@@ -9,6 +9,9 @@ on:
       model:
         required: true
         type: string
+      versions:
+        type: string
+        default: all
       provider_only:
         type: boolean
         default: false
@@ -36,6 +39,11 @@ on:
         description: Explicit authorized OpenRouter model ID including openrouter/ prefix
         required: true
         type: string
+      versions:
+        description: 'Select existing real scenarios; all is the complete Windows acceptance run'
+        type: choice
+        options: [all, v1, v2]
+        default: all
       provider_only:
         description: Compare verified 118 and explicit CI candidate with official npm V1 provider commands only
         type: boolean
@@ -105,12 +113,16 @@ jobs:
       - name: Validate exact inputs
         shell: pwsh
         env:
+          VERSIONS: ${{ inputs.versions }}
+          SOURCE_ONLY: ${{ inputs.source_only }}
           SDK_REF: ${{ inputs.sdk_ref }}
           SELECTED_MODEL: ${{ inputs.model }}
           PROVIDER_ONLY: ${{ inputs.provider_only }}
           RUNTIME_CANDIDATE_RUN: ${{ inputs.runtime_candidate_run }}
           RUNTIME_CANDIDATE_SHA: ${{ inputs.runtime_candidate_sha }}
         run: |
+          if ($env:VERSIONS -cnotin @('all', 'v1', 'v2')) { throw 'Unknown Windows version selection' }
+          if ($env:SOURCE_ONLY -eq 'true' -and $env:PROVIDER_ONLY -ne 'true' -and $env:VERSIONS -eq 'v1') { throw 'V1 has no V2 source-only scenario' }
           if ($env:SDK_REF -notmatch '^[a-f0-9]{40}$') { throw 'Exact SDK SHA required' }
           if ($env:PROVIDER_ONLY -ne 'true' -and $env:SELECTED_MODEL -notmatch '^openrouter/[a-zA-Z0-9_./:-]+$') { throw 'Explicit OpenRouter model required' }
           if ($env:PROVIDER_ONLY -eq 'true') {
@@ -355,7 +367,7 @@ jobs:
           pnpm --filter agent-teams-mcp build
           if ($LASTEXITCODE -ne 0) { throw 'MCP build failed' }
       - name: Preflight real native startup and physical stop without model prompts
-        if: ${{ !inputs.provider_only }}
+        if: ${{ !inputs.provider_only && inputs.versions != 'v1' }}
         shell: pwsh
         env:
           SELECTED_MODEL: ${{ inputs.model }}
@@ -455,6 +467,7 @@ jobs:
         shell: pwsh
         env:
           SELECTED_MODEL: ${{ inputs.model }}
+          VERSIONS: ${{ inputs.versions }}
         run: |
           $ErrorActionPreference = 'Stop'
           $env:TEMP = $env:RUNNER_TEMP
@@ -463,6 +476,8 @@ jobs:
           $app = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
           $failedPins = @()
           foreach ($pin in @(@('v1', 'opencode-windows-x64', '1.19.0'), @('floor', '@opencode/cli-windows-x64', '2.0.0'), @('current', '@opencode/cli-windows-x64', '2.0.21'))) {
+            if ($env:VERSIONS -eq 'v1' -and $pin[0] -ne 'v1') { continue }
+            if ($env:VERSIONS -eq 'v2' -and $pin[0] -eq 'v1') { continue }
             $binary = (Resolve-Path "TEST-pins/$($pin[0])/node_modules/$($pin[1])/bin/opencode.exe").Path
             $versionOutput = (& $binary --version).Trim()
             $versionExit = $LASTEXITCODE

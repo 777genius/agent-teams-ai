@@ -11,6 +11,11 @@ on:
         description: 'Explicit openrouter/provider-model for native real tasks'
         type: string
         default: ''
+      native_versions:
+        description: 'Run all versions, V1 only, or V2 only; reuse compatible completed proofs'
+        type: choice
+        options: [all, v1, v2]
+        default: all
       native_provider_only:
         description: Compare verified published V1 provider commands only; no native startup or packaging
         type: boolean
@@ -57,6 +62,7 @@ jobs:
       model: ${{ inputs.native_model }}
       source_only: ${{ inputs.native_source_only }}
       provider_only: ${{ inputs.native_provider_only }}
+      versions: ${{ inputs.native_versions }}
       runtime_candidate_run: ${{ inputs.runtime_candidate_run }}
       runtime_candidate_sha: ${{ inputs.runtime_candidate_sha }}
     secrets:

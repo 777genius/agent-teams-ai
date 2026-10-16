@@ -466,6 +466,66 @@ async function packagedStartupSnapshot(
     Number.isSafeInteger(value) && Number(value) >= 0 && Number(value) <= 0xffffffff
       ? Number(value)
       : null;
+  const nativeAlias = (input: unknown) => {
+    const value = row(input);
+    const operations = [
+      'assertLive',
+      'identity',
+      'launch',
+      'ownerArchive',
+      'ownerAssertDirectory',
+      'ownerCloseDirectory',
+      'ownerCreatePreparedDatabase',
+      'ownerInspectProfileConfig',
+      'ownerOpenDirectory',
+      'ownerPreparePrivateDirectory',
+      'ownerReadMetadata',
+      'ownerReadRecord',
+      'ownerSelectConfig',
+      'ownerValidateSelectedProfile',
+      'ownerWriteExclusive',
+      'ownerWriteMetadata',
+      'ownerWritePreparedAuth',
+      'ownerWritePreparedConfig',
+      'retire',
+      'runStateAcquire',
+      'runStateClose',
+      'runStateDiscover',
+      'runStateListen',
+      'runStateOwnerRetired',
+      'runStatePoisonConnection',
+      'runStateProcessIdentity',
+      'runStateReadControllerInbox',
+      'runStateReadRecord',
+      'runStateReadStop',
+      'runStateRequest',
+      'runStateReserve',
+      'runStateRespond',
+      'runStateSelect',
+      'runStateValidateEndpoint',
+      'runStateWriteRecord',
+      'selfImageCustody',
+      'send',
+    ];
+    if (
+      Object.keys(value).sort().join(',') !== 'operation,passed,predicate,sourceLine' ||
+      value.passed !== false ||
+      !operations.some((operation) => operation === value.operation) ||
+      !Number.isSafeInteger(value.sourceLine) ||
+      Number(value.sourceLine) < 1 ||
+      Number(value.sourceLine) > 100000 ||
+      !Number.isSafeInteger(value.predicate) ||
+      Number(value.predicate) < 0 ||
+      Number(value.predicate) > 4
+    )
+      return null;
+    return {
+      operation: value.operation,
+      sourceLine: value.sourceLine,
+      predicate: value.predicate,
+      passed: false,
+    };
+  };
   // The packet commits one immutable SDK graph row; it conveys no path or authority.
   const graphFailure = (input: unknown) => {
     const value = row(input);
@@ -677,6 +737,7 @@ async function packagedStartupSnapshot(
     'execution_owner_write_through_pending',
   ];
   const nativeStages = [
+    'alias_predicate',
     'process_alive',
     'process_alive_wait',
     'process_image_path',
@@ -906,6 +967,7 @@ async function packagedStartupSnapshot(
       category: one(data.category, categories),
       nativeStage: one(native.stage, nativeStages),
       nativeCode: number(native.nativeCode),
+      alias: nativeAlias(data.alias),
       failure: {
         name: one(failure.name, [
           'Error',

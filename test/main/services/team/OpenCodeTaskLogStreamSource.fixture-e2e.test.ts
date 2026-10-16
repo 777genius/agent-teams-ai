@@ -3,8 +3,10 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
-import { OpenCodeTaskLogStreamSource } from '../../../../src/main/services/team/taskLogs/stream/OpenCodeTaskLogStreamSource';
+import { electronTeamPort } from '../../../../scripts/e2e/opencode-native-team-port';
 import { BoardTaskExactLogChunkBuilder } from '../../../../src/main/services/team/taskLogs/exact/BoardTaskExactLogChunkBuilder';
+import { mapOpenCodeRuntimeTranscriptLogMessageToParsedMessage } from '../../../../src/main/services/team/taskLogs/stream/OpenCodeRuntimeProjectionMapper';
+import { OpenCodeTaskLogStreamSource } from '../../../../src/main/services/team/taskLogs/stream/OpenCodeTaskLogStreamSource';
 
 import type { OpenCodeRuntimeTranscriptResponse } from '../../../../src/main/services/runtime/ClaudeMultimodelBridgeService';
 import type { OpenCodeTaskLogAttributionRecord } from '../../../../src/main/services/team/taskLogs/stream/OpenCodeTaskLogAttributionStore';
@@ -121,6 +123,153 @@ function createSource(params: {
 }
 
 describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
+  it('keeps the TEST failure packet distinct for task_get failure and a model stop after a successful task_get', async () => {
+    // Retag only the sanitized fixture member for the existing TEST harness.
+    const teamName = 'test-opencode-v1-task-diagnostic';
+    const transcript = JSON.parse(
+      JSON.stringify(await loadFixtureTranscript())
+        .replace(/\bjack\b/g, 'alice')
+        .replaceAll('relay-works-10', teamName)
+    ) as Awaited<ReturnType<typeof loadFixtureTranscript>>;
+    const task = { ...RELAY_WORKS_10_COORDINATION_TASK, owner: 'alice' };
+    const { source } = createSource({ transcript, activeTasks: [task] });
+    const response = await source.getTaskLogStream(teamName, task.id);
+    expect(response).not.toBeNull();
+    const messages = (transcript.logProjection?.messages ?? [])
+      .map(mapOpenCodeRuntimeTranscriptLogMessageToParsedMessage)
+      .filter((message): message is ParsedMessage => message !== null);
+    const call = messages.find((message) =>
+      message.toolCalls.some(
+        (tool) => tool.name === 'agent-teams_task_get' && tool.input.taskId === task.id
+      )
+    );
+    const failedCall = messages.find((message) =>
+      message.toolCalls.some(
+        (tool) =>
+          tool.name === 'agent-teams_task_get' &&
+          tool.input.taskId === '211e430b-0901-4c9e-9296-2b6e2059a08f'
+      )
+    );
+    expect(call).toBeDefined();
+    expect(failedCall).toBeDefined();
+    const resultFor = (message: ParsedMessage) =>
+      messages.find((candidate) =>
+        candidate.toolResults.some((result) => result.toolUseId === message.toolCalls[0]!.id)
+      )!;
+    const success = resultFor(call!),
+      failed = resultFor(failedCall!);
+    // The real fixture encodes this MCP execution failure with isError=false.
+    expect(failed.toolResults[0]!.isError).toBe(false);
+    const baseSegment = response!.segments[0]!,
+      baseChunk = baseSegment.chunks[0]!;
+    const finalAssistant: ParsedMessage = {
+      ...call!,
+      uuid: 'TEST-final-assistant',
+      toolCalls: [],
+      toolResults: [],
+      content: 'The task was fetched. sk-TEST-private-secret C:\\TEST-private\\never-publish.txt',
+    };
+    let rawMessages = [call!, success, finalAssistant];
+    const api = {
+      teams: {
+        onProvisioningProgress: () => () => {},
+        getTask: async () => task,
+        getData: async () => ({ tasks: [task], members: [] }),
+        getTaskLogStream: async () => ({
+          ...response!,
+          segments: [{ ...baseSegment, chunks: [{ ...baseChunk, rawMessages }] }],
+        }),
+        getMessagesPage: async () => ({ messages: [], nextCursor: null }),
+      },
+    };
+    const port = electronTeamPort(api as never, teamName, 'C:\\TEST-run\\TEST-project');
+    await port.getData(); // Read-only registration of the existing owned task.
+    const succeeded = await port.getSafeTaskFailureSnapshot(task.id, 'alice');
+    expect(succeeded.log?.turn.observedTools).toEqual([
+      expect.objectContaining({
+        name: 'task_get',
+        state: 'returned',
+        resultKind: 'task',
+        inputTeamMatches: true,
+        inputTaskMatches: true,
+        resultErrorFlag: false,
+        task: expect.objectContaining({
+          idMatches: true,
+          ownerMatches: true,
+          status: 'in_progress',
+        }),
+      }),
+    ]);
+    expect(succeeded.log?.turn.assistantHasToolCalls).toBe(false);
+    expect(succeeded.log?.turn.assistantTextClass).toBe('other_text');
+    expect(succeeded.log?.turn.nativeFinishAndUsage).toBe('not_exposed_by_task_log');
+    expect(JSON.stringify(succeeded)).not.toContain('sk-TEST-private-secret');
+    expect(JSON.stringify(succeeded)).not.toContain('never-publish');
+    rawMessages = [
+      failedCall!,
+      failed,
+      {
+        ...finalAssistant,
+        content: 'Task not found. sk-TEST-private-secret C:\\TEST-private\\never-publish.txt',
+      },
+    ];
+    const failure = await port.getSafeTaskFailureSnapshot(task.id, 'alice');
+    expect(failure.log?.turn.observedTools).toEqual([
+      expect.objectContaining({
+        name: 'task_get',
+        state: 'reported_error',
+        resultKind: 'reported_error_text',
+        resultTextClass: 'reports_task_missing',
+        inputTaskMatches: false,
+        resultErrorFlag: false,
+        task: null,
+      }),
+    ]);
+    expect(failure.log?.turn.assistantTextClass).toBe('reports_task_missing');
+    expect(JSON.stringify(failure)).not.toContain('sk-TEST-private-secret');
+    expect(JSON.stringify(failure)).not.toContain('never-publish');
+    rawMessages = [
+      call!,
+      {
+        ...success,
+        toolResults: [
+          {
+            ...success.toolResults[0]!,
+            content: JSON.stringify({
+              isError: true,
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify({
+                    error: {
+                      code: -32602,
+                      message:
+                        'Unknown team "TEST-private" requires config.json. sk-TEST-private-secret',
+                    },
+                  }),
+                },
+              ],
+            }),
+          },
+        ],
+      },
+      finalAssistant,
+    ];
+    const nestedError = await port.getSafeTaskFailureSnapshot(task.id, 'alice');
+    expect(nestedError.log?.turn.observedTools).toEqual([
+      expect.objectContaining({
+        state: 'error',
+        resultErrorFlag: false,
+        resultKind: 'error_object',
+        resultTextClass: 'reports_unknown_team',
+        rpcErrorCode: -32602,
+        task: null,
+      }),
+    ]);
+    expect(JSON.stringify(nestedError)).not.toContain('sk-TEST-private-secret');
+    port.dispose();
+  });
+
   it('builds a task log stream from real OpenCode MCP task markers without leaking unrelated tasks', async () => {
     const transcript = await loadFixtureTranscript();
     const { source, bridge } = createSource({ transcript });

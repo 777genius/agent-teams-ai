@@ -145,9 +145,11 @@ async function graphFailureCoverage(value: unknown, planValue: unknown, launches
   try {
     const p = await import('node:path'), { createHash } = await import('node:crypto'), { pathToFileURL } = await import('node:url');
     const digest = (text: string) => createHash('sha256').update(text).digest('hex');
-    const plan = row(planValue), members = plan.members;
-    if (!Array.isArray(members) || members.length !== 1) throw new Error();
-    const member = row(members[0]), native = row(member.native), profile = row(member.profile), source = row(plan.source), files = row(native.graph).files;
+    const plan = row(planValue), members = plan.members, owner = row(ownerValue);
+    if (!Array.isArray(members) || members.length < 1 || members.length > 3) throw new Error();
+    const selectedMembers = members.map(row).filter(member => row(member.profile).root === owner.profileRoot);
+    if (selectedMembers.length !== 1) return { ...packet, coverage: { observation: 'owner_unavailable' } };
+    const member = selectedMembers[0]!, native = row(member.native), profile = row(member.profile), source = row(plan.source), files = row(native.graph).files;
     if (!Array.isArray(files) || files.length !== failure.total || typeof source.entryPath !== 'string') throw new Error();
     const sorted = files.map(row).sort((a, b) => String(a.path) < String(b.path) ? -1 : String(a.path) > String(b.path) ? 1 : 0), target = sorted[failure.index]!;
     if (typeof target.path !== 'string' || digest(target.path) !== failure.pathSha256 || target.sha256 !== failure.contentSha256)
@@ -155,7 +157,6 @@ async function graphFailureCoverage(value: unknown, planValue: unknown, launches
     const { resolveOpenCodeV2ExecutionDelivery } = await import(pathToFileURL(p.join(sdkRoot, 'src/services/opencode/host/OpenCodeV2ExecutionDelivery.ts')).href);
     const delivery = await resolveOpenCodeV2ExecutionDelivery(pathToFileURL(source.entryPath).href, 'execution');
     if (delivery.entrySha256 !== native.entrySha256) throw new Error();
-    const owner = row(ownerValue);
     if (owner.schema !== 1 || owner.generation !== 'v2' || owner.profileRoot !== profile.root || owner.databasePath !== profile.databasePath ||
         owner.profileEpoch !== profile.epoch || owner.graphSha256 !== row(native.graph).sha256)
       return { ...packet, coverage: { observation: 'owner_unavailable' } };
@@ -249,7 +250,7 @@ async function snapshotReadOnlyAcl(planValue: unknown, resolveDelivery: (locatio
     const row = (v: unknown): Record<string, unknown> => v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {};
     const p = await import('node:path'), fs = await import('node:fs/promises'), { pathToFileURL } = await import('node:url'), { execFile } = await import('node:child_process');
     const plan = row(planValue), source = row(plan.source), members = plan.members;
-    if (typeof source.entryPath !== 'string' || !Array.isArray(members) || members.length !== 1) return unavailable('plan_invalid');
+    if (typeof source.entryPath !== 'string' || !Array.isArray(members) || members.length < 1 || members.length > 3) return unavailable('plan_invalid');
     const native = row(row(members[0]).native), files = row(native.graph).files, bun = row(native.bun);
     if (!Array.isArray(files) || files.length > 65536 || typeof bun.path !== 'string' || typeof native.executablePath !== 'string') return unavailable('plan_invalid');
     phase = 'delivery';
@@ -339,6 +340,15 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
   const row = (v: unknown): Record<string, unknown> =>
     v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {};
   const one = (v: unknown, choices: readonly string[]) => choices.find((item) => item === v) ?? 'unclassified';
+  const aliasFailure = (input: unknown) => {
+    const value = row(input);
+    const operations = ['assertLive', 'identity', 'launch', 'ownerArchive', 'ownerAssertDirectory', 'ownerCloseDirectory', 'ownerCreatePreparedDatabase', 'ownerInspectProfileConfig', 'ownerOpenDirectory', 'ownerPreparePrivateDirectory', 'ownerReadMetadata', 'ownerReadRecord', 'ownerSelectConfig', 'ownerValidateSelectedProfile', 'ownerWriteExclusive', 'ownerWriteMetadata', 'ownerWritePreparedAuth', 'ownerWritePreparedConfig', 'retire', 'runStateAcquire', 'runStateClose', 'runStateDiscover', 'runStateListen', 'runStateOwnerRetired', 'runStatePoisonConnection', 'runStateProcessIdentity', 'runStateReadControllerInbox', 'runStateReadRecord', 'runStateReadStop', 'runStateRequest', 'runStateReserve', 'runStateRespond', 'runStateSelect', 'runStateValidateEndpoint', 'runStateWriteRecord', 'selfImageCustody', 'send'];
+    if (Object.keys(value).sort().join(',') !== 'operation,passed,predicate,sourceLine' ||
+        !operations.some(operation => operation === value.operation) || value.passed !== false ||
+        !Number.isSafeInteger(value.sourceLine) || Number(value.sourceLine) < 1 || Number(value.sourceLine) > 100000 ||
+        !Number.isSafeInteger(value.predicate) || Number(value.predicate) < 0 || Number(value.predicate) > 4) return null;
+    return { operation: value.operation, sourceLine: value.sourceLine, predicate: value.predicate, passed: false };
+  };
   const collect = async () => {
     const fs = await import('node:fs/promises'), paths = await import('node:path');
     const run = row(value), binding = row(run.binding), root = process.env.CLAUDE_MULTIMODEL_DATA_HOME;
@@ -382,7 +392,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
       'run_owner_stale', 'run_process_unknown', 'execution_owner_unknown', 'cleanup_unknown', 'execution_timeout',
       'terminal_cut_unknown', 'session_selection_changed', 'execution_profile_changed', 'execution_selected_auth_changed'];
     // Exact closed producer categories; do not classify arbitrary error text here.
-    const providerCodes = ['timeout', 'run_control_process_identity', 'provider_missing', 'provider_key_method_unsupported', 'provider_existing_credentials_unsupported',
+    const providerCodes = ['execution_path_alias', 'timeout', 'run_control_process_identity', 'provider_missing', 'provider_key_method_unsupported', 'provider_existing_credentials_unsupported',
   'provider_catalog_scope_changed', 'provider_catalog_location_changed', 'provider_integration_changed', 'provider_credential_identity_changed',
   'provider_owned_connection_unknown', 'provider_active_connection_changed', 'provider_auth_publication_changed', 'provider_auth_publication_unknown',
   'provider_selected_model_missing', 'provider_original_connect_unknown', 'provider_original_execution_pending', 'provider_execution_target_changed',
@@ -415,7 +425,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
   'execution_owner_metadata_purpose_invalid', 'execution_owner_not_private', 'execution_owner_ntfs_required',
   'execution_owner_path_invalid', 'execution_owner_record_invalid', 'execution_owner_prepared_invalid', 'execution_owner_prepared_purpose_invalid',
   'execution_owner_read_only', 'execution_owner_unknown', 'execution_owner_write_through_pending'];
-    const nativeStages = ['assert_mapping', 'assert_stopped', 'assert_broker', 'retire_broker_state', 'retire_broker_write', 'retire_job', 'retire_wait', 'retire_io_join',
+    const nativeStages = ['alias_predicate', 'assert_mapping', 'assert_stopped', 'assert_broker', 'retire_broker_state', 'retire_broker_write', 'retire_job', 'retire_wait', 'retire_io_join',
   'retire_main_exit', 'retire_owned_pair', 'retire_commands', 'retire_receipt', 'retire_grants',
   'retire_grants_dll', 'retire_grants_roots', 'retire_grants_metadata', 'process_birth', 'process_image_path', 'process_image_open', 'process_birth_changed',
   'shared_acl_mutex_descriptor', 'shared_acl_mutex_create', 'shared_acl_mutex_security',
@@ -436,9 +446,9 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
       'shared_readonly_control', 'shared_readonly_ace', 'shared_readonly_package', 'shared_readonly_foreign_write',
       'shared_readonly_grant_open', 'shared_readonly_grant_read', 'shared_readonly_grant_merge', 'shared_readonly_grant_write',
       'shared_readonly_owner_changed', 'shared_readonly_control_changed', 'shared_readonly_foreign_changed', 'shared_readonly_member_missing'];
-    const members = (v: unknown) => Array.isArray(v) ? v.slice(0, 2).map((item) => {
+    const members = (v: unknown) => Array.isArray(v) ? v.slice(0, 3).map((item) => {
       const member = row(item), bootstrap = row(member.bootstrap), cleanup = row(member.cleanup);
-      return { memberMatches: member.memberId === 'probe', state: one(member.state, ['accepted', 'unknown', 'rejected']),
+      return { memberMatches: Array.isArray(row(plan).members) && (row(plan).members as unknown[]).some(value => row(value).memberId === member.memberId), state: one(member.state, ['accepted', 'unknown', 'rejected']),
         originalSessionMatches: member.originalSessionId === session, runtimeSessionMatches: member.runtimeSessionId === session,
         opencodeSessionMatches: member.opencodeSessionId === session, bootstrapVerified: bootstrap.verified === true,
         missingNativeMessageID: bootstrap.missingNativeMessageID === true, scopeClosed: cleanup.scopeClosed === true,
@@ -446,7 +456,9 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
         errors: Array.isArray(member.errors) ? member.errors.slice(0, 8).map((code) => one(code,
           ['tombstone_unknown', 'cancel_or_interrupt_unknown', 'readers_unknown', 'physical_cleanup_unknown', 'run_tombstone_unknown'])) : [] };
     }) : [];
-    const selectedMembers = row(plan).members, selectedMember = Array.isArray(selectedMembers) && selectedMembers.length === 1 ? row(selectedMembers[0]) : {};
+    const selectedMembers = row(plan).members;
+    const matches = Array.isArray(selectedMembers) && selectedMembers.length <= 3 ? selectedMembers.map(row).filter(member => member.originalSessionId === session) : [];
+    const selectedMember = matches.length === 1 ? matches[0]! : {};
     const selectedProfileRoot = row(selectedMember.profile).root;
     const executionOwner = typeof selectedProfileRoot === 'string' && paths.dirname(selectedProfileRoot) === paths.join(root, 'opencode', 'v2', 'profiles') &&
         /^[a-f0-9]{16}-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(paths.basename(selectedProfileRoot))
@@ -473,7 +485,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
         const nativeFailure = nativeStage && typeof native.nativeCode === 'number' && Number.isSafeInteger(native.nativeCode) &&
           native.nativeCode >= 0 && native.nativeCode <= 0xffffffff ? { stage: nativeStage, nativeCode: native.nativeCode } : null;
         diagnostics.push({ observation: result.observation, phase: one(data.phase, ['execution-host-startup', 'run-owner-initialization', 'run-member-retirement']),
-          category: one(data.category, providerCodes), native: nativeFailure,
+          category: one(data.category, providerCodes), native: nativeFailure, alias: aliasFailure(data.alias),
           failure: data.failure === undefined ? null : {
             name: one(row(data.failure).name, ['Error', 'TypeError', 'ReferenceError', 'RangeError', 'AbortError']),
             errno: one(row(data.failure).errno, ['EPERM', 'EACCES', 'ENOENT', 'ENOTDIR', 'EISDIR', 'EINVAL', 'UNKNOWN', 'EIO', 'ENOSYS']),
@@ -495,11 +507,8 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
     } catch { /* Diagnostic absence is not evidence of process retirement. */ }
     let stdio: { observation: string; kind: string; errorLine?: string; readTargetKind?: string; readErrorCode?: string; readTargetLocation?: string; readTargetAncestorDistance?: number; childStartup?: { stage: string; cause: string; reason: string; errno: string; operation: string; errorName: string; profileGuard: string; environmentMismatchKeys: string[]; graphFailure?: unknown; elapsedMs: number | null; graph: { phase: string; completed: number | null; total: number | null } } } = { observation: 'unavailable', kind: 'unavailable' };
     try {
-      const selected = row(plan), prepared = row(row(selected.executionProbe).prepared);
-      const members = Array.isArray(selected.members) ? selected.members : [];
-      const profileRoot = prepared.profileRootPath;
-      if (members.length !== 1 || typeof profileRoot !== 'string' ||
-          profileRoot !== row(row(members[0]).profile).root ||
+      const profileRoot = row(selectedMember.profile).root;
+      if (matches.length !== 1 || typeof profileRoot !== 'string' ||
           paths.dirname(profileRoot) !== paths.join(root, 'opencode', 'v2', 'profiles') ||
           !/^[a-f0-9]{16}-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(paths.basename(profileRoot)))
         throw new Error('TEST fixed stdio profile invalid');
@@ -630,6 +639,7 @@ async function verifyProbePreparation(
   inspect: (input: unknown) => Promise<unknown>,
   resolveProbe: (input: unknown, selection: unknown, run: boolean,
     options: { unattendedTeam: boolean }) => Promise<unknown>,
+  buildPlan: (selection: unknown, body: Record<string, unknown>, controllerInstanceId: string) => Promise<unknown>,
   owner: { launchExplicitOpenCodeV2Run: (plan: unknown) => Promise<unknown> },
   control: {
     OPEN_CODE_V2_RUN_INITIALIZATION_MS: number;
@@ -645,7 +655,7 @@ async function verifyProbePreparation(
   },
   projectPath: string, selectedModel: string, expectedVersion: string,
   report: (phase: 'owner_launch' | 'member_readiness' | 'physical_stop', facts: {
-    launchCalls: number; ownerReturned: boolean; memberReady: boolean;
+    launchCalls: number; ownerReturned: boolean; memberReady: boolean; memberCount: number; readyMemberCount: number;
     stopConfirmed: boolean; cleanupUnknown: boolean;
   }) => void,
   snapshot: (record: unknown, session: string, plan: unknown, timing: 'before_stop' | 'after_stop') => Promise<void>
@@ -659,6 +669,9 @@ async function verifyProbePreparation(
     body: { selectedModel, requireExecutionProbe: true },
   };
   const selection = await inspect(envelope);
+  const { randomUUID } = await import('node:crypto');
+  const roster = expectedVersion === '2.0.0' ? ['team-lead', 'alice'] : expectedVersion === '2.0.21' ? ['team-lead', 'alice', 'bob'] : [];
+  if (!roster.length) throw new Error('TEST probe preparation plan invalid');
   const { lstat, readdir, open, rename } = await import('node:fs/promises');
   const { join, isAbsolute } = await import('node:path');
   const dataRoot = process.env.CLAUDE_MULTIMODEL_DATA_HOME;
@@ -676,25 +689,40 @@ async function verifyProbePreparation(
   const sentinel = new Error('TEST model-free startup and physical stop complete');
   const originalLaunch = owner.launchExplicitOpenCodeV2Run;
   let boundaryCalls = 0;
-  const facts = { launchCalls: 0, ownerReturned: false, memberReady: false,
+  const facts = { launchCalls: 0, ownerReturned: false, memberReady: false, memberCount: roster.length, readyMemberCount: 0,
     stopConfirmed: false, cleanupUnknown: false };
   const boundary = spyOn(owner, 'launchExplicitOpenCodeV2Run');
   try {
     boundary.mockImplementation(async (value) => {
       boundaryCalls++;
-      const plan = record(value), probe = record(plan.executionProbe);
-      if (boundaryCalls !== 1 || !Array.isArray(plan.members) || plan.members.length !== 1 ||
-          probe.memberId !== 'probe' || !probe.prepared)
+      const original = record(value), probe = record(original.executionProbe), originalBinding = record(original.binding);
+      if (boundaryCalls !== 1 || !Array.isArray(original.members) || original.members.length !== 1 ||
+          probe.memberId !== 'probe' || !probe.prepared || typeof originalBinding.teamId !== 'string' ||
+          !/^TEST-execution-probe-[a-f0-9]{32}$/.test(originalBinding.teamId) || !Number.isFinite(original.deadline))
         throw new Error('TEST probe preparation plan invalid');
-      const member = record(plan.members[0]);
-      if (member.memberId !== 'probe' || typeof member.originalSessionId !== 'string')
+      // The resolver created this fresh TEST team/tasks namespace, but has not
+      // reserved or launched an owner. Build each cohort profile originally;
+      // never copy a sealed profile or replay the resolver's single-member plan.
+      const planValue = await buildPlan(selection, { teamId: originalBinding.teamId, teamName: originalBinding.teamId,
+        runId: randomUUID(), laneId: 'primary', selectedModel, effort: 'default',
+        members: roster.map(name => ({ name, prompt: 'Wait for app task delivery. This startup check submits no model input.' })) }, randomUUID());
+      const plan = record(planValue), members = Array.isArray(plan.members) ? plan.members.map(record) : [];
+      if (members.length !== roster.length || members.some((member, index) => member.memberId !== roster[index] ||
+          typeof member.originalSessionId !== 'string') || new Set(members.map(member => member.originalSessionId)).size !== members.length ||
+          !Number.isFinite(plan.deadline) || Number(original.deadline) - Date.now() <= 30_000)
         throw new Error('TEST probe preparation plan invalid');
-      let returnedOwner: unknown, readyPid: number | undefined, primary: unknown, cleanupFailure: unknown;
+      // Shorten only this original, unlaunched plan to the existing probe budget.
+      plan.deadline = Math.min(Number(plan.deadline), Number(original.deadline));
+      const readyPids = new Map<unknown, number>();
+      const capture = async (timing: 'before_stop' | 'after_stop') => {
+        for (const member of members) await snapshot(returnedOwner, String(member.originalSessionId), planValue, timing);
+      };
+      let returnedOwner: unknown, primary: unknown, cleanupFailure: unknown;
       let phase: 'owner_launch' | 'member_readiness' | 'physical_stop' = 'owner_launch';
       const update = () => report(phase, { ...facts });
       try {
         facts.launchCalls++; update();
-        const launchedOwner = await originalLaunch(value); // Exactly one original call, never a reserved-plan replay.
+        const launchedOwner = await originalLaunch(planValue); // Exactly one original call, never a reserved-plan replay.
         const current = record(launchedOwner), binding = record(current.binding);
         const expectedBinding = record(plan.binding);
         if (!['teamId', 'runId', 'controllerInstanceId', 'ownerId'].every((key) =>
@@ -708,23 +736,27 @@ async function verifyProbePreparation(
         // Leave the existing 30s public stop budget inside the original probe deadline.
         const readinessMs = Math.min(control.OPEN_CODE_V2_RUN_INITIALIZATION_MS, current.deadline - Date.now() - 30_000);
         if (readinessMs <= 0) throw new Error('TEST probe readiness budget exhausted');
+        let readinessFailure: unknown;
+        const readiness = await Promise.allSettled(members.map(async member => {
+        try {
         const ready = await control.awaitOpenCodeV2RunMemberReadiness(returnedOwner, {
-          memberId: 'probe', originalSessionId: member.originalSessionId,
+          memberId: String(member.memberId), originalSessionId: String(member.originalSessionId),
           selectedModel, selectedVariant: 'default', pin: expectedVersion,
         }, Math.floor(readinessMs));
         if (!ready) throw new Error('TEST probe member not ready');
         const memberStatus = record(ready);
         if (typeof memberStatus.runtimePid !== 'number' || !Number.isSafeInteger(memberStatus.runtimePid) ||
             memberStatus.runtimePid <= 0) throw new Error('TEST probe member not ready');
-        readyPid = memberStatus.runtimePid;
+        readyPids.set(member.memberId, memberStatus.runtimePid);
+        facts.readyMemberCount = readyPids.size; update();
         // Exercise the actual live DLL custody, using only this fresh TEST profile.
-        const prepared = record(probe.prepared);
-        if (typeof prepared.tmpPath !== 'string' || !isAbsolute(prepared.tmpPath))
+        const tmpPath = record(record(member.profile).env).TMPDIR;
+        if (typeof tmpPath !== 'string' || !isAbsolute(tmpPath))
           throw new Error('TEST private DLL profile invalid');
-        const leaves = (await readdir(prepared.tmpPath)).filter(name =>
+        const leaves = (await readdir(tmpPath)).filter(name =>
           /^native-realpath-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(name));
         if (leaves.length !== 1) throw new Error('TEST private DLL leaf invalid');
-        const leaf = join(prepared.tmpPath, leaves[0]!);
+        const leaf = join(tmpPath, leaves[0]!);
         const dll = join(leaf, 'opencode-v2-windows-realpath.dll');
         const beforeLeaf = await lstat(leaf), beforeDll = await lstat(dll);
         if (!beforeLeaf.isDirectory() || beforeLeaf.isSymbolicLink() ||
@@ -748,10 +780,13 @@ async function verifyProbePreparation(
         if (afterLeaf.dev !== beforeLeaf.dev || afterLeaf.ino !== beforeLeaf.ino ||
             afterDll.dev !== beforeDll.dev || afterDll.ino !== beforeDll.ino)
           throw new Error('TEST private DLL custody changed');
-        facts.memberReady = true; update();
+        } catch (error) { readinessFailure ??= error; throw error; }
+        }));
+        if (readiness.some(result => result.status === 'rejected')) throw readinessFailure;
+        facts.memberReady = readyPids.size === members.length; update();
       } catch (error) {
         primary = error;
-        try { await snapshot(returnedOwner, member.originalSessionId, value, 'before_stop'); }
+        try { await capture('before_stop'); }
         catch { /* Preserve the original failure and always attempt its public stop. */ }
       }
       finally {
@@ -760,14 +795,15 @@ async function verifyProbePreparation(
           phase = 'physical_stop'; update();
           try {
             const stopped = record(await control.requestOpenCodeV2Run(returnedOwner, { operation: 'stop' }, 30_000));
-            const members = stopped.members;
-            const stoppedMember = Array.isArray(members) && members.length === 1 ? record(members[0]) : null;
-            const cleanup = stoppedMember?.cleanup ? record(stoppedMember.cleanup) : null;
-            if (stopped.kind !== 'stop' || stopped.state !== 'stopped' || stopped.ownerRetired !== true ||
-                stoppedMember?.memberId !== 'probe' || !Array.isArray(stoppedMember.errors) ||
-                stoppedMember.errors.length !== 0 || !cleanup || cleanup.scopeClosed !== true ||
-                cleanup.processRetired !== true || cleanup.descendantsRetired !== true ||
-                (readyPid !== undefined && cleanup.pid !== readyPid)) {
+            const retired = Array.isArray(stopped.members) ? stopped.members.map(record) : [];
+            const complete = retired.length === members.length && new Set(retired.map(member => member.memberId)).size === members.length &&
+              members.every(member => {
+                const stoppedMember = retired.find(value => value.memberId === member.memberId), cleanup = record(stoppedMember?.cleanup);
+                return stoppedMember && Array.isArray(stoppedMember.errors) && stoppedMember.errors.length === 0 &&
+                  cleanup.scopeClosed === true && cleanup.processRetired === true && cleanup.descendantsRetired === true &&
+                  (!readyPids.has(member.memberId) || cleanup.pid === readyPids.get(member.memberId));
+              });
+            if (stopped.kind !== 'stop' || stopped.state !== 'stopped' || stopped.ownerRetired !== true || !complete) {
               cleanupFailure = new Error('TEST probe physical stop unconfirmed');
               facts.cleanupUnknown = true;
             } else facts.stopConfirmed = true;
@@ -777,7 +813,7 @@ async function verifyProbePreparation(
         } else { facts.cleanupUnknown = true; update(); } // Partial launch has no returned authority to invent or replay.
       }
       if (primary !== undefined || cleanupFailure !== undefined) {
-        try { await snapshot(returnedOwner, member.originalSessionId, value, 'after_stop'); } catch { /* Preserve original failure. */ }
+        try { await capture('after_stop'); } catch { /* Preserve original failure. */ }
       }
       if (primary !== undefined) throw primary;
       if (cleanupFailure !== undefined) throw cleanupFailure;
@@ -791,7 +827,7 @@ async function verifyProbePreparation(
     if (boundaryCalls !== 1 || facts.launchCalls !== 1 || !facts.stopConfirmed)
       throw new Error('TEST probe launch boundary count invalid');
     return { modelFreeStartupOnly: true, ownerLaunchCalls: facts.launchCalls,
-      authenticatedMemberReady: facts.memberReady, physicalStopConfirmed: facts.stopConfirmed,
+      authenticatedMemberReady: facts.memberReady, memberCount: roster.length, authenticatedMemberCount: facts.readyMemberCount, physicalStopConfirmed: facts.stopConfirmed,
       modelSubmissionAttempted: false };
   } finally { boundary.mockRestore(); }
 }
@@ -926,23 +962,25 @@ try {
  const { inspectOpenCodeV2LaunchSelection } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2LaunchPlan.ts')).href)});
  await (${verifySelectedControllerRoot.toString()})(inspectOpenCodeV2LaunchSelection,${JSON.stringify(desktop.projectPath)},${JSON.stringify(desktop.env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT)},${JSON.stringify(selectedModel)});
  stage='probe-preparation';
- const { inspectOpenCodeV2SourceAvailability } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2LaunchPlan.ts')).href)});
+ const { inspectOpenCodeV2SourceAvailability, buildOpenCodeV2InternalRunPlan } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2LaunchPlan.ts')).href)});
  const runOwner = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2RunOwner.ts')).href)});
  const { resolveOpenCodeV2ExecutionProbe } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2ExecutionProbe.ts')).href)});
  const { spyOn } = await import('bun:test');
  const control = await import(${JSON.stringify(moduleUrl)});
  preparation = await (${verifyProbePreparation.toString()})(inspectOpenCodeV2SourceAvailability,
-   resolveOpenCodeV2ExecutionProbe, runOwner, control, spyOn, ${JSON.stringify(desktop.projectPath)},
+   resolveOpenCodeV2ExecutionProbe, buildOpenCodeV2InternalRunPlan, runOwner, control, spyOn, ${JSON.stringify(desktop.projectPath)},
    ${JSON.stringify(selectedModel)}, ${JSON.stringify(expectedVersion)},
    (phase, facts) => { stage=phase; startupFacts=facts; },
    async (record, session, plan, timing) => {
      if (timing === 'before_stop') {
-       if (record) startupBeforeStop = await (${snapshotStartupFailure.toString()})(record, session, plan, ${JSON.stringify(sdk)}, nativeLaunches);
+       if (record) { startupBeforeStop ??= []; startupBeforeStop.push(await (${snapshotStartupFailure.toString()})(record, session, plan, ${JSON.stringify(sdk)}, nativeLaunches)); }
        return;
      }
-     if (record) startupFailureState = await (${snapshotStartupFailure.toString()})(record, session, plan, ${JSON.stringify(sdk)}, nativeLaunches);
-     const { resolveOpenCodeV2ExecutionDelivery } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/host/OpenCodeV2ExecutionDelivery.ts')).href)});
-     readOnlyAclObservation = await (${snapshotReadOnlyAcl.toString()})(plan, resolveOpenCodeV2ExecutionDelivery);
+     if (record) { startupFailureState ??= []; startupFailureState.push(await (${snapshotStartupFailure.toString()})(record, session, plan, ${JSON.stringify(sdk)}, nativeLaunches)); }
+     if (readOnlyAclObservation === null) {
+       const { resolveOpenCodeV2ExecutionDelivery } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/host/OpenCodeV2ExecutionDelivery.ts')).href)});
+       readOnlyAclObservation = await (${snapshotReadOnlyAcl.toString()})(plan, resolveOpenCodeV2ExecutionDelivery);
+     }
    });
  // False readiness also opens the store: run it only AFTER the cold preparation.
  stage='readiness';

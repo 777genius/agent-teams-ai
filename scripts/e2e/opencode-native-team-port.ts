@@ -132,6 +132,187 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
         'protocol_proof_missing', 'backend_error'] as const;
       const count = (value: number | undefined) => typeof value === 'number' && Number.isFinite(value)
         ? Math.max(0, Math.min(10_000, Math.floor(value))) : null;
+      // This production projection contains display text, not a guaranteed
+      // secret/path redaction. Emit only closed classifications and task facts.
+      const row = (value: unknown): Record<string, unknown> =>
+        value && typeof value === 'object' && !Array.isArray(value)
+          ? (value as Record<string, unknown>)
+          : {};
+      const knownTools = [
+        'task_get',
+        'task_list',
+        'task_start',
+        'task_set_status',
+        'task_add_comment',
+        'task_complete',
+        'member_work_sync_status',
+        'member_work_sync_report',
+        'message_send',
+        'member_briefing',
+        'runtime_bootstrap_checkin',
+        'read',
+        'bash',
+        'edit',
+        'write',
+        'apply_patch',
+        'glob',
+        'grep',
+        'list',
+        'lsp',
+        'question',
+        'todoread',
+        'todowrite',
+        'getmcptools',
+        'callmcptool',
+        'list_mcp_resources',
+        'read_mcp_resource',
+      ];
+      const name = (value: string) => {
+        const normalized = value
+          .trim()
+          .toLowerCase()
+          .replace(/^proxy_/, '')
+          .replace(/^(?:mcp__agent[-_]teams__|agent[-_]teams_)/, '');
+        return knownTools.find((tool) => tool === normalized) ?? 'other';
+      };
+      const classifyText = (text: string) => {
+        const bounded = text.slice(0, 16_384).toLowerCase();
+        if (bounded.includes('unknown team') && bounded.includes('config.json'))
+          return 'reports_unknown_team';
+        if (bounded.includes('unknown task actor')) return 'reports_unknown_task_actor';
+        if (/permission denied|access denied|not permitted/.test(bounded))
+          return 'reports_permission_denied';
+        if (/task.*(?:not found|does not exist)/.test(bounded)) return 'reports_task_missing';
+        if (/tool.*(?:not found|unavailable|not available)|(?:missing|unknown) tool/.test(bounded))
+          return 'reports_tool_unavailable';
+        return bounded.trim() ? 'other_text' : 'empty';
+      };
+      const decodeResult = (value: unknown, depth = 0): { value: unknown; error: boolean } => {
+        if (depth > 5) return { value: undefined, error: false };
+        if (typeof value === 'string') {
+          if (value.length > 32_768) return { value: undefined, error: false };
+          try {
+            return decodeResult(JSON.parse(value), depth + 1);
+          } catch {
+            return { value, error: false };
+          }
+        }
+        if (Array.isArray(value)) {
+          if (value.length !== 1 || row(value[0]).type !== 'text')
+            return { value: undefined, error: false };
+          return decodeResult(row(value[0]).text, depth + 1);
+        }
+        const object = row(value);
+        const nested = Array.isArray(object.content)
+          ? decodeResult(object.content, depth + 1)
+          : { value, error: false };
+        return { value: nested.value, error: object.isError === true || nested.error };
+      };
+      const messages = [
+        ...new Map(
+          (log?.segments ?? [])
+            .slice(-8)
+            .filter((segment) => segment.actor.memberName === expectedOwner)
+            .flatMap((segment) =>
+              segment.chunks.slice(-16).flatMap((chunk) => chunk.rawMessages.slice(-16))
+            )
+            .map((message) => [message.uuid, message] as const)
+        ).values(),
+      ].slice(-128);
+      const results = messages.flatMap((message) => message.toolResults.slice(0, 32));
+      const observedTools = messages
+        .flatMap((message) => message.toolCalls.slice(0, 16))
+        .slice(-32)
+        .map((call) => {
+          const toolName = name(call.name),
+            matching = results.filter((result) => result.toolUseId === call.id);
+          const result = matching[0],
+            decoded = decodeResult(result?.content),
+            payload = row(decoded.value);
+          const isTask = typeof payload.id === 'string' && typeof payload.status === 'string';
+          const text =
+            typeof decoded.value === 'string'
+              ? decoded.value
+              : typeof payload.error === 'string'
+                ? payload.error
+                : typeof row(payload.error).message === 'string'
+                  ? String(row(payload.error).message)
+                  : !isTask && typeof payload.message === 'string'
+                    ? payload.message
+                    : '';
+          const reportedFailure =
+            toolName !== 'other' &&
+            (text.startsWith(`Tool '${toolName}' execution failed:`) ||
+              text.startsWith(`Tool '${call.name}' execution failed:`));
+          return {
+            name: toolName,
+            resultCount: count(matching.length),
+            state: !result
+              ? 'result_unobserved'
+              : result.isError === true || decoded.error || payload.error !== undefined
+                ? 'error'
+                : reportedFailure
+                  ? 'reported_error'
+                  : 'returned',
+            resultErrorFlag: result ? result.isError === true : null,
+            inputTeamMatches:
+              call.input.teamName === undefined ? null : call.input.teamName === teamName,
+            inputTaskMatches: call.input.taskId === undefined ? null : call.input.taskId === id,
+            inputActorMatches:
+              call.input.actor === undefined ? null : call.input.actor === expectedOwner,
+            resultKind: !result
+              ? 'unobserved'
+              : decoded.value === null
+                ? 'null'
+                : isTask
+                  ? 'task'
+                  : decoded.error || payload.error !== undefined
+                    ? 'error_object'
+                    : reportedFailure
+                      ? 'reported_error_text'
+                      : typeof decoded.value === 'string'
+                        ? 'text'
+                        : 'other',
+            resultTextClass: classifyText(text),
+            rpcErrorCode:
+              [-32700, -32600, -32601, -32602, -32603].find(
+                (code) => code === payload.code || code === row(payload.error).code
+              ) ?? null,
+            task:
+              toolName === 'task_get' && isTask
+                ? {
+                    idMatches: payload.id === id,
+                    ownerMatches: payload.owner === expectedOwner,
+                    status: statuses.find((status) => status === payload.status) ?? 'unknown',
+                    promptPresent:
+                      typeof payload.prompt === 'string' && payload.prompt.trim().length > 0,
+                    descriptionPresent:
+                      typeof payload.description === 'string' &&
+                      payload.description.trim().length > 0,
+                  }
+                : null,
+          };
+        });
+      const assistant = messages
+        .filter((message) => message.type === 'assistant' && !message.isMeta)
+        .at(-1);
+      const assistantText =
+        typeof assistant?.content === 'string'
+          ? assistant.content.slice(0, 16_384)
+          : (assistant?.content ?? [])
+              .slice(0, 8)
+              .filter((block) => block.type === 'text')
+              .map((block) => (block.type === 'text' ? block.text.slice(0, 16_384) : ''))
+              .join('\n');
+      const turn = {
+        observation: 'bounded_task_log_only' as const,
+        observedMessageCount: count(messages.length),
+        observedTools,
+        assistantTextClass: classifyText(assistantText),
+        assistantHasToolCalls: assistant ? assistant.toolCalls.length > 0 : null,
+        // OpenCodeRuntimeProjectionMapper currently drops native finish/usage.
+        nativeFinishAndUsage: 'not_exposed_by_task_log' as const,
+      };
       const messageIds = [...new Set((page?.messages ?? []).filter((message) =>
         message.to === expectedOwner && message.taskRefs?.some((ref) =>
           ref.taskId === id && ref.teamName === teamName))
@@ -166,7 +347,7 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
         log: log ? { segments: count(log.segments.length),
           projectedMessages: count(log.runtimeProjection?.projectedMessageCount),
           nativeTools: count(log.runtimeProjection?.nativeToolCount),
-          boardTools: count(log.runtimeProjection?.boardMcpToolCount) } : null,
+          boardTools: count(log.runtimeProjection?.boardMcpToolCount), turn } : null,
         advisory: advisory ? {
           kind: advisory.kind === 'api_error' || advisory.kind === 'sdk_retrying' ? advisory.kind : null,
           reasonCode: advisoryCodes.find((code) => code === advisory.reasonCode) ?? null,
