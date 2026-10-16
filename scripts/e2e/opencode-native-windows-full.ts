@@ -1180,6 +1180,9 @@ async function main() {
     completionObservations: [] as CompletionObservation[],
     stopObservations: [] as StopObservation[],
     stopFailureObservationUnavailable: null as boolean | null,
+    stopFailureSnapshot: null as Awaited<
+      ReturnType<ReturnType<typeof electronTeamPort>['getSafeStopFailure']>
+    > | null,
     peerObservation: null as PeerObservation | null,
     commandEvidenceConfirmed: [] as { member: string; kind: string }[],
     runIds: [] as string[],
@@ -1750,8 +1753,14 @@ async function main() {
           await checkpoint(proof.stage);
           let timer: ReturnType<typeof setTimeout> | undefined;
           try {
-            const snapshot = await Promise.race([
-              readStopObservation(app),
+            const [observationRead, failureRead] = await Promise.race([
+              Promise.allSettled([
+                readStopObservation(app),
+                app.call('getSafeStopFailure').then((value) => {
+                  proof.stopFailureSnapshot = value;
+                  return value;
+                }),
+              ]),
               new Promise<never>((_resolve, reject) => {
                 timer = setTimeout(
                   () => reject(new Error('TEST stop observation expired')),
@@ -1759,8 +1768,11 @@ async function main() {
                 );
               }),
             ]);
-            proof.stopFailureObservationUnavailable = false;
-            await recordStop(snapshot.observation);
+            proof.stopFailureSnapshot =
+              failureRead.status === 'fulfilled' ? failureRead.value : null;
+            proof.stopFailureObservationUnavailable = observationRead.status === 'rejected';
+            if (observationRead.status === 'fulfilled')
+              await recordStop(observationRead.value.observation);
           } catch {
             proof.stopFailureObservationUnavailable = true;
           } finally {

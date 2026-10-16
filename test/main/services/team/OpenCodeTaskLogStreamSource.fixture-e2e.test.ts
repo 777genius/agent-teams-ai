@@ -4,6 +4,9 @@ import path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
 import { electronTeamPort } from '../../../../scripts/e2e/opencode-native-team-port';
+import { OpenCodeReadinessBridge } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
+import { assertOpenCodeRuntimeStopEffective } from '../../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
+import { OpenCodeTeamRuntimeAdapter } from '../../../../src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import { BoardTaskExactLogChunkBuilder } from '../../../../src/main/services/team/taskLogs/exact/BoardTaskExactLogChunkBuilder';
 import { mapOpenCodeRuntimeTranscriptLogMessageToParsedMessage } from '../../../../src/main/services/team/taskLogs/stream/OpenCodeRuntimeProjectionMapper';
 import { OpenCodeTaskLogStreamSource } from '../../../../src/main/services/team/taskLogs/stream/OpenCodeTaskLogStreamSource';
@@ -11,7 +14,11 @@ import { OpenCodeTaskLogStreamSource } from '../../../../src/main/services/team/
 import type { OpenCodeRuntimeTranscriptResponse } from '../../../../src/main/services/runtime/ClaudeMultimodelBridgeService';
 import type { OpenCodeTaskLogAttributionRecord } from '../../../../src/main/services/team/taskLogs/stream/OpenCodeTaskLogAttributionStore';
 import type { ParsedMessage } from '../../../../src/main/types';
-import type { BoardTaskLogStreamResponse, TeamTask } from '../../../../src/shared/types';
+import type {
+  BoardTaskLogStreamResponse,
+  TeamProvisioningProgress,
+  TeamTask,
+} from '../../../../src/shared/types';
 
 const FIXTURE_PATH = path.resolve(
   process.cwd(),
@@ -123,6 +130,262 @@ function createSource(params: {
 }
 
 describe('OpenCodeTaskLogStreamSource real OpenCode fixture e2e', () => {
+  it('preserves finite native session-error and same-run Stop facts when the production task chunks drop error metadata', async () => {
+    const teamName = 'test-opencode-v1-native-error',
+      projectPath = 'C:\\TEST-run\\TEST-project';
+    const task = { ...RELAY_WORKS_10_COORDINATION_TASK, owner: 'alice' };
+    const transcript = await loadFixtureTranscript();
+    const originalUser = transcript.logProjection!.messages!.find(
+      (message) => message.type === 'user' && !message.isMeta
+    )!;
+    const nativeReason = JSON.stringify({
+      name: 'APIError',
+      data: {
+        statusCode: 402,
+        code: 'insufficient_credits',
+        isRetryable: false,
+        message:
+          'This request requires more credits. You requested up to 8192 tokens, but can only afford 1200. sk-TEST-secret',
+        responseHeaders: { authorization: 'Bearer sk-TEST-secret' },
+        url: 'https://TEST-private.invalid/never-publish',
+      },
+    });
+    transcript.logProjection!.messages = [
+      {
+        ...originalUser,
+        uuid: 'TEST-delivered-user',
+        agentName: 'alice',
+        timestamp: '2026-04-24T20:29:01.000Z',
+        content: `Work on task ${task.id}`,
+        toolCalls: [],
+        toolResults: [],
+      },
+      {
+        ...originalUser,
+        uuid: 'TEST-native-assistant::error',
+        parentUuid: 'TEST-delivered-user',
+        type: 'system',
+        timestamp: '2026-04-24T20:29:02.000Z',
+        agentName: 'alice',
+        isMeta: true,
+        level: 'error',
+        subtype: 'informational',
+        toolCalls: [],
+        toolResults: [],
+        content: `OpenCode runtime error - APIError: ${nativeReason}`,
+      },
+    ];
+    const { source } = createSource({ transcript, activeTasks: [task] });
+    const response = await source.getTaskLogStream(teamName, task.id);
+    // SDK emits a native error as a system/meta message. Production chunks drop
+    // it as noise, while the delivery ledger still retains its original reason.
+    expect(response?.runtimeProjection?.projectedMessageCount).toBe(2);
+    expect(flattenRawMessages(response!).map((message) => message.uuid)).toEqual([
+      'TEST-delivered-user',
+    ]);
+    let reason = nativeReason;
+    let responseState = 'session_error';
+    let emitProgress: (value: TeamProvisioningProgress) => void = () => {};
+    const api = {
+      config: { addCustomProjectPath: async () => {} },
+      teams: {
+        onProvisioningProgress: (
+          listener: (_event: unknown, value: TeamProvisioningProgress) => void
+        ) => {
+          emitProgress = (value) => listener(null, value);
+          return () => {};
+        },
+        createTeam: async () => ({ runId: 'TEST-owned-run' }),
+        getTask: async () => task,
+        getData: async () => ({ tasks: [task], members: [] }),
+        getTaskLogStream: async () => response,
+        getMessagesPage: async () => ({
+          messages: [
+            { messageId: 'TEST-delivery', to: 'alice', taskRefs: [{ teamName, taskId: task.id }] },
+          ],
+          nextCursor: null,
+        }),
+        getOpenCodeRuntimeDeliveryStatus: async () => ({
+          responseState,
+          reason,
+          attempted: true,
+          accepted: true,
+          delivered: true,
+          responsePending: true,
+          ledgerStatus: 'accepted',
+          diagnostics: [],
+        }),
+      },
+    };
+    const port = electronTeamPort(api as never, teamName, projectPath);
+    await port.createTeam({ teamName, cwd: projectPath, providerId: 'opencode', members: [] });
+    await port.getData();
+    const snapshot = await port.getSafeTaskFailureSnapshot(task.id, 'alice');
+    expect(snapshot.log?.turn).toMatchObject({
+      observedMessageCount: 1,
+      observedTools: [],
+      assistantHasToolCalls: null,
+    });
+    expect(snapshot.deliveries[0]?.nativeSessionFailure).toMatchObject({
+      source: 'native_session_error_ledger_reason',
+      present: true,
+      reportedErrorName: 'APIError',
+      providerCode: 'insufficient_credits',
+      httpStatus: 402,
+      retryable: false,
+      signals: ['credits_or_quota'],
+      requestedTokens: 8192,
+      affordableTokens: 1200,
+      maximumContextTokens: null,
+      nativeStatusAndUsage: 'not_exposed_by_delivery_ledger',
+    });
+    expect(JSON.stringify(snapshot)).not.toMatch(
+      /sk-TEST-secret|TEST-private|never-publish|authorization/
+    );
+    reason =
+      'ContextOverflowError: maximum context length is 32000 tokens; requested 40896 tokens. C:\\TEST-private\\never-publish';
+    expect(
+      (await port.getOpenCodeRuntimeDeliveryStatus('TEST-delivery'))?.nativeSessionFailure
+    ).toMatchObject({
+      reportedErrorName: 'ContextOverflowError',
+      httpStatus: null,
+      signals: ['context_limit'],
+      maximumContextTokens: 32000,
+      resultingTokens: 40896,
+    });
+    reason = 'private provider reason with arbitrary status 403 and secret sk-TEST-secret';
+    expect(
+      (await port.getOpenCodeRuntimeDeliveryStatus('TEST-delivery'))?.nativeSessionFailure
+    ).toMatchObject({ reportedErrorName: null, httpStatus: null, signals: [] });
+    reason = 'x'.repeat(40_000) + ' sk-TEST-secret';
+    expect(
+      (await port.getOpenCodeRuntimeDeliveryStatus('TEST-delivery'))?.nativeSessionFailure
+    ).toMatchObject({ inspectedCharacters: 32768, truncated: true, httpStatus: null });
+    responseState = 'responded_plain_text';
+    expect(
+      (await port.getOpenCodeRuntimeDeliveryStatus('TEST-delivery'))?.nativeSessionFailure
+    ).toBeNull();
+    const stopFailureMessage = async (message: string) => {
+      // Exercise the real three production wrappers, not a copied format string.
+      const stopData = await OpenCodeReadinessBridge.prototype.stopOpenCodeTeam.call(
+        {
+          options: {},
+          executeStateChangingCommand: async () => ({
+            ok: false,
+            error: { kind: 'provider_error', message },
+            diagnostics: [],
+          }),
+        } as never,
+        {
+          runId: 'TEST-owned-run',
+          laneId: 'primary',
+          teamId: teamName,
+          teamName,
+          projectPath,
+          expectedCapabilitySnapshotId: null,
+          reason: 'user_requested',
+        }
+      );
+      const result = await OpenCodeTeamRuntimeAdapter.prototype.stop.call(
+        {
+          bridge: { stopOpenCodeTeam: async () => stopData },
+          lastProjectPathByTeamName: new Map(),
+          providerId: 'opencode',
+        } as never,
+        {
+          runId: 'TEST-owned-run',
+          laneId: 'primary',
+          teamName,
+          cwd: projectPath,
+          providerId: 'opencode',
+          previousLaunchState: null,
+          reason: 'user_requested',
+          force: true,
+        }
+      );
+      try {
+        assertOpenCodeRuntimeStopEffective({
+          result,
+          laneId: 'primary',
+          previousLaunchState: null,
+          message: 'OpenCode team did not confirm stop',
+          logWarning: () => {},
+          isRuntimeProcessAlive: () => false,
+        });
+      } catch (error) {
+        if (error instanceof Error) return error.message;
+        throw error;
+      }
+      throw new Error('Unconfirmed Stop unexpectedly passed');
+    };
+    const stopProgress: TeamProvisioningProgress = {
+      teamName,
+      runId: 'TEST-owned-run',
+      state: 'failed',
+      message: 'OpenCode team stop failed',
+      startedAt: '2026-04-24T20:30:00.000Z',
+      updatedAt: '2026-04-24T20:30:01.000Z',
+      error: await stopFailureMessage(`OpenCode bridge command failed ${nativeReason}`),
+    };
+    emitProgress({ ...stopProgress, runId: 'foreign-run' });
+    emitProgress({ ...stopProgress, message: 'OpenCode launch failed' });
+    expect(await port.getSafeStopFailure()).toMatchObject({
+      observed: false,
+      failure: null,
+      diagnosticCodes: [],
+      guard: null,
+      bridgeFailure: 'unknown',
+    });
+    emitProgress(stopProgress);
+    const stopped = await port.getSafeStopFailure();
+    expect(stopped).toMatchObject({
+      observation: 'same_run_stop_progress_only',
+      observed: true,
+      guard: 'stop_not_confirmed',
+      diagnosticCodes: ['provider_error'],
+      originalStopReasons: ['stop_not_confirmed'],
+      bridgeFailure: 'reports_command_failed_message',
+      failure: {
+        reportedErrorName: 'APIError',
+        providerCode: 'insufficient_credits',
+        httpStatus: 402,
+        affordableTokens: 1200,
+      },
+    });
+    expect(JSON.stringify(stopped)).not.toMatch(
+      /sk-TEST-secret|TEST-private|never-publish|authorization/
+    );
+    emitProgress({ ...stopProgress, error: await stopFailureMessage('SDK failure') });
+    expect(await port.getSafeStopFailure()).toMatchObject({
+      diagnosticCodes: ['provider_error'],
+      bridgeFailure: 'reports_stop_failure_wrapper',
+    });
+    for (const [message, expected] of [
+      [
+        'OpenCode lifecycle selected run authority is unavailable',
+        'selected_run_authority_unavailable',
+      ],
+      [
+        'OpenCode lifecycle existing lane requires a capability snapshot',
+        'existing_capability_required',
+      ],
+      ['OpenCode Stop inflight; query stopOutcome/reconcileStop', 'stop_contract_inflight'],
+      ['OpenCode cleanup host ownership is unavailable', 'cleanup_host_ownership_unavailable'],
+      ['OpenCode cleanup endpoint is invalid', 'cleanup_endpoint_invalid'],
+      [
+        'OpenCode cleanup host process ownership is unavailable',
+        'cleanup_process_ownership_unavailable',
+      ],
+    ]) {
+      emitProgress({ ...stopProgress, error: await stopFailureMessage(message!) });
+      expect((await port.getSafeStopFailure()).originalStopReasons).toEqual([
+        expected,
+        'stop_not_confirmed',
+      ]);
+    }
+    port.dispose();
+  });
+
   it('keeps the TEST failure packet distinct for task_get failure and a model stop after a successful task_get', async () => {
     // Retag only the sanitized fixture member for the existing TEST harness.
     const teamName = 'test-opencode-v1-task-diagnostic';

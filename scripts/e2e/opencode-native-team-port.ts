@@ -33,6 +33,69 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
     check();
     if (!tasks.has(id)) throw new Error('task is not owned by this TEST scenario');
   };
+  // Original native/provider reasons stay inside the renderer. The proof gets
+  // only closed names/signals and bounded numeric facts, never message text.
+  const safeFailure = (value: unknown) => {
+    const original = typeof value === 'string' ? value : '';
+    const text = original.slice(0, 32_768);
+    const record = (input: unknown): Record<string, unknown> =>
+      input && typeof input === 'object' && !Array.isArray(input)
+        ? (input as Record<string, unknown>) : {};
+    let parsed: unknown;
+    try { parsed = JSON.parse(text); } catch {
+      // Stop diagnostics can prefix the original provider JSON with a guard.
+      try { parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)); }
+      catch { /* Native reasons are often plain text. */ }
+    }
+    const root = record(parsed), error = record(root.error), data = record(error.data ?? root.data);
+    const rows = [root, error, data];
+    const errorNames = ['APIError', 'APICallError', 'AI_APICallError', 'ProviderAuthError',
+      'MessageAbortedError', 'ContextOverflowError', 'StructuredOutputError', 'UnknownError',
+      'NoOutputGeneratedError', 'NoObjectGeneratedError', 'InvalidResponseDataError',
+      'TypeValidationError', 'InvalidPromptError', 'UnsupportedFunctionalityError',
+      'ModelNotFoundError'] as const;
+    const codes = ['insufficient_credits', 'insufficient_quota', 'rate_limit_exceeded',
+      'invalid_api_key', 'context_length_exceeded', 'max_tokens_exceeded', 'model_not_found',
+      'invalid_request_error', 'invalid_request', 'authentication_error', 'permission_denied',
+      'server_error', 'overloaded_error', 'billing_error'] as const;
+    const signals = [
+      ['credits_or_quota', /insufficient.?credits|not enough credits|more credits|can only afford|quota.{0,40}(?:exceeded|exhausted)|credit balance.{0,40}(?:low|insufficient)/i],
+      ['rate_limit', /rate.?limit|too many requests/i],
+      ['authentication', /invalid.?api.?key|incorrect.?api.?key|unauthorized|authentication|token refresh failed/i],
+      ['model_unavailable', /model.{0,80}(?:not found|does not exist|unavailable)|unknown model|no endpoints found/i],
+      ['context_limit', /context.{0,60}(?:exceed|limit|maximum)|maximum context length/i],
+      ['output_limit', /max_tokens|max output tokens|output token limit/i],
+      ['tool_input_invalid', /tool.{0,60}(?:schema|arguments|input).{0,40}(?:invalid|malformed)|invalid.{0,40}tool/i],
+      ['permission_denied', /permission denied|access denied|not permitted/i],
+      ['network', /fetch failed|connection reset|socket hang up|ECONNRESET|ECONNREFUSED|ENOTFOUND|ETIMEDOUT/i],
+      ['provider_unavailable', /overload|service unavailable|server error/i],
+      ['aborted', /aborted|cancelled|canceled/i],
+      ['filesystem', /\b(?:EACCES|EPERM|ENOENT)\b/],
+      ['no_output', /no output generated|NoOutputGeneratedError|NoObjectGeneratedError/i],
+      ['response_invalid', /invalid response|response.{0,30}(?:empty|malformed)|empty response|TypeValidationError|InvalidResponseDataError/i],
+    ] as const;
+    const numeric = (input: unknown, min: number, max: number) =>
+      Number.isSafeInteger(input) && Number(input) >= min && Number(input) <= max
+        ? Number(input) : null;
+    const tokens = (pattern: RegExp) => numeric(Number(pattern.exec(text)?.[1]), 1, 10_000_000);
+    return {
+      factsSource: 'bounded_original_reason_text' as const,
+      present: text.length > 0,
+      inspectedCharacters: text.length,
+      truncated: original.length > text.length,
+      reportedErrorName: errorNames.find((name) => rows.some((row) => row.name === name) ||
+        new RegExp(`\\b${name}\\b`).test(text)) ?? null,
+      providerCode: codes.find((code) => rows.some((row) => row.code === code)) ?? null,
+      httpStatus: rows.flatMap((row) => [row.statusCode, row.status, row.code])
+        .map((code) => numeric(code, 100, 599)).find((code) => code !== null) ?? null,
+      retryable: rows.map((row) => row.isRetryable).find((flag) => typeof flag === 'boolean') ?? null,
+      signals: signals.filter(([, pattern]) => pattern.test(text)).map(([signal]) => signal),
+      requestedTokens: tokens(/requested(?: up to)?\s+(\d+)\s+tokens/i),
+      affordableTokens: tokens(/can only afford\s+(\d+)/i),
+      maximumContextTokens: tokens(/maximum context length(?: is| of)?\s+(\d+)\s+tokens/i),
+      resultingTokens: tokens(/(?:resulted in|requested)\s+(\d+)\s+tokens/i),
+    };
+  };
   return {
     progress,
     async getStartupStatus() {
@@ -336,6 +399,7 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
             responseState: responseStates.find((value) => value === status.responseState) ?? null,
             reasonCode: status.reasonCode === 'unclassified' ? null : status.reasonCode,
             diagnosticCodes: status.diagnosticCodes.filter((code) => code !== 'unclassified'),
+            nativeSessionFailure: status.nativeSessionFailure,
           };
         } catch { return null; }
       }));
@@ -435,6 +499,87 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
         diagnosticCodes: [
           ...new Set((status.diagnostics ?? []).map(classify).filter((code) => code !== null)),
         ],
+        nativeSessionFailure: status.responseState === 'session_error'
+          ? { source: 'native_session_error_ledger_reason' as const,
+            ...safeFailure(status.reason), nativeStatusAndUsage: 'not_exposed_by_delivery_ledger' as const }
+          : null,
+      };
+    },
+    async getSafeStopFailure() {
+      check();
+      const failed = progress.slice(-32).filter((value) => value.teamName === teamName &&
+        value.runId === runId && value.state === 'failed' &&
+        value.message === 'OpenCode team stop failed').at(-1);
+      const text = (failed?.error ?? '').slice(0, 32_768);
+      const codes = ['opencode_stop_identity_changed', 'opencode_stop_status_unconfirmed',
+        'opencode_stop_abort_rejected', 'opencode_stop_deadline', 'opencode_stop_compensation_failed',
+        'unsupported_schema', 'unsupported_command', 'invalid_input', 'runtime_not_ready',
+        'provider_error', 'timeout', 'transport_watchdog_timeout', 'contract_violation', 'internal_error'];
+      // These are original SDK/desktop guards, retained inside the outer bridge
+      // wrapper. Keep every matching boundary instead of replacing it with the
+      // desktop's generic stop_not_confirmed label.
+      const reasons = [
+        ['lifecycle_identifiers_required', 'OpenCode lifecycle authority requires teamId and laneId'],
+        ['lane_precondition_mismatch', 'OpenCode bridge expected laneId precondition does not match command laneId'],
+        ['run_precondition_mismatch', 'OpenCode bridge expectedRunId precondition does not match command runId'],
+        ['empty_lane_authority_mismatch', 'OpenCode empty-lane stop authority mismatch'],
+        ['selected_lane_authority_unavailable', 'OpenCode lifecycle selected lane authority is unavailable'],
+        ['existing_capability_required', 'OpenCode lifecycle existing lane requires a capability snapshot'],
+        ['lifecycle_run_required', 'OpenCode lifecycle authority requires runId'],
+        ['stored_run_authority_mismatch', 'OpenCode lifecycle stored run authority mismatch'],
+        ['selected_run_authority_unavailable', 'OpenCode lifecycle selected run authority is unavailable'],
+        ['selected_lane_scope_unavailable', 'OpenCode lifecycle selected lane scope is unavailable'],
+        ['lane_project_authority_mismatch', 'OpenCode lifecycle lane project authority mismatch'],
+        ['lane_scope_ambiguous', 'OpenCode lifecycle lane scope is ambiguous'],
+        ['confirmed_stop_authority_mismatch', 'OpenCode confirmed stop authority mismatch'],
+        ['host_authority_ambiguous', 'OpenCode lifecycle lane host authority is ambiguous'],
+        ['process_authority_ambiguous', 'OpenCode lifecycle lane process authority is ambiguous'],
+        ['cleanup_host_ownership_unavailable', 'OpenCode cleanup host ownership is unavailable'],
+        ['cleanup_endpoint_invalid', 'OpenCode cleanup endpoint is invalid'],
+        ['cleanup_process_ownership_unavailable', 'OpenCode cleanup host process ownership is unavailable'],
+        ['stop_identifiers_required', 'opencode.stopTeam requires runId, laneId and teamId/teamName'],
+        ['retained_capability_required', 'OpenCode Stop requires retained capability authority'],
+        ['stop_target_mismatch', 'OpenCode Stop target_mismatch'],
+        ['stop_contract_inflight', 'OpenCode Stop inflight; query stopOutcome/reconcileStop'],
+        ['target_project_mismatch', 'OpenCode Stop target project mismatch'],
+        ['original_request_target_mismatch', 'OpenCode Stop original request/target mismatch'],
+        ['active_run_precondition_stale', 'OpenCode bridge active run precondition is stale'],
+        ['capability_precondition_mismatch', 'OpenCode bridge capability snapshot precondition mismatch'],
+        ['recovery_object_invalid', 'Invalid Stop recovery object'],
+        ['recovery_identity_invalid', 'Invalid Stop recovery identity'],
+        ['recovery_contract_unsupported', 'Unsupported OpenCode Stop recovery contract'],
+        ['recovery_session_set_required', 'Stop recovery requires the nonempty original session set'],
+        ['recovery_session_set_ambiguous', 'Ambiguous Stop recovery session set'],
+        ['recovery_capability_invalid', 'Invalid Stop recovery capability/behavior identity'],
+        ['durable_stop_result_invalid', 'Invalid durable Stop result'],
+        ['stop_receipt_corrupt', 'Corrupt Stop receipt'],
+        ['stop_receipt_identity_changed', 'Stop receipt identity changed'],
+        ['stop_result_conflict', 'Stop result already completed differently'],
+        ['session_authority_changed', 'OpenCode session authority changed before persistence'],
+        ['session_materialization_claim_fenced', 'OpenCode session write is fenced by a materialization claim'],
+        ['session_materialization_owner_fenced', 'OpenCode session write is fenced by a materialization owner'],
+        ['session_committed_identity_mismatch', 'OpenCode session write does not match the committed run and session'],
+        ['runtime_adapter_unavailable', 'OpenCode runtime adapter is unavailable'],
+        ['primary_lane_not_owned', 'OpenCode primary lane is not owned by run'],
+        ['storage_ownership_changed', 'OpenCode primary lane ownership changed before stopped storage cleanup'],
+        ['stop_not_confirmed', 'OpenCode team did not confirm stop'],
+      ] as const;
+      return {
+        observation: 'same_run_stop_progress_only' as const,
+        observed: failed !== undefined,
+        failure: failed ? safeFailure(failed.error) : null,
+        diagnosticCodes: codes.filter((code) => new RegExp(
+          `(?:^|[\\s:;])(?:info:|warning:|error:|stop_failure_code:)${code}(?=:|$|[\\s;])`
+        ).test(text)),
+        originalStopReasons: reasons.filter(([, original]) => text.includes(original))
+          .map(([reason]) => reason),
+        guard: !failed ? null
+          : text.includes('OpenCode team did not confirm stop') ? 'stop_not_confirmed'
+            : text.includes('OpenCode primary lane ownership changed before stopped storage cleanup')
+              ? 'storage_ownership_changed' : 'other',
+        bridgeFailure: text.includes('OpenCode stop bridge failed: OpenCode bridge command failed')
+          ? 'reports_command_failed_message'
+          : text.includes('OpenCode stop bridge failed:') ? 'reports_stop_failure_wrapper' : 'unknown',
       };
     },
     async sendMessage(request: Parameters<ElectronAPI['teams']['sendMessage']>[1]) {
