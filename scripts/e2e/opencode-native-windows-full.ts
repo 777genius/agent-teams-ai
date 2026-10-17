@@ -38,6 +38,11 @@ const execute = promisify(execFile);
 // The qualified Windows candidate retains over 82k files and about 15 MiB of digests.
 const BUNDLED_MANIFEST_MAX_BYTES = 32 * 1024 * 1024;
 const BUNDLED_MANIFEST_MAX_ENTRIES = 131_072;
+/** Closed failure codes in raw child stderr; the bytes themselves never leave. */
+const closedStderrCodes = (body: string | null) =>
+  body === null
+    ? []
+    : [...new Set(body.match(/\b(?:execution|run|cleanup|provider|controller)_[a-z_]{2,90}\b/g) ?? [])].slice(0, 6);
 const V1_TRANSCRIPT_MAX_BYTES = 2 * 1024 * 1024;
 // Only existing SDK read-only history/parser modules are imported. In
 // particular this never imports the profile/session bridge or prepares a host.
@@ -1522,6 +1527,7 @@ async function packagedStartupSnapshot(
                 : /EACCES|Access is denied/.test(body)
                   ? 'access_denied'
                   : 'unclassified',
+        codes: closedStderrCodes(body),
         childStartup,
       });
       if (stdio.length === 4) break;

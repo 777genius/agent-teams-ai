@@ -52,13 +52,16 @@ export function safeIpcFailureDetail(value: string, redact: (text: string) => st
     /execution_owner_not_private:private_acl_owner_run_(data_root|opencode|v2|runs|leaf):[0-9]{1,10}(?![0-9])/.exec(
       bounded
     )?.[1];
-  const label = role ? `[owner role: ${role === 'data_root' ? 'data' : role}] ` : '';
+  // Projection is idempotent: a retained closed code never earns a second label.
+  const roleName = role === 'data_root' ? 'data' : role;
+  const label = roleName && !bounded.startsWith('[owner role: ') ? `[owner role: ${roleName}] ` : '';
   const detail = redact(bounded)
     .replace(/["'`][\s\S]*/g, '[argument]')
     .replace(/[A-Za-z]:[\\/][^\r\n,;]*/g, '[path]')
     .replace(/\\\\[^\r\n,;]*/g, '[path]')
     .replace(/\/[^\s"'<>]+/g, '[path]')
-    .replace(/[A-Za-z0-9_+./=-]{24,}/g, '[opaque]')
+    // Long lowercase snake_case tokens are closed SDK/native codes, never content.
+    .replace(/[A-Za-z0-9_+./=-]{24,}/g, (token) => (/^[a-z_]+$/.test(token) && token.includes('_') ? token : '[opaque]'))
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 500);

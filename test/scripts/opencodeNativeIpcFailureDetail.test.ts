@@ -19,6 +19,15 @@ const project = (value: string): string =>
   ) as string;
 
 describe('serialized native IPC failure details', () => {
+  it('retains closed snake_case native codes and keeps other long tokens opaque', () => {
+    const detail = project(
+      'runtime_not_ready: execution_containment_unqualified:private_owner_controller_teams:0 TEST_Opaque_Token_0123456789ABCDEF abcdef0123456789abcdef0123456789'
+    );
+    expect(detail).toBe(
+      'runtime_not_ready: execution_containment_unqualified:private_owner_controller_teams:0 [opaque] [opaque]'
+    );
+    expect(project(detail)).toBe(detail);
+  });
   it('keeps original prelaunch primary and all cleanup native facts through real aggregate identities', async () => {
     const source = await readFile(
       path.resolve('scripts/e2e/opencode-native-windows-preflight.ts'),
