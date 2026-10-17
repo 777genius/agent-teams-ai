@@ -11,6 +11,7 @@ const storeState = {
 };
 const moduleMocks = vi.hoisted(() => ({
   clearTaskManualUnread: vi.fn(),
+  folderMode: false,
   openTaskFolderMove: vi.fn(),
   preloadGlobalTaskDetailDialog: vi.fn(),
   taskFolderEditingReady: true,
@@ -44,6 +45,10 @@ vi.mock('../../../../src/renderer/components/layout/GlobalTaskDetailDialogSlot',
 vi.mock('../../../../src/features/task-folders/renderer/adapters/taskFolderEditing', () => ({
   useTaskFolderEditingReady: () => moduleMocks.taskFolderEditingReady,
   taskFolderMoveRequest: { open: moduleMocks.openTaskFolderMove },
+}));
+
+vi.mock('../../../../src/features/task-folders/renderer/hooks/useTaskFolderMode', () => ({
+  useTaskFolderMode: () => moduleMocks.folderMode,
 }));
 
 vi.mock('../../../../src/renderer/hooks/useTheme', () => ({
@@ -166,6 +171,7 @@ describe('SidebarTaskItem unread styling', () => {
     moduleMocks.openTaskFolderMove.mockReset();
     moduleMocks.preloadGlobalTaskDetailDialog.mockReset();
     moduleMocks.taskFolderEditingReady = true;
+    moduleMocks.folderMode = false;
   });
 
   afterEach(() => {
@@ -202,7 +208,33 @@ describe('SidebarTaskItem unread styling', () => {
     });
   });
 
+  it('hides the move control while sticky session folder mode is off', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(SidebarTaskItem, {
+          contextId: 'local',
+          task: makeTask(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="sidebar-task-drag-handle"]')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('renders sibling native detail and move buttons and separates their actions', async () => {
+    moduleMocks.folderMode = true;
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
 
     const host = document.createElement('div');
@@ -274,6 +306,7 @@ describe('SidebarTaskItem unread styling', () => {
   });
 
   it('keeps the move control disabled until task-folder editing is ready', async () => {
+    moduleMocks.folderMode = true;
     moduleMocks.taskFolderEditingReady = false;
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
 
