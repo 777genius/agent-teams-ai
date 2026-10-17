@@ -980,6 +980,8 @@
     "folderName": "Folder name",
     "destination": "Destination folder",
     "unfiled": "Unfiled",
+    "moveHere": "Put it here",
+    "cannotMoveHere": "You can't move tasks here",
     "root": "Root",
     "showArchived": "Show archived tasks",
     "archived": "Archived task",

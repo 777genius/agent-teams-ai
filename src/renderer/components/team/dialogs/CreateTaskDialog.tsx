@@ -42,8 +42,6 @@ import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskI
 import { getTeamTaskWorkflowColumn } from '@shared/utils/teamTaskState';
 import { AlertTriangle, ChevronDown, ChevronRight, Search } from 'lucide-react';
 
-import { TaskGroupChatField } from './TaskGroupChatField';
-
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { CreateTaskRequest, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
@@ -305,15 +303,6 @@ export const CreateTaskDialog = ({
           </div>
 
           {assigneeField}
-          <TaskGroupChatField
-            teamName={teamName}
-            value={groupChatId}
-            onChange={(value) => {
-              setSubmitError(null);
-              setGroupChatId(value);
-            }}
-            disabled={submitting}
-          />
 
           {/* Toggle button for optional fields */}
           <button

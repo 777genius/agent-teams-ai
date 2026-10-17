@@ -971,6 +971,8 @@
     "unreadTasks_one": "{{count}} непросмотренная задача",
     "unreadTasks_few": "{{count}} непросмотренные задачи",
     "unreadTasks_many": "{{count}} непросмотренных задач",
-    "unreadTasks_other": "{{count}} непросмотренной задачи"
+    "unreadTasks_other": "{{count}} непросмотренной задачи",
+    "moveHere": "Положи сюда",
+    "cannotMoveHere": "Сюда переместить нельзя"
   }
 }

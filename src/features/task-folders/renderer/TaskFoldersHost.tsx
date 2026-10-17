@@ -251,6 +251,7 @@ export const TaskFoldersHost = ({
             aria-label={t('taskFolders.title')}
             aria-expanded={fallback ? fallbackOpen : visible}
             aria-pressed={model.panel.manual}
+            className={model.panel.manual ? undefined : 'text-[var(--color-text-muted)]'}
             onClick={() => panelController.toggle()}
           >
             <FolderTreeIcon className="size-3.5" />

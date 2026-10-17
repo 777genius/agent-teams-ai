@@ -808,6 +808,7 @@ export default interface Resources {
     "taskFolders": {
       "actions": "Folder or task actions",
       "archived": "Archived task",
+      "cannotMoveHere": "You can't move tasks here",
       "collapse": "Collapse folder",
       "counts": "{{active}} active, {{archived}} archived, {{unavailable}} unavailable",
       "deleteDescription": "Tasks and subfolders move to the parent. Tasks in a root folder become unfiled. No tasks are deleted.",
@@ -820,6 +821,7 @@ export default interface Resources {
       "invalidName": "Use a name with 1–120 characters.",
       "loading": "Loading folders…",
       "move": "Move to…",
+      "moveHere": "Put it here",
       "newFolder": "New folder",
       "newSubfolder": "New subfolder",
       "organizationDescription": "Organize tasks without changing their team, project or status.",
