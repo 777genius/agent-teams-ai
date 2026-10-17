@@ -289,6 +289,12 @@ export const TaskFoldersHost = ({
       >
         <DialogContent
           aria-modal="true"
+          onEscapeKeyDown={(event) => {
+            // Dialog-scoped keys skip the host handler, so the modal Escape must still reach
+            // the controller or the drag-cancel absorb window never applies here.
+            if (event.defaultPrevented) return;
+            if (panelController.escape()) event.preventDefault();
+          }}
           style={{ backgroundColor: 'var(--color-surface-sidebar)' }}
         >
           <DialogTitle>{t('taskFolders.title')}</DialogTitle>

@@ -184,6 +184,32 @@ it.each([0, 80, 239])('uses explicit folder mode for the narrow modal at %s px',
   expect(host.querySelector('[data-testid="sidebar-task-drag-handle"]')).toBeNull();
   expect(document.querySelector('[data-testid="task-folders-panel"]')).toBeNull();
 });
+it('absorbs the Escape finishing a cancelled drag inside the narrow modal', async () => {
+  await renderAt(80);
+  await act(() =>
+    Promise.resolve(
+      (host.querySelector('[data-testid="task-folders-toggle"]') as HTMLButtonElement).click()
+    )
+  );
+  const panel = document.querySelector('[data-testid="task-folders-panel"]')!;
+  expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+  await act(async () => {
+    panelController.begin('external');
+    panelController.end();
+  });
+  const escape = () =>
+    act(async () =>
+      panel.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+      )
+    );
+  await escape();
+  expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+  expect(panelController.getSnapshot()).toMatchObject({ open: true, manual: true });
+  await escape();
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  expect(panelController.getSnapshot().manual).toBe(false);
+});
 it('keeps Manual Unfiled fresh while preserving authored folder order and persisted snapshot', async () => {
   const tasks = ['old', 'filed-old', 'middle', 'filed-new', 'new'].map((id, index) =>
     makeGlobalTask({ id, updatedAt: `2026-01-0${index + 1}T00:00:00.000Z` })
