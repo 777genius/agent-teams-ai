@@ -14,6 +14,9 @@ export interface PanelState {
   dragSource: string | null;
   session: number;
 }
+// The vendor cancel Escape lands within the same input sequence as dragend; anything
+// later is a fresh Escape that must disable mode.
+const CANCEL_ESCAPE_WINDOW_MS = 2000;
 /** Host-owned lifecycle survives virtual row unmounts. Duplicate end events are harmless. */
 export class PanelController {
   private state: PanelState = { open: false, manual: false, dragSource: null, session: 0 };
@@ -23,6 +26,7 @@ export class PanelController {
   private dropTimer: ReturnType<typeof setTimeout> | undefined;
   private dropped = false;
   private pendingDragEscape = false;
+  private pendingDragEscapeTimer: ReturnType<typeof setTimeout> | undefined;
   private listeners = new Set<() => void>();
   getSnapshot = (): PanelState => this.state;
   subscribe = (listener: () => void): (() => void) => {
@@ -68,7 +72,7 @@ export class PanelController {
     this.cancelDropTimer();
     this.cancelTimer();
     this.dropped = false;
-    this.pendingDragEscape = false;
+    this.clearPendingDragEscape();
     this.holds.add('drag');
     this.publish({ open: true, dragSource: source, session: this.state.session + 1 });
     return this.state.session;
@@ -77,13 +81,25 @@ export class PanelController {
     if (session !== this.state.session || !this.holds.has('drag')) return;
     this.cancelDropTimer();
     this.holds.delete('drag');
-    if (!this.dropped) this.pendingDragEscape = true;
+    if (!this.dropped) {
+      this.pendingDragEscape = true;
+      clearTimeout(this.pendingDragEscapeTimer);
+      this.pendingDragEscapeTimer = setTimeout(
+        () => this.clearPendingDragEscape(),
+        CANCEL_ESCAPE_WINDOW_MS
+      );
+    }
     this.publish({ dragSource: null });
     this.schedule();
   }
   private cancelDropTimer(): void {
     clearTimeout(this.dropTimer);
     this.dropTimer = undefined;
+  }
+  private clearPendingDragEscape(): void {
+    this.pendingDragEscape = false;
+    clearTimeout(this.pendingDragEscapeTimer);
+    this.pendingDragEscapeTimer = undefined;
   }
   endAfterDrop(): void {
     if (this.dropTimer !== undefined || !this.holds.has('drag')) return;
@@ -106,11 +122,11 @@ export class PanelController {
       return false;
     if (this.holds.has('drag')) {
       this.end();
-      this.pendingDragEscape = false;
+      this.clearPendingDragEscape();
       return true;
     }
     if (this.pendingDragEscape) {
-      this.pendingDragEscape = false;
+      this.clearPendingDragEscape();
       return true;
     }
     if (this.holds.has('manual')) {
@@ -128,7 +144,7 @@ export class PanelController {
     this.cancelTimer();
     this.holds.clear();
     this.dropped = false;
-    this.pendingDragEscape = false;
+    this.clearPendingDragEscape();
     this.publish({ open: false, manual: false, dragSource: null });
   }
   suspend(): void {
@@ -136,7 +152,7 @@ export class PanelController {
     this.cancelTimer();
     this.holds.clear();
     this.dropped = false;
-    this.pendingDragEscape = false;
+    this.clearPendingDragEscape();
     if (this.state.manual) this.holds.add('manual');
     this.publish({ open: this.state.manual, dragSource: null, session: this.state.session + 1 });
   }
