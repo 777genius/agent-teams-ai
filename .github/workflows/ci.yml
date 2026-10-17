@@ -212,8 +212,16 @@ jobs:
       - name: Install lsof for diagnostics ownership checks
         run: |
           if ! command -v lsof >/dev/null 2>&1; then
-            sudo apt-get update -qq
-            sudo apt-get install -y -qq lsof
+            # lsof is not in the ubuntu-24.04 runner image package list, but Homebrew
+            # is preinstalled there (see actions/runner-images Ubuntu2404-Readme.md)
+            # and its lsof formula ships Linux bottles, so install without su/apt:
+            eval "$( /home/linuxbrew/.linuxbrew/bin/brew shellenv 2>/dev/null )"
+            if ! command -v brew >/dev/null 2>&1; then
+              echo "lsof is required by the opencode diagnostics ownership harness"
+              echo "and neither lsof nor Homebrew is available on this runner"
+              exit 1
+            fi
+            brew install lsof
           fi
       - name: Install dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
