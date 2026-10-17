@@ -550,23 +550,39 @@ async function main() {
       await ui.locate(folderRow(target));
       // Undo through visible UI, preserving missing canonical references.
       await ui.expand(target);
+      const dumpState = `JSON.stringify((() => {
+        const s=JSON.parse(localStorage.getItem('taskFolders:v1'));
+        const name=(id)=>s.folders.find((f)=>f.id===id)?.name ?? id;
+        const loc=(id)=>{const hit=s.folders.find((f)=>f.children.some((c)=>c.kind==='folder'&&c.id===id));
+          return hit?.name ?? (s.rootFolderIds.includes(id) ? '<root>' : '<nowhere>');};
+        window.__folderNames=Object.fromEntries(s.folders.map((f)=>[f.id,f.name]));
+        const rows=Array.from(document.querySelectorAll('[data-folder-id]')).map((e)=>e.getAttribute('data-folder-id'));
+        return {root:s.rootFolderIds.map(name),
+          parent:loc(${JSON.stringify(f.parent)}), nested:loc(${JSON.stringify(f.nested)}), drop:loc(${JSON.stringify(target)}),
+          parentRow:rows.includes(${JSON.stringify(f.parent)}), dropRow:rows.includes(${JSON.stringify(target)})};})())`;
+      const beforeUndo = await ui.value<string>(dumpState);
       await ui.menu(folderRow(f.parent), 'Move to…');
       await ui.chooseDestination('Root');
       await ui.submitMove('Move to…', 'root move submitted');
-      const locateParent = `JSON.stringify((() => {const s=JSON.parse(localStorage.getItem('taskFolders:v1'));
-        const hit=s.folders.find((f)=>f.children.some((c)=>c.kind==='folder'&&c.id===${JSON.stringify(f.parent)}));
-        return {parent:hit?.name ?? null,inRoot:s.rootFolderIds.includes(${JSON.stringify(f.parent)})};})())`;
-      const firstPlace = await ui.value<string>(locateParent);
       try {
         await ui.persisted((s) => s.rootFolderIds.includes(f.parent), 'move back to Root');
       } catch (error) {
-        const where = await ui.value<string>(locateParent);
+        const after = await ui.value<string>(dumpState);
+        const chooser = await ui.value<string>('JSON.stringify(window.__chooser ?? null)');
+        const menuOwner = await ui.value<string>('JSON.stringify(window.__menuOwner ?? null)');
+        const writes = await ui.value<string>('JSON.stringify(window.__writes ?? [])');
         throw new Error(
           String(error) +
-            ' | right after submit: ' +
-            firstPlace +
-            ' | at timeout: ' +
-            where
+            ' | before: ' +
+            beforeUndo +
+            ' | after: ' +
+            after +
+            ' | menu: ' +
+            menuOwner +
+            ' | chooser: ' +
+            chooser +
+            ' | writes: ' +
+            writes
         );
       }
       return {

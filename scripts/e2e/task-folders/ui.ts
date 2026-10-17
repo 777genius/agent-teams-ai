@@ -388,6 +388,14 @@ export class UI {
   async menu(row: string, action?: string) {
     await this.click(label('Folder or task actions', row));
     await this.wait('document.querySelector(\'[role="menu"]\')', 'portaled action menu');
+    await this.value(`(() => {
+      window.__menuOwner = {
+        owner: document.activeElement?.closest?.('[data-folder-id]')?.getAttribute('data-folder-id') ?? null,
+        menus: document.querySelectorAll('[role="menu"]').length,
+        items: Array.from(document.querySelectorAll('[role="menuitem"]')).map((e) => e.textContent?.trim() ?? null),
+      };
+      return true;
+    })()`);
     if (action) {
       await this.click(label(action, 'document', '[role="menuitem"]'));
       await this.wait(
@@ -427,6 +435,13 @@ export class UI {
     );
     await this.click(label('Destination folder', el('[role="dialog"]')));
     await this.wait('document.querySelector(\'[role="option"]\')', 'destination options open');
+    await this.value(`(() => {
+      window.__chooser = {
+        dialogs: document.querySelectorAll('[role="dialog"]').length,
+        options: Array.from(document.querySelectorAll('[role="option"]')).map((e) => e.textContent?.trim() ?? null),
+      };
+      return true;
+    })()`);
     await this.click(label(optionLabel, 'document', '[role="option"]'));
     await this.wait(
       '!document.querySelector(\'[role="option"]\')',
@@ -445,6 +460,23 @@ export class UI {
     await this.value(`(() => {
       const title = ${JSON.stringify(title)};
       window.__submitTrace = [];
+      window.__writes = [];
+      if (!window.__setItemProbe) {
+        window.__setItemProbe = true;
+        const original = Storage.prototype.setItem;
+        Storage.prototype.setItem = function (key, value) {
+          try {
+            const s = JSON.parse(String(value));
+            const names = window.__folderNames ?? {};
+            window.__writes.push(
+              String(key) + ' roots=' + (s.rootFolderIds ?? []).map((id) => names[id] ?? String(id).slice(0, 8)).join(',')
+            );
+          } catch {
+            window.__writes.push(String(key) + ' <unparsed>');
+          }
+          return original.apply(this, arguments);
+        };
+      }
       const record = (tag) => (event) => {
         const hit = document.elementFromPoint(event.clientX, event.clientY);
         const button = event.target?.closest?.('button');
