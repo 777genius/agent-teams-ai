@@ -5,6 +5,10 @@
  * Each route file mirrors the corresponding IPC handler.
  */
 import {
+  type CustomTeamTemplatesFeature,
+  registerCustomTeamTemplatesHttp,
+} from '@features/custom-team-templates/main';
+import {
   type OrganizationsFeatureFacade,
   registerOrganizationsHttp,
 } from '@features/organizations/main';
@@ -64,6 +68,7 @@ export interface HttpServices {
   dataCache: DataCache;
   recentProjectsFeature?: RecentProjectsFeatureFacade;
   teamGroupChatsFeature?: TeamGroupChatsFeature;
+  customTeamTemplatesFeature?: CustomTeamTemplatesFeature;
   organizationsFeature?: OrganizationsFeatureFacade;
   tokenUsageFeature?: TokenUsageFeatureFacade;
   memberWorkSyncFeature?: MemberWorkSyncFeatureFacade;
@@ -86,6 +91,9 @@ export function registerHttpRoutes(
   services.externalAgentConnection?.registerHttp(app);
   if (services.teamGroupChatsFeature)
     registerTeamGroupChatsHttp(app, services.teamGroupChatsFeature);
+  if (services.customTeamTemplatesFeature) {
+    registerCustomTeamTemplatesHttp(app, services.customTeamTemplatesFeature);
+  }
   registerProjectRoutes(app, services);
   registerSessionRoutes(app, services);
   registerSearchRoutes(app, services);

@@ -16,12 +16,18 @@
 // runtime which is unavailable in standalone (pure Node.js) mode. Standalone
 // error tracking can be added later with @sentry/node if needed.
 
+import {
+  createCustomTeamTemplatesFeature,
+  type CustomTeamTemplatesFeature,
+} from '@features/custom-team-templates/main';
+import { createInternalStorageFeature } from '@features/internal-storage/main';
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
 import { createWorkspaceTrustFeatures } from '@features/workspace-trust/main';
 import { createLogger } from '@shared/utils/logger';
 
 import { LocalFileSystemProvider } from './services/infrastructure/LocalFileSystemProvider';
 import {
+  getAppDataBasePath,
   getAutoDetectedClaudeBasePath,
   getClaudeBasePath,
   getHomeDir,
@@ -92,6 +98,8 @@ const sshConnectionManagerStub = {
 let localContext: ServiceContext;
 let notificationManager: NotificationManager;
 let httpServer: HttpServer;
+let internalStorageFeature: ReturnType<typeof createInternalStorageFeature>;
+let customTeamTemplatesFeature: CustomTeamTemplatesFeature;
 
 // =============================================================================
 // Lifecycle
@@ -132,6 +140,19 @@ async function start(): Promise<void> {
   // Initialize notification manager
   notificationManager = NotificationManager.getInstance();
   localContext.fileWatcher.setNotificationManager(notificationManager);
+
+  // Start internal storage (SQLite backend for custom team templates)
+  const userDataPath = getAppDataBasePath();
+  logger.info(`Internal storage database path: ${userDataPath}`);
+  internalStorageFeature = createInternalStorageFeature({ userDataPath });
+  const backendKind = await internalStorageFeature.probeBackend();
+  logger.info(`Internal storage backend: ${backendKind}`);
+
+  // Start custom team templates feature with the internal storage backend
+  customTeamTemplatesFeature = createCustomTeamTemplatesFeature({
+    backend: internalStorageFeature.customTeamTemplatesBackend,
+  });
+  logger.info('Custom team templates feature initialized');
 
   // Create HTTP server
   httpServer = new HttpServer();
@@ -175,6 +196,7 @@ async function start(): Promise<void> {
     }).status,
     updaterService: updaterServiceStub,
     sshConnectionManager: sshConnectionManagerStub,
+    customTeamTemplatesFeature,
   };
 
   // No-op mode switch handler (no SSH in standalone)
@@ -191,6 +213,14 @@ async function shutdown(): Promise<void> {
 
   if (httpServer?.isRunning()) {
     await httpServer.stop();
+  }
+
+  if (customTeamTemplatesFeature) {
+    customTeamTemplatesFeature.dispose();
+  }
+
+  if (internalStorageFeature) {
+    await internalStorageFeature.dispose();
   }
 
   if (localContext) {

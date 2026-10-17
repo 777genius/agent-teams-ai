@@ -32,6 +32,7 @@ vi.mock('@main/utils/pathDecoder', () => ({
     return `${mockHome}${sep}.claude`;
   },
   setClaudeBasePathOverride: vi.fn(),
+  applyConfiguredClaudeRoot: vi.fn(),
 }));
 
 vi.mock('node:fs/promises');

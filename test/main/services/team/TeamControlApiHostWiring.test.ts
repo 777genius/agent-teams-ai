@@ -113,6 +113,7 @@ function createHost(publish = writeTeamControlApiState) {
     contextRegistry: { getActive: () => ({}) },
     teamHttpHandlerApis: {},
     teamGroupChatsFeature: {},
+    customTeamTemplatesFeature: {},
     bindTeamHttpDataApi: () => ({}),
     teamDataService: {},
     recentProjectsFeature: {},

@@ -9,6 +9,7 @@ export { BackendSelectingTaskCommentNotificationJournalStore } from './compositi
 export { BackendSelectingTaskStallJournalStore } from './composition/BackendSelectingTaskStallJournalStore';
 export type {
   InternalStorageApplicationCommandLedgerBackend,
+  InternalStorageCustomTeamTemplatesBackend,
   InternalStorageFeature,
   InternalStorageFeatureDeps,
   InternalStorageMemberWorkSyncBackend,
