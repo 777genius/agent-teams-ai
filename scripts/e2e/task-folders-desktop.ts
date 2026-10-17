@@ -408,8 +408,7 @@ async function main() {
       await ui.key('Enter');
       await ui.wait('document.querySelector(\'[role="dialog"]\')', 'keyboard move dialog');
       await ui.chooseDestination('Unfiled');
-      await ui.click(label('Move to…', el('[role="dialog"]')));
-      await ui.wait('!document.querySelector(\'[role="dialog"]\')', 'keyboard move submitted');
+      await ui.submitMove('Move to…', 'keyboard move submitted');
       await ui.persisted(
         (s) =>
           !s.folders.some((folder) =>
@@ -419,8 +418,7 @@ async function main() {
       );
       await ui.click(taskSource('b'));
       await ui.chooseDestination('Seed parent / Seed nested / Renamed nested');
-      await ui.click(label('Move to…', el('[role="dialog"]')));
-      await ui.wait('!document.querySelector(\'[role="dialog"]\')', 'folder move submitted');
+      await ui.submitMove('Move to…', 'folder move submitted');
       await ui.persisted(
         (s) => children(s, created).some((c) => c.kind === 'task' && c.identity.taskId === 'b'),
         'chooser move to folder'
@@ -554,9 +552,17 @@ async function main() {
       await ui.expand(target);
       await ui.menu(folderRow(f.parent), 'Move to…');
       await ui.chooseDestination('Root');
-      await ui.click(label('Move to…', el('[role="dialog"]')));
-      await ui.wait('!document.querySelector(\'[role="dialog"]\')', 'root move submitted');
-      await ui.persisted((s) => s.rootFolderIds.includes(f.parent), 'move back to Root');
+      await ui.submitMove('Move to…', 'root move submitted');
+      try {
+        await ui.persisted((s) => s.rootFolderIds.includes(f.parent), 'move back to Root');
+      } catch (error) {
+        const where = await ui.value<string>(
+          `JSON.stringify((() => {const s=JSON.parse(localStorage.getItem('taskFolders:v1'));
+            const hit=s.folders.find((f)=>f.children.some((c)=>c.kind==='folder'&&c.id===${JSON.stringify(f.parent)}));
+            return {parent:hit?.name ?? null,inRoot:s.rootFolderIds.includes(${JSON.stringify(f.parent)})};})())`
+        );
+        throw new Error(String(error) + ' | folder location after undo: ' + where);
+      }
       return {
         mountedRows: mounted,
         fixtureTasks: 1004,

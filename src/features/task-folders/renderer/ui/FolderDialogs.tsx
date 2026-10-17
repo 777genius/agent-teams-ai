@@ -144,6 +144,7 @@ export const FolderDialogs = ({
       setName('');
       setEdited(false);
       setError(null);
+      setTarget('unfiled');
     } catch (caught) {
       setError(
         caught instanceof Error && caught.message === 'read-only' ? 'read-only' : 'save-error'

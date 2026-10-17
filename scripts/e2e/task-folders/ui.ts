@@ -438,6 +438,27 @@ export class UI {
     );
     assert.equal(shown, optionLabel, 'Destination selection did not stick');
   }
+  async submitMove(title: string, name: string) {
+    // Prove the submit handler ran: a dialog that only dismissed closes the same
+    // way while the move command never executes.
+    await this.value(`(() => {
+      window.__submitRan = false;
+      const probe = () => {
+        const b = Array.from(document.querySelectorAll('[role="dialog"] button'))
+          .find((e) => e.textContent.trim() === ${JSON.stringify(title)});
+        if (b && b.disabled) window.__submitRan = true;
+      };
+      window.__submitProbe = setInterval(probe, 20);
+      probe();
+      return true;
+    })()`);
+    await this.click(label(title, el('[role="dialog"]')));
+    await this.wait('!document.querySelector(\'[role="dialog"]\')', name + ' closed');
+    const ran = await this.value<boolean>(
+      'clearInterval(window.__submitProbe), window.__submitRan === true'
+    );
+    assert(ran, name + ' closed without running its submit handler');
+  }
   async expand(id: string) {
     await this.locate(folderRow(id));
     const button = label('Expand folder', folderRow(id));
