@@ -1257,6 +1257,8 @@ async function packagedStartupSnapshot(
     'run_readiness_changed',
     'run_readiness_unknown',
     'run_operation_unknown',
+    'run_controller_mcp_unknown',
+    'execution_http_transport_unknown',
     'execution_selected_auth_required',
     'execution_selected_auth_unbound',
     'execution_selected_auth_changed',
@@ -1534,6 +1536,9 @@ async function packagedStartupSnapshot(
     const startup = row(data.startup),
       native = row(data.native),
       failure = row(data.failure);
+    const controllerMcp = row(row(data.initialization).controllerMcp);
+    const controllerMcpFact = (value: unknown, allowed: readonly string[]) =>
+      value === undefined ? null : one(value, allowed);
     diagnostics.push({
       scope: 'isolated_TEST_root_not_run_authority',
       role: startup.stage === 'run-owner-entry' ? 'original_run_owner' : 'execution_host',
@@ -1630,6 +1635,26 @@ async function packagedStartupSnapshot(
         'MCP-readback',
         'controller-tools',
         'probe-authority',
+      ]),
+      // null: no readback fact; 'unclassified': a value outside the closed set.
+      controllerMcpStatus: controllerMcpFact(controllerMcp.status, [
+        'connected',
+        'pending',
+        'disabled',
+        'failed',
+        'needs_auth',
+        'absent',
+        'ambiguous',
+      ]),
+      controllerMcpFailure: controllerMcpFact(controllerMcp.failure, [
+        'relay_upstream',
+        'relay_transport',
+        'connection_refused',
+        'timeout',
+        'http_client',
+        'http_server',
+        'protocol',
+        'other',
       ]),
     });
     if (diagnostics.length === 12) break;
