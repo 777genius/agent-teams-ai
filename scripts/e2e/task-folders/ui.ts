@@ -96,9 +96,11 @@ export class UI {
     }
   }
   private async awaitBrowserFrame(name: string) {
+    // The in-page promise settles on the next frame or 250ms; the outer bound only
+    // has to outlast renderer jank (large virtual trees), not the frame itself.
     await this.boundedValue(
       `new Promise(resolve=>{const done=()=>resolve(true);requestAnimationFrame(done);setTimeout(done,250);})`,
-      500,
+      3000,
       name
     );
   }
