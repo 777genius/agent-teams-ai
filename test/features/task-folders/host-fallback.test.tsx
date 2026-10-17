@@ -210,6 +210,29 @@ it('absorbs the Escape finishing a cancelled drag inside the narrow modal', asyn
   expect(document.querySelector('[role="dialog"]')).toBeNull();
   expect(panelController.getSnapshot().manual).toBe(false);
 });
+it('keeps sticky mode when outside interaction hits the narrow modal backdrop', async () => {
+  await renderAt(80);
+  await act(() =>
+    Promise.resolve(
+      (host.querySelector('[data-testid="task-folders-toggle"]') as HTMLButtonElement).click()
+    )
+  );
+  expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+  await act(async () =>
+    document.body.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 })
+    )
+  );
+  expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+  expect(panelController.getSnapshot()).toMatchObject({ open: true, manual: true });
+  await act(async () =>
+    document.body.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    )
+  );
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  expect(panelController.getSnapshot().manual).toBe(false);
+});
 it('keeps Manual Unfiled fresh while preserving authored folder order and persisted snapshot', async () => {
   const tasks = ['old', 'filed-old', 'middle', 'filed-new', 'new'].map((id, index) =>
     makeGlobalTask({ id, updatedAt: `2026-01-0${index + 1}T00:00:00.000Z` })

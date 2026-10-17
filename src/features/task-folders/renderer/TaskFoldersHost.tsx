@@ -289,6 +289,11 @@ export const TaskFoldersHost = ({
       >
         <DialogContent
           aria-modal="true"
+          onInteractOutside={(event) => {
+            // Sticky mode ends only via the toggle, the close button, or an unhandled
+            // Escape; a backdrop click must not dismiss the modal companion.
+            event.preventDefault();
+          }}
           onEscapeKeyDown={(event) => {
             // Dialog-scoped keys skip the host handler, so the modal Escape must still reach
             // the controller or the drag-cancel absorb window never applies here.
