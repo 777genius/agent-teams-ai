@@ -618,15 +618,30 @@ export class UI {
   async nativeDragEvents(): Promise<DragEventObservation[]> {
     return await this.syncDragEvents();
   }
-  async assertNativeDragPair(point: Point, name: string, data: Record<string, unknown>) {
+  async assertNativeDragPair(
+    point: Point,
+    name: string,
+    data: Record<string, unknown>,
+    retargetedEnterOk = false
+  ) {
     const near = (event: DragEventObservation) =>
       event.isTrusted &&
       Math.abs(event.clientX - point.x) <= 1 &&
       Math.abs(event.clientY - point.y) <= 1;
     let events = await this.syncDragEvents();
-    let over = events.filter((event) => event.type === 'dragover' && near(event));
+    const matching = (type: DragEventObservation['type']) =>
+      events.filter((event) => event.type === type && near(event));
+    // Over a live auto-scroll edge the rows keep passing under a stationary cursor, so
+    // Chromium retargets every dispatched dragOver into dragenter (new hit target). The
+    // app feeds edge over() from both event types, so delivery of either is the signal.
+    const satisfied = () =>
+      matching('dragover').length > 0 || (retargetedEnterOk && matching('dragenter').length > 0);
     const deadline = Date.now() + NATIVE_DRAGOVER_RETRY_DEADLINE_MS;
-    for (let attempt = 0; !over.length && attempt < NATIVE_DRAGOVER_MAX_RETRIES && Date.now() < deadline; attempt++) {
+    for (
+      let attempt = 0;
+      !satisfied() && attempt < NATIVE_DRAGOVER_MAX_RETRIES && Date.now() < deadline;
+      attempt++
+    ) {
       // Re-send only the missing native receive readiness signal. This is deliberately
       // same-point and direct, so it never becomes a pointer movement or generic dragOver.
       await this.cdp.send('Input.dispatchDragEvent', { type: 'dragOver', ...point, data });
@@ -636,17 +651,20 @@ export class UI {
         'native dragover readiness frame'
       );
       events = await this.syncDragEvents();
-      over = events.filter((event) => event.type === 'dragover' && near(event));
     }
-    assert(over.length, `Trusted native dragover missing at ${name}: ${JSON.stringify(events)}`);
-    const enter = events.filter((event) => event.type === 'dragenter' && near(event));
+    const over = matching('dragover');
+    const enter = matching('dragenter');
+    assert(
+      satisfied(),
+      `Trusted native ${retargetedEnterOk ? 'dragenter/dragover' : 'dragover'} missing at ${name}: ${JSON.stringify(events)}`
+    );
     // Chromium can omit dragenter when the hit target does not change; retain it when emitted.
-    if (enter.length)
+    if (over.length && enter.length)
       assert(
         enter.some((candidate) => events.indexOf(candidate) < events.indexOf(over.at(-1)!)),
         `Native dragenter was not paired before dragover at ${name}: ${JSON.stringify(events)}`
       );
-    return { over: over.at(-1)!, enter: enter.at(-1) ?? null };
+    return { over: over.at(-1) ?? null, enter: enter.at(-1) ?? null };
   }
   async dragOver(data: Record<string, unknown>, point: Point, enter = false) {
     await this.move(point, 1);

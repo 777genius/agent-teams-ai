@@ -515,7 +515,9 @@ async function main() {
       );
       await ui.dragOver(data, point, true);
       await ui.dragOver(data, point);
-      await ui.assertNativeDragPair(point, 'native edge center', data);
+      // Rows keep scrolling under the stationary edge cursor, so Chromium retargets the
+      // dispatched dragOver into dragenter; delivery of either feeds the app's edge over().
+      await ui.assertNativeDragPair(point, 'native edge center', data, true);
       const before = await ui.value<number>(`${el(selectors.tree)}.scrollTop`);
       // Stationary pointer: RAF edge scroll must continue without repeated dragover events.
       await delay(1600);
@@ -539,6 +541,7 @@ async function main() {
       const selectedPair = await ui.assertNativeDragPair(selected, 'selected native drop target', data);
       const dropTarget = await ui.folderPoint(target, true);
       assert.equal(dropTarget.hitFolderId, target, 'Drop target identity changed after reacquire');
+      assert(selectedPair.over, 'Selected native dragover pair missing');
       assert.equal(selectedPair.over.folderId, target, 'Observed dragover folder identity changed');
       assert.equal(selectedPair.over.insideTree, true, 'Observed selected dragover was outside the tree');
       if (selectedPair.enter)
