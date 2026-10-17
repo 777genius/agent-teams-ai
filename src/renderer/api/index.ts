@@ -32,6 +32,23 @@ function getHttpBaseUrl(): string {
   return window.location.origin;
 }
 
+function getHttpAccessToken(): string {
+  const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const fromUrl = fragment.get('access_token')?.trim();
+  if (fromUrl) {
+    window.sessionStorage.setItem('agent-teams-http-access-token', fromUrl);
+    fragment.delete('access_token');
+    const nextHash = fragment.toString();
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}${window.location.search}${nextHash ? `#${nextHash}` : ''}`
+    );
+    return fromUrl;
+  }
+  return window.sessionStorage.getItem('agent-teams-http-access-token')?.trim() ?? '';
+}
+
 let httpClient: HttpAPIClient | null = null;
 
 function getImpl(): ElectronAPI {
@@ -39,7 +56,7 @@ function getImpl(): ElectronAPI {
   // Lazily create the HTTP client only when actually needed (browser mode).
   // Caching avoids creating multiple EventSource connections.
   if (!httpClient) {
-    httpClient = new HttpAPIClient(getHttpBaseUrl());
+    httpClient = new HttpAPIClient(getHttpBaseUrl(), getHttpAccessToken());
   }
   return httpClient;
 }

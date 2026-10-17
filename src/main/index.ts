@@ -1539,12 +1539,12 @@ function getTeamControlApiBaseUrl(): string | null {
 
 async function syncTeamControlApiState(): Promise<void> {
   const baseUrl = getTeamControlApiBaseUrl();
-  if (!baseUrl) {
+  const authToken = httpServer?.getAuthToken() ?? null;
+  if (!baseUrl || !authToken) {
     await clearTeamControlApiState();
     return;
   }
-
-  await writeTeamControlApiState(baseUrl);
+  await writeTeamControlApiState(baseUrl, authToken);
 }
 
 /**
@@ -2070,6 +2070,7 @@ async function initializeServices(): Promise<void> {
       contextRegistry.getActiveContextId() === 'local' &&
       !['connecting', 'connected'].includes(sshConnectionManager.getStatus().state),
     getControlUrl: getTeamControlApiBaseUrl,
+    getControlAuthToken: () => httpServer?.getAuthToken() ?? null,
     startControl: () => startHttpServer(handleModeSwitch),
     reconfigureRoot: async () => {
       reconfigureLocalContextForClaudeRoot();

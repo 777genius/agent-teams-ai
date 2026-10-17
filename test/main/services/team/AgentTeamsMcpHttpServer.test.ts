@@ -17,6 +17,8 @@ const hoisted = vi.hoisted(() => ({
   untrackCliProcessMock: vi.fn(),
 }));
 
+const TEST_MCP_AUTH_TOKEN = 'test-mcp-auth-token-0123456789abcdef';
+
 vi.mock('@main/utils/childProcess', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@main/utils/childProcess')>();
   return {
@@ -91,17 +93,24 @@ function buildState(input: {
   pid?: number | null;
   launchSpec: TestLaunchSpec;
   ownerInstanceId?: string;
+  authToken?: string;
 }) {
   const identity = buildIdentity(input);
-  const url = `http://127.0.0.1:${input.port}/mcp`;
+  const authToken = input.authToken ?? TEST_MCP_AUTH_TOKEN;
+  const url = `http://127.0.0.1:${input.port}/mcp?access_token=${encodeURIComponent(authToken)}`;
   return {
     ...identity,
     url,
     urlHash: sha256Hex(url),
     pid: input.pid ?? null,
+    authToken,
     startedAt: '2026-05-21T00:00:00.000Z',
     updatedAt: '2026-05-21T00:00:00.000Z',
   };
+}
+
+function protectedMcpUrl(port: number, authToken: string): string {
+  return `http://127.0.0.1:${port}/mcp?access_token=${encodeURIComponent(authToken)}`;
 }
 
 async function allocateLoopbackPort(): Promise<number> {
@@ -166,7 +175,9 @@ describe('AgentTeamsMcpHttpServer', () => {
     expect(read()?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBeUndefined();
     ready!();
     await starting;
-    expect(read()?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toContain('http://127.0.0.1:41001/mcp#');
+    expect(read()?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toMatch(
+      /^http:\/\/127\.0\.0\.1:41001\/mcp\?access_token=[^#]+#/
+    );
     children[0].emit('exit', 1, null);
     expect(read()?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBeUndefined();
     ready = undefined;
@@ -179,8 +190,8 @@ describe('AgentTeamsMcpHttpServer', () => {
     revokeOld();
     ready!();
     await restarting;
-    expect(read()?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toContain(
-      '41002/mcp#agent-teams-app-instance=reopen'
+    expect(read()?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toMatch(
+      /41002\/mcp\?access_token=[^#]+#agent-teams-app-instance=reopen/
     );
     children[1].emit('exit', 1, null);
     ready = undefined;
@@ -215,7 +226,7 @@ describe('AgentTeamsMcpHttpServer', () => {
     revokeNew();
     expect(
       reopened.appContext.read(getClaudeBasePath())?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL
-    ).toContain('41004/mcp#agent-teams-app-instance=after-quit');
+    ).toMatch(/41004\/mcp\?access_token=[^#]+#agent-teams-app-instance=after-quit/);
     expect(read()).toBeNull();
     revokeReopened();
     reopenedChild.emit('exit', 1, null);
@@ -242,7 +253,7 @@ describe('AgentTeamsMcpHttpServer', () => {
     const handle = await server.ensureStarted();
 
     expect(handle).toMatchObject({
-      url: 'http://127.0.0.1:41001/mcp',
+      url: protectedMcpUrl(41001, handle.authToken),
       port: 41001,
       pid: 43123,
       generation: 1,
@@ -255,7 +266,7 @@ describe('AgentTeamsMcpHttpServer', () => {
       host: '127.0.0.1',
       port: 41001,
       endpoint: '/mcp',
-      url: 'http://127.0.0.1:41001/mcp',
+      url: protectedMcpUrl(41001, handle.authToken),
       urlHash: handle.urlHash,
       generation: 1,
     });
@@ -278,6 +289,7 @@ describe('AgentTeamsMcpHttpServer', () => {
         AGENT_TEAMS_MCP_HTTP_HOST: '127.0.0.1',
         AGENT_TEAMS_MCP_HTTP_PORT: '41001',
         AGENT_TEAMS_MCP_HTTP_ENDPOINT: '/mcp',
+        AGENT_TEAMS_MCP_HTTP_AUTH_TOKEN: handle.authToken,
       })
     );
   });
@@ -551,9 +563,10 @@ describe('AgentTeamsMcpHttpServer', () => {
           expect(probeHealth).toHaveBeenCalledWith('127.0.0.1', port);
         } else {
           expect(handle).toMatchObject({
-            url: `http://127.0.0.1:${port}/mcp`,
+            url: protectedMcpUrl(port, TEST_MCP_AUTH_TOKEN),
             port,
             pid: 51234,
+            authToken: TEST_MCP_AUTH_TOKEN,
             diagnostics: [`opencode_app_mcp_adopted_state_server:${port}`],
           });
           expect(spawnProcess).not.toHaveBeenCalled();
@@ -638,20 +651,22 @@ describe('AgentTeamsMcpHttpServer', () => {
     }
   });
 
-  it('adopts a healthy matching MCP HTTP server on the configured stable port', async () => {
+  it('does not adopt a matching MCP HTTP server without its persisted credential', async () => {
     const { root, statePath } = await createTempStatePath();
     const launchSpec = { command: 'node', args: ['mcp-server/dist/index.js'] };
     const port = 41023;
     const identity = buildIdentity({ port, launchSpec });
     const previousPortEnv = process.env.CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT;
     process.env.CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT = String(port);
-    const spawnProcess = vi.fn();
+    const child = new FakeChildProcess();
+    const spawnProcess = vi.fn(() => child as unknown as ChildProcess);
     const server = new AgentTeamsMcpHttpServer({
       statePath,
       disableOrphanCleanup: true,
       resolveLaunchSpec: async () => launchSpec,
       spawnProcess: spawnProcess as AgentTeamsMcpHttpServerDeps['spawnProcess'],
-      canListenOnPort: async () => false,
+      waitForPort: async () => undefined,
+      canListenOnPort: async (_host, candidate) => candidate !== port,
       probeHealth: vi.fn(async () => ({
         healthy: true,
         statusCode: 200,
@@ -661,14 +676,16 @@ describe('AgentTeamsMcpHttpServer', () => {
 
     try {
       const handle = await server.ensureStarted();
+      child.emit('exit', 0, null);
       await server.stop();
 
       expect(handle).toMatchObject({
-        port,
-        pid: null,
-        diagnostics: [`opencode_app_mcp_adopted_port_server:${port}`],
+        port: 41024,
+        pid: child.pid,
       });
-      expect(spawnProcess).not.toHaveBeenCalled();
+      expect(handle.diagnostics).toContain(`opencode_app_mcp_port_auth_unavailable:${port}`);
+      expect(handle.diagnostics).toContain(`opencode_app_mcp_preferred_port_unavailable:${port}`);
+      expect(spawnProcess).toHaveBeenCalledTimes(1);
       expect(hoisted.killProcessTreeMock).not.toHaveBeenCalled();
     } finally {
       if (previousPortEnv === undefined) {
@@ -701,8 +718,8 @@ describe('AgentTeamsMcpHttpServer', () => {
 
     expect(second).toBe(first);
     expect(spawnProcess).toHaveBeenCalledTimes(1);
-    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41006, 60_000);
-    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41006, 3_000);
+    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41006, 60_000, first.authToken);
+    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41006, 3_000, first.authToken);
     expect(hoisted.killProcessTreeMock).not.toHaveBeenCalled();
   });
 
@@ -735,30 +752,35 @@ describe('AgentTeamsMcpHttpServer', () => {
     const first = await server.ensureStarted();
     const second = await server.ensureStarted();
 
-    expect(first.url).toBe('http://127.0.0.1:41007/mcp');
+    expect(first.url).toBe(protectedMcpUrl(41007, first.authToken));
     expect(second).toMatchObject({
-      url: 'http://127.0.0.1:41007/mcp',
+      url: protectedMcpUrl(41007, second.authToken),
       port: 41007,
       pid: 43124,
       generation: 2,
-      diagnostics: ['opencode_app_mcp_restart_reason:health_reuse_failed'],
     });
+    expect(second.diagnostics).toContain('opencode_app_mcp_public_url_changed');
+    expect(second.diagnostics).toContain('opencode_app_mcp_restart_reason:health_reuse_failed');
     expect(second.transportEvidence).toMatchObject({
       port: 41007,
-      url: 'http://127.0.0.1:41007/mcp',
+      url: protectedMcpUrl(41007, second.authToken),
       urlHash: second.urlHash,
       generation: 2,
     });
     expect(spawnProcess).toHaveBeenCalledTimes(2);
     expect(allocatePort).toHaveBeenCalledTimes(1);
     expect(hoisted.killProcessTreeMock).toHaveBeenCalledWith(firstChild, 'SIGKILL');
-    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41007, 60_000);
-    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41007, 3_000);
-    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41007, 60_000);
+    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41007, 60_000, first.authToken);
+    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41007, 3_000, first.authToken);
+    expect(waitForPort).toHaveBeenCalledWith('127.0.0.1', 41007, 60_000, second.authToken);
     expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain('failed health reuse check');
-    expect(vi.mocked(console.warn).mock.calls[1]?.join(' ')).toContain(
-      'opencode_app_mcp_restart_reason:health_reuse_failed'
-    );
+    expect(
+      vi
+        .mocked(console.warn)
+        .mock.calls.some((call) =>
+          call.join(' ').includes('opencode_app_mcp_restart_reason:health_reuse_failed')
+        )
+    ).toBe(true);
     vi.mocked(console.warn).mockClear();
   });
 
@@ -796,9 +818,9 @@ describe('AgentTeamsMcpHttpServer', () => {
     const first = await server.ensureStarted();
     const second = await server.ensureStarted();
 
-    expect(first.url).toBe(`http://127.0.0.1:${blockedPort}/mcp`);
+    expect(first.url).toBe(protectedMcpUrl(blockedPort, first.authToken));
     expect(second).toMatchObject({
-      url: `http://127.0.0.1:${fallbackPort}/mcp`,
+      url: protectedMcpUrl(fallbackPort, second.authToken),
       port: fallbackPort,
       pid: 43124,
       generation: 2,
@@ -1101,7 +1123,7 @@ describe('AgentTeamsMcpHttpServer', () => {
     try {
       const handle = await server.ensureStarted();
 
-      expect(handle.url).toBe(`http://127.0.0.1:${port}/mcp`);
+      expect(handle.url).toBe(protectedMcpUrl(port, handle.authToken));
       expect(healthRequests).toBeGreaterThan(0);
     } finally {
       await new Promise<void>((resolve) => healthServer.close(() => resolve()));

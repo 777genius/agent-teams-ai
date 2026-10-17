@@ -1098,6 +1098,7 @@ describe('group chat main authority and durable identity', () => {
           AGENT_TEAMS_MCP_CLAUDE_DIR: claudeDir,
           AGENT_TEAMS_BOUND_CONTROL_URL: app.listeningOrigin,
           AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify(context),
+          AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN: 'sandbox-control-token-0123456789abcdef',
         });
       try {
         await client.initialize();

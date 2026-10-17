@@ -93,10 +93,14 @@ describe('OpenCodeMcpBridgeEnv', () => {
       return projection.read('/sandbox/root');
     });
     const revokeNew = projection.bind({ ...env, CLAUDE_TEAM_APP_INSTANCE_ID: 'new' }, true);
-    handle = { url: 'http://127.0.0.1:41002/mcp', port: 41002, urlHash: 'new-hash' };
+    handle = {
+      url: 'http://127.0.0.1:41002/mcp?access_token=sandbox-mcp-token',
+      port: 41002,
+      urlHash: 'new-hash',
+    };
     finish();
     expect((await delayed)?.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toContain(
-      '41002/mcp#agent-teams-app-instance=new'
+      '41002/mcp?access_token=sandbox-mcp-token#agent-teams-app-instance=new'
     );
     revokeNew();
     expect(projection.read('/sandbox/root')).toBeNull();

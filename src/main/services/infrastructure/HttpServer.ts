@@ -17,6 +17,8 @@ import { existsSync } from 'fs';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 
+import { buildHttpAccessUrl, createHttpAuthToken, registerHttpApiAuth } from './HttpServerAuth';
+
 const logger = createLogger('Service:HttpServer');
 
 /**
@@ -53,6 +55,8 @@ export class HttpServer {
   private port: number = 3456;
   private running: boolean = false;
   private startingPromise: Promise<number> | null = null;
+  private authToken: string | null = null;
+  private host: string = '127.0.0.1';
 
   /**
    * Start the HTTP server.
@@ -87,21 +91,32 @@ export class HttpServer {
     preferredPort: number,
     host: string
   ): Promise<number> {
+    this.authToken = createHttpAuthToken();
+    this.host = host;
     this.app = Fastify({ logger: false });
+    registerHttpApiAuth(this.app, this.authToken);
 
     // Register CORS
     const corsOrigin = process.env.CORS_ORIGIN;
     if (corsOrigin === '*') {
       // Standalone/Docker mode: allow all origins (Docker network isolation replaces CORS)
-      await this.app.register(cors, { origin: true, credentials: true });
+      await this.app.register(cors, {
+        origin: true,
+        credentials: false,
+        allowedHeaders: ['content-type', 'authorization', 'x-agent-teams-app-context'],
+      });
     } else if (corsOrigin) {
       // Custom origin(s) from env
       const origins = corsOrigin.split(',').map((o) => o.trim());
-      await this.app.register(cors, { origin: origins, credentials: true });
+      await this.app.register(cors, {
+        origin: origins,
+        credentials: false,
+        allowedHeaders: ['content-type', 'authorization', 'x-agent-teams-app-context'],
+      });
     } else {
       // Default: allow all localhost origins
       // eslint-disable-next-line security/detect-unsafe-regex -- anchored, no backtracking risk
-      const localhostPattern = /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/;
+      const localhostPattern = /^https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/;
       await this.app.register(cors, {
         origin: (origin, cb) => {
           if (!origin) {
@@ -114,7 +129,8 @@ export class HttpServer {
           }
           cb(new Error('Not allowed by CORS'), false);
         },
-        credentials: true,
+        credentials: false,
+        allowedHeaders: ['content-type', 'authorization', 'x-agent-teams-app-context'],
       });
     }
 
@@ -178,6 +194,7 @@ export class HttpServer {
       await this.app.close();
       this.running = false;
       this.app = null;
+      this.authToken = null;
       logger.info('HTTP server stopped');
     }
   }
@@ -201,5 +218,15 @@ export class HttpServer {
    */
   isRunning(): boolean {
     return this.running;
+  }
+
+  getAuthToken(): string | null {
+    return this.running ? this.authToken : null;
+  }
+
+  getAccessUrl(): string | null {
+    return this.running && this.authToken
+      ? buildHttpAccessUrl(this.host, this.port, this.authToken)
+      : null;
   }
 }

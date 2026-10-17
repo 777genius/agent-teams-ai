@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const serverEntry = path.join(repoRoot, 'dist', 'index.js');
+const MCP_AUTH_TOKEN = 'sandbox-mcp-http-token-0123456789abcdef';
 
 const children: ChildProcess[] = [];
 const tempDirectories: string[] = [];
@@ -65,6 +66,7 @@ async function postMcp(
           accept: 'application/json, text/event-stream',
           'content-type': 'application/json',
           'content-length': Buffer.byteLength(body),
+          authorization: `Bearer ${MCP_AUTH_TOKEN}`,
           ...(sessionId ? { 'mcp-session-id': sessionId } : {}),
           ...headers,
         },
@@ -106,7 +108,10 @@ async function allocateLoopbackPort(): Promise<number> {
   });
 }
 
-async function readHealthBody(port: number): Promise<{ statusCode: number | null; body: string }> {
+async function readHealthBody(
+  port: number,
+  authenticate = true
+): Promise<{ statusCode: number | null; body: string }> {
   return new Promise((resolve) => {
     let body = '';
     const request = http.get(
@@ -115,6 +120,7 @@ async function readHealthBody(port: number): Promise<{ statusCode: number | null
         port,
         path: '/health',
         timeout: 1_000,
+        ...(authenticate ? { headers: { authorization: `Bearer ${MCP_AUTH_TOKEN}` } } : {}),
       },
       (response) => {
         response.setEncoding('utf8');
@@ -236,6 +242,8 @@ describe('agent-teams-mcp HTTP e2e', () => {
           ...process.env,
           AGENT_TEAMS_BOUND_CONTROL_URL: controlUrl,
           AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify(context),
+          AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN: 'sandbox-control-token-0123456789abcdef',
+          AGENT_TEAMS_MCP_HTTP_AUTH_TOKEN: MCP_AUTH_TOKEN,
           AGENT_TEAMS_MCP_CLAUDE_DIR: claudeDir,
           CLAUDE_TEAM_CONTROL_URL: fallbackUrl,
         },
@@ -245,6 +253,7 @@ describe('agent-teams-mcp HTTP e2e', () => {
     children.push(child);
     try {
       await waitForHealthBody(port);
+      expect((await readHealthBody(port, false)).statusCode).toBe(401);
       const initializePayload = {
         jsonrpc: '2.0',
         id: 1,
@@ -255,6 +264,10 @@ describe('agent-teams-mcp HTTP e2e', () => {
           clientInfo: { name: 'bound-sandbox-test', version: '1.0.0' },
         },
       };
+      const unauthenticated = await postMcp(port, initializePayload, undefined, {
+        authorization: '',
+      });
+      expect(unauthenticated.statusCode).toBe(401);
       const invalidHeaders: Array<Record<string, string>> = [
         { origin: 'https://foreign.example' },
         { host: 'foreign.example' },
@@ -380,6 +393,7 @@ describe('agent-teams-mcp HTTP e2e', () => {
       {
         env: {
           ...process.env,
+          AGENT_TEAMS_MCP_HTTP_AUTH_TOKEN: MCP_AUTH_TOKEN,
           AGENT_TEAMS_MCP_HTTP_IDENTITY_SERVICE: 'agent-teams-mcp-http',
           AGENT_TEAMS_MCP_HTTP_CLAUDE_DIR_HASH: 'claude-dir-hash-e2e',
           AGENT_TEAMS_MCP_HTTP_LAUNCH_SPEC_HASH: 'launch-spec-hash-e2e',
@@ -440,7 +454,13 @@ describe('agent-teams-mcp HTTP e2e', () => {
         '--endpoint',
         'mcp',
       ],
-      { stdio: ['ignore', 'ignore', 'pipe'] }
+      {
+        env: {
+          ...process.env,
+          AGENT_TEAMS_MCP_HTTP_AUTH_TOKEN: MCP_AUTH_TOKEN,
+        },
+        stdio: ['ignore', 'ignore', 'pipe'],
+      }
     );
     children.push(child);
     await waitForHealthBody(port);

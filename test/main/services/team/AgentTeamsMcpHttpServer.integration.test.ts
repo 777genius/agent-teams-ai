@@ -128,6 +128,7 @@ function readHealthStatus(url) {
       return;
     }
     const target = new URL(url);
+    const authToken = target.searchParams.get('access_token');
     target.pathname = '/health';
     target.search = '';
     target.hash = '';
@@ -137,6 +138,7 @@ function readHealthStatus(url) {
         port: Number(target.port),
         path: target.pathname,
         timeout: 750,
+        ...(authToken ? { headers: { authorization: 'Bearer ' + authToken } } : {}),
       },
       (response) => {
         response.resume();
@@ -226,8 +228,9 @@ async function allocateLoopbackPort(excluded: Set<number> = new Set<number>()): 
   }
 }
 
-async function readHealthStatus(url: string): Promise<number | null> {
+async function readHealthStatus(url: string, authenticate = true): Promise<number | null> {
   const target = new URL(url);
+  const authToken = authenticate ? target.searchParams.get('access_token') : null;
   target.pathname = '/health';
   target.search = '';
   target.hash = '';
@@ -239,6 +242,7 @@ async function readHealthStatus(url: string): Promise<number | null> {
         port: Number(target.port),
         path: target.pathname,
         timeout: 500,
+        ...(authToken ? { headers: { authorization: `Bearer ${authToken}` } } : {}),
       },
       (response) => {
         response.resume();
@@ -402,7 +406,7 @@ describe('packaged Agent Teams MCP launch integration', () => {
           }),
       });
       const fallbackHandle = await server.ensureStarted();
-      expect(fallbackHandle.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/mcp$/);
+      expect(fallbackHandle.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/mcp\?access_token=[A-Za-z0-9_-]{43}$/);
       expect(await readHealthStatus(fallbackHandle.url)).toBe(200);
       await server.stop();
       server = null;
@@ -439,7 +443,7 @@ describe('packaged Agent Teams MCP launch integration', () => {
       });
 
       const handle = await server.ensureStarted();
-      expect(handle.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/mcp$/);
+      expect(handle.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/mcp\?access_token=[A-Za-z0-9_-]{43}$/);
       expect(await readHealthStatus(handle.url)).toBe(200);
     } finally {
       clearResolvedNodePathForTests();
@@ -519,9 +523,10 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
 
     const handle = await server.ensureStarted();
 
-    expect(handle.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/mcp$/);
+    expect(handle.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/mcp\?access_token=[A-Za-z0-9_-]{43}$/);
     expect(handle.pid).toEqual(expect.any(Number));
     expect(await readHealthStatus(handle.url)).toBe(200);
+    expect(await readHealthStatus(handle.url, false)).toBe(401);
   });
 
   it('reuses a healthy cached bridge URL after a real loopback health recheck', async () => {
@@ -639,7 +644,7 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     const second = await server.ensureStarted();
 
     expect(second.port).toBe(first.port);
-    expect(second.url).toBe(first.url);
+    expect(second.url).not.toBe(first.url);
     expect(second.pid).not.toBe(first.pid);
     expect(await readHealthStatus(second.url)).toBe(200);
     expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain('failed health reuse check');
@@ -736,7 +741,7 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     if (!secondResult.ok) {
       throw new Error(secondResult.error.message);
     }
-    expect(secondResult.data.observedMcpUrl).toBe(firstResult.data.observedMcpUrl);
+    expect(secondResult.data.observedMcpUrl).not.toBe(firstResult.data.observedMcpUrl);
     expect(await readHealthStatus(secondResult.data.observedMcpUrl)).toBe(200);
   });
 
@@ -776,6 +781,7 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     }
     expect(result.error.kind).toBe('provider_error');
     expect(result.error.details?.stderr).toContain('mcp_unreachable');
-    expect(result.error.details?.stderr).toContain(first.url);
+    expect(result.error.details?.stderr).toContain('access_token=[redacted]');
+    expect(result.error.details?.stderr).not.toContain(first.authToken);
   });
 });

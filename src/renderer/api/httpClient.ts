@@ -227,7 +227,7 @@ function createBrowserRuntimeProviderError(
 
 export class HttpAPIClient implements ElectronAPI {
   get teamGroupChats() {
-    return createHttpTeamGroupChatsAPI(this.baseUrl);
+    return createHttpTeamGroupChatsAPI(this.baseUrl, this.authorizationHeaders());
   }
   externalAgentConnection: ExternalAgentConnectionApi = {
     getConnectionInfo: () => this.get<ConnectionInfoV1>('/api/app/connection'),
@@ -259,6 +259,7 @@ export class HttpAPIClient implements ElectronAPI {
   }
 
   private baseUrl: string;
+  private accessToken: string;
   private eventSource: EventSource | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- event callbacks have varying signatures
   private eventListeners = new Map<string, Set<(...args: any[]) => void>>();
@@ -280,8 +281,9 @@ export class HttpAPIClient implements ElectronAPI {
     },
   };
 
-  constructor(baseUrl: string) {
+  constructor(baseUrl: string, accessToken: string = '') {
     this.baseUrl = baseUrl;
+    this.accessToken = accessToken;
     this.initEventSource();
   }
 
@@ -290,7 +292,9 @@ export class HttpAPIClient implements ElectronAPI {
   // ---------------------------------------------------------------------------
 
   private initEventSource(): void {
-    this.eventSource = new EventSource(`${this.baseUrl}/api/events`);
+    const eventUrl = new URL('/api/events', this.baseUrl);
+    if (this.accessToken) eventUrl.searchParams.set('access_token', this.accessToken);
+    this.eventSource = new EventSource(eventUrl.toString());
     this.eventSource.onopen = () => console.log('[HttpAPIClient] SSE connected');
     this.eventSource.onerror = () => {
       // Auto-reconnect is built into EventSource
@@ -349,11 +353,18 @@ export class HttpAPIClient implements ElectronAPI {
     ) as T;
   }
 
+  private authorizationHeaders(): Record<string, string> {
+    return this.accessToken ? { Authorization: `Bearer ${this.accessToken}` } : {};
+  }
+
   private async get<T>(path: string, reviveDates = true): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
-      const res = await fetch(`${this.baseUrl}${path}`, { signal: controller.signal });
+      const res = await fetch(`${this.baseUrl}${path}`, {
+        headers: this.authorizationHeaders(),
+        signal: controller.signal,
+      });
       return this.parseJson<T>(res, reviveDates);
     } finally {
       clearTimeout(timeout);
@@ -366,7 +377,7 @@ export class HttpAPIClient implements ElectronAPI {
     try {
       const res = await fetch(`${this.baseUrl}${path}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...this.authorizationHeaders() },
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
@@ -382,7 +393,7 @@ export class HttpAPIClient implements ElectronAPI {
     try {
       const res = await fetch(`${this.baseUrl}${path}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...this.authorizationHeaders() },
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
@@ -398,7 +409,7 @@ export class HttpAPIClient implements ElectronAPI {
     try {
       const res = await fetch(`${this.baseUrl}${path}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...this.authorizationHeaders() },
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
@@ -1010,13 +1021,25 @@ export class HttpAPIClient implements ElectronAPI {
   // HTTP Server API — in browser mode, server is already running (we're using it)
   httpServer: HttpServerAPI = {
     start: (): Promise<HttpServerStatus> =>
-      Promise.resolve({ running: true, port: parseInt(new URL(this.baseUrl).port, 10) }),
+      Promise.resolve({
+        running: true,
+        port: parseInt(new URL(this.baseUrl).port, 10),
+        accessUrl: window.location.href,
+      }),
     stop: (): Promise<HttpServerStatus> => {
       console.warn('[HttpAPIClient] Cannot stop HTTP server from browser mode');
-      return Promise.resolve({ running: true, port: parseInt(new URL(this.baseUrl).port, 10) });
+      return Promise.resolve({
+        running: true,
+        port: parseInt(new URL(this.baseUrl).port, 10),
+        accessUrl: window.location.href,
+      });
     },
     getStatus: (): Promise<HttpServerStatus> =>
-      Promise.resolve({ running: true, port: parseInt(new URL(this.baseUrl).port, 10) }),
+      Promise.resolve({
+        running: true,
+        port: parseInt(new URL(this.baseUrl).port, 10),
+        accessUrl: window.location.href,
+      }),
   };
 
   teams: TeamsAPI = {
