@@ -4,9 +4,9 @@
  */
 
 import * as fs from 'fs';
+import { Storage as HappyDOMStorage } from 'happy-dom';
 import * as os from 'os';
 import * as path from 'path';
-import { Storage as HappyDOMStorage } from 'happy-dom';
 import { afterAll, afterEach, beforeEach, expect, vi } from 'vitest';
 
 const TEST_HOME_PREFIX = 'agent-teams-vitest-home-';

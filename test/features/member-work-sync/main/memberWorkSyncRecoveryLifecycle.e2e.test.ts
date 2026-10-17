@@ -83,8 +83,16 @@ async function seedShadowReadyMetrics(input: {
   );
 }
 
-async function waitForAssertion(assertion: () => Promise<void> | void): Promise<void> {
-  const deadline = Date.now() + 5_000;
+// Polls the intended observable until it appears. The default budget is sized
+// from the four-vCPU CI quota measurements: the feature's durable background
+// cadence can trail the first sample by well over the historical 5s under
+// concurrent durable suites, while single-file runs land in ~2.5-7s. 40s
+// keeps every completion-driven expectation exact while absorbing that skew.
+async function waitForAssertion(
+  assertion: () => Promise<void> | void,
+  timeoutMs = 40_000
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
   let lastError: unknown;
   while (Date.now() < deadline) {
     try {
@@ -226,6 +234,12 @@ function createFeature(input: {
     ...(input.resolveControlUrl ? { resolveControlUrl: input.resolveControlUrl } : {}),
   });
 }
+
+// Measured at the four-vCPU CI quota: the slowest lifecycle test legitimately
+// takes ~44.2s and the background recovery cadence can be skewed by concurrent
+// durable suites. A 90s ceiling sizes the wait to the measured worst case
+// (~2x margin) without changing any assertion.
+vi.setConfig({ testTimeout: 90_000 });
 
 describe('member work sync recovery lifecycle e2e', () => {
   it('keeps a user stop latch across process restart and does not start automatic recovery', async () => {
