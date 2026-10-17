@@ -303,6 +303,7 @@ async function main() {
       );
       await ui.menu(folderRow(f.parent), 'Move to…');
       await ui.click(label('Destination folder', el('[role="dialog"]')));
+      await ui.wait('document.querySelector(\'[role="option"]\')', 'chooser options open');
       assert(
         await ui.value(
           `Array.from(document.querySelectorAll('[role="option"]')).every(e=>!e.textContent.includes('Deep child') && !e.textContent.includes('Seed parent'))`
@@ -406,9 +407,7 @@ async function main() {
       );
       await ui.key('Enter');
       await ui.wait('document.querySelector(\'[role="dialog"]\')', 'keyboard move dialog');
-      await ui.click(label('Destination folder', el('[role="dialog"]')));
-      await ui.key('Home');
-      await ui.key('Enter'); // First option is Unfiled.
+      await ui.chooseDestination();
       await ui.click(label('Move to…', el('[role="dialog"]')));
       await ui.persisted(
         (s) =>
@@ -418,10 +417,7 @@ async function main() {
         'keyboard unfiled move'
       );
       await ui.click(taskSource('b'));
-      await ui.click(label('Destination folder', el('[role="dialog"]')));
-      await ui.click(
-        label('Seed parent / Seed nested / Renamed nested', 'document', '[role="option"]')
-      );
+      await ui.chooseDestination('Seed parent / Seed nested / Renamed nested');
       await ui.click(label('Move to…', el('[role="dialog"]')));
       await ui.persisted(
         (s) => children(s, created).some((c) => c.kind === 'task' && c.identity.taskId === 'b'),
@@ -555,9 +551,7 @@ async function main() {
       // Undo through visible UI, preserving missing canonical references.
       await ui.expand(target);
       await ui.menu(folderRow(f.parent), 'Move to…');
-      await ui.click(label('Destination folder', el('[role="dialog"]')));
-      await ui.key('Home');
-      await ui.key('Enter');
+      await ui.chooseDestination();
       await ui.click(label('Move to…', el('[role="dialog"]')));
       await ui.persisted((s) => s.rootFolderIds.includes(f.parent), 'move back to Root');
       return {

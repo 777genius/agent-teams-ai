@@ -417,6 +417,26 @@ export class UI {
       TARGET_PRESENCE_TIMEOUT_MS
     );
   }
+  async chooseDestination(option?: string) {
+    // The dialog zooms in over 200ms and the Radix listbox mounts after its trigger click,
+    // so raw clicks and keys can land on stale geometry or a still-open listbox.
+    await this.wait(
+      `document.querySelector('[role="dialog"]')?.getAnimations().length === 0`,
+      'destination dialog settled'
+    );
+    await this.click(label('Destination folder', el('[role="dialog"]')));
+    await this.wait('document.querySelector(\'[role="option"]\')', 'destination options open');
+    if (option) await this.click(label(option, 'document', '[role="option"]'));
+    else {
+      await this.key('Home');
+      await this.key('Enter');
+    }
+    await this.wait(
+      '!document.querySelector(\'[role="option"]\')',
+      'destination options closed',
+      TARGET_PRESENCE_TIMEOUT_MS
+    );
+  }
   async expand(id: string) {
     await this.locate(folderRow(id));
     const button = label('Expand folder', folderRow(id));
