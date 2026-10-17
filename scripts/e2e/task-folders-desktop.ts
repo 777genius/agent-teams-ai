@@ -8,6 +8,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Desktop, delay, fixture, json } from './task-folders/runtime.ts';
+import { cardLayoutScenarios, folderUnreadPropagation } from './task-folders/mode-layout.ts';
 import { narrowViewport } from './task-folders/narrow.ts';
 import {
   filteredSidebarNativeMove,
@@ -29,11 +30,11 @@ const declared = [
   'archive-grey-accessible-and-restore-position',
   'keyboard-move-chooser',
   'delete-promotes-children',
-  'release-grace',
-  'cancel-grace',
-  'hover-hold-and-leave-grace',
-  'edit-hold-beyond-grace',
-  'portaled-menu-hold-beyond-grace',
+  'enabled-mode-persists-after-release',
+  'enabled-mode-persists-after-cancel',
+  'enabled-mode-persists-after-pointer-leave',
+  'enabled-mode-persists-after-edit',
+  'enabled-mode-persists-after-portaled-menu',
   'virtualization-and-native-edge-scroll',
   'narrow-viewport',
   'missing-reference-reappears',
@@ -42,6 +43,8 @@ const declared = [
   'shared-card-live-actions',
   'scoped-task-sorting-and-filters',
   'filtered-sidebar-native-move',
+  'folder-mode-layout-and-background',
+  'folder-unread-task-count-propagation',
   'no-runtime-launch-or-renderer-faults',
 ] as const;
 type Check = (typeof declared)[number];
@@ -63,6 +66,7 @@ async function main() {
     'scripts/e2e/task-folders/shutdown.ts',
     'scripts/e2e/task-folders/narrow.ts',
     'scripts/e2e/task-folders/shared-cards.ts',
+    'scripts/e2e/task-folders/mode-layout.ts',
     'scripts/tsconfig/tsconfig.desktop-e2e.json',
   ];
   const harnessHashes = Object.fromEntries(
@@ -189,25 +193,18 @@ async function main() {
     `${taskRow(f.team, id, selectors.sidebar)}.querySelector(${JSON.stringify(selectors.taskHandle)})`;
   const folderSource = (id: string) =>
     `${folderRow(id)}.querySelector(${JSON.stringify(selectors.folderHandle)})`;
-  const grace = async () => {
-    const started = Date.now();
+  const remainsEnabled = async () => {
     await ui.unfocus();
-    while (Date.now() - started < 1900) {
-      assert(await ui.value(`!!${el(selectors.panel)}`), 'Panel closed before 2 second grace');
-      await delay(50);
-    }
-    await ui.wait(`!${el(selectors.panel)}`, 'close after full grace', 6000);
-    const elapsed = Date.now() - started;
-    assert(elapsed >= 2000, 'Grace shorter than 2000ms: ' + elapsed);
-    return { elapsedMs: elapsed, requiredMinimumMs: 2000 };
+    await delay(2300);
+    await ui.assertFolderMode(true);
+    return { enabledAfterOutsideFocusMs: 2300 };
   };
-  const automaticPanel = async () => {
-    if (await ui.value(`!!${el(selectors.panel)}`)) await ui.close();
+  const cancelledEnabledDrag = async () => {
+    await ui.open();
     const data = await ui.beginDrag(taskSource('c'), { teamName: f.team, taskId: 'c' });
     const point = await ui.point(folderRow(f.parent));
     await ui.dragOver(data, point, true);
     await ui.finishDrag(data, point, true);
-    // Pointer now holds the automatically opened panel; no manual-open reason.
     await ui.move(point);
     return point;
   };
@@ -265,6 +262,8 @@ async function main() {
       await screenshot('adjacent-panel');
       await ui.click(el(selectors.toggle));
       await ui.wait(`!${el(selectors.panel)}`, 'manual toggle close');
+      await ui.assertFolderMode(false);
+      await ui.attemptDisabledTaskDrag(f.team, 'c');
       await ui.open();
       await expandSeeds();
       return geometry;
@@ -304,6 +303,7 @@ async function main() {
       );
       await ui.menu(folderRow(f.parent), 'Move to…');
       await ui.click(label('Destination folder', el('[role="dialog"]')));
+      await ui.wait('document.querySelector(\'[role="option"]\')', 'chooser options open');
       assert(
         await ui.value(
           `Array.from(document.querySelectorAll('[role="option"]')).every(e=>!e.textContent.includes('Deep child') && !e.textContent.includes('Seed parent'))`
@@ -407,10 +407,8 @@ async function main() {
       );
       await ui.key('Enter');
       await ui.wait('document.querySelector(\'[role="dialog"]\')', 'keyboard move dialog');
-      await ui.click(label('Destination folder', el('[role="dialog"]')));
-      await ui.key('Home');
-      await ui.key('Enter'); // First option is Unfiled.
-      await ui.click(label('Move to…', el('[role="dialog"]')));
+      await ui.chooseDestination('Unfiled');
+      await ui.submitMove('Move to…', 'keyboard move submitted');
       await ui.persisted(
         (s) =>
           !s.folders.some((folder) =>
@@ -419,11 +417,8 @@ async function main() {
         'keyboard unfiled move'
       );
       await ui.click(taskSource('b'));
-      await ui.click(label('Destination folder', el('[role="dialog"]')));
-      await ui.click(
-        label('Seed parent / Seed nested / Renamed nested', 'document', '[role="option"]')
-      );
-      await ui.click(label('Move to…', el('[role="dialog"]')));
+      await ui.chooseDestination('Seed parent / Seed nested / Renamed nested');
+      await ui.submitMove('Move to…', 'folder move submitted');
       await ui.persisted(
         (s) => children(s, created).some((c) => c.kind === 'task' && c.identity.taskId === 'b'),
         'chooser move to folder'
@@ -449,32 +444,32 @@ async function main() {
       assert.deepEqual(children(await ui.snapshot(), f.nested), expected);
       await capture('delete-promotes-ordered-children');
     });
-    await check('release-grace', async () => {
-      await ui.close();
+    await check('enabled-mode-persists-after-release', async () => {
+      await ui.open();
       await ui.drag(taskSource('b'), folderRow(f.parent), 0.5, { teamName: f.team, taskId: 'b' });
       await ui.persisted(
         (s) => children(s, f.parent).some((c) => c.kind === 'task' && c.identity.taskId === 'b'),
         'release drop'
       );
       await ui.waitDropFocusRestored();
-      return await grace();
+      return await remainsEnabled();
     });
-    await check('cancel-grace', async () => {
+    await check('enabled-mode-persists-after-cancel', async () => {
       const before = await ui.snapshot();
       const data = await ui.beginDrag(taskSource('c'), { teamName: f.team, taskId: 'c' });
       await ui.finishDrag(data, { x: 10, y: 80 }, true);
-      const timing = await grace();
+      const timing = await remainsEnabled();
       assert.deepEqual(await ui.snapshot(), before);
       return timing;
     });
-    await check('hover-hold-and-leave-grace', async () => {
-      await automaticPanel();
+    await check('enabled-mode-persists-after-pointer-leave', async () => {
+      await cancelledEnabledDrag();
       await delay(2300);
-      assert(await ui.value(`!!${el(selectors.panel)}`), 'Hover did not hold');
-      return await grace();
+      assert(await ui.value(`!!${el(selectors.panel)}`), 'Enabled mode disappeared after hover');
+      return await remainsEnabled();
     });
-    await check('edit-hold-beyond-grace', async () => {
-      await automaticPanel();
+    await check('enabled-mode-persists-after-edit', async () => {
+      await cancelledEnabledDrag();
       await ui.menu(folderRow(f.parent), 'Rename folder');
       await ui.move({ x: 10, y: 80 });
       await delay(2300);
@@ -484,10 +479,10 @@ async function main() {
         )
       );
       await ui.key('Escape');
-      return await grace();
+      return await remainsEnabled();
     });
-    await check('portaled-menu-hold-beyond-grace', async () => {
-      await automaticPanel();
+    await check('enabled-mode-persists-after-portaled-menu', async () => {
+      await cancelledEnabledDrag();
       await ui.menu(folderRow(f.parent));
       assert(
         await ui.value(`!${el(selectors.panel)}.contains(document.querySelector('[role="menu"]'))`),
@@ -500,7 +495,7 @@ async function main() {
       );
       await ui.key('Escape');
       await ui.waitMenuClosedAndFocusRestored(folderRow(f.parent));
-      return await grace();
+      return await remainsEnabled();
     });
     await check('virtualization-and-native-edge-scroll', async () => {
       await ui.open();
@@ -516,7 +511,9 @@ async function main() {
       );
       await ui.dragOver(data, point, true);
       await ui.dragOver(data, point);
-      await ui.assertNativeDragPair(point, 'native edge center', data);
+      // Rows keep scrolling under the stationary edge cursor, so Chromium retargets the
+      // dispatched dragOver into dragenter; delivery of either feeds the app's edge over().
+      await ui.assertNativeDragPair(point, 'native edge center', data, true);
       const before = await ui.value<number>(`${el(selectors.tree)}.scrollTop`);
       // Stationary pointer: RAF edge scroll must continue without repeated dragover events.
       await delay(1600);
@@ -540,6 +537,7 @@ async function main() {
       const selectedPair = await ui.assertNativeDragPair(selected, 'selected native drop target', data);
       const dropTarget = await ui.folderPoint(target, true);
       assert.equal(dropTarget.hitFolderId, target, 'Drop target identity changed after reacquire');
+      assert(selectedPair.over, 'Selected native dragover pair missing');
       assert.equal(selectedPair.over.folderId, target, 'Observed dragover folder identity changed');
       assert.equal(selectedPair.over.insideTree, true, 'Observed selected dragover was outside the tree');
       if (selectedPair.enter)
@@ -552,12 +550,62 @@ async function main() {
       await ui.locate(folderRow(target));
       // Undo through visible UI, preserving missing canonical references.
       await ui.expand(target);
-      await ui.menu(folderRow(f.parent), 'Move to…');
-      await ui.click(label('Destination folder', el('[role="dialog"]')));
-      await ui.key('Home');
-      await ui.key('Enter');
-      await ui.click(label('Move to…', el('[role="dialog"]')));
-      await ui.persisted((s) => s.rootFolderIds.includes(f.parent), 'move back to Root');
+      const dumpState = `JSON.stringify((() => {
+        const s=JSON.parse(localStorage.getItem('taskFolders:v1'));
+        const name=(id)=>s.folders.find((f)=>f.id===id)?.name ?? id;
+        const loc=(id)=>{const hit=s.folders.find((f)=>f.children.some((c)=>c.kind==='folder'&&c.id===id));
+          return hit?.name ?? (s.rootFolderIds.includes(id) ? '<root>' : '<nowhere>');};
+        window.__folderNames=Object.fromEntries(s.folders.map((f)=>[f.id,f.name]));
+        const rows=Array.from(document.querySelectorAll('[data-folder-id]')).map((e)=>e.getAttribute('data-folder-id'));
+        return {root:s.rootFolderIds.map(name),
+          parent:loc(${JSON.stringify(f.parent)}), nested:loc(${JSON.stringify(f.nested)}), drop:loc(${JSON.stringify(target)}),
+          parentRow:rows.includes(${JSON.stringify(f.parent)}), dropRow:rows.includes(${JSON.stringify(target)})};})())`;
+      const beforeUndo = await ui.value<string>(dumpState);
+      for (let attempt = 0; ; attempt++) {
+        await ui.menu(folderRow(f.parent), 'Move to…');
+        try {
+          await ui.chooseDestination('Root', 'Seed parent');
+          break;
+        } catch (error) {
+          if (attempt >= 2) throw error;
+          await ui.key('Escape');
+          await ui.wait(
+            '!document.querySelector(\'[role="option"]\')',
+            'chooser closed after dialog identity failure',
+            5000
+          );
+          if (await ui.value<boolean>('!!document.querySelector(\'[role="dialog"]\')')) {
+            await ui.click(label('Cancel', el('[role="dialog"]')));
+            await ui.wait(
+              '!document.querySelector(\'[role="dialog"]\')',
+              'wrong-folder dialog cancelled',
+              5000
+            );
+          }
+        }
+      }
+      await ui.submitMove('Move to…', 'root move submitted');
+      try {
+        await ui.persisted((s) => s.rootFolderIds.includes(f.parent), 'move back to Root');
+      } catch (error) {
+        const after = await ui.value<string>(dumpState);
+        const chooser = await ui.value<string>('JSON.stringify(window.__chooser ?? null)');
+        const menuOwner = await ui.value<string>('JSON.stringify(window.__menuOwner ?? null)');
+        const writes = await ui.value<string>('JSON.stringify(window.__writes ?? [])');
+        throw new Error(
+          String(error) +
+            ' | before: ' +
+            beforeUndo +
+            ' | after: ' +
+            after +
+            ' | menu: ' +
+            menuOwner +
+            ' | chooser: ' +
+            chooser +
+            ' | writes: ' +
+            writes
+        );
+      }
       return {
         mountedRows: mounted,
         fixtureTasks: 1004,
@@ -606,6 +654,7 @@ async function main() {
     await check('full-process-restart-persistence', async () => {
       const before = await capture('before-restart');
       const archives = await ui.value<string>('localStorage.getItem("taskArchivedIds")');
+      await ui.assertFolderMode(true);
       const origin = await ui.value<string>('location.origin');
       await desktop.stop();
       await desktop.start();
@@ -616,6 +665,7 @@ async function main() {
       );
       assert.deepEqual(await ui.snapshot(), before);
       assert.equal(await ui.value('localStorage.getItem("taskArchivedIds")'), archives);
+      await ui.assertFolderMode(false);
       await ui.open();
       await expandSeeds();
       await ui.wait(
@@ -640,6 +690,12 @@ async function main() {
     await check('filtered-sidebar-native-move', async () =>
       filteredSidebarNativeMove(sharedUI, f, await sharedUI.snapshot())
     );
+    await check('folder-mode-layout-and-background', async () => {
+      await ui.open();
+      await expandSeeds();
+      return await cardLayoutScenarios(ui, f.team, 'a', true, screenshot);
+    });
+    await check('folder-unread-task-count-propagation', () => folderUnreadPropagation(ui, f, screenshot));
     await check('no-runtime-launch-or-renderer-faults', async () => {
       const audit = (await readFile(f.audit, 'utf8'))
         .split('\n')
@@ -676,7 +732,8 @@ async function main() {
     );
     assert.deepEqual(
       screenshots.map((file) => path.basename(file)),
-      ['adjacent-panel.png', 'nested-tree-archived.png', 'narrow-360.png', 'narrow-440.png']
+      ['adjacent-panel.png', 'nested-tree-archived.png', 'narrow-360.png', 'narrow-440.png',
+        'folder-layout-long-subject.png', 'folder-unread-propagation.png']
     );
     const finalAudit = (await readFile(f.audit, 'utf8'))
       .split('\n')
@@ -691,7 +748,7 @@ async function main() {
         )
     );
     runtimeAuditUnexpectedCount = runtimeAuditUnexpected.length;
-    assert.equal(checks.length, 23, 'Expected exactly 23 passed checks');
+    assert.equal(checks.length, 25, 'Expected exactly 25 passed checks');
     assert.deepEqual(
       screenshotNames(),
       [
@@ -699,9 +756,11 @@ async function main() {
         'nested-tree-archived.png',
         'narrow-360.png',
         'narrow-440.png',
+        'folder-layout-long-subject.png',
+        'folder-unread-propagation.png',
         'shared-cards-live.png',
       ],
-      'Expected exactly 5 receipts: 4 original plus 1 shared-card screenshot'
+      'Expected exactly 7 screenshots: 4 original, 2 mode/unread and 1 shared-card'
     );
     assert.equal(ui.dragEvidence.length, 12, 'Original suite must retain 12 native drags');
     assert.equal(sharedUI.dragEvidence.length, 1, 'Shared suite must add exactly 1 native drag');

@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import { buildTaskFilterTeamOptions } from '@renderer/components/sidebar/taskFilterOptions';
-import { useReadStateSnapshot } from '@renderer/components/sidebar/taskFiltersState';
+import {
+  getTaskUnreadCount,
+  useReadStateSnapshot,
+} from '@renderer/components/sidebar/taskFiltersState';
 import {
   createTaskEffectiveSubjectAccessor,
   filterGlobalTasks,
@@ -18,6 +21,7 @@ import { moveRequest } from '../adapters/moveRequest';
 import { folderController, panelController } from '../composition';
 import { projectFolders } from '../view-models/projection';
 import { applyVisibleTaskChildren } from '../view-models/projectionView';
+import { countUnreadTasksByNode } from '../view-models/taskUnreadCounts';
 
 import { useTaskViewState } from './useTaskViewState';
 
@@ -61,6 +65,19 @@ export function useTaskFoldersHost(
         true
       ),
     [state.snapshot, tasks, local, contextId]
+  );
+  const unreadTaskCounts = useMemo(
+    () =>
+      countUnreadTasksByNode(
+        canonicalProjection,
+        (task) =>
+          getTaskUnreadCount(
+            readState,
+            { contextId, teamName: task.teamName, taskId: task.id },
+            task.comments
+          ) > 0
+      ),
+    [canonicalProjection, contextId, readState]
   );
   const getEffectiveSubject = useMemo(
     () =>
@@ -202,7 +219,7 @@ export function useTaskFoldersHost(
   useEffect(() => () => panelObserverCleanup.current?.(), []);
   useEffect(() => {
     if (collapsed) {
-      panelController.dispose();
+      panelController.suspend();
       return;
     }
     const element = sidebar.current;
@@ -226,7 +243,7 @@ export function useTaskFoldersHost(
     window.addEventListener('blur', end);
     return () => {
       window.removeEventListener('blur', end);
-      panelController.dispose();
+      panelController.suspend();
     };
   }, []);
   return {
@@ -236,6 +253,7 @@ export function useTaskFoldersHost(
     move,
     projection,
     canonicalProjection,
+    unreadTaskCounts,
     view: {
       ...view,
       setSortOpen: setViewSortOpen,

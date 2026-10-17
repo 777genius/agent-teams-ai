@@ -14,6 +14,9 @@ export interface PanelState {
   dragSource: string | null;
   session: number;
 }
+// The vendor cancel Escape lands within the same input sequence as dragend; anything
+// later is a fresh Escape that must disable mode.
+const CANCEL_ESCAPE_WINDOW_MS = 2000;
 /** Host-owned lifecycle survives virtual row unmounts. Duplicate end events are harmless. */
 export class PanelController {
   private state: PanelState = { open: false, manual: false, dragSource: null, session: 0 };
@@ -21,6 +24,9 @@ export class PanelController {
   private timer: ReturnType<typeof setTimeout> | undefined;
   private generation = 0;
   private dropTimer: ReturnType<typeof setTimeout> | undefined;
+  private dropped = false;
+  private pendingDragEscape = false;
+  private pendingDragEscapeTimer: ReturnType<typeof setTimeout> | undefined;
   private listeners = new Set<() => void>();
   getSnapshot = (): PanelState => this.state;
   subscribe = (listener: () => void): (() => void) => {
@@ -37,6 +43,11 @@ export class PanelController {
     this.generation++;
   }
   hold(reason: Hold, active: boolean): void {
+    if (reason === 'manual' && !active) {
+      this.close();
+      return;
+    }
+    if (reason !== 'manual' && !this.state.manual) return;
     if (active === this.holds.has(reason)) return;
     if (active) {
       this.holds.add(reason);
@@ -57,8 +68,11 @@ export class PanelController {
     }, 2000);
   }
   begin(source: string): number {
+    if (!this.state.manual) return this.state.session;
     this.cancelDropTimer();
     this.cancelTimer();
+    this.dropped = false;
+    this.clearPendingDragEscape();
     this.holds.add('drag');
     this.publish({ open: true, dragSource: source, session: this.state.session + 1 });
     return this.state.session;
@@ -67,6 +81,14 @@ export class PanelController {
     if (session !== this.state.session || !this.holds.has('drag')) return;
     this.cancelDropTimer();
     this.holds.delete('drag');
+    if (!this.dropped) {
+      this.pendingDragEscape = true;
+      clearTimeout(this.pendingDragEscapeTimer);
+      this.pendingDragEscapeTimer = setTimeout(
+        () => this.clearPendingDragEscape(),
+        CANCEL_ESCAPE_WINDOW_MS
+      );
+    }
     this.publish({ dragSource: null });
     this.schedule();
   }
@@ -74,9 +96,15 @@ export class PanelController {
     clearTimeout(this.dropTimer);
     this.dropTimer = undefined;
   }
+  private clearPendingDragEscape(): void {
+    this.pendingDragEscape = false;
+    clearTimeout(this.pendingDragEscapeTimer);
+    this.pendingDragEscapeTimer = undefined;
+  }
   endAfterDrop(): void {
     if (this.dropTimer !== undefined || !this.holds.has('drag')) return;
     const session = this.state.session;
+    this.dropped = true;
     // Native listener propagation can run microtask checkpoints before the vendor drop.
     this.dropTimer = setTimeout(() => {
       this.dropTimer = undefined;
@@ -94,6 +122,11 @@ export class PanelController {
       return false;
     if (this.holds.has('drag')) {
       this.end();
+      this.clearPendingDragEscape();
+      return true;
+    }
+    if (this.pendingDragEscape) {
+      this.clearPendingDragEscape();
       return true;
     }
     if (this.holds.has('manual')) {
@@ -110,7 +143,18 @@ export class PanelController {
     this.cancelDropTimer();
     this.cancelTimer();
     this.holds.clear();
+    this.dropped = false;
+    this.clearPendingDragEscape();
     this.publish({ open: false, manual: false, dragSource: null });
+  }
+  suspend(): void {
+    this.cancelDropTimer();
+    this.cancelTimer();
+    this.holds.clear();
+    this.dropped = false;
+    this.clearPendingDragEscape();
+    if (this.state.manual) this.holds.add('manual');
+    this.publish({ open: this.state.manual, dragSource: null, session: this.state.session + 1 });
   }
   dispose(): void {
     this.close();

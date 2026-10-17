@@ -96,9 +96,11 @@ export class UI {
     }
   }
   private async awaitBrowserFrame(name: string) {
+    // The in-page promise settles on the next frame or 250ms; the outer bound only
+    // has to outlast renderer jank (large virtual trees), not the frame itself.
     await this.boundedValue(
       `new Promise(resolve=>{const done=()=>resolve(true);requestAnimationFrame(done);setTimeout(done,250);})`,
-      500,
+      3000,
       name
     );
   }
@@ -386,8 +388,39 @@ export class UI {
     await this.cdp.send('Input.insertText', { text });
   }
   async menu(row: string, action?: string) {
-    await this.click(label('Folder or task actions', row));
-    await this.wait('document.querySelector(\'[role="menu"]\')', 'portaled action menu');
+    // Geometry and the native click dispatch are separate samples: a tree rebuild in
+    // between can re-key the row under the cursor, so the opened menu may belong to a
+    // neighboring row. Verify the open trigger's row and retry when it changed.
+    for (let attempt = 0; ; attempt++) {
+      const clickedId = await this.value<string | null>(
+        `(() => {const e=${row}; return e ? (e.getAttribute('data-folder-id') ?? e.getAttribute('data-task-key')) : null;})()`
+      );
+      await this.click(label('Folder or task actions', row));
+      await this.wait('document.querySelector(\'[role="menu"]\')', 'portaled action menu');
+      const owner = await this.value<string | null>(
+        `(() => {
+          const trigger = document.querySelector('button[aria-label="Folder or task actions"][aria-expanded="true"]');
+          const host = trigger?.closest('[data-folder-id]') ?? trigger?.closest('[data-task-key]');
+          return host ? (host.getAttribute('data-folder-id') ?? host.getAttribute('data-task-key')) : null;
+        })()`
+      );
+      await this.value(`(() => {
+        window.__menuOwner = {
+          owner: ${JSON.stringify(owner)},
+          clicked: ${JSON.stringify(clickedId)},
+          menus: document.querySelectorAll('[role="menu"]').length,
+          items: Array.from(document.querySelectorAll('[role="menuitem"]')).map((e) => e.textContent?.trim() ?? null),
+        };
+        return true;
+      })()`);
+      if (clickedId === null || owner === clickedId || attempt >= 2) break;
+      await this.key('Escape');
+      await this.wait(
+        '!document.querySelector(\'[role="menu"]\')',
+        'mismatched action menu dismissed',
+        TARGET_PRESENCE_TIMEOUT_MS
+      );
+    }
     if (action) {
       await this.click(label(action, 'document', '[role="menuitem"]'));
       await this.wait(
@@ -416,6 +449,95 @@ export class UI {
       'vendor drop completion restored stable tree focus across consecutive RAFs',
       TARGET_PRESENCE_TIMEOUT_MS
     );
+  }
+  async chooseDestination(optionLabel: string, forbid?: string) {
+    // The dialog zooms in over 200ms, and keyboard selection races Radix's deferred
+    // item focus, so pick the option by its visible label and verify the trigger shows
+    // it before the caller submits.
+    await this.wait(
+      `document.querySelector('[role="dialog"]')?.getAnimations().length === 0`,
+      'destination dialog settled'
+    );
+    await this.click(label('Destination folder', el('[role="dialog"]')));
+    await this.wait('document.querySelector(\'[role="option"]\')', 'destination options open');
+    await this.value(`(() => {
+      window.__chooser = {
+        dialogs: document.querySelectorAll('[role="dialog"]').length,
+        options: Array.from(document.querySelectorAll('[role="option"]')).map((e) => e.textContent?.trim() ?? null),
+      };
+      return true;
+    })()`);
+    if (forbid) {
+      // The chooser filters the moved folder's own subtree out of the options, so a
+      // surviving label from that subtree proves the dialog belongs to another folder.
+      const leaked = await this.value<string>(
+        `JSON.stringify((window.__chooser?.options ?? []).filter((o) => o && o.includes(${JSON.stringify(forbid)})))`
+      );
+      assert.equal(
+        leaked,
+        '[]',
+        'Move dialog is not for the intended folder; its subtree labels are still choosable: ' + leaked
+      );
+    }
+    await this.click(label(optionLabel, 'document', '[role="option"]'));
+    await this.wait(
+      '!document.querySelector(\'[role="option"]\')',
+      'destination options closed',
+      TARGET_PRESENCE_TIMEOUT_MS
+    );
+    const shown = await this.value<string>(
+      `(${label('Destination folder', el('[role="dialog"]'))})?.textContent?.trim()`
+    );
+    assert.equal(shown, optionLabel, 'Destination selection did not stick');
+  }
+  async submitMove(title: string, name: string) {
+    // Prove the submit handler ran: a dialog that only dismissed closes the same
+    // way while the move command never executes. Event-level trace, since a fast
+    // submit can finish before React ever paints the busy state.
+    await this.value(`(() => {
+      const title = ${JSON.stringify(title)};
+      window.__submitTrace = [];
+      window.__writes = [];
+      if (!window.__setItemProbe) {
+        window.__setItemProbe = true;
+        const original = Storage.prototype.setItem;
+        Storage.prototype.setItem = function (key, value) {
+          try {
+            const s = JSON.parse(String(value));
+            const names = window.__folderNames ?? {};
+            window.__writes.push(
+              String(key) + ' roots=' + (s.rootFolderIds ?? []).map((id) => names[id] ?? String(id).slice(0, 8)).join(',')
+            );
+          } catch {
+            window.__writes.push(String(key) + ' <unparsed>');
+          }
+          return original.apply(this, arguments);
+        };
+      }
+      const record = (tag) => (event) => {
+        try {
+          const hit = document.elementFromPoint(event.clientX, event.clientY);
+          const button = event.target?.closest?.('button');
+          const trigger = document.querySelector('[role="dialog"] [aria-label="Destination folder"]');
+          const hitClass = hit && typeof hit.className === 'string' ? hit.className : '';
+          window.__submitTrace.push([tag, button?.textContent?.trim() ?? null,
+            hit ? hit.tagName + '.' + hitClass.slice(0, 40) : null,
+            trigger?.textContent?.trim() ?? null]);
+        } catch {
+          window.__submitTrace.push([tag, '<probe-error>', null, null]);
+        }
+      };
+      document.addEventListener('pointerdown', record('press'), true);
+      document.addEventListener('click', record('click'), true);
+      return true;
+    })()`);
+    await this.click(label(title, el('[role="dialog"]')));
+    await this.wait('!document.querySelector(\'[role="dialog"]\')', name + ' closed');
+    const trace = await this.value<unknown>('JSON.stringify(window.__submitTrace)');
+    const clicked = await this.value<boolean>(
+      `window.__submitTrace.some(([tag, button]) => tag === 'click' && button === ${JSON.stringify(title)})`
+    );
+    assert(clicked, name + ' closed without a click on its submit button: ' + trace);
   }
   async expand(id: string) {
     await this.locate(folderRow(id));
@@ -459,6 +581,38 @@ export class UI {
   }
   async persisted(predicate: (s: Snapshot) => boolean, label: string) {
     await until(async () => predicate(await this.snapshot()), 'persisted ' + label);
+  }
+  async assertFolderMode(enabled: boolean) {
+    await this.wait(
+      `${el(selectors.toggle)}?.getAttribute('aria-pressed') === ${JSON.stringify(String(enabled))}`,
+      `folder mode ${enabled ? 'enabled' : 'disabled'}`
+    );
+    assert.equal(await this.value(`!!${el(selectors.panel)}`), enabled, 'Mode and panel disagree');
+    const handles = `${el(selectors.sidebar)}?.querySelectorAll(${JSON.stringify(selectors.taskHandle)}).length ?? 0`;
+    assert.equal((await this.value<number>(handles)) > 0, enabled, 'Sidebar drag handles disagree with mode');
+  }
+  async attemptDisabledTaskDrag(team: string, id: string) {
+    await this.assertFolderMode(false);
+    const before = await this.snapshot();
+    this.desktop.takeDrag();
+    const source = `${taskRow(team, id, selectors.sidebar)}.querySelector('[data-task-card-field="status"]')`;
+    const start = await this.point(source);
+    await this.move(start);
+    await this.cdp.send('Input.dispatchMouseEvent', {
+      type: 'mousePressed', ...start, button: 'left', buttons: 1, clickCount: 1,
+    });
+    for (let step = 1; step <= 8; step++) {
+      await this.move({ x: start.x - step * 5, y: start.y + step }, 1);
+      await delay(30);
+    }
+    await this.move({ x: 10, y: 80 }, 1);
+    await this.cdp.send('Input.dispatchMouseEvent', {
+      type: 'mouseReleased', x: 10, y: 80, button: 'left', clickCount: 1,
+    });
+    await delay(250);
+    assert.equal(this.desktop.takeDrag(), undefined, 'Disabled card initiated a native drag');
+    await this.assertFolderMode(false);
+    assert.deepEqual(await this.snapshot(), before, 'Disabled drag attempt changed folders');
   }
   async open() {
     if (!(await this.value(`!!${el(selectors.panel)}`))) await this.click(el(selectors.toggle));
@@ -586,15 +740,30 @@ export class UI {
   async nativeDragEvents(): Promise<DragEventObservation[]> {
     return await this.syncDragEvents();
   }
-  async assertNativeDragPair(point: Point, name: string, data: Record<string, unknown>) {
+  async assertNativeDragPair(
+    point: Point,
+    name: string,
+    data: Record<string, unknown>,
+    retargetedEnterOk = false
+  ) {
     const near = (event: DragEventObservation) =>
       event.isTrusted &&
       Math.abs(event.clientX - point.x) <= 1 &&
       Math.abs(event.clientY - point.y) <= 1;
     let events = await this.syncDragEvents();
-    let over = events.filter((event) => event.type === 'dragover' && near(event));
+    const matching = (type: DragEventObservation['type']) =>
+      events.filter((event) => event.type === type && near(event));
+    // Over a live auto-scroll edge the rows keep passing under a stationary cursor, so
+    // Chromium retargets every dispatched dragOver into dragenter (new hit target). The
+    // app feeds edge over() from both event types, so delivery of either is the signal.
+    const satisfied = () =>
+      matching('dragover').length > 0 || (retargetedEnterOk && matching('dragenter').length > 0);
     const deadline = Date.now() + NATIVE_DRAGOVER_RETRY_DEADLINE_MS;
-    for (let attempt = 0; !over.length && attempt < NATIVE_DRAGOVER_MAX_RETRIES && Date.now() < deadline; attempt++) {
+    for (
+      let attempt = 0;
+      !satisfied() && attempt < NATIVE_DRAGOVER_MAX_RETRIES && Date.now() < deadline;
+      attempt++
+    ) {
       // Re-send only the missing native receive readiness signal. This is deliberately
       // same-point and direct, so it never becomes a pointer movement or generic dragOver.
       await this.cdp.send('Input.dispatchDragEvent', { type: 'dragOver', ...point, data });
@@ -604,17 +773,20 @@ export class UI {
         'native dragover readiness frame'
       );
       events = await this.syncDragEvents();
-      over = events.filter((event) => event.type === 'dragover' && near(event));
     }
-    assert(over.length, `Trusted native dragover missing at ${name}: ${JSON.stringify(events)}`);
-    const enter = events.filter((event) => event.type === 'dragenter' && near(event));
+    const over = matching('dragover');
+    const enter = matching('dragenter');
+    assert(
+      satisfied(),
+      `Trusted native ${retargetedEnterOk ? 'dragenter/dragover' : 'dragover'} missing at ${name}: ${JSON.stringify(events)}`
+    );
     // Chromium can omit dragenter when the hit target does not change; retain it when emitted.
-    if (enter.length)
+    if (over.length && enter.length)
       assert(
         enter.some((candidate) => events.indexOf(candidate) < events.indexOf(over.at(-1)!)),
         `Native dragenter was not paired before dragover at ${name}: ${JSON.stringify(events)}`
       );
-    return { over: over.at(-1)!, enter: enter.at(-1) ?? null };
+    return { over: over.at(-1) ?? null, enter: enter.at(-1) ?? null };
   }
   async dragOver(data: Record<string, unknown>, point: Point, enter = false) {
     await this.move(point, 1);

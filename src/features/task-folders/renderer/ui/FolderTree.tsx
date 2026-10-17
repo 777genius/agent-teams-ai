@@ -379,6 +379,8 @@ export const FolderTree = ({
     const props = item.getProps();
     const drag = item.getDragHandleProps();
     const level = item.getItemMeta().level;
+    const unreadCount = model.unreadTaskCounts?.get(n.id) ?? 0;
+    const indentation = `min(${level * 16}px, 24%)`;
     const editing = n.kind === 'folder' && rename === n.folderId;
     const task = n.task;
     const identity = n.identity;
@@ -408,7 +410,7 @@ export const FolderTree = ({
                     className: `min-h-8 outline-none focus:ring-1 focus:ring-blue-400 ${
                       item.isDragTarget() ? 'bg-blue-500/20' : ''
                     }`,
-                    style: { paddingLeft: `${level * 16}px` },
+                    style: { paddingLeft: indentation },
                     onKeyDown: (event) => {
                       if (event.target !== event.currentTarget || isImeComposing(event)) return;
                       if (event.key === 'Enter') {
@@ -446,8 +448,7 @@ export const FolderTree = ({
                         event.stopPropagation();
                         if (model.state.status === 'ready') taskFolderMoveRequest.open(n.identity!);
                       }}
-                      className="absolute top-1.5 z-10 size-5 shrink-0 p-0"
-                      style={{ left: `${22 + level * 16}px` }}
+                      className="col-start-1 row-start-1 mt-0.5 size-5 shrink-0 p-0"
                     >
                       <GripVertical className="size-3" />
                     </Button>
@@ -467,7 +468,7 @@ export const FolderTree = ({
                           aria-label={t('taskFolders.actions')}
                           data-testid="tree-task-actions"
                           onClick={(event) => event.stopPropagation()}
-                          className="absolute right-1 top-1 size-5 shrink-0 p-0"
+                          className="col-start-3 row-start-1 size-5 shrink-0 p-0"
                         >
                           <MoreHorizontal className="size-3" />
                         </Button>
@@ -530,8 +531,8 @@ export const FolderTree = ({
                 data-task-key={
                   n.identity ? JSON.stringify([n.identity.teamName, n.identity.taskId]) : undefined
                 }
-                className={`flex h-8 items-center gap-1 rounded px-1 text-xs outline-none focus:ring-1 focus:ring-blue-400 ${n.archived ? 'text-text-muted opacity-60' : 'text-text'} ${item.isDragTarget() ? 'bg-blue-500/20' : ''}`}
-                style={{ paddingLeft: `${item.getItemMeta().level * 16}px` }}
+                className={`flex h-8 min-w-0 items-center gap-1 rounded px-1 text-xs outline-none focus:ring-1 focus:ring-blue-400 ${n.archived ? 'text-text-muted opacity-60' : 'text-text'} ${item.isDragTarget() ? 'bg-blue-500/20' : ''}`}
+                style={{ paddingLeft: indentation }}
                 onKeyDown={(event) => {
                   if (event.target !== event.currentTarget || editing || isImeComposing(event))
                     return;
@@ -651,6 +652,16 @@ export const FolderTree = ({
                           ? 'taskFolders.readOnly'
                           : 'taskFolders.saveError'
                     )}
+                  </span>
+                )}
+                {item.isFolder() && unreadCount > 0 && (
+                  <span
+                    data-testid="task-folder-unread-count"
+                    data-unread-count={unreadCount}
+                    aria-label={t('taskFolders.unreadTasks', { count: unreadCount })}
+                    className="inline-flex h-3.5 min-w-3.5 shrink-0 items-center justify-center rounded-full bg-blue-500 px-1 text-[8px] font-bold leading-none text-white"
+                  >
+                    {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
                 {item.isFolder() && (

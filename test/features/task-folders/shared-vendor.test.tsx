@@ -78,6 +78,7 @@ beforeEach(() => {
   localStorage.clear();
   vendor.trees = [];
   vendor.rowLimit = Infinity;
+  panelController.hold('manual', true);
   host = document.createElement('div');
   document.body.appendChild(host);
   root = createRoot(host);
@@ -346,10 +347,7 @@ it('reports storage failure for a valid inline folder name as a save error', asy
   );
   const input = row.querySelector('input')!;
   await act(async () => {
-    const setter = Object.getOwnPropertyDescriptor(
-      HTMLInputElement.prototype,
-      'value'
-    )!.set!;
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
     setter.call(input, 'Valid name');
     input.dispatchEvent(new Event('input', { bubbles: true }));
   });
@@ -450,9 +448,7 @@ it('uses shared native buttons for tree drag, disclosure and dropdown controls',
   const disclosure = folderRow.querySelector<HTMLButtonElement>(
     '[aria-label="taskFolders.expand"]'
   )!;
-  const actions = folderRow.querySelector<HTMLButtonElement>(
-    '[aria-label="taskFolders.actions"]'
-  )!;
+  const actions = folderRow.querySelector<HTMLButtonElement>('[aria-label="taskFolders.actions"]')!;
   const taskRow = host.querySelector('[data-task-key]')!;
   const taskDrag = taskRow.querySelector<HTMLButtonElement>(
     '[data-testid="sidebar-task-drag-handle"]'
@@ -604,9 +600,7 @@ it.each([
     const move = items.find((item) => item.textContent === 'taskFolders.move');
     expect(move).toBeDefined();
     expect(move!.getAttribute('aria-disabled')).toBe('true');
-    act(() =>
-      items.find((item) => item.textContent === 'taskContextMenu.pin')!.click()
-    );
+    act(() => items.find((item) => item.textContent === 'taskContextMenu.pin')!.click());
     await act(async () => {
       await vi.waitFor(() => {
         expect(JSON.parse(localStorage.getItem('taskPinnedIds')!)).toEqual(['t:1']);
@@ -617,7 +611,7 @@ it.each([
 );
 
 it.each(['context', 'dropdown'] as const)(
-  'releases an open real portaled %s menu on catalog removal with a full grace period',
+  'releases an open real portaled %s menu on catalog removal while keeping enabled mode pinned',
   async (kind) => {
     vi.useFakeTimers();
     const fixture = treeHarness([makeGlobalTask()]);
@@ -645,7 +639,7 @@ it.each(['context', 'dropdown'] as const)(
     await act(async () => vi.advanceTimersByTime(1999));
     expect(panelController.getSnapshot().open).toBe(true);
     await act(async () => vi.advanceTimersByTime(1));
-    expect(panelController.getSnapshot().open).toBe(false);
+    expect(panelController.getSnapshot().open).toBe(true);
   }
 );
 
@@ -660,7 +654,7 @@ it('releases a menu owner when its row is virtualized away and on tree unmount',
   await act(async () => fixture.update({}));
   expect(document.querySelector('[role="menu"]')).toBeNull();
   await act(async () => vi.advanceTimersByTime(2000));
-  expect(panelController.getSnapshot().open).toBe(false);
+  expect(panelController.getSnapshot().open).toBe(true);
   vendor.rowLimit = Infinity;
   await act(async () => fixture.update({}));
   await act(async () =>
@@ -671,7 +665,7 @@ it('releases a menu owner when its row is virtualized away and on tree unmount',
   expect(document.querySelector('[role="menu"]')).not.toBeNull();
   await act(async () => fixture.update({ shown: false }));
   await act(async () => vi.advanceTimersByTime(2000));
-  expect(panelController.getSnapshot().open).toBe(false);
+  expect(panelController.getSnapshot().open).toBe(true);
 });
 
 it('removes deleted expanded IDs using real vendor state and cancels projection repair frames on change/unmount', async () => {
@@ -871,7 +865,7 @@ it('cancels vanished editors and ignores old async rename completion after a new
   await act(async () => vi.advanceTimersByTime(1999));
   expect(panelController.getSnapshot().open).toBe(true);
   await act(async () => vi.advanceTimersByTime(1));
-  expect(panelController.getSnapshot().open).toBe(false);
+  expect(panelController.getSnapshot().open).toBe(true);
   await rename('b');
   await act(async () => {
     finish(snapshot);
@@ -888,7 +882,7 @@ it('cancels vanished editors and ignores old async rename completion after a new
   await act(async () => vi.advanceTimersByTime(1999));
   expect(panelController.getSnapshot().open).toBe(true);
   await act(async () => vi.advanceTimersByTime(1));
-  expect(panelController.getSnapshot().open).toBe(false);
+  expect(panelController.getSnapshot().open).toBe(true);
 });
 
 it.each(['resolve', 'reject'] as const)(
