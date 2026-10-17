@@ -21,6 +21,8 @@ export class PanelController {
   private timer: ReturnType<typeof setTimeout> | undefined;
   private generation = 0;
   private dropTimer: ReturnType<typeof setTimeout> | undefined;
+  private dropped = false;
+  private pendingDragEscape = false;
   private listeners = new Set<() => void>();
   getSnapshot = (): PanelState => this.state;
   subscribe = (listener: () => void): (() => void) => {
@@ -65,6 +67,8 @@ export class PanelController {
     if (!this.state.manual) return this.state.session;
     this.cancelDropTimer();
     this.cancelTimer();
+    this.dropped = false;
+    this.pendingDragEscape = false;
     this.holds.add('drag');
     this.publish({ open: true, dragSource: source, session: this.state.session + 1 });
     return this.state.session;
@@ -73,6 +77,7 @@ export class PanelController {
     if (session !== this.state.session || !this.holds.has('drag')) return;
     this.cancelDropTimer();
     this.holds.delete('drag');
+    if (!this.dropped) this.pendingDragEscape = true;
     this.publish({ dragSource: null });
     this.schedule();
   }
@@ -83,6 +88,7 @@ export class PanelController {
   endAfterDrop(): void {
     if (this.dropTimer !== undefined || !this.holds.has('drag')) return;
     const session = this.state.session;
+    this.dropped = true;
     // Native listener propagation can run microtask checkpoints before the vendor drop.
     this.dropTimer = setTimeout(() => {
       this.dropTimer = undefined;
@@ -100,6 +106,11 @@ export class PanelController {
       return false;
     if (this.holds.has('drag')) {
       this.end();
+      this.pendingDragEscape = false;
+      return true;
+    }
+    if (this.pendingDragEscape) {
+      this.pendingDragEscape = false;
       return true;
     }
     if (this.holds.has('manual')) {
@@ -116,12 +127,16 @@ export class PanelController {
     this.cancelDropTimer();
     this.cancelTimer();
     this.holds.clear();
+    this.dropped = false;
+    this.pendingDragEscape = false;
     this.publish({ open: false, manual: false, dragSource: null });
   }
   suspend(): void {
     this.cancelDropTimer();
     this.cancelTimer();
     this.holds.clear();
+    this.dropped = false;
+    this.pendingDragEscape = false;
     if (this.state.manual) this.holds.add('manual');
     this.publish({ open: this.state.manual, dragSource: null, session: this.state.session + 1 });
   }

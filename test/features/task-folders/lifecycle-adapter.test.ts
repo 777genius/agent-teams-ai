@@ -65,6 +65,25 @@ describe('host lifecycle and vendor drop boundary', () => {
     vi.runAllTimers();
     expect(panel.getSnapshot()).toMatchObject({ open: false, manual: false, dragSource: null });
   });
+  it('consumes the Escape finishing a cancelled drag without disabling mode', () => {
+    const panel = new PanelController();
+    panel.toggle();
+    panel.begin('task:a');
+    panel.end();
+    expect(panel.escape()).toBe(true);
+    expect(panel.getSnapshot()).toMatchObject({ open: true, manual: true, dragSource: null });
+    expect(panel.escape()).toBe(true);
+    expect(panel.getSnapshot()).toMatchObject({ open: false, manual: false });
+  });
+  it('leaves an Escape after a completed drop free to disable mode', () => {
+    const panel = new PanelController();
+    panel.toggle();
+    panel.begin('task:a');
+    panel.endAfterDrop();
+    panel.end();
+    expect(panel.escape()).toBe(true);
+    expect(panel.getSnapshot()).toMatchObject({ open: false, manual: false });
+  });
   it('keeps a new drag active when an earlier drop finishes after event propagation', async () => {
     vi.useFakeTimers();
     const panel = new PanelController();
