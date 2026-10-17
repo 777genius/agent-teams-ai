@@ -1,4 +1,3 @@
-import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 import { createMemberWorkSyncFeature } from '@features/member-work-sync/main';
 import {
   OPENCODE_PROMPT_DELIVERY_LEDGER_SCHEMA_VERSION,
@@ -14,10 +13,12 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Mock } from 'vitest';
+
+import { createTestWorkSyncIdentity } from '../../../features/member-work-sync/helpers/createTestWorkSyncIdentity';
 
 import type { MemberWorkSyncNudgeDeliveryWakePort } from '@features/member-work-sync/core/application/ports';
 import type { InboxMessage, TaskRef } from '@shared/types/team';
+import type { Mock } from 'vitest';
 
 const tempRoots: string[] = [];
 
@@ -50,6 +51,40 @@ async function waitForAssertion(assertion: () => Promise<void> | void): Promise<
     throw lastError;
   }
   await assertion();
+}
+
+
+// The two broken fixtures below intentionally make the delivery watchdog and
+// the OpenCode inbox relay emit diagnostics for their fixture team names, so
+// those diagnostics are designed observables of this safe-e2e file rather than
+// regressions. Assert them here and remove exactly these fixture-scoped
+// entries from the console.warn spy (installed by test/setup.ts) so the shared
+// "no unexpected warnings" assertion only sees output unrelated to the
+// fixtures.
+function consumeExpectedFixtureDiagnostics(): void {
+  const warnSpy = console.warn as unknown as { mock: { calls: unknown[][] } };
+  const calls = warnSpy.mock.calls;
+  const expectedIndexes: number[] = [];
+  calls.forEach((args, index) => {
+    const text = args
+      .map((arg) => (arg instanceof Error ? arg.message : String(arg)))
+      .join(' ');
+    const isFixtureName =
+      text.includes('[team-opencode-agenda-sync-recovery]') ||
+      text.includes('[team-opencode-agenda-sync-no-proof]');
+    const isDiagnostic =
+      text.includes('delivery watchdog relay diagnostics for ') ||
+      text.includes('OpenCode inbox relay failed for ');
+    if (isFixtureName && isDiagnostic) expectedIndexes.push(index);
+  });
+  expect(
+    expectedIndexes,
+    'Expected fixture diagnostics among warn calls:' + '\n' +
+      calls.map((args) => args.map((arg) => String(arg)).join(' ')).join('\n')
+  ).not.toEqual([]);
+  for (let index = expectedIndexes.length - 1; index >= 0; index -= 1) {
+    calls.splice(expectedIndexes[index], 1);
+  }
 }
 
 async function seedNonBlockingShadowCollectingMetrics(input: {
@@ -501,6 +536,7 @@ describe('OpenCode agenda-sync proof-missing recovery safe e2e', () => {
       });
     } finally {
       await feature.dispose();
+      consumeExpectedFixtureDiagnostics();
     }
   });
 
@@ -563,6 +599,7 @@ describe('OpenCode agenda-sync proof-missing recovery safe e2e', () => {
       });
     } finally {
       await feature.dispose();
+      consumeExpectedFixtureDiagnostics();
     }
   });
 });

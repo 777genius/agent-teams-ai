@@ -638,6 +638,9 @@ describe('shellEnv', () => {
         '/usr/bin/bash',
         '/bin/sh',
       ]);
+      // Shell-equivalent candidates on Windows document the shared
+      // metadata contract only; resolveInteractiveShellEnv returns early
+      // on win32, so these entries are never used as Windows defaults.
       expect(shellEnv.defaultShellCandidates('win32')).toEqual([
         '/bin/bash',
         '/usr/bin/bash',

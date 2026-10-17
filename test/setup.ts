@@ -139,34 +139,11 @@ function isLiveSlowConfigReadWarning(text: string): boolean {
   );
 }
 
-/**
- * OpenCode agenda-sync recovery fixtures intentionally seed proof-missing
- * deliveries, so the delivery watchdog and inbox relay diagnostics those
- * fixtures are designed to surface are expected observables in that safe-e2e
- * file, not regressions. The allowance is scoped to the fixture team names
- * used there and to exactly those two diagnostic classes.
- */
-function isAgendaSyncRecoveryFixtureDiagnostic(text: string): boolean {
-  if (
-    !text.includes('[team-opencode-agenda-sync-recovery]') &&
-    !text.includes('[team-opencode-agenda-sync-no-proof]')
-  ) {
-    return false;
-  }
-  return (
-    text.includes('delivery watchdog relay diagnostics for ') ||
-    text.includes('OpenCode inbox relay failed for ')
-  );
-}
-
 afterEach(() => {
   const unexpectedErrors = errorSpy.mock.calls.map(formatConsoleCall);
   const unexpectedWarnings = warnSpy.mock.calls
     .map(formatConsoleCall)
-    .filter(
-      (text) =>
-        !isLiveSlowConfigReadWarning(text) && !isAgendaSyncRecoveryFixtureDiagnostic(text)
-    );
+    .filter((text) => !isLiveSlowConfigReadWarning(text));
 
   errorSpy.mockRestore();
   warnSpy.mockRestore();

@@ -209,7 +209,7 @@ describe('NotificationManager storage migration', () => {
     // 20-item assertion while sizing to the measured work (~5x margin).
     await vi.waitFor(
       () => {
-        const parsed = JSON.parse(fs.readFileSync(currentPath, 'utf8')) as Array<{ id: string }>;
+        const parsed = JSON.parse(fs.readFileSync(currentPath, 'utf8')) as { id: string }[];
         expect(parsed).toHaveLength(20);
       },
       { timeout: 5_000 }
