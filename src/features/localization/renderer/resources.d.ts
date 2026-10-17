@@ -832,7 +832,9 @@ export default interface Resources {
       "saveError": "Could not save folder organization. Your last saved structure is preserved.",
       "showArchived": "Show archived tasks",
       "title": "Task folders",
-      "unfiled": "Unfiled"
+      "unfiled": "Unfiled",
+      "unreadTasks_one": "{{count}} unread task",
+      "unreadTasks_other": "{{count}} unread tasks"
     },
     "tasks": {
       "date": {

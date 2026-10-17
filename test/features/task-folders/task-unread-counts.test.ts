@@ -16,7 +16,7 @@ import { taskDetailKey } from '../../../src/features/team-task-detail/core';
 import { getTaskUnreadCount } from '../../../src/renderer/components/sidebar/taskFiltersState';
 
 import type { getSnapshot } from '../../../src/renderer/services/commentReadStorage';
-import type { GlobalTask } from '../../../src/shared/types';
+import type { GlobalTask, TaskComment } from '../../../src/shared/types';
 
 const contextId = 'unread-rollup-test';
 const task = (id: string, comments: GlobalTask['comments'] = []): GlobalTask => ({
@@ -33,9 +33,10 @@ const key = (id: string, context = contextId) =>
     teamName: 'team',
     taskId: id,
   });
-const comment = (id: string) => ({
+const comment = (id: string): TaskComment => ({
   id,
   author: 'agent',
+  type: 'regular',
   text: id,
   createdAt: '2026-10-16T00:00:00.000Z',
 });
