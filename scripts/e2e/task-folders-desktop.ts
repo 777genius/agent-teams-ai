@@ -561,8 +561,29 @@ async function main() {
           parent:loc(${JSON.stringify(f.parent)}), nested:loc(${JSON.stringify(f.nested)}), drop:loc(${JSON.stringify(target)}),
           parentRow:rows.includes(${JSON.stringify(f.parent)}), dropRow:rows.includes(${JSON.stringify(target)})};})())`;
       const beforeUndo = await ui.value<string>(dumpState);
-      await ui.menu(folderRow(f.parent), 'Move to…');
-      await ui.chooseDestination('Root');
+      for (let attempt = 0; ; attempt++) {
+        await ui.menu(folderRow(f.parent), 'Move to…');
+        try {
+          await ui.chooseDestination('Root', 'Seed parent');
+          break;
+        } catch (error) {
+          if (attempt >= 2) throw error;
+          await ui.key('Escape');
+          await ui.wait(
+            '!document.querySelector(\'[role="option"]\')',
+            'chooser closed after dialog identity failure',
+            5000
+          );
+          if (await ui.value<boolean>('!!document.querySelector(\'[role="dialog"]\')')) {
+            await ui.click(label('Cancel', el('[role="dialog"]')));
+            await ui.wait(
+              '!document.querySelector(\'[role="dialog"]\')',
+              'wrong-folder dialog cancelled',
+              5000
+            );
+          }
+        }
+      }
       await ui.submitMove('Move to…', 'root move submitted');
       try {
         await ui.persisted((s) => s.rootFolderIds.includes(f.parent), 'move back to Root');

@@ -386,16 +386,39 @@ export class UI {
     await this.cdp.send('Input.insertText', { text });
   }
   async menu(row: string, action?: string) {
-    await this.click(label('Folder or task actions', row));
-    await this.wait('document.querySelector(\'[role="menu"]\')', 'portaled action menu');
-    await this.value(`(() => {
-      window.__menuOwner = {
-        owner: document.activeElement?.closest?.('[data-folder-id]')?.getAttribute('data-folder-id') ?? null,
-        menus: document.querySelectorAll('[role="menu"]').length,
-        items: Array.from(document.querySelectorAll('[role="menuitem"]')).map((e) => e.textContent?.trim() ?? null),
-      };
-      return true;
-    })()`);
+    // Geometry and the native click dispatch are separate samples: a tree rebuild in
+    // between can re-key the row under the cursor, so the opened menu may belong to a
+    // neighboring row. Verify the open trigger's row and retry when it changed.
+    for (let attempt = 0; ; attempt++) {
+      const clickedId = await this.value<string | null>(
+        `(() => {const e=${row}; return e ? (e.getAttribute('data-folder-id') ?? e.getAttribute('data-task-key')) : null;})()`
+      );
+      await this.click(label('Folder or task actions', row));
+      await this.wait('document.querySelector(\'[role="menu"]\')', 'portaled action menu');
+      const owner = await this.value<string | null>(
+        `(() => {
+          const trigger = document.querySelector('button[aria-label="Folder or task actions"][aria-expanded="true"]');
+          const host = trigger?.closest('[data-folder-id]') ?? trigger?.closest('[data-task-key]');
+          return host ? (host.getAttribute('data-folder-id') ?? host.getAttribute('data-task-key')) : null;
+        })()`
+      );
+      await this.value(`(() => {
+        window.__menuOwner = {
+          owner: ${JSON.stringify(owner)},
+          clicked: ${JSON.stringify(clickedId)},
+          menus: document.querySelectorAll('[role="menu"]').length,
+          items: Array.from(document.querySelectorAll('[role="menuitem"]')).map((e) => e.textContent?.trim() ?? null),
+        };
+        return true;
+      })()`);
+      if (clickedId === null || owner === clickedId || attempt >= 2) break;
+      await this.key('Escape');
+      await this.wait(
+        '!document.querySelector(\'[role="menu"]\')',
+        'mismatched action menu dismissed',
+        TARGET_PRESENCE_TIMEOUT_MS
+      );
+    }
     if (action) {
       await this.click(label(action, 'document', '[role="menuitem"]'));
       await this.wait(
@@ -425,7 +448,7 @@ export class UI {
       TARGET_PRESENCE_TIMEOUT_MS
     );
   }
-  async chooseDestination(optionLabel: string) {
+  async chooseDestination(optionLabel: string, forbid?: string) {
     // The dialog zooms in over 200ms, and keyboard selection races Radix's deferred
     // item focus, so pick the option by its visible label and verify the trigger shows
     // it before the caller submits.
@@ -442,6 +465,18 @@ export class UI {
       };
       return true;
     })()`);
+    if (forbid) {
+      // The chooser filters the moved folder's own subtree out of the options, so a
+      // surviving label from that subtree proves the dialog belongs to another folder.
+      const leaked = await this.value<string>(
+        `JSON.stringify((window.__chooser?.options ?? []).filter((o) => o && o.includes(${JSON.stringify(forbid)})))`
+      );
+      assert.equal(
+        leaked,
+        '[]',
+        'Move dialog is not for the intended folder; its subtree labels are still choosable: ' + leaked
+      );
+    }
     await this.click(label(optionLabel, 'document', '[role="option"]'));
     await this.wait(
       '!document.querySelector(\'[role="option"]\')',
