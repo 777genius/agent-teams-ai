@@ -417,25 +417,26 @@ export class UI {
       TARGET_PRESENCE_TIMEOUT_MS
     );
   }
-  async chooseDestination(option?: string) {
-    // The dialog zooms in over 200ms and the Radix listbox mounts after its trigger click,
-    // so raw clicks and keys can land on stale geometry or a still-open listbox.
+  async chooseDestination(optionLabel: string) {
+    // The dialog zooms in over 200ms, and keyboard selection races Radix's deferred
+    // item focus, so pick the option by its visible label and verify the trigger shows
+    // it before the caller submits.
     await this.wait(
       `document.querySelector('[role="dialog"]')?.getAnimations().length === 0`,
       'destination dialog settled'
     );
     await this.click(label('Destination folder', el('[role="dialog"]')));
     await this.wait('document.querySelector(\'[role="option"]\')', 'destination options open');
-    if (option) await this.click(label(option, 'document', '[role="option"]'));
-    else {
-      await this.key('Home');
-      await this.key('Enter');
-    }
+    await this.click(label(optionLabel, 'document', '[role="option"]'));
     await this.wait(
       '!document.querySelector(\'[role="option"]\')',
       'destination options closed',
       TARGET_PRESENCE_TIMEOUT_MS
     );
+    const shown = await this.value<string>(
+      `(${label('Destination folder', el('[role="dialog"]'))})?.textContent?.trim()`
+    );
+    assert.equal(shown, optionLabel, 'Destination selection did not stick');
   }
   async expand(id: string) {
     await this.locate(folderRow(id));

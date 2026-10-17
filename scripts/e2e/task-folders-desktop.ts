@@ -407,8 +407,9 @@ async function main() {
       );
       await ui.key('Enter');
       await ui.wait('document.querySelector(\'[role="dialog"]\')', 'keyboard move dialog');
-      await ui.chooseDestination();
+      await ui.chooseDestination('Unfiled');
       await ui.click(label('Move to…', el('[role="dialog"]')));
+      await ui.wait('!document.querySelector(\'[role="dialog"]\')', 'keyboard move submitted');
       await ui.persisted(
         (s) =>
           !s.folders.some((folder) =>
@@ -419,6 +420,7 @@ async function main() {
       await ui.click(taskSource('b'));
       await ui.chooseDestination('Seed parent / Seed nested / Renamed nested');
       await ui.click(label('Move to…', el('[role="dialog"]')));
+      await ui.wait('!document.querySelector(\'[role="dialog"]\')', 'folder move submitted');
       await ui.persisted(
         (s) => children(s, created).some((c) => c.kind === 'task' && c.identity.taskId === 'b'),
         'chooser move to folder'
@@ -551,8 +553,9 @@ async function main() {
       // Undo through visible UI, preserving missing canonical references.
       await ui.expand(target);
       await ui.menu(folderRow(f.parent), 'Move to…');
-      await ui.chooseDestination();
+      await ui.chooseDestination('Root');
       await ui.click(label('Move to…', el('[role="dialog"]')));
+      await ui.wait('!document.querySelector(\'[role="dialog"]\')', 'root move submitted');
       await ui.persisted((s) => s.rootFolderIds.includes(f.parent), 'move back to Root');
       return {
         mountedRows: mounted,
