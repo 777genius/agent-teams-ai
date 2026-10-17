@@ -20,6 +20,7 @@ import { TeamMetaStore } from './TeamMetaStore';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 
 import type { ProvisioningGroupChatCallbacks } from './provisioning/TeamProvisioningGroupChatPorts';
+import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments';
 
 export type { RuntimeBootstrapMemberMcpLaunchConfig } from './provisioning/TeamProvisioningBootstrapSpec';
 export { buildDirectTmuxRestartEnvAssignments } from './provisioning/TeamProvisioningDirectRestart';
@@ -66,9 +67,10 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     private readonly openCodeTaskLogAttributionStore: OpenCodeTaskLogAttributionStore = new OpenCodeTaskLogAttributionStore(),
     private readonly memberWorktreeManager: TeamMemberWorktreeManager = new TeamMemberWorktreeManager(),
     private readonly attachmentStore: TeamAttachmentStore = new TeamAttachmentStore(),
-    groupChats?: ProvisioningGroupChatCallbacks
+    groupChats?: ProvisioningGroupChatCallbacks,
+    resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration
   ) {
-    super();
+    super(resolveOpenCodeInputDeclaration);
     this.initializeTeamProvisioningService(groupChats);
   }
 
@@ -239,7 +241,8 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
 
 /** Keep group callbacks lazy while using the desktop service's normal dependency defaults. */
 export function createDefaultTeamProvisioningService(
-  getGroupChats: () => ProvisioningGroupChatCallbacks
+  getGroupChats: () => ProvisioningGroupChatCallbacks,
+  resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration
 ) {
   return new TeamProvisioningService(
     undefined,
@@ -256,6 +259,7 @@ export function createDefaultTeamProvisioningService(
       send: (input, from) => getGroupChats().send(input, from),
       hasAcknowledgedInbound: (input) =>
         getGroupChats().hasAcknowledgedInbound?.(input) ?? Promise.resolve(false),
-    }
+    },
+    resolveOpenCodeInputDeclaration
   );
 }

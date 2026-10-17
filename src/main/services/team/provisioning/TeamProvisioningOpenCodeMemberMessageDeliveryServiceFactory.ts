@@ -16,6 +16,7 @@ import type {
 } from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type { TeamProvisioningOpenCodeRuntimeRecoveryFacade } from './TeamProvisioningOpenCodeRuntimeRecoveryFacade';
 import type { TeamProvisioningOpenCodeStoppedLaneCleanupBoundary } from './TeamProvisioningOpenCodeStoppedLaneCleanupBoundary';
+import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments';
 
 export interface OpenCodeRuntimeBootstrapEvidencePortsFactoryInput {
   teamsBasePath: string;
@@ -128,9 +129,11 @@ export function createOpenCodeMemberMessageDeliveryService(
 }
 
 export function createOpenCodeMemberMessageDeliveryServiceFromHost(
-  host: TeamProvisioningOpenCodeMemberMessageDeliveryHost
+  host: TeamProvisioningOpenCodeMemberMessageDeliveryHost,
+  resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration
 ): OpenCodeMemberMessageDeliveryService {
   return createOpenCodeMemberMessageDeliveryService({
+    resolveOpenCodeInputDeclaration,
     getOpenCodeRuntimeMessageAdapter: () => host.getOpenCodeRuntimeMessageAdapter(),
     readOpenCodeMemberDirectory: (teamName) =>
       host.openCodeRuntimeRecoveryFacade.readOpenCodeMemberDirectory(teamName),

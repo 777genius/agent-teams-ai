@@ -1,3 +1,4 @@
+import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments/contracts';
 import { TeamReadFailureError } from '@features/team-read-recovery/main';
 import { bindTeamProvisioningStartApi } from '@main/services/team/contracts/TeamProvisioningApis';
 import {
@@ -29,6 +30,8 @@ import type {
   TeamProvisioningProgress,
   TeamViewSnapshot,
 } from '@shared/types/team';
+
+const resolveInputDeclaration = vi.fn<ResolveOpenCodeInputDeclaration>();
 
 const modelRelaunchPersistence = vi.hoisted(() => vi.fn());
 vi.mock('@features/team-provisioning/main/composition/persistNodeMemberSettingsRelaunch', () => ({
@@ -947,6 +950,8 @@ describe('ipc teams handlers', () => {
         (target) => completed.has(target)
       );
     });
+    resolveInputDeclaration.mockReset();
+    resolveInputDeclaration.mockResolvedValue(null);
     launchIoGovernor = new LaunchIoGovernor({ quietWindowMs: 100 });
     initializeTeamHandlers(
       service as never,
@@ -963,7 +968,9 @@ describe('ipc teams handlers', () => {
       boardTaskExactLogsService as never,
       boardTaskExactLogDetailService as never,
       launchIoGovernor,
-      permanentDeletionLifecycle
+      permanentDeletionLifecycle,
+      undefined,
+      resolveInputDeclaration
     );
     registerTeamHandlers(ipcMain as never);
   });
@@ -1533,8 +1540,15 @@ describe('ipc teams handlers', () => {
     ['clip.webm', 'video/webm'],
     ['clip.mov', 'video/quicktime'],
   ])(
-    'accepts %s IPC payloads for the video-capable MiniMax recipient',
+    'accepts %s IPC payloads for the declared video-capable recipient',
     async (filename, mimeType) => {
+      resolveInputDeclaration.mockImplementationOnce(({ projectPath, model }) =>
+        Promise.resolve(
+          projectPath === TEST_PROJECT_PATH && model === 'minimax-coding-plan/minimax-m3'
+            ? ['text', 'video']
+            : null
+        )
+      );
       teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
       teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
         relayed: 1,
@@ -1545,7 +1559,7 @@ describe('ipc teams handlers', () => {
       });
       service.getTeamData.mockResolvedValueOnce({
         teamName: 'my-team',
-        config: { name: 'My Team' },
+        config: { name: 'My Team', projectPath: TEST_PROJECT_PATH },
         tasks: [],
         members: [
           {
@@ -1577,6 +1591,10 @@ describe('ipc teams handlers', () => {
           attachments: [attachment],
         })) as { success: boolean };
 
+        expect(resolveInputDeclaration).toHaveBeenCalledWith({
+          projectPath: TEST_PROJECT_PATH,
+          model: 'minimax-coding-plan/minimax-m3',
+        });
         expect(result.success).toBe(true);
         const [inbox] = JSON.parse(
           fs.readFileSync(
@@ -1594,6 +1612,13 @@ describe('ipc teams handlers', () => {
   );
 
   it('allows an exact 8MiB video through the video-only serialized IPC envelope', async () => {
+    resolveInputDeclaration.mockImplementationOnce(({ projectPath, model }) =>
+      Promise.resolve(
+        projectPath === TEST_PROJECT_PATH && model === 'minimax-coding-plan/minimax-m3'
+          ? ['text', 'video']
+          : null
+      )
+    );
     const eightMiB = 8 * 1024 * 1024;
     teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
     teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
@@ -1605,7 +1630,7 @@ describe('ipc teams handlers', () => {
     });
     service.getTeamData.mockResolvedValueOnce({
       teamName: 'my-team',
-      config: { name: 'My Team' },
+      config: { name: 'My Team', projectPath: TEST_PROJECT_PATH },
       tasks: [],
       members: [
         {
@@ -1670,10 +1695,15 @@ describe('ipc teams handlers', () => {
   });
 
   it('rejects video IPC payloads for a non-video OpenCode model', async () => {
+    resolveInputDeclaration.mockImplementationOnce(({ projectPath, model }) =>
+      Promise.resolve(
+        projectPath === TEST_PROJECT_PATH && model === 'moonshotai/kimi-k2.6' ? ['text'] : null
+      )
+    );
     teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
     service.getTeamData.mockResolvedValueOnce({
       teamName: 'my-team',
-      config: { name: 'My Team' },
+      config: { name: 'My Team', projectPath: TEST_PROJECT_PATH },
       tasks: [],
       members: [
         {
@@ -1704,19 +1734,28 @@ describe('ipc teams handlers', () => {
       ],
     })) as { success: boolean; error?: string };
 
+    expect(resolveInputDeclaration).toHaveBeenCalledWith({
+      projectPath: TEST_PROJECT_PATH,
+      model: 'moonshotai/kimi-k2.6',
+    });
     expect(result.success).toBe(false);
-    expect(result.error).toContain(
-      'This provider path does not support video attachments through this delivery path.'
-    );
+    expect(result.error).toContain('This OpenCode model does not declare video input support.');
     expect(service.sendRuntimeRecipientMessage).not.toHaveBeenCalled();
     vi.mocked(console.error).mockClear();
   });
 
   it('keeps the one-video native OpenCode guard before immutable storage', async () => {
+    resolveInputDeclaration.mockImplementationOnce(({ projectPath, model }) =>
+      Promise.resolve(
+        projectPath === TEST_PROJECT_PATH && model === 'minimax-coding-plan/minimax-m3'
+          ? ['text', 'video']
+          : null
+      )
+    );
     teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValue('opencode');
     service.getTeamData.mockResolvedValueOnce({
       teamName: 'my-team',
-      config: { name: 'My Team' },
+      config: { name: 'My Team', projectPath: TEST_PROJECT_PATH },
       members: [
         {
           name: 'bob',

@@ -264,9 +264,15 @@ describe('buildProviderAwareCliEnv', () => {
       for (const port of [4580, 4581]) {
         await writeTeamControlApiState(`http://127.0.0.1:${port}`);
         const client = new AgentTeamsRuntimeProviderManagementCliClient();
-        await expect(
-          client.loadModels({ runtimeId: 'opencode', providerId: 'xai' })
-        ).resolves.toEqual(response);
+        const startedAt = Date.now();
+        const catalog = await client.loadModels({ runtimeId: 'opencode', providerId: 'xai' });
+        const freshUntil = catalog.models?.freshUntil;
+        expect(catalog).toEqual({
+          ...response,
+          models: { ...response.models, freshUntil: expect.any(String) },
+        });
+        expect(Date.parse(freshUntil!)).toBeGreaterThanOrEqual(startedAt + 120_000);
+        expect(Date.parse(freshUntil!)).toBeLessThanOrEqual(Date.now() + 120_000);
         const [command, args, options] = execCliMock.mock.calls.at(-1)!;
         expect(command).toBe('/sandbox/agent-teams-cli');
         expect(args).toEqual([

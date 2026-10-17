@@ -132,6 +132,7 @@ import type { TeamIpcHandlerApis } from '../services/team/contracts/TeamProvisio
 import type { CrossTeamService } from '../services/team/CrossTeamService';
 import type { LaunchIoGovernor } from '../services/team/LaunchIoGovernor';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
+import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments';
 
 const logger = createLogger('IPC:handlers');
 
@@ -192,7 +193,8 @@ export function initializeIpcHandlers(
     ): Promise<void>;
     completeTeamDeletion(teamName: string): void;
     resumeTeam(teamName: string): void;
-  }
+  },
+  resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration
 ): void {
   // Initialize domain handlers with registry
   initializeProjectHandlers(registry);
@@ -236,7 +238,8 @@ export function initializeIpcHandlers(
       clearTeamLogSourceSuspension: (teamName) => {
         teamLogSourceTracker?.resumeSuspendedTeam(teamName);
       },
-    })
+    }),
+    resolveOpenCodeInputDeclaration
   );
   initializeConfigHandlers({
     updateClaudeRoot: contextCallbacks.updateClaudeRoot,

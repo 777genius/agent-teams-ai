@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
+import { AttachmentCatalogRefresh } from '@renderer/components/team/attachments/AttachmentCatalogRefresh';
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
 import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneOverlay';
 import { ActionModeSelector } from '@renderer/components/team/messages/ActionModeSelector';
@@ -18,8 +19,10 @@ import { MemberSelect } from '@renderer/components/ui/MemberSelect';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useAttachments } from '@renderer/hooks/useAttachments';
+import { useAttachmentValidation } from '@renderer/hooks/useAttachmentValidation';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
+import { useRecipientAttachmentDeclarations } from '@renderer/hooks/useRecipientAttachmentDeclarations';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useStore } from '@renderer/store';
@@ -30,7 +33,6 @@ import {
   getAttachmentInputAcceptForMember,
   getMemberAttachmentUnavailableReason,
   isReferenceAttachmentForMember,
-  validateAttachmentFilesForMember,
   validateAttachmentPayloadsForMember,
 } from '@renderer/utils/attachmentRecipientCapabilities';
 import { removeChipTokenFromText } from '@renderer/utils/chipUtils';
@@ -43,10 +45,6 @@ import {
 } from '@renderer/utils/taskReferenceUtils';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
 import { isLeadMember } from '@shared/utils/leadDetection';
-import {
-  inferTeamProviderIdFromModel,
-  normalizeOptionalTeamProviderId,
-} from '@shared/utils/teamProvider';
 import { AlertCircle, Paperclip, Send, X } from 'lucide-react';
 
 import { MemberBadge } from '../MemberBadge';
@@ -118,7 +116,9 @@ export const SendMessageDialog = ({
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
   const colorMap = useMemo(() => buildMemberColorMap(members), [members]);
-  const projectPath = useStore((s) => s.selectedTeamData?.config.projectPath ?? null);
+  const projectPath = useStore((s) =>
+    s.selectedTeamName === teamName ? (s.selectedTeamData?.config.projectPath ?? null) : null
+  );
   const [quote, setQuote] = useState<QuotedMessage | undefined>(undefined);
   const [quoteExpanded, setQuoteExpanded] = useState(false);
   const [member, setMember] = useState('');
@@ -158,10 +158,11 @@ export const SendMessageDialog = ({
 
   const selectedMember = members.find((m) => m.name === member);
   const isLeadRecipient = selectedMember ? isLeadMember(selectedMember) : false;
-  const selectedProviderId =
-    normalizeOptionalTeamProviderId(selectedMember?.providerId) ??
-    inferTeamProviderIdFromModel(selectedMember?.model);
-  const isOpenCodeRecipient = selectedProviderId === 'opencode';
+  const {
+    resolveDeclaration,
+    refresh: refreshDeclarations,
+    isOpenCode: isOpenCodeRecipient,
+  } = useRecipientAttachmentDeclarations(selectedMember, projectPath, !!isTeamAlive);
   const showAttachmentControl = canMemberShowAttachmentControl(selectedMember);
   const memberAttachmentUnavailableReason = showAttachmentControl
     ? getMemberAttachmentUnavailableReason(selectedMember)
@@ -282,6 +283,7 @@ export const SendMessageDialog = ({
   const attachmentPayloadRestrictionReason = validateAttachmentPayloadsForMember({
     member: selectedMember,
     attachments,
+    resolveDeclaration,
   });
   const attachmentsBlocked =
     attachments.length > 0 && (!supportsAttachments || attachmentPayloadRestrictionReason != null);
@@ -307,8 +309,28 @@ export const SendMessageDialog = ({
     chipDraft.setChips(chipDraft.chips.filter((c) => c.id !== chipId));
   };
 
+  const showFileRestrictionError = useCallback(
+    (reason?: string) => {
+      setFileRestrictionError(
+        reason ??
+          attachmentRestrictionReason ??
+          attachmentPayloadRestrictionReason ??
+          t('sendMessage.attachments.recipientUnsupported')
+      );
+      window.clearTimeout(fileRestrictionTimerRef.current);
+      fileRestrictionTimerRef.current = window.setTimeout(() => {
+        setFileRestrictionError(null);
+      }, 4000);
+    },
+    [attachmentPayloadRestrictionReason, attachmentRestrictionReason, t]
+  );
+
+  const { validateFiles: validateSelectedAttachmentFiles, validatePayloads } =
+    useAttachmentValidation(selectedMember, resolveDeclaration, showFileRestrictionError);
+
   const handleSubmit = (): void => {
     if (!canSend || !members.some((candidate) => candidate.name === member.trim())) return;
+    if (!validatePayloads(attachments)) return;
     const taskRefs = extractTaskRefsFromText(textDraft.value, taskSuggestions);
     void Promise.resolve(
       onSend(
@@ -338,37 +360,6 @@ export const SendMessageDialog = ({
       onClose();
     }
   };
-
-  const showFileRestrictionError = useCallback(() => {
-    setFileRestrictionError(
-      attachmentRestrictionReason ??
-        attachmentPayloadRestrictionReason ??
-        t('sendMessage.attachments.recipientUnsupported')
-    );
-    window.clearTimeout(fileRestrictionTimerRef.current);
-    fileRestrictionTimerRef.current = window.setTimeout(() => {
-      setFileRestrictionError(null);
-    }, 4000);
-  }, [attachmentPayloadRestrictionReason, attachmentRestrictionReason, t]);
-
-  const validateSelectedAttachmentFiles = useCallback(
-    (files: FileList | File[]): boolean => {
-      const reason = validateAttachmentFilesForMember({
-        member: selectedMember,
-        files,
-      });
-      if (!reason) {
-        return true;
-      }
-      setFileRestrictionError(reason);
-      window.clearTimeout(fileRestrictionTimerRef.current);
-      fileRestrictionTimerRef.current = window.setTimeout(() => {
-        setFileRestrictionError(null);
-      }, 4000);
-      return false;
-    },
-    [selectedMember]
-  );
 
   const handleFileInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -530,6 +521,13 @@ export const SendMessageDialog = ({
               ) : null}
             </div>
 
+            <AttachmentCatalogRefresh
+              visible={!!isOpenCodeRecipient && (attachmentsBlocked || !!fileRestrictionError)}
+              onRefresh={() => {
+                setFileRestrictionError(null);
+                refreshDeclarations();
+              }}
+            />
             <AttachmentPreviewList
               attachments={attachments}
               isFileReference={(attachment) =>

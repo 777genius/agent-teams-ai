@@ -1328,7 +1328,6 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       this.directoryResponseCache.delete(cacheKey);
       return null;
     }
-    // Refresh insertion order so the bounded map behaves as an LRU cache.
     this.directoryResponseCache.delete(cacheKey);
     this.directoryResponseCache.set(cacheKey, cached);
     return cached.response;
@@ -1403,7 +1402,6 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       this.modelResponseCache.delete(cacheKey);
       return null;
     }
-    // Refresh insertion order so the bounded map behaves as an LRU cache.
     this.modelResponseCache.delete(cacheKey);
     this.modelResponseCache.set(cacheKey, cached);
     return cached.response;
@@ -1443,12 +1441,14 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       };
     }
     if (response.models && !response.error) {
+      const expiresAt = Date.now() + ttlMs;
+      response = {
+        ...response,
+        models: { ...response.models, freshUntil: new Date(expiresAt).toISOString() },
+      };
       this.modelResponseCache.delete(cacheKey);
       this.pruneModelResponseCache();
-      this.modelResponseCache.set(cacheKey, {
-        expiresAt: Date.now() + ttlMs,
-        response,
-      });
+      this.modelResponseCache.set(cacheKey, { expiresAt, response });
     }
     return response;
   }
