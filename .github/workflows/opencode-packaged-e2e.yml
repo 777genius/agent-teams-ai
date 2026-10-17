@@ -120,6 +120,7 @@ jobs:
           GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
           RUNTIME_CANDIDATE_RUN: ${{ inputs.runtime_candidate_run }}
           RUNTIME_CANDIDATE_SHA: ${{ inputs.runtime_candidate_sha }}
+          RUNTIME_CANDIDATE_BUN_VERSION: '1.4.3'
         run: node scripts/e2e/opencode-diagnostics/stage-candidate.mjs
       - name: Stage pinned terminal runtime
         env:
