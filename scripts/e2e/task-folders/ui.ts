@@ -448,8 +448,10 @@ export class UI {
       const record = (tag) => (event) => {
         const hit = document.elementFromPoint(event.clientX, event.clientY);
         const button = event.target?.closest?.('button');
+        const trigger = document.querySelector('[role="dialog"] [aria-label="Destination folder"]');
         window.__submitTrace.push([tag, button?.textContent?.trim() ?? null,
-          hit ? hit.tagName + '.' + (hit.className || '').slice(0, 40) : null]);
+          hit ? hit.tagName + '.' + (hit.className || '').slice(0, 40) : null,
+          trigger?.textContent?.trim() ?? null]);
       };
       document.addEventListener('pointerdown', record('press'), true);
       document.addEventListener('click', record('click'), true);

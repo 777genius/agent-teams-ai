@@ -553,15 +553,21 @@ async function main() {
       await ui.menu(folderRow(f.parent), 'Move to…');
       await ui.chooseDestination('Root');
       await ui.submitMove('Move to…', 'root move submitted');
+      const locateParent = `JSON.stringify((() => {const s=JSON.parse(localStorage.getItem('taskFolders:v1'));
+        const hit=s.folders.find((f)=>f.children.some((c)=>c.kind==='folder'&&c.id===${JSON.stringify(f.parent)}));
+        return {parent:hit?.name ?? null,inRoot:s.rootFolderIds.includes(${JSON.stringify(f.parent)})};})())`;
+      const firstPlace = await ui.value<string>(locateParent);
       try {
         await ui.persisted((s) => s.rootFolderIds.includes(f.parent), 'move back to Root');
       } catch (error) {
-        const where = await ui.value<string>(
-          `JSON.stringify((() => {const s=JSON.parse(localStorage.getItem('taskFolders:v1'));
-            const hit=s.folders.find((f)=>f.children.some((c)=>c.kind==='folder'&&c.id===${JSON.stringify(f.parent)}));
-            return {parent:hit?.name ?? null,inRoot:s.rootFolderIds.includes(${JSON.stringify(f.parent)})};})())`
+        const where = await ui.value<string>(locateParent);
+        throw new Error(
+          String(error) +
+            ' | right after submit: ' +
+            firstPlace +
+            ' | at timeout: ' +
+            where
         );
-        throw new Error(String(error) + ' | folder location after undo: ' + where);
       }
       return {
         mountedRows: mounted,
