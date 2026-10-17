@@ -440,24 +440,28 @@ export class UI {
   }
   async submitMove(title: string, name: string) {
     // Prove the submit handler ran: a dialog that only dismissed closes the same
-    // way while the move command never executes.
+    // way while the move command never executes. Event-level trace, since a fast
+    // submit can finish before React ever paints the busy state.
     await this.value(`(() => {
-      window.__submitRan = false;
-      const probe = () => {
-        const b = Array.from(document.querySelectorAll('[role="dialog"] button'))
-          .find((e) => e.textContent.trim() === ${JSON.stringify(title)});
-        if (b && b.disabled) window.__submitRan = true;
+      const title = ${JSON.stringify(title)};
+      window.__submitTrace = [];
+      const record = (tag) => (event) => {
+        const hit = document.elementFromPoint(event.clientX, event.clientY);
+        const button = event.target?.closest?.('button');
+        window.__submitTrace.push([tag, button?.textContent?.trim() ?? null,
+          hit ? hit.tagName + '.' + (hit.className || '').slice(0, 40) : null]);
       };
-      window.__submitProbe = setInterval(probe, 20);
-      probe();
+      document.addEventListener('pointerdown', record('press'), true);
+      document.addEventListener('click', record('click'), true);
       return true;
     })()`);
     await this.click(label(title, el('[role="dialog"]')));
     await this.wait('!document.querySelector(\'[role="dialog"]\')', name + ' closed');
-    const ran = await this.value<boolean>(
-      'clearInterval(window.__submitProbe), window.__submitRan === true'
+    const trace = await this.value<unknown>('JSON.stringify(window.__submitTrace)');
+    const clicked = await this.value<boolean>(
+      `window.__submitTrace.some(([tag, button]) => tag === 'click' && button === ${JSON.stringify(title)})`
     );
-    assert(ran, name + ' closed without running its submit handler');
+    assert(clicked, name + ' closed without a click on its submit button: ' + trace);
   }
   async expand(id: string) {
     await this.locate(folderRow(id));
