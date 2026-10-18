@@ -1,10 +1,6 @@
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@renderer/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { ArrowUpDown, Check } from 'lucide-react';
 
 import { type TaskViewSortMode } from './taskViewPolicy';
@@ -53,9 +49,7 @@ export const TaskSortPopover = ({
           data-testid={testId}
         >
           <ArrowUpDown className="size-3" />
-          <span className="max-w-20 truncate">
-            {t(activeOption.labelKey)}
-          </span>
+          <span className="max-w-20 truncate">{t(activeOption.labelKey)}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -63,6 +57,8 @@ export const TaskSortPopover = ({
         align="end"
         sideOffset={6}
         data-testid={`${testId}-content`}
+        // Stray programmatic focus from the folders tree must not dismiss the popover.
+        onFocusOutside={(event) => event.preventDefault()}
       >
         <div className="flex flex-col">
           {options.map((option) => (
@@ -79,7 +75,7 @@ export const TaskSortPopover = ({
               className={`h-auto w-full items-center gap-2 px-2 py-1.5 text-left text-[12px] ${
                 mode === option.id
                   ? 'bg-surface-raised text-text'
-                  : 'text-text-secondary hover:bg-surface-raised/60 hover:text-text'
+                  : 'hover:bg-surface-raised/60 text-text-secondary hover:text-text'
               }`}
             >
               <Check

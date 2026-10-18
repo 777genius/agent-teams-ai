@@ -71,6 +71,7 @@ export function getContextScopedTeamResetState(): Partial<AppState> {
     globalTasksLoading: false,
     globalTasksInitialized: false,
     globalTasksError: null,
+    globalDeletedTasks: [],
     globalTaskDetail: null,
     taskDetailById: {},
     taskDetailResourcesById: {},

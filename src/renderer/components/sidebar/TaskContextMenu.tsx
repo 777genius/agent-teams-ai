@@ -33,6 +33,7 @@ export interface TaskContextMenuProps {
   onMarkUnread: () => void;
   onRename: () => void;
   onDelete?: () => void;
+  onRestore?: () => void;
   children: React.ReactNode;
 }
 
@@ -46,6 +47,7 @@ type TaskContextMenuContentProps = Pick<
   | 'onMarkUnread'
   | 'onRename'
   | 'onDelete'
+  | 'onRestore'
 >;
 
 const TaskContextMenuLazyContent = ({
@@ -57,12 +59,15 @@ const TaskContextMenuLazyContent = ({
   onMarkUnread,
   onRename,
   onDelete,
+  onRestore,
 }: TaskContextMenuContentProps): React.JSX.Element => {
   const { t } = useAppTranslation('common');
   const taskFolderEditingReady = useTaskFolderEditingReady();
+  const isDeleted = task.status === 'deleted';
   const actions = buildTaskCardActions({
     isPinned,
     isArchived,
+    isDeleted,
     editingReady: taskFolderEditingReady,
     handlers: {
       onTogglePin,
@@ -71,6 +76,7 @@ const TaskContextMenuLazyContent = ({
       onMarkUnread,
       onToggleArchive,
       onDelete,
+      onRestore,
     },
   });
   const iconFor = (action: TaskCardAction) => {
@@ -78,6 +84,7 @@ const TaskContextMenuLazyContent = ({
     if (action.id === 'move') return FolderInput;
     if (action.id === 'rename') return Pencil;
     if (action.id === 'markUnread') return Mail;
+    if (action.id === 'restore') return ArchiveRestore;
     if (action.id === 'archive') return isArchived ? ArchiveRestore : Archive;
     return Trash2;
   };
@@ -113,6 +120,7 @@ export const TaskContextMenu = ({
   onMarkUnread,
   onRename,
   onDelete,
+  onRestore,
   children,
 }: TaskContextMenuProps): React.JSX.Element => {
   const [open, setOpen] = useState(false);
@@ -132,6 +140,7 @@ export const TaskContextMenu = ({
           onMarkUnread={onMarkUnread}
           onRename={onRename}
           onDelete={onDelete}
+          onRestore={onRestore}
         />
       ) : null}
     </ContextMenu>

@@ -1,4 +1,4 @@
-import { applyCommand, emptySnapshot, taskKey } from '../domain/folders';
+import { applyCommand, emptySnapshot, seededSnapshot, taskKey } from '../domain/folders';
 
 import type { Command, Snapshot, TaskIdentity } from '../domain/folders';
 export type LoadResult =
@@ -59,9 +59,17 @@ export class FolderController {
     if (this.loading) return this.loading;
     this.loading = this.repository
       .load()
-      .then((result) => {
+      .then(async (result) => {
+        if (result.kind === 'empty') {
+          // First run bootstraps the starter folder; persistence is best effort so a
+          // failed write simply reseeds on the next start.
+          const seeded = seededSnapshot();
+          this.publish({ status: 'ready', snapshot: seeded });
+          await this.repository.save(seeded).catch(() => undefined);
+          return;
+        }
         this.publish({
-          status: result.kind === 'empty' || result.kind === 'valid' ? 'ready' : result.kind,
+          status: result.kind === 'valid' ? 'ready' : result.kind,
           snapshot: result.kind === 'valid' ? result.snapshot : emptySnapshot(),
         });
       })

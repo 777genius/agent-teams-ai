@@ -7,9 +7,12 @@ import type { GlobalTask, TeamSummary } from '../../../../src/shared/types';
 
 interface StoreState {
   globalTasks: GlobalTask[];
+  globalDeletedTasks: GlobalTask[];
   globalTasksLoading: boolean;
   globalTasksInitialized: boolean;
   fetchAllTasks: ReturnType<typeof vi.fn>;
+  fetchAllDeletedTasks: ReturnType<typeof vi.fn>;
+  restoreTask: ReturnType<typeof vi.fn>;
   fetchProjects: ReturnType<typeof vi.fn>;
   fetchRepositoryGroups: ReturnType<typeof vi.fn>;
   softDeleteTask: ReturnType<typeof vi.fn>;
@@ -235,9 +238,12 @@ function makeTask(index: number, overrides: Partial<GlobalTask> = {}): GlobalTas
 describe('GlobalTaskList project grouping', () => {
   beforeEach(() => {
     storeState.globalTasks = [];
+    storeState.globalDeletedTasks = [];
     storeState.globalTasksLoading = false;
     storeState.globalTasksInitialized = true;
     storeState.fetchAllTasks = vi.fn(() => Promise.resolve(undefined));
+    storeState.fetchAllDeletedTasks = vi.fn(() => Promise.resolve(undefined));
+    storeState.restoreTask = vi.fn(() => Promise.resolve(undefined));
     storeState.fetchProjects = vi.fn(() => Promise.resolve(undefined));
     storeState.fetchRepositoryGroups = vi.fn(() => Promise.resolve(undefined));
     storeState.softDeleteTask = vi.fn(() => Promise.resolve(undefined));
@@ -652,10 +658,7 @@ describe('GlobalTaskList project grouping', () => {
     });
 
     const input = host.querySelector<HTMLInputElement>('input[type="text"]');
-    const setValue = Object.getOwnPropertyDescriptor(
-      HTMLInputElement.prototype,
-      'value'
-    )!.set!;
+    const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
     await act(async () => {
       setValue.call(input, '  visible new NAME  ');
       input!.dispatchEvent(new Event('input', { bubbles: true }));

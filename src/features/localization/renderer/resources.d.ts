@@ -774,6 +774,7 @@ export default interface Resources {
       "markUnread": "Mark as unread",
       "pin": "Pin",
       "rename": "Rename",
+      "restoreTask": "Restore task",
       "unarchive": "Unarchive",
       "unpin": "Unpin"
     },
@@ -794,6 +795,8 @@ export default interface Resources {
       "searchProjects": "Search projects...",
       "searchTeams": "Search teams...",
       "selectAll": "Select all",
+      "showArchived": "Show archived tasks",
+      "showDeleted": "Show deleted tasks",
       "status": "Status",
       "statusOptions": {
         "approved": "APPROVED",
@@ -808,11 +811,13 @@ export default interface Resources {
     "taskFolders": {
       "actions": "Folder or task actions",
       "archived": "Archived task",
+      "cannotMoveHere": "You can't move tasks here",
       "collapse": "Collapse folder",
       "counts": "{{active}} active, {{archived}} archived, {{unavailable}} unavailable",
       "deleteDescription": "Tasks and subfolders move to the parent. Tasks in a root folder become unfiled. No tasks are deleted.",
       "deleteFolder": "Delete folder",
       "destination": "Destination folder",
+      "dockToSidebar": "Folders as the sidebar",
       "dragFolder": "Drag folder",
       "dragTask": "Drag task to a folder",
       "expand": "Expand folder",
@@ -820,6 +825,7 @@ export default interface Resources {
       "invalidName": "Use a name with 1–120 characters.",
       "loading": "Loading folders…",
       "move": "Move to…",
+      "moveHere": "Put it here",
       "newFolder": "New folder",
       "newSubfolder": "New subfolder",
       "organizationDescription": "Organize tasks without changing their team, project or status.",
@@ -872,6 +878,11 @@ export default interface Resources {
       },
       "hideArchived": "Hide archived",
       "pinned": "Pinned",
+      "restoreFailed": {
+        "confirmLabel": "OK",
+        "fallbackMessage": "An unexpected error occurred",
+        "title": "Failed to restore task"
+      },
       "searchPlaceholder": "Search tasks...",
       "showArchived": "Show archived",
       "showLess": "Show less",

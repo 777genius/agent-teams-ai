@@ -1,5 +1,4 @@
 import { useAppTranslation } from '@features/localization/renderer';
-import { TaskGroupChatField } from '@renderer/components/team/dialogs/TaskGroupChatField';
 
 import {
   type TaskDetailFileLinkIntent,
@@ -81,13 +80,6 @@ export const TaskDetailContent = ({
           </p>
         ) : null}
         {renderHeader ? renderHeader(header) : header}
-        <TaskGroupChatField
-          key={model.currentTask.id}
-          teamName={model.teamName}
-          value={model.currentTask.groupChatId ?? null}
-          disabled={!sessionController.isOwner}
-          onChange={actions.updateGroupChat}
-        />
         <TaskDetailBody
           actions={actions}
           model={model}

@@ -100,6 +100,9 @@ export const TaskFiltersPopover = ({
           align="end"
           sideOffset={6}
           data-testid={`${testId}-content`}
+          // The folders tree re-focuses rows asynchronously after moves; that stray
+          // focus must not dismiss the popover and drop the unapplied draft.
+          onFocusOutside={(event) => event.preventDefault()}
         >
           <div className="space-y-3">
             <div>
@@ -207,6 +210,29 @@ export const TaskFiltersPopover = ({
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="flex cursor-pointer items-center gap-2 text-[12px] text-text">
+                <Checkbox
+                  data-testid="task-view-show-archived"
+                  checked={draft.showArchived}
+                  onCheckedChange={(checked) =>
+                    setDraft({ ...draft, showArchived: checked === true })
+                  }
+                />
+                {t('taskFilters.showArchived')}
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-[12px] text-text">
+                <Checkbox
+                  data-testid="task-view-show-deleted"
+                  checked={draft.showDeleted}
+                  onCheckedChange={(checked) =>
+                    setDraft({ ...draft, showDeleted: checked === true })
+                  }
+                />
+                {t('taskFilters.showDeleted')}
+              </label>
             </div>
 
             <Button

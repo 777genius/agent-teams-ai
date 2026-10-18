@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
+import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { buildTaskFilterTeamOptions } from '@renderer/components/sidebar/taskFilterOptions';
 import {
   getTaskUnreadCount,
@@ -23,6 +25,7 @@ import { projectFolders } from '../view-models/projection';
 import { applyVisibleTaskChildren } from '../view-models/projectionView';
 import { countUnreadTasksByNode } from '../view-models/taskUnreadCounts';
 
+import { useTaskFoldersDocked } from './useTaskFoldersDocked';
 import { useTaskViewState } from './useTaskViewState';
 
 import type { RefObject } from 'react';
@@ -37,6 +40,10 @@ export function useTaskFoldersHost(
   const panel = useSyncExternalStore(panelController.subscribe, panelController.getSnapshot);
   const move = useSyncExternalStore(moveRequest.subscribe, moveRequest.getSnapshot);
   const tasks = useStore((s) => s.globalTasks);
+  const globalDeletedTasks = useStore((s) => s.globalDeletedTasks);
+  const fetchAllDeletedTasks = useStore((s) => s.fetchAllDeletedTasks);
+  const restoreTask = useStore((s) => s.restoreTask);
+  const fetchAllTasks = useStore((s) => s.fetchAllTasks);
   const teams = useStore((s) => s.teams);
   const teamByName = useStore((s) => s.teamByName);
   const isTeamOffline = useTaskTeamStatus();
@@ -44,27 +51,44 @@ export function useTaskFoldersHost(
   const local = useTaskLocalState();
   const readState = useReadStateSnapshot();
   const view = useTaskViewState('tree');
+  const { t } = useAppTranslation('common');
   const taskOrder = view.sortMode === 'manual' ? 'manual' : 'computed';
   const viewSetSortOpen = view.setSortOpen;
   const viewSetFiltersOpen = view.setFiltersOpen;
   const viewClosePopovers = view.closePopovers;
-  const [showArchived, setShowArchived] = useState(true);
   const [rect, setRect] = useState<{
     left: number;
     top: number;
     height: number;
     width: number;
   } | null>(null);
+  const viewTasks = useMemo(
+    () => (globalDeletedTasks.length > 0 ? [...tasks, ...globalDeletedTasks] : tasks),
+    [globalDeletedTasks, tasks]
+  );
+  const teamCatalogKey = useMemo(() => teams.map((team) => team.teamName).join('|'), [teams]);
+  // Membership only: task add/remove invalidates the deleted feed, status churn must not.
+  const globalTaskIdsKey = useMemo(() => tasks.map((task) => task.id).join('|'), [tasks]);
+  const docked = useTaskFoldersDocked();
+  // Deleted identities must resolve even while the filter hides them, otherwise a
+  // deleted folder child reads as unavailable instead of a hidden row. The scan fans
+  // out per team and parses every task file, so only pay it while the tree can render.
+  const treeMounted = !collapsed && (docked || panel.open);
+  useEffect(() => {
+    if (!treeMounted) return;
+    void fetchAllDeletedTasks();
+  }, [contextId, fetchAllDeletedTasks, globalTaskIdsKey, teamCatalogKey, treeMounted]);
   const canonicalProjection = useMemo(
     () =>
       projectFolders(
         state.snapshot,
-        sortGlobalTasks(tasks, 'time', contextId),
+        sortGlobalTasks(viewTasks, 'time', contextId),
         local.isArchived,
         local.getRenamedSubject,
-        true
+        true,
+        view.filters.showDeleted
       ),
-    [state.snapshot, tasks, local, contextId]
+    [state.snapshot, viewTasks, local, contextId, view.filters.showDeleted]
   );
   const unreadTaskCounts = useMemo(
     () =>
@@ -86,12 +110,12 @@ export function useTaskFoldersHost(
   );
   const projection = useMemo(() => {
     const visibleTasks = filterGlobalTasks(
-      tasks,
+      viewTasks,
       {
         contextId,
         filters: view.filters,
         searchQuery: view.searchQuery,
-        archiveMode: showArchived ? 'all' : 'active',
+        archiveMode: view.filters.showArchived ? 'all' : 'active',
         getEffectiveSubject,
       },
       readState,
@@ -102,7 +126,7 @@ export function useTaskFoldersHost(
     );
     return applyVisibleTaskChildren(
       canonicalProjection,
-      tasks,
+      viewTasks,
       (task) => visibleTaskKeys.has(`task:${JSON.stringify([task.teamName, task.id])}`),
       (siblings) =>
         view.sortMode === 'manual'
@@ -116,9 +140,8 @@ export function useTaskFoldersHost(
     getEffectiveSubject,
     local,
     readState,
-    showArchived,
     taskOrder,
-    tasks,
+    viewTasks,
     view.filters,
     view.searchQuery,
     view.sortMode,
@@ -161,17 +184,17 @@ export function useTaskFoldersHost(
   }, []);
   useEffect(() => {
     folderController.setCatalog(
-      tasks.map((task) => ({ teamName: task.teamName, taskId: task.id }))
+      viewTasks.map((task) => ({ teamName: task.teamName, taskId: task.id }))
     );
-  }, [tasks]);
+  }, [viewTasks]);
   useEffect(() => {
     const source = panelController.getSnapshot().dragSource;
     if (
       source?.startsWith('task:') &&
-      !tasks.some((task) => `task:${JSON.stringify([task.teamName, task.id])}` === source)
+      !viewTasks.some((task) => `task:${JSON.stringify([task.teamName, task.id])}` === source)
     )
       panelController.end();
-  }, [tasks]);
+  }, [viewTasks]);
   const registerPanel = useCallback(
     (element: HTMLDivElement | null) => {
       panelRef.current = element;
@@ -267,14 +290,30 @@ export function useTaskFoldersHost(
     local,
     rect,
     registerPanel,
-    showArchived,
-    setShowArchived,
     openTask: (team: string, id: string): void => {
       clearTaskManualUnread({ contextId, teamName: team, taskId: id });
       openDetail(team, id);
     },
     markUnread: (team: string, id: string): void => {
       markTaskUnread({ contextId, teamName: team, taskId: id });
+    },
+    restoreTask: (team: string, id: string): void => {
+      void (async () => {
+        try {
+          await restoreTask(team, id);
+          await fetchAllTasks();
+        } catch (error) {
+          void confirm({
+            title: t('tasksPanel.restoreFailed.title'),
+            message:
+              error instanceof Error
+                ? error.message
+                : t('tasksPanel.restoreFailed.fallbackMessage'),
+            confirmLabel: t('tasksPanel.restoreFailed.confirmLabel'),
+            variant: 'danger',
+          });
+        }
+      })();
     },
   };
 }

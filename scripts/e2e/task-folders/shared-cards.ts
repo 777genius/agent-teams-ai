@@ -509,7 +509,7 @@ async function restoreSidebarFilters(ui: UI) {
 }
 
 async function resetTreePreferences(ui: UI) {
-  await ui.click(`${el(selectors.panel)}.querySelector('[aria-label="Clear all"]')`);
+  await ui.click(`${el(selectors.panel)}.querySelector('[aria-label="Reset"]')`);
   await ui.wait(
     `${el(selectors.panel)}.querySelector('[data-testid="tree-task-view-sort"]')?.textContent?.includes('Manual order')`,
     'tree preferences reset'
@@ -703,26 +703,23 @@ export async function sharedCardLiveUpdates(ui: UI, f: Fixture) {
   const beforeArchive = await ui.snapshot();
   await ui.menu(taskRow(f.team, 'a'), 'Archive');
   await waitCardArchiveState(ui, 'tree', f.team, 'a', true);
-  await ui.click(
-    `${el(selectors.sidebar)}.querySelector('button svg.lucide-archive')?.parentElement`
-  );
-  await ui.wait(
-    cardExpression('sidebar', f.team, 'a'),
-    'sidebar archived view exposes archived shared card'
-  );
   await waitCardArchiveState(ui, 'sidebar', f.team, 'a', true);
   await expectCard(ui, 'tree', f.team, 'a', { archived: true });
   await expectCard(ui, 'sidebar', f.team, 'a', { archived: true });
   assert.deepEqual(await ui.snapshot(), beforeArchive, 'Archive must not rewrite canonical folder membership');
-  await ui.menu(taskRow(f.team, 'a'), 'Unarchive');
-  await waitCardArchiveState(ui, 'tree', f.team, 'a', false);
-  await ui.click(
-    `${el(selectors.sidebar)}.querySelector('button svg.lucide-archive')?.parentElement`
+  await ui.setViewFilter('archived', false, 'sidebar');
+  await ui.wait(
+    `!${cardExpression('sidebar', f.team, 'a')}`,
+    'sidebar archived filter hides archived shared card'
   );
+  await ui.setViewFilter('archived', true, 'sidebar');
   await ui.wait(
     cardExpression('sidebar', f.team, 'a'),
-    'sidebar active view restores unarchived shared card'
+    'sidebar archived filter restores archived shared card'
   );
+  await waitCardArchiveState(ui, 'sidebar', f.team, 'a', true);
+  await ui.menu(taskRow(f.team, 'a'), 'Unarchive');
+  await waitCardArchiveState(ui, 'tree', f.team, 'a', false);
   await waitCardArchiveState(ui, 'sidebar', f.team, 'a', false);
   await expectCard(ui, 'tree', f.team, 'a', { archived: false });
   await expectCard(ui, 'sidebar', f.team, 'a', { archived: false });
