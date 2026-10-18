@@ -369,6 +369,59 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
     }
   });
 
+  it('bounds and flattens an adapter exception carried into the retention warning', async () => {
+    const teamsBasePath = mkdtempSync(join(tmpdir(), 'stopped-team-lane-cleanup-'));
+    const laneId = 'primary';
+    const stop = vi.fn(async () => {
+      throw new Error(`bridge exploded\n${'y'.repeat(20_000)}`);
+    });
+    const logWarning = vi.fn();
+
+    try {
+      await writeOpenCodeRuntimeLaneIndex(teamsBasePath, 'team', {
+        version: 1,
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        lanes: {
+          [laneId]: { laneId, state: 'active', updatedAt: '2026-01-01T00:00:00.000Z' },
+        },
+      });
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath,
+        teamName: 'team',
+        laneId,
+        runId: 'run-1',
+      });
+
+      await stopOpenCodeRuntimeLanesForStoppedTeam({
+        teamName: 'team',
+        teamsBasePath,
+        ports: {
+          withTeamLock: async (_teamName, operation) => operation(),
+          canDeliverToOpenCodeRuntimeForTeam: () => false,
+          getOpenCodeRuntimeAdapter: () => ({ providerId: 'opencode', stop }) as never,
+          readPreviousLaunchState: async () => null,
+          readConfigForObservation: async () => null,
+          readMembersMeta: async () => [],
+          readPersistedTeamProjectPath: () => null,
+          tryStopPersistedOpenCodeRuntimePidForStoppedLane: () => 'no_pid',
+          deleteSecondaryRuntimeRun: vi.fn(),
+          clearPrimaryRuntimeRun: vi.fn(),
+          markStoppedTeamOpenCodeRuntimeLanesCleaned: vi.fn(),
+          logWarning,
+        },
+      });
+
+      const retention = logWarning.mock.calls
+        .map((call) => String(call[0]))
+        .find((message) => message.includes('did not confirm stop'));
+      expect(retention).toBeDefined();
+      expect(retention).not.toContain('\n');
+      expect(retention!.length).toBeLessThan(1_500);
+    } finally {
+      rmSync(teamsBasePath, { recursive: true, force: true });
+    }
+  });
+
   it('does not clear a replacement generation installed while stopped-team adapter stop is deferred', async () => {
     const teamsBasePath = mkdtempSync(join(tmpdir(), 'stopped-team-lane-replacement-'));
     const laneId = 'primary';

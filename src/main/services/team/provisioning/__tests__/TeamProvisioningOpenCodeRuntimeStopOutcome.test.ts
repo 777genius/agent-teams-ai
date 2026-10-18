@@ -103,6 +103,25 @@ describe('summarizeOpenCodeRuntimeStopFailure', () => {
     expect(long.length).toBe(60);
     expect(long.endsWith('…')).toBe(true);
   });
+
+  it('redacts credential shaped values and strips control sequences from adapter text', () => {
+    const summary = summarizeOpenCodeRuntimeStopFailure({
+      diagnostics: [
+        'AUTH_TOKEN=TEST_SECRET_VALUE bearer Authorization: Bearer SUPER_SECRET\r\nsecond line',
+        'esc\u001b[31mRED\u001b[0m sep\u2028tail nul\u0000end',
+      ],
+    });
+
+    expect(summary).not.toContain('TEST_SECRET_VALUE');
+    expect(summary).not.toContain('SUPER_SECRET');
+    expect(summary).not.toContain('\u001b');
+    expect(summary).not.toContain('\r');
+    expect(summary).not.toContain('\n');
+    expect(summary).not.toContain('\u2028');
+    expect(summary).not.toContain('\u0000');
+    // Control bytes become separators; the readable part of the message survives.
+    expect(summary).toContain('esc [31mRED [0m sep tail nul end');
+  });
 });
 
 describe('resolveOpenCodeRuntimeStopOutcome', () => {
