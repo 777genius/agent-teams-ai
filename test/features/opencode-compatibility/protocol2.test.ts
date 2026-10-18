@@ -39,7 +39,7 @@ function native(version = '2.0.0'): NativeIdentity {
       }
     : {
         generation: 'v2',
-        apiDialect: version === '2.0.0' ? 'v2-2.0.0' : 'v2-2.0.21',
+        apiDialect: version === '2.0.0' ? 'v2-2.0.0' : 'v2-2.0.32',
         version,
         executablePath: '/TEST/bin/opencode-native',
         executableSha256: sha,
@@ -66,7 +66,7 @@ function endpoint(version = '2.0.0'): EndpointAuthority {
     capabilitySnapshotId: 'cap-6',
   };
 }
-function permission(): OwnerPermissionReply {
+function permission(version = '2.0.0'): OwnerPermissionReply {
   return {
     schemaVersion: 1,
     scope: {
@@ -74,7 +74,7 @@ function permission(): OwnerPermissionReply {
       requestId: 'r_7',
       relation: 'child',
       authority: {
-        endpoint: endpoint(),
+        endpoint: endpoint(version),
         teamId: 'TEST-team',
         runId: 'run-4',
         laneId: 'primary',
@@ -132,16 +132,16 @@ function handshake(version = '2.0.0'): Protocol2Handshake {
     qualificationDigest: sha,
   };
 }
-function context(): Protocol2CommandContext {
+function context(version = '2.0.0'): Protocol2CommandContext {
   return {
     schemaVersion: 1,
     protocolVersion: 2,
     operation: 'permissionAnswer',
     operationVersion: 1,
     operationFingerprint: sha,
-    native: native(),
+    native: native(version),
     selectionEpoch: 'sel-3',
-    authority: permission().scope.authority,
+    authority: permission(version).scope.authority,
     operationId: 'answer-12',
     expectedObservationEpoch: 'obs-4',
     expectedCapabilitySnapshotId: 'cap-6',
@@ -153,6 +153,36 @@ function context(): Protocol2CommandContext {
 
 // These protect absent/new strict decoding, not an implemented permission transport.
 describe('bounded protocol2 public contracts', () => {
+  it.each(['2.0.0', '2.0.32'])('decodes exact %s native contracts across public boundaries', (version) => {
+    expect(decodeProtocol2Offer(offer(version)).ok).toBe(true);
+    expect(decodeProtocol2Handshake(handshake(version)).ok).toBe(true);
+    expect(decodeProtocol2CommandContext(context(version)).ok).toBe(true);
+    expect(decodeOwnerPermissionReply(permission(version)).ok).toBe(true);
+    const original = offer(version);
+    const mismatched = { ...original, selected: {
+      ...original.selected, apiDialect: version === '2.0.0' ? 'v2-2.0.32' : 'v2-2.0.0',
+    } };
+    expect(decodeProtocol2Offer(mismatched).ok).toBe(false);
+  });
+
+  it('refuses the retired current pin and dialect even with claimed ready authority', () => {
+    const oldNative = { ...native('2.0.32'), version: '2.0.21', apiDialect: 'v2-2.0.21' };
+    expect(decodeProtocol2Offer({ ...offer('2.0.32'), selected: oldNative }).ok).toBe(false);
+    expect(decodeProtocol2Offer({ ...offer('2.0.32'), selected: {
+      ...native('2.0.32'), apiDialect: 'v2-2.0.21',
+    } }).ok).toBe(false);
+    expect(decodeProtocol2Handshake({ ...handshake('2.0.32'), selectedNative: oldNative,
+      selectedAuthority: { ...endpoint('2.0.32'), native: oldNative } }).ok).toBe(false);
+    expect(decodeProtocol2CommandContext({ ...context('2.0.32'), native: oldNative }).ok).toBe(false);
+    const current = handshake('2.0.32');
+    expect(decodeProtocol2Handshake({ ...current, dialects: {
+      'v2-2.0.21': current.dialects['v2-2.0.32'],
+    } }).ok).toBe(false);
+    expect(negotiateOpenCodeProtocol({ version: '2.0.21' })).toEqual({
+      kind: 'blocked', reason: 'Unsupported native generation',
+    });
+  });
+
   it.each(['once', 'always', 'reject'] as const)(
     'retains full child authority and %s intent',
     (decision) => {
@@ -246,7 +276,7 @@ describe('bounded protocol2 public contracts', () => {
     ).toBe(false);
   });
 
-  it.each(['2.0.0', '2.0.21'])('vetoes even a claimed ready %s', (version) => {
+  it.each(['2.0.0', '2.0.32'])('vetoes even a claimed ready %s', (version) => {
     const result = negotiateOpenCodeProtocol({
       version,
       offer: offer(version),

@@ -236,7 +236,7 @@ describe('RuntimeProviderQuickConnect', () => {
             installed: true,
             source: 'path',
             state: 'ready',
-            version: '2.0.21',
+            version: '2.0.32',
           },
           openCodeRuntimeStatusLoading: false,
           onInstallOpenCode: vi.fn(),

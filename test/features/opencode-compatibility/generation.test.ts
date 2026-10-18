@@ -18,10 +18,12 @@ describe('native runtime discovery', () => {
   it.each([
     ['1.18.35', true],
     ['2.0.0', true],
-    ['opencode v2.0.21', true],
+    ['opencode v2.0.32', true],
+    ['2.0.21', false],
+    ['opencode v2.0.21', false],
     ['opencode v2.0.26', false],
-    ['2.0.21-beta.1', false],
-    ['2.0.21+build.7', false],
+    ['2.0.32-beta.1', false],
+    ['2.0.32+build.7', false],
     ['1.15.9', false],
     [undefined, false],
   ])('recognizes only measured native dialects (%s)', (version, recognized) => {
@@ -36,7 +38,7 @@ describe('native runtime discovery', () => {
 describe('current public OpenCode policy consumers', () => {
   it.each([
     '2.0.0',
-    '2.0.21',
+    '2.0.32',
     '2.1.0',
     '3.0.0',
     '999.0.0',
@@ -55,7 +57,7 @@ describe('current public OpenCode policy consumers', () => {
     expect(isAgentTeamsOpenCodeVersionSupported(version)).toBe(false);
   });
 
-  it.each(['2.0.0', '2.0.21', '3.0.0', 'garbage'])(
+  it.each(['2.0.0', '2.0.32', '3.0.0', 'garbage'])(
     'vetoes %s before accessing V1 evidence',
     (version) => {
       let reads = 0;
@@ -140,7 +142,7 @@ describe('current public OpenCode policy consumers', () => {
     ).toBe(false);
   });
 
-  it.each(['2.0.0', '2.0.21'])('recognizes exact %s without enabling it', (version) => {
+  it.each(['2.0.0', '2.0.32'])('recognizes exact %s without enabling it', (version) => {
     expect(classifyNativeVersion(version)).toEqual({
       kind: 'recognized',
       generation: 'v2',
@@ -151,7 +153,7 @@ describe('current public OpenCode policy consumers', () => {
     expect(negotiateOpenCodeProtocol({ version }).kind).toBe('blocked');
   });
 
-  it.each(['2.0.0', '2.0.21'])(
+  it.each(['2.0.0', '2.0.32'])(
     'reports %s qualification status without advising an upgrade',
     (version) => {
       const message = getUnsupportedAgentTeamsOpenCodeVersionMessage(version);
@@ -160,7 +162,7 @@ describe('current public OpenCode policy consumers', () => {
       expect(message).not.toContain('below');
     }
   );
-  it.each(['3.0.0', '2.1.0', 'garbage', '1.16.0-beta.1'])(
+  it.each(['2.0.21', '3.0.0', '2.1.0', 'garbage', '1.16.0-beta.1'])(
     'reports the actual rejection for %s',
     (version) => {
       const message = getUnsupportedAgentTeamsOpenCodeVersionMessage(version);
@@ -171,7 +173,7 @@ describe('current public OpenCode policy consumers', () => {
   );
 
   // Actual independently measured native --version stdout, not normalized DTO versions.
-  it.each(['2.0.0', '2.0.21'])('recognizes native CLI output for %s without launching V2', (version) => {
+  it.each(['2.0.0', '2.0.32'])('recognizes native CLI output for %s without launching V2', (version) => {
     const stdout = `opencode v${version}\n`;
     expect(classifyNativeVersion(stdout)).toEqual({
       kind: 'recognized',
@@ -201,7 +203,7 @@ describe('current public OpenCode policy consumers', () => {
     'opencode v1.18.34',
     'OpenCode v2.0.0',
     'diagnostic: opencode v2.0.0',
-    'opencode v2.0.0\n2.0.21',
+    'opencode v2.0.0\n2.0.32',
     '\u001b[32mopencode v2.0.0\u001b[0m',
     'opencode v2.0.0+build.7',
     'opencode v2.0.0-beta.1',

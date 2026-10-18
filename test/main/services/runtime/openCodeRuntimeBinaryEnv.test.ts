@@ -109,7 +109,7 @@ describe('applyOpenCodeRuntimeBinaryEnv', () => {
 });
 
 describe('applyOpenCodeRuntimeBinaryEnv console wrapper', () => {
-  function nativeV2(resourcesPath: string, version = '2.0.21') {
+  function nativeV2(resourcesPath: string, version = '2.0.32') {
     const packageRoot = path.join(resourcesPath, 'selected-cli-package');
     fs.mkdirSync(path.join(packageRoot, 'bin'), { recursive: true });
     const binary = path.join(packageRoot, 'bin', 'opencode.exe');
@@ -124,7 +124,7 @@ describe('applyOpenCodeRuntimeBinaryEnv console wrapper', () => {
     return fs.realpathSync(binary);
   }
 
-  it.each(['2.0.0', '2.0.21'])(
+  it.each(['2.0.0', '2.0.32'])(
     'keeps the selected native V2 package path for SDK metadata: %s',
     (version) => {
       const { resourcesPath, wrapperPath } = makeResourcesWithWrapper();
@@ -140,7 +140,7 @@ describe('applyOpenCodeRuntimeBinaryEnv console wrapper', () => {
 
   it.each([
     { name: '@opencode/cli-windows-x64', version: '1.19.0' },
-    { name: '@other/cli-windows-x64', version: '2.0.21' },
+    { name: '@other/cli-windows-x64', version: '2.0.32' },
   ])('does not bypass the wrapper for unrelated package metadata: %j', (metadata) => {
     const { resourcesPath, wrapperPath } = makeResourcesWithWrapper();
     const binary = nativeV2(resourcesPath);
