@@ -13,7 +13,7 @@ export function countUnreadTasksByNode(
     const unread = new Set<string>();
     const node = projection.nodes.get(id);
     if (node?.kind === 'task') {
-      if (node.task && isTaskUnread(node.task)) unread.add(node.id);
+      if (!node.hidden && node.task && isTaskUnread(node.task)) unread.add(node.id);
     } else if (node) {
       // The synthetic root also owns Unfiled, which is not a persisted root folder.
       const children =
