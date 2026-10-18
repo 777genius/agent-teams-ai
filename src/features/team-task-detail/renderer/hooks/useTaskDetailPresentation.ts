@@ -91,7 +91,6 @@ export interface TaskDetailPresentationActions {
   setExecutionPreviewOnline: (online: boolean) => void;
   setLogsRefreshing: (refreshing: boolean) => void;
   setLogsSectionOpen: (open: boolean) => void;
-  updateGroupChat: (groupChatId: string | null) => void | Promise<void>;
 }
 
 export interface TaskDetailPresentationInput {
@@ -137,7 +136,6 @@ export function useTaskDetailPresentation(input: TaskDetailPresentationInput): {
     setResourceDemand(surfaceId, resourceIdentity, 'detail', resourceVisible);
     return () => setResourceDemand(surfaceId, resourceIdentity, 'detail', false);
   }, [resourceIdentity, resourceVisible, setResourceDemand, surfaceId]);
-  const updateTaskFields = useStore((state) => state.updateTaskFields);
   const getTaskAttachmentData = useStore((state) => state.getTaskAttachmentData);
   const setTaskNeedsClarification = useStore((state) => state.setTaskNeedsClarification);
   const handoffIntentRef = useRef(false);
@@ -344,11 +342,6 @@ export function useTaskDetailPresentation(input: TaskDetailPresentationInput): {
       setExecutionPreviewOnline,
       setLogsRefreshing,
       setLogsSectionOpen,
-      updateGroupChat: (groupChatId) => {
-        if (sessionController.canEditNow()) {
-          return updateTaskFields(teamName, currentTask.id, { groupChatId });
-        }
-      },
     },
   };
 }

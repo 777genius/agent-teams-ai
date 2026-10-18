@@ -55,12 +55,20 @@ export const FolderDialogs = ({
   const [name, setName] = useState('');
   const [edited, setEdited] = useState(false);
   const inputName = action?.kind === 'renameTask' && !edited ? action.name : name;
-  const [target, setTarget] = useState('unfiled');
+  const [picked, setPicked] = useState<string | null>(null);
   const [error, setError] = useState<FolderDialogError | null>(null);
   const [busy, setBusy] = useState(false);
   const open = !!action || !!move;
   const isMove = !!move || action?.kind === 'moveFolder';
+  const isTaskMove = !!move;
   const source = action ?? move;
+  const destinations = isMove
+    ? folderChoices(projection.snapshot).filter(
+        (f) => action?.kind !== 'moveFolder' || canMoveFolder(projection.snapshot, action.id, f.id)
+      )
+    : [];
+  const defaultTarget = isTaskMove ? (destinations[0]?.id ?? 'unfiled') : 'unfiled';
+  const target = picked && destinations.some((f) => f.id === picked) ? picked : defaultTarget;
   const operationId = (): string => {
     if (!source) return '';
     if (!operation.current || !Object.is(operation.current.source, source))
@@ -68,7 +76,7 @@ export const FolderDialogs = ({
     return operation.current.id;
   };
   const folderWrite = action ? action.kind !== 'reset' && action.kind !== 'renameTask' : !!move;
-  const canSubmit = !folderWrite || editingReady;
+  const canSubmit = (!folderWrite || editingReady) && (!isTaskMove || destinations.length > 0);
   useEffect(() => {
     if (!editingReady && folderWrite && error === 'invalid-name') setError(null);
   }, [editingReady, error, folderWrite]);
@@ -91,7 +99,7 @@ export const FolderDialogs = ({
     setName('');
     setEdited(false);
     setError(null);
-    setTarget('unfiled');
+    setPicked(null);
   };
   const submit = async (): Promise<void> => {
     if (busy || !canSubmit) return;
@@ -144,7 +152,7 @@ export const FolderDialogs = ({
       setName('');
       setEdited(false);
       setError(null);
-      setTarget('unfiled');
+      setPicked(null);
     } catch (caught) {
       setError(
         caught instanceof Error && caught.message === 'read-only' ? 'read-only' : 'save-error'
@@ -194,25 +202,29 @@ export const FolderDialogs = ({
           />
         )}
         {isMove && (
-          <Select value={target} onValueChange={setTarget}>
+          <Select value={target} onValueChange={setPicked}>
             <SelectTrigger aria-label={t('taskFolders.destination')}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="unfiled">
+              <SelectItem value="unfiled" disabled={isTaskMove}>
                 {t(action?.kind === 'moveFolder' ? 'taskFolders.root' : 'taskFolders.unfiled')}
+                {isTaskMove && (
+                  <span className="ml-1 text-[var(--color-text-muted)]">
+                    — {t('taskFolders.cannotMoveHere')}
+                  </span>
+                )}
               </SelectItem>
-              {folderChoices(projection.snapshot)
-                .filter(
-                  (f) =>
-                    action?.kind !== 'moveFolder' ||
-                    canMoveFolder(projection.snapshot, action.id, f.id)
-                )
-                .map((f) => (
-                  <SelectItem key={f.id} value={f.id}>
-                    {f.label}
-                  </SelectItem>
-                ))}
+              {destinations.map((f) => (
+                <SelectItem key={f.id} value={f.id}>
+                  {f.label}
+                  {isTaskMove && destinations.length === 1 && (
+                    <span className="ml-1 text-[var(--color-text-muted)]">
+                      — {t('taskFolders.moveHere')}
+                    </span>
+                  )}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         )}

@@ -212,6 +212,8 @@ describe('independent task view preferences', () => {
           teamName: 'team',
           projectPath: '/project',
           readFilter: 'unread',
+          showArchived: true,
+          showDeleted: false,
         },
         sortMode: 'project',
         searchQuery: 'query',

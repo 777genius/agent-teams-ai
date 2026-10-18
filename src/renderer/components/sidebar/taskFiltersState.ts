@@ -45,6 +45,8 @@ export interface TaskFiltersState {
   /** @deprecated Use readFilter instead */
   unreadOnly: boolean;
   readFilter: ReadFilter;
+  showArchived: boolean;
+  showDeleted: boolean;
 }
 
 export const defaultTaskFiltersState = (): TaskFiltersState => ({
@@ -53,7 +55,21 @@ export const defaultTaskFiltersState = (): TaskFiltersState => ({
   projectPath: null,
   unreadOnly: false,
   readFilter: 'all',
+  showArchived: true,
+  showDeleted: false,
 });
+
+export function isDefaultTaskFiltersState(filters: TaskFiltersState): boolean {
+  return (
+    filters.statusIds.size === STATUS_OPTIONS.length &&
+    STATUS_OPTIONS.every((option) => filters.statusIds.has(option.id)) &&
+    filters.teamName === null &&
+    filters.projectPath === null &&
+    filters.readFilter === 'all' &&
+    filters.showArchived &&
+    !filters.showDeleted
+  );
+}
 
 export function taskMatchesStatus(
   task: {
