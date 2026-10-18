@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { SyncedLoader2 } from '@renderer/components/ui/SyncedLoader2';
@@ -30,62 +30,104 @@ function useActivityTimerLabel(
 ): string | null {
   const [nowMs, setNowMs] = useState(() => Date.now());
   const lastStorageSyncAtRef = useRef(0);
+  // The caller rebuilds the anchor object on every render, so the effects below re-arm only
+  // when an anchor value changes. They share one key so the two arrays cannot drift apart,
+  // and the key covers every anchor field: `startedAt` is already encoded in `timerId`, so
+  // listing it costs nothing and keeps the key total over the anchor type. Every dependency is
+  // normalized exactly as the key value is — a dependency that moves while the value stands
+  // still discards the memo and re-arms both effects, which is the churn this key exists to
+  // stop. `normalizedBaseElapsedMs` is hoisted instead of inlined because lint
+  // (`--max-warnings 0` in CI) rejects a complex expression in a dependency array.
+  const normalizedBaseElapsedMs = activityTimer?.baseElapsedMs ?? 0;
+  const timerKey = useMemo(
+    () => ({
+      timerId: activityTimer?.timerId,
+      startedAt: activityTimer?.startedAt,
+      startedAtMs: activityTimer?.startedAtMs,
+      baseElapsedMs: normalizedBaseElapsedMs,
+      runId: activityTimer?.runId,
+    }),
+    [
+      activityTimer?.timerId,
+      activityTimer?.startedAt,
+      activityTimer?.startedAtMs,
+      normalizedBaseElapsedMs,
+      activityTimer?.runId,
+    ]
+  );
+
+  const [syncedTimer, setSyncedTimer] = useState<{
+    key: typeof timerKey;
+    running: boolean;
+    elapsedMs: number;
+  } | null>(null);
 
   useEffect(() => {
-    if (!activityTimer) return;
+    const { timerId, startedAtMs, baseElapsedMs, runId } = timerKey;
+    if (timerId === undefined || startedAtMs === undefined) return;
+
     const now = Date.now();
     lastStorageSyncAtRef.current = now;
-    syncMemberActivityTimer({
-      timerId: activityTimer.timerId,
-      startedAtMs: activityTimer.startedAtMs,
-      baseElapsedMs: activityTimer.baseElapsedMs,
+    const elapsedMs = syncMemberActivityTimer({
+      timerId,
+      startedAtMs,
+      baseElapsedMs,
       running: isTimerRunning,
-      runId: activityTimer.runId,
+      runId,
       nowMs: now,
     });
+    // Pausing banks the last partial persistence interval after render. Publish that committed
+    // elapsed so the paused label cannot stay at the older value read before this effect ran.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reflect the external timer store commit
+    setSyncedTimer({ key: timerKey, running: isTimerRunning, elapsedMs });
 
     return () => {
       syncMemberActivityTimer({
-        timerId: activityTimer.timerId,
-        startedAtMs: activityTimer.startedAtMs,
-        baseElapsedMs: activityTimer.baseElapsedMs,
+        timerId,
+        startedAtMs,
+        baseElapsedMs,
         running: isTimerRunning,
-        runId: activityTimer.runId,
+        runId,
         nowMs: Date.now(),
       });
     };
-  }, [activityTimer, isTimerRunning]);
+  }, [timerKey, isTimerRunning]);
 
   useEffect(() => {
-    if (!activityTimer || !isTimerRunning) return;
+    const { timerId, startedAtMs, baseElapsedMs, runId } = timerKey;
+    if (timerId === undefined || startedAtMs === undefined || !isTimerRunning) return;
+
     const handle = window.setInterval(() => {
       const now = Date.now();
       if (now - lastStorageSyncAtRef.current >= ACTIVITY_TIMER_STORAGE_SYNC_INTERVAL_MS) {
         lastStorageSyncAtRef.current = now;
         syncMemberActivityTimer({
-          timerId: activityTimer.timerId,
-          startedAtMs: activityTimer.startedAtMs,
-          baseElapsedMs: activityTimer.baseElapsedMs,
+          timerId,
+          startedAtMs,
+          baseElapsedMs,
           running: true,
-          runId: activityTimer.runId,
+          runId,
           nowMs: now,
         });
       }
       setNowMs(now);
     }, 1000);
     return () => window.clearInterval(handle);
-  }, [activityTimer, isTimerRunning]);
+  }, [timerKey, isTimerRunning]);
 
   if (!activityTimer) return null;
+  const elapsedMs = readMemberActivityTimerElapsed({
+    timerId: activityTimer.timerId,
+    startedAtMs: activityTimer.startedAtMs,
+    baseElapsedMs: activityTimer.baseElapsedMs,
+    running: isTimerRunning,
+    runId: activityTimer.runId,
+    nowMs,
+  });
   return formatMemberActivityElapsed(
-    readMemberActivityTimerElapsed({
-      timerId: activityTimer.timerId,
-      startedAtMs: activityTimer.startedAtMs,
-      baseElapsedMs: activityTimer.baseElapsedMs,
-      running: isTimerRunning,
-      runId: activityTimer.runId,
-      nowMs,
-    })
+    !isTimerRunning && syncedTimer?.key === timerKey && !syncedTimer.running
+      ? Math.max(elapsedMs, syncedTimer.elapsedMs)
+      : elapsedMs
   );
 }
 
