@@ -124,4 +124,60 @@ describe('memberActivityTimer retention', () => {
       })
     ).toBe(45_000);
   });
+
+  it('evicts the least recently observed timers first', () => {
+    const startedAtMs = Date.parse('2026-05-07T09:00:00.000Z');
+    const ids: string[] = [];
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS + 30; index += 1) {
+      const atMs = startedAtMs + index * 1_000;
+      ids.push(syncTaskTimer(`ordered-${index}`, atMs, atMs));
+    }
+
+    const survivors = storedTimerIds();
+    expect(survivors).toHaveLength(MAX_TRACKED_ACTIVITY_TIMERS);
+    expect(survivors).toEqual(expect.arrayContaining(ids.slice(-MAX_TRACKED_ACTIVITY_TIMERS)));
+    expect(survivors).not.toContain(ids[0]);
+  });
+
+  it('keeps a displayed paused timer and its accumulated elapsed', () => {
+    const startedAtMs = Date.parse('2026-05-07T09:00:00.000Z');
+    const pausedId = timerIdFor('paused-task', startedAtMs);
+    syncMemberActivityTimer({
+      timerId: pausedId,
+      startedAtMs,
+      running: true,
+      runId: 'run-1',
+      nowMs: startedAtMs,
+    });
+    syncMemberActivityTimer({
+      timerId: pausedId,
+      startedAtMs,
+      running: false,
+      runId: 'run-1',
+      nowMs: startedAtMs + 90_000,
+    });
+
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS + 60; index += 1) {
+      const rotationMs = startedAtMs + 100_000 + index * 1_000;
+      syncTaskTimer(`rotation-${index}`, rotationMs, rotationMs);
+      readMemberActivityTimerElapsed({
+        timerId: pausedId,
+        startedAtMs,
+        running: false,
+        runId: 'run-1',
+        nowMs: rotationMs + 500,
+      });
+    }
+
+    expect(storedTimerIds()).toContain(pausedId);
+    expect(
+      readMemberActivityTimerElapsed({
+        timerId: pausedId,
+        startedAtMs,
+        running: false,
+        runId: 'run-1',
+        nowMs: startedAtMs + 400_000,
+      })
+    ).toBe(90_000);
+  });
 });

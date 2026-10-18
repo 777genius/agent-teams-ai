@@ -159,6 +159,14 @@ function retainRecentTimers(keepTimerId: string): void {
   }
 }
 
+// A paused card keeps rendering but never writes, so its recency has to be recorded on
+// the read path; otherwise eviction would drop it and reset the elapsed value it shows.
+function markTimerObserved(timerId: string, nowMs: number): void {
+  const cached = timers.get(timerId);
+  if (!cached || cached.updatedAtMs >= nowMs) return;
+  timers.set(timerId, { ...cached, updatedAtMs: nowMs });
+}
+
 function readStorageTimerIds(): string[] {
   const ids: string[] = [];
   try {
@@ -284,6 +292,7 @@ export function readMemberActivityTimerElapsed({
   const timer =
     readStoredTimer(timerId, startedAtMs, baseElapsedMs) ??
     createInitialTimer(startedAtMs, baseElapsedMs, running, nowMs, runId);
+  if (!timer.running) markTimerObserved(timerId, nowMs);
   return materializeElapsed(running ? timer : { ...timer, running: false }, nowMs, runId);
 }
 
