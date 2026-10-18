@@ -56,13 +56,19 @@ function useActivityTimerLabel(
     ]
   );
 
+  const [syncedTimer, setSyncedTimer] = useState<{
+    key: typeof timerKey;
+    running: boolean;
+    elapsedMs: number;
+  } | null>(null);
+
   useEffect(() => {
     const { timerId, startedAtMs, baseElapsedMs, runId } = timerKey;
     if (timerId === undefined || startedAtMs === undefined) return;
 
     const now = Date.now();
     lastStorageSyncAtRef.current = now;
-    syncMemberActivityTimer({
+    const elapsedMs = syncMemberActivityTimer({
       timerId,
       startedAtMs,
       baseElapsedMs,
@@ -70,6 +76,10 @@ function useActivityTimerLabel(
       runId,
       nowMs: now,
     });
+    // Pausing banks the last partial persistence interval after render. Publish that committed
+    // elapsed so the paused label cannot stay at the older value read before this effect ran.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reflect the external timer store commit
+    setSyncedTimer({ key: timerKey, running: isTimerRunning, elapsedMs });
 
     return () => {
       syncMemberActivityTimer({
@@ -107,14 +117,16 @@ function useActivityTimerLabel(
 
   if (!activityTimer) return null;
   return formatMemberActivityElapsed(
-    readMemberActivityTimerElapsed({
-      timerId: activityTimer.timerId,
-      startedAtMs: activityTimer.startedAtMs,
-      baseElapsedMs: activityTimer.baseElapsedMs,
-      running: isTimerRunning,
-      runId: activityTimer.runId,
-      nowMs,
-    })
+    !isTimerRunning && syncedTimer?.key === timerKey && !syncedTimer.running
+      ? syncedTimer.elapsedMs
+      : readMemberActivityTimerElapsed({
+          timerId: activityTimer.timerId,
+          startedAtMs: activityTimer.startedAtMs,
+          baseElapsedMs: activityTimer.baseElapsedMs,
+          running: isTimerRunning,
+          runId: activityTimer.runId,
+          nowMs,
+        })
   );
 }
 

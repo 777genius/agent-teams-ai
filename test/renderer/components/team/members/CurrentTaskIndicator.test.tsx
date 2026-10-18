@@ -407,6 +407,96 @@ describe('CurrentTaskIndicator', () => {
     });
   });
 
+  it('keeps the latest visible elapsed on pause before persistence and excludes paused time on resume', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    const startedAt = '2026-05-07T09:00:00.000Z';
+    const startedAtMs = Date.parse(startedAt);
+    vi.setSystemTime(startedAtMs + 10_000);
+    const anchor = {
+      startedAt,
+      startedAtMs,
+      baseElapsedMs: 0,
+      runId: 'run-1',
+      timerId: createMemberActivityTimerId({
+        teamName: 'alpha',
+        memberName: 'bob',
+        phase: 'work',
+        taskId: task.id,
+        startedAt,
+      }),
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const renderIndicator = (running: boolean) =>
+      root.render(
+        <CurrentTaskIndicator
+          task={task}
+          borderColor="#22c55e"
+          isTimerRunning={running}
+          activityTimer={{ ...anchor }}
+        />
+      );
+    const timerText = () => host.querySelector('span.tabular-nums')?.textContent;
+
+    await act(async () => {
+      renderIndicator(true);
+    });
+    expect(timerText()).toBe('10s');
+    const setItem = vi.spyOn(globalThis.localStorage, 'setItem');
+    const setIntervalSpy = vi.spyOn(window, 'setInterval');
+    const clearIntervalSpy = vi.spyOn(window, 'clearInterval');
+    await act(async () => {
+      vi.advanceTimersByTime(2_000);
+    });
+    expect(timerText()).toBe('12s');
+    expect(setItem).not.toHaveBeenCalled();
+
+    // Two seconds is short of the five-second disk tick. The pause effect must display the
+    // elapsed it just banked, even when its clock equals the most recent render tick exactly.
+    await act(async () => {
+      renderIndicator(false);
+    });
+    expect(timerText()).toBe('12s');
+    expect(
+      writtenPayloads(setItem.mock.calls).map(({ running, elapsedMs }) => ({ running, elapsedMs }))
+    ).toEqual([
+      { running: true, elapsedMs: 12_000 },
+      { running: false, elapsedMs: 12_000 },
+    ]);
+    expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
+    expect(setIntervalSpy).not.toHaveBeenCalled();
+    setItem.mockClear();
+    clearIntervalSpy.mockClear();
+
+    await act(async () => {
+      vi.advanceTimersByTime(30_000);
+    });
+    expect(timerText()).toBe('12s');
+    await act(async () => {
+      renderIndicator(false);
+    });
+    expect(timerText()).toBe('12s');
+    expect(setItem).not.toHaveBeenCalled();
+    expect(setIntervalSpy).not.toHaveBeenCalled();
+    expect(clearIntervalSpy).not.toHaveBeenCalled();
+
+    await act(async () => {
+      renderIndicator(true);
+    });
+    expect(timerText()).toBe('12s');
+    expect(setIntervalSpy).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      vi.advanceTimersByTime(2_000);
+    });
+    expect(timerText()).toBe('14s');
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it('re-arms both effects when only the anchor timestamp changes', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();
