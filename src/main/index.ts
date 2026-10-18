@@ -200,6 +200,7 @@ import { killTrackedCliProcesses } from '@main/utils/childProcess';
 import { extractNotificationContent } from '@main/utils/inboxNotificationContent';
 import { createBudgetNotificationSink } from '@features/token-usage/main';
 import { RendererRecoveryController } from '@main/utils/RendererRecoveryController';
+import { resolveRendererEntry } from '@main/utils/rendererEntry';
 import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
 import {
   APP_GET_WINDOWS_ELEVATION_STATUS,
@@ -325,6 +326,7 @@ import {
 } from './utils/startupTelemetry';
 import {
   captureMainException,
+  captureRendererLoadFailure,
   captureRendererProcessGone,
   getMainSentryStatus,
   syncTelemetryFlag,
@@ -1515,18 +1517,6 @@ export async function disposeInternalStorageAfterWriterDrains(
     );
   }
   await internalStorageDispose.catch(() => undefined);
-}
-
-/**
- * Resolve production renderer index path.
- * Main bundle lives in dist-electron/main, while renderer lives in out/renderer.
- */
-function getRendererIndexPath(): string {
-  const candidates = [
-    join(__dirname, '../../out/renderer/index.html'),
-    join(__dirname, '../renderer/index.html'),
-  ];
-  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
 }
 
 function getTeamControlApiBaseUrl(): string | null {
@@ -3321,6 +3311,7 @@ function createWindow(): void {
 
   const isMac = process.platform === 'darwin';
   const isDev = process.env.NODE_ENV === 'development';
+  const rendererEntry = isDev ? undefined : resolveRendererEntry(__dirname);
   const iconPath = isMac ? undefined : getAppIconPath();
   const useNativeTitleBar = !isMac && configManager.getConfig().general.useNativeTitleBar;
   mainWindow = new BrowserWindow({
@@ -3380,10 +3371,11 @@ function createWindow(): void {
       logger.warn(`[dev] loading renderer from ${devUrl}`);
     }
     void mainWindow.loadURL(devUrl);
-  } else {
-    void mainWindow.loadFile(getRendererIndexPath()).catch((error: unknown) => {
-      logger.error('Failed to load renderer entry HTML:', error);
-      captureMainException(error, 'renderer_load_file');
+  } else if (rendererEntry) {
+    void mainWindow.loadFile(rendererEntry.filePath).catch((error: unknown) => {
+      const diagnostics = rendererEntry.diagnostics(app.isPackaged, error);
+      logger.error('Failed to load renderer entry HTML:', error, diagnostics);
+      captureRendererLoadFailure(error, 'renderer_load_file', diagnostics);
     });
   }
 
@@ -3435,12 +3427,15 @@ function createWindow(): void {
     'did-fail-load',
     (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
       if (isMainFrame) {
+        const diagnostics = rendererEntry?.diagnostics(app.isPackaged, errorCode);
         logger.error(
-          `Failed to load renderer (code=${errorCode}): ${errorDescription} - ${validatedURL}`
+          `Failed to load renderer (code=${errorCode}): ${errorDescription} - ${validatedURL}`,
+          diagnostics
         );
-        captureMainException(
+        captureRendererLoadFailure(
           new Error(`Renderer main-frame load failed with code ${errorCode}`),
-          'renderer_did_fail_load'
+          'renderer_did_fail_load',
+          diagnostics
         );
       }
     }
