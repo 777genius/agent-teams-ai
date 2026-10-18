@@ -2866,8 +2866,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   selectTeam: async (teamName: string, opts) => {
     const requestScope = captureTeamRequestScope(get, teamName);
     const allowReloadWhileProvisioning = opts?.allowReloadWhileProvisioning === true;
-    // Guard: prevent duplicate in-flight fetches for the same team.
-    // GlobalTaskDetailDialog + tab navigation can call selectTeam() in quick succession.
+    // Dialog and tab navigation can select the same team together; join the in-flight load.
     if (!allowReloadWhileProvisioning && isSelectTeamLoadInFlight(get(), teamName)) return;
     const requestNonce = get().selectedTeamLoadNonce + 1;
     const previousData = selectTeamDataForName(get(), teamName);
@@ -2875,8 +2874,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
     cancelPostPaintTeamEnrichments(teamName);
 
-    // Repoint selection synchronously to the new team's cached snapshot when available.
-    // Never keep the previous team's snapshot attached to a newly selected team.
+    // Repoint to this team's cached snapshot; never keep another team's data.
     set((state) => ({
       ...projectToolApprovalSettings(state, teamName, selectedSettings, true),
       selectedTeamName: teamName,
@@ -2934,8 +2932,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       if (stateAfterLoad.selectedTeamLoadNonce !== requestNonce) {
         return;
       }
-      // Eagerly patch teamByName with color/displayName from detailed data
-      // so that tab color renders immediately without waiting for fetchTeams()
+      // Apply detailed color/displayName before the next team-list refresh.
       const prevByName = get().teamByName;
       const existingEntry = prevByName[teamName];
       const configColor = data.config.color;
@@ -3076,9 +3073,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           }
         }
 
-        // Auto-select the project associated with this team's cwd/projectPath.
-        // Must search both flat projects and grouped repositoryGroups/worktrees
-        // because the default viewMode is 'grouped' and flat projects may be empty.
+        // Match the team's project in flat projects or grouped repository worktrees.
         const projectPath = committedTeamData.config.projectPath;
         if (
           !opts?.skipProjectAutoSelect &&
@@ -3088,14 +3083,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           const state = get();
           const normalizedTeamPath = normalizePath(projectPath);
 
-          // 1. Try flat projects list
           const matchingProject = state.projects.find(
             (p) => normalizePath(p.path) === normalizedTeamPath
           );
           if (matchingProject && state.selectedProjectId !== matchingProject.id) {
             state.selectProject(matchingProject.id);
           } else if (!matchingProject) {
-            // 2. Try grouped view: search worktrees across all repository groups
             for (const repo of state.repositoryGroups) {
               const matchingWorktree = repo.worktrees.find(
                 (wt) => normalizePath(wt.path) === normalizedTeamPath
@@ -3169,7 +3162,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       const existingSelectedTeamData =
         currentState.selectedTeamData?.teamName === teamName ? currentState.selectedTeamData : null;
 
-      // IPC can report provisioning state explicitly.
       if (msg === 'TEAM_PROVISIONING' || (msg.includes('TEAM_PROVISIONING') && isProvisioning)) {
         if (existingSelectedTeamData) {
           set({
