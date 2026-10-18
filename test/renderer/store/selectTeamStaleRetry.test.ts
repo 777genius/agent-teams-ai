@@ -150,9 +150,9 @@ describe('selectTeam stale read recovery', () => {
 
   it('releases the loading state after the retry budget when every read is stale', async () => {
     const store = createHarnessStore();
-    apiMock.teams.getData.mockImplementation(async () => {
+    apiMock.teams.getData.mockImplementation(() => {
       store.getState().invalidateTaskDetailTeamSource(store.getState().activeContextId, TEAM);
-      return snapshot();
+      return Promise.resolve(snapshot());
     });
 
     await store.getState().selectTeam(TEAM, { skipProjectAutoSelect: true });
@@ -172,9 +172,9 @@ describe('selectTeam stale read recovery', () => {
   it('resets the retry budget on a fresh selection after switching away mid-load', async () => {
     const store = createHarnessStore();
     const OTHER = 'other-team';
-    apiMock.teams.getData.mockImplementation(async (teamName: string) => {
+    apiMock.teams.getData.mockImplementation((teamName: string) => {
       store.getState().invalidateTaskDetailTeamSource(store.getState().activeContextId, teamName);
-      return snapshotFor(teamName);
+      return Promise.resolve(snapshotFor(teamName));
     });
 
     await store.getState().selectTeam(TEAM, { skipProjectAutoSelect: true });
@@ -240,12 +240,12 @@ describe('selectTeam stale read recovery', () => {
       selectedTeamError: null,
     });
     let newContextReads = 0;
-    apiMock.teams.getData.mockImplementation(async (teamName: string) => {
+    apiMock.teams.getData.mockImplementation((teamName: string) => {
       // Only the first read in the new context is discarded; the retry must commit it.
       newContextReads += 1;
       if (newContextReads === 1)
         store.getState().invalidateTaskDetailTeamSource(store.getState().activeContextId, teamName);
-      return snapshotFor(teamName);
+      return Promise.resolve(snapshotFor(teamName));
     });
 
     await store.getState().selectTeam(TEAM, { skipProjectAutoSelect: true });
@@ -300,18 +300,18 @@ describe('selectTeam context generation ownership', () => {
       const oldPending = deferred<TeamViewSnapshot>();
       let localReads = 0;
       let remoteReads = 0;
-      apiMock.teams.getData.mockImplementation(async (teamName: string) => {
+      apiMock.teams.getData.mockImplementation((teamName: string) => {
         const context = store.getState().activeContextId;
         if (context === 'local') {
           localReads++;
           if (localReads === 2) return oldPending.promise;
           store.getState().invalidateTaskDetailTeamSource(context, teamName);
-          return snapshotFor(teamName);
+          return Promise.resolve(snapshotFor(teamName));
         }
         remoteReads++;
         // Three stale reads, then a valid fourth read: exactly within the budget.
         if (remoteReads <= 3) store.getState().invalidateTaskDetailTeamSource(context, teamName);
-        return snapshotFor(teamName);
+        return Promise.resolve(snapshotFor(teamName));
       });
       await store.getState().selectTeam(TEAM, { skipProjectAutoSelect: true });
       await vi.advanceTimersByTimeAsync(250);
@@ -350,9 +350,9 @@ describe('selectTeam context generation ownership', () => {
       const store = createHarnessStore();
       const pending = deferred<TeamViewSnapshot>();
       apiMock.teams.getData
-        .mockImplementationOnce(async (teamName: string) => {
+        .mockImplementationOnce((teamName: string) => {
           store.getState().invalidateTaskDetailTeamSource('local', teamName);
-          return snapshot();
+          return Promise.resolve(snapshot());
         })
         .mockReturnValueOnce(pending.promise);
       await store.getState().selectTeam(TEAM, { skipProjectAutoSelect: true });
