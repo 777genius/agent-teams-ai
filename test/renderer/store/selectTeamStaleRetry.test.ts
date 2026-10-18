@@ -5,6 +5,7 @@ import {
   __resetTeamSliceModuleStateForTests,
   createTeamSlice,
 } from '../../../src/renderer/store/slices/teamSlice';
+import { createTeamTaskDetailSlice } from '../../../src/renderer/store/slices/teamTaskDetailSlice';
 import {
   resetSelectTeamLoadLatchForTests,
   SELECT_TEAM_STALE_RETRY_BASE_DELAY_MS,
@@ -12,7 +13,6 @@ import {
 } from '../../../src/renderer/store/team/selectTeamLoadLatch';
 import {
   clearAllTeamLocalStateEpochs,
-  invalidateTeamLocalStateEpoch,
 } from '../../../src/renderer/store/team/teamLocalStateEpoch';
 
 import type { TeamSlice } from '../../../src/renderer/store/slices/teamSlice';
@@ -63,11 +63,14 @@ type HarnessState = TeamSlice &
     | 'setActiveTab'
     | 'updateTabLabel'
     | 'warmTaskChangeSummaries'
+    | 'invalidateTaskDetailTeamSource'
+    | 'taskDetailById'
   >;
 
 function createHarnessStore() {
   return create<HarnessState>()((set, get, store) => ({
     ...createTeamSlice(set as never, get as never, store as never),
+    ...createTeamTaskDetailSlice(set as never, get as never, store as never),
     activeContextId: 'local',
     paneLayout: {
       focusedPaneId: 'pane-default',
@@ -133,9 +136,9 @@ describe('selectTeam stale read recovery', () => {
 
     const load = store.getState().selectTeam(TEAM, { skipProjectAutoSelect: true });
     await vi.waitFor(() => expect(apiMock.teams.getData).toHaveBeenCalledTimes(1));
-    // A team change event lands while the first read is in flight, bumping the
-    // team-local state epoch so the in-flight read is discarded as stale.
-    invalidateTeamLocalStateEpoch(TEAM);
+    // The reported trigger: a task/config change event invalidates the team read
+    // authority source epoch while the first team:getData read is in flight.
+    store.getState().invalidateTaskDetailTeamSource(store.getState().activeContextId, TEAM);
     first.resolve(snapshot());
     await load;
 
@@ -149,7 +152,7 @@ describe('selectTeam stale read recovery', () => {
   it('releases the loading state after the retry budget when every read is stale', async () => {
     const store = createHarnessStore();
     apiMock.teams.getData.mockImplementation(async () => {
-      invalidateTeamLocalStateEpoch(TEAM);
+      store.getState().invalidateTaskDetailTeamSource(store.getState().activeContextId, TEAM);
       return snapshot();
     });
 
@@ -171,7 +174,7 @@ describe('selectTeam stale read recovery', () => {
     const store = createHarnessStore();
     const OTHER = 'other-team';
     apiMock.teams.getData.mockImplementation(async (teamName: string) => {
-      invalidateTeamLocalStateEpoch(teamName);
+      store.getState().invalidateTaskDetailTeamSource(store.getState().activeContextId, teamName);
       return snapshotFor(teamName);
     });
 
@@ -238,7 +241,7 @@ describe('selectTeam stale read recovery', () => {
     apiMock.teams.getData.mockImplementation(async (teamName: string) => {
       // Only the first read in the new context is discarded; the retry must commit it.
       newContextReads += 1;
-      if (newContextReads === 1) invalidateTeamLocalStateEpoch(teamName);
+      if (newContextReads === 1) store.getState().invalidateTaskDetailTeamSource(store.getState().activeContextId, teamName);
       return snapshotFor(teamName);
     });
 
@@ -260,7 +263,7 @@ describe('selectTeam stale read recovery', () => {
       const load = store.getState().selectTeam(TEAM, { skipProjectAutoSelect: true });
       await vi.advanceTimersByTimeAsync(0);
       expect(apiMock.teams.getData).toHaveBeenCalledTimes(1);
-      invalidateTeamLocalStateEpoch(TEAM);
+      store.getState().invalidateTaskDetailTeamSource(store.getState().activeContextId, TEAM);
       first.resolve(snapshot());
       await vi.advanceTimersByTimeAsync(0);
       // The discarded read leaves a retry scheduled against this context.
