@@ -7,6 +7,7 @@ import {
 } from '../../../src/renderer/store/slices/teamSlice';
 import {
   resetSelectTeamLoadLatchForTests,
+  SELECT_TEAM_STALE_RETRY_BASE_DELAY_MS,
   SELECT_TEAM_STALE_RETRY_LIMIT,
 } from '../../../src/renderer/store/team/selectTeamLoadLatch';
 import {
@@ -194,5 +195,26 @@ describe('selectTeam stale read recovery', () => {
       SELECT_TEAM_STALE_RETRY_LIMIT + 1
     );
     vi.mocked(console.warn).mockClear();
+  });
+
+  it('holds an explicit provisioning signal instead of retrying it as a stale read', async () => {
+    const store = createHarnessStore();
+    // No provisioning run is recorded in the renderer yet, so the provisioning maps
+    // cannot tell this intentional hold apart from a latched stale read.
+    apiMock.teams.getData.mockRejectedValue(new Error('TEAM_PROVISIONING'));
+
+    await store.getState().selectTeam(TEAM, { skipProjectAutoSelect: true });
+
+    expect(store.getState().selectedTeamLoading).toBe(true);
+    expect(store.getState().selectedTeamError).toBeNull();
+
+    // The hold belongs to the provisioning progress callback: the stale-read retry
+    // must neither re-read the team nor surface a false load error for it.
+    await new Promise((resolve) =>
+      setTimeout(resolve, SELECT_TEAM_STALE_RETRY_BASE_DELAY_MS * (SELECT_TEAM_STALE_RETRY_LIMIT + 1))
+    );
+    expect(apiMock.teams.getData).toHaveBeenCalledTimes(1);
+    expect(store.getState().selectedTeamLoading).toBe(true);
+    expect(store.getState().selectedTeamError).toBeNull();
   });
 });

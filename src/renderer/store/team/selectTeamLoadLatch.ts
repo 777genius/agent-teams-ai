@@ -12,6 +12,7 @@ export const SELECT_TEAM_STALE_RETRY_LIMIT = 3;
 export const SELECT_TEAM_STALE_RETRY_BASE_DELAY_MS = 250;
 
 const staleRetriesByTeam = new Map<string, number>();
+const provisioningHoldsByTeam = new Map<string, number>();
 
 export interface SelectTeamLoadOptions {
   skipProjectAutoSelect?: boolean;
@@ -25,6 +26,12 @@ type SelectTeamLoadState = Pick<
   'selectedTeamName' | 'selectedTeamLoading' | 'selectedTeamLoadNonce'
 >;
 
+type SelectTeamLoadSetter = (partial: {
+  selectedTeamLoading: boolean;
+  selectedTeamData?: AppState['selectedTeamData'];
+  selectedTeamError?: string | null;
+}) => void;
+
 export function isSelectTeamLoadInFlight(state: SelectTeamLoadState, teamName: string): boolean {
   return state.selectedTeamLoading && state.selectedTeamName === teamName;
 }
@@ -34,17 +41,28 @@ function isLoadStillOwned(state: SelectTeamLoadState, teamName: string, nonce: n
 }
 
 /**
+ * Parks the selection on an intentional "team is provisioning" hold. The provisioning
+ * progress callback, not the stale-read retry, is what finishes this load, and the
+ * renderer's provisioning maps can still be empty when the IPC signal arrives, so the
+ * hold has to be recorded explicitly for the attempt that took it.
+ */
+export function holdSelectTeamLoadForProvisioning(
+  set: SelectTeamLoadSetter,
+  teamName: string,
+  requestNonce: number
+): void {
+  provisioningHoldsByTeam.set(teamName, requestNonce);
+  set({ selectedTeamLoading: true, selectedTeamData: null, selectedTeamError: null });
+}
+
+/**
  * Called when a selectTeam() attempt finishes. If that attempt still owns the selection
  * and left it loading without an intentional provisioning hold, schedule a bounded retry;
  * after the retry budget is spent, release the loading flag instead of latching.
  */
 export function settleLatchedSelectTeamLoad(
   get: () => AppState,
-  set: (partial: {
-    selectedTeamLoading: boolean;
-    selectedTeamData?: AppState['selectedTeamData'];
-    selectedTeamError?: string | null;
-  }) => void,
+  set: SelectTeamLoadSetter,
   teamName: string,
   requestNonce: number,
   opts: SelectTeamLoadOptions | undefined,
@@ -56,16 +74,24 @@ export function settleLatchedSelectTeamLoad(
   }
   if (!state.selectedTeamLoading) {
     staleRetriesByTeam.delete(teamName);
+    provisioningHoldsByTeam.delete(teamName);
     return;
   }
+  // An attempt that parked on the explicit provisioning signal is finished by the
+  // provisioning progress callback, so it is neither a stale read nor a latch.
+  if (provisioningHoldsByTeam.get(teamName) === requestNonce) return;
   if (isProvisioning(state, teamName)) return;
 
   // A fresh (user-initiated) selection starts a new stale-read budget, so a budget left
   // behind by an abandoned load can never leak into it. Only retries carry the flag.
-  if (!opts?.staleReadRetry) staleRetriesByTeam.delete(teamName);
+  if (!opts?.staleReadRetry) {
+    staleRetriesByTeam.delete(teamName);
+    provisioningHoldsByTeam.delete(teamName);
+  }
   const attempt = (staleRetriesByTeam.get(teamName) ?? 0) + 1;
   if (attempt > SELECT_TEAM_STALE_RETRY_LIMIT) {
     staleRetriesByTeam.delete(teamName);
+    provisioningHoldsByTeam.delete(teamName);
     logger.warn(
       `selectTeam(${teamName}) discarded ${attempt - 1} stale reads; releasing loading state`
     );
@@ -94,4 +120,5 @@ export function settleLatchedSelectTeamLoad(
 
 export function resetSelectTeamLoadLatchForTests(): void {
   staleRetriesByTeam.clear();
+  provisioningHoldsByTeam.clear();
 }

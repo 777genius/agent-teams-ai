@@ -42,6 +42,7 @@ import { calculateTaskImplementationDuration } from '@shared/utils/taskWorkDurat
 import { buildTeamGraphDefaultLayoutSeed } from '@shared/utils/teamGraphDefaultLayout';
 
 import {
+  holdSelectTeamLoadForProvisioning,
   isSelectTeamLoadInFlight,
   type SelectTeamLoadOptions,
   settleLatchedSelectTeamLoad,
@@ -3178,11 +3179,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           });
           return;
         }
-        set({
-          selectedTeamLoading: true,
-          selectedTeamData: null,
-          selectedTeamError: null,
-        });
+        holdSelectTeamLoadForProvisioning(set, teamName, requestNonce);
         return;
       }
 
