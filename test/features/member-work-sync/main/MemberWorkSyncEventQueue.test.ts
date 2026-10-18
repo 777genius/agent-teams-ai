@@ -617,6 +617,8 @@ describe('MemberWorkSyncEventQueue', () => {
   it('retries a quiesced reconcile without consuming retry attempts', async () => {
     const reconciles: unknown[] = [];
     const auditReasons: Array<string | undefined> = [];
+    const warnings: string[] = [];
+    const parked: string[] = [];
     const queue = new MemberWorkSyncEventQueue({
       quietWindowMs: 1,
       retryDelayMs: 10,
@@ -626,6 +628,15 @@ describe('MemberWorkSyncEventQueue', () => {
         throw new MemberWorkSyncTeamQuiescedError('team-a');
       },
       isTeamActive: () => true,
+      logger: {
+        debug: (message: string) => {
+          parked.push(message);
+        },
+        warn: (message: string) => {
+          warnings.push(message);
+        },
+        error: () => {},
+      },
       auditJournal: {
         append: async (event) => {
           auditReasons.push(event.reason);
@@ -637,21 +648,27 @@ describe('MemberWorkSyncEventQueue', () => {
     await vi.advanceTimersByTimeAsync(1);
     expect(reconciles).toHaveLength(1);
     expect(queue.getDiagnostics()).toMatchObject({
-      failed: 1,
+      failed: 0,
+      quiesced: 1,
       queued: 1,
       dropped: 0,
       reconciled: 0,
     });
     expect(auditReasons).toEqual(['turn_settled', 'team_quiesced']);
+    // Quiescence is an expected park state: it must not surface as a reconcile failure.
+    expect(warnings).toEqual([]);
+    expect(parked).toEqual(['member work sync queue reconcile parked: team quiesced']);
 
     await vi.advanceTimersByTimeAsync(10);
     expect(reconciles).toHaveLength(2);
     expect(queue.getDiagnostics()).toMatchObject({
-      failed: 2,
+      failed: 0,
+      quiesced: 2,
       queued: 1,
       dropped: 0,
       reconciled: 0,
     });
+    expect(warnings).toEqual([]);
 
     await queue.stop();
   });
