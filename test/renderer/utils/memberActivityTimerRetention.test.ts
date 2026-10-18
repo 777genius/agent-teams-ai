@@ -280,6 +280,7 @@ describe('memberActivityTimer retention', () => {
       timerId: timerIdFor(`pending-inventory-${index}`, nowMs + index * 1_000),
       startedAtMs: nowMs + index * 1_000,
     }));
+    const [dormantAnchor, overflowAnchor] = anchors.slice(MAX_TRACKED_ACTIVITY_TIMERS);
     for (const anchor of anchors.slice(0, -1)) {
       seedStoredTimer(anchor.timerId, anchor.startedAtMs);
     }
@@ -296,7 +297,7 @@ describe('memberActivityTimer retention', () => {
     syncMemberActivityTimer({ ...anchors[MAX_TRACKED_ACTIVITY_TIMERS - 1], running: false, nowMs });
     // The oldest resident's refused eviction is pending. Reading it again displaces the new,
     // unbanked timer, then touching every other resident makes that pending timer oldest again.
-    syncMemberActivityTimer({ ...anchors[MAX_TRACKED_ACTIVITY_TIMERS + 1], running: false, nowMs });
+    syncMemberActivityTimer({ ...overflowAnchor, running: false, nowMs });
     readMemberActivityTimerElapsed({ ...anchors[0], running: false, nowMs });
     for (const anchor of anchors.slice(1, MAX_TRACKED_ACTIVITY_TIMERS + 1)) {
       readMemberActivityTimerElapsed({ ...anchor, running: false, nowMs });
@@ -304,13 +305,13 @@ describe('memberActivityTimer retention', () => {
     expect(storage.length).toBe(MAX_TRACKED_ACTIVITY_TIMERS + 2);
     removeStorage.mockClear();
     refusing = false;
-    syncMemberActivityTimer({ ...anchors[MAX_TRACKED_ACTIVITY_TIMERS], running: false, nowMs });
+    syncMemberActivityTimer({ ...dormantAnchor, running: false, nowMs });
 
     // The pending retry and dormant reap each reclaim a real key. Counting the already deleted
     // pending key again would spend this write's one-key reap budget without reclaiming the excess.
     expect(removeStorage.mock.calls).toEqual([
       [`${STORAGE_PREFIX}${anchors[0].timerId}`],
-      [`${STORAGE_PREFIX}${anchors[MAX_TRACKED_ACTIVITY_TIMERS + 1].timerId}`],
+      [`${STORAGE_PREFIX}${overflowAnchor.timerId}`],
     ]);
     expect(storage.length).toBe(MAX_TRACKED_ACTIVITY_TIMERS);
   });
