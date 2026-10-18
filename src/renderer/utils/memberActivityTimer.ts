@@ -34,8 +34,7 @@ const timers = new Map<string, StoredActivityTimer>();
 const touchOrder = new Map<string, number>();
 let touchSequence = 0;
 // Oldest first, `null` until the renderer's keys have been listed once — on the first *write*, not
-// the first read. Never re-listed: the live set takes over the bookkeeping after that, so a
-// rotating work interval costs a compare, not a walk of every other key in the origin.
+// the first read. Memory-only evictions rejoin this ordered list without re-listing storage.
 let dormantTimerIds: string[] | null = null;
 // Eviction frees its Map slot even when the store refuses the matching delete: the memory bound is
 // the invariant this module exists for, and it is not tradeable against a read-only origin. Such a
@@ -188,32 +187,23 @@ function writeStoredTimer(timerId: string, timer: StoredActivityTimer): void {
   }
 }
 
-// The resident map is what costs renderer memory, so its bound is enforced wherever a key enters it —
-// on a read as well as on a write. Victims are chosen by touch order among residents only: a key this
-// session has read is a key the screen is displaying.
-//
-// `persistEviction` is what separates the two paths. On a write, dropping a resident means the
-// session no longer has any use for that record, so its key goes with it. On a read it does not: the
-// record on disk is the only place a paused member's banked elapsed lives, and a render pass that
-// hydrates more anchors than the map holds must not be able to delete them — the same frame that
-// evicted one is the frame that would have displayed it. The read path therefore frees the Map slot
-// and leaves the key on disk, where the write-path drain can still reach it as ordinary backlog.
+// Bound memory on reads and writes. Prefer undeclared residents, then unbanked records, then touch
+// order. Even a declared record can leave memory when every slot is live, but its disk state must
+// survive. Reads never delete disk state: a later card in the same render may still need it.
 function makeRoomForResident(timerId: string, persistEviction: boolean): void {
   while (timers.size + (timers.has(timerId) ? 0 : 1) > MAX_TRACKED_ACTIVITY_TIMERS) {
-    // A paused record holding time beyond its baseline is destroyed last. `baseElapsedMs` is derived
-    // from *completed* work intervals, so a paused stretch lives only in this record; a running
-    // record cannot be the victim either, because its own five-second persistence tick keeps bumping
-    // it, which leaves the paused card touched only when the screen re-renders it. Ranking must not
-    // rest on the render cadence, so the record's own shape decides. It is a preference, not an
-    // exemption: once every resident holds banked time the least recently touched of them goes too,
-    // because the map bound is what this module is for.
     const victimId =
+      leastRecentlyTouchedTimerId(
+        (timer, id) => !isDeclaredTimerId(id) && !holdsBankedPause(timer)
+      ) ??
+      leastRecentlyTouchedTimerId((_timer, id) => !isDeclaredTimerId(id)) ??
       leastRecentlyTouchedTimerId((timer) => !holdsBankedPause(timer)) ??
       leastRecentlyTouchedTimerId();
     if (victimId === null) return;
     forgetTimer(victimId);
-    if (!persistEviction) continue;
-    if (!safeStorageRemove(storageKey(victimId))) queueRemoval(victimId);
+    if (!persistEviction || isDeclaredTimerId(victimId)) {
+      rememberDormantTimerId(victimId);
+    } else if (!safeStorageRemove(storageKey(victimId))) queueRemoval(victimId);
   }
 }
 
@@ -241,7 +231,7 @@ function forgetTimer(timerId: string): void {
 // caller falls back to the unrestricted ranking, so the map always shrinks by one and the eviction
 // loop cannot spin.
 function leastRecentlyTouchedTimerId(
-  eligible?: (timer: StoredActivityTimer) => boolean
+  eligible?: (timer: StoredActivityTimer, timerId: string) => boolean
 ): string | null {
   let victimId: string | null = null;
   let victimTouch = Number.POSITIVE_INFINITY;
@@ -250,7 +240,7 @@ function leastRecentlyTouchedTimerId(
       const timer = timers.get(timerId);
       // The two Maps are written only together, so a resident missing from `timers` cannot happen;
       // the guard keeps a hypothetical drift from selecting no victim at all.
-      if (!timer || !eligible(timer)) continue;
+      if (!timer || !eligible(timer, timerId)) continue;
     }
     if (touch < victimTouch) {
       victimId = timerId;
@@ -327,6 +317,26 @@ function listDormantTimerIds(): string[] {
   return dormantTimerIds;
 }
 
+// An initial resident was excluded from the one-time snapshot. If it later leaves memory without
+// a disk delete, insert it by anchor age so the drain can reach it once no owner declares it.
+// Binary insertion also deduplicates ids already listed, without another localStorage scan.
+function rememberDormantTimerId(timerId: string): void {
+  if (dormantTimerIds === null) return; // The first snapshot will include it.
+  const startedAtMs = anchorMsFromTimerId(timerId);
+  if (startedAtMs <= 0) return;
+  let low = 0;
+  let high = dormantTimerIds.length;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    const candidateId = dormantTimerIds[middle];
+    const rank =
+      anchorMsFromTimerId(candidateId) - startedAtMs || compareTimerIds(candidateId, timerId);
+    if (rank < 0) low = middle + 1;
+    else high = middle;
+  }
+  if (dormantTimerIds[low] !== timerId) dormantTimerIds.splice(low, 0, timerId);
+}
+
 // Deletes up to `count` of the oldest backlog keys, oldest anchor first, and reports how many were
 // actually reclaimed. Residents are skipped: a key this session has read is a key the screen is
 // displaying, and React reads every displayed timer during the render phase, before the effect that
@@ -375,6 +385,7 @@ function drainPendingRemovals(): void {
       pendingRemovalTimerIds.delete(timerId);
       continue;
     }
+    if (isDeclaredTimerId(timerId)) continue;
     if (!safeStorageRemove(storageKey(timerId))) return;
     pendingRemovalTimerIds.delete(timerId);
   }
@@ -485,8 +496,8 @@ export function createMemberActivityTimerId({
  * component (a `useRef` value is the natural one), and an empty list withdraws the declaration.
  * Within one owner the set is replaced, never unioned, so a key the producer stops declaring is
  * ordinary backlog again.
- * Declaring does not create a record; it only withholds one from deletion until the write lands (or
- * the declaration is replaced by one that omits it).
+ * Declaring does not create a record; it withholds one from every deletion path until the
+ * declaration is replaced by one that omits it.
  */
 export function declareActivityTimerKeys(owner: object, timerIds: readonly string[]): void {
   if (timerIds.length === 0) {

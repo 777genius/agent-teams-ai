@@ -886,6 +886,147 @@ describe('memberActivityTimer retention', () => {
     expect(storedTimerIds()).toHaveLength(MAX_TRACKED_ACTIVITY_TIMERS);
   });
 
+  it('protects a declared paused member before historical banked resident timers', () => {
+    const startedAtMs = Date.parse('2026-05-07T09:00:00.000Z');
+    const liveId = timerIdFor('banked-0', startedAtMs);
+    declareActivityTimerKeys({}, [liveId]);
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS; index += 1) {
+      const atMs = startedAtMs + index * 1_000;
+      const timerId = syncTaskTimer(`banked-${index}`, atMs, atMs + 90_000);
+      syncMemberActivityTimer({
+        timerId,
+        startedAtMs: atMs,
+        running: false,
+        runId: 'run-1',
+        nowMs: atMs + 90_000,
+      });
+    }
+
+    // Every resident holds banked time. The current paused member was touched first, but the
+    // producer still declares it; a historical paused member must absorb the destructive eviction.
+    syncTaskTimer('next-running', startedAtMs + 1_000_000, startedAtMs + 1_000_000);
+    expect(storedTimerIds()).toContain(liveId);
+    expect(storedTimerIds()).not.toContain(timerIdFor('banked-1', startedAtMs + 1_000));
+    expect(storedTimerIds()).toHaveLength(MAX_TRACKED_ACTIVITY_TIMERS);
+    expect(
+      readMemberActivityTimerElapsed({
+        timerId: liveId,
+        startedAtMs,
+        running: false,
+        runId: 'run-1',
+        nowMs: startedAtMs + 2_000_000,
+      })
+    ).toBe(90_000);
+  });
+
+  it('preserves declared disk state when every resident is live and reaps it after withdrawal', () => {
+    const owner = {};
+    const startedAtMs = Date.parse('2026-05-07T09:00:00.000Z');
+    const anchors = Array.from({ length: MAX_TRACKED_ACTIVITY_TIMERS + 1 }, (_, index) => ({
+      timerId: timerIdFor(`live-${index}`, startedAtMs + index * 1_000),
+      startedAtMs: startedAtMs + index * 1_000,
+    }));
+    declareActivityTimerKeys(
+      owner,
+      anchors.map((anchor) => anchor.timerId)
+    );
+    for (const anchor of anchors) {
+      seedStoredTimer(anchor.timerId, anchor.startedAtMs, { elapsedMs: 90_000 });
+      syncMemberActivityTimer({ ...anchor, running: false, nowMs: startedAtMs + 1_000_000 });
+    }
+    const storage = globalThis.localStorage;
+    expect(storage.length).toBe(MAX_TRACKED_ACTIVITY_TIMERS + 1);
+    const readStorage = vi.spyOn(storage, 'getItem');
+    const walkStorage = vi.spyOn(storage, 'key');
+
+    // Reading the evicted first card must hit disk, proving that declaration did not unbound the
+    // resident Map. Repeated round trips also exercise deduplication of retained dormant ids.
+    for (let pass = 0; pass < 3; pass += 1) {
+      for (const anchor of anchors) {
+        expect(
+          readMemberActivityTimerElapsed({
+            ...anchor,
+            running: false,
+            nowMs: startedAtMs + 1_000_000,
+          })
+        ).toBe(90_000);
+      }
+    }
+    expect(readStorage).toHaveBeenCalledWith(`${STORAGE_PREFIX}${anchors[0].timerId}`);
+    const last = anchors[anchors.length - 1];
+    syncMemberActivityTimer({ ...last, running: false, nowMs: startedAtMs + 1_000_000 });
+    expect(storage.length).toBe(MAX_TRACKED_ACTIVITY_TIMERS + 1);
+    expect(walkStorage).not.toHaveBeenCalled();
+
+    declareActivityTimerKeys(owner, []);
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS; index += 1) {
+      syncMemberActivityTimer({ ...last, running: false, nowMs: startedAtMs + 1_000_000 });
+    }
+    expect(storage.length).toBe(MAX_TRACKED_ACTIVITY_TIMERS);
+    expect(storage.getItem(`${STORAGE_PREFIX}${anchors[0].timerId}`)).toBeNull();
+    expect(walkStorage).not.toHaveBeenCalled();
+  });
+
+  it('defers a pending deletion while its evicted timer is declared again', () => {
+    const owner = {};
+    const startedAtMs = Date.parse('2026-05-07T09:00:00.000Z');
+    const storage = globalThis.localStorage;
+    const removeOriginal = storage.removeItem.bind(storage);
+    let refusing = true;
+    vi.spyOn(storage, 'removeItem').mockImplementation((key: string) => {
+      if (refusing) throw new Error('SecurityError: storage is read-only');
+      removeOriginal(key);
+    });
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS; index += 1) {
+      const atMs = startedAtMs + index * 1_000;
+      syncTaskTimer(`pending-${index}`, atMs, atMs + 90_000);
+    }
+    const victimId = timerIdFor('pending-0', startedAtMs);
+    const victimKey = `${STORAGE_PREFIX}${victimId}`;
+    const victimPayload = storage.getItem(victimKey);
+    const latestMs = startedAtMs + 1_000_000;
+    syncTaskTimer('pending-overflow', latestMs, latestMs);
+
+    // The failed eviction queued a delete before this owner's next declaration. Recovery must not
+    // execute that stale intent against an interval the producer now knows is current.
+    declareActivityTimerKeys(owner, [victimId]);
+    refusing = false;
+    syncTaskTimer('pending-overflow', latestMs, latestMs + 5_000);
+    expect(storage.getItem(victimKey)).toBe(victimPayload);
+    expect(storage.length).toBe(MAX_TRACKED_ACTIVITY_TIMERS + 1);
+
+    declareActivityTimerKeys(owner, []);
+    syncTaskTimer('pending-overflow', latestMs, latestMs + 10_000);
+    expect(storage.getItem(victimKey)).toBeNull();
+    expect(storage.length).toBe(MAX_TRACKED_ACTIVITY_TIMERS);
+  });
+
+  it('reclaims a written resident that leaves memory after the one-time backlog snapshot', () => {
+    const startedAtMs = Date.parse('2026-05-07T09:00:00.000Z');
+    const anchors = Array.from({ length: 600 }, (_, index) => ({
+      timerId: timerIdFor(`mixed-${index}`, startedAtMs + index * 1_000),
+      startedAtMs: startedAtMs + index * 1_000,
+    }));
+    for (const anchor of anchors) seedStoredTimer(anchor.timerId, anchor.startedAtMs);
+    // Snapshot collection excludes key 0 because the first write has already made it resident.
+    syncMemberActivityTimer({ ...anchors[0], running: false, nowMs: startedAtMs + 1_000_000 });
+    for (const anchor of anchors.slice(300, 500)) {
+      readMemberActivityTimerElapsed({ ...anchor, running: false, nowMs: startedAtMs + 1_000_000 });
+    }
+    const storage = globalThis.localStorage;
+    const walkStorage = vi.spyOn(storage, 'key');
+    const removeStorage = vi.spyOn(storage, 'removeItem');
+    for (let index = 0; index < 2_000; index += 1) {
+      syncMemberActivityTimer({ ...anchors[499], running: false, nowMs: startedAtMs + 1_000_000 });
+    }
+
+    // Read eviction must return key 0 to the oldest end of the drain, without another disk scan.
+    expect(removeStorage.mock.calls[0]?.[0]).toBe(`${STORAGE_PREFIX}${anchors[0].timerId}`);
+    expect(storage.getItem(`${STORAGE_PREFIX}${anchors[0].timerId}`)).toBeNull();
+    expect(storage.length).toBe(MAX_TRACKED_ACTIVITY_TIMERS);
+    expect(walkStorage).not.toHaveBeenCalled();
+  });
+
   it('spares declared keys from the drain, before and after the backlog is listed', () => {
     const owner = {};
     const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
