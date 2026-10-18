@@ -625,7 +625,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
       const wireStatusValue = field(input, 'wireStatus');
       const wireStatus = wireCode === 'http_failure' && Number.isSafeInteger(wireStatusValue) &&
         Number(wireStatusValue) >= 100 && Number(wireStatusValue) <= 599 ? Number(wireStatusValue) : undefined;
-      let serverFailure: Record<string, string> | undefined;
+      let serverFailure: Record<string, string | { status: number; operation: number; win32: number; anchorCount: number; matchingAnchorIndex: number }> | undefined;
       if (phase === 'location' && wireCode === 'http_failure' && wireStatus === 500) {
         const server = field(input, 'serverFailure');
         const kindValue = field(server, 'kind');
@@ -653,6 +653,18 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
             const selected = allowed.find(item => item === value);
             if (selected) serverFailure[key] = selected;
           }
+          try {
+            const realpath = field(server, 'realpath');
+            const status = field(realpath, 'status'), operation = field(realpath, 'operation');
+            const win32 = field(realpath, 'win32'), anchorCount = field(realpath, 'anchorCount');
+            const matchingAnchorIndex = field(realpath, 'matchingAnchorIndex');
+            const integer = (value: unknown, min: number, max: number): value is number =>
+              Number.isSafeInteger(value) && Number(value) >= min && Number(value) <= max;
+            if (integer(status, 1, 4) && integer(operation, 0, 25) && integer(win32, 0, 0xffffffff) &&
+                integer(anchorCount, 0, 4096) && integer(matchingAnchorIndex, -1, anchorCount - 1)) {
+              serverFailure.realpath = { status, operation, win32, anchorCount, matchingAnchorIndex };
+            }
+          } catch { /* Invalid nested facts never erase the retained closed server failure. */ }
         }
       }
       return { phase, ...(reason ? { client: { reason, ...(status === undefined ? {} : { status }) } } : {}),

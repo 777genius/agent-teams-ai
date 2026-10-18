@@ -890,6 +890,22 @@ it.each([
   for (const kind of ['Fail', 'Die', 'Interrupt', 'unknown'])
     expect(project({ ...catalog500, serverFailure: { operation: 'location', kind } }))
       .toEqual({ ...catalog500, serverFailure: { operation: 'location', kind } });
+  const realpathFact = { status: 2, operation: 12, win32: 5, anchorCount: 2, matchingAnchorIndex: 1 };
+  for (const realpath of [realpathFact,
+    { status: 1, operation: 0, win32: 0, anchorCount: 0, matchingAnchorIndex: -1 },
+    { status: 4, operation: 25, win32: 0xffffffff, anchorCount: 4096, matchingAnchorIndex: 4095 }])
+    expect(project({ ...catalog500, serverFailure: { ...serverFailure, realpath: { ...realpath, ...raw } } }))
+      .toEqual({ ...catalog500, serverFailure: { ...serverFailure, realpath } });
+  const invalidRealpath = [null, [], {},
+    ...[0, 5, '2', 1.5, NaN, Infinity].map(status => ({ ...realpathFact, status })),
+    ...[-1, 26, '12'].map(operation => ({ ...realpathFact, operation })),
+    ...[-1, 0x100000000, '5'].map(win32 => ({ ...realpathFact, win32 })),
+    ...[-1, 4097, '2'].map(anchorCount => ({ ...realpathFact, anchorCount })),
+    ...[-2, 2, '1'].map(matchingAnchorIndex => ({ ...realpathFact, matchingAnchorIndex })),
+    { ...realpathFact, anchorCount: 0, matchingAnchorIndex: 0 }];
+  for (const realpath of invalidRealpath)
+    expect(project({ ...catalog500, serverFailure: { ...serverFailure, realpath } }))
+      .toEqual({ ...catalog500, serverFailure });
   const serverEnums = {
     tag: ['PlatformError', 'AppProcessError', 'SqlError', 'SchemaError', 'FileSystem.DirectoryAccessDeniedError',
       'FileSystem.DirectoryNotFoundError', 'PluginModule.LoadError', 'Provider.LoadError'],
@@ -946,6 +962,12 @@ it.each([
     .toEqual(catalog500);
   expect(project({ ...catalog500, serverFailure: Object.defineProperty({ operation: 'location', kind: 'Fail' }, 'tag', { get: getter }) }))
     .toEqual({ ...catalog500, serverFailure: { operation: 'location', kind: 'Fail' } });
+  expect(project({ ...catalog500, serverFailure: { ...serverFailure,
+    realpath: Object.defineProperty({ ...realpathFact }, 'status', { get: getter }) } }))
+    .toEqual({ ...catalog500, serverFailure });
+  expect(project({ ...catalog500, serverFailure: { ...serverFailure,
+    realpath: new Proxy({}, { getOwnPropertyDescriptor: () => { throw new Error('PRIVATE_NESTED_PROXY'); } }) } }))
+    .toEqual({ ...catalog500, serverFailure });
   expect(project(new Proxy({}, { getOwnPropertyDescriptor: getter }))).toBeNull();
   expect(getterCalls).toBe(1); // Only the proxy's metadata trap runs; property getters never run.
 
@@ -971,13 +993,13 @@ it.each([
     await writeFile(path.join(directory, 'state.json'), JSON.stringify({ binding, state: 'starting', members: [] }));
     await writeFile(path.join(diagnostics, `${randomUUID()}.json`), JSON.stringify({
       schemaVersion: 1, phase: 'execution-host-startup', category: 'run_control_foreign',
-      catalog: { phase: 'location', client: { reason: 'UnexpectedStatus', status: 503, ...raw }, wireCode: 'http_failure', wireStatus: 500, serverFailure: { ...serverFailure, ...raw }, ...raw },
+      catalog: { phase: 'location', client: { reason: 'UnexpectedStatus', status: 503, ...raw }, wireCode: 'http_failure', wireStatus: 500, serverFailure: { ...serverFailure, realpath: { ...realpathFact, ...raw }, ...raw }, ...raw },
     }));
     const packet = functionName === 'snapshotStartupFailure'
       ? await snapshot({ directory, binding }, 'TEST-session', {}, '/TEST-sdk', [])
       : await snapshot(root, dataRoot, binding.teamId, binding.runId);
     expect(packet.diagnostics).toHaveLength(1);
-    expect(packet.diagnostics[0]!.catalog).toEqual({ phase: 'location', client: { reason: 'UnexpectedStatus', status: 503 }, wireCode: 'http_failure', wireStatus: 500, serverFailure });
+    expect(packet.diagnostics[0]!.catalog).toEqual({ phase: 'location', client: { reason: 'UnexpectedStatus', status: 503 }, wireCode: 'http_failure', wireStatus: 500, serverFailure: { ...serverFailure, realpath: realpathFact } });
     expect(JSON.stringify(packet)).not.toContain('PRIVATE_');
   } finally {
     if (previousRoot === undefined) delete process.env.CLAUDE_MULTIMODEL_DATA_HOME;
