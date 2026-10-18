@@ -61,6 +61,8 @@ beforeEach(async () => {
   host = document.createElement('div');
   document.body.append(host);
   root = createRoot(host);
+  // The deleted scan is deferred until the tree can actually render.
+  panelController.toggle();
   await act(async () => root.render(<Probe />));
 });
 
@@ -77,10 +79,18 @@ it('keeps deleted tasks out of folder counts while the deleted filter is off', (
   expect(unfiledActiveCount()).toBe(1);
 });
 
-it('loads deleted identities even while the filter hides them', () => {
+it('loads deleted identities while the tree is mounted, even with the filter off', () => {
   // Without the feed a deleted folder child resolves to an unavailable node,
   // so the hidden-row rule below never gets a chance to apply.
   expect(fetchAllDeletedTasks).toHaveBeenCalled();
+});
+
+it('defers the deleted scan while the folder tree is closed', async () => {
+  expect(fetchAllDeletedTasks).toHaveBeenCalledTimes(1);
+  await act(async () => panelController.close());
+  expect(fetchAllDeletedTasks).toHaveBeenCalledTimes(1);
+  await act(async () => panelController.toggle());
+  expect(fetchAllDeletedTasks).toHaveBeenCalledTimes(2);
 });
 
 it('counts deleted tasks once the deleted filter is enabled', async () => {

@@ -25,6 +25,7 @@ import { projectFolders } from '../view-models/projection';
 import { applyVisibleTaskChildren } from '../view-models/projectionView';
 import { countUnreadTasksByNode } from '../view-models/taskUnreadCounts';
 
+import { useTaskFoldersDocked } from './useTaskFoldersDocked';
 import { useTaskViewState } from './useTaskViewState';
 
 import type { RefObject } from 'react';
@@ -68,11 +69,15 @@ export function useTaskFoldersHost(
   const teamCatalogKey = useMemo(() => teams.map((team) => team.teamName).join('|'), [teams]);
   // Membership only: task add/remove invalidates the deleted feed, status churn must not.
   const globalTaskIdsKey = useMemo(() => tasks.map((task) => task.id).join('|'), [tasks]);
+  const docked = useTaskFoldersDocked();
   // Deleted identities must resolve even while the filter hides them, otherwise a
-  // deleted folder child reads as unavailable instead of a hidden row.
+  // deleted folder child reads as unavailable instead of a hidden row. The scan fans
+  // out per team and parses every task file, so only pay it while the tree can render.
+  const treeMounted = !collapsed && (docked || panel.open);
   useEffect(() => {
+    if (!treeMounted) return;
     void fetchAllDeletedTasks();
-  }, [contextId, fetchAllDeletedTasks, globalTaskIdsKey, teamCatalogKey]);
+  }, [contextId, fetchAllDeletedTasks, globalTaskIdsKey, teamCatalogKey, treeMounted]);
   const canonicalProjection = useMemo(
     () =>
       projectFolders(
