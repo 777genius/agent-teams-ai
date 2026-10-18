@@ -42,6 +42,11 @@ import { calculateTaskImplementationDuration } from '@shared/utils/taskWorkDurat
 import { buildTeamGraphDefaultLayoutSeed } from '@shared/utils/teamGraphDefaultLayout';
 
 import {
+  isSelectTeamLoadInFlight,
+  markSelectTeamLoadStarted,
+  settleLatchedSelectTeamLoad,
+} from '../team/selectTeamLoadLatch';
+import {
   createSidebarLogsHeightSlice,
   type SidebarLogsHeightSlice,
 } from '../team/sidebarLogsHeight';
@@ -1523,7 +1528,12 @@ export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
   refreshTeamChangePresence: (teamName: string) => Promise<void>;
   selectTeam: (
     teamName: string,
-    opts?: { skipProjectAutoSelect?: boolean; allowReloadWhileProvisioning?: boolean }
+    opts?: {
+      skipProjectAutoSelect?: boolean;
+      allowReloadWhileProvisioning?: boolean;
+      /** Internal: set by the bounded stale-read retry so it keeps its budget. */
+      staleReadRetry?: boolean;
+    }
   ) => Promise<void>;
   refreshTeamData: (teamName: string, opts?: RefreshTeamDataOptions) => Promise<void>;
   refreshTeamMessagesHead: (teamName: string) => Promise<RefreshTeamMessagesHeadResult>;
@@ -2865,13 +2875,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     const allowReloadWhileProvisioning = opts?.allowReloadWhileProvisioning === true;
     // Guard: prevent duplicate in-flight fetches for the same team.
     // GlobalTaskDetailDialog + tab navigation can call selectTeam() in quick succession.
-    if (
-      get().selectedTeamLoading &&
-      get().selectedTeamName === teamName &&
-      !allowReloadWhileProvisioning
-    ) {
-      return;
-    }
+    if (!allowReloadWhileProvisioning && isSelectTeamLoadInFlight(get(), teamName)) return;
+    // A fresh selection starts a new stale-read retry budget.
+    if (!opts?.staleReadRetry) markSelectTeamLoadStarted(teamName);
     const requestNonce = get().selectedTeamLoadNonce + 1;
     const previousData = selectTeamDataForName(get(), teamName);
     const selectedSettings = loadToolApprovalSettingsForTeam(teamName);
@@ -3219,6 +3225,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         selectedTeamData: null,
         selectedTeamError: message,
       });
+    } finally {
+      settleLatchedSelectTeamLoad(get, set, teamName, requestNonce, opts, isTeamProvisioningActive);
     }
   },
 
