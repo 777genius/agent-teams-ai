@@ -36,12 +36,8 @@ let touchSequence = 0;
 // Oldest first, `null` until the renderer's keys have been listed once — on the first *write*, not
 // the first read. Memory-only evictions rejoin this ordered list without re-listing storage.
 let dormantTimerIds: string[] | null = null;
-// Eviction frees its Map slot even when the store refuses the matching delete: the memory bound is
-// the invariant this module exists for, and it is not tradeable against a read-only origin. Such a
-// key would be orphaned — neither resident nor in the backlog snapshot, which is listed once — so the
-// deletion is queued and retried from the write path. Bounded, because a store that has refused this
-// many consecutive deletions will refuse the next one as well, and an unbounded retry queue would
-// reintroduce the leak this one prevents.
+// A refused deletion must not hold a resident slot or orphan its disk key. Retry a bounded batch
+// directly; overflow rejoins the dormant list, which already tracks retained disk state.
 const PENDING_REMOVAL_LIMIT = MAX_TRACKED_ACTIVITY_TIMERS;
 const pendingRemovalTimerIds = new Set<string>();
 // Keys the producer has decided to write this frame but has not written yet. A backlog drain cannot
@@ -295,9 +291,11 @@ function anchorMsFromTimerId(timerId: string): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function collectDormantTimerIds(): string[] {
+function collectDormantTimerIds(): string[] | null {
+  const storedIds = readStorageTimerIds();
+  if (storedIds === null) return null;
   const ranked: { timerId: string; startedAtMs: number }[] = [];
-  for (const timerId of readStorageTimerIds()) {
+  for (const timerId of storedIds) {
     if (timers.has(timerId)) continue;
     const startedAtMs = anchorMsFromTimerId(timerId);
     if (startedAtMs <= 0) continue;
@@ -314,7 +312,7 @@ function listDormantTimerIds(): string[] {
   if (dormantTimerIds === null) {
     dormantTimerIds = collectDormantTimerIds();
   }
-  return dormantTimerIds;
+  return dormantTimerIds ?? []; // An incomplete enumeration remains retryable on a later write.
 }
 
 // An initial resident was excluded from the one-time snapshot. If it later leaves memory without
@@ -371,8 +369,8 @@ function reclaimOldestDormantTimers(count: number): number {
 }
 
 function queueRemoval(timerId: string): void {
-  if (pendingRemovalTimerIds.size >= PENDING_REMOVAL_LIMIT) return;
-  pendingRemovalTimerIds.add(timerId);
+  if (pendingRemovalTimerIds.size < PENDING_REMOVAL_LIMIT) pendingRemovalTimerIds.add(timerId);
+  else rememberDormantTimerId(timerId);
 }
 
 // A deletion the store refused, retried from the write path — the same path that reclaims, and the
@@ -405,17 +403,17 @@ function compareTimerIds(left: string, right: string): number {
   return left < right ? -1 : 1;
 }
 
-function readStorageTimerIds(): string[] {
+function readStorageTimerIds(): string[] | null {
   const ids: string[] = [];
   try {
     const storage = globalThis.localStorage;
-    if (!storage) return ids;
+    if (!storage) return null;
     for (let index = 0; index < storage.length; index += 1) {
       const key = storage.key(index);
       if (key?.startsWith(STORAGE_PREFIX)) ids.push(key.slice(STORAGE_PREFIX.length));
     }
   } catch {
-    // localStorage can be unavailable in tests or restricted browser contexts.
+    return null; // A partial listing cannot establish that every retained disk key is tracked.
   }
   return ids;
 }

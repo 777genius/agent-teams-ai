@@ -1220,6 +1220,92 @@ describe('memberActivityTimer retention', () => {
     expect(remaining).toContain(zonelessId);
   });
 
+  it.each(['length', 'key'] as const)(
+    'retries the backlog snapshot after storage %s enumeration recovers',
+    (failingOperation) => {
+      const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
+      const storage = globalThis.localStorage;
+      for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS * 2; index += 1) {
+        const atMs = nowMs - 1_000_000 + index * 1_000;
+        seedStoredTimer(timerIdFor(`enumeration-${index}`, atMs), atMs, { elapsedMs: 45_000 });
+      }
+      const readKey = storage.key.bind(storage);
+      const enumeration =
+        failingOperation === 'length'
+          ? vi.spyOn(storage, 'length', 'get').mockImplementation(() => {
+              throw new Error('SecurityError: transient enumeration failure');
+            })
+          : vi.spyOn(storage, 'key').mockImplementation((index: number) => {
+              if (index > 0) throw new Error('SecurityError: partial enumeration failure');
+              return readKey(index);
+            });
+      const removeStorage = vi.spyOn(storage, 'removeItem');
+      syncTaskTimer('enumeration-current', nowMs, nowMs);
+      expect(removeStorage).not.toHaveBeenCalled();
+      const enumerationCalls = enumeration.mock.calls.length;
+
+      // A read while the namespace cannot be listed still returns its stored elapsed and neither
+      // retries enumeration nor deletes another card's state during render.
+      const firstMs = nowMs - 1_000_000;
+      expect(
+        readMemberActivityTimerElapsed({
+          timerId: timerIdFor('enumeration-0', firstMs),
+          startedAtMs: firstMs,
+          running: false,
+          nowMs,
+        })
+      ).toBe(45_000);
+      expect(enumeration.mock.calls).toHaveLength(enumerationCalls);
+      expect(removeStorage).not.toHaveBeenCalled();
+
+      enumeration.mockRestore();
+      const walkStorage = vi.spyOn(storage, 'key');
+      syncTaskTimer('enumeration-current', nowMs, nowMs);
+      const recoveredScanCalls = walkStorage.mock.calls.length;
+      expect(recoveredScanCalls).toBeGreaterThan(0);
+      for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS * 2; index += 1) {
+        syncTaskTimer('enumeration-current', nowMs, nowMs);
+      }
+      expect(storage.length).toBeLessThanOrEqual(MAX_TRACKED_ACTIVITY_TIMERS);
+      expect(storage.getItem(`${STORAGE_PREFIX}${timerIdFor('enumeration-0', firstMs)}`)).toContain(
+        '45000'
+      );
+      expect(walkStorage.mock.calls).toHaveLength(recoveredScanCalls);
+    }
+  );
+
+  it('keeps overflowed failed evictions reachable after the pending deletion batch fills', () => {
+    const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
+    const storage = globalThis.localStorage;
+    const removeOriginal = storage.removeItem.bind(storage);
+    let refusing = true;
+    vi.spyOn(storage, 'removeItem').mockImplementation((key: string) => {
+      if (refusing) throw new Error('SecurityError: transient deletion failure');
+      removeOriginal(key);
+    });
+    const total = MAX_TRACKED_ACTIVITY_TIMERS * 2 + 40;
+    for (let index = 0; index < total; index += 1) {
+      const atMs = nowMs + index * 1_000;
+      syncTaskTimer(`refused-eviction-${index}`, atMs, atMs);
+    }
+    // Writes succeed independently of deletes: more than one retry batch has left memory while
+    // every disk record remains. The oldest overflowed id was never in the initial snapshot.
+    expect(storage.length).toBe(total);
+    const overflowMs = nowMs + MAX_TRACKED_ACTIVITY_TIMERS * 1_000;
+    const overflowId = timerIdFor(`refused-eviction-${MAX_TRACKED_ACTIVITY_TIMERS}`, overflowMs);
+    expect(storage.getItem(`${STORAGE_PREFIX}${overflowId}`)).not.toBeNull();
+    const walkStorage = vi.spyOn(storage, 'key');
+    refusing = false;
+    const latestMs = nowMs + (total - 1) * 1_000;
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS * 2; index += 1) {
+      syncTaskTimer(`refused-eviction-${total - 1}`, latestMs, latestMs);
+    }
+
+    expect(storage.getItem(`${STORAGE_PREFIX}${overflowId}`)).toBeNull();
+    expect(storage.length).toBe(MAX_TRACKED_ACTIVITY_TIMERS);
+    expect(walkStorage).not.toHaveBeenCalled();
+  });
+
   it('keeps a refused backlog key in the list so the bound holds once storage recovers', () => {
     const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
     for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS + 40; index += 1) {
