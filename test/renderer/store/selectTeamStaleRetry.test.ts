@@ -148,6 +148,59 @@ describe('selectTeam stale read recovery', () => {
     expect(apiMock.teams.getData).toHaveBeenCalledTimes(2);
   });
 
+  it('recovers a stale config-ready read while provisioning remains active', async () => {
+    vi.useFakeTimers();
+    try {
+      const store = createHarnessStore();
+      const first = deferred<TeamViewSnapshot>();
+      apiMock.teams.getData.mockReturnValueOnce(first.promise).mockResolvedValue(snapshot());
+      const pane = store.getState().paneLayout.panes[0];
+      store.setState({
+        selectedTeamName: TEAM,
+        paneLayout: {
+          ...store.getState().paneLayout,
+          panes: [
+            {
+              ...pane,
+              activeTabId: 'team-tab',
+              tabs: [
+                {
+                  id: 'team-tab',
+                  type: 'team',
+                  teamName: TEAM,
+                  label: TEAM,
+                  createdAt: 0,
+                },
+              ],
+            },
+          ],
+        },
+      });
+      store.getState().onProvisioningProgress({
+        runId: 'config-ready-run',
+        teamName: TEAM,
+        state: 'assembling',
+        message: 'Config ready',
+        configReady: true,
+        startedAt: '2026-10-18T00:00:00.000Z',
+        updatedAt: '2026-10-18T00:00:01.000Z',
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(apiMock.teams.getData).toHaveBeenCalledTimes(1);
+      store.getState().invalidateTaskDetailTeamSource('local', TEAM);
+      first.resolve(snapshot());
+      await vi.advanceTimersByTimeAsync(0);
+      expect(store.getState().selectedTeamLoading).toBe(true);
+      await vi.advanceTimersByTimeAsync(SELECT_TEAM_STALE_RETRY_BASE_DELAY_MS);
+      expect(apiMock.teams.getData).toHaveBeenCalledTimes(2);
+      expect(store.getState().selectedTeamLoading).toBe(false);
+      expect(store.getState().selectedTeamData?.teamName).toBe(TEAM);
+      expect(store.getState().provisioningRuns['config-ready-run'].state).toBe('assembling');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('releases the loading state after the retry budget when every read is stale', async () => {
     const store = createHarnessStore();
     apiMock.teams.getData.mockImplementation(() => {
@@ -205,7 +258,10 @@ describe('selectTeam stale read recovery', () => {
     // cannot tell this intentional hold apart from a latched stale read.
     apiMock.teams.getData.mockRejectedValue(new Error('TEAM_PROVISIONING'));
 
-    await store.getState().selectTeam(TEAM, { skipProjectAutoSelect: true });
+    await store.getState().selectTeam(TEAM, {
+      skipProjectAutoSelect: true,
+      allowReloadWhileProvisioning: true,
+    });
 
     expect(store.getState().selectedTeamLoading).toBe(true);
     expect(store.getState().selectedTeamError).toBeNull();

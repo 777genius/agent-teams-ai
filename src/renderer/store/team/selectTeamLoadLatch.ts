@@ -115,7 +115,7 @@ export function settleLatchedSelectTeamLoad(
     provisioningHolds.delete(key);
     return;
   }
-  if (isProvisioning(state, teamName)) return;
+  if (opts?.allowReloadWhileProvisioning !== true && isProvisioning(state, teamName)) return;
 
   // A fresh (user-initiated) selection starts a new stale-read budget, so a budget left
   // behind by an abandoned load can never leak into it. Only retries carry the flag.
@@ -143,8 +143,8 @@ export function settleLatchedSelectTeamLoad(
     if (!isLoadStillOwned(get(), context, teamName, requestNonce) || !get().selectedTeamLoading) {
       return;
     }
-    // A provisioning hold started during the backoff must win over the retry.
-    if (isProvisioning(get(), teamName)) return;
+    // Preserve an ordinary provisioning hold, but config-ready reads are already authorized.
+    if (opts?.allowReloadWhileProvisioning !== true && isProvisioning(get(), teamName)) return;
     void get().selectTeam(teamName, {
       ...opts,
       allowReloadWhileProvisioning: true,
