@@ -11,6 +11,46 @@ import {
 import { createLogger } from '../../../src/shared/utils/logger';
 
 describe('persistentAppLog', () => {
+  it('persists structured JSON credentials safely even with unclosed or mismatched containers', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'agent-teams-persistent-json-log-'));
+    const warnOutput = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const handle = installPersistentAppLog({ directory, appVersion: 'test' });
+
+    try {
+      const logger = createLogger('Service:TeamProvisioning');
+      logger.warn(
+        'abort failed: {"token":{"value":"TEST_SECRET","nested":["TEST_SECRET"]},"status":"public"}'
+      );
+      logger.warn('abort failed: {"token":[{"value":"TEST_SECRET"}],"status":"public"}');
+      logger.warn('abort failed: {"token":{"value":"TEST_SECRET"');
+      logger.warn('abort failed: {"token":["TEST_SECRET"},"status":"TEST_SECRET_TRAILING"}');
+      logger.warn(
+        'abort failed: ' +
+          JSON.stringify({
+            body: JSON.stringify({
+              body: JSON.stringify({ token: { value: 'TEST_SECRET_NESTED' }, status: 'public' }),
+            }),
+          })
+      );
+      await handle.flush();
+
+      const persisted = await readFile(handle.filePath, 'utf8');
+      const records = persisted
+        .trim()
+        .split('\n')
+        .map((line) => JSON.parse(line) as { message: string });
+      expect(records).toHaveLength(5);
+      expect(persisted).not.toContain('TEST_SECRET');
+      expect(records.every(({ message }) => message.includes('abort failed:'))).toBe(true);
+      expect(records.every(({ message }) => message.includes('[redacted]'))).toBe(true);
+      expect(records.slice(0, 2).every(({ message }) => message.includes('public'))).toBe(true);
+    } finally {
+      handle.dispose();
+      warnOutput.mockRestore();
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it('redacts embedded JSON and complete quoted credentials before persisting raw stop warnings', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'agent-teams-persistent-stop-log-'));
     const warnOutput = vi.spyOn(console, 'warn').mockImplementation(() => undefined);

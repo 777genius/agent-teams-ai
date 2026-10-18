@@ -82,6 +82,34 @@ describe('describeOpenCodeRuntimeStopResult', () => {
 });
 
 describe('summarizeOpenCodeRuntimeStopFailure', () => {
+  it.each([
+    [
+      JSON.stringify({ token: { value: 'TEST_SECRET', nested: ['}"TEST_SECRET'] }, status: 'public' }),
+      true,
+    ],
+    ['{"token":["TEST_SECRET",{"nested":"TEST_SECRET"}],"status":"public"}', true],
+    [
+      JSON.stringify({ token: { value: 'TEST_SECRET' }, status: 'public' }).replaceAll('"', '\\"'),
+      true,
+    ],
+    ['{"token":{"value":"TEST_SECRET"', false],
+    ['{"token":["TEST_SECRET",{"nested":"TEST_SECRET"}', false],
+    ['{"token":{"value":"TEST_SECRET"]},"status":"TEST_SECRET_TRAILING"}', false],
+    ['{"token":{"value":"TEST_SECRET",BROKEN},"status":"TEST_SECRET_TRAILING"}', false],
+    ['{"token":[redacted]TEST_SECRET,"status":"TEST_SECRET_TRAILING"}', false],
+    ['{"token":[redacted] TEST_SECRET,"status":"TEST_SECRET_TRAILING"}', false],
+  ])('redacts an entire structured credential from stop diagnostics: %s', (detail, valid) => {
+    const summary = summarizeOpenCodeRuntimeStopFailure({
+      diagnostics: [`abort failed: ${detail}`],
+    });
+
+    expect(summary).toContain('abort failed:');
+    expect(summary).toContain('[redacted]');
+    expect(summary).not.toContain('TEST_SECRET');
+    if (valid) expect(summary).toContain('public');
+    expect(sanitizeOpenCodeRuntimeStopDetail(summary)).toBe(summary);
+  });
+
   it('redacts quoted credentials in stop results and exception details before bounding', () => {
     const detail =
       'abort failed: {"token":"TEST_SECRET_JSON"} AUTH_TOKEN="TEST_SECRET_ENV\nmore secret"';
