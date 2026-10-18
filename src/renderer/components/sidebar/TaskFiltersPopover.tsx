@@ -100,6 +100,9 @@ export const TaskFiltersPopover = ({
           align="end"
           sideOffset={6}
           data-testid={`${testId}-content`}
+          // The folders tree re-focuses rows asynchronously after moves; that stray
+          // focus must not dismiss the popover and drop the unapplied draft.
+          onFocusOutside={(event) => event.preventDefault()}
         >
           <div className="space-y-3">
             <div>
