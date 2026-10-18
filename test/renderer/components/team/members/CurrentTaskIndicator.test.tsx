@@ -205,9 +205,15 @@ describe('CurrentTaskIndicator', () => {
     ]);
     expect(setIntervalSpy).toHaveBeenCalledTimes(1);
     expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
-    // The banked elapsed already contains the baseline, so a larger `baseElapsedMs` must not
-    // double-count: the label keeps the value the record carries, not baseline + elapsed.
-    expect(host.textContent).toContain('1m 11s');
+    // The store floors the record at the baseline with `max`, so a mid-life `baseElapsedMs`
+    // increase adds on top of nothing. Advancing the clock here proves both halves: the label
+    // did not double-count (it would read 2m 16s) and the render path picked the new anchor up
+    // instead of freezing at the value before the change.
+    await act(async () => {
+      vi.advanceTimersByTime(5_000);
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('1m 16s');
     setItem.mockClear();
     setIntervalSpy.mockClear();
     clearIntervalSpy.mockClear();
@@ -435,8 +441,10 @@ describe('CurrentTaskIndicator', () => {
     const setIntervalSpy = vi.spyOn(window, 'setInterval');
     const clearIntervalSpy = vi.spyOn(window, 'clearInterval');
 
-    // `startedAt` is not read by either effect body, but it is an anchor field: the shared key
-    // covers the whole type, so the display cannot keep an anchor that has moved on.
+    // Invariant, not a hazard: the shared key is total over `MemberActivityTimerAnchor`, so a
+    // field added later cannot be silently dropped from it. This input — `startedAt` moved while
+    // `timerId` was held — is not something `derive*Anchor`/`withActivityTimerRunId` can emit
+    // (`startedAt` is the trailing segment of `timerId`), and neither effect body reads it.
     await act(async () => {
       root.render(
         <CurrentTaskIndicator
@@ -448,6 +456,11 @@ describe('CurrentTaskIndicator', () => {
       await Promise.resolve();
     });
 
+    // Retire then arm, both against the timer the anchor names — not just "two writes happened".
+    expect(setItem.mock.calls.map(([key]) => key)).toEqual([
+      `member-activity-timer:${timerId}`,
+      `member-activity-timer:${timerId}`,
+    ]);
     expect(writtenPayloads(setItem.mock.calls)).toHaveLength(2);
     expect(setIntervalSpy).toHaveBeenCalledTimes(1);
     expect(clearIntervalSpy).toHaveBeenCalledTimes(1);

@@ -33,20 +33,25 @@ function useActivityTimerLabel(
   // The caller rebuilds the anchor object on every render, so the effects below re-arm only
   // when an anchor value changes. They share one key so the two arrays cannot drift apart,
   // and the key covers every anchor field: `startedAt` is already encoded in `timerId`, so
-  // listing it costs nothing and keeps the key total over the anchor type.
+  // listing it costs nothing and keeps the key total over the anchor type. Every dependency is
+  // normalized exactly as the key value is — a dependency that moves while the value stands
+  // still discards the memo and re-arms both effects, which is the churn this key exists to
+  // stop. `normalizedBaseElapsedMs` is hoisted instead of inlined because lint
+  // (`--max-warnings 0` in CI) rejects a complex expression in a dependency array.
+  const normalizedBaseElapsedMs = activityTimer?.baseElapsedMs ?? 0;
   const timerKey = useMemo(
     () => ({
       timerId: activityTimer?.timerId,
       startedAt: activityTimer?.startedAt,
       startedAtMs: activityTimer?.startedAtMs,
-      baseElapsedMs: activityTimer?.baseElapsedMs ?? 0,
+      baseElapsedMs: normalizedBaseElapsedMs,
       runId: activityTimer?.runId,
     }),
     [
       activityTimer?.timerId,
       activityTimer?.startedAt,
       activityTimer?.startedAtMs,
-      activityTimer?.baseElapsedMs,
+      normalizedBaseElapsedMs,
       activityTimer?.runId,
     ]
   );
