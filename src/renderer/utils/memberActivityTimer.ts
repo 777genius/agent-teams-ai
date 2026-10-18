@@ -130,7 +130,7 @@ function writeStoredTimer(timerId: string, timer: StoredActivityTimer): void {
 function retainRecentTimers(keepTimerId: string): void {
   const lastSeenMs = new Map<string, number>();
   for (const [timerId, timer] of timers) {
-    lastSeenMs.set(timerId, timer.updatedAtMs);
+    lastSeenMs.set(timerId, Math.max(timer.startedAtMs, timer.updatedAtMs));
   }
 
   const storedIds = readStorageTimerIds();
@@ -147,7 +147,7 @@ function retainRecentTimers(keepTimerId: string): void {
       timerId,
       isStoredTimer(parsed)
         ? Math.max(parsed.startedAtMs, parsed.updatedAtMs)
-        : Number.NEGATIVE_INFINITY
+        : Number.MIN_SAFE_INTEGER
     );
   }
 
@@ -166,11 +166,11 @@ function retainRecentTimers(keepTimerId: string): void {
 
 // A paused card keeps rendering but never writes, so its recency has to be recorded on
 // the read path; otherwise eviction would drop it and reset the elapsed value it shows.
-function markTimerObserved(timerId: string, nowMs: number): void {
+function markTimerObserved(timerId: string): void {
   const cached = timers.get(timerId);
   if (!cached) return;
-  // A paused card keeps its last captured render clock, so recency must follow wall time.
-  const observedAtMs = Math.max(nowMs, Date.now());
+  // Render clocks can be frozen or skewed by another process, so recency follows wall time.
+  const observedAtMs = Date.now();
   if (cached.updatedAtMs >= observedAtMs) return;
   timers.set(timerId, { ...cached, updatedAtMs: observedAtMs });
 }
@@ -300,7 +300,9 @@ export function readMemberActivityTimerElapsed({
   const timer =
     readStoredTimer(timerId, startedAtMs, baseElapsedMs) ??
     createInitialTimer(startedAtMs, baseElapsedMs, running, nowMs, runId);
-  if (!timer.running) markTimerObserved(timerId, nowMs);
+  // Either side calling it paused is enough: a record left running by an interrupted
+  // pause sync would otherwise stay untouched and get pruned with its open interval.
+  if (!running || !timer.running) markTimerObserved(timerId);
   return materializeElapsed(running ? timer : { ...timer, running: false }, nowMs, runId);
 }
 

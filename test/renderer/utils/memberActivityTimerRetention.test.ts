@@ -39,6 +39,7 @@ function storedTimerIds(): string[] {
 
 describe('memberActivityTimer retention', () => {
   afterEach(() => {
+    vi.useRealTimers();
     resetMemberActivityTimerStoreForTests();
     globalThis.localStorage?.clear();
   });
@@ -226,5 +227,36 @@ describe('memberActivityTimer retention', () => {
         nowMs: startedAtMs + 90_000,
       })
     ).toBe(90_000);
+  });
+
+  it('keeps a paused card whose stored record was left running', () => {
+    vi.useFakeTimers();
+    const startedAtMs = Date.parse('2026-05-07T09:00:00.000Z');
+    vi.setSystemTime(startedAtMs);
+    // An interrupted pause sync leaves the persisted record claiming it is still running,
+    // so only the reader knows that this timer is paused.
+    const stuckId = timerIdFor('stuck-task', startedAtMs);
+    syncMemberActivityTimer({
+      timerId: stuckId,
+      startedAtMs,
+      running: true,
+      runId: 'run-1',
+      nowMs: startedAtMs,
+    });
+
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS + 60; index += 1) {
+      const rotationMs = startedAtMs + 100_000 + index * 1_000;
+      vi.setSystemTime(rotationMs);
+      syncTaskTimer(`rotation-${index}`, rotationMs, rotationMs);
+      readMemberActivityTimerElapsed({
+        timerId: stuckId,
+        startedAtMs,
+        running: false,
+        runId: 'run-1',
+        nowMs: rotationMs,
+      });
+    }
+
+    expect(storedTimerIds()).toContain(stuckId);
   });
 });
