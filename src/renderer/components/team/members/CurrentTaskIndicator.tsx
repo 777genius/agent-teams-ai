@@ -116,17 +116,18 @@ function useActivityTimerLabel(
   }, [timerKey, isTimerRunning]);
 
   if (!activityTimer) return null;
+  const elapsedMs = readMemberActivityTimerElapsed({
+    timerId: activityTimer.timerId,
+    startedAtMs: activityTimer.startedAtMs,
+    baseElapsedMs: activityTimer.baseElapsedMs,
+    running: isTimerRunning,
+    runId: activityTimer.runId,
+    nowMs,
+  });
   return formatMemberActivityElapsed(
     !isTimerRunning && syncedTimer?.key === timerKey && !syncedTimer.running
-      ? syncedTimer.elapsedMs
-      : readMemberActivityTimerElapsed({
-          timerId: activityTimer.timerId,
-          startedAtMs: activityTimer.startedAtMs,
-          baseElapsedMs: activityTimer.baseElapsedMs,
-          running: isTimerRunning,
-          runId: activityTimer.runId,
-          nowMs,
-        })
+      ? Math.max(elapsedMs, syncedTimer.elapsedMs)
+      : elapsedMs
   );
 }
 

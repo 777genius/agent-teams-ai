@@ -407,7 +407,7 @@ describe('CurrentTaskIndicator', () => {
     });
   });
 
-  it('keeps the latest visible elapsed on pause before persistence and excludes paused time on resume', async () => {
+  it('keeps the latest visible elapsed on pause before persistence and excludes paused time on resume', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();
     const startedAt = '2026-05-07T09:00:00.000Z';
@@ -440,14 +440,14 @@ describe('CurrentTaskIndicator', () => {
       );
     const timerText = () => host.querySelector('span.tabular-nums')?.textContent;
 
-    await act(async () => {
+    act(() => {
       renderIndicator(true);
     });
     expect(timerText()).toBe('10s');
     const setItem = vi.spyOn(globalThis.localStorage, 'setItem');
     const setIntervalSpy = vi.spyOn(window, 'setInterval');
     const clearIntervalSpy = vi.spyOn(window, 'clearInterval');
-    await act(async () => {
+    act(() => {
       vi.advanceTimersByTime(2_000);
     });
     expect(timerText()).toBe('12s');
@@ -455,7 +455,7 @@ describe('CurrentTaskIndicator', () => {
 
     // Two seconds is short of the five-second disk tick. The pause effect must display the
     // elapsed it just banked, even when its clock equals the most recent render tick exactly.
-    await act(async () => {
+    act(() => {
       renderIndicator(false);
     });
     expect(timerText()).toBe('12s');
@@ -470,11 +470,11 @@ describe('CurrentTaskIndicator', () => {
     setItem.mockClear();
     clearIntervalSpy.mockClear();
 
-    await act(async () => {
+    act(() => {
       vi.advanceTimersByTime(30_000);
     });
     expect(timerText()).toBe('12s');
-    await act(async () => {
+    act(() => {
       renderIndicator(false);
     });
     expect(timerText()).toBe('12s');
@@ -482,17 +482,93 @@ describe('CurrentTaskIndicator', () => {
     expect(setIntervalSpy).not.toHaveBeenCalled();
     expect(clearIntervalSpy).not.toHaveBeenCalled();
 
-    await act(async () => {
+    act(() => {
       renderIndicator(true);
     });
     expect(timerText()).toBe('12s');
     expect(setIntervalSpy).toHaveBeenCalledTimes(1);
-    await act(async () => {
+    act(() => {
       vi.advanceTimersByTime(2_000);
     });
     expect(timerText()).toBe('14s');
 
-    await act(async () => {
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('recovers a paused banked timer on rerender after a transient storage read failure', () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    const startedAt = '2026-05-07T09:00:00.000Z';
+    const startedAtMs = Date.parse(startedAt);
+    const nowMs = startedAtMs + 120_000;
+    vi.setSystemTime(nowMs);
+    const anchor = {
+      startedAt,
+      startedAtMs,
+      baseElapsedMs: 0,
+      runId: 'run-1',
+      timerId: createMemberActivityTimerId({
+        teamName: 'alpha',
+        memberName: 'bob',
+        phase: 'work',
+        taskId: task.id,
+        startedAt,
+      }),
+    };
+    const storage = globalThis.localStorage;
+    const storageKey = `member-activity-timer:${anchor.timerId}`;
+    const bankedPayload = JSON.stringify({
+      version: 1,
+      startedAtMs,
+      baseElapsedMs: 0,
+      elapsedMs: 90_000,
+      updatedAtMs: nowMs,
+      running: false,
+      runId: 'run-1',
+    });
+    storage.setItem(storageKey, bankedPayload);
+    const readOriginal = storage.getItem.bind(storage);
+    let blocked = true;
+    vi.spyOn(storage, 'getItem').mockImplementation((key: string) => {
+      if (blocked && key === storageKey) throw new Error('SecurityError: transient read failure');
+      return readOriginal(key);
+    });
+    const setItem = vi.spyOn(storage, 'setItem');
+    const setIntervalSpy = vi.spyOn(window, 'setInterval');
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const renderIndicator = () =>
+      root.render(
+        <CurrentTaskIndicator
+          task={task}
+          borderColor="#22c55e"
+          isTimerRunning={false}
+          activityTimer={{ ...anchor }}
+        />
+      );
+    const timerText = () => host.querySelector('span.tabular-nums')?.textContent;
+
+    act(() => {
+      renderIndicator();
+    });
+    expect(timerText()).toBe('0s');
+    expect(setItem).not.toHaveBeenCalled();
+    expect(readOriginal(storageKey)).toBe(bankedPayload);
+
+    // The failed sync returned a provisional baseline without writing it. A same-value anchor
+    // rerender must retry the read rather than treating that provisional zero as authoritative.
+    blocked = false;
+    act(() => {
+      renderIndicator();
+    });
+    expect(timerText()).toBe('1m 30s');
+    expect(setItem).not.toHaveBeenCalled();
+    expect(setIntervalSpy).not.toHaveBeenCalled();
+    expect(readOriginal(storageKey)).toBe(bankedPayload);
+    act(() => {
       root.unmount();
     });
   });
