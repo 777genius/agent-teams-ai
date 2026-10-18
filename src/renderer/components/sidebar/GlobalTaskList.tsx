@@ -588,6 +588,11 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
   const isTeamOffline = useTaskTeamStatus();
   const sidebarTeams = useStore((s) => selectSidebarTeamsDerived(s.teams));
   const teamCatalogKey = useStore((s) => s.teams.map((team) => team.teamName).join('|'));
+  // Membership only: task add/remove invalidates the deleted feed, status churn must not.
+  const globalTaskIdsKey = useMemo(
+    () => globalTasks.map((task) => task.id).join('|'),
+    [globalTasks]
+  );
 
   const [internalFilters, setInternalFilters] = useState(defaultTaskFiltersState);
   const [internalFiltersPopoverOpen, setInternalFiltersPopoverOpen] = useState(false);
@@ -618,7 +623,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
   useEffect(() => {
     if (!filters.showDeleted) return;
     void fetchAllDeletedTasks();
-  }, [contextId, fetchAllDeletedTasks, filters.showDeleted, teamCatalogKey]);
+  }, [contextId, fetchAllDeletedTasks, filters.showDeleted, globalTaskIdsKey, teamCatalogKey]);
 
   const viewTasks = useMemo(
     () => (globalDeletedTasks.length > 0 ? [...globalTasks, ...globalDeletedTasks] : globalTasks),

@@ -76,4 +76,25 @@ describe('deletedTaskFeed', () => {
 
     expect(store.getState().globalDeletedTasks).toEqual([]);
   });
+
+  it('starts a new-context refresh without waiting for the stale context request', async () => {
+    const stale = createDeferred<TeamTask[]>();
+    let calls = 0;
+    getDeletedTasks.mockImplementation(() => {
+      calls += 1;
+      return calls === 1 ? stale.promise : Promise.resolve([deletedTask('task-beta')]);
+    });
+    const store = createFeedStore([team('alpha')]);
+
+    const staleRefresh = store.getState().fetchAllDeletedTasks();
+    store.setState({ activeContextId: 'ssh-workspace' });
+    await store.getState().fetchAllDeletedTasks();
+
+    expect(store.getState().globalDeletedTasks.map((task) => task.id)).toEqual(['task-beta']);
+
+    stale.resolve([deletedTask('task-alpha')]);
+    await staleRefresh;
+
+    expect(store.getState().globalDeletedTasks.map((task) => task.id)).toEqual(['task-beta']);
+  });
 });

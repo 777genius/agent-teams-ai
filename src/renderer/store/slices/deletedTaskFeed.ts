@@ -26,12 +26,17 @@ interface DeletedTaskFeedScope {
   contextEpoch: number;
 }
 
+interface InFlightRefresh {
+  contextId: string;
+  promise: Promise<void>;
+}
+
 export const createDeletedTaskFeed: StateCreator<AppState, [], [], DeletedTaskFeed> = (
   set,
   get
 ) => {
   let fetchGeneration = 0;
-  let inFlightRefresh: Promise<void> | null = null;
+  let inFlightRefresh: InFlightRefresh | null = null;
 
   const projectTeamDeletedTasks = (
     team: AppState['teams'][number],
@@ -54,13 +59,17 @@ export const createDeletedTaskFeed: StateCreator<AppState, [], [], DeletedTaskFe
 
     fetchAllDeletedTasks: async () => {
       const generation = ++fetchGeneration;
-      if (inFlightRefresh) await inFlightRefresh;
-      if (generation !== fetchGeneration) return;
+      const scope: DeletedTaskFeedScope = {
+        contextId: get().activeContextId,
+        contextEpoch: captureContextScopedRequestEpoch(),
+      };
+      // Coalesce only same-context refreshes: a fan-out queued by the previous
+      // context has no cancellation or timeout and would starve the visible one.
+      if (inFlightRefresh?.contextId === scope.contextId) {
+        await inFlightRefresh.promise;
+        if (generation !== fetchGeneration) return;
+      }
       const run = (async () => {
-        const scope: DeletedTaskFeedScope = {
-          contextId: get().activeContextId,
-          contextEpoch: captureContextScopedRequestEpoch(),
-        };
         const settled = await Promise.allSettled(
           get().teams.map(async (team) => {
             const tasks = await unwrapIpc<TeamTask[]>('team:getDeletedTasks', () =>
@@ -87,10 +96,13 @@ export const createDeletedTaskFeed: StateCreator<AppState, [], [], DeletedTaskFe
           globalDeletedTasks: structurallySharePlainValue(state.globalDeletedTasks, batches.flat()),
         }));
       })();
-      inFlightRefresh = run.finally(() => {
-        inFlightRefresh = null;
+      const request = run.finally(() => {
+        if (inFlightRefresh?.promise === request) {
+          inFlightRefresh = null;
+        }
       });
-      await inFlightRefresh;
+      inFlightRefresh = { contextId: scope.contextId, promise: request };
+      await request;
     },
   };
 };
