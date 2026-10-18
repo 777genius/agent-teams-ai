@@ -5,6 +5,7 @@ import {
   collectOpenCodeLaneRuntimePids,
   describeOpenCodeRuntimeStopResult,
   resolveOpenCodeRuntimeStopOutcome,
+  summarizeOpenCodeRuntimeStopFailure,
 } from '../TeamProvisioningOpenCodeRuntimeStopOutcome';
 
 import type { PersistedTeamLaunchSnapshot } from '@shared/types';
@@ -76,6 +77,31 @@ describe('describeOpenCodeRuntimeStopResult', () => {
 
   it('describes a missing result as nothing rather than failing', () => {
     expect(describeOpenCodeRuntimeStopResult(null)).toBe('');
+  });
+});
+
+describe('summarizeOpenCodeRuntimeStopFailure', () => {
+  it('names the run-less reason when the adapter reported nothing', () => {
+    expect(summarizeOpenCodeRuntimeStopFailure({ stopped: false, members: {} })).toBe(
+      'no stop diagnostics returned'
+    );
+    expect(summarizeOpenCodeRuntimeStopFailure(null)).toBe('no stop diagnostics returned');
+  });
+
+  it('keeps the summary on one line and inside the size bound', () => {
+    const summary = summarizeOpenCodeRuntimeStopFailure(
+      { diagnostics: ['host gone\n  retry scheduled'] },
+      40
+    );
+    expect(summary).not.toContain('\n');
+    expect(summary.length).toBeLessThanOrEqual(40);
+
+    const long = summarizeOpenCodeRuntimeStopFailure(
+      { diagnostics: [`owner check failed: ${'x'.repeat(500)}`] },
+      60
+    );
+    expect(long.length).toBe(60);
+    expect(long.endsWith('…')).toBe(true);
   });
 });
 

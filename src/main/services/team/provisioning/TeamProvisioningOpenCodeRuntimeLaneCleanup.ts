@@ -16,6 +16,7 @@ import {
 import { readTeamLaunchFreshnessFromTeamDir } from '../TeamLaunchFreshness';
 
 import { extractOpenCodeRuntimeLaneMemberName } from './TeamProvisioningOpenCodeRuntimePermissions';
+import { summarizeOpenCodeRuntimeStopFailure } from './TeamProvisioningOpenCodeRuntimeStopOutcome';
 import {
   collectOpenCodeStoppedLaneStopRunIds,
   isStoppedTeamOpenCodeLaneOwnershipCurrent,
@@ -356,6 +357,7 @@ async function stopOpenCodeRuntimeLanesForStoppedTeamLocked(input: {
     }
     if (adapter && targetedRunIds.length > 0) {
       let laneStopped = false;
+      const unconfirmedAttempts: string[] = [];
       const cwd = resolveOpenCodeRuntimeLaneCleanupCwd({
         laneId,
         config,
@@ -378,17 +380,21 @@ async function stopOpenCodeRuntimeLanesForStoppedTeamLocked(input: {
             laneStopped = true;
             break;
           }
+          unconfirmedAttempts.push(
+            `run=${runId} ${summarizeOpenCodeRuntimeStopFailure(result)}`
+          );
         } catch (error) {
+          const detail = error instanceof Error ? error.message : String(error);
+          unconfirmedAttempts.push(`run=${runId} threw=${detail}`);
           ports.logWarning(
-            `[${teamName}] Failed to stop orphaned OpenCode lane ${laneId} run ${runId}: ${
-              error instanceof Error ? error.message : String(error)
-            }`
+            `[${teamName}] Failed to stop orphaned OpenCode lane ${laneId} run ${runId}: ${detail}`
           );
         }
       }
       if (!laneStopped) {
         ports.logWarning(
-          `[${teamName}] OpenCode lane ${laneId} did not confirm stop; retaining runtime ownership and storage.`
+          `[${teamName}] OpenCode lane ${laneId} did not confirm stop; retaining runtime ownership and storage. ` +
+            `Attempts: ${unconfirmedAttempts.join(' | ') || 'no stop result returned'}`
         );
         continue;
       }

@@ -36,6 +36,19 @@ export function describeOpenCodeRuntimeStopResult(
     .join('; ');
 }
 
+/**
+ * Single-line, length-bounded form of an unconfirmed Stop result for warning logs, so a
+ * retained lane explains itself instead of only reporting that it was not confirmed.
+ */
+export function summarizeOpenCodeRuntimeStopFailure(
+  result: OpenCodeRuntimeStopResultLike | null,
+  maxChars = 400
+): string {
+  const described = describeOpenCodeRuntimeStopResult(result).replace(/\s*\n\s*/g, ' ').trim();
+  if (!described) return 'no stop diagnostics returned';
+  return described.length > maxChars ? `${described.slice(0, maxChars - 1)}…` : described;
+}
+
 /** Recorded host pids of the members that belong to `laneId` in the launch snapshot. */
 export function collectOpenCodeLaneRuntimePids(
   snapshot: PersistedTeamLaunchSnapshot | null | undefined,
