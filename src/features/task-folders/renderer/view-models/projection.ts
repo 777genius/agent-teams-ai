@@ -14,6 +14,8 @@ export interface Node {
   identity?: TaskIdentity;
   task?: GlobalTask;
   archived?: boolean;
+  /** Task exists but the current view hides it, so it must not feed badges or totals. */
+  hidden?: boolean;
   active: number;
   archivedCount: number;
   unavailable: number;
@@ -63,6 +65,7 @@ export function projectFolders(
       identity,
       task,
       archived,
+      hidden,
       active: archived || hidden ? 0 : 1,
       archivedCount: hidden ? 0 : archived ? 1 : 0,
     };
