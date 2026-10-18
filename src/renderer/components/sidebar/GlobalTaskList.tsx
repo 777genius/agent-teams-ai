@@ -19,7 +19,7 @@ import {
   sortTasksByFreshness,
 } from '@renderer/utils/taskGrouping';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
-import { Archive, Check, ChevronDown, ChevronRight, ListTodo, Pin, Search, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, ListTodo, Pin, Search, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { AnimatedHeightReveal } from '../team/activity/AnimatedHeightReveal';
@@ -577,7 +577,6 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
   const [groupingPopoverOpen, setGroupingPopoverOpen] = useState(false);
   const [sortMode, setSortModeState] = useState<TaskSortMode>(loadSortMode);
   const [sortPopoverOpen, setSortPopoverOpen] = useState(false);
-  const [showArchived, setShowArchived] = useState(false);
   const [renamingTaskKey, setRenamingTaskKey] = useState<string | null>(null);
   const [projectRequestedVisibleCountByKey, setProjectRequestedVisibleCountByKey] = useState<
     Record<string, number>
@@ -782,26 +781,15 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
 
   // Resolve project filter from filters state
   const selectedProjectPath = filters.projectPath;
-  const hasArchivedTasks = useMemo(
-    () => globalTasks.some((t) => getTaskLocalPresentation(t).archived),
-    [globalTasks, getTaskLocalPresentation]
-  );
-  const effectiveShowArchived = showArchived && hasArchivedTasks;
 
   const filtered = useMemo(() => {
     return filterGlobalTasks(
       globalTasks,
       {
         contextId,
-        filters: {
-          statusIds: filters.statusIds,
-          teamName: filters.teamName,
-          projectPath: selectedProjectPath,
-          unreadOnly: filters.unreadOnly,
-          readFilter: filters.readFilter,
-        },
+        filters,
         searchQuery,
-        archiveMode: effectiveShowArchived ? 'archived' : 'active',
+        archiveMode: filters.showArchived ? 'all' : 'active',
         getEffectiveSubject,
       },
       readState,
@@ -810,14 +798,9 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
   }, [
     contextId,
     globalTasks,
-    selectedProjectPath,
-    filters.statusIds,
-    filters.teamName,
-    filters.unreadOnly,
-    filters.readFilter,
+    filters,
     searchQuery,
     readState,
-    effectiveShowArchived,
     getEffectiveSubject,
     getTaskLocalPresentation,
   ]);
@@ -1016,29 +999,6 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
           </Popover>
 
           <div className="ml-auto flex items-center gap-1">
-            {hasArchivedTasks && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => setShowArchived(!showArchived)}
-                    className={cn(
-                      'rounded p-0.5 transition-colors',
-                      effectiveShowArchived
-                        ? 'bg-surface-raised text-text-secondary'
-                        : 'text-text-muted hover:text-text-secondary'
-                    )}
-                  >
-                    <Archive className="size-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  {effectiveShowArchived
-                    ? t('tasksPanel.hideArchived')
-                    : t('tasksPanel.showArchived')}
-                </TooltipContent>
-              </Tooltip>
-            )}
             <TaskFiltersPopover
               open={filtersPopoverOpen}
               onOpenChange={setFiltersPopoverOpen}
@@ -1083,7 +1043,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
       </div>
 
       {/* Pinned tasks section */}
-      {pinnedTasks.length > 0 && !effectiveShowArchived && (
+      {pinnedTasks.length > 0 && (
         <div className="shrink-0 border-b" style={{ borderColor: 'var(--color-border)' }}>
           <div className="flex items-center gap-1 px-2 py-1">
             <Pin className="size-3 text-text-muted" />

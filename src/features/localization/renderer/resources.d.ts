@@ -794,6 +794,8 @@ export default interface Resources {
       "searchProjects": "Search projects...",
       "searchTeams": "Search teams...",
       "selectAll": "Select all",
+      "showArchived": "Show archived tasks",
+      "showDeleted": "Show deleted tasks",
       "status": "Status",
       "statusOptions": {
         "approved": "APPROVED",

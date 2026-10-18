@@ -17,6 +17,7 @@ import {
   sharedCardParity,
 } from './task-folders/shared-cards.ts';
 import { UI, el, folderRow, label, selectors, taskRow } from './task-folders/ui.ts';
+import { seededSnapshot } from '../../src/features/task-folders/core/domain/folders.ts';
 import type { Snapshot } from '../../src/features/task-folders/core/domain/folders.ts';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -215,8 +216,18 @@ async function main() {
   try {
     await desktop.start();
     await check('fixture-isolation-and-seed', async () => {
+      // First run bootstraps the starter folder; only that seed may pre-exist.
+      const preexisting = await ui.value<string | null>(
+        'localStorage.getItem("taskFolders:v1")'
+      );
+      if (preexisting !== null) {
+        assert.deepEqual(
+          JSON.parse(preexisting),
+          seededSnapshot(),
+          'Fresh fixture already has folders beyond the starter seed'
+        );
+      }
       await ui.cdp.evaluate(`(() => {
-        if(localStorage.getItem('taskFolders:v1'))throw new Error('Fresh fixture already has folders');
         localStorage.setItem('taskFolders:v1',${JSON.stringify(JSON.stringify(f.snapshot))});
         localStorage.setItem('taskArchivedIds',${JSON.stringify(JSON.stringify([f.team + ':archived']))});
       })()`);
@@ -315,11 +326,9 @@ async function main() {
       await capture('native-folder-and-invalid-cycle');
     });
     await check('native-sidebar-task-move-and-hidden-order', async () => {
-      await ui.click(el(selectors.archived)); // Hide canonical archived sibling.
-      assert.equal(
-        await ui.value(`${el(selectors.archived)}.getAttribute('data-state')`),
-        'unchecked'
-      );
+      await ui.setViewFilter('archived', false); // Hide canonical archived sibling.
+      await ui.assertViewFilter('archived', false);
+      await ui.wait(`!${taskRow(f.team, 'archived')}`, 'archived sibling hidden by filter');
       const before = children(await ui.snapshot(), f.nested);
       await ui.drag(taskSource('c'), taskRow(f.team, 'b'), 0.08, { teamName: f.team, taskId: 'c' });
       const expected = [...before];
@@ -333,7 +342,8 @@ async function main() {
         'native sidebar drop before visible anchor'
       );
       assert.deepEqual(children(await ui.snapshot(), f.nested), expected);
-      await ui.click(el(selectors.archived));
+      await ui.setViewFilter('archived', true);
+      await ui.wait(taskRow(f.team, 'archived'), 'archived sibling visible again');
       await capture('hidden-canonical-order');
     });
     await check('native-tree-task-reorder', async () => {
@@ -373,10 +383,7 @@ async function main() {
         await ui.value(`${taskRow(f.team, 'a')}.hasAttribute('tabindex')`),
         'Archived row must remain keyboard accessible'
       );
-      assert.equal(
-        await ui.value(`${el(selectors.archived)}.getAttribute('data-state')`),
-        'checked'
-      );
+      await ui.assertViewFilter('archived', true);
       assert.deepEqual(
         await ui.snapshot(),
         before,

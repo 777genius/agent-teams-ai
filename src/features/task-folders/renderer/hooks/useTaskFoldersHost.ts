@@ -48,7 +48,6 @@ export function useTaskFoldersHost(
   const viewSetSortOpen = view.setSortOpen;
   const viewSetFiltersOpen = view.setFiltersOpen;
   const viewClosePopovers = view.closePopovers;
-  const [showArchived, setShowArchived] = useState(true);
   const [rect, setRect] = useState<{
     left: number;
     top: number;
@@ -91,7 +90,7 @@ export function useTaskFoldersHost(
         contextId,
         filters: view.filters,
         searchQuery: view.searchQuery,
-        archiveMode: showArchived ? 'all' : 'active',
+        archiveMode: view.filters.showArchived ? 'all' : 'active',
         getEffectiveSubject,
       },
       readState,
@@ -116,7 +115,6 @@ export function useTaskFoldersHost(
     getEffectiveSubject,
     local,
     readState,
-    showArchived,
     taskOrder,
     tasks,
     view.filters,
@@ -267,8 +265,6 @@ export function useTaskFoldersHost(
     local,
     rect,
     registerPanel,
-    showArchived,
-    setShowArchived,
     openTask: (team: string, id: string): void => {
       clearTaskManualUnread({ contextId, teamName: team, taskId: id });
       openDetail(team, id);

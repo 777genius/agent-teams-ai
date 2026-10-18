@@ -752,6 +752,8 @@
     "searchProjects": "Search projects...",
     "noProjects": "No projects",
     "comments": "Comments",
+    "showArchived": "Show archived tasks",
+    "showDeleted": "Show deleted tasks",
     "apply": "Apply",
     "read": {
       "all": "All",

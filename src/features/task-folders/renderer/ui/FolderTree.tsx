@@ -33,6 +33,7 @@ import {
   Folder,
   GripVertical,
   MoreHorizontal,
+  Plus,
 } from 'lucide-react';
 
 import { childKey, parentOf, validateName } from '../../core/domain/folders';
@@ -739,41 +740,56 @@ export const FolderTree = ({
   };
   const container = tree.getContainerProps(t('taskFolders.title'));
   return (
-    <div
-      {...container}
-      role="tree"
-      tabIndex={container.tabIndex ?? 0}
-      ref={(element) => {
-        scroll.current = element;
-        container.ref?.(element);
-      }}
-      data-testid="task-folders-tree"
-      className="min-h-0 flex-1 overflow-auto"
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && rename) {
-          event.stopPropagation();
-          cancelRename();
-        } else container.onKeyDown?.(event);
-      }}
-    >
-      <div className="relative w-full" style={{ height: virtual.getTotalSize() }}>
-        {virtual.getVirtualItems().map((v) => (
-          <div
-            key={items[v.index].getId()}
-            data-index={v.index}
-            ref={virtual.measureElement}
-            className="absolute left-0 top-0 w-full"
-            style={{ transform: `translateY(${v.start}px)` }}
-          >
-            {row(items[v.index])}
-          </div>
-        ))}
-        {tree.getDragTarget() && (
-          <div
-            className="pointer-events-none absolute h-0.5 bg-blue-400"
-            style={tree.getDragLineStyle((scroll.current?.scrollTop ?? 0) - 1)}
-          />
-        )}
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="shrink-0 px-2 py-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          data-testid="task-folders-new-folder-list"
+          disabled={model.state.status !== 'ready'}
+          className="h-7 w-full justify-start gap-1.5 px-2 text-xs text-text-muted hover:text-text"
+          onClick={() => dialog({ kind: 'create', parent: null })}
+        >
+          <Plus className="size-3.5" />
+          {t('taskFolders.newFolder')}
+        </Button>
+      </div>
+      <div
+        {...container}
+        role="tree"
+        tabIndex={container.tabIndex ?? 0}
+        ref={(element) => {
+          scroll.current = element;
+          container.ref?.(element);
+        }}
+        data-testid="task-folders-tree"
+        className="min-h-0 flex-1 overflow-auto"
+        onKeyDown={(event) => {
+          if (event.key === 'Escape' && rename) {
+            event.stopPropagation();
+            cancelRename();
+          } else container.onKeyDown?.(event);
+        }}
+      >
+        <div className="relative w-full" style={{ height: virtual.getTotalSize() }}>
+          {virtual.getVirtualItems().map((v) => (
+            <div
+              key={items[v.index].getId()}
+              data-index={v.index}
+              ref={virtual.measureElement}
+              className="absolute left-0 top-0 w-full"
+              style={{ transform: `translateY(${v.start}px)` }}
+            >
+              {row(items[v.index])}
+            </div>
+          ))}
+          {tree.getDragTarget() && (
+            <div
+              className="pointer-events-none absolute h-0.5 bg-blue-400"
+              style={tree.getDragLineStyle((scroll.current?.scrollTop ?? 0) - 1)}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

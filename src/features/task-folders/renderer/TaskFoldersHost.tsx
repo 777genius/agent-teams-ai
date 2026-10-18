@@ -5,10 +5,9 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { TaskFiltersPopover } from '@renderer/components/sidebar/TaskFiltersPopover';
 import { TaskSortPopover } from '@renderer/components/sidebar/TaskSortPopover';
 import { Button } from '@renderer/components/ui/button';
-import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Dialog, DialogContent, DialogTitle } from '@renderer/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { FolderTree as FolderTreeIcon, PanelRight, Search, X } from 'lucide-react';
+import { FolderTree as FolderTreeIcon, PanelRight, Plus, RotateCcw, Search, X } from 'lucide-react';
 
 import { dockedSidebar } from './adapters/dockedSidebar';
 import { moveRequest } from './adapters/moveRequest';
@@ -137,6 +136,21 @@ export const TaskFoldersHost = ({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
+              variant="ghost"
+              size="sm"
+              data-testid="task-folders-new-folder"
+              aria-label={t('taskFolders.newFolder')}
+              disabled={model.state.status !== 'ready'}
+              onClick={() => dialog({ kind: 'create', parent: null })}
+            >
+              <Plus className="size-3" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('taskFolders.newFolder')}</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
               variant={docked ? 'secondary' : 'ghost'}
               size="sm"
               data-testid="task-folders-dock-toggle"
@@ -154,15 +168,6 @@ export const TaskFoldersHost = ({
           </TooltipTrigger>
           <TooltipContent>{t('taskFolders.dockToSidebar')}</TooltipContent>
         </Tooltip>
-        <Button
-          variant="ghost"
-          size="sm"
-          data-testid="task-folders-new-folder"
-          disabled={model.state.status !== 'ready'}
-          onClick={() => dialog({ kind: 'create', parent: null })}
-        >
-          {t('taskFolders.newFolder')}
-        </Button>
         {!docked && (
           <Button
             variant="ghost"
@@ -173,14 +178,6 @@ export const TaskFoldersHost = ({
             <X className="size-3" />
           </Button>
         )}
-        <label className="flex w-full items-center gap-2 text-xs">
-          <Checkbox
-            data-testid="task-folders-show-archived"
-            checked={model.showArchived}
-            onCheckedChange={(value) => model.setShowArchived(value === true)}
-          />
-          {t('taskFolders.showArchived')}
-        </label>
         <div
           className="flex w-full flex-wrap items-center gap-1"
           data-testid="task-folders-task-controls"
@@ -214,21 +211,24 @@ export const TaskFoldersHost = ({
             onFiltersChange={model.view.setFilters}
             onApply={() => undefined}
           />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={t('taskFilters.clearAll')}
-                className="size-6"
-                onClick={model.view.reset}
-              >
-                <X className="size-3" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('taskFilters.clearAll')}</TooltipContent>
-          </Tooltip>
+          {!model.view.isDefault && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t('actions.reset')}
+                  data-testid="tree-task-view-reset"
+                  className="size-6"
+                  onClick={model.view.reset}
+                >
+                  <RotateCcw className="size-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('actions.reset')}</TooltipContent>
+            </Tooltip>
+          )}
         </div>
       </div>
       {model.state.status === 'loading' && (

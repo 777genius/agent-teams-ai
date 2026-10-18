@@ -17,6 +17,8 @@ export interface PersistedTaskViewState {
     teamName: string | null;
     projectPath: string | null;
     readFilter: ReadFilter;
+    showArchived: boolean;
+    showDeleted: boolean;
   };
   sortMode: TaskViewSortMode;
   searchQuery: string;
@@ -60,6 +62,12 @@ export function normalizeTaskViewState(
       filters.readFilter = candidateFilters.readFilter;
       filters.unreadOnly = candidateFilters.readFilter === 'unread';
     }
+    if (typeof candidateFilters.showArchived === 'boolean') {
+      filters.showArchived = candidateFilters.showArchived;
+    }
+    if (typeof candidateFilters.showDeleted === 'boolean') {
+      filters.showDeleted = candidateFilters.showDeleted;
+    }
   }
   if (isTaskViewSortMode(candidate.sortMode)) sortMode = candidate.sortMode;
   if (typeof candidate.searchQuery === 'string') searchQuery = candidate.searchQuery;
@@ -73,6 +81,8 @@ export function serializeTaskViewState(state: TaskViewState): PersistedTaskViewS
       teamName: state.filters.teamName,
       projectPath: state.filters.projectPath,
       readFilter: state.filters.readFilter,
+      showArchived: state.filters.showArchived,
+      showDeleted: state.filters.showDeleted,
     },
     sortMode: state.sortMode,
     searchQuery: state.searchQuery,

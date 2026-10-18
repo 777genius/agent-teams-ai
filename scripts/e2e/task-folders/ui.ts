@@ -6,9 +6,14 @@ export const selectors = {
   toggle: '[data-testid="task-folders-toggle"]',
   panel: '[data-testid="task-folders-panel"]',
   create: '[data-testid="task-folders-new-folder"]',
+  createInline: '[data-testid="task-folders-new-folder-list"]',
   newFolderName: '[role="dialog"] input[aria-label="Folder name"]',
   tree: '[data-testid="task-folders-tree"]',
-  archived: '[data-testid="task-folders-show-archived"]',
+  treeFilters: '[data-testid="tree-task-view-filters"]',
+  sidebarFilters: '[data-testid="sidebar-task-view-filters"]',
+  showArchivedFilter: '[data-testid="task-view-show-archived"]',
+  showDeletedFilter: '[data-testid="task-view-show-deleted"]',
+  viewReset: '[data-testid="tree-task-view-reset"]',
   sidebar: '#sidebar-tasks-panel',
   folderHandle: '[data-testid="task-folder-drag-handle"]',
   taskHandle: '[data-testid="sidebar-task-drag-handle"]',
@@ -630,6 +635,33 @@ export class UI {
     await this.key('Enter');
     await this.persisted((s) => s.folders.some((f) => f.name === name), 'folder creation ' + name);
     return (await this.snapshot()).folders.find((f) => f.name === name)!.id;
+  }
+  filterTrigger(scope: 'tree' | 'sidebar') {
+    return el(scope === 'tree' ? selectors.treeFilters : selectors.sidebarFilters);
+  }
+  filterCheckbox(kind: 'archived' | 'deleted') {
+    return el(kind === 'archived' ? selectors.showArchivedFilter : selectors.showDeletedFilter);
+  }
+  async setViewFilter(kind: 'archived' | 'deleted', value: boolean, scope: 'tree' | 'sidebar' = 'tree') {
+    await this.click(this.filterTrigger(scope));
+    const target = this.filterCheckbox(kind);
+    await this.wait(target, `${kind} filter checkbox`);
+    const state = await this.value<string>(`${target}.getAttribute('data-state')`);
+    if (state !== (value ? 'checked' : 'unchecked')) await this.click(target);
+    await this.click(label('Apply', el(`[data-testid="${scope}-task-view-filters-content"]`)));
+    await this.wait(`!${target}`, `${kind} filter applied`);
+  }
+  async assertViewFilter(kind: 'archived' | 'deleted', value: boolean, scope: 'tree' | 'sidebar' = 'tree') {
+    await this.click(this.filterTrigger(scope));
+    const target = this.filterCheckbox(kind);
+    await this.wait(target, `${kind} filter checkbox`);
+    assert.equal(
+      await this.value(`${target}.getAttribute('data-state')`),
+      value ? 'checked' : 'unchecked',
+      `${kind} filter state`
+    );
+    await this.key('Escape');
+    await this.wait(`!${target}`, `${kind} filter closed`);
   }
   async unfocus() {
     // Transfer both pointer and keyboard focus outside with trusted native input.
