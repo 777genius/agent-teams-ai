@@ -21,6 +21,7 @@ const task: TeamTaskWithKanban = {
 describe('CurrentTaskIndicator', () => {
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
     resetMemberActivityTimerStoreForTests();
     globalThis.localStorage?.clear();
@@ -137,6 +138,7 @@ describe('CurrentTaskIndicator', () => {
       runId: 'run-1',
       timerId,
     };
+    const storageKey = `member-activity-timer:${timerId}`;
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -151,6 +153,7 @@ describe('CurrentTaskIndicator', () => {
     const setItem = vi.spyOn(globalThis.localStorage, 'setItem');
     const setIntervalSpy = vi.spyOn(window, 'setInterval');
     const clearIntervalSpy = vi.spyOn(window, 'clearInterval');
+    const writtenPayloads = () => setItem.mock.calls.map(([, value]) => JSON.parse(String(value)));
     for (let render = 0; render < 3; render += 1) {
       await act(async () => {
         root.render(
@@ -160,10 +163,10 @@ describe('CurrentTaskIndicator', () => {
         await Promise.resolve();
       });
     }
-    const identityWrites = setItem.mock.calls.map(([, value]) => JSON.parse(String(value)));
     // Six simulated seconds only carry the one five second persistence tick.
-    expect(identityWrites).toHaveLength(1);
-    expect(identityWrites[0]).toMatchObject({ baseElapsedMs: 0, running: true });
+    expect(writtenPayloads()).toHaveLength(1);
+    expect(writtenPayloads()[0]).toMatchObject({ baseElapsedMs: 0, running: true });
+    expect(setItem.mock.calls[0][0]).toBe(storageKey);
     expect(setIntervalSpy).not.toHaveBeenCalled();
     expect(clearIntervalSpy).not.toHaveBeenCalled();
     setItem.mockClear();
@@ -178,11 +181,45 @@ describe('CurrentTaskIndicator', () => {
       );
       await Promise.resolve();
     });
-    const retiredPayloads = setItem.mock.calls.map(([, value]) => JSON.parse(String(value)));
-    expect(retiredPayloads.map((payload) => payload.baseElapsedMs)).toEqual([0, 60_000]);
-    setItem.mockRestore();
-    setIntervalSpy.mockRestore();
-    clearIntervalSpy.mockRestore();
+    expect(writtenPayloads().map((payload) => payload.baseElapsedMs)).toEqual([0, 60_000]);
+    expect(setIntervalSpy).toHaveBeenCalledTimes(1);
+    expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
+    setItem.mockClear();
+    setIntervalSpy.mockClear();
+    clearIntervalSpy.mockClear();
+
+    await act(async () => {
+      root.render(
+        <CurrentTaskIndicator
+          task={task}
+          borderColor="#22c55e"
+          activityTimer={{ ...anchor, baseElapsedMs: 60_000, runId: 'run-2' }}
+        />
+      );
+      await Promise.resolve();
+    });
+    // A new run retires the previous sync before arming its own, interval included.
+    expect(writtenPayloads().map((payload) => payload.runId)).toEqual(['run-1', 'run-2']);
+    expect(setIntervalSpy).toHaveBeenCalledTimes(1);
+    expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
+    setItem.mockClear();
+    setIntervalSpy.mockClear();
+    clearIntervalSpy.mockClear();
+
+    await act(async () => {
+      root.render(
+        <CurrentTaskIndicator
+          task={task}
+          borderColor="#22c55e"
+          isTimerRunning={false}
+          activityTimer={{ ...anchor, baseElapsedMs: 60_000, runId: 'run-2' }}
+        />
+      );
+      await Promise.resolve();
+    });
+    expect(writtenPayloads().map((payload) => payload.running)).toEqual([true, false]);
+    expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
+    expect(setIntervalSpy).not.toHaveBeenCalled();
 
     await act(async () => {
       root.unmount();
