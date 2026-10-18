@@ -23,9 +23,20 @@ interface StoredActivityTimer {
 }
 
 const STORAGE_PREFIX = 'member-activity-timer:';
+const ID_SEGMENT_SEPARATOR = '\u0000';
 const MAX_UNOBSERVED_RUN_TRANSITION_MS = 5_000;
 export const MAX_TRACKED_ACTIVITY_TIMERS = 200;
 const timers = new Map<string, StoredActivityTimer>();
+// Eviction ranks by the order this renderer last touched a key, never by the timestamps inside a
+// record. A record can legitimately carry a timestamp ahead of the renderer clock (task data from
+// another machine, a backward clock step), and such a key would outrank every timer the screen is
+// reading for as long as it survives.
+const touchOrder = new Map<string, number>();
+let touchSequence = 0;
+// Oldest first, `null` until the renderer's keys have been listed once. Never re-listed: the live
+// set takes over the bookkeeping after that, so a rotating work interval costs a compare, not a
+// walk of every other key in the origin.
+let dormantTimerIds: string[] | null = null;
 
 function parseIsoMs(value: string | null | undefined): number {
   if (!value) return 0;
@@ -90,6 +101,7 @@ function readStoredTimer(
 ): StoredActivityTimer | null {
   const cached = timers.get(timerId);
   if (cached?.startedAtMs === startedAtMs) {
+    touchTimer(timerId);
     return cached.baseElapsedMs === baseElapsedMs
       ? cached
       : { ...cached, baseElapsedMs, elapsedMs: Math.max(baseElapsedMs, cached.elapsedMs) };
@@ -110,7 +122,8 @@ function readStoredTimer(
       running: parsed.running,
       runId: parsed.runId ?? null,
     };
-    timers.set(timerId, sanitized);
+    makeRoomForTimer(timerId);
+    rememberTimer(timerId, sanitized);
     return sanitized;
   } catch {
     return null;
@@ -118,61 +131,92 @@ function readStoredTimer(
 }
 
 function writeStoredTimer(timerId: string, timer: StoredActivityTimer): void {
-  const isNewTimer = !timers.has(timerId);
-  timers.set(timerId, timer);
+  makeRoomForTimer(timerId);
+  rememberTimer(timerId, timer);
   safeStorageSet(storageKey(timerId), JSON.stringify(timer));
-  if (isNewTimer) retainRecentTimers(timerId);
 }
 
 // Timer ids embed the anchor timestamp, so every new work interval, review cycle,
 // task or team rotation adds keys that nothing ever reads again. Without a bound the
 // in-memory map and the renderer's localStorage grow for the whole app lifetime.
-function retainRecentTimers(keepTimerId: string): void {
-  const lastSeenMs = new Map<string, number>();
-  for (const [timerId, timer] of timers) {
-    lastSeenMs.set(timerId, Math.max(timer.startedAtMs, timer.updatedAtMs));
+function makeRoomForTimer(timerId: string): void {
+  if (dormantTimerIds === null) {
+    dormantTimerIds = collectDormantTimerIds(timerId);
   }
+  drainDormantTimers(timerId);
 
-  const storedIds = readStorageTimerIds();
-  for (const timerId of storedIds) {
-    if (lastSeenMs.has(timerId)) continue;
-    const raw = safeStorageGet(storageKey(timerId));
-    let parsed: unknown = null;
-    try {
-      parsed = raw === null ? null : (JSON.parse(raw) as unknown);
-    } catch {
-      parsed = null;
-    }
-    lastSeenMs.set(
-      timerId,
-      isStoredTimer(parsed)
-        ? Math.max(parsed.startedAtMs, parsed.updatedAtMs)
-        : Number.MIN_SAFE_INTEGER
-    );
-  }
-
-  let excess = lastSeenMs.size - MAX_TRACKED_ACTIVITY_TIMERS;
-  if (excess <= 0) return;
-
-  const ordered = [...lastSeenMs].sort((left, right) => left[1] - right[1]);
-  for (const [timerId] of ordered) {
-    if (excess <= 0) return;
-    if (timerId === keepTimerId) continue;
-    timers.delete(timerId);
-    safeStorageRemove(storageKey(timerId));
-    excess -= 1;
+  while (timers.size + (timers.has(timerId) ? 0 : 1) > MAX_TRACKED_ACTIVITY_TIMERS) {
+    const victimId = leastRecentlyTouchedTimerId();
+    if (victimId === null) return;
+    forgetTimer(victimId);
+    safeStorageRemove(storageKey(victimId));
   }
 }
 
-// A paused card keeps rendering but never writes, so its recency has to be recorded on
-// the read path; otherwise eviction would drop it and reset the elapsed value it shows.
-function markTimerObserved(timerId: string): void {
-  const cached = timers.get(timerId);
-  if (!cached) return;
-  // Render clocks can be frozen or skewed by another process, so recency follows wall time.
-  const observedAtMs = Date.now();
-  if (cached.updatedAtMs >= observedAtMs) return;
-  timers.set(timerId, { ...cached, updatedAtMs: observedAtMs });
+function touchTimer(timerId: string): void {
+  touchSequence += 1;
+  touchOrder.set(timerId, touchSequence);
+}
+
+function rememberTimer(timerId: string, timer: StoredActivityTimer): void {
+  timers.set(timerId, timer);
+  touchTimer(timerId);
+}
+
+function forgetTimer(timerId: string): void {
+  timers.delete(timerId);
+  touchOrder.delete(timerId);
+}
+
+// Only ever called when the incoming key is not resident yet, so it cannot be its own victim.
+function leastRecentlyTouchedTimerId(): string | null {
+  let victimId: string | null = null;
+  let victimTouch = Number.POSITIVE_INFINITY;
+  for (const [timerId, touch] of touchOrder) {
+    if (touch < victimTouch) {
+      victimId = timerId;
+      victimTouch = touch;
+    }
+  }
+  return victimId;
+}
+
+// Keys stored by earlier sessions are dead weight as soon as this session needs the room. Their
+// only trustworthy age is the anchor timestamp the id itself carries, so they are ranked from the
+// key and their values are never read: a payload this build cannot interpret — a future schema, or
+// a record whose read threw — must still not be destroyed for that reason.
+function collectDormantTimerIds(incomingTimerId: string): string[] {
+  const ranked: { timerId: string; startedAtMs: number }[] = [];
+  for (const timerId of readStorageTimerIds()) {
+    if (timerId === incomingTimerId || timers.has(timerId)) continue;
+    const startedAtMs = parseIsoMs(timerId.slice(timerId.lastIndexOf(ID_SEGMENT_SEPARATOR) + 1));
+    if (startedAtMs <= 0) continue;
+    ranked.push({ timerId, startedAtMs });
+  }
+  ranked.sort(
+    (left, right) =>
+      left.startedAtMs - right.startedAtMs || compareTimerIds(left.timerId, right.timerId)
+  );
+  return ranked.map((entry) => entry.timerId);
+}
+
+function drainDormantTimers(incomingTimerId: string): void {
+  const resident = timers.size + (timers.has(incomingTimerId) ? 0 : 1);
+  const budget = Math.max(0, MAX_TRACKED_ACTIVITY_TIMERS - resident);
+  const dormant = dormantTimerIds;
+  if (!dormant) return;
+
+  while (dormant.length > budget) {
+    const timerId = dormant.shift();
+    if (timerId === undefined) return;
+    if (timerId === incomingTimerId || timers.has(timerId)) continue;
+    safeStorageRemove(storageKey(timerId));
+  }
+}
+
+function compareTimerIds(left: string, right: string): number {
+  if (left === right) return 0;
+  return left < right ? -1 : 1;
 }
 
 function readStorageTimerIds(): string[] {
@@ -247,7 +291,11 @@ export function createMemberActivityTimerId({
   taskId: string;
   startedAt: string;
 }): string {
-  return [teamName, normalizeMemberName(memberName), phase, taskId, startedAt].join('\u0000');
+  // The anchor timestamp is the last segment: eviction ranks stored keys by it without reading
+  // their values, so producers and the rank parser must agree on its position.
+  return [teamName, normalizeMemberName(memberName), phase, taskId, startedAt].join(
+    ID_SEGMENT_SEPARATOR
+  );
 }
 
 export function syncMemberActivityTimer({
@@ -300,9 +348,8 @@ export function readMemberActivityTimerElapsed({
   const timer =
     readStoredTimer(timerId, startedAtMs, baseElapsedMs) ??
     createInitialTimer(startedAtMs, baseElapsedMs, running, nowMs, runId);
-  // Either side calling it paused is enough: a record left running by an interrupted
-  // pause sync would otherwise stay untouched and get pruned with its open interval.
-  if (!running || !timer.running) markTimerObserved(timerId);
+  // Either side reporting it paused is enough: a record left running by an interrupted pause sync
+  // must not resume accruing, because only the reader knows the timer stopped.
   return materializeElapsed(running ? timer : { ...timer, running: false }, nowMs, runId);
 }
 
@@ -523,4 +570,7 @@ function getCurrentReviewCycleStartedAtMs(task: TeamTaskWithKanban, fallbackMs: 
 
 export function resetMemberActivityTimerStoreForTests(): void {
   timers.clear();
+  touchOrder.clear();
+  touchSequence = 0;
+  dormantTimerIds = null;
 }
