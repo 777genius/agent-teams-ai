@@ -149,15 +149,23 @@ describe('CurrentTaskIndicator', () => {
     });
 
     const setItem = vi.spyOn(globalThis.localStorage, 'setItem');
+    const setIntervalSpy = vi.spyOn(window, 'setInterval');
+    const clearIntervalSpy = vi.spyOn(window, 'clearInterval');
     for (let render = 0; render < 3; render += 1) {
       await act(async () => {
         root.render(
           <CurrentTaskIndicator task={task} borderColor="#22c55e" activityTimer={{ ...anchor }} />
         );
+        vi.advanceTimersByTime(2_000);
         await Promise.resolve();
       });
     }
-    expect(setItem).not.toHaveBeenCalled();
+    const identityWrites = setItem.mock.calls.map(([, value]) => JSON.parse(String(value)));
+    // Six simulated seconds only carry the one five second persistence tick.
+    expect(identityWrites).toHaveLength(1);
+    expect(identityWrites[0]).toMatchObject({ baseElapsedMs: 0, running: true });
+    expect(setIntervalSpy).not.toHaveBeenCalled();
+    expect(clearIntervalSpy).not.toHaveBeenCalled();
     setItem.mockClear();
 
     await act(async () => {
@@ -170,8 +178,11 @@ describe('CurrentTaskIndicator', () => {
       );
       await Promise.resolve();
     });
-    expect(setItem).toHaveBeenCalledTimes(2);
+    const retiredPayloads = setItem.mock.calls.map(([, value]) => JSON.parse(String(value)));
+    expect(retiredPayloads.map((payload) => payload.baseElapsedMs)).toEqual([0, 60_000]);
     setItem.mockRestore();
+    setIntervalSpy.mockRestore();
+    clearIntervalSpy.mockRestore();
 
     await act(async () => {
       root.unmount();

@@ -35,8 +35,9 @@ function useActivityTimerLabel(
   const baseElapsedMs = activityTimer?.baseElapsedMs ?? 0;
   const runId = activityTimer?.runId;
 
-  // The caller rebuilds the anchor object on every render, so the effects below must
-  // re-arm only when a persisted timer value actually changes.
+  // The caller rebuilds the anchor object on every render, so these effects re-arm only
+  // when a persisted value changes. startedAt is not a dependency because the anchor
+  // timestamp is already encoded in timerId.
   useEffect(() => {
     if (timerId === undefined || startedAtMs === undefined) return;
 
