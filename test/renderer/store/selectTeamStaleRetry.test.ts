@@ -217,4 +217,65 @@ describe('selectTeam stale read recovery', () => {
     expect(store.getState().selectedTeamLoading).toBe(true);
     expect(store.getState().selectedTeamError).toBeNull();
   });
+
+  it('does not let a previous context provisioning hold suppress a new context load', async () => {
+    const store = createHarnessStore();
+    apiMock.teams.getData.mockRejectedValueOnce(new Error('TEAM_PROVISIONING'));
+    await store.getState().selectTeam(TEAM, { skipProjectAutoSelect: true });
+    expect(store.getState().selectedTeamLoading).toBe(true);
+
+    // A context switch resets the selection and puts the load nonce back to 0, so the
+    // next selection of the same team reuses the nonce the old hold was recorded under.
+    store.setState({
+      activeContextId: 'ssh-host',
+      selectedTeamName: null,
+      selectedTeamData: null,
+      selectedTeamLoading: false,
+      selectedTeamLoadNonce: 0,
+      selectedTeamError: null,
+    });
+    let newContextReads = 0;
+    apiMock.teams.getData.mockImplementation(async (teamName: string) => {
+      // Only the first read in the new context is discarded; the retry must commit it.
+      newContextReads += 1;
+      if (newContextReads === 1) invalidateTeamLocalStateEpoch(teamName);
+      return snapshotFor(teamName);
+    });
+
+    await store.getState().selectTeam(TEAM, { skipProjectAutoSelect: true });
+    await vi.waitFor(() => expect(store.getState().selectedTeamLoading).toBe(false), {
+      timeout: 4000,
+    });
+    expect(store.getState().selectedTeamData?.teamName).toBe(TEAM);
+    expect(store.getState().selectedTeamError).toBeNull();
+  });
+
+  it('refuses to run a scheduled retry after the selection moved to another context', async () => {
+    vi.useFakeTimers();
+    try {
+      const store = createHarnessStore();
+      const first = deferred<TeamViewSnapshot>();
+      apiMock.teams.getData.mockReturnValueOnce(first.promise).mockResolvedValue(snapshot());
+
+      const load = store.getState().selectTeam(TEAM, { skipProjectAutoSelect: true });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(apiMock.teams.getData).toHaveBeenCalledTimes(1);
+      invalidateTeamLocalStateEpoch(TEAM);
+      first.resolve(snapshot());
+      await vi.advanceTimersByTimeAsync(0);
+      // The discarded read leaves a retry scheduled against this context.
+      expect(store.getState().selectedTeamLoading).toBe(true);
+
+      store.setState({ activeContextId: 'ssh-host' });
+      await vi.advanceTimersByTimeAsync(SELECT_TEAM_STALE_RETRY_BASE_DELAY_MS * 4);
+      // The scheduled retry is bound to the context that scheduled it, so it must not
+      // fire a selection attempt into a different context. The abandoned context's
+      // selection no longer exists, so leaving its flag set is not a latch.
+      expect(apiMock.teams.getData).toHaveBeenCalledTimes(1);
+      expect(store.getState().selectedTeamLoading).toBe(true);
+      void load;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

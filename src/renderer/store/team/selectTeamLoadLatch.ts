@@ -12,7 +12,7 @@ export const SELECT_TEAM_STALE_RETRY_LIMIT = 3;
 export const SELECT_TEAM_STALE_RETRY_BASE_DELAY_MS = 250;
 
 const staleRetriesByTeam = new Map<string, number>();
-const provisioningHoldsByTeam = new Map<string, number>();
+const provisioningHolds = new Map<string, number>();
 
 export interface SelectTeamLoadOptions {
   skipProjectAutoSelect?: boolean;
@@ -23,7 +23,7 @@ export interface SelectTeamLoadOptions {
 
 type SelectTeamLoadState = Pick<
   AppState,
-  'selectedTeamName' | 'selectedTeamLoading' | 'selectedTeamLoadNonce'
+  'activeContextId' | 'selectedTeamName' | 'selectedTeamLoading' | 'selectedTeamLoadNonce'
 >;
 
 type SelectTeamLoadSetter = (partial: {
@@ -32,12 +32,28 @@ type SelectTeamLoadSetter = (partial: {
   selectedTeamError?: string | null;
 }) => void;
 
+// A state reset (context switch, reconnect) clears the selection and puts
+// selectedTeamLoadNonce back to 0, so a team plus nonce is not a usable identity
+// across contexts. Every key carries the context that owned the attempt.
+function attemptKey(state: SelectTeamLoadState, teamName: string): string {
+  return `${state.activeContextId}\u0000${teamName}`;
+}
+
 export function isSelectTeamLoadInFlight(state: SelectTeamLoadState, teamName: string): boolean {
   return state.selectedTeamLoading && state.selectedTeamName === teamName;
 }
 
-function isLoadStillOwned(state: SelectTeamLoadState, teamName: string, nonce: number): boolean {
-  return isSelectTeamLoadInFlight(state, teamName) && state.selectedTeamLoadNonce === nonce;
+function isLoadStillOwned(
+  state: SelectTeamLoadState,
+  contextId: string,
+  teamName: string,
+  nonce: number
+): boolean {
+  return (
+    state.activeContextId === contextId &&
+    isSelectTeamLoadInFlight(state, teamName) &&
+    state.selectedTeamLoadNonce === nonce
+  );
 }
 
 /**
@@ -47,11 +63,12 @@ function isLoadStillOwned(state: SelectTeamLoadState, teamName: string, nonce: n
  * hold has to be recorded explicitly for the attempt that took it.
  */
 export function holdSelectTeamLoadForProvisioning(
+  get: () => AppState,
   set: SelectTeamLoadSetter,
   teamName: string,
   requestNonce: number
 ): void {
-  provisioningHoldsByTeam.set(teamName, requestNonce);
+  provisioningHolds.set(attemptKey(get(), teamName), requestNonce);
   set({ selectedTeamLoading: true, selectedTeamData: null, selectedTeamError: null });
 }
 
@@ -69,29 +86,34 @@ export function settleLatchedSelectTeamLoad(
   isProvisioning: (state: AppState, teamName: string) => boolean
 ): void {
   const state = get();
+  const contextId = state.activeContextId;
+  const key = attemptKey(state, teamName);
   if (state.selectedTeamName !== teamName || state.selectedTeamLoadNonce !== requestNonce) {
     return;
   }
+  const heldNonce = provisioningHolds.get(key);
+  if (heldNonce !== undefined && heldNonce !== state.selectedTeamLoadNonce) {
+    provisioningHolds.delete(key);
+  }
   if (!state.selectedTeamLoading) {
-    staleRetriesByTeam.delete(teamName);
-    provisioningHoldsByTeam.delete(teamName);
+    staleRetriesByTeam.delete(key);
     return;
   }
   // An attempt that parked on the explicit provisioning signal is finished by the
-  // provisioning progress callback, so it is neither a stale read nor a latch.
-  if (provisioningHoldsByTeam.get(teamName) === requestNonce) return;
+  // provisioning progress callback, so it is neither a stale read nor a latch. The entry
+  // is single-use: it belongs to this attempt and must not outlive it.
+  if (heldNonce === requestNonce) {
+    provisioningHolds.delete(key);
+    return;
+  }
   if (isProvisioning(state, teamName)) return;
 
   // A fresh (user-initiated) selection starts a new stale-read budget, so a budget left
   // behind by an abandoned load can never leak into it. Only retries carry the flag.
-  if (!opts?.staleReadRetry) {
-    staleRetriesByTeam.delete(teamName);
-    provisioningHoldsByTeam.delete(teamName);
-  }
-  const attempt = (staleRetriesByTeam.get(teamName) ?? 0) + 1;
+  if (!opts?.staleReadRetry) staleRetriesByTeam.delete(key);
+  const attempt = (staleRetriesByTeam.get(key) ?? 0) + 1;
   if (attempt > SELECT_TEAM_STALE_RETRY_LIMIT) {
-    staleRetriesByTeam.delete(teamName);
-    provisioningHoldsByTeam.delete(teamName);
+    staleRetriesByTeam.delete(key);
     logger.warn(
       `selectTeam(${teamName}) discarded ${attempt - 1} stale reads; releasing loading state`
     );
@@ -105,9 +127,11 @@ export function settleLatchedSelectTeamLoad(
     });
     return;
   }
-  staleRetriesByTeam.set(teamName, attempt);
+  staleRetriesByTeam.set(key, attempt);
   setTimeout(() => {
-    if (!isLoadStillOwned(get(), teamName, requestNonce)) return;
+    // The retry belongs to the context that scheduled it: a reset can put the store nonce
+    // back to a value this attempt used, so team plus nonce alone is not enough to own it.
+    if (!isLoadStillOwned(get(), contextId, teamName, requestNonce)) return;
     // A provisioning hold started during the backoff must win over the retry.
     if (isProvisioning(get(), teamName)) return;
     void get().selectTeam(teamName, {
@@ -120,5 +144,5 @@ export function settleLatchedSelectTeamLoad(
 
 export function resetSelectTeamLoadLatchForTests(): void {
   staleRetriesByTeam.clear();
-  provisioningHoldsByTeam.clear();
+  provisioningHolds.clear();
 }
