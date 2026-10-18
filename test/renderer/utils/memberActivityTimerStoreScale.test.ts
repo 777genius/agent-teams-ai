@@ -214,7 +214,15 @@ describe('memberActivityTimer store scale', () => {
     // fail if the reclaim silently stopped doing anything at all.
     expect(outcome.keys).toBe(MAX_TRACKED_ACTIVITY_TIMERS);
     expect(outcome.foreign).toBe(FOREIGN_KEYS);
-    expect(outcome.runningElapsed).toBe(4_800_000);
+    // The banked pause is the assertion that can fail: 45 000 ms lives in no other record, and an
+    // eviction that picked the wrong resident would report zero here.
     expect(outcome.pausedElapsed).toBe(45_000);
+    // Not a deletion guard. For a running record `materializeElapsed` recomputes
+    // `baseElapsedMs + (nowMs - startedAtMs)` from the anchor alone, so this value is identical
+    // whether or not the key still exists — measured directly when a running card's key was deleted at
+    // write 199 and the number did not move. It pins the display shape and nothing more.
+    expect(outcome.runningElapsed).toBe(4_800_000);
+    // The printed times are measurements, not gates: nothing here asserts a budget, because a
+    // machine-dependent timing assertion would fail on CI for the wrong reason.
   }, 180_000);
 });

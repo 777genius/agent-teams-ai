@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createMemberActivityTimerId,
+  declareActivityTimerKeys,
   MAX_TRACKED_ACTIVITY_TIMERS,
   readMemberActivityTimerElapsed,
   resetMemberActivityTimerStoreForTests,
@@ -742,12 +743,47 @@ describe('memberActivityTimer retention', () => {
     ).toBe(45_000);
   });
 
+  it('keeps the run clock in the elapsed it returns when the record cannot be read', () => {
+    const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
+    const startedAtMs = nowMs - 30_000;
+    const runningId = timerIdFor('running-unreadable', startedAtMs);
+    seedStoredTimer(runningId, startedAtMs, { elapsedMs: 30_000 });
+    const payloadBefore = globalThis.localStorage?.getItem(`${STORAGE_PREFIX}${runningId}`);
+
+    const storage = globalThis.localStorage;
+    const readOriginal = storage?.getItem.bind(storage);
+    vi.spyOn(storage, 'getItem').mockImplementation((key: string) => {
+      if (key === `${STORAGE_PREFIX}${runningId}`) {
+        throw new Error('SecurityError: transient storage read failure');
+      }
+      return readOriginal ? readOriginal(key) : null;
+    });
+
+    // Skipping the write must not skip the clock. The record is transiently unreachable, but the
+    // caller just said this run is live and when it started, so the elapsed for this tick is that
+    // gap; returning the baseline instead would flash 0s on the card and jump back on the next tick.
+    expect(
+      syncMemberActivityTimer({
+        timerId: runningId,
+        startedAtMs,
+        baseElapsedMs: 0,
+        running: true,
+        runId: 'run-1',
+        nowMs,
+      })
+    ).toBe(30_000);
+    expect(readOriginal ? readOriginal(`${STORAGE_PREFIX}${runningId}`) : null).toBe(payloadBefore);
+  });
+
   it('leaves keys another feature stored untouched', () => {
     const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
     const storage = globalThis.localStorage;
-    // Each of these parses as a date in V8 (`legacy-cache-19` is 1956528000000, `2026-05-07` is
+    // Each of these parses as a date in V8 (`legacy-cache-19` is 1956528000000, `2025-01-01` is
     // midnight), so a lenient `Date.parse` in the ranker would hand another feature's keys to the
-    // reaper. Only the instant shape `createMemberActivityTimerId` writes is a candidate.
+    // reaper. Only the instant shape `createMemberActivityTimerId` writes is a candidate. The
+    // date-only entry must also be OLDER than every anchor seeded below, the `future-version` record
+    // included: reclamation is amortized, so a loosened gate only shows up when the key it wrongly
+    // admits is the one it would reap first.
     const foreignIds = [
       'opaque-key-without-an-anchor',
       'legacy-cache-19',
@@ -755,7 +791,7 @@ describe('memberActivityTimer retention', () => {
       'cache-index-7',
       'plainword',
       'v2:abc',
-      '2026-05-07',
+      '2025-01-01',
       'alpha' + '\u0000' + 'bob' + '\u0000' + 'work' + '\u0000' + 'task-9',
     ];
     foreignIds.forEach((foreignId, index) => {
@@ -848,6 +884,175 @@ describe('memberActivityTimer retention', () => {
 
     expect(storedTimerIds()).toContain(liveId);
     expect(storedTimerIds()).toHaveLength(MAX_TRACKED_ACTIVITY_TIMERS);
+  });
+
+  it('spares declared keys from the drain, before and after the backlog is listed', () => {
+    const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
+    // Oldest of all, and declared before the backlog is ever listed, so it never enters that list.
+    const earlyMs = nowMs - 120_000_000;
+    const earlyId = timerIdFor('declared-early', earlyMs);
+    seedStoredTimer(earlyId, earlyMs, { elapsedMs: 90_000 });
+    // Younger than every backlog key, so the first burst does not reach it and it *is* in the list —
+    // the only thing that can save it later is the skip taken at deletion time.
+    const lateMs = nowMs - 89_000_000;
+    const lateId = timerIdFor('declared-late', lateMs);
+    seedStoredTimer(lateId, lateMs, { elapsedMs: 80_000 });
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS + 40; index += 1) {
+      const staleMs = nowMs - 90_000_000 + index * 1_000;
+      seedStoredTimer(timerIdFor(`backlog-${index}`, staleMs), staleMs);
+    }
+    const earlyKey = `${STORAGE_PREFIX}${earlyId}`;
+    const lateKey = `${STORAGE_PREFIX}${lateId}`;
+    const earlyPayload = globalThis.localStorage?.getItem(earlyKey);
+    const latePayload = globalThis.localStorage?.getItem(lateKey);
+
+    // The first write lists the backlog and reclaims from it in the same call. `earlyId` is declared
+    // before that happens, so the burst walks past it. This is the member whose card is not on screen:
+    // nothing has read its key, it holds the oldest anchor and a banked pause, and the producer's
+    // effect is the only thing that knows it is live.
+    declareActivityTimerKeys([earlyId]);
+    syncTaskTimer('first-write', nowMs, nowMs);
+    expect(globalThis.localStorage?.getItem(earlyKey)).toBe(earlyPayload);
+    expect(globalThis.localStorage?.getItem(lateKey)).toBe(latePayload);
+
+    // Now declared after the list was built. Enough writes follow to drain everything older than it,
+    // which is what makes this an assertion about the deletion-time skip rather than about the
+    // amortized budget: without the skip this key is the next victim in line.
+    declareActivityTimerKeys([earlyId, lateId]);
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS + 40; index += 1) {
+      const busyMs = nowMs + 10_000 + index * 1_000;
+      syncTaskTimer(`while-declared-${index}`, busyMs, busyMs);
+    }
+    expect(storedTimerIds().filter((id) => id.includes('backlog-'))).toHaveLength(0);
+    expect(globalThis.localStorage?.getItem(earlyKey)).toBe(earlyPayload);
+    expect(globalThis.localStorage?.getItem(lateKey)).toBe(latePayload);
+
+    // A declaration is replaced, not accumulated. A spared key stays in the backlog list rather than
+    // being consumed by the scan, so the moment the producer stops declaring it the drain reaches it
+    // again — the exemption lasts for the frame that granted it, not until the next session.
+    declareActivityTimerKeys([]);
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS; index += 1) {
+      const laterMs = nowMs + 500_000 + index * 1_000;
+      syncTaskTimer(`after-replaced-${index}`, laterMs, laterMs);
+    }
+
+    expect(storedTimerIds()).not.toContain(lateId);
+    expect(storedTimerIds()).not.toContain(earlyId);
+    expect(storedTimerIds().length).toBeLessThanOrEqual(MAX_TRACKED_ACTIVITY_TIMERS);
+  });
+
+  it('deletes nothing while one render pass hydrates more anchors than the map holds', () => {
+    const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
+    const anchors: { timerId: string; startedAtMs: number }[] = [];
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS + 40; index += 1) {
+      const startedAtMs = nowMs - 2_000_000 + index * 1_000;
+      const timerId = timerIdFor(`read-${index}`, startedAtMs);
+      seedStoredTimer(timerId, startedAtMs);
+      anchors.push({ timerId, startedAtMs });
+    }
+    const pausedId = timerIdFor('paused-card', nowMs - 3_600_000);
+    seedStoredTimer(pausedId, nowMs - 3_600_000, { elapsedMs: 45_000 });
+    const keysBefore = storedTimerIds().length;
+
+    // A roster bigger than the resident bound, read in one pass. Freeing a Map slot is not consuming
+    // the record: the frame that evicts it is the frame that would have displayed it, and a paused
+    // member's banked elapsed lives nowhere else.
+    for (const anchor of anchors) {
+      readMemberActivityTimerElapsed({
+        timerId: anchor.timerId,
+        startedAtMs: anchor.startedAtMs,
+        running: true,
+        runId: 'run-1',
+        nowMs,
+      });
+    }
+    readMemberActivityTimerElapsed({
+      timerId: pausedId,
+      startedAtMs: nowMs - 3_600_000,
+      running: false,
+      runId: 'run-1',
+      nowMs,
+    });
+
+    expect(storedTimerIds()).toHaveLength(keysBefore);
+    expect(
+      readMemberActivityTimerElapsed({
+        timerId: pausedId,
+        startedAtMs: nowMs - 3_600_000,
+        running: false,
+        runId: 'run-1',
+        nowMs,
+      })
+    ).toBe(45_000);
+  });
+
+  it('ranks a key whose anchor is a real instant written in another ISO shape', () => {
+    const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
+    const anchorId = (taskId: string, startedAt: string): string =>
+      createMemberActivityTimerId({
+        teamName: 'alpha',
+        memberName: 'bob',
+        phase: 'work',
+        taskId,
+        startedAt,
+      });
+    // `startedAt` reaches the key verbatim from the team's task data, so an interval written by
+    // another tool can carry microsecond precision or a basic-format offset. Both denote a real
+    // instant, so both must be reclaimable — excluding them would make their keys permanent.
+    const microsecondId = anchorId('microseconds', '2026-01-01T00:00:00.123456Z');
+    const basicOffsetId = anchorId('basic-offset', '2026-01-01T00:00:00+0200');
+    // No zone at all: `Date.parse` reads that as local time, so its rank would depend on the machine
+    // rendering the list, and it stays outside the accepted set.
+    const zonelessId = anchorId('zoneless', '2026-01-01T00:00:00');
+    for (const id of [microsecondId, basicOffsetId, zonelessId]) {
+      seedStoredTimer(id, Date.parse('2026-01-01T00:00:00Z'));
+    }
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS + 20; index += 1) {
+      const staleMs = nowMs - 4_000_000 + index * 1_000;
+      seedStoredTimer(timerIdFor(`backlog-${index}`, staleMs), staleMs);
+    }
+
+    for (let index = 0; index < 60; index += 1) {
+      const laterMs = nowMs + index * 1_000;
+      syncTaskTimer(`rotate-${index}`, laterMs, laterMs);
+    }
+
+    const remaining = storedTimerIds();
+    expect(remaining).not.toContain(microsecondId);
+    expect(remaining).not.toContain(basicOffsetId);
+    expect(remaining).toContain(zonelessId);
+  });
+
+  it('keeps a refused backlog key in the list so the bound holds once storage recovers', () => {
+    const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS + 40; index += 1) {
+      const staleMs = nowMs - 5_000_000 + index * 1_000;
+      seedStoredTimer(timerIdFor(`backlog-${index}`, staleMs), staleMs);
+    }
+
+    const storage = globalThis.localStorage;
+    const removeOriginal = storage?.removeItem.bind(storage);
+    let refusing = true;
+    vi.spyOn(storage, 'removeItem').mockImplementation((key: string) => {
+      if (refusing && key.startsWith(STORAGE_PREFIX)) {
+        throw new Error('QuotaExceededError: the origin refuses deletions');
+      }
+      return removeOriginal ? removeOriginal(key) : undefined;
+    });
+
+    // Every write meets a refusal, so every write would otherwise drop one key from the only
+    // structure that ever listed it.
+    for (let index = 0; index < 60; index += 1) {
+      const busyMs = nowMs + index * 1_000;
+      syncTaskTimer(`while-refusing-${index}`, busyMs, busyMs);
+    }
+    refusing = false;
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS + 60; index += 1) {
+      const laterMs = nowMs + 100_000 + index * 1_000;
+      syncTaskTimer(`after-recovery-${index}`, laterMs, laterMs);
+    }
+
+    expect(storedTimerIds().length).toBeLessThanOrEqual(MAX_TRACKED_ACTIVITY_TIMERS);
   });
 });
 
