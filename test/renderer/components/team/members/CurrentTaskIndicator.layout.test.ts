@@ -91,8 +91,8 @@ describe('CurrentTaskIndicator', () => {
       await Promise.resolve();
     });
 
-    const spinner = host.querySelector('svg.animate-spin') as SVGElement | null;
-    expect(spinner?.style.animationDelay).toMatch(/^-?\d+(\.\d+)?ms$/);
+    const spinner = host.querySelector<SVGElement>('svg.animate-spin');
+    expect(spinner?.style.animationDelay).toMatch(/^-?(\d+\.\d+|\d+)ms$/);
     expect(spinner?.style.animationDuration).toBe('1000ms');
 
     await act(async () => {
