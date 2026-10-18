@@ -1128,10 +1128,10 @@ async function run() {
     await cdp!.evaluate(`window.__agentTeamsDevStore.getState().invalidateTaskDetailTeamSource(
       window.__agentTeamsDevStore.getState().activeContextId, ${RACE})`);
     await cdp!.evaluate('window.__teamLatchE2E.releaseHold()');
-    // Without the fix, loading stays true forever here (duplicate guard + stale discard).
+    // Concurrent UI readers can recover this race; exhaustion below isolates settlement.
     await cdp!.waitFor(
       teamLoadedExpression(RACE),
-      'stale read recovered via bounded retry',
+      'cold view recovered after source invalidation',
       20_000
     );
     const raceReads = (await readCount(fixture.raceTeamName)) - beforeRace;
