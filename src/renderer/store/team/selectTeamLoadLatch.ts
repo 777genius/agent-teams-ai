@@ -1,5 +1,7 @@
 import { createLogger } from '@shared/utils/logger';
 
+import { isContextScopedRequestEpochCurrent } from '../utils/contextScopedRequestEpoch';
+
 import type { AppState } from '../types';
 
 const logger = createLogger('selectTeamLoadLatch');
@@ -26,6 +28,11 @@ type SelectTeamLoadState = Pick<
   'activeContextId' | 'selectedTeamName' | 'selectedTeamLoading' | 'selectedTeamLoadNonce'
 >;
 
+interface SelectTeamLoadContext {
+  contextId: string;
+  contextEpoch: number;
+}
+
 type SelectTeamLoadSetter = (partial: {
   selectedTeamLoading: boolean;
   selectedTeamData?: AppState['selectedTeamData'];
@@ -45,13 +52,14 @@ export function isSelectTeamLoadInFlight(state: SelectTeamLoadState, teamName: s
 
 function isLoadStillOwned(
   state: SelectTeamLoadState,
-  contextId: string,
+  context: SelectTeamLoadContext,
   teamName: string,
   nonce: number
 ): boolean {
   return (
-    state.activeContextId === contextId &&
-    isSelectTeamLoadInFlight(state, teamName) &&
+    state.activeContextId === context.contextId &&
+    isContextScopedRequestEpochCurrent(context.contextEpoch) &&
+    state.selectedTeamName === teamName &&
     state.selectedTeamLoadNonce === nonce
   );
 }
@@ -83,14 +91,15 @@ export function settleLatchedSelectTeamLoad(
   teamName: string,
   requestNonce: number,
   opts: SelectTeamLoadOptions | undefined,
-  isProvisioning: (state: AppState, teamName: string) => boolean
+  isProvisioning: (state: AppState, teamName: string) => boolean,
+  context: SelectTeamLoadContext
 ): void {
   const state = get();
-  const contextId = state.activeContextId;
+  // Both settlement and its timer belong to the context captured before the read.
+  // A late finally must not consume a new context's budget after nonce reuse; an
+  // epoch also distinguishes reconnects and switching away and back to the same ID.
+  if (!isLoadStillOwned(state, context, teamName, requestNonce)) return;
   const key = attemptKey(state, teamName);
-  if (state.selectedTeamName !== teamName || state.selectedTeamLoadNonce !== requestNonce) {
-    return;
-  }
   const heldNonce = provisioningHolds.get(key);
   if (heldNonce !== undefined && heldNonce !== state.selectedTeamLoadNonce) {
     provisioningHolds.delete(key);
@@ -131,7 +140,9 @@ export function settleLatchedSelectTeamLoad(
   setTimeout(() => {
     // The retry belongs to the context that scheduled it: a reset can put the store nonce
     // back to a value this attempt used, so team plus nonce alone is not enough to own it.
-    if (!isLoadStillOwned(get(), contextId, teamName, requestNonce)) return;
+    if (!isLoadStillOwned(get(), context, teamName, requestNonce) || !get().selectedTeamLoading) {
+      return;
+    }
     // A provisioning hold started during the backoff must win over the retry.
     if (isProvisioning(get(), teamName)) return;
     void get().selectTeam(teamName, {

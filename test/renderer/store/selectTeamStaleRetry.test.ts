@@ -11,9 +11,8 @@ import {
   SELECT_TEAM_STALE_RETRY_BASE_DELAY_MS,
   SELECT_TEAM_STALE_RETRY_LIMIT,
 } from '../../../src/renderer/store/team/selectTeamLoadLatch';
-import {
-  clearAllTeamLocalStateEpochs,
-} from '../../../src/renderer/store/team/teamLocalStateEpoch';
+import { clearAllTeamLocalStateEpochs } from '../../../src/renderer/store/team/teamLocalStateEpoch';
+import { invalidateContextScopedRequestEpoch } from '../../../src/renderer/store/utils/contextScopedRequestEpoch';
 
 import type { TeamSlice } from '../../../src/renderer/store/slices/teamSlice';
 import type { AppState } from '../../../src/renderer/store/types';
@@ -214,7 +213,10 @@ describe('selectTeam stale read recovery', () => {
     // The hold belongs to the provisioning progress callback: the stale-read retry
     // must neither re-read the team nor surface a false load error for it.
     await new Promise((resolve) =>
-      setTimeout(resolve, SELECT_TEAM_STALE_RETRY_BASE_DELAY_MS * (SELECT_TEAM_STALE_RETRY_LIMIT + 1))
+      setTimeout(
+        resolve,
+        SELECT_TEAM_STALE_RETRY_BASE_DELAY_MS * (SELECT_TEAM_STALE_RETRY_LIMIT + 1)
+      )
     );
     expect(apiMock.teams.getData).toHaveBeenCalledTimes(1);
     expect(store.getState().selectedTeamLoading).toBe(true);
@@ -241,7 +243,8 @@ describe('selectTeam stale read recovery', () => {
     apiMock.teams.getData.mockImplementation(async (teamName: string) => {
       // Only the first read in the new context is discarded; the retry must commit it.
       newContextReads += 1;
-      if (newContextReads === 1) store.getState().invalidateTaskDetailTeamSource(store.getState().activeContextId, teamName);
+      if (newContextReads === 1)
+        store.getState().invalidateTaskDetailTeamSource(store.getState().activeContextId, teamName);
       return snapshotFor(teamName);
     });
 
@@ -277,6 +280,97 @@ describe('selectTeam stale read recovery', () => {
       expect(apiMock.teams.getData).toHaveBeenCalledTimes(1);
       expect(store.getState().selectedTeamLoading).toBe(true);
       void load;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('selectTeam context generation ownership', () => {
+  beforeEach(() => {
+    __resetTeamSliceModuleStateForTests();
+    resetSelectTeamLoadLatchForTests();
+    clearAllTeamLocalStateEpochs();
+    vi.clearAllMocks();
+  });
+  it('keeps the new context retry budget when an old-context retry settles late', async () => {
+    vi.useFakeTimers();
+    try {
+      const store = createHarnessStore();
+      const oldPending = deferred<TeamViewSnapshot>();
+      let localReads = 0;
+      let remoteReads = 0;
+      apiMock.teams.getData.mockImplementation(async (teamName: string) => {
+        const context = store.getState().activeContextId;
+        if (context === 'local') {
+          localReads++;
+          if (localReads === 2) return oldPending.promise;
+          store.getState().invalidateTaskDetailTeamSource(context, teamName);
+          return snapshotFor(teamName);
+        }
+        remoteReads++;
+        // Three stale reads, then a valid fourth read: exactly within the budget.
+        if (remoteReads <= 3) store.getState().invalidateTaskDetailTeamSource(context, teamName);
+        return snapshotFor(teamName);
+      });
+      await store.getState().selectTeam(TEAM, { skipProjectAutoSelect: true });
+      await vi.advanceTimersByTimeAsync(250);
+      expect(localReads).toBe(2);
+      store.setState({
+        activeContextId: 'ssh-host',
+        selectedTeamName: null,
+        selectedTeamData: null,
+        selectedTeamLoading: false,
+        selectedTeamLoadNonce: 0,
+        selectedTeamError: null,
+      });
+      await store.getState().selectTeam(TEAM, { skipProjectAutoSelect: true });
+      await vi.advanceTimersByTimeAsync(250);
+      expect(remoteReads).toBe(2);
+      expect(store.getState().selectedTeamLoadNonce).toBe(2);
+      oldPending.resolve(snapshot());
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(3000);
+      const result = {
+        remoteReads,
+        loading: store.getState().selectedTeamLoading,
+        error: store.getState().selectedTeamError,
+        loaded: store.getState().selectedTeamData?.teamName,
+      };
+      vi.mocked(console.warn).mockClear();
+      expect(result).toEqual({ remoteReads: 4, loading: false, error: null, loaded: TEAM });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not run an old timer after reconnect resets the nonce in the same context', async () => {
+    vi.useFakeTimers();
+    try {
+      const store = createHarnessStore();
+      const pending = deferred<TeamViewSnapshot>();
+      apiMock.teams.getData
+        .mockImplementationOnce(async (teamName: string) => {
+          store.getState().invalidateTaskDetailTeamSource('local', teamName);
+          return snapshot();
+        })
+        .mockReturnValueOnce(pending.promise);
+      await store.getState().selectTeam(TEAM, { skipProjectAutoSelect: true });
+      invalidateContextScopedRequestEpoch();
+      store.setState({
+        selectedTeamName: null,
+        selectedTeamData: null,
+        selectedTeamLoading: false,
+        selectedTeamLoadNonce: 0,
+        selectedTeamError: null,
+      });
+      const load = store.getState().selectTeam(TEAM, { skipProjectAutoSelect: true });
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(store.getState().selectedTeamLoadNonce).toBe(1);
+      expect(apiMock.teams.getData).toHaveBeenCalledTimes(2);
+      pending.resolve(snapshot());
+      await load;
+      expect(store.getState().selectedTeamData?.teamName).toBe(TEAM);
     } finally {
       vi.useRealTimers();
     }

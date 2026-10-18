@@ -3213,7 +3213,15 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         selectedTeamError: message,
       });
     } finally {
-      settleLatchedSelectTeamLoad(get, set, teamName, requestNonce, opts, isTeamProvisioningActive);
+      settleLatchedSelectTeamLoad(
+        get,
+        set,
+        teamName,
+        requestNonce,
+        opts,
+        isTeamProvisioningActive,
+        requestScope
+      );
     }
   },
 
