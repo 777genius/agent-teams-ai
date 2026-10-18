@@ -24,6 +24,8 @@ describe('persistentAppLog', () => {
       logger.warn('abort failed: {"token":[{"value":"TEST_SECRET"}],"status":"public"}');
       logger.warn('abort failed: {"token":{"value":"TEST_SECRET"');
       logger.warn('abort failed: {"token":["TEST_SECRET"},"status":"TEST_SECRET_TRAILING"}');
+      logger.warn('abort failed: {"token":{}TEST_SECRET,"status":"private"}');
+      logger.warn('abort failed: {"token":[] TEST_SECRET,"status":"private"}');
       logger.warn(
         'abort failed: ' +
           JSON.stringify({
@@ -39,7 +41,7 @@ describe('persistentAppLog', () => {
         .trim()
         .split('\n')
         .map((line) => JSON.parse(line) as { message: string });
-      expect(records).toHaveLength(5);
+      expect(records).toHaveLength(7);
       expect(persisted).not.toContain('TEST_SECRET');
       expect(records.every(({ message }) => message.includes('abort failed:'))).toBe(true);
       expect(records.every(({ message }) => message.includes('[redacted]'))).toBe(true);

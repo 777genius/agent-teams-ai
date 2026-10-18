@@ -98,6 +98,9 @@ describe('summarizeOpenCodeRuntimeStopFailure', () => {
     ['{"token":{"value":"TEST_SECRET",BROKEN},"status":"TEST_SECRET_TRAILING"}', false],
     ['{"token":[redacted]TEST_SECRET,"status":"TEST_SECRET_TRAILING"}', false],
     ['{"token":[redacted] TEST_SECRET,"status":"TEST_SECRET_TRAILING"}', false],
+    ['{"token":{}TEST_SECRET,"status":"TEST_SECRET_TRAILING"}', false],
+    ['{"token":[] TEST_SECRET,"status":"TEST_SECRET_TRAILING"}', false],
+    ['{"token":"TEST_SECRET"TEST_SECRET_TRAILING}', false],
   ])('redacts an entire structured credential from stop diagnostics: %s', (detail, valid) => {
     const summary = summarizeOpenCodeRuntimeStopFailure({
       diagnostics: [`abort failed: ${detail}`],

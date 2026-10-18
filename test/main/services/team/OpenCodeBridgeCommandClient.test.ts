@@ -1215,6 +1215,16 @@ describe('OpenCodeBridgeCommandClient', () => {
 });
 
 describe('redactBridgeDiagnosticText', () => {
+  it('keeps long dashed non-assignments from blocking diagnostic redaction', () => {
+    const started = performance.now();
+    const redacted = redactBridgeDiagnosticText(`AUTH_TOKEN="TEST_SECRET" ${'x-'.repeat(8_000)}`);
+
+    expect(performance.now() - started).toBeLessThan(500);
+    expect(redacted).toContain('AUTH_TOKEN=[redacted]');
+    expect(redacted).not.toContain('TEST_SECRET');
+    expect(redacted.length).toBeLessThan(4_100);
+  });
+
   it.each([
     'abort response: {"token":"TEST_SECRET_JSON","status":"abort failed"}',
     'abort response: {"Authorization":"Bearer TEST_SECRET_JSON_AUTH"}',

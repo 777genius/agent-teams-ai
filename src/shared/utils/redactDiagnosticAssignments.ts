@@ -7,7 +7,9 @@ export function redactDiagnosticAssignments(
   value: string,
   isSensitiveKey: (key: string) => boolean
 ): string {
-  const assignments = /\b([a-z0-9_-]+)(\\*["'`])?\s*([:=])\s*/gi;
+  // Do not restart at every hyphen in a non-assignment: that makes long dashed
+  // diagnostics quadratic before the bridge has a chance to cap the result.
+  const assignments = /(?<![a-z0-9_-])([a-z0-9_-]+)(\\*["'`])?\s*([:=])\s*/gi;
   let result = '';
   let cursor = 0;
   let match: RegExpExecArray | null;
@@ -30,14 +32,18 @@ export function redactDiagnosticAssignments(
       end = quotedValueEnd(value, start);
     } else if (jsonField && value.startsWith('[redacted]', start)) {
       end += '[redacted]'.length;
-      let next = end;
-      while (next < value.length && /\s/.test(value.charAt(next))) next += 1;
-      if (next < value.length && !/[,;}\]]/.test(value.charAt(next))) end = value.length;
     } else if (jsonField && (value[start] === '{' || value[start] === '[')) {
       end = containerValueEnd(value, start, match[2]?.startsWith('\\') ?? false);
     } else {
       const delimiter = jsonField ? /[\s,"'`;}\]]/ : /[\s"'`]/;
       while (end < value.length && !delimiter.test(value.charAt(end))) end += 1;
+    }
+    if (jsonField) {
+      // A valid value followed by malformed text is still unsafe; this also
+      // keeps re-redaction from exposing a suffix after our own marker.
+      let next = end;
+      while (next < value.length && /\s/.test(value.charAt(next))) next += 1;
+      if (next < value.length && !/[,;}\]]/.test(value.charAt(next))) end = value.length;
     }
     result += value.slice(cursor, start) + '[redacted]';
     cursor = Math.min(end, value.length);
