@@ -845,3 +845,97 @@ it('current-only preflight never resolves or starts the floor pin and rejects un
     }
   }
 });
+
+it.each([
+  ['opencode-native-windows-preflight.ts', 'snapshotStartupFailure'],
+  ['opencode-native-windows-full.ts', 'packagedStartupSnapshot'],
+])('retains only closed catalog failure facts in the actual %s snapshot', async (file, functionName) => {
+  const source = await readFile(path.join('scripts/e2e', file!), 'utf8');
+  const ast = ts.createSourceFile(file!, source, ts.ScriptTarget.Latest, true);
+  let catalogDeclaration = '';
+  const visit = (node: ts.Node) => {
+    if (ts.isVariableDeclaration(node) && node.name.getText(ast) === 'catalogFacts')
+      catalogDeclaration = node.getText(ast);
+    ts.forEachChild(node, visit);
+  };
+  visit(ast);
+  expect(catalogDeclaration).not.toBe('');
+  const compilerOptions = { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext };
+  const helper = ts.transpileModule(`const ${catalogDeclaration};`, { compilerOptions }).outputText;
+  const project = compileFunction(`${helper}\nreturn catalogFacts;`)() as (input: unknown) => unknown;
+  const raw = { message: 'PRIVATE_MESSAGE', body: 'PRIVATE_BODY', path: '/PRIVATE_PATH', url: 'https://PRIVATE_URL' };
+  for (const phase of ['client-setup', 'info', 'location', 'integration-ready']) {
+    for (const reason of ['Transport', 'UnexpectedStatus', 'UnsupportedContentType', 'MalformedResponse', 'SseEventTooLarge']) {
+      expect(project({ phase, client: { reason, status: 503, ...raw }, wireCode: 'http_failure', ...raw }))
+        .toEqual({ phase, client: { reason, ...(reason === 'UnexpectedStatus' ? { status: 503 } : {}) }, wireCode: 'http_failure' });
+    }
+  }
+  for (const wireCode of ['authority_mismatch', 'unqualified_version', 'deadline', 'disposed', 'capabilities_pending',
+    'invalid_input', 'body_limit', 'invalid_response', 'session_missing', 'http_failure', 'media_type',
+    'transport_failure', 'cleanup_unknown', 'frame_limit', 'incomplete_stream', 'authority_or_deadline', 'not_submitted'])
+    expect(project({ phase: 'info', wireCode, wireStatus: 503 }))
+      .toEqual({ phase: 'info', wireCode, ...(wireCode === 'http_failure' ? { wireStatus: 503 } : {}) });
+  expect(project({ phase: 'info', wireStatus: 503 })).toEqual({ phase: 'info' });
+  for (const wireStatus of [99, 600, 100.5, '503', NaN, Infinity, { ...raw }])
+    expect(project({ phase: 'info', wireCode: 'http_failure', wireStatus, ...raw }))
+      .toEqual({ phase: 'info', wireCode: 'http_failure' });
+  for (const wireStatus of [100, 401, 500, 599])
+    expect(project({ phase: 'info', wireCode: 'http_failure', wireStatus, client: { reason: 'Transport', status: wireStatus }, ...raw }))
+      .toEqual({ phase: 'info', wireCode: 'http_failure', wireStatus, client: { reason: 'Transport' } });
+  for (const status of [99, 600, 100.5, '503', NaN, Infinity])
+    expect(project({ phase: 'info', client: { reason: 'UnexpectedStatus', status } }))
+      .toEqual({ phase: 'info', client: { reason: 'UnexpectedStatus' } });
+  for (const status of [100, 599])
+    expect(project({ phase: 'info', client: { reason: 'UnexpectedStatus', status } }))
+      .toEqual({ phase: 'info', client: { reason: 'UnexpectedStatus', status } });
+  expect(project({ phase: 'info', client: { reason: 'PRIVATE_REASON', status: 503 }, wireCode: 'PRIVATE_CODE', ...raw }))
+    .toEqual({ phase: 'info' });
+  for (const input of [null, [], { phase: 'PRIVATE_PHASE' }, { phase: ['info'] }]) expect(project(input)).toBeNull();
+  let getterCalls = 0;
+  const getter = () => { getterCalls++; throw new Error('PRIVATE_GETTER'); };
+  expect(project(Object.defineProperty({}, 'phase', { get: getter }))).toBeNull();
+  expect(project({ phase: 'info', client: Object.defineProperty({}, 'reason', { get: getter }) }))
+    .toEqual({ phase: 'info' });
+  expect(project(Object.defineProperty({ phase: 'info' }, 'wireCode', { get: getter })))
+    .toEqual({ phase: 'info' });
+  expect(project(Object.defineProperty({ phase: 'info', wireCode: 'http_failure' }, 'wireStatus', { get: getter })))
+    .toEqual({ phase: 'info', wireCode: 'http_failure' });
+  expect(project(new Proxy({}, { getOwnPropertyDescriptor: getter }))).toBeNull();
+  expect(getterCalls).toBe(1); // Only the proxy's metadata trap runs; property getters never run.
+
+  const fs = await import('node:fs/promises');
+  const declarations = ast.statements.filter(ts.isFunctionDeclaration)
+    .filter(node => functionName === 'snapshotStartupFailure' || node.name?.text === functionName)
+    .map(node => node.getText(ast)).join('\n');
+  const compiled = ts.transpileModule(declarations, { compilerOptions }).outputText;
+  const snapshot = compileFunction(`${compiled}\nreturn ${functionName};`,
+    ['process', 'path', 'realpath', 'lstat', 'open', 'opendir', 'Buffer', 'assert'], {
+      importModuleDynamically: constants.USE_MAIN_CONTEXT_DEFAULT_LOADER,
+    })(process, path, realpath, lstat, fs.open, fs.opendir, Buffer, assert) as (...args: unknown[]) => Promise<{ diagnostics: { catalog: unknown }[] }>;
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'TEST-oc-catalog-')));
+  const dataRoot = path.join(root, 'runtime-data');
+  const previousRoot = process.env.CLAUDE_MULTIMODEL_DATA_HOME;
+  process.env.CLAUDE_MULTIMODEL_DATA_HOME = dataRoot;
+  try {
+    const directory = path.join(dataRoot, 'opencode/v2/runs', 'a'.repeat(32));
+    const diagnostics = path.join(dataRoot, 'opencode/v2/provider-diagnostics');
+    await mkdir(directory, { recursive: true });
+    await mkdir(diagnostics);
+    const binding = { teamId: `test-opencode-${randomUUID()}`, runId: randomUUID(), controllerInstanceId: randomUUID(), ownerId: randomUUID() };
+    await writeFile(path.join(directory, 'state.json'), JSON.stringify({ binding, state: 'starting', members: [] }));
+    await writeFile(path.join(diagnostics, `${randomUUID()}.json`), JSON.stringify({
+      schemaVersion: 1, phase: 'execution-host-startup', category: 'run_control_foreign',
+      catalog: { phase: 'location', client: { reason: 'UnexpectedStatus', status: 503, ...raw }, wireCode: 'http_failure', wireStatus: 401, ...raw },
+    }));
+    const packet = functionName === 'snapshotStartupFailure'
+      ? await snapshot({ directory, binding }, 'TEST-session', {}, '/TEST-sdk', [])
+      : await snapshot(root, dataRoot, binding.teamId, binding.runId);
+    expect(packet.diagnostics).toHaveLength(1);
+    expect(packet.diagnostics[0]!.catalog).toEqual({ phase: 'location', client: { reason: 'UnexpectedStatus', status: 503 }, wireCode: 'http_failure', wireStatus: 401 });
+    expect(JSON.stringify(packet)).not.toContain('PRIVATE_');
+  } finally {
+    if (previousRoot === undefined) delete process.env.CLAUDE_MULTIMODEL_DATA_HOME;
+    else process.env.CLAUDE_MULTIMODEL_DATA_HOME = previousRoot;
+    await rm(root, { recursive: true, force: true });
+  }
+});

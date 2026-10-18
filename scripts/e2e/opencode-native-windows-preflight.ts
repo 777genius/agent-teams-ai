@@ -601,6 +601,34 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
   const row = (v: unknown): Record<string, unknown> =>
     v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {};
   const one = (v: unknown, choices: readonly string[]) => choices.find((item) => item === v) ?? 'unclassified';
+  const catalogFacts = (input: unknown) => {
+    try {
+      const field = (value: unknown, key: string): unknown => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+        const descriptor = Object.getOwnPropertyDescriptor(value, key);
+        return descriptor && Object.hasOwn(descriptor, 'value') ? descriptor.value : undefined;
+      };
+      const phaseValue = field(input, 'phase');
+      const phase = ['client-setup', 'info', 'location', 'integration-ready'].find(item => item === phaseValue);
+      if (!phase) return null;
+      const client = field(input, 'client');
+      const reasonValue = field(client, 'reason');
+      const reason = ['Transport', 'UnexpectedStatus', 'UnsupportedContentType', 'MalformedResponse', 'SseEventTooLarge'].find(item => item === reasonValue);
+      const statusValue = field(client, 'status');
+      const status = reason === 'UnexpectedStatus' && Number.isSafeInteger(statusValue) &&
+        Number(statusValue) >= 100 && Number(statusValue) <= 599 ? Number(statusValue) : undefined;
+      const wireValue = field(input, 'wireCode');
+      const wireCode = ['authority_mismatch', 'unqualified_version', 'deadline', 'disposed', 'capabilities_pending',
+        'invalid_input', 'body_limit', 'invalid_response', 'session_missing', 'http_failure', 'media_type',
+        'transport_failure', 'cleanup_unknown', 'frame_limit', 'incomplete_stream', 'authority_or_deadline',
+        'not_submitted'].find(item => item === wireValue);
+      const wireStatusValue = field(input, 'wireStatus');
+      const wireStatus = wireCode === 'http_failure' && Number.isSafeInteger(wireStatusValue) &&
+        Number(wireStatusValue) >= 100 && Number(wireStatusValue) <= 599 ? Number(wireStatusValue) : undefined;
+      return { phase, ...(reason ? { client: { reason, ...(status === undefined ? {} : { status }) } } : {}),
+        ...(wireCode ? { wireCode } : {}), ...(wireStatus === undefined ? {} : { wireStatus }) };
+    } catch { return null; } // Proxy/accessor failures never contribute raw diagnostic data.
+  };
   const aliasFailure = (input: unknown) => {
     const value = row(input);
     const operations = ['assertLive', 'identity', 'launch', 'ownerArchive', 'ownerAssertDirectory', 'ownerCloseDirectory', 'ownerCreatePreparedDatabase', 'ownerInspectProfileConfig', 'ownerOpenDirectory', 'ownerPreparePrivateDirectory', 'ownerReadMetadata', 'ownerReadRecord', 'ownerSelectConfig', 'ownerValidateSelectedProfile', 'ownerWriteExclusive', 'ownerWriteMetadata', 'ownerWritePreparedAuth', 'ownerWritePreparedConfig', 'retire', 'runStateAcquire', 'runStateClose', 'runStateDiscover', 'runStateListen', 'runStateOwnerRetired', 'runStatePoisonConnection', 'runStateProcessIdentity', 'runStateReadControllerInbox', 'runStateReadRecord', 'runStateReadStop', 'runStateRequest', 'runStateReserve', 'runStateRespond', 'runStateSelect', 'runStateValidateEndpoint', 'runStateWriteRecord', 'selfImageCustody', 'send'];
@@ -840,6 +868,7 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
           native.nativeCode >= 0 && native.nativeCode <= 0xffffffff ? { stage: nativeStage, nativeCode: native.nativeCode } : null;
         diagnostics.push({ observation: result.observation, phase: one(data.phase, ['execution-host-startup', 'run-owner-initialization', 'run-member-retirement']),
           category: one(data.category, providerCodes), native: nativeFailure, alias: aliasFailure(data.alias),
+          catalog: catalogFacts(data.catalog),
           failure: data.failure === undefined ? null : {
             name: one(row(data.failure).name, ['Error', 'TypeError', 'ReferenceError', 'RangeError', 'AbortError']),
             errno: one(row(data.failure).errno, ['EPERM', 'EACCES', 'ENOENT', 'ENOTDIR', 'EISDIR', 'EINVAL', 'UNKNOWN', 'EIO', 'ENOSYS']),

@@ -1053,6 +1053,34 @@ async function packagedStartupSnapshot(
     Number.isSafeInteger(value) && Number(value) >= 0 && Number(value) <= 0xffffffff
       ? Number(value)
       : null;
+  const catalogFacts = (input: unknown) => {
+    try {
+      const field = (value: unknown, key: string): unknown => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+        const descriptor = Object.getOwnPropertyDescriptor(value, key);
+        return descriptor && Object.hasOwn(descriptor, 'value') ? descriptor.value : undefined;
+      };
+      const phaseValue = field(input, 'phase');
+      const phase = ['client-setup', 'info', 'location', 'integration-ready'].find(item => item === phaseValue);
+      if (!phase) return null;
+      const client = field(input, 'client');
+      const reasonValue = field(client, 'reason');
+      const reason = ['Transport', 'UnexpectedStatus', 'UnsupportedContentType', 'MalformedResponse', 'SseEventTooLarge'].find(item => item === reasonValue);
+      const statusValue = field(client, 'status');
+      const status = reason === 'UnexpectedStatus' && Number.isSafeInteger(statusValue) &&
+        Number(statusValue) >= 100 && Number(statusValue) <= 599 ? Number(statusValue) : undefined;
+      const wireValue = field(input, 'wireCode');
+      const wireCode = ['authority_mismatch', 'unqualified_version', 'deadline', 'disposed', 'capabilities_pending',
+        'invalid_input', 'body_limit', 'invalid_response', 'session_missing', 'http_failure', 'media_type',
+        'transport_failure', 'cleanup_unknown', 'frame_limit', 'incomplete_stream', 'authority_or_deadline',
+        'not_submitted'].find(item => item === wireValue);
+      const wireStatusValue = field(input, 'wireStatus');
+      const wireStatus = wireCode === 'http_failure' && Number.isSafeInteger(wireStatusValue) &&
+        Number(wireStatusValue) >= 100 && Number(wireStatusValue) <= 599 ? Number(wireStatusValue) : undefined;
+      return { phase, ...(reason ? { client: { reason, ...(status === undefined ? {} : { status }) } } : {}),
+        ...(wireCode ? { wireCode } : {}), ...(wireStatus === undefined ? {} : { wireStatus }) };
+    } catch { return null; } // Proxy/accessor failures never contribute raw diagnostic data.
+  };
   const nativeAlias = (input: unknown) => {
     const value = row(input);
     const operations = [
@@ -1559,6 +1587,7 @@ async function packagedStartupSnapshot(
         'run-member-retirement',
       ]),
       category: one(data.category, categories),
+      catalog: catalogFacts(data.catalog),
       nativeStage: one(native.stage, nativeStages),
       nativeCode: number(native.nativeCode),
       alias: nativeAlias(data.alias),
