@@ -43,7 +43,7 @@ import { buildTeamGraphDefaultLayoutSeed } from '@shared/utils/teamGraphDefaultL
 
 import {
   isSelectTeamLoadInFlight,
-  markSelectTeamLoadStarted,
+  type SelectTeamLoadOptions,
   settleLatchedSelectTeamLoad,
 } from '../team/selectTeamLoadLatch';
 import {
@@ -1526,15 +1526,7 @@ export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
     presencesByTaskId: Record<string, TaskChangePresenceState>
   ) => void;
   refreshTeamChangePresence: (teamName: string) => Promise<void>;
-  selectTeam: (
-    teamName: string,
-    opts?: {
-      skipProjectAutoSelect?: boolean;
-      allowReloadWhileProvisioning?: boolean;
-      /** Internal: set by the bounded stale-read retry so it keeps its budget. */
-      staleReadRetry?: boolean;
-    }
-  ) => Promise<void>;
+  selectTeam: (teamName: string, opts?: SelectTeamLoadOptions) => Promise<void>;
   refreshTeamData: (teamName: string, opts?: RefreshTeamDataOptions) => Promise<void>;
   refreshTeamMessagesHead: (teamName: string) => Promise<RefreshTeamMessagesHeadResult>;
   loadOlderTeamMessages: (teamName: string) => Promise<void>;
@@ -2876,8 +2868,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     // Guard: prevent duplicate in-flight fetches for the same team.
     // GlobalTaskDetailDialog + tab navigation can call selectTeam() in quick succession.
     if (!allowReloadWhileProvisioning && isSelectTeamLoadInFlight(get(), teamName)) return;
-    // A fresh selection starts a new stale-read retry budget.
-    if (!opts?.staleReadRetry) markSelectTeamLoadStarted(teamName);
     const requestNonce = get().selectedTeamLoadNonce + 1;
     const previousData = selectTeamDataForName(get(), teamName);
     const selectedSettings = loadToolApprovalSettingsForTeam(teamName);

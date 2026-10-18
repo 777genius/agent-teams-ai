@@ -13,11 +13,17 @@ export const SELECT_TEAM_STALE_RETRY_BASE_DELAY_MS = 250;
 
 const staleRetriesByTeam = new Map<string, number>();
 
+export interface SelectTeamLoadOptions {
+  skipProjectAutoSelect?: boolean;
+  allowReloadWhileProvisioning?: boolean;
+  /** Internal: set by the bounded stale-read retry so it keeps its budget. */
+  staleReadRetry?: boolean;
+}
+
 type SelectTeamLoadState = Pick<
   AppState,
   'selectedTeamName' | 'selectedTeamLoading' | 'selectedTeamLoadNonce'
 >;
-type SelectTeamOptions = Parameters<AppState['selectTeam']>[1];
 
 export function isSelectTeamLoadInFlight(state: SelectTeamLoadState, teamName: string): boolean {
   return state.selectedTeamLoading && state.selectedTeamName === teamName;
@@ -25,14 +31,6 @@ export function isSelectTeamLoadInFlight(state: SelectTeamLoadState, teamName: s
 
 function isLoadStillOwned(state: SelectTeamLoadState, teamName: string, nonce: number): boolean {
   return isSelectTeamLoadInFlight(state, teamName) && state.selectedTeamLoadNonce === nonce;
-}
-
-/**
- * A fresh (user-initiated) selection resets the stale-read retry budget so a
- * previous in-flight selection's budget can never leak into the new one.
- */
-export function markSelectTeamLoadStarted(teamName: string): void {
-  staleRetriesByTeam.delete(teamName);
 }
 
 /**
@@ -49,7 +47,7 @@ export function settleLatchedSelectTeamLoad(
   }) => void,
   teamName: string,
   requestNonce: number,
-  opts: SelectTeamOptions,
+  opts: SelectTeamLoadOptions | undefined,
   isProvisioning: (state: AppState, teamName: string) => boolean
 ): void {
   const state = get();
@@ -62,6 +60,9 @@ export function settleLatchedSelectTeamLoad(
   }
   if (isProvisioning(state, teamName)) return;
 
+  // A fresh (user-initiated) selection starts a new stale-read budget, so a budget left
+  // behind by an abandoned load can never leak into it. Only retries carry the flag.
+  if (!opts?.staleReadRetry) staleRetriesByTeam.delete(teamName);
   const attempt = (staleRetriesByTeam.get(teamName) ?? 0) + 1;
   if (attempt > SELECT_TEAM_STALE_RETRY_LIMIT) {
     staleRetriesByTeam.delete(teamName);
