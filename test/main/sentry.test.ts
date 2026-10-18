@@ -13,7 +13,7 @@ const electronMock = vi.hoisted(() => ({
 vi.mock('electron', () => electronMock);
 
 const requireFromTest = createRequire(import.meta.url);
-let restoreCommonJsStubs: Array<() => void> = [];
+let restoreCommonJsStubs: (() => void)[] = [];
 
 function stubCommonJsModule(specifier: string, exports: unknown): void {
   const filename = requireFromTest.resolve(specifier);
@@ -63,7 +63,8 @@ describe('main Sentry telemetry gate', () => {
   });
 
   afterEach(() => {
-    for (const restore of restoreCommonJsStubs.reverse()) {
+    restoreCommonJsStubs.reverse();
+    for (const restore of restoreCommonJsStubs) {
       restore();
     }
     if (previousDsn === undefined) {
