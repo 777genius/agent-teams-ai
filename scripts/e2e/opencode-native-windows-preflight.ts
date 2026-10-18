@@ -1045,7 +1045,7 @@ async function verifyProbePreparation(
   };
   const selection = await inspect(envelope);
   const { randomUUID } = await import('node:crypto');
-  const roster = expectedVersion === '2.0.0' ? ['team-lead', 'alice'] : expectedVersion === '2.0.21' ? ['team-lead', 'alice', 'bob'] : [];
+  const roster = expectedVersion === '2.0.0' ? ['team-lead', 'alice'] : expectedVersion === '2.0.32' ? ['team-lead', 'alice', 'bob'] : [];
   if (!roster.length) throw new Error('TEST probe preparation plan invalid');
   const { lstat, readdir, open, rename } = await import('node:fs/promises');
   const { join, isAbsolute } = await import('node:path');
@@ -1260,7 +1260,9 @@ async function verifySelectedControllerRoot(
 
 assert.equal(process.platform, 'win32');
 assert.equal(process.versions.bun, '1.4.3');
-assert.equal(process.argv.length, 7);
+assert(process.argv.length === 7 || process.argv.length === 8);
+const versionSelection = process.argv[7] ?? 'all';
+assert(['all', 'v2', 'current'].includes(versionSelection), 'Unknown Windows preflight version selection');
 const selectedModel = process.argv[5]!;
 assert(/^openrouter\/[a-zA-Z0-9_./:-]+$/.test(selectedModel), 'Explicit TEST selected model required for native startup, including source-only; no model prompts are submitted');
 const mcpNode = await realpath(path.resolve(process.argv[6]!));
@@ -1269,7 +1271,7 @@ const sdk = await realpath(path.resolve(process.argv[2]!));
 const resourcesPath = await realpath(path.resolve('resources'));
 // The desktop's real wrapper must be present so this gate exercises its binary projection.
 await realpath(path.join(resourcesPath, 'runtime', 'opencode-console', 'opencode.exe'));
-async function preflight(binary?: string, expectedVersion?: '2.0.0' | '2.0.21') {
+async function preflight(binary?: string, expectedVersion?: '2.0.0' | '2.0.32') {
   const desktop = await prepareNativeDesktopEnvironment();
   if (binary) {
     desktop.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH = binary;
@@ -1430,8 +1432,10 @@ process.exit(exitCode);`;
   assert.equal(code, 0, 'Source discovery gate failed; do not package or submit model tasks');
 }
 await preflight();
-for (const [index, version] of ['2.0.0', '2.0.21'].entries()) {
-  const binary = process.argv[index + 3]!;
+const pins = versionSelection === 'current'
+  ? [[process.argv[4]!, '2.0.32']] as const
+  : [[process.argv[3]!, '2.0.0'], [process.argv[4]!, '2.0.32']] as const;
+for (const [binary, version] of pins) {
   assert(path.isAbsolute(binary));
-  await preflight(await realpath(binary), version as '2.0.0' | '2.0.21');
+  await preflight(await realpath(binary), version);
 }

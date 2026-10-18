@@ -12,10 +12,10 @@ on:
         type: string
         default: ''
       native_versions:
-        description: 'Run all versions, V1 only, or V2 only; reuse compatible completed proofs'
+        description: 'Run current V2 only, all versions, V1 only, or both V2 pins; reuse compatible completed proofs'
         type: choice
-        options: [all, v1, v2]
-        default: all
+        options: [current, all, v1, v2]
+        default: current
       native_provider_only:
         description: Compare verified published V1 provider commands only; no native startup or packaging
         type: boolean
@@ -65,7 +65,12 @@ jobs:
           SDK_REF: ${{ inputs.native_sdk_ref }}
           SELECTED_MODEL: ${{ inputs.native_model }}
           PROVIDER_ONLY: ${{ inputs.native_provider_only }}
+          VERSIONS: ${{ inputs.native_versions }}
         run: |
+          case "$VERSIONS" in
+            all|v1|v2|current) ;;
+            *) echo '::error::Unknown Windows version selection'; exit 1 ;;
+          esac
           if [[ ! "$SDK_REF" =~ ^[a-f0-9]{40}$ ]]; then
             echo '::error::native_sdk_ref must be an exact reviewed SDK SHA for native, source-only and provider-only runs'
             exit 1

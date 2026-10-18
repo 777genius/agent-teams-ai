@@ -1764,7 +1764,7 @@ async function main() {
   preproofStage = 'version_validate';
   const version = /^(?:opencode\s*v?\s*)?(\d+\.\d+\.\d+)$/.exec(measured.stdout.trim())?.[1];
   assert(
-    version && (/^1\./.test(version) || ['2.0.0', '2.0.21'].includes(version)),
+    version && (/^1\./.test(version) || ['2.0.0', '2.0.32'].includes(version)),
     'Approved OpenCode version required'
   );
   const bundled =

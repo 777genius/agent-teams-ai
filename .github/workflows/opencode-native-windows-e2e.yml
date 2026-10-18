@@ -13,7 +13,7 @@ on:
         default: ''
       versions:
         type: string
-        default: all
+        default: current
       provider_only:
         type: boolean
         default: false
@@ -43,10 +43,10 @@ on:
         type: string
         default: ''
       versions:
-        description: 'Select existing real scenarios; all is the complete Windows acceptance run'
+        description: 'Current V2 only by default; all includes V1 and both V2 pins'
         type: choice
-        options: [all, v1, v2]
-        default: all
+        options: [current, all, v1, v2]
+        default: current
       provider_only:
         description: Compare verified 118 and explicit CI candidate with official npm V1 provider commands only
         type: boolean
@@ -124,7 +124,7 @@ jobs:
           RUNTIME_CANDIDATE_RUN: ${{ inputs.runtime_candidate_run }}
           RUNTIME_CANDIDATE_SHA: ${{ inputs.runtime_candidate_sha }}
         run: |
-          if ($env:VERSIONS -cnotin @('all', 'v1', 'v2')) { throw 'Unknown Windows version selection' }
+          if ($env:VERSIONS -cnotin @('all', 'v1', 'v2', 'current')) { throw 'Unknown Windows version selection' }
           if ($env:SOURCE_ONLY -eq 'true' -and $env:PROVIDER_ONLY -ne 'true' -and $env:VERSIONS -eq 'v1') { throw 'V1 has no V2 source-only scenario' }
           if ($env:SDK_REF -notmatch '^[a-f0-9]{40}$') { throw 'Exact SDK SHA required for native, source-only and provider-only runs' }
           if ($env:PROVIDER_ONLY -ne 'true' -and $env:SELECTED_MODEL -notmatch '^openrouter/[a-zA-Z0-9_./:-]+$') { throw 'Explicit OpenRouter model required for native and source-only startup; no model prompts in source-only mode' }
@@ -350,9 +350,14 @@ jobs:
       - name: Install exact official OpenCode CLI pins
         if: ${{ !inputs.provider_only }}
         shell: pwsh
+        env:
+          VERSIONS: ${{ inputs.versions }}
         run: |
           $ErrorActionPreference = 'Stop'
-          foreach ($pin in @(@('v1', 'opencode-windows-x64@1.19.0'), @('floor', '@opencode/cli-windows-x64@2.0.0'), @('current', '@opencode/cli-windows-x64@2.0.21'))) {
+          foreach ($pin in @(@('v1', 'opencode-windows-x64@1.19.0'), @('floor', '@opencode/cli-windows-x64@2.0.0'), @('current', '@opencode/cli-windows-x64@2.0.32'))) {
+            if ($env:VERSIONS -eq 'v1' -and $pin[0] -ne 'v1') { continue }
+            if ($env:VERSIONS -eq 'v2' -and $pin[0] -eq 'v1') { continue }
+            if ($env:VERSIONS -eq 'current' -and $pin[0] -ne 'current') { continue }
             npm install --prefix "TEST-pins/$($pin[0])" --ignore-scripts --no-audit --no-fund $pin[1]
             if ($LASTEXITCODE -ne 0) { throw 'Pinned CLI install failed' }
           }
@@ -379,11 +384,14 @@ jobs:
         shell: pwsh
         env:
           SELECTED_MODEL: ${{ inputs.model }}
+          VERSIONS: ${{ inputs.versions }}
         run: |
-          $floor = (Resolve-Path "TEST-pins/floor/node_modules/@opencode/cli-windows-x64/bin/opencode.exe").Path
           $current = (Resolve-Path "TEST-pins/current/node_modules/@opencode/cli-windows-x64/bin/opencode.exe").Path
+          # Current-only runs do not install or resolve the floor pin.
+          $floor = $current
+          if ($env:VERSIONS -ne 'current') { $floor = (Resolve-Path "TEST-pins/floor/node_modules/@opencode/cli-windows-x64/bin/opencode.exe").Path }
           $node = $env:OPENCODE_NATIVE_TEST_NODE_PATH
-          bun scripts/e2e/opencode-native-windows-preflight.ts ../TEST-native-sdk $floor $current $env:SELECTED_MODEL $node
+          bun scripts/e2e/opencode-native-windows-preflight.ts ../TEST-native-sdk $floor $current $env:SELECTED_MODEL $node $env:VERSIONS
           if ($LASTEXITCODE -ne 0) { throw 'Source gate failed before packaging; no model tasks submitted' }
       - name: Select Windows release compiler Bun
         if: ${{ !inputs.source_only && !inputs.provider_only }}
@@ -484,9 +492,10 @@ jobs:
           $env:TMPDIR = $env:RUNNER_TEMP
           $app = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
           $failedPins = @()
-          foreach ($pin in @(@('v1', 'opencode-windows-x64', '1.19.0'), @('floor', '@opencode/cli-windows-x64', '2.0.0'), @('current', '@opencode/cli-windows-x64', '2.0.21'))) {
+          foreach ($pin in @(@('v1', 'opencode-windows-x64', '1.19.0'), @('floor', '@opencode/cli-windows-x64', '2.0.0'), @('current', '@opencode/cli-windows-x64', '2.0.32'))) {
             if ($env:VERSIONS -eq 'v1' -and $pin[0] -ne 'v1') { continue }
             if ($env:VERSIONS -eq 'v2' -and $pin[0] -eq 'v1') { continue }
+            if ($env:VERSIONS -eq 'current' -and $pin[0] -ne 'current') { continue }
             $binary = (Resolve-Path "TEST-pins/$($pin[0])/node_modules/$($pin[1])/bin/opencode.exe").Path
             $versionOutput = (& $binary --version).Trim()
             $versionExit = $LASTEXITCODE

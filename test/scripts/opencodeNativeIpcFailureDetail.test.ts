@@ -692,7 +692,10 @@ it('actual bundled verifier hashes every file with at most eight readers and dra
   }
 });
 
-it('expired readiness still issues one original public Stop and retains its exact rejection', async () => {
+it.each([
+  { version: '2.0.0', members: ['team-lead', 'alice'] },
+  { version: '2.0.32', members: ['team-lead', 'alice', 'bob'] },
+])('expired $version readiness still issues one original public Stop and retains its exact rejection', async ({ version, members }) => {
   const source = await readFile('scripts/e2e/opencode-native-windows-preflight.ts', 'utf8');
   const ast = ts.createSourceFile('preflight.ts', source, ts.ScriptTarget.Latest, true);
   const declaration = ast.statements.filter(ts.isFunctionDeclaration)
@@ -736,9 +739,9 @@ it('expired readiness still issues one original public Stop and retains its exac
     const resolveProbe = () => owner.launchExplicitOpenCodeV2Run({ members: [{}], deadline: now + 295_000,
       executionProbe: { memberId: 'probe', prepared: {} }, binding: { teamId } });
     const buildPlan = () => Promise.resolve({ binding, deadline: now + 290_000,
-      members: ['team-lead', 'alice'].map((memberId) => ({ memberId, originalSessionId: `ses_${memberId}` })) });
+      members: members.map((memberId) => ({ memberId, originalSessionId: `ses_${memberId}` })) });
     await expect(verify(() => Promise.resolve({}), resolveProbe, buildPlan, owner, control, spyOn, root,
-      'openrouter/TEST-model', '2.0.0', (_phase: string, facts: Record<string, unknown>) => { reported.push(facts); },
+      'openrouter/TEST-model', version, (_phase: string, facts: Record<string, unknown>) => { reported.push(facts); },
       () => Promise.resolve(), (error: unknown) => { retained.push(error); })).rejects.toBe(primary);
     const readinessDeadline = returned.deadline - 30_000;
     expect(readiness).toEqual([readinessDeadline - 1_000_000]);
@@ -747,7 +750,7 @@ it('expired readiness still issues one original public Stop and retains its exac
     expect(retained).toHaveLength(1);
     expect(retained[0]).toBe(stopRejection);
     expect(reported.at(-1)).toMatchObject({ launchCalls: 1, ownerReturned: true, memberReady: false,
-      readyMemberCount: 0, stopConfirmed: false, cleanupUnknown: true });
+      memberCount: members.length, readyMemberCount: 0, stopConfirmed: false, cleanupUnknown: true });
   } finally {
     clock.mockRestore();
     if (previousRoot === undefined) delete process.env.CLAUDE_MULTIMODEL_DATA_HOME;
@@ -803,4 +806,42 @@ it('native broker trace keeps closed exchange facts, helper exit and broker live
   for (let index = 0; index < 30; index++) await observed.request('runStateValidateEndpoint', {}, deadline);
   expect(trace).toHaveLength(24);
   expect(JSON.stringify(trace)).not.toMatch(/PRIVATE/);
+});
+
+
+it('current-only preflight never resolves or starts the floor pin and rejects unknown selections', async () => {
+  const source = await readFile('scripts/e2e/opencode-native-windows-preflight.ts', 'utf8');
+  const ast = ts.createSourceFile('preflight.ts', source, ts.ScriptTarget.Latest, true);
+  const selection = ast.statements.filter((node) =>
+    (ts.isVariableStatement(node) && node.declarationList.declarations.some((value) => value.name.getText(ast) === 'versionSelection')) ||
+    (ts.isExpressionStatement(node) && node.getText(ast).includes('Unknown Windows preflight version selection')));
+  const start = ast.statements.findIndex((node) => node.getText(ast) === 'await preflight();');
+  expect(selection).toHaveLength(2);
+  expect(start).toBeGreaterThan(0);
+  const compiled = ts.transpileModule([...selection, ...ast.statements.slice(start)]
+    .map((node) => node.getText(ast)).join('\n'), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+  }).outputText;
+  for (const mode of [undefined, 'all', 'v2', 'current', 'v1', 'unknown']) {
+    const calls: unknown[][] = [], resolved: string[] = [];
+    const argv = ['bun', 'preflight.ts', '/TEST-sdk', '/TEST-floor', '/TEST-current', 'openrouter/TEST-model', '/TEST-node'];
+    if (mode !== undefined) argv.push(mode);
+    const run = compileFunction(`return (async () => { ${compiled} })();`, ['process', 'assert', 'path', 'realpath', 'preflight']);
+    const result = run({ argv }, assert, path.posix, async (file: string) => {
+      if (mode === 'current') assert.notEqual(file, '/TEST-floor');
+      resolved.push(file);
+      return file;
+    }, async (...args: unknown[]) => { calls.push(args); });
+    if (mode === 'v1' || mode === 'unknown') {
+      await expect(result).rejects.toThrow('Unknown Windows preflight version selection');
+      expect(calls).toEqual([]);
+      expect(resolved).toEqual([]);
+    } else {
+      await result;
+      expect(calls).toEqual(mode === 'current'
+        ? [[], ['/TEST-current', '2.0.32']]
+        : [[], ['/TEST-floor', '2.0.0'], ['/TEST-current', '2.0.32']]);
+      expect(resolved).toEqual(mode === 'current' ? ['/TEST-current'] : ['/TEST-floor', '/TEST-current']);
+    }
+  }
 });
