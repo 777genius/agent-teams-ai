@@ -14,6 +14,8 @@ export interface Node {
   identity?: TaskIdentity;
   task?: GlobalTask;
   archived?: boolean;
+  /** Task exists but the current view hides it, so it must not feed badges or totals. */
+  hidden?: boolean;
   active: number;
   archivedCount: number;
   unavailable: number;
@@ -30,11 +32,18 @@ export function projectFolders(
   tasks: GlobalTask[],
   isArchived: (team: string, id: string) => boolean,
   subject: (team: string, id: string) => string | undefined,
-  showArchived: boolean
+  showArchived: boolean,
+  showDeleted = true
 ): Projection {
-  const catalog = new Map(
-    tasks.map((task) => [taskKey({ teamName: task.teamName, taskId: task.id }), task])
-  );
+  const catalog = new Map<string, GlobalTask>();
+  for (const task of tasks) {
+    const key = taskKey({ teamName: task.teamName, taskId: task.id });
+    const known = catalog.get(key);
+    // A deleted-feed request can land after a restore and leave a stale deleted copy
+    // beside the live one; the live copy must win or the row would read as hidden.
+    if (known && known.status !== 'deleted' && task.status === 'deleted') continue;
+    catalog.set(key, task);
+  }
   const nodes = new Map<string, Node>();
   const canonicalChildren = new Map<string, readonly string[]>();
   const placed = new Set<string>();
@@ -51,6 +60,8 @@ export function projectFolders(
     const task = catalog.get(taskKey(identity));
     if (!task) return undefined;
     const archived = isArchived(identity.teamName, identity.taskId);
+    // A hidden deleted row still resolves its folder child, but adds nothing to the totals.
+    const hidden = !showDeleted && task.status === 'deleted';
     const n = {
       ...node(
         childKey({ kind: 'task', identity }),
@@ -60,8 +71,9 @@ export function projectFolders(
       identity,
       task,
       archived,
-      active: archived ? 0 : 1,
-      archivedCount: archived ? 1 : 0,
+      hidden,
+      active: archived || hidden ? 0 : 1,
+      archivedCount: hidden ? 0 : archived ? 1 : 0,
     };
     nodes.set(n.id, n);
     return n;
@@ -104,7 +116,8 @@ export function projectFolders(
   for (const id of snapshot.rootFolderIds) root.children.push(fill(id).id);
   const unfiled = node(UNFILED, '', 'unfiled');
   const unfiledChildren: string[] = [];
-  for (const task of tasks) {
+  // Iterate the deduplicated catalog: one identity can arrive from both feeds.
+  for (const task of catalog.values()) {
     const identity = { teamName: task.teamName, taskId: task.id };
     if (placed.has(taskKey(identity))) continue;
     const c = taskNode(identity)!;
