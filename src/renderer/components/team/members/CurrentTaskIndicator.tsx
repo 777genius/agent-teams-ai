@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { SyncedLoader2 } from '@renderer/components/ui/SyncedLoader2';
@@ -30,15 +30,29 @@ function useActivityTimerLabel(
 ): string | null {
   const [nowMs, setNowMs] = useState(() => Date.now());
   const lastStorageSyncAtRef = useRef(0);
-  const timerId = activityTimer?.timerId;
-  const startedAtMs = activityTimer?.startedAtMs;
-  const baseElapsedMs = activityTimer?.baseElapsedMs ?? 0;
-  const runId = activityTimer?.runId;
+  // The caller rebuilds the anchor object on every render, so the effects below re-arm only
+  // when an anchor value changes. They share one key so the two arrays cannot drift apart,
+  // and the key covers every anchor field: `startedAt` is already encoded in `timerId`, so
+  // listing it costs nothing and keeps the key total over the anchor type.
+  const timerKey = useMemo(
+    () => ({
+      timerId: activityTimer?.timerId,
+      startedAt: activityTimer?.startedAt,
+      startedAtMs: activityTimer?.startedAtMs,
+      baseElapsedMs: activityTimer?.baseElapsedMs ?? 0,
+      runId: activityTimer?.runId,
+    }),
+    [
+      activityTimer?.timerId,
+      activityTimer?.startedAt,
+      activityTimer?.startedAtMs,
+      activityTimer?.baseElapsedMs,
+      activityTimer?.runId,
+    ]
+  );
 
-  // The caller rebuilds the anchor object on every render, so these effects re-arm only
-  // when a persisted value changes. The `startedAt` string is not keyed because `timerId`
-  // is derived from it; `startedAtMs` is keyed because the store compares it directly.
   useEffect(() => {
+    const { timerId, startedAtMs, baseElapsedMs, runId } = timerKey;
     if (timerId === undefined || startedAtMs === undefined) return;
 
     const now = Date.now();
@@ -62,9 +76,10 @@ function useActivityTimerLabel(
         nowMs: Date.now(),
       });
     };
-  }, [timerId, startedAtMs, baseElapsedMs, runId, isTimerRunning]);
+  }, [timerKey, isTimerRunning]);
 
   useEffect(() => {
+    const { timerId, startedAtMs, baseElapsedMs, runId } = timerKey;
     if (timerId === undefined || startedAtMs === undefined || !isTimerRunning) return;
 
     const handle = window.setInterval(() => {
@@ -83,7 +98,7 @@ function useActivityTimerLabel(
       setNowMs(now);
     }, 1000);
     return () => window.clearInterval(handle);
-  }, [timerId, startedAtMs, baseElapsedMs, runId, isTimerRunning]);
+  }, [timerKey, isTimerRunning]);
 
   if (!activityTimer) return null;
   return formatMemberActivityElapsed(
