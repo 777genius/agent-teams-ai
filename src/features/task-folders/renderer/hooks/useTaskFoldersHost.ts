@@ -25,6 +25,7 @@ import { projectFolders } from '../view-models/projection';
 import { applyVisibleTaskChildren } from '../view-models/projectionView';
 import { countUnreadTasksByNode } from '../view-models/taskUnreadCounts';
 
+import { useTaskFoldersDocked } from './useTaskFoldersDocked';
 import { useTaskViewState } from './useTaskViewState';
 
 import type { RefObject } from 'react';
@@ -68,26 +69,26 @@ export function useTaskFoldersHost(
   const teamCatalogKey = useMemo(() => teams.map((team) => team.teamName).join('|'), [teams]);
   // Membership only: task add/remove invalidates the deleted feed, status churn must not.
   const globalTaskIdsKey = useMemo(() => tasks.map((task) => task.id).join('|'), [tasks]);
-  // Folder counts must not include deleted rows while the deleted filter is off.
-  const projectionTasks = useMemo(
-    () =>
-      view.filters.showDeleted ? viewTasks : viewTasks.filter((task) => task.status !== 'deleted'),
-    [view.filters.showDeleted, viewTasks]
-  );
+  const docked = useTaskFoldersDocked();
+  // Deleted identities must resolve even while the filter hides them, otherwise a
+  // deleted folder child reads as unavailable instead of a hidden row. The scan fans
+  // out per team and parses every task file, so only pay it while the tree can render.
+  const treeMounted = !collapsed && (docked || panel.open);
   useEffect(() => {
-    if (!view.filters.showDeleted) return;
+    if (!treeMounted) return;
     void fetchAllDeletedTasks();
-  }, [contextId, fetchAllDeletedTasks, globalTaskIdsKey, teamCatalogKey, view.filters.showDeleted]);
+  }, [contextId, fetchAllDeletedTasks, globalTaskIdsKey, teamCatalogKey, treeMounted]);
   const canonicalProjection = useMemo(
     () =>
       projectFolders(
         state.snapshot,
-        sortGlobalTasks(projectionTasks, 'time', contextId),
+        sortGlobalTasks(viewTasks, 'time', contextId),
         local.isArchived,
         local.getRenamedSubject,
-        true
+        true,
+        view.filters.showDeleted
       ),
-    [state.snapshot, projectionTasks, local, contextId]
+    [state.snapshot, viewTasks, local, contextId, view.filters.showDeleted]
   );
   const unreadTaskCounts = useMemo(
     () =>

@@ -46,19 +46,23 @@ async function setShowDeleted(showDeleted: boolean): Promise<void> {
 
 let root: ReturnType<typeof createRoot>;
 let host: HTMLDivElement;
+let fetchAllDeletedTasks: ReturnType<typeof vi.fn>;
 
 beforeEach(async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   localStorage.clear();
   await folderController.reset();
+  fetchAllDeletedTasks = vi.fn((): Promise<void> => Promise.resolve());
   useStore.setState({
     globalTasks: [makeGlobalTask()],
     globalDeletedTasks: [makeGlobalTask({ id: '2', subject: 'Deleted', status: 'deleted' })],
-    fetchAllDeletedTasks: async () => undefined,
+    fetchAllDeletedTasks,
   });
   host = document.createElement('div');
   document.body.append(host);
   root = createRoot(host);
+  // The deleted scan is deferred until the tree can actually render.
+  panelController.toggle();
   await act(async () => root.render(<Probe />));
 });
 
@@ -73,6 +77,20 @@ afterEach(async () => {
 
 it('keeps deleted tasks out of folder counts while the deleted filter is off', () => {
   expect(unfiledActiveCount()).toBe(1);
+});
+
+it('loads deleted identities while the tree is mounted, even with the filter off', () => {
+  // Without the feed a deleted folder child resolves to an unavailable node,
+  // so the hidden-row rule below never gets a chance to apply.
+  expect(fetchAllDeletedTasks).toHaveBeenCalled();
+});
+
+it('defers the deleted scan while the folder tree is closed', async () => {
+  expect(fetchAllDeletedTasks).toHaveBeenCalledTimes(1);
+  await act(async () => panelController.close());
+  expect(fetchAllDeletedTasks).toHaveBeenCalledTimes(1);
+  await act(async () => panelController.toggle());
+  expect(fetchAllDeletedTasks).toHaveBeenCalledTimes(2);
 });
 
 it('counts deleted tasks once the deleted filter is enabled', async () => {

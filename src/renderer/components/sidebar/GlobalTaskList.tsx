@@ -895,15 +895,16 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
         : EMPTY_PROJECT_GROUPS,
     [groupingMode, normalTasks, taskLocalState.pinnedProjectKeys]
   );
+  // Same source as projectGroups, so a header never counts a team whose row the filters hid.
   const projectTeamCountByKey = useMemo(
     () =>
       new Map(
-        groupTasksByProject(globalTasks).map((group) => [
+        groupTasksByProject(normalTasks).map((group) => [
           group.projectKey,
           new Set(group.tasks.map((task) => task.teamName)).size,
         ])
       ),
-    [globalTasks]
+    [normalTasks]
   );
 
   // Collapsed group keys for each grouping mode
