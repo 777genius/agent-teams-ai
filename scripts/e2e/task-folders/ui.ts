@@ -455,7 +455,11 @@ export class UI {
       TARGET_PRESENCE_TIMEOUT_MS
     );
   }
-  async chooseDestination(optionLabel: string, forbid?: string) {
+  async chooseDestination(
+    optionLabel: string,
+    forbid?: string,
+    disabledHint?: { label: string; hint: string }
+  ) {
     // The dialog zooms in over 200ms, and keyboard selection races Radix's deferred
     // item focus, so pick the option by its visible label and verify the trigger shows
     // it before the caller submits.
@@ -482,6 +486,19 @@ export class UI {
         leaked,
         '[]',
         'Move dialog is not for the intended folder; its subtree labels are still choosable: ' + leaked
+      );
+    }
+    if (disabledHint) {
+      // Task moves keep out-of-scope destinations visible but disabled, with a hint.
+      assert.equal(
+        await this.value(
+          `(() => {
+            const option = Array.from(document.querySelectorAll('[role="option"]')).find((e) => e.textContent?.includes(${JSON.stringify(disabledHint.label)}));
+            return option ? [option.getAttribute('aria-disabled'), option.textContent?.includes(${JSON.stringify(disabledHint.hint)})].join('|') : null;
+          })()`
+        ),
+        'true|true',
+        'Option "' + disabledHint.label + '" must be disabled with the "' + disabledHint.hint + '" hint'
       );
     }
     await this.click(label(optionLabel, 'document', '[role="option"]'));

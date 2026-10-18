@@ -414,23 +414,29 @@ async function main() {
       );
       await ui.key('Enter');
       await ui.wait('document.querySelector(\'[role="dialog"]\')', 'keyboard move dialog');
-      await ui.chooseDestination('Unfiled');
+      // Unfiled is not a valid task destination any more: it must stay visible but
+      // disabled with a hint instead of reading like the drop target.
+      await ui.chooseDestination('Seed parent', undefined, {
+        label: 'Unfiled',
+        hint: 'You can\'t move tasks here',
+      });
       await ui.submitMove('Move to…', 'keyboard move submitted');
       await ui.persisted(
         (s) =>
-          !s.folders.some((folder) =>
-            folder.children.some((c) => c.kind === 'task' && c.identity.taskId === 'b')
-          ),
-        'keyboard unfiled move'
+          children(s, f.parent).some((c) => c.kind === 'task' && c.identity.taskId === 'b') &&
+          !children(s, f.nested).some((c) => c.kind === 'task' && c.identity.taskId === 'b'),
+        'keyboard folder move'
       );
       await ui.click(taskSource('b'));
       await ui.chooseDestination('Seed parent / Seed nested / Renamed nested');
       await ui.submitMove('Move to…', 'folder move submitted');
       await ui.persisted(
-        (s) => children(s, created).some((c) => c.kind === 'task' && c.identity.taskId === 'b'),
+        (s) =>
+          children(s, created).some((c) => c.kind === 'task' && c.identity.taskId === 'b') &&
+          !children(s, f.parent).some((c) => c.kind === 'task' && c.identity.taskId === 'b'),
         'chooser move to folder'
       );
-      return { destination: 'Unfiled', sourceKey: JSON.stringify([f.team, 'b']) };
+      return { destination: 'Seed parent / Seed nested / Renamed nested', sourceKey: JSON.stringify([f.team, 'b']) };
     });
     await check('delete-promotes-children', async () => {
       await ui.menu(folderRow(created), 'Delete folder');
