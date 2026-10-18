@@ -35,9 +35,15 @@ export function projectFolders(
   showArchived: boolean,
   showDeleted = true
 ): Projection {
-  const catalog = new Map(
-    tasks.map((task) => [taskKey({ teamName: task.teamName, taskId: task.id }), task])
-  );
+  const catalog = new Map<string, GlobalTask>();
+  for (const task of tasks) {
+    const key = taskKey({ teamName: task.teamName, taskId: task.id });
+    const known = catalog.get(key);
+    // A deleted-feed request can land after a restore and leave a stale deleted copy
+    // beside the live one; the live copy must win or the row would read as hidden.
+    if (known && known.status !== 'deleted' && task.status === 'deleted') continue;
+    catalog.set(key, task);
+  }
   const nodes = new Map<string, Node>();
   const canonicalChildren = new Map<string, readonly string[]>();
   const placed = new Set<string>();
@@ -110,7 +116,8 @@ export function projectFolders(
   for (const id of snapshot.rootFolderIds) root.children.push(fill(id).id);
   const unfiled = node(UNFILED, '', 'unfiled');
   const unfiledChildren: string[] = [];
-  for (const task of tasks) {
+  // Iterate the deduplicated catalog: one identity can arrive from both feeds.
+  for (const task of catalog.values()) {
     const identity = { teamName: task.teamName, taskId: task.id };
     if (placed.has(taskKey(identity))) continue;
     const c = taskNode(identity)!;

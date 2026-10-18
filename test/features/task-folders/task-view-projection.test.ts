@@ -361,4 +361,45 @@ describe('canonical task view projection', () => {
     );
     expect(shown.nodes.get('folder:folder')).toMatchObject({ active: 2, unavailable: 0 });
   });
+
+  it('keeps a restored live copy ahead of a stale deleted copy of the same task', () => {
+    let snapshot = applyCommand(emptySnapshot(), {
+      type: 'create',
+      id: 'folder',
+      name: 'Folder',
+      parent: null,
+    });
+    snapshot = applyCommand(snapshot, {
+      type: 'moveTask',
+      identity: { teamName: 'team', taskId: '1' },
+      parent: 'folder',
+      anchor: append,
+    });
+    // The deleted feed is appended, so the stale copy arrives last for the identity.
+    const merged: GlobalTask[] = [tasks[0], { ...makeTask('1'), status: 'deleted' }];
+
+    const projected = projectFolders(
+      snapshot,
+      merged,
+      () => false,
+      () => undefined,
+      true,
+      false
+    );
+
+    expect(projected.nodes.get('folder:folder')).toMatchObject({ active: 1, unavailable: 0 });
+    expect(projected.nodes.get('task:["team","1"]')!.task?.status).toBe('pending');
+    expect(projected.nodes.get('task:["team","1"]')!.hidden).toBe(false);
+
+    const unfiledOnly = projectFolders(
+      emptySnapshot(),
+      merged,
+      () => false,
+      () => undefined,
+      true,
+      false
+    );
+    expect(unfiledOnly.nodes.get('unfiled')!.children).toEqual(['task:["team","1"]']);
+    expect(unfiledOnly.nodes.get('unfiled')).toMatchObject({ active: 1 });
+  });
 });
