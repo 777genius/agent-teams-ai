@@ -672,12 +672,17 @@ describe('memberActivityTimer retention', () => {
     }
 
     const storage = globalThis.localStorage;
+    const currentId = timerIdFor('current-task', nowMs);
     vi.spyOn(storage, 'getItem').mockImplementation((key: string) => {
-      if (key.startsWith(STORAGE_PREFIX)) throw new Error('SecurityError: storage read blocked');
+      // Every seeded record is unreadable, but the incoming key is not — otherwise this write would
+      // be gated by the unreachable-read guard below and the sweep would never run at all.
+      if (key.startsWith(STORAGE_PREFIX) && key !== `${STORAGE_PREFIX}${currentId}`) {
+        throw new Error('SecurityError: storage read blocked');
+      }
       return null;
     });
 
-    const currentId = syncTaskTimer('current-task', nowMs, nowMs);
+    syncTaskTimer('current-task', nowMs, nowMs);
 
     const remaining = storedTimerIds();
     // 206 seeded + the new key, minus the one key the first write's share of the backlog takes.
@@ -688,6 +693,53 @@ describe('memberActivityTimer retention', () => {
     // same victim if that record had parsed cleanly.
     expect(remaining).not.toContain(ancientIds[ancientIds.length - 1]);
     expect(remaining.filter((id) => ancientIds.includes(id))).toHaveLength(ancientIds.length - 1);
+  });
+
+  it('does not write a baseline over a record it could not read', () => {
+    const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
+    const pausedId = timerIdFor('banked-pause', nowMs - 3_600_000);
+    seedStoredTimer(pausedId, nowMs - 3_600_000, { elapsedMs: 45_000 });
+    const payloadBefore = globalThis.localStorage?.getItem(`${STORAGE_PREFIX}${pausedId}`);
+
+    const storage = globalThis.localStorage;
+    const readOriginal = storage?.getItem.bind(storage);
+    let blocked = true;
+    vi.spyOn(storage, 'getItem').mockImplementation((key: string) => {
+      if (blocked && key === `${STORAGE_PREFIX}${pausedId}`) {
+        throw new Error('SecurityError: transient storage read failure');
+      }
+      return readOriginal ? readOriginal(key) : null;
+    });
+
+    // A throw is not an empty slot. The sync still renders this tick's baseline, but persisting it
+    // would replace the banked 45 s that is (transiently) unreadable with a record that says zero,
+    // and the elapsed would be gone for good even though nothing evicted it.
+    expect(
+      syncMemberActivityTimer({
+        timerId: pausedId,
+        startedAtMs: nowMs - 3_600_000,
+        baseElapsedMs: 0,
+        running: false,
+        runId: null,
+        nowMs,
+      })
+    ).toBe(0);
+    // Inspected through the unpatched storage, because the point is what is on disk while the read
+    // is failing — and that read is still blocked at this instant.
+    expect(readOriginal ? readOriginal(`${STORAGE_PREFIX}${pausedId}`) : null).toBe(payloadBefore);
+
+    // The next tick reads it again: skipping the write is a retry, not a loss.
+    blocked = false;
+    expect(
+      readMemberActivityTimerElapsed({
+        timerId: pausedId,
+        startedAtMs: nowMs - 3_600_000,
+        baseElapsedMs: 0,
+        running: false,
+        runId: null,
+        nowMs,
+      })
+    ).toBe(45_000);
   });
 
   it('leaves keys another feature stored untouched', () => {

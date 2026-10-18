@@ -56,11 +56,13 @@ function normalizeMemberName(value: string | null | undefined): string {
   return typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : '';
 }
 
-function safeStorageGet(key: string): string | null {
+function readStorageValue(key: string): { value: string | null; unreachable: boolean } {
   try {
-    return globalThis.localStorage?.getItem(key) ?? null;
+    return { value: globalThis.localStorage?.getItem(key) ?? null, unreachable: false };
   } catch {
-    return null;
+    // A throw is not an absence. The record may well be readable on the next tick, and reporting
+    // "nothing here" would let the caller write a fresh baseline over banked elapsed time.
+    return { value: null, unreachable: true };
   }
 }
 
@@ -110,21 +112,28 @@ function readStoredTimer(
   timerId: string,
   startedAtMs: number,
   baseElapsedMs: number
-): StoredActivityTimer | null {
+): { timer: StoredActivityTimer | null; unreachable: boolean } {
   const cached = timers.get(timerId);
   if (cached?.startedAtMs === startedAtMs) {
     touchTimer(timerId);
-    return cached.baseElapsedMs === baseElapsedMs
-      ? cached
-      : { ...cached, baseElapsedMs, elapsedMs: Math.max(baseElapsedMs, cached.elapsedMs) };
+    return {
+      timer:
+        cached.baseElapsedMs === baseElapsedMs
+          ? cached
+          : { ...cached, baseElapsedMs, elapsedMs: Math.max(baseElapsedMs, cached.elapsedMs) },
+      unreachable: false,
+    };
   }
 
-  const raw = safeStorageGet(storageKey(timerId));
-  if (!raw) return null;
+  const stored = readStorageValue(storageKey(timerId));
+  if (stored.unreachable) return { timer: null, unreachable: true };
+  if (!stored.value) return { timer: null, unreachable: false };
 
   try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!isStoredTimer(parsed) || parsed.startedAtMs !== startedAtMs) return null;
+    const parsed = JSON.parse(stored.value) as unknown;
+    if (!isStoredTimer(parsed) || parsed.startedAtMs !== startedAtMs) {
+      return { timer: null, unreachable: false };
+    }
     const sanitized: StoredActivityTimer = {
       version: 1,
       startedAtMs: parsed.startedAtMs,
@@ -136,9 +145,9 @@ function readStoredTimer(
     };
     makeRoomForResident(timerId);
     rememberTimer(timerId, sanitized);
-    return sanitized;
+    return { timer: sanitized, unreachable: false };
   } catch {
-    return null;
+    return { timer: null, unreachable: false };
   }
 }
 
@@ -200,7 +209,11 @@ function forgetTimer(timerId: string): void {
   touchOrder.delete(timerId);
 }
 
-// Only ever called when the incoming key is not resident yet, so it cannot be its own victim.
+// The incoming key cannot be this scan's victim, because `makeRoomForResident` only loops while the
+// map is over its bound and a resident incoming key means the map is exactly at the bound — every
+// insertion is guarded here, so `size > MAX` is unreachable for it. Stated as a dependency rather
+// than enforced by a `timerId === incomingId` skip: the skip would be dead code the reader cannot
+// test, and the guard that keeps it dead is one line above in the caller.
 // `eligible`, when given, restricts the pass to the records the caller is willing to destroy; the
 // caller falls back to the unrestricted ranking, so the map always shrinks by one and the eviction
 // loop cannot spin.
@@ -438,11 +451,17 @@ export function syncMemberActivityTimer({
   runId?: string | null;
   nowMs?: number;
 }): number {
+  const stored = readStoredTimer(timerId, startedAtMs, baseElapsedMs);
   const existing =
-    readStoredTimer(timerId, startedAtMs, baseElapsedMs) ??
-    createInitialTimer(startedAtMs, baseElapsedMs, running, nowMs, runId);
+    stored.timer ?? createInitialTimer(startedAtMs, baseElapsedMs, running, nowMs, runId);
   const elapsedMs = materializeElapsed(existing, nowMs, runId);
-  const next: StoredActivityTimer = {
+  if (!stored.timer && stored.unreachable) {
+    // Nothing was read, and the storage said so by throwing rather than by being empty. Writing this
+    // tick's baseline would destroy banked elapsed that is probably still on disk, so the tick is
+    // skipped and the next persistence attempt re-reads it.
+    return elapsedMs;
+  }
+  writeStoredTimer(timerId, {
     version: 1,
     startedAtMs,
     baseElapsedMs,
@@ -450,8 +469,7 @@ export function syncMemberActivityTimer({
     updatedAtMs: nowMs,
     running,
     runId,
-  };
-  writeStoredTimer(timerId, next);
+  });
   return elapsedMs;
 }
 
@@ -471,7 +489,7 @@ export function readMemberActivityTimerElapsed({
   nowMs?: number;
 }): number {
   const timer =
-    readStoredTimer(timerId, startedAtMs, baseElapsedMs) ??
+    readStoredTimer(timerId, startedAtMs, baseElapsedMs).timer ??
     createInitialTimer(startedAtMs, baseElapsedMs, running, nowMs, runId);
   // Either side reporting it paused is enough: a record left running by an interrupted pause sync
   // must not resume accruing, because only the reader knows the timer stopped.
