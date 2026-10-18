@@ -169,6 +169,7 @@ describe('CurrentTaskIndicator', () => {
     expect(setItem.mock.calls[0][0]).toBe(storageKey);
     expect(setIntervalSpy).not.toHaveBeenCalled();
     expect(clearIntervalSpy).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('1m 11s');
     setItem.mockClear();
 
     await act(async () => {
@@ -220,6 +221,68 @@ describe('CurrentTaskIndicator', () => {
     expect(writtenPayloads().map((payload) => payload.running)).toEqual([true, false]);
     expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
     expect(setIntervalSpy).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('retires the timer once when the anchor disappears', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-07T09:01:05.000Z'));
+    const startedAt = '2026-05-07T09:00:00.000Z';
+    const timerId = createMemberActivityTimerId({
+      teamName: 'alpha',
+      memberName: 'bob',
+      phase: 'work',
+      taskId: task.id,
+      startedAt,
+    });
+    const anchor = {
+      startedAt,
+      startedAtMs: Date.parse(startedAt),
+      baseElapsedMs: 0,
+      runId: 'run-1',
+      timerId,
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        <CurrentTaskIndicator task={task} borderColor="#22c55e" activityTimer={anchor} />
+      );
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('1m 05s');
+
+    const setItem = vi.spyOn(globalThis.localStorage, 'setItem');
+    const setIntervalSpy = vi.spyOn(window, 'setInterval');
+    const clearIntervalSpy = vi.spyOn(window, 'clearInterval');
+
+    await act(async () => {
+      vi.advanceTimersByTime(20_000);
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('1m 25s');
+    expect(setIntervalSpy).not.toHaveBeenCalled();
+    setItem.mockClear();
+
+    await act(async () => {
+      root.render(<CurrentTaskIndicator task={task} borderColor="#22c55e" activityTimer={null} />);
+      await Promise.resolve();
+    });
+
+    const retiredPayloads = setItem.mock.calls.map(([, value]) => JSON.parse(String(value)));
+    expect(retiredPayloads).toHaveLength(1);
+    expect(retiredPayloads[0]).toMatchObject({ running: true, runId: 'run-1', elapsedMs: 85_000 });
+    expect(setItem.mock.calls[0][0]).toBe(`member-activity-timer:${timerId}`);
+    expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
+    expect(setIntervalSpy).not.toHaveBeenCalled();
+    expect(host.textContent).not.toContain('1m 25s');
 
     await act(async () => {
       root.unmount();
