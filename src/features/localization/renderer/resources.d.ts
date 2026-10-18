@@ -814,6 +814,7 @@ export default interface Resources {
       "deleteDescription": "Tasks and subfolders move to the parent. Tasks in a root folder become unfiled. No tasks are deleted.",
       "deleteFolder": "Delete folder",
       "destination": "Destination folder",
+      "dockToSidebar": "Folders as the sidebar",
       "dragFolder": "Drag folder",
       "dragTask": "Drag task to a folder",
       "expand": "Expand folder",

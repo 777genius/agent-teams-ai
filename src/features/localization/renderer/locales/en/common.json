@@ -971,6 +971,7 @@
     "unreadTasks_one": "{{count}} unread task",
     "unreadTasks_other": "{{count}} unread tasks",
     "title": "Task folders",
+    "dockToSidebar": "Folders as the sidebar",
     "newFolder": "New folder",
     "newSubfolder": "New subfolder",
     "renameFolder": "Rename folder",

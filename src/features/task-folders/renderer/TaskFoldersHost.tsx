@@ -8,9 +8,11 @@ import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Dialog, DialogContent, DialogTitle } from '@renderer/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { FolderTree as FolderTreeIcon, Search, X } from 'lucide-react';
+import { FolderTree as FolderTreeIcon, PanelRight, Search, X } from 'lucide-react';
 
+import { dockedSidebar } from './adapters/dockedSidebar';
 import { moveRequest } from './adapters/moveRequest';
+import { useTaskFoldersDocked } from './hooks/useTaskFoldersDocked';
 import { useTaskFoldersHost } from './hooks/useTaskFoldersHost';
 import { FolderDialogs } from './ui/FolderDialogs';
 import { FolderTree } from './ui/FolderTree';
@@ -32,6 +34,8 @@ export const TaskFoldersHost = ({
   const panelRef = useRef<HTMLDivElement | null>(null);
   const model = useTaskFoldersHost(contextId, sidebar, collapsed, panelRef);
   const { closeViewControls, move } = model;
+  const docked = useTaskFoldersDocked();
+  const [dockTarget, setDockTarget] = useState<HTMLElement | null>(null);
   const [action, setAction] = useState<FolderDialog | null>(null);
   const [focus, setFocus] = useState<TreeFocusRequest | null>(null);
   const dialog = (next: FolderDialog): void => {
@@ -41,6 +45,9 @@ export const TaskFoldersHost = ({
   useEffect(() => {
     panelController.hold('dialog', !!action || !!move);
   }, [action, move]);
+  useEffect(() => {
+    setDockTarget(docked && !collapsed ? document.getElementById('sidebar-tasks-panel') : null);
+  }, [docked, collapsed]);
   useEffect(() => {
     if (collapsed) {
       // Collapsing the host cancels its owned overlay workflows.
@@ -127,6 +134,26 @@ export const TaskFoldersHost = ({
     <>
       <div className="flex flex-wrap items-center gap-2 border-b border-border p-2">
         <span className="flex-1 text-sm font-semibold">{t('taskFolders.title')}</span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={docked ? 'secondary' : 'ghost'}
+              size="sm"
+              data-testid="task-folders-dock-toggle"
+              aria-label={t('taskFolders.dockToSidebar')}
+              aria-pressed={docked}
+              className={docked ? undefined : 'text-[var(--color-text-muted)]'}
+              onClick={() => {
+                const next = !dockedSidebar.getSnapshot().docked;
+                dockedSidebar.set(next);
+                if (next) panelController.close();
+              }}
+            >
+              <PanelRight className="size-3" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('taskFolders.dockToSidebar')}</TooltipContent>
+        </Tooltip>
         <Button
           variant="ghost"
           size="sm"
@@ -136,14 +163,16 @@ export const TaskFoldersHost = ({
         >
           {t('taskFolders.newFolder')}
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          aria-label={t('actions.close')}
-          onClick={() => panelController.close()}
-        >
-          <X className="size-3" />
-        </Button>
+        {!docked && (
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={t('actions.close')}
+            onClick={() => panelController.close()}
+          >
+            <X className="size-3" />
+          </Button>
+        )}
         <label className="flex w-full items-center gap-2 text-xs">
           <Checkbox
             data-testid="task-folders-show-archived"
@@ -231,7 +260,7 @@ export const TaskFoldersHost = ({
       <FolderTree model={model} dialog={dialog} focusRequest={focus} />
     </>
   );
-  const visible = model.panel.open && !collapsed;
+  const visible = model.panel.open && !collapsed && !docked;
   const fallback = !!model.rect && model.rect.width < 240;
   const fallbackOpen = visible && fallback && model.panel.manual;
   useEffect(
@@ -242,23 +271,25 @@ export const TaskFoldersHost = ({
   );
   return (
     <>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant={model.panel.manual ? 'secondary' : 'ghost'}
-            size="sm"
-            data-testid="task-folders-toggle"
-            aria-label={t('taskFolders.title')}
-            aria-expanded={fallback ? fallbackOpen : visible}
-            aria-pressed={model.panel.manual}
-            className={model.panel.manual ? undefined : 'text-[var(--color-text-muted)]'}
-            onClick={() => panelController.toggle()}
-          >
-            <FolderTreeIcon className="size-3.5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{t('taskFolders.title')}</TooltipContent>
-      </Tooltip>
+      {!docked && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={model.panel.manual ? 'secondary' : 'ghost'}
+              size="sm"
+              data-testid="task-folders-toggle"
+              aria-label={t('taskFolders.title')}
+              aria-expanded={fallback ? fallbackOpen : visible}
+              aria-pressed={model.panel.manual}
+              className={model.panel.manual ? undefined : 'text-[var(--color-text-muted)]'}
+              onClick={() => panelController.toggle()}
+            >
+              <FolderTreeIcon className="size-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('taskFolders.title')}</TooltipContent>
+        </Tooltip>
+      )}
       {visible &&
         model.rect &&
         !fallback &&
@@ -321,6 +352,20 @@ export const TaskFoldersHost = ({
           </div>
         </DialogContent>
       </Dialog>
+      {dockTarget &&
+        createPortal(
+          <div
+            ref={model.registerPanel}
+            data-testid="task-folders-docked"
+            role="region"
+            aria-label={t('taskFolders.title')}
+            className="flex h-full min-h-0 flex-col overflow-hidden"
+            style={{ backgroundColor: 'var(--color-surface-sidebar)' }}
+          >
+            {content}
+          </div>,
+          dockTarget
+        )}
       <FolderDialogs
         action={action}
         close={() => setAction(null)}

@@ -973,6 +973,7 @@
     "unreadTasks_many": "{{count}} непросмотренных задач",
     "unreadTasks_other": "{{count}} непросмотренной задачи",
     "moveHere": "Положи сюда",
-    "cannotMoveHere": "Сюда переместить нельзя"
+    "cannotMoveHere": "Сюда переместить нельзя",
+    "dockToSidebar": "Фолдеры вместо сайдбара"
   }
 }
