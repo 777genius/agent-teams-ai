@@ -30,51 +30,59 @@ function useActivityTimerLabel(
 ): string | null {
   const [nowMs, setNowMs] = useState(() => Date.now());
   const lastStorageSyncAtRef = useRef(0);
+  const timerId = activityTimer?.timerId;
+  const startedAtMs = activityTimer?.startedAtMs;
+  const baseElapsedMs = activityTimer?.baseElapsedMs ?? 0;
+  const runId = activityTimer?.runId;
 
+  // The caller rebuilds the anchor object on every render, so the effects below must
+  // re-arm only when a persisted timer value actually changes.
   useEffect(() => {
-    if (!activityTimer) return;
+    if (timerId === undefined || startedAtMs === undefined) return;
+
     const now = Date.now();
     lastStorageSyncAtRef.current = now;
     syncMemberActivityTimer({
-      timerId: activityTimer.timerId,
-      startedAtMs: activityTimer.startedAtMs,
-      baseElapsedMs: activityTimer.baseElapsedMs,
+      timerId,
+      startedAtMs,
+      baseElapsedMs,
       running: isTimerRunning,
-      runId: activityTimer.runId,
+      runId,
       nowMs: now,
     });
 
     return () => {
       syncMemberActivityTimer({
-        timerId: activityTimer.timerId,
-        startedAtMs: activityTimer.startedAtMs,
-        baseElapsedMs: activityTimer.baseElapsedMs,
+        timerId,
+        startedAtMs,
+        baseElapsedMs,
         running: isTimerRunning,
-        runId: activityTimer.runId,
+        runId,
         nowMs: Date.now(),
       });
     };
-  }, [activityTimer, isTimerRunning]);
+  }, [timerId, startedAtMs, baseElapsedMs, runId, isTimerRunning]);
 
   useEffect(() => {
-    if (!activityTimer || !isTimerRunning) return;
+    if (timerId === undefined || startedAtMs === undefined || !isTimerRunning) return;
+
     const handle = window.setInterval(() => {
       const now = Date.now();
       if (now - lastStorageSyncAtRef.current >= ACTIVITY_TIMER_STORAGE_SYNC_INTERVAL_MS) {
         lastStorageSyncAtRef.current = now;
         syncMemberActivityTimer({
-          timerId: activityTimer.timerId,
-          startedAtMs: activityTimer.startedAtMs,
-          baseElapsedMs: activityTimer.baseElapsedMs,
+          timerId,
+          startedAtMs,
+          baseElapsedMs,
           running: true,
-          runId: activityTimer.runId,
+          runId,
           nowMs: now,
         });
       }
       setNowMs(now);
     }, 1000);
     return () => window.clearInterval(handle);
-  }, [activityTimer, isTimerRunning]);
+  }, [timerId, startedAtMs, baseElapsedMs, runId, isTimerRunning]);
 
   if (!activityTimer) return null;
   return formatMemberActivityElapsed(
