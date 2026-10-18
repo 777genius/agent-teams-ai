@@ -257,22 +257,10 @@ function holdsBankedPause(timer: StoredActivityTimer): boolean {
 // a payload this build cannot interpret (a future schema, or a record whose read threw) must not be
 // destroyed for that reason.
 //
-// `Date.parse` alone does not implement "our keys only": it is lenient enough to turn other
-// features' keys into dates (`Date.parse('foreign-undatable-19')` is a positive number in V8), so the
-// segment has to match the ISO instant shape `createMemberActivityTimerId` writes, with or without a
-// fractional part. Anything else stays on disk untouched. Two patterns rather than one with an
-// optional group: a group that carries a quantifier and is quantified itself is what this repo's
-// `security/detect-unsafe-regex` gate rejects, and the gate is in the CI lint scope.
-//
-// The fraction accepts up to nine digits and the zone also accepts the basic-format `+HHMM`, because
-// `startedAt` reaches the key verbatim from the team's task data — `TeamTaskReader.ts` checks only
-// `typeof === 'string'` — so an interval written by another tool can carry microsecond precision or a
-// compact offset. Those denote real instants, and leaving them out of the accepted set would make
-// their keys permanently unreclaimable. A string with no zone at all stays excluded: `Date.parse` reads
-// those as *local* time, so its rank would depend on the machine rendering the list.
-const ISO_INSTANT_WITH_FRACTION =
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,9}(?:Z|[+-]\d{2}:?\d{2})$/;
-const ISO_INSTANT_WHOLE_SECOND = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:?\d{2})$/;
+// Ownership comes from the producer's five-field id, including its normalized member and phase.
+// Anchors preserve task timestamps verbatim, so rank them with the same parser the anchor producer
+// accepts. A stricter date-shape filter would leave normally persisted anchors unreclaimable.
+
 // One eighth of the excess per write: enough to converge a legacy namespace in a handful of
 // writes, small enough that no single write takes a deletion burst of the whole backlog with it.
 const DORMANT_REAP_DIVISOR = 8;
@@ -280,15 +268,16 @@ const DORMANT_REAP_DIVISOR = 8;
 // reclaims rather than looping over a backlog that will not fit.
 const QUOTA_RECLAIM_ATTEMPTS = 64;
 
-function isIsoInstantSegment(segment: string): boolean {
-  return ISO_INSTANT_WITH_FRACTION.test(segment) || ISO_INSTANT_WHOLE_SECOND.test(segment);
-}
-
 function anchorMsFromTimerId(timerId: string): number {
-  const segment = timerId.slice(timerId.lastIndexOf(ID_SEGMENT_SEPARATOR) + 1);
-  if (!isIsoInstantSegment(segment)) return 0;
-  const parsed = Date.parse(segment);
-  return Number.isFinite(parsed) ? parsed : 0;
+  const segments = timerId.split(ID_SEGMENT_SEPARATOR);
+  if (
+    segments.length !== 5 ||
+    (segments[2] !== 'work' && segments[2] !== 'review') ||
+    normalizeMemberName(segments[1]) !== segments[1]
+  ) {
+    return 0;
+  }
+  return parseIsoMs(segments[4]);
 }
 
 function collectDormantTimerIds(): string[] | null {

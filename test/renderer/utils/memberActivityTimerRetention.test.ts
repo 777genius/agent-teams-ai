@@ -3,11 +3,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createMemberActivityTimerId,
   declareActivityTimerKeys,
+  deriveReviewActivityTimerAnchor,
+  deriveWorkActivityTimerAnchor,
   MAX_TRACKED_ACTIVITY_TIMERS,
   readMemberActivityTimerElapsed,
   resetMemberActivityTimerStoreForTests,
   syncMemberActivityTimer,
 } from '@renderer/utils/memberActivityTimer';
+
+import type { TeamTaskWithKanban } from '@shared/types';
 
 const STORAGE_PREFIX = 'member-activity-timer:';
 
@@ -778,12 +782,9 @@ describe('memberActivityTimer retention', () => {
   it('leaves keys another feature stored untouched', () => {
     const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
     const storage = globalThis.localStorage;
-    // Each of these parses as a date in V8 (`legacy-cache-19` is 1956528000000, `2025-01-01` is
-    // midnight), so a lenient `Date.parse` in the ranker would hand another feature's keys to the
-    // reaper. Only the instant shape `createMemberActivityTimerId` writes is a candidate. The
-    // date-only entry must also be OLDER than every anchor seeded below, the `future-version` record
-    // included: reclamation is amortized, so a loosened gate only shows up when the key it wrongly
-    // admits is the one it would reap first.
+    // A parseable date alone does not establish ownership. Even timestamp-shaped foreign keys
+    // must stay untouched unless their full structure matches the timer producer. Dates below
+    // predate the backlog so any wrongly admitted key would be reclaimed first.
     const foreignIds = [
       'opaque-key-without-an-anchor',
       'legacy-cache-19',
@@ -792,7 +793,13 @@ describe('memberActivityTimer retention', () => {
       'plainword',
       'v2:abc',
       '2025-01-01',
+      '2025-01-01T00:00:00Z',
       'alpha' + '\u0000' + 'bob' + '\u0000' + 'work' + '\u0000' + 'task-9',
+      ['alpha', 'bob', 'work', '2025-01-01T00:00:00Z'].join('\u0000'),
+      ['alpha', 'bob', 'cache', 'task-9', '2025-01-01T00:00:00Z'].join('\u0000'),
+      ['alpha', ' Bob ', 'work', 'task-9', '2025-01-01T00:00:00Z'].join('\u0000'),
+      ['alpha', 'bob', 'work', 'task-9', 'not-a-date'].join('\u0000'),
+      ['alpha', 'bob', 'work', 'task-9', '2025-01-01T00:00:00Z', 'extra'].join('\u0000'),
     ];
     foreignIds.forEach((foreignId, index) => {
       storage?.setItem(`${STORAGE_PREFIX}${foreignId}`, `not-this-modules-data-${index}`);
@@ -1183,27 +1190,40 @@ describe('memberActivityTimer retention', () => {
     ).toBe(45_000);
   });
 
-  it('ranks a key whose anchor is a real instant written in another ISO shape', () => {
+  it.each([
+    '2026-01-01T00:00Z',
+    '2026-01-01T00:00+02:00',
+    '2026-01-01T00:00:00.123456Z',
+    '2026-01-01T00:00:00+0200',
+    '2026-01-01',
+    '2026-01-01T00:00:00',
+    'Thu, 01 Jan 2026 00:00:00 GMT',
+  ])('reclaims restarted producer timers whose anchor is %s', (startedAt) => {
     const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
-    const anchorId = (taskId: string, startedAt: string): string =>
-      createMemberActivityTimerId({
-        teamName: 'alpha',
-        memberName: 'bob',
-        phase: 'work',
-        taskId,
-        startedAt,
-      });
-    // `startedAt` reaches the key verbatim from the team's task data, so an interval written by
-    // another tool can carry microsecond precision or a basic-format offset. Both denote a real
-    // instant, so both must be reclaimable — excluding them would make their keys permanent.
-    const microsecondId = anchorId('microseconds', '2026-01-01T00:00:00.123456Z');
-    const basicOffsetId = anchorId('basic-offset', '2026-01-01T00:00:00+0200');
-    // No zone at all: `Date.parse` reads that as local time, so its rank would depend on the machine
-    // rendering the list, and it stays outside the accepted set.
-    const zonelessId = anchorId('zoneless', '2026-01-01T00:00:00');
-    for (const id of [microsecondId, basicOffsetId, zonelessId]) {
-      seedStoredTimer(id, Date.parse('2026-01-01T00:00:00Z'));
+    const task: TeamTaskWithKanban = {
+      id: 'producer-task',
+      displayId: 'producer',
+      subject: 'Producer timestamp retention',
+      status: 'in_progress',
+      createdAt: startedAt,
+      reviewState: 'none',
+      workIntervals: [{ startedAt }],
+      reviewIntervals: [{ reviewer: 'bob', startedAt }],
+    };
+    const params = { teamName: 'alpha', memberName: ' Bob ' };
+    const anchors = [
+      deriveWorkActivityTimerAnchor(task, params),
+      deriveReviewActivityTimerAnchor(task, params),
+    ];
+    for (const anchor of anchors) {
+      expect(anchor).not.toBeNull();
+      if (!anchor) throw new Error('Expected a producer anchor');
+      expect(anchor.startedAt).toBe(startedAt);
+      syncMemberActivityTimer({ ...anchor, running: false, nowMs });
+      expect(storedTimerIds()).toContain(anchor.timerId);
     }
+    // Restart discards the resident map. The exact normally written keys must enter the backlog.
+    resetMemberActivityTimerStoreForTests();
     for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS + 20; index += 1) {
       const staleMs = nowMs - 4_000_000 + index * 1_000;
       seedStoredTimer(timerIdFor(`backlog-${index}`, staleMs), staleMs);
@@ -1215,9 +1235,8 @@ describe('memberActivityTimer retention', () => {
     }
 
     const remaining = storedTimerIds();
-    expect(remaining).not.toContain(microsecondId);
-    expect(remaining).not.toContain(basicOffsetId);
-    expect(remaining).toContain(zonelessId);
+    for (const anchor of anchors) expect(remaining).not.toContain(anchor?.timerId);
+    expect(remaining.length).toBeLessThanOrEqual(MAX_TRACKED_ACTIVITY_TIMERS);
   });
 
   it.each(['length', 'key'] as const)(
