@@ -1060,6 +1060,10 @@ export const MemberList = memo(function MemberList({
     [getActivityTimerRunId]
   );
 
+  // Identifies this list to the store's declaration set: more than one team can be on screen, and
+  // each must spare its own keys without withdrawing another's.
+  const activityTimerOwnerRef = useRef<object>({});
+
   // Declared from a layout effect, written from a passive one, and that split is the point. A member
   // card syncs its own timer from a passive effect, and the first passive write of a frame is what
   // reclaims the backlog; declaring here from a passive effect would land after that drain had already
@@ -1068,10 +1072,12 @@ export const MemberList = memo(function MemberList({
   // declaration says the key is still live. Layout effects flush before any passive effect, so the
   // write order between this list and the cards is unchanged.
   useLayoutEffect(() => {
+    const owner = activityTimerOwnerRef.current;
     declareActivityTimerKeys(
+      owner,
       collectMemberActivityTimerIds({ activeMembers, reviewTaskByMember, taskMap, teamName })
     );
-    return () => declareActivityTimerKeys([]);
+    return () => declareActivityTimerKeys(owner, []);
   }, [activeMembers, reviewTaskByMember, taskMap, teamName]);
 
   useEffect(() => {

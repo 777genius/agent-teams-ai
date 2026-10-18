@@ -887,6 +887,7 @@ describe('memberActivityTimer retention', () => {
   });
 
   it('spares declared keys from the drain, before and after the backlog is listed', () => {
+    const owner = {};
     const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
     // Oldest of all, and declared before the backlog is ever listed, so it never enters that list.
     const earlyMs = nowMs - 120_000_000;
@@ -910,7 +911,7 @@ describe('memberActivityTimer retention', () => {
     // before that happens, so the burst walks past it. This is the member whose card is not on screen:
     // nothing has read its key, it holds the oldest anchor and a banked pause, and the producer's
     // effect is the only thing that knows it is live.
-    declareActivityTimerKeys([earlyId]);
+    declareActivityTimerKeys(owner, [earlyId]);
     syncTaskTimer('first-write', nowMs, nowMs);
     expect(globalThis.localStorage?.getItem(earlyKey)).toBe(earlyPayload);
     expect(globalThis.localStorage?.getItem(lateKey)).toBe(latePayload);
@@ -918,7 +919,7 @@ describe('memberActivityTimer retention', () => {
     // Now declared after the list was built. Enough writes follow to drain everything older than it,
     // which is what makes this an assertion about the deletion-time skip rather than about the
     // amortized budget: without the skip this key is the next victim in line.
-    declareActivityTimerKeys([earlyId, lateId]);
+    declareActivityTimerKeys(owner, [earlyId, lateId]);
     for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS + 40; index += 1) {
       const busyMs = nowMs + 10_000 + index * 1_000;
       syncTaskTimer(`while-declared-${index}`, busyMs, busyMs);
@@ -930,7 +931,7 @@ describe('memberActivityTimer retention', () => {
     // A declaration is replaced, not accumulated. A spared key stays in the backlog list rather than
     // being consumed by the scan, so the moment the producer stops declaring it the drain reaches it
     // again — the exemption lasts for the frame that granted it, not until the next session.
-    declareActivityTimerKeys([]);
+    declareActivityTimerKeys(owner, []);
     for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS; index += 1) {
       const laterMs = nowMs + 500_000 + index * 1_000;
       syncTaskTimer(`after-replaced-${index}`, laterMs, laterMs);
@@ -938,6 +939,61 @@ describe('memberActivityTimer retention', () => {
 
     expect(storedTimerIds()).not.toContain(lateId);
     expect(storedTimerIds()).not.toContain(earlyId);
+    expect(storedTimerIds().length).toBeLessThanOrEqual(MAX_TRACKED_ACTIVITY_TIMERS);
+  });
+
+  it("keeps each list's declaration when two lists declare in the same frame", () => {
+    const teamA = {};
+    const teamB = {};
+    const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
+    const aMs = nowMs - 120_000_000;
+    const aId = timerIdFor('team-a-live', aMs);
+    const bMs = nowMs - 110_000_000;
+    const bId = timerIdFor('team-b-live', bMs);
+    seedStoredTimer(aId, aMs, { elapsedMs: 90_000 });
+    seedStoredTimer(bId, bMs, { elapsedMs: 80_000 });
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS + 40; index += 1) {
+      const staleMs = nowMs - 100_000_000 + index * 1_000;
+      seedStoredTimer(timerIdFor(`backlog-${index}`, staleMs), staleMs);
+    }
+    const aKey = `${STORAGE_PREFIX}${aId}`;
+    const bKey = `${STORAGE_PREFIX}${bId}`;
+    const aPayload = globalThis.localStorage?.getItem(aKey);
+    const bPayload = globalThis.localStorage?.getItem(bKey);
+
+    // Two team lists can be mounted at once, each writing its own anchors. A declaration is
+    // therefore per caller: if the second replaced the first's set instead of adding its own, one of
+    // these two keys would be the oldest thing in the backlog and the first write would take it.
+    declareActivityTimerKeys(teamA, [aId]);
+    declareActivityTimerKeys(teamB, [bId]);
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS + 40; index += 1) {
+      const busyMs = nowMs + 10_000 + index * 1_000;
+      syncTaskTimer(`both-declared-${index}`, busyMs, busyMs);
+    }
+
+    expect(storedTimerIds().filter((id) => id.includes('backlog-'))).toHaveLength(0);
+    expect(globalThis.localStorage?.getItem(aKey)).toBe(aPayload);
+    expect(globalThis.localStorage?.getItem(bKey)).toBe(bPayload);
+
+    // Withdrawing one owner must not withdraw the other with it.
+    declareActivityTimerKeys(teamA, []);
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS; index += 1) {
+      const laterMs = nowMs + 900_000 + index * 1_000;
+      syncTaskTimer(`after-a-withdrew-${index}`, laterMs, laterMs);
+    }
+
+    expect(storedTimerIds()).not.toContain(aId);
+    expect(globalThis.localStorage?.getItem(bKey)).toBe(bPayload);
+    // The bound holds up to the keys that are currently declared: team B's live anchor is the one
+    // record above the cap, and it is there because a caller said it is about to write it. That is
+    // the documented cost of the exemption, not a leak — withdraw the declaration and it goes.
+    expect(storedTimerIds().length).toBeLessThanOrEqual(MAX_TRACKED_ACTIVITY_TIMERS + 1);
+    declareActivityTimerKeys(teamB, []);
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS; index += 1) {
+      const finalMs = nowMs + 2_000_000 + index * 1_000;
+      syncTaskTimer(`after-b-withdrew-${index}`, finalMs, finalMs);
+    }
+    expect(storedTimerIds()).not.toContain(bId);
     expect(storedTimerIds().length).toBeLessThanOrEqual(MAX_TRACKED_ACTIVITY_TIMERS);
   });
 

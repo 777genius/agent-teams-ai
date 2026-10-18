@@ -49,7 +49,17 @@ const pendingRemovalTimerIds = new Set<string>();
 // tell such a key from dead weight: it is on disk, it is not resident, and nothing has read it. The
 // set is the producer's own knowledge, handed over before the first write of the frame — see
 // `declareActivityTimerKeys`.
-const declaredTimerIds = new Set<string>();
+// The declaration is keyed by the calling component, not global: two team lists open at once would
+// otherwise replace each other's sets, and the second declaration would free the first one's
+// unwritten anchors to the drain — the exact failure this exists to prevent.
+const declaredByOwner = new Map<object, Set<string>>();
+
+function isDeclaredTimerId(timerId: string): boolean {
+  for (const ids of declaredByOwner.values()) {
+    if (ids.has(timerId)) return true;
+  }
+  return false;
+}
 
 function parseIsoMs(value: string | null | undefined): number {
   if (!value) return 0;
@@ -333,7 +343,7 @@ function reclaimOldestDormantTimers(count: number): number {
   let index = 0;
   while (index < dormant.length && reclaimed < count) {
     const timerId = dormant[index];
-    if (timers.has(timerId) || declaredTimerIds.has(timerId)) {
+    if (timers.has(timerId) || isDeclaredTimerId(timerId)) {
       index += 1;
       continue;
     }
@@ -471,14 +481,26 @@ export function createMemberActivityTimerId({
  * old as the live interval it belongs to. The caller has the set, so it hands it over here, before
  * the first write, and the drain skips it.
  *
- * The set is replaced, never unioned: keys the caller stops declaring become reclaimable again.
+ * A caller declares for itself: `owner` is any object that lives as long as the declaring
+ * component (a `useRef` value is the natural one), and an empty list withdraws the declaration.
+ * Within one owner the set is replaced, never unioned, so a key the producer stops declaring is
+ * ordinary backlog again.
  * Declaring does not create a record; it only withholds one from deletion until the write lands (or
  * the declaration is replaced by one that omits it).
  */
-export function declareActivityTimerKeys(timerIds: readonly string[]): void {
-  declaredTimerIds.clear();
+export function declareActivityTimerKeys(owner: object, timerIds: readonly string[]): void {
+  if (timerIds.length === 0) {
+    declaredByOwner.delete(owner);
+    return;
+  }
+  let ids = declaredByOwner.get(owner);
+  if (!ids) {
+    ids = new Set<string>();
+    declaredByOwner.set(owner, ids);
+  }
+  ids.clear();
   for (const timerId of timerIds) {
-    if (timerId) declaredTimerIds.add(timerId);
+    if (timerId) ids.add(timerId);
   }
 }
 
@@ -763,5 +785,5 @@ export function resetMemberActivityTimerStoreForTests(): void {
   touchSequence = 0;
   dormantTimerIds = null;
   pendingRemovalTimerIds.clear();
-  declaredTimerIds.clear();
+  declaredByOwner.clear();
 }
