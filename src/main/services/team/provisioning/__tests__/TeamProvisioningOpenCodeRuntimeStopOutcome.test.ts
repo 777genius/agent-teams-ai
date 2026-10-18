@@ -5,6 +5,7 @@ import {
   collectOpenCodeLaneRuntimePids,
   describeOpenCodeRuntimeStopResult,
   resolveOpenCodeRuntimeStopOutcome,
+  sanitizeOpenCodeRuntimeStopDetail,
   summarizeOpenCodeRuntimeStopFailure,
 } from '../TeamProvisioningOpenCodeRuntimeStopOutcome';
 
@@ -81,6 +82,27 @@ describe('describeOpenCodeRuntimeStopResult', () => {
 });
 
 describe('summarizeOpenCodeRuntimeStopFailure', () => {
+  it('redacts quoted credentials in stop results and exception details before bounding', () => {
+    const detail =
+      'abort failed: {"token":"TEST_SECRET_JSON"} AUTH_TOKEN="TEST_SECRET_ENV\nmore secret"';
+    const summary = summarizeOpenCodeRuntimeStopFailure({
+      members: { worker: { stopped: false, diagnostics: [detail] } },
+    });
+
+    expect(summary).toContain('worker: abort failed');
+    expect(summary).not.toContain('TEST_SECRET');
+    expect(summary).not.toContain('more secret');
+    expect(summary).not.toContain('\n');
+    expect(summary.length).toBeLessThanOrEqual(400);
+
+    const exceptionDetail = sanitizeOpenCodeRuntimeStopDetail(
+      `${'x'.repeat(160)} password="TEST_SECRET_PREFIX${'s'.repeat(4_000)}"`,
+      200
+    );
+    expect(exceptionDetail).not.toContain('TEST_SECRET');
+    expect(exceptionDetail.length).toBeLessThanOrEqual(200);
+  });
+
   it('names the run-less reason when the adapter reported nothing', () => {
     expect(summarizeOpenCodeRuntimeStopFailure({ stopped: false, members: {} })).toBe(
       'no stop diagnostics returned'

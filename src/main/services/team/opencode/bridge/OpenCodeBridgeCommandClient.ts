@@ -6,6 +6,7 @@ import {
   extractProfileIdFromSymlinkError,
   isOpenCodeNodeModulesSymlinkError,
 } from '@main/utils/openCodeNodeModulesJunction';
+import { redactDiagnosticAssignments } from '@shared/utils/redactDiagnosticAssignments';
 import { createHash, randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -712,10 +713,10 @@ function collectBridgeFailureText(failure: OpenCodeBridgeFailure): string {
 }
 
 export function redactBridgeDiagnosticText(value: string): string {
-  const capped = value.length > 4_000 ? `${value.slice(0, 4_000)}...[truncated]` : value;
-  return capped
-    .replace(/(authorization:\s*bearer\s+)[^\s]+/gi, '$1[redacted]')
-    .replace(/((?:api[_-]?key|token|password|secret)\s*[=:]\s*)[^\s"'`]+/gi, '$1[redacted]');
+  const redacted = redactDiagnosticAssignments(value, (key) =>
+    /api[_-]?key|token|password|secret|authorization/i.test(key)
+  );
+  return redacted.length > 4_000 ? `${redacted.slice(0, 4_000)}...[truncated]` : redacted;
 }
 
 function shouldRetryEmptyReadOnlyStdout(

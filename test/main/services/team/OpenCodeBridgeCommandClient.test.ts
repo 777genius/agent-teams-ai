@@ -1215,6 +1215,47 @@ describe('OpenCodeBridgeCommandClient', () => {
 });
 
 describe('redactBridgeDiagnosticText', () => {
+  it.each([
+    'abort response: {"token":"TEST_SECRET_JSON","status":"abort failed"}',
+    'abort response: {"Authorization":"Bearer TEST_SECRET_JSON_AUTH"}',
+    'AUTH_TOKEN="TEST_SECRET_QUOTED more secret" status=failed',
+    "password='TEST_SECRET_SINGLE\nsecond line' status=failed",
+    'api-key="TEST_SECRET_ESCAPED\\"still secret" status=failed',
+    JSON.stringify({ body: JSON.stringify({ token: 'TEST_SECRET_NESTED"still secret' }) }),
+    'secret="TEST_SECRET_UNTERMINATED\r\nmore secret',
+  ])('redacts complete quoted values from external diagnostics: %s', (value) => {
+    const redacted = redactBridgeDiagnosticText(value);
+
+    expect(redacted).toContain('[redacted]');
+    expect(redacted).not.toContain('TEST_SECRET');
+    expect(redacted).not.toContain('more secret');
+    expect(redacted).not.toContain('second line');
+    expect(redacted).not.toContain('still secret');
+    expect(redactBridgeDiagnosticText(redacted)).toBe(redacted);
+  });
+
+  it('redacts punctuation inside bare credentials while retaining JSON field delimiters', () => {
+    expect(
+      redactBridgeDiagnosticText(
+        'token=TEST_SECRET,TAIL password=ab;cd AUTH_TOKEN=[redacted],TAIL ' +
+          'secret=abc}def] status=failed\r\n{"token":123,"status":"failed"}'
+      )
+    ).toBe(
+      'token=[redacted] password=[redacted] AUTH_TOKEN=[redacted] ' +
+        'secret=[redacted] status=failed\r\n{"token":[redacted],"status":"failed"}'
+    );
+  });
+
+  it('redacts before bounding even when a quoted value crosses the input cap', () => {
+    const redacted = redactBridgeDiagnosticText(
+      `${'x'.repeat(3_970)} AUTH_TOKEN="TEST_SECRET_PREFIX${'s'.repeat(100)}" tail`
+    );
+
+    expect(redacted).not.toContain('TEST_SECRET');
+    expect(redacted).toContain('[redacted]');
+    expect(redacted.length).toBeLessThan(4_100);
+  });
+
   it('redacts common secret forms and caps large payloads', () => {
     const value = `token=abc password:secret Authorization: Bearer live ${'x'.repeat(5000)}`;
 
