@@ -357,6 +357,7 @@ export const FolderTree = ({
         ? buildTaskCardActions({
             isPinned: model.local.isPinned(n.identity.teamName, n.identity.taskId) ?? false,
             isArchived: n.archived ?? false,
+            isDeleted: n.task.status === 'deleted',
             editingReady: model.state.status === 'ready',
             includeDelete: false,
             handlers: {
@@ -366,6 +367,7 @@ export const FolderTree = ({
               onMarkUnread: () => model.markUnread(n.identity!.teamName, n.identity!.taskId),
               onToggleArchive: () =>
                 model.local.toggleArchive(n.identity!.teamName, n.identity!.taskId),
+              onRestore: () => model.restoreTask(n.identity!.teamName, n.identity!.taskId),
             },
           }).map((action) => ({
             label: t(action.labelKey),

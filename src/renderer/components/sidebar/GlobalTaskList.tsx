@@ -183,6 +183,7 @@ interface GlobalTaskRowProps {
   onMarkUnread: TaskRowAction;
   onRename: TaskRowAction;
   onDelete: TaskRowDeleteAction;
+  onRestore: TaskRowAction;
   onRenameComplete: (teamName: string, taskId: string, newSubject: string) => void;
   onRenameCancel: () => void;
   displaySubjectOverride?: string;
@@ -248,6 +249,7 @@ const GlobalTaskRow = memo(
     onMarkUnread,
     onRename,
     onDelete,
+    onRestore,
     onRenameComplete,
     onRenameCancel,
     displaySubjectOverride,
@@ -275,6 +277,10 @@ const GlobalTaskRow = memo(
       void onDelete(task.teamName, task.id);
     }, [onDelete, task.id, task.teamName]);
 
+    const handleRestore = useCallback(() => {
+      onRestore(task.teamName, task.id);
+    }, [onRestore, task.id, task.teamName]);
+
     return (
       <TaskContextMenu
         task={task}
@@ -285,6 +291,7 @@ const GlobalTaskRow = memo(
         onMarkUnread={handleMarkUnread}
         onRename={handleRename}
         onDelete={handleDelete}
+        onRestore={handleRestore}
       >
         <AnimatedHeightReveal animate={isNew}>
           <SidebarTaskItem
@@ -327,6 +334,7 @@ const GlobalTaskRow = memo(
     prev.onMarkUnread === next.onMarkUnread &&
     prev.onRename === next.onRename &&
     prev.onDelete === next.onDelete &&
+    prev.onRestore === next.onRestore &&
     prev.onRenameComplete === next.onRenameComplete &&
     prev.onRenameCancel === next.onRenameCancel &&
     prev.displaySubjectOverride === next.displaySubjectOverride &&
@@ -356,6 +364,7 @@ interface TaskRowsProps {
   onMarkUnread: TaskRowAction;
   onRename: TaskRowAction;
   onDelete: TaskRowDeleteAction;
+  onRestore: TaskRowAction;
   onRenameComplete: (teamName: string, taskId: string, newSubject: string) => void;
   onRenameCancel: () => void;
   getOwnerColorName: TaskOwnerColorResolver;
@@ -439,6 +448,7 @@ const TaskRows = memo(function TaskRows({
   onMarkUnread,
   onRename,
   onDelete,
+  onRestore,
   onRenameComplete,
   onRenameCancel,
   getOwnerColorName,
@@ -473,6 +483,7 @@ const TaskRows = memo(function TaskRows({
             onMarkUnread={onMarkUnread}
             onRename={onRename}
             onDelete={onDelete}
+            onRestore={onRestore}
             onRenameComplete={onRenameComplete}
             onRenameCancel={onRenameCancel}
             displaySubjectOverride={taskLocalPresentation.renamedSubject}
@@ -522,6 +533,7 @@ function areTaskRowsPropsEqual(prev: TaskRowsProps, next: TaskRowsProps): boolea
     prev.onMarkUnread === next.onMarkUnread &&
     prev.onRename === next.onRename &&
     prev.onDelete === next.onDelete &&
+    prev.onRestore === next.onRestore &&
     prev.onRenameComplete === next.onRenameComplete &&
     prev.onRenameCancel === next.onRenameCancel &&
     areTaskRowsDerivedValuesEqual(prev, next)
@@ -552,16 +564,27 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
 }: GlobalTaskListProps): React.JSX.Element {
   const { t } = useAppTranslation('common');
   const { isLight } = useTheme();
-  const { globalTasks, globalTasksLoading, globalTasksInitialized, fetchAllTasks, softDeleteTask } =
-    useStore(
-      useShallow((s) => ({
-        globalTasks: s.globalTasks,
-        globalTasksLoading: s.globalTasksLoading,
-        globalTasksInitialized: s.globalTasksInitialized,
-        fetchAllTasks: s.fetchAllTasks,
-        softDeleteTask: s.softDeleteTask,
-      }))
-    );
+  const {
+    globalTasks,
+    globalDeletedTasks,
+    globalTasksLoading,
+    globalTasksInitialized,
+    fetchAllTasks,
+    fetchAllDeletedTasks,
+    restoreTask,
+    softDeleteTask,
+  } = useStore(
+    useShallow((s) => ({
+      globalTasks: s.globalTasks,
+      globalDeletedTasks: s.globalDeletedTasks,
+      globalTasksLoading: s.globalTasksLoading,
+      globalTasksInitialized: s.globalTasksInitialized,
+      fetchAllTasks: s.fetchAllTasks,
+      fetchAllDeletedTasks: s.fetchAllDeletedTasks,
+      restoreTask: s.restoreTask,
+      softDeleteTask: s.softDeleteTask,
+    }))
+  );
   const isTeamOffline = useTaskTeamStatus();
   const sidebarTeams = useStore((s) => selectSidebarTeamsDerived(s.teams));
 
@@ -590,6 +613,15 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
       searchInputRef.current?.focus();
     }
   }, [searchVisible]);
+
+  useEffect(() => {
+    if (filters.showDeleted) void fetchAllDeletedTasks();
+  }, [fetchAllDeletedTasks, filters.showDeleted]);
+
+  const viewTasks = useMemo(
+    () => (globalDeletedTasks.length > 0 ? [...globalTasks, ...globalDeletedTasks] : globalTasks),
+    [globalDeletedTasks, globalTasks]
+  );
 
   const taskLocalPresentationByTask = useMemo(
     () =>
@@ -777,6 +809,18 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
     [fetchAllTasks, softDeleteTask, t]
   );
 
+  const handleRestoreTask = useCallback(
+    async (teamName: string, taskId: string): Promise<void> => {
+      try {
+        await restoreTask(teamName, taskId);
+        await fetchAllTasks();
+      } catch {
+        // error via store
+      }
+    },
+    [fetchAllTasks, restoreTask]
+  );
+
   const projectFilterOptions = useTaskProjectFilterOptions(filtersPopoverOpen);
 
   // Resolve project filter from filters state
@@ -784,7 +828,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
 
   const filtered = useMemo(() => {
     return filterGlobalTasks(
-      globalTasks,
+      viewTasks,
       {
         contextId,
         filters,
@@ -797,7 +841,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
     );
   }, [
     contextId,
-    globalTasks,
+    viewTasks,
     filters,
     searchQuery,
     readState,
@@ -1058,7 +1102,6 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
             isTeamOffline={isTeamOffline}
             isLight={isLight}
             pinnedOverride={true}
-            archivedOverride={false}
             showTeamName={groupingMode !== 'none'}
             renamingKey={renamingTaskKey}
             onTogglePin={handleToggleTaskPin}
@@ -1066,6 +1109,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
             onMarkUnread={handleMarkTaskUnread}
             onRename={handleStartTaskRename}
             onDelete={handleDeleteTask}
+            onRestore={handleRestoreTask}
             onRenameComplete={handleRenameComplete}
             onRenameCancel={handleRenameCancel}
             getOwnerColorName={getOwnerColorName}
@@ -1108,6 +1152,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
             onMarkUnread={handleMarkTaskUnread}
             onRename={handleStartTaskRename}
             onDelete={handleDeleteTask}
+            onRestore={handleRestoreTask}
             onRenameComplete={handleRenameComplete}
             onRenameCancel={handleRenameCancel}
             getOwnerColorName={getOwnerColorName}
@@ -1155,6 +1200,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
                   onMarkUnread={handleMarkTaskUnread}
                   onRename={handleStartTaskRename}
                   onDelete={handleDeleteTask}
+                  onRestore={handleRestoreTask}
                   onRenameComplete={handleRenameComplete}
                   onRenameCancel={handleRenameCancel}
                   getOwnerColorName={getOwnerColorName}
@@ -1203,6 +1249,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
                     onMarkUnread={handleMarkTaskUnread}
                     onRename={handleStartTaskRename}
                     onDelete={handleDeleteTask}
+                    onRestore={handleRestoreTask}
                     onRenameComplete={handleRenameComplete}
                     onRenameCancel={handleRenameCancel}
                     getOwnerColorName={getOwnerColorName}

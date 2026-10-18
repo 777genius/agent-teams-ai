@@ -37,6 +37,10 @@ export function useTaskFoldersHost(
   const panel = useSyncExternalStore(panelController.subscribe, panelController.getSnapshot);
   const move = useSyncExternalStore(moveRequest.subscribe, moveRequest.getSnapshot);
   const tasks = useStore((s) => s.globalTasks);
+  const globalDeletedTasks = useStore((s) => s.globalDeletedTasks);
+  const fetchAllDeletedTasks = useStore((s) => s.fetchAllDeletedTasks);
+  const restoreTask = useStore((s) => s.restoreTask);
+  const fetchAllTasks = useStore((s) => s.fetchAllTasks);
   const teams = useStore((s) => s.teams);
   const teamByName = useStore((s) => s.teamByName);
   const isTeamOffline = useTaskTeamStatus();
@@ -54,16 +58,23 @@ export function useTaskFoldersHost(
     height: number;
     width: number;
   } | null>(null);
+  const viewTasks = useMemo(
+    () => (globalDeletedTasks.length > 0 ? [...tasks, ...globalDeletedTasks] : tasks),
+    [globalDeletedTasks, tasks]
+  );
+  useEffect(() => {
+    if (view.filters.showDeleted) void fetchAllDeletedTasks();
+  }, [fetchAllDeletedTasks, view.filters.showDeleted]);
   const canonicalProjection = useMemo(
     () =>
       projectFolders(
         state.snapshot,
-        sortGlobalTasks(tasks, 'time', contextId),
+        sortGlobalTasks(viewTasks, 'time', contextId),
         local.isArchived,
         local.getRenamedSubject,
         true
       ),
-    [state.snapshot, tasks, local, contextId]
+    [state.snapshot, viewTasks, local, contextId]
   );
   const unreadTaskCounts = useMemo(
     () =>
@@ -85,7 +96,7 @@ export function useTaskFoldersHost(
   );
   const projection = useMemo(() => {
     const visibleTasks = filterGlobalTasks(
-      tasks,
+      viewTasks,
       {
         contextId,
         filters: view.filters,
@@ -101,7 +112,7 @@ export function useTaskFoldersHost(
     );
     return applyVisibleTaskChildren(
       canonicalProjection,
-      tasks,
+      viewTasks,
       (task) => visibleTaskKeys.has(`task:${JSON.stringify([task.teamName, task.id])}`),
       (siblings) =>
         view.sortMode === 'manual'
@@ -116,7 +127,7 @@ export function useTaskFoldersHost(
     local,
     readState,
     taskOrder,
-    tasks,
+    viewTasks,
     view.filters,
     view.searchQuery,
     view.sortMode,
@@ -159,17 +170,17 @@ export function useTaskFoldersHost(
   }, []);
   useEffect(() => {
     folderController.setCatalog(
-      tasks.map((task) => ({ teamName: task.teamName, taskId: task.id }))
+      viewTasks.map((task) => ({ teamName: task.teamName, taskId: task.id }))
     );
-  }, [tasks]);
+  }, [viewTasks]);
   useEffect(() => {
     const source = panelController.getSnapshot().dragSource;
     if (
       source?.startsWith('task:') &&
-      !tasks.some((task) => `task:${JSON.stringify([task.teamName, task.id])}` === source)
+      !viewTasks.some((task) => `task:${JSON.stringify([task.teamName, task.id])}` === source)
     )
       panelController.end();
-  }, [tasks]);
+  }, [viewTasks]);
   const registerPanel = useCallback(
     (element: HTMLDivElement | null) => {
       panelRef.current = element;
@@ -271,6 +282,16 @@ export function useTaskFoldersHost(
     },
     markUnread: (team: string, id: string): void => {
       markTaskUnread({ contextId, teamName: team, taskId: id });
+    },
+    restoreTask: (team: string, id: string): void => {
+      void (async () => {
+        try {
+          await restoreTask(team, id);
+          await fetchAllTasks();
+        } catch {
+          // error via store
+        }
+      })();
     },
   };
 }

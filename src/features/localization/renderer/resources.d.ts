@@ -774,6 +774,7 @@ export default interface Resources {
       "markUnread": "Mark as unread",
       "pin": "Pin",
       "rename": "Rename",
+      "restoreTask": "Restore task",
       "unarchive": "Unarchive",
       "unpin": "Unpin"
     },

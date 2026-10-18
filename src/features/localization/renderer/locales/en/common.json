@@ -663,6 +663,7 @@
     "unpin": "Unpin",
     "pin": "Pin",
     "rename": "Rename",
+    "restoreTask": "Restore task",
     "markUnread": "Mark as unread",
     "unarchive": "Unarchive",
     "archive": "Archive",
