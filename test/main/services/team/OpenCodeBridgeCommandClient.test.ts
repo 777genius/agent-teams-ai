@@ -1215,6 +1215,54 @@ describe('OpenCodeBridgeCommandClient', () => {
 });
 
 describe('redactBridgeDiagnosticText', () => {
+  it.each([
+    'token={"value":"TEST_SECRET"} status=ok',
+    'API_KEY=["TEST_SECRET",{"value":"TEST_SECRET"}] status=ok',
+    'refresh token: {"access":"TEST_SECRET"} status=ok',
+    'Authorization: Bearer {"value":"TEST_SECRET"} status=ok',
+  ])('redacts bare-key containers and preserves public diagnostics: %s', (value) => {
+    const redacted = redactBridgeDiagnosticText(value);
+    expect(redacted).not.toContain('TEST_SECRET');
+    expect(redacted).toContain('[redacted] status=ok');
+    expect(redactBridgeDiagnosticText(redacted)).toBe(redacted);
+  });
+
+  it.each([
+    'token={"value":"TEST_SECRET"',
+    'token=["TEST_SECRET"}',
+    'token={}TEST_SECRET status=ok',
+    'token=[]TEST_SECRET status=ok',
+    'token=prefix"TEST_SECRET suffix" status=ok',
+    "token=prefix'TEST_SECRET suffix' status=ok",
+    'token=prefix`TEST_SECRET` status=ok',
+    'token=prefix\\ TEST_SECRET status=ok',
+    'token=prefix\\\"TEST_SECRET status=ok',
+    'token="TEST_SECRET"TEST_SECRET_SUFFIX status=ok',
+    "token='TEST_SECRET'TEST_SECRET_SUFFIX status=ok",
+    "token={'value':'TEST_SECRET'} status=ok",
+  ])('fails closed for unsupported bare credential syntax: %s', (value) => {
+    const redacted = redactBridgeDiagnosticText(value);
+    expect(redacted).not.toContain('TEST_SECRET');
+    expect(redactBridgeDiagnosticText(redacted)).toBe(redacted);
+  });
+
+  it.each([
+    '{"credential":"TEST_SECRET"}',
+    'credentials="TEST_SECRET" status=ok',
+    'Authorization: Negotiate TEST_SECRET',
+    'Authorization: "Bearer TEST_SECRET" status=public',
+    'Authorization: Digest username="u",response="TEST_SECRET"',
+    'cookie=session-TEST_SECRET status=ok',
+    'Cookie: sid=TEST_SECRET; other=TEST_SECRET_SECOND',
+    'Set-Cookie: sid=TEST_SECRET; other=TEST_SECRET_SECOND\r\n status=private',
+    '{"Set-Cookie":"session=TEST_SECRET; Path=/"}',
+  ])('redacts generic credentials before any raw log sink: %s', (value) => {
+    const redacted = redactBridgeDiagnosticText(value);
+    expect(redacted).not.toContain('TEST_SECRET');
+    expect(redacted).toContain('[redacted]');
+    expect(redactBridgeDiagnosticText(redacted)).toBe(redacted);
+  });
+
   it('keeps long dashed non-assignments from blocking diagnostic redaction', () => {
     const started = performance.now();
     const redacted = redactBridgeDiagnosticText(`AUTH_TOKEN="TEST_SECRET" ${'x-'.repeat(8_000)}`);

@@ -23,20 +23,46 @@ export function redactDiagnosticAssignments(
     const scheme = /^(?:Bearer|Basic)\s+/i.exec(value.slice(start));
     if (scheme) start += scheme[0].length;
     const quote = value[start + (value[start] === '\\' ? 1 : 0)];
+    const quoted = quote === '"' || quote === "'" || quote === '`';
+    const container =
+      (value[start] === '{' || value[start] === '[') && !value.startsWith('[redacted]', start);
     let end = start;
     // Support raw and once-escaped JSON. Deeper or unsupported encodings must
     // not expose a suffix when their quote boundaries cannot be established.
-    if ((match[2]?.length ?? 1) > 2 || value.startsWith('\\\\', start)) {
+    if (!jsonField && /cookie/i.test(key)) {
+      // Bare cookie headers can contain several whitespace-delimited pairs.
+      // Without a JSON field boundary, discard the remaining diagnostic.
       end = value.length;
-    } else if (quote === '"' || quote === "'" || quote === '`') {
+    } else if (!jsonField && /authorization/i.test(key) && !scheme) {
+      // Unknown HTTP auth schemes may carry several credential parameters.
+      end = value.length;
+    } else if ((match[2]?.length ?? 1) > 2 || value.startsWith('\\\\', start)) {
+      end = value.length;
+    } else if (quoted) {
       end = quotedValueEnd(value, start);
     } else if (jsonField && value.startsWith('[redacted]', start)) {
       end += '[redacted]'.length;
-    } else if (jsonField && (value[start] === '{' || value[start] === '[')) {
+    } else if (container) {
       end = containerValueEnd(value, start, match[2]?.startsWith('\\') ?? false);
     } else {
       const delimiter = jsonField ? /[\s,"'`;}\]]/ : /[\s"'`]/;
-      while (end < value.length && !delimiter.test(value.charAt(end))) end += 1;
+      while (end < value.length && !delimiter.test(value.charAt(end))) {
+        // Shell escapes/concatenation have no reliable boundary in diagnostic prose.
+        if (!jsonField && value[end] === '\\') {
+          end = value.length;
+          break;
+        }
+        end += 1;
+      }
+      if (!jsonField && /["'`]/.test(value.charAt(end))) end = value.length;
+    }
+    if (
+      (container || quoted) &&
+      !jsonField &&
+      end < value.length &&
+      !/\s/.test(value.charAt(end))
+    ) {
+      end = value.length;
     }
     if (jsonField) {
       // A valid value followed by malformed text is still unsafe; this also

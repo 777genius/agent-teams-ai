@@ -714,7 +714,7 @@ function collectBridgeFailureText(failure: OpenCodeBridgeFailure): string {
 
 export function redactBridgeDiagnosticText(value: string): string {
   const redacted = redactDiagnosticAssignments(value, (key) =>
-    /api[_-]?key|token|password|secret|authorization/i.test(key)
+    /api[_-]?key|token|password|secret|authorization|credential|cookie/i.test(key)
   );
   return redacted.length > 4_000 ? `${redacted.slice(0, 4_000)}...[truncated]` : redacted;
 }

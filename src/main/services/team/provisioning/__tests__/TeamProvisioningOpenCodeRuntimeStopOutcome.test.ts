@@ -82,9 +82,32 @@ describe('describeOpenCodeRuntimeStopResult', () => {
 });
 
 describe('summarizeOpenCodeRuntimeStopFailure', () => {
+  it('redacts bare containers and generic credentials before emitting a stop warning', () => {
+    const summary = summarizeOpenCodeRuntimeStopFailure({
+      diagnostics: [
+        'abort failed: token={"value":"TEST_SECRET_OBJECT"} ' +
+          'credentials="TEST_SECRET_CREDENTIAL" status=public cookie=session-TEST_SECRET_COOKIE',
+      ],
+    });
+    expect(summary).not.toContain('TEST_SECRET');
+    expect(summary).toContain('status=public');
+    expect(summary).toContain('[redacted]');
+    expect(sanitizeOpenCodeRuntimeStopDetail(summary)).toBe(summary);
+  });
+
+  it('removes every cookie pair from console-facing stop details', () => {
+    const detail = sanitizeOpenCodeRuntimeStopDetail(
+      'abort failed: Cookie: sid=TEST_SECRET; other=TEST_SECRET_SECOND\r\n folded=TEST_SECRET_THIRD'
+    );
+    expect(detail).toBe('abort failed: Cookie: [redacted]');
+  });
+
   it.each([
     [
-      JSON.stringify({ token: { value: 'TEST_SECRET', nested: ['}"TEST_SECRET'] }, status: 'public' }),
+      JSON.stringify({
+        token: { value: 'TEST_SECRET', nested: ['}"TEST_SECRET'] },
+        status: 'public',
+      }),
       true,
     ],
     ['{"token":["TEST_SECRET",{"nested":"TEST_SECRET"}],"status":"public"}', true],
