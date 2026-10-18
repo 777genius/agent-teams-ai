@@ -1234,6 +1234,12 @@ describe('memberActivityTimer retention', () => {
       syncTaskTimer(`rotate-${index}`, laterMs, laterMs);
     }
 
+    // Stop adding keys so the amortized drain can converge instead of chasing new insertions.
+    const steadyMs = nowMs + 59_000;
+    for (let index = 0; index < 32; index += 1) {
+      syncTaskTimer('rotate-59', steadyMs, steadyMs + index * 1_000);
+    }
+
     const remaining = storedTimerIds();
     for (const anchor of anchors) expect(remaining).not.toContain(anchor?.timerId);
     expect(remaining.length).toBeLessThanOrEqual(MAX_TRACKED_ACTIVITY_TIMERS);
