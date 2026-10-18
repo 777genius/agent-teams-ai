@@ -1822,6 +1822,14 @@ async function main() {
       deliveredToInbox: boolean;
       runtimeDelivered: boolean | null;
     }[],
+    heldIdentityObservations: [] as {
+      label: string;
+      processFound: boolean;
+      nodeImage: boolean;
+      programLiteralInCommand: boolean;
+      programCaseSlashInCommand: boolean;
+      programNameInCommand: boolean;
+    }[],
     fileHashes: {} as Record<string, string>,
     peersConfirmed: false,
     heldStopConfirmed: false,
@@ -2145,11 +2153,12 @@ async function main() {
       const program = path.join(desktop.projectPath, name);
       const script = `const fs=require('node:fs');fs.writeFileSync(${JSON.stringify(marker + '.tmp')},JSON.stringify({pid:process.pid,nonce:${JSON.stringify(token)}}));fs.renameSync(${JSON.stringify(marker + '.tmp')},${JSON.stringify(marker)});setInterval(()=>{},1000);`;
       await writeFile(program, script);
+      const heldInstruction = `Run exactly ${command(name)} in foreground with timeout 660000ms. Preserve the literal absolute script path; do not rewrite it as a relative path. Do not edit the script, detach, delegate or complete this task. The host stops this team.`;
       const task = await app.call('createTask', {
         subject: 'Hold owned foreground command',
         owner: 'alice',
         startImmediately: true,
-        prompt: `${base}\nRun ${command(name)} in foreground with timeout 660000ms. Do not edit the script, detach, delegate or complete this task. The host stops this team.`,
+        prompt: `${base}\n${heldInstruction}`,
       });
       proof.taskIds.push(task.id);
       taskOwners.set(task.id, 'alice');
@@ -2186,7 +2195,7 @@ async function main() {
         const followUp = await app.call('sendMessage', {
           member: 'alice',
           from: 'user',
-          text: `Run ${command(name)} in foreground now and keep it running. Do not complete the task.`,
+          text: heldInstruction,
           messageId: randomUUID(),
         });
         proof.holdFollowUps.push({
@@ -2200,6 +2209,19 @@ async function main() {
       assert(started, 'Held marker required after follow-up');
       assert.equal(started.nonce, token);
       const original = await identity(started.pid);
+      const observedCommand = original?.command ?? '';
+      const diagnosticPathForm = (value: string) => value.replaceAll('\\', '/').toLowerCase();
+      proof.heldIdentityObservations.push({
+        label,
+        processFound: original !== null,
+        nodeImage: original !== null && path.basename(original.executable).toLowerCase() === 'node.exe',
+        programLiteralInCommand: observedCommand.includes(program),
+        programCaseSlashInCommand: diagnosticPathForm(observedCommand).includes(
+          diagnosticPathForm(program)
+        ),
+        programNameInCommand: observedCommand.toLowerCase().includes(name.toLowerCase()),
+      });
+      await checkpoint(proof.stage);
       assert(
         original &&
           path.basename(original.executable).toLowerCase() === 'node.exe' &&
