@@ -1077,8 +1077,39 @@ async function packagedStartupSnapshot(
       const wireStatusValue = field(input, 'wireStatus');
       const wireStatus = wireCode === 'http_failure' && Number.isSafeInteger(wireStatusValue) &&
         Number(wireStatusValue) >= 100 && Number(wireStatusValue) <= 599 ? Number(wireStatusValue) : undefined;
+      let serverFailure: Record<string, string> | undefined;
+      if (phase === 'location' && wireCode === 'http_failure' && wireStatus === 500) {
+        const server = field(input, 'serverFailure');
+        const kindValue = field(server, 'kind');
+        const kind = ['Fail', 'Die', 'Interrupt', 'unknown'].find(item => item === kindValue);
+        if (field(server, 'operation') === 'location' && kind) {
+          serverFailure = { operation: 'location', kind };
+          const optional: Record<string, readonly string[]> = {
+            tag: ['PlatformError', 'AppProcessError', 'SqlError', 'SchemaError', 'FileSystem.DirectoryAccessDeniedError',
+              'FileSystem.DirectoryNotFoundError', 'PluginModule.LoadError', 'Provider.LoadError'],
+            name: ['Error', 'TypeError', 'ReferenceError', 'RangeError', 'SyntaxError', 'AggregateError', 'AbortError'],
+            module: ['FileSystem', 'ChildProcess'],
+            method: ['access', 'chmod', 'chown', 'copy', 'copyFile', 'glob', 'link', 'makeDirectory', 'readDirectory',
+              'readFile', 'readLink', 'realPath', 'rename', 'stat', 'symlink', 'sync', 'truncate', 'utime', 'writeFile',
+              'close', 'endStdin', 'identity', 'kill', 'outputLimit', 'readOutput', 'resolve', 'retire', 'spawn', 'status',
+              'stdinAlreadyBound', 'unsupportedCommand', 'unsupportedDescriptor', 'unsupportedSignal', 'unsupportedUnref',
+              'validateOutput', 'writeStdin'],
+            reason: ['BadArgument', 'NotFound', 'PermissionDenied', 'AlreadyExists', 'BadResource', 'Busy', 'Unknown',
+              'ConnectionError', 'AuthenticationError', 'AuthorizationError', 'SqlSyntaxError', 'UniqueViolation',
+              'ConstraintError', 'DeadlockError', 'SerializationError', 'LockTimeoutError', 'StatementTimeoutError', 'UnknownError'],
+            errno: ['EPERM', 'EACCES', 'ENOENT', 'ENOTDIR', 'EISDIR', 'EINVAL', 'UNKNOWN', 'EIO', 'ENOSYS', 'EBUSY', 'EEXIST', 'ELOOP'],
+            sqlCode: ['SQLITE_AUTH', 'SQLITE_PERM', 'SQLITE_CONSTRAINT', 'SQLITE_BUSY', 'SQLITE_LOCKED', 'SQLITE_CANTOPEN', 'SQLITE_CONSTRAINT_UNIQUE'],
+          };
+          for (const [key, allowed] of Object.entries(optional)) {
+            const value = field(server, key);
+            const selected = allowed.find(item => item === value);
+            if (selected) serverFailure[key] = selected;
+          }
+        }
+      }
       return { phase, ...(reason ? { client: { reason, ...(status === undefined ? {} : { status }) } } : {}),
-        ...(wireCode ? { wireCode } : {}), ...(wireStatus === undefined ? {} : { wireStatus }) };
+        ...(wireCode ? { wireCode } : {}), ...(wireStatus === undefined ? {} : { wireStatus }),
+        ...(serverFailure ? { serverFailure } : {}) };
     } catch { return null; } // Proxy/accessor failures never contribute raw diagnostic data.
   };
   const nativeAlias = (input: unknown) => {

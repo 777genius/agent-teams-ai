@@ -882,6 +882,48 @@ it.each([
   for (const wireStatus of [100, 401, 500, 599])
     expect(project({ phase: 'info', wireCode: 'http_failure', wireStatus, client: { reason: 'Transport', status: wireStatus }, ...raw }))
       .toEqual({ phase: 'info', wireCode: 'http_failure', wireStatus, client: { reason: 'Transport' } });
+  const catalog500 = { phase: 'location', wireCode: 'http_failure', wireStatus: 500 };
+  const serverFailure = { operation: 'location', kind: 'Fail', tag: 'PlatformError', name: 'Error',
+    module: 'FileSystem', method: 'readDirectory', reason: 'PermissionDenied', errno: 'EACCES', sqlCode: 'SQLITE_PERM' };
+  expect(project({ ...catalog500, serverFailure: { ...serverFailure, ...raw, causes: [raw] }, ...raw }))
+    .toEqual({ ...catalog500, serverFailure });
+  for (const kind of ['Fail', 'Die', 'Interrupt', 'unknown'])
+    expect(project({ ...catalog500, serverFailure: { operation: 'location', kind } }))
+      .toEqual({ ...catalog500, serverFailure: { operation: 'location', kind } });
+  const serverEnums = {
+    tag: ['PlatformError', 'AppProcessError', 'SqlError', 'SchemaError', 'FileSystem.DirectoryAccessDeniedError',
+      'FileSystem.DirectoryNotFoundError', 'PluginModule.LoadError', 'Provider.LoadError'],
+    name: ['Error', 'TypeError', 'ReferenceError', 'RangeError', 'SyntaxError', 'AggregateError', 'AbortError'],
+    module: ['FileSystem', 'ChildProcess'],
+    method: ['access', 'chmod', 'chown', 'copy', 'copyFile', 'glob', 'link', 'makeDirectory', 'readDirectory',
+      'readFile', 'readLink', 'realPath', 'rename', 'stat', 'symlink', 'sync', 'truncate', 'utime', 'writeFile',
+      'close', 'endStdin', 'identity', 'kill', 'outputLimit', 'readOutput', 'resolve', 'retire', 'spawn', 'status',
+      'stdinAlreadyBound', 'unsupportedCommand', 'unsupportedDescriptor', 'unsupportedSignal', 'unsupportedUnref',
+      'validateOutput', 'writeStdin'],
+    reason: ['BadArgument', 'NotFound', 'PermissionDenied', 'AlreadyExists', 'BadResource', 'Busy', 'Unknown',
+      'ConnectionError', 'AuthenticationError', 'AuthorizationError', 'SqlSyntaxError', 'UniqueViolation',
+      'ConstraintError', 'DeadlockError', 'SerializationError', 'LockTimeoutError', 'StatementTimeoutError', 'UnknownError'],
+    errno: ['EPERM', 'EACCES', 'ENOENT', 'ENOTDIR', 'EISDIR', 'EINVAL', 'UNKNOWN', 'EIO', 'ENOSYS', 'EBUSY', 'EEXIST', 'ELOOP'],
+    sqlCode: ['SQLITE_AUTH', 'SQLITE_PERM', 'SQLITE_CONSTRAINT', 'SQLITE_BUSY', 'SQLITE_LOCKED', 'SQLITE_CANTOPEN', 'SQLITE_CONSTRAINT_UNIQUE'],
+  };
+  for (const [key, allowed] of Object.entries(serverEnums)) {
+    for (const value of allowed)
+      expect(project({ ...catalog500, serverFailure: { operation: 'location', kind: 'Fail', [key]: value } }))
+        .toEqual({ ...catalog500, serverFailure: { operation: 'location', kind: 'Fail', [key]: value } });
+    for (const value of ['PRIVATE_VALUE', [], {}, 500])
+      expect(project({ ...catalog500, serverFailure: { operation: 'location', kind: 'Fail', [key]: value } }))
+        .toEqual({ ...catalog500, serverFailure: { operation: 'location', kind: 'Fail' } });
+  }
+  for (const invalid of [null, [], {}, { kind: 'Fail' }, { operation: 'location' },
+    { operation: 'info', kind: 'Fail' }, { operation: 'location', kind: 'PRIVATE_KIND' }])
+    expect(project({ ...catalog500, serverFailure: invalid })).toEqual(catalog500);
+  for (const phase of ['client-setup', 'info', 'integration-ready'])
+    expect(project({ ...catalog500, phase, serverFailure })).toEqual({ ...catalog500, phase });
+  for (const wireCode of ['media_type', 'transport_failure'])
+    expect(project({ ...catalog500, wireCode, serverFailure })).toEqual({ phase: 'location', wireCode });
+  for (const wireStatus of [401, 499, 501, 599, undefined])
+    expect(project({ ...catalog500, wireStatus, serverFailure }))
+      .toEqual({ phase: 'location', wireCode: 'http_failure', ...(wireStatus === undefined ? {} : { wireStatus }) });
   for (const status of [99, 600, 100.5, '503', NaN, Infinity])
     expect(project({ phase: 'info', client: { reason: 'UnexpectedStatus', status } }))
       .toEqual({ phase: 'info', client: { reason: 'UnexpectedStatus' } });
@@ -900,6 +942,10 @@ it.each([
     .toEqual({ phase: 'info' });
   expect(project(Object.defineProperty({ phase: 'info', wireCode: 'http_failure' }, 'wireStatus', { get: getter })))
     .toEqual({ phase: 'info', wireCode: 'http_failure' });
+  expect(project({ ...catalog500, serverFailure: Object.defineProperty({}, 'operation', { get: getter }) }))
+    .toEqual(catalog500);
+  expect(project({ ...catalog500, serverFailure: Object.defineProperty({ operation: 'location', kind: 'Fail' }, 'tag', { get: getter }) }))
+    .toEqual({ ...catalog500, serverFailure: { operation: 'location', kind: 'Fail' } });
   expect(project(new Proxy({}, { getOwnPropertyDescriptor: getter }))).toBeNull();
   expect(getterCalls).toBe(1); // Only the proxy's metadata trap runs; property getters never run.
 
@@ -925,13 +971,13 @@ it.each([
     await writeFile(path.join(directory, 'state.json'), JSON.stringify({ binding, state: 'starting', members: [] }));
     await writeFile(path.join(diagnostics, `${randomUUID()}.json`), JSON.stringify({
       schemaVersion: 1, phase: 'execution-host-startup', category: 'run_control_foreign',
-      catalog: { phase: 'location', client: { reason: 'UnexpectedStatus', status: 503, ...raw }, wireCode: 'http_failure', wireStatus: 401, ...raw },
+      catalog: { phase: 'location', client: { reason: 'UnexpectedStatus', status: 503, ...raw }, wireCode: 'http_failure', wireStatus: 500, serverFailure: { ...serverFailure, ...raw }, ...raw },
     }));
     const packet = functionName === 'snapshotStartupFailure'
       ? await snapshot({ directory, binding }, 'TEST-session', {}, '/TEST-sdk', [])
       : await snapshot(root, dataRoot, binding.teamId, binding.runId);
     expect(packet.diagnostics).toHaveLength(1);
-    expect(packet.diagnostics[0]!.catalog).toEqual({ phase: 'location', client: { reason: 'UnexpectedStatus', status: 503 }, wireCode: 'http_failure', wireStatus: 401 });
+    expect(packet.diagnostics[0]!.catalog).toEqual({ phase: 'location', client: { reason: 'UnexpectedStatus', status: 503 }, wireCode: 'http_failure', wireStatus: 500, serverFailure });
     expect(JSON.stringify(packet)).not.toContain('PRIVATE_');
   } finally {
     if (previousRoot === undefined) delete process.env.CLAUDE_MULTIMODEL_DATA_HOME;
