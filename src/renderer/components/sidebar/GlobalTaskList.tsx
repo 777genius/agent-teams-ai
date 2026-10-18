@@ -587,6 +587,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
   );
   const isTeamOffline = useTaskTeamStatus();
   const sidebarTeams = useStore((s) => selectSidebarTeamsDerived(s.teams));
+  const teamCatalogKey = useStore((s) => s.teams.map((team) => team.teamName).join('|'));
 
   const [internalFilters, setInternalFilters] = useState(defaultTaskFiltersState);
   const [internalFiltersPopoverOpen, setInternalFiltersPopoverOpen] = useState(false);
@@ -615,8 +616,9 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
   }, [searchVisible]);
 
   useEffect(() => {
-    if (filters.showDeleted) void fetchAllDeletedTasks();
-  }, [fetchAllDeletedTasks, filters.showDeleted]);
+    if (!filters.showDeleted) return;
+    void fetchAllDeletedTasks();
+  }, [contextId, fetchAllDeletedTasks, filters.showDeleted, teamCatalogKey]);
 
   const viewTasks = useMemo(
     () => (globalDeletedTasks.length > 0 ? [...globalTasks, ...globalDeletedTasks] : globalTasks),
@@ -814,11 +816,17 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
       try {
         await restoreTask(teamName, taskId);
         await fetchAllTasks();
-      } catch {
-        // error via store
+      } catch (err) {
+        void confirm({
+          title: t('tasksPanel.restoreFailed.title'),
+          message:
+            err instanceof Error ? err.message : t('tasksPanel.restoreFailed.fallbackMessage'),
+          confirmLabel: t('tasksPanel.restoreFailed.confirmLabel'),
+          variant: 'danger',
+        });
       }
     },
-    [fetchAllTasks, restoreTask]
+    [fetchAllTasks, restoreTask, t]
   );
 
   const projectFilterOptions = useTaskProjectFilterOptions(filtersPopoverOpen);

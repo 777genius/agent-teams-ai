@@ -638,6 +638,11 @@
       "fallbackMessage": "Произошла непредвиденная ошибка",
       "confirmLabel": "OK"
     },
+    "restoreFailed": {
+      "title": "Не удалось восстановить задачу",
+      "fallbackMessage": "Произошла непредвиденная ошибка",
+      "confirmLabel": "OK"
+    },
     "sort": {
       "byTime": "По времени",
       "byUnread": "По непрочитанным",

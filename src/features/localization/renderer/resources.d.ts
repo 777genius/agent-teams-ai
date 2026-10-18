@@ -878,6 +878,11 @@ export default interface Resources {
       },
       "hideArchived": "Hide archived",
       "pinned": "Pinned",
+      "restoreFailed": {
+        "confirmLabel": "OK",
+        "fallbackMessage": "An unexpected error occurred",
+        "title": "Failed to restore task"
+      },
       "searchPlaceholder": "Search tasks...",
       "showArchived": "Show archived",
       "showLess": "Show less",

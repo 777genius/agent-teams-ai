@@ -638,6 +638,11 @@
       "fallbackMessage": "An unexpected error occurred",
       "confirmLabel": "OK"
     },
+    "restoreFailed": {
+      "title": "Failed to restore task",
+      "fallbackMessage": "An unexpected error occurred",
+      "confirmLabel": "OK"
+    },
     "sort": {
       "byTime": "By time",
       "byUnread": "By unread",

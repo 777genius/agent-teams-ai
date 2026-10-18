@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
+import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { buildTaskFilterTeamOptions } from '@renderer/components/sidebar/taskFilterOptions';
 import {
   getTaskUnreadCount,
@@ -48,6 +50,7 @@ export function useTaskFoldersHost(
   const local = useTaskLocalState();
   const readState = useReadStateSnapshot();
   const view = useTaskViewState('tree');
+  const { t } = useAppTranslation('common');
   const taskOrder = view.sortMode === 'manual' ? 'manual' : 'computed';
   const viewSetSortOpen = view.setSortOpen;
   const viewSetFiltersOpen = view.setFiltersOpen;
@@ -62,9 +65,11 @@ export function useTaskFoldersHost(
     () => (globalDeletedTasks.length > 0 ? [...tasks, ...globalDeletedTasks] : tasks),
     [globalDeletedTasks, tasks]
   );
+  const teamCatalogKey = useMemo(() => teams.map((team) => team.teamName).join('|'), [teams]);
   useEffect(() => {
-    if (view.filters.showDeleted) void fetchAllDeletedTasks();
-  }, [fetchAllDeletedTasks, view.filters.showDeleted]);
+    if (!view.filters.showDeleted) return;
+    void fetchAllDeletedTasks();
+  }, [contextId, fetchAllDeletedTasks, teamCatalogKey, view.filters.showDeleted]);
   const canonicalProjection = useMemo(
     () =>
       projectFolders(
@@ -288,8 +293,16 @@ export function useTaskFoldersHost(
         try {
           await restoreTask(team, id);
           await fetchAllTasks();
-        } catch {
-          // error via store
+        } catch (error) {
+          void confirm({
+            title: t('tasksPanel.restoreFailed.title'),
+            message:
+              error instanceof Error
+                ? error.message
+                : t('tasksPanel.restoreFailed.fallbackMessage'),
+            confirmLabel: t('tasksPanel.restoreFailed.confirmLabel'),
+            variant: 'danger',
+          });
         }
       })();
     },
