@@ -274,7 +274,7 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
       return filePath;
     }
     // Both the current graph and the frozen V2 floor ship multi-platform bun-pty libraries.
-    // Only exact known files may be pruned, with a compatible sibling in the same package.
+    // Require a compatible sibling except for the frozen, unused Windows ARM64 floor PTY below.
     const bunPtyReleases = [
       'bun-pty/rust-pty/target/release',
       '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release',
@@ -297,6 +297,24 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
       Object.hasOwn(libraryTargets, library) &&
       bunPtyReleases.some((root) => portableRuntimeGraph[1] === `${root}/${library}`)
     ) {
+      // The frozen floor's PTY is not used by bounded Windows transports. Retain
+      // its preexisting ARM64 packaging exception without enabling ARM64 execution.
+      if (
+        targetPlatform === 'win32' && targetArch === 'arm64' &&
+        portableRuntimeGraph[1] === `${bunPtyReleases[1]}/${library}` &&
+        ['librust_pty.so', 'librust_pty_arm64.so', 'librust_pty.dylib', 'librust_pty_arm64.dylib', 'rust_pty.dll'].includes(library)
+      ) {
+        try {
+          const manifestPath = path.join(path.dirname(filePath), '../../..', 'package.json');
+          const manifestStat = await fs.promises.lstat(manifestPath);
+          if (manifestStat.isFile() && !manifestStat.isSymbolicLink() && manifestStat.size <= 65536) {
+            const manifest = JSON.parse(await fs.promises.readFile(manifestPath, 'utf8'));
+            if (manifest?.name === 'bun-pty' && manifest.version === '0.4.8') return filePath;
+          }
+        } catch {
+          // An absent or invalid frozen-package manifest cannot authorize this exception.
+        }
+      }
       // A malformed target-named file must fail validation rather than disappear.
       if (matchesTarget(libraryTargets[library])) return null;
       for (const [filename, target] of Object.entries(libraryTargets)) {

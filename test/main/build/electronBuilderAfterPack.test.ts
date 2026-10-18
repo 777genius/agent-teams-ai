@@ -450,7 +450,7 @@ describe('electron-builder afterPack', () => {
     if (siblingBytes) expect(fs.readFileSync(sibling)).toEqual(siblingBytes);
   });
 
-  it('rejects an older floor package without a Windows arm64 sibling even if the root package has one', async () => {
+  it('preserves Windows arm64 packaging for only the verified frozen floor PTY', async () => {
     const tempDir = createTempDir();
     tempDirs.push(tempDir);
     const graph = path.join(tempDir, 'resources/runtime/local-cli/node_modules');
@@ -463,10 +463,42 @@ describe('electron-builder afterPack', () => {
       ['librust_pty_arm64.dylib', createMachOBuffer('arm64')],
       ['rust_pty.dll', createPortableExecutableBuffer('x64')],
     ] as const;
+    const manifest = path.join(floor, '../../..', 'package.json');
+    const manifestBytes = Buffer.from(JSON.stringify({ name: 'bun-pty', version: '0.4.8' }));
+    writeFile(manifest, manifestBytes);
     for (const [name, bytes] of oldLibraries) writeFile(path.join(floor, name), bytes);
+    // The outer compatibility check must retain compatible bytes even under an old foreign filename.
+    const compatible = path.join(floor, 'librust_pty_arm64.so');
+    const compatibleBytes = createPortableExecutableBuffer('arm64');
+    writeFile(compatible, compatibleBytes);
+    await afterPackModule({ appOutDir: tempDir, electronPlatformName: 'win32', arch: 3 });
+    for (const [name] of oldLibraries) {
+      if (name === 'librust_pty_arm64.so') expect(fs.readFileSync(compatible)).toEqual(compatibleBytes);
+      else expect(fs.existsSync(path.join(floor, name))).toBe(false);
+    }
+    expect(fs.readFileSync(manifest)).toEqual(manifestBytes);
+    await expect(validateNativeBinaries(tempDir, 'win32', 'arm64')).resolves.toEqual([]);
+  });
+
+  it.each([
+    ['wrong version', '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/bun-pty', 'librust_pty.so', { name: 'bun-pty', version: '0.4.11' }],
+    ['wrong package name', '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/bun-pty', 'librust_pty.so', { name: 'other', version: '0.4.8' }],
+    ['missing manifest', '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/bun-pty', 'librust_pty.so', null],
+    ['current root path', 'bun-pty', 'librust_pty.so', { name: 'bun-pty', version: '0.4.8' }],
+    ['other nested path', 'other/node_modules/bun-pty', 'librust_pty.so', { name: 'bun-pty', version: '0.4.8' }],
+    ['unknown filename', '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/bun-pty', 'unknown.so', { name: 'bun-pty', version: '0.4.8' }],
+    ['new library filename', '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/bun-pty', 'librust_pty_musl.so', { name: 'bun-pty', version: '0.4.8' }],
+  ] as const)('keeps the frozen Windows arm64 PTY exception closed for %s', async (_label, relative, filename, manifest) => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+    const root = path.join(tempDir, 'resources/runtime/local-cli/node_modules', relative);
+    const file = path.join(root, 'rust-pty/target/release', filename);
+    const bytes = createElfBuffer('x64');
+    writeFile(file, bytes);
+    if (manifest) writeFile(path.join(root, 'package.json'), Buffer.from(JSON.stringify(manifest)));
     await expect(afterPackModule({ appOutDir: tempDir, electronPlatformName: 'win32', arch: 3 }))
       .rejects.toThrow('Found incompatible native binaries in win32-arm64 bundle after pruning');
-    for (const [name, bytes] of oldLibraries) expect(fs.readFileSync(path.join(floor, name))).toEqual(bytes);
+    expect(fs.readFileSync(file)).toEqual(bytes);
   });
 
   it('retains compatible bytes under a foreign bun-pty filename', async () => {
