@@ -227,6 +227,95 @@ describe('memberActivityTimer retention', () => {
     ).toBe(1_000);
   });
 
+  it('counts hydrated backlog keys once and returns a later read eviction to the drain', () => {
+    const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
+    const anchors = Array.from({ length: MAX_TRACKED_ACTIVITY_TIMERS - 10 }, (_, index) => ({
+      timerId: timerIdFor(`inventory-${index}`, nowMs + index * 1_000),
+      startedAtMs: nowMs + index * 1_000,
+    }));
+    for (const anchor of anchors)
+      seedStoredTimer(anchor.timerId, anchor.startedAtMs, { elapsedMs: 45_000 });
+    const current = anchors[anchors.length - 1];
+    const syncCurrent = () => syncMemberActivityTimer({ ...current, running: false, nowMs });
+    syncCurrent(); // Initialize the inventory before any of the next 100 cards are hydrated.
+    for (const anchor of anchors.slice(0, 100)) {
+      expect(readMemberActivityTimerElapsed({ ...anchor, running: false, nowMs })).toBe(45_000);
+    }
+    const storage = globalThis.localStorage;
+    const removeStorage = vi.spyOn(storage, 'removeItem');
+    const walkStorage = vi.spyOn(storage, 'key');
+    for (let index = 0; index < 100; index += 1) syncCurrent();
+
+    // All 190 physical keys still fit. Hydration changes where an id is tracked, not disk occupancy.
+    expect(removeStorage).not.toHaveBeenCalled();
+    expect(storage.length).toBe(190);
+    expect(storage.getItem(`${STORAGE_PREFIX}${anchors[100].timerId}`)).toContain('45000');
+    expect(walkStorage).not.toHaveBeenCalled();
+
+    for (const anchor of anchors.slice(100)) {
+      readMemberActivityTimerElapsed({ ...anchor, running: false, nowMs });
+    }
+    let newest = current;
+    for (let index = anchors.length; index <= MAX_TRACKED_ACTIVITY_TIMERS; index += 1) {
+      newest = {
+        timerId: timerIdFor(`inventory-${index}`, nowMs + index * 1_000),
+        startedAtMs: nowMs + index * 1_000,
+      };
+      seedStoredTimer(newest.timerId, newest.startedAtMs, { elapsedMs: 45_000 });
+      readMemberActivityTimerElapsed({ ...newest, running: false, nowMs });
+    }
+    expect(storage.length).toBe(MAX_TRACKED_ACTIVITY_TIMERS + 1);
+    expect(removeStorage).not.toHaveBeenCalled();
+    syncMemberActivityTimer({ ...newest, running: false, nowMs });
+
+    // Once the oldest hydrated card actually leaves memory, it is dormant again and may be reaped.
+    expect(removeStorage.mock.calls).toEqual([[`${STORAGE_PREFIX}${anchors[0].timerId}`]]);
+    expect(storage.length).toBe(MAX_TRACKED_ACTIVITY_TIMERS);
+    expect(walkStorage).not.toHaveBeenCalled();
+  });
+
+  it('removes a pending deletion from inventory after hydration and another read eviction', () => {
+    const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
+    const anchors = Array.from({ length: MAX_TRACKED_ACTIVITY_TIMERS + 2 }, (_, index) => ({
+      timerId: timerIdFor(`pending-inventory-${index}`, nowMs + index * 1_000),
+      startedAtMs: nowMs + index * 1_000,
+    }));
+    const [dormantAnchor, overflowAnchor] = anchors.slice(MAX_TRACKED_ACTIVITY_TIMERS);
+    for (const anchor of anchors.slice(0, -1)) {
+      seedStoredTimer(anchor.timerId, anchor.startedAtMs);
+    }
+    for (const anchor of anchors.slice(0, MAX_TRACKED_ACTIVITY_TIMERS)) {
+      readMemberActivityTimerElapsed({ ...anchor, running: false, nowMs });
+    }
+    const storage = globalThis.localStorage;
+    const removeOriginal = storage.removeItem.bind(storage);
+    let refusing = true;
+    const removeStorage = vi.spyOn(storage, 'removeItem').mockImplementation((key: string) => {
+      if (refusing) throw new Error('SecurityError: transient deletion failure');
+      removeOriginal(key);
+    });
+    syncMemberActivityTimer({ ...anchors[MAX_TRACKED_ACTIVITY_TIMERS - 1], running: false, nowMs });
+    // The oldest resident's refused eviction is pending. Reading it again displaces the new,
+    // unbanked timer, then touching every other resident makes that pending timer oldest again.
+    syncMemberActivityTimer({ ...overflowAnchor, running: false, nowMs });
+    readMemberActivityTimerElapsed({ ...anchors[0], running: false, nowMs });
+    for (const anchor of anchors.slice(1, MAX_TRACKED_ACTIVITY_TIMERS + 1)) {
+      readMemberActivityTimerElapsed({ ...anchor, running: false, nowMs });
+    }
+    expect(storage.length).toBe(MAX_TRACKED_ACTIVITY_TIMERS + 2);
+    removeStorage.mockClear();
+    refusing = false;
+    syncMemberActivityTimer({ ...dormantAnchor, running: false, nowMs });
+
+    // The pending retry and dormant reap each reclaim a real key. Counting the already deleted
+    // pending key again would spend this write's one-key reap budget without reclaiming the excess.
+    expect(removeStorage.mock.calls).toEqual([
+      [`${STORAGE_PREFIX}${anchors[0].timerId}`],
+      [`${STORAGE_PREFIX}${overflowAnchor.timerId}`],
+    ]);
+    expect(storage.length).toBe(MAX_TRACKED_ACTIVITY_TIMERS);
+  });
+
   it('lists the backlog once per session, not on every write', () => {
     const storage = globalThis.localStorage;
     const walkStorageKey = storage?.key.bind(storage);

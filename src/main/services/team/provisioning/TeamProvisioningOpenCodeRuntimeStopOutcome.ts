@@ -1,5 +1,7 @@
 import { isProcessAlive } from '@main/utils/processHealth';
 
+import { redactBridgeDiagnosticText } from '../opencode/bridge/OpenCodeBridgeCommandClient';
+
 import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 
 /** Only confirmed Stop or validated runtime reconciliation authorizes lane cleanup.
@@ -34,6 +36,33 @@ export function describeOpenCodeRuntimeStopResult(
     .map((entry) => entry.trim())
     .filter(Boolean)
     .join('; ');
+}
+
+/**
+ * Single-line, length-bounded, secret-redacted form of external stop detail for warning
+ * logs. Stop results and adapter exceptions come from an out-of-process runtime, so their
+ * text is treated as untrusted: control and line separators are collapsed, credential
+ * shaped values are redacted, and the result is capped.
+ */
+export function sanitizeOpenCodeRuntimeStopDetail(detail: string, maxChars = 400): string {
+  const collapsed = redactBridgeDiagnosticText(detail)
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001f\u007f\u0080-\u009f\u2028\u2029]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!collapsed) return 'no stop diagnostics returned';
+  return collapsed.length > maxChars ? `${collapsed.slice(0, maxChars - 1)}…` : collapsed;
+}
+
+/**
+ * Single-line, length-bounded form of an unconfirmed Stop result for warning logs, so a
+ * retained lane explains itself instead of only reporting that it was not confirmed.
+ */
+export function summarizeOpenCodeRuntimeStopFailure(
+  result: OpenCodeRuntimeStopResultLike | null,
+  maxChars = 400
+): string {
+  return sanitizeOpenCodeRuntimeStopDetail(describeOpenCodeRuntimeStopResult(result), maxChars);
 }
 
 /** Recorded host pids of the members that belong to `laneId` in the launch snapshot. */

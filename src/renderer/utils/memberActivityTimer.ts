@@ -209,6 +209,7 @@ function touchTimer(timerId: string): void {
 }
 
 function rememberTimer(timerId: string, timer: StoredActivityTimer): void {
+  if (!timers.has(timerId)) forgetDormantTimerId(timerId);
   timers.set(timerId, timer);
   touchTimer(timerId);
 }
@@ -324,6 +325,13 @@ function rememberDormantTimerId(timerId: string): void {
   if (dormantTimerIds[low] !== timerId) dormantTimerIds.splice(low, 0, timerId);
 }
 
+// Keep disk inventory disjoint from residents, and drop keys whose pending delete succeeded.
+function forgetDormantTimerId(timerId: string): void {
+  if (dormantTimerIds === null) return;
+  const index = dormantTimerIds.indexOf(timerId);
+  if (index >= 0) dormantTimerIds.splice(index, 1);
+}
+
 // Deletes up to `count` of the oldest backlog keys, oldest anchor first, and reports how many were
 // actually reclaimed. Residents are skipped: a key this session has read is a key the screen is
 // displaying, and React reads every displayed timer during the render phase, before the effect that
@@ -374,6 +382,7 @@ function drainPendingRemovals(): void {
     }
     if (isDeclaredTimerId(timerId)) continue;
     if (!safeStorageRemove(storageKey(timerId))) return;
+    forgetDormantTimerId(timerId);
     pendingRemovalTimerIds.delete(timerId);
   }
 }
