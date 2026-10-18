@@ -201,3 +201,46 @@ it('projects bounded exact shell matcher facts before CDP without commands or re
     })).rejects.toThrow('not owned');
   } finally { port.dispose(); }
 });
+
+it('diagnoses Windows command spelling without accepting equivalent or unbound commands', () => {
+  const program = 'C:\\TEST-project\\bob-verify.cjs';
+  const marker = 'COMMAND_EXEC:TEST-private-nonce';
+  const match = new Function(`return ${serializedFunction(nativeCommandMatch)};`)() as typeof nativeCommandMatch;
+  const observe = (command: string, workdir?: string) => match({
+    startTime: new Date(0),
+    toolCall: { id: 'owned', name: 'bash', input: { command, workdir }, isTask: false },
+    result: { toolUseId: 'owned', isError: false, content: marker },
+  }, program, marker);
+  const slash = observe('node "C:/TEST-project/bob-verify.cjs"');
+  const caseChanged = observe('node "c:/test-project/bob-verify.cjs"');
+  const relative = observe('node .\\bob-verify.cjs', 'c:/test-project/');
+  const unbound = observe('node bob-verify.cjs');
+  const foreign = observe('node bob-verify.cjs', 'C:\\TEST-other');
+  expect(slash.commandShape).toMatchObject({
+    slashNormalizedAbsolutePresent: true, caseNormalizedAbsolutePresent: true,
+    relativeProgramArgument: false,
+  });
+  expect(caseChanged.commandShape).toMatchObject({
+    slashNormalizedAbsolutePresent: false, caseNormalizedAbsolutePresent: true,
+  });
+  expect(relative.commandShape).toMatchObject({
+    relativeProgramArgument: true, workdirProjectMatches: true, relativeProgramAtProject: true,
+  });
+  expect(unbound.commandShape).toMatchObject({
+    relativeProgramArgument: true, workdirProjectMatches: null, relativeProgramAtProject: false,
+  });
+  expect(foreign.commandShape).toMatchObject({
+    relativeProgramArgument: true, workdirProjectMatches: false, relativeProgramAtProject: false,
+  });
+  expect(observe('node bob-verify.cjs', '.').commandShape.workdirProjectMatches).toBeNull();
+  for (const command of ['echo node bob-verify.cjs', 'node bob-verify.cjs && echo done',
+    'node ../bob-verify.cjs', 'node bob-verify.cjs.bak'])
+    expect(observe(command, 'C:\\TEST-project').commandShape.relativeProgramArgument).toBe(false);
+  for (const result of [slash, caseChanged, relative, unbound, foreign]) {
+    expect(result.programMatches).toBe(false);
+    expect(result.nativeMatches).toBe(false);
+    expect(result.succeeded).toBe(true);
+    expect(JSON.stringify(result)).not.toMatch(/TEST-project|bob-verify|TEST-private-nonce/i);
+  }
+  expect(observe(`node "${program}"`).nativeMatches).toBe(true);
+});

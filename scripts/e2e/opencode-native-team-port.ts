@@ -12,6 +12,34 @@ export function nativeCommandMatch(execution: NativeCommandExecution, program: s
   const shell = ['bash', 'shell', 'exec'].includes(execution.toolCall.name);
   const programMatches = typeof command === 'string' && command.includes(program);
   const nodeMatches = typeof command === 'string' && /\bnode(?:\.exe)?\b/i.test(command);
+  // Diagnostic presence only. Equivalent spellings never relax acceptance.
+  // Keep this closure self-contained because the host serializes it into CDP.
+  const slash = (value: string) => value.replace(/\\/g, '/');
+  const normalizedProgram = slash(program);
+  const normalizedCommand = typeof command === 'string' ? slash(command) : '';
+  const windowsAbsolute = /^[A-Za-z]:\//.test(normalizedProgram);
+  const directory = normalizedProgram.slice(0, normalizedProgram.lastIndexOf('/'));
+  const basename = normalizedProgram.slice(normalizedProgram.lastIndexOf('/') + 1);
+  // Recognize only a single plain Node invocation, never shell fragments or
+  // embedded text. An absent/relative workdir cannot bind a relative argument.
+  const invocation = typeof command === 'string'
+    ? /^\s*node(?:\.exe)?\s+(?:"([^"\r\n]+)"|'([^'\r\n]+)'|([^\s"';&|<>`$]+))\s*$/i.exec(command)
+    : null;
+  const argument = invocation ? slash(invocation[1] ?? invocation[2] ?? invocation[3]) : null;
+  const relativeProgramArgument = argument !== null &&
+    [basename, './' + basename].includes(argument);
+  const workdir = execution.toolCall.input.workdir;
+  const normalizedWorkdir = typeof workdir === 'string' ? slash(workdir).replace(/\/$/, '') : null;
+  const workdirProjectMatches = normalizedWorkdir !== null && windowsAbsolute &&
+    /^[A-Za-z]:\//.test(normalizedWorkdir)
+    ? normalizedWorkdir.toLowerCase() === directory.toLowerCase() : null;
+  const commandShape = {
+    slashNormalizedAbsolutePresent: windowsAbsolute && normalizedCommand.includes(normalizedProgram),
+    caseNormalizedAbsolutePresent: windowsAbsolute && normalizedCommand.toLowerCase().includes(normalizedProgram.toLowerCase()),
+    relativeProgramArgument,
+    workdirProjectMatches,
+    relativeProgramAtProject: relativeProgramArgument && workdirProjectMatches === true,
+  };
   const resultPaired = execution.result?.toolUseId === execution.toolCall.id;
   const resultSucceeded = execution.result?.isError === false;
   const hasMarker = (content: unknown): boolean => {
@@ -25,7 +53,7 @@ export function nativeCommandMatch(execution: NativeCommandExecution, program: s
     } catch { return false; }
   };
   const markerMatches = hasMarker(execution.result?.content);
-  return { shell, programMatches, nodeMatches, resultPaired, resultSucceeded, markerMatches,
+  return { shell, programMatches, nodeMatches, commandShape, resultPaired, resultSucceeded, markerMatches,
     nativeMatches: shell && programMatches && nodeMatches,
     succeeded: resultPaired && resultSucceeded && markerMatches };
 }

@@ -1889,6 +1889,8 @@ async function main() {
       // JSON string escaping doubles backslashes in cmd/PowerShell arguments.
       return `node "${program}"`;
     };
+    const verificationInstruction = (name: string) =>
+      `Execute this supplied literal absolute Node command verbatim in your native shell: ${command(name)}. Do not substitute a relative path, recreate or copy the verifier, or print its marker yourself. Let the unchanged verifier produce its own output.`;
     const checkSum = `const a=require('node:assert/strict');a.equal(process.platform,'win32');const sum=require('./sum.cjs');a.equal(sum([]),0);a.equal(sum([2,-5,7]),4);a.equal(sum([1.5,2.5]),4);a.equal(sum([-2,-3]),-5);for(const v of [null,[NaN],[Infinity],['1']])a.throws(()=>sum(v),TypeError);`;
     await writeFile(
       path.join(desktop.projectPath, 'alice-verify.cjs'),
@@ -1954,7 +1956,7 @@ async function main() {
       subject: 'Implement and verify sum',
       owner: 'alice',
       startImmediately: true,
-      prompt: `${base}\nOwn only sum.cjs and alice-result.txt. Export sum(array) as module.exports; accept only an array of finite numbers, throw TypeError otherwise. Read alice-verify.cjs, create sum.cjs, then run ${command('alice-verify.cjs')}. ${short ? '' : `Send bob CHALLENGE:${nonce.alice} with agent-teams_message_send.`} Before task_complete add task_add_comment from alice text TASK_COMMENT:${nonce.alice}. Complete only after successful command.`,
+      prompt: `${base}\nOwn only sum.cjs and alice-result.txt. Export sum(array) as module.exports; accept only an array of finite numbers, throw TypeError otherwise. Read alice-verify.cjs, create sum.cjs, then ${verificationInstruction('alice-verify.cjs')} ${short ? '' : `Send bob CHALLENGE:${nonce.alice} with agent-teams_message_send.`} Before task_complete add task_add_comment from alice text TASK_COMMENT:${nonce.alice}. Complete only after successful command.`,
     });
     proof.taskIds.push(alice.id);
     taskOwners.set(alice.id, 'alice');
@@ -2008,7 +2010,7 @@ async function main() {
       subject: 'Independently test sum',
       owner: 'bob',
       startImmediately: true,
-      prompt: `${base}\nOwn only sum.test.cjs and bob-result.txt. Read sum.cjs, do not modify it. Write sum.test.cjs using node:assert/strict, covering []=>0,[2,-5,7]=>4,[1.5,2.5]=>4,[-2,-3]=>-5 and TypeError for null,[NaN],[Infinity],['1']. Run ${command('bob-verify.cjs')}. Send alice CHALLENGE:${nonce.bob} with agent-teams_message_send. Before task_complete add task_add_comment from bob text TASK_COMMENT:${nonce.bob}. Complete only after successful command.`,
+      prompt: `${base}\nOwn only sum.test.cjs and bob-result.txt. Read sum.cjs, do not modify it. Write sum.test.cjs using node:assert/strict, covering []=>0,[2,-5,7]=>4,[1.5,2.5]=>4,[-2,-3]=>-5 and TypeError for null,[NaN],[Infinity],['1']. ${verificationInstruction('bob-verify.cjs')} Send alice CHALLENGE:${nonce.bob} with agent-teams_message_send. Before task_complete add task_add_comment from bob text TASK_COMMENT:${nonce.bob}. Complete only after successful command.`,
     });
     proof.taskIds.push(bob.id);
     taskOwners.set(bob.id, 'bob');
@@ -2312,7 +2314,7 @@ async function main() {
       subject: 'Verify fresh run after restart',
       owner: 'alice',
       startImmediately: true,
-      prompt: `${base}\nRun ${command('new-verify.cjs')}. Add task_add_comment from alice text TASK_COMMENT:${nonce.new}, then task_complete after successful command.`,
+      prompt: `${base}\n${verificationInstruction('new-verify.cjs')} Add task_add_comment from alice text TASK_COMMENT:${nonce.new}, then task_complete after successful command.`,
     });
     proof.taskIds.push(task.id);
     taskOwners.set(task.id, 'alice');
