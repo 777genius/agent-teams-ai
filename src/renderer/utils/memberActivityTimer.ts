@@ -143,7 +143,12 @@ function retainRecentTimers(keepTimerId: string): void {
     } catch {
       parsed = null;
     }
-    lastSeenMs.set(timerId, isStoredTimer(parsed) ? parsed.updatedAtMs : Number.NEGATIVE_INFINITY);
+    lastSeenMs.set(
+      timerId,
+      isStoredTimer(parsed)
+        ? Math.max(parsed.startedAtMs, parsed.updatedAtMs)
+        : Number.NEGATIVE_INFINITY
+    );
   }
 
   let excess = lastSeenMs.size - MAX_TRACKED_ACTIVITY_TIMERS;
@@ -163,8 +168,11 @@ function retainRecentTimers(keepTimerId: string): void {
 // the read path; otherwise eviction would drop it and reset the elapsed value it shows.
 function markTimerObserved(timerId: string, nowMs: number): void {
   const cached = timers.get(timerId);
-  if (!cached || cached.updatedAtMs >= nowMs) return;
-  timers.set(timerId, { ...cached, updatedAtMs: nowMs });
+  if (!cached) return;
+  // A paused card keeps its last captured render clock, so recency must follow wall time.
+  const observedAtMs = Math.max(nowMs, Date.now());
+  if (cached.updatedAtMs >= observedAtMs) return;
+  timers.set(timerId, { ...cached, updatedAtMs: observedAtMs });
 }
 
 function readStorageTimerIds(): string[] {

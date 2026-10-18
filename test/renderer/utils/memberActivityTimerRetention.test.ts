@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createMemberActivityTimerId,
@@ -177,6 +177,53 @@ describe('memberActivityTimer retention', () => {
         running: false,
         runId: 'run-1',
         nowMs: startedAtMs + 400_000,
+      })
+    ).toBe(90_000);
+  });
+
+  it('keeps a displayed paused timer whose render clock stopped advancing', () => {
+    vi.useFakeTimers();
+    const startedAtMs = Date.parse('2026-05-07T09:00:00.000Z');
+    vi.setSystemTime(startedAtMs);
+    const pausedId = timerIdFor('frozen-task', startedAtMs);
+    syncMemberActivityTimer({
+      timerId: pausedId,
+      startedAtMs,
+      running: true,
+      runId: 'run-1',
+      nowMs: startedAtMs,
+    });
+    syncMemberActivityTimer({
+      timerId: pausedId,
+      startedAtMs,
+      baseElapsedMs: 0,
+      running: false,
+      runId: 'run-1',
+      nowMs: startedAtMs + 90_000,
+    });
+
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS + 60; index += 1) {
+      const rotationMs = startedAtMs + 100_000 + index * 1_000;
+      vi.setSystemTime(rotationMs);
+      syncTaskTimer(`rotation-${index}`, rotationMs, rotationMs);
+      // A paused card keeps re-rendering with the clock it last captured.
+      readMemberActivityTimerElapsed({
+        timerId: pausedId,
+        startedAtMs,
+        running: false,
+        runId: 'run-1',
+        nowMs: startedAtMs + 90_000,
+      });
+    }
+
+    expect(storedTimerIds()).toContain(pausedId);
+    expect(
+      readMemberActivityTimerElapsed({
+        timerId: pausedId,
+        startedAtMs,
+        running: false,
+        runId: 'run-1',
+        nowMs: startedAtMs + 90_000,
       })
     ).toBe(90_000);
   });
