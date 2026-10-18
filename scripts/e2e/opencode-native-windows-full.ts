@@ -1010,6 +1010,11 @@ async function readStopObservation(app: App) {
 }
 async function stopped(app: App, observe: (value: StopObservation) => Promise<void>) {
   await app.call('stop');
+  // The bounded projection wait below is intentionally NOT widened for the
+  // stop-vs-bootstrap race (run 39057250940): its team_stop_unconfirmed:stop_failed
+  // classification is thrown by the stop IPC itself, before this wait starts,
+  // so a longer window here would mask a real stop failure, not observe
+  // quiescence. The app-side stop already owns its 90s escalation budget.
   let previous = '';
   const settled = await waitFor(
     async () => {
@@ -1812,6 +1817,11 @@ async function main() {
     commandEvidenceConfirmed: [] as { member: string; kind: string }[],
     runIds: [] as string[],
     taskIds: [] as string[],
+    holdFollowUps: [] as {
+      label: string;
+      deliveredToInbox: boolean;
+      runtimeDelivered: boolean | null;
+    }[],
     fileHashes: {} as Record<string, string>,
     peersConfirmed: false,
     heldStopConfirmed: false,
@@ -2143,19 +2153,51 @@ async function main() {
       });
       proof.taskIds.push(task.id);
       taskOwners.set(task.id, 'alice');
-      const started = await waitFor(
-        async () => {
-          try {
-            return JSON.parse(await readFile(marker, 'utf8')) as { pid: number; nonce: string };
-          } catch (error) {
-            if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT')
-              return null;
-            throw error;
-          }
-        },
-        'held actual native command',
-        300_000
+      const readMarker = async () => {
+        try {
+          return JSON.parse(await readFile(marker, 'utf8')) as { pid: number; nonce: string };
+        } catch (error) {
+          if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT')
+            return null;
+          throw error;
+        }
+      };
+      // The member model can read the task, reply with a chat message and
+      // idle without ever running the command (run 39065596824). Give the
+      // original prompt one window, then re-prompt once through the same
+      // user-message IPC the desktop UI uses. All held-process assertions
+      // below are unchanged, so this never weakens the proof.
+      let started = await waitFor(readMarker, 'held actual native command', 120_000).catch(
+        (error: unknown) => {
+          if (
+            error instanceof Error &&
+            error.message === 'Native gate timed out: held actual native command'
+          )
+            return null;
+          throw error;
+        }
       );
+      if (!started) {
+        const pending = await app.call('getTask', task.id);
+        assert(
+          pending && pending.status === 'in_progress',
+          'Held task must still be in progress for follow-up'
+        );
+        const followUp = await app.call('sendMessage', {
+          member: 'alice',
+          from: 'user',
+          text: `Run ${command(name)} in foreground now and keep it running. Do not complete the task.`,
+          messageId: randomUUID(),
+        });
+        proof.holdFollowUps.push({
+          label,
+          deliveredToInbox: followUp.deliveredToInbox,
+          runtimeDelivered: followUp.runtimeDelivery?.delivered ?? null,
+        });
+        await checkpoint(proof.stage);
+        started = await waitFor(readMarker, 'held actual native command after follow-up', 240_000);
+      }
+      assert(started, 'Held marker required after follow-up');
       assert.equal(started.nonce, token);
       const original = await identity(started.pid);
       assert(
