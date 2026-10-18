@@ -95,10 +95,280 @@ describe('memberActivityTimer retention', () => {
       Date.parse('2026-05-07T09:00:05.000Z')
     );
 
+    const afterFirstWrite = storedTimerIds();
+    // The backlog converges over writes rather than inside the frame that first touches it: one
+    // write takes an eighth of the excess, so a namespace left by an unbounded build is swept
+    // without any single render paying for the whole delete burst.
+    expect(afterFirstWrite).toContain(activeId);
+    expect(afterFirstWrite.length).toBeLessThan(staleCount + 1);
+    expect(afterFirstWrite.length).toBeGreaterThan(MAX_TRACKED_ACTIVITY_TIMERS);
+
+    // Two rounds of the cap: the resident set absorbs the first of them, the backlog is gone by
+    // the last. Convergence is measured in writes, not in one synchronous burst.
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS * 2; index += 1) {
+      const startedAtMs = Date.parse('2026-06-01T09:00:00.000Z') + index * 1_000;
+      syncTaskTimer(`rotating-${index}`, startedAtMs, startedAtMs);
+    }
+
     const remaining = storedTimerIds();
     expect(remaining.length).toBeLessThanOrEqual(MAX_TRACKED_ACTIVITY_TIMERS);
-    expect(remaining).toContain(activeId);
     expect(remaining).not.toContain(brokenId);
+  });
+
+  it('reclaims nothing while a read runs', () => {
+    const staleMs = Date.parse('2026-04-01T09:00:00.000Z');
+    const staleIds: string[] = [];
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS + 40; index += 1) {
+      const startedAtMs = staleMs + index * 1_000;
+      const staleId = timerIdFor(`old-task-${index}`, startedAtMs);
+      seedStoredTimer(staleId, startedAtMs, { elapsedMs: 45_000 });
+      staleIds.push(staleId);
+    }
+    const before = storedTimerIds();
+
+    // Reads are what the render phase does, in tree order: card #1's read must not be allowed to
+    // take the record card #2 is about to read. Reclamation belongs to the write path, which React
+    // runs after every render in the commit.
+    for (const staleId of staleIds.slice(0, 20)) {
+      readMemberActivityTimerElapsed({
+        timerId: staleId,
+        startedAtMs: staleIds.indexOf(staleId) * 1_000 + staleMs,
+        baseElapsedMs: 0,
+        running: false,
+        runId: null,
+        nowMs: staleMs,
+      });
+    }
+
+    expect(storedTimerIds()).toEqual(before);
+  });
+
+  it('keeps a displayed timer through another member first write', () => {
+    const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
+    const pausedId = timerIdFor('paused-task', nowMs - 4 * 3_600_000);
+    // The oldest anchor in the namespace is systematically a long-running live timer, which is why
+    // age-ranked reclamation may not run before the screen has read it.
+    seedStoredTimer(pausedId, nowMs - 4 * 3_600_000, { elapsedMs: 45_000 });
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS + 40; index += 1) {
+      const startedAtMs = nowMs + index * 1_000;
+      seedStoredTimer(timerIdFor(`legacy-${index}`, startedAtMs), startedAtMs);
+    }
+
+    readMemberActivityTimerElapsed({
+      timerId: pausedId,
+      startedAtMs: nowMs - 4 * 3_600_000,
+      baseElapsedMs: 0,
+      running: false,
+      runId: null,
+      nowMs,
+    });
+    syncTaskTimer('other-member', nowMs, nowMs);
+
+    expect(storedTimerIds()).toContain(pausedId);
+    expect(
+      readMemberActivityTimerElapsed({
+        timerId: pausedId,
+        startedAtMs: nowMs - 4 * 3_600_000,
+        baseElapsedMs: 0,
+        running: false,
+        runId: null,
+        nowMs,
+      })
+    ).toBe(45_000);
+  });
+
+  it('skips a resident that was hydrated after the backlog was listed', () => {
+    const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
+    const staleMs = nowMs - 86_400_000;
+    const staleIds: string[] = [];
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS + 40; index += 1) {
+      const startedAtMs = staleMs + index * 1_000;
+      const staleId = timerIdFor(`old-task-${index}`, startedAtMs);
+      seedStoredTimer(staleId, startedAtMs);
+      staleIds.push(staleId);
+    }
+
+    // The first write lists the backlog and takes its share of it, so one of those keys is now the
+    // front of the age-ranked queue while still on disk. Reading it makes it a resident *after* the
+    // snapshot was taken — the only way a key can be in both structures at once.
+    syncTaskTimer('first-write', nowMs, nowMs);
+    const hydratedId = staleIds[6];
+    const hydratedMs = staleMs + 6 * 1_000;
+    readMemberActivityTimerElapsed({
+      timerId: hydratedId,
+      startedAtMs: hydratedMs,
+      baseElapsedMs: 0,
+      running: false,
+      runId: null,
+      nowMs,
+    });
+
+    syncTaskTimer('second-write', nowMs + 1_000, nowMs + 1_000);
+
+    // The reclaim walks the queue from the oldest end, and this key is at the front of it. Its
+    // elapsed would still read `1_000` from the Map even if the reclaim deleted the record, so the
+    // cache is exactly what hides that harm: a session reload would be the first time the label
+    // moved. The key being on disk is the assertion that matters.
+    expect(storedTimerIds()).toContain(hydratedId);
+    expect(
+      readMemberActivityTimerElapsed({
+        timerId: hydratedId,
+        startedAtMs: hydratedMs,
+        baseElapsedMs: 0,
+        running: false,
+        runId: null,
+        nowMs,
+      })
+    ).toBe(1_000);
+  });
+
+  it('lists the backlog once per session, not on every write', () => {
+    const storage = globalThis.localStorage;
+    const walkStorageKey = storage?.key.bind(storage);
+    const keyCalls: number[] = [];
+    vi.spyOn(storage, 'key').mockImplementation((index: number) => {
+      keyCalls.push(index);
+      return walkStorageKey?.(index) ?? null;
+    });
+
+    const baseMs = Date.parse('2026-05-07T09:00:00.000Z');
+    for (let index = 0; index < 5; index += 1) {
+      const startedAtMs = baseMs + index * 1_000;
+      syncTaskTimer(`listed-${index}`, startedAtMs, startedAtMs);
+    }
+    const listedOnce = keyCalls.length;
+    expect(listedOnce).toBeGreaterThan(0);
+
+    for (let index = 5; index < 10; index += 1) {
+      const startedAtMs = baseMs + index * 1_000;
+      syncTaskTimer(`listed-${index}`, startedAtMs, startedAtMs);
+    }
+
+    // A rotating work interval costs a compare against the live snapshot, never a second walk of
+    // every other key in the origin.
+    expect(keyCalls.length).toBe(listedOnce);
+  });
+
+  it('stops reclaiming when the store refuses to delete', () => {
+    const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS + 40; index += 1) {
+      const startedAtMs = nowMs - (index + 1) * 1_000;
+      seedStoredTimer(timerIdFor(`stuck-${index}`, startedAtMs), startedAtMs);
+    }
+    const before = storedTimerIds();
+    const storage = globalThis.localStorage;
+    vi.spyOn(storage, 'removeItem').mockImplementation(() => {
+      throw new Error('SecurityError: storage is read-only');
+    });
+
+    syncTaskTimer('current-task', nowMs, nowMs);
+
+    // Nothing is reclaimed, so nothing is claimed: the write still lands, the backlog is untouched,
+    // and the reaper does not burn the rest of the list on deletions that cannot happen.
+    expect(storedTimerIds().filter((id) => !before.includes(id))).toEqual([
+      timerIdFor('current-task', nowMs),
+    ]);
+    expect(storedTimerIds().length).toBe(before.length + 1);
+  });
+
+  it('deletes a paused banked record last when the resident set is full', () => {
+    const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
+    const pausedId = timerIdFor('paused-banked', nowMs - 3_600_000);
+    seedStoredTimer(pausedId, nowMs - 3_600_000, { elapsedMs: 900_000 });
+    // Read once, then never again: the card hydrates its record and stops re-rendering, and a paused
+    // timer has no persistence tick that could touch it. `baseElapsedMs` comes from *completed* work
+    // intervals, so this 15-minute stretch exists only in this record — eviction ranking may not rest
+    // on how often the parent list re-renders, so the shape of the record decides.
+    readMemberActivityTimerElapsed({
+      timerId: pausedId,
+      startedAtMs: nowMs - 3_600_000,
+      baseElapsedMs: 0,
+      running: false,
+      runId: null,
+      nowMs,
+    });
+
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS + 60; index += 1) {
+      const startedAtMs = nowMs + index * 1_000;
+      syncTaskTimer(`rot-${index}`, startedAtMs, startedAtMs);
+    }
+
+    const remaining = storedTimerIds();
+    expect(remaining).toContain(pausedId);
+    expect(
+      readMemberActivityTimerElapsed({
+        timerId: pausedId,
+        startedAtMs: nowMs - 3_600_000,
+        baseElapsedMs: 0,
+        running: false,
+        runId: null,
+        nowMs,
+      })
+    ).toBe(900_000);
+    // The preference costs the bound nothing: the rotating anchors absorb the eviction, and the
+    // namespace is still at the cap.
+    expect(remaining.length).toBeLessThanOrEqual(MAX_TRACKED_ACTIVITY_TIMERS);
+  });
+
+  it('retries a deletion the store refused instead of orphaning the key', () => {
+    const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
+    const storage = globalThis.localStorage;
+    const removeOriginal = storage.removeItem.bind(storage);
+    let refusing = true;
+    vi.spyOn(storage, 'removeItem').mockImplementation((key: string) => {
+      if (refusing) throw new Error('SecurityError: storage is read-only');
+      removeOriginal(key);
+    });
+
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS; index += 1) {
+      const startedAtMs = nowMs + index * 1_000;
+      syncTaskTimer(`resident-${index}`, startedAtMs, startedAtMs);
+    }
+    const victimId = timerIdFor('resident-0', nowMs);
+
+    // One write past the cap evicts the least recently touched resident while the store is refusing
+    // deletions. The Map slot is still freed — the memory bound is the invariant — so without a retry
+    // queue the key would belong to neither bookkeeping structure and nothing in this session could
+    // ever reclaim it.
+    syncTaskTimer('overflow', nowMs + MAX_TRACKED_ACTIVITY_TIMERS * 1_000, nowMs);
+    expect(storedTimerIds()).toContain(victimId);
+
+    refusing = false;
+    const drainedId = timerIdFor(
+      'after-refusal',
+      nowMs + (MAX_TRACKED_ACTIVITY_TIMERS + 1) * 1_000
+    );
+    syncTaskTimer('after-refusal', nowMs + (MAX_TRACKED_ACTIVITY_TIMERS + 1) * 1_000, nowMs);
+
+    const remaining = storedTimerIds();
+    expect(remaining).not.toContain(victimId);
+    expect(remaining).toContain(drainedId);
+    expect(remaining.length).toBeLessThanOrEqual(MAX_TRACKED_ACTIVITY_TIMERS);
+  });
+
+  it('puts a record restored by a read into the eviction queue like any other resident', () => {
+    const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
+    const restoredId = timerIdFor('restored', nowMs);
+    seedStoredTimer(restoredId, nowMs, { running: true, elapsedMs: 10_000 });
+
+    readMemberActivityTimerElapsed({
+      timerId: restoredId,
+      startedAtMs: nowMs,
+      baseElapsedMs: 0,
+      running: true,
+      runId: 'run-1',
+      nowMs,
+    });
+
+    for (let index = 1; index <= MAX_TRACKED_ACTIVITY_TIMERS + 10; index += 1) {
+      const startedAtMs = nowMs + index * 1_000;
+      syncTaskTimer(`rotating-${index}`, startedAtMs, startedAtMs);
+    }
+
+    // Hydration is a touch: a restored record that never re-enters the ranking would be invisible to
+    // eviction, and the cap the store exists to enforce would silently stop applying to it.
+    expect(storedTimerIds()).not.toContain(restoredId);
+    expect(storedTimerIds().length).toBeLessThanOrEqual(MAX_TRACKED_ACTIVITY_TIMERS);
   });
 
   it('preserves elapsed time for the timer that is still observed', () => {
@@ -393,9 +663,12 @@ describe('memberActivityTimer retention', () => {
         return id;
       }
     );
+    const ancientIds: string[] = [];
     for (let index = 0; index < 8; index += 1) {
       const oldMs = nowMs - 100_000_000 - index * 1_000;
-      seedStoredTimer(timerIdFor(`ancient-${index}`, oldMs), oldMs);
+      const id = timerIdFor(`ancient-${index}`, oldMs);
+      seedStoredTimer(id, oldMs);
+      ancientIds.push(id);
     }
 
     const storage = globalThis.localStorage;
@@ -404,37 +677,71 @@ describe('memberActivityTimer retention', () => {
       return null;
     });
 
-    syncTaskTimer('current-task', nowMs, nowMs);
+    const currentId = syncTaskTimer('current-task', nowMs, nowMs);
 
     const remaining = storedTimerIds();
-    expect(remaining).toHaveLength(MAX_TRACKED_ACTIVITY_TIMERS);
+    // 206 seeded + the new key, minus the one key the first write's share of the backlog takes.
+    expect(remaining).toHaveLength(MAX_TRACKED_ACTIVITY_TIMERS + 6);
+    expect(remaining).toContain(currentId);
     unreadableIds.forEach((unreadableId) => expect(remaining).toContain(unreadableId));
+    // The value was never consulted: the victim is the oldest *anchor*, and it would have been the
+    // same victim if that record had parsed cleanly.
+    expect(remaining).not.toContain(ancientIds[ancientIds.length - 1]);
+    expect(remaining.filter((id) => ancientIds.includes(id))).toHaveLength(ancientIds.length - 1);
   });
 
-  it('leaves payloads and keys it does not understand untouched', () => {
+  it('leaves keys another feature stored untouched', () => {
     const nowMs = Date.parse('2026-05-07T09:00:00.000Z');
     const storage = globalThis.localStorage;
-    const foreignKey = `${STORAGE_PREFIX}opaque-key-without-an-anchor`;
-    const futureVersionId = timerIdFor('future-version', nowMs - 1_000);
-    const futureVersionKey = `${STORAGE_PREFIX}${futureVersionId}`;
-    const futureVersionPayload = JSON.stringify({
-      version: 2,
-      startedAtMs: nowMs - 1_000,
-      elapsedMs: 500_000,
-      updatedAtMs: nowMs - 1_000,
-      running: true,
+    // Each of these parses as a date in V8 (`legacy-cache-19` is 1956528000000, `2026-05-07` is
+    // midnight), so a lenient `Date.parse` in the ranker would hand another feature's keys to the
+    // reaper. Only the instant shape `createMemberActivityTimerId` writes is a candidate.
+    const foreignIds = [
+      'opaque-key-without-an-anchor',
+      'legacy-cache-19',
+      'session-2026',
+      'cache-index-7',
+      'plainword',
+      'v2:abc',
+      '2026-05-07',
+      'alpha' + '\u0000' + 'bob' + '\u0000' + 'work' + '\u0000' + 'task-9',
+    ];
+    foreignIds.forEach((foreignId, index) => {
+      storage?.setItem(`${STORAGE_PREFIX}${foreignId}`, `not-this-modules-data-${index}`);
     });
-    storage?.setItem(futureVersionKey, futureVersionPayload);
-    storage?.setItem(foreignKey, 'not-json');
-    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS - 2; index += 1) {
+
+    // A record from a newer build, stamped with the oldest anchor in the namespace: the ranker reads
+    // the id, not the value, so this key is reclaimed on the same age terms as its neighbours. It is
+    // not destroyed *for being* version 2 — an identical v1 record at this anchor would share its
+    // fate — and that is the whole guarantee the retention rule makes.
+    const futureVersionId = timerIdFor('future-version', nowMs - 200_000_000);
+    const futureVersionKey = `${STORAGE_PREFIX}${futureVersionId}`;
+    storage?.setItem(
+      futureVersionKey,
+      JSON.stringify({
+        version: 2,
+        startedAtMs: nowMs - 200_000_000,
+        elapsedMs: 500_000,
+        updatedAtMs: nowMs - 200_000_000,
+        running: true,
+      })
+    );
+    const futureVersionPayload = storage?.getItem(futureVersionKey);
+    for (let index = 0; index < MAX_TRACKED_ACTIVITY_TIMERS - 1; index += 1) {
       const oldMs = nowMs - 100_000_000 + index * 1_000;
       seedStoredTimer(timerIdFor(`oldest-${index}`, oldMs), oldMs);
     }
 
-    syncTaskTimer('replacement-task', nowMs, nowMs);
+    const writtenId = syncTaskTimer('replacement-task', nowMs, nowMs);
 
-    expect(storage?.getItem(futureVersionKey)).toBe(futureVersionPayload);
-    expect(storage?.getItem(foreignKey)).toBe('not-json');
+    foreignIds.forEach((foreignId, index) => {
+      expect(storage?.getItem(`${STORAGE_PREFIX}${foreignId}`)).toBe(
+        `not-this-modules-data-${index}`
+      );
+    });
+    expect(storedTimerIds()).toContain(writtenId);
+    expect(futureVersionPayload).toContain('"version":2');
+    expect(storage?.getItem(futureVersionKey)).toBeNull();
   });
 
   it('does not reclaim the key it is about to restore', () => {

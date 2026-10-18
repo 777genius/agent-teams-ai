@@ -33,10 +33,18 @@ const timers = new Map<string, StoredActivityTimer>();
 // reading for as long as it survives.
 const touchOrder = new Map<string, number>();
 let touchSequence = 0;
-// Oldest first, `null` until the renderer's keys have been listed once. Never re-listed: the live
-// set takes over the bookkeeping after that, so a rotating work interval costs a compare, not a
-// walk of every other key in the origin.
+// Oldest first, `null` until the renderer's keys have been listed once — on the first *write*, not
+// the first read. Never re-listed: the live set takes over the bookkeeping after that, so a
+// rotating work interval costs a compare, not a walk of every other key in the origin.
 let dormantTimerIds: string[] | null = null;
+// Eviction frees its Map slot even when the store refuses the matching delete: the memory bound is
+// the invariant this module exists for, and it is not tradeable against a read-only origin. Such a
+// key would be orphaned — neither resident nor in the backlog snapshot, which is listed once — so the
+// deletion is queued and retried from the write path. Bounded, because a store that has refused this
+// many consecutive deletions will refuse the next one as well, and an unbounded retry queue would
+// reintroduce the leak this one prevents.
+const PENDING_REMOVAL_LIMIT = MAX_TRACKED_ACTIVITY_TIMERS;
+const pendingRemovalTimerIds = new Set<string>();
 
 function parseIsoMs(value: string | null | undefined): number {
   if (!value) return 0;
@@ -56,19 +64,23 @@ function safeStorageGet(key: string): string | null {
   }
 }
 
-function safeStorageSet(key: string, value: string): void {
+function safeStorageSet(key: string, value: string): boolean {
   try {
     globalThis.localStorage?.setItem(key, value);
+    return true;
   } catch {
     // localStorage can be unavailable in tests or restricted browser contexts.
+    return false;
   }
 }
 
-function safeStorageRemove(key: string): void {
+function safeStorageRemove(key: string): boolean {
   try {
     globalThis.localStorage?.removeItem(key);
+    return true;
   } catch {
     // localStorage can be unavailable in tests or restricted browser contexts.
+    return false;
   }
 }
 
@@ -122,7 +134,7 @@ function readStoredTimer(
       running: parsed.running,
       runId: parsed.runId ?? null,
     };
-    makeRoomForTimer(timerId);
+    makeRoomForResident(timerId);
     rememberTimer(timerId, sanitized);
     return sanitized;
   } catch {
@@ -131,25 +143,45 @@ function readStoredTimer(
 }
 
 function writeStoredTimer(timerId: string, timer: StoredActivityTimer): void {
-  makeRoomForTimer(timerId);
+  makeRoomForResident(timerId);
   rememberTimer(timerId, timer);
-  safeStorageSet(storageKey(timerId), JSON.stringify(timer));
+  const key = storageKey(timerId);
+  const payload = JSON.stringify(timer);
+  // Deletions a previous write could not complete free the same quota the backlog does, so they are
+  // attempted on both paths, not only after a write that landed.
+  drainPendingRemovals();
+  if (safeStorageSet(key, payload)) {
+    reapDormantTimers();
+    return;
+  }
+  // The store refused the write. Bounding the resident map is not enough for a capacity-limited
+  // store: the backlog is what fills the quota. Reclaim one oldest key, retry, and stop as soon as
+  // the write lands, so a store that only needed one slot pays for exactly one — the anchor the
+  // screen is showing must not be the thing that does not fit.
+  for (let attempt = 0; attempt < QUOTA_RECLAIM_ATTEMPTS; attempt += 1) {
+    if (reclaimOldestDormantTimers(1) === 0) return;
+    if (safeStorageSet(key, payload)) return;
+  }
 }
 
-// Timer ids embed the anchor timestamp, so every new work interval, review cycle,
-// task or team rotation adds keys that nothing ever reads again. Without a bound the
-// in-memory map and the renderer's localStorage grow for the whole app lifetime.
-function makeRoomForTimer(timerId: string): void {
-  if (dormantTimerIds === null) {
-    dormantTimerIds = collectDormantTimerIds(timerId);
-  }
-  drainDormantTimers(timerId);
-
+// The resident map is what costs renderer memory, so its bound is enforced wherever a key enters it —
+// on a read as well as on a write. Victims are chosen by touch order among residents only: a key this
+// session has read is a key the screen is displaying.
+function makeRoomForResident(timerId: string): void {
   while (timers.size + (timers.has(timerId) ? 0 : 1) > MAX_TRACKED_ACTIVITY_TIMERS) {
-    const victimId = leastRecentlyTouchedTimerId();
+    // A paused record holding time beyond its baseline is destroyed last. `baseElapsedMs` is derived
+    // from *completed* work intervals, so a paused stretch lives only in this record; a running
+    // record cannot be the victim either, because its own five-second persistence tick keeps bumping
+    // it, which leaves the paused card touched only when the screen re-renders it. Ranking must not
+    // rest on the render cadence, so the record's own shape decides. It is a preference, not an
+    // exemption: once every resident holds banked time the least recently touched of them goes too,
+    // because the map bound is what this module is for.
+    const victimId =
+      leastRecentlyTouchedTimerId((timer) => !holdsBankedPause(timer)) ??
+      leastRecentlyTouchedTimerId();
     if (victimId === null) return;
     forgetTimer(victimId);
-    safeStorageRemove(storageKey(victimId));
+    if (!safeStorageRemove(storageKey(victimId))) queueRemoval(victimId);
   }
 }
 
@@ -169,10 +201,21 @@ function forgetTimer(timerId: string): void {
 }
 
 // Only ever called when the incoming key is not resident yet, so it cannot be its own victim.
-function leastRecentlyTouchedTimerId(): string | null {
+// `eligible`, when given, restricts the pass to the records the caller is willing to destroy; the
+// caller falls back to the unrestricted ranking, so the map always shrinks by one and the eviction
+// loop cannot spin.
+function leastRecentlyTouchedTimerId(
+  eligible?: (timer: StoredActivityTimer) => boolean
+): string | null {
   let victimId: string | null = null;
   let victimTouch = Number.POSITIVE_INFINITY;
   for (const [timerId, touch] of touchOrder) {
+    if (eligible) {
+      const timer = timers.get(timerId);
+      // The two Maps are written only together, so a resident missing from `timers` cannot happen;
+      // the guard keeps a hypothetical drift from selecting no victim at all.
+      if (!timer || !eligible(timer)) continue;
+    }
     if (touch < victimTouch) {
       victimId = timerId;
       victimTouch = touch;
@@ -181,15 +224,49 @@ function leastRecentlyTouchedTimerId(): string | null {
   return victimId;
 }
 
-// Keys stored by earlier sessions are dead weight as soon as this session needs the room. Their
-// only trustworthy age is the anchor timestamp the id itself carries, so they are ranked from the
-// key and their values are never read: a payload this build cannot interpret — a future schema, or
-// a record whose read threw — must still not be destroyed for that reason.
-function collectDormantTimerIds(incomingTimerId: string): string[] {
+function holdsBankedPause(timer: StoredActivityTimer): boolean {
+  return !timer.running && timer.elapsedMs > timer.baseElapsedMs;
+}
+
+// Keys stored by earlier sessions are dead weight: a timer id embeds its anchor timestamp, so every
+// new work interval, review cycle, task or team rotation adds a key nothing ever reads again, and
+// without a reap the namespace grows for the whole lifetime of the app. Their only trustworthy age
+// is the instant inside the key, so they are ranked from the key and their values are never read —
+// a payload this build cannot interpret (a future schema, or a record whose read threw) must not be
+// destroyed for that reason.
+//
+// `Date.parse` alone does not implement "our keys only": it is lenient enough to turn other
+// features' keys into dates (`Date.parse('foreign-undatable-19')` is a positive number in V8), so the
+// segment has to match the ISO instant shape `createMemberActivityTimerId` writes, with or without a
+// fractional part. Anything else stays on disk untouched. Two patterns rather than one with an
+// optional group: a group that carries a quantifier and is quantified itself is what this repo's
+// `security/detect-unsafe-regex` gate rejects, and the gate is in the CI lint scope.
+const ISO_INSTANT_WITH_FRACTION =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,3}(?:Z|[+-]\d{2}:\d{2})$/;
+const ISO_INSTANT_WHOLE_SECOND = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})$/;
+// One eighth of the excess per write: enough to converge a legacy namespace in a handful of
+// writes, small enough that no single write takes a deletion burst of the whole backlog with it.
+const DORMANT_REAP_DIVISOR = 8;
+// A store that keeps refusing is not this module's to empty; give up after this many single-key
+// reclaims rather than looping over a backlog that will not fit.
+const QUOTA_RECLAIM_ATTEMPTS = 64;
+
+function isIsoInstantSegment(segment: string): boolean {
+  return ISO_INSTANT_WITH_FRACTION.test(segment) || ISO_INSTANT_WHOLE_SECOND.test(segment);
+}
+
+function anchorMsFromTimerId(timerId: string): number {
+  const segment = timerId.slice(timerId.lastIndexOf(ID_SEGMENT_SEPARATOR) + 1);
+  if (!isIsoInstantSegment(segment)) return 0;
+  const parsed = Date.parse(segment);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function collectDormantTimerIds(): string[] {
   const ranked: { timerId: string; startedAtMs: number }[] = [];
   for (const timerId of readStorageTimerIds()) {
-    if (timerId === incomingTimerId || timers.has(timerId)) continue;
-    const startedAtMs = parseIsoMs(timerId.slice(timerId.lastIndexOf(ID_SEGMENT_SEPARATOR) + 1));
+    if (timers.has(timerId)) continue;
+    const startedAtMs = anchorMsFromTimerId(timerId);
     if (startedAtMs <= 0) continue;
     ranked.push({ timerId, startedAtMs });
   }
@@ -200,18 +277,66 @@ function collectDormantTimerIds(incomingTimerId: string): string[] {
   return ranked.map((entry) => entry.timerId);
 }
 
-function drainDormantTimers(incomingTimerId: string): void {
-  const resident = timers.size + (timers.has(incomingTimerId) ? 0 : 1);
-  const budget = Math.max(0, MAX_TRACKED_ACTIVITY_TIMERS - resident);
-  const dormant = dormantTimerIds;
-  if (!dormant) return;
-
-  while (dormant.length > budget) {
-    const timerId = dormant.shift();
-    if (timerId === undefined) return;
-    if (timerId === incomingTimerId || timers.has(timerId)) continue;
-    safeStorageRemove(storageKey(timerId));
+function listDormantTimerIds(): string[] {
+  if (dormantTimerIds === null) {
+    dormantTimerIds = collectDormantTimerIds();
   }
+  return dormantTimerIds;
+}
+
+// Deletes up to `count` of the oldest backlog keys, oldest anchor first, and reports how many were
+// actually reclaimed. Residents are skipped: a key this session has read is a key the screen is
+// displaying, and React reads every displayed timer during the render phase, before the effect that
+// writes — so by the time anything here runs, the visible set is resident. Keys hydrated after the
+// snapshot was taken are skipped for the same reason.
+function reclaimOldestDormantTimers(count: number): number {
+  const dormant = listDormantTimerIds();
+  let remaining = count;
+  let reclaimed = 0;
+  while (remaining > 0 && dormant.length > 0) {
+    const timerId = dormant.shift();
+    if (timerId === undefined) return reclaimed;
+    // Hydrated after the snapshot was taken, so this session has displayed it. Skipping it does not
+    // spend the caller's budget: the point of the call is keys actually reclaimed.
+    if (timers.has(timerId)) continue;
+    if (!safeStorageRemove(storageKey(timerId))) {
+      // Storage refuses deletions (read-only or restricted). Stop rather than keep claiming a
+      // reclamation that did not happen; the backlog stays as it is until storage can act.
+      return reclaimed;
+    }
+    remaining -= 1;
+    reclaimed += 1;
+  }
+  return reclaimed;
+}
+
+function queueRemoval(timerId: string): void {
+  if (pendingRemovalTimerIds.size >= PENDING_REMOVAL_LIMIT) return;
+  pendingRemovalTimerIds.add(timerId);
+}
+
+// A deletion the store refused, retried from the write path — the same path that reclaims, and the
+// only one that can. A key re-hydrated since it was queued is on screen again, so its fresh record
+// must survive and the queue entry is dropped without a delete. One refusal ends the pass: a store
+// that will not delete this key will not delete the next either.
+function drainPendingRemovals(): void {
+  for (const timerId of pendingRemovalTimerIds) {
+    if (timers.has(timerId)) {
+      pendingRemovalTimerIds.delete(timerId);
+      continue;
+    }
+    if (!safeStorageRemove(storageKey(timerId))) return;
+    pendingRemovalTimerIds.delete(timerId);
+  }
+}
+
+// Reclaimed from the write path only. Reaping from a read would run inside the render pass, before
+// the cards further down the list have read their own records, and delete what the same frame is
+// about to display.
+function reapDormantTimers(): void {
+  const excess = timers.size + listDormantTimerIds().length - MAX_TRACKED_ACTIVITY_TIMERS;
+  if (excess <= 0) return;
+  reclaimOldestDormantTimers(Math.max(1, Math.ceil(excess / DORMANT_REAP_DIVISOR)));
 }
 
 function compareTimerIds(left: string, right: string): number {
@@ -573,4 +698,5 @@ export function resetMemberActivityTimerStoreForTests(): void {
   touchOrder.clear();
   touchSequence = 0;
   dormantTimerIds = null;
+  pendingRemovalTimerIds.clear();
 }
