@@ -251,11 +251,10 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
   const relativePath = path.relative(appOutDir, filePath);
   const segments = relativePath.split(path.sep);
   const normalizedPath = segments.join('/');
-  const isPortableRuntimeGraph =
-    normalizedPath.startsWith('resources/runtime/local-cli/node_modules/') ||
-    /^(?:[^/]+\.app\/)?Contents\/Resources\/runtime\/local-cli\/node_modules\//.test(
-      normalizedPath
-    );
+  const portableRuntimeGraph = normalizedPath.match(
+    /^(?:resources|(?:[^/]+\.app\/)?Contents\/Resources)\/runtime\/local-cli\/node_modules\/(.+)$/
+  );
+  const isPortableRuntimeGraph = portableRuntimeGraph !== null;
 
   if (isPortableRuntimeGraph) {
     // Portable payloads can contain these exact host-built msgpackr outputs.
@@ -274,32 +273,46 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
     ) {
       return filePath;
     }
-    if (targetPlatform === 'win32' && targetArch === 'arm64') {
-      const ptyIndex = findNodeModulesSequence(segments, [
-        'node_modules',
-        'bun-pty',
-        'rust-pty',
-        'target',
-        'release',
-      ]);
-      const library =
-        ptyIndex >= 0 && segments.length === ptyIndex + 6 ? segments[ptyIndex + 5] : null;
-      const libraryTargets = {
-        'librust_pty.so': ['linux', 'x64'],
-        'librust_pty_arm64.so': ['linux', 'arm64'],
-        'librust_pty.dylib': ['darwin', 'x64'],
-        'librust_pty_arm64.dylib': ['darwin', 'arm64'],
-        'rust_pty.dll': ['win32', 'x64'],
-      };
-      const target =
-        library && Object.hasOwn(libraryTargets, library) ? libraryTargets[library] : null;
-      if (
-        target &&
-        (target[0] !== targetPlatform ||
-          (target[1] !== targetArch && !(targetPlatform === 'darwin' && targetArch === 'universal')))
-      ) {
-        return filePath;
+    // Both the current graph and the frozen V2 floor ship multi-platform bun-pty libraries.
+    // Only exact known files may be pruned, with a compatible sibling in the same package.
+    const bunPtyReleases = [
+      'bun-pty/rust-pty/target/release',
+      '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release',
+    ];
+    const libraryTargets = {
+      'librust_pty.so': ['linux', 'x64'],
+      'librust_pty_musl.so': ['linux', 'x64'],
+      'librust_pty_arm64.so': ['linux', 'arm64'],
+      'librust_pty_arm64_musl.so': ['linux', 'arm64'],
+      'librust_pty.dylib': ['darwin', 'x64'],
+      'librust_pty_arm64.dylib': ['darwin', 'arm64'],
+      'rust_pty.dll': ['win32', 'x64'],
+      'rust_pty_arm64.dll': ['win32', 'arm64'],
+    };
+    const library = path.basename(filePath);
+    const matchesTarget = ([platform, arch]) =>
+      platform === targetPlatform &&
+      (arch === targetArch || (targetPlatform === 'darwin' && targetArch === 'universal'));
+    if (
+      Object.hasOwn(libraryTargets, library) &&
+      bunPtyReleases.some((root) => portableRuntimeGraph[1] === `${root}/${library}`)
+    ) {
+      // A malformed target-named file must fail validation rather than disappear.
+      if (matchesTarget(libraryTargets[library])) return null;
+      for (const [filename, target] of Object.entries(libraryTargets)) {
+        if (!matchesTarget(target)) continue;
+        const sibling = path.join(path.dirname(filePath), filename);
+        if (!(await fileExists(sibling))) continue;
+        try {
+          const metadata = await detectBinaryMetadata(sibling);
+          if (metadata && isBinaryCompatible(metadata.format, metadata.archs, targetPlatform, targetArch)) {
+            return filePath;
+          }
+        } catch {
+          // Missing or unreadable target bytes cannot authorize pruning.
+        }
       }
+      return null;
     }
   }
 
@@ -373,31 +386,6 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
       `ffi-rs-win32-${targetArch}-msvc`,
       `ffi-rs.win32-${targetArch}-msvc.node`
     );
-  }
-
-  const bunPtyRelease = 'bun-pty/rust-pty/target/release';
-  const foreignBunPtyFiles = [
-    'librust_pty.dylib',
-    'librust_pty.so',
-    'librust_pty_arm64.dylib',
-    'librust_pty_arm64.so',
-    'rust_pty.dll',
-  ];
-  const targetBunPtyFile =
-    targetPlatform === 'darwin'
-      ? targetArch === 'arm64'
-        ? 'librust_pty_arm64.dylib'
-        : 'librust_pty.dylib'
-      : targetPlatform === 'linux'
-        ? 'librust_pty.so'
-        : 'rust_pty.dll';
-  if (
-    foreignBunPtyFiles.some(
-      (filename) => filename !== targetBunPtyFile && runtimePath === `${bunPtyRelease}/${filename}`
-    )
-  ) {
-    rootToRemove = filePath;
-    targetSibling = path.join(runtimeRoot, ...bunPtyRelease.split('/'), targetBunPtyFile);
   }
 
   if (!rootToRemove || !targetSibling || !(await fileExists(targetSibling))) return null;
