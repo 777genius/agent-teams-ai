@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { append, applyCommand, childKey, emptySnapshot } from '../../../src/features/task-folders/core/domain/folders';
+import {
+  append,
+  applyCommand,
+  childKey,
+  emptySnapshot,
+} from '../../../src/features/task-folders/core/domain/folders';
 import { translateTarget } from '../../../src/features/task-folders/renderer/adapters/treeDropAdapter';
 import { projectFolders } from '../../../src/features/task-folders/renderer/view-models/projection';
 import { applyVisibleTaskChildren } from '../../../src/features/task-folders/renderer/view-models/projectionView';
@@ -39,11 +44,7 @@ describe('canonical task view projection', () => {
 
     expect(filterGlobalTasks(tasks, policy, getSnapshot()).map((task) => task.id)).toEqual(['1']);
     expect(
-      filterGlobalTasks(
-        tasks,
-        { ...policy, searchQuery: '  Subject 1  ' },
-        getSnapshot()
-      )
+      filterGlobalTasks(tasks, { ...policy, searchQuery: '  Subject 1  ' }, getSnapshot())
     ).toEqual([]);
 
     const canonical = projectFolders(
@@ -87,7 +88,13 @@ describe('canonical task view projection', () => {
         parent: 'folder',
         anchor: append,
       });
-    const canonical = projectFolders(snapshot, tasks, () => false, () => undefined, true);
+    const canonical = projectFolders(
+      snapshot,
+      tasks,
+      () => false,
+      () => undefined,
+      true
+    );
     const visible = applyVisibleTaskChildren(
       canonical,
       tasks,
@@ -133,7 +140,13 @@ describe('canonical task view projection', () => {
         parent: 'folder',
         anchor: append,
       });
-    const canonical = projectFolders(snapshot, tasks, () => false, () => undefined, true);
+    const canonical = projectFolders(
+      snapshot,
+      tasks,
+      () => false,
+      () => undefined,
+      true
+    );
     const canonicalFolder = canonical.nodes.get('folder:folder')!;
     const canonicalOrder = [
       'task:["team","1"]',
@@ -194,7 +207,13 @@ describe('canonical task view projection', () => {
         parent: 'folder',
         anchor: append,
       });
-    const canonical = projectFolders(snapshot, tasks, () => false, () => undefined, true);
+    const canonical = projectFolders(
+      snapshot,
+      tasks,
+      () => false,
+      () => undefined,
+      true
+    );
     const visible = applyVisibleTaskChildren(
       canonical,
       tasks,
@@ -233,7 +252,13 @@ describe('canonical task view projection', () => {
         parent: 'folder',
         anchor: append,
       });
-    const canonical = projectFolders(snapshot, tasks, () => false, () => undefined, true);
+    const canonical = projectFolders(
+      snapshot,
+      tasks,
+      () => false,
+      () => undefined,
+      true
+    );
     const visible = applyVisibleTaskChildren(
       canonical,
       tasks,
@@ -242,13 +267,7 @@ describe('canonical task view projection', () => {
     );
     const hiddenSource = visible.nodes.get('task:["team","1"]')!;
 
-    const translated = translateTarget(
-      visible,
-      'folder:folder',
-      1,
-      hiddenSource,
-      true
-    );
+    const translated = translateTarget(visible, 'folder:folder', 1, hiddenSource, true);
 
     expect(translated.anchor).toEqual({
       before: { kind: 'task', identity: { teamName: 'team', taskId: '3' } },
@@ -278,7 +297,13 @@ describe('canonical task view projection', () => {
       });
     const availableTasks = [tasks[0], tasks[2]];
     const visible = applyVisibleTaskChildren(
-      projectFolders(snapshot, availableTasks, () => false, () => undefined, true),
+      projectFolders(
+        snapshot,
+        availableTasks,
+        () => false,
+        () => undefined,
+        true
+      ),
       availableTasks,
       () => true,
       (siblings) => siblings
@@ -296,10 +321,44 @@ describe('canonical task view projection', () => {
         identity: { teamName: 'team', taskId: '3' },
         ...translated,
       }).folders[0].children.map(childKey)
-    ).toEqual([
-      'task:["team","3"]',
-      'task:["team","1"]',
-      'task:["team","2"]',
-    ]);
+    ).toEqual(['task:["team","3"]', 'task:["team","1"]', 'task:["team","2"]']);
+  });
+
+  it('resolves hidden deleted rows without counting them or marking them unavailable', () => {
+    let snapshot = applyCommand(emptySnapshot(), {
+      type: 'create',
+      id: 'folder',
+      name: 'Folder',
+      parent: null,
+    });
+    const deleted: GlobalTask = { ...makeTask('2'), status: 'deleted' };
+    const placed = [tasks[0], deleted];
+    for (const candidate of placed)
+      snapshot = applyCommand(snapshot, {
+        type: 'moveTask',
+        identity: { teamName: candidate.teamName, taskId: candidate.id },
+        parent: 'folder',
+        anchor: append,
+      });
+
+    const hidden = projectFolders(
+      snapshot,
+      placed,
+      () => false,
+      () => undefined,
+      true,
+      false
+    );
+    expect(hidden.nodes.get('folder:folder')).toMatchObject({ active: 1, unavailable: 0 });
+
+    const shown = projectFolders(
+      snapshot,
+      placed,
+      () => false,
+      () => undefined,
+      true,
+      true
+    );
+    expect(shown.nodes.get('folder:folder')).toMatchObject({ active: 2, unavailable: 0 });
   });
 });

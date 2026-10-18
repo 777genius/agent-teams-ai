@@ -68,12 +68,6 @@ export function useTaskFoldersHost(
   const teamCatalogKey = useMemo(() => teams.map((team) => team.teamName).join('|'), [teams]);
   // Membership only: task add/remove invalidates the deleted feed, status churn must not.
   const globalTaskIdsKey = useMemo(() => tasks.map((task) => task.id).join('|'), [tasks]);
-  // Folder counts must not include deleted rows while the deleted filter is off.
-  const projectionTasks = useMemo(
-    () =>
-      view.filters.showDeleted ? viewTasks : viewTasks.filter((task) => task.status !== 'deleted'),
-    [view.filters.showDeleted, viewTasks]
-  );
   useEffect(() => {
     if (!view.filters.showDeleted) return;
     void fetchAllDeletedTasks();
@@ -82,12 +76,13 @@ export function useTaskFoldersHost(
     () =>
       projectFolders(
         state.snapshot,
-        sortGlobalTasks(projectionTasks, 'time', contextId),
+        sortGlobalTasks(viewTasks, 'time', contextId),
         local.isArchived,
         local.getRenamedSubject,
-        true
+        true,
+        view.filters.showDeleted
       ),
-    [state.snapshot, projectionTasks, local, contextId]
+    [state.snapshot, viewTasks, local, contextId, view.filters.showDeleted]
   );
   const unreadTaskCounts = useMemo(
     () =>

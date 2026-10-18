@@ -30,7 +30,8 @@ export function projectFolders(
   tasks: GlobalTask[],
   isArchived: (team: string, id: string) => boolean,
   subject: (team: string, id: string) => string | undefined,
-  showArchived: boolean
+  showArchived: boolean,
+  showDeleted = true
 ): Projection {
   const catalog = new Map(
     tasks.map((task) => [taskKey({ teamName: task.teamName, taskId: task.id }), task])
@@ -51,6 +52,8 @@ export function projectFolders(
     const task = catalog.get(taskKey(identity));
     if (!task) return undefined;
     const archived = isArchived(identity.teamName, identity.taskId);
+    // A hidden deleted row still resolves its folder child, but adds nothing to the totals.
+    const hidden = !showDeleted && task.status === 'deleted';
     const n = {
       ...node(
         childKey({ kind: 'task', identity }),
@@ -60,8 +63,8 @@ export function projectFolders(
       identity,
       task,
       archived,
-      active: archived ? 0 : 1,
-      archivedCount: archived ? 1 : 0,
+      active: archived || hidden ? 0 : 1,
+      archivedCount: hidden ? 0 : archived ? 1 : 0,
     };
     nodes.set(n.id, n);
     return n;
