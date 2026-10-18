@@ -2890,10 +2890,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         : {}),
     }));
 
-    scheduleToolApprovalSettingsSync(teamName, selectedSettings);
-
     let snapshotRead: TaskDetailReadHandle<TeamViewSnapshot> | null = null;
     try {
+      // A throw after the loading write must still reach settlement, not leave the latch.
+      scheduleToolApprovalSettingsSync(teamName, selectedSettings);
       snapshotRead = fetchTeamDataDeduped(
         teamName,
         requestScope,
