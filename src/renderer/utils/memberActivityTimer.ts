@@ -24,6 +24,7 @@ interface StoredActivityTimer {
 
 const STORAGE_PREFIX = 'member-activity-timer:';
 const MAX_UNOBSERVED_RUN_TRANSITION_MS = 5_000;
+export const MAX_TRACKED_ACTIVITY_TIMERS = 200;
 const timers = new Map<string, StoredActivityTimer>();
 
 function parseIsoMs(value: string | null | undefined): number {
@@ -47,6 +48,14 @@ function safeStorageGet(key: string): string | null {
 function safeStorageSet(key: string, value: string): void {
   try {
     globalThis.localStorage?.setItem(key, value);
+  } catch {
+    // localStorage can be unavailable in tests or restricted browser contexts.
+  }
+}
+
+function safeStorageRemove(key: string): void {
+  try {
+    globalThis.localStorage?.removeItem(key);
   } catch {
     // localStorage can be unavailable in tests or restricted browser contexts.
   }
@@ -109,8 +118,60 @@ function readStoredTimer(
 }
 
 function writeStoredTimer(timerId: string, timer: StoredActivityTimer): void {
+  const isNewTimer = !timers.has(timerId);
   timers.set(timerId, timer);
   safeStorageSet(storageKey(timerId), JSON.stringify(timer));
+  if (isNewTimer) retainRecentTimers(timerId);
+}
+
+// Timer ids embed the anchor timestamp, so every new work interval, review cycle,
+// task or team rotation adds keys that nothing ever reads again. Without a bound the
+// in-memory map and the renderer's localStorage grow for the whole app lifetime.
+function retainRecentTimers(keepTimerId: string): void {
+  const lastSeenMs = new Map<string, number>();
+  for (const [timerId, timer] of timers) {
+    lastSeenMs.set(timerId, timer.updatedAtMs);
+  }
+
+  const storedIds = readStorageTimerIds();
+  for (const timerId of storedIds) {
+    if (lastSeenMs.has(timerId)) continue;
+    const raw = safeStorageGet(storageKey(timerId));
+    let parsed: unknown = null;
+    try {
+      parsed = raw === null ? null : (JSON.parse(raw) as unknown);
+    } catch {
+      parsed = null;
+    }
+    lastSeenMs.set(timerId, isStoredTimer(parsed) ? parsed.updatedAtMs : Number.NEGATIVE_INFINITY);
+  }
+
+  let excess = lastSeenMs.size - MAX_TRACKED_ACTIVITY_TIMERS;
+  if (excess <= 0) return;
+
+  const ordered = [...lastSeenMs].sort((left, right) => left[1] - right[1]);
+  for (const [timerId] of ordered) {
+    if (excess <= 0) return;
+    if (timerId === keepTimerId) continue;
+    timers.delete(timerId);
+    safeStorageRemove(storageKey(timerId));
+    excess -= 1;
+  }
+}
+
+function readStorageTimerIds(): string[] {
+  const ids: string[] = [];
+  try {
+    const storage = globalThis.localStorage;
+    if (!storage) return ids;
+    for (let index = 0; index < storage.length; index += 1) {
+      const key = storage.key(index);
+      if (key?.startsWith(STORAGE_PREFIX)) ids.push(key.slice(STORAGE_PREFIX.length));
+    }
+  } catch {
+    // localStorage can be unavailable in tests or restricted browser contexts.
+  }
+  return ids;
 }
 
 function createInitialTimer(
