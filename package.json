@@ -104,6 +104,7 @@
     "test": "vitest run",
     "test:ci": "vitest run --maxWorkers=1",
     "test:task-change-ledger": "vitest run test/main/services/team/TaskChangeLedgerReader.test.ts test/main/services/team/taskChangeLedgerFixtures.integration.test.ts test/main/services/team/ReviewApplierService.test.ts test/main/services/team/FileContentResolver.test.ts test/main/services/team/ChangeExtractorService.test.ts test/renderer/store/changeReviewSlice.test.ts test/renderer/utils/reviewKey.test.ts test/main/services/team/TeamLogSourceTracker.test.ts test/main/services/team/stallMonitor/TeamTaskLogFreshnessReader.test.ts",
+    "test:e2e:select-team-latch": "tsx scripts/e2e/select-team-latch-desktop.ts",
     "test:e2e:change-review": "node scripts/e2e/change-review-hunk-desktop.mjs",
     "test:e2e:change-review:dev-mcp": "node scripts/e2e/change-review-hunk-desktop.mjs --dev-mcp --single-window",
     "test:e2e:change-review:dev-mcp:restart": "node scripts/e2e/change-review-hunk-desktop.mjs --dev-mcp",
