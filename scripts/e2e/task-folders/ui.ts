@@ -6,9 +6,14 @@ export const selectors = {
   toggle: '[data-testid="task-folders-toggle"]',
   panel: '[data-testid="task-folders-panel"]',
   create: '[data-testid="task-folders-new-folder"]',
+  createInline: '[data-testid="task-folders-new-folder-list"]',
   newFolderName: '[role="dialog"] input[aria-label="Folder name"]',
   tree: '[data-testid="task-folders-tree"]',
-  archived: '[data-testid="task-folders-show-archived"]',
+  treeFilters: '[data-testid="tree-task-view-filters"]',
+  sidebarFilters: '[data-testid="sidebar-task-view-filters"]',
+  showArchivedFilter: '[data-testid="task-view-show-archived"]',
+  showDeletedFilter: '[data-testid="task-view-show-deleted"]',
+  viewReset: '[data-testid="tree-task-view-reset"]',
   sidebar: '#sidebar-tasks-panel',
   folderHandle: '[data-testid="task-folder-drag-handle"]',
   taskHandle: '[data-testid="sidebar-task-drag-handle"]',
@@ -450,7 +455,11 @@ export class UI {
       TARGET_PRESENCE_TIMEOUT_MS
     );
   }
-  async chooseDestination(optionLabel: string, forbid?: string) {
+  async chooseDestination(
+    optionLabel: string,
+    forbid?: string,
+    disabledHint?: { label: string; hint: string }
+  ) {
     // The dialog zooms in over 200ms, and keyboard selection races Radix's deferred
     // item focus, so pick the option by its visible label and verify the trigger shows
     // it before the caller submits.
@@ -477,6 +486,19 @@ export class UI {
         leaked,
         '[]',
         'Move dialog is not for the intended folder; its subtree labels are still choosable: ' + leaked
+      );
+    }
+    if (disabledHint) {
+      // Task moves keep out-of-scope destinations visible but disabled, with a hint.
+      assert.equal(
+        await this.value(
+          `(() => {
+            const option = Array.from(document.querySelectorAll('[role="option"]')).find((e) => e.textContent?.includes(${JSON.stringify(disabledHint.label)}));
+            return option ? [option.getAttribute('aria-disabled'), option.textContent?.includes(${JSON.stringify(disabledHint.hint)})].join('|') : null;
+          })()`
+        ),
+        'true|true',
+        'Option "' + disabledHint.label + '" must be disabled with the "' + disabledHint.hint + '" hint'
       );
     }
     await this.click(label(optionLabel, 'document', '[role="option"]'));
@@ -630,6 +652,33 @@ export class UI {
     await this.key('Enter');
     await this.persisted((s) => s.folders.some((f) => f.name === name), 'folder creation ' + name);
     return (await this.snapshot()).folders.find((f) => f.name === name)!.id;
+  }
+  filterTrigger(scope: 'tree' | 'sidebar') {
+    return el(scope === 'tree' ? selectors.treeFilters : selectors.sidebarFilters);
+  }
+  filterCheckbox(kind: 'archived' | 'deleted') {
+    return el(kind === 'archived' ? selectors.showArchivedFilter : selectors.showDeletedFilter);
+  }
+  async setViewFilter(kind: 'archived' | 'deleted', value: boolean, scope: 'tree' | 'sidebar' = 'tree') {
+    await this.click(this.filterTrigger(scope));
+    const target = this.filterCheckbox(kind);
+    await this.wait(target, `${kind} filter checkbox`);
+    const state = await this.value<string>(`${target}.getAttribute('data-state')`);
+    if (state !== (value ? 'checked' : 'unchecked')) await this.click(target);
+    await this.click(label('Apply', el(`[data-testid="${scope}-task-view-filters-content"]`)));
+    await this.wait(`!${target}`, `${kind} filter applied`);
+  }
+  async assertViewFilter(kind: 'archived' | 'deleted', value: boolean, scope: 'tree' | 'sidebar' = 'tree') {
+    await this.click(this.filterTrigger(scope));
+    const target = this.filterCheckbox(kind);
+    await this.wait(target, `${kind} filter checkbox`);
+    assert.equal(
+      await this.value(`${target}.getAttribute('data-state')`),
+      value ? 'checked' : 'unchecked',
+      `${kind} filter state`
+    );
+    await this.key('Escape');
+    await this.wait(`!${target}`, `${kind} filter closed`);
   }
   async unfocus() {
     // Transfer both pointer and keyboard focus outside with trusted native input.

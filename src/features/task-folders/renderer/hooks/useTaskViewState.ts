@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import {
   defaultTaskFiltersState,
+  isDefaultTaskFiltersState,
   type TaskFiltersState,
 } from '@renderer/components/sidebar/taskFiltersState';
 
@@ -56,10 +57,16 @@ export function useTaskViewState(
 
   useEffect(() => () => closePopovers(), [closePopovers]);
 
+  const isDefault =
+    isDefaultTaskFiltersState(viewState.filters) &&
+    viewState.sortMode === defaultSortMode &&
+    viewState.searchQuery.trim() === '';
+
   return {
     filters: viewState.filters,
     sortMode: viewState.sortMode,
     searchQuery: viewState.searchQuery,
+    isDefault,
     filtersOpen,
     sortOpen,
     setFilters,

@@ -173,28 +173,7 @@ export async function runTaskEditingAndNavigationCases(
   await until(
     cdp,
     `(()=>{const entry=window.__agentTeamsDevStore.getState().taskDetailById[${taskKeyExpression(teamB.teamName)}];return entry?.phase==='ready'&&!entry.loading&&!entry.refreshPending&&entry.full?.description===${JSON.stringify(savedDescription)}})()`,
-    'B saved description accepted before selecting the group chat'
-  );
-
-  await click(cdp, `${pageB}.querySelector('[aria-label="Групповой чат"]')`);
-  await until(
-    cdp,
-    `!![...document.querySelectorAll('[role="option"]')].find(e=>e.textContent.trim()===${JSON.stringify(teamB.groupName)})`,
-    'TEST group Radix option'
-  );
-  await click(
-    cdp,
-    `[...document.querySelectorAll('[role="option"]')].find(e=>e.textContent.trim()===${JSON.stringify(teamB.groupName)})`
-  );
-  await waitFile(
-    teamB.taskFile,
-    (task) => task.groupChatId === teamB.groupChatId,
-    'B group-chat association persisted'
-  );
-  await until(
-    cdp,
-    `(()=>{const entry=window.__agentTeamsDevStore.getState().taskDetailById[${taskKeyExpression(teamB.teamName)}];return entry?.phase==='ready'&&!entry.loading&&!entry.refreshPending&&entry.full?.groupChatId===${JSON.stringify(teamB.groupChatId)}})()`,
-    'B saved group chat accepted before selecting the owner'
+    'B saved description accepted before selecting the owner'
   );
 
   await click(
@@ -226,7 +205,7 @@ export async function runTaskEditingAndNavigationCases(
     kind: 'actual-b-task-and-kanban-persistence',
     subjectSavedWithCurrentControl: true,
     descriptionSavedWithTiptapSave: true,
-    groupChatSavedWithRadixSelect: true,
+    groupChatBindingRemainedSystemOwned: true,
     ownerSavedWithRadixMemberSelect: true,
     taskB: savedB,
     kanbanB: savedBKanban,

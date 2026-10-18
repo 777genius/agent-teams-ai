@@ -224,6 +224,7 @@ const SidebarTaskItemContent = ({
           unreadBackgroundClass,
           task.teamDeleted && 'opacity-50',
           isArchived && 'text-text-muted opacity-60',
+          task.status === 'deleted' && 'text-text-muted opacity-60',
           containerProps?.className
         )}
         style={{ borderColor: 'var(--color-border)', ...containerProps?.style }}

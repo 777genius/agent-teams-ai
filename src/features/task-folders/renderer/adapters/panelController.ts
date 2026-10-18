@@ -1,3 +1,5 @@
+import { dockedSidebar } from './dockedSidebar';
+
 export type Hold =
   | 'drag'
   | 'pointer'
@@ -68,7 +70,9 @@ export class PanelController {
     }, 2000);
   }
   begin(source: string): number {
-    if (!this.state.manual) return this.state.session;
+    // Folder mode is manual (overlay) or docked (replaces the sidebar); drags need a
+    // session in both.
+    if (!this.state.manual && !dockedSidebar.getSnapshot().docked) return this.state.session;
     this.cancelDropTimer();
     this.cancelTimer();
     this.dropped = false;

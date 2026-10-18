@@ -638,6 +638,11 @@
       "fallbackMessage": "Произошла непредвиденная ошибка",
       "confirmLabel": "OK"
     },
+    "restoreFailed": {
+      "title": "Не удалось восстановить задачу",
+      "fallbackMessage": "Произошла непредвиденная ошибка",
+      "confirmLabel": "OK"
+    },
     "sort": {
       "byTime": "По времени",
       "byUnread": "По непрочитанным",
@@ -663,6 +668,7 @@
     "unpin": "Открепить",
     "pin": "Закрепить",
     "rename": "Переименовать",
+    "restoreTask": "Восстановить задачу",
     "markUnread": "Пометить непрочитанной",
     "unarchive": "Разархивировать",
     "archive": "Архивировать",
@@ -752,6 +758,8 @@
     "searchProjects": "Искать проекты...",
     "noProjects": "Проектов нет",
     "comments": "Комментарии",
+    "showArchived": "Показывать архивные задачи",
+    "showDeleted": "Показывать удалённые задачи",
     "apply": "Применить",
     "read": {
       "all": "Все",
@@ -971,6 +979,9 @@
     "unreadTasks_one": "{{count}} непросмотренная задача",
     "unreadTasks_few": "{{count}} непросмотренные задачи",
     "unreadTasks_many": "{{count}} непросмотренных задач",
-    "unreadTasks_other": "{{count}} непросмотренной задачи"
+    "unreadTasks_other": "{{count}} непросмотренной задачи",
+    "moveHere": "Положи сюда",
+    "cannotMoveHere": "Сюда переместить нельзя",
+    "dockToSidebar": "Фолдеры вместо сайдбара"
   }
 }

@@ -41,7 +41,7 @@ const comment = (id: string): TaskComment => ({
   createdAt: '2026-10-16T00:00:00.000Z',
 });
 
-function nestedProjection(tasks: GlobalTask[]) {
+function nestedProjection(tasks: GlobalTask[], showDeleted = true) {
   let snapshot = emptySnapshot();
   for (const [id, parent] of [
     ['outer', null],
@@ -63,7 +63,8 @@ function nestedProjection(tasks: GlobalTask[]) {
     tasks,
     () => false,
     () => undefined,
-    true
+    true,
+    showDeleted
   );
 }
 
@@ -107,6 +108,17 @@ describe('folder unread task rollup', () => {
     expect(
       projection.snapshot.folders.find((folder) => folder.id === 'deep')!.children
     ).toHaveLength(3);
+  });
+
+  it('leaves hidden deleted tasks out of the rollup until the deleted filter is on', () => {
+    const tasks = [task('live'), { ...task('gone', [comment('x')]), status: 'deleted' }] as [
+      GlobalTask,
+      GlobalTask,
+    ];
+    const state = { [key('gone')]: { readIds: [], lastUpdated: 0, manualUnread: true } };
+
+    expect(countsFor(nestedProjection(tasks, false), state).get('folder:deep')).toBe(0);
+    expect(countsFor(nestedProjection(tasks, true), state).get('folder:deep')).toBe(1);
   });
 
   it('recomputes from the same read semantics on view, manual-unread and fresh-comment changes', () => {

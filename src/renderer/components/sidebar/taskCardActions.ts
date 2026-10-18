@@ -1,4 +1,11 @@
-export type TaskCardActionId = 'pin' | 'move' | 'rename' | 'markUnread' | 'archive' | 'delete';
+export type TaskCardActionId =
+  | 'pin'
+  | 'move'
+  | 'rename'
+  | 'markUnread'
+  | 'archive'
+  | 'delete'
+  | 'restore';
 export type TaskCardActionLabelKey =
   | 'taskContextMenu.pin'
   | 'taskContextMenu.unpin'
@@ -7,7 +14,8 @@ export type TaskCardActionLabelKey =
   | 'taskContextMenu.markUnread'
   | 'taskContextMenu.archive'
   | 'taskContextMenu.unarchive'
-  | 'taskContextMenu.deleteTask';
+  | 'taskContextMenu.deleteTask'
+  | 'taskContextMenu.restoreTask';
 
 export interface TaskCardActionHandlers {
   onTogglePin(): void;
@@ -16,6 +24,7 @@ export interface TaskCardActionHandlers {
   onMarkUnread(): void;
   onToggleArchive(): void;
   onDelete?(): void;
+  onRestore?(): void;
 }
 
 export interface TaskCardAction {
@@ -30,16 +39,30 @@ export interface TaskCardAction {
 export function buildTaskCardActions({
   isPinned,
   isArchived,
+  isDeleted = false,
   editingReady = true,
   handlers,
   includeDelete = true,
 }: {
   isPinned: boolean;
   isArchived: boolean;
+  isDeleted?: boolean;
   editingReady?: boolean;
   handlers: TaskCardActionHandlers;
   includeDelete?: boolean;
 }): TaskCardAction[] {
+  if (isDeleted) {
+    return handlers.onRestore
+      ? [
+          {
+            id: 'restore',
+            labelKey: 'taskContextMenu.restoreTask',
+            run: handlers.onRestore,
+            restoreFocus: true,
+          },
+        ]
+      : [];
+  }
   const actions: TaskCardAction[] = [
     {
       id: 'pin',

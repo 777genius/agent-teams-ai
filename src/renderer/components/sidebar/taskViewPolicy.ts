@@ -157,7 +157,11 @@ export function filterGlobalTasks(
   isArchived: (task: GlobalTask) => boolean = () => false
 ): GlobalTask[] {
   let visible = applyProjectTaskFilter(tasks, policy.filters.projectPath);
-  visible = visible.filter((task) => taskMatchesStatus(task, policy.filters.statusIds));
+  visible = visible.filter((task) =>
+    task.status === 'deleted'
+      ? policy.filters.showDeleted
+      : taskMatchesStatus(task, policy.filters.statusIds)
+  );
   if (policy.filters.teamName) {
     visible = visible.filter((task) => task.teamName === policy.filters.teamName);
   }
@@ -182,6 +186,8 @@ export function filterGlobalTasks(
   }
   visible = applyTaskSearch(visible, policy.searchQuery, policy.getEffectiveSubject);
   return visible.filter((task) => {
+    // Deleted tasks are gated solely by the showDeleted filter.
+    if (task.status === 'deleted') return true;
     const archived = isArchived(task);
     return policy.archiveMode === 'all'
       ? true

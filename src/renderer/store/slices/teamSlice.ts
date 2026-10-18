@@ -206,6 +206,8 @@ import {
 } from '../utils/contextScopedRequestEpoch';
 import { getWorktreeNavigationState } from '../utils/stateResetHelpers';
 
+import { createDeletedTaskFeed, type DeletedTaskFeed } from './deletedTaskFeed';
+
 import type {
   RefreshTeamMessagesHeadResult,
   TeamMessagesCacheEntry,
@@ -1365,7 +1367,7 @@ function isVisibleInActiveTeamSurface(
   return Boolean(teamName && getVisibleTeamNamesInAnyPane(state).has(teamName));
 }
 
-export interface TeamSlice extends SidebarLogsHeightSlice {
+export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
   teams: TeamSummary[];
   /** O(1) lookup to avoid array scans in render-hot paths */
   teamByName: Record<string, TeamSummary>;
@@ -1605,8 +1607,6 @@ export interface TeamSlice extends SidebarLogsHeightSlice {
     attachmentId: string,
     mimeType: string
   ) => Promise<string | null>;
-  deletedTasks: TeamTask[];
-  deletedTasksLoading: boolean;
   softDeleteTask: (teamName: string, taskId: string) => Promise<void>;
   restoreTask: (teamName: string, taskId: string) => Promise<void>;
   fetchDeletedTasks: (teamName: string) => Promise<void>;
@@ -1771,7 +1771,7 @@ const failedMessageState = (error: unknown) => ({
   sendMessageError: mapSendMessageError(error),
 });
 
-export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, get) => ({
+export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, get, store) => ({
   teams: [],
   teamManagementNoticeByTeam: {},
   teamByName: {},
@@ -1783,6 +1783,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   globalTasksLoading: false,
   globalTasksInitialized: false,
   globalTasksError: null,
+  ...createDeletedTaskFeed(set, get, store),
   selectedTeamName: null,
   selectedTeamData: null,
   teamsProjectNavigationIntent: null,
@@ -1982,8 +1983,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   addingComment: false,
   addCommentError: null,
   provisioningProgressUnsubscribe: null,
-  deletedTasks: [],
-  deletedTasksLoading: false,
   pendingApprovals: [],
   resolvedApprovals: new Map(),
   toolApprovalSettingsByTeam: loadAllToolApprovalSettingsByTeam(),
@@ -4079,7 +4078,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     if (!get().isContextSwitching && isTeamRequestScopeCurrent(get, teamName, requestScope)) {
       await get().refreshTeamData(teamName);
       if (isTeamRequestScopeCurrent(get, teamName, requestScope))
-        await get().fetchDeletedTasks(teamName);
+        await Promise.all([get().fetchDeletedTasks(teamName), get().fetchAllDeletedTasks()]);
     }
   },
 
@@ -4090,7 +4089,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     invalidateAcceptedTaskDetailMutation(get, teamName, taskId, requestScope, 'restoring');
     if (isTeamRequestScopeCurrent(get, teamName, requestScope)) {
       await get().refreshTeamData(teamName);
-      await get().fetchDeletedTasks(teamName);
+      await Promise.all([get().fetchDeletedTasks(teamName), get().fetchAllDeletedTasks()]);
     }
   },
 
