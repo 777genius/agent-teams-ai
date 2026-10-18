@@ -3179,7 +3179,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           });
           return;
         }
-        holdSelectTeamLoadForProvisioning(set, teamName, requestNonce);
+        holdSelectTeamLoadForProvisioning(get, set, teamName, requestNonce);
         return;
       }
 
