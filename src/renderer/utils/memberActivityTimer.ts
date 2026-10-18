@@ -45,6 +45,11 @@ let dormantTimerIds: string[] | null = null;
 // reintroduce the leak this one prevents.
 const PENDING_REMOVAL_LIMIT = MAX_TRACKED_ACTIVITY_TIMERS;
 const pendingRemovalTimerIds = new Set<string>();
+// Keys the producer has decided to write this frame but has not written yet. A backlog drain cannot
+// tell such a key from dead weight: it is on disk, it is not resident, and nothing has read it. The
+// set is the producer's own knowledge, handed over before the first write of the frame — see
+// `declareActivityTimerKeys`.
+const declaredTimerIds = new Set<string>();
 
 function parseIsoMs(value: string | null | undefined): number {
   if (!value) return 0;
@@ -143,7 +148,7 @@ function readStoredTimer(
       running: parsed.running,
       runId: parsed.runId ?? null,
     };
-    makeRoomForResident(timerId);
+    makeRoomForResident(timerId, false);
     rememberTimer(timerId, sanitized);
     return { timer: sanitized, unreachable: false };
   } catch {
@@ -152,7 +157,7 @@ function readStoredTimer(
 }
 
 function writeStoredTimer(timerId: string, timer: StoredActivityTimer): void {
-  makeRoomForResident(timerId);
+  makeRoomForResident(timerId, true);
   rememberTimer(timerId, timer);
   const key = storageKey(timerId);
   const payload = JSON.stringify(timer);
@@ -176,7 +181,14 @@ function writeStoredTimer(timerId: string, timer: StoredActivityTimer): void {
 // The resident map is what costs renderer memory, so its bound is enforced wherever a key enters it —
 // on a read as well as on a write. Victims are chosen by touch order among residents only: a key this
 // session has read is a key the screen is displaying.
-function makeRoomForResident(timerId: string): void {
+//
+// `persistEviction` is what separates the two paths. On a write, dropping a resident means the
+// session no longer has any use for that record, so its key goes with it. On a read it does not: the
+// record on disk is the only place a paused member's banked elapsed lives, and a render pass that
+// hydrates more anchors than the map holds must not be able to delete them — the same frame that
+// evicted one is the frame that would have displayed it. The read path therefore frees the Map slot
+// and leaves the key on disk, where the write-path drain can still reach it as ordinary backlog.
+function makeRoomForResident(timerId: string, persistEviction: boolean): void {
   while (timers.size + (timers.has(timerId) ? 0 : 1) > MAX_TRACKED_ACTIVITY_TIMERS) {
     // A paused record holding time beyond its baseline is destroyed last. `baseElapsedMs` is derived
     // from *completed* work intervals, so a paused stretch lives only in this record; a running
@@ -190,6 +202,7 @@ function makeRoomForResident(timerId: string): void {
       leastRecentlyTouchedTimerId();
     if (victimId === null) return;
     forgetTimer(victimId);
+    if (!persistEviction) continue;
     if (!safeStorageRemove(storageKey(victimId))) queueRemoval(victimId);
   }
 }
@@ -254,9 +267,16 @@ function holdsBankedPause(timer: StoredActivityTimer): boolean {
 // fractional part. Anything else stays on disk untouched. Two patterns rather than one with an
 // optional group: a group that carries a quantifier and is quantified itself is what this repo's
 // `security/detect-unsafe-regex` gate rejects, and the gate is in the CI lint scope.
+//
+// The fraction accepts up to nine digits and the zone also accepts the basic-format `+HHMM`, because
+// `startedAt` reaches the key verbatim from the team's task data — `TeamTaskReader.ts` checks only
+// `typeof === 'string'` — so an interval written by another tool can carry microsecond precision or a
+// compact offset. Those denote real instants, and leaving them out of the accepted set would make
+// their keys permanently unreclaimable. A string with no zone at all stays excluded: `Date.parse` reads
+// those as *local* time, so its rank would depend on the machine rendering the list.
 const ISO_INSTANT_WITH_FRACTION =
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,3}(?:Z|[+-]\d{2}:\d{2})$/;
-const ISO_INSTANT_WHOLE_SECOND = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})$/;
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,9}(?:Z|[+-]\d{2}:?\d{2})$/;
+const ISO_INSTANT_WHOLE_SECOND = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:?\d{2})$/;
 // One eighth of the excess per write: enough to converge a legacy namespace in a handful of
 // writes, small enough that no single write takes a deletion burst of the whole backlog with it.
 const DORMANT_REAP_DIVISOR = 8;
@@ -300,24 +320,31 @@ function listDormantTimerIds(): string[] {
 // Deletes up to `count` of the oldest backlog keys, oldest anchor first, and reports how many were
 // actually reclaimed. Residents are skipped: a key this session has read is a key the screen is
 // displaying, and React reads every displayed timer during the render phase, before the effect that
-// writes — so by the time anything here runs, the visible set is resident. Keys hydrated after the
-// snapshot was taken are skipped for the same reason.
+// writes — so by the time anything here runs, the visible set is resident. Keys the producer has
+// declared but not written yet are skipped for the same reason.
+//
+// The scan advances by index instead of consuming the list, so a skipped key stays where it is and
+// the next call considers it again. Consuming it here would be the quiet failure mode: the list is
+// built once per session, so a key dropped from it is invisible to every later drain no matter how
+// long it stays on disk.
 function reclaimOldestDormantTimers(count: number): number {
   const dormant = listDormantTimerIds();
-  let remaining = count;
   let reclaimed = 0;
-  while (remaining > 0 && dormant.length > 0) {
-    const timerId = dormant.shift();
-    if (timerId === undefined) return reclaimed;
-    // Hydrated after the snapshot was taken, so this session has displayed it. Skipping it does not
-    // spend the caller's budget: the point of the call is keys actually reclaimed.
-    if (timers.has(timerId)) continue;
+  let index = 0;
+  while (index < dormant.length && reclaimed < count) {
+    const timerId = dormant[index];
+    if (timers.has(timerId) || declaredTimerIds.has(timerId)) {
+      index += 1;
+      continue;
+    }
     if (!safeStorageRemove(storageKey(timerId))) {
       // Storage refuses deletions (read-only or restricted). Stop rather than keep claiming a
-      // reclamation that did not happen; the backlog stays as it is until storage can act.
+      // reclamation that did not happen, and leave the key at the head of the list: the next write
+      // tries it again. Dropping it would leave the namespace over the bound for the rest of the
+      // session while this module believed it had already reclaimed the room.
       return reclaimed;
     }
-    remaining -= 1;
+    dormant.splice(index, 1);
     reclaimed += 1;
   }
   return reclaimed;
@@ -434,6 +461,25 @@ export function createMemberActivityTimerId({
   return [teamName, normalizeMemberName(memberName), phase, taskId, startedAt].join(
     ID_SEGMENT_SEPARATOR
   );
+}
+
+/**
+ * Replace the set of timer keys the caller intends to write next. Every member card is written by an
+ * effect, and effects flush in sequence, so the first write of a frame can drain a backlog that
+ * still holds the anchors later in that same frame are about to write. Nothing in this module can
+ * see that plan — the key is not resident, nothing has read it, and its record on disk is exactly as
+ * old as the live interval it belongs to. The caller has the set, so it hands it over here, before
+ * the first write, and the drain skips it.
+ *
+ * The set is replaced, never unioned: keys the caller stops declaring become reclaimable again.
+ * Declaring does not create a record; it only withholds one from deletion until the write lands (or
+ * the declaration is replaced by one that omits it).
+ */
+export function declareActivityTimerKeys(timerIds: readonly string[]): void {
+  declaredTimerIds.clear();
+  for (const timerId of timerIds) {
+    if (timerId) declaredTimerIds.add(timerId);
+  }
 }
 
 export function syncMemberActivityTimer({
@@ -717,4 +763,5 @@ export function resetMemberActivityTimerStoreForTests(): void {
   touchSequence = 0;
   dormantTimerIds = null;
   pendingRemovalTimerIds.clear();
+  declaredTimerIds.clear();
 }
