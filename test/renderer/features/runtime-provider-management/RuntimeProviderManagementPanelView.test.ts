@@ -3557,7 +3557,8 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(host.textContent).toContain('Not recommended');
     expect(host.textContent).toContain('Not verified in OpenCode');
     expect(host.textContent).toContain('Tested');
-    expect(host.textContent).toContain('Tested with limits');
+    // Retired MiniMax routes no longer carry a verified recommendation badge.
+    expect(host.textContent).not.toContain('Tested with limits');
     expect(host.textContent).toContain('Recommended only');
     expect(host.textContent).not.toContain('Set OpenCode default');
     expect(
