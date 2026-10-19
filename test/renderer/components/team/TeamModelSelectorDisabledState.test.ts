@@ -1265,7 +1265,8 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(host.textContent).toContain('mistralai/codestral-2508');
     expect(host.textContent).toContain('Tested');
     expect(host.textContent).toContain('minimax-m2.5-free');
-    expect(host.textContent).toContain('Tested with limits');
+    // Retired MiniMax routes no longer carry a verified recommendation badge.
+    expect(host.textContent).not.toContain('Tested with limits');
     expect(host.textContent).toContain('openai/gpt-oss-120b:free');
     expect(host.textContent).toContain('big-pickle');
     expect(host.textContent).toContain('qwen/qwen3-coder-plus');
