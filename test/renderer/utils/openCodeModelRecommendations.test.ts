@@ -54,10 +54,6 @@ describe('getOpenCodeTeamModelRecommendation', () => {
       level: 'tested',
       label: 'Tested',
     });
-    expect(getOpenCodeTeamModelRecommendation('openrouter/minimax/minimax-m2')).toMatchObject({
-      level: 'tested',
-      label: 'Tested',
-    });
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/google/gemma-4-26b-a4b-it')
     ).toMatchObject({
@@ -86,14 +82,6 @@ describe('getOpenCodeTeamModelRecommendation', () => {
       level: 'tested',
       label: 'Tested',
     });
-    expect(getOpenCodeTeamModelRecommendation('openrouter/minimax/minimax-m2.1')).toMatchObject({
-      level: 'tested',
-      label: 'Tested',
-    });
-    expect(getOpenCodeTeamModelRecommendation('openrouter/minimax/minimax-m2.7')).toMatchObject({
-      level: 'tested',
-      label: 'Tested',
-    });
     expect(getOpenCodeTeamModelRecommendation('openrouter/xiaomi/mimo-v2-pro')).toMatchObject({
       level: 'tested',
       label: 'Tested',
@@ -101,13 +89,19 @@ describe('getOpenCodeTeamModelRecommendation', () => {
     expect(isOpenCodeTeamModelRecommended('openrouter/mistralai/codestral-2508')).toBe(false);
   });
 
-  it('keeps similarly named models distinct when real E2E disagreed', () => {
-    expect(getOpenCodeTeamModelRecommendation('opencode/minimax-m2.5-free')).toMatchObject({
-      level: 'tested-with-limits',
-      label: 'Tested with limits',
-      reason: expect.stringContaining('duplicate or missing reply tokens'),
-    });
-    expect(isOpenCodeTeamModelRecommended('opencode/minimax-m2.5-free')).toBe(false);
+  it('does not promote retired MiniMax models or transfer their test evidence to current models', () => {
+    for (const modelId of [
+      'openrouter/minimax/minimax-m2',
+      'openrouter/minimax/minimax-m2.1',
+      'openrouter/minimax/minimax-m2.5',
+      'openrouter/minimax/minimax-m2.7',
+      'opencode/minimax-m2.5-free',
+      'minimax-coding-plan/MiniMax-M3',
+      'minimax-coding-plan/MiniMax-M3.1-Flash',
+    ]) {
+      expect(getOpenCodeTeamModelRecommendation(modelId)).toBeNull();
+      expect(isOpenCodeTeamModelRecommended(modelId)).toBe(false);
+    }
     expect(
       getOpenCodeTeamModelRecommendation('openrouter/minimax/minimax-m2.5:free')
     ).toMatchObject({

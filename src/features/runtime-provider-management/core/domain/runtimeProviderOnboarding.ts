@@ -106,7 +106,7 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
     description: 'Use your MiniMax Token Plan Subscription Key, not a pay-as-you-go key.',
     credentialKind: 'subscription-key',
     credentialUrl: 'https://platform.minimax.io/console/plan',
-    preferredModelFragments: ['minimax-m3', 'minimax-m2.7-highspeed', 'minimax-m2.7'],
+    preferredModelFragments: ['minimax-m3.1-flash', 'minimax-m3'],
     requireOAuthCredentialHint: false,
     connectionStrategy: { kind: 'opencode-auth' },
   },

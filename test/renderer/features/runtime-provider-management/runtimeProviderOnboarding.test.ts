@@ -134,6 +134,38 @@ describe('runtime provider onboarding domain', () => {
     ).toBe(true);
   });
 
+  it('prefers MiniMax-M3.1-Flash over MiniMax-M3 when the live catalog exposes both', () => {
+    const plan = getRuntimeProviderOnboardingPlan('minimax-token-plan');
+    const m3 = model('minimax-coding-plan/MiniMax-M3', { default: true });
+    const flash = model('minimax-coding-plan/MiniMax-M3.1-Flash');
+
+    expect(plan.preferredModelFragments).toEqual(['minimax-m3.1-flash', 'minimax-m3']);
+    expect(selectRecommendedRuntimeProviderModel(plan, [m3, flash])).toBe(flash);
+  });
+
+  it('falls back to MiniMax-M3 when Flash is absent or unavailable in the live catalog', () => {
+    const plan = getRuntimeProviderOnboardingPlan('minimax-token-plan');
+    const m3 = model('minimax-coding-plan/MiniMax-M3');
+    const flash = model('minimax-coding-plan/MiniMax-M3.1-Flash', {
+      availability: 'unavailable',
+    });
+
+    expect(selectRecommendedRuntimeProviderModel(plan, [m3])).toBe(m3);
+    expect(selectRecommendedRuntimeProviderModel(plan, [flash, m3])).toBe(m3);
+    expect(selectRecommendedRuntimeProviderModel(plan, [])).toBeNull();
+  });
+
+  it('preserves explicitly saved MiniMax model selections', () => {
+    const progress = {
+      ...createRuntimeProviderOnboardingProgress(['minimax-token-plan']),
+      selectedModels: { 'minimax-token-plan': 'custom/minimax-model' },
+    };
+
+    expect(normalizeRuntimeProviderOnboardingProgress(progress)?.selectedModels).toEqual({
+      'minimax-token-plan': 'custom/minimax-model',
+    });
+  });
+
   it('opens the official MiMo Token Plan key management page for every region', () => {
     for (const providerId of [
       'xiaomi-token-plan-ams',
