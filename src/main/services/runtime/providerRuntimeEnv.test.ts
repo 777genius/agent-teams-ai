@@ -144,6 +144,8 @@ describe('applyProviderRuntimeEnv', () => {
         ANTHROPIC_AWS_API_KEY: 'platform-key',
         ANTHROPIC_BASE_URL: 'http://localhost:1234',
         ANTHROPIC_CUSTOM_HEADERS: 'Authorization: Bearer gateway-token',
+        ANTHROPIC_MODEL: 'gateway-large',
+        ANTHROPIC_SMALL_FAST_MODEL: 'gateway-small',
         ANTHROPIC_DEFAULT_SONNET_MODEL: 'bedrock-sonnet-id',
         ANTHROPIC_API_KEY: 'sk-ant-direct',
         AWS_PROFILE: 'shared-tools-profile',
@@ -163,19 +165,30 @@ describe('applyProviderRuntimeEnv', () => {
       expect(env.ANTHROPIC_AWS_API_KEY).toBeUndefined();
       expect(env.ANTHROPIC_BASE_URL).toBeUndefined();
       expect(env.ANTHROPIC_CUSTOM_HEADERS).toBeUndefined();
+      expect(env.ANTHROPIC_MODEL).toBeUndefined();
+      expect(env.ANTHROPIC_SMALL_FAST_MODEL).toBeUndefined();
       expect(env.ANTHROPIC_DEFAULT_SONNET_MODEL).toBeUndefined();
       expect(env.ANTHROPIC_API_KEY).toBe('sk-ant-direct');
       expect(env.AWS_PROFILE).toBe('shared-tools-profile');
     }
   );
 
-  it('gives the app-managed compatible endpoint precedence over ambient Bedrock routing', () => {
+  it('preserves compatible custom models while removing ambient Bedrock routing', () => {
+    const customModels = {
+      ANTHROPIC_MODEL: 'gateway-large',
+      ANTHROPIC_SMALL_FAST_MODEL: 'gateway-small',
+      ANTHROPIC_DEFAULT_SONNET_MODEL: 'gateway-sonnet',
+      ANTHROPIC_DEFAULT_SONNET_MODEL_NAME: 'Gateway Sonnet',
+      CLAUDE_CODE_SUBAGENT_MODEL: 'gateway-small',
+    };
     const env: NodeJS.ProcessEnv = {
+      ...customModels,
       CLAUDE_CODE_USE_BEDROCK: '1',
+      CLAUDE_CODE_SKIP_BEDROCK_AUTH: '1',
+      ANTHROPIC_BEDROCK_BASE_URL: 'https://bedrock.example.test',
       ANTHROPIC_BASE_URL: 'https://ambient-gateway.example.test',
       ANTHROPIC_AUTH_TOKEN: 'compatible-token',
       ANTHROPIC_CUSTOM_HEADERS: 'X-Gateway-Tenant: team-1',
-      ANTHROPIC_DEFAULT_OPUS_MODEL: 'bedrock-opus-id',
     };
 
     applyProviderRuntimeEnv(env, 'anthropic', {
@@ -186,8 +199,10 @@ describe('applyProviderRuntimeEnv', () => {
     expect(env.CLAUDE_CODE_ENTRY_PROVIDER).toBe('anthropic');
     expect(env[AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]).toBe('compatible');
     expect(env.CLAUDE_CODE_USE_BEDROCK).toBeUndefined();
+    expect(env.CLAUDE_CODE_SKIP_BEDROCK_AUTH).toBeUndefined();
+    expect(env.ANTHROPIC_BEDROCK_BASE_URL).toBeUndefined();
     expect(env.ANTHROPIC_BASE_URL).toBeUndefined();
-    expect(env.ANTHROPIC_DEFAULT_OPUS_MODEL).toBeUndefined();
+    expect(env).toMatchObject(customModels);
     expect(env.ANTHROPIC_AUTH_TOKEN).toBe('compatible-token');
     expect(env.ANTHROPIC_CUSTOM_HEADERS).toBe('X-Gateway-Tenant: team-1');
   });

@@ -16,6 +16,7 @@ import {
   AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV,
   ANTHROPIC_DIRECT_ROUTE_ENV_KEYS,
   ANTHROPIC_EXTERNAL_ROUTE_ENV_KEYS,
+  ANTHROPIC_MODEL_ENV_KEYS,
 } from '@shared/constants/anthropicConnectionMode';
 import * as os from 'os';
 import * as path from 'path';
@@ -233,6 +234,7 @@ function buildAnthropicCrossProviderConnectionEnvPatch(env: NodeJS.ProcessEnv): 
   }
 
   if (connectionMode === 'compatible') {
+    copyDefinedEnvKeys(envPatch, env, ANTHROPIC_MODEL_ENV_KEYS);
     envPatch.ANTHROPIC_BASE_URL = env.ANTHROPIC_BASE_URL?.trim() ?? '';
     envPatch.ANTHROPIC_AUTH_TOKEN = env.ANTHROPIC_AUTH_TOKEN?.trim() ?? '';
     envPatch.ANTHROPIC_API_KEY = env.ANTHROPIC_API_KEY?.trim() ?? '';
