@@ -295,6 +295,7 @@ jobs:
           SDK_REF: ${{ inputs.sdk_ref }}
           CANDIDATE_PLATFORM: win32-x64
           NATIVE_CACHE_HIT: ${{ steps.native-cache.outputs.cache-hit }}
+          VERSIONS: ${{ inputs.versions }}
           BUN_INSTALL_CACHE_DIR: ${{ github.workspace }}/TEST-bun-download-cache
         run: |
           $ErrorActionPreference = 'Stop'
@@ -311,6 +312,10 @@ jobs:
             # Reuse only the exact native/toolchain input key; validate normal PE/manifests.
             bun -e 'import {stageWindowsHelper} from "./scripts/opencode-v2/stage-windows.ts"; import {mkdtemp,rm} from "node:fs/promises"; import {tmpdir} from "node:os"; import {join} from "node:path"; const target=await mkdtemp(join(tmpdir(),"TEST-native-cache-check-")); try {await stageWindowsHelper("native",target,"x64")} finally {await rm(target,{recursive:true,force:true})}'
             if ($LASTEXITCODE -ne 0) { throw 'Cached native producer validation failed' }
+          }
+          if ($env:VERSIONS -ne 'v1') {
+            bun test src/services/opencode/bridge/OpenCodeV2DeliveryJournal.windows.test.ts
+            if ($LASTEXITCODE -ne 0) { throw 'Windows delivery journal filesystem regression failed' }
           }
       - name: Save qualified native producer before E2E
         if: ${{ !inputs.provider_only && steps.native-cache.outputs.cache-hit != 'true' }}
