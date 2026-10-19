@@ -32,7 +32,7 @@ import type {
   OpenCodeBridgeCommandLeaseStore,
   OpenCodeBridgeCommandLedger,
 } from './OpenCodeBridgeCommandLedgerStore';
-
+import type { OpenCodeStopCausalFailure } from '@shared/types';
 const DEFAULT_COMMAND_LEASE_ACQUIRE_TIMEOUT_MS = 10_000;
 const DEFAULT_COMMAND_LEASE_ACQUIRE_RETRY_DELAY_MS = 100;
 
@@ -106,7 +106,35 @@ export interface OpenCodeStateChangingBridgeCommandServiceOptions {
 }
 
 const causalSnapshots = new WeakSet<object>();
-const causalFailures = new WeakMap<object, { phase: string; cleanupErrno?: string | null }>();
+const causalFailures = new WeakMap<
+  object,
+  {
+    phase: string;
+    cleanupErrno?: string | null;
+    handshakeFailure?: OpenCodeStopCausalFailure['handshakeFailure'];
+  }
+>();
+export function rememberOpenCodeHandshakeFailure(
+  error: Error,
+  failure: NonNullable<OpenCodeStopCausalFailure['handshakeFailure']>
+): void {
+  causalFailures.set(error, {
+    ...(causalFailures.get(error) ?? { phase: 'handshake' }),
+    handshakeFailure: Object.freeze({
+      kind: failure.kind,
+      ...(failure.sdkCode ? { sdkCode: failure.sdkCode } : {}),
+      ...(failure.nativeOperation ? { nativeOperation: failure.nativeOperation } : {}),
+    }),
+  });
+}
+/** Identity-only delivery observation: never inspect an unowned thrown value. */
+export function ownedOpenCodeHandshakeFailure(error: unknown) {
+  const facts = error && typeof error === 'object' ? causalFailures.get(error) : undefined;
+  if (!facts?.handshakeFailure) return undefined;
+  const snapshot = Object.freeze({ ...facts, reason: null, errno: null, sourceFrame: null });
+  causalSnapshots.add(snapshot);
+  return snapshot;
+}
 function rememberFailure(error: unknown, phase: string): void {
   if (error && typeof error === 'object' && !causalFailures.has(error))
     causalFailures.set(error, { phase });

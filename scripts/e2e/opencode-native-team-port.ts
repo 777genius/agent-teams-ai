@@ -1,5 +1,5 @@
 import type { ElectronAPI } from '@shared/types/api';
-import type { TeamCreateRequest, TeamProvisioningProgress } from '@shared/types/team';
+import type { OpenCodeStopCausalFailure, TeamCreateRequest, TeamProvisioningProgress } from '@shared/types/team';
 
 type NativeCommandExecution = Extract<Awaited<ReturnType<ElectronAPI['teams']['getTaskLogStream']>>['segments'][number]['chunks'][number], { chunkType: 'ai' }>['toolExecutions'][number];
 export type NativeCommandExpectation = {
@@ -63,7 +63,7 @@ export function nativeCommandMatch(execution: NativeCommandExecution, program: s
  * This module does not launch Electron or establish that host ownership proof.
  * Importing it never submits work. All mutations are explicit and single-shot.
  */
-export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath: string, matchCommand = nativeCommandMatch) {
+export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath: string, matchCommand = nativeCommandMatch, projectCausal: (value: unknown) => OpenCodeStopCausalFailure | null = () => null) {
   if (!/^test-opencode-[a-zA-Z0-9-]+$/.test(teamName)) throw new Error('TEST team required');
   if (!projectPath || !/(?:^|[\\/])TEST-[^\\/]+(?:[\\/]|$)/.test(projectPath)) {
     throw new Error('TEST project required; host must also verify its opt-in marker');
@@ -486,6 +486,7 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
             reasonCode: status.reasonCode === 'unclassified' ? null : status.reasonCode,
             diagnosticCodes: status.diagnosticCodes.filter((code) => code !== 'unclassified'),
             nativeSessionFailure: status.nativeSessionFailure,
+            causalFailure: status.causalFailure,
           };
         } catch { return null; }
       }));
@@ -586,6 +587,7 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
         diagnosticCodes: [
           ...new Set((status.diagnostics ?? []).map(classify).filter((code) => code !== null)),
         ],
+        causalFailure: (status.diagnostics ?? []).map(value => projectCausal(value)).find(value => value !== null) ?? null,
         nativeSessionFailure: status.responseState === 'session_error'
           ? { source: 'native_session_error_ledger_reason' as const,
             ...safeFailure(status.reason), nativeStatusAndUsage: 'not_exposed_by_delivery_ledger' as const }

@@ -1,5 +1,5 @@
 import { stopTeamWithEscalation } from '@main/services/team/lifecycle/teamForceStopFlow';
-import { OpenCodeBridgeCommandHandshakePort } from '@main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+import { createOpenCodeBridgeHandshakeFailure, OpenCodeBridgeCommandHandshakePort } from '@main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { OpenCodeReadinessBridge } from '@main/services/team/opencode/bridge/OpenCodeReadinessBridge';
 import { OpenCodeRuntimeLaunchAuthorityWriter } from '@main/services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
 import {
@@ -1705,6 +1705,16 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
       sourceFrame: { source: 'OpenCodeBridgeHandshakeClient.ts', line: 42, column: 7 },
     });
     expect(JSON.stringify(facts)).not.toMatch(/TEST-private|never-publish|private/);
+    expect(bridge.calls).toHaveLength(0);
+  });
+
+  it('keeps the same validated handshake refusal and its finite SDK cause before dispatch', async () => {
+    const failure = createOpenCodeBridgeHandshakeFailure({ kind: 'runtime_not_ready', retryable: false,
+      message: 'execution_owner_not_private:private_acl_foreign_allow:0 @native:runStateRequest' });
+    vi.spyOn(handshakePort, 'handshake').mockRejectedValueOnce(failure);
+    await expect(createService().execute(buildStopInput())).rejects.toBe(failure);
+    expect(projectOpenCodeStateChangingFailure(failure)).toMatchObject({ phase: 'handshake',
+      handshakeFailure: { kind: 'runtime_not_ready', sdkCode: 'execution_owner_not_private', nativeOperation: 'runStateRequest' } });
     expect(bridge.calls).toHaveLength(0);
   });
 

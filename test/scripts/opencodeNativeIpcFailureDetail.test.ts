@@ -10,7 +10,11 @@ import ts from 'typescript';
 import { describe, expect, it, vi } from 'vitest';
 
 import { projectIpcCausalFailure, safeIpcFailureDetail } from '../../scripts/e2e/opencode-native-desktop-host';
+import { electronTeamPort, nativeCommandMatch } from '../../scripts/e2e/opencode-native-team-port';
 import { serializedFunction } from '../../scripts/e2e/release-updater/serialized-function.mts';
+import { parseSingleBridgeJsonResult, validateBridgeResultEnvelope } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
+import { createOpenCodeBridgeClientIdentity, createOpenCodeBridgeHandshakeFailure } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+import { formatOpenCodeStopCausalSuffix, projectOpenCodeStateChangingFailure } from '../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import { redactLaunchFailureArtifactText } from '../../src/main/services/team/TeamLaunchFailureArtifactPack';
 
 const project = (value: string): string =>
@@ -1007,3 +1011,163 @@ it.each([
     await rm(root, { recursive: true, force: true });
   }
 });
+
+async function preflightFunction(name: string) {
+  const source = await readFile('scripts/e2e/opencode-native-windows-preflight.ts', 'utf8');
+  const ast = ts.createSourceFile('preflight.ts', source, ts.ScriptTarget.Latest, true);
+  const declaration = ast.statements.filter(ts.isFunctionDeclaration).find(node => node.name?.text === name)!;
+  const compiled = ts.transpileModule(declaration.getText(ast), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+  }).outputText;
+  return compileFunction(`${compiled}\nreturn ${name};`, ['process'], {
+    importModuleDynamically: constants.USE_MAIN_CONTEXT_DEFAULT_LOADER,
+  })(process) as (...args: unknown[]) => Promise<unknown>;
+}
+
+it('fresh source CLI reaches only the original unqualified-owner guard and rejects earlier native failures', async () => {
+  const verify = await preflightFunction('verifyFreshOriginalOwnerBoundary');
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'TEST-oc-fresh-owner-')));
+  const binding = { teamId: 'TEST-team', runId: 'TEST-run', controllerInstanceId: 'TEST-controller', ownerId: 'TEST-owner' };
+  const sdkRoot = path.join(root, 'sdk'), projectPath = path.join(root, 'TEST-project');
+  await Promise.all([mkdir(sdkRoot), mkdir(projectPath)]);
+  const input = { sdk: sdkRoot, testRoot: root, projectPath, owner: { binding },
+    plan: { binding, members: [{ profile: { selection: { model: { providerID: 'openrouter', id: 'TEST-model' } } } }] },
+    selectedModel: 'openrouter/TEST-model', client: createOpenCodeBridgeClientIdentity({ appVersion: 'TEST' }), timeoutMs: 12_345 };
+  const protocol = { parse: parseSingleBridgeJsonResult, validate: validateBridgeResultEnvelope, failure: createOpenCodeBridgeHandshakeFailure };
+  let message = 'run_original_qualification_missing', mismatch = false, calls = 0;
+  const run = async (executable: string, args: string[], options: Record<string, unknown>) => {
+    calls++;
+    expect(executable).toBe(process.execPath);
+    expect(args.slice(1, 5)).toEqual(['runtime', 'opencode-command', '--json', '--input']);
+    expect(options).toMatchObject({ cwd: sdkRoot, env: process.env, timeout: 37_345, maxBuffer: 65_536 });
+    const request = JSON.parse(await readFile(args[5]!, 'utf8'));
+    expect(request.command).toBe('opencode.handshake');
+    expect(request.cwd).toBe(projectPath); // Original source host cwd remains SDK; envelope selects TEST project.
+    expect(request.body).toMatchObject({ expectedRunId: binding.runId, teamId: binding.teamId,
+      requiredCommand: 'opencode.sendMessage', expectedCapabilitySnapshotId: null, expectedManifestHighWatermark: null });
+    expect(request.body).not.toHaveProperty('prompt');
+    expect(request.body).not.toHaveProperty('qualification');
+    expect((await lstat(args[5]!)).mode & 0o777).toBe(0o600);
+    await writeFile(args[7]!, JSON.stringify({ schemaVersion: 1, requestId: mismatch ? 'TEST-other' : request.requestId,
+      command: request.command, completedAt: new Date().toISOString(), durationMs: 0, diagnostics: [], ok: false, error: { kind: 'runtime_not_ready', retryable: false, message } }) + '\n', { flag: 'wx' });
+  };
+  try {
+    await expect(verify(input, protocol, run)).resolves.toBe('qualification_guard_reached');
+    message = 'execution_owner_not_private:private_acl_foreign_allow:0 @native:runStateRequest';
+    try { await verify(input, protocol, run); throw new Error('TEST expected refusal'); }
+    catch (error) { expect(projectOpenCodeStateChangingFailure(error)).toMatchObject({ phase: 'handshake',
+      handshakeFailure: { kind: 'runtime_not_ready', sdkCode: 'execution_owner_not_private', nativeOperation: 'runStateRequest' } }); }
+    mismatch = true;
+    await expect(verify(input, protocol, run)).rejects.toThrow('TEST fresh owner response invalid');
+    expect(calls).toBe(3); // Exactly one process per observation, never a retry.
+    await expect(verify({ ...input, plan: { ...input.plan, qualification: {} } }, protocol, run)).rejects.toThrow('TEST fresh owner input invalid');
+    const timeout = Object.assign(new Error('TEST timeout'), { killed: true });
+    await expect(verify(input, protocol, () => Promise.reject(timeout))).rejects.toBe(timeout);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+it('retains only closed handshake facts through the owned suffix and serialized delivery snapshot', async () => {
+  const error = createOpenCodeBridgeHandshakeFailure({ kind: 'runtime_not_ready', retryable: false,
+    message: 'execution_owner_not_private:private_acl_foreign_allow:0 @native:runStateRequest' });
+  const facts = projectOpenCodeStateChangingFailure(error);
+  const diagnostic = 'opencode_message_delivery_exception: PRIVATE_URL_PATH_BODY' + formatOpenCodeStopCausalSuffix(facts);
+  const safeProject = runInNewContext(`(${serializedFunction(projectIpcCausalFailure)})`) as typeof projectIpcCausalFailure;
+  expect(safeProject(diagnostic)).toMatchObject({ phase: 'handshake', handshakeFailure: {
+    kind: 'runtime_not_ready', sdkCode: 'execution_owner_not_private', nativeOperation: 'runStateRequest' } });
+  const createPort = runInNewContext(`(${serializedFunction(electronTeamPort)})`) as typeof electronTeamPort;
+  const api = { teams: { onProvisioningProgress: () => () => undefined,
+    getOpenCodeRuntimeDeliveryStatus: async () => ({ diagnostics: [diagnostic] }),
+    getData: async () => ({ tasks: [{ id: 'TEST-task' }], members: [] }),
+    getTask: async () => ({ id: 'TEST-task', status: 'in_progress', owner: 'alice' }),
+    getTaskLogStream: async () => ({ segments: [] }),
+    getMessagesPage: async () => ({ messages: [{ to: 'alice', messageId: 'TEST-message',
+      taskRefs: [{ taskId: 'TEST-task', teamName: 'test-opencode-handshake' }] }] }) } };
+  const port = createPort(api as never, 'test-opencode-handshake', '/TEST-project', nativeCommandMatch, safeProject);
+  const snapshot = await port.getOpenCodeRuntimeDeliveryStatus('TEST-message');
+  expect(snapshot?.causalFailure).toMatchObject({ handshakeFailure: facts.handshakeFailure });
+  expect(JSON.stringify(snapshot)).not.toContain('PRIVATE_URL_PATH_BODY');
+  await port.getData();
+  const taskSnapshot = await port.getSafeTaskFailureSnapshot('TEST-task', 'alice');
+  expect(taskSnapshot.deliveries).toEqual([expect.objectContaining({ causalFailure: snapshot?.causalFailure })]);
+  expect(JSON.stringify(taskSnapshot)).not.toContain('PRIVATE_URL_PATH_BODY');
+  for (const message of ['execution_owner_not_private:secret:4294967296 @native:runStateRequest',
+    'unknown_secret_code @native:runStateRequest', 'execution_owner_not_private @native:unknownSecret',
+    'prefix execution_owner_not_private @native:runStateRequest', 'C:/private/token body=secret']) {
+    const packet = projectOpenCodeStateChangingFailure(createOpenCodeBridgeHandshakeFailure({ kind: 'runtime_not_ready', retryable: false, message }));
+    expect(packet.handshakeFailure?.nativeOperation).toBeUndefined();
+    expect(JSON.stringify(packet)).not.toMatch(/secret|private\/token|body=/);
+  }
+  const getter = vi.fn(() => { throw new Error('TEST foreign getter'); });
+  const foreign = Object.defineProperty({ kind: 'runtime_not_ready' }, 'message', { get: getter });
+  expect(() => createOpenCodeBridgeHandshakeFailure(foreign as never)).not.toThrow();
+  expect(getter).not.toHaveBeenCalled();
+  const trap = vi.fn(() => { throw new Error('TEST proxy trap'); });
+  expect(() => createOpenCodeBridgeHandshakeFailure(new Proxy({}, { getOwnPropertyDescriptor: trap }) as never)).not.toThrow();
+  expect(trap).not.toHaveBeenCalled();
+  expect(safeProject({ phase: 'handshake', handshakeFailure: { kind: 'runtime_not_ready',
+    sdkCode: 'UNKNOWN_PRIVATE', nativeOperation: 'runStateRequest', raw: 'PRIVATE' } })?.handshakeFailure)
+    .toEqual({ kind: 'runtime_not_ready' });
+});
+
+it.each(['current-pass', 'current-fail', 'floor'] as const)(
+  '%s preserves original Stop after readiness and the one fresh-owner observation', async (scenario) => {
+    const source = await readFile('scripts/e2e/opencode-native-windows-preflight.ts', 'utf8');
+    const ast = ts.createSourceFile('preflight.ts', source, ts.ScriptTarget.Latest, true);
+    const declaration = ast.statements.filter(ts.isFunctionDeclaration).find(node => node.name?.text === 'verifyProbePreparation')!;
+    const compiled = ts.transpileModule(declaration.getText(ast), {
+      compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+    }).outputText;
+    // Model filesystem custody only in this unit: production DLL assertions run unchanged.
+    const fakeFs = `export async function lstat(path) {
+      if (path.endsWith('/opencode/v2')) throw Object.assign(new Error('TEST absent'),{code:'ENOENT'});
+      return {isDirectory:()=>!path.endsWith('.dll'),isFile:()=>path.endsWith('.dll'),isSymbolicLink:()=>false,nlink:1,dev:1,ino:1};
+    }
+    export async function readdir(){return ['native-realpath-11111111-1111-1111-1111-111111111111'];}
+    export async function open(){throw Object.assign(new Error('TEST locked'),{code:'EPERM'});}
+    export async function rename(){throw Object.assign(new Error('TEST locked'),{code:'EPERM'});}`;
+    const fsModule = await import('data:text/javascript,' + encodeURIComponent(fakeFs));
+    const injected = compiled.replace("import('node:fs/promises')", 'Promise.resolve(fakeFs)');
+    const verify = compileFunction(`${injected}\nreturn verifyProbePreparation;`, ['process', 'fakeFs'], {
+      importModuleDynamically: constants.USE_MAIN_CONTEXT_DEFAULT_LOADER,
+    })({ env: { CLAUDE_MULTIMODEL_DATA_HOME: '/TEST-data' } }, fsModule) as (...args: unknown[]) => Promise<unknown>;
+    const roster = scenario === 'floor' ? ['team-lead', 'alice'] : ['team-lead', 'alice', 'bob'];
+    const teamId = 'TEST-execution-probe-' + 'a'.repeat(32);
+    const binding = { teamId, runId: 'TEST-run', controllerInstanceId: 'TEST-controller', ownerId: 'TEST-owner' };
+    const returned = { binding, deadline: Date.now() + 280_000 };
+    const owner = { launchExplicitOpenCodeV2Run: (_plan: unknown): Promise<unknown> => Promise.resolve(returned) };
+    const events: string[] = [], stops: unknown[] = [], reports: Record<string, unknown>[] = [];
+    const primary = createOpenCodeBridgeHandshakeFailure({ kind: 'runtime_not_ready', retryable: false, message: 'run_control_config_identity' });
+    const buildPlan = () => Promise.resolve({ binding, deadline: returned.deadline, members: roster.map(memberId => ({
+      memberId, originalSessionId: 'ses_' + memberId, profile: { env: { TMPDIR: '/TEST-temp' } } })) });
+    const control = { OPEN_CODE_V2_RUN_INITIALIZATION_MS: 120_000,
+      awaitOpenCodeV2RunMemberReadiness: async (_owner: unknown, target: { memberId: string }) => {
+        events.push(target.memberId); return { runtimePid: 100 + roster.indexOf(target.memberId) };
+      },
+      requestOpenCodeV2Run: async (record: unknown, request: unknown, timeout: number) => {
+        stops.push({ record, request, timeout }); events.push('stop');
+        return { kind: 'stop', state: 'stopped', ownerRetired: true, members: roster.map((memberId, index) => ({
+          memberId, errors: [], cleanup: { scopeClosed: true, processRetired: true, descendantsRetired: true, pid: 100 + index } })) };
+      } };
+    const spyOn = (target: typeof owner, key: 'launchExplicitOpenCodeV2Run') => {
+      const original = target[key]; return { mockImplementation: (fn: typeof original) => { target[key] = fn; },
+        mockRestore: () => { target[key] = original; } };
+    };
+    const fresh = vi.fn(async (record: unknown, _plan: unknown, timeout: number) => {
+      events.push('fresh'); expect(record).toBe(returned); expect(timeout).toBeGreaterThan(0);
+      expect(timeout).toBeLessThanOrEqual(120_000); expect(timeout + 55_000).toBeLessThanOrEqual(returned.deadline - Date.now() + 10);
+      if (scenario === 'current-fail') throw primary;
+      return 'qualification_guard_reached';
+    });
+    const promise = verify(async () => ({}), () => owner.launchExplicitOpenCodeV2Run({ members: [{}],
+      executionProbe: { memberId: 'probe', prepared: {} }, binding: { teamId }, deadline: returned.deadline }),
+    buildPlan, owner, control, spyOn, '/TEST-project', 'openrouter/TEST-model', scenario === 'floor' ? '2.0.0' : '2.0.32',
+    (_phase: string, facts: Record<string, unknown>) => reports.push(facts), async () => undefined, () => undefined, fresh);
+    if (scenario === 'current-fail') await expect(promise).rejects.toBe(primary);
+    else await expect(promise).resolves.toMatchObject({ physicalStopConfirmed: true, modelSubmissionAttempted: false,
+      freshOriginalOwnerBoundary: scenario === 'floor' ? 'not_checked' : 'qualification_guard_reached' });
+    expect(events).toEqual([...roster, ...(scenario === 'floor' ? [] : ['fresh']), 'stop']);
+    expect(fresh).toHaveBeenCalledTimes(scenario === 'floor' ? 0 : 1);
+    expect(stops).toEqual([{ record: returned, request: { operation: 'stop' }, timeout: 30_000 }]);
+    expect(reports.at(-1)).toMatchObject({ stopConfirmed: true, cleanupUnknown: false });
+  }
+);

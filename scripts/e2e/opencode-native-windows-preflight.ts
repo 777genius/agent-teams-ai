@@ -18,6 +18,11 @@ function safeSourceGateFailure(error: unknown, nativeFailures?: WeakMap<object, 
   const row = error && typeof error === 'object' ? (error as Record<string, unknown>) : {};
   const message = typeof row.message === 'string' ? row.message : '';
   const localReasons: Record<string, string> = {
+    'TEST fresh owner budget exhausted': 'fresh_owner_budget_exhausted',
+    'TEST fresh owner qualification guard bypassed': 'fresh_owner_guard_bypassed',
+    'TEST fresh owner response invalid': 'fresh_owner_response_invalid',
+    'TEST fresh owner output invalid': 'fresh_owner_output_invalid',
+    'TEST fresh owner input invalid': 'fresh_owner_input_invalid',
     'TEST readiness response invalid': 'readiness_response_invalid',
     'TEST model-free readiness refused': 'model_free_readiness_refused',
     'TEST model-free readiness contract changed': 'model_free_readiness_contract_changed',
@@ -1079,6 +1084,90 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
   finally { clearTimeout(timer); }
 }
 
+// One fresh process observes the original owner without qualification or dispatch.
+async function verifyFreshOriginalOwnerBoundary(
+  input: { sdk: string; testRoot: string; projectPath: string; owner: unknown; plan: unknown;
+    selectedModel: string; client: unknown; timeoutMs: number },
+  protocol: {
+    parse: typeof import('../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract').parseSingleBridgeJsonResult;
+    validate: typeof import('../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract').validateBridgeResultEnvelope;
+    failure: typeof import('../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient').createOpenCodeBridgeHandshakeFailure;
+  },
+  execute?: (executable: string, args: string[], options: {
+    cwd: string; env: NodeJS.ProcessEnv; timeout: number; maxBuffer: number;
+  }) => Promise<unknown>
+): Promise<'qualification_guard_reached'> {
+  const { randomUUID } = await import('node:crypto');
+  const { lstat, open, realpath, writeFile } = await import('node:fs/promises');
+  const { join, basename } = await import('node:path');
+  const record = (value: unknown): Record<string, unknown> => {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+      throw new Error('TEST fresh owner input invalid');
+    return value as Record<string, unknown>;
+  };
+  const owner = record(input.owner), plan = record(input.plan);
+  const binding = record(owner.binding), plannedBinding = record(plan.binding);
+  const member = Array.isArray(plan.members) ? record(plan.members[0]) : {};
+  const model = record(record(record(member.profile).selection).model);
+  if (!/^TEST-oc-/.test(basename(input.testRoot)) || await realpath(input.testRoot) !== input.testRoot ||
+      typeof binding.teamId !== 'string' || !binding.teamId.startsWith('TEST-') ||
+      !['teamId', 'runId', 'controllerInstanceId', 'ownerId'].every(key =>
+        typeof binding[key] === 'string' && binding[key] === plannedBinding[key]) ||
+      plan.qualification !== undefined || owner.qualification !== undefined ||
+      typeof model.providerID !== 'string' || typeof model.id !== 'string' ||
+      `${model.providerID}/${model.id}` !== input.selectedModel ||
+      !Number.isSafeInteger(input.timeoutMs) || input.timeoutMs <= 0 || input.timeoutMs > 120_000)
+    throw new Error('TEST fresh owner input invalid');
+  const requestId = 'TEST-fresh-owner-' + randomUUID();
+  const request = join(input.testRoot, requestId + '.input.json');
+  const output = join(input.testRoot, requestId + '.output.json');
+  const envelope = { schemaVersion: 1 as const, requestId, command: 'opencode.handshake' as const,
+    cwd: input.projectPath, startedAt: new Date().toISOString(), timeoutMs: input.timeoutMs,
+    body: { client: input.client, requiredCommand: 'opencode.sendMessage', expectedRunId: binding.runId,
+      teamId: binding.teamId, expectedCapabilitySnapshotId: null, expectedManifestHighWatermark: null,
+      selectedModel: input.selectedModel, laneId: 'primary' } };
+  if (await lstat(output).catch((error: unknown) => {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') return null;
+    throw error;
+  })) throw new Error('TEST fresh owner output invalid');
+  await writeFile(request, JSON.stringify(envelope), { flag: 'wx', mode: 0o600 });
+  if (!execute) {
+    const { execFile } = await import('node:child_process');
+    const { promisify } = await import('node:util');
+    execute = promisify(execFile);
+  }
+  // Same outer launch environment and pinned Bun image; no per-member profile environment.
+  await execute(process.execPath, [join(input.sdk, 'src/entrypoints/cli.tsx'), 'runtime',
+    'opencode-command', '--json', '--input', request, '--output', output], {
+    cwd: input.sdk, env: process.env, timeout: input.timeoutMs + 25_000, maxBuffer: 65_536,
+  });
+  const before = await lstat(output);
+  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1 || before.size > 65_536 ||
+      await realpath(output) !== output) throw new Error('TEST fresh owner output invalid');
+  const handle = await open(output, 'r');
+  let payload: string;
+  try {
+    const held = await handle.stat();
+    if (held.dev !== before.dev || held.ino !== before.ino || held.size !== before.size)
+      throw new Error('TEST fresh owner output invalid');
+    const bytes = Buffer.alloc(65_537);
+    const { bytesRead } = await handle.read(bytes, 0, bytes.length, 0);
+    const after = await lstat(output), heldAfter = await handle.stat();
+    if (bytesRead !== before.size || bytesRead > 65_536 || after.isSymbolicLink() ||
+        after.dev !== before.dev || after.ino !== before.ino || after.size !== before.size ||
+        heldAfter.size !== before.size || heldAfter.nlink !== 1)
+      throw new Error('TEST fresh owner output invalid');
+    payload = bytes.subarray(0, bytesRead).toString('utf8');
+  } finally { await handle.close(); }
+  const parsed = protocol.parse(payload);
+  if (!parsed.ok || !protocol.validate(parsed.value, envelope).ok)
+    throw new Error('TEST fresh owner response invalid');
+  if (!parsed.value.ok && parsed.value.error.kind === 'runtime_not_ready' &&
+      parsed.value.error.message === 'run_original_qualification_missing') return 'qualification_guard_reached';
+  if (!parsed.value.ok) throw protocol.failure(parsed.value.error);
+  throw new Error('TEST fresh owner qualification guard bypassed');
+}
+
 // Intercept only the final launch return: the real owner and native member start
 // once, then retire before resolveProbe can mark submitted or call send.
 async function verifyProbePreparation(
@@ -1100,12 +1189,13 @@ async function verifyProbePreparation(
     mockRestore(): void;
   },
   projectPath: string, selectedModel: string, expectedVersion: string,
-  report: (phase: 'owner_launch' | 'member_readiness' | 'physical_stop', facts: {
+  report: (phase: 'owner_launch' | 'member_readiness' | 'fresh_original_owner' | 'physical_stop', facts: {
     launchCalls: number; ownerReturned: boolean; memberReady: boolean; memberCount: number; readyMemberCount: number;
-    stopConfirmed: boolean; cleanupUnknown: boolean;
+    stopConfirmed: boolean; cleanupUnknown: boolean; freshOriginalOwnerBoundary: string;
   }) => void,
   snapshot: (record: unknown, session: string, plan: unknown, timing: 'before_stop' | 'after_stop') => Promise<void>,
-  stopFailure: (error: unknown) => void = () => undefined
+  stopFailure: (error: unknown) => void = () => undefined,
+  freshBoundary?: (owner: unknown, plan: unknown, timeoutMs: number) => Promise<'qualification_guard_reached'>
 ) {
   const envelope = {
     schemaVersion: 1, requestId: 'TEST-source-probe-startup',
@@ -1137,7 +1227,7 @@ async function verifyProbePreparation(
   const originalLaunch = owner.launchExplicitOpenCodeV2Run;
   let boundaryCalls = 0;
   const facts = { launchCalls: 0, ownerReturned: false, memberReady: false, memberCount: roster.length, readyMemberCount: 0,
-    stopConfirmed: false, cleanupUnknown: false };
+    stopConfirmed: false, cleanupUnknown: false, freshOriginalOwnerBoundary: 'not_checked' };
   const boundary = spyOn(owner, 'launchExplicitOpenCodeV2Run');
   try {
     boundary.mockImplementation(async (value) => {
@@ -1165,7 +1255,7 @@ async function verifyProbePreparation(
         for (const member of members) await snapshot(returnedOwner, String(member.originalSessionId), planValue, timing);
       };
       let returnedOwner: unknown, primary: unknown, cleanupFailure: unknown;
-      let phase: 'owner_launch' | 'member_readiness' | 'physical_stop' = 'owner_launch';
+      let phase: 'owner_launch' | 'member_readiness' | 'fresh_original_owner' | 'physical_stop' = 'owner_launch';
       const update = () => report(phase, { ...facts });
       try {
         facts.launchCalls++; update();
@@ -1235,6 +1325,13 @@ async function verifyProbePreparation(
         }
         if (readinessFailed) throw readinessFailure;
         facts.memberReady = readyPids.size === members.length; update();
+        if (expectedVersion === '2.0.32') {
+          phase = 'fresh_original_owner'; update();
+          // Charge both the CLI watchdog/drain margin and original public Stop inside this deadline.
+          const freshMs = Math.min(120_000, Math.floor(current.deadline - Date.now() - 30_000 - 25_000));
+          if (!freshBoundary || freshMs <= 0) throw new Error('TEST fresh owner budget exhausted');
+          facts.freshOriginalOwnerBoundary = await freshBoundary(returnedOwner, planValue, freshMs); update();
+        }
       } catch (error) {
         primary = error;
         try { await capture('before_stop'); }
@@ -1285,7 +1382,7 @@ async function verifyProbePreparation(
       throw new Error('TEST probe launch boundary count invalid');
     return { modelFreeStartupOnly: true, ownerLaunchCalls: facts.launchCalls,
       authenticatedMemberReady: facts.memberReady, memberCount: roster.length, authenticatedMemberCount: facts.readyMemberCount, physicalStopConfirmed: facts.stopConfirmed,
-      modelSubmissionAttempted: false };
+      freshOriginalOwnerBoundary: facts.freshOriginalOwnerBoundary, modelSubmissionAttempted: false };
   } finally { boundary.mockRestore(); }
 }
 
@@ -1378,6 +1475,7 @@ let startupFailureState = null;
 let startupBeforeStop = null;
 let readOnlyAclObservation = null;
 let publicStopFailure = null;
+let freshHandshakeFailure = null;
 const nativeFailures = new WeakMap();
 const nativeLaunches = [];
 const liveStatuses = [];
@@ -1429,6 +1527,9 @@ try {
  const { resolveOpenCodeV2ExecutionProbe } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/bridge/OpenCodeV2ExecutionProbe.ts')).href)});
  const { spyOn } = await import('bun:test');
  const control = await import(${JSON.stringify(moduleUrl)});
+ const freshProtocol = await import(${JSON.stringify(pathToFileURL(path.resolve('src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract.ts')).href)});
+ const freshClient = await import(${JSON.stringify(pathToFileURL(path.resolve('src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient.ts')).href)});
+ const freshCausal = await import(${JSON.stringify(pathToFileURL(path.resolve('src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService.ts')).href)});
  preparation = await (${verifyProbePreparation.toString()})(inspectOpenCodeV2SourceAvailability,
    resolveOpenCodeV2ExecutionProbe, buildOpenCodeV2InternalRunPlan, runOwner, control, spyOn, ${JSON.stringify(desktop.projectPath)},
    ${JSON.stringify(selectedModel)}, ${JSON.stringify(expectedVersion)},
@@ -1443,7 +1544,16 @@ try {
        const { resolveOpenCodeV2ExecutionDelivery } = await import(${JSON.stringify(pathToFileURL(path.join(sdk, 'src/services/opencode/host/OpenCodeV2ExecutionDelivery.ts')).href)});
        readOnlyAclObservation = await (${snapshotReadOnlyAcl.toString()})(plan, resolveOpenCodeV2ExecutionDelivery);
      }
-   }, (error) => { publicStopFailure = error; });
+   }, (error) => { publicStopFailure = error; },
+   async (owner, plan, timeoutMs) => {
+     try { return await (${verifyFreshOriginalOwnerBoundary.toString()})({
+       sdk:${JSON.stringify(sdk)},testRoot:${JSON.stringify(desktop.root)},projectPath:${JSON.stringify(desktop.projectPath)},
+       owner,plan,timeoutMs,selectedModel:${JSON.stringify(selectedModel)},
+       client:freshClient.createOpenCodeBridgeClientIdentity({appVersion:'TEST-source-preflight'})
+     }, {parse:freshProtocol.parseSingleBridgeJsonResult,validate:freshProtocol.validateBridgeResultEnvelope,
+       failure:freshClient.createOpenCodeBridgeHandshakeFailure}); }
+     catch (error) { freshHandshakeFailure = freshCausal.ownedOpenCodeHandshakeFailure(error) ?? null; throw error; }
+   });
  // False readiness also opens the store: run it only AFTER the cold preparation.
  stage='readiness';
  await (${verifyModelFreeReadiness.toString()})(executeSelectedOpenCodeBridgeCommandEnvelope,
@@ -1454,7 +1564,7 @@ try {
 } catch (error) {
  const missing = /^readiness_file_missing:(owner_discovery|source_availability|execution_probe)$/.exec(error?.message ?? '');
  const match = /^execution_owner_not_private:(private_acl_owner(?:_run_(?:data_root|opencode|v2|runs|leaf))?):[0-9]{1,10}(?::private_dir_([0-9]{1,2}))?$/.exec(error?.message ?? '');
- console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:false,stage,startupFacts,startupBeforeStop,startupFailureState,readOnlyAclObservation,nativeBrokerTrace,
+ console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:false,stage,freshHandshakeFailure,startupFacts,startupBeforeStop,startupFailureState,readOnlyAclObservation,nativeBrokerTrace,
    code:match?'execution_owner_not_private':missing||(stage==='probe-controller-state'&&error?.code==='ENOENT')?'readiness_file_missing':'source_gate_unknown',role:match?.[1]??missing?.[1]??'unknown',privateDirectoryIndex:match?.[2]??null,
    publicStopFailure:publicStopFailure===null?null:(${safeSourceGateFailure.toString()})(publicStopFailure,nativeFailures),
    ...(${safeSourceGateFailure.toString()})(error,nativeFailures)}));
