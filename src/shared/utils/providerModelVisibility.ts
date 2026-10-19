@@ -74,6 +74,23 @@ export function isCurrentMiniMaxCatalogModel(
   return underlyingModel === 'minimax-m3' || underlyingModel === 'minimax-m3.1-flash';
 }
 
+// Runtime validation of saved selections must not apply the new-choice picker policy.
+export function getUniqueProviderRuntimeModels(
+  providerId: SupportedProviderId,
+  models: readonly string[],
+  includeRetiredMiniMaxModels = false
+): string[] {
+  const seen = new Set<string>();
+  return models.filter((model) => {
+    const trimmed = model.trim();
+    if (!trimmed || seen.has(trimmed)) {
+      return false;
+    }
+    seen.add(trimmed);
+    return includeRetiredMiniMaxModels || isCurrentMiniMaxCatalogModel(trimmed, providerId);
+  });
+}
+
 export function isProviderRuntimeModelUiDisabled(
   providerId: SupportedProviderId | undefined,
   model: string | undefined
