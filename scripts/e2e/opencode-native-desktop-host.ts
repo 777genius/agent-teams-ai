@@ -480,6 +480,56 @@ export async function prepareNativeDesktop() {
   };
 }
 
+type ListenerProbeRunner = (
+  file: string,
+  args: string[],
+  options: { timeout: number; maxBuffer: number }
+) => Promise<{ stdout: string }>;
+
+// Filter after querying listeners: the cmdlet reports no matching port as an
+// error during startup. Actual query failures must still reject, but a cold
+// runner can take many seconds to start PowerShell and may fail one query with
+// a transient row error, so each probe gets a real budget and bounded retries.
+export async function queryWindowsListenerOwner(
+  pid: number,
+  port: number,
+  run: ListenerProbeRunner = execute as unknown as ListenerProbeRunner
+): Promise<boolean> {
+  let last: unknown;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (attempt) await new Promise((resolve) => setTimeout(resolve, 250));
+    let stdout: string;
+    try {
+      ({ stdout } = await run(
+        'powershell.exe',
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          `@(Get-NetTCPConnection -State Listen -ErrorAction Stop | Where-Object { $_.LocalAddress -eq '127.0.0.1' -and $_.LocalPort -eq ${port} }).OwningProcess | ConvertTo-Json -Compress`,
+        ],
+        { timeout: 15_000, maxBuffer: 4096 }
+      ));
+    } catch (error) {
+      last = error;
+      continue;
+    }
+    if (!stdout.trim()) return false;
+    const owners: number | number[] = JSON.parse(stdout);
+    const rows = Array.isArray(owners) ? owners : [owners];
+    assert(
+      rows.every((owner) => owner === pid),
+      'Foreign inspector listener'
+    );
+    return rows.length > 0;
+  }
+  const code =
+    last && typeof last === 'object' && 'code' in last
+      ? String((last as { code: unknown }).code)
+      : 'unknown';
+  throw new Error(`Windows listener ownership probe failed after retries (code=${code})`);
+}
+
 async function ownsListener(pid: number, port: number): Promise<boolean> {
   if (process.platform === 'linux') {
     const processRoot = `/proc/${pid}`;
@@ -529,28 +579,7 @@ async function ownsListener(pid: number, port: number): Promise<boolean> {
     assert.equal(await birth(), before, 'Owned Electron PID changed during listener check');
     return found;
   }
-  if (process.platform === 'win32') {
-    const { stdout } = await execute(
-      'powershell.exe',
-      [
-        '-NoProfile',
-        '-NonInteractive',
-        '-Command',
-        // Filter after querying listeners: the cmdlet reports no matching port
-        // as an error during startup. Actual query failures must still reject.
-        `@(Get-NetTCPConnection -State Listen -ErrorAction Stop | Where-Object { $_.LocalAddress -eq '127.0.0.1' -and $_.LocalPort -eq ${port} }).OwningProcess | ConvertTo-Json -Compress`,
-      ],
-      { timeout: 5000, maxBuffer: 4096 }
-    );
-    if (!stdout.trim()) return false;
-    const owners: number | number[] = JSON.parse(stdout);
-    const rows = Array.isArray(owners) ? owners : [owners];
-    assert(
-      rows.every((owner) => owner === pid),
-      'Foreign inspector listener'
-    );
-    return rows.length > 0;
-  }
+  if (process.platform === 'win32') return queryWindowsListenerOwner(pid, port);
   assert.equal(
     process.platform,
     'darwin',
