@@ -61,7 +61,7 @@ function isLocalOpenCodeLaunchModel(selectedModel: string): boolean {
 export function resolveOpenCodeLaunchTimeoutMs(
   input: Pick<OpenCodeLaunchTeamCommandBody, 'selectedModel' | 'members' | 'executionProof'>,
   configuredTimeoutMs?: number,
-  platform: NodeJS.Platform = process.platform
+  _platform: NodeJS.Platform = process.platform
 ): number {
   if (configuredTimeoutMs !== undefined) {
     return configuredTimeoutMs;
@@ -72,9 +72,11 @@ export function resolveOpenCodeLaunchTimeoutMs(
   ) {
     return LOCAL_OPENCODE_LAUNCH_TIMEOUT_MS;
   }
+  // V2 native startup (graph validation + native child boot) needs the same
+  // budget on every platform; V1 keeps the historical 120s default.
   const defaultLaunchMs = Math.max(
     OPEN_CODE_BRIDGE_TIMEOUTS_MS.launch,
-    platform === 'win32' && input.executionProof?.opencodeVersion?.startsWith('2.') ? 300_000 : 0
+    input.executionProof?.opencodeVersion?.startsWith('2.') ? 300_000 : 0
   );
   const usesSerialNativeSubscriptionCli =
     input.selectedModel.startsWith('cursor-acp/') || input.selectedModel.startsWith('kiro/');
