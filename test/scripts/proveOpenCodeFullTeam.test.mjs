@@ -6,7 +6,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { test } from 'node:test';
 
-import { allocateSmokeOwnedRoot, assertOwnedSmokeEnvironment, runFullTeamSmoke, TEST_PROJECT_MARKER,
+import { allocateSmokeOwnedRoot, assertOwnedSmokeEnvironment, preflightOpenCodeFullTeamEnvironment, runFullTeamSmoke, TEST_PROJECT_MARKER,
   TEST_PROJECT_MARKER_CONTENT, writeSmokeOwnership } from '../../scripts/prove-opencode-full-team.mjs';
 
 import { runMixedTeamSmoke } from '../../scripts/prove-opencode-mixed-team.mjs';
@@ -89,6 +89,83 @@ function cleanup(input) {
   fs.rmSync(path.dirname(input.env.HOME), { recursive: true, force: true });
   fs.rmSync(input.env.OPENCODE_E2E_PROOF_DIRECTORY, { recursive: true, force: true });
 }
+
+async function withOwnedPreflight(check) {
+  const { root, env } = fixture();
+  let input;
+  try {
+    await runFullTeamSmoke({ sourceEnv: env, vitestEntryPath: path.join(root, 'vitest.mjs'), log() {},
+      preflight: async value => { input = value; await check(value); return { ok: false }; },
+      spawn: () => assert.fail('offline preflight test must not launch FULL'),
+    });
+  } finally { cleanup(input); fs.rmSync(root, { recursive: true, force: true }); }
+}
+
+test('FULL V2 preflight uses exact version and passive selected-provider inventory on Linux/macOS', async () => {
+  await withOwnedPreflight(async input => {
+    for (const platform of ['linux', 'darwin']) for (const version of ['2.0.0', '2.0.32']) {
+      const calls = [];
+      const result = await preflightOpenCodeFullTeamEnvironment(input, { platform,
+        legacyPreflight: () => assert.fail('V2 must never use native agent/serve or legacy health'),
+        spawn: (command, args, options) => {
+          calls.push({ command, args, options });
+          assert.equal(options.env, input.env); assert.equal(options.cwd, input.projectPath);
+          assert.equal(options.maxBuffer, 256_000);
+          return { status: 0, stdout: calls.length === 1 ? `opencode v${version}\n`
+            : JSON.stringify({ models: { models: [{ modelId: 'selected/model' }] } }) };
+        },
+      });
+      assert.deepEqual(result, { ok: true, generation: 'v2', version });
+      assert.deepEqual(calls.map(call => [call.command, call.args]), [
+        [input.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH, ['--version']],
+        [input.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH, ['runtime', 'providers', 'models',
+          '--runtime', 'opencode', '--provider', 'selected', '--project-path', input.projectPath,
+          '--limit', '100', '--json']],
+      ]);
+      assert.deepEqual(calls.map(call => call.options.timeout), [20_000, 90_000]);
+    }
+    let calls = 0;
+    assert.deepEqual(await preflightOpenCodeFullTeamEnvironment(input, {
+      spawn: (_command, args) => { calls++; assert.deepEqual(args, ['--version']); return { status: 0, stdout: '1.19.0\r\n' }; },
+      legacyPreflight: value => { assert.equal(value, input); return { ok: true, legacy: true }; },
+    }), { ok: true, legacy: true });
+    assert.equal(calls, 1);
+  });
+});
+
+test('FULL V2 preflight fails closed on unsupported versions and malformed or missing inventory', async () => {
+  await withOwnedPreflight(async input => {
+    for (const version of ['2.0.21\n', '2.0.33\n', '2.0.32\n\n', ' 2.0.32\n', '2.0.32 extra', '02.0.32\n']) {
+      let calls = 0;
+      const result = await preflightOpenCodeFullTeamEnvironment(input, { platform: 'darwin',
+        legacyPreflight: () => assert.fail('unsupported version cannot fall back'),
+        spawn: () => { calls++; return { status: 0, stdout: version, stderr: 'synthetic-secret' }; },
+      });
+      assert.equal(result.ok, false); assert.equal(calls, 1);
+      assert.equal(JSON.stringify(result).includes('synthetic-secret'), false);
+    }
+    for (const catalog of [
+      { status: 1, stderr: 'synthetic-secret' }, { status: null, signal: 'SIGTERM' },
+      { status: 0, error: new Error('synthetic-secret') }, { status: 0, stdout: 'synthetic-secret' },
+      { status: 0, stdout: 'null' }, { status: 0, stdout: '{"models":[]}' },
+      { status: 0, stdout: '{"models":{"models":[{"modelId":"other/model"}]}}' },
+    ]) {
+      let calls = 0;
+      const result = await preflightOpenCodeFullTeamEnvironment(input, { platform: 'linux',
+        legacyPreflight: () => assert.fail('inventory failure cannot fall back'),
+        spawn: () => ++calls === 1 ? { status: 0, stdout: '2.0.32' } : catalog,
+      });
+      assert.equal(result.ok, false); assert.equal(calls, 2);
+      assert.equal(JSON.stringify(result).includes('synthetic-secret'), false);
+    }
+    await assert.rejects(preflightOpenCodeFullTeamEnvironment({ ...input, env: { ...input.env, HOME: '/foreign' } }, {
+      spawn: () => assert.fail('must validate ownership before any command'),
+    }), /wrapper-owned/);
+    await assert.rejects(preflightOpenCodeFullTeamEnvironment({ ...input, projectPath: '/foreign' }, {
+      spawn: () => assert.fail('must reject foreign cwd before any command'),
+    }), /owned project/);
+  });
+});
 
 test('isolates auth/home/config and retains cleanup-confirmed proof after success', async () => {
   const { root, env } = fixture();

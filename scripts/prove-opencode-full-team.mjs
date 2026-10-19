@@ -31,6 +31,48 @@ export const ISOLATED_PATH_KEYS = [
 const OWNERSHIP_FILE = '.opencode-proof-owned.json';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+/** Passive generation/model qualification. FULL still proves actual readiness,
+ * work and original-run stop through the production bridge below. */
+export async function preflightOpenCodeFullTeamEnvironment(input, {
+  spawn = spawnSync,
+  legacyPreflight = preflightOpenCodeLiveEnvironment,
+  platform = process.platform,
+} = {}) {
+  assertOwnedSmokeEnvironment(input.env, 'FULL');
+  if (input.projectPath !== input.env.OPENCODE_E2E_PROJECT_PATH)
+    throw new Error('FULL preflight requires its owned project');
+  const unavailable = (stage) => ({ ok: false, reason: 'Selected OpenCode generation or model inventory unavailable', stage });
+  const run = (command, args, timeout) => spawn(command, args, {
+    cwd: input.projectPath, env: input.env, encoding: 'utf8', timeout, maxBuffer: 256_000,
+  });
+  const measured = run(input.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH, ['--version'], 20_000);
+  if (measured.error || measured.signal || measured.status !== 0) return unavailable('version-command');
+  const version = /^(?:opencode v)?((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*))(?:\r?\n)?$/.exec(measured.stdout);
+  if (!version || version[0] !== measured.stdout) return unavailable('version-output');
+  if (version[1].startsWith('1.')) return legacyPreflight(input);
+  if (!['2.0.0', '2.0.32'].includes(version[1]) || !['linux', 'darwin'].includes(platform))
+    return unavailable('generation-policy');
+  if (!Array.isArray(input.requiredModels) || input.requiredModels.length !== 1 ||
+      input.requiredModels[0] !== input.env.OPENCODE_E2E_MODEL ||
+      !/^[^\s/]+\/[^\s]+$/.test(input.requiredModels[0])) return unavailable('required-models');
+  const model = input.requiredModels[0], provider = model.slice(0, model.indexOf('/'));
+  const cli = input.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH;
+  const catalog = run(cli, ['runtime', 'providers', 'models', '--runtime', 'opencode', '--provider', provider,
+    '--project-path', input.projectPath, '--limit', '100', '--json'],
+  path.basename(cli) === 'cli-source' ? 180_000 : 90_000);
+  if (catalog.error || catalog.signal || catalog.status !== 0) return unavailable('catalog-command');
+  try {
+    const payload = JSON.parse(catalog.stdout);
+    if (!isRecord(payload) || !isRecord(payload.models) || !Array.isArray(payload.models.models))
+      return unavailable('catalog-shape');
+    if (!payload.models.models.some(row => isRecord(row) && row.modelId === model))
+      return unavailable('catalog-selection');
+  } catch { return unavailable('catalog-json'); }
+  // Inventory is passive, not bootstrap or native retirement evidence. V2 has
+  // no V1 agent-list/serve/legacy-health preflight or global host cleanup claim.
+  return { ok: true, generation: 'v2', version: version[1] };
+}
+
 export function allocateSmokeOwnedRoot(prefix, platform = process.platform, tempDirectory = os.tmpdir()) {
   // macOS's per-user tmpdir is too long for nested tsx Unix socket paths.
   const parent = platform === 'darwin' ? '/tmp' : tempDirectory;
@@ -214,7 +256,7 @@ export function isCompleteSmokeProof(proof, kind, models) {
 
 export async function runFullTeamSmoke({
   sourceEnv = process.env,
-  preflight = preflightOpenCodeLiveEnvironment,
+  preflight = preflightOpenCodeFullTeamEnvironment,
   spawn = spawnSync,
   vitestEntryPath = path.join(repoRoot, 'node_modules/vitest/vitest.mjs'),
   log = console.log,
