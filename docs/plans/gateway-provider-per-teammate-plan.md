@@ -119,7 +119,7 @@ src/features/gateway-provider/
 | `resolveGatewayConnectionSpec` | чистая функция → нейтральный spec (`baseUrl`, `profileId`, `credentialRef`, model); без env-имён, CLI provider-id и `wireApi`                                                                | `core/domain`                |
 | `toArtifactId`                 | sanitized-префикс + hash исходной пары имён для глобальной записи OpenCode (§5.2)                                                                                                            | `main/adapters/output`       |
 | per-runtime маппинги           | spec → env/CLI/config рантайма; существующие швы вызывают эти функции без дублирования форматов                                                                                              | `main/adapters/output`       |
-| `GatewayProviderStore`         | один JSON, сериализованный writer: профили, активные биндинги и неизменяемые источники учёта с владельцем                                                                                    | `main/infrastructure`        |
+| `GatewayProviderStore`         | один JSON, сериализованный writer: профили, активные биндинги и sources с неизменяемой идентичностью; lifecycle-факты обновляются                                                            | `main/infrastructure`        |
 | `GatewayUsageSourcePort`       | порт чтения учёта — в **token-usage** (потребитель импорта), ре-экспорт из `@features/token-usage/main` (deep-import'ы запрещены standard'ом); HTTP-адаптер реализует его в gateway-provider | `src/features/token-usage/…` |
 
 Ключи — в существующем `ApiKeyService` (крипто не дублируем), вне `team.ts`.
@@ -174,8 +174,10 @@ bind-путь, без массового переноса биндингов и�
 source. Учёт старого ключа через URL-алиас и перенос его истории в новый source
 в эту фичу не входят; приложение не угадывает равенство разных gateway.
 
-Один ключ используется только этим тиммейтом; учёт охватывает весь ключ,
-включая обращения вне приложения, а не только app-запросы.
+Один ключ используется только этим тиммейтом. В диапазоне от первого дня
+привязки до `finalUsageDay` учитывается весь ключ, включая обращения вне
+приложения. Новое внешнее использование после финализации источника в этот
+диапазон не входит; повторный bind возобновляет импорт (§6.1).
 
 Единый resolver секрета потребляют runtime-маппинги, проба моделей,
 HTTP-адаптер учёта и редакция артефактов; renderer получает только ref/статус.
@@ -184,7 +186,8 @@ HTTP-адаптер учёта и редакция артефактов; rendere
 net-дельту ≤ 0; для новых границ фичи включаем eslint-ограничения импорта
 (по стандарту).
 Порт перечисляет активные и удерживаемые исторические источники с владельцем
-и lifecycle-фактами (`hasActiveBinding`, `lastUnboundAt`), читает день по
+и lifecycle-фактами (`hasActiveBinding`, `lastUnboundAt`, `hasRuntimeArtifact`,
+`runtimeArtifactRetiredAt`), читает день по
 `gatewayUsageRef`; секрет резолвится только внутри main-адаптера.
 
 ## 5. Доставка биндинга в рантаймы
@@ -255,11 +258,27 @@ overrides, иначе смена биндинга может выглядеть 
 | OpenCode    | запись провайдера в (глобальном) `opencode.json`, `apiKey = {file:~/.config/opencode/agent-teams-credentials/…}`                                   | `OpenCodeLocalProviderConnector`/`OpenCodeLocalProviderSupport`                                                                   | per-member запись + model-route `<providerEntry>/<modelId>`; файл ключа пишет **существующий** writer коннектора (rotation-имена, `assertProviderApiKeyReplacement`) |
 
 **Глобальные OpenCode id:** `gateway-<sanitized-team>-<sanitized-member>-<hash>`.
-Hash — первые 12 hex SHA-256 от `JSON.stringify([teamName, memberName])`,
+Hash — первые 12 hex SHA-256 от `JSON.stringify([teamName, memberName, gatewayUsageRef])`,
 префикс ограничен по длине, алфавит `[a-z0-9_-]`. Это различает и `a.b`/`a-b`,
 и пары `(a-b,c)`/`(a,b-c)`; одного team-scoped префикса недостаточно.
-Перед заменой существующей записи проверяем её исходного владельца; при
+Новый source получает отдельный id: смена биндинга не переписывает запись
+живого старого процесса. Перед заменой проверяем владельца и usage-ref; при
 несовпадении — ошибка, а не перезапись чужой записи. Вся функция — `toArtifactId`.
+
+**Retirement OpenCode:** после отвязки и завершения последнего app-owned run
+этого source удаляем его глобальную provider-запись и managed credential-файл
+через тот же сериализованный JSONC writer. Сейчас у connector нет удаления:
+добавляется узкий idempotent retire-метод, переиспользующий проверки ownership,
+`containsStringReference` и `removeManagedProviderCredential` из support.
+Удаляем только запись/файл с совпадающими owner, usage-ref и credential-ref;
+чужие изменения и остальные provider-записи сохраняются. Пока остались ссылки
+на старый credential или очистка не завершилась, `hasRuntimeArtifact = true`
+и source продолжает импортироваться. Успешная очистка фиксирует
+`runtimeArtifactRetiredAt` в GatewayProviderStore; сбой между удалением файла
+и этой записью безопасно повторяется существующим runtime reconciliation.
+Cutoff не предшествует retirement (§6.1), поэтому все ещё возможные через
+артефакт запросы попадают в период импорта. Нового сборщика файлов/таймера нет.
+
 Codex использует фиксированный `agent_teams_custom` только в аргументах
 отдельного процесса, не пишет общий конфиг. Поэтому коллизии между его
 тиммейтами нет и расширять `codexNative/customProviderConfigOverrides.ts`
@@ -324,13 +343,16 @@ CLI-импортёры пропускают такие runs. Attribution policy 
 при upsert владелец существующего события не меняется. Новый endpoint или
 ключ создаёт новый источник; прежние события и секрет для незавершённого
 импорта не удаляются автоматически. Старый источник дочитывается, пока есть
-его активный биндинг или runs, затем до стабилизации последнего дня (§6.2).
+его активный биндинг, runs или runtime-артефакт (§5.2), затем до стабилизации
+последнего дня (§6.2).
 При отвязке/замене биндинга `GatewayProviderStore` в той же JSON-записи
 сохраняет `lastUnboundAt` старого источника; порт возвращает этот lifecycle-факт
-и после перезапуска. Ledger выводит `lastUsedAt` как max от времени отвязки и
-terminal-времён связанных runs. Поэтому **отвязка до первого запуска** тоже
-имеет cutoff — время отвязки, без создания фиктивного run. Пока биндинг или
-run активен, окончательного cutoff нет. Повторная привязка того же source
+и после перезапуска. Ledger выводит `lastUsedAt` как max от времени отвязки,
+terminal-времён связанных runs и `runtimeArtifactRetiredAt` (если был артефакт).
+Поэтому **отвязка до первого запуска** тоже
+имеет cutoff от времени отвязки (с учётом retirement, если артефакт уже был),
+без создания фиктивного run. Пока биндинг или
+run или runtime-артефакт активен, окончательного cutoff нет. Повторная привязка того же source
 снимает финализацию и возобновляет импорт с сохранённого watermark.
 Удалённый/отозванный или заменённый через общий редактор ключ означает
 неполноту, не потерю уже импортированных сумм. Ошибка fingerprint/чтения
@@ -403,6 +425,12 @@ Gateway-импортёр возвращает успешные дни вмест
 `readSnapshot()` возвращает также состояния (у старого ledger — пустой набор),
 поэтому refresh, `getSnapshot` и publish вычисляют `degraded` одинаково после
 перезапуска. Отсутствующее состояние gateway-источника означает «ещё не загружено».
+Чтобы это работало сразу после bind, `getSnapshot`, `getBudgetStatus`, publish
+и tick получают актуальный inventory через **тот же** `GatewayUsageSourcePort`
+(только локальные metadata, без HTTP). Объединяем inventory с ledger states:
+у source без состояния — неполнота с первого чтения, даже если refresh ещё
+не запускался. Ошибка чтения inventory тоже не становится здоровым нулём.
+Состояния/история в ledger сохраняются; отдельный inventory-reader не нужен.
 Обычные массивы сохраняются прежним путём. Новых менеджеров/транзакционного
 движка или отдельного reader-порта состояния не вводим.
 
@@ -539,6 +567,9 @@ HTTP без `model_stats` не снимает ошибку. Успешный я�
   больше не запрашивается и не мешает новому source.
   В существующей prepare/пробе ключа фикстуре URL запроса, `/v1/models` и marker
   следующего запуска относятся к новому source; история остаётся у старого.
+  OpenCode: старый artifact живёт до остановки consumer, затем удаляется вместе
+  со своим unreferenced ключом; новый source/чужая запись не затронуты. Сбой
+  cleanup/restart сохраняет активность source до idempotent retirement.
 - Env/bootstrap: итоговые разные parent/member tokens, per-member URL и
   Codex overrides, strict schema/fingerprint round-trip, все separate-process
   ветки; очистка одноразового spec при успехе/ошибке и после падения, без
@@ -552,6 +583,7 @@ HTTP без `model_stats` не снимает ошибку. Успешный я�
   один раз, gateway без real run виден в общих/team/agent/model итогах;
   обычный orphan остаётся unmapped, дневная сумма не попадает в задачу/сессию.
 - Та же gateway-фикстура под team-filter и в существующем budget status:
+  сразу после bind и до первого refresh snapshot/бюджет видят неполноту;
   global/team суммы совпадают с аналитикой без падения на отсутствии run,
   затронутый project-budget неполон и не отправляет threshold-уведомление;
   до первого успеха/при частичном импорте global/team также неполны и молчат,
