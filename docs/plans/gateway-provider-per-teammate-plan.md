@@ -63,6 +63,14 @@
 локального стенда. Userinfo/query/hash запрещены; удалённый HTTP отклоняется
 при сохранении и prepare, ключ по нему не отправляется. HTTP-клиент добавляет
 `/v1/...`, маппинги Codex/OpenCode — нужный их клиентам `/v1` ровно один раз.
+Для частного **не-loopback** адреса требуется `allowPrivateNetwork` профиля
+(по умолчанию false). UI использует обычный shared Checkbox по существующему
+образцу `LocalProviderPrivateNetworkApprovalControl`; второго диалога/пробы нет.
+Классификация совпадает с `normalizeRuntimeLocalProviderTarget`: существующий
+чистый hostname-helper выносится в shared для двух потребителей, без deep-import.
+Сохранение/проба/prepare проверяют разрешение одинаково для всех рантаймов;
+при смене canonical URL подтверждение сбрасывается. Loopback и публичный HTTPS
+не требуют подтверждения; удалённый HTTP остаётся запрещён независимо от флага.
 Единица учёта = API-ключ (один ключ на тиммейта ⇒ сервер различает тиммейтов
 без своих заголовков; уникальность ключа обеспечиваем на своей стороне, §6).
 Учёт через gateway `/v1/usage`, а не панельный `/api/v1/usage`: панель требует
@@ -114,9 +122,9 @@ src/features/gateway-provider/
 
 | Что                            | Ответственность                                                                                                                                                                              | Где                          |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| `GatewayProfile`               | `id`, `baseUrl`, `displayName`                                                                                                                                                               | `core/domain`                |
+| `GatewayProfile`               | `id`, `baseUrl`, `displayName`, `allowPrivateNetwork` (default false, привязан к canonical URL)                                                                                              | `core/domain`                |
 | `MemberGatewayBinding`         | `(teamName, memberName) → {profileId, apiKeyRef, gatewayUsageRef}`                                                                                                                           | `core/domain`                |
-| `resolveGatewayConnectionSpec` | чистая функция → нейтральный spec (`baseUrl`, `profileId`, `credentialRef`, model); без env-имён, CLI provider-id и `wireApi`                                                                | `core/domain`                |
+| `resolveGatewayConnectionSpec` | чистая функция → нейтральный spec (`baseUrl`, `profileId`, `credentialRef`, model, `allowPrivateNetwork`); без env-имён, CLI provider-id и `wireApi`                                         | `core/domain`                |
 | `toArtifactId`                 | sanitized-префикс + hash исходной пары имён для глобальной записи OpenCode (§5.2)                                                                                                            | `main/adapters/output`       |
 | per-runtime маппинги           | spec → env/CLI/config рантайма; существующие швы вызывают эти функции без дублирования форматов                                                                                              | `main/adapters/output`       |
 | `GatewayProviderStore`         | один JSON, сериализованный writer: профили, активные биндинги и sources с неизменяемой идентичностью; lifecycle-факты обновляются                                                            | `main/infrastructure`        |
@@ -270,6 +278,10 @@ Hash — первые 12 hex SHA-256 от `JSON.stringify([teamName, memberName,
 несовпадении — ошибка, а не перезапись чужой записи. Вся функция — `toArtifactId`.
 Gateway writer не меняет глобальные `model`/`small_model`
 (`setAsDefault = setAsSmallModel = false`); model-route передаётся member.
+В `configureLocalProvider` передаётся сохранённый `allowPrivateNetwork` профиля;
+его штатный путь пишет private-network approval для получившихся config/id/URL.
+Это разрешение сохраняется через reload; main не подставляет true без согласия
+профиля и не обходит `normalizeRuntimeLocalProviderTarget` прямой записью файла.
 
 **Retirement OpenCode:** после отвязки и завершения последнего app-owned run
 этого source удаляем его глобальную provider-запись и managed credential-файл
@@ -567,6 +579,8 @@ HTTP без `model_stats` не снимает ошибку. Успешный я�
 - Gateway binding/store: повторный ввод ключа, конкурентная привязка,
   другой владелец после отвязки, изменение/удаление секрета, коллизии id;
   удалённый HTTP отклоняется, локальный HTTP и удалённый HTTPS допускаются.
+  Частный HTTPS проходит OpenCode prepare только с сохранённым разрешением;
+  reload его сохраняет, изменение URL сбрасывает; loopback не требует флага.
   Замена ключа через общий редактор до финального импорта оставляет старые
   суммы и durable неполноту после reload, восстановление требует того же ключа.
   URL связанного профиля не меняется, включая гонку edit/bind; отвязка →
