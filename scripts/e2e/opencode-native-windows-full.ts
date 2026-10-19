@@ -47,6 +47,30 @@ const closedStderrCodes = (body: string | null) =>
   body === null
     ? []
     : [...new Set(body.match(/\b(?:execution|run|cleanup|provider|controller)_[a-z_]{2,90}\b/g) ?? [])].slice(0, 6);
+/** Closed errno/error/path tokens in raw child stderr; the bytes themselves never leave. */
+const closedStderrEvidence = (body: string | null) =>
+  body === null
+    ? { errno: [], errors: [], paths: [] }
+    : {
+        errno: [
+          ...new Set(
+            body.match(
+              /\b(?:EPERM|EACCES|ENOENT|ENOTDIR|EISDIR|EINVAL|EIO|ENOSYS|EBUSY|EEXIST|ELOOP|UNKNOWN)\b/g
+            ) ?? []
+          ),
+        ].slice(0, 6),
+        errors: [...new Set(body.match(/\b[A-Z][A-Za-z]{1,30}Error\b/g) ?? [])].slice(0, 6),
+        paths: [
+          ...new Set(body.match(/(?:[A-Za-z]:\\|\\\\)[^\s'"<>|,;:()]{1,180}/g) ?? []),
+        ].slice(0, 8),
+      };
+/** Closed-code passthrough for structured failure fields outside the classified sets. */
+const closedRawField = (value: unknown) =>
+  typeof value === 'string' && /^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(value)
+    ? value
+    : value === undefined || value === null
+      ? null
+      : 'non_closed_shape';
 const V1_TRANSCRIPT_MAX_BYTES = 2 * 1024 * 1024;
 // Only existing SDK read-only history/parser modules are imported. In
 // particular this never imports the profile/session bridge or prepares a host.
@@ -1603,6 +1627,13 @@ async function packagedStartupSnapshot(
               operation: one(event.operation, ['realpath', 'open', 'read', 'lstat', 'stat']),
               elapsedMs: number(event.elapsedMs),
               graphFailure: graphFailure(event.graphFailure),
+              raw: {
+                stage: closedRawField(event.stage),
+                reason: closedRawField(event.reason),
+                cause: closedRawField(event.cause),
+                errno: closedRawField(event.errno),
+                operation: closedRawField(event.operation),
+              },
             };
         } catch {
           /* Arbitrary stderr never crosses this boundary. */
@@ -1622,6 +1653,7 @@ async function packagedStartupSnapshot(
                   ? 'access_denied'
                   : 'unclassified',
         codes: closedStderrCodes(body),
+        evidence: closedStderrEvidence(body),
         childStartup,
       });
       if (stdio.length === 4) break;
@@ -1672,9 +1704,24 @@ async function packagedStartupSnapshot(
           'ENOSYS',
         ]),
         operation: one(failure.operation, ['realpath', 'open', 'read', 'lstat', 'stat']),
+        raw: {
+          name: closedRawField(failure.name),
+          code: closedRawField(failure.code),
+          cause: closedRawField(failure.cause),
+          errno: closedRawField(failure.errno),
+          operation: closedRawField(failure.operation),
+        },
       },
       startupStage: one(startup.stage, stages),
       startupReason: one(startup.reason, ['timeout', 'failed']),
+      startupRaw: {
+        stage: closedRawField(startup.stage),
+        reason: closedRawField(startup.reason),
+        cause: closedRawField(startup.cause),
+        errno: closedRawField(startup.errno),
+        operation: closedRawField(startup.operation),
+        nativeStderrKind: closedRawField(startup.nativeStderrKind),
+      },
       startupElapsedMs: number(startup.elapsedMs),
       graphFailure: graphFailure(startup.graphFailure),
       startupExitCode: number(startup.nativeExitCode),
