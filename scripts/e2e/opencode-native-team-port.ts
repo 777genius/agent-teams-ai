@@ -623,6 +623,15 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
         } catch { /* Missing or foreign retained observations stay unknown. */ }
       }
       const text = (failed?.error ?? '').slice(0, 32_768);
+      const v2MemberCodes = ['tombstone_unknown', 'cancel_or_interrupt_unknown', 'readers_unknown',
+        'physical_cleanup_unknown', 'run_tombstone_unknown'];
+      const v2Word = '(?:' + [...v2MemberCodes, 'stop unconfirmed'].join('|') + ')';
+      const v2Member = '(?:team-lead|alice|bob): ' + v2Word + '(?:; ' + v2Word + ')*';
+      const v2Stop = new RegExp('^OpenCode team did not confirm stop: warning:opencode_v2_cleanup_unknown: ' +
+        'Physical cleanup remains unverified; retained tombstones forbid send/relaunch\\.(?:; ' + v2Member + ')*' +
+        '(?: \\((?:host process still alive: pid [0-9]+(?:, [0-9]+)*|no recorded host pid to verify)\\))?$').test(text);
+      const v2Codes = v2Stop ? ['opencode_v2_cleanup_unknown', ...v2MemberCodes.filter(code =>
+        new RegExp('(?:^|[ :;])' + code + '(?=;| \\(|$)').test(text))] : [];
       const codes = ['opencode_stop_identity_changed', 'opencode_stop_status_unconfirmed',
         'opencode_stop_abort_rejected', 'opencode_stop_deadline', 'opencode_stop_compensation_failed',
         'unsupported_schema', 'unsupported_command', 'invalid_input', 'runtime_not_ready',
@@ -680,9 +689,9 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
         observation: 'same_run_stop_progress_only' as const,
         observed: failed !== undefined,
         failure: failed ? safeFailure(failed.error) : null,
-        diagnosticCodes: codes.filter((code) => new RegExp(
+        diagnosticCodes: [...v2Codes, ...codes.filter((code) => new RegExp(
           `(?:^|[\\s:;])(?:info:|warning:|error:|stop_failure_code:)${code}(?=:|$|[\\s;])`
-        ).test(text)),
+        ).test(text))],
         originalStopReasons: reasons.filter(([, original]) => text.includes(original))
           .map(([reason]) => reason),
         guard: !failed ? null

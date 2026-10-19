@@ -1259,3 +1259,27 @@ it('projects the exact additional source-owned send guards including case-sensit
   expect(project('error:runtime_not_ready: OpenCode message bridge failed: missing_deliveryattemptid')).toBeNull();
   expect(project('error:internal_error: OpenCode message bridge failed: delivery_lock_foreign')).toBeNull();
 });
+
+it('retains only exact existing V2 cleanup and member Stop codes from the same-run failure', async () => {
+  const teamName = 'test-opencode-v2-stop', runId = 'TEST-original';
+  const header = 'OpenCode team did not confirm stop: warning:opencode_v2_cleanup_unknown: Physical cleanup remains unverified; retained tombstones forbid send/relaunch.';
+  let error = header + '; alice: tombstone_unknown; cancel_or_interrupt_unknown; readers_unknown; physical_cleanup_unknown; run_tombstone_unknown (no recorded host pid to verify)';
+  const api = { config: { addCustomProjectPath: async () => undefined }, teams: {
+    onProvisioningProgress: () => () => undefined, createTeam: async () => ({ runId }),
+    getProvisioningStatus: async () => ({ runId, teamName, state: 'failed', message: 'OpenCode team stop failed', error }),
+  } };
+  const createPort = runInNewContext(`(${serializedFunction(electronTeamPort)})`) as typeof electronTeamPort;
+  const port = createPort(api as never, teamName, '/TEST-project', nativeCommandMatch);
+  await port.createTeam({ teamName, cwd: '/TEST-project', providerId: 'opencode' } as never);
+  expect((await port.getSafeStopFailure()).diagnosticCodes).toEqual(['opencode_v2_cleanup_unknown',
+    'tombstone_unknown', 'cancel_or_interrupt_unknown', 'readers_unknown', 'physical_cleanup_unknown', 'run_tombstone_unknown']);
+  error = header + '; team-lead: stop unconfirmed; bob: physical_cleanup_unknown (host process still alive: pid 123, 456)';
+  expect((await port.getSafeStopFailure()).diagnosticCodes).toEqual(['opencode_v2_cleanup_unknown', 'physical_cleanup_unknown']);
+  for (const foreign of ['PRIVATE prefix ' + header, header + '; alice: PRIVATE_UNKNOWN',
+    header + '; PRIVATE_ACTOR: physical_cleanup_unknown', header + ' PRIVATE_TOKEN']) {
+    error = foreign;
+    const snapshot = await port.getSafeStopFailure();
+    expect(snapshot.diagnosticCodes).toEqual([]);
+    expect(JSON.stringify(snapshot)).not.toMatch(/PRIVATE_|123|456/);
+  }
+});

@@ -20,9 +20,12 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
+import { parseSingleBridgeJsonResult, validateBridgeResultEnvelope } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
+import { projectV2NativeTranscript } from './opencode-native-v2-transcript';
 import { redactLaunchFailureArtifactText } from '../../src/main/services/team/TeamLaunchFailureArtifactPack';
 import {
   NativeDesktopIpcError,
+  projectIpcCausalFailure,
   prepareNativeDesktop,
   safeIpcFailureDetail,
 } from './opencode-native-desktop-host';
@@ -1041,7 +1044,8 @@ async function packagedStartupSnapshot(
   testRoot: string,
   dataRoot: string,
   team: string,
-  runId: string
+  runId: string,
+  timing: 'before_stop' | 'after_original_stop' = 'before_stop'
 ) {
   const row = (value: unknown): Record<string, unknown> =>
     value && typeof value === 'object' && !Array.isArray(value)
@@ -1792,7 +1796,7 @@ async function packagedStartupSnapshot(
     if (runs.length === 4) break;
   }
   return {
-    observation: 'before_stop_snapshot_only',
+    observation: timing === 'after_original_stop' ? 'after_original_stop_snapshot_only' : 'before_stop_snapshot_only',
     authority: 'no_authority_minted',
     launchManifest,
     stdio,
@@ -1912,6 +1916,13 @@ async function main() {
     failure: null as ProofFailure | null,
     launchFailure: null as Record<string, string | boolean> | null,
     startupFailureSnapshot: null as unknown,
+    postStopSnapshot: null as unknown,
+    nativeV2TranscriptFailure: null as null | {
+      observation: 'captured' | 'unavailable'; member: 'alice' | 'bob';
+      packet?: ReturnType<typeof projectV2NativeTranscript>;
+      failure?: { classification: string; kind?: string; sdkCode?: string | null; nativeOperation?: string | null };
+      inputFileRemoved?: boolean;
+    },
     cleanupFailures: [] as ProofFailure[],
   };
   const checkpoint = async (stage: string) => {
@@ -2437,6 +2448,96 @@ async function main() {
     });
     const failedTask = latestTasks.at(-1);
     const nativeSession = failedTask && nativeSessions.get(failedTask.owner);
+    if (version.startsWith('2.') && sdk === 'bundled' && failedTask && nativeSession) {
+      const inputFile = path.join(desktop.root, `v2-transcript-${randomUUID()}.input.json`);
+      const bunConfig = inputFile + '.bunfig.toml';
+      const capture: NonNullable<typeof proof.nativeV2TranscriptFailure> = {
+        observation: 'unavailable', member: failedTask.owner,
+      };
+      proof.nativeV2TranscriptFailure = capture;
+      // One read of the original session, charged to the existing 20s diagnostic budget.
+      // The public command performs no send, observation settlement or qualification.
+      const captureDeadline = Date.now() + 20_000;
+      const captureController = new AbortController();
+      let captureTimer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([(async () => {
+        const runtimeRoot = path.join(path.dirname(await realpath(executable)), 'resources', 'runtime');
+        const bun = path.join(runtimeRoot, 'bun', 'bun.exe'), entry = path.join(runtimeRoot, 'local-cli', 'cli.js');
+        for (const [file, key] of [[bun, 'bun/bun.exe'], [entry, 'local-cli/cli.js']] as const) {
+          const stat = await lstat(file);
+          assert(stat.isFile() && !stat.isSymbolicLink() && stat.nlink === 1 &&
+            (await realpath(file)).toLowerCase() === file.toLowerCase());
+          const hash = createHash('sha256');
+          for await (const bytes of createReadStream(file, { signal: captureController.signal })) hash.update(bytes);
+          assert.equal(hash.digest('hex'), bundled.runtimeDigests[key]);
+        }
+        let runtimePromptMessageId: string | null = null;
+        try {
+          const ledgerFile = path.join(desktop.root, 'claude', 'teams', desktop.teamName,
+            '.opencode-runtime', 'lanes', 'primary', 'opencode-prompt-delivery-ledger.json');
+          const stat = await lstat(ledgerFile);
+          assert(stat.isFile() && !stat.isSymbolicLink() && stat.nlink === 1 && stat.size <= 2 * 1024 * 1024 &&
+            await realpath(ledgerFile) === ledgerFile);
+          const ledger = JSON.parse(await readFile(ledgerFile, { encoding: 'utf8', signal: captureController.signal }));
+          assert(ledger.schemaVersion === 1 && Array.isArray(ledger.data) && ledger.data.length <= 4096);
+          const matches = ledger.data.filter((row: Record<string, unknown>) => row &&
+            row.teamName === desktop.teamName && row.runId === proof.runIds.at(-1) && row.laneId === 'primary' &&
+            row.memberName === failedTask.owner && row.runtimeSessionId === nativeSession &&
+            Array.isArray(row.taskRefs) && row.taskRefs.some(ref => ref && ref.taskId === failedTask.id && ref.teamName === desktop.teamName));
+          if (matches.length === 1) {
+            const id = matches[0].lastRuntimePromptMessageId ?? matches[0].runtimePromptMessageId;
+            if (typeof id === 'string' && /^msg_[A-Za-z0-9]+$/.test(id)) runtimePromptMessageId = id;
+          }
+        } catch { /* Missing or ambiguous private input identity stays unknown. */ }
+        const timeoutMs = Math.min(8000, Math.floor(captureDeadline - Date.now() - 5000));
+        assert(timeoutMs > 0, 'TEST V2 transcript diagnostic budget expired');
+        const envelope = { schemaVersion: 1 as const, requestId: `TEST-v2-transcript-${randomUUID()}`,
+          command: 'opencode.getRuntimeTranscript' as const, cwd: desktop.projectPath,
+          startedAt: new Date().toISOString(), timeoutMs,
+          body: { teamId: desktop.teamName, teamName: desktop.teamName, runId: proof.runIds.at(-1),
+            laneId: 'primary', memberName: failedTask.owner, runtimeSessionId: nativeSession, projectPath: desktop.projectPath } };
+        await writeFile(inputFile, JSON.stringify(envelope), { flag: 'wx', mode: 0o600, signal: captureController.signal });
+        await writeFile(bunConfig, '', { flag: 'wx', mode: 0o600, signal: captureController.signal });
+        captureController.signal.throwIfAborted();
+        const { stdout } = await execute(bun, ['--no-env-file', `--config=${bunConfig}`, entry, 'runtime', 'opencode-command', '--json', '--input', inputFile], {
+          env: desktop.env, cwd: desktop.projectPath, timeout: Math.max(1, captureDeadline - Date.now()),
+          maxBuffer: V1_TRANSCRIPT_MAX_BYTES, signal: captureController.signal,
+        });
+        // Raw canonical messages remain only in this bounded child stdout/in-memory parser.
+        captureController.signal.throwIfAborted();
+        const parsed = parseSingleBridgeJsonResult(stdout);
+        assert(parsed.ok && validateBridgeResultEnvelope(parsed.value, envelope).ok, 'TEST V2 transcript response invalid');
+        if (!parsed.value.ok) {
+          const closed = projectIpcCausalFailure(`error:${parsed.value.error.kind}: OpenCode message bridge failed: ${parsed.value.error.message}`);
+          capture.failure = { classification: 'bridge_refused', kind: parsed.value.error.kind,
+            sdkCode: closed?.bridgeFailure?.sdkCode ?? null, nativeOperation: closed?.bridgeFailure?.nativeOperation ?? null };
+        } else {
+          capture.packet = projectV2NativeTranscript(parsed.value.data, { sessionId: nativeSession,
+            selectedModel: model, runtimePromptMessageId });
+          capture.observation = 'captured';
+        }
+        })().finally(async () => {
+          // Also retire any setup file whose asynchronous write settled after the cutoff.
+          await Promise.all([inputFile, bunConfig].map(file => unlink(file).catch(() => undefined)));
+        }), new Promise<never>((_resolve, reject) => {
+          captureTimer = setTimeout(() => {
+            captureController.abort();
+            reject(Object.assign(new Error('TEST V2 transcript diagnostic expired'), { code: 'ETIMEDOUT' }));
+          }, Math.max(1, captureDeadline - Date.now()));
+        })]);
+      } catch (captureError: unknown) {
+        const code = captureError && typeof captureError === 'object' && 'code' in captureError ? captureError.code : null;
+        capture.observation = 'unavailable'; delete capture.packet;
+        capture.failure = { classification: captureError instanceof assert.AssertionError ? 'assertion_failed'
+          : ['ENOENT', 'EACCES', 'EPERM', 'ETIMEDOUT', 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER'].find(item => item === code) ?? 'unavailable' };
+      } finally {
+        clearTimeout(captureTimer);
+        capture.inputFileRemoved = await unlink(inputFile).then(() => true, (error: unknown) =>
+          !!error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT');
+        await unlink(bunConfig).catch(() => undefined);
+      }
+    }
     if (version.startsWith('1.') && sdk === 'bundled' && failedTask && nativeSession) {
       // Read the exact native persistence through existing SDK parser modules,
       // without preparing a profile/host or importing a prompt-capable service.
@@ -2715,6 +2816,18 @@ async function main() {
           } finally {
             clearTimeout(timer);
           }
+          await checkpoint(proof.stage);
+        }
+        if (version.startsWith('2.') && proof.status === 'failed' && proof.runIds.length) {
+          let timer: ReturnType<typeof setTimeout> | undefined;
+          try {
+            proof.postStopSnapshot = await Promise.race([
+              packagedStartupSnapshot(desktop.root, desktop.env.CLAUDE_MULTIMODEL_DATA_HOME!,
+                desktop.teamName, proof.runIds.at(-1)!, 'after_original_stop'),
+              new Promise(resolve => { timer = setTimeout(() => resolve({ observation: 'unavailable' }), 8000); }),
+            ]);
+          } catch { proof.postStopSnapshot = { observation: 'unavailable' }; }
+          finally { clearTimeout(timer); }
           await checkpoint(proof.stage);
         }
       }
