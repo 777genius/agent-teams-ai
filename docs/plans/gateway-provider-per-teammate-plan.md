@@ -1,6 +1,6 @@
 # План: Gateway-провайдер с выбором и учётом на каждого тиммейта
 
-**Статус:** v5 (финальная, после 4 кругов ревью по 3 критика)
+**Статус:** v6 — исправлены пробелы доставки и учёта; реализация начинается с проверки контракта (§8)
 **Тестовый стенд:** локальный [agent-teams-ai/sub2api](https://github.com/agent-teams-ai/sub2api)
 
 ## 1. Цель
@@ -18,7 +18,7 @@
 **Входит:**
 
 1. Per-member gateway-биндинг: профиль + персональный API-ключ тиммейта.
-2. Доставка биндинга в спавн трёх рантаймов (§5), включая per-member env в
+2. Доставка биндинга в спавн трёх рантаймов (§5), включая per-member env и Codex overrides в
    bootstrap-пути (работа в репо оркестратора — §5.1, шаг 3а).
 3. Учёт расходов per-member (`gateway_exact`) в token-usage, `byAgent`.
 4. UI: выбор профиля/модели на строке тиммейта, управление профилями.
@@ -35,9 +35,13 @@
 - HTTP-адаптер фичи — desktop-only (осознанное исключение из standard);
 - деплой sub2api в приложение;
 - импорт учёта с субдневной точностью (§6 — агрегаты по дням);
+- распределение дневных gateway-расходов по сессиям, задачам и проектам;
+- сверка gateway с CLI-логами и резервный локальный учёт gateway-запусков:
+  у такого запуска один источник расходов — gateway (§6);
 - стабильные id тиммейтов/команд — идентичность биндинга по имени, как и
   везде в token-usage (run-identity `team:…:member:…`); смена имени =
-  ручная перевязка (§9).
+  ручная перевязка с новым ключом; старый ключ сохраняет исторического
+  владельца (§4, §9).
 
 ## 3. Gateway-контракт
 
@@ -49,7 +53,11 @@
 | Каталог моделей + проба ключа | `GET /v1/models` | ключ тиммейта |
 | Учёт по ключу | `GET /v1/usage` | ключ тиммейта |
 
-Пути фиксированы контрактом и захардкожены — настраиваемых путей в профиле нет.
+Пути фиксированы контрактом — настраиваемых путей в профиле нет.
+`baseUrl` — корень gateway без завершающего `/v1`; при сохранении URL
+нормализуется (завершающий `/` и однократное снятие `/v1`),
+разрешены только HTTP(S), без userinfo/query/hash. HTTP-клиент добавляет
+`/v1/...`, маппинги Codex/OpenCode — нужный их клиентам `/v1` ровно один раз.
 Единица учёта = API-ключ (один ключ на тиммейта ⇒ сервер различает тиммейтов
 без своих заголовков; уникальность ключа обеспечиваем на своей стороне, §6).
 Учёт через gateway `/v1/usage`, а не панельный `/api/v1/usage`: панель требует
@@ -59,7 +67,22 @@ JWT-сессию — второй тип креденшела не вводим.
 (суммарные и маргинальные), не строки запросов и не матрицу день×модель.
 Разрез день×модель получаем запросом на конкретный день
 (`start_date=D&end_date=D` → `model_stats` этого дня). Запросы всегда с явными
-датами; отсутствующие поля (`model_stats` и пр.) обрабатываются как пустые.
+датами. Календарный день — **UTC**, диапазон `[D 00:00Z, D+1 00:00Z)`;
+на стенде `TZ=UTC`. `model_stats: []` означает успешный нулевой результат.
+Отсутствующее/невалидное поле или ошибка HTTP означает **недоступный учёт**,
+а не нулевые расходы. Текущий sub2api скрывает ошибку получения статистики
+и опускает поле также при пустом результате: до интеграции нужна небольшая
+правка стенда — явный массив при успехе и non-2xx при ошибке (§8, шаг 0).
+
+Маппинг денег: `ModelStat.actual_cost` → `billableUsd`, `cost` →
+`apiEquivalentUsd`/совместимый `estimatedUsd`, `source: 'gateway'`,
+`billingMode: 'api'`. `account_cost` — расход аккаунта бэкенда, не тиммейта.
+Токены и `requests` переносятся из соответствующих полей `ModelStat`,
+без восстановления стоимости по таблицам цен приложения.
+В `normalizeCostBreakdown` явный gateway `billableUsd: 0` сохраняется:
+текущее `positive(billableUsd) || estimatedUsd` ошибочно заменяет бесплатное
+списание стандартной ценой. Legacy fallback для отсутствующего значения и
+поведение остальных источников сохраняются.
 
 ## 4. Архитектура
 
@@ -83,20 +106,46 @@ src/features/gateway-provider/
 | Что | Ответственность | Где |
 |---|---|---|
 | `GatewayProfile` | `id`, `baseUrl`, `displayName` | `core/domain` |
-| `MemberGatewayBinding` | `(teamName, memberName) → {profileId, apiKeyRef}` | `core/domain` |
+| `MemberGatewayBinding` | `(teamName, memberName) → {profileId, apiKeyRef, gatewayUsageRef}` | `core/domain` |
 | `resolveGatewayConnectionSpec` | чистая функция → **нейтральный** `GatewayConnectionSpec` (`baseUrl`, провайдер-id, `credentialRef`, `wireApi`, model; **без** env-имён — это знание рантайма) | `core/domain` |
-| `toArtifactId` | санитизация `gateway-<teamName>-<memberName>` → `[a-z0-9_-]` | `core/domain` |
+| `toArtifactId` | sanitized-префикс + короткий hash исходной пары имён для глобальной записи OpenCode (§5.2) | `core/domain` |
 | per-runtime маппинги | чистые функции spec → артефакт рантайма (env-имена `ANTHROPIC_*`, форма Codex `-c`, запись провайдера OpenCode); легаси-швы их только **вызывают**, схемы артефактов не дублируют | `core/domain` |
-| `GatewayProviderStore` | один JSON в app-config dir: профили + биндинги | `main/infrastructure` |
+| `GatewayProviderStore` | один JSON, сериализованный writer: профили, активные биндинги и неизменяемые источники учёта с владельцем | `main/infrastructure` |
 | `GatewayUsageSourcePort` | порт чтения учёта — в **token-usage** (потребитель импорта), ре-экспорт из `@features/token-usage/main` (deep-import'ы запрещены standard'ом); HTTP-адаптер реализует его в gateway-provider | `src/features/token-usage/…` |
 
-Ключи тиммейтов — в существующем `ApiKeyService` (крипто уже там, не дублируем);
-биндинг несёт только `apiKeyRef`. Храним вне `team.ts`, т.к. ключи не должны
-попадать в конфиг и бэкапы команды. Use-case «`apiKeyRef` → литерал ключа +
-список значений для редакции» — в `main/application/` фичи (main-only
-оркестрация над legacy `ApiKeyService`; в core домен его не тянем): его
-потребляют шаг 3а и редакция launch-артефактов (§5.3), других читателей
-секрета нет. Инжект `GatewayUsageSourcePort` → адаптер — в app shell
+Ключи — в существующем `ApiKeyService` (крипто не дублируем), вне `team.ts`.
+Сейчас `save()` создаёт UUID, допускает замену значения по id, а `lookup()`
+выбирает по env-имени: стабильность ref и точное чтение по id ещё **не** реализованы.
+Добавляем main-only чтение секрета по id. Gateway use-case в
+`main/application/` сохраняет/переиспользует ref по fingerprint литерала,
+проверяет неизменность значения перед чтением и возвращает литерал + значения
+для редакции. Служебное env-имя записи уникально; поиск через общий
+`lookupPreferred('CODEX_API_KEY')` для биндинга запрещён. Общую семантику
+`ApiKeyService.save()` для остальных клиентов не меняем.
+
+Fingerprint (SHA-256 литерала) хранится только в main-owned store, без литерала;
+повторный ввод переиспользует живую запись. Если запись секрета удалена,
+повторный ввод того же литерала восстанавливает storage-ref, сохраняя учётную
+идентичность. За fingerprint навсегда закреплена пара
+`(teamName, memberName)`: использовать ключ у другого тиммейта, в том числе
+после отвязки/rename, нельзя. Для нового владельца нужен новый ключ.
+Удалённая/изменённая через общий редактор запись даёт ошибку чтения ключа;
+учётный ref не начинает молча обозначать другой литерал.
+
+`gatewayUsageRef` = SHA-256 кортежа `(canonicalEndpoint, keyFingerprint)`;
+повторная привязка/создание профиля с тем же URL не создаёт второй источник.
+Запись хранит endpoint, ссылку на секрет, исторические
+`teamName`/`memberName`/`agentId` и первый день учёта. Владелец и endpoint
+неизменяемы; storage-ref можно восстановить только тем же литералом.
+Endpoint snapshot нужен, чтобы смена URL профиля не
+переписала старые расходы; новый endpoint создаёт новый источник. Записи
+источников и владельцев сохраняются после отвязки/удаления профиля.
+Один ключ используется только этим тиммейтом; учёт охватывает весь ключ,
+включая обращения вне приложения, а не только app-запросы.
+
+Единый resolver секрета потребляют runtime-маппинги, проба моделей,
+HTTP-адаптер учёта и редакция артефактов; renderer получает только ref/статус.
+Инжект `GatewayUsageSourcePort` → адаптер — в app shell
 (`main/index`), без импортов фича→фича. Для frozen-baseline файлов держим
 net-дельту ≤ 0; для новых границ фичи включаем eslint-ограничения импорта
 (по стандарту).
@@ -126,26 +175,31 @@ net-дельту ≤ 0; для новых границ фичи включаем
 - **Прямой путь** (рестарт/добавление): `TeamProvisioningMemberLifecycle`
   уже строит env per-member (:632) и передаёт в `spawnCli` (:986–996) —
   member-патч ложится сюда.
-- **Bootstrap-путь** (создание/запуск через лида): bootstrap-spec не содержит
-  env → шаг 3а (§10). In-process lane (`handleSpawnInProcess`) тиммейта в
+- **Bootstrap-путь** (создание/запуск через лида): передаются и env, и
+  per-member Codex overrides/login mode → шаг 3а (§10). In-process lane (`handleSpawnInProcess`) тиммейта в
   процессе лиды per-member env принять не может → **gateway-биндинг требует
   separate-process спавна** (tmux/native); in-process + биндинг = prepare-ошибка.
 
 Биндинги резолвятся в `buildCrossProviderMemberArgs` через lookup-порт по
 образцу `TeamProvisioningEnvRuntimePorts` (инжект композицией; `memberSpecs`
 из team-конфига ключей не несут). Единая функция применения
-`applyGatewayMemberEnvPatch` — **единственное** место, где патч попадает в env
-тиммейта.
+`applyGatewayMemberEnvPatch` — финальное применение патча в прямом пути;
+оркестратор применяет такой же узкий патч в своей границе спавна. Общий
+runtime-пакет между репозиториями ради этого не вводим.
 
 **Порядок применения (constraint):** gateway-патч применяется строго **после**
 `applyProviderRuntimeEnv` и **вне** team runtime settings bundle — тогда
 `clearExplicitAnthropicRouteEnv` и `stripCompetingAnthropicEnv` его не видят,
-правки в них не нужны. Единственный фронтовый фильтр, который может срезать
-ключ, — helper-mode список `ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS`;
-gateway-режим не сочетается с helper-режимом (блок, как в §9). Единый
-env-тест на это правило (порядок + выживание ключа) — в фронтенде; в
-оркестраторе — свой минимальный тест проброса `extraEnv` (шаг 3а), без
-общих фикстур между репо.
+правки в них не нужны. Gateway-режим не сочетается с helper-режимом.
+В оркестраторе недостаточно обычного `extraEnv`: `buildInheritedEnvObject`
+после него снова копирует `process.env.ANTHROPIC_AUTH_TOKEN` лида
+(`spawnUtils.ts`, блок после merge `extraEnv`). Gateway-патч применяется
+**после всех** inherited-auth преобразований, включая этот блок и
+`shouldClearAnthropicApiKeyForTeammateSpawn`. Claude-патч также обнуляет
+конкурирующий `ANTHROPIC_API_KEY`. После финального патча общая auth
+нормализация повторно не запускается.
+Один фронтовый env-тест и свой оркестраторный spawn-тест проверяют явно
+разные parent/member tokens и member URL; общих фикстур между репо нет.
 
 ### 5.2 Per-runtime артефакты
 
@@ -153,15 +207,20 @@ env-тест на это правило (порядок + выживание к�
 
 | Рантайм | Артефакт тиммейта | Стык (только вызывает маппинг) | Per-member механизм |
 |---|---|---|---|
-| Claude Code | env `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN` | `TeamProvisioningEnvBuilder` (лимит 800, запас есть) | member env-патч (§5.1) |
-| Codex | `-c` overrides: свой провайдер-id с `base_url`, `env_key="CODEX_API_KEY"`, `wire_api="responses"` | `buildCodexCustomProviderConfigOverrides` (`src/main/services/runtime/ProviderConnectionService.ts:188`); обе формы CLI (codex-exec `-c` и inline `--settings` JSON) | **per-member overrides** (base_url живёт в конфиге, не в env); ключ тиммейта в его env; binding фиксирует api-key режим |
+| Claude Code | env `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`, очистка конкурирующего `ANTHROPIC_API_KEY` | `TeamProvisioningEnvBuilder` (лимит 800, запас есть) | финальный member env-патч (§5.1) |
+| Codex | per-process провайдер `agent_teams_custom`, собственный `base_url`, `env_key="CODEX_API_KEY"`, `wire_api="responses"`, `forced_login_method="api"` | существующие builders в `src/main/services/runtime/ProviderConnectionService.ts`; обе формы CLI (`-c` и inline `--settings` JSON) | отдельные настройки и ключ каждого member, включая bootstrap; provider-id совместим с allowlist оркестратора |
 | OpenCode | запись провайдера в (глобальном) `opencode.json`, `apiKey = {file:~/.config/opencode/agent-teams-credentials/…}` | `OpenCodeLocalProviderConnector`/`OpenCodeLocalProviderSupport` | per-member запись + model-route `<providerEntry>/<modelId>`; файл ключа пишет **существующий** writer коннектора (rotation-имена, `assertProviderApiKeyReplacement`) |
 
-**Идентификаторы артефактов:** `gateway-<teamName>-<memberName>`, sanitized
-(`[a-z0-9_-]`, точки и прочее → `-`) — иначе (а) коллизия двух команд с
-одинаковыми именами тиммейтов в общем `opencode.json`, (b) точка в имени
-ломает TOML-путь `model_providers.<id>.*` у Codex. Санитизация — `toArtifactId`
-из §4, в единственном экземпляре.
+**Глобальные OpenCode id:** `gateway-<sanitized-team>-<sanitized-member>-<hash>`.
+Hash — первые 12 hex SHA-256 от `JSON.stringify([teamName, memberName])`,
+префикс ограничен по длине, алфавит `[a-z0-9_-]`. Это различает и `a.b`/`a-b`,
+и пары `(a-b,c)`/`(a,b-c)`; одного team-scoped префикса недостаточно.
+Перед заменой существующей записи проверяем её исходного владельца; при
+несовпадении — ошибка, а не перезапись чужой записи. Вся функция — `toArtifactId`.
+Codex использует фиксированный `agent_teams_custom` только в аргументах
+отдельного процесса, не пишет общий конфиг. Поэтому коллизии между его
+тиммейтами нет и расширять `codexNative/customProviderConfigOverrides.ts`
+для новых id не требуется; round-trip существующего parser проверяется тестом.
 
 ### 5.3 Утечки ключей
 
@@ -175,42 +234,89 @@ whitelist-only), а в launch-failure артефактах редактирую�
 
 ## 6. Учёт расходов (token-usage)
 
-`GET /v1/usage` (sub2api) возвращает **агрегаты** — суммарные и маргинальные
-(по дням / по моделям за диапазон), не строки запросов и не матрицу день×модель.
-Поэтому:
+### 6.1 Источник и сохранённая идентичность
 
-- Импортёр (в token-usage, `main/infrastructure`, реализует
-  `TokenUsageImporterPort`) запрашивает `/v1/usage` **на каждый день** окна
-  (`start_date=D&end_date=D`, всегда явные даты) — `model_stats` такого запроса
-  и есть разрез день×модель. События: одно на (ключ, день, модель),
-  `usageSourceKind: 'gateway_exact'`; отсутствующие/пустые поля = 0 событий за
-  день.
-- **Идемпотентность и id:** детерминированный id события `(apiKeyRef, day,
-  model)` + существующий ledger upsert-by-id ⇒ повторный импорт обновляет, а не
-  дублирует; растущий "today"-бакет перезаписывает то же событие. Семантика
-  ref: `ApiKeyService` возвращает **тот же** `apiKeyRef` для того же литерала
-  ⇒ повторный ввод ключа не плодит события. Уникальность: ключ привязан
-  максимум к одному биндингу — валидация при привязке/prepare (ошибка при
-  повторном использовании), иначе инвариант «один ключ = один тиммейт» и
-  атрибуция `apiKey → member` ломаются. Смена ключа = другой `apiKeyRef` =
-  новые события, старые не трогаются.
-- **Атрибуция:** импортёр штампует `teamName`/`memberName` (`agentName`,
-  run-identity) в событие **в момент импорта** (биндинг читается только тогда)
-  — смена биндинга не осиротит исторические события. `appRunId` обязателен
-  контрактом события (`TokenUsageEventDto`) и события без него отбрасываются
-  ledger'ом → заполняем детерминированным синтетическим ключом окна
-  `gateway:<apiKeyRef>:<day>`. `byAgent` сейчас строится только по runs
-  (события, не привязанные к run, уходят в `unmappedEventCount`) → в
-  `snapshotProjection` добавляется минимальный fallback: события с
-  `agentName` без run попадают в `byAgent` своего агента (файл у лимита 800 —
-  net-дельта ≤ 0).
-- **Запросы:** `requests` из `ModelStat` сохраняется в существующем JSON-поле
-  события (`providerUsage`); `requestCount` в summary суммирует вес события
-  (fallback 1) — иначе «точный» учёт показывал бы запросов = числу
-  (день×модель).
-- Порт `GatewayUsageSourcePort` — в token-usage (§4), адаптер HTTP — в
-  gateway-provider, инжект композицией (app shell).
-- `byAgent` в `snapshotProjection` уже есть (дополнение — fallback выше).
+У каждого gateway-запуска **один источник расходов — gateway**. До спавна
+фиксируем `gatewayUsageRef` в main-owned launch/run metadata и
+`TokenUsageRunDto`; restart/add/bootstrap фиксируют его одинаково. Discovery
+(`TeamLaunchRunSourceDiscovery` и composite merge) и ledger сохраняют marker,
+не резолвят его заново по текущему биндингу. Смена биндинга действует со
+следующего запуска; уже работающий процесс и его учёт сохраняют свой источник.
+
+CLI-импортёры пропускают такие runs. Attribution policy также исключает уже
+сохранённые локальные события marked-runs из расходов, чтобы обновление ledger
+или повторный CLI-импорт не создали дубль. У обычных runs поведение прежнее.
+Если gateway недоступен, локальные расходы **не** подставляются: сохраняем
+последние известные данные и показываем неполноту. Сверки имён моделей,
+покрытия бакетов и reconciliation-сервиса не требуется.
+
+Источник учёта (§4) хранит исторического владельца независимо от активного
+биндинга. Импортёр берёт `teamName`/`agentName`/`agentId` из этого snapshot;
+при upsert владелец существующего события не меняется. Новый endpoint или
+ключ создаёт новый источник; прежние события и секрет для незавершённого
+импорта не удаляются автоматически. Старый источник дочитывается, пока есть
+его активные runs, затем повторно за последний день использования после
+закрытия этого UTC-дня. Удалённый/отозванный ключ означает неполноту, не потерю
+уже импортированных сумм.
+
+### 6.2 Дневной импорт и DTO
+
+Импортёр в token-usage реализует `TokenUsageImporterPort`, HTTP-адаптер в
+gateway-provider реализует `GatewayUsageSourcePort`; композиция — app shell.
+Запуск — существующий `refreshSnapshot`, отдельного scheduler нет. Первый
+импорт: с UTC-дня первой привязки до сегодня. Следующие: пропущенные дни с
+последнего успешного импорта, вчера и сегодня. Watermark отмечает последний
+**непрерывно успешно импортированный закрытый** UTC-день; не перескакивает
+через ошибку и не закрывает today. Учёт до первой привязки не обещаем;
+первый день импортируется целиком, без отсечения времени внутри дня.
+
+Каждый день читается отдельно: `start_date=D&end_date=D`. Полный валидный
+ответ даёт событие на модель. Детерминированный id — hash кортежа
+`(gatewayUsageRef, day, model)` с namespace `gateway`, существующий upsert
+обновляет растущий today-бакет. Если успешный ответ убрал ранее известную
+модель или вернул пустой массив, импортёр возвращает её прежний id с нулевыми
+токенами, деньгами и `requestCount: 0`; это обнуляет устаревшую сумму через тот
+же upsert. Импортёр читает прежние gateway-события через существующий ledger
+port; новый механизм удаления/замены разделов хранилища не нужен.
+Ошибка/отсутствующее поле не порождает обнулений и не двигает watermark.
+
+Минимальные расширения существующих DTO и обоих normalizer'ов сохранения:
+
+- Run: `gatewayUsageRef?: string` — snapshot источника при запуске.
+- Event: `gatewayUsageRef?: string`, `gatewayDay?: string` (`YYYY-MM-DD`, UTC),
+  `requestCount?: number` — конечное неотрицательное целое; отсутствует → `1`
+  для старых событий. `requests` не прячем в `providerUsage`: сейчас его тип и
+  ledger-normalizer сохраняют только Kiro.
+- `requestCount` и все `*RequestCount` billing-счётчики используют один вес;
+  `exactEventCount`/`estimatedEventCount` остаются количеством ledger-событий.
+  Деньги и токены нормализуются по §3, `usageSourceKind: 'gateway_exact'`.
+- `appRunId` остаётся обязательным: `gateway:<gatewayUsageRef>:<day>` — только
+  namespace агрегата. Соответствующий фиктивный `TokenUsageRunDto` не создаём.
+  `occurredAt = D 00:00Z`. Runtime неизвестен из gateway-агрегата
+  (`runtimeKind: 'unknown'`), не угадываем его по последней конфигурации.
+
+### 6.3 Проекция и неполнота
+
+В `keepOnlyMappedUsageEvents` добавляется **узкое** правило до отбрасывания
+orphan-событий: валидный `gateway_exact` с `gatewayUsageRef`, `gatewayDay` и
+историческим владельцем допускается без реального run. Обычный orphan с одним
+`agentName` по-прежнему unmapped. В `snapshotProjection` aggregate-события
+входят в общий итог, `byTeam`, `byAgent`, `byModel` (модель из события),
+календарные графики и runtime `unknown`. Ключ агента совпадает с существующим
+team-scoped ключом. Файл frozen: новую связную политику выносим без роста cap.
+
+Агрегаты не увеличивают число реальных runs и не участвуют в `byTask`,
+`byProject`, `bySession`, `byCommand`, recent/expensive/session/command runs.
+Иначе дневная сумма ложно приписывается одной задаче по времени `00:00`.
+Dashboard обозначает гранулярность «по дням UTC»; для gateway range округляется
+наружу до целых UTC-дней. Фильтры конкретной сессии/команды агрегат не включают;
+временные фильтры обычных событий не меняются.
+
+До первого успешного чтения и при неполных днях snapshot помечается
+`degraded`, UI показывает неполноту и время последней успешной загрузки,
+а не подтверждённый ноль. Статус источника хранится рядом с его watermark и
+учитывается также обычным `getSnapshot`/publish после перезапуска; успешный
+HTTP без `model_stats` не снимает ошибку. Успешный явный пустой массив — ноль.
 
 ## 7. UI
 
@@ -222,28 +328,66 @@ whitelist-only), а в launch-failure артефактах редактирую�
    ключ → ошибка на строке). Пустой каталог моделей → ошибка на строке
    («каталог моделей пуст»), ручного ввода модели нет.
    `MemberDraftRow` (frozen cap 1001) — врезка компонента, net-дельта ≤ 0.
-3. Смена имени черновика команды (`renameDraftTeamDirectory`) → биндинги
-   показываются отвязанными, перевязка вручную (новой rename-логики нет).
+3. Смена имени команды/тиммейта → биндинги отвязаны; ручная привязка с новым
+   ключом, т.к. прежний сохраняет исторического владельца. Смена профиля/ключа
+   применяется к следующему запуску; UI не обещает сменить маршрут живому
+   процессу. Исторические источники не скрываются из учёта вместе с профилем.
 
 ## 8. Сценарии на локальном sub2api
 
-Стенд: `git clone https://github.com/agent-teams-ai/sub2api`, `deploy/` +
-`docker-compose.local.yml` (Postgres + Redis + sub2api).
+Стенд: [agent-teams-ai/sub2api](https://github.com/agent-teams-ai/sub2api),
+`deploy/docker-compose.local.yml` (Postgres + Redis + sub2api), `TZ=UTC`.
+Фиксируем проверенный SHA стенда. Команды и приложения запускаем только на
+новом sandbox/test-проекте, не на рабочих проектах пользователя.
 
 **Seed:** админка → 2–3 аккаунта в группе → API-ключи тиммейтов, **обязательно
 привязанные к группе** (ungrouped-ключи не пройдут авторизацию на gateway-путях).
-**Пре-шаг:** `/v1/models` и `/v1/usage` отвечают ключом тиммейта (остальное
-прикроют сценарии ниже).
+**Шаг 0 — до реализации интеграции:** ключ тиммейта читает `/v1/models` и
+дневной `/v1/usage`; проверяем UTC-границу, токены, `requests`, различающиеся
+`cost`/`actual_cost`, успешный пустой массив и ошибку чтения статистики.
+В исследованном sub2api (`0ddd6dec`) ошибка и пустой результат неразличимы
+([Usage handler](https://github.com/agent-teams-ai/sub2api/blob/0ddd6dec0492ec078b9acef13203e5ce9eae3d2f/backend/internal/handler/gateway_handler.go#L1604-L1651)).
+Отдельная bounded-правка стенда возвращает `model_stats: []` при успешном
+нуле и non-2xx при ошибке. Без неё импорт не называется точным; frontend
+не угадывает ноль. Затем используем этот контракт для будущего backend.
 
-1. **Claude Code ×2**, разные ключи → оба отвечают; `/v1/usage` каждого ключа
-   показывает свои агрегаты; `byAgent` различает тиммейтов.
+1. **Claude Code ×2**, разные ключи и отличный от них токен лида → оба отвечают
+   своими ключами; `/v1/usage` и `byAgent` различают их. Проверяем bootstrap и
+   прямой restart/add без изменения лида.
 2. **Codex ×2 с разными профилями** → каждый ходит через свой per-member
-   override (`/v1/responses`); ключи раздельны в учёте.
+   override (`/v1/responses`); различаем фактические URL в bootstrap и прямом
+   запуске, обе CLI-формы проходят parser; ключи раздельны в учёте.
 3. **OpenCode** → ответ через `/v1/chat/completions`, ключ в учёте.
 4. **Смешанная команда** (по тиммейту каждого рантайма) → три ключа, три
    агрегата, `byAgent` показывает трёх.
-5. **Смена биндинга** (другой профиль/ключ) → новые события идут на новый
-   `apiKeyRef`, старые события с исторической атрибуцией сохраняются (§6).
+5. **Смена биндинга** → следующий запуск получает новый источник, текущий
+   сохраняет старый. Re-import не меняет исторического владельца; передача
+   старого ключа другому тиммейту отклоняется, в том числе после rename.
+
+Минимальные автоматические проверки — в существующих suites, без нового
+тестового стенда/общего пакета фикстур:
+
+- Gateway binding/store: повторный ввод ключа, конкурентная привязка,
+  другой владелец после отвязки, изменение/удаление секрета, коллизии id.
+- Env/bootstrap: итоговые разные parent/member tokens, per-member URL и
+  Codex overrides, strict schema round-trip, все separate-process ветки.
+- Token-usage importer/ledger/projection: дневной re-import без дублей,
+  обнуление исчезнувшей модели, round-trip `requestCount: 0/25`, сумма всех
+  request-счётчиков, история владельца, gateway + CLI того же run учитывается
+  один раз, gateway без real run виден в общих/team/agent/model итогах;
+  обычный orphan остаётся unmapped, дневная сумма не попадает в задачу/сессию.
+- UTC/ошибка: сутки на границе месяца, successful empty против missing/error,
+  `actual_cost: 0` при положительном `cost`, сохранённые суммы и `degraded`
+  после ошибки и перезапуска; watermark не пропускает неуспешный день.
+
+Команды реализации: `pnpm exec vitest run <затронутые suites>`,
+`pnpm lint:fast:files -- <затронутые файлы>`, `pnpm typecheck`,
+`pnpm guard:source-file-size`, `pnpm guard:team-provisioning-architecture`.
+Для широкого изменения границ — полный `pnpm lint`; обязательный CI по
+политике проекта сохраняется. UI-проверка — `pnpm dev:mcp` через CDP 9222,
+fixture/test APIs, без Computer Use/нативного folder picker. Live smoke
+использует `cli-source`; перед выпуском отдельно проверяется построенный и
+зафиксированный в `runtime.lock.json` runtime по `docs/RELEASE.md`.
 
 ## 9. Edge cases
 
@@ -251,29 +395,36 @@ whitelist-only), а в launch-failure артефактах редактирую�
 |---|---|
 | Ключ невалиден/отозван | проба `GET /v1/models` ключом тиммейта → ошибка на строке, без фолбэка |
 | Профиль удалён, на него ссылается тиммейт | prepare-ошибка «профиль не найден» |
-| Сервер отклонил ключ (в т.ч. авторизация) | generic-ошибка «авторизация ключа отклонена» на строке (диагноз причин — на стороне стенда, §8 seed) |
-| Один ключ пытаются привязать к двум тиммейтам | валидация при привязке → ошибка (инвариант «один ключ = один тиммейт», §6) |
+| HTTP 401/403 на пробе ключа | «авторизация ключа отклонена» на строке; timeout/5xx — ошибка доступности, не диагноз авторизации |
+| Ключ повторно вводится / передаётся другому владельцу | тот же владелец сохраняет учётную идентичность; другой владелец — ошибка даже после отвязки (§4) |
 | Два тиммейта, один провайдер, разные ключи | per-member патч поверх базы (§5.1) |
-| Одинаковые имена тиммейтов в разных командах / имя с точкой или спецсимволами / конкурентная запись `opencode.json` | одно правило: team-scoped sanitized id + запись одной операцией через сериализованный writer (§5.2) |
+| Коллизии имён / конкурентная запись `opencode.json` | sanitized id + hash исходной пары и проверка владельца; существующий сериализованный writer (§5.2) |
 | Рантайм auto-suffixed имя (`alice` → `alice-2`) | prepare-ошибка «effective-имя не совпадает с настроенным, перевяжите вручную» |
 | In-process lane + биндинг | prepare-ошибка (биндинг требует separate-process спавна, §5.1) |
 | `/v1/models` пуст | ошибка на строке, ручного ввода нет (§7.2) |
 | Удаление/замена ключа OpenCode-записи | через существующий writer коннектора (`assertProviderApiKeyReplacement`) |
 | Утечка ключей | whitelist-only диагностика, редакция по известным значениям (§5.3) |
-| Rename черновика команды / тиммейта | ручная перевязка (§7.3), исторический учёт не переписывается |
+| Helper-mode + биндинг / удалённый или изменённый секрет | prepare-ошибка без fallback на ключ лида/другого клиента |
+| Сбой `/v1/usage` / missing `model_stats` | прежние суммы сохраняются, статус неполноты; explicit empty — успешный ноль (§6) |
+| Rename команды / тиммейта | ручная привязка нового ключа (§7.3); прежний владелец учёта неизменен |
 
 ## 10. Этапы
 
 | # | Шаг | Результат |
 |---|---|---|
-| 1 | `contracts` + `core/domain`: профили, биндинги (с валидацией уникальности ключа), `resolveGatewayConnectionSpec`, `toArtifactId`, per-runtime маппинги, eslint-границы фичи | домен + тесты |
-| 2 | `main`: `GatewayProviderStore`, ключи через `ApiKeyService`, use-case «ref → литерал + redaction-значения» (`main/application`), IPC; в token-usage — `GatewayUsageSourcePort` + ре-экспорт из `@features/token-usage/main`; инжект адаптера в app shell | обвязка |
-| 3 | Per-member доставка: member-aware контракт `buildCrossProviderMemberArgs` (потребители §5.1 + type-only подписи `EnvRuntimePorts`/`ProviderRuntimeFacade`), `applyGatewayMemberEnvPatch` (единственная точка применения) + **один** env-тест (constraint порядка + выживание ключа), per-member `-c` для Codex, записи OpenCode через существующий writer, prepare-правило separate-process | тиммейты ходят через gateway своими ключами (прямой путь) |
-| 3а | **Внешняя задача (репо `agent_teams_orchestrator`)**: (а) сериализация `env` из фронтового `TeamProvisioningBootstrapSpec.ts`; (б) поле `env` в zod-схеме `bootstrapMemberSchema` (`teamBootstrapSpec.ts:35`, `z.strictObject` — без него неизвестный ключ отвергается); (в) проброс литералов в `extraEnv` на **всех** separate-process спавн-путях: `spawnMultiAgent.ts:1880` и `:2207` (tmux-ветки `buildInheritedEnvVars`), `handleSpawnNativeProcess` (`extraEnv` в `buildInheritedEnvObject` ~:2664); gateway-ключи не срезаются `shouldClearAnthropicApiKeyForTeammateSpawn`; минимальный свой тест проброса `extraEnv` | bootstrap-путь per-member |
-| 4 | UI: секция профилей + `MemberGatewaySelector` | выбор per-member |
-| 5 | Импортёр `gateway_exact` (запрос на каждый день окна, события (ключ, день, модель) со штампом `agentName`, синтетическим `appRunId`, весом `requests` в `providerUsage`) + `GatewayUsageSource`-адаптер + fallback в `snapshotProjection` (события с `agentName` → `byAgent`) | учёт per-member |
-| 6 | Пре-шаг контракта + прогон §8 на sub2api | готово |
+| 0 | Контракт стенда (§8): UTC, модели, дневной учёт; отдельная минимальная правка sub2api для explicit empty/error | снята известная зависимость интеграции |
+| 1 | Профили, биндинги, владение ключом и endpoint snapshot; pure resolve/маппинги, hash-id OpenCode, eslint-границы | домен + focused tests |
+| 2 | `GatewayProviderStore`, чтение секрета по id и gateway-дедуп поверх `ApiKeyService`, resolver + redaction, IPC; `gatewayUsageRef` в Run DTO/ledger/discovery до использования на шаге 3; потребительский `GatewayUsageSourcePort`, public re-export и app-shell injection | хранение и обвязка |
+| 3 | Member-aware контракт со всеми потребителями §5.1; финальный env-патч, существующие Codex builders с фиксированным id, OpenCode writer, separate-process правило; snapshot `gatewayUsageRef` до прямого spawn | прямой путь, marker для учёта |
+| 3а | Обе стороны bootstrap: frontend `TeamProvisioningBootstrapSpec.ts`, orchestrator `bootstrapMemberSchema` (strict), `NormalizedBootstrapMember`, runner → spawn input → native/tmux argv/env. Передавать **env и per-member Codex overrides + api login mode**, не settings лида; валидировать узкие поля. Пройти `handleSpawnSplitPane`, `handleSpawnSeparateWindow` (`buildInheritedEnvVars`) и `handleSpawnNativeProcess` (`buildInheritedEnvObject`), финальный патч после inherited-auth. Сохранить member `gatewayUsageRef` в app-owned metadata. Проверить обе Codex CLI-формы существующим parser. Перед включением UI доставить совместимый runtime и обновить `runtime.lock.json` по `docs/RELEASE.md` | совместимый bootstrap и packaged runtime |
+| 4 | UI профилей и `MemberGatewaySelector`; секреты/ref, ошибки, семантика следующего запуска | выбор per-member |
+| 5 | Event DTO/ledger marker и `requestCount`, сохранение явного нулевого списания; importer с watermark/статусом, источник snapshot, запрет CLI-дублей, допуск aggregate до orphan-filter и проекции §6 | сохранённый точный дневной учёт |
+| 6 | Focused проверки и пять live-сценариев §8, packaged compatibility | приёмка |
 
-**Оценка:** ~4–5.5k строк (с тестами), преимущественно новые файлы фичи.
-Вне этой оценки: шаг 3а в репо оркестратора (~0.3–0.5k) и возможные правки
-sub2api, если пре-шаг §8 выявит несоответствие контракту.
+Шаги поставляются связанными PR по политике проекта; UI не включается раньше
+совместимого runtime и учёта. Нет параллельной поддержки двух форм bootstrap
+ради старого bundled runtime: обновляется runtime pin, затем включается фича.
+
+**Оценка:** ориентир frontend ~4.5–6k строк с тестами; уточняется после шага 0.
+Отдельно orchestrator (~0.4–0.7k), небольшая обязательная правка sub2api и
+штатная сборка/доставка runtime. Это оценки, не лимит и не критерий готовности.
