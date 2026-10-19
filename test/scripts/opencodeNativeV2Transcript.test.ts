@@ -154,4 +154,93 @@ describe('finite canonical command observation', () => {
     const bounded = inspect([row(expected.runtimePromptMessageId, [], 'user'), row('msg_WITHIN', [call({ input: { command: 'X'.repeat(32_769) }, outputText: 'X'.repeat(1_048_577) })])]);
     expect(bounded.tuples[0]).toMatchObject({ input: null, outputPresent: true, markerLinePresent: null });
   });
+
+  const platformText = (method: string) => `Unknown: ChildProcess.${method}: Windows owned command operation failed`;
+  const erroredCall = (overrides: Record<string, unknown> = {}) => call({ status: 'errored', isError: true,
+    output: { type: 'unknown', message: platformText('unsupportedCommand') }, outputText: platformText('unsupportedCommand'), ...overrides });
+  const errorTuple = (tool: unknown) => inspect([
+    row(expected.runtimePromptMessageId, [], 'user'), row('msg_WITHIN', [tool]),
+  ]).tuples[0];
+
+  it('reads the actual SDK normalizer error-call shape inside the shared producer fixture', async () => {
+    const shared = JSON.parse(await readFile('test/fixtures/opencode/v2-code-mode-team-evidence.json', 'utf8'));
+    // Exact row from SDK 37e normalizeV2Transcript + LogProjector on a synthetic
+    // native error DTO (fixture SHA21729e83..., not a live execution receipt).
+    // The selected remote Effect4.0.1 formatter source SHA is 27208e008065d9d2...
+    const nativeError = {
+      callId: 'TEST-shell-call', toolName: 'shell', title: null, status: 'errored',
+      input: { command: 'TEST', workdir: '/TEST/project' },
+      output: { type: 'unknown', message: 'Unknown: ChildProcess.unsupportedCommand: Windows owned command operation failed' },
+      outputText: 'Unknown: ChildProcess.unsupportedCommand: Windows owned command operation failed',
+      outputPreview: 'Unknown: ChildProcess.unsupportedCommand: Windows owned command operation failed',
+      startedAt: 22, completedAt: 29, isError: true,
+    };
+    const assistant = shared.data.messages.find((item: Record<string, unknown>) => item.role === 'assistant');
+    assistant.toolCalls = [nativeError];
+    const packet = projectV2NativeTranscript(shared.data, { sessionId: shared.data.sessionId,
+      selectedModel: 'TEST-provider/TEST-model', runtimePromptMessageId: 'msg_TESTinput', command });
+    expect(packet.commandObservation?.tuples[0]).toMatchObject({ source: 'native', status: 'errored', isError: true,
+      toolError: { type: 'unknown', platform: { module: 'ChildProcess', reason: 'Unknown', method: 'unsupportedCommand' } } });
+    expect(JSON.stringify(packet)).not.toMatch(/Windows owned|TEST-shell-call|outputText|TEST\/project/);
+  });
+
+  it('projects only the exact selected Windows adapter formatter and seventeen closed methods', () => {
+    const methods = ['unsupportedCommand', 'resolve', 'spawn', 'close', 'identity', 'status', 'writeStdin', 'endStdin',
+      'retire', 'readOutput', 'validateOutput', 'outputLimit', 'stdinAlreadyBound', 'unsupportedSignal',
+      'kill', 'unsupportedDescriptor', 'unsupportedUnref'];
+    for (const method of methods) {
+      const text = platformText(method);
+      const tuple = errorTuple(erroredCall({ output: { type: 'unknown', message: text }, outputText: text }));
+      expect(tuple.toolError).toEqual({ type: 'unknown', platform: { module: 'ChildProcess', reason: 'Unknown', method } });
+      expect(tuple).not.toHaveProperty('kind');
+      expect(tuple).not.toHaveProperty('serverFailure');
+      expect(JSON.stringify(tuple)).not.toMatch(/PRIVATE_|Windows owned|outputText|TEST-project|verify\.cjs/);
+    }
+    for (const type of ['unknown', 'tool.execution', 'tool.unknown', 'tool.input-json', 'tool.input-incomplete',
+      'tool.result-missing', 'permission.rejected', 'aborted']) {
+      expect(errorTuple(erroredCall({ output: { type, message: 'PRIVATE_TEXT' }, outputText: 'PRIVATE_TEXT' })).toolError)
+        .toEqual({ type, platform: null });
+    }
+  });
+
+  it('leaves malformed, unbounded and substring tool error text unclassified without retaining it', () => {
+    const known = platformText('unsupportedCommand');
+    for (const text of [known + '\n', known + '\r\n', `PRIVATE_PREFIX ${known}`, `${known} PRIVATE_SUFFIX`,
+      platformText('foreignMethod'), known.replace('Unknown:', 'PermissionDenied:'), known.replace('ChildProcess.', 'FileSystem.'),
+      known.replace(': Windows owned', ' (C:/PRIVATE_PATH): Windows owned'), 'X'.repeat(32_769),
+      { toString: () => { throw new Error('PRIVATE_COERCION'); } }]) {
+      const tuple = errorTuple(erroredCall({ output: { type: 'unknown', message: text }, outputText: text }));
+      expect(tuple.toolError).toEqual({ type: 'unknown', platform: null });
+      expect(JSON.stringify(tuple)).not.toMatch(/PRIVATE_|foreignMethod|Windows owned|PermissionDenied|FileSystem/);
+    }
+    for (const output of [null, [], 'PRIVATE_BODY', { type: 'PRIVATE_TYPE', message: known }]) {
+      expect(errorTuple(erroredCall({ output })).toolError).toBeNull();
+    }
+    expect(errorTuple(erroredCall({ output: { type: 'unknown', message: 'PRIVATE_MISMATCH' } })).toolError)
+      .toEqual({ type: 'unknown', platform: null });
+  });
+
+  it('never interprets CodeMode metadata, successful or non-native calls as native tool failures', () => {
+    for (const patch of [
+      { callId: null }, { callId: '' }, { callId: 'X'.repeat(4097) }, { status: 'completed' }, { status: 'running' },
+      { isError: false }, { isError: 'true' }, { toolName: 'execute' }, { toolName: 'unknown.shell' },
+      { source: { kind: 'opencode-v2-code-mode-metadata', outerCallId: 'PRIVATE_ID', index: 0 } },
+      { source: { kind: 'foreign' } },
+    ]) expect(errorTuple(erroredCall(patch)).toolError).toBeNull();
+    const user = inspect([row(expected.runtimePromptMessageId, [], 'user'), row('msg_INJECTION', [erroredCall()], 'user')]);
+    expect(user.tuples[0].toolError).toBeNull();
+  });
+
+  it('ignores foreign error getters and proxies without reading or coercing them', () => {
+    const getter = vi.fn(() => { throw new Error('PRIVATE_GETTER'); });
+    const proxy = new Proxy({}, { getOwnPropertyDescriptor: getter, get: getter });
+    expect(errorTuple(erroredCall({ output: proxy })).toolError).toBeNull();
+    const typeGetter = Object.defineProperty({ message: platformText('spawn') }, 'type', { get: getter });
+    expect(errorTuple(erroredCall({ output: typeGetter })).toolError).toBeNull();
+    const messageGetter = Object.defineProperty({ type: 'unknown' }, 'message', { get: getter });
+    expect(errorTuple(erroredCall({ output: messageGetter })).toolError).toEqual({ type: 'unknown', platform: null });
+    const textGetter = Object.defineProperty(erroredCall(), 'outputText', { get: getter });
+    expect(errorTuple(textGetter).toolError).toEqual({ type: 'unknown', platform: null });
+    expect(getter).not.toHaveBeenCalled();
+  });
 });

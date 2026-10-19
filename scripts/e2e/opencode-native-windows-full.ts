@@ -22,6 +22,7 @@ import { promisify } from 'node:util';
 
 import { parseSingleBridgeJsonResult, validateBridgeResultEnvelope } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import { projectV2NativeTranscript } from './opencode-native-v2-transcript';
+import { stageNativeTestNode } from './opencode-native-test-node';
 import { redactLaunchFailureArtifactText } from '../../src/main/services/team/TeamLaunchFailureArtifactPack';
 import {
   NativeDesktopIpcError,
@@ -1891,6 +1892,7 @@ async function main() {
     version,
     sdkSelection: sdk === 'bundled' ? 'bundled without override' : 'explicit SDK override',
     ...bundled,
+    nativeNodeDependency: null as null | { sha256: string; bytes: number },
     taskFailureSnapshot: null as null | {
       unavailable: boolean;
       failure?: ProofFailure;
@@ -1990,16 +1992,20 @@ async function main() {
   };
   try {
     await checkpoint('scripts');
+    const testNode = await stageNativeTestNode(
+      process.env.OPENCODE_NATIVE_TEST_NODE_PATH ?? '', desktop.projectPath
+    );
+    proof.nativeNodeDependency = { sha256: testNode.sha256, bytes: testNode.bytes };
     const nonce = { alice: randomUUID(), bob: randomUUID(), new: randomUUID() };
     const base = `Work only inside ${desktop.projectPath}. Never delegate, install packages, detach processes or change host verification scripts. Use team tools for peer messages and task comments. When a peer sends CHALLENGE:<token>, reply to that sender ACK:<token> exactly. Never reply to ACK.`;
     const command = (name: string) => {
       const program = path.join(desktop.projectPath, name);
-      assert(
-        [...program].every((char) => char.charCodeAt(0) >= 32) && !/["%!^&<>|`$]/.test(program),
+      for (const file of [program, testNode.executable]) assert(
+        [...file].every((char) => char.charCodeAt(0) >= 32) && !/["%!^&<>|`$]/.test(file),
         'Literal Windows TEST command path required'
       );
       // JSON string escaping doubles backslashes in cmd/PowerShell arguments.
-      return `node "${program}"`;
+      return `"${testNode.executable}" "${program}"`;
     };
     const verificationInstruction = (name: string) =>
       `Execute this supplied literal absolute Node command verbatim in your native shell: ${command(name)}. Do not substitute a relative path, recreate or copy the verifier, or print its marker yourself. Let the unchanged verifier produce its own output.`;
@@ -2025,6 +2031,7 @@ async function main() {
       )
     );
     const verifyScripts = async () => {
+      await testNode.verify();
       for (const [name, hash] of Object.entries(verificationHashes))
         assert.equal(
           await exactFile(desktop.projectPath, name),
@@ -2261,6 +2268,7 @@ async function main() {
     );
     proof.peersConfirmed = true;
     const hold = async (label: string) => {
+      await testNode.verify();
       const token = randomUUID();
       const name = `held-${label}.cjs`;
       const marker = path.join(desktop.projectPath, `held-${label}.json`);

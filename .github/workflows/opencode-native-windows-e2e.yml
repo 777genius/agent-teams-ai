@@ -331,6 +331,27 @@ jobs:
         with:
           path: TEST-bun-download-cache
           key: ${{ steps.sdk-download-cache.outputs.cache-primary-key }}
+      - name: Qualify registered V2 shell without model prompts
+        id: registered-shell
+        if: ${{ inputs.source_only && !inputs.provider_only && inputs.versions == 'current' }}
+        working-directory: TEST-native-sdk
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $shellRoot = Join-Path $env:RUNNER_TEMP ("TEST-windows-shell-" + [guid]::NewGuid().ToString())
+          $shellReceipt = "$shellRoot.json"
+          "receipt=$shellReceipt" | Out-File $env:GITHUB_OUTPUT -Append -Encoding utf8
+          $shellNode = $env:OPENCODE_NATIVE_TEST_NODE_PATH
+          $shellNodeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $shellNode).Hash.ToLowerInvariant()
+          bun scripts/opencode-v2/windows-shell-tool-probe.ts $shellRoot $shellReceipt $shellNode $shellNodeHash
+          if ($LASTEXITCODE -ne 0) { throw 'Registered V2 shell and physical cleanup failed; inspect the finite TEST receipt' }
+      - name: Preserve registered shell observation
+        if: ${{ always() && inputs.source_only && !inputs.provider_only && inputs.versions == 'current' && steps.registered-shell.outputs.receipt != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-registered-shell-${{ github.sha }}
+          path: ${{ steps.registered-shell.outputs.receipt }}
+          if-no-files-found: warn
       - name: Qualify native command isolation before desktop installation
         if: ${{ !inputs.source_only && !inputs.provider_only && inputs.versions != 'v1' }}
         working-directory: TEST-native-sdk
@@ -388,6 +409,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Controller build failed' }
           pnpm --filter agent-teams-mcp build
           if ($LASTEXITCODE -ne 0) { throw 'MCP build failed' }
+      - name: Qualify TEST Node staging on Windows
+        if: ${{ inputs.source_only && !inputs.provider_only && inputs.versions != 'v1' }}
+        shell: pwsh
+        run: |
+          pnpm exec vitest run test/scripts/opencodeNativeTestNode.test.ts
+          if ($LASTEXITCODE -ne 0) { throw 'TEST Node staging custody failed' }
       - name: Preflight real native startup and physical stop without model prompts
         if: ${{ !inputs.provider_only && inputs.versions != 'v1' }}
         shell: pwsh

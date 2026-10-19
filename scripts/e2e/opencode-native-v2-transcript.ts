@@ -159,8 +159,30 @@ export function projectV2NativeTranscript(value: unknown, expected: {
           }
         }
       }
+      const toolError = (() => {
+        if (roles[row.messageIndex] !== 'assistant' || source !== 'native' ||
+            !['bash', 'shell', 'exec'].includes(tool) || status !== 'errored' || error !== true) return null;
+        const output = field(row.tool, 'output');
+        if (!output || typeof output !== 'object' || types.isProxy(output) || Array.isArray(output)) return null;
+        // These are persisted Session.StructuredError types from the selected
+        // official tool pipeline, not arbitrary error names or raw messages.
+        const rawType = field(output, 'type');
+        const type = (['unknown', 'tool.execution', 'tool.unknown', 'tool.input-json', 'tool.input-incomplete',
+          'tool.result-missing', 'permission.rejected', 'aborted'] as const).find(item => item === rawType);
+        if (!type) return null;
+        const text = field(row.tool, 'outputText');
+        const match = typeof text === 'string' && text.length <= 32_768 && field(output, 'message') === text
+          ? /^Unknown: ChildProcess\.([A-Za-z][A-Za-z0-9]*): Windows owned command operation failed$/.exec(text) : null;
+        // Effect's formatter is exact here: the adapter supplies no path and
+        // a fixed description. Never reinterpret a substring or a child call.
+        const method = match && match[0] === text
+          ? (['unsupportedCommand', 'resolve', 'spawn', 'close', 'identity', 'status', 'writeStdin', 'endStdin',
+            'retire', 'readOutput', 'validateOutput', 'outputLimit', 'stdinAlreadyBound', 'unsupportedSignal',
+            'kill', 'unsupportedDescriptor', 'unsupportedUnref'] as const).find(item => item === match[1]) : undefined;
+        return { type, platform: method ? { module: 'ChildProcess' as const, reason: 'Unknown' as const, method } : null };
+      })();
       return { tool, relation, source, modelMatches: modelMatch(row.message), nativeCallIdPresent,
-        status, isError: typeof error === 'boolean' ? error : null, input, outputPresent, markerLinePresent };
+        status, isError: typeof error === 'boolean' ? error : null, input, outputPresent, markerLinePresent, toolError };
     });
     return { originalInputIndex: originalInputIndex < 0 ? null : originalInputIndex,
       nextInputIndex: nextInputIndex < 0 ? null : nextInputIndex, total, exhaustive: total <= 8, relationCounts, tuples };
