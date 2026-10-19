@@ -152,6 +152,9 @@ function clearShellEnvFailure(): void {
   shellEnvFailureCooldownUntil = 0;
 }
 
+/**
+ * Parse a NUL-separated `env -0` dump into a process-env record.
+ */
 function parseNullSeparatedEnv(content: string): NodeJS.ProcessEnv {
   const parsed: NodeJS.ProcessEnv = {};
   const lines = content.split('\0');
@@ -170,6 +173,9 @@ function parseNullSeparatedEnv(content: string): NodeJS.ProcessEnv {
   return parsed;
 }
 
+/**
+ * Spawn the given shell with args and resolve its exported environment.
+ */
 async function readShellEnv(shellPath: string, args: string[]): Promise<NodeJS.ProcessEnv> {
   const envDump = await new Promise<string>((resolve, reject) => {
     const child = spawn(shellPath, args, {

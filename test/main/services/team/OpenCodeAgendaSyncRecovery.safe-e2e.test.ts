@@ -35,6 +35,10 @@ afterEach(() => {
   }
 });
 
+/**
+ * Poll an async assertion until it succeeds or the 5s deadline expires.
+ * Used to wait for eventually-consistent recovery state in this safe-e2e test.
+ */
 async function waitForAssertion(assertion: () => Promise<void> | void): Promise<void> {
   const deadline = Date.now() + 5_000;
   let lastError: unknown;
@@ -91,6 +95,10 @@ function consumeExpectedFixtureDiagnostics(): void {
   }
 }
 
+/**
+ * Seed metrics that make a member appear shadow-ready (caught up) for recovery
+ * assertions, including enough status events to exercise non-blocking collection.
+ */
 async function seedNonBlockingShadowCollectingMetrics(input: {
   teamsBasePath: string;
   teamName: string;
@@ -138,6 +146,9 @@ async function seedNonBlockingShadowCollectingMetrics(input: {
   );
 }
 
+/**
+ * Write a minimal team config.json for the given member and provider.
+ */
 async function seedTeamConfig(input: {
   teamsBasePath: string;
   teamName: string;
@@ -170,6 +181,9 @@ async function seedTeamConfig(input: {
   );
 }
 
+/**
+ * Seed the member's inbox file with the provided messages.
+ */
 async function seedInbox(input: {
   teamsBasePath: string;
   teamName: string;
@@ -186,6 +200,9 @@ async function seedInbox(input: {
   await fs.promises.writeFile(inboxPath, `${JSON.stringify(input.messages, null, 2)}\n`, 'utf8');
 }
 
+/**
+ * Read and parse the member's inbox messages from disk.
+ */
 async function readInboxMessages(input: {
   teamsBasePath: string;
   teamName: string;
@@ -202,6 +219,9 @@ async function readInboxMessages(input: {
   return Array.isArray(parsed) ? (parsed as InboxMessage[]) : [];
 }
 
+/**
+ * Read the member's outbox items from disk for delivery-status assertions.
+ */
 async function readMemberOutboxItems(input: {
   teamsBasePath: string;
   teamName: string;
@@ -230,6 +250,9 @@ async function readMemberOutboxItems(input: {
   return parsed.items ?? {};
 }
 
+/**
+ * Seed an OpenCode runtime lane index and prompt-delivery ledger for recovery.
+ */
 async function seedOpenCodeRuntimeLane(input: {
   teamsBasePath: string;
   teamName: string;
@@ -281,6 +304,9 @@ async function seedOpenCodeRuntimeLane(input: {
   );
 }
 
+/**
+ * Build a proof-missing (failed_terminal) prompt-delivery ledger record fixture.
+ */
 function buildProofMissingRecord(input: {
   teamName: string;
   memberName: string;
@@ -343,6 +369,9 @@ function createNudgeDeliveryWake(): TestNudgeDeliveryWake {
   };
 }
 
+/**
+ * Create the member-work-sync feature fixture and its in-memory collaborators.
+ */
 function createFeature(input: {
   teamsBasePath: string;
   teamName: string;

@@ -19,6 +19,9 @@ function makeTempRoot(): string {
   return root;
 }
 
+/**
+ * Write a minimal team config.json for recovery-lifecycle test fixtures.
+ */
 async function writeTeamConfig(
   teamsBasePath: string,
   teamName: string,
@@ -114,6 +117,9 @@ async function waitForAssertion(
   await assertion();
 }
 
+/**
+ * Read and parse the member's inbox messages from disk.
+ */
 async function readInboxMessages(input: {
   teamsBasePath: string;
   teamName: string;
@@ -143,6 +149,9 @@ async function readInboxMessages(input: {
   }
 }
 
+/**
+ * Read the member's outbox items from disk for delivery-status assertions.
+ */
 async function readMemberOutboxItems(input: {
   teamsBasePath: string;
   teamName: string;

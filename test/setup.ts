@@ -24,11 +24,17 @@ if (typeof window !== 'undefined' && Number.parseInt(process.versions.node, 10) 
   }
 }
 
+/**
+ * Resolve the max age (ms) for stale test-home directories from env or default.
+ */
 function getStaleTestHomeMaxAgeMs(): number {
   const value = Number(process.env.AGENT_TEAMS_VITEST_STALE_HOME_MAX_AGE_MS);
   return Number.isFinite(value) && value > 0 ? value : DEFAULT_STALE_TEST_HOME_MAX_AGE_MS;
 }
 
+/**
+ * Best-effort removal of stale test-home directories older than the cutoff.
+ */
 function cleanupStaleTestHomeDirs(): void {
   const cutoff = Date.now() - getStaleTestHomeMaxAgeMs();
 

@@ -54,6 +54,9 @@ afterEach(async () => {
   for (const core of cores.splice(0)) core.close();
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
+/**
+ * Create a manually resolvable promise for deterministic async test control.
+ */
 function deferred() {
   let resolve!: () => void;
   const promise = new Promise<void>((done) => {

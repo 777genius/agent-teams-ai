@@ -67,6 +67,9 @@ function emitError(child: MockChildProcess, message: string): void {
   child.emit('error', new Error(message));
 }
 
+/**
+ * Emit a child-process close event with the given exit code and signal.
+ */
 function emitClose(
   child: MockChildProcess,
   code: number | null,
