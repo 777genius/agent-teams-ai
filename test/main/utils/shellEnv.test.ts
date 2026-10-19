@@ -24,9 +24,8 @@ vi.mock('fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('fs')>();
   return {
     ...actual,
-    accessSync: vi.fn(
-      (path: Parameters<typeof actual.accessSync>[0], mode?: number) =>
-        actual.accessSync(path, mode)
+    accessSync: vi.fn((path: Parameters<typeof actual.accessSync>[0], mode?: number) =>
+      actual.accessSync(path, mode)
     ),
   };
 });
@@ -68,7 +67,11 @@ function emitError(child: MockChildProcess, message: string): void {
   child.emit('error', new Error(message));
 }
 
-function emitClose(child: MockChildProcess, code: number | null, signal: NodeJS.Signals | null): void {
+function emitClose(
+  child: MockChildProcess,
+  code: number | null,
+  signal: NodeJS.Signals | null
+): void {
   child.emit('close', code, signal);
 }
 
@@ -632,8 +635,13 @@ describe('shellEnv', () => {
 
     it('documents the platform default candidate ordering', async () => {
       const shellEnv = await importShellEnv();
-      expect(shellEnv.defaultShellCandidates('darwin')).toEqual(['/bin/zsh', '/bin/bash', '/bin/sh']);
+      expect(shellEnv.defaultShellCandidates('darwin')).toEqual([
+        '/bin/zsh',
+        '/bin/bash',
+        '/bin/sh',
+      ]);
       expect(shellEnv.defaultShellCandidates('linux')).toEqual([
+        '/bin/zsh',
         '/bin/bash',
         '/usr/bin/bash',
         '/bin/sh',
@@ -642,6 +650,7 @@ describe('shellEnv', () => {
       // metadata contract only; resolveInteractiveShellEnv returns early
       // on win32, so these entries are never used as Windows defaults.
       expect(shellEnv.defaultShellCandidates('win32')).toEqual([
+        '/bin/zsh',
         '/bin/bash',
         '/usr/bin/bash',
         '/bin/sh',
@@ -766,6 +775,7 @@ describe('shellEnv', () => {
 
       await expect(result).resolves.toMatchObject({ PATH: '/resolved/linux-bin' });
       expect(vi.mocked(accessSync).mock.calls.map(([path]) => path.toString())).toEqual([
+        '/bin/zsh',
         '/bin/bash',
         '/usr/bin/bash',
       ]);
@@ -776,6 +786,94 @@ describe('shellEnv', () => {
         expect.objectContaining({ windowsHide: true })
       );
       expect(hoisted.loggerWarn).not.toHaveBeenCalled();
+    });
+
+    it('selects /bin/zsh before Bash on Linux when zsh is installed', async () => {
+      delete process.env.SHELL;
+      Object.defineProperty(process, 'platform', {
+        value: 'linux',
+        configurable: true,
+        writable: true,
+      });
+      pinInstalledShells(['/bin/zsh', '/bin/bash']);
+
+      const child = createChild();
+      hoisted.spawn.mockReturnValueOnce(child);
+
+      const shellEnv = await importShellEnv();
+      const result = shellEnv.resolveInteractiveShellEnv();
+      emitEnv(child, { PATH: '/resolved/zsh-bin', HOME: '/Users/tester' });
+
+      await expect(result).resolves.toMatchObject({ PATH: '/resolved/zsh-bin' });
+      expect(vi.mocked(accessSync).mock.calls.map(([path]) => path.toString())).toEqual([
+        '/bin/zsh',
+      ]);
+      expect(hoisted.spawn).toHaveBeenNthCalledWith(
+        1,
+        '/bin/zsh',
+        ['-lic', 'env -0'],
+        expect.objectContaining({ windowsHide: true })
+      );
+    });
+
+    it('falls back to Bash on Linux when zsh is absent but Bash is installed', async () => {
+      delete process.env.SHELL;
+      Object.defineProperty(process, 'platform', {
+        value: 'linux',
+        configurable: true,
+        writable: true,
+      });
+      pinInstalledShells(['/bin/bash']);
+
+      const child = createChild();
+      hoisted.spawn.mockReturnValueOnce(child);
+
+      const shellEnv = await importShellEnv();
+      const result = shellEnv.resolveInteractiveShellEnv();
+      emitEnv(child, { PATH: '/resolved/bash-bin', HOME: '/Users/tester' });
+
+      await expect(result).resolves.toMatchObject({ PATH: '/resolved/bash-bin' });
+      expect(vi.mocked(accessSync).mock.calls.map(([path]) => path.toString())).toEqual([
+        '/bin/zsh',
+        '/bin/bash',
+      ]);
+      expect(hoisted.spawn).toHaveBeenNthCalledWith(
+        1,
+        '/bin/bash',
+        ['-lic', 'env -0'],
+        expect.objectContaining({ windowsHide: true })
+      );
+    });
+
+    it('uses /bin/sh on Linux when only the portable fallback is available', async () => {
+      delete process.env.SHELL;
+      Object.defineProperty(process, 'platform', {
+        value: 'linux',
+        configurable: true,
+        writable: true,
+      });
+      pinInstalledShells([]);
+
+      const child = createChild();
+      hoisted.spawn.mockReturnValueOnce(child);
+
+      const shellEnv = await importShellEnv();
+      const result = shellEnv.resolveInteractiveShellEnv();
+      emitEnv(child, { PATH: '/resolved/sh-bin' });
+
+      await expect(result).resolves.toMatchObject({ PATH: '/resolved/sh-bin' });
+      expect(vi.mocked(accessSync).mock.calls.map(([path]) => path.toString())).toEqual([
+        '/bin/zsh',
+        '/bin/bash',
+        '/usr/bin/bash',
+        '/bin/sh',
+      ]);
+      expect(hoisted.spawn).toHaveBeenNthCalledWith(
+        1,
+        '/bin/sh',
+        ['-lic', 'env -0'],
+        expect.objectContaining({ windowsHide: true })
+      );
     });
   });
 });

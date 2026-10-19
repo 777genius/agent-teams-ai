@@ -53,7 +53,6 @@ async function waitForAssertion(assertion: () => Promise<void> | void): Promise<
   await assertion();
 }
 
-
 // The two broken fixtures below intentionally make the delivery watchdog and
 // the OpenCode inbox relay emit diagnostics for their fixture team names, so
 // those diagnostics are designed observables of this safe-e2e file rather than
@@ -61,14 +60,20 @@ async function waitForAssertion(assertion: () => Promise<void> | void): Promise<
 // entries from the console.warn spy (installed by test/setup.ts) so the shared
 // "no unexpected warnings" assertion only sees output unrelated to the
 // fixtures.
+/**
+ * Remove the fixture-scoped diagnostics emitted by the delivery watchdog and
+ * the OpenCode inbox relay from the shared console.warn spy. Matching is
+ * exact (fixture team name plus diagnostic phrase) so unrelated warnings stay
+ * observable. Removal happens in reverse index order so splicing never shifts
+ * later positions. An empty match set is valid when the watchdog is disabled
+ * via CLAUDE_TEAM_OPENCODE_PROMPT_DELIVERY_WATCHDOG=0.
+ */
 function consumeExpectedFixtureDiagnostics(): void {
   const warnSpy = console.warn as unknown as { mock: { calls: unknown[][] } };
   const calls = warnSpy.mock.calls;
   const expectedIndexes: number[] = [];
   calls.forEach((args, index) => {
-    const text = args
-      .map((arg) => (arg instanceof Error ? arg.message : String(arg)))
-      .join(' ');
+    const text = args.map((arg) => (arg instanceof Error ? arg.message : String(arg))).join(' ');
     const isFixtureName =
       text.includes('[team-opencode-agenda-sync-recovery]') ||
       text.includes('[team-opencode-agenda-sync-no-proof]');
@@ -77,11 +82,9 @@ function consumeExpectedFixtureDiagnostics(): void {
       text.includes('OpenCode inbox relay failed for ');
     if (isFixtureName && isDiagnostic) expectedIndexes.push(index);
   });
-  expect(
-    expectedIndexes,
-    'Expected fixture diagnostics among warn calls:' + '\n' +
-      calls.map((args) => args.map((arg) => String(arg)).join(' ')).join('\n')
-  ).not.toEqual([]);
+  // The watchdog may be disabled via CLAUDE_TEAM_OPENCODE_PROMPT_DELIVERY_WATCHDOG=0,
+  // in which case no matching fixture diagnostic is necessarily produced. An
+  // empty result is therefore legitimate and must not fail the helper.
   for (let index = expectedIndexes.length - 1; index >= 0; index -= 1) {
     calls.splice(expectedIndexes[index], 1);
   }

@@ -20,16 +20,20 @@ const logger = createLogger('Utils:shellEnv');
  * Default login-shell candidates, most preferred first.
  *
  * macOS keeps the platform default `/bin/zsh` and falls back to its older
- * default when zsh was removed. Linux containers and CI images commonly run
- * with `$SHELL` unset and without zsh, so bash is preferred there and
- * `/bin/sh` stays the final portable fallback. A configured `$SHELL` is
- * always honoured as-is; when that configured shell is missing the normal
- * resolution failure path reports it rather than silently probing a
- * different shell.
+ * default when zsh was removed. Linux users may rely on zsh even when
+ * `$SHELL` is unset (for example when the account's login shell is zsh but
+ * the variable was not propagated), and variables exported by `.zshrc` are
+ * only visible when zsh itself is probed. Therefore `/bin/zsh` is probed
+ * before the generic Bash fallbacks on every POSIX platform, while Bash and
+ * `/bin/sh` remain available for containers and images without zsh. A
+ * configured `$SHELL` is always honoured as-is; when that configured shell
+ * is missing the normal resolution failure path reports it rather than
+ * silently probing a different shell. No candidate is assumed to exist
+ * without an executable probe.
  */
 export function defaultShellCandidates(platform: NodeJS.Platform): readonly string[] {
   if (platform === 'darwin') return ['/bin/zsh', '/bin/bash', '/bin/sh'];
-  return ['/bin/bash', '/usr/bin/bash', '/bin/sh'];
+  return ['/bin/zsh', '/bin/bash', '/usr/bin/bash', '/bin/sh'];
 }
 
 function probeExecutableShell(candidatePath: string): boolean {
