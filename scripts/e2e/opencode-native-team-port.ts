@@ -1,6 +1,11 @@
 import type { ElectronAPI } from '@shared/types/api';
 import type { OpenCodeStopCausalFailure, TeamCreateRequest, TeamProvisioningProgress } from '@shared/types/team';
 
+// Proof-only projection; production lifecycle and delivery contracts remain unchanged.
+export type NativeCausalFailure = OpenCodeStopCausalFailure & {
+  bridgeFailure?: { kind: string; sdkCode: string; nativeOperation?: string };
+};
+
 type NativeCommandExecution = Extract<Awaited<ReturnType<ElectronAPI['teams']['getTaskLogStream']>>['segments'][number]['chunks'][number], { chunkType: 'ai' }>['toolExecutions'][number];
 export type NativeCommandExpectation = {
   session: string; program: string; marker: string; model: string;
@@ -63,7 +68,7 @@ export function nativeCommandMatch(execution: NativeCommandExecution, program: s
  * This module does not launch Electron or establish that host ownership proof.
  * Importing it never submits work. All mutations are explicit and single-shot.
  */
-export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath: string, matchCommand = nativeCommandMatch, projectCausal: (value: unknown) => OpenCodeStopCausalFailure | null = () => null) {
+export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath: string, matchCommand = nativeCommandMatch, projectCausal: (value: unknown) => NativeCausalFailure | null = () => null) {
   if (!/^test-opencode-[a-zA-Z0-9-]+$/.test(teamName)) throw new Error('TEST team required');
   if (!projectPath || !/(?:^|[\\/])TEST-[^\\/]+(?:[\\/]|$)/.test(projectPath)) {
     throw new Error('TEST project required; host must also verify its opt-in marker');
@@ -596,9 +601,27 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
     },
     async getSafeStopFailure() {
       check();
-      const failed = progress.slice(-32).filter((value) => value.teamName === teamName &&
+      let failed = progress.slice(-32).filter((value) => value.teamName === teamName &&
         value.runId === runId && value.state === 'failed' &&
         value.message === 'OpenCode team stop failed').at(-1);
+      // Stop records retained progress without publishing a provisioning event.
+      // Observe only this exact original run once; this never starts another Stop.
+      if (!failed && runId) {
+        try {
+          const retained = await api.teams.getProvisioningStatus(runId);
+          const own = (key: string): unknown => {
+            if (!retained || typeof retained !== 'object' || Array.isArray(retained)) return undefined;
+            const descriptor = Object.getOwnPropertyDescriptor(retained, key);
+            return descriptor && Object.hasOwn(descriptor, 'value') ? descriptor.value : undefined;
+          };
+          if (own('teamName') === teamName && own('runId') === runId && own('state') === 'failed' &&
+              own('message') === 'OpenCode team stop failed') {
+            const error = own('error');
+            failed = { teamName, runId, state: 'failed', message: 'OpenCode team stop failed',
+              startedAt: '', updatedAt: '', error: typeof error === 'string' ? error.slice(0, 32_768) : undefined };
+          }
+        } catch { /* Missing or foreign retained observations stay unknown. */ }
+      }
       const text = (failed?.error ?? '').slice(0, 32_768);
       const codes = ['opencode_stop_identity_changed', 'opencode_stop_status_unconfirmed',
         'opencode_stop_abort_rejected', 'opencode_stop_deadline', 'opencode_stop_compensation_failed',

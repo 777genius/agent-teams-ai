@@ -9,7 +9,7 @@ import { promisify } from 'node:util';
 import { pathToFileURL } from 'node:url';
 
 import { redactLaunchFailureArtifactText } from '../../src/main/services/team/TeamLaunchFailureArtifactPack';
-import { electronTeamPort, nativeCommandMatch } from './opencode-native-team-port';
+import { electronTeamPort, nativeCommandMatch, type NativeCausalFailure } from './opencode-native-team-port';
 import { prepareNativeDesktopEnvironment } from './opencode-native-desktop-environment';
 import { Cdp, waitFor } from './release-updater/cdp.mts';
 import { serializedFunction } from './release-updater/serialized-function.mts';
@@ -67,17 +67,29 @@ export function safeIpcFailureDetail(value: string, redact: (text: string) => st
     .slice(0, 500);
   return (label + detail).slice(0, 500);
 }
-export function projectIpcCausalFailure(value: unknown) {
+export function projectIpcCausalFailure(value: unknown): NativeCausalFailure | null {
   const row = (value: unknown): Record<string, unknown> =>
     value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
   let candidate = value;
+  let returnedDispatch = false;
   if (typeof value === 'string') {
-    const marker = '\nOPENCODE_STOP_CAUSE_V1=';
-    const index = value.lastIndexOf(marker);
-    if (index < 0 || !['team_stop_unconfirmed:', 'opencode_message_delivery_exception:'].some(prefix => value.slice(0, index).startsWith(prefix))) return null;
-    const encoded = value.slice(index + marker.length);
-    if (encoded.length > 2048 || /[\r\n]/.test(encoded)) return null;
-    try { candidate = JSON.parse(encoded); } catch { return null; }
+    // Exact production diagnostic template; never classify a code embedded in raw text.
+    const returned = value.length <= 1024
+      ? /^error:(runtime_not_ready): OpenCode message bridge failed: ([A-Za-z_][A-Za-z0-9_]*)(?::([a-z_]+):([0-9]{1,10}))?(?: @native:([A-Za-z][A-Za-z0-9_]*))?$/.exec(value)
+      : null;
+    if (returned && (returned[4] === undefined || Number(returned[4]) <= 0xffffffff)) {
+      returnedDispatch = true;
+      candidate = { phase: 'dispatch', bridgeFailure: {
+        kind: returned[1], sdkCode: returned[2], nativeOperation: returned[5],
+      } };
+    } else {
+      const marker = '\nOPENCODE_STOP_CAUSE_V1=';
+      const index = value.lastIndexOf(marker);
+      if (index < 0 || !['team_stop_unconfirmed:', 'opencode_message_delivery_exception:'].some(prefix => value.slice(0, index).startsWith(prefix))) return null;
+      const encoded = value.slice(index + marker.length);
+      if (encoded.length > 2048 || /[\r\n]/.test(encoded)) return null;
+      try { candidate = JSON.parse(encoded); } catch { return null; }
+    }
   }
   const input = row(candidate);
   const phases = ['manifest', 'binding', 'stop_ledger_lookup', 'stop_recovery', 'handshake',
@@ -97,7 +109,9 @@ export function projectIpcCausalFailure(value: unknown) {
       return descriptor && Object.hasOwn(descriptor, 'value') ? descriptor.value : undefined;
     } catch { return undefined; }
   };
-  const handshake = own(input, 'handshakeFailure');
+  const bridgeFailure = own(input, 'bridgeFailure');
+  returnedDispatch ||= phase === 'dispatch' && bridgeFailure !== undefined;
+  const handshake = returnedDispatch ? bridgeFailure : own(input, 'handshakeFailure');
   const handshakeKind = own(handshake, 'kind'), handshakeCode = own(handshake, 'sdkCode');
   const handshakeOperation = own(handshake, 'nativeOperation');
   const kind = ['unsupported_schema', 'unsupported_command', 'invalid_input', 'runtime_not_ready', 'provider_error',
@@ -135,6 +149,18 @@ export function projectIpcCausalFailure(value: unknown) {
     'run_state_record_read', 'run_state_record_rename', 'run_state_record_size', 'run_state_record_temporary',
     'run_state_record_unknown', 'run_state_record_write', 'run_state_start_changed', 'run_state_unknown',
     'run_status_unknown', 'run_stopped_or_unknown',
+    // Literal guards from V2TeamBridge, V2DeliveryJournal and V2ExecutionContracts.
+    ...(returnedDispatch ? [
+      'cancelled', 'delivery_identity_conflict', 'delivery_journal_unknown', 'delivery_lock_foreign',
+      'delivery_root_invalid', 'delivery_submission_changed', 'execution_contract_invalid', 'invalid_file_part',
+      'invalid_model', 'invalid_operation', 'invalid_operation_deadline', 'missing_deliveryAttemptId',
+      'missing_laneId', 'missing_memberName', 'missing_messageId', 'missing_runId',
+      'missing_teamId', 'missing_text', 'original_input_conflict', 'original_input_unknown',
+      'permission_observation_unknown', 'run_already_owned', 'run_binding_conflict', 'run_operation_unknown',
+      'run_readiness_changed', 'run_readiness_unknown', 'run_source_unqualified', 'stop_original_target_changed',
+      'store_unknown', 'timeout', 'transcript_authority_conflict', 'unsupported_v1_input',
+      'visible_reply_conflict',
+    ] : []),
   ].find(value => value === handshakeCode);
   const nativeOperation = sdkCode ? [
     'assertLive', 'identity', 'launch', 'ownerArchive',
@@ -148,6 +174,7 @@ export function projectIpcCausalFailure(value: unknown) {
     'runStateSelect', 'runStateValidateEndpoint', 'runStateWriteRecord', 'selfImageCustody',
     'send',
   ].find(value => value === handshakeOperation) : undefined;
+  if (returnedDispatch && (!kind || !sdkCode || (handshakeOperation !== undefined && !nativeOperation))) return null;
   const frame = row(input.sourceFrame);
   const source = ['OpenCodeStateChangingBridgeCommandService.ts', 'OpenCodeBridgeCommandClient.ts',
     'OpenCodeBridgeHandshakeClient.ts', 'OpenCodeBridgeCommandLedgerStore.ts',
@@ -155,7 +182,8 @@ export function projectIpcCausalFailure(value: unknown) {
     'OpenCodeStopOutcomeRecovery.ts'].find((source) => source === frame.source);
   return {
     phase, errno: errno(input.errno),
-    ...(kind ? { handshakeFailure: { kind, ...(sdkCode ? { sdkCode } : {}), ...(nativeOperation ? { nativeOperation } : {}) } } : {}),
+    ...(returnedDispatch && kind && sdkCode ? { bridgeFailure: { kind, sdkCode, ...(nativeOperation ? { nativeOperation } : {}) } }
+      : kind ? { handshakeFailure: { kind, ...(sdkCode ? { sdkCode } : {}), ...(nativeOperation ? { nativeOperation } : {}) } } : {}),
     ...(Object.hasOwn(input, 'cleanupErrno') ? { cleanupErrno: errno(input.cleanupErrno) } : {}),
     reason: [
       'OpenCode lifecycle command requires the exact persisted lane run and capability snapshot',

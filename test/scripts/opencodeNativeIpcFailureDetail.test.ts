@@ -1171,3 +1171,91 @@ it.each(['current-pass', 'current-fail', 'floor'] as const)(
     expect(reports.at(-1)).toMatchObject({ stopConfirmed: true, cleanupUnknown: false });
   }
 );
+
+it('retains returned send failures as dispatch facts through serialized task and FULL proof round trips', async () => {
+  const project = runInNewContext(`(${serializedFunction(projectIpcCausalFailure)})`) as typeof projectIpcCausalFailure;
+  const diagnostic = 'error:runtime_not_ready: OpenCode message bridge failed: execution_owner_not_private:private_acl_foreign_allow:0 @native:runStateRequest';
+  const projected = project(diagnostic);
+  expect(projected).toMatchObject({ phase: 'dispatch', bridgeFailure: {
+    kind: 'runtime_not_ready', sdkCode: 'execution_owner_not_private', nativeOperation: 'runStateRequest' } });
+  expect(projected).not.toHaveProperty('handshakeFailure');
+  const createPort = runInNewContext(`(${serializedFunction(electronTeamPort)})`) as typeof electronTeamPort;
+  const teamName = 'test-opencode-returned';
+  const api = { teams: { onProvisioningProgress: () => () => undefined,
+    getOpenCodeRuntimeDeliveryStatus: async () => ({ diagnostics: [diagnostic], reason: diagnostic,
+      attempted: true, accepted: false, responseState: 'not_observed', ledgerStatus: 'failed_terminal' }),
+    getData: async () => ({ tasks: [{ id: 'TEST-task' }], members: [] }),
+    getTask: async () => ({ id: 'TEST-task', status: 'in_progress', owner: 'alice' }),
+    getTaskLogStream: async () => ({ segments: [] }),
+    getMessagesPage: async () => ({ messages: [{ to: 'alice', messageId: 'TEST-message',
+      taskRefs: [{ taskId: 'TEST-task', teamName }] }] }) } };
+  const port = createPort(api as never, teamName, '/TEST-project', nativeCommandMatch, project);
+  await port.getData();
+  const task = await port.getSafeTaskFailureSnapshot('TEST-task', 'alice');
+  const proof = JSON.parse(JSON.stringify({ taskFailureSnapshot: { unavailable: false, tasks: [task] } }));
+  expect(proof.taskFailureSnapshot.tasks[0].deliveries[0]).toMatchObject({
+    reasonCode: 'runtime_not_ready', responseState: 'not_observed', causalFailure: projected });
+  expect(JSON.stringify(proof)).not.toContain('OpenCode message bridge failed');
+  // FULL stores these already-sanitized task snapshots directly under the inferred port type.
+  const full = await readFile('scripts/e2e/opencode-native-windows-full.ts', 'utf8');
+  expect(full).toContain("app.call('getSafeTaskFailureSnapshot', id, owner, commandExpectations.get(id))");
+  expect(full).toContain('proof.taskFailureSnapshot = { unavailable: false, tasks };');
+  for (const value of [
+    'error:runtime_not_ready: OpenCode message bridge failed: PRIVATE_TOKEN',
+    'prefix ' + diagnostic, diagnostic + '\nPRIVATE_BODY', diagnostic + ' C:/PRIVATE_PATH',
+    'error:runtime_not_ready: OpenCode message bridge failed: execution_owner_not_private:stage:4294967296',
+    'error:PRIVATE_KIND: OpenCode message bridge failed: execution_owner_not_private',
+    'error:runtime_not_ready: OpenCode message bridge failed: execution_owner_not_private @native:PRIVATE_UNKNOWN',
+    'error:runtime_not_ready: OpenCode message bridge failed: ' + 'a'.repeat(1024),
+  ]) expect(project(value)).toBeNull();
+});
+
+it.each(['valid', 'foreign-run', 'foreign-team', 'wrong-state', 'wrong-message', 'getter', 'rejected', 'event'] as const)(
+  'observes retained Stop %s once without issuing actions or accepting another run', async (scenario) => {
+    const teamName = 'test-opencode-retained', runId = 'TEST-original-run';
+    let receive: ((event: unknown, value: unknown) => void) | undefined;
+    const error = 'OpenCode team did not confirm stop: error:runtime_not_ready: OpenCode stop bridge failed: run_deadline_expired';
+    const retained: Record<string, unknown> = { teamName, runId, state: 'failed',
+      message: 'OpenCode team stop failed', error, path: 'PRIVATE_PATH', token: 'PRIVATE_TOKEN' };
+    if (scenario === 'foreign-run') retained.runId = 'TEST-replacement';
+    if (scenario === 'foreign-team') retained.teamName = 'test-opencode-other';
+    if (scenario === 'wrong-state') retained.state = 'ready';
+    if (scenario === 'wrong-message') retained.message = 'Other failure';
+    const getter = vi.fn(() => { throw new Error('TEST getter'); });
+    if (scenario === 'getter') Object.defineProperty(retained, 'error', { get: getter });
+    const status = vi.fn(async () => {
+      if (scenario === 'rejected') throw new Error('PRIVATE_FAILURE');
+      return retained;
+    });
+    const stop = vi.fn(async () => undefined);
+    const api = { config: { addCustomProjectPath: async () => undefined }, teams: {
+      onProvisioningProgress: (callback: typeof receive) => { receive = callback; return () => undefined; },
+      createTeam: async () => ({ runId }), getProvisioningStatus: status, stop,
+    } };
+    const createPort = runInNewContext(`(${serializedFunction(electronTeamPort)})`) as typeof electronTeamPort;
+    const port = createPort(api as never, teamName, '/TEST-project', nativeCommandMatch);
+    await port.createTeam({ teamName, cwd: '/TEST-project', providerId: 'opencode' } as never);
+    if (scenario === 'event') receive!(undefined, retained);
+    const snapshot = await port.getSafeStopFailure();
+    expect(snapshot.observed).toBe(scenario === 'valid' || scenario === 'event' || scenario === 'getter');
+    expect(status).toHaveBeenCalledTimes(scenario === 'event' ? 0 : 1);
+    if (scenario !== 'event') expect(status).toHaveBeenCalledWith(runId);
+    expect(stop).not.toHaveBeenCalled();
+    expect(getter).not.toHaveBeenCalled();
+    if (scenario === 'valid' || scenario === 'event') expect(snapshot).toMatchObject({
+      diagnosticCodes: ['runtime_not_ready'], originalStopReasons: ['stop_not_confirmed'],
+      bridgeFailure: 'reports_stop_failure_wrapper' });
+    expect(JSON.stringify(snapshot)).not.toMatch(/PRIVATE_PATH|PRIVATE_TOKEN|PRIVATE_FAILURE|run_deadline_expired/);
+  }
+);
+
+it('projects the exact additional source-owned send guards including case-sensitive field guards', () => {
+  const project = runInNewContext(`(${serializedFunction(projectIpcCausalFailure)})`) as typeof projectIpcCausalFailure;
+  const codes = ['cancelled', 'delivery_identity_conflict', 'delivery_journal_unknown', 'delivery_lock_foreign', 'delivery_root_invalid', 'delivery_submission_changed', 'execution_contract_invalid', 'invalid_file_part', 'invalid_model', 'invalid_operation', 'invalid_operation_deadline', 'missing_deliveryAttemptId', 'missing_laneId', 'missing_memberName', 'missing_messageId', 'missing_runId', 'missing_teamId', 'missing_text', 'original_input_conflict', 'original_input_unknown', 'permission_observation_unknown', 'run_already_owned', 'run_binding_conflict', 'run_operation_unknown', 'run_readiness_changed', 'run_readiness_unknown', 'run_source_unqualified', 'stop_original_target_changed', 'store_unknown', 'timeout', 'transcript_authority_conflict', 'unsupported_v1_input', 'visible_reply_conflict'];
+  for (const sdkCode of codes) {
+    expect(project('error:runtime_not_ready: OpenCode message bridge failed: ' + sdkCode))
+      .toMatchObject({ phase: 'dispatch', bridgeFailure: { kind: 'runtime_not_ready', sdkCode } });
+  }
+  expect(project('error:runtime_not_ready: OpenCode message bridge failed: missing_deliveryattemptid')).toBeNull();
+  expect(project('error:internal_error: OpenCode message bridge failed: delivery_lock_foreign')).toBeNull();
+});
