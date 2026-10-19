@@ -4,6 +4,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { useDirectMessageQueue } from '@features/manual-message-queue/renderer';
 import { normalizeConversationParticipant } from '@features/team-direct-chats/renderer';
 import { api } from '@renderer/api';
+import { AttachmentCatalogRefresh } from '@renderer/components/team/attachments/AttachmentCatalogRefresh';
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
 import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneOverlay';
 import { ComposerSurface } from '@renderer/components/team/composer/ComposerSurface';
@@ -12,6 +13,8 @@ import { ComposerLockedRecipient } from '@renderer/components/team/messages/Comp
 import { useTeamStartupCopy } from '@renderer/components/team/useTeamStartupCopy';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
+import { useAttachmentValidation } from '@renderer/hooks/useAttachmentValidation';
+import { useRecipientAttachmentDeclarations } from '@renderer/hooks/useRecipientAttachmentDeclarations';
 import {
   getTaskSuggestionsForTeamNow,
   useTaskSuggestions,
@@ -28,7 +31,6 @@ import {
   canMemberShowAttachmentControl,
   getAttachmentInputAcceptForMember,
   getMemberAttachmentUnavailableReason,
-  validateAttachmentFilesForMember,
   validateAttachmentPayloadsForMember,
 } from '@renderer/utils/attachmentRecipientCapabilities';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
@@ -506,10 +508,11 @@ const MemberMessageComposer = ({
     lockedRecipient ?? (groupChatSelected ? groupChatRecipient : recipient);
   const selectedMember = members.find((m) => m.name === effectiveRecipient);
   const isLeadRecipient = selectedMember ? isLeadMember(selectedMember) : false;
-  const selectedProviderId =
-    normalizeOptionalTeamProviderId(selectedMember?.providerId) ??
-    inferTeamProviderIdFromModel(selectedMember?.model);
-  const isOpenCodeRecipient = selectedProviderId === 'opencode';
+  const {
+    resolveDeclaration,
+    refresh: refreshDeclarations,
+    isOpenCode: isOpenCodeRecipient,
+  } = useRecipientAttachmentDeclarations(selectedMember, projectPath, !!isTeamAlive);
   const showAttachmentControl = canMemberShowAttachmentControl(selectedMember);
   const memberAttachmentUnavailableReason = showAttachmentControl
     ? getMemberAttachmentUnavailableReason(selectedMember)
@@ -537,11 +540,6 @@ const MemberMessageComposer = ({
     actionMode,
     setActionMode,
   });
-  // NOTE: lead context ring disabled — usage formula is inaccurate
-  // const isLeadAgentRecipient = selectedMember?.agentType === 'team-lead';
-  // const leadContext = useStore((s) =>
-  //   isLeadAgentRecipient ? s.leadContextByTeam[teamName] : undefined
-  // );
   const supportsAttachments =
     !isCrossTeam &&
     !!isTeamAlive &&
@@ -567,6 +565,7 @@ const MemberMessageComposer = ({
   const attachmentPayloadRestrictionReason = validateAttachmentPayloadsForMember({
     member: selectedMember,
     attachments: draft.attachments,
+    resolveDeclaration,
   });
   const attachmentsBlocked =
     draft.attachments.length > 0 &&
@@ -615,7 +614,7 @@ const MemberMessageComposer = ({
     ) => boolean
   >(() => false);
   currentSendEligibilityRef.current = (content, request, editorContext) =>
-    isPreparedSendAllowed(content, request, members, teamName, isTeamAlive) &&
+    isPreparedSendAllowed(content, request, members, teamName, isTeamAlive, resolveDeclaration) &&
     (editorContext.kind !== 'revision' ||
       ((activeRevision == null || editorContext.requestId === activeRevision.requestId) &&
         (revisableMessageId === undefined ||
@@ -637,8 +636,28 @@ const MemberMessageComposer = ({
     setActionMode(modes[(idx + 1) % modes.length]);
   }, [actionMode, canDelegate, sending, setActionMode]);
 
+  const showFileRestrictionError = useCallback(
+    (reason?: string) => {
+      setFileRestrictionError(
+        reason ??
+          attachmentRestrictionReason ??
+          attachmentPayloadRestrictionReason ??
+          t('messageComposer.attachments.restrictions.leadOnly')
+      );
+      window.clearTimeout(fileRestrictionTimerRef.current);
+      fileRestrictionTimerRef.current = window.setTimeout(() => {
+        setFileRestrictionError(null);
+      }, 4000);
+    },
+    [attachmentPayloadRestrictionReason, attachmentRestrictionReason, t]
+  );
+
+  const { validateFiles: validateSelectedAttachmentFiles, validatePayloads } =
+    useAttachmentValidation(selectedMember, resolveDeclaration, showFileRestrictionError);
+
   const handleSend = useCallback(() => {
     if (!canSend) return;
+    if (!validatePayloads(draft.attachments)) return;
     dismissMentionsRef.current?.();
     onSubmitIntent?.();
     const attemptId = createPendingSendId();
@@ -730,6 +749,7 @@ const MemberMessageComposer = ({
     focusComposerTextarea();
   }, [
     canSend,
+    validatePayloads,
     lockedRecipient,
     effectiveRecipient,
     onSend,
@@ -746,37 +766,6 @@ const MemberMessageComposer = ({
     taskSuggestions,
     teamName,
   ]);
-
-  const showFileRestrictionError = useCallback(() => {
-    setFileRestrictionError(
-      attachmentRestrictionReason ??
-        attachmentPayloadRestrictionReason ??
-        t('messageComposer.attachments.restrictions.leadOnly')
-    );
-    window.clearTimeout(fileRestrictionTimerRef.current);
-    fileRestrictionTimerRef.current = window.setTimeout(() => {
-      setFileRestrictionError(null);
-    }, 4000);
-  }, [attachmentPayloadRestrictionReason, attachmentRestrictionReason, t]);
-
-  const validateSelectedAttachmentFiles = useCallback(
-    (files: FileList | File[]): boolean => {
-      const reason = validateAttachmentFilesForMember({
-        member: selectedMember,
-        files,
-      });
-      if (!reason) {
-        return true;
-      }
-      setFileRestrictionError(reason);
-      window.clearTimeout(fileRestrictionTimerRef.current);
-      fileRestrictionTimerRef.current = window.setTimeout(() => {
-        setFileRestrictionError(null);
-      }, 4000);
-      return false;
-    },
-    [selectedMember]
-  );
 
   const { addFiles: draftAddFiles } = draft;
   const handleFileInputChange = useCallback(
@@ -1099,6 +1088,13 @@ const MemberMessageComposer = ({
         {revisionNotice ? <div className="px-2 pt-2">{revisionNotice}</div> : null}
       </div>
 
+      <AttachmentCatalogRefresh
+        visible={!!isOpenCodeRecipient && (attachmentsBlocked || !!fileRestrictionError)}
+        onRefresh={() => {
+          setFileRestrictionError(null);
+          refreshDeclarations();
+        }}
+      />
       {manualQueue.list}
       <div className="relative">
         <DropZoneOverlay

@@ -7,8 +7,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui
 import { useStore } from '@renderer/store';
 import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 import { buildMemberColorMap, REVIEW_STATE_DISPLAY } from '@renderer/utils/memberHelpers';
-import { linkifyTaskIdsInMarkdown } from '@renderer/utils/taskReferenceUtils';
-import { formatTaskDisplayLabel, taskMatchesRef } from '@shared/utils/taskIdentity';
+import {
+  linkifyTaskIdsInMarkdown,
+  resolveTaskReferenceCandidate,
+  type TaskReferenceClickKind,
+} from '@renderer/utils/taskReferenceUtils';
+import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
   getTeamTaskWorkflowColumn,
   isTeamTaskNeedsFixActionable,
@@ -59,6 +63,8 @@ interface TaskTooltipProps {
   taskId: string;
   /** Optional owning team for cross-team task references. */
   teamName?: string;
+  contextId?: string;
+  referenceKind?: TaskReferenceClickKind;
   /** Rendered trigger element. */
   children: React.ReactElement;
   /** Tooltip placement. */
@@ -68,6 +74,8 @@ interface TaskTooltipProps {
 export const TaskTooltip = memo(function TaskTooltip({
   taskId,
   teamName,
+  contextId,
+  referenceKind,
   children,
   side = 'top',
 }: TaskTooltipProps): React.JSX.Element {
@@ -79,7 +87,15 @@ export const TaskTooltip = memo(function TaskTooltip({
   return (
     <Tooltip open={open} onOpenChange={handleOpenChange}>
       <TooltipTrigger asChild>{children}</TooltipTrigger>
-      {open ? <TaskTooltipContent taskId={taskId} teamName={teamName} side={side} /> : null}
+      {open ? (
+        <TaskTooltipContent
+          taskId={taskId}
+          teamName={teamName}
+          contextId={contextId}
+          referenceKind={referenceKind}
+          side={side}
+        />
+      ) : null}
     </Tooltip>
   );
 });
@@ -87,55 +103,72 @@ export const TaskTooltip = memo(function TaskTooltip({
 interface TaskTooltipContentProps {
   taskId: string;
   teamName?: string;
+  contextId?: string;
+  referenceKind?: TaskReferenceClickKind;
   side: 'top' | 'bottom' | 'left' | 'right';
 }
 
 const TaskTooltipContent = memo(function TaskTooltipContent({
   taskId,
   teamName,
+  contextId,
+  referenceKind,
   side,
 }: TaskTooltipContentProps): React.JSX.Element | null {
   const { t } = useAppTranslation('team');
-  const { selectedTeamName, selectedTeamData, selectedTeamMembers, globalTasks, teamByName } =
-    useStore(
-      useShallow((s) => ({
-        selectedTeamName: s.selectedTeamName,
-        selectedTeamData: s.selectedTeamData,
-        selectedTeamMembers: selectResolvedMembersForTeamName(s, s.selectedTeamName),
-        globalTasks: s.globalTasks,
-        teamByName: s.teamByName,
-      }))
-    );
+  const {
+    activeContextId,
+    selectedTeamName,
+    selectedTeamData,
+    selectedTeamMembers,
+    globalTasks,
+    teamByName,
+  } = useStore(
+    useShallow((s) => ({
+      activeContextId: s.activeContextId,
+      selectedTeamName: s.selectedTeamName,
+      selectedTeamData: s.selectedTeamData,
+      selectedTeamMembers: selectResolvedMembersForTeamName(s, s.selectedTeamName),
+      globalTasks: s.globalTasks,
+      teamByName: s.teamByName,
+    }))
+  );
 
   const task = useMemo(() => {
+    if (!teamName || (contextId !== undefined && contextId !== activeContextId)) return null;
     if (teamName && selectedTeamName === teamName) {
       return (
-        (selectedTeamData?.tasks ?? []).find((candidate) => taskMatchesRef(candidate, taskId)) ??
-        null
+        resolveTaskReferenceCandidate(selectedTeamData?.tasks ?? [], taskId, referenceKind) ?? null
       );
     }
 
     if (teamName) {
       return (
-        globalTasks.find(
-          (candidate) => candidate.teamName === teamName && taskMatchesRef(candidate, taskId)
+        resolveTaskReferenceCandidate(
+          globalTasks.filter((candidate) => candidate.teamName === teamName),
+          taskId,
+          referenceKind
         ) ?? null
       );
     }
 
-    const currentTasks = selectedTeamData?.tasks ?? [];
-    const currentMatch = currentTasks.find((task) => taskMatchesRef(task, taskId));
-    if (currentMatch) return currentMatch;
-
-    const globalMatches = globalTasks.filter((candidate) => taskMatchesRef(candidate, taskId));
-    return globalMatches.length === 1 ? globalMatches[0] : null;
-  }, [globalTasks, selectedTeamData, selectedTeamName, teamName, taskId]);
+    return null;
+  }, [
+    activeContextId,
+    contextId,
+    globalTasks,
+    referenceKind,
+    selectedTeamData,
+    selectedTeamName,
+    teamName,
+    taskId,
+  ]);
 
   const members = useMemo(() => {
     if (teamName && selectedTeamName === teamName) {
       return selectedTeamMembers;
     }
-    if (!teamName && task && selectedTeamName === (task as { teamName?: string }).teamName) {
+    if (task && selectedTeamName === (task as { teamName?: string }).teamName) {
       return selectedTeamMembers;
     }
     return [];
@@ -213,6 +246,7 @@ const TaskTooltipContent = memo(function TaskTooltipContent({
             content={linkifyTaskIdsInMarkdown(task.description, task.descriptionTaskRefs)}
             maxHeight="max-h-none"
             bare
+            taskOriginTeamName={resolvedTeamName}
           />
         </div>
       ) : null}

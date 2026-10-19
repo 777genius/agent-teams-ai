@@ -234,6 +234,13 @@ const CONSTRUCTOR_DEPENDENCIES = [
     readonly: false,
     type: 'ProvisioningGroupChatCallbacks',
   },
+  {
+    accessibility: 'none',
+    defaultNew: null,
+    name: 'resolveOpenCodeInputDeclaration',
+    readonly: false,
+    type: 'ResolveOpenCodeInputDeclaration',
+  },
 ] as const;
 
 function countSourceLines(source: string): number {

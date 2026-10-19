@@ -642,7 +642,8 @@
       "byTime": "За часом",
       "byUnread": "За непрочитаними",
       "byProject": "За проєктом",
-      "byTeam": "За командою"
+      "byTeam": "За командою",
+      "manualOrder": "Ручний порядок"
     }
   },
   "toolViewer": {

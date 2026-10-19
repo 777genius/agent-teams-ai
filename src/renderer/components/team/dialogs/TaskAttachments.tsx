@@ -17,12 +17,14 @@ interface TaskAttachmentsProps {
   teamName: string;
   taskId: string;
   attachments: TaskAttachmentMeta[];
+  canMutate: () => boolean;
 }
 
 export const TaskAttachments = ({
   teamName,
   taskId,
   attachments,
+  canMutate,
 }: TaskAttachmentsProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const saveTaskAttachment = useStore((s) => s.saveTaskAttachment);
@@ -49,12 +51,13 @@ export const TaskAttachments = ({
 
   const handleFileSelect = useCallback(
     async (files: FileList | null) => {
-      if (!files || files.length === 0) return;
+      if (!files || files.length === 0 || !canMutate()) return;
       setError(null);
       setUploading(true);
 
       try {
         for (const file of Array.from(files)) {
+          if (!canMutate()) return;
           if (!ACCEPTED_TYPES.has(file.type)) {
             setError(`Unsupported file type: ${file.type}`);
             continue;
@@ -64,7 +67,8 @@ export const TaskAttachments = ({
             continue;
           }
 
-          const base64 = await fileToBase64(file);
+          const base64 = await fileToBase64(file, canMutate);
+          if (!canMutate()) return;
           await saveTaskAttachment(teamName, taskId, {
             name: file.name,
             type: file.type,
@@ -80,13 +84,15 @@ export const TaskAttachments = ({
         }
       }
     },
-    [teamName, taskId, saveTaskAttachment]
+    [canMutate, teamName, taskId, saveTaskAttachment]
   );
 
   const handleDelete = useCallback(
     async (attachmentId: string, mimeType: string) => {
+      if (!canMutate()) return;
       setDeletingId(attachmentId);
       try {
+        if (!canMutate()) return;
         await deleteTaskAttachment(teamName, taskId, attachmentId, mimeType);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to delete');
@@ -94,7 +100,7 @@ export const TaskAttachments = ({
         setDeletingId(null);
       }
     },
-    [teamName, taskId, deleteTaskAttachment]
+    [canMutate, teamName, taskId, deleteTaskAttachment]
   );
 
   const handleDownload = useCallback(
@@ -158,6 +164,7 @@ export const TaskAttachments = ({
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const handler = (e: ClipboardEvent): void => {
+      if (!canMutate()) return;
       const items = e.clipboardData?.items;
       if (!items) return;
       const imageFiles: File[] = [];
@@ -179,7 +186,7 @@ export const TaskAttachments = ({
       el.addEventListener('paste', handler);
       return () => el.removeEventListener('paste', handler);
     }
-  }, [handleFileSelect]);
+  }, [canMutate, handleFileSelect]);
 
   // Handle drag-and-drop
   const [dragOver, setDragOver] = useState(false);
@@ -192,9 +199,10 @@ export const TaskAttachments = ({
     (e: React.DragEvent) => {
       e.preventDefault();
       setDragOver(false);
+      if (!canMutate()) return;
       void handleFileSelect(e.dataTransfer.files);
     },
-    [handleFileSelect]
+    [canMutate, handleFileSelect]
   );
 
   return (
@@ -223,6 +231,7 @@ export const TaskAttachments = ({
               onDelete={() => {
                 void handleDelete(att.id, att.mimeType);
               }}
+              canMutate={canMutate}
               onDataLoaded={handleThumbLoaded}
             />
           ))}
@@ -256,14 +265,17 @@ export const TaskAttachments = ({
           accept="image/png,image/jpeg,image/gif,image/webp"
           multiple
           className="hidden"
+          disabled={!canMutate()}
           onChange={(e) => void handleFileSelect(e.target.files)}
         />
         <Button
           variant="ghost"
           size="sm"
           className="h-7 gap-1 text-xs text-[var(--color-text-muted)]"
-          disabled={uploading}
-          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading || !canMutate()}
+          onClick={() => {
+            if (canMutate()) fileInputRef.current?.click();
+          }}
         >
           {uploading ? <Loader2 size={12} className="animate-spin" /> : <ImagePlus size={12} />}
           {t('taskAttachments.attachImage')}
@@ -287,6 +299,7 @@ interface AttachmentThumbnailProps {
   teamName: string;
   taskId: string;
   isDeleting: boolean;
+  canMutate: () => boolean;
   onPreview: () => void;
   onDelete: () => void;
   onDataLoaded?: (attachmentId: string, dataUrl: string) => void;
@@ -297,6 +310,7 @@ const AttachmentThumbnail = ({
   teamName,
   taskId,
   isDeleting,
+  canMutate,
   onPreview,
   onDelete,
   onDataLoaded,
@@ -361,9 +375,9 @@ const AttachmentThumbnail = ({
         className="absolute right-0.5 top-0.5 rounded bg-black/60 p-0.5 text-white opacity-0 transition-opacity hover:bg-red-600 group-hover:opacity-100"
         onClick={(e) => {
           e.stopPropagation();
-          onDelete();
+          if (canMutate()) onDelete();
         }}
-        disabled={isDeleting}
+        disabled={isDeleting || !canMutate()}
       >
         {isDeleting ? <Loader2 size={10} className="animate-spin" /> : <Trash2 size={10} />}
       </button>
@@ -379,10 +393,14 @@ const AttachmentThumbnail = ({
 // Helpers
 // ---------------------------------------------------------------------------
 
-function fileToBase64(file: File): Promise<string> {
+function fileToBase64(file: File, canMutate: () => boolean): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
+      if (!canMutate()) {
+        reject(new Error('Task attachment state changed'));
+        return;
+      }
       const result = reader.result as string;
       // Strip the data URL prefix (e.g., "data:image/png;base64,")
       const base64 = result.split(',')[1];

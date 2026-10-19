@@ -15,6 +15,7 @@
   "sonarjs/publicly-writable-directories": "off",
   "sonarjs/use-type-alias": "warn"
 */
+import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments/contracts';
 import { createDesktopExternalAgentConnection } from '@features/external-agent-connection/main/composition/createDesktopExternalAgentConnection';
 import type { NativeRendererCdp } from '@features/external-agent-connection/main/NativeRendererCdp';
 import {
@@ -10819,7 +10820,27 @@ describe('TeamProvisioningService', () => {
     }, 10_000);
 
     it('resolves stored attachment payloads for OpenCode inbox relay before delivery', async () => {
-      const svc = new TeamProvisioningService();
+      const resolveInputDeclaration = vi
+        .fn<ResolveOpenCodeInputDeclaration>()
+        .mockImplementation(({ projectPath, model }) =>
+          Promise.resolve(
+            projectPath === '/repo' && model === 'openai/gpt-5.4-mini' ? ['text', 'image'] : null
+          )
+        );
+      const svc = new TeamProvisioningService(
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        resolveInputDeclaration
+      );
       const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
         ok: true,
         providerId: 'opencode',
@@ -10891,6 +10912,10 @@ describe('TeamProvisioningService', () => {
         failed: 0,
         relayed: 1,
       });
+      expect(resolveInputDeclaration).toHaveBeenCalledWith({
+        projectPath: '/repo',
+        model: 'openai/gpt-5.4-mini',
+      });
       expect(sendMessageToMember).toHaveBeenCalledWith(
         expect.objectContaining({
           messageId: 'msg-image-attachment',
@@ -10906,8 +10931,28 @@ describe('TeamProvisioningService', () => {
       );
     });
 
-    it('keeps OpenCode inbox relay unread and surfaces a clear reason when the model is not vision-capable', async () => {
-      const svc = new TeamProvisioningService();
+    it('keeps OpenCode inbox relay unread and surfaces a clear reason when the model declares no image input', async () => {
+      const resolveInputDeclaration = vi
+        .fn<ResolveOpenCodeInputDeclaration>()
+        .mockImplementation(({ projectPath, model }) =>
+          Promise.resolve(
+            projectPath === '/repo' && model === 'openrouter/z-ai/glm-5.1' ? ['text'] : null
+          )
+        );
+      const svc = new TeamProvisioningService(
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        resolveInputDeclaration
+      );
       const sendMessageToMember = vi.fn();
       await configureOpenCodeBobDeliveryService({
         svc,
@@ -10967,14 +11012,17 @@ describe('TeamProvisioningService', () => {
           userVisibleImpact: {
             state: 'error',
             reasonCode: 'backend_error',
-            message:
-              'This OpenCode model is not verified for image attachments. Choose a vision-capable model or remove the image.',
+            message: 'This OpenCode model does not declare image input support.',
           },
         },
       });
       expect(relay.diagnostics?.join('\n')).toContain(
-        'opencode_attachment_delivery_prepare_failed: This OpenCode model is not verified for image attachments. Choose a vision-capable model or remove the image.'
+        'opencode_attachment_delivery_prepare_failed: This OpenCode model does not declare image input support.'
       );
+      expect(resolveInputDeclaration).toHaveBeenCalledWith({
+        projectPath: '/repo',
+        model: 'openrouter/z-ai/glm-5.1',
+      });
       expect(sendMessageToMember).not.toHaveBeenCalled();
       const rows = JSON.parse(
         await fsPromises.readFile(path.join(inboxDir, 'bob.json'), 'utf8')

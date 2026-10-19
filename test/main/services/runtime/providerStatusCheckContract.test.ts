@@ -26,6 +26,7 @@ function providerStatus(overrides: Partial<CliProviderStatus> = {}): CliProvider
     statusMessage: null,
     detailMessage: null,
     models: ['opencode/big-pickle'],
+    defaultModel: 'opencode/big-pickle',
     modelAvailability: [],
     canLoginFromUi: false,
     capabilities: {
@@ -137,6 +138,33 @@ describe.each(['anthropic', 'codex'] as const)('%s refresh provenance', (provide
     expect(
       sanitizeProviderStatusAuthority({ ...previous, ...change }).teamLaunchAuthorityRestriction
     ).toBeUndefined();
+  });
+});
+
+describe('provider runtime default identity', () => {
+  it('prefers the incoming runtime default and retains it across incomplete refreshes', () => {
+    const previous = providerStatus({
+      providerId: 'anthropic',
+      defaultModel: 'claude-opus-5-5',
+      models: ['claude-opus-5-5'],
+      modelCatalog: null,
+    });
+    const incomingWithoutDefault = providerStatus({
+      providerId: 'anthropic',
+      defaultModel: null,
+      models: ['opus'],
+      modelCatalog: null,
+    });
+
+    expect(mergeProviderStatusDisplayEvidence(incomingWithoutDefault, previous).defaultModel).toBe(
+      'claude-opus-5-5'
+    );
+    expect(
+      mergeProviderStatusDisplayEvidence(
+        { ...incomingWithoutDefault, defaultModel: 'claude-opus-6' },
+        previous
+      ).defaultModel
+    ).toBe('claude-opus-6');
   });
 });
 

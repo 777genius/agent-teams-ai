@@ -9,21 +9,50 @@ interface TeamDataOwner<T> {
   queuedFull: boolean;
 }
 
+export interface TeamDataJoin<T> {
+  readonly promise: Promise<T>;
+  readonly started: boolean;
+}
+
 /** Live data-read ownership; completed snapshots remain in the store, never here. */
 export class TeamDataReadWork<T> {
   private readonly owners = new Map<string, TeamDataOwner<T>>();
 
   join(team: string, mode: SnapshotMode, scope: TeamReadScope, read: () => Promise<T>): Promise<T> {
+    return this.joinOwned(team, mode, scope, read).promise;
+  }
+
+  joinOwned(
+    team: string,
+    mode: SnapshotMode,
+    scope: TeamReadScope,
+    read: () => Promise<T>,
+    isCurrent: () => boolean = () => true
+  ): TeamDataJoin<T> {
     const owner = this.ensure(team, scope);
     const existing = owner.active[mode];
-    if (existing) return existing;
-    const request = read().finally(() => {
+    if (existing) return { promise: existing, started: false };
+    if (!isCurrent()) {
+      const retired = Promise.reject<T>(new Error('team data read scope superseded'));
+      void retired.catch(() => undefined);
+      return { promise: retired, started: false };
+    }
+    let request: Promise<T>;
+    // eslint-disable-next-line sonarjs/no-try-promise -- Catch synchronous throws before a promise exists.
+    try {
+      request = read();
+    } catch (error) {
+      const failed = Promise.reject<T>(error);
+      void failed.catch(() => undefined);
+      return { promise: failed, started: false };
+    }
+    request = request.finally(() => {
       if (this.owners.get(team) !== owner || owner.active[mode] !== request) return;
       delete owner.active[mode];
       this.prune(team, owner);
     });
     owner.active[mode] = request;
-    return request;
+    return { promise: request, started: true };
   }
 
   hasRead(team: string, mode: SnapshotMode, scope: TeamReadScope): boolean {

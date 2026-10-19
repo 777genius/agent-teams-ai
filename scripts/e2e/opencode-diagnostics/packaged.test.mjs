@@ -5,6 +5,7 @@ import { execFile } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, writeFile, symlink, rm, stat, readdir } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   packagedArguments,
   closePackagedBrowser,
@@ -288,16 +289,33 @@ test('existing project fixture is nonempty, contained, and created only once', a
     const sentinel = await prepareExistingProject(data);
     assert.equal(await readFile(sentinel, 'utf8'), 'preserve-existing-project\n');
     await assert.rejects(prepareExistingProject(data), { code: 'EEXIST' });
-    await assert.rejects(prepareExistingProject({ root, project: path.join(root, '..', 'foreign-project') }), /escapes sandbox/);
+    await assert.rejects(
+      prepareExistingProject({ root, project: path.join(root, '..', 'foreign-project') }),
+      /escapes sandbox/
+    );
   } finally {
     await rm(root, { recursive: true, force: true });
   }
 });
 
 test('project-scoped status qualification rejects filesystem and unsettled failures', () => {
-  const ready = { providerId: 'opencode', supported: true, verificationState: 'unknown', statusCheckOutcome: 'model_only' };
-  assert.deepEqual(qualifyProjectStatus(ready), { verificationState: 'unknown', statusCheckOutcome: 'model_only' });
-  for (const failed of [{ statusCheckErrorCode: 'runtime_error' }, { verificationState: 'error' }, { statusCheckOutcome: 'transient_error' }, { detailMessage: 'EEXIST: file already exists, mkdir C:\\project' }]) assert.throws(() => qualifyProjectStatus({ ...ready, ...failed }));
+  const ready = {
+    providerId: 'opencode',
+    supported: true,
+    verificationState: 'unknown',
+    statusCheckOutcome: 'model_only',
+  };
+  assert.deepEqual(qualifyProjectStatus(ready), {
+    verificationState: 'unknown',
+    statusCheckOutcome: 'model_only',
+  });
+  for (const failed of [
+    { statusCheckErrorCode: 'runtime_error' },
+    { verificationState: 'error' },
+    { statusCheckOutcome: 'transient_error' },
+    { detailMessage: 'EEXIST: file already exists, mkdir C:\\project' },
+  ])
+    assert.throws(() => qualifyProjectStatus({ ...ready, ...failed }));
 });
 
 test('prelaunch refuses a junction ancestor before creating directories outside the profile', async () => {
@@ -767,19 +785,46 @@ test('main readiness waits only for missing version handler and preserves real f
 });
 
 test('native settings qualification rejects degraded or failed reads', () => {
-  const response = { schemaVersion: 1, runtimeId: 'opencode', view: {
-    runtimeId: 'opencode', runtime: { state: 'ready' }, providers: [], configuredModels: [], diagnostics: [],
-  } };
+  const response = {
+    schemaVersion: 1,
+    runtimeId: 'opencode',
+    view: {
+      runtimeId: 'opencode',
+      runtime: { state: 'ready' },
+      providers: [],
+      configuredModels: [],
+      diagnostics: [],
+    },
+  };
   assert.equal(qualifySettings(response).state, 'ready');
   for (const state of ['degraded', 'needs-setup', undefined]) {
-    assert.throws(() => qualifySettings({ ...response, view: { ...response.view, runtime: { state } } }));
+    assert.throws(() =>
+      qualifySettings({ ...response, view: { ...response.view, runtime: { state } } })
+    );
   }
   assert.throws(() => qualifySettings({ ...response, error: { message: 'timeout' } }));
-  assert.throws(() => qualifySettings({ ...response, view: { ...response.view, diagnostics: ['HTTP timeout'] } }));
+  assert.throws(() =>
+    qualifySettings({ ...response, view: { ...response.view, diagnostics: ['HTTP timeout'] } })
+  );
 });
 
 test('settings refresh waits for fresh explicit request and delayed settlement', () => {
-  const first = { method: 'loadProviderDirectory', input: { runtimeId: 'opencode', refresh: true }, response: { schemaVersion: 1, runtimeId: 'opencode', directory: { runtimeId: 'opencode', entries: [], returnedCount: 0, totalCount: 0, diagnostics: [] } }, completedAt: 1000 };
+  const first = {
+    method: 'loadProviderDirectory',
+    input: { runtimeId: 'opencode', refresh: true },
+    response: {
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      directory: {
+        runtimeId: 'opencode',
+        entries: [],
+        returnedCount: 0,
+        totalCount: 0,
+        diagnostics: [],
+      },
+    },
+    completedAt: 1000,
+  };
   const observation = { records: [first], overflow: false };
   assert.equal(settingsRefreshSettled(observation, 1499), false);
   assert.equal(settingsRefreshSettled(observation, 1500), true);
@@ -789,12 +834,25 @@ test('settings refresh waits for fresh explicit request and delayed settlement',
   const delayed = { method: 'loadModels', startedAt: 1400 };
   observation.records.push(delayed);
   assert.equal(settingsRefreshSettled(observation, 2000), false);
-  Object.assign(delayed, { response: { schemaVersion: 1, runtimeId: 'opencode', models: { runtimeId: 'opencode', catalogState: 'fresh', models: [] } }, completedAt: 1800 });
+  Object.assign(delayed, {
+    response: {
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      models: { runtimeId: 'opencode', catalogState: 'fresh', models: [] },
+    },
+    completedAt: 1800,
+  });
   assert.equal(settingsRefreshSettled(observation, 2000), false);
   assert.equal(settingsRefreshSettled(observation, 2300), true);
   delayed.response.error = 'late failure';
   assert.equal(settingsRefreshSettled(observation, 2400), false);
-  assert.equal(settingsRefreshSettled({ records: [{ ...first, input: { refresh: false } }], overflow: false }, 3000), false);
+  assert.equal(
+    settingsRefreshSettled(
+      { records: [{ ...first, input: { refresh: false } }], overflow: false },
+      3000
+    ),
+    false
+  );
 });
 
 test('packaged cleanup stops main before recovering helpers and drains sockets jointly', () => {
@@ -810,23 +868,36 @@ test('packaged cleanup stops main before recovering helpers and drains sockets j
   assert.equal(packagedDrainSnapshot(owned, [{ ...main, birth: 'reused' }], [2]).drained, false);
 });
 
-function browserCloseFixture({ endpoint = 'ws://127.0.0.1:9222/devtools/browser/test', failCheck = 0, respond = true } = {}) {
+function browserCloseFixture({
+  endpoint = 'ws://127.0.0.1:9222/devtools/browser/test',
+  failCheck = 0,
+  respond = true,
+} = {}) {
   const socket = new EventEmitter();
   socket.readyState = 1;
   const sent = [];
   let checks = 0;
   let connected = false;
   let terminated = false;
-  socket.send = message => {
+  socket.send = (message) => {
     sent.push(JSON.parse(message));
     if (respond) queueMicrotask(() => socket.emit('message', '{"id":1,"result":{}}'));
   };
-  socket.terminate = () => { terminated = true; socket.readyState = 3; };
+  socket.terminate = () => {
+    terminated = true;
+    socket.readyState = 3;
+  };
   return {
     options: {
-      assertOwnership: async () => { if (++checks === failCheck) throw new Error('PID reused'); },
+      assertOwnership: async () => {
+        if (++checks === failCheck) throw new Error('PID reused');
+      },
       readVersion: async () => ({ webSocketDebuggerUrl: endpoint }),
-      connect: () => { connected = true; queueMicrotask(() => socket.emit('open')); return socket; },
+      connect: () => {
+        connected = true;
+        queueMicrotask(() => socket.emit('open'));
+        return socket;
+      },
       timeoutMs: 50,
     },
     state: () => ({ sent, checks, connected, terminated }),
@@ -837,13 +908,20 @@ test('graceful packaged cleanup checks ownership before discovery, connection an
   const fixture = browserCloseFixture();
   assert.equal(await closePackagedBrowser(fixture.options), 'acknowledged');
   assert.deepEqual(fixture.state(), {
-    sent: [{ id: 1, method: 'Browser.close' }], checks: 3, connected: true, terminated: true,
+    sent: [{ id: 1, method: 'Browser.close' }],
+    checks: 3,
+    connected: true,
+    terminated: true,
   });
 });
 
 test('graceful packaged cleanup rejects foreign endpoints and ownership changes', async () => {
-  for (const endpoint of ['ws://foreign:9222/devtools/browser/test', 'ws://127.0.0.1:9223/devtools/browser/test',
-    'ws://127.0.0.1:9222/devtools/page/test', 'ws://user@127.0.0.1:9222/devtools/browser/test']) {
+  for (const endpoint of [
+    'ws://foreign:9222/devtools/browser/test',
+    'ws://127.0.0.1:9223/devtools/browser/test',
+    'ws://127.0.0.1:9222/devtools/page/test',
+    'ws://user@127.0.0.1:9222/devtools/browser/test',
+  ]) {
     const fixture = browserCloseFixture({ endpoint });
     await assert.rejects(closePackagedBrowser(fixture.options), /Unexpected/);
     assert.equal(fixture.state().connected, false);
@@ -859,4 +937,180 @@ test('graceful packaged cleanup bounds an unresponsive browser and closes its so
   const fixture = browserCloseFixture({ respond: false });
   await assert.rejects(closePackagedBrowser(fixture.options), /timed out/);
   assert.equal(fixture.state().terminated, true);
+});
+
+test('candidate opt-in is explicit, bounded and refuses duplicate or foreign evidence arguments', () => {
+  const evidence = 'C:\\TEST\\runtime-candidate-evidence.json';
+  assert.equal(
+    packagedArguments(['--packaged-executable', exe, '--candidate-evidence', evidence], 'win32')
+      .candidateEvidence,
+    evidence
+  );
+  assert.equal(
+    packagedArguments(
+      [
+        '--packaged-executable',
+        exe,
+        '--runtime-setup',
+        'app-install',
+        '--candidate-evidence',
+        evidence,
+      ],
+      'win32'
+    ).runtimeSetup,
+    'app-install'
+  );
+  for (const args of [
+    ['--candidate-evidence', 'C:\\TEST\\other.json'],
+    ['--candidate-evidence', '\\\\remote\\runtime-candidate-evidence.json'],
+    ['--candidate-evidence', evidence, '--candidate-evidence', evidence],
+  ])
+    assert.throws(() => packagedArguments(['--packaged-executable', exe, ...args], 'win32'));
+});
+
+test('explicit candidate evidence survives real seed-to-start manifest handoff', async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'packaged-handoff-test-'));
+  const evidence = 'C:\\test\\runtime-candidate-evidence.json';
+  const desktop = new URL('../opencode-diagnostics-desktop.mjs', import.meta.url);
+  const helper = new URL('./packaged.mjs?handoff-actual', import.meta.url);
+  const loader = path.join(root, 'loader.mjs');
+  const preload = path.join(root, 'preload.mjs');
+  const mock = path.join(root, 'packaged-mock.mjs');
+  const platform = path.join(root, 'platform-mock.mjs');
+  const inert = path.join(root, 'inert.mjs');
+  await writeFile(
+    preload,
+    `
+    import assert from 'node:assert/strict';
+    Object.defineProperty(process, 'platform', {value:'win32'});
+    if (process.argv[2] === 'stop') process.kill = (pid) => {
+      assert.equal(pid, 101, 'App was signalled before its graceful shutdown completed');
+      return true;
+    };
+  `
+  );
+  await writeFile(
+    mock,
+    `
+    import assert from 'node:assert/strict';
+    export { packagedArguments, packagedStopOrder } from ${JSON.stringify(helper.href)};
+    export async function packagedArtifact(executable, candidateEvidence) {
+      assert.equal(candidateEvidence, ${JSON.stringify(evidence)}, 'Explicit evidence lost during manifest handoff');
+      return { app: {path: executable}, candidate: {testOnly:true} };
+    }
+    export async function preparePackagedProfile() { return {}; }
+    export async function prepareExistingProject() { return {owned:true}; }
+    export const packagedTarget = () => {};
+    export const closePackagedBrowser = async () => {
+      globalThis.packagedCloseAt = Date.now();
+      throw new Error('TEST_CDP_CLOSE_TIMED_OUT');
+    };
+  `
+  );
+  await writeFile(
+    platform,
+    `
+    export const assertPortAvailable = () => { throw new Error('TEST_HANDOFF_VERIFIED_BEFORE_LAUNCH'); };
+    export const processes = () => process.argv[2] !== 'stop' ? [] : [
+      {pid:101,birth:'launcher',executable:'node'},
+      ...(!globalThis.packagedCloseAt || Date.now() - globalThis.packagedCloseAt < 1000
+        ? [{pid:102,parent:101,birth:'app',executable:${JSON.stringify(exe)}}] : [])
+    ];
+    export const sameIdentity = () => {};
+    export const ownedTree = (snapshot) => snapshot;
+    export const listeners = () => [];
+    export const assertListenerOwnership = () => {};
+    export const fixtureShim = () => {};
+    export const launchCommand = () => {};
+    export const isolatedEnvironment = () => ({});
+    export const assertNoInstalledOpenCode = () => {};
+    export const assertLauncherCommand = () => {};
+  `
+  );
+  await writeFile(
+    inert,
+    `
+    export default class WebSocket {}
+    export const verifyPackaged = () => {};
+    export const catalogScenarios = [];
+    export const verifyCatalog = () => {};
+    export const cleanupScenario = 'cleanup';
+    export const seedStartupCleanup = () => {};
+    export const verifyStartupCleanup = () => {};
+  `
+  );
+  await writeFile(
+    loader,
+    `
+    import { pathToFileURL } from 'node:url';
+    export async function resolve(specifier, context, next) {
+      let file;
+      if (specifier.endsWith('/packaged.mjs')) file = ${JSON.stringify(mock)};
+      else if (specifier.endsWith('/platform.mjs')) file = ${JSON.stringify(platform)};
+      else if (specifier === 'ws' || ['packaged-verify', 'catalog', 'startup-cleanup'].some(name => specifier.endsWith('/' + name + '.mjs'))) file = ${JSON.stringify(inert)};
+      return file ? {url:pathToFileURL(file).href, shortCircuit:true} : next(specifier, context);
+    }
+  `
+  );
+  const invoke = (args) =>
+    new Promise((resolve) => {
+      execFile(
+        process.execPath,
+        [
+          '--import',
+          pathToFileURL(preload).href,
+          '--experimental-loader',
+          pathToFileURL(loader).href,
+          fileURLToPath(desktop),
+          ...args,
+        ],
+        { timeout: 10000, env: { ...process.env, TEMP: root, TMP: root } },
+        (error, stdout, stderr) => resolve({ error, stdout, stderr })
+      );
+    });
+  let sandbox;
+  try {
+    const seeded = await invoke([
+      'seed-packaged',
+      '--packaged-executable',
+      exe,
+      '--candidate-evidence',
+      evidence,
+    ]);
+    assert.ifError(seeded.error);
+    sandbox = seeded.stdout.trim();
+    const manifest = JSON.parse(await readFile(path.join(sandbox, 'manifest.json'), 'utf8'));
+    assert.equal(manifest.candidateEvidence, evidence);
+    const started = await invoke(['start', sandbox]);
+    assert(started.error, 'Test fence must prevent actual launch');
+    assert.match(started.stderr, /TEST_HANDOFF_VERIFIED_BEFORE_LAUNCH/);
+    assert.doesNotMatch(started.stderr, /Explicit evidence lost/);
+    await t.test(
+      'a CDP timeout still waits for the owned app to retire before fallback',
+      async () => {
+        manifest.launcher = { pid: 101, birth: 'launcher', executable: 'node' };
+        await writeFile(path.join(sandbox, 'manifest.json'), JSON.stringify(manifest));
+        const stopped = await invoke(['stop', sandbox]);
+        assert.ifError(stopped.error);
+        const graceful = JSON.parse(
+          await readFile(path.join(sandbox, 'cleanup-graceful.json'), 'utf8')
+        );
+        assert.match(graceful.error, /TEST_CDP_CLOSE_TIMED_OUT/);
+        const signals = JSON.parse(
+          await readFile(path.join(sandbox, 'cleanup-signals.json'), 'utf8')
+        );
+        assert.equal(
+          signals.find((entry) => entry.expected.pid === 102).outcome,
+          'missing-from-identity-snapshot'
+        );
+        assert.equal(
+          signals.find((entry) => entry.expected.pid === 101).outcome,
+          'signal-returned'
+        );
+      }
+    );
+  } finally {
+    if (sandbox) await rm(sandbox, { recursive: true, force: true });
+    await rm(root, { recursive: true, force: true });
+  }
 });

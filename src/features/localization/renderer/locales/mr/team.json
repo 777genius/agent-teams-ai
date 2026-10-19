@@ -1004,7 +1004,8 @@
       "cancel": "रद्द करा",
       "delete": "हटवा",
       "markResolved": "निराकरण झाले म्हणून चिन्हांकित करा",
-      "save": "जतन करा"
+      "save": "जतन करा",
+      "openInTaskTab": "स्वतंत्र टॅबमध्ये उघडा"
     },
     "attachments": {
       "commentAttachment": "टिप्पणी संलग्नक",

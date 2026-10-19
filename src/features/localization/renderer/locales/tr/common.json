@@ -642,7 +642,8 @@
       "byTime": "Zamana göre",
       "byUnread": "Okunmamışa göre",
       "byProject": "Projeye göre",
-      "byTeam": "Ekibe göre"
+      "byTeam": "Ekibe göre",
+      "manualOrder": "Manuel sıralama"
     }
   },
   "toolViewer": {

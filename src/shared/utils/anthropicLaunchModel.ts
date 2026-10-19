@@ -24,18 +24,8 @@ function isAnthropicOpusModel(model: string): boolean {
   return baseModel === 'opus' || baseModel.startsWith('claude-opus-');
 }
 
-function getStandardContextAlias(model: string): string | null {
-  const baseModel = stripOneMillionSuffix(model);
-  if (baseModel === 'opus' || baseModel.startsWith('claude-opus-')) {
-    return 'opus';
-  }
-  if (baseModel === 'sonnet' || baseModel.startsWith('claude-sonnet-')) {
-    return 'sonnet';
-  }
-  if (baseModel === 'haiku' || baseModel.startsWith('claude-haiku-')) {
-    return 'haiku';
-  }
-  return null;
+function isAnthropicFamilyAlias(model: string): boolean {
+  return ['opus', 'sonnet', 'haiku'].includes(stripOneMillionSuffix(model));
 }
 
 function normalizeStandardOnlyAnthropicModel(model: string): string {
@@ -73,6 +63,15 @@ function chooseAvailableModel(
   return null;
 }
 
+export function isAnthropicContextPolicyLaunchModelAvailable(
+  modelIds: ReadonlySet<string>,
+  resolvedLaunchModel: string
+): boolean {
+  if (modelIds.has(resolvedLaunchModel)) return true;
+  const baseModel = stripOneMillionSuffix(resolvedLaunchModel);
+  return baseModel !== resolvedLaunchModel && modelIds.has(baseModel);
+}
+
 export function resolveAnthropicLaunchModel(params: {
   selectedModel?: string | null;
   limitContext: boolean;
@@ -87,10 +86,13 @@ export function resolveAnthropicLaunchModel(params: {
     const runtimeDefault = params.defaultLaunchModel?.trim() || null;
     const rawPreferredDefault = runtimeDefault || staticDefault;
     const preferredDefault = params.limitContext
-      ? (getStandardContextAlias(rawPreferredDefault) ??
-          stripOneMillionSuffix(rawPreferredDefault)) ||
-        staticDefault
+      ? stripOneMillionSuffix(rawPreferredDefault) || staticDefault
       : normalizeStandardOnlyAnthropicModel(rawPreferredDefault) || staticDefault;
+    // A context policy may add/remove [1m], but catalog aliases and static
+    // fallbacks must never replace the runtime's concrete default identity.
+    if (runtimeDefault && !isAnthropicFamilyAlias(runtimeDefault)) {
+      return preferredDefault;
+    }
     if (availableModels.size === 0) {
       return preferredDefault;
     }
@@ -112,14 +114,7 @@ export function resolveAnthropicLaunchModel(params: {
   }
 
   if (params.limitContext) {
-    const standardAlias = getStandardContextAlias(baseModel);
-    if (!standardAlias) {
-      return baseModel;
-    }
-    if (availableModels.size === 0) {
-      return standardAlias;
-    }
-    return chooseAvailableModel(availableModels, [standardAlias, baseModel]) ?? baseModel;
+    return baseModel;
   }
 
   if (isAnthropicHaikuModel(baseModel)) {

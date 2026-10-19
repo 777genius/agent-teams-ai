@@ -774,6 +774,7 @@ export default interface Resources {
       "markUnread": "Mark as unread",
       "pin": "Pin",
       "rename": "Rename",
+      "restoreTask": "Restore task",
       "unarchive": "Unarchive",
       "unpin": "Unpin"
     },
@@ -794,6 +795,8 @@ export default interface Resources {
       "searchProjects": "Search projects...",
       "searchTeams": "Search teams...",
       "selectAll": "Select all",
+      "showArchived": "Show archived tasks",
+      "showDeleted": "Show deleted tasks",
       "status": "Status",
       "statusOptions": {
         "approved": "APPROVED",
@@ -808,11 +811,13 @@ export default interface Resources {
     "taskFolders": {
       "actions": "Folder or task actions",
       "archived": "Archived task",
+      "cannotMoveHere": "You can't move tasks here",
       "collapse": "Collapse folder",
       "counts": "{{active}} active, {{archived}} archived, {{unavailable}} unavailable",
       "deleteDescription": "Tasks and subfolders move to the parent. Tasks in a root folder become unfiled. No tasks are deleted.",
       "deleteFolder": "Delete folder",
       "destination": "Destination folder",
+      "dockToSidebar": "Folders as the sidebar",
       "dragFolder": "Drag folder",
       "dragTask": "Drag task to a folder",
       "expand": "Expand folder",
@@ -820,6 +825,7 @@ export default interface Resources {
       "invalidName": "Use a name with 1–120 characters.",
       "loading": "Loading folders…",
       "move": "Move to…",
+      "moveHere": "Put it here",
       "newFolder": "New folder",
       "newSubfolder": "New subfolder",
       "organizationDescription": "Organize tasks without changing their team, project or status.",
@@ -832,7 +838,9 @@ export default interface Resources {
       "saveError": "Could not save folder organization. Your last saved structure is preserved.",
       "showArchived": "Show archived tasks",
       "title": "Task folders",
-      "unfiled": "Unfiled"
+      "unfiled": "Unfiled",
+      "unreadTasks_one": "{{count}} unread task",
+      "unreadTasks_other": "{{count}} unread tasks"
     },
     "tasks": {
       "date": {
@@ -870,6 +878,11 @@ export default interface Resources {
       },
       "hideArchived": "Hide archived",
       "pinned": "Pinned",
+      "restoreFailed": {
+        "confirmLabel": "OK",
+        "fallbackMessage": "An unexpected error occurred",
+        "title": "Failed to restore task"
+      },
       "searchPlaceholder": "Search tasks...",
       "showArchived": "Show archived",
       "showLess": "Show less",
@@ -878,7 +891,8 @@ export default interface Resources {
         "byProject": "By project",
         "byTeam": "By team",
         "byTime": "By time",
-        "byUnread": "By unread"
+        "byUnread": "By unread",
+        "manualOrder": "Manual order"
       },
       "teamLabel": "Team: {{team}}",
       "title": "Tasks"
@@ -3557,6 +3571,13 @@ export default interface Resources {
         "acknowledged": "Bootstrap acknowledged",
         "restarting": "Restarting teammate",
         "starting": "Starting teammate"
+      },
+      "chatVisualization": {
+        "description": "Full visualization view",
+        "exceedsLimits": "Visualization exceeds display limits",
+        "incomplete": "Visualization incomplete",
+        "open": "Open visualization",
+        "unavailable": "Visualization unavailable"
       },
       "expandDialog": {
         "description": "Expanded message view"
@@ -6373,6 +6394,7 @@ export default interface Resources {
         "cancel": "Cancel",
         "delete": "Delete",
         "markResolved": "Mark resolved",
+        "openInTaskTab": "Open in a separate tab",
         "save": "Save"
       },
       "attachments": {
@@ -6475,7 +6497,16 @@ export default interface Resources {
       "logs": {
         "newArriving": "New task logs arriving"
       },
+      "navigation": {
+        "editorRefused": "The file could not be opened in the team editor. The request is saved.",
+        "reviewRefused": "Changes could not be opened. The request is saved."
+      },
       "notFound": "Task not found",
+      "page": {
+        "deleted": "Task deleted",
+        "provisioning": "Task is temporarily unavailable while the team is provisioning",
+        "unavailable": "Task unavailable"
+      },
       "related": {
         "blockedBy": "Blocked by",
         "blocks": "Blocks",

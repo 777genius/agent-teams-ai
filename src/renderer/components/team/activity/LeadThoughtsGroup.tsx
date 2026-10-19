@@ -58,6 +58,7 @@ import {
 import { TimelineHeaderAccent } from './TimelineHeaderAccent';
 import { useMessageReadVisibility } from './useMessageReadVisibility';
 
+import type { TaskIdClickHandler } from '@renderer/utils/taskReferenceUtils';
 import type { InboxMessage, ToolCallMeta } from '@shared/types';
 
 export interface LeadThoughtGroup {
@@ -121,6 +122,7 @@ const leadThoughtTimeCache = new Map<string, string>();
 
 interface LeadThoughtsGroupRowProps {
   group: LeadThoughtGroup;
+  teamName: string;
   memberColor?: string;
   isNew?: boolean;
   animateLatestThought?: boolean;
@@ -148,7 +150,7 @@ interface LeadThoughtsGroupRowProps {
   collapseToggleKey?: string;
   onToggleCollapse?: (key: string) => void;
   /** Called when a task ID link (e.g. #10) is clicked in thought text. */
-  onTaskIdClick?: (taskId: string) => void;
+  onTaskIdClick?: TaskIdClickHandler;
   /** Map of member name → color name for @mention badge rendering. */
   memberColorMap?: Map<string, string>;
   /** Team names used for mention/team-link rendering. */
@@ -250,9 +252,10 @@ export const ToolSummaryTooltipContent = ({
 
 interface LeadThoughtItemProps {
   thought: InboxMessage;
+  teamName: string;
   showDivider: boolean;
   shouldAnimate: boolean;
-  onTaskIdClick?: (taskId: string) => void;
+  onTaskIdClick?: TaskIdClickHandler;
   memberColorMap?: Map<string, string>;
   teamNames?: string[];
   teamColorByName?: ReadonlyMap<string, string>;
@@ -294,6 +297,7 @@ function areThoughtGroupsEquivalent(prev: LeadThoughtGroup, next: LeadThoughtGro
 const LeadThoughtItem = memo(
   function LeadThoughtItem({
     thought,
+    teamName,
     showDivider,
     shouldAnimate,
     onTaskIdClick,
@@ -464,6 +468,7 @@ const LeadThoughtItem = memo(
         <div ref={contentRef}>
           <ThoughtBodyContent
             thought={thought}
+            teamName={teamName}
             showDivider={showDivider}
             onTaskIdClick={onTaskIdClick}
             onReply={onReply}
@@ -479,6 +484,7 @@ const LeadThoughtItem = memo(
   (prev, next) =>
     prev.showDivider === next.showDivider &&
     prev.shouldAnimate === next.shouldAnimate &&
+    prev.teamName === next.teamName &&
     prev.onTaskIdClick === next.onTaskIdClick &&
     prev.memberColorMap === next.memberColorMap &&
     areStringArraysEqual(prev.teamNames, next.teamNames) &&
@@ -520,9 +526,10 @@ const LiveThoughtStatusBadge = ({
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional immediate sync to avoid 1s stale gap
     setIsLive(computeIsLive());
+    if (canBeLive === false || !isTeamAlive) return;
     const id = window.setInterval(() => setIsLive(computeIsLive()), 1000);
     return () => window.clearInterval(id);
-  }, [computeIsLive]);
+  }, [canBeLive, computeIsLive, isTeamAlive]);
 
   if (!isLive) return null;
 
@@ -536,6 +543,7 @@ const LiveThoughtStatusBadge = ({
 
 const LeadThoughtsGroupRowComponent = ({
   group,
+  teamName,
   memberColor,
   isNew,
   animateLatestThought = true,
@@ -1061,6 +1069,7 @@ const LeadThoughtsGroupRowComponent = ({
                 <LeadThoughtItem
                   key={toMessageKey(thought)}
                   thought={thought}
+                  teamName={teamName}
                   showDivider={idx > 0}
                   shouldAnimate={
                     shouldAnimateLatestThought && idx === chronologicalThoughts.length - 1
@@ -1121,6 +1130,7 @@ const LeadThoughtsGroupRowComponent = ({
 export const LeadThoughtsGroupRow = memo(
   LeadThoughtsGroupRowComponent,
   (prev, next) =>
+    prev.teamName === next.teamName &&
     prev.memberColor === next.memberColor &&
     prev.isNew === next.isNew &&
     prev.animateLatestThought === next.animateLatestThought &&

@@ -10,6 +10,7 @@ import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { TabUIProvider } from '@renderer/contexts/TabUIContext';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
+import { isOrdinaryTeamTab, isTaskDetailTab, type Tab } from '@renderer/types/tabs';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -17,7 +18,6 @@ import { DashboardView } from '../dashboard/DashboardView';
 import { TeamLoadingSkeleton } from '../team/TeamLoadingSkeleton';
 
 import type { Pane } from '@renderer/types/panes';
-import type { Tab } from '@renderer/types/tabs';
 
 const ExtensionStoreView = lazy(() =>
   import('../extensions/ExtensionStoreView').then((module) => ({
@@ -67,6 +67,11 @@ const TeamGraphTab = lazy(() =>
 const OrganizationMapTab = lazy(() =>
   import('@features/organizations/renderer').then((module) => ({
     default: module.OrganizationMapTab,
+  }))
+);
+const TaskDetailTab = lazy(() =>
+  import('@features/team-task-detail/renderer').then((module) => ({
+    default: module.TaskDetailTab,
   }))
 );
 const TokenUsageDashboard = lazy(() =>
@@ -144,7 +149,7 @@ const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.
   }, [isActive]);
 
   const fallback =
-    tab.type === 'team' && tab.teamName ? (
+    isOrdinaryTeamTab(tab) && tab.teamName ? (
       <TeamPaneLazyFallback
         teamName={tab.teamName}
         isActive={isActive}
@@ -167,7 +172,21 @@ const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.
               <OrganizationMapTab isActive={isActive} isPaneFocused={isPaneFocused} />
             </TabUIProvider>
           )}
-          {tab.type === 'team' && (
+          {isTaskDetailTab(tab) && tab.taskDetail && tab.teamName ? (
+            <TabUIProvider tabId={tab.id}>
+              <TaskDetailTab
+                identity={{
+                  contextId: tab.taskDetail.contextId,
+                  teamName: tab.teamName,
+                  taskId: tab.taskDetail.taskId,
+                }}
+                tabId={tab.id}
+                isActive={isActive}
+                isPaneFocused={isPaneFocused}
+              />
+            </TabUIProvider>
+          ) : null}
+          {isOrdinaryTeamTab(tab) && (
             <TabUIProvider tabId={tab.id}>
               <TeamDetailView
                 teamName={tab.teamName ?? ''}

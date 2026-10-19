@@ -11,9 +11,16 @@ const storeState = {
 };
 const moduleMocks = vi.hoisted(() => ({
   clearTaskManualUnread: vi.fn(),
+  folderMode: false,
   openTaskFolderMove: vi.fn(),
   preloadGlobalTaskDetailDialog: vi.fn(),
   taskFolderEditingReady: true,
+  useUnreadCommentCount: vi.fn(
+    (
+      _identity: { contextId: string; teamName: string; taskId: string },
+      _comments?: readonly unknown[]
+    ) => 0
+  ),
 }));
 
 let unreadCountValue = 0;
@@ -24,27 +31,25 @@ vi.mock('../../../../src/renderer/store', () => ({
 }));
 
 vi.mock('../../../../src/renderer/hooks/useUnreadCommentCount', () => ({
-  useUnreadCommentCount: () => unreadCountValue,
+  useUnreadCommentCount: moduleMocks.useUnreadCommentCount,
 }));
 
 vi.mock('../../../../src/renderer/services/commentReadStorage', () => ({
   clearTaskManualUnread: moduleMocks.clearTaskManualUnread,
 }));
 
-vi.mock(
-  '../../../../src/renderer/components/layout/GlobalTaskDetailDialogSlot',
-  () => ({
-    preloadGlobalTaskDetailDialog: moduleMocks.preloadGlobalTaskDetailDialog,
-  })
-);
+vi.mock('../../../../src/renderer/components/layout/GlobalTaskDetailDialogSlot', () => ({
+  preloadGlobalTaskDetailDialog: moduleMocks.preloadGlobalTaskDetailDialog,
+}));
 
-vi.mock(
-  '../../../../src/features/task-folders/renderer/adapters/taskFolderEditing',
-  () => ({
-    useTaskFolderEditingReady: () => moduleMocks.taskFolderEditingReady,
-    taskFolderMoveRequest: { open: moduleMocks.openTaskFolderMove },
-  })
-);
+vi.mock('../../../../src/features/task-folders/renderer/adapters/taskFolderEditing', () => ({
+  useTaskFolderEditingReady: () => moduleMocks.taskFolderEditingReady,
+  taskFolderMoveRequest: { open: moduleMocks.openTaskFolderMove },
+}));
+
+vi.mock('../../../../src/features/task-folders/renderer/hooks/useTaskFolderMode', () => ({
+  useTaskFolderMode: () => moduleMocks.folderMode,
+}));
 
 vi.mock('../../../../src/renderer/hooks/useTheme', () => ({
   useTheme: () => ({
@@ -108,6 +113,7 @@ vi.mock('zustand/react/shallow', () => ({
 vi.mock('lucide-react', () => {
   const Icon = (props: React.SVGProps<SVGSVGElement>) => React.createElement('svg', props);
   return {
+    Archive: Icon,
     GripVertical: Icon,
     CheckCircle2: Icon,
     Circle: Icon,
@@ -143,16 +149,14 @@ function makeTask(overrides: Partial<GlobalTask> = {}): GlobalTask {
     createdAt: '2026-04-18T10:00:00.000Z',
     updatedAt: '2026-04-18T10:10:00.000Z',
     reviewState: 'none',
-    reviewNotes: [],
     blockedBy: [],
     blocks: [],
     comments: [],
     attachments: [],
     workIntervals: [],
-    kanbanColumnId: null,
     projectPath: '/workspace/hookplex',
     ...overrides,
-  } as GlobalTask;
+  };
 }
 
 describe('SidebarTaskItem unread styling', () => {
@@ -162,9 +166,12 @@ describe('SidebarTaskItem unread styling', () => {
     storeState.openGlobalTaskDetail.mockReset();
     storeState.teamByName = {};
     moduleMocks.clearTaskManualUnread.mockReset();
+    moduleMocks.useUnreadCommentCount.mockReset();
+    moduleMocks.useUnreadCommentCount.mockImplementation(() => unreadCountValue);
     moduleMocks.openTaskFolderMove.mockReset();
     moduleMocks.preloadGlobalTaskDetailDialog.mockReset();
     moduleMocks.taskFolderEditingReady = true;
+    moduleMocks.folderMode = false;
   });
 
   afterEach(() => {
@@ -182,7 +189,12 @@ describe('SidebarTaskItem unread styling', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(SidebarTaskItem, { task: makeTask() }));
+      root.render(
+        React.createElement(SidebarTaskItem, {
+          contextId: 'local',
+          task: makeTask(),
+        })
+      );
       await Promise.resolve();
     });
 
@@ -196,7 +208,7 @@ describe('SidebarTaskItem unread styling', () => {
     });
   });
 
-  it('renders sibling native detail and move buttons and separates their actions', async () => {
+  it('hides the move control while sticky session folder mode is off', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
 
     const host = document.createElement('div');
@@ -204,15 +216,44 @@ describe('SidebarTaskItem unread styling', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(SidebarTaskItem, { task: makeTask() }));
+      root.render(
+        React.createElement(SidebarTaskItem, {
+          contextId: 'local',
+          task: makeTask(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="sidebar-task-drag-handle"]')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('renders sibling native detail and move buttons and separates their actions', async () => {
+    moduleMocks.folderMode = true;
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(SidebarTaskItem, {
+          contextId: 'local',
+          task: makeTask(),
+        })
+      );
       await Promise.resolve();
     });
 
     const row = host.querySelector<HTMLElement>('[data-task-key]')!;
     const detail = host.querySelector<HTMLButtonElement>('[data-testid="sidebar-task-detail"]')!;
-    const move = host.querySelector<HTMLButtonElement>(
-      '[data-testid="sidebar-task-drag-handle"]'
-    )!;
+    const move = host.querySelector<HTMLButtonElement>('[data-testid="sidebar-task-drag-handle"]')!;
 
     expect(row.tagName).toBe('DIV');
     expect(row.getAttribute('role')).toBeNull();
@@ -250,14 +291,12 @@ describe('SidebarTaskItem unread styling', () => {
     );
     expect(storeState.openGlobalTaskDetail).not.toHaveBeenCalled();
     await act(async () => detail.click());
-    expect(storeState.openGlobalTaskDetail).toHaveBeenCalledExactlyOnceWith(
-      'alpha-team',
-      'task-1'
-    );
-    expect(moduleMocks.clearTaskManualUnread).toHaveBeenCalledExactlyOnceWith(
-      'alpha-team',
-      'task-1'
-    );
+    expect(storeState.openGlobalTaskDetail).toHaveBeenCalledExactlyOnceWith('alpha-team', 'task-1');
+    expect(moduleMocks.clearTaskManualUnread).toHaveBeenCalledExactlyOnceWith({
+      contextId: 'local',
+      teamName: 'alpha-team',
+      taskId: 'task-1',
+    });
     expect(moduleMocks.openTaskFolderMove).toHaveBeenCalledTimes(1);
 
     await act(async () => {
@@ -267,6 +306,7 @@ describe('SidebarTaskItem unread styling', () => {
   });
 
   it('keeps the move control disabled until task-folder editing is ready', async () => {
+    moduleMocks.folderMode = true;
     moduleMocks.taskFolderEditingReady = false;
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
 
@@ -275,13 +315,16 @@ describe('SidebarTaskItem unread styling', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(SidebarTaskItem, { task: makeTask() }));
+      root.render(
+        React.createElement(SidebarTaskItem, {
+          contextId: 'local',
+          task: makeTask(),
+        })
+      );
       await Promise.resolve();
     });
 
-    const move = host.querySelector<HTMLButtonElement>(
-      '[data-testid="sidebar-task-drag-handle"]'
-    )!;
+    const move = host.querySelector<HTMLButtonElement>('[data-testid="sidebar-task-drag-handle"]')!;
     expect(move.disabled).toBe(true);
     expect(move.getAttribute('draggable')).toBe('false');
     await act(async () => move.click());
@@ -305,6 +348,7 @@ describe('SidebarTaskItem unread styling', () => {
     await act(async () => {
       root.render(
         React.createElement(SidebarTaskItem, {
+          contextId: 'local',
           task: makeTask(),
           renamingKey: 'alpha-team:task-1',
           onRenameComplete,
@@ -366,7 +410,12 @@ describe('SidebarTaskItem unread styling', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(SidebarTaskItem, { task: makeTask() }));
+      root.render(
+        React.createElement(SidebarTaskItem, {
+          contextId: 'local',
+          task: makeTask(),
+        })
+      );
       await Promise.resolve();
     });
 
@@ -386,7 +435,13 @@ describe('SidebarTaskItem unread styling', () => {
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(React.createElement(SidebarTaskItem, { task: makeTask(), teamOffline: true }));
+      root.render(
+        React.createElement(SidebarTaskItem, {
+          contextId: 'local',
+          task: makeTask(),
+          teamOffline: true,
+        })
+      );
       await Promise.resolve();
     });
 
@@ -407,7 +462,11 @@ describe('SidebarTaskItem unread styling', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(SidebarTaskItem, { task: makeTask(), hideProjectName: true })
+        React.createElement(SidebarTaskItem, {
+          contextId: 'local',
+          task: makeTask(),
+          hideProjectName: true,
+        })
       );
       await Promise.resolve();
     });
@@ -434,6 +493,7 @@ describe('SidebarTaskItem unread styling', () => {
     await act(async () => {
       root.render(
         React.createElement(SidebarTaskItem, {
+          contextId: 'local',
           task: makeTask({
             createdAt: createdAt.toISOString(),
             reviewState: 'needsFix',
@@ -470,6 +530,7 @@ describe('SidebarTaskItem unread styling', () => {
           React.Fragment,
           null,
           React.createElement(SidebarTaskItem, {
+            contextId: 'local',
             task: makeTask({
               id: 'minutes',
               createdAt: '2026-04-17T00:00:00.000Z',
@@ -477,6 +538,7 @@ describe('SidebarTaskItem unread styling', () => {
             }),
           }),
           React.createElement(SidebarTaskItem, {
+            contextId: 'local',
             task: makeTask({
               id: 'hours',
               createdAt: '2026-04-17T00:00:00.000Z',
@@ -484,6 +546,7 @@ describe('SidebarTaskItem unread styling', () => {
             }),
           }),
           React.createElement(SidebarTaskItem, {
+            contextId: 'local',
             task: makeTask({
               id: 'days',
               createdAt: '2026-04-01T00:00:00.000Z',
@@ -530,6 +593,7 @@ describe('SidebarTaskItem unread styling', () => {
     await act(async () => {
       root.render(
         React.createElement(SidebarTaskItem, {
+          contextId: 'local',
           task: makeTask({
             createdAt: new Date(2026, 3, 17, 12, 0, 0).toISOString(),
             updatedAt: updatedAt.toISOString(),
@@ -580,6 +644,7 @@ describe('SidebarTaskItem unread styling', () => {
         act(() => {
           root.render(
             React.createElement(SidebarTaskItem, {
+              contextId: 'local',
               task: makeTask({ createdAt: createdAt.toISOString(), updatedAt }),
             })
           );
@@ -620,6 +685,7 @@ describe('SidebarTaskItem unread styling', () => {
     act(() => {
       root.render(
         React.createElement(SidebarTaskItem, {
+          contextId: 'local',
           task: makeTask({ createdAt: date, updatedAt: date }),
         })
       );
@@ -646,6 +712,7 @@ describe('SidebarTaskItem unread styling', () => {
       await act(async () => {
         root.render(
           React.createElement(SidebarTaskItem, {
+            contextId: 'local',
             task: makeTask({
               createdAt:
                 source === 'creation' ? '2026-04-18T11:59:30.000Z' : '2026-04-18T11:00:00.000Z',
@@ -672,4 +739,99 @@ describe('SidebarTaskItem unread styling', () => {
       });
     }
   );
+
+  it('keeps injected tree presentation field-for-field synchronized with sidebar cards', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const renderCards = (source: GlobalTask, archived = false): void => {
+      root.render(
+        React.createElement(
+          React.Fragment,
+          null,
+          React.createElement(SidebarTaskItem, {
+            contextId: 'local',
+            task: source,
+            isArchived: archived,
+            showTeamName: true,
+            displaySubjectOverride: source.subject,
+          }),
+          React.createElement(SidebarTaskItem, {
+            contextId: 'local',
+            task: source,
+            isArchived: archived,
+            showTeamName: true,
+            displaySubjectOverride: source.subject,
+            containerProps: {
+              role: 'treeitem',
+              className: 'tree-card-under-test',
+            },
+            renderDragHandle: () =>
+              React.createElement('button', {
+                type: 'button',
+                'data-testid': 'injected-tree-handle',
+              }),
+            menuSlot: React.createElement('button', {
+              type: 'button',
+              'data-testid': 'injected-tree-menu',
+            }),
+          })
+        )
+      );
+    };
+    const fields = (): Record<string, string> =>
+      Object.fromEntries(
+        [...host.querySelectorAll('[data-task-card-field]')]
+          .filter((field) => !field.closest('.tree-card-under-test'))
+          .map((field) => [
+            `${field.getAttribute('data-task-card-field')}:${field.textContent}`,
+            `${field.getAttribute('class')}:${field.getAttribute('data-task-card-field')}`,
+          ])
+      );
+    const treeFields = (): Record<string, string> =>
+      Object.fromEntries(
+        [...host.querySelectorAll('.tree-card-under-test [data-task-card-field]')].map((field) => [
+          `${field.getAttribute('data-task-card-field')}:${field.textContent}`,
+          `${field.getAttribute('class')}:${field.getAttribute('data-task-card-field')}`,
+        ])
+      );
+    await act(async () => {
+      renderCards(makeTask({ status: 'pending', owner: 'alice', subject: 'Before' }));
+      await Promise.resolve();
+    });
+    expect(moduleMocks.useUnreadCommentCount).toHaveBeenCalledWith(
+      { contextId: 'local', teamName: 'alpha-team', taskId: 'task-1' },
+      expect.any(Array)
+    );
+    expect(treeFields()).toEqual(fields());
+    expect(host.querySelector('[data-testid="injected-tree-handle"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="injected-tree-menu"]')).not.toBeNull();
+
+    unreadCountValue = 3;
+    await act(async () => {
+      renderCards(
+        makeTask({
+          status: 'completed',
+          owner: 'bob',
+          subject: 'After live update',
+          updatedAt: '2026-04-18T10:30:00.000Z',
+        }),
+        true
+      );
+      await Promise.resolve();
+    });
+    expect(treeFields()).toEqual(fields());
+    expect(fields()['subject:After live update']).toBeDefined();
+    expect(fields()['owner:bob']).toBeDefined();
+    expect(fields()['unread:3']).toBeDefined();
+    expect(
+      host.querySelector('.tree-card-under-test')!.className.includes('opacity-60')
+    ).toBe(true);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
 });

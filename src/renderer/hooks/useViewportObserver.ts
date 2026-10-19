@@ -17,11 +17,15 @@ interface UseViewportObserverOptions {
   root?: HTMLElement | null;
   /** Visibility ratio threshold (0..1). Default: 0.1 (10% visible). */
   threshold?: number;
+  /** Observer registration and callbacks are disabled while false. */
+  enabled?: boolean;
+  /** Captured by the observer so callbacks queued for an old scope cannot mutate a new one. */
+  scopeKey?: string;
   /**
    * Called when the set of visible elements changes.
    * Receives the data-viewport-value strings of all currently intersecting elements.
    */
-  onVisibleChange: (visibleValues: string[]) => void;
+  onVisibleChange: (visibleValues: string[], scopeKey: string | undefined) => void;
 }
 
 /**
@@ -45,6 +49,8 @@ interface UseViewportObserverOptions {
 export function useViewportObserver({
   root,
   threshold = 0.1,
+  enabled = true,
+  scopeKey,
   onVisibleChange,
 }: UseViewportObserverOptions): {
   /** Ref callback factory. Attach the returned ref to an observed element. */
@@ -68,13 +74,16 @@ export function useViewportObserver({
     // When root is not yet available (e.g. portal not mounted), skip
     // creating the observer — it would default to document viewport
     // and produce false positives for all visible elements.
-    if (!root) return;
+    if (!enabled || !root) return;
 
     // Capture ref values for cleanup closure
-    const visibleValues = visibleValuesRef.current;
+    const visibleValues = new Set<string>();
+    visibleValuesRef.current = visibleValues;
+    let alive = true;
 
     const observer = new IntersectionObserver(
       (entries) => {
+        if (!alive) return;
         let changed = false;
         for (const entry of entries) {
           const value = entry.target.getAttribute(DATA_ATTR);
@@ -93,7 +102,7 @@ export function useViewportObserver({
           }
         }
         if (changed) {
-          onVisibleChangeRef.current(Array.from(visibleValues));
+          onVisibleChangeRef.current(Array.from(visibleValues), scopeKey);
         }
       },
       { root, threshold }
@@ -109,14 +118,17 @@ export function useViewportObserver({
     observerRef.current = observer;
 
     return () => {
+      alive = false;
       observer.disconnect();
       observerRef.current = null;
       visibleValues.clear();
     };
-  }, [root, threshold]);
+  }, [enabled, root, scopeKey, threshold]);
 
   const registerElement = useCallback((value: string) => {
+    let ownedElement: HTMLElement | null = null;
     return (el: HTMLElement | null) => {
+      if (!el && elementsByValue.current.get(value) !== ownedElement) return;
       // Cleanup previous element for this value
       const prev = elementsByValue.current.get(value);
       if (prev) {
@@ -125,6 +137,7 @@ export function useViewportObserver({
         visibleValuesRef.current.delete(value);
       }
 
+      ownedElement = el;
       // Register new element
       if (el) {
         el.setAttribute(DATA_ATTR, value);

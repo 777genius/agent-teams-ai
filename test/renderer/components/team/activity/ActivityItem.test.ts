@@ -1305,12 +1305,60 @@ describe('ActivityItem bootstrap recipient route', () => {
       taskChip?.click();
       await Promise.resolve();
     });
-    expect(onTaskIdClick).toHaveBeenCalledWith('task-abc123');
+    expect(onTaskIdClick).toHaveBeenCalledWith('task-abc123', 'demo', 'canonical');
 
     await act(async () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('routes literal same-display-ID task chips to their explicit A/B teams', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onTaskIdClick = vi.fn();
+    const messageFor = (teamName: string, taskId: string): InboxMessage => ({
+      from: 'alice',
+      to: 'user',
+      text: 'please review',
+      timestamp: new Date('2026-10-14T12:00:00.000Z').toISOString(),
+      read: false,
+      source: 'inbox',
+      messageKind: 'task_comment_notification',
+      taskRefs: [{ taskId, displayId: '#7', teamName }],
+    });
+
+    for (const [teamName, taskId] of [
+      ['team-a', 'canonical-a'],
+      ['team-b', 'canonical-b'],
+    ] as const) {
+      await act(async () => {
+        root.render(
+          React.createElement(ActivityItem, {
+            message: messageFor(teamName, taskId),
+            teamName,
+            directParticipant: 'alice',
+            onTaskIdClick,
+          })
+        );
+        await Promise.resolve();
+      });
+      const taskChip = Array.from(host.querySelectorAll('button')).find((button) =>
+        (button.textContent ?? '').includes('#7')
+      );
+      expect(taskChip).toBeDefined();
+      await act(async () => {
+        taskChip?.click();
+        await Promise.resolve();
+      });
+    }
+
+    expect(onTaskIdClick).toHaveBeenNthCalledWith(1, 'canonical-a', 'team-a', 'canonical');
+    expect(onTaskIdClick).toHaveBeenNthCalledWith(2, 'canonical-b', 'team-b', 'canonical');
+
+    await act(async () => root.unmount());
   });
 
   it('keeps lead→teammate routes visible in the lead thread', async () => {
@@ -1394,27 +1442,6 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => ({
         onValueChange(event.target.value),
     }),
 }));
-vi.mock('@renderer/components/team/dialogs/TaskGroupChatField', () => ({
-  TaskGroupChatField: ({
-    value,
-    onChange,
-  }: {
-    value: string | null;
-    onChange: (value: string | null) => void;
-  }) =>
-    React.createElement(
-      'select',
-      {
-        'aria-label': 'Group',
-        value: value ?? '',
-        onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
-          onChange(event.target.value || null),
-      },
-      React.createElement('option', { value: '' }, 'None'),
-      React.createElement('option', { value: 'group-a' }, 'Group A'),
-      React.createElement('option', { value: 'group-b' }, 'Group B')
-    ),
-}));
 
 describe('message task action and dialog ownership', () => {
   afterEach(() => {
@@ -1483,7 +1510,6 @@ describe('message task action and dialog ownership', () => {
     }
     await act(() => Promise.resolve(root.render(React.createElement(Boundary))));
     await act(() => Promise.resolve(taskAction(host).click()));
-    expect(host.querySelector<HTMLSelectElement>('[aria-label="Group"]')?.value).toBe('group-a');
     expect(host.querySelector<HTMLInputElement>('#task-subject')?.value).toBe('Group task');
     const description = host.querySelector<HTMLTextAreaElement>(
       '[aria-label="Description"]'
@@ -1497,7 +1523,6 @@ describe('message task action and dialog ownership', () => {
     const command = submit.mock.calls[0][0].command;
     expect(command?.commandId).toBeTruthy();
     expect(createButton(host).disabled).toBe(false);
-    expect(host.querySelector<HTMLSelectElement>('[aria-label="Group"]')?.value).toBe('group-a');
     expect(host.querySelector<HTMLInputElement>('#task-subject')?.value).toBe('Group task');
     expect(host.querySelector<HTMLTextAreaElement>('[aria-label="Description"]')?.value).toContain(
       'Keep the original group'
@@ -1506,22 +1531,21 @@ describe('message task action and dialog ownership', () => {
     expect(submit.mock.calls[1][0].command).toEqual(command);
     expect(host.querySelector('[role="alert"]')?.textContent).toBe('Group A is archived');
     await act(() => {
-      const field = host.querySelector<HTMLSelectElement>('[aria-label="Group"]')!;
-      field.value = '';
-      field.dispatchEvent(new Event('change', { bubbles: true }));
+      const subject = host.querySelector<HTMLInputElement>('#task-subject')!;
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+      setter.call(subject, 'Edited subject');
+      subject.dispatchEvent(new Event('input', { bubbles: true }));
       return Promise.resolve();
     });
     expect(host.querySelector('[role="alert"]')).toBeNull();
     await act(() => Promise.resolve(createButton(host).click()));
-    expect(submit.mock.calls[2][0].groupChatId).toBeUndefined();
+    expect(submit.mock.calls[2][0].groupChatId).toBe('group-a');
+    expect(submit.mock.calls[2][0].subject).toBe('Edited subject');
     expect(submit.mock.calls[2][0].command).not.toEqual(command);
     expect(host.querySelector('#task-subject')).toBeNull();
     await act(() => Promise.resolve(dialog.openCreateTaskDialog('Ordinary task')));
-    expect(host.querySelector<HTMLSelectElement>('[aria-label="Group"]')?.value).toBe('group-b');
-    await act(() => {
-      dialog.closeCreateTaskDialog();
-      return Promise.resolve();
-    });
+    await act(() => Promise.resolve(createButton(host).click()));
+    expect(submit.mock.calls[3][0].groupChatId).toBe('group-b');
     await act(() =>
       Promise.resolve(
         dialog.handleCreateTaskFromMessage({
@@ -1531,7 +1555,8 @@ describe('message task action and dialog ownership', () => {
         })
       )
     );
-    expect(host.querySelector<HTMLSelectElement>('[aria-label="Group"]')?.value).toBe('');
+    await act(() => Promise.resolve(createButton(host).click()));
+    expect(submit.mock.calls[4][0].groupChatId).toBeUndefined();
     await act(() => Promise.resolve(root.unmount()));
   });
 

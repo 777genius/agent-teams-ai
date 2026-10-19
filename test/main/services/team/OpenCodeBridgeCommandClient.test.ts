@@ -1,3 +1,8 @@
+import {
+  BoundControlContext,
+  configureDesktopMcpEnvironment,
+  getDesktopMcpChildEnvironment,
+} from '@features/external-agent-connection/main';
 import { OpenCodeReadinessBridge } from '@main/services/team/opencode/bridge/OpenCodeReadinessBridge';
 import { OpenCodeBackfillRetry } from '@main/services/team/opencode/OpenCodeBackfillRetry';
 import { promises as fs } from 'fs';
@@ -36,21 +41,230 @@ describe('OpenCodeBridgeCommandClient', () => {
     await fs.rm(tempDir, { recursive: true, force: true });
   });
 
+  it('prepares only one shutdown registry child before real admission closure, with copied authority', async () => {
+    const context = new BoundControlContext('app-test', tempDir);
+    const binding = {
+      AGENT_TEAMS_MCP_CLAUDE_DIR: tempDir,
+      CLAUDE_TEAM_APP_INSTANCE_ID: 'app-test',
+      CLAUDE_TEAM_APP_PROFILE_SCOPE: 'scope-test',
+    };
+    const revoke = configureDesktopMcpEnvironment(() => {
+      if (!context.isOpen) throw new Error('Desktop MCP control context is unavailable');
+      return {
+        ...binding,
+        AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:5001',
+        AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify(context.snapshot()),
+      };
+    });
+    try {
+      const client = createClient({
+        envProvider: () => ({ PATH: '/owned/bin', ...getDesktopMcpChildEnvironment() }),
+      });
+      const bridge = new OpenCodeReadinessBridge(client);
+      runner.nextResult = {
+        stdout: JSON.stringify(bridgeSuccess()),
+        stderr: '',
+        exitCode: 0,
+        timedOut: false,
+      };
+      await client.execute(
+        'opencode.launchTeam',
+        { runId: 'run-1' },
+        { cwd: tempDir, timeoutMs: 100 }
+      );
+      runner.calls[0].env.PATH = '/mutated-runner-copy';
+      bridge.prepareShutdownCleanup?.();
+      binding.CLAUDE_TEAM_APP_PROFILE_SCOPE = 'mutated-caller-copy';
+      await context.closeAdmission();
+      await expect(
+        client.execute('opencode.launchTeam', {}, { cwd: tempDir, timeoutMs: 100 })
+      ).rejects.toThrow('Desktop MCP control context is unavailable');
+      const startup = await client.execute(
+        'opencode.cleanupStartupHosts',
+        {},
+        { cwd: tempDir, timeoutMs: 100 }
+      );
+      expect(startup).toMatchObject({ ok: false, error: { kind: 'invalid_input' } });
+      await expect(
+        bridge.cleanupOpenCodeHosts({ reason: 'startup', projectPath: tempDir })
+      ).rejects.toThrow('Desktop MCP control context is unavailable');
+      expect(runner.calls).toHaveLength(1);
+      runner.nextResult = {
+        stdout: JSON.stringify(
+          bridgeSuccess({
+            command: 'opencode.cleanupHosts',
+            data: { cleaned: 1, remaining: 0, hosts: [], diagnostics: [] },
+          })
+        ),
+        stderr: '',
+        exitCode: 0,
+        timedOut: false,
+      };
+      expect(
+        await bridge.cleanupOpenCodeHosts({ reason: 'shutdown', projectPath: tempDir })
+      ).toEqual({ cleaned: 1, remaining: 0, hosts: [], diagnostics: [] });
+      expect(runner.calls).toHaveLength(2);
+      expect(runner.calls[1].env).toMatchObject({
+        ...binding,
+        CLAUDE_TEAM_APP_PROFILE_SCOPE: 'scope-test',
+        PATH: '/owned/bin',
+        AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:5001',
+      });
+      expect(
+        JSON.parse(runner.calls[1].env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON!)
+      ).toMatchObject({
+        AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify({
+          ...context.snapshot(),
+          connectionGeneration: 1,
+        }),
+      });
+      runner.calls[1].env.CLAUDE_TEAM_APP_PROFILE_SCOPE = 'mutated-returned-copy';
+      await expect(
+        bridge.cleanupOpenCodeHosts({ reason: 'shutdown', projectPath: tempDir })
+      ).rejects.toThrow('Desktop MCP control context is unavailable');
+      expect(runner.calls).toHaveLength(2);
+    } finally {
+      revoke();
+    }
+  });
+
+  it('clears prior preparation when the current bound factory becomes unavailable', async () => {
+    const owned = {
+      AGENT_TEAMS_MCP_CLAUDE_DIR: tempDir,
+      CLAUDE_TEAM_APP_INSTANCE_ID: 'app-test',
+      CLAUDE_TEAM_APP_PROFILE_SCOPE: 'scope-test',
+    };
+    let open = true;
+    const revoke = configureDesktopMcpEnvironment(() => {
+      if (!open) throw new Error('closed-owned-context');
+      return { ...owned };
+    });
+    try {
+      const client = createClient({ envProvider: () => getDesktopMcpChildEnvironment() });
+      const bridge = new OpenCodeReadinessBridge(client);
+      runner.nextResult = {
+        stdout: JSON.stringify(bridgeSuccess()),
+        stderr: '',
+        exitCode: 0,
+        timedOut: false,
+      };
+      await client.execute('opencode.launchTeam', {}, { cwd: tempDir, timeoutMs: 100 });
+      bridge.prepareShutdownCleanup?.();
+      open = false;
+      expect(() => bridge.prepareShutdownCleanup?.()).not.toThrow();
+      await expect(
+        bridge.cleanupOpenCodeHosts({ reason: 'shutdown', projectPath: tempDir })
+      ).rejects.toThrow('closed-owned-context');
+      expect(runner.calls).toHaveLength(1);
+    } finally {
+      revoke();
+    }
+  });
+
+  it.each([
+    'AGENT_TEAMS_MCP_CLAUDE_DIR',
+    'CLAUDE_TEAM_APP_INSTANCE_ID',
+    'CLAUDE_TEAM_APP_PROFILE_SCOPE',
+  ])('rejects changed %s preparation without replacing fresh-provider refusal', async (changed) => {
+    const owned = {
+      AGENT_TEAMS_MCP_CLAUDE_DIR: tempDir,
+      CLAUDE_TEAM_APP_INSTANCE_ID: 'app-test',
+      CLAUDE_TEAM_APP_PROFILE_SCOPE: 'scope-test',
+    };
+    let open = true;
+    const client = createClient({
+      envProvider: () => {
+        if (!open) throw new Error('closed-owned-context');
+        return { ...owned };
+      },
+    });
+    runner.nextResult = {
+      stdout: JSON.stringify(bridgeSuccess()),
+      stderr: '',
+      exitCode: 0,
+      timedOut: false,
+    };
+    await client.execute('opencode.launchTeam', {}, { cwd: tempDir, timeoutMs: 100 });
+    client.prepareShutdownCleanup?.({ ...owned, [changed]: 'foreign' });
+    open = false;
+    await expect(
+      client.execute(
+        'opencode.cleanupHosts',
+        { reason: 'shutdown' },
+        { cwd: tempDir, timeoutMs: 100 }
+      )
+    ).rejects.toThrow('closed-owned-context');
+    expect(runner.calls).toHaveLength(1);
+  });
+
+  it.each(['constructor-only', 'failed-provider', 'failed-command', 'missing-binding'])(
+    'does not prepare authority from %s',
+    async (source) => {
+      const owned = {
+        AGENT_TEAMS_MCP_CLAUDE_DIR: tempDir,
+        CLAUDE_TEAM_APP_INSTANCE_ID: 'app-test',
+        CLAUDE_TEAM_APP_PROFILE_SCOPE: 'scope-test',
+      };
+      let open = true;
+      const client = createClient({
+        env: owned,
+        envProvider: () => {
+          if (!open || source === 'failed-provider') throw new Error('closed-owned-context');
+          return source === 'missing-binding' ? {} : { ...owned };
+        },
+      });
+      runner.nextResult =
+        source === 'missing-binding'
+          ? { stdout: JSON.stringify(bridgeSuccess()), stderr: '', exitCode: 0, timedOut: false }
+          : { stdout: '', stderr: 'failed launch', exitCode: 1, timedOut: false };
+      if (source !== 'constructor-only')
+        await client
+          .execute('opencode.launchTeam', {}, { cwd: tempDir, timeoutMs: 100 })
+          .catch(() => undefined);
+      const dispatched = runner.calls.length;
+      client.prepareShutdownCleanup?.(owned);
+      open = false;
+      await expect(
+        client.execute(
+          'opencode.cleanupHosts',
+          { reason: 'shutdown' },
+          { cwd: tempDir, timeoutMs: 100 }
+        )
+      ).rejects.toThrow('closed-owned-context');
+      expect(runner.calls).toHaveLength(dispatched);
+    }
+  );
+
   it('bounds exit-1 process calls and diagnostics, and observes executable replacement through the port', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     const binaryPath = path.join(tempDir, 'runtime.exe');
     await fs.writeFile(binaryPath, 'old runtime');
-    const client = new OpenCodeBridgeCommandClient({ binaryPath, tempDirectory: tempDir,
-      processRunner: runner, diagnostics });
+    const client = new OpenCodeBridgeCommandClient({
+      binaryPath,
+      tempDirectory: tempDir,
+      processRunner: runner,
+      diagnostics,
+    });
     const bridge = new OpenCodeReadinessBridge(client);
     const retry = new OpenCodeBackfillRetry();
-    runner.nextResult = { stdout: '', stderr: 'expected 1 argument, got 2', exitCode: 1, timedOut: false };
-    const refresh = async () => retry.run('task', await bridge.getRuntimeIdentity() ?? '', async () => {
-      const result = await bridge.backfillOpenCodeTaskLedger({ teamName: 'test-team', teamId: 'test-team',
-        taskId: 'task', projectDir: tempDir, workspaceRoot: tempDir });
-      expect(result.outcome).toBe('transient-error');
-      return { attempted: true, backfilled: false };
-    });
+    runner.nextResult = {
+      stdout: '',
+      stderr: 'expected 1 argument, got 2',
+      exitCode: 1,
+      timedOut: false,
+    };
+    const refresh = async () =>
+      retry.run('task', (await bridge.getRuntimeIdentity()) ?? '', async () => {
+        const result = await bridge.backfillOpenCodeTaskLedger({
+          teamName: 'test-team',
+          teamId: 'test-team',
+          taskId: 'task',
+          projectDir: tempDir,
+          workspaceRoot: tempDir,
+        });
+        expect(result.outcome).toBe('transient-error');
+        return { attempted: true, backfilled: false };
+      });
     const identity = await bridge.getRuntimeIdentity();
     await Promise.all(Array.from({ length: 20 }, refresh));
     await refresh();
@@ -68,61 +282,145 @@ describe('OpenCodeBridgeCommandClient', () => {
     expect(diagnostics.events).toHaveLength(3);
   });
 
-  it.each([false, true])('retains correlated startup evidence on unknown drainage (watchdog=%s)', async (timedOut) => {
-    const payload = bridgeSuccess({ command: 'opencode.cleanupStartupHosts', data: {
-      cleaned: 0, remaining: 1, hosts: [], diagnostics: [],
-      startupCleanup: { completion: 'unknown', coverage: 'partial', survivingPids: [55] },
-    } });
-    runner.nextResult = { stdout: JSON.stringify(payload), stderr: '', exitCode: timedOut ? null : 0, timedOut };
-    const result = await createClient().execute('opencode.cleanupStartupHosts', {}, { cwd: tempDir, timeoutMs: 100 });
-    expect(result.requestId).toBe('req-1');
-    const files = await fs.readdir(tempDir);
-    expect(files.some(name => name.endsWith('.observed-output.json'))).toBe(true);
-    expect(await fs.readFile(path.join(tempDir, files.find(name => name.endsWith('.observed-output.json'))!), 'utf8')).toBe(JSON.stringify(payload));
-    expect(runner.calls).toHaveLength(1);
-    if (timedOut) expect(result).toMatchObject({ ok: false, error: { kind: 'transport_watchdog_timeout' } });
-    else expect(result).toEqual(payload);
-  });
+  it.each([false, true])(
+    'retains correlated startup evidence on unknown drainage (watchdog=%s)',
+    async (timedOut) => {
+      const payload = bridgeSuccess({
+        command: 'opencode.cleanupStartupHosts',
+        data: {
+          cleaned: 0,
+          remaining: 1,
+          hosts: [],
+          diagnostics: [],
+          startupCleanup: { completion: 'unknown', coverage: 'partial', survivingPids: [55] },
+        },
+      });
+      runner.nextResult = {
+        stdout: JSON.stringify(payload),
+        stderr: '',
+        exitCode: timedOut ? null : 0,
+        timedOut,
+      };
+      const result = await createClient().execute(
+        'opencode.cleanupStartupHosts',
+        {},
+        { cwd: tempDir, timeoutMs: 100 }
+      );
+      expect(result.requestId).toBe('req-1');
+      const files = await fs.readdir(tempDir);
+      expect(files.some((name) => name.endsWith('.observed-output.json'))).toBe(true);
+      expect(
+        await fs.readFile(
+          path.join(tempDir, files.find((name) => name.endsWith('.observed-output.json'))!),
+          'utf8'
+        )
+      ).toBe(JSON.stringify(payload));
+      expect(runner.calls).toHaveLength(1);
+      if (timedOut)
+        expect(result).toMatchObject({ ok: false, error: { kind: 'transport_watchdog_timeout' } });
+      else expect(result).toEqual(payload);
+    }
+  );
 
   it('consumes normal drained partial evidence, but never infers it from watchdog exit', async () => {
-    runner.nextResult = { stdout: JSON.stringify(bridgeSuccess({ command: 'opencode.cleanupStartupHosts', data: {
-      cleaned: 0, remaining: 1, hosts: [], diagnostics: [],
-      startupCleanup: { completion: 'drained', coverage: 'partial', survivingPids: [55] },
-    } })), stderr: '', exitCode: 0, timedOut: false };
-    const result = await createClient().execute('opencode.cleanupStartupHosts', {}, { cwd: tempDir, timeoutMs: 100 });
+    runner.nextResult = {
+      stdout: JSON.stringify(
+        bridgeSuccess({
+          command: 'opencode.cleanupStartupHosts',
+          data: {
+            cleaned: 0,
+            remaining: 1,
+            hosts: [],
+            diagnostics: [],
+            startupCleanup: { completion: 'drained', coverage: 'partial', survivingPids: [55] },
+          },
+        })
+      ),
+      stderr: '',
+      exitCode: 0,
+      timedOut: false,
+    };
+    const result = await createClient().execute(
+      'opencode.cleanupStartupHosts',
+      {},
+      { cwd: tempDir, timeoutMs: 100 }
+    );
     expect(result.ok).toBe(true);
     expect(await fs.readdir(tempDir)).toEqual([]);
     expect(runner.calls).toHaveLength(1);
   });
 
-  it.each(['req-1', 'different-request'])('trusts only correlated pre-mutation rejection even on abnormal exit (%s)', async (requestId) => {
-    const rejection = { ...bridgeSuccess({ command: 'opencode.cleanupStartupHosts', requestId }), ok: false,
-      error: { kind: 'unsupported_command', message: 'old runtime', retryable: false } };
-    runner.nextResult = { stdout: JSON.stringify(rejection), stderr: '', exitCode: 1, timedOut: true };
-    const result = await createClient().execute('opencode.cleanupStartupHosts', {}, { cwd: tempDir, timeoutMs: 100 });
-    expect(result).toMatchObject({ ok: false, error: { kind: requestId === 'req-1' ? 'unsupported_command' : 'transport_watchdog_timeout' } });
-    expect((await fs.readdir(tempDir)).length === 0).toBe(requestId === 'req-1');
-    expect(runner.calls).toHaveLength(1);
-  });
+  it.each(['req-1', 'different-request'])(
+    'trusts only correlated pre-mutation rejection even on abnormal exit (%s)',
+    async (requestId) => {
+      const rejection = {
+        ...bridgeSuccess({ command: 'opencode.cleanupStartupHosts', requestId }),
+        ok: false,
+        error: { kind: 'unsupported_command', message: 'old runtime', retryable: false },
+      };
+      runner.nextResult = {
+        stdout: JSON.stringify(rejection),
+        stderr: '',
+        exitCode: 1,
+        timedOut: true,
+      };
+      const result = await createClient().execute(
+        'opencode.cleanupStartupHosts',
+        {},
+        { cwd: tempDir, timeoutMs: 100 }
+      );
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          kind: requestId === 'req-1' ? 'unsupported_command' : 'transport_watchdog_timeout',
+        },
+      });
+      expect((await fs.readdir(tempDir)).length === 0).toBe(requestId === 'req-1');
+      expect(runner.calls).toHaveLength(1);
+    }
+  );
 
   it('reports preparation rejection as terminal pre-mutation failure', async () => {
-    const client = createClient({ envProvider: async () => { throw new Error('test env unavailable'); } });
-    const result = await client.execute('opencode.cleanupStartupHosts', {}, { cwd: tempDir, timeoutMs: 100 });
-    expect(result).toMatchObject({ ok: false, error: { kind: 'invalid_input', details: { mutationStarted: false } } });
+    const client = createClient({
+      envProvider: () => Promise.reject(new Error('test env unavailable')),
+    });
+    const result = await client.execute(
+      'opencode.cleanupStartupHosts',
+      {},
+      { cwd: tempDir, timeoutMs: 100 }
+    );
+    expect(result).toMatchObject({
+      ok: false,
+      error: { kind: 'invalid_input', details: { mutationStarted: false } },
+    });
     expect(runner.calls).toHaveLength(0);
     expect(await fs.readdir(tempDir)).toEqual([]);
   });
 
-  it.each(['opencode.cleanupStartupHosts', 'opencode.reapUnleasedCursorAgentTrees'] as const)('checks shutdown admission after asynchronous preparation: %s', async (command) => {
-    let allowed = true;
-    const client = createClient({ envProvider: async () => { allowed = false; return {}; } });
-    const result = await client.execute(command, {}, {
-      cwd: tempDir, timeoutMs: 100, canDispatch: () => allowed,
-    });
-    expect(result).toMatchObject({ ok: false, error: { kind: 'invalid_input' } });
-    expect(runner.calls).toHaveLength(0);
-    expect(await fs.readdir(tempDir)).toEqual([]);
-  });
+  it.each(['opencode.cleanupStartupHosts', 'opencode.reapUnleasedCursorAgentTrees'] as const)(
+    'checks shutdown admission after asynchronous preparation: %s',
+    async (command) => {
+      let allowed = true;
+      const client = createClient({
+        envProvider: () => {
+          allowed = false;
+          return Promise.resolve({});
+        },
+      });
+      const result = await client.execute(
+        command,
+        {},
+        {
+          cwd: tempDir,
+          timeoutMs: 100,
+          canDispatch: () => allowed,
+        }
+      );
+      expect(result).toMatchObject({ ok: false, error: { kind: 'invalid_input' } });
+      expect(runner.calls).toHaveLength(0);
+      expect(await fs.readdir(tempDir)).toEqual([]);
+    }
+  );
 
   it('writes a private input envelope, executes the bridge command, and removes the input file', async () => {
     runner.nextResult = {
@@ -917,6 +1215,105 @@ describe('OpenCodeBridgeCommandClient', () => {
 });
 
 describe('redactBridgeDiagnosticText', () => {
+  it.each([
+    'token={"value":"TEST_SECRET"} status=ok',
+    'API_KEY=["TEST_SECRET",{"value":"TEST_SECRET"}] status=ok',
+    'refresh token: {"access":"TEST_SECRET"} status=ok',
+    'Authorization: Bearer {"value":"TEST_SECRET"} status=ok',
+  ])('redacts bare-key containers and preserves public diagnostics: %s', (value) => {
+    const redacted = redactBridgeDiagnosticText(value);
+    expect(redacted).not.toContain('TEST_SECRET');
+    expect(redacted).toContain('[redacted] status=ok');
+    expect(redactBridgeDiagnosticText(redacted)).toBe(redacted);
+  });
+
+  it.each([
+    'token={"value":"TEST_SECRET"',
+    'token=["TEST_SECRET"}',
+    'token={}TEST_SECRET status=ok',
+    'token=[]TEST_SECRET status=ok',
+    'token=prefix"TEST_SECRET suffix" status=ok',
+    "token=prefix'TEST_SECRET suffix' status=ok",
+    'token=prefix`TEST_SECRET` status=ok',
+    'token=prefix\\ TEST_SECRET status=ok',
+    'token=prefix\\\"TEST_SECRET status=ok',
+    'token="TEST_SECRET"TEST_SECRET_SUFFIX status=ok',
+    "token='TEST_SECRET'TEST_SECRET_SUFFIX status=ok",
+    "token={'value':'TEST_SECRET'} status=ok",
+  ])('fails closed for unsupported bare credential syntax: %s', (value) => {
+    const redacted = redactBridgeDiagnosticText(value);
+    expect(redacted).not.toContain('TEST_SECRET');
+    expect(redactBridgeDiagnosticText(redacted)).toBe(redacted);
+  });
+
+  it.each([
+    '{"credential":"TEST_SECRET"}',
+    'credentials="TEST_SECRET" status=ok',
+    'Authorization: Negotiate TEST_SECRET',
+    'Authorization: "Bearer TEST_SECRET" status=public',
+    'Authorization: Digest username="u",response="TEST_SECRET"',
+    'cookie=session-TEST_SECRET status=ok',
+    'Cookie: sid=TEST_SECRET; other=TEST_SECRET_SECOND',
+    'Set-Cookie: sid=TEST_SECRET; other=TEST_SECRET_SECOND\r\n status=private',
+    '{"Set-Cookie":"session=TEST_SECRET; Path=/"}',
+  ])('redacts generic credentials before any raw log sink: %s', (value) => {
+    const redacted = redactBridgeDiagnosticText(value);
+    expect(redacted).not.toContain('TEST_SECRET');
+    expect(redacted).toContain('[redacted]');
+    expect(redactBridgeDiagnosticText(redacted)).toBe(redacted);
+  });
+
+  it('keeps long dashed non-assignments from blocking diagnostic redaction', () => {
+    const started = performance.now();
+    const redacted = redactBridgeDiagnosticText(`AUTH_TOKEN="TEST_SECRET" ${'x-'.repeat(8_000)}`);
+
+    expect(performance.now() - started).toBeLessThan(500);
+    expect(redacted).toContain('AUTH_TOKEN=[redacted]');
+    expect(redacted).not.toContain('TEST_SECRET');
+    expect(redacted.length).toBeLessThan(4_100);
+  });
+
+  it.each([
+    'abort response: {"token":"TEST_SECRET_JSON","status":"abort failed"}',
+    'abort response: {"Authorization":"Bearer TEST_SECRET_JSON_AUTH"}',
+    'AUTH_TOKEN="TEST_SECRET_QUOTED more secret" status=failed',
+    "password='TEST_SECRET_SINGLE\nsecond line' status=failed",
+    'api-key="TEST_SECRET_ESCAPED\\"still secret" status=failed',
+    JSON.stringify({ body: JSON.stringify({ token: 'TEST_SECRET_NESTED"still secret' }) }),
+    'secret="TEST_SECRET_UNTERMINATED\r\nmore secret',
+  ])('redacts complete quoted values from external diagnostics: %s', (value) => {
+    const redacted = redactBridgeDiagnosticText(value);
+
+    expect(redacted).toContain('[redacted]');
+    expect(redacted).not.toContain('TEST_SECRET');
+    expect(redacted).not.toContain('more secret');
+    expect(redacted).not.toContain('second line');
+    expect(redacted).not.toContain('still secret');
+    expect(redactBridgeDiagnosticText(redacted)).toBe(redacted);
+  });
+
+  it('redacts punctuation inside bare credentials while retaining JSON field delimiters', () => {
+    expect(
+      redactBridgeDiagnosticText(
+        'token=TEST_SECRET,TAIL password=ab;cd AUTH_TOKEN=[redacted],TAIL ' +
+          'secret=abc}def] status=failed\r\n{"token":123,"status":"failed"}'
+      )
+    ).toBe(
+      'token=[redacted] password=[redacted] AUTH_TOKEN=[redacted] ' +
+        'secret=[redacted] status=failed\r\n{"token":[redacted],"status":"failed"}'
+    );
+  });
+
+  it('redacts before bounding even when a quoted value crosses the input cap', () => {
+    const redacted = redactBridgeDiagnosticText(
+      `${'x'.repeat(3_970)} AUTH_TOKEN="TEST_SECRET_PREFIX${'s'.repeat(100)}" tail`
+    );
+
+    expect(redacted).not.toContain('TEST_SECRET');
+    expect(redacted).toContain('[redacted]');
+    expect(redacted.length).toBeLessThan(4_100);
+  });
+
   it('redacts common secret forms and caps large payloads', () => {
     const value = `token=abc password:secret Authorization: Bearer live ${'x'.repeat(5000)}`;
 

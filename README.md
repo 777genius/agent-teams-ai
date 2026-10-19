@@ -1,6 +1,8 @@
+### [Boss, watch the video](https://agentteams.live/)
+
 <p align="center">
   <a href="https://agentteams.live/">
-    <img src="docs/assets/github-header-agent-teams-ai.png" alt="Agent Teams AI - Get a lot done by doing very little" width="100%" />
+    <img alt="Agent Teams AI - Get a lot done by doing very little" width="100%" src="docs/assets/agent-teams-overview.webp" />
   </a>
 </p>
 
@@ -200,8 +202,12 @@ No prerequisites - the app can detect installed Claude Code, Codex, and OpenCode
 - [Security](#security)
 - [License](#license)
 
+## ❤️ Sponsors
+
 <p>
-  <a href="https://fluxionai.world/register?source=github&campaign=github-agent-teams&promo=AGENTTEAMS"><img src="docs/assets/sponsor-fluxion.png" alt="Sponsor: Fluxion AI - one gateway to the world's leading AI models. $3 signup credit" width="72%" /></a>
+  <a href="https://fluxionai.world/register?source=github&campaign=github-agent-teams&promo=AGENTTEAMS"><img src="docs/assets/sponsor-fluxion.png" alt="Sponsor: Fluxion AI - one gateway to the world's leading AI models. $3 signup credit" /></a>
+
+  
   <a href="#partnerships"><img src="docs/assets/sponsor-become.png" alt="Become a sponsor - partner with or sponsor Agent Teams" width="26%" /></a>
 </p>
 

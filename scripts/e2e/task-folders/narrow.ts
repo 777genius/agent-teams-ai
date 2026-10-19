@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
+import { cardLayoutScenarios } from './mode-layout.ts';
 import { delay, type Fixture } from './runtime.ts';
-import { el, folderRow, label, selectors, taskRow, type UI } from './ui.ts';
+import { el, folderRow, label, selectors, type UI } from './ui.ts';
 
 export async function narrowViewport(
   ui: UI,
@@ -20,32 +21,19 @@ export async function narrowViewport(
       `${el(selectors.toggle)}.getBoundingClientRect().right <= ${width}`,
       'narrow sidebar resized'
     );
-    const source = `${taskRow(f.team, 'c', selectors.sidebar)}.querySelector(${JSON.stringify(selectors.taskHandle)})`;
+    await ui.assertFolderMode(false);
+    await ui.attemptDisabledTaskDrag(f.team, 'c');
     const before = await ui.snapshot();
-    const drag = await ui.beginDrag(source, { teamName: f.team, taskId: 'c' }, false);
-    assert(
-      await ui.value(`!${el(selectors.panel)} && !document.querySelector('[role="dialog"]')`),
-      'Narrow drag auto-opened modal'
-    );
-    await ui.finishDrag(drag, { x: 10, y: 80 }, true);
-    const deadline = Date.now() + 2200;
-    while (Date.now() < deadline) {
-      assert(
-        await ui.value(`!${el(selectors.panel)} && !document.querySelector('[role="dialog"]')`),
-        'Drag cancellation opened/trapped modal'
-      );
-      await delay(50);
-    }
-    assert.deepEqual(await ui.snapshot(), before, 'Narrow cancelled drag changed storage');
-    await ui.value(`${el(selectors.toggle)}.focus()`);
-    await ui.key('Tab');
-    assert(
-      await ui.value(
-        `document.activeElement !== ${el(selectors.toggle)} && !document.activeElement.closest('[role="dialog"]')`
-      ),
-      'Narrow drag trapped focus'
-    );
     await ui.open();
+    await ui.expand(f.parent);
+    await ui.expand(f.nested);
+    // Narrow mode is modal: exercise a real tree handle inside its active focus scope.
+    const source = `${folderRow(f.parent)}.querySelector(${JSON.stringify(selectors.folderHandle)})`;
+    const drag = await ui.beginDrag(source);
+    await ui.finishDrag(drag, { x: 10, y: 80 }, true);
+    await delay(250);
+    await ui.assertFolderMode(true);
+    assert.deepEqual(await ui.snapshot(), before, 'Narrow cancelled drag changed storage');
     const dialog = `${el(selectors.panel)}.closest('[role="dialog"]')`;
     await ui.wait(`${dialog}?.getAttribute('aria-modal') === 'true'`, 'manual accessible modal');
     const ax = await ui.accessibility(dialog);
@@ -83,6 +71,7 @@ export async function narrowViewport(
     await ui.click(label('Delete folder', confirmation));
     await ui.wait(`!(${confirmation})`, 'narrow confirmation dismissed');
     await ui.persisted((s) => !s.folders.some((folder) => folder.id === created), 'narrow delete');
+    const cardGeometry = await cardLayoutScenarios(ui, f.team, 'a', false);
     await screenshot('narrow-' + width);
     await ui.key('Escape');
     await ui.wait(
@@ -95,7 +84,8 @@ export async function narrowViewport(
     await ui.unfocus();
     await delay(2200);
     assert(await ui.value(`!${el(selectors.panel)}`), 'Fallback reopened after close');
-    evidence.push({ width, geometry, accessibility: ax, nativeDragOpenedModal: false });
+    await ui.assertFolderMode(false);
+    evidence.push({ width, geometry, cardGeometry, accessibility: ax, disabledModeCannotDrag: true });
   }
   await ui.cdp.send('Emulation.setDeviceMetricsOverride', {
     width: 1280,

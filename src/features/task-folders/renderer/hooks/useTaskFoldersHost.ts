@@ -1,16 +1,36 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
+import { confirm } from '@renderer/components/common/ConfirmDialog';
+import { buildTaskFilterTeamOptions } from '@renderer/components/sidebar/taskFilterOptions';
+import {
+  getTaskUnreadCount,
+  useReadStateSnapshot,
+} from '@renderer/components/sidebar/taskFiltersState';
+import {
+  createTaskEffectiveSubjectAccessor,
+  filterGlobalTasks,
+  sortGlobalTasks,
+} from '@renderer/components/sidebar/taskViewPolicy';
 import { useTaskLocalState } from '@renderer/hooks/useTaskLocalState';
+import { useTaskProjectFilterOptions } from '@renderer/hooks/useTaskProjectFilterOptions';
+import { useTaskTeamStatus } from '@renderer/hooks/useTaskTeamStatus';
 import { clearTaskManualUnread, markTaskUnread } from '@renderer/services/commentReadStorage';
 import { useStore } from '@renderer/store';
-import { sortTasksByFreshness } from '@renderer/utils/taskGrouping';
+import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 
 import { moveRequest } from '../adapters/moveRequest';
 import { folderController, panelController } from '../composition';
 import { projectFolders } from '../view-models/projection';
+import { applyVisibleTaskChildren } from '../view-models/projectionView';
+import { countUnreadTasksByNode } from '../view-models/taskUnreadCounts';
+
+import { useTaskFoldersDocked } from './useTaskFoldersDocked';
+import { useTaskViewState } from './useTaskViewState';
 
 import type { RefObject } from 'react';
 export function useTaskFoldersHost(
+  contextId: string,
   sidebar: RefObject<HTMLDivElement | null>,
   collapsed: boolean,
   panelRef: RefObject<HTMLDivElement | null>
@@ -20,42 +40,161 @@ export function useTaskFoldersHost(
   const panel = useSyncExternalStore(panelController.subscribe, panelController.getSnapshot);
   const move = useSyncExternalStore(moveRequest.subscribe, moveRequest.getSnapshot);
   const tasks = useStore((s) => s.globalTasks);
+  const globalDeletedTasks = useStore((s) => s.globalDeletedTasks);
+  const fetchAllDeletedTasks = useStore((s) => s.fetchAllDeletedTasks);
+  const restoreTask = useStore((s) => s.restoreTask);
+  const fetchAllTasks = useStore((s) => s.fetchAllTasks);
+  const teams = useStore((s) => s.teams);
+  const teamByName = useStore((s) => s.teamByName);
+  const isTeamOffline = useTaskTeamStatus();
   const openDetail = useStore((s) => s.openGlobalTaskDetail);
   const local = useTaskLocalState();
-  const [showArchived, setShowArchived] = useState(true);
+  const readState = useReadStateSnapshot();
+  const view = useTaskViewState('tree');
+  const { t } = useAppTranslation('common');
+  const taskOrder = view.sortMode === 'manual' ? 'manual' : 'computed';
+  const viewSetSortOpen = view.setSortOpen;
+  const viewSetFiltersOpen = view.setFiltersOpen;
+  const viewClosePopovers = view.closePopovers;
   const [rect, setRect] = useState<{
     left: number;
     top: number;
     height: number;
     width: number;
   } | null>(null);
-  const projection = useMemo(
+  const viewTasks = useMemo(
+    () => (globalDeletedTasks.length > 0 ? [...tasks, ...globalDeletedTasks] : tasks),
+    [globalDeletedTasks, tasks]
+  );
+  const teamCatalogKey = useMemo(() => teams.map((team) => team.teamName).join('|'), [teams]);
+  // Membership only: task add/remove invalidates the deleted feed, status churn must not.
+  const globalTaskIdsKey = useMemo(() => tasks.map((task) => task.id).join('|'), [tasks]);
+  const docked = useTaskFoldersDocked();
+  // Deleted identities must resolve even while the filter hides them, otherwise a
+  // deleted folder child reads as unavailable instead of a hidden row. The scan fans
+  // out per team and parses every task file, so only pay it while the tree can render.
+  const treeMounted = !collapsed && (docked || panel.open);
+  useEffect(() => {
+    if (!treeMounted) return;
+    void fetchAllDeletedTasks();
+  }, [contextId, fetchAllDeletedTasks, globalTaskIdsKey, teamCatalogKey, treeMounted]);
+  const canonicalProjection = useMemo(
     () =>
       projectFolders(
         state.snapshot,
-        sortTasksByFreshness(tasks),
+        sortGlobalTasks(viewTasks, 'time', contextId),
         local.isArchived,
         local.getRenamedSubject,
-        showArchived
+        true,
+        view.filters.showDeleted
       ),
-    [state.snapshot, tasks, local, showArchived]
+    [state.snapshot, viewTasks, local, contextId, view.filters.showDeleted]
   );
+  const unreadTaskCounts = useMemo(
+    () =>
+      countUnreadTasksByNode(
+        canonicalProjection,
+        (task) =>
+          getTaskUnreadCount(
+            readState,
+            { contextId, teamName: task.teamName, taskId: task.id },
+            task.comments
+          ) > 0
+      ),
+    [canonicalProjection, contextId, readState]
+  );
+  const getEffectiveSubject = useMemo(
+    () =>
+      createTaskEffectiveSubjectAccessor((task) => local.getRenamedSubject(task.teamName, task.id)),
+    [local]
+  );
+  const projection = useMemo(() => {
+    const visibleTasks = filterGlobalTasks(
+      viewTasks,
+      {
+        contextId,
+        filters: view.filters,
+        searchQuery: view.searchQuery,
+        archiveMode: view.filters.showArchived ? 'all' : 'active',
+        getEffectiveSubject,
+      },
+      readState,
+      (task) => local.isArchived(task.teamName, task.id)
+    );
+    const visibleTaskKeys = new Set(
+      visibleTasks.map((task) => `task:${JSON.stringify([task.teamName, task.id])}`)
+    );
+    return applyVisibleTaskChildren(
+      canonicalProjection,
+      viewTasks,
+      (task) => visibleTaskKeys.has(`task:${JSON.stringify([task.teamName, task.id])}`),
+      (siblings) =>
+        view.sortMode === 'manual'
+          ? [...siblings]
+          : sortGlobalTasks(siblings, view.sortMode, contextId, readState),
+      taskOrder
+    );
+  }, [
+    canonicalProjection,
+    contextId,
+    getEffectiveSubject,
+    local,
+    readState,
+    taskOrder,
+    viewTasks,
+    view.filters,
+    view.searchQuery,
+    view.sortMode,
+  ]);
+  const projectFilterOptions = useTaskProjectFilterOptions(view.filtersOpen);
+  const taskFilterTeams = useMemo(() => buildTaskFilterTeamOptions(teams), [teams]);
+  const getOwnerColorName = useCallback(
+    (task: { teamName: string; owner?: string }): string | null | undefined => {
+      if (!task.owner) return null;
+      const members = teamByName[task.teamName]?.members;
+      return members ? (buildMemberColorMap(members).get(task.owner) ?? null) : undefined;
+    },
+    [teamByName]
+  );
+  const setViewSortOpen = useCallback(
+    (open: boolean) => {
+      viewSetSortOpen(open);
+      panelController.hold('menu:task-view-sort', open);
+    },
+    [viewSetSortOpen]
+  );
+  const setViewFiltersOpen = useCallback(
+    (open: boolean) => {
+      viewSetFiltersOpen(open);
+      panelController.hold('menu:task-view-filters', open);
+    },
+    [viewSetFiltersOpen]
+  );
+  const closeViewControls = useCallback(() => {
+    viewClosePopovers();
+    panelController.hold('menu:task-view-sort', false);
+    panelController.hold('menu:task-view-filters', false);
+  }, [viewClosePopovers]);
+  useEffect(() => {
+    if (collapsed || !panel.open) closeViewControls();
+  }, [closeViewControls, collapsed, panel.open]);
+  useEffect(() => () => closeViewControls(), [closeViewControls]);
   useEffect(() => {
     void folderController.load();
   }, []);
   useEffect(() => {
     folderController.setCatalog(
-      tasks.map((task) => ({ teamName: task.teamName, taskId: task.id }))
+      viewTasks.map((task) => ({ teamName: task.teamName, taskId: task.id }))
     );
-  }, [tasks]);
+  }, [viewTasks]);
   useEffect(() => {
     const source = panelController.getSnapshot().dragSource;
     if (
       source?.startsWith('task:') &&
-      !tasks.some((task) => `task:${JSON.stringify([task.teamName, task.id])}` === source)
+      !viewTasks.some((task) => `task:${JSON.stringify([task.teamName, task.id])}` === source)
     )
       panelController.end();
-  }, [tasks]);
+  }, [viewTasks]);
   const registerPanel = useCallback(
     (element: HTMLDivElement | null) => {
       panelRef.current = element;
@@ -103,7 +242,7 @@ export function useTaskFoldersHost(
   useEffect(() => () => panelObserverCleanup.current?.(), []);
   useEffect(() => {
     if (collapsed) {
-      panelController.dispose();
+      panelController.suspend();
       return;
     }
     const element = sidebar.current;
@@ -127,24 +266,55 @@ export function useTaskFoldersHost(
     window.addEventListener('blur', end);
     return () => {
       window.removeEventListener('blur', end);
-      panelController.dispose();
+      panelController.suspend();
     };
   }, []);
   return {
+    contextId,
     state,
     panel,
     move,
     projection,
+    canonicalProjection,
+    unreadTaskCounts,
+    view: {
+      ...view,
+      setSortOpen: setViewSortOpen,
+      setFiltersOpen: setViewFiltersOpen,
+    },
+    closeViewControls,
+    projectFilterOptions,
+    taskFilterTeams,
+    getOwnerColorName,
+    isTeamOffline,
     local,
     rect,
     registerPanel,
-    showArchived,
-    setShowArchived,
     openTask: (team: string, id: string): void => {
-      clearTaskManualUnread(team, id);
+      clearTaskManualUnread({ contextId, teamName: team, taskId: id });
       openDetail(team, id);
     },
-    markUnread: markTaskUnread,
+    markUnread: (team: string, id: string): void => {
+      markTaskUnread({ contextId, teamName: team, taskId: id });
+    },
+    restoreTask: (team: string, id: string): void => {
+      void (async () => {
+        try {
+          await restoreTask(team, id);
+          await fetchAllTasks();
+        } catch (error) {
+          void confirm({
+            title: t('tasksPanel.restoreFailed.title'),
+            message:
+              error instanceof Error
+                ? error.message
+                : t('tasksPanel.restoreFailed.fallbackMessage'),
+            confirmLabel: t('tasksPanel.restoreFailed.confirmLabel'),
+            variant: 'danger',
+          });
+        }
+      })();
+    },
   };
 }
 export type TaskFoldersHostModel = ReturnType<typeof useTaskFoldersHost>;

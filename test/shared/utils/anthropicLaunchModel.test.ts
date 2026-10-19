@@ -142,21 +142,21 @@ describe('resolveAnthropicLaunchModel', () => {
     ).toBe('sonnet');
   });
 
-  it('prefers standard aliases for native 1M raw ids when 200K context is requested', () => {
+  it('preserves concrete model versions when 200K context is requested', () => {
     expect(
       resolveAnthropicLaunchModel({
         selectedModel: 'claude-sonnet-4-6',
         limitContext: true,
         availableLaunchModels: ['sonnet', 'claude-sonnet-4-6'],
       })
-    ).toBe('sonnet');
+    ).toBe('claude-sonnet-4-6');
     expect(
       resolveAnthropicLaunchModel({
         selectedModel: 'claude-opus-4-7[1m]',
         limitContext: true,
         availableLaunchModels: ['opus', 'claude-opus-4-7'],
       })
-    ).toBe('opus');
+    ).toBe('claude-opus-4-7');
     expect(
       resolveAnthropicLaunchModel({
         selectedModel: 'claude-sonnet-4-6',
@@ -164,5 +164,35 @@ describe('resolveAnthropicLaunchModel', () => {
         availableLaunchModels: ['claude-sonnet-4-6'],
       })
     ).toBe('claude-sonnet-4-6');
+  });
+
+  it.each([
+    ['claude-opus-5', 'opus'],
+    ['claude-opus-5-5', 'opus'],
+    ['claude-opus-99-1', 'opus'],
+    ['claude-sonnet-5', 'sonnet'],
+    ['claude-haiku-5', 'haiku'],
+  ])('keeps %s under 200K regardless of context suffix or runtime catalog', (model, alias) => {
+    for (const suffix of ['', '[1m]']) {
+      for (const availableLaunchModels of [undefined, [alias], [alias, model]]) {
+        expect(
+          resolveAnthropicLaunchModel({
+            selectedModel: `${model}${suffix}`,
+            limitContext: true,
+            availableLaunchModels,
+          })
+        ).toBe(model);
+        for (const selectedModel of [DEFAULT_PROVIDER_MODEL_SELECTION, '', null]) {
+          expect(
+            resolveAnthropicLaunchModel({
+              selectedModel,
+              defaultLaunchModel: `${model}${suffix}`,
+              limitContext: true,
+              availableLaunchModels,
+            })
+          ).toBe(model);
+        }
+      }
+    }
   });
 });

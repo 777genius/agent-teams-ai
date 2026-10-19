@@ -17,6 +17,10 @@ import { readTeamLaunchFreshnessFromTeamDir } from '../TeamLaunchFreshness';
 
 import { extractOpenCodeRuntimeLaneMemberName } from './TeamProvisioningOpenCodeRuntimePermissions';
 import {
+  sanitizeOpenCodeRuntimeStopDetail,
+  summarizeOpenCodeRuntimeStopFailure,
+} from './TeamProvisioningOpenCodeRuntimeStopOutcome';
+import {
   collectOpenCodeStoppedLaneStopRunIds,
   isStoppedTeamOpenCodeLaneOwnershipCurrent,
   selectStoppedTeamOpenCodeRuntimeLaneIds,
@@ -356,6 +360,7 @@ async function stopOpenCodeRuntimeLanesForStoppedTeamLocked(input: {
     }
     if (adapter && targetedRunIds.length > 0) {
       let laneStopped = false;
+      const unconfirmedAttempts: string[] = [];
       const cwd = resolveOpenCodeRuntimeLaneCleanupCwd({
         laneId,
         config,
@@ -378,17 +383,25 @@ async function stopOpenCodeRuntimeLanesForStoppedTeamLocked(input: {
             laneStopped = true;
             break;
           }
+          unconfirmedAttempts.push(
+            `run=${runId} ${summarizeOpenCodeRuntimeStopFailure(result)}`
+          );
         } catch (error) {
+          const detail = error instanceof Error ? error.message : String(error);
+          const safeDetail = sanitizeOpenCodeRuntimeStopDetail(detail, 200);
+          unconfirmedAttempts.push(`run=${runId} threw=${safeDetail}`);
           ports.logWarning(
-            `[${teamName}] Failed to stop orphaned OpenCode lane ${laneId} run ${runId}: ${
-              error instanceof Error ? error.message : String(error)
-            }`
+            `[${teamName}] Failed to stop orphaned OpenCode lane ${laneId} run ${runId}: ${safeDetail}`
           );
         }
       }
       if (!laneStopped) {
+        const attempts =
+          unconfirmedAttempts.length > 0
+            ? sanitizeOpenCodeRuntimeStopDetail(`Attempts: ${unconfirmedAttempts.join(' | ')}`, 1_200)
+            : 'Attempts: no stop result returned';
         ports.logWarning(
-          `[${teamName}] OpenCode lane ${laneId} did not confirm stop; retaining runtime ownership and storage.`
+          `[${teamName}] OpenCode lane ${laneId} did not confirm stop; retaining runtime ownership and storage. ${attempts}`
         );
         continue;
       }

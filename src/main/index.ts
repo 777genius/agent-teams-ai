@@ -1,19 +1,4 @@
-import {
-  createDesktopTeamGroupChats,
-  registerTeamGroupChatsIpc,
-  type TeamGroupChatsFeature,
-} from '@features/team-group-chats/main';
-import { composeOpenCodeDesktopBridge } from '@main/services/team/opencode/bridge/composeOpenCodeDesktopBridge';
-/**
- * Main process entry point for Agent Teams AI.
- *
- * Responsibilities:
- * - Initialize Electron app and main window
- * - Set up IPC handlers for data access
- * - Initialize ServiceContextRegistry with local context
- * - Start file watcher for live updates
- * - Manage application lifecycle
- */
+/** Composes the Electron desktop services, IPC and application lifecycle. */
 
 // Increase UV thread pool size BEFORE any async I/O.
 // Default is 4 threads which is far too few for startup:
@@ -32,6 +17,12 @@ import {
 } from './bootstrapUserDataMigration';
 import { earlyAnnouncementsProfile } from './bootstrapAnnouncementsProfile';
 import './sentryBootstrap';
+import {
+  createDesktopTeamGroupChats,
+  registerTeamGroupChatsIpc,
+  type TeamGroupChatsFeature,
+} from '@features/team-group-chats/main';
+import { composeOpenCodeDesktopBridge } from '@main/services/team/opencode/bridge/composeOpenCodeDesktopBridge';
 import {
   composeExternalAgentConnection,
   refreshDesktopBridgeEnvironment,
@@ -98,6 +89,7 @@ import {
   registerRecentProjectsIpc,
   removeRecentProjectsIpc,
 } from '@features/recent-projects/main';
+import { createOpenCodeInputDeclarationResolver } from '@features/runtime-provider-management';
 import {
   createRuntimeProviderManagementFeature,
   inspectOpenCodeLocalModelRuntimeReadiness,
@@ -208,6 +200,7 @@ import { killTrackedCliProcesses } from '@main/utils/childProcess';
 import { extractNotificationContent } from '@main/utils/inboxNotificationContent';
 import { createBudgetNotificationSink } from '@features/token-usage/main';
 import { RendererRecoveryController } from '@main/utils/RendererRecoveryController';
+import { resolveRendererEntry } from '@main/utils/rendererEntry';
 import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
 import {
   APP_GET_WINDOWS_ELEVATION_STATUS,
@@ -333,6 +326,7 @@ import {
 } from './utils/startupTelemetry';
 import {
   captureMainException,
+  captureRendererLoadFailure,
   captureRendererProcessGone,
   getMainSentryStatus,
   syncTelemetryFlag,
@@ -710,49 +704,52 @@ const openCodeLifecycleCleanupTailPorts: OpenCodeLifecycleCleanupTailPorts = {
 async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'): Promise<void> {
   let registryHostPids = new Set<number>();
   let registryCleanupAvailable = false;
-  if (openCodeLifecycleBridge) {
-    const result = await openCodeLifecycleBridge.cleanupOpenCodeHosts({
-      reason,
-      mode: reason === 'shutdown' ? 'force' : 'stale',
-      staleAgeMs: reason === 'startup' ? 5 * 60_000 : null,
-      leaseStaleAgeMs: reason === 'startup' ? 24 * 60 * 60_000 : null,
-      preflightLeaseStaleAgeMs: reason === 'startup' ? 6 * 60_000 : null,
-    });
-    registryHostPids = new Set(
-      result.hosts
-        .filter((host) => host.action.startsWith('kept_'))
-        .map((host) => host.pid)
-        .filter((pid) => Number.isFinite(pid) && pid > 0)
-    );
-    if (result.cleaned > 0) {
-      logger.info(
-        `[OpenCode] ${reason} host cleanup removed ${result.cleaned} registry host(s), ${result.remaining} remaining`
+  try {
+    if (openCodeLifecycleBridge) {
+      const result = await openCodeLifecycleBridge.cleanupOpenCodeHosts({
+        reason,
+        mode: reason === 'shutdown' ? 'force' : 'stale',
+        staleAgeMs: reason === 'startup' ? 5 * 60_000 : null,
+        leaseStaleAgeMs: reason === 'startup' ? 24 * 60 * 60_000 : null,
+        preflightLeaseStaleAgeMs: reason === 'startup' ? 6 * 60_000 : null,
+      });
+      registryHostPids = new Set(
+        result.hosts
+          .filter((host) => host.action.startsWith('kept_'))
+          .map((host) => host.pid)
+          .filter((pid) => Number.isFinite(pid) && pid > 0)
+      );
+      if (result.cleaned > 0) {
+        logger.info(
+          `[OpenCode] ${reason} host cleanup removed ${result.cleaned} registry host(s), ${result.remaining} remaining`
+        );
+      }
+      for (const diagnostic of result.diagnostics) {
+        logger.warn(`[OpenCode] ${reason} host cleanup: ${diagnostic}`);
+      }
+      registryCleanupAvailable = !result.diagnostics.some((diagnostic) =>
+        diagnostic.startsWith('OpenCode host cleanup bridge failed:')
       );
     }
-    for (const diagnostic of result.diagnostics) {
-      logger.warn(`[OpenCode] ${reason} host cleanup: ${diagnostic}`);
-    }
-    registryCleanupAvailable = !result.diagnostics.some((diagnostic) =>
-      diagnostic.startsWith('OpenCode host cleanup bridge failed:')
-    );
-  }
-  // After the command, not before it: the managed host the registry sweep
-  // boots in this process directory is younger than the moment the command was
-  // issued, so an issue-time fence keeps the one host the tail below exists to
-  // reap.
-  const sweepCommandSettledAtMs = Date.now();
+  } finally {
+    // After the command, not before it: the managed host the registry sweep
+    // boots in this process directory is younger than the moment the command was
+    // issued, so an issue-time fence keeps the one host the tail below exists to
+    // reap.
+    const sweepCommandSettledAtMs = Date.now();
 
-  await runOpenCodeLifecycleCleanupTail({
-    reason,
-    registryHostPids,
-    registryCleanupAvailable,
-    appStartedAtMs,
-    sweepCommandSettledAtMs,
-    managedHostInstanceId: openCodeManagedHostInstanceId,
-    profileScope: buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath()),
-    releaseSharedRuntime: releaseLoopbackRuntimesOnAppShutdown,
-    ports: openCodeLifecycleCleanupTailPorts,
-  });
+    await runOpenCodeLifecycleCleanupTail({
+      reason,
+      registryHostPids,
+      registryCleanupAvailable,
+      appStartedAtMs,
+      sweepCommandSettledAtMs,
+      managedHostInstanceId: openCodeManagedHostInstanceId,
+      profileScope: buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath()),
+      releaseSharedRuntime: releaseLoopbackRuntimesOnAppShutdown,
+      ports: openCodeLifecycleCleanupTailPorts,
+    });
+  }
 }
 
 // --- Team display name cache (avoid listTeams() on every notification) ---
@@ -1522,18 +1519,6 @@ export async function disposeInternalStorageAfterWriterDrains(
   await internalStorageDispose.catch(() => undefined);
 }
 
-/**
- * Resolve production renderer index path.
- * Main bundle lives in dist-electron/main, while renderer lives in out/renderer.
- */
-function getRendererIndexPath(): string {
-  const candidates = [
-    join(__dirname, '../../out/renderer/index.html'),
-    join(__dirname, '../renderer/index.html'),
-  ];
-  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
-}
-
 function getTeamControlApiBaseUrl(): string | null {
   if (!httpServer?.isRunning()) {
     return null;
@@ -2008,7 +1993,24 @@ async function initializeServices(): Promise<void> {
   teamDataService.setTaskCommentNotificationJournalStore(
     internalStorageFeature.taskCommentNotificationJournalStore
   );
-  teamProvisioningService = createDefaultTeamProvisioningService(() => teamGroupChatsFeature);
+  runtimeProviderManagementFeature = createRuntimeProviderManagementFeature({
+    openExternal: async (url) => {
+      await shell.openExternal(url);
+    },
+    emitOAuthProgress: (event) => {
+      safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS, event);
+    },
+    emitProgress: (event) => {
+      safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_COMPANION_PROGRESS, event);
+    },
+  });
+  const resolveOpenCodeInputDeclaration = createOpenCodeInputDeclarationResolver(
+    runtimeProviderManagementFeature.loadModels
+  );
+  teamProvisioningService = createDefaultTeamProvisioningService(
+    () => teamGroupChatsFeature,
+    resolveOpenCodeInputDeclaration
+  );
   teamGroupChatsFeature = createDesktopTeamGroupChats({
     snapshot: (teamName) => teamProvisioningService.getTeamAgentRuntimeSnapshot(teamName),
     openCodeRun: (...args) => readOpenCodeGroupRun?.(...args) ?? Promise.resolve(null),
@@ -2357,17 +2359,6 @@ async function initializeServices(): Promise<void> {
     teamDataService,
     crossTeamService,
     logger: createLogger('Feature:Organizations'),
-  });
-  runtimeProviderManagementFeature = createRuntimeProviderManagementFeature({
-    openExternal: async (url) => {
-      await shell.openExternal(url);
-    },
-    emitOAuthProgress: (event) => {
-      safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS, event);
-    },
-    emitProgress: (event) => {
-      safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_COMPANION_PROGRESS, event);
-    },
   });
   terminalWorkspaceFeature = createTerminalWorkspaceFeature({
     teamsBasePath: getTeamsBasePath(),
@@ -2890,7 +2881,6 @@ async function initializeServices(): Promise<void> {
 
   registerExternalAgentConnectionIpc(ipcMain, externalAgentConnection);
 
-  // Initialize IPC handlers with registry
   initializeIpcHandlers(
     contextRegistry,
     updaterService,
@@ -2939,7 +2929,8 @@ async function initializeServices(): Promise<void> {
     crossTeamService,
     teamBackupService ?? undefined,
     launchIoGovernor ?? undefined,
-    memberWorkSyncFeature ?? undefined
+    memberWorkSyncFeature ?? undefined,
+    resolveOpenCodeInputDeclaration
   );
   registerCodexAccountIpc(ipcMain, codexAccountFeature);
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
@@ -2955,13 +2946,11 @@ async function initializeServices(): Promise<void> {
   registerMemberWorkSyncIpc(ipcMain, memberWorkSyncFeature);
   registerMemberLogStreamIpc(ipcMain, memberLogStreamFeature);
 
-  // Forward SSH state changes to renderer and HTTP SSE clients
   sshConnectionManager.on('state-change', (status: unknown) => {
     safeSendToRenderer(mainWindow, SSH_STATUS, status);
     httpServer.broadcast('ssh:status', status);
   });
 
-  // Forward notification events to HTTP SSE clients
   notificationManager.on('notification-new', (notification: unknown) => {
     httpServer.broadcast('notification:new', notification);
   });
@@ -3061,6 +3050,7 @@ async function shutdownServices(): Promise<void> {
   shutdownPromise = (async () => {
     logger.info('Shutting down services...');
     removeExternalAgentConnectionIpc(ipcMain);
+    openCodeLifecycleBridge?.prepareShutdownCleanup();
     await runShutdownStep('external connection admission drain', () =>
       externalAgentConnection?.closeAdmission()
     );
@@ -3321,6 +3311,7 @@ function createWindow(): void {
 
   const isMac = process.platform === 'darwin';
   const isDev = process.env.NODE_ENV === 'development';
+  const rendererEntry = isDev ? undefined : resolveRendererEntry(__dirname);
   const iconPath = isMac ? undefined : getAppIconPath();
   const useNativeTitleBar = !isMac && configManager.getConfig().general.useNativeTitleBar;
   mainWindow = new BrowserWindow({
@@ -3380,10 +3371,11 @@ function createWindow(): void {
       logger.warn(`[dev] loading renderer from ${devUrl}`);
     }
     void mainWindow.loadURL(devUrl);
-  } else {
-    void mainWindow.loadFile(getRendererIndexPath()).catch((error: unknown) => {
-      logger.error('Failed to load renderer entry HTML:', error);
-      captureMainException(error, 'renderer_load_file');
+  } else if (rendererEntry) {
+    void mainWindow.loadFile(rendererEntry.filePath).catch((error: unknown) => {
+      const diagnostics = rendererEntry.diagnostics(app.isPackaged, error);
+      logger.error('Failed to load renderer entry HTML:', error, diagnostics);
+      captureRendererLoadFailure(error, 'renderer_load_file', diagnostics);
     });
   }
 
@@ -3435,12 +3427,15 @@ function createWindow(): void {
     'did-fail-load',
     (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
       if (isMainFrame) {
+        const diagnostics = rendererEntry?.diagnostics(app.isPackaged, errorCode);
         logger.error(
-          `Failed to load renderer (code=${errorCode}): ${errorDescription} - ${validatedURL}`
+          `Failed to load renderer (code=${errorCode}): ${errorDescription} - ${validatedURL}`,
+          diagnostics
         );
-        captureMainException(
+        captureRendererLoadFailure(
           new Error(`Renderer main-frame load failed with code ${errorCode}`),
-          'renderer_did_fail_load'
+          'renderer_did_fail_load',
+          diagnostics
         );
       }
     }

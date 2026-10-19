@@ -1004,7 +1004,8 @@
       "cancel": "이름 *",
       "delete": "이름 *",
       "markResolved": "Mark 해결",
-      "save": "제품 정보"
+      "save": "제품 정보",
+      "openInTaskTab": "별도 탭에서 열기"
     },
     "attachments": {
       "commentAttachment": "댓글 첨부",

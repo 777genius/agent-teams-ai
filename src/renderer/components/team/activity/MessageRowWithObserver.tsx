@@ -21,6 +21,7 @@ import { useMessageReadVisibility } from './useMessageReadVisibility';
 import type { ChatAppearance } from './activityMessagePresentation';
 import type { TimelineCardPosition } from './timelineCardStack';
 import type { MessageTaskSeed } from '@renderer/types/messageTaskSeed';
+import type { TaskIdClickHandler } from '@renderer/utils/taskReferenceUtils';
 import type { InboxMessage } from '@shared/types';
 
 const NEW_MESSAGE_HIGHLIGHT_MS = 3_000;
@@ -52,7 +53,7 @@ interface MessageRowWithObserverProps {
   onRevise?: (message: InboxMessage) => void;
   onVisible?: (message: InboxMessage) => void;
   observationEnabled?: boolean;
-  onTaskIdClick?: (taskId: string) => void;
+  onTaskIdClick?: TaskIdClickHandler;
   onRestartTeam?: () => void;
   collapseMode: 'default' | 'managed';
   isCollapsed: boolean;

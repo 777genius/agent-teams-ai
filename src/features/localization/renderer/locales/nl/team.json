@@ -1004,7 +1004,8 @@
       "cancel": "Annuleren",
       "delete": "Verwijderen",
       "markResolved": "Markeren als opgelost",
-      "save": "Opslaan"
+      "save": "Opslaan",
+      "openInTaskTab": "Openen in afzonderlijk tabblad"
     },
     "attachments": {
       "commentAttachment": "Opmerkingbijlage",

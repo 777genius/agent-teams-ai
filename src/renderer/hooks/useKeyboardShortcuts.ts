@@ -8,6 +8,7 @@
 
 import { useEffect } from 'react';
 
+import { isOrdinaryTeamTab } from '@renderer/types/tabs';
 import { physicalKey } from '@renderer/utils/keyboardUtils';
 import { createLogger } from '@shared/utils/logger';
 import { useShallow } from 'zustand/react/shallow';
@@ -207,7 +208,7 @@ export function useKeyboardShortcuts(): void {
       if (key === 'g' && event.shiftKey && !event.altKey) {
         event.preventDefault();
         const activeTab = openTabs.find((t) => t.id === activeTabId);
-        if (activeTab?.type === 'team' && activeTab.teamName) {
+        if (activeTab && isOrdinaryTeamTab(activeTab) && activeTab.teamName) {
           window.dispatchEvent(
             new CustomEvent('toggle-team-graph', { detail: { teamName: activeTab.teamName } })
           );

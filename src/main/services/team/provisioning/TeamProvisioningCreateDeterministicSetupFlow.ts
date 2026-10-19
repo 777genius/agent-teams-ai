@@ -23,6 +23,7 @@ import {
   type ProvisioningEnvResolution,
   type TeamRuntimeAuthContext,
 } from './TeamProvisioningEnvBuilder';
+import { applyTeamContextLimitEnv } from './TeamProvisioningEnvGuards';
 import {
   assertDeterministicBootstrapPrimaryMemberLimit,
   buildLargeDeterministicBootstrapWarning,
@@ -212,6 +213,7 @@ async function prepareDeterministicCreateSetupFlowWithLease<TMixedSecondaryLane>
     providerArgs = [],
     warning: envWarning,
   } = provisioningEnv;
+  applyTeamContextLimitEnv(shellEnv, request.limitContext);
   anthropicApiKeyHelperLease.coalesce(provisioningEnv.anthropicApiKeyHelper);
   if (envWarning) {
     throw new Error(envWarning);

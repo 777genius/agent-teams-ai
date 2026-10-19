@@ -248,6 +248,7 @@ export const OrgInspector = ({
                   <KanbanTaskCard
                     key={`${agent.id}:${task.id}`}
                     task={fullTask}
+                    contextId={inspectorTasks.contextId}
                     teamName={team.teamName}
                     columnId={resolveKanbanColumn(fullTask)}
                     kanbanTaskState={inspectorTasks.kanbanTaskStateById?.[fullTask.id]}

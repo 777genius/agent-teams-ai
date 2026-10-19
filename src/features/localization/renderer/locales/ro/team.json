@@ -1004,7 +1004,8 @@
       "cancel": "Anulează",
       "delete": "Șterge",
       "markResolved": "Marchează ca rezolvată",
-      "save": "Salvează"
+      "save": "Salvează",
+      "openInTaskTab": "Deschide într-o filă separată"
     },
     "attachments": {
       "commentAttachment": "Atașament comentariu",

@@ -10,7 +10,7 @@ import {
   areStringMapsEqual,
   areThoughtMessagesEquivalentForRender,
 } from '@renderer/utils/messageRenderEquality';
-import { parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
+import { parseTaskLinkHref, type TaskIdClickHandler } from '@renderer/utils/taskReferenceUtils';
 import { isApiErrorMessage } from '@shared/utils/apiErrorDetector';
 import { Reply } from 'lucide-react';
 
@@ -21,8 +21,9 @@ import type { InboxMessage } from '@shared/types';
 
 interface ThoughtBodyContentProps {
   thought: InboxMessage;
+  teamName: string;
   showDivider?: boolean;
-  onTaskIdClick?: (taskId: string) => void;
+  onTaskIdClick?: TaskIdClickHandler;
   onReply?: (message: InboxMessage) => void;
   memberColorMap?: ReadonlyMap<string, string>;
   teamNames?: string[];
@@ -33,6 +34,7 @@ interface ThoughtBodyContentProps {
 export const ThoughtBodyContent = memo(
   function ThoughtBodyContent({
     thought,
+    teamName,
     showDivider,
     onTaskIdClick,
     onReply,
@@ -58,9 +60,14 @@ export const ThoughtBodyContent = memo(
         e.stopPropagation();
         const href = link.getAttribute('href');
         const parsed = href ? parseTaskLinkHref(href) : null;
-        if (parsed?.taskId) onTaskIdClick(parsed.taskId);
+        if (parsed?.taskId)
+          onTaskIdClick(
+            parsed.taskId,
+            parsed.teamName ?? teamName,
+            parsed.teamName ? 'canonical' : 'display'
+          );
       },
-      [onTaskIdClick]
+      [onTaskIdClick, teamName]
     );
 
     const handleReply = useCallback(
@@ -97,6 +104,7 @@ export const ThoughtBodyContent = memo(
                 content={displayContent}
                 maxHeight="max-h-none"
                 bare
+                taskOriginTeamName={teamName}
                 teamColorByName={teamColorByName}
                 onTeamClick={onTeamClick}
               />
@@ -147,6 +155,7 @@ export const ThoughtBodyContent = memo(
   },
   (prev, next) =>
     prev.showDivider === next.showDivider &&
+    prev.teamName === next.teamName &&
     prev.onTaskIdClick === next.onTaskIdClick &&
     prev.onReply === next.onReply &&
     prev.memberColorMap === next.memberColorMap &&

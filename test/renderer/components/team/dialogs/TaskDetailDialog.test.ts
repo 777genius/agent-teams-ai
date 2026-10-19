@@ -1,7 +1,14 @@
 import React, { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot as createReactRoot, type Root } from 'react-dom/client';
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+const roots = new Set<Root>();
+function createRoot(host: HTMLElement): Root {
+  const root = createReactRoot(host);
+  roots.add(root);
+  return root;
+}
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
   getTaskChanges: vi.fn(),
@@ -10,6 +17,8 @@ const hoisted = vi.hoisted(() => ({
   setSelectedTeamTaskChangePresence: vi.fn(),
   setTaskNeedsClarification: vi.fn(),
   getTaskAttachmentData: vi.fn(),
+  lastUnreadCommentIds: undefined as ReadonlySet<string> | undefined,
+  showComments: false,
 }));
 
 vi.mock('@renderer/api', () => ({
@@ -26,16 +35,30 @@ vi.mock('@renderer/api', () => ({
   },
 }));
 
-vi.mock('@renderer/store', () => ({
-  useStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({
-      updateTaskFields: hoisted.updateTaskFields,
-      recordTaskChangePresence: hoisted.recordTaskChangePresence,
-      setSelectedTeamTaskChangePresence: hoisted.setSelectedTeamTaskChangePresence,
-      setTaskNeedsClarification: hoisted.setTaskNeedsClarification,
-      getTaskAttachmentData: hoisted.getTaskAttachmentData,
-    }),
-}));
+vi.mock('@renderer/store', async () => {
+  const { create } = await import('zustand');
+  const { createTaskDetailResourcesSlice } =
+    await import('@renderer/store/slices/taskDetailResourcesSlice');
+  const useStore = create<AppState>()(
+    (...args) =>
+      ({
+        ...createTaskDetailResourcesSlice(...args),
+        activeContextId: 'local',
+        isContextSwitching: false,
+        paneLayout: { panes: [], focusedPaneId: '' },
+        taskDetailSurfaceInterests: {},
+        taskDetailById: {},
+        taskDetailReviewActivationFailure: null,
+        taskDetailEditorActivationFailure: null,
+        updateTaskFields: hoisted.updateTaskFields,
+        recordTaskChangePresence: hoisted.recordTaskChangePresence,
+        setSelectedTeamTaskChangePresence: hoisted.setSelectedTeamTaskChangePresence,
+        setTaskNeedsClarification: hoisted.setTaskNeedsClarification,
+        getTaskAttachmentData: hoisted.getTaskAttachmentData,
+      }) as unknown as AppState
+  );
+  return { useStore };
+});
 
 vi.mock('@renderer/hooks/useTheme', () => ({
   useTheme: () => ({ isLight: false }),
@@ -87,7 +110,10 @@ vi.mock('@renderer/components/team/CollapsibleTeamSection', () => ({
           ? React.createElement('span', { 'data-testid': `section-extra-${title}` }, headerExtra)
           : null
       ),
-      (title === 'Changes' || title === 'Workflow History') && open
+      (title === 'Changes' ||
+        title === 'Workflow History' ||
+        (title === 'Comments' && hoisted.showComments)) &&
+        open
         ? React.createElement('div', null, children)
         : null
     );
@@ -182,7 +208,61 @@ vi.mock('@renderer/components/team/taskLogs/TaskLogsPanel', () => ({
   TaskLogsPanel: () => null,
 }));
 
+vi.mock('@renderer/components/team/dialogs/TaskCommentsSection', () => ({
+  TaskCommentsSection: ({
+    unreadCommentIds,
+  }: {
+    unreadCommentIds?: ReadonlySet<string>;
+  }): React.ReactElement => {
+    hoisted.lastUnreadCommentIds = unreadCommentIds;
+    return React.createElement('div', {
+      'data-testid': 'task-comments',
+      'data-unread-comment-ids': Array.from(unreadCommentIds ?? []).join(','),
+    });
+  },
+}));
+
+vi.mock('@renderer/components/team/dialogs/TaskCommentInput', () => ({
+  TaskCommentInput: () => null,
+}));
+
+import { createTaskDetailReadEntry, taskDetailKey } from '@features/team-task-detail/core';
+import { TaskDetailReadCoordinator } from '@features/team-task-detail/renderer/adapters/TaskDetailReadCoordinator';
 import { TaskDetailDialog } from '@renderer/components/team/dialogs/TaskDetailDialog';
+import { useStore } from '@renderer/store';
+
+import { createTaskDetailSessionFixture } from './taskDetailSessionFixture';
+
+import type { TaskDetailDialogProps } from '@renderer/components/team/dialogs/TaskDetailDialog';
+import type { AppState } from '@renderer/store/types';
+
+function renderDialog(props: Omit<TaskDetailDialogProps, 'sessionController' | 'projectPath'>) {
+  const controller = createTaskDetailSessionFixture(props.task?.id ?? 'missing');
+  if (props.task) {
+    const key = taskDetailKey(controller.identity);
+    useStore.setState((state) => ({
+      taskDetailById: {
+        ...state.taskDetailById,
+        [key]: {
+          ...createTaskDetailReadEntry(controller.identity),
+          full: props.task,
+          phase: 'ready',
+          loading: false,
+        },
+      },
+    }));
+  }
+  return React.createElement(
+    React.Fragment,
+    null,
+    React.createElement(TaskDetailReadCoordinator),
+    React.createElement(TaskDetailDialog, {
+      ...props,
+      projectPath: '/TEST/project',
+      sessionController: controller,
+    })
+  );
+}
 
 import type { TaskChangeSetV2, TeamTaskWithKanban } from '@shared/types';
 
@@ -215,6 +295,10 @@ function makeTask(id: string): TeamTaskWithKanban {
     createdAt: '2026-04-20T09:00:00.000Z',
     updatedAt: '2026-04-20T10:00:00.000Z',
   } as unknown as TeamTaskWithKanban;
+}
+
+function readyTaskMap(...tasks: TeamTaskWithKanban[]): Map<string, TeamTaskWithKanban> {
+  return new Map(tasks.map((task) => [task.id, task]));
 }
 
 function makeSummary(taskId: string): TaskChangeSetV2 {
@@ -266,11 +350,223 @@ function clickChangesSection(host: HTMLElement): void {
 }
 
 describe('TaskDetailDialog changes summary loading', () => {
-  afterEach(() => {
+  beforeEach(() => {
+    hoisted.showComments = false;
+    hoisted.lastUnreadCommentIds = undefined;
+    useStore.setState({
+      taskDetailById: {},
+      taskDetailResourcesById: {},
+      taskDetailVisibleDemandById: {},
+      taskDetailResourcesRevision: 0,
+    });
+  });
+  afterEach(async () => {
+    await act(async () => {
+      for (const root of roots) root.unmount();
+      roots.clear();
+    });
     document.body.innerHTML = '';
     vi.clearAllMocks();
     vi.unstubAllGlobals();
     vi.useRealTimers();
+  });
+
+  it('preserves the authoritative unavailable read state and retries only for the captured current identity', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const controller = createTaskDetailSessionFixture('task-unavailable');
+    controller.session.commentText = 'rich draft';
+    controller.isOriginCurrent = vi.fn(() => false);
+    const retryRead = vi.fn();
+    const task = { ...makeTask('task-unavailable'), projectPath: '/TASK/project' };
+
+    await act(async () => {
+      root.render(
+        React.createElement(TaskDetailDialog, {
+          open: true,
+          task: null,
+          readPhase: 'unavailable',
+          readError: 'IPC transient',
+          teamName: 'team-a',
+          projectPath: '/TEAM/project',
+          sessionController: controller,
+          taskMap: new Map(),
+          members: [],
+          onClose: vi.fn(),
+          onRetryRead: retryRead,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Task unavailable');
+    expect(host.textContent).toContain('IPC transient');
+    const retryButton = host.querySelector<HTMLButtonElement>('button');
+    expect(retryButton).not.toBeNull();
+    retryButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(retryRead).not.toHaveBeenCalled();
+
+    controller.isOriginCurrent = vi.fn(() => true);
+    retryButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(retryRead).toHaveBeenCalledWith({
+      contextId: 'local',
+      teamName: 'team-a',
+      taskId: 'task-unavailable',
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(TaskDetailDialog, {
+          open: true,
+          task,
+          readPhase: 'ready',
+          readError: null,
+          teamName: 'team-a',
+          projectPath: '/TEAM/project',
+          sessionController: controller,
+          taskMap: readyTaskMap(task),
+          members: [],
+          onClose: vi.fn(),
+          onRetryRead: retryRead,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-task-detail-content]')).not.toBeNull();
+    expect(controller.session.commentText).toBe('rich draft');
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('renders a fresh unread comment snapshot when a completed task updates while mounted', async () => {
+    hoisted.showComments = true;
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const firstComment = {
+      id: 'comment-1',
+      author: 'alice',
+      text: 'first',
+      createdAt: '2026-04-20T10:00:00.000Z',
+    };
+    const secondComment = {
+      id: 'comment-2',
+      author: 'alice',
+      text: 'second',
+      createdAt: '2026-04-20T10:01:00.000Z',
+    };
+    const firstTask = {
+      ...makeTask('task-completed-unread'),
+      status: 'completed',
+      comments: [firstComment],
+    } as unknown as TeamTaskWithKanban;
+    const updatedTask = {
+      ...firstTask,
+      comments: [firstComment, secondComment],
+    } as unknown as TeamTaskWithKanban;
+
+    await act(async () => {
+      root.render(
+        renderDialog({
+          open: true,
+          variant: 'team',
+          teamName: 'team-a',
+          task: firstTask,
+          taskMap: readyTaskMap(firstTask),
+          members: [],
+          onClose: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(hoisted.lastUnreadCommentIds?.has('comment-1')).toBe(true);
+
+    await act(async () => {
+      root.render(
+        renderDialog({
+          open: true,
+          variant: 'team',
+          teamName: 'team-a',
+          task: updatedTask,
+          taskMap: readyTaskMap(updatedTask),
+          members: [],
+          onClose: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(hoisted.lastUnreadCommentIds?.has('comment-2')).toBe(true);
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('uses the task project path for file editor intents over the team config path', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const task = {
+      ...makeTask('task-editor-path'),
+      projectPath: '/TASK/project',
+    } as unknown as TeamTaskWithKanban;
+    const summary = makeSummary(task.id);
+    summary.files[0].filePath = '/TASK/project/src/task-editor-path.ts';
+    summary.files[0].relativePath = 'src/task-editor-path.ts';
+    hoisted.getTaskChanges.mockResolvedValue(summary);
+    const openTaskDetailEditor = vi.fn(() => true);
+    useStore.setState({ openTaskDetailEditor });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        renderDialog({
+          open: true,
+          variant: 'team',
+          teamName: 'team-a',
+          task,
+          taskMap: readyTaskMap(task),
+          members: [],
+          onClose: vi.fn(),
+          onViewChanges: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+    await act(async () => {
+      clickChangesSection(host);
+      await Promise.resolve();
+    });
+    const fileButtons = host.querySelectorAll<HTMLButtonElement>('div[role="button"] button');
+    expect(fileButtons.length).toBeGreaterThan(0);
+    await act(async () => {
+      fileButtons[fileButtons.length - 1].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(openTaskDetailEditor).toHaveBeenCalledWith(
+      {
+        contextId: 'local',
+        teamName: 'team-a',
+        taskId: 'task-editor-path',
+      },
+      {
+        projectPath: '/TASK/project',
+        filePath: '/TASK/project/src/task-editor-path.ts',
+        line: null,
+      }
+    );
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
   });
 
   it('shows a zero attachments count in the attachments section header', async () => {
@@ -279,14 +575,15 @@ describe('TaskDetailDialog changes summary loading', () => {
     document.body.appendChild(host);
     const root = createRoot(host);
 
+    const task = { ...makeTask('task-empty-attachments'), workIntervals: [] };
     await act(async () => {
       root.render(
-        React.createElement(TaskDetailDialog, {
+        renderDialog({
           open: true,
           variant: 'team',
           teamName: 'team-a',
-          task: { ...makeTask('task-empty-attachments'), workIntervals: [] },
-          taskMap: new Map<string, TeamTaskWithKanban>(),
+          task,
+          taskMap: readyTaskMap(task),
           members: [],
           onClose: vi.fn(),
           onViewChanges: vi.fn(),
@@ -309,20 +606,21 @@ describe('TaskDetailDialog changes summary loading', () => {
     document.body.appendChild(host);
     const root = createRoot(host);
 
+    const task = { ...makeTask('task-review'), workIntervals: [] };
     await act(async () => {
       root.render(
-        React.createElement(TaskDetailDialog, {
+        renderDialog({
           open: true,
           variant: 'team',
           teamName: 'team-a',
-          task: { ...makeTask('task-review'), workIntervals: [] },
+          task,
           kanbanTaskState: {
             column: 'review',
             reviewer: 'reviewer',
             errorDescription: 'Review failed',
             movedAt: '2026-04-20T10:00:00.000Z',
           },
-          taskMap: new Map<string, TeamTaskWithKanban>(),
+          taskMap: readyTaskMap(task),
           members: [],
           onClose: vi.fn(),
         })
@@ -356,14 +654,14 @@ describe('TaskDetailDialog changes summary loading', () => {
       open: true,
       variant: 'team' as const,
       teamName: 'team-a',
-      taskMap: new Map<string, TeamTaskWithKanban>(),
+      taskMap: readyTaskMap(taskA, taskB),
       members: [],
       onClose: vi.fn(),
       onViewChanges: vi.fn(),
     };
 
     await act(async () => {
-      root.render(React.createElement(TaskDetailDialog, { ...baseProps, task: taskA }));
+      root.render(renderDialog({ ...baseProps, task: taskA }));
       await Promise.resolve();
     });
     await act(async () => {
@@ -378,7 +676,7 @@ describe('TaskDetailDialog changes summary loading', () => {
     );
 
     await act(async () => {
-      root.render(React.createElement(TaskDetailDialog, { ...baseProps, task: taskB }));
+      root.render(renderDialog({ ...baseProps, task: taskB }));
       await Promise.resolve();
     });
     await act(async () => {
@@ -394,7 +692,7 @@ describe('TaskDetailDialog changes summary loading', () => {
     );
 
     await act(async () => {
-      root.render(React.createElement(TaskDetailDialog, { ...baseProps, task: taskA }));
+      root.render(renderDialog({ ...baseProps, task: taskA }));
       await Promise.resolve();
     });
     await act(async () => {
@@ -445,12 +743,12 @@ describe('TaskDetailDialog changes summary loading', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TaskDetailDialog, {
+        renderDialog({
           open: true,
           variant: 'team',
           teamName: 'team-a',
           task,
-          taskMap: new Map<string, TeamTaskWithKanban>(),
+          taskMap: readyTaskMap(task),
           members: [],
           onClose: vi.fn(),
           onViewChanges: vi.fn(),
@@ -460,7 +758,9 @@ describe('TaskDetailDialog changes summary loading', () => {
     });
 
     expect(
-      [...host.querySelectorAll('button')].some((button) => button.textContent === 'Changes')
+      [...host.querySelectorAll('button')].some(
+        (button) => button.textContent?.startsWith('Changes') === true
+      )
     ).toBe(true);
 
     await act(async () => {
@@ -503,12 +803,12 @@ describe('TaskDetailDialog changes summary loading', () => {
     try {
       await act(async () => {
         root.render(
-          React.createElement(TaskDetailDialog, {
+          renderDialog({
             open: true,
             variant: 'team',
             teamName: 'team-a',
             task,
-            taskMap: new Map<string, TeamTaskWithKanban>(),
+            taskMap: readyTaskMap(task),
             members: [],
             onClose: vi.fn(),
           })
@@ -556,7 +856,7 @@ describe('TaskDetailDialog changes summary loading', () => {
     }
   });
 
-  it('preloads the changes summary after 1.5 seconds and shows header loading state', async () => {
+  it('loads the visible changes summary once and shares its header loading state', async () => {
     vi.useFakeTimers();
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const request = deferred<TaskChangeSetV2>();
@@ -569,31 +869,17 @@ describe('TaskDetailDialog changes summary loading', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TaskDetailDialog, {
+        renderDialog({
           open: true,
           variant: 'team',
           teamName: 'team-a',
           task,
-          taskMap: new Map<string, TeamTaskWithKanban>(),
+          taskMap: readyTaskMap(task),
           members: [],
           onClose: vi.fn(),
           onViewChanges: vi.fn(),
         })
       );
-      await Promise.resolve();
-    });
-
-    expect(hoisted.getTaskChanges).not.toHaveBeenCalled();
-
-    await act(async () => {
-      vi.advanceTimersByTime(1_499);
-      await Promise.resolve();
-    });
-    expect(hoisted.getTaskChanges).not.toHaveBeenCalled();
-
-    await act(async () => {
-      vi.advanceTimersByTime(1);
-      await Promise.resolve();
       await Promise.resolve();
     });
 
@@ -650,12 +936,12 @@ describe('TaskDetailDialog changes summary loading', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TaskDetailDialog, {
+        renderDialog({
           open: true,
           variant: 'team',
           teamName: 'team-a',
           task,
-          taskMap: new Map<string, TeamTaskWithKanban>(),
+          taskMap: readyTaskMap(task),
           members: [],
           onClose: vi.fn(),
         })
@@ -664,7 +950,9 @@ describe('TaskDetailDialog changes summary loading', () => {
     });
 
     expect(
-      [...host.querySelectorAll('button')].some((button) => button.textContent === 'Changes')
+      [...host.querySelectorAll('button')].some(
+        (button) => button.textContent?.startsWith('Changes') === true
+      )
     ).toBe(true);
 
     await act(async () => {
@@ -740,12 +1028,12 @@ describe('TaskDetailDialog changes summary loading', () => {
 
     await act(async () => {
       root.render(
-        React.createElement(TaskDetailDialog, {
+        renderDialog({
           open: true,
           variant: 'team',
           teamName: 'team-a',
           task,
-          taskMap: new Map<string, TeamTaskWithKanban>(),
+          taskMap: readyTaskMap(task),
           members: [],
           onClose: vi.fn(),
         })

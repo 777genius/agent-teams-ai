@@ -22,6 +22,15 @@ export const emptySnapshot = (): Snapshot => ({
   rootFolderIds: [],
   folders: [],
 });
+export const DEFAULT_FOLDER_ID = 'my-first-folder';
+export const DEFAULT_FOLDER_NAME = 'My First Folder';
+/** First-run organization: one starter folder so tasks always have a home to move into. */
+export const seededSnapshot = (): Snapshot => ({
+  version: 1,
+  revision: 1,
+  rootFolderIds: [DEFAULT_FOLDER_ID],
+  folders: [{ id: DEFAULT_FOLDER_ID, name: DEFAULT_FOLDER_NAME, children: [] }],
+});
 export const taskKey = (identity: TaskIdentity): string =>
   JSON.stringify([identity.teamName, identity.taskId]);
 export const childKey = (child: Child): string =>

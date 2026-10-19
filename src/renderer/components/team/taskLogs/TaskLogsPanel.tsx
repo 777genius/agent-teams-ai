@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { api } from '@renderer/api';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
-import { isTaskLogActivityChangeEvent } from '@renderer/utils/teamChangeEvents';
+import { useStore } from '@renderer/store';
+import { selectTaskDetailResourceEntry } from '@renderer/store/slices/taskDetailResourcesSlice';
 import { isDisplayableCurrentTask } from '@renderer/utils/teamTaskDisplayState';
 
 import { ExecutionSessionsSection } from './ExecutionSessionsSection';
@@ -10,11 +10,15 @@ import { isBoardTaskActivityUiEnabled, isBoardTaskExactLogsUiEnabled } from './f
 import { TaskActivitySection } from './TaskActivitySection';
 import { TaskLogStreamSection } from './TaskLogStreamSection';
 
+import type { BoardTaskLogStreamSummary } from '@shared/types';
 import type { TeamTaskWithKanban } from '@shared/types';
 
 type TaskLogsTab = 'activity' | 'stream' | 'sessions';
 
 interface TaskLogsPanelProps {
+  contextId: string;
+  surfaceId: string;
+  visible: boolean;
   teamName: string;
   task: TeamTaskWithKanban;
   isOpen?: boolean;
@@ -29,10 +33,10 @@ interface TaskLogsPanelProps {
   onTaskLogCountChange?: (count: number | undefined) => void;
 }
 
-const TASK_LOG_ACTIVITY_PULSE_MS = 1800;
-const TASK_LOG_COUNT_RELOAD_DEBOUNCE_MS = 350;
-
 export const TaskLogsPanel = ({
+  contextId,
+  surfaceId,
+  visible,
   teamName,
   task,
   isOpen = true,
@@ -48,192 +52,92 @@ export const TaskLogsPanel = ({
 }: TaskLogsPanelProps): React.JSX.Element => {
   const availableTabs = useMemo<TaskLogsTab[]>(() => {
     const tabs: TaskLogsTab[] = [];
-    if (isBoardTaskExactLogsUiEnabled()) {
-      tabs.push('stream');
-    }
-    if (isBoardTaskActivityUiEnabled()) {
-      tabs.push('activity');
-    }
+    if (isBoardTaskExactLogsUiEnabled()) tabs.push('stream');
+    if (isBoardTaskActivityUiEnabled()) tabs.push('activity');
     tabs.push('sessions');
     return tabs;
   }, []);
-
   const defaultTab = availableTabs[0] ?? 'sessions';
   const [activeTab, setActiveTab] = useState<TaskLogsTab>(defaultTab);
-  const [isTaskLogActivityActive, setIsTaskLogActivityActive] = useState(false);
-  const [taskLogSegmentCount, setTaskLogSegmentCount] = useState<number | null>(null);
   const [hasOpenedContent, setHasOpenedContent] = useState(isOpen);
-  const pulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const countReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const countRequestSeqRef = useRef(0);
-  const hasTaskLogStream = availableTabs.includes('stream');
+  const setTaskDetailVisibleResourceDemand = useStore(
+    (state) => state.setTaskDetailVisibleResourceDemand
+  );
+  const identity = useMemo(
+    () => ({ contextId, teamName, taskId: task.id }),
+    [contextId, task.id, teamName]
+  );
+  const summaryEntry = useStore((state) =>
+    selectTaskDetailResourceEntry(state, identity, 'log-summary')
+  );
+  const streamEntry = useStore((state) =>
+    selectTaskDetailResourceEntry(state, identity, 'log-stream')
+  );
+  const activityEntry = useStore((state) =>
+    selectTaskDetailResourceEntry(state, identity, 'activity')
+  );
   const taskIsActivelyWorked = isDisplayableCurrentTask(task);
-  const taskLogActivityTrackingEnabled = taskIsActivelyWorked && hasTaskLogStream;
+  const hasTaskLogStream = availableTabs.includes('stream');
   const taskLogSummaryEnabled = hasOpenedContent && hasTaskLogStream;
+  const panelVisible = visible && isOpen;
+  const summary = summaryEntry?.data as BoardTaskLogStreamSummary | null | undefined;
+  const taskLogStreamCount = summary?.segmentCount;
+  const taskLogActivityActive =
+    panelVisible &&
+    taskIsActivelyWorked &&
+    Boolean(
+      summaryEntry?.loading ||
+      summaryEntry?.refreshPending ||
+      streamEntry?.loading ||
+      streamEntry?.refreshPending ||
+      activityEntry?.loading ||
+      activityEntry?.refreshPending
+    );
 
   useEffect(() => {
     setActiveTab(defaultTab);
   }, [defaultTab, task.id]);
 
   useEffect(() => {
-    if (!availableTabs.includes(activeTab)) {
-      setActiveTab(defaultTab);
-    }
+    if (!availableTabs.includes(activeTab)) setActiveTab(defaultTab);
   }, [activeTab, availableTabs, defaultTab]);
 
   useEffect(() => {
-    if (isOpen) {
-      setHasOpenedContent(true);
-    }
+    if (isOpen) setHasOpenedContent(true);
   }, [isOpen]);
 
   useEffect(() => {
-    onTaskLogActivityChange?.(isTaskLogActivityActive);
-  }, [isTaskLogActivityActive, onTaskLogActivityChange]);
+    onTaskLogActivityChange?.(taskLogActivityActive);
+  }, [onTaskLogActivityChange, taskLogActivityActive]);
 
   useEffect(() => {
     onTaskLogCountChange?.(
-      taskLogSegmentCount != null && taskLogSegmentCount > 0 ? taskLogSegmentCount : undefined
+      taskLogStreamCount != null && taskLogStreamCount > 0 ? taskLogStreamCount : undefined
     );
-  }, [onTaskLogCountChange, taskLogSegmentCount]);
+  }, [onTaskLogCountChange, taskLogStreamCount]);
 
   useEffect(() => {
-    if (pulseTimerRef.current) {
-      clearTimeout(pulseTimerRef.current);
-      pulseTimerRef.current = null;
-    }
-    if (countReloadTimerRef.current) {
-      clearTimeout(countReloadTimerRef.current);
-      countReloadTimerRef.current = null;
-    }
-    countRequestSeqRef.current += 1;
-    setIsTaskLogActivityActive(false);
-    setTaskLogSegmentCount(null);
-  }, [task.id]);
-
-  useEffect(() => {
-    if (!taskLogSummaryEnabled || !api.teams.getTaskLogStreamSummary) {
-      setTaskLogSegmentCount(null);
-      return;
-    }
-
-    const requestSeq = countRequestSeqRef.current + 1;
-    countRequestSeqRef.current = requestSeq;
-
-    void Promise.resolve(api.teams.getTaskLogStreamSummary(teamName, task.id))
-      .then((summary) => {
-        if (countRequestSeqRef.current !== requestSeq) {
-          return;
-        }
-        setTaskLogSegmentCount(summary.segmentCount);
-      })
-      .catch(() => {
-        if (countRequestSeqRef.current !== requestSeq) {
-          return;
-        }
-        setTaskLogSegmentCount((prev) => prev);
-      });
-  }, [task.id, taskLogSummaryEnabled, teamName]);
-
-  useEffect(() => {
-    if (!taskLogActivityTrackingEnabled || !api.teams.setTaskLogStreamTracking) {
-      return;
-    }
-
-    void Promise.resolve(api.teams.setTaskLogStreamTracking(teamName, true)).catch(() => undefined);
+    const demandSurfaceId = `${surfaceId}:task-logs:${task.id}`;
+    const demand = (kind: 'log-summary' | 'log-stream' | 'activity', enabled: boolean): void => {
+      setTaskDetailVisibleResourceDemand(demandSurfaceId, identity, kind, enabled);
+    };
+    demand('log-summary', panelVisible && taskLogSummaryEnabled);
+    demand('log-stream', panelVisible && activeTab === 'stream');
+    demand('activity', panelVisible && activeTab === 'activity');
     return () => {
-      void Promise.resolve(api.teams.setTaskLogStreamTracking(teamName, false)).catch(
-        () => undefined
-      );
+      demand('log-summary', false);
+      demand('log-stream', false);
+      demand('activity', false);
     };
-  }, [taskLogActivityTrackingEnabled, teamName]);
-
-  useEffect(() => {
-    if (!taskLogActivityTrackingEnabled) {
-      if (pulseTimerRef.current) {
-        clearTimeout(pulseTimerRef.current);
-        pulseTimerRef.current = null;
-      }
-      if (countReloadTimerRef.current) {
-        clearTimeout(countReloadTimerRef.current);
-        countReloadTimerRef.current = null;
-      }
-      setIsTaskLogActivityActive(false);
-      return;
-    }
-
-    const scheduleCountReload = (): void => {
-      if (!taskLogSummaryEnabled || !api.teams.getTaskLogStreamSummary) {
-        return;
-      }
-      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
-        return;
-      }
-      if (countReloadTimerRef.current) {
-        clearTimeout(countReloadTimerRef.current);
-      }
-      countReloadTimerRef.current = setTimeout(() => {
-        countReloadTimerRef.current = null;
-        const requestSeq = countRequestSeqRef.current + 1;
-        countRequestSeqRef.current = requestSeq;
-        void Promise.resolve(api.teams.getTaskLogStreamSummary(teamName, task.id))
-          .then((summary) => {
-            if (countRequestSeqRef.current !== requestSeq) {
-              return;
-            }
-            setTaskLogSegmentCount(summary.segmentCount);
-          })
-          .catch(() => undefined);
-      }, TASK_LOG_COUNT_RELOAD_DEBOUNCE_MS);
-    };
-
-    const unsubscribe = api.teams.onTeamChange?.((_event, event) => {
-      if (
-        event.teamName !== teamName ||
-        !isTaskLogActivityChangeEvent(event) ||
-        event.taskId !== task.id
-      ) {
-        return;
-      }
-
-      setIsTaskLogActivityActive(true);
-      if (pulseTimerRef.current) {
-        clearTimeout(pulseTimerRef.current);
-      }
-      pulseTimerRef.current = setTimeout(() => {
-        pulseTimerRef.current = null;
-        setIsTaskLogActivityActive(false);
-      }, TASK_LOG_ACTIVITY_PULSE_MS);
-      scheduleCountReload();
-    });
-
-    const handleVisibilityChange = (): void => {
-      if (document.visibilityState === 'visible') {
-        scheduleCountReload();
-      }
-    };
-
-    if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-    }
-
-    return () => {
-      if (pulseTimerRef.current) {
-        clearTimeout(pulseTimerRef.current);
-        pulseTimerRef.current = null;
-      }
-      if (countReloadTimerRef.current) {
-        clearTimeout(countReloadTimerRef.current);
-        countReloadTimerRef.current = null;
-      }
-      if (typeof document !== 'undefined') {
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-      }
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
-      }
-    };
-  }, [task.id, taskLogActivityTrackingEnabled, taskLogSummaryEnabled, teamName]);
+  }, [
+    activeTab,
+    identity,
+    panelVisible,
+    setTaskDetailVisibleResourceDemand,
+    surfaceId,
+    task.id,
+    taskLogSummaryEnabled,
+  ]);
 
   return (
     <Tabs
@@ -242,7 +146,7 @@ export const TaskLogsPanel = ({
       className="space-y-3"
     >
       <TabsList className="bg-[var(--color-surface-raised)]/80 h-auto w-full justify-start gap-1 rounded-lg p-1">
-        {availableTabs.includes('stream') ? (
+        {hasTaskLogStream ? (
           <TabsTrigger value="stream" className="gap-1.5">
             Task Log Stream
           </TabsTrigger>
@@ -257,20 +161,18 @@ export const TaskLogsPanel = ({
         </TabsTrigger>
       </TabsList>
 
-      {availableTabs.includes('stream') && hasOpenedContent ? (
+      {hasTaskLogStream && hasOpenedContent ? (
         <TabsContent value="stream" className="mt-0">
-          <TaskLogStreamSection
-            teamName={teamName}
-            taskId={task.id}
-            taskStatus={task.status}
-            liveEnabled={isOpen && taskIsActivelyWorked}
-          />
+          <TaskLogStreamSection identity={identity} />
         </TabsContent>
       ) : null}
 
       {availableTabs.includes('activity') && hasOpenedContent ? (
         <TabsContent value="activity" className="mt-0">
-          <TaskActivitySection teamName={teamName} taskId={task.id} enabled={isOpen} />
+          <TaskActivitySection
+            identity={identity}
+            enabled={panelVisible && activeTab === 'activity'}
+          />
         </TabsContent>
       ) : null}
 
@@ -285,7 +187,7 @@ export const TaskLogsPanel = ({
             taskSince={taskSince}
             isRefreshing={isExecutionRefreshing}
             isPreviewOnline={isExecutionPreviewOnline}
-            enabled={isOpen}
+            enabled={panelVisible && activeTab === 'sessions'}
             onRefreshingChange={onRefreshingChange}
             showSubagentPreview={showSubagentPreview}
             showLeadPreview={showLeadPreview}

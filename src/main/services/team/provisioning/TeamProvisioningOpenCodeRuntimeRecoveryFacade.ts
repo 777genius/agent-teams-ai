@@ -95,12 +95,13 @@ export class TeamProvisioningOpenCodeRuntimeRecoveryFacade {
   }
 
   async readOpenCodeMemberDirectory(teamName: string): Promise<OpenCodeMemberDirectory> {
-    const [config, teamMeta, metaMembers] = await Promise.all([
+    const [config, teamMeta, metaMembers, launchSnapshot] = await Promise.all([
       this.host.readConfigForObservation(teamName).catch(() => null),
       this.host.teamMetaStore.getMeta(teamName).catch(() => null),
       this.host.membersMetaStore.getMembers(teamName).catch(() => []),
+      this.host.launchStateStore.read(teamName).catch(() => null),
     ]);
-    return { config, teamMeta, metaMembers };
+    return { config, teamMeta, metaMembers, launchSnapshot };
   }
 
   resolveOpenCodeMemberIdentityFromDirectory(

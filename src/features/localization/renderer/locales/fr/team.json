@@ -1004,7 +1004,8 @@
       "cancel": "Annuler",
       "delete": "Supprimer",
       "markResolved": "Marque résolue",
-      "save": "Enregistrer"
+      "save": "Enregistrer",
+      "openInTaskTab": "Ouvrir dans un onglet séparé"
     },
     "attachments": {
       "commentAttachment": "Commentaire joint",

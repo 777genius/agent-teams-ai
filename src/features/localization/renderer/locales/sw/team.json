@@ -1006,7 +1006,8 @@
       "cancel": "Ghairi",
       "delete": "Futa",
       "markResolved": "Weka alama kuwa imesuluhishwa",
-      "save": "Hifadhi"
+      "save": "Hifadhi",
+      "openInTaskTab": "Fungua kwenye kichupo tofauti"
     },
     "attachments": {
       "commentAttachment": "Kiambatisho cha maoni",

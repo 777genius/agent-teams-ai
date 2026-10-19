@@ -642,7 +642,8 @@
       "byTime": "Mengikut masa",
       "byUnread": "Mengikut belum dibaca",
       "byProject": "Mengikut projek",
-      "byTeam": "Mengikut pasukan"
+      "byTeam": "Mengikut pasukan",
+      "manualOrder": "Susunan manual"
     }
   },
   "toolViewer": {

@@ -1,3 +1,6 @@
+import { beforeEach } from 'vitest';
+import { TaskResourceTestHost, resetTaskResourceTestState } from './taskResourceTestHost';
+beforeEach(resetTaskResourceTestState);
 import { mkdtemp, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
@@ -16,19 +19,19 @@ const TEAM_NAME = 'beacon-desk-2';
 const TASK_ID = 'c414cd52-470a-4b51-ae1e-e5250fff95d7';
 const REAL_FIXTURE_PATH = path.resolve(
   process.cwd(),
-  'test/fixtures/team/task-log-stream-fallback-real.jsonl',
+  'test/fixtures/team/task-log-stream-fallback-real.jsonl'
 );
 const ANNOTATED_REAL_FIXTURE_PATH = path.resolve(
   process.cwd(),
-  'test/fixtures/team/task-log-stream-annotated-real.jsonl',
+  'test/fixtures/team/task-log-stream-annotated-real.jsonl'
 );
 const ANNOTATED_MULTI_TASK_REAL_FIXTURE_PATH = path.resolve(
   process.cwd(),
-  'test/fixtures/team/task-log-stream-annotated-multi-task-real.jsonl',
+  'test/fixtures/team/task-log-stream-annotated-multi-task-real.jsonl'
 );
 const HISTORICAL_REAL_FIXTURE_PATH = path.resolve(
   process.cwd(),
-  'test/fixtures/team/task-log-stream-historical-board-mcp-real.jsonl',
+  'test/fixtures/team/task-log-stream-historical-board-mcp-real.jsonl'
 );
 
 const apiState = {
@@ -155,7 +158,7 @@ async function buildStreamResponse(transcriptPath: string, task: TeamTask = crea
     undefined as never,
     undefined as never,
     taskReader as never,
-    transcriptSourceLocator as never,
+    transcriptSourceLocator as never
   );
   return service.getTaskLogStream(TEAM_NAME, task.id);
 }
@@ -171,9 +174,7 @@ describe('TaskLogStreamSection integration', () => {
     document.body.innerHTML = '';
     apiState.getTaskLogStream.mockReset();
     vi.unstubAllGlobals();
-    await Promise.all(
-      tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })),
-    );
+    await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
   });
 
   it('renders worker tools and does not show empty array output blocks', async () => {
@@ -389,7 +390,7 @@ describe('TaskLogStreamSection integration', () => {
     await writeFile(
       transcriptPath,
       `${lines.map((line) => JSON.stringify(line)).join('\n')}\n`,
-      'utf8',
+      'utf8'
     );
 
     apiState.getTaskLogStream.mockResolvedValueOnce(await buildStreamResponse(transcriptPath));
@@ -403,8 +404,15 @@ describe('TaskLogStreamSection integration', () => {
         React.createElement(
           TooltipProvider,
           null,
-          React.createElement(TaskLogStreamSection, { teamName: TEAM_NAME, taskId: TASK_ID }),
-        ),
+          React.createElement(TaskResourceTestHost, {
+            identity: { contextId: 'local', teamName: TEAM_NAME, taskId: TASK_ID },
+            kind: 'log-stream',
+            enabled: true,
+            children: React.createElement(TaskLogStreamSection, {
+              identity: { contextId: 'local', teamName: TEAM_NAME, taskId: TASK_ID },
+            }),
+          })
+        )
       );
       await flushMicrotasks();
       await flushMicrotasks();
@@ -551,7 +559,7 @@ describe('TaskLogStreamSection integration', () => {
     await writeFile(
       transcriptPath,
       `${lines.map((line) => JSON.stringify(line)).join('\n')}\n`,
-      'utf8',
+      'utf8'
     );
 
     apiState.getTaskLogStream.mockResolvedValueOnce(await buildStreamResponse(transcriptPath));
@@ -565,8 +573,15 @@ describe('TaskLogStreamSection integration', () => {
         React.createElement(
           TooltipProvider,
           null,
-          React.createElement(TaskLogStreamSection, { teamName: TEAM_NAME, taskId: TASK_ID }),
-        ),
+          React.createElement(TaskResourceTestHost, {
+            identity: { contextId: 'local', teamName: TEAM_NAME, taskId: TASK_ID },
+            kind: 'log-stream',
+            enabled: true,
+            children: React.createElement(TaskLogStreamSection, {
+              identity: { contextId: 'local', teamName: TEAM_NAME, taskId: TASK_ID },
+            }),
+          })
+        )
       );
       await flushMicrotasks();
       await flushMicrotasks();
@@ -604,8 +619,8 @@ describe('TaskLogStreamSection integration', () => {
               completedAt: '2026-04-12T15:40:00.000Z',
             },
           ],
-        }),
-      ),
+        })
+      )
     );
 
     const host = document.createElement('div');
@@ -617,8 +632,15 @@ describe('TaskLogStreamSection integration', () => {
         React.createElement(
           TooltipProvider,
           null,
-          React.createElement(TaskLogStreamSection, { teamName: TEAM_NAME, taskId: TASK_ID }),
-        ),
+          React.createElement(TaskResourceTestHost, {
+            identity: { contextId: 'local', teamName: TEAM_NAME, taskId: TASK_ID },
+            kind: 'log-stream',
+            enabled: true,
+            children: React.createElement(TaskLogStreamSection, {
+              identity: { contextId: 'local', teamName: TEAM_NAME, taskId: TASK_ID },
+            }),
+          })
+        )
       );
       await flushMicrotasks();
       await flushMicrotasks();
@@ -657,8 +679,15 @@ describe('TaskLogStreamSection integration', () => {
         React.createElement(
           TooltipProvider,
           null,
-          React.createElement(TaskLogStreamSection, { teamName: TEAM_NAME, taskId: TASK_ID }),
-        ),
+          React.createElement(TaskResourceTestHost, {
+            identity: { contextId: 'local', teamName: TEAM_NAME, taskId: TASK_ID },
+            kind: 'log-stream',
+            enabled: true,
+            children: React.createElement(TaskLogStreamSection, {
+              identity: { contextId: 'local', teamName: TEAM_NAME, taskId: TASK_ID },
+            }),
+          })
+        )
       );
       await flushMicrotasks();
       await flushMicrotasks();
@@ -697,8 +726,15 @@ describe('TaskLogStreamSection integration', () => {
         React.createElement(
           TooltipProvider,
           null,
-          React.createElement(TaskLogStreamSection, { teamName: TEAM_NAME, taskId: TASK_ID }),
-        ),
+          React.createElement(TaskResourceTestHost, {
+            identity: { contextId: 'local', teamName: TEAM_NAME, taskId: TASK_ID },
+            kind: 'log-stream',
+            enabled: true,
+            children: React.createElement(TaskLogStreamSection, {
+              identity: { contextId: 'local', teamName: TEAM_NAME, taskId: TASK_ID },
+            }),
+          })
+        )
       );
       await flushMicrotasks();
       await flushMicrotasks();
@@ -731,8 +767,8 @@ describe('TaskLogStreamSection integration', () => {
         transcriptPath,
         createTask({
           owner: 'tom',
-        }),
-      ),
+        })
+      )
     );
 
     const host = document.createElement('div');
@@ -744,8 +780,15 @@ describe('TaskLogStreamSection integration', () => {
         React.createElement(
           TooltipProvider,
           null,
-          React.createElement(TaskLogStreamSection, { teamName: TEAM_NAME, taskId: TASK_ID }),
-        ),
+          React.createElement(TaskResourceTestHost, {
+            identity: { contextId: 'local', teamName: TEAM_NAME, taskId: TASK_ID },
+            kind: 'log-stream',
+            enabled: true,
+            children: React.createElement(TaskLogStreamSection, {
+              identity: { contextId: 'local', teamName: TEAM_NAME, taskId: TASK_ID },
+            }),
+          })
+        )
       );
       await flushMicrotasks();
       await flushMicrotasks();
