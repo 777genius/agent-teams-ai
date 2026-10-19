@@ -397,7 +397,9 @@ export async function runFullTeamSmoke({
     // Credentials enter only via the explicit test input above; never inherit auth profiles.
     for (const key of ISOLATED_PATH_KEYS) {
       env[key] = path.join(ownedRoot, key.toLowerCase());
-      fs.mkdirSync(env[key], { recursive: true });
+      // The V2 probe store validates, never repairs: every isolated root must
+      // be private at creation (0700) or readiness fails probe_store_foreign.
+      fs.mkdirSync(env[key], { recursive: true, mode: 0o700 });
     }
     if (selectedAuth !== undefined) {
       const authDirectory = path.join(env.XDG_DATA_HOME, 'opencode');
@@ -438,7 +440,7 @@ export async function runFullTeamSmoke({
     });
     if (!readiness.ok) {
       // Provider/CLI failures may include secret material; keep raw state, never print it.
-      log('Prerequisite check failed; no inference submitted. Inspect owned state locally.');
+      log(`Prerequisite check failed at stage=${readiness.stage}; no inference submitted. Inspect owned state locally.`);
       return 1;
     }
     const result = spawn(
