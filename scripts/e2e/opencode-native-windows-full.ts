@@ -1245,7 +1245,7 @@ async function packagedStartupSnapshot(
       dataRoot === path.join(testRoot, 'runtime-data')
   );
   assert(/^test-opencode-[a-f0-9-]+$/.test(team) && /^[a-f0-9-]{36}$/.test(runId));
-  const read = async (directory: string, name: string, plain = false) => {
+  const read = async (directory: string, name: string, plain = false, limit = 65536) => {
     try {
       const parent = await lstat(directory, { bigint: true });
       if (
@@ -1260,18 +1260,18 @@ async function packagedStartupSnapshot(
         !before.isFile() ||
         before.isSymbolicLink() ||
         before.nlink !== 1n ||
-        before.size > 65536n ||
+        before.size > BigInt(limit) ||
         (await realpath(file)) !== file
       )
         return null;
       const held = await open(file, 'r');
       try {
         if (!same(before, await held.stat({ bigint: true }))) return null;
-        const bytes = Buffer.alloc(65537),
+        const bytes = Buffer.alloc(limit + 1),
           result = await held.read(bytes, 0, bytes.length, 0);
         const after = await held.stat({ bigint: true });
         if (
-          result.bytesRead > 65536 ||
+          result.bytesRead > limit ||
           !same(before, after) ||
           before.size !== after.size ||
           before.mtimeNs !== after.mtimeNs ||
@@ -1716,7 +1716,16 @@ async function packagedStartupSnapshot(
         'closed-ack',
         'kernel-proof',
         'kernel-binding',
+        'owner-release',
+        'retained-roots',
+        'plan-close',
       ]),
+      cleanupNativePhase: one(row(data.cleanup).nativePhase, [
+        'retire_job', 'retire_wait', 'retire_io_join', 'retire_main_exit',
+        'retire_owned_pair', 'retire_commands', 'retire_receipt', 'retire_grants',
+        'retire_grants_dll', 'retire_grants_roots', 'retire_grants_metadata',
+      ]),
+      cleanupElapsedMs: number(row(data.cleanup).elapsedMs),
       initializationPhase: one(row(data.initialization).phase, [
         'MCP-connect',
         'MCP-readback',
@@ -1748,13 +1757,16 @@ async function packagedStartupSnapshot(
   }
   const runs = [],
     runsRoot = path.join(dataRoot, 'opencode', 'v2', 'runs');
-  for (const name of await list(runsRoot, /^[a-f0-9]{32}$/)) {
+  const runCandidates = await list(runsRoot, /^[a-f0-9]{32}$/);
+  let unavailableRunStates = 0;
+  for (const name of runCandidates) {
     const directory = path.join(runsRoot, name),
-      state = await read(directory, 'state.json');
+      state = await read(directory, 'state.json', false, 512 * 1024);
+    if (!state) { unavailableRunStates++; continue; }
     const binding = row(state?.binding);
     if (binding.teamId !== team || binding.runId !== runId) continue;
     const bound = async (file: string) => {
-      const data = await read(directory, file);
+      const data = await read(directory, file, false, file === 'stop.json' ? 512 * 1024 : 65536);
       return row(data?.binding).teamId === team && row(data?.binding).runId === runId ? data : null;
     };
     const operation = await bound('operation-failure.json'),
@@ -1802,6 +1814,8 @@ async function packagedStartupSnapshot(
     stdio,
     diagnostics,
     runs,
+    runStateReads: { scope: 'isolated_TEST_root_not_run_authority',
+      candidates: runCandidates.length, unavailableStates: unavailableRunStates },
   };
 }
 
