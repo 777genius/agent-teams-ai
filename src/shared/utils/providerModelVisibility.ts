@@ -1,3 +1,5 @@
+import { parseOpenCodeQualifiedModelRef } from './opencodeModelRef';
+
 import type { CliProviderId, TeamProviderId } from '@shared/types';
 
 type SupportedProviderId = CliProviderId | TeamProviderId;
@@ -42,20 +44,34 @@ export function isCurrentMiniMaxCatalogModel(
   if (runtimeProviderId !== 'opencode') {
     return true;
   }
-  const [source, ...segments] = model.trim().toLowerCase().split('/');
-  if (
-    !['minimax', 'minimax-cn', 'minimax-coding-plan', 'minimax-cn-coding-plan'].includes(source)
-  ) {
+  const route = parseOpenCodeQualifiedModelRef(model);
+  if (!route) {
     return true;
   }
 
-  const modelId = segments.join('/');
-  // Apply the text-model policy only to MiniMax's own catalog routes. Keep
-  // non-text models and explicit custom routes outside this picker policy.
+  let modelId = route.modelId.toLowerCase();
+  const isDirect = [
+    'minimax',
+    'minimax-cn',
+    'minimax-coding-plan',
+    'minimax-cn-coding-plan',
+  ].includes(route.sourceId);
+  const isOpenRouter = route.sourceId === 'openrouter' && modelId.startsWith('minimax/');
+  const isZen = route.sourceId === 'opencode' && modelId.startsWith('minimax-');
+  if (!isDirect && !isOpenRouter && !isZen) {
+    return true;
+  }
+  if (isOpenRouter) {
+    modelId = modelId.slice('minimax/'.length);
+  }
+  // Keep non-text models and arbitrary custom routes outside this picker policy.
   if (!/^(?:minimax-(?:m\d|text|vl|01)|abab)/.test(modelId)) {
     return true;
   }
-  return modelId === 'minimax-m3' || modelId === 'minimax-m3.1-flash';
+  // Gateway aliases identify the underlying model, but never establish availability.
+  // Direct MiniMax routes must use the exact official model ID without an alias.
+  const underlyingModel = isDirect ? modelId : modelId.replace(/(?::free|-free)$/, '');
+  return underlyingModel === 'minimax-m3' || underlyingModel === 'minimax-m3.1-flash';
 }
 
 export function isProviderRuntimeModelUiDisabled(

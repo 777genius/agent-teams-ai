@@ -158,11 +158,17 @@ describe('runtime provider onboarding domain', () => {
 
   it('does not fall back to retired MiniMax catalog models during onboarding', () => {
     const plan = getRuntimeProviderOnboardingPlan('minimax-token-plan');
-    const retired = model('minimax-coding-plan/MiniMax-M2.7', { default: true });
-    const unsupportedVariant = model('minimax-coding-plan/MiniMax-M3-highspeed');
+    const retired = [
+      'minimax-coding-plan/MiniMax-M2.7',
+      'minimax-coding-plan/MiniMax-M3-highspeed',
+      'openrouter/minimax/minimax-m2.7',
+      'opencode/minimax-m2.5-free',
+    ].map((modelId) => model(modelId, { default: true }));
+    const flash = model('openrouter/minimax/minimax-m3.1-flash:free');
 
-    expect(rankRecommendedRuntimeProviderModels(plan, [retired, unsupportedVariant])).toEqual([]);
-    expect(selectRecommendedRuntimeProviderModel(plan, [retired])).toBeNull();
+    expect(rankRecommendedRuntimeProviderModels(plan, retired)).toEqual([]);
+    expect(selectRecommendedRuntimeProviderModel(plan, retired)).toBeNull();
+    expect(selectRecommendedRuntimeProviderModel(plan, [...retired, flash])).toBe(flash);
   });
 
   it('preserves explicitly saved MiniMax model selections', () => {

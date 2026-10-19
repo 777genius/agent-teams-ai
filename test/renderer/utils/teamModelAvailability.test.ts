@@ -10,6 +10,7 @@ import {
   isTeamProviderModelCatalogFresh,
   isTeamProviderModelCatalogSettled,
   isTeamProviderModelVerificationPending,
+  normalizeExplicitTeamModelForUi,
   normalizeTeamModelForUi,
   type TeamModelRuntimeProviderStatus,
 } from '@renderer/utils/teamModelAvailability';
@@ -93,17 +94,33 @@ describe('teamModelAvailability', () => {
   it.each(['runtime', 'catalog'] as const)(
     'filters retired MiniMax text choices from the %s picker without adding routes',
     (source) => {
-      const models = [
-        'minimax-coding-plan/MiniMax-M2.7',
-        'minimax-coding-plan/MiniMax-M3-highspeed',
+      const expected = [
         'minimax-coding-plan/MiniMax-M3',
         'minimax-cn/MiniMax-M3.1-Flash',
-        'minimax/MiniMax-Text-01',
+        'openrouter/minimax/minimax-m3',
+        'openrouter/minimax/minimax-m3.1-flash:free',
+        'opencode/minimax-m3-free',
+        'opencode/minimax-m3.1-flash',
         'minimax/speech-2.8-hd',
+        'openrouter/minimax/minimax-hailuo-02',
+        'opencode/minimax-music-2.6',
         'custom/MiniMax-M2.7',
+        'custom/minimax/minimax-m2.7',
         'openai/gpt-5.4',
       ];
-      const expected = models.slice(2).filter((model) => model !== 'minimax/MiniMax-Text-01');
+      const retired = [
+        'minimax-coding-plan/MiniMax-M2.7',
+        'minimax-coding-plan/MiniMax-M3-highspeed',
+        'minimax/MiniMax-M3:free',
+        'minimax/MiniMax-Text-01',
+        'openrouter/minimax/minimax-m2.7',
+        'openrouter/minimax/minimax-m3-preview:free',
+        'openrouter/minimax/minimax-m3.1-flash-highspeed',
+        'opencode/minimax-m2.5-free',
+        'opencode/minimax-m3-preview-free',
+        'opencode/minimax-m3.1-flash-highspeed',
+      ];
+      const models = [...retired, ...expected];
       const providerStatus = createOpenCodeProviderStatus(source === 'runtime' ? models : [], {
         ...(source === 'catalog'
           ? {
@@ -146,9 +163,18 @@ describe('teamModelAvailability', () => {
           )
         )
       ).toEqual(new Set(['', ...expected]));
-      expect(getAvailableTeamProviderModels('opencode', providerStatus)).not.toContain(
-        'minimax-coding-plan/MiniMax-M3.1-Flash'
-      );
+      for (const absentRoute of [
+        'minimax-coding-plan/MiniMax-M3.1-Flash',
+        'openrouter/minimax/minimax-m3.1-flash',
+        'opencode/minimax-m3.1-flash-free',
+      ]) {
+        expect(getAvailableTeamProviderModels('opencode', providerStatus)).not.toContain(
+          absentRoute
+        );
+      }
+      for (const savedModel of [...retired, 'custom/MiniMax-M2.7']) {
+        expect(normalizeExplicitTeamModelForUi('opencode', savedModel)).toBe(savedModel);
+      }
     }
   );
 

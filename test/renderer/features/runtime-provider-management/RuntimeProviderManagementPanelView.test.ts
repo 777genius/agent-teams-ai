@@ -3507,6 +3507,24 @@ describe('RuntimeProviderManagementPanelView', () => {
         },
         {
           providerId: 'openrouter',
+          modelId: 'openrouter/minimax/minimax-m2.7',
+          displayName: 'minimax/minimax-m2.7',
+          sourceLabel: 'OpenRouter',
+          free: false,
+          default: false,
+          availability: 'untested',
+        },
+        {
+          providerId: 'openrouter',
+          modelId: 'openrouter/minimax/minimax-m3.1-flash:free',
+          displayName: 'minimax/minimax-m3.1-flash:free',
+          sourceLabel: 'OpenRouter',
+          free: true,
+          default: false,
+          availability: 'untested',
+        },
+        {
+          providerId: 'openrouter',
           modelId: 'openrouter/mistralai/codestral-2508',
           displayName: 'mistralai/codestral-2508',
           sourceLabel: 'OpenRouter',
@@ -3557,8 +3575,16 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(host.textContent).toContain('Not recommended');
     expect(host.textContent).toContain('Not verified in OpenCode');
     expect(host.textContent).toContain('Tested');
-    // Retired MiniMax routes no longer carry a verified recommendation badge.
+    expect(host.textContent).not.toContain('minimax-m2.5-free');
+    expect(host.textContent).not.toContain('minimax-m2.7');
+    expect(host.textContent).toContain('minimax-m3.1-flash:free');
     expect(host.textContent).not.toContain('Tested with limits');
+    const flashRow = host.querySelector(
+      '[data-testid="runtime-provider-model-row-openrouter/minimax/minimax-m3.1-flash:free"]'
+    );
+    expect(flashRow).not.toBeNull();
+    expect(flashRow?.textContent).not.toContain('Tested');
+    expect(flashRow?.textContent).not.toContain('Recommended');
     expect(host.textContent).toContain('Recommended only');
     expect(host.textContent).not.toContain('Set OpenCode default');
     expect(
@@ -3598,12 +3624,12 @@ describe('RuntimeProviderManagementPanelView', () => {
       (host.textContent ?? '').indexOf('qwen/qwen3-coder-plus')
     );
     expect((host.textContent ?? '').indexOf('opencode/big-pickle')).toBeLessThan(
-      (host.textContent ?? '').indexOf('minimax-m2.5-free')
+      (host.textContent ?? '').indexOf('minimax-m3.1-flash:free')
     );
     expect((host.textContent ?? '').indexOf('mistralai/codestral-2508')).toBeLessThan(
-      (host.textContent ?? '').indexOf('minimax-m2.5-free')
+      (host.textContent ?? '').indexOf('minimax-m3.1-flash:free')
     );
-    expect((host.textContent ?? '').indexOf('minimax-m2.5-free')).toBeLessThan(
+    expect((host.textContent ?? '').indexOf('minimax-m3.1-flash:free')).toBeLessThan(
       (host.textContent ?? '').indexOf('qwen/qwen3-coder-plus')
     );
     expect((host.textContent ?? '').indexOf('qwen/qwen3-coder-plus')).toBeLessThan(
