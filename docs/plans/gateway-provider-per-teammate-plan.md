@@ -1,6 +1,6 @@
 # План: Gateway-провайдер с выбором и учётом на каждого тиммейта
 
-**Статус:** v6 — исправлены пробелы доставки и учёта; реализация начинается с проверки контракта (§8)
+**Статус:** v7 — дополнительный цикл ревью 1/2; реализация начинается с проверки контракта (§8)
 **Тестовый стенд:** локальный [agent-teams-ai/sub2api](https://github.com/agent-teams-ai/sub2api)
 
 ## 1. Цель
@@ -45,18 +45,20 @@
 
 ## 3. Gateway-контракт
 
-| Потребность | Эндпоинт | Auth |
-|---|---|---|
-| Anthropic Messages | `POST /v1/messages` | ключ тиммейта |
-| OpenAI Responses | `POST /v1/responses` | ключ тиммейта |
-| OpenAI Chat Completions | `POST /v1/chat/completions` | ключ тиммейта |
-| Каталог моделей + проба ключа | `GET /v1/models` | ключ тиммейта |
-| Учёт по ключу | `GET /v1/usage` | ключ тиммейта |
+| Потребность                   | Эндпоинт                    | Auth          |
+| ----------------------------- | --------------------------- | ------------- |
+| Anthropic Messages            | `POST /v1/messages`         | ключ тиммейта |
+| OpenAI Responses              | `POST /v1/responses`        | ключ тиммейта |
+| OpenAI Chat Completions       | `POST /v1/chat/completions` | ключ тиммейта |
+| Каталог моделей + проба ключа | `GET /v1/models`            | ключ тиммейта |
+| Учёт по ключу                 | `GET /v1/usage`             | ключ тиммейта |
 
 Пути фиксированы контрактом — настраиваемых путей в профиле нет.
 `baseUrl` — корень gateway без завершающего `/v1`; при сохранении URL
 нормализуется (завершающий `/` и однократное снятие `/v1`),
-разрешены только HTTP(S), без userinfo/query/hash. HTTP-клиент добавляет
+разрешён HTTPS; HTTP — только для loopback (`localhost`, IPv4 127/8, IPv6 `::1`)
+локального стенда. Userinfo/query/hash запрещены; удалённый HTTP отклоняется
+при сохранении и prepare, ключ по нему не отправляется. HTTP-клиент добавляет
 `/v1/...`, маппинги Codex/OpenCode — нужный их клиентам `/v1` ровно один раз.
 Единица учёта = API-ключ (один ключ на тиммейта ⇒ сервер различает тиммейтов
 без своих заголовков; уникальность ключа обеспечиваем на своей стороне, §6).
@@ -103,15 +105,15 @@ src/features/gateway-provider/
   renderer/
 ```
 
-| Что | Ответственность | Где |
-|---|---|---|
-| `GatewayProfile` | `id`, `baseUrl`, `displayName` | `core/domain` |
-| `MemberGatewayBinding` | `(teamName, memberName) → {profileId, apiKeyRef, gatewayUsageRef}` | `core/domain` |
-| `resolveGatewayConnectionSpec` | чистая функция → **нейтральный** `GatewayConnectionSpec` (`baseUrl`, провайдер-id, `credentialRef`, `wireApi`, model; **без** env-имён — это знание рантайма) | `core/domain` |
-| `toArtifactId` | sanitized-префикс + короткий hash исходной пары имён для глобальной записи OpenCode (§5.2) | `core/domain` |
-| per-runtime маппинги | чистые функции spec → артефакт рантайма (env-имена `ANTHROPIC_*`, форма Codex `-c`, запись провайдера OpenCode); легаси-швы их только **вызывают**, схемы артефактов не дублируют | `core/domain` |
-| `GatewayProviderStore` | один JSON, сериализованный writer: профили, активные биндинги и неизменяемые источники учёта с владельцем | `main/infrastructure` |
-| `GatewayUsageSourcePort` | порт чтения учёта — в **token-usage** (потребитель импорта), ре-экспорт из `@features/token-usage/main` (deep-import'ы запрещены standard'ом); HTTP-адаптер реализует его в gateway-provider | `src/features/token-usage/…` |
+| Что                            | Ответственность                                                                                                                                                                              | Где                          |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `GatewayProfile`               | `id`, `baseUrl`, `displayName`                                                                                                                                                               | `core/domain`                |
+| `MemberGatewayBinding`         | `(teamName, memberName) → {profileId, apiKeyRef, gatewayUsageRef}`                                                                                                                           | `core/domain`                |
+| `resolveGatewayConnectionSpec` | чистая функция → **нейтральный** `GatewayConnectionSpec` (`baseUrl`, провайдер-id, `credentialRef`, `wireApi`, model; **без** env-имён — это знание рантайма)                                | `core/domain`                |
+| `toArtifactId`                 | sanitized-префикс + короткий hash исходной пары имён для глобальной записи OpenCode (§5.2)                                                                                                   | `core/domain`                |
+| per-runtime маппинги           | чистые функции spec → артефакт рантайма (env-имена `ANTHROPIC_*`, форма Codex `-c`, запись провайдера OpenCode); легаси-швы их только **вызывают**, схемы артефактов не дублируют            | `core/domain`                |
+| `GatewayProviderStore`         | один JSON, сериализованный writer: профили, активные биндинги и неизменяемые источники учёта с владельцем                                                                                    | `main/infrastructure`        |
+| `GatewayUsageSourcePort`       | порт чтения учёта — в **token-usage** (потребитель импорта), ре-экспорт из `@features/token-usage/main` (deep-import'ы запрещены standard'ом); HTTP-адаптер реализует его в gateway-provider | `src/features/token-usage/…` |
 
 Ключи — в существующем `ApiKeyService` (крипто не дублируем), вне `team.ts`.
 Сейчас `save()` создаёт UUID, допускает замену значения по id, а `lookup()`
@@ -149,6 +151,8 @@ HTTP-адаптер учёта и редакция артефактов; rendere
 (`main/index`), без импортов фича→фича. Для frozen-baseline файлов держим
 net-дельту ≤ 0; для новых границ фичи включаем eslint-ограничения импорта
 (по стандарту).
+Порт перечисляет активные и удерживаемые исторические источники с владельцем
+и читает день по `gatewayUsageRef`; секрет резолвится только внутри main-адаптера.
 
 ## 5. Доставка биндинга в рантаймы
 
@@ -166,7 +170,7 @@ net-дельту ≤ 0; для новых границ фичи включаем
 - `TeamProvisioningLaunchDeterministicSpawnFlow` (:111, :587 →
   `inheritedProviderArgs`) и `TeamProvisioningLaunchDeterministicRunFlow` (:84);
 - `buildWorkspaceTrustLaunchArgs`
-  (`TeamProvisioningWorkspaceTrustLaunchArgs.ts:19`, spread всех полей :38–46);
+  (`TeamProvisioningWorkspaceTrustLaunchArgs.ts:19`, spread всех полей:38–46);
 - type-only правки подписей: `TeamProvisioningEnvRuntimePorts.ts:34–38`,
   `TeamProvisioningProviderRuntimeFacade.ts:147`.
 
@@ -205,11 +209,11 @@ runtime-пакет между репозиториями ради этого н�
 
 Маппинг spec → артефакт — доменные функции (§4), ниже — что они собирают:
 
-| Рантайм | Артефакт тиммейта | Стык (только вызывает маппинг) | Per-member механизм |
-|---|---|---|---|
-| Claude Code | env `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`, очистка конкурирующего `ANTHROPIC_API_KEY` | `TeamProvisioningEnvBuilder` (лимит 800, запас есть) | финальный member env-патч (§5.1) |
-| Codex | per-process провайдер `agent_teams_custom`, собственный `base_url`, `env_key="CODEX_API_KEY"`, `wire_api="responses"`, `forced_login_method="api"` | существующие builders в `src/main/services/runtime/ProviderConnectionService.ts`; обе формы CLI (`-c` и inline `--settings` JSON) | отдельные настройки и ключ каждого member, включая bootstrap; provider-id совместим с allowlist оркестратора |
-| OpenCode | запись провайдера в (глобальном) `opencode.json`, `apiKey = {file:~/.config/opencode/agent-teams-credentials/…}` | `OpenCodeLocalProviderConnector`/`OpenCodeLocalProviderSupport` | per-member запись + model-route `<providerEntry>/<modelId>`; файл ключа пишет **существующий** writer коннектора (rotation-имена, `assertProviderApiKeyReplacement`) |
+| Рантайм     | Артефакт тиммейта                                                                                                                                  | Стык (только вызывает маппинг)                                                                                                    | Per-member механизм                                                                                                                                                  |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code | env `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`, очистка конкурирующего `ANTHROPIC_API_KEY`                                                      | `TeamProvisioningEnvBuilder` (лимит 800, запас есть)                                                                              | финальный member env-патч (§5.1)                                                                                                                                     |
+| Codex       | per-process провайдер `agent_teams_custom`, собственный `base_url`, `env_key="CODEX_API_KEY"`, `wire_api="responses"`, `forced_login_method="api"` | существующие builders в `src/main/services/runtime/ProviderConnectionService.ts`; обе формы CLI (`-c` и inline `--settings` JSON) | отдельные настройки и ключ каждого member, включая bootstrap; provider-id совместим с allowlist оркестратора                                                         |
+| OpenCode    | запись провайдера в (глобальном) `opencode.json`, `apiKey = {file:~/.config/opencode/agent-teams-credentials/…}`                                   | `OpenCodeLocalProviderConnector`/`OpenCodeLocalProviderSupport`                                                                   | per-member запись + model-route `<providerEntry>/<modelId>`; файл ключа пишет **существующий** writer коннектора (rotation-имена, `assertProviderApiKeyReplacement`) |
 
 **Глобальные OpenCode id:** `gateway-<sanitized-team>-<sanitized-member>-<hash>`.
 Hash — первые 12 hex SHA-256 от `JSON.stringify([teamName, memberName])`,
@@ -280,6 +284,25 @@ gateway-provider реализует `GatewayUsageSourcePort`; композици
 port; новый механизм удаления/замены разделов хранилища не нужен.
 Ошибка/отсутствующее поле не порождает обнулений и не двигает watermark.
 
+**Контракт частичного результата:** сейчас `TokenUsageImporterPort` возвращает
+только массив событий. Расширяем результат до массива (старые импортёры без
+изменений) либо `TokenUsageImportBatch {events, sourceStates}`. Состояние на
+источник содержит `gatewayUsageRef`, владельца, непрерывный watermark,
+`degraded` и `lastSuccessfulAt` последней полностью успешной загрузки.
+Gateway-импортёр возвращает успешные дни вместе с признаком ошибки остальных;
+исключение не используется для отбрасывания уже полученных дней.
+
+Единственный владелец checkpoint/status — **token-usage ledger**, а не
+`GatewayProviderStore`. `TokenUsageAnalyticsService` под существующей
+`SerialQueue` передаёт batch в узкий `commitImportBatch`: события и
+`sourceStates` сохраняются одним существующим atomic write. Watermark/успех
+не записываются импортёром до этой операции; отказ записи не продвигает их.
+`readSnapshot()` возвращает также состояния (у старого ledger — пустой набор),
+поэтому refresh, `getSnapshot` и publish вычисляют `degraded` одинаково после
+перезапуска. Отсутствующее состояние gateway-источника означает «ещё не загружено».
+Обычные массивы сохраняются прежним путём. Новых менеджеров/транзакционного
+движка или отдельного reader-порта состояния не вводим.
+
 Минимальные расширения существующих DTO и обоих normalizer'ов сохранения:
 
 - Run: `gatewayUsageRef?: string` — snapshot источника при запуске.
@@ -314,7 +337,9 @@ Dashboard обозначает гранулярность «по дням UTC»;
 
 До первого успешного чтения и при неполных днях snapshot помечается
 `degraded`, UI показывает неполноту и время последней успешной загрузки,
-а не подтверждённый ноль. Статус источника хранится рядом с его watermark и
+а не подтверждённый ноль. Статус читается из того же ledger snapshot, что и
+события; `gatewayLastSuccessfulAt` добавляется в snapshot DTO для времени
+последней полностью успешной gateway-загрузки (не текущее `updatedAt`). Статус
 учитывается также обычным `getSnapshot`/publish после перезапуска; успешный
 HTTP без `model_stats` не снимает ошибку. Успешный явный пустой массив — ноль.
 
@@ -368,7 +393,8 @@ HTTP без `model_stats` не снимает ошибку. Успешный я�
 тестового стенда/общего пакета фикстур:
 
 - Gateway binding/store: повторный ввод ключа, конкурентная привязка,
-  другой владелец после отвязки, изменение/удаление секрета, коллизии id.
+  другой владелец после отвязки, изменение/удаление секрета, коллизии id;
+  удалённый HTTP отклоняется, локальный HTTP и удалённый HTTPS допускаются.
 - Env/bootstrap: итоговые разные parent/member tokens, per-member URL и
   Codex overrides, strict schema round-trip, все separate-process ветки.
 - Token-usage importer/ledger/projection: дневной re-import без дублей,
@@ -378,7 +404,8 @@ HTTP без `model_stats` не снимает ошибку. Успешный я�
   обычный orphan остаётся unmapped, дневная сумма не попадает в задачу/сессию.
 - UTC/ошибка: сутки на границе месяца, successful empty против missing/error,
   `actual_cost: 0` при положительном `cost`, сохранённые суммы и `degraded`
-  после ошибки и перезапуска; watermark не пропускает неуспешный день.
+  после ошибки и перезапуска; успешные дни сохраняются при частичной ошибке,
+  отказ записи batch не продвигает watermark и повтор не дублирует события.
 
 Команды реализации: `pnpm exec vitest run <затронутые suites>`,
 `pnpm lint:fast:files -- <затронутые файлы>`, `pnpm typecheck`,
@@ -391,35 +418,35 @@ fixture/test APIs, без Computer Use/нативного folder picker. Live sm
 
 ## 9. Edge cases
 
-| Случай | Поведение |
-|---|---|
-| Ключ невалиден/отозван | проба `GET /v1/models` ключом тиммейта → ошибка на строке, без фолбэка |
-| Профиль удалён, на него ссылается тиммейт | prepare-ошибка «профиль не найден» |
-| HTTP 401/403 на пробе ключа | «авторизация ключа отклонена» на строке; timeout/5xx — ошибка доступности, не диагноз авторизации |
-| Ключ повторно вводится / передаётся другому владельцу | тот же владелец сохраняет учётную идентичность; другой владелец — ошибка даже после отвязки (§4) |
-| Два тиммейта, один провайдер, разные ключи | per-member патч поверх базы (§5.1) |
-| Коллизии имён / конкурентная запись `opencode.json` | sanitized id + hash исходной пары и проверка владельца; существующий сериализованный writer (§5.2) |
-| Рантайм auto-suffixed имя (`alice` → `alice-2`) | prepare-ошибка «effective-имя не совпадает с настроенным, перевяжите вручную» |
-| In-process lane + биндинг | prepare-ошибка (биндинг требует separate-process спавна, §5.1) |
-| `/v1/models` пуст | ошибка на строке, ручного ввода нет (§7.2) |
-| Удаление/замена ключа OpenCode-записи | через существующий writer коннектора (`assertProviderApiKeyReplacement`) |
-| Утечка ключей | whitelist-only диагностика, редакция по известным значениям (§5.3) |
-| Helper-mode + биндинг / удалённый или изменённый секрет | prepare-ошибка без fallback на ключ лида/другого клиента |
-| Сбой `/v1/usage` / missing `model_stats` | прежние суммы сохраняются, статус неполноты; explicit empty — успешный ноль (§6) |
-| Rename команды / тиммейта | ручная привязка нового ключа (§7.3); прежний владелец учёта неизменен |
+| Случай                                                  | Поведение                                                                                          |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Ключ невалиден/отозван                                  | проба `GET /v1/models` ключом тиммейта → ошибка на строке, без фолбэка                             |
+| Профиль удалён, на него ссылается тиммейт               | prepare-ошибка «профиль не найден»                                                                 |
+| HTTP 401/403 на пробе ключа                             | «авторизация ключа отклонена» на строке; timeout/5xx — ошибка доступности, не диагноз авторизации  |
+| Ключ повторно вводится / передаётся другому владельцу   | тот же владелец сохраняет учётную идентичность; другой владелец — ошибка даже после отвязки (§4)   |
+| Два тиммейта, один провайдер, разные ключи              | per-member патч поверх базы (§5.1)                                                                 |
+| Коллизии имён / конкурентная запись `opencode.json`     | sanitized id + hash исходной пары и проверка владельца; существующий сериализованный writer (§5.2) |
+| Рантайм auto-suffixed имя (`alice` → `alice-2`)         | prepare-ошибка «effective-имя не совпадает с настроенным, перевяжите вручную»                      |
+| In-process lane + биндинг                               | prepare-ошибка (биндинг требует separate-process спавна, §5.1)                                     |
+| `/v1/models` пуст                                       | ошибка на строке, ручного ввода нет (§7.2)                                                         |
+| Удаление/замена ключа OpenCode-записи                   | через существующий writer коннектора (`assertProviderApiKeyReplacement`)                           |
+| Утечка ключей                                           | whitelist-only диагностика, редакция по известным значениям (§5.3)                                 |
+| Helper-mode + биндинг / удалённый или изменённый секрет | prepare-ошибка без fallback на ключ лида/другого клиента                                           |
+| Сбой `/v1/usage` / missing `model_stats`                | прежние суммы сохраняются, статус неполноты; explicit empty — успешный ноль (§6)                   |
+| Rename команды / тиммейта                               | ручная привязка нового ключа (§7.3); прежний владелец учёта неизменен                              |
 
 ## 10. Этапы
 
-| # | Шаг | Результат |
-|---|---|---|
-| 0 | Контракт стенда (§8): UTC, модели, дневной учёт; отдельная минимальная правка sub2api для explicit empty/error | снята известная зависимость интеграции |
-| 1 | Профили, биндинги, владение ключом и endpoint snapshot; pure resolve/маппинги, hash-id OpenCode, eslint-границы | домен + focused tests |
-| 2 | `GatewayProviderStore`, чтение секрета по id и gateway-дедуп поверх `ApiKeyService`, resolver + redaction, IPC; `gatewayUsageRef` в Run DTO/ledger/discovery до использования на шаге 3; потребительский `GatewayUsageSourcePort`, public re-export и app-shell injection | хранение и обвязка |
-| 3 | Member-aware контракт со всеми потребителями §5.1; финальный env-патч, существующие Codex builders с фиксированным id, OpenCode writer, separate-process правило; snapshot `gatewayUsageRef` до прямого spawn | прямой путь, marker для учёта |
-| 3а | Обе стороны bootstrap: frontend `TeamProvisioningBootstrapSpec.ts`, orchestrator `bootstrapMemberSchema` (strict), `NormalizedBootstrapMember`, runner → spawn input → native/tmux argv/env. Передавать **env и per-member Codex overrides + api login mode**, не settings лида; валидировать узкие поля. Пройти `handleSpawnSplitPane`, `handleSpawnSeparateWindow` (`buildInheritedEnvVars`) и `handleSpawnNativeProcess` (`buildInheritedEnvObject`), финальный патч после inherited-auth. Сохранить member `gatewayUsageRef` в app-owned metadata. Проверить обе Codex CLI-формы существующим parser. Перед включением UI доставить совместимый runtime и обновить `runtime.lock.json` по `docs/RELEASE.md` | совместимый bootstrap и packaged runtime |
-| 4 | UI профилей и `MemberGatewaySelector`; секреты/ref, ошибки, семантика следующего запуска | выбор per-member |
-| 5 | Event DTO/ledger marker и `requestCount`, сохранение явного нулевого списания; importer с watermark/статусом, источник snapshot, запрет CLI-дублей, допуск aggregate до orphan-filter и проекции §6 | сохранённый точный дневной учёт |
-| 6 | Focused проверки и пять live-сценариев §8, packaged compatibility | приёмка |
+| #   | Шаг                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Результат                                |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| 0   | Контракт стенда (§8): UTC, модели, дневной учёт; отдельная минимальная правка sub2api для explicit empty/error                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | снята известная зависимость интеграции   |
+| 1   | Профили, биндинги, владение ключом и endpoint snapshot; pure resolve/маппинги, hash-id OpenCode, eslint-границы                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | домен + focused tests                    |
+| 2   | `GatewayProviderStore`, чтение секрета по id и gateway-дедуп поверх `ApiKeyService`, resolver + redaction, IPC; `gatewayUsageRef` в Run DTO/ledger/discovery до использования на шаге 3; потребительский `GatewayUsageSourcePort`, public re-export и app-shell injection                                                                                                                                                                                                                                                                                                                                                                                                                                       | хранение и обвязка                       |
+| 3   | Member-aware контракт со всеми потребителями §5.1; финальный env-патч, существующие Codex builders с фиксированным id, OpenCode writer, separate-process правило; snapshot `gatewayUsageRef` до прямого spawn                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | прямой путь, marker для учёта            |
+| 3а  | Обе стороны bootstrap: frontend `TeamProvisioningBootstrapSpec.ts`, orchestrator `bootstrapMemberSchema` (strict), `NormalizedBootstrapMember`, runner → spawn input → native/tmux argv/env. Передавать **env и per-member Codex overrides + api login mode**, не settings лида; валидировать узкие поля. Пройти `handleSpawnSplitPane`, `handleSpawnSeparateWindow` (`buildInheritedEnvVars`) и `handleSpawnNativeProcess` (`buildInheritedEnvObject`), финальный патч после inherited-auth. Сохранить member `gatewayUsageRef` в app-owned metadata. Проверить обе Codex CLI-формы существующим parser. Перед включением UI доставить совместимый runtime и обновить `runtime.lock.json` по `docs/RELEASE.md` | совместимый bootstrap и packaged runtime |
+| 4   | UI профилей и `MemberGatewaySelector`; секреты/ref, ошибки, семантика следующего запуска                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | выбор per-member                         |
+| 5   | Event DTO/ledger marker и `requestCount`, сохранение явного нулевого списания; batch import с ledger-owned watermark/статусом и атомарным commit, источник snapshot, запрет CLI-дублей, допуск aggregate до orphan-filter и проекции §6                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | сохранённый точный дневной учёт          |
+| 6   | Focused проверки и пять live-сценариев §8, packaged compatibility                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | приёмка                                  |
 
 Шаги поставляются связанными PR по политике проекта; UI не включается раньше
 совместимого runtime и учёта. Нет параллельной поддержки двух форм bootstrap
