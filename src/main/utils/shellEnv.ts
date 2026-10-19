@@ -36,6 +36,9 @@ export function defaultShellCandidates(platform: NodeJS.Platform): readonly stri
   return ['/bin/zsh', '/bin/bash', '/usr/bin/bash', '/bin/sh'];
 }
 
+/**
+ * Check whether a candidate shell path exists and is executable.
+ */
 function probeExecutableShell(candidatePath: string): boolean {
   try {
     accessSync(candidatePath, fsConstants.X_OK);

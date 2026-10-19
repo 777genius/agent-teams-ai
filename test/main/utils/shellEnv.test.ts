@@ -625,6 +625,9 @@ describe('shellEnv', () => {
   });
 
   describe('default login-shell selection', () => {
+    /**
+     * Pin the mocked filesystem probe to a fixed set of installed shells.
+     */
     function pinInstalledShells(installed: readonly string[]): void {
       vi.mocked(accessSync).mockImplementation((path): void => {
         const candidatePath = path.toString();

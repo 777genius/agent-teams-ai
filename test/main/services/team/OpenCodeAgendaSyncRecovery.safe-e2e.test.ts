@@ -53,14 +53,15 @@ async function waitForAssertion(assertion: () => Promise<void> | void): Promise<
   await assertion();
 }
 
-// The two broken fixtures below intentionally make the delivery watchdog and
-// the OpenCode inbox relay emit diagnostics for their fixture team names, so
-// those diagnostics are designed observables of this safe-e2e file rather than
-// regressions. Assert them here and remove exactly these fixture-scoped
-// entries from the console.warn spy (installed by test/setup.ts) so the shared
-// "no unexpected warnings" assertion only sees output unrelated to the
-// fixtures.
 /**
+ * The two broken fixtures below intentionally make the delivery watchdog and
+ * the OpenCode inbox relay emit diagnostics for their fixture team names, so
+ * those diagnostics are designed observables of this safe-e2e file rather than
+ * regressions. Assert them here and remove exactly these fixture-scoped
+ * entries from the console.warn spy (installed by test/setup.ts) so the shared
+ * "no unexpected warnings" assertion only sees output unrelated to the
+ * fixtures.
+ *
  * Remove the fixture-scoped diagnostics emitted by the delivery watchdog and
  * the OpenCode inbox relay from the shared console.warn spy. Matching is
  * exact (fixture team name plus diagnostic phrase) so unrelated warnings stay

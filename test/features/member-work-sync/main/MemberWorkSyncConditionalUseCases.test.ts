@@ -61,6 +61,9 @@ function deferred() {
   });
   return { promise, resolve };
 }
+/**
+ * Build the JSON or SQLite-backed fixture harness for conditional use-case tests.
+ */
 async function setup(kind: 'json' | 'sqlite') {
   const root = await mkdtemp(join(tmpdir(), 'mws-usecase-sandbox-'));
   roots.push(root);

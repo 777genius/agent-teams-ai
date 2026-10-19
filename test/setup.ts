@@ -132,6 +132,9 @@ beforeEach(() => {
   warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 });
 
+/**
+ * Identify the expected slow-config-read diagnostic emitted under live recovery.
+ */
 function isLiveSlowConfigReadWarning(text: string): boolean {
   return (
     process.env.MEMBER_WORK_SYNC_RECOVERY_LIVE === '1' &&

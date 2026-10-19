@@ -42,6 +42,9 @@ afterEach(() => {
   }
 });
 
+/**
+ * Seed metrics that make a member appear shadow-ready for recovery assertions.
+ */
 async function seedShadowReadyMetrics(input: {
   teamsBasePath: string;
   teamName: string;
@@ -83,11 +86,13 @@ async function seedShadowReadyMetrics(input: {
   );
 }
 
-// Polls the intended observable until it appears. The default budget is sized
-// from the four-vCPU CI quota measurements: the feature's durable background
-// cadence can trail the first sample by well over the historical 5s under
-// concurrent durable suites, while single-file runs land in ~2.5-7s. 40s
-// keeps every completion-driven expectation exact while absorbing that skew.
+/**
+ * Poll the intended observable until it appears. The default budget is sized
+ * from the four-vCPU CI quota measurements: the feature's durable background
+ * cadence can trail the first sample by well over the historical 5s under
+ * concurrent durable suites, while single-file runs land in ~2.5-7s. 40s
+ * keeps every completion-driven expectation exact while absorbing that skew.
+ */
 async function waitForAssertion(
   assertion: () => Promise<void> | void,
   timeoutMs = 40_000
@@ -164,6 +169,9 @@ async function readMemberOutboxItems(input: {
   }
 }
 
+/**
+ * Create the feature fixture and its in-memory collaborators for recovery tests.
+ */
 function createFeature(input: {
   teamsBasePath: string;
   teamName: string;
