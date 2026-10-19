@@ -59,7 +59,9 @@ export async function preflightOpenCodeFullTeamEnvironment(input, {
   const cli = input.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH;
   const catalog = run(cli, ['runtime', 'providers', 'models', '--runtime', 'opencode', '--provider', provider,
     '--project-path', input.projectPath, '--limit', '100', '--json'],
-  path.basename(cli) === 'cli-source' ? 180_000 : 90_000);
+  // A first catalog against cold owned bun caches plus antivirus scanning can
+  // take close to three minutes; only a hung CLI may fail this stage.
+  path.basename(cli) === 'cli-source' ? 360_000 : 90_000);
   if (catalog.error || catalog.signal || catalog.status !== 0) return unavailable('catalog-command');
   try {
     const payload = JSON.parse(catalog.stdout);
