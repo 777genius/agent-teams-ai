@@ -161,7 +161,8 @@ describe('TEST Node dependency staging without execution', () => {
     'non-test-project',
   ] as const)('refuses %s', async (kind) => {
     let selected = source,
-      destination = project;
+      destination = project,
+      restoreCwd: (() => void) | undefined;
     if (kind === 'symlink-source') {
       await rename(source, `${source}.original`);
       await symlink(`${source}.original`, source);
@@ -185,7 +186,15 @@ describe('TEST Node dependency staging without execution', () => {
     }
     if (kind === 'oversize') await truncate(source, 256 * 1024 * 1024 + 1);
     if (kind === 'empty') await writeFile(source, '');
-    if (kind === 'relative') selected = path.relative(process.cwd(), source);
+    if (kind === 'relative') {
+      // path.relative across Windows drives returns an absolute path, which
+      // staging must accept; compute from a cwd on the fixture volume instead.
+      const previous = process.cwd();
+      process.chdir(root);
+      restoreCwd = () => process.chdir(previous);
+      selected = path.relative(process.cwd(), source);
+      expect(path.isAbsolute(selected)).toBe(false);
+    }
     if (kind === 'wrong-name') {
       selected = path.join(path.dirname(source), 'other.exe');
       await rename(source, selected);
@@ -194,7 +203,11 @@ describe('TEST Node dependency staging without execution', () => {
       destination = path.join(root, 'project');
       await mkdir(destination);
     }
-    await expect(stageNativeTestNode(selected, destination)).rejects.toThrow();
+    try {
+      await expect(stageNativeTestNode(selected, destination)).rejects.toThrow();
+    } finally {
+      restoreCwd?.();
+    }
     if (kind === 'existing-directory')
       expect(await readFile(path.join(project, 'TEST-node-runtime', 'node.exe'), 'utf8')).toBe(
         'TEST retained existing bytes'
