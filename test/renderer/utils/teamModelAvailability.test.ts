@@ -90,6 +90,68 @@ function createAnthropicCompatibleProviderStatus(
 }
 
 describe('teamModelAvailability', () => {
+  it.each(['runtime', 'catalog'] as const)(
+    'filters retired MiniMax text choices from the %s picker without adding routes',
+    (source) => {
+      const models = [
+        'minimax-coding-plan/MiniMax-M2.7',
+        'minimax-coding-plan/MiniMax-M3-highspeed',
+        'minimax-coding-plan/MiniMax-M3',
+        'minimax-cn/MiniMax-M3.1-Flash',
+        'minimax/MiniMax-Text-01',
+        'minimax/speech-2.8-hd',
+        'custom/MiniMax-M2.7',
+        'openai/gpt-5.4',
+      ];
+      const expected = models.slice(2).filter((model) => model !== 'minimax/MiniMax-Text-01');
+      const providerStatus = createOpenCodeProviderStatus(source === 'runtime' ? models : [], {
+        ...(source === 'catalog'
+          ? {
+              modelCatalog: {
+                schemaVersion: 1,
+                providerId: 'opencode',
+                source: 'app-server',
+                status: 'ready',
+                fetchedAt: '2026-10-19T00:00:00.000Z',
+                staleAt: '2026-10-19T00:10:00.000Z',
+                defaultModelId: models[0],
+                defaultLaunchModel: models[0],
+                models: models.map((model) => ({
+                  id: model,
+                  launchModel: model,
+                  displayName: model,
+                  hidden: false,
+                  supportedReasoningEfforts: [],
+                  defaultReasoningEffort: null,
+                  inputModalities: ['text'],
+                  supportsPersonality: false,
+                  isDefault: model === models[0],
+                  upgrade: false,
+                  source: 'app-server',
+                  badgeLabel: null,
+                })),
+                diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+              },
+            }
+          : {}),
+      });
+
+      expect(new Set(getAvailableTeamProviderModels('opencode', providerStatus))).toEqual(
+        new Set(expected)
+      );
+      expect(
+        new Set(
+          getAvailableTeamProviderModelOptions('opencode', providerStatus).map(
+            (option) => option.value
+          )
+        )
+      ).toEqual(new Set(['', ...expected]));
+      expect(getAvailableTeamProviderModels('opencode', providerStatus)).not.toContain(
+        'minimax-coding-plan/MiniMax-M3.1-Flash'
+      );
+    }
+  );
+
   it.each(['cursor-acp/auto', 'kiro/auto'])(
     'keeps extension-bound model %s visible but unavailable for team launch',
     (modelId) => {

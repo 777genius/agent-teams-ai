@@ -5,7 +5,10 @@ import {
   parseOpenCodeQualifiedModelRef,
 } from '@shared/utils/opencodeModelRef';
 import { isOpenCodeModelExplicitlyFree } from '@shared/utils/opencodeModelRoute';
-import { filterVisibleProviderRuntimeModels } from '@shared/utils/providerModelVisibility';
+import {
+  filterVisibleProviderRuntimeModels,
+  isCurrentMiniMaxCatalogModel,
+} from '@shared/utils/providerModelVisibility';
 
 import { compareModelReleaseFreshness } from './modelReleaseFreshness';
 import { getCodexChatGptModeUiDisabledReason } from './teamModelCatalogChatGptGate';
@@ -622,7 +625,7 @@ export function sortTeamProviderModels(
   const seen = new Set<string>();
   const deduped = models.filter((model) => {
     const trimmed = model.trim();
-    if (!trimmed || seen.has(trimmed)) {
+    if (!trimmed || seen.has(trimmed) || !isCurrentMiniMaxCatalogModel(trimmed, providerId)) {
       return false;
     }
     seen.add(trimmed);

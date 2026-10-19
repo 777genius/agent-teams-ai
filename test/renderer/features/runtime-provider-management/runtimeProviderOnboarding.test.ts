@@ -10,6 +10,7 @@ import {
   isRuntimeProviderOnboardingPlanConnected,
   isRuntimeProviderOnboardingPlanRoutable,
   normalizeRuntimeProviderOnboardingProgress,
+  rankRecommendedRuntimeProviderModels,
   resolveXiaomiMiMoTokenPlanProvider,
   selectRecommendedRuntimeProviderModel,
 } from '../../../../src/features/runtime-provider-management/core/domain/runtimeProviderOnboarding';
@@ -153,6 +154,15 @@ describe('runtime provider onboarding domain', () => {
     expect(selectRecommendedRuntimeProviderModel(plan, [m3])).toBe(m3);
     expect(selectRecommendedRuntimeProviderModel(plan, [flash, m3])).toBe(m3);
     expect(selectRecommendedRuntimeProviderModel(plan, [])).toBeNull();
+  });
+
+  it('does not fall back to retired MiniMax catalog models during onboarding', () => {
+    const plan = getRuntimeProviderOnboardingPlan('minimax-token-plan');
+    const retired = model('minimax-coding-plan/MiniMax-M2.7', { default: true });
+    const unsupportedVariant = model('minimax-coding-plan/MiniMax-M3-highspeed');
+
+    expect(rankRecommendedRuntimeProviderModels(plan, [retired, unsupportedVariant])).toEqual([]);
+    expect(selectRecommendedRuntimeProviderModel(plan, [retired])).toBeNull();
   });
 
   it('preserves explicitly saved MiniMax model selections', () => {

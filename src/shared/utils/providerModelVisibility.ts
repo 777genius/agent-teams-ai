@@ -35,6 +35,29 @@ export function isAnthropicClaudeCodeRemovedModel(model: string | undefined): bo
   );
 }
 
+export function isCurrentMiniMaxCatalogModel(
+  model: string,
+  runtimeProviderId: SupportedProviderId = 'opencode'
+): boolean {
+  if (runtimeProviderId !== 'opencode') {
+    return true;
+  }
+  const [source, ...segments] = model.trim().toLowerCase().split('/');
+  if (
+    !['minimax', 'minimax-cn', 'minimax-coding-plan', 'minimax-cn-coding-plan'].includes(source)
+  ) {
+    return true;
+  }
+
+  const modelId = segments.join('/');
+  // Apply the text-model policy only to MiniMax's own catalog routes. Keep
+  // non-text models and explicit custom routes outside this picker policy.
+  if (!/^(?:minimax-(?:m\d|text|vl|01)|abab)/.test(modelId)) {
+    return true;
+  }
+  return modelId === 'minimax-m3' || modelId === 'minimax-m3.1-flash';
+}
+
 export function isProviderRuntimeModelUiDisabled(
   providerId: SupportedProviderId | undefined,
   model: string | undefined

@@ -26,6 +26,7 @@ import {
   isOpenCodeLocalProviderId,
   isOpenCodeModelExplicitlyFree,
 } from '@shared/utils/opencodeModelRoute';
+import { isCurrentMiniMaxCatalogModel } from '@shared/utils/providerModelVisibility';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   AlertTriangle,
@@ -1798,6 +1799,7 @@ const ProviderModelList = ({
   const visibleModels = useMemo(
     () =>
       state.models
+        .filter((model) => isCurrentMiniMaxCatalogModel(model.modelId))
         .map((model, index) => ({ model, index }))
         .filter(
           ({ model }) =>
