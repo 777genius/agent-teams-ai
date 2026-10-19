@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 
 import { describe, expect, it, vi } from 'vitest';
 
+import { nativeCommandMatch } from '../../scripts/e2e/opencode-native-team-port';
 import { projectV2NativeTranscript } from '../../scripts/e2e/opencode-native-v2-transcript';
 import { parseSingleBridgeJsonResult, validateBridgeResultEnvelope } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 
@@ -79,5 +80,78 @@ describe('bounded public V2 transcript failure observation', () => {
     expect(source).toContain('capture.inputFileRemoved = await unlink(inputFile)');
     expect(source).toContain("await execute(bun, ['--no-env-file', `--config=${bunConfig}`, entry,");
     expect(source).toContain('Raw canonical messages remain only in this bounded child stdout/in-memory parser.');
+  });
+});
+
+describe('finite canonical command observation', () => {
+  const command = { program: 'C:\\TEST-project\\verify.cjs', marker: 'TEST_VERIFIED' };
+  const inspect = (messages: Record<string, unknown>[], runtimePromptMessageId: string | null = expected.runtimePromptMessageId) =>
+    projectV2NativeTranscript({ sessionId: expected.sessionId, durableState: 'idle', messages }, { ...expected, runtimePromptMessageId, command }).commandObservation!;
+  const call = (overrides: Record<string, unknown> = {}) => ({ callId: 'PRIVATE_NATIVE_ID', toolName: 'shell', status: 'completed',
+    isError: false, input: { command: `node ${command.program}`, workdir: 'C:\\TEST-project' },
+    outputText: `PRIVATE_OUTPUT\n${command.marker}\n`, output: null, ...overrides });
+  const row = (id: string, toolCalls: unknown[] = [], role = 'assistant') => message({ id, toolCalls, role });
+
+  it('separates original input window from later input, actual native output and metadata invocation', () => {
+    const packet = inspect([
+      row('msg_BEFORE', [call()]), row(expected.runtimePromptMessageId, [], 'user'),
+      row('msg_WITHIN', [call(), call({ callId: null, source: { kind: 'opencode-v2-code-mode-metadata', outerCallId: 'PRIVATE_OUTER_ID', index: 0 },
+        outputText: command.marker, output: [{ type: 'text', text: command.marker }] })]),
+      row('msg_NEXT', [], 'user'), row('msg_AFTER', [call({ toolName: 'execute', status: 'PRIVATE_STATUS', isError: true })]),
+    ]);
+    expect(packet).toMatchObject({ originalInputIndex: 1, nextInputIndex: 3, total: 4, exhaustive: true,
+      relationCounts: { before_original: 1, original_window: 2, after_next_input: 1, unknown: 0 } });
+    expect(packet.tuples[1]).toMatchObject({ relation: 'original_window', source: 'native', modelMatches: true,
+      nativeCallIdPresent: true, status: 'completed', isError: false, outputPresent: true, markerLinePresent: true,
+      input: { shell: true, programMatches: true, nodeMatches: true } });
+    expect(packet.tuples[2]).toMatchObject({ source: 'code-mode-metadata', nativeCallIdPresent: false,
+      outputPresent: null, markerLinePresent: null });
+    expect(packet.tuples[3]).toMatchObject({ relation: 'after_next_input', tool: 'execute', status: 'unknown', isError: true });
+    expect(JSON.stringify(packet)).not.toMatch(/PRIVATE_|TEST-project|verify\.cjs|TEST_VERIFIED|msg_|outputText|callId|outerCallId/);
+    expect(packet.tuples[1]).not.toHaveProperty('resultPaired');
+    expect(packet.tuples[1]).not.toHaveProperty('succeeded');
+  });
+
+  it('keeps unknown original input relation unknown and caps retained tuples independently of totals', () => {
+    const rows = [row('msg_ONLY', Array.from({ length: 10 }, (_, index) => call({ toolName: index === 0 ? 'read' : 'bash', ...(index === 0 ? { input: { path: 'PRIVATE_PATH' } } : {}) })))];
+    const packet = inspect(rows, null);
+    expect(packet).toMatchObject({ originalInputIndex: null, nextInputIndex: null, total: 9, exhaustive: false,
+      relationCounts: { unknown: 9, before_original: 0, original_window: 0, after_next_input: 0 } });
+    expect(packet.tuples).toHaveLength(8);
+    expect(inspect(rows, 'msg_ABSENT').tuples.every(tuple => tuple.relation === 'unknown')).toBe(true);
+    expect(projectV2NativeTranscript(fixture(), expected)).not.toHaveProperty('commandObservation');
+  });
+
+  it.each([
+    ['shell', 'node C:\\TEST-project\\verify.cjs', undefined],
+    ['bash', 'node "C:/TEST-project/verify.cjs"', undefined],
+    ['exec', 'NODE.EXE c:/test-project/verify.cjs', undefined],
+    ['shell', 'node ./verify.cjs', 'C:\\TEST-project'],
+    ['shell', 'node verify.cjs', 'C:/foreign'],
+    ['shell', 'echo node C:\\TEST-project\\verify.cjs', undefined],
+    ['execute', 'node C:\\TEST-project\\verify.cjs', undefined],
+    ['proxy_shell', 'node C:\\TEST-project\\verify.cjs', undefined],
+  ])('mirrors existing matcher input predicates for %s / %s', (toolName, inputCommand, workdir) => {
+    const tool = call({ toolName, input: { command: inputCommand, workdir } });
+    const actual = nativeCommandMatch({ toolCall: { id: 'TEST-call', name: toolName!, input: tool.input } } as never, command.program, command.marker);
+    const packet = inspect([row(expected.runtimePromptMessageId, [], 'user'), row('msg_WITHIN', [tool])]);
+    expect(packet.tuples[0]?.input).toEqual({ shell: actual.shell, programMatches: actual.programMatches,
+      nodeMatches: actual.nodeMatches, commandShape: actual.commandShape });
+    if (toolName === 'proxy_shell') expect(packet.tuples[0]?.tool).toBe('other');
+  });
+
+  it('uses only own data and retains no raw command, path, output, status or coercion', () => {
+    const getter = vi.fn(() => { throw new Error('PRIVATE_GETTER'); });
+    const input = Object.defineProperty({ workdir: 'PRIVATE_PATH' }, 'command', { get: getter });
+    const tool = call({ input, status: { toString: getter }, outputText: undefined,
+      output: [{ type: 'text', text: `PRIVATE_OUTPUT\n${command.marker}` }] });
+    const packet = inspect([row(expected.runtimePromptMessageId, [], 'user'), row('msg_WITHIN', [tool])]);
+    expect(getter).not.toHaveBeenCalled();
+    expect(packet.tuples[0]).toMatchObject({ status: 'unknown', input: { programMatches: false, nodeMatches: false }, markerLinePresent: true });
+    expect(JSON.stringify(packet)).not.toContain('PRIVATE_');
+    expect(() => inspect([row(expected.runtimePromptMessageId, [], 'user'), row('msg_WITHIN', [call({ input: new Proxy({}, { getOwnPropertyDescriptor: getter }) })])])).toThrow();
+    expect(getter).not.toHaveBeenCalled();
+    const bounded = inspect([row(expected.runtimePromptMessageId, [], 'user'), row('msg_WITHIN', [call({ input: { command: 'X'.repeat(32_769) }, outputText: 'X'.repeat(1_048_577) })])]);
+    expect(bounded.tuples[0]).toMatchObject({ input: null, outputPresent: true, markerLinePresent: null });
   });
 });

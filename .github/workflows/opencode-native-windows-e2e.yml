@@ -316,6 +316,8 @@ jobs:
           if ($env:VERSIONS -ne 'v1') {
             bun test src/services/opencode/bridge/OpenCodeV2DeliveryJournal.windows.test.ts
             if ($LASTEXITCODE -ne 0) { throw 'Windows delivery journal filesystem regression failed' }
+            bun test src/cli/runtimeTranscriptCommand.test.ts
+            if ($LASTEXITCODE -ne 0) { throw 'Real transcript CLI entry and exit contract failed' }
           }
       - name: Save qualified native producer before E2E
         if: ${{ !inputs.provider_only && steps.native-cache.outputs.cache-hit != 'true' }}
@@ -345,6 +347,8 @@ jobs:
         if: ${{ !inputs.provider_only && inputs.versions != 'v1' && (!inputs.source_only || steps.native-cache.outputs.cache-hit != 'true') }}
         working-directory: TEST-native-sdk
         shell: pwsh
+        env:
+          TEST_NATIVE_ROOT_RETIREMENT_FILES: ${{ inputs.source_only && '32768' || '256' }}
         run: |
           $ErrorActionPreference = 'Stop'
           bun test scripts/opencode-v2/stage-windows.test.ts

@@ -87,6 +87,12 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
     else if (!runId || value.runId === runId) progress.push(value);
   });
   const tasks = new Set<string>();
+  // Failure diagnostics reuse only a completed gate read for this exact task.
+  // They never start an extra long-lived transcript request before Stop.
+  const completedTaskLogs = new Map<string, {
+    stream: Awaited<ReturnType<ElectronAPI['teams']['getTaskLogStream']>>;
+    completedAt: number;
+  }>();
   let disposed = false;
   const check = () => {
     if (disposed) throw new Error('renderer port disposed');
@@ -244,14 +250,17 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
     },
     async getTaskLogStream(id: string) {
       selectedTask(id);
-      return api.teams.getTaskLogStream(teamName, id);
+      const stream = await api.teams.getTaskLogStream(teamName, id);
+      completedTaskLogs.set(id, { stream, completedAt: Date.now() });
+      return stream;
     },
     async getSafeTaskFailureSnapshot(id: string, expectedOwner: 'alice' | 'bob', command?: NativeCommandExpectation) {
       selectedTask(id);
       if (expectedOwner !== 'alice' && expectedOwner !== 'bob') throw new Error('TEST owner required');
+      const completedLog = completedTaskLogs.get(id);
       const [taskRead, dataRead, logRead, pageRead] = await Promise.allSettled([
         api.teams.getTask(teamName, id), api.teams.getData(teamName),
-        api.teams.getTaskLogStream(teamName, id),
+        completedLog ? Promise.resolve(completedLog.stream) : api.teams.getTaskLogStream(teamName, id),
         api.teams.getMessagesPage(teamName, { limit: 100, cursor: null }),
       ]);
       const commandObservation = command && logRead.status === 'fulfilled' ? (() => {
@@ -498,6 +507,10 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
       return {
         taskId: id,
         commandObservation,
+        logReadSource: completedLog ? 'last_completed_gate_read' : 'fresh_read',
+        logReadAgeMs: completedLog
+          ? Math.min(0xffffffff, Math.max(0, Date.now() - completedLog.completedAt))
+          : null,
         taskStatus: task ? statuses.find((value) => value === task.status) ?? 'unknown' : 'missing',
         ownerMatches: !!task && task.owner === expectedOwner,
         commentCount: count(task?.comments?.length),

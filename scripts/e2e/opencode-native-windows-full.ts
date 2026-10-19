@@ -1057,6 +1057,19 @@ async function packagedStartupSnapshot(
     Number.isSafeInteger(value) && Number(value) >= 0 && Number(value) <= 0xffffffff
       ? Number(value)
       : null;
+  const nativeRootFacts = (cleanup: Record<string, unknown>) => {
+    if (cleanup.nativePhase !== 'retire_grants_roots') return null;
+    const root = row(cleanup.nativeRoot);
+    const phase = one(root.phase, ['root_validate', 'root_mutex_wait', 'root_precheck',
+      'root_dacl_write', 'root_postcheck', 'root_complete']);
+    const role = one(root.role, ['shared_read', 'private_writable', 'sealed_project',
+      'sealed_controller', 'protected_deny']);
+    const index = number(root.index), count = number(root.count), elapsedMs = number(root.elapsedMs);
+    if (phase === 'unclassified' || role === 'unclassified' || index === null || count === null ||
+      index < 1 || index > count || count > 4096 || elapsedMs === null || elapsedMs > 86_400_000)
+      return null;
+    return { phase, role, index, count, elapsedMs };
+  };
   const catalogFacts = (input: unknown) => {
     try {
       const field = (value: unknown, key: string): unknown => {
@@ -1726,6 +1739,7 @@ async function packagedStartupSnapshot(
         'retire_grants_dll', 'retire_grants_roots', 'retire_grants_metadata',
       ]),
       cleanupElapsedMs: number(row(data.cleanup).elapsedMs),
+      cleanupNativeRoot: nativeRootFacts(row(data.cleanup)),
       initializationPhase: one(row(data.initialization).phase, [
         'MCP-connect',
         'MCP-readback',
@@ -1879,6 +1893,7 @@ async function main() {
     ...bundled,
     taskFailureSnapshot: null as null | {
       unavailable: boolean;
+      failure?: ProofFailure;
       tasks: Awaited<
         ReturnType<ReturnType<typeof electronTeamPort>['getSafeTaskFailureSnapshot']>
       >[];
@@ -2528,7 +2543,8 @@ async function main() {
             sdkCode: closed?.bridgeFailure?.sdkCode ?? null, nativeOperation: closed?.bridgeFailure?.nativeOperation ?? null };
         } else {
           capture.packet = projectV2NativeTranscript(parsed.value.data, { sessionId: nativeSession,
-            selectedModel: model, runtimePromptMessageId });
+            selectedModel: model, runtimePromptMessageId,
+            command: commandExpectations.get(failedTask.id) });
           capture.observation = 'captured';
         }
         })().finally(async () => {
@@ -2731,8 +2747,12 @@ async function main() {
           }),
         ]);
         proof.taskFailureSnapshot = { unavailable: false, tasks };
-      } catch {
-        proof.taskFailureSnapshot = { unavailable: true, tasks: [] };
+      } catch (error: unknown) {
+        proof.taskFailureSnapshot = {
+          unavailable: true,
+          tasks: [],
+          failure: proofFailure(error, 'task_failure_snapshot'),
+        };
       } finally {
         clearTimeout(timer);
       }

@@ -6,6 +6,34 @@ import { serializedFunction } from '../../../../scripts/e2e/release-updater/seri
 import type { ElectronAPI } from '@shared/types/api';
 
 describe('Electron TEST delivery status privacy boundary', () => {
+  it('reuses only the last completed gate read for the same task during failure capture', async () => {
+    const tasks = ['first', 'second'].map(id => ({ id, owner: 'alice', status: 'completed' }));
+    const readLog = vi.fn()
+      .mockResolvedValueOnce({ segments: [] })
+      .mockRejectedValueOnce(new Error('TEST failed gate read'))
+      .mockResolvedValueOnce({ segments: [] });
+    const port = electronTeamPort({ teams: {
+      onProvisioningProgress: () => () => undefined,
+      getData: async () => ({ tasks, members: [] }),
+      getTask: async (_team: string, id: string) => tasks.find(task => task.id === id),
+      getTaskLogStream: readLog,
+      getMessagesPage: async () => ({ messages: [] }),
+    } } as unknown as ElectronAPI, 'test-opencode-cached-log', '/tmp/TEST-cached-log/project');
+    try {
+      await port.getData();
+      await port.getTaskLogStream('first');
+      await expect(port.getTaskLogStream('first')).rejects.toThrow('TEST failed gate read');
+      const first = await port.getSafeTaskFailureSnapshot('first', 'alice');
+      expect(first.logReadSource).toBe('last_completed_gate_read');
+      expect(first.log?.segments).toBe(0);
+      expect(first.logReadAgeMs).toEqual(expect.any(Number));
+      expect(readLog).toHaveBeenCalledTimes(2);
+      const second = await port.getSafeTaskFailureSnapshot('second', 'alice');
+      expect(second.logReadSource).toBe('fresh_read');
+      expect(second.logReadAgeMs).toBeNull();
+      expect(readLog).toHaveBeenCalledTimes(3);
+    } finally { port.dispose(); }
+  });
   it('returns only finite delivery categories and never raw reason or diagnostic data', async () => {
     const secret = 'TEST_PRIVATE_PROVIDER_TEXT_and_C:\\TEST-profile\\auth.json';
     const readStatus = vi.fn(async (_team: string, _message: string) => ({
@@ -49,6 +77,7 @@ describe('Electron TEST delivery status privacy boundary', () => {
         ledgerStatus: 'retry_scheduled',
         responseState: 'not_observed',
         nativeSessionFailure: null,
+        causalFailure: null,
         reasonCode: 'contract_violation',
         diagnosticCodes: [
           'contract_violation',
