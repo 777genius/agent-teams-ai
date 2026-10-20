@@ -916,11 +916,50 @@ try {
     results.push(evidence);
     await json(path.join(dirs.evidence, `${name}.json`), evidence);
     await invoke('teams', 'stop', team);
-    for (const member of members)
-      await invoke('gatewayProvider', 'unbindGatewayMember', {
-        teamName: team,
-        memberName: member.name,
-      });
+    if (name === 'claude-two') {
+      const activeBindings = await invoke<unknown[]>(
+        'gatewayProvider',
+        'listGatewayBindings',
+        team
+      );
+      assert.equal(
+        activeBindings.length,
+        members.length,
+        'Deletion fixture must still own active bindings'
+      );
+      await invoke('teams', 'deleteTeam', team);
+      await invoke('teams', 'permanentlyDeleteTeam', team);
+      const deletedTeamIndex = teams.indexOf(team);
+      if (deletedTeamIndex >= 0) teams.splice(deletedTeamIndex, 1);
+      assert.deepEqual(await invoke('gatewayProvider', 'listGatewayBindings', team), []);
+      const state = JSON.parse(
+        await readFile(
+          path.join(dirs['user-data'], 'data', 'gateway-provider', 'store.json'),
+          'utf8'
+        )
+      ) as {
+        sources: { gatewayUsageRef: string; hasActiveBinding: boolean }[];
+      };
+      for (const member of members) {
+        const source = state.sources.find((candidate) => candidate.gatewayUsageRef === member.ref);
+        assert(source, 'Permanent team deletion must preserve historical gateway sources');
+        assert.equal(source.hasActiveBinding, false);
+      }
+      const historicalSnapshot = await assertSnapshot(team, members);
+      await json(
+        path.join(dirs.evidence, 'permanent-team-deletion-snapshot.json'),
+        historicalSnapshot
+      );
+      console.log(
+        'Gateway deletion PASS: active bindings retired and exact per-agent history preserved'
+      );
+    } else {
+      for (const member of members)
+        await invoke('gatewayProvider', 'unbindGatewayMember', {
+          teamName: team,
+          memberName: member.name,
+        });
+    }
     console.log(`PASS ${name}: real desktop runtimes, fresh per-key usage, exact app attribution`);
   }
   await json(path.join(dirs.evidence, 'result.json'), {

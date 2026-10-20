@@ -619,7 +619,8 @@ export function initializeTeamHandlers(
     resumeTeam(teamName: string): void;
   },
   scopedResourceReleaser?: TeamScopedResourceReleaser,
-  inputDeclarationResolver?: ResolveOpenCodeInputDeclaration
+  inputDeclarationResolver?: ResolveOpenCodeInputDeclaration,
+  retireGatewayBindings?: (teamName: string) => Promise<void>
 ): void {
   teamDataService = service;
   resolveOpenCodeInputDeclaration = inputDeclarationResolver;
@@ -664,6 +665,7 @@ export function initializeTeamHandlers(
     attachmentStore,
     taskAttachmentStore,
     lifecycle: () => teamPermanentDeletionLifecycle,
+    retireGatewayBindings,
     invalidateTeamConfig: (teamName) => getTeamDataWorkerClient().invalidateTeamConfig(teamName),
     logRecoveryError: (teamName, error) =>
       logger.error(

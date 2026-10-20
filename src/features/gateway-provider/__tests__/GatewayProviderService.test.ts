@@ -50,6 +50,70 @@ async function createService(): Promise<{
 }
 
 describe('GatewayProviderService', () => {
+  it('retires all deleted-team bindings while retaining history, credentials and other teams', async () => {
+    const { service, store, apiKeys } = await createService();
+    const profile = await service.saveProfile({
+      displayName: 'Deleted team',
+      baseUrl: 'http://127.0.0.1:8080',
+    });
+    const otherProfile = await service.saveProfile({
+      displayName: 'Other team',
+      baseUrl: 'http://127.0.0.1:8080',
+    });
+    const first = await service.bindMember({
+      teamName: 'deleted',
+      memberName: 'alice',
+      profileId: profile.id,
+      apiKey: 'deleted-alice-key',
+    });
+    await service.bindMember({
+      teamName: 'deleted',
+      memberName: 'bob',
+      profileId: profile.id,
+      apiKey: 'deleted-bob-key',
+    });
+    await service.bindMember({
+      teamName: 'survivor',
+      memberName: 'alice',
+      profileId: otherProfile.id,
+      apiKey: 'survivor-alice-key',
+    });
+    await service.markRuntimeArtifactActive(first.gatewayUsageRef);
+    await service.unbindTeam(' deleted ');
+    const retired = await store.read();
+    expect(retired.bindings).toHaveLength(1);
+    expect(retired.bindings[0].teamName).toBe('survivor');
+    expect(retired.sources).toHaveLength(3);
+    expect(
+      retired.sources
+        .filter((source) => source.teamName === 'deleted')
+        .every(
+          (source) =>
+            !source.hasActiveBinding && source.lastUnboundAt === '2026-10-19T12:00:00.000Z'
+        )
+    ).toBe(true);
+    expect(
+      retired.sources.find((source) => source.gatewayUsageRef === first.gatewayUsageRef)
+        ?.hasRuntimeArtifact
+    ).toBe(true);
+    expect(apiKeys.records.size).toBe(3);
+    await service.unbindTeam('deleted');
+    expect(await store.read()).toEqual(retired);
+    await expect(
+      service.bindMember({
+        teamName: 'survivor',
+        memberName: 'bob',
+        profileId: profile.id,
+        apiKey: 'deleted-alice-key',
+      })
+    ).rejects.toThrow('belongs to another teammate');
+    await service.deleteProfile(profile.id);
+    expect(
+      (await service.listUsageSources()).filter((source) => source.teamName === 'deleted')
+    ).toHaveLength(2);
+    expect(await service.resolveMemberConnection('survivor', 'alice')).not.toBeNull();
+  });
+
   it('persists the default agent identity and exposes it for older source records', async () => {
     const { service, store } = await createService();
     const profile = await service.saveProfile({

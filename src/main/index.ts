@@ -1,6 +1,7 @@
-import { OpenCodeLocalProviderConnector } from '@features/runtime-provider-management/main';
-import { createGatewayLaunchRuntime } from '@main/services/gateway/createGatewayLaunchRuntime';
+import { composeGatewayProviderRuntime } from '@main/services/gateway/composeGatewayProviderRuntime';
 import { cleanupOrphanedDeterministicBootstrapSpecs } from '@main/services/team/provisioning/TeamProvisioningBootstrapSpec';
+
+import type { createGatewayLaunchRuntime } from '@main/services/gateway/createGatewayLaunchRuntime';
 // Increase UV thread pool size BEFORE async I/O: startup binary resolution,
 // subprocess work, watchers, and IPC filesystem requests share this pool.
 // The default four threads can block Windows startup.
@@ -132,7 +133,6 @@ import {
   TeamTaskUsageAttributionSource,
   type TokenUsageFeatureFacade,
 } from '@features/token-usage/main';
-import { setupGatewayProviderRuntime } from '@features/gateway-provider/main';
 import * as workspaceTrustFeature from '@features/workspace-trust/main';
 import { ensureAgentTeamsMcpLocalLaunchEnv } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
@@ -1984,17 +1984,12 @@ async function initializeServices(): Promise<void> {
     internalStorageFeature.taskCommentNotificationJournalStore
   );
   const apiKeyService = new ApiKeyService();
-  const gatewayProviderRuntime = setupGatewayProviderRuntime({
-    ipcMain,
-    storePath: join(getAppDataPath(), 'gateway-provider', 'store.json'),
-    apiKeys: apiKeyService,
-  });
-  const gatewayProviderConnector = new OpenCodeLocalProviderConnector();
-  const gatewayLaunchRuntime = createGatewayLaunchRuntime({
-    feature: gatewayProviderRuntime.feature,
-    connector: gatewayProviderConnector,
-    runsPath: join(getAppDataPath(), 'gateway-provider', 'runs.json'),
-  });
+  const { gatewayProviderRuntime, gatewayProviderConnector, gatewayLaunchRuntime } =
+    composeGatewayProviderRuntime({
+      ipcMain,
+      apiKeys: apiKeyService,
+      appDataPath: getAppDataPath(),
+    });
   runtimeProviderManagementFeature = createRuntimeProviderManagementFeature({
     localProviderConnector: gatewayProviderConnector,
     openExternal: async (url) => {
@@ -2939,7 +2934,8 @@ async function initializeServices(): Promise<void> {
     teamBackupService ?? undefined,
     launchIoGovernor ?? undefined,
     memberWorkSyncFeature ?? undefined,
-    resolveOpenCodeInputDeclaration
+    resolveOpenCodeInputDeclaration,
+    (teamName) => gatewayProviderRuntime.feature.retireTeamGatewayBindings(teamName)
   );
   registerCodexAccountIpc(ipcMain, codexAccountFeature);
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);

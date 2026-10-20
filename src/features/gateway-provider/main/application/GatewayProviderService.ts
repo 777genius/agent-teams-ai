@@ -325,6 +325,16 @@ export class GatewayProviderService {
     });
   }
 
+  async unbindTeam(teamName: string): Promise<void> {
+    const name = requireName(teamName, 'Team name');
+    const nowIso = this.clock.now().toISOString();
+    await this.store.mutate((state) => {
+      const removed = state.bindings.filter((binding) => binding.teamName === name);
+      state.bindings = state.bindings.filter((binding) => binding.teamName !== name);
+      for (const binding of removed) this.retireSource(state, binding.gatewayUsageRef, nowIso);
+    });
+  }
+
   async resolveMemberConnection(
     teamName: string,
     memberName: string,

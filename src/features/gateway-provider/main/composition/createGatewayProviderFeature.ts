@@ -10,10 +10,7 @@ import type {
   GatewayProfileSaveRequest,
   GatewayUnbindMemberRequest,
 } from '../../contracts/index';
-import type {
-  GatewayModelUsage,
-  GatewayUsageSourceInfo,
-} from '../../core/application/usage';
+import type { GatewayModelUsage, GatewayUsageSourceInfo } from '../../core/application/usage';
 import type { ResolvedMemberGatewayConnection } from '../application/GatewayProviderService';
 import type { ApiKeyService } from '@main/services/extensions/apikeys/ApiKeyService';
 
@@ -25,6 +22,7 @@ export interface GatewayProviderFeatureFacade {
   listGatewayBindings(teamName?: string): Promise<GatewayMemberBindingDto[]>;
   bindGatewayMember(request: GatewayBindMemberRequest): Promise<GatewayMemberBindingDto>;
   unbindGatewayMember(request: GatewayUnbindMemberRequest): Promise<void>;
+  retireTeamGatewayBindings(teamName: string): Promise<void>;
   resolveMemberConnection(
     teamName: string,
     memberName: string,
@@ -54,6 +52,7 @@ export function createGatewayProviderFeature(deps: {
     listGatewayBindings: (teamName) => service.listBindings(teamName),
     bindGatewayMember: (request) => service.bindMember(request),
     unbindGatewayMember: (request) => service.unbindMember(request),
+    retireTeamGatewayBindings: (teamName) => service.unbindTeam(teamName),
     resolveMemberConnection: (teamName, memberName, model) =>
       service.resolveMemberConnection(teamName, memberName, model),
     markRuntimeArtifactActive: (gatewayUsageRef) =>

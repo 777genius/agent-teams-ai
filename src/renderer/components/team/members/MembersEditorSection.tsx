@@ -235,6 +235,9 @@ export const MembersEditorSection = ({
     try {
       const drafts = parseJsonToDrafts(text).map((draft) => {
         const providerId = draft.providerId ?? inheritedProviderId ?? defaultProviderId;
+        if (providerId === 'gemini' && gatewayBindings?.boundMemberNames.has(draft.name.trim())) {
+          throw new Error('Unbind the gateway before switching this teammate to Gemini.');
+        }
         const effort = getCompatibleMemberEffort(providerId, draft.model, draft.effort);
         return effort === draft.effort ? draft : { ...draft, effort };
       });

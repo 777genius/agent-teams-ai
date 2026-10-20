@@ -54,9 +54,18 @@ vi.mock('@renderer/components/ui/label', () => ({
 }));
 
 vi.mock('../dialogs/MembersJsonEditor', () => ({
-  MembersJsonEditor: ({ value, onChange }: { value: string; onChange: (value: string) => void }) =>
+  MembersJsonEditor: ({
+    value,
+    onChange,
+    error,
+  }: {
+    value: string;
+    onChange: (value: string) => void;
+    error?: string | null;
+  }) =>
     React.createElement('textarea', {
       'data-testid': 'members-json-editor',
+      'data-error': error ?? '',
       value,
       onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value),
     }),
@@ -343,6 +352,48 @@ describe('MembersEditorSection runtime model selection', () => {
       effort: undefined,
     });
   });
+
+  it.each([
+    { bound: true, explicit: true },
+    { bound: true, explicit: false },
+    { bound: false, explicit: true },
+  ])(
+    'validates Gemini JSON imports against the active gateway binding ($bound/$explicit)',
+    async ({ bound, explicit }) => {
+      const { host, onChange } = renderMembersEditor({
+        members: [createMemberDraft({ id: 'alice', name: 'alice', providerId: 'anthropic' })],
+        inheritedProviderId: 'gemini',
+        gatewayBindings: {
+          boundMemberNames: new Set(bound ? ['alice'] : []),
+          pending: false,
+          error: null,
+          refresh: vi.fn(async () => undefined),
+        },
+      });
+      await act(async () => {
+        editJsonButton(host).click();
+        await Promise.resolve();
+      });
+      const editor = host.querySelector<HTMLTextAreaElement>(
+        '[data-testid="members-json-editor"]'
+      )!;
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set?.call(
+          editor,
+          JSON.stringify([{ name: ' alice ', ...(explicit ? { providerId: 'gemini' } : {}) }])
+        );
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+        await Promise.resolve();
+      });
+      if (bound) {
+        expect(onChange).not.toHaveBeenCalled();
+        expect(editor.getAttribute('data-error')).toContain('Unbind the gateway');
+      } else {
+        expect(onChange).toHaveBeenCalledOnce();
+        expect(editor.getAttribute('data-error')).toBe('');
+      }
+    }
+  );
 
   it('clears stale teammate effort imported through the JSON editor', async () => {
     const { host, onChange } = renderMembersEditor({
