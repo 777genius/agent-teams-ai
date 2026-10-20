@@ -67,6 +67,7 @@ export type ProvisioningAuthSource =
 
 export interface TeamRuntimeAuthContext {
   teamName?: string;
+  memberName?: string;
   authMaterialId?: string;
   allowAnthropicApiKeyHelper?: boolean;
   /** Setup-scoped ownership for any helper materialized through this context. */
@@ -132,6 +133,8 @@ export interface TeamProvisioningEnvBuilderPorts {
 }
 
 export interface BuildProvisioningEnvOptions {
+  /** Set by the direct-member host only after exact credential resolution. */
+  gatewayMember?: boolean;
   includeCodexTeammateAuth?: boolean;
   teamRuntimeAuth?: TeamRuntimeAuthContext;
 }
@@ -361,6 +364,7 @@ export async function buildProvisioningEnv({
     providerBackendId,
     shellEnv,
     env,
+    ...(options?.gatewayMember ? { connectionMode: 'runtime-only' as const } : {}),
   });
   const providerConnectionIssue = providerEnvResult.connectionIssues[resolvedProviderId];
   const providerEnv = providerEnvResult.env;
@@ -407,6 +411,10 @@ export async function buildProvisioningEnv({
       `${home}/.local/state`;
     providerEnv.XDG_CONFIG_HOME = xdgConfigHome;
     providerEnv.XDG_STATE_HOME = xdgStateHome;
+  }
+
+  if (options?.gatewayMember) {
+    return { env: providerEnv, authSource: 'none', geminiRuntimeAuth: null, providerArgs: [] };
   }
 
   if (providerConnectionIssue) {

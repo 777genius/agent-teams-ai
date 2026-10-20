@@ -173,8 +173,10 @@ export interface TeamProvisioningMemberLifecycleRuntimeLaunchPorts {
     providerId: TeamProviderId,
     providerBackendId: TeamProviderBackendId | undefined,
     options: {
+      gatewayMember?: boolean;
       teamRuntimeAuth: {
         teamName: string;
+        memberName?: string;
         authMaterialId: string;
         allowAnthropicApiKeyHelper: boolean;
       };

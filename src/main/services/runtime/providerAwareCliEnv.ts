@@ -44,7 +44,7 @@ export interface ProviderAwareCliEnvOptions {
   providerBackendId?: string | null;
   shellEnv?: NodeJS.ProcessEnv | null;
   env?: NodeJS.ProcessEnv;
-  connectionMode?: 'strict' | 'augment';
+  connectionMode?: 'strict' | 'augment' | 'runtime-only';
   allowStoredApiKeyDecryption?: boolean;
   allowedStoredApiKeyEnvVarNames?: readonly string[];
   allowClaudeUserSettingsAuthEnv?: boolean;
@@ -183,6 +183,13 @@ export async function buildProviderAwareCliEnv(
   if (!resolvedProviderId || resolvedProviderId === 'opencode') {
     await ensureAgentTeamsMcpLocalLaunchEnv(env);
     applyAgentTeamsMcpAppContext(env);
+  }
+
+  // Member gateways supply their own verified credentials and launch arguments.
+  // Keep binary/MCP preparation above, without consulting the global connection.
+  if (connectionMode === 'runtime-only') {
+    removeGlobalElectronRunAsNodeEnv(env);
+    return { env, connectionIssues: {}, providerArgs: [] };
   }
 
   if (options.providerId) {

@@ -486,8 +486,18 @@ export function createTeamProvisioningMemberLifecycleHostFromPortGroups<
         configuredMember: input.configuredMember,
         request: asServiceProvisioningRun<TRun>(input.run).request,
       }),
-    buildProvisioningEnv: (providerId, providerBackendId, options) =>
-      runtimeLaunch.buildProvisioningEnv(providerId, providerBackendId, options),
+    buildProvisioningEnv: async (providerId, providerBackendId, options) => {
+      const auth = options.teamRuntimeAuth;
+      const connection = auth.memberName
+        ? await runtimeLaunch
+            .getMemberGatewayRuntimeSeams()
+            ?.resolveMemberConnection(auth.teamName, auth.memberName)
+        : null;
+      return runtimeLaunch.buildProvisioningEnv(providerId, providerBackendId, {
+        ...options,
+        gatewayMember: Boolean(connection),
+      });
+    },
     materializeEffectiveTeamMemberSpecs: (input) =>
       memberSpec.materializeEffectiveTeamMemberSpecs(input),
     resolveDirectMemberLaunchIdentity: async (input) => {

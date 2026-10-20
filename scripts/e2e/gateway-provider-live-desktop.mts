@@ -628,10 +628,16 @@ try {
     }
     if (name === 'claude-two' || name === 'codex-two') {
       const before = await usage(members[0]);
-      await json(
-        path.join(dirs.evidence, name + '-runtime-before-restart.json'),
-        await invoke('teams', 'getTeamAgentRuntime', team)
-      );
+      const restartable = await poll('verified runtime PID before restart', async () => {
+        const snapshot = await invoke<{
+          members: Record<string, { pid?: number; restartable?: boolean }>;
+        }>('teams', 'getTeamAgentRuntime', team);
+        return snapshot.members[members[0].name]?.pid &&
+          snapshot.members[members[0].name]?.restartable
+          ? snapshot
+          : null;
+      });
+      await json(path.join(dirs.evidence, name + '-runtime-before-restart.json'), restartable);
       if (process.platform !== 'win32') {
         const table = execFileSync('ps', ['-ax', '-o', 'pid=,ppid=,pcpu=,rss=,command='], {
           encoding: 'utf8',

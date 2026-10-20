@@ -166,6 +166,23 @@ describe('buildProviderAwareCliEnv', () => {
     }
   );
 
+  it('prepares the native binary without consulting global credentials for a gateway member', async () => {
+    const { buildProviderAwareCliEnv } = await import('@main/services/runtime/providerAwareCliEnv');
+    resolveVerifiedAppManagedCodexRuntimeBinaryPathMock.mockResolvedValue('/sandbox/managed/codex');
+    const result = await buildProviderAwareCliEnv({
+      providerId: 'codex',
+      connectionMode: 'runtime-only',
+    });
+    expect(result.env.CODEX_CLI_PATH).toBe('/sandbox/managed/codex');
+    expect(result.connectionIssues).toEqual({});
+    expect(result.providerArgs).toEqual([]);
+    expect(resolveVerifiedAppManagedCodexRuntimeBinaryPathMock).toHaveBeenCalled();
+    expect(applyConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+    expect(augmentConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+    expect(getConfiguredConnectionIssuesMock).not.toHaveBeenCalled();
+    expect(getConfiguredConnectionLaunchArgsMock).not.toHaveBeenCalled();
+  });
+
   it('keeps passive reads passive when no server or MCP launch metadata exists and strips dead endpoints', async () => {
     vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', undefined);
     const { buildPassiveProviderStatusCliEnv } =

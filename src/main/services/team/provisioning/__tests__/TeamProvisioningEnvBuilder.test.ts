@@ -63,6 +63,27 @@ function createPorts(
 }
 
 describe('TeamProvisioningEnvBuilder', () => {
+  it.each(['anthropic', 'codex'] as const)(
+    'prepares a verified %s gateway member without global auth or a lead helper',
+    async (providerId) => {
+      const ports = createPorts();
+      const result = await buildProvisioningEnv({
+        providerId,
+        options: { gatewayMember: true },
+        ports,
+      });
+      expect(ports.buildProviderAwareCliEnv).toHaveBeenCalledWith(
+        expect.objectContaining({ connectionMode: 'runtime-only' })
+      );
+      expect(
+        ports.providerConnectionService.getConfiguredAnthropicApiKeyForTeamRuntime
+      ).not.toHaveBeenCalled();
+      expect(result.authSource).toBe('none');
+      expect(result.warning).toBeUndefined();
+      expect(result.providerArgs).toEqual([]);
+    }
+  );
+
   it('passes the resolved desktop binding to the runtime process instead of inherited values', async () => {
     const bound = {
       AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:4588',

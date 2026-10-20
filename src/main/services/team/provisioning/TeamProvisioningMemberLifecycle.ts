@@ -622,6 +622,7 @@ export class TeamProvisioningMemberLifecycleController {
     const provisioningEnv = await this.buildProvisioningEnv(providerId, providerBackendId, {
       teamRuntimeAuth: {
         teamName: input.teamName,
+        memberName: input.configuredMember.name,
         authMaterialId: `${input.run.runId}-direct-${input.configuredMember.name}-${randomUUID()}`,
         allowAnthropicApiKeyHelper: true,
       },
@@ -830,6 +831,7 @@ export class TeamProvisioningMemberLifecycleController {
     const provisioningEnv = await this.buildProvisioningEnv(providerId, providerBackendId, {
       teamRuntimeAuth: {
         teamName: input.teamName,
+        memberName: input.configuredMember.name,
         authMaterialId: `${input.run.runId}-process-${operation}-${input.configuredMember.name}-${randomUUID()}`,
         allowAnthropicApiKeyHelper: true,
       },
