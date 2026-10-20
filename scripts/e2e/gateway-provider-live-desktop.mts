@@ -854,8 +854,8 @@ try {
               path.join(dirs['user-data'], 'data', 'token-usage', 'ledger.json'),
               'utf8'
             )
-          ) as { runs: TokenUsageRunDto[] };
-          const run = ledger.runs.find(
+          ) as { runs: Record<string, TokenUsageRunDto> };
+          const run = Object.values(ledger.runs).find(
             (run) =>
               run.teamName === team &&
               run.agentName === original.name &&
