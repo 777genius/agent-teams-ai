@@ -87,6 +87,9 @@ jobs:
           # root and its tsconfig.json) die EPERM unless app containers may
           # read; default-ACL resource trees never had this problem. Read-only.
           $appPackages = [Security.Principal.SecurityIdentifier]::new('S-1-15-2-1')
+          $synchronize = [int][Security.AccessControl.FileSystemRights]::Synchronize
+          $readExecuteGrant = [int][Security.AccessControl.FileSystemRights]::ReadAndExecute -bor $synchronize
+          $fullControl = [int][Security.AccessControl.FileSystemRights]::FullControl
           foreach ($name in @('TEST-native-source', 'TEST-native-sdk')) {
             $target = Join-Path $env:GITHUB_WORKSPACE $name
             try { $null = Get-Item -LiteralPath $target -Force -ErrorAction Stop; throw 'TEST source container already exists' }
@@ -102,7 +105,10 @@ jobs:
             foreach ($principal in @($sid, $system)) {
               $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($principal, 'FullControl', $inherit, 'None', 'Allow'))
             }
-            $acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new($appPackages, 'ReadAndExecute', $inherit, 'None', 'Allow'))
+            # .NET's bare ReadAndExecute lacks SYNCHRONIZE, but GENERIC_READ
+            # opens map to FILE_GENERIC_READ which includes it; without the bit
+            # the container read check still denies.
+            $acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new($appPackages, [System.Security.AccessControl.FileSystemRights]$readExecuteGrant, $inherit, 'None', 'Allow'))
             $directory = [IO.DirectoryInfo]::new($target)
             [IO.FileSystemAclExtensions]::Create($directory, $acl)
             $directory.Refresh()
@@ -112,8 +118,12 @@ jobs:
             $rules = @($observed.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]))
             if ($rules.Count -ne 3) { throw 'TEST source ACL invalid' }
             foreach ($rule in $rules) {
-              $expected = if ($rule.IdentityReference.Value -eq $appPackages.Value) { 'ReadAndExecute' } elseif ($rule.IdentityReference.Value -in @($sid.Value, $system.Value)) { 'FullControl' } else { $null }
-              if ($null -eq $expected -or $rule.AccessControlType -ne 'Allow' -or $rule.FileSystemRights -ne $expected -or $rule.InheritanceFlags -ne $inherit -or $rule.PropagationFlags -ne 'None' -or $rule.IsInherited) { throw 'TEST source ACL invalid' }
+              $mask = [int]$rule.FileSystemRights
+              $expected = if ($rule.IdentityReference.Value -eq $appPackages.Value) { $readExecuteGrant } elseif ($rule.IdentityReference.Value -in @($sid.Value, $system.Value)) { $fullControl } else { $null }
+              # Exact masks only; a bare ReadAndExecute read-back is the one
+              # tolerated variant (Synchronize may be normalized either way).
+              $maskOk = $null -ne $expected -and ($mask -eq $expected -or ($expected -eq $readExecuteGrant -and $mask -eq ($readExecuteGrant -bxor $synchronize)))
+              if (!$maskOk -or $rule.AccessControlType -ne 'Allow' -or $rule.InheritanceFlags -ne $inherit -or $rule.PropagationFlags -ne 'None' -or $rule.IsInherited) { throw "TEST source ACL invalid sid=$($rule.IdentityReference.Value) mask=$mask expected=$expected type=$($rule.AccessControlType) inherit=$([int]$rule.InheritanceFlags) prop=$([int]$rule.PropagationFlags) inherited=$($rule.IsInherited)" }
             }
           }
       - uses: actions/checkout@v6
