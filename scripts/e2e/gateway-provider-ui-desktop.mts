@@ -40,6 +40,7 @@ export interface GatewayUiFixture {
   endpoints: string[];
 }
 export interface GatewayUiOptions {
+  providerId?: 'codex' | 'opencode';
   apiKey: string;
   model?: string;
   teamName?: string;
@@ -110,7 +111,10 @@ export async function verifyGatewayUi(
   await mkdir(fixture.dirs.evidence, { recursive: true });
   const capture = async (name: string): Promise<void> => {
     await page.screenshot({
-      path: path.join(fixture.dirs.evidence, `gateway-ui-${name}.png`),
+      path: path.join(
+        fixture.dirs.evidence,
+        `gateway-ui-${options.providerId ? options.providerId + '-' : ''}${name}.png`
+      ),
       fullPage: true,
     });
   };
@@ -209,6 +213,15 @@ export async function verifyGatewayUi(
       (binding) => binding.memberName === memberName && binding.profileId === profile.id
     )
   );
+  if (options.providerId) {
+    await member
+      .locator(`[data-testid="team-model-selector-provider-nav-${options.providerId}"]`)
+      .click();
+    const providerLabel = options.providerId === 'opencode' ? 'OpenCode' : 'Codex';
+    await member
+      .getByRole('button', { name: new RegExp(providerLabel + ' provider,', 'i') })
+      .waitFor();
+  }
   await capture('member-bound');
   await cancelDialog();
 

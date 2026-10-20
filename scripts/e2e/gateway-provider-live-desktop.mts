@@ -236,21 +236,28 @@ async function waitReady(team: string, runId: string): Promise<void> {
         `Provisioning ${progress.state}: ${redact(progress.error ?? progress.message ?? '')}`
       );
       if (progress.state !== 'ready') return false;
-      const launch = JSON.parse(
-        await readFile(path.join(dirs.claude, 'teams', team, 'launch-state.json'), 'utf8')
-      ) as {
-        summary?: { failedCount?: number };
-        members?: Record<string, { hardFailureReason?: string }>;
-      };
-      assert(
-        !launch.summary?.failedCount,
-        `Team has failed teammates: ${redact(
-          Object.values(launch.members ?? {})
-            .map((member) => member.hardFailureReason ?? '')
-            .filter(Boolean)
-            .join('; ')
-        )}`
+      const launchPath = path.join(dirs.claude, 'teams', team, 'launch-state.json');
+      const launchJson = await readFile(launchPath, 'utf8').catch(
+        (error: NodeJS.ErrnoException) => {
+          if (error.code === 'ENOENT') return null;
+          throw error;
+        }
       );
+      if (launchJson) {
+        const launch = JSON.parse(launchJson) as {
+          summary?: { failedCount?: number };
+          members?: Record<string, { hardFailureReason?: string }>;
+        };
+        assert(
+          !launch.summary?.failedCount,
+          `Team has failed teammates: ${redact(
+            Object.values(launch.members ?? {})
+              .map((member) => member.hardFailureReason ?? '')
+              .filter(Boolean)
+              .join('; ')
+          )}`
+        );
+      }
       return true;
     },
     8 * 60_000
@@ -648,6 +655,15 @@ try {
         { apiKey: uiKey.key }
       );
       uiVerified = true;
+    }
+    if (name === 'opencode-one') {
+      const uiKey = await freshKey(`${team}-opencode-ui`, groupByPlatform.get('openai')!);
+      permitted.add(uiKey.key);
+      await verifyGatewayUi(
+        page as unknown as GatewayUiPage,
+        { root, dirs, port, endpoints },
+        { apiKey: uiKey.key, model: 'gpt-5-codex', providerId: 'opencode' }
+      );
     }
     if (name === 'claude-two' || name === 'codex-two') {
       const before = await usage(members[0]);
