@@ -182,3 +182,160 @@ describe('Budget monthly projection', () => {
     });
   });
 });
+
+describe('Budget gateway coverage', () => {
+  it('degraded gateway team makes global and that team incomplete while other teams stay complete', () => {
+    const status = buildBudgetStatus({
+      now,
+      settings: {
+        global: {
+          monthlyTokenLimit: 1000,
+          monthlyApiEquivalentCostLimitUsd: 100,
+          thresholds: [50, 100],
+          notificationsEnabled: true,
+        },
+        teams: {
+          'team:sandbox-team': {
+            monthlyTokenLimit: 50,
+            monthlyApiEquivalentCostLimitUsd: 50,
+            thresholds: [50, 100],
+            notificationsEnabled: true,
+          },
+          'team:other-team': {
+            monthlyTokenLimit: 50,
+            monthlyApiEquivalentCostLimitUsd: 50,
+            thresholds: [50, 100],
+            notificationsEnabled: true,
+          },
+        },
+      },
+      ledger: {
+        runs: [testRun(), testRun({ appRunId: 'other-run', teamName: 'other-team' })],
+        events: [
+          testEvent(),
+          testEvent({ id: 'other-event', appRunId: 'other-run' }),
+          testEvent({
+            id: 'gateway-day',
+            appRunId: 'gateway:ref-1:2026-10-01',
+            teamName: 'sandbox-team',
+            usageSourceKind: 'gateway_exact',
+            gatewayUsageRef: 'ref-1',
+            gatewayDay: '2026-10-01',
+            occurredAt: '2026-10-01T00:00:00.000Z',
+            requestCount: 25,
+          }),
+        ],
+      },
+      degraded: false,
+      usageUpdatedAt: now.toISOString(),
+      policy: { enabled: true, nativeToasts: false },
+      gateway: { degradedTeamIds: ['team:sandbox-team'] },
+    });
+
+    const global = status.targets.find((target) => target.scope === 'global');
+    expect(global?.metrics.map((metric) => metric.value)).toEqual([300, 6]);
+    expect(global?.metrics.every((metric) => metric.incomplete)).toBe(true);
+    const degradedTeam = status.targets.find((target) => target.id === 'team:sandbox-team');
+    // Over the threshold with notifications enabled, yet incomplete suppresses any notification.
+    expect(degradedTeam?.notificationsEnabled).toBe(true);
+    expect(degradedTeam?.metrics[0]).toMatchObject({ value: 200, percent: 400, incomplete: true });
+    expect(degradedTeam?.metrics[1]?.incomplete).toBe(true);
+    const otherTeam = status.targets.find((target) => target.id === 'team:other-team');
+    expect(otherTeam?.metrics.map((metric) => metric.value)).toEqual([100, 2]);
+    expect(otherTeam?.metrics.every((metric) => metric.incomplete)).toBe(false);
+  });
+
+  it('inventoryUnavailable makes the global budget incomplete', () => {
+    const status = buildBudgetStatus({
+      now,
+      settings: config,
+      ledger: { runs: [testRun()], events: [testEvent()] },
+      degraded: false,
+      usageUpdatedAt: now.toISOString(),
+      policy: { enabled: true, nativeToasts: false },
+      gateway: { inventoryUnavailable: true },
+    });
+
+    const global = status.targets.find((target) => target.scope === 'global');
+    expect(global?.metrics.every((metric) => metric.incomplete)).toBe(true);
+  });
+
+  it('marks projects of gateway-marked runs incomplete while unlinked projects stay complete', () => {
+    const status = buildBudgetStatus({
+      now,
+      settings: {
+        global: { monthlyTokenLimit: 1000, thresholds: [50, 100], notificationsEnabled: true },
+        projects: {
+          'project:gateway:hash': {
+            monthlyTokenLimit: 100,
+            thresholds: [50, 100],
+            notificationsEnabled: true,
+          },
+          'project:plain:hash': {
+            monthlyTokenLimit: 100,
+            thresholds: [50, 100],
+            notificationsEnabled: true,
+          },
+        },
+      },
+      ledger: {
+        runs: [
+          testRun({ workspacePathHash: 'gateway:hash', gatewayUsageRef: 'ref-1' }),
+          testRun({ appRunId: 'plain-run', workspacePathHash: 'plain:hash' }),
+        ],
+        events: [
+          testEvent({ id: 'gateway-run-event', appRunId: 'sandbox-run' }),
+          testEvent({ id: 'plain-event', appRunId: 'plain-run' }),
+        ],
+      },
+      degraded: false,
+      usageUpdatedAt: now.toISOString(),
+      policy: { enabled: true, nativeToasts: false },
+      gateway: {},
+    });
+
+    const gatewayProject = status.targets.find((target) => target.id === 'project:gateway:hash');
+    expect(gatewayProject?.metrics.every((metric) => metric.incomplete)).toBe(true);
+    const plainProject = status.targets.find((target) => target.id === 'project:plain:hash');
+    expect(plainProject?.metrics.every((metric) => metric.incomplete)).toBe(false);
+    const global = status.targets.find((target) => target.scope === 'global');
+    expect(global?.metrics.every((metric) => metric.incomplete)).toBe(false);
+  });
+
+  it('counts an explicit zero billable gateway cost as known rather than estimated', () => {
+    const gatewayDay = testEvent({
+      id: 'gateway-free-day',
+      appRunId: 'gateway:ref-1:2026-10-01',
+      teamName: 'sandbox-team',
+      usageSourceKind: 'gateway_exact',
+      gatewayUsageRef: 'ref-1',
+      gatewayDay: '2026-10-01',
+      occurredAt: '2026-10-01T00:00:00.000Z',
+      cost: normalizeCostBreakdown({
+        estimatedUsd: 0.5,
+        billableUsd: 0,
+        apiEquivalentUsd: 0.5,
+        source: 'gateway',
+      }),
+    });
+    const status = buildBudgetStatus({
+      now,
+      settings: config,
+      ledger: { runs: [], events: [gatewayDay] },
+      degraded: false,
+      usageUpdatedAt: now.toISOString(),
+      policy: { enabled: true, nativeToasts: false },
+      gateway: {},
+    });
+
+    const global = status.targets.find((target) => target.scope === 'global');
+    expect(global?.metrics[1]).toMatchObject({ value: 0.5, incomplete: false });
+    const summary = buildTokenUsageSnapshot({
+      runs: [],
+      events: [gatewayDay],
+      nowIso: now.toISOString(),
+    }).summary;
+    expect(summary.billableCostUsd).toBe(0);
+    expect(summary.apiEquivalentCostUsd).toBe(0.5);
+  });
+});

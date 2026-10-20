@@ -5,26 +5,24 @@ import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Label } from '@renderer/components/ui/label';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
+import { CUSTOM_ROLE, NO_ROLE } from '@renderer/constants/teamRoles';
 import { cn } from '@renderer/lib/utils';
 import { getParticipantAvatarUrlByIndex } from '@renderer/utils/memberAvatarCatalog';
 import { getAvailableTeamEffortValue } from '@renderer/utils/teamEffortOptions';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
-import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { GitBranch, Plug, Plus } from 'lucide-react';
 
 import { MembersJsonEditor } from '../dialogs/MembersJsonEditor';
 
 import { MemberDraftRow } from './MemberDraftRow';
 import { getNextSuggestedMemberName } from './memberNameSets';
+import { membersToJsonText, parseJsonToDrafts } from './membersEditorJson';
 import {
   buildMemberDraftColorMap,
   buildMemberDraftSuggestions,
   createMemberDraft,
-  getMemberDraftRole,
-  getWorkflowForExport,
 } from './membersEditorUtils';
 
 import type { MemberDraft } from './membersEditorTypes';
@@ -32,55 +30,6 @@ import type { TeamModelSelectorProps } from '@renderer/components/team/dialogs/T
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { CliProviderStatus, EffortLevel, TeamProviderId } from '@shared/types';
-
-function membersToJsonText(drafts: MemberDraft[]): string {
-  const arr = drafts
-    .filter((d) => d.name.trim())
-    .map((d) => {
-      const role = getMemberDraftRole(d);
-      const obj: Record<string, unknown> = { name: d.name.trim() };
-      if (role) obj.role = role;
-      const workflow = getWorkflowForExport(d);
-      if (workflow) obj.workflow = workflow;
-      if (d.isolation === 'worktree') obj.isolation = 'worktree';
-      if (d.providerId) obj.providerId = d.providerId;
-      if (d.model?.trim()) obj.model = d.model.trim();
-      if (d.effort) obj.effort = d.effort;
-      if (d.mcpPolicy) obj.mcpPolicy = d.mcpPolicy;
-      return obj;
-    });
-  return JSON.stringify(arr, null, 2);
-}
-
-function parseJsonToDrafts(text: string): MemberDraft[] {
-  const arr: unknown = JSON.parse(text);
-  if (!Array.isArray(arr)) return [];
-  return (arr as Record<string, unknown>[]).map((item) => {
-    const name = typeof item.name === 'string' ? item.name : '';
-    const role = typeof item.role === 'string' ? item.role.trim() : '';
-    const workflow = typeof item.workflow === 'string' ? item.workflow.trim() : '';
-    const isolation = item.isolation === 'worktree' ? 'worktree' : undefined;
-    const providerId = normalizeOptionalTeamProviderId(item.providerId);
-    const model = typeof item.model === 'string' ? item.model.trim() : '';
-    const effort: EffortLevel | undefined = isTeamEffortLevel(item.effort)
-      ? item.effort
-      : undefined;
-    const mcpPolicy = normalizeTeamMemberMcpPolicy(item.mcpPolicy);
-    const presetRoles: readonly string[] = PRESET_ROLES;
-    const isPreset = presetRoles.includes(role);
-    return createMemberDraft({
-      name,
-      roleSelection: role ? (isPreset ? role : CUSTOM_ROLE) : '',
-      customRole: role && !isPreset ? role : '',
-      workflow: workflow || undefined,
-      isolation,
-      providerId,
-      model,
-      effort,
-      mcpPolicy,
-    });
-  });
-}
 
 function cloneMcpPolicy(policy: MemberDraft['mcpPolicy']): MemberDraft['mcpPolicy'] {
   const normalized = normalizeTeamMemberMcpPolicy(policy);
@@ -103,6 +52,8 @@ function forceActiveMembersToAgentTeamsMcp(drafts: MemberDraft[]): MemberDraft[]
 export interface MembersEditorSectionProps {
   members: MemberDraft[];
   onChange: (members: MemberDraft[]) => void;
+  /** Team name used for per-teammate gateway bindings on the member row. */
+  teamName?: string;
   fieldError?: string;
   validateMemberName?: (name: string) => string | null;
   showWorkflow?: boolean;
@@ -180,6 +131,7 @@ export interface MembersEditorSectionProps {
 export const MembersEditorSection = ({
   members,
   onChange,
+  teamName,
   fieldError,
   validateMemberName,
   showWorkflow = false,
@@ -642,6 +594,7 @@ export const MembersEditorSection = ({
                   runtimeSelectionUnresolved={runtimeSelectionUnresolved}
                   key={member.id}
                   member={member}
+                  teamName={teamName}
                   index={index}
                   avatarSrc={getParticipantAvatarUrlByIndex(index + 1)}
                   resolvedColor={memberColorMap.get(member.id)}

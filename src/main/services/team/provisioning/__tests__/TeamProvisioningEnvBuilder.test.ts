@@ -72,12 +72,16 @@ describe('TeamProvisioningEnvBuilder', () => {
     try {
       const ports = createPorts({
         buildProviderAwareCliEnv: vi.fn(async () => ({
-          env: { AGENT_TEAMS_BOUND_CONTEXT_JSON: 'stale-context' }, connectionIssues: {}, providerArgs: [],
+          env: { AGENT_TEAMS_BOUND_CONTEXT_JSON: 'stale-context' },
+          connectionIssues: {},
+          providerArgs: [],
         })),
       });
       const result = await buildProvisioningEnv({ providerId: 'opencode', ports });
       expect(result.env).toMatchObject(bound);
-    } finally { revoke(); }
+    } finally {
+      revoke();
+    }
   });
   it('projects the late launch-resolved control URL and app root into MCP child env as well as outer env', async () => {
     const ports = createPorts({
@@ -181,6 +185,45 @@ describe('TeamProvisioningEnvBuilder', () => {
     expect(result.env.SHELL).toBe('/bin/fish');
     expect(result.env.XDG_CONFIG_HOME).toBe('/shell/config');
     expect(result.env.XDG_STATE_HOME).toBe('/shell/state');
+  });
+
+  it('launches gateway-bound Codex members without a global Codex credential', async () => {
+    const buildGlobalEnv = vi.fn(async () => {
+      throw new Error('No global Codex credential');
+    });
+    const result = await buildCrossProviderMemberArgs({
+      primaryProviderId: 'anthropic',
+      memberSpecs: [{ name: 'bound', providerId: 'codex', model: 'gpt-5' }],
+      options: { teamRuntimeAuth: { teamName: 'sandbox' } },
+      ports: {
+        buildProvisioningEnv: buildGlobalEnv,
+        buildRuntimeTurnSettledHookSettingsArgs: async () => [],
+        logger: { error: vi.fn() },
+        getMemberGatewayRuntimeSeams: () => ({
+          resolveMemberConnection: async () => ({
+            teamName: 'sandbox',
+            memberName: 'bound',
+            gatewayUsageRef: 'member-source',
+            apiKey: 'member-only-key',
+            spec: {
+              profileId: 'profile',
+              baseUrl: 'https://gateway.example',
+              credentialRef: 'key-ref',
+              allowPrivateNetwork: false,
+              model: 'gpt-5',
+            },
+          }),
+          configureOpenCodeLocalProvider: async () => ({ providerId: '', modelRoute: '' }),
+          retireOpenCodeLocalProvider: async () => ({ retired: false }),
+          markRuntimeArtifactActive: async () => undefined,
+          markRuntimeArtifactRetired: async () => undefined,
+        }),
+      },
+    });
+    expect(buildGlobalEnv).not.toHaveBeenCalled();
+    expect(result.envPatch.CODEX_API_KEY).toBeUndefined();
+    expect(result.memberArgsByMember.get('bound')?.envPatch.CODEX_API_KEY).toBe('member-only-key');
+    expect(result.memberArgsByMember.get('bound')?.gatewayUsageRef).toBe('member-source');
   });
 
   it('builds cross-provider runtime args and safe Codex env patch', async () => {

@@ -7,6 +7,7 @@ import {
 
 import { ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS } from '../../runtime/anthropicTeamApiKeyHelper';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
+import { getExplicitDesktopTeammateMode } from '../runtimeTeammateMode';
 
 import {
   type AnthropicApiKeyHelperCleanupRetryOwner,
@@ -36,6 +37,7 @@ import {
   parseLaunchConfigProjectPath,
   resolveExistingLaunchRunReuse,
 } from './TeamProvisioningLaunchTeamFlow';
+import { assertMemberGatewaySpawnCompatibility } from './TeamProvisioningMemberGatewayRuntime';
 import {
   buildEffectiveTeamMemberSpecs,
   teamRequestIncludesCodexMember,
@@ -382,6 +384,11 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
       { teamRuntimeAuth }
     );
     anthropicApiKeyHelperLease.coalesce(crossProviderMemberArgs.anthropicApiKeyHelper);
+    assertMemberGatewaySpawnCompatibility({
+      memberArgsByMember: crossProviderMemberArgs.memberArgsByMember,
+      usesAnthropicApiKeyHelper: crossProviderMemberArgs.usesAnthropicApiKeyHelper,
+      teammateModeIsInProcess: getExplicitDesktopTeammateMode(request.extraCliArgs) === 'in-process',
+    });
     const workspaceTrustFullWorkspaces = workspaceTrustFeatureFlags.enabled
       ? await collectWorkspaceTrustWorkspaces({
           cwd: request.cwd,

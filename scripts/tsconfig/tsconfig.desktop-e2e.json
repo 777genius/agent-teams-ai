@@ -18,7 +18,10 @@
     "../../scripts/e2e/external-agent-shared-root.ts",
     "../../scripts/e2e/opencode-status-recovery/**/*.mts",
     "../../scripts/e2e/task-detail-tabs-desktop.ts",
-    "../../scripts/e2e/task-detail-tabs/**/*.ts"
+    "../../scripts/e2e/task-detail-tabs/**/*.ts",
+    "../../scripts/e2e/gateway-provider-live-desktop.mts",
+    "../../scripts/e2e/gateway-provider-ui-desktop.mts",
+    "../../scripts/e2e/gateway-provider/**/*.ts"
   ],
   "exclude": ["../../node_modules", "../../dist", "../../dist-electron"]
 }

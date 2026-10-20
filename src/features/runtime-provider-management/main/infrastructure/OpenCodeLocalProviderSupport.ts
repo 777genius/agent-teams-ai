@@ -206,6 +206,7 @@ export async function commitProviderConfigWithCredential(input: {
   readonly previousApiKeyReference: string | null;
   readonly contents: string;
   readonly mode: number;
+  readonly beforeConfigCommit?: (contents: string, credentialReference: string) => Promise<void>;
 }): Promise<void> {
   const commitConfig = (contents = input.contents): Promise<void> =>
     atomicWriteAsync(input.configPath, contents, { mode: input.mode });
@@ -237,6 +238,7 @@ export async function commitProviderConfigWithCredential(input: {
       JSON.stringify(absoluteReference) +
       input.contents.slice(referenceNode.offset + referenceNode.length);
     committedTree = parseTree(contents);
+    await input.beforeConfigCommit?.(contents, absoluteReference);
     await commitConfig(contents);
   } catch (error) {
     await fs.unlink(staged.credentialPath).catch(() => undefined);
@@ -264,7 +266,7 @@ export async function commitProviderConfigWithCredential(input: {
   }
 }
 
-function containsStringReference(
+export function containsStringReference(
   node: JsoncNode,
   reference: string,
   credentialDirectory: string
@@ -276,7 +278,9 @@ function containsStringReference(
     (filename !== null &&
       typeof value === 'string' &&
       parseManagedProviderCredentialFilename(credentialDirectory, value) === filename) ||
-    (node.children?.some((child) => containsStringReference(child, reference, credentialDirectory)) ??
+    (node.children?.some((child) =>
+      containsStringReference(child, reference, credentialDirectory)
+    ) ??
       false)
   );
 }
@@ -300,19 +304,26 @@ function parseProviderApiKeyFilename(reference: string): string | null {
   return /^[a-z0-9][a-z0-9._-]{0,190}\.key$/i.test(filename) ? filename : null;
 }
 
-async function removeManagedProviderCredential(
+export async function removeManagedProviderCredential(
   credentialDirectory: string,
   reference: string,
   owner: {
     readonly configPath: string;
     readonly providerId: string;
   }
-): Promise<void> {
+): Promise<boolean> {
   const filename = parseManagedProviderCredentialFilename(credentialDirectory, reference);
-  if (!filename || !isOwnedProviderApiKeyFilename(filename, owner)) return;
+  if (!filename || !isOwnedProviderApiKeyFilename(filename, owner)) return false;
   const credentialPath = path.join(credentialDirectory, filename);
-  const stat = await fs.lstat(credentialPath);
-  if (!stat.isSymbolicLink() && stat.isFile()) await fs.unlink(credentialPath);
+  try {
+    const stat = await fs.lstat(credentialPath);
+    if (stat.isSymbolicLink() || !stat.isFile()) return false;
+    await fs.unlink(credentialPath);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return true;
+    throw error;
+  }
 }
 
 function parseManagedProviderCredentialFilename(

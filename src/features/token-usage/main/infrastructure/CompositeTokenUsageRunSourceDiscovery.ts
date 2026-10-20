@@ -33,6 +33,7 @@ function mergeRunsByNativeSession(runs: readonly TokenUsageRunDto[]): TokenUsage
           ? preferred.billingMode
           : supplemental.billingMode,
       model: preferred.model ?? supplemental.model,
+      gatewayUsageRef: preferred.gatewayUsageRef ?? supplemental.gatewayUsageRef,
       providerBackendId: preferred.providerBackendId ?? supplemental.providerBackendId,
       sources,
     });

@@ -64,6 +64,7 @@ function createService(): ReceiverBoundService {
     events: [],
     marker: 'provider-runtime',
     expectedLane,
+    getMemberGatewayRuntimeSeams: () => null,
     runs: new Map([['team-a', serviceRun as unknown as HostRun]]),
     runtimeAdapterRunByTeam: new Map(),
     failedOpenCodeSecondaryRetryInFlightByTeam: new Map(),

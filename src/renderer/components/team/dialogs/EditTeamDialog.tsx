@@ -561,6 +561,7 @@ export const EditTeamDialog = ({
                 clearTransientErrors();
                 setMembers(nextMembers);
               }}
+              teamName={teamName}
               fieldError={invalidMemberNamesError ?? undefined}
               validateMemberName={validateMemberNameInline}
               showWorkflow

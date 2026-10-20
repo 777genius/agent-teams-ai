@@ -204,6 +204,7 @@ export const AddMemberDialog = ({
           <MembersEditorSection
             members={members}
             onChange={setMembers}
+            teamName={teamName}
             fieldError={error ?? undefined}
             validateMemberName={validateName}
             showWorkflow

@@ -178,3 +178,82 @@ export function mergeJsonSettingsArgs(args: string[]): string[] {
 
   return output;
 }
+
+export interface ParsedCodexCliSettings {
+  forcedLoginMethod: string | null;
+  configOverrides: string[];
+}
+
+const FORCED_LOGIN_METHOD_TOML_PATTERN = /^forced_login_method\s*=\s*([\s\S]+)$/;
+
+function stripTomlString(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    try {
+      return JSON.parse(trimmed) as string;
+    } catch {
+      return trimmed.slice(1, -1);
+    }
+  }
+  return trimmed;
+}
+
+/**
+ * Round-trippable extraction of Codex settings from both CLI forms produced by
+ * `buildCodexLaunchArgs`: native `-c`/`--config` pairs and inline `--settings`
+ * JSON (`codex.*.config_overrides`, `codex.forced_login_method`).
+ */
+export function parseCodexCliSettingsArgs(args: readonly string[]): ParsedCodexCliSettings {
+  let forcedLoginMethod: string | null = null;
+  const configOverrides: string[] = [];
+
+  const collectFromSettingsJson = (raw: string): boolean => {
+    const parsed = parseJsonSettingsObject(raw);
+    if (!parsed) return false;
+    const codex = parsed.codex;
+    if (!isJsonObject(codex)) return true;
+    if (typeof codex.forced_login_method === 'string') {
+      forcedLoginMethod = codex.forced_login_method;
+    }
+    for (const value of Object.values(codex)) {
+      if (isJsonObject(value) && Array.isArray(value.config_overrides)) {
+        for (const override of value.config_overrides) {
+          if (typeof override === 'string') configOverrides.push(override);
+        }
+      }
+    }
+    return true;
+  };
+
+  let i = 0;
+  while (i < args.length) {
+    const arg = args[i];
+    if (arg === '--settings' && typeof args[i + 1] === 'string') {
+      if (collectFromSettingsJson(args[i + 1])) {
+        i += 2;
+        continue;
+      }
+    }
+    const settingsPrefix = '--settings=';
+    if (arg.startsWith(settingsPrefix) && collectFromSettingsJson(arg.slice(settingsPrefix.length))) {
+      i += 1;
+      continue;
+    }
+    if (arg === '-c' || arg === '--config') {
+      const value = args[i + 1];
+      if (typeof value === 'string') {
+        const loginMatch = FORCED_LOGIN_METHOD_TOML_PATTERN.exec(value);
+        if (loginMatch) {
+          forcedLoginMethod = stripTomlString(loginMatch[1]);
+        } else {
+          configOverrides.push(value);
+        }
+        i += 2;
+        continue;
+      }
+    }
+    i += 1;
+  }
+
+  return { forcedLoginMethod, configOverrides };
+}

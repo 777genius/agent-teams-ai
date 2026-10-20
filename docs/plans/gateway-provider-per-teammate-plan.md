@@ -583,6 +583,24 @@ HTTP без `model_stats` не снимает ошибку. Успешный я�
 нуле и non-2xx при ошибке. Без неё импорт не называется точным; frontend
 не угадывает ноль. Затем используем этот контракт для будущего backend.
 
+**Шаг 0 выполнен 2026-10-20.** Проверенный стенд: SHA `0ddd6dec` + локальная
+bounded-правка `gateway_handler.go` (explicit-empty `model_stats`), собран
+образ `weishaw/sub2api:latest` локально (иначе compose подтянул бы upstream
+без правки). Скрипт проверки контракта `stage0/stage0-verify.mjs`
+(`/tmp/sub2api-stand`): 17/17 — ключи тиммейтов в группе читают `/v1/models`
+и дневной `/v1/usage`; явный `model_stats: []` для пустого дня; суммы
+`requests`/токенов по моделям; различающиеся `cost`/`actual_cost`; изоляция
+по ключам; UTC-границы 23:59:59Z/00:00:01Z; сбой статистики даёт 502 (не
+фейковый ноль), после восстановления — те же суммы. Операционные факты
+стенда: admin-записи требуют однократного `POST /api/v1/admin/compliance/accept`;
+gateway-авторизация требует `users.balance > 0` (баланс кэшируется в Redis
+в auth-кэше ключа); ungrouped-ключи не проходят авторизацию. Живой трафик
+через стенд тоже проверен: mock-upstream (Anthropic/OpenAI stream + non-stream,
+`/Users/belief/dev/projects/agent-teams-ai/.gateway-stand/mock-upstream.mjs`)
+подключён аккаунтам как `credentials.base_url`; запросы ключами тиммейтов
+получают ответы, и дневной `/v1/usage` относит токены строго по ключам
+(`stand-live-probe.mjs`, 10/10).
+
 1. **Claude Code ×2**, разные ключи и отличный от них токен лида → оба отвечают
    своими ключами; `/v1/usage` и `byAgent` различают их. Проверяем bootstrap и
    прямой restart/add без изменения лида.

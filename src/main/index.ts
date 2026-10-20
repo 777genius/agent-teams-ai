@@ -1,12 +1,13 @@
+import { cleanupOrphanedDeterministicBootstrapSpecs } from '@main/services/team/provisioning/TeamProvisioningBootstrapSpec';
+import { createGatewayLaunchRuntime } from '@main/services/gateway/createGatewayLaunchRuntime';
+import { OpenCodeLocalProviderConnector } from '@features/runtime-provider-management/main';
 /** Composes the Electron desktop services, IPC and application lifecycle. */
-
 // Increase UV thread pool size BEFORE any async I/O.
 // Default is 4 threads which is far too few for startup:
 // binary resolution stat() calls, CLI subprocess spawning, fs.watch(),
 // and readFile/readdir from IPC handlers all compete for the pool.
 // On Windows this saturates all threads, blocking the event loop.
 process.env.UV_THREADPOOL_SIZE ??= '16';
-
 // Keep userData stable before any integration can initialize Electron storage.
 // Sentry must stay near the top to capture early errors after storage migration.
 // eslint-disable-next-line simple-import-sort/imports -- userData migration must run before Sentry initializes Electron storage.
@@ -32,7 +33,6 @@ import {
   createStartupStage,
   StartupCancelledError,
 } from './utils/startupCancellation';
-
 import type {
   AppCloseReadinessResult,
   AppCloseReason,
@@ -135,6 +135,7 @@ import {
   TeamTaskUsageAttributionSource,
   type TokenUsageFeatureFacade,
 } from '@features/token-usage/main';
+import { setupGatewayProviderRuntime } from '@features/gateway-provider/main';
 import * as workspaceTrustFeature from '@features/workspace-trust/main';
 import { ensureAgentTeamsMcpLocalLaunchEnv } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
@@ -237,7 +238,6 @@ import {
 } from './startMemberWorkSyncFeature';
 import { existsSync } from 'fs';
 import { join } from 'path';
-
 import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
 import { registerOpenCodeStartupCleanupHandlers } from './ipc/openCodeStartupCleanup';
@@ -375,7 +375,6 @@ import {
   UpdaterService,
   applyCursorAgentAttributionEnv,
 } from './services';
-
 import type { FileChangeEvent } from '@main/types';
 import type {
   AppStartupMemorySnapshot,
@@ -383,7 +382,6 @@ import type {
   AppStartupStep,
   TeamChangeEvent,
 } from '@shared/types';
-
 const logger = createLogger('App');
 let persistentAppLog: ReturnType<typeof installPersistentAppLog> | null = null;
 const appStartedAtMs = Date.now();
@@ -394,12 +392,10 @@ const nativeRendererCdp = prepareNativeRendererCdp(
   configManager.getConfig().general.externalAgentCdpEnabled === true
 );
 let externalAgentConnection: ReturnType<typeof composeExternalAgentConnection> | null = null;
-
 if (process.env.AGENT_TEAMS_DISABLE_GPU?.trim() === '1') {
   app.disableHardwareAcceleration();
   logger.info('Hardware acceleration disabled by AGENT_TEAMS_DISABLE_GPU=1');
 }
-
 if (
   earlyElectronDevPathOverrideResult.userDataDir ||
   earlyElectronDevPathOverrideResult.claudeRoot
@@ -412,19 +408,16 @@ if (
 for (const warning of earlyElectronDevPathOverrideResult.warnings) {
   logger.warn(warning);
 }
-
 function readOptionalEnv(name: string): string | undefined {
   const value = process.env[name]?.trim();
   return value ? value : undefined;
 }
-
 function readOptionalEnvNumber(name: string): number | undefined {
   const value = readOptionalEnv(name);
   if (!value) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
-
 function readOptionalEnvArgs(name: string): string[] | undefined {
   const value = readOptionalEnv(name);
   if (!value) return undefined;
@@ -490,7 +483,8 @@ const INBOX_NOTIFY_DEBOUNCE_MS = 500;
 const suppressedSources = new Set(['user_sent']);
 
 async function createOpenCodeRuntimeAdapterRegistry(
-  reportProgress: (phase: string, message: string) => void = () => undefined
+  reportProgress: (phase: string, message: string) => void = () => undefined,
+  gatewayRuntime?: ReturnType<typeof createGatewayLaunchRuntime>
 ): Promise<TeamRuntimeAdapterRegistry> {
   const binaryPath = await startupStage(() =>
     ClaudeBinaryResolver.resolve({
@@ -687,11 +681,10 @@ async function createOpenCodeRuntimeAdapterRegistry(
   const readinessBridge = desktopBridge.readiness;
   readOpenCodeGroupRun = desktopBridge.groupRun;
   openCodeLifecycleBridge = readinessBridge;
-  return new TeamRuntimeAdapterRegistry([
-    new OpenCodeTeamRuntimeAdapter(readinessBridge, {
-      inspectLocalModelRuntime: inspectOpenCodeLocalModelRuntimeReadiness,
-    }),
-  ]);
+  const adapter = new OpenCodeTeamRuntimeAdapter(readinessBridge, {
+    inspectLocalModelRuntime: inspectOpenCodeLocalModelRuntimeReadiness,
+  });
+  return new TeamRuntimeAdapterRegistry([gatewayRuntime?.wrapOpenCodeAdapter(adapter) ?? adapter]);
 }
 let stopPeriodicOpenCodeHostStartupLockPurge: (() => void) | null = null;
 
@@ -1993,7 +1986,19 @@ async function initializeServices(): Promise<void> {
   teamDataService.setTaskCommentNotificationJournalStore(
     internalStorageFeature.taskCommentNotificationJournalStore
   );
+  const apiKeyService = new ApiKeyService();
+  const gatewayProviderRuntime = setupGatewayProviderRuntime({
+    ipcMain,
+    storePath: join(getAppDataPath(), 'gateway-provider', 'store.json'),
+    apiKeys: apiKeyService,
+  });
+  const gatewayProviderConnector = new OpenCodeLocalProviderConnector();
+  const gatewayLaunchRuntime = createGatewayLaunchRuntime({
+    feature: gatewayProviderRuntime.feature, connector: gatewayProviderConnector,
+    runsPath: join(getAppDataPath(), 'gateway-provider', 'runs.json'),
+  });
   runtimeProviderManagementFeature = createRuntimeProviderManagementFeature({
+    localProviderConnector: gatewayProviderConnector,
     openExternal: async (url) => {
       await shell.openExternal(url);
     },
@@ -2007,9 +2012,11 @@ async function initializeServices(): Promise<void> {
   const resolveOpenCodeInputDeclaration = createOpenCodeInputDeclarationResolver(
     runtimeProviderManagementFeature.loadModels
   );
+  await cleanupOrphanedDeterministicBootstrapSpecs().catch(() => console.warn('Could not clean retired bootstrap files'));
   teamProvisioningService = createDefaultTeamProvisioningService(
     () => teamGroupChatsFeature,
-    resolveOpenCodeInputDeclaration
+    resolveOpenCodeInputDeclaration,
+    gatewayLaunchRuntime.seams
   );
   teamGroupChatsFeature = createDesktopTeamGroupChats({
     snapshot: (teamName) => teamProvisioningService.getTeamAgentRuntimeSnapshot(teamName),
@@ -2141,7 +2148,7 @@ async function initializeServices(): Promise<void> {
   });
   const runtimeAdapterRegistry = await startupStage(() =>
     createOpenCodeRuntimeAdapterRegistry((phase, message) =>
-      publishStartupStatus({ phase, message })
+      publishStartupStatus({ phase, message }), gatewayLaunchRuntime
     )
   );
   assertStartupActive(isShutdownStarted);
@@ -2245,7 +2252,6 @@ async function initializeServices(): Promise<void> {
     extensionsRuntimeAdapter
   );
   const mcpInstallService = new McpInstallService(mcpAggregator, extensionsRuntimeAdapter);
-  const apiKeyService = new ApiKeyService();
   providerConnectionService.setApiKeyService(apiKeyService);
   publishStartupStatus({
     phase: 'settings',
@@ -2376,6 +2382,8 @@ async function initializeServices(): Promise<void> {
     teamsBasePath: getTeamsBasePath(),
     claudeProjectsBasePath: getProjectsBasePath(),
     openCodeDataHomePath: resolveClaudeMultimodelDataHomePath(),
+    gatewayUsage: gatewayProviderRuntime.gatewayUsage,
+    runMetadata: gatewayLaunchRuntime,
     ccusageJsonPath: process.env.AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_JSON,
     tokscaleJsonPath: process.env.AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_JSON,
     ccusageCommand: readOptionalEnv('AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_COMMAND'),

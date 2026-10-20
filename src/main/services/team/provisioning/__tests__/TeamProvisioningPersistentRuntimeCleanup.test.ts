@@ -35,12 +35,14 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     expect(ports.killOrphanedTeamAgentProcesses).toHaveBeenCalledWith('team-a', 123);
   });
 
-  it('clears leftover live runtime handles after stopping persisted members', () => {
+  it('clears leftover live runtime handles in the awaited stopped-team cleanup', async () => {
     const clearPersistedLiveRuntimeHandles = vi.fn(() => true);
     const ports = createPorts({ clearPersistedLiveRuntimeHandles });
     const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
 
     expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(true);
+    expect(clearPersistedLiveRuntimeHandles).not.toHaveBeenCalled();
+    await cleanup.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam('team-a');
     expect(clearPersistedLiveRuntimeHandles).toHaveBeenCalledWith('team-a');
   });
 
@@ -69,7 +71,7 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     expect(clearPersistedLiveRuntimeHandles).not.toHaveBeenCalled();
   });
 
-  it('still reports confirmed Stop when clearing persisted live runtime handles throws', () => {
+  it('still reports confirmed Stop when clearing persisted live runtime handles throws', async () => {
     const clearPersistedLiveRuntimeHandles = vi.fn(() => {
       throw new Error('File lock timeout');
     });
@@ -77,6 +79,7 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
 
     expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(true);
+    await cleanup.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam('team-a');
     expect(clearPersistedLiveRuntimeHandles).toHaveBeenCalledWith('team-a');
     expect(ports.logger.warn).toHaveBeenCalledWith(
       '[team-a] Failed to clear persisted live runtime handles: File lock timeout'
@@ -111,5 +114,62 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     expect(ports.logger.warn).toHaveBeenCalledWith(
       '[team-a] Failed to cleanup Anthropic team API-key helper material: permission denied'
     );
+  });
+
+  it('awaits durable native terminal facts before clearing discovery or helper material', async () => {
+    let finish!: () => void;
+    const persisted = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const ports = createPorts({
+      confirmNativeTeamStopped: vi.fn(() => persisted),
+      clearPersistedLiveRuntimeHandles: vi.fn(() => true),
+    });
+    const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
+    expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(true);
+    const completing = cleanup.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam('team-a');
+    expect(ports.confirmNativeTeamStopped).toHaveBeenCalledWith('team-a');
+    expect(ports.clearPersistedLiveRuntimeHandles).not.toHaveBeenCalled();
+    expect(ports.cleanupAnthropicTeamApiKeyHelperForTeam).not.toHaveBeenCalled();
+    finish();
+    await completing;
+    expect(ports.clearPersistedLiveRuntimeHandles).toHaveBeenCalledWith('team-a');
+    expect(ports.cleanupAnthropicTeamApiKeyHelperForTeam).toHaveBeenCalled();
+  });
+
+  it('preserves discovery on terminal persistence failure and retries before cleanup', async () => {
+    const ports = createPorts({
+      confirmNativeTeamStopped: vi
+        .fn()
+        .mockRejectedValueOnce(new Error('ledger write failed'))
+        .mockResolvedValue(undefined),
+      clearPersistedLiveRuntimeHandles: vi.fn(() => true),
+    });
+    const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
+    expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(true);
+    await expect(
+      cleanup.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam('team-a')
+    ).rejects.toThrow('ledger write failed');
+    expect(ports.clearPersistedLiveRuntimeHandles).not.toHaveBeenCalled();
+    expect(ports.cleanupAnthropicTeamApiKeyHelperForTeam).not.toHaveBeenCalled();
+    await cleanup.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam('team-a');
+    expect(ports.confirmNativeTeamStopped).toHaveBeenCalledTimes(2);
+    expect(ports.clearPersistedLiveRuntimeHandles).toHaveBeenCalledWith('team-a');
+  });
+
+  it('cannot publish terminal facts or clear discovery after an unconfirmed stop', async () => {
+    const ports = createPorts({
+      killOrphanedTeamAgentProcesses: vi.fn(() => false),
+      confirmNativeTeamStopped: vi.fn(async () => undefined),
+      clearPersistedLiveRuntimeHandles: vi.fn(() => true),
+    });
+    const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
+    expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(false);
+    await expect(
+      cleanup.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam('team-a')
+    ).rejects.toThrow('could not be confirmed');
+    expect(ports.confirmNativeTeamStopped).not.toHaveBeenCalled();
+    expect(ports.clearPersistedLiveRuntimeHandles).not.toHaveBeenCalled();
+    expect(ports.cleanupAnthropicTeamApiKeyHelperForTeam).not.toHaveBeenCalled();
   });
 });

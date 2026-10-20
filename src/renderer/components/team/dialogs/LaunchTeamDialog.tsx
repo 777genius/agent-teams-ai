@@ -2694,6 +2694,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   runtimeSelectionUnresolved={runtimeSelectionUnresolved}
                   members={membersDrafts}
                   onMembersChange={setMembersDraftsFromUser}
+                  teamName={effectiveTeamName}
                   validateMemberName={validateMemberNameInline}
                   showWorkflow
                   showJsonEditor

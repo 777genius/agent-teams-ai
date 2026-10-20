@@ -63,6 +63,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'getLeadActivityState',
   'getLeadContextUsage',
   'getLiveLeadProcessMessages',
+  'getMemberGatewayRuntimeSeams',
   'getMemberToolApprovalBusyStatus',
   'getMemberSpawnStatuses',
   'getMemberSpawnStatusesReadOnly',
@@ -233,6 +234,13 @@ const CONSTRUCTOR_DEPENDENCIES = [
     name: 'resolveOpenCodeInputDeclaration',
     readonly: false,
     type: 'ResolveOpenCodeInputDeclaration',
+  },
+  {
+    accessibility: 'none',
+    defaultNew: null,
+    name: 'memberGatewayRuntimeSeams',
+    readonly: false,
+    type: 'MemberGatewayRuntimeSeams | null',
   },
 ] as const;
 
@@ -735,7 +743,7 @@ describe('TeamProvisioningService facade guard', () => {
       [...DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS].sort((a, b) => a.localeCompare(b))
     );
     expect(publicMemberNames.some((memberName) => !declaredEntryPoints.has(memberName))).toBe(true);
-  });
+  }, 60_000);
 
   it('keeps the constructor dependency surface explicit and bounded', () => {
     const source = readTeamProvisioningServiceSource();

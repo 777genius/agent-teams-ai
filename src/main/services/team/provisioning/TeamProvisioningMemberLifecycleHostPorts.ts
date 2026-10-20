@@ -1,6 +1,7 @@
 import type { TeamMcpConfigBuilder } from '../TeamMcpConfigBuilder';
 import type { TeamMembersMetaStore } from '../TeamMembersMetaStore';
 import type { RuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
+import type { MemberGatewayRuntimeSeams } from './TeamProvisioningMemberGatewayRuntime';
 import type {
   DirectProcessMemberLaunchReason,
   EffectiveConfiguredMember,
@@ -197,6 +198,7 @@ export interface TeamProvisioningMemberLifecycleRuntimeLaunchPorts {
     includeAnthropicHelper: boolean;
     contextLabel: string;
   }): Promise<TeamRuntimeLaunchArgsPlan>;
+  getMemberGatewayRuntimeSeams(): MemberGatewayRuntimeSeams | null;
   buildTrackedMemberMcpLaunchConfig(input: {
     cwd: string;
     mcpPolicy: TeamCreateRequest['members'][number]['mcpPolicy'];

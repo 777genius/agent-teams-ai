@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { MemberGatewaySelector } from '@features/gateway-provider/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { OpenCodeLocalModelLimitsCard } from '@features/runtime-provider-management/renderer';
 import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
@@ -19,13 +20,6 @@ import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@renderer/components/ui/select';
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -43,10 +37,6 @@ import {
 } from '@renderer/utils/teamModelCatalog';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import {
-  normalizeTeamMemberMcpPolicy,
-  resolveTeamMemberMcpScopes,
-} from '@shared/utils/teamMemberMcpPolicy';
-import {
   AlertTriangle,
   ChevronDown,
   ChevronRight,
@@ -60,11 +50,11 @@ import {
 
 import {
   formatMemberMcpButtonLabel,
-  MEMBER_MCP_SCOPE_LABEL_KEYS,
   resolveMemberModelButtonLabels,
   resolveMemberModelReasonTexts,
 } from './memberDraftRowText';
 import { MemberDraftStatusNotices } from './MemberDraftStatusNotices';
+import { MemberMcpPolicyPanel } from './MemberMcpPolicyPanel';
 import * as modelTone from './memberModelToneClasses';
 import { MemberModelTooltipContent } from './MemberModelTooltipContent';
 import { RosterParticipantFrame, RosterParticipantIdentity } from './RosterParticipantFrame';
@@ -81,6 +71,7 @@ import type {
 } from '@shared/types';
 interface MemberDraftRowProps {
   member: MemberDraft;
+  teamName?: string;
   index: number;
   avatarSrc?: string;
   resolvedColor?: string;
@@ -145,6 +136,7 @@ interface MemberDraftRowProps {
 }
 export const MemberDraftRow = ({
   member,
+  teamName,
   index,
   avatarSrc,
   resolvedColor,
@@ -258,10 +250,6 @@ export const MemberDraftRow = ({
     [agentTeamsMcpLocked, member.mcpPolicy]
   );
   const mcpMode: TeamMemberMcpMode = effectiveMcpPolicy?.mode ?? 'inheritLead';
-  const mcpScopes = useMemo(
-    () => resolveTeamMemberMcpScopes(effectiveMcpPolicy),
-    [effectiveMcpPolicy]
-  );
   const mcpServerNames = useMemo(
     () => effectiveMcpPolicy?.serverNames ?? [],
     [effectiveMcpPolicy?.serverNames]
@@ -270,69 +258,6 @@ export const MemberDraftRow = ({
     scopes: t('memberDraft.mcp.buttonScopes'),
     inherit: t('memberDraft.mcp.buttonInherit'),
   });
-  const updateMcpPolicy = useCallback(
-    (policy: TeamMemberMcpPolicy | undefined) => {
-      if (agentTeamsMcpLocked) {
-        return;
-      }
-      onMcpPolicyChange?.(member.id, normalizeTeamMemberMcpPolicy(policy));
-    },
-    [agentTeamsMcpLocked, member.id, onMcpPolicyChange]
-  );
-  const handleMcpModeChange = useCallback(
-    (mode: string) => {
-      if (mode === 'inheritLead') {
-        updateMcpPolicy(undefined);
-        return;
-      }
-      if (mode === 'appOnly') {
-        updateMcpPolicy({ mode: 'appOnly' });
-        return;
-      }
-      if (mode === 'inheritScopes' || mode === 'strictAllowlist') {
-        updateMcpPolicy({
-          mode,
-          scopes: mcpScopes,
-          ...(mode === 'strictAllowlist' && mcpServerNames.length > 0
-            ? { serverNames: mcpServerNames }
-            : {}),
-        });
-      }
-    },
-    [mcpScopes, mcpServerNames, updateMcpPolicy]
-  );
-  const updateMcpScope = useCallback(
-    (scope: 'user' | 'project' | 'local', enabled: boolean) => {
-      if (mcpMode !== 'inheritScopes' && mcpMode !== 'strictAllowlist') {
-        return;
-      }
-      updateMcpPolicy({
-        mode: mcpMode,
-        scopes: { ...mcpScopes, [scope]: enabled },
-        ...(mcpMode === 'strictAllowlist' && mcpServerNames.length > 0
-          ? { serverNames: mcpServerNames }
-          : {}),
-      });
-    },
-    [mcpMode, mcpScopes, mcpServerNames, updateMcpPolicy]
-  );
-  const updateMcpServerNames = useCallback(
-    (value: string) => {
-      const serverNames = value
-        .split(',')
-        .map((name) => name.trim())
-        .filter(Boolean);
-      updateMcpPolicy({
-        mode: 'strictAllowlist',
-        scopes: mcpScopes,
-        serverNames,
-      });
-    },
-    [mcpScopes, updateMcpPolicy]
-  );
-
-  const getMcpScopeLabel = (scope: 'user' | 'project' | 'local'): string =>
-    t(MEMBER_MCP_SCOPE_LABEL_KEYS[scope]);
   useEffect(() => {
     if (
       onWorkflowChange &&
@@ -428,10 +353,6 @@ export const MemberDraftRow = ({
     ? t('memberDraft.workflow.editTooltip')
     : t('memberDraft.workflow.addTooltip');
   const mcpTooltipText = t('memberDraft.mcp.tooltip', { label: mcpButtonLabel });
-  const mcpLockedInfoText = t('memberDraft.mcp.lockedInfo');
-  const mcpSettingInfoText = agentTeamsMcpLocked
-    ? mcpLockedInfoText
-    : t('memberDraft.mcp.settingInfo');
   const runtimeSummary = formatTeamModelSummary(
     effectiveProviderId,
     effectiveModel?.trim() ?? '',
@@ -727,89 +648,12 @@ export const MemberDraftRow = ({
         />
       ) : null}
       {!isRemoved && onMcpPolicyChange && mcpExpanded ? (
-        <div className="space-y-3 pl-3 md:col-span-3">
-          <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-            <div className="grid gap-3 sm:grid-cols-[minmax(160px,220px)_1fr]">
-              <div className="space-y-1">
-                <Label
-                  htmlFor={`member-${member.id}-mcp-mode`}
-                  className="text-[10px] text-[var(--color-text-muted)]"
-                >
-                  {t('memberDraft.mcp.mode')}
-                </Label>
-                <Select
-                  value={mcpMode}
-                  onValueChange={handleMcpModeChange}
-                  disabled={agentTeamsMcpLocked}
-                >
-                  <SelectTrigger
-                    id={`member-${member.id}-mcp-mode`}
-                    className="h-8 text-xs"
-                    disabled={agentTeamsMcpLocked}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="inheritLead">{t('memberDraft.mcp.inheritLead')}</SelectItem>
-                    <SelectItem value="inheritScopes">
-                      {t('memberDraft.mcp.chooseScopes')}
-                    </SelectItem>
-                    <SelectItem value="strictAllowlist">
-                      {t('memberDraft.mcp.strictAllowlist')}
-                    </SelectItem>
-                    <SelectItem value="appOnly">{t('memberDraft.mcp.agentTeamsMcp')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {(['user', 'project', 'local'] as const).map((scope) => (
-                    <label
-                      key={scope}
-                      className={cn(
-                        'flex h-8 items-center gap-2 rounded-md border border-[var(--color-border)] px-2 text-xs text-[var(--color-text-secondary)]',
-                        (agentTeamsMcpLocked ||
-                          mcpMode === 'inheritLead' ||
-                          mcpMode === 'appOnly') &&
-                          'opacity-50'
-                      )}
-                    >
-                      <Checkbox
-                        checked={mcpMode === 'appOnly' ? false : mcpScopes[scope]}
-                        disabled={
-                          agentTeamsMcpLocked || mcpMode === 'inheritLead' || mcpMode === 'appOnly'
-                        }
-                        onCheckedChange={(checked) => updateMcpScope(scope, checked === true)}
-                      />
-                      <span className="capitalize">{getMcpScopeLabel(scope)}</span>
-                    </label>
-                  ))}
-                </div>
-                {mcpMode === 'strictAllowlist' ? (
-                  <div className="space-y-1">
-                    <Label
-                      htmlFor={`member-${member.id}-mcp-servers`}
-                      className="text-[10px] text-[var(--color-text-muted)]"
-                    >
-                      {t('memberDraft.mcp.serverNames')}
-                    </Label>
-                    <Input
-                      id={`member-${member.id}-mcp-servers`}
-                      className="h-8 text-xs"
-                      value={mcpServerNames.join(', ')}
-                      disabled={agentTeamsMcpLocked}
-                      onChange={(event) => updateMcpServerNames(event.target.value)}
-                      placeholder={t('memberDraft.placeholders.mcpServers')}
-                    />
-                  </div>
-                ) : null}
-                {mcpMode !== 'inheritLead' ? (
-                  <p className={modelTone.MCP_SETTING_NOTE_CLASS}>{mcpSettingInfoText}</p>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </div>
+        <MemberMcpPolicyPanel
+          memberId={member.id}
+          mcpPolicy={member.mcpPolicy}
+          agentTeamsMcpLocked={agentTeamsMcpLocked}
+          onMcpPolicyChange={onMcpPolicyChange}
+        />
       ) : null}
       {showWorkflow && onWorkflowChange && workflowExpanded ? (
         <div className="space-y-0.5 pl-3 md:col-span-3">
@@ -903,6 +747,18 @@ export const MemberDraftRow = ({
                 onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
                 onOpenProviderSettings={onOpenProviderSettings}
               />
+              {teamName?.trim() && !lockProviderModel ? (
+                <MemberGatewaySelector
+                  teamName={teamName.trim()}
+                  memberName={member.name}
+                  originalName={member.originalName}
+                  selectedModel={member.model}
+                  onModelChange={(model) => {
+                    if (lockProviderModel) return;
+                    onModelChange(member.id, model);
+                  }}
+                />
+              ) : null}
               <EffortLevelSelector
                 value={effectiveEffort ?? ''}
                 onValueChange={(value) => {

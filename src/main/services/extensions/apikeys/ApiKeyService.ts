@@ -193,6 +193,17 @@ export class ApiKeyService {
     return Boolean(preferred?.encryptedValue);
   }
 
+  /**
+   * Main-only exact read for feature-owned credentials.
+   * Returns null when the record is gone; throws when it cannot be decrypted.
+   */
+  async readValueById(id: string): Promise<string | null> {
+    const keys = await this.readStore();
+    const stored = keys.find((key) => key.id === id);
+    if (!stored) return null;
+    return this.decryptStored(stored);
+  }
+
   async getStorageStatus(): Promise<ApiKeyStorageStatus> {
     const secure = this.isSecureBackend();
     const backend = this.getBackendName();
@@ -259,21 +270,25 @@ export class ApiKeyService {
 
   private decrypt(stored: StoredApiKey): string {
     try {
-      const method = this.resolveMethod(stored);
-
-      switch (method) {
-        case 'safeStorage': {
-          const buf = Buffer.from(stored.encryptedValue, 'base64');
-          return safeStorage.decryptString(buf);
-        }
-        case 'aes-local':
-          return this.decryptAesLocal(stored.encryptedValue);
-        case 'base64':
-          return Buffer.from(stored.encryptedValue, 'base64').toString('utf-8');
-      }
+      return this.decryptStored(stored);
     } catch (err) {
       this.reportDecryptFailure(stored, err);
       return '';
+    }
+  }
+
+  private decryptStored(stored: StoredApiKey): string {
+    const method = this.resolveMethod(stored);
+
+    switch (method) {
+      case 'safeStorage': {
+        const buf = Buffer.from(stored.encryptedValue, 'base64');
+        return safeStorage.decryptString(buf);
+      }
+      case 'aes-local':
+        return this.decryptAesLocal(stored.encryptedValue);
+      case 'base64':
+        return Buffer.from(stored.encryptedValue, 'base64').toString('utf-8');
     }
   }
 

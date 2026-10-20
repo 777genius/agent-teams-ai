@@ -287,6 +287,11 @@
   },
   "tokenUsage": {
     "title": "Использование",
+    "gateway": {
+      "dailyGranularity": "Расходы gateway сгруппированы по дням UTC.",
+      "lastSuccessfulImport": "Последний полный импорт gateway:",
+      "noConfirmedImport": "Полный импорт gateway пока не подтверждён; суммы могут быть неполными."
+    },
     "partialData": "Частичные данные",
     "actions": {
       "refresh": "Обновить",

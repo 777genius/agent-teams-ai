@@ -14,6 +14,8 @@ import type { CliProviderStatus, EffortLevel, TeamProviderId } from '@shared/typ
 interface TeamRosterEditorSectionProps {
   members: MemberDraft[];
   onMembersChange: (members: MemberDraft[]) => void;
+  /** Team name used for per-teammate gateway bindings on the member row. */
+  teamName?: string;
   fieldError?: string;
   validateMemberName?: (name: string) => string | null;
   showWorkflow?: boolean;
@@ -80,6 +82,7 @@ interface TeamRosterEditorSectionProps {
 const TeamRosterEditorSectionImpl = ({
   members,
   onMembersChange,
+  teamName,
   fieldError,
   validateMemberName,
   showWorkflow = false,
@@ -174,6 +177,7 @@ const TeamRosterEditorSectionImpl = ({
         runtimeSelectionUnresolved={runtimeSelectionUnresolved}
         members={members}
         onChange={onMembersChange}
+        teamName={teamName}
         fieldError={fieldError}
         validateMemberName={validateMemberName}
         showWorkflow={showWorkflow}

@@ -5,7 +5,11 @@ import { describe, expect, it } from 'vitest';
 
 import { JsonTokenUsageLedgerRepository } from '../JsonTokenUsageLedgerRepository';
 
-import type { TokenUsageEventDto, TokenUsageRunDto } from '../../../contracts';
+import type {
+  TokenUsageEventDto,
+  TokenUsageGatewaySourceStateDto,
+  TokenUsageRunDto,
+} from '../../../contracts';
 
 function run(overrides: Partial<TokenUsageRunDto>): TokenUsageRunDto {
   return {
@@ -52,6 +56,18 @@ function event(overrides: Partial<TokenUsageEventDto>): TokenUsageEventDto {
     usageSourceKind: 'log_parsed',
     occurredAt: '2026-06-30T00:01:00.000Z',
     createdAt: '2026-06-30T00:01:00.000Z',
+    ...overrides,
+  };
+}
+
+function sourceState(
+  overrides: Partial<TokenUsageGatewaySourceStateDto> = {}
+): TokenUsageGatewaySourceStateDto {
+  return {
+    gatewayUsageRef: 'ref-1',
+    teamName: 'alpha',
+    agentName: 'builder',
+    degraded: false,
     ...overrides,
   };
 }
@@ -112,7 +128,11 @@ describe('JsonTokenUsageLedgerRepository', () => {
           'Invalid token usage event entry'
         );
         expect(await readFile(filePath, 'utf8')).toBe(saved);
-        expect(await repository.readSnapshot()).toEqual({ runs: [run({})], events: [event({})] });
+        expect(await repository.readSnapshot()).toEqual({
+          runs: [run({})],
+          events: [event({})],
+          sourceStates: [],
+        });
 
         await writeFile(filePath, '{"schemaVersion":2}');
         await expect(repository.upsertEvents(batch)).rejects.toThrow(
@@ -190,6 +210,7 @@ describe('JsonTokenUsageLedgerRepository', () => {
         schemaVersion: 1,
         runs: { 'run-1': snapshot.runs[0] },
         events: { 'event-1': snapshot.events[0] },
+        sourceStates: {},
       });
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -226,6 +247,118 @@ describe('JsonTokenUsageLedgerRepository', () => {
           providerBackendId: 'codex-native',
           billingMode: 'subscription',
         }),
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('persists gateway events and source states together in one committed batch', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'token-usage-ledger-'));
+    try {
+      const filePath = path.join(root, 'ledger.json');
+      const repository = new JsonTokenUsageLedgerRepository(filePath);
+      const state = sourceState({
+        agentId: 'alpha:builder',
+        watermarkDay: '2026-06-01',
+        lastUsedAt: '2026-06-05T08:00:00.000Z',
+        finalUsageDay: '2026-06-05',
+        degraded: true,
+        degradedReason: 'credential_changed',
+        lastSuccessfulAt: '2026-06-01T00:00:00.000Z',
+      });
+      await repository.commitImportBatch({
+        events: [
+          event({
+            usageSourceKind: 'gateway_exact',
+            gatewayUsageRef: 'ref-1',
+            gatewayDay: '2026-06-01',
+            requestCount: 25,
+          }),
+        ],
+        sourceStates: [state],
+      });
+
+      const saved = JSON.parse(await readFile(filePath, 'utf8')) as Record<string, unknown>;
+      expect(saved).toMatchObject({
+        schemaVersion: 1,
+        runs: {},
+        sourceStates: { 'ref-1': state },
+      });
+      expect(saved.events).toMatchObject({
+        'event-1': { gatewayDay: '2026-06-01', requestCount: 25, usageSourceKind: 'gateway_exact' },
+      });
+      expect(await repository.readSnapshot()).toEqual({
+        runs: [],
+        events: [expect.objectContaining({ id: 'event-1', requestCount: 25 })],
+        sourceStates: [state],
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each(['gatewayUsageRef', 'teamName', 'agentName'] as const)(
+    'preserves the durable ledger when a batch carries an invalid source state %s',
+    async (invalidField) => {
+      const root = await mkdtemp(path.join(tmpdir(), 'token-usage-ledger-'));
+      try {
+        const filePath = path.join(root, 'ledger.json');
+        const repository = new JsonTokenUsageLedgerRepository(filePath);
+        await repository.upsertRuns([run({})]);
+        await repository.upsertEvents([event({})]);
+        const saved = await readFile(filePath, 'utf8');
+        const batch = {
+          events: [event({ id: 'new-event' })],
+          sourceStates: [sourceState({ [invalidField]: '   ' })],
+        };
+
+        await expect(repository.commitImportBatch(batch)).rejects.toThrow(
+          'Invalid gateway usage source state'
+        );
+        expect(await readFile(filePath, 'utf8')).toBe(saved);
+        const snapshot = await repository.readSnapshot();
+        expect(snapshot.events.map((item) => item.id)).toEqual(['event-1']);
+        expect(snapshot.sourceStates).toEqual([]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it('round-trips source states with watermark and degraded reason through readSnapshot', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'token-usage-ledger-'));
+    try {
+      const filePath = path.join(root, 'ledger.json');
+      const repository = new JsonTokenUsageLedgerRepository(filePath);
+      const states = [
+        sourceState({
+          watermarkDay: '2026-06-01',
+          degraded: true,
+          degradedReason: 'http_unavailable',
+          lastSuccessfulAt: '2026-06-01T00:00:00.000Z',
+        }),
+        sourceState({
+          gatewayUsageRef: 'ref-2',
+          teamName: 'beta',
+          agentName: 'reviewer',
+          watermarkDay: '2026-06-03',
+          finalUsageDay: '2026-06-05',
+          degraded: true,
+          degradedReason: 'credential_missing',
+        }),
+        sourceState({
+          gatewayUsageRef: 'ref-3',
+          degradedReason: 'nonsense' as unknown as TokenUsageGatewaySourceStateDto['degradedReason'],
+        }),
+      ];
+      await repository.commitImportBatch({ events: [], sourceStates: states });
+
+      const snapshot = await new JsonTokenUsageLedgerRepository(filePath).readSnapshot();
+      expect(snapshot.sourceStates).toEqual([
+        states[0],
+        states[1],
+        sourceState({ gatewayUsageRef: 'ref-3' }),
       ]);
     } finally {
       await rm(root, { recursive: true, force: true });

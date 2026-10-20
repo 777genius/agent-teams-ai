@@ -59,6 +59,7 @@ export async function prepareModelLaunchFixture(request: TeamLaunchRequest, root
       args: [],
       providerArgsByProvider: new Map(),
       envPatch: {},
+      memberArgsByMember: new Map(),
       usesAnthropicApiKeyHelper: false,
       anthropicApiKeyHelper: null,
     }),

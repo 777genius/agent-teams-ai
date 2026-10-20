@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { GatewayProvidersSettingsSection } from '@features/gateway-provider/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { useStore } from '@renderer/store';
 import { Loader2 } from 'lucide-react';
@@ -161,6 +162,8 @@ export const SettingsView = (): React.JSX.Element | null => {
 
           {activeSection === 'connection' && <ConnectionSection />}
 
+          {activeSection === 'gatewayProviders' && <GatewayProvidersSettingsSection />}
+
           {activeSection === 'notifications' && (
             <NotificationsSection
               safeConfig={safeConfig}
@@ -200,6 +203,7 @@ function isSettingsSection(value: string | undefined): value is SettingsSection 
   return (
     value === 'general' ||
     value === 'connection' ||
+    value === 'gatewayProviders' ||
     value === 'notifications' ||
     value === 'advanced'
   );

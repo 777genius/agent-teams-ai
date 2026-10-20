@@ -47,6 +47,13 @@ function getEnvTeammateMode(env: NodeJS.ProcessEnv): DesktopTeammateMode | null 
   return normalizeDesktopTeammateMode(env[DESKTOP_TEAMMATE_MODE_ENV]);
 }
 
+export function getExplicitDesktopTeammateMode(
+  rawExtraCliArgs: string | undefined,
+  env: NodeJS.ProcessEnv = process.env
+): DesktopTeammateMode | null {
+  return getExplicitTeammateMode(rawExtraCliArgs) ?? getEnvTeammateMode(env);
+}
+
 async function isTmuxAvailable(): Promise<boolean> {
   if (!tmuxAvailablePromise) {
     tmuxAvailablePromise = isTmuxRuntimeReadyForCurrentPlatform()

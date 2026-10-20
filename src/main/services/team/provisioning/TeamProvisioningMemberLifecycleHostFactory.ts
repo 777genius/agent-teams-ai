@@ -62,6 +62,7 @@ export interface TeamProvisioningMemberLifecycleHostFactoryRuntimeLaunchPorts<
     >
   ): ReturnType<TeamProvisioningMemberLifecycleHost['resolveDirectMemberLaunchIdentity']>;
   buildTeamRuntimeLaunchArgsPlan: TeamProvisioningMemberLifecycleHost['buildTeamRuntimeLaunchArgsPlan'];
+  getMemberGatewayRuntimeSeams: TeamProvisioningMemberLifecycleHost['getMemberGatewayRuntimeSeams'];
   sendMessageToRun(
     run: TRun,
     message: string
@@ -244,6 +245,7 @@ export const TEAM_PROVISIONING_MEMBER_LIFECYCLE_HOST_FACTORY_PORT_KEYS = {
     'buildProvisioningEnv',
     'resolveDirectMemberLaunchIdentity',
     'buildTeamRuntimeLaunchArgsPlan',
+    'getMemberGatewayRuntimeSeams',
     'sendMessageToRun',
   ],
   memberMcpLaunchConfig: [
@@ -333,6 +335,7 @@ export function createTeamProvisioningMemberLifecycleHostPortGroups<
       service.buildProvisioningEnv(providerId, providerBackendId, options),
     resolveDirectMemberLaunchIdentity: (input) => service.resolveDirectMemberLaunchIdentity(input),
     buildTeamRuntimeLaunchArgsPlan: (input) => service.buildTeamRuntimeLaunchArgsPlan(input),
+    getMemberGatewayRuntimeSeams: () => service.getMemberGatewayRuntimeSeams(),
     sendMessageToRun: (run, message) => service.sendMessageToRun(run, message),
   };
 
@@ -492,6 +495,7 @@ export function createTeamProvisioningMemberLifecycleHostFromPortGroups<
         run: asServiceProvisioningRun<TRun>(input.run),
       }),
     buildTeamRuntimeLaunchArgsPlan: (input) => runtimeLaunch.buildTeamRuntimeLaunchArgsPlan(input),
+    getMemberGatewayRuntimeSeams: () => runtimeLaunch.getMemberGatewayRuntimeSeams(),
     persistInboxMessage: (teamName, memberName, message) =>
       messaging.persistInboxMessage(teamName, memberName, message),
     persistSentMessage: (teamName, message) => messaging.persistSentMessage(teamName, message),

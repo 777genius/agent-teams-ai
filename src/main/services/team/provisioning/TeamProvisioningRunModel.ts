@@ -1,4 +1,5 @@
 import type { AnthropicTeamApiKeyHelperMaterial } from '../../runtime/anthropicTeamApiKeyHelper';
+import type { RuntimeBootstrapSpec } from './TeamProvisioningBootstrapSpec';
 import type { PendingInboxRelayCandidate } from './TeamProvisioningInboxRelayCandidates';
 import type { LeadActivityState } from './TeamProvisioningLeadActivity';
 import type { MemberSpawnInboxCursor } from './TeamProvisioningMemberSpawnCursor';
@@ -140,6 +141,8 @@ export interface ProvisioningRun {
   memberMcpConfigPaths: string[];
   /** Path to the deterministic bootstrap spec file for later cleanup. */
   bootstrapSpecPath: string | null;
+  /** Original one-shot launch intent retained only until provisioning/auth retry terminates. */
+  bootstrapSpecSnapshot?: RuntimeBootstrapSpec | null;
   /** Path to the deferred first-user-task file consumed by runtime after bootstrap. */
   bootstrapUserPromptPath: string | null;
   isLaunch: boolean;

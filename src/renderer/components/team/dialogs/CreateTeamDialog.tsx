@@ -2470,6 +2470,7 @@ export const CreateTeamDialog = ({
               runtimeSelectionUnresolved={runtimeSelectionUnresolved}
               members={members}
               onMembersChange={setMembers}
+              teamName={teamName.trim() || undefined}
               fieldError={fieldErrors.members}
               validateMemberName={validateMemberNameInline}
               showWorkflow
