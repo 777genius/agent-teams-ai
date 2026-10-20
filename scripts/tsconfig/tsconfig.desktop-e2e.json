@@ -1,6 +1,7 @@
 {
   "extends": "./e2e-base.json",
   "include": [
+    "../../scripts/e2e/anthropic-compatible-status/*.ts",
     "../../scripts/e2e/select-team-latch-desktop.ts",
     "../../scripts/e2e/openui-desktop.ts",
     "../../scripts/e2e/opencode-diagnostics/windows-attachments.mts",
