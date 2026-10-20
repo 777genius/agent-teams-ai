@@ -161,6 +161,13 @@ export async function verifyGatewayUi(
       await unresolvedProvider.click();
       await page.getByRole('option', { name: 'Claude', exact: true }).click();
     }
+    // The fixture catalog deliberately omits the app's persisted Opus default.
+    await lead.getByRole('button', { name: /provider,/i }).click();
+    await lead
+      .locator('[data-testid="team-model-selector-model-option"]')
+      .filter({ hasText: 'Default' })
+      .first()
+      .click();
     const sync = dialog.locator('#sync-models-with-lead');
     if ((await sync.getAttribute('aria-checked')) === 'true') await sync.click();
     if ((await dialog.locator('[data-role="member-row"]').count()) === 0) {
