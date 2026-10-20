@@ -518,7 +518,12 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
     ]);
     expect(ports.unregisterRun).not.toHaveBeenCalled();
     expect(run.anthropicApiKeyHelper).toBe(anthropicApiKeyHelper);
-    expect(flowMocks.removePath).toHaveBeenCalledTimes(4);
+    // The unmarked spec belongs to the caller and must survive best-effort cleanup.
+    expect(flowMocks.removePath.mock.calls).toEqual([
+      [path.join(getTeamsBasePath(), planningRequest.teamName), { recursive: true, force: true }],
+      [path.join(getTasksBasePath(), planningRequest.teamName), { recursive: true, force: true }],
+      [TEST_BOOTSTRAP_PROMPT_PATH, { force: true }],
+    ]);
     expect(run.bootstrapSpecPath).toBeNull();
     expect(run.bootstrapUserPromptPath).toBeNull();
     expect(run.mcpConfigPath).toBeNull();

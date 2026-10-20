@@ -992,14 +992,15 @@ export class TeamProvisioningMemberLifecycleController {
       } catch (error) {
         stdoutLog.destroy();
         stderrLog.destroy();
+        await directGatewayArgs?.abortUnspawnedLaunch?.();
         throw error;
       }
       if (!child.pid) {
         stdoutLog.destroy();
         stderrLog.destroy();
+        await directGatewayArgs?.abortUnspawnedLaunch?.();
         throw new Error(`Failed to spawn teammate process for ${agentId}: missing pid`);
       }
-
       const runtimePid = child.pid;
       const processPaneId = `process:${runtimePid}`;
       const runtimeEventSource = `TeamProvisioningService.direct_process_${operation}`;
@@ -1011,7 +1012,9 @@ export class TeamProvisioningMemberLifecycleController {
         );
       });
       child.once('close', (code, signal) => {
-        void directGatewayArgs?.confirmStopped?.().catch(() => logger.warn('Failed to persist gateway member termination'));
+        void directGatewayArgs
+          ?.confirmStopped?.()
+          .catch(() => logger.warn('Failed to persist gateway member termination'));
         void this.appendDirectProcessRuntimeEvent({
           type: 'exited',
           eventsPath: runtimePaths.eventsPath,

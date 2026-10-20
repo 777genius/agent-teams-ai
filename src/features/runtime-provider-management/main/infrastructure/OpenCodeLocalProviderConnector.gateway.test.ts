@@ -246,17 +246,20 @@ describe('OpenCode gateway artifact ownership and retirement', () => {
 
   it('requires saved private-network approval and persists approval for a permitted profile', async () => {
     await expect(
-      connector.configureGatewayProvider({ ...input(), baseUrl: 'http://192.168.10.10/v1' }, target)
+      connector.configureGatewayProvider(
+        { ...input(), baseUrl: 'https://192.168.10.10/v1' },
+        target
+      )
     ).rejects.toMatchObject({ code: 'invalid-input' });
     expect(fetchImpl).not.toHaveBeenCalled();
     await connector.configureGatewayProvider(
-      { ...input(), baseUrl: 'http://192.168.10.10/v1', allowPrivateNetwork: true },
+      { ...input(), baseUrl: 'https://192.168.10.10/v1', allowPrivateNetwork: true },
       target
     );
     expect(approvalStore.approve).toHaveBeenCalledWith({
       configPath: await fs.realpath(configPath),
       providerId: providerId(),
-      baseUrl: 'http://192.168.10.10/v1',
+      baseUrl: 'https://192.168.10.10/v1',
     });
   });
 });

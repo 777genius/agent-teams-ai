@@ -65,3 +65,5 @@ describe('gateway identity helpers', () => {
     expect(utcDayAt(new Date('2026-10-19T23:59:59.999Z'))).toBe('2026-10-19');
   });
 });
+
+/* eslint-enable sonarjs/no-clear-text-protocols */

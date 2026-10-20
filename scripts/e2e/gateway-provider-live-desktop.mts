@@ -120,7 +120,9 @@ async function listen(server: Server): Promise<number> {
   assert(address && typeof address !== 'string');
   return address.port;
 }
-const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'gateway-desktop-e2e-')));
+// macOS per-user TMPDIR can exceed the Unix socket limit used by tsx.
+const fixtureTmp = process.platform === 'darwin' ? '/tmp' : os.tmpdir();
+const root = await realpath(await mkdtemp(path.join(fixtureTmp, 'gateway-desktop-e2e-')));
 await chmod(root, 0o700);
 const directoryNames = [
   'home',
@@ -422,7 +424,8 @@ try {
     AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
     pnpm_config_verify_deps_before_run: 'false',
   });
-  app = spawn('pnpm', ['dev:mcp'], {
+  const devArgs = ['dev:mcp', ...(process.platform === 'linux' ? ['--noSandbox'] : [])];
+  app = spawn('pnpm', devArgs, {
     cwd: repo,
     detached: true,
     env,

@@ -346,7 +346,7 @@ export async function abortUnspawnedGatewayMembers(
   members: ReadonlyMap<string, MemberGatewayRuntimeArgs> | undefined
 ): Promise<void> {
   await Promise.all(
-    [...(members?.values() ?? [])].map((member) => member.abortUnspawnedLaunch?.())
+    [...(members?.values() ?? [])].map(async (member) => member.abortUnspawnedLaunch?.())
   );
 }
 

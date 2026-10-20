@@ -81,9 +81,7 @@ const binding = {
   credentialStatus: 'ready' as const,
 };
 
-function renderSelector(
-  props: Partial<React.ComponentProps<typeof MemberGatewaySelector>> = {}
-): {
+function renderSelector(props: Partial<React.ComponentProps<typeof MemberGatewaySelector>> = {}): {
   host: HTMLDivElement;
   root: ReturnType<typeof createRoot>;
   onModelChange: ReturnType<typeof vi.fn>;
@@ -191,6 +189,7 @@ describe('MemberGatewaySelector', () => {
 
     clickSelectItem(host, 'prof-1');
     act(() => {
+      // eslint-disable-next-line sonarjs/no-hardcoded-passwords -- deliberately invalid test input
       host.querySelector<HTMLInputElement>('input[type="password"]')!.value = 'sk-bad';
     });
     await act(async () => {
@@ -198,8 +197,9 @@ describe('MemberGatewaySelector', () => {
     });
 
     expect(host.textContent).toContain('Key authorization was rejected.');
-    expect(host.querySelector('button[data-testid="select-item"][data-value="claude-sonnet-4"]'))
-      .toBeNull();
+    expect(
+      host.querySelector('button[data-testid="select-item"][data-value="claude-sonnet-4"]')
+    ).toBeNull();
     expect(document.body.innerHTML).not.toContain('sk-bad');
 
     act(() => {
@@ -214,6 +214,7 @@ describe('MemberGatewaySelector', () => {
 
     clickSelectItem(host, 'prof-1');
     act(() => {
+      // eslint-disable-next-line sonarjs/no-hardcoded-passwords -- deliberately invalid test input
       host.querySelector<HTMLInputElement>('input[type="password"]')!.value = 'sk-empty';
     });
     await act(async () => {

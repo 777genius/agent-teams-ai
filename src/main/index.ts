@@ -1,6 +1,6 @@
-import { cleanupOrphanedDeterministicBootstrapSpecs } from '@main/services/team/provisioning/TeamProvisioningBootstrapSpec';
-import { createGatewayLaunchRuntime } from '@main/services/gateway/createGatewayLaunchRuntime';
 import { OpenCodeLocalProviderConnector } from '@features/runtime-provider-management/main';
+import { createGatewayLaunchRuntime } from '@main/services/gateway/createGatewayLaunchRuntime';
+import { cleanupOrphanedDeterministicBootstrapSpecs } from '@main/services/team/provisioning/TeamProvisioningBootstrapSpec';
 /** Composes the Electron desktop services, IPC and application lifecycle. */
 // Increase UV thread pool size BEFORE any async I/O.
 // Default is 4 threads which is far too few for startup:
@@ -1994,7 +1994,8 @@ async function initializeServices(): Promise<void> {
   });
   const gatewayProviderConnector = new OpenCodeLocalProviderConnector();
   const gatewayLaunchRuntime = createGatewayLaunchRuntime({
-    feature: gatewayProviderRuntime.feature, connector: gatewayProviderConnector,
+    feature: gatewayProviderRuntime.feature,
+    connector: gatewayProviderConnector,
     runsPath: join(getAppDataPath(), 'gateway-provider', 'runs.json'),
   });
   runtimeProviderManagementFeature = createRuntimeProviderManagementFeature({
@@ -2012,7 +2013,9 @@ async function initializeServices(): Promise<void> {
   const resolveOpenCodeInputDeclaration = createOpenCodeInputDeclarationResolver(
     runtimeProviderManagementFeature.loadModels
   );
-  await cleanupOrphanedDeterministicBootstrapSpecs().catch(() => console.warn('Could not clean retired bootstrap files'));
+  await cleanupOrphanedDeterministicBootstrapSpecs().catch(() =>
+    console.warn('Could not clean retired bootstrap files')
+  );
   teamProvisioningService = createDefaultTeamProvisioningService(
     () => teamGroupChatsFeature,
     resolveOpenCodeInputDeclaration,
@@ -2147,8 +2150,9 @@ async function initializeServices(): Promise<void> {
     message: 'Resolving local runtime...',
   });
   const runtimeAdapterRegistry = await startupStage(() =>
-    createOpenCodeRuntimeAdapterRegistry((phase, message) =>
-      publishStartupStatus({ phase, message }), gatewayLaunchRuntime
+    createOpenCodeRuntimeAdapterRegistry(
+      (phase, message) => publishStartupStatus({ phase, message }),
+      gatewayLaunchRuntime
     )
   );
   assertStartupActive(isShutdownStarted);

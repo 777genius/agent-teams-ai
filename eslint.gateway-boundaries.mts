@@ -53,10 +53,10 @@ export const gatewayBoundaries: Linter.Config[] = [
         'error',
         {
           forbid: [
-            '@features/gateway-provider/core/**',
-            '@features/gateway-provider/{contracts,main,preload,renderer}/**',
             '**/gateway-provider/core/**',
-            '**/gateway-provider/{contracts,main,preload,renderer}/**',
+            // The import rule also resolves public barrels to their index.ts files.
+            '**/gateway-provider/{contracts,main,preload,renderer}/!(index|index.ts){,/**}',
+            '**/gateway-provider/{contracts,main,preload,renderer}/*/*/**',
           ],
         },
       ],

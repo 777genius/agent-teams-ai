@@ -86,7 +86,11 @@ export function createGatewayLaunchRuntime(deps: {
               const result = await target.launch(input);
               if (result.preLaunchGate)
                 await Promise.all(snapshots.map((id) => metadata.abortUnspawnedLaunch(id)));
-              await metadata.recordOpenCodeSessions(input.teamName, Object.values(result.members));
+              else
+                await metadata.recordOpenCodeSessions(
+                  input.teamName,
+                  Object.values(result.members)
+                );
               return result;
             };
           if (property === 'stop')
