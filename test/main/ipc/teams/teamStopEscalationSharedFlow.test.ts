@@ -168,6 +168,39 @@ describe('the escalated stop shares one fenced flow between the IPC handler and 
     vi.mocked(console.warn).mockClear();
   });
 
+  it('reports unconfirmed cleanup on the HTTP route instead of answering 200', async () => {
+    stopFlowMocks.stopTeamWithEscalation.mockResolvedValueOnce({
+      stopOutcome: 'timed_out',
+      cleanupOutcome: 'incomplete',
+      killedRuntimePids: [],
+      clearedPendingDeliveries: 0,
+      diagnostics: ['stop_failure_code:opencode_stop_deadline', 'SECRET-provider-body'],
+    });
+    const getRuntimeState = vi.fn(() => Promise.resolve({ state: 'running' }));
+    const app = Fastify();
+    const services = {
+      teamApis: {
+        runtime: { stopTeam, getAliveTeams, getRuntimeState },
+      },
+    } as unknown as HttpServices;
+    registerTeamRoutes(app, services);
+    await app.ready();
+    const response = await app.inject({ method: 'POST', url: '/api/teams/fixteam/stop' });
+    // The HTTP stop claims the in-app semantics: an unconfirmed stop is a
+    // failure there too, and it does not hand back runtime state to trust.
+    expect(response.statusCode).toBe(500);
+    expect(getRuntimeState).not.toHaveBeenCalled();
+    const errorLog = vi.mocked(console.error).mock.calls.flat().join(' ');
+    expect(errorLog).toContain('team_stop_unconfirmed:timed_out:opencode_stop_deadline');
+    expect(errorLog).not.toContain('SECRET-provider-body');
+    vi.mocked(console.error).mockClear();
+    expect(vi.mocked(console.warn).mock.calls.flat().join(' ')).toContain(
+      'Regular stop timed_out'
+    );
+    vi.mocked(console.warn).mockClear();
+    await app.close();
+  });
+
   async function callThroughHttp(): Promise<void> {
     const app = Fastify();
     const services = {

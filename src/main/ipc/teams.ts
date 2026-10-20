@@ -18,8 +18,6 @@ import {
 import { addMainBreadcrumb } from '@main/sentry';
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { markTeamEngaged } from '@main/services/infrastructure/teamWatchScope';
-import { formatOpenCodeStopCausalSuffix } from '@main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
-import { OpenCodeRuntimeStopUnconfirmedError } from '@main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 import {
   getTeamDataWorkerClient,
   isTeamDataWorkerFatalError,
@@ -185,7 +183,7 @@ import {
   buildOriginalUserRequestBlock,
 } from '../services/team/messageDeliveryText';
 import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '../services/team/opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
-import { openCodeStopFailureCodes } from '../services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
+import { assertEscalatedStopConfirmed } from '../services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamConfigReader } from '../services/team/TeamConfigReader';
 import { capMessagesPageLiveOverlay } from '../services/team/teamInboxOrdering';
@@ -4019,18 +4017,7 @@ async function handleStopTeam(
         `[${tn}] Regular stop ${result.stopOutcome}; escalated to force stop (killed ${result.killedRuntimePids.length} runtime pid(s), cancelled ${result.clearedPendingDeliveries} pending deliveries)`
       );
     }
-    if (result.cleanupOutcome === 'incomplete' || result.stopOutcome !== 'stopped') {
-      const outcome =
-        ['stopped', 'stop_failed', 'timed_out', 'runtime_already_down'].find(
-          (value) => value === result.stopOutcome
-        ) ?? 'unknown';
-      const codes = openCodeStopFailureCodes(result.diagnostics);
-      throw new OpenCodeRuntimeStopUnconfirmedError(
-        `team_stop_unconfirmed:${outcome}${codes.length ? ':' + codes.join(',') : ''}${formatOpenCodeStopCausalSuffix(result.causalFailure)}`,
-        result.diagnostics,
-        result.causalFailure
-      );
-    }
+    assertEscalatedStopConfirmed(result);
   });
 }
 

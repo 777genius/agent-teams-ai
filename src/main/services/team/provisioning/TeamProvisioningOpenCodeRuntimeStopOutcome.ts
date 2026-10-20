@@ -1,8 +1,15 @@
 import { isProcessAlive } from '@main/utils/processHealth';
 
-import { ownedOpenCodeStateChangingFailure } from '../opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+import {
+  formatOpenCodeStopCausalSuffix,
+  ownedOpenCodeStateChangingFailure,
+} from '../opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 
-import type { OpenCodeStopCausalFailure, PersistedTeamLaunchSnapshot } from '@shared/types';
+import type {
+  OpenCodeStopCausalFailure,
+  PersistedTeamLaunchSnapshot,
+  TeamForceStopResult,
+} from '@shared/types';
 
 /** Only confirmed Stop or validated runtime reconciliation authorizes lane cleanup.
  * PID absence and capability mismatch are not proof of the original Stop result. */
@@ -139,4 +146,25 @@ export function assertOpenCodeRuntimeStopEffective(input: {
     );
   }
   return outcome;
+}
+
+/**
+ * Both Stop entry points reject the same unconfirmed outcomes: a regular stop
+ * that timed out, failed, or left cleanup incomplete must never read as a
+ * successful stop, whether the caller is the in-app control or a headless
+ * HTTP client.
+ */
+export function assertEscalatedStopConfirmed(result: TeamForceStopResult): void {
+  if (result.cleanupOutcome === 'incomplete' || result.stopOutcome !== 'stopped') {
+    const outcome =
+      ['stopped', 'stop_failed', 'timed_out', 'runtime_already_down'].find(
+        (value) => value === result.stopOutcome
+      ) ?? 'unknown';
+    const codes = openCodeStopFailureCodes(result.diagnostics);
+    throw new OpenCodeRuntimeStopUnconfirmedError(
+      `team_stop_unconfirmed:${outcome}${codes.length ? ':' + codes.join(',') : ''}${formatOpenCodeStopCausalSuffix(result.causalFailure)}`,
+      result.diagnostics,
+      result.causalFailure
+    );
+  }
 }
