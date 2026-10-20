@@ -812,6 +812,24 @@ describe('buildTokenUsageSnapshot gateway aggregates', () => {
     });
   }
 
+  it('stops counting persisted local events after reconciliation marks a gateway run', () => {
+    const local = event();
+    expect(
+      buildTokenUsageSnapshot({ runs: [run()], events: [local], nowIso: NOW }).summary.totalTokens
+    ).toBe(100);
+    const snapshot = buildTokenUsageSnapshot({
+      runs: [run({ gatewayUsageRef: 'gateway-ref-1' }), run({ appRunId: 'ordinary' })],
+      events: [local, gatewayEvent(), event({ id: 'ordinary-event', appRunId: 'ordinary' })],
+      nowIso: NOW,
+    });
+    expect(snapshot.summary.totalTokens).toBe(200);
+    expect(snapshot.summary.requestCount).toBe(26);
+    expect(snapshot.summary.apiEquivalentCostUsd).toBeCloseTo(0.62);
+    expect(snapshot.sourceCounts.log_parsed).toBe(1);
+    expect(snapshot.sourceCounts.gateway_exact).toBe(1);
+    expect(snapshot.unmappedEventCount).toBe(0);
+  });
+
   it('includes run-less gateway aggregates in totals, team/agent/runtime/model and sourceCounts', () => {
     const snapshot = buildTokenUsageSnapshot({
       runs: [],
@@ -950,7 +968,12 @@ describe('buildTokenUsageSnapshot gateway aggregates', () => {
 
   it('keeps explicit zero billable cost and weights request counts into summary counters', () => {
     expect(
-      normalizeCostBreakdown({ estimatedUsd: 0.5, billableUsd: 0, apiEquivalentUsd: 0.5, source: 'gateway' })
+      normalizeCostBreakdown({
+        estimatedUsd: 0.5,
+        billableUsd: 0,
+        apiEquivalentUsd: 0.5,
+        source: 'gateway',
+      })
     ).toMatchObject({ billableUsd: 0, estimatedUsd: 0.5, apiEquivalentUsd: 0.5 });
     expect(normalizeCostBreakdown({ estimatedUsd: 0.5, source: 'gateway' })).toMatchObject({
       billableUsd: 0.5,

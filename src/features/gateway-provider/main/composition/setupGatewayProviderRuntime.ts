@@ -5,10 +5,7 @@ import {
   type GatewayProviderFeatureFacade,
 } from './createGatewayProviderFeature';
 
-import type {
-  GatewayModelUsage,
-  GatewayUsageSourceInfo,
-} from '../../core/application/usage';
+import type { GatewayModelUsage, GatewayUsageSourceInfo } from '../../core/application/usage';
 import type { ApiKeyService } from '@main/services/extensions/apikeys/ApiKeyService';
 import type { IpcMain } from 'electron';
 
@@ -27,10 +24,12 @@ export function setupGatewayProviderRuntime(options: {
   ipcMain: IpcMain;
   storePath: string;
   apiKeys: Pick<ApiKeyService, 'save' | 'readValueById'>;
+  onBindingsChanged?: () => void;
 }): GatewayProviderRuntime {
   const feature = createGatewayProviderFeature({
     storePath: options.storePath,
     apiKeys: options.apiKeys,
+    onBindingsChanged: options.onBindingsChanged,
   });
   registerGatewayProviderIpc(options.ipcMain, feature);
   return {

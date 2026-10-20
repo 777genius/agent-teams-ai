@@ -37,11 +37,13 @@ export interface GatewayProviderFeatureFacade {
 export function createGatewayProviderFeature(deps: {
   storePath: string;
   apiKeys: Pick<ApiKeyService, 'save' | 'readValueById'>;
+  onBindingsChanged?: () => void;
 }): GatewayProviderFeatureFacade {
   const service = new GatewayProviderService({
     store: new JsonGatewayProviderStore(deps.storePath),
     credentials: new GatewayCredentialStore(deps.apiKeys),
     clock: { now: () => new Date() },
+    onBindingsChanged: deps.onBindingsChanged,
   });
 
   return {

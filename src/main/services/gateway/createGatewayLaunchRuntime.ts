@@ -35,11 +35,41 @@ export function createGatewayLaunchRuntime(deps: {
     markRuntimeArtifactRetired: (ref) => deps.feature.markRuntimeArtifactRetired(ref),
     snapshotLaunch: (input) => metadata.snapshotLaunch(input),
     abortUnspawnedLaunch: (id) => metadata.abortUnspawnedLaunch(id),
-    confirmLaunchStopped: (id) => metadata.confirmLaunchStopped(id),
+    confirmLaunchStopped: async (id) => {
+      await metadata.confirmLaunchStopped(id);
+      await retireStoppedArtifacts().catch(() => deps.onRetirementFailure?.());
+    },
     confirmNativeTeamStopped: (teamName) => metadata.confirmNativeTeamStopped(teamName),
   });
+  async function retireStoppedArtifacts(): Promise<void> {
+    for (const source of await deps.feature.listGatewayUsageSources()) {
+      if (
+        source.hasActiveBinding ||
+        !source.hasRuntimeArtifact ||
+        (await metadata.hasUnfinishedRuns(source.gatewayUsageRef))
+      )
+        continue;
+      try {
+        await metadata.runWhenStopped(source.gatewayUsageRef, async () => {
+          const target = {
+            teamName: source.teamName,
+            memberName: source.memberName,
+            gatewayUsageRef: source.gatewayUsageRef,
+          };
+          const result = await deps.connector.retireGatewayProvider({
+            ...target,
+            providerId: toOpenCodeGatewayProviderId(target),
+          });
+          if (result.retired) await deps.feature.markRuntimeArtifactRetired(source.gatewayUsageRef);
+        });
+      } catch {
+        deps.onRetirementFailure?.();
+      }
+    }
+  }
   return {
     seams,
+    retireStoppedArtifacts,
     wrapOpenCodeAdapter<T extends TeamLaunchRuntimeAdapter>(adapter: T): T {
       return new Proxy(adapter, {
         get(target, property) {
@@ -110,6 +140,7 @@ export function createGatewayLaunchRuntime(deps: {
             return async (input: Parameters<T['stop']>[0]) => {
               const result = await target.stop(input);
               await metadata.confirmOpenCodeStopped(input.teamName, Object.values(result.members));
+              await retireStoppedArtifacts().catch(() => deps.onRetirementFailure?.());
               return result;
             };
           const value: unknown = Reflect.get(target, property, target);
@@ -119,31 +150,7 @@ export function createGatewayLaunchRuntime(deps: {
     },
     async reconcileRuns(runs: readonly TokenUsageRunDto[]): Promise<TokenUsageRunDto[]> {
       const marked = await metadata.reconcileRuns(runs);
-      for (const source of await deps.feature.listGatewayUsageSources()) {
-        if (
-          source.hasActiveBinding ||
-          !source.hasRuntimeArtifact ||
-          (await metadata.hasUnfinishedRuns(source.gatewayUsageRef))
-        )
-          continue;
-        try {
-          await metadata.runWhenStopped(source.gatewayUsageRef, async () => {
-            const target = {
-              teamName: source.teamName,
-              memberName: source.memberName,
-              gatewayUsageRef: source.gatewayUsageRef,
-            };
-            const result = await deps.connector.retireGatewayProvider({
-              ...target,
-              providerId: toOpenCodeGatewayProviderId(target),
-            });
-            if (result.retired)
-              await deps.feature.markRuntimeArtifactRetired(source.gatewayUsageRef);
-          });
-        } catch {
-          deps.onRetirementFailure?.();
-        }
-      }
+      await retireStoppedArtifacts();
       return marked;
     },
   };

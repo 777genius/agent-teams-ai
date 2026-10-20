@@ -50,6 +50,21 @@ async function setup() {
 }
 
 describe('OpenCode gateway launch attempts', () => {
+  it('retires stopped artifacts without usage refresh while retaining unfinished launches', async () => {
+    const { source, feature, connector, runtime, store } = await setup();
+    const id = await store.snapshotLaunch({
+      teamName: source.teamName,
+      memberName: source.memberName,
+      providerId: 'opencode',
+      gatewayUsageRef: source.gatewayUsageRef,
+    });
+    await runtime.retireStoppedArtifacts();
+    expect(connector.retireGatewayProvider).not.toHaveBeenCalled();
+    await runtime.seams.confirmLaunchStopped?.(id);
+    expect(connector.retireGatewayProvider).toHaveBeenCalledOnce();
+    expect(feature.markRuntimeArtifactRetired).toHaveBeenCalledWith(source.gatewayUsageRef);
+  });
+
   it('closes a rejected attempt so it does not block artifact retirement', async () => {
     const { source, feature, connector, runtime, input, store } = await setup();
     const failure = new Error('transient shared runtime unavailable');

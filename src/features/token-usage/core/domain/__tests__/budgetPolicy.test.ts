@@ -28,6 +28,33 @@ export function project(runs = [testRun()], events = [testEvent()]) {
 }
 
 describe('Budget monthly projection', () => {
+  it('excludes old local charges once a run is recognized as gateway-owned', () => {
+    const status = project(
+      [testRun({ gatewayUsageRef: 'late-gateway' }), testRun({ appRunId: 'ordinary' })],
+      [
+        testEvent(),
+        testEvent({ id: 'ordinary', appRunId: 'ordinary' }),
+        testEvent({
+          id: 'gateway',
+          teamName: 'sandbox-team',
+          appRunId: 'gateway:late-gateway:2026-10-01',
+          usageSourceKind: 'gateway_exact',
+          gatewayUsageRef: 'late-gateway',
+          gatewayDay: '2026-10-01',
+          occurredAt: '2026-10-01T00:00:00.000Z',
+          cost: normalizeCostBreakdown({
+            estimatedUsd: 3,
+            apiEquivalentUsd: 3,
+            billableUsd: 3,
+            source: 'gateway',
+            billingMode: 'api',
+          }),
+        }),
+      ]
+    );
+    expect(status.targets[0].metrics.map((metric) => metric.value)).toEqual([200, 5]);
+  });
+
   it.each([
     ['future after clock rollback', '2026-10-03T13:00:00.000Z', true],
     ['current clock', '2026-10-03T12:00:00.000Z', false],

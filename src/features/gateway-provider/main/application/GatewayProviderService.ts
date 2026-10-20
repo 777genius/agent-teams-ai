@@ -46,6 +46,7 @@ export interface GatewayProviderServiceDeps {
   clock: GatewayClockPort;
   probeModels?: typeof probeGatewayModels;
   readUsageDay?: typeof readGatewayUsageDay;
+  onBindingsChanged?: () => void;
 }
 
 const NAME_MAX_LENGTH = 120;
@@ -74,6 +75,7 @@ export class GatewayProviderService {
   private readonly clock: GatewayClockPort;
   private readonly probeModelsImpl: typeof probeGatewayModels;
   private readonly readUsageDayImpl: typeof readGatewayUsageDay;
+  private readonly onBindingsChanged?: () => void;
 
   constructor(deps: GatewayProviderServiceDeps) {
     this.store = deps.store;
@@ -81,6 +83,7 @@ export class GatewayProviderService {
     this.clock = deps.clock;
     this.probeModelsImpl = deps.probeModels ?? probeGatewayModels;
     this.readUsageDayImpl = deps.readUsageDay ?? readGatewayUsageDay;
+    this.onBindingsChanged = deps.onBindingsChanged;
   }
 
   async listProfiles(): Promise<GatewayProfileDto[]> {
@@ -199,7 +202,7 @@ export class GatewayProviderService {
     const now = this.clock.now();
     const nowIso = now.toISOString();
 
-    return this.store.mutate(async (state) => {
+    const result = await this.store.mutate(async (state) => {
       const profile = state.profiles.find((candidate) => candidate.id === request.profileId);
       if (!profile) throw new GatewayValidationError('Gateway profile was not found.');
       const baseUrl = normalizeGatewayBaseUrl({
@@ -293,6 +296,8 @@ export class GatewayProviderService {
         credentialStatus: 'ready' as GatewayCredentialStatus,
       };
     });
+    this.onBindingsChanged?.();
+    return result;
   }
 
   async unbindMember(request: GatewayUnbindMemberRequest): Promise<void> {
@@ -323,6 +328,7 @@ export class GatewayProviderService {
       const [removed] = state.bindings.splice(index, 1);
       this.retireSource(state, removed.gatewayUsageRef, nowIso);
     });
+    this.onBindingsChanged?.();
   }
 
   async unbindTeam(teamName: string): Promise<void> {
@@ -333,6 +339,7 @@ export class GatewayProviderService {
       state.bindings = state.bindings.filter((binding) => binding.teamName !== name);
       for (const binding of removed) this.retireSource(state, binding.gatewayUsageRef, nowIso);
     });
+    this.onBindingsChanged?.();
   }
 
   async resolveMemberConnection(

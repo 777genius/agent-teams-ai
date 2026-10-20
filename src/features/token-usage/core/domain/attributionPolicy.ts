@@ -24,6 +24,10 @@ export function keepOnlyMappedUsageEvents(params: {
   let unmappedEventCount = 0;
 
   for (const event of params.events) {
+    if (!isGatewayAggregateEvent(event) && runById.get(event.appRunId)?.gatewayUsageRef) {
+      // Reconciliation can mark a run after local events were already persisted.
+      continue;
+    }
     if (runById.has(event.appRunId) || isGatewayAggregateEvent(event)) {
       attributed.push(event);
     } else {

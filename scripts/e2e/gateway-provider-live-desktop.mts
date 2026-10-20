@@ -960,6 +960,38 @@ try {
           memberName: member.name,
         });
     }
+    if (name === 'opencode-one') {
+      const retiredSource = await poll(
+        'stopped OpenCode artifact retires immediately after unbind without a usage refresh',
+        async () => {
+          const state = JSON.parse(
+            await readFile(
+              path.join(dirs['user-data'], 'data', 'gateway-provider', 'store.json'),
+              'utf8'
+            )
+          ) as {
+            sources: {
+              gatewayUsageRef: string;
+              hasRuntimeArtifact: boolean;
+              runtimeArtifactRetiredAt?: string;
+            }[];
+          };
+          const source = state.sources.find(
+            (candidate) => candidate.gatewayUsageRef === members[0].ref
+          );
+          return source && !source.hasRuntimeArtifact && source.runtimeArtifactRetiredAt
+            ? source
+            : null;
+        }
+      );
+      await json(
+        path.join(dirs.evidence, 'opencode-unbind-artifact-retirement.json'),
+        retiredSource
+      );
+      console.log(
+        'Gateway artifact retirement PASS: stopped OpenCode credentials retired without opening usage'
+      );
+    }
     console.log(`PASS ${name}: real desktop runtimes, fresh per-key usage, exact app attribution`);
   }
   await json(path.join(dirs.evidence, 'result.json'), {
