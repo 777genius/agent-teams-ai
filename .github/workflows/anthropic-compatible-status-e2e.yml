@@ -9,6 +9,8 @@ on:
       - scripts/e2e/opencode-diagnostics/**
       - scripts/electron-builder/afterPack.cjs
       - scripts/lib/runtime-payload-cache.mjs
+      - scripts/stage-opencode-console-wrapper.mjs
+      - tools/opencode-console-wrapper/**
       - src/main/services/runtime/ClaudeMultimodelBridgeService.ts
       - src/main/services/runtime/ProviderConnectionService.ts
       - src/main/services/runtime/anthropicCompatibleEndpoint.ts

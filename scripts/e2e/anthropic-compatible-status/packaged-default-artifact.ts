@@ -9,6 +9,8 @@ import { fingerprint, packagedArtifact } from '../opencode-diagnostics/packaged.
 // @ts-expect-error Existing shared JavaScript archive extractor has no declarations.
 import { extractArchive } from '../../lib/runtime-payload-cache.mjs';
 
+import { qualifyPackagedRuntimeAdditions } from './packaged-default-additions.ts';
+
 export interface Fingerprint {
   path: string;
   sha256: string;
@@ -194,6 +196,13 @@ export async function qualifyDefaultArtifact(
       `Packaged runtime differs from final public archive: ${file}`
     );
   }
+  const packagedAdditions = await qualifyPackagedRuntimeAdditions(
+    new Map(original),
+    bundled,
+    repoRoot,
+    runtimeRoot,
+    process.platform
+  );
   assert.equal((await readFile(path.join(runtimeRoot, 'VERSION'), 'utf8')).trim(), lock.version);
   assert.equal(
     (await readFile(path.join(runtimeRoot, 'COMMIT_SHA'), 'utf8')).trim(),
@@ -213,9 +222,14 @@ export async function qualifyDefaultArtifact(
     bun,
     runtimeRoot,
     publicPayloadFiles: original.length,
+    bundledPayloadFiles: bundled.size,
+    packagedAdditions,
     allowedPrunedRoots,
     actualPrunedFiles,
     omittedCopyMarkers,
     payloadInventorySha256: createHash('sha256').update(JSON.stringify(original)).digest('hex'),
+    bundledPayloadInventorySha256: createHash('sha256')
+      .update(JSON.stringify([...bundled]))
+      .digest('hex'),
   };
 }

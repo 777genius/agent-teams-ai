@@ -54,6 +54,45 @@ describe('packaged native diagnostic evidence', () => {
     expect(progress.freshCompleteCount).toBe(1);
   });
 
+  it.each([
+    [start(), complete(), start(), complete()],
+    [start(), start(), complete(), complete()],
+  ])('accepts a fresh pair while an earlier diagnostic drains across the baseline', (...events) => {
+    const progress = nativeDiagnosticProgress(events, 1, 'fresh-diagnostic');
+    expect(progress.ready).toBe(true);
+    expect(progress.freshStartCount).toBe(1);
+    expect(progress.freshCompleteCount).toBe(2);
+  });
+
+  it.each(['quiet-drain', 'fresh-diagnostic'] as const)(
+    'rejects completion-first streams even when total counts balance during %s',
+    (requirement) => {
+      expect(nativeDiagnosticProgress([complete(), start()], 0, requirement).ready).toBe(false);
+    }
+  );
+
+  it.each(['quiet-drain', 'fresh-diagnostic'] as const)(
+    'rejects an extra completion followed by a new start during %s',
+    (requirement) => {
+      expect(
+        nativeDiagnosticProgress([start(), complete(), complete(), start()], 2, requirement).ready
+      ).toBe(false);
+    }
+  );
+
+  it.each(['quiet-drain', 'fresh-diagnostic'] as const)(
+    'rejects a completion without explicit success during %s',
+    (requirement) => {
+      const progress = nativeDiagnosticProgress(
+        [start(), { ...complete(), ok: undefined }],
+        0,
+        requirement
+      );
+      expect(progress.allSucceeded).toBe(false);
+      expect(progress.ready).toBe(false);
+    }
+  );
+
   it.each(['quiet-drain', 'fresh-diagnostic'] as const)(
     'never hides an earlier failed diagnostic during %s',
     (requirement) => {
