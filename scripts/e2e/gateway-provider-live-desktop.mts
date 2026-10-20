@@ -421,7 +421,8 @@ try {
     AGENT_TEAMS_ELECTRON_USER_DATA_DIR: dirs['user-data'],
     CLAUDE_MULTIMODEL_DATA_HOME: dirs.data,
     CLAUDE_MULTIMODEL_CACHE_HOME: dirs.cache,
-    XDG_CONFIG_HOME: dirs.config,
+    // HOME is already isolated. Use its canonical ~/.config so OpenCode
+    // ownership guards can write the active global config safely.
     XDG_DATA_HOME: dirs.data,
     XDG_CACHE_HOME: dirs.cache,
     XDG_STATE_HOME: dirs.state,
