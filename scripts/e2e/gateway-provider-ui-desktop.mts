@@ -22,6 +22,7 @@ export interface GatewayUiLocator {
   getAttribute(name: string): Promise<string | null>;
   click(options?: { timeout?: number }): Promise<void>;
   fill(value: string): Promise<void>;
+  inputValue(): Promise<string>;
   waitFor(options?: { state?: 'visible' | 'hidden'; timeout?: number }): Promise<void>;
 }
 export interface GatewayUiPage {
@@ -151,7 +152,13 @@ export async function verifyGatewayUi(
     // The Teams header precedes the equivalent empty-state action.
     await page.getByRole('button', { name: 'Create Team', exact: true }).first().click();
     const dialog = page.getByRole('dialog');
-    await dialog.locator('#team-name').fill(teamName);
+    const nameInput = dialog.locator('#team-name');
+    await readback('initialized team draft', async () => (await nameInput.inputValue()).length > 0);
+    await nameInput.fill(teamName);
+    await readback(
+      'fixture team owner selected',
+      async () => (await nameInput.inputValue()) === teamName
+    );
     const lead = dialog.locator('[data-role="lead-row"]');
     const unresolvedProvider = lead.getByRole('combobox', {
       name: 'Choose team provider',
