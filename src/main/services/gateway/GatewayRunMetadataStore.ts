@@ -82,6 +82,7 @@ export class GatewayRunMetadataStore {
                 candidate.teamName === run.teamName &&
                 candidate.memberName === run.agentName &&
                 candidate.providerId === run.providerId &&
+                candidate.providerId !== 'opencode' &&
                 candidate.startedAt <= run.startedAt
             );
         if (
@@ -95,6 +96,7 @@ export class GatewayRunMetadataStore {
           : run;
         const marked = {
           ...confirmed,
+          agentId: run.agentId ?? known?.agentId ?? `${snapshot.teamName}:${snapshot.memberName}`,
           gatewayUsageRef: snapshot.gatewayUsageRef,
           ...(confirmed.terminationConfirmed
             ? {}
@@ -152,8 +154,11 @@ export class GatewayRunMetadataStore {
 
   recordOpenCodeSessions(
     teamName: string,
-    members: readonly { memberName: string; sessionId?: string; runtimeAlive: boolean }[]
+    members: readonly { memberName: string; sessionId?: string; runtimeAlive: boolean }[],
+    launchSnapshotIds: readonly string[]
   ): Promise<void> {
+    if (launchSnapshotIds.length === 0) return Promise.resolve();
+    const allowed = new Set(launchSnapshotIds);
     return this.update(async (snapshots) => {
       for (const member of members) {
         if (!member.sessionId) continue;
@@ -161,6 +166,7 @@ export class GatewayRunMetadataStore {
           .reverse()
           .find(
             (entry) =>
+              allowed.has(entry.id) &&
               entry.teamName === teamName &&
               entry.memberName === member.memberName &&
               entry.providerId === 'opencode'

@@ -98,6 +98,81 @@ function fakeUsage(
 }
 
 describe('GatewayUsageImporter', () => {
+  it.each([undefined, 'alpha:builder'])(
+    'joins gateway costs to the native agent identity instead of %s',
+    async (sourceAgentId) => {
+      const ledger = new MemoryLedger();
+      const gateway = fakeUsage(() => [modelUsage()], [source({ agentId: sourceAgentId })]);
+      const importer = new GatewayUsageImporter({
+        usage: gateway.port,
+        ledger,
+        clock: { now: () => new Date('2026-06-01T12:00:00Z') },
+      });
+      const run: TokenUsageRunDto = {
+        appRunId: 'native-run',
+        gatewayUsageRef: REF,
+        teamName: 'alpha',
+        agentName: 'builder',
+        agentId: 'native-builder-id',
+        runtimeKind: 'codex',
+        status: 'running',
+        startedAt: '2026-06-01T11:00:00Z',
+        source: 'team_launch_state',
+        sources: [
+          {
+            id: 'native-source',
+            appRunId: 'native-run',
+            sourceType: 'cli_log',
+            nativeSessionId: 'session',
+            discoveredAt: '2026-06-01T11:00:00Z',
+          },
+        ],
+      };
+      const batch = await importer.importUsage([
+        { ...run, agentId: 'placeholder', sources: [] },
+        { ...run, teamName: 'foreign', agentId: 'foreign-agent' },
+        run,
+      ]);
+      expect(batch.events).toHaveLength(1);
+      expect(batch.events[0]).toMatchObject({
+        agentId: 'native-builder-id',
+        teamName: 'alpha',
+        agentName: 'builder',
+        requestCount: 25,
+      });
+      expect(batch.sourceStates[0].agentId).toBe('native-builder-id');
+    }
+  );
+
+  it('repairs missing identities on stabilized costs even while the gateway is unavailable', async () => {
+    const ledger = new MemoryLedger();
+    const previous = { ...previousEvent('2026-06-01', 'claude-sonnet'), agentId: undefined };
+    ledger.events = [previous];
+    ledger.sourceStates = [
+      {
+        gatewayUsageRef: REF,
+        teamName: 'alpha',
+        agentName: 'builder',
+        watermarkDay: '2026-06-01',
+        degraded: false,
+      },
+    ];
+    const gateway = fakeUsage(() => {
+      throw new Error('offline');
+    }, [source({ agentId: undefined })]);
+    const importer = new GatewayUsageImporter({
+      usage: gateway.port,
+      ledger,
+      clock: { now: () => new Date('2026-06-05T12:00:00Z') },
+    });
+    const batch = await importer.importUsage([]);
+    expect(gateway.readDays).not.toContain('2026-06-01');
+    expect(batch.events).toEqual([
+      { ...previous, agentId: 'alpha:builder', createdAt: '2026-06-05T12:00:00.000Z' },
+    ]);
+    expect(batch.sourceStates[0].degraded).toBe(true);
+  });
+
   it('successful empty day emits no events and advances the watermark once stabilized', async () => {
     const ledger = new MemoryLedger();
     const gateway = fakeUsage(() => []);

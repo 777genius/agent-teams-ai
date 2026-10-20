@@ -50,6 +50,28 @@ async function createService(): Promise<{
 }
 
 describe('GatewayProviderService', () => {
+  it('persists the default agent identity and exposes it for older source records', async () => {
+    const { service, store } = await createService();
+    const profile = await service.saveProfile({
+      displayName: 'Local',
+      baseUrl: 'http://127.0.0.1:8080',
+    });
+    const owner = {
+      teamName: 'team',
+      memberName: 'alice',
+      profileId: profile.id,
+      apiKey: 'gw-key-alice',
+    };
+    await service.bindMember(owner);
+    expect((await store.read()).sources[0].agentId).toBe('team:alice');
+    await store.mutate(async (state) => {
+      delete state.sources[0].agentId;
+    });
+    expect((await service.listUsageSources())[0].agentId).toBe('team:alice');
+    await service.bindMember(owner);
+    expect((await store.read()).sources[0].agentId).toBe('team:alice');
+  });
+
   it('retires the previous binding on a key switch while keeping same-source rebinds active', async () => {
     const { service, store } = await createService();
     const profile = await service.saveProfile({

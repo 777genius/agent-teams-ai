@@ -100,6 +100,17 @@ export class GatewayUsageImporter implements TokenUsageImporterPort {
     const nowIso = now.toISOString();
     const today = utcDay(now);
     const linkedRuns = runs.filter((run) => run.gatewayUsageRef === source.gatewayUsageRef);
+    const agentId =
+      linkedRuns.find(
+        (run) =>
+          run.agentId &&
+          run.teamName === source.teamName &&
+          run.agentName === source.memberName &&
+          run.sources.length > 0
+      )?.agentId ??
+      source.agentId ??
+      `${source.teamName}:${source.memberName}`;
+    const attributedSource = { ...source, agentId };
     const lastUsedAt = latestIso([
       source.lastUnboundAt,
       source.runtimeArtifactRetiredAt,
@@ -135,7 +146,7 @@ export class GatewayUsageImporter implements TokenUsageImporterPort {
           this.deps.logger?.warn('Failed to read gateway usage day', error);
           continue;
         }
-        events.push(...buildDayEvents(source, day, usage, previousEvents, nowIso));
+        events.push(...buildDayEvents(attributedSource, day, usage, previousEvents, nowIso));
         if (
           now.getTime() >= dayEndMs(day) + STABILIZATION_WINDOW_MS &&
           (cursor === undefined ? day === source.firstUsageDay : day === addUtcDays(cursor, 1))
@@ -145,6 +156,12 @@ export class GatewayUsageImporter implements TokenUsageImporterPort {
       }
     }
 
+    // Repair identity on stabilized ledger days without refetching or changing their amounts.
+    const refreshedIds = new Set(events.map((event) => event.id));
+    for (const previous of previousEvents) {
+      if (previous.agentId !== agentId && !refreshedIds.has(previous.id))
+        events.push({ ...previous, agentId, createdAt: nowIso });
+    }
     const degraded = degradedReason !== undefined;
     return {
       events,
@@ -152,7 +169,7 @@ export class GatewayUsageImporter implements TokenUsageImporterPort {
         gatewayUsageRef: source.gatewayUsageRef,
         teamName: source.teamName,
         agentName: source.memberName,
-        agentId: source.agentId,
+        agentId,
         watermarkDay: cursor,
         lastUsedAt,
         finalUsageDay,
@@ -179,7 +196,7 @@ function buildDayEvents(
   }
   for (const previous of previousEvents) {
     if (previous.gatewayDay !== day || !previous.model || seen.has(previous.model)) continue;
-    events.push(zeroOutEvent(previous, nowIso));
+    events.push(zeroOutEvent({ ...previous, agentId: source.agentId }, nowIso));
   }
   return events;
 }

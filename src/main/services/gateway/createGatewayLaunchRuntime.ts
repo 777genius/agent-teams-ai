@@ -101,7 +101,8 @@ export function createGatewayLaunchRuntime(deps: {
               else
                 await metadata.recordOpenCodeSessions(
                   input.teamName,
-                  Object.values(result.members)
+                  Object.values(result.members),
+                  snapshots
                 );
               return result;
             };

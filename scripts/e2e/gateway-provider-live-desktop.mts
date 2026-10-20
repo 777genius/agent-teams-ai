@@ -294,6 +294,15 @@ async function assertSnapshot(
         Math.abs(entry.summary.billableCostUsd - meter.actual_cost) > 1e-8
       )
         return false;
+      assert(entry.summary.runCount >= 1, 'Gateway cost and native runtime share one agent row');
+      const filtered = await invoke<TokenUsageAnalyticsSnapshotDto>('tokenUsage', 'getSnapshot', {
+        teamName: team,
+        agentId: entry.id,
+      });
+      assert.equal(filtered.summary.requestCount, meter.requests);
+      assert(Math.abs(filtered.summary.billableCostUsd - meter.actual_cost) < 1e-8);
+      assert(filtered.byAgent.every((row) => row.id === entry.id));
+      await json(path.join(dirs.evidence, `${team}-${member.name}-snapshot.json`), filtered);
       assert.equal(entry.summary.inputTokens, meter.input_tokens);
       assert.equal(entry.summary.outputTokens, meter.output_tokens);
       expectedCost += meter.actual_cost;

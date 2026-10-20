@@ -237,6 +237,7 @@ export class GatewayProviderService {
           secretStorageRef: storageRef,
           teamName,
           memberName,
+          agentId: `${teamName}:${memberName}`,
           firstUsageDay: utcDayAt(now),
           createdAt: nowIso,
           lastBoundAt: nowIso,
@@ -245,6 +246,7 @@ export class GatewayProviderService {
         };
         state.sources.push(source);
       } else {
+        source.agentId ??= `${teamName}:${memberName}`;
         source.secretStorageRef = storageRef;
         source.hasActiveBinding = true;
         source.lastBoundAt = nowIso;
@@ -439,7 +441,7 @@ export function sourceToUsageInfo(source: GatewayUsageSource): GatewayUsageSourc
     allowPrivateNetwork: source.allowPrivateNetwork,
     teamName: source.teamName,
     memberName: source.memberName,
-    agentId: source.agentId,
+    agentId: source.agentId ?? `${source.teamName}:${source.memberName}`,
     firstUsageDay: source.firstUsageDay,
     hasActiveBinding: source.hasActiveBinding,
     lastBoundAt: source.lastBoundAt,

@@ -43,6 +43,103 @@ function nativeRun(
 }
 
 describe('GatewayRunMetadataStore', () => {
+  it('requires the current launch receipt for OpenCode sessions and keeps a later unbound run ordinary', async () => {
+    directory = await mkdtemp(path.join(os.tmpdir(), 'gateway-run-metadata-'));
+    const filePath = path.join(directory, 'runs.json');
+    const store = new GatewayRunMetadataStore(filePath);
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-20T12:00:00Z'));
+    const old = await store.snapshotLaunch({
+      teamName: 'sandbox',
+      memberName: 'alice',
+      providerId: 'opencode',
+      gatewayUsageRef: 'old-source',
+    });
+    await store.recordOpenCodeSessions(
+      'sandbox',
+      [{ memberName: 'alice', sessionId: 'old-session', runtimeAlive: true }],
+      [old]
+    );
+    vi.setSystemTime(new Date('2026-10-20T12:01:00Z'));
+    await store.confirmOpenCodeStopped('sandbox', [
+      { memberName: 'alice', sessionId: 'old-session', stopped: true },
+    ]);
+    await store.recordOpenCodeSessions(
+      'sandbox',
+      [{ memberName: 'alice', sessionId: 'ordinary-session', runtimeAlive: true }],
+      []
+    );
+    const run = {
+      ...nativeRun('ordinary-session', '2026-10-20T12:02:00Z'),
+      providerId: 'opencode',
+      runtimeKind: 'opencode',
+    } as TokenUsageRunDto;
+    const reconciled = await new GatewayRunMetadataStore(filePath).reconcileRuns([run]);
+    expect(reconciled[0].gatewayUsageRef).toBeUndefined();
+    expect(reconciled.filter((item) => item.gatewayUsageRef === 'old-source')).toHaveLength(1);
+    expect(reconciled[1]).toMatchObject({
+      gatewayUsageRef: 'old-source',
+      status: 'completed',
+      terminationConfirmed: true,
+    });
+    expect(await store.hasUnfinishedRuns('old-source')).toBe(false);
+  });
+
+  it('records OpenCode results only in this attempt, preserving older session ownership across a rebind', async () => {
+    directory = await mkdtemp(path.join(os.tmpdir(), 'gateway-run-metadata-'));
+    const store = new GatewayRunMetadataStore(path.join(directory, 'runs.json'));
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-20T12:00:00Z'));
+    const old = await store.snapshotLaunch({
+      teamName: 'sandbox',
+      memberName: 'alice',
+      providerId: 'opencode',
+      gatewayUsageRef: 'old-source',
+    });
+    const newer = await store.snapshotLaunch({
+      teamName: 'sandbox',
+      memberName: 'alice',
+      providerId: 'opencode',
+      gatewayUsageRef: 'new-source',
+    });
+    const foreign = await store.snapshotLaunch({
+      teamName: 'other',
+      memberName: 'alice',
+      providerId: 'opencode',
+      gatewayUsageRef: 'foreign-source',
+    });
+    await store.recordOpenCodeSessions(
+      'sandbox',
+      [
+        { memberName: 'alice', sessionId: 'old-session', runtimeAlive: true },
+        { memberName: 'bob', sessionId: 'foreign-member', runtimeAlive: true },
+      ],
+      [old, foreign]
+    );
+    await store.recordOpenCodeSessions(
+      'sandbox',
+      [{ memberName: 'alice', sessionId: 'new-session', runtimeAlive: true }],
+      [newer]
+    );
+    const runs = await store.reconcileRuns([
+      {
+        ...nativeRun('old-session', '2026-10-20T12:00:01Z'),
+        providerId: 'opencode',
+        runtimeKind: 'opencode',
+        agentId: 'native-alice',
+      },
+      {
+        ...nativeRun('new-session', '2026-10-20T12:00:01Z'),
+        providerId: 'opencode',
+        runtimeKind: 'opencode',
+      },
+    ]);
+    expect(runs[0]).toMatchObject({ gatewayUsageRef: 'old-source', agentId: 'native-alice' });
+    expect(runs[1]).toMatchObject({ gatewayUsageRef: 'new-source', agentId: 'sandbox:alice' });
+    expect(runs.some((run) => run.agentName === 'bob')).toBe(false);
+    expect(runs.find((run) => run.gatewayUsageRef === 'foreign-source')?.sources).toEqual([]);
+  });
+
   it('persists before discovery, fixes source identity per native session across rebind and restart', async () => {
     directory = await mkdtemp(path.join(os.tmpdir(), 'gateway-run-metadata-'));
     const filePath = path.join(directory, 'runs.json');
