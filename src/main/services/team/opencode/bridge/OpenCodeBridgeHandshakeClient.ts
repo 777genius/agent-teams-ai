@@ -49,53 +49,70 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
     memberName?: string;
     laneId?: string | null;
   }): Promise<OpenCodeBridgeHandshake> {
-    const result = await this.bridge.execute<
-      {
-        client: OpenCodeBridgePeerIdentity;
-        requiredCommand: OpenCodeBridgeCommandName;
-        expectedRunId: string | null;
-        expectedCapabilitySnapshotId: string | null;
-        expectedManifestHighWatermark: number | null;
-        allowEmptyLaneStop?: boolean;
-        selectedModel?: string | null;
-        toolApprovalMode?: 'auto' | 'manual';
-        teamId?: string;
-        teamName?: string;
-        memberName?: string;
-        laneId?: string | null;
-      },
-      OpenCodeBridgeHandshake
-    >(
-      'opencode.handshake',
-      {
-        client: this.clientIdentity,
-        requiredCommand: input.requiredCommand,
-        expectedRunId: input.expectedRunId,
-        expectedCapabilitySnapshotId: input.expectedCapabilitySnapshotId,
-        expectedManifestHighWatermark: input.expectedManifestHighWatermark,
-        ...(input.allowEmptyLaneStop === true ? { allowEmptyLaneStop: true } : {}),
-        ...(input.selectedModel === undefined ? {} : { selectedModel: input.selectedModel }),
-        ...(input.toolApprovalMode === undefined
-          ? {}
-          : { toolApprovalMode: input.toolApprovalMode }),
-        ...(input.teamId === undefined ? {} : { teamId: input.teamId }),
-        ...(input.teamName === undefined ? {} : { teamName: input.teamName }),
-        ...(input.memberName === undefined ? {} : { memberName: input.memberName }),
-        ...(input.laneId === undefined ? {} : { laneId: input.laneId }),
-      },
-      {
-        cwd: input.cwd ?? process.cwd(),
-        timeoutMs: this.timeoutMs,
-      }
-    );
-
-    if (!result.ok) {
-      throw new Error(
-        `OpenCode bridge handshake failed: ${result.error.kind}: ${result.error.message}`
+    const deadline = Date.now() + this.timeoutMs;
+    for (let attempt = 0; ; attempt++) {
+      const result = await this.bridge.execute<
+        {
+          client: OpenCodeBridgePeerIdentity;
+          requiredCommand: OpenCodeBridgeCommandName;
+          expectedRunId: string | null;
+          expectedCapabilitySnapshotId: string | null;
+          expectedManifestHighWatermark: number | null;
+          allowEmptyLaneStop?: boolean;
+          selectedModel?: string | null;
+          toolApprovalMode?: 'auto' | 'manual';
+          teamId?: string;
+          teamName?: string;
+          memberName?: string;
+          laneId?: string | null;
+        },
+        OpenCodeBridgeHandshake
+      >(
+        'opencode.handshake',
+        {
+          client: this.clientIdentity,
+          requiredCommand: input.requiredCommand,
+          expectedRunId: input.expectedRunId,
+          expectedCapabilitySnapshotId: input.expectedCapabilitySnapshotId,
+          expectedManifestHighWatermark: input.expectedManifestHighWatermark,
+          ...(input.allowEmptyLaneStop === true ? { allowEmptyLaneStop: true } : {}),
+          ...(input.selectedModel === undefined ? {} : { selectedModel: input.selectedModel }),
+          ...(input.toolApprovalMode === undefined
+            ? {}
+            : { toolApprovalMode: input.toolApprovalMode }),
+          ...(input.teamId === undefined ? {} : { teamId: input.teamId }),
+          ...(input.teamName === undefined ? {} : { teamName: input.teamName }),
+          ...(input.memberName === undefined ? {} : { memberName: input.memberName }),
+          ...(input.laneId === undefined ? {} : { laneId: input.laneId }),
+        },
+        {
+          cwd: input.cwd ?? process.cwd(),
+          timeoutMs: Math.max(1, deadline - Date.now()),
+        }
       );
-    }
 
-    return result.data;
+      // Handshake precedes command dispatch. Retry only a structured, retryable
+      // registry contention result; ownership loss and all other failures propagate.
+      if (
+        !result.ok &&
+        result.error.retryable &&
+        result.error.kind === 'provider_error' &&
+        result.error.details?.lockCode === 'ELOCKED' &&
+        result.error.details?.lockCategory === 'registry' &&
+        attempt < 3 &&
+        Date.now() + 250 < deadline
+      ) {
+        await new Promise<void>((resolve) => setTimeout(resolve, 250));
+        continue;
+      }
+      if (!result.ok) {
+        throw new Error(
+          `OpenCode bridge handshake failed: ${result.error.kind}: ${result.error.message}`
+        );
+      }
+
+      return result.data;
+    }
   }
 }
 
