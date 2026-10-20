@@ -20,15 +20,27 @@ interface PersistedTeamModelInput {
 export function resolvePersistedTeamModel(input: PersistedTeamModelInput): string | undefined {
   if (
     input.providerId !== 'anthropic' ||
-    (input.selectedModel.trim() && !isDefaultProviderModelSelection(input.selectedModel)) ||
-    input.globalStatus?.effectiveDefaultModel === undefined
+    (input.selectedModel.trim() && !isDefaultProviderModelSelection(input.selectedModel))
   ) {
     return input.model;
   }
   const scope = input.probedCwd.trim();
-  if (!input.projectSelectionReady || !scope || input.persistedCwd?.trim() !== scope) {
-    return undefined;
+  if (input.projectSelectionReady && scope && input.persistedCwd?.trim() === scope) {
+    const confirmed = resolveRuntimeDefaultModelLabel(
+      'anthropic',
+      input.scopedStatus,
+      input.limitContext
+    );
+    if (confirmed) return confirmed.modelLabel;
   }
-  return resolveRuntimeDefaultModelLabel('anthropic', input.scopedStatus, input.limitContext)
-    ?.modelLabel;
+  const global = input.globalStatus;
+  return global?.providerId === 'anthropic' &&
+    global.supported &&
+    global.verificationState === 'verified' &&
+    global.statusCheckOutcome === 'authoritative' &&
+    !global.statusCheckErrorCode &&
+    global.effectiveDefaultModel === undefined &&
+    input.scopedStatus?.effectiveDefaultModel === undefined
+    ? input.model
+    : undefined;
 }

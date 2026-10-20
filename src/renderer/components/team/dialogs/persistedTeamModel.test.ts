@@ -11,6 +11,13 @@ const confirmed = {
   statusCheckOutcome: 'authoritative',
   effectiveDefaultModel: 'gateway/project-default',
 } as CliProviderStatus;
+const legacy = { ...confirmed, effectiveDefaultModel: undefined };
+const loading = {
+  providerId: 'anthropic',
+  supported: false,
+  verificationState: 'unknown',
+  statusCheckOutcome: 'pending',
+} as CliProviderStatus;
 const input = {
   model: 'catalog-fallback',
   selectedModel: '',
@@ -35,6 +42,39 @@ describe('persisting a provider Default selection', () => {
     ).toBe('claude-opus-5');
   });
 
+  it.each([null, loading, legacy])(
+    'uses scope-bound confirmed new-contract evidence before global discovery: %j',
+    (globalStatus) => {
+      expect(resolvePersistedTeamModel({ ...input, globalStatus })).toBe('gateway/project-default');
+    }
+  );
+
+  it.each([
+    null,
+    loading,
+    { ...legacy, supported: false },
+    { ...legacy, verificationState: 'unknown' as const },
+    { ...legacy, statusCheckOutcome: 'pending' as const },
+    { ...legacy, statusCheckOutcome: 'transient_error' as const },
+    { ...legacy, statusCheckOutcome: 'model_only' as const },
+    { ...legacy, statusCheckErrorCode: 'unavailable' as const },
+    { ...legacy, providerId: 'codex' as const },
+  ])('does not infer a legacy contract from unresolved global evidence: %j', (globalStatus) => {
+    expect(
+      resolvePersistedTeamModel({ ...input, globalStatus, scopedStatus: null })
+    ).toBeUndefined();
+  });
+
+  it('keeps a scoped new-contract null inherited even if the global snapshot is legacy', () => {
+    expect(
+      resolvePersistedTeamModel({
+        ...input,
+        globalStatus: legacy,
+        scopedStatus: { ...confirmed, effectiveDefaultModel: null },
+      })
+    ).toBeUndefined();
+  });
+
   it.each([
     { projectSelectionReady: false },
     { scopedStatus: null },
@@ -53,18 +93,22 @@ describe('persisting a provider Default selection', () => {
         ...input,
         model: 'manual-model',
         selectedModel: 'manual-model',
+        globalStatus: loading,
         scopedStatus: null,
       })
     ).toBe('manual-model');
     expect(
       resolvePersistedTeamModel({
         ...input,
-        globalStatus: { ...confirmed, effectiveDefaultModel: undefined },
+        globalStatus: legacy,
         scopedStatus: null,
       })
     ).toBe('catalog-fallback');
     expect(resolvePersistedTeamModel({ ...input, providerId: 'codex', scopedStatus: null })).toBe(
       'catalog-fallback'
     );
+    expect(
+      resolvePersistedTeamModel({ ...input, providerId: undefined, globalStatus: loading })
+    ).toBe('catalog-fallback');
   });
 });

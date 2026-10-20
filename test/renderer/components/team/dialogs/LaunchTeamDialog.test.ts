@@ -759,6 +759,7 @@ function createAuthoritativeProviderStatus(
 
 describe('LaunchTeamDialog', () => {
   it.each([
+    'initial-loading',
     'pending',
     'failed',
     'unknown',
@@ -791,8 +792,12 @@ describe('LaunchTeamDialog', () => {
       if (phase !== 'legacy')
         global.effectiveDefaultModel = phase === 'unknown' ? null : 'global/wrong';
       storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [global] };
+      if (phase === 'initial-loading') {
+        storeState.cliStatus = null as any;
+        storeState.cliStatusLoading = true;
+      }
       fetchCliProviderStatus.mockImplementation(async () => false);
-      if (phase !== 'pending' && phase !== 'unknown') {
+      if (phase !== 'initial-loading' && phase !== 'pending' && phase !== 'unknown') {
         storeState.cliProviderStatusByScope[
           getCliProviderStatusScopeKey('anthropic', projectPath)
         ] = {
@@ -946,7 +951,7 @@ describe('LaunchTeamDialog', () => {
     }
   });
 
-  it.each(['pending', 'failed', 'confirmed', 'explicit', 'legacy'] as const)(
+  it.each(['initial-loading', 'pending', 'failed', 'confirmed', 'explicit', 'legacy'] as const)(
     'saves an Anthropic schedule safely with %s project evidence',
     async (phase) => {
       vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -959,8 +964,12 @@ describe('LaunchTeamDialog', () => {
       ]);
       if (phase !== 'legacy') global.effectiveDefaultModel = 'global/wrong';
       storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [global] };
+      if (phase === 'initial-loading') {
+        storeState.cliStatus = null as any;
+        storeState.cliStatusLoading = true;
+      }
       fetchCliProviderStatus.mockImplementation(async () => false);
-      if (phase !== 'pending') {
+      if (phase !== 'initial-loading' && phase !== 'pending') {
         storeState.cliProviderStatusByScope[
           getCliProviderStatusScopeKey('anthropic', projectPath)
         ] = {
@@ -1024,7 +1033,7 @@ describe('LaunchTeamDialog', () => {
                 ? 'catalog-fallback'
                 : undefined
         );
-        if (phase !== 'legacy')
+        if (phase !== 'legacy' && phase !== 'initial-loading')
           expect(fetchCliProviderStatus).toHaveBeenCalledWith(
             'anthropic',
             expect.objectContaining({ projectPath })
@@ -1769,6 +1778,7 @@ describe('LaunchTeamDialog', () => {
     createTeamDraftMock.state.setRuntimeSelection.mockReset();
     createTeamDraftMock.state.setMembers.mockReset();
     storeState.cliStatus = { providers: [] };
+    storeState.cliStatusLoading = false;
     storeState.cliProviderStatusByScope = {};
     storeState.cliProviderStatusLoading = {};
     storeState.launchParamsByTeam = {};
