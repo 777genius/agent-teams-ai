@@ -717,6 +717,10 @@ const OPENCODE_TEAM_UNAVAILABLE_MODELS = new Map<string, string>([
 
 const OPENCODE_TEAM_NOT_RECOMMENDED_MODELS = new Map<string, string>([
   [
+    'opencode/minimax-m2.5-free',
+    'This exact free model route passed simple OpenCode Agent Teams provider stress, but a deeper repeated gauntlet hit duplicate or missing reply tokens. Keep it below Recommended until a clean repeated gauntlet passes.',
+  ],
+  [
     'opencode/ling-2.6-flash-free',
     'Real OpenCode Agent Teams E2E showed unreliable peer relay for this model.',
   ],

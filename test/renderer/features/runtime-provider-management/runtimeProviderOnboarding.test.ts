@@ -171,6 +171,17 @@ describe('runtime provider onboarding domain', () => {
     expect(selectRecommendedRuntimeProviderModel(plan, [...retired, flash])).toBe(flash);
   });
 
+  it.each(['minimax', 'minimax-cn', 'minimax-coding-plan', 'minimax-cn-coding-plan'])(
+    'filters bare MiniMax IDs from the %s scoped catalog before recommending a default',
+    (providerId) => {
+      const plan = getRuntimeProviderOnboardingPlan('minimax-token-plan');
+      const retired = model('MiniMax-M2.7', { providerId, default: true });
+      const current = model('MiniMax-M3.1-Flash', { providerId });
+      expect(selectRecommendedRuntimeProviderModel(plan, [retired])).toBeNull();
+      expect(rankRecommendedRuntimeProviderModels(plan, [retired, current])).toEqual([current]);
+    }
+  );
+
   it('preserves explicitly saved MiniMax model selections', () => {
     const progress = {
       ...createRuntimeProviderOnboardingProgress(['minimax-token-plan']),

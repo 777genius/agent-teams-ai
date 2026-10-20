@@ -50,6 +50,7 @@ import {
   getRuntimeProviderSetupPresentation,
   supportsScopedDefaultModelInheritance,
 } from '../../core/domain';
+import { qualifyModelId } from '../../core/domain/openCodeModelIdentity';
 
 import { LegacyConfiguredModelsPanel } from './LegacyConfiguredModelsPanel';
 import {
@@ -1799,7 +1800,11 @@ const ProviderModelList = ({
   const visibleModels = useMemo(
     () =>
       state.models
-        .filter((model) => isCurrentMiniMaxCatalogModel(model.modelId))
+        .filter((model) =>
+          isCurrentMiniMaxCatalogModel(
+            qualifyModelId(model.providerId, model.modelId) || model.modelId
+          )
+        )
         .map((model, index) => ({ model, index }))
         .filter(
           ({ model }) =>

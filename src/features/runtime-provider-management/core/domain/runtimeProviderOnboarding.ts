@@ -1,5 +1,6 @@
 import { isCurrentMiniMaxCatalogModel } from '@shared/utils/providerModelVisibility';
 
+import { qualifyModelId } from './openCodeModelIdentity';
 import { isOAuthCredentialHint } from './runtimeProviderQuickConnect';
 
 import type { RuntimeProviderDirectoryEntryDto, RuntimeProviderModelDto } from '../../contracts';
@@ -379,7 +380,10 @@ export function rankRecommendedRuntimeProviderModels(
   models: readonly RuntimeProviderModelDto[]
 ): RuntimeProviderModelDto[] {
   const candidates = models.filter(
-    (model) => isCurrentMiniMaxCatalogModel(model.modelId) && modelCanBeProbed(model)
+    (model) =>
+      isCurrentMiniMaxCatalogModel(
+        qualifyModelId(model.providerId, model.modelId) || model.modelId
+      ) && modelCanBeProbed(model)
   );
   const ranked: RuntimeProviderModelDto[] = [];
   const seen = new Set<string>();

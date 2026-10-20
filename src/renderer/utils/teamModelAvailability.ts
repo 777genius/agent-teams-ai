@@ -1,5 +1,8 @@
 import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
-import { isAnthropicClaudeCodeRemovedModel } from '@shared/utils/providerModelVisibility';
+import {
+  isAnthropicClaudeCodeRemovedModel,
+  isCurrentMiniMaxCatalogModel,
+} from '@shared/utils/providerModelVisibility';
 
 import {
   getProviderScopedTeamModelLabel,
@@ -719,7 +722,8 @@ export function getAvailableTeamProviderModels(
 
 export function getAvailableTeamProviderModelOptions(
   providerId: SupportedProviderId,
-  providerStatus?: TeamModelRuntimeProviderStatus | null
+  providerStatus?: TeamModelRuntimeProviderStatus | null,
+  selectedModel = ''
 ): TeamRuntimeModelOption[] {
   if (providerId === 'anthropic') {
     if (isAnthropicCompatibleRuntime(providerStatus)) {
@@ -794,7 +798,9 @@ export function getAvailableTeamProviderModelOptions(
 
   const visibleModels = withSupplementalDisabledRuntimeModels(
     providerId,
-    getRuntimeSelectorModels(providerId, providerStatus),
+    getRuntimeSelectorModels(providerId, providerStatus, Boolean(selectedModel)).filter(
+      (model) => model === selectedModel || isCurrentMiniMaxCatalogModel(model, providerId)
+    ),
     providerStatus
   );
   const runtimeVisibleModelSet = new Set(
@@ -897,10 +903,6 @@ export function normalizeTeamModelForUi(
   }
 
   if (providerId === 'anthropic') {
-    if (isAnthropicCompatibleRuntime(providerStatus)) {
-      return isTeamModelAvailableForUi(providerId, trimmed, providerStatus) ? normalized : '';
-    }
-
     return isTeamModelAvailableForUi(providerId, trimmed, providerStatus) ? normalized : '';
   }
 

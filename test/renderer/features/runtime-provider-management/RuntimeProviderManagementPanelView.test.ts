@@ -3497,6 +3497,24 @@ describe('RuntimeProviderManagementPanelView', () => {
           availability: 'untested',
         },
         {
+          providerId: 'minimax-coding-plan',
+          modelId: 'MiniMax-M2.7',
+          displayName: 'Retired bare MiniMax M2.7',
+          sourceLabel: 'MiniMax',
+          free: false,
+          default: false,
+          availability: 'untested',
+        },
+        {
+          providerId: 'minimax-coding-plan',
+          modelId: 'MiniMax-M3.1-Flash',
+          displayName: 'Current bare MiniMax Flash',
+          sourceLabel: 'MiniMax',
+          free: false,
+          default: false,
+          availability: 'untested',
+        },
+        {
           providerId: 'openrouter',
           modelId: 'opencode/minimax-m2.5-free',
           displayName: 'minimax-m2.5-free',
@@ -3576,6 +3594,8 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(host.textContent).toContain('Not verified in OpenCode');
     expect(host.textContent).toContain('Tested');
     expect(host.textContent).not.toContain('minimax-m2.5-free');
+    expect(host.textContent).not.toContain('Retired bare MiniMax M2.7');
+    expect(host.textContent).toContain('Current bare MiniMax Flash');
     expect(host.textContent).not.toContain('minimax-m2.7');
     expect(host.textContent).toContain('minimax-m3.1-flash:free');
     expect(host.textContent).not.toContain('Tested with limits');
@@ -3609,7 +3629,7 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(modelSearch?.style.paddingLeft).toBe('42px');
     expect(modelList?.style.maxHeight).toBe('300px');
     expect(host.querySelector('[data-testid="runtime-provider-model-virtual-list"]')).toBeNull();
-    expect(host.querySelectorAll('[data-testid^="runtime-provider-model-row-"]')).toHaveLength(7);
+    expect(host.querySelectorAll('[data-testid^="runtime-provider-model-row-"]')).toHaveLength(8);
     expect(host.textContent).not.toContain('OpenRouterfree');
     const firstTestButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent?.trim() === 'Test'

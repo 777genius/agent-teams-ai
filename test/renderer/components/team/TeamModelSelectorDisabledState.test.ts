@@ -1211,6 +1211,65 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(onValueChange).not.toHaveBeenCalledWith('');
   });
 
+  it('shows the saved retired MiniMax selection without offering other retired models', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          authMethod: 'api_key',
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI', endpointLabel: 'opencode' },
+          authenticated: true,
+          supported: true,
+          capabilities: { teamLaunch: true },
+          models: [
+            'opencode/minimax-m2.5-free',
+            'opencode/minimax-m3-free',
+            'openrouter/minimax/minimax-m2.7',
+          ],
+          modelVerificationState: 'idle',
+          modelAvailability: [],
+        },
+      ],
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onValueChange = vi.fn();
+    const render = (value: string) =>
+      React.createElement(TeamModelSelector, {
+        providerId: 'opencode',
+        onProviderChange: () => undefined,
+        providerReadyById: { opencode: true },
+        value,
+        onValueChange,
+      });
+
+    await act(async () => {
+      root.render(render('opencode/minimax-m2.5-free'));
+      await Promise.resolve();
+    });
+    const selected = host.querySelector(
+      '[data-testid="team-model-selector-model-option"][aria-pressed="true"]'
+    );
+    expect(selected?.textContent).toContain('minimax-m2.5-free');
+    expect(selected?.getAttribute('aria-disabled')).toBe('false');
+    expect(selected?.textContent).toContain('Not recommended');
+    expect(host.textContent).not.toContain('minimax-m2.7');
+    expect(onValueChange).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.render(render('opencode/minimax-m3-free'));
+      await Promise.resolve();
+    });
+    expect(host.textContent).not.toContain('minimax-m2.5-free');
+    expect(
+      host.querySelector('[data-testid="team-model-selector-model-option"][aria-pressed="true"]')
+        ?.textContent
+    ).toContain('minimax-m3-free');
+  });
+
   it('labels, sorts, and filters OpenCode models with real Agent Teams E2E recommendations', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {

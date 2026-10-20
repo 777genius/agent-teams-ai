@@ -95,7 +95,6 @@ describe('getOpenCodeTeamModelRecommendation', () => {
       'openrouter/minimax/minimax-m2.1',
       'openrouter/minimax/minimax-m2.5',
       'openrouter/minimax/minimax-m2.7',
-      'opencode/minimax-m2.5-free',
       'minimax-coding-plan/MiniMax-M3',
       'minimax-coding-plan/MiniMax-M3.1-Flash',
     ]) {
@@ -107,6 +106,14 @@ describe('getOpenCodeTeamModelRecommendation', () => {
     ).toMatchObject({
       level: 'not-recommended',
     });
+  });
+
+  it('keeps the known messaging failure warning for saved retired MiniMax routes', () => {
+    expect(getOpenCodeTeamModelRecommendation('opencode/minimax-m2.5-free')).toMatchObject({
+      level: 'not-recommended',
+      reason: expect.stringContaining('duplicate or missing reply tokens'),
+    });
+    expect(isOpenCodeTeamModelRecommended('opencode/minimax-m2.5-free')).toBe(false);
   });
 
   it('marks models with real launch or messaging failures as not recommended', () => {
@@ -814,9 +821,9 @@ describe('getOpenCodeTeamModelRecommendation', () => {
       'opencode/big-pickle',
       'openrouter/mistralai/codestral-2508',
       'openrouter/anthropic/claude-sonnet-4.6',
-      'opencode/minimax-m2.5-free',
       'openrouter/qwen/qwen3-coder-plus',
       'openrouter/openai/gpt-oss-20b:free',
+      'opencode/minimax-m2.5-free',
     ]);
   });
 });
