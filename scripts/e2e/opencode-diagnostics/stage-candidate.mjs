@@ -99,13 +99,13 @@ export async function verifyCandidatePayload(root, expected, { packaged = false 
   if (expected.payloadReceiptSha256) {
     assert.equal(await digest('.archive-payload.json'), expected.payloadReceiptSha256);
     const receipt = JSON.parse(await readFile(path.join(root, '.archive-payload.json'), 'utf8'));
-    assert(
-      receipt.version === 1 &&
-        receipt.archiveSha256 === expected.payloadArchiveSha256 &&
-        receipt.binaryName === 'claude-multimodel.exe' &&
-        Array.isArray(receipt.entries) &&
-        receipt.entries.length <= 100000
-    );
+    assert.equal(receipt.version, 1);
+    assert.equal(receipt.archiveSha256, expected.payloadArchiveSha256);
+    assert.equal(receipt.binaryName, 'claude-multimodel.exe');
+    assert(Array.isArray(receipt.entries), 'Candidate payload receipt entries must be a list');
+    // Fail-closed work bound for the per-entry verification below. The shipped
+    // portable graph alone already carries >100k node_modules entries.
+    assert(receipt.entries.length <= 250000, 'Candidate payload receipt lists too many entries');
     // Pinned builder-util copyDir omits these markers and directories without copied files.
     const marker = (file) => ['.DS_Store', '.gitkeep'].includes(path.posix.basename(file));
     const pruned = (file) =>
