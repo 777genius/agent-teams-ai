@@ -33,6 +33,7 @@ import { InternalStorageBackendSelector } from './InternalStorageBackendSelector
 import type { InternalStorageBackendKind } from '../../contracts/internalStorageContracts';
 import type { MemberWorkSyncStorageGateway } from '../../core/application/ports';
 import type { ApplicationCommandLedgerStorageGateway } from '@features/application-command-ledger';
+import type { CustomTeamTemplateStorageGateway } from '@features/custom-team-templates/contracts';
 import type { TaskStallJournalStore } from '@main/services/team/stallMonitor/TaskStallJournalStore';
 import type { TaskCommentNotificationJournalStore } from '@main/services/team/TaskCommentNotificationJournalStore';
 
@@ -54,6 +55,17 @@ export interface InternalStorageApplicationCommandLedgerBackend {
   selector: InternalStorageBackendSelector;
 }
 
+export interface InternalStorageCustomTeamTemplatesBackend {
+  /**
+   * Worker-backed SQLite gateway for the custom team template library.
+   *
+   * There is deliberately no selector and no JSON fallback: A1 has no legacy
+   * template store, so an unavailable worker must surface as unavailable
+   * storage rather than a silently empty library.
+   */
+  gateway: CustomTeamTemplateStorageGateway;
+}
+
 export interface InternalStorageFeature {
   taskStallJournalStore: TaskStallJournalStore;
   taskCommentNotificationJournalStore: TaskCommentNotificationJournalStore;
@@ -69,6 +81,12 @@ export interface InternalStorageFeature {
    * worker bundle is unavailable, so callers must leave durable commands off.
    */
   applicationCommandLedgerBackend: InternalStorageApplicationCommandLedgerBackend | null;
+  /**
+   * SQLite gateway for the custom-team-templates feature. Null when the worker
+   * bundle is unavailable, so callers must report unavailable storage instead
+   * of degrading to a different backend.
+   */
+  customTeamTemplatesBackend: InternalStorageCustomTeamTemplatesBackend | null;
   /** Forces the lazy backend decision for startup diagnostics and packaged smoke checks. */
   probeBackend(): Promise<InternalStorageBackendKind>;
   getBackendKind(): InternalStorageBackendKind;
@@ -158,6 +176,7 @@ export function createInternalStorageFeature(
     ),
     memberWorkSyncBackend: { gateway: client, selector, fallbackRequiresReplica },
     applicationCommandLedgerBackend: workerAvailable ? { gateway: client, selector } : null,
+    customTeamTemplatesBackend: workerAvailable ? { gateway: client } : null,
     probeBackend: () => selector.select('sqlite', 'json-fallback'),
     getBackendKind: () => selector.getBackendKind(),
     dispose: () => client.close(),

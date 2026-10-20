@@ -143,6 +143,34 @@ export const memberWorkSyncMetricEvents = sqliteTable(
   ]
 );
 
+/**
+ * Saved custom team templates.
+ *
+ * Unlike every other table in this database, the template library is
+ * app-global instead of team-scoped, so the primary key is the template id and
+ * the uniqueness key is the normalized display name.
+ *
+ * `name_normalized` is the single source of truth for name uniqueness and is
+ * derived from `name` by the worker, never supplied by a caller.
+ * `content_hash` is an opaque digest of the canonical allowlisted content; it
+ * answers "is this the same save request?" and is not a secret.
+ */
+export const customTeamTemplates = sqliteTable(
+  'custom_team_templates',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    nameNormalized: text('name_normalized').notNull(),
+    description: text('description'),
+    schemaVersion: integer('schema_version').notNull(),
+    teamPrompt: text('team_prompt').notNull(),
+    membersJson: text('members_json').notNull(),
+    contentHash: text('content_hash').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [uniqueIndex('idx_custom_team_templates_name_normalized').on(table.nameNormalized)]
+);
+
 export const applicationCommandLedger = sqliteTable(
   'application_command_ledger',
   {
