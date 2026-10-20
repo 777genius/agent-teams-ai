@@ -571,7 +571,7 @@ try {
       const route = routes.find(
         (call) =>
           call.credentialHash === hash(member.key) &&
-          call.path ===
+          new URL(call.path, 'http://gateway-e2e.invalid').pathname ===
             (member.providerId === 'anthropic'
               ? '/v1/messages'
               : member.providerId === 'codex'
