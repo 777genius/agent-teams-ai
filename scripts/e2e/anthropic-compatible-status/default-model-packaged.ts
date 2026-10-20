@@ -180,6 +180,9 @@ async function waitSettled(
           ...progress,
           noNewNativeEvents: events.length === priorCount,
           requireReadyUi,
+          quietDurationMs: Date.now() - quietSince,
+          activeNativeChildren: children,
+          httpInFlight: gateway.inFlight(),
         });
         return;
       }
@@ -565,6 +568,14 @@ try {
     scope:
       'native saved model -> exact bundled released executable -> local Messages PONG; fixture launch endpoint credentials supplied directly',
   };
+  // The direct command's close event does not settle app-owned native children.
+  // Await their natural completion before the final success snapshots.
+  await waitSettled(
+    'after-saved-model-inference-native-work-drained',
+    await scopedPreflightCount(),
+    'quiet-drain',
+    false
+  );
   const finalEvents = await preflightEvents();
   const starts = finalEvents.filter(
     (e) => e.event === 'provider_one_shot_diagnostic_start' && e.cwd === data.project
