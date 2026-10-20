@@ -141,6 +141,7 @@ const dirs = Object.fromEntries(
   directoryNames.map((name) => [name, path.join(root, name)])
 ) as Record<(typeof directoryNames)[number], string>;
 await Promise.all(Object.values(dirs).map((dir) => mkdir(dir, { recursive: true, mode: 0o700 })));
+await mkdir(path.join(dirs.home, '.codex'), { mode: 0o700 });
 await writeFile(path.join(dirs.sandbox, '.gateway-e2e-test-only'), root);
 assert.equal(await readFile(path.join(dirs.sandbox, '.gateway-e2e-test-only'), 'utf8'), root);
 await writeFile(path.join(dirs.sandbox, 'README.md'), '# Disposable gateway desktop E2E\n');
