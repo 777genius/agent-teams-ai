@@ -1609,8 +1609,15 @@ async function packagedStartupSnapshot(
   }
   const stdio = [];
   const profilesRoot = path.join(dataRoot, 'opencode', 'v2', 'profiles');
-  for (const profile of await list(profilesRoot, /^[a-f0-9]{16}-[a-f0-9-]{36}$/)) {
-    const owner = path.join(profilesRoot, profile, '.opencode-v2-execution-owner');
+  // Retirement renames the owner directory to .opencode-v2-execution-owner.released.<leaseId>;
+  // the stdio spool keeps every original byte there, so both names must be read.
+  const ownerDirs: string[] = [];
+  for (const profile of await list(profilesRoot, /^[a-f0-9]{16}-[a-f0-9-]{36}$/))
+    for (const owner of (
+      await list(path.join(profilesRoot, profile), /^\.opencode-v2-execution-owner(\.released\.[a-f0-9-]{36})?$/)
+    ).sort())
+      ownerDirs.push(path.join(profilesRoot, profile, owner));
+  for (const owner of ownerDirs) {
     for (const leaf of await list(owner, /^native-stdio-[a-f0-9-]{36}$/)) {
       const content = await read(path.join(owner, leaf), 'main.stderr', true);
       const body = typeof content?.body === 'string' ? content.body : null;
