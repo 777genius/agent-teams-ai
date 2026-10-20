@@ -527,7 +527,13 @@ try {
         name: `${team}-${platform}`,
         platform,
         type: 'apikey',
-        credentials: { api_key: upstreamKey, base_url: mock.dockerBaseUrl },
+        credentials: {
+          api_key: upstreamKey,
+          base_url: mock.dockerBaseUrl,
+          // The stand advertises models from API-account mappings, independently
+          // of the mock upstream catalog. Declare the selected OpenAI test model.
+          ...(platform === 'openai' ? { model_mapping: { 'gpt-5-codex': 'gpt-5-codex' } } : {}),
+        },
         group_ids: [group.id],
         concurrency: 10,
         priority: 1,
