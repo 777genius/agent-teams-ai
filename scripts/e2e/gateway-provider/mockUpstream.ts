@@ -291,7 +291,14 @@ export async function startMockUpstream(
           bootstrapProof: proof,
         })
       );
-      const text = proof ? 'Startup context loaded.' : 'GATEWAY_E2E_OK';
+      const prompt = currentUserPrompt(body);
+      const strictToken = /Output only this exact token: (STRICT_LAUNCH_[A-Za-z0-9_-]+)/.exec(
+        prompt
+      )?.[1];
+      const text = proof
+        ? 'Startup context loaded.'
+        : (strictToken ??
+          (prompt.includes('Output only the single word PONG.') ? 'PONG' : 'GATEWAY_E2E_OK'));
       if (path === '/v1/messages/count_tokens')
         return json(response, 200, { input_tokens: usage.input });
       if (path === '/v1/messages')
