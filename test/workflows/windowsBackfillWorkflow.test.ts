@@ -187,3 +187,30 @@ describe('native Windows dispatch input admission', () => {
     }
   );
 });
+
+describe('native Windows provider comparison workflow contract', () => {
+  it('keeps the dispatch token away from the npm install and fails closed on the integrity check', () => {
+    const native = parse(readFileSync('.github/workflows/opencode-native-windows-e2e.yml', 'utf8'));
+    const nativeSteps = native.jobs['real-tasks'].steps as {
+      name?: string;
+      run?: string;
+      env?: Record<string, string>;
+    }[];
+    const step = nativeSteps.find((candidate) =>
+      candidate.name?.startsWith('Compare verified Windows V1 provider behavior')
+    )!;
+    const script = step.run!;
+    expect(step.env?.GH_TOKEN).toBe('${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}');
+    // Third-party install scripts must not run with the dispatch token set.
+    expect(script.indexOf('Remove-Item Env:GH_TOKEN')).toBeGreaterThanOrEqual(0);
+    expect(script.indexOf('Remove-Item Env:GH_TOKEN')).toBeLessThan(
+      script.indexOf('npm install --global')
+    );
+    // A missing lockfile fails the step instead of silently skipping the check.
+    expect(script).toContain(
+      "if (!(Test-Path $npmLockPath -PathType Leaf)) { throw 'Official npm install lock missing; integrity unverifiable' }"
+    );
+    expect(script).toContain("throw 'Official npm wrapper integrity changed'");
+    expect(script).toContain("throw 'Official npm native integrity changed'");
+  });
+});

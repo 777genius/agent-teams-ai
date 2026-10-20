@@ -252,16 +252,18 @@ jobs:
             if ($candidate.runId -cne $env:RUNTIME_CANDIDATE_RUN -or $candidate.sourceSha -cne $env:RUNTIME_CANDIDATE_SHA) { throw 'Explicit candidate selection changed' }
             Move-Item resources/runtime (Join-Path $comparisonRoot 'candidate')
             $npmRoot = Join-Path $comparisonRoot 'npm'
+            # The staging calls that need the dispatch token are done; third-party
+            # install scripts must never run with it in their environment.
+            Remove-Item Env:GH_TOKEN -ErrorAction SilentlyContinue
             npm install --global --prefix $npmRoot --no-audit --no-fund opencode-ai@1.18.31
             if ($LASTEXITCODE -ne 0) { throw 'Official npm V1 install failed' }
             $npmLockPath = Join-Path $npmRoot 'node_modules/.package-lock.json'
-            if (Test-Path $npmLockPath -PathType Leaf) {
-              $npmLock = Get-Content $npmLockPath -Raw | ConvertFrom-Json
-              $wrapper = $npmLock.packages.'node_modules/opencode-ai'
-              $native = @($npmLock.packages.PSObject.Properties | Where-Object { $_.Name -cin @('node_modules/opencode-windows-x64', 'node_modules/opencode-ai/node_modules/opencode-windows-x64') })
-              if ($wrapper.version -cne '1.18.31' -or $wrapper.integrity -cne 'sha512-J95feefeWwtIaw3irx76WjzWcgQXxmuHmDVphvs5ep9X30fBJ6T6bFhw50i9Kx50MG/xPn5w2pafXIfNtdry9w==') { throw 'Official npm wrapper integrity changed' }
-              if ($native.Count -ne 1 -or $native[0].Value.version -cne '1.18.31' -or $native[0].Value.integrity -cne 'sha512-1Za7uKeGLonNUkUIGHD7xfV5omi7ju/7z2WYfS5YvDLTr1iU/W1PPVHzHXiwiyV4gMxsWGwHHLubWdH99D7pSA==') { throw 'Official npm native integrity changed' }
-            }
+            if (!(Test-Path $npmLockPath -PathType Leaf)) { throw 'Official npm install lock missing; integrity unverifiable' }
+            $npmLock = Get-Content $npmLockPath -Raw | ConvertFrom-Json
+            $wrapper = $npmLock.packages.'node_modules/opencode-ai'
+            $native = @($npmLock.packages.PSObject.Properties | Where-Object { $_.Name -cin @('node_modules/opencode-windows-x64', 'node_modules/opencode-ai/node_modules/opencode-windows-x64') })
+            if ($wrapper.version -cne '1.18.31' -or $wrapper.integrity -cne 'sha512-J95feefeWwtIaw3irx76WjzWcgQXxmuHmDVphvs5ep9X30fBJ6T6bFhw50i9Kx50MG/xPn5w2pafXIfNtdry9w==') { throw 'Official npm wrapper integrity changed' }
+            if ($native.Count -ne 1 -or $native[0].Value.version -cne '1.18.31' -or $native[0].Value.integrity -cne 'sha512-1Za7uKeGLonNUkUIGHD7xfV5omi7ju/7z2WYfS5YvDLTr1iU/W1PPVHzHXiwiyV4gMxsWGwHHLubWdH99D7pSA==') { throw 'Official npm native integrity changed' }
             $baseline = (Resolve-Path (Join-Path $comparisonRoot 'runtime118/claude-multimodel.exe')).Path
             $candidateBinary = (Resolve-Path (Join-Path $comparisonRoot 'candidate/claude-multimodel.exe')).Path
             $official = (Resolve-Path (Join-Path $npmRoot 'opencode.cmd')).Path
