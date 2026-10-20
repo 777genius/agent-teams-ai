@@ -217,17 +217,17 @@ export async function verifyGatewayUi(
     await member
       .locator(`[data-testid="team-model-selector-provider-nav-${options.providerId}"]`)
       .click();
-    // A tab opened while the runtime is checking is an inspection view. Once
-    // ready, the existing explicit action confirms the provider selection.
-    const useProvider = member.getByRole('button', {
-      name: options.providerId === 'opencode' ? 'Use OpenCode' : 'Use Codex',
-      exact: true,
-    });
-    if (await useProvider.count()) await useProvider.click();
+    // Runtime status can settle after the tab opens in inspection mode.
     const providerLabel = options.providerId === 'opencode' ? 'OpenCode' : 'Codex';
-    await member
-      .getByRole('button', { name: new RegExp(providerLabel + ' provider,', 'i') })
-      .waitFor();
+    await readback('confirmed ' + providerLabel + ' selection', async () => {
+      const useProvider = member.getByRole('button', { name: 'Use ' + providerLabel, exact: true });
+      if (await useProvider.count()) await useProvider.click();
+      return (
+        (await member
+          .getByRole('button', { name: new RegExp(providerLabel + ' provider,', 'i') })
+          .count()) > 0
+      );
+    });
   }
   await capture('member-bound');
   await cancelDialog();
