@@ -1,3 +1,6 @@
+import { isCurrentMiniMaxCatalogModel } from '@shared/utils/providerModelVisibility';
+
+import { qualifyModelId } from './openCodeModelIdentity';
 import { isOAuthCredentialHint } from './runtimeProviderQuickConnect';
 
 import type { RuntimeProviderDirectoryEntryDto, RuntimeProviderModelDto } from '../../contracts';
@@ -106,7 +109,7 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
     description: 'Use your MiniMax Token Plan Subscription Key, not a pay-as-you-go key.',
     credentialKind: 'subscription-key',
     credentialUrl: 'https://platform.minimax.io/console/plan',
-    preferredModelFragments: ['minimax-m3', 'minimax-m2.7-highspeed', 'minimax-m2.7'],
+    preferredModelFragments: ['minimax-m3.1-flash', 'minimax-m3'],
     requireOAuthCredentialHint: false,
     connectionStrategy: { kind: 'opencode-auth' },
   },
@@ -376,7 +379,12 @@ export function rankRecommendedRuntimeProviderModels(
   plan: RuntimeProviderOnboardingPlan,
   models: readonly RuntimeProviderModelDto[]
 ): RuntimeProviderModelDto[] {
-  const candidates = models.filter(modelCanBeProbed);
+  const candidates = models.filter(
+    (model) =>
+      isCurrentMiniMaxCatalogModel(
+        qualifyModelId(model.providerId, model.modelId) || model.modelId
+      ) && modelCanBeProbed(model)
+  );
   const ranked: RuntimeProviderModelDto[] = [];
   const seen = new Set<string>();
   const add = (model: RuntimeProviderModelDto | undefined): void => {

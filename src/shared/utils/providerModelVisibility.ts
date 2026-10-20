@@ -1,3 +1,5 @@
+import { parseOpenCodeQualifiedModelRef } from './opencodeModelRef';
+
 import type { CliProviderId, TeamProviderId } from '@shared/types';
 
 type SupportedProviderId = CliProviderId | TeamProviderId;
@@ -33,6 +35,60 @@ export function isAnthropicClaudeCodeRemovedModel(model: string | undefined): bo
   return ANTHROPIC_CLAUDE_CODE_REMOVED_MODEL_PREFIXES.some((prefix) =>
     modelIdMatchesPrefix(normalized, prefix)
   );
+}
+
+export function isCurrentMiniMaxCatalogModel(
+  model: string,
+  runtimeProviderId: SupportedProviderId = 'opencode'
+): boolean {
+  if (runtimeProviderId !== 'opencode') {
+    return true;
+  }
+  const route = parseOpenCodeQualifiedModelRef(model);
+  if (!route) {
+    return true;
+  }
+
+  let modelId = route.modelId.toLowerCase();
+  const isDirect = [
+    'minimax',
+    'minimax-cn',
+    'minimax-coding-plan',
+    'minimax-cn-coding-plan',
+  ].includes(route.sourceId);
+  const isOpenRouter = route.sourceId === 'openrouter' && modelId.startsWith('minimax/');
+  const isZen = route.sourceId === 'opencode' && modelId.startsWith('minimax-');
+  if (!isDirect && !isOpenRouter && !isZen) {
+    return true;
+  }
+  if (isOpenRouter) {
+    modelId = modelId.slice('minimax/'.length);
+  }
+  // Keep non-text models and arbitrary custom routes outside this picker policy.
+  if (!/^(?:minimax-(?:m\d|text|vl|01)|abab)/.test(modelId)) {
+    return true;
+  }
+  // Gateway aliases identify the underlying model, but never establish availability.
+  // Direct MiniMax routes must use the exact official model ID without an alias.
+  const underlyingModel = isDirect ? modelId : modelId.replace(/(?::free|-free)$/, '');
+  return underlyingModel === 'minimax-m3' || underlyingModel === 'minimax-m3.1-flash';
+}
+
+// Runtime validation of saved selections must not apply the new-choice picker policy.
+export function getUniqueProviderRuntimeModels(
+  providerId: SupportedProviderId,
+  models: readonly string[],
+  includeRetiredMiniMaxModels = false
+): string[] {
+  const seen = new Set<string>();
+  return models.filter((model) => {
+    const trimmed = model.trim();
+    if (!trimmed || seen.has(trimmed)) {
+      return false;
+    }
+    seen.add(trimmed);
+    return includeRetiredMiniMaxModels || isCurrentMiniMaxCatalogModel(trimmed, providerId);
+  });
 }
 
 export function isProviderRuntimeModelUiDisabled(

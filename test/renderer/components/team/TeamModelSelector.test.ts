@@ -451,6 +451,34 @@ describe('resolveTeamModelSelectorValue', () => {
 });
 
 describe('computeEffectiveTeamModel', () => {
+  it('uses a confirmed configured default before the catalog while preserving explicit selection', () => {
+    const providerStatus = {
+      providerId: 'anthropic' as const,
+      verificationState: 'verified' as const,
+      statusCheckOutcome: 'authoritative' as const,
+      effectiveDefaultModel: 'gateway/custom-default',
+      defaultModel: 'old-model-list-default',
+    };
+    expect(computeEffectiveTeamModel('', false, 'anthropic', providerStatus)).toBe(
+      'gateway/custom-default'
+    );
+    expect(computeEffectiveTeamModel('explicit-model', false, 'anthropic', providerStatus)).toBe(
+      'explicit-model'
+    );
+    expect(
+      computeEffectiveTeamModel('', false, 'anthropic', {
+        ...providerStatus,
+        statusCheckOutcome: 'pending',
+      })
+    ).toBe('old-model-list-default');
+    expect(
+      computeEffectiveTeamModel('', false, 'anthropic', {
+        ...providerStatus,
+        providerId: 'codex',
+      })
+    ).toBe('opus[1m]');
+  });
+
   it('appends [1m] for Opus but keeps Sonnet on standard context', () => {
     expect(computeEffectiveTeamModel('opus', false, 'anthropic')).toBe('opus[1m]');
     expect(computeEffectiveTeamModel('sonnet', false, 'anthropic')).toBe('sonnet');

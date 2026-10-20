@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { EventEmitter } from 'events';
+import { accessSync } from 'fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
@@ -14,6 +15,20 @@ vi.mock('child_process', () => ({
 vi.mock('@main/utils/pathDecoder', () => ({
   getHomeDir: () => '/Users/tester',
 }));
+
+// accessSync stays a passthrough to the real builtin by default so unrelated
+// tests keep real-fs behavior; the "default login-shell selection" tests pin
+// exact probe results with vi.mocked(accessSync).mockImplementation for
+// cross-platform determinism under the mocked child_process.spawn.
+vi.mock('fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs')>();
+  return {
+    ...actual,
+    accessSync: vi.fn((path: Parameters<typeof actual.accessSync>[0], mode?: number) =>
+      actual.accessSync(path, mode)
+    ),
+  };
+});
 
 vi.mock('@shared/utils/logger', () => ({
   createLogger: () => ({
@@ -52,7 +67,14 @@ function emitError(child: MockChildProcess, message: string): void {
   child.emit('error', new Error(message));
 }
 
-function emitClose(child: MockChildProcess, code: number | null, signal: NodeJS.Signals | null): void {
+/**
+ * Emit a child-process close event with the given exit code and signal.
+ */
+function emitClose(
+  child: MockChildProcess,
+  code: number | null,
+  signal: NodeJS.Signals | null
+): void {
   child.emit('close', code, signal);
 }
 
@@ -603,5 +625,261 @@ describe('shellEnv', () => {
     ).resolves.toEqual({});
     expect(hoisted.spawn).not.toHaveBeenCalled();
     expect(shellEnv.getCachedShellEnv()).toEqual({});
+  });
+
+  describe('default login-shell selection', () => {
+    /**
+     * Pin the mocked filesystem probe to a fixed set of installed shells.
+     */
+    function pinInstalledShells(installed: readonly string[]): void {
+      vi.mocked(accessSync).mockImplementation((path): void => {
+        const candidatePath = path.toString();
+        if (installed.includes(candidatePath)) return;
+        throw new Error(`ENOENT: ${candidatePath} is not installed`);
+      });
+    }
+
+    it('documents the platform default candidate ordering', async () => {
+      const shellEnv = await importShellEnv();
+      expect(shellEnv.defaultShellCandidates('darwin')).toEqual([
+        '/bin/zsh',
+        '/bin/bash',
+        '/bin/sh',
+      ]);
+      expect(shellEnv.defaultShellCandidates('linux')).toEqual([
+        '/bin/zsh',
+        '/bin/bash',
+        '/usr/bin/bash',
+        '/bin/sh',
+      ]);
+      // Shell-equivalent candidates on Windows document the shared
+      // metadata contract only; resolveInteractiveShellEnv returns early
+      // on win32, so these entries are never used as Windows defaults.
+      expect(shellEnv.defaultShellCandidates('win32')).toEqual([
+        '/bin/zsh',
+        '/bin/bash',
+        '/usr/bin/bash',
+        '/bin/sh',
+      ]);
+    });
+
+    it('resolves interactions through the injected probe and trimmed configured shell', async () => {
+      const shellEnv = await importShellEnv();
+      expect(
+        shellEnv.resolveDefaultLoginShellPath({
+          env: { SHELL: '  /opt/homebrew/bin/fish  ' },
+          probe: () => false,
+        })
+      ).toBe('/opt/homebrew/bin/fish');
+      expect(
+        shellEnv.resolveDefaultLoginShellPath({
+          env: {},
+          platform: 'linux',
+          probe: (candidate) => candidate === '/usr/bin/bash',
+        })
+      ).toBe('/usr/bin/bash');
+      expect(
+        shellEnv.resolveDefaultLoginShellPath({
+          env: {},
+          platform: 'linux',
+          probe: () => false,
+        })
+      ).toBe('/bin/sh');
+    });
+
+    it('spawns the first installed platform candidate when SHELL is unset', async () => {
+      delete process.env.SHELL;
+      pinInstalledShells(['/bin/bash']);
+
+      const child = createChild();
+      hoisted.spawn.mockReturnValueOnce(child);
+
+      const shellEnv = await importShellEnv();
+      const result = shellEnv.resolveInteractiveShellEnv();
+      emitEnv(child, { PATH: '/resolved/bin', HOME: '/Users/tester' });
+
+      await expect(result).resolves.toMatchObject({
+        PATH: '/resolved/bin',
+        HOME: '/Users/tester',
+      });
+      expect(vi.mocked(accessSync).mock.calls.map(([path]) => path.toString())).toEqual([
+        '/bin/zsh',
+        '/bin/bash',
+      ]);
+      expect(hoisted.spawn).toHaveBeenNthCalledWith(
+        1,
+        '/bin/bash',
+        ['-lic', 'env -0'],
+        expect.objectContaining({ windowsHide: true })
+      );
+      expect(hoisted.loggerWarn).not.toHaveBeenCalled();
+    });
+
+    it('falls back to /bin/sh when every platform candidate is missing', async () => {
+      delete process.env.SHELL;
+      pinInstalledShells([]);
+
+      const child = createChild();
+      hoisted.spawn.mockReturnValueOnce(child);
+
+      const shellEnv = await importShellEnv();
+      const result = shellEnv.resolveInteractiveShellEnv();
+      emitEnv(child, { PATH: '/resolved/sh-bin' });
+
+      await expect(result).resolves.toMatchObject({ PATH: '/resolved/sh-bin' });
+      expect(vi.mocked(accessSync).mock.calls.map(([path]) => path.toString())).toEqual([
+        '/bin/zsh',
+        '/bin/bash',
+        '/bin/sh',
+      ]);
+      expect(hoisted.spawn).toHaveBeenNthCalledWith(
+        1,
+        '/bin/sh',
+        ['-lic', 'env -0'],
+        expect.objectContaining({ windowsHide: true })
+      );
+      expect(hoisted.loggerWarn).not.toHaveBeenCalled();
+    });
+
+    it('honours a configured SHELL verbatim without probing for installation', async () => {
+      process.env.SHELL = '/opt/homebrew/bin/fish';
+      pinInstalledShells([]);
+
+      const child = createChild();
+      hoisted.spawn.mockReturnValueOnce(child);
+
+      const shellEnv = await importShellEnv();
+      const result = shellEnv.resolveInteractiveShellEnv();
+      emitEnv(child, { PATH: '/resolved/fish-bin' });
+
+      await expect(result).resolves.toMatchObject({ PATH: '/resolved/fish-bin' });
+      expect(vi.mocked(accessSync)).not.toHaveBeenCalled();
+      expect(hoisted.spawn).toHaveBeenNthCalledWith(
+        1,
+        '/opt/homebrew/bin/fish',
+        ['-lic', 'env -0'],
+        expect.objectContaining({ windowsHide: true })
+      );
+      expect(hoisted.loggerWarn).not.toHaveBeenCalled();
+    });
+
+    it('honours linux candidate ordering across separate install roots', async () => {
+      delete process.env.SHELL;
+      Object.defineProperty(process, 'platform', {
+        value: 'linux',
+        configurable: true,
+        writable: true,
+      });
+      pinInstalledShells(['/usr/bin/bash']);
+
+      const child = createChild();
+      hoisted.spawn.mockReturnValueOnce(child);
+
+      const shellEnv = await importShellEnv();
+      const result = shellEnv.resolveInteractiveShellEnv();
+      emitEnv(child, { PATH: '/resolved/linux-bin' });
+
+      await expect(result).resolves.toMatchObject({ PATH: '/resolved/linux-bin' });
+      expect(vi.mocked(accessSync).mock.calls.map(([path]) => path.toString())).toEqual([
+        '/bin/zsh',
+        '/bin/bash',
+        '/usr/bin/bash',
+      ]);
+      expect(hoisted.spawn).toHaveBeenNthCalledWith(
+        1,
+        '/usr/bin/bash',
+        ['-lic', 'env -0'],
+        expect.objectContaining({ windowsHide: true })
+      );
+      expect(hoisted.loggerWarn).not.toHaveBeenCalled();
+    });
+
+    it('selects /bin/zsh before Bash on Linux when zsh is installed', async () => {
+      delete process.env.SHELL;
+      Object.defineProperty(process, 'platform', {
+        value: 'linux',
+        configurable: true,
+        writable: true,
+      });
+      pinInstalledShells(['/bin/zsh', '/bin/bash']);
+
+      const child = createChild();
+      hoisted.spawn.mockReturnValueOnce(child);
+
+      const shellEnv = await importShellEnv();
+      const result = shellEnv.resolveInteractiveShellEnv();
+      emitEnv(child, { PATH: '/resolved/zsh-bin', HOME: '/Users/tester' });
+
+      await expect(result).resolves.toMatchObject({ PATH: '/resolved/zsh-bin' });
+      expect(vi.mocked(accessSync).mock.calls.map(([path]) => path.toString())).toEqual([
+        '/bin/zsh',
+      ]);
+      expect(hoisted.spawn).toHaveBeenNthCalledWith(
+        1,
+        '/bin/zsh',
+        ['-lic', 'env -0'],
+        expect.objectContaining({ windowsHide: true })
+      );
+    });
+
+    it('falls back to Bash on Linux when zsh is absent but Bash is installed', async () => {
+      delete process.env.SHELL;
+      Object.defineProperty(process, 'platform', {
+        value: 'linux',
+        configurable: true,
+        writable: true,
+      });
+      pinInstalledShells(['/bin/bash']);
+
+      const child = createChild();
+      hoisted.spawn.mockReturnValueOnce(child);
+
+      const shellEnv = await importShellEnv();
+      const result = shellEnv.resolveInteractiveShellEnv();
+      emitEnv(child, { PATH: '/resolved/bash-bin', HOME: '/Users/tester' });
+
+      await expect(result).resolves.toMatchObject({ PATH: '/resolved/bash-bin' });
+      expect(vi.mocked(accessSync).mock.calls.map(([path]) => path.toString())).toEqual([
+        '/bin/zsh',
+        '/bin/bash',
+      ]);
+      expect(hoisted.spawn).toHaveBeenNthCalledWith(
+        1,
+        '/bin/bash',
+        ['-lic', 'env -0'],
+        expect.objectContaining({ windowsHide: true })
+      );
+    });
+
+    it('uses /bin/sh on Linux when only the portable fallback is available', async () => {
+      delete process.env.SHELL;
+      Object.defineProperty(process, 'platform', {
+        value: 'linux',
+        configurable: true,
+        writable: true,
+      });
+      pinInstalledShells([]);
+
+      const child = createChild();
+      hoisted.spawn.mockReturnValueOnce(child);
+
+      const shellEnv = await importShellEnv();
+      const result = shellEnv.resolveInteractiveShellEnv();
+      emitEnv(child, { PATH: '/resolved/sh-bin' });
+
+      await expect(result).resolves.toMatchObject({ PATH: '/resolved/sh-bin' });
+      expect(vi.mocked(accessSync).mock.calls.map(([path]) => path.toString())).toEqual([
+        '/bin/zsh',
+        '/bin/bash',
+        '/usr/bin/bash',
+        '/bin/sh',
+      ]);
+      expect(hoisted.spawn).toHaveBeenNthCalledWith(
+        1,
+        '/bin/sh',
+        ['-lic', 'env -0'],
+        expect.objectContaining({ windowsHide: true })
+      );
+    });
   });
 });

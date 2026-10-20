@@ -12,7 +12,9 @@ import {
   type OpenCodeProjectDefaultModel,
   resolveOpenCodeProjectDefaultModel,
 } from './openCodeDefaultModel';
+import { useRuntimeDefaultModelLabel } from './useRuntimeDefaultModelLabel';
 
+import type { TeamDefaultModelLabel } from './runtimeDefaultModelLabel';
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
 /**
@@ -99,8 +101,8 @@ export function useMaterializedOpenCodeDefaultRoute(
 }
 
 /**
- * The provider and model a roster row launches with, and the Default route
- * label when that is OpenCode Default. A row inherits the lead's model under
+ * The provider and model a roster row launches with, and its confirmed Default
+ * label. OpenCode keeps its materialized route label. A row inherits the lead's model under
  * sync, and in Create/Launch also when main gives an unset teammate the lead's
  * model at launch.
  */
@@ -109,12 +111,13 @@ export function useMemberDraftRowModel(input: {
   inheritedProviderId: TeamProviderId;
   inheritedModel: string;
   forced: boolean;
+  limitContext?: boolean;
   projectPath: string | null | undefined;
 }): {
   inheritsLeadModel: boolean;
   effectiveProviderId: TeamProviderId;
   effectiveModel: string | undefined;
-  openCodeDefaultRoute: OpenCodeDefaultRouteLabel | null;
+  defaultModelLabel: TeamDefaultModelLabel | null;
 } {
   const { member, inheritedProviderId, inheritedModel } = input;
   const launchInherits = useLaunchInheritsLeadModel();
@@ -127,12 +130,25 @@ export function useMemberDraftRowModel(input: {
   const effectiveProviderId = inheritsLeadModel
     ? inheritedProviderId
     : (member.providerId ?? inheritedProviderId);
-  const effectiveModel = inheritsLeadModel ? inheritedModel : (member.model ?? inheritedModel);
+  const effectiveModel = inheritsLeadModel
+    ? inheritedModel
+    : (member.model ?? (effectiveProviderId === inheritedProviderId ? inheritedModel : undefined));
   const openCodeDefaultRoute = useMaterializedOpenCodeDefaultRoute(
     input.projectPath,
     effectiveProviderId,
     effectiveModel,
     inheritsLeadModel
   );
-  return { inheritsLeadModel, effectiveProviderId, effectiveModel, openCodeDefaultRoute };
+  const runtimeDefault = useRuntimeDefaultModelLabel(
+    effectiveProviderId,
+    input.limitContext,
+    !effectiveModel?.trim(),
+    input.projectPath
+  );
+  return {
+    inheritsLeadModel,
+    effectiveProviderId,
+    effectiveModel,
+    defaultModelLabel: openCodeDefaultRoute ?? runtimeDefault,
+  };
 }

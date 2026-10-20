@@ -1,12 +1,9 @@
 import { OpenCodeLocalProviderConnector } from '@features/runtime-provider-management/main';
 import { createGatewayLaunchRuntime } from '@main/services/gateway/createGatewayLaunchRuntime';
 import { cleanupOrphanedDeterministicBootstrapSpecs } from '@main/services/team/provisioning/TeamProvisioningBootstrapSpec';
-/** Composes the Electron desktop services, IPC and application lifecycle. */
-// Increase UV thread pool size BEFORE any async I/O.
-// Default is 4 threads which is far too few for startup:
-// binary resolution stat() calls, CLI subprocess spawning, fs.watch(),
-// and readFile/readdir from IPC handlers all compete for the pool.
-// On Windows this saturates all threads, blocking the event loop.
+// Increase UV thread pool size BEFORE async I/O: startup binary resolution,
+// subprocess work, watchers, and IPC filesystem requests share this pool.
+// The default four threads can block Windows startup.
 process.env.UV_THREADPOOL_SIZE ??= '16';
 // Keep userData stable before any integration can initialize Electron storage.
 // Sentry must stay near the top to capture early errors after storage migration.

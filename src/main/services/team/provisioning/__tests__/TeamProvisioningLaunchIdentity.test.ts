@@ -81,6 +81,71 @@ function buildLaunchIdentity(
 }
 
 describe('team provisioning launch identity facts', () => {
+  it('uses current configured Anthropic identity before a different model-list or catalog recommendation', () => {
+    const facts = buildRuntimeProviderLaunchFacts({
+      providerId: 'anthropic',
+      limitContext: true,
+      modelListStdout: JSON.stringify({
+        providers: {
+          anthropic: {
+            defaultModel: 'first-listed',
+            models: ['first-listed', 'gateway-selected'],
+          },
+        },
+      }),
+      runtimeStatusStdout: JSON.stringify({
+        providers: {
+          anthropic: {
+            providerId: 'anthropic',
+            verificationState: 'verified',
+            statusCheckOutcome: 'authoritative',
+            effectiveDefaultModel: 'gateway-selected',
+            modelCatalog: buildCatalog({
+              providerId: 'anthropic',
+              defaultLaunchModel: 'catalog-recommendation',
+            }),
+          },
+        },
+      }),
+    });
+    expect(facts.defaultModel).toBe('gateway-selected');
+    expect(facts.modelIds.has('gateway-selected')).toBe(true);
+  });
+
+  it.each([
+    { providerId: 'codex' },
+    { statusCheckOutcome: 'pending' },
+    { statusCheckOutcome: 'transient_error' },
+    { verificationState: 'unknown' },
+    { statusCheckErrorCode: 'unavailable' },
+    { effectiveDefaultModel: 42 },
+  ])('does not promote unconfirmed effective model %j', (change) => {
+    const facts = buildRuntimeProviderLaunchFacts({
+      providerId: 'anthropic',
+      limitContext: true,
+      modelListStdout: JSON.stringify({
+        providers: {
+          anthropic: {
+            defaultModel: 'legacy-model',
+            models: ['legacy-model'],
+          },
+        },
+      }),
+      runtimeStatusStdout: JSON.stringify({
+        providers: {
+          anthropic: {
+            providerId: 'anthropic',
+            verificationState: 'verified',
+            statusCheckOutcome: 'authoritative',
+            effectiveDefaultModel: 'unconfirmed-model',
+            ...change,
+          },
+        },
+      }),
+    });
+    expect(facts.defaultModel).toBe('legacy-model');
+  });
+
   it('builds runtime launch facts from model list and status catalog output', () => {
     const catalog = buildCatalog();
 

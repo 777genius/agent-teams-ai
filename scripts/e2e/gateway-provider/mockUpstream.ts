@@ -232,7 +232,9 @@ function chat(
 }
 
 /** In-memory protocol upstream for sandbox E2E; it never forwards any requests. */
-export async function startMockUpstream(): Promise<MockUpstream> {
+export async function startMockUpstream(
+  options: { sharedStandNetwork?: boolean } = {}
+): Promise<MockUpstream> {
   const calls: MockUpstreamCall[] = [];
   const server = createServer((request, response) => {
     void (async () => {
@@ -315,7 +317,7 @@ export async function startMockUpstream(): Promise<MockUpstream> {
   return {
     server,
     baseUrl: `http://127.0.0.1:${address.port}`,
-    dockerBaseUrl: `http://host.docker.internal:${address.port}`,
+    dockerBaseUrl: `http://${options.sharedStandNetwork ? '127.0.0.1' : 'host.docker.internal'}:${address.port}`,
     get calls() {
       return Object.freeze([...calls]);
     },

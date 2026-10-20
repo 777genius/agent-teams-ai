@@ -1,5 +1,8 @@
 import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
-import { isAnthropicClaudeCodeRemovedModel } from '@shared/utils/providerModelVisibility';
+import {
+  isAnthropicClaudeCodeRemovedModel,
+  isCurrentMiniMaxCatalogModel,
+} from '@shared/utils/providerModelVisibility';
 
 import {
   getProviderScopedTeamModelLabel,
@@ -511,7 +514,8 @@ function getRuntimeCatalogModelOption(
 
 function getRuntimeSelectorModels(
   providerId: SupportedProviderId,
-  providerStatus?: TeamModelRuntimeProviderStatus | null
+  providerStatus?: TeamModelRuntimeProviderStatus | null,
+  includeRetiredMiniMaxModels = false
 ): string[] {
   if (!providerStatus) {
     return [];
@@ -520,7 +524,12 @@ function getRuntimeSelectorModels(
   const catalogModels = getRuntimeCatalogModels(providerId, providerStatus);
   if (catalogModels) {
     if (providerId === 'anthropic') {
-      return sortTeamProviderModels(providerId, catalogModels, providerStatus);
+      return sortTeamProviderModels(
+        providerId,
+        catalogModels,
+        providerStatus,
+        includeRetiredMiniMaxModels
+      );
     }
 
     const sourceModels =
@@ -531,21 +540,24 @@ function getRuntimeSelectorModels(
         : catalogModels;
     return getVisibleTeamProviderModels(providerId, sourceModels, providerStatus, {
       expandOpenCodeSummaryCatalog: false,
+      includeRetiredMiniMaxModels,
     });
   }
 
-  if (providerId === 'anthropic' && isAnthropicCompatibleRuntime(providerStatus)) {
-    return sortTeamProviderModels(providerId, providerStatus.models, providerStatus);
-  }
-
-  return sortTeamProviderModels(providerId, providerStatus.models, providerStatus);
+  return sortTeamProviderModels(
+    providerId,
+    providerStatus.models,
+    providerStatus,
+    includeRetiredMiniMaxModels
+  );
 }
 
 function getVisibleRuntimeModels(
   providerId: SupportedProviderId,
-  providerStatus?: TeamModelRuntimeProviderStatus | null
+  providerStatus?: TeamModelRuntimeProviderStatus | null,
+  includeRetiredMiniMaxModels = false
 ): string[] {
-  return getRuntimeSelectorModels(providerId, providerStatus).filter(
+  return getRuntimeSelectorModels(providerId, providerStatus, includeRetiredMiniMaxModels).filter(
     (model) => getTeamModelUiDisabledReason(providerId, model, providerStatus) == null
   );
 }
@@ -593,11 +605,7 @@ function getRuntimeModelAvailabilityFromLookup(
     return null;
   }
 
-  const runtimeAvailability = modelAvailabilityById.get(model)?.status ?? null;
-  if (runtimeAvailability === 'unavailable') {
-    return 'unavailable';
-  }
-  return 'available';
+  return modelAvailabilityById.get(model)?.status === 'unavailable' ? 'unavailable' : 'available';
 }
 
 function getRuntimeModelAvailability(
@@ -607,7 +615,7 @@ function getRuntimeModelAvailability(
 ): CliProviderModelAvailabilityStatus | null {
   if (providerId === 'anthropic') {
     if (isAnthropicCompatibleRuntime(providerStatus)) {
-      const visibleModels = getVisibleRuntimeModels(providerId, providerStatus);
+      const visibleModels = getVisibleRuntimeModels(providerId, providerStatus, true);
       if (visibleModels.includes(model)) {
         const runtimeAvailability = getModelAvailabilityMap(providerStatus).get(model)?.status;
         return runtimeAvailability === 'unavailable' ? 'unavailable' : 'available';
@@ -638,19 +646,11 @@ function getRuntimeModelAvailability(
     return isSupportedAnthropicTeamModel(model) ? 'available' : null;
   }
 
-  if (!providerStatus) {
-    return null;
-  }
-
-  const visibleModels = getVisibleRuntimeModels(providerId, providerStatus);
-  if (!visibleModels.includes(model)) {
-    return null;
-  }
-  const runtimeAvailability = getModelAvailabilityMap(providerStatus).get(model)?.status ?? null;
-  if (runtimeAvailability === 'unavailable') {
-    return 'unavailable';
-  }
-  return 'available';
+  return getRuntimeModelAvailabilityFromLookup(
+    model,
+    new Set(getVisibleRuntimeModels(providerId, providerStatus, true)),
+    getModelAvailabilityMap(providerStatus)
+  );
 }
 
 function getRuntimeModelAvailabilityReason(
@@ -722,7 +722,8 @@ export function getAvailableTeamProviderModels(
 
 export function getAvailableTeamProviderModelOptions(
   providerId: SupportedProviderId,
-  providerStatus?: TeamModelRuntimeProviderStatus | null
+  providerStatus?: TeamModelRuntimeProviderStatus | null,
+  selectedModel = ''
 ): TeamRuntimeModelOption[] {
   if (providerId === 'anthropic') {
     if (isAnthropicCompatibleRuntime(providerStatus)) {
@@ -797,7 +798,9 @@ export function getAvailableTeamProviderModelOptions(
 
   const visibleModels = withSupplementalDisabledRuntimeModels(
     providerId,
-    getRuntimeSelectorModels(providerId, providerStatus),
+    getRuntimeSelectorModels(providerId, providerStatus, Boolean(selectedModel)).filter(
+      (model) => model === selectedModel || isCurrentMiniMaxCatalogModel(model, providerId)
+    ),
     providerStatus
   );
   const runtimeVisibleModelSet = new Set(
@@ -900,10 +903,6 @@ export function normalizeTeamModelForUi(
   }
 
   if (providerId === 'anthropic') {
-    if (isAnthropicCompatibleRuntime(providerStatus)) {
-      return isTeamModelAvailableForUi(providerId, trimmed, providerStatus) ? normalized : '';
-    }
-
     return isTeamModelAvailableForUi(providerId, trimmed, providerStatus) ? normalized : '';
   }
 
@@ -915,7 +914,7 @@ export function normalizeTeamModelForUi(
     return normalized;
   }
 
-  const visibleModels = getVisibleRuntimeModels(providerId, providerStatus);
+  const visibleModels = getVisibleRuntimeModels(providerId, providerStatus, true);
   if (!visibleModels.includes(trimmed)) {
     return '';
   }
@@ -962,7 +961,7 @@ export function getTeamModelSelectionError(
     return null;
   }
 
-  const visibleModels = getVisibleRuntimeModels(providerId, providerStatus);
+  const visibleModels = getVisibleRuntimeModels(providerId, providerStatus, true);
   // A fresh, ready catalog that lists nothing is an authoritative "not offered".
   const freshCatalog = isTeamProviderModelCatalogFresh(providerId, providerStatus);
   if (providerId === 'opencode' && visibleModels.length === 0 && !freshCatalog) {

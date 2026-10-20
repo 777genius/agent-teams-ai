@@ -7,6 +7,7 @@ import {
   ANTHROPIC_CONNECTION_MODES,
   ANTHROPIC_DIRECT_ROUTE_ENV_KEYS,
   ANTHROPIC_EXTERNAL_ROUTE_ENV_KEYS,
+  ANTHROPIC_MODEL_ENV_KEYS,
   type AnthropicConnectionMode,
 } from '@shared/constants/anthropicConnectionMode';
 
@@ -222,7 +223,11 @@ function applyAnthropicRestartConnectionPolicy(
   for (const key of ANTHROPIC_EXTERNAL_ROUTE_ENV_KEYS) {
     assignments.set(key, '');
   }
-  if (connectionMode !== 'compatible') {
+  if (connectionMode === 'compatible') {
+    for (const key of ANTHROPIC_MODEL_ENV_KEYS) {
+      assignments.set(key, env[key] ?? '');
+    }
+  } else {
     for (const key of ANTHROPIC_DIRECT_ROUTE_ENV_KEYS) {
       assignments.set(key, '');
     }

@@ -49,6 +49,7 @@ export function mergeProviderCatalogFields(
     const displayPair = selectProviderModelDisplayPair(hydratedProvider, liveProvider, false);
     return {
       ...liveProvider,
+      effectiveDefaultModel: liveProvider.effectiveDefaultModel === undefined ? undefined : null,
       capabilities: { ...liveProvider.capabilities, teamLaunch: false },
       ...displayPair,
       modelCatalog: retainedCatalog ? { ...retainedCatalog, status: 'stale' } : null,
@@ -59,6 +60,7 @@ export function mergeProviderCatalogFields(
   return {
     ...liveProvider,
     ...displayPair,
+    effectiveDefaultModel: hydratedProvider.effectiveDefaultModel,
     capabilities: { ...liveProvider.capabilities, teamLaunch: canRestoreLaunch },
     modelCatalog: hydratedCatalog,
     modelCatalogRefreshState: 'ready',
@@ -76,6 +78,7 @@ export function markProviderCatalogRefreshFailed(
 ): CliProviderStatus {
   return {
     ...liveProvider,
+    effectiveDefaultModel: liveProvider.effectiveDefaultModel === undefined ? undefined : null,
     capabilities: { ...liveProvider.capabilities, teamLaunch: false },
     modelCatalog: liveProvider.modelCatalog
       ? { ...liveProvider.modelCatalog, status: 'stale' }

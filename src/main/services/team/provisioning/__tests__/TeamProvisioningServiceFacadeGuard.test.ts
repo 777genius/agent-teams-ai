@@ -3,7 +3,14 @@ import { dirname, relative, resolve, sep } from 'node:path';
 
 import { format, type Options as PrettierOptions } from 'prettier';
 import ts from 'typescript';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// Measured at the four-vCPU CI quota: this guard suite parses the provisioning
+// facade graph and formats rendered sources, and its first execution after a
+// cold vitest worker/transform was observed at ~16.5s, while warm runs take
+// ~3.5-4s. The 60s ceiling sizes the wait to the measured worst case (~3.6x
+// margin) without changing any assertion.
+vi.setConfig({ testTimeout: 60_000 });
 
 const TEAM_PROVISIONING_SERVICE_PATH = resolve(
   process.cwd(),

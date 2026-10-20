@@ -295,7 +295,7 @@ try {
   });
   adminToken = login.access_token;
   secrets.add(adminToken);
-  mock = await startMockUpstream();
+  mock = await startMockUpstream({ sharedStandNetwork: process.argv.includes('--shared-stand-network') });
   const permitted = new Set<string>();
   const endpoints: string[] = [];
   for (let index = 0; index < 2; index++) {
@@ -311,6 +311,13 @@ try {
         status: 0,
       };
       routes.push(call);
+      // Runtime reachability probes use the public root without credentials.
+      if (!auth && req.url === '/' && ['GET', 'HEAD'].includes(req.method ?? '')) {
+        call.status = 200;
+        res.writeHead(200);
+        res.end('Gateway E2E fixture');
+        return;
+      }
       if (!permitted.has(auth)) {
         call.status = 403;
         res.writeHead(403);
@@ -327,7 +334,11 @@ try {
               !['host', 'connection', 'content-length'].includes(name) && typeof value === 'string'
           )
         ) as Record<string, string>;
-        const upstream = await fetch(new URL(req.url ?? '/', stand), {
+        const requestUrl = new URL(req.url ?? '/', 'http://gateway-e2e.invalid');
+        const targetUrl = new URL(stand);
+        targetUrl.pathname = requestUrl.pathname;
+        targetUrl.search = requestUrl.search;
+        const upstream = await fetch(targetUrl, {
           method: req.method,
           headers,
           ...(body.length ? { body } : {}),

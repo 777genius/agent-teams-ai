@@ -270,12 +270,13 @@ export const MemberDraftRow = ({
   const suggestionsExcludingSelf = mentionSuggestions.filter(
     (s) => s.name.toLowerCase() !== member.name.trim().toLowerCase()
   );
-  const { inheritsLeadModel, effectiveProviderId, effectiveModel, openCodeDefaultRoute } =
+  const { inheritsLeadModel, effectiveProviderId, effectiveModel, defaultModelLabel } =
     useMemberDraftRowModel({
       member,
       inheritedProviderId,
       inheritedModel,
       forced: forceInheritedModelSettings,
+      limitContext,
       projectPath,
     });
   const memberProviderId = member.providerId;
@@ -289,7 +290,7 @@ export const MemberDraftRow = ({
     resolveMemberModelButtonLabels({
       effectiveProviderId,
       effectiveModel,
-      openCodeDefaultRoute,
+      defaultModelLabel,
       inheritsLeadModel,
       unresolved: runtimeSelectionUnresolved,
       t,
@@ -724,6 +725,7 @@ export const MemberDraftRow = ({
                   onProviderChange(member.id, providerId);
                 }}
                 value={effectiveModel ?? ''}
+                limitContext={limitContext}
                 preserveSelectedModel={preserveSelectedModel}
                 onValueChange={(value) => {
                   if (lockProviderModel) return;
@@ -768,6 +770,7 @@ export const MemberDraftRow = ({
                 id={`member-${member.id}-effort`}
                 providerId={effectiveProviderId}
                 model={effectiveModel}
+                projectPath={projectPath}
                 limitContext={limitContext}
               />
               {effectiveProviderId === 'opencode' ? (
