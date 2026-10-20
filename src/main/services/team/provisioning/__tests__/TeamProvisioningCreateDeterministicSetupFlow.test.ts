@@ -156,6 +156,7 @@ function buildPorts(
         ANTHROPIC_AUTH_TOKEN: 'helper-token',
         MEMBER_SYNC: '1',
       },
+      memberArgsByMember: new Map(),
       usesAnthropicApiKeyHelper: true,
       ...({ anthropicApiKeyHelper } as const),
     })),

@@ -8,21 +8,31 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
-import { Bell, Info, Settings, Wrench } from 'lucide-react';
+import { Bell, Info, Network, Settings, Wrench } from 'lucide-react';
 
 import type { LucideIcon } from 'lucide-react';
 
-export type SettingsSection = 'general' | 'connection' | 'notifications' | 'advanced';
+export type SettingsSection =
+  | 'general'
+  | 'connection'
+  | 'gatewayProviders'
+  | 'notifications'
+  | 'advanced';
 
 interface SettingsTabsProps {
   activeSection: SettingsSection;
   onSectionChange: (section: SettingsSection) => void;
 }
 
-type TabLabelKey = 'tabs.advanced.label' | 'tabs.general.label' | 'tabs.notifications.label';
+type TabLabelKey =
+  | 'tabs.advanced.label'
+  | 'tabs.gatewayProviders.label'
+  | 'tabs.general.label'
+  | 'tabs.notifications.label';
 
 type TabDescriptionKey =
   | 'tabs.advanced.description'
+  | 'tabs.gatewayProviders.description'
   | 'tabs.general.description'
   | 'tabs.notifications.description';
 
@@ -47,6 +57,13 @@ const tabs: TabConfig[] = [
     labelKey: 'tabs.notifications.label',
     icon: Bell,
     descriptionKey: 'tabs.notifications.description',
+  },
+  {
+    id: 'gatewayProviders',
+    labelKey: 'tabs.gatewayProviders.label',
+    icon: Network,
+    descriptionKey: 'tabs.gatewayProviders.description',
+    electronOnly: true,
   },
   {
     id: 'advanced',

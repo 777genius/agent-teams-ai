@@ -93,6 +93,10 @@ vi.mock('@renderer/api', () => ({
   isElectronMode: () => true,
   api: {
     workspaceTrust: { getLaunchStatus: vi.fn(), getProjectStatus: vi.fn() },
+    gatewayProvider: {
+      listGatewayBindings: vi.fn(async () => []),
+      unbindGatewayMember: vi.fn(async () => {}),
+    },
     getCodexAccountSnapshot: vi.fn(async () => null),
     refreshCodexAccountSnapshot: vi.fn(async () => null),
     onCodexAccountSnapshotChanged: vi.fn(() => () => {}),
@@ -5993,7 +5997,8 @@ describe('LaunchTeamDialog', () => {
         memberName: 'lead',
         targetKind: 'lead',
         expectedTeamSettingsFingerprint: 'editor-defaults',
-      })
+      }),
+      expect.any(Function)
     );
     await act(async () => root.unmount());
   });
@@ -6053,7 +6058,8 @@ describe('LaunchTeamDialog', () => {
             expect.objectContaining({ name: 'inherited', model: '' }),
             expect.objectContaining({ name: 'explicit', model: 'opus' }),
           ],
-          undefined
+          undefined,
+          expect.any(Function)
         );
       } finally {
         await act(async () => root.unmount());

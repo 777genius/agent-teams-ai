@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildTokenUsageSnapshot } from '../snapshotProjection';
+import { normalizeCostBreakdown, normalizeRequestCount } from '../tokenUsageTotals';
 
 import type { TokenUsageEventDto, TokenUsageRunDto } from '../../../contracts';
 
@@ -776,5 +777,225 @@ describe('buildTokenUsageSnapshot', () => {
     expect(() =>
       buildTokenUsageSnapshot({ runs: [], events: [], request: { teamIds: [''] }, nowIso: NOW })
     ).toThrow('canonical team filter');
+  });
+});
+
+describe('buildTokenUsageSnapshot gateway aggregates', () => {
+  function gatewayEvent(overrides: Partial<TokenUsageEventDto> = {}): TokenUsageEventDto {
+    return event({
+      id: 'gateway-day',
+      appRunId: 'gateway:gateway-ref-1:2026-06-30',
+      teamName: 'alpha',
+      agentId: 'alpha:builder',
+      agentName: 'builder',
+      runtimeKind: 'unknown',
+      providerId: undefined,
+      billingMode: 'api',
+      model: 'claude-sonnet',
+      commandId: undefined,
+      commandInvocationId: undefined,
+      nativeSessionId: undefined,
+      usageSourceKind: 'gateway_exact',
+      gatewayUsageRef: 'gateway-ref-1',
+      gatewayDay: '2026-06-30',
+      requestCount: 25,
+      cost: {
+        estimatedUsd: 0.5,
+        billableUsd: 0,
+        apiEquivalentUsd: 0.5,
+        source: 'gateway',
+        billingMode: 'api',
+      },
+      occurredAt: '2026-06-30T00:00:00.000Z',
+      createdAt: '2026-06-30T00:02:00.000Z',
+      ...overrides,
+    });
+  }
+
+  it('stops counting persisted local events after reconciliation marks a gateway run', () => {
+    const local = event();
+    expect(
+      buildTokenUsageSnapshot({ runs: [run()], events: [local], nowIso: NOW }).summary.totalTokens
+    ).toBe(100);
+    const snapshot = buildTokenUsageSnapshot({
+      runs: [run({ gatewayUsageRef: 'gateway-ref-1' }), run({ appRunId: 'ordinary' })],
+      events: [local, gatewayEvent(), event({ id: 'ordinary-event', appRunId: 'ordinary' })],
+      nowIso: NOW,
+    });
+    expect(snapshot.summary.totalTokens).toBe(200);
+    expect(snapshot.summary.requestCount).toBe(26);
+    expect(snapshot.summary.apiEquivalentCostUsd).toBeCloseTo(0.62);
+    expect(snapshot.sourceCounts.log_parsed).toBe(1);
+    expect(snapshot.sourceCounts.gateway_exact).toBe(1);
+    expect(snapshot.unmappedEventCount).toBe(0);
+  });
+
+  it('includes run-less gateway aggregates in totals, team/agent/runtime/model and sourceCounts', () => {
+    const snapshot = buildTokenUsageSnapshot({
+      runs: [],
+      events: [gatewayEvent()],
+      nowIso: NOW,
+    });
+
+    expect(snapshot.summary).toEqual(
+      expect.objectContaining({
+        runCount: 0,
+        totalTokens: 100,
+        requestCount: 25,
+        apiEquivalentCostUsd: 0.5,
+        exactEventCount: 1,
+        estimatedEventCount: 0,
+      })
+    );
+    expect(snapshot.sourceCounts).toEqual({
+      sdk_exact: 0,
+      gateway_exact: 1,
+      log_parsed: 0,
+      tokenizer_estimated: 0,
+      cost_estimated: 0,
+    });
+    expect(snapshot.byTeam).toEqual([
+      expect.objectContaining({
+        id: 'team:alpha',
+        teamName: 'alpha',
+        summary: expect.objectContaining({ totalTokens: 100, requestCount: 25 }),
+      }),
+    ]);
+    expect(snapshot.byAgent).toEqual([
+      expect.objectContaining({ id: 'alpha:builder', agentName: 'builder' }),
+    ]);
+    expect(snapshot.byRuntime).toEqual([expect.objectContaining({ id: 'unknown' })]);
+    expect(snapshot.byModel).toEqual([
+      expect.objectContaining({
+        id: 'claude-sonnet',
+        summary: expect.objectContaining({ totalTokens: 100 }),
+      }),
+    ]);
+    expect(snapshot.unmappedEventCount).toBe(0);
+  });
+
+  it('excludes gateway day totals from task, project, session, command and run lists', () => {
+    const snapshot = buildTokenUsageSnapshot({
+      runs: [run()],
+      events: [event(), gatewayEvent()],
+      tasks: [
+        {
+          id: '1',
+          displayId: 'AT-1',
+          teamName: 'alpha',
+          owner: 'builder',
+          subject: 'Build task',
+          status: 'in_progress',
+          workIntervals: [
+            {
+              startedAt: '2026-06-30T00:00:00.000Z',
+              completedAt: '2026-06-30T00:10:00.000Z',
+            },
+          ],
+        },
+      ],
+      nowIso: NOW,
+    });
+
+    expect(snapshot.summary.totalTokens).toBe(200);
+    // The gateway day falls inside the owner-matched interval but never funds a task.
+    expect(snapshot.byTask).toEqual([
+      expect.objectContaining({
+        id: 'task:alpha:1',
+        summary: expect.objectContaining({ totalTokens: 100 }),
+      }),
+    ]);
+    expect(snapshot.byProject.map((item) => item.summary.totalTokens)).toEqual([100]);
+    expect(snapshot.bySession.map((item) => item.summary.totalTokens)).toEqual([100]);
+    expect(snapshot.byCommand.map((item) => item.summary.totalTokens)).toEqual([100]);
+    expect(snapshot.recentRuns.map((item) => item.appRunId)).toEqual(['run-1']);
+    expect(snapshot.recentRuns[0]?.summary.totalTokens).toBe(100);
+    expect(snapshot.expensiveRuns.map((item) => item.appRunId)).toEqual(['run-1']);
+  });
+
+  it('filters gateway aggregates by their own team name', () => {
+    const events = [
+      gatewayEvent(),
+      gatewayEvent({
+        id: 'gateway-day-beta',
+        appRunId: 'gateway:gateway-ref-2:2026-06-30',
+        teamName: 'beta',
+        agentId: 'beta:reviewer',
+        agentName: 'reviewer',
+        gatewayUsageRef: 'gateway-ref-2',
+      }),
+    ];
+
+    const alpha = buildTokenUsageSnapshot({
+      runs: [],
+      events,
+      request: { teamName: 'alpha' },
+      nowIso: NOW,
+    });
+    expect(alpha.summary.totalTokens).toBe(100);
+    expect(alpha.byTeam.map((item) => item.id)).toEqual(['team:alpha']);
+
+    const beta = buildTokenUsageSnapshot({
+      runs: [],
+      events,
+      request: { teamIds: ['team:beta'] },
+      nowIso: NOW,
+    });
+    expect(beta.summary.totalTokens).toBe(100);
+    expect(beta.byTeam.map((item) => item.id)).toEqual(['team:beta']);
+  });
+
+  it('keeps ordinary orphans unmapped while gateway aggregates stay attributed', () => {
+    const snapshot = buildTokenUsageSnapshot({
+      runs: [],
+      events: [
+        gatewayEvent(),
+        event({ id: 'orphan', appRunId: 'missing-run', occurredAt: '2026-06-30T00:01:00.000Z' }),
+      ],
+      nowIso: NOW,
+    });
+
+    expect(snapshot.unmappedEventCount).toBe(1);
+    expect(snapshot.summary.totalTokens).toBe(100);
+    expect(snapshot.sourceCounts).toEqual({
+      sdk_exact: 0,
+      gateway_exact: 1,
+      log_parsed: 0,
+      tokenizer_estimated: 0,
+      cost_estimated: 0,
+    });
+  });
+
+  it('keeps explicit zero billable cost and weights request counts into summary counters', () => {
+    expect(
+      normalizeCostBreakdown({
+        estimatedUsd: 0.5,
+        billableUsd: 0,
+        apiEquivalentUsd: 0.5,
+        source: 'gateway',
+      })
+    ).toMatchObject({ billableUsd: 0, estimatedUsd: 0.5, apiEquivalentUsd: 0.5 });
+    expect(normalizeCostBreakdown({ estimatedUsd: 0.5, source: 'gateway' })).toMatchObject({
+      billableUsd: 0.5,
+    });
+    expect([0, 25, undefined, -3, 2.5, '25'].map((value) => normalizeRequestCount(value))).toEqual([
+      0, 25, 1, 1, 1, 1,
+    ]);
+
+    const snapshot = buildTokenUsageSnapshot({
+      runs: [],
+      events: [
+        gatewayEvent({ id: 'req-0', model: 'model-zero', requestCount: 0 }),
+        gatewayEvent({ id: 'req-25', model: 'model-many', requestCount: 25 }),
+        gatewayEvent({ id: 'req-default', model: 'model-default', requestCount: undefined }),
+        gatewayEvent({ id: 'req-invalid', model: 'model-invalid', requestCount: -3 }),
+      ],
+      nowIso: NOW,
+    });
+
+    expect(snapshot.summary.requestCount).toBe(27);
+    expect(snapshot.summary.apiBillingRequestCount).toBe(27);
+    expect(snapshot.summary.billableCostUsd).toBe(0);
+    expect(snapshot.summary.apiEquivalentCostUsd).toBe(2);
   });
 });

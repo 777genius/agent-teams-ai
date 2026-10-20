@@ -984,7 +984,12 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   );
 
   const handleRelaunchSubmit = useCallback(
-    async (request: TeamLaunchRequest, members: TeamCreateRequest['members']) => {
+    async (
+      request: TeamLaunchRequest,
+      members: TeamCreateRequest['members'],
+      _intent?: unknown,
+      onMembersSaved?: () => void
+    ) => {
       setLaunchingTeamName(request.teamName);
       try {
         await executeTeamRelaunch({
@@ -992,6 +997,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           isTeamAlive: true,
           request,
           members,
+          onMembersSaved,
           stopTeam: async (nextTeamName) => {
             try {
               await api.teams.stop(nextTeamName);

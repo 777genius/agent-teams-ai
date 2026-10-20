@@ -35,7 +35,7 @@ overrides:
   fast-uri: 3.1.7
   file-type@21: 21.3.2
   flatted: 3.4.2
-  follow-redirects: 1.16.0
+  follow-redirects: 1.16.1
   find-my-way: 9.7.0
   handlebars: 4.7.10
   hono: 4.12.30
@@ -45,7 +45,7 @@ overrides:
   linkify-it: 5.0.2
   lodash: ^4.18.1
   lodash-es: ^4.18.1
-  markdown-it: 14.2.0
+  markdown-it: 14.3.3
   js-yaml@3: 3.15.2
   js-yaml@4: 4.3.2
   '@nuxt/devtools-kit>vite': 7.3.5
@@ -7942,8 +7942,8 @@ packages:
   focus-trap@8.2.0:
     resolution: {integrity: sha512-CaBdQ9P4fa/yCA6pDf/3aJd8bf9IOG5QGK21/E+86o2V4V8kzXaR4A9E6tNR7KkkS1+T5ZIU1tJDBDLwsucz9g==}
 
-  follow-redirects@1.16.0:
-    resolution: {integrity: sha512-y5rN/uOsadFT/JfYwhxRS5R7Qce+g3zG97+JrtFZlC9klX/W5hD7iiLzScI4nZqUS7DNUdhPgw4xI8W2LuXlUw==}
+  follow-redirects@1.16.1:
+    resolution: {integrity: sha512-FNvFGzoMLWmE6Yj9spb/zjd7yiNCHiAW9/Tg9CXrQ8wuu32HtlJOwWO11OJafl5FfY3DxTdQ0vj42zU1kvv5jg==}
     engines: {node: '>=4.0'}
     peerDependencies:
       debug: '*'
@@ -9162,8 +9162,8 @@ packages:
   mark.js@8.11.1:
     resolution: {integrity: sha512-1I+1qpDt4idfgLQG+BNWmrqku+7/2bi5nLf4YwF8y8zXvmfiTBY3PV3ZibfrjBueCByROpuBjLLFCajqkgYoLQ==}
 
-  markdown-it@14.2.0:
-    resolution: {integrity: sha512-1TGiQiJVRQ3NPmZH6sx5Cfnmg6GQm9jvC1ch4TK511NjSJvjzKLzn5pPfZRNZkRPZP0HqCioSndqH8v2nRaWVQ==}
+  markdown-it@14.3.3:
+    resolution: {integrity: sha512-L//tDAkjTjJCU6pBUSBTgs3Kg4InVaZuUZog/b6V12UKhcDQ7S78877ibbCanRExwPuYP1CZD7Gd2dxSy1GXRg==}
     hasBin: true
 
   markdown-table@3.0.4:
@@ -18644,7 +18644,7 @@ snapshots:
 
   axios@1.20.0(debug@4.4.3(supports-color@10.2.2))(supports-color@10.2.2):
     dependencies:
-      follow-redirects: 1.16.0(debug@4.4.3(supports-color@10.2.2))
+      follow-redirects: 1.16.1(debug@4.4.3(supports-color@10.2.2))
       form-data: 4.0.6
       https-proxy-agent: 5.0.1(supports-color@10.2.2)
       proxy-from-env: 2.1.0
@@ -20748,7 +20748,7 @@ snapshots:
     dependencies:
       tabbable: 6.4.0
 
-  follow-redirects@1.16.0(debug@4.4.3(supports-color@10.2.2)):
+  follow-redirects@1.16.1(debug@4.4.3(supports-color@10.2.2)):
     optionalDependencies:
       debug: 4.4.3(supports-color@10.2.2)
 
@@ -22132,7 +22132,7 @@ snapshots:
 
   mark.js@8.11.1: {}
 
-  markdown-it@14.2.0:
+  markdown-it@14.3.3:
     dependencies:
       argparse: 2.0.1
       entities: 4.5.0
@@ -26050,7 +26050,7 @@ snapshots:
   vitepress-plugin-llms@1.12.2(supports-color@10.2.2):
     dependencies:
       gray-matter: 4.0.3
-      markdown-it: 14.2.0
+      markdown-it: 14.3.3
       markdown-title: 1.0.2
       mdast-util-from-markdown: 2.0.3(supports-color@10.2.2)
       millify: 6.1.0

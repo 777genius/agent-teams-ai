@@ -1,6 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { TeamPermanentDeletionTransactionCoordinator } from '@main/ipc/teams/TeamPermanentDeletionTransactionCoordinator';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { TeamPermanentDeletionTransactionCoordinatorPorts } from '@main/ipc/teams/TeamPermanentDeletionTransactionCoordinator';
 import type { TeamAttachmentStore } from '@main/services/team/TeamAttachmentStore';
@@ -74,6 +73,7 @@ function createHarness(options: {
     prepareOptions?: { signal?: AbortSignal }
   ) => Promise<void>;
   releaseTeamScopedResources?: () => Promise<void>;
+  retireGatewayBindings?: (teamName: string) => Promise<void>;
   withResourceHooks?: boolean;
   intent?: TeamPermanentDeletionIntent;
 }): {
@@ -84,6 +84,7 @@ function createHarness(options: {
     completeTeamDeletion: ReturnType<typeof vi.fn>;
     resumeTeam: ReturnType<typeof vi.fn>;
   };
+  retireGatewayBindings: ReturnType<typeof vi.fn>;
   permanentlyDeleteTeam: ReturnType<typeof vi.fn>;
   completePermanentDeletion: ReturnType<typeof vi.fn>;
   isPermanentDeletionTargetCurrent: ReturnType<typeof vi.fn>;
@@ -96,6 +97,7 @@ function createHarness(options: {
     completeTeamDeletion: vi.fn(),
     resumeTeam: vi.fn(),
   };
+  const retireGatewayBindings = vi.fn(options.retireGatewayBindings ?? (() => Promise.resolve()));
   const permanentlyDeleteTeam = vi.fn(async () => true);
   const completePermanentDeletion = vi.fn(async () => undefined);
   const isPermanentDeletionTargetCurrent = vi.fn(async () => true);
@@ -156,6 +158,7 @@ function createHarness(options: {
       deleteTeamAttachments: vi.fn(async () => true),
     } as unknown as TeamTaskAttachmentStore,
     lifecycle: () => lifecycle,
+    retireGatewayBindings,
     invalidateTeamConfig: vi.fn(),
     logRecoveryError: vi.fn(),
     ...(options.withResourceHooks === true
@@ -168,6 +171,7 @@ function createHarness(options: {
     intent,
     lifecycle,
     permanentlyDeleteTeam,
+    retireGatewayBindings,
     completePermanentDeletion,
     isPermanentDeletionTargetCurrent,
     releaseTeamScopedResources,
@@ -182,6 +186,41 @@ describe('TeamPermanentDeletionTransactionCoordinator quiesce timeout', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it('retires gateway bindings before detaching a current team', async () => {
+    const harness = createHarness({ prepareTeamDeletion: async () => undefined });
+    await harness.coordinator.permanentlyDelete('fixteam');
+    expect(harness.retireGatewayBindings).toHaveBeenCalledExactlyOnceWith('fixteam');
+    expect(harness.retireGatewayBindings.mock.invocationCallOrder[0]).toBeLessThan(
+      harness.permanentlyDeleteTeam.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('keeps deletion retryable when gateway retirement cannot be persisted', async () => {
+    const failure = new Error('gateway store unavailable');
+    const retire = vi.fn<(teamName: string) => Promise<void>>(async () => {
+      throw failure;
+    });
+    const harness = createHarness({
+      prepareTeamDeletion: async () => undefined,
+      retireGatewayBindings: retire,
+    });
+    await expect(harness.coordinator.permanentlyDelete('fixteam')).rejects.toBe(failure);
+    expect(harness.permanentlyDeleteTeam).not.toHaveBeenCalled();
+    expect(harness.completePermanentDeletion).not.toHaveBeenCalled();
+    retire.mockResolvedValueOnce(undefined);
+    await expect(harness.coordinator.permanentlyDelete('fixteam')).resolves.toBeUndefined();
+    expect(harness.completePermanentDeletion).toHaveBeenCalledOnce();
+  });
+
+  it('does not retire a replacement team when recovering already-removed team data', async () => {
+    const harness = createHarness({
+      prepareTeamDeletion: async () => undefined,
+      intent: createRecoveredIntent(['team-data', 'task-data']),
+    });
+    await harness.coordinator.permanentlyDelete('fixteam', { existingIntent: harness.intent });
+    expect(harness.retireGatewayBindings).not.toHaveBeenCalled();
   });
 
   it('rejects with a concrete error instead of hanging when the quiesce never settles', async () => {

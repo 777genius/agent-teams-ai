@@ -6,6 +6,10 @@ export {
   createRuntimeProviderManagementFeature,
   type RuntimeProviderManagementFeatureFacade,
 } from './composition/createRuntimeProviderManagementFeature';
+export type {
+  OpenCodeGatewayProviderRetireTarget,
+  OpenCodeGatewayProviderTarget,
+} from './infrastructure/OpenCodeGatewayArtifactOwnership';
 export {
   inspectOpenCodeLocalModelRuntimeReadiness,
   MIN_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS,

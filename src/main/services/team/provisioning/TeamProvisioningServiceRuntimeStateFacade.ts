@@ -412,6 +412,9 @@ export abstract class TeamProvisioningServiceRuntimeStateFacade extends TeamProv
     cleanupAnthropicTeamApiKeyHelperForTeam,
     getClaudeBasePath,
     clearPersistedLiveRuntimeHandles: persistClearedStoppedTeamLiveRuntimeHandlesForTeam,
+    confirmNativeTeamStopped: (teamName) =>
+      this.appShellBoundary.getMemberGatewayRuntimeSeams()?.confirmNativeTeamStopped?.(teamName) ??
+      Promise.resolve(),
     logger,
   });
 

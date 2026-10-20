@@ -50,6 +50,7 @@ export interface TeamProvisioningTurnCompleteRun {
   runId: string;
   teamName: string;
   provisioningComplete: boolean;
+  bootstrapSpecSnapshot?: unknown;
   cancelRequested: boolean;
   processKilled: boolean;
   progress: TeamProvisioningProgress;
@@ -414,6 +415,7 @@ export async function handleTeamProvisioningTurnComplete<
   }
 
   run.provisioningComplete = true;
+  run.bootstrapSpecSnapshot = null;
   ports.scheduleDeterministicBootstrapCompletionRecovery(run);
   ports.resetRuntimeToolActivity(run, ports.getRunLeadName(run));
   ports.setLeadActivity(run, 'idle');

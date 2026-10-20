@@ -45,6 +45,7 @@ import {
 
 import { ActivityHeatmapPanel } from './ActivityHeatmapPanel';
 import { BudgetSection } from './BudgetSection';
+import { GatewayUsageStatus } from './GatewayUsageStatus';
 import { MetricInfoTooltip } from './MetricInfoTooltip';
 import { ModelUsagePanel } from './ModelUsagePanel';
 import { SummaryMetricsPanel } from './SummaryMetricsPanel';
@@ -110,7 +111,7 @@ export const TokenUsageDashboard = ({
     }
     return Object.keys(request).length > 0 ? request : undefined;
   }, [dateRange, selectedTeamIds]);
-  const { viewModel, loading, refreshing, error, refresh } = useTokenUsageSnapshot({
+  const { snapshot, viewModel, loading, refreshing, error, refresh } = useTokenUsageSnapshot({
     request: snapshotRequest,
     viewModelOptions,
   });
@@ -146,6 +147,7 @@ export const TokenUsageDashboard = ({
             )}
           </div>
         </div>
+        <GatewayUsageStatus snapshot={snapshot} locale={resolvedLanguage ?? 'en'} t={tokenUsageT} />
         <div className="usage-toolbar">
           <DateRangeSelector value={dateRange} onChange={setDateRange} t={tokenUsageT} />
           <TeamFilterSelector

@@ -2122,7 +2122,8 @@ export const TeamDetailView = memo(function TeamDetailView({
     async (
       request: TeamLaunchRequest,
       nextMembers: TeamCreateRequest['members'],
-      memberSettingsRelaunch?: import('@shared/types').ReplaceMembersRequest['memberSettingsRelaunch']
+      memberSettingsRelaunch?: import('@shared/types').ReplaceMembersRequest['memberSettingsRelaunch'],
+      onMembersSaved?: () => void
     ): Promise<void> => {
       await executeTeamRelaunch({
         teamName,
@@ -2130,6 +2131,7 @@ export const TeamDetailView = memo(function TeamDetailView({
         request,
         members: nextMembers,
         memberSettingsRelaunch,
+        onMembersSaved,
         validateBeforeReplace: validateMemberSettingsRelaunch,
         stopTeam: async (nextTeamName) => {
           try {
@@ -3466,31 +3468,28 @@ export const TeamDetailView = memo(function TeamDetailView({
                   projectPath={data.config.projectPath}
                   adding={addingMemberLoading}
                   onClose={() => setAddMemberDialogOpen(false)}
-                  onAdd={(entries: AddMemberEntry[]) => {
+                  onAdd={async (entries: AddMemberEntry[], onMemberAdded) => {
                     setAddingMemberLoading(true);
-                    void (async () => {
-                      try {
-                        for (const entry of entries) {
-                          await addMember(teamName, {
-                            name: entry.name,
-                            role: entry.role,
-                            workflow: entry.workflow,
-                            isolation: entry.isolation,
-                            providerId: entry.providerId,
-                            providerBackendId: entry.providerBackendId,
-                            model: entry.model,
-                            effort: entry.effort,
-                            fastMode: entry.fastMode,
-                            mcpPolicy: entry.mcpPolicy,
-                          });
-                        }
-                        setAddMemberDialogOpen(false);
-                      } catch {
-                        // error shown via store
-                      } finally {
-                        setAddingMemberLoading(false);
+                    try {
+                      for (const entry of entries) {
+                        await addMember(teamName, {
+                          name: entry.name,
+                          role: entry.role,
+                          workflow: entry.workflow,
+                          isolation: entry.isolation,
+                          providerId: entry.providerId,
+                          providerBackendId: entry.providerBackendId,
+                          model: entry.model,
+                          effort: entry.effort,
+                          fastMode: entry.fastMode,
+                          mcpPolicy: entry.mcpPolicy,
+                        });
+                        onMemberAdded?.(entry.name);
                       }
-                    })();
+                      setAddMemberDialogOpen(false);
+                    } finally {
+                      setAddingMemberLoading(false);
+                    }
                   }}
                 />
               )}

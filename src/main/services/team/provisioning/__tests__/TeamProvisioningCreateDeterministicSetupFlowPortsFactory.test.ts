@@ -24,6 +24,7 @@ function createHost(): TeamProvisioningCreateDeterministicSetupFlowServiceHost {
       args: [],
       providerArgsByProvider: new Map(),
       envPatch: {},
+      memberArgsByMember: new Map(),
       usesAnthropicApiKeyHelper: false,
       ...({ anthropicApiKeyHelper: null } as const),
     })),

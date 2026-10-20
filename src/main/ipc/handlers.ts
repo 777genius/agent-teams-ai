@@ -194,7 +194,8 @@ export function initializeIpcHandlers(
     completeTeamDeletion(teamName: string): void;
     resumeTeam(teamName: string): void;
   },
-  resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration
+  resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration,
+  retireGatewayBindings?: (teamName: string) => Promise<void>
 ): void {
   // Initialize domain handlers with registry
   initializeProjectHandlers(registry);
@@ -239,7 +240,8 @@ export function initializeIpcHandlers(
         teamLogSourceTracker?.resumeSuspendedTeam(teamName);
       },
     }),
-    resolveOpenCodeInputDeclaration
+    resolveOpenCodeInputDeclaration,
+    retireGatewayBindings
   );
   initializeConfigHandlers({
     updateClaudeRoot: contextCallbacks.updateClaudeRoot,

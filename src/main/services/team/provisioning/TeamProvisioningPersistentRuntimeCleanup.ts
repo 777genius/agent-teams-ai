@@ -15,6 +15,7 @@ export interface TeamProvisioningPersistentRuntimeCleanupPorts {
   }): Promise<void>;
   getClaudeBasePath(): string;
   clearPersistedLiveRuntimeHandles?(teamName: string): boolean;
+  confirmNativeTeamStopped?(teamName: string): Promise<void>;
   logger: TeamProvisioningPersistentRuntimeCleanupLogger;
 }
 
@@ -26,8 +27,10 @@ export interface TeamProvisioningPersistentRuntimeCleanup {
 export function createTeamProvisioningPersistentRuntimeCleanup(
   ports: TeamProvisioningPersistentRuntimeCleanupPorts
 ): TeamProvisioningPersistentRuntimeCleanup {
+  const confirmedStops = new Map<string, boolean>();
   return {
     stopPersistentTeamMembers(teamName) {
+      confirmedStops.set(teamName, false);
       const members = ports.readPersistedRuntimeMembers(teamName);
       let panesConfirmed = true;
       if (members.length > 0) {
@@ -38,7 +41,18 @@ export function createTeamProvisioningPersistentRuntimeCleanup(
         ports.getCurrentRunPid(teamName)
       );
       const confirmed = panesConfirmed && processesConfirmed;
-      if (confirmed) {
+      confirmedStops.set(teamName, confirmed);
+      return confirmed;
+    },
+
+    async cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName) {
+      if (confirmedStops.get(teamName) === false) {
+        throw new Error(`[${teamName}] Persistent runtime termination could not be confirmed`);
+      }
+      if (confirmedStops.get(teamName) === true) {
+        // StopFlow calls this only after its tracked lead/lane stops also settle.
+        // Persist gateway terminal facts while launch discovery is still available.
+        await ports.confirmNativeTeamStopped?.(teamName);
         try {
           ports.clearPersistedLiveRuntimeHandles?.(teamName);
         } catch (error) {
@@ -48,11 +62,8 @@ export function createTeamProvisioningPersistentRuntimeCleanup(
             }`
           );
         }
+        confirmedStops.delete(teamName);
       }
-      return confirmed;
-    },
-
-    async cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName) {
       try {
         await ports.cleanupAnthropicTeamApiKeyHelperForTeam({
           teamName,

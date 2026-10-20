@@ -4,13 +4,26 @@ import type {
   TokenUsageBudgetSettingsUpdateRequestDto,
   TokenUsageBudgetStatusDto,
   TokenUsageEventDto,
+  TokenUsageGatewayDegradedReason,
+  TokenUsageGatewaySourceStateDto,
   TokenUsageRunDto,
   TokenUsageSnapshotRequest,
   TokenUsageTaskAttributionDto,
 } from '../../contracts';
 
+export interface TokenUsageLedgerSnapshot {
+  runs: TokenUsageRunDto[];
+  events: TokenUsageEventDto[];
+  sourceStates: TokenUsageGatewaySourceStateDto[];
+}
+
+export interface TokenUsageImportBatch {
+  events: readonly TokenUsageEventDto[];
+  sourceStates?: readonly TokenUsageGatewaySourceStateDto[];
+}
+
 export interface TokenUsageLedgerRepositoryPort {
-  readSnapshot(): Promise<{ runs: TokenUsageRunDto[]; events: TokenUsageEventDto[] }>;
+  readSnapshot(): Promise<TokenUsageLedgerSnapshot>;
   listRuns(): Promise<TokenUsageRunDto[]>;
   listEvents(): Promise<TokenUsageEventDto[]>;
   upsertRuns(runs: readonly TokenUsageRunDto[]): Promise<void>;
@@ -19,6 +32,8 @@ export interface TokenUsageLedgerRepositoryPort {
     runs: readonly TokenUsageRunDto[]
   ): Promise<void>;
   upsertEvents(events: readonly TokenUsageEventDto[]): Promise<void>;
+  /** Commits events and gateway source states in one atomic write. */
+  commitImportBatch(batch: TokenUsageImportBatch): Promise<void>;
 }
 
 export interface TokenUsageRunSourceDiscoveryPort {
@@ -26,7 +41,51 @@ export interface TokenUsageRunSourceDiscoveryPort {
 }
 
 export interface TokenUsageImporterPort {
-  importUsage(runs: readonly TokenUsageRunDto[]): Promise<TokenUsageEventDto[]>;
+  /** CLI importers leave this unset and skip runs marked with a gateway source. */
+  readonly includesGatewayRuns?: boolean;
+  importUsage(
+    runs: readonly TokenUsageRunDto[]
+  ): Promise<TokenUsageEventDto[] | TokenUsageImportBatch>;
+}
+
+export interface TokenUsageGatewayUsageSource {
+  gatewayUsageRef: string;
+  teamName: string;
+  memberName: string;
+  agentId?: string;
+  firstUsageDay: string;
+  lastBoundAt: string;
+  lastUnboundAt?: string;
+  hasActiveBinding: boolean;
+  hasRuntimeArtifact: boolean;
+  runtimeArtifactRetiredAt?: string;
+}
+
+export interface TokenUsageGatewayModelUsage {
+  model: string;
+  requests: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
+  totalTokens: number;
+  apiEquivalentUsd: number;
+  billableUsd: number;
+}
+
+export interface TokenUsageGatewayUsagePort {
+  listSources(): Promise<TokenUsageGatewayUsageSource[]>;
+  readUsageDay(
+    gatewayUsageRef: string,
+    day: string
+  ): Promise<TokenUsageGatewayModelUsage[]>;
+}
+
+export interface TokenUsageGatewayCredentialError {
+  readonly degradedReason: Extract<
+    TokenUsageGatewayDegradedReason,
+    'credential_changed' | 'credential_missing'
+  >;
 }
 
 export interface TokenUsageRealtimePublisherPort {
