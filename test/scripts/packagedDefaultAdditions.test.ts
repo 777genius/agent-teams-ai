@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -17,7 +17,7 @@ describe('packaged runtime additions', () => {
   const original = new Map([['VERSION', digest('0.0.127')]]);
 
   beforeEach(async () => {
-    root = await mkdtemp(path.join(os.tmpdir(), 'packaged-additions-'));
+    root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'packaged-additions-')));
     repo = path.join(root, 'repo');
     runtime = path.join(root, 'app/resources/runtime');
     await mkdir(path.join(repo, 'resources/runtime/opencode-console'), { recursive: true });
@@ -64,6 +64,27 @@ describe('packaged runtime additions', () => {
         bundled: { path: path.join(runtime, wrapper), sha256: hash },
       },
     ]);
+  });
+
+  it('rejects omission of the production-staged Windows wrapper from the package', async () => {
+    await writeFile(path.join(repo, 'resources/runtime', wrapper), 'compiled wrapper');
+    await writeFile(path.join(runtime, 'VERSION'), '0.0.127');
+    await expect(qualify([])).rejects.toThrow(
+      `Required Windows runtime wrapper missing: ${wrapper}`
+    );
+  });
+
+  it('does not require a Windows-only addition in a Linux package', async () => {
+    await expect(qualify([], 'linux')).resolves.toEqual([]);
+  });
+
+  it('leaves an archive-owned wrapper under the original strict comparison', async () => {
+    const hash = digest('public archive wrapper');
+    await writeFile(path.join(runtime, wrapper), 'public archive wrapper');
+    const archive = new Map([...original, [wrapper, hash]]);
+    await expect(
+      qualifyPackagedRuntimeAdditions(archive, new Map(archive), repo, runtime, 'win32')
+    ).resolves.toEqual([]);
   });
 
   it('rejects a modified or stale wrapper even at the allowlisted path', async () => {

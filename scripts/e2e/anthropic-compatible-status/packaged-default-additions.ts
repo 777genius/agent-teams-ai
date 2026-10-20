@@ -68,5 +68,7 @@ export async function qualifyPackagedRuntimeAdditions(
     );
     additions.push({ file, staged, bundled: physical });
   }
+  if (targetPlatform === 'win32')
+    assert(bundled.has(wrapper), `Required Windows runtime wrapper missing: ${wrapper}`);
   return additions;
 }
