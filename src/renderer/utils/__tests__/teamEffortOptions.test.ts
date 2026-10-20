@@ -70,6 +70,32 @@ function createProviderStatus(
 }
 
 describe('team effort options', () => {
+  it('uses the configured Anthropic default effort contract before the catalog default', () => {
+    const providerStatus = createProviderStatus('anthropic', {
+      id: 'gateway/custom-model',
+      launchModel: 'gateway/custom-model',
+      displayName: 'Custom Model',
+      hidden: false,
+      supportedReasoningEfforts: ['low'],
+      defaultReasoningEffort: 'low',
+      inputModalities: ['text'],
+      supportsPersonality: false,
+      isDefault: false,
+      upgrade: false,
+      source: 'anthropic-compatible-api',
+    });
+    providerStatus.statusCheckOutcome = 'authoritative';
+    providerStatus.effectiveDefaultModel = 'gateway/custom-model';
+    providerStatus.modelCatalog!.defaultLaunchModel = 'claude-opus-catalog-fallback';
+    expect(getTeamEffortOptions({ providerId: 'anthropic', model: '', providerStatus })).toEqual([
+      { value: '', label: 'Default (Low)' },
+      { value: 'low', label: 'Low' },
+    ]);
+    expect(
+      getTeamEffortSelectorPresentation({ providerId: 'anthropic', model: '', providerStatus })
+    ).toMatchObject({ canValidateValue: true, disabled: false });
+  });
+
   it('uses exact Kiro catalog efforts including xhigh, max, and ultra', () => {
     const providerStatus = createProviderStatus('opencode', {
       id: 'kiro/auto',

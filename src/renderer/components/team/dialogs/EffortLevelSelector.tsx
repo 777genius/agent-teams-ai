@@ -2,13 +2,14 @@ import React, { useEffect, useMemo } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Label } from '@renderer/components/ui/label';
-import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { cn } from '@renderer/lib/utils';
 import {
   getAvailableTeamEffortValue,
   getTeamEffortSelectorPresentation,
 } from '@renderer/utils/teamEffortOptions';
 import { Brain } from 'lucide-react';
+
+import { useTeamModelProviderStatus } from './useTeamModelProviderStatus';
 
 import type { TeamProviderId } from '@shared/types';
 
@@ -25,6 +26,7 @@ export interface EffortLevelSelectorProps {
   providerId?: TeamProviderId;
   model?: string;
   limitContext?: boolean;
+  projectPath?: string | null;
 }
 
 export const EffortLevelSelector: React.FC<EffortLevelSelectorProps> = ({
@@ -35,9 +37,10 @@ export const EffortLevelSelector: React.FC<EffortLevelSelectorProps> = ({
   providerId,
   model,
   limitContext,
+  projectPath,
 }) => {
   const { t } = useAppTranslation('team');
-  const { providerStatus } = useEffectiveCliProviderStatus(providerId);
+  const { providerStatus } = useTeamModelProviderStatus(providerId, projectPath);
   const presentation = getTeamEffortSelectorPresentation({
     providerId,
     model,

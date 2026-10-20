@@ -68,6 +68,12 @@ Examples:
 
 If a model name is rejected, verify it directly in the runtime/provider first. Changing a team brief cannot make an unavailable model launch.
 
+### Default model selection
+
+**Default** keeps the model inherited from the selected runtime. When current runtime status confirms that model, its name appears beside **Default**. For Claude, status is checked for the selected project because saved project settings can change the inherited model. An explicit model choice takes precedence; the existing context-limit setting still applies.
+
+In Claude **Auto** or compatible-endpoint mode, the runtime can apply `ANTHROPIC_MODEL` and supported saved model settings, including its existing model alias mappings. Direct subscription/API-key modes filter inherited gateway model variables. A loading or failed check shows **Default** without a guessed name. Older runtimes keep the existing launch fallback, and a Codex catalog recommendation does not establish its applied default. OpenCode continues to show a resolved provider/model route when available.
+
 ## Multi-provider strategy
 
 Agent Teams keeps orchestration provider-aware but not provider-owned:

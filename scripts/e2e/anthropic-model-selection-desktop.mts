@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Run: pnpm exec node scripts/e2e/anthropic-model-selection-desktop.mts
 // Default/no-catalog: add --default-no-catalog
+// Environment default: add --effective-env-default; baseline evidence also adds --record-baseline.
 // Typecheck: pnpm exec tsc --ignoreConfig --noEmit --strict --skipLibCheck --target ES2023 --module NodeNext --types node scripts/e2e/anthropic-model-selection-desktop.mts
 // Regression: explicit Opus generations must survive context toggles, real
 // main-process preflight, and config-only creation. No provider is launched.
@@ -13,6 +14,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const effectiveEnvDefault = process.argv.includes('--effective-env-default');
+const recordBaseline = process.argv.includes('--record-baseline');
+assert(
+  !recordBaseline || effectiveEnvDefault,
+  'Baseline recording requires environment-default mode'
+);
+const configuredDefault = 'gateway/qwen-default';
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 type JsonRecord = Record<string, unknown>;
 interface PreflightEvent {
@@ -52,6 +60,10 @@ interface InputPage {
   url(): string;
   bringToFront(): Promise<void>;
   evaluateHandle(expression: string): Promise<InputHandle>;
+  evaluate<Result, Argument>(
+    pageFunction: (argument: Argument) => Result | Promise<Result>,
+    argument: Argument
+  ): Promise<Result>;
 }
 interface InputBrowser {
   contexts(): { pages(): InputPage[] }[];
@@ -145,16 +157,22 @@ class Cdp {
   }
   // Inspection uses CDP; signoff input uses normal Playwright mouse/keyboard.
   async click(expression: string): Promise<void> {
-    await this.waitFor(expression, expression);
     assert(this.inputPage, 'Trusted Playwright input must be connected');
-    await this.inputPage.bringToFront();
-    const handle = await this.inputPage.evaluateHandle(expression);
-    try {
-      const element = handle.asElement();
-      assert(element);
-      await element.click();
-    } finally {
-      await handle.dispose();
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await this.waitFor(expression, expression);
+      await this.inputPage.bringToFront();
+      const handle = await this.inputPage.evaluateHandle(expression);
+      try {
+        const element = handle.asElement();
+        assert(element);
+        await element.click();
+        return;
+      } catch (error) {
+        if (attempt === 2 || !String(error).includes('not attached to the DOM')) throw error;
+        await delay(100);
+      } finally {
+        await handle.dispose();
+      }
     }
   }
   async fill(selector: string, text: string): Promise<void> {
@@ -171,6 +189,21 @@ class Cdp {
       await handle.dispose();
     }
   }
+  async openTeams(projectPath: string): Promise<void> {
+    assert(this.inputPage, 'Owned Electron input page must be connected');
+    await this.inputPage.evaluate((cwd) => {
+      const store = (
+        window as unknown as {
+          __agentTeamsDevStore: {
+            setState(state: { selectedProjectId: string }): void;
+            getState(): { openTeamsTab(projectPath: string): void };
+          };
+        }
+      ).__agentTeamsDevStore;
+      store.setState({ selectedProjectId: 'anthropic-model-e2e-sandbox' });
+      store.getState().openTeamsTab(cwd);
+    }, projectPath);
+  }
   close(): void {
     this.socket.close();
   }
@@ -180,6 +213,27 @@ const button = (text: string, scope = 'document') =>
 const dialog = "document.querySelector('[role=dialog]')";
 const json = async (file: string, value: unknown) =>
   writeFile(file, JSON.stringify(value, null, 2) + '\n');
+
+async function readSavedRequest(cdp: Cdp, name: string): Promise<SavedRequest> {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    const saved = await cdp.evaluate<SavedRequest | null>(
+      `window.electronAPI.teams.getSavedRequest(${JSON.stringify(name)})`
+    );
+    if (saved) return saved;
+    await delay(100);
+  }
+  throw new Error(`Native saved request was not persisted for ${name}`);
+}
+
+async function confirmTeamName(cdp: Cdp, name: string): Promise<void> {
+  // Initial draft hydration can replace the field after the dialog first appears.
+  await cdp.fill('#team-name', name);
+  await cdp.waitFor(
+    `document.querySelector('#team-name')?.value === ${JSON.stringify(name)}`,
+    'submitted fixture team name'
+  );
+}
 
 async function fixture() {
   const defaultNoCatalog = process.argv.includes('--default-no-catalog');
@@ -239,6 +293,15 @@ async function fixture() {
         isDefault: false,
       }))
   );
+  if (effectiveEnvDefault)
+    models.push({
+      ...models[1],
+      id: configuredDefault,
+      launchModel: configuredDefault,
+      displayName: configuredDefault,
+      isDefault: false,
+      metadata: { context: 200_000 },
+    });
   const status = {
     providerId: 'anthropic',
     supported: true,
@@ -317,6 +380,7 @@ if (readOnlyDiscovery) { const result = envelope ? {schemaVersion:1,requestId:en
 if (authProbe) { console.log('PONG'); process.exit(0); }
 if (args[0] === '--version') { console.log(${JSON.stringify(version)}); process.exit(0); }
 const status = provider === 'anthropic' ? ${JSON.stringify(status)} : {...${JSON.stringify(status)},providerId:provider,supported:false,authenticated:false,models:[],defaultModel:null,modelCatalog:null,capabilities:{teamLaunch:false,oneShot:false,extensions:{}}};
+if (${effectiveEnvDefault} && provider === 'anthropic') status.effectiveDefaultModel = process.env.ANTHROPIC_MODEL || null;
 if (args[0] === 'model') console.log(JSON.stringify({schemaVersion:1,providers:{[provider]:{defaultModel:status.defaultModel,models:status.models}}}));
 else console.log(JSON.stringify({schemaVersion:1,provider, status, providers:{[provider]:status}}));
 `
@@ -345,6 +409,24 @@ async function readPreflight(file: string): Promise<PreflightEvent[]> {
     .split('\n')
     .filter(Boolean)
     .map((line) => JSON.parse(line) as PreflightEvent);
+}
+
+async function readAllowedRuntimeLedger(file: string) {
+  const ledger = (await readFile(file, 'utf8'))
+    .trim()
+    .split('\n')
+    .filter(Boolean)
+    .map(
+      (line) =>
+        JSON.parse(line) as { args: string[]; allowed: boolean; startupCleanupDenied: boolean }
+    );
+  assert(ledger.length > 0, 'Fixture runtime must have served real status/preflight');
+  assert(
+    ledger.every((entry) => entry.allowed || entry.startupCleanupDenied),
+    'No workflow lifecycle/provider command may be attempted; app startup cleanup must remain blocked'
+  );
+  assert(ledger.filter((entry) => entry.startupCleanupDenied).every((entry) => !entry.allowed));
+  return ledger;
 }
 
 async function main(): Promise<void> {
@@ -379,6 +461,7 @@ async function main(): Promise<void> {
     for (const key of Object.keys(env))
       if (/API_KEY|AUTH_TOKEN|ACCESS_TOKEN|SECRET|ANTHROPIC_BASE_URL/.test(key))
         delete (env as NodeJS.ProcessEnv)[key];
+    if (effectiveEnvDefault) (env as NodeJS.ProcessEnv).ANTHROPIC_MODEL = configuredDefault;
     app = spawn('pnpm', ['dev:mcp'], {
       cwd: repoRoot,
       detached: process.platform !== 'win32',
@@ -423,9 +506,7 @@ async function main(): Promise<void> {
       'native API',
       60_000
     );
-    await cdp.evaluate<void>(
-      `(() => { const store = window.__agentTeamsDevStore; store.setState({selectedProjectId:'anthropic-model-e2e-sandbox'}); store.getState().openTeamsTab(${JSON.stringify(d['sandbox-project'])}); })()`
-    );
+    await cdp.openTeams(d['sandbox-project']);
     // Provider polling is passive until the initial native runtime discovery completes.
     await cdp.evaluate<unknown>('window.electronAPI.cliInstaller.getStatus()');
     await cdp.waitFor(
@@ -434,10 +515,16 @@ async function main(): Promise<void> {
     );
     const provider = await cdp.evaluate<{
       defaultModel: string | null;
+      effectiveDefaultModel?: string | null;
       modelCatalog: { source: string; status: string; models: { launchModel: string }[] } | null;
       modelCatalogRefreshState: string;
     }>("window.electronAPI.cliInstaller.getProviderStatus('anthropic')");
     const defaultNoCatalog = process.argv.includes('--default-no-catalog');
+    assert(!(defaultNoCatalog && effectiveEnvDefault), 'Default modes must run independently');
+    if (effectiveEnvDefault) {
+      assert.equal(provider.defaultModel, 'claude-opus-4-8');
+      if (!recordBaseline) assert.equal(provider.effectiveDefaultModel, configuredDefault);
+    }
     if (defaultNoCatalog) {
       assert.equal(provider.defaultModel, 'claude-opus-5-5');
       assert.equal(provider.modelCatalog, null);
@@ -456,8 +543,10 @@ async function main(): Promise<void> {
         provider.modelCatalog?.models.some((entry) => entry.launchModel === 'claude-opus-5-5')
     );
     const results: unknown[] = [{ catalog: provider.modelCatalog }];
-    if (defaultNoCatalog) {
-      console.log('Checking runtime Default with no catalog off/on');
+    if (defaultNoCatalog || effectiveEnvDefault) {
+      console.log(
+        `Checking runtime Default ${effectiveEnvDefault ? 'from environment' : 'with no catalog'} off/on`
+      );
       await cdp.waitFor(
         '!window.__agentTeamsDevStore.getState().teamsLoading',
         'hydrated Teams view'
@@ -465,7 +554,8 @@ async function main(): Promise<void> {
       await delay(200);
       await cdp.click(button('Create Team'));
       await cdp.waitFor(dialog, 'Create dialog');
-      await cdp.fill('#team-name', 'model-e2e-default-no-catalog');
+      const name = effectiveEnvDefault ? 'model-e2e-env-default' : 'model-e2e-default-no-catalog';
+      await cdp.fill('#team-name', name);
       if (
         !(await cdp.evaluate<boolean>(
           "document.querySelector('#solo-team')?.getAttribute('aria-checked') === 'true'"
@@ -475,6 +565,11 @@ async function main(): Promise<void> {
       await cdp.click(
         `Array.from(${dialog}.querySelectorAll('button')).find(e => /provider,/.test(e.getAttribute('aria-label') || ''))`
       );
+      if (effectiveEnvDefault && !recordBaseline)
+        await cdp.waitFor(
+          `Array.from(document.querySelectorAll('[data-testid="team-model-selector-model-option"]')).some(e => e.textContent.trim().startsWith('Default') && e.textContent.includes(${JSON.stringify(configuredDefault)}))`,
+          'Default option resolved from the native environment status'
+        );
       await cdp.click(
         `Array.from(document.querySelectorAll('[data-testid="team-model-selector-model-option"]')).find(e => e.textContent.trim().startsWith('Default'))`
       );
@@ -489,15 +584,40 @@ async function main(): Promise<void> {
           `${selector}?.getAttribute('aria-checked') === '${limit}'`,
           'context toggle'
         );
-        const expected = 'claude-opus-5-5';
+        const expected = recordBaseline
+          ? (provider.defaultModel ?? '__provider_default__')
+          : effectiveEnvDefault
+            ? configuredDefault
+            : 'claude-opus-5-5';
         const selected = await cdp.evaluate<string>(
           "document.querySelector('#lead-model')?.textContent.trim()"
         );
-        assert.equal(selected, 'Default', 'Default selection must survive context toggle');
-        await cdp.waitFor(
-          `document.querySelector('[role=dialog]').innerText.includes('The verified model catalog is unavailable or stale')`,
-          'missing catalog launch gate'
+        const trigger = await cdp.evaluate<{ text: string; aria: string }>(
+          `(() => { const e = Array.from(${dialog}.querySelectorAll('button')).find(e => /provider,/.test(e.getAttribute('aria-label') || '')); return { text: e?.textContent.trim() || '', aria: e?.getAttribute('aria-label') || '' }; })()`
         );
+        if (effectiveEnvDefault && !recordBaseline) {
+          assert(selected.startsWith('Default'), 'Default must remain selected');
+          assert(selected.includes(configuredDefault), 'Default must display the applied model');
+          assert(
+            trigger.text.includes(configuredDefault),
+            'Visible roster trigger must display the applied model'
+          );
+          assert(
+            trigger.aria.includes(`Default - ${configuredDefault}`),
+            'Trigger accessible name must retain Default and the exact model'
+          );
+        } else if (recordBaseline) {
+          assert(
+            !trigger.text.includes(configuredDefault),
+            'Baseline must reproduce the missing default-model label'
+          );
+        } else if (!recordBaseline) {
+          assert.equal(selected, 'Default', 'Default selection must survive context toggle');
+          await cdp.waitFor(
+            `document.querySelector('[role=dialog]').innerText.includes('The verified model catalog is unavailable or stale')`,
+            'missing catalog launch gate'
+          );
+        }
         const preflightPath = path.join(d.tmp, 'claude-team-preflight-debug.log');
         const preflightDeadline = Date.now() + 30_000;
         let observed: PreflightEvent | undefined;
@@ -505,18 +625,33 @@ async function main(): Promise<void> {
           observed = (await readPreflight(preflightPath)).findLast(
             (event) =>
               event.event === 'provider_model_catalog_check_complete' &&
-              event.modelIds?.includes('__provider_default__') &&
-              event.details?.includes(
-                'Selected model __provider_default__ is available for launch.'
-              )
+              (recordBaseline ||
+                (event.modelIds?.includes('__provider_default__') &&
+                  event.details?.includes(
+                    'Selected model __provider_default__ is available for launch.'
+                  )))
           );
           if (observed) break;
           await delay(150);
         }
         assert(observed, `Real main preflight must preserve runtime Default ${expected}`);
         assert.deepEqual(observed.blockingMessages, []);
-        results.push({ selection: 'default', limit, preflight: observed });
+        assert.equal(observed.cwd, d['sandbox-project']);
+        results.push({
+          selection: 'default',
+          selected,
+          trigger,
+          expected,
+          limit,
+          preflight: observed,
+        });
       }
+      await confirmTeamName(cdp, name);
+      const screenshot = await cdp.send('Page.captureScreenshot', { format: 'png' });
+      await writeFile(
+        path.join(evidence, `${name}.png`),
+        Buffer.from(screenshot.data as string, 'base64')
+      );
       await cdp.click("document.querySelector('#launch-team')");
       await cdp.waitFor(
         "document.querySelector('#launch-team')?.getAttribute('aria-checked') === 'false'",
@@ -524,14 +659,42 @@ async function main(): Promise<void> {
       );
       await cdp.click(button('Create', dialog));
       await cdp.waitFor(`!${dialog}`, 'created Default config-only team');
-      const name = 'model-e2e-default-no-catalog';
-      const saved = await cdp.evaluate<SavedRequest>(
-        `window.electronAPI.teams.getSavedRequest(${JSON.stringify(name)})`
-      );
-      assert.equal(saved.model, 'claude-opus-5-5');
+      const saved = await readSavedRequest(cdp, name);
+      const expected = effectiveEnvDefault ? configuredDefault : 'claude-opus-5-5';
+      if (recordBaseline)
+        assert.notEqual(
+          saved.model,
+          configuredDefault,
+          'Baseline must reproduce the incorrect saved model'
+        );
+      else assert.equal(saved.model, expected);
       assert.equal(saved.providerId, 'anthropic');
       assert.equal(saved.limitContext, true);
-      results.push({ name, saved });
+      const meta = JSON.parse(
+        await readFile(path.join(d.claude, 'teams', name, 'team.meta.json'), 'utf8')
+      ) as SavedRequest;
+      assert.equal(meta.model, recordBaseline ? saved.model : expected);
+      results.push({ name, saved, diskModel: meta.model });
+      if (recordBaseline) {
+        await json(path.join(evidence, 'result.json'), {
+          ok: false,
+          baselineRegression: true,
+          expected: configuredDefault,
+          results,
+          ledger: await readAllowedRuntimeLedger(test.ledger),
+        });
+        console.error(
+          JSON.stringify({
+            baselineRegression: true,
+            evidence,
+            actualSavedModel: saved.model,
+            expected: configuredDefault,
+          })
+        );
+        process.exitCode = 1;
+        return;
+      }
+      await cdp.openTeams(d['sandbox-project']);
     }
     for (const [model, label] of defaultNoCatalog
       ? []
@@ -620,12 +783,11 @@ async function main(): Promise<void> {
         "document.querySelector('#launch-team')?.getAttribute('aria-checked') === 'false'",
         'config-only create'
       );
+      const name = `model-e2e-${model.replaceAll('claude-', '')}`;
+      await confirmTeamName(cdp, name);
       await cdp.click(button('Create', dialog));
       await cdp.waitFor(`!${dialog}`, 'created config-only team');
-      const name = `model-e2e-${model.replaceAll('claude-', '')}`;
-      const saved = await cdp.evaluate<SavedRequest>(
-        `window.electronAPI.teams.getSavedRequest(${JSON.stringify(name)})`
-      );
+      const saved = await readSavedRequest(cdp, name);
       assert.equal(
         saved.model,
         persistedModel,
@@ -638,24 +800,9 @@ async function main(): Promise<void> {
       ) as SavedRequest;
       assert.equal(meta.model, persistedModel);
       results.push({ name, saved, diskModel: meta.model });
-      await cdp.evaluate<void>(
-        `(() => { const store = window.__agentTeamsDevStore; store.setState({selectedProjectId:'anthropic-model-e2e-sandbox'}); store.getState().openTeamsTab(${JSON.stringify(d['sandbox-project'])}); })()`
-      );
+      await cdp.openTeams(d['sandbox-project']);
     }
-    const ledger = (await readFile(test.ledger, 'utf8'))
-      .trim()
-      .split('\n')
-      .filter(Boolean)
-      .map(
-        (line) =>
-          JSON.parse(line) as { args: string[]; allowed: boolean; startupCleanupDenied: boolean }
-      );
-    assert(ledger.length > 0, 'Fixture runtime must have served real status/preflight');
-    assert(
-      ledger.every((entry) => entry.allowed || entry.startupCleanupDenied),
-      'No workflow lifecycle/provider command may be attempted; app startup cleanup must remain blocked'
-    );
-    assert(ledger.filter((entry) => entry.startupCleanupDenied).every((entry) => !entry.allowed));
+    const ledger = await readAllowedRuntimeLedger(test.ledger);
     await json(path.join(evidence, 'result.json'), { ok: true, results, ledger });
     console.log(JSON.stringify({ ok: true, evidence, fixture: test.root }));
   } catch (error) {
@@ -676,30 +823,51 @@ async function main(): Promise<void> {
     console.error(`Evidence: ${evidence}; fixture: ${test.root}`);
     throw error;
   } finally {
-    await writeFile(path.join(evidence, 'app.log'), logs.join(''));
-    await writeFile(path.join(evidence, 'runtime.ndjson'), await readFile(test.ledger, 'utf8'));
-    await writeFile(
-      path.join(evidence, 'preflight.ndjson'),
-      await readFile(
-        path.join(test.directories.tmp, 'claude-team-preflight-debug.log'),
-        'utf8'
-      ).catch(() => '')
-    );
-    await inputBrowser?.close().catch(() => undefined);
-    client?.close();
-    if (app?.pid) {
-      try {
-        process.kill(process.platform === 'win32' ? app.pid : -app.pid, 'SIGKILL');
-      } catch {
-        /* owned process already exited */
+    try {
+      if (client && app && app.exitCode === null) {
+        // Let native shutdown stop its detached, fixture-owned MCP HTTP child.
+        const exited = new Promise<void>((resolve) => app!.once('exit', () => resolve()));
+        await Promise.race([
+          client.evaluate('window.electronAPI.windowControls.close()').catch(() => undefined),
+          delay(1_000),
+        ]);
+        await Promise.race([exited, delay(12_000)]);
       }
-      await delay(500);
+      await writeFile(path.join(evidence, 'app.log'), logs.join(''));
+      await writeFile(path.join(evidence, 'runtime.ndjson'), await readFile(test.ledger, 'utf8'));
+      await writeFile(
+        path.join(evidence, 'preflight.ndjson'),
+        await readFile(
+          path.join(test.directories.tmp, 'claude-team-preflight-debug.log'),
+          'utf8'
+        ).catch(() => '')
+      );
+      await json(
+        path.join(evidence, 'runtime-ledger-after-shutdown.json'),
+        await readAllowedRuntimeLedger(test.ledger)
+      );
+    } finally {
+      try {
+        client?.close();
+        await Promise.race([inputBrowser?.close().catch(() => undefined), delay(2_000)]);
+      } finally {
+        if (app?.pid) {
+          try {
+            process.kill(process.platform === 'win32' ? app.pid : -app.pid, 'SIGKILL');
+          } catch {
+            /* owned process already exited */
+          }
+          await delay(500);
+        }
+        if (process.env.ANTHROPIC_MODEL_E2E_KEEP !== '1')
+          await rm(test.root, { recursive: true, force: true });
+      }
     }
-    if (process.env.ANTHROPIC_MODEL_E2E_KEEP !== '1')
-      await rm(test.root, { recursive: true, force: true });
   }
 }
-main().catch((error: unknown) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+main()
+  .catch((error: unknown) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(() => process.exit(process.exitCode ?? 0));
