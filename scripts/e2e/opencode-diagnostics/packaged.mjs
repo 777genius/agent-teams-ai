@@ -497,7 +497,7 @@ export async function installerPublicationSnapshot(data) {
     staging.push({ name, directory, executable });
     exactExecutables.add(path.join(runtime, name, 'opencode.exe').toLowerCase());
   }
-  const target = 'versions/1.19.0/opencode-windows-x64';
+  const target = 'versions/1.19.3/opencode-windows-x64';
   const targetDirectory = await metadata(target);
   const targetExecutable = await metadata(`${target}/opencode.exe`);
   assert(targetDirectory.state === 'missing' || targetDirectory.kind === 'directory');
