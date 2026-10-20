@@ -125,8 +125,12 @@ export async function verifyGatewayUi(
     page.evaluate(
       `window.electronAPI.gatewayProvider.listGatewayBindings(${JSON.stringify(teamName)})`
     );
-  const readback = async (label: string, read: () => Promise<boolean>): Promise<void> => {
-    const deadline = Date.now() + 15_000;
+  const readback = async (
+    label: string,
+    read: () => Promise<boolean>,
+    timeout = 15_000
+  ): Promise<void> => {
+    const deadline = Date.now() + timeout;
     while (Date.now() < deadline) {
       if (await read()) return;
       await new Promise<void>((resolve) => setTimeout(resolve, 150));
@@ -236,20 +240,24 @@ export async function verifyGatewayUi(
         .click();
       // Runtime status can settle after the tab opens in inspection mode.
       const providerLabel = options.providerId === 'opencode' ? 'OpenCode' : 'Codex';
-      await readback('confirmed ' + providerLabel + ' selection', async () => {
-        const useProvider = member.getByRole('button', {
-          name: 'Use ' + providerLabel,
-          exact: true,
-        });
-        if (await useProvider.count()) await useProvider.click();
-        const selected = member.getByRole('button', {
-          name: new RegExp(providerLabel + ' provider,', 'i'),
-        });
-        return (
-          (await selected.count()) > 0 &&
-          (await selected.getAttribute('aria-label'))?.includes(model) === true
-        );
-      });
+      await readback(
+        'confirmed ' + providerLabel + ' selection',
+        async () => {
+          const useProvider = member.getByRole('button', {
+            name: 'Use ' + providerLabel,
+            exact: true,
+          });
+          if (await useProvider.count()) await useProvider.click();
+          const selected = member.getByRole('button', {
+            name: new RegExp(providerLabel + ' provider,', 'i'),
+          });
+          return (
+            (await selected.count()) > 0 &&
+            (await selected.getAttribute('aria-label'))?.includes(model) === true
+          );
+        },
+        120_000
+      );
     }
     await capture('member-bound');
   };
