@@ -72,12 +72,16 @@ describe('TeamProvisioningEnvBuilder', () => {
     try {
       const ports = createPorts({
         buildProviderAwareCliEnv: vi.fn(async () => ({
-          env: { AGENT_TEAMS_BOUND_CONTEXT_JSON: 'stale-context' }, connectionIssues: {}, providerArgs: [],
+          env: { AGENT_TEAMS_BOUND_CONTEXT_JSON: 'stale-context' },
+          connectionIssues: {},
+          providerArgs: [],
         })),
       });
       const result = await buildProvisioningEnv({ providerId: 'opencode', ports });
       expect(result.env).toMatchObject(bound);
-    } finally { revoke(); }
+    } finally {
+      revoke();
+    }
   });
   it('projects the late launch-resolved control URL and app root into MCP child env as well as outer env', async () => {
     const ports = createPorts({
@@ -424,33 +428,47 @@ describe('TeamProvisioningEnvBuilder', () => {
     }
   });
 
-  it('prepares an authless compatible endpoint for a future dynamic Anthropic spawn', async () => {
-    const result = await buildCrossProviderMemberArgs({
-      primaryProviderId: 'gemini',
-      memberSpecs: [{ name: 'Gemini', providerId: 'gemini', role: 'only initial member' }],
-      ports: {
-        buildProvisioningEnv: vi.fn(async () => ({
-          env: {
-            [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: 'compatible',
-            ANTHROPIC_BASE_URL: 'http://localhost:1234',
-            ANTHROPIC_API_KEY: '',
-          },
-          authSource: 'none' as const,
-          geminiRuntimeAuth: null,
-          providerArgs: [],
-        })),
-        buildRuntimeTurnSettledHookSettingsArgs: vi.fn(async () => []),
-        logger: { error: vi.fn() },
-      },
-    });
+  it.each([
+    ['authless', '', 'none'],
+    ['token-authenticated', 'gateway-token', 'anthropic_auth_token'],
+  ] as const)(
+    'prepares %s compatible models for a future dynamic Anthropic spawn',
+    async (_label, token, authSource) => {
+      const customModels = {
+        ANTHROPIC_MODEL: 'gateway-large',
+        ANTHROPIC_SMALL_FAST_MODEL: 'gateway-small',
+        ANTHROPIC_DEFAULT_SONNET_MODEL: 'gateway-sonnet',
+      };
+      const result = await buildCrossProviderMemberArgs({
+        primaryProviderId: 'gemini',
+        memberSpecs: [{ name: 'Gemini', providerId: 'gemini', role: 'only initial member' }],
+        ports: {
+          buildProvisioningEnv: vi.fn(async () => ({
+            env: {
+              ...customModels,
+              [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: 'compatible',
+              ANTHROPIC_BASE_URL: 'http://localhost:1234',
+              ANTHROPIC_API_KEY: '',
+              ANTHROPIC_AUTH_TOKEN: token,
+            },
+            authSource,
+            geminiRuntimeAuth: null,
+            providerArgs: [],
+          })),
+          buildRuntimeTurnSettledHookSettingsArgs: vi.fn(async () => []),
+          logger: { error: vi.fn() },
+        },
+      });
 
-    expect(result.envPatch).toMatchObject({
-      [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: 'compatible',
-      ANTHROPIC_BASE_URL: 'http://localhost:1234',
-      ANTHROPIC_API_KEY: '',
-      ANTHROPIC_AUTH_TOKEN: '',
-    });
-  });
+      expect(result.envPatch).toMatchObject({
+        ...customModels,
+        [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: 'compatible',
+        ANTHROPIC_BASE_URL: 'http://localhost:1234',
+        ANTHROPIC_API_KEY: '',
+        ANTHROPIC_AUTH_TOKEN: token,
+      });
+    }
+  );
 
   it('preserves Auto Bedrock routing for a future dynamic Anthropic spawn', async () => {
     const result = await buildCrossProviderMemberArgs({

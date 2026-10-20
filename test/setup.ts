@@ -4,9 +4,9 @@
  */
 
 import * as fs from 'fs';
+import { Storage as HappyDOMStorage } from 'happy-dom';
 import * as os from 'os';
 import * as path from 'path';
-import { Storage as HappyDOMStorage } from 'happy-dom';
 import { afterAll, afterEach, beforeEach, expect, vi } from 'vitest';
 
 const TEST_HOME_PREFIX = 'agent-teams-vitest-home-';
@@ -24,11 +24,17 @@ if (typeof window !== 'undefined' && Number.parseInt(process.versions.node, 10) 
   }
 }
 
+/**
+ * Resolve the max age (ms) for stale test-home directories from env or default.
+ */
 function getStaleTestHomeMaxAgeMs(): number {
   const value = Number(process.env.AGENT_TEAMS_VITEST_STALE_HOME_MAX_AGE_MS);
   return Number.isFinite(value) && value > 0 ? value : DEFAULT_STALE_TEST_HOME_MAX_AGE_MS;
 }
 
+/**
+ * Best-effort removal of stale test-home directories older than the cutoff.
+ */
 function cleanupStaleTestHomeDirs(): void {
   const cutoff = Date.now() - getStaleTestHomeMaxAgeMs();
 
@@ -132,6 +138,9 @@ beforeEach(() => {
   warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 });
 
+/**
+ * Identify the expected slow-config-read diagnostic emitted under live recovery.
+ */
 function isLiveSlowConfigReadWarning(text: string): boolean {
   return (
     process.env.MEMBER_WORK_SYNC_RECOVERY_LIVE === '1' &&

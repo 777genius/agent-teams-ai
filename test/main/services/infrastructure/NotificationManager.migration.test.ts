@@ -203,9 +203,16 @@ describe('NotificationManager storage migration', () => {
       )
     );
 
-    await vi.waitFor(() => {
-      const parsed = JSON.parse(fs.readFileSync(currentPath, 'utf8')) as Array<{ id: string }>;
-      expect(parsed).toHaveLength(20);
-    });
+    // Measured at the four-vCPU CI quota: each durable save costs ~37-46ms
+    // (temp fsync + rename), so 20 rapid chained saves complete the full
+    // snapshot just past the 1s default wait. The 5s window keeps the exact
+    // 20-item assertion while sizing to the measured work (~5x margin).
+    await vi.waitFor(
+      () => {
+        const parsed = JSON.parse(fs.readFileSync(currentPath, 'utf8')) as { id: string }[];
+        expect(parsed).toHaveLength(20);
+      },
+      { timeout: 5_000 }
+    );
   });
 });
