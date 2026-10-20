@@ -166,13 +166,13 @@ describe('Codex custom provider config', () => {
   it('maps the spec to the neutral custom-provider config', () => {
     expect(buildCodexGatewayCustomProviderConfig({ spec: connection().spec })).toEqual({
       enabled: true,
-      baseUrl: 'https://gw.example.com',
+      baseUrl: 'https://gw.example.com/v1',
     });
     expect(
       buildCodexGatewayCustomProviderConfig({
         spec: { ...connection().spec, model: 'gpt-5' },
       })
-    ).toEqual({ enabled: true, baseUrl: 'https://gw.example.com', model: 'gpt-5' });
+    ).toEqual({ enabled: true, baseUrl: 'https://gw.example.com/v1', model: 'gpt-5' });
   });
 });
 

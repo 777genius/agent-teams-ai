@@ -52,7 +52,7 @@ export function buildCodexGatewayCustomProviderConfig(input: {
 }): CodexGatewayCustomProviderConfig {
   return {
     enabled: true,
-    baseUrl: input.spec.baseUrl,
+    baseUrl: `${input.spec.baseUrl}/v1`,
     ...(input.spec.model ? { model: input.spec.model } : {}),
   };
 }

@@ -384,6 +384,12 @@ try {
           )
         ) as Record<string, string>;
         const requestUrl = new URL(req.url ?? '/', 'http://gateway-e2e.invalid');
+        if (requestUrl.pathname === '/responses') {
+          call.status = 404;
+          res.writeHead(404);
+          res.end('Fixture requires the canonical /v1/responses route');
+          return;
+        }
         const targetUrl = new URL(stand);
         targetUrl.pathname = requestUrl.pathname;
         targetUrl.search = requestUrl.search;
@@ -661,7 +667,7 @@ try {
             (member.providerId === 'anthropic'
               ? '/v1/messages'
               : member.providerId === 'codex'
-                ? '/responses'
+                ? '/v1/responses'
                 : '/v1/chat/completions') &&
           call.status === 200 &&
           call.route === (name === 'codex-two' ? index : 0)
