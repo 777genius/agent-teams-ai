@@ -215,13 +215,18 @@ jobs:
             # lsof is not in the ubuntu-24.04 runner image package list, but Homebrew
             # is preinstalled there (see actions/runner-images Ubuntu2404-Readme.md)
             # and its lsof formula ships Linux bottles, so install without su/apt:
-            eval "$( /home/linuxbrew/.linuxbrew/bin/brew shellenv 2>/dev/null )"
+            if ! command -v brew >/dev/null 2>&1 && [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+              eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+            fi
             if ! command -v brew >/dev/null 2>&1; then
               echo "lsof is required by the opencode diagnostics ownership harness"
               echo "and neither lsof nor Homebrew is available on this runner"
               exit 1
             fi
             brew install lsof
+            # Each Actions step starts a fresh shell; preserve Homebrew discovery.
+            echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
+            echo "$(brew --prefix)/sbin" >> "$GITHUB_PATH"
           fi
       - name: Install dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
