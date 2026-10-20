@@ -676,16 +676,23 @@ export async function verifyPackaged({
     );
     evidence.summaryQualification = qualifySummary(provider);
 
-    // Wait for bootstrap catalog to settle before starting the measured UI refresh.
+    // Warm starts can retain a ready catalog while provider status still disables
+    // refresh. Wait for both rendered facts before arming the measured request.
     let before;
+    let refreshReady = false;
     for (let i = 0; i < 240; i++) {
-      before = await evaluate(catalogState);
-      if (before && before.state !== 'loading') break;
+      const current = await evaluate(`({
+        catalog: ${catalogState},
+        refreshReady: (${refreshControl})?.disabled === false
+      })`);
+      before = current?.catalog;
+      refreshReady = current?.refreshReady === true;
+      if (before && before.state !== 'loading' && refreshReady) break;
       await pause(500);
     }
     assert(
-      before && before.state !== 'loading',
-      'Real dashboard catalog props unavailable/unsettled'
+      before && before.state !== 'loading' && refreshReady,
+      'Real dashboard catalog/refresh control unavailable or unsettled'
     );
     evidence.ui = { before, startedAt: new Date().toISOString(), transitions: [] };
     await observe('globalThis.__packagedCatalogObservation.active = true');
