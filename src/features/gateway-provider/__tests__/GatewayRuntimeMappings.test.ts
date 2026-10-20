@@ -186,7 +186,7 @@ describe('OpenCode gateway artifact mapping', () => {
       runtimeId: 'opencode',
       scope: 'global',
       presetId: 'custom',
-      baseUrl: 'https://gw.example.com',
+      baseUrl: 'https://gw.example.com/v1',
       apiKey: 'sk-member',
       defaultModelId: 'gpt-5',
       modelIds: ['gpt-5'],
@@ -197,6 +197,15 @@ describe('OpenCode gateway artifact mapping', () => {
     expect(buildOpenCodeGatewayModelRoute(artifact!.input)).toBe(
       `${artifact!.input.providerId}/gpt-5`
     );
+  });
+
+  it('keeps a gateway path prefix when selecting the OpenAI-compatible API base', () => {
+    const artifact = buildOpenCodeGatewayArtifactConfigureInput(
+      connection({
+        spec: { ...connection().spec, baseUrl: 'https://gw.example.com/proxy', model: 'gpt-5' },
+      })
+    );
+    expect(artifact!.input.baseUrl).toBe('https://gw.example.com/proxy/v1');
   });
 
   it('returns no artifact when the binding has no model', () => {

@@ -128,7 +128,9 @@ export function buildOpenCodeGatewayArtifactConfigureInput(
       runtimeId: 'opencode',
       scope: 'global',
       presetId: 'custom',
-      baseUrl: connection.spec.baseUrl,
+      // Profiles store the gateway root; the OpenAI-compatible SDK appends
+      // /models and /chat/completions to its API base.
+      baseUrl: `${connection.spec.baseUrl}/v1`,
       providerId: toOpenCodeGatewayProviderId(target),
       apiKey: connection.apiKey,
       defaultModelId: model,
