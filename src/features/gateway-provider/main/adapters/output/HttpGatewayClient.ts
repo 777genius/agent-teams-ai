@@ -23,6 +23,7 @@ async function requestJson(input: {
   try {
     const response = await fetch(`${input.baseUrl}${input.path}`, {
       method: 'GET',
+      redirect: 'error',
       headers: {
         Authorization: `Bearer ${input.apiKey}`,
         Accept: 'application/json',
@@ -30,7 +31,10 @@ async function requestJson(input: {
       signal: controller.signal,
     });
     if (!response.ok) {
-      throw new GatewayHttpError(`Gateway request failed (HTTP ${response.status}).`, response.status);
+      throw new GatewayHttpError(
+        `Gateway request failed (HTTP ${response.status}).`,
+        response.status
+      );
     }
     try {
       return (await response.json()) as unknown;
@@ -63,8 +67,7 @@ export async function probeGatewayModels(input: {
   const models = Array.from(
     new Set(
       data.flatMap((entry) => {
-        const id =
-          entry && typeof entry === 'object' ? (entry as { id?: unknown }).id : undefined;
+        const id = entry && typeof entry === 'object' ? (entry as { id?: unknown }).id : undefined;
         return typeof id === 'string' && id.trim() ? [id.trim()] : [];
       })
     )
@@ -105,11 +108,7 @@ export async function readGatewayUsageDay(input: {
   }
   const record = payload as Record<string, unknown>;
   if (!Array.isArray(record.model_stats)) {
-    throw new GatewayHttpError(
-      'Gateway usage statistics are unavailable.',
-      undefined,
-      'shape'
-    );
+    throw new GatewayHttpError('Gateway usage statistics are unavailable.', undefined, 'shape');
   }
   return record.model_stats.map((entry) => {
     if (!entry || typeof entry !== 'object') {
