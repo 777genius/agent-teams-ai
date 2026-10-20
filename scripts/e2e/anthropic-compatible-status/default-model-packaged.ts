@@ -17,6 +17,11 @@ import {
 import { defaultArtifact, qualifyDefaultArtifact } from './packaged-default-artifact.ts';
 import { PackagedDefaultCdp, pause } from './packaged-default-cdp.ts';
 import {
+  nativeDiagnosticProgress,
+  type DiagnosticRequirement,
+  type PreflightEvent,
+} from './packaged-default-preflight.ts';
+import {
   DefaultProcessLedger,
   stopUnregisteredApp,
   type ProcessIdentity,
@@ -62,16 +67,6 @@ interface ConnectionPreference {
   authMode: string;
   compatibleEndpointEnabled: boolean;
   compatibleEndpointBaseUrl: string;
-}
-interface PreflightEvent {
-  at: string;
-  event: string;
-  providerId?: string;
-  cwd?: string;
-  ok?: boolean;
-  args?: string[];
-  modelIds?: string[];
-  blockingMessages?: string[];
 }
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const args = process.argv.slice(2);
@@ -152,20 +147,24 @@ async function assertEnvironmentOnlyConnection(label: string) {
   );
   evidence[label] = preference;
 }
-async function waitSettled(label: string, priorCount: number, requireReadyUi = true) {
+async function waitSettled(
+  label: string,
+  priorCount: number,
+  requirement: DiagnosticRequirement,
+  requireReadyUi = true
+) {
   assert(cdp && gateway);
   const deadline = Date.now() + 90_000;
   let quietSince = 0;
+  let previousEventCount = -1;
   while (Date.now() < deadline) {
     const events = (await preflightEvents()).filter(
       (e) => e.providerId === 'anthropic' && e.cwd === data.project
     );
-    const starts = events.filter((e) => e.event === 'provider_one_shot_diagnostic_start');
-    const complete = events.filter((e) => e.event === 'provider_one_shot_diagnostic_complete');
-    assert(
-      complete.every((e) => e.ok === true),
-      'A real native diagnostic failed'
-    );
+    const progress = nativeDiagnosticProgress(events, priorCount, requirement);
+    assert(progress.allSucceeded, 'A real native diagnostic failed');
+    if (events.length !== previousEventCount) quietSince = 0;
+    previousEventCount = events.length;
     const ready =
       !requireReadyUi ||
       (await cdp.evaluate<boolean>(`(() => {
@@ -173,20 +172,13 @@ async function waitSettled(label: string, priorCount: number, requireReadyUi = t
         && !/Checking selected providers|Checking provider readiness/.test(d.innerText);
     })()`));
     const children = await ledger.runtimeQuiet(data.artifact.app.path);
-    if (
-      ready &&
-      starts.length > 0 &&
-      starts.length === complete.length &&
-      gateway.inFlight() === 0 &&
-      children.length === 0
-    ) {
+    if (ready && progress.ready && gateway.inFlight() === 0 && children.length === 0) {
       if (!quietSince) quietSince = Date.now();
       if (Date.now() - quietSince >= 1000) {
         record(label, {
-          startCount: starts.length,
-          completeCount: complete.length,
-          newEvents: events.slice(priorCount),
-          cacheReuse: events.length === priorCount,
+          requirement,
+          ...progress,
+          noNewNativeEvents: events.length === priorCount,
           requireReadyUi,
         });
         return;
@@ -414,6 +406,7 @@ try {
   );
   assert(provider.modelCatalog.models.some((m) => m.launchModel === configuredDefault));
   record('environment-only-native-status-confirmed-without-frontend-credentials');
+  const beforeDialog = await scopedPreflightCount();
   await cdp.click('[aria-label="More actions"]');
   await cdp.clickText('Teams');
   await cdp.clickText('Create Team');
@@ -426,6 +419,11 @@ try {
     ))
   )
     await cdp.click('#solo-team');
+  await waitSettled(
+    'initial-create-dialog-native-revalidation-settled',
+    beforeDialog,
+    'fresh-diagnostic'
+  );
   const label = `Default - ${configuredDefault}`;
   const selections = [];
   for (const limitContext of [false, true]) {
@@ -438,12 +436,11 @@ try {
       'Boolean(document.querySelector("#lead-limit-context"))',
       'expanded lead model controls'
     );
-    if (
+    const contextChanged =
       (await cdp.evaluate<boolean>(
         'document.querySelector("#lead-limit-context")?.getAttribute("aria-checked") === "true"'
-      )) !== limitContext
-    )
-      await cdp.click('#lead-limit-context');
+      )) !== limitContext;
+    if (contextChanged) await cdp.click('#lead-limit-context');
     await cdp.wait(
       `document.querySelector('#lead-limit-context')?.getAttribute('aria-checked') === '${limitContext}'`,
       'context state'
@@ -472,13 +469,21 @@ try {
     );
     assert.equal(trigger.text, `${configuredDefault} · Default`);
     assert.equal(trigger.aria, `Anthropic provider, ${label}`);
-    await waitSettled(`context-${limitContext}-native-revalidation-settled`, before);
-    selections.push({ limitContext, option, trigger });
+    await waitSettled(
+      `context-${limitContext}-native-${contextChanged ? 'revalidation' : 'drain'}-settled`,
+      before,
+      contextChanged ? 'fresh-diagnostic' : 'quiet-drain'
+    );
+    selections.push({ limitContext, contextChanged, option, trigger });
     await cdp.screenshot(path.join(evidenceRoot, `default-context-${limitContext}.png`));
   }
   evidence.selections = selections;
   await cdp.fill('#team-name', 'packaged-default-model-test');
-  await waitSettled('before-config-only-toggle', await scopedPreflightCount());
+  await waitSettled(
+    'before-config-only-toggle-drained',
+    await scopedPreflightCount(),
+    'quiet-drain'
+  );
   if (
     await cdp.evaluate<boolean>(
       'document.querySelector("#launch-team")?.getAttribute("aria-checked") === "true"'
@@ -491,7 +496,12 @@ try {
   );
   // Config-only mode hides the provider readiness section and resets its UI
   // state. Drain native work without requiring that intentionally hidden text.
-  await waitSettled('before-config-only-create-drained', await scopedPreflightCount(), false);
+  await waitSettled(
+    'before-config-only-create-drained',
+    await scopedPreflightCount(),
+    'quiet-drain',
+    false
+  );
   await cdp.clickText('Create', dialog);
   await cdp.wait(`!${dialog}`, 'native config-only creation');
   const saved = await cdp.wait<SavedRequest>(

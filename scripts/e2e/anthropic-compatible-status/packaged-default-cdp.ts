@@ -103,18 +103,12 @@ export class PackagedDefaultCdp {
   }
   async fill(selector: string, value: string) {
     await this.click(selector);
-    await this.send('Input.dispatchKeyEvent', {
-      type: 'keyDown',
-      key: 'a',
-      code: 'KeyA',
-      modifiers: 2,
-    });
-    await this.send('Input.dispatchKeyEvent', {
-      type: 'keyUp',
-      key: 'a',
-      code: 'KeyA',
-      modifiers: 2,
-    });
+    await this.evaluate(`(() => {
+      const e = document.querySelector(${JSON.stringify(selector)});
+      if (!(e instanceof HTMLInputElement || e instanceof HTMLTextAreaElement))
+        throw new Error('Expected a text input for native fill');
+      e.focus(); e.select();
+    })()`);
     await this.send('Input.insertText', { text: value });
     assert.equal(
       await this.evaluate(`document.querySelector(${JSON.stringify(selector)}).value`),
