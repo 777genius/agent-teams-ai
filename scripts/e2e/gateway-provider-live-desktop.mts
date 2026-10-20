@@ -235,7 +235,23 @@ async function waitReady(team: string, runId: string): Promise<void> {
         !['failed', 'cancelled', 'disconnected'].includes(progress.state),
         `Provisioning ${progress.state}: ${redact(progress.error ?? progress.message ?? '')}`
       );
-      return progress.state === 'ready';
+      if (progress.state !== 'ready') return false;
+      const launch = JSON.parse(
+        await readFile(path.join(dirs.claude, 'teams', team, 'launch-state.json'), 'utf8')
+      ) as {
+        summary?: { failedCount?: number };
+        members?: Record<string, { hardFailureReason?: string }>;
+      };
+      assert(
+        !launch.summary?.failedCount,
+        `Team has failed teammates: ${redact(
+          Object.values(launch.members ?? {})
+            .map((member) => member.hardFailureReason ?? '')
+            .filter(Boolean)
+            .join('; ')
+        )}`
+      );
+      return true;
     },
     8 * 60_000
   );
