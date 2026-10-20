@@ -65,9 +65,21 @@ export function registerGatewayProviderIpc(
   ipcMain.handle(GATEWAY_PROVIDER_CHANNELS.unbindMember, (_event, request: unknown) => {
     if (!request || typeof request !== 'object') throw new Error('Invalid unbind request.');
     const input = request as Record<string, unknown>;
+    const receipt = input.expectedBinding;
+    if (receipt !== undefined && (!receipt || typeof receipt !== 'object'))
+      throw new Error('Invalid expected gateway binding.');
+    const expected = receipt as Record<string, unknown> | undefined;
     return feature.unbindGatewayMember({
       teamName: requireString(input.teamName, 'Team name'),
       memberName: requireString(input.memberName, 'Member name'),
+      ...(expected
+        ? {
+            expectedBinding: {
+              gatewayUsageRef: requireString(expected.gatewayUsageRef, 'Expected usage reference'),
+              boundAt: requireString(expected.boundAt, 'Expected binding timestamp'),
+            },
+          }
+        : {}),
     });
   });
 }

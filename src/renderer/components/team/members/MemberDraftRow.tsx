@@ -740,7 +740,9 @@ export const MemberDraftRow = ({
                 }}
                 projectPath={projectPath}
                 id={`member-${member.id}-model`}
-                disableGeminiOption={disableGeminiOption}
+                disableGeminiOption={
+                  disableGeminiOption || gatewayBindings?.boundMemberNames.has(member.name.trim())
+                }
                 providerReadyById={providerReadyById}
                 providerDisabledReasonById={providerDisabledReasonById}
                 modelAdvisoryReasonByValue={modelAdvisoryReasonByProvider?.[effectiveProviderId]}
@@ -756,7 +758,9 @@ export const MemberDraftRow = ({
                 onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
                 onOpenProviderSettings={onOpenProviderSettings}
               />
-              {teamName?.trim() && !lockProviderModel ? (
+              {teamName?.trim() &&
+              !lockProviderModel &&
+              ['anthropic', 'codex', 'opencode'].includes(effectiveProviderId) ? (
                 <MemberGatewaySelector
                   teamName={teamName.trim()}
                   memberName={member.name}
@@ -764,6 +768,7 @@ export const MemberDraftRow = ({
                   selectedModel={member.model}
                   onBindingsChange={gatewayBindings?.refresh}
                   onBindRequest={gatewayBindings?.runBinding}
+                  onBindingPendingChange={gatewayBindings?.onBindingPendingChange}
                   disabled={gatewayBindings?.pending}
                   onModelChange={(model) => {
                     if (lockProviderModel) return;

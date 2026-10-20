@@ -1,5 +1,6 @@
 import { toOpenCodeGatewayProviderId } from '@features/gateway-provider/main';
 import { createMemberGatewayRuntimeSeams } from '@main/services/team/provisioning/TeamProvisioningMemberGatewayRuntime';
+import { createLogger } from '@shared/utils/logger';
 
 import { GatewayRunMetadataStore } from './GatewayRunMetadataStore';
 
@@ -46,44 +47,55 @@ export function createGatewayLaunchRuntime(deps: {
             return async (input: Parameters<T['launch']>[0]) => {
               const snapshots: string[] = [];
               const sources = await deps.feature.listGatewayUsageSources();
-              for (const member of input.expectedMembers) {
-                const source = sources.find(
-                  (source) =>
-                    source.teamName === input.teamName &&
-                    source.memberName === member.name &&
-                    member.model?.startsWith(
-                      `${toOpenCodeGatewayProviderId({ teamName: source.teamName, memberName: source.memberName, gatewayUsageRef: source.gatewayUsageRef })}/`
-                    )
-                );
-                if (source)
-                  snapshots.push(
-                    await metadata.snapshotLaunch({
-                      teamName: input.teamName,
-                      memberName: member.name,
-                      providerId: 'opencode',
-                      gatewayUsageRef: source.gatewayUsageRef,
-                    })
+              let result: Awaited<ReturnType<TeamLaunchRuntimeAdapter['launch']>>;
+              try {
+                for (const member of input.expectedMembers) {
+                  const source = sources.find(
+                    (source) =>
+                      source.teamName === input.teamName &&
+                      source.memberName === member.name &&
+                      member.model?.startsWith(
+                        `${toOpenCodeGatewayProviderId({ teamName: source.teamName, memberName: source.memberName, gatewayUsageRef: source.gatewayUsageRef })}/`
+                      )
                   );
-              }
-              const currentSources = await deps.feature.listGatewayUsageSources();
-              const missingArtifact = input.expectedMembers.some((member) =>
-                sources.some(
-                  (source) =>
-                    member.model?.startsWith(
-                      `${toOpenCodeGatewayProviderId({ teamName: source.teamName, memberName: source.memberName, gatewayUsageRef: source.gatewayUsageRef })}/`
-                    ) &&
-                    !currentSources.find(
-                      (current) => current.gatewayUsageRef === source.gatewayUsageRef
-                    )?.hasRuntimeArtifact
-                )
-              );
-              if (missingArtifact) {
-                await Promise.all(snapshots.map((id) => metadata.abortUnspawnedLaunch(id)));
-                throw new Error(
-                  'Gateway provider artifact changed during preparation. Retry the launch.'
+                  if (source)
+                    snapshots.push(
+                      await metadata.snapshotLaunch({
+                        teamName: input.teamName,
+                        memberName: member.name,
+                        providerId: 'opencode',
+                        gatewayUsageRef: source.gatewayUsageRef,
+                      })
+                    );
+                }
+                const currentSources = await deps.feature.listGatewayUsageSources();
+                const missingArtifact = input.expectedMembers.some((member) =>
+                  sources.some(
+                    (source) =>
+                      member.model?.startsWith(
+                        `${toOpenCodeGatewayProviderId({ teamName: source.teamName, memberName: source.memberName, gatewayUsageRef: source.gatewayUsageRef })}/`
+                      ) &&
+                      !currentSources.find(
+                        (current) => current.gatewayUsageRef === source.gatewayUsageRef
+                      )?.hasRuntimeArtifact
+                  )
                 );
+                if (missingArtifact) {
+                  throw new Error(
+                    'Gateway provider artifact changed during preparation. Retry the launch.'
+                  );
+                }
+                result = await target.launch(input);
+              } catch (error) {
+                const cleanup = await Promise.allSettled(
+                  snapshots.map((id) => metadata.abortUnspawnedLaunch(id))
+                );
+                if (cleanup.some((attempt) => attempt.status === 'rejected'))
+                  createLogger('GatewayLaunchRuntime').warn(
+                    'Could not close all rejected gateway launch snapshots.'
+                  );
+                throw error;
               }
-              const result = await target.launch(input);
               if (result.preLaunchGate)
                 await Promise.all(snapshots.map((id) => metadata.abortUnspawnedLaunch(id)));
               else

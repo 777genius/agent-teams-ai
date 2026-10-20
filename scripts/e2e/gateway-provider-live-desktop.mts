@@ -733,6 +733,13 @@ try {
       await assertSnapshot(team, members);
     }
     if (name === 'binding-switch') {
+      const previousBindings = await invoke<
+        { memberName: string; gatewayUsageRef: string; boundAt: string }[]
+      >('gatewayProvider', 'listGatewayBindings', team);
+      const previousBinding = previousBindings.find(
+        (binding) => binding.memberName === members[0].name
+      );
+      assert(previousBinding, 'The original binding receipt must be present before replacement');
       const original = { ...members[0] };
       const replacement = await freshKey(`${team}-replacement`, groupByPlatform.get('anthropic')!);
       permitted.add(replacement.key);
@@ -747,6 +754,25 @@ try {
         }
       );
       assert.notEqual(bound.gatewayUsageRef, original.ref);
+      await invoke('gatewayProvider', 'unbindGatewayMember', {
+        teamName: team,
+        memberName: original.name,
+        expectedBinding: {
+          gatewayUsageRef: previousBinding.gatewayUsageRef,
+          boundAt: previousBinding.boundAt,
+        },
+      });
+      const currentBindings = await invoke<{ memberName: string; gatewayUsageRef: string }[]>(
+        'gatewayProvider',
+        'listGatewayBindings',
+        team
+      );
+      assert.equal(
+        currentBindings.find((binding) => binding.memberName === original.name)?.gatewayUsageRef,
+        bound.gatewayUsageRef,
+        'Stale draft cleanup must not unbind a replacement through Electron IPC'
+      );
+
       const before = await usage(original);
       await invoke('teams', 'sendMessage', team, {
         member: original.name,

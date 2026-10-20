@@ -932,3 +932,23 @@ describe('MemberDraftRow', () => {
     });
   });
 });
+
+it('does not offer gateway binding for an unsupported Gemini teammate', () => {
+  const { host, root } = renderMemberDraftRow({
+    teamName: 'alpha',
+    member: createMemberDraft({
+      id: 'member-1',
+      name: 'alice',
+      providerId: 'gemini',
+      model: 'gemini-test',
+    }),
+  });
+  act(() =>
+    host
+      .querySelector<HTMLButtonElement>('button[aria-label="gemini provider, gemini-test"]')!
+      .click()
+  );
+  expect(host.textContent).toContain('team-model-selector');
+  expect(host.querySelector('[data-testid="member-gateway-selector"]')).toBeNull();
+  act(() => root.unmount());
+});

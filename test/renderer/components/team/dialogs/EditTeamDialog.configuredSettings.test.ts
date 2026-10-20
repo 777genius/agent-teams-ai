@@ -1,9 +1,14 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@renderer/api', () => ({
   api: {
+    gatewayProvider: {
+      listGatewayBindings: vi.fn(async () => []),
+      unbindGatewayMember: vi.fn(async () => {}),
+    },
     teams: {
       updateConfig: vi.fn(() => Promise.resolve()),
       replaceMembers: vi.fn(() => Promise.resolve()),
@@ -33,15 +38,15 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', async () => ({
           {
             key: field,
             onClick: () =>
-              onChange(
-                [
-                  {
-                    ...members[0],
-                    ...(field === 'role' ? { roleSelection: 'Developer' } : { model: 'edited/model' }),
-                  },
-                  ...members.slice(1),
-                ]
-              ),
+              onChange([
+                {
+                  ...members[0],
+                  ...(field === 'role'
+                    ? { roleSelection: 'Developer' }
+                    : { model: 'edited/model' }),
+                },
+                ...members.slice(1),
+              ]),
           },
           `change-member-${field}`
         )
@@ -126,8 +131,8 @@ vi.mock('@renderer/constants/teamColors', () => ({
   getThemedBadge: () => '#0f172a',
 }));
 
-import { EditTeamDialog } from '@renderer/components/team/dialogs/EditTeamDialog';
 import { api } from '@renderer/api';
+import { EditTeamDialog } from '@renderer/components/team/dialogs/EditTeamDialog';
 
 import type { ResolvedTeamMember } from '@shared/types';
 
@@ -193,7 +198,9 @@ describe('EditTeamDialog canonical settings', () => {
       });
     };
     const click = async (text: string) => {
-      const button = Array.from(host.querySelectorAll('button')).find((b) => b.textContent === text);
+      const button = Array.from(host.querySelectorAll('button')).find(
+        (b) => b.textContent === text
+      );
       expect(button).toBeTruthy();
       await act(() => Promise.resolve(button!.click()));
     };

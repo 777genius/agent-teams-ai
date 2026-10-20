@@ -2163,6 +2163,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   ]);
 
   const handleSubmit = (): void => {
+    if (gatewayBindings.pending) return;
     if (submissionFence.busy || isSubmitting || launchInFlight) return;
     if (runtimeSelectionUnresolved) {
       setLocalError('Choose a team provider before launching');
@@ -3215,7 +3216,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           <WorkspaceTrustLaunchControl
             status={workspaceTrustStatus}
             isLaunchMode={isLaunchMode}
-            disabled={isDisabled}
+            disabled={isDisabled || gatewayBindings.pending}
             describedBy={
               isLaunchMode &&
               prepareState !== 'idle' &&

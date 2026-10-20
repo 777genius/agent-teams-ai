@@ -17,13 +17,16 @@ export function createGatewayBindingDraft(
   const initial = new Map<string, Set<string>>();
   const latest = new Map<string, readonly Binding[]>();
   const owned = new Map<string, Binding>();
+  const generations = new WeakMap<Binding, number>();
+  let generation = 0;
   const removing = new Map<string, Promise<void>>();
   let context: Context | null = null;
   let pendingOperations = 0;
 
   const remove = (binding: Binding): Promise<void> => {
     const id = key(binding);
-    const active = removing.get(id);
+    const receiptId = JSON.stringify([id, binding.gatewayUsageRef, binding.boundAt]);
+    const active = removing.get(receiptId);
     if (active) return active;
     const operation = Promise.resolve()
       .then(() =>
@@ -37,8 +40,8 @@ export function createGatewayBindingDraft(
         if (owned.get(id) === binding) owned.delete(id);
       })
       .catch(reportError)
-      .finally(() => removing.delete(id));
-    removing.set(id, operation);
+      .finally(() => removing.delete(receiptId));
+    removing.set(receiptId, operation);
     return operation;
   };
   const flush = async (): Promise<void> => {
@@ -47,6 +50,7 @@ export function createGatewayBindingDraft(
       [...owned.values()]
         .filter(
           (binding) =>
+            generations.get(binding) !== generation ||
             !context ||
             binding.teamName !== context.teamName ||
             !context.memberNames.includes(binding.memberName)
@@ -73,9 +77,10 @@ export function createGatewayBindingDraft(
       if (binding.teamName === teamName && names.includes(binding.memberName)) owned.delete(id);
     }
   };
-  const register = (binding: Binding): void => {
+  const register = (binding: Binding, receiptGeneration = generation): void => {
     if (initial.has(binding.teamName) && !initial.get(binding.teamName)!.has(binding.memberName)) {
       owned.set(key(binding), binding);
+      generations.set(binding, receiptGeneration);
       void flush();
     }
   };
@@ -87,19 +92,22 @@ export function createGatewayBindingDraft(
     },
     register,
     update(next: Context | null): void {
+      if (context && !next) generation++;
       context = next;
       void flush();
     },
     discard(): void {
+      generation++;
       context = null;
       void flush();
     },
     markSaved: mark,
     async runBinding(operation: () => Promise<Binding>): Promise<Binding> {
+      const receiptGeneration = generation;
       pendingOperations++;
       try {
         const binding = await operation();
-        register(binding);
+        register(binding, receiptGeneration);
         return binding;
       } finally {
         pendingOperations--;

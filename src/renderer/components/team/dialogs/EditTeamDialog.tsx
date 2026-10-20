@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { useGatewayMemberBindings } from '@features/gateway-provider/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { MemberDraftRow } from '@renderer/components/team/members/MemberDraftRow';
@@ -170,6 +171,10 @@ export const EditTeamDialog = ({
   const [teammateWorktreeDefault, setTeammateWorktreeDefault] = useState(() =>
     deriveTeammateWorktreeDefault(currentMembers)
   );
+  const gatewayBindings = useGatewayMemberBindings(open ? teamName : undefined, {
+    memberNames: members.filter((member) => !member.removedAt).map((member) => member.name),
+    mode: 'roster',
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveOutcomeError, setSaveOutcomeError] = useState<string | null>(null);
@@ -369,6 +374,7 @@ export const EditTeamDialog = ({
   }, [liveRuntimeRefreshMemberNames, members, t]);
 
   const handleSave = (): void => {
+    if (gatewayBindings.pending) return;
     if (!name.trim()) {
       setError(t('editTeam.errors.teamNameEmpty'));
       return;
@@ -423,7 +429,7 @@ export const EditTeamDialog = ({
     setSaving(true);
     setError(null);
     setSaveOutcomeError(null);
-    void (async () => {
+    void gatewayBindings.run(async () => {
       let configSaved = false;
       let membersSaved = false;
       let refreshAfterSaveAttempted = false;
@@ -442,10 +448,16 @@ export const EditTeamDialog = ({
               committedMembersForSnapshot,
               [removedMemberName]
             );
+            gatewayBindings.markSaved(
+              committedMembersForSnapshot
+                .filter((member) => !member.removedAt)
+                .map((member) => member.name)
+            );
           }
           await api.teams.replaceMembers(teamName, { members: builtMembers });
           membersSaved = true;
         }
+        gatewayBindings.markSaved(builtMembers.map((member) => member.name));
         pendingCommittedSourceSnapshotRef.current = buildEditTeamSourceSnapshot({
           name: name.trim(),
           description: description.trim(),
@@ -501,7 +513,7 @@ export const EditTeamDialog = ({
       } finally {
         setSaving(false);
       }
-    })();
+    }, []);
   };
 
   return (
@@ -562,6 +574,7 @@ export const EditTeamDialog = ({
                 setMembers(nextMembers);
               }}
               teamName={teamName}
+              gatewayBindings={gatewayBindings}
               fieldError={invalidMemberNamesError ?? undefined}
               validateMemberName={validateMemberNameInline}
               showWorkflow
@@ -683,8 +696,10 @@ export const EditTeamDialog = ({
               })}
             </div>
           </div>
-          {(error || saveOutcomeError) && (
-            <p className="text-xs text-red-400">{error ?? saveOutcomeError}</p>
+          {(error || saveOutcomeError || gatewayBindings.error) && (
+            <p className="text-xs text-red-400">
+              {error ?? saveOutcomeError ?? gatewayBindings.error}
+            </p>
           )}
         </div>
 
@@ -697,6 +712,7 @@ export const EditTeamDialog = ({
             onClick={handleSave}
             disabled={
               saving ||
+              gatewayBindings.pending ||
               isTeamProvisioning ||
               !name.trim() ||
               hasDuplicateMembers ||

@@ -143,7 +143,8 @@ describe('MemberGatewaySelector', () => {
   it('probes the key, lists gateway models, binds, and never keeps the key in the DOM', async () => {
     mocks.probeGatewayModels.mockResolvedValue({ models: ['claude-sonnet-4', 'claude-opus-4'] });
     mocks.bindGatewayMember.mockResolvedValue(binding);
-    const { host, root, onModelChange } = renderSelector();
+    const onBindingPendingChange = vi.fn();
+    const { host, root, onModelChange } = renderSelector({ onBindingPendingChange });
     await settle();
 
     clickSelectItem(host, 'prof-1');
@@ -175,6 +176,10 @@ describe('MemberGatewaySelector', () => {
       apiKey: 'sk-secret-123',
     });
     expect(onModelChange).toHaveBeenCalledWith('claude-sonnet-4');
+    expect(onBindingPendingChange.mock.calls).toEqual([[true], [false]]);
+    expect(onModelChange.mock.invocationCallOrder[0]).toBeLessThan(
+      onBindingPendingChange.mock.invocationCallOrder[1]
+    );
     expect(document.body.innerHTML).not.toContain('sk-secret-123');
 
     act(() => {
@@ -253,6 +258,7 @@ describe('MemberGatewaySelector', () => {
     expect(mocks.unbindGatewayMember).toHaveBeenCalledWith({
       teamName: 'alpha',
       memberName: 'alice',
+      expectedBinding: { gatewayUsageRef: binding.gatewayUsageRef, boundAt: binding.boundAt },
     });
 
     act(() => {

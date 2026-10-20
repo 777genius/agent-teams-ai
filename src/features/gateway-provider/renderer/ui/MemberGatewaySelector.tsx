@@ -33,6 +33,7 @@ interface MemberGatewaySelectorProps {
   onModelChange: (model: string) => void;
   onBindingsChange?: (binding?: GatewayMemberBindingDto) => Promise<void>;
   disabled?: boolean;
+  onBindingPendingChange?: (pending: boolean) => void;
   onBindRequest?: (
     operation: () => Promise<GatewayMemberBindingDto>
   ) => Promise<GatewayMemberBindingDto>;
@@ -61,6 +62,7 @@ export const MemberGatewaySelector = ({
   onBindingsChange,
   disabled = false,
   onBindRequest,
+  onBindingPendingChange,
 }: MemberGatewaySelectorProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
   const [profiles, setProfiles] = useState<GatewayProfileDto[]>([]);
@@ -171,6 +173,7 @@ export const MemberGatewaySelector = ({
   const handleBind = async (): Promise<void> => {
     if (!keyReady || !modelChoice) return;
     setBusy(true);
+    onBindingPendingChange?.(true);
     setErrorKind(null);
     setErrorMessage('');
     try {
@@ -196,18 +199,21 @@ export const MemberGatewaySelector = ({
       showError(error);
     } finally {
       setBusy(false);
+      onBindingPendingChange?.(false);
     }
   };
 
   const handleUnbind = async (): Promise<void> => {
     if (!binding) return;
     setBusy(true);
+    onBindingPendingChange?.(true);
     setErrorKind(null);
     setErrorMessage('');
     try {
       await unbindGatewayMember({
         teamName,
         memberName: binding.memberName,
+        expectedBinding: { gatewayUsageRef: binding.gatewayUsageRef, boundAt: binding.boundAt },
       });
       clearKeyInput();
       await refresh();
@@ -216,6 +222,7 @@ export const MemberGatewaySelector = ({
       showError(error);
     } finally {
       setBusy(false);
+      onBindingPendingChange?.(false);
     }
   };
 

@@ -27,7 +27,7 @@ function setup(
   existing: GatewayMemberBindingDto[] = [],
   mode: 'roster' | 'addition' = 'roster'
 ) {
-  const unbind = vi.fn(async () => undefined);
+  const unbind = vi.fn(async (): Promise<void> => undefined);
   const report = vi.fn();
   const draft = createGatewayBindingDraft(unbind, report);
   draft.update({ teamName: 'team', memberNames: names, mode });
@@ -156,4 +156,45 @@ describe('gateway binding draft ownership', () => {
     draft.discard();
     await vi.waitFor(() => expect(unbind).toHaveBeenCalledTimes(2));
   });
+});
+
+it('cleans a replacement receipt when an older cleanup for the same member is still pending', async () => {
+  const { draft, unbind } = setup();
+  const oldCleanup = deferred<void>();
+  const newBinding = deferred<GatewayMemberBindingDto>();
+  await draft.runBinding(async () => binding());
+  unbind.mockImplementationOnce(() => oldCleanup.promise);
+  draft.update({ teamName: 'team', memberNames: [], mode: 'roster' });
+  await vi.waitFor(() => expect(unbind).toHaveBeenCalledTimes(1));
+  draft.update({ teamName: 'team', memberNames: ['new'], mode: 'roster' });
+  const pending = draft.runBinding(() => newBinding.promise);
+  draft.discard();
+  const replacement = { ...binding(), boundAt: '2026-10-20T00:00:01.000Z' };
+  newBinding.resolve(replacement);
+  try {
+    await vi.waitFor(() => expect(unbind).toHaveBeenCalledTimes(2));
+    expect(unbind).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        expectedBinding: {
+          gatewayUsageRef: replacement.gatewayUsageRef,
+          boundAt: replacement.boundAt,
+        },
+      })
+    );
+  } finally {
+    oldCleanup.resolve();
+    await pending;
+  }
+});
+
+it('discards a cancelled late binding even if the same dialog was reopened for the same owner', async () => {
+  const { draft, unbind } = setup();
+  const gate = deferred<GatewayMemberBindingDto>();
+  const pending = draft.runBinding(() => gate.promise);
+  draft.discard();
+  draft.update({ teamName: 'team', memberNames: ['new'], mode: 'roster' });
+  draft.observe('team', []);
+  gate.resolve(binding());
+  await pending;
+  expect(unbind).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ memberName: 'new' }));
 });

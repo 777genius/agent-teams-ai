@@ -2114,6 +2114,7 @@ export const CreateTeamDialog = ({
   }, [conflictingTeam?.teamName, effectiveCwd]);
 
   const handleSubmit = (): void => {
+    if (gatewayBindings.pending) return;
     if (!canCreate || !draftLoaded) return;
     if (launchTeam && !launchPreflightSelectionReady) return;
     if (submissionFence.busy || isSubmitting) return;
@@ -3077,6 +3078,7 @@ export const CreateTeamDialog = ({
                 disabled={
                   !canCreate ||
                   !draftLoaded ||
+                  gatewayBindings.pending ||
                   isSubmitting ||
                   (launchTeam && !launchPreflightSelectionReady) ||
                   (prepareState === 'loading' && !canSkipPreflight()) ||

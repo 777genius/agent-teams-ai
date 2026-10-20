@@ -81,4 +81,17 @@ describe('useGatewayMemberBindings', () => {
     expect(latest.error).toBe('Binding lookup failed');
     expect(latest.pending).toBe(true);
   });
+  it('keeps forms pending until all binding UI operations, including model refresh, have finished', async () => {
+    list.mockResolvedValue([]);
+    await render('team-a');
+    await act(async () => {
+      latest.onBindingPendingChange!(true);
+      latest.onBindingPendingChange!(true);
+    });
+    expect(latest.pending).toBe(true);
+    await act(async () => latest.onBindingPendingChange!(false));
+    expect(latest.pending).toBe(true);
+    await act(async () => latest.onBindingPendingChange!(false));
+    expect(latest.pending).toBe(false);
+  });
 });

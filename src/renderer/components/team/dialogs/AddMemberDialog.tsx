@@ -150,6 +150,7 @@ export const AddMemberDialog = ({
   }, [members, validateName]);
 
   const handleSubmit = (): void => {
+    if (gatewayBindings.pending) return;
     const built = buildMembersFromDrafts(members);
     // Validate all entries
     const invalid = built.find((m) => validateName(m.name));
@@ -239,7 +240,11 @@ export const AddMemberDialog = ({
           <Button type="button" variant="outline" onClick={onClose} disabled={adding}>
             {t('dialogs.actions.cancel')}
           </Button>
-          <Button type="button" disabled={adding || !hasValidMembers} onClick={handleSubmit}>
+          <Button
+            type="button"
+            disabled={adding || gatewayBindings.pending || !hasValidMembers}
+            onClick={handleSubmit}
+          >
             {adding ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : null}
             {memberCount > 1 ? `Add ${memberCount} members` : 'Add member'}
           </Button>

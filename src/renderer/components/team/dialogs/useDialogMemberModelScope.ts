@@ -13,7 +13,7 @@ export function useDialogMemberModelScope(
   }
 ) {
   const gatewayBindings = useGatewayMemberBindings(input.enabled ? input.teamName : undefined, {
-    memberNames: input.members.map((member) => member.name),
+    memberNames: input.members.filter((member) => !member.removedAt).map((member) => member.name),
     mode: 'roster',
   });
   const openCodeScope = useOpenCodeLocalModelScope(input);
