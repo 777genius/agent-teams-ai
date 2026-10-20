@@ -584,8 +584,15 @@ try {
     const created = await invoke<{ runId: string }>('teams', 'createTeam', request);
     await waitReady(team, created.runId);
     for (const [index, member] of members.entries()) {
+      // Native private startup context can be acknowledged without an API turn.
+      // Exercise a real user turn before checking fresh billed gateway traffic.
+      await invoke('teams', 'sendMessage', team, {
+        member: member.name,
+        text: 'Reply GATEWAY_E2E_OK.',
+        from: 'user',
+      });
       await poll(
-        `new billed ${member.name} bootstrap`,
+        `new billed ${member.name} request`,
         async () => (await usage(member)).requests > 0
       );
       const route = routes.find(
