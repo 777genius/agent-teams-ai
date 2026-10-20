@@ -12,8 +12,68 @@
 import { getHomeDir } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { spawn } from 'child_process';
+import { accessSync, constants as fsConstants } from 'fs';
 
 const logger = createLogger('Utils:shellEnv');
+
+/**
+ * Default login-shell candidates, most preferred first.
+ *
+ * macOS keeps the platform default `/bin/zsh` and falls back to its older
+ * default when zsh was removed. Linux users may rely on zsh even when
+ * `$SHELL` is unset (for example when the account's login shell is zsh but
+ * the variable was not propagated), and variables exported by `.zshrc` are
+ * only visible when zsh itself is probed. Therefore `/bin/zsh` is probed
+ * before the generic Bash fallbacks on every POSIX platform, while Bash and
+ * `/bin/sh` remain available for containers and images without zsh. A
+ * configured `$SHELL` is always honoured as-is; when that configured shell
+ * is missing the normal resolution failure path reports it rather than
+ * silently probing a different shell. No candidate is assumed to exist
+ * without an executable probe.
+ */
+export function defaultShellCandidates(platform: NodeJS.Platform): readonly string[] {
+  if (platform === 'darwin') return ['/bin/zsh', '/bin/bash', '/bin/sh'];
+  return ['/bin/zsh', '/bin/bash', '/usr/bin/bash', '/bin/sh'];
+}
+
+/**
+ * Check whether a candidate shell path exists and is executable.
+ */
+function probeExecutableShell(candidatePath: string): boolean {
+  try {
+    accessSync(candidatePath, fsConstants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Resolve the shell path used to read the exported interactive environment.
+ *
+ * A configured `$SHELL` wins verbatim (the repository never assumes that a
+ * configured shell exists; its absence surfaces through the resolver's normal
+ * failure diagnostics). Without one, the first installed platform candidate is
+ * used, with `/bin/sh` as the guaranteed last resort so a bare container gets
+ * a working probe instead of a misleading `<platform-default> ENOENT`. The
+ * filesystem probe is injectable so tests can express every platform.
+ */
+export function resolveDefaultLoginShellPath(
+  options: {
+    env?: NodeJS.ProcessEnv;
+    platform?: NodeJS.Platform;
+    probe?: (candidatePath: string) => boolean;
+  } = {}
+): string {
+  const configured = (options.env ?? process.env).SHELL?.trim();
+  if (configured) return configured;
+  const probe = options.probe ?? probeExecutableShell;
+  const candidates = defaultShellCandidates(options.platform ?? process.platform);
+  for (const candidate of candidates) {
+    if (probe(candidate)) return candidate;
+  }
+  return '/bin/sh';
+}
 
 const SHELL_ENV_TIMEOUT_MS = 12_000;
 const SHELL_ENV_BEST_EFFORT_TIMEOUT_MS = 5_000;
@@ -92,6 +152,9 @@ function clearShellEnvFailure(): void {
   shellEnvFailureCooldownUntil = 0;
 }
 
+/**
+ * Parse a NUL-separated `env -0` dump into a process-env record.
+ */
 function parseNullSeparatedEnv(content: string): NodeJS.ProcessEnv {
   const parsed: NodeJS.ProcessEnv = {};
   const lines = content.split('\0');
@@ -110,6 +173,9 @@ function parseNullSeparatedEnv(content: string): NodeJS.ProcessEnv {
   return parsed;
 }
 
+/**
+ * Spawn the given shell with args and resolve its exported environment.
+ */
 async function readShellEnv(shellPath: string, args: string[]): Promise<NodeJS.ProcessEnv> {
   const envDump = await new Promise<string>((resolve, reject) => {
     const child = spawn(shellPath, args, {
@@ -196,7 +262,7 @@ export async function resolveInteractiveShellEnv(
   }
 
   shellEnvResolvePromise = (async () => {
-    const shellPath = process.env.SHELL || '/bin/zsh';
+    const shellPath = resolveDefaultLoginShellPath();
     try {
       emitProgress(options, 'shell-env-login', 'Reading login shell environment...');
       const loginEnv = await readShellEnv(shellPath, ['-lic', 'env -0']);

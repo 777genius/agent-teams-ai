@@ -642,7 +642,8 @@
       "byTime": "Ayon sa oras",
       "byUnread": "Ayon sa hindi nabasa",
       "byProject": "Ayon sa proyekto",
-      "byTeam": "Ayon sa team"
+      "byTeam": "Ayon sa team",
+      "manualOrder": "Manuwal na pagkakasunod-sunod"
     }
   },
   "toolViewer": {

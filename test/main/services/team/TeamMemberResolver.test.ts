@@ -5,6 +5,52 @@ import { TeamMemberResolver } from '../../../../src/main/services/team/TeamMembe
 import type { TeamConfig, TeamTask, TeamTaskWithKanban } from '../../../../src/shared/types/team';
 
 describe('TeamMemberResolver', () => {
+  it('projects the resolved OpenCode primary model over saved default selection', () => {
+    const members = new TeamMemberResolver().resolveMembers(
+      {
+        name: 'TEST-primary',
+        projectPath: '/TEST/primary',
+        members: [{ name: 'team-lead', providerId: 'opencode', model: 'default' }],
+      },
+      [],
+      [],
+      [],
+      { leadProviderId: 'opencode', leadRuntimeSettings: { model: 'novel/ResolvedPrimary' } }
+    );
+    expect(members.find((member) => member.name === 'team-lead')?.model).toBe(
+      'novel/ResolvedPrimary'
+    );
+  });
+
+  it('preserves a distinct OpenCode teammate model without a launch snapshot', () => {
+    const members = new TeamMemberResolver().resolveMembers(
+      {
+        name: 'TEST-model-targets',
+        projectPath: '/TEST/primary',
+        members: [
+          { name: 'team-lead', providerId: 'opencode', model: 'default' },
+          {
+            name: 'Alice',
+            providerId: 'opencode',
+            model: 'novel/SecondaryModel',
+            cwd: '/TEST/secondary',
+          },
+        ],
+      },
+      [],
+      [],
+      [],
+      { leadProviderId: 'opencode', leadRuntimeSettings: { model: 'novel/ResolvedPrimary' } }
+    );
+    expect(members.find((member) => member.name === 'team-lead')?.model).toBe(
+      'novel/ResolvedPrimary'
+    );
+    expect(members.find((member) => member.name === 'Alice')).toMatchObject({
+      model: 'novel/SecondaryModel',
+      cwd: '/TEST/secondary',
+    });
+  });
+
   it.each(['inherited', 'explicit', 'config-only', 'unrelated-meta', 'legacy-provider'] as const)(
     'separates configured authority from effective config (%s)',
     (kind) => {

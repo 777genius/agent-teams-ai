@@ -18,6 +18,7 @@ import {
   type TeamModelSelectorProps,
 } from '@renderer/components/team/dialogs/TeamModelSelector';
 import { useOpenCodeDefaultRouteLabel } from '@renderer/components/team/dialogs/useOpenCodeDefaultRouteLabel';
+import { useRuntimeDefaultModelLabel } from '@renderer/components/team/dialogs/useRuntimeDefaultModelLabel';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Label } from '@renderer/components/ui/label';
 import {
@@ -108,19 +109,26 @@ export const LeadModelRow = ({
   const hasActiveProviderNotice = Boolean(providerNoticeById?.[providerId]);
   const [modelExpanded, setModelExpanded] = useState(hasActiveProviderNotice);
   const leadColorSet = getTeamColorSet(resolveTeamLeadColorName());
-  const resolvedOpenCodeDefault = useOpenCodeDefaultRouteLabel(
+  const openCodeDefault = useOpenCodeDefaultRouteLabel(
     projectPath,
     providerId === 'opencode' && !model.trim()
   );
+  const runtimeDefault = useRuntimeDefaultModelLabel(
+    providerId,
+    limitContext,
+    !model.trim(),
+    projectPath
+  );
+  const resolvedDefault = openCodeDefault ?? runtimeDefault;
   const modelButtonLabel = model.trim()
     ? getProviderScopedTeamModelLabel(providerId, model.trim())
-    : resolvedOpenCodeDefault
-      ? t('modelSelector.defaultWithResolved', { model: resolvedOpenCodeDefault.label })
+    : resolvedDefault
+      ? t('modelSelector.defaultWithResolved', { model: resolvedDefault.label })
       : t('members.leadModel.defaultModel');
   // The trigger is narrow: lead with the model so truncation cuts the marker,
   // not the model. The full label stays in the tooltip and aria-label.
-  const modelButtonText = resolvedOpenCodeDefault
-    ? t('modelSelector.defaultCompact', { model: resolvedOpenCodeDefault.modelLabel })
+  const modelButtonText = resolvedDefault
+    ? t('modelSelector.defaultCompact', { model: resolvedDefault.modelLabel })
     : modelButtonLabel;
   const modelButtonAriaLabel = t('members.leadModel.providerModelAria', {
     provider: getTeamProviderLabel(providerId),
@@ -281,6 +289,7 @@ export const LeadModelRow = ({
             providerId={providerId}
             onProviderChange={onProviderChange}
             value={model}
+            limitContext={limitContext}
             onValueChange={onModelChange}
             projectPath={projectPath}
             id="lead-model"
@@ -303,6 +312,7 @@ export const LeadModelRow = ({
             id="lead-effort"
             providerId={providerId}
             model={model}
+            projectPath={projectPath}
             limitContext={limitContext}
           />
           {providerId === 'opencode' ? (

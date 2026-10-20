@@ -2,6 +2,11 @@ import {
   clearInheritedMemberModelsUnavailableForProvider,
   resolveProviderScopedMemberModel,
 } from '@renderer/components/team/dialogs/memberModelScope';
+import {
+  getAvailableTeamProviderModels,
+  getTeamModelSelectionError,
+  normalizeTeamModelForUi,
+} from '@renderer/utils/teamModelAvailability';
 import { describe, expect, it } from 'vitest';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
@@ -50,6 +55,36 @@ describe('memberModelScope', () => {
     });
   });
 
+  it.each([
+    'minimax/MiniMax-M2.7',
+    'openrouter/minimax/minimax-m2.7',
+    'opencode/minimax-m2.5-free',
+  ])('preserves saved %s without offering it as a new choice', (model) => {
+    const status = freshScopedProviderStatus([model, 'minimax/MiniMax-M3.1-Flash']);
+    expect(getAvailableTeamProviderModels('opencode', status)).toEqual([
+      'minimax/MiniMax-M3.1-Flash',
+    ]);
+    expect(normalizeTeamModelForUi('opencode', model, status)).toBe(model);
+    expect(getTeamModelSelectionError('opencode', model, status)).toBeNull();
+    expect(
+      resolveProviderScopedMemberModel({
+        memberModel: model,
+        selectedProviderId: 'opencode',
+        runtimeProviderStatusById: providerStatuses([status]),
+      })
+    ).toEqual({ providerId: 'opencode', model });
+
+    const unavailable = {
+      ...status,
+      modelAvailability: [{ modelId: model, status: 'unavailable' as const, reason: 'Retired' }],
+    };
+    expect(normalizeTeamModelForUi('opencode', model, unavailable)).toBe('');
+    expect(getTeamModelSelectionError('opencode', model, unavailable)).toContain('Retired');
+    expect(
+      getTeamModelSelectionError('opencode', model, terminalAuthoritativeEmptyCatalogStatus())
+    ).toContain('not available');
+  });
+
   it('preserves a saved teammate model until cold-start provider status arrives', () => {
     const scoped = resolveProviderScopedMemberModel({
       memberProviderId: 'opencode',
@@ -75,9 +110,7 @@ describe('memberModelScope', () => {
     const result = clearInheritedMemberModelsUnavailableForProvider({
       members: [inheritedStale, explicitGemini],
       selectedProviderId: 'opencode',
-      runtimeProviderStatusById: providerStatuses([
-        terminalAuthoritativeEmptyCatalogStatus(),
-      ]),
+      runtimeProviderStatusById: providerStatuses([terminalAuthoritativeEmptyCatalogStatus()]),
     });
 
     expect(result.changed).toBe(true);

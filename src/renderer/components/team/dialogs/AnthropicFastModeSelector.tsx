@@ -1,14 +1,13 @@
 import React, { useMemo } from 'react';
 
-import {
-  resolveAnthropicFastMode,
-  resolveAnthropicRuntimeSelection,
-} from '@features/anthropic-runtime-profile/renderer';
+import { resolveAnthropicFastMode } from '@features/anthropic-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Label } from '@renderer/components/ui/label';
-import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { cn } from '@renderer/lib/utils';
+import { resolveAnthropicProviderRuntimeSelection } from '@renderer/utils/anthropicRuntimeSelection';
 import { Zap } from 'lucide-react';
+
+import { useTeamModelProviderStatus } from './useTeamModelProviderStatus';
 
 import type { TeamFastMode } from '@shared/types';
 
@@ -18,6 +17,7 @@ export interface AnthropicFastModeSelectorProps {
   providerFastModeDefault: boolean;
   model?: string;
   limitContext: boolean;
+  projectPath?: string | null;
   id?: string;
 }
 
@@ -27,29 +27,15 @@ export const AnthropicFastModeSelector: React.FC<AnthropicFastModeSelectorProps>
   providerFastModeDefault,
   model,
   limitContext,
+  projectPath,
   id,
 }) => {
   const { t } = useAppTranslation('team');
-  const { providerStatus } = useEffectiveCliProviderStatus('anthropic');
+  const { providerStatus } = useTeamModelProviderStatus('anthropic', projectPath);
 
   const selection = useMemo(
-    () =>
-      resolveAnthropicRuntimeSelection({
-        source: {
-          modelCatalog: providerStatus?.modelCatalog,
-          runtimeCapabilities: providerStatus?.runtimeCapabilities,
-        },
-        selectedModel: model,
-        limitContext,
-        defaultLaunchModel: providerStatus?.defaultModel,
-      }),
-    [
-      limitContext,
-      model,
-      providerStatus?.defaultModel,
-      providerStatus?.modelCatalog,
-      providerStatus?.runtimeCapabilities,
-    ]
+    () => resolveAnthropicProviderRuntimeSelection(providerStatus, model, limitContext),
+    [limitContext, model, providerStatus]
   );
 
   const resolution = useMemo(

@@ -642,7 +642,8 @@
       "byTime": "समय",
       "byUnread": "बिना पढ़े",
       "byProject": "परियोजना",
-      "byTeam": "टीम द्वारा"
+      "byTeam": "टीम द्वारा",
+      "manualOrder": "मैनुअल क्रम"
     }
   },
   "toolViewer": {

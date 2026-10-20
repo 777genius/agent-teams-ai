@@ -34,6 +34,7 @@ import * as path from 'path';
 
 import { loadMainSentryArtifactPolicy } from './sentryArtifactPolicy';
 
+import type { RendererLoadDiagnostics } from '@main/utils/rendererEntry';
 import type { SentryTelemetryStatus } from '@shared/types/api';
 
 // ---------------------------------------------------------------------------
@@ -130,7 +131,11 @@ interface SentryMainApi {
   init?: (options: SentryInitOptions) => void;
   captureException?: (
     error: unknown,
-    context?: { tags?: Record<string, string>; contexts?: Record<string, Record<string, number>> }
+    context?: {
+      tags?: Record<string, string>;
+      contexts?: Record<string, Record<string, number>>;
+      fingerprint?: string[];
+    }
   ) => string | undefined;
   setUser?: (user: { id: string } | null) => void;
   setTags?: (tags: Record<string, string>) => void;
@@ -392,6 +397,40 @@ export function captureMainException(error: unknown, operation: string): string 
   return Sentry.captureException(exception, {
     tags: { 'error.operation': safeOperation },
   });
+}
+
+/** Add path-free local entry facts without changing the existing load exception. */
+export function captureRendererLoadFailure(
+  error: unknown,
+  operation: 'renderer_load_file' | 'renderer_did_fail_load',
+  diagnostics?: RendererLoadDiagnostics
+): string | undefined {
+  if (!diagnostics) return captureMainException(error, operation);
+  if (!initialized || !telemetryAllowed || !Sentry?.captureException) return undefined;
+  const safeDiagnostics: Record<string, number> = {};
+  for (const field of [
+    'packaged',
+    'selected_candidate',
+    'primary_present_at_selection',
+    'fallback_present_at_selection',
+    'primary_present',
+    'fallback_present',
+  ] as const) {
+    const value = diagnostics[field];
+    if (value === 0 || value === 1) safeDiagnostics[field] = value;
+  }
+  const code = diagnostics.error_code;
+  if (typeof code === 'number' && Number.isInteger(code) && code < 0 && code >= -10_000) {
+    safeDiagnostics.error_code = code;
+  }
+  return Sentry.captureException(
+    error instanceof Error ? error : new Error('Non-Error exception'),
+    {
+      tags: { 'error.operation': operation },
+      contexts: { renderer_load: safeDiagnostics },
+      fingerprint: ['{{ default }}', operation, String(safeDiagnostics.error_code ?? 'unknown')],
+    }
+  );
 }
 
 /** Preserve crash evidence without accepting arbitrary renderer or project metadata. */

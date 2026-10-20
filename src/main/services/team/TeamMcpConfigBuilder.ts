@@ -199,7 +199,7 @@ async function resolveWorkspaceTsxCli(checked: string[]): Promise<string | null>
 
       checked.push(tsxCli);
       if (await pathExists(tsxCli)) {
-        return tsxCli;
+        return await fs.promises.realpath(tsxCli);
       }
     } catch (error) {
       logger.warn(
@@ -588,7 +588,7 @@ export async function resolveAgentTeamsMcpLaunchSpec(
     if (tsxCli) {
       return {
         command: await resolveNodePath(options),
-        args: [tsxCli, sourceEntry],
+        args: [tsxCli, await fs.promises.realpath(sourceEntry)],
       };
     }
   }

@@ -1808,6 +1808,42 @@ describe('CLI status visibility during completed install state', () => {
     }
   });
 
+  it('shows runtime inventory when only a retired MiniMax route is available', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      binaryPath: '/app-data/runtimes/opencode/opencode',
+      version: '1.17.18',
+      source: 'app-managed',
+      state: 'ready',
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          ...createDeferredMultimodelProvider('opencode', 'OpenCode'),
+          supported: true,
+          verificationState: 'verified',
+          statusMessage: null,
+          statusCheckOutcome: 'model_only',
+          modelCatalogRefreshState: 'ready',
+          models: ['opencode/minimax-m2.5-free'],
+        },
+      ],
+    });
+    const host = document.createElement('div');
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(CliStatusBanner)));
+      expect(host.textContent).not.toContain('No models from connected providers');
+      expect(host.textContent).not.toContain('Models unavailable for this runtime build');
+      expect(host.textContent).toContain('minimax-m2.5-free');
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
   it('shows available models without endless loading for a completed OpenCode passive summary', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';

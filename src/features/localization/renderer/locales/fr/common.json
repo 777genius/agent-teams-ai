@@ -642,7 +642,8 @@
       "byTime": "À temps",
       "byUnread": "Non lu",
       "byProject": "Par projet",
-      "byTeam": "Par équipe"
+      "byTeam": "Par équipe",
+      "manualOrder": "Ordre manuel"
     }
   },
   "toolViewer": {

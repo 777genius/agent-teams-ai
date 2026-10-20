@@ -1,5 +1,6 @@
 import { isAgentVideoMimeType, resolveAgentAttachmentCapability } from '../../core/domain';
 
+import type { ResolveOpenCodeInputDeclaration } from '../../contracts';
 import type { AttachmentPayload, TeamProviderId, TeamViewSnapshot } from '@shared/types';
 
 export async function getNativeAttachmentRecipientRestriction(input: {
@@ -8,6 +9,7 @@ export async function getNativeAttachmentRecipientRestriction(input: {
   providerId: TeamProviderId | undefined;
   attachments: AttachmentPayload[];
   readTeamData: (teamName: string) => Promise<TeamViewSnapshot>;
+  resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration;
 }): Promise<string | null> {
   if (input.attachments.length === 0) {
     return null;
@@ -16,16 +18,23 @@ export async function getNativeAttachmentRecipientRestriction(input: {
   const snapshot =
     input.providerId === 'opencode' ? await input.readTeamData(input.teamName) : undefined;
   const normalizedMemberName = input.memberName.trim().toLowerCase();
-  const member =
-    snapshot?.members.find(
-      (candidate) => candidate.name.trim().toLowerCase() === normalizedMemberName
-    ) ??
-    snapshot?.config.members?.find(
-      (candidate) => candidate.name.trim().toLowerCase() === normalizedMemberName
-    );
+  const member = snapshot?.members.find(
+    (candidate) => candidate.name.trim().toLowerCase() === normalizedMemberName
+  );
+  const projectPath =
+    member?.laneKind === 'secondary' && member.laneOwnerProviderId === 'opencode'
+      ? member.cwd || snapshot?.config.projectPath
+      : snapshot?.config.projectPath || member?.cwd;
+  const declaredInputModalities =
+    input.providerId === 'opencode' && projectPath && member?.model
+      ? ((await input
+          .resolveOpenCodeInputDeclaration?.({ projectPath, model: member.model })
+          .catch(() => null)) ?? null)
+      : null;
   const capability = resolveAgentAttachmentCapability({
     providerId: input.providerId ?? member?.providerId ?? 'unknown',
     model: member?.model,
+    declaredInputModalities,
     nativeInboxTextAttachmentsSupported: true,
   });
 

@@ -1215,6 +1215,105 @@ describe('OpenCodeBridgeCommandClient', () => {
 });
 
 describe('redactBridgeDiagnosticText', () => {
+  it.each([
+    'token={"value":"TEST_SECRET"} status=ok',
+    'API_KEY=["TEST_SECRET",{"value":"TEST_SECRET"}] status=ok',
+    'refresh token: {"access":"TEST_SECRET"} status=ok',
+    'Authorization: Bearer {"value":"TEST_SECRET"} status=ok',
+  ])('redacts bare-key containers and preserves public diagnostics: %s', (value) => {
+    const redacted = redactBridgeDiagnosticText(value);
+    expect(redacted).not.toContain('TEST_SECRET');
+    expect(redacted).toContain('[redacted] status=ok');
+    expect(redactBridgeDiagnosticText(redacted)).toBe(redacted);
+  });
+
+  it.each([
+    'token={"value":"TEST_SECRET"',
+    'token=["TEST_SECRET"}',
+    'token={}TEST_SECRET status=ok',
+    'token=[]TEST_SECRET status=ok',
+    'token=prefix"TEST_SECRET suffix" status=ok',
+    "token=prefix'TEST_SECRET suffix' status=ok",
+    'token=prefix`TEST_SECRET` status=ok',
+    'token=prefix\\ TEST_SECRET status=ok',
+    'token=prefix\\\"TEST_SECRET status=ok',
+    'token="TEST_SECRET"TEST_SECRET_SUFFIX status=ok',
+    "token='TEST_SECRET'TEST_SECRET_SUFFIX status=ok",
+    "token={'value':'TEST_SECRET'} status=ok",
+  ])('fails closed for unsupported bare credential syntax: %s', (value) => {
+    const redacted = redactBridgeDiagnosticText(value);
+    expect(redacted).not.toContain('TEST_SECRET');
+    expect(redactBridgeDiagnosticText(redacted)).toBe(redacted);
+  });
+
+  it.each([
+    '{"credential":"TEST_SECRET"}',
+    'credentials="TEST_SECRET" status=ok',
+    'Authorization: Negotiate TEST_SECRET',
+    'Authorization: "Bearer TEST_SECRET" status=public',
+    'Authorization: Digest username="u",response="TEST_SECRET"',
+    'cookie=session-TEST_SECRET status=ok',
+    'Cookie: sid=TEST_SECRET; other=TEST_SECRET_SECOND',
+    'Set-Cookie: sid=TEST_SECRET; other=TEST_SECRET_SECOND\r\n status=private',
+    '{"Set-Cookie":"session=TEST_SECRET; Path=/"}',
+  ])('redacts generic credentials before any raw log sink: %s', (value) => {
+    const redacted = redactBridgeDiagnosticText(value);
+    expect(redacted).not.toContain('TEST_SECRET');
+    expect(redacted).toContain('[redacted]');
+    expect(redactBridgeDiagnosticText(redacted)).toBe(redacted);
+  });
+
+  it('keeps long dashed non-assignments from blocking diagnostic redaction', () => {
+    const started = performance.now();
+    const redacted = redactBridgeDiagnosticText(`AUTH_TOKEN="TEST_SECRET" ${'x-'.repeat(8_000)}`);
+
+    expect(performance.now() - started).toBeLessThan(500);
+    expect(redacted).toContain('AUTH_TOKEN=[redacted]');
+    expect(redacted).not.toContain('TEST_SECRET');
+    expect(redacted.length).toBeLessThan(4_100);
+  });
+
+  it.each([
+    'abort response: {"token":"TEST_SECRET_JSON","status":"abort failed"}',
+    'abort response: {"Authorization":"Bearer TEST_SECRET_JSON_AUTH"}',
+    'AUTH_TOKEN="TEST_SECRET_QUOTED more secret" status=failed',
+    "password='TEST_SECRET_SINGLE\nsecond line' status=failed",
+    'api-key="TEST_SECRET_ESCAPED\\"still secret" status=failed',
+    JSON.stringify({ body: JSON.stringify({ token: 'TEST_SECRET_NESTED"still secret' }) }),
+    'secret="TEST_SECRET_UNTERMINATED\r\nmore secret',
+  ])('redacts complete quoted values from external diagnostics: %s', (value) => {
+    const redacted = redactBridgeDiagnosticText(value);
+
+    expect(redacted).toContain('[redacted]');
+    expect(redacted).not.toContain('TEST_SECRET');
+    expect(redacted).not.toContain('more secret');
+    expect(redacted).not.toContain('second line');
+    expect(redacted).not.toContain('still secret');
+    expect(redactBridgeDiagnosticText(redacted)).toBe(redacted);
+  });
+
+  it('redacts punctuation inside bare credentials while retaining JSON field delimiters', () => {
+    expect(
+      redactBridgeDiagnosticText(
+        'token=TEST_SECRET,TAIL password=ab;cd AUTH_TOKEN=[redacted],TAIL ' +
+          'secret=abc}def] status=failed\r\n{"token":123,"status":"failed"}'
+      )
+    ).toBe(
+      'token=[redacted] password=[redacted] AUTH_TOKEN=[redacted] ' +
+        'secret=[redacted] status=failed\r\n{"token":[redacted],"status":"failed"}'
+    );
+  });
+
+  it('redacts before bounding even when a quoted value crosses the input cap', () => {
+    const redacted = redactBridgeDiagnosticText(
+      `${'x'.repeat(3_970)} AUTH_TOKEN="TEST_SECRET_PREFIX${'s'.repeat(100)}" tail`
+    );
+
+    expect(redacted).not.toContain('TEST_SECRET');
+    expect(redacted).toContain('[redacted]');
+    expect(redacted.length).toBeLessThan(4_100);
+  });
+
   it('redacts common secret forms and caps large payloads', () => {
     const value = `token=abc password:secret Authorization: Bearer live ${'x'.repeat(5000)}`;
 

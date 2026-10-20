@@ -642,7 +642,8 @@
       "byTime": "Theo thời gian",
       "byUnread": "Theo chưa đọc",
       "byProject": "Theo dự án",
-      "byTeam": "Theo đội ngũ"
+      "byTeam": "Theo đội ngũ",
+      "manualOrder": "Thứ tự thủ công"
     }
   },
   "toolViewer": {
