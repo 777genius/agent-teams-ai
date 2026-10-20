@@ -2182,36 +2182,38 @@ export const CreateTeamDialog = ({
             cwd: effectiveCwd,
             projectFolder: api.projectFolder,
           });
-          await api.teams.createConfig({
-            runtimeSelectionVersion: request.runtimeSelectionVersion,
-            teamName: request.teamName,
-            displayName: request.displayName,
-            description: request.description,
-            color: request.color,
-            members: request.members,
-            cwd: configOnlyCwd,
-            prompt: request.prompt,
-            providerId: request.providerId,
-            providerBackendId: request.providerBackendId,
-            model: resolvePersistedTeamModel({
-              model: request.model,
-              selectedModel: effectiveSelectedModel,
+          await gatewayBindings.run(() =>
+            api.teams.createConfig({
+              runtimeSelectionVersion: request.runtimeSelectionVersion,
+              teamName: request.teamName,
+              displayName: request.displayName,
+              description: request.description,
+              color: request.color,
+              members: request.members,
+              cwd: configOnlyCwd,
+              prompt: request.prompt,
               providerId: request.providerId,
-              globalStatus: globalRuntimeProviderStatusById.get('anthropic'),
-              scopedStatus: runtimeProviderStatusById.get(selectedProviderId),
-              projectSelectionReady: launchPreflightSelectionReady,
-              probedCwd: effectiveCwd,
-              persistedCwd: configOnlyCwd,
-              limitContext: effectiveAnthropicRuntimeLimitContext,
-            }),
-            effort: request.effort,
-            fastMode: request.fastMode,
-            syncModelsWithLead: request.syncModelsWithLead,
-            limitContext: request.limitContext,
-            skipPermissions: request.skipPermissions,
-            worktree: request.worktree,
-            extraCliArgs: request.extraCliArgs,
-          });
+              providerBackendId: request.providerBackendId,
+              model: resolvePersistedTeamModel({
+                model: request.model,
+                selectedModel: effectiveSelectedModel,
+                providerId: request.providerId,
+                globalStatus: globalRuntimeProviderStatusById.get('anthropic'),
+                scopedStatus: runtimeProviderStatusById.get(selectedProviderId),
+                projectSelectionReady: launchPreflightSelectionReady,
+                probedCwd: effectiveCwd,
+                persistedCwd: configOnlyCwd,
+                limitContext: effectiveAnthropicRuntimeLimitContext,
+              }),
+              effort: request.effort,
+              fastMode: request.fastMode,
+              syncModelsWithLead: request.syncModelsWithLead,
+              limitContext: request.limitContext,
+              skipPermissions: request.skipPermissions,
+              worktree: request.worktree,
+              extraCliArgs: request.extraCliArgs,
+            })
+          );
           if (selectedOrganizationPlacement) {
             try {
               await api.organizations.assignTeamToUnit({
@@ -2248,7 +2250,9 @@ export const CreateTeamDialog = ({
         if (!syncModelsWithLead) {
           persistCurrentMemberRuntimePreferences(members);
         }
-        await onCreate(request, selectedOrganizationPlacement ?? undefined);
+        await gatewayBindings.run(() =>
+          onCreate(request, selectedOrganizationPlacement ?? undefined)
+        );
         onOpenTeam(request.teamName, effectiveCwd || undefined);
         resetFormState();
         onClose();

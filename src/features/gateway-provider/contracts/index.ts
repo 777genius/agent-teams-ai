@@ -47,6 +47,8 @@ export interface GatewayBindMemberRequest {
 export interface GatewayUnbindMemberRequest {
   teamName: string;
   memberName: string;
+  /** Remove only the binding allocated by this draft, if it is still current. */
+  expectedBinding?: Pick<GatewayMemberBindingDto, 'gatewayUsageRef' | 'boundAt'>;
 }
 
 export interface GatewayProbeModelsRequest {

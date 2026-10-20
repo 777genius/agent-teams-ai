@@ -7,6 +7,7 @@ import {
   assertMemberGatewaySpawnCompatibility,
   beginGatewayMemberLaunches,
   buildMemberCodexCliArgs,
+  cleanupUnspawnedGatewayLaunch,
   getRuntimeCatalogMembers,
   type MemberGatewayRuntimeSeams,
   MemberGatewaySpawnCompatibilityError,
@@ -374,4 +375,33 @@ it('rejects a bound unsupported runtime instead of falling back to its global cr
       memberSpec: { name: 'builder', model: 'model' },
     })
   ).rejects.toThrow('Claude, Codex and OpenCode');
+});
+
+describe('unspawned launch rollback', () => {
+  it('closes captured streams and retains the original spawn failure if rollback also fails', async () => {
+    const abortUnspawnedLaunch = vi.fn().mockRejectedValue(new Error('cleanup unavailable'));
+    const stream = { destroy: vi.fn() };
+    const failure = new Error('sendKeys failed');
+    const launch = async () => {
+      try {
+        throw failure;
+      } catch (error) {
+        await cleanupUnspawnedGatewayLaunch({ abortUnspawnedLaunch }, [stream]);
+        throw error;
+      }
+    };
+    await expect(launch()).rejects.toBe(failure);
+    expect(console.warn).toHaveBeenCalledWith(
+      '[GatewayMemberLaunch]',
+      expect.stringContaining('cleanup unavailable')
+    );
+    vi.mocked(console.warn).mockClear();
+    expect(stream.destroy).toHaveBeenCalledOnce();
+    expect(abortUnspawnedLaunch).toHaveBeenCalledOnce();
+  });
+  it('does not close an active snapshot after tmux accepted the command', async () => {
+    const abortUnspawnedLaunch = vi.fn();
+    await cleanupUnspawnedGatewayLaunch({ abortUnspawnedLaunch }, [], true);
+    expect(abortUnspawnedLaunch).not.toHaveBeenCalled();
+  });
 });

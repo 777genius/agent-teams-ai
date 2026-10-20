@@ -31,7 +31,11 @@ interface MemberGatewaySelectorProps {
   originalName?: string;
   selectedModel?: string;
   onModelChange: (model: string) => void;
-  onBindingsChange?: () => Promise<void>;
+  onBindingsChange?: (binding?: GatewayMemberBindingDto) => Promise<void>;
+  disabled?: boolean;
+  onBindRequest?: (
+    operation: () => Promise<GatewayMemberBindingDto>
+  ) => Promise<GatewayMemberBindingDto>;
 }
 
 type GatewayErrorKind = 'authRejected' | 'unavailable' | 'message';
@@ -55,6 +59,8 @@ export const MemberGatewaySelector = ({
   selectedModel,
   onModelChange,
   onBindingsChange,
+  disabled = false,
+  onBindRequest,
 }: MemberGatewaySelectorProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
   const [profiles, setProfiles] = useState<GatewayProfileDto[]>([]);
@@ -168,19 +174,21 @@ export const MemberGatewaySelector = ({
     setErrorKind(null);
     setErrorMessage('');
     try {
-      await bindGatewayMember({
-        teamName,
-        memberName: trimmedMemberName,
-        profileId,
-        apiKey: keyRef.current,
-      });
+      const bind = () =>
+        bindGatewayMember({
+          teamName,
+          memberName: trimmedMemberName,
+          profileId,
+          apiKey: keyRef.current,
+        });
+      const createdBinding = await (onBindRequest ? onBindRequest(bind) : bind());
       keyRef.current = '';
       setKeyReady(false);
       setModels(null);
       setModelChoice('');
       await refresh();
       try {
-        await onBindingsChange?.();
+        await onBindingsChange?.(createdBinding);
       } finally {
         onModelChange(modelChoice);
       }
@@ -322,7 +330,7 @@ export const MemberGatewaySelector = ({
             type="button"
             size="sm"
             className="h-8 shrink-0"
-            disabled={busy || !modelChoice || !keyReady}
+            disabled={busy || disabled || !modelChoice || !keyReady}
             onClick={() => void handleBind()}
           >
             {t('memberDraft.gateway.bindButton')}

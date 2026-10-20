@@ -427,7 +427,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   });
   const { scope: openCodeLocalModelScope, gatewayBindings } = useDialogMemberModelScope({
     enabled: open,
-    teamName: effectiveTeamName,
+    teamName: isLaunchMode ? effectiveTeamName : undefined,
     projectPath: effectiveCwd,
     selectedProviderId,
     members: membersDrafts,
@@ -2252,13 +2252,21 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             nextMembers
           );
           if (isRelaunch) {
-            await props.onRelaunch(launchRequest, nextMembers, intent);
+            await gatewayBindings.run(
+              () =>
+                props.onRelaunch(launchRequest, nextMembers, intent, () =>
+                  gatewayBindings.markSaved(nextMembers.map((member) => member.name))
+                ),
+              []
+            );
           } else {
             await props.validateMemberSettings?.();
-            await api.teams.replaceMembers(effectiveTeamName, {
-              members: nextMembers,
-              memberSettingsRelaunch: intent,
-            });
+            await gatewayBindings.run(() =>
+              api.teams.replaceMembers(effectiveTeamName, {
+                members: nextMembers,
+                memberSettingsRelaunch: intent,
+              })
+            );
             await props.onLaunch(launchRequest);
           }
           openTeamTab(effectiveTeamName, effectiveCwd || defaultProjectPath);

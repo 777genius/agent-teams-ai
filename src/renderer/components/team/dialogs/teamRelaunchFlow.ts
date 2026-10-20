@@ -10,6 +10,7 @@ interface ExecuteTeamRelaunchOptions {
   stopTeam: (teamName: string) => Promise<void>;
   replaceMembers: (teamName: string, request: ReplaceMembersRequest) => Promise<void>;
   launchTeam: (request: TeamLaunchRequest) => Promise<unknown>;
+  onMembersSaved?: () => void;
 }
 
 export async function executeTeamRelaunch({
@@ -22,6 +23,7 @@ export async function executeTeamRelaunch({
   stopTeam,
   replaceMembers,
   launchTeam,
+  onMembersSaved,
 }: ExecuteTeamRelaunchOptions): Promise<void> {
   await validateBeforeReplace?.();
   if (isTeamAlive) {
@@ -32,5 +34,6 @@ export async function executeTeamRelaunch({
     members,
     ...(memberSettingsRelaunch ? { memberSettingsRelaunch } : {}),
   });
+  onMembersSaved?.();
   await launchTeam(request);
 }

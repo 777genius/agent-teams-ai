@@ -207,3 +207,20 @@ describe('GatewayProviderService', () => {
     expect(state.sources).toHaveLength(1);
   });
 });
+
+it('conditionally unbinds only the expected draft binding, retaining a newer owner selection', async () => {
+  const { service, store } = await createService();
+  const profile = await service.saveProfile({
+    displayName: 'Local',
+    baseUrl: 'http://127.0.0.1:8080',
+  });
+  const owner = { teamName: 'team', memberName: 'alice', profileId: profile.id };
+  const first = await service.bindMember({ ...owner, apiKey: 'gw-before' });
+  const second = await service.bindMember({ ...owner, apiKey: 'gw-after' });
+  await service.unbindMember({ ...owner, expectedBinding: first });
+  expect((await service.listBindings('team'))[0].gatewayUsageRef).toBe(second.gatewayUsageRef);
+  await service.unbindMember({ ...owner, expectedBinding: { ...second, boundAt: 'stale-time' } });
+  expect((await store.read()).bindings).toHaveLength(1);
+  await service.unbindMember({ ...owner, expectedBinding: second });
+  expect((await store.read()).bindings).toHaveLength(0);
+});

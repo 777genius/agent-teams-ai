@@ -9,7 +9,10 @@ import {
   useGatewayMemberBindings,
 } from '../useGatewayMemberBindings';
 
-vi.mock('../../adapters/gatewayProviderApi', () => ({ listGatewayBindings: vi.fn() }));
+vi.mock('../../adapters/gatewayProviderApi', () => ({
+  listGatewayBindings: vi.fn(),
+  unbindGatewayMember: vi.fn(),
+}));
 const list = vi.mocked(listGatewayBindings);
 const binding = (memberName: string) =>
   ({ memberName }) as Awaited<ReturnType<typeof listGatewayBindings>>[number];

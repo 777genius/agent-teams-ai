@@ -16,6 +16,7 @@ import {
 } from '@main/services/runtime/ProviderConnectionService';
 import { resolveTeamProviderId } from '@main/services/runtime/providerRuntimeEnv';
 import { isLeadMember } from '@shared/utils/leadDetection';
+import { createLogger } from '@shared/utils/logger';
 
 import { normalizeTeamMemberProviderId } from './TeamProvisioningMemberSpecs';
 
@@ -409,4 +410,20 @@ export async function beginGatewayMemberLaunches(
   members: ReadonlyMap<string, MemberGatewayRuntimeArgs> | undefined
 ): Promise<void> {
   for (const member of members?.values() ?? []) await member.beginLaunch?.();
+}
+
+/** Roll back only launches that never reached a child; preserve the original failure. */
+export async function cleanupUnspawnedGatewayLaunch(
+  args: Pick<DirectGatewaySpawnArgs, 'abortUnspawnedLaunch'> | null,
+  streams: ReadonlyArray<{ destroy(): unknown }> = [],
+  spawned = false
+): Promise<void> {
+  for (const stream of streams) stream.destroy();
+  if (!spawned) {
+    await args?.abortUnspawnedLaunch?.().catch((error: unknown) => {
+      createLogger('GatewayMemberLaunch').warn(
+        `Could not close an unspawned gateway launch: ${String(error)}`
+      );
+    });
+  }
 }

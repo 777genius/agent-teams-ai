@@ -763,6 +763,8 @@ export const MemberDraftRow = ({
                   originalName={member.originalName}
                   selectedModel={member.model}
                   onBindingsChange={gatewayBindings?.refresh}
+                  onBindRequest={gatewayBindings?.runBinding}
+                  disabled={gatewayBindings?.pending}
                   onModelChange={(model) => {
                     if (lockProviderModel) return;
                     onModelChange(member.id, model);

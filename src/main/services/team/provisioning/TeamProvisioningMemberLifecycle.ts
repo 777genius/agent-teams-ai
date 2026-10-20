@@ -50,7 +50,10 @@ import {
   createHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase,
   type HasOpenCodeMemberRuntimeEvidenceForControlledRelaunchInput,
 } from './TeamProvisioningHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase';
-import { applyDirectGatewayArgs } from './TeamProvisioningMemberGatewayRuntime';
+import {
+  applyDirectGatewayArgs,
+  cleanupUnspawnedGatewayLaunch,
+} from './TeamProvisioningMemberGatewayRuntime';
 import {
   matchesExactTeamMemberName,
   matchesMemberNameOrBase,
@@ -771,14 +774,15 @@ export class TeamProvisioningMemberLifecycleController {
         });
         await directGatewayArgs?.beginLaunch?.();
         await sendKeysToTmuxPaneForCurrentPlatform(input.paneId, launcher.command);
+        directTmuxLaunchSucceeded = true;
         this.appendMemberBootstrapDiagnostic(
           input.run,
           input.memberName,
           `restart command delivered to tmux pane ${input.paneId}`
         );
         this.setMemberSpawnStatus(input.run, input.memberName, 'waiting');
-        directTmuxLaunchSucceeded = true;
       } catch (error) {
+        await cleanupUnspawnedGatewayLaunch(directGatewayArgs, [], directTmuxLaunchSucceeded);
         await launcher.cleanup();
         throw error;
       }
@@ -992,15 +996,11 @@ export class TeamProvisioningMemberLifecycleController {
           stdio: ['pipe', 'pipe', 'pipe'],
         });
       } catch (error) {
-        stdoutLog.destroy();
-        stderrLog.destroy();
-        await directGatewayArgs?.abortUnspawnedLaunch?.();
+        await cleanupUnspawnedGatewayLaunch(directGatewayArgs, [stdoutLog, stderrLog]);
         throw error;
       }
       if (!child.pid) {
-        stdoutLog.destroy();
-        stderrLog.destroy();
-        await directGatewayArgs?.abortUnspawnedLaunch?.();
+        await cleanupUnspawnedGatewayLaunch(directGatewayArgs, [stdoutLog, stderrLog]);
         throw new Error(`Failed to spawn teammate process for ${agentId}: missing pid`);
       }
       const runtimePid = child.pid;

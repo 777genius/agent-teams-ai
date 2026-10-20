@@ -23,12 +23,13 @@ import type {
   GatewayProfileSaveRequest,
   GatewayUnbindMemberRequest,
 } from '../../contracts/index';
-import type { GatewayClockPort,GatewayProviderStorePort } from '../../core/application/ports';
+import type { GatewayClockPort, GatewayProviderStorePort } from '../../core/application/ports';
+import type { GatewayModelUsage, GatewayUsageSourceInfo } from '../../core/application/usage';
 import type {
-  GatewayModelUsage,
-  GatewayUsageSourceInfo,
-} from '../../core/application/usage';
-import type { GatewayConnectionSpec, GatewayProviderState, GatewayUsageSource } from '../../core/domain/index';
+  GatewayConnectionSpec,
+  GatewayProviderState,
+  GatewayUsageSource,
+} from '../../core/domain/index';
 import type { GatewayCredentialStore } from '../adapters/output/GatewayCredentialStore';
 
 export interface ResolvedMemberGatewayConnection {
@@ -102,7 +103,10 @@ export class GatewayProviderService {
           baseUrl: request.baseUrl,
           allowPrivateNetwork: request.allowPrivateNetwork,
         });
-        if (baseUrl !== existing.baseUrl && state.bindings.some((b) => b.profileId === existing.id)) {
+        if (
+          baseUrl !== existing.baseUrl &&
+          state.bindings.some((b) => b.profileId === existing.id)
+        ) {
           throw new GatewayValidationError(
             'Unbind teammates from this profile before changing its URL, or create another profile.'
           );
@@ -137,9 +141,7 @@ export class GatewayProviderService {
   async deleteProfile(id: string): Promise<void> {
     await this.store.mutate((state) => {
       if (state.bindings.some((binding) => binding.profileId === id)) {
-        throw new GatewayValidationError(
-          'Unbind teammates from this profile before deleting it.'
-        );
+        throw new GatewayValidationError('Unbind teammates from this profile before deleting it.');
       }
       const index = state.profiles.findIndex((profile) => profile.id === id);
       if (index === -1) throw new GatewayValidationError('Gateway profile was not found.');
@@ -294,6 +296,14 @@ export class GatewayProviderService {
   async unbindMember(request: GatewayUnbindMemberRequest): Promise<void> {
     const teamName = requireName(request.teamName, 'Team name');
     const memberName = requireName(request.memberName, 'Member name');
+    const expected = request.expectedBinding;
+    if (
+      expected !== undefined &&
+      (!expected ||
+        typeof expected.gatewayUsageRef !== 'string' ||
+        typeof expected.boundAt !== 'string')
+    )
+      throw new GatewayValidationError('Invalid expected gateway binding.');
     const nowIso = this.clock.now().toISOString();
     await this.store.mutate((state) => {
       const bindingId = gatewayBindingKey(teamName, memberName);
@@ -301,6 +311,13 @@ export class GatewayProviderService {
         (binding) => gatewayBindingKey(binding.teamName, binding.memberName) === bindingId
       );
       if (index === -1) return;
+      const current = state.bindings[index];
+      if (
+        expected &&
+        (current.gatewayUsageRef !== expected.gatewayUsageRef ||
+          current.boundAt !== expected.boundAt)
+      )
+        return;
       const [removed] = state.bindings.splice(index, 1);
       this.retireSource(state, removed.gatewayUsageRef, nowIso);
     });
@@ -345,7 +362,9 @@ export class GatewayProviderService {
 
   async markRuntimeArtifactActive(gatewayUsageRef: string): Promise<void> {
     await this.store.mutate((state) => {
-      const source = state.sources.find((candidate) => candidate.gatewayUsageRef === gatewayUsageRef);
+      const source = state.sources.find(
+        (candidate) => candidate.gatewayUsageRef === gatewayUsageRef
+      );
       if (source) source.hasRuntimeArtifact = true;
     });
   }
@@ -353,7 +372,9 @@ export class GatewayProviderService {
   async markRuntimeArtifactRetired(gatewayUsageRef: string): Promise<void> {
     const nowIso = this.clock.now().toISOString();
     await this.store.mutate((state) => {
-      const source = state.sources.find((candidate) => candidate.gatewayUsageRef === gatewayUsageRef);
+      const source = state.sources.find(
+        (candidate) => candidate.gatewayUsageRef === gatewayUsageRef
+      );
       if (!source) return;
       source.hasRuntimeArtifact = false;
       source.runtimeArtifactRetiredAt = nowIso;
@@ -369,7 +390,8 @@ export class GatewayProviderService {
     const normalizedDay = requireDay(day);
     const state = await this.store.read();
     const source = state.sources.find((candidate) => candidate.gatewayUsageRef === gatewayUsageRef);
-    if (!source) throw new GatewayCredentialError('Gateway usage source was not found.', 'credential_missing');
+    if (!source)
+      throw new GatewayCredentialError('Gateway usage source was not found.', 'credential_missing');
     const baseUrl = normalizeGatewayBaseUrl({
       baseUrl: source.canonicalEndpoint,
       allowPrivateNetwork: source.allowPrivateNetwork,

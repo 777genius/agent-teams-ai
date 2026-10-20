@@ -195,44 +195,66 @@ export async function verifyGatewayUi(
   assert(profile);
   await capture('profile-created-edited');
 
-  const member = await memberDraft();
-  await member.locator(`#member-${memberName}-gateway-profile`).click();
-  await page.getByRole('option', { name: editedName, exact: true }).click();
-  await member.locator(`#member-${memberName}-gateway-key`).fill('gateway-e2e-invalid-key');
-  await member.getByRole('button', { name: 'Check key and load models', exact: true }).click();
-  await member.getByText('Key authorization was rejected.', { exact: true }).waitFor();
-  await capture('invalid-key');
-  await member.locator(`#member-${memberName}-gateway-key`).fill(options.apiKey);
-  await member.getByRole('button', { name: 'Check key and load models', exact: true }).click();
-  await member.locator(`#member-${memberName}-gateway-model`).click();
-  await page.getByRole('option', { name: model, exact: true }).click();
-  await member.getByRole('button', { name: 'Bind teammate', exact: true }).click();
-  await member.getByText(`Bound to ${editedName} · key stored`, { exact: true }).waitFor();
-  await readback('UI binding', async () =>
-    (await bindings()).some(
-      (binding) => binding.memberName === memberName && binding.profileId === profile.id
-    )
-  );
-  if (options.providerId) {
-    await member
-      .locator(`[data-testid="team-model-selector-provider-nav-${options.providerId}"]`)
-      .click();
-    // Runtime status can settle after the tab opens in inspection mode.
-    const providerLabel = options.providerId === 'opencode' ? 'OpenCode' : 'Codex';
-    await readback('confirmed ' + providerLabel + ' selection', async () => {
-      const useProvider = member.getByRole('button', { name: 'Use ' + providerLabel, exact: true });
-      if (await useProvider.count()) await useProvider.click();
-      const selected = member.getByRole('button', {
-        name: new RegExp(providerLabel + ' provider,', 'i'),
+  const bindDraft = async (checkInvalidKey = false): Promise<void> => {
+    const member = await memberDraft();
+    await member.locator(`#member-${memberName}-gateway-profile`).click();
+    await page.getByRole('option', { name: editedName, exact: true }).click();
+    if (checkInvalidKey) {
+      await member.locator(`#member-${memberName}-gateway-key`).fill('gateway-e2e-invalid-key');
+      await member.getByRole('button', { name: 'Check key and load models', exact: true }).click();
+      await member.getByText('Key authorization was rejected.', { exact: true }).waitFor();
+      await capture('invalid-key');
+    }
+    await member.locator(`#member-${memberName}-gateway-key`).fill(options.apiKey);
+    await member.getByRole('button', { name: 'Check key and load models', exact: true }).click();
+    await member.locator(`#member-${memberName}-gateway-model`).click();
+    await page.getByRole('option', { name: model, exact: true }).click();
+    await member.getByRole('button', { name: 'Bind teammate', exact: true }).click();
+    await member.getByText(`Bound to ${editedName} · key stored`, { exact: true }).waitFor();
+    await readback('UI binding', async () =>
+      (await bindings()).some(
+        (binding) => binding.memberName === memberName && binding.profileId === profile.id
+      )
+    );
+    if (options.providerId) {
+      await member
+        .locator(`[data-testid="team-model-selector-provider-nav-${options.providerId}"]`)
+        .click();
+      // Runtime status can settle after the tab opens in inspection mode.
+      const providerLabel = options.providerId === 'opencode' ? 'OpenCode' : 'Codex';
+      await readback('confirmed ' + providerLabel + ' selection', async () => {
+        const useProvider = member.getByRole('button', {
+          name: 'Use ' + providerLabel,
+          exact: true,
+        });
+        if (await useProvider.count()) await useProvider.click();
+        const selected = member.getByRole('button', {
+          name: new RegExp(providerLabel + ' provider,', 'i'),
+        });
+        return (
+          (await selected.count()) > 0 &&
+          (await selected.getAttribute('aria-label'))?.includes(model) === true
+        );
       });
-      return (
-        (await selected.count()) > 0 &&
-        (await selected.getAttribute('aria-label'))?.includes(model) === true
-      );
-    });
-  }
-  await capture('member-bound');
+    }
+    await capture('member-bound');
+  };
+  await bindDraft(true);
   await cancelDialog();
+  await readback(
+    'cancelled draft releases its binding',
+    async () => (await bindings()).length === 0
+  );
+  await bindDraft();
+  const createDialog = page.getByRole('dialog');
+  const launchAfterCreate = createDialog.locator('#launch-team');
+  if ((await launchAfterCreate.getAttribute('aria-checked')) === 'true')
+    await launchAfterCreate.click();
+  await createDialog.getByRole('button', { name: 'Create', exact: true }).click();
+  await createDialog.waitFor({ state: 'hidden' });
+  await readback('saved config retains the gateway binding', async () =>
+    (await bindings()).some((binding) => binding.memberName === memberName)
+  );
 
   await settings();
   await row().getByRole('button', { name: 'Edit', exact: true }).click();
@@ -264,8 +286,9 @@ export async function verifyGatewayUi(
     async () => !(await profiles()).some((item) => item.id === profile.id)
   );
   await capture('profile-deleted');
+  await page.evaluate(`window.electronAPI.teams.deleteTeam(${JSON.stringify(teamName)})`);
   console.log(
-    'Gateway UI PASS: profile CRUD, bound URL guard, invalid-key error, model selection, bind/unbind'
+    'Gateway UI PASS: profile CRUD, bound URL guard, invalid-key error, model selection, bind/unbind, cancelled draft cleanup, config-only save'
   );
 }
 
