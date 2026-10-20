@@ -622,7 +622,7 @@ export function sortTeamProviderModels(
   providerId: SupportedProviderId,
   models: readonly string[],
   providerStatus?: RuntimeAwareProviderStatus | null,
-  includeRetiredMiniMaxModels = false
+  includeRetiredMiniMaxModels = true
 ): string[] {
   const deduped = getUniqueProviderRuntimeModels(providerId, models, includeRetiredMiniMaxModels);
   const order = TEAM_PROVIDER_MODEL_ORDER[providerId];
