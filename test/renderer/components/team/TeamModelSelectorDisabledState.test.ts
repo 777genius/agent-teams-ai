@@ -272,6 +272,207 @@ const inMaterializingRoster = (element: React.ReactElement): React.ReactElement 
   );
 
 describe('TeamModelSelector disabled Codex models', () => {
+  it('keeps legacy Anthropic status global without requesting a project scope', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'anthropic',
+          supported: true,
+          authenticated: true,
+          verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
+          models: ['sonnet'],
+          capabilities: { teamLaunch: true, oneShot: true },
+        },
+      ],
+    };
+    const onValueChange = vi.fn();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'anthropic',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange,
+          projectPath: '/tmp/legacy-project',
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(
+      storeState.fetchCliProviderStatus.mock.calls.filter(
+        ([providerId, options]) => providerId === 'anthropic' && options?.projectPath
+      )
+    ).toEqual([]);
+    expect(
+      host.querySelector('[data-testid="team-model-selector-model-option"][aria-pressed="true"]')
+        ?.textContent
+    ).toContain('Default');
+    expect(onValueChange).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it.each([null, 'global/wrong-default'])(
+    'keeps the Anthropic project default unknown until its scope answers and ignores late previous-project truth when the global effective model is %s',
+    async (globalDefault) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const status = (model: string) => ({
+        providerId: 'anthropic',
+        supported: true,
+        authenticated: true,
+        verificationState: 'verified',
+        statusCheckOutcome: 'authoritative',
+        effectiveDefaultModel: model,
+        models: ['sonnet'],
+        capabilities: { teamLaunch: true, oneShot: true },
+        modelCatalogRefreshState: 'ready',
+        modelCatalog: {
+          schemaVersion: 1,
+          providerId: 'anthropic',
+          source: 'anthropic-compatible-api',
+          status: 'ready',
+          fetchedAt: '2026-10-20T00:00:00.000Z',
+          staleAt: '2099-10-20T00:00:00.000Z',
+          defaultModelId: model,
+          defaultLaunchModel: model,
+          models: [{ id: model, launchModel: model, displayName: model }],
+          diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+        },
+      });
+      storeState.cliStatus = {
+        flavor: 'agent_teams_orchestrator',
+        providers: [{ ...status('global/wrong-default'), effectiveDefaultModel: globalDefault }],
+      };
+      const onValueChange = vi.fn();
+      const requests = new Map<string, Deferred<void>>();
+      storeState.fetchCliProviderStatus.mockImplementation(
+        (_providerId, options: { projectPath?: string }) => {
+          const deferred = createDeferred<void>();
+          requests.set(options.projectPath ?? '', deferred);
+          return deferred.promise;
+        }
+      );
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      const render = (projectPath: string) =>
+        root.render(
+          React.createElement(TeamModelSelector, {
+            providerId: 'anthropic',
+            onProviderChange: () => undefined,
+            value: '',
+            onValueChange,
+            projectPath,
+          })
+        );
+      await act(async () => {
+        render('/tmp/project-a');
+        await Promise.resolve();
+      });
+      expect(requests.has('/tmp/project-a')).toBe(true);
+      expect(host.textContent).not.toContain('global/wrong-default');
+      await act(async () => {
+        render('/tmp/project-b');
+        await Promise.resolve();
+      });
+      expect(requests.has('/tmp/project-b')).toBe(true);
+      storeState.cliProviderStatusByScope[
+        getCliProviderStatusScopeKey('anthropic', '/tmp/project-a')
+      ] = status('project-a/model');
+      await resolveDeferred(requests.get('/tmp/project-a')!, undefined);
+      await act(async () => {
+        render('/tmp/project-b');
+        await Promise.resolve();
+      });
+      expect(host.textContent).not.toContain('project-a/model');
+      storeState.cliProviderStatusByScope[
+        getCliProviderStatusScopeKey('anthropic', '/tmp/project-b')
+      ] = status('project-b/model');
+      await resolveDeferred(requests.get('/tmp/project-b')!, undefined);
+      await act(async () => {
+        render('/tmp/project-b');
+        await Promise.resolve();
+      });
+      expect(host.textContent).toContain('Default - project-b/model');
+      expect(host.textContent).not.toContain('project-a/model');
+      expect(onValueChange).not.toHaveBeenCalled();
+      await act(async () => root.unmount());
+    }
+  );
+
+  it.each([
+    ['en', 'Default - gateway/custom-default'],
+    ['ru', 'По умолчанию - gateway/custom-default'],
+  ])(
+    'shows the confirmed default in %s without changing its empty value',
+    async (locale, label) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      await appI18n.changeLanguage(locale);
+      const onValueChange = vi.fn();
+      storeState.cliStatus = {
+        flavor: 'agent_teams_orchestrator',
+        providers: [
+          {
+            providerId: 'anthropic',
+            supported: true,
+            authenticated: true,
+            verificationState: 'verified',
+            statusCheckOutcome: 'authoritative',
+            effectiveDefaultModel: 'gateway/custom-default',
+            models: ['gateway/custom-default', 'sonnet'],
+            capabilities: { teamLaunch: true, oneShot: true },
+          },
+        ],
+      };
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      const render = (value: string, providerId: 'anthropic' | 'codex' = 'anthropic') =>
+        root.render(
+          React.createElement(TeamModelSelector, {
+            providerId,
+            value,
+            onProviderChange: () => undefined,
+            onValueChange,
+          })
+        );
+      try {
+        await act(async () => {
+          render('');
+          await Promise.resolve();
+        });
+        const defaultOption = host.querySelector<HTMLButtonElement>(
+          '[data-testid="team-model-selector-model-option"][aria-pressed="true"]'
+        );
+        expect(defaultOption?.textContent).toContain(label);
+        expect(defaultOption?.getAttribute('aria-label')).toContain(label);
+        expect(onValueChange).not.toHaveBeenCalled();
+        await act(async () => defaultOption?.click());
+        expect(onValueChange).toHaveBeenLastCalledWith('');
+        onValueChange.mockClear();
+        await act(async () => {
+          render('sonnet');
+          await Promise.resolve();
+        });
+        expect(host.querySelector('[aria-pressed="true"]')?.textContent).toContain('Sonnet');
+        expect(onValueChange).not.toHaveBeenCalled();
+        await act(async () => {
+          render('', 'codex');
+          await Promise.resolve();
+        });
+        expect(host.textContent).not.toContain('gateway/custom-default');
+      } finally {
+        await act(async () => root.unmount());
+        await appI18n.changeLanguage('en');
+      }
+    }
+  );
+
   beforeEach(() => {
     vi.stubGlobal('EventSource', undefined);
   });
@@ -972,7 +1173,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(defaultModelButton?.getAttribute('aria-label')).toContain(
       'Anthropic-compatible endpoint default model'
     );
-    expect(defaultModelButton?.getAttribute('aria-label')).toContain('openai/gpt-oss-20b');
+    expect(defaultModelButton?.getAttribute('aria-label')).not.toContain('openai/gpt-oss-20b');
     const localModelButton = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('GPT OSS 20B')
     );

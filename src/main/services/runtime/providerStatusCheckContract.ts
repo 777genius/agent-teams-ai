@@ -250,6 +250,7 @@ export function createDegradedProviderStatus(
   const degraded = createRuntimeStatusErrorProviderStatus(previous.providerId, error);
   return {
     ...previous,
+    effectiveDefaultModel: previous.effectiveDefaultModel === undefined ? undefined : null,
     teamLaunchAuthorityRestriction: undefined,
     verificationState: degraded.verificationState,
     statusCheckOutcome: degraded.statusCheckOutcome,
@@ -338,6 +339,12 @@ export function mergeProviderStatusDisplayEvidence(
       : current.resolvedBackendId,
     ...displayPair,
     defaultModel: incoming.defaultModel?.trim() || current.defaultModel?.trim() || null,
+    effectiveDefaultModel:
+      incoming.effectiveDefaultModel === undefined
+        ? undefined
+        : hasAuthoritativeStatusEvidence && typeof incoming.effectiveDefaultModel === 'string'
+          ? incoming.effectiveDefaultModel.trim() || null
+          : null,
     availableBackends:
       (incoming.availableBackends?.length ?? 0) > 0
         ? incoming.availableBackends

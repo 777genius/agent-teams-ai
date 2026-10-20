@@ -85,6 +85,7 @@ import {
 } from '@renderer/services/createTeamPreferences';
 import { useStore } from '@renderer/store';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
+import { resolveAnthropicProviderRuntimeSelection } from '@renderer/utils/anthropicRuntimeSelection';
 import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { resolveUiOwnedProviderBackendId } from '@renderer/utils/providerBackendIdentity';
@@ -93,6 +94,7 @@ import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvaila
 import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
 import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
+import { getAnthropicRuntimeDefaultLaunchModel } from '@shared/utils/providerDefaultModel';
 import { resolveTeamLeadColorName } from '@shared/utils/teamMemberColors';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
@@ -578,8 +580,6 @@ export const CreateTeamDialog = ({
     forceDefaultProjectSelection,
     appliedDefaultProjectModePath: forcedDefaultProjectModePathRef.current,
   });
-  const { projectScopedCliStatus, projectScopedOpenCodeStatus, runtimeProviderStatusById } =
-    useProjectScopedRuntimeProviderStatuses(globalRuntimeProviderStatusById, effectiveCwd);
   const openCodeLocalModelScope = useOpenCodeLocalModelScope({
     enabled: open,
     projectPath: effectiveCwd,
@@ -620,6 +620,12 @@ export const CreateTeamDialog = ({
     soloTeam,
     syncModelsWithLead,
   ]);
+  const { projectScopedCliStatus, projectScopedOpenCodeStatus, runtimeProviderStatusById } =
+    useProjectScopedRuntimeProviderStatuses(
+      globalRuntimeProviderStatusById,
+      effectiveCwd,
+      open && launchPreflightSelectionReady && selectedMemberProviders.includes('anthropic')
+    );
   const openCodeCatalogEnabled =
     open && launchTeam && multimodelEnabled && selectedMemberProviders.includes('opencode');
   useEffect(() => {
@@ -1653,15 +1659,11 @@ export const CreateTeamDialog = ({
   const anthropicRuntimeSelection = useMemo(
     () =>
       selectedProviderId === 'anthropic'
-        ? resolveAnthropicRuntimeSelection({
-            source: {
-              modelCatalog: runtimeProviderStatusById.get('anthropic')?.modelCatalog,
-              runtimeCapabilities: runtimeProviderStatusById.get('anthropic')?.runtimeCapabilities,
-            },
+        ? resolveAnthropicProviderRuntimeSelection(
+            runtimeProviderStatusById.get('anthropic'),
             selectedModel,
-            limitContext: effectiveAnthropicRuntimeLimitContext,
-            defaultLaunchModel: runtimeProviderStatusById.get('anthropic')?.defaultModel,
-          })
+            effectiveAnthropicRuntimeLimitContext
+          )
         : null,
     [
       effectiveAnthropicRuntimeLimitContext,
@@ -1729,13 +1731,12 @@ export const CreateTeamDialog = ({
             selection:
               anthropicRuntimeSelection ??
               resolveAnthropicRuntimeSelection({
-                source: {
-                  modelCatalog: null,
-                  runtimeCapabilities: null,
-                },
+                source: {},
                 selectedModel,
                 limitContext: effectiveAnthropicRuntimeLimitContext,
-                defaultLaunchModel: runtimeProviderStatusById.get('anthropic')?.defaultModel,
+                defaultLaunchModel: getAnthropicRuntimeDefaultLaunchModel(
+                  runtimeProviderStatusById.get('anthropic')
+                ),
               }),
             selectedEffort: selectedEffortForCurrentSelection,
             selectedFastMode,
@@ -2589,6 +2590,7 @@ export const CreateTeamDialog = ({
                           onValueChange={setSelectedFastMode}
                           providerFastModeDefault={anthropicProviderFastModeDefault}
                           model={selectedModel}
+                          projectPath={effectiveCwd}
                           limitContext={effectiveAnthropicRuntimeLimitContext}
                           id="create-fast-mode"
                         />

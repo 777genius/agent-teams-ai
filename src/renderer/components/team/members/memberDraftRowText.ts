@@ -46,22 +46,22 @@ export function formatMemberMcpButtonLabel(
 export function resolveMemberModelButtonLabels({
   effectiveProviderId,
   effectiveModel,
-  openCodeDefaultRoute,
+  defaultModelLabel,
   inheritsLeadModel,
   unresolved,
   t,
 }: {
   effectiveProviderId: TeamProviderId;
   effectiveModel?: string;
-  openCodeDefaultRoute?: { label: string; modelLabel: string } | null;
+  defaultModelLabel?: { label: string; modelLabel: string } | null;
   inheritsLeadModel: boolean;
   unresolved: boolean;
   t: ReturnType<typeof import('@features/localization/renderer').useAppTranslation>['t'];
 }) {
   const modelButtonLabelBase = effectiveModel?.trim()
     ? getProviderScopedTeamModelLabel(effectiveProviderId, effectiveModel.trim())
-    : openCodeDefaultRoute
-      ? t('modelSelector.defaultWithResolved', { model: openCodeDefaultRoute.label })
+    : defaultModelLabel
+      ? t('modelSelector.defaultWithResolved', { model: defaultModelLabel.label })
       : t('memberDraft.model.default');
   const modelButtonLabel = unresolved
     ? 'Provider not selected'
@@ -69,8 +69,8 @@ export function resolveMemberModelButtonLabels({
       ? t('memberDraft.model.leadSuffix', { label: modelButtonLabelBase })
       : modelButtonLabelBase;
   const modelButtonText =
-    !unresolved && openCodeDefaultRoute
-      ? t('modelSelector.defaultCompact', { model: openCodeDefaultRoute.modelLabel })
+    !unresolved && defaultModelLabel
+      ? t('modelSelector.defaultCompact', { model: defaultModelLabel.modelLabel })
       : modelButtonLabel;
   const modelButtonAriaLabel = t('memberDraft.model.ariaLabel', {
     provider: unresolved ? 'Not selected' : getTeamProviderLabel(effectiveProviderId),

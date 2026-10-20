@@ -297,6 +297,8 @@ export interface CliProviderStatus {
   models: string[];
   /** Runtime model-list default, retained separately from catalog fallbacks. */
   defaultModel?: string | null;
+  /** Current runtime-resolved inherited team model; never retained as stale evidence. */
+  effectiveDefaultModel?: string | null;
   modelCatalog?: CliProviderModelCatalog | null;
   modelCatalogRefreshState?: 'idle' | 'loading' | 'ready' | 'error';
   modelAvailability?: CliProviderModelAvailability[];

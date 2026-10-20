@@ -119,9 +119,32 @@ vi.mock('@renderer/components/ui/label', () => ({
 const openCodeDefaultRoute = vi.hoisted(() => ({
   route: null as { label: string; modelLabel: string } | null,
 }));
+const runtimeDefaultStatus = vi.hoisted(() => ({
+  current: null as unknown,
+  byProject: {} as Record<string, unknown>,
+}));
+vi.mock('@renderer/hooks/useEffectiveCliProviderStatus', () => ({
+  useEffectiveCliProviderStatus: (
+    providerId: string | undefined,
+    options?: { projectPath?: string | null }
+  ) => ({
+    providerStatus: providerId
+      ? options?.projectPath
+        ? (runtimeDefaultStatus.byProject[options.projectPath] ?? null)
+        : runtimeDefaultStatus.current
+      : null,
+  }),
+}));
 vi.mock('@renderer/components/team/dialogs/useOpenCodeDefaultRouteLabel', () => ({
   useOpenCodeDefaultRouteLabel: (_projectPath: unknown, enabled = true) =>
     enabled ? openCodeDefaultRoute.route : null,
+}));
+
+vi.mock('@renderer/store', () => ({
+  useStore: (selector: (state: unknown) => unknown) =>
+    selector({
+      cliStatus: { providers: [{ providerId: 'anthropic', effectiveDefaultModel: null }] },
+    }),
 }));
 
 vi.mock('@renderer/hooks/useTheme', () => ({
@@ -197,6 +220,57 @@ describe('LeadModelRow', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     openCodeDefaultRoute.route = null;
+    runtimeDefaultStatus.current = null;
+    runtimeDefaultStatus.byProject = {};
+  });
+
+  it('shows the runtime-confirmed Anthropic Default with its full accessible id', () => {
+    runtimeDefaultStatus.current = {
+      providerId: 'anthropic',
+      supported: true,
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      effectiveDefaultModel: 'gateway/long-custom-model-id',
+    };
+    const { host, root } = renderLeadModelRow({ model: '' });
+    const trigger = host.querySelector('button[aria-label*="Default"]');
+    expect(trigger?.textContent).toContain('gateway/long-custom-model-id · Default');
+    expect(trigger?.getAttribute('aria-label')).toContain('Default - gateway/long-custom-model-id');
+    expect(trigger?.querySelector('span.truncate')).not.toBeNull();
+    act(() => root.unmount());
+  });
+
+  it('uses the launch project default on the collapsed lead trigger', () => {
+    const status = (model: string) => ({
+      providerId: 'anthropic',
+      supported: true,
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      effectiveDefaultModel: model,
+    });
+    runtimeDefaultStatus.current = status('global/wrong-default');
+    runtimeDefaultStatus.byProject['/tmp/project-a'] = status('project-a/model');
+    runtimeDefaultStatus.byProject['/tmp/project-b'] = status('project-b/model');
+    const { host, root } = renderLeadModelRow({ model: '', projectPath: '/tmp/project-b' });
+    expect(host.querySelector('button[aria-label*="Default"]')?.textContent).toContain(
+      'project-b/model'
+    );
+    expect(host.textContent).not.toContain('global/wrong-default');
+    expect(host.textContent).not.toContain('project-a/model');
+    act(() => root.unmount());
+  });
+
+  it('keeps an explicit lead selection when a runtime default is available', () => {
+    runtimeDefaultStatus.current = {
+      providerId: 'anthropic',
+      supported: true,
+      verificationState: 'verified',
+      effectiveDefaultModel: 'gateway/default',
+    };
+    const { host, root } = renderLeadModelRow({ model: 'sonnet' });
+    expect(host.textContent).not.toContain('gateway/default');
+    expect(host.querySelector('button[aria-label*="sonnet"]')).not.toBeNull();
+    act(() => root.unmount());
   });
 
   it('shows the concrete OpenCode route on a Default lead trigger', () => {

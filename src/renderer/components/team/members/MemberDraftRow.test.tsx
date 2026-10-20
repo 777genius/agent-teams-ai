@@ -127,9 +127,15 @@ vi.mock('@renderer/hooks/useTheme', () => ({
 }));
 
 const openCodeStatus = vi.hoisted(() => ({ current: null as unknown }));
+const runtimeDefaultStatus = vi.hoisted(() => ({ current: null as unknown }));
 vi.mock('@renderer/hooks/useEffectiveCliProviderStatus', () => ({
   useEffectiveCliProviderStatus: (providerId: string | undefined) => ({
-    providerStatus: providerId === 'opencode' ? openCodeStatus.current : null,
+    providerStatus:
+      providerId === 'opencode'
+        ? openCodeStatus.current
+        : providerId
+          ? runtimeDefaultStatus.current
+          : null,
   }),
 }));
 
@@ -175,11 +181,59 @@ function renderMemberDraftRow(props: Partial<React.ComponentProps<typeof MemberD
 }
 
 describe('MemberDraftRow', () => {
+  it.each([
+    ['anthropic', 'gateway/member-default'],
+    ['codex', 'gpt-member-default'],
+  ] as const)(
+    'shows the confirmed %s model on an unset member without changing its draft',
+    (providerId, model) => {
+      runtimeDefaultStatus.current = {
+        providerId,
+        supported: true,
+        verificationState: 'verified',
+        statusCheckOutcome: 'authoritative',
+        effectiveDefaultModel: model,
+      };
+      const member = createMemberDraft({ id: 'member-1', name: 'alice', providerId, model: '' });
+      const { host, root } = renderMemberDraftRow({ member });
+      const trigger = host.querySelector('button[aria-label*="Default"]');
+      expect(trigger?.textContent).toContain(`${model} · Default`);
+      expect(trigger?.getAttribute('aria-label')).toContain(`Default - ${model}`);
+      expect(member.model).toBe('');
+      act(() => root.unmount());
+      runtimeDefaultStatus.current = null;
+    }
+  );
+
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   });
 
+  it('shows a different-provider member default instead of borrowing the lead model', () => {
+    runtimeDefaultStatus.current = {
+      providerId: 'codex',
+      supported: true,
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      effectiveDefaultModel: 'gpt-member-default',
+    };
+    const member = {
+      ...createMemberDraft({ id: 'member-1', name: 'alice', providerId: 'codex' }),
+      model: undefined,
+    };
+    const { host, root } = renderMemberDraftRow({
+      member,
+      inheritedProviderId: 'anthropic',
+      inheritedModel: 'sonnet',
+    });
+    const trigger = host.querySelector('button[aria-label*="Default"]');
+    expect(trigger?.textContent).toContain('gpt-member-default · Default');
+    expect(trigger?.getAttribute('aria-label')).not.toContain('sonnet');
+    act(() => root.unmount());
+  });
+
   afterEach(() => {
+    runtimeDefaultStatus.current = null;
     document.body.innerHTML = '';
   });
 

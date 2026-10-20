@@ -594,7 +594,7 @@ vi.mock('@renderer/components/team/dialogs/ProvisioningProviderStatusList', () =
 vi.mock('@renderer/components/team/dialogs/TeamModelSelector', () => ({
   TeamModelSelector: ({ value }: { value: string }) =>
     React.createElement('div', { 'data-testid': 'team-model-selector' }, `model:${value}`),
-  computeEffectiveTeamModel: (model: string) => model || undefined,
+  computeEffectiveTeamModel: vi.fn((model: string) => model || undefined),
   formatTeamModelSummary: (providerId: string, model: string, effort?: string) =>
     [providerId, model, effort].filter(Boolean).join(' '),
   OPENCODE_ONE_SHOT_DISABLED_BADGE_LABEL: 'team only',
@@ -658,6 +658,8 @@ import { api } from '@renderer/api';
 import { CreateTeamDialog } from '@renderer/components/team/dialogs/CreateTeamDialog';
 import { LaunchTeamDialog } from '@renderer/components/team/dialogs/LaunchTeamDialog';
 import { runProviderPrepareDiagnostics } from '@renderer/components/team/dialogs/providerPrepareDiagnostics';
+import { computeEffectiveTeamModel as computeModelMock } from '@renderer/components/team/dialogs/TeamModelSelector';
+import { computeEffectiveTeamModel } from '@renderer/components/team/dialogs/teamModelSummary';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
 import { reconcileCliProviderSnapshot } from '@renderer/store/slices/cliInstallerStatusReconciliation';
 import {
@@ -756,6 +758,96 @@ function createAuthoritativeProviderStatus(
 }
 
 describe('LaunchTeamDialog', () => {
+  it.each(['create', 'launch'] as const)(
+    'sends the confirmed Anthropic gateway default in the %s request while the draft stays Default',
+    async (mode) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.mocked(computeModelMock).mockImplementation(computeEffectiveTeamModel);
+      localStorage.setItem('team:lastSelectedProvider', 'anthropic');
+      localStorage.setItem('team:lastSelectedModel:anthropic', '');
+      createTeamDraftMock.state.runtimeSelectionVersion = 1;
+      createTeamDraftMock.state.runtimeProviderId = 'anthropic';
+      createTeamDraftMock.state.runtimeModel = '';
+      createTeamDraftMock.state.soloTeam = true;
+      const provider = createAuthoritativeProviderStatus('anthropic', ['catalog-fallback']);
+      provider.effectiveDefaultModel = 'global/wrong-default';
+      storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [provider] };
+      const projectProvider = { ...provider, effectiveDefaultModel: 'gateway/qwen-default' };
+      storeState.cliProviderStatusByScope[
+        getCliProviderStatusScopeKey('anthropic', '/tmp/project')
+      ] = projectProvider;
+      fetchCliProviderStatus.mockImplementation(async (_providerId, options) => {
+        if (options?.projectPath === '/tmp/project') {
+          storeState.cliProviderStatusByScope[
+            getCliProviderStatusScopeKey('anthropic', options.projectPath)
+          ] = projectProvider;
+        }
+        return true;
+      });
+      const submit = vi.fn<(request: unknown) => Promise<void>>(async () => {});
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(
+          mode === 'create'
+            ? React.createElement(CreateTeamDialog, {
+                open: true,
+                canCreate: true,
+                provisioningErrorsByTeam: {},
+                existingTeamNames: [],
+                activeTeams: [],
+                defaultProjectPath: '/tmp/project',
+                onClose: vi.fn(),
+                onCreate: submit,
+                onOpenTeam: vi.fn(),
+              })
+            : React.createElement(LaunchTeamDialog, {
+                mode: 'launch',
+                open: true,
+                teamName: 'team-alpha',
+                members: [],
+                defaultProjectPath: '/tmp/project',
+                provisioningError: null,
+                clearProvisioningError: vi.fn(),
+                activeTeams: [],
+                onClose: vi.fn(),
+                onLaunch: submit,
+              })
+        );
+        await flush();
+      });
+      await flushCustomFolderProbe();
+      expect(teamRosterEditorSectionMock.lastProps.model).toBe('');
+      expect(createTeamDraftMock.state.runtimeModel).toBe('');
+      expect(fetchCliProviderStatus).toHaveBeenCalledWith(
+        'anthropic',
+        expect.objectContaining({
+          projectPath: '/tmp/project',
+          checkReason: 'launch_preflight',
+        })
+      );
+      const submitButton = Array.from(host.querySelectorAll('button')).find((button) =>
+        mode === 'create'
+          ? button.textContent?.trim() === 'Create'
+          : button.textContent?.trim() === 'Launch team'
+      );
+      expect(submitButton, host.textContent ?? '').toBeDefined();
+      expect(submitButton?.disabled).toBe(false);
+      await act(async () => {
+        submitButton?.click();
+        await flush();
+      });
+      expect(submit).toHaveBeenCalledTimes(1);
+      expect(submit.mock.calls[0]?.[0]).toMatchObject({
+        providerId: 'anthropic',
+        model: 'gateway/qwen-default',
+      });
+      expect(createTeamDraftMock.state.runtimeModel).toBe('');
+      await act(async () => root.unmount());
+    }
+  );
+
   it('opens provider settings from the relaunch roster model picker', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
@@ -1284,6 +1376,7 @@ describe('LaunchTeamDialog', () => {
   );
 
   beforeEach(() => {
+    vi.mocked(computeModelMock).mockImplementation((model) => model || undefined);
     if (typeof localStorage?.getItem !== 'function' || typeof localStorage?.clear !== 'function') {
       const store = new Map<string, string>();
       vi.stubGlobal('localStorage', {
@@ -1320,6 +1413,16 @@ describe('LaunchTeamDialog', () => {
     storeState.cliProviderStatusLoading = {};
     fetchCliProviderStatus.mockReset();
     fetchCliProviderStatus.mockImplementation(async (providerId, options) => {
+      if (providerId === 'anthropic' && options?.projectPath) {
+        const provider = storeState.cliStatus.providers.find(
+          (entry) => entry.providerId === 'anthropic'
+        );
+        if (provider)
+          storeState.cliProviderStatusByScope[
+            getCliProviderStatusScopeKey('anthropic', options.projectPath)
+          ] = provider;
+        return true;
+      }
       if (providerId !== 'opencode' || !options?.projectPath) {
         return true;
       }
