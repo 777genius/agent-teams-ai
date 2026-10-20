@@ -295,7 +295,9 @@ try {
   });
   adminToken = login.access_token;
   secrets.add(adminToken);
-  mock = await startMockUpstream({ sharedStandNetwork: process.argv.includes('--shared-stand-network') });
+  mock = await startMockUpstream({
+    sharedStandNetwork: process.argv.includes('--shared-stand-network'),
+  });
   const permitted = new Set<string>();
   const endpoints: string[] = [];
   for (let index = 0; index < 2; index++) {
@@ -482,6 +484,24 @@ try {
     }).trim(),
   });
   console.log(`Owned desktop and sandbox: ${root}`);
+  // Install actual provider CLIs into this disposable app profile. A source
+  // launcher alone does not supply Codex/OpenCode native executables.
+  if (selected.some((name) => name === 'codex-two' || name === 'mixed')) {
+    const status = await page.evaluate(async () =>
+      (window as unknown as { electronAPI: ElectronAPI }).electronAPI.codexRuntime.install()
+    );
+    assert(status.installed && status.binaryPath, 'Test profile Codex CLI install failed');
+    await json(path.join(dirs.evidence, 'codex-runtime.json'), status);
+    console.log('Installed isolated native Codex CLI');
+  }
+  if (selected.some((name) => name === 'opencode-one' || name === 'mixed')) {
+    const status = await page.evaluate(async () =>
+      (window as unknown as { electronAPI: ElectronAPI }).electronAPI.openCodeRuntime.install()
+    );
+    assert(status.installed && status.binaryPath, 'Test profile OpenCode CLI install failed');
+    await json(path.join(dirs.evidence, 'opencode-runtime.json'), status);
+    console.log('Installed isolated OpenCode CLI');
+  }
   for (const name of selected) {
     const team = `gw-e2e-${name}-${Date.now().toString(36)}`;
     teams.push(team);

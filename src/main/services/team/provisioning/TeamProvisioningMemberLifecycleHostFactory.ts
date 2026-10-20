@@ -2,6 +2,7 @@ import {
   buildConfiguredProvisioningMember,
   buildPrimaryOwnedMemberSpecForRuntime,
 } from './TeamProvisioningConfiguredMemberSpecs';
+import { resolveGatewayMemberLaunchIdentity } from './TeamProvisioningMemberGatewayRuntime';
 import {
   resolveEffectiveConfiguredMember,
   resolveLeadMemberName,
@@ -489,11 +490,21 @@ export function createTeamProvisioningMemberLifecycleHostFromPortGroups<
       runtimeLaunch.buildProvisioningEnv(providerId, providerBackendId, options),
     materializeEffectiveTeamMemberSpecs: (input) =>
       memberSpec.materializeEffectiveTeamMemberSpecs(input),
-    resolveDirectMemberLaunchIdentity: (input) =>
-      runtimeLaunch.resolveDirectMemberLaunchIdentity({
-        ...input,
-        run: asServiceProvisioningRun<TRun>(input.run),
-      }),
+    resolveDirectMemberLaunchIdentity: async (input) => {
+      const gatewayIdentity = await resolveGatewayMemberLaunchIdentity({
+        seams: runtimeLaunch.getMemberGatewayRuntimeSeams(),
+        teamName: input.run.teamName,
+        providerId: input.providerId,
+        memberSpec: input.memberSpec,
+      });
+      return (
+        gatewayIdentity ??
+        runtimeLaunch.resolveDirectMemberLaunchIdentity({
+          ...input,
+          run: asServiceProvisioningRun<TRun>(input.run),
+        })
+      );
+    },
     buildTeamRuntimeLaunchArgsPlan: (input) => runtimeLaunch.buildTeamRuntimeLaunchArgsPlan(input),
     getMemberGatewayRuntimeSeams: () => runtimeLaunch.getMemberGatewayRuntimeSeams(),
     persistInboxMessage: (teamName, memberName, message) =>
