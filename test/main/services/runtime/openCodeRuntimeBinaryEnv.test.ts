@@ -109,7 +109,11 @@ describe('applyOpenCodeRuntimeBinaryEnv', () => {
 });
 
 describe('applyOpenCodeRuntimeBinaryEnv console wrapper', () => {
-  function nativeV2(resourcesPath: string, version = '2.0.32') {
+  function nativeV2(
+    resourcesPath: string,
+    version = '2.0.32',
+    packageName = '@opencode/cli-windows-x64'
+  ) {
     const packageRoot = path.join(resourcesPath, 'selected-cli-package');
     fs.mkdirSync(path.join(packageRoot, 'bin'), { recursive: true });
     const binary = path.join(packageRoot, 'bin', 'opencode.exe');
@@ -117,7 +121,7 @@ describe('applyOpenCodeRuntimeBinaryEnv console wrapper', () => {
     fs.writeFileSync(
       path.join(packageRoot, 'package.json'),
       JSON.stringify({
-        name: '@opencode/cli-windows-x64',
+        name: packageName,
         version,
       })
     );
@@ -129,6 +133,20 @@ describe('applyOpenCodeRuntimeBinaryEnv console wrapper', () => {
     (version) => {
       const { resourcesPath, wrapperPath } = makeResourcesWithWrapper();
       const binary = nativeV2(resourcesPath, version);
+      const env: NodeJS.ProcessEnv = { PATH: '' };
+      applyOpenCodeRuntimeBinaryEnv(env, binary, { resourcesPath, platform: 'win32', env: {} });
+      expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(binary);
+      expect(env.OPENCODE_BIN_PATH).toBe(binary);
+      expect(env.OPENCODE_CONSOLE_WRAPPER_TARGET).toBeUndefined();
+      expect(fs.existsSync(path.join(path.dirname(wrapperPath), 'opencode.real.path'))).toBe(false);
+    }
+  );
+
+  it.each(['@opencode/cli-windows-arm64', '@opencode/cli-windows-x64-baseline'])(
+    'keeps the selected native V2 %s package path for SDK metadata',
+    (packageName) => {
+      const { resourcesPath, wrapperPath } = makeResourcesWithWrapper();
+      const binary = nativeV2(resourcesPath, '2.0.32', packageName);
       const env: NodeJS.ProcessEnv = { PATH: '' };
       applyOpenCodeRuntimeBinaryEnv(env, binary, { resourcesPath, platform: 'win32', env: {} });
       expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(binary);

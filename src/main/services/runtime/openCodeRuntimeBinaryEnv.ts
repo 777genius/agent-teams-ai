@@ -75,6 +75,17 @@ export function resolveOpenCodeConsoleWrapperPath(
   return wrapperPath;
 }
 
+/**
+ * Official Windows V2 CLI package manifests. Any of their `bin/opencode.exe`
+ * deliveries is the SDK-selected native binary, whichever architecture or
+ * baseline the machine picked.
+ */
+const WINDOWS_V2_CLI_PACKAGE_NAMES = new Set([
+  '@opencode/cli-windows-x64',
+  '@opencode/cli-windows-x64-baseline',
+  '@opencode/cli-windows-arm64',
+]);
+
 /** Routing hint only. The SDK still measures the selected native delivery. */
 function selectedWindowsV2PackageBinary(binaryPath: string): string | null {
   if (!path.isAbsolute(binaryPath)) return null;
@@ -95,7 +106,8 @@ function selectedWindowsV2PackageBinary(binaryPath: string): string | null {
       !metadata ||
       typeof metadata !== 'object' ||
       !('name' in metadata) ||
-      metadata.name !== '@opencode/cli-windows-x64' ||
+      typeof metadata.name !== 'string' ||
+      !WINDOWS_V2_CLI_PACKAGE_NAMES.has(metadata.name) ||
       !('version' in metadata) ||
       typeof metadata.version !== 'string' ||
       !/^2\.\d+\.\d+$/.test(metadata.version)
