@@ -173,7 +173,14 @@ export async function qualifyDefaultArtifact(
   }
   const allowedPrunedRoots = [...allowedPruned].sort();
   const actualPrunedFiles: string[] = [];
+  const omittedCopyMarkers: string[] = [];
   for (const [file, digest] of original) {
+    // Pinned builder-util copyDir omits exactly these two marker basenames.
+    // Retained markers still reach the same strict digest comparison below.
+    if (!bundled.has(file) && ['.DS_Store', '.gitkeep'].includes(path.posix.basename(file))) {
+      omittedCopyMarkers.push(file);
+      continue;
+    }
     if (
       !bundled.has(file) &&
       allowedPrunedRoots.some((prune) => file === prune || file.startsWith(prune + '/'))
@@ -208,6 +215,7 @@ export async function qualifyDefaultArtifact(
     publicPayloadFiles: original.length,
     allowedPrunedRoots,
     actualPrunedFiles,
+    omittedCopyMarkers,
     payloadInventorySha256: createHash('sha256').update(JSON.stringify(original)).digest('hex'),
   };
 }
