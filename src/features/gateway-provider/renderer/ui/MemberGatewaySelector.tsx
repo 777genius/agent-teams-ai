@@ -240,10 +240,10 @@ export const MemberGatewaySelector = ({
         <Label className="text-[11px] font-medium text-[var(--color-text)]">
           {t('memberDraft.gateway.title')}
         </Label>
-        <span className="text-[10px] text-[var(--color-text-muted)]">
-          {t('memberDraft.gateway.nextLaunchHint')}
-        </span>
       </div>
+      <p className="text-[10px] leading-snug text-[var(--color-text-muted)]">
+        {t('memberDraft.gateway.nextLaunchHint')}
+      </p>
       {renamed ? (
         <p className="text-[10px] leading-snug text-amber-700 dark:text-amber-300">
           {t('memberDraft.gateway.renamedHint')}

@@ -373,7 +373,7 @@
       "keyRequired": "Enter the gateway API key first.",
       "modelLabel": "Model",
       "modelPlaceholder": "Select a model",
-      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route.",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. 在打开此表单前已保存的绑定会立即更新，即使取消团队表单，这些更改也会保留。",
       "probeButton": "Check key and load models",
       "probing": "Checking...",
       "profileLabel": "Gateway profile",

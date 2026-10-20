@@ -9,7 +9,7 @@ interface Context {
 const key = (binding: Pick<Binding, 'teamName' | 'memberName'>): string =>
   JSON.stringify([binding.teamName, binding.memberName]);
 
-/** Own only bindings allocated by this form, never its pre-existing bindings. */
+/** Own new draft bindings; edits to pre-existing bindings are explicit saved credential actions. */
 export function createGatewayBindingDraft(
   unbind: (request: GatewayUnbindMemberRequest) => Promise<void>,
   reportError: (error: unknown) => void

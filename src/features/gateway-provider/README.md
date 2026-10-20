@@ -34,3 +34,7 @@ pnpm exec node scripts/e2e/gateway-provider-live-desktop.mts --scenario all
 ```
 
 Use the built `cli` for the packaged compatibility pass. The driver reports its private evidence directory and cleans only the app, teams and stand entities it created. The UI driver can also attach to that driver's owned fixture via `--fixture`; it never attaches to an arbitrary running app.
+
+Binding changes for connections saved before a team form opens are explicit saved
+credential actions and survive roster cancellation. The selector explains this.
+Bindings first allocated by the form are draft-owned and removed on cancellation.
