@@ -283,7 +283,8 @@ export const MembersEditorSection = ({
           ? (() => {
               const previousProviderId = c.providerId ?? inheritedProviderId ?? defaultProviderId;
               const providerChanged = previousProviderId !== providerId;
-              const nextModel = providerChanged ? '' : c.model;
+              const gatewayBound = gatewayBindings?.boundMemberNames.has(c.name.trim());
+              const nextModel = providerChanged && !gatewayBound ? '' : c.model;
               const nextEffort = providerChanged
                 ? undefined
                 : getCompatibleMemberEffort(providerId, nextModel, c.effort);

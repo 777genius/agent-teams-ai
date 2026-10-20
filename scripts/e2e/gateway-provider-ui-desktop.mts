@@ -222,10 +222,12 @@ export async function verifyGatewayUi(
     await readback('confirmed ' + providerLabel + ' selection', async () => {
       const useProvider = member.getByRole('button', { name: 'Use ' + providerLabel, exact: true });
       if (await useProvider.count()) await useProvider.click();
+      const selected = member.getByRole('button', {
+        name: new RegExp(providerLabel + ' provider,', 'i'),
+      });
       return (
-        (await member
-          .getByRole('button', { name: new RegExp(providerLabel + ' provider,', 'i') })
-          .count()) > 0
+        (await selected.count()) > 0 &&
+        (await selected.getAttribute('aria-label'))?.includes(model) === true
       );
     });
   }

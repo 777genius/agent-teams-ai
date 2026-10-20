@@ -69,6 +69,7 @@ vi.mock('./MemberDraftRow', () => ({
     onRemove,
     onRestore,
     onModelChange,
+    onProviderChange,
     agentTeamsMcpLocked,
     hideActionButton,
     providerDisabledReasonById,
@@ -86,6 +87,7 @@ vi.mock('./MemberDraftRow', () => ({
     onRemove?: (id: string) => void;
     onRestore?: (id: string) => void;
     onModelChange?: (id: string, model: string) => void;
+    onProviderChange?: (id: string, providerId: TeamProviderId) => void;
     agentTeamsMcpLocked?: boolean;
     hideActionButton?: boolean;
     providerDisabledReasonById?: Record<string, string>;
@@ -131,6 +133,15 @@ vi.mock('./MemberDraftRow', () => ({
         'button',
         {
           type: 'button',
+          'data-testid': `provider-${member.name}`,
+          onClick: () => onProviderChange?.(member.id, 'opencode'),
+        },
+        'select OpenCode'
+      ),
+      React.createElement(
+        'button',
+        {
+          type: 'button',
           'data-testid': `model-${member.name}`,
           'data-model': member.model ?? '',
           'data-effort': member.effort ?? '',
@@ -165,6 +176,7 @@ function renderMembersEditor(props: {
   runtimeProviderStatusById?: ReadonlyMap<TeamProviderId, CliProviderStatus>;
   singleMemberMode?: boolean;
   leadRuntimeSettingsOnly?: boolean;
+  gatewayBindings?: React.ComponentProps<typeof MembersEditorSection>['gatewayBindings'];
 }): {
   host: HTMLDivElement;
   onChange: ReturnType<typeof vi.fn>;
@@ -192,6 +204,7 @@ function renderMembersEditor(props: {
           runtimeProviderStatusById={props.runtimeProviderStatusById}
           singleMemberMode={props.singleMemberMode}
           leadRuntimeSettingsOnly={props.leadRuntimeSettingsOnly}
+          gatewayBindings={props.gatewayBindings}
           identityLockReason="locked"
           draftKeyPrefix="worktree-test"
         />
@@ -740,4 +753,35 @@ describe('MembersEditorSection Agent Teams MCP master checkbox', () => {
       originalMembers[1].mcpPolicy
     );
   });
+});
+
+describe('gateway member runtime selection', () => {
+  it.each([true, false])(
+    'preserves only a bound gateway model when the provider changes (bound=%s)',
+    (bound) => {
+      const { host, onChange } = renderMembersEditor({
+        members: [
+          createMemberDraft({
+            id: 'member-gateway',
+            name: 'alice',
+            providerId: 'anthropic',
+            model: 'gateway-custom-model',
+          }),
+        ],
+        gatewayBindings: {
+          boundMemberNames: new Set(bound ? ['alice'] : []),
+          pending: false,
+          error: null,
+          refresh: async () => {},
+        },
+      });
+      onChange.mockClear();
+      act(() => host.querySelector<HTMLButtonElement>('[data-testid="provider-alice"]')!.click());
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange.mock.calls[0][0][0]).toMatchObject({
+        providerId: 'opencode',
+        model: bound ? 'gateway-custom-model' : '',
+      });
+    }
+  );
 });

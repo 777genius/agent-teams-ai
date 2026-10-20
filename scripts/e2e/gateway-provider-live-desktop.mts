@@ -263,6 +263,17 @@ async function waitReady(team: string, runId: string): Promise<void> {
     8 * 60_000
   );
 }
+async function waitForRestartableRuntime(team: string, memberName: string) {
+  return poll('verified runtime PID before restart', async () => {
+    const snapshot = await invoke<{
+      members: Record<string, { pid?: number; restartable?: boolean }>;
+    }>('teams', 'getTeamAgentRuntime', team);
+    return snapshot.members[memberName]?.pid && snapshot.members[memberName]?.restartable
+      ? snapshot
+      : null;
+  });
+}
+
 async function assertSnapshot(
   team: string,
   members: Member[]
@@ -667,15 +678,7 @@ try {
     }
     if (name === 'claude-two' || name === 'codex-two') {
       const before = await usage(members[0]);
-      const restartable = await poll('verified runtime PID before restart', async () => {
-        const snapshot = await invoke<{
-          members: Record<string, { pid?: number; restartable?: boolean }>;
-        }>('teams', 'getTeamAgentRuntime', team);
-        return snapshot.members[members[0].name]?.pid &&
-          snapshot.members[members[0].name]?.restartable
-          ? snapshot
-          : null;
-      });
+      const restartable = await waitForRestartableRuntime(team, members[0].name);
       await json(path.join(dirs.evidence, name + '-runtime-before-restart.json'), restartable);
       if (process.platform !== 'win32') {
         const table = execFileSync('ps', ['-ax', '-o', 'pid=,ppid=,pcpu=,rss=,command='], {
@@ -755,6 +758,7 @@ try {
         async () => (await usage(original)).requests > before.requests
       );
       assert.equal((await usage({ key: replacement.key, model: original.model })).requests, 0);
+      await waitForRestartableRuntime(team, original.name);
       await invoke('teams', 'restartMember', team, original.name);
       members[0] = {
         ...original,
