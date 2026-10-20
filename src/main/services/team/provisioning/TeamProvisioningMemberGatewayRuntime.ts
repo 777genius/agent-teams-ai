@@ -74,6 +74,12 @@ export interface MemberGatewayRuntimeSeams {
   markRuntimeArtifactRetired(gatewayUsageRef: string): Promise<void>;
 }
 
+function assertGatewayProviderSupported(providerId: TeamProviderId): void {
+  if (providerId === 'gemini') {
+    throw new Error('Gateway bindings support Claude, Codex and OpenCode teammates only.');
+  }
+}
+
 export interface ResolveMemberGatewayRuntimeArgsInput {
   seams: MemberGatewayRuntimeSeams | null;
   teamName: string | null | undefined;
@@ -120,6 +126,7 @@ export async function resolveMemberGatewayRuntimeArgs(
       await input.seams!.confirmLaunchStopped?.(launchSnapshotId);
   };
   if (!connection) return null;
+  assertGatewayProviderSupported(input.providerId);
 
   if (input.providerId === 'opencode') {
     const artifact = buildOpenCodeGatewayArtifactConfigureInput(connection);
@@ -203,6 +210,7 @@ export async function resolveGatewayMemberLaunchIdentity(input: {
       : model
   );
   if (!connection) return null;
+  assertGatewayProviderSupported(input.providerId);
   const gatewayModel = connection.spec.model?.trim();
   if (!gatewayModel) throw new Error('A gateway teammate requires an explicit model.');
   return {

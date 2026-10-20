@@ -623,6 +623,19 @@ try {
     }
     if (name === 'claude-two' || name === 'codex-two') {
       const before = await usage(members[0]);
+      await json(
+        path.join(dirs.evidence, name + '-runtime-before-restart.json'),
+        await invoke('teams', 'getTeamAgentRuntime', team)
+      );
+      if (process.platform !== 'win32') {
+        const table = execFileSync('ps', ['-ax', '-o', 'pid=,ppid=,pcpu=,rss=,command='], {
+          encoding: 'utf8',
+        });
+        await json(
+          path.join(dirs.evidence, name + '-processes-before-restart.json'),
+          table.split('\n').filter((line) => line.includes(root) || line.includes(team))
+        );
+      }
       await invoke('teams', 'restartMember', team, members[0].name);
       await invoke('teams', 'sendMessage', team, {
         member: members[0].name,

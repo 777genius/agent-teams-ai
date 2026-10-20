@@ -354,3 +354,24 @@ describe('gateway model authority', () => {
     await expect(resolveGatewayMemberLaunchIdentity(input)).rejects.toThrow('credential_changed');
   });
 });
+
+it('rejects a bound unsupported runtime instead of falling back to its global credentials', async () => {
+  const seams = seamsWithConnection(connection({ spec: { ...connection().spec, model: 'model' } }));
+  await expect(
+    resolveMemberGatewayRuntimeArgs({
+      seams,
+      teamName: 'team-a',
+      memberName: 'builder',
+      providerId: 'gemini',
+      model: 'model',
+    })
+  ).rejects.toThrow('Claude, Codex and OpenCode');
+  await expect(
+    resolveGatewayMemberLaunchIdentity({
+      seams,
+      teamName: 'team-a',
+      providerId: 'gemini',
+      memberSpec: { name: 'builder', model: 'model' },
+    })
+  ).rejects.toThrow('Claude, Codex and OpenCode');
+});
