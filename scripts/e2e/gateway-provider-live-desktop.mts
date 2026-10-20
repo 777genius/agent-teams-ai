@@ -826,17 +826,28 @@ try {
         rejected = true;
       }
       assert(rejected, 'Historical key owner cannot be stolen after unbind/rename');
-      const snapshot = await invoke<TokenUsageAnalyticsSnapshotDto>(
-        'tokenUsage',
-        'refreshSnapshot',
-        { teamName: team }
+      const history = await poll(
+        'both historical and current key totals are imported exactly',
+        async () => {
+          const snapshot = await invoke<TokenUsageAnalyticsSnapshotDto>(
+            'tokenUsage',
+            'refreshSnapshot',
+            { teamName: team }
+          );
+          const oldUsage = await usage(original);
+          const newUsage = await usage(members[0]);
+          const row = snapshot.byAgent.find((item) => item.agentName === original.name);
+          if (
+            !row ||
+            row.summary.requestCount !== oldUsage.requests + newUsage.requests ||
+            Math.abs(row.summary.billableCostUsd - oldUsage.actual_cost - newUsage.actual_cost) >=
+              1e-8
+          )
+            return null;
+          return snapshot;
+        }
       );
-      const total = (await usage(original)).actual_cost + (await usage(members[0])).actual_cost;
-      const row = snapshot.byAgent.find((item) => item.agentName === original.name);
-      assert(
-        row && Math.abs(row.summary.billableCostUsd - total) < 1e-8,
-        'Re-import preserves historical owner and both source totals'
-      );
+      await json(path.join(dirs.evidence, `${team}-binding-history-snapshot.json`), history);
       await waitForRestartableRuntime(team, original.name);
       const ordinaryStartedAt = Date.now();
       await invoke('teams', 'restartMember', team, original.name);
