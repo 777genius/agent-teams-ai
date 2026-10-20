@@ -68,6 +68,10 @@
 образцу `LocalProviderPrivateNetworkApprovalControl`; второго диалога/пробы нет.
 Классификация совпадает с `normalizeRuntimeLocalProviderTarget`: существующий
 чистый hostname-helper выносится в shared для двух потребителей, без deep-import.
+Это проверка hostname из URL (IP-литералы и `.local`), как у текущих local
+providers. Обычное HTTPS DNS-имя может разрешиться в частный IP; HTTP-клиент
+и native CLI разрешают DNS штатно. DNS pinning и защита от rebinding требуют
+отдельного сетевого scope и в этот этап не входят.
 Сохранение/проба/prepare проверяют разрешение одинаково для всех рантаймов;
 при смене canonical URL подтверждение сбрасывается. Loopback и публичный HTTPS
 не требуют подтверждения; удалённый HTTP остаётся запрещён независимо от флага.

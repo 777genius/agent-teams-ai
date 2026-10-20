@@ -10,6 +10,8 @@ Desktop-only feature for per-teammate API-key routing through an Anthropic/OpenA
 
 `GatewayProviderService` owns profile, key-owner and binding changes. `JsonGatewayProviderStore` serializes those changes; literals live in the existing `ApiKeyService`. Sources retain their endpoint, approval and owner after a profile or binding is removed.
 
+Local-network approval follows the existing local-provider policy and classifies literal IPs and `.local` hostnames. DNS resolution remains with the HTTP client and native CLIs: an ordinary HTTPS hostname can resolve to a private address. DNS pinning and rebinding protection require separate network-layer work and are outside this feature's agreed scope.
+
 The app shell composes runtime integrations in `src/main/services/gateway/createGatewayLaunchRuntime.ts`. Its app-owned run metadata records the source before spawn, associates native sessions immutably and retains terminal facts after team files disappear. Token usage imports daily UTC aggregates through the public usage port; marked runs do not also import CLI costs. OpenCode artifacts use the existing connector writer and are retired only after their bindings and live consumers are gone.
 
 Dialogs preserve gateway models and skip global account/catalog checks only for bound teammates. Binding lookup settles before model normalization; main revalidates the exact credential on every launch and restart.
