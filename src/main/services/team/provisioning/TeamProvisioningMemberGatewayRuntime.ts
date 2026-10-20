@@ -19,7 +19,7 @@ import { isLeadMember } from '@shared/utils/leadDetection';
 
 import { normalizeTeamMemberProviderId } from './TeamProvisioningMemberSpecs';
 
-import type { TeamCreateRequest, TeamProviderId } from '@shared/types';
+import type { ProviderModelLaunchIdentity, TeamCreateRequest, TeamProviderId } from '@shared/types';
 
 /**
  * Per-member gateway runtime artifacts (Stage 3 of
@@ -172,6 +172,53 @@ export async function resolveMemberGatewayRuntimeArgs(
     confirmStopped,
     envPatch: buildClaudeGatewayMemberEnvPatch(connection),
     gatewayUsageRef: connection.gatewayUsageRef,
+  };
+}
+
+/**
+ * The global provider catalog describes the user's default connection. A member
+ * whose exact gateway credentials have already resolved uses that gateway's
+ * selected model instead; the lead is validated separately by the caller.
+ */
+export function getRuntimeCatalogMembers(
+  members: TeamCreateRequest['members'],
+  memberArgsByMember: ReadonlyMap<string, MemberGatewayRuntimeArgs> | undefined
+): TeamCreateRequest['members'] {
+  return members.filter((member) => !memberArgsByMember?.get(member.name)?.gatewayUsageRef);
+}
+
+/** Read-only identity resolution before direct restart creates any launch artifacts. */
+export async function resolveGatewayMemberLaunchIdentity(input: {
+  seams: MemberGatewayRuntimeSeams | null;
+  teamName: string;
+  providerId: TeamProviderId;
+  memberSpec: TeamCreateRequest['members'][number];
+}): Promise<ProviderModelLaunchIdentity | null> {
+  const model = input.memberSpec.model?.trim();
+  const connection = await input.seams?.resolveMemberConnection(
+    input.teamName,
+    input.memberSpec.name,
+    input.providerId === 'opencode'
+      ? model?.replace(/^gateway-[a-z0-9_-]+-[a-f0-9]{12}\//, '')
+      : model
+  );
+  if (!connection) return null;
+  const gatewayModel = connection.spec.model?.trim();
+  if (!gatewayModel) throw new Error('A gateway teammate requires an explicit model.');
+  return {
+    providerId: input.providerId,
+    providerBackendId: input.providerId === 'codex' ? 'codex-native' : null,
+    billingMode: 'api',
+    selectedModel: gatewayModel,
+    selectedModelKind: 'explicit',
+    resolvedLaunchModel: gatewayModel,
+    catalogId: gatewayModel,
+    catalogSource: 'runtime',
+    catalogFetchedAt: null,
+    selectedEffort: input.memberSpec.effort ?? null,
+    resolvedEffort: input.memberSpec.effort ?? null,
+    selectedFastMode: input.memberSpec.fastMode ?? 'inherit',
+    resolvedFastMode: input.memberSpec.fastMode === 'on',
   };
 }
 

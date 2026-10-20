@@ -50,7 +50,10 @@ import {
   createHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase,
   type HasOpenCodeMemberRuntimeEvidenceForControlledRelaunchInput,
 } from './TeamProvisioningHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase';
-import { applyDirectGatewayArgs } from './TeamProvisioningMemberGatewayRuntime';
+import {
+  applyDirectGatewayArgs,
+  resolveGatewayMemberLaunchIdentity,
+} from './TeamProvisioningMemberGatewayRuntime';
 import {
   matchesExactTeamMemberName,
   matchesMemberNameOrBase,
@@ -305,10 +308,16 @@ export class TeamProvisioningMemberLifecycleController {
     return this.host.materializeEffectiveTeamMemberSpecs(input);
   }
 
-  private resolveDirectMemberLaunchIdentity(
+  private async resolveDirectMemberLaunchIdentity(
     input: Parameters<TeamProvisioningMemberLifecycleHost['resolveDirectMemberLaunchIdentity']>[0]
   ): Promise<ProviderModelLaunchIdentity | null> {
-    return this.host.resolveDirectMemberLaunchIdentity(input);
+    const gatewayIdentity = await resolveGatewayMemberLaunchIdentity({
+      seams: this.host.getMemberGatewayRuntimeSeams(),
+      teamName: input.run.teamName,
+      providerId: input.providerId,
+      memberSpec: input.memberSpec,
+    });
+    return gatewayIdentity ?? this.host.resolveDirectMemberLaunchIdentity(input);
   }
 
   private buildTeamRuntimeLaunchArgsPlan(

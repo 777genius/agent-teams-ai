@@ -37,7 +37,10 @@ import {
   parseLaunchConfigProjectPath,
   resolveExistingLaunchRunReuse,
 } from './TeamProvisioningLaunchTeamFlow';
-import { assertMemberGatewaySpawnCompatibility } from './TeamProvisioningMemberGatewayRuntime';
+import {
+  assertMemberGatewaySpawnCompatibility,
+  getRuntimeCatalogMembers,
+} from './TeamProvisioningMemberGatewayRuntime';
 import {
   buildEffectiveTeamMemberSpecs,
   teamRequestIncludesCodexMember,
@@ -387,7 +390,8 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
     assertMemberGatewaySpawnCompatibility({
       memberArgsByMember: crossProviderMemberArgs.memberArgsByMember,
       usesAnthropicApiKeyHelper: crossProviderMemberArgs.usesAnthropicApiKeyHelper,
-      teammateModeIsInProcess: getExplicitDesktopTeammateMode(request.extraCliArgs) === 'in-process',
+      teammateModeIsInProcess:
+        getExplicitDesktopTeammateMode(request.extraCliArgs) === 'in-process',
     });
     const workspaceTrustFullWorkspaces = workspaceTrustFeatureFlags.enabled
       ? await collectWorkspaceTrustWorkspaces({
@@ -428,7 +432,10 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
       cwd: request.cwd,
       env: shellEnv,
       request,
-      effectiveMembers: effectiveMemberSpecs,
+      effectiveMembers: getRuntimeCatalogMembers(
+        effectiveMemberSpecs,
+        crossProviderMemberArgs.memberArgsByMember
+      ),
       providerArgsByProvider,
     });
 

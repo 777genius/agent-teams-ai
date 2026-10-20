@@ -31,6 +31,7 @@ import {
 } from './TeamProvisioningLaunchCompatibility';
 import {
   assertMemberGatewaySpawnCompatibility,
+  getRuntimeCatalogMembers,
   type MemberGatewayRuntimeArgs,
 } from './TeamProvisioningMemberGatewayRuntime';
 import {
@@ -354,7 +355,10 @@ async function prepareDeterministicCreateSetupFlowWithLease<TMixedSecondaryLane>
     cwd: request.cwd,
     env: shellEnv,
     request,
-    effectiveMembers: effectiveMemberSpecs,
+    effectiveMembers: getRuntimeCatalogMembers(
+      effectiveMemberSpecs,
+      crossProviderMemberArgs.memberArgsByMember
+    ),
     providerArgsByProvider,
   });
 

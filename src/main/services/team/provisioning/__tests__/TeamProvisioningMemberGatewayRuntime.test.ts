@@ -7,8 +7,10 @@ import {
   assertMemberGatewaySpawnCompatibility,
   beginGatewayMemberLaunches,
   buildMemberCodexCliArgs,
+  getRuntimeCatalogMembers,
   type MemberGatewayRuntimeSeams,
   MemberGatewaySpawnCompatibilityError,
+  resolveGatewayMemberLaunchIdentity,
   resolveMemberGatewayRuntimeArgs,
   resolveOpenCodeGatewayMemberModels,
 } from '../TeamProvisioningMemberGatewayRuntime';
@@ -287,5 +289,68 @@ describe('app-owned OpenCode gateway members', () => {
     );
     expect(seams.markRuntimeArtifactActive).toHaveBeenCalledWith('usage-ref-1');
     expect(snapshots).toEqual([]);
+  });
+});
+
+describe('gateway model authority', () => {
+  it('excludes only members with resolved gateway credentials from the global catalog', () => {
+    const members = [
+      { name: 'gateway', model: 'private-model' },
+      { name: 'ordinary', model: 'unknown-global-model' },
+      { name: 'unresolved', model: 'another-model' },
+    ];
+    expect(
+      getRuntimeCatalogMembers(
+        members,
+        new Map([
+          ['gateway', { envPatch: {}, gatewayUsageRef: 'resolved-exact-key' }],
+          ['unresolved', { envPatch: {} }],
+        ])
+      )
+    ).toEqual(members.slice(1));
+    expect(getRuntimeCatalogMembers(members, undefined)).toEqual(members);
+  });
+
+  it('retains an exact custom Codex model and API billing for a direct restart', async () => {
+    const seams = seamsWithConnection(
+      connection({
+        spec: { ...connection().spec, model: 'gateway-only-model' },
+      })
+    );
+    const identity = await resolveGatewayMemberLaunchIdentity({
+      seams,
+      teamName: 'team-a',
+      providerId: 'codex',
+      memberSpec: { name: 'builder', model: 'gateway-only-model', effort: 'high' },
+    });
+    expect(identity).toMatchObject({
+      providerBackendId: 'codex-native',
+      billingMode: 'api',
+      selectedModel: 'gateway-only-model',
+      resolvedLaunchModel: 'gateway-only-model',
+      selectedEffort: 'high',
+      resolvedEffort: 'high',
+    });
+    expect(seams.resolveMemberConnection).toHaveBeenCalledExactlyOnceWith(
+      'team-a',
+      'builder',
+      'gateway-only-model'
+    );
+    expect(seams.configureOpenCodeLocalProvider).not.toHaveBeenCalled();
+    expect(seams.markRuntimeArtifactActive).not.toHaveBeenCalled();
+  });
+
+  it('keeps unbound members on normal validation and fails closed for edited credentials', async () => {
+    const input = {
+      seams: seamsWithConnection(null),
+      teamName: 'team-a',
+      providerId: 'codex' as const,
+      memberSpec: { name: 'builder', model: 'gateway-only-model' },
+    };
+    expect(await resolveGatewayMemberLaunchIdentity(input)).toBeNull();
+    input.seams.resolveMemberConnection = vi.fn(async () => {
+      throw new Error('credential_changed');
+    });
+    await expect(resolveGatewayMemberLaunchIdentity(input)).rejects.toThrow('credential_changed');
   });
 });
