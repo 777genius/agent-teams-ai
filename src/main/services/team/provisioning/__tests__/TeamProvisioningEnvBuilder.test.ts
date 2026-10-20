@@ -247,6 +247,55 @@ describe('TeamProvisioningEnvBuilder', () => {
     expect(result.memberArgsByMember.get('bound')?.gatewayUsageRef).toBe('member-source');
   });
 
+  it.each(['anthropic', 'codex'] as const)(
+    'keeps global %s preparation when unbound members only have attribution hooks',
+    async (providerId) => {
+      const snapshotLaunch = vi.fn(async () => 'unbound-launch');
+      const buildGlobalEnv = vi.fn(async () => ({
+        env: { CODEX_HOME: '/sandbox/codex', ANTHROPIC_AUTH_TOKEN: 'synthetic-global-token' },
+        authSource: 'none' as const,
+        geminiRuntimeAuth: null,
+        providerArgs: ['--global-provider-settings'],
+      }));
+      const result = await buildCrossProviderMemberArgs({
+        primaryProviderId: providerId === 'codex' ? 'anthropic' : 'codex',
+        memberSpecs: [{ name: 'ordinary', providerId }],
+        options: { teamRuntimeAuth: { teamName: 'sandbox' } },
+        ports: {
+          buildProvisioningEnv: buildGlobalEnv,
+          buildRuntimeTurnSettledHookSettingsArgs: async () => [],
+          logger: { error: vi.fn() },
+          getMemberGatewayRuntimeSeams: () => ({
+            resolveMemberConnection: async () => null,
+            snapshotLaunch,
+            configureOpenCodeLocalProvider: async () => ({ providerId: '', modelRoute: '' }),
+            retireOpenCodeLocalProvider: async () => ({ retired: false }),
+            markRuntimeArtifactActive: async () => undefined,
+            markRuntimeArtifactRetired: async () => undefined,
+          }),
+        },
+      });
+      expect(buildGlobalEnv).toHaveBeenCalledWith(providerId, undefined, {
+        teamRuntimeAuth: { teamName: 'sandbox' },
+      });
+      expect(result.providerArgsByProvider.get(providerId)).toEqual(['--global-provider-settings']);
+      expect(result.envPatch).toMatchObject(
+        providerId === 'codex'
+          ? { CODEX_HOME: '/sandbox/codex' }
+          : { ANTHROPIC_AUTH_TOKEN: 'synthetic-global-token' }
+      );
+      const memberArgs = result.memberArgsByMember.get('ordinary');
+      expect(memberArgs?.gatewayUsageRef).toBeUndefined();
+      await memberArgs?.beginLaunch?.();
+      expect(snapshotLaunch).toHaveBeenCalledWith({
+        teamName: 'sandbox',
+        memberName: 'ordinary',
+        providerId,
+        gatewayUsageRef: undefined,
+      });
+    }
+  );
+
   it('builds cross-provider runtime args and safe Codex env patch', async () => {
     const buildProvisioningEnvForMember = vi.fn(async () => ({
       env: {

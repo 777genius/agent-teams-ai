@@ -12,6 +12,35 @@ export class GatewayHttpError extends Error {
 }
 
 const REQUEST_TIMEOUT_MS = 20_000;
+const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
+
+async function readBoundedJson(response: Response, controller: AbortController): Promise<unknown> {
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new GatewayHttpError('Gateway returned invalid JSON.', response.status, 'shape');
+  }
+  const chunks: Uint8Array[] = [];
+  let bytes = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > MAX_RESPONSE_BYTES) {
+        controller.abort();
+        throw new GatewayHttpError('Gateway response is too large.', response.status, 'shape');
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown;
+  } catch {
+    throw new GatewayHttpError('Gateway returned invalid JSON.', response.status, 'shape');
+  }
+}
 
 async function requestJson(input: {
   baseUrl: string;
@@ -36,11 +65,7 @@ async function requestJson(input: {
         response.status
       );
     }
-    try {
-      return (await response.json()) as unknown;
-    } catch {
-      throw new GatewayHttpError('Gateway returned invalid JSON.', response.status, 'shape');
-    }
+    return await readBoundedJson(response, controller);
   } catch (error) {
     if (error instanceof GatewayHttpError) throw error;
     if ((error as Error).name === 'AbortError') {

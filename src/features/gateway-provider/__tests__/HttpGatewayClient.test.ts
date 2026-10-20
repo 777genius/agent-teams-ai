@@ -64,3 +64,35 @@ describe('gateway HTTP origin boundary', () => {
     }
   );
 });
+
+describe('gateway HTTP response bounds', () => {
+  it.each(['models', 'usage'] as const)(
+    'rejects oversized %s bodies with or without Content-Length',
+    async (kind) => {
+      for (const contentLength of [false, true]) {
+        const payload = JSON.stringify({
+          data: [{ id: 'model' }],
+          model_stats: [],
+          padding: 'x'.repeat(5 * 1024 * 1024),
+        });
+        const gateway = await listen((_req, response) => {
+          response.setHeader('Content-Type', 'application/json');
+          if (contentLength) response.setHeader('Content-Length', Buffer.byteLength(payload));
+          response.end(payload);
+        });
+        await expect(request(kind, gateway)).rejects.toMatchObject({
+          name: 'GatewayHttpError',
+          kind: 'shape',
+          message: 'Gateway response is too large.',
+        });
+      }
+    }
+  );
+  it.each(['models', 'usage'] as const)('rejects malformed %s JSON', async (kind) => {
+    const gateway = await listen((_req, response) => response.end('{'));
+    await expect(request(kind, gateway)).rejects.toMatchObject({
+      kind: 'shape',
+      message: 'Gateway returned invalid JSON.',
+    });
+  });
+});

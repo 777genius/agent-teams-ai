@@ -623,7 +623,7 @@ export async function buildCrossProviderMemberArgs({
       );
       if (
         providerMembers.length > 0 &&
-        providerMembers.every((member) => memberArgsByMember.has(member.name))
+        providerMembers.every((member) => memberArgsByMember.get(member.name)?.gatewayUsageRef)
       )
         continue;
       const dynamicSpawnOnly = providerId === 'anthropic' && prepareAnthropicForDynamicSpawn;
