@@ -99,7 +99,7 @@ export async function verifyGatewayUi(
   assert(options.apiKey, 'A fresh group-bound test key is required');
   const teamName = options.teamName ?? `gateway-ui-${Date.now().toString(36)}`;
   const memberName = options.memberName ?? 'ui-member';
-  const model = options.model ?? 'claude-sonnet-4-5';
+  const model = options.model ?? 'claude-sonnet-4-5-20250929';
   assert(
     /^[a-z][a-z0-9-]+$/.test(teamName) && /^[a-z][a-z0-9-]+$/.test(memberName),
     'Use simple test owner names'
