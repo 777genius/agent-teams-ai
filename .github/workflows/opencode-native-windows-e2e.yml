@@ -81,7 +81,12 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           # Keep Bun's resolver outside the unrelated desktop package scope.
-          # Both source trees retain independent owner-only custody.
+          # Both source trees keep owner-only WRITE custody. The owned execution
+          # child runs in a per-launch AppContainer whose access checks do not
+          # honor the owner SID alone, so Bun's ancestor probes (the checkout
+          # root and its tsconfig.json) die EPERM unless app containers may
+          # read; default-ACL resource trees never had this problem. Read-only.
+          $appPackages = [Security.Principal.SecurityIdentifier]::new('S-1-15-2-1')
           foreach ($name in @('TEST-native-source', 'TEST-native-sdk')) {
             $target = Join-Path $env:GITHUB_WORKSPACE $name
             try { $null = Get-Item -LiteralPath $target -Force -ErrorAction Stop; throw 'TEST source container already exists' }
@@ -97,6 +102,7 @@ jobs:
             foreach ($principal in @($sid, $system)) {
               $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($principal, 'FullControl', $inherit, 'None', 'Allow'))
             }
+            $acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new($appPackages, 'ReadAndExecute', $inherit, 'None', 'Allow'))
             $directory = [IO.DirectoryInfo]::new($target)
             [IO.FileSystemAclExtensions]::Create($directory, $acl)
             $directory.Refresh()
@@ -104,9 +110,10 @@ jobs:
             $observed = [IO.FileSystemAclExtensions]::GetAccessControl($directory)
             if (!$observed.AreAccessRulesProtected -or $observed.GetOwner([Security.Principal.SecurityIdentifier]).Value -cne $sid.Value) { throw 'TEST source custody invalid' }
             $rules = @($observed.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]))
-            if ($rules.Count -ne 2) { throw 'TEST source ACL invalid' }
+            if ($rules.Count -ne 3) { throw 'TEST source ACL invalid' }
             foreach ($rule in $rules) {
-              if ($rule.IdentityReference.Value -notin @($sid.Value, $system.Value) -or $rule.AccessControlType -ne 'Allow' -or $rule.FileSystemRights -ne 'FullControl' -or $rule.InheritanceFlags -ne $inherit -or $rule.PropagationFlags -ne 'None' -or $rule.IsInherited) { throw 'TEST source ACL invalid' }
+              $expected = if ($rule.IdentityReference.Value -eq $appPackages.Value) { 'ReadAndExecute' } elseif ($rule.IdentityReference.Value -in @($sid.Value, $system.Value)) { 'FullControl' } else { $null }
+              if ($null -eq $expected -or $rule.AccessControlType -ne 'Allow' -or $rule.FileSystemRights -ne $expected -or $rule.InheritanceFlags -ne $inherit -or $rule.PropagationFlags -ne 'None' -or $rule.IsInherited) { throw 'TEST source ACL invalid' }
             }
           }
       - uses: actions/checkout@v6
