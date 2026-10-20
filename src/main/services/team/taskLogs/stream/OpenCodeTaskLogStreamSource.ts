@@ -1189,7 +1189,6 @@ export class OpenCodeTaskLogStreamSource {
       const laneId = record.laneId?.trim();
       const sessionId = record.sessionId?.trim();
       const runId = record.runId?.trim();
-      strictOriginalAttribution ||= Boolean(runId && record.source === 'delivery_ledger');
       const transcriptCacheKey = `${memberKey}::${laneId ?? 'current-lane'}::${
         sessionId ?? 'current'
       }::${runId ?? 'legacy-run'}`;
@@ -1209,6 +1208,8 @@ export class OpenCodeTaskLogStreamSource {
 
       const transcript = transcriptCache.get(transcriptCacheKey);
       if (!transcript) {
+        // An unavailable run-bound read must not become a latest-session guess.
+        strictOriginalAttribution ||= Boolean(runId && record.source === 'delivery_ledger');
         continue;
       }
       const marker = 'v2_native_parent_ids_unavailable';
