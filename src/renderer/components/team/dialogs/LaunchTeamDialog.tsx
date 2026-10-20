@@ -123,6 +123,7 @@ import {
 import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
 import * as optionalPreflight from './optionalProviderPreflight';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
+import { resolvePersistedTeamModel } from './persistedTeamModel';
 import {
   isDeletedProjectPathSelection,
   isLaunchPreflightProjectSelectionReady,
@@ -414,7 +415,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       : selectedProjectPath.trim();
   const effectiveCwd = cwdMode === 'project' ? selectedProjectCwd : customCwd.trim();
   const launchPreflightSelectionReady = isLaunchPreflightProjectSelectionReady({
-    draftLoaded: launchHydratedTeamName === effectiveTeamName,
+    draftLoaded: !isLaunchMode || launchHydratedTeamName === effectiveTeamName,
     effectiveCwd,
     cwdMode,
     projectsLoading,
@@ -2233,13 +2234,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             cwd: effectiveCwd,
             prompt: promptDraft.value.trim() || undefined,
             providerId: selectedProviderId,
-            providerBackendId:
-              resolveUiOwnedProviderBackendId(
-                selectedProviderId,
-                runtimeProviderStatusById.get(selectedProviderId)
-              ) ??
-              selectedProviderBackendId ??
-              undefined,
+            providerBackendId: selectedProviderBackendId,
             model: computeEffectiveTeamModel(
               effectiveSelectedModel,
               effectiveAnthropicRuntimeLimitContext,
@@ -2280,19 +2275,22 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         } else {
           // Schedule mode: create or update
           const parsedBudget = maxBudgetUsd ? parseFloat(maxBudgetUsd) : undefined;
-          const scheduleProviderBackendId =
-            resolveUiOwnedProviderBackendId(
+          const scheduleModel = resolvePersistedTeamModel({
+            model: computeEffectiveTeamModel(
+              effectiveSelectedModel,
+              false,
               selectedProviderId,
               runtimeProviderStatusById.get(selectedProviderId)
-            ) ??
-            selectedProviderBackendId ??
-            undefined;
-          const scheduleModel = computeEffectiveTeamModel(
-            effectiveSelectedModel,
-            false,
-            selectedProviderId,
-            runtimeProviderStatusById.get(selectedProviderId)
-          );
+            ),
+            selectedModel: effectiveSelectedModel,
+            providerId: selectedProviderId,
+            globalStatus: globalRuntimeProviderStatusById.get('anthropic'),
+            scopedStatus: runtimeProviderStatusById.get(selectedProviderId),
+            projectSelectionReady: launchPreflightSelectionReady,
+            probedCwd: effectiveCwd,
+            persistedCwd: effectiveCwd,
+            limitContext: false,
+          });
           const explicitScheduleEffort = selectedEffortForCurrentSelection
             ? (selectedEffortForCurrentSelection as EffortLevel)
             : undefined;
@@ -2304,7 +2302,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             cwd: effectiveCwd,
             prompt: promptDraft.value.trim(),
             providerId: selectedProviderId,
-            providerBackendId: scheduleProviderBackendId,
+            providerBackendId: selectedProviderBackendId,
             model: scheduleModel,
             effort: scheduleEffort,
             fastMode:

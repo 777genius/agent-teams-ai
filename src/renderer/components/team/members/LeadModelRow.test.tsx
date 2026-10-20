@@ -249,9 +249,12 @@ describe('LeadModelRow', () => {
       effectiveDefaultModel: model,
     });
     runtimeDefaultStatus.current = status('global/wrong-default');
-    runtimeDefaultStatus.byProject['/tmp/project-a'] = status('project-a/model');
-    runtimeDefaultStatus.byProject['/tmp/project-b'] = status('project-b/model');
-    const { host, root } = renderLeadModelRow({ model: '', projectPath: '/tmp/project-b' });
+    runtimeDefaultStatus.byProject['/test-fixtures/project-a'] = status('project-a/model');
+    runtimeDefaultStatus.byProject['/test-fixtures/project-b'] = status('project-b/model');
+    const { host, root } = renderLeadModelRow({
+      model: '',
+      projectPath: '/test-fixtures/project-b',
+    });
     expect(host.querySelector('button[aria-label*="Default"]')?.textContent).toContain(
       'project-b/model'
     );

@@ -126,6 +126,7 @@ import {
 import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
 import * as optionalPreflight from './optionalProviderPreflight';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
+import { resolvePersistedTeamModel } from './persistedTeamModel';
 import {
   isDeletedProjectPathSelection,
   isLaunchPreflightProjectSelectionReady,
@@ -2201,7 +2202,17 @@ export const CreateTeamDialog = ({
             prompt: request.prompt,
             providerId: request.providerId,
             providerBackendId: request.providerBackendId,
-            model: request.model,
+            model: resolvePersistedTeamModel({
+              model: request.model,
+              selectedModel: effectiveSelectedModel,
+              providerId: request.providerId,
+              globalStatus: globalRuntimeProviderStatusById.get('anthropic'),
+              scopedStatus: runtimeProviderStatusById.get(selectedProviderId),
+              projectSelectionReady: launchPreflightSelectionReady,
+              probedCwd: effectiveCwd,
+              persistedCwd: configOnlyCwd,
+              limitContext: effectiveAnthropicRuntimeLimitContext,
+            }),
             effort: request.effort,
             fastMode: request.fastMode,
             syncModelsWithLead: request.syncModelsWithLead,

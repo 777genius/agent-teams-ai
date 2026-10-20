@@ -60,6 +60,10 @@ interface InputPage {
   url(): string;
   bringToFront(): Promise<void>;
   evaluateHandle(expression: string): Promise<InputHandle>;
+  evaluate<Result, Argument>(
+    pageFunction: (argument: Argument) => Result | Promise<Result>,
+    argument: Argument
+  ): Promise<Result>;
 }
 interface InputBrowser {
   contexts(): { pages(): InputPage[] }[];
@@ -184,6 +188,21 @@ class Cdp {
     } finally {
       await handle.dispose();
     }
+  }
+  async openTeams(projectPath: string): Promise<void> {
+    assert(this.inputPage, 'Owned Electron input page must be connected');
+    await this.inputPage.evaluate((cwd) => {
+      const store = (
+        window as unknown as {
+          __agentTeamsDevStore: {
+            setState(state: { selectedProjectId: string }): void;
+            getState(): { openTeamsTab(projectPath: string): void };
+          };
+        }
+      ).__agentTeamsDevStore;
+      store.setState({ selectedProjectId: 'anthropic-model-e2e-sandbox' });
+      store.getState().openTeamsTab(cwd);
+    }, projectPath);
   }
   close(): void {
     this.socket.close();
@@ -487,9 +506,7 @@ async function main(): Promise<void> {
       'native API',
       60_000
     );
-    await cdp.evaluate<void>(
-      `(() => { const store = window.__agentTeamsDevStore; store.setState({selectedProjectId:'anthropic-model-e2e-sandbox'}); store.getState().openTeamsTab(${JSON.stringify(d['sandbox-project'])}); })()`
-    );
+    await cdp.openTeams(d['sandbox-project']);
     // Provider polling is passive until the initial native runtime discovery completes.
     await cdp.evaluate<unknown>('window.electronAPI.cliInstaller.getStatus()');
     await cdp.waitFor(
@@ -677,9 +694,7 @@ async function main(): Promise<void> {
         process.exitCode = 1;
         return;
       }
-      await cdp.evaluate<void>(
-        `(() => { const store = window.__agentTeamsDevStore; store.setState({selectedProjectId:'anthropic-model-e2e-sandbox'}); store.getState().openTeamsTab(${JSON.stringify(d['sandbox-project'])}); })()`
-      );
+      await cdp.openTeams(d['sandbox-project']);
     }
     for (const [model, label] of defaultNoCatalog
       ? []
@@ -785,9 +800,7 @@ async function main(): Promise<void> {
       ) as SavedRequest;
       assert.equal(meta.model, persistedModel);
       results.push({ name, saved, diskModel: meta.model });
-      await cdp.evaluate<void>(
-        `(() => { const store = window.__agentTeamsDevStore; store.setState({selectedProjectId:'anthropic-model-e2e-sandbox'}); store.getState().openTeamsTab(${JSON.stringify(d['sandbox-project'])}); })()`
-      );
+      await cdp.openTeams(d['sandbox-project']);
     }
     const ledger = await readAllowedRuntimeLedger(test.ledger);
     await json(path.join(evidence, 'result.json'), { ok: true, results, ledger });
@@ -822,16 +835,16 @@ async function main(): Promise<void> {
       }
       await writeFile(path.join(evidence, 'app.log'), logs.join(''));
       await writeFile(path.join(evidence, 'runtime.ndjson'), await readFile(test.ledger, 'utf8'));
-      await json(
-        path.join(evidence, 'runtime-ledger-after-shutdown.json'),
-        await readAllowedRuntimeLedger(test.ledger)
-      );
       await writeFile(
         path.join(evidence, 'preflight.ndjson'),
         await readFile(
           path.join(test.directories.tmp, 'claude-team-preflight-debug.log'),
           'utf8'
         ).catch(() => '')
+      );
+      await json(
+        path.join(evidence, 'runtime-ledger-after-shutdown.json'),
+        await readAllowedRuntimeLedger(test.ledger)
       );
     } finally {
       try {
