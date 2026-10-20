@@ -154,7 +154,13 @@ describe('native Windows dispatch input admission', () => {
           ]) {
             const result = spawnSync('/bin/bash', ['-c', script], {
               encoding: 'utf8',
-              env: { ...process.env, SDK_REF: sha, SELECTED_MODEL: model, PROVIDER_ONLY: provider },
+              env: {
+                ...process.env,
+                SDK_REF: sha,
+                SELECTED_MODEL: model,
+                PROVIDER_ONLY: provider,
+                VERSIONS: 'current',
+              },
             });
             const accepted =
               sha === 'a'.repeat(40) && (provider === 'true' || model.startsWith('openrouter/'));
@@ -166,6 +172,18 @@ describe('native Windows dispatch input admission', () => {
           }
         }
       }
+      const rejectedVersions = spawnSync('/bin/bash', ['-c', script], {
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          SDK_REF: 'a'.repeat(40),
+          SELECTED_MODEL: 'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
+          PROVIDER_ONLY: 'false',
+          VERSIONS: 'not-a-version-selection',
+        },
+      });
+      expect(rejectedVersions.status).toBe(1);
+      expect(rejectedVersions.stdout).toContain('Unknown Windows version selection');
     }
   );
 });
