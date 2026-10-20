@@ -3,5 +3,9 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": ["../../scripts/ci/packaged-ci-*.mts", "../../scripts/ci/verify-dmg-artwork.mts"]
+  "include": [
+    "../../scripts/ci/packaged-ci-*.mts",
+    "../../scripts/ci/verify-dmg-artwork.mts",
+    "../../scripts/electron-builder/smokePackagedRuntime.ts"
+  ]
 }

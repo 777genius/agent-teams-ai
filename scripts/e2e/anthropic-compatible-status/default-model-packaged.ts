@@ -317,7 +317,10 @@ try {
     data.project,
     10_000
   );
-  assert.equal((evidence.bunVersion as { stdout: string }).stdout.trim(), '1.3.11');
+  assert.equal(
+    (evidence.bunVersion as { stdout: string }).stdout.trim(),
+    process.platform === 'win32' ? '1.4.3' : '1.3.11'
+  );
   app = spawn(
     data.artifact.app.path,
     [

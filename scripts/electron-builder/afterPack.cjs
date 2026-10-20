@@ -285,6 +285,41 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
   }
   const runtimeRoot = path.join(appOutDir, ...runtimePrefix);
   const runtimePath = segments.slice(runtimePrefix.length).join('/');
+  // The exact optional extractor falls back to msgpackr's JS string decoders
+  // when its native loader fails. Cross-installing on Linux can leave these
+  // host build files in a Windows ARM64 graph. Remove only incompatible files,
+  // preserving any compatible accelerator, prebuilds and unknown paths.
+  if (
+    targetPlatform === 'win32' &&
+    targetArch === 'arm64' &&
+    [
+      'msgpackr-extract/build/Release/extract.node',
+      'msgpackr-extract/build/Release/obj.target/extract.node',
+      'msgpackr-extract/build/Release/obj.target/extract/src/extract.o',
+    ].includes(runtimePath)
+  ) {
+    try {
+      const [extractor, consumer] = await Promise.all(
+        ['msgpackr-extract', 'msgpackr'].map(async (name) =>
+          JSON.parse(
+            await fs.promises.readFile(path.join(runtimeRoot, name, 'package.json'), 'utf8')
+          )
+        )
+      );
+      if (
+        extractor.name === 'msgpackr-extract' &&
+        extractor.version === '3.0.4' &&
+        consumer.name === 'msgpackr' &&
+        consumer.version === '2.1.0' &&
+        consumer.optionalDependencies?.['msgpackr-extract'] === '^3.0.4'
+      ) {
+        return filePath;
+      }
+    } catch {
+      // Unknown or incomplete package identity must retain the strict rejection.
+    }
+    return null;
+  }
   let rootToRemove = null;
   let targetSibling = null;
   const treeSitterRoots = [
@@ -329,7 +364,10 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
     'librust_pty.so',
     'librust_pty_arm64.dylib',
     'librust_pty_arm64.so',
+    'librust_pty_musl.so',
+    'librust_pty_arm64_musl.so',
     'rust_pty.dll',
+    'rust_pty_arm64.dll',
   ];
   const targetBunPtyFile =
     targetPlatform === 'darwin'
@@ -338,7 +376,9 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
         : 'librust_pty.dylib'
       : targetPlatform === 'linux'
         ? 'librust_pty.so'
-        : 'rust_pty.dll';
+        : targetArch === 'arm64'
+          ? 'rust_pty_arm64.dll'
+          : 'rust_pty.dll';
   if (
     foreignBunPtyFiles.some(
       (filename) => filename !== targetBunPtyFile && runtimePath === `${bunPtyRelease}/${filename}`

@@ -155,9 +155,16 @@ export class DefaultProcessLedger {
     assert.equal(entry.signal, null);
     return { stdout, stderr, pid: child.pid };
   }
-  async stop() {
+  async stop({ requireQuiet = false }: { requireQuiet?: boolean } = {}) {
     if (this.timer) clearInterval(this.timer);
     let current = this.sample();
+    if (requireQuiet) {
+      // Qualification may only observe natural retirement. Ordinary failure
+      // cleanup below is never allowed to manufacture a successful final census.
+      assert.equal(current.length, 0, 'Owned processes did not settle naturally');
+      assert(!this.samplingError, `Process inventory failed: ${this.samplingError}`);
+      return { remaining: current, observed: [...this.observed.values()], commands: this.commands };
+    }
     const rootKeys = new Set(this.roots.map((p) => this.key(p)));
     // First ask each owned app root to stop; descendants may then exit normally.
     for (const p of current.filter((p) => rootKeys.has(this.key(p)))) this.signal(p);

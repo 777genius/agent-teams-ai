@@ -79,8 +79,11 @@ describe.skipIf(process.platform === 'win32')('packaged native probe isolation',
       });
       expect(result.error).toBeUndefined();
       expect(result.stdout + result.stderr).not.toContain('TEST isolation failure');
-      expect(result.status).toBe(0);
+      // This isolation fixture deliberately has no bundled runtime. The new
+      // mandatory runtime smoke must reject it after the unchanged native probe.
+      expect(result.status).toBe(1);
       expect(result.stdout).toContain('[smokePackagedNative] OK linux: PACKAGED_NATIVE_OK');
+      expect(result.stderr).toContain('Packaged bundled-runtime smoke failed');
       const { root } = JSON.parse(fs.readFileSync(evidence, 'utf8')) as { root: string };
       expect(fs.existsSync(root)).toBe(false);
       expect(fs.existsSync(preloadMarker)).toBe(false);

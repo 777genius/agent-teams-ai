@@ -62,7 +62,9 @@ export async function verifyCandidatePayload(root, expected, { packaged = false 
     delivery.schema === 1 &&
       delivery.platform === 'win32' &&
       delivery.arch === 'x64' &&
-      delivery.bunVersion === '1.3.11'
+      // Preserve historical candidates and the new Windows platform pin.
+      // Both remain bound to the exact source/artifact and physical Bun digest.
+      ['1.3.11', '1.4.3'].includes(delivery.bunVersion)
   );
   assert(/^[a-f0-9]{64}$/.test(delivery.bunSha256) && /^[a-f0-9]{64}$/.test(delivery.entrySha256));
   const binary = await readFile(path.join(root, 'claude-multimodel.exe'));

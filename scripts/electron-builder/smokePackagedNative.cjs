@@ -84,6 +84,26 @@ function main() {
       );
     }
     console.log(`[smokePackagedNative] OK ${platform}: ${result.stdout.trim()}`);
+    const runtimeEnv = { ...childEnv };
+    delete runtimeEnv.ELECTRON_RUN_AS_NODE;
+    const runtime = spawnSync(
+      process.execPath,
+      [path.join(__dirname, 'smokePackagedRuntime.ts'), bundle, platform],
+      {
+        cwd: testProject,
+        env: runtimeEnv,
+        encoding: 'utf8',
+        timeout: 180_000,
+        maxBuffer: 2_097_152,
+      }
+    );
+    if (runtime.error) throw runtime.error;
+    if (runtime.status !== 0 || !runtime.stdout.includes('[smokePackagedRuntime] OK')) {
+      throw new Error(
+        `Packaged bundled-runtime smoke failed (${runtime.status}): ${runtime.stderr}\n${runtime.stdout}`
+      );
+    }
+    process.stdout.write(runtime.stdout);
   } finally {
     fs.rmSync(testProject, { recursive: true, force: true });
   }

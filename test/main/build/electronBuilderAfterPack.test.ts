@@ -27,6 +27,15 @@ function writeFile(filePath: string, content: Buffer): void {
   fs.writeFileSync(filePath, content);
 }
 
+function writeOptionalMsgpackrIdentity(modules: string): void {
+  writeFile(path.join(modules, 'msgpackr-extract', 'package.json'), Buffer.from(JSON.stringify({
+    name: 'msgpackr-extract', version: '3.0.4',
+  })));
+  writeFile(path.join(modules, 'msgpackr', 'package.json'), Buffer.from(JSON.stringify({
+    name: 'msgpackr', version: '2.1.0', optionalDependencies: { 'msgpackr-extract': '^3.0.4' },
+  })));
+}
+
 function createMachOBuffer(arch: 'arm64' | 'x64'): Buffer {
   const cpuType = arch === 'arm64' ? 0x0100000c : 0x01000007;
   const buffer = Buffer.alloc(8);
@@ -65,6 +74,7 @@ describe('electron-builder afterPack', () => {
   const tempDirs: string[] = [];
   const managedRuntimeTargets = [
     ['win32', 'x64'],
+    ['win32', 'arm64'],
     ['linux', 'x64'],
     ['darwin', 'arm64'],
     ['darwin', 'x64'],
@@ -214,7 +224,7 @@ describe('electron-builder afterPack', () => {
       const prebuilds = path.join(coreRoot, 'node_modules', 'tree-sitter-bash', 'prebuilds');
       const target = path.join(prebuilds, `${platform}-${targetArch}`, 'tree-sitter-bash.node');
       writeFile(target, platform === 'darwin' ? createMachOBuffer(targetArch)
-      : platform === 'win32' ? createPortableExecutableBuffer('x64') : createElfBuffer('x64'));
+      : platform === 'win32' ? createPortableExecutableBuffer(targetArch) : createElfBuffer('x64'));
       targetFiles.push(target);
       for (const [variant, bytes] of [
         ['darwin-arm64', createMachOBuffer('arm64')],
@@ -232,38 +242,42 @@ describe('electron-builder afterPack', () => {
     }
     if (platform === 'win32') {
       const ffiTarget = path.join(
-        modules, '@yuuang', 'ffi-rs-win32-x64-msvc', 'ffi-rs.win32-x64-msvc.node'
+        modules, '@yuuang', `ffi-rs-win32-${targetArch}-msvc`, `ffi-rs.win32-${targetArch}-msvc.node`
       );
       const ffiForeign = path.join(
         modules, '@yuuang', 'ffi-rs-win32-ia32-msvc', 'ffi-rs.win32-ia32-msvc.node'
       );
-      writeFile(ffiTarget, createPortableExecutableBuffer('x64'));
+      writeFile(ffiTarget, createPortableExecutableBuffer(targetArch));
       writeFile(ffiForeign, createPortableExecutableBuffer('ia32'));
       targetFiles.push(ffiTarget);
       foreignFiles.push(ffiForeign);
     }
     const release = path.join(modules, 'bun-pty', 'rust-pty', 'target', 'release');
     const targetLibrary = platform === 'darwin' ? (targetArch === 'arm64' ? 'librust_pty_arm64.dylib' : 'librust_pty.dylib')
-      : platform === 'win32' ? 'rust_pty.dll' : 'librust_pty.so';
+      : platform === 'win32' ? (targetArch === 'arm64' ? 'rust_pty_arm64.dll' : 'rust_pty.dll') : 'librust_pty.so';
     const target = path.join(release, targetLibrary);
     writeFile(target, platform === 'darwin' ? createMachOBuffer(targetArch)
-      : platform === 'win32' ? createPortableExecutableBuffer('x64') : createElfBuffer('x64'));
+      : platform === 'win32' ? createPortableExecutableBuffer(targetArch) : createElfBuffer('x64'));
     targetFiles.push(target);
     for (const [filename, bytes] of [
       ['librust_pty.dylib', createMachOBuffer('x64')],
       ['librust_pty_arm64.dylib', createMachOBuffer('arm64')],
       ['librust_pty.so', createElfBuffer('x64')],
       ['librust_pty_arm64.so', createElfBuffer('arm64')],
+      ['librust_pty_musl.so', createElfBuffer('x64')],
+      ['librust_pty_arm64_musl.so', createElfBuffer('arm64')],
       ['rust_pty.dll', createPortableExecutableBuffer('x64')],
+      ['rust_pty_arm64.dll', createPortableExecutableBuffer('arm64')],
     ] as const) {
       if (filename === targetLibrary) continue;
       const foreign = path.join(release, filename);
       writeFile(foreign, bytes);
-      foreignFiles.push(foreign);
+      if (platform === 'linux' && filename === 'librust_pty_musl.so') targetFiles.push(foreign);
+      else foreignFiles.push(foreign);
     }
 
     await afterPackModule({ appOutDir: tempDir, electronPlatformName: platform, arch: targetArch === 'arm64' ? 3 : 1 });
-    expect(foreignFiles.length).toBe(platform === 'win32' ? 15 : 14);
+    expect(foreignFiles.length).toBe(platform === 'win32' ? 18 : platform === 'linux' ? 16 : 17);
     expect(foreignFiles.every(file => !fs.existsSync(file))).toBe(true);
     expect(targetFiles.every(file => fs.existsSync(file))).toBe(true);
     await expect(validateNativeBinaries(tempDir, platform, targetArch)).resolves.toEqual([]);
@@ -283,13 +297,13 @@ describe('electron-builder afterPack', () => {
     const invalidSibling = path.join(
       modules, 'bun-pty', 'rust-pty', 'target', 'release',
       platform === 'darwin' ? (targetArch === 'arm64' ? 'librust_pty_arm64.dylib' : 'librust_pty.dylib')
-        : platform === 'win32' ? 'rust_pty.dll' : 'librust_pty.so'
+        : platform === 'win32' ? (targetArch === 'arm64' ? 'rust_pty_arm64.dll' : 'rust_pty.dll') : 'librust_pty.so'
     );
     const foreign = path.join(path.dirname(invalidSibling), platform === 'win32' ? 'librust_pty.so' : 'rust_pty.dll');
     const unknown = path.join(modules, 'unknown-package', 'unknown.node');
     writeFile(missingSibling, platform === 'darwin' ? createPortableExecutableBuffer('arm64') : createMachOBuffer('arm64'));
     writeFile(invalidSibling, platform === 'darwin' ? createMachOBuffer(targetArch === 'arm64' ? 'x64' : 'arm64')
-      : platform === 'win32' ? createPortableExecutableBuffer('arm64') : createElfBuffer('arm64'));
+      : platform === 'win32' ? createPortableExecutableBuffer(targetArch === 'arm64' ? 'x64' : 'arm64') : createElfBuffer('arm64'));
     writeFile(foreign, platform === 'win32' ? createElfBuffer('x64') : createPortableExecutableBuffer('x64'));
     writeFile(unknown, platform === 'darwin' ? createElfBuffer('x64') : createMachOBuffer('x64'));
 
@@ -298,6 +312,76 @@ describe('electron-builder afterPack', () => {
     expect([missingSibling, invalidSibling, foreign, unknown].every(file => fs.existsSync(file)))
       .toBe(true);
   });
+
+  it('removes only the known failed optional extractor files from Windows ARM64', async () => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+    const modules = path.join(tempDir, 'resources', 'runtime', 'local-cli', 'node_modules');
+    writeOptionalMsgpackrIdentity(modules);
+    const extractor = path.join(modules, 'msgpackr-extract');
+    const foreign = [
+      'build/Release/extract.node',
+      'build/Release/obj.target/extract.node',
+      'build/Release/obj.target/extract/src/extract.o',
+    ].map(file => path.join(extractor, file));
+    for (const file of foreign) writeFile(file, createElfBuffer('x64'));
+    const source = path.join(extractor, 'src', 'extract.cpp');
+    const prebuild = path.join(extractor, 'prebuilds', 'win32-arm64', 'extract.node');
+    writeFile(source, Buffer.from('// retained package source'));
+    writeFile(prebuild, createPortableExecutableBuffer('arm64'));
+
+    await afterPackModule({ appOutDir: tempDir, electronPlatformName: 'win32', arch: 3 });
+
+    expect(foreign.every(file => !fs.existsSync(file))).toBe(true);
+    expect(fs.existsSync(source)).toBe(true);
+    expect(fs.existsSync(prebuild)).toBe(true);
+    expect(fs.existsSync(path.join(extractor, 'package.json'))).toBe(true);
+    await expect(validateNativeBinaries(tempDir, 'win32', 'arm64')).resolves.toEqual([]);
+  });
+
+  it('retains a compatible extractor even when a foreign build object exists beside it', async () => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+    const modules = path.join(tempDir, 'resources', 'runtime', 'local-cli', 'node_modules');
+    writeOptionalMsgpackrIdentity(modules);
+    const release = path.join(modules, 'msgpackr-extract', 'build', 'Release');
+    const compatible = path.join(release, 'extract.node');
+    const foreign = path.join(release, 'obj.target', 'extract', 'src', 'extract.o');
+    writeFile(compatible, createPortableExecutableBuffer('arm64'));
+    writeFile(foreign, createElfBuffer('x64'));
+
+    await afterPackModule({ appOutDir: tempDir, electronPlatformName: 'win32', arch: 3 });
+
+    expect(fs.readFileSync(compatible)).toEqual(createPortableExecutableBuffer('arm64'));
+    expect(fs.existsSync(foreign)).toBe(false);
+  });
+
+  it.each(['missing identity', 'required dependency', 'different version', 'unknown filename', 'different platform'])(
+    'rejects optional-extractor pruning with %s', async reason => {
+      const tempDir = createTempDir();
+      tempDirs.push(tempDir);
+      const modules = path.join(tempDir, 'resources', 'runtime', 'local-cli', 'node_modules');
+      if (reason !== 'missing identity') writeOptionalMsgpackrIdentity(modules);
+      if (reason === 'required dependency') {
+        writeFile(path.join(modules, 'msgpackr', 'package.json'), Buffer.from(JSON.stringify({
+          name: 'msgpackr', version: '2.1.0', dependencies: { 'msgpackr-extract': '^3.0.4' },
+        })));
+      }
+      if (reason === 'different version') {
+        writeFile(path.join(modules, 'msgpackr-extract', 'package.json'), Buffer.from(JSON.stringify({
+          name: 'msgpackr-extract', version: '4.0.0',
+        })));
+      }
+      const foreign = path.join(modules, 'msgpackr-extract', 'build', 'Release',
+        reason === 'unknown filename' ? 'unreviewed.node' : 'extract.node');
+      writeFile(foreign, createElfBuffer('x64'));
+      const arch = reason === 'different platform' ? 1 : 3;
+
+      await expect(afterPackModule({ appOutDir: tempDir, electronPlatformName: 'win32', arch }))
+        .rejects.toThrow('Found incompatible native binaries');
+      expect(fs.existsSync(foreign)).toBe(true);
+    }
+  );
 
   it('fails validation when a foreign-arch native binary remains in the bundle', async () => {
     const tempDir = createTempDir();

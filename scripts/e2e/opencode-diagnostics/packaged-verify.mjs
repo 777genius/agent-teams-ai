@@ -8,6 +8,10 @@ import {
   packagedEnvironment,
   probeOrchestratorVersion,
   installerPublicationSnapshot,
+  packagedRefreshControlState,
+  packagedSettingsPreparationState,
+  packagedSettingsRequestObservation,
+  waitForPackagedRefreshPreparation,
 } from './packaged.mjs';
 
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -676,18 +680,16 @@ export async function verifyPackaged({
     );
     evidence.summaryQualification = qualifySummary(provider);
 
-    // Wait for bootstrap catalog to settle before starting the measured UI refresh.
-    let before;
-    for (let i = 0; i < 240; i++) {
-      before = await evaluate(catalogState);
-      if (before && before.state !== 'loading') break;
-      await pause(500);
-    }
-    assert(
-      before && before.state !== 'loading',
-      'Real dashboard catalog props unavailable/unsettled'
+    const preparation = await waitForPackagedRefreshPreparation(() =>
+      evaluate(`({catalog: ${catalogState}, control:
+        (${packagedRefreshControlState.toString()})(${refreshControl})})`)
     );
-    evidence.ui = { before, startedAt: new Date().toISOString(), transitions: [] };
+    evidence.ui = { before: preparation.catalog, preparation, transitions: [] };
+    evidence.ui.startedAt = new Date().toISOString();
+    assert(
+      preparation.ready,
+      `Dashboard refresh preparation unavailable: ${preparation.lastReason}`
+    );
     await observe('globalThis.__packagedCatalogObservation.active = true');
     try {
       await clickControl(evaluate, send, refreshControl);
@@ -817,24 +819,21 @@ export async function verifyPackaged({
       send,
       `document.querySelector('[data-testid="runtime-manage-opencode"]')`
     );
-    let settingsRendered = false;
-    for (let attempt = 0; attempt < 360; attempt++) {
-      settingsRendered =
-        await evaluate(`Boolean(document.querySelector('[role="dialog"] [data-testid="runtime-provider-catalog-list"]'))
-        && !document.querySelector('[role="dialog"] [data-testid="runtime-provider-loading-skeleton"]')`);
-      const requests = await observe('globalThis.__packagedCatalogObservation');
-      settingsRendered =
-        settingsRendered &&
-        !requests.overflow &&
-        requests.records.length > 0 &&
-        requests.records.every(
-          (record) =>
-            record.completedAt && record.response && !record.error && !record.response.error
-        );
-      if (settingsRendered) break;
-      await pause(250);
-    }
-    assert(settingsRendered, 'Provider settings initial load did not finish');
+    const settingsPreparation = await waitForPackagedRefreshPreparation(
+      async () => {
+        const sample = await evaluate(`(${packagedSettingsPreparationState.toString()})(document,
+        ${packagedRefreshControlState.toString()})`);
+        const requests = await observe('globalThis.__packagedCatalogObservation');
+        const observation = packagedSettingsRequestObservation(requests);
+        return { ...sample, requests: observation, requestsSettled: observation.settled };
+      },
+      { phase: 'settings' }
+    );
+    evidence.settingsPreparation = settingsPreparation;
+    assert(
+      settingsPreparation.ready,
+      `Settings preparation unavailable: ${settingsPreparation.lastReason}`
+    );
     await observe('globalThis.__packagedCatalogObservation.records = []');
     evidence.settingsRefreshClick = [];
     await clickControl(
@@ -866,7 +865,7 @@ export async function verifyPackaged({
       },
       `document.querySelector('[role="dialog"] [data-testid="runtime-provider-refresh-catalog"]:not(:disabled)')`
     );
-    settingsRendered = false;
+    let settingsRendered = false;
     for (let attempt = 0; attempt < 360; attempt++) {
       const requests = await observe('globalThis.__packagedCatalogObservation');
       evidence.settingsRefresh = requests.records;

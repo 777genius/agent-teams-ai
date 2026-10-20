@@ -158,6 +158,15 @@ test('complete candidate publication replaces stale published JS/Bun and detects
     const verified = await verifyCandidatePayload(source, expected);
     assert.equal(verified.entrySha256, hash(js));
     assert.equal(verified.bunSha256, hash(bun));
+    const deliveryPath = path.join(source, 'opencode-delivery.json');
+    await writeFile(deliveryPath, JSON.stringify({ ...delivery, bunVersion: '1.4.3' }));
+    const windowsPin = await verifyCandidatePayload(source, expected);
+    assert.equal(windowsPin.bunSha256, hash(bun));
+    assert.notEqual(windowsPin.deliverySha256, verified.deliverySha256);
+    await assert.rejects(verifyCandidatePayload(source, { ...expected, ...verified }));
+    await writeFile(deliveryPath, JSON.stringify({ ...delivery, bunVersion: '1.99.0' }));
+    await assert.rejects(verifyCandidatePayload(source, expected));
+    await writeFile(deliveryPath, JSON.stringify(delivery));
     publishRuntimePayload(
       path.join(source, 'claude-multimodel.exe'),
       target,
