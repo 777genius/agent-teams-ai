@@ -265,6 +265,7 @@ describe('LeadModelRow', () => {
       providerId: 'anthropic',
       supported: true,
       verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
       effectiveDefaultModel: 'gateway/default',
     };
     const { host, root } = renderLeadModelRow({ model: 'sonnet' });
