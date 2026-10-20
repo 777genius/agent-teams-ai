@@ -13,10 +13,17 @@ Turns a saved team configuration into a reusable template and keeps the library 
 
 ## Renderer surface
 
-`renderer/index.ts` exports exactly two statically imported actions, and nothing else:
+`renderer/index.ts` exports the two statically imported list actions plus the
+creation picker, and nothing else:
 
 - `SaveAsTemplateAction` — team-row action beside "Copy team". It renders nothing for a draft team, stops row navigation, and lazy-loads `SaveAsTemplateDialog`.
 - `MyTemplatesAction` — team-list header action that lazy-loads `MyTemplatesDialog`.
+- `CreateTeamTemplatePicker` — small dialog-free control rendered inline by the
+  Create Team dialog. It prefills the existing creation form from a built-in
+  catalogue entry or a saved custom template and sends no creation request
+  itself; creation still goes through the dialog's unchanged `team:create` /
+  `team:createConfig` path, so all team and member identities stay
+  backend-generated.
 
 Both dialogs are imported with `lazy()` so their code stays in its own chunk.
 
@@ -24,6 +31,11 @@ Both dialogs are imported with `lazy()` so their code stays in its own chunk.
 - `ui/MyTemplatesDialog.tsx` — read-only library. `empty`, `ready`, `hasUnreadableRecords`, `storageUnavailable` and a failed request are five distinct presentations; the list is re-read on every open.
 - `hooks/useSaveAsTemplate.ts` — the prepare/save/re-check state machine (single in-flight request, request-sequence guards).
 - `hooks/useCustomTemplateLibrary.ts` — the list read with the same request-sequence guard.
+- `templateDraft.ts` — pure mapping from a picker selection to an
+  `applyTeamTemplate`-compatible draft. Only allowlisted content
+  (`description`, `teamPrompt`, member `name`/`role`/`workflow`) is copied into
+  fresh objects; no template identity, revision, task, message, session or
+  history survives, and unknown built-in ids never resolve.
 
 Both dialogs reach the API only through `api` from `@renderer/api`, so Electron IPC and browser HTTP behave identically.
 

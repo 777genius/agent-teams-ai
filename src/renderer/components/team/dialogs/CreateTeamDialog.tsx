@@ -17,8 +17,8 @@ import {
   resolveCodexFastMode,
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
+import { CreateTeamTemplatePicker } from '@features/custom-team-templates/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
-import { TeamTemplatePicker } from '@features/team-templates/renderer';
 import {
   useWorkspaceTrustStatus,
   WorkspaceTrustLaunchNotice,
@@ -2450,12 +2450,19 @@ export const CreateTeamDialog = ({
           </div>
 
           <div className="space-y-4 md:col-span-2">
-            <TeamTemplatePicker
-              onApply={(draft) => {
-                setRuntimeSelection(1);
-                setLaunchTeam(false);
-                setSoloTeam(false);
-                setSyncModelsWithLead(true, { persistStoredPreference: false });
+            <CreateTeamTemplatePicker
+              open={open}
+              onApply={(draft, source) => {
+                // A real template switches to the previous template semantics
+                // (config-only draft). Going back to "no template" only clears
+                // the template-derived content and leaves launch and runtime
+                // settings exactly as the user left them.
+                if (source !== 'none') {
+                  setRuntimeSelection(1);
+                  setLaunchTeam(false);
+                  setSoloTeam(false);
+                  setSyncModelsWithLead(true, { persistStoredPreference: false });
+                }
                 descriptionDraft.setValue(draft.description ?? '');
                 promptDraft.setValue(draft.prompt ?? '');
                 setMembers(
