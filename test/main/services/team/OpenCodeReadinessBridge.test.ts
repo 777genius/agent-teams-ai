@@ -1576,7 +1576,7 @@ function readiness(
 }
 
 
-describe('measured Windows V2 launch timeout policy', () => {
+describe('measured V2 launch timeout policy', () => {
   const input = (version: string | null | undefined, selectedModel = 'openai/gpt-5.5') => ({
     selectedModel, members: [],
     ...(version === undefined ? {} : { executionProof: {
@@ -1589,12 +1589,12 @@ describe('measured Windows V2 launch timeout policy', () => {
       proofHash: 'TEST-proof',
     } }),
   });
-  it('uses 300s only for measured Windows V2 and preserves explicit overrides', () => {
+  it('uses 300s for measured V2 on every platform and preserves explicit overrides', () => {
     for (const version of ['2.0.0', '2.0.21']) {
       expect(resolveOpenCodeLaunchTimeoutMs(input(version), undefined, 'win32')).toBe(300_000);
       expect(resolveOpenCodeLaunchTimeoutMs(input(version), 15_000, 'win32')).toBe(15_000);
       for (const platform of ['darwin', 'linux'] as const)
-        expect(resolveOpenCodeLaunchTimeoutMs(input(version), undefined, platform)).toBe(120_000);
+        expect(resolveOpenCodeLaunchTimeoutMs(input(version), undefined, platform)).toBe(300_000);
     }
     for (const version of ['1.19.0', undefined, null])
       expect(resolveOpenCodeLaunchTimeoutMs(input(version), undefined, 'win32')).toBe(120_000);
@@ -1603,7 +1603,7 @@ describe('measured Windows V2 launch timeout policy', () => {
     expect(resolveOpenCodeLaunchTimeoutMs(input('2.0.21', 'ollama/model'), undefined, 'win32')).toBe(420_000);
     const serial = { ...input('2.0.21', 'cursor-acp/model'), members: Array.from({ length: 2 }, (_, index) => ({ name: `member-${index}`, role: 'worker', prompt: 'TEST' })) };
     expect(resolveOpenCodeLaunchTimeoutMs(serial, undefined, 'win32')).toBe(600_000);
-    expect(resolveOpenCodeLaunchTimeoutMs({ ...serial, selectedModel: 'kiro/model' }, undefined, 'darwin')).toBe(270_000);
+    expect(resolveOpenCodeLaunchTimeoutMs({ ...serial, selectedModel: 'kiro/model' }, undefined, 'darwin')).toBe(300_000);
     expect(resolveOpenCodeLaunchTimeoutMs(input(undefined, 'cursor-acp/model'), undefined, 'win32')).toBe(300_000);
     expect(resolveOpenCodeLaunchTimeoutMs(input(undefined, 'kiro/model'), undefined, 'linux')).toBe(120_000);
   });
