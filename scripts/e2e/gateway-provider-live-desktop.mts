@@ -488,17 +488,22 @@ try {
   // Install actual provider CLIs into this disposable app profile. A source
   // launcher alone does not supply Codex/OpenCode native executables.
   if (selected.some((name) => name === 'codex-two' || name === 'mixed')) {
-    const status = await page.evaluate(async () =>
-      (window as unknown as { electronAPI: ElectronAPI }).electronAPI.codexRuntime.install()
-    );
+    const status = await page.evaluate(async () => {
+      const runtime = (window as unknown as { electronAPI: ElectronAPI }).electronAPI.codexRuntime;
+      const installed = await runtime.getStatus();
+      return installed.installed ? installed : runtime.install();
+    });
     assert(status.installed && status.binaryPath, 'Test profile Codex CLI install failed');
     await json(path.join(dirs.evidence, 'codex-runtime.json'), status);
     console.log('Installed isolated native Codex CLI');
   }
   if (selected.some((name) => name === 'opencode-one' || name === 'mixed')) {
-    const status = await page.evaluate(async () =>
-      (window as unknown as { electronAPI: ElectronAPI }).electronAPI.openCodeRuntime.install()
-    );
+    const status = await page.evaluate(async () => {
+      const runtime = (window as unknown as { electronAPI: ElectronAPI }).electronAPI
+        .openCodeRuntime;
+      const installed = await runtime.getStatus();
+      return installed.installed ? installed : runtime.install();
+    });
     assert(status.installed && status.binaryPath, 'Test profile OpenCode CLI install failed');
     await json(path.join(dirs.evidence, 'opencode-runtime.json'), status);
     console.log('Installed isolated OpenCode CLI');
