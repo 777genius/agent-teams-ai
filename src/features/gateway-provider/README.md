@@ -6,11 +6,13 @@ Desktop-only feature for per-teammate API-key routing through an Anthropic/OpenA
 - `core/domain/index.ts`: canonical endpoint and immutable owner/source identity policies.
 - `main/index.ts`: composition, usage-source access and runtime mappings.
 - `preload/index.ts`: gateway IPC bridge.
-- `renderer/index.ts`: profile settings and the member gateway selector.
+- `renderer/index.ts`: profile settings, member selector and dialog-local binding lookup.
 
 `GatewayProviderService` owns profile, key-owner and binding changes. `JsonGatewayProviderStore` serializes those changes; literals live in the existing `ApiKeyService`. Sources retain their endpoint, approval and owner after a profile or binding is removed.
 
 The app shell composes runtime integrations in `src/main/services/gateway/createGatewayLaunchRuntime.ts`. Its app-owned run metadata records the source before spawn, associates native sessions immutably and retains terminal facts after team files disappear. Token usage imports daily UTC aggregates through the public usage port; marked runs do not also import CLI costs. OpenCode artifacts use the existing connector writer and are retired only after their bindings and live consumers are gone.
+
+Dialogs preserve gateway models and skip global account/catalog checks only for bound teammates. Binding lookup settles before model normalization; main revalidates the exact credential on every launch and restart.
 
 See [`gateway-provider-per-teammate-plan.md`](../../../docs/plans/gateway-provider-per-teammate-plan.md) for the gateway contract and acceptance criteria.
 

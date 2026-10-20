@@ -61,6 +61,7 @@ import { RosterParticipantFrame, RosterParticipantIdentity } from './RosterParti
 
 import type { ModelReasonByProvider } from './memberDraftRowText';
 import type { MemberDraft } from './membersEditorTypes';
+import type { GatewayMemberBindingsState } from '@features/gateway-provider/renderer';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type {
@@ -85,6 +86,7 @@ interface MemberDraftRowProps {
   onWorkflowChipsChange?: (id: string, chips: InlineChip[]) => void;
   onProviderChange: (id: string, providerId: TeamProviderId) => void;
   onModelChange: (id: string, model: string) => void;
+  gatewayBindings?: GatewayMemberBindingsState;
   preserveSelectedModel?: boolean;
   onEffortChange: (id: string, effort: string) => void;
   onLimitContextChange?: (value: boolean) => void;
@@ -150,6 +152,7 @@ export const MemberDraftRow = ({
   onWorkflowChipsChange,
   onProviderChange,
   onModelChange,
+  gatewayBindings,
   onEffortChange,
   onLimitContextChange,
   inheritedProviderId = 'anthropic',
@@ -270,19 +273,21 @@ export const MemberDraftRow = ({
   const suggestionsExcludingSelf = mentionSuggestions.filter(
     (s) => s.name.toLowerCase() !== member.name.trim().toLowerCase()
   );
+  const forceLeadModelSettings =
+    forceInheritedModelSettings && !gatewayBindings?.boundMemberNames.has(member.name.trim());
   const { inheritsLeadModel, effectiveProviderId, effectiveModel, defaultModelLabel } =
     useMemberDraftRowModel({
       member,
       inheritedProviderId,
       inheritedModel,
-      forced: forceInheritedModelSettings,
+      forced: forceLeadModelSettings,
       limitContext,
       projectPath,
     });
   const memberProviderId = member.providerId;
   const explicitMemberModel = member.model?.trim() ?? '';
   const inheritsDefaultRuntime = !memberProviderId || memberProviderId === inheritedProviderId;
-  const effectiveEffort = forceInheritedModelSettings
+  const effectiveEffort = forceLeadModelSettings
     ? inheritedEffort
     : (member.effort ??
       (inheritsDefaultRuntime && !explicitMemberModel ? inheritedEffort : undefined));
@@ -296,7 +301,7 @@ export const MemberDraftRow = ({
       t,
     });
   const canOpenLockedModelPanel = lockProviderModel && !isRemoved && Boolean(lockedModelAction);
-  const modelTooltipText = forceInheritedModelSettings
+  const modelTooltipText = forceLeadModelSettings
     ? t('memberDraft.model.inheritedTooltip')
     : lockProviderModel
       ? (lockedModelAction?.description ?? modelLockReason)
@@ -337,7 +342,7 @@ export const MemberDraftRow = ({
     />
   );
   const hasCustomProviderOrModel =
-    !forceInheritedModelSettings && Boolean(member.providerId || member.model?.trim());
+    !forceLeadModelSettings && Boolean(member.providerId || member.model?.trim());
   const showSonnetExtraUsageWarning =
     effectiveProviderId === 'anthropic' &&
     !limitContext &&
@@ -726,7 +731,9 @@ export const MemberDraftRow = ({
                 }}
                 value={effectiveModel ?? ''}
                 limitContext={limitContext}
-                preserveSelectedModel={preserveSelectedModel}
+                preserveSelectedModel={
+                  preserveSelectedModel || gatewayBindings?.boundMemberNames.has(member.name.trim())
+                }
                 onValueChange={(value) => {
                   if (lockProviderModel) return;
                   onModelChange(member.id, value);
@@ -755,6 +762,7 @@ export const MemberDraftRow = ({
                   memberName={member.name}
                   originalName={member.originalName}
                   selectedModel={member.model}
+                  onBindingsChange={gatewayBindings?.refresh}
                   onModelChange={(model) => {
                     if (lockProviderModel) return;
                     onModelChange(member.id, model);

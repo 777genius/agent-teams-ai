@@ -31,6 +31,7 @@ interface MemberGatewaySelectorProps {
   originalName?: string;
   selectedModel?: string;
   onModelChange: (model: string) => void;
+  onBindingsChange?: () => Promise<void>;
 }
 
 type GatewayErrorKind = 'authRejected' | 'unavailable' | 'message';
@@ -53,6 +54,7 @@ export const MemberGatewaySelector = ({
   originalName,
   selectedModel,
   onModelChange,
+  onBindingsChange,
 }: MemberGatewaySelectorProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
   const [profiles, setProfiles] = useState<GatewayProfileDto[]>([]);
@@ -96,7 +98,7 @@ export const MemberGatewaySelector = ({
   const binding = bindings.find(
     (candidate) =>
       candidate.memberName === trimmedMemberName ||
-      Boolean(originalName?.trim()) && candidate.memberName === originalName?.trim()
+      (Boolean(originalName?.trim()) && candidate.memberName === originalName?.trim())
   );
 
   const clearKeyInput = (): void => {
@@ -176,8 +178,12 @@ export const MemberGatewaySelector = ({
       setKeyReady(false);
       setModels(null);
       setModelChoice('');
-      onModelChange(modelChoice);
       await refresh();
+      try {
+        await onBindingsChange?.();
+      } finally {
+        onModelChange(modelChoice);
+      }
     } catch (error) {
       showError(error);
     } finally {
@@ -197,6 +203,7 @@ export const MemberGatewaySelector = ({
       });
       clearKeyInput();
       await refresh();
+      await onBindingsChange?.();
     } catch (error) {
       showError(error);
     } finally {

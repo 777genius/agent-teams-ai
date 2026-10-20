@@ -1,5 +1,10 @@
 import {
+  buildProviderModelChecksMap,
+  collectDialogMemberProviderIds,
+} from '@renderer/components/team/dialogs/defaultModelSelection';
+import {
   clearInheritedMemberModelsUnavailableForProvider,
+  getDialogTeamModelValidationError,
   resolveProviderScopedMemberModel,
 } from '@renderer/components/team/dialogs/memberModelScope';
 import {
@@ -460,3 +465,78 @@ function draft(overrides: Partial<MemberDraft>): MemberDraft {
     ...overrides,
   };
 }
+
+describe('gateway member model authority', () => {
+  const gatewayBoundMemberNames = new Set(['gateway']);
+  const runtimeProviderStatusById = providerStatuses([providerStatus('codex', ['listed-model'])]);
+  const member = draft({ name: 'gateway', model: 'private-gateway-model' });
+  const input = {
+    selectedProviderId: 'codex' as const,
+    selectedModel: 'listed-model',
+    members: [member],
+    validateMembers: true,
+    runtimeProviderStatusById,
+    runtimeProviderLoadingById: new Map(),
+  };
+
+  it('preserves a bound private model and waits for binding hydration before clearing', () => {
+    expect(
+      clearInheritedMemberModelsUnavailableForProvider({
+        ...input,
+        gatewayBoundMemberNames,
+      })
+    ).toEqual({ members: [member], changed: false });
+    expect(
+      clearInheritedMemberModelsUnavailableForProvider({
+        ...input,
+        gatewayBindingsPending: true,
+      })
+    ).toEqual({ members: [member], changed: false });
+    expect(clearInheritedMemberModelsUnavailableForProvider(input).members[0].model).toBe('');
+  });
+
+  it('validates the lead and unbound members while allowing a bound private model', () => {
+    expect(
+      getDialogTeamModelValidationError({
+        ...input,
+        gatewayBoundMemberNames,
+      })
+    ).toBeNull();
+    expect(getDialogTeamModelValidationError(input)).not.toBeNull();
+    expect(
+      getDialogTeamModelValidationError({
+        ...input,
+        gatewayBoundMemberNames,
+        selectedModel: 'private-gateway-model',
+      })
+    ).not.toBeNull();
+  });
+
+  it('never probes bound models or requires the global account for a gateway-only provider', () => {
+    const scopeContext = { runtimeProviderStatusById, gatewayBoundMemberNames };
+    expect(
+      buildProviderModelChecksMap({
+        leadProviderId: 'codex',
+        leadModel: 'listed-model',
+        members: [member],
+        scopeContext,
+      }).get('codex')
+    ).toEqual([{ providerId: 'codex', model: 'listed-model' }]);
+    expect(
+      collectDialogMemberProviderIds(
+        true,
+        'anthropic',
+        [{ ...member, providerId: 'codex' }],
+        gatewayBoundMemberNames
+      )
+    ).toEqual(['anthropic']);
+    expect(
+      collectDialogMemberProviderIds(
+        true,
+        'anthropic',
+        [{ ...member, name: 'unbound', providerId: 'codex' }],
+        gatewayBoundMemberNames
+      )
+    ).toEqual(['anthropic', 'codex']);
+  });
+});

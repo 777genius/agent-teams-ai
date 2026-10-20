@@ -118,6 +118,7 @@ import {
 } from './launchTeamDialogHelpers';
 import {
   clearInheritedMemberModelsUnavailableForProvider,
+  getDialogMemberModelIssues,
   getDialogTeamModelValidationError,
 } from './memberModelScope';
 import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
@@ -177,8 +178,8 @@ import {
   TeamModelSelector,
 } from './TeamModelSelector';
 import { useCustomProjectFolder } from './useCustomProjectFolder';
+import { useDialogMemberModelScope } from './useDialogMemberModelScope';
 import { useMemberWorkspaceInfo } from './useMemberWorkspaceInfo';
-import { useOpenCodeLocalModelScope } from './useOpenCodeLocalModelScope';
 import { useOpenCodeProviderScopedDialogModelState } from './useOpenCodeProviderScopedModelAuthority';
 import { useProjectScopedRuntimeProviderStatuses } from './useProjectScopedRuntimeProviderStatuses';
 import { useProvisioningPreparePresentationState } from './useProvisioningPreparePresentationState';
@@ -424,8 +425,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     defaultProjectPath,
     appliedDefaultProjectPath: appliedDefaultProjectPathRef.current,
   });
-  const openCodeLocalModelScope = useOpenCodeLocalModelScope({
+  const { scope: openCodeLocalModelScope, gatewayBindings } = useDialogMemberModelScope({
     enabled: open,
+    teamName: effectiveTeamName,
     projectPath: effectiveCwd,
     selectedProviderId,
     members: membersDrafts,
@@ -481,9 +483,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         : collectDialogMemberProviderIds(
             multimodelEnabled,
             selectedProviderId,
-            effectiveMemberDrafts
+            gatewayBindings.pending ? [] : effectiveMemberDrafts,
+            gatewayBindings.boundMemberNames
           ),
-    [runtimeSelectionUnresolved, effectiveMemberDrafts, multimodelEnabled, selectedProviderId]
+    [
+      runtimeSelectionUnresolved,
+      effectiveMemberDrafts,
+      multimodelEnabled,
+      selectedProviderId,
+      gatewayBindings,
+    ]
   );
   const tmuxRuntime = useTmuxRuntimeReadiness(open && isLaunchMode);
   const launchGuard = createLaunchGuard(
@@ -2028,6 +2037,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   ]);
   const modelValidationError = useMemo(
     () =>
+      gatewayBindings.error ??
       (isLaunchMode ? openCodeDefaultSelectionError : null) ??
       getDialogTeamModelValidationError({
         selectedProviderId,
@@ -2040,6 +2050,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         openCodeProviderScopedStatusBySourceId,
       }),
     [
+      gatewayBindings,
       effectiveMemberDrafts,
       isLaunchMode,
       openCodeDefaultSelectionError,
@@ -2059,35 +2070,15 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     );
     return issue?.reason ?? issue?.detail ?? null;
   }, [effectiveLeadRuntimeModel, prepareChecks, selectedModel, selectedProviderId]);
-  const memberModelIssueById = useMemo(() => {
-    const next: Record<string, string> = {};
-    if (!isLaunchMode) {
-      return next;
-    }
-    for (const member of effectiveMemberDrafts) {
-      if (member.removedAt) {
-        continue;
-      }
-      if (syncModelsWithLead && leadModelIssueText) {
-        next[member.id] = leadModelIssueText;
-        continue;
-      }
-      const providerId = normalizeOptionalTeamProviderId(member.providerId) ?? selectedProviderId;
-      const issue = getProvisioningModelIssue(prepareChecks, providerId, member.model);
-      const issueText = issue?.reason ?? issue?.detail ?? null;
-      if (issueText) {
-        next[member.id] = issueText;
-      }
-    }
-    return next;
-  }, [
-    effectiveMemberDrafts,
-    isLaunchMode,
-    leadModelIssueText,
-    prepareChecks,
+  const memberModelIssueById = getDialogMemberModelIssues({
+    members: effectiveMemberDrafts,
     selectedProviderId,
+    prepareChecks,
     syncModelsWithLead,
-  ]);
+    leadModelIssueText,
+    gatewayBoundMemberNames: gatewayBindings.boundMemberNames,
+    validateMembers: isLaunchMode,
+  });
   const hasInvalidLaunchMemberNames = useMemo(
     () =>
       isLaunchMode &&
@@ -2374,7 +2365,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
 
   const isDisabled = isLaunchMode
-    ? runtimeSelectionUnresolved ||
+    ? gatewayBindings.pending ||
+      runtimeSelectionUnresolved ||
       !launchPreflightSelectionReady ||
       isSubmitting ||
       launchInFlight ||
@@ -2694,6 +2686,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   members={membersDrafts}
                   onMembersChange={setMembersDraftsFromUser}
                   teamName={effectiveTeamName}
+                  gatewayBindings={gatewayBindings}
                   validateMemberName={validateMemberNameInline}
                   showWorkflow
                   showJsonEditor

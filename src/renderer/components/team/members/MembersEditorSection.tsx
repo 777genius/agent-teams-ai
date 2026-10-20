@@ -26,6 +26,7 @@ import {
 } from './membersEditorUtils';
 
 import type { MemberDraft } from './membersEditorTypes';
+import type { GatewayMemberBindingsState } from '@features/gateway-provider/renderer';
 import type { TeamModelSelectorProps } from '@renderer/components/team/dialogs/TeamModelSelector';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
@@ -54,6 +55,7 @@ export interface MembersEditorSectionProps {
   onChange: (members: MemberDraft[]) => void;
   /** Team name used for per-teammate gateway bindings on the member row. */
   teamName?: string;
+  gatewayBindings?: GatewayMemberBindingsState;
   fieldError?: string;
   validateMemberName?: (name: string) => string | null;
   showWorkflow?: boolean;
@@ -132,6 +134,7 @@ export const MembersEditorSection = ({
   members,
   onChange,
   teamName,
+  gatewayBindings,
   fieldError,
   validateMemberName,
   showWorkflow = false,
@@ -609,6 +612,7 @@ export const MembersEditorSection = ({
                   onWorkflowChipsChange={showWorkflow ? updateMemberWorkflowChips : undefined}
                   onProviderChange={updateMemberProvider}
                   onModelChange={updateMemberModel}
+                  gatewayBindings={gatewayBindings}
                   onEffortChange={updateMemberEffort}
                   onLimitContextChange={onLimitContextChange}
                   showWorktreeIsolationControls={showWorktreeIsolationControls}

@@ -603,7 +603,7 @@ try {
             (member.providerId === 'anthropic'
               ? '/v1/messages'
               : member.providerId === 'codex'
-                ? '/v1/responses'
+                ? '/responses'
                 : '/v1/chat/completions') &&
           call.status === 200 &&
           call.route === (name === 'codex-two' ? index : 0)
