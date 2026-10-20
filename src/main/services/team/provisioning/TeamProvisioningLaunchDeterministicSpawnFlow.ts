@@ -401,6 +401,7 @@ export function registerDeterministicLaunchChildHandlers<
   input: {
     run: TRun;
     child: ChildProcess;
+    memberArgsByMember?: CrossProviderMemberArgsResult['memberArgsByMember'];
   },
   ports: Pick<
     RunDeterministicLaunchSpawnFlowPorts<TRun>,
@@ -494,11 +495,10 @@ export function registerDeterministicLaunchChildHandlers<
       cliLogsTail: extractCliLogsFromRun(run),
     });
     run.onProgress(progress);
-    void cleanupAnthropicHelperIfPresent(run, ports).then((helperReleased) => {
-      if (helperReleased) {
-        ports.cleanupRun(run);
-      }
-    });
+    void (async () => {
+      if (child.pid === undefined) await abortUnspawnedGatewayMembers(input.memberArgsByMember);
+      if (await cleanupAnthropicHelperIfPresent(run, ports)) ports.cleanupRun(run);
+    })().catch(() => undefined);
   });
 
   child.once('close', (code: number | null) => {
@@ -726,7 +726,10 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
   ports.updateProgress(run, 'configuring', 'CLI running - deterministic launch in progress');
   run.onProgress(run.progress);
 
-  registerDeterministicLaunchChildHandlers({ run, child }, ports);
+  registerDeterministicLaunchChildHandlers(
+    { run, child, memberArgsByMember: crossProviderMemberArgsForLaunch.memberArgsByMember },
+    ports
+  );
 
   return { runId };
 }

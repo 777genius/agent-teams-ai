@@ -1,4 +1,5 @@
 import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
+import { EventEmitter } from 'events';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -56,6 +57,7 @@ import {
   shouldCancelDeterministicCreateSpawn,
 } from '../TeamProvisioningCreateDeterministicSpawnFlow';
 
+import type { MemberGatewayRuntimeArgs } from '../TeamProvisioningMemberGatewayRuntime';
 import type { TeamCreateRequest } from '@shared/types';
 
 const TEST_BOOTSTRAP_SPEC_PATH = '/repo/.agent-teams/bootstrap.json';
@@ -183,7 +185,8 @@ function createPlanningPorts(
 
 function runPlanningFailureFlow(
   run: DeterministicCreateSpawnFlowRun,
-  ports: DeterministicCreateSpawnFlowPorts<DeterministicCreateSpawnFlowRun>
+  ports: DeterministicCreateSpawnFlowPorts<DeterministicCreateSpawnFlowRun>,
+  memberArgsByMember?: Map<string, MemberGatewayRuntimeArgs>
 ): Promise<{ runId: string }> {
   return runDeterministicCreateSpawnFlow({
     request: planningRequest,
@@ -204,6 +207,7 @@ function runPlanningFailureFlow(
     resolvedProviderId: 'anthropic',
     providerArgsForLaunch: [],
     inheritedProviderArgsForLaunch: [],
+    memberArgsByMember,
     geminiRuntimeAuth: null,
     stopAllGenerationAtStart: 4,
     disallowedTools: 'TeamDelete',
@@ -414,6 +418,59 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
     expect(run.anthropicApiKeyHelper).toBeNull();
     expect(ports.unregisterRun).toHaveBeenCalledWith(run.runId, permissionRequest.teamName);
   });
+
+  it('preserves the original spawn error and normal cleanup when snapshot abort fails', async () => {
+    const run = createPlanningRun();
+    const ports = createPlanningPorts([]);
+    const spawnError = new Error('original spawn failure');
+    ports.spawnCli = vi.fn(() => {
+      throw spawnError;
+    });
+    const abort = vi.fn(async () => {
+      throw new Error('metadata unavailable');
+    });
+    const otherAbort = vi.fn(async () => undefined);
+    const members = new Map([
+      ['builder', { envPatch: {}, abortUnspawnedLaunch: abort }],
+      ['reviewer', { envPatch: {}, abortUnspawnedLaunch: otherAbort }],
+    ]);
+    await expect(runPlanningFailureFlow(run, ports, members)).rejects.toBe(spawnError);
+    expect(abort).toHaveBeenCalledOnce();
+    expect(console.warn).toHaveBeenCalledExactlyOnceWith(
+      '[GatewayMemberLaunch]',
+      'Could not close an unspawned gateway launch: Error: metadata unavailable'
+    );
+    vi.mocked(console.warn).mockClear();
+    expect(otherAbort).toHaveBeenCalledOnce();
+    expect(ports.unregisterRun).toHaveBeenCalledWith(run.runId, planningRequest.teamName);
+    expect(ports.teamMetaStore.deleteMeta).toHaveBeenCalled();
+    expect(run.anthropicApiKeyHelper).toBeNull();
+  });
+
+  it.each([undefined, 123])(
+    'aborts async spawn failures only when no child PID exists (%s)',
+    async (pid) => {
+      vi.useFakeTimers();
+      const run = createPlanningRun();
+      const ports = createPlanningPorts([]);
+      const child = Object.assign(new EventEmitter(), { pid }) as ReturnType<
+        PlanningPorts['spawnCli']
+      >;
+      ports.spawnCli = vi.fn(() => child);
+      const abort = vi.fn(async () => undefined);
+      const beginLaunch = vi.fn(async () => undefined);
+      await runPlanningFailureFlow(
+        run,
+        ports,
+        new Map([['builder', { envPatch: {}, beginLaunch, abortUnspawnedLaunch: abort }]])
+      );
+      expect(beginLaunch).toHaveBeenCalledOnce();
+      child.emit('error', new Error('ENOENT'));
+      await vi.waitFor(() => expect(ports.cleanupRun).toHaveBeenCalledWith(run));
+      expect(abort).toHaveBeenCalledTimes(pid === undefined ? 1 : 0);
+      expect(run.anthropicApiKeyHelper).toBeNull();
+    }
+  );
 
   it('cleans the transferred helper when synchronous spawn throws', async () => {
     const spawnError = new Error('synchronous spawn failed');

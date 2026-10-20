@@ -405,12 +405,20 @@ export async function resolveOpenCodeGatewayMemberModels(input: {
   return members;
 }
 
-/** Called only before a child has been spawned; never infers termination from disappearance. */
+/** Best-effort cleanup only for confirmed spawn failures; preserve the original launch error. */
 export async function abortUnspawnedGatewayMembers(
   members: ReadonlyMap<string, MemberGatewayRuntimeArgs> | undefined
 ): Promise<void> {
   await Promise.all(
-    [...(members?.values() ?? [])].map(async (member) => member.abortUnspawnedLaunch?.())
+    [...(members?.values() ?? [])].map(async (member) => {
+      try {
+        await member.abortUnspawnedLaunch?.();
+      } catch (error) {
+        createLogger('GatewayMemberLaunch').warn(
+          `Could not close an unspawned gateway launch: ${String(error)}`
+        );
+      }
+    })
   );
 }
 

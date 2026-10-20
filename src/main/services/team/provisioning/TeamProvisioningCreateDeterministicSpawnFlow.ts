@@ -560,10 +560,12 @@ export async function runDeterministicCreateSpawnFlow<
       cliLogsTail: extractCliLogsFromRun(run),
     });
     run.onProgress(progress);
-    void cleanupRunOwnedAnthropicApiKeyHelper(run).then(
-      () => ports.cleanupRun(run),
-      () => undefined
-    );
+    void (async () => {
+      // Node reports executable/permission failures asynchronously without assigning a PID.
+      if (child.pid === undefined) await abortUnspawnedGatewayMembers(memberArgsByMember);
+      await cleanupRunOwnedAnthropicApiKeyHelper(run);
+      ports.cleanupRun(run);
+    })().catch(() => undefined);
   });
 
   child.once('close', (code) => {
