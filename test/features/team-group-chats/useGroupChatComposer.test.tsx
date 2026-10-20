@@ -5,6 +5,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { useGroupChatComposer } from '../../../src/features/team-group-chats/renderer/hooks/useGroupChatComposer';
 import {
+  acquireComposerSubmission,
+  releaseComposerSubmission,
+  resetComposerSubmissionForTests,
+} from '../../../src/renderer/components/team/messages/composerSubmission';
+import {
   invalidateContextScopedRequestEpoch,
   resetContextScopedRequestEpochForTests,
 } from '../../../src/renderer/store/utils/contextScopedRequestEpoch';
@@ -386,6 +391,78 @@ describe('group composer canonical send outcome', () => {
     } finally {
       releaseSave!();
       act(() => view.unmount());
+      resetContextScopedRequestEpochForTests();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('leaves the composer usable when submission acquisition fails', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    resetContextScopedRequestEpochForTests();
+    resetComposerSubmissionForTests();
+    // Occupy this context's submission latch so acquireComposerSubmission fails.
+    acquireComposerSubmission('root-a', 'foreign-attempt');
+    ports.send.mockReset();
+    ports.save.mockReset();
+    ports.load.mockImplementation((address: ComposerDraftAddress) =>
+      Promise.resolve({
+        working: {
+          version: 2,
+          address,
+          workingRevision: 'loaded',
+          content: null,
+          editorContext: { kind: 'plain' },
+          updatedAt: 0,
+        },
+        status: 'durable',
+      })
+    );
+    ports.save.mockImplementation(
+      async (
+        _address: ComposerDraftAddress,
+        _revision: string,
+        nextRevision: string,
+        _content: ComposerDraftContent | null
+      ) => ({ kind: 'saved', workingRevision: nextRevision, status: 'durable' })
+    );
+    ports.send.mockImplementation(async (request: GroupChatSendRequest) =>
+      Promise.resolve({
+        saved: true,
+        groupChatId: request.groupChatId,
+        messageId: request.messageId,
+        statusPersisted: true,
+      })
+    );
+    const refresh = vi.fn(() => Promise.resolve());
+    let composer: ReturnType<typeof useGroupChatComposer> | undefined;
+    function Probe() {
+      composer = useGroupChatComposer('team-a', 'root-a', 'group-a', refresh, 'Discussion');
+      return null;
+    }
+    const view = createRoot(document.createElement('div'));
+    try {
+      await act(async () => {
+        view.render(<Probe />);
+        await Promise.resolve();
+      });
+      expect(composer?.ready).toBe(true);
+      act(() => composer!.change('Blocked message'));
+      await act(async () => {
+        await composer!.send();
+      });
+      // The failed acquisition sends nothing and must not lock the composer.
+      expect(ports.send).not.toHaveBeenCalled();
+      act(() => composer!.change('Retry message'));
+      expect(composer!.text).toBe('Retry message');
+      releaseComposerSubmission('root-a', 'foreign-attempt');
+      await act(async () => {
+        await composer!.send();
+      });
+      expect(ports.send).toHaveBeenCalledTimes(1);
+      expect(composer!.text).toBe('');
+    } finally {
+      act(() => view.unmount());
+      resetComposerSubmissionForTests();
       resetContextScopedRequestEpochForTests();
       vi.unstubAllGlobals();
     }

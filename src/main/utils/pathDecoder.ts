@@ -399,6 +399,27 @@ export function setClaudeBasePathOverride(claudeBasePath: string | null | undefi
   claudeBasePathOverride = normalizeOverridePath(claudeBasePath);
 }
 
+// The root most recently applied through applyConfiguredClaudeRoot (dev
+// override or persisted preference). A null input clears the override only
+// while it still holds this value, so an explicit root set elsewhere
+// (standalone CLAUDE_ROOT) survives configuration loads carrying no preference.
+let configuredClaudeRoot: string | null = null;
+
+/**
+ * Applies a resolved configured Claude root with source-aware clearing.
+ * Unlike setClaudeBasePathOverride(null), a null input never discards an
+ * override established through another setter.
+ */
+export function applyConfiguredClaudeRoot(next: string | null): void {
+  if (next != null) {
+    configuredClaudeRoot = next;
+    claudeBasePathOverride = next;
+  } else if (claudeBasePathOverride === configuredClaudeRoot) {
+    configuredClaudeRoot = null;
+    claudeBasePathOverride = null;
+  }
+}
+
 /**
  * Get the Claude config base path (~/.claude).
  */

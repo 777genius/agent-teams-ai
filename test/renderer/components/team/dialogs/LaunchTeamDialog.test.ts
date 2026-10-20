@@ -1922,8 +1922,10 @@ describe('LaunchTeamDialog', () => {
       await vi.advanceTimersByTimeAsync(0);
       await flush();
     });
-    const createButton = Array.from(createHost.querySelectorAll('button')).find((button) =>
-      button.textContent?.toLowerCase().includes('create')
+    const createButton = Array.from(createHost.querySelectorAll('button')).find(
+      (button) =>
+        button.textContent?.toLowerCase().includes('create') &&
+        !button.closest('[data-testid="create-team-template-picker"]')
     );
     expect(createButton?.disabled).toBe(false);
 

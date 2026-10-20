@@ -53,7 +53,7 @@ RUN apt-get update \
 # Lifecycle scripts stay disabled, so root preinstall/postinstall do not run.
 COPY . .
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts \
-  && pnpm rebuild node-pty cpu-features ssh2
+  && pnpm rebuild node-pty cpu-features ssh2 better-sqlite3
 
 # =============================================================================
 # Production stage - minimal image with only runtime dependencies and built output
@@ -67,6 +67,15 @@ COPY --from=builder /app/agent-teams-controller ./agent-teams-controller
 # Copy built standalone server and renderer output
 COPY --from=builder /app/dist-standalone ./dist-standalone
 COPY --from=builder /app/out/renderer ./out/renderer
+# The internal-storage SQLite worker is built by electron-vite into
+# dist-electron/main, which is not shipped in this image. Copy it next to the
+# standalone bundle so InternalStorageWorkerClient resolves it co-located
+# (candidate #1) instead of reporting unavailable storage for template writes.
+# The worker requires its shared chunks (relative ./chunks/*.cjs requires, with
+# content-hashed names that change per build), so the whole chunks directory
+# travels with it.
+COPY --from=builder /app/dist-electron/main/internal-storage-worker.cjs ./dist-standalone/internal-storage-worker.cjs
+COPY --from=builder /app/dist-electron/main/chunks ./dist-standalone/chunks
 
 # Create data directory for Claude session mount
 RUN mkdir -p /data/.claude

@@ -44,6 +44,14 @@ import type {
   ApplicationCommandLedgerRecord,
   ApplicationCommandLedgerStorageGateway,
 } from '@features/application-command-ledger';
+import type {
+  CreateCustomTeamTemplateRecordRequest,
+  CreateCustomTeamTemplateRecordResult,
+  CustomTeamTemplateStorageGateway,
+  ListCustomTeamTemplateRecordsResult,
+  ReadCustomTeamTemplateRecordRequest,
+  ReadCustomTeamTemplateRecordResult,
+} from '@features/custom-team-templates/contracts';
 
 const logger = createLogger('Service:InternalStorageWorkerClient');
 
@@ -52,6 +60,7 @@ const logger = createLogger('Service:InternalStorageWorkerClient');
 type InternalStorageWorkerPayloadFor<TOp extends InternalStorageWorkerRequest['op']> = TOp extends
   | `appCommandLedger.${string}`
   | `mws.${string}`
+  | `customTemplate.${string}`
   ? unknown
   : Extract<InternalStorageWorkerRequest, { op: TOp }>['payload'];
 
@@ -110,7 +119,8 @@ export class InternalStorageWorkerClient
   implements
     InternalStorageGateway,
     MemberWorkSyncStorageGateway,
-    ApplicationCommandLedgerStorageGateway
+    ApplicationCommandLedgerStorageGateway,
+    CustomTeamTemplateStorageGateway
 {
   private worker: Worker | null = null;
   private readonly workerPath: string | null = resolveWorkerPath();
@@ -437,6 +447,28 @@ export class InternalStorageWorkerClient
       'appCommandLedger.listByScope',
       request
     )) as ApplicationCommandLedgerRecord<TOperation>[];
+  }
+
+  async customTeamTemplateCreate(
+    request: CreateCustomTeamTemplateRecordRequest
+  ): Promise<CreateCustomTeamTemplateRecordResult> {
+    return (await this.call(
+      'customTemplate.create',
+      request
+    )) as CreateCustomTeamTemplateRecordResult;
+  }
+
+  async customTeamTemplateList(): Promise<ListCustomTeamTemplateRecordsResult> {
+    return (await this.call('customTemplate.list', {})) as ListCustomTeamTemplateRecordsResult;
+  }
+
+  async customTeamTemplateGetById(
+    request: ReadCustomTeamTemplateRecordRequest
+  ): Promise<ReadCustomTeamTemplateRecordResult> {
+    return (await this.call(
+      'customTemplate.getById',
+      request
+    )) as ReadCustomTeamTemplateRecordResult;
   }
 
   close(): Promise<void> {

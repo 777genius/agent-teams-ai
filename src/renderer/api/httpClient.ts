@@ -6,6 +6,10 @@
  * to run in a regular browser connected to an HTTP server.
  */
 import {
+  createHttpCustomTeamTemplatesApi,
+  type CustomTeamTemplatesApi,
+} from '@features/custom-team-templates';
+import {
   createEmptyMemberLogPreviewResponse,
   createEmptyMemberLogStreamResponse,
   createEmptyMemberRuntimeLogTailResponse,
@@ -226,6 +230,9 @@ function createBrowserRuntimeProviderError(
 }
 
 export class HttpAPIClient implements ElectronAPI {
+  get customTeamTemplates(): CustomTeamTemplatesApi {
+    return createHttpCustomTeamTemplatesApi(this.baseUrl);
+  }
   get teamGroupChats() {
     return createHttpTeamGroupChatsAPI(this.baseUrl);
   }

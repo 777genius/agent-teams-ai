@@ -2,6 +2,7 @@ import { createAnnouncementsBridge } from '@features/announcements/preload';
 import { createAppCloseCoordinationBridge } from '@features/app-close-coordination/preload';
 import { createCodexAccountBridge } from '@features/codex-account/preload';
 import { createCodexRuntimeInstallerBridge } from '@features/codex-runtime-installer/preload';
+import { createCustomTeamTemplatesBridge } from '@features/custom-team-templates/preload';
 import { createDocumentPreviewBridge } from '@features/document-preview/preload';
 import { createExternalAgentConnectionBridge } from '@features/external-agent-connection/preload';
 import { createMemberLogStreamBridge } from '@features/member-log-stream/preload';
@@ -515,6 +516,7 @@ const electronAPI: ElectronAPI = {
   }),
   ...createRecentProjectsBridge(),
   teamGroupChats: createTeamGroupChatsBridge(),
+  customTeamTemplates: createCustomTeamTemplatesBridge(),
   announcements: createAnnouncementsBridge(),
   ...createWorkspaceTrustBridge(ipcRenderer),
   ...createProjectFolderBridge(ipcRenderer),
