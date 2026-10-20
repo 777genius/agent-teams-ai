@@ -13,6 +13,7 @@ import { createLogger } from '@shared/utils/logger';
 import { resolveTeamMemberMcpScopes } from '@shared/utils/teamMemberMcpPolicy';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
+import { pathToFileURL } from 'node:url';
 import * as path from 'path';
 
 import { McpConfigStateReader } from '../extensions/runtime/McpConfigStateReader';
@@ -560,9 +561,11 @@ export async function resolveAgentTeamsMcpLaunchSpec(
     // under a deep owned-profile TMPDIR exceeds the UNIX socket path limit.
     const tsxLoader = await resolveWorkspaceTsxLoader(checked);
     if (tsxLoader) {
+      // `--import` resolves its argument as an ESM specifier: a Windows drive
+      // path is parsed as a `C:` URL scheme and rejected, so pass a file URL.
       return {
         command: await resolveNodePath(options),
-        args: ['--import', tsxLoader, sourceEntry],
+        args: ['--import', pathToFileURL(tsxLoader).href, sourceEntry],
       };
     }
   }

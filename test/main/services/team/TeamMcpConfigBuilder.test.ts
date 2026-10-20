@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 
 import { configureDesktopMcpEnvironment } from '@features/external-agent-connection/main/desktopMcpEnvironment';
 import * as fs from 'fs';
@@ -132,7 +133,9 @@ describe('TeamMcpConfigBuilder', () => {
     tsxLoader: string,
     sourceEntry: string
   ): void {
-    expect(server?.args).toEqual(['--import', tsxLoader, sourceEntry]);
+    // `--import` takes an ESM specifier, so the loader travels as a file URL
+    // even on Windows; the positional entry stays a filesystem path.
+    expect(server?.args).toEqual(['--import', pathToFileURL(tsxLoader).href, sourceEntry]);
     expect(server?.command).toMatch(/(^node(?:-\d+)?$|[\\/]node(?:-\d+)?(?:\.exe)?$)/);
   }
 
