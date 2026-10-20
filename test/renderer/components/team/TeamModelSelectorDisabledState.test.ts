@@ -1211,6 +1211,65 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(onValueChange).not.toHaveBeenCalledWith('');
   });
 
+  it('shows the saved retired MiniMax selection without offering other retired models', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          authMethod: 'api_key',
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI', endpointLabel: 'opencode' },
+          authenticated: true,
+          supported: true,
+          capabilities: { teamLaunch: true },
+          models: [
+            'opencode/minimax-m2.5-free',
+            'opencode/minimax-m3-free',
+            'openrouter/minimax/minimax-m2.7',
+          ],
+          modelVerificationState: 'idle',
+          modelAvailability: [],
+        },
+      ],
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onValueChange = vi.fn();
+    const render = (value: string) =>
+      React.createElement(TeamModelSelector, {
+        providerId: 'opencode',
+        onProviderChange: () => undefined,
+        providerReadyById: { opencode: true },
+        value,
+        onValueChange,
+      });
+
+    await act(async () => {
+      root.render(render('opencode/minimax-m2.5-free'));
+      await Promise.resolve();
+    });
+    const selected = host.querySelector(
+      '[data-testid="team-model-selector-model-option"][aria-pressed="true"]'
+    );
+    expect(selected?.textContent).toContain('minimax-m2.5-free');
+    expect(selected?.getAttribute('aria-disabled')).toBe('false');
+    expect(selected?.textContent).toContain('Not recommended');
+    expect(host.textContent).not.toContain('minimax-m2.7');
+    expect(onValueChange).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.render(render('opencode/minimax-m3-free'));
+      await Promise.resolve();
+    });
+    expect(host.textContent).not.toContain('minimax-m2.5-free');
+    expect(
+      host.querySelector('[data-testid="team-model-selector-model-option"][aria-pressed="true"]')
+        ?.textContent
+    ).toContain('minimax-m3-free');
+  });
+
   it('labels, sorts, and filters OpenCode models with real Agent Teams E2E recommendations', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
@@ -1234,6 +1293,9 @@ describe('TeamModelSelector disabled Codex models', () => {
             'openrouter/qwen/qwen3-coder-plus',
             'opencode/big-pickle',
             'opencode/minimax-m2.5-free',
+            'opencode/minimax-m3-free',
+            'openrouter/minimax/minimax-m2.7',
+            'openrouter/minimax/minimax-m3.1-flash:free',
             'openrouter/openai/gpt-oss-120b:free',
             'openrouter/mistralai/codestral-2508',
             'openrouter/anthropic/claude-sonnet-4.6',
@@ -1264,8 +1326,17 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(host.textContent).toContain('Tested');
     expect(host.textContent).toContain('mistralai/codestral-2508');
     expect(host.textContent).toContain('Tested');
-    expect(host.textContent).toContain('minimax-m2.5-free');
-    expect(host.textContent).toContain('Tested with limits');
+    expect(host.textContent).not.toContain('minimax-m2.5-free');
+    expect(host.textContent).not.toContain('minimax-m2.7');
+    expect(host.textContent).toContain('minimax-m3-free');
+    expect(host.textContent).toContain('minimax-m3.1-flash:free');
+    expect(host.textContent).not.toContain('Tested with limits');
+    const flashOption = Array.from(
+      host.querySelectorAll('[data-testid="team-model-selector-model-option"]')
+    ).find((option) => option.textContent?.includes('minimax-m3.1-flash:free'));
+    expect(flashOption).toBeDefined();
+    expect(flashOption?.textContent).not.toContain('Tested');
+    expect(flashOption?.textContent).not.toContain('Recommended');
     expect(host.textContent).toContain('openai/gpt-oss-120b:free');
     expect(host.textContent).toContain('big-pickle');
     expect(host.textContent).toContain('qwen/qwen3-coder-plus');
@@ -1288,7 +1359,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     );
     const testedIndex = buttonTexts.findIndex((text) => text.includes('mistralai/codestral-2508'));
     const recommendedIndex = buttonTexts.findIndex((text) => text.includes('big-pickle'));
-    const limitedIndex = buttonTexts.findIndex((text) => text.includes('minimax-m2.5-free'));
+    const currentMiniMaxIndex = buttonTexts.findIndex((text) => text.includes('minimax-m3-free'));
     const notRecommendedIndex = buttonTexts.findIndex((text) =>
       text.includes('openai/gpt-oss-20b:free')
     );
@@ -1297,11 +1368,11 @@ describe('TeamModelSelector disabled Codex models', () => {
     );
     expect(sonnetIndex).toBeGreaterThanOrEqual(0);
     expect(recommendedIndex).toBeGreaterThanOrEqual(0);
-    expect(limitedIndex).toBeGreaterThanOrEqual(0);
+    expect(currentMiniMaxIndex).toBeGreaterThanOrEqual(0);
     expect(testedIndex).toBeGreaterThanOrEqual(0);
-    expect(limitedIndex).toBeGreaterThan(recommendedIndex);
+    expect(currentMiniMaxIndex).toBeGreaterThan(recommendedIndex);
     expect(testedIndex).toBeGreaterThan(recommendedIndex);
-    expect(unavailableIndex).toBeGreaterThan(limitedIndex);
+    expect(unavailableIndex).toBeGreaterThan(currentMiniMaxIndex);
     expect(notRecommendedIndex).toBeGreaterThan(unavailableIndex);
 
     expect(host.textContent).toContain('Recommended only');
@@ -3965,7 +4036,7 @@ describe('TeamModelSelector disabled Codex models', () => {
           capabilities: {
             teamLaunch: true,
           },
-          models: ['openrouter/minimax/minimax-m2.5-free'],
+          models: ['openrouter/minimax/minimax-m3.1-flash:free'],
           modelCatalogRefreshState: 'ready',
           modelCatalog: {
             schemaVersion: 1,
@@ -3978,9 +4049,9 @@ describe('TeamModelSelector disabled Codex models', () => {
             defaultLaunchModel: null,
             models: [
               {
-                id: 'openrouter/minimax/minimax-m2.5-free',
-                launchModel: 'openrouter/minimax/minimax-m2.5-free',
-                displayName: 'minimax/minimax-m2.5-free',
+                id: 'openrouter/minimax/minimax-m3.1-flash:free',
+                launchModel: 'openrouter/minimax/minimax-m3.1-flash:free',
+                displayName: 'minimax/minimax-m3.1-flash:free',
               },
             ],
           },
@@ -4354,7 +4425,7 @@ describe('TeamModelSelector disabled Codex models', () => {
           capabilities: {
             teamLaunch: true,
           },
-          models: ['opencode/minimax-m2.5-free'],
+          models: ['opencode/minimax-m3-free'],
         },
       ],
     };
@@ -4407,7 +4478,7 @@ describe('TeamModelSelector disabled Codex models', () => {
           capabilities: {
             teamLaunch: true,
           },
-          models: ['openrouter/minimax/minimax-m2.5-free'],
+          models: ['openrouter/minimax/minimax-m3.1-flash:free'],
         },
       ],
     };
@@ -4473,7 +4544,7 @@ describe('TeamModelSelector disabled Codex models', () => {
           capabilities: {
             teamLaunch: true,
           },
-          models: ['openrouter/minimax/minimax-m2.5-free'],
+          models: ['openrouter/minimax/minimax-m3.1-flash:free'],
           modelCatalogRefreshState: 'ready',
           modelCatalog: {
             schemaVersion: 1,
@@ -4486,9 +4557,9 @@ describe('TeamModelSelector disabled Codex models', () => {
             defaultLaunchModel: null,
             models: [
               {
-                id: 'openrouter/minimax/minimax-m2.5-free',
-                launchModel: 'openrouter/minimax/minimax-m2.5-free',
-                displayName: 'minimax/minimax-m2.5-free',
+                id: 'openrouter/minimax/minimax-m3.1-flash:free',
+                launchModel: 'openrouter/minimax/minimax-m3.1-flash:free',
+                displayName: 'minimax/minimax-m3.1-flash:free',
               },
             ],
           },
@@ -5364,7 +5435,7 @@ describe('TeamModelSelector disabled Codex models', () => {
           capabilities: {
             teamLaunch: true,
           },
-          models: ['community/community-model', 'opencode/minimax-m2.7', 'openai/gpt-5.6'],
+          models: ['community/community-model', 'opencode/minimax-m3', 'openai/gpt-5.6'],
           modelCatalog: {
             schemaVersion: 1,
             providerId: 'opencode',
@@ -5395,9 +5466,9 @@ describe('TeamModelSelector disabled Codex models', () => {
                 },
               },
               {
-                id: 'opencode/minimax-m2.7',
-                launchModel: 'opencode/minimax-m2.7',
-                displayName: 'minimax-m2.7',
+                id: 'opencode/minimax-m3',
+                launchModel: 'opencode/minimax-m3',
+                displayName: 'minimax-m3',
                 hidden: false,
                 supportedReasoningEfforts: [],
                 defaultReasoningEffort: null,
@@ -5512,7 +5583,7 @@ describe('TeamModelSelector disabled Codex models', () => {
       await Promise.resolve();
     });
     expect(host.textContent).toContain('community-model');
-    expect(host.textContent).not.toContain('minimax-m2.7');
+    expect(host.textContent).not.toContain('minimax-m3');
     expect(host.textContent).not.toContain('gpt-5.6');
 
     await act(async () => {

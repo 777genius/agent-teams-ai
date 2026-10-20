@@ -1750,7 +1750,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     }
     const unscopedRuntimeOptions = getAvailableTeamProviderModelOptions(
       effectiveProviderId,
-      runtimeProviderStatus
+      runtimeProviderStatus,
+      normalizedValue
     );
     const catalogModelById = new Map<string, ProviderModelCatalogItem>();
     for (const model of runtimeProviderStatus?.modelCatalog?.models ?? []) {
@@ -1803,6 +1804,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     openCodeDefaultOptionLabel,
     openCodeLocalModelOverlay.modelIds,
     openCodeLocalModelOverlay.options,
+    normalizedValue,
     runtimeProviderStatus,
     selectedLocalModelFallbackOption,
     shouldAwaitRuntimeModelList,

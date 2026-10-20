@@ -10,6 +10,7 @@ import {
   isRuntimeProviderOnboardingPlanConnected,
   isRuntimeProviderOnboardingPlanRoutable,
   normalizeRuntimeProviderOnboardingProgress,
+  rankRecommendedRuntimeProviderModels,
   resolveXiaomiMiMoTokenPlanProvider,
   selectRecommendedRuntimeProviderModel,
 } from '../../../../src/features/runtime-provider-management/core/domain/runtimeProviderOnboarding';
@@ -132,6 +133,64 @@ describe('runtime provider onboarding domain', () => {
         directoryEntry({ providerId: plan.providerId, connectedAuthHint: 'api' })
       )
     ).toBe(true);
+  });
+
+  it('prefers MiniMax-M3.1-Flash over MiniMax-M3 when the live catalog exposes both', () => {
+    const plan = getRuntimeProviderOnboardingPlan('minimax-token-plan');
+    const m3 = model('minimax-coding-plan/MiniMax-M3', { default: true });
+    const flash = model('minimax-coding-plan/MiniMax-M3.1-Flash');
+
+    expect(plan.preferredModelFragments).toEqual(['minimax-m3.1-flash', 'minimax-m3']);
+    expect(selectRecommendedRuntimeProviderModel(plan, [m3, flash])).toBe(flash);
+  });
+
+  it('falls back to MiniMax-M3 when Flash is absent or unavailable in the live catalog', () => {
+    const plan = getRuntimeProviderOnboardingPlan('minimax-token-plan');
+    const m3 = model('minimax-coding-plan/MiniMax-M3');
+    const flash = model('minimax-coding-plan/MiniMax-M3.1-Flash', {
+      availability: 'unavailable',
+    });
+
+    expect(selectRecommendedRuntimeProviderModel(plan, [m3])).toBe(m3);
+    expect(selectRecommendedRuntimeProviderModel(plan, [flash, m3])).toBe(m3);
+    expect(selectRecommendedRuntimeProviderModel(plan, [])).toBeNull();
+  });
+
+  it('does not fall back to retired MiniMax catalog models during onboarding', () => {
+    const plan = getRuntimeProviderOnboardingPlan('minimax-token-plan');
+    const retired = [
+      'minimax-coding-plan/MiniMax-M2.7',
+      'minimax-coding-plan/MiniMax-M3-highspeed',
+      'openrouter/minimax/minimax-m2.7',
+      'opencode/minimax-m2.5-free',
+    ].map((modelId) => model(modelId, { default: true }));
+    const flash = model('openrouter/minimax/minimax-m3.1-flash:free');
+
+    expect(rankRecommendedRuntimeProviderModels(plan, retired)).toEqual([]);
+    expect(selectRecommendedRuntimeProviderModel(plan, retired)).toBeNull();
+    expect(selectRecommendedRuntimeProviderModel(plan, [...retired, flash])).toBe(flash);
+  });
+
+  it.each(['minimax', 'minimax-cn', 'minimax-coding-plan', 'minimax-cn-coding-plan'])(
+    'filters bare MiniMax IDs from the %s scoped catalog before recommending a default',
+    (providerId) => {
+      const plan = getRuntimeProviderOnboardingPlan('minimax-token-plan');
+      const retired = model('MiniMax-M2.7', { providerId, default: true });
+      const current = model('MiniMax-M3.1-Flash', { providerId });
+      expect(selectRecommendedRuntimeProviderModel(plan, [retired])).toBeNull();
+      expect(rankRecommendedRuntimeProviderModels(plan, [retired, current])).toEqual([current]);
+    }
+  );
+
+  it('preserves explicitly saved MiniMax model selections', () => {
+    const progress = {
+      ...createRuntimeProviderOnboardingProgress(['minimax-token-plan']),
+      selectedModels: { 'minimax-token-plan': 'custom/minimax-model' },
+    };
+
+    expect(normalizeRuntimeProviderOnboardingProgress(progress)?.selectedModels).toEqual({
+      'minimax-token-plan': 'custom/minimax-model',
+    });
   });
 
   it('opens the official MiMo Token Plan key management page for every region', () => {
