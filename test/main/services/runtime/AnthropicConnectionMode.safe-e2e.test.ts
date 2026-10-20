@@ -113,7 +113,7 @@ describe('Anthropic connection mode safe e2e', () => {
     expect(result.env.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
   });
 
-  it('restores the configured compatible endpoint on passive status after routing scrub', async () => {
+  it('preserves custom models with the configured compatible endpoint on passive status', async () => {
     configState.compatibleEndpoint = {
       enabled: true,
       baseUrl: 'http://127.0.0.1:11434',
@@ -122,22 +122,33 @@ describe('Anthropic connection mode safe e2e', () => {
       await import('@main/services/runtime/providerAwareCliEnv');
     const { providerConnectionService } =
       await import('@main/services/runtime/ProviderConnectionService');
+    const customModels = {
+      ANTHROPIC_MODEL: 'gateway-large',
+      ANTHROPIC_SMALL_FAST_MODEL: 'gateway-small',
+      ANTHROPIC_DEFAULT_SONNET_MODEL: 'gateway-sonnet',
+    };
 
     const { env: passiveEnv } = buildPassiveProviderStatusCliEnv({
       binaryPath: '/mock/claude-multimodel',
       providerId: 'anthropic',
       shellEnv: {
+        ...customModels,
         HOME: tempHome,
         USERPROFILE: tempHome,
         PATH: '/usr/bin:/bin',
         ANTHROPIC_BASE_URL: 'https://ambient-gateway.example/anthropic',
         ANTHROPIC_AUTH_TOKEN: 'compatible-token',
+        CLAUDE_CODE_USE_BEDROCK: '1',
+        ANTHROPIC_BEDROCK_BASE_URL: 'https://bedrock.example.test',
       },
     });
 
     expect(passiveEnv.AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE).toBe('compatible');
     expect(passiveEnv.ANTHROPIC_BASE_URL).toBeUndefined();
     expect(passiveEnv.ANTHROPIC_AUTH_TOKEN).toBe('compatible-token');
+    expect(passiveEnv).toMatchObject(customModels);
+    expect(passiveEnv.CLAUDE_CODE_USE_BEDROCK).toBeUndefined();
+    expect(passiveEnv.ANTHROPIC_BEDROCK_BASE_URL).toBeUndefined();
 
     const env = await providerConnectionService.applyPassiveProviderStatusConnectionEnv(
       passiveEnv,
@@ -146,5 +157,49 @@ describe('Anthropic connection mode safe e2e', () => {
 
     expect(env.ANTHROPIC_BASE_URL).toBe('http://127.0.0.1:11434');
     expect(env.ANTHROPIC_AUTH_TOKEN).toBe('compatible-token');
+    expect(env).toMatchObject(customModels);
+  });
+
+  it('preserves the custom endpoint token and models together for an active Anthropic launch', async () => {
+    configState.authMode = 'api_key';
+    configState.compatibleEndpoint = {
+      enabled: true,
+      baseUrl: 'http://127.0.0.1:11434',
+    };
+    const { buildProviderAwareCliEnv } = await import('@main/services/runtime/providerAwareCliEnv');
+    const customModels = {
+      ANTHROPIC_MODEL: 'gateway-large',
+      ANTHROPIC_SMALL_FAST_MODEL: 'gateway-small',
+      ANTHROPIC_DEFAULT_SONNET_MODEL: 'gateway-sonnet',
+    };
+
+    const result = await buildProviderAwareCliEnv({
+      binaryPath: '/mock/claude-multimodel',
+      providerId: 'anthropic',
+      shellEnv: {
+        ...customModels,
+        HOME: tempHome,
+        USERPROFILE: tempHome,
+        PATH: '/usr/bin:/bin',
+        CLAUDE_CODE_USE_BEDROCK: '1',
+        ANTHROPIC_BEDROCK_BASE_URL: 'https://bedrock.example.test',
+        ANTHROPIC_BASE_URL: 'https://ambient-gateway.example/anthropic',
+        ANTHROPIC_AUTH_TOKEN: 'compatible-token',
+        ANTHROPIC_API_KEY: '',
+      },
+    });
+
+    expect(result.connectionIssues).toEqual({});
+    expect(result.env).toMatchObject({
+      ...customModels,
+      CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST: '1',
+      CLAUDE_CODE_ENTRY_PROVIDER: 'anthropic',
+      AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE: 'compatible',
+      ANTHROPIC_BASE_URL: 'http://127.0.0.1:11434',
+      ANTHROPIC_AUTH_TOKEN: 'compatible-token',
+      ANTHROPIC_API_KEY: '',
+    });
+    expect(result.env.CLAUDE_CODE_USE_BEDROCK).toBeUndefined();
+    expect(result.env.ANTHROPIC_BEDROCK_BASE_URL).toBeUndefined();
   });
 });
