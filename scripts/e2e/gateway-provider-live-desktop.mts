@@ -16,7 +16,10 @@ import { fileURLToPath } from 'node:url';
 import { startMockUpstream } from './gateway-provider/mockUpstream.ts';
 import { verifyGatewayUi, type GatewayUiPage } from './gateway-provider-ui-desktop.mts';
 import type { ElectronAPI } from '../../src/shared/types/api.ts';
-import type { TokenUsageAnalyticsSnapshotDto } from '../../src/features/token-usage/contracts/dto.ts';
+import type {
+  TokenUsageAnalyticsSnapshotDto,
+  TokenUsageRunDto,
+} from '../../src/features/token-usage/contracts/dto.ts';
 
 interface InputPage {
   url(): string;
@@ -834,6 +837,41 @@ try {
         row && Math.abs(row.summary.billableCostUsd - total) < 1e-8,
         'Re-import preserves historical owner and both source totals'
       );
+      await waitForRestartableRuntime(team, original.name);
+      const ordinaryStartedAt = Date.now();
+      await invoke('teams', 'restartMember', team, original.name);
+      await invoke('teams', 'sendMessage', team, {
+        member: original.name,
+        text: 'Ordinary unbound run: reply GATEWAY_E2E_OK.',
+        from: 'user',
+      });
+      const ordinary = await poll(
+        'ordinary native run retains CLI attribution after unbind',
+        async () => {
+          await invoke('tokenUsage', 'refreshSnapshot', { teamName: team });
+          const ledger = JSON.parse(
+            await readFile(
+              path.join(dirs['user-data'], 'data', 'token-usage', 'ledger.json'),
+              'utf8'
+            )
+          ) as { runs: TokenUsageRunDto[] };
+          const run = ledger.runs.find(
+            (run) =>
+              run.teamName === team &&
+              run.agentName === original.name &&
+              Date.parse(run.startedAt) >= ordinaryStartedAt &&
+              run.sources.length > 0
+          );
+          if (!run) return null;
+          assert.equal(
+            run.gatewayUsageRef,
+            undefined,
+            'A new unbound run must not inherit historical gateway usage'
+          );
+          return run;
+        }
+      );
+      await json(path.join(dirs.evidence, `${team}-unbound-native-run.json`), ordinary);
     }
     assert(
       !routes.some(

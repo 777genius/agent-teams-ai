@@ -43,6 +43,89 @@ function nativeRun(
 }
 
 describe('GatewayRunMetadataStore', () => {
+  it('preserves historical native stop times across later team stops and late discovery', async () => {
+    directory = await mkdtemp(path.join(os.tmpdir(), 'gateway-run-metadata-'));
+    const store = new GatewayRunMetadataStore(path.join(directory, 'runs.json'));
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-20T12:00:00Z'));
+    const old = await store.snapshotLaunch({
+      teamName: 'sandbox',
+      memberName: 'alice',
+      providerId: 'anthropic',
+      gatewayUsageRef: 'old-source',
+    });
+    await store.reconcileRuns([nativeRun('old-session', '2026-10-20T12:00:01Z')]);
+    vi.setSystemTime(new Date('2026-10-20T12:30:00Z'));
+    await store.confirmNativeTeamStopped('sandbox');
+    vi.setSystemTime(new Date('2026-10-21T12:00:00Z'));
+    await store.snapshotLaunch({
+      teamName: 'sandbox',
+      memberName: 'alice',
+      providerId: 'anthropic',
+      gatewayUsageRef: 'new-source',
+    });
+    await store.reconcileRuns([nativeRun('new-session', '2026-10-21T12:00:01Z')]);
+    vi.setSystemTime(new Date('2026-10-21T12:30:00Z'));
+    await store.confirmNativeTeamStopped('sandbox');
+    await store.confirmLaunchStopped(old);
+    const retained = await store.reconcileRuns([
+      nativeRun('late-old-session', '2026-10-20T12:00:02Z'),
+    ]);
+    expect(retained.filter((run) => run.gatewayUsageRef === 'old-source')).toHaveLength(2);
+    expect(
+      retained
+        .filter((run) => run.gatewayUsageRef === 'old-source')
+        .every((run) => run.endedAt === '2026-10-20T12:30:00.000Z' && run.terminationConfirmed)
+    ).toBe(true);
+    expect(retained.find((run) => run.gatewayUsageRef === 'new-source')?.endedAt).toBe(
+      '2026-10-21T12:30:00.000Z'
+    );
+    expect(await store.hasUnfinishedRuns('old-source')).toBe(false);
+  });
+
+  it('does not move OpenCode termination or an aborted attempt to a later day', async () => {
+    directory = await mkdtemp(path.join(os.tmpdir(), 'gateway-run-metadata-'));
+    const store = new GatewayRunMetadataStore(path.join(directory, 'runs.json'));
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-20T12:00:00Z'));
+    const old = await store.snapshotLaunch({
+      teamName: 'sandbox',
+      memberName: 'alice',
+      providerId: 'opencode',
+      gatewayUsageRef: 'old-source',
+    });
+    const failed = await store.snapshotLaunch({
+      teamName: 'sandbox',
+      memberName: 'bob',
+      providerId: 'anthropic',
+      gatewayUsageRef: 'failed-source',
+    });
+    await store.recordOpenCodeSessions(
+      'sandbox',
+      [{ memberName: 'alice', sessionId: 'old-session', runtimeAlive: true }],
+      [old]
+    );
+    await store.snapshotLaunch({
+      teamName: 'sandbox',
+      memberName: 'charlie',
+      providerId: 'opencode',
+      gatewayUsageRef: 'empty-opencode-source',
+    });
+    vi.setSystemTime(new Date('2026-10-20T12:30:00Z'));
+    await store.confirmOpenCodeStopped('sandbox', [
+      { memberName: 'alice', sessionId: 'old-session', stopped: true },
+    ]);
+    await store.abortUnspawnedLaunch(failed);
+    await store.confirmOpenCodeStopped('sandbox', [{ memberName: 'charlie', stopped: true }]);
+    vi.setSystemTime(new Date('2026-10-21T12:30:00Z'));
+    await store.confirmOpenCodeStopped('sandbox', [{ memberName: 'alice', stopped: true }]);
+    await store.abortUnspawnedLaunch(failed);
+    await store.confirmOpenCodeStopped('sandbox', [{ memberName: 'charlie', stopped: true }]);
+    const retained = await store.reconcileRuns([]);
+    expect(retained).toHaveLength(3);
+    expect(retained.every((run) => run.endedAt === '2026-10-20T12:30:00.000Z')).toBe(true);
+  });
+
   it('requires the current launch receipt for OpenCode sessions and keeps a later unbound run ordinary', async () => {
     directory = await mkdtemp(path.join(os.tmpdir(), 'gateway-run-metadata-'));
     const filePath = path.join(directory, 'runs.json');

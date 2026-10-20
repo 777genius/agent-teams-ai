@@ -34,16 +34,18 @@ export class GatewayRunMetadataStore {
   abortUnspawnedLaunch(id: string): Promise<void> {
     return this.update(async (snapshots) => {
       const snapshot = snapshots.find((entry) => entry.id === id);
-      if (snapshot && snapshot.runs.length === 0) snapshot.endedAt = new Date().toISOString();
+      if (snapshot?.runs.length === 0 && !snapshot.endedAt)
+        snapshot.endedAt = new Date().toISOString();
     });
   }
 
   confirmLaunchStopped(id: string): Promise<void> {
     return this.update(async (snapshots) => {
       const snapshot = snapshots.find((entry) => entry.id === id);
-      if (!snapshot) return;
+      if (!snapshot || snapshot.endedAt) return;
       snapshot.endedAt = new Date().toISOString();
       for (const run of snapshot.runs) {
+        if (run.terminationConfirmed && run.endedAt) continue;
         run.endedAt = snapshot.endedAt;
         run.status = 'completed';
         run.terminationConfirmed = true;
@@ -55,9 +57,15 @@ export class GatewayRunMetadataStore {
     return this.update(async (snapshots) => {
       const endedAt = new Date().toISOString();
       for (const snapshot of snapshots) {
-        if (snapshot.teamName !== teamName || snapshot.providerId === 'opencode') continue;
+        if (
+          snapshot.teamName !== teamName ||
+          snapshot.providerId === 'opencode' ||
+          snapshot.endedAt
+        )
+          continue;
         snapshot.endedAt = endedAt;
         for (const run of snapshot.runs) {
+          if (run.terminationConfirmed && run.endedAt) continue;
           run.endedAt = endedAt;
           run.status = 'completed';
           run.terminationConfirmed = true;
@@ -93,7 +101,14 @@ export class GatewayRunMetadataStore {
         const known = snapshot.runs.find((item) => sessionIdentity(item) === sessionIdentity(run));
         const confirmed = known?.terminationConfirmed
           ? { ...run, terminationConfirmed: true, endedAt: known.endedAt, status: known.status }
-          : run;
+          : snapshot.endedAt
+            ? {
+                ...run,
+                terminationConfirmed: true,
+                endedAt: snapshot.endedAt,
+                status: 'completed' as const,
+              }
+            : run;
         const marked = {
           ...confirmed,
           agentId: run.agentId ?? known?.agentId ?? `${snapshot.teamName}:${snapshot.memberName}`,
@@ -214,8 +229,10 @@ export class GatewayRunMetadataStore {
         if (snapshot.teamName !== teamName || snapshot.providerId !== 'opencode') continue;
         for (const member of members) {
           if (!member.stopped || snapshot.memberName !== member.memberName) continue;
-          if (snapshot.runs.length === 0 && !member.sessionId) snapshot.endedAt = endedAt;
+          if (snapshot.runs.length === 0 && !member.sessionId && !snapshot.endedAt)
+            snapshot.endedAt = endedAt;
           for (const run of snapshot.runs) {
+            if (run.terminationConfirmed && run.endedAt) continue;
             if (
               member.sessionId &&
               !run.sources.some((source) => source.nativeSessionId === member.sessionId)

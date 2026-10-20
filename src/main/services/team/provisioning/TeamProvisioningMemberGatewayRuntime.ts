@@ -91,9 +91,10 @@ export interface ResolveMemberGatewayRuntimeArgsInput {
 }
 
 /**
- * Resolve one member's gateway binding into per-runtime artifacts. Returns
- * null when the member has no binding or no seam is injected. The resolved
- * connection identity is snapshotted into `gatewayUsageRef` before any spawn.
+ * Resolve one member's gateway binding into per-runtime artifacts.
+ * Native unbound members retain launch hooks to delimit gateway attribution;
+ * route/auth overrides remain empty. No seam means no gateway integration.
+ * The resolved source identity is snapshotted before any spawn.
  */
 export async function resolveMemberGatewayRuntimeArgs(
   input: ResolveMemberGatewayRuntimeArgsInput
@@ -126,7 +127,14 @@ export async function resolveMemberGatewayRuntimeArgs(
     if (typeof launchSnapshotId === 'string')
       await input.seams!.confirmLaunchStopped?.(launchSnapshotId);
   };
-  if (!connection) return null;
+  if (!connection) {
+    // A native launch without a route closes the preceding gateway attribution window.
+    return input.snapshotLaunch !== false &&
+      input.seams.snapshotLaunch &&
+      (input.providerId === 'anthropic' || input.providerId === 'codex')
+      ? { envPatch: {}, beginLaunch, abortUnspawnedLaunch, confirmStopped }
+      : null;
+  }
   assertGatewayProviderSupported(input.providerId);
 
   if (input.providerId === 'opencode') {

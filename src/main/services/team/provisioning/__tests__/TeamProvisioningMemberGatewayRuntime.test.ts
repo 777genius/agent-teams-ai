@@ -108,6 +108,36 @@ describe('resolveMemberGatewayRuntimeArgs', () => {
 });
 
 describe('gateway launch ownership', () => {
+  it.each(['anthropic', 'codex'] as const)(
+    'persists an unbound %s boundary without changing global credentials',
+    async (providerId) => {
+      const seams = seamsWithConnection(null);
+      seams.snapshotLaunch = vi.fn(async () => 'ordinary-attempt');
+      const env = { ANTHROPIC_AUTH_TOKEN: 'default-token', CODEX_API_KEY: 'default-codex' };
+      const args = await applyDirectGatewayArgs(
+        { getMemberGatewayRuntimeSeams: () => seams },
+        { teamName: 'team-a', configuredMember: { name: 'builder' } },
+        { providerId, model: 'default-model' },
+        env
+      );
+      expect(args).toMatchObject({ envPatch: {}, codexArgs: [] });
+      expect(args?.gatewayUsageRef).toBeUndefined();
+      expect(seams.snapshotLaunch).not.toHaveBeenCalled();
+      await args?.beginLaunch?.();
+      await args?.beginLaunch?.();
+      expect(seams.snapshotLaunch).toHaveBeenCalledExactlyOnceWith({
+        teamName: 'team-a',
+        memberName: 'builder',
+        providerId,
+        gatewayUsageRef: undefined,
+      });
+      expect(env).toEqual({
+        ANTHROPIC_AUTH_TOKEN: 'default-token',
+        CODEX_API_KEY: 'default-codex',
+      });
+    }
+  );
+
   it('creates no run at prepare and aborts only its exact snapshot after a failed spawn', async () => {
     const seams = seamsWithConnection(connection());
     seams.snapshotLaunch = vi.fn(async () => 'attempt-token');
