@@ -2,6 +2,7 @@ import {
   buildConfiguredProvisioningMember,
   buildPrimaryOwnedMemberSpecForRuntime,
 } from './TeamProvisioningConfiguredMemberSpecs';
+import { resolveGatewayMemberLaunchIdentity } from './TeamProvisioningMemberGatewayRuntime';
 import {
   resolveEffectiveConfiguredMember,
   resolveLeadMemberName,
@@ -62,6 +63,7 @@ export interface TeamProvisioningMemberLifecycleHostFactoryRuntimeLaunchPorts<
     >
   ): ReturnType<TeamProvisioningMemberLifecycleHost['resolveDirectMemberLaunchIdentity']>;
   buildTeamRuntimeLaunchArgsPlan: TeamProvisioningMemberLifecycleHost['buildTeamRuntimeLaunchArgsPlan'];
+  getMemberGatewayRuntimeSeams: TeamProvisioningMemberLifecycleHost['getMemberGatewayRuntimeSeams'];
   sendMessageToRun(
     run: TRun,
     message: string
@@ -244,6 +246,7 @@ export const TEAM_PROVISIONING_MEMBER_LIFECYCLE_HOST_FACTORY_PORT_KEYS = {
     'buildProvisioningEnv',
     'resolveDirectMemberLaunchIdentity',
     'buildTeamRuntimeLaunchArgsPlan',
+    'getMemberGatewayRuntimeSeams',
     'sendMessageToRun',
   ],
   memberMcpLaunchConfig: [
@@ -333,6 +336,7 @@ export function createTeamProvisioningMemberLifecycleHostPortGroups<
       service.buildProvisioningEnv(providerId, providerBackendId, options),
     resolveDirectMemberLaunchIdentity: (input) => service.resolveDirectMemberLaunchIdentity(input),
     buildTeamRuntimeLaunchArgsPlan: (input) => service.buildTeamRuntimeLaunchArgsPlan(input),
+    getMemberGatewayRuntimeSeams: () => service.getMemberGatewayRuntimeSeams(),
     sendMessageToRun: (run, message) => service.sendMessageToRun(run, message),
   };
 
@@ -482,16 +486,37 @@ export function createTeamProvisioningMemberLifecycleHostFromPortGroups<
         configuredMember: input.configuredMember,
         request: asServiceProvisioningRun<TRun>(input.run).request,
       }),
-    buildProvisioningEnv: (providerId, providerBackendId, options) =>
-      runtimeLaunch.buildProvisioningEnv(providerId, providerBackendId, options),
+    buildProvisioningEnv: async (providerId, providerBackendId, options) => {
+      const auth = options.teamRuntimeAuth;
+      const connection = auth.memberName
+        ? await runtimeLaunch
+            .getMemberGatewayRuntimeSeams()
+            ?.resolveMemberConnection(auth.teamName, auth.memberName)
+        : null;
+      return runtimeLaunch.buildProvisioningEnv(providerId, providerBackendId, {
+        ...options,
+        gatewayMember: Boolean(connection),
+      });
+    },
     materializeEffectiveTeamMemberSpecs: (input) =>
       memberSpec.materializeEffectiveTeamMemberSpecs(input),
-    resolveDirectMemberLaunchIdentity: (input) =>
-      runtimeLaunch.resolveDirectMemberLaunchIdentity({
-        ...input,
-        run: asServiceProvisioningRun<TRun>(input.run),
-      }),
+    resolveDirectMemberLaunchIdentity: async (input) => {
+      const gatewayIdentity = await resolveGatewayMemberLaunchIdentity({
+        seams: runtimeLaunch.getMemberGatewayRuntimeSeams(),
+        teamName: input.run.teamName,
+        providerId: input.providerId,
+        memberSpec: input.memberSpec,
+      });
+      return (
+        gatewayIdentity ??
+        runtimeLaunch.resolveDirectMemberLaunchIdentity({
+          ...input,
+          run: asServiceProvisioningRun<TRun>(input.run),
+        })
+      );
+    },
     buildTeamRuntimeLaunchArgsPlan: (input) => runtimeLaunch.buildTeamRuntimeLaunchArgsPlan(input),
+    getMemberGatewayRuntimeSeams: () => runtimeLaunch.getMemberGatewayRuntimeSeams(),
     persistInboxMessage: (teamName, memberName, message) =>
       messaging.persistInboxMessage(teamName, memberName, message),
     persistSentMessage: (teamName, message) => messaging.persistSentMessage(teamName, message),

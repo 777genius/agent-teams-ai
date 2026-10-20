@@ -9,6 +9,7 @@ import { buildDesktopTeammateModeCliArgs } from '../runtimeTeammateMode';
 import {
   buildDeterministicCreateBootstrapSpec,
   type RuntimeBootstrapMemberMcpLaunchConfig,
+  type RuntimeBootstrapSpec,
   writeDeterministicBootstrapSpecFile,
   writeDeterministicBootstrapUserPromptFile,
 } from './TeamProvisioningBootstrapSpec';
@@ -24,6 +25,7 @@ import {
 } from './TeamProvisioningProgressBuffers';
 import { getPromptSizeSummary, type PromptSizeSummary } from './TeamProvisioningRuntimeDiagnostics';
 
+import type { MemberGatewayRuntimeArgs } from './TeamProvisioningMemberGatewayRuntime';
 import type {
   TeamRuntimeLaunchArgsPlan,
   TeamsBaseLocation,
@@ -44,6 +46,7 @@ export interface TeamProvisioningCreateBootstrapRun extends TeamProvisioningChec
   runId: string;
   progress: TeamProvisioningProgress;
   bootstrapSpecPath: string | null;
+  bootstrapSpecSnapshot?: RuntimeBootstrapSpec | null;
   bootstrapUserPromptPath: string | null;
   mcpConfigPath: string | null;
   requiresFirstRealTurnSuccess: boolean;
@@ -73,6 +76,8 @@ export interface MaterializeDeterministicCreateTeamBootstrapFilesInput {
   run: TeamProvisioningCreateBootstrapRun;
   effectiveMemberSpecs: TeamCreateRequest['members'];
   allEffectiveMemberSpecs: TeamCreateRequest['members'];
+  /** Per-member gateway artifacts carried from the create setup result. */
+  memberArgsByMember?: ReadonlyMap<string, MemberGatewayRuntimeArgs>;
   launchIdentity: ProviderModelLaunchIdentity | null;
   initialUserPrompt: string;
   promptSize?: PromptSizeSummary;
@@ -298,6 +303,7 @@ export async function materializeDeterministicCreateTeamBootstrapFiles({
   run,
   effectiveMemberSpecs,
   allEffectiveMemberSpecs,
+  memberArgsByMember,
   launchIdentity,
   initialUserPrompt,
   promptSize = getPromptSizeSummary(initialUserPrompt),
@@ -361,11 +367,13 @@ export async function materializeDeterministicCreateTeamBootstrapFiles({
     request,
     effectiveMemberSpecs,
     nativeBootstrapBuild.specs,
-    memberMcpLaunchConfigs
+    memberMcpLaunchConfigs,
+    memberArgsByMember ?? new Map()
   );
   emitProvisioningCheckpoint(run, 'Writing deterministic bootstrap spec file');
   const bootstrapSpecPath = await writeDeterministicBootstrapSpecFile(bootstrapSpec);
   run.bootstrapSpecPath = bootstrapSpecPath;
+  run.bootstrapSpecSnapshot = structuredClone(bootstrapSpec);
 
   let bootstrapUserPromptPath: string | null = null;
   if (initialUserPrompt) {

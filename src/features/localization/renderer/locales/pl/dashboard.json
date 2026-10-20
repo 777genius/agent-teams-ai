@@ -284,6 +284,11 @@
   },
   "tokenUsage": {
     "title": "Użycie",
+    "gateway": {
+      "dailyGranularity": "Gateway usage is aggregated by UTC day.",
+      "lastSuccessfulImport": "Last complete gateway import:",
+      "noConfirmedImport": "A complete gateway import is not yet confirmed; totals may be partial."
+    },
     "partialData": "Dane częściowe",
     "actions": {
       "refresh": "Odśwież",

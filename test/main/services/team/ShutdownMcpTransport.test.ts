@@ -220,6 +220,7 @@ describe('shutdown MCP transport authority', () => {
       pendingConsumers.push(resolveEnv());
     });
     let connection: ReturnType<typeof createDesktopExternalAgentConnection> | undefined;
+    const gatewayLaunchRuntime = {};
     const initializeBoundary = compileExpression(
       `async () => { let externalAgentConnection = null, memberWorkSyncFeature = null; ${boundaries.map((node) => node.getText(mainSource)).join('\n')} }`,
       {
@@ -238,6 +239,7 @@ describe('shutdown MCP transport authority', () => {
           return { ...connection, start: () => connection!.retryConnection() };
         },
         teamDataService: {},
+        gatewayLaunchRuntime,
         cliInstallerService: { getProviderStatus: vi.fn() },
         codexAccountFeature: undefined,
         forwardTeamChangeToRendererAndHttp: vi.fn(),
@@ -258,7 +260,11 @@ describe('shutdown MCP transport authority', () => {
         },
         handleModeSwitch: vi.fn(),
         startupStage: (operation: () => unknown) => operation(),
-        createOpenCodeRuntimeAdapterRegistry: async () => {
+        createOpenCodeRuntimeAdapterRegistry: async (
+          _publish: unknown,
+          gatewayRuntime: unknown
+        ) => {
+          expect(gatewayRuntime).toBe(gatewayLaunchRuntime);
           // An early env request must fail without touching the unbound supervisor.
           await expect(resolveEnv()).rejects.toThrow('Desktop MCP control server is not ready');
           expect(start).not.toHaveBeenCalled();

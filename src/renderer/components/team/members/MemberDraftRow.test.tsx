@@ -13,6 +13,17 @@ vi.mock('@features/runtime-provider-management/renderer', () => ({
     }),
 }));
 
+vi.mock('@features/gateway-provider/renderer', () => ({
+  GatewayProvidersSettingsSection: () =>
+    React.createElement('div', null, 'gateway-providers-settings'),
+  MemberGatewaySelector: () =>
+    React.createElement(
+      'div',
+      { 'data-testid': 'member-gateway-selector' },
+      'member-gateway-selector'
+    ),
+}));
+
 vi.mock('@renderer/components/common/ProviderBrandLogo', () => ({
   ProviderBrandLogo: () => React.createElement('span', { 'data-testid': 'provider-logo' }),
 }));
@@ -859,6 +870,46 @@ describe('MemberDraftRow', () => {
     });
   });
 
+  it('renders the gateway selector right after the model selector when a team name is provided', () => {
+    const { host, root } = renderMemberDraftRow({ teamName: 'alpha' });
+    const modelButton = host.querySelector<HTMLButtonElement>(
+      'button[aria-label="anthropic provider, opus"]'
+    )!;
+    act(() => {
+      modelButton.click();
+    });
+
+    const gatewaySelector = host.querySelector('[data-testid="member-gateway-selector"]')!;
+    expect(gatewaySelector).toBeTruthy();
+    const teamModelSelector = Array.from(host.querySelectorAll('div')).find(
+      (div) => div.textContent === 'team-model-selector'
+    )!;
+    expect(
+      teamModelSelector.compareDocumentPosition(gatewaySelector) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('keeps the plain provider/model selection when no team name is known', () => {
+    const { host, root } = renderMemberDraftRow();
+    const modelButton = host.querySelector<HTMLButtonElement>(
+      'button[aria-label="anthropic provider, opus"]'
+    )!;
+    act(() => {
+      modelButton.click();
+    });
+
+    expect(host.textContent).toContain('team-model-selector');
+    expect(host.querySelector('[data-testid="member-gateway-selector"]')).toBeNull();
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
   it('does not duplicate the Sonnet Extra Usage warning for effort-only inherited teammates', () => {
     const { host, root } = renderMemberDraftRow({
       member: createMemberDraft({
@@ -880,4 +931,24 @@ describe('MemberDraftRow', () => {
       root.unmount();
     });
   });
+});
+
+it('does not offer gateway binding for an unsupported Gemini teammate', () => {
+  const { host, root } = renderMemberDraftRow({
+    teamName: 'alpha',
+    member: createMemberDraft({
+      id: 'member-1',
+      name: 'alice',
+      providerId: 'gemini',
+      model: 'gemini-test',
+    }),
+  });
+  act(() =>
+    host
+      .querySelector<HTMLButtonElement>('button[aria-label="gemini provider, gemini-test"]')!
+      .click()
+  );
+  expect(host.textContent).toContain('team-model-selector');
+  expect(host.querySelector('[data-testid="member-gateway-selector"]')).toBeNull();
+  act(() => root.unmount());
 });

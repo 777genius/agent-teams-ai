@@ -47,6 +47,7 @@ import {
 } from './TeamProvisioningSendMessageToRunBoundaryFactory';
 
 import type { OpenCodeTeamRuntimeMessageResult } from '../runtime';
+import type { MemberGatewayRuntimeSeams } from './TeamProvisioningMemberGatewayRuntime';
 import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments';
 
 const logger = createLogger('Service:TeamProvisioning');
@@ -376,8 +377,11 @@ export abstract class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibility
 > extends TeamProvisioningOpenCodePromptDeliveryCompatibilityFacade<TRun> {
   private readonly openCodeMemberMessageDeliveryCompatibility: TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<TRun>;
 
-  constructor(resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration) {
-    super();
+  constructor(
+    resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration,
+    memberGatewayRuntimeSeams: MemberGatewayRuntimeSeams | null = null
+  ) {
+    super(memberGatewayRuntimeSeams);
     this.openCodeMemberMessageDeliveryCompatibility =
       createTeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServiceFromService(
         this as unknown as TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServiceHost<TRun>,

@@ -81,6 +81,7 @@ function createCrossProviderArgs(): CrossProviderMemberArgsResult {
       ANTHROPIC_API_KEY: 'fake-helper-key',
       ANTHROPIC_AUTH_TOKEN: 'fake-token',
     },
+    memberArgsByMember: new Map(),
     usesAnthropicApiKeyHelper: true,
     ...({ anthropicApiKeyHelper } as const),
   };

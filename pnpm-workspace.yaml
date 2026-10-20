@@ -60,7 +60,7 @@ overrides:
   'linkify-it': '5.0.2'
   'lodash': '^4.18.1'
   'lodash-es': '^4.18.1'
-  'markdown-it': '14.3.2'
+  'markdown-it': '14.3.3'
   'js-yaml@3': '3.15.2'
   'js-yaml@4': '4.3.2'
   '@nuxt/devtools-kit>vite': '7.3.5'

@@ -54,9 +54,18 @@ vi.mock('@renderer/components/ui/label', () => ({
 }));
 
 vi.mock('../dialogs/MembersJsonEditor', () => ({
-  MembersJsonEditor: ({ value, onChange }: { value: string; onChange: (value: string) => void }) =>
+  MembersJsonEditor: ({
+    value,
+    onChange,
+    error,
+  }: {
+    value: string;
+    onChange: (value: string) => void;
+    error?: string | null;
+  }) =>
     React.createElement('textarea', {
       'data-testid': 'members-json-editor',
+      'data-error': error ?? '',
       value,
       onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value),
     }),
@@ -69,6 +78,7 @@ vi.mock('./MemberDraftRow', () => ({
     onRemove,
     onRestore,
     onModelChange,
+    onProviderChange,
     agentTeamsMcpLocked,
     hideActionButton,
     providerDisabledReasonById,
@@ -86,6 +96,7 @@ vi.mock('./MemberDraftRow', () => ({
     onRemove?: (id: string) => void;
     onRestore?: (id: string) => void;
     onModelChange?: (id: string, model: string) => void;
+    onProviderChange?: (id: string, providerId: TeamProviderId) => void;
     agentTeamsMcpLocked?: boolean;
     hideActionButton?: boolean;
     providerDisabledReasonById?: Record<string, string>;
@@ -131,6 +142,15 @@ vi.mock('./MemberDraftRow', () => ({
         'button',
         {
           type: 'button',
+          'data-testid': `provider-${member.name}`,
+          onClick: () => onProviderChange?.(member.id, 'opencode'),
+        },
+        'select OpenCode'
+      ),
+      React.createElement(
+        'button',
+        {
+          type: 'button',
           'data-testid': `model-${member.name}`,
           'data-model': member.model ?? '',
           'data-effort': member.effort ?? '',
@@ -165,6 +185,7 @@ function renderMembersEditor(props: {
   runtimeProviderStatusById?: ReadonlyMap<TeamProviderId, CliProviderStatus>;
   singleMemberMode?: boolean;
   leadRuntimeSettingsOnly?: boolean;
+  gatewayBindings?: React.ComponentProps<typeof MembersEditorSection>['gatewayBindings'];
 }): {
   host: HTMLDivElement;
   onChange: ReturnType<typeof vi.fn>;
@@ -192,6 +213,7 @@ function renderMembersEditor(props: {
           runtimeProviderStatusById={props.runtimeProviderStatusById}
           singleMemberMode={props.singleMemberMode}
           leadRuntimeSettingsOnly={props.leadRuntimeSettingsOnly}
+          gatewayBindings={props.gatewayBindings}
           identityLockReason="locked"
           draftKeyPrefix="worktree-test"
         />
@@ -330,6 +352,48 @@ describe('MembersEditorSection runtime model selection', () => {
       effort: undefined,
     });
   });
+
+  it.each([
+    { bound: true, explicit: true },
+    { bound: true, explicit: false },
+    { bound: false, explicit: true },
+  ])(
+    'validates Gemini JSON imports against the active gateway binding ($bound/$explicit)',
+    async ({ bound, explicit }) => {
+      const { host, onChange } = renderMembersEditor({
+        members: [createMemberDraft({ id: 'alice', name: 'alice', providerId: 'anthropic' })],
+        inheritedProviderId: 'gemini',
+        gatewayBindings: {
+          boundMemberNames: new Set(bound ? ['alice'] : []),
+          pending: false,
+          error: null,
+          refresh: vi.fn(async () => undefined),
+        },
+      });
+      await act(async () => {
+        editJsonButton(host).click();
+        await Promise.resolve();
+      });
+      const editor = host.querySelector<HTMLTextAreaElement>(
+        '[data-testid="members-json-editor"]'
+      )!;
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set?.call(
+          editor,
+          JSON.stringify([{ name: ' alice ', ...(explicit ? { providerId: 'gemini' } : {}) }])
+        );
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+        await Promise.resolve();
+      });
+      if (bound) {
+        expect(onChange).not.toHaveBeenCalled();
+        expect(editor.getAttribute('data-error')).toContain('Unbind the gateway');
+      } else {
+        expect(onChange).toHaveBeenCalledOnce();
+        expect(editor.getAttribute('data-error')).toBe('');
+      }
+    }
+  );
 
   it('clears stale teammate effort imported through the JSON editor', async () => {
     const { host, onChange } = renderMembersEditor({
@@ -740,4 +804,35 @@ describe('MembersEditorSection Agent Teams MCP master checkbox', () => {
       originalMembers[1].mcpPolicy
     );
   });
+});
+
+describe('gateway member runtime selection', () => {
+  it.each([true, false])(
+    'preserves only a bound gateway model when the provider changes (bound=%s)',
+    (bound) => {
+      const { host, onChange } = renderMembersEditor({
+        members: [
+          createMemberDraft({
+            id: 'member-gateway',
+            name: 'alice',
+            providerId: 'anthropic',
+            model: 'gateway-custom-model',
+          }),
+        ],
+        gatewayBindings: {
+          boundMemberNames: new Set(bound ? ['alice'] : []),
+          pending: false,
+          error: null,
+          refresh: async () => {},
+        },
+      });
+      onChange.mockClear();
+      act(() => host.querySelector<HTMLButtonElement>('[data-testid="provider-alice"]')!.click());
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange.mock.calls[0][0][0]).toMatchObject({
+        providerId: 'opencode',
+        model: bound ? 'gateway-custom-model' : '',
+      });
+    }
+  );
 });

@@ -182,3 +182,30 @@ it('passes the target guard into persistence and does not launch after a write c
   });
   expect(launchTeam).not.toHaveBeenCalled();
 });
+
+it.each([true, false])(
+  'acknowledges saved members before a subsequent launch failure (saved=%s)',
+  async (saved) => {
+    const onMembersSaved = vi.fn();
+    const launchTeam = vi.fn(async () => {
+      expect(onMembersSaved).toHaveBeenCalledOnce();
+      throw new Error('launch failed');
+    });
+    await expect(
+      executeTeamRelaunch({
+        teamName: 'test-only',
+        isTeamAlive: false,
+        request: { teamName: 'test-only', cwd: '/tmp/test-only' },
+        members: [],
+        stopTeam: vi.fn(),
+        replaceMembers: async () => {
+          if (!saved) throw new Error('save failed');
+        },
+        onMembersSaved,
+        launchTeam,
+      })
+    ).rejects.toThrow(saved ? 'launch failed' : 'save failed');
+    expect(onMembersSaved).toHaveBeenCalledTimes(saved ? 1 : 0);
+    expect(launchTeam).toHaveBeenCalledTimes(saved ? 1 : 0);
+  }
+);

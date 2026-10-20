@@ -318,6 +318,9 @@ export function normalizeTokenUsageSnapshot(value: unknown): TokenUsageAnalytics
     updatedAt,
     stale: record?.stale === true,
     degraded: record?.degraded === true,
+    gatewayLastSuccessfulAt: readString(record?.gatewayLastSuccessfulAt),
+    gatewaySourceCount:
+      record?.gatewaySourceCount === undefined ? undefined : readNumber(record.gatewaySourceCount),
     summary: normalizeTokenUsageSummary(record?.summary),
     byTeam: normalizeItems(record?.byTeam),
     byAgent: normalizeItems(record?.byAgent),

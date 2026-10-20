@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useGatewayMemberBindings } from '@features/gateway-provider/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { getNextSuggestedMemberName } from '@renderer/components/team/members/memberNameSets';
 import {
@@ -49,7 +50,10 @@ interface AddMemberDialogProps {
   existingNames: string[];
   onClose: () => void;
   /** Called with the list of new members to add. */
-  onAdd: (members: AddMemberEntry[]) => void;
+  onAdd: (
+    members: AddMemberEntry[],
+    onMemberAdded?: (name: string) => void
+  ) => void | Promise<void>;
   adding?: boolean;
   /** Project path for @file mentions in workflow field. */
   projectPath?: string | null;
@@ -107,6 +111,10 @@ export const AddMemberDialog = ({
     buildInitialDrafts(existingNames, existingWorktreeDefault)
   );
   const [error, setError] = useState<string | null>(null);
+  const gatewayBindings = useGatewayMemberBindings(open ? teamName : undefined, {
+    memberNames: members.map((member) => member.name),
+    mode: 'addition',
+  });
   const wasOpenRef = useRef(open);
 
   const validateName = useCallback(
@@ -142,6 +150,7 @@ export const AddMemberDialog = ({
   }, [members, validateName]);
 
   const handleSubmit = (): void => {
+    if (gatewayBindings.pending) return;
     const built = buildMembersFromDrafts(members);
     // Validate all entries
     const invalid = built.find((m) => validateName(m.name));
@@ -154,20 +163,27 @@ export const AddMemberDialog = ({
       return;
     }
     setError(null);
-    onAdd(
-      built.map((m) => ({
-        name: m.name,
-        role: m.role,
-        workflow: m.workflow,
-        isolation: m.isolation,
-        providerId: m.providerId,
-        providerBackendId: m.providerBackendId,
-        model: m.model,
-        effort: m.effort,
-        fastMode: m.fastMode,
-        mcpPolicy: m.mcpPolicy,
-      }))
-    );
+    void gatewayBindings
+      .run(
+        () =>
+          onAdd(
+            built.map((m) => ({
+              name: m.name,
+              role: m.role,
+              workflow: m.workflow,
+              isolation: m.isolation,
+              providerId: m.providerId,
+              providerBackendId: m.providerBackendId,
+              model: m.model,
+              effort: m.effort,
+              fastMode: m.fastMode,
+              mcpPolicy: m.mcpPolicy,
+            })),
+            (name) => gatewayBindings.markSaved([name])
+          ),
+        []
+      )
+      .catch((error) => setError(error instanceof Error ? error.message : String(error)));
   };
 
   const handleOpenChange = (nextOpen: boolean): void => {
@@ -204,6 +220,8 @@ export const AddMemberDialog = ({
           <MembersEditorSection
             members={members}
             onChange={setMembers}
+            teamName={teamName}
+            gatewayBindings={gatewayBindings}
             fieldError={error ?? undefined}
             validateMemberName={validateName}
             showWorkflow
@@ -222,7 +240,11 @@ export const AddMemberDialog = ({
           <Button type="button" variant="outline" onClick={onClose} disabled={adding}>
             {t('dialogs.actions.cancel')}
           </Button>
-          <Button type="button" disabled={adding || !hasValidMembers} onClick={handleSubmit}>
+          <Button
+            type="button"
+            disabled={adding || gatewayBindings.pending || !hasValidMembers}
+            onClick={handleSubmit}
+          >
             {adding ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : null}
             {memberCount > 1 ? `Add ${memberCount} members` : 'Add member'}
           </Button>

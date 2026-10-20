@@ -359,6 +359,30 @@
     "placeholders": {
       "name": "メンバー名",
       "mcpServers": "github の sendry"
+    },
+    "gateway": {
+      "apiKeyLabel": "Gateway API key",
+      "apiKeyPlaceholder": "Paste the teammate gateway API key",
+      "authRejected": "Key authorization was rejected.",
+      "bindButton": "Bind teammate",
+      "bindingStatus": "Bound to {{profile}}",
+      "credentialChanged": "stored key changed — bind again with a new key",
+      "credentialMissing": "stored key missing — bind again with a new key",
+      "credentialReady": "key stored",
+      "emptyCatalog": "The model catalog is empty.",
+      "keyRequired": "Enter the gateway API key first.",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. このフォームを開く前に保存された関連付けは即座に更新され、チームのフォームをキャンセルしても変更は保持されます。",
+      "probeButton": "Check key and load models",
+      "probing": "Checking...",
+      "profileLabel": "Gateway profile",
+      "profilePlaceholder": "Select a gateway profile",
+      "profileRequired": "Select a gateway profile first.",
+      "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+      "title": "Gateway provider",
+      "unbindButton": "Unbind",
+      "unavailable": "The gateway is unavailable right now."
     }
   },
   "detail": {

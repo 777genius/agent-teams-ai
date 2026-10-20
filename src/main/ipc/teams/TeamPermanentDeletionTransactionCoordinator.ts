@@ -54,6 +54,7 @@ export interface TeamPermanentDeletionTransactionCoordinatorPorts {
   attachmentStore: TeamAttachmentStore;
   taskAttachmentStore: TeamTaskAttachmentStore;
   lifecycle(): TeamPermanentDeletionLifecycle | null;
+  retireGatewayBindings?(teamName: string): Promise<void>;
   invalidateTeamConfig(teamName: string): void;
   logRecoveryError(teamName: string, error: unknown): void;
   /**
@@ -233,6 +234,12 @@ export class TeamPermanentDeletionTransactionCoordinator {
     const cleanupCompleted = await backupService.withPermanentDeletionTargetFence(
       intent,
       async (isTargetCurrent, getTargetProofHooks, isTargetCompleted) => {
+        if (!isTargetCompleted('team-data')) {
+          // Retire before detaching files so durable deletion recovery retries a failed
+          // gateway write. An already-completed old intent must not unbind a replacement.
+          if (!(await isTargetCurrent('team-data'))) return false;
+          await this.ports.retireGatewayBindings?.(intent.teamName);
+        }
         await this.releaseTeamScopedResourcesUnderFence(
           intent,
           teamDataAlreadyCompleted,

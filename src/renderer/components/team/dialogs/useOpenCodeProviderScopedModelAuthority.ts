@@ -212,6 +212,8 @@ interface OpenCodeProviderScopedDialogModelStateOptions {
   >;
   deferredProviderIds?: ReadonlySet<TeamProviderId>;
   openCodeLocalProviderIds?: ReadonlySet<string>;
+  gatewayBoundMemberNames?: ReadonlySet<string>;
+  gatewayBindingsPending?: boolean;
   openCodeLocalProviderLookupAuthoritative?: boolean;
 }
 
@@ -230,6 +232,8 @@ export function useOpenCodeProviderScopedDialogModelState({
   deferredProviderIds,
   openCodeLocalProviderIds,
   openCodeLocalProviderLookupAuthoritative,
+  gatewayBoundMemberNames,
+  gatewayBindingsPending,
 }: OpenCodeProviderScopedDialogModelStateOptions) {
   useOpenCodePassiveStatusPrefetch({
     enabled: passiveStatusPrefetchEnabled === true,
@@ -241,7 +245,13 @@ export function useOpenCodeProviderScopedDialogModelState({
   const { t } = useAppTranslation('team');
   const openCodeProjectDefault = useOpenCodeProjectDefaultModel(passiveProviderStatus, projectPath);
   const openCodeDefaultSelection = useMemo(() => {
-    const scopedMembers = syncModelsWithLead ? members.map(clearMemberModelOverrides) : members;
+    const scopedMembers = syncModelsWithLead
+      ? members.map((member) =>
+          gatewayBoundMemberNames?.has(member.name.trim())
+            ? member
+            : clearMemberModelOverrides(member)
+        )
+      : members;
     return materializeOpenCodeDefaultSelections({
       selectedProviderId: leadProviderResolved ? selectedProviderId : undefined,
       selectedModel,
@@ -254,6 +264,8 @@ export function useOpenCodeProviderScopedDialogModelState({
             selectedProviderId,
             runtimeProviderStatusById,
             deferredProviderIds,
+            gatewayBoundMemberNames,
+            gatewayBindingsPending,
             openCodeLocalProviderIds,
             openCodeLocalProviderLookupAuthoritative,
             openCodeProviderScopedStatusBySourceId,
@@ -261,6 +273,8 @@ export function useOpenCodeProviderScopedDialogModelState({
     });
   }, [
     deferredProviderIds,
+    gatewayBoundMemberNames,
+    gatewayBindingsPending,
     inheritsLeadModel,
     leadProviderResolved,
     members,
@@ -290,7 +304,8 @@ export function useOpenCodeProviderScopedDialogModelState({
       selectedModels: getSelectedOpenCodeModels(
         selectedProviderId,
         effectiveSelectedModel,
-        effectiveMemberDrafts
+        gatewayBindingsPending ? [] : effectiveMemberDrafts,
+        gatewayBoundMemberNames
       ),
       scopedStatusBySourceId: openCodeProviderScopedStatusBySourceId,
       localSourceIds: openCodeLocalProviderIds ?? new Set<string>(),
@@ -298,6 +313,8 @@ export function useOpenCodeProviderScopedDialogModelState({
     }),
     [
       effectiveMemberDrafts,
+      gatewayBoundMemberNames,
+      gatewayBindingsPending,
       openCodeLocalProviderIds,
       openCodeLocalProviderLookupAuthoritative,
       openCodeProviderScopedStatusBySourceId,

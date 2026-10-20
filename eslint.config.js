@@ -15,6 +15,7 @@ import eslintComments from '@eslint-community/eslint-plugin-eslint-comments';
 import eslintConfigPrettier from 'eslint-config-prettier/flat';
 import globals from 'globals';
 import { featureOverrides } from './eslint.feature-overrides.mts';
+import { gatewayBoundaries } from './eslint.gateway-boundaries.mts';
 
 export default defineConfig([
   // Global ignores
@@ -1143,6 +1144,8 @@ export default defineConfig([
       ],
     },
   },
+
+  ...gatewayBoundaries,
 
   // The existing JavaScript compatibility entrypoint is outside the TS project.
   // Its replacement graph stays type-aware; retain normal JS/security lint here.

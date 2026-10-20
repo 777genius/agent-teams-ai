@@ -6,6 +6,7 @@ import {
 
 import type { OpenCodeRuntimeMessageAdapter } from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type { TeamLaunchRuntimeAdapter, TeamRuntimeAdapterRegistry } from '../runtime';
+import type { MemberGatewayRuntimeSeams } from './TeamProvisioningMemberGatewayRuntime';
 import type {
   MemberWorkSyncAcceptedReportChecker,
   MemberWorkSyncProofMissingRecoveryScheduler,
@@ -49,6 +50,9 @@ export class TeamProvisioningAppShellBoundary {
     null;
   private runtimeTurnSettledEnvironmentProvider: RuntimeTurnSettledEnvironmentProvider | null =
     null;
+  constructor(
+    private readonly memberGatewayRuntimeSeams: MemberGatewayRuntimeSeams | null = null
+  ) {}
 
   setRuntimeAdapterRegistry(registry: TeamRuntimeAdapterRegistry | null): void {
     this.runtimeAdapterRegistry = registry;
@@ -142,5 +146,9 @@ export class TeamProvisioningAppShellBoundary {
 
   getRuntimeTurnSettledEnvironmentProvider(): RuntimeTurnSettledEnvironmentProvider | null {
     return this.runtimeTurnSettledEnvironmentProvider;
+  }
+
+  getMemberGatewayRuntimeSeams(): MemberGatewayRuntimeSeams | null {
+    return this.memberGatewayRuntimeSeams;
   }
 }

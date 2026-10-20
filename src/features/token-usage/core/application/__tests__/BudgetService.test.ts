@@ -32,10 +32,13 @@ function fixture() {
   const ledger = {
     readSnapshot: async () => {
       if (readFails) throw new Error('ledger unavailable');
-      return { runs, events };
+      return { runs, events, sourceStates: [] };
     },
     listRuns: async () => runs,
     listEvents: async () => events,
+    commitImportBatch: async (batch: { events: readonly TokenUsageEventDto[] }) => {
+      events = [...batch.events];
+    },
     replaceRunsForSource: async (_source: unknown, next: readonly TokenUsageRunDto[]) => {
       runs = [...next];
     },
