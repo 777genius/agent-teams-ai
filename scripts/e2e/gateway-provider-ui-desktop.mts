@@ -144,7 +144,8 @@ export async function verifyGatewayUi(
     await page.evaluate(
       `window.__agentTeamsDevStore.getState().openTeamsTab(${JSON.stringify(fixture.dirs.sandbox)})`
     );
-    await page.getByRole('button', { name: 'Create Team', exact: true }).click();
+    // The Teams header precedes the equivalent empty-state action.
+    await page.getByRole('button', { name: 'Create Team', exact: true }).first().click();
     const dialog = page.getByRole('dialog');
     await dialog.locator('#team-name').fill(teamName);
     const lead = dialog.locator('[data-role="lead-row"]');
