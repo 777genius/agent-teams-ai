@@ -446,7 +446,7 @@ async function probe(runtime: string, staged: string, project: string, expectedB
   };
 }
 
-async function runProbe(
+export async function runProbe(
   executable: string,
   args: string[],
   env: NodeJS.ProcessEnv,
@@ -465,6 +465,10 @@ async function runProbe(
     registered = false,
     positiveFinalized = false,
     timer: NodeJS.Timeout | undefined;
+  let phase = 'registration';
+  let evidence: unknown;
+  let beforeExitCensus: ReturnType<DefaultProcessLedger['sample']> = [];
+  let naturalExit: { code: number | null; signal: string | null } | undefined;
   const closed = new Promise<{ code: number | null; signal: string | null }>((resolve, reject) => {
     child.once('error', reject);
     child.once('close', (code, signal) => resolve({ code, signal }));
@@ -513,31 +517,59 @@ async function runProbe(
       throw error;
     }
     ledger.start();
-    // Registration precedes PTY creation. The final acknowledgement keeps Bun alive
-    // while its real descendants drain, so orphaned console helpers remain visible.
+    // Registration precedes PTY creation. Capture descendants while their owner
+    // is alive, then let it return so owner-dependent helpers can retire too.
     fs.writeFileSync(path.join(project, 'runtime-start'), 'owned\n');
     const deadline = new Promise<never>((_resolve, reject) => {
       timer = setTimeout(() => reject(new Error('Bundled runtime probe timed out')), 60000);
     });
-    const evidence = await Promise.race([receipt, deadline]);
-    const until = Date.now() + 5000;
-    while (ledger.sample().some((entry) => entry.pid !== child.pid) && Date.now() < until)
-      await pause(100);
-    assert.equal(
-      ledger.sample().filter((entry) => entry.pid !== child.pid).length,
-      0,
-      'Runtime descendants did not settle naturally'
+    phase = 'probe';
+    evidence = await Promise.race([receipt, deadline]);
+    phase = 'before-owner-exit';
+    beforeExitCensus = ledger.sample();
+    const owner = ledger.roots[0];
+    assert(
+      owner &&
+        beforeExitCensus.some((entry) => entry.pid === owner.pid && entry.birth === owner.birth),
+      'Runtime owner exited before final identity capture'
     );
     fs.writeFileSync(path.join(project, 'runtime-exit'), 'owned\n');
-    const result = await Promise.race([closed, deadline]);
-    assert.equal(result.code, 0, `Bundled runtime probe failed: ${stderr}`);
-    assert.equal(result.signal, null);
+    phase = 'natural-owner-exit';
+    naturalExit = await Promise.race([closed, deadline]);
+    assert.equal(naturalExit.code, 0, `Bundled runtime probe failed: ${stderr}`);
+    assert.equal(naturalExit.signal, null);
     assert.equal(outputExceeded, false, 'Runtime probe output exceeded bound after receipt');
     assert.equal(stdout.split(/\r?\n/).filter((line) => line.startsWith(successPrefix)).length, 1);
-    assert.equal(ledger.sample().length, 0, 'Runtime smoke process did not exit naturally');
+    phase = 'natural-tree-retirement';
+    const until = Date.now() + 5000;
+    while (ledger.sample().length && Date.now() < until) await Promise.race([pause(100), deadline]);
+    assert.equal(ledger.sample().length, 0, 'Runtime processes did not settle naturally');
     const naturalFinalization = await ledger.stop({ requireQuiet: true });
     positiveFinalized = true;
-    return { evidence, naturalFinalization };
+    return { evidence, beforeExitCensus, naturalExit, naturalFinalization };
+  } catch (error) {
+    let remaining: ReturnType<DefaultProcessLedger['sample']> | undefined;
+    let inventoryError: string | undefined;
+    try {
+      if (registered) remaining = ledger.sample();
+    } catch (failure) {
+      inventoryError = String(failure);
+    }
+    // Retain the actual receipt and owned identities before failure-only cleanup.
+    console.error(
+      '[smokePackagedRuntime] FAILURE ' +
+        JSON.stringify({
+          phase,
+          error: String(error),
+          evidence,
+          beforeExitCensus,
+          naturalExit,
+          remaining,
+          observed: [...ledger.observed.values()],
+          inventoryError,
+        })
+    );
+    throw error;
   } finally {
     clearTimeout(timer);
     if (registered && !positiveFinalized) await ledger.stop();
