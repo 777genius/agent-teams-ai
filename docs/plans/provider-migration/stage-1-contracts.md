@@ -134,6 +134,37 @@ outbox не вызывает provider и не зависит от повторн
 доставка имеет durable tombstone, поэтому replay outbox её не воскресит. Второй
 broker/планировщик не добавляется.
 
+Одна допустимая последовательность ниже иллюстрирует этот протокол. Участники —
+логические роли; Team/outbox и Runtime остаются модулями одного host. Запись Team
+использует partial-write recovery §3, общей транзакции с Runtime здесь нет.
+
+```mermaid
+sequenceDiagram
+    participant D as Desktop
+    participant T as Team / outbox owner
+    participant R as Runtime owner
+    participant P as Provider driver
+    D->>T: sendMessage(commandId, fingerprint, binding)
+    T->>T: Persist message, delivery intent and business receipt
+    T-->>D: Message saved, delivery status separate
+    T->>R: Admit original inputId and binding
+    R->>R: Persist input and admission receipt
+    R-->>T: Admission ACK (may be lost)
+    Note over T,R: Lost ACK requires lookup of original ID, without new input ID
+    opt Admitted and unclaimed with dispatch permitted
+        R->>R: Persist dispatch claim
+        R->>P: Submit from this claim
+        P-->>R: Handoff / terminal observations
+        R-->>T: Technical progress for original input
+    end
+```
+
+Получение outbox ACK не является условием native dispatch: при потере ACK provider
+уже мог получить input. Lookup после restart возвращает исходный admission/outcome;
+uncertain dispatch claim удерживается без нового submit. Business receipt, admission,
+terminal и доказанный read/reply остаются разными фактами; provider result сам не
+завершает Task. Порядок UI response и runtime progress может различаться.
+
 ## 4. Native allocation, input и control
 
 Runtime private composition для каждого provider создаёт ровно нужные ports:
