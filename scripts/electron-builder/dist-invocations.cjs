@@ -1,4 +1,6 @@
-/* global console, module, setTimeout */
+/* global console, module, process, require, setTimeout */
+
+const { spawn } = require('node:child_process');
 
 const PLATFORM_FLAGS = new Map([
   ['--mac', 'mac'],
@@ -327,11 +329,43 @@ async function runWithDmgDetachRetry(run, { attempts = 2, delayMs = 30000, log =
   }
 }
 
+function runElectronBuilderOnce(cliPath, args) {
+  return new Promise((resolve, reject) => {
+    let output = '';
+    const child = spawn(process.execPath, [cliPath, ...args], {
+      stdio: ['inherit', 'pipe', 'pipe'],
+      env: process.env,
+    });
+    const capture = (stream, targetStream) => {
+      stream.on('data', (chunk) => {
+        output += chunk.toString();
+        targetStream.write(chunk);
+      });
+    };
+    capture(child.stdout, process.stdout);
+    capture(child.stderr, process.stderr);
+
+    child.on('error', reject);
+    // Settle on `close` (after the piped streams end) so trailing stderr written
+    // near exit is still captured before failures are classified.
+    child.on('close', (code, signal) => {
+      if (code === 0) {
+        resolve();
+        return;
+      }
+      const error = new Error(`electron-builder failed with ${signal ?? `exit code ${code}`}`);
+      error.output = output;
+      reject(error);
+    });
+  });
+}
+
 module.exports = {
   buildElectronBuilderInvocations,
   buildNativeRebuildPlan,
   buildNativeRestorePlan,
   isRetryableDmgDetachFailure,
+  runElectronBuilderOnce,
   runWithDmgDetachRetry,
   runWithNativeDependencyRestore,
 };

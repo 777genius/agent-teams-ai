@@ -126,6 +126,22 @@ function createTargetBinaryBuffer(
   return createPortableExecutableBuffer(arch);
 }
 
+function targetBunPtyLibrary(
+  platform: 'linux' | 'darwin' | 'win32',
+  arch: 'x64' | 'arm64'
+): string {
+  if (platform === 'darwin') return arch === 'arm64' ? 'librust_pty_arm64.dylib' : 'librust_pty.dylib';
+  if (platform === 'win32') return arch === 'arm64' ? 'rust_pty_arm64.dll' : 'rust_pty.dll';
+  return arch === 'arm64' ? 'librust_pty_arm64.so' : 'librust_pty.so';
+}
+
+function createWrongArchBinaryBuffer(
+  platform: 'linux' | 'darwin' | 'win32',
+  arch: 'x64' | 'arm64'
+): Buffer {
+  return createTargetBinaryBuffer(platform, arch === 'arm64' ? 'x64' : 'arm64');
+}
+
 describe('electron-builder afterPack', () => {
   const tempDirs: string[] = [];
   const managedRuntimeTargets = [
@@ -279,8 +295,7 @@ describe('electron-builder afterPack', () => {
     ]) {
       const prebuilds = path.join(coreRoot, 'node_modules', 'tree-sitter-bash', 'prebuilds');
       const target = path.join(prebuilds, `${platform}-${targetArch}`, 'tree-sitter-bash.node');
-      writeFile(target, platform === 'darwin' ? createMachOBuffer(targetArch)
-      : platform === 'win32' ? createPortableExecutableBuffer(targetArch) : createElfBuffer(targetArch));
+      writeFile(target, createTargetBinaryBuffer(platform, targetArch));
       targetFiles.push(target);
       for (const [variant, bytes] of [
         ['darwin-arm64', createMachOBuffer('arm64')],
@@ -309,16 +324,13 @@ describe('electron-builder afterPack', () => {
       foreignFiles.push(ffiForeign);
     }
     const release = path.join(modules, 'bun-pty', 'rust-pty', 'target', 'release');
-    const targetLibrary = platform === 'darwin' ? (targetArch === 'arm64' ? 'librust_pty_arm64.dylib' : 'librust_pty.dylib')
-      : platform === 'win32' ? (targetArch === 'arm64' ? 'rust_pty_arm64.dll' : 'rust_pty.dll')
-      : (targetArch === 'arm64' ? 'librust_pty_arm64.so' : 'librust_pty.so');
+    const targetLibrary = targetBunPtyLibrary(platform, targetArch);
     const keptLibraries = platform === 'linux'
       ? [targetLibrary, targetLibrary.replace(/\.so$/, '_musl.so')]
       : [targetLibrary];
     for (const filename of keptLibraries) {
       const target = path.join(release, filename);
-      writeFile(target, platform === 'darwin' ? createMachOBuffer(targetArch)
-        : platform === 'win32' ? createPortableExecutableBuffer(targetArch) : createElfBuffer(targetArch));
+      writeFile(target, createTargetBinaryBuffer(platform, targetArch));
       targetFiles.push(target);
     }
     for (const [filename, bytes] of [
@@ -338,7 +350,8 @@ describe('electron-builder afterPack', () => {
     }
 
     await afterPackModule({ appOutDir: tempDir, electronPlatformName: platform, arch: targetArch === 'arm64' ? 3 : 1 });
-    expect(foreignFiles.length).toBe(platform === 'win32' ? 18 : platform === 'linux' ? 16 : 17);
+    const expectedForeignCounts = { win32: 18, linux: 16, darwin: 17 } as const;
+    expect(foreignFiles.length).toBe(expectedForeignCounts[platform]);
     expect(foreignFiles.every(file => !fs.existsSync(file))).toBe(true);
     expect(targetFiles.every(file => fs.existsSync(file))).toBe(true);
     await expect(validateNativeBinaries(tempDir, platform, targetArch)).resolves.toEqual([]);
@@ -357,15 +370,12 @@ describe('electron-builder afterPack', () => {
     );
     const invalidSibling = path.join(
       modules, 'bun-pty', 'rust-pty', 'target', 'release',
-      platform === 'darwin' ? (targetArch === 'arm64' ? 'librust_pty_arm64.dylib' : 'librust_pty.dylib')
-        : platform === 'win32' ? (targetArch === 'arm64' ? 'rust_pty_arm64.dll' : 'rust_pty.dll') : 'librust_pty.so'
+      targetBunPtyLibrary(platform, targetArch)
     );
     const foreign = path.join(path.dirname(invalidSibling), platform === 'win32' ? 'librust_pty.so' : 'rust_pty.dll');
     const unknown = path.join(modules, 'unknown-package', 'unknown.node');
     writeFile(missingSibling, platform === 'darwin' ? createPortableExecutableBuffer('arm64') : createMachOBuffer('arm64'));
-    writeFile(invalidSibling, platform === 'darwin' ? createMachOBuffer(targetArch === 'arm64' ? 'x64' : 'arm64')
-      : platform === 'win32' ? createPortableExecutableBuffer(targetArch === 'arm64' ? 'x64' : 'arm64')
-      : createElfBuffer('arm64'));
+    writeFile(invalidSibling, createWrongArchBinaryBuffer(platform, targetArch));
     writeFile(foreign, platform === 'win32' ? createElfBuffer('x64') : createPortableExecutableBuffer('x64'));
     writeFile(unknown, platform === 'darwin' ? createElfBuffer('x64') : createMachOBuffer('x64'));
 
@@ -376,7 +386,7 @@ describe('electron-builder afterPack', () => {
     expect(fs.existsSync(foreign)).toBe(false);
   });
 
-  it('prunes the shipped win32-arm64 bun-pty set even when rust_pty_arm64.dll is absent', async () => {
+  it('prunes the shipped win32-arm64 bun-pty set and reports the absent target binding', async () => {
     const tempDir = createTempDir();
     tempDirs.push(tempDir);
     const release = path.join(
@@ -390,7 +400,7 @@ describe('electron-builder afterPack', () => {
       'target',
       'release'
     );
-    const shipped: Array<[string, Buffer]> = [
+    const shipped: [string, Buffer][] = [
       ['librust_pty.so', createElfBuffer('x64')],
       ['rust_pty.dll', createPortableExecutableBuffer('x64')],
       ['librust_pty.dylib', createMachOBuffer('x64')],
@@ -401,7 +411,13 @@ describe('electron-builder afterPack', () => {
       writeFile(path.join(release, filename), bytes);
     }
 
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     await afterPackModule({ appOutDir: tempDir, electronPlatformName: 'win32', arch: 3 });
+    const notices = logSpy.mock.calls
+      .map((call) => String(call[0] ?? ''))
+      .filter((text) => text.includes('no loadable bun-pty binding'));
+    logSpy.mockRestore();
+    expect(notices.some((text) => text.includes('rust_pty_arm64.dll'))).toBe(true);
 
     expect(shipped.every(([filename]) => !fs.existsSync(path.join(release, filename)))).toBe(true);
     await expect(validateNativeBinaries(tempDir, 'win32', 'arm64')).resolves.toEqual([]);

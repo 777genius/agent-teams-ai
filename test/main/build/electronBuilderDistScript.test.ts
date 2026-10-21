@@ -1,4 +1,8 @@
 // @vitest-environment node
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import packageJson from '../../../package.json';
@@ -8,6 +12,7 @@ const {
   buildNativeRebuildPlan,
   buildNativeRestorePlan,
   isRetryableDmgDetachFailure,
+  runElectronBuilderOnce,
   runWithDmgDetachRetry,
   runWithNativeDependencyRestore,
 } = require('../../../scripts/electron-builder/dist-invocations.cjs');
@@ -481,7 +486,7 @@ describe('electron-builder DMG detach retry', () => {
   it('retries once after a detach flake and resolves the second attempt', async () => {
     const calls: number[] = [];
     const result = await runWithDmgDetachRetry(
-      async (attempt: number) => {
+      (attempt: number) => {
         calls.push(attempt);
         if (attempt === 1) {
           throw detachFlakeError();
@@ -504,7 +509,7 @@ describe('electron-builder DMG detach retry', () => {
 
     await expect(
       runWithDmgDetachRetry(
-        async (attempt: number) => {
+        (attempt: number) => {
           calls.push(attempt);
           throw failure;
         },
@@ -514,12 +519,46 @@ describe('electron-builder DMG detach retry', () => {
     expect(calls).toEqual([1]);
   });
 
+  it('captures stderr written after exit so late detach flakes classify as retryable', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dist-cli-capture-'));
+    const cliPath = path.join(tempDir, 'fake-cli.cjs');
+    fs.writeFileSync(
+      cliPath,
+      [
+        "const { spawn } = require('node:child_process');",
+        '// Keep the inherited stderr pipe open past this process exit and write the',
+        '// detach failure late, so exit-based capture would miss it.',
+        "spawn(process.execPath, ['-e', `setTimeout(() => { console.error('dmgbuild.core.DMGError: Unable to detach device cleanly'); }, 400)`], {",
+        "  stdio: ['ignore', 'inherit', 'inherit'],",
+        '});',
+        'process.exit(1);',
+        '',
+      ].join('\n')
+    );
+
+    try {
+      let failure: (Error & { output?: string }) | undefined;
+      try {
+        await runElectronBuilderOnce(cliPath, []);
+      } catch (error) {
+        failure = error as Error & { output?: string };
+      }
+      expect(failure).toBeDefined();
+      expect(failure?.output).toContain('Unable to detach device cleanly');
+      expect(
+        isRetryableDmgDetachFailure(`${failure?.message ?? ''}\n${failure?.output ?? ''}`)
+      ).toBe(true);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it('stops after the attempt budget when the volume stays busy', async () => {
     const calls: number[] = [];
 
     await expect(
       runWithDmgDetachRetry(
-        async (attempt: number) => {
+        (attempt: number) => {
           calls.push(attempt);
           throw detachFlakeError();
         },

@@ -10,6 +10,7 @@ const {
   buildElectronBuilderInvocations,
   buildNativeRebuildPlan,
   buildNativeRestorePlan,
+  runElectronBuilderOnce,
   runWithDmgDetachRetry,
   runWithNativeDependencyRestore,
 } = require('./dist-invocations.cjs');
@@ -76,35 +77,6 @@ async function runRendererBundleGuard() {
         return;
       }
       reject(new Error(`renderer bundle guard failed with ${signal ?? `exit code ${code}`}`));
-    });
-  });
-}
-
-function runElectronBuilderOnce(cliPath, args) {
-  return new Promise((resolve, reject) => {
-    let output = '';
-    const child = spawn(process.execPath, [cliPath, ...args], {
-      stdio: ['inherit', 'pipe', 'pipe'],
-      env: process.env,
-    });
-    const capture = (stream, targetStream) => {
-      stream.on('data', (chunk) => {
-        output += chunk.toString();
-        targetStream.write(chunk);
-      });
-    };
-    capture(child.stdout, process.stdout);
-    capture(child.stderr, process.stderr);
-
-    child.on('error', reject);
-    child.on('exit', (code, signal) => {
-      if (code === 0) {
-        resolve();
-        return;
-      }
-      const error = new Error(`electron-builder failed with ${signal ?? `exit code ${code}`}`);
-      error.output = output;
-      reject(error);
     });
   });
 }
