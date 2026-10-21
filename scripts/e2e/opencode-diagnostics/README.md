@@ -199,6 +199,16 @@ API**: the current `install()` API accepts no version or artifact parameter. Do
 not work around that by writing `current.json` or downloading a runtime yourself.
 No setup command has been executed by this worker.
 
+The separate candidate-only Windows attachment proof calls this same real
+installer. Before launching the app, it captures official npm root metadata,
+resolves the exact Windows x64 package, verifies its SHA-512 integrity, and
+independently hashes its native executable. It retains that expected version,
+package identity and SHA-256 in the qualification receipt, then compares the
+actual install status, managed manifest, host version and binary bytes with
+those unchanged expectations. It never installs the audit copy or supplies an
+override to the app. A registry change between capture and installation fails
+qualification; the fixture does not refresh its expectation or accept drift.
+
 The runner creates HOME, USERPROFILE, APPDATA, LOCALAPPDATA, XDG config/data/cache/
 state, temp, Claude root and Electron userData before starting the executable.
 It retains that profile for exactly one cold and two warm attempts. Every attempt

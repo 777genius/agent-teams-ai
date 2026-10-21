@@ -16,6 +16,8 @@ on:
       - .github/workflows/opencode-packaged-e2e.yml
       - scripts/e2e/opencode-diagnostics/packaged*.mjs
       - scripts/e2e/opencode-diagnostics/stage-candidate*.mjs
+      - scripts/e2e/opencode-diagnostics/native-install-expectation*.mjs
+      - scripts/e2e/opencode-diagnostics/windows-attachments.mts
       - scripts/e2e/opencode-diagnostics/run-packaged.mjs
       - scripts/e2e/opencode-diagnostics-desktop.mjs
       - scripts/e2e/opencode-diagnostics/platform.mjs
@@ -43,7 +45,7 @@ jobs:
           python-version: '3.11'
       - run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Verify harness contracts
-        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs
+        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs scripts/e2e/opencode-diagnostics/native-install-expectation.test.mjs
       - name: Stage pinned runtime
         env:
           GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
@@ -141,6 +143,7 @@ jobs:
           path: |
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/*.json
             scripts/e2e/opencode-diagnostics/windows-attachments.mts
+            scripts/e2e/opencode-diagnostics/native-install-expectation.mjs
             runtime-candidate-evidence.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold/*.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold/*.png

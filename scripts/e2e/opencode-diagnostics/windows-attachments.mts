@@ -20,7 +20,6 @@ import type {
 } from '../../../src/shared/types/team.ts';
 
 const MODEL = 'openrouter/openai/gpt-5.4-mini';
-const NATIVE_SHA = 'bb731f311416df16691fa16763eb87657c4a5f5f3bcff5202718c416e8f7ab1a';
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const harness = path.join(repo, 'scripts/e2e/opencode-diagnostics-desktop.mjs');
 const hash = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
@@ -426,6 +425,26 @@ async function main() {
   assert(wrapper.path.toLowerCase() === expectedWrapperPath.toLowerCase());
   receipt.consoleWrapper = { ...wrapper, provenance: 'APP-BUILD-wrapper', boundBeforeLaunch: true };
   await persist();
+  const { resolveNativeInstallExpectation, verifyNativeInstallExpectation } = (await import(
+    pathToFileURL(
+      path.join(repo, 'scripts/e2e/opencode-diagnostics/native-install-expectation.mjs')
+    ).href
+  )) as {
+    resolveNativeInstallExpectation(): Promise<{
+      version: string;
+      nativeSha256: string;
+      [key: string]: unknown;
+    }>;
+    verifyNativeInstallExpectation(
+      expectation: unknown,
+      actual: { status: unknown; manifest: unknown; binarySha256: string }
+    ): unknown;
+  };
+  // The real installer follows latest. Freeze independently verified npm bytes
+  // before launching the app; a registry change during installation must fail.
+  const nativeExpectation = await resolveNativeInstallExpectation();
+  receipt.nativeExpectation = nativeExpectation;
+  await persist();
   let release!: () => void;
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -536,10 +555,11 @@ async function main() {
       finish<T>(await begin(expression), label);
     const registry = path.join(data.home, 'AppData/Local/claude-multimodel-nodejs/Data/opencode');
     const readManaged = async (
-      name: 'session-store.json' | 'host-registry.json' | 'command-outcomes.json'
+      name: 'session-store.json' | 'host-registry.json' | 'command-outcomes.json' | 'current.json',
+      directory = registry
     ) => {
       const rootReal = await realpath(root);
-      const file = path.join(registry, name),
+      const file = path.join(directory, name),
         relative = path.relative(root, file);
       assert(!relative.startsWith('..') && !path.isAbsolute(relative));
       let current = root;
@@ -626,7 +646,7 @@ async function main() {
             host.hostKey === session.hostKey &&
             host.profileRootKey === session.profileRootKey &&
             host.projectPath === data.project &&
-            host.version === '1.19.0',
+            host.version === nativeExpectation.version,
           'host-identity-mismatch'
         );
         const key = `${team}::${session.laneId}::${member}`,
@@ -677,7 +697,7 @@ async function main() {
                 ? wrapper.path
                 : null,
           nativePath: native.binaryPath,
-          nativeSha256: NATIVE_SHA,
+          nativeSha256: nativeExpectation.nativeSha256,
           wrapperPath: wrapper.path,
           wrapperSha256: wrapper.sha256,
         };
@@ -690,7 +710,7 @@ async function main() {
         const installed = await binaryIdentity(native.binaryPath, data.userData);
         assert(
           installed.path.toLowerCase() === native.binaryPath.toLowerCase() &&
-            installed.sha256 === NATIVE_SHA,
+            installed.sha256 === nativeExpectation.nativeSha256,
           'native-binary-changed'
         );
         let child: Identity | undefined;
@@ -1290,15 +1310,30 @@ async function main() {
         };
       }
     };
-    await api('window.electronAPI.openCodeRuntime.install()', 'app managed native install');
+    receipt.nativeInstallResult = await api(
+      'window.electronAPI.openCodeRuntime.install()',
+      'app managed native install'
+    );
+    await persist();
     const native = await api<{ installed: boolean; version: string; binaryPath: string }>(
       'window.electronAPI.openCodeRuntime.getStatus()',
       'native identity'
     );
-    assert(native.installed && native.version === '1.19.0');
-    assert((await realpath(native.binaryPath)).startsWith(await realpath(data.userData)));
-    assert.equal(hash(await readFile(native.binaryPath)), NATIVE_SHA);
-    receipt.native = { version: native.version, path: native.binaryPath, sha256: NATIVE_SHA };
+    receipt.nativeStatus = native;
+    await persist();
+    assert(native.installed && native.version === nativeExpectation.version);
+    const managedRoot = path.join(data.userData, 'data/runtimes/opencode');
+    const managedManifest = await readManaged('current.json', managedRoot);
+    receipt.managedNative = managedManifest;
+    const installedNative = await binaryIdentity(native.binaryPath, managedRoot);
+    receipt.native = { version: native.version, ...installedNative };
+    await persist();
+    receipt.nativeVerification = verifyNativeInstallExpectation(nativeExpectation, {
+      status: native,
+      manifest: managedManifest,
+      binarySha256: installedNative.sha256,
+    });
+    await persist();
     const request: TeamCreateRequest = {
       teamName: team,
       cwd: data.project,
