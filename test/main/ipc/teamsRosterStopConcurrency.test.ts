@@ -14,8 +14,8 @@ vi.mock('electron', () => ({
 // factories lose their implementation and hang the roster mutation path.
 vi.mock('@main/services/team/TeamMembersMetaStore', () => ({
   TeamMembersMetaStore: class {
-    async getMeta(): Promise<null> {
-      return null;
+    getMeta(): Promise<null> {
+      return Promise.resolve(null);
     }
   },
 }));
