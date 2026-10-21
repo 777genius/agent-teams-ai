@@ -357,7 +357,7 @@ describe('pathDecoder', () => {
     });
 
     it('preserves an explicit override whose path equals the configured root', () => {
-      const root = path.join(defaultHome, '.claude');
+      const root = path.join(defaultHome, 'explicit-claude');
       applyConfiguredClaudeRoot(root);
       // Explicit setter call (e.g. the standalone CLAUDE_ROOT) with the very
       // same path: ownership moves to the explicit call.
