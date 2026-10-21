@@ -1,8 +1,16 @@
 import { digest, effectId, safeSegment, stableJson } from './identity.js';
 import { TeamOwnerError } from './contracts.js';
 import { DeliveryRecovery, deliveryIdentity, memberBinding } from './DeliveryRecovery.js';
+import { TaskRecovery } from './TaskRecovery.js';
+import { TaskPolicyRejected } from './ports.js';
 
-import type { TeamPolicyPort, TeamStore, TeamTask } from './ports.js';
+import type {
+  TaskBoardPolicy,
+  TaskMutationPort,
+  TeamPolicyPort,
+  TeamStore,
+  TeamTask,
+} from './ports.js';
 import type { JsonValue } from '../contracts.js';
 import type {
   CommandReceipt,
@@ -25,6 +33,7 @@ export interface TeamOwnerOptions {
   grants: TeamGrant[];
   store: TeamStore;
   policy: TeamPolicyPort;
+  taskMutations: TaskMutationPort;
 }
 
 interface OwnerState {
@@ -136,6 +145,7 @@ export class TeamOwner {
   private readonly policy: TeamPolicyPort;
   private readonly binding: TeamBinding;
   private readonly deliveryRecovery: DeliveryRecovery;
+  private readonly taskRecovery: TaskRecovery;
 
   constructor(options: TeamOwnerOptions) {
     this.binding = structuredClone(options.binding);
@@ -187,14 +197,55 @@ export class TeamOwner {
       this.store.write('state.json', state);
       this.finishBootstrap(state);
     });
-    this.deliveryRecovery = new DeliveryRecovery(this.store, (intent) =>
-      this.deliveryAuthorized(intent)
+    this.taskRecovery = new TaskRecovery(
+      this.store,
+      options.taskMutations,
+      (receipt) => this.taskAuthorityCurrent(receipt),
+      (receipt) => {
+        this.execute(receipt.principalId, receipt.command);
+      }
+    );
+    this.deliveryRecovery = new DeliveryRecovery(
+      this.store,
+      (intent) => !this.taskRecovery.retracting(intent) && this.deliveryAuthorized(intent)
     );
   }
 
   /** Trusted host composition only; this capability is intentionally absent from connect/MCP. */
   resumeDeliveries(runtime: TeamRuntimeDeliveryPort): Promise<DeliveryResumeResult[]> {
     return this.deliveryRecovery.resume(runtime);
+  }
+
+  /** Trusted startup continuation; it reuses prepared Task facts, never canonical handlers. */
+  resumeTaskCommands(runtime?: TeamRuntimeDeliveryPort) {
+    return this.taskRecovery.resume(runtime);
+  }
+
+  authorizeRuntimeAccess(
+    principalId: string,
+    binding: RuntimeMemberBinding,
+    action: 'read' | 'control'
+  ): boolean {
+    return this.store.fenced(() => {
+      try {
+        const grant = this.authorize(principalId, 'read');
+        const member = this.state().members.find(
+          (candidate) =>
+            candidate.delivery &&
+            digest(memberBinding(candidate.delivery)) === digest(memberBinding(binding))
+        );
+        if (!member) return false;
+        return (
+          action === 'read' ||
+          grant.permissions.includes('admin') ||
+          (member?.name === grant.memberName &&
+            (grant.permissions.includes('task.write') ||
+              grant.permissions.includes('message.write')))
+        );
+      } catch {
+        return false;
+      }
+    });
   }
 
   /** Synchronous Runtime-fence callback; callers separately authenticate user/admin control. */
@@ -206,9 +257,19 @@ export class TeamOwner {
   }
 
   /** Runtime passes the original persisted input identity, never an actor claimed by a tool. */
-  authorizeDeliveryIntent(raw: ImmutableDelivery): boolean {
+  authorizeDeliveryIntent(
+    raw: ImmutableDelivery,
+    action: 'read' | 'admit' | 'dispatch' | 'control' = 'admit'
+  ): boolean {
     return this.store.fenced(() => {
       try {
+        if (
+          (action === 'control' || action === 'read') &&
+          this.taskRecovery.authorizeRetraction(raw)
+        )
+          return true;
+        if ((action === 'admit' || action === 'dispatch') && this.taskRecovery.retracting(raw))
+          return false;
         safeSegment(raw.deliveryId);
         const intent = this.store.read<DeliveryIntent>(`outbox/${raw.deliveryId}.json`);
         return (
@@ -254,9 +315,11 @@ export class TeamOwner {
     try {
       if (intent.schemaVersion !== 1 || !this.memberAuthorized(intent.binding, 'admit'))
         return false;
+      const receipt = this.store.read<CommandReceipt>(this.commandPath(intent.commandId));
+      if (receipt && receipt.command.operation !== 'message.send')
+        return this.taskAuthorityCurrent(receipt) && this.taskRecovery.owns(intent, receipt);
       const grant = this.authorize(intent.principalId, 'message.write');
       if ((grant.revision ?? 1) !== intent.authorityRevision) return false;
-      const receipt = this.store.read<CommandReceipt>(this.commandPath(intent.commandId));
       if (
         !receipt ||
         receipt.command.operation !== 'message.send' ||
@@ -339,6 +402,31 @@ export class TeamOwner {
     return `commands/${digest(commandId)}.json`;
   }
 
+  private taskAuthorityCurrent(receipt: CommandReceipt): boolean {
+    try {
+      const grant = this.authorize(receipt.principalId, 'task.write');
+      this.authorize(receipt.principalId, 'read');
+      const current = this.store.read<CommandReceipt>(this.commandPath(receipt.commandId));
+      return (
+        receipt.command.operation !== 'message.send' &&
+        receipt.phase !== 'rejected' &&
+        receipt.authorityRevision === (grant.revision ?? 1) &&
+        !!current &&
+        current.fingerprint === receipt.fingerprint &&
+        current.authorityRevision === receipt.authorityRevision &&
+        receipt.fingerprint ===
+          digest({
+            binding: this.binding,
+            principalId: receipt.principalId,
+            command: receipt.command,
+            taskRecipients: receipt.taskRecipients,
+          })
+      );
+    } catch {
+      return false;
+    }
+  }
+
   private lookup(principalId: string, commandId: string): CommandReceipt | undefined {
     return this.store.fenced(() => {
       this.authorize(principalId, 'read');
@@ -402,14 +490,33 @@ export class TeamOwner {
         (command.operation === 'message.send'
           ? this.state().members.find((member) => member.name === command.payload.to)?.delivery
           : undefined);
-      const fingerprint = digest({ binding: this.binding, principalId, command, deliveryBinding });
+      const taskRecipients = receipt
+        ? receipt.taskRecipients
+        : command.operation !== 'message.send'
+          ? this.state().members.map(({ name, delivery }) => ({
+              name,
+              ...(delivery ? { delivery: structuredClone(delivery) } : {}),
+            }))
+          : undefined;
+      if (taskRecipients && taskRecipients.length > 256) throw new TeamOwnerError('hold');
+      const fingerprint = digest({
+        binding: this.binding,
+        principalId,
+        command,
+        deliveryBinding,
+        taskRecipients,
+      });
       if (receipt) {
         if (receipt.principalId !== principalId || receipt.fingerprint !== fingerprint)
           throw new TeamOwnerError('conflict');
         if (receipt.phase === 'completed' || receipt.phase === 'rejected') return receipt;
-        // Message reconciliation is exact-ID and stage-aware. Canonical Task lifecycle
-        // has additional notification effects; an uncertain invocation is never replayed.
-        if (command.operation !== 'message.send' && receipt.phase !== 'prepared')
+        if (
+          command.operation !== 'message.send' &&
+          receipt.phase !== 'prepared' &&
+          !this.taskRecovery.hasPlan(receipt) &&
+          (receipt.taskPlanVersion !== 1 ||
+            receipt.taskPreimage !== this.store.productFingerprint(this.binding.teamName))
+        )
           throw new TeamOwnerError('hold');
       } else {
         if (command.operation === 'message.send') {
@@ -447,6 +554,14 @@ export class TeamOwner {
           },
           createdAt: new Date().toISOString(),
           phase: 'prepared',
+          authorityRevision: grant.revision ?? 1,
+          ...(command.operation !== 'message.send'
+            ? {
+                taskPlanVersion: 1 as const,
+                taskPreimage: this.store.productFingerprint(this.binding.teamName),
+                taskRecipients: taskRecipients!,
+              }
+            : {}),
           ...(deliveryBinding
             ? {
                 deliveryBinding: structuredClone(deliveryBinding),
@@ -460,21 +575,25 @@ export class TeamOwner {
       this.store.write(location, receipt);
       const before = this.store.productFingerprint(this.binding.teamName);
       try {
-        receipt.result =
-          command.operation === 'message.send'
-            ? this.commitMessage(receipt, grant.memberName)
-            : this.applyTask(receipt, grant.memberName);
-        if (command.operation !== 'message.send') {
-          const taskId =
-            command.operation === 'task.create' ? receipt.effects.taskId : command.payload.taskId;
-          receipt.taskHash = digest(this.policy.taskBoard().getTask(taskId));
+        if (command.operation === 'message.send')
+          receipt.result = this.commitMessage(receipt, grant.memberName);
+        else {
+          const plan = this.taskRecovery.commit(
+            receipt,
+            grant.memberName,
+            this.state().members,
+            (board) => this.applyTask(receipt, grant.memberName, board)
+          );
+          receipt.result = plan.result;
+          receipt.taskHash = plan.taskHash;
         }
         receipt.phase = 'completed';
         this.store.write(location, receipt);
         return receipt;
-      } catch {
+      } catch (error) {
         if (
           command.operation !== 'message.send' &&
+          error instanceof TaskPolicyRejected &&
           this.store.productFingerprint(this.binding.teamName) === before &&
           !receipt.result
         ) {
@@ -491,9 +610,8 @@ export class TeamOwner {
     });
   }
 
-  private applyTask(receipt: CommandReceipt, actor: string): JsonValue {
+  private applyTask(receipt: CommandReceipt, actor: string, board: TaskBoardPolicy): JsonValue {
     const command = receipt.command;
-    const board = this.policy.taskBoard(actor);
     switch (command.operation) {
       case 'task.create':
         return json(

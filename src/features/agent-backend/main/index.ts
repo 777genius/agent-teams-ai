@@ -1,3 +1,6 @@
+export { BackendOperationsFacade } from './adapters/input/BackendOperationsFacade';
+export { registerAgentBackendHttp } from './adapters/input/registerAgentBackendHttp';
+export { registerAgentBackendIpc } from './adapters/input/registerAgentBackendIpc';
 export {
   type BackendOwnerBinding,
   type BackendOwnerRef,

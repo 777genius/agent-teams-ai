@@ -1,6 +1,14 @@
 import { randomUUID } from 'node:crypto';
 
 import { RuntimeOwnerError } from './contracts.js';
+import { CheckpointCoordinator } from './CheckpointCoordinator.js';
+import {
+  activeInput as active,
+  assertGenerationAvailable,
+  emptySession,
+  normalizeOpenConfig,
+} from './sessionState.js';
+import type { CheckpointReceipt, RestoreSessionRequest } from './checkpointContracts.js';
 import { deliveryFingerprint, normalizeBinding, runtimeDigest } from './identity.js';
 import type {
   RuntimeAdmission,
@@ -18,14 +26,12 @@ import type {
   Session,
 } from '@agent-teams/provider-session-contracts';
 
-const active = (input: RuntimeInput): boolean =>
-  ['claimed', 'consumed', 'unknown'].includes(input.phase);
-
 /** One durable technical dispatch owner; no Task policy or provider protocol implementation. */
 export class RuntimeOwner {
   private readonly drivers = new Map<string, Session>();
   private readonly closes = new Map<string, Promise<RuntimeSessionRecord>>();
   private readonly controls = new Map<string, Set<Promise<unknown>>>();
+  private readonly checkpoints: CheckpointCoordinator;
   private readonly maxQueued: number;
   private readonly maxBytes: number;
   private readonly maxInteractions: number;
@@ -44,6 +50,37 @@ export class RuntimeOwner {
       )
     )
       throw new RuntimeOwnerError('invalid');
+    this.checkpoints = new CheckpointCoordinator({
+      store: options.store,
+      profileId: options.profileId,
+      hostIncarnation: options.hostIncarnation,
+      authorize: options.authorize,
+      driver: (binding) => this.drivers.get(this.key(binding)),
+      ...(options.checkpoints ? { storage: options.checkpoints } : {}),
+      ...(options.checkpointIdleTimeoutMs === undefined
+        ? {}
+        : { idleTimeoutMs: options.checkpointIdleTimeoutMs }),
+    });
+  }
+
+  captureCheckpoint(input: {
+    binding: RuntimeBinding;
+    checkpointId: string;
+  }): Promise<CheckpointReceipt> {
+    return this.checkpoints.capture(input.binding, input.checkpointId);
+  }
+  lookupCheckpoint(binding: RuntimeBinding, checkpointId: string): CheckpointReceipt {
+    return this.checkpoints.lookup(binding, checkpointId);
+  }
+  /** Private DriverHost callback; never expose opaque checkpoint bytes through RPC. */
+  readCheckpoint(reference: string, request: OpenConfig): Promise<unknown> {
+    return this.checkpoints.readCheckpoint(reference, request);
+  }
+  async restoreSession(request: RestoreSessionRequest): Promise<RuntimeSessionRecord> {
+    const prepared = this.checkpoints.prepareRestore(request);
+    return prepared.allocate
+      ? this.allocate(prepared.record.binding, prepared.config)
+      : prepared.record;
   }
 
   readSession(binding: RuntimeBinding): {
@@ -66,7 +103,7 @@ export class RuntimeOwner {
     config: OpenConfig;
   }): Promise<RuntimeSessionRecord> {
     const binding = normalizeBinding(input.binding);
-    const config = this.config(input.config);
+    const config = normalizeOpenConfig(input.config);
     const fingerprint = runtimeDigest({ profileId: this.options.profileId, config });
     const prepared = this.options.store.fenced(binding, (tx) => {
       this.authorize(binding, 'admit');
@@ -76,36 +113,33 @@ export class RuntimeOwner {
         return { record: prior, allocate: false };
       }
       if (prior?.sealed) throw new RuntimeOwnerError('hold');
-      for (const sibling of tx.siblings()) {
-        if (
-          sibling.config?.sessionId === config.sessionId &&
-          config.generation <= sibling.config.generation
-        ) {
-          throw new RuntimeOwnerError('conflict');
-        }
-        if (
-          this.key(sibling.binding) !== this.key(binding) &&
-          (sibling.phase !== 'closed' ||
-            sibling.custody !== 'released' ||
-            sibling.control !== undefined ||
-            sibling.inputs.some(active))
-        ) {
-          throw new RuntimeOwnerError('hold');
-        }
-      }
+      assertGenerationAvailable(tx, binding, config);
       const record = prior ?? this.empty(binding);
       record.hostIncarnation = this.options.hostIncarnation;
       record.config = config;
       record.openFingerprint = fingerprint;
       record.phase = 'opening';
       record.custody = 'unknown';
-      tx.put(record); // Opening intent precedes native allocation.
+      tx.put(record, 'growth'); // Opening intent precedes native allocation.
       return { record, allocate: true };
     });
     if (!prepared.allocate) return prepared.record;
+    return this.allocate(binding, config);
+  }
+
+  private async allocate(
+    binding: RuntimeBinding,
+    config: OpenConfig
+  ): Promise<RuntimeSessionRecord> {
     try {
       const opened = await this.options.driverFactory.open(config);
       this.drivers.set(this.key(binding), opened.driver);
+      if (
+        typeof opened.driver.sessionRef !== 'string' ||
+        !opened.driver.sessionRef ||
+        opened.driver.sessionRef.length > 1024
+      )
+        throw new RuntimeOwnerError('hold');
       let record = this.publish(binding, (current) => {
         if (!this.options.authorize(binding, 'admit')) current.sealed = true;
         current.sessionRef = opened.driver.sessionRef;
@@ -157,7 +191,7 @@ export class RuntimeOwner {
         phase: 'admitted',
       };
       record.inputs.push(input);
-      tx.put(record);
+      tx.put(record, 'growth');
       return this.admission(input);
     });
   }
@@ -178,6 +212,7 @@ export class RuntimeOwner {
       this.authorize(intent.binding, 'control', intent);
       const record = tx.get() ?? this.empty(intent.binding);
       let input = this.find(record, intent);
+      const unseen = !input;
       if (!input) {
         input = {
           intent,
@@ -187,7 +222,7 @@ export class RuntimeOwner {
         };
         record.inputs.push(input);
       } else if (input.phase === 'admitted') input.phase = 'cancelled';
-      tx.put(record); // Includes unseen delivery IDs: a late outbox admission cannot resurrect them.
+      tx.put(record, unseen ? 'growth' : undefined); // Includes unseen delivery IDs: a late outbox admission cannot resurrect them.
       return active(input)
         ? { inputId: input.intent.inputId, outcome: 'unknown' }
         : this.admission(input);
@@ -216,6 +251,7 @@ export class RuntimeOwner {
         record.phase !== 'allocated' ||
         !record.nativeReady ||
         record.control ||
+        record.checkpoints?.some((attempt) => attempt.status === 'capturing') ||
         record.inputs.some(active)
       ) {
         throw new RuntimeOwnerError('hold');
@@ -344,6 +380,11 @@ export class RuntimeOwner {
     return this.stopOwned(normalizeBinding(binding));
   }
 
+  /** Trusted composition shutdown only; never register as a business RPC or MCP tool. */
+  async stopCapturedSession(binding: RuntimeBinding): Promise<RuntimeSessionRecord> {
+    return this.stopOwned(normalizeBinding(binding), true);
+  }
+
   private async stopOwned(
     binding: RuntimeBinding,
     capturedCleanup = false
@@ -354,7 +395,7 @@ export class RuntimeOwner {
       wait?: Promise<unknown>;
     }>(binding, (tx) => {
       if (!capturedCleanup) this.authorize(binding, 'control');
-      const record = this.record(tx);
+      const record = tx.get() ?? (capturedCleanup ? this.empty(binding) : this.record(tx));
       record.sealed = true;
       record.nativeReady = false;
       for (const input of record.inputs) if (input.phase === 'admitted') input.phase = 'cancelled';
@@ -367,6 +408,13 @@ export class RuntimeOwner {
       if (record.phase === 'unopened') {
         record.phase = 'closed';
         record.custody = 'released';
+        tx.put(record);
+        return { record, driver: undefined };
+      }
+      if (record.closeClaimed && !this.closes.has(this.key(binding))) {
+        // A settled/abandoned close claim cannot become a new close or appear in flight again.
+        record.phase = 'held';
+        record.custody = 'unknown';
         tx.put(record);
         return { record, driver: undefined };
       }
@@ -401,6 +449,7 @@ export class RuntimeOwner {
     const closing = (async () => {
       let confirmed = false;
       try {
+        this.checkpoints.captureBeforeClose(binding);
         confirmed = (await driver.close()).cleanup === 'confirmed';
       } catch {
         /* custody retained */
@@ -464,8 +513,10 @@ export class RuntimeOwner {
             record.sessionRef !== event.sessionRef
           )
             return;
+          const interactionCount = record.interactions.length;
           this.applyEvent(record, event);
-          tx.put(record);
+          tx.put(record, record.interactions.length > interactionCount ? 'growth' : undefined);
+          this.checkpoints.signal(binding);
         });
       }
     } catch {
@@ -541,6 +592,7 @@ export class RuntimeOwner {
       const record = this.record(tx);
       mutate(record);
       tx.put(record);
+      this.checkpoints.signal(binding);
       return record;
     });
   }
@@ -564,20 +616,7 @@ export class RuntimeOwner {
     return record;
   }
   private empty(binding: RuntimeBinding): RuntimeSessionRecord {
-    return {
-      schemaVersion: 1,
-      binding,
-      profileId: this.options.profileId,
-      config: null,
-      openFingerprint: null,
-      hostIncarnation: this.options.hostIncarnation,
-      phase: 'unopened',
-      sealed: false,
-      custody: 'released',
-      nativeReady: false,
-      inputs: [],
-      interactions: [],
-    };
+    return emptySession(binding, this.options.profileId, this.options.hostIncarnation);
   }
   private key(binding: RuntimeBinding): string {
     return runtimeDigest(normalizeBinding(binding));
@@ -619,32 +658,6 @@ export class RuntimeOwner {
         operationRef: input.operationRef,
         phase: input.phase,
       },
-    };
-  }
-  private config(config: OpenConfig): OpenConfig {
-    // Restore requires host-owned checkpoint/history/custody publication, not an arbitrary token.
-    if (config?.checkpointRef !== undefined) throw new RuntimeOwnerError('hold');
-    if (
-      !config ||
-      [config.tenantId, config.projectId, config.sessionId, config.configRevision].some(
-        (value) => typeof value !== 'string' || !value || value.length > 256
-      ) ||
-      !Number.isSafeInteger(config.generation) ||
-      config.generation < 0 ||
-      !Array.isArray(config.requiredCapabilities) ||
-      config.requiredCapabilities.some(
-        (capability) => typeof capability !== 'string' || !capability
-      )
-    )
-      throw new RuntimeOwnerError('invalid');
-    return {
-      tenantId: config.tenantId,
-      projectId: config.projectId,
-      sessionId: config.sessionId,
-      generation: config.generation,
-      configRevision: config.configRevision,
-      requiredCapabilities: [...config.requiredCapabilities].sort(),
-      ...(config.checkpointRef ? { checkpointRef: config.checkpointRef } : {}),
     };
   }
 }

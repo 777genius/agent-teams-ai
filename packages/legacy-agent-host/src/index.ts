@@ -38,6 +38,8 @@ export interface HostServerOptions {
   capabilities?: readonly string[];
   limits?: Partial<HostLimits>;
   methods?: Readonly<Record<string, HostMethod>>;
+  /** Synchronous work seal, before any abort/cleanup await, including pending allocations. */
+  onSeal?(): void;
   /** Caller must retain durable obligations; called once even after transport failure. */
   onDispose?(reason: HostCloseReason): void | Promise<void>;
 }
@@ -204,6 +206,12 @@ export function createHostServer(options: HostServerOptions): HostServer {
   function dispose(reason: HostCloseReason = 'disposed'): Promise<HostCloseResult> {
     if (closing) return closed;
     closing = true;
+    let sealFailed = false;
+    try {
+      options.onSeal?.();
+    } catch {
+      sealFailed = true;
+    }
     decoder.stop();
     options.input.off('data', onData).off('end', onEnd).off('error', onInputError);
     options.input.pause();
@@ -216,7 +224,10 @@ export function createHostServer(options: HostServerOptions): HostServer {
       timer = setTimeout(() => resolve('timeout'), limits.disposeTimeoutMs);
     });
     const cleanup = Promise.resolve()
-      .then(() => options.onDispose?.(reason))
+      .then(async () => {
+        await options.onDispose?.(reason);
+        if (sealFailed) throw new Error('Seal failed');
+      })
       .then(
         () => 'completed' as const,
         () => 'failed' as const

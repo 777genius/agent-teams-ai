@@ -8,7 +8,9 @@
 Merge, публикация и включение нового пути остаются отдельным решением после
 проверок и ревью; прежнее общее разрешение автономного merge здесь не применяется.
 
-P0–P3 находятся в работе; полный native Team workflow, IPC/UI cutover и P4–P8
+P0–P3 находятся в работе; host CLI уже соединяет отдельного Claude-участника с
+Team/Runtime/MCP и автоматическим dispatch, а bounded Task recovery и checkpoints
+проверяются отдельно. Полный native Team workflow, IPC/UI cutover и P4–P8
 ещё не завершены. Проверены отдельные Team/Runtime/MCP и Desktop owner-routing
 slices, что не является приёмкой всей программы. Актуальные selected sources,
 Node profile и ограничения доказательств — в
@@ -22,6 +24,20 @@ business inputs, canonical Task lifecycle и ответы участника ч�
 actual SDK/CLI/MCP с локальной моделью. Он проверяет in-process owners;
 host stdio и Desktop/mixed-team приёмку не заменяет. Точные source/artifact hashes,
 исходный неуспешный fixture-run и успешный receipt сохранены внутри.
+
+Следующий [standalone-host Claude proof](evidence/p4-claude-host-native-v1.tar.gz)
+прошёл уже через настоящий CLI stdio, production composition и выбранный D artifact:
+два business inputs, canonical Task/MCP/native file effects, остановка и перезапуск
+host с теми же receipts без повторного исполнения. Полные source/dist/artifact
+digests сохранены в архиве. Это отдельный участник и локальная тестовая модель;
+Desktop, mixed teams, native history restore и real-auth квалификация остаются впереди.
+
+Отдельный [Codex Team proof](evidence/p4-codex-team-native-v1.tar.gz) проверяет
+actual app-server 0.162.0, same-thread MCP discovery и два inputs через in-process
+Team/Runtime. Шесть Team tools явно разрешены в TEST-конфигурации native provider;
+это не проверка human approval UI. Архив сохраняет три неуспешные попытки,
+различие external harness cleanup и Runtime custody, успешный receipt и source.
+Standalone Codex host, mixed-team и Desktop qualification этим не закрыты.
 
 ## 1. Приоритет и результат
 

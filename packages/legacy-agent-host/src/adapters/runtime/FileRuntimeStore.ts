@@ -10,6 +10,9 @@ import type {
   RuntimeTransaction,
 } from '../../runtime/contracts.js';
 import { deliveryFingerprint, normalizeBinding, runtimeDigest } from '../../runtime/identity.js';
+import { FileCheckpointStorage } from './FileCheckpointStorage.js';
+import { checkpointFingerprint } from '../../runtime/checkpointIdentity.js';
+import type { CheckpointPayload, CheckpointStorage } from '../../runtime/checkpointContracts.js';
 
 const require = createRequire(import.meta.url);
 const locks = require('agent-teams-controller/src/internal/fileLock.js') as {
@@ -118,13 +121,79 @@ function validate(record: RuntimeSessionRecord): void {
     (record.phase !== 'allocated' || record.custody !== 'owned' || !record.sessionRef)
   )
     invalid();
+  if (record.checkpoints !== undefined) {
+    if (!Array.isArray(record.checkpoints) || !record.config) invalid();
+    const ids = new Set<string>();
+    for (const checkpoint of record.checkpoints) {
+      if (
+        !checkpoint ||
+        typeof checkpoint.checkpointId !== 'string' ||
+        !checkpoint.checkpointId ||
+        ids.has(checkpoint.checkpointId) ||
+        !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(checkpoint.checkpointId) ||
+        checkpoint.fingerprint !==
+          checkpointFingerprint(
+            record.binding,
+            record.profileId,
+            record.config!,
+            checkpoint.checkpointId
+          ) ||
+        typeof checkpoint.hostIncarnation !== 'string' ||
+        !checkpoint.hostIncarnation ||
+        !['capturing', 'published', 'unsupported', 'held'].includes(checkpoint.status)
+      )
+        invalid();
+      ids.add(checkpoint.checkpointId);
+      if (
+        checkpoint.status === 'published' &&
+        (checkpoint.reference !==
+          `cp1-${runtimeDigest({ binding: record.binding, checkpointId: checkpoint.checkpointId })}` ||
+          !/^[a-f0-9]{64}$/.test(checkpoint.payloadDigest ?? '') ||
+          !/^[a-f0-9]{64}$/.test(checkpoint.historyDigest ?? ''))
+      )
+        invalid();
+      if (checkpoint.status !== 'published' && checkpoint.reference !== undefined) invalid();
+    }
+  }
+  if (
+    record.restoredFrom &&
+    (record.config?.checkpointRef !== record.restoredFrom.reference ||
+      !/^cp1-[a-f0-9]{64}$/.test(record.restoredFrom.reference) ||
+      ['backendId', 'teamId', 'memberId'].some(
+        (key) =>
+          normalizeBinding(record.restoredFrom!.sourceBinding)[
+            key as 'backendId' | 'teamId' | 'memberId'
+          ] !== record.binding[key as 'backendId' | 'teamId' | 'memberId']
+      ))
+  )
+    invalid();
 }
 
 /** Existing cross-process lock/atomic IO. No age-based lock takeover or power-loss claim. */
-export class FileRuntimeStore implements RuntimeStore {
+export class FileRuntimeStore implements RuntimeStore, CheckpointStorage {
   private readonly directory: string;
+  private readonly checkpointStorage: FileCheckpointStorage;
+  private readonly maxStateBytes: number;
+  private readonly growthLimit: number;
 
-  constructor(root: string) {
+  constructor(
+    root: string,
+    limits: {
+      maxStateBytes?: number;
+      settlementReserveBytes?: number;
+      maxCheckpointBytes?: number;
+    } = {}
+  ) {
+    this.maxStateBytes = limits.maxStateBytes ?? 16 * 1024 * 1024;
+    const reserve = limits.settlementReserveBytes ?? 512 * 1024;
+    if (
+      !Number.isSafeInteger(this.maxStateBytes) ||
+      !Number.isSafeInteger(reserve) ||
+      reserve < 1024 ||
+      reserve >= this.maxStateBytes
+    )
+      throw new RuntimeOwnerError('invalid');
+    this.growthLimit = this.maxStateBytes - reserve;
     if (!isAbsolute(root) || resolve(root) !== root) throw new RuntimeOwnerError('invalid');
     let part = parse(root).root;
     for (const segment of root.slice(part.length).split('/')) {
@@ -140,6 +209,7 @@ export class FileRuntimeStore implements RuntimeStore {
     if (realpathSync(root) !== root) throw new RuntimeOwnerError('invalid');
     this.directory = join(root, 'runtime-sessions');
     this.ensureDirectory(this.directory);
+    this.checkpointStorage = new FileCheckpointStorage(root, limits.maxCheckpointBytes);
   }
 
   fenced<T>(rawBinding: RuntimeBinding, action: (transaction: RuntimeTransaction) => T): T {
@@ -156,7 +226,7 @@ export class FileRuntimeStore implements RuntimeStore {
     const read = (file: string): RuntimeSessionRecord | undefined => {
       try {
         const stat = lstatSync(file);
-        if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 16 * 1024 * 1024)
+        if (!stat.isFile() || stat.isSymbolicLink() || stat.size > this.maxStateBytes)
           throw new RuntimeOwnerError('hold');
         const record = JSON.parse(readFileSync(file, 'utf8')) as RuntimeSessionRecord;
         validate(record);
@@ -185,17 +255,25 @@ export class FileRuntimeStore implements RuntimeStore {
               if (!record) throw new RuntimeOwnerError('hold');
               return record;
             }),
-        put: (record) => {
+        put: (record, purpose) => {
           validate(record);
           if (runtimeDigest(normalizeBinding(record.binding)) !== runtimeDigest(binding)) {
             throw new RuntimeOwnerError('conflict');
           }
-          if (Buffer.byteLength(JSON.stringify(record, null, 2)) > 16 * 1024 * 1024)
-            throw new RuntimeOwnerError('hold');
+          const bytes = Buffer.byteLength(JSON.stringify(record, null, 2));
+          if (bytes > (purpose === 'growth' ? this.growthLimit : this.maxStateBytes))
+            throw new RuntimeOwnerError(purpose === 'growth' ? 'busy' : 'hold');
           atomic.writeJsonFileSync(path, record);
         },
       })
     );
+  }
+
+  writeCheckpoint(payload: CheckpointPayload): void {
+    this.checkpointStorage.writeCheckpoint(payload);
+  }
+  readCheckpointPayload(reference: string): CheckpointPayload {
+    return this.checkpointStorage.readCheckpointPayload(reference);
   }
 
   private ensureDirectory(path: string): void {

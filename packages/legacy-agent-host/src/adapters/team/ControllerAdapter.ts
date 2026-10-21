@@ -38,13 +38,28 @@ const lock = require('agent-teams-controller/src/internal/fileLock.js') as {
 const atomic = require('agent-teams-controller/src/internal/atomicFile.js') as {
   writeJsonFileSync(filePath: string, value: unknown): void;
 };
+const boardLock = require('agent-teams-controller/src/internal/boardLock.js') as {
+  withTeamBoardLock<T>(paths: { teamDir: string }, action: () => T): T;
+};
 
 export const withTeamFileFence = lock.withFileLockSync;
 export const writeTeamJson = atomic.writeJsonFileSync;
 
 export function createTeamPolicy(root: string, teamName: string): TeamPolicyPort {
   return {
-    taskBoard: (actor) => createTeamController(root, teamName, actor === 'user').taskBoard,
+    taskBoard: (actor) => {
+      const board = createTeamController(root, teamName, actor === 'user').taskBoard;
+      // Prepared Task publication bypasses controller write caches; the canonical
+      // board lock supplies a fresh scan context for every owner read.
+      const read = <T>(action: () => T): T =>
+        boardLock.withTeamBoardLock({ teamDir: join(root, 'teams', teamName) }, action);
+      return {
+        ...board,
+        getTask: (id) => read(() => board.getTask(id)),
+        listTasks: () => read(() => board.listTasks()),
+        listDeletedTasks: () => read(() => board.listDeletedTasks()),
+      };
+    },
     sendMessage: (actor, flags) =>
       createTeamController(root, teamName, actor === 'user').messages.sendMessage(flags),
     readInbox(member) {

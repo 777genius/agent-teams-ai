@@ -4,11 +4,18 @@ import { acquireProfileWriterLease } from '../adapters/profile/ProfileWriterLeas
 import { createFilesystemTeamOwner } from '../adapters/team/createFilesystemTeamOwner.js';
 import { createHostServer } from '../index.js';
 import { TeamOwnerError } from '../team/contracts.js';
+import { RuntimeOwnerError } from '../runtime/contracts.js';
+import { runtimeProfileSchema } from './runtimeProfile.js';
+import { RuntimeTeamCoordinator } from './RuntimeTeamCoordinator.js';
 
-import type { HostServer, HostServerOptions } from '../index.js';
+import type { HostMethod, HostServer, HostServerOptions } from '../index.js';
 import type { JsonValue } from '../contracts.js';
-import type { TeamOwner } from '../team/TeamOwner.js';
 import type { TeamCommand } from '../team/contracts.js';
+import type { HostedTeam } from './RuntimeTeamCoordinator.js';
+import type {
+  MemberProvider,
+  MemberProviderContext,
+} from '../adapters/providers/ClaudeMemberProvider.js';
 
 const id = z.string().min(1).max(256);
 const segment = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
@@ -43,6 +50,7 @@ export const teamHostProfileSchema = z
     schemaVersion: z.literal(1),
     owner,
     principalId: id,
+    runtime: runtimeProfileSchema.optional(),
     teams: z
       .array(
         z
@@ -105,24 +113,20 @@ function equalFields(a: object, b: object): boolean {
 }
 
 /**
- * Product-only Team composition. Runtime/bootstrap capabilities are deliberately
- * absent until their actual owner is wired; this does not advertise ready agents.
+ * Captured product owner and optional real provider Runtime. Aggregate bootstrap
+ * readiness is separate from an individual native member's readiness.
  */
 export function createTeamHost(
   rawProfile: TeamHostProfile,
-  streams: Pick<HostServerOptions, 'input' | 'output' | 'limits'>
+  streams: Pick<HostServerOptions, 'input' | 'output' | 'limits'>,
+  composition?: { createProvider(context: MemberProviderContext): MemberProvider }
 ): HostServer {
   const profile = structuredClone(teamHostProfileSchema.parse(rawProfile));
   const lease = acquireProfileWriterLease(profile.owner.storageRoot);
   let sealed = false;
+  let runtime: RuntimeTeamCoordinator | undefined;
   try {
-    const teams = new Map<
-      string,
-      {
-        definition: TeamHostProfile['teams'][number];
-        connection: ReturnType<TeamOwner['connect']>;
-      }
-    >();
+    const teams = new Map<string, HostedTeam>();
     for (const definition of profile.teams) {
       if (
         definition.binding.backendId !== profile.owner.ownerId ||
@@ -148,15 +152,23 @@ export function createTeamHost(
       });
       teams.set(definition.binding.teamId, {
         definition,
+        owner: team,
         connection: team.connect(profile.principalId),
       });
     }
+    if (profile.runtime)
+      runtime = new RuntimeTeamCoordinator({
+        profile,
+        teams,
+        assertWriter: () => lease.assertCurrent(),
+        ...(composition ? { createProvider: composition.createProvider } : {}),
+      });
 
     const method = (
       operation: 'execute' | 'lookup' | 'getTask' | 'listTasks'
     ): NonNullable<HostServerOptions['methods']>[string] => ({
       lane: operation === 'execute' ? 'work' : 'control',
-      handle(raw) {
+      async handle(raw) {
         try {
           if (sealed) throw new TeamOwnerError('hold');
           lease.assertCurrent();
@@ -183,7 +195,25 @@ export function createTeamHost(
             .strict()
             .parse(input.payload);
           const command = { ...payload, commandId: input.commandId } as TeamCommand;
-          return { ok: true, value: json(connection.execute(command)) };
+          let receipt;
+          try {
+            receipt = connection.execute(command);
+          } catch (error) {
+            if (
+              !(error instanceof TeamOwnerError) ||
+              error.code !== 'hold' ||
+              !runtime ||
+              command.operation === 'message.send'
+            )
+              throw error;
+            await runtime.settleTeamCommands(selected.definition.binding.teamId);
+            const saved = connection.lookup(input.commandId);
+            if (!saved || (saved.phase !== 'completed' && saved.phase !== 'rejected')) throw error;
+            receipt = saved;
+          } finally {
+            runtime?.kick();
+          }
+          return { ok: true, value: json(receipt) };
         } catch (error) {
           const code =
             error instanceof TeamOwnerError
@@ -196,24 +226,86 @@ export function createTeamHost(
       },
     });
 
-    return createHostServer({
+    const runtimeMethods: Record<string, HostMethod> = {};
+    if (runtime)
+      for (const operation of [
+        'open',
+        'read',
+        'dispatch',
+        'stop',
+        'interrupt',
+        'interaction',
+        'reconcile',
+        'checkpoint',
+      ]) {
+        runtimeMethods[`runtime.${operation}`] = {
+          lane: operation === 'open' || operation === 'dispatch' ? 'work' : 'control',
+          async handle(raw) {
+            try {
+              if (sealed) throw new RuntimeOwnerError('hold');
+              lease.assertCurrent();
+              const input = envelopeSchema.parse(raw);
+              const selected = teams.get(input.binding.scope.teamId);
+              if (
+                !selected ||
+                !equalFields(input.binding.owner, profile.owner) ||
+                !equalFields(input.binding.scope, selected.definition.scope)
+              )
+                throw new RuntimeOwnerError('forbidden');
+              return {
+                ok: true,
+                value: await runtime!.execute(
+                  selected.definition.binding.teamId,
+                  operation,
+                  input.payload
+                ),
+              };
+            } catch (error) {
+              const code =
+                error instanceof RuntimeOwnerError || error instanceof TeamOwnerError
+                  ? error.code
+                  : error instanceof z.ZodError
+                    ? 'invalid'
+                    : 'hold';
+              return { ok: false, code, outcome: code === 'hold' ? 'unknown' : 'rejected' };
+            }
+          },
+        };
+      }
+
+    const server = createHostServer({
       ...streams,
       buildId: profile.owner.buildId,
-      capabilities: ['team.task', 'team.message', 'team.command-outcome'],
+      capabilities: [
+        'team.task',
+        'team.message',
+        'team.command-outcome',
+        ...(runtime ? ['runtime.member-session', 'runtime.checkpoint'] : []),
+      ],
       methods: {
         'team.execute': method('execute'),
         'team.lookup': method('lookup'),
         'team.task.get': method('getTask'),
         'team.tasks.list': method('listTasks'),
+        ...runtimeMethods,
       },
-      onDispose() {
-        // No native resources are opened by this product-only composition.
+      onSeal() {
         sealed = true;
-        lease.release();
+        runtime?.seal();
+      },
+      async onDispose() {
+        try {
+          await runtime?.close();
+        } finally {
+          lease.release();
+        }
       },
     });
+    runtime?.kick(); // Resume original durable obligations on startup, without opening/adopting native sessions.
+    return server;
   } catch (error) {
     sealed = true;
+    runtime?.seal();
     lease.release();
     throw error;
   }

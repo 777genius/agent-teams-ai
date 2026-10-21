@@ -36,3 +36,35 @@ bypass that fence. This provides transport shutdown, not scoped Team/runtime cle
 later lifecycle composition must retain control callbacks during bounded cleanup
 before final client disposal. Routing does not grant authority; the receiving host
 still validates current actor/grants and its resource/recovery fences.
+
+`BackendOperationsFacade` supplies a finite app-facing conversation over the router:
+Task mutations/reads, message send, original command lookup, and the captured
+member Runtime operations. Renderer inputs carry an opaque handle, a caller-supplied
+stable command ID and validated operation payload. They cannot supply RPC method
+names, backend owners, roots, generations, provider config or native session IDs.
+Read calls use the supplied ID for the existing wire envelope and create no receipt.
+
+`registerAgentBackendIpc` and `registerAgentBackendHttp` expose the same validated
+facade over `agentBackend:invoke` and `POST /api/agent-backend/operations`. Both require
+a shell-supplied authorization callback using captured IPC sender or authenticated
+HTTP context, then defer current business/runtime grants to the host. Raw errors and
+private host receipt/config fields are projected out of responses. The initial
+Task DTO covers the exposed operations; this is not yet the complete review/feed/
+attachment UI contract. Existing app-shell registration, preload/HTTP clients and
+workflow cutover remain unwired until the shell integration is reviewed.
+
+Public `preload/index.ts` exports `createAgentBackendBridge(ipcRenderer)` for the
+`electronAPI.agentBackend` namespace. Public `renderer/index.ts` exports
+`createAgentBackendHttpClient((route, body) => existingHttpClientPost(route, body))`
+for the same `AgentBackendApi`. Neither adapter creates IDs, retries requests,
+selects a backend or translates transport loss into rejection. The HTTP adapter
+uses the app's existing transport policy and has no renderer dependency on IPC.
+`AgentBackendElectronApi` is the shared app API fragment for both implementations.
+
+The shell must still install these adapters into the existing unified app API and
+register the finite input handlers against trusted main composition. IPC sender
+validation and sender/context-to-handle grants are required; handle existence alone
+is not authorization. The current loopback HTTP server does not supply an
+authenticated context, so its authorization callback must remain denying until a
+trusted context is explicitly captured. No raw public backend configuration or
+automatic legacy routing is exposed to solve this seam.

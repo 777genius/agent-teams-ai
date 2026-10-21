@@ -2,7 +2,10 @@
 
 Stage 1 portable Team/Runtime host under implementation. The transport-only CLI
 remains available without a product profile. A captured product profile enables
-canonical Team Task/Message commands and original-command lookup. A handshake
+canonical Team Task/Message commands and original-command lookup. An optional
+captured `runtime.members` profile composes individual Claude members through the
+selected public provider library, real private Team MCP and the durable Runtime.
+A handshake
 means API readiness, not member or aggregate team readiness.
 
 The package is portable ESM and requires Node `>=24.21.0 <25`. Provider Session SPI
@@ -28,10 +31,23 @@ claims native dispatch. The `./mcp` endpoint uses an injected captured Team
 connection, private route/Bearer capability, current binding checks and stable
 mutation IDs. It does not instantiate another controller/writer.
 
-This checkpoint is incomplete: the CLI does not yet compose native Runtime
-sessions or bootstrap a team; full catalog/review/backup/restore and Desktop
-cutover remain in the Stage 1 plan. Uncertain Task notification recovery is held,
-not replayed. Technical fixtures and individual native feasibility proofs do not
+The Runtime RPC surface selects only a captured member ID: open/read/dispatch,
+stop/interrupt/interaction/reconcile and checkpoint. It does not accept executable,
+environment, model, principal, run, generation or native checkpoint bytes. Read
+projections omit private provider/configuration/operation identities. Team commits
+wake one recovery/dispatch pump; native terminal events allow the next admitted
+input. Startup recovers original obligations without allocating or adopting a
+native session. Aggregate Team bootstrap is not advertised as complete.
+
+Task recovery prepares canonical policy once on a private detached product JSON
+snapshot, then publishes guarded file effects and notification obligations.
+Uncertain or changed evidence holds the original intent instead of running the
+canonical handler again. Checkpoints publish private payloads before safe
+references, and explicit restore keeps the new input queue empty. Actual native
+history restore still needs its provider qualification.
+
+This checkpoint is incomplete: full catalog/review/backup/restore, mixed-provider
+teams and Desktop cutover remain in the Stage 1 plan. Technical fixtures and individual native feasibility proofs do not
 close the complete P4–P8 acceptance matrix or real account qualification.
 
 The first native Claude integration test is separate from the regular test glob:
@@ -41,6 +57,21 @@ explicit `LEGACY_NATIVE_TEAM_GO=1`, `LEGACY_NATIVE_PROVIDER_ARTIFACT` and
 TEST roots and localhost inference, uses actual SDK/CLI/MCP and retains its
 receipt, including failed attempts. It exercises in-process Team/Runtime owners;
 the CLI stdio product path has its own subprocess test. Neither is Desktop E2E.
+
+`tests/native-claude-host.native.ts` is the separate actual-CLI/native scenario.
+It requires explicit GO plus selected provider, native executable, complete host
+source and compiled-tree digests. Ordinary tests do not launch provider agents.
+Native cleanup tracks captured process handles and isolated POSIX groups, retiring
+confirmed-ended groups. This is not proof against descendants escaping those
+groups; Windows cleanup remains unconfirmed until its process-tree adapter is
+qualified. Selected native history lookup is read-only, rejects ambiguous or
+symlinked stores, and bounds history to 64 MiB and individual JSONL rows to 1 MiB.
+
+The separate `tests/native-codex-team.native.ts` uses the actual pinned Codex
+app-server through public D with in-process owners, explicit
+`LEGACY_CODEX_TEAM_GO=1` and the selected provider artifact/digest. The archived
+passing profile explicitly approves six Team tools only in the TEST config. It
+does not qualify production Codex host composition or interactive human approvals.
 
 Frames are UTF-8 NDJSON, one JSON-RPC 2.0 request with a string/safe integer `id`
 per line. Batches and client notifications are intentionally unsupported. A frame

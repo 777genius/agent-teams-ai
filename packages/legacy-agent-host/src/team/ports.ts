@@ -1,4 +1,5 @@
 import type { JsonValue } from '../contracts.js';
+import type { CommandReceipt } from './contracts.js';
 
 export interface TeamTask {
   id: string;
@@ -29,6 +30,33 @@ export interface TeamPolicyPort {
     flags: Record<string, unknown>
   ): { messageId: string; message: JsonValue };
   readInbox(member: string): JsonValue[];
+}
+
+export interface TaskNotification {
+  member: string;
+  messageId: string;
+  content: string;
+}
+
+export interface PreparedTaskMutation {
+  result: JsonValue;
+  taskHash: string;
+  notifications: TaskNotification[];
+  removedMessageIds: string[];
+}
+
+export class TaskPolicyRejected extends Error {}
+
+/** Task-only canonical policy preparation and exact file publication, within Team's fence. */
+export interface TaskMutationPort {
+  load(receipt: CommandReceipt): PreparedTaskMutation | undefined;
+  prepare(
+    receipt: CommandReceipt,
+    actor: string,
+    apply: (board: TaskBoardPolicy) => JsonValue
+  ): PreparedTaskMutation;
+  validate(receipt: CommandReceipt): void;
+  publish(receipt: CommandReceipt): void;
 }
 
 /** Storage transitions and current authority use the same synchronous resource fence. */

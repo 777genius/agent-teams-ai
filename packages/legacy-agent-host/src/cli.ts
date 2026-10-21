@@ -47,7 +47,7 @@ process.once('SIGINT', () => {
   void server.dispose('signal');
 });
 void server.closed.then(({ reason, cleanup }) => {
-  // API disposal is separate from native custody; this CLI has no provider yet.
+  // Cleanup failure/timeout preserves native custody debt and exits unsuccessfully.
   const success =
     (reason === 'input_eof' || reason === 'disposed' || reason === 'signal') &&
     cleanup === 'completed';

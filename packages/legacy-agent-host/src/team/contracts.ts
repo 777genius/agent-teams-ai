@@ -84,6 +84,11 @@ export interface CommandReceipt {
   taskHash?: string;
   deliveryBinding?: DeliveryBinding;
   authorityRevision?: number;
+  /** New Task publication never changes product bytes before its durable file plan exists. */
+  taskPlanVersion?: 1;
+  taskPreimage?: string;
+  /** Captured before canonical planning; recovery never resolves old notifications to a new run. */
+  taskRecipients?: { name: string; delivery?: DeliveryBinding }[];
 }
 
 export type RuntimeMemberBinding = Omit<DeliveryBinding, 'teamName'>;
@@ -122,6 +127,8 @@ export interface TeamRuntimeDeliveryPort {
   lookupDelivery(intent: DeliveryIntent): Promise<DeliveryAdmission>;
   /** Official Runtime proof fingerprint, shared by its persisted input and admission receipt. */
   fingerprintDelivery(intent: ImmutableDelivery): string;
+  /** Optional existing Runtime cancellation capability, used for Task notification retraction. */
+  cancelDelivery?(intent: DeliveryIntent): Promise<DeliveryAdmission>;
 }
 
 export interface DeliveryResumeResult {

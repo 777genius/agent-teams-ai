@@ -28,7 +28,7 @@ peerDependencyRules:
     '@nuxt/schema': '3.21.11'
 
 overrides:
-  '@agent-teams/provider-session-contracts': 'file:vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-session-contracts-0.0.0.tgz'
+  '@agent-teams/provider-session-contracts': 'file:vendor/provider-migration/attachments-mcp-v1/agent-teams-provider-session-contracts-0.0.0.tgz'
   '@terminal-platform/design-tokens': 'file:vendor/terminal-platform/sdk/terminal-platform-design-tokens-0.1.0.tgz'
   '@terminal-platform/foundation': 'file:vendor/terminal-platform/sdk/terminal-platform-foundation-0.1.0.tgz'
   '@terminal-platform/runtime-types': 'file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz'

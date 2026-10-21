@@ -166,6 +166,13 @@ test('real canonical lifecycle keeps work intervals/history and deleted tasks do
   assert.ok(
     (task.historyEvents as { type: string }[]).some((event) => event.type === 'status_changed')
   );
+  // Read notification rows are retained by canonical delete, with no queued retraction.
+  const inboxPath = join(f.root, 'teams', 'test-team', 'inboxes', 'alice.json');
+  const inbox = JSON.parse(readFileSync(inboxPath, 'utf8')) as { read: boolean }[];
+  inbox.forEach((row) => {
+    row.read = true;
+  });
+  writeFileSync(inboxPath, JSON.stringify(inbox));
   assert.equal(run('delete', 'delete').phase, 'completed');
   const deletedBytes = taskBytes(f.root, taskId);
   f.human.execute(create('life-create'));
@@ -279,7 +286,7 @@ class FailCompletedOnce extends TeamOwnerStore {
   }
 }
 
-test('uncertain Task side effects HOLD rather than rerunning canonical notifications', (t) => {
+test('lost Task receipt recovers prepared exact effects without rerunning canonical notifications', (t) => {
   const f = fixture(t, (root) => new FailCompletedOnce(root, 'test-team'));
   const command = create('unknown-task');
   assert.throws(() => f.human.execute(command), expectCode('hold'));
@@ -288,7 +295,7 @@ test('uncertain Task side effects HOLD rather than rerunning canonical notificat
   const inboxPath = join(f.root, 'teams', 'test-team', 'inboxes', 'alice.json');
   const inboxBefore = readFileSync(inboxPath, 'utf8');
   const restarted = createOwner(f.options).connect('human');
-  assert.throws(() => restarted.execute(command), expectCode('hold'));
+  assert.equal(restarted.execute(command).phase, 'completed');
   assert.equal(taskBytes(f.root, receipt.effects.taskId), taskBefore);
   assert.equal(readFileSync(inboxPath, 'utf8'), inboxBefore);
 });

@@ -41,7 +41,7 @@
       "owner": "provider lane",
       "baselineRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
       "workingTreeBytesSelected": false,
-      "checkpointRef": "4773c30624de598d64af484a4c368272e83496b4"
+      "checkpointRef": "a7a768fb210200b34f4435eca5fc99c0e5739e9e"
     }
   },
   "providerPackage": {
@@ -60,48 +60,85 @@
     ],
     "declaredNodeEngineRange": ">=24.21.0 <25 || >=26.11.1 <27",
     "artifact": {
-      "status": "selected successor installed; first actual native Team/Runtime/MCP slice passed",
-      "sha256": "68fa190a9abc2d8f128e0247ffc0f9bc8c3287c3adecf9f95d653184775122f3",
-      "contractsSha256": "9b40cdd4865d1e9767738159df6f125517f2e04e39f879ca99731b97ba1a78ef",
-      "sourceCommit": "4773c30624de598d64af484a4c368272e83496b4",
+      "status": "selected committed successor installed; standalone-host Claude and in-process Codex Team native proofs passed",
+      "sha256": "2884e9e77f2a693a59348019ae400819172e5406f672c89cfb5c1a589156e9e3",
+      "contractsSha256": "bde60366595ceb7d445c1aa44399ad7bbdc1a5dbedbfe19a8264a146139448dc",
+      "sourceCommit": "a7a768fb210200b34f4435eca5fc99c0e5739e9e",
       "localPaths": [
-        "vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-implementations-0.0.0.tgz",
-        "vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-session-contracts-0.0.0.tgz"
+        "vendor/provider-migration/attachments-mcp-v1/agent-teams-provider-implementations-0.0.0.tgz",
+        "vendor/provider-migration/attachments-mcp-v1/agent-teams-provider-session-contracts-0.0.0.tgz"
       ],
       "peerDependencies": {},
       "contractsDependency": "@agent-teams/provider-session-contracts@0.0.0 via exact local override",
-      "owningGateEvidence": "docs/plans/provider-migration/evidence/p1-claude-capabilities-handoff.json",
+      "owningGateEvidence": "docs/plans/provider-migration/evidence/p4-provider-attachments-mcp-handoff.json",
       "qualifiedProfiles": [
-        "Node24.21 darwin-arm64; single member Claude SDK0.3.305 with real MCP/Team/Runtime and localhost inference; no full team/UI/real auth qualification"
+        "Node24.21 darwin-arm64; one Claude SDK0.3.305 member through actual standalone host stdio, Team/MCP/Runtime and localhost inference; no Desktop/mixed-team/real auth qualification",
+        "Node24.21 darwin-arm64; one Codex0.162.0 member via public D and actual app-server/MCP/Team/Runtime with six explicitly approved TEST tools; not standalone Codex host/Desktop/mixed-team/real auth qualification"
       ],
       "predecessor": {
-        "status": "selected and integrated local tarball bytes; focused owning gates passed, Linux aggregate pending",
-        "sha256": "93d6ecaf571c3496924cf9c68cc3c2055e1ae4f097fbb62ec132d2a01b06a893",
-        "contractsSha256": "269f80a74b6d9f42d8018b78948e3178cd09c42c2ecd5441e34d0c7e77cf4151",
-        "sourceCommit": "c4235e029d6395cdcb385844ad6046d6f94d3449",
-        "packedTechnicalProof": "docs/plans/provider-migration/evidence/p1-packed-host-walk.tgz",
-        "packedTechnicalProofSha256": "be475b8ffee3c566bc8051d0b8c5fc52182d6424213871376def2aca6c653275",
-        "contractsNativeProofOriginalSha256": "d6a2351a672efe91d359356c4ed56b6b8aa28dbf5e05a0557de2716dea7b404f",
-        "contractsDeltaProof": "docs/plans/provider-migration/evidence/p1-contracts-artifact-delta.json",
-        "qualifiedProfiles": [
-          "Node24.21 darwin-arm64 technical packed composition; no Team/UI/real auth qualification"
-        ],
-        "sourceFinalCheckpoint": "dfc1aa5ce1d357b732f66b9294651f96799c140a",
+        "status": "selected successor installed; first actual native Team/Runtime/MCP slice passed",
+        "sha256": "68fa190a9abc2d8f128e0247ffc0f9bc8c3287c3adecf9f95d653184775122f3",
+        "contractsSha256": "9b40cdd4865d1e9767738159df6f125517f2e04e39f879ca99731b97ba1a78ef",
+        "sourceCommit": "4773c30624de598d64af484a4c368272e83496b4",
         "localPaths": [
-          "vendor/provider-migration/agent-teams-provider-implementations-0.0.0.tgz",
-          "vendor/provider-migration/agent-teams-provider-session-contracts-0.0.0.tgz"
+          "vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-implementations-0.0.0.tgz",
+          "vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-session-contracts-0.0.0.tgz"
         ],
         "peerDependencies": {},
         "contractsDependency": "@agent-teams/provider-session-contracts@0.0.0 via exact local override",
-        "owningGateEvidence": "docs/plans/provider-migration/evidence/p1-provider-package-handoff.json",
-        "pendingGate": "unchanged Linux check:fast aggregate requires Bash>=4; Mac Bash3.2 mapfile unsupported"
+        "owningGateEvidence": "docs/plans/provider-migration/evidence/p1-claude-capabilities-handoff.json",
+        "qualifiedProfiles": [
+          "Node24.21 darwin-arm64; single member Claude SDK0.3.305 with real MCP/Team/Runtime and localhost inference; no full team/UI/real auth qualification"
+        ],
+        "predecessor": {
+          "status": "selected and integrated local tarball bytes; focused owning gates passed, Linux aggregate pending",
+          "sha256": "93d6ecaf571c3496924cf9c68cc3c2055e1ae4f097fbb62ec132d2a01b06a893",
+          "contractsSha256": "269f80a74b6d9f42d8018b78948e3178cd09c42c2ecd5441e34d0c7e77cf4151",
+          "sourceCommit": "c4235e029d6395cdcb385844ad6046d6f94d3449",
+          "packedTechnicalProof": "docs/plans/provider-migration/evidence/p1-packed-host-walk.tgz",
+          "packedTechnicalProofSha256": "be475b8ffee3c566bc8051d0b8c5fc52182d6424213871376def2aca6c653275",
+          "contractsNativeProofOriginalSha256": "d6a2351a672efe91d359356c4ed56b6b8aa28dbf5e05a0557de2716dea7b404f",
+          "contractsDeltaProof": "docs/plans/provider-migration/evidence/p1-contracts-artifact-delta.json",
+          "qualifiedProfiles": [
+            "Node24.21 darwin-arm64 technical packed composition; no Team/UI/real auth qualification"
+          ],
+          "sourceFinalCheckpoint": "dfc1aa5ce1d357b732f66b9294651f96799c140a",
+          "localPaths": [
+            "vendor/provider-migration/agent-teams-provider-implementations-0.0.0.tgz",
+            "vendor/provider-migration/agent-teams-provider-session-contracts-0.0.0.tgz"
+          ],
+          "peerDependencies": {},
+          "contractsDependency": "@agent-teams/provider-session-contracts@0.0.0 via exact local override",
+          "owningGateEvidence": "docs/plans/provider-migration/evidence/p1-provider-package-handoff.json",
+          "pendingGate": "unchanged Linux check:fast aggregate requires Bash>=4; Mac Bash3.2 mapfile unsupported"
+        },
+        "note": "P1 predecessor native proof remains separately bound to its old bytes; successor requires its own actual native integration proof.",
+        "nativeTechnicalProof": {
+          "path": "docs/plans/provider-migration/evidence/p4-claude-team-native-v1.tar.gz",
+          "sha256": "75dd7aa070aca8ccae6b167ac5939127332bad6d5e5296f478d4c50fc988bfba",
+          "passedReceiptSha256": "ef42979ca844f3c57e1dcedc5c0e2aee8fcc5f74fa0777cc9ac6677775de5041",
+          "scope": "First in-process Team + Runtime + real MCP/native SDK proof; not host stdio/Desktop/mixed-team/full P4"
+        }
       },
-      "note": "P1 predecessor native proof remains separately bound to its old bytes; successor requires its own actual native integration proof.",
-      "nativeTechnicalProof": {
-        "path": "docs/plans/provider-migration/evidence/p4-claude-team-native-v1.tar.gz",
-        "sha256": "75dd7aa070aca8ccae6b167ac5939127332bad6d5e5296f478d4c50fc988bfba",
-        "passedReceiptSha256": "ef42979ca844f3c57e1dcedc5c0e2aee8fcc5f74fa0777cc9ac6677775de5041",
-        "scope": "First in-process Team + Runtime + real MCP/native SDK proof; not host stdio/Desktop/mixed-team/full P4"
+      "pendingGate": "Linux aggregate remains pending; required changed gate retains sole known Mac Bash/mapfile Foundation aggregate failure",
+      "note": "Adds finite native attachment parts and same-dispatcher Codex MCP readiness. Predecessor native proofs retain their original source/artifact bindings; they do not qualify these new bytes.",
+      "nativeStandaloneHostProof": {
+        "archive": "docs/plans/provider-migration/evidence/p4-claude-host-native-v1.tar.gz",
+        "archiveSha256": "6d3cd36cb124b09520d3dc14b0644efda54a778465d40f6cd08c796a8a756a7b",
+        "receiptSha256": "916c59c2ad1e6f9a5ae7c84a7cae614ae9e5c6b139148b528dce15d5d3269657",
+        "hostSourceSha256": "8bc8d51ca952a9a29acf7bdd26972c8c6d138096cd2fee280538c453fb63f519",
+        "hostDistSha256": "c64781c850805bdfd0344278c435ceff8447bd1687fb362bf8e56462c0023c7f",
+        "nativeExecutableSha256": "ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f",
+        "scope": "Two business inputs, canonical Task/MCP/native Bash effects, safe Runtime RPCs, stop and host restart original receipts/outbox without resubmit; one member, localhost scripted inference"
+      },
+      "nativeCodexTeamProof": {
+        "archive": "docs/plans/provider-migration/evidence/p4-codex-team-native-v1.tar.gz",
+        "archiveSha256": "4a6bcc060daf5da28da63709161484638db741a42165f8ae16df37ec7de0108a",
+        "receiptSha256": "fe1d0382041549ada1d12c63481554bef31b37aa41f3d0d45ea0d31a5e17c883",
+        "approvalAuditSha256": "c5ddea8685b001fb0be615d366eb0a53a4b936d5b1a90231027d3077ae8a03a7",
+        "nativeExecutableSha256": "8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57",
+        "scope": "Same-thread native MCP discovery/context, two business inputs/Task lifecycle/Bash effects/replies, replay without resubmit, closed/released; one member, in-process owners and localhost scripted inference",
+        "failedAttempts": "All three retained in archive; constructor/limit/TEST native approval configuration failures; first external harness cleanup distinct, second original Runtime custody stays unknown, no original input replay"
       }
     },
     "historicalArchiveDigestsSelected": false,
@@ -297,7 +334,8 @@
         "frontend:agent-teams-controller/src/controller.js",
         "frontend:agent-teams-controller/src/internal/context.js",
         "frontend:agent-teams-controller/src/internal/fileLock.js",
-        "frontend:agent-teams-controller/src/internal/atomicFile.js"
+        "frontend:agent-teams-controller/src/internal/atomicFile.js",
+        "frontend:agent-teams-controller/src/internal/boardLock.js"
       ],
       "existingOracles": [
         "frontend:agent-teams-controller/test/taskLifecycle.test.js",
@@ -3375,6 +3413,15 @@
         "RENAME_RETRY_JITTER_MS",
         "RETRYABLE_RENAME_CODES"
       ]
+    },
+    "frontend:agent-teams-controller/src/internal/boardLock.js": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "agent-teams-controller/src/internal/boardLock.js",
+      "blobOid": "70e38795b8d4f7eeaffe6bae9970dbfda3cb92a1",
+      "declarationExamples": [
+        "withTeamBoardLock"
+      ]
     }
   },
   "remainingClosure": [
@@ -3390,6 +3437,6 @@
     "coverage": "All M01-M19 have source and existing oracle references via at least one seam",
     "shape": "Unique seam IDs; valid owner/matrix IDs; source/oracle references resolve; no selected artifact digest or native proof invented",
     "execution": "Source inventory validation only; separately linked implementation/native evidence records its own actual TEST executions and limits.",
-    "implementationEvidenceNote": "Recorded native proofs are separately bound to their archived source/receipts; current selected D successor has a first Team/Runtime/MCP native proof. This is not full M13, mixed-Team, host-stdio-native or P8 parity; representative source closure remains open."
+    "implementationEvidenceNote": "Exact archived native proofs are separately bound to their actual source and artifacts. Selected attachment/MCP successor passed standalone-host Claude and in-process Codex Team proofs, plus100 bounded host tests. Full mixed-Team, native history restore, Desktop, M13 and P8 acceptance remain open."
   }
 }

@@ -32,10 +32,10 @@ function object(value: JsonValue | undefined): Record<string, JsonValue> | undef
   return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
 }
 
-function classifyProof(
+export function classifyProof(
   intent: DeliveryIntent,
   response: DeliveryAdmission,
-  runtime: TeamRuntimeDeliveryPort
+  runtime: Pick<TeamRuntimeDeliveryPort, 'fingerprintDelivery'>
 ): 'admitted' | 'not_admitted' | 'absent' | 'unknown' {
   if (response.inputId !== intent.inputId) throw new TeamOwnerError('conflict');
   if (response.outcome === 'unknown') return 'unknown';

@@ -579,3 +579,83 @@ test('settled unknown interrupt does not skip owned cleanup and retains uncertai
     RuntimeOwnerError
   );
 });
+
+test('trusted captured shutdown cleans an owned session after revocation without adopting foreign custody', async (t) => {
+  const f = await setup(t);
+  let granted = true;
+  const runtime = f.make('host-1', { authorize: () => granted });
+  await runtime.openSession({ binding: binding(), config: config() });
+  const session = f.sessions.get('session-A')!;
+  await runtime.admitDelivery(delivery('queued'));
+  granted = false;
+  await assert.rejects(
+    runtime.stopSession(binding()),
+    (error) => error instanceof RuntimeOwnerError && error.code === 'forbidden'
+  );
+  assert.equal(session.closeCalls, 0);
+  const stopped = await runtime.stopCapturedSession(binding());
+  assert.equal(stopped.sealed, true);
+  assert.equal(stopped.phase, 'closed');
+  assert.equal(stopped.custody, 'released');
+  assert.equal(stopped.inputs[0]?.phase, 'cancelled');
+  assert.equal(session.closeCalls, 1);
+  assert.equal(session.submits.length, 0);
+  await runtime.stopCapturedSession(binding());
+  assert.equal(session.closeCalls, 1);
+  assert.equal(f.opens(), 1);
+
+  granted = true;
+  await runtime.openSession({ binding: binding('B'), config: config('B') });
+  const foreign = f.make('host-2', { authorize: () => false });
+  const held = await foreign.stopCapturedSession(binding('B'));
+  assert.equal(held.sealed, true);
+  assert.equal(held.phase, 'held');
+  assert.equal(held.custody, 'unknown');
+  assert.equal(held.hostIncarnation, 'host-1');
+  assert.equal(f.sessions.get('session-B')?.closeCalls, 0);
+  assert.equal(f.opens(), 2, 'trusted shutdown cannot adopt or allocate foreign host resources');
+});
+
+test('trusted shutdown before first open seals a closed technical tombstone without allocating', async (t) => {
+  const f = await setup(t);
+  const runtime = f.make('host-1', { authorize: () => false });
+  const stopped = await runtime.stopCapturedSession(binding());
+  assert.equal(stopped.phase, 'closed');
+  assert.equal(stopped.custody, 'released');
+  assert.equal(stopped.sealed, true);
+  assert.equal(stopped.config, null);
+  assert.equal(f.opens(), 0);
+  const restarted = f.make('host-2');
+  assert.equal((await restarted.admitDelivery(delivery('late'))).outcome, 'not_admitted');
+  await assert.rejects(
+    restarted.openSession({ binding: binding(), config: config() }),
+    heldRuntime
+  );
+  assert.equal(f.opens(), 0);
+  assert.equal((await restarted.stopCapturedSession(binding())).phase, 'closed');
+});
+
+function heldRuntime(error: unknown): boolean {
+  return error instanceof RuntimeOwnerError && error.code === 'hold';
+}
+
+test('repeated settled unknown close retains held custody debt without another native close', async (t) => {
+  const f = await setup(t);
+  const runtime = f.make('host-1');
+  await runtime.openSession({ binding: binding(), config: config() });
+  const session = f.sessions.get('session-A')!;
+  session.cleanup = 'unknown';
+  const first = await runtime.stopCapturedSession(binding());
+  assert.equal(first.phase, 'held');
+  assert.equal(first.custody, 'unknown');
+  assert.equal(first.closeClaimed, true);
+  for (const owner of [runtime, f.make('host-2', { authorize: () => false })]) {
+    const repeated = await owner.stopCapturedSession(binding());
+    assert.equal(repeated.phase, 'held');
+    assert.equal(repeated.custody, 'unknown');
+    assert.equal(repeated.closeClaimed, true);
+    assert.equal(repeated.sealed, true);
+  }
+  assert.equal(session.closeCalls, 1);
+  assert.equal(f.opens(), 1);
+});

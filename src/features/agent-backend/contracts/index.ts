@@ -21,3 +21,5 @@ export interface HostClientFailure {
 export interface BackendHandle {
   readonly handleId: string;
 }
+
+export * from './operations';

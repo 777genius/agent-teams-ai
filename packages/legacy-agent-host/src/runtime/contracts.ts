@@ -4,6 +4,7 @@ import type {
   OpenConfig,
 } from '@agent-teams/provider-session-contracts';
 import type { JsonValue } from '../contracts.js';
+import type { CheckpointAttempt, CheckpointStorage } from './checkpointContracts.js';
 
 export interface RuntimeBinding {
   backendId: string;
@@ -66,6 +67,8 @@ export interface RuntimeSessionRecord {
   sessionRef?: string;
   control?: { inputId: string; operationRef: string; phase: 'pending' | 'unknown' };
   closeClaimed?: boolean;
+  checkpoints?: CheckpointAttempt[];
+  restoredFrom?: { reference: string; sourceBinding: RuntimeBinding };
   inputs: RuntimeInput[];
   interactions: RuntimeInteraction[];
   diagnostic?:
@@ -79,7 +82,8 @@ export interface RuntimeSessionRecord {
 export interface RuntimeTransaction {
   get(): RuntimeSessionRecord | undefined;
   siblings(): RuntimeSessionRecord[];
-  put(record: RuntimeSessionRecord): void;
+  /** Growth must preserve reserved bytes for accepted work/control settlement. */
+  put(record: RuntimeSessionRecord, purpose?: 'growth'): void;
 }
 
 /** Short synchronous actions use the same member fence, including publication and revocation. */
@@ -104,6 +108,8 @@ export interface RuntimeOwnerOptions {
   maxInputBytes?: number;
   maxPendingInteractions?: number;
   interactionTtlMs?: number;
+  checkpoints?: CheckpointStorage;
+  checkpointIdleTimeoutMs?: number;
 }
 
 export class RuntimeOwnerError extends Error {

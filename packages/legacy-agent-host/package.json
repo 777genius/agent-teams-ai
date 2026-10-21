@@ -76,8 +76,8 @@
     "@typescript/native": "npm:typescript@7.0.2"
   },
   "dependencies": {
-    "@agent-teams/provider-implementations": "file:../../vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-implementations-0.0.0.tgz",
-    "@agent-teams/provider-session-contracts": "file:../../vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-session-contracts-0.0.0.tgz",
+    "@agent-teams/provider-implementations": "file:../../vendor/provider-migration/attachments-mcp-v1/agent-teams-provider-implementations-0.0.0.tgz",
+    "@agent-teams/provider-session-contracts": "file:../../vendor/provider-migration/attachments-mcp-v1/agent-teams-provider-session-contracts-0.0.0.tgz",
     "@modelcontextprotocol/sdk": "1.30.0",
     "agent-teams-controller": "workspace:*",
     "zod": "4.6.7"
