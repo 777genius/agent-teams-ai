@@ -39,4 +39,16 @@ Use the built `cli` for the packaged compatibility pass. The driver reports its 
 
 Binding changes for connections saved before a team form opens are explicit saved
 credential actions and survive roster cancellation. The selector explains this.
-Bindings first allocated by the form are draft-owned and removed on cancellation.
+Bindings first allocated for an unsaved member are persisted with the issuing renderer
+document's ownership and removed on cancellation. Renderer termination/reload and app
+startup recover those provisional receipts under the existing roster configuration
+fence. Initial recovery starts in the background after that fence is wired and does
+not gate app startup or ordinary gateway APIs. Service-local live owners protect
+current renderer drafts; startup reclaims only previous-process receipts, while
+explicit renderer-loss recovery releases its owner's receipts. Saved members in `members.meta.json` or `config.json`, launch-history sources,
+and runtime artifacts retain their bindings and immutable key ownership. Recovery
+never infers abandonment from age or an offline team. Unreadable roster/history
+evidence preserves that team's ownership, logs a safe warning, and lets healthy
+teams continue; legacy unmarked
+bindings retain their existing behavior. Unused draft sources release their key
+fingerprint; shared API-key editor records are retained.

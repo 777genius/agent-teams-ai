@@ -155,6 +155,11 @@ export class GatewayRunMetadataStore {
     });
   }
 
+  async hasSourceHistory(gatewayUsageRef: string): Promise<boolean> {
+    await this.chain;
+    return (await this.read()).some((snapshot) => snapshot.gatewayUsageRef === gatewayUsageRef);
+  }
+
   async hasUnfinishedRuns(gatewayUsageRef: string): Promise<boolean> {
     await this.chain;
     return hasUnfinished(await this.read(), gatewayUsageRef);

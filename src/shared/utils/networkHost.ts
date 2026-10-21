@@ -1,5 +1,5 @@
 export function isLoopbackHostname(hostname: string): boolean {
-  const normalized = hostname.toLowerCase().replace(/(?:^\[|\]$)/g, '');
+  const normalized = normalizeNetworkHostname(hostname);
   if (normalized === 'localhost' || normalized.endsWith('.localhost') || normalized === '::1') {
     return true;
   }
@@ -7,7 +7,7 @@ export function isLoopbackHostname(hostname: string): boolean {
 }
 
 export function isPrivateNetworkHostname(hostname: string): boolean {
-  const normalized = hostname.toLowerCase().replace(/(?:^\[|\]$)/g, '');
+  const normalized = normalizeNetworkHostname(hostname);
   if (normalized.endsWith('.local')) {
     return true;
   }
@@ -28,7 +28,7 @@ export function isPrivateNetworkHostname(hostname: string): boolean {
 }
 
 export function isUnusableNetworkHostname(hostname: string): boolean {
-  const normalized = hostname.toLowerCase().replace(/(?:^\[|\]$)/g, '');
+  const normalized = normalizeNetworkHostname(hostname);
   if (normalized === '0.0.0.0' || normalized === '::' || normalized === '255.255.255.255') {
     return true;
   }
@@ -42,4 +42,22 @@ export function parseIpv4Octets(hostname: string): readonly number[] | null {
   if (!match) return null;
   const octets = match.slice(1).map(Number);
   return octets.every((octet) => octet <= 255) ? octets : null;
+}
+
+function normalizeNetworkHostname(hostname: string): string {
+  const normalized = hostname.toLowerCase().replace(/(?:^\[|\]$)/g, '');
+  if (!normalized.includes(':')) return normalized;
+  try {
+    // URL canonicalization handles compressed, expanded and dotted mapped literals.
+    const canonical = new URL(`https://[${normalized}]`).hostname;
+    const mapped = /^\[::ffff:([a-f0-9]+):([a-f0-9]+)\]$/.exec(canonical);
+    if (mapped) {
+      const high = Number.parseInt(mapped[1], 16);
+      const low = Number.parseInt(mapped[2], 16);
+      return `${high >>> 8}.${high & 255}.${low >>> 8}.${low & 255}`;
+    }
+  } catch {
+    // Invalid IPv6 input keeps its existing classification.
+  }
+  return normalized;
 }
