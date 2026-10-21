@@ -3,7 +3,7 @@
   "purpose": "P0 bounded Git-object-verified source/use-case selection, with explicit selected Node artifact and direct native feasibility evidence; not full dependency closure or product parity",
   "planCommit": "b6a038388ec6dc12f73ce71e684b0bd5cdeefcb3",
   "planPath": "docs/plans/provider-migration/stage-1-legacy-host.md",
-  "status": "P0/P1 in progress; representative source closure and final provider artifact selection remain open",
+  "status": "P0 source closure/config mapping in progress; P1 transport/native technical proofs recorded; P2/P3 implementation in progress",
   "selectionPolicy": {
     "bytes": "Only committed Git blobs at the listed refs; source lookup does not copy working-tree bytes",
     "includedOwnerPatches": [],
@@ -40,7 +40,8 @@
       "checkout": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host",
       "owner": "provider lane",
       "baselineRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
-      "workingTreeBytesSelected": false
+      "workingTreeBytesSelected": false,
+      "checkpointRef": "4773c30624de598d64af484a4c368272e83496b4"
     }
   },
   "providerPackage": {
@@ -49,26 +50,65 @@
     "manifestSource": "provider:packages/platform/provider-implementations/package.json",
     "name": "@agent-teams/provider-implementations",
     "sourceVersion": "0.0.0",
-    "exports": [".", "./composition", "./claude", "./codex", "./opencode", "./session-io"],
+    "exports": [
+      ".",
+      "./composition",
+      "./claude",
+      "./codex",
+      "./opencode",
+      "./session-io"
+    ],
     "declaredNodeEngineRange": ">=24.21.0 <25 || >=26.11.1 <27",
-    "peerDependencies": {
-      "@agent-teams/agent-execution": "workspace:*"
-    },
     "artifact": {
-      "status": "selected tarball bytes; source checkpoint/remaining owning gates pending",
-      "sha256": "93d6ecaf571c3496924cf9c68cc3c2055e1ae4f097fbb62ec132d2a01b06a893",
-      "contractsSha256": "269f80a74b6d9f42d8018b78948e3178cd09c42c2ecd5441e34d0c7e77cf4151",
-      "sourceCommit": null,
-      "packedTechnicalProof": "docs/plans/provider-migration/evidence/p1-packed-host-walk.tgz",
-      "packedTechnicalProofSha256": "be475b8ffee3c566bc8051d0b8c5fc52182d6424213871376def2aca6c653275",
-      "contractsNativeProofOriginalSha256": "d6a2351a672efe91d359356c4ed56b6b8aa28dbf5e05a0557de2716dea7b404f",
-      "contractsDeltaProof": "docs/plans/provider-migration/evidence/p1-contracts-artifact-delta.json",
+      "status": "selected successor installed; first actual native Team/Runtime/MCP slice passed",
+      "sha256": "68fa190a9abc2d8f128e0247ffc0f9bc8c3287c3adecf9f95d653184775122f3",
+      "contractsSha256": "9b40cdd4865d1e9767738159df6f125517f2e04e39f879ca99731b97ba1a78ef",
+      "sourceCommit": "4773c30624de598d64af484a4c368272e83496b4",
+      "localPaths": [
+        "vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-implementations-0.0.0.tgz",
+        "vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-session-contracts-0.0.0.tgz"
+      ],
+      "peerDependencies": {},
+      "contractsDependency": "@agent-teams/provider-session-contracts@0.0.0 via exact local override",
+      "owningGateEvidence": "docs/plans/provider-migration/evidence/p1-claude-capabilities-handoff.json",
       "qualifiedProfiles": [
-        "Node24.21 darwin-arm64 technical packed composition; no Team/UI/real auth qualification"
-      ]
+        "Node24.21 darwin-arm64; single member Claude SDK0.3.305 with real MCP/Team/Runtime and localhost inference; no full team/UI/real auth qualification"
+      ],
+      "predecessor": {
+        "status": "selected and integrated local tarball bytes; focused owning gates passed, Linux aggregate pending",
+        "sha256": "93d6ecaf571c3496924cf9c68cc3c2055e1ae4f097fbb62ec132d2a01b06a893",
+        "contractsSha256": "269f80a74b6d9f42d8018b78948e3178cd09c42c2ecd5441e34d0c7e77cf4151",
+        "sourceCommit": "c4235e029d6395cdcb385844ad6046d6f94d3449",
+        "packedTechnicalProof": "docs/plans/provider-migration/evidence/p1-packed-host-walk.tgz",
+        "packedTechnicalProofSha256": "be475b8ffee3c566bc8051d0b8c5fc52182d6424213871376def2aca6c653275",
+        "contractsNativeProofOriginalSha256": "d6a2351a672efe91d359356c4ed56b6b8aa28dbf5e05a0557de2716dea7b404f",
+        "contractsDeltaProof": "docs/plans/provider-migration/evidence/p1-contracts-artifact-delta.json",
+        "qualifiedProfiles": [
+          "Node24.21 darwin-arm64 technical packed composition; no Team/UI/real auth qualification"
+        ],
+        "sourceFinalCheckpoint": "dfc1aa5ce1d357b732f66b9294651f96799c140a",
+        "localPaths": [
+          "vendor/provider-migration/agent-teams-provider-implementations-0.0.0.tgz",
+          "vendor/provider-migration/agent-teams-provider-session-contracts-0.0.0.tgz"
+        ],
+        "peerDependencies": {},
+        "contractsDependency": "@agent-teams/provider-session-contracts@0.0.0 via exact local override",
+        "owningGateEvidence": "docs/plans/provider-migration/evidence/p1-provider-package-handoff.json",
+        "pendingGate": "unchanged Linux check:fast aggregate requires Bash>=4; Mac Bash3.2 mapfile unsupported"
+      },
+      "note": "P1 predecessor native proof remains separately bound to its old bytes; successor requires its own actual native integration proof.",
+      "nativeTechnicalProof": {
+        "path": "docs/plans/provider-migration/evidence/p4-claude-team-native-v1.tar.gz",
+        "sha256": "75dd7aa070aca8ccae6b167ac5939127332bad6d5e5296f478d4c50fc988bfba",
+        "passedReceiptSha256": "ef42979ca844f3c57e1dcedc5c0e2aee8fcc5f74fa0777cc9ac6677775de5041",
+        "scope": "First in-process Team + Runtime + real MCP/native SDK proof; not host stdio/Desktop/mixed-team/full P4"
+      }
     },
     "historicalArchiveDigestsSelected": false,
-    "note": "Source commit is coherent; earlier independently qualified archives are references, not the selected deliverable"
+    "note": "Baseline source remains donor oracle; selected artifact comes from isolated provider checkpoint, contains no agent-execution dependency. Product parity remains open.",
+    "baselinePeerDependencies": {
+      "@agent-teams/agent-execution": "workspace:*"
+    }
   },
   "nativeProfiles": [
     {
@@ -97,7 +137,7 @@
       "captureProofSha256": "cdd81486ba1727f93d257c13a1ab93b88282cf67ca9896b8cd59dd3c33b82b63"
     },
     {
-      "provider": "opencode-selected-dialect",
+      "provider": "opencode-v1-native-parts",
       "status": "direct-native capture feasibility only; D/host/product integration pending",
       "nativeVersion": "1.18.35",
       "artifactDigest": "8c3c351b138cfe35905ab11846a1373f1beea590aee7eda412fb765b72c79d82",
@@ -106,7 +146,8 @@
       "realAuthQualified": false,
       "nativeParityQualified": false,
       "captureProofArtifact": "docs/plans/provider-migration/evidence/p1-native-capture-feasibility.tar.gz",
-      "captureProofSha256": "cdd81486ba1727f93d257c13a1ab93b88282cf67ca9896b8cd59dd3c33b82b63"
+      "captureProofSha256": "cdd81486ba1727f93d257c13a1ab93b88282cf67ca9896b8cd59dd3c33b82b63",
+      "selectionReason": "Selected existing native file-parts path; current D V2 text/queue endpoint has no qualified attachment wire. V1 D integration/native parity still pending."
     }
   ],
   "nodeProfile": {
@@ -130,35 +171,65 @@
       ],
       "to": "D private profile/environment/options + native management with identical account namespace",
       "status": "source mapped; exact effective effort/permissions/context/settings and auth namespace pending native profile selection",
-      "seamIds": ["claude-driver", "context-compaction", "provider-management"],
+      "seamIds": [
+        "claude-driver",
+        "context-compaction",
+        "provider-management"
+      ],
       "doNotInfer": "UI metadata or readable secret paths do not prove effective native configuration"
     },
     {
       "from": "D ClaudeConfig custody.launch/confirmStopped, sessionExists and probe",
       "to": "Runtime captured-process custody, durable checkpoint publication and readiness adapter",
       "status": "required injected ports identified; implementation and native qualification pending",
-      "seamIds": ["claude-driver", "stop-custody", "provider-session-spi"]
+      "seamIds": [
+        "claude-driver",
+        "stop-custody",
+        "provider-session-spi"
+      ]
     }
   ],
   "attachmentSourceContract": {
     "source": "frontend:src/features/agent-attachments/core/domain/capabilities.ts",
     "mimeSource": "frontend:src/features/agent-attachments/core/domain/mimeTypes.ts",
     "claude": {
-      "images": ["image/png", "image/jpeg", "image/webp", "image/gif"],
-      "files": ["application/pdf", "text/*"],
+      "images": [
+        "image/png",
+        "image/jpeg",
+        "image/webp",
+        "image/gif"
+      ],
+      "files": [
+        "application/pdf",
+        "text/*"
+      ],
       "video": false
     },
     "codex": {
-      "images": ["image/png", "image/jpeg", "image/webp"],
+      "images": [
+        "image/png",
+        "image/jpeg",
+        "image/webp"
+      ],
       "nonImageFiles": false,
       "video": false
     },
     "opencode": {
-      "images": ["image/png", "image/jpeg", "image/webp"],
+      "images": [
+        "image/png",
+        "image/jpeg",
+        "image/webp"
+      ],
       "modelPolicy": "Exact VERIFIED_OPENCODE_IMAGE_MODELS allowlist in source; unknown/nonvision targets are rejected",
       "video": {
-        "models": ["minimax-coding-plan/minimax-m3"],
-        "mimeTypes": ["video/mp4", "video/webm", "video/quicktime"]
+        "models": [
+          "minimax-coding-plan/minimax-m3"
+        ],
+        "mimeTypes": [
+          "video/mp4",
+          "video/webm",
+          "video/quicktime"
+        ]
       },
       "nonImageFiles": false
     },
@@ -169,11 +240,17 @@
   "seams": [
     {
       "id": "team-roster-bootstrap",
-      "matrixIds": ["M01", "M02"],
+      "matrixIds": [
+        "M01",
+        "M02"
+      ],
       "useCases": [
         "Create/delete team; preserve member identity and expected roster; bootstrap initial context; partial launch and scoped retry"
       ],
-      "targetOwners": ["Team", "Runtime"],
+      "targetOwners": [
+        "Team",
+        "Runtime"
+      ],
       "replacementPort": "Team launch/roster use cases -> Runtime open/readiness/control with immutable member generation",
       "sources": [
         "frontend:src/main/services/team/provisioning/TeamProvisioningMemberIdentity.ts",
@@ -197,11 +274,16 @@
     },
     {
       "id": "task-policy",
-      "matrixIds": ["M03", "M13"],
+      "matrixIds": [
+        "M03",
+        "M13"
+      ],
       "useCases": [
         "Task CRUD, assign/claim, dependencies, reopen/restore, comments; task review/start/request changes/approve; lifecycle and cascade notifications"
       ],
-      "targetOwners": ["Team"],
+      "targetOwners": [
+        "Team"
+      ],
       "replacementPort": "Authoritative Team task/review/kanban command/query handlers shared by Desktop and MCP",
       "sources": [
         "frontend:agent-teams-controller/src/internal/taskBoard.js",
@@ -210,7 +292,12 @@
         "frontend:agent-teams-controller/src/internal/kanban.js",
         "frontend:agent-teams-controller/src/internal/taskLifecycle.js",
         "frontend:src/main/services/team/TeamTaskWriter.ts",
-        "frontend:src/main/services/team/TeamTaskReader.ts"
+        "frontend:src/main/services/team/TeamTaskReader.ts",
+        "frontend:agent-teams-controller/src/index.js",
+        "frontend:agent-teams-controller/src/controller.js",
+        "frontend:agent-teams-controller/src/internal/context.js",
+        "frontend:agent-teams-controller/src/internal/fileLock.js",
+        "frontend:agent-teams-controller/src/internal/atomicFile.js"
       ],
       "existingOracles": [
         "frontend:agent-teams-controller/test/taskLifecycle.test.js",
@@ -226,11 +313,20 @@
     },
     {
       "id": "controller-mcp-writers",
-      "matrixIds": ["M01", "M03", "M04", "M05", "M19"],
+      "matrixIds": [
+        "M01",
+        "M03",
+        "M04",
+        "M05",
+        "M19"
+      ],
       "useCases": [
         "Register authoritative task/message/process tools; derive trusted actor from connection; route mutations to shared owner"
       ],
-      "targetOwners": ["Team", "Desktop"],
+      "targetOwners": [
+        "Team",
+        "Desktop"
+      ],
       "replacementPort": "Injected Team handlers plus authenticated MCP principal and stable command identity",
       "sources": [
         "frontend:mcp-server/src/controller.ts",
@@ -251,11 +347,17 @@
     },
     {
       "id": "command-recovery",
-      "matrixIds": ["M03", "M08"],
+      "matrixIds": [
+        "M03",
+        "M08"
+      ],
       "useCases": [
         "Persist command identity, replay outcomes, reconcile stale Started records, fence late original writers"
       ],
-      "targetOwners": ["Team", "Runtime"],
+      "targetOwners": [
+        "Team",
+        "Runtime"
+      ],
       "replacementPort": "Shared authority/resource fence and command receipt store -> Runtime admission/handoff",
       "sources": [
         "frontend:src/features/application-command-ledger/core/application/ApplicationCommandRunner.ts",
@@ -275,11 +377,17 @@
     },
     {
       "id": "direct-delivery",
-      "matrixIds": ["M04", "M08"],
+      "matrixIds": [
+        "M04",
+        "M08"
+      ],
       "useCases": [
         "Human/peer messages, user replies, feed identity, delivery receipt/reconciliation; persistent teammates distinct from SDK children"
       ],
-      "targetOwners": ["Team", "Runtime"],
+      "targetOwners": [
+        "Team",
+        "Runtime"
+      ],
       "replacementPort": "Team recipient/effect ID -> Runtime durable submit/list/discard; observational message feed",
       "sources": [
         "frontend:src/main/services/team/TeamInboxWriter.ts",
@@ -302,28 +410,45 @@
     },
     {
       "id": "queued-message-cancel",
-      "matrixIds": ["M04", "M08", "M18"],
+      "matrixIds": [
+        "M04",
+        "M08",
+        "M18"
+      ],
       "useCases": [
         "List queued user messages; discard exact listed IDs without deleting late arrivals; cancel durable unclaimed input"
       ],
-      "targetOwners": ["Team", "Runtime", "Desktop"],
+      "targetOwners": [
+        "Team",
+        "Runtime",
+        "Desktop"
+      ],
       "replacementPort": "Team queued list/discard -> Runtime cancellation fence + same-owner inbox mutation",
       "sources": [
         "frontend:src/main/ipc/teams.ts",
         "frontend:src/main/ipc/teams/teamQueuedUserMessages.ts"
       ],
-      "existingOracles": ["frontend:test/main/ipc/teams/teamQueuedUserMessages.test.ts"],
+      "existingOracles": [
+        "frontend:test/main/ipc/teams/teamQueuedUserMessages.test.ts"
+      ],
       "disposition": "Migrate inbox writer and durable input cancellation together; preserve UNKNOWN",
-      "unresolved": ["Current inbox-only mutation is not sufficient for new durable input queue"],
+      "unresolved": [
+        "Current inbox-only mutation is not sufficient for new durable input queue"
+      ],
       "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
     },
     {
       "id": "group-cross-team",
-      "matrixIds": ["M05", "M12"],
+      "matrixIds": [
+        "M05",
+        "M12"
+      ],
       "useCases": [
         "Group addressing and recipient deduplication; cross-team outbox/reply; preserve original TaskRef owner"
       ],
-      "targetOwners": ["Team"],
+      "targetOwners": [
+        "Team"
+      ],
       "replacementPort": "Team group/cross-team command use cases -> recipient-bound Runtime delivery",
       "sources": [
         "fork:src/utils/groupMailbox.ts",
@@ -335,16 +460,27 @@
         "frontend:src/main/services/team/__tests__/CrossTeamOutbox.test.ts"
       ],
       "disposition": "Reuse product recipients/outbox IDs; no lead relay or foreign backend adoption",
-      "unresolved": ["Cross-team host-routing identity and recovery composition pending P2/P5"],
+      "unresolved": [
+        "Cross-team host-routing identity and recovery composition pending P2/P5"
+      ],
       "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
     },
     {
       "id": "provider-session-spi",
-      "matrixIds": ["M02", "M06", "M07", "M08", "M09"],
+      "matrixIds": [
+        "M02",
+        "M06",
+        "M07",
+        "M08",
+        "M09"
+      ],
       "useCases": [
         "Open/submit/observe/respondToInteraction/interrupt/checkReadiness/checkpoint/close"
       ],
-      "targetOwners": ["Runtime", "D"],
+      "targetOwners": [
+        "Runtime",
+        "D"
+      ],
       "replacementPort": "Consumer-owned Session SPI in minimal contracts artifact, compatibility re-export from agent-execution",
       "sources": [
         "provider:packages/platform/provider-implementations/package.json",
@@ -366,11 +502,23 @@
     },
     {
       "id": "claude-driver",
-      "matrixIds": ["M02", "M06", "M07", "M09", "M10", "M11", "M15"],
+      "matrixIds": [
+        "M02",
+        "M06",
+        "M07",
+        "M09",
+        "M10",
+        "M11",
+        "M15"
+      ],
       "useCases": [
         "Official SDK session and readiness; targeted control; selected checkpoint restore; native configuration and hooks; ordinary solo DO Agent child"
       ],
-      "targetOwners": ["D", "Runtime", "Team"],
+      "targetOwners": [
+        "D",
+        "Runtime",
+        "Team"
+      ],
       "replacementPort": "Public createClaudeDriverFactory with host-owned config/custody/checkpoint storage; Team context policy",
       "sources": [
         "provider:packages/platform/provider-implementations/src/claude.ts",
@@ -396,11 +544,22 @@
     },
     {
       "id": "codex-driver",
-      "matrixIds": ["M02", "M06", "M07", "M09", "M11", "M14", "M15"],
+      "matrixIds": [
+        "M02",
+        "M06",
+        "M07",
+        "M09",
+        "M11",
+        "M14",
+        "M15"
+      ],
       "useCases": [
         "Native app-server session, interactions/control, text/tool/usage observations, compatible selected checkpoint restore"
       ],
-      "targetOwners": ["D", "Runtime"],
+      "targetOwners": [
+        "D",
+        "Runtime"
+      ],
       "replacementPort": "Public createCodexDriverFactory; private native protocol behind Session SPI",
       "sources": [
         "provider:packages/platform/provider-implementations/src/codex.ts",
@@ -424,11 +583,21 @@
     },
     {
       "id": "opencode-driver",
-      "matrixIds": ["M02", "M06", "M07", "M09", "M11", "M15"],
+      "matrixIds": [
+        "M02",
+        "M06",
+        "M07",
+        "M09",
+        "M11",
+        "M15"
+      ],
       "useCases": [
         "HTTP/ACP profile session, selected native binding, terminal cut/control, permissions and shared backing isolation"
       ],
-      "targetOwners": ["D", "Runtime"],
+      "targetOwners": [
+        "D",
+        "Runtime"
+      ],
       "replacementPort": "Public OpenCode driver factory chosen by explicit qualified profile; scoped session control",
       "sources": [
         "provider:packages/platform/provider-implementations/src/opencode.ts",
@@ -451,11 +620,19 @@
     },
     {
       "id": "stop-custody",
-      "matrixIds": ["M07", "M08", "M18"],
+      "matrixIds": [
+        "M07",
+        "M08",
+        "M18"
+      ],
       "useCases": [
         "Targeted interrupt/cancel; team/member stop; seal/drain, retain UNKNOWN custody; close pending opens during app exit"
       ],
-      "targetOwners": ["Runtime", "Team", "Desktop"],
+      "targetOwners": [
+        "Runtime",
+        "Team",
+        "Desktop"
+      ],
       "replacementPort": "Team stop policy -> Runtime current-authority operation/control and captured-process cleanup",
       "sources": [
         "frontend:src/main/services/team/provisioning/TeamProvisioningProcessExit.ts",
@@ -475,11 +652,18 @@
     },
     {
       "id": "context-compaction",
-      "matrixIds": ["M10", "M11"],
+      "matrixIds": [
+        "M10",
+        "M11"
+      ],
       "useCases": [
         "Project/role/team context, post-compact reminder, effective selected settings, private/internal event semantics"
       ],
-      "targetOwners": ["Team", "Runtime", "D"],
+      "targetOwners": [
+        "Team",
+        "Runtime",
+        "D"
+      ],
       "replacementPort": "D observation -> single Team reminder owner -> Runtime admitted context input",
       "sources": [
         "frontend:src/main/services/team/provisioning/TeamProvisioningStreamEvents.ts",
@@ -498,11 +682,20 @@
     },
     {
       "id": "message-attachments",
-      "matrixIds": ["M04", "M10", "M15"],
+      "matrixIds": [
+        "M04",
+        "M10",
+        "M15"
+      ],
       "useCases": [
         "Recipient/model/MIME restrictions; artifact bytes retained across queued native delivery; structured native parts"
       ],
-      "targetOwners": ["Team", "Runtime", "D", "Desktop"],
+      "targetOwners": [
+        "Team",
+        "Runtime",
+        "D",
+        "Desktop"
+      ],
       "replacementPort": "Host artifact references in Runtime input -> D native content parts; Desktop upload validation",
       "sources": [
         "frontend:src/features/agent-attachments/core/domain/capabilities.ts",
@@ -526,11 +719,17 @@
     },
     {
       "id": "task-comment-blobs",
-      "matrixIds": ["M03", "M16"],
+      "matrixIds": [
+        "M03",
+        "M16"
+      ],
       "useCases": [
         "Task/comment attachment storage, IPC authorization and metadata binding, restart/restore retention"
       ],
-      "targetOwners": ["Team", "Desktop"],
+      "targetOwners": [
+        "Team",
+        "Desktop"
+      ],
       "replacementPort": "Team blob command/query port with captured storage owner; Desktop IPC becomes adapter",
       "sources": [
         "frontend:src/main/services/team/TeamTaskAttachmentStore.ts",
@@ -548,11 +747,19 @@
     },
     {
       "id": "logs-usage-projection",
-      "matrixIds": ["M11", "M14"],
+      "matrixIds": [
+        "M11",
+        "M14"
+      ],
       "useCases": [
         "Member log streams, task activity/provenance, usage/context totals and notification actions"
       ],
-      "targetOwners": ["D", "Runtime", "Team", "Desktop"],
+      "targetOwners": [
+        "D",
+        "Runtime",
+        "Team",
+        "Desktop"
+      ],
       "replacementPort": "Runtime observation feed -> Team task attribution -> Desktop log/usage read model",
       "sources": [
         "frontend:src/features/member-log-stream/main/composition/createMemberLogStreamFeature.ts",
@@ -574,18 +781,28 @@
     },
     {
       "id": "structured-taskrefs",
-      "matrixIds": ["M05", "M12", "M16", "M18"],
+      "matrixIds": [
+        "M05",
+        "M12",
+        "M16",
+        "M18"
+      ],
       "useCases": [
         "Persist/render encoded TaskRefs and exact team/task navigation; preserve external owner during offline import"
       ],
-      "targetOwners": ["Team", "Desktop"],
+      "targetOwners": [
+        "Team",
+        "Desktop"
+      ],
       "replacementPort": "Owner-qualified TaskRef DTO and explicit import identity map; original-owner navigation",
       "sources": [
         "frontend:src/shared/types/teamBoardTask.ts",
         "frontend:src/renderer/utils/taskReferenceUtils.ts",
         "frontend:src/renderer/hooks/useTaskSuggestions.ts"
       ],
-      "existingOracles": ["frontend:test/renderer/utils/taskReferenceUtils.test.ts"],
+      "existingOracles": [
+        "frontend:test/renderer/utils/taskReferenceUtils.test.ts"
+      ],
       "disposition": "Extend identity at public boundary without blanket rebinding external references",
       "unresolved": [
         "Owner qualification schema and encoded-reference compatibility mapping pending P1/P5"
@@ -594,11 +811,17 @@
     },
     {
       "id": "change-capture",
-      "matrixIds": ["M13"],
+      "matrixIds": [
+        "M13"
+      ],
       "useCases": [
         "Before/final bytes, exact task/window/session/member attribution, failed/post-hook/background outcomes; authored native chain"
       ],
-      "targetOwners": ["Runtime", "Team", "D"],
+      "targetOwners": [
+        "Runtime",
+        "Team",
+        "D"
+      ],
       "replacementPort": "D technical observations/capture -> Runtime immutable binding -> Team evidence writer",
       "sources": [
         "fork:src/services/tools/toolExecution.ts",
@@ -623,11 +846,17 @@
     },
     {
       "id": "review-owner-readers",
-      "matrixIds": ["M13", "M18"],
+      "matrixIds": [
+        "M13",
+        "M18"
+      ],
       "useCases": [
         "Changes read-side backfill, file Apply/Reject, partial decisions, edited-file save/delete, Undo/Redo/history/recovery"
       ],
-      "targetOwners": ["Team", "Desktop"],
+      "targetOwners": [
+        "Team",
+        "Desktop"
+      ],
       "replacementPort": "Team revisioned evidence/review mutation port; Desktop read-only projection after host ownership",
       "sources": [
         "frontend:src/main/services/team/ChangeExtractorService.ts",
@@ -650,11 +879,18 @@
     },
     {
       "id": "provider-management",
-      "matrixIds": ["M02", "M15"],
+      "matrixIds": [
+        "M02",
+        "M15"
+      ],
       "useCases": [
         "Provider discovery/auth/setup/config and selected account namespace; native management without fork executor"
       ],
-      "targetOwners": ["D", "Desktop", "Runtime"],
+      "targetOwners": [
+        "D",
+        "Desktop",
+        "Runtime"
+      ],
       "replacementPort": "Existing RuntimeProviderManagementPort -> native management adapter + same account/profile binding",
       "sources": [
         "frontend:src/features/runtime-provider-management/core/application/RuntimeProviderManagementPort.ts",
@@ -674,11 +910,20 @@
     },
     {
       "id": "saved-team-lifecycle-backup",
-      "matrixIds": ["M01", "M03", "M12", "M16"],
+      "matrixIds": [
+        "M01",
+        "M03",
+        "M12",
+        "M16"
+      ],
       "useCases": [
         "Offline saved-team relaunch with new execution owner; trash/restore/member restore; identity-fenced purge; backup startup reconcile/prune/work-sync restore"
       ],
-      "targetOwners": ["Team", "Desktop", "Runtime"],
+      "targetOwners": [
+        "Team",
+        "Desktop",
+        "Runtime"
+      ],
       "replacementPort": "Scoped offline import + Team lifecycle/backup ports; Runtime reconciles retained obligations without old execution adoption",
       "sources": [
         "frontend:src/renderer/components/team/dialogs/teamRelaunchFlow.ts",
@@ -705,11 +950,18 @@
     },
     {
       "id": "node-packaging-transport",
-      "matrixIds": ["M17", "M18"],
+      "matrixIds": [
+        "M17",
+        "M18"
+      ],
       "useCases": [
         "Standalone host bootstrap/handshake; clean bounded stdio; candidate Node/provider artifact staging and install"
       ],
-      "targetOwners": ["Desktop", "Runtime", "D"],
+      "targetOwners": [
+        "Desktop",
+        "Runtime",
+        "D"
+      ],
       "replacementPort": "Desktop backend client -> captured standalone Node host; package composition uses minimal SPI artifact",
       "sources": [
         "frontend:src/main/services/infrastructure/codexAppServer/JsonRpcStdioClient.ts",
@@ -734,11 +986,17 @@
     },
     {
       "id": "desktop-routing-shutdown",
-      "matrixIds": ["M18"],
+      "matrixIds": [
+        "M18"
+      ],
       "useCases": [
         "IPC/HTTP host routing, snapshot/replay feeds, cache consistency, original owner/generation, Quit/Relaunch ingress seal"
       ],
-      "targetOwners": ["Desktop", "Runtime", "Team"],
+      "targetOwners": [
+        "Desktop",
+        "Runtime",
+        "Team"
+      ],
       "replacementPort": "agent-backend public feature API -> stdio host command/query/observation transport",
       "sources": [
         "frontend:src/renderer/api/index.ts",
@@ -759,11 +1017,17 @@
     },
     {
       "id": "background-services",
-      "matrixIds": ["M19"],
+      "matrixIds": [
+        "M19"
+      ],
       "useCases": [
         "Register/list/health/history/restart; scoped UI process stop; metadata-only removal distinct from physical stop and teammate readiness"
       ],
-      "targetOwners": ["Team", "Runtime", "Desktop"],
+      "targetOwners": [
+        "Team",
+        "Runtime",
+        "Desktop"
+      ],
       "replacementPort": "Team process registry -> Runtime captured process-control adapter -> Desktop ProcessesSection",
       "sources": [
         "frontend:mcp-server/src/tools/processTools.ts",
@@ -771,7 +1035,9 @@
         "frontend:src/main/services/team/TeamDataService.ts",
         "frontend:src/renderer/components/team/ProcessesSection.tsx"
       ],
-      "existingOracles": ["frontend:test/renderer/components/team/ProcessesSection.test.tsx"],
+      "existingOracles": [
+        "frontend:test/renderer/components/team/ProcessesSection.test.tsx"
+      ],
       "disposition": "Extract registry use cases and health/killProcess path; forbid OS action for stale/foreign binding",
       "unresolved": [
         "Exact processHealthTick/killProcess transitive closure and runtime OS authority oracle pending P2/P6"
@@ -781,7 +1047,11 @@
   ],
   "matrixCoverage": {
     "M01": {
-      "seamIds": ["team-roster-bootstrap", "controller-mcp-writers", "saved-team-lifecycle-backup"],
+      "seamIds": [
+        "team-roster-bootstrap",
+        "controller-mcp-writers",
+        "saved-team-lifecycle-backup"
+      ],
       "status": "mapped to representative sources/oracles; not implemented or accepted"
     },
     "M02": {
@@ -815,11 +1085,20 @@
       "status": "mapped to representative sources/oracles; not implemented or accepted"
     },
     "M05": {
-      "seamIds": ["controller-mcp-writers", "group-cross-team", "structured-taskrefs"],
+      "seamIds": [
+        "controller-mcp-writers",
+        "group-cross-team",
+        "structured-taskrefs"
+      ],
       "status": "mapped to representative sources/oracles; not implemented or accepted"
     },
     "M06": {
-      "seamIds": ["provider-session-spi", "claude-driver", "codex-driver", "opencode-driver"],
+      "seamIds": [
+        "provider-session-spi",
+        "claude-driver",
+        "codex-driver",
+        "opencode-driver"
+      ],
       "status": "mapped to representative sources/oracles; not implemented or accepted"
     },
     "M07": {
@@ -843,11 +1122,20 @@
       "status": "mapped to representative sources/oracles; not implemented or accepted"
     },
     "M09": {
-      "seamIds": ["provider-session-spi", "claude-driver", "codex-driver", "opencode-driver"],
+      "seamIds": [
+        "provider-session-spi",
+        "claude-driver",
+        "codex-driver",
+        "opencode-driver"
+      ],
       "status": "mapped to representative sources/oracles; not implemented or accepted"
     },
     "M10": {
-      "seamIds": ["claude-driver", "context-compaction", "message-attachments"],
+      "seamIds": [
+        "claude-driver",
+        "context-compaction",
+        "message-attachments"
+      ],
       "status": "mapped to representative sources/oracles; not implemented or accepted"
     },
     "M11": {
@@ -861,15 +1149,26 @@
       "status": "mapped to representative sources/oracles; not implemented or accepted"
     },
     "M12": {
-      "seamIds": ["group-cross-team", "structured-taskrefs", "saved-team-lifecycle-backup"],
+      "seamIds": [
+        "group-cross-team",
+        "structured-taskrefs",
+        "saved-team-lifecycle-backup"
+      ],
       "status": "mapped to representative sources/oracles; not implemented or accepted"
     },
     "M13": {
-      "seamIds": ["task-policy", "change-capture", "review-owner-readers"],
+      "seamIds": [
+        "task-policy",
+        "change-capture",
+        "review-owner-readers"
+      ],
       "status": "mapped to representative sources/oracles; not implemented or accepted"
     },
     "M14": {
-      "seamIds": ["codex-driver", "logs-usage-projection"],
+      "seamIds": [
+        "codex-driver",
+        "logs-usage-projection"
+      ],
       "status": "mapped to representative sources/oracles; not implemented or accepted"
     },
     "M15": {
@@ -883,11 +1182,17 @@
       "status": "mapped to representative sources/oracles; not implemented or accepted"
     },
     "M16": {
-      "seamIds": ["task-comment-blobs", "structured-taskrefs", "saved-team-lifecycle-backup"],
+      "seamIds": [
+        "task-comment-blobs",
+        "structured-taskrefs",
+        "saved-team-lifecycle-backup"
+      ],
       "status": "mapped to representative sources/oracles; not implemented or accepted"
     },
     "M17": {
-      "seamIds": ["node-packaging-transport"],
+      "seamIds": [
+        "node-packaging-transport"
+      ],
       "status": "mapped to representative sources/oracles; not implemented or accepted"
     },
     "M18": {
@@ -902,7 +1207,10 @@
       "status": "mapped to representative sources/oracles; not implemented or accepted"
     },
     "M19": {
-      "seamIds": ["controller-mcp-writers", "background-services"],
+      "seamIds": [
+        "controller-mcp-writers",
+        "background-services"
+      ],
       "status": "mapped to representative sources/oracles; not implemented or accepted"
     }
   },
@@ -984,14 +1292,22 @@
       "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
       "path": "src/tools/TeamDeleteTool/TeamDeleteTool.ts",
       "blobOid": "f09f78c30b47b27165bcb9b318c887886f5bc26b",
-      "declarationExamples": ["inputSchema", "InputSchema", "Output", "Input", "TeamDeleteTool"]
+      "declarationExamples": [
+        "inputSchema",
+        "InputSchema",
+        "Output",
+        "Input",
+        "TeamDeleteTool"
+      ]
     },
     "frontend:test/main/services/team/TeamProvisioningServiceRoster.test.ts": {
       "repository": "frontend",
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "test/main/services/team/TeamProvisioningServiceRoster.test.ts",
       "blobOid": "e0dde1d6455a2b35cbecfa1aa749cebc3cfb3053",
-      "declarationExamples": ["makePorts"]
+      "declarationExamples": [
+        "makePorts"
+      ]
     },
     "frontend:test/main/services/team/TeamProvisioningMemberIdentity.test.ts": {
       "repository": "frontend",
@@ -1085,7 +1401,9 @@
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "agent-teams-controller/src/internal/taskLifecycle.js",
       "blobOid": "7377c3f2fadda29695ae0936740fd6cf9274147f",
-      "declarationExamples": ["isTaskOpen"]
+      "declarationExamples": [
+        "isTaskOpen"
+      ]
     },
     "frontend:src/main/services/team/TeamTaskWriter.ts": {
       "repository": "frontend",
@@ -1127,14 +1445,21 @@
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "agent-teams-controller/test/taskDependencyTransitions.test.js",
       "blobOid": "ddc196ce70eeadf6e8921d1aef40a648112d3db6",
-      "declarationExamples": ["fs", "os", "path", "transitions"]
+      "declarationExamples": [
+        "fs",
+        "os",
+        "path",
+        "transitions"
+      ]
     },
     "frontend:agent-teams-controller/test/cascadeGuard.test.js": {
       "repository": "frontend",
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "agent-teams-controller/test/cascadeGuard.test.js",
       "blobOid": "7573a60e5dadbecec2ccf4de892f14b7e7b9b6d4",
-      "declarationExamples": ["cascadeGuard"]
+      "declarationExamples": [
+        "cascadeGuard"
+      ]
     },
     "frontend:mcp-server/src/controller.ts": {
       "repository": "frontend",
@@ -1172,14 +1497,20 @@
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "mcp-server/src/tools/messageTools.ts",
       "blobOid": "c3a9f629edbbed860d7a5ac420d4f50dfa4d6d0b",
-      "declarationExamples": ["toolContextSchema", "registerMessageTools"]
+      "declarationExamples": [
+        "toolContextSchema",
+        "registerMessageTools"
+      ]
     },
     "frontend:mcp-server/src/tools/processTools.ts": {
       "repository": "frontend",
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "mcp-server/src/tools/processTools.ts",
       "blobOid": "4038c52a3593002d28c3ff6b112c4a50c8ab2c00",
-      "declarationExamples": ["toolContextSchema", "registerProcessTools"]
+      "declarationExamples": [
+        "toolContextSchema",
+        "registerProcessTools"
+      ]
     },
     "frontend:src/main/services/team/AgentTeamsMcpHttpServer.ts": {
       "repository": "frontend",
@@ -1281,7 +1612,11 @@
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "mcp-server/test/taskCreationIdempotency.integration.test.ts",
       "blobOid": "853b45ae064035aaf20899c5a2b5703e68ada624",
-      "declarationExamples": ["RegisteredTool", "collectTools", "parseJsonToolResult"]
+      "declarationExamples": [
+        "RegisteredTool",
+        "collectTools",
+        "parseJsonToolResult"
+      ]
     },
     "frontend:src/main/services/team/TeamInboxWriter.ts": {
       "repository": "frontend",
@@ -1368,21 +1703,28 @@
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "src/main/services/team/__tests__/TeamInboxWriter.test.ts",
       "blobOid": "a299cec063313f97863fb4e5a19987f76b6f0623",
-      "declarationExamples": ["hoisted"]
+      "declarationExamples": [
+        "hoisted"
+      ]
     },
     "frontend:test/main/services/team/TeamInboxReader.test.ts": {
       "repository": "frontend",
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "test/main/services/team/TeamInboxReader.test.ts",
       "blobOid": "f9fc7b32947cc5cc2793d28a06108e0b931b9f25",
-      "declarationExamples": ["hoisted"]
+      "declarationExamples": [
+        "hoisted"
+      ]
     },
     "frontend:test/main/services/team/TeamMessageFeedService.test.ts": {
       "repository": "frontend",
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "test/main/services/team/TeamMessageFeedService.test.ts",
       "blobOid": "491326ad0294220733d55f434b0cfd294e417faf",
-      "declarationExamples": ["makeMessage", "createDeferred"]
+      "declarationExamples": [
+        "makeMessage",
+        "createDeferred"
+      ]
     },
     "frontend:src/main/ipc/teams.ts": {
       "repository": "frontend",
@@ -1421,7 +1763,13 @@
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "test/main/ipc/teams/teamQueuedUserMessages.test.ts",
       "blobOid": "dd225ec24f15610bbe9c0a4881916d2b36fd9dd3",
-      "declarationExamples": ["TEAM_NAME", "MEMBER", "queuedRow", "deliveredRow", "agentRow"]
+      "declarationExamples": [
+        "TEAM_NAME",
+        "MEMBER",
+        "queuedRow",
+        "deliveredRow",
+        "agentRow"
+      ]
     },
     "fork:src/utils/groupMailbox.ts": {
       "repository": "fork",
@@ -1476,14 +1824,20 @@
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "agent-teams-controller/test/crossTeam.test.js",
       "blobOid": "b07e34ac9cfc99e8919145dbe730b8bda7ea6542",
-      "declarationExamples": ["fs", "os", "path"]
+      "declarationExamples": [
+        "fs",
+        "os",
+        "path"
+      ]
     },
     "frontend:src/main/services/team/__tests__/CrossTeamOutbox.test.ts": {
       "repository": "frontend",
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "src/main/services/team/__tests__/CrossTeamOutbox.test.ts",
       "blobOid": "4715b0d8ae3350e2e3fad73a3c86cc9c1049e099",
-      "declarationExamples": ["makeMessage"]
+      "declarationExamples": [
+        "makeMessage"
+      ]
     },
     "provider:packages/platform/provider-implementations/package.json": {
       "repository": "provider",
@@ -1534,7 +1888,11 @@
       "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
       "path": "packages/platform/provider-implementations/tests/package/install-consumer.ts",
       "blobOid": "cebcec5189a602395288e1df0a974b19d88ffb4f",
-      "declarationExamples": ["retainCheckedArchive", "runConsumer", "installPackedConsumer"]
+      "declarationExamples": [
+        "retainCheckedArchive",
+        "runConsumer",
+        "installPackedConsumer"
+      ]
     },
     "provider:packages/platform/provider-implementations/tests/package/packed-consumer.test.ts": {
       "repository": "provider",
@@ -1580,14 +1938,23 @@
       "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
       "path": "packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/session.ts",
       "blobOid": "ff42d03892b1f2415ca5d7ac1a548c7a08408b9a",
-      "declarationExamples": ["QueryHandle", "QueryFactory", "PendingInput", "ClaudeSession"]
+      "declarationExamples": [
+        "QueryHandle",
+        "QueryFactory",
+        "PendingInput",
+        "ClaudeSession"
+      ]
     },
     "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/open-session.ts": {
       "repository": "provider",
       "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
       "path": "packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/open-session.ts",
       "blobOid": "838ebde32aeef5e9297da4681c4ba3a287f412b4",
-      "declarationExamples": ["ClaudeSdkBoundary", "realBoundary", "openClaudeSession"]
+      "declarationExamples": [
+        "ClaudeSdkBoundary",
+        "realBoundary",
+        "openClaudeSession"
+      ]
     },
     "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/tool-binding.ts": {
       "repository": "provider",
@@ -1610,7 +1977,12 @@
       "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
       "path": "packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/normalize.ts",
       "blobOid": "0ab3ebe4f5b07577eeccaca1b1571cc0ebbcb38f",
-      "declarationExamples": ["Fact", "record", "OutputLimitError", "Normalizer"]
+      "declarationExamples": [
+        "Fact",
+        "record",
+        "OutputLimitError",
+        "Normalizer"
+      ]
     },
     "frontend:src/main/services/team/provisioning/TeamProvisioningPromptBuilders.ts": {
       "repository": "frontend",
@@ -1640,14 +2012,23 @@
       "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
       "path": "packages/platform/provider-implementations/tests/features/provider-session-implementation/claude-sdk/tool-binding.test.ts",
       "blobOid": "f2f86aba1b87db4f61850436256ccbca5db43f66",
-      "declarationExamples": ["input", "names", "invoke", "owner", "deny", "deferred"]
+      "declarationExamples": [
+        "input",
+        "names",
+        "invoke",
+        "owner",
+        "deny",
+        "deferred"
+      ]
     },
     "frontend:test/main/services/team/TeamProvisioningPromptBuilders.test.ts": {
       "repository": "frontend",
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "test/main/services/team/TeamProvisioningPromptBuilders.test.ts",
       "blobOid": "95acccbf4f078d6b7a5f8b4703201f31c8ae61d1",
-      "declarationExamples": ["buildPromptWithStatus"]
+      "declarationExamples": [
+        "buildPromptWithStatus"
+      ]
     },
     "provider:packages/platform/provider-implementations/src/codex.ts": {
       "repository": "provider",
@@ -1661,7 +2042,13 @@
       "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
       "path": "packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-session.ts",
       "blobOid": "db4fcffd64dff762082bf215cad598b65e383734",
-      "declarationExamples": ["failure", "Pending", "Control", "outcome", "CodexDriverSession"]
+      "declarationExamples": [
+        "failure",
+        "Pending",
+        "Control",
+        "outcome",
+        "CodexDriverSession"
+      ]
     },
     "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-config.ts": {
       "repository": "provider",
@@ -1744,21 +2131,31 @@
       "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
       "path": "packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-factory.ts",
       "blobOid": "63982517daa92bb57a0988ceb35ab80503acd219",
-      "declarationExamples": ["OpenCodeV1DriverHost", "supported", "createOpenCodeV1DriverFactory"]
+      "declarationExamples": [
+        "OpenCodeV1DriverHost",
+        "supported",
+        "createOpenCodeV1DriverFactory"
+      ]
     },
     "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-factory.ts": {
       "repository": "provider",
       "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
       "path": "packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-factory.ts",
       "blobOid": "8b04cad0c7a945043c8a3d6f766a46dc52eb6a53",
-      "declarationExamples": ["OpenCodeV2DriverHost", "supported", "createOpenCodeV2DriverFactory"]
+      "declarationExamples": [
+        "OpenCodeV2DriverHost",
+        "supported",
+        "createOpenCodeV2DriverFactory"
+      ]
     },
     "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-session.ts": {
       "repository": "provider",
       "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
       "path": "packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-session.ts",
       "blobOid": "632cc4487fb6d0d5ed9b0950f43e6c1dce494fea",
-      "declarationExamples": ["createV2DriverSession"]
+      "declarationExamples": [
+        "createV2DriverSession"
+      ]
     },
     "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-session-control.ts": {
       "repository": "provider",
@@ -1777,21 +2174,31 @@
       "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
       "path": "packages/platform/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v1-driver.test.ts",
       "blobOid": "837e0a9df611cd0d4592ae6847eb2e7b8fc6b253",
-      "declarationExamples": ["request", "configuration", "factory", "until", "observe"]
+      "declarationExamples": [
+        "request",
+        "configuration",
+        "factory",
+        "until",
+        "observe"
+      ]
     },
     "provider:packages/platform/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-driver-session.test.ts": {
       "repository": "provider",
       "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
       "path": "packages/platform/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-driver-session.test.ts",
       "blobOid": "a349fe84bf693893d86e8d8043fad4099c8447b7",
-      "declarationExamples": ["until"]
+      "declarationExamples": [
+        "until"
+      ]
     },
     "provider:packages/platform/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-control.test.ts": {
       "repository": "provider",
       "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
       "path": "packages/platform/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-control.test.ts",
       "blobOid": "afdf6fb0198d574fb9abb2ab0b659043454c3adf",
-      "declarationExamples": ["peer"]
+      "declarationExamples": [
+        "peer"
+      ]
     },
     "frontend:src/main/services/team/provisioning/TeamProvisioningProcessExit.ts": {
       "repository": "frontend",
@@ -1866,7 +2273,11 @@
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "test/main/index.shutdown-order.test.ts",
       "blobOid": "3115349387ae1fa7222295af3e5a13da1622bb2f",
-      "declarationExamples": ["electronMock", "createDeferred", "flushPromises"]
+      "declarationExamples": [
+        "electronMock",
+        "createDeferred",
+        "flushPromises"
+      ]
     },
     "frontend:src/main/services/team/provisioning/TeamProvisioningStreamEvents.ts": {
       "repository": "frontend",
@@ -2040,21 +2451,28 @@
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "src/features/agent-attachments/main/providers/claudeAttachmentAdapter.test.ts",
       "blobOid": "e1ce91fccbb974aa10dfe83d7bbf918c58dc4c99",
-      "declarationExamples": ["attachment"]
+      "declarationExamples": [
+        "attachment"
+      ]
     },
     "frontend:src/features/agent-attachments/main/providers/codexNativeAttachmentAdapter.test.ts": {
       "repository": "frontend",
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "src/features/agent-attachments/main/providers/codexNativeAttachmentAdapter.test.ts",
       "blobOid": "3a6662fb84a5cecbc121e3a3e4554e6de7f0c9d7",
-      "declarationExamples": ["attachment"]
+      "declarationExamples": [
+        "attachment"
+      ]
     },
     "frontend:src/features/agent-attachments/main/providers/opencodeAttachmentAdapter.test.ts": {
       "repository": "frontend",
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "src/features/agent-attachments/main/providers/opencodeAttachmentAdapter.test.ts",
       "blobOid": "80e5e9ad381e16dabf66f5e92666fbbd38fb35c5",
-      "declarationExamples": ["attachment", "attachmentWithBytes"]
+      "declarationExamples": [
+        "attachment",
+        "attachmentWithBytes"
+      ]
     },
     "frontend:src/main/services/team/TeamTaskAttachmentStore.ts": {
       "repository": "frontend",
@@ -2091,7 +2509,10 @@
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "src/features/token-usage/core/application/TokenUsageAnalyticsService.ts",
       "blobOid": "e0a4096364a43c89e54a2a6e90c6d542a56b1e87",
-      "declarationExamples": ["TokenUsageAnalyticsServiceDeps", "TokenUsageAnalyticsService"]
+      "declarationExamples": [
+        "TokenUsageAnalyticsServiceDeps",
+        "TokenUsageAnalyticsService"
+      ]
     },
     "frontend:src/features/token-usage/core/application/TokenUsageBudgetNotificationEvaluator.ts": {
       "repository": "frontend",
@@ -2146,7 +2567,12 @@
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "src/features/member-log-stream/core/application/use-cases/__tests__/GetMemberLogStreamUseCase.test.ts",
       "blobOid": "358d24d1e2afd65461a5d1c6a3de853b953a1a62",
-      "declarationExamples": ["generatedAt", "participant", "segment", "includedResult"]
+      "declarationExamples": [
+        "generatedAt",
+        "participant",
+        "segment",
+        "includedResult"
+      ]
     },
     "frontend:src/features/token-usage/core/application/__tests__/TokenUsageAnalyticsService.test.ts": {
       "repository": "frontend",
@@ -2452,7 +2878,10 @@
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "test/main/ipc/review.test.ts",
       "blobOid": "5e38690e9fb0aee385b0b5b5da7446d0a39fb50f",
-      "declarationExamples": ["ReviewHandler", "createMockIpcMain"]
+      "declarationExamples": [
+        "ReviewHandler",
+        "createMockIpcMain"
+      ]
     },
     "frontend:test/features/review-mutations/main/ReviewMutationCrash.safe-e2e.test.ts": {
       "repository": "frontend",
@@ -2490,7 +2919,10 @@
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "src/features/runtime-provider-management/core/application/RuntimeProviderManagementPort.ts",
       "blobOid": "6216891385a81da2ebfb6ada44680ee7c16bb6cb",
-      "declarationExamples": ["RuntimeProviderManagementPort", "RuntimeLocalProviderConnectorPort"]
+      "declarationExamples": [
+        "RuntimeProviderManagementPort",
+        "RuntimeLocalProviderConnectorPort"
+      ]
     },
     "frontend:src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts": {
       "repository": "frontend",
@@ -2528,14 +2960,19 @@
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningEnvBuilder.test.ts",
       "blobOid": "f8ed0f7edfa931833203a3dca76cacd796b51fc7",
-      "declarationExamples": ["createPorts"]
+      "declarationExamples": [
+        "createPorts"
+      ]
     },
     "frontend:src/renderer/components/team/dialogs/teamRelaunchFlow.ts": {
       "repository": "frontend",
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "src/renderer/components/team/dialogs/teamRelaunchFlow.ts",
       "blobOid": "2a253732da178baa8ff178d53979fbd665901610",
-      "declarationExamples": ["ExecuteTeamRelaunchOptions", "executeTeamRelaunch"]
+      "declarationExamples": [
+        "ExecuteTeamRelaunchOptions",
+        "executeTeamRelaunch"
+      ]
     },
     "frontend:src/main/ipc/teams/teamSoftDeleteFlow.ts": {
       "repository": "frontend",
@@ -2553,7 +2990,10 @@
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "src/main/services/team/TeamMemberRestorePlan.ts",
       "blobOid": "ad54c9edf73b0d7984f8c5c5348603332d46b431",
-      "declarationExamples": ["TeamMemberRestorePlan", "planTeamMemberRestore"]
+      "declarationExamples": [
+        "TeamMemberRestorePlan",
+        "planTeamMemberRestore"
+      ]
     },
     "frontend:src/main/services/team/permanent-deletion/TeamPermanentDeletionCoordinator.ts": {
       "repository": "frontend",
@@ -2646,7 +3086,10 @@
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "test/main/ipc/teams/teamSoftDeleteFlow.test.ts",
       "blobOid": "d651884f965e6568d29a776303ab5ce8bdfc5905",
-      "declarationExamples": ["STOP_TIMEOUT_MS", "createPorts"]
+      "declarationExamples": [
+        "STOP_TIMEOUT_MS",
+        "createPorts"
+      ]
     },
     "frontend:test/main/services/team/TeamBackupService.test.ts": {
       "repository": "frontend",
@@ -2667,7 +3110,11 @@
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "test/main/services/team/TeamBackupRestoreStartupIsolation.test.ts",
       "blobOid": "f8e4e8e7d9b5abec7fdc6be1ac8a8aea1a6b4d31",
-      "declarationExamples": ["env", "seedBackupTeam", "createSkipCoordinator"]
+      "declarationExamples": [
+        "env",
+        "seedBackupTeam",
+        "createSkipCoordinator"
+      ]
     },
     "frontend:src/main/services/infrastructure/codexAppServer/JsonRpcStdioClient.ts": {
       "repository": "frontend",
@@ -2772,7 +3219,12 @@
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "src/renderer/api/index.ts",
       "blobOid": "c314cd123ebc7a14cb22adb6cba13b3c30ec9afd",
-      "declarationExamples": ["getHttpBaseUrl", "getImpl", "isElectronMode", "api"]
+      "declarationExamples": [
+        "getHttpBaseUrl",
+        "getImpl",
+        "isElectronMode",
+        "api"
+      ]
     },
     "frontend:src/main/ipc/httpServer.ts": {
       "repository": "frontend",
@@ -2795,7 +3247,12 @@
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "test/main/ipc/httpServer.test.ts",
       "blobOid": "749e6e021c43d4448804183b5f3ae4a4f8c5897d",
-      "declarationExamples": ["HttpServerResult", "IpcHandler", "deferred", "createMockIpcMain"]
+      "declarationExamples": [
+        "HttpServerResult",
+        "IpcHandler",
+        "deferred",
+        "createMockIpcMain"
+      ]
     },
     "frontend:agent-teams-controller/src/internal/processStore.js": {
       "repository": "frontend",
@@ -2847,7 +3304,77 @@
       "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
       "path": "test/renderer/components/team/ProcessesSection.test.tsx",
       "blobOid": "7953d49bd738ff4b5187a0b161e96bacff03d2f3",
-      "declarationExamples": ["processRow"]
+      "declarationExamples": [
+        "processRow"
+      ]
+    },
+    "frontend:agent-teams-controller/src/index.js": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "agent-teams-controller/src/index.js",
+      "blobOid": "50bb54f81cb9ebb7077debd9f07ff1281b896ab8",
+      "declarationExamples": [
+        "controller",
+        "mcpToolCatalog"
+      ]
+    },
+    "frontend:agent-teams-controller/src/controller.js": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "agent-teams-controller/src/controller.js",
+      "blobOid": "fbd477b93051841f2b63cd9f0bccdaadf715cc53",
+      "declarationExamples": [
+        "tasks",
+        "kanban",
+        "review",
+        "taskBoard",
+        "messages",
+        "processes",
+        "maintenance",
+        "crossTeam"
+      ]
+    },
+    "frontend:agent-teams-controller/src/internal/context.js": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "agent-teams-controller/src/internal/context.js",
+      "blobOid": "e9dec826b99e66c58b4643c6c32c95753e33b45b",
+      "declarationExamples": [
+        "runtimeHelpers",
+        "createControllerContext"
+      ]
+    },
+    "frontend:agent-teams-controller/src/internal/fileLock.js": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "agent-teams-controller/src/internal/fileLock.js",
+      "blobOid": "dae68ede7dafc87413324bd5d9ae2719ab1eb3d9",
+      "declarationExamples": [
+        "fs",
+        "path",
+        "ACQUIRE_TIMEOUT_MS",
+        "RETRY_INTERVAL_MS",
+        "codeOf",
+        "statOrMissing",
+        "readOrMissing",
+        "unlinkOrMissing"
+      ]
+    },
+    "frontend:agent-teams-controller/src/internal/atomicFile.js": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "agent-teams-controller/src/internal/atomicFile.js",
+      "blobOid": "f859c74698d541c32fd7ed2f16dd67b942da63f8",
+      "declarationExamples": [
+        "fs",
+        "path",
+        "crypto",
+        "RENAME_MAX_ATTEMPTS",
+        "RENAME_RETRY_BASE_DELAY_MS",
+        "RENAME_RETRY_MAX_DELAY_MS",
+        "RENAME_RETRY_JITTER_MS",
+        "RETRYABLE_RENAME_CODES"
+      ]
     }
   },
   "remainingClosure": [
@@ -2855,7 +3382,7 @@
     "Complete final provider native dialect/config qualification and packaged OS tuple proof; selected Node24.21 darwin-arm64 staging and direct native capture feasibility are recorded above.",
     "Complete task/comment attachment, process OS authority, permanent deletion and member-work-sync restore oracle roster at the implementing boundary.",
     "Integrate sufficient capture path through D/Host and task/window owner; direct native feasibility alone does not close overlap/background/product review acceptance.",
-    "Provider/contract clean packed closure and old re-export have focused proof; finish owning metadata/gates/source checkpoint and broader host product acceptance.",
+    "Provider/contract clean packed closure and old re-export have focused proof; Linux aggregate remains pending; finish broader host product acceptance.",
     "Run actual mixed-provider Team/Runtime/Desktop and restart/review/packaged acceptance; recorded native capture proof uses only its TEST fixtures and does not qualify those product workflows."
   ],
   "validation": {
@@ -2863,6 +3390,6 @@
     "coverage": "All M01-M19 have source and existing oracle references via at least one seam",
     "shape": "Unique seam IDs; valid owner/matrix IDs; source/oracle references resolve; no selected artifact digest or native proof invented",
     "execution": "Source inventory validation only; separately linked implementation/native evidence records its own actual TEST executions and limits.",
-    "implementationEvidenceNote": "Native feasibility is scoped to exact archived source/receipts; this is not M13 or P4/P8 parity. Source closure and final provider artifact selection remain open."
+    "implementationEvidenceNote": "Recorded native proofs are separately bound to their archived source/receipts; current selected D successor has a first Team/Runtime/MCP native proof. This is not full M13, mixed-Team, host-stdio-native or P8 parity; representative source closure remains open."
   }
 }

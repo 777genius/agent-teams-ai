@@ -6,6 +6,7 @@
   "type": "commonjs",
   "main": "src/index.js",
   "files": [
+    "src",
     "dist"
   ],
   "scripts": {

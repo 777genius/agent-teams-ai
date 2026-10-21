@@ -8,11 +8,20 @@
 Merge, публикация и включение нового пути остаются отдельным решением после
 проверок и ревью; прежнее общее разрешение автономного merge здесь не применяется.
 
-P0/P1 находятся в работе; P2–P8 ещё не завершены. Актуальные selected sources,
+P0–P3 находятся в работе; полный native Team workflow, IPC/UI cutover и P4–P8
+ещё не завершены. Проверены отдельные Team/Runtime/MCP и Desktop owner-routing
+slices, что не является приёмкой всей программы. Актуальные selected sources,
 Node profile и ограничения доказательств — в
 [selection manifest](stage-1-source-selection.json). Direct native capture source/
 receipts сохранены в [P1 feasibility artifact](evidence/p1-native-capture-feasibility.tar.gz);
 это ранняя проверка native mechanisms, без заявления M13 или полного Desktop E2E.
+
+Первый связанный Claude slice сохранён в
+[native Team/Runtime/MCP proof](evidence/p4-claude-team-native-v1.tar.gz): два
+business inputs, canonical Task lifecycle и ответы участника человеку через
+actual SDK/CLI/MCP с локальной моделью. Он проверяет in-process owners;
+host stdio и Desktop/mixed-team приёмку не заменяет. Точные source/artifact hashes,
+исходный неуспешный fixture-run и успешный receipt сохранены внутри.
 
 ## 1. Приоритет и результат
 

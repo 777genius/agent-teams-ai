@@ -240,7 +240,8 @@ function resolveLockOptions(options) {
   };
 }
 
-function withFileLockSync(filePath, fn, options = {}) {
+/** Retain the same owner/token protocol for a captured host's whole lifetime. */
+function acquireFileLockSync(filePath, options = {}) {
   const resolvedOptions = resolveLockOptions(options);
   const lockPath = `${filePath}.lock`;
   const deadline = Date.now() + resolvedOptions.acquireTimeoutMs;
@@ -253,11 +254,21 @@ function withFileLockSync(filePath, fn, options = {}) {
     sleepSync(Math.min(resolvedOptions.retryIntervalMs, Math.max(0, deadline - Date.now())));
   }
 
+  let released = false;
+  return () => {
+    if (released) return;
+    releaseLock(lockPath, token);
+    released = true;
+  };
+}
+
+function withFileLockSync(filePath, fn, options = {}) {
+  const release = acquireFileLockSync(filePath, options);
   try {
     return fn();
   } finally {
-    releaseLock(lockPath, token);
+    release();
   }
 }
 
-module.exports = { withFileLockSync };
+module.exports = { withFileLockSync, acquireFileLockSync };

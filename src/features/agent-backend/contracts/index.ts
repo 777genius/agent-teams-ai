@@ -16,3 +16,8 @@ export interface HostClientFailure {
   code: HostClientFailureCode;
   outcome: HostRequestOutcome;
 }
+
+/** Opaque owner-qualified lookup key. No filesystem, provider or native identity. */
+export interface BackendHandle {
+  readonly handleId: string;
+}

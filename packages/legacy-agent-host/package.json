@@ -19,7 +19,47 @@
       "types": "./dist/contracts.d.ts",
       "import": "./dist/contracts.js"
     },
-    "./cli": "./dist/cli.js"
+    "./cli": "./dist/cli.js",
+    "./team": {
+      "types": "./dist/team/TeamOwner.d.ts",
+      "import": "./dist/team/TeamOwner.js"
+    },
+    "./team/contracts": {
+      "types": "./dist/team/contracts.d.ts",
+      "import": "./dist/team/contracts.js"
+    },
+    "./team/filesystem": {
+      "types": "./dist/adapters/team/createFilesystemTeamOwner.d.ts",
+      "import": "./dist/adapters/team/createFilesystemTeamOwner.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime/RuntimeOwner.d.ts",
+      "import": "./dist/runtime/RuntimeOwner.js"
+    },
+    "./runtime/contracts": {
+      "types": "./dist/runtime/contracts.d.ts",
+      "import": "./dist/runtime/contracts.js"
+    },
+    "./runtime/filesystem": {
+      "types": "./dist/adapters/runtime/FileRuntimeStore.d.ts",
+      "import": "./dist/adapters/runtime/FileRuntimeStore.js"
+    },
+    "./profile": {
+      "types": "./dist/adapters/profile/ProfileWriterLease.d.ts",
+      "import": "./dist/adapters/profile/ProfileWriterLease.js"
+    },
+    "./mcp": {
+      "types": "./dist/mcp/index.d.ts",
+      "import": "./dist/mcp/index.js"
+    },
+    "./team-host": {
+      "types": "./dist/composition/TeamHost.d.ts",
+      "import": "./dist/composition/TeamHost.js"
+    },
+    "./runtime/identity": {
+      "types": "./dist/runtime/identity.d.ts",
+      "import": "./dist/runtime/identity.js"
+    }
   },
   "bin": {
     "legacy-agent-host": "./dist/cli.js"
@@ -28,10 +68,18 @@
     "build": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json",
     "typecheck": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json --noEmit",
     "typecheck:test": "node node_modules/@typescript/native/bin/tsc -p tsconfig.test.json",
-    "test": "pnpm build && pnpm typecheck:test && node --test tests/*.test.ts"
+    "test": "pnpm build && pnpm typecheck:test && node --test tests/*.test.ts tests/fixtures/native-claude-team/model.test.ts",
+    "test:native:claude": "node --test tests/native-claude-team.native.ts"
   },
   "devDependencies": {
     "@types/node": "^24.12.4",
     "@typescript/native": "npm:typescript@7.0.2"
+  },
+  "dependencies": {
+    "@agent-teams/provider-implementations": "file:../../vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-implementations-0.0.0.tgz",
+    "@agent-teams/provider-session-contracts": "file:../../vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-session-contracts-0.0.0.tgz",
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "agent-teams-controller": "workspace:*",
+    "zod": "4.6.7"
   }
 }

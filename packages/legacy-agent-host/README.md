@@ -1,14 +1,46 @@
-# Legacy Agent Host transport
+# Legacy Agent Host
 
-P1 transport package only. There is no Team store, provider driver, native session,
-single-writer storage lock, durable command outcome or recovery implementation yet.
-The executable advertises only its actual transport capabilities and rejects all
-product/native methods. A successful handshake means protocol compatibility only.
+Stage 1 portable Team/Runtime host under implementation. The transport-only CLI
+remains available without a product profile. A captured product profile enables
+canonical Team Task/Message commands and original-command lookup. A handshake
+means API readiness, not member or aggregate team readiness.
 
-The package is portable ESM with no runtime dependencies and requires Node
-`>=24.21.0 <25`. Build/test with `pnpm --filter @agent-teams/legacy-agent-host test`.
+The package is portable ESM and requires Node `>=24.21.0 <25`. Provider Session SPI
+and driver implementations install from pinned local artifacts; the current
+agent-runtime engine, PostgreSQL and fork executable are not dependencies.
+Canonical Task policy and filesystem locks reuse `agent-teams-controller`.
+Build/test with `pnpm --filter @agent-teams/legacy-agent-host test`.
 The `./contracts` export is browser-safe; the root server factory is Node-only.
 `./cli` and `legacy-agent-host` launch the standalone transport executable.
+
+The trusted Desktop profile can set `LEGACY_AGENT_HOST_PROFILE_PATH` and
+`LEGACY_AGENT_HOST_PROFILE_SHA256` together. The CLI reads the bounded, exact-digest
+private file before acquiring the canonical store writer lease or creating Team
+state. Its schema is exported from `./team-host`; paths, principal and grants are
+composition data, never model/renderer arguments. Team RPC requires the captured
+owner/scope envelope and a caller-prepared command ID. Policy diagnostics are
+bounded on stderr and never appear in stdout NDJSON.
+
+`./team` and `./team/filesystem` expose the product owner and its filesystem
+composition. `./runtime` and `./runtime/filesystem` expose the technical owner and
+store. The Team outbox hands the original immutable input to Runtime; only Runtime
+claims native dispatch. The `./mcp` endpoint uses an injected captured Team
+connection, private route/Bearer capability, current binding checks and stable
+mutation IDs. It does not instantiate another controller/writer.
+
+This checkpoint is incomplete: the CLI does not yet compose native Runtime
+sessions or bootstrap a team; full catalog/review/backup/restore and Desktop
+cutover remain in the Stage 1 plan. Uncertain Task notification recovery is held,
+not replayed. Technical fixtures and individual native feasibility proofs do not
+close the complete P4–P8 acceptance matrix or real account qualification.
+
+The first native Claude integration test is separate from the regular test glob:
+`tests/native-claude-team.native.ts`. Run it with the staged standalone Node and
+explicit `LEGACY_NATIVE_TEAM_GO=1`, `LEGACY_NATIVE_PROVIDER_ARTIFACT` and
+`LEGACY_NATIVE_PROVIDER_SHA256` matching the selected tarball. It creates fresh
+TEST roots and localhost inference, uses actual SDK/CLI/MCP and retains its
+receipt, including failed attempts. It exercises in-process Team/Runtime owners;
+the CLI stdio product path has its own subprocess test. Neither is Desktop E2E.
 
 Frames are UTF-8 NDJSON, one JSON-RPC 2.0 request with a string/safe integer `id`
 per line. Batches and client notifications are intentionally unsupported. A frame

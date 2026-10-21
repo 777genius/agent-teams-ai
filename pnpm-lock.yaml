@@ -5,6 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
+  '@agent-teams/provider-session-contracts': file:vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-session-contracts-0.0.0.tgz
   '@terminal-platform/design-tokens': file:vendor/terminal-platform/sdk/terminal-platform-design-tokens-0.1.0.tgz
   '@terminal-platform/foundation': file:vendor/terminal-platform/sdk/terminal-platform-foundation-0.1.0.tgz
   '@terminal-platform/runtime-types': file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz
@@ -760,6 +761,22 @@ importers:
         version: 3.0.10
 
   packages/legacy-agent-host:
+    dependencies:
+      '@agent-teams/provider-implementations':
+        specifier: file:../../vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-implementations-0.0.0.tgz
+        version: file:vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)
+      '@agent-teams/provider-session-contracts':
+        specifier: file:../../vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-session-contracts-0.0.0.tgz
+        version: file:vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-session-contracts-0.0.0.tgz
+      '@modelcontextprotocol/sdk':
+        specifier: 1.30.0
+        version: 1.30.0(supports-color@10.2.2)(zod@4.6.7)
+      agent-teams-controller:
+        specifier: workspace:*
+        version: link:../../agent-teams-controller
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@types/node':
         specifier: ^24.12.4
@@ -769,6 +786,16 @@ importers:
         version: typescript@7.0.2
 
 packages:
+
+  '@agent-teams/provider-implementations@file:vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-implementations-0.0.0.tgz':
+    resolution: {integrity: sha512-3PGwDVhASsTb5L2dFuKON2RdJLvtBsKayRA7X4NIXGpxw2sxC3UXufZ/z1eDRm77QftBdQFce//XaB3kCpOIdw==, tarball: file:vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-implementations-0.0.0.tgz}
+    version: 0.0.0
+    engines: {node: '>=24.21.0 <25 || >=26.11.1 <27'}
+
+  '@agent-teams/provider-session-contracts@file:vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-session-contracts-0.0.0.tgz':
+    resolution: {integrity: sha512-qWn2q9tCquj2rmE+wJ2cDgvyG6H+PuaqNh/UasutqPOO2BNDDweFsseVG2gt1QPdVNJ/ms2w/5rqwjGE9qw3YA==, tarball: file:vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-session-contracts-0.0.0.tgz}
+    version: 0.0.0
+    engines: {node: '>=24.21.0 <25 || >=26.11.1 <27'}
 
   '@alloc/quick-lru@5.2.0':
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
@@ -780,6 +807,67 @@ packages:
 
   '@antfu/install-pkg@1.1.0':
     resolution: {integrity: sha512-MGQsmw10ZyI+EJo45CdSER4zEb+p31LpDAFp2Z3gkSd1yqVZGi0Ebx++YTEMonJy4oChEMLsxZ64j8FH6sSqtQ==}
+
+  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.305':
+    resolution: {integrity: sha512-ZwisMI1FVJtl7VR20NbQNA3o2f9NuyuzrCPwyLL4Pl9TvkjCmLWGUTpBUGktGEadIuoT7SgR44j+Wvu/gvT+wA==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.305':
+    resolution: {integrity: sha512-PdNnidLbc+I66oAI/L4KiZoMRUxl1MOmBhgdIuQmvmAJp+saSdwCVCUo+raWTUPYb+NZYCy+4XC/KlZVPV54Sg==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.305':
+    resolution: {integrity: sha512-kFKVm6WZGUKRXzL6n8kajeJYywewXzJQ69NJnU4QXgSSFKOa6e5N9fuR1k3L8xFGo0BvNLDASFq+kdj55GTIlA==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.305':
+    resolution: {integrity: sha512-eu3X9KuzwePZNc/4e3LlqkrfRc3lF4nNL2BWKWU3MPLADRIwqoG9AO11+Z8vcjRs3Qgea6nOPIxJJONBsMTqcg==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.305':
+    resolution: {integrity: sha512-XwQ9K0T9LCIeK5wEp0V8cnvyfqdv8T7jo929P/CrRNj4td9dhvB57yd6abJQNMhI1hkVhcvId0a9aIUwH+zyvw==}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.305':
+    resolution: {integrity: sha512-l+Ez1Ld6yyZRsg4ILqQA3qCVNvAI62VdPZUt9rPkGMCKzAorMC1NFhwiBZ7HVVU/vdxqFdHhMoDX0pu2ibLCXQ==}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.305':
+    resolution: {integrity: sha512-lpH23fhToQybIL5ihzPRwWwhj8ajilcR+ePscopr7zK4UlLJZYUGod7UrKtEtXcAYSXh4KemLZgg7wyc7G7kxA==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.305':
+    resolution: {integrity: sha512-SI5PwkQsCF+HcW0KCA9dXKDX4q8LPebTGLGmsXXQvXChsqrrsVOKRM5TXuqRxxtLlg5Bvar+AbgzBFCSeaJAog==}
+    cpu: [x64]
+    os: [win32]
+
+  '@anthropic-ai/claude-agent-sdk@0.3.305':
+    resolution: {integrity: sha512-trQdV76nXgJpvcYBQ9TI2e1OAWRVoEIgnuC2x1KEw4MAtyrJsb7UXkU/lNXuy40g5jiaFEf43iAepgOzcNep8A==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      '@anthropic-ai/sdk': '>=0.93.0'
+      '@modelcontextprotocol/sdk': ^1.29.0
+      zod: ^4.0.0
+
+  '@anthropic-ai/sdk@0.122.0':
+    resolution: {integrity: sha512-GGPNftt0caaz9MDlmNQGHX8855Ojaduyy5pm9Sm1h7HalCn0cWNb5/bweadJF+4yzbal+QL6ztBa09WAAOzLmQ==}
+    hasBin: true
+    peerDependencies:
+      zod: ^3.25.0 || ^4.0.0
+    peerDependenciesMeta:
+      zod:
+        optional: true
 
   '@apidevtools/json-schema-ref-parser@14.2.1':
     resolution: {integrity: sha512-HmdFw9CDYqM6B25pqGBpNeLCKvGPlIx1EbLrVL0zPvj50CJQUHyBNBw45Muk0kEIkogo1VZvOKHajdMuAzSxRg==}
@@ -1905,6 +1993,16 @@ packages:
 
   '@modelcontextprotocol/sdk@1.27.1':
     resolution: {integrity: sha512-sr6GbP+4edBwFndLbM60gf07z0FQ79gaExpnsjMGePXqFcSSb7t6iscpjk9DhFhwd+mTEQrzNafGP8/iGGFYaA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@cfworker/json-schema': ^4.1.1
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      '@cfworker/json-schema':
+        optional: true
+
+  '@modelcontextprotocol/sdk@1.30.0':
+    resolution: {integrity: sha512-xKd8OIzlqNzcqcNumGAa6g+PW2kjD5vrpcKOnfldAUPP3j7lnqMPwlTXQm8gF+UwH72z0lqaRbjr9hqGz0eITA==}
     engines: {node: '>=18'}
     peerDependencies:
       '@cfworker/json-schema': ^4.1.1
@@ -4011,6 +4109,9 @@ packages:
 
   '@speed-highlight/core@1.2.15':
     resolution: {integrity: sha512-BMq1K3DsElxDWawkX6eLg9+CKJrTVGCBAWVuHXVUV2u0s2711qiChLSId6ikYPfxhdYocLNt3wWwSvDiTvFabw==}
+
+  '@stablelib/base64@1.0.1':
+    resolution: {integrity: sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ==}
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
@@ -7110,6 +7211,9 @@ packages:
   fast-querystring@1.1.2:
     resolution: {integrity: sha512-g6KuKWmFXc0fID8WWH0jit4g0AGBoJhCkJMb1RmbsSEUNvQ+ZC8D6CUZ+GtF8nMzSPXnhiePyyqqipzNNEnHjg==}
 
+  fast-sha256@1.3.0:
+    resolution: {integrity: sha512-n11RGP/lrWEFI/bWdygLxhI+pVeo1ZYIVwvvPkW7azl/rOy+F3HYRZ2K5zeE9mmkhQppyv9sQFx0JM9UabnpPQ==}
+
   fast-string-truncated-width@3.0.3:
     resolution: {integrity: sha512-0jjjIEL6+0jag3l2XWWizO64/aZVtpiGE3t0Zgqxv0DPuxiMjvB3M24fCyhZUO4KomJQPj3LTSUnDP3GpdwC0g==}
 
@@ -8093,6 +8197,10 @@ packages:
 
   json-schema-ref-resolver@3.0.0:
     resolution: {integrity: sha512-hOrZIVL5jyYFjzk7+y7n5JDzGlU8rfWDuYyHwGa2WA8/pcmMHezp2xsVwxrebD/Q9t8Nc5DboieySDpCp4WG4A==}
+
+  json-schema-to-ts@3.1.1:
+    resolution: {integrity: sha512-+DWg8jCJG2TEnpy7kOm/7/AxaYoaRbjVB4LFZLySZlWn8exGs3A4OLJR966cVvU26N7X9TWxl+Jsw7dzAqKT6g==}
+    engines: {node: '>=16'}
 
   json-schema-to-typescript-lite@15.0.0:
     resolution: {integrity: sha512-5mMORSQm9oTLyjM4mWnyNBi2T042Fhg1/0gCIB6X8U/LVpM2A+Nmj2yEyArqVouDmFThDxpEXcnTgSrjkGJRFA==}
@@ -10333,6 +10441,9 @@ packages:
   standard-as-callback@2.1.0:
     resolution: {integrity: sha512-qoRRSyROncaz1z0mvYqIE4lCd9p2R90i6GxW3uZv5ucSu8tU7B5HXUP1gG8pVZsYNVaXjk8ClXHPttLyxAL48A==}
 
+  standardwebhooks@1.1.1:
+    resolution: {integrity: sha512-bCbX9ZEyFkWPsRz7Bl3NuQUJohmwGSev/yhr7vhaGPlc4AfIrspIRa6cPTBuI1ItmrTDJ4d/S2hCsfe4+vQGnQ==}
+
   stat-mode@1.0.0:
     resolution: {integrity: sha512-jH9EhtKIjuXZ2cWxmXS8ZP80XyC3iasQxMDV8jzhNJpfDb7VbQLVW4Wvsxz9QZvzV+G4YoSfBUVKDOyxLzi/sg==}
     engines: {node: '>= 6'}
@@ -10718,6 +10829,9 @@ packages:
 
   truncate-utf8-bytes@1.0.2:
     resolution: {integrity: sha512-95Pu1QXQvruGEhv62XCMO3Mm90GscOCClvrIUwCM0PYOXK3kaF3l3sIHxx71ThJfcbM2O5Au6SO3AWCSEfW4mQ==}
+
+  ts-algebra@2.0.0:
+    resolution: {integrity: sha512-FPAhNPFMrkwz76P7cdjdmiShwMynZYN6SgOujD1urY4oNm80Ou9oMdmbR45LotcKOXoy7wSmHkRFE6Mxbrhefw==}
 
   ts-api-utils@2.4.0:
     resolution: {integrity: sha512-3TaVTaAv2gTiMB35i3FiGJaRfwb3Pyn/j3m/bfAvGe8FB7CF6u+LMYqYlDh7reQf7UNvoTvdfAqHGmPGOSsPmA==}
@@ -11750,6 +11864,9 @@ packages:
   zod@4.3.6:
     resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
 
+  zod@4.6.7:
+    resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
+
   zustand@4.5.7:
     resolution: {integrity: sha512-CHOUy7mu3lbD6o6LJLfllpjkzhHXSBlX8B9+qPddUsIfeF5S/UZ5q0kmCsnRqT1UHFQZchNFDDzMbQsuesHWlw==}
     engines: {node: '>=12.7.0'}
@@ -11770,6 +11887,19 @@ packages:
 
 snapshots:
 
+  '@agent-teams/provider-implementations@file:vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)':
+    dependencies:
+      '@agent-teams/provider-session-contracts': file:vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-session-contracts-0.0.0.tgz
+      '@anthropic-ai/claude-agent-sdk': 0.3.305(@anthropic-ai/sdk@0.122.0(zod@4.6.7))(@modelcontextprotocol/sdk@1.30.0(supports-color@10.2.2)(zod@4.6.7))(zod@4.6.7)
+      '@anthropic-ai/sdk': 0.122.0(zod@4.6.7)
+      '@modelcontextprotocol/sdk': 1.30.0(supports-color@10.2.2)(zod@4.6.7)
+      zod: 4.6.7
+    transitivePeerDependencies:
+      - '@cfworker/json-schema'
+      - supports-color
+
+  '@agent-teams/provider-session-contracts@file:vendor/provider-migration/claude-capabilities-v1/agent-teams-provider-session-contracts-0.0.0.tgz': {}
+
   '@alloc/quick-lru@5.2.0': {}
 
   '@ampproject/remapping@2.3.0':
@@ -11781,6 +11911,52 @@ snapshots:
     dependencies:
       package-manager-detector: 1.6.0
       tinyexec: 1.1.2
+
+  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.305':
+    optional: true
+
+  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.305':
+    optional: true
+
+  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.305':
+    optional: true
+
+  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.305':
+    optional: true
+
+  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.305':
+    optional: true
+
+  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.305':
+    optional: true
+
+  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.305':
+    optional: true
+
+  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.305':
+    optional: true
+
+  '@anthropic-ai/claude-agent-sdk@0.3.305(@anthropic-ai/sdk@0.122.0(zod@4.6.7))(@modelcontextprotocol/sdk@1.30.0(supports-color@10.2.2)(zod@4.6.7))(zod@4.6.7)':
+    dependencies:
+      '@anthropic-ai/sdk': 0.122.0(zod@4.6.7)
+      '@modelcontextprotocol/sdk': 1.30.0(supports-color@10.2.2)(zod@4.6.7)
+      zod: 4.6.7
+    optionalDependencies:
+      '@anthropic-ai/claude-agent-sdk-darwin-arm64': 0.3.305
+      '@anthropic-ai/claude-agent-sdk-darwin-x64': 0.3.305
+      '@anthropic-ai/claude-agent-sdk-linux-arm64': 0.3.305
+      '@anthropic-ai/claude-agent-sdk-linux-arm64-musl': 0.3.305
+      '@anthropic-ai/claude-agent-sdk-linux-x64': 0.3.305
+      '@anthropic-ai/claude-agent-sdk-linux-x64-musl': 0.3.305
+      '@anthropic-ai/claude-agent-sdk-win32-arm64': 0.3.305
+      '@anthropic-ai/claude-agent-sdk-win32-x64': 0.3.305
+
+  '@anthropic-ai/sdk@0.122.0(zod@4.6.7)':
+    dependencies:
+      json-schema-to-ts: 3.1.1
+      standardwebhooks: 1.1.1
+    optionalDependencies:
+      zod: 4.6.7
 
   '@apidevtools/json-schema-ref-parser@14.2.1(@types/json-schema@7.0.15)':
     dependencies:
@@ -13217,6 +13393,28 @@ snapshots:
       raw-body: 3.0.2
       zod: 4.3.6
       zod-to-json-schema: 3.25.1(zod@4.3.6)
+    transitivePeerDependencies:
+      - supports-color
+
+  '@modelcontextprotocol/sdk@1.30.0(supports-color@10.2.2)(zod@4.6.7)':
+    dependencies:
+      '@hono/node-server': 1.19.13(hono@4.12.30)
+      ajv: 8.20.0
+      ajv-formats: 3.0.1(ajv@8.20.0)
+      content-type: 1.0.5
+      cors: 2.8.6
+      cross-spawn: 7.0.6
+      eventsource: 3.0.7
+      eventsource-parser: 3.0.6
+      express: 5.2.1(supports-color@10.2.2)
+      express-rate-limit: 8.3.0(express@5.2.1(supports-color@10.2.2))
+      hono: 4.12.30
+      jose: 6.2.0
+      json-schema-typed: 8.0.2
+      pkce-challenge: 5.0.1
+      raw-body: 3.0.2
+      zod: 4.6.7
+      zod-to-json-schema: 3.25.1(zod@4.6.7)
     transitivePeerDependencies:
       - supports-color
 
@@ -15483,6 +15681,8 @@ snapshots:
   '@sindresorhus/merge-streams@4.0.0': {}
 
   '@speed-highlight/core@1.2.15': {}
+
+  '@stablelib/base64@1.0.1': {}
 
   '@standard-schema/spec@1.1.0': {}
 
@@ -19092,6 +19292,8 @@ snapshots:
     dependencies:
       fast-decode-uri-component: 1.0.1
 
+  fast-sha256@1.3.0: {}
+
   fast-string-truncated-width@3.0.3: {}
 
   fast-string-width@3.0.2:
@@ -20204,6 +20406,11 @@ snapshots:
   json-schema-ref-resolver@3.0.0:
     dependencies:
       dequal: 2.0.3
+
+  json-schema-to-ts@3.1.1:
+    dependencies:
+      '@babel/runtime': 7.29.2
+      ts-algebra: 2.0.0
 
   json-schema-to-typescript-lite@15.0.0:
     dependencies:
@@ -23102,6 +23309,11 @@ snapshots:
 
   standard-as-callback@2.1.0: {}
 
+  standardwebhooks@1.1.1:
+    dependencies:
+      '@stablelib/base64': 1.0.1
+      fast-sha256: 1.3.0
+
   stat-mode@1.0.0: {}
 
   statuses@1.5.0: {}
@@ -23533,6 +23745,8 @@ snapshots:
   truncate-utf8-bytes@1.0.2:
     dependencies:
       utf8-byte-length: 1.0.5
+
+  ts-algebra@2.0.0: {}
 
   ts-api-utils@2.4.0(typescript@5.9.3):
     dependencies:
@@ -24740,11 +24954,17 @@ snapshots:
     dependencies:
       zod: 4.3.6
 
+  zod-to-json-schema@3.25.1(zod@4.6.7):
+    dependencies:
+      zod: 4.6.7
+
   zod-validation-error@4.0.2(zod@4.3.6):
     dependencies:
       zod: 4.3.6
 
   zod@4.3.6: {}
+
+  zod@4.6.7: {}
 
   zustand@4.5.7(@types/react@19.2.14)(react@19.2.4):
     dependencies:
