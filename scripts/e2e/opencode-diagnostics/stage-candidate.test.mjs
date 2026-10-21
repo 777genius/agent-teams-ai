@@ -1,6 +1,116 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { candidatePages } from './stage-candidate.mjs';
+import { candidatePages, downloadCandidateArchive } from './stage-candidate.mjs';
+
+test('candidate transfer retries explicit transient HTTP failures for the same immutable artifact', async () => {
+  for (const status of [429, 502, 503, 504]) {
+    const calls = [],
+      waits = [],
+      warnings = [];
+    const archive = Buffer.from('immutable archive bytes');
+    const result = await downloadCandidateArchive(12362620618, {
+      execute: (...args) => {
+        calls.push(args);
+        if (calls.length === 1)
+          throw Object.assign(new Error('HTTP failure'), {
+            status: 1,
+            signal: null,
+            stderr: Buffer.from(`gh: HTTP ${status}\r\n`),
+            stdout: Buffer.from('<Error>partial failed response</Error>'),
+          });
+        return archive;
+      },
+      wait: async (milliseconds) => waits.push(milliseconds),
+      warn: (message) => warnings.push(message),
+    });
+    assert.strictEqual(result, archive);
+    assert.equal(calls.length, 2);
+    assert.deepEqual(calls[0], calls[1]);
+    assert.deepEqual(calls[0], [
+      'gh',
+      ['api', 'repos/777genius/agent_teams_orchestrator/actions/artifacts/12362620618/zip'],
+      {
+        maxBuffer: 256 * 1024 * 1024,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        timeout: 120_000,
+        killSignal: 'SIGKILL',
+      },
+    ]);
+    assert.deepEqual(waits, [2000]);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], new RegExp(`HTTP ${status}; transfer attempt 1/3 failed`));
+  }
+});
+
+test('candidate transfer stops after three explicit HTTP failures with bounded backoff', async () => {
+  let calls = 0;
+  const waits = [];
+  const error = Object.assign(new Error('HTTP failure'), {
+    status: 1,
+    signal: null,
+    stderr: Buffer.from('gh: HTTP 503\n'),
+  });
+  await assert.rejects(
+    downloadCandidateArchive(42, {
+      execute: () => {
+        calls++;
+        throw error;
+      },
+      wait: async (milliseconds) => waits.push(milliseconds),
+      warn: () => {},
+    }),
+    (actual) => actual === error
+  );
+  assert.equal(calls, 3);
+  assert.deepEqual(waits, [2000, 4000]);
+});
+
+test('candidate transfer does not retry auth, missing, malformed, timeout, signal or buffer failures', async () => {
+  for (const detail of [
+    ...[401, 403, 404, 500].map((status) => ({ stderr: Buffer.from(`gh: HTTP ${status}\n`) })),
+    { stderr: Buffer.from('payload says gh: HTTP 503\n') },
+    { stderr: Buffer.from('gh: HTTP 503\nextra diagnostic') },
+    { stderr: Buffer.from('gh: HTTP 503\n\n') },
+    { stderr: Buffer.from('gh: HTTP 5030\n') },
+    { stderr: Buffer.from(''), stdout: Buffer.from('gh: HTTP 503\n') },
+    { stderr: 'gh: HTTP 503\n' },
+    { code: 'ETIMEDOUT' },
+    { code: 'ENOBUFS' },
+    { signal: 'SIGKILL' },
+    { status: null },
+    { status: 2 },
+  ]) {
+    let calls = 0;
+    const error = Object.assign(new Error('transfer failure'), {
+      status: 1,
+      signal: null,
+      stderr: Buffer.from('gh: HTTP 503\n'),
+      ...detail,
+    });
+    await assert.rejects(
+      downloadCandidateArchive(42, {
+        execute: () => {
+          calls++;
+          throw error;
+        },
+        wait: async () => assert.fail('A non-transient failure must not wait or retry'),
+        warn: () => assert.fail('A non-transient failure must not be reported as retryable'),
+      }),
+      (actual) => actual === error
+    );
+    assert.equal(calls, 1);
+  }
+});
+
+test('candidate transfer requires a positive safe numeric artifact ID before executing', async () => {
+  for (const id of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1, '42', undefined])
+    await assert.rejects(
+      downloadCandidateArchive(id, {
+        execute: () => assert.fail('Invalid artifact ID must not reach gh'),
+      }),
+      { code: 'ERR_ASSERTION', message: 'Invalid candidate artifact ID' }
+    );
+});
 
 for (const key of ['jobs', 'artifacts']) {
   test(`${key}: collects candidates and ambiguity beyond the first 100 entries`, () => {

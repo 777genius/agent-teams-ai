@@ -5,12 +5,51 @@ import { mkdtemp, readFile, writeFile, lstat, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { setTimeout as delay } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 import { extractArchive, publishRuntimePayload } from '../../lib/runtime-payload-cache.mjs';
+
+const candidateRepository = '777genius/agent_teams_orchestrator';
 
 // Complete Windows deliveries exceed 100,000 entries when directories are counted.
 // Keep verification IO bounded while checking every entry of the full payload.
 const maxPayloadReceiptEntries = 131_072;
+
+// Only retry an explicit transient HTTP response for the same immutable artifact.
+// Digest, extraction and physical payload verification remain outside this boundary.
+export async function downloadCandidateArchive(
+  artifactId,
+  { execute = execFileSync, wait = delay, warn = console.warn } = {}
+) {
+  assert(Number.isSafeInteger(artifactId) && artifactId > 0, 'Invalid candidate artifact ID');
+  const endpoint = `repos/${candidateRepository}/actions/artifacts/${artifactId}/zip`;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return execute('gh', ['api', endpoint], {
+        maxBuffer: 256 * 1024 * 1024,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        timeout: 120_000,
+        killSignal: 'SIGKILL',
+      });
+    } catch (error) {
+      const stderr = Buffer.isBuffer(error?.stderr) ? error.stderr.toString('utf8') : '';
+      const status = /^gh: HTTP (429|502|503|504)\r?\n?$/.exec(stderr)?.[1];
+      if (
+        attempt >= 3 ||
+        error?.status !== 1 ||
+        error?.signal !== null ||
+        error?.code !== undefined ||
+        !status
+      )
+        throw error;
+      const milliseconds = attempt * 2_000;
+      warn(
+        `Candidate artifact ${artifactId}: HTTP ${status}; transfer attempt ${attempt}/3 failed, retrying in ${milliseconds}ms`
+      );
+      await wait(milliseconds);
+    }
+  }
+}
 
 // Bound API work and reject partial/changing listings before selecting a producer or artifact.
 export function candidatePages(api, endpoint, key) {
@@ -149,7 +188,7 @@ export async function verifyCandidatePayload(root, expected, { packaged = false 
 
 async function stageCandidate() {
   // Explicit CI-only test packaging. Never edits runtime.lock or publishes a release.
-  const repo = '777genius/agent_teams_orchestrator';
+  const repo = candidateRepository;
   const runId = process.env.RUNTIME_CANDIDATE_RUN;
   const sha = process.env.RUNTIME_CANDIDATE_SHA;
   assert(process.env.GITHUB_ACTIONS === 'true' && process.platform === 'win32');
@@ -181,14 +220,7 @@ async function stageCandidate() {
   const temp = await mkdtemp(path.join(os.tmpdir(), 'opencode-candidate-'));
   try {
     // Verify the archive itself against GitHub's immutable artifact digest before extraction.
-    const archive = execFileSync(
-      'gh',
-      ['api', `repos/${repo}/actions/artifacts/${artifact.id}/zip`],
-      {
-        maxBuffer: 256 * 1024 * 1024,
-        stdio: ['ignore', 'pipe', 'inherit'],
-      }
-    );
+    const archive = await downloadCandidateArchive(artifact.id);
     assert.equal(`sha256:${createHash('sha256').update(archive).digest('hex')}`, artifact.digest);
     const archivePath = path.join(temp, 'candidate.zip');
     await writeFile(archivePath, archive);
