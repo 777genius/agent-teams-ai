@@ -386,11 +386,22 @@ function normalizeOverridePath(claudeBasePath: string): string | null {
   return resolved.slice(0, end);
 }
 
+// Whether the current override was last applied by applyConfiguredClaudeRoot
+// (dev override or persisted preference). Ownership — not path equality —
+// decides whether a null configured root clears the override: an explicit
+// setClaudeBasePathOverride call (e.g. the standalone CLAUDE_ROOT) survives
+// configuration loads carrying no preference, even when it resolves to the
+// very same path the configuration would have applied.
+let configuredRootOwnsOverride = false;
+
 /**
  * Override the Claude config base path (~/.claude).
  * Pass null to return to auto-detection.
  */
 export function setClaudeBasePathOverride(claudeBasePath: string | null | undefined): void {
+  // An explicit call always takes ownership of the override, whatever path it
+  // carries, so a later applyConfiguredClaudeRoot(null) cannot discard it.
+  configuredRootOwnsOverride = false;
   if (claudeBasePath == null) {
     claudeBasePathOverride = null;
     return;
@@ -399,23 +410,17 @@ export function setClaudeBasePathOverride(claudeBasePath: string | null | undefi
   claudeBasePathOverride = normalizeOverridePath(claudeBasePath);
 }
 
-// The root most recently applied through applyConfiguredClaudeRoot (dev
-// override or persisted preference). A null input clears the override only
-// while it still holds this value, so an explicit root set elsewhere
-// (standalone CLAUDE_ROOT) survives configuration loads carrying no preference.
-let configuredClaudeRoot: string | null = null;
-
 /**
  * Applies a resolved configured Claude root with source-aware clearing.
- * Unlike setClaudeBasePathOverride(null), a null input never discards an
- * override established through another setter.
+ * Unlike setClaudeBasePathOverride(null), a null input clears the override
+ * only while the configured root still owns it.
  */
 export function applyConfiguredClaudeRoot(next: string | null): void {
   if (next != null) {
-    configuredClaudeRoot = next;
+    configuredRootOwnsOverride = true;
     claudeBasePathOverride = next;
-  } else if (claudeBasePathOverride === configuredClaudeRoot) {
-    configuredClaudeRoot = null;
+  } else if (configuredRootOwnsOverride) {
+    configuredRootOwnsOverride = false;
     claudeBasePathOverride = null;
   }
 }

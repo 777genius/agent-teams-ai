@@ -59,6 +59,18 @@ describe('templateNamePolicy', () => {
     });
   });
 
+  it('rejects Unicode control characters and line/paragraph separators', () => {
+    // U+0085 (NEL, Cc), U+2028 (LINE SEPARATOR, Zl), U+2029 (PARAGRAPH SEPARATOR, Zp).
+    for (const embedded of ['Bad\u0085Name', 'Bad\u2028Name', 'Bad\u2029Name']) {
+      expect(validateTemplateName(embedded)).toEqual({
+        valid: false,
+        issues: [{ code: 'templateNameInvalidCharacters', field: 'name' }],
+      });
+    }
+    // Ordinary spaces (Zs) stay allowed.
+    expect(validateTemplateName('Bad Name').valid).toBe(true);
+  });
+
   it('finds the existing template whose name normalizes to the same key', () => {
     const existing = [
       { templateId: 'template-1', name: 'Product Team' },
