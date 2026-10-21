@@ -142,6 +142,27 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
   );
   const fixturePath = path.resolve(import.meta.dirname, 'fixtures/packaged-smoke-process-TEST.cjs');
 
+  it.skipIf(process.platform !== 'linux').each(['retired', 'live'])(
+    'requires native retirement proof after a denied environment read for %s processes',
+    async (mode) => {
+      const output = await new Promise<string>((resolve, reject) => {
+        execFile(process.execPath, [
+          path.resolve(import.meta.dirname, 'fixtures/packaged-smoke-retirement-TEST.mjs'), mode,
+        ], { encoding: 'utf8', timeout: 14_000 }, (error, stdout, stderr) => {
+          if (error) reject(new Error(`${error.message}\n${stdout}\n${stderr}`));
+          else resolve(stdout);
+        });
+      });
+      expect(JSON.parse(output)).toEqual({
+        mode,
+        nativePermissionRace: mode === 'retired',
+        liveRefused: mode === 'live',
+        ownedRemaining: [],
+      });
+    },
+    16_000
+  );
+
   it.skipIf(process.platform !== 'linux').each(['preexisting', 'young', 'late', 'leader'])(
     'preserves strict process birth and ownership boundaries for %s environments',
     async (mode) => {

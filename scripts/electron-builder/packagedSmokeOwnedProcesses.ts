@@ -139,6 +139,16 @@ export function createPackagedSmokeOwnership(
     } catch (error) {
       if (error instanceof CensusDeadlineError) throw error;
       if (gone(error)) return undefined;
+      if (
+        (stage === 'open' || stage === 'read') &&
+        ['EACCES', 'EPERM'].includes((error as NodeJS.ErrnoException).code ?? '')
+      ) {
+        // Linux can deny environ access after the live metadata read when a
+        // process becomes a zombie. Only fresh retirement proof resolves this
+        // race; a live, changed-user or reused identity remains unverifiable.
+        const current = linuxIdentity(pid, deadline, true);
+        if (!current || (current.birth === before.birth && !live(current))) return undefined;
+      }
       throw environmentInspectionError(pid, stage, error);
     } finally {
       if (descriptor !== undefined) {
