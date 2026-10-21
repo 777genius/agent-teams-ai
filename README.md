@@ -387,6 +387,7 @@ This vision is not tied to a specific SDLC or workflow. Users should be free to 
 
 For feature architecture and implementation guidance:
 
+- Design and implementation plans - [docs/plans/README.md](docs/plans/README.md)
 - Canonical standard - [docs/FEATURE_ARCHITECTURE_STANDARD.md](docs/FEATURE_ARCHITECTURE_STANDARD.md)
 - Repo working instructions - [CLAUDE.md](CLAUDE.md)
 - Feature root guidance - [src/features/README.md](src/features/README.md)

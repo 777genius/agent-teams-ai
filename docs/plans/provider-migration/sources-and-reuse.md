@@ -1,0 +1,113 @@
+# Источники, уже сделанное и границы reuse
+
+Навигация: [программа](README.md) · [P0](stage-1-legacy-host.md#p0-зафиксировать-source-и-недостающую-совместимость).
+
+Это source map для начала этапа 1. Ни один перечисленный dirty checkout не является
+автоматически выбранной поставкой. Перед переносом P0 фиксирует точные Git blobs,
+imports closure, relevant tests и artifact digest. Accepted ADR других repos
+не изменяются этим frontend-планом.
+
+## 1. Frozen donor и наблюдаемые seams
+
+Fork inventory ниже привязан к commit
+`969afc56ec39d92c33dd5aabd15ef782da94dd87`, baseline upstream
+`38c09970c2925bb36a340c546ac53229f3d7bda5`. Локально наблюдался более поздний HEAD
+`3bf24764f25dfd7588b9c8b23748fa0891fd85df` и dirty edits. Новые изменения из него
+требуют отдельного inclusion decision; эти цифры их не описывают.
+
+Подсчёт `git ls-tree` + `git show` выбранного ref, физические production TS/TSX
+строки без test/spec/fixtures. Это размеры исходников, не объём будущих изменений,
+не доказательство авторства и не готовая переносимая closure.
+
+| Донор                                                                         | Files / physical LOC | Disposition первого этапа                                                                                     |
+| ----------------------------------------------------------------------------- | -------------------: | ------------------------------------------------------------------------------------------------------------- |
+| `src/services/teamBootstrap`                                                  |           21 / 4 327 | Извлечь нужные workflow/state/guards в Team; отделить ToolUseContext/global session/spawn                     |
+| `src/services/agentTeams`                                                     |            6 / 1 147 | Разделить product store/config и adapter/composition; не переносить как второй runtime manager                |
+| `src/services/boardTaskActivity`                                              |            6 / 1 537 | Product activity у Team, technical event capture у runtime/provider                                           |
+| `src/services/taskChangeLedger`                                               |            4 / 4 155 | Reuse Git capture, отдельно task attribution/review authority                                                 |
+| `src/services/codexNative`                                                    |           20 / 5 972 | Сопоставить с уже выделенным driver; не копировать вторую app-server реализацию                               |
+| `src/services/opencode`                                                       |         145 / 50 922 | Выбирать нужные механизмы/config/custody/recovery; существующий D покрывает только выбранные кластеры         |
+| `src/utils/swarm`                                                             |          25 / 10 347 | Разделить process/control/identity и Claude in-process dependencies; весь каталог не является runtime library |
+| TeamCreate/TeamDelete/SendMessage/TaskCreate/Update/Get/List tool directories |           24 / 2 579 | Извлечь use cases/schema semantics; renderTool/buildTool/Claude state заменить MCP boundary                   |
+
+Отдельные mixed files: `useInboxPoller.ts` — 4 649 строк;
+`spawnMultiAgent.ts` — 3 580; `tasks.ts` — 864;
+`teammateMailbox.ts` — 2 039; `groupMailbox.ts` — 272.
+Они используют React/AppState, bootstrap globals, task types и внутренние tool
+registries. Перенос без seam замены снова потянет Claude engine.
+Эти числа не следует суммировать с общей оценкой как независимые work packages.
+
+Исходный [Codex manifest](../runtime-provider-extraction-source-manifest.json)
+остаётся неизменённым inventory, а не manifest всего legacy-host. Новый selection
+manifest ведётся рядом с реализацией и дополнительно фиксирует целевой module,
+source blob/hash, replacement port и existing oracle для каждого выбранного seam.
+
+## 2. Frontend oracle и release isolation
+
+Исследованный committed baseline: `07e7d8e0d44f4a3999e2693dfa2986d6b3819403`.
+Original checkout содержит активные release/feature edits; они не включаются в
+worktree этой документации и не выбираются production baseline автоматически.
+
+Ключевые места для P0:
+
+- `src/main/services/team/provisioning/*`: launch/member/runtime flows; сохранять
+  thin facade и composition по нормативному provisioning standard.
+- `TeamDataService`, `TeamTaskReader/Writer`, `TeamInboxReader/Writer`,
+  `TeamMessageFeedService`: существующие data ownership, TaskRef и message semantics.
+- `mcp-server` и `agent-teams-controller`: пригодные schemas, trusted identity и
+  handlers; сравнить реальные writers, не добавить второй MCP storage engine.
+- `src/features/member-log-stream`, task-change/review/context/usage features:
+  source attribution и presentation oracle, а не причина синтезировать transcripts.
+- `src/features/team-runtime-recovery`, OpenCode bridge/lanes/stop records:
+  persisted obligations; mutating quarantine readers не подходят read-only census.
+- `scripts/dev-with-runtime.mjs`, staging/dist scripts и provider management:
+  скрытые executable probes/import/download/config dependencies до первого prompt.
+
+Подготовленные ранее worktrees frontend boundary/N1/N2 — donors после review их
+конкретного patch и ownership; целиком не cherry-pick. Новая программа не признаёт
+старые singleton UI proofs доказательством полной совместимости.
+
+## 3. Provider package: reuse без повторного написания
+
+Наблюдаемый package: `@agent-teams/provider-implementations`, workspace path
+`packages/platform/provider-implementations`; public exports root/composition,
+`claude`, `codex`, `opencode`, `session-io`. Архитектурное размещение принято
+runtime ADR-0092; перемещение пакета в другой repo не является шагом этого плана.
+
+Ранее квалифицированный initial archive SHA256:
+`3d547879a7ea0d5af48dccec285e8c6afca3eddde13a4a77ab15588650db0e8d`.
+Зафиксированы Node24/26 strict/packed, 137 behavioral checks и 24 SDK/CLI localhost
+проверки. Это evidence выбранных bytes, не native parity всей библиотеки/host.
+
+Отдельные successor proofs:
+
+- Codex D archive `01f97cae091297d31ee834e4bb92b74aab67f9e577792a52aadd9dfc93c735ff`:
+  actual Codex 0.162.0 + public C + real TEST PostgreSQL + local Responses/MCP;
+  пять POST, targeted interrupt, deny→native cancel→cancelled, MCP once, cleanup.
+- OpenCode D archive `d1e99f5336bddc1e79f84aec71f9e8154eb2c3d8827a37f3b82cfe22a457aba4`:
+  actual OpenCode 1.18.35, две processes, A1/A2/B1/stopA/B2, четыре local model POST.
+  Это не proof публичного C Host/MCP/cross-backing restore для OpenCode.
+
+Это разные archives с разными patches, не один уже объединённый qualified release.
+P0 выбирает один coherent source/artifact, integrating only reviewed deltas, и
+повторяет только недоказанные affected checks. Временные локальные receipt paths
+сохранены в [исторической матрице](../runtime-provider-extraction-capabilities.md);
+нужные для delivery proof должны стать восстанавливаемыми version-bound artifacts,
+а не prerequisite существования чужого `/tmp`.
+
+## 4. Что делать с нынешним runtime и новым Orchestrator
+
+Runtime C delivered checkpoint `8d89b28f07426846b3ded7c6bd933363d9dc468c`
+содержит пригодные session/input/control/custody contracts и rejecting tests.
+Они могут служить oracle и source donor по собственным правилам repo. Этап 1
+не зависит от его PG implementation, Assembly или embedded Host.
+
+Старые B/C evidence, E singleton integration, N1 roster/direct delivery и N2 Work
+разработки сохраняются в прежних worktrees. Полезные отдельные решения/fixtures
+reuse после mapping на legacy semantics; unfinished future-core code не становится
+обязательным prerequisite legacy-host. Ранее доставленные commits не откатываются.
+
+Публикации tooling/Foundation и native governance остаются результатами тех
+репозиториев, а не новым gate этого плана. Для изменений D соблюдаются реальные
+scoped package/architecture gates; их нельзя обходить ни копированием source,
+ни переименованием legacy-host в fixture.
