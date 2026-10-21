@@ -7,14 +7,24 @@ import { open, readFile, writeFile, mkdir, lstat } from 'node:fs/promises';
 import path from 'node:path';
 import { connect, createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
-import { packagedArguments, packagedDrainSnapshot } from './packaged.mjs';
+import { packagedArguments } from './packaged.mjs';
 import { settingsRefreshFailureSummary } from './packaged-verify.mjs';
 import {
+  SCENARIO_RECEIPT_LIMIT,
+  parseScenarioReceipt,
+  scenarioProofIdentities,
+  scenarioProofBinding,
+  validateScenarioProof,
+  scenarioProofDrain,
+  scenarioFinalHistory,
+  carryScenarioProof,
+} from './scenario-cleanup-proof.mjs';
+import {
   processes,
-  listeners,
   sameIdentity,
   windowsCleanupEvidence,
   ownedTree,
+  windowsProcessCensus,
 } from './platform.mjs';
 
 const args = process.argv.slice(2);
@@ -108,6 +118,7 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
   } finally {
     let history;
     let crashOwner;
+    let ownedManifest, context;
     const observeHistory = () => {
       const current = processes();
       return history.expected.map((expected) => {
@@ -138,27 +149,42 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
     };
     try {
       // Capture identity set before stop. Never kill by executable name, port, or /T.
-      const ownedManifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-      await writeFile(path.join(runDir, 'manifest.json'), JSON.stringify(ownedManifest, null, 2));
       try {
+        ownedManifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+        await writeFile(path.join(runDir, 'manifest.json'), JSON.stringify(ownedManifest, null, 2));
+        assert(!ownedManifest.proofHistoryUnavailable, 'Pre-stop proof history unavailable');
         const current = ownedTree(processes(), ownedManifest.launcher);
-        const prior = ownedManifest.observedProcesses ?? [];
-        assert(prior.length + current.length <= 500, 'Historical diagnostic bound exceeded');
-        const union = [...prior, ...current].filter(
-          (entry, index, all) =>
-            all.findIndex((p) => p.pid === entry.pid && p.birth === entry.birth) === index
+        const union = scenarioProofIdentities(
+          [ownedManifest.launcher],
+          ownedManifest.proofObservedProcesses,
+          ownedManifest.observedProcesses ?? [],
+          current
         );
+        context = { root, run, launcher: ownedManifest.launcher, requestedAt: Date.now() };
         history = {
-          at: Date.now(),
+          at: context.requestedAt,
           observationOnly: true,
-          expected: union.map((p) => ({
-            pid: p.pid,
-            parent: p.parent,
-            birth: p.birth,
-            executable: p.executable ?? null,
-          })),
+          binding: scenarioProofBinding(root, run, ownedManifest.launcher),
+          expected: union,
         };
-        const app = history.expected.filter(
+        // Stop must inherit identities first seen in this fresh snapshot even
+        // if they exit before its own live census. This publishes proof only.
+        const handoffManifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+        assert(!handoffManifest.proofHistoryUnavailable, 'Pre-stop proof publication unavailable');
+        assert.deepEqual(
+          scenarioProofBinding(handoffManifest.root, handoffManifest.run, handoffManifest.launcher),
+          history.binding,
+          'Manifest changed before pre-stop proof publication'
+        );
+        history.expected = scenarioProofIdentities(
+          handoffManifest.proofObservedProcesses,
+          history.expected
+        );
+        handoffManifest.proofObservedProcesses = history.expected;
+        await writeFile(manifestPath, JSON.stringify(handoffManifest, null, 2));
+        ownedManifest = handoffManifest;
+        await writeFile(path.join(runDir, 'manifest.json'), JSON.stringify(ownedManifest, null, 2));
+        const app = current.filter(
           (p) =>
             p.parent === ownedManifest.launcher.pid &&
             p.executable?.toLowerCase() === ownedManifest.artifact.app.path.toLowerCase()
@@ -185,113 +211,78 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
         history = { observationOnly: true, collectionFailed: true };
       }
       const stopped = command('stop', [root], 60000);
+      const stoppedAt = Date.now();
+      history.stopCompletedAt = stoppedAt;
       await writeFile(path.join(runDir, 'stop.txt'), stopped.stdout + stopped.stderr);
       assert.equal(stopped.status, 0, 'Manifest-owned cleanup refused');
-      try {
-        const receiptPath = path.join(root, 'cleanup-graceful.json');
+      // Archive each scenario's actual post-stop receipts before a later run can
+      // replace the root files. Proof identities never become signal identities.
+      const stopReceipt = async (name) => {
+        const receiptPath = path.join(root, name);
         const leaf = await lstat(receiptPath);
-        assert(leaf.isFile() && !leaf.isSymbolicLink() && leaf.size <= 1024 * 1024);
-        const after = JSON.parse(await readFile(receiptPath, 'utf8')).afterClose;
-        assert(
-          history?.expected &&
-            after?.observationOnly === true &&
-            Number.isFinite(after.at) &&
-            after.at >= history.at &&
-            after.at <= Date.now()
-        );
-        assert(
-          Array.isArray(after.known) &&
-            after.known.length <= 500 &&
-            Array.isArray(after.descendants) &&
-            after.descendants.length <= 500
-        );
-        const valid = (p) =>
-          p &&
-          Number.isSafeInteger(p.pid) &&
-          p.pid > 0 &&
-          Number.isSafeInteger(p.parent) &&
-          p.parent >= 0 &&
-          typeof p.birth === 'string' &&
-          p.birth.length <= 64 &&
-          Number.isFinite(Date.parse(p.birth)) &&
-          (p.executable === null ||
-            (typeof p.executable === 'string' && p.executable.length <= 4096));
-        const known = after.known.map((record) => record.expected);
-        assert(
-          known.every(
-            (p) =>
-              valid(p) &&
-              history.expected.some(
-                (previous) =>
-                  previous.pid === p.pid &&
-                  previous.birth === p.birth &&
-                  previous.executable === p.executable
-              )
-          )
-        );
-        assert(after.descendants.every(valid));
-        const lineage = [ownedManifest.launcher];
-        for (let index = 0; index < lineage.length; index++) {
-          for (const p of after.descendants) {
-            if (
-              p.parent === lineage[index].pid &&
-              Date.parse(p.birth) >= Date.parse(lineage[index].birth) &&
-              !lineage.some((parent) => parent.pid === p.pid)
-            )
-              lineage.push(p);
-          }
-        }
-        assert(
-          after.descendants.every((p) =>
-            lineage.some(
-              (parent) =>
-                parent.pid === p.pid &&
-                parent.birth === p.birth &&
-                parent.executable === p.executable
-            )
-          )
-        );
-        const union = [...history.expected, ...known, ...after.descendants].filter(
-          (p, index, all) =>
-            all.findIndex((previous) => previous.pid === p.pid && previous.birth === p.birth) ===
-            index
-        );
-        assert(union.length <= 500);
-        history.expected = union.map((p) => ({
-          pid: p.pid,
-          parent: p.parent,
-          birth: p.birth,
-          executable: p.executable,
-        }));
+        assert(leaf.isFile() && !leaf.isSymbolicLink() && leaf.size <= SCENARIO_RECEIPT_LIMIT);
+        const text = await readFile(receiptPath, 'utf8');
+        await writeFile(path.join(runDir, name), text, { flag: 'wx' });
+        return parseScenarioReceipt(text);
+      };
+      const identities = await stopReceipt('cleanup-identities.json');
+      const graceful = await stopReceipt('cleanup-graceful.json');
+      const proof = await stopReceipt('cleanup-proof-identities.json');
+      await stopReceipt('cleanup-signals.json');
+      let handoff;
+      try {
+        assert(history?.expected && !history.collectionFailed, 'Pre-stop history was not captured');
+        handoff = validateScenarioProof({
+          context,
+          prestop: history.expected,
+          proof,
+          graceful,
+          signal: identities,
+          stoppedAt,
+        });
+        history.expected = handoff.identities;
         history.afterCloseReceipt = {
-          at: after.at,
-          source: 'cleanup-graceful.json/afterClose',
+          at: graceful.afterClose.at,
+          source: `${run}/cleanup-graceful.json/afterClose`,
           observationOnly: true,
         };
-      } catch {
+      } catch (error) {
         if (history) history.afterCloseCollectionFailed = true;
+        // Validator assertions use fixed messages; omit any deep-equality diff.
+        const reason =
+          error instanceof Error
+            ? error.message.split('\n', 1)[0].slice(0, 256)
+            : 'Unknown proof validation failure';
+        history.proofFailure = { stage: 'post-stop-proof-validation', reason };
+        throw new Error(
+          `Complete bound post-stop proof history unavailable: ${reason}; refusing warm restart`
+        );
       }
-      // stop writes the exact identities it signalled; detect surviving owned children
-      // even if Electron exited and they have since been reparented.
-      const identities = JSON.parse(
-        await readFile(path.join(root, 'cleanup-identities.json'), 'utf8')
-      );
-      await writeFile(
-        path.join(runDir, 'cleanup-identities.json'),
-        JSON.stringify(identities, null, 2)
-      );
       const deadline = Date.now() + 15000;
-      let drain;
+      let drain, census;
       do {
-        drain = packagedDrainSnapshot(identities, processes(), listeners());
+        const remaining = deadline - Date.now();
+        assert(remaining > 0, 'Scenario proof census deadline expired');
+        census = windowsProcessCensus([9222], remaining);
+        drain = scenarioProofDrain(handoff, census, Date.now());
+        await writeFile(
+          path.join(runDir, 'cleanup-final-census.json'),
+          JSON.stringify(census, null, 2)
+        );
+        history.final = scenarioFinalHistory(drain, census.completedAt);
         if (drain.drained) break;
-        await new Promise((resolve) => setTimeout(resolve, 250));
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.min(250, Math.max(0, deadline - Date.now())))
+        );
       } while (Date.now() < deadline);
       await writeFile(
         path.join(runDir, 'cleanup.json'),
         JSON.stringify(
           {
             at: new Date().toISOString(),
+            binding: history.binding,
+            stopCompletedAt: stoppedAt,
+            proofIdentities: handoff.identities,
             ...drain,
           },
           null,
@@ -385,12 +376,11 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
         }
         await writeFile(path.join(runDir, 'cleanup-os.json'), JSON.stringify(diagnostic, null, 2));
       }
-      assert(
-        drain.drained,
-        'Owned processes or CDP listener survived cleanup; refusing warm restart'
-      );
+      assert(drain.drained, 'Proof identity/listener remains or is UNKNOWN; refusing warm restart');
+      await writeFile(path.join(runDir, 'cleanup-history.json'), JSON.stringify(history, null, 2));
       const current = JSON.parse(await readFile(manifestPath, 'utf8'));
       sameIdentity(ownedManifest.launcher, current.launcher);
+      current.proofObservedProcesses = carryScenarioProof(current, handoff);
       delete current.launcher;
       delete current.observedProcesses;
       await writeFile(manifestPath, JSON.stringify(current, null, 2));
@@ -401,11 +391,11 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
       launcher.unref();
     } finally {
       try {
-        if (history?.expected) history.final = { at: Date.now(), records: observeHistory() };
-        await writeFile(
-          path.join(runDir, 'cleanup-history.json'),
-          JSON.stringify(history ?? { observationOnly: true, collectionFailed: true }, null, 2)
-        );
+        if (!result.cleanup)
+          await writeFile(
+            path.join(runDir, 'cleanup-history.json'),
+            JSON.stringify(history ?? { observationOnly: true, collectionFailed: true }, null, 2)
+          );
       } catch {
         /* Historical observation cannot replace the cleanup result. */
       }

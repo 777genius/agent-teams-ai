@@ -40,6 +40,7 @@ on:
       - scripts/e2e/opencode-diagnostics/native-install-expectation*.mjs
       - scripts/e2e/opencode-diagnostics/windows-attachments*
       - scripts/e2e/opencode-diagnostics/run-packaged.mjs
+      - scripts/e2e/opencode-diagnostics/scenario-cleanup-proof*.mjs
       - scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.mts
       - scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.tsconfig.json
       - scripts/e2e/opencode-diagnostics-desktop.mjs
@@ -114,7 +115,7 @@ jobs:
           python-version: '3.11'
       - run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Verify harness contracts
-        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs scripts/e2e/opencode-diagnostics/native-install-expectation.test.mjs scripts/e2e/opencode-diagnostics/windows-attachments-support.test.mjs
+        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs scripts/e2e/opencode-diagnostics/native-install-expectation.test.mjs scripts/e2e/opencode-diagnostics/windows-attachments-support.test.mjs scripts/e2e/opencode-diagnostics/scenario-cleanup-proof.test.mjs
       - name: Typecheck admission diagnostic
         run: node node_modules/@typescript/native/bin/tsc --noEmit -p scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.tsconfig.json
       - name: Download and hash the locked public runtime archive
@@ -293,6 +294,8 @@ jobs:
             scripts/e2e/opencode-diagnostics/native-install-expectation.mjs
             scripts/e2e/opencode-diagnostics/platform.mjs
             scripts/e2e/opencode-diagnostics/packaged.mjs
+            scripts/e2e/opencode-diagnostics/run-packaged.mjs
+            scripts/e2e/opencode-diagnostics/scenario-cleanup-proof.mjs
             scripts/e2e/opencode-diagnostics-desktop.mjs
             scripts/e2e/anthropic-compatible-status/packaged-default-artifact.ts
             scripts/e2e/anthropic-compatible-status/packaged-default-additions.ts

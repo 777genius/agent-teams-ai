@@ -8,6 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
+import * as proofPlatform from './opencode-diagnostics/platform.mjs';
 import {
   packagedArguments,
   packagedArtifact,
@@ -261,13 +262,44 @@ if (mode === 'seed-packaged') {
   await writeFile(path.join(dir, 'manifest.json'), JSON.stringify(data, null, 2));
   console.log(dir);
 } else if (mode === 'stop') {
+  const stopStartedAt = Date.now();
+  const stopDeadline = stopStartedAt + 60000; // Existing caller's stop envelope.
   const historicalManifest = await manifest();
   let owned = await ownedProcesses();
   const data = await manifest();
+  let gracefulReceipt, proofReceipt;
   if (data.packaged)
     await writeFile(path.join(root, 'cleanup-identities.json'), JSON.stringify(owned, null, 2));
   if (data.packaged) {
-    const graceful = { at: new Date().toISOString(), cdp: {} };
+    const binding = {
+      root: data.root,
+      run: data.run ?? null,
+      launcher: { pid: data.launcher.pid, birth: data.launcher.birth },
+    };
+    const graceful = {
+      schemaVersion: 1,
+      observationOnly: true,
+      binding,
+      startedAt: stopStartedAt,
+      at: new Date().toISOString(),
+      cdp: {},
+    };
+    gracefulReceipt = graceful;
+    const retiredRoot = (deadline, startedAt) => {
+      const remaining = Math.min(30000, deadline - Date.now());
+      assert(remaining > 0, 'Stop proof census deadline expired');
+      const census = proofPlatform.windowsProcessCensus([9222], remaining);
+      const state = proofPlatform.windowsProofDrainSnapshot([data.launcher], census).rows[0].state;
+      assert(['absent', 'different-birth'].includes(state), 'Launcher ancestry is unknown');
+      return {
+        startedAt,
+        at: Date.now(),
+        observationOnly: true,
+        expected: { pid: data.launcher.pid, birth: data.launcher.birth },
+        state,
+        census,
+      };
+    };
     let closureHistory = [];
     try {
       const prior = historicalManifest.observedProcesses ?? [];
@@ -280,6 +312,7 @@ if (mode === 'seed-packaged') {
       graceful.historyUnavailable = true;
     }
     const closureCensus = () => {
+      const startedAt = Date.now();
       try {
         const current = processes();
         const known = closureHistory.map((expected) => {
@@ -308,7 +341,7 @@ if (mode === 'seed-packaged') {
               : null,
           };
         });
-        let descendants;
+        let descendants, rootRetirement;
         try {
           descendants = ownedTree(current, data.launcher).map((p) => ({
             pid: p.pid,
@@ -322,10 +355,21 @@ if (mode === 'seed-packaged') {
             graceful.historyUnavailable = true;
           }
         } catch {
-          descendants = null;
+          // Filtered processes() absence is insufficient. Only a complete
+          // census can retire this exact root, and it grants no new ancestry.
+          rootRetirement = retiredRoot(stopDeadline, startedAt);
+          descendants = [];
         }
-        return { at: Date.now(), observationOnly: true, known, descendants };
+        return {
+          startedAt,
+          at: Date.now(),
+          observationOnly: true,
+          known,
+          descendants,
+          ...(rootRetirement ? { rootRetirement } : {}),
+        };
       } catch {
+        graceful.historyUnavailable = true;
         return { at: Date.now(), collectionFailed: true };
       }
     };
@@ -346,8 +390,9 @@ if (mode === 'seed-packaged') {
         graceful.error = String(error);
       });
       graceful.afterClose = closureCensus();
-      const deadline = Date.now() + 5000;
+      const deadline = Math.min(stopDeadline, Date.now() + 5000);
       while (Date.now() < deadline) {
+        const observationStartedAt = Date.now();
         const snapshot = processes();
         try {
           const descendants = ownedTree(snapshot, data.launcher);
@@ -357,7 +402,12 @@ if (mode === 'seed-packaged') {
             graceful.historyUnavailable = true;
           }
         } catch {
-          /* An absent launcher does not prove ancestry for any new process. */
+          try {
+            graceful.lateRootRetirement = retiredRoot(deadline, observationStartedAt);
+          } catch {
+            graceful.historyUnavailable = true;
+          }
+          break; // A retired root grants no new descendant discovery.
         }
         if (
           !owned.some(
@@ -371,11 +421,23 @@ if (mode === 'seed-packaged') {
       }
     } catch (error) {
       graceful.error = String(error); // Identity-checked signals remain the fallback.
+      graceful.historyUnavailable = true;
     } finally {
       if (!graceful.afterClose) graceful.afterClose = closureCensus();
     }
-    await writeFile(path.join(root, 'cleanup-graceful.json'), JSON.stringify(graceful, null, 2));
-    const survivors = await ownedProcesses();
+    let survivors = [];
+    const survivorObservationAt = Date.now();
+    try {
+      survivors = await ownedProcesses();
+    } catch {
+      try {
+        graceful.finalRootRetirement = retiredRoot(stopDeadline, survivorObservationAt);
+      } catch {
+        graceful.historyUnavailable = true;
+      }
+      // Retain the previously captured owned list. No new identity receives
+      // signal rights when fresh ancestry cannot be established.
+    }
     for (const entry of survivors)
       if (!owned.some((prior) => prior.pid === entry.pid && prior.birth === entry.birth))
         owned.push(entry);
@@ -384,7 +446,10 @@ if (mode === 'seed-packaged') {
     let proof = { complete: false, identities: [] };
     try {
       proof = {
-        complete: !graceful.historyUnavailable && !latest.proofHistoryUnavailable,
+        complete:
+          !graceful.historyUnavailable &&
+          !latest.proofHistoryUnavailable &&
+          Array.isArray(latest.proofObservedProcesses),
         identities: mergeProofIdentities(
           latest.proofObservedProcesses ?? [],
           closureHistory,
@@ -394,16 +459,20 @@ if (mode === 'seed-packaged') {
     } catch {
       /* A missing/oversized proof history cannot qualify physical retirement. */
     }
-    await writeFile(
-      path.join(root, 'cleanup-proof-identities.json'),
-      JSON.stringify(proof, null, 2)
-    );
+    proofReceipt = {
+      schemaVersion: 1,
+      observationOnly: true,
+      binding,
+      startedAt: stopStartedAt,
+      ...proof,
+    };
   }
   // Capture identities before cleanup; never use taskkill /T or a process-group signal.
   const ordered = data.packaged
     ? packagedStopOrder(owned, data.artifact.app.path)
     : [...owned].reverse();
   const signals = [];
+  let commandsCompleted = false;
   try {
     for (const entry of ordered) {
       const record = { expected: entry, at: new Date().toISOString(), outcome: 'checking' };
@@ -423,9 +492,24 @@ if (mode === 'seed-packaged') {
         if (error.code !== 'ESRCH') throw error;
       }
     }
+    commandsCompleted = true;
   } finally {
-    if (data.packaged)
+    if (data.packaged) {
       await writeFile(path.join(root, 'cleanup-signals.json'), JSON.stringify(signals, null, 2));
+      // These proof-only receipts bind the actual stop invocation and are emitted
+      // after the existing identity-checked signal loop. They never select signals.
+      gracefulReceipt.completedAt = Date.now();
+      proofReceipt.completedAt = Date.now();
+      proofReceipt.complete = proofReceipt.complete && commandsCompleted;
+      await writeFile(
+        path.join(root, 'cleanup-graceful.json'),
+        JSON.stringify(gracefulReceipt, null, 2)
+      );
+      await writeFile(
+        path.join(root, 'cleanup-proof-identities.json'),
+        JSON.stringify(proofReceipt, null, 2)
+      );
+    }
   }
   console.log('Stopped owned test process tree');
 } else if (mode === 'start') {
