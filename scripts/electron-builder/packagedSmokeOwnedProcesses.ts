@@ -6,6 +6,8 @@ const MARKER = 'AGENT_TEAMS_PACKAGED_SMOKE_RUN_ID';
 const MAX_OWNED = 128;
 const MAX_PS_BYTES = 16 * 1024 * 1024;
 const MAX_PROC_ENV_BYTES = 1024 * 1024;
+const MAX_BASELINE = 4_096;
+const MAX_PROC_ENTRIES = 16_384;
 const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 class CensusDeadlineError extends Error {}
 class OwnershipDebtError extends Error {}
@@ -43,6 +45,7 @@ export function createPackagedSmokeOwnership(
   if (!Number.isFinite(probeTimeout) || probeTimeout <= 0)
     throw new Error('Invalid packaged smoke ownership timeout');
   const observed = new Map<string, SmokeProcessIdentity>();
+  const baseline = new Map<number, string>();
   const signals: SignalReceipt[] = [];
   let leaderPid: number | undefined;
 
@@ -114,6 +117,7 @@ export function createPackagedSmokeOwnership(
     if (!before || !live(before)) return undefined;
     let environment: Buffer;
     let descriptor: number | undefined;
+    let stage: 'open' | 'read' | 'limit' = 'open';
     try {
       descriptor = openSync(`/proc/${pid}/environ`, 'r');
       const chunks: Buffer[] = [];
@@ -121,26 +125,82 @@ export function createPackagedSmokeOwnership(
       while (true) {
         budget(deadline);
         const chunk = Buffer.alloc(Math.min(16 * 1024, MAX_PROC_ENV_BYTES + 1 - total));
+        stage = 'read';
         const bytes = readSync(descriptor, chunk, 0, chunk.length, null);
         if (bytes === 0) break;
         total += bytes;
-        if (total > MAX_PROC_ENV_BYTES)
+        if (total > MAX_PROC_ENV_BYTES) {
+          stage = 'limit';
           throw new Error('Packaged smoke process environment exceeded its read bound');
+        }
         chunks.push(chunk.subarray(0, bytes));
       }
       environment = Buffer.concat(chunks, total);
     } catch (error) {
       if (error instanceof CensusDeadlineError) throw error;
       if (gone(error)) return undefined;
-      throw new Error(`Unable to inspect packaged smoke ownership: pid=${pid}`);
+      throw environmentInspectionError(pid, stage, error);
     } finally {
-      if (descriptor !== undefined) closeSync(descriptor);
+      if (descriptor !== undefined) {
+        try {
+          closeSync(descriptor);
+        } catch (error) {
+          throw environmentInspectionError(pid, 'close', error);
+        }
+      }
     }
     const after = linuxIdentity(pid, deadline, requireUser);
     if (!after || !live(after)) return undefined;
     if (before.birth !== after.birth)
       throw new Error(`Packaged smoke process identity changed during census: pid=${pid}`);
     return environment.toString().split('\0').includes(`${MARKER}=${marker}`) ? after : undefined;
+  }
+
+  function environmentInspectionError(
+    pid: number,
+    stage: 'open' | 'read' | 'limit' | 'close',
+    error: unknown
+  ) {
+    const code = (error as NodeJS.ErrnoException).code;
+    const errno =
+      typeof code === 'string' &&
+      [
+        'EACCES',
+        'EPERM',
+        'EIO',
+        'EMFILE',
+        'ENFILE',
+        'ENOMEM',
+        'EBADF',
+        'EINVAL',
+        'EAGAIN',
+      ].includes(code)
+        ? code
+        : 'UNKNOWN';
+    return new Error(
+      `Unable to inspect packaged smoke ownership: pid=${pid} stage=${stage} errno=${errno}`
+    );
+  }
+
+  function linuxProcessIds(deadline: number) {
+    budget(deadline);
+    let entries: string[];
+    try {
+      entries = readdirSync('/proc');
+    } catch {
+      throw new Error('Unable to enumerate packaged smoke process inventory');
+    }
+    if (entries.length > MAX_PROC_ENTRIES)
+      throw new Error('Packaged smoke process inventory exceeded its entry bound');
+    return entries.filter((entry) => /^\d+$/.test(entry)).map(Number);
+  }
+
+  function isPreexisting(identity: SmokeProcessIdentity) {
+    return (
+      identity.pid !== leaderPid &&
+      baseline.get(identity.pid) === identity.birth &&
+      !observed.has(`${identity.pid}:${identity.birth}`)
+    );
   }
 
   function parseDarwinMetadata(output: string): SmokeProcessIdentity[] {
@@ -206,16 +266,12 @@ export function createPackagedSmokeOwnership(
 
   function inventory(deadline: number): SmokeProcessIdentity[] {
     if (platform === 'linux') {
-      let entries: string[];
-      try {
-        entries = readdirSync('/proc');
-      } catch {
-        throw new Error('Unable to enumerate packaged smoke process inventory');
-      }
       const result: SmokeProcessIdentity[] = [];
-      for (const entry of entries) {
-        if (!/^\d+$/.test(entry) || Number(entry) === process.pid) continue;
-        const identity = linuxMarked(Number(entry), deadline);
+      for (const pid of linuxProcessIds(deadline)) {
+        if (pid === process.pid) continue;
+        const metadata = linuxIdentity(pid, deadline);
+        if (!metadata || !live(metadata) || isPreexisting(metadata)) continue;
+        const identity = linuxMarked(pid, deadline);
         if (identity) result.push(identity);
       }
       return result;
@@ -283,11 +339,34 @@ export function createPackagedSmokeOwnership(
     );
   }
 
+  // This synchronous metadata snapshot completes before the launch capability
+  // is exposed. These exact identities cannot have inherited its new marker.
+  // Never refresh the baseline after a caller can spawn a marked descendant.
+  if (platform === 'linux') {
+    const baselineDeadline = Date.now() + probeTimeout;
+    const self = linuxIdentity(process.pid, baselineDeadline, true);
+    if (!self || !live(self)) throw new Error('Unable to establish packaged smoke harness birth');
+    const harnessBirth = BigInt(self.birth.slice('proc:'.length));
+    for (const pid of linuxProcessIds(baselineDeadline)) {
+      const identity = linuxIdentity(pid, baselineDeadline);
+      // Linux birth ticks have finite resolution. A future marked descendant
+      // cannot share a tick strictly older than this still-live harness.
+      if (identity && BigInt(identity.birth.slice('proc:'.length)) < harnessBirth)
+        baseline.set(identity.pid, identity.birth);
+      if (baseline.size > MAX_BASELINE)
+        throw new Error('Packaged smoke pre-launch baseline exceeded its process bound');
+    }
+    budget(baselineDeadline);
+  }
+
   return {
     environment: { [MARKER]: marker },
     sample,
     begin(pid?: number) {
       leaderPid = pid;
+      // A supplied live leader must still prove its marker, even if a caller
+      // incorrectly created this scope after spawning that process.
+      if (pid !== undefined) baseline.delete(pid);
       emit({ phase: 'begin', leaderPid });
       const current = sample();
       // An immediately exited/spawn-failed leader is fine; its marked orphans

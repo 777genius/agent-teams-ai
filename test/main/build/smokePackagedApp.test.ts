@@ -142,6 +142,44 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
   );
   const fixturePath = path.resolve(import.meta.dirname, 'fixtures/packaged-smoke-process-TEST.cjs');
 
+  it.skipIf(process.platform !== 'linux').each(['preexisting', 'young', 'late', 'leader'])(
+    'preserves strict process birth and ownership boundaries for %s environments',
+    async (mode) => {
+      const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-baseline-TEST-'));
+      try {
+        const output = await new Promise<string>((resolve, reject) => {
+          execFile(
+            process.execPath,
+            [path.resolve(import.meta.dirname, 'fixtures/packaged-smoke-baseline-TEST.ts'), mode],
+            {
+              cwd: sandbox,
+              env: { ...process.env, PACKAGED_SMOKE_FIXTURE_ROOT: sandbox },
+              encoding: 'utf8',
+              timeout: 12_000,
+            },
+            (error, stdout, stderr) => {
+              if (error) reject(new Error(`${error.message}\n${stdout}\n${stderr}`));
+              else resolve(stdout);
+            }
+          );
+        });
+        expect(JSON.parse(output)).toEqual({
+          mode,
+          nativeBirthBoundary: true,
+          predecessorUntouched: true,
+          lateOrYoungRejected: mode !== 'preexisting',
+          ownedDrained: mode === 'preexisting',
+        });
+        expect(
+          JSON.parse(fs.readFileSync(path.join(sandbox, 'baseline-cleanup.json'), 'utf8'))
+        ).toEqual({ remaining: [] });
+      } finally {
+        fs.rmSync(sandbox, { recursive: true, force: true });
+      }
+    },
+    14_000
+  );
+
   it.skipIf(process.platform !== 'linux').each(['ownership-retiring', 'ownership-persistent', 'ownership-newly-observed'])(
     'keeps same-birth unmarked process debt unsettled on %s',
     async (mode) => {
@@ -303,7 +341,7 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
               // execFile reports normal nonzero exits as errors; preserve their exact status.
               resolve({ error: undefined, status: error.code, stdout, stderr });
             } else {
-              reject(error);
+              reject(new Error(error.message, { cause: error }));
             }
           }
         );
