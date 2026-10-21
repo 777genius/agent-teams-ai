@@ -20,6 +20,7 @@ import {
   stopTeamWithEscalation,
 } from '@main/services/team/lifecycle/teamForceStopFlow';
 import { reapCursorAgentLeadTreesForStoppedTeam } from '@main/services/team/lifecycle/teamLeadProcessTreeReap';
+import { assertEscalatedStopConfirmed } from '@main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
@@ -120,6 +121,10 @@ export function registerTeamLifecycleRoutes(
             `[${teamName}] Regular stop ${result.stopOutcome}; escalated to force stop (killed ${result.killedRuntimePids.length} runtime pid(s), cancelled ${result.clearedPendingDeliveries} pending deliveries)`
           );
         }
+        // Same rejection as the in-app Stop control: a stop that did not
+        // confirm is a failure here too, never a 200 carrying runtime state
+        // a headless caller would trust.
+        assertEscalatedStopConfirmed(result);
         return reply.send(await teamRuntimeApi.getRuntimeState(teamName));
       } catch (error) {
         if (shouldLogError(error)) {

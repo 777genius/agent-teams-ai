@@ -1,4 +1,6 @@
-import { OpenCodeBridgeCommandHandshakePort } from '@main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+import { stopTeamWithEscalation } from '@main/services/team/lifecycle/teamForceStopFlow';
+import { createOpenCodeBridgeHandshakeFailure, OpenCodeBridgeCommandHandshakePort } from '@main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+import { OpenCodeReadinessBridge } from '@main/services/team/opencode/bridge/OpenCodeReadinessBridge';
 import { OpenCodeRuntimeLaunchAuthorityWriter } from '@main/services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
 import {
   getOpenCodeRuntimeManifestPath,
@@ -18,6 +20,8 @@ import {
   createDefaultOpenCodeRuntimeBootstrapEvidencePorts,
   stampOpenCodeAppMcpTransportEvidenceIfMissing,
 } from '@main/services/team/provisioning/TeamProvisioningOpenCodeBootstrapEvidence';
+import { assertOpenCodeRuntimeStopEffective } from '@main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
+import { OpenCodeTeamRuntimeAdapter } from '@main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import { createHash } from 'crypto';
 import { promises as fs } from 'fs';
 import * as os from 'os';
@@ -52,6 +56,7 @@ import {
   type OpenCodeLaunchAuthorityWriter,
   OpenCodeStateChangingBridgeCommandService,
   type OpenCodeStateChangingBridgeDiagnosticsSink,
+  projectOpenCodeStateChangingFailure,
   resolveOpenCodeBridgeLeaseAcquireTimeoutMs,
   type RuntimeStoreManifestReader,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
@@ -1766,6 +1771,146 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     await createService().execute(buildStopInput());
     manifestReader.manifest = { ...manifestReader.manifest, sessionIdentityHash: 'successor' };
     await expect(createService().execute(buildStopInput())).rejects.toThrow(/target/);
+    expect(bridge.calls).toHaveLength(1);
+  });
+
+  it('preserves the original pre-dispatch failure and exports only finite causal facts', async () => {
+    const failure = Object.assign(new Error('TEST-private token=never-publish C:\\private'), {
+      code: 'EACCES',
+    });
+    failure.stack =
+      'Error: TEST-private\n    at C:\\private\\OpenCodeBridgeHandshakeClient.ts:42:7';
+    vi.spyOn(handshakePort, 'handshake').mockRejectedValueOnce(failure);
+    await expect(createService().execute(buildStopInput())).rejects.toBe(failure);
+    const facts = projectOpenCodeStateChangingFailure(failure);
+    expect(facts).toMatchObject({
+      phase: 'handshake',
+      errno: 'EACCES',
+      reason: null,
+      sourceFrame: { source: 'OpenCodeBridgeHandshakeClient.ts', line: 42, column: 7 },
+    });
+    expect(JSON.stringify(facts)).not.toMatch(/TEST-private|never-publish|private/);
+    expect(bridge.calls).toHaveLength(0);
+  });
+
+  it('keeps the same validated handshake refusal and its finite SDK cause before dispatch', async () => {
+    const failure = createOpenCodeBridgeHandshakeFailure({ kind: 'runtime_not_ready', retryable: false,
+      message: 'execution_owner_not_private:private_acl_foreign_allow:0 @native:runStateRequest' });
+    vi.spyOn(handshakePort, 'handshake').mockRejectedValueOnce(failure);
+    await expect(createService().execute(buildStopInput())).rejects.toBe(failure);
+    expect(projectOpenCodeStateChangingFailure(failure)).toMatchObject({ phase: 'handshake',
+      handshakeFailure: { kind: 'runtime_not_ready', sdkCode: 'execution_owner_not_private', nativeOperation: 'runStateRequest', nativeErrno: 0 } });
+    expect(bridge.calls).toHaveLength(0);
+  });
+
+  it('preserves post-effect persistence failure when lease cleanup also fails', async () => {
+    bridge.resultFactory = ({ body, command, options }) =>
+      bridgeSuccess({
+        command,
+        requestId: options.requestId,
+        data: {
+          runId: 'run-1',
+          stopped: true,
+          members: {},
+          warnings: [],
+          diagnostics: [],
+          idempotencyKey: body.preconditions.idempotencyKey,
+        },
+      });
+    const primary = Object.assign(new Error('TEST-private primary'), { code: 'ENOSPC' });
+    vi.spyOn(ledger, 'markCompleted').mockRejectedValueOnce(primary);
+    vi.spyOn(leaseStore, 'release').mockRejectedValueOnce(
+      Object.assign(new Error('TEST-private cleanup'), { code: 'EACCES' })
+    );
+    await expect(createService().execute(buildStopInput())).rejects.toBe(primary);
+    expect(projectOpenCodeStateChangingFailure(primary)).toMatchObject({
+      phase: 'ledger_complete',
+      errno: 'ENOSPC',
+      cleanupErrno: 'EACCES',
+      reason: null,
+    });
+    expect(bridge.calls).toHaveLength(1);
+    expect(JSON.stringify(projectOpenCodeStateChangingFailure(primary))).not.toContain(
+      'TEST-private'
+    );
+  });
+
+  it('identifies final lease release failure after one successful Stop effect', async () => {
+    bridge.resultFactory = ({ body, command, options }) =>
+      bridgeSuccess({
+        command,
+        requestId: options.requestId,
+        data: {
+          runId: 'run-1',
+          stopped: true,
+          members: {},
+          warnings: [],
+          diagnostics: [],
+          idempotencyKey: body.preconditions.idempotencyKey,
+        },
+      });
+    const failure = Object.assign(new Error('TEST-private release'), { code: 'EPERM' });
+    vi.spyOn(leaseStore, 'release').mockRejectedValueOnce(failure);
+    await expect(createService().execute(buildStopInput())).rejects.toBe(failure);
+    expect(projectOpenCodeStateChangingFailure(failure)).toMatchObject({
+      phase: 'lease_release',
+      errno: 'EPERM',
+    });
+    expect(bridge.calls).toHaveLength(1);
+  });
+
+  it('carries a real post-success causal failure through readiness, adapter and stop escalation', async () => {
+    bridge.resultFactory = ({ body, command, options }) =>
+      bridgeSuccess({
+        command,
+        requestId: options.requestId,
+        data: {
+          runId: 'run-1',
+          stopped: true,
+          members: {},
+          warnings: [],
+          diagnostics: [],
+          idempotencyKey: body.preconditions.idempotencyKey,
+        },
+      });
+    const failure = Object.assign(new Error('TEST-private release never-publish'), {
+      code: 'EPERM',
+    });
+    vi.spyOn(leaseStore, 'release').mockRejectedValueOnce(failure);
+    const readiness = new OpenCodeReadinessBridge(bridge, {
+      stateChangingCommands: createService(),
+    });
+    const adapter = new OpenCodeTeamRuntimeAdapter(readiness);
+    const result = await stopTeamWithEscalation('TEST-stop-cause', {
+      stopTeam: async () => {
+        const stopped = await adapter.stop({
+          teamName: 'team-a',
+          runId: 'run-1',
+          laneId: 'primary',
+          cwd: '/tmp/project',
+          providerId: 'opencode',
+          reason: 'cleanup',
+          previousLaunchState: null,
+        });
+        assertOpenCodeRuntimeStopEffective({
+          result: stopped,
+          laneId: 'primary',
+          previousLaunchState: null,
+          message: 'Stop unconfirmed',
+          logWarning: () => {},
+        });
+      },
+      observeOwnedRuntimeRunIds: async () => [],
+      observeOwnedRuntimeLaneIds: async () => [],
+      killRetainedRuntimeProcesses: async () => ({ killedPids: [], diagnostics: [] }),
+      clearPendingPromptDeliveries: async () => ({ cleared: 0, diagnostics: [] }),
+      logWarning: () => {},
+      stopTimeoutMs: 1000,
+    });
+    expect(result.stopOutcome).toBe('stop_failed');
+    expect(result.cleanupOutcome).toBe('incomplete');
+    expect(result.causalFailure).toMatchObject({ phase: 'lease_release', errno: 'EPERM' });
+    expect(JSON.stringify(result.causalFailure)).not.toMatch(/TEST-private|never-publish/);
     expect(bridge.calls).toHaveLength(1);
   });
 

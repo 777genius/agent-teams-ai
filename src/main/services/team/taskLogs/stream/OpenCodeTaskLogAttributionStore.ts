@@ -25,6 +25,7 @@ export interface OpenCodeTaskLogAttributionRecord {
   scope: OpenCodeTaskLogAttributionScope;
   laneId?: string;
   sessionId?: string;
+  runId?: string;
   since?: string;
   until?: string;
   startMessageUuid?: string;
@@ -94,6 +95,7 @@ function normalizeRecord(
     return null;
   }
   const sessionId = trimString(raw.sessionId);
+  const runId = trimString(raw.runId);
   const laneId = trimString(raw.laneId);
   const startMessageUuid = trimString(raw.startMessageUuid);
   const endMessageUuid = trimString(raw.endMessageUuid);
@@ -107,6 +109,7 @@ function normalizeRecord(
     scope: normalizeScope(raw.scope),
     ...(laneId ? { laneId } : {}),
     ...(sessionId ? { sessionId } : {}),
+    ...(runId ? { runId } : {}),
     ...(since ? { since } : {}),
     ...(until ? { until } : {}),
     ...(startMessageUuid ? { startMessageUuid } : {}),
@@ -203,6 +206,7 @@ function dedupeRecords(
         record.memberName.trim().toLowerCase(),
         record.scope,
         record.sessionId ?? '',
+        record.runId ?? '',
         record.since ?? '',
         record.until ?? '',
         record.startMessageUuid ?? '',
@@ -227,6 +231,7 @@ function buildUpsertKey(record: OpenCodeTaskLogAttributionRecord): string {
     record.memberName.trim().toLowerCase(),
     record.scope,
     record.sessionId ?? '',
+    record.runId ?? '',
     record.since ?? '',
     record.startMessageUuid ?? '',
   ]);

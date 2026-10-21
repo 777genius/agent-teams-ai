@@ -349,7 +349,8 @@ describe('JsonTokenUsageLedgerRepository', () => {
         }),
         sourceState({
           gatewayUsageRef: 'ref-3',
-          degradedReason: 'nonsense' as unknown as TokenUsageGatewaySourceStateDto['degradedReason'],
+          degradedReason:
+            'nonsense' as unknown as TokenUsageGatewaySourceStateDto['degradedReason'],
         }),
       ];
       await repository.commitImportBatch({ events: [], sourceStates: states });

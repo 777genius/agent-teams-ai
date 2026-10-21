@@ -383,9 +383,7 @@ async function stopOpenCodeRuntimeLanesForStoppedTeamLocked(input: {
             laneStopped = true;
             break;
           }
-          unconfirmedAttempts.push(
-            `run=${runId} ${summarizeOpenCodeRuntimeStopFailure(result)}`
-          );
+          unconfirmedAttempts.push(`run=${runId} ${summarizeOpenCodeRuntimeStopFailure(result)}`);
         } catch (error) {
           const detail = error instanceof Error ? error.message : String(error);
           const safeDetail = sanitizeOpenCodeRuntimeStopDetail(detail, 200);
@@ -398,7 +396,10 @@ async function stopOpenCodeRuntimeLanesForStoppedTeamLocked(input: {
       if (!laneStopped) {
         const attempts =
           unconfirmedAttempts.length > 0
-            ? sanitizeOpenCodeRuntimeStopDetail(`Attempts: ${unconfirmedAttempts.join(' | ')}`, 1_200)
+            ? sanitizeOpenCodeRuntimeStopDetail(
+                `Attempts: ${unconfirmedAttempts.join(' | ')}`,
+                1_200
+              )
             : 'Attempts: no stop result returned';
         ports.logWarning(
           `[${teamName}] OpenCode lane ${laneId} did not confirm stop; retaining runtime ownership and storage. ${attempts}`

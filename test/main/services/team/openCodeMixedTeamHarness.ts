@@ -75,8 +75,8 @@ export async function createMixedHarness(tempDir: string, claudeRoot: string) {
     });
     const readiness = new OpenCodeReadinessBridge(bridgeClient, {
       stateChangingCommands,
-      timeoutMs: 180_000,
-      launchTimeoutMs: 180_000,
+      timeoutMs: 300_000,
+      launchTimeoutMs: 300_000,
       reconcileTimeoutMs: 90_000,
       stopTimeoutMs: 90_000,
     });

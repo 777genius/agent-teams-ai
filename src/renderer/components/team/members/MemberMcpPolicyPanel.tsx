@@ -108,7 +108,11 @@ export const MemberMcpPolicyPanel = ({
             >
               {t('memberDraft.mcp.mode')}
             </Label>
-            <Select value={mcpMode} onValueChange={handleMcpModeChange} disabled={agentTeamsMcpLocked}>
+            <Select
+              value={mcpMode}
+              onValueChange={handleMcpModeChange}
+              disabled={agentTeamsMcpLocked}
+            >
               <SelectTrigger
                 id={`member-${memberId}-mcp-mode`}
                 className="h-8 text-xs"

@@ -173,6 +173,7 @@ function toAttributionRecord(
     scope: 'member_session_window',
     laneId: record.laneId.trim(),
     sessionId,
+    ...(record.runId?.trim() ? { runId: record.runId.trim() } : {}),
     source: 'delivery_ledger',
     ...(since ? { since } : {}),
     ...(until ? { until } : {}),
@@ -257,6 +258,7 @@ export class TaskLogOpenCodeSessionEvidenceSource implements OpenCodeTaskLogSess
         record.memberName.trim().toLowerCase(),
         record.laneId.trim(),
         sessionId,
+        record.runId?.trim() ?? '',
         record.deliveredUserMessageId ??
           getLatestOpenCodeRuntimePromptMessageId(record) ??
           record.inboxMessageId,

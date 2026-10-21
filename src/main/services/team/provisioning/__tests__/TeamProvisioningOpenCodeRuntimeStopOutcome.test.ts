@@ -1,15 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  assertEscalatedStopConfirmed,
   assertOpenCodeRuntimeStopEffective,
   collectOpenCodeLaneRuntimePids,
   describeOpenCodeRuntimeStopResult,
+  OpenCodeRuntimeStopUnconfirmedError,
   resolveOpenCodeRuntimeStopOutcome,
   sanitizeOpenCodeRuntimeStopDetail,
   summarizeOpenCodeRuntimeStopFailure,
 } from '../TeamProvisioningOpenCodeRuntimeStopOutcome';
 
-import type { PersistedTeamLaunchSnapshot } from '@shared/types';
+import type { PersistedTeamLaunchSnapshot, TeamForceStopResult } from '@shared/types';
 
 function snapshot(
   members: Record<string, { laneId?: string; laneKind?: string; runtimePid?: number }>
@@ -215,6 +217,32 @@ describe('resolveOpenCodeRuntimeStopOutcome', () => {
     expect(isRuntimeProcessAlive).not.toHaveBeenCalled();
   });
 
+  it('retains only fixed diagnostic codes on a still-unconfirmed Stop', () => {
+    try {
+      assertOpenCodeRuntimeStopEffective({
+        result: {
+          stopped: false,
+          diagnostics: [
+            'warning:opencode_stop_status_unconfirmed: SECRET',
+            'error:provider_error: SECRET',
+            'error:unrecognized_SECRET: SECRET',
+          ],
+        },
+        laneId: 'primary',
+        previousLaunchState: null,
+        message: 'Stop failed',
+        logWarning: vi.fn(),
+      });
+      expect.fail('Unconfirmed Stop must reject');
+    } catch (error) {
+      expect(error).toBeInstanceOf(OpenCodeRuntimeStopUnconfirmedError);
+      expect((error as OpenCodeRuntimeStopUnconfirmedError).diagnosticCodes).toEqual([
+        'opencode_stop_status_unconfirmed',
+        'provider_error',
+      ]);
+    }
+  });
+
   it('rejects an unconfirmed stop even when recorded hosts are gone', () => {
     const outcome = resolveOpenCodeRuntimeStopOutcome({
       result: { stopped: false, diagnostics: ['session abort not confirmed'] },
@@ -374,5 +402,44 @@ describe('assertOpenCodeRuntimeStopEffective', () => {
         isRuntimeProcessAlive: () => false,
       })
     ).toThrow('OpenCode lane lane-a did not confirm stop (no recorded host pid to verify)');
+  });
+});
+
+describe('assertEscalatedStopConfirmed', () => {
+  const finished: TeamForceStopResult = {
+    stopOutcome: 'stopped',
+    cleanupOutcome: 'completed',
+    killedRuntimePids: [],
+    clearedPendingDeliveries: 0,
+    diagnostics: [],
+  };
+
+  it('accepts the runtime-already-down outcome as the finished stop it is', () => {
+    // A team with no owned OpenCode lane ids whose recorded hosts exit before
+    // the orchestrator acknowledges: the flow deliberately returns this after
+    // its force cleanup and both entry points describe it as having finished
+    // the stop, so it must not read as an unconfirmed stop failure.
+    expect(() =>
+      assertEscalatedStopConfirmed({
+        ...finished,
+        stopOutcome: 'runtime_already_down',
+        cleanupOutcome: 'incomplete',
+        diagnostics: [
+          'Runtime hosts were gone 12ms into the stop; finished without waiting for the orchestrator acknowledgement',
+        ],
+      })
+    ).not.toThrow();
+  });
+
+  it('still rejects an unconfirmed stop and a stop with incomplete cleanup', () => {
+    expect(() => assertEscalatedStopConfirmed({ ...finished, stopOutcome: 'timed_out' })).toThrow(
+      'team_stop_unconfirmed:timed_out'
+    );
+    expect(() => assertEscalatedStopConfirmed({ ...finished, stopOutcome: 'stop_failed' })).toThrow(
+      'team_stop_unconfirmed:stop_failed'
+    );
+    expect(() =>
+      assertEscalatedStopConfirmed({ ...finished, cleanupOutcome: 'incomplete' })
+    ).toThrow('team_stop_unconfirmed:stopped');
   });
 });

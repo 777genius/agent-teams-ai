@@ -23,6 +23,7 @@ import {
   OpenCodeRuntimeManifestEvidenceReader,
   readOpenCodeRuntimeLaneIndex,
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { OpenCodeRuntimeStopUnconfirmedError } from '../provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
 import type { TeamLaunchStateReadResult, TeamLaunchStopAuthority } from '../TeamLaunchStateStore';
@@ -340,6 +341,7 @@ async function runTeamStopFlow(
   const timeoutMs = ports.stopTimeoutMs ?? DEFAULT_STOP_TIMEOUT_MS;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let stopOutcome: TeamForceStopResult['stopOutcome'];
+  let causalFailure: TeamForceStopResult['causalFailure'];
   let timedOut = false;
   let runtimeHostsGone: { promise: Promise<'runtime_already_down'>; cancel(): void } | null = null;
   try {
@@ -365,12 +367,20 @@ async function runTeamStopFlow(
           ports.logWarning(
             `[${teamName}] Regular stop failed before force stop cleanup: ${message}`
           );
+          if (error instanceof OpenCodeRuntimeStopUnconfirmedError) {
+            causalFailure = error.causalFailure;
+            diagnostics.push(...error.diagnosticCodes.map((code) => `stop_failure_code:${code}`));
+          }
           diagnostics.push(`Regular stop failed: ${message}`);
         }
         return 'stop_failed' as const;
       }
     );
-    runtimeHostsGone = watchRuntimeHostsGone(teamName, ports);
+    // Recorded host exit does not acknowledge native lane/session cleanup.
+    // Keep its original stop attempt authoritative until the existing deadline.
+    runtimeHostsGone = ownedLaneIds?.length
+      ? { promise: new Promise<'runtime_already_down'>(() => {}), cancel() {} }
+      : watchRuntimeHostsGone(teamName, ports);
     stopOutcome = await Promise.race([
       stopAttempt,
       runtimeHostsGone.promise,
@@ -448,6 +458,7 @@ async function runTeamStopFlow(
   await markStopped(teamName, ports, diagnostics, publicationAuthority);
   return {
     stopOutcome,
+    ...(causalFailure ? { causalFailure } : {}),
     cleanupOutcome: stopOutcome === 'stopped' && !cleanupIncomplete ? 'completed' : 'incomplete',
     killedRuntimePids,
     clearedPendingDeliveries,
