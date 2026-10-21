@@ -149,14 +149,33 @@ Probe/version пригоден только до allocation; фактическ�
 подтверждаются после handshake. Factories сами по себе не обеспечивают поиск
 executable, user login или durable ownership всех созданных native resources.
 
+### Readiness при потере обязательной зависимости
+
+Host API ready, native session ready и member ready — разные факты. Для рабочего
+handoff требуется актуальный proof endpoint + mandatory tool set + effective config
+того же run/member/generation. Один successful boolean probe, health URL или файл
+MCP config не доказывает discovery обязательных tools. Private adapter связывает
+native status/discovery с read-only owner handshake; модельный prompt не нужен.
+
+Потеря обязательного MCP/tool или истечение trusted proof инвалидирует member
+readiness и удерживает следующие native handoffs. Admitted input сохраняет исходную
+identity; active input учитывается отдельно и не replay после reconnect. Control
+и reconciliation остаются доступны. Timeout `checkReadiness` не превращает уже
+admitted input в terminal success/cancel: он остаётся held/not-dispatched до proof
+или явного stop/discard. Свежий same-binding proof восстанавливает
+готовность; сам reconnect/новый PID этого не делает. При readiness timeout — typed
+dependency failure, без fallback. Политика свежести/инвалидации фиксируется на P1
+для выбранного profile; не требуется полный discovery всех tools на каждом input,
+если native revision/invalidation даёт доказанно актуальный bounded proof.
+
 Состояния не требуют отдельных классов/таблиц на каждое слово:
 
-| Resource    | Допустимая последовательность                                   | Crash/неопределённость                                                                          |
-| ----------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Session     | opening intent → allocated → ready → closing → closed           | Unknown allocation/stop сохраняет debt; новая generation удерживается                           |
-| Input       | admitted → dispatch claimed → consumed/handoff → terminal       | После uncertain claim не повторять submit; известный not-sent допускает тот же intent по policy |
-| Interaction | pending → ответ принят → provider outcome/expired               | Не восстанавливать volatile callback после restart и не отвечать другому request                |
-| Close       | admission sealed → outstanding reconciled → drain/custody proof | Logical closed отдельно от physical stopped; unresolved записывается явно                       |
+| Resource    | Допустимая последовательность                                                  | Crash/неопределённость                                                                          |
+| ----------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| Session     | opening intent → allocated → ready ↔ dependency-unavailable → closing → closed | Readiness recovery остаётся той же generation; unknown allocation/stop сохраняет debt           |
+| Input       | admitted → dispatch claimed → consumed/handoff → terminal                      | После uncertain claim не повторять submit; известный not-sent допускает тот же intent по policy |
+| Interaction | pending → ответ принят → provider outcome/expired                              | Не восстанавливать volatile callback после restart и не отвечать другому request                |
+| Close       | admission sealed → outstanding reconciled → drain/custody proof                | Logical closed отдельно от physical stopped; unresolved записывается явно                       |
 
 Один активный input на session, порядок queued inputs устойчив к reconnect.
 Следующий handoff не пересекает unresolved input/control. Result A и interrupt A
@@ -295,8 +314,14 @@ writers. Active/UNKNOWN command, delivery, stop или custody в исходно
 Snapshot получают согласованно существующими locks/revisions, затем работают с
 detached bytes. Переносятся saved config/roster/settings, tasks/comments/dependencies,
 TaskRefs, нужные blobs и retained history/evidence. Stable product IDs сохраняются
-в новом backend namespace; ссылки используют его captured owner binding. Existing
-old-run/receipt links остаются явно archive-bound. Conflict IDs/неподдержанные
+в новом backend namespace. Import map переводит в destination binding только refs
+на ресурсы **внутри импортируемого snapshot**. Внешние TaskRefs сохраняют точный
+source-owner/archive target либо explicit unresolved gap; одноимённая host-команда
+не становится их адресатом. Это относится к structured полям и encoded metadata/
+`task://` links. Existing `{taskId, displayId, teamName}` не содержит backend:
+feature projection/navigation дополнительно несёт owner qualification из сохранённого
+import/source context, без путей/credentials и без выбора по текущему default.
+Old-run/receipt links также остаются явно archive-bound. Conflict IDs/неподдержанные
 settings/неполный обязательный blob mapping отказывают до публикации нового handle.
 Уже отсутствующая history/evidence сохраняет явный gap, не становится новым proof.
 History не подделывается новым native transcript; credentials, checkpoints,
@@ -337,8 +362,11 @@ captured host exit до recovery startup; provider children не считают�
 pending effects не replay. Простое переполнение data queue должно разрешить control
 без disposal; этот случай и недоступный transport имеют разные ожидаемые исходы.
 
-Два existing product workflows дополняют F-строки в тех же suites:
+Existing workflows дополняют F-строки в тех же suites:
 
+- **Readiness/F04:** после initial ready потерять обязательный MCP/tool при active
+  A и queued B. Native B не начинается до свежего same-binding discovery/handshake;
+  readiness timeout виден, A не replay. Восстановление не создаёт новую generation.
 - **Очередь:** A active, B/C queued; после listing приходит D. Discard B/C гоняется
   с claim C. B не исполняется, D остаётся, C имеет один truthful outcome. Отдельный
   stop/revoke при queued input и restart сохраняет cancelled/rejected, не переносит
@@ -348,6 +376,9 @@ pending effects не replay. Простое переполнение data queue 
   запускается через host при недоступном fork. Product state сохранён, run новый,
   source/archive bytes неизменны. Повтор import/launch после response loss не
   создаёт второй ресурс; active/UNKNOWN census не проходит этот путь.
+  Internal ref открывает imported host team, внешний ref на неимпортированную
+  команду — точный old-owner archive либо gap. Совпадающие team/display/task IDs
+  у другого backend, structured поля и encoded metadata не меняют этот выбор.
 
 ## 8. MCP и полный cutover владельцев
 
@@ -391,6 +422,7 @@ intent/effect. Native Team/Task names при compatibility mapping вызыва�
 | `ChangeExtractorService`, task/member log sources             | Host evidence/log projection; archive отдельно                   | Native backfill, warning-recovery и transcript fallback при открытии Changes |
 | `review.ts`: mutations/recovery/history/edit/rename/decisions | Host-owned review use cases + existing Git/filesystem adapters   | Старый независимый apply/Undo/Redo/save/delete writer                        |
 | Task/comment attachment IPC                                   | Scoped blob + metadata operations того же Team owner             | Ambient module-level appData blob store при новом backend                    |
+| Backup startup/reconcile/restore/periodic/prune               | Owner-scoped existing backup adapters, §11                       | Legacy background publication/cleanup в новом namespace                      |
 | Provider management CLI client                                | Существующий management port → native provider adapter, §9       | `fork runtime providers ...` даже до первого team launch                     |
 
 Cutover проверяется sentinel на **старых** entries для этих handles; новый host
@@ -537,6 +569,21 @@ D не пишет Task ledger. Перекрывающиеся окна/внеш�
 по одному path/time interval; при недоказанной attribution остаётся gap/nonreviewable.
 Provider без достаточного capture получает explicit capability gap до приёмки.
 
+Доступность awaited barrier проверяется узким native proof уже в P1, до широкого
+extraction P2/P3. Для выбранного profile фиксируется реальный hook/interception
+механизм и его ordering: задержать preimage callback → файл ещё не изменён →
+разрешить callback → tool effect; callback failure запрещает effect. Отдельный
+failed tool/post-hook подтверждает final bytes. Reuse существующих native fixtures,
+без Team store/UI harness и без замены проверки моделируемым callback.
+
+Codex `item/started` и OpenCode turn snapshots в исследованном D сами по себе
+barrier не дают; availability другого native механизма пока не доказана. Новый SPI
+метод, prompt-инструкция либо permission dialog не заменяет этот proof. Если
+поддерживаемого механизма нет, P1 явно пересматривает конкретный capture seam/M13
+и оценку до широкого переноса. Нельзя продолжить с обещанием исправить невозможную
+гарантию в P6 или объявить notification capture полным parity. P6 подключает
+доказанный механизм к product attribution/review и проверяет полный workflow.
+
 Проверка: native command меняет TEST файл и завершается ошибкой; post-hook меняет
 его ещё раз. Ledger сохраняет корректные before/final bytes, failed outcome и
 task/window binding. Background completion проверяется existing relevant fixture;
@@ -549,3 +596,57 @@ guards сохраняются до filesystem effects. Acceptance: Reject → Un
 stale snapshot/revision refusal без изменения bytes и interrupted mutation recovery.
 Открытие Changes при missing/degraded ledger показывает gap, не запускает старый
 OpenCode backfill/transcript repair. Это проверяется одним read-side sentinel.
+
+## 11. Trash, restore, backup и окончательное удаление
+
+Здесь сохраняются existing lifecycle rules, а не вводится единый новый delete
+workflow. Team soft delete/restore/permanent delete, Task restore и member restore
+остаются разными use cases того же Team owner.
+
+- **Team trash:** reversible product tombstone и best-effort scoped stop. Failed/
+  UNKNOWN stop не запрещает убрать команду в корзину и не означает physical stop.
+  Runtime debt/receipts/native custody сохраняются, admission новых work intents
+  закрывается; UI отличает корзину от подтверждённой остановки/удаления данных.
+- **Team restore:** снимает product tombstone, сохраняет tasks/comments/blobs.
+  Не resume старой generation, не возвращает revoked grants/callbacks и не replay
+  pending inputs. Unresolved debt продолжает блокировать новый execution;
+  Relaunch следует отдельному §6 или обычному host path.
+- **Member restore:** reuse `TeamMemberRestorePlan`: старые runtime `agentId/joinedAt`
+  не восстанавливаются как authority, хотя бы один durable removed marker сохраняется
+  до завершения multi-file записи. Task restore использует existing controller policy:
+  pending с очисткой review/kanban state; не новый dispatch по старому assignment.
+- **Permanent delete:** отдельный durable intent с target identity и proof removal
+  для team-data, task-data, message/task attachments. Reuse existing permanent-deletion
+  coordinator, detached-path checks и backup-publication fence. Retry после crash
+  продолжает тот же intent, не удаляет replacement team с тем же именем. Минимальные
+  unresolved runtime/control/command records сохраняются вне удаляемого product root;
+  если adapter этого не обеспечивает, final purge удерживается до closure. Нельзя
+  удалить последнее evidence долга и объявить cleanup завершённым.
+
+`TeamBackupService` — активный startup/periodic writer, а не archive reader.
+Для host-owned roots его нужные backup/reconcile/restore/prune helpers работают
+как scoped adapters Team owner с injected roots/identity и existing locks/guards;
+Electron globals/whole-service instance в portable package не переносятся. Legacy
+service обслуживает только old-owner roots. Нового backup store/планировщика нет.
+
+При startup сначала читаются current deletion/runtime/recovery obligations, затем
+разрешается owner-scoped product restore. Восстановление missing product files
+сохраняет существующие identity/version guards и не откатывает более новые файлы.
+Backup launch-state/native-member files — архивные факты, не право на execution.
+Restore не заменяет current command/outbox/runtime journals, cancellation tombstones
+или checkpoints старыми copies; missing authoritative recovery state остаётся HOLD.
+Member-work-sync восстановление проходит через existing feature port с тем же
+backend/identity fence, не через независимый startup writer.
+
+Retention/prune сохраняет existing policy для product archives, но не удаляет
+unresolved obligations, referenced native stores/input blobs или данные, которые
+ещё обещаны retained handle. Истечение допустимой archive retention даёт явный gap,
+не перенаправление в одноимённую новую команду. Публикация backup и permanent deletion
+сериализуются по exact owner identity; соседний backend/root не затрагивается.
+
+Приёмка в existing lifecycle/backup suites: trash при UNKNOWN stop → host restart →
+restore сохраняет product data и debt без dispatch; interrupted permanent delete
+не удаляет replacement namespace. Missing product file после restart восстанавливает
+host owner, legacy publication sentinel не вызывается; backup/prune различает
+одноимённые old/new roots и удерживает unresolved references. Один Electron сценарий
+проверяет видимый trash/restore, без повторения всей filesystem fault suite.

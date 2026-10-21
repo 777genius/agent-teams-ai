@@ -81,6 +81,15 @@ profile; renderer не импортирует package. Это исключает
 Desktop владеет соединением и captured child host; runtime-модуль владеет native
 provider children. Выход host не считается доказательством остановки его детей.
 
+Для установленного candidate Node поставляется **внутри candidate resources**
+отдельным pinned artifact выбранного OS/arch tuple, вне ASAR. P1 фиксирует exact
+version/digest, build-time acquisition и resource path; P7 проверяет эти bytes.
+Existing staging/packaging helpers расширяются этим artifact, новый downloader
+при startup не создаётся. Electron-as-Node и пользовательский PATH не являются
+fallback. В dev допускается явно captured совместимый TEST Node; такой dev PASS
+не доказывает packaged runtime. Host/SDK разрешаются относительно своих artifacts,
+не соседнего checkout. Source/digest получения Node фиксируется в existing manifest.
+
 Локальный transport — JSON-RPC по stdio с request IDs и ограниченными framing/
 payload/notification buffers. Нынешний `JsonRpcStdioClient` использует unbounded
 `readline`, session timeout и force-close, поэтому целиком для постоянного host
@@ -202,6 +211,9 @@ Completed business receipt не снимает delivery obligation: startup/reco
 Для native create, потерявшего ответ, нет второго create по title/member name.
 Session становится ready после handshake, mandatory tools и config proof;
 PID, inbox file, `member_briefing` или `registered` этого не доказывают.
+Потеря обязательного MCP/tool инвалидирует member readiness и удерживает новые
+handoffs до свежего same-binding proof; control и исход active input учитываются
+отдельно. Детали: [readiness recovery](stage-1-contracts.md#readiness-при-потере-обязательной-зависимости).
 
 До handoff сохраняются input/operation ID, fingerprint, binding и delivery intent.
 Одновременно допускается один активный turn конкретной session, очереди и output
@@ -287,6 +299,9 @@ Task completion/review сохраняет действующие product пра�
 работу. Dependencies/claim/update/delete/reopen сохраняют свои guards. Новые N2
 модели будущего ядра здесь не внедряются. Tool-output change capture и review/apply
 проверяются на настоящих TEST Git bytes; SDK checkpoint не заменяет change ledger.
+Trash, Team/Task/member restore, permanent delete и backup имеют отдельные
+переходы/guards из [§11 протоколов](stage-1-contracts.md#11-trash-restore-backup-и-окончательное-удаление).
+Product tombstone не стирает unresolved runtime debt и не означает physical stop.
 
 ### 6.4 Config, context и наблюдение
 
@@ -365,6 +380,10 @@ upstream и уже доказанные exact-byte тесты.
    attachment и process-registry writers, не только CLI entrypoints.
    Включить queued-message list/discard и saved-team relaunch: первый переписывает
    inbox, второй обязан сохранить product data при новом execution owner.
+   Включить trash/restore/permanent deletion и backup/reconcile/prune, включая
+   member-work-sync restore. Внешние TaskRefs не переназначать imported team owner.
+   Для M13 указать exact native pre-effect mechanism; notification-only путь
+   пометить недоказанным до P1, а не готовым provider capability.
 4. Создать изолированные lanes и один integration root, записать их refs/owners.
    Команды будущих scripts отмечать planned, пока package реально не создан.
 
@@ -386,6 +405,8 @@ symbol/use case, целевой module/owner, replacement port, M-ID и oracle. 
    Добавить package в `pnpm-workspace.yaml`, build/typecheck/test scopes и dist
    composition. Existing root scripts перечисляют workspaces явно и сами новый
    package не проверят. Host/API contract modules browser-safe; executor Node-only.
+   Зафиксировать поставку standalone Node из §3: artifact/version/digest/resource
+   path для selected tuple и включение в existing build staging. На user Node не опираться.
 2. Привязать current provider SPI/exports и exact artifact. Снять dependency на
    source checkout/implementation нынешнего runtime; type-only import проверить
    внешним packed consumer. Выделить contracts artifact из §4.3 с compatibility
@@ -396,6 +417,11 @@ symbol/use case, целевой module/owner, replacement port, M-ID и oracle. 
    очереди. Snapshot/cursor handshake входит в тот же transport slice.
 4. Пройти open → два inputs → text/tool/result → close на fixture driver и выбранном
    packed provider. Этот walking slice не является командной приёмкой.
+5. Проверить ещё недоказанный native capture barrier выбранных provider profiles
+   из [§10](stage-1-contracts.md#10-task-lifecycle-и-evidencereview) минимальным
+   существующим fixture. Это ранняя проверка feasibility, а не весь P6 ledger/review.
+   При отсутствии механизма пересмотреть этот seam до широкого P2/P3 extraction;
+   сохранять условие M13 явно открытым, не добавлять fallback provider loop.
 
 Минимальный consumer устанавливает host, D и contracts из tarballs в новый TEST
 root. В lock/install/build closure нет `agent-execution` implementation, PG,
@@ -403,7 +429,9 @@ filesystem-custody engine или fork. Отдельный прежний consume
 изменение published peer/exports допускается только с owning package metadata.
 
 **Выход:** package запускается без fork/runtime checkout и Electron globals;
-контрактные unknown/error/control значения не сглаживаются в success.
+контрактные unknown/error/control значения не сглаживаются в success. Поставка Node
+определена; native capture assumptions доказаны либо их конкретный seam исправлен
+до допуска зависимого широкого переноса.
 **Проверка:** strict build/consumer + существующие relevant session fixtures.
 **Не входит:** full UI cutover, полный business store, новая generic transport platform.
 
@@ -444,6 +472,9 @@ system Node пользователя не используется молча в
    ACK. Добавить targeted queued-message cancellation через Runtime port вместо
    inbox-only discard; P2 использует управляемый runtime adapter, P3 проверяет race
    с реальным dispatch. Business completed не завершает доставку.
+6. Сохранить distinct trash/restore/permanent-delete policy и reuse existing
+   identity-fenced helpers; backup/restore/prune — scoped owner adapters из §11.
+   Product delete не удаляет единственное evidence unresolved runtime obligation.
 
 **Выход:** actual filesystem/stores fixture доказывает Team/Task/Message эффекты,
 дубли, wrong actor/revoke и restart outcome; нет fake fixture-only Task handler.
@@ -464,6 +495,8 @@ system Node пользователя не используется молча в
    Подключить typed attachment references/native materialization, effective config
    и compaction observation. Text-only SPI не считается готовым attachment transport.
    Missing capability исправляется в D; host не дублирует native protocol.
+   Readiness proof включает mandatory tools и invalidate/recover того же binding;
+   queued input не обходит потерянную dependency, reconnect не подменяет proof.
 4. Реализовать stop/drain/debt/restart reconcile/explicit restore. Unknown open,
    handoff и custody не вызывают повтор native create/submit/generation.
    Capture/persist/publish checkpoint делается до close; session/native backing
@@ -526,6 +559,9 @@ system Node пользователя не используется молча в
    team выполнить explicit product snapshot import/relaunch из §6 протоколов:
    новый storage/run binding с retained TaskRefs/history, без shared writable root.
    Inventory UNKNOWN не допускает этот переход, broad cleanup или отмену recovery.
+   В import map различить internal/external TaskRefs, включая encoded links;
+   feature navigation несёт owner qualification. Backup startup/timers для этих
+   roots также идут через host owner, legacy publication имеет sentinel.
 5. Передать все явные settings/auth/skills/hooks/extensions действия в admitted
    adapter. Скрытие контролов или новый error вместо прежней функции не parity.
    Убрать fork executor из provider-management port; synthetic progress/code/cancel
@@ -563,6 +599,8 @@ system Node пользователя не используется молча в
    отдельно от file Reject→Undo/Redo и stale snapshot/revision refusal. Детали и
    конкретный failed-tool capture proof заданы в
    [§10 протоколов](stage-1-contracts.md#10-task-lifecycle-и-evidencereview).
+   Existing lifecycle/backup suites закрывают trash при UNKNOWN stop, restore без
+   dispatch и interrupted identity-fenced purge; Electron проверяет видимые действия.
 4. Сопоставить M01–M19 с proof на host path; missing observation требует driver/
    projection доработки. Нельзя считать «UI не упал» доказательством корректности.
 
@@ -580,6 +618,8 @@ system Node пользователя не используется молча в
 2. Собрать clean external consumer/desktop candidate без sibling repos и старого
    CLI. Проверить host executable/Node version, native modules, SDK resolution,
    ASAR/path spaces, stdio purity, exit/drain и config location.
+   Системный Node сделать недоступным для harness; resolved Node должен быть
+   candidate-owned artifact из §3 с ожидаемым digest и executable permissions.
 3. Проверить repo-supported OS/architecture tuples существующей packaging matrix;
    unsupported tuple не становится supported от успеха на macOS.
 4. Сохранённый rollback artifact не является активной dependency. Ветки с активными

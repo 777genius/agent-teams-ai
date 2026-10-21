@@ -51,6 +51,8 @@ publication и ordinary subagent provenance/custody. [Протоколы эта�
 задают требуемое поведение, не структуру будущих stores. В delta включаются
 management/auth namespace, attachment custody, pre/post capture, compaction reminder,
 review history/edit mutations и background service registry, когда их заменяет новое ядро.
+Также сохраняются readiness invalidation/recovery, trash/restore и identity-fenced
+purge, backup ownership и owner-qualified внешние TaskRefs из §11/§6 протоколов.
 TypeScript assignability не доказывает Liskov compatibility.
 
 Выход: таблица exact-compatible / translated / requires new capability / incompatible.

@@ -124,6 +124,22 @@ P0 выбирает один coherent source/artifact, integrating only reviewed
 | `processTools/processStore`, `TeamDataService.processHealthTick/killProcess`, `ProcessesSection`              | Registry и scoped OS stop используются UI; это отдельный M19, не agent liveness                                                  | Team registry + runtime OS port; P2/P5/P6     |
 | `src/main/ipc/teams.ts:4404`, `teams/teamQueuedUserMessages.ts:197`                                           | Inbox-only discard не отменяет новый durable delivery/input; exact listed IDs и late arrivals должны сохраняться                 | Team cancellation + Runtime fence; P2/P3/P5   |
 | `TeamDetailView.tsx:2174`, `dialogs/teamRelaunchFlow.ts`                                                      | Existing Relaunch шире archive reading; stopped saved team должен запускаться без fork с сохранёнными product data               | Team offline import/new run + Desktop; P5     |
+| `TeamMcpConfigBuilder.ts:551`, root `package.json` extraResources                                             | Existing bootstrap использует Electron-as-Node, standalone Node для нового host пока не поставляется                             | Node artifact composition/staging; P1/P7      |
+| `teamSoftDeleteFlow`, `TeamMemberRestorePlan`, controller `tasks.js`, `permanent-deletion/*`                  | Trash, restore и permanent purge имеют разные guards/targets; общий delete теряет debt или восстанавливает старую authority      | Team lifecycle + existing IO adapters; P2/P6  |
+| `TeamBackupService.ts:171–180`, `TeamBackupRestoreService.ts`, member-work-sync restore                       | Startup restore/reconcile/prune — отдельные writers; runtime files в backup не дают права на execution                           | Team-scoped backup adapter/cutover; P2/P5     |
+| `shared/types/teamBoardTask.ts`, `renderer/utils/taskReferenceUtils.ts`, `useTaskSuggestions.ts`              | TaskRefs/encoded links не имеют backend identity и бывают cross-team; blanket import rebinding направляет их не тому owner       | Import map + feature navigation; P1/P5        |
+
+Дополнительный read-only осмотр provider source привязан к clean package files
+commit `7805dbf49d298f21bbb489faa99fe79a1116c17a`, не к новому qualified artifact.
+В `adapters/codex-protocol` item notifications и не ожидаемые event callbacks,
+в OpenCode turn snapshots сами не являются pre-effect capture barrier. Claude
+tool-binding PreToolUse — полезный частичный seam, но не полный final/background
+capture. Availability нужного механизма требует P1 native proof; чтение source
+не доказывает невозможность provider API и не заменяет этот proof.
+
+Claude `session.checkReadiness` проверяет native MCP status/tools; Codex/OpenCode
+опираются на injected probe. Поэтому новый host adapter обязан подтвердить exact
+required-tool set и invalidation, а не считать boolean probe достаточным сам по себе.
 
 Проектные guards и OS profiles проверяются на selected baseline. Например,
 Unix-only проверки абсолютного пути в provider config не доказывают Windows
@@ -134,6 +150,11 @@ support; P0/P7 должны сопоставить такой код с реал
 legacy product formats и scoped snapshot import; generic live migration не оценена
 и не добавляется. После P0/P1 фактическая closure может изменить диапазон, но число
 страниц плана само по себе не является основанием пересчитать LOC.
+Node staging относится к packaging/composition, lifecycle/backup — к Team adapters,
+owner qualification refs — к Desktop/import. Эти изменения включаются в selected
+closure и пересчёт P0/P1; перенос existing helpers не считается новым engine.
+Диапазон 15–25k предполагает доступный native capture mechanism. Если P1 его не
+подтвердит, цена и конкретный capture seam пересматриваются до широкого extraction.
 
 ## 5. Что делать с нынешним runtime и новым Orchestrator
 

@@ -23,7 +23,7 @@ Merge, публикация и включение нового пути оста
 **Этап 1:** старый Desktop полноценно работает через выделенный `legacy-agent-host`
 и provider library без запуска/import исходников старого Claude-форка.
 Сохраняемые возможности перечислены в [матрице совместимости](compatibility-matrix.md), включая attachments, полный
-review workflow и используемый реестр фоновых services.
+review workflow, trash/restore/backup и используемый реестр фоновых services.
 
 **Этап 2:** командный и runtime-модули legacy-host независимо заменяются будущими
 Orchestrator/runtime через уже определённые границы. Не обещается перенос native
@@ -56,14 +56,14 @@ flowchart TB
 
 ## 2. Как читать документы
 
-| Документ                                  | Единственная ответственность                                              |
-| ----------------------------------------- | ------------------------------------------------------------------------- |
-| Этот README                               | Направление, этапы, размещение, оценки и разрешения                       |
-| [Этап 1](stage-1-legacy-host.md)          | Пошаговая реализация, invariants, переходы, зависимости и exit criteria   |
-| [Протоколы этапа 1](stage-1-contracts.md) | Recovery/RPC, MCP/config/attachments, capture/review и конкретная приёмка |
-| [Матрица](compatibility-matrix.md)        | Полный сохраняемый функционал и доказательства; не проценты готовности    |
-| [Источники и reuse](sources-and-reuse.md) | Frozen donor, существующие результаты и ограничения их применения         |
-| [Этап 2](stage-2-new-cores.md)            | Что стабилизируем сейчас и как заменяем владельцев позднее                |
+| Документ                                  | Единственная ответственность                                                   |
+| ----------------------------------------- | ------------------------------------------------------------------------------ |
+| Этот README                               | Направление, этапы, размещение, оценки и разрешения                            |
+| [Этап 1](stage-1-legacy-host.md)          | Пошаговая реализация, invariants, переходы, зависимости и exit criteria        |
+| [Протоколы этапа 1](stage-1-contracts.md) | Recovery/RPC, MCP/config/attachments, capture/review, data lifecycle и приёмка |
+| [Матрица](compatibility-matrix.md)        | Полный сохраняемый функционал и доказательства; не проценты готовности         |
+| [Источники и reuse](sources-and-reuse.md) | Frozen donor, существующие результаты и ограничения их применения              |
+| [Этап 2](stage-2-new-cores.md)            | Что стабилизируем сейчас и как заменяем владельцев позднее                     |
 
 Старый [A–F](../runtime-provider-extraction-and-claude-sdk-plan.md) сохраняет историю
 первого направления и выполненных проверок. Его схема «сначала полностью новое
@@ -161,6 +161,11 @@ MCP/review/blob writers. Это существующий product scope, не н�
 во второй строке, durable technical state в третьей, UI routing в четвёртой,
 provider protocol/config/capture observations в пятой. Boundaries/composition —
 первая строка. Нового provider loop или generic artifact/process platform нет.
+Pinned Node поставляется в candidate resources; lifecycle/backup reuse и точная
+owner qualification TaskRefs входят в соответствующие composition/Team/Desktop
+части. Native pre-effect capture — ещё недоказанная предпосылка оценки: её узкий
+proof перенесён в P1, до широкого extraction. Если механизм недоступен, пересматривают
+конкретный seam и диапазон, сохраняя M13 открытым; fallback в fork parity не закрывает.
 
 Диапазон ещё не measured diff: нижняя граница предполагает reuse существующих
 stores/config/protocol code. P0/P1 уточняют closure и стоимость отсутствующих D
