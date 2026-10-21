@@ -90,6 +90,106 @@ const closedDiagnosticTokens = (values: unknown) =>
         ),
       ].slice(0, 16)
     : [];
+/** Closed run-control pump failure facts only. The operation-failure record, its
+ * binding and timestamp never cross this boundary; a missing, foreign or
+ * non-closed value stays null. */
+export function projectRunControlPumpFailure(value: unknown): {
+  category: 'run_control_pump_failed';
+  controlPhase: string;
+  controlCode: string;
+  nativeCode: number;
+} | null {
+  const row = (entry: unknown): Record<string, unknown> =>
+    entry && typeof entry === 'object' && !Array.isArray(entry)
+      ? (entry as Record<string, unknown>)
+      : {};
+  const data = row(value);
+  // Exact producer literals from the SDK run-control pump failure record.
+  const category = data.category === 'run_control_pump_failed' ? 'run_control_pump_failed' : null;
+  const controlPhase = [
+    'accept_wait',
+    'accept_authenticate',
+    'accept_replenish',
+    'read_frame',
+    'verify_frame',
+    'validate_payload',
+    'publish_request',
+  ].find((item) => item === data.controlPhase) ?? null;
+  const controlCode = ['cleanup_unknown', 'run_control_accept_timeout', 'run_control_accept_unknown',
+    'run_control_connect_unknown', 'run_control_connection_limit', 'run_control_disconnected',
+    'run_control_endpoint_changed', 'run_control_foreign', 'run_control_frame_invalid',
+    'run_control_frame_oversize', 'run_control_held_identity', 'run_control_held_inputs',
+    'run_control_hmac_unknown', 'run_control_image_changed', 'run_control_image_hash',
+    'run_control_listen_unknown', 'run_control_owner_identity', 'run_control_package_peer_identity',
+    'run_control_parent_birth', 'run_control_parent_join', 'run_control_path_alias',
+    'run_control_peer_identity', 'run_control_pipe_name', 'run_control_pipe_security',
+    'run_control_process_identity', 'run_control_pump_unknown', 'run_control_read_unknown',
+    'run_control_timeout', 'run_control_write_partial', 'run_control_write_unknown',
+    'run_process_changed', 'run_state_acl_unknown', 'run_state_challenge_changed',
+    'run_state_challenge_unknown', 'run_state_endpoint_changed', 'run_state_endpoint_missing',
+    'run_state_held_inputs', 'run_state_identity_changed', 'run_state_record_absent',
+    'run_state_record_changed', 'run_state_record_collision', 'run_state_record_encoding',
+    'run_state_record_name', 'run_state_record_read', 'run_state_record_rename',
+    'run_state_record_size', 'run_state_record_temporary', 'run_state_record_unknown',
+    'run_state_record_write', 'run_state_start_changed', 'run_state_unknown'].find(
+      (item) => item === data.controlCode) ?? null;
+  const nativeCode = Number.isSafeInteger(data.nativeCode) && Number(data.nativeCode) >= 0 &&
+    Number(data.nativeCode) <= 0xffffffff ? Number(data.nativeCode) : null;
+  return category && controlPhase && controlCode && nativeCode !== null
+    ? Object.freeze({ category, controlPhase, controlCode, nativeCode })
+    : null;
+}
+/** Bounded run-control record read: a non-regular, resized or aliased file is
+ * never observed as facts. */
+async function readRunControlJson(directory: string, name: string, limit: number) {
+  try {
+    const parent = await lstat(directory, { bigint: true });
+    if (!parent.isDirectory() || parent.isSymbolicLink() || (await realpath(directory)) !== directory)
+      return null;
+    const file = path.join(directory, name),
+      before = await lstat(file, { bigint: true });
+    if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || before.size > BigInt(limit) ||
+      (await realpath(file)) !== file)
+      return null;
+    const value: unknown = JSON.parse(await readFile(file, 'utf8'));
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+/** The corresponding run-control directory only: the run under the owned runs
+ * root whose own record binding names exactly this team and run. A missing,
+ * ambiguous or foreign record stays unknown. */
+async function readRunControlPumpFailure(dataRoot: string, team: string, runId: string) {
+  try {
+    const runsRoot = path.join(dataRoot, 'opencode', 'v2', 'runs');
+    if ((await realpath(runsRoot)) !== runsRoot || (await lstat(runsRoot)).isSymbolicLink())
+      return null;
+    const entries = await opendir(runsRoot),
+      matched: ReturnType<typeof projectRunControlPumpFailure>[] = [];
+    let visited = 0;
+    try {
+      for await (const entry of entries) {
+        if (++visited > 64) break;
+        if (!entry.isDirectory() || !/^[a-f0-9]{32}$/.test(entry.name)) continue;
+        const record = await readRunControlJson(
+          path.join(runsRoot, entry.name), 'operation-failure.json', 65536);
+        const binding = record && typeof record.binding === 'object' && !Array.isArray(record.binding)
+          ? (record.binding as Record<string, unknown>)
+          : {};
+        if (binding.teamId !== team || binding.runId !== runId) continue;
+        matched.push(projectRunControlPumpFailure(record));
+      }
+    } finally {
+      await entries.close().catch(() => {});
+    }
+    return matched.length === 1 ? (matched[0] ?? null) : null;
+  } catch {
+    return null;
+  }
+}
 const V1_TRANSCRIPT_MAX_BYTES = 2 * 1024 * 1024;
 // Only existing SDK read-only history/parser modules are imported. In
 // particular this never imports the profile/session bridge or prepares a host.
@@ -2039,6 +2139,7 @@ async function main() {
       failure?: { classification: string; kind?: string; sdkCode?: string | null; nativeOperation?: string | null; nativeErrno?: number | null };
       inputFileRemoved?: boolean;
     },
+    pumpFailure: null as null | { category: 'run_control_pump_failed'; controlPhase: string; controlCode: string; nativeCode: number },
     cleanupFailures: [] as ProofFailure[],
   };
   const checkpoint = async (stage: string) => {
@@ -2686,6 +2787,15 @@ async function main() {
         capture.inputFileRemoved = await unlink(inputFile).then(() => true, (error: unknown) =>
           !!error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT');
         await unlink(bunConfig).catch(() => undefined);
+      }
+      if (proof.runIds.length) {
+        // The server-side request pump publishes its terminal failure only into
+        // run-control operation-failure.json. Project its closed facts into the
+        // proof; a missing, foreign or non-closed record stays null and neither
+        // the timestamp nor any raw string crosses into the proof.
+        proof.pumpFailure = await readRunControlPumpFailure(
+          desktop.env.CLAUDE_MULTIMODEL_DATA_HOME!, desktop.teamName, proof.runIds.at(-1)!);
+        await checkpoint(proof.stage);
       }
     }
     if (version.startsWith('1.') && sdk === 'bundled' && failedTask && nativeSession) {
