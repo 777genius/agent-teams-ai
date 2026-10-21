@@ -134,6 +134,7 @@ async function assertEnvironmentOnlyConnection(label: string) {
     compatibleEndpointEnabled:c.providerConnections.anthropic.compatibleEndpoint.enabled,
     compatibleEndpointBaseUrl:c.providerConnections.anthropic.compatibleEndpoint.baseUrl
   }))`);
+  evidence[label] = preference;
   assert.equal(preference.authMode, 'auto', 'Environment inheritance requires untouched Auto auth');
   assert.equal(
     preference.compatibleEndpointEnabled,
@@ -145,7 +146,6 @@ async function assertEnvironmentOnlyConnection(label: string) {
     '',
     'This scenario must not save an endpoint URL'
   );
-  evidence[label] = preference;
 }
 async function waitSettled(
   label: string,
