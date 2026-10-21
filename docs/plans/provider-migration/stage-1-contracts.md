@@ -28,6 +28,12 @@ native session IDs и private checkpoint не попадают в app DTO/logs.
 generation и host incarnation различаются; mapping хранится вместе с handle.
 Новые default settings влияют на новые intents, не переназначают уже accepted.
 
+Backend default выбирает owner только при создании нового unbound handle. Любая
+операция над retained team/run handle, включая сообщение/review/stop с **новым**
+command ID, идёт исходному owner. Его недоступность даёт explicit unavailable/HOLD;
+текущий default не заменяет этот binding. Явный import/relaunch в новый namespace
+создаёт новый handle по §6; настройки нового target не мигрируют старый handle.
+
 ## 2. Соединение и ошибки
 
 Один Desktop profile управляет одним captured child host. Startup последовательно:
@@ -455,6 +461,10 @@ pending effects не replay. Простое переполнение data queue 
 
 Existing workflows дополняют F-строки в тех же suites:
 
+- **Owner routing/F08:** при handle команды у A сменить default на B и выполнить
+  новую mutation с новым command ID: она идёт A, вновь создаваемая unbound Team — B.
+  При недоступном A mutation остаётся у A с unavailable/HOLD, B не получает effect.
+  Rollback default сохраняет тот же invariant для уже созданных handles обоих owners.
 - **Partial launch/F06:** A usable, B pending human permission, C known failure до
   allocation. После startup grace summary остаётся partial, A работает по existing
   launch policy, B не объявляется failed. Scoped retry C не создаёт второй A/B.

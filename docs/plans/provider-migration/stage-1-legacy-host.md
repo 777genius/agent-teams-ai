@@ -110,6 +110,8 @@ Owner binding фиксируется **до мутации**: backend identity/r
 project/workspace, team/run/member identity и generation. Display name/provider
 label не является ключом полномочий или маршрутизации. Старые accepted/unknown
 commands навсегда сохраняют original binding, даже после смены default target.
+Новые command IDs на retained handle также сохраняют его owner; positive routing
+probe при смене default/rollback задан в §1/§7 протоколов.
 
 API группируется по реальным app capabilities: Team/lifecycle, Task/review,
 messages/groups, activity/queries, connection/config, command outcome. Существующие

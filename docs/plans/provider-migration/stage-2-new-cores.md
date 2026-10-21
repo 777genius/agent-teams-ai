@@ -76,9 +76,11 @@ Desktop consumer port переводится в canonical Team/Run/Task/Message/
 Legacy resource IDs не маскируются под новые canonical identities; retained handles
 сохраняют backend binding. Входящие events проходят generation/scope/cursor checks.
 
-Новые команды создаются у нового owner. Незавершённые legacy команды продолжают
-завершение/stop у legacy-host; команды, callbacks и effects между owners не
-дублируются. Cross-team между разными owners требует отдельного принятого bridge
+Новые unbound Team handles создаются у нового Team owner. Любая операция на
+retained team/run handle, в том числе с новым command ID, сохраняет исходного owner
+по §1 протоколов этапа 1. Незавершённые legacy intents продолжают завершение/stop
+у legacy-host; команды, callbacks и effects между owners не дублируются.
+Cross-team между разными owners требует отдельного принятого bridge
 scope; silent relay не добавляется в этот migration adapter.
 
 ### S2.3. Данные, settings и архив
@@ -106,7 +108,8 @@ legacy writers/CLI/readers. Сначала удалить неиспользуе
 
 Review/required CI/отдельное решение владельца о delivery сохраняются. Отказ нового
 backend после accepted/unknown не включает прежний backend для того же intent.
-Rollback меняет default для **новых** intents, сохраняет обслуживание старых owners.
+Rollback меняет default только для новых unbound handles; существующие handles
+и их новые intents сохраняют owner. Проверка использует Owner routing/F08 этапа 1.
 
 ## 4. Контрактные гарантии, которые нельзя потерять
 
