@@ -201,6 +201,47 @@ describe('the escalated stop shares one fenced flow between the IPC handler and 
     await app.close();
   });
 
+  it('keeps the runtime-already-down outcome a finished stop on both entry points', async () => {
+    // A team with no owned OpenCode lane ids whose recorded hosts exit before
+    // the orchestrator acknowledges: the flow deliberately answers
+    // `runtime_already_down` after its force cleanup and both entry points
+    // describe it as having finished the stop. It is a successful, idempotent
+    // stop - not an unconfirmed-stop failure to report.
+    const alreadyDown = {
+      stopOutcome: 'runtime_already_down' as const,
+      cleanupOutcome: 'incomplete' as const,
+      killedRuntimePids: [],
+      clearedPendingDeliveries: 0,
+      diagnostics: [
+        'Runtime hosts were gone 12ms into the stop; finished without waiting for the orchestrator acknowledgement',
+      ],
+    };
+    stopFlowMocks.stopTeamWithEscalation.mockResolvedValueOnce({ ...alreadyDown });
+    initializeTeamHandlers(
+      { getTeamData: vi.fn(() => Promise.resolve({ members: [] })) } as never,
+      { runtime: { stopTeam, getAliveTeams, isTeamAlive: () => false } } as never
+    );
+    registerTeamHandlers(ipcMain as never);
+    await expect(handlers.get(TEAM_STOP)!({} as never, 'fixteam')).resolves.toMatchObject({
+      success: true,
+    });
+
+    stopFlowMocks.stopTeamWithEscalation.mockResolvedValueOnce({ ...alreadyDown });
+    const getRuntimeState = vi.fn(() => Promise.resolve({ state: 'stopped' }));
+    const app = Fastify();
+    const services = {
+      teamApis: {
+        runtime: { stopTeam, getAliveTeams, getRuntimeState },
+      },
+    } as unknown as HttpServices;
+    registerTeamRoutes(app, services);
+    await app.ready();
+    const response = await app.inject({ method: 'POST', url: '/api/teams/fixteam/stop' });
+    expect(response.statusCode).toBe(200);
+    expect(getRuntimeState).toHaveBeenCalled();
+    await app.close();
+  });
+
   async function callThroughHttp(): Promise<void> {
     const app = Fastify();
     const services = {

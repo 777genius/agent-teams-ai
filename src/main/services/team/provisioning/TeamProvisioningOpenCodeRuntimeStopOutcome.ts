@@ -183,6 +183,13 @@ export function assertOpenCodeRuntimeStopEffective(input: {
  * HTTP client.
  */
 export function assertEscalatedStopConfirmed(result: TeamForceStopResult): void {
+  // `runtime_already_down` is the deliberate finished-stop outcome of a team
+  // with no owned OpenCode lane ids: the recorded hosts exited before the
+  // orchestrator acknowledged and the flow completed its force cleanup, which
+  // both entry points describe as having finished the stop. The rejection
+  // below is scoped to the OpenCode lane case - a stop that did not confirm -
+  // and this idempotent one did.
+  if (result.stopOutcome === 'runtime_already_down') return;
   if (result.cleanupOutcome === 'incomplete' || result.stopOutcome !== 'stopped') {
     const outcome =
       ['stopped', 'stop_failed', 'timed_out', 'runtime_already_down'].find(
