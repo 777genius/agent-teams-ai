@@ -1,6 +1,3 @@
-import { composeGatewayProviderRuntime } from '@main/services/gateway/composeGatewayProviderRuntime';
-import { cleanupOrphanedDeterministicBootstrapSpecs } from '@main/services/team/provisioning/TeamProvisioningBootstrapSpec';
-
 import type { createGatewayLaunchRuntime } from '@main/services/gateway/createGatewayLaunchRuntime';
 // Increase UV thread pool size BEFORE async I/O: startup binary resolution,
 // subprocess work, watchers, and IPC filesystem requests share this pool.
@@ -16,6 +13,9 @@ import {
 } from './bootstrapUserDataMigration';
 import { earlyAnnouncementsProfile } from './bootstrapAnnouncementsProfile';
 import './sentryBootstrap';
+import { composeGatewayProviderRuntime } from '@main/services/gateway/composeGatewayProviderRuntime';
+import { cleanupOrphanedDeterministicBootstrapSpecs } from '@main/services/team/provisioning/TeamProvisioningBootstrapSpec';
+
 import {
   createDesktopTeamGroupChats,
   registerTeamGroupChatsIpc,
