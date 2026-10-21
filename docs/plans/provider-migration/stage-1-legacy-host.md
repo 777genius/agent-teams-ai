@@ -4,6 +4,7 @@
 производственная готовность этим документом не объявляется.
 Основание и оценки: [двухэтапная программа](README.md).
 Функциональный denominator: [матрица совместимости](compatibility-matrix.md).
+Точные recovery/RPC/checkpoint решения: [протоколы этапа 1](stage-1-contracts.md).
 
 ## 1. Цель, scope и конечный результат
 
@@ -81,9 +82,12 @@ Desktop владеет соединением и captured child host; runtime-м
 provider children. Выход host не считается доказательством остановки его детей.
 
 Локальный transport — JSON-RPC по stdio с request IDs и ограниченными framing/
-payload/notification buffers. Существующий `JsonRpcStdioClient` переиспользуется
-через public boundary, если его реальные limits/cancellation подходят. Новый
-network daemon и второй message broker не вводятся. Логи идут отдельно от RPC.
+payload/notification buffers. Нынешний `JsonRpcStdioClient` использует unbounded
+`readline`, session timeout и force-close, поэтому целиком для постоянного host
+не подходит. Reuse ограничивается пригодными primitives за owned port; shared
+Codex client попутно не переписывается. Host framing/control описаны в
+[протоколе соединения](stage-1-contracts.md#2-соединение-и-ошибки).
+Новый network daemon и второй message broker не вводятся. Логи идут отдельно от RPC.
 
 IPC и существующий HTTP adapter Desktop вызывают один feature API. HTTP здесь
 не требует browser-dev smoke: пользовательская проверка выполняется в Electron.
@@ -139,9 +143,13 @@ close` сохраняются с их действительными гаран�
 provider library с проверкой, а не второй raw-protocol adapter в Desktop/host.
 
 Host и provider package устанавливаются из проверенных packed artifacts вне
-donor checkout. Если contracts peer неразрывно загружает нынешний engine, P1
-выделяет один типовой contracts artifact штатным owning admission; алгоритмы
-runtime и доменные Team/Task types туда не переносятся.
+donor checkout. Уже известна install/build coupling: нынешний consumer test
+устанавливает весь `agent-execution` и custody dependencies. P1 выделяет один
+type/schema-only contracts artifact, рабочее имя `@agent-teams/provider-session-contracts`,
+в том же workspace по штатным правилам owning repo. D и legacy-host используют
+его напрямую; прежний curated entrypoint re-export этих же определений сохраняет
+существующих consumers. В artifact нет engine/PG/custody implementation,
+SDK imports и доменных Team/Task types. Нового contracts repo не создаётся.
 
 ## 5. Единственные владельцы состояния
 
@@ -168,6 +176,14 @@ outcome. Частичная запись сверяется по тем же IDs
 state удерживается. «Повторить весь handler» не является recovery strategy.
 Если конкретный store не даёт такого протокола, его slice сначала получает один
 узкий durable intent/receipt owner; новый generic workflow engine не строится.
+
+Execute, partial-effect census, reconcile/retry и revoke используют тот же
+resource/authority fence. Возраст Started/timeout не доказывает остановку первого
+handler. `not_applied` допустим только после исключения его поздних writes;
+иначе UNKNOWN/HOLD. Current authority проверяется и перед completed-result replay,
+который existing command runner может вернуть без вызова handler.
+Порядок и минимальные receipt-поля заданы в
+[протоколе команды](stage-1-contracts.md#3-команда-и-частичная-запись).
 
 Прежние бизнес receipts и технические input records имеют разные обязанности.
 Один Message не становится вторым inbox store в runtime; один handoff не получает
@@ -227,6 +243,13 @@ team, member, task или permission mode не дают authority. Scoped MCP en
 одни use cases. Native Claude Team/Task/SendMessage writers не включаются вторым
 ядром; имена legacy tools при необходимости переводятся в MCP boundary.
 
+Обычный SDK subagent без `team_name` отличается от persistent teammate. Текущий
+Desktop допускает его в solo DO; эта возможность сохраняется с action-mode gate.
+Нынешний D блокирует все `Agent` tools и не сохраняет child provenance: это явный
+provider gap P4, а не готовая поддержка. Нужны scoped parent/child observations и
+custody/control; одного whitelist имени недостаточно. Subagent не получает
+teammate identity или расширенные Team grants из переданного моделью payload.
+
 Revocation и mutating handler сериализуются одним существующим owner authority
 fence до финальной записи/outcome. Проверка grants повторяется внутри него;
 receipt/result disclosure также требует current authority. Если eligibility
@@ -285,6 +308,14 @@ engine/config/account/workspace и подтверждённой custody преж
 resume. Incompatible/missing checkpoint виден в UI. Продолжение с новым engine
 может быть отдельным пользовательским действием с новым context/run binding.
 
+Runtime сохраняет opaque checkpoint **в idle до close** под тем же session fence,
+затем публикует durable reference; нативная history и private config/store binding
+сохраняются отдельно от token. Crash между capture/write/publication и восстановление
+после uncertain input описаны в
+[checkpoint-протоколе](stage-1-contracts.md#5-checkpoint-и-положительный-restore).
+Для каждого заявленного provider profile нужен успешный selected-session restore
+после host restart; набор одних отказов missing/incompatible не закрывает M09.
+
 Legacy recovery inventory читает launch/bootstrap/lane/session/stop/command records
 без quarantine/repair. Corrupt/unreadable/incomplete census означает UNKNOWN/HOLD,
 не пустой список. Старый `getAliveTeams()` после restart не доказательство terminal.
@@ -306,6 +337,8 @@ upstream и уже доказанные exact-byte тесты.
 2. Сопоставить M01–M18 с entrypoint, state writer/reader, известным oracle,
    provider capability и местом extraction. Для mixed modules перечислить только
    используемые transitive dependencies. Snapshot файла не доказывает авторство.
+   Отдельно различить persistent teammates и обычные native subagents, а также
+   solo DO/обзорные modes; не объявлять их взаимозаменяемыми.
 3. Отметить уже готовые public provider exports/контракт/fixtures; отдельно gaps:
    native custody/config/MCP, checkpoint, context/usage/evidence, OS packaging.
 4. Создать изолированные lanes и один integration root, записать их refs/owners.
@@ -315,6 +348,11 @@ upstream и уже доказанные exact-byte тесты.
 ни один используемый сценарий не остаётся «вне scope случайно».
 **Не входит:** production rewrite, запуск на user project, новые ADR всех будущих ядер.
 
+Один selection manifest содержит для каждого seam `sourceRef/path/blob`, нужный
+symbol/use case, целевой module/owner, replacement port, M-ID и oracle. Рядом
+фиксируются selected artifact digests, provider/Node profiles и известные gaps.
+Это рабочие данные реализации; отдельный генератор inventory не требуется.
+
 ### P1. Замкнуть contracts/packages и один технический walking slice
 
 **Зависит от:** P0. **Scope:** три границы §4 и package closure.
@@ -323,11 +361,17 @@ upstream и уже доказанные exact-byte тесты.
    переиспользовать только после проверки absence of future-engine dependency.
 2. Привязать current provider SPI/exports и exact artifact. Снять dependency на
    source checkout/implementation нынешнего runtime; type-only import проверить
-   внешним packed consumer. При необходимости выделить один contracts artifact.
+   внешним packed consumer. Выделить contracts artifact из §4.3 с compatibility
+   re-export; не считать прежний install всего runtime достаточным proof.
 3. Реализовать stdio host connection/handshake: protocol/build/capabilities,
    request bounds, safe failure, captured executable/profile, отдельные logs.
 4. Пройти open → два inputs → text/tool/result → close на fixture driver и выбранном
    packed provider. Этот walking slice не является командной приёмкой.
+
+Минимальный consumer устанавливает host, D и contracts из tarballs в новый TEST
+root. В lock/install/build closure нет `agent-execution` implementation, PG,
+filesystem-custody engine или fork. Отдельный прежний consumer проверяет re-export;
+изменение published peer/exports допускается только с owning package metadata.
 
 **Выход:** package запускается без fork/runtime checkout и Electron globals;
 контрактные unknown/error/control значения не сглаживаются в success.
@@ -346,7 +390,9 @@ upstream и уже доказанные exact-byte тесты.
    handle направить в тот же host facade; откат routing не включает второй writer.
 3. Реализовать shared MCP tool registration/legacy schema mapping, trusted actor,
    current grants, stable command outcomes и duplicate/conflict/partial-write
-   recovery из §5. Read-only tools не создают команда/сессию побочно.
+   recovery из §5 и [протокола команды](stage-1-contracts.md#3-команда-и-частичная-запись).
+   Read-only tools не создают команду/сессию побочно. Task-create idempotency helper
+   донора служит образцом deterministic IDs, не общей квитанцией всех mutations.
 4. Сохранить product approvals, task assignment/dependencies/claim/comments,
    group/cross-team recipients, TaskRefs и review-facing facts. Новые модели
    будущего Orchestrator не копировать в этот legacy scope.
@@ -369,6 +415,9 @@ upstream и уже доказанные exact-byte тесты.
    session-level diagnostics без attribution не становятся Task activity.
 4. Реализовать stop/drain/debt/restart reconcile/explicit restore. Unknown open,
    handoff и custody не вызывают повтор native create/submit/generation.
+   Capture/persist/publish checkpoint делается до close; session/native backing
+   сохраняет history после host restart. Положительный restore и crash в publication
+   проверяются отдельно от missing/incompatible checkpoint.
 5. Проверить две concurrent sessions: stop/control A не затрагивают B; retained
    state после host crash не приводит к speculative process adoption.
 
@@ -381,18 +430,23 @@ upstream и уже доказанные exact-byte тесты.
 
 **Зависит от:** P2 + P3. **Scope:** соединённый headless team workflow.
 
-1. Запустить двух idle-ready members через authoritative MCP на localhost provider
-   fixtures с настоящими выбранными SDK/CLI/protocol paths.
-2. Human → B → human, A → B → A, group и cross-team delivery получают реальные
-   recipient inputs и explicit ответы; проверить отсутствие lead relay/duplicates.
-3. Agent получает Task, делает meaningful TEST effect, task update/comment и
+1. Запустить один TEST team с idle-ready A=Claude, B=Codex, C=OpenCode через
+   authoritative MCP и localhost inference с actual SDK/CLI/protocol paths.
+2. Human → B → human, A↔B, B↔C, C↔A и group получают реальные recipient inputs
+   и explicit ответы; проверить отсутствие lead relay/duplicates. Вторая host-owned
+   TEST team с одним member нужна для разрешённого cross-team roundtrip.
+3. Каждый из трёх providers получает Task, делает meaningful TEST effect, task update/comment и
    completion проходят owner policy. Wrong task/member/role/revoked session
    отвергаются handler, а не только mock permission callback.
-4. Добавить остальные Claude/Codex/OpenCode profiles, config/readiness и native
+4. Для выбранных Claude/Codex/OpenCode profiles подтвердить config/readiness и native
    permissions/questions. Недостающая возможность provider library реализуется
    один раз в D; private host adapter не дублирует её transport algorithm.
 5. Проверить context/compaction/restart и shared OpenCode isolation на фактических
    профилях. Unsupported сохраняет безопасный отказ, но строку parity не закрывает.
+6. В solo DO выполнить обычный SDK subagent tool-call с дочерним TEST effect;
+   передать parent/child provenance через provider-owned observation capability,
+   проверить запрет в недопустимом mode и отсутствие невыданной Team authority.
+   Control родителя закрывает его owned descendants, не других members.
 
 **Выход:** M01–M10 и необходимые runtime части M13–M18 проходят actual host path;
 каждый provider имеет свой exact evidence tuple, а не чужой mock PASS.
@@ -428,6 +482,8 @@ upstream и уже доказанные exact-byte тесты.
    workspace/window attribution, исходные bytes, conflict и interrupted apply.
 2. Подключить context usage, private/internal messages, chunks/subagents/task logs,
    edits/commands и structured references без синтетических success observations.
+   Реальный P4 subagent виден как child родителя; фильтры не теряют его output
+   и не присваивают его другому teammate/task. Архивного fixture display недостаточно.
 3. Закрыть оставшиеся реальными сценариями: add/remove/restart member, solo→team,
    failed launch/retry, task review/reopen/dependencies, notification/action paths.
 4. Сопоставить M01–M18 с proof на host path; missing observation требует driver/
@@ -451,6 +507,10 @@ upstream и уже доказанные exact-byte тесты.
    unsupported tuple не становится supported от успеха на macOS.
 4. Сохранённый rollback artifact не является активной dependency. Ветки с активными
    old-owned runs сохраняют explicit compatibility control до их завершения.
+5. На actual packed Electron artifact выполнить короткий TEST workflow:
+   startup → host ready → input → targeted control → close с недоступным fork.
+   Записать digest artifact и resolved host/Node/provider paths. Он проверяет
+   packaged bytes/ASAR; полный dev UI suite повторять на каждом OS tuple не нужно.
 
 **Выход:** candidate install не требует executable форка ни при startup, ни при
 host-owned user actions; release/signing/publication ещё не выполняются. Наличие
@@ -459,7 +519,8 @@ host-owned user actions; release/signing/publication ещё не выполня�
 
 ### P8. Интеграционный E2E, review и handoff
 
-**Зависит от:** P7. **Scope:** проверка одной собранной кандидатной ревизии.
+**Зависит от:** P7. **Scope:** полный dev E2E на source refs того же candidate,
+короткий packed workflow остаётся отдельным фактом P7.
 
 1. Запустить один развиваемый harness в integration worktree: normal Electron
    `pnpm dev:mcp` + реальный legacy-host + packed provider + localhost inference.
@@ -474,6 +535,10 @@ host-owned user actions; release/signing/publication ещё не выполня�
    независимым. Исправления проверять на affected boundaries.
 5. Зафиксировать `candidate`, exact refs/artifacts, M01–M18, cleanup и известные
    ограничения. Не merge/publish/activate; следующий шаг — решение о доставке.
+
+Конкретные F01–F09 из [протоколов](stage-1-contracts.md#7-фокусные-проверки-отказов)
+выполняются на ближайшей meaningful boundary. В Electron повторяются routing,
+reconnect и видимые состояния, а не вся headless fault suite.
 
 **Выход:** проверенный и reviewable candidate. Без real Claude access возможен
 `candidate-synthetic` с end-to-end PASS, но production auth qualification остаётся недоказанной.

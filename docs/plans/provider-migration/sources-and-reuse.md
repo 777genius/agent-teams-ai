@@ -95,7 +95,27 @@ P0 выбирает один coherent source/artifact, integrating only reviewed
 нужные для delivery proof должны стать восстанавливаемыми version-bound artifacts,
 а не prerequisite существования чужого `/tmp`.
 
-## 4. Что делать с нынешним runtime и новым Orchestrator
+## 4. Подтверждённые gaps для реализации
+
+Это результат source review, не новый выполненный native proof. Frontend paths
+относятся к `07e7d8e0`; provider paths — к исследованному D worktree. P0 закрепляет
+их фактические blob IDs в selected manifest, прежде чем использовать как donor.
+
+| Gap и source seam                                                                         | Почему нельзя считать готовым                                                                                | Минимальный scope                                                                                      |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| D `tests/package/install-consumer.ts`, package peers                                      | Packed consumer ставит весь `agent-execution` + custody; erased type imports не замыкают independent install | P1: один contracts artifact, старый re-export, clean minimal consumer                                  |
+| D Claude `config.ts`, `session.ts`; frontend `TeamProvisioningPromptBuilders.ts`          | D запрещает все Agent tools и отбрасывает child correlation, а frontend разрешает ordinary Agent в solo DO   | P4/P6: execution gate, parent/child provenance/custody, actual child scenario; без native Team writers |
+| D Claude/Codex `Session.checkpoint()`, factory `readCheckpoint`, Claude `open-session.ts` | Idle-only token и `sessionExists` требуют runtime-owned durable publication и native history                 | P3/P4: capture до close, retain store, positive selected restore, publication crash                    |
+| Frontend `ApplicationCommandRunner.ts`, `workerOps.ts`                                    | Stale Started/reconcile и completed replay могут идти вне обычного handler                                   | P2: общий authority/resource fence, проверка replay, отсутствие позднего original writer перед retry   |
+| Frontend `mcp-server/src/utils/taskCreationIdempotency.ts`                                | Только task.create; optional key оставляет прямой новый create                                               | P2: mandatory command identity + outcomes остальных mutations, reuse deterministic IDs                 |
+| Frontend `JsonRpcStdioClient.ts`                                                          | Unbounded readline, short session lifecycle/force-close, `@main` imports                                     | P1: narrow primitive reuse + bounded host transport; не менять shared Codex client попутно             |
+
+Проектные guards и OS profiles проверяются на selected baseline. Например,
+Unix-only проверки абсолютного пути в provider config не доказывают Windows
+support; P0/P7 должны сопоставить такой код с реально заявляемой packaging matrix.
+Эти gaps входят в существующие work packages оценки, не суммируются повторно.
+
+## 5. Что делать с нынешним runtime и новым Orchestrator
 
 Runtime C delivered checkpoint `8d89b28f07426846b3ded7c6bd933363d9dc468c`
 содержит пригодные session/input/control/custody contracts и rejecting tests.

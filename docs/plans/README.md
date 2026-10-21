@@ -10,6 +10,10 @@
 | Этап 1: совместимый legacy-host                 | [План реализации](provider-migration/stage-1-legacy-host.md)          | Следующая реализация; отдельные worktrees, без автоматического merge |
 | Этап 2: будущие Orchestrator/runtime            | [Границы последующей замены](provider-migration/stage-2-new-cores.md) | Будущий этап; не prerequisite первого                                |
 
+Точные RPC/recovery/checkpoint переходы этапа 1 собраны в
+[протоколах реализации](provider-migration/stage-1-contracts.md); scope и порядок
+фаз остаются в основном плане.
+
 Для этой программы прежний
 [план A–F](runtime-provider-extraction-and-claude-sdk-plan.md),
 [матрица A–F](runtime-provider-extraction-capabilities.md) и

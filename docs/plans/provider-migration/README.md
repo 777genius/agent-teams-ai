@@ -59,6 +59,7 @@ flowchart TB
 | ----------------------------------------- | ----------------------------------------------------------------------- |
 | Этот README                               | Направление, этапы, размещение, оценки и разрешения                     |
 | [Этап 1](stage-1-legacy-host.md)          | Пошаговая реализация, invariants, переходы, зависимости и exit criteria |
+| [Протоколы этапа 1](stage-1-contracts.md) | Identity, RPC, recovery, checkpoints и конкретные fault-сценарии        |
 | [Матрица](compatibility-matrix.md)        | Полный сохраняемый функционал и доказательства; не проценты готовности  |
 | [Источники и reuse](sources-and-reuse.md) | Frozen donor, существующие результаты и ограничения их применения       |
 | [Этап 2](stage-2-new-cores.md)            | Что стабилизируем сейчас и как заменяем владельцев позднее              |
@@ -70,13 +71,13 @@ flowchart TB
 
 ## 3. Где находится код
 
-| Часть                | Размещение и scope                                                                                                                                                 |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Provider library     | Существующий `packages/platform/provider-implementations` в репозитории `agent-runtime`; независимые build/test/packed entrypoints, один источник алгоритмов       |
-| Legacy-host          | Новый portable package `packages/legacy-agent-host` в изолированном frontend worktree; два внутренних модуля `team` и `runtime`, explicit composition              |
-| Desktop connection   | Feature `src/features/agent-backend` с process-specific entrypoints по стандарту frontend; это host client/owner routing/projection, не второй Team store          |
-| Provider Session SPI | Существующий curated `@agent-teams/agent-execution/interactive-contracts` на выбранном pin; только типовой контракт, без загрузки implementation нынешнего runtime |
-| Будущие ядра         | Их собственные репозитории и worktrees; этап 1 не меняет их accepted ADR или implementation scope                                                                  |
+| Часть                | Размещение и scope                                                                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Provider library     | Существующий `packages/platform/provider-implementations` в репозитории `agent-runtime`; независимые build/test/packed entrypoints, один источник алгоритмов |
+| Legacy-host          | Новый portable package `packages/legacy-agent-host` в изолированном frontend worktree; два внутренних модуля `team` и `runtime`, explicit composition        |
+| Desktop connection   | Feature `src/features/agent-backend` с process-specific entrypoints по стандарту frontend; это host client/owner routing/projection, не второй Team store    |
+| Provider Session SPI | Curated Session SPI выделяется в минимальный contracts artifact того же workspace; старый entrypoint остаётся совместимым re-export, без копии типов         |
+| Будущие ядра         | Их собственные репозитории и worktrees; этап 1 не меняет их accepted ADR или implementation scope                                                            |
 
 Имена новых package/feature — выбранные рабочие имена спецификации, не заявление
 об уже существующем npm-пакете. Если в выбранном baseline есть пригодная public
@@ -84,10 +85,12 @@ feature, P0 фиксирует её reuse вместо второго одина
 
 Путь provider package внутри runtime repo не означает dependency на нынешний
 runtime engine. Перед его rewrite package сохраняется отдельным ownership scope,
-exact artifact и контрактным entrypoint. Если внешний packed consumer вынужденно
-тянет implementation вместо типов, P1 выделяет **тот же** SPI в один минимальный
-contracts package через штатные правила owning repo. Вторую редактируемую копию
-SPI или отдельный contracts-репозиторий не заводим.
+exact artifact и контрактным entrypoint. Нынешний packed test устанавливает весь
+`agent-execution` с implementation dependencies: type-only import сам по себе
+не обеспечивает независимый install/build. Поэтому P1 выделяет **тот же** SPI
+в один минимальный contracts package по правилам owning repo; прежний
+`agent-execution/interactive-contracts` re-export сохраняет совместимость.
+Вторую редактируемую копию SPI или отдельный contracts-репозиторий не заводим.
 
 ## 4. Разделение ответственности
 
@@ -149,6 +152,11 @@ identity, delivery, authorization или recovery, integration forecast возр
 разработка ядер пока не оценена: прежняя цифра 8–18k не применяется к неизвестному
 rewrite. Оценка этапа 1: confidence 6/10, complexity 8/10; риск регрессий до проверок
 7/10. Это шкалы инженерного суждения, не вероятность дефекта.
+
+Package closure, обычные SDK subagents и checkpoint persistence входят в строки
+SPI/runtime/provider gaps, а не добавляются к оценке второй раз. Нижняя граница
+предполагает reuse существующих stores/config/protocol code. На P0/P1 она
+уточняется по фактической closure; новые подтверждённые gaps отражаются явно.
 
 ## 7. Что не считается завершением
 

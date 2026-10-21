@@ -10,7 +10,7 @@
 - Desktop feature API, UI и captured backend identity для существующих handles.
 - Явные границы Team→Runtime и Runtime→Provider, без vendor DTO в Team/UI.
 - Behavioral fixtures M01–M18, exact identities и раздельную классификацию
-  admission/handoff/result/cleanup, unknown/recovery/control.
+  admission/handoff/result/cleanup, unknown/recovery/control, positive restore и parent/child subagent scope.
 - Read-only доступ к архивным данным и завершённым legacy receipts.
 
 Сохраняем семантику используемых операций, а не обещание никогда не менять метод
@@ -44,7 +44,9 @@ flowchart LR
 
 Взять approved public API новых ядер и составить delta только для используемых
 портов. Сравнить identity/generation, accepted/unknown/rejected, scope/grants,
-ordering, independent replies/control, feeds/gaps, cleanup, config/checkpoints.
+ordering, independent replies/control, feeds/gaps, cleanup, durable checkpoint/history
+publication и ordinary subagent provenance/custody. [Протоколы этапа 1](stage-1-contracts.md)
+задают требуемое поведение, не структуру будущих stores.
 TypeScript assignability не доказывает Liskov compatibility.
 
 Выход: таблица exact-compatible / translated / requires new capability / incompatible.
