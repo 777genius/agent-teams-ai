@@ -5,21 +5,25 @@ import { projectOpenCodeStateChangingFailure } from '../../../src/main/services/
 import { OpenCodeRuntimeStopUnconfirmedError } from '../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 
 vi.mock('electron', () => ({
-  app: { getLocale: vi.fn(() => 'en'), getPath: vi.fn(() => '/tmp'), isPackaged: false },
-  Notification: Object.assign(vi.fn(), { isSupported: vi.fn(() => false) }),
-  BrowserWindow: { fromWebContents: vi.fn(() => null), getAllWindows: vi.fn(() => []) },
+  app: { getLocale: () => 'en', getPath: () => '/tmp', isPackaged: false },
+  Notification: Object.assign(class {}, { isSupported: () => false }),
+  BrowserWindow: { fromWebContents: () => null, getAllWindows: () => [] },
 }));
 
+// Plain class stubs survive vi.restoreAllMocks() in afterEach; vi.fn-based
+// factories lose their implementation and hang the roster mutation path.
 vi.mock('@main/services/team/TeamMembersMetaStore', () => ({
-  TeamMembersMetaStore: vi.fn().mockImplementation(() => ({
-    getMeta: vi.fn(async () => null),
-  })),
+  TeamMembersMetaStore: class {
+    async getMeta(): Promise<null> {
+      return null;
+    }
+  },
 }));
 
 vi.mock('@main/services/team/TeamDataWorkerClient', () => ({
   getTeamDataWorkerClient: () => ({
-    invalidateTeamConfig: vi.fn(),
-    invalidateMemberRuntimeAdvisory: vi.fn(),
+    invalidateTeamConfig: () => undefined,
+    invalidateMemberRuntimeAdvisory: () => undefined,
   }),
 }));
 
