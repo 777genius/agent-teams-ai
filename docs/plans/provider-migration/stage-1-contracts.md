@@ -168,7 +168,43 @@ dependency failure, без fallback. Политика свежести/инва�
 для выбранного profile; не требуется полный discovery всех tools на каждом input,
 если native revision/invalidation даёт доказанно актуальный bounded proof.
 
-Состояния не требуют отдельных классов/таблиц на каждое слово:
+### Team bootstrap и частичный запуск
+
+До allocation Team сохраняет expected roster, launch/roster revision и member
+bindings. Summary считает весь этот набор, включая members без созданной session;
+его нельзя уменьшать по timeout/ошибке. Existing launch policy задаёт skipped
+members явно; skipped не является подтверждением готовности.
+
+Member usable требует native readiness и доказанной установки обязательного
+initial role/team/workspace context в **той же generation**. Proof может быть
+trusted effective native configuration либо delivery исходного bootstrap input
+с подтверждением его применения. Старый fork check-in ритуал не обязателен;
+model-text ACK и один read `member_briefing` не доказывают весь bootstrap. До usable
+разрешены scoped bootstrap/control, обычные work deliveries ждут. Bootstrap имеет
+свои stable input IDs/binding; purpose задаёт Team owner, не tool payload модели.
+
+Раздельно сохраняются ready, pending bootstrap, pending human permission,
+definitive failed и skipped; UNKNOWN allocation/custody не превращается в failed.
+Team ready требует готовности всех expected members. Иначе UI показывает partial/
+pending/failed summary по actual facts; healthy member не считается сломанным из-за
+соседа. Existing policy продолжения/cleanup сохраняется, whole-team retry не
+подставляется автоматически. Bootstrap deadline не делает pending human decision
+ошибкой старта; native interaction expiry/control имеет отдельный исход.
+
+Повтор launch command возвращает его receipt/progress, не запускает roster снова.
+Явный scoped retry задаёт только допустимые failed members, original launch/revision
+и новый стабильный attempt ID; до allocation проверяется terminal/no-allocation
+либо cleanup proof старой попытки. Healthy/pending/UNKNOWN members сохраняют binding.
+Новая конфигурация/roster требует нового явного intent; late signals прежнего
+attempt/generation не исправляют статус новой попытки.
+
+Host crash сохраняет эти records, но не восстанавливает volatile permission
+callbacks. После restart прежний pending request виден как retained obligation
+с unavailable/expired control до reconciliation, а не свежий отвечаемый grant.
+Без custody proof старые ready members также не объявляются автоматически usable.
+
+Состояния ниже не требуют отдельных классов/таблиц; Session.ready означает native
+readiness, а не aggregate Team bootstrap completion:
 
 | Resource    | Допустимая последовательность                                                  | Crash/неопределённость                                                                          |
 | ----------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
@@ -364,6 +400,12 @@ pending effects не replay. Простое переполнение data queue 
 
 Existing workflows дополняют F-строки в тех же suites:
 
+- **Partial launch/F06:** A usable, B pending human permission, C known failure до
+  allocation. После startup grace summary остаётся partial, A работает по existing
+  launch policy, B не объявляется failed. Scoped retry C не создаёт второй A/B.
+  При отдельном host crash/restart B сохраняет original obligation, callback не
+  оживает; A/B не объявляются заново usable без актуального ownership/bootstrap
+  proof. Пустая in-memory map не уменьшает expected roster.
 - **Readiness/F04:** после initial ready потерять обязательный MCP/tool при active
   A и queued B. Native B не начинается до свежего same-binding discovery/handshake;
   readiness timeout виден, A не replay. Восстановление не создаёт новую generation.
@@ -458,12 +500,14 @@ fast/context limits, action/permission mode, context reset, workspace/worktree,
 
 Composition разрешает настройки последовательно: выбранный profile/account и
 workspace → сохранённые launch settings → явные overrides текущего intent.
-Обязательные owner tools/identity/capture hooks не ослабляются этими overrides;
+Обязательные owner tools/identity guards и integrity rules capture не ослабляются overrides;
 конфликт отказывает до allocation. Два источника одной настройки не включаются
 одновременно с неявным приоритетом. Hooks пользователя компонуются с mandatory
-provider hooks, не заменяют их целиком. Для tool-bound hooks порядок фиксирован:
-owner checks/preimage → user pre-hook → native effect → user post-hook → final
-capture; error/cancel path сохраняет partial effects и исход ошибки. Другие hooks
+provider hooks, не заменяют их целиком. Где используются tool-bound hooks, порядок:
+owner checks/required preimage → user pre-hook → native effect → user post-hook →
+final capture. Required preimage относится к выбранному capture path из §10;
+window/native snapshot path не изображает отсутствующий per-tool callback.
+Error/cancel path сохраняет partial effects и исход ошибки. Другие hooks
 не получают выдуманную task attribution. Raw SDK/CLI
 mapping остаётся в D/private adapter; parser всех возможных vendor flags не строится.
 
@@ -555,12 +599,13 @@ request changes → исправление/start/complete → повторный
 из existing policy, не вводится новая state machine будущего Orchestrator.
 Task approval и Accept/Reject file changes остаются разными решениями.
 
-Change capture требуется **вокруг** native tool execution: preimage до эффекта,
-postimage после tool и relevant post-hooks; failed tool сохраняет partial effects,
-background tool — eventual outcome того же execution. Одних tool-result/turn-end
-events недостаточно. D даёт provider-owned pre/post/background capture seam;
-если preimage нужен до эффекта, callback завершается до разрешения native tool,
-асинхронная notification после старта не заменяет этот barrier.
+Change capture сохраняет доказанные before/final bytes, tool/window timeline и
+исход выполнения; failed tool и relevant post-hooks сохраняют partial/final effects,
+background tool — eventual outcome того же execution. Способ получения preimage
+зависит от profile: awaited tool hooks, подготовленный input/window baseline либо
+проверенная native snapshot/change chain. Provider-owned observations/capture seam
+находятся в D, product evidence writer — у host. Один turn-end diff или сообщение
+о tool result сами по себе не доказывают авторство изменений.
 
 Runtime сопоставляет exact input/tool execution с immutable task/window/session/
 member/workspace binding. Host evidence writer использует existing Git capture/
@@ -569,20 +614,26 @@ D не пишет Task ledger. Перекрывающиеся окна/внеш�
 по одному path/time interval; при недоказанной attribution остаётся gap/nonreviewable.
 Provider без достаточного capture получает explicit capability gap до приёмки.
 
-Доступность awaited barrier проверяется узким native proof уже в P1, до широкого
-extraction P2/P3. Для выбранного profile фиксируется реальный hook/interception
-механизм и его ordering: задержать preimage callback → файл ещё не изменён →
-разрешить callback → tool effect; callback failure запрещает effect. Отдельный
-failed tool/post-hook подтверждает final bytes. Reuse существующих native fixtures,
-без Team store/UI harness и без замены проверки моделируемым callback.
+В P1 для каждого выбранного profile узкий native proof проверяет **достаточный**
+capture mechanism до широкого extraction P2/P3: известный initial dirty файл,
+native modification/failed outcome и post-hook, точные before/final bytes,
+immutable task/window binding и gap для недоказанного overlap/external edit.
+Window/native-snapshot путь требует authored tool anchors/validated chain и
+нужной timeline/outcome информации; snapshot-only authorship недостаточна.
 
-Codex `item/started` и OpenCode turn snapshots в исследованном D сами по себе
-barrier не дают; availability другого native механизма пока не доказана. Новый SPI
-метод, prompt-инструкция либо permission dialog не заменяет этот proof. Если
-поддерживаемого механизма нет, P1 явно пересматривает конкретный capture seam/M13
-и оценку до широкого переноса. Нельзя продолжить с обещанием исправить невозможную
-гарантию в P6 или объявить notification capture полным parity. P6 подключает
-доказанный механизм к product attribution/review и проверяет полный workflow.
+Если выбранному пути нужен новый preimage прямо перед tool effect, callback обязан
+завершиться до effect; для такого пути проверяется ordering с задержанным callback.
+Это условие конкретного механизма, не универсальное требование к каждому native
+tool. Existing fork capture best-effort: capture failure не обязана запрещать
+обычную работу агента. При отсутствии доказанных bytes/attribution host помечает
+gap/nonreviewable и запрещает unsafe review/apply; fabricated preimage недопустим.
+
+Codex item notifications и OpenCode snapshots нынешнего D ещё не доказывают полную
+M13 parity. Выбранный безопасный механизм подтверждается на actual native fixture;
+новый SPI метод, prompt-инструкция или permission dialog не заменяет proof. Если
+его нет, пересматриваются конкретный seam/оценка, M13 остаётся открытым. P6 подключает
+доказанный механизм к attribution/review; новый fail-closed tool policy сверх
+действующих authorization guards в существующий scope не добавляется.
 
 Проверка: native command меняет TEST файл и завершается ошибкой; post-hook меняет
 его ещё раз. Ledger сохраняет корректные before/final bytes, failed outcome и

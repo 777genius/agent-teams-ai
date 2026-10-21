@@ -131,11 +131,20 @@ P0 выбирает один coherent source/artifact, integrating only reviewed
 
 Дополнительный read-only осмотр provider source привязан к clean package files
 commit `7805dbf49d298f21bbb489faa99fe79a1116c17a`, не к новому qualified artifact.
-В `adapters/codex-protocol` item notifications и не ожидаемые event callbacks,
-в OpenCode turn snapshots сами не являются pre-effect capture barrier. Claude
-tool-binding PreToolUse — полезный частичный seam, но не полный final/background
-capture. Availability нужного механизма требует P1 native proof; чтение source
-не доказывает невозможность provider API и не заменяет этот proof.
+Codex item notifications и OpenCode turn snapshots сами не доказывают полный M13;
+Claude tool-binding PreToolUse — частичный seam, не весь final/background capture.
+
+Повторное сравнение с frozen donor уточняет **требуемую parity**, не только форму SPI:
+`src/services/tools/toolExecution.ts:1265` ожидает capture перед tool, но
+`TaskChangeLedgerService.ts:3373` возвращает null при capture failure, сохраняя
+обычное выполнение. Summary использует первый before/последний after.
+`OpenCodeLedgerBridgeService.ts:737` использует authored toolpart anchors и native
+snapshot windows; `OpenCodeToolpartChangeReconstructor.ts:375` запрещает snapshot-only
+authorship. Frontend review проверяет bytes/hash/conflicts, не наличие конкретного
+callback. Поэтому P1 квалифицирует достаточный hook/window/native-chain mechanism;
+универсальный awaited per-tool barrier и запрет tool при capture failure не являются
+унаследованным требованием. Недоказанные changes остаются gap/nonreviewable. Чтение
+source не заменяет native proof выбранного profile.
 
 Claude `session.checkReadiness` проверяет native MCP status/tools; Codex/OpenCode
 опираются на injected probe. Поэтому новый host adapter обязан подтвердить exact
@@ -155,6 +164,9 @@ owner qualification refs — к Desktop/import. Эти изменения вкл
 closure и пересчёт P0/P1; перенос existing helpers не считается новым engine.
 Диапазон 15–25k предполагает доступный native capture mechanism. Если P1 его не
 подтвердит, цена и конкретный capture seam пересматриваются до широкого extraction.
+Здесь «доступный» означает достаточный для before/final/attribution/review guards,
+а не обязательно synchronous per-tool interception. Bootstrap/partial outcomes
+входят в существующие Team/Runtime work packages, нового launch manager нет.
 
 ## 5. Что делать с нынешним runtime и новым Orchestrator
 

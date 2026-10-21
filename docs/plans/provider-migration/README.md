@@ -163,8 +163,9 @@ provider protocol/config/capture observations в пятой. Boundaries/composit
 первая строка. Нового provider loop или generic artifact/process platform нет.
 Pinned Node поставляется в candidate resources; lifecycle/backup reuse и точная
 owner qualification TaskRefs входят в соответствующие composition/Team/Desktop
-части. Native pre-effect capture — ещё недоказанная предпосылка оценки: её узкий
-proof перенесён в P1, до широкого extraction. Если механизм недоступен, пересматривают
+части. Достаточный capture mechanism для M13 — ещё недоказанная предпосылка оценки:
+его узкий proof проводится в P1 до широкого extraction, без обязательного per-tool
+interception для всех providers. Если подходящего механизма нет, пересматривают
 конкретный seam и диапазон, сохраняя M13 открытым; fallback в fork parity не закрывает.
 
 Диапазон ещё не measured diff: нижняя граница предполагает reuse существующих

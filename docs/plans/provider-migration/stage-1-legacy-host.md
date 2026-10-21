@@ -211,6 +211,10 @@ Completed business receipt не снимает delivery obligation: startup/reco
 Для native create, потерявшего ответ, нет второго create по title/member name.
 Session становится ready после handshake, mandatory tools и config proof;
 PID, inbox file, `member_briefing` или `registered` этого не доказывают.
+Team bootstrap отдельно подтверждает initial context exact generation и считает
+статусы по сохранённому expected roster, включая не создавшие session members.
+Partial launch, human-permission wait и scoped retry описаны в
+[bootstrap-протоколе](stage-1-contracts.md#team-bootstrap-и-частичный-запуск).
 Потеря обязательного MCP/tool инвалидирует member readiness и удерживает новые
 handoffs до свежего same-binding proof; control и исход active input учитываются
 отдельно. Детали: [readiness recovery](stage-1-contracts.md#readiness-при-потере-обязательной-зависимости).
@@ -382,8 +386,8 @@ upstream и уже доказанные exact-byte тесты.
    inbox, второй обязан сохранить product data при новом execution owner.
    Включить trash/restore/permanent deletion и backup/reconcile/prune, включая
    member-work-sync restore. Внешние TaskRefs не переназначать imported team owner.
-   Для M13 указать exact native pre-effect mechanism; notification-only путь
-   пометить недоказанным до P1, а не готовым provider capability.
+   Для M13 указать exact capture mechanism и необходимые before/final/attribution
+   proofs; notification-only путь без anchors/chain не считать готовым capability.
 4. Создать изолированные lanes и один integration root, записать их refs/owners.
    Команды будущих scripts отмечать planned, пока package реально не создан.
 
@@ -417,7 +421,7 @@ symbol/use case, целевой module/owner, replacement port, M-ID и oracle. 
    очереди. Snapshot/cursor handshake входит в тот же transport slice.
 4. Пройти open → два inputs → text/tool/result → close на fixture driver и выбранном
    packed provider. Этот walking slice не является командной приёмкой.
-5. Проверить ещё недоказанный native capture barrier выбранных provider profiles
+5. Проверить достаточный capture mechanism выбранных provider profiles
    из [§10](stage-1-contracts.md#10-task-lifecycle-и-evidencereview) минимальным
    существующим fixture. Это ранняя проверка feasibility, а не весь P6 ledger/review.
    При отсутствии механизма пересмотреть этот seam до широкого P2/P3 extraction;
@@ -430,7 +434,7 @@ filesystem-custody engine или fork. Отдельный прежний consume
 
 **Выход:** package запускается без fork/runtime checkout и Electron globals;
 контрактные unknown/error/control значения не сглаживаются в success. Поставка Node
-определена; native capture assumptions доказаны либо их конкретный seam исправлен
+определена; capture mechanism сохраняет observable M13 либо его seam исправлен
 до допуска зависимого широкого переноса.
 **Проверка:** strict build/consumer + существующие relevant session fixtures.
 **Не входит:** full UI cutover, полный business store, новая generic transport platform.
@@ -452,6 +456,8 @@ system Node пользователя не используется молча в
    Canonical Task policy брать из `agent-teams-controller` taskBoard/tasks/review/
    kanban; `TeamTaskWriter` только store helper. Process registry/background services
    сохранять отдельно от teammate readiness/custody.
+   Bootstrap сохраняет expected roster/revision и individual outcomes из §4
+   протоколов; completion не вычисляется только по созданным native sessions.
 2. Дать каждому store одного writer. Desktop legacy mutations для host-owned
    handle направить в тот же host facade; откат routing не включает второй writer.
 3. Реализовать shared MCP tool registration/legacy schema mapping, trusted actor,
@@ -516,8 +522,10 @@ system Node пользователя не используется молча в
 
 **Зависит от:** P2 + P3. **Scope:** соединённый headless team workflow.
 
-1. Запустить один TEST team с idle-ready A=Claude, B=Codex, C=OpenCode через
+1. Запустить один TEST team с A=Claude, B=Codex, C=OpenCode через
    authoritative MCP и localhost inference с actual SDK/CLI/protocol paths.
+   Сначала пройти bootstrap transitions: initial context applied → member usable
+   → aggregate ready по expected roster; не подставлять уже готовые fixture members.
 2. Human → B → human, A↔B, B↔C, C↔A и group получают реальные recipient inputs
    и explicit ответы; проверить отсутствие lead relay/duplicates. Вторая host-owned
    TEST team с одним member нужна для разрешённого cross-team roundtrip.
@@ -536,8 +544,14 @@ system Node пользователя не используется молча в
    передать parent/child provenance через provider-owned observation capability,
    проверить запрет в недопустимом mode и отсутствие невыданной Team authority.
    Control родителя закрывает его owned descendants, не других members.
+7. В existing mixed-launch fixture проверить partial исход: A ready, B ждёт human
+   permission дольше startup grace, C known failure до allocation. Scoped retry C
+   не запускает A/B повторно; crash/restart сохраняет B obligation без оживления
+   volatile callback и без speculative replacement. Детали — §4/§7 протоколов.
 
-**Выход:** M01–M10 и необходимые runtime части M13–M19 проходят actual host path;
+**Выход:** headless bootstrap/messaging/task/runtime части M01–M10 и необходимые
+runtime части M13–M19 проходят actual host path; целые строки не объявляются
+закрытыми до остальных product/UI acceptance P6/P8;
 каждый provider имеет свой exact evidence tuple, а не чужой mock PASS.
 **Не входит:** переключение production Desktop или real model/auth claim по dummy API.
 
@@ -586,9 +600,11 @@ system Node пользователя не используется молча в
 
 1. Извлечь Git capture/task attribution/review/apply use cases. Сохранить task/run/
    workspace/window attribution, исходные bytes, conflict и interrupted apply.
-   Preimage capture завершается до native effect; final capture после tool/hooks
-   учитывает failed/background effects. Fork globals заменить immutable binding;
-   async tool-result или общий turn-end diff недостаточны для этой гарантии.
+   Использовать проверенный в P1 capture path: hooks либо anchored window/native
+   change chain с доказанными before/final bytes и timeline/outcomes. Новый preimage
+   перед tool effect ожидается только там, где его требует выбранный механизм.
+   Final capture учитывает hooks/failed/background effects; недоказанное имеет gap.
+   Fork globals заменить immutable binding; один turn-end diff не даёт attribution.
 2. Подключить context usage, private/internal messages, chunks/subagents/task logs,
    edits/commands и structured references без синтетических success observations.
    Реальный P4 subagent виден как child родителя; фильтры не теряют его output
@@ -636,8 +652,9 @@ host-owned user actions; release/signing/publication ещё не выполня�
 
 ### P8. Интеграционный E2E, review и handoff
 
-**Зависит от:** P7. **Scope:** полный dev E2E на source refs того же candidate,
-короткий packed workflow остаётся отдельным фактом P7.
+**Зависит от:** P5 + P6 для dev E2E/affected gates. Они могут идти параллельно P7
+на согласованных source refs/provider artifacts. Итоговый review/handoff candidate
+требует результатов обоих P7/P8; короткий installed workflow доказывается только P7.
 
 1. Запустить один развиваемый harness в integration worktree: normal Electron
    `pnpm dev:mcp` + реальный legacy-host + packed provider + localhost inference.
@@ -656,7 +673,7 @@ host-owned user actions; release/signing/publication ещё не выполня�
 Конкретные F01–F09 из [протоколов](stage-1-contracts.md#7-фокусные-проверки-отказов)
 выполняются на ближайшей meaningful boundary. В Electron повторяются routing,
 reconnect и видимые состояния, а не вся headless fault suite.
-Acceptance из §8–§10 дополняет эти fault probes существующими product workflows;
+Acceptance из §8–§11 дополняет эти fault probes существующими product workflows;
 новых harness/CI gates для каждого пункта не требуется.
 
 **Выход:** проверенный и reviewable candidate. Без real Claude access возможен
@@ -667,8 +684,10 @@ Acceptance из §8–§10 дополняет эти fault probes существ
 
 P0 → P1; затем P2 и P3 допускают разные owners. P4 соединяет их. P5 projections
 можно готовить на recorded fixtures параллельно P3/P4. P6 evidence ведётся отдельно
-с явными ports; P7/P8 выполняются на одной собранной ревизии. Package manifest,
-общие contracts/composition и shared policy имеют одного назначенного writer.
+с явными ports; после P5/P6 dev E2E P8 и packaging P7 могут идти параллельно.
+Final candidate связывает результаты с одной выбранной source/artifact composition;
+relevant delta требует только affected перепроверки. Package manifest, общие
+contracts/composition и shared policy имеют одного назначенного writer.
 
 Большая фаза разбивается на reviewable coherent checkpoints, ориентир около
 2k handwritten changed LOC без generated/lockfile частей. До решения о доставке
