@@ -324,12 +324,15 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
   }
 
   const bunPtyRelease = 'bun-pty/rust-pty/target/release';
-  const foreignBunPtyFiles = [
+  const bunPtyLibraries = [
     'librust_pty.dylib',
     'librust_pty.so',
     'librust_pty_arm64.dylib',
+    'librust_pty_arm64_musl.so',
     'librust_pty_arm64.so',
+    'librust_pty_musl.so',
     'rust_pty.dll',
+    'rust_pty_arm64.dll',
   ];
   const targetBunPtyFile =
     targetPlatform === 'darwin'
@@ -337,15 +340,25 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
         ? 'librust_pty_arm64.dylib'
         : 'librust_pty.dylib'
       : targetPlatform === 'linux'
-        ? 'librust_pty.so'
-        : 'rust_pty.dll';
+        ? targetArch === 'arm64'
+          ? 'librust_pty_arm64.so'
+          : 'librust_pty.so'
+        : targetArch === 'arm64'
+          ? 'rust_pty_arm64.dll'
+          : 'rust_pty.dll';
+  // bun-pty's loader falls back to the same-arch musl build on Linux.
+  const keptBunPtyFiles =
+    targetPlatform === 'linux'
+      ? [targetBunPtyFile, targetBunPtyFile.replace(/\.so$/, '_musl.so')]
+      : [targetBunPtyFile];
   if (
-    foreignBunPtyFiles.some(
-      (filename) => filename !== targetBunPtyFile && runtimePath === `${bunPtyRelease}/${filename}`
+    bunPtyLibraries.some(
+      (filename) =>
+        !keptBunPtyFiles.includes(filename) && runtimePath === `${bunPtyRelease}/${filename}`
     )
   ) {
-    rootToRemove = filePath;
-    targetSibling = path.join(runtimeRoot, ...bunPtyRelease.split('/'), targetBunPtyFile);
+    // No sibling gate: the loader's per-platform filename map is exhaustive, and the win32-arm64 runtime omits rust_pty_arm64.dll.
+    return filePath;
   }
 
   if (!rootToRemove || !targetSibling || !(await fileExists(targetSibling))) return null;

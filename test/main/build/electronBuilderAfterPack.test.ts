@@ -65,6 +65,7 @@ describe('electron-builder afterPack', () => {
   const tempDirs: string[] = [];
   const managedRuntimeTargets = [
     ['win32', 'x64'],
+    ['win32', 'arm64'],
     ['linux', 'x64'],
     ['darwin', 'arm64'],
     ['darwin', 'x64'],
@@ -214,7 +215,7 @@ describe('electron-builder afterPack', () => {
       const prebuilds = path.join(coreRoot, 'node_modules', 'tree-sitter-bash', 'prebuilds');
       const target = path.join(prebuilds, `${platform}-${targetArch}`, 'tree-sitter-bash.node');
       writeFile(target, platform === 'darwin' ? createMachOBuffer(targetArch)
-      : platform === 'win32' ? createPortableExecutableBuffer('x64') : createElfBuffer('x64'));
+      : platform === 'win32' ? createPortableExecutableBuffer(targetArch) : createElfBuffer(targetArch));
       targetFiles.push(target);
       for (const [variant, bytes] of [
         ['darwin-arm64', createMachOBuffer('arm64')],
@@ -232,44 +233,53 @@ describe('electron-builder afterPack', () => {
     }
     if (platform === 'win32') {
       const ffiTarget = path.join(
-        modules, '@yuuang', 'ffi-rs-win32-x64-msvc', 'ffi-rs.win32-x64-msvc.node'
+        modules, '@yuuang', `ffi-rs-win32-${targetArch}-msvc`, `ffi-rs.win32-${targetArch}-msvc.node`
       );
       const ffiForeign = path.join(
         modules, '@yuuang', 'ffi-rs-win32-ia32-msvc', 'ffi-rs.win32-ia32-msvc.node'
       );
-      writeFile(ffiTarget, createPortableExecutableBuffer('x64'));
+      writeFile(ffiTarget, createPortableExecutableBuffer(targetArch));
       writeFile(ffiForeign, createPortableExecutableBuffer('ia32'));
       targetFiles.push(ffiTarget);
       foreignFiles.push(ffiForeign);
     }
     const release = path.join(modules, 'bun-pty', 'rust-pty', 'target', 'release');
     const targetLibrary = platform === 'darwin' ? (targetArch === 'arm64' ? 'librust_pty_arm64.dylib' : 'librust_pty.dylib')
-      : platform === 'win32' ? 'rust_pty.dll' : 'librust_pty.so';
-    const target = path.join(release, targetLibrary);
-    writeFile(target, platform === 'darwin' ? createMachOBuffer(targetArch)
-      : platform === 'win32' ? createPortableExecutableBuffer('x64') : createElfBuffer('x64'));
-    targetFiles.push(target);
+      : platform === 'win32' ? (targetArch === 'arm64' ? 'rust_pty_arm64.dll' : 'rust_pty.dll')
+      : (targetArch === 'arm64' ? 'librust_pty_arm64.so' : 'librust_pty.so');
+    const keptLibraries = platform === 'linux'
+      ? [targetLibrary, targetLibrary.replace(/\.so$/, '_musl.so')]
+      : [targetLibrary];
+    for (const filename of keptLibraries) {
+      const target = path.join(release, filename);
+      writeFile(target, platform === 'darwin' ? createMachOBuffer(targetArch)
+        : platform === 'win32' ? createPortableExecutableBuffer(targetArch) : createElfBuffer(targetArch));
+      targetFiles.push(target);
+    }
     for (const [filename, bytes] of [
       ['librust_pty.dylib', createMachOBuffer('x64')],
       ['librust_pty_arm64.dylib', createMachOBuffer('arm64')],
       ['librust_pty.so', createElfBuffer('x64')],
       ['librust_pty_arm64.so', createElfBuffer('arm64')],
+      ['librust_pty_musl.so', createElfBuffer('x64')],
+      ['librust_pty_arm64_musl.so', createElfBuffer('arm64')],
       ['rust_pty.dll', createPortableExecutableBuffer('x64')],
+      ['rust_pty_arm64.dll', createPortableExecutableBuffer('arm64')],
     ] as const) {
-      if (filename === targetLibrary) continue;
+      if (keptLibraries.includes(filename)) continue;
       const foreign = path.join(release, filename);
       writeFile(foreign, bytes);
       foreignFiles.push(foreign);
     }
 
     await afterPackModule({ appOutDir: tempDir, electronPlatformName: platform, arch: targetArch === 'arm64' ? 3 : 1 });
-    expect(foreignFiles.length).toBe(platform === 'win32' ? 15 : 14);
+    expect(foreignFiles.length).toBe(platform === 'win32' ? 18 : platform === 'linux' ? 16 : 17);
     expect(foreignFiles.every(file => !fs.existsSync(file))).toBe(true);
     expect(targetFiles.every(file => fs.existsSync(file))).toBe(true);
     await expect(validateNativeBinaries(tempDir, platform, targetArch)).resolves.toEqual([]);
   });
 
-  it.each(managedRuntimeTargets)('retains %s-%s runtime variants without compatible siblings and rejects unknown native files', async (platform, targetArch) => {
+  it.each(managedRuntimeTargets)('keeps %s-%s variants without compatible siblings, prunes known bun-pty foreigns, and rejects unknown native files', async (platform, targetArch) => {
     const tempDir = createTempDir();
     tempDirs.push(tempDir);
     const resources = platform === 'darwin'
@@ -283,20 +293,53 @@ describe('electron-builder afterPack', () => {
     const invalidSibling = path.join(
       modules, 'bun-pty', 'rust-pty', 'target', 'release',
       platform === 'darwin' ? (targetArch === 'arm64' ? 'librust_pty_arm64.dylib' : 'librust_pty.dylib')
-        : platform === 'win32' ? 'rust_pty.dll' : 'librust_pty.so'
+        : platform === 'win32' ? (targetArch === 'arm64' ? 'rust_pty_arm64.dll' : 'rust_pty.dll') : 'librust_pty.so'
     );
     const foreign = path.join(path.dirname(invalidSibling), platform === 'win32' ? 'librust_pty.so' : 'rust_pty.dll');
     const unknown = path.join(modules, 'unknown-package', 'unknown.node');
     writeFile(missingSibling, platform === 'darwin' ? createPortableExecutableBuffer('arm64') : createMachOBuffer('arm64'));
     writeFile(invalidSibling, platform === 'darwin' ? createMachOBuffer(targetArch === 'arm64' ? 'x64' : 'arm64')
-      : platform === 'win32' ? createPortableExecutableBuffer('arm64') : createElfBuffer('arm64'));
+      : platform === 'win32' ? createPortableExecutableBuffer(targetArch === 'arm64' ? 'x64' : 'arm64')
+      : createElfBuffer('arm64'));
     writeFile(foreign, platform === 'win32' ? createElfBuffer('x64') : createPortableExecutableBuffer('x64'));
     writeFile(unknown, platform === 'darwin' ? createElfBuffer('x64') : createMachOBuffer('x64'));
 
     await expect(afterPackModule({ appOutDir: tempDir, electronPlatformName: platform, arch: targetArch === 'arm64' ? 3 : 1 }))
       .rejects.toThrow(`Found incompatible native binaries in ${platform}-${targetArch} bundle after pruning`);
-    expect([missingSibling, invalidSibling, foreign, unknown].every(file => fs.existsSync(file)))
+    expect([missingSibling, invalidSibling, unknown].every(file => fs.existsSync(file)))
       .toBe(true);
+    expect(fs.existsSync(foreign)).toBe(false);
+  });
+
+  it('prunes the shipped win32-arm64 bun-pty set even when rust_pty_arm64.dll is absent', async () => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+    const release = path.join(
+      tempDir,
+      'resources',
+      'runtime',
+      'local-cli',
+      'node_modules',
+      'bun-pty',
+      'rust-pty',
+      'target',
+      'release'
+    );
+    const shipped: Array<[string, Buffer]> = [
+      ['librust_pty.so', createElfBuffer('x64')],
+      ['rust_pty.dll', createPortableExecutableBuffer('x64')],
+      ['librust_pty.dylib', createMachOBuffer('x64')],
+      ['librust_pty_arm64.dylib', createMachOBuffer('arm64')],
+      ['librust_pty_arm64.so', createElfBuffer('arm64')],
+    ];
+    for (const [filename, bytes] of shipped) {
+      writeFile(path.join(release, filename), bytes);
+    }
+
+    await afterPackModule({ appOutDir: tempDir, electronPlatformName: 'win32', arch: 3 });
+
+    expect(shipped.every(([filename]) => !fs.existsSync(path.join(release, filename)))).toBe(true);
+    await expect(validateNativeBinaries(tempDir, 'win32', 'arm64')).resolves.toEqual([]);
   });
 
   it('fails validation when a foreign-arch native binary remains in the bundle', async () => {
