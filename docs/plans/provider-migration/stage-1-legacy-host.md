@@ -17,7 +17,7 @@ provider library. Исполнение не запускает fork CLI, не и
 Сохраняется пользовательское поведение текущего продукта: roster/roles, solo/team,
 запуск/ready, tasks/assignment/dependencies, DM/group/cross-team, approvals,
 interrupt/stop/restart/resume, context/settings, activity/logs/usage, TaskRef,
-evidence/review и provider connection. Все строки M01–M18 обязательны; при
+evidence/review и provider connection. Все строки M01–M19 обязательны; при
 обнаружении используемого сценария вне матрицы добавляется строка до его удаления.
 Первый vertical slice не уменьшает scope окончательного результата.
 
@@ -293,6 +293,12 @@ Skills/hooks/project instructions/context compaction сохраняют поль
 Для реальной auth route проверяется её допустимость/работоспособность отдельно;
 существующий login UI нельзя незаметно превратить только в API-key workflow.
 
+Management сохраняет existing `RuntimeProviderManagementPort` отдельно от session
+conversation: native executor заменяет fork CLI, login/status/launch используют
+один selected profile. TEST isolation и production credential namespace различаются.
+Effective settings, auth flow, compaction observation и native attachments
+детализированы в [§9 протоколов](stage-1-contracts.md#9-config-auth-context-и-attachments).
+
 Логи нормализуются с exact source/message/block/tool IDs; одинаковый текст разных
 сообщений не схлопывается. Частичные/complete события одного блока не дублируются.
 `isMeta`, internal blocks, chunks, subagent filtering, TaskRef и unknown usage
@@ -334,13 +340,16 @@ upstream и уже доказанные exact-byte тесты.
 
 1. Выбрать committed frontend/provider/donor refs, проверить dirty diff. Явно
    зафиксировать включаемые owner patches; release dirty tree не включать.
-2. Сопоставить M01–M18 с entrypoint, state writer/reader, известным oracle,
+2. Сопоставить M01–M19 с entrypoint, state writer/reader, известным oracle,
    provider capability и местом extraction. Для mixed modules перечислить только
    используемые transitive dependencies. Snapshot файла не доказывает авторство.
    Отдельно различить persistent teammates и обычные native subagents, а также
    solo DO/обзорные modes; не объявлять их взаимозаменяемыми.
 3. Отметить уже готовые public provider exports/контракт/fixtures; отдельно gaps:
    native custody/config/MCP, checkpoint, context/usage/evidence, OS packaging.
+   Выписать source→effective mapping settings/auth namespace и supported attachment
+   MIME/model/recipient paths. Указать controller/MCP, Changes backfill, review,
+   attachment и process-registry writers, не только CLI entrypoints.
 4. Создать изолированные lanes и один integration root, записать их refs/owners.
    Команды будущих scripts отмечать planned, пока package реально не создан.
 
@@ -359,6 +368,9 @@ symbol/use case, целевой module/owner, replacement port, M-ID и oracle. 
 
 1. Создать legacy-host package и Desktop feature public port; существующий gateway
    переиспользовать только после проверки absence of future-engine dependency.
+   Добавить package в `pnpm-workspace.yaml`, build/typecheck/test scopes и dist
+   composition. Existing root scripts перечисляют workspaces явно и сами новый
+   package не проверят. Host/API contract modules browser-safe; executor Node-only.
 2. Привязать current provider SPI/exports и exact artifact. Снять dependency на
    source checkout/implementation нынешнего runtime; type-only import проверить
    внешним packed consumer. Выделить contracts artifact из §4.3 с compatibility
@@ -378,6 +390,12 @@ filesystem-custody engine или fork. Отдельный прежний consume
 **Проверка:** strict build/consumer + существующие relevant session fixtures.
 **Не входит:** full UI cutover, полный business store, новая generic transport platform.
 
+Node profile выбирается по **пересечению** engines всего selected closure.
+Исследованный D допускает Node24/26, а existing MCP package только Node24:
+для совместного baseline применим `>=24.21.0 <25`. D-only Node26 PASS не доказывает
+работу host/MCP на Node26. Смена диапазона требует owning package/test delta;
+system Node пользователя не используется молча вместо captured executable.
+
 ### P2. Выделить командный owner и авторитетные tools
 
 **Зависит от:** P1. **Scope:** Team/Task/Message stores/use cases/MCP, пока с
@@ -386,6 +404,9 @@ filesystem-custody engine или fork. Отдельный прежний consume
 1. Извлечь bootstrap/roster/task/mailbox/group/dependency use cases из выбранных
    donor/front-end paths. Убрать React/AppState/global session/ToolUseContext через
    small owned ports; SDK agent loop остаётся у official provider.
+   Canonical Task policy брать из `agent-teams-controller` taskBoard/tasks/review/
+   kanban; `TeamTaskWriter` только store helper. Process registry/background services
+   сохранять отдельно от teammate readiness/custody.
 2. Дать каждому store одного writer. Desktop legacy mutations для host-owned
    handle направить в тот же host facade; откат routing не включает второй writer.
 3. Реализовать shared MCP tool registration/legacy schema mapping, trusted actor,
@@ -393,9 +414,15 @@ filesystem-custody engine или fork. Отдельный прежний consume
    recovery из §5 и [протокола команды](stage-1-contracts.md#3-команда-и-частичная-запись).
    Read-only tools не создают команду/сессию побочно. Task-create idempotency helper
    донора служит образцом deterministic IDs, не общей квитанцией всех mutations.
+   Existing MCP `getController` — прямой файловый writer; заменить его injected
+   handler ports/proxy для host-owned handles. Схемы сами по себе этого не меняют.
+   Exact mapping и scoped connection описаны в
+   [§8 протоколов](stage-1-contracts.md#8-mcp-и-полный-cutover-владельцев).
 4. Сохранить product approvals, task assignment/dependencies/claim/comments,
    group/cross-team recipients, TaskRefs и review-facing facts. Новые модели
    будущего Orchestrator не копировать в этот legacy scope.
+   Task/comment blob bytes и metadata имеют captured owner/storage binding;
+   проверить partial write, read-after-restart и remove через existing adapters.
 
 **Выход:** actual filesystem/stores fixture доказывает Team/Task/Message эффекты,
 дубли, wrong actor/revoke и restart outcome; нет fake fixture-only Task handler.
@@ -413,6 +440,9 @@ filesystem-custody engine или fork. Отдельный прежний consume
 3. Соединить provider factories, bounded queue/read loop, independent interaction
    replies и control fence. Output progress привязан к exact session/input;
    session-level diagnostics без attribution не становятся Task activity.
+   Подключить typed attachment references/native materialization, effective config
+   и compaction observation. Text-only SPI не считается готовым attachment transport.
+   Missing capability исправляется в D; host не дублирует native protocol.
 4. Реализовать stop/drain/debt/restart reconcile/explicit restore. Unknown open,
    handoff и custody не вызывают повтор native create/submit/generation.
    Capture/persist/publish checkpoint делается до close; session/native backing
@@ -443,12 +473,15 @@ filesystem-custody engine или fork. Отдельный прежний consume
    один раз в D; private host adapter не дублирует её transport algorithm.
 5. Проверить context/compaction/restart и shared OpenCode isolation на фактических
    профилях. Unsupported сохраняет безопасный отказ, но строку parity не закрывает.
+   Actual compact→roster change→next input проходит один reminder owner. Native
+   options/request подтверждают settings и поддерживаемые attachment paths;
+   их наличие только в UI metadata недостаточно.
 6. В solo DO выполнить обычный SDK subagent tool-call с дочерним TEST effect;
    передать parent/child provenance через provider-owned observation capability,
    проверить запрет в недопустимом mode и отсутствие невыданной Team authority.
    Control родителя закрывает его owned descendants, не других members.
 
-**Выход:** M01–M10 и необходимые runtime части M13–M18 проходят actual host path;
+**Выход:** M01–M10 и необходимые runtime части M13–M19 проходят actual host path;
 каждый provider имеет свой exact evidence tuple, а не чужой mock PASS.
 **Не входит:** переключение production Desktop или real model/auth claim по dummy API.
 
@@ -463,11 +496,20 @@ filesystem-custody engine или fork. Отдельный прежний consume
    missing/offline target показывает connection state, не fallback в fork.
 3. Направить live reads/log streams/task evidence/review/config в host projections.
    Отключить для этих handles старые filesystem/protocol readers и backend timers.
+   Включить `ChangeExtractorService` backfill/repair, attachment stores и process
+   health polling в sentinel cutover. Открытие Changes не запускает native repair.
 4. Сохранить imports/archive как read-only; active old-owner obligations имеют
    отдельные reconciliation/stop paths с исходными identities. Inventory UNKNOWN
    не включает broad cleanup и не отменяет recovery jobs.
 5. Передать все явные settings/auth/skills/hooks/extensions действия в admitted
    adapter. Скрытие контролов или новый error вместо прежней функции не parity.
+   Убрать fork executor из provider-management port; synthetic progress/code/cancel
+   и status→session проверяют shared account/profile binding. Реальный OAuth
+   остаётся qualification при наличии TEST account, не prerequisite fixture работ.
+6. Переключить полный review mutation entrypoint: Apply/Reject, recovery, Undo/Redo,
+   edited-file save/delete, rename restore и decisions/history; старый writer
+   не остаётся активным из-за отдельного IPC channel. Background process UI читает
+   host registry, scoped OS stop делегирует runtime adapter.
 
 **Выход:** обычный Electron UI показывает/управляет host-owned командой при sentinel
 старых CLI/readers; IPC и HTTP вызывают те же semantics, late feeds не меняют target.
@@ -480,13 +522,20 @@ filesystem-custody engine или fork. Отдельный прежний consume
 
 1. Извлечь Git capture/task attribution/review/apply use cases. Сохранить task/run/
    workspace/window attribution, исходные bytes, conflict и interrupted apply.
+   Preimage capture завершается до native effect; final capture после tool/hooks
+   учитывает failed/background effects. Fork globals заменить immutable binding;
+   async tool-result или общий turn-end diff недостаточны для этой гарантии.
 2. Подключить context usage, private/internal messages, chunks/subagents/task logs,
    edits/commands и structured references без синтетических success observations.
    Реальный P4 subagent виден как child родителя; фильтры не теряют его output
    и не присваивают его другому teammate/task. Архивного fixture display недостаточно.
 3. Закрыть оставшиеся реальными сценариями: add/remove/restart member, solo→team,
    failed launch/retry, task review/reopen/dependencies, notification/action paths.
-4. Сопоставить M01–M18 с proof на host path; missing observation требует driver/
+   Task completion/review/needsFix/approve с cascade notifications проверяются
+   отдельно от file Reject→Undo/Redo и stale snapshot/revision refusal. Детали и
+   конкретный failed-tool capture proof заданы в
+   [§10 протоколов](stage-1-contracts.md#10-task-lifecycle-и-evidencereview).
+4. Сопоставить M01–M19 с proof на host path; missing observation требует driver/
    projection доработки. Нельзя считать «UI не упал» доказательством корректности.
 
 **Выход:** ни один обязательный пользовательский сценарий не подменён unavailable
@@ -533,12 +582,14 @@ host-owned user actions; release/signing/publication ещё не выполня�
 4. Провести содержательное review final diff и remaining gaps. При существенном
    риске использовать отдельного доступного reviewer; self-review не называть
    независимым. Исправления проверять на affected boundaries.
-5. Зафиксировать `candidate`, exact refs/artifacts, M01–M18, cleanup и известные
+5. Зафиксировать `candidate`, exact refs/artifacts, M01–M19, cleanup и известные
    ограничения. Не merge/publish/activate; следующий шаг — решение о доставке.
 
 Конкретные F01–F09 из [протоколов](stage-1-contracts.md#7-фокусные-проверки-отказов)
 выполняются на ближайшей meaningful boundary. В Electron повторяются routing,
 reconnect и видимые состояния, а не вся headless fault suite.
+Acceptance из §8–§10 дополняет эти fault probes существующими product workflows;
+новых harness/CI gates для каждого пункта не требуется.
 
 **Выход:** проверенный и reviewable candidate. Без real Claude access возможен
 `candidate-synthetic` с end-to-end PASS, но production auth qualification остаётся недоказанной.
@@ -581,7 +632,7 @@ focused tests и затронутые source-size/provisioning guards. Итог�
 
 ## 10. Definition of done и условия пересмотра
 
-- [ ] M01–M18 имеют actual acceptance на новом host path и exact provider tuples;
+- [ ] M01–M19 имеют actual acceptance на новом host path и exact provider tuples;
       synthetic compatibility и real auth/OS qualification отмечены раздельно.
 - [ ] Provider library имеет одну редактируемую реализацию; fork и нынешний runtime
       implementation отсутствуют в её требуемой runtime/build closure.

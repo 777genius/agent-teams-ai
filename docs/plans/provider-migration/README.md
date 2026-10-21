@@ -22,7 +22,8 @@ Merge, публикация и включение нового пути оста
 
 **Этап 1:** старый Desktop полноценно работает через выделенный `legacy-agent-host`
 и provider library без запуска/import исходников старого Claude-форка.
-Сохраняемые возможности перечислены в [матрице совместимости](compatibility-matrix.md).
+Сохраняемые возможности перечислены в [матрице совместимости](compatibility-matrix.md), включая attachments, полный
+review workflow и используемый реестр фоновых services.
 
 **Этап 2:** командный и runtime-модули legacy-host независимо заменяются будущими
 Orchestrator/runtime через уже определённые границы. Не обещается перенос native
@@ -55,14 +56,14 @@ flowchart TB
 
 ## 2. Как читать документы
 
-| Документ                                  | Единственная ответственность                                            |
-| ----------------------------------------- | ----------------------------------------------------------------------- |
-| Этот README                               | Направление, этапы, размещение, оценки и разрешения                     |
-| [Этап 1](stage-1-legacy-host.md)          | Пошаговая реализация, invariants, переходы, зависимости и exit criteria |
-| [Протоколы этапа 1](stage-1-contracts.md) | Identity, RPC, recovery, checkpoints и конкретные fault-сценарии        |
-| [Матрица](compatibility-matrix.md)        | Полный сохраняемый функционал и доказательства; не проценты готовности  |
-| [Источники и reuse](sources-and-reuse.md) | Frozen donor, существующие результаты и ограничения их применения       |
-| [Этап 2](stage-2-new-cores.md)            | Что стабилизируем сейчас и как заменяем владельцев позднее              |
+| Документ                                  | Единственная ответственность                                              |
+| ----------------------------------------- | ------------------------------------------------------------------------- |
+| Этот README                               | Направление, этапы, размещение, оценки и разрешения                       |
+| [Этап 1](stage-1-legacy-host.md)          | Пошаговая реализация, invariants, переходы, зависимости и exit criteria   |
+| [Протоколы этапа 1](stage-1-contracts.md) | Recovery/RPC, MCP/config/attachments, capture/review и конкретная приёмка |
+| [Матрица](compatibility-matrix.md)        | Полный сохраняемый функционал и доказательства; не проценты готовности    |
+| [Источники и reuse](sources-and-reuse.md) | Frozen donor, существующие результаты и ограничения их применения         |
+| [Этап 2](stage-2-new-cores.md)            | Что стабилизируем сейчас и как заменяем владельцев позднее                |
 
 Старый [A–F](../runtime-provider-extraction-and-claude-sdk-plan.md) сохраняет историю
 первого направления и выполненных проверок. Его схема «сначала полностью новое
@@ -126,24 +127,24 @@ exact artifact и контрактным entrypoint. Нынешний packed tes
 provider library и существующие reusable tests не считаем написанными повторно.
 Это инженерная оценка, а не измеренный diff или обещание точного итогового размера.
 
-| Первый этап                                                | Production LOC |
-| ---------------------------------------------------------- | -------------: |
-| Границы подключения, SPI и package composition             |         0.5–1k |
-| Командная механика, Task/Message tools, MCP                |           3–5k |
-| Независимый runtime-host: launch, input, control, recovery |           3–5k |
-| Desktop connection, inbox/logs/usage/readiness projections |           2–4k |
-| Config, permissions, resume и provider compatibility gaps  |         2.5–5k |
-| **Этап 1**                                                 |     **11–20k** |
+| Первый этап                                                 | Production LOC |
+| ----------------------------------------------------------- | -------------: |
+| Границы подключения, SPI, workspace/package composition     |         1–1.5k |
+| Team/Task/Message/MCP, product blobs и registry             |         3.5–6k |
+| Runtime-host: launch/input/control/checkpoint/recovery      |           4–6k |
+| Desktop routing, reads/logs/usage и полный review cutover   |         2.5–4k |
+| D/private adapters: config/auth/attachments/capture/context |         4–7.5k |
+| **Этап 1, округлённый диапазон**                            |     **15–25k** |
 
-| Этап                                    | Production | Tests/E2E |
-| --------------------------------------- | ---------: | --------: |
-| 1. Совместимый host без fork executable |     11–20k |     6–10k |
-| 2. Подключение уже готовых будущих ядер |       4–8k |      3–6k |
-| **Два этапа интеграции**                | **15–28k** | **9–16k** |
+| Этап                                    | Production |  Tests/E2E |
+| --------------------------------------- | ---------: | ---------: |
+| 1. Совместимый host без fork executable |     15–25k |      7–12k |
+| 2. Подключение уже готовых будущих ядер |       4–8k |       3–6k |
+| **Два этапа интеграции**                | **19–33k** | **10–18k** |
 
 Предполагаемый преимущественно механический перенос: **20–40k существующих строк**.
 Его точная dependency closure ещё не установлена. Изменяемая часть переноса —
-подмножество 11–20k, её нельзя прибавлять второй раз. Generated/locks/docs и перенос
+подмножество 15–25k, её нельзя прибавлять второй раз. Generated/locks/docs и перенос
 старых fixtures считаются отдельно в фактическом diff.
 
 В 4–8k второго этапа не входит разработка новых ядер. Если они меняют смысл
@@ -153,10 +154,17 @@ identity, delivery, authorization или recovery, integration forecast возр
 rewrite. Оценка этапа 1: confidence 6/10, complexity 8/10; риск регрессий до проверок
 7/10. Это шкалы инженерного суждения, не вероятность дефекта.
 
-Package closure, обычные SDK subagents и checkpoint persistence входят в строки
-SPI/runtime/provider gaps, а не добавляются к оценке второй раз. Нижняя граница
-предполагает reuse существующих stores/config/protocol code. На P0/P1 она
-уточняется по фактической closure; новые подтверждённые gaps отражаются явно.
+Прежние 11–20k были оптимистичны: source review выявил text-only input,
+потерянный compact event, fork management executor, pre/post capture seam и скрытые
+MCP/review/blob writers. Это существующий product scope, не новые функции.
+Пересмотренный диапазон включает эти доработки один раз: Team semantics/stores
+во второй строке, durable technical state в третьей, UI routing в четвёртой,
+provider protocol/config/capture observations в пятой. Boundaries/composition —
+первая строка. Нового provider loop или generic artifact/process platform нет.
+
+Диапазон ещё не measured diff: нижняя граница предполагает reuse существующих
+stores/config/protocol code. P0/P1 уточняют closure и стоимость отсутствующих D
+capabilities до широкого переноса; fixture PASS не доказывает, что эти gaps готовы.
 
 ## 7. Что не считается завершением
 

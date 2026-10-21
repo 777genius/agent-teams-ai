@@ -241,3 +241,202 @@ Cross-owner обмен и live import не входят в этот cutover. Э�
 reference custody; mixed team с одним OpenCode member его не заменяет. Faults
 используют реальные TEST files/processes на relevant boundary; localhost inference
 скриптует модель, но не подменяет host, native SDK/CLI, MCP или Desktop.
+
+## 8. MCP и полный cutover владельцев
+
+Нынешний `mcp-server/src/controller.ts` создаёт файловый `agent-teams-controller`;
+`taskTools`/`messageTools` вызывают его напрямую. Перенаправления Desktop IPC
+недостаточно: такой MCP остаётся вторым writer. В новом host handlers получают
+injected Team/Runtime ports. Из controller извлекаются используемые business
+use cases/stores; старый `getController(teamName, claudeDir)` не вызывается для
+host-owned handles. Catalog/schema/text helpers переиспользуются отдельно. Все десять existing groups
+(team/task/lead/kanban/review/message/process/runtime/workSync/crossTeam) получают
+явный handler disposition на P2: Team use case, private runtime callback либо
+explicit old-owner-only route. Используемая product функция не исчезает при этом
+из нового host path; callback не получает authority обычного user tool.
+
+Host владеет MCP lifecycle и trusted member binding. Существующий loopback HTTP
+transport пригоден для native clients; stdio-вариант при необходимости остаётся
+тонким proxy в те же handlers. Это endpoint инструментов внутри host, не ещё один
+владелец данных. SDK client не должен ждать долгий turn с заблокированным обработчиком
+своих MCP callbacks. Tool reply/permission/control не проходят через prompt queue.
+
+Actor привязан к authenticated MCP session/captured private capability, проверяемой
+host. Сам localhost, health response, tool argument `from`, `teamName`, `claudeDir`
+или `controlUrl` не подтверждают полномочия. Connection фиксирует допустимый
+owner/run/member/generation; чужие root/endpoint overrides отвергаются. Reconnect
+не переиспользует истёкший grant прежней generation. Новый auth service не нужен.
+
+Все mutating tools имеют stable intent identity. При доступном trusted native
+tool-call ID boundary сохраняет mapping до эффекта; иначе schema требует явный
+`commandId`/`idempotencyKey` и prompt protocol объясняет его повторное использование.
+Transport request ID и новый UUID при каждом retry не заменяют identity. Одинаковый
+текст двух разных tool calls сам по себе не duplicate. Read-only tools не создают
+intent/effect. Native Team/Task names при compatibility mapping вызывают те же handlers.
+
+| Нынешний вход                                                 | Cutover для host-owned handle                                    | Что исключается                                                              |
+| ------------------------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Desktop Team IPC/HTTP и MCP task/message/kanban/review tools  | Те же Team use cases, captured actor, общие receipts/guards      | Отдельный controller/filesystem writer в MCP или Desktop                     |
+| Runtime tools, launch/member mutations, inbox bridges         | Team policy → Runtime port; native callbacks привязаны к session | Возврат в Desktop bootstrap CLI и второй inbox dispatcher                    |
+| `TeamDataService` reads/watchers/process-health timer         | Host query/feed; health maintenance явно у owner                 | Read, который незаметно чинит host-owned state                               |
+| `ChangeExtractorService`, task/member log sources             | Host evidence/log projection; archive отдельно                   | Native backfill, warning-recovery и transcript fallback при открытии Changes |
+| `review.ts`: mutations/recovery/history/edit/rename/decisions | Host-owned review use cases + existing Git/filesystem adapters   | Старый независимый apply/Undo/Redo/save/delete writer                        |
+| Task/comment attachment IPC                                   | Scoped blob + metadata operations того же Team owner             | Ambient module-level appData blob store при новом backend                    |
+| Provider management CLI client                                | Существующий management port → native provider adapter, §9       | `fork runtime providers ...` даже до первого team launch                     |
+
+Cutover проверяется sentinel на **старых** entries для этих handles; новый host
+может reuse extracted helpers, но не whole-service entry с legacy fallback.
+Archive/old-owner routes сохраняют собственный explicit binding. Эта таблица
+дополняется только реально используемыми входами, не всеми скрытыми CLI командами.
+
+### Фоновые services отличаются от teammate runtime
+
+`process_*` tools и `ProcessesSection` уже используются приложением. Team owner
+сохраняет registry/metadata/history фоновых dev servers/watchers; это не roster
+и не доказательство готовности агента. `process_stop` в нынешнем MCP помечает
+registry stopped; UI `killProcess` отдельно выполняет OS stop. Эти действия не
+сливаются в одну неоднозначную операцию.
+
+OS effect проходит через runtime/process adapter с current authority и captured
+identity зарегистрированного TEST-owned процесса; один PID/label из tool payload
+не даёт custody и не защищает от PID reuse. Unknown/stale identity не превращается
+в successful kill. Dedicated general process supervisor не добавляется. Приёмка:
+register/list → host restart → UI stop своего test child → stopped history;
+отдельно metadata-only stop и отказ stale/чужому process binding.
+
+## 9. Config, auth, context и attachments
+
+### Выбранное значение должно стать effective configuration
+
+На P0 заполняется небольшой mapping **используемых** `TeamLaunchRequest` и extension
+settings. Для каждого поля: product source/revision → private provider option →
+effective observation или явная incompatible причина. Включаются model/effort,
+fast/context limits, action/permission mode, context reset, workspace/worktree,
+поддерживаемые extra args, project instructions, skills/plugins/hooks и MCP.
+Метаданные UI не доказывают, что provider применил настройку.
+
+Composition разрешает настройки последовательно: выбранный profile/account и
+workspace → сохранённые launch settings → явные overrides текущего intent.
+Обязательные owner tools/identity/capture hooks не ослабляются этими overrides;
+конфликт отказывает до allocation. Два источника одной настройки не включаются
+одновременно с неявным приоритетом. Hooks пользователя компонуются с mandatory
+provider hooks, не заменяют их целиком. Для tool-bound hooks порядок фиксирован:
+owner checks/preimage → user pre-hook → native effect → user post-hook → final
+capture; error/cancel path сохраняет partial effects и исход ошибки. Другие hooks
+не получают выдуманную task attribution. Raw SDK/CLI
+mapping остаётся в D/private adapter; parser всех возможных vendor flags не строится.
+
+Изменение config действующей session требует явного relaunch/new binding, кроме
+конкретной capability, доказанно поддерживающей update. Existing D фиксирует
+`permissionMode: default`/`settingSources: []` и собственный PreToolUse hook;
+это baseline, который нужно доработать для используемых settings, не готовая parity.
+Проверка использует actual native options/request и один разрешённый hook/instruction
+с наблюдаемым TEST effect; неизвестное поле не исчезает при сериализации.
+
+### Management отделён от conversation Session SPI
+
+Сохраняется existing `RuntimeProviderManagementPort`; его executor заменяется
+provider-native adapters вместо fork CLI. Connect/status/test/models/defaults,
+OAuth progress/submit-code/cancel/forget остаются своими user workflows. Session
+driver не получает management methods ради удобства и не создаёт auth daemon.
+Desktop сохраняет свои product settings/UI state; host adapter владеет native
+auth action и возвращает safe progress по captured request/profile binding.
+
+Login, status и launch используют **один явно выбранный** account/config/credential
+namespace. TEST всегда имеет собственные roots и dummy auth. В production profile
+может явно выбирать штатный native namespace; это не разрешение читать случайный
+ambient чужой profile. В частности, frozen frontend намеренно не устанавливает
+default `CLAUDE_CONFIG_DIR` из-за Keychain namespace, а D сейчас требует его.
+P3/P5 исправляют этот контракт частной конфигурации; принудительный custom dir или
+API-key вместо прежнего login не является решением совместимости.
+
+После cancel/reconnect поздний auth progress не меняет новый target; response loss
+проверяется по исходному request, без повторного OAuth flow. Forget не отменяет
+молча уже accepted input и не перепривязывает его account. Synthetic adapter
+проверяет progress/code/cancel и shared binding status→session без настоящих
+credentials. Реальный login→status→session остаётся отдельной qualification,
+когда доступен выделенный тестовый аккаунт.
+
+### Compaction требует observation и одного reminder owner
+
+Frozen Desktop видит compact boundary и в idle восстанавливает актуальный roster;
+нынешний D преобразует такое событие в unknown-event. Добавляется provider-neutral
+compaction/context-reset observation с session/operation/source identity. Team
+решает, какой **текущий** role/roster/task context восстановить; Runtime доставляет
+его через существующий admission. Второй idle poller/скрытый writer не запускается.
+
+Reminder не прерывает active turn: перед следующим допустимым input, после
+нормального idle/control fence, он получает stable dedup identity compaction epoch.
+Повтор observation не создаёт второго input; pending reminder после restart
+сохраняется, uncertain handoff не повторяется. Если следующий input уже включает
+тот же reminder, отдельно он не отправляется. Internal/isMeta semantics сохранены.
+Один actual native compact → изменение roster → next input доказывает актуальный
+context и отсутствие duplicate injection.
+
+### Native message attachments и product blobs
+
+Нынешний SPI `Input.content: string` и text-only submit Claude/Codex не передают
+image/document blocks. Сначала фиксируется существующий supported MIME/model/
+recipient denominator: frontend уже различает online lead/OpenCode и запрещённые
+пути. Не требуется расширить attachments на каждого provider/member сверх него.
+
+Минимальное совместимое расширение SPI сохраняет text `content` и добавляет
+capability ordered attachment references для текущего UI: artifact ID, MIME,
+byte length и digest; native bytes/path разрешаются private runtime port. Legacy
+text-only consumer работает как прежде. D переводит references в нужные native
+image/document/file parts, не Team/UI. Input fingerprint включает порядок и
+digests вложений; missing artifact/неподдержанный MIME/model отвергается до handoff.
+Текстовый путь к файлу и successful storage metadata не доказывают native delivery.
+
+Existing `agent-attachments` adapters/storage переиспользуются. Host-owned store
+удерживает bytes/metadata до terminal/recovery, runtime custody удерживает нужные
+native artifacts; cleanup не удаляет вложения unresolved input. Native request
+проверяется на каждом **существующем поддерживаемом** attachment path; unsupported
+recipient/MIME сохраняет явный отказ без тихого удаления вложения.
+
+Task/comment attachments сохраняются отдельно от input lifecycle. Их blob root
+сейчас находится под appData; новый owner binding включает этот storage adapter.
+Blob ID/digest и metadata ref записываются по durable intent, partial write
+reconcile следует §3. Create → restart/read → remove сохраняет Task/comment refs;
+orphan blob не означает completed attachment. Новый blob service не создаётся.
+
+## 10. Task lifecycle и evidence/review
+
+Canonical donor Task policy — `agent-teams-controller` taskBoard/tasks/review/kanban,
+а не только низкоуровневый `TeamTaskWriter`. Сохраняется сочетание status,
+reviewState, kanban, history и workIntervals. `completed + review/needsFix` остаётся
+открытой работой; review requires completed. Завершение/delete сохраняет действующие
+dependency/board notifications с original effect IDs, не по одному provider result.
+
+Один acceptance workflow проходит assign/start → complete → request review →
+request changes → исправление/start/complete → повторный request review → approve,
+включая blocked dependency, reassignment/stale actor и duplicate notification. Точные переходы/history берутся
+из existing policy, не вводится новая state machine будущего Orchestrator.
+Task approval и Accept/Reject file changes остаются разными решениями.
+
+Change capture требуется **вокруг** native tool execution: preimage до эффекта,
+postimage после tool и relevant post-hooks; failed tool сохраняет partial effects,
+background tool — eventual outcome того же execution. Одних tool-result/turn-end
+events недостаточно. D даёт provider-owned pre/post/background capture seam;
+если preimage нужен до эффекта, callback завершается до разрешения native tool,
+асинхронная notification после старта не заменяет этот barrier.
+
+Runtime сопоставляет exact input/tool execution с immutable task/window/session/
+member/workspace binding. Host evidence writer использует existing Git capture/
+ledger adapters с этим binding вместо fork globals `getSessionId/getCwd/task scope`.
+D не пишет Task ledger. Перекрывающиеся окна/внешние edits не присваиваются задаче
+по одному path/time interval; при недоказанной attribution остаётся gap/nonreviewable.
+Provider без достаточного capture получает explicit capability gap до приёмки.
+
+Проверка: native command меняет TEST файл и завершается ошибкой; post-hook меняет
+его ещё раз. Ledger сохраняет корректные before/final bytes, failed outcome и
+task/window binding. Background completion проверяется existing relevant fixture;
+полного fork toolExecution/QueryEngine ради capture не переносим.
+
+Все review mutations из `review.ts` направляются одному owner: Apply/Reject,
+mutation recovery, Undo/Redo/history restore, edited-file save/delete, rejected
+rename restoration и revisioned decisions. Existing snapshot/reviewKey/revision
+guards сохраняются до filesystem effects. Acceptance: Reject → Undo/Redo,
+stale snapshot/revision refusal без изменения bytes и interrupted mutation recovery.
+Открытие Changes при missing/degraded ledger показывает gap, не запускает старый
+OpenCode backfill/transcript repair. Это проверяется одним read-side sentinel.

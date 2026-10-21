@@ -9,8 +9,10 @@
 - Одну provider library и один versioned provider Session SPI.
 - Desktop feature API, UI и captured backend identity для существующих handles.
 - Явные границы Team→Runtime и Runtime→Provider, без vendor DTO в Team/UI.
-- Behavioral fixtures M01–M18, exact identities и раздельную классификацию
+- Behavioral fixtures M01–M19, exact identities и раздельную классификацию
   admission/handoff/result/cleanup, unknown/recovery/control, positive restore и parent/child subagent scope.
+- Existing provider-management port и profile binding, attachment references,
+  capture/context observations и полный review/process-registry consumer scope.
 - Read-only доступ к архивным данным и завершённым legacy receipts.
 
 Сохраняем семантику используемых операций, а не обещание никогда не менять метод
@@ -46,7 +48,9 @@ flowchart LR
 портов. Сравнить identity/generation, accepted/unknown/rejected, scope/grants,
 ordering, independent replies/control, feeds/gaps, cleanup, durable checkpoint/history
 publication и ordinary subagent provenance/custody. [Протоколы этапа 1](stage-1-contracts.md)
-задают требуемое поведение, не структуру будущих stores.
+задают требуемое поведение, не структуру будущих stores. В delta включаются
+management/auth namespace, attachment custody, pre/post capture, compaction reminder,
+review history/edit mutations и background service registry, когда их заменяет новое ядро.
 TypeScript assignability не доказывает Liskov compatibility.
 
 Выход: таблица exact-compatible / translated / requires new capability / incompatible.
@@ -89,7 +93,7 @@ continuation с заново собранным product context. Это не nat
 
 ### S2.4. Приёмка и retirement
 
-Сценарии M01–M18 выполняются через новую композицию, включая mixed providers,
+Сценарии M01–M19 выполняются через новую композицию, включая mixed providers,
 normal Electron UI, fault/restart и packed candidate. Сравниваются observable
 результаты и side effects, а не только happy-path screenshot.
 

@@ -110,6 +110,19 @@ P0 выбирает один coherent source/artifact, integrating only reviewed
 | Frontend `mcp-server/src/utils/taskCreationIdempotency.ts`                                | Только task.create; optional key оставляет прямой новый create                                               | P2: mandatory command identity + outcomes остальных mutations, reuse deterministic IDs                 |
 | Frontend `JsonRpcStdioClient.ts`                                                          | Unbounded readline, short session lifecycle/force-close, `@main` imports                                     | P1: narrow primitive reuse + bounded host transport; не менять shared Codex client попутно             |
 
+Дополнительно подтверждены используемые product seams:
+
+| Source seam                                                                                                   | Нужное изменение плана                                                                                                           | Owner / фаза                                  |
+| ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| `mcp-server/controller.ts` и `taskTools/messageTools`; `AgentTeamsMcpHttpServer`                              | Direct controller writer заменяется injected host handlers; scoped MCP principal и stable mutation IDs                           | Team/MCP; P2/P5                               |
+| `TeamProvisioningStreamEvents` + `IdlePromptInjection`; D `normalize.ts`                                      | Compact event сейчас теряется; нужен observation + один актуальный Team reminder через admission                                 | D + Team/Runtime; P3/P4                       |
+| `RuntimeProviderManagementPort` + `AgentTeamsRuntimeProviderManagementCliClient`; `EnvBuilder`; D `config.ts` | Fork management executor и несовместимый default CLAUDE_CONFIG_DIR namespace; native management adapter с тем же account binding | Management adapter; P3/P5                     |
+| `TeamLaunchRequest`, frontend extension builders; D `options`/PreToolUse hook                                 | Effective effort/permission/context/settings и composition hooks не следуют из UI metadata                                       | Private provider adapter; P3/P4               |
+| Frontend `agent-attachments` adapters; D text-only `Input.content`/submit                                     | Нужны typed artifact references и native parts; сохранять existing recipient/MIME restrictions                                   | Host artifacts + D; P3/P4                     |
+| `taskBoard/tasks/review/kanban/taskLifecycle`; `TeamTaskAttachmentStore` и attachment IPC                     | Product lifecycle/notifications и отдельный appData blob writer шире Task CRUD                                                   | Team; P2/P6                                   |
+| Fork `toolExecution.ts`, `TaskChangeLedgerService`; frontend `ChangeExtractorService`, `review.ts`            | Pre/post/failure/background capture требует нового seam без globals; backfill-read и все review writers должны перейти owner     | Runtime capture + Team evidence/review; P5/P6 |
+| `processTools/processStore`, `TeamDataService.processHealthTick/killProcess`, `ProcessesSection`              | Registry и scoped OS stop используются UI; это отдельный M19, не agent liveness                                                  | Team registry + runtime OS port; P2/P5/P6     |
+
 Проектные guards и OS profiles проверяются на selected baseline. Например,
 Unix-only проверки абсолютного пути в provider config не доказывают Windows
 support; P0/P7 должны сопоставить такой код с реально заявляемой packaging matrix.
