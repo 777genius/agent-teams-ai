@@ -4,6 +4,8 @@ import { join } from 'node:path';
 
 import { isGatewayMemberSaved } from '@main/services/gateway/GatewayDraftRoster';
 import { GatewayRunMetadataStore } from '@main/services/gateway/GatewayRunMetadataStore';
+import { TeamDataService } from '@main/services/team/TeamDataService';
+import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
 import { describe, expect, it, vi } from 'vitest';
 
 import { GatewayCredentialStore } from '../main/adapters/output/GatewayCredentialStore';
@@ -205,6 +207,54 @@ describe('gateway draft recovery', () => {
     expect(await service.resolveMemberConnection('sandbox', 'alice')).toMatchObject({
       apiKey: 'new-key',
     });
+  });
+
+  it('samples saved membership and binds after a queued roster mutation finishes', async () => {
+    const { service, restart, bind, dir, drafts, store } = await fixture();
+    const configuration = new TeamDataService();
+    const lifecycle = new TeamProvisioningService();
+    configuration.setConfigurationGate((team, operation) =>
+      lifecycle.runLiveRosterMutation(team, operation)
+    );
+    drafts.configurationOperation = (team, operation) =>
+      configuration.runConfigurationOperation(team, operation);
+    await mkdir(join(dir, 'sandbox'));
+    const rosterPath = join(dir, 'sandbox', 'members.meta.json');
+    await writeFile(rosterPath, JSON.stringify({ version: 1, members: [{ name: 'alice' }] }));
+    let removalStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      removalStarted = resolve;
+    });
+    let releaseRemoval!: () => void;
+    const paused = new Promise<void>((resolve) => {
+      releaseRemoval = resolve;
+    });
+    const removal = configuration.runConfigurationOperation('sandbox', async () => {
+      removalStarted();
+      await paused;
+      await writeFile(
+        rosterPath,
+        JSON.stringify({ version: 1, members: [{ name: 'alice', removedAt: 1_800_000_000_000 }] })
+      );
+    });
+    await started;
+    const savedRead = vi.spyOn(drafts, 'isMemberSaved');
+    const pending = bind(service, 'alice', 'document-after-removal');
+    try {
+      // An admitted roster transaction owns the saved-state decision until it commits.
+      expect(savedRead).not.toHaveBeenCalled();
+      releaseRemoval();
+      await Promise.all([removal, pending]);
+      expect((await store.read()).bindings[0].draftOwner).toBe('document-after-removal');
+      const recovered = restart();
+      await recovered.service.recoverDraftBindings();
+      expect(await recovered.service.listBindings()).toEqual([]);
+      expect(await recovered.service.listUsageSources()).toEqual([]);
+    } finally {
+      releaseRemoval();
+      await Promise.allSettled([removal, pending]);
+      savedRead.mockRestore();
+    }
   });
 
   it('keeps ordinary APIs and live-owner cleanup independent of delayed startup recovery', async () => {

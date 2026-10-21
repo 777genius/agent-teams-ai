@@ -207,10 +207,27 @@ export class GatewayProviderService {
     draftOwner?: string
   ): Promise<GatewayMemberBindingDto> {
     const teamName = requireName(request.teamName, 'Team name');
+    if (draftOwner && this.drafts) this.liveDraftOwners.add(draftOwner);
+    let result!: GatewayMemberBindingDto;
+    if (this.drafts) {
+      await this.drafts.configurationOperation(teamName, async () => {
+        result = await this.bindMemberUnlocked(request, draftOwner);
+      });
+    } else {
+      result = await this.bindMemberUnlocked(request, draftOwner);
+    }
+    this.onBindingsChanged?.();
+    return result;
+  }
+
+  private async bindMemberUnlocked(
+    request: GatewayBindMemberRequest,
+    draftOwner?: string
+  ): Promise<GatewayMemberBindingDto> {
+    const teamName = requireName(request.teamName, 'Team name');
     const memberName = requireName(request.memberName, 'Member name');
     const apiKey = request.apiKey.trim();
     if (!apiKey) throw new GatewayValidationError('Gateway API key is required.');
-    if (draftOwner && this.drafts) this.liveDraftOwners.add(draftOwner);
     const saved =
       !draftOwner || !this.drafts || (await this.drafts.isMemberSaved(teamName, memberName));
     const fingerprint = hashGatewayLiteral(apiKey);
@@ -327,7 +344,6 @@ export class GatewayProviderService {
         credentialStatus: 'ready' as GatewayCredentialStatus,
       };
     });
-    this.onBindingsChanged?.();
     return result;
   }
 
