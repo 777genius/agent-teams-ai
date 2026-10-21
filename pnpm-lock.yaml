@@ -98,6 +98,9 @@ importers:
 
   .:
     dependencies:
+      '@agent-teams/legacy-agent-host':
+        specifier: workspace:*
+        version: link:packages/legacy-agent-host
       '@claude-teams/agent-graph':
         specifier: workspace:*
         version: link:packages/agent-graph
@@ -755,6 +758,15 @@ importers:
       '@types/d3-force':
         specifier: ^3.0.10
         version: 3.0.10
+
+  packages/legacy-agent-host:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.12.4
+        version: 24.12.4
+      '@typescript/native':
+        specifier: npm:typescript@7.0.2
+        version: typescript@7.0.2
 
 packages:
 
@@ -2254,6 +2266,7 @@ packages:
   '@opentelemetry/sdk-trace-base@2.6.0':
     resolution: {integrity: sha512-g/OZVkqlxllgFM7qMKqbPV9c1DUPhQ7d4n3pgZFcrnrNft9eJXZM2TNHTPYREJBrtNdRytYyvwjgL5geDKl3EQ==}
     engines: {node: ^18.19.0 || >=20.6.0}
+    deprecated: Use @opentelemetry/sdk-trace package
     peerDependencies:
       '@opentelemetry/api': '>=1.3.0 <1.10.0'
 

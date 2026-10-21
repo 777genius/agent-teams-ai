@@ -1,0 +1,2868 @@
+{
+  "schemaVersion": 1,
+  "purpose": "P0 bounded Git-object-verified source/use-case selection, with explicit selected Node artifact and direct native feasibility evidence; not full dependency closure or product parity",
+  "planCommit": "b6a038388ec6dc12f73ce71e684b0bd5cdeefcb3",
+  "planPath": "docs/plans/provider-migration/stage-1-legacy-host.md",
+  "status": "P0/P1 in progress; representative source closure and final provider artifact selection remain open",
+  "selectionPolicy": {
+    "bytes": "Only committed Git blobs at the listed refs; source lookup does not copy working-tree bytes",
+    "includedOwnerPatches": [],
+    "dirtyWorkingTreeContentIncluded": false,
+    "laterDonorCommitsIncluded": false,
+    "entireModulesSelectedForBlindCopy": false,
+    "oracleMeaning": "Existing source oracle, not an assertion of PASS or sufficiency for new host",
+    "declarationExamplesMeaning": "Actual declaration names sampled from each Git blob for navigation; useCases define extraction scope",
+    "runtimeImplementationExcluded": "No dependency on current agent-execution engine, PG/custody implementation, fork executable, QueryEngine, React/AppState or global bootstrap state"
+  },
+  "repositories": {
+    "frontend": {
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "objectFormat": "sha1",
+      "localReadOnlyCheckout": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend"
+    },
+    "fork": {
+      "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+      "objectFormat": "sha1",
+      "localReadOnlyCheckout": "/Users/belief/dev/projects/claude/agent_teams_orchestrator"
+    },
+    "provider": {
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "objectFormat": "sha1",
+      "localReadOnlyCheckout": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-library"
+    }
+  },
+  "lanes": {
+    "frontendIntegration": {
+      "checkout": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend",
+      "owner": "root integration / Team / Runtime / Desktop assignments; this artifact only source-selection worker"
+    },
+    "providerImplementation": {
+      "checkout": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host",
+      "owner": "provider lane",
+      "baselineRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "workingTreeBytesSelected": false
+    }
+  },
+  "providerPackage": {
+    "repository": "provider",
+    "path": "packages/platform/provider-implementations",
+    "manifestSource": "provider:packages/platform/provider-implementations/package.json",
+    "name": "@agent-teams/provider-implementations",
+    "sourceVersion": "0.0.0",
+    "exports": [".", "./composition", "./claude", "./codex", "./opencode", "./session-io"],
+    "declaredNodeEngineRange": ">=24.21.0 <25 || >=26.11.1 <27",
+    "peerDependencies": {
+      "@agent-teams/agent-execution": "workspace:*"
+    },
+    "artifact": {
+      "status": "selected tarball bytes; source checkpoint/remaining owning gates pending",
+      "sha256": "93d6ecaf571c3496924cf9c68cc3c2055e1ae4f097fbb62ec132d2a01b06a893",
+      "contractsSha256": "269f80a74b6d9f42d8018b78948e3178cd09c42c2ecd5441e34d0c7e77cf4151",
+      "sourceCommit": null,
+      "packedTechnicalProof": "docs/plans/provider-migration/evidence/p1-packed-host-walk.tgz",
+      "packedTechnicalProofSha256": "be475b8ffee3c566bc8051d0b8c5fc52182d6424213871376def2aca6c653275",
+      "contractsNativeProofOriginalSha256": "d6a2351a672efe91d359356c4ed56b6b8aa28dbf5e05a0557de2716dea7b404f",
+      "contractsDeltaProof": "docs/plans/provider-migration/evidence/p1-contracts-artifact-delta.json",
+      "qualifiedProfiles": [
+        "Node24.21 darwin-arm64 technical packed composition; no Team/UI/real auth qualification"
+      ]
+    },
+    "historicalArchiveDigestsSelected": false,
+    "note": "Source commit is coherent; earlier independently qualified archives are references, not the selected deliverable"
+  },
+  "nativeProfiles": [
+    {
+      "provider": "claude-sdk",
+      "status": "direct-native capture feasibility only; D/host/product integration pending",
+      "nativeVersion": null,
+      "artifactDigest": null,
+      "osArch": "darwin-arm64",
+      "configRevision": null,
+      "realAuthQualified": false,
+      "nativeParityQualified": false,
+      "captureProofArtifact": "docs/plans/provider-migration/evidence/p1-native-capture-feasibility.tar.gz",
+      "captureProofSha256": "cdd81486ba1727f93d257c13a1ab93b88282cf67ca9896b8cd59dd3c33b82b63",
+      "sdkVersion": "0.3.305"
+    },
+    {
+      "provider": "codex-app-server",
+      "status": "direct-native capture feasibility only; D/host/product integration pending",
+      "nativeVersion": "0.162.0",
+      "artifactDigest": "8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57",
+      "osArch": "darwin-arm64",
+      "configRevision": null,
+      "realAuthQualified": false,
+      "nativeParityQualified": false,
+      "captureProofArtifact": "docs/plans/provider-migration/evidence/p1-native-capture-feasibility.tar.gz",
+      "captureProofSha256": "cdd81486ba1727f93d257c13a1ab93b88282cf67ca9896b8cd59dd3c33b82b63"
+    },
+    {
+      "provider": "opencode-selected-dialect",
+      "status": "direct-native capture feasibility only; D/host/product integration pending",
+      "nativeVersion": "1.18.35",
+      "artifactDigest": "8c3c351b138cfe35905ab11846a1373f1beea590aee7eda412fb765b72c79d82",
+      "osArch": "darwin-arm64",
+      "configRevision": null,
+      "realAuthQualified": false,
+      "nativeParityQualified": false,
+      "captureProofArtifact": "docs/plans/provider-migration/evidence/p1-native-capture-feasibility.tar.gz",
+      "captureProofSha256": "cdd81486ba1727f93d257c13a1ab93b88282cf67ca9896b8cd59dd3c33b82b63"
+    }
+  ],
+  "nodeProfile": {
+    "status": "selected and staged on darwin-arm64; installed candidate/other OS tuples not qualified",
+    "version": "24.21.0",
+    "artifactDigest": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057",
+    "binarySha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+    "osArch": "darwin-arm64",
+    "resourcePath": "resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node",
+    "lockPath": "legacy-host.lock.json",
+    "acquisitionScript": "scripts/legacy-agent-host/stage-node.ts",
+    "userSystemNodeFallbackAllowed": false,
+    "packedDesktopQualified": false
+  },
+  "configurationMappings": [
+    {
+      "from": [
+        "Team launch settings",
+        "TeamProvisioningEnvBuilder",
+        "RuntimeProviderManagementPort"
+      ],
+      "to": "D private profile/environment/options + native management with identical account namespace",
+      "status": "source mapped; exact effective effort/permissions/context/settings and auth namespace pending native profile selection",
+      "seamIds": ["claude-driver", "context-compaction", "provider-management"],
+      "doNotInfer": "UI metadata or readable secret paths do not prove effective native configuration"
+    },
+    {
+      "from": "D ClaudeConfig custody.launch/confirmStopped, sessionExists and probe",
+      "to": "Runtime captured-process custody, durable checkpoint publication and readiness adapter",
+      "status": "required injected ports identified; implementation and native qualification pending",
+      "seamIds": ["claude-driver", "stop-custody", "provider-session-spi"]
+    }
+  ],
+  "attachmentSourceContract": {
+    "source": "frontend:src/features/agent-attachments/core/domain/capabilities.ts",
+    "mimeSource": "frontend:src/features/agent-attachments/core/domain/mimeTypes.ts",
+    "claude": {
+      "images": ["image/png", "image/jpeg", "image/webp", "image/gif"],
+      "files": ["application/pdf", "text/*"],
+      "video": false
+    },
+    "codex": {
+      "images": ["image/png", "image/jpeg", "image/webp"],
+      "nonImageFiles": false,
+      "video": false
+    },
+    "opencode": {
+      "images": ["image/png", "image/jpeg", "image/webp"],
+      "modelPolicy": "Exact VERIFIED_OPENCODE_IMAGE_MODELS allowlist in source; unknown/nonvision targets are rejected",
+      "video": {
+        "models": ["minimax-coding-plan/minimax-m3"],
+        "mimeTypes": ["video/mp4", "video/webm", "video/quicktime"]
+      },
+      "nonImageFiles": false
+    },
+    "recipientAndBudgetPolicy": "Preserve existing capability resolver, adapters and budgets; no widening from generic native API claims",
+    "newSpiSupport": "pending typed artifact reference/native-part extension; current Input.content is string",
+    "qualification": "Frozen product policy only; no present-day vendor/model qualification claimed"
+  },
+  "seams": [
+    {
+      "id": "team-roster-bootstrap",
+      "matrixIds": ["M01", "M02"],
+      "useCases": [
+        "Create/delete team; preserve member identity and expected roster; bootstrap initial context; partial launch and scoped retry"
+      ],
+      "targetOwners": ["Team", "Runtime"],
+      "replacementPort": "Team launch/roster use cases -> Runtime open/readiness/control with immutable member generation",
+      "sources": [
+        "frontend:src/main/services/team/provisioning/TeamProvisioningMemberIdentity.ts",
+        "frontend:src/main/services/team/provisioning/TeamProvisioningRuntimeLaunchSelection.ts",
+        "fork:src/services/teamBootstrap/teamBootstrapStateMachine.ts",
+        "fork:src/services/teamBootstrap/teamBootstrapRunner.ts",
+        "fork:src/tools/TeamCreateTool/TeamCreateTool.ts",
+        "fork:src/tools/TeamDeleteTool/TeamDeleteTool.ts"
+      ],
+      "existingOracles": [
+        "frontend:test/main/services/team/TeamProvisioningServiceRoster.test.ts",
+        "frontend:test/main/services/team/TeamProvisioningMemberIdentity.test.ts",
+        "fork:src/services/teamBootstrap/teamBootstrapRunner.launchMatrix.test.ts"
+      ],
+      "disposition": "Extract product workflow/guards; replace globals/spawn/tool UI with ports; no second runtime manager",
+      "unresolved": [
+        "Runner transitive ToolUseContext/AppState/spawn closure not selected; only required workflow slice may be extracted",
+        "No native bootstrap/partial launch proof on new host"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "task-policy",
+      "matrixIds": ["M03", "M13"],
+      "useCases": [
+        "Task CRUD, assign/claim, dependencies, reopen/restore, comments; task review/start/request changes/approve; lifecycle and cascade notifications"
+      ],
+      "targetOwners": ["Team"],
+      "replacementPort": "Authoritative Team task/review/kanban command/query handlers shared by Desktop and MCP",
+      "sources": [
+        "frontend:agent-teams-controller/src/internal/taskBoard.js",
+        "frontend:agent-teams-controller/src/internal/tasks.js",
+        "frontend:agent-teams-controller/src/internal/review.js",
+        "frontend:agent-teams-controller/src/internal/kanban.js",
+        "frontend:agent-teams-controller/src/internal/taskLifecycle.js",
+        "frontend:src/main/services/team/TeamTaskWriter.ts",
+        "frontend:src/main/services/team/TeamTaskReader.ts"
+      ],
+      "existingOracles": [
+        "frontend:agent-teams-controller/test/taskLifecycle.test.js",
+        "frontend:agent-teams-controller/test/taskDependencyTransitions.test.js",
+        "frontend:agent-teams-controller/test/cascadeGuard.test.js"
+      ],
+      "disposition": "Reuse selected policy and store semantics, one Team writer; task approval remains distinct from file decisions",
+      "unresolved": [
+        "Selected policy import closure needs taskStore/boardLock/ownership/message notification ports; no wholesale controller copy",
+        "Stable notification/effect IDs and stale-actor behavior require new host proof"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "controller-mcp-writers",
+      "matrixIds": ["M01", "M03", "M04", "M05", "M19"],
+      "useCases": [
+        "Register authoritative task/message/process tools; derive trusted actor from connection; route mutations to shared owner"
+      ],
+      "targetOwners": ["Team", "Desktop"],
+      "replacementPort": "Injected Team handlers plus authenticated MCP principal and stable command identity",
+      "sources": [
+        "frontend:mcp-server/src/controller.ts",
+        "frontend:mcp-server/src/tools/taskTools.ts",
+        "frontend:mcp-server/src/tools/messageTools.ts",
+        "frontend:mcp-server/src/tools/processTools.ts",
+        "frontend:src/main/services/team/AgentTeamsMcpHttpServer.ts"
+      ],
+      "existingOracles": [
+        "frontend:test/main/services/team/AgentTeamsMcpHttpServer.integration.test.ts"
+      ],
+      "disposition": "Replace direct controller storage writer at host cutover; reuse schema/transport behavior",
+      "unresolved": [
+        "Exact tool schema -> command DTO mapping and caller capabilities pending P1/P2",
+        "Current controller filesystem mutations must not coexist with host writers"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "command-recovery",
+      "matrixIds": ["M03", "M08"],
+      "useCases": [
+        "Persist command identity, replay outcomes, reconcile stale Started records, fence late original writers"
+      ],
+      "targetOwners": ["Team", "Runtime"],
+      "replacementPort": "Shared authority/resource fence and command receipt store -> Runtime admission/handoff",
+      "sources": [
+        "frontend:src/features/application-command-ledger/core/application/ApplicationCommandRunner.ts",
+        "frontend:src/features/internal-storage/main/infrastructure/worker/applicationCommandLedgerWorkerOps.ts",
+        "frontend:mcp-server/src/utils/taskCreationIdempotency.ts"
+      ],
+      "existingOracles": [
+        "frontend:test/features/application-command-ledger/core/ApplicationCommandRunner.test.ts",
+        "frontend:mcp-server/test/taskCreationIdempotency.integration.test.ts"
+      ],
+      "disposition": "Reuse deterministic IDs/ledger behavior; extend beyond optional task.create key without second writer",
+      "unresolved": [
+        "Durable technical input records and transaction/locking composition pending P1/P2/P3",
+        "UNKNOWN and stop/discard crash cuts remain unproven on host"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "direct-delivery",
+      "matrixIds": ["M04", "M08"],
+      "useCases": [
+        "Human/peer messages, user replies, feed identity, delivery receipt/reconciliation; persistent teammates distinct from SDK children"
+      ],
+      "targetOwners": ["Team", "Runtime"],
+      "replacementPort": "Team recipient/effect ID -> Runtime durable submit/list/discard; observational message feed",
+      "sources": [
+        "frontend:src/main/services/team/TeamInboxWriter.ts",
+        "frontend:src/main/services/team/TeamInboxReader.ts",
+        "frontend:src/main/services/team/TeamMessageFeedService.ts",
+        "fork:src/tools/SendMessageTool/SendMessageTool.ts",
+        "fork:src/utils/teammateMailbox.ts"
+      ],
+      "existingOracles": [
+        "frontend:src/main/services/team/__tests__/TeamInboxWriter.test.ts",
+        "frontend:test/main/services/team/TeamInboxReader.test.ts",
+        "frontend:test/main/services/team/TeamMessageFeedService.test.ts"
+      ],
+      "disposition": "Preserve message/TaskRef semantics; replace fork poller/global session ownership with explicit admission",
+      "unresolved": [
+        "Mailbox mixed dependencies remain unresolved; entire useInboxPoller/spawn engine excluded",
+        "Lost acknowledgement and committed-delivery restart tests pending"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "queued-message-cancel",
+      "matrixIds": ["M04", "M08", "M18"],
+      "useCases": [
+        "List queued user messages; discard exact listed IDs without deleting late arrivals; cancel durable unclaimed input"
+      ],
+      "targetOwners": ["Team", "Runtime", "Desktop"],
+      "replacementPort": "Team queued list/discard -> Runtime cancellation fence + same-owner inbox mutation",
+      "sources": [
+        "frontend:src/main/ipc/teams.ts",
+        "frontend:src/main/ipc/teams/teamQueuedUserMessages.ts"
+      ],
+      "existingOracles": ["frontend:test/main/ipc/teams/teamQueuedUserMessages.test.ts"],
+      "disposition": "Migrate inbox writer and durable input cancellation together; preserve UNKNOWN",
+      "unresolved": ["Current inbox-only mutation is not sufficient for new durable input queue"],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "group-cross-team",
+      "matrixIds": ["M05", "M12"],
+      "useCases": [
+        "Group addressing and recipient deduplication; cross-team outbox/reply; preserve original TaskRef owner"
+      ],
+      "targetOwners": ["Team"],
+      "replacementPort": "Team group/cross-team command use cases -> recipient-bound Runtime delivery",
+      "sources": [
+        "fork:src/utils/groupMailbox.ts",
+        "frontend:src/main/services/team/CrossTeamService.ts",
+        "frontend:src/main/services/team/CrossTeamOutbox.ts"
+      ],
+      "existingOracles": [
+        "frontend:agent-teams-controller/test/crossTeam.test.js",
+        "frontend:src/main/services/team/__tests__/CrossTeamOutbox.test.ts"
+      ],
+      "disposition": "Reuse product recipients/outbox IDs; no lead relay or foreign backend adoption",
+      "unresolved": ["Cross-team host-routing identity and recovery composition pending P2/P5"],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "provider-session-spi",
+      "matrixIds": ["M02", "M06", "M07", "M08", "M09"],
+      "useCases": [
+        "Open/submit/observe/respondToInteraction/interrupt/checkReadiness/checkpoint/close"
+      ],
+      "targetOwners": ["Runtime", "D"],
+      "replacementPort": "Consumer-owned Session SPI in minimal contracts artifact, compatibility re-export from agent-execution",
+      "sources": [
+        "provider:packages/platform/provider-implementations/package.json",
+        "provider:packages/platform/provider-implementations/src/index.ts",
+        "provider:packages/platform/provider-implementations/src/composition.ts",
+        "provider:packages/contexts/agent-execution/src/features/interactive-agent-session/application/ports/outbound/interactive-provider-driver.ts",
+        "provider:packages/contexts/agent-execution/src/features/interactive-agent-session/contracts/interactive-provider-driver.ts",
+        "provider:packages/platform/provider-implementations/tests/package/install-consumer.ts"
+      ],
+      "existingOracles": [
+        "provider:packages/platform/provider-implementations/tests/package/packed-consumer.test.ts"
+      ],
+      "disposition": "Reuse SPI definitions; extract their required type closure once, never depend on current runtime implementation",
+      "unresolved": [
+        "SPI still refers to domain SessionRef; exact minimal contracts dependency closure pending P1",
+        "Published metadata/peers, independent packed install and compatible re-export need proof"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "claude-driver",
+      "matrixIds": ["M02", "M06", "M07", "M09", "M10", "M11", "M15"],
+      "useCases": [
+        "Official SDK session and readiness; targeted control; selected checkpoint restore; native configuration and hooks; ordinary solo DO Agent child"
+      ],
+      "targetOwners": ["D", "Runtime", "Team"],
+      "replacementPort": "Public createClaudeDriverFactory with host-owned config/custody/checkpoint storage; Team context policy",
+      "sources": [
+        "provider:packages/platform/provider-implementations/src/claude.ts",
+        "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/config.ts",
+        "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/session.ts",
+        "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/open-session.ts",
+        "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/tool-binding.ts",
+        "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/normalize.ts",
+        "frontend:src/main/services/team/provisioning/TeamProvisioningPromptBuilders.ts"
+      ],
+      "existingOracles": [
+        "provider:packages/platform/provider-implementations/tests/features/provider-session-implementation/claude-sdk/factory.test.ts",
+        "provider:packages/platform/provider-implementations/tests/features/provider-session-implementation/claude-sdk/tool-binding.test.ts",
+        "frontend:test/main/services/team/TeamProvisioningPromptBuilders.test.ts"
+      ],
+      "disposition": "Modify provider-owned adapter; do not copy fork QueryEngine/native Team tools",
+      "unresolved": [
+        "Current validConfig rejects Agent; selected modes/grants and parent-child provenance/custody need implementation",
+        "Compaction observation, effective settings and final/background capture not proven",
+        "Native profile and artifact not selected"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "codex-driver",
+      "matrixIds": ["M02", "M06", "M07", "M09", "M11", "M14", "M15"],
+      "useCases": [
+        "Native app-server session, interactions/control, text/tool/usage observations, compatible selected checkpoint restore"
+      ],
+      "targetOwners": ["D", "Runtime"],
+      "replacementPort": "Public createCodexDriverFactory; private native protocol behind Session SPI",
+      "sources": [
+        "provider:packages/platform/provider-implementations/src/codex.ts",
+        "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-session.ts",
+        "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-config.ts",
+        "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/notification-mapper.ts",
+        "fork:src/services/codexNative/appServerRunner.ts"
+      ],
+      "existingOracles": [
+        "provider:packages/platform/provider-implementations/tests/features/provider-session-implementation/codex-protocol/driver-permissions.test.ts",
+        "provider:packages/platform/provider-implementations/tests/features/provider-session-implementation/codex-protocol/driver-checkpoint.test.ts",
+        "provider:packages/platform/provider-implementations/tests/features/provider-session-implementation/codex-protocol/driver-session.test.ts"
+      ],
+      "disposition": "Reuse D implementation; fork protocol is comparison evidence only, not second app-server implementation",
+      "unresolved": [
+        "Required MCP/tool probe injection must be implemented and invalidated by host",
+        "Positive restart/history proof, attachment parts and authored capture mechanism pending",
+        "Native profile and artifact not selected"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "opencode-driver",
+      "matrixIds": ["M02", "M06", "M07", "M09", "M11", "M15"],
+      "useCases": [
+        "HTTP/ACP profile session, selected native binding, terminal cut/control, permissions and shared backing isolation"
+      ],
+      "targetOwners": ["D", "Runtime"],
+      "replacementPort": "Public OpenCode driver factory chosen by explicit qualified profile; scoped session control",
+      "sources": [
+        "provider:packages/platform/provider-implementations/src/opencode.ts",
+        "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-factory.ts",
+        "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-factory.ts",
+        "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-session.ts",
+        "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-session-control.ts"
+      ],
+      "existingOracles": [
+        "provider:packages/platform/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v1-driver.test.ts",
+        "provider:packages/platform/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-driver-session.test.ts",
+        "provider:packages/platform/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-control.test.ts"
+      ],
+      "disposition": "Existing public variants are inventory, not a decision to qualify both dialects; use only explicitly selected native path",
+      "unresolved": [
+        "Dialect/version/config/custody profile remains pending actual selection",
+        "Shared backing stop isolation, required MCP readiness and cross-backing positive restore require new proof"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "stop-custody",
+      "matrixIds": ["M07", "M08", "M18"],
+      "useCases": [
+        "Targeted interrupt/cancel; team/member stop; seal/drain, retain UNKNOWN custody; close pending opens during app exit"
+      ],
+      "targetOwners": ["Runtime", "Team", "Desktop"],
+      "replacementPort": "Team stop policy -> Runtime current-authority operation/control and captured-process cleanup",
+      "sources": [
+        "frontend:src/main/services/team/provisioning/TeamProvisioningProcessExit.ts",
+        "frontend:src/main/services/team/provisioning/TeamProvisioningShutdownCoordination.ts",
+        "frontend:src/main/index.ts"
+      ],
+      "existingOracles": [
+        "frontend:test/main/services/team/TeamProvisioningProcessExit.test.ts",
+        "frontend:src/main/services/team/provisioning/__tests__/TeamProvisioningShutdownCoordination.test.ts",
+        "frontend:test/main/index.shutdown-order.test.ts"
+      ],
+      "disposition": "Replace legacy registry integration at composition; no shared-host blanket kill or recovery during Quit",
+      "unresolved": [
+        "OS custody mechanism per selected tuple and durable cleanup obligations pending P1/P3/P7"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "context-compaction",
+      "matrixIds": ["M10", "M11"],
+      "useCases": [
+        "Project/role/team context, post-compact reminder, effective selected settings, private/internal event semantics"
+      ],
+      "targetOwners": ["Team", "Runtime", "D"],
+      "replacementPort": "D observation -> single Team reminder owner -> Runtime admitted context input",
+      "sources": [
+        "frontend:src/main/services/team/provisioning/TeamProvisioningStreamEvents.ts",
+        "frontend:src/main/services/team/provisioning/TeamProvisioningIdlePromptInjection.ts",
+        "frontend:src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts"
+      ],
+      "existingOracles": [
+        "frontend:test/main/services/team/TeamProvisioningServicePostCompact.test.ts",
+        "frontend:test/main/services/team/TeamProvisioningStreamEvents.test.ts"
+      ],
+      "disposition": "Reuse reminder/context policy; normalize compact event in provider and preserve isMeta/chunk behavior",
+      "unresolved": [
+        "Driver SPI compact observation and exact settings-to-effective configuration mapping pending"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "message-attachments",
+      "matrixIds": ["M04", "M10", "M15"],
+      "useCases": [
+        "Recipient/model/MIME restrictions; artifact bytes retained across queued native delivery; structured native parts"
+      ],
+      "targetOwners": ["Team", "Runtime", "D", "Desktop"],
+      "replacementPort": "Host artifact references in Runtime input -> D native content parts; Desktop upload validation",
+      "sources": [
+        "frontend:src/features/agent-attachments/core/domain/capabilities.ts",
+        "frontend:src/features/agent-attachments/core/domain/mimeTypes.ts",
+        "frontend:src/features/agent-attachments/main/infrastructure/attachmentArtifactStore.ts",
+        "frontend:src/features/agent-attachments/main/providers/claudeAttachmentAdapter.ts",
+        "frontend:src/features/agent-attachments/main/providers/codexNativeAttachmentAdapter.ts",
+        "frontend:src/features/agent-attachments/main/providers/opencodeAttachmentAdapter.ts"
+      ],
+      "existingOracles": [
+        "frontend:src/features/agent-attachments/main/providers/claudeAttachmentAdapter.test.ts",
+        "frontend:src/features/agent-attachments/main/providers/codexNativeAttachmentAdapter.test.ts",
+        "frontend:src/features/agent-attachments/main/providers/opencodeAttachmentAdapter.test.ts"
+      ],
+      "disposition": "Reuse allowlists/budgets and native adapters; current SPI content:string requires typed reference/part extension",
+      "unresolved": [
+        "Provider/model profile needs qualification; source allowlist is not a claim of current vendor support",
+        "Artifact authorization, lifetime and restart references pending P2/P3"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "task-comment-blobs",
+      "matrixIds": ["M03", "M16"],
+      "useCases": [
+        "Task/comment attachment storage, IPC authorization and metadata binding, restart/restore retention"
+      ],
+      "targetOwners": ["Team", "Desktop"],
+      "replacementPort": "Team blob command/query port with captured storage owner; Desktop IPC becomes adapter",
+      "sources": [
+        "frontend:src/main/services/team/TeamTaskAttachmentStore.ts",
+        "frontend:src/main/ipc/teams.ts"
+      ],
+      "existingOracles": [
+        "frontend:src/features/agent-attachments/main/adapters/input/attachmentIpcPayloadValidation.test.ts"
+      ],
+      "disposition": "Move product blob writer with metadata owner; message attachment validation is only a partial input oracle",
+      "unresolved": [
+        "Focused task/comment attachment store/IPC oracle roster needs completion; selected validation test alone does not prove task blobs",
+        "Blob bytes/ref atomicity and identity-scoped purge closure pending"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "logs-usage-projection",
+      "matrixIds": ["M11", "M14"],
+      "useCases": [
+        "Member log streams, task activity/provenance, usage/context totals and notification actions"
+      ],
+      "targetOwners": ["D", "Runtime", "Team", "Desktop"],
+      "replacementPort": "Runtime observation feed -> Team task attribution -> Desktop log/usage read model",
+      "sources": [
+        "frontend:src/features/member-log-stream/main/composition/createMemberLogStreamFeature.ts",
+        "frontend:src/features/token-usage/core/application/TokenUsageAnalyticsService.ts",
+        "frontend:src/features/token-usage/core/application/TokenUsageBudgetNotificationEvaluator.ts",
+        "frontend:src/shared/utils/contextMetrics.ts",
+        "fork:src/services/boardTaskActivity/RuntimeBoardTaskExecutionStore.ts"
+      ],
+      "existingOracles": [
+        "frontend:src/features/member-log-stream/core/application/use-cases/__tests__/GetMemberLogStreamUseCase.test.ts",
+        "frontend:src/features/token-usage/core/application/__tests__/TokenUsageAnalyticsService.test.ts",
+        "frontend:src/shared/utils/__tests__/contextMetrics.test.ts"
+      ],
+      "disposition": "Preserve existing view semantics while sourcing host events; no fabricated transcript/success/zero usage",
+      "unresolved": [
+        "Delta/complete/isMeta/subagent correlation and feed cursor transport mapping pending P3/P5/P6"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "structured-taskrefs",
+      "matrixIds": ["M05", "M12", "M16", "M18"],
+      "useCases": [
+        "Persist/render encoded TaskRefs and exact team/task navigation; preserve external owner during offline import"
+      ],
+      "targetOwners": ["Team", "Desktop"],
+      "replacementPort": "Owner-qualified TaskRef DTO and explicit import identity map; original-owner navigation",
+      "sources": [
+        "frontend:src/shared/types/teamBoardTask.ts",
+        "frontend:src/renderer/utils/taskReferenceUtils.ts",
+        "frontend:src/renderer/hooks/useTaskSuggestions.ts"
+      ],
+      "existingOracles": ["frontend:test/renderer/utils/taskReferenceUtils.test.ts"],
+      "disposition": "Extend identity at public boundary without blanket rebinding external references",
+      "unresolved": [
+        "Owner qualification schema and encoded-reference compatibility mapping pending P1/P5"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "change-capture",
+      "matrixIds": ["M13"],
+      "useCases": [
+        "Before/final bytes, exact task/window/session/member attribution, failed/post-hook/background outcomes; authored native chain"
+      ],
+      "targetOwners": ["Runtime", "Team", "D"],
+      "replacementPort": "D technical observations/capture -> Runtime immutable binding -> Team evidence writer",
+      "sources": [
+        "fork:src/services/tools/toolExecution.ts",
+        "fork:src/services/taskChangeLedger/TaskChangeLedgerService.ts",
+        "fork:src/services/taskChangeLedger/GitChangePathProvider.ts",
+        "fork:src/services/taskChangeLedger/TaskChangeWriterLock.ts",
+        "fork:src/services/opencode/OpenCodeLedgerBridgeService.ts",
+        "fork:src/services/opencode/OpenCodeToolpartChangeReconstructor.ts",
+        "fork:src/services/opencode/OpenCodeSnapshotEvidenceProvider.ts"
+      ],
+      "existingOracles": [
+        "fork:src/services/taskChangeLedger/TaskChangeLedgerService.test.ts",
+        "fork:src/services/opencode/OpenCodeLedgerBridge.fixture-e2e.test.ts"
+      ],
+      "disposition": "Extract Git/ledger helpers with explicit binding; no fork tool loop; capture failure -> gap/nonreviewable, not a new blanket tool deny",
+      "unresolved": [
+        "P1 native proof must select sufficient hooks/window/native chain for each profile; notifications or snapshot-only attribution insufficient",
+        "Ledger imports depend on bootstrap/cwd/task execution globals; exact replacement and used transitive closure pending",
+        "Unproven overlap/external edits must not acquire authored attribution"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "review-owner-readers",
+      "matrixIds": ["M13", "M18"],
+      "useCases": [
+        "Changes read-side backfill, file Apply/Reject, partial decisions, edited-file save/delete, Undo/Redo/history/recovery"
+      ],
+      "targetOwners": ["Team", "Desktop"],
+      "replacementPort": "Team revisioned evidence/review mutation port; Desktop read-only projection after host ownership",
+      "sources": [
+        "frontend:src/main/services/team/ChangeExtractorService.ts",
+        "frontend:src/main/services/team/TaskChangeLedgerReader.ts",
+        "frontend:src/main/services/team/ReviewApplierService.ts",
+        "frontend:src/main/services/team/ReviewMutationJournalStore.ts",
+        "frontend:src/main/ipc/review.ts"
+      ],
+      "existingOracles": [
+        "frontend:test/main/ipc/review.test.ts",
+        "frontend:test/features/review-mutations/main/ReviewMutationCrash.safe-e2e.test.ts",
+        "frontend:test/main/services/team/TaskChangeLedgerReader.test.ts"
+      ],
+      "disposition": "Route every review writer to one owner; preserve hashes/snapshot/revision/conflict guards; remove read-triggered native repair for host handles",
+      "unresolved": [
+        "Mixed-hunk Apply decision/history retention after restart requires actual host workflow",
+        "Full review mutation methods/dependencies extraction closure pending P5/P6"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "provider-management",
+      "matrixIds": ["M02", "M15"],
+      "useCases": [
+        "Provider discovery/auth/setup/config and selected account namespace; native management without fork executor"
+      ],
+      "targetOwners": ["D", "Desktop", "Runtime"],
+      "replacementPort": "Existing RuntimeProviderManagementPort -> native management adapter + same account/profile binding",
+      "sources": [
+        "frontend:src/features/runtime-provider-management/core/application/RuntimeProviderManagementPort.ts",
+        "frontend:src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts",
+        "frontend:src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts"
+      ],
+      "existingOracles": [
+        "frontend:src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.test.ts",
+        "frontend:src/main/services/team/provisioning/__tests__/TeamProvisioningEnvBuilder.test.ts"
+      ],
+      "disposition": "Keep secrets/private setup UI outside generic observations; replace fork CLI execution with provider-native supported operations",
+      "unresolved": [
+        "Source-to-effective effort/permissions/context/auth namespaces need actual profile selection and tests",
+        "No credentials inspected; no real auth/inference proof in this inventory"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "saved-team-lifecycle-backup",
+      "matrixIds": ["M01", "M03", "M12", "M16"],
+      "useCases": [
+        "Offline saved-team relaunch with new execution owner; trash/restore/member restore; identity-fenced purge; backup startup reconcile/prune/work-sync restore"
+      ],
+      "targetOwners": ["Team", "Desktop", "Runtime"],
+      "replacementPort": "Scoped offline import + Team lifecycle/backup ports; Runtime reconciles retained obligations without old execution adoption",
+      "sources": [
+        "frontend:src/renderer/components/team/dialogs/teamRelaunchFlow.ts",
+        "frontend:src/main/ipc/teams/teamSoftDeleteFlow.ts",
+        "frontend:src/main/services/team/TeamMemberRestorePlan.ts",
+        "frontend:src/main/services/team/permanent-deletion/TeamPermanentDeletionCoordinator.ts",
+        "frontend:src/main/services/team/TeamBackupService.ts",
+        "frontend:src/main/services/team/TeamBackupRestoreService.ts",
+        "frontend:src/main/services/team/TeamBackupWorkSyncRestoreCoordinator.ts",
+        "frontend:src/features/team-runtime-recovery/core/application/DispatchDueRecoveries.ts"
+      ],
+      "existingOracles": [
+        "frontend:test/renderer/components/team/dialogs/teamRelaunchFlow.test.ts",
+        "frontend:test/main/ipc/teams/teamSoftDeleteFlow.test.ts",
+        "frontend:test/main/services/team/TeamBackupService.test.ts",
+        "frontend:test/main/services/team/TeamBackupRestoreStartupIsolation.test.ts"
+      ],
+      "disposition": "Preserve product formats and debt; route startup/restore writers by captured owner; backup runtime files do not grant execution authority",
+      "unresolved": [
+        "Full permanent deletion/member-work-sync backup used closure and oracle roster pending P2/P5",
+        "Cross-owner external references preserved, no generic live migration"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "node-packaging-transport",
+      "matrixIds": ["M17", "M18"],
+      "useCases": [
+        "Standalone host bootstrap/handshake; clean bounded stdio; candidate Node/provider artifact staging and install"
+      ],
+      "targetOwners": ["Desktop", "Runtime", "D"],
+      "replacementPort": "Desktop backend client -> captured standalone Node host; package composition uses minimal SPI artifact",
+      "sources": [
+        "frontend:src/main/services/infrastructure/codexAppServer/JsonRpcStdioClient.ts",
+        "frontend:src/main/services/team/TeamMcpConfigBuilder.ts",
+        "frontend:package.json",
+        "frontend:pnpm-workspace.yaml",
+        "frontend:scripts/stage-runtime.mjs",
+        "frontend:scripts/dev-with-runtime.mjs",
+        "provider:packages/platform/provider-implementations/src/session-io.ts"
+      ],
+      "existingOracles": [
+        "frontend:src/main/services/infrastructure/codexAppServer/__tests__/JsonRpcStdioClient.test.ts",
+        "provider:packages/platform/provider-implementations/tests/package/packed-consumer.test.ts"
+      ],
+      "disposition": "Reuse narrow I/O primitives, not shared Codex client lifecycle; introduce host workspace and pin candidate resources outside ASAR",
+      "unresolved": [
+        "Standalone Node OS/arch/version/digest/resource path and provider tarballs are pending actual selection",
+        "Bounded frame/request/queue limits, stdout separation and independent install closure pending P1/P7",
+        "Existing Electron-as-Node path is not accepted new host artifact proof"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "desktop-routing-shutdown",
+      "matrixIds": ["M18"],
+      "useCases": [
+        "IPC/HTTP host routing, snapshot/replay feeds, cache consistency, original owner/generation, Quit/Relaunch ingress seal"
+      ],
+      "targetOwners": ["Desktop", "Runtime", "Team"],
+      "replacementPort": "agent-backend public feature API -> stdio host command/query/observation transport",
+      "sources": [
+        "frontend:src/renderer/api/index.ts",
+        "frontend:src/main/ipc/teams.ts",
+        "frontend:src/main/ipc/httpServer.ts",
+        "frontend:src/main/index.ts"
+      ],
+      "existingOracles": [
+        "frontend:test/main/ipc/httpServer.test.ts",
+        "frontend:test/main/index.shutdown-order.test.ts"
+      ],
+      "disposition": "Desktop retains presentation/transport only; host-owned mutations cannot fall back to legacy writer",
+      "unresolved": [
+        "Exact handler routing census, target binding and feed projection closure pending P5",
+        "No agent-backend feature exists at frozen baseline; public feature implementation planned"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    },
+    {
+      "id": "background-services",
+      "matrixIds": ["M19"],
+      "useCases": [
+        "Register/list/health/history/restart; scoped UI process stop; metadata-only removal distinct from physical stop and teammate readiness"
+      ],
+      "targetOwners": ["Team", "Runtime", "Desktop"],
+      "replacementPort": "Team process registry -> Runtime captured process-control adapter -> Desktop ProcessesSection",
+      "sources": [
+        "frontend:mcp-server/src/tools/processTools.ts",
+        "frontend:agent-teams-controller/src/internal/processStore.js",
+        "frontend:src/main/services/team/TeamDataService.ts",
+        "frontend:src/renderer/components/team/ProcessesSection.tsx"
+      ],
+      "existingOracles": ["frontend:test/renderer/components/team/ProcessesSection.test.tsx"],
+      "disposition": "Extract registry use cases and health/killProcess path; forbid OS action for stale/foreign binding",
+      "unresolved": [
+        "Exact processHealthTick/killProcess transitive closure and runtime OS authority oracle pending P2/P6"
+      ],
+      "verificationStatus": "source-inventory-only; existing oracles not executed for legacy-host"
+    }
+  ],
+  "matrixCoverage": {
+    "M01": {
+      "seamIds": ["team-roster-bootstrap", "controller-mcp-writers", "saved-team-lifecycle-backup"],
+      "status": "mapped to representative sources/oracles; not implemented or accepted"
+    },
+    "M02": {
+      "seamIds": [
+        "team-roster-bootstrap",
+        "provider-session-spi",
+        "claude-driver",
+        "codex-driver",
+        "opencode-driver",
+        "provider-management"
+      ],
+      "status": "mapped to representative sources/oracles; not implemented or accepted"
+    },
+    "M03": {
+      "seamIds": [
+        "task-policy",
+        "controller-mcp-writers",
+        "command-recovery",
+        "task-comment-blobs",
+        "saved-team-lifecycle-backup"
+      ],
+      "status": "mapped to representative sources/oracles; not implemented or accepted"
+    },
+    "M04": {
+      "seamIds": [
+        "controller-mcp-writers",
+        "direct-delivery",
+        "queued-message-cancel",
+        "message-attachments"
+      ],
+      "status": "mapped to representative sources/oracles; not implemented or accepted"
+    },
+    "M05": {
+      "seamIds": ["controller-mcp-writers", "group-cross-team", "structured-taskrefs"],
+      "status": "mapped to representative sources/oracles; not implemented or accepted"
+    },
+    "M06": {
+      "seamIds": ["provider-session-spi", "claude-driver", "codex-driver", "opencode-driver"],
+      "status": "mapped to representative sources/oracles; not implemented or accepted"
+    },
+    "M07": {
+      "seamIds": [
+        "provider-session-spi",
+        "claude-driver",
+        "codex-driver",
+        "opencode-driver",
+        "stop-custody"
+      ],
+      "status": "mapped to representative sources/oracles; not implemented or accepted"
+    },
+    "M08": {
+      "seamIds": [
+        "command-recovery",
+        "direct-delivery",
+        "queued-message-cancel",
+        "provider-session-spi",
+        "stop-custody"
+      ],
+      "status": "mapped to representative sources/oracles; not implemented or accepted"
+    },
+    "M09": {
+      "seamIds": ["provider-session-spi", "claude-driver", "codex-driver", "opencode-driver"],
+      "status": "mapped to representative sources/oracles; not implemented or accepted"
+    },
+    "M10": {
+      "seamIds": ["claude-driver", "context-compaction", "message-attachments"],
+      "status": "mapped to representative sources/oracles; not implemented or accepted"
+    },
+    "M11": {
+      "seamIds": [
+        "claude-driver",
+        "codex-driver",
+        "opencode-driver",
+        "context-compaction",
+        "logs-usage-projection"
+      ],
+      "status": "mapped to representative sources/oracles; not implemented or accepted"
+    },
+    "M12": {
+      "seamIds": ["group-cross-team", "structured-taskrefs", "saved-team-lifecycle-backup"],
+      "status": "mapped to representative sources/oracles; not implemented or accepted"
+    },
+    "M13": {
+      "seamIds": ["task-policy", "change-capture", "review-owner-readers"],
+      "status": "mapped to representative sources/oracles; not implemented or accepted"
+    },
+    "M14": {
+      "seamIds": ["codex-driver", "logs-usage-projection"],
+      "status": "mapped to representative sources/oracles; not implemented or accepted"
+    },
+    "M15": {
+      "seamIds": [
+        "claude-driver",
+        "codex-driver",
+        "opencode-driver",
+        "message-attachments",
+        "provider-management"
+      ],
+      "status": "mapped to representative sources/oracles; not implemented or accepted"
+    },
+    "M16": {
+      "seamIds": ["task-comment-blobs", "structured-taskrefs", "saved-team-lifecycle-backup"],
+      "status": "mapped to representative sources/oracles; not implemented or accepted"
+    },
+    "M17": {
+      "seamIds": ["node-packaging-transport"],
+      "status": "mapped to representative sources/oracles; not implemented or accepted"
+    },
+    "M18": {
+      "seamIds": [
+        "queued-message-cancel",
+        "stop-custody",
+        "structured-taskrefs",
+        "review-owner-readers",
+        "node-packaging-transport",
+        "desktop-routing-shutdown"
+      ],
+      "status": "mapped to representative sources/oracles; not implemented or accepted"
+    },
+    "M19": {
+      "seamIds": ["controller-mcp-writers", "background-services"],
+      "status": "mapped to representative sources/oracles; not implemented or accepted"
+    }
+  },
+  "sourceCatalog": {
+    "frontend:src/main/services/team/provisioning/TeamProvisioningMemberIdentity.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/provisioning/TeamProvisioningMemberIdentity.ts",
+      "blobOid": "e793440c8ba7b4acf7c03ff50df82ee3a0317c69",
+      "declarationExamples": [
+        "matchesMemberNameOrBase",
+        "matchesTeamMemberIdentity",
+        "matchesObservedMemberNameForExpected",
+        "matchesExactTeamMemberName",
+        "namesMatchCaseInsensitive",
+        "isOpenCodeOverlayMemberRemoved"
+      ]
+    },
+    "frontend:src/main/services/team/provisioning/TeamProvisioningRuntimeLaunchSelection.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/provisioning/TeamProvisioningRuntimeLaunchSelection.ts",
+      "blobOid": "50c81e888af69be042ac4249373d34f764f5fcff",
+      "declarationExamples": [
+        "ProviderModelListCommandResponse",
+        "RuntimeStatusCommandResponse",
+        "AuthStatusCommandResponse",
+        "RuntimeProviderLaunchFacts",
+        "TeamRuntimeLaunchArgsPlan",
+        "TeamRuntimeLaunchArgsPlanEnvResolutionLike",
+        "BuildTeamRuntimeLaunchArgsPlanInput",
+        "BuildTeamRuntimeLaunchArgsPlanPorts"
+      ]
+    },
+    "fork:src/services/teamBootstrap/teamBootstrapStateMachine.ts": {
+      "repository": "fork",
+      "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+      "path": "src/services/teamBootstrap/teamBootstrapStateMachine.ts",
+      "blobOid": "7c8635b72b77368f87f36875ad99f22f8a891c6d",
+      "declarationExamples": [
+        "TeamBootstrapPhase",
+        "ALLOWED_TRANSITIONS",
+        "isTerminalBootstrapPhase",
+        "assertBootstrapPhaseTransition"
+      ]
+    },
+    "fork:src/services/teamBootstrap/teamBootstrapRunner.ts": {
+      "repository": "fork",
+      "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+      "path": "src/services/teamBootstrap/teamBootstrapRunner.ts",
+      "blobOid": "9b2b4fe8f2774705f3462581916ada4a625f2467",
+      "declarationExamples": [
+        "TeamCreateCall",
+        "TeamBootstrapRunnerDeps",
+        "SpawnTeammateInput",
+        "SpawnTeammateResult",
+        "TRANSIENT_STARTUP_RETRY_LIMIT",
+        "TRANSIENT_STARTUP_RETRY_DELAY_MS",
+        "TRANSIENT_STARTUP_RETRY_MIN_REMAINING_BUDGET_MS",
+        "DEFAULT_BOOTSTRAP_SUBMITTED_CONFIRMATION_TIMEOUT_MS"
+      ]
+    },
+    "fork:src/tools/TeamCreateTool/TeamCreateTool.ts": {
+      "repository": "fork",
+      "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+      "path": "src/tools/TeamCreateTool/TeamCreateTool.ts",
+      "blobOid": "19fd431bf62e104a55f43741a983805575136c2a",
+      "declarationExamples": [
+        "inputSchema",
+        "InputSchema",
+        "Output",
+        "Input",
+        "generateUniqueTeamName",
+        "TeamCreateTool"
+      ]
+    },
+    "fork:src/tools/TeamDeleteTool/TeamDeleteTool.ts": {
+      "repository": "fork",
+      "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+      "path": "src/tools/TeamDeleteTool/TeamDeleteTool.ts",
+      "blobOid": "f09f78c30b47b27165bcb9b318c887886f5bc26b",
+      "declarationExamples": ["inputSchema", "InputSchema", "Output", "Input", "TeamDeleteTool"]
+    },
+    "frontend:test/main/services/team/TeamProvisioningServiceRoster.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/main/services/team/TeamProvisioningServiceRoster.test.ts",
+      "blobOid": "e0dde1d6455a2b35cbecfa1aa749cebc3cfb3053",
+      "declarationExamples": ["makePorts"]
+    },
+    "frontend:test/main/services/team/TeamProvisioningMemberIdentity.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/main/services/team/TeamProvisioningMemberIdentity.test.ts",
+      "blobOid": "a03b0b43bf1bc2d370c0b0c19d4170ff19ac9534",
+      "declarationExamples": []
+    },
+    "fork:src/services/teamBootstrap/teamBootstrapRunner.launchMatrix.test.ts": {
+      "repository": "fork",
+      "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+      "path": "src/services/teamBootstrap/teamBootstrapRunner.launchMatrix.test.ts",
+      "blobOid": "1e80b80539d8feea99172a1bee6d6fe5a947bcb9",
+      "declarationExamples": [
+        "SpawnInput",
+        "DuplicateReason",
+        "FailedTeamBootstrapResult",
+        "originalClaudeConfigDir",
+        "SAFE_E2E_TIMEOUT_MS",
+        "request",
+        "member",
+        "writeBootstrapConfirmations"
+      ]
+    },
+    "frontend:agent-teams-controller/src/internal/taskBoard.js": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "agent-teams-controller/src/internal/taskBoard.js",
+      "blobOid": "7695dcde98abf5131cac24aafc86aa60ff7ee1f9",
+      "declarationExamples": [
+        "kanban",
+        "review",
+        "tasks",
+        "createTask",
+        "reconcileTaskCreation",
+        "getTask",
+        "getTaskComment",
+        "listTasks"
+      ]
+    },
+    "frontend:agent-teams-controller/src/internal/tasks.js": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "agent-teams-controller/src/internal/tasks.js",
+      "blobOid": "8faf010bde68b7edf3f5f019d7c970871ba42ed9",
+      "declarationExamples": [
+        "taskStore",
+        "runtimeHelpers",
+        "messages",
+        "messageStore",
+        "processStore",
+        "kanbanStore",
+        "agenda",
+        "mergeMemberRecord"
+      ]
+    },
+    "frontend:agent-teams-controller/src/internal/review.js": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "agent-teams-controller/src/internal/review.js",
+      "blobOid": "76e2bdbcb6fe83214ba67cd4ade20145566d4af5",
+      "declarationExamples": [
+        "kanban",
+        "messages",
+        "runtimeHelpers",
+        "reviewStateHelpers",
+        "tasks",
+        "warnNonCritical",
+        "getReviewer",
+        "resolveLeadSessionId"
+      ]
+    },
+    "frontend:agent-teams-controller/src/internal/kanban.js": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "agent-teams-controller/src/internal/kanban.js",
+      "blobOid": "83c13afc3f3fb207f7e9d54ec0f73d2f8d11ffc2",
+      "declarationExamples": [
+        "kanbanStore",
+        "tasks",
+        "reviewStateHelpers",
+        "runtimeHelpers",
+        "getEffectiveReviewState",
+        "assertKanbanColumnAllowed",
+        "getKanbanState",
+        "setKanbanColumn"
+      ]
+    },
+    "frontend:agent-teams-controller/src/internal/taskLifecycle.js": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "agent-teams-controller/src/internal/taskLifecycle.js",
+      "blobOid": "7377c3f2fadda29695ae0936740fd6cf9274147f",
+      "declarationExamples": ["isTaskOpen"]
+    },
+    "frontend:src/main/services/team/TeamTaskWriter.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/TeamTaskWriter.ts",
+      "blobOid": "3f9c07465c3dd244237bea2abdfdc2c46d34624e",
+      "declarationExamples": [
+        "taskWriteLocks",
+        "withTaskLock",
+        "appendHistoryEvent",
+        "TeamTaskWriter"
+      ]
+    },
+    "frontend:src/main/services/team/TeamTaskReader.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/TeamTaskReader.ts",
+      "blobOid": "9a58827db83dfe0ccb430500b398ec7d3454036d",
+      "declarationExamples": [
+        "logger",
+        "MAX_TASK_FILE_BYTES",
+        "ALL_TASKS_CACHE_TTL_MS",
+        "TASK_FILE_CACHE_MAX_ENTRIES",
+        "TASK_FILE_CACHE_MAX_BYTES",
+        "TASK_FILE_CACHE_MAX_ENTRY_BYTES",
+        "TEAM_TASKS_CACHE_MAX_ENTRIES",
+        "TEAM_TASKS_CACHE_MAX_BYTES"
+      ]
+    },
+    "frontend:agent-teams-controller/test/taskLifecycle.test.js": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "agent-teams-controller/test/taskLifecycle.test.js",
+      "blobOid": "5681d5966d884cabdcf0605af5c63a70cee287c5",
+      "declarationExamples": []
+    },
+    "frontend:agent-teams-controller/test/taskDependencyTransitions.test.js": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "agent-teams-controller/test/taskDependencyTransitions.test.js",
+      "blobOid": "ddc196ce70eeadf6e8921d1aef40a648112d3db6",
+      "declarationExamples": ["fs", "os", "path", "transitions"]
+    },
+    "frontend:agent-teams-controller/test/cascadeGuard.test.js": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "agent-teams-controller/test/cascadeGuard.test.js",
+      "blobOid": "7573a60e5dadbecec2ccf4de892f14b7e7b9b6d4",
+      "declarationExamples": ["cascadeGuard"]
+    },
+    "frontend:mcp-server/src/controller.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "mcp-server/src/controller.ts",
+      "blobOid": "6239a691f52ae6ce0828c1f2218a2475a85f3475",
+      "declarationExamples": [
+        "ControllerModule",
+        "controllerModule",
+        "FORCED_CLAUDE_DIR_ENV",
+        "WorkSyncCapableController",
+        "agentBlocks",
+        "taskTextSignals",
+        "getController"
+      ]
+    },
+    "frontend:mcp-server/src/tools/taskTools.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "mcp-server/src/tools/taskTools.ts",
+      "blobOid": "c93474387b442863d4b5106efc4310cd2809e1fc",
+      "declarationExamples": [
+        "stripAgentBlocksFn",
+        "toolContextSchema",
+        "ALWAYS_LOAD_META",
+        "relationshipTypeSchema",
+        "inventoryTaskStatusSchema",
+        "reviewStateSchema",
+        "inventoryKanbanColumnSchema",
+        "taskMutationActorSchema"
+      ]
+    },
+    "frontend:mcp-server/src/tools/messageTools.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "mcp-server/src/tools/messageTools.ts",
+      "blobOid": "c3a9f629edbbed860d7a5ac420d4f50dfa4d6d0b",
+      "declarationExamples": ["toolContextSchema", "registerMessageTools"]
+    },
+    "frontend:mcp-server/src/tools/processTools.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "mcp-server/src/tools/processTools.ts",
+      "blobOid": "4038c52a3593002d28c3ff6b112c4a50c8ab2c00",
+      "declarationExamples": ["toolContextSchema", "registerProcessTools"]
+    },
+    "frontend:src/main/services/team/AgentTeamsMcpHttpServer.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/AgentTeamsMcpHttpServer.ts",
+      "blobOid": "699bd3e7237421659143d2c16f777c711bd42e4a",
+      "declarationExamples": [
+        "logger",
+        "MCP_HTTP_HOST",
+        "MCP_HTTP_ENDPOINT",
+        "MCP_HTTP_READY_TIMEOUT_MS",
+        "MCP_HTTP_EXISTING_HANDLE_READY_TIMEOUT_MS",
+        "MCP_HTTP_READY_POLL_MS",
+        "MCP_HTTP_PORT_RELEASE_TIMEOUT_MS",
+        "MCP_HTTP_STABLE_PORT_BASE"
+      ]
+    },
+    "frontend:test/main/services/team/AgentTeamsMcpHttpServer.integration.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/main/services/team/AgentTeamsMcpHttpServer.integration.test.ts",
+      "blobOid": "745e219732d10544b4e5cedd8d7d61fcd96c088d",
+      "declarationExamples": [
+        "FAKE_MCP_HTTP_SERVER_SOURCE",
+        "fs",
+        "http",
+        "readArg",
+        "host",
+        "endpoint",
+        "port",
+        "controlFile"
+      ]
+    },
+    "frontend:src/features/application-command-ledger/core/application/ApplicationCommandRunner.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/application-command-ledger/core/application/ApplicationCommandRunner.ts",
+      "blobOid": "2872ce807bb3742892d3ade8e1e4b1e48119278c",
+      "declarationExamples": [
+        "STORED_RESULT_VERSION_KEY",
+        "STORED_RESULT_VERSION",
+        "DEFAULT_STARTED_STALE_AFTER_MS",
+        "ApplicationCommandResult",
+        "ApplicationCommandRunnerOptions",
+        "ApplicationCommandReconciliation",
+        "ApplicationCommandRunInput",
+        "ApplicationCommandRunResult"
+      ]
+    },
+    "frontend:src/features/internal-storage/main/infrastructure/worker/applicationCommandLedgerWorkerOps.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/internal-storage/main/infrastructure/worker/applicationCommandLedgerWorkerOps.ts",
+      "blobOid": "835ee23f1f7f4c891a2fdedd546acc91febc030c",
+      "declarationExamples": [
+        "AppCommandRecord",
+        "AppCommandBeginRequest",
+        "AppCommandBeginResult",
+        "handleApplicationCommandLedgerOp",
+        "ApplicationCommandLedgerWorkerOps",
+        "canFinalize",
+        "assertAttemptMatches",
+        "assertValidBeginTiming"
+      ]
+    },
+    "frontend:mcp-server/src/utils/taskCreationIdempotency.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "mcp-server/src/utils/taskCreationIdempotency.ts",
+      "blobOid": "3058a2514f8f192f77096dac0fc1ccd013b1c357",
+      "declarationExamples": [
+        "MCP_TASK_CREATION_NAMESPACE",
+        "CANONICAL_TASK_UUID_PATTERN",
+        "TaskCreationBoard",
+        "OptionalTaskCreateIdentity",
+        "resolveOptionalTaskCreateCommandId",
+        "resolveMessageTaskCommandId",
+        "createTaskWithOptionalIdempotency",
+        "normalizeOptionalValue"
+      ]
+    },
+    "frontend:test/features/application-command-ledger/core/ApplicationCommandRunner.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/features/application-command-ledger/core/ApplicationCommandRunner.test.ts",
+      "blobOid": "0b05a028698138f51a7495ddb8b201aa1f49c195",
+      "declarationExamples": [
+        "hasher",
+        "makeInput",
+        "fixedClock",
+        "key",
+        "idempotencyKey",
+        "statusForFailure",
+        "InMemoryLedgerStore"
+      ]
+    },
+    "frontend:mcp-server/test/taskCreationIdempotency.integration.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "mcp-server/test/taskCreationIdempotency.integration.test.ts",
+      "blobOid": "853b45ae064035aaf20899c5a2b5703e68ada624",
+      "declarationExamples": ["RegisteredTool", "collectTools", "parseJsonToolResult"]
+    },
+    "frontend:src/main/services/team/TeamInboxWriter.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/TeamInboxWriter.ts",
+      "blobOid": "de70b8696fa5a84558bd362aacf5acc4bba07eaa",
+      "declarationExamples": [
+        "realpathIfExists",
+        "resolveInboxPath",
+        "UpdateInboxMessageTextRequest",
+        "UpdateInboxMessageTextResult",
+        "MergeRuntimeDeliveryTaskRefsRequest",
+        "MergeRuntimeDeliveryTaskRefsResult",
+        "CorrelateRuntimeDeliveryReplyRequest",
+        "CorrelateRuntimeDeliveryReplyResult"
+      ]
+    },
+    "frontend:src/main/services/team/TeamInboxReader.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/TeamInboxReader.ts",
+      "blobOid": "e68d72eb419d62003a0a702793746f90ec74b665",
+      "declarationExamples": [
+        "MAX_INBOX_FILE_BYTES",
+        "INBOX_READ_CONCURRENCY",
+        "INBOX_FILE_CACHE_MAX_ENTRIES",
+        "INBOX_FILE_CACHE_MAX_BYTES",
+        "INBOX_FILE_CACHE_MAX_ENTRY_BYTES",
+        "InboxFileSignature",
+        "CachedInboxFile",
+        "InboxMessageCursor"
+      ]
+    },
+    "frontend:src/main/services/team/TeamMessageFeedService.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/TeamMessageFeedService.ts",
+      "blobOid": "eb76dcd7dad78eb920ce16e1e49653daf39a27b0",
+      "declarationExamples": [
+        "MESSAGE_FEED_CACHE_MAX_AGE_MS",
+        "MESSAGE_PAGE_SOURCE_CACHE_MAX_AGE_MS",
+        "MESSAGE_PAGE_SOURCE_CACHE_MAX_ENTRIES",
+        "MAX_PAGE_LIVE_MESSAGES_PAYLOAD",
+        "logger",
+        "TeamConfigMember",
+        "TeamMessageFeedDeps",
+        "TeamMessageFeedCacheEntry"
+      ]
+    },
+    "fork:src/tools/SendMessageTool/SendMessageTool.ts": {
+      "repository": "fork",
+      "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+      "path": "src/tools/SendMessageTool/SendMessageTool.ts",
+      "blobOid": "289f6a1809af37781f890e7b1289b597343b3822",
+      "declarationExamples": [
+        "StructuredMessage",
+        "inputSchema",
+        "InputSchema",
+        "Input",
+        "MessageRouting",
+        "MessageOutput",
+        "BroadcastOutput",
+        "RequestOutput"
+      ]
+    },
+    "fork:src/utils/teammateMailbox.ts": {
+      "repository": "fork",
+      "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+      "path": "src/utils/teammateMailbox.ts",
+      "blobOid": "215da593cf6750d641c60dc9d84ab2644e983a4d",
+      "declarationExamples": [
+        "LOCK_OPTIONS",
+        "TeammateMessageKind",
+        "AgentErrorMetadataV1",
+        "RuntimeRecoveryNudgeMetadataV1",
+        "TeammateMessage",
+        "isAgentErrorNotificationMessage",
+        "RawTeammateMessage",
+        "VerifiedMailboxWriteReceipt"
+      ]
+    },
+    "frontend:src/main/services/team/__tests__/TeamInboxWriter.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/__tests__/TeamInboxWriter.test.ts",
+      "blobOid": "a299cec063313f97863fb4e5a19987f76b6f0623",
+      "declarationExamples": ["hoisted"]
+    },
+    "frontend:test/main/services/team/TeamInboxReader.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/main/services/team/TeamInboxReader.test.ts",
+      "blobOid": "f9fc7b32947cc5cc2793d28a06108e0b931b9f25",
+      "declarationExamples": ["hoisted"]
+    },
+    "frontend:test/main/services/team/TeamMessageFeedService.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/main/services/team/TeamMessageFeedService.test.ts",
+      "blobOid": "491326ad0294220733d55f434b0cfd294e417faf",
+      "declarationExamples": ["makeMessage", "createDeferred"]
+    },
+    "frontend:src/main/ipc/teams.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/ipc/teams.ts",
+      "blobOid": "d004cd5730434051714c75f1412531b2bd8853a1",
+      "declarationExamples": [
+        "logger",
+        "VisibleDirectReplyProtocol",
+        "resolveVisibleDirectReplyProtocol",
+        "TEAM_DATA_DRAFT_CLASSIFICATION_ACCESS_TIMEOUT_MS",
+        "isPlainObject",
+        "validateTeamGetDataOptions",
+        "noteHeavyTeamDataWorkerFallback",
+        "getWorkerErrorMessage"
+      ]
+    },
+    "frontend:src/main/ipc/teams/teamQueuedUserMessages.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/ipc/teams/teamQueuedUserMessages.ts",
+      "blobOid": "d026e35680ad5a00e3b1b7bb3ce69a9f2acb744e",
+      "declarationExamples": [
+        "isQueuedUserInboxRow",
+        "listQueuedUserMessagesFromRows",
+        "discardQueuedUserMessagesFromRows",
+        "realpathIfExists",
+        "resolveSafeInboxPath",
+        "readInboxRows",
+        "listQueuedUserMessages",
+        "discardQueuedUserMessages"
+      ]
+    },
+    "frontend:test/main/ipc/teams/teamQueuedUserMessages.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/main/ipc/teams/teamQueuedUserMessages.test.ts",
+      "blobOid": "dd225ec24f15610bbe9c0a4881916d2b36fd9dd3",
+      "declarationExamples": ["TEAM_NAME", "MEMBER", "queuedRow", "deliveredRow", "agentRow"]
+    },
+    "fork:src/utils/groupMailbox.ts": {
+      "repository": "fork",
+      "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+      "path": "src/utils/groupMailbox.ts",
+      "blobOid": "9cf8f6135afda0f61209fa888bed484a3933e1c3",
+      "declarationExamples": [
+        "GroupMailboxEnvelope",
+        "hasGroupMailboxMarker",
+        "isGroupMailboxUuid",
+        "GROUP_MAILBOX_SOURCE_MAX_BYTES",
+        "assertValidGroupMailboxRows",
+        "getCurrentGroupRunIdentity",
+        "GROUP_MAILBOX_PROTOCOL_KIND",
+        "HeadlessGroupMailboxOwner"
+      ]
+    },
+    "frontend:src/main/services/team/CrossTeamService.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/CrossTeamService.ts",
+      "blobOid": "c2157c105775bb4625f8656b5ec24f43ec4c875f",
+      "declarationExamples": [
+        "logger",
+        "AgentTeamsController",
+        "TEAM_NAME_PATTERN",
+        "normalizeMemberKey",
+        "resolveCrossTeamFromMember",
+        "CrossTeamRecipientMetadataReader",
+        "CrossTeamService",
+        "hasRuntimeDeliveryProof"
+      ]
+    },
+    "frontend:src/main/services/team/CrossTeamOutbox.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/CrossTeamOutbox.ts",
+      "blobOid": "5437a7ad6db5ac2f80848e1f6398ad558de3e8fb",
+      "declarationExamples": [
+        "CROSS_TEAM_DEDUPE_WINDOW_MS",
+        "CrossTeamDedupeOptions",
+        "CrossTeamOutboxMessage",
+        "CrossTeamRuntimeDeliveryProofInput",
+        "CrossTeamRuntimeDeliveryReceiptStatus",
+        "CrossTeamRuntimeDeliveryIdempotencyConflictError",
+        "isRecord",
+        "readRequiredString"
+      ]
+    },
+    "frontend:agent-teams-controller/test/crossTeam.test.js": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "agent-teams-controller/test/crossTeam.test.js",
+      "blobOid": "b07e34ac9cfc99e8919145dbe730b8bda7ea6542",
+      "declarationExamples": ["fs", "os", "path"]
+    },
+    "frontend:src/main/services/team/__tests__/CrossTeamOutbox.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/__tests__/CrossTeamOutbox.test.ts",
+      "blobOid": "4715b0d8ae3350e2e3fad73a3c86cc9c1049e099",
+      "declarationExamples": ["makeMessage"]
+    },
+    "provider:packages/platform/provider-implementations/package.json": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/package.json",
+      "blobOid": "f58afb987d20006e5d62bca51040743b97ac7e57",
+      "declarationExamples": []
+    },
+    "provider:packages/platform/provider-implementations/src/index.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/src/index.ts",
+      "blobOid": "6f93f7adae6ba23e85bb591f9481e03d4eba699d",
+      "declarationExamples": []
+    },
+    "provider:packages/platform/provider-implementations/src/composition.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/src/composition.ts",
+      "blobOid": "741499156ce240dd9129eca9fa90893931d46f15",
+      "declarationExamples": []
+    },
+    "provider:packages/contexts/agent-execution/src/features/interactive-agent-session/application/ports/outbound/interactive-provider-driver.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/contexts/agent-execution/src/features/interactive-agent-session/application/ports/outbound/interactive-provider-driver.ts",
+      "blobOid": "41c96bfd344324820fe4b2fee0cdbc8ab017687e",
+      "declarationExamples": [
+        "FailureCode",
+        "Failure",
+        "Reply",
+        "Input",
+        "Handoff",
+        "InteractionReply",
+        "EventPayload",
+        "Event"
+      ]
+    },
+    "provider:packages/contexts/agent-execution/src/features/interactive-agent-session/contracts/interactive-provider-driver.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/contexts/agent-execution/src/features/interactive-agent-session/contracts/interactive-provider-driver.ts",
+      "blobOid": "aa67e16958b364f5f5fe2d8db9e3ea7461c60ca4",
+      "declarationExamples": []
+    },
+    "provider:packages/platform/provider-implementations/tests/package/install-consumer.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/tests/package/install-consumer.ts",
+      "blobOid": "cebcec5189a602395288e1df0a974b19d88ffb4f",
+      "declarationExamples": ["retainCheckedArchive", "runConsumer", "installPackedConsumer"]
+    },
+    "provider:packages/platform/provider-implementations/tests/package/packed-consumer.test.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/tests/package/packed-consumer.test.ts",
+      "blobOid": "cda58f2618fb4700a87c6e40583d26b1ed208df4",
+      "declarationExamples": [
+        "factory",
+        "codexFactory",
+        "ConsumerSession",
+        "openCodeFactory",
+        "openCodeV1Factory",
+        "unknownUsage",
+        "reply",
+        "native"
+      ]
+    },
+    "provider:packages/platform/provider-implementations/src/claude.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/src/claude.ts",
+      "blobOid": "98a345e89aea6f11a06e6a6ecda44c07bd105c1f",
+      "declarationExamples": []
+    },
+    "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/config.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/config.ts",
+      "blobOid": "e7e9555551228be801e9d2d92453fc209eb45ade",
+      "declarationExamples": [
+        "SDK_REVISION",
+        "ClaudeConfig",
+        "Checkpoint",
+        "compatibility",
+        "validConfig",
+        "options",
+        "freshNativeSession",
+        "readCheckpoint"
+      ]
+    },
+    "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/session.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/session.ts",
+      "blobOid": "ff42d03892b1f2415ca5d7ac1a548c7a08408b9a",
+      "declarationExamples": ["QueryHandle", "QueryFactory", "PendingInput", "ClaudeSession"]
+    },
+    "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/open-session.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/open-session.ts",
+      "blobOid": "838ebde32aeef5e9297da4681c4ba3a287f412b4",
+      "declarationExamples": ["ClaudeSdkBoundary", "realBoundary", "openClaudeSession"]
+    },
+    "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/tool-binding.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/tool-binding.ts",
+      "blobOid": "6ddc3bb965d262b312fc4bd965a40fdf35cac7a0",
+      "declarationExamples": [
+        "ClaudeToolBindingRequest",
+        "ClaudeToolBinding",
+        "ForegroundToolOwner",
+        "denied",
+        "toolBindingHook",
+        "plainInput",
+        "bound",
+        "abortable"
+      ]
+    },
+    "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/normalize.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/claude-sdk/normalize.ts",
+      "blobOid": "0ab3ebe4f5b07577eeccaca1b1571cc0ebbcb38f",
+      "declarationExamples": ["Fact", "record", "OutputLimitError", "Normalizer"]
+    },
+    "frontend:src/main/services/team/provisioning/TeamProvisioningPromptBuilders.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/provisioning/TeamProvisioningPromptBuilders.ts",
+      "blobOid": "ac96b2574f30a5e2dd4e4da94288aaf7de7f36d4",
+      "declarationExamples": [
+        "TeamProvisioningHydrationRun",
+        "BootstrapTranscriptSuccessSource",
+        "CanonicalSendMessageExample",
+        "SEND_MESSAGE_CANONICAL_FIELDS",
+        "SEND_MESSAGE_FORBIDDEN_ALIAS_FIELDS",
+        "isUnsafeProvisionedButNotAliveStatus",
+        "isSafelyHealedProvisionedButNotAliveStatus",
+        "formatFailedLaunchStatus"
+      ]
+    },
+    "provider:packages/platform/provider-implementations/tests/features/provider-session-implementation/claude-sdk/factory.test.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/tests/features/provider-session-implementation/claude-sdk/factory.test.ts",
+      "blobOid": "7259f6ee83797f2502c4d7c7e04d36ced03f9e62",
+      "declarationExamples": []
+    },
+    "provider:packages/platform/provider-implementations/tests/features/provider-session-implementation/claude-sdk/tool-binding.test.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/tests/features/provider-session-implementation/claude-sdk/tool-binding.test.ts",
+      "blobOid": "f2f86aba1b87db4f61850436256ccbca5db43f66",
+      "declarationExamples": ["input", "names", "invoke", "owner", "deny", "deferred"]
+    },
+    "frontend:test/main/services/team/TeamProvisioningPromptBuilders.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/main/services/team/TeamProvisioningPromptBuilders.test.ts",
+      "blobOid": "95acccbf4f078d6b7a5f8b4703201f31c8ae61d1",
+      "declarationExamples": ["buildPromptWithStatus"]
+    },
+    "provider:packages/platform/provider-implementations/src/codex.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/src/codex.ts",
+      "blobOid": "f360c0791cb288fa575ac05280aa4be2261ebb14",
+      "declarationExamples": []
+    },
+    "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-session.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-session.ts",
+      "blobOid": "db4fcffd64dff762082bf215cad598b65e383734",
+      "declarationExamples": ["failure", "Pending", "Control", "outcome", "CodexDriverSession"]
+    },
+    "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-config.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-config.ts",
+      "blobOid": "f4acc51af460a82af2715d69bd0b41b4b002ce57",
+      "declarationExamples": [
+        "CodexDriverConfig",
+        "configurationFields",
+        "matchingBinding",
+        "validLimits",
+        "configuredClient",
+        "validDriverConfiguration",
+        "captureDriverConfig",
+        "driverCompatibility"
+      ]
+    },
+    "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/notification-mapper.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/notification-mapper.ts",
+      "blobOid": "0b41d88aadd21bdd7e1d256879f7e18bbd0f0ede",
+      "declarationExamples": [
+        "consistentId",
+        "nativeThreadId",
+        "nativeTurnId",
+        "usageEvent",
+        "nativeTurnOutcome",
+        "nativeTurnError",
+        "terminalEvent",
+        "CodexNotificationMapper"
+      ]
+    },
+    "fork:src/services/codexNative/appServerRunner.ts": {
+      "repository": "fork",
+      "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+      "path": "src/services/codexNative/appServerRunner.ts",
+      "blobOid": "9e42b40d3d66137bc0e47ad0f92c871bee20458a",
+      "declarationExamples": [
+        "JsonRpcErrorPayload",
+        "JsonRpcResponse",
+        "SpawnedCodexAppServerProcess",
+        "CodexNativeAppServerRunnerOptions",
+        "CodexNativeAppServerRunnerDeps",
+        "PendingRequest",
+        "QueuedObservation",
+        "DEFAULT_APP_SERVER_REQUEST_TIMEOUT_MS"
+      ]
+    },
+    "provider:packages/platform/provider-implementations/tests/features/provider-session-implementation/codex-protocol/driver-permissions.test.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/tests/features/provider-session-implementation/codex-protocol/driver-permissions.test.ts",
+      "blobOid": "721add0da320b692179f75a95bd687a800567e86",
+      "declarationExamples": []
+    },
+    "provider:packages/platform/provider-implementations/tests/features/provider-session-implementation/codex-protocol/driver-checkpoint.test.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/tests/features/provider-session-implementation/codex-protocol/driver-checkpoint.test.ts",
+      "blobOid": "b8b4ee3a06ba151d9964fe83d32468af1ef2aa18",
+      "declarationExamples": []
+    },
+    "provider:packages/platform/provider-implementations/tests/features/provider-session-implementation/codex-protocol/driver-session.test.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/tests/features/provider-session-implementation/codex-protocol/driver-session.test.ts",
+      "blobOid": "c0c9b2f25bbf45c5169628c03af1934364eee52c",
+      "declarationExamples": []
+    },
+    "provider:packages/platform/provider-implementations/src/opencode.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/src/opencode.ts",
+      "blobOid": "2e2d518ac01cdb85b3f61bcccd40327de933e126",
+      "declarationExamples": []
+    },
+    "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-factory.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-factory.ts",
+      "blobOid": "63982517daa92bb57a0988ceb35ab80503acd219",
+      "declarationExamples": ["OpenCodeV1DriverHost", "supported", "createOpenCodeV1DriverFactory"]
+    },
+    "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-factory.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-factory.ts",
+      "blobOid": "8b04cad0c7a945043c8a3d6f766a46dc52eb6a53",
+      "declarationExamples": ["OpenCodeV2DriverHost", "supported", "createOpenCodeV2DriverFactory"]
+    },
+    "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-session.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-session.ts",
+      "blobOid": "632cc4487fb6d0d5ed9b0950f43e6c1dce494fea",
+      "declarationExamples": ["createV2DriverSession"]
+    },
+    "provider:packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-session-control.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/src/features/provider-session-implementation/adapters/opencode-protocol/v2-session-control.ts",
+      "blobOid": "a80a50be038dafc63e3ea4c12bc39ca43a2f5055",
+      "declarationExamples": [
+        "OpenCodeV2Permission",
+        "text",
+        "permission",
+        "createOpenCodeV2SessionControl"
+      ]
+    },
+    "provider:packages/platform/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v1-driver.test.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v1-driver.test.ts",
+      "blobOid": "837e0a9df611cd0d4592ae6847eb2e7b8fc6b253",
+      "declarationExamples": ["request", "configuration", "factory", "until", "observe"]
+    },
+    "provider:packages/platform/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-driver-session.test.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-driver-session.test.ts",
+      "blobOid": "a349fe84bf693893d86e8d8043fad4099c8447b7",
+      "declarationExamples": ["until"]
+    },
+    "provider:packages/platform/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-control.test.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/tests/features/provider-session-implementation/opencode-protocol/v2-control.test.ts",
+      "blobOid": "afdf6fb0198d574fb9abb2ab0b659043454c3adf",
+      "declarationExamples": ["peer"]
+    },
+    "frontend:src/main/services/team/provisioning/TeamProvisioningProcessExit.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/provisioning/TeamProvisioningProcessExit.ts",
+      "blobOid": "5811640ca9c85c05888728a501c671d06e002800",
+      "declarationExamples": [
+        "ProgressState",
+        "ProgressExtras",
+        "ValidConfigProbeResultLike",
+        "WaitForValidConfigRun",
+        "WaitForValidConfigPorts",
+        "TeamProvisioningProcessExitRun",
+        "WaitForTeamInListPorts",
+        "WaitForMissingInboxesRun"
+      ]
+    },
+    "frontend:src/main/services/team/provisioning/TeamProvisioningShutdownCoordination.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/provisioning/TeamProvisioningShutdownCoordination.ts",
+      "blobOid": "96239ff12183072d5704900309a7eac880ce78e6",
+      "declarationExamples": [
+        "ShutdownLogger",
+        "TeamProvisioningShutdownCoordinationState",
+        "TeamProvisioningShutdownCoordinationPorts",
+        "TeamProvisioningShutdownCoordination",
+        "getPendingRuntimeAdapterLaunchesForShutdown",
+        "getShutdownTrackedTeamNames",
+        "stopTrackedTeamsForShutdown",
+        "cancelPendingRuntimeAdapterLaunchesForShutdown"
+      ]
+    },
+    "frontend:src/main/index.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/index.ts",
+      "blobOid": "dc9878be39e0a31ee86aec915bd5810a1a1d286e",
+      "declarationExamples": [
+        "logger",
+        "appStartedAtMs",
+        "openCodeManagedHostInstanceId",
+        "readOptionalEnv",
+        "readOptionalEnvNumber",
+        "readOptionalEnvArgs",
+        "teamInboxReader",
+        "teamInboxWriter"
+      ]
+    },
+    "frontend:test/main/services/team/TeamProvisioningProcessExit.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/main/services/team/TeamProvisioningProcessExit.test.ts",
+      "blobOid": "055e5f27d2e9c8ede12aca48d422bef44dd8e821",
+      "declarationExamples": []
+    },
+    "frontend:src/main/services/team/provisioning/__tests__/TeamProvisioningShutdownCoordination.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningShutdownCoordination.test.ts",
+      "blobOid": "7e936f34a7cde59478444c14676a8e9a5f443196",
+      "declarationExamples": [
+        "ProbeProcess",
+        "makeProgress",
+        "makeLogger",
+        "makeState",
+        "makePorts"
+      ]
+    },
+    "frontend:test/main/index.shutdown-order.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/main/index.shutdown-order.test.ts",
+      "blobOid": "3115349387ae1fa7222295af3e5a13da1622bb2f",
+      "declarationExamples": ["electronMock", "createDeferred", "flushPromises"]
+    },
+    "frontend:src/main/services/team/provisioning/TeamProvisioningStreamEvents.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/provisioning/TeamProvisioningStreamEvents.ts",
+      "blobOid": "506ac1404021ed6b901905dffb52ce75e7b7b9b6",
+      "declarationExamples": [
+        "logger",
+        "HANDLED_STREAM_JSON_TYPES",
+        "TeamProvisioningStreamRun",
+        "TeamProvisioningStreamEventPorts",
+        "shouldAcceptDeterministicBootstrapEvent",
+        "classifyDeterministicBootstrapFailure",
+        "extractStreamContentBlocks",
+        "hasCapturedVisibleSendMessage"
+      ]
+    },
+    "frontend:src/main/services/team/provisioning/TeamProvisioningIdlePromptInjection.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/provisioning/TeamProvisioningIdlePromptInjection.ts",
+      "blobOid": "70155b9b941ade62ddf9a466e826801c119cb060",
+      "declarationExamples": [
+        "TeamProvisioningIdlePromptInjectionRun",
+        "TeamProvisioningIdlePromptInjectionConfigMember",
+        "TeamProvisioningIdlePromptInjectionConfig",
+        "TeamProvisioningIdlePromptInjectionLogger",
+        "TeamProvisioningIdlePromptInjectionPorts",
+        "clearPostCompactReminderState",
+        "buildUserPayload",
+        "getLaunchLeadName"
+      ]
+    },
+    "frontend:src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts",
+      "blobOid": "954dc5cd1d2a6e5784772ca705196fcd3ab7ba20",
+      "declarationExamples": [
+        "ProvisioningAuthSource",
+        "TeamRuntimeAuthContext",
+        "ProvisioningEnvResolution",
+        "CrossProviderMemberArgsResult",
+        "TeamProvisioningProviderConnectionPort",
+        "TeamProvisioningEnvBuilderLogger",
+        "TeamProvisioningEnvBuilderPorts",
+        "BuildProvisioningEnvOptions"
+      ]
+    },
+    "frontend:test/main/services/team/TeamProvisioningServicePostCompact.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/main/services/team/TeamProvisioningServicePostCompact.test.ts",
+      "blobOid": "0b5e545b18904cdb0d33d3da81d758fcc2d099c7",
+      "declarationExamples": [
+        "hoisted",
+        "createFakeChild",
+        "ProvisioningEnvHarness",
+        "ProviderRuntimeHarness",
+        "ConfigFacadeHarness",
+        "providerRuntimeHarness",
+        "configFacadeHarness",
+        "mockProviderRuntime"
+      ]
+    },
+    "frontend:test/main/services/team/TeamProvisioningStreamEvents.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/main/services/team/TeamProvisioningStreamEvents.test.ts",
+      "blobOid": "b1a9301d34a2e2c9426af102155edc7d8ded1940",
+      "declarationExamples": [
+        "NOW",
+        "DeterministicBootstrapTestRun",
+        "createMemberSpawnStatusEntry",
+        "createProgress",
+        "createDeterministicBootstrapRun",
+        "createStreamEventPorts"
+      ]
+    },
+    "frontend:src/features/agent-attachments/core/domain/capabilities.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/agent-attachments/core/domain/capabilities.ts",
+      "blobOid": "25697cedf21d79f565bef77eba23da76f86fc2e5",
+      "declarationExamples": [
+        "DEFAULT_IMAGE_BYTES_PER_PROVIDER",
+        "DEFAULT_FILE_BYTES_PER_PROVIDER",
+        "VERIFIED_OPENCODE_IMAGE_MODELS",
+        "VERIFIED_OPENCODE_VIDEO_MODELS",
+        "supportedImagesOnly",
+        "supportedClaude",
+        "unsupported",
+        "withOpenCodeVideoSupport"
+      ]
+    },
+    "frontend:src/features/agent-attachments/core/domain/mimeTypes.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/agent-attachments/core/domain/mimeTypes.ts",
+      "blobOid": "29646ec36ab57311a876155b9849c14d38be1a30",
+      "declarationExamples": [
+        "AGENT_IMAGE_MIME_TYPES",
+        "NATIVE_IMAGE_MIME_TYPES",
+        "NATIVE_VIDEO_MIME_TYPES",
+        "CLAUDE_IMAGE_MIME_TYPES",
+        "isAgentImageMimeType",
+        "isAgentVideoMimeType",
+        "isNativeImageMimeType"
+      ]
+    },
+    "frontend:src/features/agent-attachments/main/infrastructure/attachmentArtifactStore.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/agent-attachments/main/infrastructure/attachmentArtifactStore.ts",
+      "blobOid": "afc8410d555935b42c9a62da908a4ed25afbd63e",
+      "declarationExamples": [
+        "AgentAttachmentArtifactFileName",
+        "ResolveAgentAttachmentArtifactPathInput",
+        "resolveAgentAttachmentArtifactPath",
+        "writeFileAtomic"
+      ]
+    },
+    "frontend:src/features/agent-attachments/main/providers/claudeAttachmentAdapter.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/agent-attachments/main/providers/claudeAttachmentAdapter.ts",
+      "blobOid": "68bcc4685bca0a7da065869b84842273d0e0998f",
+      "declarationExamples": [
+        "ClaudeInputBlock",
+        "ClaudeAttachmentDeliveryParts",
+        "decodeBase64Text",
+        "CLAUDE_IMAGE_MIME_TYPE_SET",
+        "buildClaudeAttachmentDeliveryParts",
+        "redactClaudeBlocksForDiagnostics"
+      ]
+    },
+    "frontend:src/features/agent-attachments/main/providers/codexNativeAttachmentAdapter.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/agent-attachments/main/providers/codexNativeAttachmentAdapter.ts",
+      "blobOid": "9b939296f034b162af2a6af256fca828448359c3",
+      "declarationExamples": [
+        "CodexNativeImageMimeType",
+        "CodexNativeImageArgPart",
+        "CodexNativeAttachmentDeliveryParts",
+        "BuildCodexNativeAttachmentDeliveryPartsInput",
+        "assertCodexImageMimeType",
+        "codexArtifactFileName",
+        "formatBytes",
+        "buildCodexNativeAttachmentDeliveryParts"
+      ]
+    },
+    "frontend:src/features/agent-attachments/main/providers/opencodeAttachmentAdapter.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/agent-attachments/main/providers/opencodeAttachmentAdapter.ts",
+      "blobOid": "29104fffdc34cc30765d7b02cb0c5e3f909bce10",
+      "declarationExamples": [
+        "OpenCodeFilePartMimeType",
+        "OpenCodeFilePart",
+        "OpenCodeAttachmentDeliveryParts",
+        "BuildOpenCodeAttachmentDeliveryPartsInput",
+        "isOpenCodeImageMimeType",
+        "isOpenCodeVideoMimeType",
+        "buildOpenCodeCapabilityBlock",
+        "formatBytes"
+      ]
+    },
+    "frontend:src/features/agent-attachments/main/providers/claudeAttachmentAdapter.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/agent-attachments/main/providers/claudeAttachmentAdapter.test.ts",
+      "blobOid": "e1ce91fccbb974aa10dfe83d7bbf918c58dc4c99",
+      "declarationExamples": ["attachment"]
+    },
+    "frontend:src/features/agent-attachments/main/providers/codexNativeAttachmentAdapter.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/agent-attachments/main/providers/codexNativeAttachmentAdapter.test.ts",
+      "blobOid": "3a6662fb84a5cecbc121e3a3e4554e6de7f0c9d7",
+      "declarationExamples": ["attachment"]
+    },
+    "frontend:src/features/agent-attachments/main/providers/opencodeAttachmentAdapter.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/agent-attachments/main/providers/opencodeAttachmentAdapter.test.ts",
+      "blobOid": "80e5e9ad381e16dabf66f5e92666fbbd38fb35c5",
+      "declarationExamples": ["attachment", "attachmentWithBytes"]
+    },
+    "frontend:src/main/services/team/TeamTaskAttachmentStore.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/TeamTaskAttachmentStore.ts",
+      "blobOid": "96a71a10e2f963d3e0820c980858e4f8bc41f619",
+      "declarationExamples": [
+        "logger",
+        "MAX_ATTACHMENT_SIZE",
+        "TEAM_TASK_ATTACHMENT_DELETE_OPTIONS",
+        "TeamTaskAttachmentStore"
+      ]
+    },
+    "frontend:src/features/agent-attachments/main/adapters/input/attachmentIpcPayloadValidation.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/agent-attachments/main/adapters/input/attachmentIpcPayloadValidation.test.ts",
+      "blobOid": "553ec8696b0f2b7a63361ad4ffa1c1cd5e88cd3e",
+      "declarationExamples": []
+    },
+    "frontend:src/features/member-log-stream/main/composition/createMemberLogStreamFeature.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/member-log-stream/main/composition/createMemberLogStreamFeature.ts",
+      "blobOid": "bd073ece5f78b2bca0d906c367b43670acce8320",
+      "declarationExamples": [
+        "MemberLogStreamFeatureFacade",
+        "TeamLogSourceTrackerMemberStreamPort",
+        "createMemberLogStreamFeature"
+      ]
+    },
+    "frontend:src/features/token-usage/core/application/TokenUsageAnalyticsService.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/token-usage/core/application/TokenUsageAnalyticsService.ts",
+      "blobOid": "e0a4096364a43c89e54a2a6e90c6d542a56b1e87",
+      "declarationExamples": ["TokenUsageAnalyticsServiceDeps", "TokenUsageAnalyticsService"]
+    },
+    "frontend:src/features/token-usage/core/application/TokenUsageBudgetNotificationEvaluator.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/token-usage/core/application/TokenUsageBudgetNotificationEvaluator.ts",
+      "blobOid": "58fd09c08477abb8274991149560e2396d4db910",
+      "declarationExamples": [
+        "BudgetTarget",
+        "TokenUsageBudgetNotificationEvaluatorDeps",
+        "DEFAULT_MIN_EVALUATION_INTERVAL_MS",
+        "TokenUsageBudgetNotificationEvaluator",
+        "budgetTargets",
+        "hasBudgetLimit",
+        "budgetMetricChecks",
+        "periodKeyFor"
+      ]
+    },
+    "frontend:src/shared/utils/contextMetrics.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/shared/utils/contextMetrics.ts",
+      "blobOid": "9130776258d01017e4d6b6c3eb79618289c060fb",
+      "declarationExamples": [
+        "ANTHROPIC_DEFAULT_CONTEXT_WINDOW",
+        "ANTHROPIC_EXTENDED_CONTEXT_WINDOW",
+        "OPENAI_COMPACT_CONTEXT_WINDOW",
+        "OPENAI_DEFAULT_CONTEXT_WINDOW",
+        "OPENAI_LONG_CONTEXT_WINDOW",
+        "ContextUsageLike",
+        "PromptInputSource",
+        "DerivedContextMetrics"
+      ]
+    },
+    "fork:src/services/boardTaskActivity/RuntimeBoardTaskExecutionStore.ts": {
+      "repository": "fork",
+      "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+      "path": "src/services/boardTaskActivity/RuntimeBoardTaskExecutionStore.ts",
+      "blobOid": "d2321bcd0e800be05f3febd8616615591d864a48",
+      "declarationExamples": [
+        "ActiveScope",
+        "ActorExecutionState",
+        "MAX_PROCESSED_TOOL_USE_IDS",
+        "cloneLocator",
+        "buildActorKey",
+        "buildTaskIdentityKey",
+        "buildScopeKey",
+        "isSameTask"
+      ]
+    },
+    "frontend:src/features/member-log-stream/core/application/use-cases/__tests__/GetMemberLogStreamUseCase.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/member-log-stream/core/application/use-cases/__tests__/GetMemberLogStreamUseCase.test.ts",
+      "blobOid": "358d24d1e2afd65461a5d1c6a3de853b953a1a62",
+      "declarationExamples": ["generatedAt", "participant", "segment", "includedResult"]
+    },
+    "frontend:src/features/token-usage/core/application/__tests__/TokenUsageAnalyticsService.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/token-usage/core/application/__tests__/TokenUsageAnalyticsService.test.ts",
+      "blobOid": "cc9cb06848f1376361647685b2b93f03373fc754",
+      "declarationExamples": [
+        "NOW",
+        "run",
+        "event",
+        "MemoryLedgerRepository",
+        "CapturingBudgetEvaluator"
+      ]
+    },
+    "frontend:src/shared/utils/__tests__/contextMetrics.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/shared/utils/__tests__/contextMetrics.test.ts",
+      "blobOid": "8d781e4674a80a394166bf5bb8fda31fc91fd689",
+      "declarationExamples": []
+    },
+    "frontend:src/shared/types/teamBoardTask.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/shared/types/teamBoardTask.ts",
+      "blobOid": "0dac879747dba7834fd780508b641c705b854c3a",
+      "declarationExamples": [
+        "TaskRef",
+        "BoardTaskRefKind",
+        "BoardTaskResolution",
+        "BoardTaskActivityLinkKind",
+        "BoardTaskActivityTargetRole",
+        "BoardTaskActivityPhase",
+        "BoardTaskActorRelation",
+        "BoardTaskActivityStatus"
+      ]
+    },
+    "frontend:src/renderer/utils/taskReferenceUtils.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/renderer/utils/taskReferenceUtils.ts",
+      "blobOid": "8ef12b93a71099d9fb9f6debf515d3b1eb4013aa",
+      "declarationExamples": [
+        "TASK_REF_REGEX",
+        "EXACT_TASK_REF_REGEX",
+        "TASK_META_START",
+        "TASK_META_END",
+        "ZERO_WIDTH_ALPHABET",
+        "ZERO_WIDTH_TO_BITS",
+        "isAllowedTaskRefBoundary",
+        "buildSuggestionsByRef"
+      ]
+    },
+    "frontend:src/renderer/hooks/useTaskSuggestions.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/renderer/hooks/useTaskSuggestions.ts",
+      "blobOid": "4542955395a5fd43b1a28e7c81328dca32b47399",
+      "declarationExamples": [
+        "EMPTY_GLOBAL_TASKS",
+        "EMPTY_TEAM_MEMBERS",
+        "EMPTY_TEAM_BY_NAME",
+        "EMPTY_TASK_SUGGESTIONS",
+        "UseTaskSuggestionsResult",
+        "UseTaskSuggestionsOptions",
+        "TaskWithTeamContext",
+        "getTaskTimestamp"
+      ]
+    },
+    "frontend:test/renderer/utils/taskReferenceUtils.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/renderer/utils/taskReferenceUtils.test.ts",
+      "blobOid": "fcbabc9f7fb240eff5dc62b3ce961118d93a9430",
+      "declarationExamples": []
+    },
+    "fork:src/services/tools/toolExecution.ts": {
+      "repository": "fork",
+      "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+      "path": "src/services/tools/toolExecution.ts",
+      "blobOid": "a06e55cfba19f0e7fc63e3c5c23c65800d306c84",
+      "declarationExamples": [
+        "HOOK_TIMING_DISPLAY_THRESHOLD_MS",
+        "SLOW_PHASE_LOG_THRESHOLD_MS",
+        "classifyToolError",
+        "ruleSourceToOTelSource",
+        "decisionReasonToOTelSource",
+        "getNextImagePasteId",
+        "MessageUpdateLazy",
+        "McpServerType"
+      ]
+    },
+    "fork:src/services/taskChangeLedger/TaskChangeLedgerService.ts": {
+      "repository": "fork",
+      "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+      "path": "src/services/taskChangeLedger/TaskChangeLedgerService.ts",
+      "blobOid": "aea25854503190612cec1b8467892309e222f37d",
+      "declarationExamples": [
+        "TASK_CHANGE_JOURNAL_SCHEMA_VERSION",
+        "TASK_CHANGE_SUMMARY_BUNDLE_SCHEMA_VERSION",
+        "TASK_CHANGE_FRESHNESS_SCHEMA_VERSION",
+        "TASK_CHANGE_LEDGER_DIRNAME",
+        "TASK_CHANGE_FRESHNESS_DIRNAME",
+        "TASK_CHANGE_FILE_SUFFIX",
+        "MAX_TEXT_BLOB_BYTES",
+        "MAX_SHELL_SNAPSHOT_FILES"
+      ]
+    },
+    "fork:src/services/taskChangeLedger/GitChangePathProvider.ts": {
+      "repository": "fork",
+      "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+      "path": "src/services/taskChangeLedger/GitChangePathProvider.ts",
+      "blobOid": "e15c0f57ed2cd3aafd3dfef6c8b27839ca34d182",
+      "declarationExamples": [
+        "GitChangeRelation",
+        "GitChangePathEntry",
+        "GitChangePathResult",
+        "ParseOptions",
+        "RunOptions",
+        "DEFAULT_MAX_PATHS",
+        "resultFromEntries",
+        "relationKindForStatus"
+      ]
+    },
+    "fork:src/services/taskChangeLedger/TaskChangeWriterLock.ts": {
+      "repository": "fork",
+      "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+      "path": "src/services/taskChangeLedger/TaskChangeWriterLock.ts",
+      "blobOid": "6065a8466b8bb03926ff575d158cdb8861755c70",
+      "declarationExamples": [
+        "TaskWriterLockOwner",
+        "AcquireTaskWriterLockOptions",
+        "AcquireTaskWriterLockResult",
+        "DEFAULT_WAIT_BUDGET_MS",
+        "DEFAULT_HEARTBEAT_INTERVAL_MS",
+        "DEFAULT_STALE_THRESHOLD_MS",
+        "MAX_TASK_ID_ARTIFACT_SEGMENT_LENGTH",
+        "OWNER_RENAME_RETRY_DELAYS_MS"
+      ]
+    },
+    "fork:src/services/opencode/OpenCodeLedgerBridgeService.ts": {
+      "repository": "fork",
+      "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+      "path": "src/services/opencode/OpenCodeLedgerBridgeService.ts",
+      "blobOid": "8516ae3a1b906c6f77212fe2d3be03262e7b9d48",
+      "declarationExamples": [
+        "OpenCodeLedgerBackfillOutcome",
+        "OpenCodeLedgerBridgeBackfillResult",
+        "BackfillParams",
+        "SessionStorePort",
+        "MAX_SCANNED_RECORDS",
+        "MAX_METADATA_TEXT_BLOB_BYTES",
+        "DELIVERY_CONTEXT_FILE_NAME",
+        "DELIVERY_CONTEXT_TEMP_PREFIX"
+      ]
+    },
+    "fork:src/services/opencode/OpenCodeToolpartChangeReconstructor.ts": {
+      "repository": "fork",
+      "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+      "path": "src/services/opencode/OpenCodeToolpartChangeReconstructor.ts",
+      "blobOid": "076822b03aa98004eaca4415a745137144299c4a",
+      "declarationExamples": [
+        "OpenCodeTaskRef",
+        "OpenCodeLedgerAttributionMode",
+        "OpenCodeDeliveryContextV1",
+        "ReconstructedOpenCodeToolChange",
+        "SkippedOpenCodeSnapshotOnlyChange",
+        "Toolpart",
+        "TaskContext",
+        "TaskContextResolution"
+      ]
+    },
+    "fork:src/services/opencode/OpenCodeSnapshotEvidenceProvider.ts": {
+      "repository": "fork",
+      "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+      "path": "src/services/opencode/OpenCodeSnapshotEvidenceProvider.ts",
+      "blobOid": "15ca3b1b89a4240df1bada7595ea9e0caade16db",
+      "declarationExamples": [
+        "ADAPTER_VERSION",
+        "SNAPSHOT_SHAPE_FINGERPRINT",
+        "fingerprintWindow",
+        "partOrderById",
+        "groupChangesByWindow",
+        "appendPatchHintDiagnostics",
+        "appendSessionDirectoryScopeDiagnostics",
+        "OpenCodeSnapshotEvidenceProviderService"
+      ]
+    },
+    "fork:src/services/taskChangeLedger/TaskChangeLedgerService.test.ts": {
+      "repository": "fork",
+      "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+      "path": "src/services/taskChangeLedger/TaskChangeLedgerService.test.ts",
+      "blobOid": "6cd349991bcd7331460448f4e9980bdc330f7c92",
+      "declarationExamples": [
+        "MAX_TASK_ID_ARTIFACT_SEGMENT_LENGTH",
+        "runGit",
+        "writeRepoFile",
+        "createGitRepo",
+        "commitAll",
+        "setRepoContext",
+        "openScope",
+        "readJson"
+      ]
+    },
+    "fork:src/services/opencode/OpenCodeLedgerBridge.fixture-e2e.test.ts": {
+      "repository": "fork",
+      "sourceRef": "969afc56ec39d92c33dd5aabd15ef782da94dd87",
+      "path": "src/services/opencode/OpenCodeLedgerBridge.fixture-e2e.test.ts",
+      "blobOid": "688d3bfa2eda6418f4bd0de295a226272fd73822",
+      "declarationExamples": [
+        "LEDGER_CLI_FIXTURE_E2E_TIMEOUT_MS",
+        "LEDGER_CLI_MODE_MATRIX_E2E_TIMEOUT_MS",
+        "SNAPSHOT_PROJECT_ID",
+        "supportsNewlineFilenames",
+        "newlinePathFixtureTest",
+        "SnapshotProofMode",
+        "FixtureOpenCodeOfflineSessionReader",
+        "sessionRecord"
+      ]
+    },
+    "frontend:src/main/services/team/ChangeExtractorService.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/ChangeExtractorService.ts",
+      "blobOid": "cff5d5124905042bbc46dbe3399c0b6799042103",
+      "declarationExamples": [
+        "logger",
+        "OPEN_CODE_AUTO_BACKFILL_ATTRIBUTION_MODE",
+        "OPEN_CODE_AUTO_BACKFILL_EVIDENCE_PIPELINE",
+        "OPEN_CODE_MAX_DISCOVERED_LANES",
+        "TEAM_TASK_CHANGE_SUMMARY_BATCH_INSPECT_LIMIT",
+        "TEAM_TASK_CHANGE_SUMMARY_BATCH_LIMIT",
+        "TEAM_TASK_CHANGE_SUMMARY_BATCH_CONCURRENCY",
+        "TEAM_TASK_CHANGE_SUMMARY_TASK_TIMEOUT_MS"
+      ]
+    },
+    "frontend:src/main/services/team/TaskChangeLedgerReader.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/TaskChangeLedgerReader.ts",
+      "blobOid": "bf2359822e7706277fc3d77494232d7069dc1ba2",
+      "declarationExamples": [
+        "logger",
+        "TASK_CHANGE_JOURNAL_SCHEMA_VERSION",
+        "TASK_CHANGE_SUMMARY_SCHEMA_VERSION",
+        "TASK_CHANGE_FRESHNESS_SCHEMA_VERSION",
+        "TASK_CHANGE_LEDGER_DIRNAME",
+        "TASK_CHANGE_FRESHNESS_DIRNAME",
+        "MAX_TASK_ID_ARTIFACT_SEGMENT_LENGTH",
+        "TASK_CHANGE_LEDGER_READ_LIMITS"
+      ]
+    },
+    "frontend:src/main/services/team/ReviewApplierService.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/ReviewApplierService.ts",
+      "blobOid": "6b945e104c22014ad2044147dc3828bf2510e7e0",
+      "declarationExamples": [
+        "ReviewApplyMutationHooks",
+        "ReviewApplyMutationContext",
+        "reviewApplyMutationContext",
+        "ApplyErrorCode",
+        "LedgerApplyOutcome",
+        "CurrentTextReadResult",
+        "ReviewFileTransitionState",
+        "ReviewRenameTransitionState"
+      ]
+    },
+    "frontend:src/main/services/team/ReviewMutationJournalStore.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/ReviewMutationJournalStore.ts",
+      "blobOid": "a52e05949599d669d137ddca34c7f03942a2b339",
+      "declarationExamples": [
+        "JOURNAL_VERSION",
+        "MAX_JOURNAL_BYTES",
+        "MAX_JOURNAL_RECORDS_PER_SCOPE",
+        "TEAM_NAME_PATTERN",
+        "SCOPE_KEY_PATTERN",
+        "CorruptReviewMutationJournalError",
+        "ReviewMutationJournalDiscardInspection",
+        "ReviewMutationJournalRecord"
+      ]
+    },
+    "frontend:src/main/ipc/review.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/ipc/review.ts",
+      "blobOid": "67cf0fd670794918f1b73cbe7324eefba9a0dc48",
+      "declarationExamples": [
+        "wrapReviewHandler",
+        "logger",
+        "TEAM_TASK_CHANGE_SUMMARY_IPC_RAW_REQUEST_LIMIT",
+        "TEAM_TASK_CHANGE_SUMMARY_IPC_UNIQUE_REQUEST_LIMIT",
+        "MAX_REVIEW_DECISIONS",
+        "MAX_REVIEW_SNIPPETS_PER_FILE",
+        "MAX_REVIEW_HUNK_DECISIONS_PER_FILE",
+        "MAX_REVIEW_MUTATION_STEPS"
+      ]
+    },
+    "frontend:test/main/ipc/review.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/main/ipc/review.test.ts",
+      "blobOid": "5e38690e9fb0aee385b0b5b5da7446d0a39fb50f",
+      "declarationExamples": ["ReviewHandler", "createMockIpcMain"]
+    },
+    "frontend:test/features/review-mutations/main/ReviewMutationCrash.safe-e2e.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/features/review-mutations/main/ReviewMutationCrash.safe-e2e.test.ts",
+      "blobOid": "1a493fd16dc2efdc3127f032416e419bcb77ceb5",
+      "declarationExamples": [
+        "CrashPoint",
+        "WorkerResult",
+        "RecoverySnapshot",
+        "temporaryRoots",
+        "workerPath",
+        "tsxPath",
+        "runWorker",
+        "WINDOWS_TERMINATE_PROCESS_EXIT_CODE"
+      ]
+    },
+    "frontend:test/main/services/team/TaskChangeLedgerReader.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/main/services/team/TaskChangeLedgerReader.test.ts",
+      "blobOid": "b508dd33bd2433a2ffaab055ee40341fde0bc3b8",
+      "declarationExamples": [
+        "TASK_ID",
+        "safeTaskIdSegment",
+        "sha",
+        "makeBlobEvent",
+        "makeLedgerBundle",
+        "makeSummaryLedgerBundleV2",
+        "fsTempDir"
+      ]
+    },
+    "frontend:src/features/runtime-provider-management/core/application/RuntimeProviderManagementPort.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/runtime-provider-management/core/application/RuntimeProviderManagementPort.ts",
+      "blobOid": "6216891385a81da2ebfb6ada44680ee7c16bb6cb",
+      "declarationExamples": ["RuntimeProviderManagementPort", "RuntimeLocalProviderConnectorPort"]
+    },
+    "frontend:src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts",
+      "blobOid": "7ddc84597654bec1ac71341938366ce23c981ed4",
+      "declarationExamples": [
+        "COMMAND_TIMEOUT_MS",
+        "OAUTH_COMMAND_TIMEOUT_MS",
+        "OAUTH_CANCEL_FORCE_KILL_DELAY_MS",
+        "DIRECTORY_RESPONSE_CACHE_TTL_MS",
+        "DEFAULT_DIRECTORY_RESPONSE_CACHE_TTL_MS",
+        "MAX_DIRECTORY_RESPONSE_CACHE_ENTRIES",
+        "MODEL_RESPONSE_CACHE_TTL_MS",
+        "DEFAULT_MODEL_RESPONSE_CACHE_TTL_MS"
+      ]
+    },
+    "frontend:src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.test.ts",
+      "blobOid": "0efa9f5b6b4822f938ea68b1f30327dacbca1c74",
+      "declarationExamples": [
+        "deferred",
+        "modelResponse",
+        "inventoryTimeout",
+        "directoryInput",
+        "directoryResponse",
+        "directoryOutput",
+        "expectDirectoryWarnings"
+      ]
+    },
+    "frontend:src/main/services/team/provisioning/__tests__/TeamProvisioningEnvBuilder.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningEnvBuilder.test.ts",
+      "blobOid": "f8ed0f7edfa931833203a3dca76cacd796b51fc7",
+      "declarationExamples": ["createPorts"]
+    },
+    "frontend:src/renderer/components/team/dialogs/teamRelaunchFlow.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/renderer/components/team/dialogs/teamRelaunchFlow.ts",
+      "blobOid": "2a253732da178baa8ff178d53979fbd665901610",
+      "declarationExamples": ["ExecuteTeamRelaunchOptions", "executeTeamRelaunch"]
+    },
+    "frontend:src/main/ipc/teams/teamSoftDeleteFlow.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/ipc/teams/teamSoftDeleteFlow.ts",
+      "blobOid": "ff54b2faba1ca0a7799f05901d4ed901432053b0",
+      "declarationExamples": [
+        "STOP_TIMEOUT_MS",
+        "TeamSoftDeleteFlowPorts",
+        "softDeleteTeamWithBestEffortStop"
+      ]
+    },
+    "frontend:src/main/services/team/TeamMemberRestorePlan.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/TeamMemberRestorePlan.ts",
+      "blobOid": "ad54c9edf73b0d7984f8c5c5348603332d46b431",
+      "declarationExamples": ["TeamMemberRestorePlan", "planTeamMemberRestore"]
+    },
+    "frontend:src/main/services/team/permanent-deletion/TeamPermanentDeletionCoordinator.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/permanent-deletion/TeamPermanentDeletionCoordinator.ts",
+      "blobOid": "35e7c1d78925b3dc218e772e38e46a12b85a72a7",
+      "declarationExamples": [
+        "BackupManifestPort",
+        "BackupRegistryEntryPort",
+        "TeamPermanentDeletionCoordinatorPorts",
+        "isEnoent",
+        "isValidConfig",
+        "nowIso",
+        "TeamPermanentDeletionCoordinator"
+      ]
+    },
+    "frontend:src/main/services/team/TeamBackupService.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/TeamBackupService.ts",
+      "blobOid": "a10bd083bcddf5239f3ab8d5015883a848dab3e8",
+      "declarationExamples": [
+        "logger",
+        "PERIODIC_INTERVAL_MS",
+        "TASK_DEBOUNCE_MS",
+        "DELETED_RETENTION_DAYS",
+        "MAX_FILE_SIZE_BYTES",
+        "TEAM_ROOT_FILES",
+        "TEAM_SUBDIRS",
+        "TEAM_RECURSIVE_SUBDIRS"
+      ]
+    },
+    "frontend:src/main/services/team/TeamBackupRestoreService.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/TeamBackupRestoreService.ts",
+      "blobOid": "01b3df82bc0e02b7953db8897f91a32944956bdf",
+      "declarationExamples": [
+        "logger",
+        "LAUNCH_STATE_PUBLICATION_FILES",
+        "DRAFT_DELETION_IDENTITY_FILE",
+        "SourceConfigObservation",
+        "TeamBackupRestorePorts",
+        "isEnoent",
+        "isValidJson",
+        "isValidConfig"
+      ]
+    },
+    "frontend:src/main/services/team/TeamBackupWorkSyncRestoreCoordinator.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/TeamBackupWorkSyncRestoreCoordinator.ts",
+      "blobOid": "1341c4689f872ade9826f63bd3ae8501e77589b2",
+      "declarationExamples": [
+        "logger",
+        "RegistryEntry",
+        "LiveConfigState",
+        "TeamBackupRestoreProgress",
+        "RESTORE_CONCURRENCY",
+        "runBounded",
+        "RestorePorts",
+        "TeamBackupWorkSyncRestoreCoordinator"
+      ]
+    },
+    "frontend:src/features/team-runtime-recovery/core/application/DispatchDueRecoveries.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/features/team-runtime-recovery/core/application/DispatchDueRecoveries.ts",
+      "blobOid": "f5dd16da929efa2f9e2a06d2499260ee41848ad1",
+      "declarationExamples": [
+        "CLAIM_STALE_MS",
+        "DELIVERY_RETRY_DELAYS_MS",
+        "OUTCOME_TIMEOUT_MS",
+        "DispatchDueRecoveriesDeps",
+        "DispatchDueRecoveriesSummary",
+        "emptySummary",
+        "isDue",
+        "releaseCircuit"
+      ]
+    },
+    "frontend:test/renderer/components/team/dialogs/teamRelaunchFlow.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/renderer/components/team/dialogs/teamRelaunchFlow.test.ts",
+      "blobOid": "fc3be31b04fb6a55e42f1744e2d188d62e1d9211",
+      "declarationExamples": []
+    },
+    "frontend:test/main/ipc/teams/teamSoftDeleteFlow.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/main/ipc/teams/teamSoftDeleteFlow.test.ts",
+      "blobOid": "d651884f965e6568d29a776303ab5ce8bdfc5905",
+      "declarationExamples": ["STOP_TIMEOUT_MS", "createPorts"]
+    },
+    "frontend:test/main/services/team/TeamBackupService.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/main/services/team/TeamBackupService.test.ts",
+      "blobOid": "b5e69b4414ed263b208e15564f39525345fda784",
+      "declarationExamples": [
+        "hoisted",
+        "removePreparedDeletionTargets",
+        "getPermanentDeletionLockPath",
+        "PermanentDeletionTestLock",
+        "getAcquirePermanentDeletionLock",
+        "getReleasePermanentDeletionLock"
+      ]
+    },
+    "frontend:test/main/services/team/TeamBackupRestoreStartupIsolation.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/main/services/team/TeamBackupRestoreStartupIsolation.test.ts",
+      "blobOid": "f8e4e8e7d9b5abec7fdc6be1ac8a8aea1a6b4d31",
+      "declarationExamples": ["env", "seedBackupTeam", "createSkipCoordinator"]
+    },
+    "frontend:src/main/services/infrastructure/codexAppServer/JsonRpcStdioClient.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/infrastructure/codexAppServer/JsonRpcStdioClient.ts",
+      "blobOid": "5b09a217c9b12086c718d8ea58efe6033880d433",
+      "declarationExamples": [
+        "JsonRpcLogger",
+        "JsonRpcErrorPayload",
+        "JsonRpcResponse",
+        "JsonRpcNotificationMessage",
+        "JsonRpcSession",
+        "withTimeout",
+        "DEFAULT_REQUEST_TIMEOUT_MS",
+        "DEFAULT_TOTAL_TIMEOUT_MS"
+      ]
+    },
+    "frontend:src/main/services/team/TeamMcpConfigBuilder.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/TeamMcpConfigBuilder.ts",
+      "blobOid": "a7dbebeedee82633b5cf435b22bdbfe90d6b0ee5",
+      "declarationExamples": [
+        "McpLaunchSpec",
+        "McpLaunchSpecResolveProgress",
+        "McpLaunchSpecResolveOptions",
+        "WriteMcpConfigOptions",
+        "MCP_SERVER_NAME",
+        "MCP_CLAUDE_DIR_ENV",
+        "MCP_CONTROL_URL_ENV",
+        "logger"
+      ]
+    },
+    "frontend:package.json": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "package.json",
+      "blobOid": "f612b5f36e5028278851440e7dfc1690026eb2c9",
+      "declarationExamples": []
+    },
+    "frontend:pnpm-workspace.yaml": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "pnpm-workspace.yaml",
+      "blobOid": "dd4399be0ab8d43d3a6ef758aecd40a971192dcf",
+      "declarationExamples": []
+    },
+    "frontend:scripts/stage-runtime.mjs": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "scripts/stage-runtime.mjs",
+      "blobOid": "00b662aee6732d45cfc479527c306464ac3a4a57",
+      "declarationExamples": [
+        "scriptDir",
+        "repoRoot",
+        "runtimeLockPath",
+        "runtimeDir",
+        "downloadRoot",
+        "printUsage",
+        "parseArgs",
+        "runOrThrow"
+      ]
+    },
+    "frontend:scripts/dev-with-runtime.mjs": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "scripts/dev-with-runtime.mjs",
+      "blobOid": "f4584697181aa65c1e463f098e059bdf8849ce2e",
+      "declarationExamples": [
+        "scriptDir",
+        "uiRepoRoot",
+        "runtimeRepoRoot",
+        "explicitRuntimeCliPath",
+        "disableAuthenticatedRuntimeDownload",
+        "runtimeLockPath",
+        "defaultRuntimeCacheRoot",
+        "runtimeCacheRoot"
+      ]
+    },
+    "provider:packages/platform/provider-implementations/src/session-io.ts": {
+      "repository": "provider",
+      "sourceRef": "7805dbf49d298f21bbb489faa99fe79a1116c17a",
+      "path": "packages/platform/provider-implementations/src/session-io.ts",
+      "blobOid": "f29bb42176f624669d414f66731839e829127b82",
+      "declarationExamples": []
+    },
+    "frontend:src/main/services/infrastructure/codexAppServer/__tests__/JsonRpcStdioClient.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/infrastructure/codexAppServer/__tests__/JsonRpcStdioClient.test.ts",
+      "blobOid": "cabac893d25c0f827b0fa795b452f06e37875b7c",
+      "declarationExamples": [
+        "tempDirs",
+        "createStrictJsonRpcServerScript",
+        "readline",
+        "rl",
+        "createSignalIgnoringJsonRpcServerScript"
+      ]
+    },
+    "frontend:src/renderer/api/index.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/renderer/api/index.ts",
+      "blobOid": "c314cd123ebc7a14cb22adb6cba13b3c30ec9afd",
+      "declarationExamples": ["getHttpBaseUrl", "getImpl", "isElectronMode", "api"]
+    },
+    "frontend:src/main/ipc/httpServer.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/ipc/httpServer.ts",
+      "blobOid": "c728120c65ada86da85bc6de966b0c29607e6714",
+      "declarationExamples": [
+        "logger",
+        "enqueueLifecycleOperation",
+        "initializeHttpServerHandlers",
+        "registerHttpServerHandlers",
+        "removeHttpServerHandlers",
+        "handleStart",
+        "handleStop",
+        "handleGetStatus"
+      ]
+    },
+    "frontend:test/main/ipc/httpServer.test.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/main/ipc/httpServer.test.ts",
+      "blobOid": "749e6e021c43d4448804183b5f3ae4a4f8c5897d",
+      "declarationExamples": ["HttpServerResult", "IpcHandler", "deferred", "createMockIpcMain"]
+    },
+    "frontend:agent-teams-controller/src/internal/processStore.js": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "agent-teams-controller/src/internal/processStore.js",
+      "blobOid": "7e99ed6d38d7a7d6ef7d4e829740704abf06cd01",
+      "declarationExamples": [
+        "fs",
+        "crypto",
+        "runtimeHelpers",
+        "nowIso",
+        "readJson",
+        "writeJson",
+        "readProcesses",
+        "writeProcesses"
+      ]
+    },
+    "frontend:src/main/services/team/TeamDataService.ts": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/main/services/team/TeamDataService.ts",
+      "blobOid": "4a7b60a2b2290a21598b8b8cc6571742c520e815",
+      "declarationExamples": [
+        "logger",
+        "MIN_TEXT_LENGTH",
+        "MAX_LEAD_TEXTS",
+        "LEAD_SESSION_PARSE_CACHE_SCHEMA_VERSION",
+        "PROCESS_HEALTH_INTERVAL_MS",
+        "TASK_MAP_YIELD_EVERY",
+        "TASK_COMMENT_NOTIFICATION_SOURCE",
+        "MEMBER_RUNTIME_ADVISORY_SNAPSHOT_BUDGET_MS"
+      ]
+    },
+    "frontend:src/renderer/components/team/ProcessesSection.tsx": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "src/renderer/components/team/ProcessesSection.tsx",
+      "blobOid": "e2f4b096b02870e0ae2a6c3122d95699978626cb",
+      "declarationExamples": [
+        "ProcessesSectionProps",
+        "areMembersEquivalent",
+        "areProcessesEquivalent",
+        "ProcessesSection",
+        "areProcessesSectionPropsEqual"
+      ]
+    },
+    "frontend:test/renderer/components/team/ProcessesSection.test.tsx": {
+      "repository": "frontend",
+      "sourceRef": "07e7d8e0d44f4a3999e2693dfa2986d6b3819403",
+      "path": "test/renderer/components/team/ProcessesSection.test.tsx",
+      "blobOid": "7953d49bd738ff4b5187a0b161e96bacff03d2f3",
+      "declarationExamples": ["processRow"]
+    }
+  },
+  "remainingClosure": [
+    "Resolve only used imports for each extracted use case; verify selected patches against blob IDs before copy. Representative files do not establish a portable transitive closure.",
+    "Complete final provider native dialect/config qualification and packaged OS tuple proof; selected Node24.21 darwin-arm64 staging and direct native capture feasibility are recorded above.",
+    "Complete task/comment attachment, process OS authority, permanent deletion and member-work-sync restore oracle roster at the implementing boundary.",
+    "Integrate sufficient capture path through D/Host and task/window owner; direct native feasibility alone does not close overlap/background/product review acceptance.",
+    "Provider/contract clean packed closure and old re-export have focused proof; finish owning metadata/gates/source checkpoint and broader host product acceptance.",
+    "Run actual mixed-provider Team/Runtime/Desktop and restart/review/packaged acceptance; recorded native capture proof uses only its TEST fixtures and does not qualify those product workflows."
+  ],
+  "validation": {
+    "gitObjects": "All source refs are commit objects; every catalog path resolved to a blob at its declared sourceRef",
+    "coverage": "All M01-M19 have source and existing oracle references via at least one seam",
+    "shape": "Unique seam IDs; valid owner/matrix IDs; source/oracle references resolve; no selected artifact digest or native proof invented",
+    "execution": "Source inventory validation only; separately linked implementation/native evidence records its own actual TEST executions and limits.",
+    "implementationEvidenceNote": "Native feasibility is scoped to exact archived source/receipts; this is not M13 or P4/P8 parity. Source closure and final provider artifact selection remain open."
+  }
+}

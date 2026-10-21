@@ -1,0 +1,37 @@
+{
+  "name": "@agent-teams/legacy-agent-host",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.21.0 <25"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts.d.ts",
+      "import": "./dist/contracts.js"
+    },
+    "./cli": "./dist/cli.js"
+  },
+  "bin": {
+    "legacy-agent-host": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json",
+    "typecheck": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json --noEmit",
+    "typecheck:test": "node node_modules/@typescript/native/bin/tsc -p tsconfig.test.json",
+    "test": "pnpm build && pnpm typecheck:test && node --test tests/*.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4",
+    "@typescript/native": "npm:typescript@7.0.2"
+  }
+}

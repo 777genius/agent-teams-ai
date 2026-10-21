@@ -42,7 +42,7 @@
     "team:prove-launch-matrix": "pnpm exec vitest run --maxWorkers=1 test/main/services/team/TeamAgentLaunchMatrix.safe-e2e.test.ts",
     "team:smoke-changes-real-data": "tsx scripts/team-changes-real-data-smoke.ts",
     "smoke:codex-runtime-install": "tsx scripts/smoke/codex-runtime-install.ts",
-    "prebuild": "node ./scripts/ci/verify-radix-presence-patch.mjs && tsx scripts/fetch-pricing-data.ts && pnpm --filter agent-teams-controller build && pnpm --filter agent-teams-mcp build",
+    "prebuild": "pnpm --filter @agent-teams/legacy-agent-host build && node ./scripts/ci/verify-radix-presence-patch.mjs && tsx scripts/fetch-pricing-data.ts && pnpm --filter agent-teams-controller build && pnpm --filter agent-teams-mcp build",
     "build": "node --max-old-space-size=8192 ./node_modules/electron-vite/bin/electron-vite.js build",
     "postbuild": "node ./scripts/ci/verify-radix-renderer-bundle.mjs",
     "stage-runtime": "node ./scripts/stage-runtime.mjs",
@@ -70,7 +70,7 @@
     "preview": "electron-vite preview",
     "typecheck": "node ./node_modules/@typescript/native/bin/tsc --noEmit",
     "typecheck:legacy": "node ./node_modules/typescript/bin/tsc --noEmit",
-    "typecheck:workspace": "pnpm typecheck && pnpm --filter agent-teams-mcp typecheck && pnpm --filter agent-teams-mcp typecheck:test",
+    "typecheck:workspace": "pnpm typecheck && pnpm typecheck:legacy-host-scripts && pnpm --filter @agent-teams/legacy-agent-host typecheck:test && pnpm --filter agent-teams-mcp typecheck && pnpm --filter agent-teams-mcp typecheck:test",
     "lint": "node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js src/ --cache --cache-location .eslintcache --cache-strategy content",
     "lint:ci:files": "node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js --cache --cache-strategy content",
     "lint:fast": "eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content src/",
@@ -80,8 +80,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
     "build:workspace": "pnpm build && pnpm --filter agent-teams-controller build && pnpm --filter agent-teams-mcp build",
-    "test:workspace": "pnpm test && pnpm --filter agent-teams-controller test && pnpm --filter agent-teams-mcp test",
-    "test:workspace:ci": "pnpm test:ci && pnpm --filter agent-teams-controller test && pnpm --filter agent-teams-mcp test",
+    "test:workspace": "pnpm test && pnpm --filter agent-teams-controller test && pnpm --filter agent-teams-mcp test && pnpm --filter @agent-teams/legacy-agent-host test",
+    "test:workspace:ci": "pnpm test:ci && pnpm --filter agent-teams-controller test && pnpm --filter agent-teams-mcp test && pnpm --filter @agent-teams/legacy-agent-host test",
     "check:workspace": "pnpm typecheck:workspace && pnpm test:workspace && pnpm build:workspace && pnpm --filter agent-teams-mcp test:e2e",
     "check:workspace:ci": "pnpm typecheck:workspace && pnpm test:workspace:ci && pnpm build:workspace && pnpm --filter agent-teams-mcp test:e2e",
     "check": "pnpm guard:source-file-size && pnpm guard:team-provisioning-architecture && pnpm check:workspace && pnpm lint && pnpm lint:mcp",
@@ -114,7 +114,11 @@
     "standalone:build": "node --max-old-space-size=8192 ./node_modules/electron-vite/bin/electron-vite.js build && node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build --config docker/vite.standalone.config.ts",
     "standalone:start": "node dist-standalone/index.cjs",
     "prepare": "husky",
-    "postinstall": "electron-rebuild -f -o node-pty,ssh2,cpu-features,better-sqlite3 || echo 'native Electron rebuild failed (terminal/ssh/sqlite features may be degraded)'; node ./scripts/ensure-electron-install.cjs"
+    "postinstall": "electron-rebuild -f -o node-pty,ssh2,cpu-features,better-sqlite3 || echo 'native Electron rebuild failed (terminal/ssh/sqlite features may be degraded)'; node ./scripts/ensure-electron-install.cjs",
+    "pretypecheck": "pnpm --filter @agent-teams/legacy-agent-host build",
+    "test:legacy-agent-host": "pnpm --filter @agent-teams/legacy-agent-host test && pnpm exec vitest run test/features/agent-backend --maxWorkers=1",
+    "stage:legacy-host-node": "node scripts/legacy-agent-host/stage-node.ts",
+    "typecheck:legacy-host-scripts": "node node_modules/@typescript/native/bin/tsc --project tsconfig.legacy-agent-host-scripts.json"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx,js,jsx}": [
@@ -247,7 +251,8 @@
     "ws": "^8.21.0",
     "yaml": "^2.9.0",
     "yet-another-react-lightbox": "^3.29.1",
-    "zustand": "^4.5.0"
+    "zustand": "^4.5.0",
+    "@agent-teams/legacy-agent-host": "workspace:*"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.4",
@@ -360,6 +365,10 @@
       {
         "from": "mcp-server/package.json",
         "to": "mcp-server/package.json"
+      },
+      {
+        "from": "resources/legacy-agent-host",
+        "to": "legacy-agent-host"
       }
     ],
     "npmRebuild": false,
