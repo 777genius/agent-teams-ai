@@ -22,7 +22,7 @@ async function main() {
   const [executable, sdk, binary, model, authFile, stopProbe, projectConfigFile] = process.argv.slice(2);
   assert(stopProbe === undefined || stopProbe === '--held-stop', 'Unknown smoke option');
   assert(executable && sdk && binary && model && authFile, 'Explicit test inputs required');
-  assert(/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_./:-]+$/.test(model), 'Explicit provider/model required');
+  assert(/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_./:~-]+$/.test(model), 'Explicit provider/model required');
   for (const file of [executable, binary, authFile]) assert(path.isAbsolute(file));
   assert(
     sdk === 'bundled' || path.isAbsolute(sdk),

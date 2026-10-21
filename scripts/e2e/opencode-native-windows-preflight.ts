@@ -1433,7 +1433,7 @@ assert(process.argv.length === 7 || process.argv.length === 8);
 const versionSelection = process.argv[7] ?? 'all';
 assert(['all', 'v2', 'current'].includes(versionSelection), 'Unknown Windows preflight version selection');
 const selectedModel = process.argv[5]!;
-assert(/^openrouter\/[a-zA-Z0-9_./:-]+$/.test(selectedModel), 'Explicit TEST selected model required for native startup, including source-only; no model prompts are submitted');
+assert(/^openrouter\/[a-zA-Z0-9_./:~-]+$/.test(selectedModel), 'Explicit TEST selected model required for native startup, including source-only; no model prompts are submitted');
 const mcpNode = await realpath(path.resolve(process.argv[6]!));
 const mcpEntry = await realpath(path.resolve('mcp-server/dist/index.js'));
 const sdk = await realpath(path.resolve(process.argv[2]!));

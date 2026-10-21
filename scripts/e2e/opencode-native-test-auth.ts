@@ -108,7 +108,7 @@ export async function seedWindowsTestModelOutputLimit(
 ): Promise<void> {
   assert.equal(process.platform, 'win32');
   assert(path.isAbsolute(directory) && /(?:^|[\\/])TEST-[^\\/]+(?:[\\/]|$)/.test(directory));
-  assert(/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_./:-]+$/.test(model));
+  assert(/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_./:~-]+$/.test(model));
   const separator = model.indexOf('/');
   const provider = model.slice(0, separator);
   const modelId = model.slice(separator + 1);

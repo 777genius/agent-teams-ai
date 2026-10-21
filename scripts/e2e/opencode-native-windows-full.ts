@@ -1926,7 +1926,7 @@ async function main() {
   );
   for (const file of [executable, binary, authFile]) assert(path.isAbsolute(file));
   assert(sdk === 'bundled' || path.isAbsolute(sdk));
-  assert(/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_./:-]+$/.test(model));
+  assert(/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_./:~-]+$/.test(model));
   preproofStage = 'desktop_prepare';
   const desktop = await prepareNativeDesktop();
   preproofStage = 'desktop_private_acl';
