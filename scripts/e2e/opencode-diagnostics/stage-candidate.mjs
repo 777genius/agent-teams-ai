@@ -8,6 +8,10 @@ import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { extractArchive, publishRuntimePayload } from '../../lib/runtime-payload-cache.mjs';
 
+// Complete Windows deliveries exceed 100,000 entries when directories are counted.
+// Keep verification IO bounded while checking every entry of the full payload.
+const maxPayloadReceiptEntries = 131_072;
+
 // Bound API work and reject partial/changing listings before selecting a producer or artifact.
 export function candidatePages(api, endpoint, key) {
   const perPage = 100;
@@ -97,8 +101,11 @@ export async function verifyCandidatePayload(root, expected, { packaged = false 
       receipt.version === 1 &&
         receipt.archiveSha256 === expected.payloadArchiveSha256 &&
         receipt.binaryName === 'claude-multimodel.exe' &&
-        Array.isArray(receipt.entries) &&
-        receipt.entries.length <= 100000
+        Array.isArray(receipt.entries)
+    );
+    assert(
+      receipt.entries.length <= maxPayloadReceiptEntries,
+      'Candidate payload receipt exceeds entry limit'
     );
     // Pinned builder-util copyDir omits these markers and directories without copied files.
     const marker = (file) => ['.DS_Store', '.gitkeep'].includes(path.posix.basename(file));

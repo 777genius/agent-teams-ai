@@ -178,6 +178,31 @@ test('complete candidate publication replaces stale published JS/Bun and detects
     );
     Object.assign(expected, verified);
     await verifyCandidatePayload(target, expected);
+    const receiptPath = path.join(target, '.archive-payload.json');
+    const originalReceipt = await readFile(receiptPath);
+    const oversizedReceipt = Buffer.from(
+      JSON.stringify({
+        ...JSON.parse(originalReceipt),
+        entries: Array.from({ length: 131_073 }, (_, index) => [
+          `absent-companion-${index}.js`,
+          'c'.repeat(64),
+        ]),
+      })
+    );
+    await writeFile(receiptPath, oversizedReceipt);
+    try {
+      // The receipt hash is valid, but its first companion is absent. Require
+      // the count guard to reject before attempting any receipt-entry IO.
+      await assert.rejects(
+        verifyCandidatePayload(target, {
+          ...expected,
+          payloadReceiptSha256: hash(oversizedReceipt),
+        }),
+        { code: 'ERR_ASSERTION', message: 'Candidate payload receipt exceeds entry limit' }
+      );
+    } finally {
+      await writeFile(receiptPath, originalReceipt);
+    }
     const packaged = path.join(root, 'packaged');
     await copyDir(target, packaged, { isUseHardLink: () => false });
     for (const omitted of [
