@@ -588,6 +588,10 @@ runtime части M13–M19 проходят actual host path; целые ст�
    Existing queued-message listing/discard идёт тому же owner; незавершённая
    доставка не скрывается удалением строки inbox. Snapshot/replay закрывает race
    mutation между чтением state и подключением feed.
+7. Включить app Quit/Relaunch в existing shutdown coordination: captured host owner
+   учитывает pending opens и active sessions, синхронно seals work/recovery ingress,
+   сохраняет control/MCP до bounded cleanup. Legacy stop/kill fallback не обслуживает
+   host-owned resources. Порядок и timeout/debt — §2 протоколов.
 
 **Выход:** обычный Electron UI показывает/управляет host-owned командой при sentinel
 старых CLI/readers; IPC и HTTP вызывают те же semantics, late feeds не меняют target.
@@ -615,6 +619,8 @@ runtime части M13–M19 проходят actual host path; целые ст�
    отдельно от file Reject→Undo/Redo и stale snapshot/revision refusal. Детали и
    конкретный failed-tool capture proof заданы в
    [§10 протоколов](stage-1-contracts.md#10-task-lifecycle-и-evidencereview).
+   Тот же review workflow включает positive mixed-hunk Apply и сохранность exact
+   bytes/decisions/history после reconnect и host restart.
    Existing lifecycle/backup suites закрывают trash при UNKNOWN stop, restore без
    dispatch и interrupted identity-fenced purge; Electron проверяет видимые действия.
 4. Сопоставить M01–M19 с proof на host path; missing observation требует driver/
@@ -662,6 +668,9 @@ host-owned user actions; release/signing/publication ещё не выполня�
 2. На том же ownership path воспроизвести restart/response-loss/control/revoke
    failures, проверить no duplicate effects и narrow cleanup. Fault fixtures не
    дублируются на каждом слое без отдельного проверяемого риска.
+   App Quit/Relaunch проходит новый owner path без recovery при shutdown; следующий
+   startup не оживляет очередь и сохраняет unresolved debt. Headless order/timeouts
+   проверяются existing shutdown suites, Electron подтверждает фактическое wiring.
 3. Выполнить required gates затронутых repos на выбранных final refs. Раздельно
    сохранить build/test, synthetic native integration, real auth и OS qualification.
 4. Провести содержательное review final diff и remaining gaps. При существенном

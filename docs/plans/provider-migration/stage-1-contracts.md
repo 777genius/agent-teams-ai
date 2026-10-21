@@ -14,7 +14,7 @@ atomic-write helpers и stores переиспользуются, если вып
 | Session generation       | Runtime owner до allocation                     | Одна incarnation технической session; старая generation не оживает после crash                      |
 | Host incarnation         | Host startup                                    | Отличает новый процесс от прежнего; не даёт автоматически присвоить прежние children                |
 | Command ID + fingerprint | App caller до первого dispatch; host валидирует | Повтор intent, immutable operation/payload/resource binding; новый payload с прежним ID конфликтует |
-| Input/operation ID       | Runtime до handoff                              | Связь с message/task intent, exact session/turn и consumption/terminal; не случайный ID при retry   |
+| Delivery/input ID        | Team/outbox до admission; Runtime валидирует    | Stable intent→session/operation; технические IDs связывает Runtime; retry сохраняет input ID        |
 | Interaction/control ID   | Runtime из provider observation                 | Exact generation/operation/request и expiry; reply не может превратиться в grant другому turn       |
 | Checkpoint reference     | Runtime после durable publication               | Private opaque bytes и native store binding; renderer получает handle/status без native paths       |
 
@@ -73,6 +73,30 @@ provider interrupt; interrupt/close требуют явного scoped запр�
 Desktop не запускает replacement с предположением, что child providers умерли:
 recovery сначала проверяет прежнюю custody. Нужен конечный startup/control timeout,
 но истечение времени меняет здоровье/наблюдение, а не доказанный исход effects.
+
+### Штатные Quit и Relaunch Desktop
+
+После existing window-close readiness, когда выход действительно принят, existing
+shutdown coordination обращается к captured backend owners. До первого await
+закрываются admission новых work intents и автоматический recovery/restart host;
+позднее завершение startup/open handler не обходит этот shutdown fence. Отменённый
+Quit не переводит backend в shutdown. Pending opens и active sessions входят в
+scoped stop исходного owner, queued inputs завершаются по §4 без dispatch.
+
+Необходимые cleanup/control callbacks и MCP authority сохраняются до окончания
+scoped cleanup либо его конечного budget; затем закрываются transport и captured
+host. Ошибка/задержка одного resource не пропускает cleanup остальных. Timeout
+ожидания не отменяет прежний handler и не означает physical stop: unresolved
+obligations остаются durable, поздние writes учитывают те же fences. Relaunch
+допускает нового writer только по exit/lock/custody протоколу выше. Legacy shutdown,
+tracked-process и OpenCode fallback cleanup обслуживают только свои old-owner
+resources, не новый host или чужой shared backing.
+
+Проверка переиспользует `index.shutdown-order.test.ts` и `ShutdownMcpTransport.test.ts`:
+Quit при pending open и active input с очередью, один cleanup задержан; остальные
+targets обработаны, recovery host не стартует, очередь не исполняется, timeout
+сохраняет debt. В P8 этот же lifecycle связывается с app Quit/Relaunch и следующим
+startup; отдельный shutdown manager/harness не добавляется.
 
 ## 3. Команда и частичная запись
 
@@ -496,6 +520,7 @@ intent/effect. Native Team/Task names при compatibility mapping вызыва�
 | `review.ts`: mutations/recovery/history/edit/rename/decisions | Host-owned review use cases + existing Git/filesystem adapters   | Старый независимый apply/Undo/Redo/save/delete writer                        |
 | Task/comment attachment IPC                                   | Scoped blob + metadata operations того же Team owner             | Ambient module-level appData blob store при новом backend                    |
 | Backup startup/reconcile/restore/periodic/prune               | Owner-scoped existing backup adapters, §11                       | Legacy background publication/cleanup в новом namespace                      |
+| App Quit/Relaunch и shutdown coordination                     | Captured owners, admission/recovery fence и bounded cleanup, §2  | Pending open вне cleanup, ранний MCP teardown или recovery при выходе        |
 | Provider management CLI client                                | Существующий management port → native provider adapter, §9       | `fork runtime providers ...` даже до первого team launch                     |
 
 Cutover проверяется sentinel на **старых** entries для этих handles; новый host
@@ -674,7 +699,13 @@ task/window binding. Background completion проверяется existing relev
 Все review mutations из `review.ts` направляются одному owner: Apply/Reject,
 mutation recovery, Undo/Redo/history restore, edited-file save/delete, rejected
 rename restoration и revisioned decisions. Existing snapshot/reviewKey/revision
-guards сохраняются до filesystem effects. Acceptance: Reject → Undo/Redo,
+guards сохраняются до filesystem effects. Acceptance включает успешный Apply
+на host-owned task с двумя независимыми hunks: accepted hunk сохраняет modified
+bytes, rejected hunk восстанавливает before bytes. После reconnect и отдельного
+host restart повторное открытие Changes сохраняет decisions/history и согласованную
+revision без нового filesystem effect; старый review writer sentinel не вызывается.
+Используются existing `review.test.ts`/`ReviewApplierService.test.ts` oracles и
+один P6/P8 review workflow, без новой suite. Также проверяются Reject → Undo/Redo,
 stale snapshot/revision refusal без изменения bytes и interrupted mutation recovery.
 Открытие Changes при missing/degraded ledger показывает gap, не запускает старый
 OpenCode backfill/transcript repair. Это проверяется одним read-side sentinel.
