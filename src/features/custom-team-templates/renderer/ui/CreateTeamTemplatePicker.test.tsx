@@ -208,7 +208,8 @@ describe('CreateTeamTemplatePicker', () => {
         members: [{ name: 'backend-dev', role: 'Backend Developer', workflow: 'Build APIs' }],
         syncModelsWithLead: true,
       },
-      'custom'
+      'custom',
+      'custom:tmpl-custom-1'
     );
     const preview = host.querySelector('[data-testid="create-template-preview"]');
     expect(preview?.textContent).toContain('Custom prompt');
@@ -249,6 +250,7 @@ describe('CreateTeamTemplatePicker', () => {
         members: [],
         syncModelsWithLead: true,
       },
+      'none',
       'none'
     );
   });

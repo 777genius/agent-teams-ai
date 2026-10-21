@@ -18,44 +18,29 @@ import type { CreateTeamTemplateDraft } from '../templateDraft';
 import type { CustomTeamTemplateV1 } from '@features/custom-team-templates/contracts';
 
 export interface CreateTeamTemplatePickerProps {
-  /** Whether the surrounding creation dialog is open; drives library loading. */
   open: boolean;
-  /**
-   * Receives the wholesale draft for every explicit choice, plus which kind
-   * of source produced it. The dialog applies builtin/custom drafts exactly
-   * like the previous built-in picker (description, prompt and members are
-   * replaced, never merged), so switching templates cannot leak draft data
-   * from the previously selected template. A `none` source resets only the
-   * template-derived content fields and leaves launch/runtime settings alone.
-   */
-  onApply: (draft: CreateTeamTemplateDraft, source: 'none' | 'builtin' | 'custom') => void;
+  initialSelection?: string;
+  onApply: (
+    draft: CreateTeamTemplateDraft,
+    source: 'none' | 'builtin' | 'custom',
+    selectionValue?: string
+  ) => void;
 }
 
-/**
- * Optional template selector for team creation.
- *
- * The default selection (`none`) preserves the ordinary no-template creation
- * experience. Built-in templates come from the closed static catalogue;
- * custom templates come from the persisted library via the existing
- * read-only list operation. Applying a template only prefills the creation
- * form — creation itself still goes through the dialog's unchanged submit
- * path, and no team-creation request is sent from this picker.
- */
 export const CreateTeamTemplatePicker = ({
   open,
+  initialSelection,
   onApply,
 }: CreateTeamTemplatePickerProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { state, reload } = useCustomTemplateLibrary(open);
 
-  const [selection, setSelection] = useState<string>(CREATE_TEAM_TEMPLATE_NONE_VALUE);
+  const [selection, setSelection] = useState<string>(
+    initialSelection && initialSelection.length > 0
+      ? initialSelection
+      : CREATE_TEAM_TEMPLATE_NONE_VALUE
+  );
   const [lastCustomSnapshot, setLastCustomSnapshot] = useState<CustomTeamTemplateV1 | null>(null);
-
-  // No reset-on-open here by design: the creation form itself persists drafts
-  // across dialog opens, and the surrounding dialog content unmounts on close
-  // (fresh picker for a fresh dialog). Keeping the selection lets a reopen
-  // reload detect that the selected custom template was deleted elsewhere
-  // and surface the stale warning instead of silently dropping it.
 
   const customs = state.status === 'ready' || state.status === 'partial' ? state.templates : [];
   const libraryLoading = state.status === 'idle' || state.status === 'loading';
@@ -80,8 +65,6 @@ export const CreateTeamTemplatePicker = ({
   const previewCustom = selectedCustom ?? (staleCustomId ? lastCustomSnapshot : null);
 
   const handleSelect = (value: string): void => {
-    // Re-clicking the active option is a no-op: re-applying the same draft
-    // must never toggle dialog settings as a side effect.
     if (value === selection) return;
     const result = resolveCreateTeamTemplateDraft(value, {
       builtins: TEAM_TEMPLATES,
@@ -90,23 +73,20 @@ export const CreateTeamTemplatePicker = ({
     switch (result.status) {
       case 'none':
         setSelection(value);
-        onApply(result.draft, 'none');
+        onApply(result.draft, 'none', value);
         return;
       case 'builtin':
         setSelection(value);
-        onApply(result.draft, 'builtin');
+        onApply(result.draft, 'builtin', value);
         return;
       case 'custom': {
         const record = customs.find((entry) => entry.templateId === result.templateId) ?? null;
         setSelection(value);
         setLastCustomSnapshot(record);
-        onApply(result.draft, 'custom');
+        onApply(result.draft, 'custom', value);
         return;
       }
       default:
-        // `builtinNotFound`, `customNotFound` and `unknownSelection` cannot be
-        // produced by the rendered options; ignore defensively so a stale or
-        // forged value can never apply the wrong content.
         return;
     }
   };
@@ -129,11 +109,12 @@ export const CreateTeamTemplatePicker = ({
         </p>
       </div>
 
-      <button
+      <Button
         type="button"
+        variant="ghost"
         data-testid="create-template-option-none"
         aria-pressed={selection === CREATE_TEAM_TEMPLATE_NONE_VALUE}
-        className={`w-full ${optionClass(selection === CREATE_TEAM_TEMPLATE_NONE_VALUE)}`}
+        className={`h-auto w-full justify-start ${optionClass(selection === CREATE_TEAM_TEMPLATE_NONE_VALUE)}`}
         onClick={() => handleSelect(CREATE_TEAM_TEMPLATE_NONE_VALUE)}
       >
         <span className="text-sm font-semibold text-[var(--color-text)]">
@@ -142,7 +123,7 @@ export const CreateTeamTemplatePicker = ({
         <span className="mt-1 block text-xs text-[var(--color-text-muted)]">
           {t('customTemplates.createFromTemplate.noneHint')}
         </span>
-      </button>
+      </Button>
 
       <div className="space-y-1.5">
         <p className="text-xs font-semibold text-[var(--color-text-muted)]">
@@ -155,12 +136,13 @@ export const CreateTeamTemplatePicker = ({
             );
             const active = selection === value;
             return (
-              <button
+              <Button
                 key={template.id}
                 type="button"
+                variant="ghost"
                 data-testid={`create-template-option-builtin-${template.id}`}
                 aria-pressed={active}
-                className={optionClass(active)}
+                className={`h-auto justify-start ${optionClass(active)}`}
                 onClick={() => handleSelect(value)}
               >
                 <span className="flex items-start justify-between gap-2">
@@ -177,7 +159,7 @@ export const CreateTeamTemplatePicker = ({
                     count: template.members.length,
                   })}
                 </span>
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -232,12 +214,13 @@ export const CreateTeamTemplatePicker = ({
               const value = customTemplateSelectionValue(template.templateId);
               const active = selection === value;
               return (
-                <button
+                <Button
                   key={template.templateId}
                   type="button"
+                  variant="ghost"
                   data-testid={`create-template-option-custom-${template.templateId}`}
                   aria-pressed={active}
-                  className={optionClass(active)}
+                  className={`h-auto justify-start ${optionClass(active)}`}
                   onClick={() => handleSelect(value)}
                 >
                   <span className="text-sm font-semibold text-[var(--color-text)]">
@@ -253,7 +236,7 @@ export const CreateTeamTemplatePicker = ({
                       count: template.members.length,
                     })}
                   </span>
-                </button>
+                </Button>
               );
             })}
           </div>

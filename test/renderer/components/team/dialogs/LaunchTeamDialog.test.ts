@@ -81,7 +81,7 @@ const storeState = {
   updateSchedule,
   repositoryGroups: [],
   branchByPath: { '/tmp/project': 'main', '/tmp/project/.worktrees/jack': 'feature/current-work' },
-  fetchBranches: vi.fn(async () => {}),
+  fetchBranches: vi.fn(() => Promise.resolve()),
   selectedTeamName: 'team-alpha',
   launchParamsByTeam: {},
   teamByName: {},
@@ -117,9 +117,9 @@ vi.mock('@renderer/api', () => ({
       ),
     },
     teams: {
-      createConfig: vi.fn(async () => {}),
+      createConfig: vi.fn(() => Promise.resolve()),
       getSavedRequest: vi.fn(async () => null),
-      replaceMembers: vi.fn(async () => {}),
+      replaceMembers: vi.fn(() => Promise.resolve()),
       prepareProvisioning: vi.fn(async () => ({})),
       getWorktreeGitStatus: vi.fn(async (projectPath: string) => ({
         projectPath,
@@ -142,7 +142,7 @@ vi.mock('@renderer/api', () => ({
       })),
     },
     customTeamTemplates: {
-      listTemplates: vi.fn(async () => ({ status: 'empty' as const })),
+      listTemplates: vi.fn(() => Promise.resolve({ status: 'empty' as const })),
     },
     projectFolder: {
       getState: vi.fn(async () => ({ state: 'exists' as const })),
@@ -346,6 +346,8 @@ vi.mock('@renderer/components/ui/button', () => ({
     disabled,
     className,
     'aria-describedby': ariaDescribedBy,
+    'data-testid': dataTestId,
+    'aria-pressed': ariaPressed,
   }: {
     children: React.ReactNode;
     onClick?: () => void;
@@ -353,6 +355,8 @@ vi.mock('@renderer/components/ui/button', () => ({
     disabled?: boolean;
     className?: string;
     'aria-describedby'?: string;
+    'data-testid'?: string;
+    'aria-pressed'?: boolean;
   }) =>
     React.createElement(
       'button',
@@ -362,6 +366,8 @@ vi.mock('@renderer/components/ui/button', () => ({
         disabled,
         className,
         'aria-describedby': ariaDescribedBy,
+        'data-testid': dataTestId,
+        'aria-pressed': ariaPressed,
       },
       children
     ),
@@ -778,7 +784,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onRelaunch: vi.fn(async () => {}),
+          onRelaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -793,7 +799,7 @@ describe('LaunchTeamDialog', () => {
       'opencode'
     );
 
-    await act(async () => root.unmount());
+    act(() => root.unmount());
   });
 
   it.each([
@@ -863,7 +869,7 @@ describe('LaunchTeamDialog', () => {
           modelVerificationState: 'idle',
           modelCatalogRefreshState: 'loading',
         });
-      const submit = vi.fn(async () => {});
+      const submit = vi.fn(() => Promise.resolve());
       const host = document.createElement('div');
       document.body.appendChild(host);
       const root = createRoot(host);
@@ -953,7 +959,7 @@ describe('LaunchTeamDialog', () => {
         await flush();
       });
       expect(submit).toHaveBeenCalledOnce();
-      await act(async () => root.unmount());
+      act(() => root.unmount());
     }
   );
 
@@ -1012,7 +1018,7 @@ describe('LaunchTeamDialog', () => {
                 activeTeams: [],
                 defaultProjectPath: '/tmp/project',
                 onClose: vi.fn(),
-                onCreate: vi.fn(async () => {}),
+                onCreate: vi.fn(() => Promise.resolve()),
                 onOpenTeam: vi.fn(),
               })
             : React.createElement(LaunchTeamDialog, {
@@ -1025,7 +1031,7 @@ describe('LaunchTeamDialog', () => {
                 clearProvisioningError: vi.fn(),
                 activeTeams: [],
                 onClose: vi.fn(),
-                onLaunch: vi.fn(async () => {}),
+                onLaunch: vi.fn(() => Promise.resolve()),
               })
         );
         await flush();
@@ -1085,7 +1091,7 @@ describe('LaunchTeamDialog', () => {
           vi.mocked(runProviderPrepareDiagnostics).mock.calls.map(([input]) => input.providerId)
         )
       ).toEqual(new Set(expectedProviders));
-      await act(async () => root.unmount());
+      act(() => root.unmount());
     }
   );
 
@@ -1109,7 +1115,7 @@ describe('LaunchTeamDialog', () => {
                 activeTeams: [],
                 defaultProjectPath: '/tmp/project',
                 onClose: vi.fn(),
-                onCreate: vi.fn(async () => {}),
+                onCreate: vi.fn(() => Promise.resolve()),
                 onOpenTeam: vi.fn(),
               })
             : mode === 'schedule'
@@ -1128,7 +1134,7 @@ describe('LaunchTeamDialog', () => {
                   clearProvisioningError: vi.fn(),
                   activeTeams: [],
                   onClose: vi.fn(),
-                  onLaunch: vi.fn(async () => {}),
+                  onLaunch: vi.fn(() => Promise.resolve()),
                 })
         );
         await flush();
@@ -1137,7 +1143,7 @@ describe('LaunchTeamDialog', () => {
         await vi.advanceTimersByTimeAsync(2_500);
       });
       expect(api.workspaceTrust!.getLaunchStatus).not.toHaveBeenCalled();
-      await act(async () => root.unmount());
+      act(() => root.unmount());
     }
   );
 
@@ -1283,7 +1289,7 @@ describe('LaunchTeamDialog', () => {
         ).disabled
       ).toBe(false);
       expect(submit).toHaveBeenCalledTimes(1);
-      await act(async () => root.unmount());
+      act(() => root.unmount());
     }
   );
 
@@ -1467,7 +1473,7 @@ describe('LaunchTeamDialog', () => {
     const launchHost = document.createElement('div');
     document.body.appendChild(launchHost);
     const launchDialogRoot = createRoot(launchHost);
-    const onLaunch = vi.fn(async () => {});
+    const onLaunch = vi.fn(() => Promise.resolve());
     await act(async () => {
       launchDialogRoot.render(
         React.createElement(LaunchTeamDialog, {
@@ -1515,7 +1521,7 @@ describe('LaunchTeamDialog', () => {
     const createHost = document.createElement('div');
     document.body.appendChild(createHost);
     const createDialogRoot = createRoot(createHost);
-    const onCreate = vi.fn(async () => {});
+    const onCreate = vi.fn(() => Promise.resolve());
     await act(async () => {
       createDialogRoot.render(
         React.createElement(CreateTeamDialog, {
@@ -1586,7 +1592,7 @@ describe('LaunchTeamDialog', () => {
       host: HTMLElement,
       root: ReturnType<typeof createRoot>
     ): Promise<() => Promise<void>> {
-      const onCreate = vi.fn(async () => {});
+      const onCreate = vi.fn(() => Promise.resolve());
       await act(async () => {
         root.render(
           React.createElement(CreateTeamDialog, {
@@ -1675,7 +1681,7 @@ describe('LaunchTeamDialog', () => {
         expect(payload.prompt).toBe('Edited template lead prompt');
         expect(onCreate).not.toHaveBeenCalled();
       } finally {
-        await act(async () => root.unmount());
+        act(() => root.unmount());
         restoreLaunchTeam();
         vi.mocked(api.customTeamTemplates.listTemplates).mockReset();
         vi.mocked(api.customTeamTemplates.listTemplates).mockResolvedValue({
@@ -1719,7 +1725,7 @@ describe('LaunchTeamDialog', () => {
         const payload = vi.mocked(api.teams.createConfig).mock.calls[0]?.[0] as any;
         expect(payload.prompt).toBe('Edited builtin lead prompt');
       } finally {
-        await act(async () => root.unmount());
+        act(() => root.unmount());
         restoreLaunchTeam();
       }
     });
@@ -1743,7 +1749,7 @@ describe('LaunchTeamDialog', () => {
         const payload = vi.mocked(api.teams.createConfig).mock.calls[0]?.[0] as any;
         expect(payload.prompt).toBeUndefined();
       } finally {
-        await act(async () => root.unmount());
+        act(() => root.unmount());
       }
     });
   });
@@ -1789,7 +1795,7 @@ describe('LaunchTeamDialog', () => {
           activeTeams: [],
           defaultProjectPath: '/tmp/project',
           onClose: vi.fn(),
-          onCreate: vi.fn(async () => {}),
+          onCreate: vi.fn(() => Promise.resolve()),
           onOpenTeam: vi.fn(),
         })
       );
@@ -1817,7 +1823,7 @@ describe('LaunchTeamDialog', () => {
     expect(host.textContent).not.toContain('All selected providers are ready.');
     expect(host.textContent).not.toContain('CODEX_API_KEY');
 
-    await act(async () => root.unmount());
+    act(() => root.unmount());
   });
 
   it('renders relaunch-specific title, warning and submit label', async () => {
@@ -1839,7 +1845,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onRelaunch: vi.fn(async () => {}),
+          onRelaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -1885,7 +1891,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -1995,7 +2001,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2038,7 +2044,7 @@ describe('LaunchTeamDialog', () => {
   it('invalidates ready checks and blocks launch while project selection is unresolved', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();
-    const onLaunch = vi.fn(async () => {});
+    const onLaunch = vi.fn(() => Promise.resolve());
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -2087,7 +2093,7 @@ describe('LaunchTeamDialog', () => {
       await vi.advanceTimersByTimeAsync(250);
     });
     expect(submit().disabled).toBe(false);
-    await act(async () => root.unmount());
+    act(() => root.unmount());
   });
 
   it('starts preflight with user choices when a roster refresh cancels pending hydration', async () => {
@@ -2109,7 +2115,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
     await act(async () => {
@@ -2135,7 +2141,7 @@ describe('LaunchTeamDialog', () => {
       expect.objectContaining({ cwd: '/tmp/project' })
     );
     expect(api.teams.getSavedRequest).toHaveBeenCalledTimes(1);
-    await act(async () => root.unmount());
+    act(() => root.unmount());
   });
 
   it('keeps a programmatic effort reset from cancelling saved-request hydration', async () => {
@@ -2165,7 +2171,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2243,7 +2249,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2307,7 +2313,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2373,7 +2379,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2445,7 +2451,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2506,7 +2512,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2557,7 +2563,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2597,7 +2603,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2660,7 +2666,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2720,7 +2726,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2789,7 +2795,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2900,7 +2906,7 @@ describe('LaunchTeamDialog', () => {
           activeTeams: [],
           defaultProjectPath: '/tmp/project',
           onClose: vi.fn(),
-          onCreate: vi.fn(async () => {}),
+          onCreate: vi.fn(() => Promise.resolve()),
           onOpenTeam: vi.fn(),
         })
       );
@@ -3019,7 +3025,7 @@ describe('LaunchTeamDialog', () => {
           activeTeams: [],
           defaultProjectPath: '/tmp/project',
           onClose: vi.fn(),
-          onCreate: vi.fn(async () => {}),
+          onCreate: vi.fn(() => Promise.resolve()),
           onOpenTeam: vi.fn(),
         })
       );
@@ -3044,7 +3050,7 @@ describe('LaunchTeamDialog', () => {
       selectedModelChecks: expect.arrayContaining([expect.objectContaining({ model: localModel })]),
     });
 
-    await act(async () => root.unmount());
+    act(() => root.unmount());
   });
 
   it('opens a brand-new team with the lead only and no pre-stuffed teammates', async () => {
@@ -3069,7 +3075,7 @@ describe('LaunchTeamDialog', () => {
             activeTeams: [],
             defaultProjectPath: '/tmp/project',
             onClose: vi.fn(),
-            onCreate: vi.fn(async () => {}),
+            onCreate: vi.fn(() => Promise.resolve()),
             onOpenTeam: vi.fn(),
           })
         );
@@ -3112,7 +3118,7 @@ describe('LaunchTeamDialog', () => {
       const host = document.createElement('div');
       document.body.appendChild(host);
       const root = createRoot(host);
-      const onCreate = vi.fn(async () => {});
+      const onCreate = vi.fn(() => Promise.resolve());
       try {
         await act(async () => {
           root.render(
@@ -3158,7 +3164,7 @@ describe('LaunchTeamDialog', () => {
         );
         expect(onCreate).not.toHaveBeenCalled();
       } finally {
-        await act(async () => root.unmount());
+        act(() => root.unmount());
       }
     }
   );
@@ -3191,7 +3197,7 @@ describe('LaunchTeamDialog', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
-    const onCreate = vi.fn(async () => {});
+    const onCreate = vi.fn(() => Promise.resolve());
     try {
       await act(async () => {
         root.render(
@@ -3246,7 +3252,7 @@ describe('LaunchTeamDialog', () => {
       expect(request?.members[1]?.model).toBeUndefined();
       expect(onCreate).not.toHaveBeenCalled();
     } finally {
-      await act(async () => root.unmount());
+      act(() => root.unmount());
       createTeamDraftMock.state.members = savedMembers;
     }
   });
@@ -3268,7 +3274,7 @@ describe('LaunchTeamDialog', () => {
       defaultProjectPath: '/tmp/project',
       forceDefaultProjectSelection: true,
       onClose: vi.fn(),
-      onCreate: vi.fn(async () => {}),
+      onCreate: vi.fn(() => Promise.resolve()),
       onOpenTeam: vi.fn(),
     };
 
@@ -3338,7 +3344,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -3374,7 +3380,7 @@ describe('LaunchTeamDialog', () => {
         },
       ],
     } as any);
-    const onLaunch = vi.fn(async () => {});
+    const onLaunch = vi.fn(() => Promise.resolve());
 
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -3601,7 +3607,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -3692,7 +3698,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -3717,7 +3723,7 @@ describe('LaunchTeamDialog', () => {
     'carries a %s model draft into relaunch and discards it on cancel',
     async (targetKind) => {
       vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-      const onRelaunch = vi.fn(async () => {});
+      const onRelaunch = vi.fn(() => Promise.resolve());
       const onClose = vi.fn();
       const host = document.createElement('div');
       document.body.appendChild(host);
@@ -3810,7 +3816,7 @@ describe('LaunchTeamDialog', () => {
       await render(false);
       expect(host.textContent).not.toContain('glm-5.3-flash');
       expect(target.configuredRuntimeSettings.model).toBe('glm-5.3');
-      await act(async () => root.unmount());
+      act(() => root.unmount());
     }
   );
 
@@ -3825,7 +3831,7 @@ describe('LaunchTeamDialog', () => {
       syncModelsWithLead: true,
       members: [],
     });
-    const onRelaunch = vi.fn(async () => {});
+    const onRelaunch = vi.fn(() => Promise.resolve());
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -4086,7 +4092,7 @@ describe('LaunchTeamDialog', () => {
       syncModelsWithLead: false,
       members: [{ name: 'bob', role: 'Reviewer', model: vanishedRoute }],
     } as any);
-    const onLaunch = vi.fn(async () => {});
+    const onLaunch = vi.fn(() => Promise.resolve());
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -4166,7 +4172,7 @@ describe('LaunchTeamDialog', () => {
       model: '',
       members: [{ name: 'alice', role: 'Reviewer', providerId: 'opencode' }],
     } as any);
-    const onLaunch = vi.fn(async () => {});
+    const onLaunch = vi.fn(() => Promise.resolve());
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -4236,7 +4242,7 @@ describe('LaunchTeamDialog', () => {
       model: 'opencode/minimax-m2.5-free',
       members: [],
     } as any);
-    const onLaunch = vi.fn(async () => {});
+    const onLaunch = vi.fn(() => Promise.resolve());
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -4333,7 +4339,7 @@ describe('LaunchTeamDialog', () => {
       model: 'opencode/minimax-m2.5-free',
       members: [{ name: 'alice', role: 'Reviewer', providerId: 'codex', model: 'gpt-5.4' }],
     } as any);
-    const onLaunch = vi.fn(async () => {});
+    const onLaunch = vi.fn(() => Promise.resolve());
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -4848,7 +4854,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -5000,7 +5006,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -5195,7 +5201,7 @@ describe('LaunchTeamDialog', () => {
             modelResultsById: {},
           } as any)
     );
-    const onLaunch = vi.fn(async () => {});
+    const onLaunch = vi.fn(() => Promise.resolve());
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -5314,7 +5320,7 @@ describe('LaunchTeamDialog', () => {
           activeTeams: [],
           defaultProjectPath: '/tmp/project',
           onClose: vi.fn(),
-          onCreate: vi.fn(async () => {}),
+          onCreate: vi.fn(() => Promise.resolve()),
           onOpenTeam: vi.fn(),
         })
       );
@@ -5342,7 +5348,7 @@ describe('LaunchTeamDialog', () => {
     expect(host.textContent).not.toContain('All selected providers are ready.');
     expect(host.querySelector<HTMLButtonElement>('button.min-w-32')?.disabled).toBe(true);
 
-    await act(async () => root.unmount());
+    act(() => root.unmount());
   });
 
   it('permits saving a draft after opting out of a pending launch preflight and ignores its late failure', async () => {
@@ -5357,7 +5363,7 @@ describe('LaunchTeamDialog', () => {
       }
     );
     vi.mocked(runProviderPrepareDiagnostics).mockReturnValue(pendingPreflight);
-    const onCreate = vi.fn(async () => {});
+    const onCreate = vi.fn(() => Promise.resolve());
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -5421,14 +5427,14 @@ describe('LaunchTeamDialog', () => {
       );
       expect(onCreate).not.toHaveBeenCalled();
     } finally {
-      await act(async () => root.unmount());
+      act(() => root.unmount());
     }
   });
 
   it('clears completed create preflight while selection is unresolved but permits create without launch', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();
-    const onCreate = vi.fn(async () => {});
+    const onCreate = vi.fn(() => Promise.resolve());
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -5499,7 +5505,7 @@ describe('LaunchTeamDialog', () => {
       expect.objectContaining({ cwd: undefined })
     );
     expect(onCreate).not.toHaveBeenCalled();
-    await act(async () => root.unmount());
+    act(() => root.unmount());
   });
 
   it.each(['project', 'custom'] as const)(
@@ -5580,7 +5586,7 @@ describe('LaunchTeamDialog', () => {
             defaultProjectPath: '/tmp/project',
             forceDefaultProjectSelection: true,
             onClose: vi.fn(),
-            onCreate: vi.fn(async () => {}),
+            onCreate: vi.fn(() => Promise.resolve()),
             onOpenTeam: vi.fn(),
           })
         );
@@ -5747,7 +5753,7 @@ describe('LaunchTeamDialog', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
-    const onRelaunch = vi.fn(async () => {});
+    const onRelaunch = vi.fn(() => Promise.resolve());
     await act(async () => {
       root.render(
         React.createElement(LaunchTeamDialog, {
@@ -5805,7 +5811,7 @@ describe('LaunchTeamDialog', () => {
         expectedTeamSettingsFingerprint: 'editor-defaults',
       })
     );
-    await act(async () => root.unmount());
+    act(() => root.unmount());
   });
 
   it.each([true, false])(
@@ -5823,7 +5829,7 @@ describe('LaunchTeamDialog', () => {
       const host = document.createElement('div');
       document.body.appendChild(host);
       const root = createRoot(host);
-      const onRelaunch = vi.fn(async () => {});
+      const onRelaunch = vi.fn(() => Promise.resolve());
       try {
         await act(async () => {
           root.render(
@@ -5866,7 +5872,7 @@ describe('LaunchTeamDialog', () => {
           undefined
         );
       } finally {
-        await act(async () => root.unmount());
+        act(() => root.unmount());
         host.remove();
       }
     }
