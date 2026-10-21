@@ -140,6 +140,38 @@ describe('gateway draft recovery', () => {
     });
   });
 
+  it('reclaims an unsaved restore despite metadata tombstones and stale config, but retains an active restore', async () => {
+    const { service, restart, bind, dir } = await fixture();
+    await mkdir(join(dir, 'sandbox'));
+    await writeFile(
+      join(dir, 'sandbox', 'members.meta.json'),
+      JSON.stringify({ version: 1, members: [{ name: ' ALICE ', removedAt: 1_800_000_000_000 }] })
+    );
+    await writeFile(
+      join(dir, 'sandbox', 'config.json'),
+      JSON.stringify({ members: [{ name: 'alice' }] })
+    );
+    await bind(service, 'alice', 'crashed-restore', 'restore-key');
+    const recovered = restart();
+    await recovered.service.recoverDraftBindings();
+    expect(await recovered.service.listBindings()).toEqual([]);
+    expect(await recovered.service.listUsageSources()).toEqual([]);
+
+    // Saving the restored metadata row makes the same identity active again.
+    await writeFile(
+      join(dir, 'sandbox', 'members.meta.json'),
+      JSON.stringify({ version: 1, members: [{ name: ' ALICE ' }] })
+    );
+    await writeFile(join(dir, 'sandbox', 'config.json'), JSON.stringify({ members: [] }));
+    await bind(recovered.service, 'alice', 'saved-restore', 'restore-key');
+    const restored = restart();
+    await restored.service.recoverDraftBindings();
+    expect(await restored.service.resolveMemberConnection('sandbox', 'alice')).toMatchObject({
+      apiKey: 'restore-key',
+    });
+    expect((await restored.store.read()).bindings[0].draftOwner).toBeUndefined();
+  });
+
   it('scopes renderer recovery and stale receipts to the allocating document', async () => {
     const { service, bind } = await fixture();
     const stale = await bind(service, 'alice', 'old-document');
