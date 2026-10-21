@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { TeamProvisioningMemberLifecycleController } from '../TeamProvisioningMemberLifecycle';
 import {
@@ -64,6 +64,7 @@ function createService(): ReceiverBoundService {
     events: [],
     marker: 'provider-runtime',
     expectedLane,
+    getMemberGatewayRuntimeSeams: () => null,
     runs: new Map([['team-a', serviceRun as unknown as HostRun]]),
     runtimeAdapterRunByTeam: new Map(),
     failedOpenCodeSecondaryRetryInFlightByTeam: new Map(),
@@ -642,4 +643,62 @@ describe('TeamProvisioningMemberLifecycleHostFactory', () => {
         .events
     ).toEqual(['mcp-provisioner:build:run-2', 'mcp-provisioner:remove:run-2']);
   });
+});
+
+it('skips global auth only after the direct member exact gateway credential resolves', async () => {
+  const service = createService();
+  const resolveMemberConnection = vi.fn<
+    NonNullable<ReturnType<Host['getMemberGatewayRuntimeSeams']>>['resolveMemberConnection']
+  >(async () => ({
+    teamName: 'team-a',
+    memberName: 'builder',
+    gatewayUsageRef: 'source',
+    apiKey: 'synthetic-key',
+    spec: {
+      profileId: 'profile',
+      baseUrl: 'https://gateway.test',
+      credentialRef: 'key-ref',
+      allowPrivateNetwork: false,
+    },
+  }));
+  service.getMemberGatewayRuntimeSeams = () => ({
+    resolveMemberConnection,
+    configureOpenCodeLocalProvider: async () => ({
+      providerId: 'gateway',
+      modelRoute: 'gateway/test',
+    }),
+    retireOpenCodeLocalProvider: async () => ({ retired: true }),
+    markRuntimeArtifactActive: async () => undefined,
+    markRuntimeArtifactRetired: async () => undefined,
+  });
+  const build = vi.fn(
+    async () => ({ env: {} }) as Awaited<ReturnType<Host['buildProvisioningEnv']>>
+  );
+  service.buildProvisioningEnv = build;
+  const host = createTeamProvisioningMemberLifecycleHost(service);
+  const options = {
+    teamRuntimeAuth: {
+      teamName: 'team-a',
+      memberName: 'builder',
+      authMaterialId: 'direct-attempt',
+      allowAnthropicApiKeyHelper: true,
+    },
+  };
+  await host.buildProvisioningEnv('codex', 'codex-native', options);
+  expect(build).toHaveBeenLastCalledWith('codex', 'codex-native', {
+    ...options,
+    gatewayMember: true,
+  });
+  expect(resolveMemberConnection).toHaveBeenCalledWith('team-a', 'builder');
+  resolveMemberConnection.mockResolvedValueOnce(null);
+  await host.buildProvisioningEnv('codex', 'codex-native', options);
+  expect(build).toHaveBeenLastCalledWith('codex', 'codex-native', {
+    ...options,
+    gatewayMember: false,
+  });
+  resolveMemberConnection.mockRejectedValueOnce(new Error('credential_changed'));
+  await expect(host.buildProvisioningEnv('codex', 'codex-native', options)).rejects.toThrow(
+    'credential_changed'
+  );
+  expect(build).toHaveBeenCalledTimes(2);
 });

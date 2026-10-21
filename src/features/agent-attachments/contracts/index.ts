@@ -39,3 +39,9 @@ export type {
   NativeAttachmentDigest,
   NativeMemberCapability,
 } from './nativeTeammateAttachment';
+
+/** The actual model and cwd of the recipient, never a selector default. */
+export type ResolveOpenCodeInputDeclaration = (input: {
+  projectPath: string;
+  model: string;
+}) => Promise<readonly string[] | null>;

@@ -7,6 +7,7 @@
     "../../scripts/e2e/opencode-native-test-auth.ts",
     "../../scripts/e2e/opencode-native-desktop-smoke.ts",
     "../../scripts/e2e/opencode-native-team-port.ts",
+    "../../scripts/e2e/select-team-latch-desktop.ts",
     "../../scripts/e2e/openui-desktop.ts",
     "../../scripts/e2e/opencode-diagnostics/windows-attachments.mts",
     "../../scripts/e2e/group-chats-desktop.ts",
@@ -23,7 +24,10 @@
     "../../scripts/e2e/external-agent-shared-root.ts",
     "../../scripts/e2e/opencode-status-recovery/**/*.mts",
     "../../scripts/e2e/task-detail-tabs-desktop.ts",
-    "../../scripts/e2e/task-detail-tabs/**/*.ts"
+    "../../scripts/e2e/task-detail-tabs/**/*.ts",
+    "../../scripts/e2e/gateway-provider-live-desktop.mts",
+    "../../scripts/e2e/gateway-provider-ui-desktop.mts",
+    "../../scripts/e2e/gateway-provider/**/*.ts"
   ],
   "exclude": ["../../node_modules", "../../dist", "../../dist-electron"]
 }

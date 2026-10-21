@@ -7,6 +7,7 @@ import { childKey } from '../../core/domain/folders';
 import { taskFolderMoveRequest, useTaskFolderEditingReady } from '../adapters/taskFolderEditing';
 import { writeTaskDrag } from '../adapters/treeDropAdapter';
 import { panelController } from '../composition';
+import { useTaskFolderMode } from '../hooks/useTaskFolderMode';
 
 import type { TaskIdentity } from '../../core/domain/folders';
 export const TaskDragHandle = ({
@@ -19,9 +20,11 @@ export const TaskDragHandle = ({
   subject: string;
   className?: string;
   onFocus?: React.FocusEventHandler<HTMLButtonElement>;
-}): React.JSX.Element => {
+}): React.JSX.Element | null => {
   const { t } = useAppTranslation('common');
   const editingReady = useTaskFolderEditingReady();
+  const folderMode = useTaskFolderMode();
+  if (!folderMode) return null;
   return (
     <Tooltip>
       <TooltipTrigger asChild>

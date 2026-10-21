@@ -115,6 +115,7 @@ function createHost(
     runs: new Map([[run.runId, run]]),
     runtimeAdapterRunByTeam: new Map(),
     failedOpenCodeSecondaryRetryInFlightByTeam: new Map(),
+    getMemberGatewayRuntimeSeams: () => null,
     mcpConfigBuilder: {
       async writeConfigFile() {
         return '/safe-test-project/mcp.json';

@@ -68,6 +68,39 @@ function verifiedOpenCodeProvider(): CliProviderStatus {
 }
 
 describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
+  test.each([' configured-model ', null, undefined, 42, {}, []])(
+    'maps only the current typed effective model %j',
+    (effectiveDefaultModel) => {
+      const provider = mapRuntimeProviderStatus('anthropic', {
+        ...verifiedOpenCodeProvider(),
+        providerId: 'anthropic',
+        effectiveDefaultModel,
+        defaultModel: 'legacy-model',
+      });
+      expect(provider.effectiveDefaultModel).toBe(
+        effectiveDefaultModel === undefined
+          ? undefined
+          : typeof effectiveDefaultModel === 'string'
+            ? 'configured-model'
+            : null
+      );
+      expect(provider.defaultModel).toBe('legacy-model');
+    }
+  );
+
+  test.each(['pending', 'transient_error', 'model_only'])(
+    'does not promote effective model from %s status',
+    (statusCheckOutcome) => {
+      const provider = mapRuntimeProviderStatus('anthropic', {
+        ...verifiedOpenCodeProvider(),
+        providerId: 'anthropic',
+        effectiveDefaultModel: 'unconfirmed-model',
+        statusCheckOutcome,
+      });
+      expect(provider.effectiveDefaultModel).toBeNull();
+    }
+  );
+
   test.each(
     (['anthropic', 'codex'] as const).flatMap((providerId) =>
       [true, false].map((teamLaunch) => ({ providerId, teamLaunch }))

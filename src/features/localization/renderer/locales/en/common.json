@@ -638,11 +638,17 @@
       "fallbackMessage": "An unexpected error occurred",
       "confirmLabel": "OK"
     },
+    "restoreFailed": {
+      "title": "Failed to restore task",
+      "fallbackMessage": "An unexpected error occurred",
+      "confirmLabel": "OK"
+    },
     "sort": {
       "byTime": "By time",
       "byUnread": "By unread",
       "byProject": "By project",
-      "byTeam": "By team"
+      "byTeam": "By team",
+      "manualOrder": "Manual order"
     }
   },
   "toolViewer": {
@@ -662,6 +668,7 @@
     "unpin": "Unpin",
     "pin": "Pin",
     "rename": "Rename",
+    "restoreTask": "Restore task",
     "markUnread": "Mark as unread",
     "unarchive": "Unarchive",
     "archive": "Archive",
@@ -751,6 +758,8 @@
     "searchProjects": "Search projects...",
     "noProjects": "No projects",
     "comments": "Comments",
+    "showArchived": "Show archived tasks",
+    "showDeleted": "Show deleted tasks",
     "apply": "Apply",
     "read": {
       "all": "All",
@@ -967,7 +976,10 @@
     }
   },
   "taskFolders": {
+    "unreadTasks_one": "{{count}} unread task",
+    "unreadTasks_other": "{{count}} unread tasks",
     "title": "Task folders",
+    "dockToSidebar": "Folders as the sidebar",
     "newFolder": "New folder",
     "newSubfolder": "New subfolder",
     "renameFolder": "Rename folder",
@@ -977,6 +989,8 @@
     "folderName": "Folder name",
     "destination": "Destination folder",
     "unfiled": "Unfiled",
+    "moveHere": "Put it here",
+    "cannotMoveHere": "You can't move tasks here",
     "root": "Root",
     "showArchived": "Show archived tasks",
     "archived": "Archived task",

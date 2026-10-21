@@ -166,6 +166,23 @@ describe('buildProviderAwareCliEnv', () => {
     }
   );
 
+  it('prepares the native binary without consulting global credentials for a gateway member', async () => {
+    const { buildProviderAwareCliEnv } = await import('@main/services/runtime/providerAwareCliEnv');
+    resolveVerifiedAppManagedCodexRuntimeBinaryPathMock.mockResolvedValue('/sandbox/managed/codex');
+    const result = await buildProviderAwareCliEnv({
+      providerId: 'codex',
+      connectionMode: 'runtime-only',
+    });
+    expect(result.env.CODEX_CLI_PATH).toBe('/sandbox/managed/codex');
+    expect(result.connectionIssues).toEqual({});
+    expect(result.providerArgs).toEqual([]);
+    expect(resolveVerifiedAppManagedCodexRuntimeBinaryPathMock).toHaveBeenCalled();
+    expect(applyConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+    expect(augmentConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+    expect(getConfiguredConnectionIssuesMock).not.toHaveBeenCalled();
+    expect(getConfiguredConnectionLaunchArgsMock).not.toHaveBeenCalled();
+  });
+
   it('keeps passive reads passive when no server or MCP launch metadata exists and strips dead endpoints', async () => {
     vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', undefined);
     const { buildPassiveProviderStatusCliEnv } =
@@ -264,9 +281,15 @@ describe('buildProviderAwareCliEnv', () => {
       for (const port of [4580, 4581]) {
         await writeTeamControlApiState(`http://127.0.0.1:${port}`);
         const client = new AgentTeamsRuntimeProviderManagementCliClient();
-        await expect(
-          client.loadModels({ runtimeId: 'opencode', providerId: 'xai' })
-        ).resolves.toEqual(response);
+        const startedAt = Date.now();
+        const catalog = await client.loadModels({ runtimeId: 'opencode', providerId: 'xai' });
+        const freshUntil = catalog.models?.freshUntil;
+        expect(catalog).toEqual({
+          ...response,
+          models: { ...response.models, freshUntil: expect.any(String) },
+        });
+        expect(Date.parse(freshUntil!)).toBeGreaterThanOrEqual(startedAt + 120_000);
+        expect(Date.parse(freshUntil!)).toBeLessThanOrEqual(Date.now() + 120_000);
         const [command, args, options] = execCliMock.mock.calls.at(-1)!;
         expect(command).toBe('/sandbox/agent-teams-cli');
         expect(args).toEqual([

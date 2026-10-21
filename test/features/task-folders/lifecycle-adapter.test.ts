@@ -23,21 +23,81 @@ import {
   TreeDropAdapter,
 } from '../../../src/features/task-folders/renderer/adapters/treeDropAdapter';
 import { projectFolders } from '../../../src/features/task-folders/renderer/view-models/projection';
+import { applyVisibleTaskChildren } from '../../../src/features/task-folders/renderer/view-models/projectionView';
 
 import type { Node } from '../../../src/features/task-folders/renderer/view-models/projection';
 import type { DndDataRef, DragTarget } from '@headless-tree/core';
 import type { GlobalTask } from '@shared/types';
 const identity = { teamName: 't', taskId: '1' };
-const tasks = [{ teamName: 't', id: '1', subject: 'Task' }] as GlobalTask[];
+const makeGlobalTask = (id: string, overrides: Partial<GlobalTask> = {}): GlobalTask => ({
+  id,
+  teamName: 't',
+  teamDisplayName: 'Team',
+  subject: id === '1' ? 'Task' : id,
+  status: 'pending',
+  ...overrides,
+});
+const tasks = [makeGlobalTask('1')];
 const folder = applyCommand(emptySnapshot(), { type: 'create', id: 'a', parent: null, name: 'A' });
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 describe('host lifecycle and vendor drop boundary', () => {
+  it('requires explicit mode and keeps it enabled through holds, drag cleanup and suspension', () => {
+    vi.useFakeTimers();
+    const panel = new PanelController();
+    panel.begin('off');
+    for (const reason of ['pointer', 'focus', 'dialog', 'menu'] as const) panel.hold(reason, true);
+    expect(panel.getSnapshot()).toMatchObject({ open: false, manual: false, dragSource: null });
+    panel.toggle();
+    panel.begin('on');
+    panel.end();
+    vi.advanceTimersByTime(5000);
+    expect(panel.getSnapshot()).toMatchObject({ open: true, manual: true, dragSource: null });
+    panel.begin('suspended');
+    panel.suspend();
+    vi.runAllTimers();
+    expect(panel.getSnapshot()).toMatchObject({ open: true, manual: true, dragSource: null });
+    panel.toggle();
+    for (const reason of ['pointer', 'focus', 'dialog', 'menu'] as const) panel.hold(reason, true);
+    panel.begin('stale');
+    vi.runAllTimers();
+    expect(panel.getSnapshot()).toMatchObject({ open: false, manual: false, dragSource: null });
+  });
+  it('consumes the Escape finishing a cancelled drag without disabling mode', () => {
+    const panel = new PanelController();
+    panel.toggle();
+    panel.begin('task:a');
+    panel.end();
+    expect(panel.escape()).toBe(true);
+    expect(panel.getSnapshot()).toMatchObject({ open: true, manual: true, dragSource: null });
+    expect(panel.escape()).toBe(true);
+    expect(panel.getSnapshot()).toMatchObject({ open: false, manual: false });
+  });
+  it('leaves an Escape after a completed drop free to disable mode', () => {
+    const panel = new PanelController();
+    panel.toggle();
+    panel.begin('task:a');
+    panel.endAfterDrop();
+    panel.end();
+    expect(panel.escape()).toBe(true);
+    expect(panel.getSnapshot()).toMatchObject({ open: false, manual: false });
+  });
+  it('lets a fresh Escape disable mode once the cancelled-drag window elapsed', () => {
+    vi.useFakeTimers();
+    const panel = new PanelController();
+    panel.toggle();
+    panel.begin('task:a');
+    panel.end();
+    vi.advanceTimersByTime(2000);
+    expect(panel.escape()).toBe(true);
+    expect(panel.getSnapshot()).toMatchObject({ open: false, manual: false });
+  });
   it('keeps a new drag active when an earlier drop finishes after event propagation', async () => {
     vi.useFakeTimers();
     const panel = new PanelController();
+    panel.toggle();
     panel.begin('task:a');
     panel.endAfterDrop();
     panel.begin('task:b');
@@ -51,7 +111,7 @@ describe('host lifecycle and vendor drop boundary', () => {
     vi.advanceTimersByTime(1999);
     expect(panel.getSnapshot().open).toBe(true);
     vi.advanceTimersByTime(1);
-    expect(panel.getSnapshot().open).toBe(false);
+    expect(panel.getSnapshot().open).toBe(true);
     panel.begin('task:c');
     panel.endAfterDrop();
     panel.endAfterDrop();
@@ -59,9 +119,10 @@ describe('host lifecycle and vendor drop boundary', () => {
     vi.runAllTimers();
     expect(panel.getSnapshot().open).toBe(false);
   });
-  it('gives the last hold a full grace period and prevents duplicate end/stale timer closure', () => {
+  it('keeps enabled mode pinned after the final hold and rejects stale drag completion', () => {
     vi.useFakeTimers();
     const panel = new PanelController();
+    panel.toggle();
     const first = panel.begin('task:a');
     panel.end(first);
     vi.advanceTimersByTime(1999);
@@ -82,7 +143,7 @@ describe('host lifecycle and vendor drop boundary', () => {
     vi.advanceTimersByTime(1999);
     expect(panel.getSnapshot().open).toBe(true);
     vi.advanceTimersByTime(1);
-    expect(panel.getSnapshot().open).toBe(false);
+    expect(panel.getSnapshot().open).toBe(true);
     panel.begin('folder:a');
     panel.dispose();
     vi.runAllTimers();
@@ -104,6 +165,7 @@ describe('host lifecycle and vendor drop boundary', () => {
       true
     );
     const panel = new PanelController();
+    panel.toggle();
     const adapter = new TreeDropAdapter(() => projection, folders, panel);
     const source = childKey({ kind: 'task', identity });
     const target = { item: { getId: () => 'folder:a' } } as DragTarget<Node>;
@@ -144,7 +206,7 @@ describe('host lifecycle and vendor drop boundary', () => {
         parent: 'a',
         anchor: append,
       });
-    const all = ['1', '2', '3'].map((id) => ({ teamName: 't', id, subject: id })) as GlobalTask[];
+    const all = ['1', '2', '3'].map((id) => makeGlobalTask(id));
     const projection = projectFolders(
       s,
       all,
@@ -202,6 +264,7 @@ describe('host lifecycle and vendor drop boundary', () => {
       true
     );
     const panel = new PanelController();
+    panel.toggle();
     const adapter = new TreeDropAdapter(() => projection, folders, panel);
     const source = projection.nodes.get(childKey({ kind: 'task', identity }))!;
     const target = { item: { getId: () => 'unfiled' } } as DragTarget<Node>;
@@ -214,6 +277,140 @@ describe('host lifecycle and vendor drop boundary', () => {
     await adapter.dropInternal([source], target);
     expect(folders.getSnapshot().snapshot.folders[0].children).toEqual([]);
     expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['internal', 'foreign'] as const)(
+    'rejects %s same-parent reorder without mutation when computed task order is active',
+    async (origin) => {
+      let snapshot = folder;
+      for (const id of ['1', '2'])
+        snapshot = applyCommand(snapshot, {
+          type: 'moveTask',
+          identity: { teamName: 't', taskId: id },
+          parent: 'a',
+          anchor: append,
+        });
+      const save = vi.fn(async () => undefined);
+      const folders = new FolderController({
+        load: async () => ({ kind: 'valid', snapshot }),
+        save,
+      });
+      folders.setCatalog([
+        { teamName: 't', taskId: '1' },
+        { teamName: 't', taskId: '2' },
+      ]);
+      await folders.load();
+      const canonical = projectFolders(
+        snapshot,
+        [makeGlobalTask('1'), makeGlobalTask('2')],
+        () => false,
+        () => undefined,
+        true
+      );
+      const projection = applyVisibleTaskChildren(
+        canonical,
+        [makeGlobalTask('1'), makeGlobalTask('2')],
+        () => true,
+        (siblings) => [...siblings].reverse(),
+        'computed'
+      );
+      const panel = new PanelController();
+      panel.toggle();
+      const adapter = new TreeDropAdapter(() => projection, folders, panel);
+      const source = projection.nodes.get(childKey({ kind: 'task', identity }))!;
+      const target = {
+        item: { getId: () => 'folder:a' },
+        insertionIndex: 0,
+      } as DragTarget<Node>;
+      const transfer = {
+        types: [TASK_MIME],
+        getData: () => JSON.stringify({ version: 1, identity }),
+      } as unknown as DataTransfer;
+      panel.begin(source.id);
+
+      if (origin === 'internal') {
+        expect(adapter.canInternal([source], target)).toBe(false);
+        await expect(adapter.dropInternal([source], target)).rejects.toThrow('invalid-drop');
+      } else {
+        expect(adapter.canForeign(transfer, target, true)).toBe(false);
+        await expect(adapter.dropForeign(transfer, target)).rejects.toThrow('invalid-drop');
+      }
+      expect(save).not.toHaveBeenCalled();
+      expect(folders.getSnapshot().snapshot).toBe(snapshot);
+    }
+  );
+
+  it('keeps manual same-parent and computed cross-folder moves valid while reading live policy', async () => {
+    let snapshot = folder;
+    snapshot = applyCommand(snapshot, { type: 'create', id: 'b', parent: null, name: 'B' });
+    snapshot = applyCommand(snapshot, {
+      type: 'moveTask',
+      identity,
+      parent: 'a',
+      anchor: append,
+    });
+    const save = vi.fn(async () => undefined);
+    const folders = new FolderController({
+      load: async () => ({ kind: 'valid', snapshot }),
+      save,
+    });
+    folders.setCatalog([identity]);
+    await folders.load();
+    const canonical = projectFolders(
+      snapshot,
+      tasks,
+      () => false,
+      () => undefined,
+      true
+    );
+    const sorted = applyVisibleTaskChildren(
+      canonical,
+      tasks,
+      () => true,
+      (siblings) => siblings,
+      'computed'
+    );
+    const manual = applyVisibleTaskChildren(
+      canonical,
+      tasks,
+      () => true,
+      (siblings) => siblings,
+      'manual'
+    );
+    let liveProjection = sorted;
+    const panel = new PanelController();
+    panel.toggle();
+    const adapter = new TreeDropAdapter(() => liveProjection, folders, panel);
+    const source = sorted.nodes.get(childKey({ kind: 'task', identity }))!;
+    const sameParent = {
+      item: { getId: () => 'folder:a' },
+      insertionIndex: 0,
+    } as DragTarget<Node>;
+    const crossFolder = {
+      item: { getId: () => 'folder:b' },
+      insertionIndex: 0,
+    } as DragTarget<Node>;
+    const folderReorder = {
+      item: { getId: () => 'root' },
+      insertionIndex: 0,
+    } as DragTarget<Node>;
+
+    expect(adapter.canInternal([source], sameParent)).toBe(false);
+    liveProjection = manual;
+    expect(adapter.canInternal([source], sameParent)).toBe(true);
+    liveProjection = sorted;
+    expect(adapter.canInternal([source], crossFolder)).toBe(true);
+    expect(adapter.canInternal([sorted.nodes.get('folder:b')!], folderReorder)).toBe(true);
+
+    panel.begin(source.id);
+    await adapter.dropInternal([source], crossFolder);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(
+      folders.getSnapshot().snapshot.folders.find((candidate) => candidate.id === 'b')!.children
+    ).toEqual([{ kind: 'task', identity }]);
+    expect(
+      folders.getSnapshot().snapshot.folders.find((candidate) => candidate.id === 'a')!.children
+    ).toEqual([]);
   });
 });
 
@@ -309,6 +506,7 @@ it.each(['foreign', 'internal'] as const)(
       true
     );
     const panel = new PanelController();
+    panel.toggle();
     const adapter = new TreeDropAdapter(() => projection, folders, panel);
     const execute = vi.spyOn(folders, 'execute');
     const tree = createTree<Node>({

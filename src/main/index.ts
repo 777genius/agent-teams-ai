@@ -1,21 +1,11 @@
-/**
- * Main process entry point for Agent Teams AI.
- *
- * Responsibilities:
- * - Initialize Electron app and main window
- * - Set up IPC handlers for data access
- * - Initialize ServiceContextRegistry with local context
- * - Start file watcher for live updates
- * - Manage application lifecycle
- */
+import { composeGatewayProviderRuntime } from '@main/services/gateway/composeGatewayProviderRuntime';
+import { cleanupOrphanedDeterministicBootstrapSpecs } from '@main/services/team/provisioning/TeamProvisioningBootstrapSpec';
 
-// Increase UV thread pool size BEFORE any async I/O.
-// Default is 4 threads which is far too few for startup:
-// binary resolution stat() calls, CLI subprocess spawning, fs.watch(),
-// and readFile/readdir from IPC handlers all compete for the pool.
-// On Windows this saturates all threads, blocking the event loop.
+import type { createGatewayLaunchRuntime } from '@main/services/gateway/createGatewayLaunchRuntime';
+// Increase UV thread pool size BEFORE async I/O: startup binary resolution,
+// subprocess work, watchers, and IPC filesystem requests share this pool.
+// The default four threads can block Windows startup.
 process.env.UV_THREADPOOL_SIZE ??= '16';
-
 // Keep userData stable before any integration can initialize Electron storage.
 // Sentry must stay near the top to capture early errors after storage migration.
 // eslint-disable-next-line simple-import-sort/imports -- userData migration must run before Sentry initializes Electron storage.
@@ -41,7 +31,6 @@ import {
   createStartupStage,
   StartupCancelledError,
 } from './utils/startupCancellation';
-
 import type {
   AppCloseReadinessResult,
   AppCloseReason,
@@ -98,6 +87,7 @@ import {
   registerRecentProjectsIpc,
   removeRecentProjectsIpc,
 } from '@features/recent-projects/main';
+import { createOpenCodeInputDeclarationResolver } from '@features/runtime-provider-management';
 import {
   createRuntimeProviderManagementFeature,
   inspectOpenCodeLocalModelRuntimeReadiness,
@@ -208,6 +198,7 @@ import { killTrackedCliProcesses } from '@main/utils/childProcess';
 import { extractNotificationContent } from '@main/utils/inboxNotificationContent';
 import { createBudgetNotificationSink } from '@features/token-usage/main';
 import { RendererRecoveryController } from '@main/utils/RendererRecoveryController';
+import { resolveRendererEntry } from '@main/utils/rendererEntry';
 import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
 import {
   APP_GET_WINDOWS_ELEVATION_STATUS,
@@ -244,7 +235,6 @@ import {
 } from './startMemberWorkSyncFeature';
 import { existsSync } from 'fs';
 import { join } from 'path';
-
 import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
 import { registerOpenCodeStartupCleanupHandlers } from './ipc/openCodeStartupCleanup';
@@ -333,6 +323,7 @@ import {
 } from './utils/startupTelemetry';
 import {
   captureMainException,
+  captureRendererLoadFailure,
   captureRendererProcessGone,
   getMainSentryStatus,
   syncTelemetryFlag,
@@ -381,7 +372,6 @@ import {
   UpdaterService,
   applyCursorAgentAttributionEnv,
 } from './services';
-
 import type { FileChangeEvent } from '@main/types';
 import type {
   AppStartupMemorySnapshot,
@@ -389,7 +379,6 @@ import type {
   AppStartupStep,
   TeamChangeEvent,
 } from '@shared/types';
-
 const logger = createLogger('App');
 let persistentAppLog: ReturnType<typeof installPersistentAppLog> | null = null;
 const appStartedAtMs = Date.now();
@@ -400,12 +389,10 @@ const nativeRendererCdp = prepareNativeRendererCdp(
   configManager.getConfig().general.externalAgentCdpEnabled === true
 );
 let externalAgentConnection: ReturnType<typeof composeExternalAgentConnection> | null = null;
-
 if (process.env.AGENT_TEAMS_DISABLE_GPU?.trim() === '1') {
   app.disableHardwareAcceleration();
   logger.info('Hardware acceleration disabled by AGENT_TEAMS_DISABLE_GPU=1');
 }
-
 if (
   earlyElectronDevPathOverrideResult.userDataDir ||
   earlyElectronDevPathOverrideResult.claudeRoot
@@ -418,19 +405,16 @@ if (
 for (const warning of earlyElectronDevPathOverrideResult.warnings) {
   logger.warn(warning);
 }
-
 function readOptionalEnv(name: string): string | undefined {
   const value = process.env[name]?.trim();
   return value ? value : undefined;
 }
-
 function readOptionalEnvNumber(name: string): number | undefined {
   const value = readOptionalEnv(name);
   if (!value) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
-
 function readOptionalEnvArgs(name: string): string[] | undefined {
   const value = readOptionalEnv(name);
   if (!value) return undefined;
@@ -496,7 +480,8 @@ const INBOX_NOTIFY_DEBOUNCE_MS = 500;
 const suppressedSources = new Set(['user_sent']);
 
 async function createOpenCodeRuntimeAdapterRegistry(
-  reportProgress: (phase: string, message: string) => void = () => undefined
+  reportProgress: (phase: string, message: string) => void = () => undefined,
+  gatewayRuntime?: ReturnType<typeof createGatewayLaunchRuntime>
 ): Promise<TeamRuntimeAdapterRegistry> {
   const binaryPath = await startupStage(() =>
     ClaudeBinaryResolver.resolve({
@@ -693,11 +678,10 @@ async function createOpenCodeRuntimeAdapterRegistry(
   const readinessBridge = desktopBridge.readiness;
   readOpenCodeGroupRun = desktopBridge.groupRun;
   openCodeLifecycleBridge = readinessBridge;
-  return new TeamRuntimeAdapterRegistry([
-    new OpenCodeTeamRuntimeAdapter(readinessBridge, {
-      inspectLocalModelRuntime: inspectOpenCodeLocalModelRuntimeReadiness,
-    }),
-  ]);
+  const adapter = new OpenCodeTeamRuntimeAdapter(readinessBridge, {
+    inspectLocalModelRuntime: inspectOpenCodeLocalModelRuntimeReadiness,
+  });
+  return new TeamRuntimeAdapterRegistry([gatewayRuntime?.wrapOpenCodeAdapter(adapter) ?? adapter]);
 }
 let stopPeriodicOpenCodeHostStartupLockPurge: (() => void) | null = null;
 
@@ -1525,18 +1509,6 @@ export async function disposeInternalStorageAfterWriterDrains(
   await internalStorageDispose.catch(() => undefined);
 }
 
-/**
- * Resolve production renderer index path.
- * Main bundle lives in dist-electron/main, while renderer lives in out/renderer.
- */
-function getRendererIndexPath(): string {
-  const candidates = [
-    join(__dirname, '../../out/renderer/index.html'),
-    join(__dirname, '../renderer/index.html'),
-  ];
-  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
-}
-
 function getTeamControlApiBaseUrl(): string | null {
   if (!httpServer?.isRunning()) {
     return null;
@@ -2011,7 +1983,36 @@ async function initializeServices(): Promise<void> {
   teamDataService.setTaskCommentNotificationJournalStore(
     internalStorageFeature.taskCommentNotificationJournalStore
   );
-  teamProvisioningService = createDefaultTeamProvisioningService(() => teamGroupChatsFeature);
+  const apiKeyService = new ApiKeyService();
+  const { gatewayProviderRuntime, gatewayProviderConnector, gatewayLaunchRuntime } =
+    composeGatewayProviderRuntime({
+      ipcMain,
+      apiKeys: apiKeyService,
+      appDataPath: getAppDataPath(),
+    });
+  runtimeProviderManagementFeature = createRuntimeProviderManagementFeature({
+    localProviderConnector: gatewayProviderConnector,
+    openExternal: async (url) => {
+      await shell.openExternal(url);
+    },
+    emitOAuthProgress: (event) => {
+      safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS, event);
+    },
+    emitProgress: (event) => {
+      safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_COMPANION_PROGRESS, event);
+    },
+  });
+  const resolveOpenCodeInputDeclaration = createOpenCodeInputDeclarationResolver(
+    runtimeProviderManagementFeature.loadModels
+  );
+  await cleanupOrphanedDeterministicBootstrapSpecs().catch(() =>
+    console.warn('Could not clean retired bootstrap files')
+  );
+  teamProvisioningService = createDefaultTeamProvisioningService(
+    () => teamGroupChatsFeature,
+    resolveOpenCodeInputDeclaration,
+    gatewayLaunchRuntime.seams
+  );
   teamGroupChatsFeature = createDesktopTeamGroupChats({
     snapshot: (teamName) => teamProvisioningService.getTeamAgentRuntimeSnapshot(teamName),
     openCodeRun: (...args) => readOpenCodeGroupRun?.(...args) ?? Promise.resolve(null),
@@ -2141,8 +2142,9 @@ async function initializeServices(): Promise<void> {
     message: 'Resolving local runtime...',
   });
   const runtimeAdapterRegistry = await startupStage(() =>
-    createOpenCodeRuntimeAdapterRegistry((phase, message) =>
-      publishStartupStatus({ phase, message })
+    createOpenCodeRuntimeAdapterRegistry(
+      (phase, message) => publishStartupStatus({ phase, message }),
+      gatewayLaunchRuntime
     )
   );
   assertStartupActive(isShutdownStarted);
@@ -2246,7 +2248,6 @@ async function initializeServices(): Promise<void> {
     extensionsRuntimeAdapter
   );
   const mcpInstallService = new McpInstallService(mcpAggregator, extensionsRuntimeAdapter);
-  const apiKeyService = new ApiKeyService();
   providerConnectionService.setApiKeyService(apiKeyService);
   publishStartupStatus({
     phase: 'settings',
@@ -2361,17 +2362,6 @@ async function initializeServices(): Promise<void> {
     crossTeamService,
     logger: createLogger('Feature:Organizations'),
   });
-  runtimeProviderManagementFeature = createRuntimeProviderManagementFeature({
-    openExternal: async (url) => {
-      await shell.openExternal(url);
-    },
-    emitOAuthProgress: (event) => {
-      safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS, event);
-    },
-    emitProgress: (event) => {
-      safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_COMPANION_PROGRESS, event);
-    },
-  });
   terminalWorkspaceFeature = createTerminalWorkspaceFeature({
     teamsBasePath: getTeamsBasePath(),
     logger: createLogger('Feature:TerminalWorkspace'),
@@ -2388,6 +2378,8 @@ async function initializeServices(): Promise<void> {
     teamsBasePath: getTeamsBasePath(),
     claudeProjectsBasePath: getProjectsBasePath(),
     openCodeDataHomePath: resolveClaudeMultimodelDataHomePath(),
+    gatewayUsage: gatewayProviderRuntime.gatewayUsage,
+    runMetadata: gatewayLaunchRuntime,
     ccusageJsonPath: process.env.AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_JSON,
     tokscaleJsonPath: process.env.AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_JSON,
     ccusageCommand: readOptionalEnv('AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_COMMAND'),
@@ -2893,7 +2885,6 @@ async function initializeServices(): Promise<void> {
 
   registerExternalAgentConnectionIpc(ipcMain, externalAgentConnection);
 
-  // Initialize IPC handlers with registry
   initializeIpcHandlers(
     contextRegistry,
     updaterService,
@@ -2942,7 +2933,9 @@ async function initializeServices(): Promise<void> {
     crossTeamService,
     teamBackupService ?? undefined,
     launchIoGovernor ?? undefined,
-    memberWorkSyncFeature ?? undefined
+    memberWorkSyncFeature ?? undefined,
+    resolveOpenCodeInputDeclaration,
+    (teamName) => gatewayProviderRuntime.feature.retireTeamGatewayBindings(teamName)
   );
   registerCodexAccountIpc(ipcMain, codexAccountFeature);
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
@@ -2958,13 +2951,11 @@ async function initializeServices(): Promise<void> {
   registerMemberWorkSyncIpc(ipcMain, memberWorkSyncFeature);
   registerMemberLogStreamIpc(ipcMain, memberLogStreamFeature);
 
-  // Forward SSH state changes to renderer and HTTP SSE clients
   sshConnectionManager.on('state-change', (status: unknown) => {
     safeSendToRenderer(mainWindow, SSH_STATUS, status);
     httpServer.broadcast('ssh:status', status);
   });
 
-  // Forward notification events to HTTP SSE clients
   notificationManager.on('notification-new', (notification: unknown) => {
     httpServer.broadcast('notification:new', notification);
   });
@@ -3325,6 +3316,7 @@ function createWindow(): void {
 
   const isMac = process.platform === 'darwin';
   const isDev = process.env.NODE_ENV === 'development';
+  const rendererEntry = isDev ? undefined : resolveRendererEntry(__dirname);
   const iconPath = isMac ? undefined : getAppIconPath();
   const useNativeTitleBar = !isMac && configManager.getConfig().general.useNativeTitleBar;
   mainWindow = new BrowserWindow({
@@ -3384,10 +3376,11 @@ function createWindow(): void {
       logger.warn(`[dev] loading renderer from ${devUrl}`);
     }
     void mainWindow.loadURL(devUrl);
-  } else {
-    void mainWindow.loadFile(getRendererIndexPath()).catch((error: unknown) => {
-      logger.error('Failed to load renderer entry HTML:', error);
-      captureMainException(error, 'renderer_load_file');
+  } else if (rendererEntry) {
+    void mainWindow.loadFile(rendererEntry.filePath).catch((error: unknown) => {
+      const diagnostics = rendererEntry.diagnostics(app.isPackaged, error);
+      logger.error('Failed to load renderer entry HTML:', error, diagnostics);
+      captureRendererLoadFailure(error, 'renderer_load_file', diagnostics);
     });
   }
 
@@ -3439,12 +3432,15 @@ function createWindow(): void {
     'did-fail-load',
     (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
       if (isMainFrame) {
+        const diagnostics = rendererEntry?.diagnostics(app.isPackaged, errorCode);
         logger.error(
-          `Failed to load renderer (code=${errorCode}): ${errorDescription} - ${validatedURL}`
+          `Failed to load renderer (code=${errorCode}): ${errorDescription} - ${validatedURL}`,
+          diagnostics
         );
-        captureMainException(
+        captureRendererLoadFailure(
           new Error(`Renderer main-frame load failed with code ${errorCode}`),
-          'renderer_did_fail_load'
+          'renderer_did_fail_load',
+          diagnostics
         );
       }
     }

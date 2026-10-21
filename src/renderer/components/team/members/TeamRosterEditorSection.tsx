@@ -7,6 +7,7 @@ import { LeadModelRow } from './LeadModelRow';
 import { MembersEditorSection } from './MembersEditorSection';
 
 import type { MemberDraft } from './membersEditorTypes';
+import type { GatewayMemberBindingsState } from '@features/gateway-provider/renderer';
 import type { TeamModelSelectorProps } from '@renderer/components/team/dialogs/TeamModelSelector';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { CliProviderStatus, EffortLevel, TeamProviderId } from '@shared/types';
@@ -14,6 +15,9 @@ import type { CliProviderStatus, EffortLevel, TeamProviderId } from '@shared/typ
 interface TeamRosterEditorSectionProps {
   members: MemberDraft[];
   onMembersChange: (members: MemberDraft[]) => void;
+  /** Team name used for per-teammate gateway bindings on the member row. */
+  teamName?: string;
+  gatewayBindings?: GatewayMemberBindingsState;
   fieldError?: string;
   validateMemberName?: (name: string) => string | null;
   showWorkflow?: boolean;
@@ -80,6 +84,8 @@ interface TeamRosterEditorSectionProps {
 const TeamRosterEditorSectionImpl = ({
   members,
   onMembersChange,
+  teamName,
+  gatewayBindings,
   fieldError,
   validateMemberName,
   showWorkflow = false,
@@ -174,6 +180,8 @@ const TeamRosterEditorSectionImpl = ({
         runtimeSelectionUnresolved={runtimeSelectionUnresolved}
         members={members}
         onChange={onMembersChange}
+        teamName={teamName}
+        gatewayBindings={gatewayBindings}
         fieldError={fieldError}
         validateMemberName={validateMemberName}
         showWorkflow={showWorkflow}

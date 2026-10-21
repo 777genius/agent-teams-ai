@@ -642,7 +642,8 @@
       "byTime": "زمانہ کی قسم ہے",
       "byUnread": "قَسم ہے روزِ روشن کی۔",
       "byProject": "منصوبہ‌سازی سے",
-      "byTeam": "ٹیم کی قسم"
+      "byTeam": "ٹیم کی قسم",
+      "manualOrder": "دستی ترتیب"
     }
   },
   "toolViewer": {

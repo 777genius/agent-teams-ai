@@ -7,6 +7,7 @@ import {
   ANTHROPIC_CONNECTION_MODES,
   ANTHROPIC_DIRECT_ROUTE_ENV_KEYS,
   ANTHROPIC_EXTERNAL_ROUTE_ENV_KEYS,
+  ANTHROPIC_MODEL_ENV_KEYS,
   type AnthropicConnectionMode,
 } from '@shared/constants/anthropicConnectionMode';
 
@@ -222,7 +223,11 @@ function applyAnthropicRestartConnectionPolicy(
   for (const key of ANTHROPIC_EXTERNAL_ROUTE_ENV_KEYS) {
     assignments.set(key, '');
   }
-  if (connectionMode !== 'compatible') {
+  if (connectionMode === 'compatible') {
+    for (const key of ANTHROPIC_MODEL_ENV_KEYS) {
+      assignments.set(key, env[key] ?? '');
+    }
+  } else {
     for (const key of ANTHROPIC_DIRECT_ROUTE_ENV_KEYS) {
       assignments.set(key, '');
     }
@@ -239,7 +244,8 @@ function applyAnthropicRestartConnectionPolicy(
 
 export function buildDirectTmuxRestartEnvAssignments(
   env: NodeJS.ProcessEnv,
-  providerId: TeamProviderId
+  providerId: TeamProviderId,
+  finalEnvPatch?: Record<string, string>
 ): string {
   const assignments = new Map<string, string>();
   const unsetKeys = new Set<string>();
@@ -287,6 +293,13 @@ export function buildDirectTmuxRestartEnvAssignments(
     }
   }
 
+  // The member gateway patch is final: it wins over every inherited-auth
+  // transform above and must never be blanked by connection-mode policy.
+  for (const [key, value] of Object.entries(finalEnvPatch ?? {})) {
+    unsetKeys.delete(key);
+    assignments.set(key, value);
+  }
+
   return [
     ...[...unsetKeys].map((key) => `-u ${shellQuote(key)}`),
     ...[...assignments.entries()].map(([key, value]) => `${key}=${shellQuote(value)}`),
@@ -299,10 +312,16 @@ interface DirectTmuxRestartCommandInput {
   providerId: TeamProviderId;
   binaryPath: string;
   args: string[];
+  /** Final member env patch applied after all inherited-auth transforms. */
+  finalEnvPatch?: Record<string, string>;
 }
 
 export function buildDirectTmuxRestartCommand(input: DirectTmuxRestartCommandInput): string {
-  const envAssignments = buildDirectTmuxRestartEnvAssignments(input.env, input.providerId);
+  const envAssignments = buildDirectTmuxRestartEnvAssignments(
+    input.env,
+    input.providerId,
+    input.finalEnvPatch
+  );
   const command = [
     'cd',
     shellQuote(input.cwd),

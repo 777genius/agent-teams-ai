@@ -37,7 +37,8 @@ interface LaunchDialogRelaunchMode extends LaunchDialogBase {
   onRelaunch: (
     request: TeamLaunchRequest,
     members: TeamCreateRequest['members'],
-    intent?: import('@shared/types').ReplaceMembersRequest['memberSettingsRelaunch']
+    intent?: import('@shared/types').ReplaceMembersRequest['memberSettingsRelaunch'],
+    onMembersSaved?: () => void
   ) => Promise<void>;
 }
 

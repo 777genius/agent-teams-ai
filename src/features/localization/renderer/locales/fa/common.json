@@ -642,7 +642,8 @@
       "byTime": "بر اساس زمان",
       "byUnread": "بر اساس خوانده‌نشده",
       "byProject": "بر اساس پروژه",
-      "byTeam": "بر اساس تیم"
+      "byTeam": "بر اساس تیم",
+      "manualOrder": "ترتیب دستی"
     }
   },
   "toolViewer": {

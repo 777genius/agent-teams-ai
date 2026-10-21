@@ -8,6 +8,7 @@ import { ClaudeJsonlUsageImporter } from '../infrastructure/ClaudeJsonlUsageImpo
 import { createCliUsageImporter } from '../infrastructure/CliUsageImporters';
 import { CodexJsonlUsageImporter } from '../infrastructure/CodexJsonlUsageImporter';
 import { CompositeTokenUsageRunSourceDiscovery } from '../infrastructure/CompositeTokenUsageRunSourceDiscovery';
+import { GatewayUsageImporter } from '../infrastructure/GatewayUsageImporter';
 import { JsonTokenUsageBudgetNotificationStateRepository } from '../infrastructure/JsonTokenUsageBudgetNotificationStateRepository';
 import { JsonTokenUsageBudgetSettingsRepository } from '../infrastructure/JsonTokenUsageBudgetSettingsRepository';
 import { JsonTokenUsageLedgerRepository } from '../infrastructure/JsonTokenUsageLedgerRepository';
@@ -29,6 +30,7 @@ import type {
   TokenUsageAnalyticsServicePort,
   TokenUsageBudgetNotificationSettingsPort,
   TokenUsageBudgetNotificationSinkPort,
+  TokenUsageGatewayUsagePort,
   TokenUsageImporterPort,
   TokenUsageLoggerPort,
   TokenUsageRealtimePublisherPort,
@@ -67,6 +69,8 @@ export interface CreateTokenUsageFeatureDeps {
   budgetNotificationSettings?: TokenUsageBudgetNotificationSettingsPort;
   publisher?: TokenUsageRealtimePublisherPort;
   taskAttributionSource?: TokenUsageTaskAttributionSourcePort;
+  gatewayUsage?: TokenUsageGatewayUsagePort;
+  runMetadata?: { reconcileRuns(runs: readonly TokenUsageRunDto[]): Promise<TokenUsageRunDto[]> };
   logger?: TokenUsageLoggerPort;
 }
 
@@ -101,17 +105,36 @@ export function createTokenUsageFeature(
         new OpenCodeSessionStoreRunSourceDiscovery(deps.teamsBasePath, deps.openCodeDataHomePath),
       ])
     : teamLaunchDiscovery;
+  const clock = { now: () => new Date() };
+  const ledger = new JsonTokenUsageLedgerRepository(deps.ledgerPath);
+  const importers = buildImporters(deps);
+  if (deps.gatewayUsage) {
+    importers.push(
+      new GatewayUsageImporter({
+        usage: deps.gatewayUsage,
+        ledger,
+        clock,
+        logger: deps.logger,
+      })
+    );
+  }
   const service: TokenUsageAnalyticsServicePort = new TokenUsageAnalyticsService({
     statusEpoch: randomUUID(),
-    ledger: new JsonTokenUsageLedgerRepository(deps.ledgerPath),
-    discovery,
-    importers: buildImporters(deps),
-    clock: { now: () => new Date() },
+    ledger,
+    discovery: deps.runMetadata
+      ? {
+          discoverAppRuns: async () =>
+            deps.runMetadata!.reconcileRuns(await discovery.discoverAppRuns()),
+        }
+      : discovery,
+    importers,
+    clock,
     budgets: budgetSettingsRepository,
     budgetNotifications: budgetNotificationEvaluator,
     budgetNotificationSettings: deps.budgetNotificationSettings,
     publisher: deps.publisher,
     taskAttributionSource: deps.taskAttributionSource,
+    gatewayUsage: deps.gatewayUsage,
     logger: deps.logger,
   });
 

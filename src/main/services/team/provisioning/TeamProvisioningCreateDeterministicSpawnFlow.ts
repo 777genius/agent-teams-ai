@@ -30,6 +30,10 @@ import {
 } from './TeamProvisioningCreateTeamFlow';
 import { applyAppManagedRuntimeSettingsPathEnv } from './TeamProvisioningEnvGuards';
 import { mergeProvisioningWarnings } from './TeamProvisioningLaunchCompatibility';
+import {
+  abortUnspawnedGatewayMembers,
+  beginGatewayMemberLaunches,
+} from './TeamProvisioningMemberGatewayRuntime';
 import { emitProvisioningCheckpoint } from './TeamProvisioningProgressBuffers';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
 import { buildCreateBootstrapUserPrompt } from './TeamProvisioningRosterPrompt';
@@ -47,6 +51,7 @@ import { scheduleProvisioningRunTimeout } from './TeamProvisioningTimeoutLifecyc
 
 import type { GeminiRuntimeAuthState } from '../../runtime/geminiRuntimeAuth';
 import type { ProvisioningEnvResolution } from './TeamProvisioningEnvBuilder';
+import type { MemberGatewayRuntimeArgs } from './TeamProvisioningMemberGatewayRuntime';
 import type { spawnCli } from '@main/utils/childProcess';
 import type {
   ProviderModelLaunchIdentity,
@@ -164,6 +169,8 @@ export interface RunDeterministicCreateSpawnFlowInput<
   runId: string;
   effectiveMemberSpecs: TeamCreateRequest['members'];
   allEffectiveMemberSpecs: TeamCreateRequest['members'];
+  /** Per-member gateway artifacts carried from the create setup result. */
+  memberArgsByMember?: ReadonlyMap<string, MemberGatewayRuntimeArgs>;
   launchIdentity: ProviderModelLaunchIdentity | null;
   provisioningEnv: ProvisioningEnvResolution;
   claudePath: string;
@@ -340,6 +347,7 @@ export async function runDeterministicCreateSpawnFlow<
   runId,
   effectiveMemberSpecs,
   allEffectiveMemberSpecs,
+  memberArgsByMember,
   launchIdentity,
   provisioningEnv,
   claudePath,
@@ -387,6 +395,7 @@ export async function runDeterministicCreateSpawnFlow<
       run,
       effectiveMemberSpecs,
       allEffectiveMemberSpecs,
+      memberArgsByMember: memberArgsByMember ?? new Map(),
       launchIdentity,
       initialUserPrompt,
       promptSize,
@@ -492,12 +501,14 @@ export async function runDeterministicCreateSpawnFlow<
       'Spawning Claude CLI process',
       `args=${spawnArgs.length} cwd=${request.cwd}`
     );
+    await beginGatewayMemberLaunches(memberArgsByMember);
     child = ports.spawnCli(claudePath, spawnArgs, {
       cwd: request.cwd,
       env: { ...shellEnv },
       stdio: ['pipe', 'pipe', 'pipe'],
     });
   } catch (error) {
+    await abortUnspawnedGatewayMembers(memberArgsByMember);
     // Clean up pre-saved meta files if spawn failed (instant failure, not transient)
     await cleanupDeterministicCreateSpawnFailure(run, request, ports);
     throw error;
@@ -549,10 +560,12 @@ export async function runDeterministicCreateSpawnFlow<
       cliLogsTail: extractCliLogsFromRun(run),
     });
     run.onProgress(progress);
-    void cleanupRunOwnedAnthropicApiKeyHelper(run).then(
-      () => ports.cleanupRun(run),
-      () => undefined
-    );
+    void (async () => {
+      // Node reports executable/permission failures asynchronously without assigning a PID.
+      if (child.pid === undefined) await abortUnspawnedGatewayMembers(memberArgsByMember);
+      await cleanupRunOwnedAnthropicApiKeyHelper(run);
+      ports.cleanupRun(run);
+    })().catch(() => undefined);
   });
 
   child.once('close', (code) => {

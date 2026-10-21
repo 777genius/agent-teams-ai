@@ -976,9 +976,22 @@ it.each([
   expect(getterCalls).toBe(1); // Only the proxy's metadata trap runs; property getters never run.
 
   const fs = await import('node:fs/promises');
-  const declarations = ast.statements.filter(ts.isFunctionDeclaration)
-    .filter(node => functionName === 'snapshotStartupFailure' || node.name?.text === functionName)
-    .map(node => node.getText(ast)).join('\n');
+  // The snapshot slices call module-level closed-fact helpers; collect those
+  // declarations too so the compiled slice keeps the real script's scope.
+  const helperNames = ['closedRawField', 'closedStderrCodes', 'closedStderrEvidence'];
+  const helperDeclarations: string[] = [];
+  const collectHelper = (node: ts.Node) => {
+    if (ts.isVariableDeclaration(node) && helperNames.includes(node.name.getText(ast)))
+      helperDeclarations.push(`const ${node.getText(ast)};`);
+    ts.forEachChild(node, collectHelper);
+  };
+  collectHelper(ast);
+  const declarations = [
+    ...helperDeclarations,
+    ...ast.statements.filter(ts.isFunctionDeclaration)
+      .filter(node => functionName === 'snapshotStartupFailure' || node.name?.text === functionName)
+      .map(node => node.getText(ast)),
+  ].join('\n');
   const compiled = ts.transpileModule(declarations, { compilerOptions }).outputText;
   const snapshot = compileFunction(`${compiled}\nreturn ${functionName};`,
     ['process', 'path', 'realpath', 'lstat', 'open', 'opendir', 'Buffer', 'assert'], {

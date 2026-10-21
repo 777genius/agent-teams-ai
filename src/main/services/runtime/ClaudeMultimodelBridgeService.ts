@@ -208,6 +208,7 @@ interface UnifiedRuntimeStatusResponse {
       statusMessage?: string | null;
       detailMessage?: string | null;
       defaultModel?: string | null;
+      effectiveDefaultModel?: string | null;
       selectedBackendId?: string | null;
       resolvedBackendId?: string | null;
       availableBackends?: {
@@ -1051,6 +1052,12 @@ export class ClaudeMultimodelBridgeService {
       statusMessage: runtimeStatus.statusMessage ?? null,
       detailMessage: runtimeStatus.detailMessage ?? null,
       defaultModel: runtimeStatus.defaultModel?.trim() || provider.defaultModel || null,
+      effectiveDefaultModel:
+        runtimeStatus.effectiveDefaultModel === undefined
+          ? undefined
+          : isAuthoritativeStatus && typeof runtimeStatus.effectiveDefaultModel === 'string'
+            ? runtimeStatus.effectiveDefaultModel.trim() || null
+            : null,
       canLoginFromUi: runtimeStatus.canLoginFromUi !== false,
       capabilities: {
         teamLaunch: isAuthoritativeStatus && runtimeStatus.capabilities?.teamLaunch === true,

@@ -1,4 +1,4 @@
-import { validateTeamIds } from '../../contracts';
+import { teamIdForName, validateTeamIds } from '../../contracts';
 import { budgetPeriod, buildBudgetStatus, buildTokenUsageSnapshot } from '../domain';
 
 import { SerialQueue } from './SerialQueue';
@@ -9,6 +9,7 @@ import type {
   TokenUsageBudgetSettingsUpdateRequestDto,
   TokenUsageBudgetStatusDto,
   TokenUsageEventDto,
+  TokenUsageGatewaySourceStateDto,
   TokenUsageRunDto,
   TokenUsageSnapshotRequest,
   TokenUsageTaskAttributionDto,
@@ -19,8 +20,10 @@ import type {
   TokenUsageBudgetNotificationSettingsPort,
   TokenUsageBudgetSettingsRepositoryPort,
   TokenUsageClockPort,
+  TokenUsageGatewayUsagePort,
   TokenUsageImporterPort,
   TokenUsageLedgerRepositoryPort,
+  TokenUsageLedgerSnapshot,
   TokenUsageLoggerPort,
   TokenUsageRealtimePublisherPort,
   TokenUsageRunSourceDiscoveryPort,
@@ -38,12 +41,18 @@ export interface TokenUsageAnalyticsServiceDeps {
   budgetNotificationSettings?: TokenUsageBudgetNotificationSettingsPort;
   publisher?: TokenUsageRealtimePublisherPort;
   taskAttributionSource?: TokenUsageTaskAttributionSourcePort;
+  gatewayUsage?: TokenUsageGatewayUsagePort;
   logger?: TokenUsageLoggerPort;
 }
 
-interface Ledger {
-  runs: TokenUsageRunDto[];
-  events: TokenUsageEventDto[];
+type Ledger = TokenUsageLedgerSnapshot;
+
+interface GatewayHealth {
+  degraded: boolean;
+  sourceCount?: number;
+  lastSuccessfulAt?: string;
+  degradedTeamIds: string[];
+  inventoryUnavailable: boolean;
 }
 export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePort {
   private readonly queue = new SerialQueue();
@@ -63,7 +72,8 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
     validateTeamIds(request?.teamIds);
     return this.queue.run(async () => {
       const ledger = await this.deps.ledger.readSnapshot();
-      return this.analytics(ledger, await this.listTaskAttributions(), request);
+      const health = await this.gatewayHealth(ledger.sourceStates);
+      return this.analytics(ledger, await this.listTaskAttributions(), request, health);
     });
   }
 
@@ -96,13 +106,28 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
         this.deps.logger?.warn('Failed to discover token usage app runs', error);
       }
       const { runs } = await this.deps.ledger.readSnapshot();
+      const importedEvents: TokenUsageEventDto[] = [];
+      const sourceStates: TokenUsageGatewaySourceStateDto[] = [];
+      const cliRuns = runs.filter((run) => !run.gatewayUsageRef);
       for (const importer of this.deps.importers) {
         try {
-          await this.deps.ledger.upsertEvents(await importer.importUsage(runs));
+          const result = await importer.importUsage(importer.includesGatewayRuns ? runs : cliRuns);
+          if (Array.isArray(result)) {
+            importedEvents.push(...result);
+          } else {
+            importedEvents.push(...result.events);
+            sourceStates.push(...(result.sourceStates ?? []));
+          }
         } catch (error) {
           degraded = true;
           this.deps.logger?.warn('Failed to import token usage events', error);
         }
+      }
+      try {
+        await this.deps.ledger.commitImportBatch({ events: importedEvents, sourceStates });
+      } catch (error) {
+        degraded = true;
+        this.deps.logger?.warn('Failed to commit token usage import batch', error);
       }
       const ledger = await this.deps.ledger.readSnapshot();
       let tasks: TokenUsageTaskAttributionDto[] = [];
@@ -115,7 +140,12 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
       this.refreshDegraded = degraded;
       if (!degraded) this.usageUpdatedAt = this.deps.clock.now().toISOString();
       this.remember(ledger);
-      const snapshot = this.analytics(ledger, tasks);
+      const snapshot = this.analytics(
+        ledger,
+        tasks,
+        undefined,
+        await this.gatewayHealth(ledger.sourceStates)
+      );
       this.deps.publisher?.publishSnapshot(snapshot);
       await this.publishBudgetSafely();
       return snapshot;
@@ -215,13 +245,18 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
       }
     }
     const policy = this.deps.budgetNotificationSettings?.getSettings();
+    const health = await this.gatewayHealth(ledger?.sourceStates ?? []);
     const status = buildBudgetStatus({
       now,
       settings,
       ledger,
       usageUpdatedAt: this.usageUpdatedAt,
-      degraded: this.refreshDegraded || readFailed,
+      degraded: this.refreshDegraded || readFailed || health.degraded,
       policy: { enabled: policy?.enabled ?? false, nativeToasts: policy?.nativeToasts ?? false },
+      gateway: {
+        degradedTeamIds: health.degradedTeamIds,
+        inventoryUnavailable: health.inventoryUnavailable,
+      },
     });
     if (readFailed || rollover) status.stale = true;
     if (this.deps.statusEpoch !== undefined) {
@@ -253,20 +288,71 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
   private analytics(
     ledger: Ledger,
     tasks: TokenUsageTaskAttributionDto[],
-    request?: TokenUsageSnapshotRequest
+    request?: TokenUsageSnapshotRequest,
+    health?: GatewayHealth
   ): TokenUsageAnalyticsSnapshotDto {
     return buildTokenUsageSnapshot({
-      ...ledger,
+      runs: ledger.runs,
+      events: ledger.events,
       tasks,
       request,
       nowIso: this.deps.clock.now().toISOString(),
-      degraded: this.refreshDegraded,
+      degraded: this.refreshDegraded || (health?.degraded ?? false),
+      gatewayLastSuccessfulAt: health?.lastSuccessfulAt,
+      gatewaySourceCount: health?.sourceCount,
     });
+  }
+  private async gatewayHealth(
+    states: readonly TokenUsageGatewaySourceStateDto[]
+  ): Promise<GatewayHealth> {
+    if (!this.deps.gatewayUsage) {
+      return { degraded: false, degradedTeamIds: [], inventoryUnavailable: false };
+    }
+    let sources: Awaited<ReturnType<TokenUsageGatewayUsagePort['listSources']>>;
+    try {
+      sources = await this.deps.gatewayUsage.listSources();
+    } catch (error) {
+      this.deps.logger?.warn('Failed to list gateway usage sources for status', error);
+      return { degraded: true, degradedTeamIds: [], inventoryUnavailable: true };
+    }
+    const statesByRef = new Map(states.map((state) => [state.gatewayUsageRef, state]));
+    const degradedTeamIds = new Set<string>();
+    const successfulAt: string[] = [];
+    let complete = true;
+    for (const source of sources) {
+      const state = statesByRef.get(source.gatewayUsageRef);
+      const pendingBind =
+        state === undefined ||
+        state.lastSuccessfulAt === undefined ||
+        state.lastSuccessfulAt < source.lastBoundAt;
+      if (state === undefined || pendingBind || state.degraded) {
+        complete = false;
+        degradedTeamIds.add(teamIdForName(source.teamName));
+      }
+      if (state?.lastSuccessfulAt) successfulAt.push(state.lastSuccessfulAt);
+    }
+    return {
+      degraded: !complete,
+      sourceCount: sources.length,
+      lastSuccessfulAt:
+        complete && sources.length > 0 && successfulAt.length === sources.length
+          ? successfulAt.sort()[0]
+          : undefined,
+      degradedTeamIds: [...degradedTeamIds],
+      inventoryUnavailable: false,
+    };
   }
   private async publishCurrentSnapshot(): Promise<void> {
     const ledger = await this.deps.ledger.readSnapshot();
     this.remember(ledger);
-    this.deps.publisher?.publishSnapshot(this.analytics(ledger, await this.listTaskAttributions()));
+    this.deps.publisher?.publishSnapshot(
+      this.analytics(
+        ledger,
+        await this.listTaskAttributions(),
+        undefined,
+        await this.gatewayHealth(ledger.sourceStates)
+      )
+    );
     await this.publishBudgetSafely();
   }
   private async listTaskAttributions(strict = false): Promise<TokenUsageTaskAttributionDto[]> {

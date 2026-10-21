@@ -179,7 +179,8 @@ async function resolveWorkspaceTsxLoader(checked: string[]): Promise<string | nu
     const loader = path.resolve(path.dirname(packageJsonPath), 'dist', 'loader.mjs');
     checked.push(loader);
     if (await pathExists(loader)) {
-      return loader;
+      // Symlinked workspace deps (pnpm store) launch from their physical paths.
+      return await fs.promises.realpath(loader);
     }
   }
 
@@ -565,7 +566,7 @@ export async function resolveAgentTeamsMcpLaunchSpec(
       // path is parsed as a `C:` URL scheme and rejected, so pass a file URL.
       return {
         command: await resolveNodePath(options),
-        args: ['--import', pathToFileURL(tsxLoader).href, sourceEntry],
+        args: ['--import', pathToFileURL(tsxLoader).href, await fs.promises.realpath(sourceEntry)],
       };
     }
   }

@@ -1,4 +1,4 @@
-import { LEGACY_COMBINED_TEAM_ID, teamIdentityLabel } from '../../contracts';
+import { LEGACY_COMBINED_TEAM_ID, teamIdentityLabel, teamIdForName } from '../../contracts';
 
 import { keepOnlyMappedUsageEvents } from './attributionPolicy';
 import { runProjectKey, runTeamKey } from './budgetScopeKeys';
@@ -51,22 +51,36 @@ export function buildBudgetStatus(input: {
   usageUpdatedAt?: string;
   degraded: boolean;
   policy: TokenUsageBudgetStatusDto['notificationPolicy'];
+  gateway?: {
+    /** Team ids with missing or degraded gateway usage; undefined inventory fails closed. */
+    degradedTeamIds?: readonly string[];
+    inventoryUnavailable?: boolean;
+  };
 }): TokenUsageBudgetStatusDto {
   const period = budgetPeriod(input.now);
   const runs = input.ledger?.runs ?? [];
   const options = new Map<string, TokenUsageBudgetStatusDto['options'][number]>();
-  const totals = new Map<string, { tokens: number; usd: number; incomplete: boolean }>();
+  const totals = new Map<string, { tokens: number; usd: number; costIncomplete: boolean }>();
   const key = (scope: string, id: string): string => JSON.stringify([scope, id]);
   const addOption = (scope: TokenUsageBudgetScope, id: string, label: string): void => {
     options.set(key(scope, id), { scope, id, label });
   };
+  const gatewayMarkedProjects = new Set<string>();
   addOption('global', 'global', 'All teams');
   for (const run of runs) {
     const team = runTeamKey(run);
     const project = runProjectKey(run);
     addOption('team', team.id, team.label);
     addOption('project', project.id, project.label);
+    if (run.gatewayUsageRef) gatewayMarkedProjects.add(project.id);
   }
+  const degradedGatewayTeams = new Set(input.gateway?.degradedTeamIds ?? []);
+  const coverageIncomplete = (scope: TokenUsageBudgetScope, id: string): boolean =>
+    scope === 'global'
+      ? Boolean(input.gateway?.inventoryUnavailable) || degradedGatewayTeams.size > 0
+      : scope === 'team'
+        ? degradedGatewayTeams.has(id)
+        : gatewayMarkedProjects.has(id);
   let degraded = input.degraded;
   const monthEvents = (input.ledger?.events ?? []).filter((event) => {
     const time = Date.parse(event.occurredAt);
@@ -80,24 +94,27 @@ export function buildBudgetStatus(input: {
   if (attributed.unmappedEventCount > 0) degraded = true;
   const runById = new Map(runs.map((run) => [run.appRunId, run]));
   for (const event of attributed.attributed) {
-    const run = runById.get(event.appRunId)!;
-    const team = runTeamKey(run);
-    const project = runProjectKey(run);
+    const run = runById.get(event.appRunId);
+    const teamName = run?.teamName ?? event.teamName;
+    const team = run
+      ? runTeamKey(run)
+      : { id: teamIdForName(teamName), label: teamIdentityLabel(teamIdForName(teamName)) };
+    const project = run ? runProjectKey(run) : null;
     const cost = normalizeCostBreakdown(event.cost);
     const tokens = normalizeTokenBreakdown(event.tokens).totalTokens;
     for (const [scope, id] of [
       ['global', 'global'],
       ['team', team.id],
-      ...(run.teamName === undefined || run.teamName === 'unassigned'
+      ...(teamName === undefined || teamName === 'unassigned'
         ? [['team', LEGACY_COMBINED_TEAM_ID]]
         : []),
-      ['project', project.id],
-    ]) {
+      ...(project ? [['project', project.id]] : []),
+    ] as [TokenUsageBudgetScope, string][]) {
       const idKey = key(scope, id);
-      const value = totals.get(idKey) ?? { tokens: 0, usd: 0, incomplete: false };
+      const value = totals.get(idKey) ?? { tokens: 0, usd: 0, costIncomplete: false };
       value.tokens += tokens;
       value.usd += cost.apiEquivalentUsd;
-      value.incomplete ||= cost.source === 'unknown';
+      value.costIncomplete ||= cost.source === 'unknown';
       totals.set(idKey, value);
     }
   }
@@ -115,7 +132,8 @@ export function buildBudgetStatus(input: {
     const optionKey = key(scope, id);
     if (!options.has(optionKey))
       addOption(scope, id, scope === 'team' ? teamIdentityLabel(id) : id);
-    const total = totals.get(optionKey) ?? { tokens: 0, usd: 0, incomplete: false };
+    const total = totals.get(optionKey) ?? { tokens: 0, usd: 0, costIncomplete: false };
+    const coverage = coverageIncomplete(scope, id);
     const metrics: TokenUsageBudgetMetricStatusDto[] = [];
     for (const [metric, limit, amount] of [
       ['tokens', config.monthlyTokenLimit, total.tokens],
@@ -133,7 +151,9 @@ export function buildBudgetStatus(input: {
         nextThreshold:
           percent === null ? undefined : config.thresholds.find((threshold) => threshold > percent),
         incomplete:
-          input.ledger === null || (metric === 'apiEquivalentCostUsd' && total.incomplete),
+          input.ledger === null ||
+          coverage ||
+          (metric === 'apiEquivalentCostUsd' && total.costIncomplete),
       });
     }
     return {

@@ -12,6 +12,7 @@ import {
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
 import { isUsableCodexModelCatalog } from '@shared/utils/codexModelCatalog';
 import { getErrorMessage } from '@shared/utils/errorHandling';
+import { getAnthropicRuntimeDefaultLaunchModel } from '@shared/utils/providerDefaultModel';
 
 import { buildProviderControlPlaneCliCommandArgs } from '../../runtime/providerCliCommandArgs';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
@@ -193,9 +194,12 @@ export function buildRuntimeProviderLaunchFacts(
     }
   }
 
-  if (input.providerId === 'anthropic' && !defaultModel) {
-    const statusDefaultModel =
-      typeof providerStatus?.defaultModel === 'string' ? providerStatus.defaultModel.trim() : null;
+  if (input.providerId === 'anthropic') {
+    const statusDefaultModel = getAnthropicRuntimeDefaultLaunchModel({
+      ...providerStatus,
+      providerId: providerStatus?.providerId ?? 'anthropic',
+      defaultModel: defaultModel ? null : providerStatus?.defaultModel,
+    });
     if (statusDefaultModel) {
       defaultModel = statusDefaultModel;
       modelIds.add(statusDefaultModel);

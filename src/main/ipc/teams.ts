@@ -250,6 +250,7 @@ import type {
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { TeamMembersMetaFile } from '../services/team/TeamMembersMetaStore';
 import type { TeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
+import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments';
 import type {
   AddTaskCommentRequest,
   AgentActionMode,
@@ -574,6 +575,7 @@ let teamPermanentDeletionLifecycle: {
   completeTeamDeletion(teamName: string): void;
   resumeTeam(teamName: string): void;
 } | null = null;
+let resolveOpenCodeInputDeclaration: ResolveOpenCodeInputDeclaration | undefined;
 let teamScopedResourceReleaser: TeamScopedResourceReleaser | null = null;
 let permanentDeletionCoordinator: TeamPermanentDeletionTransactionCoordinator | null = null;
 
@@ -581,7 +583,6 @@ const attachmentStore = new TeamAttachmentStore();
 const taskAttachmentStore = new TeamTaskAttachmentStore();
 const teamMetaStore = new TeamMetaStore();
 const worktreeGitService = new TeamWorktreeGitService();
-
 function isValidStoredAttachmentMimeType(value: unknown): value is string {
   if (typeof value !== 'string') return false;
   const v = value.trim();
@@ -592,10 +593,6 @@ function isValidStoredAttachmentMimeType(value: unknown): value is string {
   return slash > 0 && slash < v.length - 1;
 }
 
-/**
- * Prevents GC from collecting Notification objects in the deprecated showTeamNativeNotification.
- * @see https://blog.bloomca.me/2025/02/22/electron-mac-notifications.html
- */
 const activeTeamNotifications = new Set<Notification>();
 
 export function initializeTeamHandlers(
@@ -622,9 +619,12 @@ export function initializeTeamHandlers(
     completeTeamDeletion(teamName: string): void;
     resumeTeam(teamName: string): void;
   },
-  scopedResourceReleaser?: TeamScopedResourceReleaser
+  scopedResourceReleaser?: TeamScopedResourceReleaser,
+  inputDeclarationResolver?: ResolveOpenCodeInputDeclaration,
+  retireGatewayBindings?: (teamName: string) => Promise<void>
 ): void {
   teamDataService = service;
+  resolveOpenCodeInputDeclaration = inputDeclarationResolver;
   teamProvisioningStartApi = teamHandlerApis.provisioningStart;
   teamProvisioningStatusApi = teamHandlerApis.provisioningStatus;
   teamProvisioningPreflightApi = teamHandlerApis.preflight;
@@ -666,6 +666,7 @@ export function initializeTeamHandlers(
     attachmentStore,
     taskAttachmentStore,
     lifecycle: () => teamPermanentDeletionLifecycle,
+    retireGatewayBindings,
     invalidateTeamConfig: (teamName) => getTeamDataWorkerClient().invalidateTeamConfig(teamName),
     logRecoveryError: (teamName, error) =>
       logger.error(
@@ -2838,6 +2839,7 @@ async function handleSendMessage(
         memberName,
         providerId: recipientProviderId,
         attachments: nativeAttachments,
+        resolveOpenCodeInputDeclaration,
         readTeamData: (teamName) =>
           getTeamDataService().getTeamData(teamName, { includeMemberBranches: false }),
       });

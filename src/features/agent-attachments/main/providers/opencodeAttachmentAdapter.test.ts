@@ -1,9 +1,20 @@
+import { resolveAgentAttachmentCapability } from '../../core/domain/capabilities';
+
 import {
   buildOpenCodeAttachmentDeliveryParts,
   redactOpenCodeFilePartsForDiagnostics,
 } from './opencodeAttachmentAdapter';
 
 import type { AttachmentPayload } from '@shared/types';
+
+const imageCapability = resolveAgentAttachmentCapability({
+  providerId: 'opencode',
+  declaredInputModalities: ['image'],
+});
+const videoCapability = resolveAgentAttachmentCapability({
+  providerId: 'opencode',
+  declaredInputModalities: ['image', 'video'],
+});
 
 function attachment(overrides: Partial<AttachmentPayload> = {}): AttachmentPayload {
   return {
@@ -32,7 +43,7 @@ describe('OpenCode attachment adapter', () => {
     expect(
       buildOpenCodeAttachmentDeliveryParts({
         text: 'hello',
-        model: 'openrouter/moonshotai/kimi-k2.6',
+        model: 'custom/new-model',
       })
     ).toEqual({
       kind: 'legacy_text',
@@ -42,10 +53,11 @@ describe('OpenCode attachment adapter', () => {
     });
   });
 
-  it('serializes verified OpenCode vision models as file parts', () => {
+  it('serializes declared image input as file parts', () => {
     const result = buildOpenCodeAttachmentDeliveryParts({
       text: 'What color?',
-      model: 'openrouter/moonshotai/kimi-k2.6',
+      model: 'custom/new-model',
+      capability: imageCapability,
       attachments: [attachment()],
     });
 
@@ -61,72 +73,6 @@ describe('OpenCode attachment adapter', () => {
     expect(result.diagnostics.join('\n')).not.toContain(attachment().data);
   });
 
-  it('allows verified GLM 4.5V image delivery', () => {
-    expect(() =>
-      buildOpenCodeAttachmentDeliveryParts({
-        text: 'What color?',
-        model: 'openrouter/z-ai/glm-4.5v',
-        attachments: [attachment()],
-      })
-    ).not.toThrow();
-  });
-
-  it.each([
-    'kimi-for-coding/kimi-for-coding',
-    'kimi-for-coding/kimi-for-coding-highspeed',
-    'kimi-for-coding/k3',
-    'zai-coding-plan/glm-5v-turbo',
-    'minimax-coding-plan/MiniMax-M3',
-    'xai/grok-4.5',
-    'xai/grok-4.3',
-    'xai/grok-4.20-0309-reasoning',
-    'xai/grok-4.20-0309-non-reasoning',
-    'xai/grok-build-0.1',
-    'github-copilot/gpt-5-mini',
-    'github-copilot/gpt-5.3-codex',
-    'github-copilot/gpt-5.4',
-    'github-copilot/gpt-5.4-mini',
-    'github-copilot/gpt-5.5',
-    'github-copilot/gpt-5.6-luna',
-    'github-copilot/gpt-5.6-sol',
-    'github-copilot/gpt-5.6-terra',
-    'github-copilot/claude-fable-5',
-    'github-copilot/claude-haiku-4.5',
-    'github-copilot/claude-opus-4.5',
-    'github-copilot/claude-opus-4.6',
-    'github-copilot/claude-opus-4.7',
-    'github-copilot/claude-opus-4.8',
-    'github-copilot/claude-sonnet-4.5',
-    'github-copilot/claude-sonnet-4.6',
-    'github-copilot/claude-sonnet-5',
-    'github-copilot/gemini-2.5-pro',
-    'github-copilot/gemini-3-flash-preview',
-    'github-copilot/gemini-3.1-pro-preview',
-    'github-copilot/gemini-3.5-flash',
-    'github-copilot/kimi-k2.7-code',
-    'xiaomi-token-plan-ams/mimo-v2.5',
-    'xiaomi-token-plan-sgp/mimo-v2.5',
-    'xiaomi-token-plan-cn/mimo-v2.5',
-  ])('allows verified subscription model %s image delivery', (model) => {
-    expect(() =>
-      buildOpenCodeAttachmentDeliveryParts({
-        text: 'What color?',
-        model,
-        attachments: [attachment()],
-      })
-    ).not.toThrow();
-  });
-
-  it('blocks known non-vision OpenCode models before runtime send', () => {
-    expect(() =>
-      buildOpenCodeAttachmentDeliveryParts({
-        text: 'What color?',
-        model: 'openrouter/z-ai/glm-5.1',
-        attachments: [attachment()],
-      })
-    ).toThrow(/not verified for image attachments/);
-  });
-
   it('blocks unknown OpenCode model image delivery by default', () => {
     expect(() =>
       buildOpenCodeAttachmentDeliveryParts({
@@ -134,23 +80,25 @@ describe('OpenCode attachment adapter', () => {
         model: 'openrouter/example/new-model',
         attachments: [attachment()],
       })
-    ).toThrow(/unknown image support/);
+    ).toThrow(/unknown image input support/);
   });
 
   it('rejects non-image attachments before provider send', () => {
     expect(() =>
       buildOpenCodeAttachmentDeliveryParts({
         text: 'Read PDF',
-        model: 'openrouter/moonshotai/kimi-k2.6',
+        model: 'custom/new-model',
+        capability: imageCapability,
         attachments: [attachment({ filename: 'a.pdf', mimeType: 'application/pdf' })],
       })
     ).toThrow(/OpenCode currently supports image attachments only/);
   });
 
-  it('serializes video attachments as file parts for the verified video model', () => {
+  it('serializes video attachments as file parts with declared video input', () => {
     const result = buildOpenCodeAttachmentDeliveryParts({
       text: 'Summarize this clip',
-      model: 'minimax-coding-plan/MiniMax-M3',
+      model: 'custom/new-model',
+      capability: videoCapability,
       attachments: [attachment({ filename: 'clip.mp4', mimeType: 'video/mp4' })],
     });
 
@@ -167,10 +115,11 @@ describe('OpenCode attachment adapter', () => {
     expect(result.diagnostics.join('\n')).not.toContain(attachment().data);
   });
 
-  it('delivers both image and video parts for the verified video model', () => {
+  it('delivers both image and video parts with declared video input', () => {
     const result = buildOpenCodeAttachmentDeliveryParts({
       text: 'What is happening?',
-      model: 'minimax-coding-plan/MiniMax-M3',
+      model: 'custom/new-model',
+      capability: videoCapability,
       attachments: [
         attachment({ filename: 'frame.png', mimeType: 'image/png' }),
         attachment({ filename: 'clip.webm', mimeType: 'video/webm' }),
@@ -184,7 +133,8 @@ describe('OpenCode attachment adapter', () => {
     expect(() =>
       buildOpenCodeAttachmentDeliveryParts({
         text: 'Compare these clips',
-        model: 'minimax-coding-plan/MiniMax-M3',
+        model: 'custom/new-model',
+        capability: videoCapability,
         attachments: [
           attachment({ id: 'video_1', filename: 'one.mp4', mimeType: 'video/mp4' }),
           attachment({ id: 'video_2', filename: 'two.webm', mimeType: 'video/webm' }),
@@ -197,7 +147,8 @@ describe('OpenCode attachment adapter', () => {
     expect(() =>
       buildOpenCodeAttachmentDeliveryParts({
         text: 'Inspect these',
-        model: 'minimax-coding-plan/MiniMax-M3',
+        model: 'custom/new-model',
+        capability: videoCapability,
         attachments: [
           attachmentWithBytes(4 * 1024 * 1024, {
             id: 'image_1',
@@ -218,7 +169,8 @@ describe('OpenCode attachment adapter', () => {
     expect(() =>
       buildOpenCodeAttachmentDeliveryParts({
         text: 'Inspect this clip',
-        model: 'minimax-coding-plan/MiniMax-M3',
+        model: 'custom/new-model',
+        capability: videoCapability,
         attachments: [
           attachmentWithBytes(8 * 1024 * 1024 + 1, {
             id: 'video_1',
@@ -234,7 +186,8 @@ describe('OpenCode attachment adapter', () => {
     expect(() =>
       buildOpenCodeAttachmentDeliveryParts({
         text: 'Inspect this clip',
-        model: 'minimax-coding-plan/MiniMax-M3',
+        model: 'custom/new-model',
+        capability: videoCapability,
         attachments: [
           attachment({
             filename: 'clip.mp4',
@@ -250,7 +203,8 @@ describe('OpenCode attachment adapter', () => {
     expect(() =>
       buildOpenCodeAttachmentDeliveryParts({
         text: 'Inspect this clip',
-        model: 'minimax-coding-plan/MiniMax-M3',
+        model: 'custom/new-model',
+        capability: videoCapability,
         attachments: [
           attachment({
             filename: 'clip.mp4',
@@ -263,14 +217,15 @@ describe('OpenCode attachment adapter', () => {
     ).toThrow(/invalid base64 data/);
   });
 
-  it('rejects video attachments for OpenCode models that only support images', () => {
+  it('enforces the supplied image-only capability for video attachments', () => {
     expect(() =>
       buildOpenCodeAttachmentDeliveryParts({
         text: 'Summarize this clip',
-        model: 'openrouter/moonshotai/kimi-k2.6',
+        model: 'custom/new-model',
+        capability: imageCapability,
         attachments: [attachment({ filename: 'clip.mp4', mimeType: 'video/mp4' })],
       })
-    ).toThrow(/does not support video attachments/);
+    ).toThrow(/does not declare video input support/);
   });
 
   it('redacts data URLs from diagnostics', () => {

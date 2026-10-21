@@ -774,6 +774,7 @@ export default interface Resources {
       "markUnread": "Mark as unread",
       "pin": "Pin",
       "rename": "Rename",
+      "restoreTask": "Restore task",
       "unarchive": "Unarchive",
       "unpin": "Unpin"
     },
@@ -794,6 +795,8 @@ export default interface Resources {
       "searchProjects": "Search projects...",
       "searchTeams": "Search teams...",
       "selectAll": "Select all",
+      "showArchived": "Show archived tasks",
+      "showDeleted": "Show deleted tasks",
       "status": "Status",
       "statusOptions": {
         "approved": "APPROVED",
@@ -808,11 +811,13 @@ export default interface Resources {
     "taskFolders": {
       "actions": "Folder or task actions",
       "archived": "Archived task",
+      "cannotMoveHere": "You can't move tasks here",
       "collapse": "Collapse folder",
       "counts": "{{active}} active, {{archived}} archived, {{unavailable}} unavailable",
       "deleteDescription": "Tasks and subfolders move to the parent. Tasks in a root folder become unfiled. No tasks are deleted.",
       "deleteFolder": "Delete folder",
       "destination": "Destination folder",
+      "dockToSidebar": "Folders as the sidebar",
       "dragFolder": "Drag folder",
       "dragTask": "Drag task to a folder",
       "expand": "Expand folder",
@@ -820,6 +825,7 @@ export default interface Resources {
       "invalidName": "Use a name with 1–120 characters.",
       "loading": "Loading folders…",
       "move": "Move to…",
+      "moveHere": "Put it here",
       "newFolder": "New folder",
       "newSubfolder": "New subfolder",
       "organizationDescription": "Organize tasks without changing their team, project or status.",
@@ -832,7 +838,9 @@ export default interface Resources {
       "saveError": "Could not save folder organization. Your last saved structure is preserved.",
       "showArchived": "Show archived tasks",
       "title": "Task folders",
-      "unfiled": "Unfiled"
+      "unfiled": "Unfiled",
+      "unreadTasks_one": "{{count}} unread task",
+      "unreadTasks_other": "{{count}} unread tasks"
     },
     "tasks": {
       "date": {
@@ -870,6 +878,11 @@ export default interface Resources {
       },
       "hideArchived": "Hide archived",
       "pinned": "Pinned",
+      "restoreFailed": {
+        "confirmLabel": "OK",
+        "fallbackMessage": "An unexpected error occurred",
+        "title": "Failed to restore task"
+      },
       "searchPlaceholder": "Search tasks...",
       "showArchived": "Show archived",
       "showLess": "Show less",
@@ -878,7 +891,8 @@ export default interface Resources {
         "byProject": "By project",
         "byTeam": "By team",
         "byTime": "By time",
-        "byUnread": "By unread"
+        "byUnread": "By unread",
+        "manualOrder": "Manual order"
       },
       "teamLabel": "Team: {{team}}",
       "title": "Tasks"
@@ -1389,6 +1403,11 @@ export default interface Resources {
         "allTeams": "All teams",
         "filterTeams": "Filter teams",
         "selectedTeams": "{{count}} teams"
+      },
+      "gateway": {
+        "dailyGranularity": "Gateway usage is aggregated by UTC day.",
+        "lastSuccessfulImport": "Last complete gateway import:",
+        "noConfirmedImport": "A complete gateway import is not yet confirmed; totals may be partial."
       },
       "labels": {
         "cost": "Cost",
@@ -2546,6 +2565,42 @@ export default interface Resources {
       },
       "title": "Remote Connection"
     },
+    "gatewayProviders": {
+      "actions": {
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "save": "Save"
+      },
+      "addProfile": "Add profile",
+      "badges": {
+        "privateNetwork": "Private network allowed"
+      },
+      "boundTeammates": "Bound teammates: {{total}}",
+      "description": "Gateway endpoints for per-teammate gateway models. API keys are entered on the teammate row and are never kept in app settings.",
+      "dialog": {
+        "createTitle": "Add gateway profile",
+        "description": "Profiles point at a gateway root URL. The connection and key are checked when a teammate API key is probed on the member row.",
+        "editTitle": "Edit gateway profile"
+      },
+      "empty": "No gateway profiles yet.",
+      "errors": {
+        "boundUrl": "This profile still has teammates bound to it. Unbind them first, or create another profile for the new URL.",
+        "fieldsRequired": "Display name and gateway URL are required."
+      },
+      "fields": {
+        "allowPrivateNetwork": "Allow private network address",
+        "allowPrivateNetworkHint": "This gateway runs on another machine on your network. Traffic is sent over your local network, unencrypted when using HTTP.",
+        "baseUrl": "Gateway URL",
+        "baseUrlHint": "Gateway root without a trailing /v1.",
+        "displayName": "Display name"
+      },
+      "hints": {
+        "deleteKeepsHistory": "Deleting a profile does not hide historical usage sources from reports and budgets.",
+        "probeIsTest": "There is no separate connection test: the connection is checked when a teammate API key is probed on the member row."
+      },
+      "title": "Gateway providers"
+    },
     "general": {
       "agentLanguage": {
         "description": "Language for agent communication",
@@ -3456,6 +3511,10 @@ export default interface Resources {
       "advanced": {
         "description": "Power-user options: export/import config, reset defaults, and raw configuration editing.",
         "label": "Advanced"
+      },
+      "gatewayProviders": {
+        "description": "Manage gateway endpoints for per-teammate model access.",
+        "label": "Gateway providers"
       },
       "general": {
         "description": "Core app preferences like theme, language, display density, and startup behavior.",
@@ -4683,6 +4742,30 @@ export default interface Resources {
         "defaultSetting": "default context setting",
         "description": "Anthropic context is team-wide for this launch: {{mode}}. Use Limit context to 200K tokens to avoid long-context behavior.",
         "limitEnabled": "200K limit enabled"
+      },
+      "gateway": {
+        "apiKeyLabel": "Gateway API key",
+        "apiKeyPlaceholder": "Paste the teammate gateway API key",
+        "authRejected": "Key authorization was rejected.",
+        "bindButton": "Bind teammate",
+        "bindingStatus": "Bound to {{profile}}",
+        "credentialChanged": "stored key changed — bind again with a new key",
+        "credentialMissing": "stored key missing — bind again with a new key",
+        "credentialReady": "key stored",
+        "emptyCatalog": "The model catalog is empty.",
+        "keyRequired": "Enter the gateway API key first.",
+        "modelLabel": "Model",
+        "modelPlaceholder": "Select a model",
+        "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route.",
+        "probeButton": "Check key and load models",
+        "probing": "Checking...",
+        "profileLabel": "Gateway profile",
+        "profilePlaceholder": "Select a gateway profile",
+        "profileRequired": "Select a gateway profile first.",
+        "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+        "title": "Gateway provider",
+        "unavailable": "The gateway is unavailable right now.",
+        "unbindButton": "Unbind"
       },
       "mcp": {
         "agentTeamsMcp": "Agent Teams MCP",

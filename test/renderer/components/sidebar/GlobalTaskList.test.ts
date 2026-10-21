@@ -7,9 +7,12 @@ import type { GlobalTask, TeamSummary } from '../../../../src/shared/types';
 
 interface StoreState {
   globalTasks: GlobalTask[];
+  globalDeletedTasks: GlobalTask[];
   globalTasksLoading: boolean;
   globalTasksInitialized: boolean;
   fetchAllTasks: ReturnType<typeof vi.fn>;
+  fetchAllDeletedTasks: ReturnType<typeof vi.fn>;
+  restoreTask: ReturnType<typeof vi.fn>;
   fetchProjects: ReturnType<typeof vi.fn>;
   fetchRepositoryGroups: ReturnType<typeof vi.fn>;
   softDeleteTask: ReturnType<typeof vi.fn>;
@@ -57,19 +60,30 @@ function notifyStoreUpdate(): void {
 }
 
 vi.mock('../../../../src/renderer/store', () => ({
-  useStore: (selector: (state: StoreState) => unknown) => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { useState, useEffect } = require('react') as typeof import('react');
-    const [, setVersion] = useState(0);
-    useEffect(() => {
-      const listener = () => setVersion((v) => v + 1);
-      storeListeners.add(listener);
-      return () => {
-        storeListeners.delete(listener);
-      };
-    }, []);
-    return selector(storeState);
-  },
+  useStore: Object.assign(
+    (selector: (state: StoreState) => unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { useState, useEffect } = require('react') as typeof import('react');
+      const [, setVersion] = useState(0);
+      useEffect(() => {
+        const listener = () => setVersion((v) => v + 1);
+        storeListeners.add(listener);
+        return () => {
+          storeListeners.delete(listener);
+        };
+      }, []);
+      return selector(storeState);
+    },
+    {
+      getState: () => storeState,
+      subscribe: (listener: () => void) => {
+        storeListeners.add(listener);
+        return () => {
+          storeListeners.delete(listener);
+        };
+      },
+    }
+  ),
 }));
 
 vi.mock('zustand/react/shallow', () => ({
@@ -211,24 +225,25 @@ function makeTask(index: number, overrides: Partial<GlobalTask> = {}): GlobalTas
     createdAt: `2026-04-18T10:${timestamp}:00.000Z`,
     updatedAt: `2026-04-18T10:${timestamp}:00.000Z`,
     reviewState: 'none',
-    reviewNotes: [],
     blockedBy: [],
     blocks: [],
     comments: [],
     attachments: [],
     workIntervals: [],
-    kanbanColumnId: null,
     projectPath: '/workspace/hookplex',
     ...overrides,
-  } as GlobalTask;
+  };
 }
 
 describe('GlobalTaskList project grouping', () => {
   beforeEach(() => {
     storeState.globalTasks = [];
+    storeState.globalDeletedTasks = [];
     storeState.globalTasksLoading = false;
     storeState.globalTasksInitialized = true;
     storeState.fetchAllTasks = vi.fn(() => Promise.resolve(undefined));
+    storeState.fetchAllDeletedTasks = vi.fn(() => Promise.resolve(undefined));
+    storeState.restoreTask = vi.fn(() => Promise.resolve(undefined));
     storeState.fetchProjects = vi.fn(() => Promise.resolve(undefined));
     storeState.fetchRepositoryGroups = vi.fn(() => Promise.resolve(undefined));
     storeState.softDeleteTask = vi.fn(() => Promise.resolve(undefined));
@@ -612,6 +627,68 @@ describe('GlobalTaskList project grouping', () => {
     expect(
       host.querySelector('[data-testid="sidebar-task-item"]')?.getAttribute('data-team-offline')
     ).toBe('true');
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('searches locally renamed subjects live and ignores the obsolete subject', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    localStorage.setItem('sidebarTasksGrouping', 'none');
+    storeState.globalTasks = [makeTask(1)];
+    taskLocalState.renamedSubjects.set('alpha-team:task-1', 'Visible New Name');
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(GlobalTaskList));
+      await flushMicrotasks();
+    });
+
+    const searchButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.getAttribute('aria-label')?.toLowerCase().includes('search')
+    );
+    expect(searchButton).toBeTruthy();
+    await act(async () => {
+      searchButton!.click();
+      await flushMicrotasks();
+    });
+
+    const input = host.querySelector<HTMLInputElement>('input[type="text"]');
+    const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+    await act(async () => {
+      setValue.call(input, '  visible new NAME  ');
+      input!.dispatchEvent(new Event('input', { bubbles: true }));
+      await flushMicrotasks();
+    });
+    expect(visibleSubjects(host)).toEqual(['Visible New Name']);
+
+    await act(async () => {
+      setValue.call(input, '  Task 1  ');
+      input!.dispatchEvent(new Event('input', { bubbles: true }));
+      await flushMicrotasks();
+    });
+    expect(visibleSubjects(host)).toEqual([]);
+
+    await act(async () => {
+      setValue.call(input, '  another live name  ');
+      input!.dispatchEvent(new Event('input', { bubbles: true }));
+      await flushMicrotasks();
+    });
+    expect(visibleSubjects(host)).toEqual([]);
+
+    await act(async () => {
+      taskLocalState.renamedSubjects = new Map(taskLocalState.renamedSubjects).set(
+        'alpha-team:task-1',
+        'Another Live Name'
+      );
+      notifyStoreUpdate();
+      await flushMicrotasks();
+    });
+    expect(visibleSubjects(host)).toEqual(['Another Live Name']);
 
     await act(async () => {
       root.unmount();

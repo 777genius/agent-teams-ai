@@ -642,7 +642,8 @@
       "byTime": "Op tijd",
       "byUnread": "Op ongelezen",
       "byProject": "Op project",
-      "byTeam": "Op team"
+      "byTeam": "Op team",
+      "manualOrder": "Handmatige volgorde"
     }
   },
   "toolViewer": {

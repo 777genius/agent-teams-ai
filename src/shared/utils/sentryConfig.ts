@@ -7,6 +7,7 @@
  */
 
 import { APP_RELEASE } from './buildMetadata';
+import { redactDiagnosticAssignments } from './redactDiagnosticAssignments';
 import {
   isSentryFramePath,
   isSentryImagePath,
@@ -129,7 +130,7 @@ function redactSentryString(value: string): string {
     (current, [pattern, replacement]) => current.replace(pattern, replacement),
     value
   );
-  return redactSentryEnvAssignments(redacted);
+  return redactSentryEnvAssignments(redactDiagnosticAssignments(redacted, isSensitiveSentryKey));
 }
 
 function isSensitiveSentryKey(key: string): boolean {

@@ -47,6 +47,8 @@ import {
 } from './TeamProvisioningSendMessageToRunBoundaryFactory';
 
 import type { OpenCodeTeamRuntimeMessageResult } from '../runtime';
+import type { MemberGatewayRuntimeSeams } from './TeamProvisioningMemberGatewayRuntime';
+import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments';
 
 const logger = createLogger('Service:TeamProvisioning');
 
@@ -63,6 +65,7 @@ export const OPENCODE_LEAD_ACTIVE_FALLBACK_MS = 4 * 60_000;
 export interface TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServiceDeps<
   TRun extends TeamProvisioningSendMessageToRunRun,
 > extends TeamProvisioningOpenCodePrimaryLaneSelfHealPorts {
+  resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration;
   readLeadActivityDirectory: TeamProvisioningOpenCodeMemberMessageDeliveryServiceHost['openCodeRuntimeRecoveryFacade']['readOpenCodeMemberDirectory'];
   createDeliveryHost(): TeamProvisioningOpenCodeMemberMessageDeliveryHost;
   /** Tracked run that owns the OpenCode primary lane for a team, if any. */
@@ -204,14 +207,17 @@ export class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<
   protected createOpenCodeMemberMessageDeliveryService(): ReturnType<
     typeof createOpenCodeMemberMessageDeliveryServiceFromHost
   > {
-    return createOpenCodeMemberMessageDeliveryServiceFromHost({
-      ...this.deps.createDeliveryHost(),
-      notifyOpenCodeLeadTurnActivity: (input) => {
-        void this.notifyOpenCodeLeadTurnActivity(input);
+    return createOpenCodeMemberMessageDeliveryServiceFromHost(
+      {
+        ...this.deps.createDeliveryHost(),
+        notifyOpenCodeLeadTurnActivity: (input) => {
+          void this.notifyOpenCodeLeadTurnActivity(input);
+        },
+        requestOpenCodePrimaryLaneRebootstrap: (input) =>
+          this.primaryLaneBootstrapSelfHeal.request(input),
       },
-      requestOpenCodePrimaryLaneRebootstrap: (input) =>
-        this.primaryLaneBootstrapSelfHeal.request(input),
-    });
+      this.deps.resolveOpenCodeInputDeclaration
+    );
   }
 
   private readonly leadActivityPending = new Map<string, Promise<void>>();
@@ -328,7 +334,7 @@ export function createTeamProvisioningOpenCodeMemberMessageDeliveryCompatibility
   service: TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServiceHost<TRun>,
   options: Pick<
     TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServiceDeps<TRun>,
-    'logger' | 'nowIso' | 'getErrorMessage'
+    'logger' | 'nowIso' | 'getErrorMessage' | 'resolveOpenCodeInputDeclaration'
   >
 ): TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<TRun> {
   return new TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<TRun>({
@@ -369,15 +375,24 @@ export function createTeamProvisioningOpenCodeMemberMessageDeliveryCompatibility
 export abstract class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityFacade<
   TRun extends ProvisioningRun = ProvisioningRun,
 > extends TeamProvisioningOpenCodePromptDeliveryCompatibilityFacade<TRun> {
-  private readonly openCodeMemberMessageDeliveryCompatibility =
-    createTeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServiceFromService(
-      this as unknown as TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServiceHost<TRun>,
-      {
-        logger,
-        nowIso,
-        getErrorMessage,
-      }
-    );
+  private readonly openCodeMemberMessageDeliveryCompatibility: TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<TRun>;
+
+  constructor(
+    resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration,
+    memberGatewayRuntimeSeams: MemberGatewayRuntimeSeams | null = null
+  ) {
+    super(memberGatewayRuntimeSeams);
+    this.openCodeMemberMessageDeliveryCompatibility =
+      createTeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServiceFromService(
+        this as unknown as TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServiceHost<TRun>,
+        {
+          logger,
+          nowIso,
+          getErrorMessage,
+          resolveOpenCodeInputDeclaration,
+        }
+      );
+  }
 
   protected get sendMessageToRunBoundary(): TeamProvisioningSendMessageToRunBoundary<TRun> {
     return this.openCodeMemberMessageDeliveryCompatibility.sendMessageToRunBoundary;

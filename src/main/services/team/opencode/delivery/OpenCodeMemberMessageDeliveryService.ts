@@ -1,9 +1,4 @@
 import {
-  AgentAttachmentError,
-  buildOpenCodeAttachmentDeliveryParts,
-  type OpenCodeFilePart,
-} from '@features/agent-attachments/main';
-import {
   buildOpenCodeWorkSyncLaneDeliveryGateInput,
   gateOpenCodeWorkSyncLaneDelivery,
   sendOpenCodeWorkSyncAdmittedMessage,
@@ -23,6 +18,10 @@ import {
 } from '../store/OpenCodeRuntimeManifestEvidenceReader';
 
 import { recoverOpenCodeActiveDeliveryBlocker } from './OpenCodeActiveDeliveryPreemption';
+import {
+  prepareOpenCodeDeliveryAttachments,
+  resolveOpenCodeDeliveryModel,
+} from './OpenCodeAttachmentPreparation';
 import {
   markOpenCodeGroupHandoff,
   observedOpenCodeDelivery,
@@ -228,6 +227,7 @@ export class OpenCodeMemberMessageDeliveryService {
 
     const trackedRunId = this.deps.resolveDeliverableTrackedRuntimeRunId(teamName);
     const trackedRun = trackedRunId ? this.deps.runs.get(trackedRunId) : null;
+    const deliveryModel = resolveOpenCodeDeliveryModel({ identity, directory, run: trackedRun });
     let liveSecondaryLaneRunId: string | null = null;
     let trackedSecondaryLanePresent = false;
     let trackedSecondaryLaneSnapshotKnown = false;
@@ -295,7 +295,7 @@ export class OpenCodeMemberMessageDeliveryService {
           ...(metaMember ?? {}),
           name: canonicalMemberName,
           providerId: 'opencode',
-          model: metaMember?.model ?? configMember?.model,
+          model: deliveryModel,
           role: metaMember?.role ?? configMember?.role,
           workflow: metaMember?.workflow ?? configMember?.workflow,
           effort: metaMember?.effort ?? configMember?.effort,
@@ -315,7 +315,7 @@ export class OpenCodeMemberMessageDeliveryService {
               ...(metaMember ?? {}),
               name: canonicalMemberName,
               providerId: 'opencode',
-              model: metaMember?.model ?? configMember?.model,
+              model: deliveryModel,
               role: metaMember?.role ?? configMember?.role,
               workflow: metaMember?.workflow ?? configMember?.workflow,
               effort: metaMember?.effort ?? configMember?.effort,
@@ -445,37 +445,6 @@ export class OpenCodeMemberMessageDeliveryService {
       }
     }
 
-    let openCodeFileParts: OpenCodeFilePart[] = [];
-    if (input.attachments?.length && laneIdentity.laneOwnerProviderId === 'opencode') {
-      try {
-        openCodeFileParts = buildOpenCodeAttachmentDeliveryParts({
-          text: input.text,
-          model: metaMember?.model ?? configMember?.model ?? '',
-          attachments: input.attachments,
-        }).fileParts;
-      } catch (error) {
-        const reason =
-          error instanceof AgentAttachmentError
-            ? error.code
-            : 'opencode_attachment_delivery_prepare_failed';
-        const diagnostic = `opencode_attachment_delivery_prepare_failed: ${getErrorMessage(error)}`;
-        const userVisibleMessage =
-          error instanceof AgentAttachmentError
-            ? error.message
-            : 'OpenCode could not prepare the attachment for live delivery.';
-        return {
-          delivered: false,
-          reason,
-          diagnostics: [diagnostic],
-          userVisibleImpact: {
-            state: 'error',
-            reasonCode: 'backend_error',
-            message: userVisibleMessage,
-          },
-        };
-      }
-    }
-
     const assertCurrentRun = (): void => {
       const current =
         laneIdentity.laneKind === 'primary'
@@ -491,6 +460,16 @@ export class OpenCodeMemberMessageDeliveryService {
         throw new OpenCodePromptDeliveryCancelledError();
       }
     };
+    const preparedAttachments = await prepareOpenCodeDeliveryAttachments({
+      projectPath: cwd,
+      model: deliveryModel,
+      text: input.text,
+      attachments: input.attachments,
+      resolveOpenCodeInputDeclaration: this.deps.resolveOpenCodeInputDeclaration,
+      assertCurrentRun,
+    });
+    if ('failure' in preparedAttachments) return preparedAttachments.failure;
+    const openCodeFileParts = preparedAttachments.fileParts;
     if (input.groupChatId && !this.deps.openCodePromptDeliveryWatchdogScheduler.isEnabled()) {
       restoreConsumedLane();
       return { delivered: false, reason: 'group_delivery_observer_unavailable' };
@@ -837,7 +816,7 @@ export class OpenCodeMemberMessageDeliveryService {
           teamName,
           memberName: canonicalMemberName,
           laneId: laneIdentity.laneId,
-          model: metaMember?.model ?? configMember?.model,
+          model: deliveryModel,
           pendingAgeMs: turnActivityAgeMs,
           read: this.deps.readOpenCodeMemberContextUsage,
         });

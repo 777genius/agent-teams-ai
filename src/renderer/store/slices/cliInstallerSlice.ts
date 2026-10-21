@@ -369,8 +369,7 @@ function areProviderBackendsEqual(
  * IPC path (`CliInstallerService.cloneCliInstallationStatus()` then
  * `publishStatusSnapshot()`) hands the renderer freshly-deserialised
  * provider objects on every tick — reference equality on those nested
- * fields would never hold even when the snapshot is structurally
- * identical.
+ * fields would never hold even when the snapshot is structurally identical.
  */
 function areProviderStatusContentEqual(a: CliProviderStatus, b: CliProviderStatus): boolean {
   if (a === b) return true;
@@ -380,6 +379,7 @@ function areProviderStatusContentEqual(a: CliProviderStatus, b: CliProviderStatu
     a.supported === b.supported &&
     a.authenticated === b.authenticated &&
     a.authMethod === b.authMethod &&
+    a.effectiveDefaultModel === b.effectiveDefaultModel &&
     a.verificationState === b.verificationState &&
     (a.statusCheckOutcome ?? null) === (b.statusCheckOutcome ?? null) &&
     (a.statusCheckErrorCode ?? null) === (b.statusCheckErrorCode ?? null) &&
