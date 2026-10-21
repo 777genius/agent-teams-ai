@@ -8,6 +8,10 @@ import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
 import {
+  formatOpenCodeStopCausalSuffix,
+  ownedOpenCodeHandshakeFailure,
+} from '../bridge/OpenCodeStateChangingBridgeCommandService';
+import {
   inspectOpenCodeRuntimeLaneStorage,
   type OpenCodeCommittedBootstrapSessionRecord,
   recoverStaleOpenCodeRuntimeLaneIndexEntry,
@@ -1167,7 +1171,7 @@ export class OpenCodeMemberMessageDeliveryService {
       result = admitted.result;
     } catch (error) {
       await checkpoint();
-      const diagnostic = `opencode_message_delivery_exception: ${getErrorMessage(error)}`;
+      const diagnostic = `opencode_message_delivery_exception: ${getErrorMessage(error)}${formatOpenCodeStopCausalSuffix(ownedOpenCodeHandshakeFailure(error))}`;
       notifyActivity('idle');
       await this.deps.maybeSyncOpenCodeRuntimePermissionsAfterDelivery({
         teamName,

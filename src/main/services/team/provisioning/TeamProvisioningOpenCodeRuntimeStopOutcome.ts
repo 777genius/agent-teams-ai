@@ -1,13 +1,22 @@
 import { isProcessAlive } from '@main/utils/processHealth';
 
 import { redactBridgeDiagnosticText } from '../opencode/bridge/OpenCodeBridgeCommandClient';
+import {
+  formatOpenCodeStopCausalSuffix,
+  ownedOpenCodeStateChangingFailure,
+} from '../opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 
-import type { PersistedTeamLaunchSnapshot } from '@shared/types';
+import type {
+  OpenCodeStopCausalFailure,
+  PersistedTeamLaunchSnapshot,
+  TeamForceStopResult,
+} from '@shared/types';
 
 /** Only confirmed Stop or validated runtime reconciliation authorizes lane cleanup.
  * PID absence and capability mismatch are not proof of the original Stop result. */
 
 export interface OpenCodeRuntimeStopResultLike {
+  causalFailure?: OpenCodeStopCausalFailure;
   stopped?: unknown;
   diagnostics?: unknown;
   warnings?: unknown;
@@ -22,6 +31,42 @@ function stringList(value: unknown): string[] {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === 'string')
     : [];
+}
+
+const STOP_FAILURE_CODES = [
+  'opencode_stop_identity_changed',
+  'opencode_stop_status_unconfirmed',
+  'opencode_stop_abort_rejected',
+  'opencode_stop_deadline',
+  'opencode_stop_compensation_failed',
+  'unsupported_schema',
+  'unsupported_command',
+  'invalid_input',
+  'runtime_not_ready',
+  'provider_error',
+  'timeout',
+  'transport_watchdog_timeout',
+  'contract_violation',
+  'internal_error',
+] as const;
+
+/** Finite diagnostics only: never forward native/provider message text. */
+export function openCodeStopFailureCodes(diagnostics: unknown): string[] {
+  const codes = stringList(diagnostics).flatMap((row) => {
+    const code = /^(?:info:|warning:|error:|stop_failure_code:)([a-z_]+)(?::|$)/.exec(row)?.[1];
+    return STOP_FAILURE_CODES.filter((known) => known === code);
+  });
+  return [...new Set(codes)];
+}
+
+export class OpenCodeRuntimeStopUnconfirmedError extends Error {
+  readonly diagnosticCodes: readonly string[];
+  readonly causalFailure?: OpenCodeStopCausalFailure;
+  constructor(message: string, diagnostics: unknown, causalFailure?: OpenCodeStopCausalFailure) {
+    super(message);
+    this.causalFailure = ownedOpenCodeStateChangingFailure(causalFailure);
+    this.diagnosticCodes = Object.freeze(openCodeStopFailureCodes(diagnostics));
+  }
 }
 
 export function describeOpenCodeRuntimeStopResult(
@@ -122,7 +167,39 @@ export function assertOpenCodeRuntimeStopEffective(input: {
       outcome.alivePids.length > 0
         ? ` (host process still alive: pid ${outcome.alivePids.join(', ')})`
         : ' (no recorded host pid to verify)';
-    throw new Error(`${input.message}${suffix}${alive}`);
+    throw new OpenCodeRuntimeStopUnconfirmedError(
+      `${input.message}${suffix}${alive}`,
+      input.result?.diagnostics,
+      input.result?.causalFailure
+    );
   }
   return outcome;
+}
+
+/**
+ * Both Stop entry points reject the same unconfirmed outcomes: a regular stop
+ * that timed out, failed, or left cleanup incomplete must never read as a
+ * successful stop, whether the caller is the in-app control or a headless
+ * HTTP client.
+ */
+export function assertEscalatedStopConfirmed(result: TeamForceStopResult): void {
+  // `runtime_already_down` is the deliberate finished-stop outcome of a team
+  // with no owned OpenCode lane ids: the recorded hosts exited before the
+  // orchestrator acknowledged and the flow completed its force cleanup, which
+  // both entry points describe as having finished the stop. The rejection
+  // below is scoped to the OpenCode lane case - a stop that did not confirm -
+  // and this idempotent one did.
+  if (result.stopOutcome === 'runtime_already_down') return;
+  if (result.cleanupOutcome === 'incomplete' || result.stopOutcome !== 'stopped') {
+    const outcome =
+      ['stopped', 'stop_failed', 'timed_out', 'runtime_already_down'].find(
+        (value) => value === result.stopOutcome
+      ) ?? 'unknown';
+    const codes = openCodeStopFailureCodes(result.diagnostics);
+    throw new OpenCodeRuntimeStopUnconfirmedError(
+      `team_stop_unconfirmed:${outcome}${codes.length ? ':' + codes.join(',') : ''}${formatOpenCodeStopCausalSuffix(result.causalFailure)}`,
+      result.diagnostics,
+      result.causalFailure
+    );
+  }
 }

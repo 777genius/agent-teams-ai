@@ -153,7 +153,10 @@ export const GatewayProvidersSettingsSection = (): React.JSX.Element => {
 
   return (
     <div>
-      <SettingsSectionHeader title={t('gatewayProviders.title')} icon={<Network className="size-3.5" />} />
+      <SettingsSectionHeader
+        title={t('gatewayProviders.title')}
+        icon={<Network className="size-3.5" />}
+      />
       <p className="mb-3 text-xs" style={{ color: 'var(--color-text-muted)' }}>
         {t('gatewayProviders.description')}
       </p>

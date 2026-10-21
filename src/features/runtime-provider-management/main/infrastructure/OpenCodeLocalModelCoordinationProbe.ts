@@ -697,7 +697,7 @@ function unavailableResult(
 }
 
 function failedResult(
-  input: {
+  _input: {
     readonly provider: RuntimeLocalProviderListEntryDto;
     readonly modelId: string;
   },

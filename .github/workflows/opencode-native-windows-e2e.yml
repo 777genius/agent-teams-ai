@@ -1,0 +1,571 @@
+name: OpenCode native Windows real tasks
+
+on:
+  workflow_call:
+    inputs:
+      sdk_ref:
+        required: true
+        type: string
+      model:
+        description: Explicit selected model required for native and source-only startup; unused for provider-only
+        required: false
+        type: string
+        default: ''
+      versions:
+        type: string
+        default: current
+      provider_only:
+        type: boolean
+        default: false
+      source_only:
+        type: boolean
+        default: false
+      runtime_candidate_run:
+        type: string
+        default: ''
+      runtime_candidate_sha:
+        type: string
+        default: ''
+    secrets:
+      RUNTIME_BUILD_DISPATCH_TOKEN:
+        required: false
+      OPENROUTER_API_KEY:
+        required: true
+  workflow_dispatch:
+    inputs:
+      sdk_ref:
+        description: Independently reviewed exact SDK commit with qualified Windows native gate
+        required: true
+        type: string
+      model:
+        description: Explicit openrouter/ model required for native and source-only startup; unused for provider-only
+        required: false
+        type: string
+        default: ''
+      versions:
+        description: 'Current V2 only by default; all includes V1 and both V2 pins'
+        type: choice
+        options: [current, all, v1, v2]
+        default: current
+      provider_only:
+        description: Compare verified 118 and explicit CI candidate with official npm V1 provider commands only
+        type: boolean
+        default: false
+      source_only:
+        description: Requires exact sdk_ref and explicit model; real startup/stop without packaging or model prompts
+        type: boolean
+        default: false
+      runtime_candidate_run:
+        description: Exact completed Windows packaged-delivery CI producer run for provider-only verification
+        type: string
+        default: ''
+      runtime_candidate_sha:
+        description: Exact candidate source SHA matching sdk_ref for provider-only verification
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  real-tasks:
+    runs-on: windows-2022
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: TEST-native-source
+    steps:
+      - name: Create a fresh private TEST source container
+        shell: pwsh
+        working-directory: ${{ github.workspace }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # Keep Bun's resolver outside the unrelated desktop package scope.
+          # Both source trees keep owner-only WRITE custody. The owned execution
+          # child runs in a per-launch AppContainer whose access checks do not
+          # honor the owner SID alone, so Bun's ancestor probes (the checkout
+          # root and its tsconfig.json) die EPERM unless app containers may
+          # read; default-ACL resource trees never had this problem. Read-only.
+          $appPackages = [Security.Principal.SecurityIdentifier]::new('S-1-15-2-1')
+          $synchronize = [int][Security.AccessControl.FileSystemRights]::Synchronize
+          $readExecuteGrant = [int][Security.AccessControl.FileSystemRights]::ReadAndExecute -bor $synchronize
+          $fullControl = [int][Security.AccessControl.FileSystemRights]::FullControl
+          foreach ($name in @('TEST-native-source', 'TEST-native-sdk')) {
+            $target = Join-Path $env:GITHUB_WORKSPACE $name
+            try { $null = Get-Item -LiteralPath $target -Force -ErrorAction Stop; throw 'TEST source container already exists' }
+            catch [System.Management.Automation.ItemNotFoundException] { }
+            $parent = [IO.DirectoryInfo]::new($env:GITHUB_WORKSPACE)
+            if (!$parent.Exists -or ($parent.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'TEST source parent invalid' }
+            $sid = [Security.Principal.WindowsIdentity]::GetCurrent().User
+            $system = [Security.Principal.SecurityIdentifier]::new('S-1-5-18')
+            $acl = [Security.AccessControl.DirectorySecurity]::new()
+            $acl.SetOwner($sid)
+            $acl.SetAccessRuleProtection($true, $false)
+            $inherit = [Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [Security.AccessControl.InheritanceFlags]::ObjectInherit
+            foreach ($principal in @($sid, $system)) {
+              $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($principal, 'FullControl', $inherit, 'None', 'Allow'))
+            }
+            # .NET's bare ReadAndExecute lacks SYNCHRONIZE, but GENERIC_READ
+            # opens map to FILE_GENERIC_READ which includes it; without the bit
+            # the container read check still denies.
+            $acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new($appPackages, [System.Security.AccessControl.FileSystemRights]$readExecuteGrant, $inherit, 'None', 'Allow'))
+            $directory = [IO.DirectoryInfo]::new($target)
+            [IO.FileSystemAclExtensions]::Create($directory, $acl)
+            $directory.Refresh()
+            if (!$directory.Exists -or ($directory.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $directory.FullName -cne $target) { throw 'TEST source container invalid' }
+            $observed = [IO.FileSystemAclExtensions]::GetAccessControl($directory)
+            if (!$observed.AreAccessRulesProtected -or $observed.GetOwner([Security.Principal.SecurityIdentifier]).Value -cne $sid.Value) { throw 'TEST source custody invalid' }
+            $rules = @($observed.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]))
+            if ($rules.Count -ne 3) { throw 'TEST source ACL invalid' }
+            foreach ($rule in $rules) {
+              $mask = [int]$rule.FileSystemRights
+              $expected = if ($rule.IdentityReference.Value -eq $appPackages.Value) { $readExecuteGrant } elseif ($rule.IdentityReference.Value -in @($sid.Value, $system.Value)) { $fullControl } else { $null }
+              # Exact masks only; a bare ReadAndExecute read-back is the one
+              # tolerated variant (Synchronize may be normalized either way).
+              $maskOk = $null -ne $expected -and ($mask -eq $expected -or ($expected -eq $readExecuteGrant -and $mask -eq ($readExecuteGrant -bxor $synchronize)))
+              if (!$maskOk -or $rule.AccessControlType -ne 'Allow' -or $rule.InheritanceFlags -ne $inherit -or $rule.PropagationFlags -ne 'None' -or $rule.IsInherited) { throw "TEST source ACL invalid sid=$($rule.IdentityReference.Value) mask=$mask expected=$expected type=$($rule.AccessControlType) inherit=$([int]$rule.InheritanceFlags) prop=$([int]$rule.PropagationFlags) inherited=$($rule.IsInherited)" }
+            }
+          }
+      - uses: actions/checkout@v6
+        with:
+          path: TEST-native-source
+          persist-credentials: false
+      - name: Validate exact inputs
+        shell: pwsh
+        env:
+          VERSIONS: ${{ inputs.versions }}
+          SOURCE_ONLY: ${{ inputs.source_only }}
+          SDK_REF: ${{ inputs.sdk_ref }}
+          SELECTED_MODEL: ${{ inputs.model }}
+          PROVIDER_ONLY: ${{ inputs.provider_only }}
+          RUNTIME_CANDIDATE_RUN: ${{ inputs.runtime_candidate_run }}
+          RUNTIME_CANDIDATE_SHA: ${{ inputs.runtime_candidate_sha }}
+        run: |
+          if ($env:VERSIONS -cnotin @('all', 'v1', 'v2', 'current')) { throw 'Unknown Windows version selection' }
+          if ($env:SOURCE_ONLY -eq 'true' -and $env:PROVIDER_ONLY -ne 'true' -and $env:VERSIONS -eq 'v1') { throw 'V1 has no V2 source-only scenario' }
+          if ($env:SDK_REF -notmatch '^[a-f0-9]{40}$') { throw 'Exact SDK SHA required for native, source-only and provider-only runs' }
+          if ($env:PROVIDER_ONLY -ne 'true' -and $env:SELECTED_MODEL -notmatch '^openrouter/[a-zA-Z0-9_./:~-]+$') { throw 'Explicit OpenRouter model required for native and source-only startup; no model prompts in source-only mode' }
+          if ($env:PROVIDER_ONLY -eq 'true') {
+            if ($env:RUNTIME_CANDIDATE_RUN -notmatch '^[0-9]+$' -or $env:RUNTIME_CANDIDATE_SHA -notmatch '^[a-f0-9]{40}$') { throw 'Explicit provider candidate CI run and exact source SHA required' }
+            if ($env:RUNTIME_CANDIDATE_SHA -cne $env:SDK_REF) { throw 'Provider candidate must match selected SDK source' }
+          }
+      - uses: actions/checkout@v6
+        with:
+          repository: 777genius/agent_teams_orchestrator
+          ref: ${{ inputs.sdk_ref }}
+          path: TEST-native-sdk
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: TEST-native-source/package.json
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: TEST-native-source/.node-version
+          cache: pnpm
+          cache-dependency-path: TEST-native-source/pnpm-lock.yaml
+      - name: Stage the selected Node in a fresh private TEST directory
+        if: ${{ !inputs.provider_only }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $source = (Get-Command node).Source
+          $expected = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash
+          $directory = Join-Path (Get-Location).Path 'TEST-controller-node'
+          if (Test-Path -LiteralPath $directory) { throw 'TEST controller Node already exists' }
+          $null = New-Item -ItemType Directory -Path $directory -ErrorAction Stop
+          $target = Join-Path $directory 'node.exe'
+          [IO.File]::Copy($source, $target, $false)
+          if ((Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash -cne $expected -or (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -cne $expected) { throw 'TEST controller Node bytes changed' }
+          "OPENCODE_NATIVE_TEST_NODE_PATH=$target" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+      - uses: actions/setup-python@v6
+        if: ${{ !inputs.provider_only }}
+        with:
+          python-version: '3.11'
+      - uses: oven-sh/setup-bun@v2
+        if: ${{ !inputs.provider_only }}
+        with:
+          bun-version: '1.4.3'
+      - name: Observe three shared tool roots before native compilation
+        if: ${{ !inputs.provider_only }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $found = $false
+          try {
+          $current = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+          function Principal($sid) {
+            if ($sid -eq $current) { return 'current_user' }
+            switch ($sid) {
+              'S-1-5-18' { 'local_system'; break }; 'S-1-5-32-544' { 'administrators'; break }
+              'S-1-5-32-545' { 'builtin_users'; break }; 'S-1-5-11' { 'authenticated_users'; break }
+              'S-1-1-0' { 'everyone'; break }; 'S-1-3-0' { 'creator_owner'; break }; 'S-1-3-1' { 'creator_group'; break }
+              'S-1-15-2-1' { 'all_application_packages'; break }; default { if ($sid.StartsWith('S-1-15-2-')) { 'app_package' } else { 'other' } }
+            }
+          }
+          $roots = @(@{kind='sdk'; path=(Resolve-Path ../TEST-native-sdk).Path}, @{kind='bun'; path=(Split-Path (Get-Command bun).Source)}, @{kind='controller_runtime'; path=(Split-Path $env:OPENCODE_NATIVE_TEST_NODE_PATH)})
+          :roots foreach ($root in $roots) {
+            $sections = [Security.AccessControl.AccessControlSections]::Owner -bor [Security.AccessControl.AccessControlSections]::Access
+            $acl = [IO.FileSystemAclExtensions]::GetAccessControl([IO.DirectoryInfo]::new($root.path), $sections)
+            $descriptor = [Security.AccessControl.RawSecurityDescriptor]::new($acl.GetSecurityDescriptorSddlForm($sections))
+            foreach ($ace in $descriptor.DiscretionaryAcl) {
+              if ($ace -isnot [Security.AccessControl.CommonAce] -or $ace.AceType.ToString() -ne 'AccessAllowed') { continue }
+              $principal = Principal $ace.SecurityIdentifier.Value
+              [long]$mask = [long]$ace.AccessMask -band 4294967295L
+              $flags = [int]$ace.AceFlags
+              $creator = $principal -eq 'creator_owner' -and ($flags -band 8) -ne 0 -and ($flags -band 3) -ne 0 -and ($flags -band (-bnot 27)) -eq 0
+              if (($mask -band (-bnot 2685534377L)) -eq 0 -or $creator -or $principal -in @('current_user','local_system','administrators')) { continue }
+              $mutation = @{writeData=($mask -band 2) -ne 0; appendData=($mask -band 4) -ne 0; writeEA=($mask -band 16) -ne 0; writeAttributes=($mask -band 256) -ne 0; deleteChild=($mask -band 64) -ne 0; delete=($mask -band 65536) -ne 0; writeDac=($mask -band 262144) -ne 0; writeOwner=($mask -band 524288) -ne 0; genericWrite=($mask -band 1073741824) -ne 0; genericAll=($mask -band 268435456) -ne 0; otherMutation=($mask -band (-bnot (2685534377L -bor 2 -bor 4 -bor 16 -bor 256 -bor 64 -bor 65536 -bor 262144 -bor 524288 -bor 1073741824 -bor 268435456))) -ne 0}
+              @{observation='three_roots_acl_shape_only'; foreignWrite=$true; rootClass=$root.kind; principalClass=$principal; inheritOnly=($flags -band 8) -ne 0; mutation=$mutation} | ConvertTo-Json -Depth 4 -Compress | Write-Output
+              $found = $true; break roots
+            }
+          }
+          if (!$found) { @{observation='three_roots_only'; foreignWrite=$false} | ConvertTo-Json -Compress | Write-Output }
+          } catch { @{observation='unavailable'; reason='acl_measurement_failed'} | ConvertTo-Json -Compress | Write-Output }
+          if ($found) { throw 'native_readonly_acl_shape_rejected' }
+      - name: Compare verified Windows V1 provider behavior without inference
+        if: ${{ inputs.provider_only }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+          RUNTIME_CANDIDATE_RUN: ${{ inputs.runtime_candidate_run }}
+          RUNTIME_CANDIDATE_SHA: ${{ inputs.runtime_candidate_sha }}
+          RUNTIME_CANDIDATE_BUN_VERSION: '1.4.3'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $comparisonRoot = Join-Path $env:RUNNER_TEMP ("TEST-opencode-provider-" + $env:GITHUB_RUN_ID + '-' + [guid]::NewGuid().ToString('N'))
+          New-Item -ItemType Directory $comparisonRoot | Out-Null
+          $originalLock = Get-Content runtime.lock.json -Raw
+          try {
+            $lock = $originalLock | ConvertFrom-Json
+            $lock.version = '0.0.118'
+            $lock.releaseTag = 'runtime-v0.0.118'
+            $lock.assets.'win32-x64'.file = 'agent-teams-runtime-win32-x64-v0.0.118.zip'
+            $lock.assets.'win32-x64'.sha256 = 'f664938c6194dd2b9e08c6ba850a83cfbb7361809b11f855562bb03b5bb69d2d'
+            $lock | ConvertTo-Json -Depth 20 | Set-Content runtime.lock.json -Encoding utf8NoBOM
+            node scripts/stage-runtime.mjs --platform win32-x64
+            if ($LASTEXITCODE -ne 0) { throw 'Verified 118 staging failed' }
+            Move-Item resources/runtime (Join-Path $comparisonRoot 'runtime118')
+            New-Item -ItemType Directory resources/runtime | Out-Null
+            node scripts/e2e/opencode-diagnostics/stage-candidate.mjs
+            if ($LASTEXITCODE -ne 0) { throw 'Verified candidate staging failed' }
+            $candidate = Get-Content runtime-candidate-evidence.json -Raw | ConvertFrom-Json
+            if ($candidate.runId -cne $env:RUNTIME_CANDIDATE_RUN -or $candidate.sourceSha -cne $env:RUNTIME_CANDIDATE_SHA) { throw 'Explicit candidate selection changed' }
+            Move-Item resources/runtime (Join-Path $comparisonRoot 'candidate')
+            $npmRoot = Join-Path $comparisonRoot 'npm'
+            # The staging calls that need the dispatch token are done; third-party
+            # install scripts must never run with it in their environment.
+            Remove-Item Env:GH_TOKEN -ErrorAction SilentlyContinue
+            npm install --global --prefix $npmRoot --no-audit --no-fund opencode-ai@1.18.31
+            if ($LASTEXITCODE -ne 0) { throw 'Official npm V1 install failed' }
+            $npmLockPath = Join-Path $npmRoot 'node_modules/.package-lock.json'
+            if (!(Test-Path $npmLockPath -PathType Leaf)) { throw 'Official npm install lock missing; integrity unverifiable' }
+            $npmLock = Get-Content $npmLockPath -Raw | ConvertFrom-Json
+            $wrapper = $npmLock.packages.'node_modules/opencode-ai'
+            $native = @($npmLock.packages.PSObject.Properties | Where-Object { $_.Name -cin @('node_modules/opencode-windows-x64', 'node_modules/opencode-ai/node_modules/opencode-windows-x64') })
+            if ($wrapper.version -cne '1.18.31' -or $wrapper.integrity -cne 'sha512-J95feefeWwtIaw3irx76WjzWcgQXxmuHmDVphvs5ep9X30fBJ6T6bFhw50i9Kx50MG/xPn5w2pafXIfNtdry9w==') { throw 'Official npm wrapper integrity changed' }
+            if ($native.Count -ne 1 -or $native[0].Value.version -cne '1.18.31' -or $native[0].Value.integrity -cne 'sha512-1Za7uKeGLonNUkUIGHD7xfV5omi7ju/7z2WYfS5YvDLTr1iU/W1PPVHzHXiwiyV4gMxsWGwHHLubWdH99D7pSA==') { throw 'Official npm native integrity changed' }
+            $baseline = (Resolve-Path (Join-Path $comparisonRoot 'runtime118/claude-multimodel.exe')).Path
+            $candidateBinary = (Resolve-Path (Join-Path $comparisonRoot 'candidate/claude-multimodel.exe')).Path
+            $official = (Resolve-Path (Join-Path $npmRoot 'opencode.cmd')).Path
+            node ../TEST-native-sdk/scripts/opencode-v1-provider-regression.ts $comparisonRoot $official $candidateBinary $baseline
+            if ($LASTEXITCODE -ne 0) { throw 'Real V1 provider comparison failed; inspect finite receipt' }
+          } finally { Set-Content runtime.lock.json $originalLock -Encoding utf8NoBOM }
+      - name: Preserve finite V1 provider comparison
+        if: ${{ always() && inputs.provider_only }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-v1-provider-comparison-${{ github.sha }}
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/TEST-opencode-provider-*/baseline-summary.json
+            ${{ runner.temp }}/TEST-opencode-provider-*/candidate-summary.json
+            TEST-native-source/runtime-candidate-evidence.json
+      - name: Seed private runner-local TEST provider auth
+        if: ${{ !inputs.source_only && !inputs.provider_only }}
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: node scripts/e2e/opencode-native-test-auth.ts --seed-openrouter
+      - name: Identify hosted native toolchain image
+        if: ${{ !inputs.provider_only }}
+        id: native-image
+        shell: pwsh
+        run: |
+          if ($env:ImageVersion -notmatch '^[A-Za-z0-9_.-]+$') { throw 'Hosted image identity missing' }
+          "version=$env:ImageVersion" | Out-File $env:GITHUB_OUTPUT -Append -Encoding utf8
+      - name: Restore exact native producer inputs
+        if: ${{ !inputs.provider_only }}
+        id: native-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: TEST-native-sdk/native/win32-x64
+          key: opencode-native-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-image.outputs.version }}-bun-1.4.3-${{ hashFiles('TEST-native-sdk/src/services/opencode/host/windows/*.cpp', 'TEST-native-sdk/src/services/opencode/host/windows/*.hpp', 'TEST-native-sdk/scripts/opencode-v2/compile-windows.ts', 'TEST-native-sdk/scripts/opencode-v2/stage-windows.ts') }}
+      - name: Restore frozen SDK package downloads
+        if: ${{ !inputs.provider_only }}
+        id: sdk-download-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: TEST-bun-download-cache
+          key: opencode-sdk-downloads-v1-${{ runner.os }}-bun-1.4.3-${{ hashFiles('TEST-native-sdk/bun.lock', 'TEST-native-sdk/package.json') }}
+      - name: Compile exact Windows native producer
+        if: ${{ !inputs.provider_only }}
+        working-directory: TEST-native-sdk
+        shell: pwsh
+        env:
+          SDK_REF: ${{ inputs.sdk_ref }}
+          CANDIDATE_PLATFORM: win32-x64
+          NATIVE_CACHE_HIT: ${{ steps.native-cache.outputs.cache-hit }}
+          VERSIONS: ${{ inputs.versions }}
+          BUN_INSTALL_CACHE_DIR: ${{ github.workspace }}/TEST-bun-download-cache
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ((git rev-parse HEAD) -ne $env:SDK_REF) { throw 'SDK checkout identity mismatch' }
+          # Match portable runtime staging's private copies, including cached downloads.
+          bun install --frozen-lockfile --linker hoisted --backend=copyfile
+          if ($LASTEXITCODE -ne 0) { throw 'SDK install failed' }
+          bun test src/services/opencode/execution/OpenCodeV2AdmissionService.test.ts -t 'host filesystem'
+          if ($LASTEXITCODE -ne 0) { throw 'Windows admission journal filesystem regression failed' }
+          if ($env:NATIVE_CACHE_HIT -ne 'true') {
+            bun scripts/opencode-v2/compile-windows.ts
+            if ($LASTEXITCODE -ne 0) { throw 'Native MSVC qualification failed' }
+          } else {
+            # Reuse only the exact native/toolchain input key; validate normal PE/manifests.
+            bun -e 'import {stageWindowsHelper} from "./scripts/opencode-v2/stage-windows.ts"; import {mkdtemp,rm} from "node:fs/promises"; import {tmpdir} from "node:os"; import {join} from "node:path"; const target=await mkdtemp(join(tmpdir(),"TEST-native-cache-check-")); try {await stageWindowsHelper("native",target,"x64")} finally {await rm(target,{recursive:true,force:true})}'
+            if ($LASTEXITCODE -ne 0) { throw 'Cached native producer validation failed' }
+          }
+          if ($env:VERSIONS -ne 'v1') {
+            bun test src/services/opencode/bridge/OpenCodeV2DeliveryJournal.windows.test.ts
+            if ($LASTEXITCODE -ne 0) { throw 'Windows delivery journal filesystem regression failed' }
+            bun test src/cli/runtimeTranscriptCommand.test.ts
+            if ($LASTEXITCODE -ne 0) { throw 'Real transcript CLI entry and exit contract failed' }
+          }
+      - name: Save qualified native producer before E2E
+        if: ${{ !inputs.provider_only && steps.native-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v5
+        with:
+          path: TEST-native-sdk/native/win32-x64
+          key: ${{ steps.native-cache.outputs.cache-primary-key }}
+      - name: Save frozen SDK package downloads before E2E
+        if: ${{ !inputs.provider_only && steps.sdk-download-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v5
+        with:
+          path: TEST-bun-download-cache
+          key: ${{ steps.sdk-download-cache.outputs.cache-primary-key }}
+      - name: Qualify registered V2 shell without model prompts
+        id: registered-shell
+        if: ${{ inputs.source_only && !inputs.provider_only && inputs.versions == 'current' }}
+        working-directory: TEST-native-sdk
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $shellRoot = Join-Path $env:RUNNER_TEMP ("TEST-windows-shell-" + [guid]::NewGuid().ToString())
+          $shellReceipt = "$shellRoot.json"
+          "receipt=$shellReceipt" | Out-File $env:GITHUB_OUTPUT -Append -Encoding utf8
+          $shellNode = $env:OPENCODE_NATIVE_TEST_NODE_PATH
+          $shellNodeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $shellNode).Hash.ToLowerInvariant()
+          bun scripts/opencode-v2/windows-shell-tool-probe.ts $shellRoot $shellReceipt $shellNode $shellNodeHash
+          if ($LASTEXITCODE -ne 0) { throw 'Registered V2 shell and physical cleanup failed; inspect the finite TEST receipt' }
+      - name: Preserve registered shell observation
+        if: ${{ always() && inputs.source_only && !inputs.provider_only && inputs.versions == 'current' && steps.registered-shell.outputs.receipt != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-registered-shell-${{ github.sha }}
+          path: ${{ steps.registered-shell.outputs.receipt }}
+          if-no-files-found: warn
+      - name: Qualify native command isolation before desktop installation
+        if: ${{ !inputs.source_only && !inputs.provider_only && inputs.versions != 'v1' }}
+        working-directory: TEST-native-sdk
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $commandRoot = Join-Path $env:RUNNER_TEMP ("TEST-windows-command-" + [guid]::NewGuid().ToString('N'))
+          $commandReceipt = Join-Path $env:RUNNER_TEMP 'TEST-windows-command-receipt.json'
+          bun scripts/opencode-v2/windows-command-probe.ts $commandRoot $commandReceipt
+          if ($LASTEXITCODE -ne 0) { throw 'Native command and descendant retirement contract failed' }
+      # Source-only cache-hit diagnostics skip this separate qualification step.
+      # This is partial evidence; full qualification and cache misses always execute it.
+      - name: Qualify native ownership and command retirement
+        if: ${{ !inputs.provider_only && inputs.versions != 'v1' && (!inputs.source_only || steps.native-cache.outputs.cache-hit != 'true') }}
+        working-directory: TEST-native-sdk
+        shell: pwsh
+        env:
+          TEST_NATIVE_ROOT_RETIREMENT_FILES: ${{ inputs.source_only && '32768' || '256' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          bun test scripts/opencode-v2/stage-windows.test.ts
+          if ($LASTEXITCODE -ne 0) { throw 'Native producer contract failed' }
+          $ownerRoot = Join-Path $env:RUNNER_TEMP ("TEST-windows-owner-" + [guid]::NewGuid().ToString('N'))
+          bun scripts/opencode-v2/windows-owner-probe.ts $ownerRoot
+          if ($LASTEXITCODE -ne 0) { throw 'Native held-directory contract failed' }
+      - name: Install exact official OpenCode CLI pins
+        if: ${{ !inputs.provider_only }}
+        shell: pwsh
+        env:
+          VERSIONS: ${{ inputs.versions }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($pin in @(@('v1', 'opencode-windows-x64@1.19.0'), @('floor', '@opencode/cli-windows-x64@2.0.0'), @('current', '@opencode/cli-windows-x64@2.0.32'))) {
+            if ($env:VERSIONS -eq 'v1' -and $pin[0] -ne 'v1') { continue }
+            if ($env:VERSIONS -eq 'v2' -and $pin[0] -eq 'v1') { continue }
+            if ($env:VERSIONS -eq 'current' -and $pin[0] -ne 'current') { continue }
+            npm install --prefix "TEST-pins/$($pin[0])" --ignore-scripts --no-audit --no-fund $pin[1]
+            if ($LASTEXITCODE -ne 0) { throw 'Pinned CLI install failed' }
+          }
+      - name: Stage the real desktop console wrapper before binary projection
+        if: ${{ !inputs.provider_only }}
+        run: node scripts/stage-opencode-console-wrapper.mjs --platform win32-x64 --require
+      - name: Install frozen desktop dependencies and build only the real controller
+        if: ${{ !inputs.provider_only }}
+        shell: pwsh
+        env:
+          AGENT_TEAMS_INSTALL_PROFILE: ${{ inputs.source_only && 'node-ci' || 'desktop' }}
+          # Source controller packages need the same private-copy shape as portable staging.
+          pnpm_config_package_import_method: copy
+        run: |
+          $ErrorActionPreference = 'Stop'
+          node scripts/ci/install-dependencies-with-retry.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop install failed' }
+          pnpm --filter agent-teams-controller build
+          if ($LASTEXITCODE -ne 0) { throw 'Controller build failed' }
+          pnpm --filter agent-teams-mcp build
+          if ($LASTEXITCODE -ne 0) { throw 'MCP build failed' }
+      - name: Qualify TEST Node staging on Windows
+        if: ${{ inputs.source_only && !inputs.provider_only && inputs.versions != 'v1' }}
+        shell: pwsh
+        run: |
+          pnpm exec vitest run test/scripts/opencodeNativeTestNode.test.ts
+          if ($LASTEXITCODE -ne 0) { throw 'TEST Node staging custody failed' }
+      - name: Preflight real native startup and physical stop without model prompts
+        if: ${{ !inputs.provider_only && inputs.versions != 'v1' }}
+        shell: pwsh
+        env:
+          SELECTED_MODEL: ${{ inputs.model }}
+          VERSIONS: ${{ inputs.versions }}
+        run: |
+          $current = (Resolve-Path "TEST-pins/current/node_modules/@opencode/cli-windows-x64/bin/opencode.exe").Path
+          # Current-only runs do not install or resolve the floor pin.
+          $floor = $current
+          if ($env:VERSIONS -ne 'current') { $floor = (Resolve-Path "TEST-pins/floor/node_modules/@opencode/cli-windows-x64/bin/opencode.exe").Path }
+          $node = $env:OPENCODE_NATIVE_TEST_NODE_PATH
+          bun scripts/e2e/opencode-native-windows-preflight.ts ../TEST-native-sdk $floor $current $env:SELECTED_MODEL $node $env:VERSIONS
+          if ($LASTEXITCODE -ne 0) { throw 'Source gate failed before packaging; no model tasks submitted' }
+      - name: Select Windows release compiler Bun
+        if: ${{ !inputs.source_only && !inputs.provider_only }}
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.2'
+      - name: Build and stage the verified runtime candidate
+        if: ${{ !inputs.source_only && !inputs.provider_only }}
+        working-directory: TEST-native-sdk
+        shell: pwsh
+        env:
+          SDK_REF: ${{ inputs.sdk_ref }}
+          CANDIDATE_PLATFORM: win32-x64
+        run: |
+          $ErrorActionPreference = 'Stop'
+          bun scripts/package-runtime.ts --platform win32-x64
+          if ($LASTEXITCODE -ne 0) { throw 'Runtime candidate build failed' }
+          New-Item -ItemType Directory -Force candidate/runtime | Out-Null
+          Copy-Item dist/cli.exe candidate/runtime/claude-multimodel.exe
+          foreach ($name in @('cursor-managed', 'local-cli', 'bun')) { Copy-Item "dist/$name" "candidate/runtime/$name" -Recurse }
+          bun scripts/ci/verify-packaged-delivery.ts
+          if ($LASTEXITCODE -ne 0) { throw 'Physical delivery identity failed' }
+          Set-Content candidate/runtime/COMMIT_SHA $env:SDK_REF
+          Compress-Archive candidate/runtime candidate/TEST-runtime-win32-x64.zip
+          $lock = Get-Content ../TEST-native-source/runtime.lock.json -Raw | ConvertFrom-Json
+          $lock.version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $lock.sourceRef = $env:SDK_REF
+          $lock.releaseTag = "TEST-native-candidate-$($env:SDK_REF)"
+          $lock.assets.'win32-x64'.file = 'TEST-runtime-win32-x64.zip'
+          $lock.assets.'win32-x64'.sha256 = (Get-FileHash candidate/TEST-runtime-win32-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          $lock | ConvertTo-Json -Depth 20 | Set-Content ../TEST-native-source/runtime.lock.json -Encoding utf8NoBOM
+          New-Item -ItemType Directory -Force ../TEST-native-source/resources | Out-Null
+          if (Test-Path ../TEST-native-source/resources/runtime/claude-multimodel.exe) { throw 'Unexpected preexisting runtime' }
+          New-Item -ItemType Directory -Force ../TEST-native-source/resources/runtime | Out-Null
+          Copy-Item candidate/runtime/* ../TEST-native-source/resources/runtime -Recurse -Force
+      - name: Install and package the desktop app
+        if: ${{ !inputs.source_only && !inputs.provider_only }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          node scripts/stage-terminal-platform-runtime.mjs --platform win32-x64
+          if ($LASTEXITCODE -ne 0) { throw 'Terminal staging failed' }
+          pnpm build
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop build failed' }
+          pnpm pack:win:x64 --dir --publish never
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop package failed' }
+          node scripts/electron-builder/verifyBundle.cjs release/win-unpacked win32 x64
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop native architecture failed' }
+      - name: Verify retained candidate bytes and record post-pack manifest
+        if: ${{ !inputs.source_only && !inputs.provider_only }}
+        shell: pwsh
+        env:
+          SDK_REF: ${{ inputs.sdk_ref }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # Apply the existing afterPack pruning policy to the independent candidate.
+          # Retained expected bytes still originate from the SDK build, not the app.
+          New-Item -ItemType Directory ../TEST-native-sdk/candidate/resources | Out-Null
+          Move-Item ../TEST-native-sdk/candidate/runtime ../TEST-native-sdk/candidate/resources/runtime
+          node -e "(async () => { const p = require('./scripts/electron-builder/afterPack.cjs')._internal; const root = require('node:path').resolve('../TEST-native-sdk/candidate'); await p.pruneKnownIncompatibleNativeArtifacts(root, 'win32', 'x64'); await p.pruneNodePtyArtifacts(root, 'win32', 'x64'); })().catch(() => process.exit(1))"
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate pruning qualification failed' }
+          $candidateRoot = (Resolve-Path ../TEST-native-sdk/candidate/resources/runtime).Path
+          $packagedRoot = (Resolve-Path release/win-unpacked/resources/runtime).Path
+          $required = @('claude-multimodel.exe', 'COMMIT_SHA', 'bun/bun.exe', 'local-cli/cli.js', 'local-cli/native/win32-x64/opencode-v2-windows-helper.exe', 'local-cli/native/win32-x64/opencode-v2-windows-realpath.dll')
+          foreach ($relative in $required) {
+            if (!(Test-Path (Join-Path $candidateRoot $relative) -PathType Leaf)) { throw "Required candidate component missing: $relative" }
+          }
+          if ((Get-Content (Join-Path $candidateRoot 'COMMIT_SHA') -Raw).Trim() -ne $env:SDK_REF) { throw 'Candidate commit identity mismatch' }
+          $candidateEntries = @(Get-ChildItem $candidateRoot -Recurse -Force)
+          if ($candidateEntries | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }) { throw 'Candidate link forbidden' }
+          $digests = [ordered]@{}
+          # builder-util copyDir omits these two metadata names before extraResources copying.
+          $candidateEntries | Where-Object { !$_.PSIsContainer -and $_.Name -cnotin @('.gitkeep', '.DS_Store') } | Sort-Object FullName | ForEach-Object {
+            $relative = [System.IO.Path]::GetRelativePath($candidateRoot, $_.FullName).Replace([char]92, [char]47)
+            $expectedHash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            $delivered = Join-Path $packagedRoot $relative
+            if (!(Test-Path $delivered -PathType Leaf) -or ((Get-Item $delivered).Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw "Retained candidate component missing: $relative" }
+            if ((Get-FileHash $delivered -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expectedHash) { throw "Packaged candidate bytes changed: $relative" }
+            $digests[$relative] = $expectedHash
+          }
+          $manifest = Join-Path $env:RUNNER_TEMP 'TEST-opencode-runtime-manifest.json'
+          @{ sdkSha = $env:SDK_REF; files = $digests } | ConvertTo-Json -Depth 20 | Set-Content $manifest -Encoding utf8NoBOM
+          "OPENCODE_NATIVE_EXPECTED_RUNTIME_MANIFEST=$manifest" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Real V1 and V2 tasks through the bundled runtime
+        if: ${{ !inputs.source_only && !inputs.provider_only }}
+        id: real_tasks
+        shell: pwsh
+        env:
+          SELECTED_MODEL: ${{ inputs.model }}
+          VERSIONS: ${{ inputs.versions }}
+          OPENCODE_NATIVE_DIAGNOSTIC_SDK_ROOT: ${{ github.workspace }}/TEST-native-sdk
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:TEMP = $env:RUNNER_TEMP
+          $env:TMP = $env:RUNNER_TEMP
+          $env:TMPDIR = $env:RUNNER_TEMP
+          $app = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
+          $failedPins = @()
+          foreach ($pin in @(@('v1', 'opencode-windows-x64', '1.19.0'), @('floor', '@opencode/cli-windows-x64', '2.0.0'), @('current', '@opencode/cli-windows-x64', '2.0.32'))) {
+            if ($env:VERSIONS -eq 'v1' -and $pin[0] -ne 'v1') { continue }
+            if ($env:VERSIONS -eq 'v2' -and $pin[0] -eq 'v1') { continue }
+            if ($env:VERSIONS -eq 'current' -and $pin[0] -ne 'current') { continue }
+            $binary = (Resolve-Path "TEST-pins/$($pin[0])/node_modules/$($pin[1])/bin/opencode.exe").Path
+            $versionOutput = (& $binary --version).Trim()
+            $versionExit = $LASTEXITCODE
+            $version = $versionOutput -replace '^opencode\s*v?\s*', ''
+            if ($versionExit -ne 0 -or $version -ne $pin[2]) { throw 'Selected CLI version mismatch' }
+            $scenario = @()
+            if ($pin[0] -eq 'floor') { $scenario = @('--short') }
+            pnpm exec tsx scripts/e2e/opencode-native-windows-full.ts $app bundled $binary $env:SELECTED_MODEL $env:OPENCODE_NATIVE_E2E_AUTH_FILE @scenario
+            if ($LASTEXITCODE -ne 0) { $failedPins += $pin[0] }
+          }
+          if ($failedPins.Count -gt 0) { throw ('Real Windows task scenarios failed: ' + ($failedPins -join ',') + '; no automatic replay') }
+      - name: Preserve only sanitized scenario proofs
+        if: ${{ always() && !inputs.source_only && !inputs.provider_only && steps.real_tasks.outcome != 'skipped' && steps.real_tasks.outcome != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-native-windows-proof-${{ github.sha }}
+          if-no-files-found: error
+          path: ${{ runner.temp }}/TEST-oc-*/proof.json

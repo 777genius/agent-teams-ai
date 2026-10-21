@@ -20,6 +20,7 @@ import {
   publishRuntimePayload,
 } from './lib/runtime-payload-cache.mjs';
 import { verifyRuntimeArchiveChecksum } from './lib/runtime-archive-checksum.mjs';
+import { phase } from './lib/runtime-bootstrap-diagnostics.mts';
 import {
   formatRuntimeVersionForDisplay,
   getExpectedRuntimeCliVersion,
@@ -229,10 +230,6 @@ function getReleaseAssetDownload(runtimeLock, asset) {
   };
 }
 
-function ensureDir(dirPath) {
-  fs.mkdirSync(dirPath, { recursive: true });
-}
-
 function formatBytes(bytes) {
   if (!Number.isFinite(bytes) || bytes < 0) {
     return '0 B';
@@ -384,7 +381,7 @@ async function resolveElectronViteArgs(args) {
 }
 
 function readBinaryVersion(binaryPath) {
-  return runAndCapture(binaryPath, ['--version']);
+  return runAndCapture(binaryPath, ['--version'], { timeout: 30_000 });
 }
 
 function isExecutable(filePath) {
@@ -594,14 +591,14 @@ async function ensureBootstrappedRuntime() {
     isRuntimePayloadCacheValid(payloadDir, asset.sha256, asset.binaryName) &&
     isCachedBinaryValid(cachedBinaryPath, expectedCliVersion);
 
-  ensureDir(cacheDir);
+  fs.mkdirSync(cacheDir, { recursive: true });
   const lockHandle = await acquireBootstrapLock(path.join(cacheDir, '.bootstrap.lock'));
 
   try {
-    if (isCacheValid()) {
+    if (phase('cache-validation', isCacheValid)) {
       return {
         binaryPath: cachedBinaryPath,
-        versionText: readBinaryVersion(cachedBinaryPath),
+        versionText: phase('cached-version', () => readBinaryVersion(cachedBinaryPath)),
         sourceLabel: `cached release ${runtimeLock.sourceRef}`,
         cacheDir,
         downloaded: false,
@@ -609,33 +606,35 @@ async function ensureBootstrappedRuntime() {
     }
 
     const workDir = path.join(cacheDir, `.bootstrap-${process.pid}-${Date.now()}`);
-    ensureDir(workDir);
+    fs.mkdirSync(workDir, { recursive: true });
 
     try {
       const archivePath = path.join(workDir, asset.file);
       const download = getReleaseAssetDownload(runtimeLock, asset);
       logRuntimePhase(`downloading release asset: ${asset.file}`);
-      if (!downloadReleaseAssetWithGh(download, archivePath)) {
-        await downloadWithProgress(download, archivePath);
-      }
+      await phase('download', async () => {
+        if (!downloadReleaseAssetWithGh(download, archivePath)) {
+          await downloadWithProgress(download, archivePath);
+        }
+      });
 
       logRuntimePhase('verifying archive checksum');
-      await verifyRuntimeArchiveChecksum(archivePath, asset, platformKey);
+      await phase('checksum', () => verifyRuntimeArchiveChecksum(archivePath, asset, platformKey));
 
       const extractDir = path.join(workDir, 'extracted');
       logRuntimePhase(`extracting ${asset.archiveKind} archive`);
-      extractArchive(archivePath, extractDir, asset.archiveKind, runOrExit);
+      phase('extract', () => extractArchive(archivePath, extractDir, asset.archiveKind, runOrExit));
       logRuntimePhase('archive extracted');
 
       const extractedBinaryPath = findExtractedBinary(extractDir, asset.binaryName);
       if (process.platform !== 'win32') fs.chmodSync(extractedBinaryPath, 0o755);
-      const versionText = readBinaryVersion(extractedBinaryPath);
+      const versionText = phase('extracted-version', () => readBinaryVersion(extractedBinaryPath));
       if (!matchesRuntimeCliVersion(versionText, expectedCliVersion)) {
         throw new Error(
           `Bootstrapped runtime CLI version mismatch for release ${runtimeLock.version}. Expected ${expectedCliVersion}, got: ${versionText}`
         );
       }
-      publishRuntimePayload(extractedBinaryPath, payloadDir, asset.sha256);
+      phase('publish', () => publishRuntimePayload(extractedBinaryPath, payloadDir, asset.sha256));
       return {
         binaryPath: cachedBinaryPath,
         versionText,
@@ -644,7 +643,7 @@ async function ensureBootstrappedRuntime() {
         downloaded: true,
       };
     } finally {
-      fs.rmSync(workDir, { recursive: true, force: true });
+      phase('work-cleanup', () => fs.rmSync(workDir, { recursive: true, force: true }));
     }
   } finally {
     await lockHandle.close();

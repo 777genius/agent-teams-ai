@@ -1,4 +1,7 @@
-import { GATEWAY_PROVIDER_CHANNELS, type GatewayProviderApi } from '@features/gateway-provider/contracts';
+import {
+  GATEWAY_PROVIDER_CHANNELS,
+  type GatewayProviderApi,
+} from '@features/gateway-provider/contracts';
 import { ipcRenderer } from 'electron';
 
 export function createGatewayProviderBridge(): GatewayProviderApi {
@@ -6,8 +9,7 @@ export function createGatewayProviderBridge(): GatewayProviderApi {
     listGatewayProfiles: () => ipcRenderer.invoke(GATEWAY_PROVIDER_CHANNELS.listProfiles),
     saveGatewayProfile: (request) =>
       ipcRenderer.invoke(GATEWAY_PROVIDER_CHANNELS.saveProfile, request),
-    deleteGatewayProfile: (id) =>
-      ipcRenderer.invoke(GATEWAY_PROVIDER_CHANNELS.deleteProfile, id),
+    deleteGatewayProfile: (id) => ipcRenderer.invoke(GATEWAY_PROVIDER_CHANNELS.deleteProfile, id),
     probeGatewayModels: (request) =>
       ipcRenderer.invoke(GATEWAY_PROVIDER_CHANNELS.probeModels, request),
     listGatewayBindings: (teamName) =>

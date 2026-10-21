@@ -75,10 +75,7 @@ export interface TokenUsageGatewayModelUsage {
 
 export interface TokenUsageGatewayUsagePort {
   listSources(): Promise<TokenUsageGatewayUsageSource[]>;
-  readUsageDay(
-    gatewayUsageRef: string,
-    day: string
-  ): Promise<TokenUsageGatewayModelUsage[]>;
+  readUsageDay(gatewayUsageRef: string, day: string): Promise<TokenUsageGatewayModelUsage[]>;
 }
 
 export interface TokenUsageGatewayCredentialError {

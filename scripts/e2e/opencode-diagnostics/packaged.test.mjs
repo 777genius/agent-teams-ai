@@ -29,6 +29,8 @@ import {
   waitForPackagedPreload,
   matchesPackagedPreload,
   refreshSettled,
+  waitForSettledDirectory,
+  waitForSettledDashboardPreparation,
   qualifySummary,
   qualifyProjectStatus,
   qualifySettings,
@@ -834,6 +836,7 @@ const uiDirectory = (entries) =>
     runtimeId: 'opencode',
     directory: {
       runtimeId: 'opencode',
+      diagnostics: [],
       entries,
       cursor: null,
       nextCursor: null,
@@ -841,6 +844,81 @@ const uiDirectory = (entries) =>
       totalCount: entries.length,
     },
   });
+
+test('pending directory never qualifies a ready measured UI refresh with fresh models', async () => {
+  const directory = uiDirectory([{ providerId: 'opencode' }]);
+  directory.response.directory.diagnostics = ['capabilities_pending'];
+  const records = [directory, uiRecord('loadModels', modelPage(['one'], null, null, 1))];
+  await assert.rejects(
+    qualifyUIRefresh(records, { state: 'ready', models: ['opencode/one'] }),
+    /Pending\/degraded provider directory/
+  );
+});
+
+test('directory readiness waits for authoritative capabilities and preserves a finite budget', async () => {
+  const pending = uiDirectory([{ providerId: 'opencode' }]).response;
+  pending.directory.diagnostics = ['capabilities_pending'];
+  const ready = uiDirectory([{ providerId: 'opencode' }, { providerId: 'kiro' }]).response;
+  const attempts = [];
+  assert.equal(
+    await waitForSettledDirectory(async (remaining, attempt) => {
+      assert(remaining > 0 && remaining <= 2000);
+      attempts.push(attempt);
+      return attempt === 0 ? pending : ready;
+    }, 2000),
+    ready
+  );
+  assert.deepEqual(attempts, [0, 1]);
+  await assert.rejects(
+    waitForSettledDirectory(async () => pending, 1),
+    /bootstrap budget/
+  );
+  await assert.rejects(
+    waitForSettledDirectory(async () => ({ ...ready, error: { message: 'failed' } })),
+    /readiness failed/
+  );
+});
+
+for (const enabled of [false, true]) {
+  test(`dashboard preparation ${enabled ? 'accepts a ready control within' : 'does not renew'} the budget consumed by directory readiness`, async (t) => {
+    let clock = 0;
+    t.mock.method(Date, 'now', () => clock);
+    const directory = uiDirectory([{ providerId: 'opencode' }]).response;
+    let directoryReads = 0;
+    let uiReads = 0;
+    const waits = [];
+    const result = await waitForSettledDashboardPreparation(
+      async (remaining) => {
+        directoryReads++;
+        assert.equal(remaining, 120000);
+        clock = 119999;
+        return directory;
+      },
+      async () => {
+        uiReads++;
+        return {
+          catalog: { state: 'ready' },
+          control: { present: true, connected: true, rendered: true, disabled: !enabled },
+        };
+      },
+      {
+        now: () => clock,
+        pause: async (milliseconds) => {
+          waits.push(milliseconds);
+          clock += milliseconds;
+        },
+      }
+    );
+    assert.equal(result.ready, enabled);
+    assert.equal(result.budgetMs, 120000);
+    assert.equal(result.elapsedMs, enabled ? 119999 : 120000);
+    assert.equal(result.samples, 1);
+    assert.equal(directoryReads, 1);
+    assert.equal(uiReads, 1);
+    assert.deepEqual(waits, enabled ? [] : [1]);
+    if (!enabled) assert.equal(result.lastReason, 'control-disabled');
+  });
+}
 
 test('measured unknown UI freshness fails even with ready UI and identical fresh separate API models', async () => {
   const fresh = modelPage(['one'], null, null, 1);

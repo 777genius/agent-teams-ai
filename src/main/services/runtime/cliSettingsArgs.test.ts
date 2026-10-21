@@ -13,7 +13,11 @@ import {
 const BASE_URL = 'https://gw.example.com';
 
 function gatewayOverrides(): string[] {
-  return buildCodexCustomProviderConfigOverrides({ enabled: true, baseUrl: BASE_URL, model: 'gpt-5' });
+  return buildCodexCustomProviderConfigOverrides({
+    enabled: true,
+    baseUrl: BASE_URL,
+    model: 'gpt-5',
+  });
 }
 
 describe('buildCodexCustomProviderConfigOverrides', () => {
@@ -23,9 +27,7 @@ describe('buildCodexCustomProviderConfigOverrides', () => {
     expect(overrides).toContain(
       `model_providers.${CODEX_CUSTOM_PROVIDER_ID}.base_url="${BASE_URL}"`
     );
-    expect(overrides).toContain(
-      `model_providers.${CODEX_CUSTOM_PROVIDER_ID}.wire_api="responses"`
-    );
+    expect(overrides).toContain(`model_providers.${CODEX_CUSTOM_PROVIDER_ID}.wire_api="responses"`);
     expect(overrides).toContain(
       `model_providers.${CODEX_CUSTOM_PROVIDER_ID}.env_key="${CODEX_NATIVE_API_KEY_ENV_VAR}"`
     );
