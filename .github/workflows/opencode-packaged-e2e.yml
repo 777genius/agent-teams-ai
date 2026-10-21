@@ -75,7 +75,7 @@ jobs:
             echo '::error::native_sdk_ref must be an exact reviewed SDK SHA for native, source-only and provider-only runs'
             exit 1
           fi
-          if [[ "$PROVIDER_ONLY" != 'true' && ! "$SELECTED_MODEL" =~ ^openrouter/[a-zA-Z0-9_./:-]+$ ]]; then
+          if [[ "$PROVIDER_ONLY" != 'true' && ! "$SELECTED_MODEL" =~ ^openrouter/[a-zA-Z0-9_./:~-]+$ ]]; then
             echo '::error::native_model is required for native and source-only startup; source-only submits no model prompts'
             exit 1
           fi

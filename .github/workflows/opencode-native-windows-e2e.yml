@@ -144,7 +144,7 @@ jobs:
           if ($env:VERSIONS -cnotin @('all', 'v1', 'v2', 'current')) { throw 'Unknown Windows version selection' }
           if ($env:SOURCE_ONLY -eq 'true' -and $env:PROVIDER_ONLY -ne 'true' -and $env:VERSIONS -eq 'v1') { throw 'V1 has no V2 source-only scenario' }
           if ($env:SDK_REF -notmatch '^[a-f0-9]{40}$') { throw 'Exact SDK SHA required for native, source-only and provider-only runs' }
-          if ($env:PROVIDER_ONLY -ne 'true' -and $env:SELECTED_MODEL -notmatch '^openrouter/[a-zA-Z0-9_./:-]+$') { throw 'Explicit OpenRouter model required for native and source-only startup; no model prompts in source-only mode' }
+          if ($env:PROVIDER_ONLY -ne 'true' -and $env:SELECTED_MODEL -notmatch '^openrouter/[a-zA-Z0-9_./:~-]+$') { throw 'Explicit OpenRouter model required for native and source-only startup; no model prompts in source-only mode' }
           if ($env:PROVIDER_ONLY -eq 'true') {
             if ($env:RUNTIME_CANDIDATE_RUN -notmatch '^[0-9]+$' -or $env:RUNTIME_CANDIDATE_SHA -notmatch '^[a-f0-9]{40}$') { throw 'Explicit provider candidate CI run and exact source SHA required' }
             if ($env:RUNTIME_CANDIDATE_SHA -cne $env:SDK_REF) { throw 'Provider candidate must match selected SDK source' }
