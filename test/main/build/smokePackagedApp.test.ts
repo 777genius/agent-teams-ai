@@ -142,6 +142,75 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
   );
   const fixturePath = path.resolve(import.meta.dirname, 'fixtures/packaged-smoke-process-TEST.cjs');
 
+  it.skipIf(process.platform !== 'linux').each(['ownership-retiring', 'ownership-persistent', 'ownership-newly-observed'])(
+    'keeps same-birth unmarked process debt unsettled on %s',
+    async (mode) => {
+      const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-ownership-debt-TEST-'));
+      try {
+        const output = await new Promise<string>((resolve, reject) => {
+          execFile(process.execPath, [
+            path.resolve(import.meta.dirname, 'fixtures/packaged-smoke-escaped-TEST.ts'), mode,
+          ], {
+            cwd: sandbox,
+            env: { ...process.env, PACKAGED_SMOKE_FIXTURE_ROOT: sandbox, PACKAGED_SMOKE_FIXTURE_MODE: mode },
+            encoding: 'utf8', timeout: 14_000,
+          }, (error, stdout, stderr) => {
+            if (error) reject(new Error(`${error.message}\n${stdout}\n${stderr}`));
+            else resolve(stdout);
+          });
+        });
+        expect(JSON.parse(output)).toEqual({ mode, samePidAndBirth: true,
+          settledOnlyAfterExit: mode === 'ownership-retiring',
+          persistentDebtRejected: mode !== 'ownership-retiring',
+          freshDebtRetained: mode === 'ownership-newly-observed',
+          unverifiedSignals: 0, sentinelUntouched: true });
+      } finally {
+        fs.rmSync(sandbox, { recursive: true, force: true });
+      }
+    }, 16_000
+  );
+
+  it.each(['app-success', 'app-failure', 'mcp-success', 'mcp-failure', 'owner-exited', 'delayed-kill'])(
+    'drains escaped owned processes and preserves an unrelated sentinel on %s',
+    async (mode) => {
+      const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-escaped-TEST-'));
+      try {
+        const output = await new Promise<string>((resolve, reject) => {
+          execFile(
+            process.execPath,
+            [path.resolve(import.meta.dirname, 'fixtures/packaged-smoke-escaped-TEST.ts'), mode],
+            {
+              cwd: sandbox,
+              env: {
+                ...process.env,
+                PACKAGED_SMOKE_FIXTURE_ROOT: sandbox,
+                PACKAGED_SMOKE_FIXTURE_MODE: mode,
+              },
+              encoding: 'utf8',
+              timeout: 14_000,
+            },
+            (error, stdout, stderr) => {
+              if (error) reject(new Error(`${error.message}\n${stdout}\n${stderr}`));
+              else resolve(stdout);
+            }
+          );
+        });
+        expect(JSON.parse(output)).toMatchObject({
+          mode,
+          status: mode.endsWith('failure') ? 1 : 0,
+          escapedGone: true,
+          sentinelUntouched: true,
+          detached: true,
+          receiptPhases: ['begin', 'final'],
+          signals: ['SIGTERM', 'SIGKILL'],
+        });
+      } finally {
+        fs.rmSync(sandbox, { recursive: true, force: true });
+      }
+    },
+    16_000
+  );
+
   it.each(['normal', 'retained-pipes', 'already-exited', 'silent-descendant', 'delayed-kill'])(
     'closes %s fixture and lets its Node harness exit',
     (mode) => {
@@ -198,7 +267,7 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
             const kill = process.kill;
             process.kill = function(pid, signal) {
               const result = kill.call(this, pid, signal);
-              // Deliver the real owned-group cleanup before injecting a diagnostic failure.
+              // Deliver the real exact-owned cleanup before injecting a diagnostic failure.
               if (signal === 'SIGKILL') throw new Error('TEST cleanup failure');
               return result;
             };
@@ -250,9 +319,11 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
       };
       if (mode !== 'success') expect(result.stderr).toContain(failureReasons[mode]);
       if (mode === 'failure-and-cleanup-error') {
-        expect(result.stderr).toContain('TEST cleanup failure');
+        expect(result.stderr).toContain('Unable to signal owned packaged smoke process');
+        expect(result.stderr).not.toContain('TEST cleanup failure');
+        expect(result.stderr).toContain('Preserved TEST sandbox after cleanup failure');
       } else {
-        expect(result.stdout).toContain('stdio closed');
+        expect(result.stdout, `Harness stderr:\n${result.stderr}`).toContain('stdio closed');
       }
       expect(result.stdout.includes('[smokePackagedApp] OK')).toBe(mode === 'success');
       if (mode === 'success') {
