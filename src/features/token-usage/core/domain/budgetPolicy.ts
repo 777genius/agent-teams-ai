@@ -60,10 +60,7 @@ export function buildBudgetStatus(input: {
   const period = budgetPeriod(input.now);
   const runs = input.ledger?.runs ?? [];
   const options = new Map<string, TokenUsageBudgetStatusDto['options'][number]>();
-  const totals = new Map<
-    string,
-    { tokens: number; usd: number; costIncomplete: boolean }
-  >();
+  const totals = new Map<string, { tokens: number; usd: number; costIncomplete: boolean }>();
   const key = (scope: string, id: string): string => JSON.stringify([scope, id]);
   const addOption = (scope: TokenUsageBudgetScope, id: string, label: string): void => {
     options.set(key(scope, id), { scope, id, label });

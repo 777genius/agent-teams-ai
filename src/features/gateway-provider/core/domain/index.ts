@@ -27,6 +27,8 @@ export interface MemberGatewayBinding {
   apiKeyRef: string;
   gatewayUsageRef: string;
   boundAt: string;
+  /** Provisional allocation owned by an Electron renderer document. */
+  draftOwner?: string;
 }
 
 export interface GatewayUsageSource {
@@ -42,6 +44,9 @@ export interface GatewayUsageSource {
   createdAt: string;
   lastBoundAt: string;
   lastUnboundAt?: string;
+  /** No saved roster or launch has consumed this newly allocated source yet. */
+  draftOnly?: boolean;
+  draftOwner?: string;
   hasActiveBinding: boolean;
   hasRuntimeArtifact: boolean;
   runtimeArtifactRetiredAt?: string;

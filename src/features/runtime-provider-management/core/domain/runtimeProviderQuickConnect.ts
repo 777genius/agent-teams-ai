@@ -1,5 +1,5 @@
+import { isRecognizedOpenCodeRuntimeVersion } from '@features/opencode-compatibility';
 import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
-import { isAgentTeamsOpenCodeVersionSupported } from '@shared/utils/version';
 
 import type { RuntimeProviderDirectoryEntryDto } from '../../contracts';
 import type { CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
@@ -24,7 +24,7 @@ const MINIMUM_OPENCODE_PROVIDER_OAUTH_VERSION = [1, 15, 7] as const;
 
 export function isOpenCodeRuntimeUsable(runtimeStatus: OpenCodeRuntimeStatus | null): boolean {
   return (
-    runtimeStatus?.installed === true && isAgentTeamsOpenCodeVersionSupported(runtimeStatus.version)
+    runtimeStatus?.installed === true && isRecognizedOpenCodeRuntimeVersion(runtimeStatus.version)
   );
 }
 

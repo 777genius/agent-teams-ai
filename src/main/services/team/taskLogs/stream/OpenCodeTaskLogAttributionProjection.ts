@@ -28,9 +28,39 @@ function filterDeliveryTurn(messages: ParsedMessage[], promptUuid: string): Pars
   return messages.filter((message) => included.has(message.uuid));
 }
 
+/** V2 has no native parent IDs. This is a conservative display window, never turn authority. */
+function filterV2NativeInputWindow(messages: ParsedMessage[], promptUuid: string): ParsedMessage[] {
+  if (!/^msg_[A-Za-z0-9]+$/.test(promptUuid)) return [];
+  const nativeInput = (message: ParsedMessage) =>
+    message.type === 'user' &&
+    message.toolResults.length === 0 &&
+    /^msg_[A-Za-z0-9]+$/.test(message.uuid);
+  const prompts = messages.filter((message) => message.uuid === promptUuid);
+  if (prompts.length !== 1 || !nativeInput(prompts[0]) || prompts[0].isMeta) return [];
+  const ids = new Set<string>();
+  let previousTime = Number.NEGATIVE_INFINITY;
+  for (const message of messages) {
+    if (ids.has(message.uuid)) return [];
+    ids.add(message.uuid);
+    // Synthetic result timestamps may follow a later native message's creation.
+    if (message.isMeta || !['user', 'assistant'].includes(message.type)) continue;
+    const time = message.timestamp.getTime();
+    if (!Number.isFinite(time) || time < previousTime) return [];
+    previousTime = time;
+  }
+  // Native protocol notifications also delimit the window; synthetic tool-result
+  // USER rows do not. Keep all original parent/result IDs exactly as projected.
+  const startIndex = messages.findIndex((message) => message.uuid === promptUuid);
+  const nextInput = messages.findIndex(
+    (message, index) => index > startIndex && nativeInput(message)
+  );
+  return messages.slice(startIndex, nextInput < 0 ? messages.length : nextInput);
+}
+
 export function filterMessagesForAttribution(
   projectedMessages: OpenCodeRuntimeTranscriptLogMessage[],
-  record: OpenCodeTaskLogAttributionRecord
+  record: OpenCodeTaskLogAttributionRecord,
+  options: { nativeParentIdsUnavailable?: boolean } = {}
 ): ParsedMessage[] {
   const messages = mapOpenCodeRuntimeTranscriptMessagesToParsedMessages(projectedMessages).filter(
     (message) => !record.sessionId || message.sessionId === record.sessionId
@@ -55,11 +85,20 @@ export function filterMessagesForAttribution(
     return [];
   }
 
+  if (
+    options.nativeParentIdsUnavailable &&
+    record.source === 'delivery_ledger' &&
+    messages.filter((message) => message.uuid === record.startMessageUuid).length !== 1
+  )
+    return [];
+
   const range = messages.slice(startIndex, endIndex + 1);
   const turn =
     record.source === 'delivery_ledger'
       ? record.startMessageUuid
-        ? filterDeliveryTurn(range, record.startMessageUuid)
+        ? options.nativeParentIdsUnavailable && record.sessionId?.trim()
+          ? filterV2NativeInputWindow(messages.slice(0, endIndex + 1), record.startMessageUuid)
+          : filterDeliveryTurn(range, record.startMessageUuid)
         : []
       : range;
   const sinceMs = record.since ? Date.parse(record.since) : Number.NaN;

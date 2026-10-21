@@ -44,7 +44,7 @@ const operations: readonly Operation[] = [
   'taskLedgerEvidence',
   'expectedBehaviorFingerprint',
 ];
-const dialects = ['v1', 'v2-2.0.0', 'v2-2.0.21'] as const;
+const dialects = ['v1', 'v2-2.0.0', 'v2-2.0.32'] as const;
 const versions: Record<Operation, number> = {
   generationIdentity: 1,
   bootstrap: 2,

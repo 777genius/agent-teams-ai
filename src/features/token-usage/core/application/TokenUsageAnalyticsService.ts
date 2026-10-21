@@ -111,9 +111,7 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
       const cliRuns = runs.filter((run) => !run.gatewayUsageRef);
       for (const importer of this.deps.importers) {
         try {
-          const result = await importer.importUsage(
-            importer.includesGatewayRuns ? runs : cliRuns
-          );
+          const result = await importer.importUsage(importer.includesGatewayRuns ? runs : cliRuns);
           if (Array.isArray(result)) {
             importedEvents.push(...result);
           } else {
@@ -142,7 +140,12 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
       this.refreshDegraded = degraded;
       if (!degraded) this.usageUpdatedAt = this.deps.clock.now().toISOString();
       this.remember(ledger);
-      const snapshot = this.analytics(ledger, tasks, undefined, await this.gatewayHealth(ledger.sourceStates));
+      const snapshot = this.analytics(
+        ledger,
+        tasks,
+        undefined,
+        await this.gatewayHealth(ledger.sourceStates)
+      );
       this.deps.publisher?.publishSnapshot(snapshot);
       await this.publishBudgetSafely();
       return snapshot;
@@ -343,7 +346,12 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
     const ledger = await this.deps.ledger.readSnapshot();
     this.remember(ledger);
     this.deps.publisher?.publishSnapshot(
-      this.analytics(ledger, await this.listTaskAttributions(), undefined, await this.gatewayHealth(ledger.sourceStates))
+      this.analytics(
+        ledger,
+        await this.listTaskAttributions(),
+        undefined,
+        await this.gatewayHealth(ledger.sourceStates)
+      )
     );
     await this.publishBudgetSafely();
   }

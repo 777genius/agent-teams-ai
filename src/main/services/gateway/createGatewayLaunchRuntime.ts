@@ -69,6 +69,7 @@ export function createGatewayLaunchRuntime(deps: {
   }
   return {
     seams,
+    hasSourceHistory: (ref: string) => metadata.hasSourceHistory(ref),
     retireStoppedArtifacts,
     wrapOpenCodeAdapter<T extends TeamLaunchRuntimeAdapter>(adapter: T): T {
       return new Proxy(adapter, {

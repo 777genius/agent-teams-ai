@@ -1,0 +1,448 @@
+{
+  "sessionId": "ses_TESTtranscript",
+  "durableState": "idle",
+  "messages": [
+    {
+      "id": "msg_TESTinput",
+      "parentId": null,
+      "role": "user",
+      "agent": null,
+      "providerId": null,
+      "modelId": null,
+      "createdAt": 10,
+      "completedAt": null,
+      "text": "TEST original input",
+      "reasoningText": "",
+      "previewText": "TEST original input",
+      "partTypes": [
+        "text"
+      ],
+      "reasoningPartCount": 0,
+      "toolCalls": [],
+      "contentBlocks": [
+        {
+          "type": "text",
+          "text": "TEST original input"
+        }
+      ],
+      "finishReason": null,
+      "errorName": null,
+      "errorMessage": null,
+      "hasError": false
+    },
+    {
+      "id": "msg_TESTassistant",
+      "parentId": null,
+      "role": "assistant",
+      "agent": "TEST-agent",
+      "providerId": "TEST-provider",
+      "modelId": "TEST-model",
+      "createdAt": 20,
+      "completedAt": 29,
+      "text": "TEST original response",
+      "reasoningText": "",
+      "previewText": "TEST original response",
+      "partTypes": [
+        "text",
+        "tool"
+      ],
+      "reasoningPartCount": 0,
+      "toolCalls": [
+        {
+          "callId": "TEST-shell",
+          "toolName": "shell",
+          "title": null,
+          "status": "completed",
+          "input": {
+            "command": "node C:\\TEST-project\\verify.cjs",
+            "workdir": "C:\\TEST-project"
+          },
+          "output": [
+            {
+              "type": "text",
+              "text": "TEST verifier passed"
+            }
+          ],
+          "outputText": "TEST verifier passed",
+          "outputPreview": "TEST verifier passed",
+          "startedAt": 22,
+          "completedAt": 28,
+          "isError": false
+        }
+      ],
+      "contentBlocks": [
+        {
+          "type": "text",
+          "text": "TEST original response"
+        },
+        {
+          "type": "tool_use",
+          "id": "TEST-shell",
+          "name": "shell",
+          "title": null,
+          "status": "completed",
+          "input": {
+            "command": "node C:\\TEST-project\\verify.cjs",
+            "workdir": "C:\\TEST-project"
+          },
+          "startedAt": 22,
+          "completedAt": 28
+        },
+        {
+          "type": "tool_result",
+          "toolUseId": "TEST-shell",
+          "toolName": "shell",
+          "title": null,
+          "status": "completed",
+          "contentText": "TEST verifier passed",
+          "contentPreview": "TEST verifier passed",
+          "rawContent": [
+            {
+              "type": "text",
+              "text": "TEST verifier passed"
+            }
+          ],
+          "isError": false,
+          "startedAt": 22,
+          "completedAt": 28
+        }
+      ],
+      "finishReason": "stop",
+      "errorName": null,
+      "errorMessage": null,
+      "hasError": false
+    },
+    {
+      "id": "msg_TESTother",
+      "parentId": null,
+      "role": "user",
+      "agent": null,
+      "providerId": null,
+      "modelId": null,
+      "createdAt": 30,
+      "completedAt": null,
+      "text": "TEST later input",
+      "reasoningText": "",
+      "previewText": "TEST later input",
+      "partTypes": [
+        "text"
+      ],
+      "reasoningPartCount": 0,
+      "toolCalls": [],
+      "contentBlocks": [
+        {
+          "type": "text",
+          "text": "TEST later input"
+        }
+      ],
+      "finishReason": null,
+      "errorName": null,
+      "errorMessage": null,
+      "hasError": false
+    },
+    {
+      "id": "msg_TESTforeignassistant",
+      "parentId": null,
+      "role": "assistant",
+      "agent": "TEST-agent",
+      "providerId": "TEST-provider",
+      "modelId": "TEST-model",
+      "createdAt": 40,
+      "completedAt": 49,
+      "text": "TEST later response",
+      "reasoningText": "",
+      "previewText": "TEST later response",
+      "partTypes": [
+        "text",
+        "tool"
+      ],
+      "reasoningPartCount": 0,
+      "toolCalls": [
+        {
+          "callId": "TEST-other-shell",
+          "toolName": "shell",
+          "title": null,
+          "status": "completed",
+          "input": {
+            "command": "TEST later command"
+          },
+          "output": [
+            {
+              "type": "text",
+              "text": "TEST later output"
+            }
+          ],
+          "outputText": "TEST later output",
+          "outputPreview": "TEST later output",
+          "startedAt": 42,
+          "completedAt": 48,
+          "isError": false
+        }
+      ],
+      "contentBlocks": [
+        {
+          "type": "text",
+          "text": "TEST later response"
+        },
+        {
+          "type": "tool_use",
+          "id": "TEST-other-shell",
+          "name": "shell",
+          "title": null,
+          "status": "completed",
+          "input": {
+            "command": "TEST later command"
+          },
+          "startedAt": 42,
+          "completedAt": 48
+        },
+        {
+          "type": "tool_result",
+          "toolUseId": "TEST-other-shell",
+          "toolName": "shell",
+          "title": null,
+          "status": "completed",
+          "contentText": "TEST later output",
+          "contentPreview": "TEST later output",
+          "rawContent": [
+            {
+              "type": "text",
+              "text": "TEST later output"
+            }
+          ],
+          "isError": false,
+          "startedAt": 42,
+          "completedAt": 48
+        }
+      ],
+      "finishReason": "stop",
+      "errorName": null,
+      "errorMessage": null,
+      "hasError": false
+    },
+    {
+      "id": "msg_TESTterminal",
+      "parentId": null,
+      "role": "system",
+      "agent": null,
+      "providerId": null,
+      "modelId": null,
+      "createdAt": 50,
+      "completedAt": null,
+      "text": "",
+      "reasoningText": "",
+      "previewText": null,
+      "partTypes": [
+        "idle"
+      ],
+      "reasoningPartCount": 0,
+      "toolCalls": [],
+      "contentBlocks": [],
+      "finishReason": null,
+      "errorName": null,
+      "errorMessage": null,
+      "hasError": false
+    }
+  ],
+  "logProjection": {
+    "sessionId": "ses_TESTtranscript",
+    "durableState": "idle",
+    "sourceMessageCount": 5,
+    "projectedMessageCount": 6,
+    "syntheticMessageCount": 2,
+    "toolCallCount": 2,
+    "errorCount": 0,
+    "diagnostics": [
+      "v2_native_parent_ids_unavailable"
+    ],
+    "messages": [
+      {
+        "uuid": "msg_TESTinput",
+        "parentUuid": null,
+        "type": "user",
+        "timestamp": "1970-01-01T00:00:00.010Z",
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "TEST original input"
+          }
+        ],
+        "isMeta": false,
+        "sessionId": "ses_TESTtranscript",
+        "toolCalls": [],
+        "toolResults": []
+      },
+      {
+        "uuid": "msg_TESTassistant",
+        "parentUuid": null,
+        "type": "assistant",
+        "timestamp": "1970-01-01T00:00:00.020Z",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "TEST original response"
+          },
+          {
+            "type": "tool_use",
+            "id": "TEST-shell",
+            "name": "shell",
+            "input": {
+              "command": "node C:\\TEST-project\\verify.cjs",
+              "workdir": "C:\\TEST-project"
+            }
+          }
+        ],
+        "model": "TEST-provider/TEST-model",
+        "agentName": "TEST-agent",
+        "isMeta": false,
+        "sessionId": "ses_TESTtranscript",
+        "toolCalls": [
+          {
+            "id": "TEST-shell",
+            "name": "shell",
+            "input": {
+              "command": "node C:\\TEST-project\\verify.cjs",
+              "workdir": "C:\\TEST-project"
+            },
+            "isTask": false
+          }
+        ],
+        "toolResults": []
+      },
+      {
+        "uuid": "msg_TESTassistant::tool_results",
+        "parentUuid": "msg_TESTassistant",
+        "type": "user",
+        "timestamp": "1970-01-01T00:00:00.029Z",
+        "role": "user",
+        "content": [
+          {
+            "type": "tool_result",
+            "tool_use_id": "TEST-shell",
+            "content": [
+              {
+                "type": "text",
+                "text": "TEST verifier passed"
+              }
+            ]
+          }
+        ],
+        "model": "TEST-provider/TEST-model",
+        "agentName": "TEST-agent",
+        "isMeta": true,
+        "sessionId": "ses_TESTtranscript",
+        "toolCalls": [],
+        "toolResults": [
+          {
+            "toolUseId": "TEST-shell",
+            "content": [
+              {
+                "type": "text",
+                "text": "TEST verifier passed"
+              }
+            ],
+            "isError": false
+          }
+        ],
+        "sourceToolUseID": "TEST-shell",
+        "sourceToolAssistantUUID": "msg_TESTassistant"
+      },
+      {
+        "uuid": "msg_TESTother",
+        "parentUuid": null,
+        "type": "user",
+        "timestamp": "1970-01-01T00:00:00.030Z",
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "TEST later input"
+          }
+        ],
+        "isMeta": false,
+        "sessionId": "ses_TESTtranscript",
+        "toolCalls": [],
+        "toolResults": []
+      },
+      {
+        "uuid": "msg_TESTforeignassistant",
+        "parentUuid": null,
+        "type": "assistant",
+        "timestamp": "1970-01-01T00:00:00.040Z",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "TEST later response"
+          },
+          {
+            "type": "tool_use",
+            "id": "TEST-other-shell",
+            "name": "shell",
+            "input": {
+              "command": "TEST later command"
+            }
+          }
+        ],
+        "model": "TEST-provider/TEST-model",
+        "agentName": "TEST-agent",
+        "isMeta": false,
+        "sessionId": "ses_TESTtranscript",
+        "toolCalls": [
+          {
+            "id": "TEST-other-shell",
+            "name": "shell",
+            "input": {
+              "command": "TEST later command"
+            },
+            "isTask": false
+          }
+        ],
+        "toolResults": []
+      },
+      {
+        "uuid": "msg_TESTforeignassistant::tool_results",
+        "parentUuid": "msg_TESTforeignassistant",
+        "type": "user",
+        "timestamp": "1970-01-01T00:00:00.049Z",
+        "role": "user",
+        "content": [
+          {
+            "type": "tool_result",
+            "tool_use_id": "TEST-other-shell",
+            "content": [
+              {
+                "type": "text",
+                "text": "TEST later output"
+              }
+            ]
+          }
+        ],
+        "model": "TEST-provider/TEST-model",
+        "agentName": "TEST-agent",
+        "isMeta": true,
+        "sessionId": "ses_TESTtranscript",
+        "toolCalls": [],
+        "toolResults": [
+          {
+            "toolUseId": "TEST-other-shell",
+            "content": [
+              {
+                "type": "text",
+                "text": "TEST later output"
+              }
+            ],
+            "isError": false
+          }
+        ],
+        "sourceToolUseID": "TEST-other-shell",
+        "sourceToolAssistantUUID": "msg_TESTforeignassistant"
+      }
+    ]
+  },
+  "diagnostics": [
+    "v2_native_parent_ids_unavailable"
+  ]
+}

@@ -20,7 +20,7 @@ import type {
 } from '../../../src/shared/types/team.ts';
 
 const MODEL = 'openrouter/openai/gpt-5.4-mini';
-const NATIVE_SHA = 'bb731f311416df16691fa16763eb87657c4a5f5f3bcff5202718c416e8f7ab1a';
+const NATIVE_SHA = '81bb8ddc61554dd8328fd1b69ef2411b54037c32838f8009b1066894696722e3';
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const harness = path.join(repo, 'scripts/e2e/opencode-diagnostics-desktop.mjs');
 const hash = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
@@ -626,7 +626,7 @@ async function main() {
             host.hostKey === session.hostKey &&
             host.profileRootKey === session.profileRootKey &&
             host.projectPath === data.project &&
-            host.version === '1.19.0',
+            host.version === '1.19.3',
           'host-identity-mismatch'
         );
         const key = `${team}::${session.laneId}::${member}`,
@@ -1295,7 +1295,10 @@ async function main() {
       'window.electronAPI.openCodeRuntime.getStatus()',
       'native identity'
     );
-    assert(native.installed && native.version === '1.19.0');
+    assert(
+      native.installed && native.version === '1.19.3',
+      `Managed native identity mismatch: ${JSON.stringify(native)}`
+    );
     assert((await realpath(native.binaryPath)).startsWith(await realpath(data.userData)));
     assert.equal(hash(await readFile(native.binaryPath)), NATIVE_SHA);
     receipt.native = { version: native.version, path: native.binaryPath, sha256: NATIVE_SHA };

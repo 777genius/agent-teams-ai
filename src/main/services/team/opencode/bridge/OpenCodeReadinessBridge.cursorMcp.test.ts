@@ -29,7 +29,7 @@ describe('desktop Cursor launch dispatch without global registration', () => {
 
   it('keeps desktop HTTP MCP refresh on the command client without global registration wiring', async () => {
     const source = await fs.readFile(path.resolve(process.cwd(), 'src/main/index.ts'), 'utf8');
-    expect(source).toContain('envProvider: resolveBridgeCommandEnv');
+    expect(source).toContain('envProvider: async (command) =>');
     expect(source).toContain('nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = appScopedMcpUrl');
     expect(source).not.toContain('resolveAgentTeamsMcpUrl');
   });

@@ -186,10 +186,12 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
 
   it.each([
     ['2.0.0', true],
-    ['opencode v2.0.21', true],
+    ['opencode v2.0.32', true],
+    ['2.0.21', false],
+    ['opencode v2.0.21', false],
     ['opencode v2.0.26', false],
-    ['2.0.21-beta.1', false],
-    ['2.0.21+build.7', false],
+    ['2.0.32-beta.1', false],
+    ['2.0.32+build.7', false],
   ])('discovers only recognized native runtime versions on PATH (%s)', async (version, supported) => {
     const binDir = path.join(tempRoot!, 'TEST-bin');
     await mkdir(binDir, { recursive: true });
@@ -204,10 +206,12 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
 
   it.each([
     ['2.0.0', true],
-    ['opencode v2.0.21', true],
+    ['opencode v2.0.32', true],
+    ['2.0.21', false],
+    ['opencode v2.0.21', false],
     ['opencode v2.0.26', false],
-    ['2.0.21-beta.1', false],
-    ['2.0.21+build.7', false],
+    ['2.0.32-beta.1', false],
+    ['2.0.32+build.7', false],
   ])('discovers only recognized managed native runtime versions (%s)', async (version, supported) => {
     const binaryPath = path.join(tempRoot!, 'TEST-managed-opencode');
     await writeFile(binaryPath, 'TEST native version probe', { mode: 0o755 });
@@ -227,11 +231,13 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
   it.each([
     ['1.18.3', true],
     ['2.0.0', true],
-    ['opencode v2.0.21', true],
+    ['opencode v2.0.32', true],
+    ['2.0.21', false],
+    ['opencode v2.0.21', false],
     ['1.15.9', false],
     ['2.0.22', false],
-    ['2.0.21-beta.1', false],
-    ['2.0.21+unqualified', false],
+    ['2.0.32-beta.1', false],
+    ['2.0.32+unqualified', false],
     ['3.0.0', false],
     ['unknown', false],
   ])('preserves only recognized native binary overrides (%s)', async (version, supported) => {

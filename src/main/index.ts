@@ -1,6 +1,3 @@
-import { composeGatewayProviderRuntime } from '@main/services/gateway/composeGatewayProviderRuntime';
-import { cleanupOrphanedDeterministicBootstrapSpecs } from '@main/services/team/provisioning/TeamProvisioningBootstrapSpec';
-
 import type { createGatewayLaunchRuntime } from '@main/services/gateway/createGatewayLaunchRuntime';
 // Increase UV thread pool size BEFORE async I/O: startup binary resolution,
 // subprocess work, watchers, and IPC filesystem requests share this pool.
@@ -16,6 +13,9 @@ import {
 } from './bootstrapUserDataMigration';
 import { earlyAnnouncementsProfile } from './bootstrapAnnouncementsProfile';
 import './sentryBootstrap';
+import { composeGatewayProviderRuntime } from '@main/services/gateway/composeGatewayProviderRuntime';
+import { cleanupOrphanedDeterministicBootstrapSpecs } from '@main/services/team/provisioning/TeamProvisioningBootstrapSpec';
+
 import {
   createDesktopTeamGroupChats,
   registerTeamGroupChatsIpc,
@@ -619,45 +619,45 @@ async function createOpenCodeRuntimeAdapterRegistry(
   await startupStage(() => ensureOpenCodeLocalMcpLaunchEnv(bridgeEnv, { emitProgress: true }));
 
   reportProgress('runtime-bridge', 'Preparing OpenCode bridge...');
-  const resolveBridgeCommandEnv = async (): Promise<NodeJS.ProcessEnv> => {
-    const nextEnv = { ...bridgeEnv };
-    await ensureOpenCodeRuntimeBinaryEnv(nextEnv, { includeShellEnv: true });
-    if (!useHttpMcpBridge) {
-      await refreshDesktopBridgeEnvironment(nextEnv);
-      return nextEnv;
-    }
-    if (!getTeamControlApiBaseUrl()) throw new Error('Desktop MCP control server is not ready');
-    try {
-      const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
-      const appScopedMcpUrl = buildOpenCodeAppScopedMcpUrl(
-        mcpHttpServer.url,
-        openCodeManagedHostInstanceId,
-        profileScope
-      );
-      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = appScopedMcpUrl;
-      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
-      nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = appScopedMcpUrl;
-      nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
-      await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
-    } catch (error) {
-      delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
-      delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH;
-      await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
-      logger.warn(
-        `[OpenCode] Runtime adapter bridge MCP HTTP server refresh failed: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-    await refreshDesktopBridgeEnvironment(nextEnv);
-    return nextEnv;
-  };
+
   const bridgeControlDir = join(app.getPath('userData'), 'opencode-bridge');
   const bridgeClient = new OpenCodeBridgeCommandClient({
     binaryPath,
     tempDirectory: join(app.getPath('temp'), 'claude-team-opencode-bridge'),
     env: bridgeEnv,
-    envProvider: resolveBridgeCommandEnv,
+    envProvider: async (command) => {
+      const nextEnv = { ...bridgeEnv };
+      await ensureOpenCodeRuntimeBinaryEnv(nextEnv, { includeShellEnv: true });
+      if (!useHttpMcpBridge || command === 'opencode.cleanupStartupHosts') {
+        await refreshDesktopBridgeEnvironment(nextEnv, command !== 'opencode.cleanupStartupHosts');
+        return nextEnv;
+      }
+      if (!getTeamControlApiBaseUrl()) throw new Error('Desktop MCP control server is not ready');
+      try {
+        const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
+        const appScopedMcpUrl = buildOpenCodeAppScopedMcpUrl(
+          mcpHttpServer.url,
+          openCodeManagedHostInstanceId,
+          profileScope
+        );
+        bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = appScopedMcpUrl;
+        bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
+        nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = appScopedMcpUrl;
+        nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
+        await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
+      } catch (error) {
+        delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
+        delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH;
+        await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
+        logger.warn(
+          `[OpenCode] Runtime adapter bridge MCP HTTP server refresh failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
+      await refreshDesktopBridgeEnvironment(nextEnv);
+      return nextEnv;
+    },
     diagnostics: new OpenCodeBridgeDiagnosticsStore({
       directory: join(bridgeControlDir, 'diagnostics'),
     }),
@@ -1987,6 +1987,7 @@ async function initializeServices(): Promise<void> {
   const { gatewayProviderRuntime, gatewayProviderConnector, gatewayLaunchRuntime } =
     composeGatewayProviderRuntime({
       ipcMain,
+      configuration: teamDataService,
       apiKeys: apiKeyService,
       appDataPath: getAppDataPath(),
     });
@@ -2937,6 +2938,9 @@ async function initializeServices(): Promise<void> {
     resolveOpenCodeInputDeclaration,
     (teamName) => gatewayProviderRuntime.feature.retireTeamGatewayBindings(teamName)
   );
+  void gatewayProviderRuntime.feature.recoverGatewayDraftBindings().catch(() => {
+    logger.warn('Could not recover gateway drafts; their saved ownership is preserved.');
+  });
   registerCodexAccountIpc(ipcMain, codexAccountFeature);
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
   registerTeamGroupChatsIpc(ipcMain, teamGroupChatsFeature);

@@ -335,6 +335,41 @@ export function refreshSettled(observation, current) {
   );
 }
 
+export function assertSettledDirectoryPage(payload) {
+  assert(
+    Array.isArray(payload?.diagnostics) && payload.diagnostics.length === 0,
+    'Pending/degraded provider directory does not qualify'
+  );
+}
+
+// Readiness is a separate main API precondition, never measured UI evidence.
+export async function waitForSettledDirectory(load, timeoutMs = 120000) {
+  const deadline = Date.now() + timeoutMs;
+  let attempt = 0;
+  for (;;) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) break;
+    const response = await load(remaining, attempt++);
+    assert.equal(response?.schemaVersion, 1);
+    assert.equal(response.runtimeId, 'opencode');
+    assert(!response.error, 'Provider directory readiness failed');
+    assert.equal(response.directory?.runtimeId, 'opencode');
+    const diagnostics = response.directory.diagnostics;
+    assert(Array.isArray(diagnostics), 'Missing directory readiness diagnostics');
+    if (!diagnostics.length) {
+      assertSettledDirectoryPage(response.directory);
+      assert(Date.now() < deadline, 'Provider directory did not settle within bootstrap budget');
+      return response;
+    }
+    assert(
+      diagnostics.every((item) => item === 'capabilities_pending'),
+      'Provider directory readiness failed'
+    );
+    await pause(Math.min(250, Math.max(0, deadline - Date.now())));
+  }
+  throw new Error('Provider directory did not settle within bootstrap budget');
+}
+
 export async function qualifyUIRefresh(records, completed) {
   assert.equal(completed?.state, 'ready');
   assert(!completed.diagnostics?.message);
@@ -372,6 +407,7 @@ export async function qualifyUIRefresh(records, completed) {
   assert(directory.every((r) => r.input.summary === true && r.input.filter === 'all'));
   for (const record of directory) {
     const payload = record.response.directory;
+    assertSettledDirectoryPage(payload);
     assert(
       Number.isInteger(payload?.totalCount) && Number.isInteger(payload?.returnedCount),
       'Missing UI directory completeness metadata'
@@ -676,6 +712,18 @@ export async function verifyPackaged({
     );
     evidence.summaryQualification = qualifySummary(provider);
 
+    // The UI can be ready while its source directory still reports capabilities_pending.
+    // Share the existing bootstrap-settle budget with an independent readiness read.
+    const bootstrapDeadline = Date.now() + 120000;
+    await waitForSettledDirectory(
+      (remaining, attempt) =>
+        probe(
+          `directoryReady:${attempt}`,
+          'window.electronAPI.runtimeProviderManagement.loadProviderDirectory({runtimeId:"opencode",projectPath:null,summary:true,filter:"all",limit:100,cursor:null,refresh:true})',
+          remaining
+        ),
+      bootstrapDeadline - Date.now()
+    );
     // Warm starts can retain a ready catalog while provider status still disables
     // refresh. Wait for both rendered facts before arming the measured request.
     let before;
@@ -731,7 +779,7 @@ export async function verifyPackaged({
 
     // Separate fresh main API attempts corroborate source/model payloads. Never injected
     // into UI state or claimed to carry the UI attempt's report IDs.
-    const entries = await collectPages((cursor, page) => {
+    const entries = await collectPages(async (cursor, page) => {
       const input = {
         runtimeId: 'opencode',
         projectPath: null,
@@ -741,10 +789,12 @@ export async function verifyPackaged({
         refresh: true,
         cursor,
       };
-      return probe(
+      const response = await probe(
         `directory:${page}`,
         `window.electronAPI.runtimeProviderManagement.loadProviderDirectory(${JSON.stringify(input)})`
       );
+      assertSettledDirectoryPage(response.directory);
+      return response;
     }, 'directory');
     const sources = entries
       .filter(

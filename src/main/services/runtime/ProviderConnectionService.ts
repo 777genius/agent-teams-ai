@@ -185,7 +185,9 @@ function tomlString(value: string): string {
   return JSON.stringify(value);
 }
 
-export function buildCodexCustomProviderConfigOverrides(config: CodexCustomProviderConfig): string[] {
+export function buildCodexCustomProviderConfigOverrides(
+  config: CodexCustomProviderConfig
+): string[] {
   return [
     `model_provider=${tomlString(CODEX_CUSTOM_PROVIDER_ID)}`,
     `model_providers.${CODEX_CUSTOM_PROVIDER_ID}.name=${tomlString(CODEX_CUSTOM_PROVIDER_NAME)}`,

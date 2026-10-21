@@ -11,6 +11,7 @@ import type {
   GatewayUnbindMemberRequest,
 } from '../../contracts/index';
 import type { GatewayModelUsage, GatewayUsageSourceInfo } from '../../core/application/usage';
+import type { GatewayProviderServiceDeps } from '../application/GatewayProviderService';
 import type { ResolvedMemberGatewayConnection } from '../application/GatewayProviderService';
 import type { ApiKeyService } from '@main/services/extensions/apikeys/ApiKeyService';
 
@@ -20,7 +21,11 @@ export interface GatewayProviderFeatureFacade {
   deleteGatewayProfile(id: string): Promise<void>;
   probeGatewayModels(request: GatewayProbeModelsRequest): Promise<string[]>;
   listGatewayBindings(teamName?: string): Promise<GatewayMemberBindingDto[]>;
-  bindGatewayMember(request: GatewayBindMemberRequest): Promise<GatewayMemberBindingDto>;
+  bindGatewayMember(
+    request: GatewayBindMemberRequest,
+    draftOwner?: string
+  ): Promise<GatewayMemberBindingDto>;
+  recoverGatewayDraftBindings(owner?: string): Promise<void>;
   unbindGatewayMember(request: GatewayUnbindMemberRequest): Promise<void>;
   retireTeamGatewayBindings(teamName: string): Promise<void>;
   resolveMemberConnection(
@@ -38,12 +43,14 @@ export function createGatewayProviderFeature(deps: {
   storePath: string;
   apiKeys: Pick<ApiKeyService, 'save' | 'readValueById'>;
   onBindingsChanged?: () => void;
+  drafts?: GatewayProviderServiceDeps['drafts'];
 }): GatewayProviderFeatureFacade {
   const service = new GatewayProviderService({
     store: new JsonGatewayProviderStore(deps.storePath),
     credentials: new GatewayCredentialStore(deps.apiKeys),
     clock: { now: () => new Date() },
     onBindingsChanged: deps.onBindingsChanged,
+    drafts: deps.drafts,
   });
 
   return {
@@ -52,16 +59,15 @@ export function createGatewayProviderFeature(deps: {
     deleteGatewayProfile: (id) => service.deleteProfile(id),
     probeGatewayModels: (request) => service.probeModels(request),
     listGatewayBindings: (teamName) => service.listBindings(teamName),
-    bindGatewayMember: (request) => service.bindMember(request),
+    bindGatewayMember: (request, owner) => service.bindMember(request, owner),
     unbindGatewayMember: (request) => service.unbindMember(request),
+    recoverGatewayDraftBindings: (owner) => service.recoverDraftBindings(owner),
     retireTeamGatewayBindings: (teamName) => service.unbindTeam(teamName),
     resolveMemberConnection: (teamName, memberName, model) =>
       service.resolveMemberConnection(teamName, memberName, model),
-    markRuntimeArtifactActive: (gatewayUsageRef) =>
-      service.markRuntimeArtifactActive(gatewayUsageRef),
-    markRuntimeArtifactRetired: (gatewayUsageRef) =>
-      service.markRuntimeArtifactRetired(gatewayUsageRef),
+    markRuntimeArtifactActive: (ref) => service.markRuntimeArtifactActive(ref),
+    markRuntimeArtifactRetired: (ref) => service.markRuntimeArtifactRetired(ref),
     listGatewayUsageSources: () => service.listUsageSources(),
-    readGatewayUsageDay: (gatewayUsageRef, day) => service.readUsageDay(gatewayUsageRef, day),
+    readGatewayUsageDay: (ref, day) => service.readUsageDay(ref, day),
   };
 }

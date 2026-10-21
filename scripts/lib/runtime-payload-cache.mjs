@@ -2,6 +2,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { assertSafeRuntimeZip } from './runtime-archive-extraction.mts';
+
 import { RUNTIME_ARCHIVE_SHA256_PATTERN } from './runtime-archive-checksum.mjs';
 
 const receiptName = '.archive-payload.json';
@@ -98,7 +100,22 @@ export function publishRuntimePayload(extractedBinaryPath, payloadDir, archiveSh
   }
 }
 
+export function logRuntimePhase(message) {
+  process.stderr.write(`[dev-runtime-bootstrap] ${message}\n`);
+}
+
+function assertRegularArchiveEntries(root) {
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    const file = path.join(root, entry.name);
+    if (entry.isDirectory()) assertRegularArchiveEntries(file);
+    else if (!entry.isFile()) throw new Error(`Unsupported runtime archive entry: ${file}`);
+  }
+}
+
 export function extractArchive(archivePath, extractDir, archiveKind, runOrExit) {
+  if (fs.existsSync(extractDir) && !fs.lstatSync(extractDir).isDirectory()) {
+    throw new Error(`Unsupported runtime archive entry: ${extractDir}`);
+  }
   fs.mkdirSync(extractDir, { recursive: true });
 
   if (archiveKind === 'tar.gz') {
@@ -108,24 +125,26 @@ export function extractArchive(archivePath, extractDir, archiveKind, runOrExit) 
 
   if (archiveKind === 'zip') {
     if (process.platform === 'win32') {
-      // Windows ships bsdtar with ZIP support. Use the system executable so
-      // Git's GNU tar on PATH cannot shadow it (GNU tar cannot extract ZIPs).
-      const tarPath = path.join(
-        process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows',
-        'System32',
-        'tar.exe'
-      );
+      const systemRoot = process.env.SystemRoot;
+      if (typeof systemRoot !== 'string' || !/^[A-Za-z]:[\\/]/u.test(systemRoot)) {
+        throw new Error('Windows runtime ZIP extraction requires an absolute SystemRoot');
+      }
+      assertSafeRuntimeZip(archivePath);
+      assertRegularArchiveEntries(extractDir);
+      const tarPath = path.win32.join(systemRoot, 'System32', 'tar.exe');
       // Windows bsdtar converts argv paths through the active ANSI code page.
       // Inherit the open archive file and let Node set the Unicode cwd instead.
       const archiveFd = fs.openSync(archivePath, 'r');
       try {
         runOrExit(tarPath, ['-xf', '-'], {
+          shell: false,
           cwd: extractDir,
           stdio: [archiveFd, 'inherit', 'inherit'],
         });
       } finally {
         fs.closeSync(archiveFd);
       }
+      assertRegularArchiveEntries(extractDir);
       return;
     }
 
@@ -134,8 +153,4 @@ export function extractArchive(archivePath, extractDir, archiveKind, runOrExit) 
   }
 
   throw new Error(`Unsupported runtime archive kind: ${archiveKind}`);
-}
-
-export function logRuntimePhase(message) {
-  process.stderr.write(`[dev-runtime-bootstrap] ${message}\n`);
 }

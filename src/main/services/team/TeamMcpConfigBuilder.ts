@@ -1,3 +1,5 @@
+import { pathToFileURL } from 'node:url';
+
 import { getDesktopMcpChildEnvironment } from '@features/external-agent-connection/main';
 import { execCli } from '@main/utils/childProcess';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
@@ -159,17 +161,6 @@ function getWorkspaceTsxPackageJsonCandidates(): string[] {
   ];
 }
 
-function resolvePackageBin(
-  packageJsonPath: string,
-  binName: string,
-  packageJsonRaw: string
-): string | null {
-  const packageJson = JSON.parse(packageJsonRaw) as { bin?: string | Record<string, string> };
-  const bin = typeof packageJson.bin === 'string' ? packageJson.bin : packageJson.bin?.[binName];
-  if (!bin) return null;
-  return path.resolve(path.dirname(packageJsonPath), bin);
-}
-
 async function pathExists(targetPath: string): Promise<boolean> {
   try {
     await fs.promises.access(targetPath, fs.constants.F_OK);
@@ -179,34 +170,18 @@ async function pathExists(targetPath: string): Promise<boolean> {
   }
 }
 
-async function resolveWorkspaceTsxCli(checked: string[]): Promise<string | null> {
+async function resolveWorkspaceTsxLoader(checked: string[]): Promise<string | null> {
   for (const packageJsonPath of getWorkspaceTsxPackageJsonCandidates()) {
     checked.push(packageJsonPath);
     if (!(await pathExists(packageJsonPath))) {
       continue;
     }
 
-    try {
-      const tsxCli = resolvePackageBin(
-        packageJsonPath,
-        'tsx',
-        await fs.promises.readFile(packageJsonPath, 'utf8')
-      );
-      if (!tsxCli) {
-        logger.warn(`tsx package has no bin.tsx entry at ${packageJsonPath}`);
-        continue;
-      }
-
-      checked.push(tsxCli);
-      if (await pathExists(tsxCli)) {
-        return await fs.promises.realpath(tsxCli);
-      }
-    } catch (error) {
-      logger.warn(
-        `Failed to resolve tsx CLI from ${packageJsonPath}: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
+    const loader = path.resolve(path.dirname(packageJsonPath), 'dist', 'loader.mjs');
+    checked.push(loader);
+    if (await pathExists(loader)) {
+      // Symlinked workspace deps (pnpm store) launch from their physical paths.
+      return await fs.promises.realpath(loader);
     }
   }
 
@@ -584,11 +559,15 @@ export async function resolveAgentTeamsMcpLaunchSpec(
   checked.push(sourceEntry);
   if (await pathExists(sourceEntry)) {
     emitProgress(options, 'tsx-runner', 'Resolving MCP TypeScript runner...');
-    const tsxCli = await resolveWorkspaceTsxCli(checked);
-    if (tsxCli) {
+    // Registering the tsx loader in-process avoids the tsx CLI, whose IPC pipe
+    // under a deep owned-profile TMPDIR exceeds the UNIX socket path limit.
+    const tsxLoader = await resolveWorkspaceTsxLoader(checked);
+    if (tsxLoader) {
+      // `--import` resolves its argument as an ESM specifier: a Windows drive
+      // path is parsed as a `C:` URL scheme and rejected, so pass a file URL.
       return {
         command: await resolveNodePath(options),
-        args: [tsxCli, await fs.promises.realpath(sourceEntry)],
+        args: ['--import', pathToFileURL(tsxLoader).href, await fs.promises.realpath(sourceEntry)],
       };
     }
   }
