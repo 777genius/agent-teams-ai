@@ -1,6 +1,3 @@
-import { composeGatewayProviderRuntime } from '@main/services/gateway/composeGatewayProviderRuntime';
-import { cleanupOrphanedDeterministicBootstrapSpecs } from '@main/services/team/provisioning/TeamProvisioningBootstrapSpec';
-
 import type { createGatewayLaunchRuntime } from '@main/services/gateway/createGatewayLaunchRuntime';
 // Increase UV thread pool size BEFORE async I/O: startup binary resolution,
 // subprocess work, watchers, and IPC filesystem requests share this pool.
@@ -16,6 +13,9 @@ import {
 } from './bootstrapUserDataMigration';
 import { earlyAnnouncementsProfile } from './bootstrapAnnouncementsProfile';
 import './sentryBootstrap';
+import { composeGatewayProviderRuntime } from '@main/services/gateway/composeGatewayProviderRuntime';
+import { cleanupOrphanedDeterministicBootstrapSpecs } from '@main/services/team/provisioning/TeamProvisioningBootstrapSpec';
+
 import {
   createDesktopTeamGroupChats,
   registerTeamGroupChatsIpc,
@@ -1987,6 +1987,7 @@ async function initializeServices(): Promise<void> {
   const { gatewayProviderRuntime, gatewayProviderConnector, gatewayLaunchRuntime } =
     composeGatewayProviderRuntime({
       ipcMain,
+      configuration: teamDataService,
       apiKeys: apiKeyService,
       appDataPath: getAppDataPath(),
     });
@@ -2937,6 +2938,9 @@ async function initializeServices(): Promise<void> {
     resolveOpenCodeInputDeclaration,
     (teamName) => gatewayProviderRuntime.feature.retireTeamGatewayBindings(teamName)
   );
+  void gatewayProviderRuntime.feature.recoverGatewayDraftBindings().catch(() => {
+    logger.warn('Could not recover gateway drafts; their saved ownership is preserved.');
+  });
   registerCodexAccountIpc(ipcMain, codexAccountFeature);
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
   registerTeamGroupChatsIpc(ipcMain, teamGroupChatsFeature);

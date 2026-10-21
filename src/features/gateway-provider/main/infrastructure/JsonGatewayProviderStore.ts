@@ -62,7 +62,17 @@ function normalizeState(value: unknown): GatewayProviderState {
       const gatewayUsageRef = readString(binding?.gatewayUsageRef);
       const boundAt = readString(binding?.boundAt);
       return teamName && memberName && profileId && apiKeyRef && gatewayUsageRef && boundAt
-        ? [{ teamName, memberName, profileId, apiKeyRef, gatewayUsageRef, boundAt }]
+        ? [
+            {
+              teamName,
+              memberName,
+              profileId,
+              apiKeyRef,
+              gatewayUsageRef,
+              boundAt,
+              draftOwner: readString(binding?.draftOwner),
+            },
+          ]
         : [];
     }),
     sources: sources.flatMap((entry) => {
@@ -103,6 +113,8 @@ function normalizeState(value: unknown): GatewayProviderState {
           createdAt,
           lastBoundAt,
           lastUnboundAt: readString(source?.lastUnboundAt),
+          draftOnly: source?.draftOnly === true ? true : undefined,
+          draftOwner: readString(source?.draftOwner),
           hasActiveBinding: readBoolean(source?.hasActiveBinding),
           hasRuntimeArtifact: readBoolean(source?.hasRuntimeArtifact),
           runtimeArtifactRetiredAt: readString(source?.runtimeArtifactRetiredAt),
