@@ -12,6 +12,7 @@ import {
   resolveOpenCodeReadinessTimeoutMs,
 } from './OpenCodeReadinessTimeoutPolicy';
 
+import type { OpenCodeExecutionProof } from '../readiness/OpenCodeExecutionProof';
 import type { OpenCodeTeamLaunchReadiness } from '../readiness/OpenCodeTeamLaunchReadiness';
 
 vi.mock('../config/CursorMcpConfigWriter', () => ({
@@ -26,7 +27,7 @@ describe('resolveOpenCodeLaunchTimeoutMs', () => {
   });
 
   it('gives V2 runs the 300s launch budget on every platform', () => {
-    const v2 = { opencodeVersion: '2.0.32' };
+    const v2 = { opencodeVersion: '2.0.32' } as OpenCodeExecutionProof;
     expect(
       resolveOpenCodeLaunchTimeoutMs(
         { selectedModel: 'openai/gpt-5.4', members: [], executionProof: v2 },
@@ -54,7 +55,7 @@ describe('resolveOpenCodeLaunchTimeoutMs', () => {
         {
           selectedModel: 'openai/gpt-5.4',
           members: [],
-          executionProof: { opencodeVersion: '1.2.3' },
+          executionProof: { opencodeVersion: '1.2.3' } as OpenCodeExecutionProof,
         },
         undefined,
         'darwin'

@@ -81,6 +81,7 @@ export function projectIpcCausalFailure(value: unknown): NativeCausalFailure | n
       returnedDispatch = true;
       candidate = { phase: 'dispatch', bridgeFailure: {
         kind: returned[1], sdkCode: returned[2], nativeOperation: returned[5],
+        ...(returned[4] !== undefined ? { nativeErrno: Number(returned[4]) } : {}),
       } };
     } else {
       const marker = '\nOPENCODE_STOP_CAUSE_V1=';
@@ -114,6 +115,14 @@ export function projectIpcCausalFailure(value: unknown): NativeCausalFailure | n
   const handshake = returnedDispatch ? bridgeFailure : own(input, 'handshakeFailure');
   const handshakeKind = own(handshake, 'kind'), handshakeCode = own(handshake, 'sdkCode');
   const handshakeOperation = own(handshake, 'nativeOperation');
+  const handshakeErrnoRaw = own(handshake, 'nativeErrno');
+  const handshakeErrno =
+    typeof handshakeErrnoRaw === 'number' &&
+    Number.isInteger(handshakeErrnoRaw) &&
+    handshakeErrnoRaw >= 0 &&
+    handshakeErrnoRaw <= 0xffffffff
+      ? handshakeErrnoRaw
+      : undefined;
   const kind = ['unsupported_schema', 'unsupported_command', 'invalid_input', 'runtime_not_ready', 'provider_error',
     'timeout', 'transport_watchdog_timeout', 'contract_violation', 'internal_error'].find(value => value === handshakeKind);
   const sdkCode = [
@@ -182,8 +191,8 @@ export function projectIpcCausalFailure(value: unknown): NativeCausalFailure | n
     'OpenCodeStopOutcomeRecovery.ts'].find((source) => source === frame.source);
   return {
     phase, errno: errno(input.errno),
-    ...(returnedDispatch && kind && sdkCode ? { bridgeFailure: { kind, sdkCode, ...(nativeOperation ? { nativeOperation } : {}) } }
-      : kind ? { handshakeFailure: { kind, ...(sdkCode ? { sdkCode } : {}), ...(nativeOperation ? { nativeOperation } : {}) } } : {}),
+    ...(returnedDispatch && kind && sdkCode ? { bridgeFailure: { kind, sdkCode, ...(nativeOperation ? { nativeOperation } : {}), ...(handshakeErrno !== undefined ? { nativeErrno: handshakeErrno } : {}) } }
+      : kind ? { handshakeFailure: { kind, ...(sdkCode ? { sdkCode } : {}), ...(nativeOperation ? { nativeOperation } : {}), ...(handshakeErrno !== undefined ? { nativeErrno: handshakeErrno } : {}) } } : {}),
     ...(Object.hasOwn(input, 'cleanupErrno') ? { cleanupErrno: errno(input.cleanupErrno) } : {}),
     reason: [
       'OpenCode lifecycle command requires the exact persisted lane run and capability snapshot',

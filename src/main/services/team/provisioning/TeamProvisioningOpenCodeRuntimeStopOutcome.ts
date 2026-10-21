@@ -1,10 +1,10 @@
 import { isProcessAlive } from '@main/utils/processHealth';
 
+import { redactBridgeDiagnosticText } from '../opencode/bridge/OpenCodeBridgeCommandClient';
 import {
   formatOpenCodeStopCausalSuffix,
   ownedOpenCodeStateChangingFailure,
 } from '../opencode/bridge/OpenCodeStateChangingBridgeCommandService';
-import { redactBridgeDiagnosticText } from '../opencode/bridge/OpenCodeBridgeCommandClient';
 
 import type {
   OpenCodeStopCausalFailure,

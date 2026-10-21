@@ -3,7 +3,7 @@ import type { OpenCodeStopCausalFailure, TeamCreateRequest, TeamProvisioningProg
 
 // Proof-only projection; production lifecycle and delivery contracts remain unchanged.
 export type NativeCausalFailure = OpenCodeStopCausalFailure & {
-  bridgeFailure?: { kind: string; sdkCode: string; nativeOperation?: string };
+  bridgeFailure?: { kind: string; sdkCode: string; nativeOperation?: string; nativeErrno?: number };
 };
 
 type NativeCommandExecution = Extract<Awaited<ReturnType<ElectronAPI['teams']['getTaskLogStream']>>['segments'][number]['chunks'][number], { chunkType: 'ai' }>['toolExecutions'][number];

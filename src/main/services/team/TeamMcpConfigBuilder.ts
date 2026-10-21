@@ -1,3 +1,5 @@
+import { pathToFileURL } from 'node:url';
+
 import { getDesktopMcpChildEnvironment } from '@features/external-agent-connection/main';
 import { execCli } from '@main/utils/childProcess';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
@@ -13,7 +15,6 @@ import { createLogger } from '@shared/utils/logger';
 import { resolveTeamMemberMcpScopes } from '@shared/utils/teamMemberMcpPolicy';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
-import { pathToFileURL } from 'node:url';
 import * as path from 'path';
 
 import { McpConfigStateReader } from '../extensions/runtime/McpConfigStateReader';

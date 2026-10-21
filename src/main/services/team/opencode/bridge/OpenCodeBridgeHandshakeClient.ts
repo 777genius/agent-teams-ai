@@ -231,10 +231,12 @@ export function createOpenCodeBridgeHandshakeFailure(
       : undefined;
   const nativeOperation =
     sdkCode && match ? nativeOperations.find((value) => value === match[4]) : undefined;
+  const nativeErrno = sdkCode && match && match[3] !== undefined ? Number(match[3]) : undefined;
   rememberOpenCodeHandshakeFailure(error, {
     kind,
     ...(sdkCode ? { sdkCode } : {}),
     ...(nativeOperation ? { nativeOperation } : {}),
+    ...(nativeErrno !== undefined ? { nativeErrno } : {}),
   });
   return error;
 }

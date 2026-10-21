@@ -1799,7 +1799,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     vi.spyOn(handshakePort, 'handshake').mockRejectedValueOnce(failure);
     await expect(createService().execute(buildStopInput())).rejects.toBe(failure);
     expect(projectOpenCodeStateChangingFailure(failure)).toMatchObject({ phase: 'handshake',
-      handshakeFailure: { kind: 'runtime_not_ready', sdkCode: 'execution_owner_not_private', nativeOperation: 'runStateRequest' } });
+      handshakeFailure: { kind: 'runtime_not_ready', sdkCode: 'execution_owner_not_private', nativeOperation: 'runStateRequest', nativeErrno: 0 } });
     expect(bridge.calls).toHaveLength(0);
   });
 

@@ -2032,7 +2032,7 @@ async function main() {
     nativeV2TranscriptFailure: null as null | {
       observation: 'captured' | 'unavailable'; member: 'alice' | 'bob';
       packet?: ReturnType<typeof projectV2NativeTranscript>;
-      failure?: { classification: string; kind?: string; sdkCode?: string | null; nativeOperation?: string | null };
+      failure?: { classification: string; kind?: string; sdkCode?: string | null; nativeOperation?: string | null; nativeErrno?: number | null };
       inputFileRemoved?: boolean;
     },
     cleanupFailures: [] as ProofFailure[],
@@ -2629,7 +2629,8 @@ async function main() {
         if (!parsed.value.ok) {
           const closed = projectIpcCausalFailure(`error:${parsed.value.error.kind}: OpenCode message bridge failed: ${parsed.value.error.message}`);
           capture.failure = { classification: 'bridge_refused', kind: parsed.value.error.kind,
-            sdkCode: closed?.bridgeFailure?.sdkCode ?? null, nativeOperation: closed?.bridgeFailure?.nativeOperation ?? null };
+            sdkCode: closed?.bridgeFailure?.sdkCode ?? null, nativeOperation: closed?.bridgeFailure?.nativeOperation ?? null,
+            nativeErrno: closed?.bridgeFailure?.nativeErrno ?? null };
         } else {
           capture.packet = projectV2NativeTranscript(parsed.value.data, { sessionId: nativeSession,
             selectedModel: model, runtimePromptMessageId,

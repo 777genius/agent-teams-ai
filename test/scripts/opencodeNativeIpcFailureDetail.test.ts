@@ -1069,7 +1069,7 @@ it('fresh source CLI reaches only the original unqualified-owner guard and rejec
     message = 'execution_owner_not_private:private_acl_foreign_allow:0 @native:runStateRequest';
     try { await verify(input, protocol, run); throw new Error('TEST expected refusal'); }
     catch (error) { expect(projectOpenCodeStateChangingFailure(error)).toMatchObject({ phase: 'handshake',
-      handshakeFailure: { kind: 'runtime_not_ready', sdkCode: 'execution_owner_not_private', nativeOperation: 'runStateRequest' } }); }
+      handshakeFailure: { kind: 'runtime_not_ready', sdkCode: 'execution_owner_not_private', nativeOperation: 'runStateRequest', nativeErrno: 0 } }); }
     mismatch = true;
     await expect(verify(input, protocol, run)).rejects.toThrow('TEST fresh owner response invalid');
     expect(calls).toBe(3); // Exactly one process per observation, never a retry.
@@ -1086,7 +1086,7 @@ it('retains only closed handshake facts through the owned suffix and serialized 
   const diagnostic = 'opencode_message_delivery_exception: PRIVATE_URL_PATH_BODY' + formatOpenCodeStopCausalSuffix(facts);
   const safeProject = runInNewContext(`(${serializedFunction(projectIpcCausalFailure)})`) as typeof projectIpcCausalFailure;
   expect(safeProject(diagnostic)).toMatchObject({ phase: 'handshake', handshakeFailure: {
-    kind: 'runtime_not_ready', sdkCode: 'execution_owner_not_private', nativeOperation: 'runStateRequest' } });
+    kind: 'runtime_not_ready', sdkCode: 'execution_owner_not_private', nativeOperation: 'runStateRequest', nativeErrno: 0 } });
   const createPort = runInNewContext(`(${serializedFunction(electronTeamPort)})`) as typeof electronTeamPort;
   const api = { teams: { onProvisioningProgress: () => () => undefined,
     getOpenCodeRuntimeDeliveryStatus: async () => ({ diagnostics: [diagnostic] }),

@@ -54,7 +54,7 @@ function filterV2NativeInputWindow(messages: ParsedMessage[], promptUuid: string
   const nextInput = messages.findIndex(
     (message, index) => index > startIndex && nativeInput(message)
   );
-  return messages.slice(startIndex, nextInput < 0 ? undefined : nextInput);
+  return messages.slice(startIndex, nextInput < 0 ? messages.length : nextInput);
 }
 
 export function filterMessagesForAttribution(

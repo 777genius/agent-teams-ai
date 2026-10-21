@@ -616,7 +616,12 @@ export type OpenCodeRuntimeDeliveryStatus = NonNullable<SendMessageResult['runti
 
 /** Finite observation of a failed OpenCode bridge operation; never stop authority. */
 export interface OpenCodeStopCausalFailure {
-  handshakeFailure?: { kind: string; sdkCode?: string; nativeOperation?: string };
+  handshakeFailure?: {
+    kind: string;
+    sdkCode?: string;
+    nativeOperation?: string;
+    nativeErrno?: number;
+  };
   phase: string;
   reason: string | null;
   errno: string | null;
