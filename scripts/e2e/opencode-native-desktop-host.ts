@@ -141,7 +141,8 @@ export function projectIpcCausalFailure(value: unknown): NativeCausalFailure | n
     'execution_owner_unknown', 'execution_owner_write_through_pending', 'execution_path_alias', 'execution_probe',
     'execution_profile_changed', 'execution_selected_auth_changed', 'member_authority_ambiguous', 'operation_timeout',
     'original_session_changed', 'run_control_accept_timeout', 'run_control_accept_unknown', 'run_control_changed',
-    'run_control_cleanup_unknown', 'run_control_config_budget', 'run_control_config_identity', 'run_control_connect_unknown',
+    'run_control_cleanup_unknown', 'run_control_client_budget_exhausted', 'run_control_config_budget', 'run_control_config_identity', 'run_control_connect_busy_timeout_expired',
+    'run_control_connect_idle_expired', 'run_control_connect_no_listener_expired', 'run_control_connect_unknown',
     'run_control_connection_limit', 'run_control_disconnected', 'run_control_endpoint_changed', 'run_control_foreign',
     'run_control_frame_invalid', 'run_control_frame_oversize', 'run_control_frame_too_large', 'run_control_frame_utf8',
     'run_control_held_identity', 'run_control_held_inputs', 'run_control_hmac_unknown', 'run_control_image_changed',
@@ -159,7 +160,7 @@ export function projectIpcCausalFailure(value: unknown): NativeCausalFailure | n
     'run_state_held_inputs', 'run_state_identity_changed', 'run_state_missing', 'run_state_record_absent',
     'run_state_record_changed', 'run_state_record_collision', 'run_state_record_encoding', 'run_state_record_name',
     'run_state_record_read', 'run_state_record_rename', 'run_state_record_size', 'run_state_record_temporary',
-    'run_state_record_unknown', 'run_state_record_write', 'run_state_start_changed', 'run_state_unknown',
+    'run_state_record_unknown', 'run_state_record_write', 'run_state_start_changed', 'run_state_unknown', 'run_state_wall_deadline_expired',
     'run_status_unknown', 'run_stopped_or_unknown',
     // Literal guards from V2TeamBridge, V2DeliveryJournal and V2ExecutionContracts.
     ...(returnedDispatch ? [

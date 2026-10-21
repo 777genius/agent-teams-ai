@@ -1287,6 +1287,23 @@ it('projects the exact additional source-owned send guards including case-sensit
   expect(project('error:internal_error: OpenCode message bridge failed: delivery_lock_foreign')).toBeNull();
 });
 
+it('projects the precise run-control deadline codes instead of one ambiguous token', () => {
+  const project = runInNewContext(`(${serializedFunction(projectIpcCausalFailure)})`) as typeof projectIpcCausalFailure;
+  const codes = ['run_state_wall_deadline_expired', 'run_control_client_budget_exhausted',
+    'run_control_connect_no_listener_expired', 'run_control_connect_busy_timeout_expired',
+    'run_control_connect_idle_expired'];
+  for (const sdkCode of codes) {
+    expect(project('error:runtime_not_ready: OpenCode message bridge failed: ' + sdkCode))
+      .toMatchObject({ phase: 'dispatch', bridgeFailure: { kind: 'runtime_not_ready', sdkCode } });
+    expect(project('error:runtime_not_ready: OpenCode message bridge failed: ' + sdkCode + ' @native:runStateRequest'))
+      .toMatchObject({ phase: 'dispatch', bridgeFailure: { kind: 'runtime_not_ready', sdkCode, nativeOperation: 'runStateRequest' } });
+  }
+  // The ambiguous predecessor token stays recognized, but the precise tokens
+  // must never be folded back into it or dropped as unknown.
+  expect(project('error:runtime_not_ready: OpenCode message bridge failed: run_deadline_expired'))
+    .toMatchObject({ phase: 'dispatch', bridgeFailure: { kind: 'runtime_not_ready', sdkCode: 'run_deadline_expired' } });
+});
+
 it('retains only exact existing V2 cleanup and member Stop codes from the same-run failure', async () => {
   const teamName = 'test-opencode-v2-stop', runId = 'TEST-original';
   const header = 'OpenCode team did not confirm stop: warning:opencode_v2_cleanup_unknown: Physical cleanup remains unverified; retained tombstones forbid send/relaunch.';
