@@ -70,6 +70,27 @@ flowchart TB
 ядро» не является текущей последовательностью. Уже сделанные B/C/D/E не удаляются,
 не переписываются под новую историю и не объявляются доказательством legacy-host.
 
+### Что выбрать при старте реализации
+
+P0/P1 можно начинать по этой спецификации. Таблица ниже показывает оставшиеся
+локальные решения исполнителя; их границы и acceptance заданы в фазах, а не требуют
+новой архитектурной программы. Все перечисленные результаты пока planned.
+
+| Решение                                                        | Кто и когда                                              | Конкретный результат                                                                                                                                                                       |
+| -------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Какие bytes переносим и устанавливаем                          | Frontend/Provider owners, P0                             | Один selection manifest с выбранными refs/blobs/artifact digests; включённые donor deltas перечислены явно                                                                                 |
+| Точные TypeScript shapes и profile limits                      | Владельцы consumer ports и Provider package, P1          | Public DTO/errors, SPI artifact/re-export, captured Node/provider profile и bounded transport limits; SDK types остаются private                                                           |
+| Как хранить новые receipts/technical records и соединить locks | Team/Runtime owners, P1 contracts → P2/P3 implementation | Versioned records и reuse existing stores/helpers, удовлетворяющие §3–§5 протоколов; exact layout не навязывается будущим ядрам                                                            |
+| Как доказать change capture конкретного provider               | Provider + capture adapter owner, P1; product wiring P6  | P1 native fixture подтверждает before/final bytes, immutable attribution и timeline/outcomes выбранного hooks/window/native-chain path; полный ledger/review и его guards проверяются в P6 |
+| Что именно квалифицировано в тестовой среде                    | Integration owner, P0 profiles → P4/P7/P8 evidence       | Separate synthetic/native, real auth и OS tuple results на выбранной composition; отсутствующий доступ не записывается как PASS                                                            |
+
+Точные имена файлов, внутренние record shapes и композиция пригодных helpers
+определяются при реализации этих фаз. Материальная ошибка boundary/guarantee меняет
+соответствующий контракт; обычный локальный выбор не расширяет scope программы.
+Точки входа для работы: [P0](stage-1-legacy-host.md#p0-зафиксировать-source-и-недостающую-совместимость),
+[P1](stage-1-legacy-host.md#p1-замкнуть-contractspackages-и-один-технический-walking-slice)
+и [протоколы](stage-1-contracts.md).
+
 ## 3. Где находится код
 
 | Часть                | Размещение и scope                                                                                                                                           |
