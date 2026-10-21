@@ -15,6 +15,10 @@ import {
   fixtureShim,
   isolatedEnvironment,
   launchCommand,
+  mergeProofIdentities,
+  parseWindowsProcessCensus,
+  windowsProofDrainSnapshot,
+  windowsProcessCensus,
 } from './platform.mjs';
 
 test('OS process and listener output parsing fails closed', () => {
@@ -163,9 +167,109 @@ test('timeout fixture stays live until its owning test terminates it', async () 
   }
 });
 
-test('Windows cleanup evidence retains current PID through independent read-only queries', { skip: process.platform !== 'win32' }, () => {
-  const evidence = windowsCleanupEvidence([process.pid]);
-  assert(evidence.cim.some(entry => entry.pid === process.pid && entry.creationDate));
-  assert(evidence.native.some(entry => entry.pid === process.pid && entry.startTime && entry.hasExited === false));
-  assert(Array.isArray(evidence.tcp));
+test(
+  'Windows cleanup evidence retains current PID through independent read-only queries',
+  { skip: process.platform !== 'win32' },
+  () => {
+    const evidence = windowsCleanupEvidence([process.pid]);
+    assert(evidence.cim.some((entry) => entry.pid === process.pid && entry.creationDate));
+    assert(
+      evidence.native.some(
+        (entry) => entry.pid === process.pid && entry.startTime && entry.hasExited === false
+      )
+    );
+    assert(Array.isArray(evidence.tcp));
+  }
+);
+
+const preciseBirth = '2026-10-21T18:29:36.1682520Z';
+const census = (processes = [], listeners = []) => ({
+  schemaVersion: 1,
+  complete: true,
+  ports: [9222, 40123],
+  processes,
+  listeners,
 });
+
+test('complete Windows census retains unreadable births and refuses incomplete or duplicated PID lists', () => {
+  const expected = census([{ pid: 4724, parent: 4312, birth: null }]);
+  assert.deepEqual(parseWindowsProcessCensus(JSON.stringify(expected)), expected);
+  for (const bad of [
+    { ...expected, complete: false },
+    { ...expected, processes: null },
+    { ...expected, processes: [...expected.processes, ...expected.processes] },
+    { ...expected, processes: [{ pid: 4724, parent: 4312 }] },
+    { ...expected, processes: [{ pid: 4724, parent: 4312, birth: 123 }] },
+    { ...expected, listeners: [{ pid: 4548, port: 9999 }] },
+    { ...expected, ports: [40123] },
+  ])
+    assert.throws(() => parseWindowsProcessCensus(JSON.stringify(bad)));
+});
+
+test('cleanup proof union retains historical, native and late descendants, including different births for one PID', () => {
+  const app = { pid: 4312, birth: preciseBirth };
+  const host = { pid: 4724, parent: 4312, birth: preciseBirth };
+  const child = { pid: 4548, parent: 4724, birth: '2026-10-21T18:29:36.1990160Z' };
+  const late = [2508, 1700, 2040, 7524].map((pid) => ({ pid, birth: preciseBirth }));
+  const union = mergeProofIdentities(
+    [app, host],
+    [child],
+    late,
+    [host],
+    [{ ...host, birth: '2026-10-21T18:29:36.1682521Z' }]
+  );
+  assert.equal(union.length, 8);
+  assert.deepEqual(
+    new Set(union.map((row) => row.pid)),
+    new Set([4312, 4724, 4548, 2508, 1700, 2040, 7524])
+  );
+  assert(windowsProofDrainSnapshot(union, census()).drained);
+  for (const identity of union) {
+    const result = windowsProofDrainSnapshot(union, census([{ ...identity, parent: 0 }]));
+    assert.equal(result.drained, false, `Retained identity ${identity.pid} must block retirement`);
+    assert(result.rows.some((row) => row.state === 'same-birth-present'));
+  }
+  assert.throws(() => mergeProofIdentities([{ pid: 1, birth: null }]));
+  assert.throws(() =>
+    mergeProofIdentities(
+      Array.from({ length: 501 }, (_, i) => ({ pid: i + 1, birth: preciseBirth }))
+    )
+  );
+});
+
+test('retirement requires complete absence or a provably different precise birth, never an unreadable same PID', () => {
+  const expected = [{ pid: 4724, birth: preciseBirth }];
+  for (const birth of [null, '', 'unreadable', '2026-10-21T18:29:36.168Z']) {
+    const result = windowsProofDrainSnapshot(
+      expected,
+      census([{ pid: 4724, parent: 4312, birth }])
+    );
+    assert.equal(result.drained, false);
+    assert.equal(result.rows[0].state, 'unknown');
+  }
+  const reused = windowsProofDrainSnapshot(
+    expected,
+    census([{ pid: 4724, parent: 4312, birth: '2026-10-21T18:29:36.1682521Z' }])
+  );
+  assert.equal(reused.drained, true);
+  assert.equal(reused.rows[0].state, 'different-birth');
+  for (const port of [9222, 40123])
+    assert.equal(
+      windowsProofDrainSnapshot(expected, census([], [{ pid: 9999, port }])).drained,
+      false,
+      'CDP and retained native host listener ports both block retirement'
+    );
+  assert.throws(() => windowsProofDrainSnapshot(expected, { ...census(), complete: false }));
+});
+
+test(
+  'native Windows proof census includes the current PID without filtering unreadable identity rows',
+  { skip: process.platform !== 'win32' },
+  () => {
+    const current = windowsProcessCensus([9222], 30000);
+    assert.equal(current.complete, true);
+    assert(current.processes.some((row) => row.pid === process.pid));
+    assert(Array.isArray(current.listeners));
+    assert(current.completedAt >= current.startedAt);
+  }
+);

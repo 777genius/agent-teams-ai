@@ -1465,11 +1465,14 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
   await writeFile(
     platform,
     `
+    export { mergeProofIdentities } from ${JSON.stringify(new URL('./platform.mjs?proof-history-test', import.meta.url).href)};
     export const assertPortAvailable = () => { throw new Error('TEST_HANDOFF_VERIFIED_BEFORE_LAUNCH'); };
     export const processes = () => process.argv[2] !== 'stop' ? [] : [
       {pid:101,birth:'launcher',executable:'node'},
       ...(!globalThis.packagedCloseAt || Date.now() - globalThis.packagedCloseAt < 1000
-        ? [{pid:102,parent:101,birth:'app',executable:${JSON.stringify(exe)}}] : [])
+        ? [{pid:102,parent:101,birth:'app',executable:${JSON.stringify(exe)}}] : []),
+      ...(globalThis.packagedCloseAt && Date.now() - globalThis.packagedCloseAt < 800
+        ? [{pid:103,parent:102,birth:'late',executable:'TEST-late-child'}] : [])
     ];
     export const sameIdentity = () => {};
     export const ownedTree = (snapshot) => snapshot;
@@ -1544,6 +1547,7 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
       'a CDP timeout still waits for the owned app to retire before fallback',
       async () => {
         manifest.launcher = { pid: 101, birth: 'launcher', executable: 'node' };
+        manifest.proofObservedProcesses = [{ pid: 104, parent: 102, birth: 'historical' }];
         await writeFile(path.join(sandbox, 'manifest.json'), JSON.stringify(manifest));
         const stopped = await invoke(['stop', sandbox]);
         assert.ifError(stopped.error);
@@ -1561,6 +1565,16 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
         assert.equal(
           signals.find((entry) => entry.expected.pid === 101).outcome,
           'signal-returned'
+        );
+        const proof = JSON.parse(
+          await readFile(path.join(sandbox, 'cleanup-proof-identities.json'), 'utf8')
+        );
+        assert.equal(proof.complete, true);
+        assert(proof.identities.some((row) => row.pid === 103 && row.birth === 'late'));
+        assert(proof.identities.some((row) => row.pid === 104 && row.birth === 'historical'));
+        assert(
+          !signals.some((row) => [103, 104].includes(row.expected.pid)),
+          'Proof-only historical/late identities must not grant signaling authority'
         );
       }
     );

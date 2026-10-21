@@ -38,7 +38,7 @@ on:
       - scripts/e2e/opencode-diagnostics/packaged*.mjs
       - scripts/e2e/opencode-diagnostics/stage-candidate*.mjs
       - scripts/e2e/opencode-diagnostics/native-install-expectation*.mjs
-      - scripts/e2e/opencode-diagnostics/windows-attachments.mts
+      - scripts/e2e/opencode-diagnostics/windows-attachments*
       - scripts/e2e/opencode-diagnostics/run-packaged.mjs
       - scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.mts
       - scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.tsconfig.json
@@ -114,9 +114,24 @@ jobs:
           python-version: '3.11'
       - run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Verify harness contracts
-        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs scripts/e2e/opencode-diagnostics/native-install-expectation.test.mjs
+        run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/e2e/opencode-diagnostics/packaged.test.mjs scripts/e2e/opencode-diagnostics/catalog.test.mjs scripts/e2e/opencode-diagnostics/stage-candidate.test.mjs scripts/e2e/opencode-diagnostics/native-install-expectation.test.mjs scripts/e2e/opencode-diagnostics/windows-attachments-support.test.mjs
       - name: Typecheck admission diagnostic
         run: node node_modules/@typescript/native/bin/tsc --noEmit -p scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.tsconfig.json
+      - name: Download and hash the locked public runtime archive
+        if: inputs.runtime_candidate_run == '' && inputs.runtime_candidate_sha == ''
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+        run: |
+          $lock = Get-Content runtime.lock.json | ConvertFrom-Json
+          $asset = $lock.assets.'win32-x64'
+          if ($asset.sha256 -notmatch '^[a-f0-9]{64}$') { throw 'Invalid locked Windows archive hash' }
+          $archiveDir = Join-Path $env:RUNNER_TEMP 'opencode-public-runtime-archive'
+          New-Item -ItemType Directory -Path $archiveDir | Out-Null
+          gh release download $lock.releaseTag --repo $lock.releaseRepository --pattern $asset.file --dir $archiveDir
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $archive = Join-Path $archiveDir $asset.file
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $asset.sha256) { throw 'Locked public archive SHA-256 mismatch' }
       - name: Stage pinned runtime
         env:
           GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
@@ -152,15 +167,22 @@ jobs:
       - name: Validate bundle
         run: node scripts/electron-builder/verifyBundle.cjs release/win-unpacked win32 x64
       - name: Prove compiled legacy Windows saved-file read and native image on loopback model
-        if: inputs.runtime_candidate_run != ''
         shell: pwsh
+        env:
+          RUNTIME_CANDIDATE_RUN: ${{ inputs.runtime_candidate_run }}
         run: |
           $env:TMPDIR = $env:RUNNER_TEMP
           $env:TEMP = $env:RUNNER_TEMP
           $env:TMP = $env:RUNNER_TEMP
           $executable = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
-          $candidate = (Resolve-Path 'runtime-candidate-evidence.json').Path
-          pnpm exec tsx scripts/e2e/opencode-diagnostics/windows-attachments.mts $executable $candidate
+          if ($env:RUNTIME_CANDIDATE_RUN) {
+            $candidate = (Resolve-Path 'runtime-candidate-evidence.json').Path
+            pnpm exec tsx scripts/e2e/opencode-diagnostics/windows-attachments.mts $executable $candidate
+          } else {
+            $lock = Get-Content runtime.lock.json | ConvertFrom-Json
+            $archive = Join-Path (Join-Path $env:RUNNER_TEMP 'opencode-public-runtime-archive') $lock.assets.'win32-x64'.file
+            pnpm exec tsx scripts/e2e/opencode-diagnostics/windows-attachments.mts $executable --runtime-archive $archive
+          }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Qualify cold and warm packaged starts
         id: qualify
@@ -267,7 +289,14 @@ jobs:
             ${{ runner.temp }}/selected-identity-diagnostic.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/*.json
             scripts/e2e/opencode-diagnostics/windows-attachments.mts
+            scripts/e2e/opencode-diagnostics/windows-attachments-support.mts
             scripts/e2e/opencode-diagnostics/native-install-expectation.mjs
+            scripts/e2e/opencode-diagnostics/platform.mjs
+            scripts/e2e/opencode-diagnostics/packaged.mjs
+            scripts/e2e/opencode-diagnostics-desktop.mjs
+            scripts/e2e/anthropic-compatible-status/packaged-default-artifact.ts
+            scripts/e2e/anthropic-compatible-status/packaged-default-additions.ts
+            scripts/electron-builder/afterPack.cjs
             runtime-candidate-evidence.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold/*.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold/*.png

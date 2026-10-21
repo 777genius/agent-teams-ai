@@ -31,6 +31,7 @@ import {
   isolatedEnvironment,
   assertNoInstalledOpenCode,
   assertLauncherCommand,
+  mergeProofIdentities,
 } from './opencode-diagnostics/platform.mjs';
 
 import {
@@ -69,6 +70,21 @@ async function ownedProcesses() {
         snapshot.some((entry) => entry.pid === prior.pid && entry.birth === prior.birth)
       )
         owned.push(prior);
+    }
+    let laterDescendants = [];
+    try {
+      laterDescendants = ownedTree(snapshot, data.launcher);
+    } catch {
+      /* Unproven late ancestry never adds an identity. */
+    }
+    try {
+      data.proofObservedProcesses = mergeProofIdentities(
+        data.proofObservedProcesses ?? [],
+        owned,
+        laterDescendants
+      );
+    } catch {
+      data.proofHistoryUnavailable = true;
     }
     data.observedProcesses = owned;
     await writeFile(path.join(root, 'manifest.json'), JSON.stringify(data, null, 2));
@@ -134,6 +150,15 @@ async function assertOwnedDebugEndpoint(receipt) {
     const data = await manifest();
     if (data.packaged) {
       const descendants = ownedTree(current, data.launcher);
+      try {
+        data.proofObservedProcesses = mergeProofIdentities(
+          data.proofObservedProcesses ?? [],
+          descendants
+        );
+      } catch {
+        data.proofHistoryUnavailable = true;
+      }
+      await writeFile(path.join(root, 'manifest.json'), JSON.stringify(data, null, 2));
       for (const entry of listenerProcesses) {
         assert(
           descendants.some((p) => p.pid === entry.pid && p.birth === entry.birth),
@@ -246,10 +271,10 @@ if (mode === 'seed-packaged') {
     let closureHistory = [];
     try {
       const prior = historicalManifest.observedProcesses ?? [];
-      assert(prior.length + owned.length <= 500, 'Closure diagnostic bound exceeded');
-      closureHistory = [...prior, ...owned].filter(
-        (p, i, all) =>
-          all.findIndex((entry) => entry.pid === p.pid && entry.birth === p.birth) === i
+      closureHistory = mergeProofIdentities(
+        historicalManifest.proofObservedProcesses ?? [],
+        prior,
+        owned
       );
     } catch {
       graceful.historyUnavailable = true;
@@ -285,14 +310,17 @@ if (mode === 'seed-packaged') {
         });
         let descendants;
         try {
-          descendants = ownedTree(current, data.launcher)
-            .slice(0, 500)
-            .map((p) => ({
-              pid: p.pid,
-              parent: p.parent,
-              birth: p.birth,
-              executable: p.executable ?? null,
-            }));
+          descendants = ownedTree(current, data.launcher).map((p) => ({
+            pid: p.pid,
+            parent: p.parent,
+            birth: p.birth,
+            executable: p.executable ?? null,
+          }));
+          try {
+            closureHistory = mergeProofIdentities(closureHistory, descendants);
+          } catch {
+            graceful.historyUnavailable = true;
+          }
         } catch {
           descendants = null;
         }
@@ -321,6 +349,16 @@ if (mode === 'seed-packaged') {
       const deadline = Date.now() + 5000;
       while (Date.now() < deadline) {
         const snapshot = processes();
+        try {
+          const descendants = ownedTree(snapshot, data.launcher);
+          try {
+            closureHistory = mergeProofIdentities(closureHistory, descendants);
+          } catch {
+            graceful.historyUnavailable = true;
+          }
+        } catch {
+          /* An absent launcher does not prove ancestry for any new process. */
+        }
         if (
           !owned.some(
             (entry) =>
@@ -342,6 +380,24 @@ if (mode === 'seed-packaged') {
       if (!owned.some((prior) => prior.pid === entry.pid && prior.birth === entry.birth))
         owned.push(entry);
     await writeFile(path.join(root, 'cleanup-identities.json'), JSON.stringify(owned, null, 2));
+    const latest = await manifest();
+    let proof = { complete: false, identities: [] };
+    try {
+      proof = {
+        complete: !graceful.historyUnavailable && !latest.proofHistoryUnavailable,
+        identities: mergeProofIdentities(
+          latest.proofObservedProcesses ?? [],
+          closureHistory,
+          owned
+        ),
+      };
+    } catch {
+      /* A missing/oversized proof history cannot qualify physical retirement. */
+    }
+    await writeFile(
+      path.join(root, 'cleanup-proof-identities.json'),
+      JSON.stringify(proof, null, 2)
+    );
   }
   // Capture identities before cleanup; never use taskkill /T or a process-group signal.
   const ordered = data.packaged
@@ -500,9 +556,8 @@ if (mode === 'seed-packaged') {
     if (item) {
       pending.delete(response.id);
       clearTimeout(item.timer);
-      response.error
-        ? item.reject(new Error(response.error.message))
-        : item.resolve(response.result);
+      if (response.error) item.reject(new Error(response.error.message));
+      else item.resolve(response.result);
     }
   });
   const send = (method, params = {}) =>

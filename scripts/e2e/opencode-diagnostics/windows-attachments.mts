@@ -7,6 +7,12 @@ import { readFile, realpath, rm, writeFile, lstat, open } from 'node:fs/promises
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Cdp, waitFor } from '../release-updater/cdp.mts';
+import {
+  attachmentRuntimeArguments,
+  qualifyAttachmentRuntime,
+  selectedModelCatalogObservation,
+  type AttachmentArtifact,
+} from './windows-attachments-support.mts';
 import type {
   AttachmentPayload,
   InboxMessage,
@@ -37,12 +43,7 @@ interface Manifest {
   project: string;
   userData: string;
   launcher?: Identity;
-  artifact: {
-    app: { path: string; sha256: string };
-    renderer: string;
-    orchestrator: { path: string; sha256: string };
-    candidate: Record<string, unknown>;
-  };
+  artifact: AttachmentArtifact;
 }
 interface Host {
   hostKey: string;
@@ -334,23 +335,22 @@ const command = (mode: string, args: string[], timeout = 120000) => {
 };
 async function main() {
   assert(process.platform === 'win32' && process.arch === 'x64');
-  const [executable, candidateFile, ...extra] = process.argv.slice(2);
-  assert(executable && candidateFile && extra.length === 0);
+  const input = attachmentRuntimeArguments(process.argv.slice(2));
   const root = command('seed-packaged', [
     '--packaged-executable',
-    executable,
+    input.executable,
     '--runtime-setup',
     'app-install',
-    '--candidate-evidence',
-    candidateFile,
+    ...(input.mode === 'candidate' ? ['--candidate-evidence', input.candidateFile] : []),
   ]);
   const data = JSON.parse(await readFile(path.join(root, 'manifest.json'), 'utf8')) as Manifest;
-  assert(data.packaged === true && data.artifact.candidate?.testOnly === true);
+  assert(data.packaged === true);
   const receipt: Record<string, unknown> = {
     schemaVersion: 1,
     passed: false,
     root,
     model: MODEL,
+    runtimeMode: input.mode,
     compiledRuntime: data.artifact.orchestrator,
     candidate: data.artifact.candidate,
     cleanup: { passed: false },
@@ -358,6 +358,26 @@ async function main() {
   const persist = () =>
     writeFile(path.join(root, 'windows-attachments.json'), JSON.stringify(receipt, null, 2));
   await persist();
+  const runtimeBefore = await qualifyAttachmentRuntime(input, data.artifact, root, repo);
+  receipt.runtimeDelivery = { before: runtimeBefore };
+  await persist();
+  const proofPlatform = (await import(
+    pathToFileURL(path.join(repo, 'scripts/e2e/opencode-diagnostics/platform.mjs')).href
+  )) as {
+    mergeProofIdentities(...groups: Identity[][]): Identity[];
+    windowsProcessCensus(
+      ports: number[],
+      timeoutMs: number
+    ): {
+      complete: boolean;
+      processes: { pid: number; parent: number; birth: string | null }[];
+      ports: number[];
+      listeners: { pid: number; port: number }[];
+    };
+    windowsProofDrainSnapshot(identities: Identity[], census: unknown): { drained: boolean };
+  };
+  let nativeProofIdentities: Identity[] = [];
+  const nativeProofPorts = new Set([9222]);
   const packageRoot = path.dirname(data.artifact.app.path);
   const binaryIdentity = async (file: string, namespace: string) => {
     const relative = path.relative(namespace, file);
@@ -761,6 +781,19 @@ async function main() {
             'native-child-changed'
           );
         }
+        // Retirement proof only. These identities never enter signal ordering.
+        nativeProofIdentities = proofPlatform.mergeProofIdentities(
+          nativeProofIdentities,
+          [identity],
+          child ? [child] : []
+        );
+        nativeProofPorts.add(host.port);
+        receipt.nativeProcessProof = {
+          observationOnly: true,
+          identities: nativeProofIdentities,
+          ports: [...nativeProofPorts],
+        };
+        await persist();
         return {
           session,
           host,
@@ -1440,6 +1473,28 @@ async function main() {
     ];
     const messageId = randomUUID();
     deliveryMessageId = messageId;
+    const selected = { providerId: 'openrouter', model: MODEL, projectPath: data.project };
+    try {
+      const catalog = await api<unknown>(
+        `window.electronAPI.runtimeProviderManagement.loadModels(${literal({ runtimeId: 'opencode', providerId: selected.providerId, projectPath: selected.projectPath, query: null, limit: null, cursor: null, refresh: false })})`,
+        'separate selected model catalog observation'
+      );
+      receipt.selectedModelCatalog = selectedModelCatalogObservation(selected, catalog);
+    } catch {
+      receipt.selectedModelCatalog = {
+        observationOnly: true,
+        separateAppApiAttempt: true,
+        admissionAuthority: false,
+        selected,
+        outcome: 'catalog-observation-unavailable',
+      };
+    }
+    try {
+      await ownedNativeSession();
+    } catch {
+      receipt.preAdmissionNativeObservation = { observationOnly: true, outcome: 'unknown' };
+    }
+    await persist();
     receipt.phase = 'attachment_admission';
     const sentKey = await begin(
       `window.electronAPI.teams.sendMessage(${literal(team)}, ${literal({ member, messageId, text: 'Read the saved arbitrary file with the native Read tool, then reply to user via message_send with the NONCE and image SHA. Do not execute or extract either attachment.', attachments: payloads })})`
@@ -1631,6 +1686,7 @@ async function main() {
   } finally {
     release();
     const cleanup: Record<string, unknown> = { passed: false };
+    receipt.cleanup = cleanup;
     let cleanupFailed = false;
     if (primaryFailure && cdp && teamAttempted) {
       await retainDispatchDiagnostics?.();
@@ -1676,28 +1732,33 @@ async function main() {
       cleanup.appStop = 'failed';
     }
     try {
-      const identities = JSON.parse(
+      const signalIdentities = JSON.parse(
         await readFile(path.join(root, 'cleanup-identities.json'), 'utf8')
       ) as Identity[];
-      const packaged = (await import(
-        pathToFileURL(path.join(repo, 'scripts/e2e/opencode-diagnostics/packaged.mjs')).href
-      )) as {
-        packagedDrainSnapshot(
-          ids: Identity[],
-          snapshot: Identity[],
-          listeners: number[]
-        ): { drained: boolean };
-      };
-      const platform = (await import(
-        pathToFileURL(path.join(repo, 'scripts/e2e/opencode-diagnostics/platform.mjs')).href
-      )) as { processes(): Identity[]; listeners(): number[] };
+      const history = JSON.parse(
+        await readFile(path.join(root, 'cleanup-proof-identities.json'), 'utf8')
+      ) as { complete: boolean; identities: Identity[] };
+      assert(history.complete === true, 'Ancestry proof history incomplete');
+      if (teamAttempted && launchRun)
+        assert(nativeProofIdentities.length > 0, 'Native host retirement identity unknown');
+      const identities = proofPlatform.mergeProofIdentities(
+        signalIdentities,
+        history.identities,
+        nativeProofIdentities
+      );
+      const deadline = Date.now() + 15000;
+      const ports = [...nativeProofPorts].sort((a, b) => a - b);
+      cleanup.proofIdentities = identities;
+      cleanup.proofPorts = ports;
       const drain = await waitFor(
         async () => {
-          const value = packaged.packagedDrainSnapshot(
-            identities,
-            platform.processes(),
-            platform.listeners()
-          );
+          const remaining = deadline - Date.now();
+          assert(remaining > 0, 'Cleanup proof census deadline expired');
+          const census = proofPlatform.windowsProcessCensus(ports, remaining);
+          const value = proofPlatform.windowsProofDrainSnapshot(identities, census);
+          cleanup.census = census;
+          cleanup.drain = value;
+          await persist();
           return value.drained ? value : null;
         },
         'owned Windows process and CDP drain',
@@ -1711,6 +1772,20 @@ async function main() {
     }
     if (cleanupFailed) cleanup.failure = 'owned_cleanup_unproven';
     await new Promise<void>((resolve) => model.server.close(() => resolve()));
+    try {
+      const runtimeAfter = await qualifyAttachmentRuntime(input, data.artifact, root, repo);
+      assert.deepEqual(
+        runtimeAfter,
+        runtimeBefore,
+        'Runtime delivery changed during attachment proof'
+      );
+      receipt.runtimeDelivery = { before: runtimeBefore, after: runtimeAfter, unchanged: true };
+    } catch {
+      cleanupFailed = true;
+      cleanup.runtimeDelivery = 'post-run-public-or-candidate-identity-unproven';
+    }
+    cleanup.passed =
+      !cleanupFailed && (cleanup.drain as { drained?: boolean } | undefined)?.drained === true;
     receipt.actualRequests = model.requests;
     receipt.modelObservation = { observationOnly: true, value: model.observation() };
     receipt.cleanup = cleanup;

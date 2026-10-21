@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 const windows = process.platform === 'win32';
-function powershell(script) {
+function powershell(script, timeout = 30000) {
   return execFileSync(
     path.join(
       process.env.SystemRoot || 'C:\\Windows',
@@ -17,7 +17,7 @@ function powershell(script) {
       '-EncodedCommand',
       Buffer.from(`$ErrorActionPreference='Stop'; ${script}`, 'utf16le').toString('base64'),
     ],
-    { encoding: 'utf8', windowsHide: true, timeout: 30000 }
+    { encoding: 'utf8', windowsHide: true, timeout }
   );
 }
 export function parseWindowsProcesses(output) {
@@ -59,6 +59,136 @@ export function processes() {
       env: { ...process.env, LC_ALL: 'C' },
     })
   );
+}
+
+// Proof-only history. It never authorizes access or signals to any process.
+export function mergeProofIdentities(...groups) {
+  const result = [];
+  for (const group of groups) {
+    assert(Array.isArray(group), 'Missing cleanup proof identity history');
+    for (const row of group) {
+      assert(
+        Number.isInteger(row?.pid) && row.pid > 0 && typeof row.birth === 'string' && row.birth,
+        'Invalid cleanup proof identity'
+      );
+      if (!result.some((entry) => entry.pid === row.pid && entry.birth === row.birth))
+        result.push({ ...row });
+      assert(result.length <= 500, 'Cleanup proof identity bound exceeded');
+    }
+  }
+  return result;
+}
+
+export function parseWindowsProcessCensus(output) {
+  const value = JSON.parse(output.replace(/^\uFEFF/, '').trim());
+  assert(
+    value?.schemaVersion === 1 &&
+      value.complete === true &&
+      Array.isArray(value.processes) &&
+      Array.isArray(value.ports) &&
+      value.ports.includes(9222) &&
+      value.ports.length <= 32 &&
+      value.ports.every((port) => Number.isInteger(port) && port > 0 && port <= 65535) &&
+      Array.isArray(value.listeners),
+    'Incomplete Windows process census'
+  );
+  assert(value.processes.length <= 65536, 'Windows process census bound exceeded');
+  const seen = new Set();
+  for (const row of value.processes) {
+    assert(
+      Number.isInteger(row?.pid) &&
+        row.pid >= 0 &&
+        !seen.has(row.pid) &&
+        Number.isInteger(row.parent) &&
+        row.parent >= 0 &&
+        (row.birth === null || typeof row.birth === 'string'),
+      'Invalid Windows process census row'
+    );
+    seen.add(row.pid);
+  }
+  for (const row of value.listeners)
+    assert(
+      Number.isInteger(row?.pid) && row.pid > 0 && value.ports.includes(row.port),
+      'Invalid Windows listener census row'
+    );
+  return value;
+}
+
+// Unlike processes(), this census must retain PIDs whose birth is unreadable.
+// A failed CIM enumeration cannot produce the complete envelope below.
+export function windowsProcessCensus(ports = [9222], timeoutMs = 30000) {
+  assert(windows, 'Windows process census requires Windows');
+  assert(
+    Number.isFinite(timeoutMs) && timeoutMs > 0 && timeoutMs <= 30000,
+    'Invalid census deadline'
+  );
+  assert(
+    Array.isArray(ports) &&
+      ports.includes(9222) &&
+      ports.length <= 32 &&
+      ports.every((port) => Number.isInteger(port) && port > 0 && port <= 65535),
+    'Invalid cleanup proof ports'
+  );
+  const selectedPorts = [...new Set(ports)].sort((a, b) => a - b);
+  const startedAt = Date.now();
+  const value = parseWindowsProcessCensus(
+    powershell(
+      `
+    $ports = @(${selectedPorts.join(',')});
+    $rows = @(Get-CimInstance Win32_Process | ForEach-Object {
+      $birth = $null;
+      if ($null -ne $_.CreationDate) {
+        try { $birth = $_.CreationDate.ToUniversalTime().ToString('o') } catch { }
+      }
+      [pscustomobject]@{pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; birth=$birth}
+    });
+    $tcp = @(Get-NetTCPConnection -State Listen | Where-Object { $ports -contains [int]$_.LocalPort } | ForEach-Object {
+      [pscustomobject]@{pid=[int]$_.OwningProcess; port=[int]$_.LocalPort}
+    });
+    @{schemaVersion=1; complete=$true; processes=$rows; ports=$ports; listeners=$tcp} | ConvertTo-Json -Depth 4 -Compress
+  `,
+      timeoutMs
+    )
+  );
+  assert.deepEqual(value.ports, selectedPorts, 'Cleanup proof port selection changed');
+  return { ...value, startedAt, completedAt: Date.now() };
+}
+
+function preciseWindowsBirth(value) {
+  return (
+    typeof value === 'string' &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z$/.test(value) &&
+    Number.isFinite(Date.parse(value)) &&
+    new Date(Date.parse(value)).toISOString() === value.slice(0, 23) + 'Z'
+  );
+}
+
+// A complete PID census can prove absence. A filtered identity list cannot.
+export function windowsProofDrainSnapshot(identities, census) {
+  const expected = mergeProofIdentities(identities);
+  assert(expected.length > 0, 'Empty cleanup proof identity union');
+  parseWindowsProcessCensus(JSON.stringify(census));
+  const rows = expected.map((identity) => {
+    const current = census.processes.find((row) => row.pid === identity.pid);
+    const state = !preciseWindowsBirth(identity.birth)
+      ? 'unknown'
+      : !current
+        ? 'absent'
+        : !preciseWindowsBirth(current.birth)
+          ? 'unknown'
+          : current.birth === identity.birth
+            ? 'same-birth-present'
+            : 'different-birth';
+    return { expected: identity, current: current ?? null, state };
+  });
+  return {
+    drained:
+      census.listeners.length === 0 &&
+      rows.every((row) => ['absent', 'different-birth'].includes(row.state)),
+    rows,
+    ports: census.ports,
+    listeners: census.listeners,
+  };
 }
 export function sameIdentity(expected, current) {
   assert(
@@ -238,11 +368,12 @@ export function assertLauncherCommand(launcher) {
 
 // Read-only failure evidence. Missing identity never grants signal authority.
 export function windowsCleanupEvidence(pids) {
-  assert(pids.every(pid => Number.isInteger(pid) && pid > 0));
+  assert(pids.every((pid) => Number.isInteger(pid) && pid > 0));
   assert(pids.length <= 500, 'Cleanup evidence PID bound exceeded');
   if (!windows) return null;
   const ids = [...new Set(pids)].join(',');
-  return JSON.parse(powershell(`
+  return JSON.parse(
+    powershell(`
     $targets = @(${ids});
     $cim = @(Get-CimInstance Win32_Process | Where-Object { $targets -contains [int]$_.ProcessId } | ForEach-Object {
       [pscustomobject]@{ pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; creationDate=$_.CreationDate; executable=$_.ExecutablePath }
@@ -255,5 +386,8 @@ export function windowsCleanupEvidence(pids) {
     });
     $tcp = @(Get-NetTCPConnection | Where-Object { $_.LocalPort -eq 9222 } | Select-Object LocalAddress,LocalPort,State,OwningProcess);
     @{ cim=$cim; native=$native; tcp=$tcp } | ConvertTo-Json -Depth 5 -Compress
-  `).replace(/^\uFEFF/, '').trim());
+  `)
+      .replace(/^\uFEFF/, '')
+      .trim()
+  );
 }
