@@ -326,6 +326,8 @@ async function main() {
     AGENT_TEAMS_MCP_CLAUDE_DIR: claudeRoot,
     AGENT_TEAMS_MCP_TRANSPORT: 'stdio',
     AGENT_TEAMS_PACKAGED_SMOKE: '1',
+    // Hosted display sessions can repeatedly fail native GPU initialization.
+    AGENT_TEAMS_DISABLE_GPU: '1',
     ...ownership?.environment,
   };
   const childEnv = { ...process.env };

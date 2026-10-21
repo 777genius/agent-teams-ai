@@ -462,6 +462,8 @@ describe.skipIf(process.platform === 'win32')('packaged smoke child isolation', 
             Agent_Teams_Electron_Claude_Root: poison,
             Agent_Teams_Mcp_Claude_Dir: poison,
             Claude_Config_Dir: poison,
+            AGENT_TEAMS_DISABLE_GPU: '0',
+            Agent_Teams_Disable_Gpu: '0',
           })});`
         );
         const resources = path.join(sandbox, 'resources', 'mcp-server');
@@ -498,6 +500,10 @@ describe.skipIf(process.platform === 'win32')('packaged smoke child isolation', 
           assert.deepEqual(Object.keys(process.env).filter(key => key.toUpperCase() === 'ELECTRON_RUN_AS_NODE'), ${kind === 'Mcp' ? "['ELECTRON_RUN_AS_NODE']" : '[]'}, 'no inherited run-as-node aliases');
           assert.equal(process.env.ELECTRON_RUN_AS_NODE, ${kind === 'Mcp' ? "'1'" : 'undefined'});
           assert.equal(process.env.AGENT_TEAMS_MCP_TRANSPORT, 'stdio');
+          if (${JSON.stringify(kind)} === 'App') {
+            assert.equal(process.env.AGENT_TEAMS_DISABLE_GPU, '1', 'smoke must select software rendering');
+            assert.deepEqual(Object.keys(process.env).filter(key => key.toUpperCase() === 'AGENT_TEAMS_DISABLE_GPU'), ['AGENT_TEAMS_DISABLE_GPU'], 'no inherited GPU flag aliases');
+          }
           fs.writeFileSync(${JSON.stringify(evidence)}, JSON.stringify({ root }));
         } catch (error) { console.error('TEST isolation failure: ' + error.message); process.exit(9); }
         if (${JSON.stringify(kind)} === 'App') {
