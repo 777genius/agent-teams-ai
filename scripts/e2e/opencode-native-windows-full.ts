@@ -1999,7 +1999,7 @@ async function main() {
     relaunchConfirmed: false,
     finalStopConfirmed: false,
     failure: null as ProofFailure | null,
-    launchFailure: null as Record<string, string | boolean> | null,
+    launchFailure: null as Record<string, unknown> | null,
     startupFailureSnapshot: null as unknown,
     postStopSnapshot: null as unknown,
     nativeV2TranscriptFailure: null as null | {
@@ -2868,6 +2868,41 @@ async function main() {
           'diagnosticsUnavailable',
         ] as const)
           if (key in diagnostics) proof.launchFailure[key] = diagnostics[key] === true;
+        // Closed diagnostic detail already vetted by the port; re-check the shape
+        // here so proof.json is the enforcing boundary.
+        const safe = diagnostics as Record<string, unknown>;
+        if (
+          typeof safe.classificationConfidence === 'number' &&
+          Number.isFinite(safe.classificationConfidence)
+        )
+          proof.launchFailure.classificationConfidence = safe.classificationConfidence;
+        if (typeof safe.retryable === 'boolean') proof.launchFailure.retryable = safe.retryable;
+        if (typeof safe.noStdinWarning === 'boolean')
+          proof.launchFailure.noStdinWarning = safe.noStdinWarning;
+        for (const key of ['breadcrumbStage', 'provisioningState']) {
+          const value = safe[key];
+          if (typeof value === 'string')
+            proof.launchFailure[key] = /^[A-Za-z0-9_.:\- ]{1,96}$/.test(value) ? value : null;
+        }
+        if (Array.isArray(safe.evidenceTokens))
+          proof.launchFailure.evidenceTokens = safe.evidenceTokens
+            .filter((value: unknown): value is string =>
+              typeof value === 'string' && /^[a-zA-Z_][a-zA-Z0-9_]{1,95}$/.test(value))
+            .slice(0, 16);
+        if (Array.isArray(safe.launchDiagnostics))
+          proof.launchFailure.launchDiagnostics = safe.launchDiagnostics
+            .slice(0, 32)
+            .map((value: unknown) => {
+              const item = (value ?? {}) as Record<string, unknown>;
+              return {
+                code: closedRawField(item.code),
+                severity: closedRawField(item.severity),
+                memberName:
+                  typeof item.memberName === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(item.memberName)
+                    ? item.memberName
+                    : null,
+              };
+            });
       } catch {
         proof.launchFailure = { diagnosticsUnavailable: true };
       }

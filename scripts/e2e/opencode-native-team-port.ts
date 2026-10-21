@@ -11,6 +11,13 @@ export type NativeCommandExpectation = {
   session: string; program: string; marker: string; model: string;
 };
 
+/** Closed identifiers in redacted diagnostic text; the text itself never leaves. */
+const closedDiagnosticTokens = (values: readonly (string | undefined)[] | undefined) =>
+  [...new Set((values ?? []).flatMap((value) =>
+    typeof value === 'string'
+      ? value.match(/\b(?:[a-z][a-z0-9]*(?:_[a-z0-9]+){1,12}|EPERM|EACCES|ENOENT|ENOTDIR|EISDIR|EINVAL|EIO|ENOSYS|EBUSY|EEXIST|ELOOP|UNKNOWN|[A-Z][A-Za-z]{1,30}Error)\b/g) ?? []
+      : []))].slice(0, 16);
+
 /** The exact acceptance predicates, also used for finite failure observations. */
 export function nativeCommandMatch(execution: NativeCommandExecution, program: string, marker: string) {
   const command = execution.toolCall.input.command;
@@ -220,14 +227,75 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
       ];
       if (createBoundary !== 'team_create' && createBoundary !== 'created')
         return { boundary: createBoundary };
+      // Only closed identifiers and enumerated codes cross this boundary; labels,
+      // details and raw log text are dropped here.
+      const diagnosticCodes = [
+        'spawn_accepted',
+        'runtime_process_detected',
+        'runtime_process_candidate',
+        'tmux_shell_only',
+        'runtime_not_found',
+        'permission_pending',
+        'bootstrap_confirmed',
+        'bootstrap_stalled',
+        'workspace_trust_preflight',
+        'stale_runtime_event_rejected',
+        'process_table_unavailable',
+      ] as const;
+      const severities = ['info', 'warning', 'error'] as const;
       try {
         const diagnostics = await api.teams.getLaunchFailureDiagnostics(teamName, runId);
+        const breadcrumb = diagnostics.bootstrapTransportBreadcrumb;
+        const launchDiagnostics: { code: string; severity: string; memberName: string | null }[] = [];
+        let provisioningState: string | null = null;
+        try {
+          const status = runId === undefined ? null : await api.teams.getProvisioningStatus(runId);
+          if (status && status.runId === runId && status.teamName === teamName) {
+            provisioningState =
+              typeof status.state === 'string' && /^[a-z_]{1,32}$/.test(status.state)
+                ? status.state
+                : null;
+            for (const item of (status.launchDiagnostics ?? []).slice(0, 32)) {
+              const code = diagnosticCodes.find((value) => value === item.code);
+              const severity = severities.find((value) => value === item.severity);
+              if (!code || !severity) continue;
+              launchDiagnostics.push({
+                code,
+                severity,
+                memberName:
+                  typeof item.memberName === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(item.memberName)
+                    ? item.memberName
+                    : null,
+              });
+            }
+          }
+        } catch {
+          /* Provisioning status is diagnostic-only here. */
+        }
         return {
           boundary: createBoundary,
           classification:
             codes.find((code) => code === diagnostics.classification?.code) ?? 'unknown',
-          bootstrapSubmitted: diagnostics.bootstrapTransportBreadcrumb?.bootstrapSubmitted === true,
-          submitRejected: diagnostics.bootstrapTransportBreadcrumb?.submitRejected === true,
+          classificationConfidence:
+            typeof diagnostics.classification?.confidence === 'number' &&
+            Number.isFinite(diagnostics.classification.confidence)
+              ? diagnostics.classification.confidence
+              : null,
+          evidenceTokens: closedDiagnosticTokens([
+            ...(diagnostics.classification?.evidence ?? []),
+            ...(breadcrumb?.evidence ?? []),
+          ]),
+          breadcrumbStage:
+            typeof breadcrumb?.lastTransportStage === 'string' &&
+            /^[A-Za-z0-9_.:\- ]{1,96}$/.test(breadcrumb.lastTransportStage)
+              ? breadcrumb.lastTransportStage
+              : null,
+          retryable: typeof breadcrumb?.retryable === 'boolean' ? breadcrumb.retryable : null,
+          noStdinWarning: breadcrumb?.noStdinWarning === true,
+          bootstrapSubmitted: breadcrumb?.bootstrapSubmitted === true,
+          submitRejected: breadcrumb?.submitRejected === true,
+          provisioningState,
+          launchDiagnostics,
         };
       } catch {
         return { boundary: createBoundary, diagnosticsUnavailable: true };
