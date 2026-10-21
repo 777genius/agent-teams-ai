@@ -85,6 +85,7 @@ overrides:
   vitest>tinypool: 2.2.0
   vitest>vite: 6.4.4
   vitepress>vite: 7.3.7
+  '@nuxt/vite-builder>vite': 7.3.7
   vue: 3.5.43
   ws: 8.21.0
   yaml: 2.9.0
@@ -2390,7 +2391,6 @@ packages:
   '@opentelemetry/sdk-trace-base@2.6.0':
     resolution: {integrity: sha512-g/OZVkqlxllgFM7qMKqbPV9c1DUPhQ7d4n3pgZFcrnrNft9eJXZM2TNHTPYREJBrtNdRytYyvwjgL5geDKl3EQ==}
     engines: {node: ^18.19.0 || >=20.6.0}
-    deprecated: Use @opentelemetry/sdk-trace package
     peerDependencies:
       '@opentelemetry/api': '>=1.3.0 <1.10.0'
 
@@ -13486,7 +13486,7 @@ snapshots:
       esbuild: 0.28.1
       eslint: 9.39.4(jiti@2.7.0)(supports-color@10.2.2)
       h3: 1.15.11
-      tinyglobby: 0.2.16
+      tinyglobby: 0.2.17
       ws: 8.21.0
     transitivePeerDependencies:
       - bufferutil
@@ -14518,7 +14518,7 @@ snapshots:
       rc9: 3.0.0
       scule: 1.3.0
       semver: 7.8.5
-      tinyglobby: 0.2.16
+      tinyglobby: 0.2.17
       ufo: 1.6.4
       unctx: 2.5.0
       untyped: 2.0.0
@@ -14544,7 +14544,7 @@ snapshots:
       rc9: 3.0.1
       scule: 1.3.0
       semver: 7.8.5
-      tinyglobby: 0.2.16
+      tinyglobby: 0.2.17
       ufo: 1.6.4
       unctx: 2.5.0
       untyped: 2.0.0
@@ -14569,7 +14569,7 @@ snapshots:
       rc9: 3.0.0
       scule: 1.3.0
       semver: 7.8.5
-      tinyglobby: 0.2.16
+      tinyglobby: 0.2.17
       ufo: 1.6.4
       unctx: 2.5.0
       untyped: 2.0.0
@@ -17639,7 +17639,7 @@ snapshots:
       debug: 4.4.3(supports-color@10.2.2)
       minimatch: 9.0.7
       semver: 7.8.5
-      tinyglobby: 0.2.16
+      tinyglobby: 0.2.17
       ts-api-utils: 2.4.0(typescript@5.9.3)
       typescript: 5.9.3
     transitivePeerDependencies:
@@ -25466,7 +25466,7 @@ snapshots:
       pkg-types: 2.3.1
       scule: 1.3.0
       strip-literal: 3.1.0
-      tinyglobby: 0.2.16
+      tinyglobby: 0.2.17
       unplugin: 2.3.11
       unplugin-utils: 0.3.1
 
@@ -25621,7 +25621,7 @@ snapshots:
       pathe: 2.0.3
       picomatch: 4.0.4
       scule: 1.3.0
-      tinyglobby: 0.2.16
+      tinyglobby: 0.2.17
       unplugin: 2.3.11
       unplugin-utils: 0.3.1
       yaml: 2.9.0
@@ -25927,7 +25927,7 @@ snapshots:
       picomatch: 4.0.4
       postcss: 8.5.28
       rollup: 4.59.0
-      tinyglobby: 0.2.16
+      tinyglobby: 0.2.17
     optionalDependencies:
       '@types/node': 24.12.4
       fsevents: 2.3.3
@@ -25944,7 +25944,7 @@ snapshots:
       picomatch: 4.0.4
       postcss: 8.5.28
       rollup: 4.59.0
-      tinyglobby: 0.2.16
+      tinyglobby: 0.2.17
     optionalDependencies:
       '@types/node': 24.12.4
       fsevents: 2.3.3
@@ -25961,7 +25961,7 @@ snapshots:
       picomatch: 4.0.4
       postcss: 8.5.28
       rollup: 4.59.0
-      tinyglobby: 0.2.16
+      tinyglobby: 0.2.17
     optionalDependencies:
       '@types/node': 24.12.4
       fsevents: 2.3.3
@@ -25978,7 +25978,7 @@ snapshots:
       picomatch: 4.0.4
       postcss: 8.5.28
       rollup: 4.59.0
-      tinyglobby: 0.2.16
+      tinyglobby: 0.2.17
     optionalDependencies:
       '@types/node': 24.12.4
       fsevents: 2.3.3

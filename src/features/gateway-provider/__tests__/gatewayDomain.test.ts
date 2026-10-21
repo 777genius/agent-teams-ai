@@ -40,6 +40,35 @@ describe('normalizeGatewayBaseUrl', () => {
     ).toThrow(GatewayValidationError);
   });
 
+  it.each(['::ffff:10.0.0.1', '::ffff:a00:1'])(
+    'requires private-network approval for mapped host %s',
+    (hostname) => {
+      const baseUrl = `https://[${hostname}]`;
+      expect(() => normalizeGatewayBaseUrl({ baseUrl })).toThrow(GatewayValidationError);
+      expect(normalizeGatewayBaseUrl({ baseUrl, allowPrivateNetwork: true })).toBe(
+        'https://[::ffff:a00:1]'
+      );
+    }
+  );
+
+  it.each(['::ffff:0.0.0.0', '::ffff:0:0', '::ffff:224.0.0.1', '::ffff:e000:1'])(
+    'rejects unusable mapped host %s even with approval',
+    (hostname) => {
+      expect(() =>
+        normalizeGatewayBaseUrl({ baseUrl: `https://[${hostname}]`, allowPrivateNetwork: true })
+      ).toThrow(GatewayValidationError);
+    }
+  );
+
+  it('accepts mapped loopback HTTP and public HTTPS without private approval', () => {
+    expect(normalizeGatewayBaseUrl({ baseUrl: 'http://[::ffff:127.0.0.1]' })).toBe(
+      'http://[::ffff:7f00:1]'
+    );
+    expect(normalizeGatewayBaseUrl({ baseUrl: 'https://[::ffff:8.8.8.8]' })).toBe(
+      'https://[::ffff:808:808]'
+    );
+  });
+
   it('rejects credentials, query, fragment and unusable hosts', () => {
     expect(() => normalizeGatewayBaseUrl({ baseUrl: 'https://user:pass@gw.example.com' })).toThrow(
       GatewayValidationError

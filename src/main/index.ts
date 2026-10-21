@@ -1987,6 +1987,7 @@ async function initializeServices(): Promise<void> {
   const { gatewayProviderRuntime, gatewayProviderConnector, gatewayLaunchRuntime } =
     composeGatewayProviderRuntime({
       ipcMain,
+      configuration: teamDataService,
       apiKeys: apiKeyService,
       appDataPath: getAppDataPath(),
     });
@@ -2937,6 +2938,9 @@ async function initializeServices(): Promise<void> {
     resolveOpenCodeInputDeclaration,
     (teamName) => gatewayProviderRuntime.feature.retireTeamGatewayBindings(teamName)
   );
+  void gatewayProviderRuntime.feature.recoverGatewayDraftBindings().catch(() => {
+    logger.warn('Could not recover gateway drafts; their saved ownership is preserved.');
+  });
   registerCodexAccountIpc(ipcMain, codexAccountFeature);
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
   registerTeamGroupChatsIpc(ipcMain, teamGroupChatsFeature);

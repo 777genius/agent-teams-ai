@@ -47,6 +47,12 @@ export interface GatewayProviderServiceDeps {
   probeModels?: typeof probeGatewayModels;
   readUsageDay?: typeof readGatewayUsageDay;
   onBindingsChanged?: () => void;
+  drafts?: {
+    isMemberSaved(teamName: string, memberName: string): Promise<boolean>;
+    hasSourceHistory(gatewayUsageRef: string): Promise<boolean>;
+    onRecoveryFailure?(teamName: string): void;
+    configurationOperation(teamName: string, operation: () => Promise<void>): Promise<void>;
+  };
 }
 
 const NAME_MAX_LENGTH = 120;
@@ -76,9 +82,12 @@ export class GatewayProviderService {
   private readonly probeModelsImpl: typeof probeGatewayModels;
   private readonly readUsageDayImpl: typeof readGatewayUsageDay;
   private readonly onBindingsChanged?: () => void;
+  private readonly drafts?: GatewayProviderServiceDeps['drafts'];
+  private readonly liveDraftOwners = new Set<string>();
 
   constructor(deps: GatewayProviderServiceDeps) {
     this.store = deps.store;
+    this.drafts = deps.drafts;
     this.credentials = deps.credentials;
     this.clock = deps.clock;
     this.probeModelsImpl = deps.probeModels ?? probeGatewayModels;
@@ -193,11 +202,34 @@ export class GatewayProviderService {
     return this.probeModelsImpl({ baseUrl, apiKey });
   }
 
-  async bindMember(request: GatewayBindMemberRequest): Promise<GatewayMemberBindingDto> {
+  async bindMember(
+    request: GatewayBindMemberRequest,
+    draftOwner?: string
+  ): Promise<GatewayMemberBindingDto> {
+    const teamName = requireName(request.teamName, 'Team name');
+    if (draftOwner && this.drafts) this.liveDraftOwners.add(draftOwner);
+    let result!: GatewayMemberBindingDto;
+    if (this.drafts) {
+      await this.drafts.configurationOperation(teamName, async () => {
+        result = await this.bindMemberUnlocked(request, draftOwner);
+      });
+    } else {
+      result = await this.bindMemberUnlocked(request, draftOwner);
+    }
+    this.onBindingsChanged?.();
+    return result;
+  }
+
+  private async bindMemberUnlocked(
+    request: GatewayBindMemberRequest,
+    draftOwner?: string
+  ): Promise<GatewayMemberBindingDto> {
     const teamName = requireName(request.teamName, 'Team name');
     const memberName = requireName(request.memberName, 'Member name');
     const apiKey = request.apiKey.trim();
     if (!apiKey) throw new GatewayValidationError('Gateway API key is required.');
+    const saved =
+      !draftOwner || !this.drafts || (await this.drafts.isMemberSaved(teamName, memberName));
     const fingerprint = hashGatewayLiteral(apiKey);
     const now = this.clock.now();
     const nowIso = now.toISOString();
@@ -244,6 +276,8 @@ export class GatewayProviderService {
           firstUsageDay: utcDayAt(now),
           createdAt: nowIso,
           lastBoundAt: nowIso,
+          draftOnly: !saved ? true : undefined,
+          draftOwner: !saved ? draftOwner : undefined,
           hasActiveBinding: true,
           hasRuntimeArtifact: false,
         };
@@ -269,14 +303,28 @@ export class GatewayProviderService {
         throw new GatewayValidationError('This gateway key is already bound to another teammate.');
       }
 
+      const previous = state.bindings[bindingIndex];
+      const provisional = !saved && (!previous || Boolean(previous.draftOwner));
+      // Receipts must differ even when a draft rebind happens in the same clock tick.
+      const previousTime = Date.parse(previous?.boundAt ?? '');
+      const receiptDate = new Date(
+        Math.max(now.getTime(), Number.isFinite(previousTime) ? previousTime + 1 : now.getTime())
+      );
+      const boundAt = Number.isFinite(receiptDate.getTime()) ? receiptDate.toISOString() : nowIso;
       const binding = {
+        ...(provisional ? { draftOwner } : {}),
         teamName,
         memberName,
         profileId: profile.id,
         apiKeyRef: storageRef,
         gatewayUsageRef: source.gatewayUsageRef,
-        boundAt: nowIso,
+        boundAt,
       };
+      if (!provisional) {
+        delete source.draftOnly;
+        delete source.draftOwner;
+      } else if (source.draftOnly) source.draftOwner = draftOwner;
+      source.lastBoundAt = boundAt;
       if (bindingIndex === -1) {
         state.bindings.push(binding);
       } else {
@@ -296,8 +344,87 @@ export class GatewayProviderService {
         credentialStatus: 'ready' as GatewayCredentialStatus,
       };
     });
-    this.onBindingsChanged?.();
     return result;
+  }
+
+  async recoverDraftBindings(owner?: string): Promise<void> {
+    if (!this.drafts) return;
+    if (owner !== undefined) this.liveDraftOwners.delete(owner);
+    const eligible = (draftOwner: string | undefined): boolean =>
+      Boolean(draftOwner) &&
+      (owner === undefined ? !this.liveDraftOwners.has(draftOwner!) : draftOwner === owner);
+    const snapshot = await this.store.read();
+    const failedTeams = new Set<string>();
+    const attempt = async (teamName: string, operation: () => Promise<void>): Promise<void> => {
+      if (failedTeams.has(teamName)) return;
+      try {
+        await this.drafts!.configurationOperation(teamName, operation);
+      } catch {
+        // A missing/unreadable roster is not proof of abandonment. Keep this team's
+        // receipts, but allow unrelated healthy teams and saved connections to work.
+        failedTeams.add(teamName);
+        this.drafts!.onRecoveryFailure?.(teamName);
+      }
+    };
+    const pending = snapshot.bindings.filter((binding) => eligible(binding.draftOwner));
+    for (const receipt of pending) {
+      await attempt(receipt.teamName, async () => {
+        const saved = await this.drafts!.isMemberSaved(receipt.teamName, receipt.memberName);
+        const used = await this.drafts!.hasSourceHistory(receipt.gatewayUsageRef);
+        await this.store.mutate((state) => {
+          const index = state.bindings.findIndex(
+            (binding) =>
+              binding.teamName === receipt.teamName &&
+              binding.memberName === receipt.memberName &&
+              binding.gatewayUsageRef === receipt.gatewayUsageRef &&
+              binding.boundAt === receipt.boundAt &&
+              binding.draftOwner === receipt.draftOwner
+          );
+          if (index === -1 || !eligible(state.bindings[index].draftOwner)) return;
+          const source = state.sources.find(
+            (entry) => entry.gatewayUsageRef === receipt.gatewayUsageRef
+          );
+          if (saved || used || source?.hasRuntimeArtifact) {
+            delete state.bindings[index].draftOwner;
+            if (source) {
+              delete source.draftOnly;
+              delete source.draftOwner;
+            }
+          } else {
+            state.bindings.splice(index, 1);
+            this.retireSource(state, receipt.gatewayUsageRef, this.clock.now().toISOString());
+            if (source?.draftOnly)
+              state.sources = state.sources.filter((entry) => entry !== source);
+          }
+        });
+      });
+    }
+    for (const receipt of snapshot.sources.filter(
+      (source) => source.draftOnly && eligible(source.draftOwner)
+    )) {
+      await attempt(receipt.teamName, async () => {
+        const saved = await this.drafts!.isMemberSaved(receipt.teamName, receipt.memberName);
+        const used = await this.drafts!.hasSourceHistory(receipt.gatewayUsageRef);
+        await this.store.mutate((state) => {
+          const source = state.sources.find(
+            (entry) =>
+              entry.gatewayUsageRef === receipt.gatewayUsageRef &&
+              entry.draftOwner === receipt.draftOwner &&
+              entry.lastBoundAt === receipt.lastBoundAt
+          );
+          if (!source || !source.draftOnly || !eligible(source.draftOwner)) return;
+          if (saved || used || source.hasRuntimeArtifact) {
+            delete source.draftOnly;
+            delete source.draftOwner;
+          } else if (
+            !state.bindings.some((binding) => binding.gatewayUsageRef === source.gatewayUsageRef)
+          ) {
+            state.sources = state.sources.filter((entry) => entry !== source);
+          }
+        });
+      });
+    }
+    if (pending.length) this.onBindingsChanged?.();
   }
 
   async unbindMember(request: GatewayUnbindMemberRequest): Promise<void> {
@@ -311,23 +438,38 @@ export class GatewayProviderService {
         typeof expected.boundAt !== 'string')
     )
       throw new GatewayValidationError('Invalid expected gateway binding.');
-    const nowIso = this.clock.now().toISOString();
-    await this.store.mutate((state) => {
-      const bindingId = gatewayBindingKey(teamName, memberName);
-      const index = state.bindings.findIndex(
-        (binding) => gatewayBindingKey(binding.teamName, binding.memberName) === bindingId
-      );
-      if (index === -1) return;
-      const current = state.bindings[index];
-      if (
-        expected &&
-        (current.gatewayUsageRef !== expected.gatewayUsageRef ||
-          current.boundAt !== expected.boundAt)
-      )
-        return;
-      const [removed] = state.bindings.splice(index, 1);
-      this.retireSource(state, removed.gatewayUsageRef, nowIso);
-    });
+    const remove = async (): Promise<void> => {
+      const saved =
+        expected && this.drafts ? await this.drafts.isMemberSaved(teamName, memberName) : true;
+      const used =
+        expected && this.drafts
+          ? await this.drafts.hasSourceHistory(expected.gatewayUsageRef)
+          : true;
+      const nowIso = this.clock.now().toISOString();
+      await this.store.mutate((state) => {
+        const bindingId = gatewayBindingKey(teamName, memberName);
+        const index = state.bindings.findIndex(
+          (binding) => gatewayBindingKey(binding.teamName, binding.memberName) === bindingId
+        );
+        if (index === -1) return;
+        const current = state.bindings[index];
+        if (
+          expected &&
+          (current.gatewayUsageRef !== expected.gatewayUsageRef ||
+            current.boundAt !== expected.boundAt)
+        )
+          return;
+        const [removed] = state.bindings.splice(index, 1);
+        this.retireSource(state, removed.gatewayUsageRef, nowIso);
+        const source = state.sources.find(
+          (entry) => entry.gatewayUsageRef === removed.gatewayUsageRef
+        );
+        if (source?.draftOnly && !source.hasRuntimeArtifact && !saved && !used)
+          state.sources = state.sources.filter((entry) => entry !== source);
+      });
+    };
+    if (expected && this.drafts) await this.drafts.configurationOperation(teamName, remove);
+    else await remove();
     this.onBindingsChanged?.();
   }
 
