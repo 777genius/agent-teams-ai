@@ -115,7 +115,9 @@ Timeout/transport abort не означают cancel и не разрешают 
 
 Read API имеет snapshot и change/progress sequence. Разные feeds не делят один
 выдуманный глобальный cursor. После потери retention — rehydrate/явный gap.
-Поздний результат прежнего target/generation не меняет текущий UI cache.
+Согласованный snapshot содержит cursor для replay; поздний snapshot/result
+не откатывает cache. Точный handoff описан в
+[протоколе reads](stage-1-contracts.md#согласованный-snapshot-и-feed).
 
 ### 4.2 Team → Runtime port
 
@@ -188,6 +190,9 @@ handler. `not_applied` допустим только после исключен
 Прежние бизнес receipts и технические input records имеют разные обязанности.
 Один Message не становится вторым inbox store в runtime; один handoff не получает
 два независимых dispatch ledger. Provider не пишет продуктовые team/task файлы.
+Completed business receipt не снимает delivery obligation: startup/reconnect
+существующего outbox owner доводит исходный intent до durable runtime admission
+по [протоколу delivery](stage-1-contracts.md#delivery-после-business-commit).
 
 ## 6. Обязательные переходы и сложные случаи
 
@@ -227,6 +232,10 @@ Interrupt A, пришедший после result A, не отменяет B. Co
 общий per-session fence. `requested`/RPC ACK не является `cancelled`.
 Close сначала закрывает admission, затем дожидается outcome/drain/custody.
 Unknown stop сохраняет debt и не допускает replacement generation.
+Ещё не claimed inputs получают durable cancelled/not-sent; drain не исполняет
+отложенные prompts. Targeted discard UI и revoke сериализуются с admission/claim,
+не удаляют чужие/новые rows и не скрывают UNKNOWN. Подробности и crash recovery:
+[очередь/discard/stop](stage-1-contracts.md#очередь-discard-и-stop).
 
 Shared OpenCode backing нельзя завершать при stop одного member: логическое
 закрытие session и физический stop host — разные права. Runtime хранит exact
@@ -326,6 +335,10 @@ Legacy recovery inventory читает launch/bootstrap/lane/session/stop/comman
 без quarantine/repair. Corrupt/unreadable/incomplete census означает UNKNOWN/HOLD,
 не пустой список. Старый `getAliveTeams()` после restart не доказательство terminal.
 Оригинальные unresolved stop/request IDs сохраняются, shared hosts не убиваются.
+Остановленная saved команда имеет явный путь Relaunch: validated product snapshot
+в отдельный host-owned namespace и новый run, без native adoption и replay старых
+inputs. Архив/receipts остаются исходному owner. Его границы и приёмка определены
+в [offline relaunch](stage-1-contracts.md#явный-relaunch-остановленной-сохранённой-команды).
 
 ## 7. Фазы реализации
 
@@ -350,6 +363,8 @@ upstream и уже доказанные exact-byte тесты.
    Выписать source→effective mapping settings/auth namespace и supported attachment
    MIME/model/recipient paths. Указать controller/MCP, Changes backfill, review,
    attachment и process-registry writers, не только CLI entrypoints.
+   Включить queued-message list/discard и saved-team relaunch: первый переписывает
+   inbox, второй обязан сохранить product data при новом execution owner.
 4. Создать изолированные lanes и один integration root, записать их refs/owners.
    Команды будущих scripts отмечать planned, пока package реально не создан.
 
@@ -377,6 +392,8 @@ symbol/use case, целевой module/owner, replacement port, M-ID и oracle. 
    re-export; не считать прежний install всего runtime достаточным proof.
 3. Реализовать stdio host connection/handshake: protocol/build/capabilities,
    request bounds, safe failure, captured executable/profile, отдельные logs.
+   Data overflow ведёт в gap/recovery; provider control/outcome progress не ждёт UI
+   очереди. Snapshot/cursor handshake входит в тот же transport slice.
 4. Пройти open → два inputs → text/tool/result → close на fixture driver и выбранном
    packed provider. Этот walking slice не является командной приёмкой.
 
@@ -423,6 +440,10 @@ system Node пользователя не используется молча в
    будущего Orchestrator не копировать в этот legacy scope.
    Task/comment blob bytes и metadata имеют captured owner/storage binding;
    проверить partial write, read-after-restart и remove через existing adapters.
+5. Подключить existing outbox startup/reconnect recovery с durable runtime admission
+   ACK. Добавить targeted queued-message cancellation через Runtime port вместо
+   inbox-only discard; P2 использует управляемый runtime adapter, P3 проверяет race
+   с реальным dispatch. Business completed не завершает доставку.
 
 **Выход:** actual filesystem/stores fixture доказывает Team/Task/Message эффекты,
 дубли, wrong actor/revoke и restart outcome; нет fake fixture-only Task handler.
@@ -448,6 +469,8 @@ system Node пользователя не используется молча в
    Capture/persist/publish checkpoint делается до close; session/native backing
    сохраняет history после host restart. Положительный restore и crash в publication
    проверяются отдельно от missing/incompatible checkpoint.
+   Unclaimed inputs получают terminal not-sent при stop/revoke/discard; cancellation
+   tombstone также блокирует admission ещё не увиденного Runtime delivery ID.
 5. Проверить две concurrent sessions: stop/control A не затрагивают B; retained
    state после host crash не приводит к speculative process adoption.
 
@@ -498,9 +521,11 @@ system Node пользователя не используется молча в
    Отключить для этих handles старые filesystem/protocol readers и backend timers.
    Включить `ChangeExtractorService` backfill/repair, attachment stores и process
    health polling в sentinel cutover. Открытие Changes не запускает native repair.
-4. Сохранить imports/archive как read-only; active old-owner obligations имеют
-   отдельные reconciliation/stop paths с исходными identities. Inventory UNKNOWN
-   не включает broad cleanup и не отменяет recovery jobs.
+4. Сохранить исходные archive/receipts read-only; active old-owner obligations имеют
+   отдельные reconciliation/stop paths с исходными identities. Для stopped saved
+   team выполнить explicit product snapshot import/relaunch из §6 протоколов:
+   новый storage/run binding с retained TaskRefs/history, без shared writable root.
+   Inventory UNKNOWN не допускает этот переход, broad cleanup или отмену recovery.
 5. Передать все явные settings/auth/skills/hooks/extensions действия в admitted
    adapter. Скрытие контролов или новый error вместо прежней функции не parity.
    Убрать fork executor из provider-management port; synthetic progress/code/cancel
@@ -510,6 +535,9 @@ system Node пользователя не используется молча в
    edited-file save/delete, rename restore и decisions/history; старый writer
    не остаётся активным из-за отдельного IPC channel. Background process UI читает
    host registry, scoped OS stop делегирует runtime adapter.
+   Existing queued-message listing/discard идёт тому же owner; незавершённая
+   доставка не скрывается удалением строки inbox. Snapshot/replay закрывает race
+   mutation между чтением state и подключением feed.
 
 **Выход:** обычный Electron UI показывает/управляет host-owned командой при sentinel
 старых CLI/readers; IPC и HTTP вызывают те же semantics, late feeds не меняют target.

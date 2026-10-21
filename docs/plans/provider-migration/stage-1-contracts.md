@@ -43,10 +43,20 @@ Mismatch отказывает до mutations. Stdout содержит тольк
 Числа задаются trusted TEST/production profile на P1 и проверяются limit/limit+1;
 большие observations разбиваются штатным stream API, а не отключением bounds.
 
-Нельзя терять terminal/interaction event при переполнении: reader либо применяет
-backpressure, либо отдаёт durable cursor/gap и snapshot recovery. Notification
-не является единственной квитанцией mutation. Diagnostic без operation attribution
-остаётся session-level. Credentials/raw provider payload не выводятся в ошибку.
+Выбранная policy для медленного UI: data notifications имеют bounded очередь;
+при переполнении клиент получает gap и восстанавливается через snapshot/replay.
+RPC responses/control имеют отдельный bounded budget и приоритет перед data;
+provider read/control loop и durable запись terminal/interaction state не ждут
+освобождения UI очереди. Одного приоритета недостаточно, если уже заблокирован
+stdout: после конечного write timeout connection закрывается, obligations остаются
+у owner. К stdio живого child повторно не подключаются: transport failure запускает
+bounded disposal именно captured host, Desktop ждёт его подтверждённый exit и
+освобождение single-writer lock. Только затем запускается recovery incarnation,
+которая читает durable state без replay native effects. Неизвестный exit удерживает
+новый writer; выход host не доказывает stop provider children, их custody остаётся
+отдельной obligation/HOLD. Чужие процессы/shared provider host не завершаются.
+Notification не является единственной квитанцией mutation. Diagnostic без operation
+attribution остаётся session-level. Credentials/raw payload не выводятся в ошибку.
 
 | Ответ/ситуация                                                     | Действие клиента                                                                 |
 | ------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
@@ -107,6 +117,23 @@ update/delete/messages/control. В existing `ApplicationCommandRunner` защи�
 authority оборачивает также completed replay и stale reconciliation, поскольку
 они могут обойти обычный execute handler.
 
+### Delivery после business commit
+
+Completed business receipt означает сохранённое сообщение, а не завершённую
+доставку. Existing outbox/delivery owner при startup и восстановлении соединения
+перечитывает незавершённые intents, включая записанные до последнего completed
+receipt. Он передаёт Runtime **тот же** delivery/input ID и binding; durable runtime
+admission receipt подтверждает передачу ответственности. Только после его записи
+outbox может отметить admission; terminal/read/reply остаются отдельными фактами.
+
+Crash после business commit до admission оставляет доставляемый intent. Crash после
+runtime admission до outbox ACK разрешается lookup того же ID: known admitted
+возвращает исходный receipt, proven not-admitted допускает admission того же intent,
+UNKNOWN удерживается. Native submit при этом выполняет только Runtime; recovery
+outbox не вызывает provider и не зависит от повторного UI/MCP handler. Отменённая
+доставка имеет durable tombstone, поэтому replay outbox её не воскресит. Второй
+broker/планировщик не добавляется.
+
 ## 4. Native allocation, input и control
 
 Runtime private composition для каждого provider создаёт ровно нужные ports:
@@ -136,6 +163,31 @@ executable, user login или durable ownership всех созданных nati
 проверяются под session fence; после terminal A control не переадресуется на B.
 Delivery/Task policy может создать новое намерение только при доказанном исходе
 старого; автоматический новый UUID после transport error запрещён.
+
+### Очередь, discard и stop
+
+Один per-session fence сериализует admission/dispatch claim, targeted discard, seal/stop и
+revoke-check. Перед claim Runtime повторно проверяет актуальный authority binding;
+при revoke unclaimed input получает durable rejected/not-sent. Уже claimed input
+проходит control/reconcile; revoke не обещает отменить совершённые native effects.
+
+Stop seals admission и завершает ещё не claimed inputs durable cancelled/not-sent;
+active/uncertain input проходит обычный targeted control и custody reconciliation.
+Ожидание drain не запускает queued prompts. Очередь сохраняет original generation;
+restart/replacement не переносит её на новую. Возобновление недоставленного сообщения
+в новом run требует явного нового intent после доказанного исхода прежнего.
+
+Existing UI listing/discard сохраняет точные `messageIds` показанных пользователю
+user messages; нет операции «удалить всю очередь» или trim/перегенерации IDs. Team
+через Runtime сначала отменяет только названные **доказанно unclaimed** deliveries,
+затем обновляет inbox projection. Подтверждённая отмена/tombstone предшествует удалению
+строки; crash между ними оставляет восстанавливаемую проекцию, а не исполнимый prompt.
+Если Runtime ещё не видел intent, отмена резервирует его exact ID/binding как
+cancelled/not-sent; более поздний outbox admission получает этот же outcome.
+Listing не выдаёт unread за доказательство not-sent. Claimed/consumed, уже отменённые
+и UNKNOWN IDs различаются в результате, поздние новые сообщения не затрагиваются.
+`discarded` считает только подтверждённые отмены; UNKNOWN UI показывает явно.
+Это один use case с исходным command ID/partial recovery §3, не отдельный queue store.
 
 Shared OpenCode host хранит exact session references: close A закрывает A, не
 host B. Physical stop backing разрешён только владельцу captured process и после
@@ -214,33 +266,88 @@ query/log feeds, approvals и evidence. Sentinel старого writer/reader д
 readers разрешены только для явно archive/old-owner handles. Отдельно проверяется
 late notification старого target после переключения и reconnect с gap/snapshot.
 
+### Согласованный snapshot и feed
+
+Snapshot возвращает state и high-water cursor **того же** resource/feed и owner
+incarnation, полученные согласованно под existing state lock/revision protocol.
+Subscribe/replay продолжает строго после этого cursor. Mutation между snapshot и
+subscribe обязана попасть в replay; при истёкшей retention приходит новый explicit
+gap. Клиент rehydrates тот же owner и не заменяет уже принятый более новый state
+поздним snapshot; duplicate events фильтруются по source sequence/event ID.
+Новый host incarnation инвалидирует volatile cursor и требует snapshot, сохраняя
+durable command/interaction outcomes. Data feed не становится вторым business log.
+
 Active old-owner inventory read-only: launch/bootstrap/lane/session/stop/command
 records перечисляются без repair/quarantine. Corrupt/unreadable census = HOLD.
 New host не забирает processes/receipts; rollback defaults касается новых intents.
 Cross-owner обмен и live import не входят в этот cutover. Этот запрет не уменьшает
 обязательный cross-team сценарий между двумя host-owned командами.
 
+### Явный relaunch остановленной сохранённой команды
+
+Read-only archive не заменяет существующую кнопку Relaunch. Для остановленной
+legacy команды выбран отдельный offline путь: явный user intent принимает
+проверенный product snapshot в **новый host-owned storage namespace**, после чего
+создаёт новый run/generations. Это не native resume и не in-place передача живых
+writers. Active/UNKNOWN command, delivery, stop или custody в исходном census
+блокирует этот переход; corrupt/unreadable census также HOLD.
+
+Snapshot получают согласованно существующими locks/revisions, затем работают с
+detached bytes. Переносятся saved config/roster/settings, tasks/comments/dependencies,
+TaskRefs, нужные blobs и retained history/evidence. Stable product IDs сохраняются
+в новом backend namespace; ссылки используют его captured owner binding. Existing
+old-run/receipt links остаются явно archive-bound. Conflict IDs/неподдержанные
+settings/неполный обязательный blob mapping отказывают до публикации нового handle.
+Уже отсутствующая history/evidence сохраняет явный gap, не становится новым proof.
+History не подделывается новым native transcript; credentials, checkpoints,
+pending native callbacks и executable commands не копируются как live state.
+
+Import intent фиксирует source snapshot digest/versions и destination IDs до
+записи; retry продолжает тот же незавершённый import. Новый handle публикуется после
+полного product state, отдельно от runtime launch. Потеря launch ACK разрешается
+по исходному run/opening intent, не повтором импорта или запуском второй команды.
+Task policy/state сохраняются; новые bootstrap/work actions получают новые intents
+нового run, прежние inputs/outcomes не replay. Исходные файлы/receipts остаются
+неизменными и доступными как архив; old/new UI handles и writers не разделяют root.
+Existing import/store helpers используются за Team port, без общего migration engine.
+
 ## 7. Фокусные проверки отказов
 
 Это scenarios для существующих suites, а не девять новых harness/CI gates.
 Один proof закрывает несколько M-строк; Electron не дублирует все injection points.
 
-| ID  | Injection / проверка                                                                                      | Где достаточно доказать                             | Ожидаемый результат                                                                                              |
-| --- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| F01 | Response loss после business commit; повтор ID, затем payload conflict и revoke перед lookup              | P2 actual owner store/MCP + existing command ledger | Один effect; прежний receipt только при authority; conflict без новых writes                                     |
-| F02 | Crash между message и delivery write; зависший original handler одновременно со stale reconcile           | P2 store integration                                | Только доказанно missing effect дописан; живой writer не допускает not-applied/replay                            |
-| F03 | Crash до/после native dispatch claim; missing receipt после create                                        | P3 runtime + packed D fixture                       | Proven not-sent отличается от UNKNOWN; нет второго native create/submit                                          |
-| F04 | Pending permission при полной queue; revoke/late reply; interrupt A после result A                        | P3/P4 provider control                              | Reply обслуживается отдельно; stale grant/отмена B отсутствуют                                                   |
-| F05 | Capture/write/publication crash; native history missing; compatible selected restore после restart        | P3/P4 actual native store + localhost inference     | Reference не раньше bytes; положительный restore каждого profile; uncertain input held                           |
-| F06 | Mixed team A=Claude/B=Codex/C=OpenCode; A↔B/B↔C/C↔A, group, task per provider, stop/restart одного member | P4 actual host/MCP/native paths                     | Exact recipients/replies/task effects; остальные members продолжают работу; cross-team со второй host-owned team |
-| F07 | Solo DO subagent effect; запрещённый mode; parent/child logs и parent stop при соседней session           | P4 native SDK + P6 projections                      | Реальный child effect и provenance; mode/grants соблюдены; сосед не остановлен                                   |
-| F08 | Reconnect/gap и late reply прежнего target; старые readers/writers со sentinel                            | P5/P8 Electron через CDP                            | Правильный owner/cache/status; ни одного active legacy fallback                                                  |
-| F09 | Packed Electron startup/input/control/close без fork, source checkout и ambient config                    | P7 installed candidate                              | Работает actual artifact; resolved paths/digest сохранены; cleanup только TEST-owned                             |
+| ID  | Injection / проверка                                                                                                     | Где достаточно доказать                             | Ожидаемый результат                                                                                               |
+| --- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| F01 | Response loss после business commit; повтор ID, затем payload conflict и revoke перед lookup                             | P2 actual owner store/MCP + existing command ledger | Один effect; прежний receipt только при authority; conflict без новых writes                                      |
+| F02 | Crash между message/delivery write, после business receipt до admission и после admission до outbox ACK; stale reconcile | P2/P3 actual stores + delivery owner                | Missing часть дописана; startup доставляет original intent один раз, живой writer не допускает not-applied/replay |
+| F03 | Crash до/после native dispatch claim; missing receipt после create                                                       | P3 runtime + packed D fixture                       | Proven not-sent отличается от UNKNOWN; нет второго native create/submit                                           |
+| F04 | Полные input/data-notification budgets + pending permission/control; revoke/late reply; interrupt A после result A       | P3/P4 provider control + stdio                      | Control продвигается, state доступен после gap/reconnect; stale grant/отмена B отсутствуют, память ограничена     |
+| F05 | Capture/write/publication crash; native history missing; compatible selected restore после restart                       | P3/P4 actual native store + localhost inference     | Reference не раньше bytes; положительный restore каждого profile; uncertain input held                            |
+| F06 | Mixed team A=Claude/B=Codex/C=OpenCode; A↔B/B↔C/C↔A, group, task per provider, stop/restart одного member                | P4 actual host/MCP/native paths                     | Exact recipients/replies/task effects; остальные members продолжают работу; cross-team со второй host-owned team  |
+| F07 | Solo DO subagent effect; запрещённый mode; parent/child logs и parent stop при соседней session                          | P4 native SDK + P6 projections                      | Реальный child effect и provenance; mode/grants соблюдены; сосед не остановлен                                    |
+| F08 | Mutation между snapshot и subscribe, reconnect/gap, поздний snapshot/ответ прежнего target; legacy sentinels             | P5/P8 Electron через CDP                            | Mutation видна один раз либо explicit повторный gap; cache не откатывается, active legacy fallback отсутствует    |
+| F09 | Packed Electron startup/input/control/close без fork, source checkout и ambient config                                   | P7 installed candidate                              | Работает actual artifact; resolved paths/digest сохранены; cleanup только TEST-owned                              |
 
 Отдельный existing shared-OpenCode сценарий с двумя native sessions подтверждает
 reference custody; mixed team с одним OpenCode member его не заменяет. Faults
 используют реальные TEST files/processes на relevant boundary; localhost inference
 скриптует модель, но не подменяет host, native SDK/CLI, MCP или Desktop.
+В F04 отдельно удерживается заблокированный stdout: bounded disposal дожидается
+captured host exit до recovery startup; provider children не считаются stopped,
+pending effects не replay. Простое переполнение data queue должно разрешить control
+без disposal; этот случай и недоступный transport имеют разные ожидаемые исходы.
+
+Два existing product workflows дополняют F-строки в тех же suites:
+
+- **Очередь:** A active, B/C queued; после listing приходит D. Discard B/C гоняется
+  с claim C. B не исполняется, D остаётся, C имеет один truthful outcome. Отдельный
+  stop/revoke при queued input и restart сохраняет cancelled/rejected, не переносит
+  intent в replacement generation. Crash после cancel до inbox update не воскресит
+  сообщение; legacy discard writer sentinel не вызывается.
+- **Saved relaunch:** stopped legacy TEST team с settings/tasks/TaskRefs/blobs
+  запускается через host при недоступном fork. Product state сохранён, run новый,
+  source/archive bytes неизменны. Повтор import/launch после response loss не
+  создаёт второй ресурс; active/UNKNOWN census не проходит этот путь.
 
 ## 8. MCP и полный cutover владельцев
 
@@ -278,6 +385,8 @@ intent/effect. Native Team/Task names при compatibility mapping вызыва�
 | ------------------------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | Desktop Team IPC/HTTP и MCP task/message/kanban/review tools  | Те же Team use cases, captured actor, общие receipts/guards      | Отдельный controller/filesystem writer в MCP или Desktop                     |
 | Runtime tools, launch/member mutations, inbox bridges         | Team policy → Runtime port; native callbacks привязаны к session | Возврат в Desktop bootstrap CLI и второй inbox dispatcher                    |
+| Queued-message list/discard IPC                               | Team intent → Runtime targeted cancellation → inbox projection   | Прямой inbox rewrite при ещё живом durable delivery/input                    |
+| Relaunch stopped saved team                                   | Explicit product snapshot import/new host run, §6                | Launch исходным fork, adoption native session или shared writable root       |
 | `TeamDataService` reads/watchers/process-health timer         | Host query/feed; health maintenance явно у owner                 | Read, который незаметно чинит host-owned state                               |
 | `ChangeExtractorService`, task/member log sources             | Host evidence/log projection; archive отдельно                   | Native backfill, warning-recovery и transcript fallback при открытии Changes |
 | `review.ts`: mutations/recovery/history/edit/rename/decisions | Host-owned review use cases + existing Git/filesystem adapters   | Старый независимый apply/Undo/Redo/save/delete writer                        |

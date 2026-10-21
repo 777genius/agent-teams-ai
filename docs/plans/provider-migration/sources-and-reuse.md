@@ -122,11 +122,18 @@ P0 выбирает один coherent source/artifact, integrating only reviewed
 | `taskBoard/tasks/review/kanban/taskLifecycle`; `TeamTaskAttachmentStore` и attachment IPC                     | Product lifecycle/notifications и отдельный appData blob writer шире Task CRUD                                                   | Team; P2/P6                                   |
 | Fork `toolExecution.ts`, `TaskChangeLedgerService`; frontend `ChangeExtractorService`, `review.ts`            | Pre/post/failure/background capture требует нового seam без globals; backfill-read и все review writers должны перейти owner     | Runtime capture + Team evidence/review; P5/P6 |
 | `processTools/processStore`, `TeamDataService.processHealthTick/killProcess`, `ProcessesSection`              | Registry и scoped OS stop используются UI; это отдельный M19, не agent liveness                                                  | Team registry + runtime OS port; P2/P5/P6     |
+| `src/main/ipc/teams.ts:4404`, `teams/teamQueuedUserMessages.ts:197`                                           | Inbox-only discard не отменяет новый durable delivery/input; exact listed IDs и late arrivals должны сохраняться                 | Team cancellation + Runtime fence; P2/P3/P5   |
+| `TeamDetailView.tsx:2174`, `dialogs/teamRelaunchFlow.ts`                                                      | Existing Relaunch шире archive reading; stopped saved team должен запускаться без fork с сохранёнными product data               | Team offline import/new run + Desktop; P5     |
 
 Проектные guards и OS profiles проверяются на selected baseline. Например,
 Unix-only проверки абсолютного пути в provider config не доказывают Windows
 support; P0/P7 должны сопоставить такой код с реально заявляемой packaging matrix.
 Эти gaps входят в существующие work packages оценки, не суммируются повторно.
+Уточнения delivery recovery, transport pressure, feed handoff и queue cancellation
+конкретизируют уже оценённые Team/Runtime/Desktop части. Offline relaunch использует
+legacy product formats и scoped snapshot import; generic live migration не оценена
+и не добавляется. После P0/P1 фактическая closure может изменить диапазон, но число
+страниц плана само по себе не является основанием пересчитать LOC.
 
 ## 5. Что делать с нынешним runtime и новым Orchestrator
 
