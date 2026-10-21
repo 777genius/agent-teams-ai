@@ -682,10 +682,13 @@ Provider без достаточного capture получает explicit capab
 
 В P1 для каждого выбранного profile узкий native proof проверяет **достаточный**
 capture mechanism до широкого extraction P2/P3: известный initial dirty файл,
-native modification/failed outcome и post-hook, точные before/final bytes,
+native modification/failed outcome, точные before/final bytes,
 immutable task/window binding и gap для недоказанного overlap/external edit.
 Window/native-snapshot путь требует authored tool anchors/validated chain и
 нужной timeline/outcome информации; snapshot-only authorship недостаточна.
+Post-hook включается в proof тех paths, где он входит в сохраняемый denominator
+по P0 mapping; отсутствие нужного hook в новом driver остаётся capability gap.
+Для остальных profiles final bytes/outcome подтверждает выбранный capture mechanism.
 
 Если выбранному пути нужен новый preimage прямо перед tool effect, callback обязан
 завершиться до effect; для такого пути проверяется ordering с задержанным callback.
@@ -701,9 +704,9 @@ M13 parity. Выбранный безопасный механизм подтв�
 доказанный механизм к attribution/review; новый fail-closed tool policy сверх
 действующих authorization guards в существующий scope не добавляется.
 
-Проверка: native command меняет TEST файл и завершается ошибкой; post-hook меняет
-его ещё раз. Ledger сохраняет корректные before/final bytes, failed outcome и
-task/window binding. Background completion проверяется existing relevant fixture;
+Проверка: native command меняет TEST файл и завершается ошибкой; на сохраняемом
+hook path post-hook меняет его ещё раз. Ledger сохраняет корректные before/final
+bytes, failed outcome и task/window binding. Background completion проверяется existing relevant fixture;
 полного fork toolExecution/QueryEngine ради capture не переносим.
 
 Все review mutations из `review.ts` направляются одному owner: Apply/Reject,
@@ -755,6 +758,13 @@ service обслуживает только old-owner roots. Нового backup
 При startup сначала читаются current deletion/runtime/recovery obligations, затем
 разрешается owner-scoped product restore. Восстановление missing product files
 сохраняет существующие identity/version guards и не откатывает более новые файлы.
+Под тем же resource fence из §3 backup bytes сверяются с current completed outcomes/tombstones
+того же resource и его version, включая missing destination: отсутствие файла
+или его mtime не доказывает отсутствие более поздней mutation. После доказанного
+delete старый Task/member не восстанавливается. Для более позднего update owner
+восстанавливает доказанное актуальное состояние по имеющимся receipt/store facts
+либо оставляет этот resource degraded/HOLD. Completed handler, notifications и
+native effects не повторяются; остальные resources/команды продолжают работу.
 Backup launch-state/native-member files — архивные факты, не право на execution.
 Restore не заменяет current command/outbox/runtime journals, cancellation tombstones
 или checkpoints старыми copies; missing authoritative recovery state остаётся HOLD.
@@ -773,3 +783,7 @@ restore сохраняет product data и debt без dispatch; interrupted per
 host owner, legacy publication sentinel не вызывается; backup/prune различает
 одноимённые old/new roots и удерживает unresolved references. Один Electron сценарий
 проверяет видимый trash/restore, без повторения всей filesystem fault suite.
+В той же backup suite: backup Task до delete → completed delete receipt → missing
+Task file → restart не воскрешает задачу и сохраняет original receipt; соседняя
+команда работает. Аналогичный newer update не публикует старую backup revision:
+получается доказанно актуальное состояние либо scoped degraded/HOLD.

@@ -483,6 +483,8 @@ system Node пользователя не используется молча в
 6. Сохранить distinct trash/restore/permanent-delete policy и reuse existing
    identity-fenced helpers; backup/restore/prune — scoped owner adapters из §11.
    Product delete не удаляет единственное evidence unresolved runtime obligation.
+   Restore missing product files согласуется с current completed outcomes/tombstones;
+   устаревший backup не отменяет завершённую mutation и не вызывает её replay.
 
 **Выход:** actual filesystem/stores fixture доказывает Team/Task/Message эффекты,
 дубли, wrong actor/revoke и restart outcome; нет fake fixture-only Task handler.
