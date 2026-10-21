@@ -1985,8 +1985,9 @@ async function initializeServices(): Promise<void> {
   );
   const apiKeyService = new ApiKeyService();
   const { gatewayProviderRuntime, gatewayProviderConnector, gatewayLaunchRuntime } =
-    composeGatewayProviderRuntime({
+    await composeGatewayProviderRuntime({
       ipcMain,
+      configuration: teamDataService,
       apiKeys: apiKeyService,
       appDataPath: getAppDataPath(),
     });

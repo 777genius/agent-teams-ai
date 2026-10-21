@@ -693,7 +693,7 @@ fixture/test APIs, без Computer Use/нативного folder picker. Live sm
 | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | Ключ невалиден/отозван                                  | проба `GET /v1/models` ключом тиммейта → ошибка на строке, без фолбэка                             |
 | Профиль удалён, на него ссылается тиммейт               | prepare-ошибка «профиль не найден»                                                                 |
-| Профиль удалён/изменён после отвязки до `finalUsageDay` | исторический source читается по своему endpoint + approval snapshot; профиль не нужен (§4)          |
+| Профиль удалён/изменён после отвязки до `finalUsageDay` | исторический source читается по своему endpoint + approval snapshot; профиль не нужен (§4)         |
 | Меняется URL профиля с активным биндингом               | сохранение отклоняется; другой профиль или отвязка и повторная привязка (§4)                       |
 | HTTP 401/403 на пробе ключа                             | «авторизация ключа отклонена» на строке; timeout/5xx — ошибка доступности, не диагноз авторизации  |
 | Ключ повторно вводится / меняет владельца или endpoint  | тот же владелец и endpoint сохраняют учётную идентичность; иначе нужен новый ключ (§4)             |
@@ -729,3 +729,22 @@ fixture/test APIs, без Computer Use/нативного folder picker. Live sm
 **Оценка:** ориентир frontend ~4.5–6k строк с тестами; уточняется после шага 0.
 Отдельно orchestrator (~0.4–0.7k), небольшая обязательная правка sub2api и
 штатная сборка/доставка runtime. Это оценки, не лимит и не критерий готовности.
+
+### Crash recovery acceptance clarification (2026-10-21)
+
+- A binding allocated for a member absent from the saved roster carries durable
+  ownership of the issuing renderer document. Cancellation, document reload/crash,
+  and app restart reclaim only matching provisional receipts. No TTL is used.
+- Recovery shares the existing configuration fence with roster writes and team
+  lifecycle operations. Both saved offline `members.meta.json` rosters and native
+  `config.json` rosters count as saved membership. Launch snapshots and runtime
+  artifacts preserve source ownership/history even without a current live process.
+- A never-saved, never-launched draft releases its binding, profile reservation,
+  and key fingerprint, including superseded provisional keys. Historical sources,
+  shared key-editor records, and committed credential replacements survive.
+- Owner scoping and exact receipts protect other windows and later replacements,
+  including same-tick rebinds. Missing files differ from unreadable/malformed
+  evidence: the latter preserves that team's state and logs a safe warning while
+  healthy teams continue, without blocking app initialization. Legacy unmarked records are not guessed to be drafts.
+- Focused service/store restart and IPC lifecycle tests verify these boundaries.
+  This clarification does not claim a fresh live-runtime E2E pass.

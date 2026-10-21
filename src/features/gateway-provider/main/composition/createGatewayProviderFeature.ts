@@ -11,6 +11,7 @@ import type {
   GatewayUnbindMemberRequest,
 } from '../../contracts/index';
 import type { GatewayModelUsage, GatewayUsageSourceInfo } from '../../core/application/usage';
+import type { GatewayProviderServiceDeps } from '../application/GatewayProviderService';
 import type { ResolvedMemberGatewayConnection } from '../application/GatewayProviderService';
 import type { ApiKeyService } from '@main/services/extensions/apikeys/ApiKeyService';
 
@@ -20,7 +21,11 @@ export interface GatewayProviderFeatureFacade {
   deleteGatewayProfile(id: string): Promise<void>;
   probeGatewayModels(request: GatewayProbeModelsRequest): Promise<string[]>;
   listGatewayBindings(teamName?: string): Promise<GatewayMemberBindingDto[]>;
-  bindGatewayMember(request: GatewayBindMemberRequest): Promise<GatewayMemberBindingDto>;
+  bindGatewayMember(
+    request: GatewayBindMemberRequest,
+    draftOwner?: string
+  ): Promise<GatewayMemberBindingDto>;
+  recoverGatewayDraftBindings(owner?: string): Promise<void>;
   unbindGatewayMember(request: GatewayUnbindMemberRequest): Promise<void>;
   retireTeamGatewayBindings(teamName: string): Promise<void>;
   resolveMemberConnection(
@@ -38,30 +43,40 @@ export function createGatewayProviderFeature(deps: {
   storePath: string;
   apiKeys: Pick<ApiKeyService, 'save' | 'readValueById'>;
   onBindingsChanged?: () => void;
+  drafts?: GatewayProviderServiceDeps['drafts'];
 }): GatewayProviderFeatureFacade {
   const service = new GatewayProviderService({
     store: new JsonGatewayProviderStore(deps.storePath),
     credentials: new GatewayCredentialStore(deps.apiKeys),
     clock: { now: () => new Date() },
     onBindingsChanged: deps.onBindingsChanged,
+    drafts: deps.drafts,
   });
 
+  let recovery: Promise<void> | undefined;
+  const ready = <T>(operation: () => Promise<T>): Promise<T> => {
+    recovery ??= service.recoverDraftBindings().catch((error: unknown) => {
+      recovery = undefined;
+      throw error;
+    });
+    return recovery.then(operation);
+  };
   return {
-    listGatewayProfiles: () => service.listProfiles(),
-    saveGatewayProfile: (request) => service.saveProfile(request),
-    deleteGatewayProfile: (id) => service.deleteProfile(id),
-    probeGatewayModels: (request) => service.probeModels(request),
-    listGatewayBindings: (teamName) => service.listBindings(teamName),
-    bindGatewayMember: (request) => service.bindMember(request),
-    unbindGatewayMember: (request) => service.unbindMember(request),
-    retireTeamGatewayBindings: (teamName) => service.unbindTeam(teamName),
+    listGatewayProfiles: () => ready(() => service.listProfiles()),
+    saveGatewayProfile: (request) => ready(() => service.saveProfile(request)),
+    deleteGatewayProfile: (id) => ready(() => service.deleteProfile(id)),
+    probeGatewayModels: (request) => ready(() => service.probeModels(request)),
+    listGatewayBindings: (teamName) => ready(() => service.listBindings(teamName)),
+    bindGatewayMember: (request, owner) => ready(() => service.bindMember(request, owner)),
+    unbindGatewayMember: (request) => ready(() => service.unbindMember(request)),
+    recoverGatewayDraftBindings: (owner) =>
+      ready(() => (owner === undefined ? Promise.resolve() : service.recoverDraftBindings(owner))),
+    retireTeamGatewayBindings: (teamName) => ready(() => service.unbindTeam(teamName)),
     resolveMemberConnection: (teamName, memberName, model) =>
-      service.resolveMemberConnection(teamName, memberName, model),
-    markRuntimeArtifactActive: (gatewayUsageRef) =>
-      service.markRuntimeArtifactActive(gatewayUsageRef),
-    markRuntimeArtifactRetired: (gatewayUsageRef) =>
-      service.markRuntimeArtifactRetired(gatewayUsageRef),
-    listGatewayUsageSources: () => service.listUsageSources(),
-    readGatewayUsageDay: (gatewayUsageRef, day) => service.readUsageDay(gatewayUsageRef, day),
+      ready(() => service.resolveMemberConnection(teamName, memberName, model)),
+    markRuntimeArtifactActive: (ref) => ready(() => service.markRuntimeArtifactActive(ref)),
+    markRuntimeArtifactRetired: (ref) => ready(() => service.markRuntimeArtifactRetired(ref)),
+    listGatewayUsageSources: () => ready(() => service.listUsageSources()),
+    readGatewayUsageDay: (ref, day) => ready(() => service.readUsageDay(ref, day)),
   };
 }
