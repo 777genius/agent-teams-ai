@@ -472,6 +472,71 @@ export function settingsRefreshSettled(observation, now, quietMs = 500) {
   );
 }
 
+export function settingsRefreshFailure(observation) {
+  for (const [recordIndex, record] of observation.records.entries()) {
+    // The observer is cleared immediately before the real settings click. Only
+    // that explicit OpenCode directory refresh can establish this failure.
+    if (
+      record.method !== 'loadProviderDirectory' ||
+      record.input?.runtimeId !== 'opencode' ||
+      record.input.refresh !== true ||
+      record.input.summary === true ||
+      !Number.isFinite(record.completedAt)
+    )
+      continue;
+    let category, cause;
+    const diagnostics = record.response?.directory?.diagnostics;
+    if (record.error) category = cause = 'transport-error';
+    else if (record.response?.error) category = cause = 'runtime-error';
+    else if (
+      record.response?.runtimeId === 'opencode' &&
+      record.response.directory?.runtimeId === 'opencode' &&
+      Array.isArray(diagnostics) &&
+      diagnostics.length
+    ) {
+      category = 'native-diagnostics';
+      // Classify bounded text locally. Never put native messages, paths,
+      // credentials or arbitrary error strings into the CI summary.
+      const messages = diagnostics
+        .slice(0, 32)
+        .map((item) => (typeof item === 'string' ? item : item?.message))
+        .filter((item) => typeof item === 'string')
+        .map((item) => item.slice(0, 4096));
+      cause = messages.some((message) => /inventory probe timed out/i.test(message))
+        ? 'inventory-timeout'
+        : messages.some((message) => /query OpenCode providers:.*timed out/i.test(message))
+          ? 'providers-timeout'
+          : 'native-diagnostics';
+    }
+    if (category)
+      return {
+        phase: 'settings-refresh',
+        category,
+        cause,
+        recordIndex,
+        startedAt: Number.isFinite(record.startedAt) ? record.startedAt : null,
+        completedAt: record.completedAt,
+        diagnosticsCount: Array.isArray(diagnostics) ? diagnostics.length : 0,
+      };
+  }
+  return null;
+}
+
+export function settingsRefreshFailureSummary(failure) {
+  const causes = {
+    'transport-error': ['transport-error'],
+    'runtime-error': ['runtime-error'],
+    'native-diagnostics': ['inventory-timeout', 'providers-timeout', 'native-diagnostics'],
+  };
+  if (
+    failure?.phase !== 'settings-refresh' ||
+    !Object.hasOwn(causes, failure.category) ||
+    !causes[failure.category].includes(failure.cause)
+  )
+    return null;
+  return { phase: 'settings-refresh', category: failure.category, cause: failure.cause };
+}
+
 export function qualifySettings(response) {
   assert.equal(response?.schemaVersion, 1);
   assert.equal(response.runtimeId, 'opencode');
@@ -884,6 +949,11 @@ export async function verifyPackaged({
         && Boolean(document.querySelector('[role="dialog"] [data-testid="runtime-provider-refresh-catalog"]:not(:disabled)'))
         && !document.querySelector('[role="dialog"] [data-testid="runtime-provider-loading-skeleton"]')`);
       evidence.settingsRefreshObservation.ready = ready;
+      const failure = settingsRefreshFailure(requests);
+      if (failure) {
+        evidence.settingsRefreshFailure = failure;
+        throw new Error(`Settings refresh completed with ${failure.category}: ${failure.cause}`);
+      }
       if (ready && settled) {
         settingsRendered = true;
         break;

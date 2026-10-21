@@ -8,6 +8,7 @@ import path from 'node:path';
 import { connect, createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { packagedArguments, packagedDrainSnapshot } from './packaged.mjs';
+import { settingsRefreshFailureSummary } from './packaged-verify.mjs';
 import {
   processes,
   listeners,
@@ -74,6 +75,23 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
     );
     const verified = command('verify', [root], 900000);
     await writeFile(path.join(runDir, 'verify.txt'), verified.stdout + verified.stderr);
+    if (verified.status !== 0) {
+      const evidencePath = path.join(runDir, 'evidence.json');
+      try {
+        const leaf = await lstat(evidencePath);
+        assert(leaf.isFile() && !leaf.isSymbolicLink() && leaf.size <= 4 * 1024 * 1024);
+        const evidence = JSON.parse(await readFile(evidencePath, 'utf8'));
+        const failure = settingsRefreshFailureSummary(evidence.settingsRefreshFailure);
+        if (failure) {
+          result.settingsRefreshFailure = failure;
+          console.error(
+            `[opencode-packaged] ${run}: ${failure.phase}/${failure.category}/${failure.cause}; evidence: ${evidencePath}`
+          );
+        }
+      } catch {
+        // Diagnostic collection never replaces the original verification failure.
+      }
+    }
     assert.equal(
       verified.status,
       0,

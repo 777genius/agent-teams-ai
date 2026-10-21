@@ -33,6 +33,8 @@ import {
   qualifyProjectStatus,
   qualifySettings,
   settingsRefreshSettled,
+  settingsRefreshFailure,
+  settingsRefreshFailureSummary,
   waitForAppVersion,
   qualifyModels,
   collectPages,
@@ -1120,6 +1122,114 @@ test('settings refresh waits for fresh explicit request and delayed settlement',
     ),
     false
   );
+});
+
+test('completed warm settings failures retain the native cause without waiting for UI loading', () => {
+  // Minimal relevant fields from the actual H0e58 warm-1 and warm-2 receipts.
+  const cases = [
+    {
+      startedAt: 1792552357554,
+      completedAt: 1792552393444,
+      diagnostics: ['Failed to query OpenCode providers: OpenCode command timed out after 10000ms'],
+      cause: 'providers-timeout',
+    },
+    {
+      startedAt: 1792552683836,
+      completedAt: 1792552746769,
+      diagnostics: [
+        'OpenCode inventory probe timed out after 60000ms during opencode models --refresh',
+      ],
+      cause: 'inventory-timeout',
+    },
+  ];
+  for (const { cause, diagnostics, ...timing } of cases) {
+    const record = {
+      method: 'loadProviderDirectory',
+      input: { runtimeId: 'opencode', projectPath: null, refresh: true },
+      response: {
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        directory: { runtimeId: 'opencode', diagnostics },
+      },
+      ...timing,
+    };
+    const failure = settingsRefreshFailure({ records: [record], overflow: false });
+    assert.deepEqual(failure, {
+      phase: 'settings-refresh',
+      category: 'native-diagnostics',
+      cause,
+      recordIndex: 0,
+      ...timing,
+      diagnosticsCount: 1,
+    });
+    assert.equal(
+      settingsRefreshSettled({ records: [record], overflow: false }, timing.completedAt + 500),
+      false
+    );
+    assert.deepEqual(settingsRefreshFailureSummary(failure), {
+      phase: 'settings-refresh',
+      category: 'native-diagnostics',
+      cause,
+    });
+  }
+});
+
+test('settings completed-failure reporting ignores unfinished and unrelated observations', () => {
+  const own = {
+    method: 'loadProviderDirectory',
+    input: { runtimeId: 'opencode', refresh: true },
+    completedAt: 1000,
+    error: 'transport failed with secret-token-and-path',
+  };
+  for (const unrelated of [
+    { ...own, completedAt: undefined },
+    { ...own, method: 'loadModels' },
+    { ...own, input: { runtimeId: 'codex', refresh: true } },
+    { ...own, input: { runtimeId: 'opencode', refresh: false } },
+    { ...own, input: { runtimeId: 'opencode', refresh: true, summary: true } },
+  ])
+    assert.equal(settingsRefreshFailure({ records: [unrelated], overflow: false }), null);
+  const failure = settingsRefreshFailure({ records: [own], overflow: false });
+  assert.equal(failure.category, 'transport-error');
+  assert(!JSON.stringify(failure).includes('secret-token-and-path'));
+  assert.deepEqual(settingsRefreshFailureSummary(failure), {
+    phase: 'settings-refresh',
+    category: 'transport-error',
+    cause: 'transport-error',
+  });
+  const runtime = { ...own, error: undefined, response: { error: { message: 'secret' } } };
+  assert.equal(
+    settingsRefreshFailure({ records: [runtime], overflow: false }).category,
+    'runtime-error'
+  );
+  assert.equal(settingsRefreshFailureSummary({ ...failure, cause: 'secret' }), null);
+});
+
+test('settings failure observation preserves the existing successful quiet interval', () => {
+  const observation = {
+    records: [
+      {
+        method: 'loadProviderDirectory',
+        input: { runtimeId: 'opencode', refresh: true },
+        response: {
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          directory: {
+            runtimeId: 'opencode',
+            entries: [],
+            returnedCount: 0,
+            totalCount: 0,
+            diagnostics: [],
+          },
+        },
+        completedAt: 1000,
+      },
+    ],
+    overflow: false,
+  };
+  assert.equal(settingsRefreshFailure(observation), null);
+  assert.equal(settingsRefreshSettled(observation, 1499), false);
+  assert.equal(settingsRefreshSettled(observation, 1500), true);
 });
 
 test('packaged cleanup stops main before recovering helpers and drains sockets jointly', () => {
