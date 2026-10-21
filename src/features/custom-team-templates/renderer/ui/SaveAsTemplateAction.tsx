@@ -62,7 +62,6 @@ export const SaveAsTemplateAction = ({
         // itself stops its own events), so a click on the overlay or an
         // Enter/Space press must not bubble into the row's open-team handler.
         // `display: contents` keeps the wrapper out of the row's layout.
-        // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events
         <div
           className="contents"
           onClick={(event) => event.stopPropagation()}
