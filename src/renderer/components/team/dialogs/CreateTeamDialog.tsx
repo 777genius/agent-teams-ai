@@ -48,7 +48,6 @@ import {
 } from '@renderer/components/ui/dialog';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
-import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import {
   Select,
   SelectContent,
@@ -108,6 +107,7 @@ import {
   getOrganizationPlacementUnitOptions,
   getOrganizationUnitLabel,
 } from './createTeamOrganizationPlacement';
+import { CreateTeamPromptField } from './CreateTeamPromptField';
 import { sanitizeTeamName, validateRequest } from './createTeamSubmissionValidation';
 import { buildProviderModelChecksMap } from './defaultModelSelection';
 import {
@@ -360,6 +360,11 @@ export const CreateTeamDialog = ({
   const descriptionDraft = useDraftPersistence({ key: 'createTeam:description' });
   const promptDraft = useDraftPersistence({ key: 'createTeam:prompt' });
   const promptChipDraft = useChipDraftPersistence('createTeam:prompt:chips');
+  // Template source that prefilled the current form; keeps the prompt field
+  // visible for template-driven config-only creation (launchTeam=false).
+  const [appliedTemplateSource, setAppliedTemplateSource] = useState<'none' | 'builtin' | 'custom'>(
+    'none'
+  );
   const [projects, setProjects] = useState<ProjectPathProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
@@ -545,6 +550,7 @@ export const CreateTeamDialog = ({
     descriptionDraft.clearDraft();
     promptDraft.clearDraft();
     promptChipDraft.clearChipDraft();
+    setAppliedTemplateSource('none');
     resetUIState();
   };
 
@@ -2453,6 +2459,7 @@ export const CreateTeamDialog = ({
             <CreateTeamTemplatePicker
               open={open}
               onApply={(draft, source) => {
+                setAppliedTemplateSource(source);
                 // A real template switches to the previous template semantics
                 // (config-only draft). Going back to "no template" only clears
                 // the template-derived content and leaves launch and runtime
@@ -2562,6 +2569,20 @@ export const CreateTeamDialog = ({
               </div>
             </div>
 
+            {launchTeam || appliedTemplateSource !== 'none' ? (
+              <div className="mt-4">
+                <CreateTeamPromptField
+                  promptDraft={promptDraft}
+                  chipDraft={promptChipDraft}
+                  soloTeam={soloTeam}
+                  mentionSuggestions={mentionSuggestions}
+                  teamSuggestions={teamMentionSuggestions}
+                  taskSuggestions={taskSuggestions}
+                  projectPath={effectiveCwd || null}
+                />
+              </div>
+            ) : null}
+
             {launchTeam ? (
               <div className="mt-4 space-y-4">
                 <ProjectPathSelector
@@ -2629,35 +2650,6 @@ export const CreateTeamDialog = ({
                         ) : null}
                       </div>
                     ) : null}
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="team-prompt" className="label-optional">
-                        {t('create.fields.prompt')}
-                      </Label>
-                      <MentionableTextarea
-                        id="team-prompt"
-                        className="text-xs"
-                        minRows={3}
-                        maxRows={12}
-                        value={prompt}
-                        onValueChange={promptDraft.setValue}
-                        suggestions={soloTeam ? [] : mentionSuggestions}
-                        teamSuggestions={teamMentionSuggestions}
-                        taskSuggestions={taskSuggestions}
-                        projectPath={effectiveCwd || null}
-                        chips={promptChipDraft.chips}
-                        onChipRemove={promptChipDraft.removeChip}
-                        onFileChipInsert={promptChipDraft.addChip}
-                        placeholder={t('create.placeholders.prompt')}
-                        footerRight={
-                          promptDraft.isSaved ? (
-                            <span className="text-[10px] text-[var(--color-text-muted)]">
-                              {t('create.saved')}
-                            </span>
-                          ) : null
-                        }
-                      />
-                    </div>
 
                     <SkipPermissionsCheckbox
                       id="create-skip-permissions"

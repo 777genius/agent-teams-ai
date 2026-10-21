@@ -141,6 +141,9 @@ vi.mock('@renderer/api', () => ({
         canUseWorktrees: true,
       })),
     },
+    customTeamTemplates: {
+      listTemplates: vi.fn(async () => ({ status: 'empty' as const })),
+    },
     projectFolder: {
       getState: vi.fn(async () => ({ state: 'exists' as const })),
       create: vi.fn(async () => ({ state: 'exists' as const })),
@@ -653,6 +656,7 @@ vi.mock('@renderer/components/team/dialogs/CodexFastModeSelector', () => ({
     ),
 }));
 
+import { TEAM_TEMPLATES } from '@features/team-templates';
 import { sanitizeProviderStatusAuthority } from '@main/services/runtime/providerStatusCheckContract';
 import { api } from '@renderer/api';
 import { CreateTeamDialog } from '@renderer/components/team/dialogs/CreateTeamDialog';
@@ -1548,6 +1552,200 @@ describe('LaunchTeamDialog', () => {
     await act(async () => vi.runOnlyPendingTimersAsync());
     expect(createButton?.disabled).toBe(true);
     await act(async () => createDialogRoot.unmount());
+  });
+
+  describe('CreateTeamDialog template prompt editing', () => {
+    const customTemplateRecord = {
+      templateId: 'tmpl-review-1',
+      name: 'Review Template',
+      description: 'Saved review template',
+      schemaVersion: 1,
+      teamPrompt: 'Template lead prompt',
+      members: [{ name: 'backend-dev', role: 'Backend Developer', workflow: 'Build APIs' }],
+      revision: 2,
+      createdAt: '2026-09-10T10:00:00.000Z',
+    };
+
+    /**
+     * The shared useCreateTeamDraft mock exposes plain vi.fn() setters, so
+     * applying a template would never actually flip launchTeam in the mocked
+     * draft state. This swaps setLaunchTeam for a state-mutating stand-in to
+     * mirror the real hook, and returns a restore callback.
+     */
+    function installStatefulLaunchTeamSetter(): () => void {
+      const original = createTeamDraftMock.state.setLaunchTeam;
+      createTeamDraftMock.state.setLaunchTeam = ((value: boolean) => {
+        createTeamDraftMock.state.launchTeam = value;
+      }) as typeof createTeamDraftMock.state.setLaunchTeam;
+      return () => {
+        createTeamDraftMock.state.setLaunchTeam = original;
+      };
+    }
+
+    async function renderCreateDialog(
+      host: HTMLElement,
+      root: ReturnType<typeof createRoot>
+    ): Promise<() => Promise<void>> {
+      const onCreate = vi.fn(async () => {});
+      await act(async () => {
+        root.render(
+          React.createElement(CreateTeamDialog, {
+            open: true,
+            canCreate: true,
+            provisioningErrorsByTeam: {},
+            existingTeamNames: [],
+            activeTeams: [],
+            defaultProjectPath: '/tmp/project',
+            onClose: vi.fn(),
+            onCreate,
+            onOpenTeam: vi.fn(),
+          })
+        );
+        await flush();
+      });
+      // Let the custom-template library load so picker options are rendered.
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        if (host.querySelector('[data-testid="create-template-option-none"]')) break;
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          await flush();
+        });
+      }
+      return onCreate as unknown as () => Promise<void>;
+    }
+
+    function setPromptTextarea(host: HTMLElement, value: string): HTMLTextAreaElement {
+      const textarea = host.querySelector('textarea#team-prompt') as HTMLTextAreaElement | null;
+      if (!textarea) throw new Error('Expected the team prompt field to be rendered.');
+      // Bypass React's value tracker so the controlled textarea registers the edit.
+      const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!;
+      setter.call(textarea, value);
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      return textarea;
+    }
+
+    function findCreateButton(host: HTMLElement): HTMLButtonElement | undefined {
+      return Array.from(host.querySelectorAll('button')).find(
+        (button) =>
+          button.textContent?.trim() === 'Create' &&
+          !button.closest('[data-testid="create-team-template-picker"]')
+      ) as HTMLButtonElement | undefined;
+    }
+
+    it('keeps a saved template prompt editable and submits the edited prompt config-only', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.mocked(api.customTeamTemplates.listTemplates).mockResolvedValue({
+        status: 'ready',
+        templates: [customTemplateRecord],
+      } as any);
+      const restoreLaunchTeam = installStatefulLaunchTeamSetter();
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      try {
+        const onCreate = await renderCreateDialog(host, root);
+        // Ordinary launch flow keeps its prompt field.
+        expect(host.querySelector('textarea#team-prompt')).not.toBeNull();
+        const customOption = host.querySelector(
+          '[data-testid="create-template-option-custom-tmpl-review-1"]'
+        ) as HTMLButtonElement | null;
+        expect(customOption, host.textContent ?? '').not.toBeNull();
+        await act(async () => {
+          customOption!.click();
+          await flush();
+        });
+        expect(createTeamDraftMock.state.launchTeam).toBe(false);
+        // Regression: applying the template switches to config-only semantics,
+        // but the template prompt must stay visible and editable before submit.
+        const textarea = host.querySelector('textarea#team-prompt') as HTMLTextAreaElement | null;
+        expect(textarea, host.textContent ?? '').not.toBeNull();
+        expect(textarea!.value).toBe('Template lead prompt');
+        await act(async () => {
+          setPromptTextarea(host, 'Edited template lead prompt');
+          await flush();
+        });
+        const createButton = findCreateButton(host);
+        expect(createButton?.disabled, host.textContent ?? '').toBe(false);
+        await act(async () => {
+          createButton!.click();
+          await flush();
+        });
+        expect(api.teams.createConfig).toHaveBeenCalledTimes(1);
+        const payload = vi.mocked(api.teams.createConfig).mock.calls[0]?.[0] as any;
+        expect(payload.prompt).toBe('Edited template lead prompt');
+        expect(onCreate).not.toHaveBeenCalled();
+      } finally {
+        await act(async () => root.unmount());
+        restoreLaunchTeam();
+        vi.mocked(api.customTeamTemplates.listTemplates).mockReset();
+        vi.mocked(api.customTeamTemplates.listTemplates).mockResolvedValue({
+          status: 'empty',
+        } as any);
+      }
+    });
+
+    it('keeps a built-in template prompt editable the same way', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const restoreLaunchTeam = installStatefulLaunchTeamSetter();
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      const builtin = TEAM_TEMPLATES.find((entry) => entry.id === 'marketing');
+      try {
+        await renderCreateDialog(host, root);
+        const builtinOption = host.querySelector(
+          '[data-testid="create-template-option-builtin-marketing"]'
+        ) as HTMLButtonElement | null;
+        expect(builtinOption, host.textContent ?? '').not.toBeNull();
+        await act(async () => {
+          builtinOption!.click();
+          await flush();
+        });
+        expect(createTeamDraftMock.state.launchTeam).toBe(false);
+        const textarea = host.querySelector('textarea#team-prompt') as HTMLTextAreaElement | null;
+        expect(textarea, host.textContent ?? '').not.toBeNull();
+        expect(textarea!.value).toBe(builtin?.teamPrompt);
+        await act(async () => {
+          setPromptTextarea(host, 'Edited builtin lead prompt');
+          await flush();
+        });
+        const createButton = findCreateButton(host);
+        expect(createButton?.disabled, host.textContent ?? '').toBe(false);
+        await act(async () => {
+          createButton!.click();
+          await flush();
+        });
+        expect(api.teams.createConfig).toHaveBeenCalledTimes(1);
+        const payload = vi.mocked(api.teams.createConfig).mock.calls[0]?.[0] as any;
+        expect(payload.prompt).toBe('Edited builtin lead prompt');
+      } finally {
+        await act(async () => root.unmount());
+        restoreLaunchTeam();
+      }
+    });
+
+    it('hides the prompt field for ordinary config-only creation without a template', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      createTeamDraftMock.state.launchTeam = false;
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      try {
+        await renderCreateDialog(host, root);
+        expect(host.querySelector('textarea#team-prompt')).toBeNull();
+        const createButton = findCreateButton(host);
+        expect(createButton?.disabled, host.textContent ?? '').toBe(false);
+        await act(async () => {
+          createButton!.click();
+          await flush();
+        });
+        expect(api.teams.createConfig).toHaveBeenCalledTimes(1);
+        const payload = vi.mocked(api.teams.createConfig).mock.calls[0]?.[0] as any;
+        expect(payload.prompt).toBeUndefined();
+      } finally {
+        await act(async () => root.unmount());
+      }
+    });
   });
 
   it('shows the Codex account/runtime launch mismatch when Create is disabled', async () => {
