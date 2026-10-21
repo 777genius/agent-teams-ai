@@ -7,6 +7,8 @@ const {
   buildElectronBuilderInvocations,
   buildNativeRebuildPlan,
   buildNativeRestorePlan,
+  isRetryableDmgDetachFailure,
+  runWithDmgDetachRetry,
   runWithNativeDependencyRestore,
 } = require('../../../scripts/electron-builder/dist-invocations.cjs');
 
@@ -451,5 +453,79 @@ describe('electron-builder dist wrapper', () => {
         packageTarget: async () => undefined,
       })
     ).rejects.toThrow('restore failed');
+  });
+});
+
+describe('electron-builder DMG detach retry', () => {
+  const detachFailureOutput =
+    "dmgbuild.core.DMGError: Unable to detach device cleanly: hdiutil: couldn't eject \"disk2\" - Resource busy";
+
+  function detachFlakeError(): Error & { output?: string } {
+    const error: Error & { output?: string } = new Error(
+      'electron-builder failed with exit code 1'
+    );
+    error.output = detachFailureOutput;
+    return error;
+  }
+
+  it('classifies the dmgbuild clean-detach failure from packaged CI run 39495942432', () => {
+    expect(isRetryableDmgDetachFailure(detachFailureOutput)).toBe(true);
+    expect(
+      isRetryableDmgDetachFailure("hdiutil: couldn't eject \"disk2\" - Resource busy")
+    ).toBe(true);
+    expect(
+      isRetryableDmgDetachFailure('Exit code: 1. Command failed: /cache/dmgbuild -s 2.json')
+    ).toBe(false);
+  });
+
+  it('retries once after a detach flake and resolves the second attempt', async () => {
+    const calls: number[] = [];
+    const result = await runWithDmgDetachRetry(
+      async (attempt: number) => {
+        calls.push(attempt);
+        if (attempt === 1) {
+          throw detachFlakeError();
+        }
+        return 'packaged';
+      },
+      { delayMs: 0, log: { warn: () => undefined } }
+    );
+
+    expect(result).toBe('packaged');
+    expect(calls).toEqual([1, 2]);
+  });
+
+  it('does not retry failures that are not detach flakes', async () => {
+    const calls: number[] = [];
+    const failure: Error & { output?: string } = new Error(
+      'electron-builder failed with exit code 1'
+    );
+    failure.output = 'Found incompatible native binaries in win32-arm64 bundle after pruning';
+
+    await expect(
+      runWithDmgDetachRetry(
+        async (attempt: number) => {
+          calls.push(attempt);
+          throw failure;
+        },
+        { delayMs: 0, log: { warn: () => undefined } }
+      )
+    ).rejects.toBe(failure);
+    expect(calls).toEqual([1]);
+  });
+
+  it('stops after the attempt budget when the volume stays busy', async () => {
+    const calls: number[] = [];
+
+    await expect(
+      runWithDmgDetachRetry(
+        async (attempt: number) => {
+          calls.push(attempt);
+          throw detachFlakeError();
+        },
+        { delayMs: 0, log: { warn: () => undefined } }
+      )
+    ).rejects.toThrow('electron-builder failed with exit code 1');
+    expect(calls).toEqual([1, 2]);
   });
 });

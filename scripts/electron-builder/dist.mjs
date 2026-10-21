@@ -10,6 +10,7 @@ const {
   buildElectronBuilderInvocations,
   buildNativeRebuildPlan,
   buildNativeRestorePlan,
+  runWithDmgDetachRetry,
   runWithNativeDependencyRestore,
 } = require('./dist-invocations.cjs');
 
@@ -17,6 +18,7 @@ export {
   buildElectronBuilderInvocations,
   buildNativeRebuildPlan,
   buildNativeRestorePlan,
+  runWithDmgDetachRetry,
   runWithNativeDependencyRestore,
 };
 
@@ -78,13 +80,21 @@ async function runRendererBundleGuard() {
   });
 }
 
-async function runElectronBuilder(args) {
-  const cliPath = require.resolve('electron-builder/cli.js');
-  await new Promise((resolve, reject) => {
+function runElectronBuilderOnce(cliPath, args) {
+  return new Promise((resolve, reject) => {
+    let output = '';
     const child = spawn(process.execPath, [cliPath, ...args], {
-      stdio: 'inherit',
+      stdio: ['inherit', 'pipe', 'pipe'],
       env: process.env,
     });
+    const capture = (stream, targetStream) => {
+      stream.on('data', (chunk) => {
+        output += chunk.toString();
+        targetStream.write(chunk);
+      });
+    };
+    capture(child.stdout, process.stdout);
+    capture(child.stderr, process.stderr);
 
     child.on('error', reject);
     child.on('exit', (code, signal) => {
@@ -92,9 +102,16 @@ async function runElectronBuilder(args) {
         resolve();
         return;
       }
-      reject(new Error(`electron-builder failed with ${signal ?? `exit code ${code}`}`));
+      const error = new Error(`electron-builder failed with ${signal ?? `exit code ${code}`}`);
+      error.output = output;
+      reject(error);
     });
   });
+}
+
+async function runElectronBuilder(args) {
+  const cliPath = require.resolve('electron-builder/cli.js');
+  await runWithDmgDetachRetry(() => runElectronBuilderOnce(cliPath, args));
 }
 
 export async function main(argv, {
