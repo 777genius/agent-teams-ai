@@ -42,7 +42,10 @@ credential actions and survive roster cancellation. The selector explains this.
 Bindings first allocated for an unsaved member are persisted with the issuing renderer
 document's ownership and removed on cancellation. Renderer termination/reload and app
 startup recover those provisional receipts under the existing roster configuration
-fence. Saved members in `members.meta.json` or `config.json`, launch-history sources,
+fence. Initial recovery starts in the background after that fence is wired and does
+not gate app startup or ordinary gateway APIs. Service-local live owners protect
+current renderer drafts; startup reclaims only previous-process receipts, while
+explicit renderer-loss recovery releases its owner's receipts. Saved members in `members.meta.json` or `config.json`, launch-history sources,
 and runtime artifacts retain their bindings and immutable key ownership. Recovery
 never infers abandonment from age or an offline team. Unreadable roster/history
 evidence preserves that team's ownership, logs a safe warning, and lets healthy

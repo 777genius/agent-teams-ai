@@ -16,7 +16,7 @@ import type { TeamDataService } from '@main/services/team/TeamDataService';
 import type { IpcMain } from 'electron';
 
 /** App-shell composition of gateway IPC, native launch metadata and OpenCode artifacts. */
-export async function composeGatewayProviderRuntime(deps: {
+export function composeGatewayProviderRuntime(deps: {
   ipcMain: IpcMain;
   apiKeys: Pick<ApiKeyService, 'save' | 'readValueById'>;
   appDataPath: string;
@@ -47,9 +47,6 @@ export async function composeGatewayProviderRuntime(deps: {
     connector: gatewayProviderConnector,
     runsPath: join(deps.appDataPath, 'gateway-provider', 'runs.json'),
     onRetirementFailure: () => logger.warn('Could not retire an owned gateway artifact.'),
-  });
-  await gatewayProviderRuntime.feature.recoverGatewayDraftBindings().catch((error: unknown) => {
-    logger.warn('Could not recover gateway drafts; their saved ownership is preserved.', error);
   });
   return { gatewayProviderRuntime, gatewayProviderConnector, gatewayLaunchRuntime };
 }

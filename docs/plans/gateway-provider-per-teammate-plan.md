@@ -735,8 +735,10 @@ fixture/test APIs, без Computer Use/нативного folder picker. Live sm
 - A binding allocated for a member absent from the saved roster carries durable
   ownership of the issuing renderer document. Cancellation, document reload/crash,
   and app restart reclaim only matching provisional receipts. No TTL is used.
-- Recovery shares the existing configuration fence with roster writes and team
-  lifecycle operations. Both saved offline `members.meta.json` rosters and native
+- Initial recovery starts in the background after the existing configuration fence
+  is wired, without gating startup or ordinary APIs. Service-local live owners
+  protect current renderer drafts; exact previous-process or explicit-loss receipts
+  recover under that fence with roster writes and team lifecycle operations. Both saved offline `members.meta.json` rosters and native
   `config.json` rosters count as saved membership. Launch snapshots and runtime
   artifacts preserve source ownership/history even without a current live process.
 - A never-saved, never-launched draft releases its binding, profile reservation,

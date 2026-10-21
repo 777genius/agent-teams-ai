@@ -83,6 +83,7 @@ export class GatewayProviderService {
   private readonly readUsageDayImpl: typeof readGatewayUsageDay;
   private readonly onBindingsChanged?: () => void;
   private readonly drafts?: GatewayProviderServiceDeps['drafts'];
+  private readonly liveDraftOwners = new Set<string>();
 
   constructor(deps: GatewayProviderServiceDeps) {
     this.store = deps.store;
@@ -209,6 +210,7 @@ export class GatewayProviderService {
     const memberName = requireName(request.memberName, 'Member name');
     const apiKey = request.apiKey.trim();
     if (!apiKey) throw new GatewayValidationError('Gateway API key is required.');
+    if (draftOwner && this.drafts) this.liveDraftOwners.add(draftOwner);
     const saved =
       !draftOwner || !this.drafts || (await this.drafts.isMemberSaved(teamName, memberName));
     const fingerprint = hashGatewayLiteral(apiKey);
@@ -287,10 +289,11 @@ export class GatewayProviderService {
       const previous = state.bindings[bindingIndex];
       const provisional = !saved && (!previous || Boolean(previous.draftOwner));
       // Receipts must differ even when a draft rebind happens in the same clock tick.
-      const boundAt =
-        previous && previous.boundAt >= nowIso
-          ? new Date(Date.parse(previous.boundAt) + 1).toISOString()
-          : nowIso;
+      const previousTime = Date.parse(previous?.boundAt ?? '');
+      const receiptDate = new Date(
+        Math.max(now.getTime(), Number.isFinite(previousTime) ? previousTime + 1 : now.getTime())
+      );
+      const boundAt = Number.isFinite(receiptDate.getTime()) ? receiptDate.toISOString() : nowIso;
       const binding = {
         ...(provisional ? { draftOwner } : {}),
         teamName,
@@ -330,6 +333,10 @@ export class GatewayProviderService {
 
   async recoverDraftBindings(owner?: string): Promise<void> {
     if (!this.drafts) return;
+    if (owner !== undefined) this.liveDraftOwners.delete(owner);
+    const eligible = (draftOwner: string | undefined): boolean =>
+      Boolean(draftOwner) &&
+      (owner === undefined ? !this.liveDraftOwners.has(draftOwner!) : draftOwner === owner);
     const snapshot = await this.store.read();
     const failedTeams = new Set<string>();
     const attempt = async (teamName: string, operation: () => Promise<void>): Promise<void> => {
@@ -343,9 +350,7 @@ export class GatewayProviderService {
         this.drafts!.onRecoveryFailure?.(teamName);
       }
     };
-    const pending = snapshot.bindings.filter(
-      (binding) => binding.draftOwner && (owner === undefined || binding.draftOwner === owner)
-    );
+    const pending = snapshot.bindings.filter((binding) => eligible(binding.draftOwner));
     for (const receipt of pending) {
       await attempt(receipt.teamName, async () => {
         const saved = await this.drafts!.isMemberSaved(receipt.teamName, receipt.memberName);
@@ -359,7 +364,7 @@ export class GatewayProviderService {
               binding.boundAt === receipt.boundAt &&
               binding.draftOwner === receipt.draftOwner
           );
-          if (index === -1) return;
+          if (index === -1 || !eligible(state.bindings[index].draftOwner)) return;
           const source = state.sources.find(
             (entry) => entry.gatewayUsageRef === receipt.gatewayUsageRef
           );
@@ -379,10 +384,7 @@ export class GatewayProviderService {
       });
     }
     for (const receipt of snapshot.sources.filter(
-      (source) =>
-        source.draftOnly &&
-        source.draftOwner &&
-        (owner === undefined || source.draftOwner === owner)
+      (source) => source.draftOnly && eligible(source.draftOwner)
     )) {
       await attempt(receipt.teamName, async () => {
         const saved = await this.drafts!.isMemberSaved(receipt.teamName, receipt.memberName);
@@ -394,7 +396,7 @@ export class GatewayProviderService {
               entry.draftOwner === receipt.draftOwner &&
               entry.lastBoundAt === receipt.lastBoundAt
           );
-          if (!source || !source.draftOnly) return;
+          if (!source || !source.draftOnly || !eligible(source.draftOwner)) return;
           if (saved || used || source.hasRuntimeArtifact) {
             delete source.draftOnly;
             delete source.draftOwner;

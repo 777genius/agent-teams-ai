@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import { isGatewayMemberSaved } from '@main/services/gateway/GatewayDraftRoster';
 import { GatewayRunMetadataStore } from '@main/services/gateway/GatewayRunMetadataStore';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { GatewayCredentialStore } from '../main/adapters/output/GatewayCredentialStore';
 import { GatewayProviderService } from '../main/application/GatewayProviderService';
@@ -207,6 +207,72 @@ describe('gateway draft recovery', () => {
     });
   });
 
+  it('keeps ordinary APIs and live-owner cleanup independent of delayed startup recovery', async () => {
+    const { service, bind, storePath, apiKeys, drafts, profile } = await fixture();
+    await bind(service, 'stale', 'old-process');
+    const feature = createGatewayProviderFeature({ storePath, apiKeys, drafts });
+    let resumeRead!: () => void;
+    const paused = new Promise<void>((resolve) => {
+      resumeRead = resolve;
+    });
+    const originalRead = JsonGatewayProviderStore.prototype.read;
+    const read = vi
+      .spyOn(JsonGatewayProviderStore.prototype, 'read')
+      .mockImplementationOnce(async function (this: JsonGatewayProviderStore) {
+        await paused;
+        return originalRead.call(this);
+      });
+    const recovery = feature.recoverGatewayDraftBindings();
+    try {
+      // These settle while the initial recovery read is still paused.
+      expect(await feature.listGatewayProfiles()).toHaveLength(1);
+      await feature.bindGatewayMember(
+        { teamName: 'sandbox', memberName: 'live', profileId: profile.id, apiKey: 'live-key' },
+        'current-document'
+      );
+      await feature.bindGatewayMember(
+        { teamName: 'sandbox', memberName: 'closed', profileId: profile.id, apiKey: 'closed-key' },
+        'closed-document'
+      );
+      await feature.recoverGatewayDraftBindings('closed-document');
+      expect((await feature.listGatewayBindings()).map((binding) => binding.memberName)).toEqual([
+        'stale',
+        'live',
+      ]);
+      resumeRead();
+      await recovery;
+      expect((await feature.listGatewayBindings()).map((binding) => binding.memberName)).toEqual([
+        'live',
+      ]);
+      await feature.recoverGatewayDraftBindings('current-document');
+      expect(await feature.listGatewayBindings()).toEqual([]);
+      expect(await feature.listGatewayUsageSources()).toEqual([]);
+    } finally {
+      resumeRead();
+      await recovery;
+      read.mockRestore();
+    }
+  });
+
+  it.each(['z-invalid-date', '+275760-09-13T00:00:00.000Z'])(
+    'rebinds a persisted receipt with an invalid or overflowing timestamp: %s',
+    async (boundAt) => {
+      const { service, bind, store } = await fixture();
+      await bind(service, 'alice', 'document');
+      await store.mutate((state) => {
+        state.bindings[0].boundAt = boundAt;
+      });
+      const replacement = await bind(service, 'alice', 'document');
+      expect(replacement.boundAt).toBe('2026-10-21T00:00:00.000Z');
+      await service.unbindMember({
+        teamName: 'sandbox',
+        memberName: 'alice',
+        expectedBinding: { gatewayUsageRef: replacement.gatewayUsageRef, boundAt },
+      });
+      expect(await service.listBindings()).toHaveLength(1);
+    }
+  );
+
   it('isolates unreadable roster recovery from healthy drafts and saved facade operations', async () => {
     const { service, bind, dir, store, apiKeys, storePath, drafts, recoveryFailures, profile } =
       await fixture();
@@ -226,8 +292,9 @@ describe('gateway draft recovery', () => {
       { teamName: 'healthy', memberName: 'unsaved', profileId: profile.id, apiKey: 'unsaved-key' },
       'dead-renderer'
     );
-    // The public startup gate must resolve even though a different team's evidence is corrupt.
+    // Explicit startup recovery preserves the bad team without blocking healthy connections.
     const feature = createGatewayProviderFeature({ storePath, apiKeys, drafts });
+    await feature.recoverGatewayDraftBindings();
     expect(await feature.listGatewayProfiles()).toHaveLength(1);
     expect(
       (await feature.listGatewayBindings('healthy')).map((binding) => binding.memberName)
