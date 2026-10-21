@@ -11,13 +11,6 @@ export type NativeCommandExpectation = {
   session: string; program: string; marker: string; model: string;
 };
 
-/** Closed identifiers in redacted diagnostic text; the text itself never leaves. */
-const closedDiagnosticTokens = (values: readonly (string | undefined)[] | undefined) =>
-  [...new Set((values ?? []).flatMap((value) =>
-    typeof value === 'string'
-      ? value.match(/\b(?:[a-z][a-z0-9]*(?:_[a-z0-9]+){1,12}|EPERM|EACCES|ENOENT|ENOTDIR|EISDIR|EINVAL|EIO|ENOSYS|EBUSY|EEXIST|ELOOP|UNKNOWN|[A-Z][A-Za-z]{1,30}Error)\b/g) ?? []
-      : []))].slice(0, 16);
-
 /** The exact acceptance predicates, also used for finite failure observations. */
 export function nativeCommandMatch(execution: NativeCommandExecution, program: string, marker: string) {
   const command = execution.toolCall.input.command;
@@ -81,6 +74,14 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
     throw new Error('TEST project required; host must also verify its opt-in marker');
   }
   const progress: TeamProvisioningProgress[] = [];
+  // The host serializes this factory into the renderer (CDP), so every helper it
+  // uses must live inside the factory body; module scope does not exist there.
+  /** Closed identifiers in redacted diagnostic text; the text itself never leaves. */
+  const closedDiagnosticTokens = (values: readonly (string | undefined)[] | undefined) =>
+    [...new Set((values ?? []).flatMap((value) =>
+      typeof value === 'string'
+        ? value.match(/\b(?:[a-z][a-z0-9]*(?:_[a-z0-9]+){1,12}|EPERM|EACCES|ENOENT|ENOTDIR|EISDIR|EINVAL|EIO|ENOSYS|EBUSY|EEXIST|ELOOP|UNKNOWN|[A-Z][A-Za-z]{1,30}Error)\b/g) ?? []
+        : []))].slice(0, 16);
   let runId: string | undefined;
   let submitted = false;
   let createBoundary: 'not_submitted' | 'project_registration' | 'team_create' | 'created' =

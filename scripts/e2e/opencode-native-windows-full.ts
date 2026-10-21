@@ -71,6 +71,21 @@ const closedRawField = (value: unknown) =>
     : value === undefined || value === null
       ? null
       : 'non_closed_shape';
+/** Closed identifiers in redacted diagnostic text; the text itself never leaves. */
+const closedDiagnosticTokens = (values: unknown) =>
+  Array.isArray(values)
+    ? [
+        ...new Set(
+          values.flatMap((value) =>
+            typeof value === 'string'
+              ? (value.match(
+                  /\b(?:[a-z][a-z0-9]*(?:_[a-z0-9]+){1,12}|EPERM|EACCES|ENOENT|ENOTDIR|EISDIR|EINVAL|EIO|ENOSYS|EBUSY|EEXIST|ELOOP|UNKNOWN)\b/g
+                ) ?? [])
+              : []
+          ),
+        ),
+      ].slice(0, 16)
+    : [];
 const V1_TRANSCRIPT_MAX_BYTES = 2 * 1024 * 1024;
 // Only existing SDK read-only history/parser modules are imported. In
 // particular this never imports the profile/session bridge or prepares a host.
@@ -1582,6 +1597,18 @@ async function packagedStartupSnapshot(
           'opencode_protocol',
           'unknown',
         ]),
+        classificationConfidence: number(row(manifest.classification).confidence),
+        evidenceTokens: [
+          ...closedDiagnosticTokens(row(manifest.classification).evidence),
+          ...closedDiagnosticTokens(breadcrumb.evidence),
+        ].slice(0, 16),
+        breadcrumbStage:
+          typeof breadcrumb.lastTransportStage === 'string' &&
+          /^[A-Za-z0-9_.:\- ]{1,96}$/.test(breadcrumb.lastTransportStage)
+            ? breadcrumb.lastTransportStage
+            : null,
+        retryable: typeof breadcrumb.retryable === 'boolean' ? breadcrumb.retryable : null,
+        noStdinWarning: breadcrumb.noStdinWarning === true,
         bootstrapSubmitted: breadcrumb.bootstrapSubmitted === true,
         submitRejected: breadcrumb.submitRejected === true,
         memberSpawnStatuses: Object.values(row(manifest.memberSpawnStatuses))
