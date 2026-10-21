@@ -342,6 +342,64 @@ describe('electron-builder afterPack', () => {
     await expect(validateNativeBinaries(tempDir, 'win32', 'arm64')).resolves.toEqual([]);
   });
 
+  it('prunes the msgpackr-extract ELF build leftovers shipped in the win32-arm64 runtime', async () => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+    const build = path.join(
+      tempDir,
+      'resources',
+      'runtime',
+      'local-cli',
+      'node_modules',
+      'msgpackr-extract',
+      'build',
+      'Release'
+    );
+    const shipped = [
+      path.join(build, 'extract.node'),
+      path.join(build, 'obj.target', 'extract.node'),
+      path.join(build, 'obj.target', 'extract', 'src', 'extract.o'),
+    ];
+    for (const file of shipped) {
+      writeFile(file, createElfBuffer('x64'));
+    }
+
+    await afterPackModule({ appOutDir: tempDir, electronPlatformName: 'win32', arch: 3 });
+
+    expect(shipped.every(file => !fs.existsSync(file))).toBe(true);
+    await expect(validateNativeBinaries(tempDir, 'win32', 'arm64')).resolves.toEqual([]);
+  });
+
+  it('keeps a compatible msgpackr-extract binding while pruning node-gyp build leftovers', async () => {
+    const tempDir = createTempDir();
+    tempDirs.push(tempDir);
+    const build = path.join(
+      tempDir,
+      'resources',
+      'runtime',
+      'local-cli',
+      'node_modules',
+      'msgpackr-extract',
+      'build',
+      'Release'
+    );
+    const kept = path.join(build, 'extract.node');
+    const leftovers = [
+      path.join(build, 'obj.target', 'extract.node'),
+      path.join(build, 'obj.target', 'extract', 'src', 'extract.o'),
+    ];
+    writeFile(kept, createPortableExecutableBuffer('arm64'));
+    for (const file of leftovers) {
+      writeFile(file, createElfBuffer('x64'));
+    }
+
+    await afterPackModule({ appOutDir: tempDir, electronPlatformName: 'win32', arch: 3 });
+
+    expect(fs.existsSync(kept)).toBe(true);
+    expect(leftovers.every(file => !fs.existsSync(file))).toBe(true);
+    await expect(validateNativeBinaries(tempDir, 'win32', 'arm64')).resolves.toEqual([]);
+  });
+
   it('fails validation when a foreign-arch native binary remains in the bundle', async () => {
     const tempDir = createTempDir();
     tempDirs.push(tempDir);

@@ -360,6 +360,11 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
     // No sibling gate: the loader's per-platform filename map is exhaustive, and the win32-arm64 runtime omits rust_pty_arm64.dll.
     return filePath;
   }
+  // msgpackr-extract ships node-gyp leftovers and foreign bindings here; without a
+  // loadable binding msgpackr falls back to its pure-JS decoder, so pruning is safe.
+  if (runtimePath.startsWith('msgpackr-extract/build/')) {
+    return filePath;
+  }
 
   if (!rootToRemove || !targetSibling || !(await fileExists(targetSibling))) return null;
   try {
