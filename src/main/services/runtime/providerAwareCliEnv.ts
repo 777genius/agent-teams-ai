@@ -156,8 +156,11 @@ export async function buildProviderAwareCliEnv(
   });
   if (!resolvedProviderId || resolvedProviderId === 'opencode') {
     const explicitOpenCodeBinary = resolveExplicitOpenCodeBinary(options);
+    // Generic shells and management commands only inherit the override; the
+    // OpenCode launch path owns verification and its fail-closed errors.
     const supportedExplicitOpenCodeBinary =
-      explicitOpenCodeBinary && (await isSupportedOpenCodeRuntimeBinaryPath(explicitOpenCodeBinary))
+      explicitOpenCodeBinary &&
+      (!resolvedProviderId || (await isSupportedOpenCodeRuntimeBinaryPath(explicitOpenCodeBinary)))
         ? explicitOpenCodeBinary
         : null;
     const openCodeBinary =

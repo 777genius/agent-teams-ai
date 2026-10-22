@@ -1286,6 +1286,38 @@ describe('buildProviderAwareCliEnv', () => {
     expect(result.env.PATH?.split(path.delimiter)[0]).toBe(path.dirname(explicitBinaryPath));
   });
 
+  it.each([
+    { caller: 'PTY shell', binaryPath: undefined, source: 'call' },
+    { caller: 'Claude management', binaryPath: '/sandbox/claude', source: 'call' },
+    { caller: 'PTY shell', binaryPath: undefined, source: 'process' },
+    { caller: 'Claude management', binaryPath: '/sandbox/claude', source: 'process' },
+  ])(
+    'preserves an explicit OpenCode override without probing for $caller ($source)',
+    async ({ binaryPath, source }) => {
+      const explicitBinaryPath = '/TEST/unresponsive-opencode';
+      isSupportedOpenCodeRuntimeBinaryPathMock.mockRejectedValue(new Error('probe timed out'));
+      resolveVerifiedOpenCodeRuntimeBinaryPathMock.mockRejectedValue(
+        new Error('unexpected runtime resolution')
+      );
+      if (source === 'process') {
+        vi.stubEnv('OPENCODE_BIN_PATH', explicitBinaryPath);
+      }
+      const { buildProviderAwareCliEnv } =
+        await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+      const result = await buildProviderAwareCliEnv({
+        binaryPath,
+        connectionMode: 'augment',
+        allowStoredApiKeyDecryption: false,
+        env: source === 'call' ? { OPENCODE_BIN_PATH: explicitBinaryPath } : {},
+      });
+      expect(result.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(explicitBinaryPath);
+      expect(result.env.OPENCODE_BIN_PATH).toBe(explicitBinaryPath);
+      expect(result.env.PATH?.split(path.delimiter)[0]).toBe(path.dirname(explicitBinaryPath));
+      expect(isSupportedOpenCodeRuntimeBinaryPathMock).not.toHaveBeenCalled();
+      expect(resolveVerifiedOpenCodeRuntimeBinaryPathMock).not.toHaveBeenCalled();
+    }
+  );
+
   it('propagates an explicit OpenCode verification failure before choosing a managed runtime', async () => {
     const failure = new Error('Could not verify the explicitly selected OpenCode binary');
     isSupportedOpenCodeRuntimeBinaryPathMock.mockRejectedValue(failure);
