@@ -364,21 +364,12 @@ export const CreateTeamDialog = ({
   const descriptionDraft = useDraftPersistence({ key: 'createTeam:description' });
   const promptDraft = useDraftPersistence({ key: 'createTeam:prompt' });
   const promptChipDraft = useChipDraftPersistence('createTeam:prompt:chips');
-  const templateSelectionDraft = useDraftPersistence({ key: 'createTeam:templateSelection' });
-  // Template source that prefilled the current form; keeps the prompt field
-  // visible for template-driven config-only creation (launchTeam=false).
-  const [appliedTemplateSource, setAppliedTemplateSource] =
-    useState<CreateTeamTemplateSource>('none');
-  const storedTemplateSelection = readStoredTemplateSelection(templateSelectionDraft.value);
-  useEffect(() => {
-    if (initialData) {
-      setAppliedTemplateSource('none');
-      templateSelectionDraft.clearDraft();
-      return;
-    }
-    const { source } = readStoredTemplateSelection(templateSelectionDraft.value);
-    if (source) setAppliedTemplateSource(source);
-  }, [templateSelectionDraft.value, initialData, templateSelectionDraft]);
+  const {
+    templateSelectionDraft,
+    appliedTemplateSource,
+    storedTemplateSelection,
+    clearTemplateSelection,
+  } = useCreateTeamTemplateSelection({ initialData });
   const [projects, setProjects] = useState<ProjectPathProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
@@ -564,8 +555,7 @@ export const CreateTeamDialog = ({
     descriptionDraft.clearDraft();
     promptDraft.clearDraft();
     promptChipDraft.clearChipDraft();
-    setAppliedTemplateSource('none');
-    templateSelectionDraft.clearDraft();
+    clearTemplateSelection();
     resetUIState();
   };
 
