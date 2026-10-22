@@ -227,7 +227,7 @@ export function getStoredCreateTeamFastMode(): TeamFastMode {
     CREATE_TEAM_FAST_MODE_KEY,
     `${LEGACY_TEAM_PREFIX}lastSelectedFastMode`
   );
-  return stored === 'on' || stored === 'off' || stored === 'inherit' ? stored : 'inherit';
+  return stored === 'on' || stored === 'off' || stored === 'inherit' ? stored : 'off';
 }
 
 export function setStoredCreateTeamFastMode(value: TeamFastMode): void {
