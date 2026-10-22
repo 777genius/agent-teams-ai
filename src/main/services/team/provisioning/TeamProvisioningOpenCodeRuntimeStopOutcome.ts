@@ -48,7 +48,32 @@ const STOP_FAILURE_CODES = [
   'transport_watchdog_timeout',
   'contract_violation',
   'internal_error',
+  'team_process_exit_unconfirmed',
+  'primary_lane_ownership_mismatch',
+  'provisioning_cancel_stop_unconfirmed',
+  'prompt_delivery_ledger_error',
+  'regular_stop_rejected_unknown',
 ] as const;
+
+/**
+ * Finite closed code for a regular-stop rejection. The rejection's own text only
+ * reaches diagnostics, which the IPC boundary drops, so the stop failure has to
+ * name its cause in a code the caller can carry away.
+ */
+export function openCodeRegularStopRejectionCode(error: unknown): string {
+  const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+  if (message.includes('did not stop after SIGKILL')) return 'team_process_exit_unconfirmed';
+  if (message.includes('primary lane is not owned by')) {
+    return 'primary_lane_ownership_mismatch';
+  }
+  if (message.includes('did not confirm stop during cancellation')) {
+    return 'provisioning_cancel_stop_unconfirmed';
+  }
+  if (message.includes('File lock timeout:') || message.includes('VersionedJsonStoreError')) {
+    return 'prompt_delivery_ledger_error';
+  }
+  return 'regular_stop_rejected_unknown';
+}
 
 /** Finite diagnostics only: never forward native/provider message text. */
 export function openCodeStopFailureCodes(diagnostics: unknown): string[] {

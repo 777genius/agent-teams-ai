@@ -27,7 +27,10 @@ vi.mock('@main/services/team/opencode/bridge/OpenCodeLoopbackRuntimeRelease', ()
   reportUnattributedLoopbackRuntimeRelease: vi.fn(),
 }));
 
-import { OpenCodeRuntimeStopUnconfirmedError } from '@main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
+import {
+  assertEscalatedStopConfirmed,
+  OpenCodeRuntimeStopUnconfirmedError,
+} from '@main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
 
 import type { TeamForceStopFlowPorts } from '@main/services/team/lifecycle/teamForceStopFlow';
@@ -98,6 +101,40 @@ describe('runTeamForceStopFlow', () => {
     expect(result.diagnostics.filter((row) => row.startsWith('stop_failure_code:'))).toEqual([
       'stop_failure_code:opencode_stop_status_unconfirmed',
     ]);
+  });
+
+  it('classifies an opaque regular-stop rejection into a finite stop_failure_code', async () => {
+    const ports = createPorts({
+      stopTeam: vi.fn(() =>
+        Promise.reject(new Error('Team process 4242 did not stop after SIGKILL'))
+      ),
+    });
+    const result = await stopTeamWithEscalation('exitrace', ports);
+    expect(result.stopOutcome).toBe('stop_failed');
+    expect(result.diagnostics).toContain('stop_failure_code:team_process_exit_unconfirmed');
+    expect(() => assertEscalatedStopConfirmed(result)).toThrow(
+      'team_stop_unconfirmed:stop_failed:team_process_exit_unconfirmed'
+    );
+  });
+
+  it.each([
+    ['OpenCode primary lane is not owned by run run-a', 'primary_lane_ownership_mismatch'],
+    [
+      'OpenCode runtime adapter launch did not confirm stop during cancellation',
+      'provisioning_cancel_stop_unconfirmed',
+    ],
+    ['File lock timeout: /teams/prompt-deliveries.json', 'prompt_delivery_ledger_error'],
+    ['freshness unreadable', 'regular_stop_rejected_unknown'],
+  ])('classifies regular stop rejection %s as %s', async (message, code) => {
+    const ports = createPorts({
+      stopTeam: vi.fn(() => Promise.reject(new Error(message))),
+    });
+    const result = await stopTeamWithEscalation('classify', ports);
+    expect(result.stopOutcome).toBe('stop_failed');
+    expect(result.diagnostics).toContain(`stop_failure_code:${code}`);
+    expect(() => assertEscalatedStopConfirmed(result)).toThrow(
+      `team_stop_unconfirmed:stop_failed:${code}`
+    );
   });
 
   it.each([stopTeamWithEscalation, runTeamForceStopFlow])(
