@@ -44,15 +44,16 @@ export function validateTemplateName(rawName: unknown): TemplateNameValidation {
   if (typeof rawName !== 'string') {
     return { valid: false, issues: [{ code: 'templateNameRequired', field: 'name' }] };
   }
-  const value = rawName.normalize('NFC').trim();
+  const normalized = rawName.normalize('NFC');
+  if (hasControlCharacter(normalized)) {
+    return { valid: false, issues: [{ code: 'templateNameInvalidCharacters', field: 'name' }] };
+  }
+  const value = normalized.trim();
   if (!value) {
     return { valid: false, issues: [{ code: 'templateNameRequired', field: 'name' }] };
   }
   if (value.length > TEMPLATE_NAME_MAX_LENGTH) {
     return { valid: false, issues: [{ code: 'templateNameTooLong', field: 'name' }] };
-  }
-  if (hasControlCharacter(value)) {
-    return { valid: false, issues: [{ code: 'templateNameInvalidCharacters', field: 'name' }] };
   }
   return { valid: true, value, normalizedKey: normalizeTemplateNameKey(value) };
 }
