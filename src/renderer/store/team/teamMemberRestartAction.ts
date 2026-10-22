@@ -28,6 +28,19 @@ export function createTeamMemberRestartAction<TScope>(options: {
       options.isScopeCurrent(teamName, requestScope);
     const predecessor = get().currentRuntimeRunIdByTeam[teamName];
     const previousProvisioning = get().currentProvisioningRunIdByTeam[teamName];
+    const canHandoff = (state: AppState, successor?: string): boolean =>
+      Boolean(
+        predecessor &&
+        isCurrent() &&
+        state.currentRuntimeRunIdByTeam[teamName] === predecessor &&
+        state.currentProvisioningRunIdByTeam[teamName] === previousProvisioning &&
+        state.ignoredRuntimeRunIds[predecessor] !== teamName &&
+        state.ignoredProvisioningRunIds[predecessor] !== teamName &&
+        (!successor ||
+          (state.ignoredRuntimeRunIds[successor] !== teamName &&
+            state.ignoredProvisioningRunIds[successor] !== teamName))
+      );
+
     try {
       const result = await unwrapIpc('team:restartMember', () =>
         options.restart(teamName, memberName, expectedSecondary)
@@ -38,72 +51,83 @@ export function createTeamMemberRestartAction<TScope>(options: {
         (retainedFailure.teamName === teamName &&
           retainedFailure.memberName === memberName &&
           retainedFailure.predecessorRunId === predecessor);
-      if (predecessor && correlated && isCurrent()) {
-        try {
-          // Only this exact action result can hand off a still-live aggregate.
-          // Generic events keep rejecting other generations while secondary lanes live.
-          const snapshot = await options.readSnapshot(teamName);
-          const successor = snapshot.runId?.trim();
-          let adopted = false;
-          const failedPrimary = snapshot.statuses[memberName];
-          const retainedSnapshot =
-            !retainedFailure ||
-            (successor === retainedFailure.successorRunId &&
-              failedPrimary?.runtimeAlive === false &&
-              failedPrimary.launchState === 'failed_to_start' &&
-              Object.entries(snapshot.statuses).some(
-                ([name, member]) => name !== memberName && member.runtimeAlive === true
-              ));
-          if (successor && successor !== predecessor && retainedSnapshot) {
-            set((state) => {
-              if (
-                !isCurrent() ||
-                state.currentRuntimeRunIdByTeam[teamName] !== predecessor ||
-                state.currentProvisioningRunIdByTeam[teamName] !== previousProvisioning ||
-                state.ignoredRuntimeRunIds[predecessor] === teamName ||
-                state.ignoredProvisioningRunIds[predecessor] === teamName ||
-                state.ignoredRuntimeRunIds[successor] === teamName ||
-                state.ignoredProvisioningRunIds[successor] === teamName ||
-                !Object.values(snapshot.statuses).some((member) => member.runtimeAlive === true)
-              ) {
-                return {};
-              }
-              adopted = true;
-              const nextPins = { ...state.currentRuntimeRunIdByTeam, [teamName]: successor };
-              const nextRuns = { ...state.provisioningRuns };
-              delete nextRuns[predecessor];
-              return {
-                ...projectIncomingMemberSpawnSnapshot({
-                  teamName,
-                  snapshot,
-                  prev: { ...state, currentRuntimeRunIdByTeam: nextPins },
-                  onEqualSuppressed: options.onEqualSuppressed,
-                }),
-                currentRuntimeRunIdByTeam: nextPins,
-                currentProvisioningRunIdByTeam: {
-                  ...state.currentProvisioningRunIdByTeam,
-                  [teamName]: successor,
-                },
-                provisioningRuns: nextRuns,
-                ignoredRuntimeRunIds: { ...state.ignoredRuntimeRunIds, [predecessor]: teamName },
-                ignoredProvisioningRunIds: {
-                  ...state.ignoredProvisioningRunIds,
-                  [predecessor]: teamName,
-                },
-              };
-            });
+      let statusUnavailable = false;
+      if (predecessor && correlated && canHandoff(get())) {
+        let snapshot: MemberSpawnStatusesSnapshot | undefined;
+        // Retry only observation, within this invocation's bounded authority.
+        for (let attempt = 0; attempt < 3 && canHandoff(get()); attempt += 1) {
+          try {
+            const observed = await options.readSnapshot(teamName);
+            if (!canHandoff(get(), observed.runId?.trim())) break;
+            snapshot = observed;
+            break;
+          } catch {
+            if (!canHandoff(get())) break;
+            statusUnavailable = attempt === 2;
           }
-          if (adopted && successor && isCurrent()) {
-            await get().getProvisioningStatus(successor);
+        }
+        if (snapshot) {
+          try {
+            const successor = snapshot.runId?.trim();
+            let adopted = false;
+            const failedPrimary = snapshot.statuses[memberName];
+            const retainedSnapshot =
+              !retainedFailure ||
+              (successor === retainedFailure.successorRunId &&
+                failedPrimary?.runtimeAlive === false &&
+                failedPrimary.launchState === 'failed_to_start' &&
+                Object.entries(snapshot.statuses).some(
+                  ([name, member]) => name !== memberName && member.runtimeAlive === true
+                ));
+            if (successor && successor !== predecessor && retainedSnapshot) {
+              set((state) => {
+                if (
+                  !canHandoff(state, successor) ||
+                  !Object.values(snapshot.statuses).some((member) => member.runtimeAlive === true)
+                ) {
+                  return {};
+                }
+                adopted = true;
+                const nextPins = { ...state.currentRuntimeRunIdByTeam, [teamName]: successor };
+                const nextRuns = { ...state.provisioningRuns };
+                delete nextRuns[predecessor];
+                return {
+                  ...projectIncomingMemberSpawnSnapshot({
+                    teamName,
+                    snapshot,
+                    prev: { ...state, currentRuntimeRunIdByTeam: nextPins },
+                    onEqualSuppressed: options.onEqualSuppressed,
+                  }),
+                  currentRuntimeRunIdByTeam: nextPins,
+                  currentProvisioningRunIdByTeam: {
+                    ...state.currentProvisioningRunIdByTeam,
+                    [teamName]: successor,
+                  },
+                  provisioningRuns: nextRuns,
+                  ignoredRuntimeRunIds: { ...state.ignoredRuntimeRunIds, [predecessor]: teamName },
+                  ignoredProvisioningRunIds: {
+                    ...state.ignoredProvisioningRunIds,
+                    [predecessor]: teamName,
+                  },
+                };
+              });
+            }
+            if (adopted && successor && isCurrent()) {
+              await get().getProvisioningStatus(successor);
+            }
+          } catch {
+            // Progress details are best-effort after the runtime handoff is confirmed.
           }
-        } catch {
-          // A best-effort UI read never replaces the original restart outcome.
         }
       }
-      if (retainedFailure) {
-        await unwrapIpc('team:restartMember', () =>
-          Promise.reject(new Error(retainedFailure.error))
-        );
+      if (retainedFailure || statusUnavailable) {
+        const statusError = statusUnavailable
+          ? retainedFailure
+            ? "The teammate's current status could not be loaded."
+            : 'Teammate restarted, but its current status could not be loaded.'
+          : '';
+        const message = [retainedFailure?.error, statusError].filter(Boolean).join(' ');
+        await unwrapIpc('team:restartMember', () => Promise.reject(new Error(message)));
       }
     } finally {
       const state = get();

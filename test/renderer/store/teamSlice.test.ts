@@ -6455,6 +6455,140 @@ describe('teamSlice actions', () => {
     }
   );
 
+  it.each(['restarted', 'failed_retained'] as const)(
+    'recovers an authoritative %s handoff after a transient snapshot read failure',
+    async (status) => {
+      const store = createSliceStore();
+      store.setState({
+        currentRuntimeRunIdByTeam: { 'my-team': 'run-old' },
+        currentProvisioningRunIdByTeam: { 'my-team': 'run-old' },
+        memberSpawnStatusesByTeam: { 'my-team': { bob: createMemberSpawnStatus() } },
+        fetchMemberSpawnStatuses: vi.fn(async () => undefined),
+      });
+      hoisted.restartMember.mockResolvedValueOnce(
+        status === 'restarted'
+          ? { status }
+          : {
+              status,
+              error: 'primary restart quota failure',
+              teamName: 'my-team',
+              memberName: 'alice',
+              predecessorRunId: 'run-old',
+              successorRunId: 'run-new',
+            }
+      );
+      const snapshot = createMemberSpawnSnapshot({
+        runId: 'run-new',
+        statuses: {
+          alice: createMemberSpawnStatus(
+            status === 'failed_retained'
+              ? {
+                  status: 'error',
+                  launchState: 'failed_to_start',
+                  runtimeAlive: false,
+                  hardFailure: true,
+                }
+              : {}
+          ),
+          bob: createMemberSpawnStatus(),
+        },
+      });
+      hoisted.getMemberSpawnStatuses
+        .mockRejectedValueOnce(new Error('temporary read unavailable'))
+        .mockResolvedValue(snapshot);
+      hoisted.getProvisioningStatus.mockResolvedValue({
+        runId: 'run-new',
+        teamName: 'my-team',
+        state: status === 'restarted' ? 'ready' : 'failed',
+        retainedSecondaryRuntime: status === 'failed_retained' ? true : undefined,
+        message: 'current restart outcome',
+        startedAt: '2026-03-12T10:00:00.000Z',
+        updatedAt: '2026-03-12T10:02:00.000Z',
+      });
+      const result = store.getState().restartMember('my-team', 'alice');
+      if (status === 'failed_retained')
+        await expect(result).rejects.toThrow('primary restart quota failure');
+      else await expect(result).resolves.toBeUndefined();
+      expect(hoisted.restartMember).toHaveBeenCalledTimes(1);
+      expect(hoisted.getMemberSpawnStatuses).toHaveBeenCalledTimes(2);
+      expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('run-new');
+      expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBe('run-new');
+      expect(store.getState().ignoredRuntimeRunIds['run-old']).toBe('my-team');
+      expect(store.getState().memberSpawnStatusesByTeam['my-team'].bob.runtimeAlive).toBe(true);
+    }
+  );
+
+  it.each(['restarted', 'failed_retained'] as const)(
+    'reports unavailable status after all three %s handoff reads fail',
+    async (status) => {
+      const store = createSliceStore();
+      store.setState({
+        currentRuntimeRunIdByTeam: { 'my-team': 'run-old' },
+        currentProvisioningRunIdByTeam: { 'my-team': 'run-old' },
+        memberSpawnStatusesByTeam: { 'my-team': { bob: createMemberSpawnStatus() } },
+        fetchMemberSpawnStatuses: vi.fn(async () => undefined),
+      });
+      hoisted.restartMember.mockResolvedValueOnce(
+        status === 'restarted'
+          ? { status }
+          : {
+              status,
+              error: 'primary restart quota failure',
+              teamName: 'my-team',
+              memberName: 'alice',
+              predecessorRunId: 'run-old',
+              successorRunId: 'run-new',
+            }
+      );
+      hoisted.getMemberSpawnStatuses.mockRejectedValue(new Error('read unavailable'));
+      await expect(store.getState().restartMember('my-team', 'alice')).rejects.toThrow(
+        status === 'restarted'
+          ? 'Teammate restarted, but its current status could not be loaded.'
+          : "primary restart quota failure The teammate's current status could not be loaded."
+      );
+      expect(hoisted.restartMember).toHaveBeenCalledTimes(1);
+      expect(hoisted.getMemberSpawnStatuses).toHaveBeenCalledTimes(3);
+      expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('run-old');
+      expect(hoisted.getProvisioningStatus).not.toHaveBeenCalled();
+      expect(store.getState().ignoredRuntimeRunIds['run-old']).toBeUndefined();
+    }
+  );
+
+  it.each(['stop', 'launch', 'overlap', 'runtime-pin', 'provisioning-pin', 'context'] as const)(
+    'revokes handoff recovery while a failed snapshot read awaits %s',
+    async (race) => {
+      const store = createSliceStore();
+      store.setState({
+        currentRuntimeRunIdByTeam: { 'my-team': 'run-old' },
+        currentProvisioningRunIdByTeam: { 'my-team': 'run-old' },
+        memberSpawnStatusesByTeam: { 'my-team': { bob: createMemberSpawnStatus() } },
+        fetchMemberSpawnStatuses: vi.fn(async () => undefined),
+      });
+      const retryRead = createDeferredPromise<MemberSpawnStatusesSnapshot>();
+      hoisted.getMemberSpawnStatuses
+        .mockRejectedValueOnce(new Error('temporary unavailable'))
+        .mockReturnValueOnce(retryRead.promise)
+        .mockResolvedValue(createMemberSpawnSnapshot({ runId: 'run-old' }));
+      const restarting = store.getState().restartMember('my-team', 'alice');
+      await flushMicrotasks();
+      await flushMicrotasks();
+      expect(hoisted.getMemberSpawnStatuses).toHaveBeenCalledTimes(2);
+      if (race === 'stop') store.setState({ ignoredRuntimeRunIds: { 'run-old': 'my-team' } });
+      if (race === 'launch') invalidateTeamLocalStateEpoch('my-team');
+      if (race === 'context') store.setState({ activeContextId: 'another-context' });
+      if (race === 'runtime-pin')
+        store.setState({ currentRuntimeRunIdByTeam: { 'my-team': 'other-run' } });
+      if (race === 'provisioning-pin')
+        store.setState({ currentProvisioningRunIdByTeam: { 'my-team': 'other-run' } });
+      if (race === 'overlap') await store.getState().restartMember('my-team', 'bob');
+      retryRead.reject(new Error('second read failed after authority changed'));
+      await restarting;
+      expect(hoisted.getMemberSpawnStatuses).toHaveBeenCalledTimes(race === 'overlap' ? 3 : 2);
+      expect(store.getState().currentRuntimeRunIdByTeam['my-team']).not.toBe('run-new');
+      expect(hoisted.getProvisioningStatus).not.toHaveBeenCalled();
+    }
+  );
+
   it('a delayed earlier restart cannot replace the successor adopted by a rapid second restart', async () => {
     const store = createSliceStore();
     store.setState({
