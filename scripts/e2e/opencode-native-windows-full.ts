@@ -2141,7 +2141,7 @@ async function main() {
     nativeV2TranscriptFailure: null as null | {
       observation: 'captured' | 'unavailable'; member: 'alice' | 'bob';
       packet?: ReturnType<typeof projectV2NativeTranscript>;
-      failure?: { classification: string; kind?: string; sdkCode?: string | null; nativeOperation?: string | null; nativeErrno?: number | null };
+      failure?: { classification: string; kind?: string; sdkCode?: string | null; nativeOperation?: string | null; nativeErrno?: number | null; nativeStage?: string | null };
       inputFileRemoved?: boolean;
     },
     pumpFailure: null as null | { category: 'run_control_pump_failed'; controlPhase: string; controlCode: string; nativeCode: number },
@@ -2766,7 +2766,7 @@ async function main() {
           const closed = projectIpcCausalFailure(`error:${parsed.value.error.kind}: OpenCode message bridge failed: ${parsed.value.error.message}`);
           capture.failure = { classification: 'bridge_refused', kind: parsed.value.error.kind,
             sdkCode: closed?.bridgeFailure?.sdkCode ?? null, nativeOperation: closed?.bridgeFailure?.nativeOperation ?? null,
-            nativeErrno: closed?.bridgeFailure?.nativeErrno ?? null };
+            nativeErrno: closed?.bridgeFailure?.nativeErrno ?? null, nativeStage: closed?.bridgeFailure?.nativeStage ?? null };
         } else {
           capture.packet = projectV2NativeTranscript(parsed.value.data, { sessionId: nativeSession,
             selectedModel: model, runtimePromptMessageId,

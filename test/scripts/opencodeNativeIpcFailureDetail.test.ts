@@ -1237,6 +1237,24 @@ it('retains returned send failures as dispatch facts through serialized task and
   ]) expect(project(value)).toBeNull();
 });
 
+it('keeps only the closed native stage token on returned dispatch failures', async () => {
+  const project = runInNewContext(`(${serializedFunction(projectIpcCausalFailure)})`) as typeof projectIpcCausalFailure;
+  const returned = project('error:runtime_not_ready: OpenCode message bridge failed: run_control_process_identity:process_image_open:0 @native:runStateSelect');
+  expect(returned).toMatchObject({ phase: 'dispatch', bridgeFailure: {
+    kind: 'runtime_not_ready', sdkCode: 'run_control_process_identity', nativeOperation: 'runStateSelect',
+    nativeErrno: 0, nativeStage: 'process_image_open' } });
+  // The stage is a closed token only; an open shape never survives projection.
+  expect(project('error:runtime_not_ready: OpenCode message bridge failed: run_control_process_identity:PROCESS_IMAGE_OPEN:0 @native:runStateSelect')).toBeNull();
+  const carried = project({ phase: 'dispatch', bridgeFailure: { kind: 'runtime_not_ready',
+    sdkCode: 'run_control_process_identity', nativeOperation: 'runStateSelect',
+    nativeStage: 'process_alive', nativeErrno: 0 } } as never);
+  expect(carried).toMatchObject({ bridgeFailure: { nativeStage: 'process_alive', nativeErrno: 0 } });
+  const dropped = project({ phase: 'dispatch', bridgeFailure: { kind: 'runtime_not_ready',
+    sdkCode: 'run_control_process_identity', nativeStage: 'PRIVATE TOKEN' } } as never);
+  expect(dropped?.bridgeFailure).not.toHaveProperty('nativeStage');
+  expect(dropped?.bridgeFailure).toMatchObject({ sdkCode: 'run_control_process_identity' });
+});
+
 it.each(['valid', 'foreign-run', 'foreign-team', 'wrong-state', 'wrong-message', 'getter', 'rejected', 'event'] as const)(
   'observes retained Stop %s once without issuing actions or accepting another run', async (scenario) => {
     const teamName = 'test-opencode-retained', runId = 'TEST-original-run';
