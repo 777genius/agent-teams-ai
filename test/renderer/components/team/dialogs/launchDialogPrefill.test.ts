@@ -33,6 +33,7 @@ describe('resolveLaunchDialogPrefill', () => {
         previousLaunchParams: { fastMode: previous },
         multimodelEnabled: true,
         storedProviderId: 'anthropic',
+        storedEffort: '',
         storedFastMode: stored,
         storedLimitContext: false,
         getStoredModel: createStoredModelGetter({}),
