@@ -45,6 +45,7 @@ describe('native real-task prompt contract', () => {
 
   it('forbids task_complete before the work and the exact comment', () => {
     expect(prompt).toContain('Never call task_complete before');
+    expect(prompt).toContain('final two actions must be task_add_comment then task_complete');
   });
 
   it('requires retrying failed tool calls before finishing', () => {
