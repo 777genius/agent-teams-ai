@@ -124,7 +124,18 @@ describe('runTeamForceStopFlow', () => {
       'provisioning_cancel_stop_unconfirmed',
     ],
     ['File lock timeout: /teams/prompt-deliveries.json', 'prompt_delivery_ledger_error'],
-    ['freshness unreadable', 'regular_stop_rejected_unknown'],
+    ['OpenCode runtime adapter is unavailable', 'runtime_adapter_unavailable'],
+    [
+      'OpenCode primary lane ownership changed before stopped storage cleanup',
+      'lane_ownership_changed_after_stop',
+    ],
+    [
+      'OpenCode secondary lane alice did not confirm stop: no recorded host pid to verify',
+      'secondary_lane_stop_unconfirmed',
+    ],
+    ['OpenCode team did not confirm stop: result unconfirmed', 'runtime_stop_unconfirmed'],
+    ['freshness unreadable', 'reject_freshness_unreadable'],
+    ['!@#$%', 'regular_stop_rejected_unknown'],
   ])('classifies regular stop rejection %s as %s', async (message, code) => {
     const ports = createPorts({
       stopTeam: vi.fn(() => Promise.reject(new Error(message))),

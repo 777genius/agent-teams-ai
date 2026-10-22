@@ -52,6 +52,10 @@ const STOP_FAILURE_CODES = [
   'primary_lane_ownership_mismatch',
   'provisioning_cancel_stop_unconfirmed',
   'prompt_delivery_ledger_error',
+  'runtime_adapter_unavailable',
+  'lane_ownership_changed_after_stop',
+  'secondary_lane_stop_unconfirmed',
+  'runtime_stop_unconfirmed',
   'regular_stop_rejected_unknown',
 ] as const;
 
@@ -72,14 +76,38 @@ export function openCodeRegularStopRejectionCode(error: unknown): string {
   if (message.includes('File lock timeout:') || message.includes('VersionedJsonStoreError')) {
     return 'prompt_delivery_ledger_error';
   }
-  return 'regular_stop_rejected_unknown';
+  if (message.includes('runtime adapter is unavailable')) return 'runtime_adapter_unavailable';
+  if (message.includes('ownership changed before stopped storage cleanup')) {
+    return 'lane_ownership_changed_after_stop';
+  }
+  if (message.includes('did not confirm stop') && message.includes('secondary lane')) {
+    return 'secondary_lane_stop_unconfirmed';
+  }
+  if (message.includes('did not confirm stop')) return 'runtime_stop_unconfirmed';
+  return stopRejectionHintCode(error);
 }
 
-/** Finite diagnostics only: never forward native/provider message text. */
+/** Bounded closed-token fallback: an unrecognized rejection still names its own shape. */
+function stopRejectionHintCode(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const tokens = message
+    .toLowerCase()
+    .split(/[^a-z_]+/)
+    .filter((token) => token.length >= 3 && token.length <= 16)
+    .slice(0, 5);
+  if (tokens.length === 0) return 'regular_stop_rejected_unknown';
+  return `reject_${tokens.join('_')}`.slice(0, 90);
+}
+
+/** Finite diagnostics only: never forward native/provider message text.
+ * A `reject_*` code is the bounded closed-token projection the fallback
+ * classifier builds from a rejection shape, allowed through by the same rule. */
 export function openCodeStopFailureCodes(diagnostics: unknown): string[] {
   const codes = stringList(diagnostics).flatMap((row) => {
     const code = /^(?:info:|warning:|error:|stop_failure_code:)([a-z_]+)(?::|$)/.exec(row)?.[1];
-    return STOP_FAILURE_CODES.filter((known) => known === code);
+    if (!code) return [];
+    if (STOP_FAILURE_CODES.some((known) => known === code)) return [code];
+    return /^reject_[a-z_]{2,80}$/.test(code) ? [code] : [];
   });
   return [...new Set(codes)];
 }
