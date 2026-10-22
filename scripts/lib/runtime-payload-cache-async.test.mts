@@ -283,7 +283,7 @@ test('bounded copy preserves modes, refuses an existing stage, and rejects an in
 });
 
 test(
-  'readonly root and nested directory modes match the legacy copy contract',
+  'private writable root retains readonly child modes independently of legacy root defaults',
   { skip: process.platform === 'win32' },
   async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-cache-readonly-copy-'));
@@ -298,7 +298,8 @@ test(
       fs.chmodSync(source, 0o555);
       fs.cpSync(source, legacy, { recursive: true, errorOnExist: true, force: false });
       await copyRuntimePayload(source, stage, await inventoryRuntimePayload(source));
-      for (const relative of ['', 'nested', 'nested/companion']) {
+      assert.equal(fs.statSync(stage).mode & 0o7777, 0o700);
+      for (const relative of ['nested', 'nested/companion']) {
         assert.equal(
           fs.statSync(path.join(stage, relative)).mode & 0o7777,
           fs.statSync(path.join(legacy, relative)).mode & 0o7777
@@ -314,6 +315,55 @@ test(
         if (fs.existsSync(path.join(directory, 'nested')))
           fs.chmodSync(path.join(directory, 'nested'), 0o700);
       }
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }
+);
+
+test(
+  'publishes and replaces a readonly source root while keeping the private generation writable',
+  { skip: process.platform === 'win32' },
+  async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-cache-readonly-publish-'));
+    const source = path.join(root, 'source');
+    const destination = path.join(root, 'published');
+    try {
+      fs.mkdirSync(source);
+      const binary = path.join(source, 'orchestrator');
+      fs.writeFileSync(binary, 'first generation');
+      fs.chmodSync(source, 0o555);
+      await cache.publishRuntimePayload(binary, destination, sha256);
+      assert.equal(fs.statSync(destination).mode & 0o7777, 0o700);
+      assert.equal(
+        await cache.isRuntimePayloadCacheValid(destination, sha256, 'orchestrator'),
+        true
+      );
+      assert.equal(
+        fs.readFileSync(path.join(destination, 'orchestrator'), 'utf8'),
+        'first generation'
+      );
+      assert.equal(fs.statSync(source).mode & 0o7777, 0o555);
+      fs.writeFileSync(binary, 'replacement generation');
+      const replacementSha = 'b'.repeat(64);
+      await cache.publishRuntimePayload(binary, destination, replacementSha);
+      assert.equal(fs.statSync(destination).mode & 0o7777, 0o700);
+      assert.equal(
+        await cache.isRuntimePayloadCacheValid(destination, replacementSha, 'orchestrator'),
+        true
+      );
+      assert.equal(
+        await cache.isRuntimePayloadCacheValid(destination, sha256, 'orchestrator'),
+        false
+      );
+      assert.equal(
+        fs.readFileSync(path.join(destination, 'orchestrator'), 'utf8'),
+        'replacement generation'
+      );
+      assert.deepEqual(fs.readdirSync(root).sort(), ['published', 'source']);
+    } finally {
+      // Only the deliberately readonly source fixture needs permission restoration.
+      // Published generations must remain removable without a cleanup workaround.
+      fs.chmodSync(source, 0o700);
       fs.rmSync(root, { recursive: true, force: true });
     }
   }

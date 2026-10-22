@@ -73,7 +73,7 @@ export async function inventoryRuntimePayload(root: string): Promise<RuntimePayl
   return visit();
 }
 
-/** Copy only the inventoried regular entries into a new, private stage. */
+/** Copy inventoried entries; keep the private root writable (0700), preserving child modes. */
 export async function copyRuntimePayload(
   source: string,
   stage: string,
@@ -88,11 +88,10 @@ export async function copyRuntimePayload(
     children.set(key, group);
   }
   const scope = createPayloadIoScope();
-  const rootMode = await scope.io(async () => {
+  await scope.io(async () => {
     const stat = await fs.promises.lstat(source);
     if (!stat.isDirectory()) throw new Error('Unsupported runtime archive source directory');
     await fs.promises.mkdir(stage, { mode: 0o700 });
-    return stat.mode & 0o7777;
   });
   async function copy(entry: RuntimePayloadEntry): Promise<void> {
     const [key, kind] = entry;
@@ -117,5 +116,4 @@ export async function copyRuntimePayload(
   }
   // Keep stage ownership until every admitted copy has settled on error as well.
   await scope.settle((children.get('') ?? []).map(copy));
-  await scope.io(() => fs.promises.chmod(stage, rootMode));
 }

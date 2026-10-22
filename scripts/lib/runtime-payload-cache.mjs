@@ -45,6 +45,8 @@ export async function isRuntimePayloadCacheValid(payloadDir, archiveSha256, bina
 // Caller holds the bootstrap lock and verifies archive checksum before entry.
 // Publish the entire binary + companions with one directory rename. Retain the
 // previous generation until publication succeeds; never expose a partial copy.
+// Generation roots remain private and writable (0700), independent of archive root mode,
+// so receipt publication and later generation retirement do not require permission repair.
 export async function publishRuntimePayload(extractedBinaryPath, payloadDir, archiveSha256) {
   const binaryName = path.basename(extractedBinaryPath);
   const source = path.dirname(extractedBinaryPath);
