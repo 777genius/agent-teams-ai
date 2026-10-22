@@ -1,6 +1,12 @@
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
+import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  buildDirectRestartPromptMessage,
   persistTeamProvisioningInboxMessage,
   persistTeamProvisioningSentMessage,
   type TeamProvisioningInboxMessagePersistencePorts,
@@ -114,6 +120,52 @@ function createPorts(
 }
 
 describe('TeamProvisioningMessagePersistence', () => {
+  it('persists each restart bootstrap independently while deduplicating the same attempt', async () => {
+    const claudeDir = await mkdtemp(path.join(tmpdir(), 'TEST-restart-bootstrap-'));
+    const teamName = 'restart-bootstrap-test';
+    const teamDir = path.join(claudeDir, 'teams', teamName);
+    const inboxPath = path.join(teamDir, 'inboxes', 'bob.json');
+    try {
+      await mkdir(path.dirname(inboxPath), { recursive: true });
+      await writeFile(
+        path.join(teamDir, 'config.json'),
+        JSON.stringify({ name: teamName, members: [{ name: 'team-lead' }, { name: 'bob' }] })
+      );
+      const ports = createPorts({
+        createController: (input) => agentTeamsControllerModule.createController(input),
+        getClaudeBasePath: () => claudeDir,
+      });
+      const input = {
+        teamName,
+        memberName: 'bob',
+        leadName: 'team-lead',
+        leadSessionId: 'same-parent-session',
+        prompt:
+          '<agent_teams_native_app_managed_bootstrap_check>\n</agent_teams_native_app_managed_bootstrap_check>',
+      };
+      const first = buildDirectRestartPromptMessage(input);
+      persistTeamProvisioningInboxMessage(teamName, 'bob', first, ports);
+      const readInbox = async (): Promise<InboxMessage[]> =>
+        JSON.parse(await readFile(inboxPath, 'utf8')) as InboxMessage[];
+      const consumedFirst = (await readInbox()).map((row) => ({ ...row, read: true }));
+      await writeFile(inboxPath, JSON.stringify(consumedFirst));
+
+      const second = buildDirectRestartPromptMessage(input);
+      persistTeamProvisioningInboxMessage(teamName, 'bob', second, ports);
+      persistTeamProvisioningInboxMessage(teamName, 'bob', second, ports);
+
+      const rows = await readInbox();
+      expect(rows).toHaveLength(2);
+      expect(rows.map((row) => row.messageId)).toEqual([first.messageId, second.messageId]);
+      expect(rows.map((row) => row.read)).toEqual([true, false]);
+      expect(rows[1]).toMatchObject({ from: 'team-lead', to: 'bob', text: input.prompt });
+      expect(rows[1]?.conversationId).not.toBe(rows[0]?.conversationId);
+      expect(ports.logger.warn).not.toHaveBeenCalled();
+    } finally {
+      await rm(claudeDir, { recursive: true, force: true });
+    }
+  });
+
   it('persists sent messages with the existing controller field mapping', () => {
     const ports = createPorts();
     const message = createMessage();

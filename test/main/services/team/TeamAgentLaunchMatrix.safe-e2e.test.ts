@@ -2095,7 +2095,9 @@ describe(
         state: 'failed',
         message: 'OpenCode member restart and primary rollback failed',
         messageSeverity: 'error',
-        error: expect.stringContaining('Rollback failed: persistent primary relaunch failure'),
+        error: expect.stringContaining(
+          'Primary rollback failed: persistent primary relaunch failure'
+        ),
       });
       await expect(
         fs.readFile(path.join(getTeamsBasePath(), teamName, 'launch-state.json'), 'utf8')

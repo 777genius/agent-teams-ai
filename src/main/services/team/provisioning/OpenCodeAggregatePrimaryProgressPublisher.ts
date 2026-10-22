@@ -1,8 +1,9 @@
 import { getErrorMessage } from '@shared/utils/errorHandling';
 
 import { OpenCodeRetainedPrimaryRestartError } from './OpenCodeRetainedPrimaryRestartError';
-import type { ProvisioningRun } from './TeamProvisioningRunModel';
 import { nowIso } from './TeamProvisioningRunProgress';
+
+import type { ProvisioningRun } from './TeamProvisioningRunModel';
 
 export interface OpenCodeAggregatePrimaryProgressPublisherPorts {
   usesRetainedProgressState(): boolean;

@@ -3,7 +3,6 @@ import { NotificationManager } from '@main/services/infrastructure/NotificationM
 import { notifyTeamWatchScopeChanged } from '@main/services/infrastructure/teamWatchScope';
 import { execCli, killProcessTree } from '@main/utils/childProcess';
 import { getClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
-import type { TeamProvisioningProgress } from '@shared/types';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
@@ -21,9 +20,8 @@ import { type OpenCodeVisibleReplyProofService } from '../opencode/delivery/Open
 import { boundLaunchDiagnostics } from '../progressPayload';
 import { readBootstrapLaunchSnapshot } from '../TeamBootstrapStateReader';
 import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
+
 import { createAnthropicApiKeyHelperCleanupRetryOwner } from './TeamProvisioningAnthropicApiKeyHelperLease';
-import type { TeamProvisioningBootstrapEvidenceFacade } from './TeamProvisioningBootstrapEvidenceFacade';
-import type { TeamProvisioningBootstrapTranscriptFacade } from './TeamProvisioningBootstrapTranscriptFacade';
 import {
   createTeamProvisioningCancellationBoundary,
   createTeamProvisioningCancellationBoundaryPortsFromService,
@@ -32,7 +30,6 @@ import {
 } from './TeamProvisioningCancellationBoundary';
 import { createTeamProvisioningClaudePermissionSettingsDelegation } from './TeamProvisioningClaudePermissionSettingsDelegation';
 import { persistClearedStoppedTeamLiveRuntimeHandlesForTeam } from './TeamProvisioningClearStoppedTeamRuntimeHandles';
-import type { TeamProvisioningConfigFacade } from './TeamProvisioningConfigFacade';
 import { type TeamProvisioningConfigTaskActivityBoundary } from './TeamProvisioningConfigTaskActivityBoundary';
 import { buildLaunchDiagnosticsFromRun } from './TeamProvisioningLaunchDiagnostics';
 import {
@@ -42,7 +39,6 @@ import {
 import { createTeamProvisioningLaunchNotificationsBoundary } from './TeamProvisioningLaunchNotificationsBoundaryFactory';
 import { type TeamProvisioningLaunchStateCompatibilityBoundary } from './TeamProvisioningLaunchStateCompatibilityFacade';
 import { getPersistedLaunchMemberNames } from './TeamProvisioningLaunchStateProjection';
-import type { TeamProvisioningLaunchStateStoreBoundary } from './TeamProvisioningLaunchStateStoreBoundary';
 import { type TeamProvisioningLeadInboxRelayCompatibilityFacade } from './TeamProvisioningLeadInboxRelayCompatibilityFacade';
 import {
   createTeamProvisioningLiveLaunchSnapshotBoundaryFromService,
@@ -84,7 +80,6 @@ import {
   type TeamProvisioningPrimaryBootstrapTruthReportingServiceHost,
 } from './TeamProvisioningPrimaryBootstrapTruthReportingPortsFactory';
 import { TeamProvisioningRetainedProgressState } from './TeamProvisioningProgressState';
-import type { RetainedClaudeLogsSnapshot } from './TeamProvisioningRetainedLogs';
 import {
   MEMBER_SPAWN_AUDIT_MIN_INTERVAL_MS,
   type ProvisioningRun,
@@ -110,6 +105,13 @@ import {
   killOrphanedTeamAgentProcesses,
   killPersistedPaneMembers,
 } from './TeamProvisioningStopProcessCleanup';
+
+import type { TeamProvisioningBootstrapEvidenceFacade } from './TeamProvisioningBootstrapEvidenceFacade';
+import type { TeamProvisioningBootstrapTranscriptFacade } from './TeamProvisioningBootstrapTranscriptFacade';
+import type { TeamProvisioningConfigFacade } from './TeamProvisioningConfigFacade';
+import type { TeamProvisioningLaunchStateStoreBoundary } from './TeamProvisioningLaunchStateStoreBoundary';
+import type { RetainedClaudeLogsSnapshot } from './TeamProvisioningRetainedLogs';
+import type { TeamProvisioningProgress } from '@shared/types';
 
 const logger = createLogger('Service:TeamProvisioning');
 const { AGENT_TEAMS_NAMESPACED_LEAD_BOOTSTRAP_TOOL_NAMES, createController } =

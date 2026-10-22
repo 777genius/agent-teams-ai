@@ -1,15 +1,16 @@
-import type { TeamProvisioningProgress } from '@shared/types';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createOpenCodePromptDeliveryWatchdogCoordinator } from '../../opencode/delivery/OpenCodePromptDeliveryWatchdogCoordinator';
-import type { OpenCodeRetainedSecondaryDelivery } from '../OpenCodeRetainedSecondaryOwnership';
 import { createDefaultOpenCodeRuntimeBootstrapEvidencePorts } from '../TeamProvisioningOpenCodeBootstrapEvidence';
 import { createOpenCodeBootstrapWakePorts } from '../TeamProvisioningOpenCodeDeliveryComposition';
 import { createOpenCodePromptDeliveryWatchdogSchedulerFromService } from '../TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerFactory';
-import type { OpenCodeRuntimeLaneRecoveryPorts } from '../TeamProvisioningOpenCodeRuntimeRecoveryFlow';
 import { tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery } from '../TeamProvisioningOpenCodeRuntimeRecoveryFlow';
 import { TeamProvisioningRunTrackingDeliveryHelper } from '../TeamProvisioningRunTrackingDelivery';
+
+import type { OpenCodeRetainedSecondaryDelivery } from '../OpenCodeRetainedSecondaryOwnership';
+import type { OpenCodeRuntimeLaneRecoveryPorts } from '../TeamProvisioningOpenCodeRuntimeRecoveryFlow';
 import type { SecondaryRuntimeRunEntry } from '../TeamProvisioningSecondaryRuntimeRuns';
+import type { TeamProvisioningProgress } from '@shared/types';
 
 const input = {
   teamName: 'bootstrap-wake-test',

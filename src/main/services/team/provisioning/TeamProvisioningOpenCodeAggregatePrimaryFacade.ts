@@ -1,14 +1,9 @@
 import { buildOpenCodeSecondaryLaneId } from '@features/team-runtime-lanes';
-import type { RetryFailedOpenCodeSecondaryLanesResult, TeamCreateRequest } from '@shared/types';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
-import type {
-  OpenCodeTeamRuntimeMessageResult,
-  TeamLaunchRuntimeAdapter,
-  TeamRuntimeLaunchResult,
-} from '../runtime';
 import { type TeamLaunchStateStore } from '../TeamLaunchStateStore';
+
 import {
   advanceOpenCodePrimaryIncarnation,
   captureRetainedSecondaryDelivery,
@@ -53,6 +48,13 @@ import {
   type OpenCodeAggregatePrimaryRestartLease,
   TeamProvisioningServiceMemberLifecycleFacade,
 } from './TeamProvisioningServiceMemberLifecycleFacade';
+
+import type {
+  OpenCodeTeamRuntimeMessageResult,
+  TeamLaunchRuntimeAdapter,
+  TeamRuntimeLaunchResult,
+} from '../runtime';
+import type { RetryFailedOpenCodeSecondaryLanesResult, TeamCreateRequest } from '@shared/types';
 
 const logger = createLogger('Service:TeamProvisioning');
 

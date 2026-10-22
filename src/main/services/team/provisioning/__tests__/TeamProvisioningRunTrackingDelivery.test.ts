@@ -1,10 +1,11 @@
-import type { TeamProvisioningProgress } from '@shared/types';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
   type RunTrackingProvisioningRun,
   TeamProvisioningRunTrackingDeliveryHelper,
 } from '../TeamProvisioningRunTrackingDelivery';
+
+import type { TeamProvisioningProgress } from '@shared/types';
 
 function progress(
   state: TeamProvisioningProgress['state']

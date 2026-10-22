@@ -1,10 +1,10 @@
-import type { TeamProvisioningProgress } from '@shared/types';
-
 import {
   hasCurrentRetainedSecondaryOwnership,
   type OpenCodeRetainedSecondaryDelivery,
 } from './OpenCodeRetainedSecondaryOwnership';
+
 import type { SecondaryRuntimeRunEntry } from './TeamProvisioningSecondaryRuntimeRuns';
+import type { TeamProvisioningProgress } from '@shared/types';
 
 type RuntimeProgressState = TeamProvisioningProgress['state'];
 

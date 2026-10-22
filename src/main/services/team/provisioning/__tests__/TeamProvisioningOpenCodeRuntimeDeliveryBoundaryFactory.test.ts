@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { OpenCodeRuntimeCheckinRun } from '../TeamProvisioningOpenCodeRuntimeCheckin';
 import {
   createTeamProvisioningOpenCodeRuntimeDeliveryBoundary,
   type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryPorts,
@@ -14,6 +13,8 @@ import {
   type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHostFactoryService,
 } from '../TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactory';
 import { TeamProvisioningRunTrackingDeliveryHelper } from '../TeamProvisioningRunTrackingDelivery';
+
+import type { OpenCodeRuntimeCheckinRun } from '../TeamProvisioningOpenCodeRuntimeCheckin';
 
 const createBoundaryMock = vi.mocked(createTeamProvisioningOpenCodeRuntimeDeliveryBoundary);
 const testProjectPath = '/safe-test/project';
@@ -236,7 +237,7 @@ describe('TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactory', () => {
           },
         })
       );
-      const boundary = createBoundaryMock.mock.calls[0]![0];
+      const boundary = createBoundaryMock.mock.calls[0][0];
       await expect(boundary.resolveCurrentOpenCodeRuntimeRunId('Team', lane.laneId)).resolves.toBe(
         scenario === 'owned' ? lane.runId : null
       );

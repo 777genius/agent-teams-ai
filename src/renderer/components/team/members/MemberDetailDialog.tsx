@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
@@ -204,6 +204,8 @@ export const MemberDetailDialog = ({
   const [activeTab, setActiveTab] = useState<MemberDetailTab>(initialTab);
   const [restarting, setRestarting] = useState(false);
   const [restartError, setRestartError] = useState<string | null>(null);
+  const restartAttempt = useRef(0);
+  const memberName = member?.name ?? null;
 
   const runtimeSummary = useMemo(
     () =>
@@ -271,13 +273,17 @@ export const MemberDetailDialog = ({
         (runtimeEntry?.restartable !== false || canControlledOpenCodeRelaunch);
 
   useEffect(() => {
-    if (!open || !member) {
-      return;
-    }
-    setActiveTab(initialTab);
+    if (open && memberName) setActiveTab(initialTab);
+  }, [initialTab, memberName, open, teamName]);
+
+  useEffect(() => {
+    restartAttempt.current += 1;
     setRestartError(null);
     setRestarting(false);
-  }, [initialTab, member, open]);
+    return () => {
+      restartAttempt.current += 1;
+    };
+  }, [memberName, open, teamName]);
 
   const {
     stats: memberStats,
@@ -446,19 +452,21 @@ export const MemberDetailDialog = ({
                   className="gap-1.5"
                   disabled={restarting || restartInFlight}
                   onClick={async () => {
+                    const attempt = ++restartAttempt.current;
                     setRestartError(null);
                     setRestarting(true);
                     try {
                       if (!onRestartMember) return;
                       await onRestartMember(member.name);
                     } catch (error) {
+                      if (restartAttempt.current !== attempt) return;
                       setRestartError(
                         error instanceof Error
                           ? error.message
                           : t('members.detail.failedToRestartMember')
                       );
                     } finally {
-                      setRestarting(false);
+                      if (restartAttempt.current === attempt) setRestarting(false);
                     }
                   }}
                 >
