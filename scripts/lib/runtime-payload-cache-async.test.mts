@@ -283,12 +283,11 @@ test('bounded copy preserves modes, refuses an existing stage, and rejects an in
 });
 
 test(
-  'private writable root retains readonly child modes independently of legacy root defaults',
+  'private writable root preserves exact readonly source child modes',
   { skip: process.platform === 'win32' },
   async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-cache-readonly-copy-'));
     const source = path.join(root, 'source');
-    const legacy = path.join(root, 'legacy');
     const stage = path.join(root, 'stage');
     try {
       fs.mkdirSync(path.join(source, 'nested'), { recursive: true });
@@ -296,13 +295,12 @@ test(
       fs.chmodSync(path.join(source, 'nested', 'companion'), 0o444);
       fs.chmodSync(path.join(source, 'nested'), 0o555);
       fs.chmodSync(source, 0o555);
-      fs.cpSync(source, legacy, { recursive: true, errorOnExist: true, force: false });
       await copyRuntimePayload(source, stage, await inventoryRuntimePayload(source));
       assert.equal(fs.statSync(stage).mode & 0o7777, 0o700);
       for (const relative of ['nested', 'nested/companion']) {
         assert.equal(
           fs.statSync(path.join(stage, relative)).mode & 0o7777,
-          fs.statSync(path.join(legacy, relative)).mode & 0o7777
+          fs.statSync(path.join(source, relative)).mode & 0o7777
         );
       }
       assert.equal(
@@ -310,7 +308,7 @@ test(
         'readonly fixture'
       );
     } finally {
-      for (const directory of [source, legacy, stage]) {
+      for (const directory of [source, stage]) {
         if (fs.existsSync(directory)) fs.chmodSync(directory, 0o700);
         if (fs.existsSync(path.join(directory, 'nested')))
           fs.chmodSync(path.join(directory, 'nested'), 0o700);
