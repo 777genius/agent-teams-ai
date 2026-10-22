@@ -81,6 +81,23 @@ export function projectV2NativeTranscript(value: unknown, expected: {
       }
       return null;
     };
+    // Plain-text failures keep only a class from this fixed vocabulary plus
+    // the text length; no fragment of the original text is retained.
+    const proseClass = (input: unknown): string | null => {
+      if (typeof input !== 'string' || input.length === 0) return null;
+      const probes: [RegExp, string][] = [
+        [/rate.{0,12}limit|too many requests|\b429\b/i, 'rate_limited'],
+        [/insufficient.{0,12}credit|payment|\b402\b|billing|quota|balance/i, 'credit_limited'],
+        [/abort/i, 'aborted'],
+        [/time.?out|timed out|deadline/i, 'timed_out'],
+        [/econnreset|econnrefused|socket|network|fetch|terminated|disconnect/i, 'network_failure'],
+        [/context|too long|token limit|maximum/i, 'context_overflow'],
+        [/unauthorized|\b401\b|api key|authentication/i, 'authentication_failed'],
+        [/\b5\d\d\b|server error|overloaded|internal/i, 'server_error'],
+        [/json|parse|invalid|syntax/i, 'invalid_response'],
+      ];
+      return probes.find(([pattern]) => pattern.test(input))?.[1] ?? 'unclassified_prose';
+    };
     return {
       name: names.find(item => item === name || rows.some(row => safeField(row, 'name') === item))
         ?? firstClosedToken([name, ...rows.map(row => safeField(row, 'name'))]),
@@ -88,6 +105,8 @@ export function projectV2NativeTranscript(value: unknown, expected: {
         ?? firstClosedToken(rows.map(row => safeField(row, 'code'))),
       httpStatus: rows.flatMap(row => [safeField(row, 'status'), safeField(row, 'statusCode')])
         .find(status => Number.isSafeInteger(status) && Number(status) >= 100 && Number(status) <= 599) as number | undefined ?? null,
+      proseClass: proseClass(raw),
+      messageLength: typeof raw === 'string' && raw.length <= 32_768 ? raw.length : null,
     };
   };
   const errors = assistants.filter(message => field(message, 'hasError') === true);
