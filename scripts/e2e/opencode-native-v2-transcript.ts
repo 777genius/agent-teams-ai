@@ -68,9 +68,24 @@ export function projectV2NativeTranscript(value: unknown, expected: {
     const codes = ['insufficient_credits', 'insufficient_quota', 'rate_limit_exceeded', 'invalid_api_key',
       'context_length_exceeded', 'max_tokens_exceeded', 'model_not_found', 'invalid_request_error',
       'invalid_request', 'authentication_error', 'permission_denied', 'server_error', 'overloaded_error', 'billing_error'];
+    // Unrecognized failures still name themselves, but only as closed
+    // snake-case tokens; the original error text is never retained.
+    const closedToken = (input: unknown): string | null => {
+      const token = typeof input === 'string' ? input.toLowerCase() : '';
+      return /^[a-z_]{2,90}$/.test(token) ? token : null;
+    };
+    const firstClosedToken = (inputs: unknown[]): string | null => {
+      for (const input of inputs) {
+        const token = closedToken(input);
+        if (token !== null) return token;
+      }
+      return null;
+    };
     return {
-      name: names.find(item => item === name || rows.some(row => safeField(row, 'name') === item)) ?? null,
-      providerCode: codes.find(item => rows.some(row => safeField(row, 'code') === item)) ?? null,
+      name: names.find(item => item === name || rows.some(row => safeField(row, 'name') === item))
+        ?? firstClosedToken([name, ...rows.map(row => safeField(row, 'name'))]),
+      providerCode: codes.find(item => rows.some(row => safeField(row, 'code') === item))
+        ?? firstClosedToken(rows.map(row => safeField(row, 'code'))),
       httpStatus: rows.flatMap(row => [safeField(row, 'status'), safeField(row, 'statusCode')])
         .find(status => Number.isSafeInteger(status) && Number(status) >= 100 && Number(status) <= 599) as number | undefined ?? null,
     };

@@ -243,4 +243,24 @@ describe('finite canonical command observation', () => {
     expect(errorTuple(textGetter).toolError).toEqual({ type: 'unknown', platform: null });
     expect(getter).not.toHaveBeenCalled();
   });
+
+  it('names unrecognized assistant failures with closed tokens and never retains the error text', () => {
+    const unknown = fixture();
+    unknown.messages[1] = message({ hasError: true, errorName: 'ProviderStreamFailure',
+      errorMessage: 'PRIVATE_PROSE at C:/PRIVATE_PATH key=PRIVATE_KEY' });
+    const packet = projectV2NativeTranscript(unknown, expected);
+    expect(packet.assistantFailures).toEqual([{ name: 'providerstreamfailure', providerCode: null, httpStatus: null }]);
+    expect(JSON.stringify(packet)).not.toMatch(/PRIVATE_|C:/);
+    const wrapped = fixture();
+    wrapped.messages[1] = message({ hasError: true, errorName: 'StrangeName123',
+      errorMessage: JSON.stringify({ error: { name: 'WrappedFailure', code: 'strange_upstream_code' } }) });
+    expect(projectV2NativeTranscript(wrapped, expected).assistantFailures)
+      .toEqual([{ name: 'wrappedfailure', providerCode: 'strange_upstream_code', httpStatus: null }]);
+    for (const bad of ['Weird Error with spaces and C:/PRIVATE_PATH', 'X'.repeat(91), '404', 'x'.repeat(91), 123, {}]) {
+      const refused = fixture();
+      refused.messages[1] = message({ hasError: true, errorName: bad, errorMessage: null });
+      expect(projectV2NativeTranscript(refused, expected).assistantFailures)
+        .toEqual([{ name: null, providerCode: null, httpStatus: null }]);
+    }
+  });
 });
