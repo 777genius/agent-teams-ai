@@ -6248,6 +6248,8 @@ describe('teamSlice actions', () => {
     'does not hand off a restart snapshot after %s invalidates its authority',
     async (race) => {
       const store = createSliceStore();
+      const refreshTruth = vi.fn(() => Promise.resolve());
+      store.setState({ refreshTeamData: refreshTruth });
       store.setState({
         currentRuntimeRunIdByTeam: { 'my-team': 'run-old' },
         currentProvisioningRunIdByTeam: { 'my-team': 'run-old' },
@@ -6257,8 +6259,7 @@ describe('teamSlice actions', () => {
       hoisted.getMemberSpawnStatuses.mockReturnValue(pending.promise);
       const restarting = store.getState().restartMember('my-team', 'alice');
       await flushMicrotasks();
-      if (race === 'stop')
-        store.setState({ ignoredRuntimeRunIds: { 'run-old': 'my-team' } });
+      if (race === 'stop') store.setState({ ignoredRuntimeRunIds: { 'run-old': 'my-team' } });
       if (race === 'launch') invalidateTeamLocalStateEpoch('my-team');
       if (race === 'other-restart')
         store.setState({
@@ -6279,12 +6280,16 @@ describe('teamSlice actions', () => {
       expect(store.getState().currentRuntimeRunIdByTeam['my-team']).not.toBe('run-new');
       expect(store.getState().currentProvisioningRunIdByTeam['my-team']).not.toBe('run-new');
       expect(hoisted.getProvisioningStatus).not.toHaveBeenCalled();
+      if (race === 'stop' || race === 'launch') expect(refreshTruth).not.toHaveBeenCalled();
     }
   );
 
   it('does not grant successful-action handoff to a failed restart with live secondary lanes', async () => {
     const store = createSliceStore();
+    hoisted.getData.mockResolvedValue(createTeamSnapshot({ isAlive: true }));
     store.setState({
+      selectedTeamName: 'my-team',
+      selectedTeamData: createTeamSnapshot({ isAlive: false }),
       currentRuntimeRunIdByTeam: { 'my-team': 'run-old' },
       currentProvisioningRunIdByTeam: { 'my-team': 'run-old' },
       memberSpawnStatusesByTeam: { 'my-team': { bob: createMemberSpawnStatus() } },
@@ -6298,6 +6303,8 @@ describe('teamSlice actions', () => {
     );
     expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('run-old');
     expect(hoisted.getProvisioningStatus).not.toHaveBeenCalled();
+    expect(hoisted.getData).toHaveBeenCalledWith('my-team');
+    expect(store.getState().selectedTeamData?.isAlive).toBe(true);
   });
 
   it('a delayed earlier restart cannot replace the successor adopted by a rapid second restart', async () => {

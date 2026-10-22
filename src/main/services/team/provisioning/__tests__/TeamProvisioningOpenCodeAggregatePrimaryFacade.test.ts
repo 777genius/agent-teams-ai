@@ -126,6 +126,36 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
     this.runtimeAdapterRunByTeam.set(run.teamName, owner);
   }
 
+  trackSecondaryRuns(run: ProvisioningRun): void {
+    this.secondaryRuntimeRunByTeam.set(
+      run.teamName,
+      new Map(
+        run.mixedSecondaryLanes.map((lane) => [
+          lane.laneId,
+          {
+            runId: lane.runId!,
+            providerId: 'opencode',
+            laneId: lane.laneId,
+            memberName: lane.member.name,
+          },
+        ])
+      )
+    );
+  }
+
+  simulatePrimaryCleanup(teamName: string, runId: string): void {
+    if (this.runtimeAdapterRunByTeam.get(teamName)?.runId === runId)
+      this.runtimeAdapterRunByTeam.delete(teamName);
+    if (this.runTracking.getAliveRunId(teamName) === runId)
+      this.runTracking.deleteAliveRunId(teamName);
+    if (this.provisioningRunByTeam.get(teamName) === runId)
+      this.provisioningRunByTeam.delete(teamName);
+  }
+
+  getTrackedAggregateRun(teamName: string): string | null {
+    return this.runTracking.getTrackedRunId(teamName);
+  }
+
   publishNewOwner(teamName: string, owner: RuntimeAdapterRunByTeamEntry): void {
     this.runTracking.setAliveRunId(teamName, owner.runId);
     this.runtimeAdapterRunByTeam.set(teamName, owner);
@@ -367,6 +397,11 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
         })),
       ];
       run.mixedSecondaryLanes = siblings;
+      facade.trackSecondaryRuns(run);
+      facade.clearPrimaryLaneIfOwned.mockImplementation(() => {
+        facade.simulatePrimaryCleanup(run.teamName, run.runId);
+        return Promise.resolve(undefined);
+      });
       const stopped = new Set<string>();
       const stop = vi.fn(async (input: TeamRuntimeStopInput) => {
         const bound = bindLifecycleManifest(
@@ -450,6 +485,8 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
         expect(facade.writeFailureArtifact).not.toHaveBeenCalled();
       }
       expect(run.progress.state).toBe(failedLaunches === 2 ? 'failed' : 'ready');
+      expect(facade.isTeamAlive(run.teamName)).toBe(true);
+      expect(facade.getTrackedAggregateRun(run.teamName)).toBe(run.runId);
       expect(run.effectiveMembers.map((entry) => entry.name)).toEqual(
         failedLaunches ? ['Lead', 'Worker'] : ['Lead']
       );

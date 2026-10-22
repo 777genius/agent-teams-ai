@@ -4,7 +4,11 @@ import { createLogger } from '@shared/utils/logger';
 
 import { type TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
-import { advanceOpenCodePrimaryIncarnation } from './OpenCodeAggregatePrimaryIncarnation';
+import {
+  advanceOpenCodePrimaryIncarnation,
+  hasRetainablePrimaryLead,
+  retainSecondaryAggregateOwnership,
+} from './OpenCodeAggregatePrimaryIncarnation';
 import {
   stopFailedOpenCodeAggregatePrimaryRelaunchCandidate as stopFailedOpenCodeAggregatePrimaryRelaunchCandidateHelper,
   stopUnretainableOpenCodePrimaryLane as stopUnretainableOpenCodePrimaryLaneHelper,
@@ -33,10 +37,7 @@ import {
 } from './TeamProvisioningOpenCodeAggregatePrimaryLaneWiring';
 import { hasDeliverableOpenCodeRuntimeBootstrapSessionEvidence } from './TeamProvisioningOpenCodeBootstrapEvidence';
 import { rebootstrapOpenCodeAggregatePrimaryLane as rebootstrapOpenCodeAggregatePrimaryLaneHelper } from './TeamProvisioningOpenCodePrimaryLaneRebootstrap';
-import {
-  hasRetainableOpenCodeRuntimeMember,
-  isRecoverableOpenCodeRuntimeEvidence,
-} from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+import { hasRetainableOpenCodeRuntimeMember } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import { type ProvisioningRun } from './TeamProvisioningRunModel';
 import { nowIso } from './TeamProvisioningRunProgress';
 import { type MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
@@ -287,21 +288,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     const previousExpectedMembers = [...run.expectedMembers];
     const previousSecondaryLanes = [...run.mixedSecondaryLanes];
     const leadMemberName = this.getRunLeadName(run).trim().toLowerCase();
-    const hasRetainablePrimaryLead = (result: TeamRuntimeLaunchResult | null): boolean => {
-      if (!result) {
-        return false;
-      }
-      const leadEvidence = Object.entries(result.members).find(
-        ([name, evidence]) =>
-          (evidence.memberName?.trim() || name.trim()).toLowerCase() === leadMemberName
-      )?.[1];
-      return Boolean(
-        leadEvidence &&
-        leadEvidence.launchState !== 'failed_to_start' &&
-        leadEvidence.hardFailure !== true &&
-        isRecoverableOpenCodeRuntimeEvidence(leadEvidence)
-      );
-    };
 
     const currentPrimaryRun = this.runtimeAdapterRunByTeam.get(teamName);
     const assertPrimaryRuntimeOwnerCurrent = (): void => {
@@ -343,14 +329,19 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       );
     }
 
+    const incarnationPorts = {
+      runs: this.runs,
+      provisioningRunByTeam: this.provisioningRunByTeam,
+      getRuntimeOwner: (name: string) => this.runtimeAdapterRunByTeam.get(name),
+      getAliveRunId: (name: string) => this.runTracking.getAliveRunId(name),
+      setAliveRunId: (name: string, id: string) => this.runTracking.setAliveRunId(name, id),
+      mayRestore: () => !restartNoLongerCurrent() && this.hasSecondaryRuntimeRuns(teamName),
+      getRestartLease: () =>
+        this.openCodeAggregatePrimaryRestartByTeam.get(teamName.trim().toLowerCase()),
+      getTrackedRunId: () => this.runTracking.getTrackedRunId(teamName),
+    };
     const advancePrimaryIncarnation = (): void =>
-      advanceOpenCodePrimaryIncarnation(run, restartLease, {
-        runs: this.runs,
-        provisioningRunByTeam: this.provisioningRunByTeam,
-        getRuntimeOwner: (name) => this.runtimeAdapterRunByTeam.get(name),
-        getAliveRunId: (name) => this.runTracking.getAliveRunId(name),
-        setAliveRunId: (name, id) => this.runTracking.setAliveRunId(name, id),
-      });
+      advanceOpenCodePrimaryIncarnation(run, restartLease, incarnationPorts);
     await this.stopOpenCodeRuntimeAdapterTeam(teamName, run.runId);
     assertRestartCurrent();
     advancePrimaryIncarnation();
@@ -404,7 +395,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
         await this.clearCancelledOpenCodeAggregateRestartState(teamName, run.runId);
         throw getCancelledAggregateLaunchError(teamName);
       }
-      if (!hasRetainablePrimaryLead(primaryRelaunchResult)) {
+      if (!hasRetainablePrimaryLead(primaryRelaunchResult, leadMemberName)) {
         throw new Error('OpenCode primary member restart did not retain the team lead runtime.');
       }
       run.detectedSessionId = primaryRelaunchResult?.leadSessionId?.trim() || null;
@@ -464,7 +455,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
           await this.clearCancelledOpenCodeAggregateRestartState(teamName, run.runId);
           throw getCancelledAggregateLaunchError(teamName);
         }
-        if (!hasRetainablePrimaryLead(rollbackResult)) {
+        if (!hasRetainablePrimaryLead(rollbackResult, leadMemberName)) {
           throw new Error('Primary rollback did not restore a retainable OpenCode team lead.');
         }
         run.detectedSessionId = rollbackResult?.leadSessionId?.trim() || null;
@@ -503,6 +494,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
           previousLaunchState,
         });
         await this.clearCancelledOpenCodeAggregateRestartState(teamName, run.runId);
+        retainSecondaryAggregateOwnership(run, restartLease, incarnationPorts);
         this.aggregatePrimaryProgress.publishFailed(
           run,
           'OpenCode member restart and primary rollback failed',
@@ -526,7 +518,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       const memberRestartRetained =
         lane.result != null && hasRetainableOpenCodeRuntimeMember(lane.result);
       const restartRetained =
-        memberRestartRetained && hasRetainablePrimaryLead(primaryRelaunchResult);
+        memberRestartRetained && hasRetainablePrimaryLead(primaryRelaunchResult, leadMemberName);
       run.progress = this.runtimeAdapterProgressState.setRuntimeAdapterProgress(
         {
           ...run.progress,

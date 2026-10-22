@@ -79,7 +79,18 @@ export function createTeamMemberRestartAction<TScope>(options: {
         }
       }
     } finally {
+      const state = get();
+      const currentRun = state.currentRuntimeRunIdByTeam[teamName];
+      const stoppedPredecessor =
+        predecessor &&
+        state.ignoredRuntimeRunIds[predecessor] === teamName &&
+        (!currentRun ||
+          currentRun === predecessor ||
+          state.ignoredRuntimeRunIds[currentRun] === teamName);
       await Promise.allSettled([
+        ...(options.isScopeCurrent(teamName, requestScope) && !stoppedPredecessor
+          ? [get().refreshTeamData(teamName)]
+          : []),
         get().refreshTeamMessagesHead(teamName),
         get().fetchMemberSpawnStatuses(teamName),
         get().fetchTeamAgentRuntime(teamName),

@@ -2,7 +2,9 @@ import { randomUUID } from 'crypto';
 
 import { getCancelledAggregateLaunchError } from './OpenCodeAggregatePrimaryRestartPolicy';
 import { createInitialMemberSpawnStatusEntry } from './TeamProvisioningMemberSpawnStatusPolicy';
+import { isRecoverableOpenCodeRuntimeEvidence } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 
+import type { TeamRuntimeLaunchResult } from '../runtime/TeamRuntimeAdapter';
 import type { ProvisioningRun } from './TeamProvisioningRunModel';
 import type { OpenCodeAggregatePrimaryRestartLease } from './TeamProvisioningServiceMemberLifecycleFacade';
 
@@ -46,4 +48,49 @@ export function advanceOpenCodePrimaryIncarnation(
   ports.runs.set(runId, run);
   ports.provisioningRunByTeam.set(run.teamName, runId);
   ports.setAliveRunId(run.teamName, runId);
+}
+
+/** Preserve the aggregate owner when a failed primary leaves owned secondary lanes. */
+export function retainSecondaryAggregateOwnership(
+  run: Pick<ProvisioningRun, 'teamName' | 'runId'>,
+  lease: OpenCodeAggregatePrimaryRestartLease,
+  ports: {
+    mayRestore(): boolean;
+    getRestartLease(): OpenCodeAggregatePrimaryRestartLease | undefined;
+    getTrackedRunId(): string | null;
+    getRuntimeOwner(teamName: string): unknown;
+    getAliveRunId(teamName: string): string | null;
+    setAliveRunId(teamName: string, runId: string): void;
+  }
+): void {
+  const aliveRunId = ports.getAliveRunId(run.teamName);
+  const trackedRunId = ports.getTrackedRunId();
+  if (
+    ports.mayRestore() &&
+    lease.teamName === run.teamName &&
+    ports.getRestartLease() === lease &&
+    !lease.cancelRequested &&
+    (lease.candidateRunId ?? lease.runId) === run.runId &&
+    (!trackedRunId || trackedRunId === run.runId) &&
+    !ports.getRuntimeOwner(run.teamName) &&
+    (!aliveRunId || aliveRunId === run.runId)
+  ) {
+    ports.setAliveRunId(run.teamName, run.runId);
+  }
+}
+
+export function hasRetainablePrimaryLead(
+  result: TeamRuntimeLaunchResult | null,
+  leadName: string
+): boolean {
+  if (!result) return false;
+  const leadEvidence = Object.entries(result.members).find(
+    ([name, evidence]) => (evidence.memberName?.trim() || name.trim()).toLowerCase() === leadName
+  )?.[1];
+  return Boolean(
+    leadEvidence &&
+    leadEvidence.launchState !== 'failed_to_start' &&
+    leadEvidence.hardFailure !== true &&
+    isRecoverableOpenCodeRuntimeEvidence(leadEvidence)
+  );
 }

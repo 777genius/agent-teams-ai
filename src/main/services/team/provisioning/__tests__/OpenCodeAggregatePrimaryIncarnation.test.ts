@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { advanceOpenCodePrimaryIncarnation } from '../OpenCodeAggregatePrimaryIncarnation';
+import {
+  advanceOpenCodePrimaryIncarnation,
+  retainSecondaryAggregateOwnership,
+} from '../OpenCodeAggregatePrimaryIncarnation';
 import { createOpenCodeAggregateProvisioningRun } from '../TeamProvisioningOpenCodeAggregateRun';
 
 import type { ProvisioningRun } from '../TeamProvisioningRunModel';
@@ -68,7 +71,12 @@ describe('OpenCode aggregate primary incarnation handoff', () => {
       bootstrapConfirmed: true,
       updatedAt: '',
     });
-    const secondary = { status: 'online' as const, launchState: 'confirmed_alive' as const, runtimeAlive: true, updatedAt: '' };
+    const secondary = {
+      status: 'online' as const,
+      launchState: 'confirmed_alive' as const,
+      runtimeAlive: true,
+      updatedAt: '',
+    };
     run.memberSpawnStatuses.set('secondary', secondary);
     advanceOpenCodePrimaryIncarnation(run, lease, ports);
     expect(run.runId).not.toBe('TEST-stopped');
@@ -117,5 +125,31 @@ describe('OpenCode aggregate primary incarnation handoff', () => {
     expect(ports.getAliveRunId()).toBe(beforeAlive);
     expect(run.runId).toBe('TEST-stopped');
     expect(lease.candidateRunId).toBe(beforeCandidateRunId);
+  });
+});
+
+describe('retained secondary aggregate after primary failure', () => {
+  it.each([
+    'owned',
+    'no-secondary',
+    'cancelled',
+    'replaced-lease',
+    'other-tracked',
+    'other-alive',
+    'other-primary',
+  ] as const)('retains cleanup authority only for the current secondary owner: %s', (scenario) => {
+    const { run, lease } = fixture();
+    const setAliveRunId = vi.fn();
+    if (scenario === 'cancelled') lease.cancelRequested = true;
+    retainSecondaryAggregateOwnership(run, lease, {
+      mayRestore: () => scenario !== 'no-secondary',
+      getRestartLease: () => (scenario === 'replaced-lease' ? { ...lease } : lease),
+      getTrackedRunId: () => (scenario === 'other-tracked' ? 'TEST-replacement' : null),
+      getRuntimeOwner: () => (scenario === 'other-primary' ? {} : undefined),
+      getAliveRunId: () => (scenario === 'other-alive' ? 'TEST-replacement' : null),
+      setAliveRunId,
+    });
+    if (scenario === 'owned') expect(setAliveRunId).toHaveBeenCalledWith(run.teamName, run.runId);
+    else expect(setAliveRunId).not.toHaveBeenCalled();
   });
 });
