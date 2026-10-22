@@ -8,7 +8,12 @@ import { TeamTaskReader } from '../../TeamTaskReader';
 import { BoardTaskExactLogChunkBuilder } from '../exact/BoardTaskExactLogChunkBuilder';
 
 import { mapOpenCodeRuntimeTranscriptLogMessageToParsedMessage } from './OpenCodeRuntimeProjectionMapper';
-import { filterMessagesForAttribution } from './OpenCodeTaskLogAttributionProjection';
+import {
+  filterMessagesForAttribution,
+  TASK_LOG_MARKER_TOOL_NAMES,
+  TERMINAL_TASK_MARKER_TOOL_NAMES,
+  TERMINAL_TASK_SET_STATUS_VALUES,
+} from './OpenCodeTaskLogAttributionProjection';
 import { OpenCodeTaskLogAttributionStore } from './OpenCodeTaskLogAttributionStore';
 import { TaskLogOpenCodeSessionEvidenceSource } from './TaskLogOpenCodeSessionEvidenceSource';
 
@@ -46,21 +51,6 @@ const AGENT_TEAMS_TOOL_PREFIXES = [
   'agent_teams_',
 ] as const;
 
-const TASK_LOG_MARKER_TOOL_NAMES = new Set<string>([
-  'task_start',
-  'task_complete',
-  'task_set_status',
-  'task_set_owner',
-  'task_add_comment',
-  'task_attach_file',
-  'task_attach_comment_file',
-  'task_set_clarification',
-  'review_start',
-  'review_request',
-  'review_approve',
-  'review_request_changes',
-]);
-
 const BOARD_MCP_TOOL_NAMES = new Set<string>([
   ...TASK_LOG_MARKER_TOOL_NAMES,
   'runtime_bootstrap_checkin',
@@ -76,14 +66,6 @@ const BOARD_MCP_TOOL_NAMES = new Set<string>([
   'task_delete',
   'process_list',
 ]);
-
-const TERMINAL_TASK_MARKER_TOOL_NAMES = new Set<string>([
-  'task_complete',
-  'review_approve',
-  'review_request_changes',
-]);
-
-const TERMINAL_TASK_SET_STATUS_VALUES = new Set<string>(['completed', 'pending', 'deleted']);
 
 const TASK_REFERENCE_KEYS = new Set<string>([
   'taskid',

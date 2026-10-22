@@ -1,3 +1,4 @@
+import { canonicalizeAgentTeamsToolName } from '../../agentTeamsToolNames';
 import { mapOpenCodeRuntimeTranscriptMessagesToParsedMessages } from './OpenCodeRuntimeProjectionMapper';
 
 import type { OpenCodeRuntimeTranscriptLogMessage } from '../../../runtime/ClaudeMultimodelBridgeService';
@@ -5,6 +6,44 @@ import type { OpenCodeTaskLogAttributionRecord } from './OpenCodeTaskLogAttribut
 import type { ParsedMessage } from '@main/types';
 
 const ATTRIBUTION_WINDOW_GRACE_MS = 1_000;
+
+export const TASK_LOG_MARKER_TOOL_NAMES = new Set<string>([
+  'task_start',
+  'task_complete',
+  'task_set_status',
+  'task_set_owner',
+  'task_add_comment',
+  'task_attach_file',
+  'task_attach_comment_file',
+  'task_set_clarification',
+  'review_start',
+  'review_request',
+  'review_approve',
+  'review_request_changes',
+]);
+
+export const TERMINAL_TASK_MARKER_TOOL_NAMES = new Set<string>([
+  'task_complete',
+  'review_approve',
+  'review_request_changes',
+]);
+
+export const TERMINAL_TASK_SET_STATUS_VALUES = new Set<string>(['completed', 'pending', 'deleted']);
+
+function collectTurnClosure(messages: ParsedMessage[], rootUuid: string): ParsedMessage[] {
+  const included = new Set([rootUuid]);
+  for (const message of messages) {
+    if (
+      (message.type === 'assistant' && message.parentUuid && included.has(message.parentUuid)) ||
+      (message.isMeta &&
+        (message.sourceToolAssistantUUID || message.parentUuid) &&
+        included.has(message.sourceToolAssistantUUID || message.parentUuid!))
+    ) {
+      included.add(message.uuid);
+    }
+  }
+  return messages.filter((message) => included.has(message.uuid));
+}
 
 function filterDeliveryTurn(messages: ParsedMessage[], promptUuid: string): ParsedMessage[] {
   const prompt = messages.find((message) => message.uuid === promptUuid);
@@ -14,15 +53,142 @@ function filterDeliveryTurn(messages: ParsedMessage[], promptUuid: string): Pars
 
   // OpenCode assistant parent IDs identify the delivered prompt. A later notification
   // can share the same task ref and time window without belonging to this turn.
-  const included = new Set([promptUuid]);
+  return collectTurnClosure(messages, promptUuid);
+}
+
+function normalizeTaskRef(value: unknown): string | null {
+  if (typeof value !== 'string' && typeof value !== 'number') {
+    return null;
+  }
+  const normalized = String(value).trim().replace(/^#/, '').toLowerCase();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function valueReferencesTask(value: unknown, taskRefs: Set<string>, depth = 0): boolean {
+  if (depth > 4 || value === null || value === undefined || taskRefs.size === 0) {
+    return false;
+  }
+  const normalized = normalizeTaskRef(value);
+  if (normalized && taskRefs.has(normalized)) {
+    return true;
+  }
+  if (Array.isArray(value)) {
+    return value.some((item) => valueReferencesTask(item, taskRefs, depth + 1));
+  }
+  if (typeof value === 'object') {
+    return Object.values(value as Record<string, unknown>).some((nested) =>
+      valueReferencesTask(nested, taskRefs, depth + 1)
+    );
+  }
+  return false;
+}
+
+function markerCallReferencesTask(
+  toolCall: { name?: string; input?: unknown },
+  taskRefs: Set<string>
+): boolean {
+  const canonicalName = canonicalizeAgentTeamsToolName(toolCall.name ?? '')
+    .trim()
+    .toLowerCase();
+  return (
+    TASK_LOG_MARKER_TOOL_NAMES.has(canonicalName) && valueReferencesTask(toolCall.input, taskRefs)
+  );
+}
+
+function terminalMarkerCallReferencesTask(
+  toolCall: { name?: string; input?: unknown },
+  taskRefs: Set<string>
+): boolean {
+  if (!markerCallReferencesTask(toolCall, taskRefs)) {
+    return false;
+  }
+  const canonicalName = canonicalizeAgentTeamsToolName(toolCall.name ?? '')
+    .trim()
+    .toLowerCase();
+  if (TERMINAL_TASK_MARKER_TOOL_NAMES.has(canonicalName)) {
+    return true;
+  }
+  if (canonicalName !== 'task_set_status') {
+    return false;
+  }
+  const status = (toolCall.input as Record<string, unknown> | undefined)?.status;
+  return (
+    typeof status === 'string' && TERMINAL_TASK_SET_STATUS_VALUES.has(status.trim().toLowerCase())
+  );
+}
+
+function resolveTurnRootUuid(messages: ParsedMessage[], message: ParsedMessage): string {
+  const byUuid = new Map<string, ParsedMessage>();
+  for (const item of messages) {
+    byUuid.set(item.uuid, item);
+  }
+  const seen = new Set([message.uuid]);
+  let current = message;
+  while (current.parentUuid) {
+    const parent = byUuid.get(current.parentUuid);
+    if (!parent || seen.has(parent.uuid)) {
+      break;
+    }
+    seen.add(parent.uuid);
+    current = parent;
+  }
+  return current.uuid;
+}
+
+/**
+ * V1 keeps working on a task inside turns triggered by later pumped messages, so the
+ * delivered turn alone hides the task's own command evidence. When the delivered turn
+ * has no terminal task marker, pull in the task's marker turns up to and including the
+ * terminal marker turn. Without a terminal marker inside the record bounds, stay strict.
+ */
+function extendDeliveryTurnAcrossTaskLifecycle(
+  messages: ParsedMessage[],
+  promptUuid: string,
+  taskRefs: Set<string>
+): ParsedMessage[] {
+  const base = filterDeliveryTurn(messages, promptUuid);
+  if (base.length === 0) {
+    return base;
+  }
+  const containsTerminal = (list: ParsedMessage[]) =>
+    list.some((message) =>
+      message.toolCalls.some((toolCall) => terminalMarkerCallReferencesTask(toolCall, taskRefs))
+    );
+  if (containsTerminal(base)) {
+    return base;
+  }
+
+  const baseRoots = new Set(base.map((message) => resolveTurnRootUuid(messages, message)));
+  const markerTurnRoots: string[] = [];
+  const markerTurns = new Map<string, ParsedMessage[]>();
+  let terminalRoot: string | null = null;
   for (const message of messages) {
-    if (
-      (message.type === 'assistant' && message.parentUuid && included.has(message.parentUuid)) ||
-      (message.isMeta &&
-        (message.sourceToolAssistantUUID || message.parentUuid) &&
-        included.has(message.sourceToolAssistantUUID || message.parentUuid!))
-    ) {
-      included.add(message.uuid);
+    if (!message.toolCalls.some((toolCall) => markerCallReferencesTask(toolCall, taskRefs))) {
+      continue;
+    }
+    const rootUuid = resolveTurnRootUuid(messages, message);
+    if (baseRoots.has(rootUuid) || markerTurns.has(rootUuid)) {
+      continue;
+    }
+    const turn = collectTurnClosure(messages, rootUuid);
+    markerTurns.set(rootUuid, turn);
+    markerTurnRoots.push(rootUuid);
+    if (containsTerminal(turn)) {
+      terminalRoot = rootUuid;
+      break;
+    }
+  }
+  if (!terminalRoot) {
+    return base;
+  }
+
+  const included = new Set(base.map((message) => message.uuid));
+  for (const rootUuid of markerTurnRoots) {
+    for (const item of markerTurns.get(rootUuid) ?? []) {
+      included.add(item.uuid);
+    }
+    if (rootUuid === terminalRoot) {
+      break;
     }
   }
   return messages.filter((message) => included.has(message.uuid));
@@ -93,12 +259,15 @@ export function filterMessagesForAttribution(
     return [];
 
   const range = messages.slice(startIndex, endIndex + 1);
+  const taskRefs = new Set(
+    [record.taskId].map(normalizeTaskRef).filter((value): value is string => value !== null)
+  );
   const turn =
     record.source === 'delivery_ledger'
       ? record.startMessageUuid
         ? options.nativeParentIdsUnavailable && record.sessionId?.trim()
           ? filterV2NativeInputWindow(messages.slice(0, endIndex + 1), record.startMessageUuid)
-          : filterDeliveryTurn(range, record.startMessageUuid)
+          : extendDeliveryTurnAcrossTaskLifecycle(range, record.startMessageUuid, taskRefs)
         : []
       : range;
   const sinceMs = record.since ? Date.parse(record.since) : Number.NaN;
