@@ -130,7 +130,7 @@ export function resolveLaunchDialogPrefill({
   const effort =
     currentLead?.effort ?? savedRequest?.effort ?? previousLaunchParams?.effort ?? storedEffort;
   const fastMode =
-    savedRequest?.fastMode ?? previousLaunchParams?.fastMode ?? storedFastMode ?? 'inherit';
+    savedRequest?.fastMode ?? previousLaunchParams?.fastMode ?? storedFastMode ?? 'off';
   const limitContext =
     previousLaunchParams?.limitContext ?? savedRequest?.limitContext ?? storedLimitContext;
   const providerBackendId =
