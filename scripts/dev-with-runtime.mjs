@@ -587,15 +587,15 @@ async function ensureBootstrappedRuntime() {
   const cacheDir = path.join(runtimeCacheRoot, runtimeLock.version, platformKey);
   const payloadDir = path.join(cacheDir, 'payload-v1');
   const cachedBinaryPath = path.join(payloadDir, asset.binaryName);
-  const isCacheValid = () =>
-    isRuntimePayloadCacheValid(payloadDir, asset.sha256, asset.binaryName) &&
+  const isCacheValid = async () =>
+    (await isRuntimePayloadCacheValid(payloadDir, asset.sha256, asset.binaryName)) &&
     isCachedBinaryValid(cachedBinaryPath, expectedCliVersion);
 
   fs.mkdirSync(cacheDir, { recursive: true });
   const lockHandle = await acquireBootstrapLock(path.join(cacheDir, '.bootstrap.lock'));
 
   try {
-    if (phase('cache-validation', isCacheValid)) {
+    if (await phase('cache-validation', isCacheValid)) {
       return {
         binaryPath: cachedBinaryPath,
         versionText: phase('cached-version', () => readBinaryVersion(cachedBinaryPath)),
@@ -634,7 +634,9 @@ async function ensureBootstrappedRuntime() {
           `Bootstrapped runtime CLI version mismatch for release ${runtimeLock.version}. Expected ${expectedCliVersion}, got: ${versionText}`
         );
       }
-      phase('publish', () => publishRuntimePayload(extractedBinaryPath, payloadDir, asset.sha256));
+      await phase('publish', () =>
+        publishRuntimePayload(extractedBinaryPath, payloadDir, asset.sha256)
+      );
       return {
         binaryPath: cachedBinaryPath,
         versionText,

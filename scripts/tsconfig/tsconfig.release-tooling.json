@@ -28,6 +28,8 @@
     "../../scripts/lib/runtime-archive-extraction.mts",
     "../../scripts/lib/runtime-archive-extraction.test.mts",
     "../../scripts/lib/runtime-zip.test-fixture.mts",
-    "../../scripts/lib/runtime-bootstrap-diagnostics.mts"
+    "../../scripts/lib/runtime-bootstrap-diagnostics.mts",
+    "../../scripts/lib/runtime-payload-cache-async.test.mts",
+    "../../scripts/lib/runtime-payload-inventory.mts"
   ]
 }

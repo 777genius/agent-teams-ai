@@ -172,7 +172,7 @@ test('complete candidate publication replaces stale published JS/Bun and detects
     const nativeVerified = await verifyCandidatePayload(source, nativeExpected);
     assert.equal(nativeVerified.bunVersion, '1.4.3');
     const nativeTarget = path.join(root, 'native-staged');
-    publishRuntimePayload(
+    await publishRuntimePayload(
       path.join(source, 'claude-multimodel.exe'),
       nativeTarget,
       expected.payloadArchiveSha256
@@ -200,7 +200,7 @@ test('complete candidate publication replaces stale published JS/Bun and detects
     await assert.rejects(verifyCandidatePayload(source, nativeExpected));
     delivery.bunVersion = '1.3.11';
     await writeFile(path.join(source, 'opencode-delivery.json'), JSON.stringify(delivery));
-    publishRuntimePayload(
+    await publishRuntimePayload(
       path.join(source, 'claude-multimodel.exe'),
       target,
       expected.payloadArchiveSha256

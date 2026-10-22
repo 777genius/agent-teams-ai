@@ -54,31 +54,38 @@ for (const archiveKind of ['tar.gz']) {
           // Bare older cache cannot establish whether its archive had companions.
           fs.mkdirSync(cache);
           fs.copyFileSync(binary, path.join(cache, 'orchestrator'));
-          assert.equal(isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), false);
-          publishRuntimePayload(binary, cache, sha256);
+          assert.equal(await isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), false);
+          await publishRuntimePayload(binary, cache, sha256);
           fs.rmSync(extracted, { recursive: true });
-          assert.equal(isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), true);
-          assert.equal(isRuntimePayloadCacheValid(cache, '0'.repeat(64), 'orchestrator'), false);
+          assert.equal(await isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), true);
+          assert.equal(
+            await isRuntimePayloadCacheValid(cache, '0'.repeat(64), 'orchestrator'),
+            false
+          );
           assert.equal(fs.existsSync(path.join(cache, 'cursor-managed')), managed);
           if (managed) {
             fs.unlinkSync(path.join(cache, 'cursor-managed/plugin/index.js'));
-            assert.equal(isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), false);
+            assert.equal(await isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), false);
           } else {
             fs.writeFileSync(path.join(cache, 'orchestrator'), 'changed');
-            assert.equal(isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), false);
+            assert.equal(await isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), false);
           }
           extractArchive(archive, extracted, archiveKind, (cmd, args) => execFileSync(cmd, args));
-          publishRuntimePayload(findExtractedBinary(extracted, 'orchestrator'), cache, sha256);
-          assert.equal(isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), true);
+          await publishRuntimePayload(
+            findExtractedBinary(extracted, 'orchestrator'),
+            cache,
+            sha256
+          );
+          assert.equal(await isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), true);
           // A failed replacement leaves the previously complete payload available.
           fs.symlinkSync(
             'missing',
             path.join(path.dirname(findExtractedBinary(extracted, 'orchestrator')), 'bad-link')
           );
-          assert.throws(() =>
+          await assert.rejects(() =>
             publishRuntimePayload(findExtractedBinary(extracted, 'orchestrator'), cache, sha256)
           );
-          assert.equal(isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), true);
+          assert.equal(await isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), true);
           assert.equal(
             fs.readdirSync(root).some((name) => name.includes('.stage-')),
             false
@@ -135,18 +142,20 @@ test('ZIP extraction preserves Unicode and spaced companions through cache publi
     );
 
     const cache = path.join(root, 'cached тест with spaces');
-    publishRuntimePayload(binary, cache, sha256);
+    await publishRuntimePayload(binary, cache, sha256);
     fs.rmSync(extracted, { recursive: true, force: true });
     assert.deepEqual(fs.readFileSync(path.join(cache, companion)), contents);
-    assert.equal(isRuntimePayloadCacheValid(cache, sha256, 'orchestrator.exe'), true);
-    assert.equal(isRuntimePayloadCacheValid(cache, '0'.repeat(64), 'orchestrator.exe'), false);
+    assert.equal(await isRuntimePayloadCacheValid(cache, sha256, 'orchestrator.exe'), true);
+    assert.equal(
+      await isRuntimePayloadCacheValid(cache, '0'.repeat(64), 'orchestrator.exe'),
+      false
+    );
     fs.appendFileSync(path.join(cache, companion), 'tampered');
-    assert.equal(isRuntimePayloadCacheValid(cache, sha256, 'orchestrator.exe'), false);
+    assert.equal(await isRuntimePayloadCacheValid(cache, sha256, 'orchestrator.exe'), false);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
-
 
 test('cached bootstrap waits for publication lock before validating or executing the binary', async () => {
   const source = fs.readFileSync(new URL('../dev-with-runtime.mjs', import.meta.url), 'utf8');
@@ -159,6 +168,10 @@ test('cached bootstrap waits for publication lock before validating or executing
   let unlock;
   const publication = new Promise((resolve) => {
     unlock = resolve;
+  });
+  let finishValidation;
+  const validation = new Promise((resolve) => {
+    finishValidation = resolve;
   });
   const run = runInNewContext(`${functionSource}; ensureBootstrappedRuntime`, {
     fs,
@@ -184,8 +197,9 @@ test('cached bootstrap waits for publication lock before validating or executing
         },
       };
     },
-    isRuntimePayloadCacheValid: () => {
+    isRuntimePayloadCacheValid: async () => {
       events.push('validate');
+      await validation;
       return true;
     },
     isCachedBinaryValid: () => true,
@@ -199,12 +213,16 @@ test('cached bootstrap waits for publication lock before validating or executing
     await new Promise((resolve) => setImmediate(resolve));
     assert.deepEqual(events, ['waiting']);
     unlock();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(events, ['waiting', 'locked', 'validate']);
+    finishValidation();
     const resolved = await result;
     assert.equal(resolved.downloaded, false);
     assert.equal(resolved.versionText, 'fixture');
     assert.deepEqual(events, ['waiting', 'locked', 'validate', 'execute-version', 'closed']);
   } finally {
     unlock();
+    finishValidation();
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
@@ -311,8 +329,8 @@ test(
         execFileSync(command, args, options)
       );
       const cache = path.join(root, 'published');
-      publishRuntimePayload(findExtractedBinary(extracted, 'orchestrator'), cache, sha256);
-      assert.equal(isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), true);
+      await publishRuntimePayload(findExtractedBinary(extracted, 'orchestrator'), cache, sha256);
+      assert.equal(await isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), true);
       assert.equal(
         fs.readFileSync(
           path.join(extracted, "runtime/local-cli/nested/file [brackets] 'quote'.js"),
