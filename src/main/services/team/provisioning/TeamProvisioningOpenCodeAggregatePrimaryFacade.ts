@@ -8,6 +8,7 @@ import {
   advanceOpenCodePrimaryIncarnation,
   captureRetainedSecondaryDelivery,
   createAggregatePrimaryRestartFailure,
+  createAggregatePrimaryRestoredRestartFailure,
   hasRetainablePrimaryLead,
   isAggregateRuntimeOwnerAlive,
   retainSecondaryAggregateOwnership,
@@ -337,6 +338,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     }
 
     const incarnationPorts = {
+      isCurrent: () => !restartNoLongerCurrent(),
       runs: this.runs,
       provisioningRunByTeam: this.provisioningRunByTeam,
       getRuntimeOwner: (name: string) => this.runtimeAdapterRunByTeam.get(name),
@@ -478,18 +480,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
         await this.persistLaunchStateSnapshot(run, this.getMixedSecondaryLaunchPhase(run));
         await assertRestartCurrentAfterPersistence();
         this.runTracking.setAliveRunId(teamName, run.runId);
-        run.progress = this.runtimeAdapterProgressState.setRuntimeAdapterProgress(
-          {
-            ...run.progress,
-            state: 'ready',
-            message: 'OpenCode member restart failed; original primary lane was restored',
-            messageSeverity: 'warning',
-            updatedAt: nowIso(),
-            error: undefined,
-            cliLogsTail: getErrorMessage(restartError),
-          },
-          run.onProgress
-        );
+        this.aggregatePrimaryProgress.publishRestoredPrimary(run, restartError);
       } catch (rollbackError) {
         if (restartNoLongerCurrent()) {
           await this.stopUnretainableOpenCodePrimaryLane({
@@ -527,7 +518,12 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
         });
         throw restartFailure;
       }
-      throw restartError;
+      throw createAggregatePrimaryRestoredRestartFailure(
+        run,
+        restartLease,
+        incarnationPorts,
+        getErrorMessage(restartError)
+      );
     }
 
     await this.launchSingleMixedSecondaryLane(run, lane);

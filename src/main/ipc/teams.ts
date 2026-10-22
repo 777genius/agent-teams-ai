@@ -3924,7 +3924,7 @@ async function handleRestartMember(
         error.retention.memberName === validatedMemberName.value
       ) {
         return parseTeamMemberRestartResult({
-          status: 'failed_retained',
+          status: error.outcome,
           error: error.message,
           ...error.retention,
         });

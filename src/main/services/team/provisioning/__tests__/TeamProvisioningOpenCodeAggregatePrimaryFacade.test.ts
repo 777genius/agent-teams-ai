@@ -465,9 +465,21 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
       facade.trackRun(run, { runId: originalRunId, providerId: 'opencode', cwd: run.request.cwd });
       const restarting = facade.restartMember(run.teamName, 'Worker', false);
       if (failedLaunches === 2) await expect(restarting).rejects.toThrow('Primary rollback failed');
-      else if (failedLaunches === 1)
+      else if (failedLaunches === 1) {
         await expect(restarting).rejects.toThrow('did not retain the team lead');
-      else await expect(restarting).resolves.toBeUndefined();
+        await expect(restarting).rejects.toMatchObject({
+          outcome: 'failed_restored',
+          retention: {
+            teamName: run.teamName,
+            memberName: 'Worker',
+            predecessorRunId: originalRunId,
+            successorRunId: run.runId,
+          },
+        });
+        expect(run.detectedSessionId).toBe(`ses_TEST_${run.runId}_Lead`);
+        expect(run.progress.messageSeverity).toBe('warning');
+        expect(run.progress.retainedSecondaryRuntime).toBeUndefined();
+      } else await expect(restarting).resolves.toBeUndefined();
       siblings.forEach((entry, index) => expect(run.mixedSecondaryLanes[index]).toBe(entry));
       expect(sibling.result.members['grok-one'].sessionId).toBe('ses_TEST_TEST-grok-run_grok-one');
       expect(new Set([originalRunId, ...facade.launchedRunIds]).size).toBe(failedLaunches ? 3 : 2);

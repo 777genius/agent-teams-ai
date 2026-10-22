@@ -8,7 +8,7 @@ export interface TeamMemberRestartRetention {
 
 export type TeamMemberRestartResult =
   | { status: 'restarted' }
-  | ({ status: 'failed_retained'; error: string } & TeamMemberRestartRetention);
+  | ({ status: 'failed_retained' | 'failed_restored'; error: string } & TeamMemberRestartRetention);
 
 /** Validate plain data before it crosses the Electron context bridge. */
 export function parseTeamMemberRestartResult(value: unknown): TeamMemberRestartResult {
@@ -17,13 +17,13 @@ export function parseTeamMemberRestartResult(value: unknown): TeamMemberRestartR
   if (result.status === 'restarted') return { status: 'restarted' };
   const keys = ['error', 'teamName', 'memberName', 'predecessorRunId', 'successorRunId'] as const;
   if (
-    result.status !== 'failed_retained' ||
+    (result.status !== 'failed_retained' && result.status !== 'failed_restored') ||
     keys.some((key) => typeof result[key] !== 'string' || !result[key].trim()) ||
     result.predecessorRunId === result.successorRunId
   )
     throw new Error('Invalid retained member restart result');
   return {
-    status: 'failed_retained',
+    status: result.status,
     error: result.error as string,
     teamName: result.teamName as string,
     memberName: result.memberName as string,

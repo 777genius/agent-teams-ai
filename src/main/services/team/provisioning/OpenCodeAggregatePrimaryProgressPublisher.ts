@@ -50,13 +50,31 @@ export class OpenCodeAggregatePrimaryProgressPublisher {
     this.ports.invalidateRuntimeSnapshotCaches(run.teamName);
   }
 
+  publishRestoredPrimary(run: ProvisioningRun, error: unknown): void {
+    run.progress = this.ports.setRuntimeAdapterProgress(
+      {
+        ...run.progress,
+        state: 'ready',
+        retainedSecondaryRuntime: undefined,
+        message: 'OpenCode member restart failed; original primary lane was restored',
+        messageSeverity: 'warning',
+        updatedAt: nowIso(),
+        error: undefined,
+        cliLogsTail: getErrorMessage(error),
+      },
+      run.onProgress
+    );
+  }
+
   publishFailed(run: ProvisioningRun, message: string, error: unknown): void {
     const errorMessage = getErrorMessage(error);
     run.progress = this.publish(run, {
       ...run.progress,
       state: 'failed',
       retainedSecondaryRuntime:
-        error instanceof OpenCodeRetainedPrimaryRestartError ? true : undefined,
+        error instanceof OpenCodeRetainedPrimaryRestartError && error.outcome === 'failed_retained'
+          ? true
+          : undefined,
       message,
       messageSeverity: 'error',
       updatedAt: nowIso(),

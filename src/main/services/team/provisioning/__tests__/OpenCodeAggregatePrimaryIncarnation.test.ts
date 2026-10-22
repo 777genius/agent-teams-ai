@@ -4,6 +4,7 @@ import {
   advanceOpenCodePrimaryIncarnation,
   captureRetainedSecondaryDelivery,
   createAggregatePrimaryRestartFailure,
+  createAggregatePrimaryRestoredRestartFailure,
   retainSecondaryAggregateOwnership,
 } from '../OpenCodeAggregatePrimaryIncarnation';
 import { OpenCodeAggregatePrimaryProgressPublisher } from '../OpenCodeAggregatePrimaryProgressPublisher';
@@ -227,3 +228,57 @@ it.each(['owned', 'Stop', 'new lease', 'new owner', 'new secondary'])(
     expect(run.progress.retainedSecondaryRuntime).toBeUndefined();
   }
 );
+
+describe('restored primary restart failure authority', () => {
+  it.each([
+    'current',
+    'stop-generation',
+    'lease-replaced',
+    'cancelled',
+    'run-killed',
+    'owner-missing',
+    'owner-run',
+    'owner-provider',
+    'tracked-run',
+    'alive-run',
+    'not-ready',
+    'candidate-run',
+  ] as const)('publishes restored authority only for exact current ownership: %s', (scenario) => {
+    const { run, lease, ports } = fixture();
+    advanceOpenCodePrimaryIncarnation(run, lease, ports);
+    run.progress = { ...run.progress, state: 'ready' };
+    const owner = {
+      runId: scenario === 'owner-run' ? 'foreign-run' : run.runId,
+      providerId: scenario === 'owner-provider' ? 'codex' : 'opencode',
+    };
+    ports.getRuntimeOwner.mockReturnValue(scenario === 'owner-missing' ? undefined : owner);
+    if (scenario === 'cancelled') lease.cancelRequested = true;
+    if (scenario === 'run-killed') run.processKilled = true;
+    if (scenario === 'not-ready') run.progress.state = 'failed';
+    if (scenario === 'candidate-run') lease.candidateRunId = 'different-candidate';
+    const error = createAggregatePrimaryRestoredRestartFailure(
+      run,
+      lease,
+      {
+        ...ports,
+        isCurrent: () => scenario !== 'stop-generation',
+        getRestartLease: () => (scenario === 'lease-replaced' ? { ...lease } : lease),
+        getTrackedRunId: () => (scenario === 'tracked-run' ? 'foreign-run' : run.runId),
+        getAliveRunId: () => (scenario === 'alive-run' ? 'foreign-run' : run.runId),
+      },
+      'original restart failure'
+    );
+    expect(error.message).toBe('original restart failure');
+    if (scenario === 'current')
+      expect(error).toMatchObject({
+        outcome: 'failed_restored',
+        retention: {
+          predecessorRunId: lease.runId,
+          successorRunId: run.runId,
+          teamName: run.teamName,
+          memberName: lease.memberName,
+        },
+      });
+    else expect(error).not.toHaveProperty('retention');
+  });
+});

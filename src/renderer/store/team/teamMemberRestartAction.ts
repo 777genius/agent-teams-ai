@@ -45,12 +45,12 @@ export function createTeamMemberRestartAction<TScope>(options: {
       const result = await unwrapIpc('team:restartMember', () =>
         options.restart(teamName, memberName, expectedSecondary)
       );
-      const retainedFailure = result.status === 'failed_retained' ? result : null;
+      const restartFailure = result.status === 'restarted' ? null : result;
       const correlated =
-        !retainedFailure ||
-        (retainedFailure.teamName === teamName &&
-          retainedFailure.memberName === memberName &&
-          retainedFailure.predecessorRunId === predecessor);
+        !restartFailure ||
+        (restartFailure.teamName === teamName &&
+          restartFailure.memberName === memberName &&
+          restartFailure.predecessorRunId === predecessor);
       let statusUnavailable = false;
       if (predecessor && correlated && canHandoff(get())) {
         let snapshot: MemberSpawnStatusesSnapshot | undefined;
@@ -72,13 +72,14 @@ export function createTeamMemberRestartAction<TScope>(options: {
             let adopted = false;
             const failedPrimary = snapshot.statuses[memberName];
             const retainedSnapshot =
-              !retainedFailure ||
-              (successor === retainedFailure.successorRunId &&
-                failedPrimary?.runtimeAlive === false &&
-                failedPrimary.launchState === 'failed_to_start' &&
-                Object.entries(snapshot.statuses).some(
-                  ([name, member]) => name !== memberName && member.runtimeAlive === true
-                ));
+              !restartFailure ||
+              (successor === restartFailure.successorRunId &&
+                (restartFailure.status === 'failed_restored' ||
+                  (failedPrimary?.runtimeAlive === false &&
+                    failedPrimary.launchState === 'failed_to_start' &&
+                    Object.entries(snapshot.statuses).some(
+                      ([name, member]) => name !== memberName && member.runtimeAlive === true
+                    ))));
             if (successor && successor !== predecessor && retainedSnapshot) {
               set((state) => {
                 if (
@@ -120,13 +121,13 @@ export function createTeamMemberRestartAction<TScope>(options: {
           }
         }
       }
-      if (retainedFailure || statusUnavailable) {
+      if (restartFailure || statusUnavailable) {
         const statusError = statusUnavailable
-          ? retainedFailure
+          ? restartFailure
             ? "The teammate's current status could not be loaded."
             : 'Teammate restarted, but its current status could not be loaded.'
           : '';
-        const message = [retainedFailure?.error, statusError].filter(Boolean).join(' ');
+        const message = [restartFailure?.error, statusError].filter(Boolean).join(' ');
         await unwrapIpc('team:restartMember', () => Promise.reject(new Error(message)));
       }
     } finally {

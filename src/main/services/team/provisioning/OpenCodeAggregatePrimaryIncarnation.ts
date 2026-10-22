@@ -163,6 +163,55 @@ export function createAggregatePrimaryRestartFailure(
   return new Error(message);
 }
 
+/** A restored primary owns a new incarnation even though the requested restart failed. */
+export function createAggregatePrimaryRestoredRestartFailure(
+  run: Pick<
+    ProvisioningRun,
+    'teamName' | 'runId' | 'progress' | 'cancelRequested' | 'processKilled'
+  >,
+  lease: OpenCodeAggregatePrimaryRestartLease,
+  ports: Pick<
+    Parameters<typeof retainSecondaryAggregateOwnership>[2],
+    'getRestartLease' | 'getRuntimeOwner' | 'getAliveRunId' | 'getTrackedRunId'
+  > & { isCurrent(): boolean },
+  message: string
+): Error {
+  const owner = ports.getRuntimeOwner(run.teamName);
+  if (
+    ports.isCurrent() &&
+    !run.cancelRequested &&
+    !run.processKilled &&
+    ports.getRestartLease() === lease &&
+    !lease.cancelRequested &&
+    lease.teamName === run.teamName &&
+    lease.candidateRunId === run.runId &&
+    lease.runId !== run.runId &&
+    run.progress.runId === run.runId &&
+    run.progress.state === 'ready' &&
+    ports.getTrackedRunId() === run.runId &&
+    ports.getAliveRunId(run.teamName) === run.runId &&
+    owner &&
+    typeof owner === 'object' &&
+    'runId' in owner &&
+    owner.runId === run.runId &&
+    'providerId' in owner &&
+    owner.providerId === 'opencode' &&
+    ports.getRuntimeOwner(run.teamName) === owner
+  ) {
+    return new OpenCodeRetainedPrimaryRestartError(
+      message,
+      {
+        teamName: run.teamName,
+        memberName: lease.memberName,
+        predecessorRunId: lease.runId,
+        successorRunId: run.runId,
+      },
+      'failed_restored'
+    );
+  }
+  return new Error(message);
+}
+
 export function isAggregateRuntimeOwnerAlive(input: {
   runId: string | null;
   hasPrimaryRuntime: boolean;

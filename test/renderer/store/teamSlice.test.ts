@@ -6455,7 +6455,7 @@ describe('teamSlice actions', () => {
     }
   );
 
-  it.each(['restarted', 'failed_retained'] as const)(
+  it.each(['restarted', 'failed_retained', 'failed_restored'] as const)(
     'recovers an authoritative %s handoff after a transient snapshot read failure',
     async (status) => {
       const store = createSliceStore();
@@ -6499,14 +6499,14 @@ describe('teamSlice actions', () => {
       hoisted.getProvisioningStatus.mockResolvedValue({
         runId: 'run-new',
         teamName: 'my-team',
-        state: status === 'restarted' ? 'ready' : 'failed',
+        state: status === 'failed_retained' ? 'failed' : 'ready',
         retainedSecondaryRuntime: status === 'failed_retained' ? true : undefined,
         message: 'current restart outcome',
         startedAt: '2026-03-12T10:00:00.000Z',
         updatedAt: '2026-03-12T10:02:00.000Z',
       });
       const result = store.getState().restartMember('my-team', 'alice');
-      if (status === 'failed_retained')
+      if (status !== 'restarted')
         await expect(result).rejects.toThrow('primary restart quota failure');
       else await expect(result).resolves.toBeUndefined();
       expect(hoisted.restartMember).toHaveBeenCalledTimes(1);
@@ -6518,7 +6518,7 @@ describe('teamSlice actions', () => {
     }
   );
 
-  it.each(['restarted', 'failed_retained'] as const)(
+  it.each(['restarted', 'failed_retained', 'failed_restored'] as const)(
     'reports unavailable status after all three %s handoff reads fail',
     async (status) => {
       const store = createSliceStore();
@@ -6586,6 +6586,79 @@ describe('teamSlice actions', () => {
       expect(hoisted.getMemberSpawnStatuses).toHaveBeenCalledTimes(race === 'overlap' ? 3 : 2);
       expect(store.getState().currentRuntimeRunIdByTeam['my-team']).not.toBe('run-new');
       expect(hoisted.getProvisioningStatus).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([
+    'valid',
+    'wrong-team',
+    'wrong-member',
+    'wrong-predecessor',
+    'wrong-successor',
+    'stop',
+    'launch',
+    'ignored-successor',
+  ] as const)(
+    'adopts only exact restored rollback authority while preserving the restart error: %s',
+    async (variant) => {
+      const store = createSliceStore();
+      store.setState({
+        currentRuntimeRunIdByTeam: { 'my-team': 'run-old' },
+        currentProvisioningRunIdByTeam: { 'my-team': 'run-old' },
+        memberSpawnStatusesByTeam: { 'my-team': { bob: createMemberSpawnStatus() } },
+        fetchMemberSpawnStatuses: vi.fn(async () => undefined),
+      });
+      hoisted.restartMember.mockResolvedValueOnce({
+        status: 'failed_restored',
+        error: 'requested restart failed',
+        teamName: variant === 'wrong-team' ? 'foreign-team' : 'my-team',
+        memberName: variant === 'wrong-member' ? 'bob' : 'alice',
+        predecessorRunId: variant === 'wrong-predecessor' ? 'foreign-run' : 'run-old',
+        successorRunId: variant === 'wrong-successor' ? 'foreign-successor' : 'run-new',
+      });
+      const progress = {
+        runId: 'run-new',
+        teamName: 'my-team',
+        state: 'ready' as const,
+        message: 'Original primary lane was restored',
+        messageSeverity: 'warning' as const,
+        cliLogsTail: 'requested restart failed',
+        startedAt: '2026-03-12T10:00:00.000Z',
+        updatedAt: '2026-03-12T10:02:00.000Z',
+      };
+      hoisted.getProvisioningStatus.mockResolvedValue(progress);
+      const pending = createDeferredPromise<MemberSpawnStatusesSnapshot>();
+      hoisted.getMemberSpawnStatuses.mockReset().mockReturnValueOnce(pending.promise);
+      const result = store.getState().restartMember('my-team', 'alice');
+      const rejected = expect(result).rejects.toThrow('requested restart failed');
+      await flushMicrotasks();
+      if (variant === 'stop') store.setState({ ignoredRuntimeRunIds: { 'run-old': 'my-team' } });
+      if (variant === 'launch') invalidateTeamLocalStateEpoch('my-team');
+      if (variant === 'ignored-successor')
+        store.setState({ ignoredRuntimeRunIds: { 'run-new': 'my-team' } });
+      pending.resolve(
+        createMemberSpawnSnapshot({
+          runId: 'run-new',
+          statuses: {
+            alice: createMemberSpawnStatus(),
+            bob: createMemberSpawnStatus(),
+          },
+        })
+      );
+      await rejected;
+      expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe(
+        variant === 'valid' ? 'run-new' : 'run-old'
+      );
+      if (variant === 'valid') {
+        expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBe('run-new');
+        expect(store.getState().memberSpawnStatusesByTeam['my-team'].alice.runtimeAlive).toBe(true);
+        expect(store.getState().memberSpawnStatusesByTeam['my-team'].bob.runtimeAlive).toBe(true);
+        expect(store.getState().provisioningRuns['run-new']).toMatchObject({
+          state: 'ready',
+          messageSeverity: 'warning',
+        });
+        expect(store.getState().ignoredRuntimeRunIds['run-old']).toBe('my-team');
+      } else expect(hoisted.getProvisioningStatus).not.toHaveBeenCalled();
     }
   );
 
