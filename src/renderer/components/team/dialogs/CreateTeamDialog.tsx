@@ -366,25 +366,8 @@ export const CreateTeamDialog = ({
   const [appliedTemplateSource, setAppliedTemplateSource] = useState<'none' | 'builtin' | 'custom'>(
     'none'
   );
-  const restoredTemplateSelection = templateSelectionDraft.value
-    ? (() => {
-        try {
-          const p = JSON.parse(templateSelectionDraft.value) as { value?: string };
-          return typeof p.value === 'string' ? p.value : '';
-        } catch {
-          return '';
-        }
-      })()
-    : '';
-  useEffect(() => {
-    try {
-      const p = JSON.parse(templateSelectionDraft.value || '{}') as { source?: string };
-      if (p.source === 'none' || p.source === 'builtin' || p.source === 'custom')
-        setAppliedTemplateSource(p.source);
-    } catch {
-      /* ignore */
-    }
-  }, [templateSelectionDraft.value]);
+  const restoredTemplateSelection = templateSelectionDraft.value ? (() => { try { const p = JSON.parse(templateSelectionDraft.value) as { value?: string }; return typeof p.value === 'string' ? p.value : ''; } catch { return ''; } })() : '';
+  useEffect(() => { try { const p = JSON.parse(templateSelectionDraft.value || '{}') as { source?: string }; if (p.source === 'none' || p.source === 'builtin' || p.source === 'custom') setAppliedTemplateSource(p.source); } catch { /* ignore */ } }, [templateSelectionDraft.value]);
   const [projects, setProjects] = useState<ProjectPathProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
@@ -2482,9 +2465,7 @@ export const CreateTeamDialog = ({
               initialSelection={restoredTemplateSelection}
               onApply={(draft, source, selectionValue) => {
                 setAppliedTemplateSource(source);
-                templateSelectionDraft.setValue(
-                  JSON.stringify({ source, value: selectionValue ?? '' })
-                );
+                templateSelectionDraft.setValue(JSON.stringify({ source, value: selectionValue ?? '' }));
                 // A real template switches to the previous template semantics
                 // (config-only draft). Going back to "no template" only clears
                 // the template-derived content and leaves launch and runtime
