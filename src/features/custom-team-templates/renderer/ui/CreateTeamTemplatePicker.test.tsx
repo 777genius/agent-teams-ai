@@ -355,7 +355,8 @@ describe('CreateTeamTemplatePicker', () => {
       await flush();
       expect(optionNone()?.getAttribute('aria-pressed')).toBe('true');
 
-      renderPicker(true, undefined);
+      // Omitting the argument is the "absent saved selection" case.
+      renderPicker(true);
       await flush();
       expect(optionNone()?.getAttribute('aria-pressed')).toBe('true');
       expect(onApply).not.toHaveBeenCalled();
