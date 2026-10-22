@@ -137,9 +137,11 @@ function resolveTurnRootUuid(messages: ParsedMessage[], message: ParsedMessage):
 
 /**
  * V1 keeps working on a task inside turns triggered by later pumped messages, so the
- * delivered turn alone hides the task's own command evidence. When the delivered turn
- * has no terminal task marker, pull in the task's marker turns up to and including the
- * terminal marker turn. Without a terminal marker inside the record bounds, stay strict.
+ * delivered turn alone hides the task's own command evidence. Those pump turns carry
+ * plain work tools (read/write/bash) without any task marker, so when the delivered
+ * turn has no terminal task marker, attribute every turn from the delivered turn
+ * through the turn that carries the terminal marker. Without a terminal marker inside
+ * the record bounds, stay strict.
  */
 function extendDeliveryTurnAcrossTaskLifecycle(
   messages: ParsedMessage[],
@@ -159,39 +161,36 @@ function extendDeliveryTurnAcrossTaskLifecycle(
   }
 
   const baseRoots = new Set(base.map((message) => resolveTurnRootUuid(messages, message)));
-  const markerTurnRoots: string[] = [];
-  const markerTurns = new Map<string, ParsedMessage[]>();
-  let terminalRoot: string | null = null;
+  let terminalEndIndex = -1;
   for (const message of messages) {
-    if (!message.toolCalls.some((toolCall) => markerCallReferencesTask(toolCall, taskRefs))) {
+    if (!message.toolCalls.some((toolCall) => terminalMarkerCallReferencesTask(toolCall, taskRefs))) {
       continue;
     }
     const rootUuid = resolveTurnRootUuid(messages, message);
-    if (baseRoots.has(rootUuid) || markerTurns.has(rootUuid)) {
+    if (baseRoots.has(rootUuid)) {
       continue;
     }
-    const turn = collectTurnClosure(messages, rootUuid);
-    markerTurns.set(rootUuid, turn);
-    markerTurnRoots.push(rootUuid);
-    if (containsTerminal(turn)) {
-      terminalRoot = rootUuid;
-      break;
+    const terminalTurnUuids = new Set(
+      collectTurnClosure(messages, rootUuid).map((item) => item.uuid)
+    );
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      if (terminalTurnUuids.has(messages[index].uuid)) {
+        terminalEndIndex = index;
+        break;
+      }
     }
+    break;
   }
-  if (!terminalRoot) {
+  if (terminalEndIndex < 0) {
     return base;
   }
 
-  const included = new Set(base.map((message) => message.uuid));
-  for (const rootUuid of markerTurnRoots) {
-    for (const item of markerTurns.get(rootUuid) ?? []) {
-      included.add(item.uuid);
-    }
-    if (rootUuid === terminalRoot) {
-      break;
-    }
+  const baseUuids = new Set(base.map((message) => message.uuid));
+  let baseStartIndex = messages.findIndex((message) => baseUuids.has(message.uuid));
+  if (baseStartIndex < 0) {
+    baseStartIndex = 0;
   }
-  return messages.filter((message) => included.has(message.uuid));
+  return messages.filter((message, index) => index >= baseStartIndex && index <= terminalEndIndex);
 }
 
 /** V2 has no native parent IDs. This is a conservative display window, never turn authority. */
