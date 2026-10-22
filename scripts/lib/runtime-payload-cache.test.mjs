@@ -9,6 +9,7 @@ import { runInNewContext } from 'node:vm';
 
 import { verifyRuntimeArchiveChecksum } from './runtime-archive-checksum.mjs';
 import { phase } from './runtime-bootstrap-diagnostics.mts';
+import { extractWindowsRuntimeZip } from './runtime-windows-zip-extraction.mts';
 import { assertSafeRuntimeZip } from './runtime-archive-extraction.mts';
 import {
   ambiguousDirectoryFixture,
@@ -271,12 +272,13 @@ function windowsExtractor() {
     fs,
     path,
     assertSafeRuntimeZip,
+    extractWindowsRuntimeZip,
     process: { platform: 'win32', env: { SystemRoot: 'C:\\Windows' } },
   });
 }
 
 for (const caller of ['bootstrap', 'stager']) {
-  test(`${caller}: Windows ZIP uses absolute inbox tar, literal args, and rejects symlinks`, () => {
+  test(`${caller}: Windows ZIP uses absolute inbox .NET reader, literal paths, and rejects symlinks`, () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-zip-contract-'));
     const archive = path.join(root, "archive [x] 'quote'.zip");
     const destination = path.join(root, "extracted [x] 'quote'");
@@ -302,11 +304,15 @@ for (const caller of ['bootstrap', 'stager']) {
     let runner;
     try {
       runner = (command, args, options) => {
-        assert.equal(command, 'C:\\Windows\\System32\\tar.exe');
-        assert.deepEqual(Array.from(args), ['-xf', '-']);
-        assert.equal(options.cwd, destination);
-        assert.equal(typeof options.stdio[0], 'number');
-        assert.equal(fs.fstatSync(options.stdio[0]).size, fs.statSync(archive).size);
+        assert.equal(
+          command,
+          path.win32.join('C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+        );
+        assert.equal(args[0], '-NoLogo');
+        assert.equal(args[3], '-EncodedCommand');
+        assert.equal(options.env.AGENT_TEAMS_RUNTIME_ZIP_ARCHIVE, archive);
+        assert.equal(options.env.AGENT_TEAMS_RUNTIME_ZIP_DESTINATION, destination);
+        assert.ok(fs.existsSync(options.env.AGENT_TEAMS_RUNTIME_ZIP_MANIFEST));
         assert.equal(options.shell, false);
         fs.mkdirSync(path.join(destination, 'nested'), { recursive: true });
         fs.writeFileSync(path.join(destination, 'nested', 'companion'), 'unchanged');
@@ -340,7 +346,7 @@ for (const caller of ['bootstrap', 'stager']) {
 }
 
 test(
-  'Windows inbox tar preserves actual nested ZIP payload under quoted paths',
+  'Windows inbox ZIP preserves actual nested ZIP payload under quoted paths',
   { skip: process.platform !== 'win32' },
   async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "runtime-zip [x] 'quote'-"));
@@ -432,7 +438,7 @@ test('stager extraction failure preserves previous payload and removes only its 
 });
 
 test(
-  'Windows inbox tar inputs are rejected by preflight before extractor invocation',
+  'Windows inbox ZIP inputs are rejected by preflight before extractor invocation',
   { skip: process.platform !== 'win32' },
   () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "runtime-zip-safety [x] 'quote'-"));

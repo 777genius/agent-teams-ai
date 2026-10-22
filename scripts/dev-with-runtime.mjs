@@ -623,7 +623,17 @@ async function ensureBootstrappedRuntime() {
 
       const extractDir = path.join(workDir, 'extracted');
       logRuntimePhase(`extracting ${asset.archiveKind} archive`);
-      phase('extract', () => extractArchive(archivePath, extractDir, asset.archiveKind, runOrExit));
+      phase('extract', () =>
+        extractArchive(archivePath, extractDir, asset.archiveKind, (command, args, options) => {
+          const result = spawnSyncWithWindowsShell(command, args, { stdio: 'inherit', ...options });
+          if (result.error)
+            throw new Error(`Runtime archive extraction failed: ${result.error.message}`);
+          if (result.status !== 0)
+            throw new Error(
+              `Runtime archive extraction failed (exit ${result.status ?? result.signal ?? 'unknown'})`
+            );
+        })
+      );
       logRuntimePhase('archive extracted');
 
       const extractedBinaryPath = findExtractedBinary(extractDir, asset.binaryName);

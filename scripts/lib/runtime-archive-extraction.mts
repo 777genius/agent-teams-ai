@@ -46,6 +46,14 @@ function extras(buffer: Buffer): Map<number, Buffer> {
   }
   return result;
 }
+export interface ValidatedRuntimeZipEntry {
+  readonly name: string;
+  readonly size: number;
+  readonly compressedSize: number;
+  readonly crc32: number;
+  readonly directory: boolean;
+}
+
 type Entry = {
   offset: number;
   compressed: number;
@@ -54,11 +62,12 @@ type Entry = {
   flags: number;
   method: number;
   name: Buffer;
+  directory: boolean;
 };
 
 // Inspect all local records before the native extractor can follow a link or
 // write a hostile path. ZIP64 counts are required by the published runtime ZIPs.
-export function assertSafeRuntimeZip(archivePath: string): void {
+export function assertSafeRuntimeZip(archivePath: string): readonly ValidatedRuntimeZipEntry[] {
   const fd = fs.openSync(archivePath, 'r');
   try {
     const fileSize = fs.fstatSync(fd).size;
@@ -147,6 +156,7 @@ export function assertSafeRuntimeZip(archivePath: string): void {
         malformed();
       const name = central.subarray(cursor + 46, cursor + 46 + nameSize),
         text = name.toString('utf8');
+      if (!Buffer.from(text, 'utf8').equals(name)) unsafe('malformed UTF-8 ZIP filename');
       assertName(text);
       const attributes = central.readUInt32LE(cursor + 38),
         type = (attributes >>> 16) & 0xf000;
@@ -190,6 +200,7 @@ export function assertSafeRuntimeZip(archivePath: string): void {
         flags,
         method,
         name,
+        directory: paths.get(key) === true,
       });
       cursor = next;
     }
@@ -201,6 +212,7 @@ export function assertSafeRuntimeZip(archivePath: string): void {
           unsafe(`ZIP file used as parent: ${key}`);
       }
     }
+    const centralEntries = [...entries];
     entries.sort((left, right) => left.offset - right.offset);
     let localEnd = 0;
     for (const entry of entries) {
@@ -279,6 +291,15 @@ export function assertSafeRuntimeZip(archivePath: string): void {
       }
     }
     if (localEnd !== centralOffset) malformed();
+    return centralEntries.map((entry) =>
+      Object.freeze({
+        name: entry.name.toString('utf8'),
+        size: entry.uncompressed,
+        compressedSize: entry.compressed,
+        crc32: entry.crc,
+        directory: entry.directory,
+      })
+    );
   } finally {
     fs.closeSync(fd);
   }

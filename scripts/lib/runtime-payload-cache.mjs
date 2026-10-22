@@ -5,6 +5,7 @@ import path from 'node:path';
 import { assertSafeRuntimeZip } from './runtime-archive-extraction.mts';
 
 import { phase } from './runtime-bootstrap-diagnostics.mts';
+import { extractWindowsRuntimeZip } from './runtime-windows-zip-extraction.mts';
 import {
   copyRuntimePayload,
   inventoryRuntimePayload as inventory,
@@ -121,25 +122,9 @@ export function extractArchive(archivePath, extractDir, archiveKind, runOrExit) 
 
   if (archiveKind === 'zip') {
     if (process.platform === 'win32') {
-      const systemRoot = process.env.SystemRoot;
-      if (typeof systemRoot !== 'string' || !/^[A-Za-z]:[\\/]/u.test(systemRoot)) {
-        throw new Error('Windows runtime ZIP extraction requires an absolute SystemRoot');
-      }
-      assertSafeRuntimeZip(archivePath);
+      const entries = assertSafeRuntimeZip(archivePath);
       assertRegularArchiveEntries(extractDir);
-      const tarPath = path.win32.join(systemRoot, 'System32', 'tar.exe');
-      // Windows bsdtar converts argv paths through the active ANSI code page.
-      // Inherit the open archive file and let Node set the Unicode cwd instead.
-      const archiveFd = fs.openSync(archivePath, 'r');
-      try {
-        runOrExit(tarPath, ['-xf', '-'], {
-          shell: false,
-          cwd: extractDir,
-          stdio: [archiveFd, 'inherit', 'inherit'],
-        });
-      } finally {
-        fs.closeSync(archiveFd);
-      }
+      extractWindowsRuntimeZip(archivePath, extractDir, entries, process.env, runOrExit);
       assertRegularArchiveEntries(extractDir);
       return;
     }

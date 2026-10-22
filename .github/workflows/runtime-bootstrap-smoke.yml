@@ -17,6 +17,8 @@ on:
       - 'scripts/lib/runtime-payload-cache.test.mjs'
       - 'scripts/lib/runtime-payload-cache-async.test.mts'
       - 'scripts/lib/runtime-payload-inventory.mts'
+      - 'scripts/lib/runtime-windows-zip-extraction.mts'
+      - 'scripts/lib/runtime-windows-zip-extraction.test.mts'
       - 'scripts/lib/runtime-archive-extraction.mts'
       - 'scripts/lib/runtime-archive-extraction.test.mts'
       - 'scripts/lib/runtime-zip.test-fixture.mts'
@@ -35,6 +37,8 @@ on:
       - 'scripts/lib/runtime-payload-cache.test.mjs'
       - 'scripts/lib/runtime-payload-cache-async.test.mts'
       - 'scripts/lib/runtime-payload-inventory.mts'
+      - 'scripts/lib/runtime-windows-zip-extraction.mts'
+      - 'scripts/lib/runtime-windows-zip-extraction.test.mts'
       - 'scripts/lib/runtime-archive-extraction.mts'
       - 'scripts/lib/runtime-archive-extraction.test.mts'
       - 'scripts/lib/runtime-zip.test-fixture.mts'
@@ -77,13 +81,16 @@ jobs:
 
       - name: Verify native Windows ZIP extraction and containment
         if: matrix.platform == 'win32-x64'
-        run: node --test --test-name-pattern="Windows inbox tar" scripts/lib/runtime-payload-cache.test.mjs
+        run: node --test --test-name-pattern="Windows inbox ZIP" scripts/lib/runtime-payload-cache.test.mjs
 
       - name: Verify ZIP metadata and native reader differentials
         if: matrix.platform != 'linux-x64'
         run: node --test scripts/lib/runtime-archive-extraction.test.mts
       - name: Verify ZIP extraction and companion integrity
         run: node --test --test-name-pattern="ZIP extraction" scripts/lib/runtime-payload-cache.test.mjs
+
+      - name: Verify literal Windows ZIP reader and streamed integrity
+        run: node --test scripts/lib/runtime-windows-zip-extraction.test.mts
 
       - name: Verify complete payload cache and publication lock ordering
         run: node --test scripts/lib/runtime-payload-cache.test.mjs
