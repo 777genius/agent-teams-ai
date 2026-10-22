@@ -19,6 +19,7 @@ on:
       - 'scripts/lib/github-release-download-error.mjs'
       - 'scripts/lib/runtime-archive-checksum.mjs'
       - 'scripts/lib/runtime-payload-cache.mjs'
+      - 'scripts/lib/runtime-payload-inventory.mts'
       - 'scripts/lib/runtime-archive-extraction.mts'
       - 'scripts/ensure-electron-install.cjs'
       - 'scripts/prepare-cpu-features-rebuild.cjs'

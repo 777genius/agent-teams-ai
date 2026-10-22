@@ -85,6 +85,9 @@ jobs:
       - name: Verify ZIP extraction and companion integrity
         run: node --test --test-name-pattern="ZIP extraction" scripts/lib/runtime-payload-cache.test.mjs
 
+      - name: Verify complete payload cache and publication lock ordering
+        run: node --test scripts/lib/runtime-payload-cache.test.mjs
+
       - name: Verify asynchronous payload inventory, rollback, and reader drain
         run: node --test scripts/lib/runtime-payload-cache-async.test.mts
 
