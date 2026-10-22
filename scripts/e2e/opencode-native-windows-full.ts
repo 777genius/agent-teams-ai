@@ -923,6 +923,9 @@ type CompletionObservation = {
   exactComment: boolean;
   exactTextAnyAuthor: boolean;
   ownerHasComment: boolean;
+  commentTextIncludesExpected?: boolean;
+  commentTextStartsWithExpected?: boolean;
+  firstCommentLength?: number | null;
   terminalPresent: boolean;
   commentTimeValid: boolean;
   terminalTimeValid: boolean;
@@ -974,6 +977,9 @@ async function completed(
         exactComment: !!durable,
         exactTextAnyAuthor: !!task.comments?.some((row) => row.text === comment),
         ownerHasComment: !!task.comments?.some((row) => row.author === owner),
+        commentTextIncludesExpected: !!task.comments?.some((row) => typeof row.text === 'string' && row.text.includes(comment)),
+        commentTextStartsWithExpected: !!task.comments?.some((row) => typeof row.text === 'string' && row.text.startsWith(comment)),
+        firstCommentLength: typeof task.comments?.[0]?.text === 'string' ? task.comments[0].text.length : null,
         terminalPresent: !!terminal,
         commentTimeValid: !!durable && Number.isFinite(Date.parse(durable.createdAt)),
         terminalTimeValid: !!terminal && Number.isFinite(Date.parse(terminal.timestamp)),
@@ -2709,9 +2715,9 @@ async function main() {
         observation: 'unavailable', member: failedTask.owner,
       };
       proof.nativeV2TranscriptFailure = capture;
-      // One read of the original session, charged to the existing 20s diagnostic budget.
+      // One read of the original session, charged to a bounded diagnostic budget.
       // The public command performs no send, observation settlement or qualification.
-      const captureDeadline = Date.now() + 20_000;
+      const captureDeadline = Date.now() + 60_000;
       const captureController = new AbortController();
       let captureTimer: ReturnType<typeof setTimeout> | undefined;
       try {

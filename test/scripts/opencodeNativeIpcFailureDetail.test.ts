@@ -1255,6 +1255,20 @@ it('keeps only the closed native stage token on returned dispatch failures', asy
   expect(dropped?.bridgeFailure).toMatchObject({ sdkCode: 'run_control_process_identity' });
 });
 
+it('pins the exact durable comment expectation and its closed mismatch classification', async () => {
+  const full = await readFile('scripts/e2e/opencode-native-windows-full.ts', 'utf8');
+  // The nonce comment is an exact-text durable receipt; the prompt demands
+  // those characters alone so a paraphrase can never satisfy the assertion.
+  expect(full).toContain('call task_add_comment with the comment text exactly TASK_COMMENT:${nonce.alice} (that text alone, no quotes or extra words)');
+  expect(full).toContain('call task_add_comment with the comment text exactly TASK_COMMENT:${nonce.bob} (that text alone, no quotes or extra words)');
+  expect(full).toContain('Call task_add_comment with the comment text exactly TASK_COMMENT:${nonce.new} (that text alone, no quotes or extra words)');
+  for (const field of ['exactComment:', 'exactTextAnyAuthor:', 'commentTextIncludesExpected:',
+    'commentTextStartsWithExpected:', 'firstCommentLength:', 'commentBeforeTerminal:'])
+    expect(full).toContain(field);
+  // A failed durable receipt is classified without carrying any comment text.
+  expect(full).not.toContain('row.text,');
+});
+
 it.each(['valid', 'foreign-run', 'foreign-team', 'wrong-state', 'wrong-message', 'getter', 'rejected', 'event'] as const)(
   'observes retained Stop %s once without issuing actions or accepting another run', async (scenario) => {
     const teamName = 'test-opencode-retained', runId = 'TEST-original-run';
