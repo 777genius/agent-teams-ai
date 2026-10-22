@@ -1,8 +1,15 @@
 import type { TeamProvisioningProgress } from '@shared/types';
 
+import {
+  hasCurrentRetainedSecondaryOwnership,
+  type OpenCodeRetainedSecondaryDelivery,
+} from './OpenCodeRetainedSecondaryOwnership';
+import type { SecondaryRuntimeRunEntry } from './TeamProvisioningSecondaryRuntimeRuns';
+
 type RuntimeProgressState = TeamProvisioningProgress['state'];
 
 export interface RunTrackingProvisioningRun {
+  retainedSecondaryDelivery?: OpenCodeRetainedSecondaryDelivery;
   processKilled: boolean;
   cancelRequested: boolean;
   progress: Pick<TeamProvisioningProgress, 'state'>;
@@ -27,6 +34,11 @@ export interface TeamProvisioningRunTrackingDeliveryState<
 }
 
 export interface TeamProvisioningRunTrackingDeliveryPorts {
+  getSecondaryRuntimeRuns?(
+    teamName: string
+  ): ReadonlyMap<string, SecondaryRuntimeRunEntry> | undefined;
+  getStopAllTeamsGeneration?(): number;
+  getStopTeamGeneration?(teamName: string): number;
   notifyTeamWatchScopeChanged(): void;
   isTeamAlive(teamName: string): boolean;
   hasAlivePersistedTeamProcess(teamName: string): boolean;
@@ -144,7 +156,37 @@ export class TeamProvisioningRunTrackingDeliveryHelper<
     return this.options.persistedRuntimeSnapshotCacheTtlMs;
   }
 
-  canDeliverToTrackedRuntimeRun(teamName: string, runId: string): boolean {
+  private canDeliverToRetainedSecondary(
+    teamName: string,
+    ownerRunId: string,
+    laneId?: string,
+    laneRunId?: string
+  ): boolean {
+    const run = this.options.state.runs.get(ownerRunId);
+    if (!run || run.processKilled || run.cancelRequested || run.progress.state !== 'failed')
+      return false;
+    return hasCurrentRetainedSecondaryOwnership({
+      fact: run.retainedSecondaryDelivery,
+      ownerRunId,
+      trackedRunId: this.options.state.provisioningRunByTeam.get(teamName),
+      aliveRunId: this.options.state.aliveRunByTeam.get(teamName),
+      primaryRunId: this.options.state.runtimeAdapterRunByTeam.get(teamName)?.runId,
+      secondaryRuns: this.options.ports.getSecondaryRuntimeRuns?.(teamName),
+      stopAllTeamsGeneration: this.options.ports.getStopAllTeamsGeneration?.(),
+      stopTeamGeneration: this.options.ports.getStopTeamGeneration?.(teamName),
+      laneId,
+      laneRunId,
+    });
+  }
+
+  canDeliverToTrackedRuntimeRun(
+    teamName: string,
+    runId: string,
+    laneId?: string,
+    laneRunId?: string
+  ): boolean {
+    if (laneId && this.canDeliverToRetainedSecondary(teamName, runId, laneId, laneRunId))
+      return true;
     const runtimeProgress =
       this.options.state.runtimeAdapterProgressByRunId.get(runId) ??
       this.options.state.getRetainedProvisioningProgressMap().get(runId);
@@ -189,6 +231,8 @@ export class TeamProvisioningRunTrackingDeliveryHelper<
   }
 
   canDeliverToOpenCodeRuntimeForTeam(teamName: string): boolean {
+    const retainedOwner = this.options.state.aliveRunByTeam.get(teamName);
+    if (retainedOwner && this.canDeliverToRetainedSecondary(teamName, retainedOwner)) return true;
     const provisioningRunId = this.getProvisioningDeliveryRunId(teamName);
     const trackedCandidates = Array.from(
       new Set(

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { OpenCodeRuntimeCheckinRun } from '../TeamProvisioningOpenCodeRuntimeCheckin';
 import {
   createTeamProvisioningOpenCodeRuntimeDeliveryBoundary,
   type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryPorts,
@@ -12,8 +13,7 @@ import {
   type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost,
   type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHostFactoryService,
 } from '../TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactory';
-
-import type { OpenCodeRuntimeCheckinRun } from '../TeamProvisioningOpenCodeRuntimeCheckin';
+import { TeamProvisioningRunTrackingDeliveryHelper } from '../TeamProvisioningRunTrackingDelivery';
 
 const createBoundaryMock = vi.mocked(createTeamProvisioningOpenCodeRuntimeDeliveryBoundary);
 const testProjectPath = '/safe-test/project';
@@ -164,6 +164,7 @@ describe('TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactory', () => {
       resolveCurrentOpenCodeRuntimeRunId: vi.fn(async () => 'secondary-run-1'),
       getTrackedRunId: vi.fn(() => 'aggregate-run-1'),
       resolveDeliverableTrackedRuntimeRunId: vi.fn(() => null),
+      canDeliverToTrackedRuntimeRun: vi.fn(() => false),
     });
 
     createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromPorts(ports);
@@ -173,6 +174,78 @@ describe('TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactory', () => {
       boundaryPorts?.resolveCurrentOpenCodeRuntimeRunId('Team', 'secondary:opencode:builder')
     ).resolves.toBeNull();
   });
+
+  it.each(['owned', 'Stop during identity', 'lane replaced during identity'])(
+    'composes real tracked-run admission for retained secondary: %s',
+    async (scenario) => {
+      const lane = {
+        providerId: 'opencode' as const,
+        laneId: 'secondary:opencode:bob',
+        runId: 'lane-run',
+        memberName: 'bob',
+      };
+      const secondaryRuns = new Map([[lane.laneId, lane]]);
+      let stopGeneration = 0;
+      const owner = {
+        processKilled: false,
+        cancelRequested: false,
+        progress: { state: 'failed' as const },
+        retainedSecondaryDelivery: {
+          ownerRunId: 'owner',
+          stopAllTeamsGeneration: 0,
+          stopTeamGeneration: 0,
+          lanes: [lane],
+        },
+      };
+      const tracking = new TeamProvisioningRunTrackingDeliveryHelper({
+        state: {
+          runs: new Map([['owner', owner]]),
+          provisioningRunByTeam: new Map([['Team', 'owner']]),
+          aliveRunByTeam: new Map([['Team', 'owner']]),
+          runtimeAdapterRunByTeam: new Map(),
+          runtimeAdapterProgressByRunId: new Map(),
+          getRetainedProvisioningProgressMap: () => new Map(),
+        },
+        ports: {
+          getSecondaryRuntimeRuns: () => secondaryRuns,
+          getStopAllTeamsGeneration: () => 0,
+          getStopTeamGeneration: () => stopGeneration,
+          notifyTeamWatchScopeChanged: vi.fn(),
+          isTeamAlive: () => true,
+          hasAlivePersistedTeamProcess: () => true,
+          hasOnlyExplicitlyStoppedPersistedTeamProcesses: () => false,
+          logDebug: vi.fn(),
+        },
+        liveRuntimeSnapshotCacheTtlMs: 1,
+        persistedRuntimeSnapshotCacheTtlMs: 1,
+      });
+      createBoundaryMock.mockReturnValue(createFakeBoundary());
+      createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromPorts(
+        createPorts({
+          getTrackedRunId: (name) => tracking.getTrackedRunId(name),
+          resolveDeliverableTrackedRuntimeRunId: (name) =>
+            tracking.resolveDeliverableTrackedRuntimeRunId(name),
+          canDeliverToTrackedRuntimeRun: (name, runId, laneId, laneRunId) =>
+            tracking.canDeliverToTrackedRuntimeRun(name, runId, laneId, laneRunId),
+          resolveCurrentOpenCodeRuntimeRunId: async (_name, laneId) => {
+            await Promise.resolve();
+            if (scenario === 'Stop during identity') stopGeneration += 1;
+            if (scenario === 'lane replaced during identity')
+              secondaryRuns.set(lane.laneId, { ...lane, runId: 'replacement' });
+            return laneId === 'primary' ? 'owner' : lane.runId;
+          },
+        })
+      );
+      const boundary = createBoundaryMock.mock.calls[0]![0];
+      await expect(boundary.resolveCurrentOpenCodeRuntimeRunId('Team', lane.laneId)).resolves.toBe(
+        scenario === 'owned' ? lane.runId : null
+      );
+      await expect(
+        boundary.resolveCurrentOpenCodeRuntimeRunId('Team', 'primary')
+      ).resolves.toBeNull();
+      expect(owner.progress.state).toBe('failed');
+    }
+  );
 
   it('builds the delivery boundary from a TeamProvisioning host without importing the service', async () => {
     const fakeBoundary = createFakeBoundary();

@@ -4,6 +4,7 @@ import { projectIncomingMemberSpawnSnapshot } from './teamRuntimeRunAdoption';
 
 import type { AppState } from '../types';
 import type { MemberSpawnStatusesSnapshot } from '@shared/types';
+import type { TeamMemberRestartResult } from '@shared/types/teamMemberRestart';
 import type { StoreApi } from 'zustand';
 
 /** Feature-local action orchestration; generic runtime event adoption remains unchanged. */
@@ -12,30 +13,51 @@ export function createTeamMemberRestartAction<TScope>(options: {
   set: StoreApi<AppState>['setState'];
   captureScope(teamName: string): TScope;
   isScopeCurrent(teamName: string, scope: TScope): boolean;
-  restart: AppState['restartMember'];
+  restart: (...args: Parameters<AppState['restartMember']>) => Promise<TeamMemberRestartResult>;
   readSnapshot(teamName: string): Promise<MemberSpawnStatusesSnapshot>;
   onEqualSuppressed: (teamName: string, runId: string | null | undefined) => void;
 }): AppState['restartMember'] {
   const { get, set } = options;
+  const invocationByTeam = new Map<string, number>();
   return async (teamName, memberName, expectedSecondary) => {
+    const invocation = (invocationByTeam.get(teamName) ?? 0) + 1;
+    invocationByTeam.set(teamName, invocation);
     const requestScope = options.captureScope(teamName);
+    const isCurrent = (): boolean =>
+      invocationByTeam.get(teamName) === invocation &&
+      options.isScopeCurrent(teamName, requestScope);
     const predecessor = get().currentRuntimeRunIdByTeam[teamName];
     const previousProvisioning = get().currentProvisioningRunIdByTeam[teamName];
     try {
-      await unwrapIpc('team:restartMember', () =>
+      const result = await unwrapIpc('team:restartMember', () =>
         options.restart(teamName, memberName, expectedSecondary)
       );
-      if (predecessor && options.isScopeCurrent(teamName, requestScope)) {
+      const retainedFailure = result.status === 'failed_retained' ? result : null;
+      const correlated =
+        !retainedFailure ||
+        (retainedFailure.teamName === teamName &&
+          retainedFailure.memberName === memberName &&
+          retainedFailure.predecessorRunId === predecessor);
+      if (predecessor && correlated && isCurrent()) {
         try {
-          // Only this completed explicit action can hand off a still-live aggregate.
+          // Only this exact action result can hand off a still-live aggregate.
           // Generic events keep rejecting other generations while secondary lanes live.
           const snapshot = await options.readSnapshot(teamName);
           const successor = snapshot.runId?.trim();
           let adopted = false;
-          if (successor && successor !== predecessor) {
+          const failedPrimary = snapshot.statuses[memberName];
+          const retainedSnapshot =
+            !retainedFailure ||
+            (successor === retainedFailure.successorRunId &&
+              failedPrimary?.runtimeAlive === false &&
+              failedPrimary.launchState === 'failed_to_start' &&
+              Object.entries(snapshot.statuses).some(
+                ([name, member]) => name !== memberName && member.runtimeAlive === true
+              ));
+          if (successor && successor !== predecessor && retainedSnapshot) {
             set((state) => {
               if (
-                !options.isScopeCurrent(teamName, requestScope) ||
+                !isCurrent() ||
                 state.currentRuntimeRunIdByTeam[teamName] !== predecessor ||
                 state.currentProvisioningRunIdByTeam[teamName] !== previousProvisioning ||
                 state.ignoredRuntimeRunIds[predecessor] === teamName ||
@@ -71,12 +93,17 @@ export function createTeamMemberRestartAction<TScope>(options: {
               };
             });
           }
-          if (adopted && successor && options.isScopeCurrent(teamName, requestScope)) {
+          if (adopted && successor && isCurrent()) {
             await get().getProvisioningStatus(successor);
           }
         } catch {
-          // A successful restart remains successful when its best-effort UI read fails.
+          // A best-effort UI read never replaces the original restart outcome.
         }
+      }
+      if (retainedFailure) {
+        await unwrapIpc('team:restartMember', () =>
+          Promise.reject(new Error(retainedFailure.error))
+        );
       }
     } finally {
       const state = get();
@@ -88,9 +115,7 @@ export function createTeamMemberRestartAction<TScope>(options: {
           currentRun === predecessor ||
           state.ignoredRuntimeRunIds[currentRun] === teamName);
       await Promise.allSettled([
-        ...(options.isScopeCurrent(teamName, requestScope) && !stoppedPredecessor
-          ? [get().refreshTeamData(teamName)]
-          : []),
+        ...(isCurrent() && !stoppedPredecessor ? [get().refreshTeamData(teamName)] : []),
         get().refreshTeamMessagesHead(teamName),
         get().fetchMemberSpawnStatuses(teamName),
         get().fetchTeamAgentRuntime(teamName),

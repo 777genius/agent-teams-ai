@@ -2,10 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   advanceOpenCodePrimaryIncarnation,
+  captureRetainedSecondaryDelivery,
+  createAggregatePrimaryRestartFailure,
   retainSecondaryAggregateOwnership,
 } from '../OpenCodeAggregatePrimaryIncarnation';
 import { createOpenCodeAggregateProvisioningRun } from '../TeamProvisioningOpenCodeAggregateRun';
-
 import type { ProvisioningRun } from '../TeamProvisioningRunModel';
 import type { OpenCodeAggregatePrimaryRestartLease } from '../TeamProvisioningServiceMemberLifecycleFacade';
 
@@ -153,3 +154,56 @@ describe('retained secondary aggregate after primary failure', () => {
     else expect(setAliveRunId).not.toHaveBeenCalled();
   });
 });
+
+it.each(['owned', 'Stop', 'new lease', 'new owner', 'new secondary'])(
+  'publishes retained restart outcome only from the same current ownership fact: %s',
+  (scenario) => {
+    const { run, lease, ports } = fixture();
+    const lane = {
+      laneId: 'secondary:opencode:bob',
+      providerId: 'opencode' as const,
+      member: { name: 'bob' },
+      runId: 'secondary-run',
+      state: 'finished' as const,
+      result: null,
+      warnings: [],
+      diagnostics: [],
+    };
+    run.mixedSecondaryLanes = [lane];
+    const owners = new Map([
+      [
+        lane.laneId,
+        {
+          laneId: lane.laneId,
+          providerId: 'opencode' as const,
+          runId: lane.runId,
+          memberName: 'bob',
+        },
+      ],
+    ]);
+    let current = true;
+    const retentionPorts = {
+      ...ports,
+      mayRestore: () => current,
+      getRestartLease: () => lease,
+      getTrackedRunId: () => run.runId,
+      captureRetainedSecondaryDelivery: () => captureRetainedSecondaryDelivery(run, owners, 0, 0),
+    };
+    retainSecondaryAggregateOwnership(run, lease, retentionPorts);
+    expect(run.retainedSecondaryDelivery?.ownerRunId).toBe(run.runId);
+    if (scenario === 'Stop') current = false;
+    if (scenario === 'new lease') lease.cancelRequested = true;
+    if (scenario === 'new owner') retentionPorts.getTrackedRunId = () => 'replacement-owner';
+    if (scenario === 'new secondary')
+      owners.set(lane.laneId, { ...owners.get(lane.laneId)!, runId: 'replacement-lane' });
+    const error = createAggregatePrimaryRestartFailure(
+      run,
+      lease,
+      retentionPorts,
+      'TEST failed primary'
+    );
+    expect(error.name).toBe(scenario === 'owned' ? 'OpenCodeRetainedPrimaryRestartError' : 'Error');
+    run.progress.state = 'failed';
+    expect(run.progress.state).toBe('failed');
+  }
+);

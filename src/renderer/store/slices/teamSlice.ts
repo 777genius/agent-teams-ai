@@ -175,6 +175,7 @@ import {
   nextRuntimeRunIdByTeamAfterAdoption,
   projectIncomingMemberSpawnSnapshot,
   resolveIncomingRuntimeRunAdoption,
+  retainTerminalMemberSpawnStatuses,
   shouldAdoptSuccessorProvisioningRun,
 } from '../team/teamRuntimeRunAdoption';
 import {
@@ -1565,7 +1566,7 @@ export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
     request: AddTaskCommentRequest
   ) => Promise<TaskComment>;
   addMember: (teamName: string, request: AddMemberRequest) => Promise<void>;
-  restartMember: typeof api.teams.restartMember;
+  restartMember: (...args: Parameters<typeof api.teams.restartMember>) => Promise<void>;
   skipMemberForLaunch: (teamName: string, memberName: string) => Promise<void>;
   removeMember: (teamName: string, memberName: string) => Promise<void>;
   restoreMember: (teamName: string, memberName: string) => Promise<void>;
@@ -4866,8 +4867,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             teamAgentRuntimeByTeam: nextRuntime,
           };
         }
-        const retainedStatuses = Object.fromEntries(
-          Object.entries(currentStatuses).filter(([, entry]) => entry.status === 'error')
+        const retainedStatuses = retainTerminalMemberSpawnStatuses(
+          currentStatuses,
+          progress,
+          prev.currentRuntimeRunIdByTeam[progress.teamName]
         );
         if (Object.keys(retainedStatuses).length > 0) {
           next[progress.teamName] = retainedStatuses;

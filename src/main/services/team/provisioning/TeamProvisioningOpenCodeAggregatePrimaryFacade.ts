@@ -1,12 +1,20 @@
 import { buildOpenCodeSecondaryLaneId } from '@features/team-runtime-lanes';
+import type { RetryFailedOpenCodeSecondaryLanesResult, TeamCreateRequest } from '@shared/types';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
+import type {
+  OpenCodeTeamRuntimeMessageResult,
+  TeamLaunchRuntimeAdapter,
+  TeamRuntimeLaunchResult,
+} from '../runtime';
 import { type TeamLaunchStateStore } from '../TeamLaunchStateStore';
-
 import {
   advanceOpenCodePrimaryIncarnation,
+  captureRetainedSecondaryDelivery,
+  createAggregatePrimaryRestartFailure,
   hasRetainablePrimaryLead,
+  isAggregateRuntimeOwnerAlive,
   retainSecondaryAggregateOwnership,
 } from './OpenCodeAggregatePrimaryIncarnation';
 import {
@@ -45,13 +53,6 @@ import {
   type OpenCodeAggregatePrimaryRestartLease,
   TeamProvisioningServiceMemberLifecycleFacade,
 } from './TeamProvisioningServiceMemberLifecycleFacade';
-
-import type {
-  OpenCodeTeamRuntimeMessageResult,
-  TeamLaunchRuntimeAdapter,
-  TeamRuntimeLaunchResult,
-} from '../runtime';
-import type { RetryFailedOpenCodeSecondaryLanesResult, TeamCreateRequest } from '@shared/types';
 
 const logger = createLogger('Service:TeamProvisioning');
 
@@ -265,7 +266,11 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       throw new Error('OpenCode runtime adapter is not available for member restart.');
     }
 
+    const stopAllGeneration = this.stopAllTeamsGeneration;
+    const stopTeamGeneration = this.getStopTeamGeneration(teamName);
     const restartNoLongerCurrent = (): boolean =>
+      this.stopAllTeamsGeneration !== stopAllGeneration ||
+      this.getStopTeamGeneration(teamName) !== stopTeamGeneration ||
       restartLease.cancelRequested ||
       run.processKilled ||
       run.cancelRequested ||
@@ -335,6 +340,15 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       getRuntimeOwner: (name: string) => this.runtimeAdapterRunByTeam.get(name),
       getAliveRunId: (name: string) => this.runTracking.getAliveRunId(name),
       setAliveRunId: (name: string, id: string) => this.runTracking.setAliveRunId(name, id),
+      captureRetainedSecondaryDelivery: () =>
+        restartNoLongerCurrent()
+          ? null
+          : captureRetainedSecondaryDelivery(
+              run,
+              this.secondaryRuntimeRunByTeam.get(teamName),
+              stopAllGeneration,
+              stopTeamGeneration
+            ),
       mayRestore: () => !restartNoLongerCurrent() && this.hasSecondaryRuntimeRuns(teamName),
       getRestartLease: () =>
         this.openCodeAggregatePrimaryRestartByTeam.get(teamName.trim().toLowerCase()),
@@ -503,7 +517,10 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
         this.writeLaunchFailureArtifactPackBestEffort(run, {
           reason: 'opencode_primary_restart_and_rollback_failed',
         });
-        throw new Error(
+        throw createAggregatePrimaryRestartFailure(
+          run,
+          restartLease,
+          incarnationPorts,
           `OpenCode member restart failed: ${restartMessage}. Primary rollback failed: ${rollbackMessage}`
         );
       }
@@ -731,28 +748,17 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
 
   override isTeamAlive(teamName: string): boolean {
     const runId = this.runTracking.getAliveRunId(teamName);
-    if (!runId) {
-      return false;
-    }
-    const hasPrimaryRuntime = this.runtimeAdapterRunByTeam.get(teamName)?.runId === runId;
-    const hasSecondaryRuntime = this.hasSecondaryRuntimeRuns(teamName);
-    const runtimeProgressState = this.runtimeAdapterProgressByRunId.get(runId)?.state;
-    if (
-      !hasSecondaryRuntime &&
-      (runtimeProgressState === 'disconnected' ||
-        runtimeProgressState === 'failed' ||
-        runtimeProgressState === 'cancelled')
-    ) {
-      return false;
-    }
-    const run = this.runs.get(runId);
-    if (!run) {
-      return hasPrimaryRuntime || hasSecondaryRuntime;
-    }
-    if (hasPrimaryRuntime || hasSecondaryRuntime) {
-      return !run.processKilled && !run.cancelRequested;
-    }
-    return run.child != null && !run.processKilled && !run.cancelRequested;
+    return isAggregateRuntimeOwnerAlive({
+      runId,
+      hasPrimaryRuntime: Boolean(
+        runId && this.runtimeAdapterRunByTeam.get(teamName)?.runId === runId
+      ),
+      hasSecondaryRuntime: this.hasSecondaryRuntimeRuns(teamName),
+      runtimeProgressState: runId
+        ? this.runtimeAdapterProgressByRunId.get(runId)?.state
+        : undefined,
+      run: runId ? this.runs.get(runId) : undefined,
+    });
   }
 
   override getAliveTeams(): string[] {

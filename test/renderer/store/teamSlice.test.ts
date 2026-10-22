@@ -596,7 +596,7 @@ describe('teamSlice actions', () => {
       failed: [],
       skipped: [],
     });
-    hoisted.restartMember.mockResolvedValue(undefined);
+    hoisted.restartMember.mockResolvedValue({ status: 'restarted' });
     hoisted.skipMemberForLaunch.mockResolvedValue(undefined);
     window.localStorage.removeItem('team:messagesPanelMode');
     for (let i = window.localStorage.length - 1; i >= 0; i--) {
@@ -6305,6 +6305,99 @@ describe('teamSlice actions', () => {
     expect(hoisted.getProvisioningStatus).not.toHaveBeenCalled();
     expect(hoisted.getData).toHaveBeenCalledWith('my-team');
     expect(store.getState().selectedTeamData?.isAlive).toBe(true);
+  });
+
+  it.each([
+    'valid',
+    'wrong-team',
+    'wrong-member',
+    'wrong-predecessor',
+    'wrong-successor',
+    'primary-alive',
+    'no-secondary',
+    'stop',
+    'launch',
+    'other-restart',
+    'ignored-successor',
+  ] as const)('adopts only this failed retained restart authority: %s', async (variant) => {
+    const store = createSliceStore();
+    hoisted.getData.mockResolvedValue(
+      createTeamSnapshot({ isAlive: true, members: [{ name: 'alice' }, { name: 'bob' }] })
+    );
+    const progress = {
+      runId: 'run-new',
+      teamName: 'my-team',
+      state: 'failed' as const,
+      message: 'Primary rollback failed',
+      error: 'quota exceeded',
+      startedAt: '2026-03-12T10:00:00.000Z',
+      updatedAt: '2026-03-12T10:02:00.000Z',
+    };
+    const snapshot = createMemberSpawnSnapshot({
+      runId: 'run-new',
+      statuses: {
+        alice: createMemberSpawnStatus({
+          status: 'error',
+          launchState: 'failed_to_start',
+          runtimeAlive: variant === 'primary-alive',
+          hardFailure: true,
+          error: 'quota exceeded',
+        }),
+        bob: createMemberSpawnStatus({ runtimeAlive: variant !== 'no-secondary' }),
+      },
+    });
+    store.setState({
+      selectedTeamName: 'my-team',
+      selectedTeamData: createTeamSnapshot({ isAlive: true }),
+      currentRuntimeRunIdByTeam: { 'my-team': 'run-old' },
+      currentProvisioningRunIdByTeam: { 'my-team': 'run-old' },
+      memberSpawnStatusesByTeam: { 'my-team': { bob: createMemberSpawnStatus() } },
+    });
+    hoisted.restartMember.mockResolvedValueOnce({
+      status: 'failed_retained',
+      error: 'quota exceeded',
+      teamName: variant === 'wrong-team' ? 'other-team' : 'my-team',
+      memberName: variant === 'wrong-member' ? 'bob' : 'alice',
+      predecessorRunId: variant === 'wrong-predecessor' ? 'unrelated-run' : 'run-old',
+      successorRunId: variant === 'wrong-successor' ? 'unrelated-successor' : 'run-new',
+    });
+    hoisted.getProvisioningStatus.mockResolvedValue(progress);
+    hoisted.getTeamAgentRuntime.mockResolvedValue(createRuntimeSnapshot({ runId: 'run-new' }));
+    const pending = createDeferredPromise<MemberSpawnStatusesSnapshot>();
+    hoisted.getMemberSpawnStatuses.mockReturnValueOnce(pending.promise).mockResolvedValue(snapshot);
+    const restarting = store.getState().restartMember('my-team', 'alice');
+    const rejected = expect(restarting).rejects.toThrow('quota exceeded');
+    await flushMicrotasks();
+    if (variant === 'stop') store.setState({ ignoredRuntimeRunIds: { 'run-old': 'my-team' } });
+    if (variant === 'launch') invalidateTeamLocalStateEpoch('my-team');
+    if (variant === 'ignored-successor')
+      store.setState({ ignoredRuntimeRunIds: { 'run-new': 'my-team' } });
+    if (variant === 'other-restart') {
+      hoisted.getMemberSpawnStatuses.mockResolvedValue(
+        createMemberSpawnSnapshot({ runId: 'run-old' })
+      );
+      await store.getState().restartMember('my-team', 'bob');
+    }
+    pending.resolve(snapshot);
+    await rejected;
+    expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe(
+      variant === 'valid' ? 'run-new' : 'run-old'
+    );
+    if (variant === 'valid') {
+      expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBe('run-new');
+      expect(store.getState().memberSpawnStatusesByTeam['my-team'].alice.runtimeAlive).toBe(false);
+      expect(store.getState().memberSpawnStatusesByTeam['my-team'].bob.runtimeAlive).toBe(true);
+      expect(store.getState().provisioningRuns['run-new']?.state).toBe('failed');
+      store
+        .getState()
+        .onProvisioningProgress({ ...progress, updatedAt: '2026-03-12T10:03:00.000Z' });
+      await store.getState().fetchMemberSpawnStatuses('my-team');
+      expect(store.getState().memberSpawnStatusesByTeam['my-team'].bob.runtimeAlive).toBe(true);
+      expect(store.getState().ignoredRuntimeRunIds['run-old']).toBe('my-team');
+      store.getState().onProvisioningProgress({ ...progress, runId: 'run-old', state: 'ready' });
+      expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('run-new');
+      expect(store.getState().provisioningRuns['run-new']?.state).toBe('failed');
+    }
   });
 
   it('a delayed earlier restart cannot replace the successor adopted by a rapid second restart', async () => {

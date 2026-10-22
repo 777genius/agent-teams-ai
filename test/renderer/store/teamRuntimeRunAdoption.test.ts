@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   isPinnedRuntimeRunFullyStopped,
   resolveIncomingRuntimeRunAdoption,
+  retainTerminalMemberSpawnStatuses,
   shouldAdoptSuccessorProvisioningRun,
 } from '../../../src/renderer/store/team/teamRuntimeRunAdoption';
 
@@ -116,4 +117,40 @@ describe('teamRuntimeRunAdoption', () => {
       })
     ).toBe(false);
   });
+});
+
+describe('retained same-run live status after terminal primary failure', () => {
+  it.each(['failed', 'cancelled', 'disconnected'] as const)(
+    'retains live truth only for failed current run: %s',
+    (state) => {
+      const statuses = {
+        alice: {
+          status: 'error' as const,
+          launchState: 'failed_to_start' as const,
+          updatedAt: '',
+          runtimeAlive: false,
+        },
+        bob: {
+          status: 'online' as const,
+          launchState: 'confirmed_alive' as const,
+          updatedAt: '',
+          runtimeAlive: true,
+        },
+      };
+      const progress = {
+        state,
+        teamName: 'team',
+        runId: 'run',
+        message: '',
+        startedAt: '',
+        updatedAt: '',
+      };
+      expect(Object.keys(retainTerminalMemberSpawnStatuses(statuses, progress, 'run'))).toEqual(
+        state === 'failed' ? ['alice', 'bob'] : ['alice']
+      );
+      expect(
+        Object.keys(retainTerminalMemberSpawnStatuses(statuses, progress, 'other-run'))
+      ).toEqual(['alice']);
+    }
+  );
 });

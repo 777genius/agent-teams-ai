@@ -116,6 +116,7 @@ import type {
   ToolApprovalSettings,
   UpdateKanbanPatch,
 } from './team';
+import type { TeamMemberRestartResult } from './teamMemberRestart';
 import type { TerminalAPI } from './terminal';
 import type { TmuxAPI } from './tmux';
 import type { WaterfallData } from './visualization';
@@ -571,7 +572,7 @@ export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi {
     teamName: string,
     memberName: string,
     expectedSecondary?: boolean
-  ) => Promise<void>;
+  ) => Promise<TeamMemberRestartResult>;
   skipMemberForLaunch: (teamName: string, memberName: string) => Promise<void>;
   softDeleteTask: (teamName: string, taskId: string) => Promise<void>;
   restoreTask: (teamName: string, taskId: string) => Promise<void>;

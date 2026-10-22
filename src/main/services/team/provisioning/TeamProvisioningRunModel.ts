@@ -1,11 +1,3 @@
-import type { AnthropicTeamApiKeyHelperMaterial } from '../../runtime/anthropicTeamApiKeyHelper';
-import type { RuntimeBootstrapSpec } from './TeamProvisioningBootstrapSpec';
-import type { PendingInboxRelayCandidate } from './TeamProvisioningInboxRelayCandidates';
-import type { LeadActivityState } from './TeamProvisioningLeadActivity';
-import type { MemberSpawnInboxCursor } from './TeamProvisioningMemberSpawnCursor';
-import type { OpenCodeSharedRuntimeFailuresByProject } from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
-import type { TeamsBaseLocation } from './TeamProvisioningRuntimeLaunchSelection';
-import type { MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
 import type {
   WorkspaceTrustDiagnosticsManifest,
   WorkspaceTrustExecutionResult,
@@ -22,6 +14,16 @@ import type {
   ToolCallMeta,
 } from '@shared/types';
 import type { spawn } from 'child_process';
+
+import type { AnthropicTeamApiKeyHelperMaterial } from '../../runtime/anthropicTeamApiKeyHelper';
+import type { OpenCodeRetainedSecondaryDelivery } from './OpenCodeRetainedSecondaryOwnership';
+import type { RuntimeBootstrapSpec } from './TeamProvisioningBootstrapSpec';
+import type { PendingInboxRelayCandidate } from './TeamProvisioningInboxRelayCandidates';
+import type { LeadActivityState } from './TeamProvisioningLeadActivity';
+import type { MemberSpawnInboxCursor } from './TeamProvisioningMemberSpawnCursor';
+import type { OpenCodeSharedRuntimeFailuresByProject } from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
+import type { TeamsBaseLocation } from './TeamProvisioningRuntimeLaunchSelection';
+import type { MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
 
 export const VERIFY_TIMEOUT_MS = 15_000;
 
@@ -52,6 +54,7 @@ export interface PendingMemberRestartContext {
 
 export interface ProvisioningRun {
   runId: string;
+  retainedSecondaryDelivery?: OpenCodeRetainedSecondaryDelivery;
   teamName: string;
   startedAt: string;
   progress: TeamProvisioningProgress;
