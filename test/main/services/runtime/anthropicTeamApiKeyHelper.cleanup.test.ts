@@ -248,6 +248,33 @@ describe('anthropicTeamApiKeyHelper cleanup failures', () => {
     await expect(stat(path.dirname(material.directory))).resolves.toBeDefined();
   });
 
+  it.each(['runs', 'team'] as const)(
+    'preserves entries created in the %s parent after the empty snapshot',
+    async (parent) => {
+      const root = await createTempRoot();
+      const teamName = 'TEST parent pruning race';
+      const material = await materializeFixture(
+        { teamName, authMaterialId: 'run-a', baseClaudeDir: root },
+        buildCredential('parent-race')
+      );
+      const runsDir = path.dirname(material.directory);
+      const targetDir = parent === 'runs' ? runsDir : path.dirname(runsDir);
+      const preservedFile = path.join(targetDir, 'new-user-data.txt');
+      const rmdir = fs.promises.rmdir.bind(fs.promises);
+      vi.spyOn(fs.promises, 'rmdir').mockImplementation(async (directory) => {
+        if (directory === targetDir) await writeFile(preservedFile, 'concurrent user data');
+        return rmdir(directory);
+      });
+
+      await expect(
+        cleanupAnthropicTeamApiKeyHelperForTeam({ teamName, baseClaudeDir: root })
+      ).resolves.toBeUndefined();
+
+      await expect(readFile(preservedFile, 'utf8')).resolves.toBe('concurrent user data');
+      await expect(lstat(material.directory)).rejects.toMatchObject({ code: 'ENOENT' });
+    }
+  );
+
   it('reports parent-directory read failure instead of claiming pruning succeeded', async () => {
     const root = await createTempRoot();
     const teamName = 'TEST parent read failure';

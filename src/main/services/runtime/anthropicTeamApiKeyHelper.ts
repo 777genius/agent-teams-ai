@@ -105,7 +105,10 @@ async function removeEmptyDirectoryIfExists(targetPath: string): Promise<void> {
   try {
     await fs.promises.rmdir(targetPath);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+    const code = (error as NodeJS.ErrnoException).code;
+    // Parent pruning owns no files: a new entry after the empty snapshot must
+    // survive. Leaf cleanup separately rejects remaining owned helper files.
+    if (code !== 'ENOENT' && code !== 'ENOTEMPTY') {
       throw error;
     }
   }

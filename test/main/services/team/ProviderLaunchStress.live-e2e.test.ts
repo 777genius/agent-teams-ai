@@ -42,10 +42,8 @@ vi.mock('../../../../src/main/services/infrastructure/NotificationManager', () =
   },
 }));
 
-const liveDescribe =
-  process.env.PROVIDER_LAUNCH_STRESS_LIVE === '1' && hasAnthropicAuthConfigured()
-    ? describe
-    : describe.skip;
+const liveEnabled = process.env.PROVIDER_LAUNCH_STRESS_LIVE === '1' && hasAnthropicAuthConfigured();
+const liveDescribe = liveEnabled ? describe : describe.skip;
 
 const DEFAULT_ORCHESTRATOR_CLI =
   '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
@@ -76,9 +74,17 @@ const MEMBER_NAMES = [
   'aria',
   'milo',
 ];
+const LAUNCH_READY_TIMEOUT_MS = 420_000;
+const MEMBERS_READY_TIMEOUT_MS = 240_000;
+const RUNTIMES_ALIVE_TIMEOUT_MS = 180_000;
 const RESTART_CONFIRM_TIMEOUT_MS = 300_000;
+const RESTART_ALIVE_TIMEOUT_MS = 120_000;
+const RESTART_TEAM_READY_TIMEOUT_MS = 120_000;
+const STOP_CONFIRM_TIMEOUT_MS = 90_000;
+const SCENARIO_IO_ALLOWANCE_MS = 300_000;
 // A retained big-pickle turn took 305s before its first tool call, then completed normally.
-const POST_LAUNCH_WORK_TIMEOUT_MS = getPostLaunchWorkTimeoutMs();
+// Disabled live suites must not validate configuration they will never consume.
+const POST_LAUNCH_WORK_TIMEOUT_MS = liveEnabled ? getPostLaunchWorkTimeoutMs() : 600_000;
 let currentStressTempDir = '';
 let currentStressProjectPath = '';
 
@@ -217,7 +223,7 @@ liveDescribe('provider launch stress live e2e', () => {
         await runProviderStressScenario(scenario, activeScenarios);
       }
     },
-    30 * 60_000
+    getStressTestTimeoutMs()
   );
 });
 
@@ -273,7 +279,7 @@ async function runProviderStressScenario(
         throw new Error(await formatStressDiagnostics(svc, teamName, progressEvents));
       }
       return last?.state === 'ready';
-    }, 420_000);
+    }, LAUNCH_READY_TIMEOUT_MS);
 
     const expectedMembers = buildExpectedMemberNames(memberCount);
     await waitUntil(async () => {
@@ -290,7 +296,7 @@ async function runProviderStressScenario(
           entry.bootstrapConfirmed === true
         );
       });
-    }, 240_000);
+    }, MEMBERS_READY_TIMEOUT_MS);
 
     await waitForStressCondition(
       `all teammate runtimes alive ${teamName}`,
@@ -298,7 +304,7 @@ async function runProviderStressScenario(
         const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
         return expectedMembers.every((memberName) => snapshot.members[memberName]?.alive === true);
       },
-      180_000,
+      RUNTIMES_ALIVE_TIMEOUT_MS,
       2_000,
       () => formatStressDiagnostics(svc, teamName, progressEvents)
     );
@@ -370,7 +376,7 @@ async function runRestartStressChecks(
           const snapshot = await active.svc.getTeamAgentRuntimeSnapshot(active.teamName);
           return snapshot.members[memberName]?.alive === true;
         },
-        120_000,
+        RESTART_ALIVE_TIMEOUT_MS,
         2_000,
         () => formatStressDiagnostics(active.svc, active.teamName, progressEvents)
       );
@@ -394,7 +400,7 @@ async function runRestartStressChecks(
         );
       });
     },
-    120_000,
+    RESTART_TEAM_READY_TIMEOUT_MS,
     2_000,
     () => formatStressDiagnostics(active.svc, active.teamName, progressEvents)
   );
@@ -686,6 +692,26 @@ function resolveScenarioSelection(_scenario: ProviderLaunchStressScenario): {
   };
 }
 
+function getStressTestTimeoutMs(): number {
+  const expectedMembers = buildExpectedMemberNames(getStressMemberCount());
+  // Scenarios run sequentially. Work completion and peer receipt are separate
+  // waits; mixed teams can restart one member for each of three providers.
+  return getStressOrder().reduce(
+    (total, scenario) =>
+      total +
+      LAUNCH_READY_TIMEOUT_MS +
+      MEMBERS_READY_TIMEOUT_MS +
+      RUNTIMES_ALIVE_TIMEOUT_MS +
+      2 * POST_LAUNCH_WORK_TIMEOUT_MS +
+      resolveRestartStressTargets(scenario, expectedMembers).length *
+        (RESTART_CONFIRM_TIMEOUT_MS + RESTART_ALIVE_TIMEOUT_MS) +
+      RESTART_TEAM_READY_TIMEOUT_MS +
+      STOP_CONFIRM_TIMEOUT_MS +
+      SCENARIO_IO_ALLOWANCE_MS,
+    0
+  );
+}
+
 function getPostLaunchWorkTimeoutMs(): number {
   const raw = process.env.PROVIDER_LAUNCH_STRESS_POST_LAUNCH_WORK_TIMEOUT_MS;
   if (raw === undefined) return 600_000;
@@ -737,7 +763,9 @@ async function cleanupActiveScenario(
     .catch(() => null);
   await active.svc.stopTeam(active.teamName).catch(() => undefined);
   if (active.harness) {
-    await waitForOpenCodeLanesStopped(active.teamName, 90_000).catch(() => undefined);
+    await waitForOpenCodeLanesStopped(active.teamName, STOP_CONFIRM_TIMEOUT_MS).catch(
+      () => undefined
+    );
   }
   await terminateProcessBackends(beforeStopSnapshot);
   const afterStopSnapshot = await active.svc
