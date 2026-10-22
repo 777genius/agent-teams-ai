@@ -371,9 +371,14 @@ export const CreateTeamDialog = ({
     useState<CreateTeamTemplateSource>('none');
   const storedTemplateSelection = readStoredTemplateSelection(templateSelectionDraft.value);
   useEffect(() => {
+    if (initialData) {
+      setAppliedTemplateSource('none');
+      templateSelectionDraft.clearDraft();
+      return;
+    }
     const { source } = readStoredTemplateSelection(templateSelectionDraft.value);
     if (source) setAppliedTemplateSource(source);
-  }, [templateSelectionDraft.value]);
+  }, [templateSelectionDraft.value, initialData, templateSelectionDraft]);
   const [projects, setProjects] = useState<ProjectPathProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
@@ -2468,7 +2473,7 @@ export const CreateTeamDialog = ({
           <div className="space-y-4 md:col-span-2">
             <CreateTeamTemplatePicker
               open={open}
-              initialSelection={storedTemplateSelection.value}
+              initialSelection={initialData ? '' : storedTemplateSelection.value}
               onApply={(draft, source, selectionValue) => {
                 setAppliedTemplateSource(source);
                 templateSelectionDraft.setValue(
