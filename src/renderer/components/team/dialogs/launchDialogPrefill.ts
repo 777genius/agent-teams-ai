@@ -81,13 +81,15 @@ export function resolveLaunchDialogPrefill({
   storedLimitContext,
   getStoredModel,
 }: LaunchDialogPrefillInput): LaunchDialogPrefillResult {
+  const fastMode =
+    savedRequest?.fastMode ?? previousLaunchParams?.fastMode ?? storedFastMode ?? 'off';
   if (savedRequest && resolveTeamRuntimeSelection(savedRequest).status === 'unresolved') {
     return {
       runtimeSelectionUnresolved: true,
       providerId: storedProviderId,
       model: '',
       effort: '',
-      fastMode: 'inherit',
+      fastMode,
       limitContext: false,
     };
   }
@@ -129,8 +131,6 @@ export function resolveLaunchDialogPrefill({
 
   const effort =
     currentLead?.effort ?? savedRequest?.effort ?? previousLaunchParams?.effort ?? storedEffort;
-  const fastMode =
-    savedRequest?.fastMode ?? previousLaunchParams?.fastMode ?? storedFastMode ?? 'off';
   const limitContext =
     previousLaunchParams?.limitContext ?? savedRequest?.limitContext ?? storedLimitContext;
   const providerBackendId =
