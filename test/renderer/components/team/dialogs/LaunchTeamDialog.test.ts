@@ -4692,7 +4692,7 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
-  it('preserves Codex schedule backend lane and effort in edit saves', async () => {
+  it('preserves Codex schedule backend lane and effort and defaults missing fast mode to off', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
@@ -4766,7 +4766,7 @@ describe('LaunchTeamDialog', () => {
         providerBackendId: 'codex-native',
         model: 'gpt-5.4',
         effort: 'xhigh',
-        fastMode: 'inherit',
+        fastMode: 'off',
         resolvedFastMode: false,
         skipPermissions: true,
       },

@@ -119,10 +119,6 @@ vi.mock('@renderer/components/team/members/MemberLogsTab', () => ({
   MemberLogsTab: () => React.createElement('div', null, 'logs-tab'),
 }));
 
-vi.mock('@features/member-work-sync/renderer', () => ({
-  MemberWorkSyncStatusPanel: () => null,
-}));
-
 vi.mock('@features/member-log-stream/renderer', async () => {
   const ReactModule = await import('react');
   return {
@@ -171,6 +167,46 @@ describe('MemberDetailDialog activity count', () => {
     vi.clearAllMocks();
     useStore.setState({ teamMessagesByName: {} } as never);
     vi.unstubAllGlobals();
+  });
+
+  it('does not render the member work sync card in the profile dialog', async () => {
+    const member: ResolvedTeamMember = {
+      name: 'jack',
+      status: 'active',
+      currentTaskId: null,
+      taskCount: 0,
+      lastActiveAt: null,
+      messageCount: 0,
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberDetailDialog, {
+          open: true,
+          member,
+          teamName: 'demo-team',
+          members: [member],
+          tasks: [],
+          initialTab: 'tasks',
+          onClose: () => undefined,
+          onSendMessage: () => undefined,
+          onAssignTask: () => undefined,
+          onTaskClick: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="member-work-sync-badge"]')).toBeNull();
+    expect(host.textContent).not.toContain('Member work sync');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
   });
 
   it('renders legacy member logs directly when the member log stream UI gate is off', async () => {
