@@ -15,6 +15,9 @@ const TARGET_BINARY_FORMAT = {
   win32: 'pe',
 };
 
+// Collected per afterPack run so a deficient runtime payload is loud in build logs.
+const missingPortableBunPtyTargets = new Set();
+
 function getArchLabel(arch) {
   return ARCH_LABELS[arch] ?? String(arch);
 }
@@ -317,6 +320,25 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
       }
       // A malformed target-named file must fail validation rather than disappear.
       if (matchesTarget(libraryTargets[library])) return null;
+      // The frozen floor keeps its sibling-gated retention below.
+      if (portableRuntimeGraph[1] === `${bunPtyReleases[0]}/${library}`) {
+        // The loader's per-platform filename map is exhaustive, so a foreign-named
+        // library can never load on the target; the win32-arm64 runtime also omits
+        // rust_pty_arm64.dll entirely. Prune current-graph foreigns outright, but
+        // surface the absent target binding so the degradation is not silent.
+        const targetFilenames = Object.entries(libraryTargets)
+          .filter(([, target]) => matchesTarget(target))
+          .map(([filename]) => filename);
+        if (targetFilenames.length > 0) {
+          const siblings = await Promise.all(
+            targetFilenames.map((filename) => fileExists(path.join(path.dirname(filePath), filename)))
+          );
+          if (!siblings.some(Boolean)) {
+            missingPortableBunPtyTargets.add(path.join(path.dirname(filePath), targetFilenames[0]));
+          }
+        }
+        return filePath;
+      }
       for (const [filename, target] of Object.entries(libraryTargets)) {
         if (!matchesTarget(target)) continue;
         const sibling = path.join(path.dirname(filePath), filename);
@@ -686,6 +708,7 @@ async function validateNativeBinaries(appOutDir, targetPlatform, targetArch) {
 async function afterPack(context) {
   const targetPlatform = context.electronPlatformName;
   const targetArch = getArchLabel(context.arch);
+  missingPortableBunPtyTargets.clear();
 
   const removedPaths = [
     ...(await pruneNodePtyArtifacts(context.appOutDir, targetPlatform, targetArch)),
@@ -708,6 +731,13 @@ async function afterPack(context) {
       `[afterPack] pruned ${removedPaths.length} incompatible native artifact(s) for ${targetPlatform}-${targetArch}`
     );
   }
+
+  for (const missingTarget of missingPortableBunPtyTargets) {
+    console.log(
+      `[afterPack] notice: no loadable bun-pty binding for ${targetPlatform}-${targetArch} (missing ${missingTarget}); PTY stays unavailable until the runtime ships it`
+    );
+  }
+  missingPortableBunPtyTargets.clear();
 }
 
 module.exports = afterPack;

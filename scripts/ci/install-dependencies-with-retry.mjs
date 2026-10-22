@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAYS_MS = [10_000, 20_000];
 const RETRYABLE_NETWORK_ERROR =
-  /(?:response code|status(?: code)?)[=: ]+5\d\d|\bERR_PNPM_FETCH_5\d\d\b|\b(?:EAI_AGAIN|ECONNRESET|ECONNREFUSED|ENETUNREACH|ETIMEDOUT|ERR_SOCKET_TIMEOUT|UND_ERR_[A-Z_]*TIMEOUT)\b|socket (?:hang up|timeout)|network timeout/i;
+  /(?:response code|status(?: code)?)[=: ]+5\d\d|\bERR_PNPM_FETCH_5\d\d\b|\b(?:EAI_AGAIN|ECONNRESET|ECONNREFUSED|ENETUNREACH|ETIMEDOUT|ERR_SOCKET_TIMEOUT|UND_ERR_[A-Z_]*TIMEOUT)\b|socket (?:hang up|timeout)|network timeout|TypeError: terminated|other side closed/i;
 const TERMINAL_INSTALL_ERROR =
   /\bERR_PNPM_OUTDATED_LOCKFILE\b|unsupported engine|(?:response code|status(?: code)?)[=: ]+4\d\d/i;
 

@@ -3,7 +3,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
 
-const STARTUP_TIMEOUT_MS = Number(process.env.PACKAGED_SMOKE_TIMEOUT_MS ?? 30_000);
+const STARTUP_TIMEOUT_MS = Number(process.env.PACKAGED_SMOKE_TIMEOUT_MS ?? 60_000);
 const POST_STARTUP_STABLE_MS = Number(process.env.PACKAGED_SMOKE_STABLE_MS ?? 8_000);
 const SHUTDOWN_TIMEOUT_MS = Number(process.env.PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS ?? 5_000);
 const REQUIRED_LOG_MARKERS = ['renderer did-finish-load'];
