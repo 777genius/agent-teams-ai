@@ -27,6 +27,19 @@ import type {
   OpenCodeBridgeHandshakePort,
 } from './OpenCodeStateChangingBridgeCommandService';
 
+function canonicalStopProjectPath(projectPath: string): string {
+  const resolved = path.normalize(path.resolve(projectPath.trim()));
+  try {
+    return path.normalize(realpathSync(resolved));
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException | null)?.code;
+    // Match runtime canonicalization when the launch directory is no longer
+    // accessible. Retained target equality still fences alias retargeting.
+    if (['ENOENT', 'ENOTDIR', 'EACCES', 'ELOOP', 'EPERM'].includes(code ?? '')) return resolved;
+    throw error;
+  }
+}
+
 export function createStopTarget(
   input: {
     teamName: string;
@@ -70,9 +83,9 @@ export function createStopTarget(
         laneId: input.laneId ?? 'primary',
         runId: input.runId,
         // Launch stores the canonical filesystem identity. Admit that same
-        // identity before retaining the first request; never rewrite a retained
-        // target or fall back to an unverified alias during recovery.
-        projectPath: path.normalize(realpathSync(path.resolve(input.cwd.trim()))),
+        // identity before retaining the first request; recovery preserves exact
+        // equality with this target, including when only lexical fallback remains.
+        projectPath: canonicalStopProjectPath(input.cwd),
         capabilitySnapshotId: input.capabilitySnapshotId,
         expectedBehaviorFingerprint: input.behaviorFingerprint ?? manifest.behaviorFingerprint,
         members: sessions.map((s) => ({ memberName: s.memberName, sessionId: s.sessionId })),
@@ -93,7 +106,7 @@ export function runtimeStopRequest(
     idempotencyKey: entry.idempotencyKey,
     target: target.runtimeTarget,
   });
-  if (path.normalize(realpathSync(path.resolve(target.cwd.trim()))) !== request.target.projectPath)
+  if (canonicalStopProjectPath(target.cwd) !== request.target.projectPath)
     throw new Error('Stop project identity mismatch; reconciliation unknown');
   return request;
 }

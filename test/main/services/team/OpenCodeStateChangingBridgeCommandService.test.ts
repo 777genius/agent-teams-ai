@@ -1307,18 +1307,39 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     expect((await ledger.list())[0]).toEqual(original);
   });
 
-  it('refuses a versioned Stop before persistence or dispatch when project identity is unavailable', async () => {
-    const projectPath = path.join(tempDir, 'missing-project');
+  it('stops the retained session after its canonical project directory is deleted', async () => {
+    const projectPath = path.join(tempDir, 'deleted-project');
+    await fs.mkdir(projectPath);
+    const canonicalProjectPath = await fs.realpath(projectPath);
     const input = {
       ...enableRuntimeStop(),
-      cwd: projectPath,
-      body: { ...(buildStopInput().body as object), projectPath },
+      cwd: canonicalProjectPath,
+      body: { ...(buildStopInput().body as object), projectPath: canonicalProjectPath },
+    };
+    await fs.rm(projectPath, { recursive: true });
+    bridge.resultFactory = ({ command, body, options }) => {
+      const request = (body as unknown as { stopRecovery: RuntimeStopRequest }).stopRecovery;
+      expect(request.target.projectPath).toBe(canonicalProjectPath);
+      expect(options.cwd).toBe(canonicalProjectPath);
+      return bridgeSuccess({
+        command,
+        requestId: options.requestId,
+        runtime: { ...bridgeSuccess().runtime, capabilitySnapshotId: input.capabilitySnapshotId },
+        data: runtimeData(true, request.idempotencyKey),
+      });
     };
 
-    await expect(createService().execute(input)).rejects.toMatchObject({ code: 'ENOENT' });
-    expect(await ledger.list()).toEqual([]);
-    expect(bridge.calls).toHaveLength(0);
-    expect(await leaseStore.getActive('team-a')).toBeNull();
+    const result = await createService().execute(input);
+    expect(result.ok).toBe(true);
+    expect(bridge.calls).toHaveLength(1);
+    expect((await ledger.list())[0]).toMatchObject({
+      status: 'completed',
+      stopTarget: {
+        cwd: canonicalProjectPath,
+        body: { projectPath: canonicalProjectPath },
+        runtimeTarget: { projectPath: canonicalProjectPath },
+      },
+    });
   });
 
   it.each([true, false])(

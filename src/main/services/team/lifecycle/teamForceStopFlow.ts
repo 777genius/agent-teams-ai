@@ -707,6 +707,7 @@ export async function clearPendingOpenCodePromptDeliveriesForTeam(input: {
       laneId,
       fileName: 'opencode-prompt-delivery-ledger.json',
     });
+    if (!fs.existsSync(ledgerPath)) continue;
     try {
       // Lane removal takes this same outer lock; ledger writes must finish
       // before cleanup can delete their directory. The inner store lock never
