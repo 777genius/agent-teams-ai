@@ -2233,6 +2233,7 @@ async function main() {
       // JSON string escaping doubles backslashes in cmd/PowerShell arguments.
       return `"${testNode.executable}" "${program}"`;
     };
+
     const checkSum = `const a=require('node:assert/strict');a.equal(process.platform,'win32');const sum=require('./sum.cjs');a.equal(sum([]),0);a.equal(sum([2,-5,7]),4);a.equal(sum([1.5,2.5]),4);a.equal(sum([-2,-3]),-5);for(const v of [null,[NaN],[Infinity],['1']])a.throws(()=>sum(v),TypeError);`;
     await writeFile(
       path.join(desktop.projectPath, 'alice-verify.cjs'),

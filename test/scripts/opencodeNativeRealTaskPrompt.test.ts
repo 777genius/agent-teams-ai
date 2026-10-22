@@ -66,6 +66,7 @@ describe('native verification command contract', () => {
     expect(instruction).toContain(command);
     expect(instruction).toContain('Do not substitute a relative path');
     expect(instruction).toContain('print its marker yourself');
+    expect(instruction).toContain('Never create or edit *-result.txt yourself');
     expect(instruction).toContain('never counts as the marker');
   });
 

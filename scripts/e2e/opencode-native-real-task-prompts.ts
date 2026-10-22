@@ -45,6 +45,7 @@ export function verificationInstruction(command: string): string {
   return [
     `Execute this supplied literal absolute Node command verbatim in your native shell: ${command}.`,
     'Do not substitute a relative path, recreate or copy the verifier, or print its marker yourself. Let the unchanged verifier produce its own output.',
+    'Never create or edit *-result.txt yourself; the unchanged verifier alone writes it.',
     'This step is done only when that exact command exits zero and its own output prints the marker line.',
     'If it exits non-zero because a file you wrote is wrong, fix only your file and execute this identical command again until it exits zero. Its arguments are already correct: never alter, wrap, cd around or re-spell the command.',
     'Anything you print yourself never counts as the marker.',
