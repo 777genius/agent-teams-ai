@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Disposable Electron renderer E2E for member-work-sync Continue.
-// Seeds an isolated team/project, launches `pnpm dev:mcp`, opens the member
-// dialog, clicks Continue, and proves the renderer invoked continueManually.
+// Disposable Electron renderer E2E proving the member profile dialog has no
+// Member work sync card. Seeds an isolated team/project, launches `pnpm dev:mcp`,
+// opens the member profile dialog, and asserts the work sync card is absent.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
@@ -16,14 +16,6 @@ import WebSocket from 'ws';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '../..');
-const apiModuleSuffix = '/src/renderer/api/index.ts';
-const expectedApiModulePaths = new Set([
-  '/api/index.ts',
-  apiModuleSuffix,
-  `/@fs${repoRoot}${apiModuleSuffix}`,
-  `/@fs/${repoRoot}${apiModuleSuffix}`,
-]);
-const apiNeedle = 'function getImpl() {\n  if (window.electronAPI) return window.electronAPI;';
 const appLogTail = [];
 const appLogRemainder = { stdout: '', stderr: '' };
 let appProcess = null;
@@ -44,10 +36,10 @@ async function json(file, value) {
 }
 
 async function seedFixture() {
-  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'work-sync-continue-e2e-')));
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'member-dialog-e2e-')));
   const runtimeLock = JSON.parse(await readFile(path.join(repoRoot, 'runtime.lock.json'), 'utf8'));
   const fixture = {
-    kind: 'member-work-sync-continue-desktop-v1',
+    kind: 'member-dialog-no-work-sync-card-desktop-v1',
     root,
     claudeRoot: path.join(root, '.claude'),
     userDataRoot: path.join(root, 'user-data'),
@@ -60,7 +52,7 @@ async function seedFixture() {
     xdgStateHome: path.join(root, 'xdg-state'),
     xdgRuntimeDir: path.join(root, 'xdg-runtime'),
     projectPath: path.join(root, 'sandbox-project'),
-    teamName: `wsync-e2e-${randomUUID()}`,
+    teamName: `member-dialog-e2e-${randomUUID()}`,
     memberName: 'team-lead',
     runtimeWrapperPath: path.join(root, 'fixture-runtime-deny.cjs'),
     runtimeLedgerPath: path.join(root, 'fixture-runtime-ledger.ndjson'),
@@ -97,7 +89,7 @@ async function seedFixture() {
   );
   await chmod(fixture.runtimeWrapperPath, 0o755);
   await writeFile(fixture.runtimeLedgerPath, '');
-  await writeFile(path.join(fixture.projectPath, 'README.md'), '# Disposable Continue E2E\n');
+  await writeFile(path.join(fixture.projectPath, 'README.md'), '# Disposable Member Dialog E2E\n');
   const member = {
     name: fixture.memberName,
     agentId: `${fixture.memberName}@${fixture.teamName}`,
@@ -117,7 +109,7 @@ async function seedFixture() {
   });
   await json(path.join(teamDir, 'config.json'), {
     name: fixture.teamName,
-    description: 'Disposable Continue E2E fixture',
+    description: 'Disposable member dialog E2E fixture',
     color: 'blue',
     language: 'en',
     createdAt: Date.now(),
@@ -383,7 +375,7 @@ async function cleanup(fixture) {
   }
   appProcess = null;
   appProcessGroupId = null;
-  if (fixture?.root && process.env.MEMBER_WORK_SYNC_CONTINUE_E2E_KEEP !== '1') {
+  if (fixture?.root && process.env.MEMBER_DIALOG_WORK_SYNC_E2E_KEEP !== '1') {
     for (let attempt = 0; attempt < 8; attempt += 1) {
       try {
         await rm(fixture.root, { recursive: true, force: true });
@@ -403,23 +395,13 @@ async function dumpRenderer(client, label) {
   if (!client) return;
   try {
     const snapshot = await client.evaluate(`(() => {
-      const state = window.__agentTeamsDevStore?.getState?.();
-      const fixture = window.__workSyncContinueE2E;
+      const dialog = document.querySelector('[role="dialog"]');
       return {
         label: ${JSON.stringify(label)},
-        hasFixtureApi: Boolean(fixture?.createApi),
-        getStatus: fixture?.getStatus ?? [],
-        continue: fixture?.continue ?? [],
-        paneTabs: (state?.paneLayout?.panes ?? []).flatMap((pane) =>
-          (pane.tabs ?? []).map((tab) => ({ type: tab.type, teamName: tab.teamName, id: tab.id }))
-        ),
-        focusedPaneId: state?.paneLayout?.focusedPaneId,
-        teams: (state?.teams ?? []).map((team) => team.teamName),
-        selectedTeamName: state?.selectedTeamName,
-        selectedMembers: (state?.selectedTeamData?.members ?? []).map((member) => member.name),
-        pendingMemberProfile: state?.pendingMemberProfile,
-        dialog: Boolean(document.querySelector('[role="dialog"]')),
-        continueButton: Boolean(document.querySelector('[data-testid="member-work-sync-continue"]')),
+        dialog: Boolean(dialog),
+        workSyncMarkers: Array.from(
+          document.querySelectorAll('[data-testid^="member-work-sync-"]')
+        ).map((element) => element.getAttribute('data-testid')),
         bodyText: (document.body?.innerText ?? '').slice(0, 800),
       };
     })()`);
@@ -427,164 +409,6 @@ async function dumpRenderer(client, label) {
   } catch (error) {
     process.stderr.write(`Renderer dump failed: ${String(error)}\n`);
   }
-}
-
-const attentionStatus = (fixture) => ({
-  teamName: fixture.teamName,
-  memberName: fixture.memberName,
-  state: 'needs_sync',
-  agenda: {
-    teamName: fixture.teamName,
-    memberName: fixture.memberName,
-    generatedAt: '2026-04-29T00:20:00.000Z',
-    fingerprint: 'agenda:v1:continue-e2e',
-    items: [
-      {
-        taskId: 'task-1',
-        displayId: '11111111',
-        subject: 'Recover stuck work',
-        kind: 'work',
-        assignee: fixture.memberName,
-        priority: 'normal',
-        reason: 'owned_pending_task',
-        evidence: { status: 'pending', owner: fixture.memberName },
-      },
-    ],
-    diagnostics: [],
-  },
-  shadow: { reconciledBy: 'queue', wouldNudge: true, fingerprintChanged: false },
-  evaluatedAt: '2026-04-29T00:20:00.000Z',
-  diagnostics: [],
-  recoveryHealth: {
-    schemaVersion: 1,
-    attentionAt: '2026-04-29T00:20:00.000Z',
-    episodes: [
-      {
-        episodeId: 'episode:task-1:team-lead:2026-04-29T00:00:00.000Z',
-        workKey: `task-1:${fixture.memberName}`,
-        taskId: 'task-1',
-        firstObservedAt: '2026-04-29T00:00:00.000Z',
-        dueAt: '2026-04-29T00:20:00.000Z',
-        phase: 'attention',
-        reason: 'no_progress_deadline',
-      },
-    ],
-  },
-});
-
-function fixtureBootstrap(fixture) {
-  return `(() => {
-    const status = ${JSON.stringify(attentionStatus(fixture))};
-    const state = {
-      getStatus: [],
-      continue: [],
-      status,
-      createApi(realApi) {
-        const memberWorkSync = {
-          ...realApi.memberWorkSync,
-          getStatus: async (request) => {
-            state.getStatus.push(request);
-            return status;
-          },
-          continueManually: async (request) => {
-            state.continue.push(request);
-            return status;
-          },
-        };
-        return new Proxy({}, {
-          get(_target, property) {
-            if (property === 'memberWorkSync') return memberWorkSync;
-            const value = Reflect.get(realApi, property, realApi);
-            return typeof value === 'function' ? value.bind(realApi) : value;
-          },
-        });
-      },
-    };
-    window.__workSyncContinueE2E = state;
-  })();`;
-}
-
-async function installApiInterception(client, fixture) {
-  let patchCount = 0;
-  let patchError = null;
-  const observedScriptPaths = new Set();
-  let resolveFirstPatch;
-  let rejectFirstPatch;
-  const firstPatch = new Promise((resolve, reject) => {
-    resolveFirstPatch = resolve;
-    rejectFirstPatch = reject;
-  });
-  client.on('Fetch.requestPaused', async (event) => {
-    const url = new URL(event.request.url);
-    observedScriptPaths.add(url.pathname);
-    if (!expectedApiModulePaths.has(url.pathname) || !event.responseStatusCode) {
-      await client.send('Fetch.continueRequest', { requestId: event.requestId });
-      return;
-    }
-    try {
-      const bodyResult = await client.send('Fetch.getResponseBody', { requestId: event.requestId });
-      const source = bodyResult.base64Encoded
-        ? Buffer.from(bodyResult.body, 'base64').toString('utf8')
-        : bodyResult.body;
-      const occurrences = source.split(apiNeedle).length - 1;
-      assert.equal(occurrences, 1, 'Expected exactly one getImpl fixture injection needle');
-      const replacement = `${apiNeedle.split('\n')[0]}\n  const continueFixture = window.__workSyncContinueE2E;\n  if (window.electronAPI && continueFixture?.createApi) return continueFixture.createApi(window.electronAPI);\n  ${apiNeedle.split('\n')[1]}`;
-      const patched = source.replace(apiNeedle, replacement);
-      const headers = (event.responseHeaders ?? []).filter(
-        (header) => !['content-length', 'content-encoding'].includes(header.name.toLowerCase())
-      );
-      await client.send('Fetch.fulfillRequest', {
-        requestId: event.requestId,
-        responseCode: event.responseStatusCode,
-        responsePhrase: event.responseStatusText,
-        responseHeaders: headers,
-        body: Buffer.from(patched).toString('base64'),
-      });
-      patchCount += 1;
-      resolveFirstPatch();
-    } catch (error) {
-      patchError = error;
-      rejectFirstPatch(error);
-      await client
-        .send('Fetch.failRequest', {
-          requestId: event.requestId,
-          errorReason: 'Failed',
-        })
-        .catch(() => undefined);
-    }
-  });
-  await client.send('Network.enable');
-  await client.send('Network.setCacheDisabled', { cacheDisabled: true });
-  await client.send('Fetch.enable', {
-    patterns: [{ urlPattern: '*api/index.ts*', resourceType: 'Script', requestStage: 'Response' }],
-  });
-  await client.send('Page.addScriptToEvaluateOnNewDocument', { source: fixtureBootstrap(fixture) });
-  await client.send('Page.reload', { ignoreCache: true });
-  let timeout;
-  try {
-    await Promise.race([
-      firstPatch,
-      new Promise((_, reject) => {
-        timeout = setTimeout(
-          () =>
-            reject(
-              new Error(
-                `API module was not intercepted; observed ${JSON.stringify(
-                  [...observedScriptPaths]
-                    .filter((value) => /api|renderer/i.test(value))
-                    .slice(-100)
-                )}`
-              )
-            ),
-          30_000
-        );
-      }),
-    ]);
-  } finally {
-    clearTimeout(timeout);
-  }
-  if (patchError) throw patchError;
-  assert(patchCount >= 1, 'API module was not patched');
 }
 
 async function main() {
@@ -610,38 +434,12 @@ async function main() {
       return teams.map((team) => team.teamName);
     })()`);
     assert.deepEqual(native, [fixture.teamName]);
-    step('installing API interception');
-    await installApiInterception(cdp, fixture);
-    step('waiting for intercepted API');
-    await cdp.waitFor(
-      'window.__workSyncContinueE2E?.createApi && window.__agentTeamsDevStore && window.electronAPI?.teams',
-      'intercepted renderer API and dev store',
-      60_000
-    );
     step('waiting for hydrated team list');
     await cdp.waitFor(
       `(() => { const state = window.__agentTeamsDevStore?.getState(); return Boolean(
         state?.paneLayout?.focusedPaneId && state?.paneLayout?.panes?.length && !state?.teamsLoading &&
         state?.teams?.some((team) => team.teamName === ${JSON.stringify(fixture.teamName)})); })()`,
       'hydrated fixture team',
-      60_000
-    );
-    step('opening teams list');
-    await cdp.evaluate(`window.__agentTeamsDevStore.getState().openTeamsTab()`);
-    await cdp.waitFor(
-      `(() => {
-        const state = window.__agentTeamsDevStore?.getState();
-        const pane = state?.paneLayout?.panes?.find((candidate) =>
-          candidate.id === state.paneLayout.focusedPaneId);
-        return pane?.tabs?.find((tab) => tab.id === pane.activeTabId)?.type === 'teams';
-      })()`,
-      'active Teams tab',
-      60_000
-    );
-    await cdp.waitFor(
-      `Boolean(Array.from(document.querySelectorAll('[role="button"]')).find((element) =>
-        element.querySelector('h3')?.textContent?.trim() === ${JSON.stringify(fixture.teamName)}))`,
-      'fixture team card',
       60_000
     );
     step('opening team tab');
@@ -674,58 +472,63 @@ async function main() {
       60_000
     );
     step('opening member profile');
-    const continueSelector = '[data-testid="member-work-sync-continue"]';
-    const opened = Date.now() + 30_000;
-    while (Date.now() < opened) {
+    const dialogDeadline = Date.now() + 30_000;
+    let dialogOpen = false;
+    while (Date.now() < dialogDeadline) {
       await cdp.evaluate(
         `window.__agentTeamsDevStore.getState().openMemberProfile(${JSON.stringify(
           fixture.memberName
         )}, ${JSON.stringify(fixture.teamName)})`
       );
-      if (
-        await cdp.evaluate(`Boolean(document.querySelector(${JSON.stringify(continueSelector)}))`)
-      ) {
+      if (await cdp.evaluate(`Boolean(document.querySelector('[role="dialog"]'))`)) {
+        dialogOpen = true;
         break;
       }
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
+    assert.equal(dialogOpen, true, 'member profile dialog did not open');
+    step('waiting for dialog content');
     await cdp.waitFor(
-      `Boolean(document.querySelector(${JSON.stringify(continueSelector)}))`,
-      'Continue control',
-      5_000
-    );
-    step('asserting durable attention instead of Working');
-    await cdp.waitFor(
-      `Boolean(document.querySelector('[data-testid="member-work-sync-attention"]'))`,
-      'attention banner',
-      5_000
-    );
-    const attentionUi = await cdp.evaluate(`({
-      banner: document.querySelector('[data-testid="member-work-sync-attention"]')?.textContent ?? '',
-      badge: document.querySelector('[data-testid="member-work-sync-badge"]')?.textContent ?? '',
-    })`);
-    assert.match(attentionUi.banner, /No confirmed task progress for 20 minutes/);
-    assert.equal(attentionUi.badge, 'Needs attention');
-    step('clicking Continue');
-    await cdp.evaluate(`document.querySelector(${JSON.stringify(continueSelector)}).click()`);
-    await cdp.waitFor(
-      `window.__workSyncContinueE2E.continue.length > 0`,
-      'Continue API invocation',
+      `(() => { const dialog = document.querySelector('[role="dialog"]'); return Boolean(
+        dialog && (dialog.innerText ?? '').includes('Tasks')); })()`,
+      'member dialog tasks tab',
       10_000
     );
-    const calls = await cdp.evaluate(
-      `({ getStatus: window.__workSyncContinueE2E.getStatus, continue: window.__workSyncContinueE2E.continue })`
+    step('asserting member work sync card is absent');
+    // The card rendered immediately (including its loading state) whenever it
+    // was part of the dialog, so poll briefly to rule out a late async render.
+    const absenceDeadline = Date.now() + 5_000;
+    let violation = null;
+    while (Date.now() < absenceDeadline) {
+      violation = await cdp.evaluate(`(() => {
+        const dialog = document.querySelector('[role="dialog"]');
+        if (!dialog) return 'member profile dialog disappeared';
+        const markers = Array.from(dialog.querySelectorAll('[data-testid^="member-work-sync-"]'))
+          .map((element) => element.getAttribute('data-testid'));
+        if (markers.length > 0) return 'work sync testids present: ' + markers.join(', ');
+        const text = dialog.innerText ?? '';
+        if (text.includes('Member work sync')) return 'Member work sync card text present';
+        if (text.includes('Shadow would nudge')) return 'work sync diagnostics text present';
+        return null;
+      })()`);
+      if (violation) break;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    assert.equal(violation, null, `member work sync card found in profile dialog: ${violation}`);
+    step('capturing dialog screenshot');
+    const screenshot = await cdp.send('Page.captureScreenshot', { format: 'png' });
+    const screenshotPath = path.join(
+      os.tmpdir(),
+      `member-dialog-no-work-sync-card-desktop-${Date.now()}.png`
     );
-    assert.equal(calls.continue.length, 1);
-    assert.equal(calls.continue[0].teamName, fixture.teamName);
-    assert.equal(calls.continue[0].memberName, fixture.memberName);
+    await writeFile(screenshotPath, Buffer.from(screenshot.data, 'base64'));
     process.stdout.write(
       JSON.stringify(
         {
           ok: true,
           teamName: fixture.teamName,
           memberName: fixture.memberName,
-          continueCalls: calls.continue,
+          screenshotPath,
         },
         null,
         2
