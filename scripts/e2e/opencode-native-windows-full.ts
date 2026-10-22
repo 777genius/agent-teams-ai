@@ -1134,6 +1134,14 @@ async function exactFile(project: string, name: string, expected?: string) {
   if (expected !== undefined) assert.equal(bytes.toString(), expected);
   return createHash('sha256').update(bytes).digest('hex');
 }
+async function resultFileFacts(project: string, name: string, expected: string) {
+  try {
+    const bytes = await readFile(path.join(project, name));
+    return { name, present: true, exact: bytes.toString() === expected };
+  } catch {
+    return { name, present: false, exact: false };
+  }
+}
 async function readStopObservation(app: App) {
   const processAlive = await app.call('processAlive');
   const runtime = await app.call('getRuntime');
@@ -2077,6 +2085,7 @@ async function main() {
       : { bundledSdkSha: '', runtimeDigests: {} };
   const taskOwners = new Map<string, 'alice' | 'bob'>();
   const commandExpectations = new Map<string, NativeCommandExpectation>();
+  const commandResultFiles: { name: string; expected: string }[] = [];
   const nativeSessions = new Map<string, string>();
   const proofFile = path.join(desktop.root, 'proof.json');
   const proof = {
@@ -2096,6 +2105,7 @@ async function main() {
         ReturnType<ReturnType<typeof electronTeamPort>['getSafeTaskFailureSnapshot']>
       >[];
     },
+    commandResultFiles: [] as { name: string; present: boolean; exact: boolean }[],
     nativeTranscriptFailure: null as null | {
       observation: 'captured' | 'unavailable';
       member: 'alice' | 'bob';
@@ -2194,6 +2204,11 @@ async function main() {
     );
     proof.nativeNodeDependency = { sha256: testNode.sha256, bytes: testNode.bytes };
     const nonce = { alice: randomUUID(), bob: randomUUID(), new: randomUUID() };
+    commandResultFiles.push(
+      { name: 'alice-result.txt', expected: nonce.alice + '\n' },
+      { name: 'bob-result.txt', expected: nonce.bob + '\n' },
+      { name: 'new-result.txt', expected: nonce.new + '\n' }
+    );
     const base = `Work only inside ${desktop.projectPath}. Never delegate, install packages, detach processes or change host verification scripts. Use team tools for peer messages and task comments. When a peer sends CHALLENGE:<token>, reply to that sender ACK:<token> exactly. Never reply to ACK.`;
     const command = (name: string) => {
       const program = path.join(desktop.projectPath, name);
@@ -2976,6 +2991,9 @@ async function main() {
         await unlink(bunConfig).catch(() => undefined);
       }
     }
+    proof.commandResultFiles = await Promise.all(
+      commandResultFiles.map((check) => resultFileFacts(desktop.projectPath, check.name, check.expected))
+    );
     if (latestTasks.length) {
       let timer: ReturnType<typeof setTimeout> | undefined;
       try {
