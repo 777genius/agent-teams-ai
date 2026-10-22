@@ -177,7 +177,10 @@ export function retainTerminalMemberSpawnStatuses(
   progress: TeamProvisioningProgress,
   currentRuntimeRunId: string | null | undefined
 ): Record<string, MemberSpawnStatusEntry> {
-  const retainLive = progress.state === 'failed' && currentRuntimeRunId === progress.runId;
+  const retainLive =
+    progress.state === 'failed' &&
+    progress.retainedSecondaryRuntime === true &&
+    currentRuntimeRunId === progress.runId;
   return Object.fromEntries(
     Object.entries(statuses).filter(
       ([, entry]) => entry.status === 'error' || (retainLive && entry.runtimeAlive === true)

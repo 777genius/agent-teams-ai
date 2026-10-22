@@ -6,6 +6,7 @@ import {
   createAggregatePrimaryRestartFailure,
   retainSecondaryAggregateOwnership,
 } from '../OpenCodeAggregatePrimaryIncarnation';
+import { OpenCodeAggregatePrimaryProgressPublisher } from '../OpenCodeAggregatePrimaryProgressPublisher';
 import { createOpenCodeAggregateProvisioningRun } from '../TeamProvisioningOpenCodeAggregateRun';
 import type { ProvisioningRun } from '../TeamProvisioningRunModel';
 import type { OpenCodeAggregatePrimaryRestartLease } from '../TeamProvisioningServiceMemberLifecycleFacade';
@@ -79,7 +80,9 @@ describe('OpenCode aggregate primary incarnation handoff', () => {
       updatedAt: '',
     };
     run.memberSpawnStatuses.set('secondary', secondary);
+    run.progress.retainedSecondaryRuntime = true;
     advanceOpenCodePrimaryIncarnation(run, lease, ports);
+    expect(run.progress.retainedSecondaryRuntime).toBeUndefined();
     expect(run.runId).not.toBe('TEST-stopped');
     expect(ports.runs.has('TEST-stopped')).toBe(false);
     expect(ports.runs.get(run.runId)).toBe(run);
@@ -203,7 +206,23 @@ it.each(['owned', 'Stop', 'new lease', 'new owner', 'new secondary'])(
       'TEST failed primary'
     );
     expect(error.name).toBe(scenario === 'owned' ? 'OpenCodeRetainedPrimaryRestartError' : 'Error');
-    run.progress.state = 'failed';
+    const publisher = new OpenCodeAggregatePrimaryProgressPublisher({
+      usesRetainedProgressState: () => true,
+      setRuntimeAdapterProgress: (progress) => progress,
+      enrichRuntimeAdapterProgressTrace: (progress) => progress,
+      rememberProgress: vi.fn(),
+      invalidateRuntimeSnapshotCaches: vi.fn(),
+    });
+    publisher.publishFailed(run, 'Primary failed', error);
     expect(run.progress.state).toBe('failed');
+    expect(run.progress.retainedSecondaryRuntime).toBe(scenario === 'owned' ? true : undefined);
+    publisher.publishFailed(run, 'Ordinary failure', new Error('TEST ordinary failure'));
+    expect(run.progress.retainedSecondaryRuntime).toBeUndefined();
+    publisher.publishFailed(run, 'Primary failed', error);
+    publisher.publishPending(run, 'Restarting');
+    expect(run.progress.retainedSecondaryRuntime).toBeUndefined();
+    publisher.publishFailed(run, 'Primary failed', error);
+    publisher.publishReady(run, 'Recovered');
+    expect(run.progress.retainedSecondaryRuntime).toBeUndefined();
   }
 );

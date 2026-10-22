@@ -6328,6 +6328,7 @@ describe('teamSlice actions', () => {
       runId: 'run-new',
       teamName: 'my-team',
       state: 'failed' as const,
+      retainedSecondaryRuntime: true as const,
       message: 'Primary rollback failed',
       error: 'quota exceeded',
       startedAt: '2026-03-12T10:00:00.000Z',
@@ -6399,6 +6400,60 @@ describe('teamSlice actions', () => {
       expect(store.getState().provisioningRuns['run-new']?.state).toBe('failed');
     }
   });
+
+  it.each(['ordinary', 'retained', 'revoked', 'cancelled', 'disconnected', 'foreign-run'] as const)(
+    'only authoritative failed progress retains live secondary status: %s',
+    (variant) => {
+      const store = createSliceStore();
+      const progress = {
+        runId: 'run-current',
+        teamName: 'my-team',
+        state: 'failed' as const,
+        message: 'primary failed',
+        error: 'quota exceeded',
+        startedAt: '2026-03-12T10:00:00.000Z',
+        updatedAt: '2026-03-12T10:02:00.000Z',
+      };
+      store.setState({
+        currentRuntimeRunIdByTeam: { 'my-team': 'run-current' },
+        currentProvisioningRunIdByTeam: { 'my-team': 'run-current' },
+        memberSpawnStatusesByTeam: {
+          'my-team': {
+            alice: createMemberSpawnStatus({
+              status: 'error',
+              runtimeAlive: false,
+              launchState: 'failed_to_start',
+            }),
+            bob: createMemberSpawnStatus(),
+          },
+        },
+      });
+      if (variant === 'revoked') {
+        store.getState().onProvisioningProgress({ ...progress, retainedSecondaryRuntime: true });
+        expect(store.getState().memberSpawnStatusesByTeam['my-team'].bob.runtimeAlive).toBe(true);
+      }
+      const incoming = {
+        ...progress,
+        ...(variant !== 'ordinary' && variant !== 'revoked'
+          ? { retainedSecondaryRuntime: true as const }
+          : {}),
+        ...(variant === 'cancelled' || variant === 'disconnected' ? { state: variant } : {}),
+        ...(variant === 'foreign-run' ? { runId: 'unrelated-run' } : {}),
+      };
+      store.getState().onProvisioningProgress(incoming);
+      expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('run-current');
+      if (variant === 'retained' || variant === 'foreign-run') {
+        expect(store.getState().memberSpawnStatusesByTeam['my-team'].bob.runtimeAlive).toBe(true);
+      } else {
+        expect(store.getState().memberSpawnStatusesByTeam['my-team'].bob).toBeUndefined();
+        expect(store.getState().memberSpawnStatusesByTeam['my-team'].alice.status).toBe('error');
+      }
+      if (variant === 'revoked')
+        expect(
+          store.getState().provisioningRuns['run-current'].retainedSecondaryRuntime
+        ).toBeUndefined();
+    }
+  );
 
   it('a delayed earlier restart cannot replace the successor adopted by a rapid second restart', async () => {
     const store = createSliceStore();

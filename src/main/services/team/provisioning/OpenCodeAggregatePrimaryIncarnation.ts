@@ -46,7 +46,12 @@ export function advanceOpenCodePrimaryIncarnation(
   for (const member of run.effectiveMembers) {
     run.memberSpawnStatuses.set(member.name, createInitialMemberSpawnStatusEntry());
   }
-  run.progress = { ...run.progress, runId, state: 'disconnected' };
+  run.progress = {
+    ...run.progress,
+    runId,
+    state: 'disconnected',
+    retainedSecondaryRuntime: undefined,
+  };
   lease.candidateRunId = runId;
   ports.runs.set(runId, run);
   ports.provisioningRunByTeam.set(run.teamName, runId);

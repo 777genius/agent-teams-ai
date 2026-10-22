@@ -1460,6 +1460,8 @@ export interface TeamProvisioningProgress {
   assistantOutput?: string;
   /** True once provisioning has written a readable config.json for this team. */
   configReady?: boolean;
+  /** Main confirmed owned secondary lanes survive this failed run under its current Stop generation. */
+  retainedSecondaryRuntime?: true;
   /** Bounded structured launch diagnostics for the progress UI. */
   launchDiagnostics?: TeamLaunchDiagnosticItem[];
 }

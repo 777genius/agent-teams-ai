@@ -1,8 +1,8 @@
 import { getErrorMessage } from '@shared/utils/errorHandling';
 
-import { nowIso } from './TeamProvisioningRunProgress';
-
+import { OpenCodeRetainedPrimaryRestartError } from './OpenCodeRetainedPrimaryRestartError';
 import type { ProvisioningRun } from './TeamProvisioningRunModel';
+import { nowIso } from './TeamProvisioningRunProgress';
 
 export interface OpenCodeAggregatePrimaryProgressPublisherPorts {
   usesRetainedProgressState(): boolean;
@@ -24,6 +24,7 @@ export class OpenCodeAggregatePrimaryProgressPublisher {
     run.progress = this.publish(run, {
       ...run.progress,
       state: 'disconnected',
+      retainedSecondaryRuntime: undefined,
       message,
       updatedAt: nowIso(),
     });
@@ -39,6 +40,7 @@ export class OpenCodeAggregatePrimaryProgressPublisher {
     run.progress = this.publish(run, {
       ...run.progress,
       state: 'ready',
+      retainedSecondaryRuntime: undefined,
       message,
       messageSeverity: undefined,
       updatedAt: nowIso(),
@@ -52,6 +54,8 @@ export class OpenCodeAggregatePrimaryProgressPublisher {
     run.progress = this.publish(run, {
       ...run.progress,
       state: 'failed',
+      retainedSecondaryRuntime:
+        error instanceof OpenCodeRetainedPrimaryRestartError ? true : undefined,
       message,
       messageSeverity: 'error',
       updatedAt: nowIso(),

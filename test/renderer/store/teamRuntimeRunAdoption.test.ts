@@ -141,6 +141,7 @@ describe('retained same-run live status after terminal primary failure', () => {
         state,
         teamName: 'team',
         runId: 'run',
+        retainedSecondaryRuntime: true as const,
         message: '',
         startedAt: '',
         updatedAt: '',
@@ -150,6 +151,15 @@ describe('retained same-run live status after terminal primary failure', () => {
       );
       expect(
         Object.keys(retainTerminalMemberSpawnStatuses(statuses, progress, 'other-run'))
+      ).toEqual(['alice']);
+      expect(
+        Object.keys(
+          retainTerminalMemberSpawnStatuses(
+            statuses,
+            { ...progress, retainedSecondaryRuntime: undefined },
+            'run'
+          )
+        )
       ).toEqual(['alice']);
     }
   );

@@ -1717,6 +1717,7 @@ function provisioningProgressPayloadEqual(
     a.cliLogsTail === b.cliLogsTail &&
     a.assistantOutput === b.assistantOutput &&
     a.configReady === b.configReady &&
+    a.retainedSecondaryRuntime === b.retainedSecondaryRuntime &&
     stringArraysEqual(a.warnings, b.warnings) &&
     launchDiagnosticsEqual(a.launchDiagnostics, b.launchDiagnostics)
   );
@@ -4620,7 +4621,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     get().onProvisioningProgress(progress);
     return progress;
   },
-
   clearMissingProvisioningRun: (runId: string) => {
     teamLaunchAnalyticsByRunId.delete(runId);
     clearTeamLaunchStepTracking(runId);

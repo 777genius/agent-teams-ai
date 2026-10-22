@@ -509,20 +509,21 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
         });
         await this.clearCancelledOpenCodeAggregateRestartState(teamName, run.runId);
         retainSecondaryAggregateOwnership(run, restartLease, incarnationPorts);
-        this.aggregatePrimaryProgress.publishFailed(
-          run,
-          'OpenCode member restart and primary rollback failed',
-          new Error(`${restartMessage} Rollback failed: ${rollbackMessage}`)
-        );
-        this.writeLaunchFailureArtifactPackBestEffort(run, {
-          reason: 'opencode_primary_restart_and_rollback_failed',
-        });
-        throw createAggregatePrimaryRestartFailure(
+        const restartFailure = createAggregatePrimaryRestartFailure(
           run,
           restartLease,
           incarnationPorts,
           `OpenCode member restart failed: ${restartMessage}. Primary rollback failed: ${rollbackMessage}`
         );
+        this.aggregatePrimaryProgress.publishFailed(
+          run,
+          'OpenCode member restart and primary rollback failed',
+          restartFailure
+        );
+        this.writeLaunchFailureArtifactPackBestEffort(run, {
+          reason: 'opencode_primary_restart_and_rollback_failed',
+        });
+        throw restartFailure;
       }
       throw restartError;
     }
