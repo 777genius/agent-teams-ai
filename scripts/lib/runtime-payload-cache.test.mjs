@@ -112,6 +112,12 @@ test('ZIP extraction preserves Unicode and spaced companions through cache publi
 
     const archive = path.join(root, 'runtime архив with spaces.zip');
     if (process.platform === 'win32') {
+      const inboxTar = path.win32.join(process.env.SystemRoot, 'System32', 'tar.exe');
+      process.stdout.write(
+        `[Windows Unicode ZIP reader] ${execFileSync(inboxTar, ['--version'], { encoding: 'utf8' }).trim()}\n`
+      );
+      // Preserve the real PowerShell producer and Unicode native-reader regression.
+      // libarchive#3063 documents UTF-8 pathname conversion failures in some inbox versions.
       // PowerShell preserves Unicode archive paths and UTF-8 ZIP entry names.
       const command = `$ErrorActionPreference = 'Stop'; Compress-Archive -LiteralPath '${payload.replace(/'/g, "''")}' -DestinationPath '${archive.replace(/'/g, "''")}' -Force`;
       execFileSync('powershell', [
@@ -123,7 +129,36 @@ test('ZIP extraction preserves Unicode and spaced companions through cache publi
     } else {
       execFileSync('zip', ['-qr', archive, '.'], { cwd: source });
     }
-    const sha256 = createHash('sha256').update(fs.readFileSync(archive)).digest('hex');
+    const archiveBytes = fs.readFileSync(archive);
+    if (process.platform === 'win32') {
+      const end = archiveBytes.lastIndexOf(Buffer.from('504b0506', 'hex'));
+      assert.ok(end >= 0, 'fixture has an end-of-central-directory record');
+      let cursor = archiveBytes.readUInt32LE(end + 16);
+      const entries = [];
+      for (let index = 0; index < archiveBytes.readUInt16LE(end + 10); index++) {
+        assert.equal(archiveBytes.readUInt32LE(cursor), 0x02014b50);
+        const length = archiveBytes.readUInt16LE(cursor + 28);
+        const name = archiveBytes.subarray(cursor + 46, cursor + 46 + length);
+        const local = archiveBytes.readUInt32LE(cursor + 42);
+        entries.push({
+          name: name.toString('utf8'),
+          nameHex: name.toString('hex'),
+          flags: archiveBytes.readUInt16LE(cursor + 8),
+          localFlags: archiveBytes.readUInt16LE(local + 6),
+        });
+        cursor +=
+          46 +
+          length +
+          archiveBytes.readUInt16LE(cursor + 30) +
+          archiveBytes.readUInt16LE(cursor + 32);
+      }
+      process.stdout.write(`[Windows Unicode ZIP metadata] ${JSON.stringify(entries)}\n`);
+      const unicode = entries.find((entry) => entry.name.replaceAll('\\', '/').endsWith(companion));
+      assert.ok(unicode, 'fixture preserves the exact Unicode companion name in UTF-8');
+      assert.equal(unicode.flags & 0x0800, 0x0800, 'central name declares UTF-8');
+      assert.equal(unicode.localFlags & 0x0800, 0x0800, 'local name declares UTF-8');
+    }
+    const sha256 = createHash('sha256').update(archiveBytes).digest('hex');
     await verifyRuntimeArchiveChecksum(archive, { sha256 }, 'fixture');
     await assert.rejects(
       verifyRuntimeArchiveChecksum(archive, { sha256: '0'.repeat(64) }, 'fixture')
