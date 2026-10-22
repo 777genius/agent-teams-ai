@@ -283,3 +283,23 @@ it('diagnoses Windows command spelling without accepting equivalent or unbound c
   }
   expect(observe(`node "${program}"`).nativeMatches).toBe(true);
 });
+
+it('accepts the exact marker line in projected text-block tool results', () => {
+  const program = 'C:\\TEST-project\\bob-verify.cjs';
+  const marker = 'COMMAND_EXEC:TEST-block-nonce';
+  const match = new Function(`return ${serializedFunction(nativeCommandMatch)};`)() as typeof nativeCommandMatch;
+  const observe = (content: unknown) => match({
+    startTime: new Date(0),
+    toolCall: { id: 'owned', name: 'bash', input: { command: `node "${program}"` }, isTask: false },
+    result: { toolUseId: 'owned', isError: false, content: content as string },
+  }, program, marker);
+  const blocks = (text: string) => [{ type: 'text', text }];
+  expect(observe(blocks(`${marker}\n`)).markerMatches).toBe(true);
+  expect(observe(blocks(`noise\n${marker}\nmore`)).markerMatches).toBe(true);
+  expect(observe([{ type: 'text', text: 'noise' }, { type: 'text', text: `${marker}\r\n` }]).markerMatches).toBe(true);
+  expect(observe(JSON.stringify(blocks(marker))).markerMatches).toBe(true);
+  expect(observe(blocks(`${marker}\n`)).succeeded).toBe(true);
+  for (const content of [blocks(`prefix ${marker}`), blocks(`${marker} suffix`),
+    [{ type: 'thinking', thinking: marker }], [], [marker]])
+    expect(observe(content).markerMatches).toBe(false);
+});
