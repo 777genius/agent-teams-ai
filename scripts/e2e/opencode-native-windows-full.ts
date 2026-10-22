@@ -23,6 +23,7 @@ import { promisify } from 'node:util';
 import { parseSingleBridgeJsonResult, validateBridgeResultEnvelope } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import { projectV2NativeTranscript } from './opencode-native-v2-transcript';
 import { stageNativeTestNode } from './opencode-native-test-node';
+import { realTaskPrompt } from './opencode-native-real-task-prompts';
 import { redactLaunchFailureArtifactText } from '../../src/main/services/team/TeamLaunchFailureArtifactPack';
 import {
   NativeDesktopIpcError,
@@ -2156,11 +2157,22 @@ async function main() {
       subject: 'Implement and verify sum',
       owner: 'alice',
       startImmediately: true,
-      prompt: `${base}\nOwn only sum.cjs and alice-result.txt. Export sum(array) as module.exports; accept only an array of finite numbers, throw TypeError otherwise. Read alice-verify.cjs, create sum.cjs, then ${verificationInstruction('alice-verify.cjs')} ${short ? '' : `Send bob CHALLENGE:${nonce.alice} with agent-teams_message_send.`} Before task_complete add task_add_comment from alice text TASK_COMMENT:${nonce.alice}. Complete only after successful command.`,
+      prompt: realTaskPrompt({
+        base,
+        teamName: desktop.teamName,
+        owner: 'alice',
+        commentToken: `TASK_COMMENT:${nonce.alice}`,
+        work: [
+          'Own only sum.cjs and alice-result.txt. Export sum(array) as module.exports; accept only an array of finite numbers, throw TypeError otherwise.',
+          'Read alice-verify.cjs and create sum.cjs.',
+          verificationInstruction('alice-verify.cjs'),
+          ...(short ? [] : [`Send bob CHALLENGE:${nonce.alice} with agent-teams_message_send.`]),
+        ],
+      }),
     });
     proof.taskIds.push(alice.id);
     taskOwners.set(alice.id, 'alice');
-    commandExpectations.set(alice.id, { session: sessions[0], program: path.join(desktop.projectPath, 'alice-verify.cjs'), marker: 'COMMAND_EXEC:' + nonce.alice, model });
+    commandExpectations.set(alice.id, { session: sessions[0], program: path.join(desktop.projectPath, 'alice-verify.cjs'), marker: 'COMMAND_EXEC:' + nonce.alice, model, comment: `TASK_COMMENT:${nonce.alice}` });
     await completed(app, alice.id, 'alice', `TASK_COMMENT:${nonce.alice}`, recordCompletion);
     const aliceCommandEvidence = await commandEvidence(
       app,
@@ -2210,11 +2222,22 @@ async function main() {
       subject: 'Independently test sum',
       owner: 'bob',
       startImmediately: true,
-      prompt: `${base}\nOwn only sum.test.cjs and bob-result.txt. Read sum.cjs, do not modify it. Write sum.test.cjs using node:assert/strict, covering []=>0,[2,-5,7]=>4,[1.5,2.5]=>4,[-2,-3]=>-5 and TypeError for null,[NaN],[Infinity],['1']. ${verificationInstruction('bob-verify.cjs')} Send alice CHALLENGE:${nonce.bob} with agent-teams_message_send. Before task_complete add task_add_comment from bob text TASK_COMMENT:${nonce.bob}. Complete only after successful command.`,
+      prompt: realTaskPrompt({
+        base,
+        teamName: desktop.teamName,
+        owner: 'bob',
+        commentToken: `TASK_COMMENT:${nonce.bob}`,
+        work: [
+          'Own only sum.test.cjs and bob-result.txt. Read sum.cjs, do not modify it.',
+          "Write sum.test.cjs using node:assert/strict, covering []=>0,[2,-5,7]=>4,[1.5,2.5]=>4,[-2,-3]=>-5 and TypeError for null,[NaN],[Infinity],['1'].",
+          verificationInstruction('bob-verify.cjs'),
+          `Send alice CHALLENGE:${nonce.bob} with agent-teams_message_send.`,
+        ],
+      }),
     });
     proof.taskIds.push(bob.id);
     taskOwners.set(bob.id, 'bob');
-    commandExpectations.set(bob.id, { session: sessions[1], program: path.join(desktop.projectPath, 'bob-verify.cjs'), marker: 'COMMAND_EXEC:' + nonce.bob, model });
+    commandExpectations.set(bob.id, { session: sessions[1], program: path.join(desktop.projectPath, 'bob-verify.cjs'), marker: 'COMMAND_EXEC:' + nonce.bob, model, comment: `TASK_COMMENT:${nonce.bob}` });
     await completed(app, bob.id, 'bob', `TASK_COMMENT:${nonce.bob}`, recordCompletion);
     const bobCommandEvidence = await commandEvidence(
       app,
@@ -2515,11 +2538,17 @@ async function main() {
       subject: 'Verify fresh run after restart',
       owner: 'alice',
       startImmediately: true,
-      prompt: `${base}\n${verificationInstruction('new-verify.cjs')} Add task_add_comment from alice text TASK_COMMENT:${nonce.new}, then task_complete after successful command.`,
+      prompt: realTaskPrompt({
+        base,
+        teamName: desktop.teamName,
+        owner: 'alice',
+        commentToken: `TASK_COMMENT:${nonce.new}`,
+        work: [verificationInstruction('new-verify.cjs')],
+      }),
     });
     proof.taskIds.push(task.id);
     taskOwners.set(task.id, 'alice');
-    commandExpectations.set(task.id, { session: newSessions[0], program: path.join(desktop.projectPath, 'new-verify.cjs'), marker: 'COMMAND_EXEC:' + nonce.new, model });
+    commandExpectations.set(task.id, { session: newSessions[0], program: path.join(desktop.projectPath, 'new-verify.cjs'), marker: 'COMMAND_EXEC:' + nonce.new, model, comment: `TASK_COMMENT:${nonce.new}` });
     await completed(app, task.id, 'alice', `TASK_COMMENT:${nonce.new}`, recordCompletion);
     const freshCommandEvidence = await commandEvidence(
       app,
