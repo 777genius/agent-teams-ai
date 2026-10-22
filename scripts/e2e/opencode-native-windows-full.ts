@@ -735,6 +735,9 @@ export function projectV1NativeTranscript(
   };
 }
 let preproofStage = 'arguments';
+// Failure-only observation: member runtime liveness at the moment the native
+// command-evidence gate gives up. Never an input to the gate itself.
+const commandEvidenceLivenessRows: { member: string; observation: StopObservation }[] = [];
 const preproofFacts: { manifestBytes?: number; manifestEntries?: number } = {};
 type App = Awaited<ReturnType<Awaited<ReturnType<typeof prepareNativeDesktop>>['launch']>>;
 type Identity = { pid: number; birth: string; executable: string; command: string };
@@ -1050,7 +1053,13 @@ async function commandEvidence(
     },
     'actor/session-scoped genuine command evidence',
     180_000
-  );
+  ).catch(async (error: unknown) => {
+    try {
+      const { observation } = await readStopObservation(app);
+      commandEvidenceLivenessRows.push({ member, observation });
+    } catch { /* Observation only: never masks the original gate failure. */ }
+    throw error;
+  });
 }
 async function bundledRuntime(executable: string, manifestFile: string) {
   preproofStage = 'manifest_path';
@@ -1581,6 +1590,10 @@ async function packagedStartupSnapshot(
     'alias_predicate',
     'process_alive',
     'process_alive_wait',
+    'process_alive_held_bun',
+    'process_alive_package_peer',
+    'process_alive_peer',
+    'process_alive_peer_parent',
     'process_image_path',
     'process_image_open',
     'process_birth_changed',
@@ -2128,6 +2141,7 @@ async function main() {
     > | null,
     peerObservation: null as PeerObservation | null,
     commandEvidenceConfirmed: [] as { member: string; kind: string }[],
+    commandEvidenceLiveness: commandEvidenceLivenessRows,
     runIds: [] as string[],
     taskIds: [] as string[],
     holdFollowUps: [] as {
