@@ -2035,7 +2035,7 @@ describe(
       });
     });
 
-    it('stops the OpenCode aggregate cleanly when member restart and primary rollback both fail', async () => {
+    it('retains the independent secondary lane when primary restart and rollback both fail', async () => {
       const teamName = 'pure-opencode-primary-restart-double-failure-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
       const svc = new TeamProvisioningService();
@@ -2067,13 +2067,30 @@ describe(
         (progress) => progressEvents.push(progress)
       );
 
+      const secondaryLaneId = 'secondary:opencode:alice';
+      const secondaryLaunch = adapter.launchInputs.find(
+        (input) => input.laneId === secondaryLaneId
+      )!;
+      expect(secondaryLaunch.expectedMembers.map((member) => member.name)).toEqual(['alice']);
+      const beforeLaneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
+      const secondaryLane = beforeLaneIndex.lanes[secondaryLaneId];
+      expect(secondaryLane).toMatchObject({ state: 'active' });
+      const beforeSecondarySessions = await readCommittedOpenCodeBootstrapSessionEvidence({
+        teamsBasePath: getTeamsBasePath(),
+        teamName,
+        laneId: secondaryLaneId,
+      });
+      expect(beforeSecondarySessions).toMatchObject({
+        committed: true,
+        sessions: [expect.objectContaining({ memberName: 'alice', runId: secondaryLaunch.runId })],
+      });
       adapter.failNextPrimaryLaunch('persistent primary relaunch failure', 2);
 
       await expect(svc.restartMember(teamName, 'tom')).rejects.toThrow(
         'Primary rollback failed: persistent primary relaunch failure'
       );
 
-      expect(svc.isTeamAlive(teamName)).toBe(false);
+      expect(svc.isTeamAlive(teamName)).toBe(true);
       expect(progressEvents.at(-1)).toMatchObject({
         state: 'failed',
         message: 'OpenCode member restart and primary rollback failed',
@@ -2083,10 +2100,36 @@ describe(
       await expect(
         fs.readFile(path.join(getTeamsBasePath(), teamName, 'launch-state.json'), 'utf8')
       ).rejects.toMatchObject({ code: 'ENOENT' });
+      const afterLaneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
+      expect(afterLaneIndex.lanes).toEqual({ [secondaryLaneId]: secondaryLane });
       await expect(
-        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
-      ).resolves.toMatchObject({
-        lanes: {},
+        readCommittedOpenCodeBootstrapSessionEvidence({
+          teamsBasePath: getTeamsBasePath(),
+          teamName,
+          laneId: secondaryLaneId,
+        })
+      ).resolves.toEqual(beforeSecondarySessions);
+      expect(adapter.stopInputs.some((input) => input.laneId === secondaryLaneId)).toBe(false);
+      await expect(
+        svc.deliverOpenCodeMemberMessage(teamName, {
+          memberName: 'team-lead',
+          text: 'failed primary cannot receive work',
+          messageId: 'msg-opencode-lead-after-primary-double-failure',
+        })
+      ).resolves.toMatchObject({ delivered: false });
+      expect(adapter.messageInputs).toHaveLength(0);
+      await expectOpenCodeTrackedPendingDelivery(
+        svc.deliverOpenCodeMemberMessage(teamName, {
+          memberName: 'alice',
+          text: 'independent lane remains usable after primary failure',
+          messageId: 'msg-opencode-alice-after-primary-double-failure',
+        })
+      );
+      expect(adapter.messageInputs.at(-1)).toMatchObject({
+        teamName,
+        runId: secondaryLaunch.runId,
+        laneId: secondaryLaneId,
+        memberName: 'alice',
       });
       await waitForCondition(async () => {
         const artifactPath = path.join(
@@ -2100,6 +2143,25 @@ describe(
       expect(adapter.launchInputs.some((input) => input.laneId === 'secondary:opencode:tom')).toBe(
         false
       );
+      await svc.stopTeam(teamName);
+      expect(adapter.stopInputs.at(-1)).toMatchObject({
+        teamName,
+        runId: secondaryLaunch.runId,
+        laneId: secondaryLaneId,
+      });
+      expect(svc.isTeamAlive(teamName)).toBe(false);
+      await expect(
+        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
+      ).resolves.toMatchObject({ lanes: {} });
+      const sendsBeforeStoppedDelivery = adapter.messageInputs.length;
+      await expect(
+        svc.deliverOpenCodeMemberMessage(teamName, {
+          memberName: 'alice',
+          text: 'stopped secondary cannot receive work',
+          messageId: 'msg-opencode-alice-after-primary-double-failure-stop',
+        })
+      ).resolves.toMatchObject({ delivered: false });
+      expect(adapter.messageInputs).toHaveLength(sendsBeforeStoppedDelivery);
     });
 
     it('launches pure OpenCode worktree members as aggregate worktree-root lanes', async () => {

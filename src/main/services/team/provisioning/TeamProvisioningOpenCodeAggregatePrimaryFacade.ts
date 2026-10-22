@@ -769,6 +769,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       Boolean(this.runTracking.getTrackedRunId(input.teamName)) ||
       this.runtimeAdapterRunByTeam.has(input.teamName);
     if (
+      input.laneId.trim() === 'primary' &&
       hasTrackedRuntimeOwner &&
       !this.runTracking.resolveDeliverableTrackedRuntimeRunId(input.teamName)
     ) {

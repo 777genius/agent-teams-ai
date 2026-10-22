@@ -22,6 +22,7 @@ import {
   getOpenCodeLaneScopedRuntimeFilePath,
   OpenCodeRuntimeManifestEvidenceReader,
   readOpenCodeRuntimeLaneIndex,
+  withOpenCodeRuntimeLaneLifecycleLock,
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { OpenCodeRuntimeStopUnconfirmedError } from '../provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
@@ -706,18 +707,25 @@ export async function clearPendingOpenCodePromptDeliveriesForTeam(input: {
       laneId,
       fileName: 'opencode-prompt-delivery-ledger.json',
     });
-    if (!fs.existsSync(ledgerPath)) {
-      continue;
-    }
     try {
-      const ledger = createOpenCodePromptDeliveryLedgerStore({ filePath: ledgerPath });
-      const result = await ledger.cancelNonTerminalRecords({
-        now: (input.now?.() ?? new Date()).toISOString(),
-        reason: input.reason ?? FORCE_STOP_DELIVERY_CANCEL_REASON,
-        includeRecoverableTerminal: input.includeRecoverableTerminal,
-        ownedRunIds: input.ownedRunIds,
-        createdAtOrBeforeMs: input.requestedAtMs,
-      });
+      // Lane removal takes this same outer lock; ledger writes must finish
+      // before cleanup can delete their directory. The inner store lock never
+      // calls lifecycle operations, so ordering remains lane -> ledger.
+      const result = await withOpenCodeRuntimeLaneLifecycleLock(
+        { teamsBasePath, teamName: input.teamName, laneId },
+        async () => {
+          if (!fs.existsSync(ledgerPath)) return null;
+          const ledger = createOpenCodePromptDeliveryLedgerStore({ filePath: ledgerPath });
+          return await ledger.cancelNonTerminalRecords({
+            now: (input.now?.() ?? new Date()).toISOString(),
+            reason: input.reason ?? FORCE_STOP_DELIVERY_CANCEL_REASON,
+            includeRecoverableTerminal: input.includeRecoverableTerminal,
+            ownedRunIds: input.ownedRunIds,
+            createdAtOrBeforeMs: input.requestedAtMs,
+          });
+        }
+      );
+      if (!result) continue;
       cleared += result.cancelled;
       keptForLaterRun += result.keptForLaterRun;
     } catch (error) {
