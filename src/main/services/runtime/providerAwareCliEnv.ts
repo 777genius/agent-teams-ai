@@ -157,8 +157,7 @@ export async function buildProviderAwareCliEnv(
   if (!resolvedProviderId || resolvedProviderId === 'opencode') {
     const explicitOpenCodeBinary = resolveExplicitOpenCodeBinary(options);
     const supportedExplicitOpenCodeBinary =
-      explicitOpenCodeBinary &&
-      (await isSupportedOpenCodeRuntimeBinaryPath(explicitOpenCodeBinary).catch(() => false))
+      explicitOpenCodeBinary && (await isSupportedOpenCodeRuntimeBinaryPath(explicitOpenCodeBinary))
         ? explicitOpenCodeBinary
         : null;
     const openCodeBinary =

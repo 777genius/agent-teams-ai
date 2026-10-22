@@ -1286,6 +1286,20 @@ describe('buildProviderAwareCliEnv', () => {
     expect(result.env.PATH?.split(path.delimiter)[0]).toBe(path.dirname(explicitBinaryPath));
   });
 
+  it('propagates an explicit OpenCode verification failure before choosing a managed runtime', async () => {
+    const failure = new Error('Could not verify the explicitly selected OpenCode binary');
+    isSupportedOpenCodeRuntimeBinaryPathMock.mockRejectedValue(failure);
+    const { buildProviderAwareCliEnv } =
+      await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+    await expect(
+      buildProviderAwareCliEnv({
+        providerId: 'opencode',
+        env: { OPENCODE_BIN_PATH: '/TEST/selected-opencode' },
+      })
+    ).rejects.toBe(failure);
+    expect(resolveVerifiedOpenCodeRuntimeBinaryPathMock).not.toHaveBeenCalled();
+  });
+
   it('ignores an unsupported explicit OpenCode override and uses the verified runtime', async () => {
     const explicitBinaryPath = path.join(process.cwd(), 'old opencode', 'opencode');
     const verifiedBinaryPath = path.join(process.cwd(), 'managed opencode', 'opencode');

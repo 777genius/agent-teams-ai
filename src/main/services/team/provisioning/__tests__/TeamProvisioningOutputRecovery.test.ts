@@ -216,6 +216,43 @@ describe('team provisioning output recovery helper', () => {
     expect(ports.emitLogsProgress).toHaveBeenCalled();
   });
 
+  it.each([
+    { type: 'result', subtype: 'success' },
+    { type: 'system', subtype: 'team_bootstrap', event: 'completed' },
+  ])('reports dispatch failures without treating valid $type JSON as auth output', (message) => {
+    const run = makeRun();
+    const ports = makePorts();
+    const helper = makeHelper(ports);
+    ports.handleStreamJsonMessage.mockImplementationOnce(() => {
+      throw new Error('not authenticated: secret exception content');
+    });
+
+    expect(() =>
+      helper.handleStdoutParserLine(
+        run,
+        JSON.stringify({
+          ...message,
+          result: 'not authenticated: secret payload content',
+        })
+      )
+    ).not.toThrow();
+
+    expect(ports.logger.warn).toHaveBeenCalledWith('[team-a] stream-json handler failed', {
+      code: 'TEAM_STREAM_JSON_HANDLER_FAILED',
+      runId: 'run-1',
+      messageType: message.type,
+      successfulResult: message.type === 'result',
+      bootstrapCompleted: message.type === 'system',
+    });
+    expect(JSON.stringify(ports.logger.warn.mock.calls)).not.toContain('secret');
+    expect(ports.respawnAfterAuthFailure).not.toHaveBeenCalled();
+    expect(run.authRetryInProgress).toBe(false);
+    expect(run.apiErrorWarningEmitted).toBe(false);
+
+    helper.handleStdoutParserLine(run, '{"type":"result","subtype":"success"}');
+    expect(ports.handleStreamJsonMessage).toHaveBeenCalledTimes(2);
+  });
+
   it('clears stall warnings when assistant or result stdout arrives', () => {
     const run = makeRun({
       progress: { ...progress(), message: 'Waiting', messageSeverity: 'warning' },

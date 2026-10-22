@@ -909,6 +909,66 @@ describe('teamSlice actions', () => {
     ).toBe(1);
   });
 
+  it('keeps ready log updates without restarting terminal hydration, and hydrates the next terminal state', () => {
+    const store = createSliceStore();
+    const fetchTeams = vi.fn(async () => undefined);
+    const selectTeam = vi.fn(async () => undefined);
+    const fetchMemberSpawnStatuses = vi.fn(async () => undefined);
+    const fetchTeamAgentRuntime = vi.fn(async () => undefined);
+    store.setState({
+      fetchTeams,
+      selectTeam,
+      fetchMemberSpawnStatuses,
+      fetchTeamAgentRuntime,
+      selectedTeamName: 'my-team',
+      selectedTeamData: createTeamSnapshot(),
+      paneLayout: createPaneLayout([
+        { id: 'team-my-team', type: 'team', teamName: 'my-team', label: 'Team' },
+      ]),
+    });
+    const ready = {
+      runId: 'run-ready',
+      teamName: 'my-team',
+      state: 'ready' as const,
+      message: 'Ready',
+      startedAt: '2026-03-12T10:00:00.000Z',
+      updatedAt: '2026-03-12T10:00:01.000Z',
+    };
+    store.getState().onProvisioningProgress(ready);
+    store.getState().onProvisioningProgress({
+      ...ready,
+      updatedAt: '2026-03-12T10:00:02.000Z',
+      cliLogsTail: 'new retained log',
+      assistantOutput: 'new response',
+    });
+
+    expect(fetchTeams).toHaveBeenCalledTimes(1);
+    expect(selectTeam).toHaveBeenCalledTimes(1);
+    expect(fetchMemberSpawnStatuses).toHaveBeenCalledTimes(1);
+    expect(fetchTeamAgentRuntime).toHaveBeenCalledTimes(1);
+    expect(store.getState().provisioningRuns['run-ready']).toMatchObject({
+      cliLogsTail: 'new retained log',
+      assistantOutput: 'new response',
+    });
+
+    store.getState().onProvisioningProgress({ ...ready, state: 'disconnected' });
+    expect(fetchTeams).toHaveBeenCalledTimes(2);
+    expect(selectTeam).toHaveBeenCalledTimes(2);
+    store.getState().onProvisioningProgress({
+      ...ready,
+      state: 'disconnected',
+      updatedAt: '2026-03-12T10:00:03.000Z',
+    });
+    expect(fetchTeams).toHaveBeenCalledTimes(2);
+
+    store.setState({ currentProvisioningRunIdByTeam: { 'my-team': 'pending:create' } });
+    store.getState().onProvisioningProgress({ ...ready, runId: 'next-run-ready' });
+    expect(fetchTeams).toHaveBeenCalledTimes(3);
+    expect(selectTeam).toHaveBeenCalledTimes(3);
+    expect(fetchMemberSpawnStatuses).toHaveBeenCalledTimes(3);
+    expect(fetchTeamAgentRuntime).toHaveBeenCalledTimes(3);
+  });
+
   it('does not demand team-wide provisioning refreshes from a visible task-detail tab', () => {
     const store = createSliceStore();
     const fetchTeams = vi.fn(async () => undefined);
@@ -6130,6 +6190,145 @@ describe('teamSlice actions', () => {
       alice: expect.objectContaining({ status: 'spawning', launchState: 'starting' }),
     });
     expect(store.getState().teamAgentRuntimeByTeam['my-team']).toEqual(createRuntimeSnapshot());
+  });
+
+  it('adopts a completed explicit primary restart while secondary members stay live and rejects late predecessor events', async () => {
+    const store = createSliceStore();
+    const oldStatuses = { alice: createMemberSpawnStatus(), bob: createMemberSpawnStatus() };
+    const oldProgress = {
+      runId: 'run-old',
+      teamName: 'my-team',
+      state: 'disconnected' as const,
+      message: 'Stopping OpenCode team through runtime adapter',
+      startedAt: '2026-03-12T10:00:00.000Z',
+      updatedAt: '2026-03-12T10:01:00.000Z',
+    };
+    store.setState({
+      currentRuntimeRunIdByTeam: { 'my-team': 'run-old' },
+      currentProvisioningRunIdByTeam: { 'my-team': 'run-old' },
+      provisioningRuns: { 'run-old': oldProgress },
+      memberSpawnStatusesByTeam: { 'my-team': oldStatuses },
+    });
+    const fresh = createMemberSpawnSnapshot({
+      runId: 'run-new',
+      statuses: {
+        alice: createMemberSpawnStatus({ updatedAt: '2026-03-12T10:02:00.000Z' }),
+        bob: oldStatuses.bob,
+      },
+    });
+    hoisted.getMemberSpawnStatuses.mockResolvedValue(fresh);
+    hoisted.getProvisioningStatus.mockResolvedValue({
+      ...oldProgress,
+      runId: 'run-new',
+      state: 'ready',
+      message: 'OpenCode member lane restart is ready',
+    });
+    hoisted.getTeamAgentRuntime.mockResolvedValue(createRuntimeSnapshot({ runId: 'run-new' }));
+
+    await store.getState().restartMember('my-team', 'alice');
+
+    expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('run-new');
+    expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBe('run-new');
+    expect(store.getState().memberSpawnStatusesByTeam['my-team']).toEqual(fresh.statuses);
+    expect(store.getState().provisioningRuns['run-new']?.message).toContain('restart is ready');
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']?.runId).toBe('run-new');
+    expect(store.getState().ignoredRuntimeRunIds['run-old']).toBe('my-team');
+    store
+      .getState()
+      .onProvisioningProgress({ ...oldProgress, updatedAt: '2099-01-01T00:00:00.000Z' });
+    hoisted.getMemberSpawnStatuses.mockResolvedValue(
+      createMemberSpawnSnapshot({ runId: 'run-old' })
+    );
+    await store.getState().fetchMemberSpawnStatuses('my-team');
+    expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('run-new');
+    expect(store.getState().provisioningRuns['run-old']).toBeUndefined();
+  });
+
+  it.each(['stop', 'launch', 'other-restart', 'ignored-successor', 'dead-successor'] as const)(
+    'does not hand off a restart snapshot after %s invalidates its authority',
+    async (race) => {
+      const store = createSliceStore();
+      store.setState({
+        currentRuntimeRunIdByTeam: { 'my-team': 'run-old' },
+        currentProvisioningRunIdByTeam: { 'my-team': 'run-old' },
+        memberSpawnStatusesByTeam: { 'my-team': { bob: createMemberSpawnStatus() } },
+      });
+      const pending = createDeferredPromise<MemberSpawnStatusesSnapshot>();
+      hoisted.getMemberSpawnStatuses.mockReturnValue(pending.promise);
+      const restarting = store.getState().restartMember('my-team', 'alice');
+      await flushMicrotasks();
+      if (race === 'stop')
+        store.setState({ ignoredRuntimeRunIds: { 'run-old': 'my-team' } });
+      if (race === 'launch') invalidateTeamLocalStateEpoch('my-team');
+      if (race === 'other-restart')
+        store.setState({
+          currentRuntimeRunIdByTeam: { 'my-team': 'run-later' },
+          currentProvisioningRunIdByTeam: { 'my-team': 'run-later' },
+        });
+      if (race === 'ignored-successor')
+        store.setState({ ignoredRuntimeRunIds: { 'run-new': 'my-team' } });
+      pending.resolve(
+        createMemberSpawnSnapshot({
+          runId: 'run-new',
+          statuses: {
+            alice: createMemberSpawnStatus({ runtimeAlive: race !== 'dead-successor' }),
+          },
+        })
+      );
+      await restarting;
+      expect(store.getState().currentRuntimeRunIdByTeam['my-team']).not.toBe('run-new');
+      expect(store.getState().currentProvisioningRunIdByTeam['my-team']).not.toBe('run-new');
+      expect(hoisted.getProvisioningStatus).not.toHaveBeenCalled();
+    }
+  );
+
+  it('does not grant successful-action handoff to a failed restart with live secondary lanes', async () => {
+    const store = createSliceStore();
+    store.setState({
+      currentRuntimeRunIdByTeam: { 'my-team': 'run-old' },
+      currentProvisioningRunIdByTeam: { 'my-team': 'run-old' },
+      memberSpawnStatusesByTeam: { 'my-team': { bob: createMemberSpawnStatus() } },
+    });
+    hoisted.restartMember.mockRejectedValueOnce(new Error('restart failed'));
+    hoisted.getMemberSpawnStatuses.mockResolvedValue(
+      createMemberSpawnSnapshot({ runId: 'run-new' })
+    );
+    await expect(store.getState().restartMember('my-team', 'alice')).rejects.toThrow(
+      'restart failed'
+    );
+    expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('run-old');
+    expect(hoisted.getProvisioningStatus).not.toHaveBeenCalled();
+  });
+
+  it('a delayed earlier restart cannot replace the successor adopted by a rapid second restart', async () => {
+    const store = createSliceStore();
+    store.setState({
+      currentRuntimeRunIdByTeam: { 'my-team': 'run-old' },
+      currentProvisioningRunIdByTeam: { 'my-team': 'run-old' },
+      memberSpawnStatusesByTeam: { 'my-team': { bob: createMemberSpawnStatus() } },
+    });
+    const firstSnapshot = createDeferredPromise<MemberSpawnStatusesSnapshot>();
+    hoisted.getMemberSpawnStatuses
+      .mockReturnValueOnce(firstSnapshot.promise)
+      .mockResolvedValue(createMemberSpawnSnapshot({ runId: 'run-second' }));
+    hoisted.getTeamAgentRuntime.mockResolvedValue(createRuntimeSnapshot({ runId: 'run-second' }));
+    hoisted.getProvisioningStatus.mockResolvedValue({
+      runId: 'run-second',
+      teamName: 'my-team',
+      state: 'ready',
+      message: 'Second restart ready',
+      startedAt: '2026-03-12T10:00:00.000Z',
+      updatedAt: '2026-03-12T10:02:00.000Z',
+    });
+    const first = store.getState().restartMember('my-team', 'alice');
+    await flushMicrotasks();
+    await store.getState().restartMember('my-team', 'bob');
+    firstSnapshot.resolve(createMemberSpawnSnapshot({ runId: 'run-first' }));
+    await first;
+    expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('run-second');
+    expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBe('run-second');
+    expect(hoisted.getProvisioningStatus).toHaveBeenCalledTimes(1);
+    expect(hoisted.getProvisioningStatus).toHaveBeenCalledWith('run-second');
   });
 
   it('retryFailedOpenCodeSecondaryLanes refreshes only spawn statuses and runtime snapshot', async () => {

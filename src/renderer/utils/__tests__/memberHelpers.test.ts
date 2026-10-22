@@ -212,6 +212,83 @@ describe('member runtime presentation', () => {
     expect(presentation.dotClass).toContain('bg-red-400');
   });
 
+  it.each(['waiting', 'spawning'] as const)(
+    'shows %s while an initial provisioning runtime has not registered',
+    (spawnStatus) => {
+      for (const livenessKind of [
+        undefined,
+        'not_found',
+        'stale_metadata',
+        'registered_only',
+      ] as const) {
+        const presentation = buildMemberLaunchPresentation({
+          member: createMember(),
+          spawnStatus,
+          spawnLaunchState: 'starting',
+          spawnRuntimeAlive: false,
+          spawnBootstrapConfirmed: false,
+          spawnLivenessSource: undefined,
+          runtimeAdvisory: undefined,
+          isTeamAlive: true,
+          isTeamProvisioning: true,
+          runtimeEntry: createLiveRuntime({ alive: false, livenessKind, pid: undefined }),
+        });
+
+        expect(presentation.launchVisualState).toBe(spawnStatus);
+        expect(presentation.dotClass).not.toContain('bg-red-400');
+      }
+    }
+  );
+
+  it.each([
+    { isTeamProvisioning: false },
+    { spawnBootstrapConfirmed: true },
+    { spawnHardFailure: true },
+    { spawnRuntimeDiagnosticSeverity: 'error' as const },
+  ])('preserves stale evidence outside an initial pending spawn: %j', (overrides) => {
+    const presentation = buildMemberLaunchPresentation({
+      member: createMember(),
+      spawnStatus: 'spawning',
+      spawnLaunchState: 'starting',
+      spawnRuntimeAlive: false,
+      spawnBootstrapConfirmed: false,
+      spawnLivenessSource: undefined,
+      runtimeAdvisory: undefined,
+      isTeamAlive: true,
+      isTeamProvisioning: true,
+      runtimeEntry: createLiveRuntime({ alive: false, livenessKind: 'not_found', pid: undefined }),
+      ...overrides,
+    });
+
+    expect(presentation.launchVisualState).toBe('stale_runtime');
+  });
+
+  it.each([
+    {
+      spawnStatus: 'error' as const,
+      spawnLaunchState: 'failed_to_start' as const,
+      expected: 'error',
+    },
+    {
+      spawnStatus: 'skipped' as const,
+      spawnLaunchState: 'skipped_for_launch' as const,
+      expected: 'skipped',
+    },
+  ])('preserves an explicit provisioning failure: $expected', ({ expected, ...spawn }) => {
+    const presentation = buildMemberLaunchPresentation({
+      member: createMember(),
+      ...spawn,
+      spawnRuntimeAlive: false,
+      spawnLivenessSource: undefined,
+      runtimeAdvisory: undefined,
+      isTeamAlive: true,
+      isTeamProvisioning: true,
+      runtimeEntry: createLiveRuntime({ alive: false, livenessKind: 'not_found', pid: undefined }),
+    });
+
+    expect(presentation.launchVisualState).toBe(expected);
+  });
+
   it('marks Codex native members without runtime snapshots as stale after launch settles', () => {
     const presentation = buildMemberLaunchPresentation({
       member: createMember(),

@@ -1,3 +1,6 @@
+import { realpathSync } from 'fs';
+import path from 'path';
+
 import {
   type OpenCodeBridgePeerIdentity,
   type OpenCodeBridgeResult,
@@ -56,6 +59,8 @@ export function createStopTarget(
         s.runId === input.runId
     )
   ) {
+    if (!input.cwd.trim())
+      throw new Error('Invalid original Stop identity; reconciliation unknown');
     target.runtimeTarget = parseRuntimeStopRequest({
       contractVersion: 1,
       originalRequestId: 'validation',
@@ -64,7 +69,10 @@ export function createStopTarget(
         teamId: input.teamName,
         laneId: input.laneId ?? 'primary',
         runId: input.runId,
-        projectPath: input.cwd,
+        // Launch stores the canonical filesystem identity. Admit that same
+        // identity before retaining the first request; never rewrite a retained
+        // target or fall back to an unverified alias during recovery.
+        projectPath: path.normalize(realpathSync(path.resolve(input.cwd.trim()))),
         capabilitySnapshotId: input.capabilitySnapshotId,
         expectedBehaviorFingerprint: input.behaviorFingerprint ?? manifest.behaviorFingerprint,
         members: sessions.map((s) => ({ memberName: s.memberName, sessionId: s.sessionId })),
@@ -79,12 +87,15 @@ export function runtimeStopRequest(
 ): RuntimeStopRequest {
   if (!target.runtimeTarget)
     throw new Error('Stop reconciliation unknown: incomplete original session target');
-  return parseRuntimeStopRequest({
+  const request = parseRuntimeStopRequest({
     contractVersion: 1,
     originalRequestId: entry.requestId,
     idempotencyKey: entry.idempotencyKey,
     target: target.runtimeTarget,
   });
+  if (path.normalize(realpathSync(path.resolve(target.cwd.trim()))) !== request.target.projectPath)
+    throw new Error('Stop project identity mismatch; reconciliation unknown');
+  return request;
 }
 
 /** Lookup and current observation never dispatch Stop or rewrite a legacy completion. */
@@ -118,7 +129,7 @@ export async function recoverRuntimeStop<TData>(input: {
     expectedRunId: null,
     expectedCapabilitySnapshotId: null,
     expectedManifestHighWatermark: null,
-    cwd: retained.cwd,
+    cwd: request.target.projectPath,
     teamId: retained.teamName,
     laneId: retained.laneId,
   });
@@ -143,7 +154,7 @@ export async function recoverRuntimeStop<TData>(input: {
     const result = await input.bridge.execute(
       command,
       { stopRecovery: request },
-      { cwd: retained.cwd, timeoutMs: input.timeoutMs, requestId }
+      { cwd: request.target.projectPath, timeoutMs: input.timeoutMs, requestId }
     );
     const parsed = parseSingleBridgeJsonResult<unknown>(JSON.stringify(result));
     if (

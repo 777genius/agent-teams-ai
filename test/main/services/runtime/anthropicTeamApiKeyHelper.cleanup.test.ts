@@ -1,11 +1,4 @@
 // @vitest-environment node
-import fs from 'fs';
-import { mkdtemp, rm, stat } from 'fs/promises';
-import { tmpdir } from 'os';
-import path from 'path';
-
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import {
   cleanupAnthropicTeamApiKeyHelperForTeam,
   cleanupAnthropicTeamApiKeyHelperMaterial,
@@ -13,6 +6,12 @@ import {
   materializeAnthropicTeamApiKeyHelper,
 } from '@main/services/runtime/anthropicTeamApiKeyHelper';
 import { cleanupRunOwnedAnthropicApiKeyHelper } from '@main/services/team/provisioning/TeamProvisioningAnthropicApiKeyHelperLease';
+import childProcess from 'child_process';
+import fs from 'fs';
+import { lstat, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from 'fs/promises';
+import { tmpdir } from 'os';
+import path from 'path';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const credentialField = ['api', 'Key'].join('');
 
@@ -123,6 +122,185 @@ describe('anthropicTeamApiKeyHelper cleanup failures', () => {
     rmdirSpy.mockRestore();
     await cleanupAnthropicTeamApiKeyHelperMaterial({ directory: material.directory });
     await expect(stat(material.directory)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('preserves foreign contents and symlinks while continuing the stale sweep', async () => {
+    if (process.platform === 'win32') return;
+    const root = await createTempRoot();
+    const material = await materializeFixture(
+      { teamName: 'foreign contents', authMaterialId: 'run-a', baseClaudeDir: root },
+      buildCredential('foreign')
+    );
+    const otherMaterial = await materializeFixture(
+      { teamName: 'foreign contents', authMaterialId: 'run-b', baseClaudeDir: root },
+      buildCredential('other')
+    );
+    const foreignFile = path.join(material.directory, 'user-notes.txt');
+    const nestedFile = path.join(material.directory, 'user-data', 'keep.txt');
+    const target = path.join(root, 'symlink-target');
+    await writeFile(foreignFile, 'user notes');
+    await mkdir(path.dirname(nestedFile));
+    await writeFile(nestedFile, 'nested user data');
+    await writeFile(target, 'outside target');
+    await rm(material.keyPath);
+    await symlink(target, material.keyPath);
+    const runtimeSettings = path.join(material.directory, 'runtime-settings-fixture.json');
+    await writeFile(runtimeSettings, '{}');
+
+    // A second sweep must also succeed with only deliberately preserved entries.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await cleanupStaleAnthropicTeamApiKeyHelpers({ baseClaudeDir: root, maxAgeMs: -1 });
+    }
+
+    await expect(readFile(foreignFile, 'utf8')).resolves.toBe('user notes');
+    await expect(readFile(nestedFile, 'utf8')).resolves.toBe('nested user data');
+    expect((await lstat(material.keyPath)).isSymbolicLink()).toBe(true);
+    await expect(readFile(target, 'utf8')).resolves.toBe('outside target');
+    for (const removed of [
+      material.helperPath,
+      material.settingsPath,
+      runtimeSettings,
+      otherMaterial.directory,
+    ]) {
+      await expect(lstat(removed)).rejects.toMatchObject({ code: 'ENOENT' });
+    }
+  });
+
+  it('keeps ENOTEMPTY visible when an owned regular file remains', async () => {
+    const root = await createTempRoot();
+    const material = await materializeFixture(
+      { teamName: 'recreated material', authMaterialId: 'run-a', baseClaudeDir: root },
+      buildCredential('recreated')
+    );
+    const rmdir = fs.promises.rmdir.bind(fs.promises);
+    vi.spyOn(fs.promises, 'rmdir').mockImplementationOnce(async (directory) => {
+      await writeFile(material.settingsPath, '{}');
+      return rmdir(directory);
+    });
+
+    await expect(
+      cleanupAnthropicTeamApiKeyHelperMaterial({ directory: material.directory })
+    ).rejects.toMatchObject({ code: 'ENOTEMPTY' });
+    await expect(readFile(material.settingsPath, 'utf8')).resolves.toBe('{}');
+  });
+
+  it('preserves nonempty parent directories after stopped-team helper cleanup', async () => {
+    const root = await createTempRoot();
+    const teamName = 'TEST stopped preserved parents';
+    const material = await materializeFixture(
+      { teamName, authMaterialId: 'run-a', baseClaudeDir: root },
+      buildCredential('stopped-preserved')
+    );
+    const runsDir = path.dirname(material.directory);
+    const teamDir = path.dirname(runsDir);
+    const foreignFiles = [
+      path.join(material.directory, 'keep.txt'),
+      path.join(runsDir, 'user-run-notes.txt'),
+      path.join(teamDir, 'user-team-notes.txt'),
+    ];
+    for (const file of foreignFiles) await writeFile(file, 'preserved user data');
+
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await cleanupAnthropicTeamApiKeyHelperForTeam({ teamName, baseClaudeDir: root });
+    }
+
+    for (const file of foreignFiles) {
+      await expect(readFile(file, 'utf8')).resolves.toBe('preserved user data');
+    }
+    for (const file of [material.helperPath, material.keyPath, material.settingsPath]) {
+      await expect(lstat(file)).rejects.toMatchObject({ code: 'ENOENT' });
+    }
+  });
+
+  it('reports read errors when checking a nonempty helper directory', async () => {
+    const root = await createTempRoot();
+    const material = await materializeFixture(
+      { teamName: 'preserved read failure', authMaterialId: 'run-a', baseClaudeDir: root },
+      buildCredential('preserved-read')
+    );
+    await writeFile(path.join(material.directory, 'keep.txt'), 'user data');
+    const readError = Object.assign(new Error('permission denied'), { code: 'EACCES' });
+    const readdir = fs.promises.readdir.bind(fs.promises);
+    vi.spyOn(fs.promises, 'readdir')
+      .mockImplementationOnce(readdir)
+      .mockRejectedValueOnce(readError);
+
+    await expect(
+      cleanupAnthropicTeamApiKeyHelperMaterial({ directory: material.directory })
+    ).rejects.toBe(readError);
+  });
+
+  it('reports a parent-directory remove failure after removing helper material', async () => {
+    const root = await createTempRoot();
+    const teamName = 'TEST parent remove failure';
+    const material = await materializeFixture(
+      { teamName, authMaterialId: 'run-a', baseClaudeDir: root },
+      buildCredential('parent-remove')
+    );
+    const removeError = Object.assign(new Error('parent permission denied'), { code: 'EACCES' });
+    const rmdir = fs.promises.rmdir.bind(fs.promises);
+    vi.spyOn(fs.promises, 'rmdir').mockImplementationOnce(rmdir).mockRejectedValueOnce(removeError);
+
+    await expect(
+      cleanupAnthropicTeamApiKeyHelperForTeam({ teamName, baseClaudeDir: root })
+    ).rejects.toBe(removeError);
+    await expect(lstat(material.directory)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(stat(path.dirname(material.directory))).resolves.toBeDefined();
+  });
+
+  it('reports parent-directory read failure instead of claiming pruning succeeded', async () => {
+    const root = await createTempRoot();
+    const teamName = 'TEST parent read failure';
+    await materializeFixture(
+      { teamName, authMaterialId: 'run-a', baseClaudeDir: root },
+      buildCredential('parent-read')
+    );
+    const readError = Object.assign(new Error('parent permission denied'), { code: 'EACCES' });
+    const readdir = fs.promises.readdir.bind(fs.promises);
+    vi.spyOn(fs.promises, 'readdir')
+      .mockImplementationOnce(readdir)
+      .mockImplementationOnce(readdir)
+      .mockRejectedValueOnce(readError);
+
+    await expect(
+      cleanupAnthropicTeamApiKeyHelperForTeam({ teamName, baseClaudeDir: root })
+    ).rejects.toBe(readError);
+  });
+
+  it('preserves stale material referenced by a live process and symlinked run directories', async () => {
+    if (process.platform === 'win32') return;
+    const root = await createTempRoot();
+    const material = await materializeFixture(
+      { teamName: 'live material', authMaterialId: 'run-live', baseClaudeDir: root },
+      buildCredential('live')
+    );
+    const linkedRun = path.join(path.dirname(material.directory), 'run-linked');
+    await symlink(material.directory, linkedRun, 'dir');
+    const child = childProcess.spawn(
+      process.execPath,
+      ['-e', 'setInterval(() => {}, 1000)', material.settingsPath],
+      { stdio: 'ignore' }
+    );
+    await new Promise<void>((resolve, reject) => {
+      child.once('spawn', resolve);
+      child.once('error', reject);
+    });
+    try {
+      await cleanupStaleAnthropicTeamApiKeyHelpers({ baseClaudeDir: root, maxAgeMs: -1 });
+      await cleanupAnthropicTeamApiKeyHelperForTeam({
+        teamName: 'live material',
+        baseClaudeDir: root,
+      });
+
+      await expect(stat(material.helperPath)).resolves.toBeDefined();
+      await expect(stat(material.keyPath)).resolves.toBeDefined();
+      expect((await lstat(linkedRun)).isSymbolicLink()).toBe(true);
+    } finally {
+      await new Promise<void>((resolve) => {
+        child.once('exit', () => resolve());
+        child.kill();
+      });
+    }
   });
 
   it.each([

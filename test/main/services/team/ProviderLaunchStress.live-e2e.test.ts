@@ -77,7 +77,8 @@ const MEMBER_NAMES = [
   'milo',
 ];
 const RESTART_CONFIRM_TIMEOUT_MS = 300_000;
-const POST_LAUNCH_WORK_TIMEOUT_MS = 300_000;
+// A retained big-pickle turn took 305s before its first tool call, then completed normally.
+const POST_LAUNCH_WORK_TIMEOUT_MS = getPostLaunchWorkTimeoutMs();
 let currentStressTempDir = '';
 let currentStressProjectPath = '';
 
@@ -118,9 +119,10 @@ liveDescribe('provider launch stress live e2e', () => {
     tempHome = path.join(tempDir, 'home');
     projectPath = path.join(tempDir, 'project');
     currentStressTempDir = tempDir;
-    currentStressProjectPath = projectPath;
     await fs.mkdir(tempHome, { recursive: true });
     await fs.mkdir(projectPath, { recursive: true });
+    projectPath = await fs.realpath(projectPath);
+    currentStressProjectPath = projectPath;
     await fs.writeFile(
       path.join(projectPath, 'README.md'),
       '# Provider launch stress live e2e\n\nKeep this project intentionally tiny.\n',
@@ -302,8 +304,8 @@ async function runProviderStressScenario(
     );
     process.stderr.write(`[ProviderLaunchStress.live] ${scenario} confirmed all teammates\n`);
 
-    await runRestartStressChecks(active, expectedMembers, progressEvents);
     await runPostLaunchWorkProofCheck(active, expectedMembers, progressEvents);
+    await runRestartStressChecks(active, expectedMembers, progressEvents);
   } catch (error) {
     active.failed = true;
     throw error;
@@ -682,6 +684,18 @@ function resolveScenarioSelection(_scenario: ProviderLaunchStressScenario): {
     openCodeModel,
     openCodeModels: openCodeModels?.length ? openCodeModels : [openCodeModel],
   };
+}
+
+function getPostLaunchWorkTimeoutMs(): number {
+  const raw = process.env.PROVIDER_LAUNCH_STRESS_POST_LAUNCH_WORK_TIMEOUT_MS;
+  if (raw === undefined) return 600_000;
+  const value = Number(raw.trim());
+  if (!/^\d+$/.test(raw.trim()) || !Number.isSafeInteger(value) || value < 1 || value > 1_800_000) {
+    throw new Error(
+      'PROVIDER_LAUNCH_STRESS_POST_LAUNCH_WORK_TIMEOUT_MS must be an integer from 1 to 1800000 milliseconds'
+    );
+  }
+  return value;
 }
 
 function getStressMemberCount(): number {

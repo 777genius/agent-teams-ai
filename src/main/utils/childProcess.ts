@@ -887,6 +887,8 @@ function getOwnedUnixProcessTreeIdentities(
 ): UnixProcessIdentity[] {
   const processes = readUnixProcessTable(parentPid);
   const ownedGroup = ownedUnixProcessGroups.get(child);
+  const root = processes.get(parentPid);
+  let roots = root ? [root] : [];
   if (ownedGroup) {
     const currentRoot = processes.get(parentPid);
     if (ownedGroup.rootStartIdentity === null) {
@@ -905,25 +907,23 @@ function getOwnedUnixProcessTreeIdentities(
       );
     }
     if (ownedGroup.processGroupId !== null) {
-      return [...processes.values()].filter(
+      roots = [...processes.values()].filter(
         (identity) => identity.processGroupId === ownedGroup.processGroupId
       );
-    }
-    if (!currentRoot) {
+    } else if (!currentRoot) {
       throw new Error(
         `Failed to verify exited Unix process tree ${parentPid}: non-group root is no longer observable`
       );
     }
   }
 
-  if (child.exitCode != null || child.signalCode != null) {
+  if (ownedGroup?.processGroupId == null && (child.exitCode != null || child.signalCode != null)) {
     throw new Error(
       `Failed to verify exited Unix process tree ${parentPid}: root birth identity was not captured`
     );
   }
 
-  const root = processes.get(parentPid);
-  if (!root) {
+  if (!ownedGroup && !root) {
     throw new Error(
       `Failed to verify exited Unix process tree ${parentPid}: no owned process-group identity`
     );
@@ -938,10 +938,10 @@ function getOwnedUnixProcessTreeIdentities(
       childrenByParent.set(identity.parentPid, [identity.pid]);
     }
   }
-
-  const descendants: UnixProcessIdentity[] = [root];
-  const stack = [...(childrenByParent.get(parentPid) ?? [])];
-  const seen = new Set<number>([parentPid]);
+  // Detached teammates leave the launcher's group but remain owned descendants.
+  const descendants = [...roots];
+  const stack = roots.flatMap((identity) => childrenByParent.get(identity.pid) ?? []);
+  const seen = new Set(roots.map((identity) => identity.pid));
   while (stack.length > 0) {
     const pid = stack.pop();
     if (!pid || seen.has(pid) || pid === process.pid) {
