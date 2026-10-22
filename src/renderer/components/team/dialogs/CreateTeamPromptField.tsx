@@ -29,6 +29,16 @@ export interface CreateTeamPromptFieldProps {
   teamSuggestions: MentionSuggestion[];
   taskSuggestions: MentionSuggestion[];
   projectPath: string | null;
+  /**
+   * Requests the lazy workflow suggestion sources on first focus.
+   *
+   * The launch flow enables suggestions through the optional launch settings
+   * and member workflow editors; config-only creation (a team template was
+   * applied, so `launchTeam` is false) renders neither, making this field the
+   * only place that can enable them. The dialog's handler is idempotent, so
+   * repeated focuses never re-initialize anything.
+   */
+  onSuggestionsNeeded?: () => void;
 }
 
 /**
@@ -47,6 +57,7 @@ export const CreateTeamPromptField = ({
   teamSuggestions,
   taskSuggestions,
   projectPath,
+  onSuggestionsNeeded,
 }: CreateTeamPromptFieldProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
 
@@ -69,6 +80,7 @@ export const CreateTeamPromptField = ({
         chips={chipDraft.chips}
         onChipRemove={chipDraft.removeChip}
         onFileChipInsert={chipDraft.addChip}
+        onFocus={() => onSuggestionsNeeded?.()}
         placeholder={t('create.placeholders.prompt')}
         footerRight={
           promptDraft.isSaved ? (

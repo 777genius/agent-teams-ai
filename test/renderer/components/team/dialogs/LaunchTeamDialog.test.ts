@@ -454,15 +454,18 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => ({
     value,
     onValueChange,
     id,
+    onFocus,
   }: {
     value: string;
     onValueChange: (value: string) => void;
     id?: string;
+    onFocus?: () => void;
   }) =>
     React.createElement('textarea', {
       id,
       value,
       onChange: (event: Event) => onValueChange((event.target as HTMLTextAreaElement).value),
+      onFocus,
     }),
 }));
 
@@ -479,9 +482,27 @@ vi.mock('@renderer/hooks/useCreateTeamDraft', () => ({
   useCreateTeamDraft: () => createTeamDraftMock.state,
 }));
 
+const draftPersistenceMock = vi.hoisted(() => ({
+  /** Saved draft values keyed by draft key; restored asynchronously like the real hook. */
+  savedDrafts: new Map<string, string>(),
+}));
+
 vi.mock('@renderer/hooks/useDraftPersistence', () => ({
-  useDraftPersistence: () => {
+  useDraftPersistence: ({ key }: { key: string }) => {
     const [value, setValue] = React.useState('');
+    React.useEffect(() => {
+      const saved = draftPersistenceMock.savedDrafts.get(key);
+      if (saved === undefined) return undefined;
+      // Mirrors the real hook: the draft lands only after the first render,
+      // so consumers must tolerate selection/prompt values arriving late.
+      let cancelled = false;
+      void Promise.resolve().then(() => {
+        if (!cancelled) setValue(saved);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, [key]);
     return {
       value,
       setValue,
@@ -495,12 +516,23 @@ vi.mock('@renderer/hooks/useFileListCacheWarmer', () => ({
   useFileListCacheWarmer: () => undefined,
 }));
 
+const suggestionHookState = vi.hoisted(() => ({
+  taskEnabled: [] as boolean[],
+  teamEnabled: [] as boolean[],
+}));
+
 vi.mock('@renderer/hooks/useTaskSuggestions', () => ({
-  useTaskSuggestions: () => ({ suggestions: [] }),
+  useTaskSuggestions: (_currentTeamName?: string | null, options?: { enabled?: boolean }) => {
+    suggestionHookState.taskEnabled.push(options?.enabled ?? true);
+    return { suggestions: [] };
+  },
 }));
 
 vi.mock('@renderer/hooks/useTeamSuggestions', () => ({
-  useTeamSuggestions: () => ({ suggestions: [] }),
+  useTeamSuggestions: (_currentTeamName?: string | null, options?: { enabled?: boolean }) => {
+    suggestionHookState.teamEnabled.push(options?.enabled ?? true);
+    return { suggestions: [] };
+  },
 }));
 
 vi.mock('@renderer/hooks/useTheme', () => ({
@@ -666,6 +698,7 @@ import { TEAM_TEMPLATES } from '@features/team-templates';
 import { sanitizeProviderStatusAuthority } from '@main/services/runtime/providerStatusCheckContract';
 import { api } from '@renderer/api';
 import { CreateTeamDialog } from '@renderer/components/team/dialogs/CreateTeamDialog';
+import { buildInitialRosterMemberDrafts } from '@renderer/components/team/dialogs/createTeamInitialRoster';
 import { LaunchTeamDialog } from '@renderer/components/team/dialogs/LaunchTeamDialog';
 import { runProviderPrepareDiagnostics } from '@renderer/components/team/dialogs/providerPrepareDiagnostics';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
@@ -1591,7 +1624,7 @@ describe('LaunchTeamDialog', () => {
     async function renderCreateDialog(
       host: HTMLElement,
       root: ReturnType<typeof createRoot>
-    ): Promise<() => Promise<void>> {
+    ): Promise<ReturnType<typeof vi.fn>> {
       const onCreate = vi.fn(() => Promise.resolve());
       await act(async () => {
         root.render(
@@ -1617,7 +1650,7 @@ describe('LaunchTeamDialog', () => {
           await flush();
         });
       }
-      return onCreate as unknown as () => Promise<void>;
+      return onCreate;
     }
 
     function setPromptTextarea(host: HTMLElement, value: string): HTMLTextAreaElement {
@@ -1628,6 +1661,14 @@ describe('LaunchTeamDialog', () => {
       setter.call(textarea, value);
       textarea.dispatchEvent(new Event('input', { bubbles: true }));
       return textarea;
+    }
+
+    function optionState(host: HTMLElement, option: string): string | null {
+      return (
+        host
+          .querySelector(`[data-testid="create-template-option-${option}"]`)
+          ?.getAttribute('aria-pressed') ?? null
+      );
     }
 
     function findCreateButton(host: HTMLElement): HTMLButtonElement | undefined {
@@ -1727,6 +1768,152 @@ describe('LaunchTeamDialog', () => {
       } finally {
         act(() => root.unmount());
         restoreLaunchTeam();
+      }
+    });
+
+    it('enables workflow suggestions lazily when the template prompt is focused in config-only mode', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      suggestionHookState.taskEnabled.length = 0;
+      suggestionHookState.teamEnabled.length = 0;
+      const restoreLaunchTeam = installStatefulLaunchTeamSetter();
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      try {
+        await renderCreateDialog(host, root);
+        // Ordinary launch flow: nothing has focused the prompt, so the lazy
+        // suggestion sources must not have been initialized yet.
+        expect(suggestionHookState.taskEnabled.length).toBeGreaterThan(0);
+        expect(suggestionHookState.taskEnabled.every((value) => value === false)).toBe(true);
+        expect(suggestionHookState.teamEnabled.every((value) => value === false)).toBe(true);
+
+        // Apply a built-in template: the dialog switches to config-only mode.
+        const builtinOption = host.querySelector<HTMLButtonElement>(
+          '[data-testid="create-template-option-builtin-marketing"]'
+        );
+        expect(builtinOption, host.textContent ?? '').not.toBeNull();
+        await act(async () => {
+          builtinOption!.click();
+          await flush();
+        });
+        expect(createTeamDraftMock.state.launchTeam).toBe(false);
+
+        // Config-only: the prompt stays visible and editable while the
+        // launch-settings optional section (the old suggestion trigger) is not rendered.
+        const textarea = host.querySelector<HTMLTextAreaElement>('textarea#team-prompt');
+        expect(textarea, host.textContent ?? '').not.toBeNull();
+        expect(host.textContent).not.toContain('create.optional.launchSettingsTitle');
+        expect(host.querySelector('#create-skip-permissions')).toBeNull();
+        await act(async () => {
+          setPromptTextarea(host, 'Focused template lead prompt');
+          await flush();
+        });
+        expect(textarea!.value).toBe('Focused template lead prompt');
+        // Applying the template alone must not initialize the suggestion sources.
+        expect(suggestionHookState.taskEnabled.every((value) => value === false)).toBe(true);
+        expect(suggestionHookState.teamEnabled.every((value) => value === false)).toBe(true);
+
+        // Focusing the prompt is what lazily enables team/task suggestions.
+        await act(async () => {
+          textarea!.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+          await flush();
+        });
+        expect(suggestionHookState.taskEnabled.at(-1)).toBe(true);
+        expect(suggestionHookState.teamEnabled.at(-1)).toBe(true);
+        // Repeated focuses must not toggle the sources back off or re-initialize.
+        await act(async () => {
+          textarea!.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+          await flush();
+        });
+        expect(suggestionHookState.taskEnabled.at(-1)).toBe(true);
+        expect(suggestionHookState.teamEnabled.at(-1)).toBe(true);
+        expect(suggestionHookState.taskEnabled.some((value) => value === true)).toBe(true);
+      } finally {
+        act(() => root.unmount());
+        restoreLaunchTeam();
+      }
+    });
+
+    it('synchronizes the picker with the asynchronously restored selection without re-applying the template', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      // The saved prompt was edited after the template was applied, so any
+      // re-application during restore would clobber the user's own text.
+      draftPersistenceMock.savedDrafts.set('createTeam:prompt', 'Saved edited lead prompt');
+      draftPersistenceMock.savedDrafts.set(
+        'createTeam:templateSelection',
+        JSON.stringify({ source: 'custom', value: 'custom:tmpl-review-1' })
+      );
+      const originalMembers = createTeamDraftMock.state.members;
+      const originalLaunchTeam = createTeamDraftMock.state.launchTeam;
+      // The saved draft belongs to a config-only session: the template was
+      // applied earlier (launchTeam=false) and the dialog is reopened now.
+      createTeamDraftMock.state.launchTeam = false;
+      // Restored roster shaped exactly like a template-applied roster.
+      createTeamDraftMock.state.members = buildInitialRosterMemberDrafts({
+        copiedMembers: [{ name: 'backend-dev', role: 'Backend Developer', workflow: 'Build APIs' }],
+        multimodelEnabled: true,
+      }) as typeof createTeamDraftMock.state.members;
+      const restoreLaunchTeam = installStatefulLaunchTeamSetter();
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      try {
+        vi.mocked(api.customTeamTemplates.listTemplates).mockResolvedValue({
+          status: 'ready',
+          templates: [customTemplateRecord],
+        } as any);
+        await renderCreateDialog(host, root);
+
+        // The empty-then-restored transition itself is covered by the picker
+        // component tests; here the dialog must converge end-to-end.
+        for (let attempt = 0; attempt < 12; attempt += 1) {
+          await act(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            await flush();
+          });
+          if (
+            host
+              .querySelector('[data-testid="create-template-option-custom-tmpl-review-1"]')
+              ?.getAttribute('aria-pressed') === 'true'
+          ) {
+            break;
+          }
+        }
+
+        // Restored picker selection matches the restored template source…
+        expect(
+          host
+            .querySelector('[data-testid="create-template-option-custom-tmpl-review-1"]')
+            ?.getAttribute('aria-pressed')
+        ).toBe('true');
+        expect(optionState(host, 'none')).toBe('false');
+        // …while the restored prompt and members stay exactly as the user
+        // saved them — restoration must not re-apply the template content.
+        const textarea = host.querySelector<HTMLTextAreaElement>('textarea#team-prompt');
+        expect(textarea, host.textContent ?? '').not.toBeNull();
+        expect(textarea!.value).toBe('Saved edited lead prompt');
+        expect(host.textContent).toContain('backend-dev');
+
+        // The consistent restored state submits as-is.
+        const createButton = findCreateButton(host);
+        expect(createButton?.disabled, host.textContent ?? '').toBe(false);
+        await act(async () => {
+          createButton!.click();
+          await flush();
+        });
+        expect(api.teams.createConfig).toHaveBeenCalledTimes(1);
+        const payload = vi.mocked(api.teams.createConfig).mock.calls[0]?.[0] as any;
+        expect(payload.prompt).toBe('Saved edited lead prompt');
+      } finally {
+        act(() => root.unmount());
+        draftPersistenceMock.savedDrafts.clear();
+        createTeamDraftMock.state.members = originalMembers;
+        createTeamDraftMock.state.launchTeam = originalLaunchTeam;
+        restoreLaunchTeam();
+        vi.mocked(api.customTeamTemplates.listTemplates).mockReset();
+        vi.mocked(api.customTeamTemplates.listTemplates).mockResolvedValue({
+          status: 'empty',
+        } as any);
       }
     });
 

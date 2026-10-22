@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { TEAM_TEMPLATES } from '@features/team-templates';
@@ -27,6 +27,13 @@ export interface CreateTeamTemplatePickerProps {
   ) => void;
 }
 
+/** An absent or empty saved selection always resolves to the explicit "No template" option. */
+function resolveInitialSelection(initialSelection: string | undefined): string {
+  return initialSelection && initialSelection.length > 0
+    ? initialSelection
+    : CREATE_TEAM_TEMPLATE_NONE_VALUE;
+}
+
 export const CreateTeamTemplatePicker = ({
   open,
   initialSelection,
@@ -35,12 +42,25 @@ export const CreateTeamTemplatePicker = ({
   const { t } = useAppTranslation('team');
   const { state, reload } = useCustomTemplateLibrary(open);
 
-  const [selection, setSelection] = useState<string>(
-    initialSelection && initialSelection.length > 0
-      ? initialSelection
-      : CREATE_TEAM_TEMPLATE_NONE_VALUE
+  const [selection, setSelection] = useState<string>(() =>
+    resolveInitialSelection(initialSelection)
   );
+  // A deliberate user choice always outranks a draft selection that arrives
+  // later: draft persistence restores asynchronously, long after mount.
+  const userSelectionMadeRef = useRef(false);
   const [lastCustomSnapshot, setLastCustomSnapshot] = useState<CustomTeamTemplateV1 | null>(null);
+
+  // Draft persistence restores the saved selection after mount. Adopt it only
+  // while the picker still shows its default, so the visible selection matches
+  // the restored prompt/members without re-applying the template (restoration
+  // must never overwrite user-edited prompt/member data).
+  useEffect(() => {
+    if (userSelectionMadeRef.current) return;
+    setSelection((current) => {
+      const next = resolveInitialSelection(initialSelection);
+      return current === next ? current : next;
+    });
+  }, [initialSelection]);
 
   const customs = state.status === 'ready' || state.status === 'partial' ? state.templates : [];
   const libraryLoading = state.status === 'idle' || state.status === 'loading';
@@ -65,6 +85,7 @@ export const CreateTeamTemplatePicker = ({
   const previewCustom = selectedCustom ?? (staleCustomId ? lastCustomSnapshot : null);
 
   const handleSelect = (value: string): void => {
+    userSelectionMadeRef.current = true;
     if (value === selection) return;
     const result = resolveCreateTeamTemplateDraft(value, {
       builtins: TEAM_TEMPLATES,

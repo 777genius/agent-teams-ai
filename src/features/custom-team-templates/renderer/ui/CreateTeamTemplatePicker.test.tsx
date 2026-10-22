@@ -49,8 +49,10 @@ let host: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
 let onApply: ReturnType<typeof vi.fn>;
 
-function renderPicker(open = true): void {
-  root.render(<CreateTeamTemplatePicker open={open} onApply={onApply} />);
+function renderPicker(open = true, initialSelection?: string): void {
+  root.render(
+    <CreateTeamTemplatePicker open={open} initialSelection={initialSelection} onApply={onApply} />
+  );
 }
 
 async function flush(): Promise<void> {
@@ -291,6 +293,90 @@ describe('CreateTeamTemplatePicker', () => {
     expect(onApply).toHaveBeenCalledTimes(1);
     // The picker only ever reads the library; creation stays on dialog submit.
     expect(listTemplates).toHaveBeenCalledTimes(1);
+  });
+
+  describe('asynchronously restored initial selection', () => {
+    it('adopts a restored custom selection after mount without re-applying the template', async () => {
+      listTemplates.mockResolvedValue({ status: 'ready', templates: customTemplates() });
+      // Mount the way the dialog does before the draft load resolves.
+      renderPicker(true, '');
+      await flush();
+      expect(optionNone()?.getAttribute('aria-pressed')).toBe('true');
+
+      // The saved selection arrives asynchronously after the library loaded.
+      renderPicker(true, 'custom:tmpl-custom-1');
+      await flush();
+
+      expect(optionCustom('tmpl-custom-1')?.getAttribute('aria-pressed')).toBe('true');
+      expect(optionNone()?.getAttribute('aria-pressed')).toBe('false');
+      // Restoration only synchronizes the picker view; it must not re-run
+      // template application (which would clobber user-edited form state).
+      expect(onApply).not.toHaveBeenCalled();
+      // The preview mirrors the same template the restored prompt/members came from.
+      const preview = host.querySelector('[data-testid="create-template-preview"]');
+      expect(preview?.textContent).toContain('Custom prompt');
+      expect(preview?.textContent).toContain('backend-dev');
+    });
+
+    it('adopts a restored built-in selection after mount', async () => {
+      listTemplates.mockResolvedValue({ status: 'empty' });
+      renderPicker(true, '');
+      await flush();
+
+      renderPicker(true, 'builtin:marketing');
+      await flush();
+
+      expect(optionBuiltin('marketing')?.getAttribute('aria-pressed')).toBe('true');
+      expect(optionNone()?.getAttribute('aria-pressed')).toBe('false');
+      expect(onApply).not.toHaveBeenCalled();
+    });
+
+    it('does not overwrite a deliberate user selection made before the restore arrives', async () => {
+      listTemplates.mockResolvedValue({ status: 'ready', templates: customTemplates() });
+      renderPicker(true, '');
+      await flush();
+
+      // The user deliberately picks a built-in template before the draft loads.
+      await click(optionBuiltin('marketing'));
+      expect(onApply).toHaveBeenCalledTimes(1);
+
+      // A stale saved selection then arrives asynchronously.
+      renderPicker(true, 'custom:tmpl-custom-1');
+      await flush();
+
+      expect(optionBuiltin('marketing')?.getAttribute('aria-pressed')).toBe('true');
+      expect(optionCustom('tmpl-custom-1')?.getAttribute('aria-pressed')).toBe('false');
+      expect(onApply).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps an empty or absent restored selection on the explicit no-template option', async () => {
+      listTemplates.mockResolvedValue({ status: 'ready', templates: customTemplates() });
+      renderPicker(true, '');
+      await flush();
+      expect(optionNone()?.getAttribute('aria-pressed')).toBe('true');
+
+      renderPicker(true, undefined);
+      await flush();
+      expect(optionNone()?.getAttribute('aria-pressed')).toBe('true');
+      expect(onApply).not.toHaveBeenCalled();
+    });
+
+    it('does not update when the incoming value is already the selected option', async () => {
+      listTemplates.mockResolvedValue({ status: 'ready', templates: customTemplates() });
+      renderPicker(true, '');
+      await flush();
+
+      renderPicker(true, 'custom:tmpl-custom-1');
+      await flush();
+      expect(optionCustom('tmpl-custom-1')?.getAttribute('aria-pressed')).toBe('true');
+
+      // The same value arriving again (e.g. an unrelated re-render) is a no-op.
+      renderPicker(true, 'custom:tmpl-custom-1');
+      await flush();
+      expect(optionCustom('tmpl-custom-1')?.getAttribute('aria-pressed')).toBe('true');
+      expect(optionNone()?.getAttribute('aria-pressed')).toBe('false');
+      expect(onApply).not.toHaveBeenCalled();
+    });
   });
 
   it('keeps selection controls keyboard-focusable with accessible pressed state', async () => {
