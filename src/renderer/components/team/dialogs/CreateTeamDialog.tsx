@@ -1438,7 +1438,7 @@ export const CreateTeamDialog = ({
         setSelectedEffortRaw(initialData.effort ?? '');
       }
       if (Object.hasOwn(initialData, 'fastMode')) {
-        setSelectedFastModeRaw(initialData.fastMode ?? 'inherit');
+        setSelectedFastModeRaw(initialData.fastMode ?? getStoredTeamFastMode());
       }
       if (Object.hasOwn(initialData, 'limitContext')) {
         setLimitContextRaw(initialData.limitContext === true);
