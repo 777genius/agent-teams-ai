@@ -19,7 +19,7 @@ import { OpenCodeRuntimeDeliveryProofReader } from '../opencode/delivery/OpenCod
 import { type OpenCodeVisibleReplyProofService } from '../opencode/delivery/OpenCodeVisibleReplyProofService';
 import { boundLaunchDiagnostics } from '../progressPayload';
 import { readBootstrapLaunchSnapshot } from '../TeamBootstrapStateReader';
-import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
+import { readPersistedLaunchRuntimePidsSync, TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
 import { createAnthropicApiKeyHelperCleanupRetryOwner } from './TeamProvisioningAnthropicApiKeyHelperLease';
 import {
@@ -404,10 +404,17 @@ export abstract class TeamProvisioningServiceRuntimeStateFacade extends TeamProv
   protected readonly openCodePromptDeliveryWatchdogScheduler!: OpenCodePromptDeliveryWatchdogScheduler;
   protected readonly persistentRuntimeCleanup = createTeamProvisioningPersistentRuntimeCleanup({
     readPersistedRuntimeMembers: (teamName) => this.readPersistedRuntimeMembers(teamName),
+    readRecordedRuntimePids: (teamName) => readPersistedLaunchRuntimePidsSync(teamName),
     killPersistedPaneMembers: (teamName, members) =>
       killPersistedPaneMembers(teamName, members, logger),
-    killOrphanedTeamAgentProcesses: (teamName, currentRunPid) =>
-      killOrphanedTeamAgentProcesses({ teamName, currentRunPid, logger }),
+    killOrphanedTeamAgentProcesses: (teamName, currentRunPid, knownPids, options) =>
+      killOrphanedTeamAgentProcesses({
+        teamName,
+        currentRunPid,
+        knownPids,
+        isRecheck: options?.isRecheck,
+        logger,
+      }),
     getCurrentRunPid: (teamName) => {
       const currentRunId = this.runTracking.getTrackedRunId(teamName);
       return currentRunId ? this.runs.get(currentRunId)?.child?.pid : undefined;

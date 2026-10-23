@@ -73,6 +73,7 @@ export interface OpenCodeBridgeHandshakePort {
     expectedRunId: string | null;
     expectedCapabilitySnapshotId: string | null;
     expectedManifestHighWatermark: number | null;
+    timeoutMs?: number;
     cwd?: string;
     allowEmptyLaneStop?: boolean;
     selectedModel?: string | null;
@@ -135,6 +136,15 @@ export function rememberOpenCodeHandshakeFailure(
   error: Error,
   failure: NonNullable<OpenCodeStopCausalFailure['handshakeFailure']>
 ): void {
+  const lockCode = (['ELOCKED', 'ECOMPROMISED'] as const).find(
+    (value) => value === failure.lockCode
+  );
+  const lockCategory = (['registry', 'profile', 'startup', 'unknown'] as const).find(
+    (value) => value === failure.lockCategory
+  );
+  const messageShape = (['code', 'lock_operation', 'unclassified'] as const).find(
+    (value) => value === failure.messageShape
+  );
   causalFailures.set(error, {
     ...(causalFailures.get(error) ?? { phase: 'handshake' }),
     handshakeFailure: Object.freeze({
@@ -146,6 +156,9 @@ export function rememberOpenCodeHandshakeFailure(
       (failure.nativeErrno ?? -1) <= 0xffffffff
         ? { nativeErrno: failure.nativeErrno }
         : {}),
+      ...(lockCode ? { lockCode } : {}),
+      ...(lockCategory ? { lockCategory } : {}),
+      ...(messageShape ? { messageShape } : {}),
     }),
   });
 }
@@ -317,6 +330,8 @@ export class OpenCodeStateChangingBridgeCommandService {
     context: { phase: string }
   ): Promise<OpenCodeBridgeResult<TData>> {
     assertLaunchBehaviorFingerprint(input.command, input.behaviorFingerprint, input.body);
+    // Pre-dispatch phases share the command budget so the attempt settles inside the caller's escalation race.
+    const preDispatchDeadlineMs = Date.now() + input.timeoutMs;
     const normalizedLaneId = input.laneId ?? null;
     const manifest = await this.manifestReader.read(
       input.teamName,
@@ -355,6 +370,7 @@ export class OpenCodeStateChangingBridgeCommandService {
           laneId: normalizedLaneId,
           runId: input.runId,
           command: input.command,
+          acquireBudgetMs: Math.max(1, preDispatchDeadlineMs - Date.now()),
           ttlMs: input.timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS + 5_000,
         });
         let primary: unknown;
@@ -381,7 +397,8 @@ export class OpenCodeStateChangingBridgeCommandService {
             handshakePort: this.handshakePort,
             bridge: this.bridge,
             ledger: this.ledger,
-            timeoutMs: input.timeoutMs,
+            timeoutMs: Math.max(1, preDispatchDeadlineMs - Date.now()),
+            handshakeTimeoutMs: Math.max(1, preDispatchDeadlineMs - Date.now()),
           });
         } catch (error) {
           primary = error;
@@ -406,6 +423,7 @@ export class OpenCodeStateChangingBridgeCommandService {
       expectedRunId: input.runId,
       expectedCapabilitySnapshotId: capabilitySnapshotId,
       expectedManifestHighWatermark,
+      timeoutMs: Math.max(1, preDispatchDeadlineMs - Date.now()),
       cwd: input.cwd,
       teamId: input.teamName,
       laneId: normalizedLaneId,
@@ -460,6 +478,7 @@ export class OpenCodeStateChangingBridgeCommandService {
       laneId: normalizedLaneId,
       runId: input.runId,
       command: input.command,
+      acquireBudgetMs: Math.max(1, preDispatchDeadlineMs - Date.now()),
       ttlMs: input.timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS + 5_000,
     });
 
@@ -555,7 +574,9 @@ export class OpenCodeStateChangingBridgeCommandService {
         bodyWithPreconditions,
         {
           cwd: stopRequest?.target.projectPath ?? input.cwd,
-          timeoutMs: input.timeoutMs,
+          // The dispatch settles inside the same shared budget instead of
+          // restarting the full command clock after the pre-dispatch phases.
+          timeoutMs: Math.max(1, preDispatchDeadlineMs - Date.now()),
           requestId: commandRequestId,
         }
       );
@@ -708,13 +729,17 @@ export class OpenCodeStateChangingBridgeCommandService {
     runId: string | null;
     command: OpenCodeBridgeCommandName;
     ttlMs: number;
+    acquireBudgetMs?: number;
   }): Promise<OpenCodeBridgeCommandLease> {
+    const acquireTimeoutMs = resolveOpenCodeBridgeLeaseAcquireTimeoutMs({
+      configuredTimeoutMs: this.leaseAcquireTimeoutMs,
+      leaseTtlMs: input.ttlMs,
+    });
     const deadlineMs =
       Date.now() +
-      resolveOpenCodeBridgeLeaseAcquireTimeoutMs({
-        configuredTimeoutMs: this.leaseAcquireTimeoutMs,
-        leaseTtlMs: input.ttlMs,
-      });
+      (input.acquireBudgetMs === undefined
+        ? acquireTimeoutMs
+        : Math.min(acquireTimeoutMs, input.acquireBudgetMs));
     while (true) {
       try {
         return await this.leaseStore.acquire(input);

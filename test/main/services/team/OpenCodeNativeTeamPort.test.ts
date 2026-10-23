@@ -127,6 +127,10 @@ describe('Electron TEST delivery status privacy boundary', () => {
       expect(result.taskStatus).toBe('in_progress');
       expect(result.advisory).toEqual({ kind: 'api_error', reasonCode: 'quota_exhausted' });
       expect(result.matchedMessages).toBe(4);
+      expect(result.commentObservation).toEqual({
+        count: 1, ownerAuthored: false, exactMatch: false,
+        trimmedExactMatch: false, containsToken: false,
+      });
       expect(result.messageSearchExhaustive).toBe(false);
       expect(readStatus.mock.calls).toEqual(Array.from({ length: 4 }, (_, n) => [team, `owned-${n}`]));
       expect(result.deliveries.every((row) => row?.ledgerStatus === null &&
@@ -188,7 +192,8 @@ it('projects bounded exact shell matcher facts before CDP without commands or re
   const exact = execution(`node "${program}" ${secret}`);
   const calls = [execution(`node other.cjs ${secret}`), execution(`other "${program}"`),
     execution(`node "${program}"`, false), execution(`node "${program}"`, true, secret), exact];
-  const task = { id: 'owned', owner: 'bob', status: 'completed' };
+  const task = { id: 'owned', owner: 'bob', status: 'completed',
+    comments: [{ author: 'bob', text: 'TASK_COMMENT:TEST-comment-nonce' }] };
   const chunk = { chunkType: 'ai', responses: [{ type: 'assistant', model: 'test/model' }],
     toolExecutions: calls, rawMessages: [] };
   // Execute the actual serialized renderer closure, including its injected matcher.
@@ -207,6 +212,11 @@ it('projects bounded exact shell matcher facts before CDP without commands or re
     await port.getData();
     const result = await port.getSafeTaskFailureSnapshot('owned', 'bob', {
       session: 'original', program, marker, model: 'test/model',
+      comment: 'TASK_COMMENT:TEST-comment-nonce',
+    });
+    expect(result.commentObservation).toEqual({
+      count: 1, ownerAuthored: true, exactMatch: true,
+      trimmedExactMatch: true, containsToken: true,
     });
     const observed = result.commandObservation!;
     expect(observed.shellCount).toBe(15);

@@ -405,9 +405,9 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
 
   it.each([
     ['ECOMPROMISED', 'registry', 1000, 1],
-    ['ELOCKED', 'profile', 1000, 1],
+    ['ELOCKED', 'profile', 1000, 3],
     ['ELOCKED', 'registry', 200, 1],
-    ['ELOCKED', 'registry', 5000, 4],
+    ['ELOCKED', 'registry', 5000, 5],
   ] as const)(
     'bounds handshake retries without bypassing %s/%s (%s ms)',
     async (lockCode, lockCategory, timeoutMs, attempts) => {
@@ -436,11 +436,271 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
           expectedManifestHighWatermark: null,
         })
       ).rejects.toThrow('lock unavailable');
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(10_000);
       await pending;
       expect(bridge.calls).toHaveLength(attempts);
     }
   );
+
+  it('recovers a contended handshake after the fixed registry retry budget is exhausted', async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    bridge.resultFactory = ({ command, options }) =>
+      ++calls <= 4
+        ? {
+            ok: false,
+            schemaVersion: 1,
+            requestId: options.requestId!,
+            command,
+            completedAt: now.toISOString(),
+            durationMs: 0,
+            diagnostics: [],
+            error: {
+              kind: 'provider_error',
+              message: 'lock unavailable',
+              retryable: true,
+              details: { lockCode: 'ELOCKED', lockCategory: 'registry' },
+            },
+          }
+        : bridgeSuccess({
+            command,
+            requestId: options.requestId,
+            data: handshakePort.nextHandshake,
+          });
+    const port = new OpenCodeBridgeCommandHandshakePort({ bridge, clientIdentity, timeoutMs: 60_000 });
+    const pending = port.handshake({
+      requiredCommand: 'opencode.launchTeam',
+      expectedRunId: null,
+      expectedCapabilitySnapshotId: null,
+      expectedManifestHighWatermark: null,
+    });
+    await vi.advanceTimersByTimeAsync(4000);
+    await expect(pending).resolves.toEqual(handshakePort.nextHandshake);
+    expect(bridge.calls).toHaveLength(5);
+  });
+
+  it('recovers a contended handshake held on a non-registry lock', async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    bridge.resultFactory = ({ command, options }) =>
+      ++calls <= 2
+        ? {
+            ok: false,
+            schemaVersion: 1,
+            requestId: options.requestId!,
+            command,
+            completedAt: now.toISOString(),
+            durationMs: 0,
+            diagnostics: [],
+            error: {
+              kind: 'provider_error',
+              message: 'lock unavailable',
+              retryable: true,
+              details: { lockCode: 'ELOCKED', lockCategory: 'profile' },
+            },
+          }
+        : bridgeSuccess({
+            command,
+            requestId: options.requestId,
+            data: handshakePort.nextHandshake,
+          });
+    const port = new OpenCodeBridgeCommandHandshakePort({ bridge, clientIdentity, timeoutMs: 10_000 });
+    const pending = port.handshake({
+      requiredCommand: 'opencode.launchTeam',
+      expectedRunId: null,
+      expectedCapabilitySnapshotId: null,
+      expectedManifestHighWatermark: null,
+    });
+    await vi.advanceTimersByTimeAsync(1000);
+    await expect(pending).resolves.toEqual(handshakePort.nextHandshake);
+    expect(bridge.calls).toHaveLength(3);
+  });
+
+  it('propagates a deterministic authority rejection without retrying it', async () => {
+    bridge.resultFactory = ({ command, options }) => ({
+      ok: false,
+      schemaVersion: 1,
+      requestId: options.requestId!,
+      command,
+      completedAt: now.toISOString(),
+      durationMs: 0,
+      diagnostics: [],
+      error: {
+        kind: 'provider_error',
+        message: 'OpenCode confirmed stop authority mismatch',
+        retryable: true,
+      },
+    });
+    const port = new OpenCodeBridgeCommandHandshakePort({ bridge, clientIdentity, timeoutMs: 10_000 });
+    await expect(
+      port.handshake({
+        requiredCommand: 'opencode.stopTeam',
+        expectedRunId: null,
+        expectedCapabilitySnapshotId: null,
+        expectedManifestHighWatermark: null,
+      })
+    ).rejects.toThrow('OpenCode confirmed stop authority mismatch');
+    expect(bridge.calls).toHaveLength(1);
+  });
+
+  it('bounds a per-call handshake deadline below the port default', async () => {
+    vi.useFakeTimers();
+    bridge.resultFactory = ({ command, options }) => ({
+      ok: false,
+      schemaVersion: 1,
+      requestId: options.requestId!,
+      command,
+      completedAt: now.toISOString(),
+      durationMs: 0,
+      diagnostics: [],
+      error: {
+        kind: 'provider_error',
+        message: 'lock unavailable',
+        retryable: true,
+        details: { lockCode: 'ELOCKED', lockCategory: 'registry' },
+      },
+    });
+    const port = new OpenCodeBridgeCommandHandshakePort({ bridge, clientIdentity });
+    const pending = port.handshake({
+      requiredCommand: 'opencode.stopTeam',
+      expectedRunId: null,
+      expectedCapabilitySnapshotId: null,
+      expectedManifestHighWatermark: null,
+      timeoutMs: 300,
+    });
+    let settled = false;
+    void pending.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      }
+    );
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(settled).toBe(true);
+    await expect(pending).rejects.toThrow('lock unavailable');
+    expect(bridge.calls.length).toBeLessThanOrEqual(2);
+    expect(bridge.calls[0].options.timeoutMs).toBeLessThanOrEqual(300);
+  });
+
+  it('passes the command budget to the handshake as a per-call deadline', async () => {
+    handshakePort.nextHandshake = buildHandshake({
+      client: clientIdentity,
+      server: peerIdentity('agent_teams_orchestrator', {
+        capabilitySnapshotId: 'other-cap',
+        runtimeStoreManifestHighWatermark: 0,
+      }),
+    });
+    const input = { ...buildLaunchInput(), timeoutMs: 30_000 };
+    await expect(createService().execute(input)).rejects.toThrow('capability snapshot mismatch');
+    const call = handshakePort.calls[0] as { timeoutMs?: number };
+    expect(call.timeoutMs).toEqual(expect.any(Number));
+    expect(call.timeoutMs).toBeLessThanOrEqual(30_000);
+    expect(call.timeoutMs).toBeGreaterThan(20_000);
+  });
+
+  it('shares one pre-dispatch budget across the handshake and the lease acquire', async () => {
+    vi.useFakeTimers();
+    handshakePort.nextHandshake = buildHandshake({
+      client: clientIdentity,
+      server: peerIdentity('agent_teams_orchestrator', {
+        runtimeStoreManifestHighWatermark: 0,
+      }),
+    });
+    const busyLeaseStore = {
+      acquire: () =>
+        Promise.reject(
+          new OpenCodeBridgeCommandLeaseError('OpenCode bridge command lease already active: synth')
+        ),
+      release: () => Promise.resolve(),
+    } as unknown as OpenCodeBridgeCommandLeaseStore;
+    const slowHandshake: OpenCodeBridgeHandshakePort = {
+      async handshake(callInput) {
+        await sleep(1_500);
+        return handshakePort.handshake(callInput);
+      },
+    };
+    const service = new OpenCodeStateChangingBridgeCommandService({
+      expectedClientIdentity: clientIdentity,
+      handshakePort: slowHandshake,
+      leaseStore: busyLeaseStore,
+      ledger,
+      bridge,
+      manifestReader,
+      launchAuthorityWriter,
+      diagnostics,
+      requestIdFactory: () => 'cmd-1',
+      diagnosticIdFactory: () => 'diag-1',
+      clock: () => now,
+      leaseAcquireRetryDelayMs: 50,
+    });
+    const pending = service.execute({ ...buildLaunchInput(), timeoutMs: 2_000 });
+    let settled = false;
+    void pending.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      }
+    );
+    for (let elapsedMs = 0; elapsedMs < 3_000 && !settled; elapsedMs += 100) {
+      await vi.advanceTimersByTimeAsync(100);
+    }
+    await Promise.resolve();
+    expect(settled).toBe(true);
+    await expect(pending).rejects.toThrow(OpenCodeBridgeCommandLeaseError);
+    expect(handshakePort.calls).toHaveLength(1);
+    expect((handshakePort.calls[0] as { timeoutMs?: number }).timeoutMs).toBeLessThanOrEqual(2_000);
+  });
+
+  it('applies the shared pre-dispatch deadline to the actual stop dispatch', async () => {
+    vi.useRealTimers();
+    const input = { ...enableRuntimeStop(), timeoutMs: 2_000 };
+    const slowHandshake: OpenCodeBridgeHandshakePort = {
+      async handshake(callInput) {
+        await sleep(300);
+        return handshakePort.handshake(callInput);
+      },
+    };
+    const execute = vi.fn(async (command, body, options) => {
+      const request = (body as { stopRecovery: RuntimeStopRequest }).stopRecovery;
+      return bridgeSuccess({
+        command,
+        requestId: options.requestId,
+        runtime: { ...bridgeSuccess().runtime, capabilitySnapshotId: input.capabilitySnapshotId },
+        data: runtimeData(true, request.idempotencyKey),
+      });
+    });
+    await createService({
+      bridge: { execute } as OpenCodeBridgeCommandExecutor,
+      handshakePort: slowHandshake,
+    }).execute(input);
+    const dispatch = execute.mock.calls.find(([command]) => command === 'opencode.stopTeam');
+    expect(dispatch).toBeDefined();
+    // The handshake already consumed part of the command budget; the dispatch
+    // must draw from what remains instead of restarting the full clock.
+    expect(dispatch![2].timeoutMs).toBeLessThanOrEqual(1_700);
+    expect(dispatch![2].timeoutMs).toBeGreaterThanOrEqual(1);
+  });
+
+  it('bounds the stop-recovery handshake by the command budget', async () => {
+    const { input } = await seedLegacyStop('unknown_after_timeout');
+    ledger = createOpenCodeBridgeCommandLedgerStore({
+      filePath: path.join(tempDir, 'ledger.json'),
+    });
+    await createService()
+      .execute(input)
+      .catch(() => undefined);
+    const call = handshakePort.calls.find(
+      (candidate) =>
+        (candidate as { requiredCommand?: string }).requiredCommand === 'opencode.stopOutcome'
+    ) as { timeoutMs?: number } | undefined;
+    expect(call).toBeDefined();
+    expect(call!.timeoutMs).toEqual(expect.any(Number));
+    expect(call!.timeoutMs).toBeLessThanOrEqual(input.timeoutMs);
+  });
 
   it.each(['opencode.reconcileTeam', 'opencode.stopTeam', 'opencode.sendMessage'] as const)(
     'carries the exact persisted original behavior into %s without a versioned Stop target',
@@ -2715,6 +2975,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
   function createService(
     overrides: {
       bridge?: OpenCodeBridgeCommandExecutor;
+      handshakePort?: OpenCodeBridgeHandshakePort;
       leaseAcquireTimeoutMs?: number;
       leaseAcquireRetryDelayMs?: number;
       requestIdFactory?: () => string;
@@ -2996,4 +3257,8 @@ class FakeManifestReader implements RuntimeStoreManifestReader {
 
 class FakeDiagnosticsSink implements OpenCodeStateChangingBridgeDiagnosticsSink {
   readonly append = vi.fn(async () => {});
+}
+
+function sleep(delayMs: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
 }

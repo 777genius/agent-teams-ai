@@ -27,7 +27,10 @@ vi.mock('@main/services/team/opencode/bridge/OpenCodeLoopbackRuntimeRelease', ()
   reportUnattributedLoopbackRuntimeRelease: vi.fn(),
 }));
 
-import { OpenCodeRuntimeStopUnconfirmedError } from '@main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
+import {
+  assertEscalatedStopConfirmed,
+  OpenCodeRuntimeStopUnconfirmedError,
+} from '@main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
 
 import type { TeamForceStopFlowPorts } from '@main/services/team/lifecycle/teamForceStopFlow';
@@ -98,6 +101,64 @@ describe('runTeamForceStopFlow', () => {
     expect(result.diagnostics.filter((row) => row.startsWith('stop_failure_code:'))).toEqual([
       'stop_failure_code:opencode_stop_status_unconfirmed',
     ]);
+  });
+
+  it('classifies an opaque regular-stop rejection into a finite stop_failure_code', async () => {
+    const ports = createPorts({
+      stopTeam: vi.fn(() =>
+        Promise.reject(new Error('Team process 4242 did not stop after SIGKILL'))
+      ),
+    });
+    const result = await stopTeamWithEscalation('exitrace', ports);
+    expect(result.stopOutcome).toBe('stop_failed');
+    expect(result.diagnostics).toContain('stop_failure_code:team_process_exit_unconfirmed');
+    expect(() => assertEscalatedStopConfirmed(result)).toThrow(
+      'team_stop_unconfirmed:stop_failed:team_process_exit_unconfirmed'
+    );
+  });
+
+  it.each([
+    ['OpenCode primary lane is not owned by run run-a', 'primary_lane_ownership_mismatch'],
+    [
+      'OpenCode runtime adapter launch did not confirm stop during cancellation',
+      'provisioning_cancel_stop_unconfirmed',
+    ],
+    ['File lock timeout: /teams/prompt-deliveries.json', 'prompt_delivery_ledger_error'],
+    ['OpenCode runtime adapter is unavailable', 'runtime_adapter_unavailable'],
+    [
+      'OpenCode primary lane ownership changed before stopped storage cleanup',
+      'lane_ownership_changed_after_stop',
+    ],
+    [
+      'OpenCode secondary lane alice did not confirm stop: no recorded host pid to verify',
+      'secondary_lane_stop_unconfirmed',
+    ],
+    ['OpenCode team did not confirm stop: result unconfirmed', 'runtime_stop_unconfirmed'],
+    [
+      '[team-a] Persistent runtime termination could not be confirmed: pane_kill_failed',
+      'persistent_runtime_stop_unconfirmed_pane_kill_failed',
+    ],
+    [
+      '[team-a] Persistent runtime termination could not be confirmed: process_table_unreadable',
+      'persistent_runtime_stop_unconfirmed_process_table_unreadable',
+    ],
+    [
+      '[team-a] Persistent runtime termination could not be confirmed: live_agent_processes',
+      'persistent_runtime_stop_unconfirmed_live_agent_processes',
+    ],
+    ['process_table_unreadable scan', 'regular_stop_rejected_unknown'],
+    ['freshness unreadable', 'regular_stop_rejected_unknown'],
+    ['!@#$%', 'regular_stop_rejected_unknown'],
+  ])('classifies regular stop rejection %s as %s', async (message, code) => {
+    const ports = createPorts({
+      stopTeam: vi.fn(() => Promise.reject(new Error(message))),
+    });
+    const result = await stopTeamWithEscalation('classify', ports);
+    expect(result.stopOutcome).toBe('stop_failed');
+    expect(result.diagnostics).toContain(`stop_failure_code:${code}`);
+    expect(() => assertEscalatedStopConfirmed(result)).toThrow(
+      `team_stop_unconfirmed:stop_failed:${code}`
+    );
   });
 
   it.each([stopTeamWithEscalation, runTeamForceStopFlow])(

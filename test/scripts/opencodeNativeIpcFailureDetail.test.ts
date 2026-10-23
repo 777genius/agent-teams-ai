@@ -1122,6 +1122,20 @@ it('retains only closed handshake facts through the owned suffix and serialized 
     .toEqual({ kind: 'runtime_not_ready' });
 });
 
+it('carries closed lock facts of a held handshake lock into the serialized cause', () => {
+  const error = createOpenCodeBridgeHandshakeFailure({ kind: 'provider_error', retryable: true,
+    message: 'OpenCode lock operation failed [code=ELOCKED, lock=host-registry.json.lock]',
+    details: { lockCode: 'ELOCKED', lockCategory: 'registry' } });
+  const packet = projectOpenCodeStateChangingFailure(error);
+  expect(packet.handshakeFailure).toMatchObject({ kind: 'provider_error',
+    lockCode: 'ELOCKED', lockCategory: 'registry', messageShape: 'lock_operation' });
+  const message = 'team_stop_unconfirmed:stop_failed' + formatOpenCodeStopCausalSuffix(packet);
+  const safeProject = runInNewContext(`(${serializedFunction(projectIpcCausalFailure)})`) as typeof projectIpcCausalFailure;
+  expect(safeProject(message)?.handshakeFailure).toMatchObject({ kind: 'provider_error',
+    lockCode: 'ELOCKED', lockCategory: 'registry', messageShape: 'lock_operation' });
+  expect(JSON.stringify(safeProject(message))).not.toContain('host-registry');
+});
+
 it.each(['current-pass', 'current-fail', 'floor'] as const)(
   '%s preserves original Stop after readiness and the one fresh-owner observation', async (scenario) => {
     const source = await readFile('scripts/e2e/opencode-native-windows-preflight.ts', 'utf8');
