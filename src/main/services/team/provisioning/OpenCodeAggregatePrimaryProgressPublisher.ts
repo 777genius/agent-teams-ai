@@ -51,21 +51,20 @@ export class OpenCodeAggregatePrimaryProgressPublisher {
   }
 
   publishRestartedMember(run: ProvisioningRun, retained: boolean, setupError?: unknown): void {
-    run.progress = this.ports.setRuntimeAdapterProgress(
-      {
-        ...run.progress,
-        state: 'ready',
-        retainedSecondaryRuntime: undefined,
-        message: retained
-          ? 'OpenCode member lane restart is ready'
-          : 'OpenCode team is running with unavailable members',
-        messageSeverity: retained ? undefined : 'warning',
-        updatedAt: nowIso(),
-        error: undefined,
-        ...(setupError === undefined ? {} : { cliLogsTail: getErrorMessage(setupError) }),
-      },
-      run.onProgress
-    );
+    // Keep authoritative READY ownership readable even if a notification throws.
+    run.progress = {
+      ...run.progress,
+      state: 'ready',
+      retainedSecondaryRuntime: undefined,
+      message: retained
+        ? 'OpenCode member lane restart is ready'
+        : 'OpenCode team is running with unavailable members',
+      messageSeverity: retained ? undefined : 'warning',
+      updatedAt: nowIso(),
+      error: undefined,
+      ...(setupError === undefined ? {} : { cliLogsTail: getErrorMessage(setupError) }),
+    };
+    run.progress = this.ports.setRuntimeAdapterProgress(run.progress, run.onProgress);
   }
 
   publishRestoredPrimary(run: ProvisioningRun, error: unknown): void {

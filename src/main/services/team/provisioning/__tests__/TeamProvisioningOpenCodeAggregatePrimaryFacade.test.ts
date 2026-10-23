@@ -81,6 +81,9 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
   readonly launchedRunIds: string[] = [];
   productionLaunch = false;
   secondarySetupError?: Error;
+  finalPersistenceError?: Error;
+  beforeFinalPersistenceFailure?: () => void;
+  readonly finalPersistence = vi.fn();
   beforeSecondarySetupFailure?: () => void;
   initialStop?: (runId: string) => Promise<void>;
   manifest: RuntimeStoreManifestEvidence = {
@@ -278,6 +281,11 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
   }
 
   protected override async persistLaunchStateSnapshot(): Promise<PersistedTeamLaunchSnapshot | null> {
+    this.finalPersistence();
+    if (this.finalPersistenceError) {
+      this.beforeFinalPersistenceFailure?.();
+      throw this.finalPersistenceError;
+    }
     return null;
   }
 
@@ -375,7 +383,7 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
     expect(deleteRuntimeOwner).toHaveBeenCalledWith(run.teamName);
   });
 
-  it.each(['current', 'cancelled'] as const)(
+  it.each(['current', 'cancelled', 'double-failure', 'publication-replacement'] as const)(
     'returns only current correlated successor authority when secondary setup fails after successful primary relaunch: %s',
     async (scope) => {
       const facade = new TestOpenCodeAggregatePrimaryFacade();
@@ -383,6 +391,17 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
       facade.secondarySetupError = new Error('secondary worktree setup failed');
       const run = createRun();
       const predecessorRunId = run.runId;
+      if (scope === 'double-failure')
+        facade.finalPersistenceError = new Error('snapshot disk failed');
+      if (scope === 'publication-replacement')
+        run.onProgress = vi.fn((progress: ProvisioningRun['progress']) => {
+          if (progress.state === 'ready' && progress.messageSeverity === 'warning')
+            facade.publishNewOwner(run.teamName, {
+              runId: run.runId,
+              providerId: 'opencode',
+              cwd: run.request.cwd,
+            });
+        });
       const launch = vi.fn(async (input: Parameters<TeamLaunchRuntimeAdapter['launch']>[0]) =>
         materializedResult(
           input.runId,
@@ -398,12 +417,16 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
       if (scope === 'cancelled')
         facade.beforeSecondarySetupFailure = () => facade.cancelRestart(run.teamName);
       const restarting = facade.restartMember(run.teamName, 'Worker', false);
-      if (scope === 'cancelled') {
+      if (scope === 'cancelled' || scope === 'publication-replacement') {
         await expect(restarting).rejects.not.toHaveProperty('retention');
+        expect(facade.finalPersistence).toHaveBeenCalledTimes(scope === 'cancelled' ? 0 : 1);
         return;
       }
       await expect(restarting).rejects.toMatchObject({
-        message: 'secondary worktree setup failed',
+        message:
+          scope === 'double-failure'
+            ? 'secondary worktree setup failed. Final snapshot persistence failed: snapshot disk failed'
+            : 'secondary worktree setup failed',
         outcome: 'failed_restored',
         retention: {
           teamName: run.teamName,
@@ -419,9 +442,72 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
         runId: run.runId,
         state: 'ready',
         messageSeverity: 'warning',
-        cliLogsTail: 'secondary worktree setup failed',
+        cliLogsTail:
+          scope === 'double-failure'
+            ? 'secondary worktree setup failed. Final snapshot persistence failed: snapshot disk failed'
+            : 'secondary worktree setup failed',
       });
       expect(launch).toHaveBeenCalledTimes(1);
+      expect(facade.finalPersistence).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it.each(['current', 'cancelled', 'replaced', 'publication'] as const)(
+    'correlates final persistence failure only while the successful successor primary is still owned: %s',
+    async (scope) => {
+      const facade = new TestOpenCodeAggregatePrimaryFacade();
+      facade.productionLaunch = true;
+      const failureMessage =
+        scope === 'publication' ? 'ready notification failed' : 'final snapshot persistence failed';
+      if (scope !== 'publication') facade.finalPersistenceError = new Error(failureMessage);
+      const run = createRun();
+      const predecessorRunId = run.runId;
+      if (scope === 'publication')
+        run.onProgress = vi.fn((progress) => {
+          if (progress.state === 'ready') throw new Error(failureMessage);
+        });
+      const launch = vi.fn(async (input: Parameters<TeamLaunchRuntimeAdapter['launch']>[0]) =>
+        materializedResult(
+          input.runId,
+          input.expectedMembers.map((entry) => entry.name)
+        )
+      );
+      facade.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          { providerId: 'opencode', launch, stop: vi.fn() } as unknown as TeamLaunchRuntimeAdapter,
+        ])
+      );
+      facade.trackRun(run, { runId: run.runId, providerId: 'opencode', cwd: run.request.cwd });
+      if (scope === 'cancelled')
+        facade.beforeFinalPersistenceFailure = () => facade.cancelRestart(run.teamName);
+      if (scope === 'replaced')
+        facade.beforeFinalPersistenceFailure = () =>
+          facade.publishNewOwner(run.teamName, {
+            runId: 'foreign-successor',
+            providerId: 'opencode',
+            cwd: run.request.cwd,
+          });
+      const restarting = facade.restartMember(run.teamName, 'Worker', false);
+      if (scope === 'current' || scope === 'publication') {
+        await expect(restarting).rejects.toMatchObject({
+          message:
+            scope === 'publication' ? expect.stringContaining(failureMessage) : failureMessage,
+          outcome: 'failed_restored',
+          retention: { teamName: run.teamName, memberName: 'Worker', predecessorRunId },
+        });
+        await expect(restarting).rejects.toHaveProperty('retention.successorRunId', run.runId);
+        expect(run.progress).toMatchObject({
+          runId: run.runId,
+          state: 'ready',
+          messageSeverity: 'warning',
+          cliLogsTail: failureMessage,
+        });
+        expect(facade.getPrimaryOwner(run.teamName)?.runId).toBe(run.runId);
+      } else await expect(restarting).rejects.not.toHaveProperty('retention');
+      expect(run.runId).not.toBe(predecessorRunId);
+      expect(launch).toHaveBeenCalledTimes(1);
+      expect(facade.finalPersistence).toHaveBeenCalledTimes(1);
+      expect(run.mixedSecondaryLanes.at(-1)?.result?.runId).toBe('TEST-target-secondary');
     }
   );
 
