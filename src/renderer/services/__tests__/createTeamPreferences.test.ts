@@ -1,5 +1,6 @@
 import {
   applyStoredCreateTeamMemberRuntimePreferences,
+  getStoredCreateTeamFastMode,
   getStoredCreateTeamMemberRuntimePreferences,
   getStoredCreateTeamProvider,
   setStoredCreateTeamMemberRuntimePreferences,
@@ -9,6 +10,16 @@ import { afterEach, describe, expect, it } from 'vitest';
 describe('createTeamPreferences', () => {
   afterEach(() => {
     localStorage.clear();
+  });
+
+  it('defaults fast mode to off and preserves explicit preferences', () => {
+    expect(getStoredCreateTeamFastMode()).toBe('off');
+    localStorage.setItem('createTeam:lastSelectedFastMode', 'invalid');
+    expect(getStoredCreateTeamFastMode()).toBe('off');
+    for (const mode of ['on', 'off', 'inherit']) {
+      localStorage.setItem('createTeam:lastSelectedFastMode', mode);
+      expect(getStoredCreateTeamFastMode()).toBe(mode);
+    }
   });
 
   it('stores teammate runtime preferences and reapplies them by member name', () => {

@@ -7,7 +7,11 @@ import { open, readFile, writeFile, mkdir, lstat } from 'node:fs/promises';
 import path from 'node:path';
 import { connect, createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
-import { packagedArguments, packagedDrainSnapshot } from './packaged.mjs';
+import {
+  packagedArguments,
+  packagedDrainSnapshot,
+  packagedOrphanObservation,
+} from './packaged.mjs';
 import {
   processes,
   listeners,
@@ -39,6 +43,8 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
   const data = JSON.parse(await readFile(manifestPath, 'utf8'));
   assert(!data.launcher, 'Previous ownership manifest must be retired only after verified cleanup');
   data.run = run;
+  delete data.diagnosticLineage;
+  delete data.diagnosticLineageCollectionFailed;
   await writeFile(manifestPath, JSON.stringify(data, null, 2));
   const log = await open(path.join(runDir, 'desktop.log'), 'a');
   const launcher = spawn(process.execPath, [harness, 'start', root], {
@@ -281,6 +287,33 @@ for (const run of ['cold', 'warm-1', 'warm-2']) {
         )
       );
       if (!drain.drained) {
+        // Metadata-only census may expose an unobserved child of an exited helper.
+        // It never extends the exact identities authorized for cleanup.
+        try {
+          const latest = JSON.parse(await readFile(manifestPath, 'utf8'));
+          await writeFile(
+            path.join(runDir, 'cleanup-lineage.json'),
+            JSON.stringify(
+              {
+                at: Date.now(),
+                lineage: latest.diagnosticLineage ?? null,
+                lineageCollectionFailed: latest.diagnosticLineageCollectionFailed === true,
+                ...packagedOrphanObservation(latest.diagnosticLineage?.records ?? [], processes()),
+              },
+              null,
+              2
+            )
+          );
+        } catch {
+          try {
+            await writeFile(
+              path.join(runDir, 'cleanup-lineage.json'),
+              JSON.stringify({ observationOnly: true, collectionFailed: true })
+            );
+          } catch {
+            /* Observation failure cannot replace the original failed drain. */
+          }
+        }
         let diagnostic;
         try {
           diagnostic = windowsCleanupEvidence([

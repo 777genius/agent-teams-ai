@@ -16836,15 +16836,16 @@ describe('TeamProvisioningService', () => {
         runId: laneRunId,
       });
 
-      const stopping = harness.stopSingleMixedSecondaryRuntimeLane(
-        run,
-        lane,
-        'relaunch'
-      ) as Promise<void>;
+      const stopping = memberLifecycleControllerHarness(svc).runMemberLifecycleOperationInternal(
+        teamName,
+        'bob',
+        'manual_restart',
+        () => harness.stopSingleMixedSecondaryRuntimeLane(run, lane, 'relaunch') as Promise<void>
+      );
       await stopStarted.promise;
 
       expect(run.progress).toMatchObject({
-        state: 'disconnected',
+        state: 'ready',
         message: 'Stopping OpenCode runtime lane before cleanup or relaunch',
       });
       expect(harness.getSecondaryRuntimeRun(teamName, laneId)).toMatchObject({
@@ -16852,11 +16853,22 @@ describe('TeamProvisioningService', () => {
         laneId,
       });
       expect(lane.runId).toBe(laneRunId);
+      expect(
+        memberLifecycleControllerHarness(svc).isMemberLifecycleOperationActive(teamName, 'bob')
+      ).toBe(true);
+      expect(
+        memberLifecycleControllerHarness(svc).isMemberLifecycleOperationActive(
+          teamName,
+          'team-lead'
+        )
+      ).toBe(false);
       expect(harness.runTracking.canDeliverToTrackedRuntimeRun(teamName, aggregateRunId)).toBe(
-        false
+        true
       );
-      expect(harness.runTracking.resolveDeliverableTrackedRuntimeRunId(teamName)).toBeNull();
-      expect(harness.runTracking.canDeliverToOpenCodeRuntimeForTeam(teamName)).toBe(false);
+      expect(harness.runTracking.resolveDeliverableTrackedRuntimeRunId(teamName)).toBe(
+        aggregateRunId
+      );
+      expect(harness.runTracking.canDeliverToOpenCodeRuntimeForTeam(teamName)).toBe(true);
       await expect(
         svc.deliverOpenCodeMemberMessage(teamName, {
           memberName: 'bob',

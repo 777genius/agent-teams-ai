@@ -42,3 +42,15 @@ export function shouldIgnoreProvisioningProgressRegression(
   }
   return false;
 }
+
+/** A terminal cleanup disconnect carries a visible error; an ordinary Stop does not. */
+export function getProvisioningProgressError(progress: TeamProvisioningProgress): string | null {
+  if (
+    progress.state === 'failed' ||
+    ((progress.state === 'disconnected' || progress.state === 'cancelled') &&
+      progress.messageSeverity === 'error')
+  ) {
+    return progress.error?.trim() ? progress.error : progress.message;
+  }
+  return null;
+}

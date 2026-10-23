@@ -95,11 +95,20 @@ async function readDirectoryIfExists(targetPath: string): Promise<fs.Dirent[] | 
   }
 }
 
-async function removeDirectoryIfExists(targetPath: string): Promise<void> {
+async function removeEmptyDirectoryIfExists(targetPath: string): Promise<void> {
+  // The sweep deliberately retains live runs, foreign entries and symlinks.
+  // Prune their parents only when no preserved entries remain.
+  const entries = await readDirectoryIfExists(targetPath);
+  if (entries === null || entries.length > 0) {
+    return;
+  }
   try {
     await fs.promises.rmdir(targetPath);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+    const code = (error as NodeJS.ErrnoException).code;
+    // Parent pruning owns no files: a new entry after the empty snapshot must
+    // survive. Leaf cleanup separately rejects remaining owned helper files.
+    if (code !== 'ENOENT' && code !== 'ENOTEMPTY') {
       throw error;
     }
   }
@@ -274,14 +283,14 @@ export async function cleanupAnthropicTeamApiKeyHelperMaterial(input: {
     throw error;
   }
   const expected = new Set(['helper.sh', 'key', 'settings.json']);
+  const isExpectedFileName = (name: string): boolean =>
+    expected.has(name) || /^runtime-settings-[a-zA-Z0-9._-]+\.json$/.test(name);
   for (const entry of entries) {
     if (!entry.isFile()) {
       continue;
     }
     const fileName = entry.name;
-    const isExpected =
-      expected.has(fileName) || /^runtime-settings-[a-zA-Z0-9._-]+\.json$/.test(fileName);
-    if (!isExpected) {
+    if (!isExpectedFileName(fileName)) {
       continue;
     }
     const filePath = path.join(input.directory, fileName);
@@ -302,9 +311,23 @@ export async function cleanupAnthropicTeamApiKeyHelperMaterial(input: {
   try {
     await fs.promises.rmdir(input.directory);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      throw error;
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT') {
+      return;
     }
+    if (code === 'ENOTEMPTY') {
+      const remaining = await readDirectoryIfExists(input.directory);
+      // Foreign entries and symlinks are deliberately preserved. A recreated
+      // owned regular file still represents cleanup debt and must be reported.
+      if (
+        remaining === null ||
+        (remaining.length > 0 &&
+          remaining.every((entry) => !entry.isFile() || !isExpectedFileName(entry.name)))
+      ) {
+        return;
+      }
+    }
+    throw error;
   }
 }
 
@@ -340,9 +363,9 @@ export async function cleanupAnthropicTeamApiKeyHelperForTeam(input: {
       }
       await cleanupAnthropicTeamApiKeyHelperMaterial({ directory: runDir });
     }
-    await removeDirectoryIfExists(runsDir);
+    await removeEmptyDirectoryIfExists(runsDir);
   }
-  await removeDirectoryIfExists(teamDir);
+  await removeEmptyDirectoryIfExists(teamDir);
 }
 
 export async function cleanupStaleAnthropicTeamApiKeyHelpers(input: {

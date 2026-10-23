@@ -12,6 +12,11 @@ export interface PersistentRuntimeStopVerdict {
   reason?: PersistentRuntimeStopReason;
 }
 
+export interface PendingPersistentProcessStop {
+  stopNewProcesses(currentRunPid: number | undefined): void;
+  confirmStopped(): Promise<boolean>;
+}
+
 export interface TeamProvisioningPersistentRuntimeCleanupLogger {
   warn(message: string): void;
 }
@@ -30,8 +35,9 @@ export interface TeamProvisioningPersistentRuntimeCleanupPorts {
   killOrphanedTeamAgentProcesses(
     teamName: string,
     currentRunPid: number | undefined,
-    knownPids: readonly number[]
-  ): PersistentRuntimeStopVerdict;
+    knownPids: readonly number[],
+    options?: { isRecheck?: boolean }
+  ): PersistentRuntimeStopVerdict | PendingPersistentProcessStop;
   getCurrentRunPid(teamName: string): number | undefined;
   cleanupAnthropicTeamApiKeyHelperForTeam(input: {
     teamName: string;
@@ -49,19 +55,39 @@ export interface TeamProvisioningPersistentRuntimeCleanup {
   cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName: string): Promise<void>;
 }
 
+export function isPendingPersistentProcessStop(
+  value: PersistentRuntimeStopVerdict | PendingPersistentProcessStop
+): value is PendingPersistentProcessStop {
+  return 'confirmStopped' in value && 'stopNewProcesses' in value;
+}
+
 export function createTeamProvisioningPersistentRuntimeCleanup(
   ports: TeamProvisioningPersistentRuntimeCleanupPorts
 ): TeamProvisioningPersistentRuntimeCleanup {
-  const confirmedStops = new Map<string, boolean>();
-  const stopReasons = new Map<string, PersistentRuntimeStopReason>();
-  const stopPersistentTeamMembers = (teamName: string): boolean => {
-    confirmedStops.set(teamName, false);
-    stopReasons.delete(teamName);
+  interface StopConfirmation {
+    confirmed: boolean;
+    panesConfirmed: boolean;
+    pending?: PendingPersistentProcessStop;
+    reason?: PersistentRuntimeStopReason;
+  }
+  const confirmedStops = new Map<string, StopConfirmation>();
+  const stopPersistentTeamMembers = (
+    teamName: string,
+    options: { killPanes?: boolean; isRecheck?: boolean } = {}
+  ): boolean => {
+    const previous = confirmedStops.get(teamName);
+    const stop: StopConfirmation = { confirmed: false, panesConfirmed: false };
+    confirmedStops.set(teamName, stop);
     const members = ports.readPersistedRuntimeMembers(teamName);
+    // A settled pane kill must not be replayed: the pane id stays persisted until
+    // the whole stop confirms, and a replayed kill of a gone pane reports a false
+    // pane_kill_failed that keeps the stop unconfirmed forever.
     const panes =
-      members.length > 0
-        ? ports.killPersistedPaneMembers(teamName, members)
-        : ({ confirmed: true } satisfies PersistentRuntimeStopVerdict);
+      options.killPanes === false && previous?.panesConfirmed
+        ? ({ confirmed: true } satisfies PersistentRuntimeStopVerdict)
+        : members.length > 0
+          ? ports.killPersistedPaneMembers(teamName, members)
+          : ({ confirmed: true } satisfies PersistentRuntimeStopVerdict);
     const memberPids = members.flatMap((member) =>
       typeof member.runtimePid === 'number' && Number.isFinite(member.runtimePid)
         ? [member.runtimePid]
@@ -70,52 +96,79 @@ export function createTeamProvisioningPersistentRuntimeCleanup(
     const recordedPids = [
       ...new Set([...(ports.readRecordedRuntimePids?.(teamName) ?? []), ...memberPids]),
     ];
-    const processes = ports.killOrphanedTeamAgentProcesses(
-      teamName,
-      ports.getCurrentRunPid(teamName),
-      recordedPids
-    );
-    const confirmed = panes.confirmed && processes.confirmed;
-    confirmedStops.set(teamName, confirmed);
-    if (!confirmed) {
-      const reason: PersistentRuntimeStopReason = !panes.confirmed
-        ? (panes.reason ?? 'pane_kill_failed')
-        : (processes.reason ?? 'process_table_unreadable');
-      stopReasons.set(teamName, reason);
+    // Extend the existing capture on explicit Stop without replaying sent signals.
+    previous?.pending?.stopNewProcesses(ports.getCurrentRunPid(teamName));
+    const processes =
+      previous?.pending ??
+      ports.killOrphanedTeamAgentProcesses(
+        teamName,
+        ports.getCurrentRunPid(teamName),
+        recordedPids,
+        ...(options.isRecheck ? [{ isRecheck: true } as const] : [])
+      );
+    stop.panesConfirmed = panes.confirmed;
+    if (isPendingPersistentProcessStop(processes)) {
+      stop.pending = processes;
+    } else {
+      stop.confirmed = panes.confirmed && processes.confirmed;
     }
-    return confirmed;
+    if (!stop.confirmed) {
+      stop.reason = !panes.confirmed
+        ? (panes.reason ?? 'pane_kill_failed')
+        : isPendingPersistentProcessStop(processes)
+          ? 'live_agent_processes'
+          : (processes.reason ?? 'process_table_unreadable');
+    }
+    return stop.confirmed;
   };
   return {
     stopPersistentTeamMembers,
 
     async cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName) {
-      // A dispatched kill is not proof of exit (fire-and-forget on Windows) and
-      // the scan runs before the lane stops settle, so an unconfirmed dispatch
-      // is re-checked here: this cleanup runs when the explicit stop completed,
-      // and only leftovers that are still live keep the stop unconfirmed.
-      if (confirmedStops.get(teamName) === false) {
+      let stop = confirmedStops.get(teamName);
+      if (stop?.pending && stop.panesConfirmed) {
+        stop.confirmed = await stop.pending.confirmStopped();
+        if (confirmedStops.get(teamName) !== stop) {
+          throw new Error(`[${teamName}] Persistent runtime stop ownership changed`);
+        }
+        if (!stop.confirmed) stop.reason = 'live_agent_processes';
+      }
+      if (stop && !stop.confirmed && !stop.pending) {
+        // A dispatched kill is not proof of exit (fire-and-forget on Windows) and
+        // the scan runs before the lane stops settle, so an unconfirmed dispatch
+        // is re-checked here: this cleanup runs when the explicit stop completed,
+        // and only leftovers that are still live keep the stop unconfirmed.
         const delay = ports.sleep ?? sleep;
-        let confirmed = false;
         for (let attempt = 1; attempt <= STOP_CONFIRMATION_RECHECKS; attempt += 1) {
           // Each re-check first lets the previous kill dispatch settle and gives
           // the process-table probe a fresh try, so only leftovers that survive
           // the whole bounded window are reported as still live.
           await delay(STOP_CONFIRMATION_RECHECK_BACKOFF_MS * attempt);
-          confirmed = stopPersistentTeamMembers(teamName);
+          if (confirmedStops.get(teamName) !== stop) {
+            throw new Error(`[${teamName}] Persistent runtime stop ownership changed`);
+          }
+          const confirmed = stopPersistentTeamMembers(teamName, {
+            killPanes: !stop.panesConfirmed,
+            isRecheck: true,
+          });
+          stop = confirmedStops.get(teamName) ?? stop;
           if (confirmed) break;
         }
-        if (!confirmed) {
-          throw new Error(
-            `[${teamName}] Persistent runtime termination could not be confirmed: ${
-              stopReasons.get(teamName) ?? 'process_table_unreadable'
-            }`
-          );
-        }
       }
-      if (confirmedStops.get(teamName) === true) {
+      if (stop && !stop.confirmed) {
+        throw new Error(
+          `[${teamName}] Persistent runtime termination could not be confirmed: ${
+            stop.reason ?? 'process_table_unreadable'
+          }`
+        );
+      }
+      if (stop?.confirmed) {
         // StopFlow calls this only after its tracked lead/lane stops also settle.
         // Persist gateway terminal facts while launch discovery is still available.
         await ports.confirmNativeTeamStopped?.(teamName);
+        if (confirmedStops.get(teamName) !== stop) {
+          throw new Error(`[${teamName}] Persistent runtime stop ownership changed`);
+        }
         try {
           ports.clearPersistedLiveRuntimeHandles?.(teamName);
         } catch (error) {

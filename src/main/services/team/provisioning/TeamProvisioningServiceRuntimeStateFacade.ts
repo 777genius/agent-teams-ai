@@ -185,6 +185,9 @@ export abstract class TeamProvisioningServiceRuntimeStateFacade extends TeamProv
         this.retainedProvisioningProgressState.getRetainedProvisioningProgressMap(),
     },
     ports: {
+      getSecondaryRuntimeRuns: (teamName) => this.secondaryRuntimeRunByTeam.get(teamName),
+      getStopAllTeamsGeneration: () => this.stopAllTeamsGeneration,
+      getStopTeamGeneration: (teamName) => this.getStopTeamGeneration(teamName),
       notifyTeamWatchScopeChanged,
       isTeamAlive: (teamName) => this.isTeamAlive(teamName),
       hasAlivePersistedTeamProcess: (teamName) =>

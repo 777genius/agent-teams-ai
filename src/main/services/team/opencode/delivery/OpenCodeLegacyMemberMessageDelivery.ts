@@ -32,6 +32,7 @@ export type OpenCodeLegacyMemberMessageDeliveryPorts = Pick<
 export async function deliverOpenCodeMemberMessageWithoutWatchdog(input: {
   ports: OpenCodeLegacyMemberMessageDeliveryPorts;
   assertCurrentRun: () => void;
+  onSubmitting: () => void;
   adapter: OpenCodeRuntimeMessageAdapter;
   message: OpenCodeMemberMessageDeliveryInput;
   teamName: string;
@@ -57,6 +58,7 @@ export async function deliverOpenCodeMemberMessageWithoutWatchdog(input: {
     memberName,
     send: async () => {
       input.assertCurrentRun();
+      input.onSubmitting();
       return await input.adapter.sendMessageToMember({
         ...(runtimeRunId ? { runId: runtimeRunId } : {}),
         teamName,

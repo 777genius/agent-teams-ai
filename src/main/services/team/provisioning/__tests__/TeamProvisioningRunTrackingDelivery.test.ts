@@ -34,7 +34,14 @@ function createHarness() {
     retainedProvisioningProgressByRunId: new Map<string, Pick<TeamProvisioningProgress, 'state'>>(),
     runtimeAdapterRunByTeam: new Map<string, { runId: string }>(),
   };
+  const secondaryRuns = new Map<
+    string,
+    import('../TeamProvisioningSecondaryRuntimeRuns').SecondaryRuntimeRunEntry
+  >();
   const ports = {
+    getSecondaryRuntimeRuns: () => secondaryRuns,
+    getStopAllTeamsGeneration: vi.fn(() => 0),
+    getStopTeamGeneration: vi.fn(() => 0),
     notifyTeamWatchScopeChanged: vi.fn(),
     isTeamAlive: vi.fn(() => false),
     hasAlivePersistedTeamProcess: vi.fn(() => false),
@@ -50,7 +57,7 @@ function createHarness() {
     liveRuntimeSnapshotCacheTtlMs: 2_000,
     persistedRuntimeSnapshotCacheTtlMs: 10_000,
   });
-  return { helper, ports, state };
+  return { helper, ports, state, secondaryRuns };
 }
 
 describe('TeamProvisioningRunTrackingDeliveryHelper', () => {
@@ -192,5 +199,55 @@ describe('TeamProvisioningRunTrackingDeliveryHelper', () => {
 
     expect(helper.resolveDeliverableTrackedRuntimeRunId('team')).toBe('new-owner-run');
     expect(helper.canDeliverToOpenCodeRuntimeForTeam('team')).toBe(true);
+  });
+});
+
+describe('intentional retained secondary delivery after failed primary rollback', () => {
+  it.each([
+    'owned',
+    'no fact',
+    'cancelled',
+    'killed',
+    'new owner',
+    'new lease',
+    'team Stop',
+    'Stop all',
+    'primary owner',
+  ])('admits only exact current retained ownership: %s', (scenario) => {
+    const h = createHarness();
+    const lane = {
+      providerId: 'opencode' as const,
+      laneId: 'secondary:opencode:bob',
+      runId: 'lane-run',
+      memberName: 'bob',
+    };
+    const owner = run('failed', {
+      retainedSecondaryDelivery: {
+        ownerRunId: 'owner',
+        stopAllTeamsGeneration: 0,
+        stopTeamGeneration: 0,
+        lanes: [lane],
+      },
+    });
+    h.state.runs.set('owner', owner);
+    h.state.provisioningRunByTeam.set('team', 'owner');
+    h.state.aliveRunByTeam.set('team', 'owner');
+    h.secondaryRuns.set(lane.laneId, lane);
+    if (scenario === 'no fact') delete owner.retainedSecondaryDelivery;
+    if (scenario === 'cancelled') owner.cancelRequested = true;
+    if (scenario === 'killed') owner.processKilled = true;
+    if (scenario === 'new owner') h.state.provisioningRunByTeam.set('team', 'new-owner');
+    if (scenario === 'new lease') h.secondaryRuns.set(lane.laneId, { ...lane, runId: 'new-lane' });
+    if (scenario === 'team Stop') h.ports.getStopTeamGeneration.mockReturnValue(1);
+    if (scenario === 'Stop all') h.ports.getStopAllTeamsGeneration.mockReturnValue(1);
+    if (scenario === 'primary owner')
+      h.state.runtimeAdapterRunByTeam.set('team', { runId: 'owner' });
+    expect(h.helper.canDeliverToTrackedRuntimeRun('team', 'owner', lane.laneId, lane.runId)).toBe(
+      scenario === 'owned'
+    );
+    expect(h.helper.canDeliverToOpenCodeRuntimeForTeam('team')).toBe(scenario === 'owned');
+    expect(h.helper.canDeliverToTrackedRuntimeRun('team', 'owner')).toBe(false);
+    expect(h.helper.canDeliverToTrackedRuntimeRun('team', 'owner', 'primary', 'owner')).toBe(false);
+    expect(h.helper.resolveDeliverableTrackedRuntimeRunId('team')).toBeNull();
   });
 });

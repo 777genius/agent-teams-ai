@@ -316,31 +316,11 @@
 }
 
 .kanban-column-glow {
-  background-image:
-    radial-gradient(
-      ellipse 150% 70% at 50% 0,
-      color-mix(in srgb, var(--kanban-column-accent) 8%, transparent) 0%,
-      color-mix(in srgb, var(--kanban-column-accent) 3%, transparent) 48%,
-      transparent 100%
-    ),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--kanban-column-accent) 6%, transparent) 0%,
-      color-mix(in srgb, var(--kanban-column-accent) 3.5%, transparent) 38%,
-      color-mix(in srgb, var(--kanban-column-accent) 1.5%, transparent) 76%,
-      transparent 100%
-    );
-  background-position: top center;
-  background-repeat: no-repeat;
+  background-color: color-mix(in srgb, var(--kanban-column-accent) 5%, transparent);
 }
 
 .kanban-column-header-glow {
-  background-image: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--kanban-column-accent) 8%, transparent) 0%,
-    color-mix(in srgb, var(--kanban-column-accent) 3%, transparent) 58%,
-    transparent 100%
-  );
+  background-image: none;
 }
 
 .kanban-task-card-toolbar button {

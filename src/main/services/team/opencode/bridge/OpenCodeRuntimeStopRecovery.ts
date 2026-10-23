@@ -1,3 +1,6 @@
+import { realpathSync } from 'fs';
+import path from 'path';
+
 import {
   type OpenCodeBridgePeerIdentity,
   type OpenCodeBridgeResult,
@@ -23,6 +26,21 @@ import type {
   OpenCodeBridgeCommandExecutor,
   OpenCodeBridgeHandshakePort,
 } from './OpenCodeStateChangingBridgeCommandService';
+
+function canonicalStopProjectPath(projectPath: string, retainedProjectPath?: string): string {
+  const resolved = path.normalize(path.resolve(projectPath.trim()));
+  try {
+    return path.normalize(realpathSync(resolved));
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException | null)?.code;
+    // An unavailable alias cannot identify its original directory again. Only
+    // already-retained canonical authority may supply that identity; a reachable
+    // retarget still resolves above and fails exact target equality.
+    if (['ENOENT', 'ENOTDIR', 'EACCES', 'ELOOP', 'EPERM'].includes(code ?? ''))
+      return retainedProjectPath ?? resolved;
+    throw error;
+  }
+}
 
 export function createStopTarget(
   input: {
@@ -56,6 +74,8 @@ export function createStopTarget(
         s.runId === input.runId
     )
   ) {
+    if (!input.cwd.trim())
+      throw new Error('Invalid original Stop identity; reconciliation unknown');
     target.runtimeTarget = parseRuntimeStopRequest({
       contractVersion: 1,
       originalRequestId: 'validation',
@@ -64,7 +84,10 @@ export function createStopTarget(
         teamId: input.teamName,
         laneId: input.laneId ?? 'primary',
         runId: input.runId,
-        projectPath: input.cwd,
+        // Launch stores the canonical filesystem identity. Admit that same
+        // identity before retaining the first request; recovery preserves exact
+        // equality with this target, including when only lexical fallback remains.
+        projectPath: canonicalStopProjectPath(input.cwd),
         capabilitySnapshotId: input.capabilitySnapshotId,
         expectedBehaviorFingerprint: input.behaviorFingerprint ?? manifest.behaviorFingerprint,
         members: sessions.map((s) => ({ memberName: s.memberName, sessionId: s.sessionId })),
@@ -79,12 +102,15 @@ export function runtimeStopRequest(
 ): RuntimeStopRequest {
   if (!target.runtimeTarget)
     throw new Error('Stop reconciliation unknown: incomplete original session target');
-  return parseRuntimeStopRequest({
+  const request = parseRuntimeStopRequest({
     contractVersion: 1,
     originalRequestId: entry.requestId,
     idempotencyKey: entry.idempotencyKey,
     target: target.runtimeTarget,
   });
+  if (canonicalStopProjectPath(target.cwd) !== request.target.projectPath)
+    throw new Error('Stop project identity mismatch; reconciliation unknown');
+  return request;
 }
 
 /** Lookup and current observation never dispatch Stop or rewrite a legacy completion. */
@@ -99,10 +125,28 @@ export async function recoverRuntimeStop<TData>(input: {
   timeoutMs: number;
   handshakeTimeoutMs?: number;
 }): Promise<OpenCodeBridgeResult<TData>> {
-  const { entry, current, manifest } = input;
+  const { entry, manifest } = input;
+  const retained = entry.stopTarget ?? entry.stopRecovery?.target;
+  // Rebuild only the canonical path lost with an unavailable alias. All other
+  // caller, generation and session bytes remain subject to exact target equality.
+  const current =
+    retained?.runtimeTarget &&
+    input.current.runtimeTarget &&
+    input.current.runtimeTarget.projectPath ===
+      path.normalize(path.resolve(input.current.cwd.trim()))
+      ? {
+          ...input.current,
+          runtimeTarget: {
+            ...input.current.runtimeTarget,
+            projectPath: canonicalStopProjectPath(
+              input.current.cwd,
+              retained.runtimeTarget.projectPath
+            ),
+          },
+        }
+      : input.current;
   if (entry.status === 'completed' && entry.stopRecovery)
     return recoverCompletedStop(entry, current, manifest);
-  const retained = entry.stopTarget;
   if (!retained?.runtimeTarget || !current.sessionIdentityHash)
     throw new Error('Stop reconciliation unknown: insufficient retained original target evidence');
   if (
@@ -113,13 +157,18 @@ export async function recoverRuntimeStop<TData>(input: {
     stableHash(retained) !== stableHash(current)
   )
     throw new Error('Stop original target mismatch; reconciliation required');
-  const request = runtimeStopRequest(entry, retained);
+  // The full current/retained comparison above authorizes this ledger identity,
+  // independently of an alias which may have disappeared since the first Stop.
+  const request = runtimeStopRequest(entry, {
+    ...retained,
+    cwd: retained.runtimeTarget.projectPath,
+  });
   const handshake = await input.handshakePort.handshake({
     requiredCommand: 'opencode.stopOutcome',
     expectedRunId: null,
     expectedCapabilitySnapshotId: null,
     expectedManifestHighWatermark: null,
-    cwd: retained.cwd,
+    cwd: request.target.projectPath,
     teamId: retained.teamName,
     laneId: retained.laneId,
     ...(input.handshakeTimeoutMs === undefined ? {} : { timeoutMs: input.handshakeTimeoutMs }),
@@ -145,7 +194,7 @@ export async function recoverRuntimeStop<TData>(input: {
     const result = await input.bridge.execute(
       command,
       { stopRecovery: request },
-      { cwd: retained.cwd, timeoutMs: input.timeoutMs, requestId }
+      { cwd: request.target.projectPath, timeoutMs: input.timeoutMs, requestId }
     );
     const parsed = parseSingleBridgeJsonResult<unknown>(JSON.stringify(result));
     if (

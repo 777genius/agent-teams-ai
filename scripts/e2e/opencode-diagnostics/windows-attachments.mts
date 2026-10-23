@@ -7,6 +7,7 @@ import { readFile, realpath, rm, writeFile, lstat, open } from 'node:fs/promises
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Cdp, waitFor } from '../release-updater/cdp.mts';
+import { WINDOWS_NATIVE_TEST_PIN } from './native-test-pin.mts';
 import type {
   AttachmentPayload,
   InboxMessage,
@@ -20,7 +21,7 @@ import type {
 } from '../../../src/shared/types/team.ts';
 
 const MODEL = 'openrouter/openai/gpt-5.4-mini';
-const NATIVE_SHA = '81bb8ddc61554dd8328fd1b69ef2411b54037c32838f8009b1066894696722e3';
+const NATIVE_SHA = WINDOWS_NATIVE_TEST_PIN.nativeExecutableSha256;
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const harness = path.join(repo, 'scripts/e2e/opencode-diagnostics-desktop.mjs');
 const hash = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
@@ -626,7 +627,7 @@ async function main() {
             host.hostKey === session.hostKey &&
             host.profileRootKey === session.profileRootKey &&
             host.projectPath === data.project &&
-            host.version === '1.19.3',
+            host.version === WINDOWS_NATIVE_TEST_PIN.version,
           'host-identity-mismatch'
         );
         const key = `${team}::${session.laneId}::${member}`,
@@ -1296,7 +1297,7 @@ async function main() {
       'native identity'
     );
     assert(
-      native.installed && native.version === '1.19.3',
+      native.installed && native.version === WINDOWS_NATIVE_TEST_PIN.version,
       `Managed native identity mismatch: ${JSON.stringify(native)}`
     );
     assert((await realpath(native.binaryPath)).startsWith(await realpath(data.userData)));

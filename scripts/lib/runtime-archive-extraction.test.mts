@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { runInNewContext } from 'node:vm';
+import { extractWindowsRuntimeZip } from './runtime-windows-zip-extraction.mts';
 import { assertSafeRuntimeZip } from './runtime-archive-extraction.mts';
 import {
   ambiguousDirectoryFixture,
@@ -188,6 +189,7 @@ test('Windows shared extraction rejects the link archive before invoking any ext
       fs,
       path,
       assertSafeRuntimeZip,
+      extractWindowsRuntimeZip,
       process: { platform: 'win32', env: { SystemRoot: 'C:\\Windows' } },
     }
   ) as Extract;
@@ -298,5 +300,17 @@ test('rejects central entry comments even without a second EOCD', () => {
   const bytes = Buffer.concat([original.subarray(0, end), Buffer.from('x'), footer]);
   archiveTest(bytes, (file) =>
     assert.throws(() => assertSafeRuntimeZip(file), /Malformed runtime ZIP/)
+  );
+});
+
+test('rejects consistently malformed UTF8 names but accepts an explicitly encoded replacement character', () => {
+  const bytes = zipFixture([{ name: 'runtime/x.txt', data: 'fixture' }]);
+  const central = bytes.readUInt32LE(bytes.length - 6);
+  const position = Buffer.byteLength('runtime/');
+  bytes[30 + position] = 0xff;
+  bytes[central + 46 + position] = 0xff;
+  archiveTest(bytes, (file) => assert.throws(() => assertSafeRuntimeZip(file), /malformed UTF-8/u));
+  archiveTest(zipFixture([{ name: 'runtime/\uFFFD.txt', data: 'fixture' }]), (file) =>
+    assert.doesNotThrow(() => assertSafeRuntimeZip(file))
   );
 });

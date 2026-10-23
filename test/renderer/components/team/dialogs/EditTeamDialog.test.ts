@@ -797,7 +797,7 @@ describe('EditTeamDialog', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
     vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
-    vi.mocked(api.teams.restartMember).mockResolvedValue(undefined);
+    vi.mocked(api.teams.restartMember).mockResolvedValue({ status: 'restarted' });
 
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -867,7 +867,7 @@ describe('EditTeamDialog', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
     vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
-    vi.mocked(api.teams.restartMember).mockResolvedValue(undefined);
+    vi.mocked(api.teams.restartMember).mockResolvedValue({ status: 'restarted' });
 
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -930,7 +930,7 @@ describe('EditTeamDialog', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
     vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
-    vi.mocked(api.teams.restartMember).mockResolvedValue(undefined);
+    vi.mocked(api.teams.restartMember).mockResolvedValue({ status: 'restarted' });
 
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -1000,7 +1000,7 @@ describe('EditTeamDialog', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
     vi.mocked(api.teams.replaceMembers).mockResolvedValue(undefined);
-    vi.mocked(api.teams.restartMember).mockResolvedValue(undefined);
+    vi.mocked(api.teams.restartMember).mockResolvedValue({ status: 'restarted' });
 
     const host = document.createElement('div');
     document.body.appendChild(host);

@@ -520,7 +520,11 @@ export class OpenCodeStateChangingBridgeCommandService {
           : null;
       const bodyWithPreconditions = attachBridgePreconditions(
         stopRequest
-          ? { ...(isRecord(commandBody) && commandBody), stopRecovery: stopRequest }
+          ? {
+              ...(isRecord(commandBody) && commandBody),
+              projectPath: stopRequest.target.projectPath,
+              stopRecovery: stopRequest,
+            }
           : commandBody,
         {
           handshakeIdentityHash: handshake.identityHash,
@@ -569,7 +573,7 @@ export class OpenCodeStateChangingBridgeCommandService {
         input.command,
         bodyWithPreconditions,
         {
-          cwd: input.cwd,
+          cwd: stopRequest?.target.projectPath ?? input.cwd,
           timeoutMs: input.timeoutMs,
           requestId: commandRequestId,
         }

@@ -1,4 +1,29 @@
+import { randomUUID } from 'node:crypto';
+
+import type { DirectRestartPromptInput } from './TeamProvisioningMemberLifecycleHostPorts';
 import type { InboxMessage } from '@shared/types';
+
+export function buildDirectRestartPromptMessage(input: DirectRestartPromptInput): InboxMessage {
+  const operation = input.operation ?? 'manual_restart';
+  const messageId = `direct-${operation}-${input.memberName}-${randomUUID()}`;
+  return {
+    from: input.leadName,
+    to: input.memberName,
+    text: input.prompt,
+    timestamp: new Date().toISOString(),
+    read: false,
+    source: 'system_notification',
+    leadSessionId: input.leadSessionId ?? undefined,
+    messageId,
+    // Each new runtime needs its own bootstrap even when control text repeats.
+    // Reusing this envelope still deduplicates by the same message identity.
+    conversationId: messageId,
+    summary:
+      operation === 'manual_restart'
+        ? `Restart bootstrap instructions for ${input.memberName}`
+        : `Bootstrap instructions for ${input.memberName}`,
+  };
+}
 
 export interface TeamProvisioningMessagePersistenceLogger {
   warn(message: string): void;

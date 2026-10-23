@@ -7,7 +7,9 @@ import { createOpenCodePromptDeliveryWatchdogSchedulerFromService } from '../Tea
 import { tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery } from '../TeamProvisioningOpenCodeRuntimeRecoveryFlow';
 import { TeamProvisioningRunTrackingDeliveryHelper } from '../TeamProvisioningRunTrackingDelivery';
 
+import type { OpenCodeRetainedSecondaryDelivery } from '../OpenCodeRetainedSecondaryOwnership';
 import type { OpenCodeRuntimeLaneRecoveryPorts } from '../TeamProvisioningOpenCodeRuntimeRecoveryFlow';
+import type { SecondaryRuntimeRunEntry } from '../TeamProvisioningSecondaryRuntimeRuns';
 import type { TeamProvisioningProgress } from '@shared/types';
 
 const input = {
@@ -27,6 +29,7 @@ const unread = {
 
 function createHarness() {
   const run = {
+    retainedSecondaryDelivery: undefined as OpenCodeRetainedSecondaryDelivery | undefined,
     processKilled: false,
     cancelRequested: false,
     progress: { state: 'verifying' as TeamProvisioningProgress['state'] },
@@ -34,16 +37,22 @@ function createHarness() {
   };
   const runs = new Map([['root-run-1', run]]);
   const provisioningRunByTeam = new Map([[input.teamName, 'root-run-1']]);
+  const aliveRunByTeam = new Map<string, string>();
+  const secondaryRuns = new Map<string, SecondaryRuntimeRunEntry>();
+  let stopGeneration = 0;
   const runTracking = new TeamProvisioningRunTrackingDeliveryHelper({
     state: {
       runs,
       provisioningRunByTeam,
-      aliveRunByTeam: new Map(),
+      aliveRunByTeam,
       runtimeAdapterRunByTeam: new Map(),
       runtimeAdapterProgressByRunId: new Map(),
       getRetainedProvisioningProgressMap: () => new Map(),
     },
     ports: {
+      getSecondaryRuntimeRuns: () => secondaryRuns,
+      getStopAllTeamsGeneration: () => 0,
+      getStopTeamGeneration: () => stopGeneration,
       isTeamAlive: () => false,
       hasAlivePersistedTeamProcess: () => false,
       hasOnlyExplicitlyStoppedPersistedTeamProcesses: () => false,
@@ -136,6 +145,11 @@ function createHarness() {
     coordinator,
     scheduler,
     runTracking,
+    aliveRunByTeam,
+    secondaryRuns,
+    stop: () => {
+      stopGeneration += 1;
+    },
     run,
     runs,
     provisioningRunByTeam,
@@ -226,3 +240,48 @@ describe('OpenCode bootstrap delivery while the lead is finalizing', () => {
     expect(h.relay).not.toHaveBeenCalled();
   });
 });
+
+it.each([false, true])(
+  'real watchdog retains secondary delivery after failed primary, Stop=%s',
+  async (stopped) => {
+    vi.useFakeTimers();
+    const h = createHarness();
+    const lane = {
+      providerId: 'opencode' as const,
+      laneId: input.laneId,
+      runId: input.runId,
+      memberName: input.memberName,
+    };
+    h.run.progress.state = 'failed';
+    h.run.retainedSecondaryDelivery = {
+      ownerRunId: 'root-run-1',
+      stopAllTeamsGeneration: 0,
+      stopTeamGeneration: 0,
+      lanes: [lane],
+    };
+    h.aliveRunByTeam.set(input.teamName, 'root-run-1');
+    h.secondaryRuns.set(input.laneId, lane);
+    h.scheduler.schedule({
+      teamName: input.teamName,
+      memberName: input.memberName,
+      messageId: unread.messageId,
+      delayMs: 500,
+    });
+    if (stopped) {
+      h.stop();
+      h.recover.mockResolvedValue(false);
+    }
+    await vi.advanceTimersByTimeAsync(500);
+    expect(h.relay).toHaveBeenCalledTimes(stopped ? 0 : 1);
+    if (!stopped) expect(h.recover).not.toHaveBeenCalled();
+    expect(h.run.progress.state).toBe('failed');
+    expect(
+      h.runTracking.canDeliverToTrackedRuntimeRun(
+        input.teamName,
+        'root-run-1',
+        'primary',
+        'root-run-1'
+      )
+    ).toBe(false);
+  }
+);

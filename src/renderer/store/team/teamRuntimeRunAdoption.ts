@@ -170,3 +170,20 @@ export function projectIncomingMemberSpawnSnapshot(input: {
     },
   };
 }
+
+/** A failed primary does not revoke live members of the same owned aggregate. */
+export function retainTerminalMemberSpawnStatuses(
+  statuses: Record<string, MemberSpawnStatusEntry>,
+  progress: TeamProvisioningProgress,
+  currentRuntimeRunId: string | null | undefined
+): Record<string, MemberSpawnStatusEntry> {
+  const retainLive =
+    progress.state === 'failed' &&
+    progress.retainedSecondaryRuntime === true &&
+    currentRuntimeRunId === progress.runId;
+  return Object.fromEntries(
+    Object.entries(statuses).filter(
+      ([, entry]) => entry.status === 'error' || (retainLive && entry.runtimeAlive === true)
+    )
+  );
+}

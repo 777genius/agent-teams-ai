@@ -36,7 +36,7 @@ export function getStoredTeamModel(providerId: TeamProviderId): string {
 
 export function getStoredTeamFastMode(): TeamFastMode {
   const stored = localStorage.getItem('team:lastSelectedFastMode');
-  return stored === 'on' || stored === 'off' || stored === 'inherit' ? stored : 'inherit';
+  return stored === 'on' || stored === 'off' || stored === 'inherit' ? stored : 'off';
 }
 
 export function getProviderLabel(providerId: TeamProviderId): string {

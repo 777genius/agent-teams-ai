@@ -104,6 +104,7 @@ function createHarness(input: {
       metaMember: { name: MEMBER, providerId: 'opencode' as const },
       memberRuntimeCwd: input.ledgerDir,
     })),
+    isMemberLifecycleOperationActive: () => false,
     stoppingSecondaryRuntimeTeams: { has: () => false },
     readPersistedTeamProjectPath: vi.fn(() => input.ledgerDir),
     resolveDeliverableTrackedRuntimeRunId: vi.fn(() => 'run-1'),
