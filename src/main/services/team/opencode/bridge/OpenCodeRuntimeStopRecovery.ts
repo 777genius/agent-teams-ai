@@ -122,10 +122,14 @@ export async function recoverRuntimeStop<TData>(input: {
   handshakePort: OpenCodeBridgeHandshakePort;
   bridge: OpenCodeBridgeCommandExecutor;
   ledger: OpenCodeBridgeCommandLedger;
+  /** Budget of the whole recovery, not of each bridge call it makes. */
   timeoutMs: number;
-  handshakeTimeoutMs?: number;
 }): Promise<OpenCodeBridgeResult<TData>> {
   const { entry, manifest } = input;
+  // The handshake and both queries draw from one deadline, so a slow handshake
+  // or outcome lookup cannot hand the next call a fresh copy of the budget.
+  const deadlineMs = Date.now() + input.timeoutMs;
+  const remainingMs = () => Math.max(1, deadlineMs - Date.now());
   const retained = entry.stopTarget ?? entry.stopRecovery?.target;
   // Rebuild only the canonical path lost with an unavailable alias. All other
   // caller, generation and session bytes remain subject to exact target equality.
@@ -171,7 +175,7 @@ export async function recoverRuntimeStop<TData>(input: {
     cwd: request.target.projectPath,
     teamId: retained.teamName,
     laneId: retained.laneId,
-    ...(input.handshakeTimeoutMs === undefined ? {} : { timeoutMs: input.handshakeTimeoutMs }),
+    timeoutMs: remainingMs(),
   });
   const validation = validateOpenCodeBridgeHandshake({
     handshake,
@@ -194,7 +198,7 @@ export async function recoverRuntimeStop<TData>(input: {
     const result = await input.bridge.execute(
       command,
       { stopRecovery: request },
-      { cwd: request.target.projectPath, timeoutMs: input.timeoutMs, requestId }
+      { cwd: request.target.projectPath, timeoutMs: remainingMs(), requestId }
     );
     const parsed = parseSingleBridgeJsonResult<unknown>(JSON.stringify(result));
     if (

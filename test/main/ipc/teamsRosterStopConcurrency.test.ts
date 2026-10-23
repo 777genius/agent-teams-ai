@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import * as stopFlows from '../../../src/main/services/team/lifecycle/teamForceStopFlow';
-import { projectOpenCodeStateChangingFailure } from '../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+import { projectOpenCodeStateChangingFailure } from '../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingCausalFailure';
 import { OpenCodeRuntimeStopUnconfirmedError } from '../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 
 vi.mock('electron', () => ({

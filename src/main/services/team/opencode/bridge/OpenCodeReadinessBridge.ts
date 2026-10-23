@@ -30,11 +30,11 @@ import {
   resolveOpenCodeReadinessTimeoutMs,
 } from './OpenCodeReadinessTimeoutPolicy';
 import { executeOpenCodeStartupCleanup } from './OpenCodeStartupCleanupBridge';
+import { type OpenCodeStateChangingBridgeCommandService } from './OpenCodeStateChangingBridgeCommandService';
 import {
-  type OpenCodeStateChangingBridgeCommandService,
   ownedOpenCodeStateChangingFailure,
   projectOpenCodeStateChangingFailure,
-} from './OpenCodeStateChangingBridgeCommandService';
+} from './OpenCodeStateChangingCausalFailure';
 
 import type { OpenCodeTeamRuntimeBridgePort } from '../../runtime/OpenCodeTeamRuntimeAdapter';
 import type { OpenCodeTeamLaunchReadiness } from '../readiness/OpenCodeTeamLaunchReadiness';
