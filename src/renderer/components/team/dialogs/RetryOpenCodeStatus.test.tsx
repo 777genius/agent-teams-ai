@@ -95,6 +95,7 @@ it('retries only an eligible project failure on an explicit click, without an au
 
 it('keeps the provider summary visible and offers retry only when OpenCode is selected', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  fetchCliProviderStatus.mockReset().mockResolvedValue(false);
   const host = document.createElement('div');
   const root = createRoot(host);
   const props: ComponentProps<typeof CreateTeamProviderStatusStrip> = {
@@ -119,6 +120,34 @@ it('keeps the provider summary visible and offers retry only when OpenCode is se
       expect(host.querySelector('p')?.textContent).toBe('Selected providers');
       expect(Boolean(host.querySelector('button'))).toBe(providerIds[0] === 'opencode');
     }
+    await act(async () =>
+      root.render(
+        <CreateTeamProviderStatusStrip
+          {...props}
+          providerIds={['opencode']}
+          forceLoadingProviderIds={['opencode']}
+        />
+      )
+    );
+    expect(host.querySelector('button')!.disabled).toBe(true);
+    await act(async () => host.querySelector('button')!.click());
+    expect(fetchCliProviderStatus).not.toHaveBeenCalled();
+
+    const renderReady = async (): Promise<void> => {
+      await act(async () =>
+        root.render(<CreateTeamProviderStatusStrip {...props} providerIds={['opencode']} />)
+      );
+    };
+    await renderReady();
+    expect(host.querySelector('button')!.disabled).toBe(false);
+    await act(async () => host.querySelector('button')!.click());
+    expect(fetchCliProviderStatus).toHaveBeenCalledExactlyOnceWith('opencode', {
+      projectPath: props.projectPath,
+      silent: false,
+      checkReason: 'manual_refresh',
+    });
+    await renderReady();
+    expect(fetchCliProviderStatus).toHaveBeenCalledTimes(1);
   } finally {
     await act(async () => root.unmount());
     vi.unstubAllGlobals();

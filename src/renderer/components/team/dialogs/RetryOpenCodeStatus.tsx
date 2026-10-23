@@ -25,7 +25,10 @@ export const CreateTeamProviderStatusStrip = ({
       <RetryOpenCodeStatus
         projectPath={projectPath}
         providerStatus={stripProps.providerStatusOverride ?? null}
-        loading={stripProps.cliProviderStatusLoading.opencode === true}
+        loading={
+          stripProps.cliProviderStatusLoading.opencode === true ||
+          stripProps.forceLoadingProviderIds?.includes('opencode') === true
+        }
         disabled={disabled}
       />
     ) : null}
