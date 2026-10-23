@@ -84,7 +84,10 @@ describe('closed run-control pump failure projection', () => {
   it('publishes the closed projection in the failure capture proof', async () => {
     const source = await readFile(harness, 'utf8');
     expect(source).toContain('pumpFailure: null as null |');
-    expect(source).toContain('proof.pumpFailure = await readRunControlPumpFailure(');
+    // Read for every failed V2 run, not only when a native transcript session exists.
+    expect(source).toMatch(
+      /if \(version\.startsWith\('2\.'\) && proof\.runIds\.length\) \{[^}]*proof\.pumpFailure = await Promise\.race\(\[\s*readRunControlPumpFailure\(/
+    );
     expect(source).toContain("path.join(dataRoot, 'opencode', 'v2', 'runs')");
   });
 });

@@ -1253,6 +1253,9 @@ it('keeps only the closed native stage token on returned dispatch failures', asy
     sdkCode: 'run_control_process_identity', nativeStage: 'PRIVATE TOKEN' } } as never);
   expect(dropped?.bridgeFailure).not.toHaveProperty('nativeStage');
   expect(dropped?.bridgeFailure).toMatchObject({ sdkCode: 'run_control_process_identity' });
+  for (const nativeStage of ['a', 'x'.repeat(91)])
+    expect(project({ phase: 'dispatch', bridgeFailure: { kind: 'runtime_not_ready',
+      sdkCode: 'run_control_process_identity', nativeStage } } as never)?.bridgeFailure).not.toHaveProperty('nativeStage');
 });
 
 it('pins the exact durable comment expectation and its closed mismatch classification', async () => {

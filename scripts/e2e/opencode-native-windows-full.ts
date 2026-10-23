@@ -151,10 +151,21 @@ async function readRunControlJson(directory: string, name: string, limit: number
     if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || before.size > BigInt(limit) ||
       (await realpath(file)) !== file)
       return null;
-    const value: unknown = JSON.parse(await readFile(file, 'utf8'));
-    return value && typeof value === 'object' && !Array.isArray(value)
-      ? (value as Record<string, unknown>)
-      : null;
+    const held = await open(file, 'r');
+    try {
+      const bytes = Buffer.alloc(limit + 1),
+        result = await held.read(bytes, 0, bytes.length, 0);
+      const after = await held.stat({ bigint: true });
+      if (result.bytesRead > limit || after.dev !== before.dev || after.ino !== before.ino ||
+        after.size !== before.size || after.mtimeNs !== before.mtimeNs)
+        return null;
+      const value: unknown = JSON.parse(bytes.subarray(0, result.bytesRead).toString('utf8'));
+      return value && typeof value === 'object' && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : null;
+    } finally {
+      await held.close();
+    }
   } catch {
     return null;
   }
@@ -1054,10 +1065,19 @@ async function commandEvidence(
     'actor/session-scoped genuine command evidence',
     180_000
   ).catch(async (error: unknown) => {
+    // Observation only and bounded: never masks or stalls the original gate failure.
+    let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-      const { observation } = await readStopObservation(app);
+      const { observation } = await Promise.race([
+        readStopObservation(app),
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => reject(new Error('TEST liveness observation expired')), 10_000);
+        }),
+      ]);
       commandEvidenceLivenessRows.push({ member, observation });
-    } catch { /* Observation only: never masks the original gate failure. */ }
+    } catch { /* Missing observation stays absent. */ } finally {
+      clearTimeout(timer);
+    }
     throw error;
   });
 }
@@ -1143,9 +1163,16 @@ async function exactFile(project: string, name: string, expected?: string) {
   if (expected !== undefined) assert.equal(bytes.toString(), expected);
   return createHash('sha256').update(bytes).digest('hex');
 }
+/** Failure-only facts under the same predicates as exactFile; an agent-written
+ * link, alias or oversized file is never read and never reported as exact. */
 async function resultFileFacts(project: string, name: string, expected: string) {
   try {
-    const bytes = await readFile(path.join(project, name));
+    const file = path.join(project, name);
+    const stat = await lstat(file);
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 ||
+      stat.size > Buffer.byteLength(expected))
+      return { name, present: true, exact: false };
+    const bytes = await readFile(file);
     return { name, present: true, exact: bytes.toString() === expected };
   } catch {
     return { name, present: false, exact: false };
@@ -2829,15 +2856,26 @@ async function main() {
           !!error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT');
         await unlink(bunConfig).catch(() => undefined);
       }
-      if (proof.runIds.length) {
-        // The server-side request pump publishes its terminal failure only into
-        // run-control operation-failure.json. Project its closed facts into the
-        // proof; a missing, foreign or non-closed record stays null and neither
-        // the timestamp nor any raw string crosses into the proof.
-        proof.pumpFailure = await readRunControlPumpFailure(
-          desktop.env.CLAUDE_MULTIMODEL_DATA_HOME!, desktop.teamName, proof.runIds.at(-1)!);
-        await checkpoint(proof.stage);
+    }
+    if (version.startsWith('2.') && proof.runIds.length) {
+      // The server-side request pump publishes its terminal failure only into
+      // run-control operation-failure.json, also before any task or native
+      // session exists. Project its closed facts into the proof; a missing,
+      // foreign, non-closed or slow record stays null and neither the timestamp
+      // nor any raw string crosses into the proof.
+      let pumpTimer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        proof.pumpFailure = await Promise.race([
+          readRunControlPumpFailure(
+            desktop.env.CLAUDE_MULTIMODEL_DATA_HOME!, desktop.teamName, proof.runIds.at(-1)!),
+          new Promise<null>((resolve) => {
+            pumpTimer = setTimeout(() => resolve(null), 8000);
+          }),
+        ]);
+      } finally {
+        clearTimeout(pumpTimer);
       }
+      await checkpoint(proof.stage);
     }
     if (version.startsWith('1.') && sdk === 'bundled' && failedTask && nativeSession) {
       // Read the exact native persistence through existing SDK parser modules,

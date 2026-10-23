@@ -129,7 +129,7 @@ export function projectIpcCausalFailure(value: unknown): NativeCausalFailure | n
   const handshakeShape = (['code', 'lock_operation', 'unclassified'] as const).find(value => value === own(handshake, 'messageShape'));
   const handshakeStageRaw = own(handshake, 'nativeStage');
   const nativeStage =
-    typeof handshakeStageRaw === 'string' && /^[a-z_]{1,90}$/.test(handshakeStageRaw)
+    typeof handshakeStageRaw === 'string' && /^[a-z_]{2,90}$/.test(handshakeStageRaw)
       ? handshakeStageRaw
       : undefined;
   const kind = ['unsupported_schema', 'unsupported_command', 'invalid_input', 'runtime_not_ready', 'provider_error',
