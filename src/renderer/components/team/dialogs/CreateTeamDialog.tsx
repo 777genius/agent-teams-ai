@@ -109,10 +109,6 @@ import {
 } from './createTeamOrganizationPlacement';
 import { CreateTeamPromptField } from './CreateTeamPromptField';
 import { sanitizeTeamName, validateRequest } from './createTeamSubmissionValidation';
-import {
-  type CreateTeamTemplateSource,
-  readStoredTemplateSelection,
-} from './createTeamTemplateSelectionRestore';
 import { buildProviderModelChecksMap } from './defaultModelSelection';
 import {
   cancelScheduledIdleSet,
@@ -179,6 +175,7 @@ import {
 import { TeammateRuntimeCompatibilityNotice } from './TeammateRuntimeCompatibilityNotice';
 import { computeEffectiveTeamModel } from './TeamModelSelector';
 import { getNextSuggestedTeamName } from './teamNameSets';
+import { useCreateTeamTemplateSelection } from './useCreateTeamTemplateSelection';
 import { useCustomProjectFolder } from './useCustomProjectFolder';
 import { useMemberWorkspaceInfo } from './useMemberWorkspaceInfo';
 import { useOpenCodeLocalModelScope } from './useOpenCodeLocalModelScope';
@@ -367,9 +364,10 @@ export const CreateTeamDialog = ({
   const {
     templateSelectionDraft,
     appliedTemplateSource,
+    setAppliedTemplateSource,
     storedTemplateSelection,
     clearTemplateSelection,
-  } = useCreateTeamTemplateSelection({ initialData });
+  } = useCreateTeamTemplateSelection({ initialData: Boolean(initialData) });
   const [projects, setProjects] = useState<ProjectPathProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);

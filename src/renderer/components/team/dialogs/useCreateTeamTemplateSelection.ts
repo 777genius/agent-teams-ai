@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 
 import {
-  readStoredTemplateSelection,
   type CreateTeamTemplateSource,
+  readStoredTemplateSelection,
   type StoredTemplateSelection,
 } from './createTeamTemplateSelectionRestore';
 
@@ -30,6 +30,9 @@ export interface UseCreateTeamTemplateSelectionResult {
   /** Template source that prefilled the current form; keeps the prompt field
    * visible for template-driven config-only creation (`launchTeam=false`). */
   appliedTemplateSource: CreateTeamTemplateSource;
+  /** Records the applied template source without re-applying template
+   * content, so apply/restore never overwrites user edits. */
+  setAppliedTemplateSource: (source: CreateTeamTemplateSource) => void;
   /** Parsed selection (`source` + `value`) from the persisted draft, or the
    * empty/invalid defaults. */
   storedTemplateSelection: StoredTemplateSelection;
@@ -79,6 +82,7 @@ export function useCreateTeamTemplateSelection({
   return {
     templateSelectionDraft,
     appliedTemplateSource,
+    setAppliedTemplateSource,
     storedTemplateSelection,
     clearTemplateSelection,
   };
