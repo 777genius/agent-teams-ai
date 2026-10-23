@@ -488,6 +488,35 @@ describe('secondary delivery waiting for a native bootstrap commit', () => {
     }
   });
 
+  it('does not restore a consumed lane ticket after the provider has accepted a revoked scoped send', async () => {
+    const h = harness();
+    h.commit();
+    let current = true;
+    const restore = vi.fn();
+    const consumed = vi.fn(() => ({}));
+    const gate = vi
+      .spyOn(memberWorkSync, 'gateOpenCodeWorkSyncLaneDelivery')
+      .mockResolvedValueOnce({ restore, consumeForSend: consumed });
+    h.send.mockImplementationOnce(async () => {
+      current = false;
+      return acceptedResult('Muse');
+    });
+    try {
+      await h.service.deliver('team-a', {
+        ...h.message,
+        messageKind: 'member_work_sync_nudge',
+        workSyncRuntimeTicketId: 'ticket',
+        isCurrent: () => current,
+      });
+      expect(consumed).toHaveBeenCalledTimes(1);
+      expect(h.send).toHaveBeenCalledTimes(1);
+      expect(restore).not.toHaveBeenCalled();
+    } finally {
+      gate.mockRestore();
+      h.scheduler.cancelTeam('team-a');
+    }
+  });
+
   it('restores a lane ticket before scheduling a bootstrap-pending retry', async () => {
     const h = harness();
     const restore = vi.fn();

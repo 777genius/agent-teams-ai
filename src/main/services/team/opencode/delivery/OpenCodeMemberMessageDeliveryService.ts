@@ -461,7 +461,7 @@ export class OpenCodeMemberMessageDeliveryService {
     }
 
     const assertCurrentRun = (): void => {
-      assertAuthorized(restoreConsumedLane);
+      assertAuthorized();
       const current =
         laneIdentity.laneKind === 'primary'
           ? this.deps.resolveDeliverableTrackedRuntimeRunId(teamName)
