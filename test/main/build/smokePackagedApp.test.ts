@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { execFile, execFileSync, spawnSync } from 'node:child_process';
+import { execFile, execFileSync, spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import os from 'node:os';
@@ -206,6 +206,44 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
         fs.rmSync(sandbox, { recursive: true, force: true });
       }
     }, 16_000
+  );
+
+  it.skipIf(process.platform !== 'linux')(
+    'treats a same-uid non-dumpable process as unowned instead of failing the census',
+    async () => {
+      const child = spawn(
+        'python3',
+        ['-c', 'import ctypes,time;ctypes.CDLL(None).prctl(4,0);time.sleep(60)'],
+        { stdio: 'ignore' }
+      );
+      try {
+        let control = 'timeout';
+        const deadline = Date.now() + 5_000;
+        while (Date.now() < deadline) {
+          try {
+            fs.readFileSync(`/proc/${child.pid}/environ`);
+            control = 'readable';
+          } catch (error) {
+            control = (error as NodeJS.ErrnoException).code ?? 'unknown';
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        expect(control).toBe('EACCES');
+        const { createPackagedSmokeOwnership } = requireFromTest(
+          '../../../scripts/electron-builder/packagedSmokeOwnedProcesses.ts'
+        ) as {
+          createPackagedSmokeOwnership(options?: {
+            timeoutMs?: number;
+          }): { begin(): { pid: number }[] };
+        };
+        const ownership = createPackagedSmokeOwnership({ timeoutMs: 10_000 });
+        expect(ownership.begin().some((entry) => entry.pid === child.pid)).toBe(false);
+      } finally {
+        child.kill('SIGKILL');
+      }
+    },
+    15_000
   );
 
   it.each(['app-success', 'app-failure', 'mcp-success', 'mcp-failure', 'owner-exited', 'delayed-kill'])(

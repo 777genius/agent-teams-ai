@@ -139,6 +139,12 @@ export function createPackagedSmokeOwnership(
     } catch (error) {
       if (error instanceof CensusDeadlineError) throw error;
       if (gone(error)) return undefined;
+      // Same-uid non-dumpable processes (Chromium zygote/crashpad) deny environ reads; treat as not owned.
+      if (
+        stage === 'open' &&
+        ['EACCES', 'EPERM'].includes((error as NodeJS.ErrnoException).code ?? '')
+      )
+        return undefined;
       throw environmentInspectionError(pid, stage, error);
     } finally {
       if (descriptor !== undefined) {
