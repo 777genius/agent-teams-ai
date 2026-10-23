@@ -63,10 +63,20 @@ describe('bundled runtime smoke contract', () => {
     const ledger = new DefaultProcessLedger();
     const child = spawn(
       process.execPath,
-      ['-e', "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000);"],
-      { stdio: 'ignore' }
+      [
+        '-e',
+        "process.on('SIGTERM', () => {}); process.stdout.write('ready'); setInterval(() => {}, 1000);",
+      ],
+      { stdio: ['ignore', 'pipe', 'ignore'] }
     );
     try {
+      // A slow child could take the graceful SIGTERM before its handler exists
+      // and die without exercising the escalation pass.
+      await new Promise<void>((resolve, reject) => {
+        child.once('error', reject);
+        child.once('exit', () => reject(new Error('TERM-resistant fixture exited before ready')));
+        child.stdout.once('data', () => resolve());
+      });
       await ledger.register(child);
       const stopped = await ledger.stop();
       expect(stopped.remaining).toEqual([]);
