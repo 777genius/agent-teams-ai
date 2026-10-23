@@ -166,6 +166,35 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     expect(ports.clearPersistedLiveRuntimeHandles).toHaveBeenCalledWith('team-a');
   });
 
+  it('retains an outstanding descendant receipt across repeated Stop until its captured child exits', async () => {
+    let childAlive = true;
+    const confirmStopped = vi.fn(async () => !childAlive);
+    const killOrphaned = vi
+      .fn<Ports['killOrphanedTeamAgentProcesses']>()
+      .mockReturnValueOnce({ confirmStopped })
+      .mockReturnValue(true); // Root is now gone: rediscovery alone would falsely confirm.
+    const confirmNativeTeamStopped = vi.fn(async () => undefined);
+    const cleanup = createTeamProvisioningPersistentRuntimeCleanup(
+      createPorts({
+        killOrphanedTeamAgentProcesses: killOrphaned,
+        confirmNativeTeamStopped,
+      })
+    );
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(false);
+      await expect(
+        cleanup.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam('team-a')
+      ).rejects.toThrow('termination could not be confirmed');
+    }
+    expect(killOrphaned).toHaveBeenCalledTimes(1);
+    expect(confirmNativeTeamStopped).not.toHaveBeenCalled();
+    childAlive = false;
+    expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(false);
+    await cleanup.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam('team-a');
+    expect(killOrphaned).toHaveBeenCalledTimes(1);
+    expect(confirmNativeTeamStopped).toHaveBeenCalledTimes(1);
+  });
+
   it('does not replace a newer stop receipt with a delayed earlier confirmation', async () => {
     let release!: (confirmed: boolean) => void;
     const pending = new Promise<boolean>((resolve) => {

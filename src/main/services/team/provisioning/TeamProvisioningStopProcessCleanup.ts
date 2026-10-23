@@ -63,7 +63,7 @@ interface OrphanedProcessStopPorts {
 }
 
 const ORPHAN_EXIT_TIMEOUT_MS = 5_000;
-const ORPHAN_EXIT_POLL_MS = 50;
+const ORPHAN_EXIT_POLL_MS = 250;
 
 export function killOrphanedTeamAgentProcesses(
   input: {
@@ -93,19 +93,17 @@ export function killOrphanedTeamAgentProcesses(
       for (const identity of tree.identities) captured.set(identity.pid, identity);
     }
   }
-  let signalFailed = false;
-  for (const pid of targetPids) {
+  const signalPids = process.platform === 'win32' ? targetPids : captured.keys();
+  for (const pid of signalPids) {
     try {
       if (process.platform !== 'win32') {
         const current = ports.readIdentities();
         if (!current) {
-          signalFailed = true;
           continue;
         }
         if (!current.has(pid)) continue;
         const expected = captured.get(pid);
         if (!expected || !isSameUnixProcessIdentity(expected, current.get(pid))) {
-          signalFailed = true;
           continue;
         }
       }
@@ -114,7 +112,6 @@ export function killOrphanedTeamAgentProcesses(
         `[${input.teamName}] Signalled orphaned teammate process pid=${pid} during stop`
       );
     } catch (error) {
-      signalFailed = true;
       input.logger.debug(
         `[${input.teamName}] Failed to kill orphaned teammate process pid=${pid}: ${
           error instanceof Error ? error.message : String(error)
@@ -124,7 +121,9 @@ export function killOrphanedTeamAgentProcesses(
   }
   // Windows' legacy taskkill helper is fire-and-forget and has no captured
   // birth identities here. Preserve its honest refusal rather than infer exit.
-  if (process.platform === 'win32' || signalFailed) return false;
+  if (process.platform === 'win32') return false;
+  // Even a partially failed dispatch retains its captured identities for retries.
+  // Observation may confirm their eventual exit but never grants another signal.
   return {
     async confirmStopped() {
       const deadline = Date.now() + ORPHAN_EXIT_TIMEOUT_MS;

@@ -42,6 +42,7 @@ export function createTeamProvisioningPersistentRuntimeCleanup(
   const confirmedStops = new Map<string, StopConfirmation>();
   return {
     stopPersistentTeamMembers(teamName) {
+      const previous = confirmedStops.get(teamName);
       const stop: StopConfirmation = { confirmed: false, panesConfirmed: false };
       confirmedStops.set(teamName, stop);
       const members = ports.readPersistedRuntimeMembers(teamName);
@@ -49,10 +50,11 @@ export function createTeamProvisioningPersistentRuntimeCleanup(
       if (members.length > 0) {
         panesConfirmed = ports.killPersistedPaneMembers(teamName, members);
       }
-      const processesConfirmed = ports.killOrphanedTeamAgentProcesses(
-        teamName,
-        ports.getCurrentRunPid(teamName)
-      );
+      // An outstanding receipt owns descendants even after its matching root exits.
+      // Retry observes that same capture; it cannot forget it or replay its signals.
+      const processesConfirmed =
+        previous?.pending ??
+        ports.killOrphanedTeamAgentProcesses(teamName, ports.getCurrentRunPid(teamName));
       stop.panesConfirmed = panesConfirmed;
       stop.confirmed = panesConfirmed && processesConfirmed === true;
       if (typeof processesConfirmed !== 'boolean') stop.pending = processesConfirmed;

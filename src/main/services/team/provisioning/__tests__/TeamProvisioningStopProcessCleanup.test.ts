@@ -68,7 +68,7 @@ describe.skipIf(process.platform === 'win32')('owned orphan stop confirmation', 
     const confirmed = pending.confirmStopped();
     readRows.mockReturnValue([]);
     readIdentities.mockReturnValue(new Map());
-    await vi.advanceTimersByTimeAsync(50);
+    await vi.advanceTimersByTimeAsync(250);
     await expect(confirmed).resolves.toBe(true);
     expect(killPid.mock.calls).toEqual([[41]]);
   });
@@ -104,6 +104,36 @@ describe.skipIf(process.platform === 'win32')('owned orphan stop confirmation', 
     await vi.advanceTimersByTimeAsync(5_000);
     await expect(confirmed).resolves.toBe(false);
     expect(killPid.mock.calls).toEqual([[41]]);
+  });
+
+  it('signals each captured descendant once in deepest-first order and retains a surviving child', async () => {
+    vi.useFakeTimers();
+    const child = { ...identity, pid: 42, parentPid: 41, startIdentity: 'test:child' };
+    const grandchild = { ...identity, pid: 43, parentPid: 42, startIdentity: 'test:grandchild' };
+    const table = new Map([
+      [41, identity],
+      [42, child],
+      [43, grandchild],
+    ]);
+    const readIdentities = vi.fn(() => table);
+    const killPid = vi.fn();
+    const pending = killOrphanedTeamAgentProcesses(
+      { teamName: 'TEST-owned', logger },
+      {
+        readRows: () => [{ pid: 41, command: 'node --team-name TEST-owned --agent-id bob' }],
+        readIdentities,
+        killPid,
+      }
+    );
+    if (typeof pending === 'boolean') throw new Error('Expected captured pending stop');
+    expect(killPid.mock.calls).toEqual([[43], [42], [41]]);
+    readIdentities.mockReturnValue(new Map([[42, child]]));
+    const first = pending.confirmStopped();
+    await vi.advanceTimersByTimeAsync(5_000);
+    await expect(first).resolves.toBe(false);
+    readIdentities.mockReturnValue(new Map());
+    await expect(pending.confirmStopped()).resolves.toBe(true);
+    expect(killPid.mock.calls).toEqual([[43], [42], [41]]);
   });
 
   it('never signals a target whose birth identity cannot be captured', () => {
