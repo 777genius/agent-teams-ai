@@ -206,7 +206,9 @@ function extendDeliveryTurnAcrossTaskLifecycle(
   let terminalEndIndex = -1;
   let terminalRootUuid: string | null = null;
   for (const message of messages) {
-    if (!message.toolCalls.some((toolCall) => terminalMarkerCallReferencesTask(toolCall, taskRefs))) {
+    if (
+      !message.toolCalls.some((toolCall) => terminalMarkerCallReferencesTask(toolCall, taskRefs))
+    ) {
       continue;
     }
     const rootUuid = resolveTurnRootUuid(messages, message);

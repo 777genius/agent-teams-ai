@@ -88,9 +88,7 @@ export function resolveOrphanedTeamAgentStopVerdict(input: {
     : null;
   const liveRecordedPids = recordedPids.filter((pid) => {
     try {
-      return attributedRows
-        ? attributedRows.some((row) => row.pid === pid)
-        : input.isPidAlive(pid);
+      return attributedRows ? attributedRows.some((row) => row.pid === pid) : input.isPidAlive(pid);
     } catch {
       return false;
     }
@@ -312,10 +310,12 @@ export function selectOrphanedTeamAgentPids(
 const WIN32_PROBE_FAILURE_COOLDOWN_MS = 15_000;
 let win32ProbeUnreadableUntil = 0;
 
-export function readProcessRows(options: { allowCooldown?: boolean } = {}): {
-  pid: number;
-  command: string;
-}[] | null {
+export function readProcessRows(options: { allowCooldown?: boolean } = {}):
+  | {
+      pid: number;
+      command: string;
+    }[]
+  | null {
   const rows: { pid: number; command: string }[] = [];
 
   if (process.platform === 'win32') {
