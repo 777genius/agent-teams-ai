@@ -301,6 +301,7 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
     expectedRunId: string | null;
     expectedCapabilitySnapshotId: string | null;
     expectedManifestHighWatermark: number | null;
+    timeoutMs?: number;
     cwd?: string;
     allowEmptyLaneStop?: boolean;
     selectedModel?: string | null;
@@ -310,7 +311,11 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
     memberName?: string;
     laneId?: string | null;
   }): Promise<OpenCodeBridgeHandshake> {
-    const deadline = Date.now() + this.timeoutMs;
+    // A per-call command budget only tightens the port ceiling: a stop attempt
+    // must settle inside its caller's escalation race.
+    const timeoutMs =
+      input.timeoutMs === undefined ? this.timeoutMs : Math.min(this.timeoutMs, input.timeoutMs);
+    const deadline = Date.now() + timeoutMs;
     for (let attempt = 0; ; attempt++) {
       const result = await this.bridge.execute<
         {
