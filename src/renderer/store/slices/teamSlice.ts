@@ -155,6 +155,7 @@ import {
   setPendingReplyRefreshEnabled,
 } from '../team/teamPendingReplyWaits';
 import {
+  getProvisioningProgressError,
   isActiveProvisioningState,
   isTerminalProvisioningState,
   shouldIgnoreProvisioningProgressRegression,
@@ -4787,11 +4788,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       }
 
       const nextErrors = { ...state.provisioningErrorByTeam };
-      if (progress.state === 'failed') {
-        nextErrors[progress.teamName] = progress.error ?? progress.message;
-      } else {
-        delete nextErrors[progress.teamName];
-      }
+      const progressError = getProvisioningProgressError(progress);
+      if (progressError) nextErrors[progress.teamName] = progressError;
+      else delete nextErrors[progress.teamName];
       // Clean up provisioning snapshot on terminal failure states
       const nextSnapshots =
         progress.state === 'failed' || progress.state === 'cancelled'

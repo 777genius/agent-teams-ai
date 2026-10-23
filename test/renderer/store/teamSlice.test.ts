@@ -969,6 +969,33 @@ describe('teamSlice actions', () => {
     expect(fetchTeamAgentRuntime).toHaveBeenCalledTimes(3);
   });
 
+  it('retains a terminal cleanup error after a secondary failure and rejects late ready', () => {
+    const store = createSliceStore();
+    const ready = {
+      runId: 'cleanup-root',
+      teamName: 'my-team',
+      state: 'ready' as const,
+      message: 'Ready',
+      startedAt: '2026-03-12T10:00:00.000Z',
+      updatedAt: '2026-03-12T10:00:01.000Z',
+    };
+    store.getState().onProvisioningProgress(ready);
+    const failure = {
+      ...ready,
+      state: 'disconnected' as const,
+      messageSeverity: 'error' as const,
+      message: 'OpenCode runtime lane stopped but exact cleanup failed',
+      error: 'Exact cleanup owner changed',
+      updatedAt: '2026-03-12T10:01:00.000Z',
+    };
+    store.getState().onProvisioningProgress(failure);
+    expect(store.getState().provisioningRuns[ready.runId]).toEqual(failure);
+    expect(store.getState().provisioningErrorByTeam['my-team']).toBe(failure.error);
+    store.getState().onProvisioningProgress({ ...ready, updatedAt: '2026-03-12T10:02:00.000Z' });
+    expect(store.getState().provisioningRuns[ready.runId]).toEqual(failure);
+    expect(store.getState().provisioningErrorByTeam['my-team']).toBe(failure.error);
+  });
+
   it('does not demand team-wide provisioning refreshes from a visible task-detail tab', () => {
     const store = createSliceStore();
     const fetchTeams = vi.fn(async () => undefined);

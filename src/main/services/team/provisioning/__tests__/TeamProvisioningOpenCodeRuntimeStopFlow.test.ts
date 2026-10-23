@@ -2,6 +2,10 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 
+import {
+  getProvisioningProgressError,
+  shouldIgnoreProvisioningProgressRegression,
+} from '@renderer/store/team/teamProvisioningStateRules';
 import { describe, expect, it, vi } from 'vitest';
 
 import { bindLifecycleManifest } from '../../opencode/bridge/OpenCodeLifecycleManifestBinding';
@@ -580,65 +584,124 @@ describe('OpenCode runtime stop flow', () => {
     expect(lane.state).toBe('launching');
   });
 
-  it('publishes one team-level pending-stop fence while exact secondary ownership is awaiting stop', async () => {
-    const stopStarted = createDeferred<void>();
-    const stopRelease = createDeferred<void>();
-    const run = makeSingleLaneRun();
-    const previousProgress = run.progress;
-    const lane = makeSingleLane();
-    const ports = makeSingleLaneStopPorts({
-      adapter: makeAdapter(
-        vi.fn(async (stopInput) => {
-          stopStarted.resolve();
-          await stopRelease.promise;
+  it.each([true, false])(
+    'keeps a live aggregate ready during lane Stop and publishes terminal cleanup failure (success=%s)',
+    async (cleanupSucceeded) => {
+      const stopStarted = createDeferred<void>();
+      const stopRelease = createDeferred<void>();
+      const run = makeSingleLaneRun();
+      const previousProgress = run.progress;
+      let rendererProgress = previousProgress;
+      run.onProgress.mockImplementation((progress) => {
+        if (!shouldIgnoreProvisioningProgressRegression(rendererProgress.state, progress.state))
+          rendererProgress = progress;
+      });
+      const lane = makeSingleLane();
+      const ports = makeSingleLaneStopPorts({
+        clearLane: async () => cleanupSucceeded,
+        adapter: makeAdapter(
+          vi.fn(async (stopInput) => {
+            stopStarted.resolve();
+            await stopRelease.promise;
+            return {
+              runId: stopInput.runId,
+              teamName: stopInput.teamName,
+              stopped: true,
+              members: {},
+              warnings: [],
+              diagnostics: [],
+            };
+          })
+        ),
+      });
+      const helper = new TeamProvisioningRunTrackingDeliveryHelper({
+        state: {
+          provisioningRunByTeam: new Map([[run.teamName, run.runId]]),
+          aliveRunByTeam: new Map([[run.teamName, run.runId]]),
+          runs: new Map([[run.runId, run]]),
+          runtimeAdapterProgressByRunId: new Map([[run.runId, previousProgress]]),
+          runtimeAdapterRunByTeam: new Map([[run.teamName, { runId: run.runId }]]),
+          getRetainedProvisioningProgressMap: () => new Map(),
+        },
+        ports: {
+          notifyTeamWatchScopeChanged: vi.fn(),
+          isTeamAlive: vi.fn(() => true),
+          hasAlivePersistedTeamProcess: vi.fn(() => true),
+          hasOnlyExplicitlyStoppedPersistedTeamProcesses: vi.fn(() => false),
+          logDebug: vi.fn(),
+        },
+        liveRuntimeSnapshotCacheTtlMs: 1,
+        persistedRuntimeSnapshotCacheTtlMs: 2,
+      });
+
+      const stopping = stopSingleMixedSecondaryRuntimeLane(run, lane, 'relaunch', ports);
+      await stopStarted.promise;
+
+      expect(run.progress).toMatchObject({
+        state: 'ready',
+        message: 'Stopping OpenCode runtime lane before cleanup or relaunch',
+      });
+      expect(lane.runId).toBe('lane-run-existing');
+      expect(helper.canDeliverToTrackedRuntimeRun(run.teamName, run.runId)).toBe(true);
+      expect(helper.resolveDeliverableTrackedRuntimeRunId(run.teamName)).toBe(run.runId);
+      expect(helper.canDeliverToOpenCodeRuntimeForTeam(run.teamName)).toBe(true);
+
+      expect(rendererProgress.state).toBe('ready');
+      stopRelease.resolve();
+      if (cleanupSucceeded) {
+        await stopping;
+        expect(run.progress).toBe(previousProgress);
+        expect(rendererProgress).toBe(previousProgress);
+        expectFinalSingleLaneState(lane);
+      } else {
+        await expect(stopping).rejects.toThrow('ownership changed before stopped storage cleanup');
+        expect(run.progress.state).toBe('disconnected');
+        expect(rendererProgress).toBe(run.progress);
+        expect(getProvisioningProgressError(rendererProgress)).toContain(
+          'ownership changed before stopped storage cleanup'
+        );
+        expect(helper.canDeliverToTrackedRuntimeRun(run.teamName, run.runId)).toBe(false);
+        run.onProgress(previousProgress);
+        expect(rendererProgress.state).toBe('disconnected');
+      }
+    }
+  );
+
+  it.each(['failed', 'cancelled', 'disconnected'] as const)(
+    'does not clear existing %s truth while stopping a secondary lane',
+    async (state) => {
+      const run = makeSingleLaneRun();
+      run.progress = {
+        ...run.progress,
+        state,
+        message: 'Existing terminal fact',
+        error: 'Existing failure',
+        messageSeverity: 'error',
+      };
+      const previous = run.progress;
+      const lane = makeSingleLane();
+      const ports = makeSingleLaneStopPorts({
+        adapter: makeAdapter(async (input) => {
+          expect(run.progress).toMatchObject({
+            state,
+            message: previous.message,
+            error: previous.error,
+            messageSeverity: previous.messageSeverity,
+          });
           return {
-            runId: stopInput.runId,
-            teamName: stopInput.teamName,
+            runId: input.runId,
+            teamName: input.teamName,
             stopped: true,
             members: {},
             warnings: [],
             diagnostics: [],
           };
-        })
-      ),
-    });
-    const helper = new TeamProvisioningRunTrackingDeliveryHelper({
-      state: {
-        provisioningRunByTeam: new Map([[run.teamName, run.runId]]),
-        aliveRunByTeam: new Map([[run.teamName, run.runId]]),
-        runs: new Map([[run.runId, run]]),
-        runtimeAdapterProgressByRunId: new Map([[run.runId, previousProgress]]),
-        runtimeAdapterRunByTeam: new Map([[run.teamName, { runId: run.runId }]]),
-        getRetainedProvisioningProgressMap: () => new Map(),
-      },
-      ports: {
-        notifyTeamWatchScopeChanged: vi.fn(),
-        isTeamAlive: vi.fn(() => true),
-        hasAlivePersistedTeamProcess: vi.fn(() => true),
-        hasOnlyExplicitlyStoppedPersistedTeamProcesses: vi.fn(() => false),
-        logDebug: vi.fn(),
-      },
-      liveRuntimeSnapshotCacheTtlMs: 1,
-      persistedRuntimeSnapshotCacheTtlMs: 2,
-    });
-
-    const stopping = stopSingleMixedSecondaryRuntimeLane(run, lane, 'relaunch', ports);
-    await stopStarted.promise;
-
-    expect(run.progress).toMatchObject({
-      state: 'disconnected',
-      message: 'Stopping OpenCode runtime lane before cleanup or relaunch',
-    });
-    expect(lane.runId).toBe('lane-run-existing');
-    expect(helper.canDeliverToTrackedRuntimeRun(run.teamName, run.runId)).toBe(false);
-    expect(helper.resolveDeliverableTrackedRuntimeRunId(run.teamName)).toBeNull();
-    expect(helper.canDeliverToOpenCodeRuntimeForTeam(run.teamName)).toBe(false);
-
-    stopRelease.resolve();
-    await stopping;
-    expect(run.progress).toBe(previousProgress);
-    expectFinalSingleLaneState(lane);
-  });
+        }),
+      });
+      await stopSingleMixedSecondaryRuntimeLane(run, lane, 'cleanup', ports);
+      expect(run.progress).toBe(previous);
+    }
+  );
 
   it('restores the owned aggregate phase after real diagnostic metadata copying during lane Stop', async () => {
     const started = createDeferred<void>();
@@ -704,107 +767,6 @@ describe('OpenCode runtime stop flow', () => {
     expectFinalSingleLaneState(lane);
   });
 
-  it.each(['enabled', 'disabled', 'throwing logger'] as const)(
-    'records bounded custody diagnostics without changing successful restoration (%s)',
-    async (mode) => {
-      vi.stubEnv('CLAUDE_MULTIMODEL_DEBUG_OPENCODE_COMMAND', mode === 'disabled' ? '0' : '1');
-      const run = makeSingleLaneRun();
-      const lane = makeSingleLane();
-      const previous = run.progress;
-      const ports = makeSingleLaneStopPorts({
-        adapter: makeAdapter(async (input) => ({
-          runId: input.runId,
-          teamName: input.teamName,
-          stopped: true,
-          members: {},
-          warnings: [],
-          diagnostics: [],
-        })),
-      });
-      if (mode === 'throwing logger')
-        ports.logger.info.mockImplementation(() => {
-          throw new Error('diagnostic sink failure');
-        });
-      try {
-        await expect(
-          stopSingleMixedSecondaryRuntimeLane(run, lane, 'relaunch', ports)
-        ).resolves.toBeUndefined();
-        expect(run.progress).toBe(previous);
-        const rows = ports.logger.info.mock.calls.map(([line]) =>
-          JSON.parse(line.slice('[opencode_secondary_stop_custody] '.length))
-        );
-        if (mode === 'disabled') expect(rows).toEqual([]);
-        else {
-          expect(rows).toHaveLength(2);
-          expect(rows[0]).toMatchObject({
-            stage: 'begin',
-            baselinePhase: 'ready',
-            currentPhase: 'disconnected',
-            exactProgressPointer: true,
-            exactCustody: true,
-            authorized: true,
-            trackedRunCurrent: true,
-            activeCount: 1,
-          });
-          expect(rows[1]).toMatchObject({
-            stage: 'finish',
-            baselinePhase: 'ready',
-            currentPhase: 'disconnected',
-            exactProgressPointer: true,
-            exactCustody: true,
-            authorized: true,
-            clearedOwnedLane: true,
-            failed: false,
-            metadataChanged: false,
-            restored: true,
-            afterPhase: 'ready',
-          });
-          for (const row of rows) {
-            for (const key of ['message', 'assistantOutput', 'cliLogsTail', 'context']) {
-              expect(row).not.toHaveProperty(key);
-            }
-          }
-        }
-      } finally {
-        vi.unstubAllEnvs();
-      }
-    }
-  );
-
-  it('records a revoked progress pointer without changing the fail-closed restoration decision', async () => {
-    vi.stubEnv('CLAUDE_MULTIMODEL_DEBUG_OPENCODE_COMMAND', '1');
-    const run = makeSingleLaneRun();
-    const lane = makeSingleLane();
-    run.onProgress.mockImplementationOnce(() => {
-      run.progress = { ...run.progress };
-    });
-    const ports = makeSingleLaneStopPorts({
-      adapter: makeAdapter(async (input) => ({
-        runId: input.runId,
-        teamName: input.teamName,
-        stopped: true,
-        members: {},
-        warnings: [],
-        diagnostics: [],
-      })),
-    });
-    try {
-      await stopSingleMixedSecondaryRuntimeLane(run, lane, 'relaunch', ports);
-      const line = ports.logger.info.mock.calls.at(-1)?.[0];
-      expect(JSON.parse(line!.slice('[opencode_secondary_stop_custody] '.length))).toMatchObject({
-        stage: 'finish',
-        exactProgressPointer: false,
-        exactCustody: true,
-        authorized: true,
-        restored: false,
-        afterPhase: 'disconnected',
-      });
-      expect(run.progress.state).toBe('disconnected');
-    } finally {
-      vi.unstubAllEnvs();
-    }
-  });
-
   it('owns the stop phase before its first read and cannot start an adapter effect after revocation during that read', async () => {
     const run = makeSingleLaneRun();
     const lane = makeSingleLane();
@@ -830,11 +792,13 @@ describe('OpenCode runtime stop flow', () => {
       (error: unknown) => error
     );
     await reading.promise;
-    expect(run.progress.state).toBe('disconnected');
+    expect(run.progress.state).toBe('ready');
     run.cancelRequested = true;
+    run.progress = { ...run.progress, state: 'disconnected', message: 'Actual cohort Stop' };
     release.resolve();
     expect(await settled).toBeInstanceOf(Error);
     expect(stop).not.toHaveBeenCalled();
+    expect(run.progress.state).toBe('disconnected');
   });
 
   it.each(['success-first', 'success-last', 'failed-cleanup'] as const)(
@@ -875,13 +839,15 @@ describe('OpenCode runtime stop flow', () => {
       release[earlier].resolve();
       if (earlier === 0) await aSettled;
       else await b;
-      expect(run.progress.state).toBe(order === 'failed-cleanup' ? 'failed' : 'disconnected');
+      expect(run.progress.state).toBe(order === 'failed-cleanup' ? 'disconnected' : 'ready');
       release[1 - earlier].resolve();
       await b;
       const failure = await aSettled;
       if (order === 'failed-cleanup') {
         expect(failure).toBeInstanceOf(Error);
-        expect(run.progress.state).toBe('failed');
+        expect(run.progress.state).toBe('disconnected');
+        expect(run.progress.messageSeverity).toBe('error');
+        expect(run.progress.error).toContain('ownership changed before stopped storage cleanup');
       } else {
         expect(failure).toBeNull();
         expect(run.progress.state).toBe(initial.state);
@@ -925,6 +891,7 @@ describe('OpenCode runtime stop flow', () => {
       if (change === 'foreign-phase')
         run.progress = {
           ...run.progress,
+          state: 'disconnected',
           message: 'Actual newer Stop',
           updatedAt: '2026-01-01T00:00:09.000Z',
         };

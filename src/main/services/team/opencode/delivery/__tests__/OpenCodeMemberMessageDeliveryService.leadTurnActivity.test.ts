@@ -473,6 +473,10 @@ describe('secondary delivery waiting for a native bootstrap commit', () => {
           getOpenCodeRuntimeAdapter: () =>
             ({
               stop: async (input: TeamRuntimeStopInput) => {
+                expect(run.progress.state).toBe('ready');
+                expect((await h.service.deliver('team-a', h.message)).delivered).toBe(false);
+                expect(h.deps.createOpenCodePromptDeliveryLedger).not.toHaveBeenCalled();
+                expect(h.send).not.toHaveBeenCalled();
                 updateProvisioningProgressMetadata(run, {
                   cliLogsTail: 'Fresh diagnostics copied during Stop',
                 });

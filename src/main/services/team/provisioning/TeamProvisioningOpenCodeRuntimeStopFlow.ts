@@ -2,6 +2,7 @@ import { getOpenCodeRuntimeManifestPath } from '../opencode/store/OpenCodeRuntim
 import { readOpenCodeStopSessionIdentity } from '../opencode/store/OpenCodeStopSessionIdentity';
 
 import { assertOpenCodeRuntimeStopEffective } from './TeamProvisioningOpenCodeRuntimeStopOutcome';
+import { isTerminalFailureProvisioningState } from './TeamProvisioningProgressState';
 import { ownsOpenCodeRuntimeAdapterPrimaryLane } from './TeamProvisioningRuntimeAdapterCancellation';
 import {
   beginSecondaryStopProgress,
@@ -114,18 +115,6 @@ export interface SingleMixedSecondaryRuntimeLaneStopPorts {
   logger: StopLogger;
 }
 
-function writeSecondaryStopCustodyDebug(
-  ports: SingleMixedSecondaryRuntimeLaneStopPorts,
-  receipt: Record<string, unknown>
-): void {
-  if (process.env.CLAUDE_MULTIMODEL_DEBUG_OPENCODE_COMMAND !== '1') return;
-  try {
-    ports.logger.info(`[opencode_secondary_stop_custody] ${JSON.stringify(receipt)}`);
-  } catch {
-    // Diagnostic logging must never replace a lifecycle result or exception.
-  }
-}
-
 export async function stopSingleMixedSecondaryRuntimeLane(
   run: SingleMixedSecondaryRuntimeLaneStopRun,
   lane: MixedSecondaryRuntimeLaneState,
@@ -141,43 +130,21 @@ export async function stopSingleMixedSecondaryRuntimeLane(
   const previousProgress = run.progress;
   const rootRunId = run.runId;
   let clearedOwnedLane = false;
-  let trackedRunCurrent = false;
   const isAuthorized = (): boolean =>
-    (trackedRunCurrent = ports.isCurrentRun()) &&
+    ports.isCurrentRun() &&
     run.runId === rootRunId &&
     !run.cancelRequested &&
     !run.processKilled &&
     (lane.runId === targetRunId || (clearedOwnedLane && lane.runId === null));
   let operation: ReturnType<typeof beginSecondaryStopProgress> | null = null;
   let keepStopFence = false;
-  const custodyReceipt = (stage: string, authorized: boolean): Record<string, unknown> => ({
-    stage,
-    teamName: run.teamName,
-    laneId: lane.laneId,
-    rootRunId,
-    currentRootRunId: run.runId,
-    targetRunId,
-    currentLaneRunId: lane.runId,
-    baselinePhase: operation?.custody.baseline?.state,
-    currentPhase: run.progress?.state,
-    exactProgressPointer: run.progress === operation?.custody.current,
-    exactCustody: run.secondaryStopProgressCustody === operation?.custody,
-    authorized,
-    trackedRunCurrent,
-    cancelRequested: Boolean(run.cancelRequested),
-    processKilled: Boolean(run.processKilled),
-    clearedOwnedLane,
-    keepStopFence,
-    activeCount: operation?.custody.operations.size,
-    failed: operation?.custody.failed,
-    metadataChanged: operation?.custody.metadataChanged,
-  });
 
   try {
     if (!adapter) {
       throw new Error('OpenCode runtime adapter is unavailable');
     }
     const timestamp = new Date().toISOString();
+    // Recipient lifecycle admission fences this lane; its live cohort keeps its phase.
     const pendingStopProgress: TeamProvisioningProgress = {
       ...(previousProgress ?? {
         runId: targetRunId,
@@ -185,15 +152,15 @@ export async function stopSingleMixedSecondaryRuntimeLane(
         startedAt: timestamp,
         updatedAt: timestamp,
       }),
-      state: 'disconnected',
-      message: 'Stopping OpenCode runtime lane before cleanup or relaunch',
-      messageSeverity: undefined,
+      state: previousProgress?.state ?? 'disconnected',
+      message:
+        previousProgress && isTerminalFailureProvisioningState(previousProgress.state)
+          ? previousProgress.message
+          : 'Stopping OpenCode runtime lane before cleanup or relaunch',
       updatedAt: timestamp,
-      error: undefined,
     };
     if (!isAuthorized()) throw new Error(`OpenCode lane ${lane.laneId} stop ownership changed`);
     operation = beginSecondaryStopProgress(run, pendingStopProgress);
-    writeSecondaryStopCustodyDebug(ports, custodyReceipt('begin', true));
     run.onProgress?.(pendingStopProgress);
     const previousLaunchState = await ports.readLaunchState(run.teamName);
 
@@ -266,14 +233,7 @@ export async function stopSingleMixedSecondaryRuntimeLane(
   } finally {
     if (operation) {
       if (keepStopFence) operation.custody.failed = true;
-      const authorized = isAuthorized();
-      const receipt = custodyReceipt('finish', authorized);
-      const restored = finishSecondaryStopProgress(run, operation, authorized);
-      writeSecondaryStopCustodyDebug(ports, {
-        ...receipt,
-        restored: Boolean(restored),
-        afterPhase: run.progress?.state,
-      });
+      const restored = finishSecondaryStopProgress(run, operation, isAuthorized());
       if (restored) run.onProgress?.(restored);
     }
   }
