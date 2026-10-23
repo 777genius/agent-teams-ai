@@ -4,7 +4,7 @@ import { redactBridgeDiagnosticText } from '../opencode/bridge/OpenCodeBridgeCom
 import {
   formatOpenCodeStopCausalSuffix,
   ownedOpenCodeStateChangingFailure,
-} from '../opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+} from '../opencode/bridge/OpenCodeStateChangingCausalFailure';
 
 import type {
   OpenCodeStopCausalFailure,

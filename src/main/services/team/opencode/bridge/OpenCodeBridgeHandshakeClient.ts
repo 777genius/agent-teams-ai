@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { types } from 'node:util';
 
 import {
@@ -7,7 +8,7 @@ import {
   OPEN_CODE_FILE_PARTS_CONTRACT_VERSION,
   OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION,
 } from './OpenCodeBridgeCommandContract';
-import { rememberOpenCodeHandshakeFailure } from './OpenCodeStateChangingBridgeCommandService';
+import { rememberOpenCodeHandshakeFailure } from './OpenCodeStateChangingCausalFailure';
 
 import type {
   OpenCodeBridgeCommandName,
@@ -19,6 +20,40 @@ import type {
   OpenCodeBridgeCommandExecutor,
   OpenCodeBridgeHandshakePort,
 } from './OpenCodeStateChangingBridgeCommandService';
+
+/** Ordered prefixes: specific rejections before their catch-all family. */
+export const OPEN_CODE_HANDSHAKE_MESSAGE_FAMILIES = [
+  ['stop_authority_mismatch', 'OpenCode confirmed stop authority mismatch'],
+  ['empty_lane_mismatch', 'OpenCode empty-lane stop authority mismatch'],
+  ['lane_authority_unavailable', 'OpenCode lifecycle selected lane authority is unavailable'],
+  [
+    'capability_snapshot_required',
+    'OpenCode lifecycle existing lane requires a capability snapshot',
+  ],
+  ['run_authority_conflict', 'OpenCode lifecycle stored run authority mismatch'],
+  ['run_authority_unavailable', 'OpenCode lifecycle selected run authority is unavailable'],
+  ['lifecycle_identifiers_required', 'OpenCode lifecycle authority requires teamId and laneId'],
+  ['run_identity_required', 'OpenCode lifecycle authority requires runId'],
+  ['lane_scope_unavailable', 'OpenCode lifecycle selected lane scope is unavailable'],
+  ['lane_scope_ambiguous', 'OpenCode lifecycle lane scope is ambiguous'],
+  ['lane_project_mismatch', 'OpenCode lifecycle lane project authority mismatch'],
+  ['host_authority_ambiguous', 'OpenCode lifecycle lane host authority is ambiguous'],
+  ['process_authority_ambiguous', 'OpenCode lifecycle lane process authority is ambiguous'],
+  ['delivery_lane_stopped', 'OpenCode delivery lane is stopped'],
+  [
+    'delivery_authority_required',
+    'OpenCode selected delivery requires persisted lane capability authority',
+  ],
+  ['delivery_session_changed', 'OpenCode selected delivery session authority changed'],
+  ['observation_launch_unavailable', 'OpenCode observation launch authority is unavailable'],
+  ['precondition_mismatch', 'OpenCode bridge expected laneId precondition'],
+  ['precondition_mismatch', 'OpenCode bridge expectedRunId precondition'],
+  ['strict_launch_evidence', 'OpenCode strict launch profile scope evidence is invalid'],
+  ['strict_launch_model', 'OpenCode strict launch requires a provider-qualified selected model'],
+  ['runtime_process_changed', 'OpenCode selected session runtime process changed'],
+  ['lock_operation', 'OpenCode lock operation failed ['],
+  ['lifecycle_rejection', 'OpenCode lifecycle '],
+] as const;
 
 /** Preserve only closed facts from a validated failure envelope on the same thrown Error. */
 export function createOpenCodeBridgeHandshakeFailure(
@@ -245,6 +280,17 @@ export function createOpenCodeBridgeHandshakeFailure(
         messageValue.startsWith('OpenCode lock operation failed [')
       ? 'lock_operation'
       : 'unclassified';
+  // Closed identity of an unclassifiable message: a family label plus a digest
+  // that can be matched offline against candidate fixed strings.
+  const messageText = typeof messageValue === 'string' ? messageValue.trim() : '';
+  const messageFamily = messageText
+    ? (OPEN_CODE_HANDSHAKE_MESSAGE_FAMILIES.find(([, prefix]) =>
+        messageText.startsWith(prefix)
+      )?.[0] ?? 'unclassified')
+    : undefined;
+  const messageDigest = messageText
+    ? createHash('sha256').update(messageText).digest('hex').slice(0, 12)
+    : undefined;
   rememberOpenCodeHandshakeFailure(error, {
     kind,
     ...(sdkCode ? { sdkCode } : {}),
@@ -252,6 +298,8 @@ export function createOpenCodeBridgeHandshakeFailure(
     ...(nativeErrno !== undefined ? { nativeErrno } : {}),
     ...(lockCode ? { lockCode } : {}),
     ...(lockCategory ? { lockCategory } : {}),
+    ...(messageFamily ? { messageFamily } : {}),
+    ...(messageDigest ? { messageDigest } : {}),
     messageShape,
   });
   return error;

@@ -10,7 +10,7 @@ import { createLogger } from '@shared/utils/logger';
 import {
   formatOpenCodeStopCausalSuffix,
   ownedOpenCodeHandshakeFailure,
-} from '../bridge/OpenCodeStateChangingBridgeCommandService';
+} from '../bridge/OpenCodeStateChangingCausalFailure';
 import {
   inspectOpenCodeRuntimeLaneStorage,
   type OpenCodeCommittedBootstrapSessionRecord,

@@ -1540,7 +1540,7 @@ try {
  const control = await import(${JSON.stringify(moduleUrl)});
  const freshProtocol = await import(${JSON.stringify(pathToFileURL(path.resolve('src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract.ts')).href)});
  const freshClient = await import(${JSON.stringify(pathToFileURL(path.resolve('src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient.ts')).href)});
- const freshCausal = await import(${JSON.stringify(pathToFileURL(path.resolve('src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService.ts')).href)});
+ const freshCausal = await import(${JSON.stringify(pathToFileURL(path.resolve('src/main/services/team/opencode/bridge/OpenCodeStateChangingCausalFailure.ts')).href)});
  preparation = await (${verifyProbePreparation.toString()})(inspectOpenCodeV2SourceAvailability,
    resolveOpenCodeV2ExecutionProbe, buildOpenCodeV2InternalRunPlan, runOwner, control, spyOn, ${JSON.stringify(desktop.projectPath)},
    ${JSON.stringify(selectedModel)}, ${JSON.stringify(expectedVersion)},
