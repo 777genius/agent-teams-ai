@@ -2,6 +2,7 @@ import { getOpenCodeRuntimeManifestPath } from '../opencode/store/OpenCodeRuntim
 import { readOpenCodeStopSessionIdentity } from '../opencode/store/OpenCodeStopSessionIdentity';
 
 import { assertOpenCodeRuntimeStopEffective } from './TeamProvisioningOpenCodeRuntimeStopOutcome';
+import { isTerminalFailureProvisioningState } from './TeamProvisioningProgressState';
 import { ownsOpenCodeRuntimeAdapterPrimaryLane } from './TeamProvisioningRuntimeAdapterCancellation';
 import {
   beginSecondaryStopProgress,
@@ -143,6 +144,7 @@ export async function stopSingleMixedSecondaryRuntimeLane(
       throw new Error('OpenCode runtime adapter is unavailable');
     }
     const timestamp = new Date().toISOString();
+    // Recipient lifecycle admission fences this lane; its live cohort keeps its phase.
     const pendingStopProgress: TeamProvisioningProgress = {
       ...(previousProgress ?? {
         runId: targetRunId,
@@ -150,11 +152,12 @@ export async function stopSingleMixedSecondaryRuntimeLane(
         startedAt: timestamp,
         updatedAt: timestamp,
       }),
-      state: 'disconnected',
-      message: 'Stopping OpenCode runtime lane before cleanup or relaunch',
-      messageSeverity: undefined,
+      state: previousProgress?.state ?? 'disconnected',
+      message:
+        previousProgress && isTerminalFailureProvisioningState(previousProgress.state)
+          ? previousProgress.message
+          : 'Stopping OpenCode runtime lane before cleanup or relaunch',
       updatedAt: timestamp,
-      error: undefined,
     };
     if (!isAuthorized()) throw new Error(`OpenCode lane ${lane.laneId} stop ownership changed`);
     operation = beginSecondaryStopProgress(run, pendingStopProgress);
