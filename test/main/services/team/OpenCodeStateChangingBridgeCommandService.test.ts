@@ -56,6 +56,10 @@ import {
   type OpenCodeBridgeCommandLedger,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
 import {
+  OPEN_CODE_BRIDGE_TIMEOUTS_MS,
+  OPEN_CODE_SDK_STOP_CAP_MS,
+} from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessTimeoutPolicy';
+import {
   type OpenCodeBridgeCommandExecutor,
   type OpenCodeBridgeHandshakePort,
   type OpenCodeLaunchAuthorityWriter,
@@ -683,6 +687,35 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     // must draw from what remains instead of restarting the full clock.
     expect(dispatch![2].timeoutMs).toBeLessThanOrEqual(1_700);
     expect(dispatch![2].timeoutMs).toBeGreaterThanOrEqual(1);
+  });
+
+  it('leaves the default stop dispatch the full SDK Stop window after a measured slow handshake', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    const input = { ...enableRuntimeStop(), timeoutMs: OPEN_CODE_BRIDGE_TIMEOUTS_MS.stop };
+    // A healthy stop confirmed at 47.6s with at most 30s of dispatch, so its
+    // phases before the dispatch spent more than 17s of the shared deadline.
+    const slowHandshake: OpenCodeBridgeHandshakePort = {
+      async handshake(callInput) {
+        vi.setSystemTime(Date.now() + 18_000);
+        return handshakePort.handshake(callInput);
+      },
+    };
+    const execute = vi.fn(async (command, body, options) => {
+      const request = (body as { stopRecovery: RuntimeStopRequest }).stopRecovery;
+      return bridgeSuccess({
+        command,
+        requestId: options.requestId,
+        runtime: { ...bridgeSuccess().runtime, capabilitySnapshotId: input.capabilitySnapshotId },
+        data: runtimeData(true, request.idempotencyKey),
+      });
+    });
+    await createService({
+      bridge: { execute } as OpenCodeBridgeCommandExecutor,
+      handshakePort: slowHandshake,
+    }).execute(input);
+    const dispatch = execute.mock.calls.find(([command]) => command === 'opencode.stopTeam');
+    expect(dispatch).toBeDefined();
+    expect(dispatch![2].timeoutMs).toBeGreaterThanOrEqual(OPEN_CODE_SDK_STOP_CAP_MS);
   });
 
   it('bounds the stop-recovery handshake by the command budget', async () => {

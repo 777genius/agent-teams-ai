@@ -7,6 +7,20 @@ import type { OpenCodeLaunchTeamCommandBody } from './OpenCodeBridgeCommandContr
  * serial native-subscription CLIs; readiness is provider-independent).
  */
 
+/**
+ * SDK run-control Stop cap: Windows DACL and physical process retirement alone
+ * can exceed 30s, so a Stop clipped below this aborts a healthy physical stop
+ * before its confirmation arrives.
+ */
+export const OPEN_CODE_SDK_STOP_CAP_MS = 45_000;
+/**
+ * What a stop attempt spends before the SDK Stop starts. The manifest reads,
+ * handshake, lease and the runtime's own start-up draw from the same deadline
+ * as the dispatch: a stop confirmed at 47.6s with at most 30s of dispatch had
+ * already spent more than 17s there.
+ */
+export const OPEN_CODE_STOP_PRE_DISPATCH_RESERVE_MS = 25_000;
+
 /** Applied whenever the caller configures no explicit budget for a command. */
 export const OPEN_CODE_BRIDGE_TIMEOUTS_MS = {
   readiness: 300_000,
@@ -16,10 +30,9 @@ export const OPEN_CODE_BRIDGE_TIMEOUTS_MS = {
   // finish bridge-side observation and emit member-work-sync signals.
   send: 45_000,
   observe: 20_000,
-  // Aligned with the SDK run-control Stop cap (45s): Windows DACL and physical
-  // process retirement alone can exceed 30s, so a shorter app budget aborts a
-  // healthy physical stop before its confirmation arrives.
-  stop: 45_000,
+  // One deadline covers the whole attempt, so the dispatch keeps the full SDK
+  // Stop window only when the budget also pays for the phases before it.
+  stop: OPEN_CODE_SDK_STOP_CAP_MS + OPEN_CODE_STOP_PRE_DISPATCH_RESERVE_MS,
   cleanup: 10_000,
   permission: 30_000,
   backfill: 45_000,

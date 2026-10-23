@@ -7,7 +7,10 @@ import {
   type OpenCodeReadinessBridgeCommandExecutor,
   type OpenCodeReadinessBridgeOptions,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
-import { resolveOpenCodeLaunchTimeoutMs } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessTimeoutPolicy';
+import {
+  OPEN_CODE_SDK_STOP_CAP_MS,
+  resolveOpenCodeLaunchTimeoutMs,
+} from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessTimeoutPolicy';
 import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
 import { STOP_ESCALATION_TIMEOUT_MS } from '../../../../src/main/services/team/lifecycle/teamForceStopFlow';
 
@@ -1441,8 +1444,8 @@ describe('OpenCodeReadinessBridge', () => {
       { timeoutMs: number },
     ];
     expect(call[0]).toBe('opencode.stopTeam');
-    // Below the 45s SDK Stop envelope a healthy Windows stop is clipped again.
-    expect(call[2].timeoutMs).toBeGreaterThanOrEqual(45_000);
+    // Below the SDK Stop cap a healthy Windows stop is clipped again.
+    expect(call[2].timeoutMs).toBeGreaterThanOrEqual(OPEN_CODE_SDK_STOP_CAP_MS);
     // One attempt settles within its budget plus one watchdog grace; the race
     // keeps headroom above that for the per-team lock and the file phases.
     expect(call[2].timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS).toBeLessThan(
