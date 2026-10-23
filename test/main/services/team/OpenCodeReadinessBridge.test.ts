@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import { OpenCodeBridgeCommandLedgerError } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
 import {
   OpenCodeReadinessBridge,
@@ -8,6 +9,7 @@ import {
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
 import { resolveOpenCodeLaunchTimeoutMs } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessTimeoutPolicy';
 import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
+import { STOP_ESCALATION_TIMEOUT_MS } from '../../../../src/main/services/team/lifecycle/teamForceStopFlow';
 
 import type {
   OpenCodeBridgeCommandName,
@@ -1412,7 +1414,7 @@ describe('OpenCodeReadinessBridge', () => {
     expect(executor.execute).not.toHaveBeenCalled();
   });
 
-  it('keeps the stop command budget above the SDK owner Stop envelope', async () => {
+  it('keeps the stop command budget at the SDK Stop envelope and inside the escalation race', async () => {
     const executor = fakeExecutor(
       bridgeCommandFailure({
         command: 'opencode.stopTeam',
@@ -1439,8 +1441,12 @@ describe('OpenCodeReadinessBridge', () => {
       { timeoutMs: number },
     ];
     expect(call[0]).toBe('opencode.stopTeam');
-    expect(call[2].timeoutMs).toBeGreaterThanOrEqual(40_000);
-    expect(call[2].timeoutMs).toBeLessThanOrEqual(45_000);
+    // Below the 45s SDK Stop envelope a healthy Windows stop is clipped again;
+    // above it the doubled attempt budget outgrows the escalation race.
+    expect(call[2].timeoutMs).toBeGreaterThanOrEqual(45_000);
+    expect(
+      2 * call[2].timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS
+    ).toBeLessThanOrEqual(STOP_ESCALATION_TIMEOUT_MS);
   });
 });
 

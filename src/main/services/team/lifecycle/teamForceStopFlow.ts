@@ -44,8 +44,10 @@ export const RUNTIME_HOSTS_POLL_INTERVAL_MS = 1_000;
  * a stop that was about to succeed: a 45s budget cut off a lane that confirmed
  * at 47.6s. `countLiveRuntimeHosts` ends the wait the moment the hosts are
  * gone, so a healthy stop never spends this budget and it only bounds a hang.
+ * The stop attempt can spend the stop budget twice (pre-dispatch, then dispatch
+ * plus its transport watchdog grace), so the race clears twice the budget plus it.
  */
-export const STOP_ESCALATION_TIMEOUT_MS = 90_000;
+export const STOP_ESCALATION_TIMEOUT_MS = 120_000;
 const FORCE_STOP_DELIVERY_CANCEL_REASON =
   'force_stop_requested: pending delivery cancelled by user force stop';
 
