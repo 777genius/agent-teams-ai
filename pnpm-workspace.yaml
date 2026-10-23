@@ -12,6 +12,7 @@ minimumReleaseAgeExclude:
   - find-my-way@9.7.0
   # Exact critical security fix; retain release-age protection for other versions.
   - handlebars@4.7.10
+  - dompurify@3.4.17
   - tmp@0.2.6
 strictPeerDependencies: false
 peerDependencyRules:
@@ -45,7 +46,7 @@ overrides:
   'brace-expansion@5': '5.0.12'
   'defu': '6.1.5'
   'devalue': '5.9.4'
-  'dompurify': '3.4.12'
+  'dompurify': '3.4.17'
   'esbuild': '0.28.1'
   'fast-uri': '3.1.7'
   'file-type@21': '21.3.2'
