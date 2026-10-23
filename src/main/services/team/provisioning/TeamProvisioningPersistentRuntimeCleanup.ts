@@ -1,5 +1,9 @@
 import type { PersistedRuntimeMemberLike } from './TeamProvisioningRuntimeSnapshot';
 
+export interface PendingPersistentProcessStop {
+  confirmStopped(): Promise<boolean>;
+}
+
 export interface TeamProvisioningPersistentRuntimeCleanupLogger {
   warn(message: string): void;
 }
@@ -7,7 +11,10 @@ export interface TeamProvisioningPersistentRuntimeCleanupLogger {
 export interface TeamProvisioningPersistentRuntimeCleanupPorts {
   readPersistedRuntimeMembers(teamName: string): PersistedRuntimeMemberLike[];
   killPersistedPaneMembers(teamName: string, members: PersistedRuntimeMemberLike[]): boolean;
-  killOrphanedTeamAgentProcesses(teamName: string, currentRunPid: number | undefined): boolean;
+  killOrphanedTeamAgentProcesses(
+    teamName: string,
+    currentRunPid: number | undefined
+  ): boolean | PendingPersistentProcessStop;
   getCurrentRunPid(teamName: string): number | undefined;
   cleanupAnthropicTeamApiKeyHelperForTeam(input: {
     teamName: string;
@@ -27,10 +34,16 @@ export interface TeamProvisioningPersistentRuntimeCleanup {
 export function createTeamProvisioningPersistentRuntimeCleanup(
   ports: TeamProvisioningPersistentRuntimeCleanupPorts
 ): TeamProvisioningPersistentRuntimeCleanup {
-  const confirmedStops = new Map<string, boolean>();
+  interface StopConfirmation {
+    confirmed: boolean;
+    panesConfirmed: boolean;
+    pending?: PendingPersistentProcessStop;
+  }
+  const confirmedStops = new Map<string, StopConfirmation>();
   return {
     stopPersistentTeamMembers(teamName) {
-      confirmedStops.set(teamName, false);
+      const stop: StopConfirmation = { confirmed: false, panesConfirmed: false };
+      confirmedStops.set(teamName, stop);
       const members = ports.readPersistedRuntimeMembers(teamName);
       let panesConfirmed = true;
       if (members.length > 0) {
@@ -40,19 +53,30 @@ export function createTeamProvisioningPersistentRuntimeCleanup(
         teamName,
         ports.getCurrentRunPid(teamName)
       );
-      const confirmed = panesConfirmed && processesConfirmed;
-      confirmedStops.set(teamName, confirmed);
-      return confirmed;
+      stop.panesConfirmed = panesConfirmed;
+      stop.confirmed = panesConfirmed && processesConfirmed === true;
+      if (typeof processesConfirmed !== 'boolean') stop.pending = processesConfirmed;
+      return stop.confirmed;
     },
 
     async cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName) {
-      if (confirmedStops.get(teamName) === false) {
+      const stop = confirmedStops.get(teamName);
+      if (stop?.pending && stop.panesConfirmed) {
+        stop.confirmed = await stop.pending.confirmStopped();
+        if (confirmedStops.get(teamName) !== stop) {
+          throw new Error(`[${teamName}] Persistent runtime stop ownership changed`);
+        }
+      }
+      if (stop && !stop.confirmed) {
         throw new Error(`[${teamName}] Persistent runtime termination could not be confirmed`);
       }
-      if (confirmedStops.get(teamName) === true) {
+      if (stop?.confirmed) {
         // StopFlow calls this only after its tracked lead/lane stops also settle.
         // Persist gateway terminal facts while launch discovery is still available.
         await ports.confirmNativeTeamStopped?.(teamName);
+        if (confirmedStops.get(teamName) !== stop) {
+          throw new Error(`[${teamName}] Persistent runtime stop ownership changed`);
+        }
         try {
           ports.clearPersistedLiveRuntimeHandles?.(teamName);
         } catch (error) {
