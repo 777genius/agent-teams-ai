@@ -1917,6 +1917,123 @@ describe('LaunchTeamDialog', () => {
       }
     });
 
+    it('restores edited prompt and members after a real dialog unmount and remount', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.mocked(api.customTeamTemplates.listTemplates).mockResolvedValue({
+        status: 'ready',
+        templates: [customTemplateRecord],
+      } as any);
+      const originalMembers = createTeamDraftMock.state.members;
+      const originalLaunchTeam = createTeamDraftMock.state.launchTeam;
+      const restoreLaunchTeam = installStatefulLaunchTeamSetter();
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      try {
+        const onCreate = await renderCreateDialog(host, root);
+        const customOption = host.querySelector(
+          '[data-testid="create-template-option-custom-tmpl-review-1"]'
+        ) as HTMLButtonElement | null;
+        expect(customOption, host.textContent ?? '').not.toBeNull();
+        await act(async () => {
+          customOption!.click();
+          await flush();
+        });
+        expect(createTeamDraftMock.state.launchTeam).toBe(false);
+
+        const textarea = host.querySelector('textarea#team-prompt') as HTMLTextAreaElement | null;
+        expect(textarea, host.textContent ?? '').not.toBeNull();
+        await act(async () => {
+          setPromptTextarea(host, 'Edited unmount prompt');
+          await flush();
+        });
+        // Representative member edit: mutate the roster the dialog owns so the
+        // restored instance must carry it back instead of reapplying the template.
+        const editedMembers = [
+          { name: 'backend-dev', role: 'Backend Developer', workflow: 'Edited workflow' },
+        ];
+        createTeamDraftMock.state.members =
+          editedMembers as unknown as typeof createTeamDraftMock.state.members;
+
+        // Mirror the persistence that the real (debounced) draft hooks perform
+        // on unmount, since this harness mocks them as in-memory state.
+        draftPersistenceMock.savedDrafts.set('createTeam:prompt', 'Edited unmount prompt');
+        draftPersistenceMock.savedDrafts.set(
+          'createTeam:templateSelection',
+          JSON.stringify({ source: 'custom', value: 'custom:tmpl-review-1' })
+        );
+
+        // Prove the dialog is actually unmounted (not merely hidden).
+        const dialogBefore = host.querySelector('[data-testid="create-team-template-picker"]');
+        expect(dialogBefore).not.toBeNull();
+        act(() => root.unmount());
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        });
+        expect(host.querySelector('[data-testid="create-team-template-picker"]')).toBeNull();
+
+        // Reopen through a brand-new instance on the same host.
+        const reopenedRoot = createRoot(host);
+        await act(async () => {
+          reopenedRoot.render(
+            React.createElement(CreateTeamDialog, {
+              open: true,
+              canCreate: true,
+              provisioningErrorsByTeam: {},
+              existingTeamNames: [],
+              activeTeams: [],
+              defaultProjectPath: '/tmp/project',
+              onClose: vi.fn(),
+              onCreate,
+              onOpenTeam: vi.fn(),
+            })
+          );
+          await flush();
+        });
+        for (let attempt = 0; attempt < 12; attempt += 1) {
+          if (
+            host
+              .querySelector('[data-testid="create-template-option-custom-tmpl-review-1"]')
+              ?.getAttribute('aria-pressed') === 'true'
+          ) {
+            break;
+          }
+          await act(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            await flush();
+          });
+        }
+
+        // Saved template stays selected.
+        expect(
+          host
+            .querySelector('[data-testid="create-template-option-custom-tmpl-review-1"]')
+            ?.getAttribute('aria-pressed')
+        ).toBe('true');
+        // Edited prompt is restored, not the template's original prompt.
+        const reopenedTextarea = host.querySelector<HTMLTextAreaElement>('textarea#team-prompt');
+        expect(reopenedTextarea, host.textContent ?? '').not.toBeNull();
+        expect(reopenedTextarea!.value).toBe('Edited unmount prompt');
+        expect(reopenedTextarea!.value).not.toBe('Template lead prompt');
+        // Member edit survived the round trip.
+        expect(host.textContent).toContain('backend-dev');
+        // Template was not reapplied over the restored user edits (prompt stays edited).
+        expect(host.textContent).toContain('Edited unmount prompt');
+
+        act(() => reopenedRoot.unmount());
+      } finally {
+        act(() => root.unmount());
+        draftPersistenceMock.savedDrafts.clear();
+        createTeamDraftMock.state.members = originalMembers;
+        createTeamDraftMock.state.launchTeam = originalLaunchTeam;
+        restoreLaunchTeam();
+        vi.mocked(api.customTeamTemplates.listTemplates).mockReset();
+        vi.mocked(api.customTeamTemplates.listTemplates).mockResolvedValue({
+          status: 'empty',
+        } as any);
+      }
+    });
+
     it('hides the prompt field for ordinary config-only creation without a template', async () => {
       vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
       createTeamDraftMock.state.launchTeam = false;
