@@ -400,9 +400,9 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
 
   it.each([
     ['ECOMPROMISED', 'registry', 1000, 1],
-    ['ELOCKED', 'profile', 1000, 1],
+    ['ELOCKED', 'profile', 1000, 3],
     ['ELOCKED', 'registry', 200, 1],
-    ['ELOCKED', 'registry', 5000, 4],
+    ['ELOCKED', 'registry', 5000, 5],
   ] as const)(
     'bounds handshake retries without bypassing %s/%s (%s ms)',
     async (lockCode, lockCategory, timeoutMs, attempts) => {
@@ -431,11 +431,112 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
           expectedManifestHighWatermark: null,
         })
       ).rejects.toThrow('lock unavailable');
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(10_000);
       await pending;
       expect(bridge.calls).toHaveLength(attempts);
     }
   );
+
+  it('recovers a contended handshake after the fixed registry retry budget is exhausted', async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    bridge.resultFactory = ({ command, options }) =>
+      ++calls <= 4
+        ? {
+            ok: false,
+            schemaVersion: 1,
+            requestId: options.requestId!,
+            command,
+            completedAt: now.toISOString(),
+            durationMs: 0,
+            diagnostics: [],
+            error: {
+              kind: 'provider_error',
+              message: 'lock unavailable',
+              retryable: true,
+              details: { lockCode: 'ELOCKED', lockCategory: 'registry' },
+            },
+          }
+        : bridgeSuccess({
+            command,
+            requestId: options.requestId,
+            data: handshakePort.nextHandshake,
+          });
+    const port = new OpenCodeBridgeCommandHandshakePort({ bridge, clientIdentity, timeoutMs: 60_000 });
+    const pending = port.handshake({
+      requiredCommand: 'opencode.launchTeam',
+      expectedRunId: null,
+      expectedCapabilitySnapshotId: null,
+      expectedManifestHighWatermark: null,
+    });
+    await vi.advanceTimersByTimeAsync(4000);
+    await expect(pending).resolves.toEqual(handshakePort.nextHandshake);
+    expect(bridge.calls).toHaveLength(5);
+  });
+
+  it('recovers a contended handshake held on a non-registry lock', async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    bridge.resultFactory = ({ command, options }) =>
+      ++calls <= 2
+        ? {
+            ok: false,
+            schemaVersion: 1,
+            requestId: options.requestId!,
+            command,
+            completedAt: now.toISOString(),
+            durationMs: 0,
+            diagnostics: [],
+            error: {
+              kind: 'provider_error',
+              message: 'lock unavailable',
+              retryable: true,
+              details: { lockCode: 'ELOCKED', lockCategory: 'profile' },
+            },
+          }
+        : bridgeSuccess({
+            command,
+            requestId: options.requestId,
+            data: handshakePort.nextHandshake,
+          });
+    const port = new OpenCodeBridgeCommandHandshakePort({ bridge, clientIdentity, timeoutMs: 10_000 });
+    const pending = port.handshake({
+      requiredCommand: 'opencode.launchTeam',
+      expectedRunId: null,
+      expectedCapabilitySnapshotId: null,
+      expectedManifestHighWatermark: null,
+    });
+    await vi.advanceTimersByTimeAsync(1000);
+    await expect(pending).resolves.toEqual(handshakePort.nextHandshake);
+    expect(bridge.calls).toHaveLength(3);
+  });
+
+  it('propagates a deterministic authority rejection without retrying it', async () => {
+    bridge.resultFactory = ({ command, options }) => ({
+      ok: false,
+      schemaVersion: 1,
+      requestId: options.requestId!,
+      command,
+      completedAt: now.toISOString(),
+      durationMs: 0,
+      diagnostics: [],
+      error: {
+        kind: 'provider_error',
+        message: 'OpenCode confirmed stop authority mismatch',
+        retryable: true,
+      },
+    });
+    const port = new OpenCodeBridgeCommandHandshakePort({ bridge, clientIdentity, timeoutMs: 10_000 });
+    await expect(
+      port.handshake({
+        requiredCommand: 'opencode.stopTeam',
+        expectedRunId: null,
+        expectedCapabilitySnapshotId: null,
+        expectedManifestHighWatermark: null,
+      })
+    ).rejects.toThrow('OpenCode confirmed stop authority mismatch');
+    expect(bridge.calls).toHaveLength(1);
+  });
 
   it.each(['opencode.reconcileTeam', 'opencode.stopTeam', 'opencode.sendMessage'] as const)(
     'carries the exact persisted original behavior into %s without a versioned Stop target',

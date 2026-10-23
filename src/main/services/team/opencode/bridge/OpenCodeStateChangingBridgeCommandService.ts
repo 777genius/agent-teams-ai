@@ -135,6 +135,15 @@ export function rememberOpenCodeHandshakeFailure(
   error: Error,
   failure: NonNullable<OpenCodeStopCausalFailure['handshakeFailure']>
 ): void {
+  const lockCode = (['ELOCKED', 'ECOMPROMISED'] as const).find(
+    (value) => value === failure.lockCode
+  );
+  const lockCategory = (['registry', 'profile', 'startup', 'unknown'] as const).find(
+    (value) => value === failure.lockCategory
+  );
+  const messageShape = (['code', 'lock_operation', 'unclassified'] as const).find(
+    (value) => value === failure.messageShape
+  );
   causalFailures.set(error, {
     ...(causalFailures.get(error) ?? { phase: 'handshake' }),
     handshakeFailure: Object.freeze({
@@ -146,6 +155,9 @@ export function rememberOpenCodeHandshakeFailure(
       (failure.nativeErrno ?? -1) <= 0xffffffff
         ? { nativeErrno: failure.nativeErrno }
         : {}),
+      ...(lockCode ? { lockCode } : {}),
+      ...(lockCategory ? { lockCategory } : {}),
+      ...(messageShape ? { messageShape } : {}),
     }),
   });
 }

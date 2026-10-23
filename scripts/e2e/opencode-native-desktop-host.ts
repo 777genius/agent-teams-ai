@@ -123,6 +123,9 @@ export function projectIpcCausalFailure(value: unknown): NativeCausalFailure | n
     handshakeErrnoRaw <= 0xffffffff
       ? handshakeErrnoRaw
       : undefined;
+  const handshakeLockCode = (['ELOCKED', 'ECOMPROMISED'] as const).find(value => value === own(handshake, 'lockCode'));
+  const handshakeLockCategory = (['registry', 'profile', 'startup', 'unknown'] as const).find(value => value === own(handshake, 'lockCategory'));
+  const handshakeShape = (['code', 'lock_operation', 'unclassified'] as const).find(value => value === own(handshake, 'messageShape'));
   const kind = ['unsupported_schema', 'unsupported_command', 'invalid_input', 'runtime_not_ready', 'provider_error',
     'timeout', 'transport_watchdog_timeout', 'contract_violation', 'internal_error'].find(value => value === handshakeKind);
   const sdkCode = [
@@ -192,7 +195,7 @@ export function projectIpcCausalFailure(value: unknown): NativeCausalFailure | n
   return {
     phase, errno: errno(input.errno),
     ...(returnedDispatch && kind && sdkCode ? { bridgeFailure: { kind, sdkCode, ...(nativeOperation ? { nativeOperation } : {}), ...(handshakeErrno !== undefined ? { nativeErrno: handshakeErrno } : {}) } }
-      : kind ? { handshakeFailure: { kind, ...(sdkCode ? { sdkCode } : {}), ...(nativeOperation ? { nativeOperation } : {}), ...(handshakeErrno !== undefined ? { nativeErrno: handshakeErrno } : {}) } } : {}),
+      : kind ? { handshakeFailure: { kind, ...(sdkCode ? { sdkCode } : {}), ...(nativeOperation ? { nativeOperation } : {}), ...(handshakeErrno !== undefined ? { nativeErrno: handshakeErrno } : {}), ...(handshakeLockCode ? { lockCode: handshakeLockCode } : {}), ...(handshakeLockCategory ? { lockCategory: handshakeLockCategory } : {}), ...(handshakeShape ? { messageShape: handshakeShape } : {}) } } : {}),
     ...(Object.hasOwn(input, 'cleanupErrno') ? { cleanupErrno: errno(input.cleanupErrno) } : {}),
     reason: [
       'OpenCode lifecycle command requires the exact persisted lane run and capability snapshot',

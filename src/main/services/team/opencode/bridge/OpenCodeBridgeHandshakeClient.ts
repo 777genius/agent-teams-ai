@@ -30,10 +30,13 @@ export function createOpenCodeBridgeHandshakeFailure(
     const descriptor = Object.getOwnPropertyDescriptor(value, key);
     return descriptor && Object.hasOwn(descriptor, 'value') ? descriptor.value : undefined;
   };
-  let kindValue: unknown, messageValue: unknown;
+  let kindValue: unknown, messageValue: unknown, lockCodeValue: unknown, lockCategoryValue: unknown;
   try {
     kindValue = field(failure, 'kind');
     messageValue = field(failure, 'message');
+    const details = field(failure, 'details');
+    lockCodeValue = field(details, 'lockCode');
+    lockCategoryValue = field(details, 'lockCategory');
   } catch {
     /* No foreign getters. */
   }
@@ -232,11 +235,24 @@ export function createOpenCodeBridgeHandshakeFailure(
   const nativeOperation =
     sdkCode && match ? nativeOperations.find((value) => value === match[4]) : undefined;
   const nativeErrno = sdkCode && match && match[3] !== undefined ? Number(match[3]) : undefined;
+  const lockCode = (['ELOCKED', 'ECOMPROMISED'] as const).find((value) => value === lockCodeValue);
+  const lockCategory = (['registry', 'profile', 'startup', 'unknown'] as const).find(
+    (value) => value === lockCategoryValue
+  );
+  const messageShape = match
+    ? 'code'
+    : typeof messageValue === 'string' &&
+        messageValue.startsWith('OpenCode lock operation failed [')
+      ? 'lock_operation'
+      : 'unclassified';
   rememberOpenCodeHandshakeFailure(error, {
     kind,
     ...(sdkCode ? { sdkCode } : {}),
     ...(nativeOperation ? { nativeOperation } : {}),
     ...(nativeErrno !== undefined ? { nativeErrno } : {}),
+    ...(lockCode ? { lockCode } : {}),
+    ...(lockCategory ? { lockCategory } : {}),
+    messageShape,
   });
   return error;
 }
@@ -248,6 +264,26 @@ export interface OpenCodeBridgeCommandHandshakePortOptions {
 }
 
 const DEFAULT_HANDSHAKE_TIMEOUT_MS = 120_000;
+
+/** Escalating contention backoff; the handshake deadline stays the only bound. */
+const OPEN_CODE_HANDSHAKE_RETRY_BACKOFF_MS = [250, 500, 1000, 2000, 4000] as const;
+
+/** One-line deterministic lane/authority rejections from the SDK probe path:
+ *  retrying them cannot recover, so they propagate immediately. */
+const OPEN_CODE_AUTHORITY_REJECTION_PREFIXES = [
+  'OpenCode lifecycle ',
+  'OpenCode confirmed stop authority mismatch',
+  'OpenCode empty-lane stop authority mismatch',
+  'OpenCode delivery lane is stopped',
+  'OpenCode observation launch authority',
+  'OpenCode selected delivery ',
+  'OpenCode bridge expected laneId precondition',
+  'OpenCode bridge expectedRunId precondition',
+] as const;
+
+function isDeterministicOpenCodeAuthorityRejection(message: string): boolean {
+  return OPEN_CODE_AUTHORITY_REJECTION_PREFIXES.some((prefix) => message.startsWith(prefix));
+}
 
 export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandshakePort {
   private readonly bridge: OpenCodeBridgeCommandExecutor;
@@ -316,19 +352,25 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
         }
       );
 
-      // Handshake precedes command dispatch. Retry only a structured, retryable
-      // registry contention result; ownership loss and all other failures propagate.
+      // Handshake precedes command dispatch. Retry retryable contention (a held
+      // lock of any category, or a transient with no lock facts) with escalating
+      // backoff bounded by the original deadline; deterministic lane authority
+      // rejections, corrupted locks, and non-retryable failures propagate.
       if (
         !result.ok &&
         result.error.retryable &&
         result.error.kind === 'provider_error' &&
-        result.error.details?.lockCode === 'ELOCKED' &&
-        result.error.details?.lockCategory === 'registry' &&
-        attempt < 3 &&
-        Date.now() + 250 < deadline
+        result.error.details?.lockCode !== 'ECOMPROMISED' &&
+        !isDeterministicOpenCodeAuthorityRejection(result.error.message)
       ) {
-        await new Promise<void>((resolve) => setTimeout(resolve, 250));
-        continue;
+        const delay =
+          OPEN_CODE_HANDSHAKE_RETRY_BACKOFF_MS[
+            Math.min(attempt, OPEN_CODE_HANDSHAKE_RETRY_BACKOFF_MS.length - 1)
+          ];
+        if (Date.now() + delay < deadline) {
+          await new Promise<void>((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
       }
       if (!result.ok) {
         throw createOpenCodeBridgeHandshakeFailure(result.error);

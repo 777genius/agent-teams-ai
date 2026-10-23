@@ -621,6 +621,9 @@ export interface OpenCodeStopCausalFailure {
     sdkCode?: string;
     nativeOperation?: string;
     nativeErrno?: number;
+    lockCode?: 'ELOCKED' | 'ECOMPROMISED';
+    lockCategory?: 'registry' | 'profile' | 'startup' | 'unknown';
+    messageShape?: 'code' | 'lock_operation' | 'unclassified';
   };
   phase: string;
   reason: string | null;
