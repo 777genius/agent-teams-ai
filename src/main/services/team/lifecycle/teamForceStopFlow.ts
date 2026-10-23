@@ -44,8 +44,13 @@ export const RUNTIME_HOSTS_POLL_INTERVAL_MS = 1_000;
  * a stop that was about to succeed: a 45s budget cut off a lane that confirmed
  * at 47.6s. `countLiveRuntimeHosts` ends the wait the moment the hosts are
  * gone, so a healthy stop never spends this budget and it only bounds a hang.
+ * A stop attempt settles within the stop command budget plus one transport
+ * watchdog grace: every bridge call it makes, recovery included, draws from one
+ * deadline, and only a watchdog kill - which ends the attempt - overruns it.
+ * The rest of the race is headroom for the per-team lock and the file phases
+ * around the attempt, so a slow stop still reports its own causal failure.
  */
-export const STOP_ESCALATION_TIMEOUT_MS = 90_000;
+export const STOP_ESCALATION_TIMEOUT_MS = 120_000;
 const FORCE_STOP_DELIVERY_CANCEL_REASON =
   'force_stop_requested: pending delivery cancelled by user force stop';
 
