@@ -14,7 +14,7 @@ import { applyAgentTeamsIdentityEnv } from '@main/services/identity/AgentTeamsId
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { killProcessTree, spawnCli, untrackCliProcess } from '@main/utils/childProcess';
 import { ensureMinimumNodeOldSpaceEnv } from '@main/utils/nodeOptions';
-import { getAppDataPath, getClaudeBasePath } from '@main/utils/pathDecoder';
+import { getAppDataPath, getClaudeBasePath, getMcpServerBasePath } from '@main/utils/pathDecoder';
 import { forceKillProcessByPidNoWait, killProcessByPid } from '@main/utils/processKill';
 import { createLogger } from '@shared/utils/logger';
 
@@ -573,8 +573,14 @@ function commandArgEquals(command: string, flag: string, expected: string): bool
 
 function isMcpHttpServerCommand(command: string): boolean {
   const normalized = command.trim();
+  const devBase = path.join(getMcpServerBasePath(), 'dev').replaceAll('\\', '/');
+  const escapedDevBase = devBase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const devEntry = new RegExp(
+    `(?:^|\\s|["'])${escapedDevBase}/[1-9]\\d*-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/index\\.js(?=["']?(?:\\s|$))`
+  );
   return (
-    /mcp-server[/\\](?:src[/\\]index\.ts|dist[/\\]index\.js|index\.js)(?=\s|$)/.test(normalized) &&
+    (/mcp-server[/\\](?:src[/\\]index\.ts|dist[/\\]index\.js|index\.js)(?=\s|$)/.test(normalized) ||
+      devEntry.test(normalized.replaceAll('\\', '/'))) &&
     commandArgEquals(normalized, '--transport', 'httpStream') &&
     commandArgEquals(normalized, '--host', MCP_HTTP_HOST) &&
     commandArgEquals(normalized, '--endpoint', MCP_HTTP_ENDPOINT) &&

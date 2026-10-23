@@ -8,7 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { configureDesktopMcpEnvironment } from '@features/external-agent-connection/main';
-import { getClaudeBasePath } from '@main/utils/pathDecoder';
+import { getClaudeBasePath, getMcpServerBasePath } from '@main/utils/pathDecoder';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
@@ -813,16 +813,26 @@ describe('AgentTeamsMcpHttpServer', () => {
   });
 
   it.each([
-    { bound: false, identity: 'missing', shouldKill: true },
-    { bound: true, identity: 'missing', shouldKill: false },
-    { bound: true, identity: 'foreign', shouldKill: false },
-    { bound: true, identity: 'prior-owned', shouldKill: true },
-    { bound: true, identity: 'owner-live', shouldKill: false },
-    { bound: true, identity: 'owner-reappears', shouldKill: false },
-    { bound: true, identity: 'pid-reused', shouldKill: false },
-  ] as const)(
-    'cleans up an orphan with bound=$bound, identity=$identity only when ownership is proven',
-    async ({ bound, identity, shouldKill }) => {
+    ...(
+      [
+        { bound: false, identity: 'missing', shouldKill: true },
+        { bound: true, identity: 'missing', shouldKill: false },
+        { bound: true, identity: 'foreign', shouldKill: false },
+        { bound: true, identity: 'prior-owned', shouldKill: true },
+        { bound: true, identity: 'owner-live', shouldKill: false },
+        { bound: true, identity: 'owner-reappears', shouldKill: false },
+        { bound: true, identity: 'pid-reused', shouldKill: false },
+      ] as const
+    ).flatMap((scenario) => (['legacy', 'dev'] as const).map((entry) => ({ ...scenario, entry }))),
+    ...(['foreign-dev', 'bad-pid', 'bad-uuid'] as const).map((entry) => ({
+      bound: false,
+      identity: 'missing' as const,
+      shouldKill: false,
+      entry,
+    })),
+  ])(
+    'cleans up an orphan entry=$entry bound=$bound identity=$identity only when ownership is proven',
+    async ({ bound, identity, shouldKill, entry }) => {
       const { root, statePath } = await createTempStatePath();
       const child = new FakeChildProcess(43123);
       const orphanPort = 41031;
@@ -830,7 +840,25 @@ describe('AgentTeamsMcpHttpServer', () => {
       const killProcess = vi.fn((pid: number) => {
         alivePids.delete(pid);
       });
-      const command = `node /repo/mcp-server/src/index.ts --transport httpStream --host 127.0.0.1 --port ${orphanPort} --endpoint /mcp`;
+      const uuid = 'eaf6e8d0-0daf-4aa7-89e8-90d9f315d531';
+      const base = getMcpServerBasePath();
+      const entries = {
+        legacy: '/repo/mcp-server/src/index.ts',
+        dev: path.join(base, 'dev', `9001-${uuid}`, 'index.js'),
+        'foreign-dev': path.join(
+          base,
+          '..',
+          'foreign',
+          'mcp-server',
+          'dev',
+          `9001-${uuid}`,
+          'index.js'
+        ),
+        'bad-pid': path.join(base, 'dev', `0-${uuid}`, 'index.js'),
+        'bad-uuid': path.join(base, 'dev', '9001-not-a-uuid', 'index.js'),
+      };
+      const entryArg = entry === 'legacy' ? entries[entry] : `"${entries[entry]}"`;
+      const command = `node ${entryArg} --transport httpStream --host 127.0.0.1 --port ${orphanPort} --endpoint /mcp`;
       const rows = [
         { pid: 9001, ppid: 1, command },
         { pid: 9005, ppid: 9001, command },

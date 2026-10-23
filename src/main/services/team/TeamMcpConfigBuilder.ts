@@ -1,5 +1,3 @@
-import { pathToFileURL } from 'node:url';
-
 import { getDesktopMcpChildEnvironment } from '@features/external-agent-connection/main';
 import { execCli } from '@main/utils/childProcess';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
@@ -28,6 +26,7 @@ import {
   parseNodeRuntimeProbeMetadata,
   probePackagedElectronNodeRuntime,
 } from './McpNodeRuntimeProbe';
+import { resolveWorkspaceMcpBundle } from './WorkspaceMcpBundle';
 
 import type { TeamMemberMcpPolicy, TeamMemberMcpScope } from '@shared/types';
 
@@ -146,19 +145,8 @@ function getWorkspaceMcpServerDir(): string {
   return path.join(getWorkspaceRoot(), 'mcp-server');
 }
 
-function getBuiltServerEntry(): string {
-  return path.join(getWorkspaceMcpServerDir(), 'dist', 'index.js');
-}
-
 function getSourceServerEntry(): string {
   return path.join(getWorkspaceMcpServerDir(), 'src', 'index.ts');
-}
-
-function getWorkspaceTsxPackageJsonCandidates(): string[] {
-  return [
-    path.join(getWorkspaceMcpServerDir(), 'node_modules', 'tsx', 'package.json'),
-    path.join(getWorkspaceRoot(), 'node_modules', 'tsx', 'package.json'),
-  ];
 }
 
 async function pathExists(targetPath: string): Promise<boolean> {
@@ -168,24 +156,6 @@ async function pathExists(targetPath: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-async function resolveWorkspaceTsxLoader(checked: string[]): Promise<string | null> {
-  for (const packageJsonPath of getWorkspaceTsxPackageJsonCandidates()) {
-    checked.push(packageJsonPath);
-    if (!(await pathExists(packageJsonPath))) {
-      continue;
-    }
-
-    const loader = path.resolve(path.dirname(packageJsonPath), 'dist', 'loader.mjs');
-    checked.push(loader);
-    if (await pathExists(loader)) {
-      // Symlinked workspace deps (pnpm store) launch from their physical paths.
-      return await fs.promises.realpath(loader);
-    }
-  }
-
-  return null;
 }
 
 function shouldRetryMcpConfigRemoval(error: NodeJS.ErrnoException): boolean {
@@ -553,33 +523,16 @@ export async function resolveAgentTeamsMcpLaunchSpec(
     logger.warn(`Packaged MCP entry not found at ${packagedEntry}, falling back to workspace`);
   }
 
-  // 2. Dev mode — prefer source so pnpm dev always sees current MCP tools
+  // 2. Compile current development sources before starting the MCP client clock.
   const sourceEntry = getSourceServerEntry();
   emitProgress(options, 'source-entry', 'Checking MCP source entry...');
   checked.push(sourceEntry);
   if (await pathExists(sourceEntry)) {
-    emitProgress(options, 'tsx-runner', 'Resolving MCP TypeScript runner...');
-    // Registering the tsx loader in-process avoids the tsx CLI, whose IPC pipe
-    // under a deep owned-profile TMPDIR exceeds the UNIX socket path limit.
-    const tsxLoader = await resolveWorkspaceTsxLoader(checked);
-    if (tsxLoader) {
-      // `--import` resolves its argument as an ESM specifier: a Windows drive
-      // path is parsed as a `C:` URL scheme and rejected, so pass a file URL.
-      return {
-        command: await resolveNodePath(options),
-        args: ['--import', pathToFileURL(tsxLoader).href, await fs.promises.realpath(sourceEntry)],
-      };
-    }
-  }
-
-  // 3. Dev mode fallback — use built dist when source execution is unavailable
-  const builtEntry = getBuiltServerEntry();
-  emitProgress(options, 'built-entry', 'Checking built MCP server entry...');
-  checked.push(builtEntry);
-  if (await pathExists(builtEntry)) {
+    emitProgress(options, 'workspace-bundle', 'Preparing current MCP JavaScript bundle...');
+    const command = await resolveNodePath(options);
     return {
-      command: await resolveNodePath(options),
-      args: [builtEntry],
+      command,
+      args: [await resolveWorkspaceMcpBundle(getWorkspaceRoot(), command, getMcpServerBasePath())],
     };
   }
 
