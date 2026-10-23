@@ -135,7 +135,7 @@ export const CreateTeamTemplatePicker = ({
         variant="ghost"
         data-testid="create-template-option-none"
         aria-pressed={selection === CREATE_TEAM_TEMPLATE_NONE_VALUE}
-        className={`h-auto w-full justify-start ${optionClass(selection === CREATE_TEAM_TEMPLATE_NONE_VALUE)}`}
+        className={`h-auto w-full flex-col items-stretch justify-start whitespace-normal ${optionClass(selection === CREATE_TEAM_TEMPLATE_NONE_VALUE)}`}
         onClick={() => handleSelect(CREATE_TEAM_TEMPLATE_NONE_VALUE)}
       >
         <span className="text-sm font-semibold text-[var(--color-text)]">
@@ -163,7 +163,7 @@ export const CreateTeamTemplatePicker = ({
                 variant="ghost"
                 data-testid={`create-template-option-builtin-${template.id}`}
                 aria-pressed={active}
-                className={`h-auto justify-start ${optionClass(active)}`}
+                className={`h-auto w-full flex-col items-stretch justify-start whitespace-normal ${optionClass(active)}`}
                 onClick={() => handleSelect(value)}
               >
                 <span className="flex items-start justify-between gap-2">
@@ -241,7 +241,7 @@ export const CreateTeamTemplatePicker = ({
                   variant="ghost"
                   data-testid={`create-template-option-custom-${template.templateId}`}
                   aria-pressed={active}
-                  className={`h-auto justify-start ${optionClass(active)}`}
+                  className={`h-auto w-full flex-col items-stretch justify-start whitespace-normal ${optionClass(active)}`}
                   onClick={() => handleSelect(value)}
                 >
                   <span className="text-sm font-semibold text-[var(--color-text)]">
