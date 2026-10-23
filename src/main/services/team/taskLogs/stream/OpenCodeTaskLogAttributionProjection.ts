@@ -1,4 +1,5 @@
 import { canonicalizeAgentTeamsToolName } from '../../agentTeamsToolNames';
+
 import { mapOpenCodeRuntimeTranscriptMessagesToParsedMessages } from './OpenCodeRuntimeProjectionMapper';
 
 import type { OpenCodeRuntimeTranscriptLogMessage } from '../../../runtime/ClaudeMultimodelBridgeService';

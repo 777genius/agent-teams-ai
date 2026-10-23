@@ -146,7 +146,7 @@ export function killOrphanedTeamAgentProcesses(
     teamName: input.teamName,
     currentRunPid: input.currentRunPid,
     knownPids: input.knownPids,
-    isPidAlive: ports.isPidAlive,
+    isPidAlive: (pid) => ports.isPidAlive(pid),
   });
   if (verdict.confirmed) return verdict;
   if (!rows || targetPids.length === 0) return verdict;
