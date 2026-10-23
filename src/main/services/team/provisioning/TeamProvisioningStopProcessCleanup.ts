@@ -83,49 +83,99 @@ export function killOrphanedTeamAgentProcesses(
   if (!rows) return false;
   const targetPids = selectOrphanedTeamAgentPids(rows, input.teamName, input.currentRunPid);
   if (targetPids.size === 0) return true;
-  const captured = new Map<number, UnixProcessIdentity>();
-  if (process.platform !== 'win32') {
-    const identities = ports.readIdentities();
-    if (!identities) return false;
+  // Windows has no captured birth identities on this legacy taskkill path.
+  if (process.platform === 'win32') {
     for (const pid of targetPids) {
-      const tree = collectExternalProcessTreeIdentities(identities, pid, process.pid);
-      if ('refusal' in tree || tree.identities.length === 0) return false;
-      for (const identity of tree.identities) captured.set(identity.pid, identity);
-    }
-  }
-  const signalPids = process.platform === 'win32' ? targetPids : captured.keys();
-  for (const pid of signalPids) {
-    try {
-      if (process.platform !== 'win32') {
-        const current = ports.readIdentities();
-        if (!current) {
-          continue;
-        }
-        if (!current.has(pid)) continue;
-        const expected = captured.get(pid);
-        if (!expected || !isSameUnixProcessIdentity(expected, current.get(pid))) {
-          continue;
-        }
+      try {
+        ports.killPid(pid);
+      } catch (error) {
+        input.logger.debug(
+          `[${input.teamName}] Failed to kill orphaned teammate process pid=${pid}: ${String(error)}`
+        );
       }
-      ports.killPid(pid);
-      input.logger.info(
-        `[${input.teamName}] Signalled orphaned teammate process pid=${pid} during stop`
-      );
-    } catch (error) {
-      input.logger.debug(
-        `[${input.teamName}] Failed to kill orphaned teammate process pid=${pid}: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
+    }
+    return false;
+  }
+  const captured = new Map<number, UnixProcessIdentity>();
+  const signalSent = new Set<number>();
+  let discoveryComplete = false;
+  let currentRunPid = input.currentRunPid;
+  function stopNewProcesses(nextRunPid: number | undefined): void {
+    currentRunPid = nextRunPid;
+    discoveryComplete = false;
+    const discoveredRows = ports.readRows();
+    const identities = ports.readIdentities();
+    if (!discoveredRows || !identities) return;
+    // A different birth proves the old process has exited; it grants no rights
+    // over the successor. Only current matching-root discovery can capture it.
+    for (const [pid, identity] of captured) {
+      const observed = identities.get(pid);
+      if (!observed || observed.startIdentity !== identity.startIdentity) {
+        captured.delete(pid);
+        signalSent.delete(pid);
+      }
+    }
+    const roots = selectOrphanedTeamAgentPids(discoveredRows, input.teamName, currentRunPid);
+    let complete = true;
+    // Rebuild deepest-first order on every explicit Stop: an unsent old parent
+    // may have acquired a child since the previous attempt.
+    const ordered = new Map<number, UnixProcessIdentity>();
+    for (const pid of new Set([...roots, ...captured.keys()])) {
+      const previousRoot = captured.get(pid);
+      const observedRoot = identities.get(pid);
+      if (
+        previousRoot &&
+        observedRoot &&
+        previousRoot.processGroupId !== observedRoot.processGroupId
+      ) {
+        complete = false;
+        continue;
+      }
+      const tree = collectExternalProcessTreeIdentities(identities, pid, process.pid);
+      if ('refusal' in tree || tree.identities.length === 0) {
+        complete = false;
+        continue;
+      }
+      for (const identity of tree.identities) {
+        const previous = captured.get(identity.pid);
+        try {
+          if (previous && !isSameUnixProcessIdentity(previous, identity)) {
+            complete = false;
+            continue;
+          }
+        } catch {
+          complete = false;
+          continue;
+        }
+        ordered.set(identity.pid, identity);
+      }
+    }
+    for (const [pid, identity] of ordered) captured.set(pid, identity);
+    discoveryComplete = complete;
+    for (const [pid, expected] of ordered) {
+      if (signalSent.has(pid)) continue;
+      try {
+        const current = ports.readIdentities();
+        if (!current || !current.has(pid)) continue;
+        if (!isSameUnixProcessIdentity(expected, current.get(pid))) continue;
+        ports.killPid(pid);
+        signalSent.add(pid);
+        input.logger.info(
+          `[${input.teamName}] Signalled orphaned teammate process pid=${pid} during stop`
+        );
+      } catch (error) {
+        input.logger.debug(
+          `[${input.teamName}] Failed to kill orphaned teammate process pid=${pid}: ${String(error)}`
+        );
+      }
     }
   }
-  // Windows' legacy taskkill helper is fire-and-forget and has no captured
-  // birth identities here. Preserve its honest refusal rather than infer exit.
-  if (process.platform === 'win32') return false;
-  // Even a partially failed dispatch retains its captured identities for retries.
-  // Observation may confirm their eventual exit but never grants another signal.
+  stopNewProcesses(currentRunPid);
+  if (!discoveryComplete && captured.size === 0) return false;
   return {
+    stopNewProcesses,
     async confirmStopped() {
+      if (!discoveryComplete) return false;
       const deadline = Date.now() + ORPHAN_EXIT_TIMEOUT_MS;
       while (true) {
         const currentRows = ports.readRows();
@@ -133,16 +183,20 @@ export function killOrphanedTeamAgentProcesses(
         if (!currentRows || !current) return false;
         // A newly launched matching process is not owned by this receipt.
         if (
-          [...selectOrphanedTeamAgentPids(currentRows, input.teamName, input.currentRunPid)].some(
-            (pid) => !captured.has(pid)
+          [...selectOrphanedTeamAgentPids(currentRows, input.teamName, currentRunPid)].some(
+            (pid) => {
+              const expected = captured.get(pid);
+              const observed = current.get(pid);
+              return !expected || !observed || expected.startIdentity !== observed.startIdentity;
+            }
           )
         )
           return false;
         let remaining = false;
         for (const [pid, identity] of captured) {
           const observed = current.get(pid);
-          if (!observed) continue;
-          // PID reuse is not authority to finalize the successor or signal it.
+          if (!observed || observed.startIdentity !== identity.startIdentity) continue;
+          // Same birth with changed process-group authority remains a refusal.
           try {
             if (!isSameUnixProcessIdentity(identity, observed)) return false;
           } catch {

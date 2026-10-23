@@ -169,9 +169,10 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
   it('retains an outstanding descendant receipt across repeated Stop until its captured child exits', async () => {
     let childAlive = true;
     const confirmStopped = vi.fn(async () => !childAlive);
+    const stopNewProcesses = vi.fn();
     const killOrphaned = vi
       .fn<Ports['killOrphanedTeamAgentProcesses']>()
-      .mockReturnValueOnce({ confirmStopped })
+      .mockReturnValueOnce({ confirmStopped, stopNewProcesses })
       .mockReturnValue(true); // Root is now gone: rediscovery alone would falsely confirm.
     const confirmNativeTeamStopped = vi.fn(async () => undefined);
     const cleanup = createTeamProvisioningPersistentRuntimeCleanup(
@@ -193,6 +194,7 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     await cleanup.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam('team-a');
     expect(killOrphaned).toHaveBeenCalledTimes(1);
     expect(confirmNativeTeamStopped).toHaveBeenCalledTimes(1);
+    expect(stopNewProcesses.mock.calls).toEqual([[123], [123]]);
   });
 
   it('does not replace a newer stop receipt with a delayed earlier confirmation', async () => {
@@ -201,7 +203,10 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
       release = resolve;
     });
     const ports = createPorts({
-      killOrphanedTeamAgentProcesses: vi.fn(() => ({ confirmStopped: () => pending })),
+      killOrphanedTeamAgentProcesses: vi.fn(() => ({
+        confirmStopped: () => pending,
+        stopNewProcesses: vi.fn(),
+      })),
       confirmNativeTeamStopped: vi.fn(async () => undefined),
     });
     const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
@@ -246,7 +251,7 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
         { name: 'worker', tmuxPaneId: '%1', backendType: 'tmux' },
       ],
       killPersistedPaneMembers: () => false,
-      killOrphanedTeamAgentProcesses: () => ({ confirmStopped }),
+      killOrphanedTeamAgentProcesses: () => ({ confirmStopped, stopNewProcesses: vi.fn() }),
       confirmNativeTeamStopped: vi.fn(async () => undefined),
     });
     const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);

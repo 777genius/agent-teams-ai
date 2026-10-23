@@ -1,6 +1,7 @@
 import type { PersistedRuntimeMemberLike } from './TeamProvisioningRuntimeSnapshot';
 
 export interface PendingPersistentProcessStop {
+  stopNewProcesses(currentRunPid: number | undefined): void;
   confirmStopped(): Promise<boolean>;
 }
 
@@ -50,8 +51,8 @@ export function createTeamProvisioningPersistentRuntimeCleanup(
       if (members.length > 0) {
         panesConfirmed = ports.killPersistedPaneMembers(teamName, members);
       }
-      // An outstanding receipt owns descendants even after its matching root exits.
-      // Retry observes that same capture; it cannot forget it or replay its signals.
+      // Extend the existing capture on explicit Stop without replaying sent signals.
+      previous?.pending?.stopNewProcesses(ports.getCurrentRunPid(teamName));
       const processesConfirmed =
         previous?.pending ??
         ports.killOrphanedTeamAgentProcesses(teamName, ports.getCurrentRunPid(teamName));
