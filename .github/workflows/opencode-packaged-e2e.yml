@@ -39,6 +39,7 @@ on:
       - scripts/e2e/opencode-diagnostics/stage-candidate*.mjs
       - scripts/e2e/opencode-diagnostics/run-packaged.mjs
       - scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.mts
+      - scripts/e2e/opencode-diagnostics/native-test-pin.mts
       - scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.tsconfig.json
       - scripts/e2e/opencode-diagnostics-desktop.mjs
       - scripts/e2e/opencode-diagnostics/platform.mjs

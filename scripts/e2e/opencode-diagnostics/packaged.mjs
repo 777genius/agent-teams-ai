@@ -6,6 +6,7 @@ import { lstat, mkdir, readFile, readdir, realpath, stat, writeFile } from 'node
 import path from 'node:path';
 import { verifyCandidatePayload } from './stage-candidate.mjs';
 import { isolatedEnvironment, processes, ownedTree, sameIdentity } from './platform.mjs';
+import { WINDOWS_NATIVE_TEST_PIN } from './native-test-pin.mts';
 
 export function packagedArguments(args, platform = process.platform) {
   assert.equal(platform, 'win32', 'Packaged harness requires Windows');
@@ -564,7 +565,7 @@ export async function installerPublicationSnapshot(data) {
     staging.push({ name, directory, executable });
     exactExecutables.add(path.join(runtime, name, 'opencode.exe').toLowerCase());
   }
-  const target = 'versions/1.19.3/opencode-windows-x64';
+  const target = `versions/${WINDOWS_NATIVE_TEST_PIN.version}/opencode-windows-x64`;
   const targetDirectory = await metadata(target);
   const targetExecutable = await metadata(`${target}/opencode.exe`);
   assert(targetDirectory.state === 'missing' || targetDirectory.kind === 'directory');
