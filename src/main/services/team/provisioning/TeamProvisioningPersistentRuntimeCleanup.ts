@@ -21,6 +21,8 @@ const STOP_CONFIRMATION_RECHECK_BACKOFF_MS = 400;
 
 export interface TeamProvisioningPersistentRuntimeCleanupPorts {
   readPersistedRuntimeMembers(teamName: string): PersistedRuntimeMemberLike[];
+  /** Recorded runtime pids from launch discovery - config members rarely carry any. */
+  readRecordedRuntimePids?(teamName: string): readonly number[];
   killPersistedPaneMembers(
     teamName: string,
     members: PersistedRuntimeMemberLike[]
@@ -60,14 +62,18 @@ export function createTeamProvisioningPersistentRuntimeCleanup(
       members.length > 0
         ? ports.killPersistedPaneMembers(teamName, members)
         : ({ confirmed: true } satisfies PersistentRuntimeStopVerdict);
+    const memberPids = members.flatMap((member) =>
+      typeof member.runtimePid === 'number' && Number.isFinite(member.runtimePid)
+        ? [member.runtimePid]
+        : []
+    );
+    const recordedPids = [
+      ...new Set([...(ports.readRecordedRuntimePids?.(teamName) ?? []), ...memberPids]),
+    ];
     const processes = ports.killOrphanedTeamAgentProcesses(
       teamName,
       ports.getCurrentRunPid(teamName),
-      members.flatMap((member) =>
-        typeof member.runtimePid === 'number' && Number.isFinite(member.runtimePid)
-          ? [member.runtimePid]
-          : []
-      )
+      recordedPids
     );
     const confirmed = panes.confirmed && processes.confirmed;
     confirmedStops.set(teamName, confirmed);

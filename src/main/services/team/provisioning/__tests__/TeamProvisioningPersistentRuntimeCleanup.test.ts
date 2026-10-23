@@ -223,6 +223,20 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     expect(ports.killOrphanedTeamAgentProcesses).toHaveBeenCalledWith('team-a', 123, [51, 52]);
   });
 
+  it('takes recorded runtime pids from launch discovery when config members carry none', () => {
+    const members = [{ name: 'Worker', tmuxPaneId: '%1', backendType: 'tmux' }, { name: 'Solo' }];
+    const ports = createPorts({
+      readPersistedRuntimeMembers: vi.fn(() => members as PersistedRuntimeMemberLike[]),
+      readRecordedRuntimePids: vi.fn(() => [51, 52]),
+    });
+    const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
+
+    expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(true);
+
+    expect(ports.readRecordedRuntimePids).toHaveBeenCalledWith('team-a');
+    expect(ports.killOrphanedTeamAgentProcesses).toHaveBeenCalledWith('team-a', 123, [51, 52]);
+  });
+
   it.each(['live_agent_processes', 'process_table_unreadable'] as const)(
     'settles dispatched kills before declaring the stop unconfirmed (%s)',
     async (reason) => {
