@@ -265,7 +265,7 @@
     "@openuidev/react-headless": "0.17.0",
     "@openuidev/react-lang": "0.3.2",
     "@openuidev/react-ui": "0.17.0",
-    "zod": "4.6.5"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.2.0",

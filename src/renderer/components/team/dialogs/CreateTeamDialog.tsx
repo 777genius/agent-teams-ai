@@ -24,7 +24,6 @@ import {
   WorkspaceTrustLaunchNotice,
 } from '@features/workspace-trust/renderer';
 import { api } from '@renderer/api';
-import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import {
   buildMemberDraftColorMap,
   buildMemberDraftSuggestions,
@@ -174,6 +173,7 @@ import {
   updateProviderCheck,
 } from './ProvisioningProviderStatusList';
 import { resolveConfigOnlyCwd } from './resolveConfigOnlyCwd';
+import { CreateTeamProviderStatusStrip } from './RetryOpenCodeStatus';
 import { SkipPermissionsCheckbox } from './SkipPermissionsCheckbox';
 import {
   analyzeTeammateRuntimeCompatibility,
@@ -2880,7 +2880,9 @@ export const CreateTeamDialog = ({
         <DialogFooter className="-mx-6 -mb-6 -mt-4 border-t border-[var(--color-border)] bg-[var(--color-surface-sidebar)] px-6 pb-5 pt-4 sm:justify-between">
           <div className="min-w-0">
             {canCreate && launchTeam ? (
-              <ProviderActivityStatusStrip
+              <CreateTeamProviderStatusStrip
+                projectPath={effectiveCwd}
+                disabled={isSubmitting}
                 cliStatus={effectiveCliStatus}
                 providerStatusOverride={effectiveCwd ? projectScopedOpenCodeStatus : null}
                 sourceCliStatus={loadingCliStatus}
