@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { bindLifecycleManifest } from '../../opencode/bridge/OpenCodeLifecycleManifestBinding';
 import { getOpenCodeRuntimeManifestPath } from '../../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { createMemberSpawnStatusMutationPortsFromService } from '../TeamProvisioningMemberSpawnSnapshots';
 import { prepareOpenCodeWorktreeRootAggregateLaunchPreflight } from '../TeamProvisioningOpenCodeAggregateRun';
 import {
   type OpenCodeRuntimeStopFlowPorts,
@@ -16,6 +17,7 @@ import {
   stopSingleMixedSecondaryRuntimeLane,
 } from '../TeamProvisioningOpenCodeRuntimeStopFlow';
 import { TeamProvisioningRunTrackingDeliveryHelper } from '../TeamProvisioningRunTrackingDelivery';
+import { updateProvisioningProgressMetadata } from '../TeamProvisioningSecondaryStopProgress';
 
 import type { TeamLaunchRuntimeAdapter } from '../../runtime';
 import type {
@@ -282,6 +284,7 @@ function makeSingleLaneStopPorts(
   const logger = { warn: vi.fn(), info: vi.fn() };
   return {
     teamsBasePath: '/teams',
+    isCurrentRun: () => true,
     isRuntimeProcessAlive: input.isRuntimeProcessAlive ?? ((): boolean => false),
     getOpenCodeRuntimeAdapter: vi.fn(() =>
       Object.prototype.hasOwnProperty.call(input, 'adapter')
@@ -635,6 +638,213 @@ describe('OpenCode runtime stop flow', () => {
     await stopping;
     expect(run.progress).toBe(previousProgress);
     expectFinalSingleLaneState(lane);
+  });
+
+  it('restores the owned aggregate phase after real diagnostic metadata copying during lane Stop', async () => {
+    const started = createDeferred<void>();
+    const release = createDeferred<void>();
+    const run = {
+      ...makeSingleLaneRun(),
+      expectedMembers: ['Worker'],
+      isLaunch: true,
+      provisioningComplete: true,
+      memberSpawnStatuses: new Map(),
+    };
+    const lane = makeSingleLane();
+    const previous = run.progress;
+    const ports = makeSingleLaneStopPorts({
+      adapter: makeAdapter(async (input) => {
+        started.resolve();
+        await release.promise;
+        return {
+          runId: input.runId,
+          teamName: input.teamName,
+          stopped: true,
+          members: {},
+          warnings: [],
+          diagnostics: [],
+        };
+      }),
+    });
+    const diagnostics = [
+      {
+        id: 'fresh-proof',
+        memberName: 'Worker',
+        severity: 'info' as const,
+        code: 'bootstrap_confirmed' as const,
+        label: 'Fresh proof',
+        observedAt: '2026-01-01T00:00:06.000Z',
+      },
+    ];
+    const mutation = createMemberSpawnStatusMutationPortsFromService<typeof run>(
+      {
+        syncMemberTaskActivityForRuntimeTransition: vi.fn(),
+        syncMemberLaunchGraceCheck: vi.fn(),
+        appendMemberBootstrapDiagnostic: vi.fn(),
+        isCurrentTrackedRun: () => true,
+        emitMemberSpawnChange: vi.fn(),
+        persistLaunchStateSnapshot: async () => undefined,
+      },
+      {
+        nowIso: () => '2026-01-01T00:00:06.000Z',
+        buildLaunchDiagnostics: () => diagnostics,
+        reportBackgroundPersistenceError: vi.fn(),
+      }
+    );
+    const stopping = stopSingleMixedSecondaryRuntimeLane(run, lane, 'relaunch', ports);
+    await started.promise;
+    mutation.updateLaunchDiagnostics(run);
+    run.progress.cliLogsTail = 'newer CLI log';
+    release.resolve();
+    await stopping;
+    expect(run.progress.state).toBe(previous.state);
+    expect(run.progress.message).toBe(previous.message);
+    expect(run.progress.launchDiagnostics).toEqual(diagnostics);
+    expect(run.progress.cliLogsTail).toBe('newer CLI log');
+    expectFinalSingleLaneState(lane);
+  });
+
+  it('owns the stop phase before its first read and cannot start an adapter effect after revocation during that read', async () => {
+    const run = makeSingleLaneRun();
+    const lane = makeSingleLane();
+    const reading = createDeferred<void>();
+    const release = createDeferred<void>();
+    const stop = vi.fn(async (input) => ({
+      runId: input.runId,
+      teamName: input.teamName,
+      stopped: true,
+      members: {},
+      warnings: [],
+      diagnostics: [],
+    }));
+    const ports = makeSingleLaneStopPorts({ adapter: makeAdapter(stop) });
+    ports.readLaunchState = vi.fn(async () => {
+      reading.resolve();
+      await release.promise;
+      return snapshot();
+    });
+    const work = stopSingleMixedSecondaryRuntimeLane(run, lane, 'relaunch', ports);
+    const settled = work.then(
+      () => null,
+      (error: unknown) => error
+    );
+    await reading.promise;
+    expect(run.progress.state).toBe('disconnected');
+    run.cancelRequested = true;
+    release.resolve();
+    expect(await settled).toBeInstanceOf(Error);
+    expect(stop).not.toHaveBeenCalled();
+  });
+
+  it.each(['success-first', 'success-last', 'failed-cleanup'] as const)(
+    'keeps one original phase baseline across overlapping lane stops: %s',
+    async (order) => {
+      const run = makeSingleLaneRun();
+      const initial = run.progress;
+      const first = makeSingleLane();
+      const second = makeSingleLane({ laneId: 'secondary-other', runId: 'other-run' });
+      const started = [createDeferred<void>(), createDeferred<void>()];
+      const release = [createDeferred<void>(), createDeferred<void>()];
+      const makePortsFor = (index: number): SingleMixedSecondaryRuntimeLaneStopPorts =>
+        makeSingleLaneStopPorts({
+          adapter: makeAdapter(async (input) => {
+            started[index].resolve();
+            await release[index].promise;
+            return {
+              runId: input.runId,
+              teamName: input.teamName,
+              stopped: true,
+              members: {},
+              warnings: [],
+              diagnostics: [],
+            };
+          }),
+          clearLane: async () => order !== 'failed-cleanup' || index !== 0,
+        });
+      const a = stopSingleMixedSecondaryRuntimeLane(run, first, 'relaunch', makePortsFor(0));
+      const aSettled = a.then(
+        () => null,
+        (error: unknown) => error
+      );
+      await started[0].promise;
+      const b = stopSingleMixedSecondaryRuntimeLane(run, second, 'cleanup', makePortsFor(1));
+      await started[1].promise;
+      updateProvisioningProgressMetadata(run, { cliLogsTail: 'latest concurrent log' });
+      const earlier = order === 'success-last' ? 1 : 0;
+      release[earlier].resolve();
+      if (earlier === 0) await aSettled;
+      else await b;
+      expect(run.progress.state).toBe(order === 'failed-cleanup' ? 'failed' : 'disconnected');
+      release[1 - earlier].resolve();
+      await b;
+      const failure = await aSettled;
+      if (order === 'failed-cleanup') {
+        expect(failure).toBeInstanceOf(Error);
+        expect(run.progress.state).toBe('failed');
+      } else {
+        expect(failure).toBeNull();
+        expect(run.progress.state).toBe(initial.state);
+        expect(run.progress.message).toBe(initial.message);
+      }
+      expect(run.progress.cliLogsTail).toBe('latest concurrent log');
+      expect(run.secondaryStopProgressCustody).toBeUndefined();
+    }
+  );
+
+  it.each(['cancelled', 'killed', 'foreign-root', 'foreign-phase', 'replacement-lane'] as const)(
+    'never restores the old phase after %s',
+    async (change) => {
+      const run = makeSingleLaneRun();
+      const lane = makeSingleLane();
+      const started = createDeferred<void>();
+      const release = createDeferred<void>();
+      let current = true;
+      const ports = makeSingleLaneStopPorts({
+        adapter: makeAdapter(async (input) => {
+          started.resolve();
+          await release.promise;
+          return {
+            runId: input.runId,
+            teamName: input.teamName,
+            stopped: true,
+            members: {},
+            warnings: [],
+            diagnostics: [],
+          };
+        }),
+      });
+      ports.isCurrentRun = () => current;
+      const work = stopSingleMixedSecondaryRuntimeLane(run, lane, 'relaunch', ports);
+      await started.promise;
+      updateProvisioningProgressMetadata(run, { cliLogsTail: 'fresh log' });
+      if (change === 'cancelled') run.cancelRequested = true;
+      if (change === 'killed') run.processKilled = true;
+      if (change === 'foreign-root') current = false;
+      if (change === 'replacement-lane') lane.runId = 'replacement';
+      if (change === 'foreign-phase')
+        run.progress = {
+          ...run.progress,
+          message: 'Actual newer Stop',
+          updatedAt: '2026-01-01T00:00:09.000Z',
+        };
+      if (change === 'foreign-phase')
+        updateProvisioningProgressMetadata(run, { updatedAt: 'later-metadata' });
+      const newer = run.progress;
+      release.resolve();
+      await work;
+      expect(run.progress).toBe(newer);
+      if (change !== 'foreign-phase')
+        expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+    }
+  );
+
+  it('transfers only whitelisted metadata and never recaptures a foreign phase', () => {
+    const run = makeSingleLaneRun();
+    const wider = { updatedAt: 'new-time', state: 'failed', runId: 'foreign', message: 'foreign' };
+    updateProvisioningProgressMetadata(run, wider);
+    expect(run.progress.state).toBe('ready');
+    expect(run.progress.runId).toBe('aggregate-run');
+    expect(run.progress.message).toBe('OpenCode team ready');
   });
 
   it('retains a single lane and its storage when adapter stop throws', async () => {

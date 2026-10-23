@@ -184,6 +184,7 @@ export interface OpenCodeMemberMessageDeliveryServiceDependencies {
     memberName: string,
     directory: OpenCodeMemberDirectory
   ): OpenCodeMemberIdentityResolution;
+  isMemberLifecycleOperationActive(teamName: string, memberName: string): boolean;
   stoppingSecondaryRuntimeTeams: { has(teamName: string): boolean };
   readPersistedTeamProjectPath(teamName: string): string | null;
   resolveDeliverableTrackedRuntimeRunId(teamName: string): string | null;

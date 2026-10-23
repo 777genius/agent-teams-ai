@@ -81,6 +81,7 @@ function createDeps(input: {
       metaMember: { name: memberName, providerId: 'opencode' as const },
       memberRuntimeCwd: '/repo',
     })),
+    isMemberLifecycleOperationActive: () => false,
     stoppingSecondaryRuntimeTeams: { has: () => false },
     readPersistedTeamProjectPath: vi.fn(() => '/repo'),
     resolveDeliverableTrackedRuntimeRunId: vi.fn(() =>

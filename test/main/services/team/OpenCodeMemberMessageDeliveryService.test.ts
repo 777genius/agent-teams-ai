@@ -110,6 +110,7 @@ function makeDeps(
       },
       configMember: { name: 'alice', providerId: 'opencode' as const },
     })),
+    isMemberLifecycleOperationActive: () => false,
     stoppingSecondaryRuntimeTeams: { has: vi.fn(() => false) },
     readPersistedTeamProjectPath: vi.fn(() => null),
     resolveDeliverableTrackedRuntimeRunId: vi.fn(() => 'run-1'),

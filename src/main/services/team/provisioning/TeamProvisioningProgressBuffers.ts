@@ -6,6 +6,8 @@ import {
   PROGRESS_RETAINED_LOG_LINE_CHARS,
 } from '../progressPayload';
 
+import { updateProvisioningProgressMetadata } from './TeamProvisioningSecondaryStopProgress';
+
 import type { InboxMessage, TeamProvisioningProgress, TeamProvisioningState } from '@shared/types';
 
 const CLI_LOG_LINE_CARRY_LIMIT = PROGRESS_RETAINED_LOG_LINE_CHARS;
@@ -200,10 +202,9 @@ export function boundRunProvisioningOutputParts(
 
 export function initializeProvisioningTrace(run: TeamProvisioningTraceRun): void {
   appendProvisioningTrace(run, run.progress.state, run.progress.message);
-  run.progress = {
-    ...run.progress,
+  updateProvisioningProgressMetadata(run, {
     assistantOutput: buildProvisioningLiveOutput(run) ?? run.progress.assistantOutput,
-  };
+  });
 }
 
 export function emitProvisioningCheckpoint(
@@ -212,10 +213,9 @@ export function emitProvisioningCheckpoint(
   detail?: string
 ): void {
   appendProvisioningTrace(run, run.progress.state, message, detail);
-  run.progress = {
-    ...run.progress,
+  updateProvisioningProgressMetadata(run, {
     updatedAt: new Date().toISOString(),
     assistantOutput: buildProvisioningLiveOutput(run) ?? run.progress.assistantOutput,
-  };
+  });
   run.onProgress(run.progress);
 }

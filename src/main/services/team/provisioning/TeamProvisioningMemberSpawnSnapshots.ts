@@ -14,6 +14,7 @@ import {
   buildMemberSpawnTranscriptConfirmationTransition,
   type PendingMemberSpawnRestart,
 } from './TeamProvisioningMemberSpawnTransitions';
+import { updateProvisioningProgressMetadata } from './TeamProvisioningSecondaryStopProgress';
 import {
   applyStoppedTeamSpawnProjection,
   maybeProjectStoppedCachedSpawnSnapshot,
@@ -102,11 +103,10 @@ export function createMemberSpawnStatusMutationPortsFromService<TRun extends Mem
     updateLaunchDiagnostics: (run) => {
       const launchDiagnostics = options.buildLaunchDiagnostics(run);
       if (!launchDiagnostics) return;
-      run.progress = {
-        ...run.progress,
+      updateProvisioningProgressMetadata(run, {
         updatedAt: options.nowIso(),
         launchDiagnostics,
-      };
+      });
       run.onProgress(run.progress);
     },
     appendMemberBootstrapDiagnostic: (run, memberName, text) =>

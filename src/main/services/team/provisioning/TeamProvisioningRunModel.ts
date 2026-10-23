@@ -7,6 +7,7 @@ import type { MemberSpawnInboxCursor } from './TeamProvisioningMemberSpawnCursor
 import type { OpenCodeSharedRuntimeFailuresByProject } from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
 import type { TeamsBaseLocation } from './TeamProvisioningRuntimeLaunchSelection';
 import type { MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
+import type { SecondaryStopProgressCustody } from './TeamProvisioningSecondaryStopProgress';
 import type {
   WorkspaceTrustDiagnosticsManifest,
   WorkspaceTrustExecutionResult,
@@ -57,6 +58,7 @@ export interface ProvisioningRun {
   teamName: string;
   startedAt: string;
   progress: TeamProvisioningProgress;
+  secondaryStopProgressCustody?: SecondaryStopProgressCustody;
   stdoutBuffer: string;
   stderrBuffer: string;
   /** Rolling buffer of CLI log lines (oldest -> newest). */

@@ -35,6 +35,9 @@ import { isOpenCodeLeadRecipient } from './OpenCodeLeadTurnActivity';
 import { deliverOpenCodeMemberMessageWithoutWatchdog } from './OpenCodeLegacyMemberMessageDelivery';
 import {
   assertOpenCodePromptDeliveryNotCancelled,
+  createOpenCodeCurrentDeliveryAssertion,
+  createOpenCodeDeliveryAuthorization,
+  createOpenCodePreSubmissionAssertion,
   OpenCodePromptDeliveryCancelledError,
 } from './OpenCodePromptDeliveryCancellationGuard';
 import {
@@ -175,12 +178,7 @@ export class OpenCodeMemberMessageDeliveryService {
     teamName: string,
     input: OpenCodeMemberMessageDeliveryInput
   ): Promise<OpenCodeMemberInboxDelivery> {
-    const assertAuthorized = (restore?: () => void): void => {
-      if (input.isCurrent?.() === false) {
-        restore?.();
-        throw new OpenCodePromptDeliveryCancelledError();
-      }
-    };
+    let assertAuthorized = createOpenCodeDeliveryAuthorization(input.isCurrent);
     assertAuthorized();
     const adapter = this.deps.getOpenCodeRuntimeMessageAdapter();
     if (!adapter) {
@@ -275,6 +273,21 @@ export class OpenCodeMemberMessageDeliveryService {
       restoreConsumedLane();
       return { delivered: false, reason: 'group_runtime_run_changed' };
     }
+    const wakePendingDelivery = createOpenCodeBootstrapPendingDeliveryWake(this.deps, {
+      teamName,
+      memberName: canonicalMemberName,
+      messageId: input.messageId,
+      laneId: laneIdentity.laneId,
+      trackedRunId,
+      trackedRun,
+      runtimeRunId,
+    });
+    assertAuthorized = createOpenCodeDeliveryAuthorization(
+      input.isCurrent,
+      () => this.deps.isMemberLifecycleOperationActive(teamName, canonicalMemberName),
+      wakePendingDelivery
+    );
+    assertAuthorized(restoreConsumedLane);
     let runtimeActive = Boolean(runtimeRunId);
     if (!runtimeActive) {
       if (
@@ -297,6 +310,7 @@ export class OpenCodeMemberMessageDeliveryService {
       laneIdentity.laneKind === 'secondary' &&
       laneIdentity.laneOwnerProviderId === 'opencode'
     ) {
+      assertAuthorized(restoreConsumedLane);
       let recovered = await this.deps.tryRecoverOpenCodeRuntimeLaneBeforeDelivery({
         teamName,
         laneId: laneIdentity.laneId,
@@ -316,6 +330,7 @@ export class OpenCodeMemberMessageDeliveryService {
           config?.projectPath?.trim() || this.deps.readPersistedTeamProjectPath(teamName),
       });
       if (!recovered) {
+        assertAuthorized(restoreConsumedLane);
         recovered = await this.deps.tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery(
           {
             teamName,
@@ -361,11 +376,13 @@ export class OpenCodeMemberMessageDeliveryService {
         teamName,
         laneId: laneIdentity.laneId,
       });
+      assertAuthorized(restoreConsumedLane);
       const staleLane = await recoverStaleOpenCodeRuntimeLaneIndexEntry({
         teamsBasePath: getTeamsBasePath(),
         teamName,
         laneId: laneIdentity.laneId,
       });
+      assertAuthorized(restoreConsumedLane);
       if (!laneStorage.hasRuntimeEvidenceOnDisk) {
         if (staleLane.stale) {
           this.deps.deleteSecondaryRuntimeRun(teamName, laneIdentity.laneId);
@@ -383,26 +400,17 @@ export class OpenCodeMemberMessageDeliveryService {
       }
     }
     if (!runtimeActive) {
+      assertAuthorized(restoreConsumedLane);
       this.deps.cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(teamName);
       restoreConsumedLane();
       return { delivered: false, reason: 'opencode_runtime_not_active' };
     }
-
     let legacyOpenCodeBootstrapSessionToStamp: OpenCodeCommittedBootstrapSessionRecord | null =
       null;
     let refreshedOpenCodeBootstrapSessionToStamp: OpenCodeCommittedBootstrapSessionRecord | null =
       null;
     let forceOpenCodeSessionRefreshReason: string | undefined;
     if (laneIdentity.laneOwnerProviderId === 'opencode') {
-      const wakePendingDelivery = createOpenCodeBootstrapPendingDeliveryWake(this.deps, {
-        teamName,
-        memberName: canonicalMemberName,
-        messageId: input.messageId,
-        laneId: laneIdentity.laneId,
-        trackedRunId,
-        trackedRun,
-        runtimeRunId,
-      });
       const bootstrapSession =
         await this.deps.findDeliverableOpenCodeRuntimeBootstrapSessionEvidence({
           teamName,
@@ -445,9 +453,7 @@ export class OpenCodeMemberMessageDeliveryService {
         if (appMcpTransportMismatch) {
           refreshedOpenCodeBootstrapSessionToStamp = bootstrapSession;
           forceOpenCodeSessionRefreshReason = appMcpTransportMismatch;
-          // Durable: a forced session refresh is the only trace that this
-          // delivery started from a rebuilt session, and it has to still be
-          // readable when the lane-scoped ledger is gone.
+          // Persist refresh evidence beyond the lifetime of the lane ledger.
           logger.diagnostic(
             `[${teamName}] opencode_delivery_app_mcp_transport_stale ` +
               `${canonicalMemberName}/${laneIdentity.laneId} ` +
@@ -456,30 +462,23 @@ export class OpenCodeMemberMessageDeliveryService {
         }
       }
     }
-
-    const assertCurrentRun = (): void => {
-      assertAuthorized();
-      const current =
-        laneIdentity.laneKind === 'primary'
-          ? this.deps.resolveDeliverableTrackedRuntimeRunId(teamName)
-          : this.deps.getCurrentOpenCodeRuntimeRunId(teamName, laneIdentity.laneId);
-      const hadTrackedRun =
-        laneIdentity.laneKind === 'primary' ? trackedRunId : inMemorySecondaryLaneRunId;
-      if (
-        (current && runtimeRunId && current !== runtimeRunId) ||
-        (hadTrackedRun && !current) ||
-        this.deps.stoppingSecondaryRuntimeTeams.has(teamName)
-      ) {
-        throw new OpenCodePromptDeliveryCancelledError();
-      }
-    };
+    const assertCurrentRun = createOpenCodeCurrentDeliveryAssertion(this.deps, {
+      teamName,
+      memberName: canonicalMemberName,
+      laneKind: laneIdentity.laneKind,
+      laneId: laneIdentity.laneId,
+      runtimeRunId,
+      trackedRunId,
+      inMemorySecondaryLaneRunId,
+      assertAuthorized,
+    });
     const preparedAttachments = await prepareOpenCodeDeliveryAttachments({
       projectPath: cwd,
       model: deliveryModel,
       text: input.text,
       attachments: input.attachments,
       resolveOpenCodeInputDeclaration: this.deps.resolveOpenCodeInputDeclaration,
-      assertCurrentRun,
+      assertCurrentRun: createOpenCodePreSubmissionAssertion(assertCurrentRun, restoreConsumedLane),
     });
     if ('failure' in preparedAttachments) return preparedAttachments.failure;
     const openCodeFileParts = preparedAttachments.fileParts;
@@ -530,6 +529,7 @@ export class OpenCodeMemberMessageDeliveryService {
       );
     };
     const messageId = input.messageId?.trim();
+    assertAuthorized(restoreConsumedLane);
     const ledger = messageId
       ? this.deps.createOpenCodePromptDeliveryLedger(teamName, laneIdentity.laneId)
       : null;
@@ -594,7 +594,7 @@ export class OpenCodeMemberMessageDeliveryService {
         ],
       };
     }
-    assertCurrentRun();
+    createOpenCodePreSubmissionAssertion(assertCurrentRun, restoreConsumedLane)();
     let ledgerRecord = messageId
       ? await ledger?.ensurePending({
           teamName,

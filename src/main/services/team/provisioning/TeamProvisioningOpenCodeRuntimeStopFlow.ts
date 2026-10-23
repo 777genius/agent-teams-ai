@@ -3,6 +3,12 @@ import { readOpenCodeStopSessionIdentity } from '../opencode/store/OpenCodeStopS
 
 import { assertOpenCodeRuntimeStopEffective } from './TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { ownsOpenCodeRuntimeAdapterPrimaryLane } from './TeamProvisioningRuntimeAdapterCancellation';
+import {
+  beginSecondaryStopProgress,
+  failSecondaryStopProgress,
+  finishSecondaryStopProgress,
+  type SecondaryStopProgressCustody,
+} from './TeamProvisioningSecondaryStopProgress';
 
 import type {
   TeamLaunchRuntimeAdapter,
@@ -74,6 +80,9 @@ export interface OpenCodeRuntimeStopFlowPorts {
 }
 
 export interface SingleMixedSecondaryRuntimeLaneStopRun {
+  secondaryStopProgressCustody?: SecondaryStopProgressCustody;
+  processKilled?: boolean;
+  cancelRequested?: boolean;
   runId?: string;
   teamName: string;
   progress?: TeamProvisioningProgress;
@@ -82,6 +91,7 @@ export interface SingleMixedSecondaryRuntimeLaneStopRun {
 }
 
 export interface SingleMixedSecondaryRuntimeLaneStopPorts {
+  isCurrentRun(): boolean;
   teamsBasePath: string;
   getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null;
   readLaunchState(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
@@ -116,10 +126,16 @@ export async function stopSingleMixedSecondaryRuntimeLane(
     return;
   }
   const adapter = ports.getOpenCodeRuntimeAdapter();
-  const previousLaunchState = await ports.readLaunchState(run.teamName);
-  const hadPreviousProgress = Object.prototype.hasOwnProperty.call(run, 'progress');
   const previousProgress = run.progress;
-  let pendingStopProgress: TeamProvisioningProgress | null = null;
+  const rootRunId = run.runId;
+  let clearedOwnedLane = false;
+  const isAuthorized = (): boolean =>
+    ports.isCurrentRun() &&
+    run.runId === rootRunId &&
+    !run.cancelRequested &&
+    !run.processKilled &&
+    (lane.runId === targetRunId || (clearedOwnedLane && lane.runId === null));
+  let operation: ReturnType<typeof beginSecondaryStopProgress> | null = null;
   let keepStopFence = false;
 
   try {
@@ -127,7 +143,7 @@ export async function stopSingleMixedSecondaryRuntimeLane(
       throw new Error('OpenCode runtime adapter is unavailable');
     }
     const timestamp = new Date().toISOString();
-    pendingStopProgress = {
+    const pendingStopProgress: TeamProvisioningProgress = {
       ...(previousProgress ?? {
         runId: targetRunId,
         teamName: run.teamName,
@@ -140,12 +156,15 @@ export async function stopSingleMixedSecondaryRuntimeLane(
       updatedAt: timestamp,
       error: undefined,
     };
-    run.progress = pendingStopProgress;
+    if (!isAuthorized()) throw new Error(`OpenCode lane ${lane.laneId} stop ownership changed`);
+    operation = beginSecondaryStopProgress(run, pendingStopProgress);
     run.onProgress?.(pendingStopProgress);
+    const previousLaunchState = await ports.readLaunchState(run.teamName);
 
-    const targetSessionIdentity = await readOpenCodeStopSessionIdentity(getOpenCodeRuntimeManifestPath(
-      ports.teamsBasePath, run.teamName, lane.laneId
-    ));
+    const targetSessionIdentity = await readOpenCodeStopSessionIdentity(
+      getOpenCodeRuntimeManifestPath(ports.teamsBasePath, run.teamName, lane.laneId)
+    );
+    if (!isAuthorized()) throw new Error(`OpenCode lane ${lane.laneId} stop ownership changed`);
     const result = await adapter.stop({
       runId: targetRunId,
       laneId: lane.laneId,
@@ -182,7 +201,7 @@ export async function stopSingleMixedSecondaryRuntimeLane(
       );
     }
 
-    if (lane.runId !== targetRunId) {
+    if (lane.runId !== targetRunId || !isAuthorized()) {
       keepStopFence = false;
       return;
     }
@@ -192,19 +211,15 @@ export async function stopSingleMixedSecondaryRuntimeLane(
     lane.result = null;
     lane.warnings = [];
     lane.diagnostics = [];
+    clearedOwnedLane = true;
     keepStopFence = false;
   } catch (error) {
-    if (keepStopFence && pendingStopProgress && run.progress === pendingStopProgress) {
-      const failedProgress: TeamProvisioningProgress = {
-        ...pendingStopProgress,
-        state: 'failed',
-        message: 'OpenCode runtime lane stopped but exact cleanup failed',
-        messageSeverity: 'error',
-        updatedAt: new Date().toISOString(),
-        error: error instanceof Error ? error.message : String(error),
-      };
-      run.progress = failedProgress;
-      run.onProgress?.(failedProgress);
+    if (keepStopFence && operation) {
+      operation.custody.failed = true;
+      if (isAuthorized()) {
+        const failed = failSecondaryStopProgress(run, operation.custody, error);
+        if (failed) run.onProgress?.(failed);
+      }
     }
     ports.logger.warn(
       `[${run.teamName}] Failed to stop mixed OpenCode lane ${lane.laneId}: ${
@@ -213,15 +228,10 @@ export async function stopSingleMixedSecondaryRuntimeLane(
     );
     throw error;
   } finally {
-    if (!keepStopFence && pendingStopProgress && run.progress === pendingStopProgress) {
-      if (previousProgress) {
-        run.progress = previousProgress;
-        run.onProgress?.(previousProgress);
-      } else if (hadPreviousProgress) {
-        run.progress = undefined;
-      } else {
-        delete run.progress;
-      }
+    if (operation) {
+      if (keepStopFence) operation.custody.failed = true;
+      const restored = finishSecondaryStopProgress(run, operation, isAuthorized());
+      if (restored) run.onProgress?.(restored);
     }
   }
 }
@@ -370,9 +380,9 @@ export async function stopOpenCodeRuntimeAdapterTeam(
   ports.invalidateRuntimeSnapshotCaches(teamName);
   try {
     const previousLaunchState = await ports.readLaunchState(teamName);
-    const targetSessionIdentity = await readOpenCodeStopSessionIdentity(getOpenCodeRuntimeManifestPath(
-      ports.teamsBasePath, teamName, 'primary'
-    ));
+    const targetSessionIdentity = await readOpenCodeStopSessionIdentity(
+      getOpenCodeRuntimeManifestPath(ports.teamsBasePath, teamName, 'primary')
+    );
     const stopStartedAtMs = Date.now();
     const result = await adapter.stop({
       runId,
@@ -404,7 +414,12 @@ export async function stopOpenCodeRuntimeAdapterTeam(
     if (!ownsPrimaryRuntimeLane(teamName, runId, ports)) {
       return;
     }
-    const cleared = await clearPrimaryRuntimeLaneStorage(teamName, runId, ports, targetSessionIdentity);
+    const cleared = await clearPrimaryRuntimeLaneStorage(
+      teamName,
+      runId,
+      ports,
+      targetSessionIdentity
+    );
     if (!cleared) {
       if (!ownsPrimaryRuntimeLane(teamName, runId, ports)) {
         return;
