@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -58,6 +59,24 @@ describe('bundled runtime smoke contract', () => {
       vi.useRealTimers();
     }
   });
+  it('escalates a TERM-resistant owned process to SIGKILL before asserting cleanup', async () => {
+    const ledger = new DefaultProcessLedger();
+    const child = spawn(
+      process.execPath,
+      ['-e', "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000);"],
+      { stdio: 'ignore' }
+    );
+    try {
+      await ledger.register(child);
+      const stopped = await ledger.stop();
+      expect(stopped.remaining).toEqual([]);
+      expect(child.signalCode !== null || child.exitCode !== null).toBe(true);
+      if (process.platform !== 'win32') expect(child.signalCode).toBe('SIGKILL');
+    } finally {
+      if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+    }
+  }, 20_000);
+
   it('keeps the canonical runtime directory inside its enclosing bundle', () =>
     fixture((root) => {
       const bundle = path.join(root, 'bundle'),

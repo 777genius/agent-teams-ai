@@ -172,7 +172,7 @@ export class DefaultProcessLedger {
       await pause(300);
       current = this.sample();
     }
-    for (const p of current.reverse()) this.signal(p);
+    for (const p of current.reverse()) this.signal(p, 'SIGKILL');
     for (let attempt = 0; attempt < 20 && current.length; attempt++) {
       await pause(300);
       current = this.sample();
@@ -181,12 +181,12 @@ export class DefaultProcessLedger {
     assert(!this.samplingError, `Process inventory failed: ${this.samplingError}`);
     return { remaining: current, observed: [...this.observed.values()], commands: this.commands };
   }
-  private signal(expected: ProcessIdentity) {
+  private signal(expected: ProcessIdentity, signal: NodeJS.Signals = 'SIGTERM') {
     const current = (processes() as ProcessIdentity[]).find((p) => p.pid === expected.pid);
     if (!current) return;
     sameIdentity(expected, current);
     try {
-      process.kill(expected.pid, 'SIGTERM');
+      process.kill(expected.pid, signal);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
     }
