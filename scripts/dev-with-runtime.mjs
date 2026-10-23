@@ -21,12 +21,15 @@ import {
 } from './lib/runtime-payload-cache.mjs';
 import { verifyRuntimeArchiveChecksum } from './lib/runtime-archive-checksum.mjs';
 import { phase } from './lib/runtime-bootstrap-diagnostics.mts';
+import { createRuntimeCommandCapture } from './lib/runtime-command-capture.mts';
 import {
   formatRuntimeVersionForDisplay,
   getExpectedRuntimeCliVersion,
   matchesRuntimeCliVersion,
 } from './lib/runtime-cli-version.mjs';
 import { spawnSyncWithWindowsShell } from './lib/windows-shell-spawn.mjs';
+
+const runAndCapture = createRuntimeCommandCapture(spawnSyncWithWindowsShell);
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const uiRepoRoot = path.resolve(scriptDir, '..');
@@ -129,27 +132,6 @@ function applyOrganizationDemoMode() {
   });
 
   return demoMode === 'restore';
-}
-
-function runAndCapture(cmd, args, options = {}) {
-  const result = spawnSyncWithWindowsShell(cmd, args, {
-    encoding: 'utf8',
-    ...options,
-  });
-
-  if (result.error) {
-    throw new Error(`Failed to run ${cmd}: ${result.error.message}`);
-  }
-
-  if (result.status !== 0) {
-    const details = [result.stdout, result.stderr]
-      .map((value) => value?.trim())
-      .filter(Boolean)
-      .join('\n');
-    throw new Error(`Command failed: ${cmd} ${args.join(' ')}${details ? `\n${details}` : ''}`);
-  }
-
-  return result.stdout?.trim() ?? '';
 }
 
 function hasTerminalPlatformOverride() {
