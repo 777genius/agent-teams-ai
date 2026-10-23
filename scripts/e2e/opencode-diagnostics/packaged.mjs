@@ -339,6 +339,73 @@ export function packagedStopOrder(owned, executable) {
   return [...main, ...owned.filter((entry) => entry !== main[0]).reverse()];
 }
 
+// Diagnostic history only. Never pass this set to cleanup or ownership checks.
+export function retainPackagedLineage(previous = [], proven = [], at = Date.now()) {
+  const records = previous.slice(0, 500).map((entry) => ({ ...entry }));
+  let truncated = previous.length > 500;
+  for (const entry of proven) {
+    const prior = records.find((p) => p.pid === entry.pid && p.birth === entry.birth);
+    if (prior) {
+      prior.lastSeen = at;
+      continue;
+    }
+    if (records.length === 500) {
+      truncated = true;
+      continue;
+    }
+    const parent = proven.find((p) => p.pid === entry.parent);
+    records.push({
+      pid: entry.pid,
+      parent: entry.parent,
+      birth: entry.birth,
+      executable: entry.executable ?? null,
+      firstSeen: at,
+      lastSeen: at,
+      parentBirth: parent?.birth ?? null,
+    });
+  }
+  return { records, truncated };
+}
+
+export function packagedOrphanObservation(history, snapshot) {
+  const census = snapshot.slice(0, 10000).map((p) => ({
+    pid: p.pid,
+    parent: p.parent,
+    birth: p.birth,
+    executable: p.executable ?? null,
+  }));
+  const candidates = census.flatMap((child) => {
+    if (history.some((p) => p.pid === child.pid && p.birth === child.birth)) return [];
+    const parents = history.filter(
+      (p) => p.pid === child.parent && Date.parse(p.birth) <= Date.parse(child.birth)
+    );
+    if (!parents.length) return [];
+    const currentParent = census.find((p) => p.pid === child.parent);
+    return [
+      {
+        ...child,
+        observationOnly: true,
+        signalAuthorized: false,
+        historicalParents: parents.map((p) => ({ pid: p.pid, birth: p.birth })),
+        relation:
+          parents.length !== 1 || (currentParent && currentParent.birth !== parents[0].birth)
+            ? 'ambiguous-parent-identity'
+            : currentParent
+              ? 'historical-parent-present'
+              : 'historical-parent-absent',
+      },
+    ];
+  });
+  return {
+    observationOnly: true,
+    signalAuthorized: false,
+    census,
+    censusTruncated: snapshot.length > 10000,
+    candidates: candidates.slice(0, 500),
+    candidatesTruncated: candidates.length > 500,
+  };
+}
+
 export function packagedDrainSnapshot(identities, snapshot, listenerPids) {
   const ownedRemaining = identities.filter((entry) =>
     snapshot.some((current) => current.pid === entry.pid && current.birth === entry.birth)

@@ -11,6 +11,8 @@ import {
   closePackagedBrowser,
   packagedStopOrder,
   packagedDrainSnapshot,
+  retainPackagedLineage,
+  packagedOrphanObservation,
   packagedEnvironment,
   packagedTarget,
   containedPath,
@@ -599,7 +601,10 @@ test('directory readiness waits for authoritative capabilities and preserves a f
     ready
   );
   assert.deepEqual(attempts, [0, 1]);
-  await assert.rejects(waitForSettledDirectory(async () => pending, 1), /bootstrap budget/);
+  await assert.rejects(
+    waitForSettledDirectory(async () => pending, 1),
+    /bootstrap budget/
+  );
   await assert.rejects(
     waitForSettledDirectory(async () => ({ ...ready, error: { message: 'failed' } })),
     /readiness failed/
@@ -888,6 +893,37 @@ test('settings refresh waits for fresh explicit request and delayed settlement',
   );
 });
 
+test('diagnostic lineage retains exited parents and exposes orphan candidates without cleanup authority', () => {
+  const launcher = { pid: 1, parent: 0, birth: '2026-01-01T00:00:00Z' };
+  const helper = { pid: 2, parent: 1, birth: '2026-01-01T00:00:01Z' };
+  const first = retainPackagedLineage([], [launcher, helper], 100);
+  const second = retainPackagedLineage(first.records, [launcher], 200);
+  assert.equal(second.records.length, 2);
+  assert.equal(second.records[1].lastSeen, 100);
+  assert.equal(second.records[1].parentBirth, launcher.birth);
+  const child = { pid: 3, parent: 2, birth: '2026-01-01T00:00:02Z' };
+  const unrelated = { pid: 4, parent: 2, birth: '2025-12-31T00:00:00Z' };
+  const observation = packagedOrphanObservation(second.records, [launcher, child, unrelated]);
+  assert.deepEqual(
+    observation.candidates.map((p) => p.pid),
+    [3]
+  );
+  assert.equal(observation.candidates[0].relation, 'historical-parent-absent');
+  assert.equal(observation.candidates[0].signalAuthorized, false);
+  assert.equal(packagedDrainSnapshot([], [], [99]).drained, false);
+  const reused = { ...helper, birth: '2026-01-01T00:00:01.500Z' };
+  assert.equal(
+    packagedOrphanObservation(second.records, [reused, child]).candidates.find(
+      (p) => p.pid === child.pid
+    ).relation,
+    'ambiguous-parent-identity'
+  );
+  const full = Array.from({ length: 500 }, (_, i) => ({ ...helper, pid: i + 100 }));
+  const bounded = retainPackagedLineage(full, [launcher], 300);
+  assert.equal(bounded.records.length, 500);
+  assert.equal(bounded.truncated, true);
+});
+
 test('packaged cleanup stops main before recovering helpers and drains sockets jointly', () => {
   const launcher = { pid: 1, birth: 'one' };
   const main = { pid: 2, parent: 1, birth: 'two', executable: exe };
@@ -1026,7 +1062,7 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
     mock,
     `
     import assert from 'node:assert/strict';
-    export { packagedArguments, packagedStopOrder } from ${JSON.stringify(helper.href)};
+    export { packagedArguments, packagedStopOrder, retainPackagedLineage } from ${JSON.stringify(helper.href)};
     export async function packagedArtifact(executable, candidateEvidence) {
       assert.equal(candidateEvidence, ${JSON.stringify(evidence)}, 'Explicit evidence lost during manifest handoff');
       return { app: {path: executable}, candidate: {testOnly:true} };
