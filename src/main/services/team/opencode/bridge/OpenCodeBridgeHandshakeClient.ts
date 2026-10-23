@@ -267,6 +267,9 @@ const DEFAULT_HANDSHAKE_TIMEOUT_MS = 120_000;
 
 /** Escalating contention backoff; the handshake deadline stays the only bound. */
 const OPEN_CODE_HANDSHAKE_RETRY_BACKOFF_MS = [250, 500, 1000, 2000, 4000] as const;
+// A retry is only useful when the next attempt itself keeps real budget instead
+// of collapsing into a nominal 1 ms dispatch; bounded-retry counts stay intact.
+const MIN_HANDSHAKE_ATTEMPT_BUDGET_MS = 100;
 
 /** One-line deterministic lane/authority rejections from the SDK probe path:
  *  retrying them cannot recover, so they propagate immediately. */
@@ -372,7 +375,7 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
           OPEN_CODE_HANDSHAKE_RETRY_BACKOFF_MS[
             Math.min(attempt, OPEN_CODE_HANDSHAKE_RETRY_BACKOFF_MS.length - 1)
           ];
-        if (Date.now() + delay < deadline) {
+        if (Date.now() + delay + MIN_HANDSHAKE_ATTEMPT_BUDGET_MS < deadline) {
           await new Promise<void>((resolve) => setTimeout(resolve, delay));
           continue;
         }
