@@ -20,6 +20,15 @@ vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
   ClaudeBinaryResolver: { resolve: vi.fn() },
 }));
 
+// These tests simulate an already-running lead; compiler behavior is covered by
+// the workspace bundle tests, while execCli below models provider diagnostics.
+vi.mock('@main/services/team/WorkspaceMcpBundle', () => ({
+  resolveWorkspaceMcpBundle: (...args: [root: string, node: string, outputRoot: string]) =>
+    Promise.resolve(
+      path.join(args[2], 'dev', '12345-eaf6e8d0-0daf-4aa7-89e8-90d9f315d531', 'index.js')
+    ),
+}));
+
 vi.mock('@main/utils/childProcess', () => ({
   spawnCli: vi.fn(),
   execCli: vi.fn(),
@@ -260,6 +269,9 @@ async function setupRunningTeam(teamName: string) {
   // Get the run object
   const run = (svc as any).runs.get(runId);
   if (!run) throw new Error('Run not found');
+  expect(run.progress.state).not.toBe('failed');
+  expect(run.progress.error).toBeUndefined();
+  expect(run.child).toBe(child);
 
   // Simulate provisioning complete (skip the full provisioning flow)
   run.provisioningComplete = true;
