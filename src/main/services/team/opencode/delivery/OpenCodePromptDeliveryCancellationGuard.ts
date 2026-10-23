@@ -35,11 +35,9 @@ export function createOpenCodeCurrentDeliveryAssertion(
     | 'resolveDeliverableTrackedRuntimeRunId'
     | 'getCurrentOpenCodeRuntimeRunId'
     | 'stoppingSecondaryRuntimeTeams'
-    | 'isMemberLifecycleOperationActive'
   >,
   input: {
     teamName: string;
-    memberName: string;
     laneKind: 'primary' | 'secondary';
     laneId: string;
     runtimeRunId: string | null;
@@ -59,8 +57,7 @@ export function createOpenCodeCurrentDeliveryAssertion(
     if (
       (current && input.runtimeRunId && current !== input.runtimeRunId) ||
       (hadTrackedRun && !current) ||
-      ports.stoppingSecondaryRuntimeTeams.has(input.teamName) ||
-      ports.isMemberLifecycleOperationActive(input.teamName, input.memberName)
+      ports.stoppingSecondaryRuntimeTeams.has(input.teamName)
     ) {
       throw new OpenCodePromptDeliveryCancelledError();
     }

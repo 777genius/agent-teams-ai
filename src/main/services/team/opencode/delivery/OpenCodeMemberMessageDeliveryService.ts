@@ -178,6 +178,7 @@ export class OpenCodeMemberMessageDeliveryService {
     teamName: string,
     input: OpenCodeMemberMessageDeliveryInput
   ): Promise<OpenCodeMemberInboxDelivery> {
+    let admissionRequired = true;
     let assertAuthorized = createOpenCodeDeliveryAuthorization(input.isCurrent);
     assertAuthorized();
     const adapter = this.deps.getOpenCodeRuntimeMessageAdapter();
@@ -232,7 +233,6 @@ export class OpenCodeMemberMessageDeliveryService {
       restoreConsumedLane();
       return { delivered: false, reason: 'opencode_project_path_unavailable' };
     }
-
     const trackedRunId = this.deps.resolveDeliverableTrackedRuntimeRunId(teamName);
     const trackedRun = trackedRunId ? this.deps.runs.get(trackedRunId) : null;
     const deliveryModel = resolveOpenCodeDeliveryModel({ identity, directory, run: trackedRun });
@@ -284,7 +284,9 @@ export class OpenCodeMemberMessageDeliveryService {
     });
     assertAuthorized = createOpenCodeDeliveryAuthorization(
       input.isCurrent,
-      () => this.deps.isMemberLifecycleOperationActive(teamName, canonicalMemberName),
+      () =>
+        admissionRequired &&
+        this.deps.isMemberLifecycleOperationActive(teamName, canonicalMemberName),
       wakePendingDelivery
     );
     assertAuthorized(restoreConsumedLane);
@@ -464,7 +466,6 @@ export class OpenCodeMemberMessageDeliveryService {
     }
     const assertCurrentRun = createOpenCodeCurrentDeliveryAssertion(this.deps, {
       teamName,
-      memberName: canonicalMemberName,
       laneKind: laneIdentity.laneKind,
       laneId: laneIdentity.laneId,
       runtimeRunId,
@@ -490,6 +491,9 @@ export class OpenCodeMemberMessageDeliveryService {
       return await deliverOpenCodeMemberMessageWithoutWatchdog({
         ports: this.deps,
         assertCurrentRun,
+        onSubmitting: () => {
+          admissionRequired = false;
+        },
         adapter,
         message: input,
         teamName,
@@ -505,7 +509,6 @@ export class OpenCodeMemberMessageDeliveryService {
         teamDisplayName: config?.name,
       });
     }
-
     const isLeadRecipient =
       laneIdentity.laneKind === 'primary' &&
       isOpenCodeLeadRecipient(canonicalMemberName, directory);
@@ -553,7 +556,6 @@ export class OpenCodeMemberMessageDeliveryService {
         memberName: canonicalMemberName,
       });
     }
-
     if (active && active.inboxMessageId !== messageId) {
       const activeDueMs = active.nextAttemptAt ? Date.parse(active.nextAttemptAt) : NaN;
       this.deps.scheduleOpenCodePromptDeliveryWatchdog({
@@ -689,10 +691,8 @@ export class OpenCodeMemberMessageDeliveryService {
         notifyActivity('idle');
         return observedOpenCodeDelivery(ledgerRecord, laneIdentity.laneId);
       }
-
       const unknownHandoff = unknownGroupHandoffSnapshot(ledgerRecord, laneIdentity.laneId);
       if (unknownHandoff) return unknownHandoff;
-
       if (!ledgerRecord.groupChatId) {
         ledgerRecord = await this.deps.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded({
           ledger,
@@ -700,7 +700,6 @@ export class OpenCodeMemberMessageDeliveryService {
         });
       }
       await checkpoint();
-
       if (ledgerRecord.status === 'failed_terminal') {
         this.deps.logOpenCodePromptDeliveryEvent(
           'opencode_prompt_delivery_terminal_failure',
@@ -719,7 +718,6 @@ export class OpenCodeMemberMessageDeliveryService {
           diagnostics: ledgerRecord.diagnostics,
         };
       }
-
       let attemptDue = isOpenCodePromptDeliveryAttemptDue(ledgerRecord);
       if (!ledgerRecord.groupChatId && isOpenCodeAcceptedDeliveryMissingPromptProof(ledgerRecord)) {
         ledgerRecord = await this.deps.markOpenCodeAcceptedDeliveryMissingPromptProofForRetry({
@@ -1167,6 +1165,8 @@ export class OpenCodeMemberMessageDeliveryService {
         sendMessage: async () => {
           if (ledgerRecord?.groupChatId && ledger)
             ledgerRecord = await markOpenCodeGroupHandoff(ledger, ledgerRecord, now);
+          assertCurrentRun();
+          admissionRequired = false;
           return adapter.sendMessageToMember({
             ...payload(deliveryText),
             deliveryAttemptId,
