@@ -12,10 +12,7 @@
  * the relay's ledger and delivery ports.
  */
 
-import {
-  isOpenCodeAppAuthoredNoticeContract,
-  isOpenCodeReplyOptionalDeliveryContract,
-} from '../opencode/delivery/OpenCodeDeliveryReplyContract';
+import { isOpenCodeAppAuthoredNoticeContract } from '../opencode/delivery/OpenCodeDeliveryReplyContract';
 import { hasOpenCodeAcceptedRuntimePrompt } from '../opencode/delivery/OpenCodePromptDeliveryReadCommitPolicy';
 import {
   OPENCODE_COALESCE_DEFERRED_DIAGNOSTIC,
@@ -110,10 +107,9 @@ async function selectQueuedReplyOptionalNotices(
   input: OpenCodeQueuedNoticeSelection & {
     limit: number;
     /**
-     * Which reply contracts this walk accepts, for the anchor and for every
-     * follower alike. Batching a message into somebody else's prompt still
-     * delivers its text, so it may take the broad reply-optional set;
-     * absorbing one without a prompt may not (see the settle selector below).
+     * Which reply contracts this walk accepts, for the anchor and every
+     * follower. Peer-authored rows keep independent delivery: the no-reply
+     * wrapper would otherwise replace an authored request's original intent.
      */
     isEligibleContract: (replyRecipient: string) => boolean;
   }
@@ -150,10 +146,10 @@ async function selectQueuedReplyOptionalNotices(
 }
 
 /**
- * Reply-optional notices queued directly behind the message at `index` (in
- * inbox order, stopping at the first message that is not reply-optional, is an
- * automated nudge, or already has a ledger record). They are delivered in the
- * same prompt and marked read once that prompt is accepted.
+ * App-authored informational notices queued directly behind the message at
+ * `index`, in inbox order. Peer messages, automated nudges and rows with their
+ * own ledger record end the run. Riders are marked read on prompt acceptance,
+ * so only messages carrying the same no-reply contract may share that prompt.
  *
  * Capped at `OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT`, because this selection
  * becomes prompt text the model has to read in full.
@@ -164,7 +160,7 @@ export function selectOpenCodeReplyOptionalCoalescedFollowers(
   return selectQueuedReplyOptionalNotices({
     ...input,
     limit: OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT,
-    isEligibleContract: isOpenCodeReplyOptionalDeliveryContract,
+    isEligibleContract: isOpenCodeAppAuthoredNoticeContract,
   });
 }
 
