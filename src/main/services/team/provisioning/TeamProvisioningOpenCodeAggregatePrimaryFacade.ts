@@ -542,8 +542,11 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       },
       assertCurrent: assertRestartCurrentAfterPersistence,
       isOwnerCurrent: () => this.runtimeAdapterRunByTeam.get(teamName) === primaryOwner,
-      publishFailure: (message) =>
-        this.aggregatePrimaryProgress.publishRestartedMember(run, false, message),
+      publishFailure: (message) => {
+        if (this.isTeamAlive(teamName))
+          this.aggregatePrimaryProgress.publishRestartedMember(run, false, message);
+        else this.runTracking.deleteAliveRunId(teamName);
+      },
       createFailure: (message) =>
         createAggregatePrimaryRestoredRestartFailure(run, restartLease, incarnationPorts, message),
     });

@@ -157,6 +157,15 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
       this.provisioningRunByTeam.delete(teamName);
   }
 
+  markDisconnected(run: ProvisioningRun): void {
+    run.progress = { ...run.progress, state: 'disconnected' };
+    this.runtimeAdapterProgressByRunId.set(run.runId, run.progress);
+  }
+
+  getAliveAggregateRun(teamName: string): string | null {
+    return this.runTracking.getAliveRunId(teamName);
+  }
+
   getTrackedAggregateRun(teamName: string): string | null {
     return this.runTracking.getTrackedRunId(teamName);
   }
@@ -452,7 +461,7 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
     }
   );
 
-  it.each(['current', 'cancelled', 'replaced', 'publication'] as const)(
+  it.each(['current', 'cancelled', 'replaced', 'publication', 'disconnected'] as const)(
     'correlates final persistence failure only while the successful successor primary is still owned: %s',
     async (scope) => {
       const facade = new TestOpenCodeAggregatePrimaryFacade();
@@ -480,6 +489,8 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
       facade.trackRun(run, { runId: run.runId, providerId: 'opencode', cwd: run.request.cwd });
       if (scope === 'cancelled')
         facade.beforeFinalPersistenceFailure = () => facade.cancelRestart(run.teamName);
+      if (scope === 'disconnected')
+        facade.beforeFinalPersistenceFailure = () => facade.markDisconnected(run);
       if (scope === 'replaced')
         facade.beforeFinalPersistenceFailure = () =>
           facade.publishNewOwner(run.teamName, {
@@ -504,6 +515,11 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
         });
         expect(facade.getPrimaryOwner(run.teamName)?.runId).toBe(run.runId);
       } else await expect(restarting).rejects.not.toHaveProperty('retention');
+      if (scope === 'disconnected') {
+        expect(run.progress.state).toBe('disconnected');
+        expect(facade.getAliveAggregateRun(run.teamName)).toBeNull();
+        expect(facade.isTeamAlive(run.teamName)).toBe(false);
+      }
       expect(run.runId).not.toBe(predecessorRunId);
       expect(launch).toHaveBeenCalledTimes(1);
       expect(facade.finalPersistence).toHaveBeenCalledTimes(1);
