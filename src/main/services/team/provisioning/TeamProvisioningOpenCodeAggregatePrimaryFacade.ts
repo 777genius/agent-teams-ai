@@ -665,6 +665,12 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
         throw error;
       } finally {
         restart.release();
+        await this.openCodePromptDeliveryWatchdogCoordinator
+          .wakeAfterRuntimeRegistration({
+            teamName,
+            runId: restart.lease.candidateRunId ?? restart.lease.runId,
+          })
+          .catch((error: unknown) => logger.warn(`OpenCode restart wake failed: ${String(error)}`));
       }
     });
   }
