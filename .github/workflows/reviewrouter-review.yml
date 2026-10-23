@@ -1,0 +1,24 @@
+name: ReviewRouter
+run-name: ${{ format('ReviewRouter review {0}', inputs.review_request_id) }}
+on:
+  workflow_dispatch:
+    inputs:
+      review_request_id: { required: true, type: string }
+      pr_number: { required: true, type: string }
+      review_head_sha: { required: true, type: string }
+permissions: {}
+jobs:
+  review:
+    if: ${{ inputs.review_request_id != '' && inputs.pr_number != '' && inputs.review_head_sha != '' }}
+    concurrency:
+      group: reviewrouter-request-${{ github.repository_id }}-${{ inputs.review_request_id }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      pull-requests: read
+      id-token: write
+    uses: 777genius/review-router/.github/workflows/reviewrouter-runtime.yml@workflow-v1
+    with:
+      review_request_id: ${{ inputs.review_request_id }}
+      pr_number: ${{ inputs.pr_number }}
+      review_head_sha: ${{ inputs.review_head_sha }}
