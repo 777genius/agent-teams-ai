@@ -35,7 +35,9 @@ const CHANNEL = CODEX_RUNTIME_PROGRESS;
 const ROOT_PACKAGE_NAME = '@openai/codex';
 const NPM_REGISTRY_BASE_URL = 'https://registry.npmjs.org';
 const CURRENT_MANIFEST_SCHEMA_VERSION = 1;
-const MAX_TARBALL_BYTES = 160 * 1024 * 1024;
+// Codex 0.164.0 Windows x64 is 172,854,349 compressed bytes. Keep a finite
+// allowance above that package while retaining streaming and unpacked limits.
+const MAX_TARBALL_BYTES = 192 * 1024 * 1024;
 const MAX_UNPACKED_BYTES = 650 * 1024 * 1024;
 const METADATA_FETCH_TIMEOUT_MS = 60_000;
 // The platform package can approach MAX_TARBALL_BYTES. A one-minute wall-clock

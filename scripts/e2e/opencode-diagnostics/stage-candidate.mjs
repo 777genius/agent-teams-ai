@@ -219,7 +219,7 @@ async function stageCandidate() {
     };
     Object.assign(provenance, await verifyCandidatePayload(payload, provenance));
     await writeFile(path.join(payload, 'TEST-CANDIDATE.json'), JSON.stringify(provenance, null, 2));
-    publishRuntimePayload(
+    await publishRuntimePayload(
       path.join(payload, 'claude-multimodel.exe'),
       path.resolve('resources/runtime'),
       payloadArchiveSha256

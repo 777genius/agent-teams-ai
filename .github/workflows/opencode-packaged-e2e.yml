@@ -39,6 +39,7 @@ on:
       - scripts/e2e/opencode-diagnostics/stage-candidate*.mjs
       - scripts/e2e/opencode-diagnostics/run-packaged.mjs
       - scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.mts
+      - scripts/e2e/opencode-diagnostics/native-test-pin.mts
       - scripts/e2e/opencode-diagnostics/selected-identity-diagnostic.tsconfig.json
       - scripts/e2e/opencode-diagnostics-desktop.mjs
       - scripts/e2e/opencode-diagnostics/platform.mjs
@@ -48,6 +49,9 @@ on:
       - scripts/lib/github-release-download-error.mjs
       - scripts/lib/runtime-archive-checksum.mjs
       - scripts/lib/runtime-payload-cache.mjs
+      - scripts/lib/runtime-payload-inventory.mts
+      - scripts/lib/runtime-windows-zip-extraction.mts
+      - scripts/lib/runtime-windows-zip-extraction.test.mts
       - scripts/lib/runtime-archive-extraction.mts
 
 permissions:
@@ -137,6 +141,16 @@ jobs:
         run: pnpm build
       - name: Stage native OpenCode wrapper
         run: node scripts/stage-opencode-console-wrapper.mjs --platform win32-x64 --require
+      - name: Verify wrapper native handle and job isolation
+        shell: pwsh
+        run: |
+          $compiler = Join-Path $env:SystemRoot 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
+          $fixture = Join-Path $env:RUNNER_TEMP 'TEST-wrapper-native-fixture.exe'
+          $fixtureSource = (Resolve-Path 'tools/opencode-console-wrapper/WrapperNativeFixture.cs').Path
+          & $compiler /nologo /target:exe /optimize "/out:$fixture" $fixtureSource
+          if ($LASTEXITCODE -ne 0) { throw 'Native wrapper fixture compilation failed' }
+          & $fixture (Resolve-Path resources/runtime/opencode-console/opencode.exe).Path
+          if ($LASTEXITCODE -ne 0) { throw 'Native wrapper handle/job isolation failed' }
       - name: Package without publishing
         run: pnpm pack:win:x64 --dir --publish never
       - name: Verify packaged candidate identity

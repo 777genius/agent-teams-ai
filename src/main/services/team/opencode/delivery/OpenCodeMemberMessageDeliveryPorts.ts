@@ -50,6 +50,7 @@ export type OpenCodeMemberMessageDeliverySource =
   | 'member-work-sync-review-pickup';
 
 export interface OpenCodeMemberMessageDeliveryInput {
+  isCurrent?: () => boolean;
   memberName: string;
   text: string;
   messageId?: string;
@@ -302,6 +303,7 @@ export interface OpenCodeMemberMessageDeliveryServiceDependencies {
     memberName: string;
     messageId?: string | null;
     delayMs: number;
+    isCurrent?: () => boolean;
   }): void;
   logOpenCodePromptDeliveryEvent(
     event: string,

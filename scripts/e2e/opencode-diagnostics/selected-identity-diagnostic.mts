@@ -4,9 +4,10 @@ import { createReadStream, writeFileSync } from 'node:fs';
 import { lstat, mkdtemp, readFile, realpath, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { WINDOWS_NATIVE_TEST_PIN } from './native-test-pin.mts';
 
 const SDK_HEAD = 'd6361e0f50821ffc31cc5a9efd0dcaf6643c850d';
-const NATIVE_SHA = '81bb8ddc61554dd8328fd1b69ef2411b54037c32838f8009b1066894696722e3';
+const NATIVE_SHA = WINDOWS_NATIVE_TEST_PIN.nativeExecutableSha256;
 const SDK_CLOSURE_SHA = '60c1b866f6d90ce272001513e29a84a416306fe64bb61fc7e8fdfe6dbc05706f';
 const sourcePins: ReadonlyArray<readonly [string, string]> = [
   ["src/services/opencode/OpenCodeBinaryResolver.ts", "835887e50b2110dd9eab585d95f63a0a3bc792317372b23bdc665c3404a94076"],
@@ -79,7 +80,7 @@ async function main() {
   requireInput(typeof manifest.run === 'string' && ['cold', 'warm-1', 'warm-2'].includes(manifest.run));
   const evidence = await json(path.join(root, manifest.run, 'evidence.json'));
   requireInput(record(evidence) && record(evidence.opencode));
-  requireInput(evidence.opencode.version === '1.19.3' && evidence.opencode.sha256 === NATIVE_SHA);
+  requireInput(evidence.opencode.version === WINDOWS_NATIVE_TEST_PIN.version && evidence.opencode.sha256 === NATIVE_SHA);
   requireInput(typeof evidence.opencode.path === 'string' && path.isAbsolute(evidence.opencode.path));
   const native = await realpath(evidence.opencode.path);
   requireInput(contained(native, path.join(root, 'user-data')) && await hash(native) === NATIVE_SHA);
@@ -142,8 +143,8 @@ async function main() {
     receipt.phase = 'admission_result';
     requireInput(record(result) && record(result.policy));
     requireInput(result.path === wrapper && result.fingerprint === wrapperHash);
-    requireInput(result.policy.generation === 'v1' && result.policy.version === '1.19.3');
-    Object.assign(receipt, { policy: 'v1', version: '1.19.3', fingerprint: result.fingerprint });
+    requireInput(result.policy.generation === 'v1' && result.policy.version === WINDOWS_NATIVE_TEST_PIN.version);
+    Object.assign(receipt, { policy: 'v1', version: WINDOWS_NATIVE_TEST_PIN.version, fingerprint: result.fingerprint });
     requireInput(await hash(wrapper) === wrapperHash && await hash(native) === NATIVE_SHA);
     if (timedOut) return;
     receipt.outcome = 'ADMITTED';

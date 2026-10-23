@@ -50,6 +50,13 @@ describe('TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerFactory', () =>
     await expect(
       deps.recoverBeforeDelivery({ teamName: 'alpha', memberName: 'Builder' })
     ).resolves.toBe(true);
+    const isCurrent = (): boolean => true;
+    await deps.relay({ teamName: 'alpha', memberName: 'Builder', messageId: 'scoped', isCurrent });
+    expect(service.relayOpenCodeMemberInboxMessages).toHaveBeenCalledWith('alpha', 'Builder', {
+      onlyMessageId: 'scoped',
+      source: 'watchdog',
+      isCurrent,
+    });
     // The relay's own account has to survive the hop, or a refused wake has
     // nothing to report.
     await expect(

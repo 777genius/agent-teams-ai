@@ -1,3 +1,4 @@
+import * as memberWorkSync from '@features/member-work-sync/main';
 import { mkdtemp, rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -11,11 +12,13 @@ import {
   type OpenCodeMemberMessageDeliveryServiceDependencies,
 } from '../OpenCodeMemberMessageDeliveryPorts';
 import { OpenCodeMemberMessageDeliveryService } from '../OpenCodeMemberMessageDeliveryService';
+import { OpenCodePromptDeliveryFollowUpPolicy } from '../OpenCodePromptDeliveryFollowUpPolicy';
 import {
   createOpenCodePromptDeliveryLedgerStore,
   type OpenCodePromptDeliveryLedgerRecord,
 } from '../OpenCodePromptDeliveryLedger';
 import { OPENCODE_STALE_PENDING_POLICY_CONFIG } from '../OpenCodePromptDeliveryStalePendingPolicy';
+import { OpenCodePromptDeliveryWatchdogScheduler } from '../OpenCodePromptDeliveryWatchdogScheduler';
 
 import type { OpenCodeTeamRuntimeMessageResult } from '../../../runtime';
 
@@ -309,5 +312,325 @@ describe('OpenCodeMemberMessageDeliveryService lead turn activity', () => {
     } finally {
       consoleWarnSpy.mockRestore();
     }
+  });
+});
+
+describe('secondary delivery waiting for a native bootstrap commit', () => {
+  let ledgerDir: string;
+  beforeEach(async () => {
+    ledgerDir = await mkdtemp(join(tmpdir(), 'opencode-bootstrap-wake-'));
+    vi.useFakeTimers();
+  });
+  afterEach(async () => {
+    vi.useRealTimers();
+    await rm(ledgerDir, { recursive: true, force: true });
+  });
+
+  function harness(responsePending = false, realFollowUps = false) {
+    const send = vi.fn(async () => acceptedResult('Muse'));
+    const deps = createDeps({
+      ledgerDir,
+      laneIdentity: SECONDARY_LANE,
+      memberName: 'Muse',
+      send,
+      readAllowed: responsePending ? () => false : settleAfterAcceptance,
+      notify: vi.fn(),
+    });
+    const lane = {
+      laneId: SECONDARY_LANE.laneId,
+      member: { name: 'Muse' },
+      runId: 'runtime-run-1',
+    };
+    const root = { mixedSecondaryLanes: [lane] };
+    deps.runs = { get: () => root };
+    let committed = false;
+    deps.findDeliverableOpenCodeRuntimeBootstrapSessionEvidence = vi.fn(async () =>
+      committed ? ({ appMcpTransportHash: 'hash' } as never) : null
+    );
+    const service = new OpenCodeMemberMessageDeliveryService(deps);
+    let complete!: () => void;
+    const completed = new Promise<void>((resolve) => {
+      complete = resolve;
+    });
+    const message = { ...leadMessage, memberName: 'Muse', source: 'watcher' as const };
+    const relay = vi.fn(async (wake: { isCurrent?: () => boolean }) => {
+      try {
+        return await service.deliver('team-a', { ...message, isCurrent: wake.isCurrent });
+      } finally {
+        complete();
+      }
+    });
+    const scheduler = new OpenCodePromptDeliveryWatchdogScheduler({
+      canDeliverToTeamRuntime: () => true,
+      recoverBeforeDelivery: async () => false,
+      relay,
+      getInboxMessages: async () => [],
+      resolveIdentity: async () => null,
+      isLaneActive: async () => true,
+      isRecordNotFoundError: () => false,
+      info: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+      diagnostic: vi.fn(),
+      getErrorMessage: String,
+    });
+    const scheduled = vi.fn(
+      (input: Parameters<OpenCodePromptDeliveryWatchdogScheduler['schedule']>[0]) =>
+        scheduler.schedule(input)
+    );
+    deps.scheduleOpenCodePromptDeliveryWatchdog = scheduled;
+    if (realFollowUps)
+      deps.openCodePromptDeliveryFollowUpPolicy = new OpenCodePromptDeliveryFollowUpPolicy({
+        scheduleWatchdog: scheduled,
+        logEvent: vi.fn(),
+        markFailedTerminal: async (input) => await input.ledger.markFailedTerminal(input),
+      });
+    return {
+      deps,
+      scheduled,
+      service,
+      scheduler,
+      send,
+      relay,
+      message,
+      lane,
+      root,
+      completed,
+      commit: () => {
+        committed = true;
+      },
+    };
+  }
+
+  it.each(['policy-followup', 'queued-behind', 'not-due', 'new-retry'] as const)(
+    'keeps %s watchdog descendants scoped when the lane is replaced',
+    async (path) => {
+      const h = harness(true, path !== 'queued-behind');
+      h.commit();
+      let current = true;
+      if (path === 'new-retry')
+        h.send.mockResolvedValueOnce({
+          ...acceptedResult('Muse'),
+          runtimePromptMessageId: undefined,
+        });
+      try {
+        await h.service.deliver('team-a', { ...h.message, isCurrent: () => current });
+        if (path === 'queued-behind' || path === 'not-due') {
+          h.scheduler.cancelTeam('team-a');
+          await h.service.deliver('team-a', {
+            ...h.message,
+            messageId: path === 'queued-behind' ? 'queued-second' : h.message.messageId,
+            isCurrent: () => current,
+          });
+        }
+        expect(h.scheduled.mock.calls.length).toBeGreaterThan(0);
+        const ledger = h.deps.createOpenCodePromptDeliveryLedger('team-a', SECONDARY_LANE.laneId);
+        const before = await ledger.list();
+        current = false;
+        h.lane.runId = 'replacement-run';
+        h.deps.getCurrentOpenCodeRuntimeRunId = () => 'replacement-run';
+        await vi.advanceTimersByTimeAsync(15_000);
+        if (h.relay.mock.calls.length) await h.completed;
+        expect(h.relay).not.toHaveBeenCalled();
+        expect(h.send).toHaveBeenCalledTimes(1);
+        expect(await ledger.list()).toEqual(before);
+      } finally {
+        h.scheduler.cancelTeam('team-a');
+      }
+    }
+  );
+
+  it('keeps a current scoped followup observing its one accepted send', async () => {
+    const h = harness(true, true);
+    h.commit();
+    try {
+      await h.service.deliver('team-a', { ...h.message, isCurrent: () => true });
+      await vi.advanceTimersByTimeAsync(15_000);
+      await h.completed;
+      expect(h.relay).toHaveBeenCalledTimes(1);
+      expect(h.send).toHaveBeenCalledTimes(1);
+    } finally {
+      h.scheduler.cancelTeam('team-a');
+    }
+  });
+
+  it('submits a message queued during Relaunch once after late native commit without another inbox mutation', async () => {
+    const h = harness();
+    try {
+      const refused = await h.service.deliver('team-a', h.message);
+      expect(refused.delivered).toBe(false);
+      expect(h.send).not.toHaveBeenCalled();
+      h.commit();
+      await vi.advanceTimersByTimeAsync(3_000);
+      await h.completed;
+      expect(h.relay).toHaveBeenCalledTimes(1);
+      expect(h.send).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(6_000);
+      expect(h.send).toHaveBeenCalledTimes(1);
+    } finally {
+      h.scheduler.cancelTeam('team-a');
+    }
+  });
+
+  it('observes an already submitted prompt without sending it again when bootstrap temporarily disappears', async () => {
+    const h = harness(true);
+    try {
+      h.commit();
+      const accepted = await h.service.deliver('team-a', h.message);
+      expect(accepted.accepted).toBe(true);
+      expect(h.send).toHaveBeenCalledTimes(1);
+      const probe = h.deps.findDeliverableOpenCodeRuntimeBootstrapSessionEvidence.bind(h.deps);
+      h.deps.findDeliverableOpenCodeRuntimeBootstrapSessionEvidence = async () => null;
+      await h.service.deliver('team-a', h.message);
+      h.deps.findDeliverableOpenCodeRuntimeBootstrapSessionEvidence = probe;
+      await vi.advanceTimersByTimeAsync(3_000);
+      await h.completed;
+      expect(h.send).toHaveBeenCalledTimes(1);
+    } finally {
+      h.scheduler.cancelTeam('team-a');
+    }
+  });
+
+  it.each(['stop', 'replacement', 'removed-lane', 'root-replacement', 'secondary-owner'] as const)(
+    'does not resurrect a pending wake after %s during bootstrap read',
+    async (change) => {
+      const h = harness();
+      let finish!: () => void;
+      const waiting = new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+      let started!: () => void;
+      const reading = new Promise<void>((resolve) => {
+        started = resolve;
+      });
+      h.deps.findDeliverableOpenCodeRuntimeBootstrapSessionEvidence = async () => {
+        started();
+        await waiting;
+        return null;
+      };
+      const delivery = h.service.deliver('team-a', h.message);
+      await reading;
+      if (change === 'stop') h.deps.stoppingSecondaryRuntimeTeams = { has: () => true };
+      if (change === 'replacement') h.lane.runId = 'replacement-run';
+      if (change === 'removed-lane') h.root.mixedSecondaryLanes = [];
+      if (change === 'root-replacement') h.deps.runs = { get: () => ({ ...h.root }) };
+      if (change === 'secondary-owner') h.deps.getCurrentOpenCodeRuntimeRunId = () => 'other-run';
+      h.scheduler.cancelTeam('team-a');
+      finish();
+      await delivery;
+      expect(h.scheduled).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(6_000);
+      expect(h.relay).not.toHaveBeenCalled();
+      expect(h.send).not.toHaveBeenCalled();
+    }
+  );
+
+  it('restores the existing lane ticket when authorization is revoked during gate hydration', async () => {
+    const h = harness();
+    let current = true;
+    const restore = vi.fn();
+    const gate = vi
+      .spyOn(memberWorkSync, 'gateOpenCodeWorkSyncLaneDelivery')
+      .mockImplementationOnce(async () => {
+        current = false;
+        return { restore };
+      });
+    try {
+      const result = await h.service.deliver('team-a', { ...h.message, isCurrent: () => current });
+      expect(result.reason).toBe('opencode_prompt_delivery_cancelled');
+      expect(restore).toHaveBeenCalledTimes(1);
+      expect(h.send).not.toHaveBeenCalled();
+      expect(h.scheduled).not.toHaveBeenCalled();
+    } finally {
+      gate.mockRestore();
+      h.scheduler.cancelTeam('team-a');
+    }
+  });
+
+  it('does not restore a consumed lane ticket after the provider has accepted a revoked scoped send', async () => {
+    const h = harness();
+    h.commit();
+    let current = true;
+    const restore = vi.fn();
+    const consumed = vi.fn(() => ({}));
+    const gate = vi
+      .spyOn(memberWorkSync, 'gateOpenCodeWorkSyncLaneDelivery')
+      .mockResolvedValueOnce({ restore, consumeForSend: consumed });
+    h.send.mockImplementationOnce(async () => {
+      current = false;
+      return acceptedResult('Muse');
+    });
+    try {
+      await h.service.deliver('team-a', {
+        ...h.message,
+        messageKind: 'member_work_sync_nudge',
+        workSyncRuntimeTicketId: 'ticket',
+        isCurrent: () => current,
+      });
+      expect(consumed).toHaveBeenCalledTimes(1);
+      expect(h.send).toHaveBeenCalledTimes(1);
+      expect(restore).not.toHaveBeenCalled();
+    } finally {
+      gate.mockRestore();
+      h.scheduler.cancelTeam('team-a');
+    }
+  });
+
+  it('restores a lane ticket before scheduling a bootstrap-pending retry', async () => {
+    const h = harness();
+    const restore = vi.fn();
+    const gate = vi
+      .spyOn(memberWorkSync, 'gateOpenCodeWorkSyncLaneDelivery')
+      .mockResolvedValueOnce({ restore });
+    try {
+      await h.service.deliver('team-a', h.message);
+      expect(restore).toHaveBeenCalledTimes(1);
+      expect(h.scheduled).toHaveBeenCalledTimes(1);
+      expect(h.send).not.toHaveBeenCalled();
+    } finally {
+      gate.mockRestore();
+      h.scheduler.cancelTeam('team-a');
+    }
+  });
+
+  it('delivers once for a replacement generation whose wake shares the previous message key', async () => {
+    const h = harness();
+    await h.service.deliver('team-a', h.message);
+    h.lane.runId = 'runtime-run-2';
+    h.deps.getCurrentOpenCodeRuntimeRunId = () => 'runtime-run-2';
+    await h.service.deliver('team-a', h.message);
+    h.commit();
+    await vi.advanceTimersByTimeAsync(3_000);
+    await h.completed;
+    expect(h.relay).toHaveBeenCalledTimes(1);
+    expect(h.send).toHaveBeenCalledTimes(1);
+    h.scheduler.cancelTeam('team-a');
+  });
+
+  it('keeps the originating generation fence while the relay is reading delivery context', async () => {
+    const h = harness();
+    await h.service.deliver('team-a', h.message);
+    h.commit();
+    const readDirectory = h.deps.readOpenCodeMemberDirectory.bind(h.deps);
+    h.deps.readOpenCodeMemberDirectory = async (teamName) => {
+      const directory = await readDirectory(teamName);
+      h.lane.runId = 'replacement-run';
+      return directory;
+    };
+    await vi.advanceTimersByTimeAsync(3_000);
+    await h.completed;
+    expect(h.send).not.toHaveBeenCalled();
+    h.scheduler.cancelTeam('team-a');
+  });
+
+  it('drops an already scheduled wake when its lane owner changes', async () => {
+    const h = harness();
+    await h.service.deliver('team-a', h.message);
+    h.commit();
+    h.lane.runId = 'replacement-run';
+    await vi.advanceTimersByTimeAsync(6_000);
+    expect(h.relay).not.toHaveBeenCalled();
+    expect(h.send).not.toHaveBeenCalled();
+    h.scheduler.cancelTeam('team-a');
   });
 });

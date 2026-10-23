@@ -20,6 +20,7 @@ import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
 import { createWorkspaceTrustBridge } from '@features/workspace-trust/preload';
 import { WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
+import { parseTeamMemberRestartResult } from '@shared/types/teamMemberRestart';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 import {
@@ -1242,11 +1243,13 @@ const electronAPI: ElectronAPI = {
       );
     },
     restartMember: async (teamName: string, memberName: string, expectedSecondary?: boolean) => {
-      return invokeIpcWithResult<void>(
-        TEAM_RESTART_MEMBER,
-        teamName,
-        memberName,
-        ...(expectedSecondary === undefined ? [] : [expectedSecondary])
+      return parseTeamMemberRestartResult(
+        await invokeIpcWithResult<unknown>(
+          TEAM_RESTART_MEMBER,
+          teamName,
+          memberName,
+          ...(expectedSecondary === undefined ? [] : [expectedSecondary])
+        )
       );
     },
     skipMemberForLaunch: async (teamName: string, memberName: string) => {

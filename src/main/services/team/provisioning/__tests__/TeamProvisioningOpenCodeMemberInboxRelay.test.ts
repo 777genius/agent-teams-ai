@@ -154,6 +154,97 @@ function createRelayPorts(
 }
 
 describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
+  it('does not create an unscoped followup when a queued scoped wake is revoked during the existing-relay inbox read', async () => {
+    const existing = deferred<OpenCodeMemberInboxRelayResult>();
+    const reading = deferred<void>();
+    const release = deferred<readonly InboxMessage[]>();
+    let current = true;
+    const scheduleWake = vi.fn();
+    const ports = createRelayPorts({
+      readInboxMessages: async () => {
+        reading.resolve();
+        return await release.promise;
+      },
+      scheduleOpenCodeMemberInboxDeliveryWake: scheduleWake,
+    });
+    ports.inFlight.set('team/worker', existing.promise);
+    const work = relayOpenCodeMemberInboxMessagesWithPorts(
+      {
+        teamName: 'team',
+        memberName: 'worker',
+        relayKey: 'team/worker',
+        options: { onlyMessageId: 'queued', source: 'watchdog', isCurrent: () => current },
+      },
+      ports
+    );
+    await reading.promise;
+    current = false;
+    release.resolve([message({ messageId: 'queued' })]);
+    await work;
+    expect(scheduleWake).not.toHaveBeenCalled();
+    existing.resolve({ attempted: 0, delivered: 0, relayed: 0, failed: 0 });
+    await existing.promise;
+  });
+
+  it('preserves the scoped owner when forwarding a queued existing-relay wake into the watchdog', async () => {
+    const existing = deferred<OpenCodeMemberInboxRelayResult>();
+    let current = true;
+    const isCurrent = (): boolean => current;
+    const scheduled = vi.fn();
+    const ports = createRelayPorts({
+      readInboxMessages: async () => [message({ messageId: 'queued' })],
+      scheduleOpenCodeMemberInboxDeliveryWake: (input) => {
+        scheduleOpenCodeMemberInboxDeliveryWakeWithPorts(input, {
+          watchdogScheduler: { isEnabled: () => true },
+          scheduleWake: scheduled,
+        });
+      },
+    });
+    ports.inFlight.set('team/worker', existing.promise);
+    await relayOpenCodeMemberInboxMessagesWithPorts(
+      {
+        teamName: 'team',
+        memberName: 'worker',
+        relayKey: 'team/worker',
+        options: { onlyMessageId: 'queued', source: 'watchdog', isCurrent },
+      },
+      ports
+    );
+    expect(scheduled).toHaveBeenCalledWith(expect.objectContaining({ isCurrent }));
+    current = false;
+    expect(isCurrent()).toBe(false);
+    existing.resolve({ attempted: 0, delivered: 0, relayed: 0, failed: 0 });
+    await existing.promise;
+  });
+
+  it('revokes a scoped watchdog wake while inbox reading is in flight', async () => {
+    const reading = deferred<void>();
+    const release = deferred<readonly InboxMessage[]>();
+    let current = true;
+    const deliver = vi.fn(async () => ({ delivered: true }));
+    const ports = createRelayPorts({
+      readInboxMessages: async () => {
+        reading.resolve();
+        return await release.promise;
+      },
+      deliverOpenCodeMemberMessage: deliver,
+    });
+    const work = relayOpenCodeMemberInboxMessagesWithPorts(
+      {
+        teamName: 'team',
+        memberName: 'worker',
+        relayKey: 'scoped-bootstrap',
+        options: { onlyMessageId: 'queued', source: 'watchdog', isCurrent: () => current },
+      },
+      ports
+    );
+    await reading.promise;
+    current = false;
+    release.resolve([message({ messageId: 'queued' })]);
+    await work;
+    expect(deliver).not.toHaveBeenCalled();
+  });
+
   it('keeps a group terminal handoff fenced while still delivering fresh DM', async () => {
     const terminal = ledgerRecord({
       status: 'failed_terminal',

@@ -16,9 +16,7 @@ import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { getShellPreferredHome, resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
-import {
-  getUnsupportedAgentTeamsOpenCodeVersionMessage,
-} from '@shared/utils/version';
+import { getUnsupportedAgentTeamsOpenCodeVersionMessage } from '@shared/utils/version';
 import { createHash, randomUUID } from 'crypto';
 import { promises as fsp, readdirSync, readFileSync } from 'fs';
 import path from 'path';
@@ -137,7 +135,16 @@ export async function isSupportedOpenCodeRuntimeBinaryPath(binaryPath: string): 
     return false;
   }
   const version = await probeOpenCodeBinaryVersionCached(binaryPath);
-  return version.ok && isRecognizedOpenCodeRuntimeVersion(version.version);
+  if (!version.ok) {
+    // A failed probe does not establish that the selected delivery is unsupported.
+    // Preserve explicit selection so a transient timeout cannot launch another binary.
+    throw new Error(
+      `Could not verify the explicitly selected OpenCode binary: ${binaryPath}. ` +
+        'Retry the version check, or update/remove the binary override before launching. ' +
+        'The app will not substitute its managed OpenCode runtime.'
+    );
+  }
+  return isRecognizedOpenCodeRuntimeVersion(version.version);
 }
 
 function getExecutableName(): string {

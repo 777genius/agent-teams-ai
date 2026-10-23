@@ -6889,9 +6889,38 @@ describe('ipc teams handlers', () => {
       expect(invalid).toEqual({ success: false, error: 'Invalid expectedSecondary' });
       expect(teamHandlerMocks.restartMember).not.toHaveBeenCalled();
       const result = await handler({} as never, 'my-team', 'alice', true);
-      expect(result).toEqual({ success: true, data: undefined });
+      expect(result).toEqual({ success: true, data: { status: 'restarted' } });
       expect(teamHandlerMocks.restartMember).toHaveBeenCalledWith('my-team', 'alice', true);
     });
+
+    it.each(['failed_retained', 'failed_restored'] as const)(
+      'serializes confirmed %s primary failure as a plain same-call domain outcome',
+      async (outcome) => {
+        const { OpenCodeRetainedPrimaryRestartError } =
+          await import('@main/services/team/provisioning/OpenCodeRetainedPrimaryRestartError');
+        const retention = {
+          teamName: 'my-team',
+          memberName: 'alice',
+          predecessorRunId: 'run-old',
+          successorRunId: 'run-new',
+        };
+        teamHandlerMocks.restartMember.mockRejectedValueOnce(
+          new OpenCodeRetainedPrimaryRestartError('quota exceeded', retention, outcome)
+        );
+        const handler = handlers.get(TEAM_RESTART_MEMBER)!;
+        const result = await handler({} as never, 'my-team', 'alice');
+        expect(JSON.parse(JSON.stringify(result))).toEqual({
+          success: true,
+          data: { status: outcome, error: 'quota exceeded', ...retention },
+        });
+        teamHandlerMocks.restartMember.mockRejectedValueOnce(new Error('ordinary restart failed'));
+        await expect(handler({} as never, 'my-team', 'alice')).resolves.toEqual({
+          success: false,
+          error: 'ordinary restart failed',
+        });
+        vi.mocked(console.error).mockClear();
+      }
+    );
 
     it('blocks live replaceMembers when a member migrates from primary runtime ownership to OpenCode', async () => {
       const handler = handlers.get(TEAM_REPLACE_MEMBERS)!;

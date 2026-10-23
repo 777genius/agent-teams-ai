@@ -1,5 +1,9 @@
 import { stopTeamWithEscalation } from '@main/services/team/lifecycle/teamForceStopFlow';
-import { createOpenCodeBridgeHandshakeFailure, OpenCodeBridgeCommandHandshakePort } from '@main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+import { OpenCodeBridgeCommandClient } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
+import {
+  createOpenCodeBridgeHandshakeFailure,
+  OpenCodeBridgeCommandHandshakePort,
+} from '@main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { OpenCodeReadinessBridge } from '@main/services/team/opencode/bridge/OpenCodeReadinessBridge';
 import { OpenCodeRuntimeLaunchAuthorityWriter } from '@main/services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
 import {
@@ -35,6 +39,7 @@ import {
   OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
   OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION,
   OPEN_CODE_FILE_PARTS_CONTRACT_VERSION,
+  type OpenCodeBridgeCommandEnvelope,
   type OpenCodeBridgeCommandName,
   type OpenCodeBridgeHandshake,
   type OpenCodeBridgePeerIdentity,
@@ -77,7 +82,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
   let clientIdentity: OpenCodeBridgePeerIdentity;
 
   beforeEach(async () => {
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'opencode-state-bridge-'));
+    tempDir = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'opencode-state-bridge-')));
     now = new Date('2026-04-21T12:00:00.000Z');
     nextLeaseId = 1;
     ledger = createOpenCodeBridgeCommandLedgerStore({
@@ -1109,8 +1114,240 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     );
     h.identityHash = createOpenCodeBridgeHandshakeIdentityHash(h);
     handshakePort.nextHandshake = h;
-    return { ...buildStopInput(), capabilitySnapshotId: cap };
+    const input = buildStopInput();
+    return {
+      ...input,
+      capabilitySnapshotId: cap,
+      cwd: tempDir,
+      body: { ...(input.body as object), projectPath: tempDir },
+    };
   }
+
+  it('persists the canonical Stop project target before dispatch through a project alias', async () => {
+    const projectPath = path.join(tempDir, 'project');
+    const projectAlias = path.join(tempDir, 'project-alias');
+    await fs.mkdir(projectPath);
+    await fs.symlink(projectPath, projectAlias, 'junction');
+    const canonicalProjectPath = await fs.realpath(projectPath);
+    const input = {
+      ...enableRuntimeStop(),
+      cwd: projectAlias,
+      body: { ...(buildStopInput().body as object), projectPath: projectAlias },
+    };
+    const executor: OpenCodeBridgeCommandExecutor = {
+      execute: vi.fn(async (command, body, options) => {
+        const request = (body as { stopRecovery: RuntimeStopRequest }).stopRecovery;
+        // Runtime wire admission compares these exact bytes before outcome lookup.
+        expect(options.cwd).toBe(request.target.projectPath);
+        expect((body as { projectPath: string }).projectPath).toBe(request.target.projectPath);
+        const original = (await ledger.list())[0];
+        expect(original.stopTarget).toMatchObject({
+          cwd: projectAlias,
+          body: { projectPath: projectAlias },
+          runtimeTarget: { projectPath: canonicalProjectPath },
+        });
+        expect(request.target).toEqual(original.stopTarget!.runtimeTarget);
+        return bridgeSuccess({
+          command,
+          requestId: options.requestId,
+          runtime: { ...bridgeSuccess().runtime, capabilitySnapshotId: input.capabilitySnapshotId },
+          data: runtimeData(true, request.idempotencyKey),
+        });
+      }) as OpenCodeBridgeCommandExecutor['execute'],
+    };
+
+    const result = await createService({ bridge: executor }).execute(input);
+    await fs.unlink(projectAlias);
+    expect(await createService({ bridge: executor }).execute(input)).toEqual(result);
+    expect(executor.execute).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['reconciled_stopped', false],
+    ['active', false],
+    ['reconciled_stopped', true],
+    ['active', true],
+  ] as const)(
+    'projects failed alias Stop recovery through real wire bytes without replay: %s removed=%s',
+    async (observation, removeAlias) => {
+      const projectPath = path.join(tempDir, 'wire-project');
+      const projectAlias = path.join(tempDir, 'wire-project-alias');
+      await fs.mkdir(projectPath);
+      await fs.symlink(projectPath, projectAlias, 'junction');
+      const input = {
+        ...enableRuntimeStop(),
+        cwd: projectAlias,
+        body: { ...(buildStopInput().body as object), projectPath: projectAlias },
+      };
+      const wires: OpenCodeBridgeCommandEnvelope<Record<string, unknown>>[] = [];
+      const client = new OpenCodeBridgeCommandClient({
+        binaryPath: process.execPath,
+        tempDirectory: path.join(tempDir, 'wire-inputs'),
+        env: {},
+        processRunner: {
+          async run({ args }) {
+            const wire: OpenCodeBridgeCommandEnvelope<Record<string, unknown>> = JSON.parse(
+              await fs.readFile(args[args.indexOf('--input') + 1], 'utf8')
+            );
+            wires.push(wire);
+            const request = wire.body.stopRecovery as RuntimeStopRequest;
+            expect(wire.cwd).toBe(request.target.projectPath);
+            if (wire.command === 'opencode.stopTeam') {
+              expect(wire.body.projectPath).toBe(request.target.projectPath);
+              return {
+                stdout: JSON.stringify({
+                  ok: false,
+                  schemaVersion: 1,
+                  command: wire.command,
+                  requestId: wire.requestId,
+                  completedAt: now.toISOString(),
+                  durationMs: 1,
+                  diagnostics: [],
+                  error: {
+                    kind: 'provider_error',
+                    message: 'OpenCode Stop target project mismatch',
+                    retryable: false,
+                  },
+                }),
+                stderr: '',
+                exitCode: 0,
+                timedOut: false,
+              };
+            }
+            const binding = [
+              {
+                memberName: 'alice',
+                sessionId: 'session-1',
+                hostKey: 'host-1',
+                createdAt: 'original',
+              },
+            ];
+            const data =
+              wire.command === 'opencode.stopOutcome'
+                ? { status: 'unknown' }
+                : {
+                    status: observation,
+                    target: request.target,
+                    binding,
+                    sessionSetToken: createHash('sha256')
+                      .update(JSON.stringify({ target: request.target, binding }))
+                      .digest('hex'),
+                  };
+            return {
+              stdout: JSON.stringify(
+                bridgeSuccess({ command: wire.command, requestId: wire.requestId, data })
+              ),
+              stderr: '',
+              exitCode: 0,
+              timedOut: false,
+            };
+          },
+        },
+      });
+      await expect(createService({ bridge: client }).execute(input)).resolves.toMatchObject({
+        ok: false,
+      });
+      const original = (await ledger.list())[0];
+      expect(original).toMatchObject({
+        status: 'failed',
+        lastError: 'OpenCode Stop target project mismatch',
+      });
+      if (removeAlias) await fs.unlink(projectAlias);
+      const recovering = createService({ bridge: client }).execute(input);
+      if (observation === 'active')
+        await expect(recovering).rejects.toThrow('Stop reconciliation active');
+      else
+        await expect(recovering).resolves.toMatchObject({
+          ok: true,
+          command: 'opencode.reconcileStop',
+          data: { status: 'reconciled_stopped' },
+        });
+      expect(wires.map((wire) => wire.command)).toEqual([
+        'opencode.stopTeam',
+        'opencode.stopOutcome',
+        'opencode.reconcileStop',
+      ]);
+      expect((await ledger.list())[0]).toEqual(original);
+      expect(original.stopTarget).toMatchObject({
+        cwd: projectAlias,
+        body: { projectPath: projectAlias },
+        runtimeTarget: { projectPath: await fs.realpath(projectPath) },
+      });
+      for (const wire of wires) expect(wire.body.stopRecovery).toEqual(wires[0].body.stopRecovery);
+      // Optional cross-repository contract packet; the runtime test consumes these
+      // exact serialized client bytes under its own disposable session store.
+      const packetPath = process.env.AGENT_TEAMS_TEST_STOP_WIRE_PACKET;
+      if (packetPath && observation === 'reconciled_stopped') {
+        if (
+          !path.isAbsolute(packetPath) ||
+          !packetPath.split(path.sep).some((part) => part.startsWith('TEST-'))
+        )
+          throw new Error('Stop wire packet requires an explicit TEST artifact path');
+        await fs.mkdir(path.dirname(packetPath), { recursive: true });
+        await fs.writeFile(packetPath, JSON.stringify({ projectAlias, wires }, null, 2));
+      }
+    }
+  );
+
+  it('rejects recovery after a project alias changes without replacing the retained Stop target', async () => {
+    const projectPath = path.join(tempDir, 'original-project');
+    const successorPath = path.join(tempDir, 'successor-project');
+    const projectAlias = path.join(tempDir, 'project-alias');
+    await fs.mkdir(projectPath);
+    await fs.mkdir(successorPath);
+    await fs.symlink(projectPath, projectAlias, 'junction');
+    const input = {
+      ...enableRuntimeStop(),
+      cwd: projectAlias,
+      body: { ...(buildStopInput().body as object), projectPath: projectAlias },
+    };
+    bridge.resultFactory = () => {
+      throw new Error('lost original response');
+    };
+    await expect(createService().execute(input)).rejects.toThrow('lost original response');
+    const original = (await ledger.list())[0];
+    await fs.unlink(projectAlias);
+    await fs.symlink(successorPath, projectAlias, 'junction');
+
+    await expect(createService().execute(input)).rejects.toThrow('target mismatch');
+    expect(bridge.calls).toHaveLength(1);
+    expect((await ledger.list())[0]).toEqual(original);
+  });
+
+  it('stops the retained session after its canonical project directory is deleted', async () => {
+    const projectPath = path.join(tempDir, 'deleted-project');
+    await fs.mkdir(projectPath);
+    const canonicalProjectPath = await fs.realpath(projectPath);
+    const input = {
+      ...enableRuntimeStop(),
+      cwd: canonicalProjectPath,
+      body: { ...(buildStopInput().body as object), projectPath: canonicalProjectPath },
+    };
+    await fs.rm(projectPath, { recursive: true });
+    bridge.resultFactory = ({ command, body, options }) => {
+      const request = (body as unknown as { stopRecovery: RuntimeStopRequest }).stopRecovery;
+      expect(request.target.projectPath).toBe(canonicalProjectPath);
+      expect(options.cwd).toBe(canonicalProjectPath);
+      return bridgeSuccess({
+        command,
+        requestId: options.requestId,
+        runtime: { ...bridgeSuccess().runtime, capabilitySnapshotId: input.capabilitySnapshotId },
+        data: runtimeData(true, request.idempotencyKey),
+      });
+    };
+
+    const result = await createService().execute(input);
+    expect(result.ok).toBe(true);
+    expect(bridge.calls).toHaveLength(1);
+    expect((await ledger.list())[0]).toMatchObject({
+      status: 'completed',
+      stopTarget: {
+        cwd: canonicalProjectPath,
+        body: { projectPath: canonicalProjectPath },
+        runtimeTarget: { projectPath: canonicalProjectPath },
+      },
+    });
+  });
 
   it.each([true, false])(
     'new Stop retains original session authority and string warnings on immediate durable completion %s',
@@ -1794,12 +2031,22 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
   });
 
   it('keeps the same validated handshake refusal and its finite SDK cause before dispatch', async () => {
-    const failure = createOpenCodeBridgeHandshakeFailure({ kind: 'runtime_not_ready', retryable: false,
-      message: 'execution_owner_not_private:private_acl_foreign_allow:0 @native:runStateRequest' });
+    const failure = createOpenCodeBridgeHandshakeFailure({
+      kind: 'runtime_not_ready',
+      retryable: false,
+      message: 'execution_owner_not_private:private_acl_foreign_allow:0 @native:runStateRequest',
+    });
     vi.spyOn(handshakePort, 'handshake').mockRejectedValueOnce(failure);
     await expect(createService().execute(buildStopInput())).rejects.toBe(failure);
-    expect(projectOpenCodeStateChangingFailure(failure)).toMatchObject({ phase: 'handshake',
-      handshakeFailure: { kind: 'runtime_not_ready', sdkCode: 'execution_owner_not_private', nativeOperation: 'runStateRequest', nativeErrno: 0 } });
+    expect(projectOpenCodeStateChangingFailure(failure)).toMatchObject({
+      phase: 'handshake',
+      handshakeFailure: {
+        kind: 'runtime_not_ready',
+        sdkCode: 'execution_owner_not_private',
+        nativeOperation: 'runStateRequest',
+        nativeErrno: 0,
+      },
+    });
     expect(bridge.calls).toHaveLength(0);
   });
 
@@ -2108,13 +2355,36 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
       ttlMs: 10_000,
     });
 
-    const resultPromise = service.execute(buildSendInput('acceptance'));
-    await sleep(20);
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+    let notifyLeaseConflict!: () => void;
+    const leaseConflict = new Promise<void>((resolve) => {
+      notifyLeaseConflict = resolve;
+    });
+    const acquire = leaseStore.acquire.bind(leaseStore);
+    const acquireSpy = vi.spyOn(leaseStore, 'acquire').mockImplementation(async (input) => {
+      try {
+        return await acquire(input);
+      } catch (error) {
+        notifyLeaseConflict();
+        throw error;
+      }
+    });
+    // Observe contention before releasing it; filesystem latency must not consume
+    // this test's retry budget, and any rejection is observed immediately.
+    const resultPromise = expect(
+      service.execute(buildSendInput('acceptance'))
+    ).resolves.toMatchObject({
+      ok: true,
+    });
+    await leaseConflict;
+    expect(acquireSpy).toHaveBeenCalledTimes(1);
     expect(bridge.calls).toHaveLength(0);
 
     await leaseStore.release(activeLease.leaseId);
+    await vi.advanceTimersByTimeAsync(5);
 
-    await expect(resultPromise).resolves.toMatchObject({ ok: true });
+    await resultPromise;
+    expect(acquireSpy).toHaveBeenCalledTimes(2);
     expect(bridge.calls).toHaveLength(1);
     expect(bridge.calls[0].body.preconditions.commandLeaseId).toBe('lease-2');
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
@@ -2726,8 +2996,4 @@ class FakeManifestReader implements RuntimeStoreManifestReader {
 
 class FakeDiagnosticsSink implements OpenCodeStateChangingBridgeDiagnosticsSink {
   readonly append = vi.fn(async () => {});
-}
-
-function sleep(delayMs: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, delayMs));
 }

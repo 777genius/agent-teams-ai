@@ -1,4 +1,5 @@
 import type { AnthropicTeamApiKeyHelperMaterial } from '../../runtime/anthropicTeamApiKeyHelper';
+import type { OpenCodeRetainedSecondaryDelivery } from './OpenCodeRetainedSecondaryOwnership';
 import type { RuntimeBootstrapSpec } from './TeamProvisioningBootstrapSpec';
 import type { PendingInboxRelayCandidate } from './TeamProvisioningInboxRelayCandidates';
 import type { LeadActivityState } from './TeamProvisioningLeadActivity';
@@ -52,6 +53,7 @@ export interface PendingMemberRestartContext {
 
 export interface ProvisioningRun {
   runId: string;
+  retainedSecondaryDelivery?: OpenCodeRetainedSecondaryDelivery;
   teamName: string;
   startedAt: string;
   progress: TeamProvisioningProgress;

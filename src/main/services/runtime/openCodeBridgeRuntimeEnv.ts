@@ -108,7 +108,7 @@ export async function ensureOpenCodeBridgeRuntimeBinaryEnv({
       onOverrideRejected?.();
     } else if (
       !isSupportedOpenCodeRuntimeBinaryPath ||
-      (await isSupportedOpenCodeRuntimeBinaryPath(existingBinary.binaryPath).catch(() => false))
+      (await isSupportedOpenCodeRuntimeBinaryPath(existingBinary.binaryPath))
     ) {
       targetEnv[OPENCODE_RUNTIME_BINARY_PATH_ENV] = existingBinary.binaryPath;
       targetEnv[OPENCODE_LEGACY_BINARY_PATH_ENV] = existingBinary.binaryPath;

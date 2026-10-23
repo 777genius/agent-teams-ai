@@ -9,6 +9,7 @@ import { runInNewContext } from 'node:vm';
 
 import { verifyRuntimeArchiveChecksum } from './runtime-archive-checksum.mjs';
 import { phase } from './runtime-bootstrap-diagnostics.mts';
+import { extractWindowsRuntimeZip } from './runtime-windows-zip-extraction.mts';
 import { assertSafeRuntimeZip } from './runtime-archive-extraction.mts';
 import {
   ambiguousDirectoryFixture,
@@ -54,31 +55,38 @@ for (const archiveKind of ['tar.gz']) {
           // Bare older cache cannot establish whether its archive had companions.
           fs.mkdirSync(cache);
           fs.copyFileSync(binary, path.join(cache, 'orchestrator'));
-          assert.equal(isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), false);
-          publishRuntimePayload(binary, cache, sha256);
+          assert.equal(await isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), false);
+          await publishRuntimePayload(binary, cache, sha256);
           fs.rmSync(extracted, { recursive: true });
-          assert.equal(isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), true);
-          assert.equal(isRuntimePayloadCacheValid(cache, '0'.repeat(64), 'orchestrator'), false);
+          assert.equal(await isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), true);
+          assert.equal(
+            await isRuntimePayloadCacheValid(cache, '0'.repeat(64), 'orchestrator'),
+            false
+          );
           assert.equal(fs.existsSync(path.join(cache, 'cursor-managed')), managed);
           if (managed) {
             fs.unlinkSync(path.join(cache, 'cursor-managed/plugin/index.js'));
-            assert.equal(isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), false);
+            assert.equal(await isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), false);
           } else {
             fs.writeFileSync(path.join(cache, 'orchestrator'), 'changed');
-            assert.equal(isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), false);
+            assert.equal(await isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), false);
           }
           extractArchive(archive, extracted, archiveKind, (cmd, args) => execFileSync(cmd, args));
-          publishRuntimePayload(findExtractedBinary(extracted, 'orchestrator'), cache, sha256);
-          assert.equal(isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), true);
+          await publishRuntimePayload(
+            findExtractedBinary(extracted, 'orchestrator'),
+            cache,
+            sha256
+          );
+          assert.equal(await isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), true);
           // A failed replacement leaves the previously complete payload available.
           fs.symlinkSync(
             'missing',
             path.join(path.dirname(findExtractedBinary(extracted, 'orchestrator')), 'bad-link')
           );
-          assert.throws(() =>
+          await assert.rejects(() =>
             publishRuntimePayload(findExtractedBinary(extracted, 'orchestrator'), cache, sha256)
           );
-          assert.equal(isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), true);
+          assert.equal(await isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), true);
           assert.equal(
             fs.readdirSync(root).some((name) => name.includes('.stage-')),
             false
@@ -105,6 +113,12 @@ test('ZIP extraction preserves Unicode and spaced companions through cache publi
 
     const archive = path.join(root, 'runtime архив with spaces.zip');
     if (process.platform === 'win32') {
+      const inboxTar = path.win32.join(process.env.SystemRoot, 'System32', 'tar.exe');
+      process.stdout.write(
+        `[Windows Unicode ZIP reader] ${execFileSync(inboxTar, ['--version'], { encoding: 'utf8' }).trim()}\n`
+      );
+      // Preserve the real PowerShell producer and Unicode native-reader regression.
+      // libarchive#3063 documents UTF-8 pathname conversion failures in some inbox versions.
       // PowerShell preserves Unicode archive paths and UTF-8 ZIP entry names.
       const command = `$ErrorActionPreference = 'Stop'; Compress-Archive -LiteralPath '${payload.replace(/'/g, "''")}' -DestinationPath '${archive.replace(/'/g, "''")}' -Force`;
       execFileSync('powershell', [
@@ -116,7 +130,36 @@ test('ZIP extraction preserves Unicode and spaced companions through cache publi
     } else {
       execFileSync('zip', ['-qr', archive, '.'], { cwd: source });
     }
-    const sha256 = createHash('sha256').update(fs.readFileSync(archive)).digest('hex');
+    const archiveBytes = fs.readFileSync(archive);
+    if (process.platform === 'win32') {
+      const end = archiveBytes.lastIndexOf(Buffer.from('504b0506', 'hex'));
+      assert.ok(end >= 0, 'fixture has an end-of-central-directory record');
+      let cursor = archiveBytes.readUInt32LE(end + 16);
+      const entries = [];
+      for (let index = 0; index < archiveBytes.readUInt16LE(end + 10); index++) {
+        assert.equal(archiveBytes.readUInt32LE(cursor), 0x02014b50);
+        const length = archiveBytes.readUInt16LE(cursor + 28);
+        const name = archiveBytes.subarray(cursor + 46, cursor + 46 + length);
+        const local = archiveBytes.readUInt32LE(cursor + 42);
+        entries.push({
+          name: name.toString('utf8'),
+          nameHex: name.toString('hex'),
+          flags: archiveBytes.readUInt16LE(cursor + 8),
+          localFlags: archiveBytes.readUInt16LE(local + 6),
+        });
+        cursor +=
+          46 +
+          length +
+          archiveBytes.readUInt16LE(cursor + 30) +
+          archiveBytes.readUInt16LE(cursor + 32);
+      }
+      process.stdout.write(`[Windows Unicode ZIP metadata] ${JSON.stringify(entries)}\n`);
+      const unicode = entries.find((entry) => entry.name.replaceAll('\\', '/').endsWith(companion));
+      assert.ok(unicode, 'fixture preserves the exact Unicode companion name in UTF-8');
+      assert.equal(unicode.flags & 0x0800, 0x0800, 'central name declares UTF-8');
+      assert.equal(unicode.localFlags & 0x0800, 0x0800, 'local name declares UTF-8');
+    }
+    const sha256 = createHash('sha256').update(archiveBytes).digest('hex');
     await verifyRuntimeArchiveChecksum(archive, { sha256 }, 'fixture');
     await assert.rejects(
       verifyRuntimeArchiveChecksum(archive, { sha256: '0'.repeat(64) }, 'fixture')
@@ -135,18 +178,20 @@ test('ZIP extraction preserves Unicode and spaced companions through cache publi
     );
 
     const cache = path.join(root, 'cached тест with spaces');
-    publishRuntimePayload(binary, cache, sha256);
+    await publishRuntimePayload(binary, cache, sha256);
     fs.rmSync(extracted, { recursive: true, force: true });
     assert.deepEqual(fs.readFileSync(path.join(cache, companion)), contents);
-    assert.equal(isRuntimePayloadCacheValid(cache, sha256, 'orchestrator.exe'), true);
-    assert.equal(isRuntimePayloadCacheValid(cache, '0'.repeat(64), 'orchestrator.exe'), false);
+    assert.equal(await isRuntimePayloadCacheValid(cache, sha256, 'orchestrator.exe'), true);
+    assert.equal(
+      await isRuntimePayloadCacheValid(cache, '0'.repeat(64), 'orchestrator.exe'),
+      false
+    );
     fs.appendFileSync(path.join(cache, companion), 'tampered');
-    assert.equal(isRuntimePayloadCacheValid(cache, sha256, 'orchestrator.exe'), false);
+    assert.equal(await isRuntimePayloadCacheValid(cache, sha256, 'orchestrator.exe'), false);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
-
 
 test('cached bootstrap waits for publication lock before validating or executing the binary', async () => {
   const source = fs.readFileSync(new URL('../dev-with-runtime.mjs', import.meta.url), 'utf8');
@@ -159,6 +204,10 @@ test('cached bootstrap waits for publication lock before validating or executing
   let unlock;
   const publication = new Promise((resolve) => {
     unlock = resolve;
+  });
+  let finishValidation;
+  const validation = new Promise((resolve) => {
+    finishValidation = resolve;
   });
   const run = runInNewContext(`${functionSource}; ensureBootstrappedRuntime`, {
     fs,
@@ -184,8 +233,9 @@ test('cached bootstrap waits for publication lock before validating or executing
         },
       };
     },
-    isRuntimePayloadCacheValid: () => {
+    isRuntimePayloadCacheValid: async () => {
       events.push('validate');
+      await validation;
       return true;
     },
     isCachedBinaryValid: () => true,
@@ -199,12 +249,16 @@ test('cached bootstrap waits for publication lock before validating or executing
     await new Promise((resolve) => setImmediate(resolve));
     assert.deepEqual(events, ['waiting']);
     unlock();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(events, ['waiting', 'locked', 'validate']);
+    finishValidation();
     const resolved = await result;
     assert.equal(resolved.downloaded, false);
     assert.equal(resolved.versionText, 'fixture');
     assert.deepEqual(events, ['waiting', 'locked', 'validate', 'execute-version', 'closed']);
   } finally {
     unlock();
+    finishValidation();
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
@@ -218,12 +272,13 @@ function windowsExtractor() {
     fs,
     path,
     assertSafeRuntimeZip,
+    extractWindowsRuntimeZip,
     process: { platform: 'win32', env: { SystemRoot: 'C:\\Windows' } },
   });
 }
 
 for (const caller of ['bootstrap', 'stager']) {
-  test(`${caller}: Windows ZIP uses absolute inbox tar, literal args, and rejects symlinks`, () => {
+  test(`${caller}: Windows ZIP uses absolute inbox .NET reader, literal paths, and rejects symlinks`, () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-zip-contract-'));
     const archive = path.join(root, "archive [x] 'quote'.zip");
     const destination = path.join(root, "extracted [x] 'quote'");
@@ -249,11 +304,15 @@ for (const caller of ['bootstrap', 'stager']) {
     let runner;
     try {
       runner = (command, args, options) => {
-        assert.equal(command, 'C:\\Windows\\System32\\tar.exe');
-        assert.deepEqual(Array.from(args), ['-xf', '-']);
-        assert.equal(options.cwd, destination);
-        assert.equal(typeof options.stdio[0], 'number');
-        assert.equal(fs.fstatSync(options.stdio[0]).size, fs.statSync(archive).size);
+        assert.equal(
+          command,
+          path.win32.join('C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+        );
+        assert.equal(args[0], '-NoLogo');
+        assert.equal(args[3], '-EncodedCommand');
+        assert.equal(options.env.AGENT_TEAMS_RUNTIME_ZIP_ARCHIVE, archive);
+        assert.equal(options.env.AGENT_TEAMS_RUNTIME_ZIP_DESTINATION, destination);
+        assert.ok(fs.existsSync(options.env.AGENT_TEAMS_RUNTIME_ZIP_MANIFEST));
         assert.equal(options.shell, false);
         fs.mkdirSync(path.join(destination, 'nested'), { recursive: true });
         fs.writeFileSync(path.join(destination, 'nested', 'companion'), 'unchanged');
@@ -287,7 +346,7 @@ for (const caller of ['bootstrap', 'stager']) {
 }
 
 test(
-  'Windows inbox tar preserves actual nested ZIP payload under quoted paths',
+  'Windows inbox ZIP preserves actual nested ZIP payload under quoted paths',
   { skip: process.platform !== 'win32' },
   async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "runtime-zip [x] 'quote'-"));
@@ -311,8 +370,8 @@ test(
         execFileSync(command, args, options)
       );
       const cache = path.join(root, 'published');
-      publishRuntimePayload(findExtractedBinary(extracted, 'orchestrator'), cache, sha256);
-      assert.equal(isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), true);
+      await publishRuntimePayload(findExtractedBinary(extracted, 'orchestrator'), cache, sha256);
+      assert.equal(await isRuntimePayloadCacheValid(cache, sha256, 'orchestrator'), true);
       assert.equal(
         fs.readFileSync(
           path.join(extracted, "runtime/local-cli/nested/file [brackets] 'quote'.js"),
@@ -379,7 +438,7 @@ test('stager extraction failure preserves previous payload and removes only its 
 });
 
 test(
-  'Windows inbox tar inputs are rejected by preflight before extractor invocation',
+  'Windows inbox ZIP inputs are rejected by preflight before extractor invocation',
   { skip: process.platform !== 'win32' },
   () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "runtime-zip-safety [x] 'quote'-"));

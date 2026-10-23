@@ -1338,7 +1338,7 @@ export class HttpAPIClient implements ElectronAPI {
         members: {},
       };
     },
-    restartMember: async (): Promise<void> => {
+    restartMember: async () => {
       throw new Error('Member restart is not available in browser mode');
     },
     retryFailedOpenCodeSecondaryLanes: async () => {

@@ -3,6 +3,7 @@ export interface OpenCodeMemberInboxDeliveryWakeInput {
   memberName: string;
   messageId: string;
   delayMs?: number;
+  isCurrent?: () => boolean;
 }
 
 export interface OpenCodeMemberInboxDeliveryWakePorts {
@@ -14,6 +15,7 @@ export interface OpenCodeMemberInboxDeliveryWakePorts {
     memberName: string;
     messageId: string;
     delayMs: number;
+    isCurrent?: () => boolean;
   }): void;
 }
 
@@ -24,7 +26,13 @@ export function scheduleOpenCodeMemberInboxDeliveryWakeWithPorts(
   const teamName = input.teamName.trim();
   const memberName = input.memberName.trim();
   const messageId = input.messageId.trim();
-  if (!teamName || !memberName || !messageId || !ports.watchdogScheduler.isEnabled()) {
+  if (
+    !teamName ||
+    !memberName ||
+    !messageId ||
+    !ports.watchdogScheduler.isEnabled() ||
+    input.isCurrent?.() === false
+  ) {
     return false;
   }
 
@@ -33,6 +41,7 @@ export function scheduleOpenCodeMemberInboxDeliveryWakeWithPorts(
     memberName,
     messageId,
     delayMs: Math.max(0, input.delayMs ?? 500),
+    ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
   });
   return true;
 }
