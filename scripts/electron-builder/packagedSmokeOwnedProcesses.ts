@@ -45,6 +45,8 @@ export function createPackagedSmokeOwnership(
   if (!Number.isFinite(probeTimeout) || probeTimeout <= 0)
     throw new Error('Invalid packaged smoke ownership timeout');
   const observed = new Map<string, SmokeProcessIdentity>();
+  const unverifiable = new Map<string, SmokeProcessIdentity>();
+  const unreadable = new Map<string, SmokeProcessIdentity>();
   const baseline = new Map<number, string>();
   const signals: SignalReceipt[] = [];
   let leaderPid: number | undefined;
@@ -143,8 +145,12 @@ export function createPackagedSmokeOwnership(
       if (
         stage === 'open' &&
         ['EACCES', 'EPERM'].includes((error as NodeJS.ErrnoException).code ?? '')
-      )
+      ) {
+        // Candidate only; census links lineage-linked descendants to
+        // exit-only cleanup debt that is never signaled.
+        unreadable.set(`${before.pid}:${before.birth}`, before);
         return undefined;
+      }
       throw environmentInspectionError(pid, stage, error);
     } finally {
       if (descriptor !== undefined) {
@@ -333,8 +339,40 @@ export function createPackagedSmokeOwnership(
           `Owned packaged smoke process lost verifiable ownership: pid=${expected.pid}`
         );
     }
+    // Unreadable identities keep exit-only debt only when recorded parentage
+    // reaches the owned tree; unrelated non-dumpable processes (browser
+    // zygotes) are forgotten.
+    const trackedPids = new Set<number>([...observed.values()].map((entry) => entry.pid));
+    if (leaderPid !== undefined) trackedPids.add(leaderPid);
+    for (const entry of unverifiable.values()) trackedPids.add(entry.pid);
+    for (let changed = true; changed; ) {
+      changed = false;
+      for (const [key, entry] of [...unreadable]) {
+        if (!trackedPids.has(entry.parent) || observed.has(key)) continue;
+        trackedPids.add(entry.pid);
+        unverifiable.set(key, entry);
+        unreadable.delete(key);
+        changed = true;
+      }
+    }
+    unreadable.clear();
+    if (unverifiable.size > MAX_OWNED)
+      throw new Error('Packaged smoke ownership exceeded its unverifiable process bound');
     budget(deadline);
     return identities;
+  }
+
+  function unverifiableSurvivors(deadline: number) {
+    const survivors: SmokeProcessIdentity[] = [];
+    for (const [key, expected] of unverifiable) {
+      const current =
+        platform === 'linux'
+          ? linuxIdentity(expected.pid, deadline, true)
+          : darwinIdentity(expected.pid, deadline);
+      if (current && live(current) && current.birth === expected.birth) survivors.push(expected);
+      else unverifiable.delete(key);
+    }
+    return survivors;
   }
 
   const sample = (timeoutMs = probeTimeout) => census(Date.now() + timeoutMs);
@@ -434,7 +472,8 @@ export function createPackagedSmokeOwnership(
       const deadline = Date.now() + timeoutMs;
       while (Date.now() < deadline) {
         try {
-          if (census(deadline).length === 0) return true;
+          if (census(deadline).length === 0 && unverifiableSurvivors(deadline).length === 0)
+            return true;
         } catch (error) {
           // Reaching this wait's deadline is unsettled, never an empty census.
           // The TERM caller can escalate with a fresh verified inventory; after
@@ -453,6 +492,11 @@ export function createPackagedSmokeOwnership(
     finish() {
       const remaining = sample();
       if (remaining.length) throw new Error('Owned packaged smoke processes remain after cleanup');
+      const unverifiableRemaining = unverifiableSurvivors(Date.now() + probeTimeout);
+      if (unverifiableRemaining.length)
+        throw new Error(
+          `Unverifiable packaged smoke processes remain after cleanup: pid=${unverifiableRemaining[0].pid}`
+        );
       const receipt = {
         phase: 'final',
         leaderPid,

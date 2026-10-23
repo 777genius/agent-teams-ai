@@ -246,6 +246,72 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
     15_000
   );
 
+  it.skipIf(process.platform !== 'linux')(
+    'keeps a marked non-dumpable descendant as unsettled debt until it exits',
+    async () => {
+      const { createPackagedSmokeOwnership } = requireFromTest(
+        '../../../scripts/electron-builder/packagedSmokeOwnedProcesses.ts'
+      ) as {
+        createPackagedSmokeOwnership(options?: {
+          timeoutMs?: number;
+        }): {
+          environment: Record<string, string>;
+          begin(pid?: number): { pid: number }[];
+          waitForExit(timeoutMs: number): Promise<boolean>;
+          finish(): unknown;
+        };
+      };
+      const ownership = createPackagedSmokeOwnership({ timeoutMs: 10_000 });
+      let grandchild: number | undefined;
+      const child = spawn(
+        process.execPath,
+        [
+          '-e',
+          "const {spawn}=require('node:child_process');" +
+            "const p=spawn('python3',['-c','import ctypes,time;ctypes.CDLL(None).prctl(4,0);time.sleep(60)'],{stdio:'ignore'});" +
+            'console.log(p.pid);setInterval(()=>{},1000);',
+        ],
+        { env: { ...process.env, ...ownership.environment }, stdio: ['ignore', 'pipe', 'ignore'] }
+      );
+      try {
+        grandchild = Number(
+          await new Promise<string>((resolve, reject) => {
+            child.once('error', reject);
+            child.stdout.once('data', (chunk: Buffer) => resolve(chunk.toString().trim()));
+          })
+        );
+        expect(Number.isInteger(grandchild)).toBe(true);
+        const deadline = Date.now() + 5_000;
+        let denied = false;
+        while (Date.now() < deadline) {
+          try {
+            fs.readFileSync(`/proc/${grandchild}/environ`);
+          } catch (error) {
+            denied = (error as NodeJS.ErrnoException).code === 'EACCES';
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        expect(denied).toBe(true);
+        ownership.begin(child.pid);
+        child.kill('SIGKILL');
+        await new Promise<void>((resolve) => child.once('close', () => resolve()));
+        expect(await ownership.waitForExit(1_500)).toBe(false);
+        expect(() => ownership.finish()).toThrow(/Unverifiable packaged smoke process/);
+      } finally {
+        if (grandchild !== undefined) {
+          try {
+            process.kill(grandchild, 'SIGKILL');
+          } catch {
+            // Already gone.
+          }
+        }
+        if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+      }
+    },
+    20_000
+  );
+
   it.each(['app-success', 'app-failure', 'mcp-success', 'mcp-failure', 'owner-exited', 'delayed-kill'])(
     'drains escaped owned processes and preserves an unrelated sentinel on %s',
     async (mode) => {
