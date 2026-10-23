@@ -6,6 +6,7 @@ export type OpenCodeStopHandshakeMessageFamily =
   | 'capability_snapshot_required'
   | 'run_authority_conflict'
   | 'run_authority_unavailable'
+  | 'lifecycle_identifiers_required'
   | 'run_identity_required'
   | 'lane_scope_unavailable'
   | 'lane_scope_ambiguous'

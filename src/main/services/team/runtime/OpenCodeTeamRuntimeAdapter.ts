@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 
-import { ownedOpenCodeStateChangingFailure } from '../opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+import { ownedOpenCodeStateChangingFailure } from '../opencode/bridge/OpenCodeStateChangingCausalFailure';
 import {
   freshOpenCodeExecutionProof,
   openCodeReadinessArtifactKey,

@@ -8,7 +8,7 @@ import {
   OPEN_CODE_FILE_PARTS_CONTRACT_VERSION,
   OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION,
 } from './OpenCodeBridgeCommandContract';
-import { rememberOpenCodeHandshakeFailure } from './OpenCodeStateChangingBridgeCommandService';
+import { rememberOpenCodeHandshakeFailure } from './OpenCodeStateChangingCausalFailure';
 
 import type {
   OpenCodeBridgeCommandName,
@@ -21,9 +21,8 @@ import type {
   OpenCodeBridgeHandshakePort,
 } from './OpenCodeStateChangingBridgeCommandService';
 
-/** Preserve only closed facts from a validated failure envelope on the same thrown Error. */
 /** Ordered prefixes: specific rejections before their catch-all family. */
-const OPEN_CODE_HANDSHAKE_MESSAGE_FAMILIES = [
+export const OPEN_CODE_HANDSHAKE_MESSAGE_FAMILIES = [
   ['stop_authority_mismatch', 'OpenCode confirmed stop authority mismatch'],
   ['empty_lane_mismatch', 'OpenCode empty-lane stop authority mismatch'],
   ['lane_authority_unavailable', 'OpenCode lifecycle selected lane authority is unavailable'],
@@ -33,7 +32,8 @@ const OPEN_CODE_HANDSHAKE_MESSAGE_FAMILIES = [
   ],
   ['run_authority_conflict', 'OpenCode lifecycle stored run authority mismatch'],
   ['run_authority_unavailable', 'OpenCode lifecycle selected run authority is unavailable'],
-  ['run_identity_required', 'OpenCode lifecycle authority requires'],
+  ['lifecycle_identifiers_required', 'OpenCode lifecycle authority requires teamId and laneId'],
+  ['run_identity_required', 'OpenCode lifecycle authority requires runId'],
   ['lane_scope_unavailable', 'OpenCode lifecycle selected lane scope is unavailable'],
   ['lane_scope_ambiguous', 'OpenCode lifecycle lane scope is ambiguous'],
   ['lane_project_mismatch', 'OpenCode lifecycle lane project authority mismatch'],
@@ -55,6 +55,7 @@ const OPEN_CODE_HANDSHAKE_MESSAGE_FAMILIES = [
   ['lifecycle_rejection', 'OpenCode lifecycle '],
 ] as const;
 
+/** Preserve only closed facts from a validated failure envelope on the same thrown Error. */
 export function createOpenCodeBridgeHandshakeFailure(
   failure: OpenCodeBridgeFailure['error']
 ): Error {

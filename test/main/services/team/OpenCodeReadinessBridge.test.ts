@@ -1441,12 +1441,13 @@ describe('OpenCodeReadinessBridge', () => {
       { timeoutMs: number },
     ];
     expect(call[0]).toBe('opencode.stopTeam');
-    // Below the 45s SDK Stop envelope a healthy Windows stop is clipped again;
-    // above it the doubled attempt budget outgrows the escalation race.
+    // Below the 45s SDK Stop envelope a healthy Windows stop is clipped again.
     expect(call[2].timeoutMs).toBeGreaterThanOrEqual(45_000);
-    expect(
-      2 * call[2].timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS
-    ).toBeLessThanOrEqual(STOP_ESCALATION_TIMEOUT_MS);
+    // One attempt settles within its budget plus one watchdog grace; the race
+    // keeps headroom above that for the per-team lock and the file phases.
+    expect(call[2].timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS).toBeLessThan(
+      STOP_ESCALATION_TIMEOUT_MS
+    );
   });
 });
 

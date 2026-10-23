@@ -13,8 +13,8 @@ import { projectIpcCausalFailure, safeIpcFailureDetail } from '../../scripts/e2e
 import { electronTeamPort, nativeCommandMatch } from '../../scripts/e2e/opencode-native-team-port';
 import { serializedFunction } from '../../scripts/e2e/release-updater/serialized-function.mts';
 import { parseSingleBridgeJsonResult, validateBridgeResultEnvelope } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
-import { createOpenCodeBridgeClientIdentity, createOpenCodeBridgeHandshakeFailure } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
-import { formatOpenCodeStopCausalSuffix, projectOpenCodeStateChangingFailure } from '../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+import { createOpenCodeBridgeClientIdentity, createOpenCodeBridgeHandshakeFailure, OPEN_CODE_HANDSHAKE_MESSAGE_FAMILIES } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+import { formatOpenCodeStopCausalSuffix, projectOpenCodeStateChangingFailure, rememberOpenCodeHandshakeFailure } from '../../src/main/services/team/opencode/bridge/OpenCodeStateChangingCausalFailure';
 import { redactLaunchFailureArtifactText } from '../../src/main/services/team/TeamLaunchFailureArtifactPack';
 
 const project = (value: string): string =>
@@ -1195,6 +1195,47 @@ it('classifies deterministic handshake rejections into closed message families a
     messageFamily: 'stop_authority_mismatch',
     messageDigest: /^[a-f0-9]{12}$/,
   });
+});
+
+it('keeps every classified handshake family distinct and through the serialized e2e projection', () => {
+  const safeProject = runInNewContext(
+    `(${serializedFunction(projectIpcCausalFailure)})`
+  ) as typeof projectIpcCausalFailure;
+  const roundTrip = (text: string) =>
+    safeProject(
+      'team_stop_unconfirmed:stop_failed' +
+        formatOpenCodeStopCausalSuffix(
+          projectOpenCodeStateChangingFailure(
+            createOpenCodeBridgeHandshakeFailure({
+              kind: 'provider_error',
+              retryable: true,
+              message: text,
+            })
+          )
+        )
+    )?.handshakeFailure?.messageFamily;
+  // An earlier catch-all prefix would shadow a later family; a family missing
+  // from the e2e allowlist would silently vanish from the proof artifact.
+  for (const [family, prefix] of OPEN_CODE_HANDSHAKE_MESSAGE_FAMILIES)
+    expect([prefix, roundTrip(`${prefix} TEST-suffix`)]).toEqual([prefix, family]);
+  expect(roundTrip('fetch failed at TLS handshake')).toBe('unclassified');
+  expect(roundTrip('OpenCode lifecycle authority requires teamId and laneId')).toBe(
+    'lifecycle_identifiers_required'
+  );
+  expect(roundTrip('OpenCode lifecycle authority requires runId')).toBe('run_identity_required');
+});
+
+it('drops a message family that is not a closed token even behind a widening cast', () => {
+  const error = new Error('TEST handshake failure');
+  rememberOpenCodeHandshakeFailure(error, {
+    kind: 'provider_error',
+    messageFamily: 'C:/private/token body=secret-value' as never,
+  });
+  const facts = projectOpenCodeStateChangingFailure(error).handshakeFailure;
+  expect(facts).toEqual({ kind: 'provider_error' });
+  expect(formatOpenCodeStopCausalSuffix(projectOpenCodeStateChangingFailure(error))).not.toMatch(
+    /private|secret/
+  );
 });
 
 it.each(['current-pass', 'current-fail', 'floor'] as const)(

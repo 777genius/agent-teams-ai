@@ -61,10 +61,10 @@ import {
   type OpenCodeLaunchAuthorityWriter,
   OpenCodeStateChangingBridgeCommandService,
   type OpenCodeStateChangingBridgeDiagnosticsSink,
-  projectOpenCodeStateChangingFailure,
   resolveOpenCodeBridgeLeaseAcquireTimeoutMs,
   type RuntimeStoreManifestReader,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+import { projectOpenCodeStateChangingFailure } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingCausalFailure';
 
 import type { RuntimeStopRequest } from '@main/services/team/opencode/bridge/OpenCodeRuntimeStopProtocol';
 
@@ -700,6 +700,43 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     expect(call).toBeDefined();
     expect(call!.timeoutMs).toEqual(expect.any(Number));
     expect(call!.timeoutMs).toBeLessThanOrEqual(input.timeoutMs);
+  });
+
+  it('draws every stop-recovery bridge call from what the previous ones left', async () => {
+    vi.useRealTimers();
+    const { input, result } = await seedLegacyStop('unknown_after_timeout');
+    ledger = createOpenCodeBridgeCommandLedgerStore({
+      filePath: path.join(tempDir, 'ledger.json'),
+    });
+    const slowHandshake: OpenCodeBridgeHandshakePort = {
+      async handshake(callInput) {
+        await sleep(300);
+        return handshakePort.handshake(callInput);
+      },
+    };
+    // A slow outcome lookup that leaves the original Stop unknown forces the
+    // second recovery query, so both queries are measured against one budget.
+    const execute = vi.fn(async (command, _body, options) => {
+      await sleep(300);
+      return bridgeSuccess({
+        command,
+        requestId: options.requestId,
+        runtime: result.runtime,
+        data: { status: 'unknown' },
+      });
+    });
+    await createService({
+      bridge: { execute } as OpenCodeBridgeCommandExecutor,
+      handshakePort: slowHandshake,
+    })
+      .execute({ ...input, timeoutMs: 2_000 })
+      .catch(() => undefined);
+    const budgets = new Map(
+      execute.mock.calls.map(([command, , options]) => [command, options.timeoutMs])
+    );
+    expect([...budgets.keys()]).toEqual(['opencode.stopOutcome', 'opencode.reconcileStop']);
+    expect(budgets.get('opencode.stopOutcome')).toBeLessThanOrEqual(1_750);
+    expect(budgets.get('opencode.reconcileStop')).toBeLessThanOrEqual(1_450);
   });
 
   it.each(['opencode.reconcileTeam', 'opencode.stopTeam', 'opencode.sendMessage'] as const)(
