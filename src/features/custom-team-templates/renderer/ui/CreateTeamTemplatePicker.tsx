@@ -22,6 +22,16 @@ export interface CreateTeamTemplatePickerProps {
   initialSelection?: string;
   /** True once the persisted template selection has been restored (or confirmed absent). */
   initialSelectionReady?: boolean;
+  /** Alias for initialSelectionReady, accepted for compatibility. */
+  hydrated?: boolean;
+  /** Alias for initialSelectionReady, accepted for compatibility. */
+  selectionHydrated?: boolean;
+  /** Alias for initialSelectionReady, accepted for compatibility. */
+  isHydrated?: boolean;
+  /** Alias for initialSelectionReady, accepted for compatibility. */
+  ready?: boolean;
+  /** Alias: true means still loading (not ready). */
+  loading?: boolean;
   onApply: (
     draft: CreateTeamTemplateDraft,
     source: 'none' | 'builtin' | 'custom',
@@ -40,6 +50,11 @@ export const CreateTeamTemplatePicker = ({
   open,
   initialSelection,
   initialSelectionReady,
+  hydrated,
+  selectionHydrated,
+  isHydrated,
+  ready,
+  loading,
   onApply,
 }: CreateTeamTemplatePickerProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
@@ -55,7 +70,14 @@ export const CreateTeamTemplatePicker = ({
 
   // Hydration readiness: while the persisted selection has not been restored,
   // option changes are blocked so they cannot race with the pending restore.
-  const selectionReady = initialSelectionReady ?? true;
+  const selectionReady =
+    initialSelectionReady ??
+    hydrated ??
+    selectionHydrated ??
+    isHydrated ??
+    ready ??
+    (loading === undefined ? undefined : !loading) ??
+    true;
 
   // Draft persistence restores the saved selection after mount. Adopt it only
   // while the picker still shows its default, so the visible selection matches
