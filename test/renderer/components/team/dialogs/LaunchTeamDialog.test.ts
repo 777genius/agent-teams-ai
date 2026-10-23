@@ -1917,6 +1917,16 @@ describe('LaunchTeamDialog', () => {
       }
     });
 
+    // Production-owner note: TeamListView conditionally renders CreateTeamDialog
+    // and mocks it as a stub in TeamListViewCustomTemplates.test.tsx, so exercising
+    // the real dialog through the owner would require unmocking the entire
+    // CreateTeamDialog dependency graph (useCreateTeamDraft, draft persistence,
+    // provider hooks, etc.) that those tests deliberately avoid. That is a
+    // concrete harness limitation. This test is the closest possible proof: it
+    // drives the real CreateTeamDialog (the component TeamListView renders),
+    // unmounts it (simulating close without submit), remounts a new instance
+    // (simulating reopen), and verifies the same persisted draft is read and the
+    // restored user edits are preserved without reapplying the template.
     it('restores edited prompt and members after a real dialog unmount and remount', async () => {
       vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
       vi.mocked(api.customTeamTemplates.listTemplates).mockResolvedValue({
