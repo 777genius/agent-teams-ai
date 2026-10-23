@@ -90,6 +90,117 @@ const closedDiagnosticTokens = (values: unknown) =>
         ),
       ].slice(0, 16)
     : [];
+/** Closed run-control pump failure facts only. The operation-failure record, its
+ * binding and timestamp never cross this boundary; a missing, foreign or
+ * non-closed value stays null. */
+export function projectRunControlPumpFailure(value: unknown): {
+  category: 'run_control_pump_failed';
+  controlPhase: string;
+  controlCode: string;
+  nativeCode: number;
+} | null {
+  const row = (entry: unknown): Record<string, unknown> =>
+    entry && typeof entry === 'object' && !Array.isArray(entry)
+      ? (entry as Record<string, unknown>)
+      : {};
+  const data = row(value);
+  // Exact producer literals from the SDK run-control pump failure record.
+  const category = data.category === 'run_control_pump_failed' ? 'run_control_pump_failed' : null;
+  const controlPhase = [
+    'accept_wait',
+    'accept_authenticate',
+    'accept_replenish',
+    'read_frame',
+    'verify_frame',
+    'validate_payload',
+    'publish_request',
+  ].find((item) => item === data.controlPhase) ?? null;
+  const controlCode = ['cleanup_unknown', 'run_control_accept_timeout', 'run_control_accept_unknown',
+    'run_control_connect_unknown', 'run_control_connection_limit', 'run_control_disconnected',
+    'run_control_endpoint_changed', 'run_control_foreign', 'run_control_frame_invalid',
+    'run_control_frame_oversize', 'run_control_held_identity', 'run_control_held_inputs',
+    'run_control_hmac_unknown', 'run_control_image_changed', 'run_control_image_hash',
+    'run_control_listen_unknown', 'run_control_owner_identity', 'run_control_package_peer_identity',
+    'run_control_parent_birth', 'run_control_parent_join', 'run_control_path_alias',
+    'run_control_peer_identity', 'run_control_pipe_name', 'run_control_pipe_security',
+    'run_control_process_identity', 'run_control_pump_unknown', 'run_control_read_unknown',
+    'run_control_timeout', 'run_control_write_partial', 'run_control_write_unknown',
+    'run_process_changed', 'run_state_acl_unknown', 'run_state_challenge_changed',
+    'run_state_challenge_unknown', 'run_state_endpoint_changed', 'run_state_endpoint_missing',
+    'run_state_held_inputs', 'run_state_identity_changed', 'run_state_record_absent',
+    'run_state_record_changed', 'run_state_record_collision', 'run_state_record_encoding',
+    'run_state_record_name', 'run_state_record_read', 'run_state_record_rename',
+    'run_state_record_size', 'run_state_record_temporary', 'run_state_record_unknown',
+    'run_state_record_write', 'run_state_start_changed', 'run_state_unknown'].find(
+      (item) => item === data.controlCode) ?? null;
+  const nativeCode = Number.isSafeInteger(data.nativeCode) && Number(data.nativeCode) >= 0 &&
+    Number(data.nativeCode) <= 0xffffffff ? Number(data.nativeCode) : null;
+  return category && controlPhase && controlCode && nativeCode !== null
+    ? Object.freeze({ category, controlPhase, controlCode, nativeCode })
+    : null;
+}
+/** Bounded run-control record read: a non-regular, resized or aliased file is
+ * never observed as facts. */
+async function readRunControlJson(directory: string, name: string, limit: number) {
+  try {
+    const parent = await lstat(directory, { bigint: true });
+    if (!parent.isDirectory() || parent.isSymbolicLink() || (await realpath(directory)) !== directory)
+      return null;
+    const file = path.join(directory, name),
+      before = await lstat(file, { bigint: true });
+    if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || before.size > BigInt(limit) ||
+      (await realpath(file)) !== file)
+      return null;
+    const held = await open(file, 'r');
+    try {
+      const bytes = Buffer.alloc(limit + 1),
+        result = await held.read(bytes, 0, bytes.length, 0);
+      const after = await held.stat({ bigint: true });
+      if (result.bytesRead > limit || after.dev !== before.dev || after.ino !== before.ino ||
+        after.size !== before.size || after.mtimeNs !== before.mtimeNs)
+        return null;
+      const value: unknown = JSON.parse(bytes.subarray(0, result.bytesRead).toString('utf8'));
+      return value && typeof value === 'object' && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : null;
+    } finally {
+      await held.close();
+    }
+  } catch {
+    return null;
+  }
+}
+/** The corresponding run-control directory only: the run under the owned runs
+ * root whose own record binding names exactly this team and run. A missing,
+ * ambiguous or foreign record stays unknown. */
+async function readRunControlPumpFailure(dataRoot: string, team: string, runId: string) {
+  try {
+    const runsRoot = path.join(dataRoot, 'opencode', 'v2', 'runs');
+    if ((await realpath(runsRoot)) !== runsRoot || (await lstat(runsRoot)).isSymbolicLink())
+      return null;
+    const entries = await opendir(runsRoot),
+      matched: ReturnType<typeof projectRunControlPumpFailure>[] = [];
+    let visited = 0;
+    try {
+      for await (const entry of entries) {
+        if (++visited > 64) break;
+        if (!entry.isDirectory() || !/^[a-f0-9]{32}$/.test(entry.name)) continue;
+        const record = await readRunControlJson(
+          path.join(runsRoot, entry.name), 'operation-failure.json', 65536);
+        const binding = record && typeof record.binding === 'object' && !Array.isArray(record.binding)
+          ? (record.binding as Record<string, unknown>)
+          : {};
+        if (binding.teamId !== team || binding.runId !== runId) continue;
+        matched.push(projectRunControlPumpFailure(record));
+      }
+    } finally {
+      await entries.close().catch(() => {});
+    }
+    return matched.length === 1 ? (matched[0] ?? null) : null;
+  } catch {
+    return null;
+  }
+}
 const V1_TRANSCRIPT_MAX_BYTES = 2 * 1024 * 1024;
 // Only existing SDK read-only history/parser modules are imported. In
 // particular this never imports the profile/session bridge or prepares a host.
@@ -635,6 +746,9 @@ export function projectV1NativeTranscript(
   };
 }
 let preproofStage = 'arguments';
+// Failure-only observation: member runtime liveness at the moment the native
+// command-evidence gate gives up. Never an input to the gate itself.
+const commandEvidenceLivenessRows: { member: string; observation: StopObservation }[] = [];
 const preproofFacts: { manifestBytes?: number; manifestEntries?: number } = {};
 type App = Awaited<ReturnType<Awaited<ReturnType<typeof prepareNativeDesktop>>['launch']>>;
 type Identity = { pid: number; birth: string; executable: string; command: string };
@@ -823,6 +937,9 @@ type CompletionObservation = {
   exactComment: boolean;
   exactTextAnyAuthor: boolean;
   ownerHasComment: boolean;
+  commentTextIncludesExpected?: boolean;
+  commentTextStartsWithExpected?: boolean;
+  firstCommentLength?: number | null;
   terminalPresent: boolean;
   commentTimeValid: boolean;
   terminalTimeValid: boolean;
@@ -874,6 +991,9 @@ async function completed(
         exactComment: !!durable,
         exactTextAnyAuthor: !!task.comments?.some((row) => row.text === comment),
         ownerHasComment: !!task.comments?.some((row) => row.author === owner),
+        commentTextIncludesExpected: !!task.comments?.some((row) => typeof row.text === 'string' && row.text.includes(comment)),
+        commentTextStartsWithExpected: !!task.comments?.some((row) => typeof row.text === 'string' && row.text.startsWith(comment)),
+        firstCommentLength: typeof task.comments?.[0]?.text === 'string' ? task.comments[0].text.length : null,
         terminalPresent: !!terminal,
         commentTimeValid: !!durable && Number.isFinite(Date.parse(durable.createdAt)),
         terminalTimeValid: !!terminal && Number.isFinite(Date.parse(terminal.timestamp)),
@@ -944,7 +1064,22 @@ async function commandEvidence(
     },
     'actor/session-scoped genuine command evidence',
     180_000
-  );
+  ).catch(async (error: unknown) => {
+    // Observation only and bounded: never masks or stalls the original gate failure.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const { observation } = await Promise.race([
+        readStopObservation(app),
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => reject(new Error('TEST liveness observation expired')), 10_000);
+        }),
+      ]);
+      commandEvidenceLivenessRows.push({ member, observation });
+    } catch { /* Missing observation stays absent. */ } finally {
+      clearTimeout(timer);
+    }
+    throw error;
+  });
 }
 async function bundledRuntime(executable: string, manifestFile: string) {
   preproofStage = 'manifest_path';
@@ -1027,6 +1162,21 @@ async function exactFile(project: string, name: string, expected?: string) {
   const bytes = await readFile(file);
   if (expected !== undefined) assert.equal(bytes.toString(), expected);
   return createHash('sha256').update(bytes).digest('hex');
+}
+/** Failure-only facts under the same predicates as exactFile; an agent-written
+ * link, alias or oversized file is never read and never reported as exact. */
+async function resultFileFacts(project: string, name: string, expected: string) {
+  try {
+    const file = path.join(project, name);
+    const stat = await lstat(file);
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 ||
+      stat.size > Buffer.byteLength(expected))
+      return { name, present: true, exact: false };
+    const bytes = await readFile(file);
+    return { name, present: true, exact: bytes.toString() === expected };
+  } catch {
+    return { name, present: false, exact: false };
+  }
 }
 async function readStopObservation(app: App) {
   const processAlive = await app.call('processAlive');
@@ -1395,7 +1545,12 @@ async function packagedStartupSnapshot(
     'run_owner_stale',
     'run_process_unknown',
     'run_process_changed',
+    'run_control_client_budget_exhausted',
+    'run_control_connect_busy_timeout_expired',
+    'run_control_connect_idle_expired',
+    'run_control_connect_no_listener_expired',
     'run_deadline_expired',
+    'run_state_wall_deadline_expired',
     'run_readiness_changed',
     'run_readiness_unknown',
     'run_operation_unknown',
@@ -1462,6 +1617,10 @@ async function packagedStartupSnapshot(
     'alias_predicate',
     'process_alive',
     'process_alive_wait',
+    'process_alive_held_bun',
+    'process_alive_package_peer',
+    'process_alive_peer',
+    'process_alive_peer_parent',
     'process_image_path',
     'process_image_open',
     'process_birth_changed',
@@ -1966,6 +2125,7 @@ async function main() {
       : { bundledSdkSha: '', runtimeDigests: {} };
   const taskOwners = new Map<string, 'alice' | 'bob'>();
   const commandExpectations = new Map<string, NativeCommandExpectation>();
+  const commandResultFiles: { name: string; expected: string }[] = [];
   const nativeSessions = new Map<string, string>();
   const proofFile = path.join(desktop.root, 'proof.json');
   const proof = {
@@ -1985,6 +2145,7 @@ async function main() {
         ReturnType<ReturnType<typeof electronTeamPort>['getSafeTaskFailureSnapshot']>
       >[];
     },
+    commandResultFiles: [] as { name: string; present: boolean; exact: boolean }[],
     nativeTranscriptFailure: null as null | {
       observation: 'captured' | 'unavailable';
       member: 'alice' | 'bob';
@@ -2007,6 +2168,7 @@ async function main() {
     > | null,
     peerObservation: null as PeerObservation | null,
     commandEvidenceConfirmed: [] as { member: string; kind: string }[],
+    commandEvidenceLiveness: commandEvidenceLivenessRows,
     runIds: [] as string[],
     taskIds: [] as string[],
     holdFollowUps: [] as {
@@ -2036,9 +2198,10 @@ async function main() {
     nativeV2TranscriptFailure: null as null | {
       observation: 'captured' | 'unavailable'; member: 'alice' | 'bob';
       packet?: ReturnType<typeof projectV2NativeTranscript>;
-      failure?: { classification: string; kind?: string; sdkCode?: string | null; nativeOperation?: string | null; nativeErrno?: number | null };
+      failure?: { classification: string; kind?: string; sdkCode?: string | null; nativeOperation?: string | null; nativeErrno?: number | null; nativeStage?: string | null };
       inputFileRemoved?: boolean;
     },
+    pumpFailure: null as null | { category: 'run_control_pump_failed'; controlPhase: string; controlCode: string; nativeCode: number },
     cleanupFailures: [] as ProofFailure[],
   };
   const checkpoint = async (stage: string) => {
@@ -2082,6 +2245,11 @@ async function main() {
     );
     proof.nativeNodeDependency = { sha256: testNode.sha256, bytes: testNode.bytes };
     const nonce = { alice: randomUUID(), bob: randomUUID(), new: randomUUID() };
+    commandResultFiles.push(
+      { name: 'alice-result.txt', expected: nonce.alice + '\n' },
+      { name: 'bob-result.txt', expected: nonce.bob + '\n' },
+      { name: 'new-result.txt', expected: nonce.new + '\n' }
+    );
     const base = `Work only inside ${desktop.projectPath}. Never delegate, install packages, detach processes or change host verification scripts. Use team tools for peer messages and task comments. When a peer sends CHALLENGE:<token>, reply to that sender ACK:<token> exactly. Never reply to ACK.`;
     const command = (name: string) => {
       const program = path.join(desktop.projectPath, name);
@@ -2092,6 +2260,7 @@ async function main() {
       // JSON string escaping doubles backslashes in cmd/PowerShell arguments.
       return `"${testNode.executable}" "${program}"`;
     };
+
     const checkSum = `const a=require('node:assert/strict');a.equal(process.platform,'win32');const sum=require('./sum.cjs');a.equal(sum([]),0);a.equal(sum([2,-5,7]),4);a.equal(sum([1.5,2.5]),4);a.equal(sum([-2,-3]),-5);for(const v of [null,[NaN],[Infinity],['1']])a.throws(()=>sum(v),TypeError);`;
     await writeFile(
       path.join(desktop.projectPath, 'alice-verify.cjs'),
@@ -2603,9 +2772,9 @@ async function main() {
         observation: 'unavailable', member: failedTask.owner,
       };
       proof.nativeV2TranscriptFailure = capture;
-      // One read of the original session, charged to the existing 20s diagnostic budget.
+      // One read of the original session, charged to a bounded diagnostic budget.
       // The public command performs no send, observation settlement or qualification.
-      const captureDeadline = Date.now() + 20_000;
+      const captureDeadline = Date.now() + 60_000;
       const captureController = new AbortController();
       let captureTimer: ReturnType<typeof setTimeout> | undefined;
       try {
@@ -2660,7 +2829,7 @@ async function main() {
           const closed = projectIpcCausalFailure(`error:${parsed.value.error.kind}: OpenCode message bridge failed: ${parsed.value.error.message}`);
           capture.failure = { classification: 'bridge_refused', kind: parsed.value.error.kind,
             sdkCode: closed?.bridgeFailure?.sdkCode ?? null, nativeOperation: closed?.bridgeFailure?.nativeOperation ?? null,
-            nativeErrno: closed?.bridgeFailure?.nativeErrno ?? null };
+            nativeErrno: closed?.bridgeFailure?.nativeErrno ?? null, nativeStage: closed?.bridgeFailure?.nativeStage ?? null };
         } else {
           capture.packet = projectV2NativeTranscript(parsed.value.data, { sessionId: nativeSession,
             selectedModel: model, runtimePromptMessageId,
@@ -2687,6 +2856,26 @@ async function main() {
           !!error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT');
         await unlink(bunConfig).catch(() => undefined);
       }
+    }
+    if (version.startsWith('2.') && proof.runIds.length) {
+      // The server-side request pump publishes its terminal failure only into
+      // run-control operation-failure.json, also before any task or native
+      // session exists. Project its closed facts into the proof; a missing,
+      // foreign, non-closed or slow record stays null and neither the timestamp
+      // nor any raw string crosses into the proof.
+      let pumpTimer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        proof.pumpFailure = await Promise.race([
+          readRunControlPumpFailure(
+            desktop.env.CLAUDE_MULTIMODEL_DATA_HOME!, desktop.teamName, proof.runIds.at(-1)!),
+          new Promise<null>((resolve) => {
+            pumpTimer = setTimeout(() => resolve(null), 8000);
+          }),
+        ]);
+      } finally {
+        clearTimeout(pumpTimer);
+      }
+      await checkpoint(proof.stage);
     }
     if (version.startsWith('1.') && sdk === 'bundled' && failedTask && nativeSession) {
       // Read the exact native persistence through existing SDK parser modules,
@@ -2855,6 +3044,9 @@ async function main() {
         await unlink(bunConfig).catch(() => undefined);
       }
     }
+    proof.commandResultFiles = await Promise.all(
+      commandResultFiles.map((check) => resultFileFacts(desktop.projectPath, check.name, check.expected))
+    );
     if (latestTasks.length) {
       let timer: ReturnType<typeof setTimeout> | undefined;
       try {

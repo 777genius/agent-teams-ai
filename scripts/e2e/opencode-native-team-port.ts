@@ -5,7 +5,7 @@ import type { OpenCodeStopCausalFailure, TeamCreateRequest, TeamProvisioningProg
 // Proof-only projection; production lifecycle and delivery contracts remain unchanged.
 export type NativeCausalFailure = Omit<OpenCodeStopCausalFailure, 'handshakeFailure'> & {
   handshakeFailure?: OpenCodeStopHandshakeFailureFacts;
-  bridgeFailure?: { kind: string; sdkCode: string; nativeOperation?: string; nativeErrno?: number };
+  bridgeFailure?: { kind: string; sdkCode: string; nativeOperation?: string; nativeErrno?: number; nativeStage?: string };
 };
 
 type NativeCommandExecution = Extract<Awaited<ReturnType<ElectronAPI['teams']['getTaskLogStream']>>['segments'][number]['chunks'][number], { chunkType: 'ai' }>['toolExecutions'][number];
@@ -50,13 +50,18 @@ export function nativeCommandMatch(execution: NativeCommandExecution, program: s
   const resultPaired = execution.result?.toolUseId === execution.toolCall.id;
   const resultSucceeded = execution.result?.isError === false;
   const hasMarker = (content: unknown): boolean => {
+    const markerLine = (text: unknown): boolean => typeof text === 'string' &&
+      text.split(/\r?\n/).includes(marker);
+    // The runtime projection emits tool_result content as real text-block
+    // arrays for block output; only exact whole lines ever match.
+    const textBlocksCarryMarker = (value: unknown): boolean => Array.isArray(value) &&
+      value.some((block) => block && typeof block === 'object' &&
+        'type' in block && block.type === 'text' && 'text' in block && markerLine(block.text));
+    if (Array.isArray(content)) return textBlocksCarryMarker(content);
     if (typeof content !== 'string') return false;
-    if (content.split(/\r?\n/).includes(marker)) return true;
+    if (markerLine(content)) return true;
     try {
-      const blocks: unknown = JSON.parse(content);
-      return Array.isArray(blocks) && blocks.some((block) => block && typeof block === 'object' &&
-        'type' in block && block.type === 'text' && 'text' in block && typeof block.text === 'string' &&
-        block.text.split(/\r?\n/).includes(marker));
+      return textBlocksCarryMarker(JSON.parse(content));
     } catch { return false; }
   };
   const markerMatches = hasMarker(execution.result?.content);

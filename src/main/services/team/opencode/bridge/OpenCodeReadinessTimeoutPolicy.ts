@@ -20,6 +20,12 @@ export const OPEN_CODE_SDK_STOP_CAP_MS = 45_000;
  * already spent more than 17s there.
  */
 export const OPEN_CODE_STOP_PRE_DISPATCH_RESERVE_MS = 25_000;
+/**
+ * The lost-reply reconciliation window that follows the SDK Stop operation: a
+ * valid stopped receipt can still arrive inside it, and a caller that stops
+ * waiting at the operation cap discards it and reports a stopped team failed.
+ */
+export const OPEN_CODE_STOP_LOST_REPLY_RECONCILIATION_MS = 10_000;
 
 /** Applied whenever the caller configures no explicit budget for a command. */
 export const OPEN_CODE_BRIDGE_TIMEOUTS_MS = {
@@ -30,9 +36,14 @@ export const OPEN_CODE_BRIDGE_TIMEOUTS_MS = {
   // finish bridge-side observation and emit member-work-sync signals.
   send: 45_000,
   observe: 20_000,
-  // One deadline covers the whole attempt, so the dispatch keeps the full SDK
-  // Stop window only when the budget also pays for the phases before it.
-  stop: OPEN_CODE_SDK_STOP_CAP_MS + OPEN_CODE_STOP_PRE_DISPATCH_RESERVE_MS,
+  // One deadline covers the whole attempt: the dispatch keeps the full SDK Stop
+  // window only when the budget also pays for the phases before it, and the
+  // caller must outlive the operation plus the lost-reply reconciliation window
+  // that can still deliver a valid stopped receipt.
+  stop:
+    OPEN_CODE_SDK_STOP_CAP_MS +
+    OPEN_CODE_STOP_PRE_DISPATCH_RESERVE_MS +
+    OPEN_CODE_STOP_LOST_REPLY_RECONCILIATION_MS,
   cleanup: 10_000,
   permission: 30_000,
   backfill: 45_000,

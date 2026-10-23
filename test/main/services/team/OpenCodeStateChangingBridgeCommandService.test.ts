@@ -58,6 +58,7 @@ import {
 import {
   OPEN_CODE_BRIDGE_TIMEOUTS_MS,
   OPEN_CODE_SDK_STOP_CAP_MS,
+  OPEN_CODE_STOP_LOST_REPLY_RECONCILIATION_MS,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessTimeoutPolicy';
 import {
   type OpenCodeBridgeCommandExecutor,
@@ -716,6 +717,11 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     const dispatch = execute.mock.calls.find(([command]) => command === 'opencode.stopTeam');
     expect(dispatch).toBeDefined();
     expect(dispatch![2].timeoutMs).toBeGreaterThanOrEqual(OPEN_CODE_SDK_STOP_CAP_MS);
+    // The dispatch wait must also outlive the lost-reply reconciliation window
+    // that can still deliver a valid stopped receipt after the operation.
+    expect(dispatch![2].timeoutMs).toBeGreaterThanOrEqual(
+      OPEN_CODE_SDK_STOP_CAP_MS + OPEN_CODE_STOP_LOST_REPLY_RECONCILIATION_MS
+    );
   });
 
   it('bounds the stop-recovery handshake by the command budget', async () => {
