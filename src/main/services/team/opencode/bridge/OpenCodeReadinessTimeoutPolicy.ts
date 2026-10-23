@@ -7,6 +7,26 @@ import type { OpenCodeLaunchTeamCommandBody } from './OpenCodeBridgeCommandContr
  * serial native-subscription CLIs; readiness is provider-independent).
  */
 
+/**
+ * SDK run-control Stop cap: Windows DACL and physical process retirement alone
+ * can exceed 30s, so a Stop clipped below this aborts a healthy physical stop
+ * before its confirmation arrives.
+ */
+export const OPEN_CODE_SDK_STOP_CAP_MS = 45_000;
+/**
+ * What a stop attempt spends before the SDK Stop starts. The manifest reads,
+ * handshake, lease and the runtime's own start-up draw from the same deadline
+ * as the dispatch: a stop confirmed at 47.6s with at most 30s of dispatch had
+ * already spent more than 17s there.
+ */
+export const OPEN_CODE_STOP_PRE_DISPATCH_RESERVE_MS = 25_000;
+/**
+ * The lost-reply reconciliation window that follows the SDK Stop operation: a
+ * valid stopped receipt can still arrive inside it, and a caller that stops
+ * waiting at the operation cap discards it and reports a stopped team failed.
+ */
+export const OPEN_CODE_STOP_LOST_REPLY_RECONCILIATION_MS = 10_000;
+
 /** Applied whenever the caller configures no explicit budget for a command. */
 export const OPEN_CODE_BRIDGE_TIMEOUTS_MS = {
   readiness: 300_000,
@@ -16,9 +36,14 @@ export const OPEN_CODE_BRIDGE_TIMEOUTS_MS = {
   // finish bridge-side observation and emit member-work-sync signals.
   send: 45_000,
   observe: 20_000,
-  // The desktop must outlive the 45s stop operation plus the 10s lost-reply
-  // reconciliation window that can still deliver a valid stopped receipt.
-  stop: 60_000,
+  // One deadline covers the whole attempt: the dispatch keeps the full SDK Stop
+  // window only when the budget also pays for the phases before it, and the
+  // caller must outlive the operation plus the lost-reply reconciliation window
+  // that can still deliver a valid stopped receipt.
+  stop:
+    OPEN_CODE_SDK_STOP_CAP_MS +
+    OPEN_CODE_STOP_PRE_DISPATCH_RESERVE_MS +
+    OPEN_CODE_STOP_LOST_REPLY_RECONCILIATION_MS,
   cleanup: 10_000,
   permission: 30_000,
   backfill: 45_000,

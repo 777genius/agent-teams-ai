@@ -13,8 +13,8 @@ import { projectIpcCausalFailure, safeIpcFailureDetail } from '../../scripts/e2e
 import { electronTeamPort, nativeCommandMatch } from '../../scripts/e2e/opencode-native-team-port';
 import { serializedFunction } from '../../scripts/e2e/release-updater/serialized-function.mts';
 import { parseSingleBridgeJsonResult, validateBridgeResultEnvelope } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
-import { createOpenCodeBridgeClientIdentity, createOpenCodeBridgeHandshakeFailure } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
-import { formatOpenCodeStopCausalSuffix, projectOpenCodeStateChangingFailure } from '../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+import { createOpenCodeBridgeClientIdentity, createOpenCodeBridgeHandshakeFailure, OPEN_CODE_HANDSHAKE_MESSAGE_FAMILIES } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+import { formatOpenCodeStopCausalSuffix, projectOpenCodeStateChangingFailure, rememberOpenCodeHandshakeFailure } from '../../src/main/services/team/opencode/bridge/OpenCodeStateChangingCausalFailure';
 import { redactLaunchFailureArtifactText } from '../../src/main/services/team/TeamLaunchFailureArtifactPack';
 
 const project = (value: string): string =>
@@ -1134,6 +1134,108 @@ it('carries closed lock facts of a held handshake lock into the serialized cause
   expect(safeProject(message)?.handshakeFailure).toMatchObject({ kind: 'provider_error',
     lockCode: 'ELOCKED', lockCategory: 'registry', messageShape: 'lock_operation' });
   expect(JSON.stringify(safeProject(message))).not.toContain('host-registry');
+});
+
+it('classifies deterministic handshake rejections into closed message families and digests', () => {
+  const family = (text: string, details?: Record<string, unknown>) =>
+    projectOpenCodeStateChangingFailure(
+      createOpenCodeBridgeHandshakeFailure({
+        kind: 'provider_error',
+        retryable: true,
+        message: text,
+        ...(details ? { details } : {}),
+      })
+    ).handshakeFailure;
+  expect(family('OpenCode confirmed stop authority mismatch')).toMatchObject({
+    kind: 'provider_error',
+    messageShape: 'unclassified',
+    messageFamily: 'stop_authority_mismatch',
+    messageDigest: /^[a-f0-9]{12}$/,
+  });
+  expect(family('OpenCode lifecycle selected lane authority is unavailable')?.messageFamily).toBe(
+    'lane_authority_unavailable'
+  );
+  expect(
+    family('OpenCode lifecycle stored run authority mismatch; another run is active')?.messageFamily
+  ).toBe('run_authority_conflict');
+  expect(
+    family('OpenCode selected session runtime process changed (expected pid=1, actual pid=2)')
+      ?.messageFamily
+  ).toBe('runtime_process_changed');
+  expect(
+    family('OpenCode lock operation failed [code=ELOCKED, lock=host-registry.json.lock]', {
+      lockCode: 'ELOCKED',
+      lockCategory: 'registry',
+    })?.messageFamily
+  ).toBe('lock_operation');
+  expect(family('fetch failed at TLS handshake')?.messageFamily).toBe('unclassified');
+  const first = family('OpenCode lifecycle selected lane authority is unavailable');
+  expect(family('OpenCode lifecycle selected lane authority is unavailable')?.messageDigest).toBe(
+    first?.messageDigest
+  );
+  expect(
+    family('OpenCode lifecycle selected run authority is unavailable')?.messageDigest
+  ).not.toBe(first?.messageDigest);
+  const packet = family('C:/private/token body=secret-value');
+  expect(JSON.stringify(packet)).not.toMatch(/private|secret/);
+  expect(packet).toMatchObject({ messageDigest: /^[a-f0-9]{12}$/ });
+  const owned = projectOpenCodeStateChangingFailure(
+    createOpenCodeBridgeHandshakeFailure({
+      kind: 'provider_error',
+      retryable: true,
+      message: 'OpenCode confirmed stop authority mismatch',
+    })
+  );
+  const message = 'team_stop_unconfirmed:stop_failed' + formatOpenCodeStopCausalSuffix(owned);
+  const safeProject = runInNewContext(
+    `(${serializedFunction(projectIpcCausalFailure)})`
+  ) as typeof projectIpcCausalFailure;
+  expect(safeProject(message)?.handshakeFailure).toMatchObject({
+    kind: 'provider_error',
+    messageFamily: 'stop_authority_mismatch',
+    messageDigest: /^[a-f0-9]{12}$/,
+  });
+});
+
+it('keeps every classified handshake family distinct and through the serialized e2e projection', () => {
+  const safeProject = runInNewContext(
+    `(${serializedFunction(projectIpcCausalFailure)})`
+  ) as typeof projectIpcCausalFailure;
+  const roundTrip = (text: string) =>
+    safeProject(
+      'team_stop_unconfirmed:stop_failed' +
+        formatOpenCodeStopCausalSuffix(
+          projectOpenCodeStateChangingFailure(
+            createOpenCodeBridgeHandshakeFailure({
+              kind: 'provider_error',
+              retryable: true,
+              message: text,
+            })
+          )
+        )
+    )?.handshakeFailure?.messageFamily;
+  // An earlier catch-all prefix would shadow a later family; a family missing
+  // from the e2e allowlist would silently vanish from the proof artifact.
+  for (const [family, prefix] of OPEN_CODE_HANDSHAKE_MESSAGE_FAMILIES)
+    expect([prefix, roundTrip(`${prefix} TEST-suffix`)]).toEqual([prefix, family]);
+  expect(roundTrip('fetch failed at TLS handshake')).toBe('unclassified');
+  expect(roundTrip('OpenCode lifecycle authority requires teamId and laneId')).toBe(
+    'lifecycle_identifiers_required'
+  );
+  expect(roundTrip('OpenCode lifecycle authority requires runId')).toBe('run_identity_required');
+});
+
+it('drops a message family that is not a closed token even behind a widening cast', () => {
+  const error = new Error('TEST handshake failure');
+  rememberOpenCodeHandshakeFailure(error, {
+    kind: 'provider_error',
+    messageFamily: 'C:/private/token body=secret-value' as never,
+  });
+  const facts = projectOpenCodeStateChangingFailure(error).handshakeFailure;
+  expect(facts).toEqual({ kind: 'provider_error' });
+  expect(formatOpenCodeStopCausalSuffix(projectOpenCodeStateChangingFailure(error))).not.toMatch(
+    /private|secret/
+  );
 });
 
 it.each(['current-pass', 'current-fail', 'floor'] as const)(

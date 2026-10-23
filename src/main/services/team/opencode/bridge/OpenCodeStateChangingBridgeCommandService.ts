@@ -43,6 +43,10 @@ import {
   recoverRuntimeStop,
   runtimeStopRequest,
 } from './OpenCodeRuntimeStopRecovery';
+import {
+  rememberOpenCodeStateChangingCleanupFailure,
+  rememberOpenCodeStateChangingFailurePhase,
+} from './OpenCodeStateChangingCausalFailure';
 import { assertStopDomainResult } from './OpenCodeStopOutcomeRecovery';
 
 import type {
@@ -50,7 +54,6 @@ import type {
   OpenCodeBridgeCommandLeaseStore,
   OpenCodeBridgeCommandLedger,
 } from './OpenCodeBridgeCommandLedgerStore';
-import type { OpenCodeStopCausalFailure } from '@shared/types';
 const DEFAULT_COMMAND_LEASE_ACQUIRE_RETRY_DELAY_MS = 100;
 
 export interface OpenCodeBridgeCommandExecutor {
@@ -123,151 +126,6 @@ export interface OpenCodeStateChangingBridgeCommandServiceOptions {
   leaseAcquireRetryDelayMs?: number;
 }
 
-const causalSnapshots = new WeakSet<object>();
-const causalFailures = new WeakMap<
-  object,
-  {
-    phase: string;
-    cleanupErrno?: string | null;
-    handshakeFailure?: OpenCodeStopCausalFailure['handshakeFailure'];
-  }
->();
-export function rememberOpenCodeHandshakeFailure(
-  error: Error,
-  failure: NonNullable<OpenCodeStopCausalFailure['handshakeFailure']>
-): void {
-  const lockCode = (['ELOCKED', 'ECOMPROMISED'] as const).find(
-    (value) => value === failure.lockCode
-  );
-  const lockCategory = (['registry', 'profile', 'startup', 'unknown'] as const).find(
-    (value) => value === failure.lockCategory
-  );
-  const messageShape = (['code', 'lock_operation', 'unclassified'] as const).find(
-    (value) => value === failure.messageShape
-  );
-  causalFailures.set(error, {
-    ...(causalFailures.get(error) ?? { phase: 'handshake' }),
-    handshakeFailure: Object.freeze({
-      kind: failure.kind,
-      ...(failure.sdkCode ? { sdkCode: failure.sdkCode } : {}),
-      ...(failure.nativeOperation ? { nativeOperation: failure.nativeOperation } : {}),
-      ...(Number.isInteger(failure.nativeErrno) &&
-      (failure.nativeErrno ?? -1) >= 0 &&
-      (failure.nativeErrno ?? -1) <= 0xffffffff
-        ? { nativeErrno: failure.nativeErrno }
-        : {}),
-      ...(lockCode ? { lockCode } : {}),
-      ...(lockCategory ? { lockCategory } : {}),
-      ...(messageShape ? { messageShape } : {}),
-    }),
-  });
-}
-/** Identity-only delivery observation: never inspect an unowned thrown value. */
-export function ownedOpenCodeHandshakeFailure(error: unknown) {
-  const facts = error && typeof error === 'object' ? causalFailures.get(error) : undefined;
-  if (!facts?.handshakeFailure) return undefined;
-  const snapshot = Object.freeze({ ...facts, reason: null, errno: null, sourceFrame: null });
-  causalSnapshots.add(snapshot);
-  return snapshot;
-}
-function rememberFailure(error: unknown, phase: string): void {
-  if (error && typeof error === 'object' && !causalFailures.has(error))
-    causalFailures.set(error, { phase });
-}
-/** Closed causal facts only; the original exception remains the thrown object. */
-export function projectOpenCodeStateChangingFailure(error: unknown) {
-  const object = error && typeof error === 'object' ? error : {};
-  const code = 'code' in object ? object.code : null;
-  const errno =
-    [
-      'EACCES',
-      'EPERM',
-      'ENOENT',
-      'ENOSPC',
-      'EIO',
-      'EROFS',
-      'EEXIST',
-      'ENOTDIR',
-      'EISDIR',
-      'EMFILE',
-      'ENFILE',
-      'EBUSY',
-      'EINVAL',
-      'ETIMEDOUT',
-      'ECONNRESET',
-      'ECONNREFUSED',
-      'EPIPE',
-      'ABORT_ERR',
-      'ERR_CHILD_PROCESS_STDIO_MAXBUFFER',
-    ].find((value) => value === code) ?? null;
-  const message = error instanceof Error ? error.message : '';
-  const reason =
-    [
-      'OpenCode lifecycle command requires the exact persisted lane run and capability snapshot',
-      'OpenCode lifecycle command requires a persisted lane capability snapshot',
-      'OpenCode lifecycle capability snapshot does not match the persisted lane manifest',
-      'Bridge handshake client identity mismatch',
-      'Bridge server capability snapshot mismatch',
-      'Bridge server active run mismatch',
-      'Bridge server runtime manifest high watermark is stale',
-      'Bridge handshake identity hash mismatch',
-      'OpenCode lifecycle command body does not match its persisted lane identity',
-      'Invalid OpenCode Stop domain result; exact-target reconciliation required',
-      'Invalid durable Stop result; reconciliation required',
-      'Stop binding mismatch; reconciliation required',
-      'Stop receipt target/runtime mismatch; reconciliation required',
-      'Invalid original Stop identity; reconciliation unknown',
-      'Stop reconciliation unknown: original session set missing',
-      'Ambiguous original Stop session set',
-      'Invalid original Stop capability/behavior identity',
-      'Bridge handshake protocol version mismatch',
-      'Unsupported Stop recovery capability/version; reconciliation unknown',
-      'Stop target changed before dispatch; reconciliation required',
-      'OpenCode bridge command outcome must be reconciled before retry',
-      'OpenCode bridge command already started',
-      'OpenCode bridge command completed concurrently; retry recovery',
-      'OpenCode bridge command already completed; recover through commandStatus',
-      'Invalid Stop recovery object; reconciliation required',
-      'Unsupported Stop recovery contract version',
-      'Stop observation session-set token mismatch',
-      'Stop recovery requires a validated success envelope',
-      'OpenCode Stop requires authoritative exact-target reconciliation; no durable outcome',
-      'OpenCode Stop recovery target or outcome mismatch; reconciliation required',
-      'Stop receipt envelope identity mismatch; reconciliation required',
-      'OpenCode bridge idempotency key reused with different payload',
-      'OpenCode bridge command lease was not created',
-    ].find((value) => value === message) ?? null;
-  const frame =
-    error instanceof Error
-      ? /(?:^|[/\\])((?:OpenCodeStateChangingBridgeCommandService|OpenCodeBridgeCommandClient|OpenCodeBridgeHandshakeClient|OpenCodeBridgeCommandLedgerStore|OpenCodeLifecycleManifestBinding|OpenCodeRuntimeStopProtocol|OpenCodeStopOutcomeRecovery)\.ts):(\d{1,7}):(\d{1,5})(?:\)|$)/m.exec(
-          error.stack ?? ''
-        )
-      : null;
-  const snapshot = {
-    ...(causalFailures.get(object) ?? { phase: 'unclassified' }),
-    reason,
-    errno,
-    sourceFrame: frame
-      ? Object.freeze({ source: frame[1], line: Number(frame[2]), column: Number(frame[3]) })
-      : null,
-  };
-  Object.freeze(snapshot);
-  causalSnapshots.add(snapshot);
-  return snapshot;
-}
-export function ownedOpenCodeStateChangingFailure(value: unknown) {
-  return value && typeof value === 'object' && causalSnapshots.has(value)
-    ? (value as ReturnType<typeof projectOpenCodeStateChangingFailure>)
-    : undefined;
-}
-
-export function formatOpenCodeStopCausalSuffix(value: unknown): string {
-  const snapshot = ownedOpenCodeStateChangingFailure(value);
-  if (!snapshot) return '';
-  const json = JSON.stringify(snapshot);
-  return json.length <= 2048 ? '\nOPENCODE_STOP_CAUSE_V1=' + json : '';
-}
-
 interface StateChangingInput<TBody> {
   command: OpenCodeBridgeCommandName;
   teamName: string;
@@ -320,7 +178,7 @@ export class OpenCodeStateChangingBridgeCommandService {
     try {
       return await this.executeTracked<TBody, TData>(input, context);
     } catch (error) {
-      rememberFailure(error, context.phase);
+      rememberOpenCodeStateChangingFailurePhase(error, context.phase);
       throw error;
     }
   }
@@ -398,19 +256,17 @@ export class OpenCodeStateChangingBridgeCommandService {
             bridge: this.bridge,
             ledger: this.ledger,
             timeoutMs: Math.max(1, preDispatchDeadlineMs - Date.now()),
-            handshakeTimeoutMs: Math.max(1, preDispatchDeadlineMs - Date.now()),
           });
         } catch (error) {
           primary = error;
-          rememberFailure(error, context.phase);
+          rememberOpenCodeStateChangingFailurePhase(error, context.phase);
           throw error;
         } finally {
           await this.leaseStore.release(lease.leaseId).catch((cleanup) => {
             if (primary && typeof primary === 'object')
-              causalFailures.get(primary)!.cleanupErrno =
-                projectOpenCodeStateChangingFailure(cleanup).errno;
+              rememberOpenCodeStateChangingCleanupFailure(primary, cleanup);
             else {
-              rememberFailure(cleanup, 'lease_release');
+              rememberOpenCodeStateChangingFailurePhase(cleanup, 'lease_release');
               throw cleanup;
             }
           });
@@ -714,10 +570,9 @@ export class OpenCodeStateChangingBridgeCommandService {
       await this.leaseStore.release(lease.leaseId);
       return result;
     } catch (error) {
-      rememberFailure(error, context.phase);
+      rememberOpenCodeStateChangingFailurePhase(error, context.phase);
       await this.leaseStore.release(lease.leaseId).catch((cleanup) => {
-        const original = error && typeof error === 'object' ? causalFailures.get(error) : undefined;
-        if (original) original.cleanupErrno = projectOpenCodeStateChangingFailure(cleanup).errno;
+        rememberOpenCodeStateChangingCleanupFailure(error, cleanup);
       });
       throw error;
     }

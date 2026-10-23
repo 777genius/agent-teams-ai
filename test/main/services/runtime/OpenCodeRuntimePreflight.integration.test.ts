@@ -1,6 +1,6 @@
 // @vitest-environment node
 /* eslint-disable security/detect-non-literal-fs-filename */
-import { chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -74,6 +74,7 @@ describePosix('OpenCode packaged-runtime preflight integration', () => {
   let originalShell: string | undefined;
   let originalFakeOpenCodeBinDir: string | undefined;
   let originalFakeNodePath: string | undefined;
+  let originalFakeCompilerNodePath: string | undefined;
 
   beforeEach(async () => {
     tempDir = await mkdtemp(path.join(os.tmpdir(), 'opencode-prod-preflight-'));
@@ -85,6 +86,7 @@ describePosix('OpenCode packaged-runtime preflight integration', () => {
     originalShell = process.env.SHELL;
     originalFakeOpenCodeBinDir = process.env.FAKE_OPENCODE_BIN_DIR;
     originalFakeNodePath = process.env.FAKE_NODE_PATH;
+    originalFakeCompilerNodePath = process.env.FAKE_COMPILER_NODE_PATH;
     process.env.PATH = '';
 
     vi.clearAllMocks();
@@ -113,6 +115,11 @@ describePosix('OpenCode packaged-runtime preflight integration', () => {
       delete process.env.FAKE_NODE_PATH;
     } else {
       process.env.FAKE_NODE_PATH = originalFakeNodePath;
+    }
+    if (originalFakeCompilerNodePath === undefined) {
+      delete process.env.FAKE_COMPILER_NODE_PATH;
+    } else {
+      process.env.FAKE_COMPILER_NODE_PATH = originalFakeCompilerNodePath;
     }
 
     if (tempDir) {
@@ -145,6 +152,7 @@ describePosix('OpenCode packaged-runtime preflight integration', () => {
   async function createFakeNodeBinary(binDir: string): Promise<string> {
     const binaryPath = path.join(binDir, 'node');
     process.env.FAKE_NODE_PATH = binaryPath;
+    process.env.FAKE_COMPILER_NODE_PATH = process.execPath;
     await writeFile(
       binaryPath,
       [
@@ -153,6 +161,13 @@ describePosix('OpenCode packaged-runtime preflight integration', () => {
         '  printf "{\\"execPath\\":\\"%s\\",\\"version\\":\\"%s\\"}" "$FAKE_NODE_PATH" "24.16.0"',
         '  exit 0',
         'fi',
+        'case "$1" in',
+        '  */tsup/dist/cli-default.js)',
+        '    if [ "$#" -eq 3 ] && [ "$2" = "--out-dir" ]; then',
+        '      exec "$FAKE_COMPILER_NODE_PATH" "$@"',
+        '    fi',
+        '    ;;',
+        'esac',
         'echo "unexpected node args: $*" >&2',
         'exit 2',
       ].join('\n'),
@@ -247,9 +262,17 @@ describePosix('OpenCode packaged-runtime preflight integration', () => {
 
     expect(providerEnv.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND).toBe(nodePath);
     expect(providerEnv.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND).not.toBe('node');
-    expect(providerEnv.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY).toBeTruthy();
-    expect(providerEnv.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON).toContain(
-      providerEnv.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY ?? ''
+    const entry = providerEnv.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY;
+    expect(entry?.startsWith(path.join(tempDir!, 'app-data', 'mcp-server', 'dev') + path.sep)).toBe(
+      true
     );
+    expect(path.basename(entry!)).toBe('index.js');
+    expect((await stat(entry!)).size).toBeGreaterThan(0);
+    expect(
+      JSON.parse(await readFile(path.join(path.dirname(entry!), 'package.json'), 'utf8'))
+    ).toEqual({ type: 'module' });
+    expect(
+      JSON.parse(providerEnv.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON ?? 'null')
+    ).toEqual([entry]);
   });
 });
