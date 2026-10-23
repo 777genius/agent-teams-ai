@@ -7,6 +7,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
+import { phase } from '../lib/runtime-bootstrap-diagnostics.mts';
 import {
   getExpectedRuntimeCliVersion,
   matchesRuntimeCliVersion,
@@ -211,12 +212,14 @@ try {
   );
 } finally {
   try {
-    fs.rmSync(cacheRoot, {
-      recursive: true,
-      force: true,
-      maxRetries: 5,
-      retryDelay: 200,
-    });
+    phase('cleanup', () =>
+      fs.rmSync(cacheRoot, {
+        recursive: true,
+        force: true,
+        maxRetries: 5,
+        retryDelay: 200,
+      })
+    );
   } catch (error) {
     process.stderr.write(
       `[public-runtime-bootstrap-e2e] warning: failed to remove temporary cache ${cacheRoot}: ${error instanceof Error ? error.message : String(error)}\n`

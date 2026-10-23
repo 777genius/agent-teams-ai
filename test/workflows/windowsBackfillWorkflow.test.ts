@@ -1,5 +1,6 @@
 // @vitest-environment node
 // Static workflow contract checks. These do not claim PowerShell/Windows execution.
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
@@ -125,5 +126,91 @@ describe('Windows draft backfill workflow contract', () => {
     expect(integration).toContain('expect(report.runtimeBuildSourceSha).toBe(runtimeSourceSha)');
     expect(integration).toContain('runtimeRelease: `runtime-v${runtimeVersion}`');
     expect(integration).toContain('const result = await delegate.run(input)');
+  });
+});
+
+describe('native Windows dispatch input admission', () => {
+  it.skipIf(process.platform === 'win32')(
+    'executes the real Linux caller guard for omitted, source-only and provider-only inputs',
+    () => {
+      const caller = parse(readFileSync('.github/workflows/opencode-packaged-e2e.yml', 'utf8'));
+      const callee = parse(
+        readFileSync('.github/workflows/opencode-native-windows-e2e.yml', 'utf8')
+      );
+      const admission = caller.jobs['validate-native-inputs'];
+      const native = caller.jobs['native-real-tasks'];
+      expect(native.needs).toBe('validate-native-inputs');
+      expect(admission.if).toBe(native.if);
+      expect(caller.jobs['packaged-windows'].needs).toBeUndefined();
+      expect(callee.on.workflow_call.inputs.sdk_ref.required).toBe(true);
+      expect(callee.on.workflow_call.inputs.model).toMatchObject({ required: false, default: '' });
+      const script = admission.steps[0].run;
+      for (const provider of ['false', 'true']) {
+        for (const sha of ['', 'a'.repeat(40), 'main']) {
+          for (const model of [
+            '',
+            'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
+            'not-a-model',
+          ]) {
+            const result = spawnSync('/bin/bash', ['-c', script], {
+              encoding: 'utf8',
+              env: {
+                ...process.env,
+                SDK_REF: sha,
+                SELECTED_MODEL: model,
+                PROVIDER_ONLY: provider,
+                VERSIONS: 'current',
+              },
+            });
+            const accepted =
+              sha === 'a'.repeat(40) && (provider === 'true' || model.startsWith('openrouter/'));
+            expect(result.status, JSON.stringify({ provider, sha, model })).toBe(accepted ? 0 : 1);
+            if (!accepted)
+              expect(result.stdout).toContain(
+                sha !== 'a'.repeat(40) ? 'native_sdk_ref must' : 'native_model is required'
+              );
+          }
+        }
+      }
+      const rejectedVersions = spawnSync('/bin/bash', ['-c', script], {
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          SDK_REF: 'a'.repeat(40),
+          SELECTED_MODEL: 'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
+          PROVIDER_ONLY: 'false',
+          VERSIONS: 'not-a-version-selection',
+        },
+      });
+      expect(rejectedVersions.status).toBe(1);
+      expect(rejectedVersions.stdout).toContain('Unknown Windows version selection');
+    }
+  );
+});
+
+describe('native Windows provider comparison workflow contract', () => {
+  it('keeps the dispatch token away from the npm install and fails closed on the integrity check', () => {
+    const native = parse(readFileSync('.github/workflows/opencode-native-windows-e2e.yml', 'utf8'));
+    const nativeSteps = native.jobs['real-tasks'].steps as {
+      name?: string;
+      run?: string;
+      env?: Record<string, string>;
+    }[];
+    const step = nativeSteps.find((candidate) =>
+      candidate.name?.startsWith('Compare verified Windows V1 provider behavior')
+    )!;
+    const script = step.run!;
+    expect(step.env?.GH_TOKEN).toBe('${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}');
+    // Third-party install scripts must not run with the dispatch token set.
+    expect(script.indexOf('Remove-Item Env:GH_TOKEN')).toBeGreaterThanOrEqual(0);
+    expect(script.indexOf('Remove-Item Env:GH_TOKEN')).toBeLessThan(
+      script.indexOf('npm install --global')
+    );
+    // A missing lockfile fails the step instead of silently skipping the check.
+    expect(script).toContain(
+      "if (!(Test-Path $npmLockPath -PathType Leaf)) { throw 'Official npm install lock missing; integrity unverifiable' }"
+    );
+    expect(script).toContain("throw 'Official npm wrapper integrity changed'");
+    expect(script).toContain("throw 'Official npm native integrity changed'");
   });
 });

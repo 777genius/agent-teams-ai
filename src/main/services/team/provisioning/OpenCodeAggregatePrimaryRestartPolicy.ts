@@ -1,3 +1,5 @@
+import { getErrorMessage } from '@shared/utils/errorHandling';
+
 import { clearBootstrapState } from '../TeamBootstrapStateReader';
 
 import type { TeamLaunchStateStore } from '../TeamLaunchStateStore';
@@ -224,4 +226,57 @@ export async function clearPersistedAggregateLaunchStateIfOwned(input: {
     await clearBootstrapState(input.teamName);
     input.invalidateRuntimeSnapshotCaches(input.teamName);
   });
+}
+
+/** Finish a committed successor without losing its call-correlated failure authority. */
+export async function finalizeAggregatePrimaryRestart(ports: {
+  launchSecondary(): Promise<void>;
+  persistFinalSnapshot(): Promise<unknown>;
+  assertCurrent(): Promise<void>;
+  isOwnerCurrent(): boolean;
+  publishReady(): void;
+  publishFailure(message: string): void;
+  createFailure(message: string): Error;
+}): Promise<void> {
+  const failureMessage = (error: unknown): string =>
+    getErrorMessage(error) || 'OpenCode member restart finalization failed';
+  try {
+    let message: string | undefined;
+    try {
+      await ports.launchSecondary();
+    } catch (error) {
+      message = failureMessage(error);
+    }
+    await ports.assertCurrent();
+    if (!ports.isOwnerCurrent())
+      throw new Error('OpenCode primary owner changed during restart finalization');
+    try {
+      await ports.persistFinalSnapshot();
+    } catch (error) {
+      message =
+        message === undefined
+          ? failureMessage(error)
+          : `${message}. Final snapshot persistence failed: ${failureMessage(error)}`;
+    }
+    await ports.assertCurrent();
+    if (message !== undefined) throw new Error(message);
+    if (!ports.isOwnerCurrent())
+      throw new Error('OpenCode primary owner changed during restart finalization');
+    ports.publishReady();
+    await ports.assertCurrent();
+    if (!ports.isOwnerCurrent())
+      throw new Error('OpenCode primary owner changed during restart finalization');
+  } catch (error) {
+    await ports.assertCurrent();
+    let message = failureMessage(error);
+    if (!ports.isOwnerCurrent()) throw new Error(message);
+    try {
+      ports.publishFailure(message);
+    } catch (publicationError) {
+      message += `. Failure progress publication failed: ${getErrorMessage(publicationError)}`;
+    }
+    // Notifications can synchronously replace an owner with the same run ID.
+    if (!ports.isOwnerCurrent()) throw new Error(message);
+    throw ports.createFailure(message);
+  }
 }

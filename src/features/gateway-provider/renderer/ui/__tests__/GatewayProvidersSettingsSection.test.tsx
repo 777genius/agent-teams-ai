@@ -158,9 +158,7 @@ describe('GatewayProvidersSettingsSection', () => {
       dialog.querySelector<HTMLInputElement>('#gateway-profile-url')!,
       'https://personal.example.com'
     );
-    const checkbox = dialog.querySelector<HTMLInputElement>(
-      'input[type="checkbox"]'
-    )!;
+    const checkbox = dialog.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
     act(() => {
       checkbox.click();
     });
@@ -183,7 +181,9 @@ describe('GatewayProvidersSettingsSection', () => {
 
   it('surfaces the server error and explains the next step when a bound URL is saved', async () => {
     mocks.saveGatewayProfile.mockRejectedValue(
-      new Error('Unbind teammates from this profile before changing its URL, or create another profile.')
+      new Error(
+        'Unbind teammates from this profile before changing its URL, or create another profile.'
+      )
     );
     const { host, root } = renderSection();
     await settle();

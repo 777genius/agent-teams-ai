@@ -62,6 +62,41 @@ describe('preload electronAPI memberWorkSync wiring', () => {
     vi.restoreAllMocks();
   });
 
+  it.each(['failed_retained', 'failed_restored'] as const)(
+    'preserves %s restart failures as validated plain context-bridge data',
+    async (status) => {
+      await import('../../src/preload/index');
+      const api = getExposedValue<ElectronAPI>('electronAPI');
+      const result = {
+        status,
+        error: 'quota exceeded',
+        teamName: 'my-team',
+        memberName: 'alice',
+        predecessorRunId: 'run-old',
+        successorRunId: 'run-new',
+      };
+      mocks.ipcRenderer.invoke.mockResolvedValueOnce({
+        success: true,
+        data: JSON.parse(JSON.stringify(result)),
+      });
+      await expect(api.teams.restartMember('my-team', 'alice')).resolves.toEqual(result);
+      mocks.ipcRenderer.invoke.mockResolvedValueOnce({
+        success: true,
+        data: { ...result, successorRunId: 'run-old' },
+      });
+      await expect(api.teams.restartMember('my-team', 'alice')).rejects.toThrow(
+        'Invalid retained member restart result'
+      );
+      mocks.ipcRenderer.invoke.mockResolvedValueOnce({
+        success: false,
+        error: 'ordinary restart failure',
+      });
+      await expect(api.teams.restartMember('my-team', 'alice')).rejects.toThrow(
+        'ordinary restart failure'
+      );
+    }
+  );
+
   it('exposes the member work sync bridge on the shared Electron API', async () => {
     await import('../../src/preload/index');
 
@@ -74,9 +109,8 @@ describe('preload electronAPI memberWorkSync wiring', () => {
   it('exposes Sentry renderer IPC without relying on package subpath exports', async () => {
     await import('../../src/preload/index');
 
-    const sentryIpc = getExposedValue<Record<string, { sendRendererStart: () => void }>>(
-      '__SENTRY_IPC__'
-    );
+    const sentryIpc =
+      getExposedValue<Record<string, { sendRendererStart: () => void }>>('__SENTRY_IPC__');
 
     expect(sentryIpc['sentry-ipc']).toEqual(
       expect.objectContaining({

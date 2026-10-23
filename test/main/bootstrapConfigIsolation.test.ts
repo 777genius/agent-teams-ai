@@ -59,7 +59,7 @@ it('applies profile paths before entrypoint imports construct the configuration 
   }));
   vi.doMock('../../src/main/utils/atomicWrite', async (importOriginal) => ({
     ...(await importOriginal<typeof import('../../src/main/utils/atomicWrite')>()),
-    atomicWriteAsync: vi.fn(async () => {}),
+    atomicWriteAsync: vi.fn(() => Promise.resolve()),
   }));
 
   const source = ts.createSourceFile(
@@ -75,7 +75,7 @@ it('applies profile paths before entrypoint imports construct the configuration 
   for (const statement of source.statements) {
     if (
       !ts.isImportDeclaration(statement) ||
-      statement.importClause?.isTypeOnly ||
+      statement.importClause?.phaseModifier === ts.SyntaxKind.TypeKeyword ||
       !ts.isStringLiteral(statement.moduleSpecifier)
     )
       continue;

@@ -30,6 +30,11 @@ import {
   resolveOpenCodeReadinessTimeoutMs,
 } from './OpenCodeReadinessTimeoutPolicy';
 import { executeOpenCodeStartupCleanup } from './OpenCodeStartupCleanupBridge';
+import {
+  type OpenCodeStateChangingBridgeCommandService,
+  ownedOpenCodeStateChangingFailure,
+  projectOpenCodeStateChangingFailure,
+} from './OpenCodeStateChangingBridgeCommandService';
 
 import type { OpenCodeTeamRuntimeBridgePort } from '../../runtime/OpenCodeTeamRuntimeAdapter';
 import type { OpenCodeTeamLaunchReadiness } from '../readiness/OpenCodeTeamLaunchReadiness';
@@ -62,7 +67,6 @@ import type { OpenCodeReadinessBridgeTimeoutOptions } from './OpenCodeReadinessT
 import type { RuntimeStopObservation } from './OpenCodeRuntimeStopProtocol';
 import type { OpenCodeStartupCleanupData } from './OpenCodeStartupCleanupBridge';
 import type { OpenCodeStartupCleanupBudget } from './OpenCodeStartupCleanupBudget';
-import type { OpenCodeStateChangingBridgeCommandService } from './OpenCodeStateChangingBridgeCommandService';
 
 export interface OpenCodeLedgerBackfillPort {
   getRuntimeIdentity?(): Promise<string | null>;
@@ -321,6 +325,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     return {
       runId: input.runId,
       stopped: false,
+      causalFailure: ownedOpenCodeStateChangingFailure(result.error.details?.causalFailure),
       members: {},
       warnings: [],
       diagnostics: [
@@ -860,6 +865,7 @@ function thrownBridgeFailure<TData>(
       kind: 'internal_error',
       message,
       retryable: false,
+      details: { causalFailure: projectOpenCodeStateChangingFailure(error) },
     },
     diagnostics: [
       {

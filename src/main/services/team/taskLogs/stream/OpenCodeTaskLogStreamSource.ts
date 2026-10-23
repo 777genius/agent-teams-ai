@@ -8,7 +8,12 @@ import { TeamTaskReader } from '../../TeamTaskReader';
 import { BoardTaskExactLogChunkBuilder } from '../exact/BoardTaskExactLogChunkBuilder';
 
 import { mapOpenCodeRuntimeTranscriptLogMessageToParsedMessage } from './OpenCodeRuntimeProjectionMapper';
-import { filterMessagesForAttribution } from './OpenCodeTaskLogAttributionProjection';
+import {
+  filterMessagesForAttribution,
+  TASK_LOG_MARKER_TOOL_NAMES,
+  TERMINAL_TASK_MARKER_TOOL_NAMES,
+  TERMINAL_TASK_SET_STATUS_VALUES,
+} from './OpenCodeTaskLogAttributionProjection';
 import { OpenCodeTaskLogAttributionStore } from './OpenCodeTaskLogAttributionStore';
 import { TaskLogOpenCodeSessionEvidenceSource } from './TaskLogOpenCodeSessionEvidenceSource';
 
@@ -46,21 +51,6 @@ const AGENT_TEAMS_TOOL_PREFIXES = [
   'agent_teams_',
 ] as const;
 
-const TASK_LOG_MARKER_TOOL_NAMES = new Set<string>([
-  'task_start',
-  'task_complete',
-  'task_set_status',
-  'task_set_owner',
-  'task_add_comment',
-  'task_attach_file',
-  'task_attach_comment_file',
-  'task_set_clarification',
-  'review_start',
-  'review_request',
-  'review_approve',
-  'review_request_changes',
-]);
-
 const BOARD_MCP_TOOL_NAMES = new Set<string>([
   ...TASK_LOG_MARKER_TOOL_NAMES,
   'runtime_bootstrap_checkin',
@@ -76,14 +66,6 @@ const BOARD_MCP_TOOL_NAMES = new Set<string>([
   'task_delete',
   'process_list',
 ]);
-
-const TERMINAL_TASK_MARKER_TOOL_NAMES = new Set<string>([
-  'task_complete',
-  'review_approve',
-  'review_request_changes',
-]);
-
-const TERMINAL_TASK_SET_STATUS_VALUES = new Set<string>(['completed', 'pending', 'deleted']);
 
 const TASK_REFERENCE_KEYS = new Set<string>([
   'taskid',
@@ -122,6 +104,7 @@ interface BinaryResolverLike {
 interface MemberProjectedMessages {
   memberName: string;
   sessionId?: string;
+  runId?: string;
   messages: ParsedMessage[];
 }
 
@@ -196,6 +179,7 @@ function stableAttributionKey(records: OpenCodeTaskLogAttributionRecord[]): stri
         record.scope,
         record.laneId ?? '',
         record.sessionId ?? '',
+        record.runId ?? '',
         record.since ?? '',
         record.until ?? '',
         record.startMessageUuid ?? '',
@@ -212,13 +196,36 @@ function mergeTaskLogAttributionRecords(
 ): OpenCodeTaskLogAttributionRecord[] {
   const merged: OpenCodeTaskLogAttributionRecord[] = [];
   const seen = new Set<string>();
-  for (const record of [...attributionRecords, ...sessionEvidenceRecords]) {
+  const records = [...attributionRecords, ...sessionEvidenceRecords];
+  const actorSessionKey = (record: OpenCodeTaskLogAttributionRecord) =>
+    JSON.stringify([normalizeMemberName(record.memberName), record.sessionId?.trim()]);
+  const boundLedgerSessions = new Set(
+    records
+      .filter(
+        (record) =>
+          record.source === 'delivery_ledger' &&
+          record.runId?.trim() &&
+          record.laneId?.trim() &&
+          record.sessionId?.trim()
+      )
+      .map(actorSessionKey)
+  );
+  for (const record of records) {
+    // Older runtime check-ins omit run/lane. Do not read their unbound route
+    // before the original delivery ledger for the same actor and exact session.
+    if (
+      !record.runId?.trim() &&
+      record.sessionId?.trim() &&
+      boundLedgerSessions.has(actorSessionKey(record))
+    )
+      continue;
     const key = JSON.stringify([
       record.taskId,
       normalizeMemberName(record.memberName),
       record.scope,
       record.laneId ?? '',
       record.sessionId ?? '',
+      record.runId ?? '',
       record.since ?? '',
       record.until ?? '',
       record.startMessageUuid ?? '',
@@ -1148,6 +1155,7 @@ export class OpenCodeTaskLogStreamSource {
     attributionRecords: OpenCodeTaskLogAttributionRecord[]
   ): Promise<BoardTaskLogStreamResponse | null> {
     const projectedByParticipant = new Map<string, MemberProjectedMessages>();
+    let strictOriginalAttribution = false;
     const transcriptCache = new Map<
       string,
       Awaited<ReturnType<ClaudeMultimodelBridgeService['getOpenCodeTranscript']>>
@@ -1162,9 +1170,10 @@ export class OpenCodeTaskLogStreamSource {
       const memberKey = normalizeMemberName(memberName);
       const laneId = record.laneId?.trim();
       const sessionId = record.sessionId?.trim();
+      const runId = record.runId?.trim();
       const transcriptCacheKey = `${memberKey}::${laneId ?? 'current-lane'}::${
         sessionId ?? 'current'
-      }`;
+      }::${runId ?? 'legacy-run'}`;
       if (!transcriptCache.has(transcriptCacheKey)) {
         transcriptCache.set(
           transcriptCacheKey,
@@ -1174,27 +1183,45 @@ export class OpenCodeTaskLogStreamSource {
             limit: ATTRIBUTED_TRANSCRIPT_LIMIT,
             ...(laneId ? { laneId } : {}),
             ...(sessionId ? { sessionId } : {}),
+            ...(runId ? { runId } : {}),
           })
         );
       }
 
       const transcript = transcriptCache.get(transcriptCacheKey);
       if (!transcript) {
+        // An unavailable run-bound read must not become a latest-session guess.
+        strictOriginalAttribution ||= Boolean(runId && record.source === 'delivery_ledger');
         continue;
       }
-      if (record.sessionId && transcript.sessionId !== record.sessionId) {
+      const marker = 'v2_native_parent_ids_unavailable';
+      const nativeSource = Boolean(
+        Array.isArray(transcript.diagnostics) &&
+        transcript.diagnostics.includes(marker) &&
+        Array.isArray(transcript.logProjection?.diagnostics) &&
+        transcript.logProjection.diagnostics.includes(marker)
+      );
+      // A rejected native input must never turn into an unbound latest-session guess.
+      strictOriginalAttribution ||= nativeSource && record.source === 'delivery_ledger';
+      if (record.sessionId && transcript.sessionId !== record.sessionId) continue;
+      if (
+        nativeSource &&
+        (!record.sessionId?.trim() || transcript.logProjection?.sessionId !== record.sessionId)
+      )
         continue;
-      }
-
       const projectedMessages = transcript.logProjection?.messages ?? [];
-      const filteredMessages = filterMessagesForAttribution(projectedMessages, record);
+      const nativeParentIdsUnavailable = nativeSource && Boolean(record.sessionId?.trim());
+      const filteredMessages = filterMessagesForAttribution(projectedMessages, record, {
+        nativeParentIdsUnavailable,
+        taskRefs: buildTaskRefSet(task),
+      });
       if (filteredMessages.length === 0) {
         continue;
       }
 
       const participantKey = buildParticipantKey(memberName);
       const projectedSessionId = transcript.sessionId ?? record.sessionId;
-      const segmentKey = `${participantKey}::${projectedSessionId ?? 'unknown-session'}`;
+      const segmentKey = `${participantKey}::${projectedSessionId ?? 'unknown-session'}::${runId ?? 'legacy-run'}`;
       const existing = projectedByParticipant.get(segmentKey);
       if (existing) {
         const seen = new Set(
@@ -1216,6 +1243,7 @@ export class OpenCodeTaskLogStreamSource {
         projectedByParticipant.set(segmentKey, {
           memberName,
           sessionId: projectedSessionId,
+          ...(runId ? { runId } : {}),
           messages: filteredMessages,
         });
       }
@@ -1224,7 +1252,7 @@ export class OpenCodeTaskLogStreamSource {
     const members = Array.from(projectedByParticipant.values()).filter(
       (item) => item.messages.length > 0
     );
-    if (members.length === 0) {
+    if (members.length === 0 && !strictOriginalAttribution) {
       logger.debug(
         `[${teamName}/${task.id}] OpenCode task-log attribution yielded no projected messages; falling back to owner/time-window heuristic`
       );
@@ -1264,7 +1292,7 @@ export class OpenCodeTaskLogStreamSource {
       segments.push({
         id: `opencode-attributed:${teamName}:${task.id}:${normalizeMemberName(
           member.memberName
-        )}:${buildSessionSegmentKey(member.sessionId ?? firstMessage.sessionId)}`,
+        )}:${buildSessionSegmentKey(member.sessionId ?? firstMessage.sessionId)}${member.runId ? `:run:${encodeURIComponent(member.runId)}` : ''}`,
         participantKey: participant.key,
         actor: buildActor(member.memberName, member.sessionId ?? firstMessage.sessionId),
         startTimestamp: firstMessage.timestamp.toISOString(),
@@ -1273,7 +1301,7 @@ export class OpenCodeTaskLogStreamSource {
       });
     }
 
-    if (segments.length === 0) {
+    if (segments.length === 0 && !strictOriginalAttribution) {
       return null;
     }
 

@@ -7,8 +7,10 @@ this policy. Generic version extraction/comparison and free-tier checks retain
 existing behavior.
 
 Only stable V1 >=1.16.0 and <2 can enter the existing capability evaluation.
-Exact V2 2.0.0 and 2.0.21 are recognized but remain unqualified, even if a peer
-claims readiness. No SDK, runtime, permission writer, native CAS, or transport
+Exact V2 2.0.0 and 2.0.32 are recognized but remain unqualified, even if a peer
+claims readiness. The retired 2.0.21 pin and dialect are refused. Recognition
+feeds native discovery and provider setup; it does not grant launch capabilities.
+No SDK, runtime, permission writer, native CAS, or transport
 is implemented here.
 
 Protocol2 is a separate opt-in offer/handshake/operation map. Default envelope1

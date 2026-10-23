@@ -15,6 +15,8 @@ describe('install-dependencies-with-retry', () => {
     'UND_ERR_CONNECT_TIMEOUT while downloading Electron',
     'Socket timeout while downloading Electron',
     'HTTPError: Response code 504\nELIFECYCLE Command failed with exit code 1',
+    'gyp ERR! stack TypeError: terminated',
+    'SocketError: other side closed',
   ]) {
     it(`retries transient network failure: ${output}`, () => {
       assert.equal(isRetryableInstallFailure(output), true);

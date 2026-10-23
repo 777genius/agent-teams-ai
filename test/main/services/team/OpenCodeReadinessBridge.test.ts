@@ -6,6 +6,7 @@ import {
   type OpenCodeReadinessBridgeCommandExecutor,
   type OpenCodeReadinessBridgeOptions,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
+import { resolveOpenCodeLaunchTimeoutMs } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessTimeoutPolicy';
 import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
 
 import type {
@@ -1573,3 +1574,37 @@ function readiness(
     ...overrides,
   };
 }
+
+
+describe('measured V2 launch timeout policy', () => {
+  const input = (version: string | null | undefined, selectedModel = 'openai/gpt-5.5') => ({
+    selectedModel, members: [],
+    ...(version === undefined ? {} : { executionProof: {
+      schemaVersion: 1 as const, providerId: 'opencode' as const, modelId: selectedModel,
+      projectPath: '/TEST-project', profileRootKey: 'TEST-profile',
+      projectBehaviorFingerprint: 'TEST-behavior', managedConfigFingerprint: 'TEST-config',
+      managedAuthFingerprint: null, binaryPath: '/TEST-opencode', binaryFingerprint: 'TEST-binary',
+      opencodeVersion: version, capabilitySnapshotId: null, credentialMode: 'none' as const,
+      reusable: true, verifiedAt: '2026-10-16T00:00:00Z', expiresAt: '2026-10-16T00:05:00Z',
+      proofHash: 'TEST-proof',
+    } }),
+  });
+  it('uses 300s for measured V2 on every platform and preserves explicit overrides', () => {
+    for (const version of ['2.0.0', '2.0.21']) {
+      expect(resolveOpenCodeLaunchTimeoutMs(input(version), undefined, 'win32')).toBe(300_000);
+      expect(resolveOpenCodeLaunchTimeoutMs(input(version), 15_000, 'win32')).toBe(15_000);
+      for (const platform of ['darwin', 'linux'] as const)
+        expect(resolveOpenCodeLaunchTimeoutMs(input(version), undefined, platform)).toBe(300_000);
+    }
+    for (const version of ['1.19.0', undefined, null])
+      expect(resolveOpenCodeLaunchTimeoutMs(input(version), undefined, 'win32')).toBe(120_000);
+  });
+  it('preserves larger local and serial allowances independently of the native baseline', () => {
+    expect(resolveOpenCodeLaunchTimeoutMs(input('2.0.21', 'ollama/model'), undefined, 'win32')).toBe(420_000);
+    const serial = { ...input('2.0.21', 'cursor-acp/model'), members: Array.from({ length: 2 }, (_, index) => ({ name: `member-${index}`, role: 'worker', prompt: 'TEST' })) };
+    expect(resolveOpenCodeLaunchTimeoutMs(serial, undefined, 'win32')).toBe(600_000);
+    expect(resolveOpenCodeLaunchTimeoutMs({ ...serial, selectedModel: 'kiro/model' }, undefined, 'darwin')).toBe(300_000);
+    expect(resolveOpenCodeLaunchTimeoutMs(input(undefined, 'cursor-acp/model'), undefined, 'win32')).toBe(300_000);
+    expect(resolveOpenCodeLaunchTimeoutMs(input(undefined, 'kiro/model'), undefined, 'linux')).toBe(120_000);
+  });
+});

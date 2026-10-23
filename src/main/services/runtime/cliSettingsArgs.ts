@@ -235,7 +235,10 @@ export function parseCodexCliSettingsArgs(args: readonly string[]): ParsedCodexC
       }
     }
     const settingsPrefix = '--settings=';
-    if (arg.startsWith(settingsPrefix) && collectFromSettingsJson(arg.slice(settingsPrefix.length))) {
+    if (
+      arg.startsWith(settingsPrefix) &&
+      collectFromSettingsJson(arg.slice(settingsPrefix.length))
+    ) {
       i += 1;
       continue;
     }

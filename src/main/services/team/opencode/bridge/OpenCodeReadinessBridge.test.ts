@@ -12,6 +12,7 @@ import {
   resolveOpenCodeReadinessTimeoutMs,
 } from './OpenCodeReadinessTimeoutPolicy';
 
+import type { OpenCodeExecutionProof } from '../readiness/OpenCodeExecutionProof';
 import type { OpenCodeTeamLaunchReadiness } from '../readiness/OpenCodeTeamLaunchReadiness';
 
 vi.mock('../config/CursorMcpConfigWriter', () => ({
@@ -23,6 +24,43 @@ describe('resolveOpenCodeLaunchTimeoutMs', () => {
     expect(resolveOpenCodeLaunchTimeoutMs({ selectedModel: 'openai/gpt-5.4', members: [] })).toBe(
       120_000
     );
+  });
+
+  it('gives V2 runs the 300s launch budget on every platform', () => {
+    const v2 = { opencodeVersion: '2.0.32' } as OpenCodeExecutionProof;
+    expect(
+      resolveOpenCodeLaunchTimeoutMs(
+        { selectedModel: 'openai/gpt-5.4', members: [], executionProof: v2 },
+        undefined,
+        'darwin'
+      )
+    ).toBe(300_000);
+    expect(
+      resolveOpenCodeLaunchTimeoutMs(
+        { selectedModel: 'openai/gpt-5.4', members: [], executionProof: v2 },
+        undefined,
+        'win32'
+      )
+    ).toBe(300_000);
+    expect(
+      resolveOpenCodeLaunchTimeoutMs(
+        { selectedModel: 'openai/gpt-5.4', members: [], executionProof: v2 },
+        undefined,
+        'linux'
+      )
+    ).toBe(300_000);
+    // V1 keeps its original budget everywhere.
+    expect(
+      resolveOpenCodeLaunchTimeoutMs(
+        {
+          selectedModel: 'openai/gpt-5.4',
+          members: [],
+          executionProof: { opencodeVersion: '1.2.3' } as OpenCodeExecutionProof,
+        },
+        undefined,
+        'darwin'
+      )
+    ).toBe(120_000);
   });
 
   it('gives local Ollama-style models a launch budget above the 7B dest:mcp wall', () => {

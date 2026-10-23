@@ -10,7 +10,10 @@ export interface OpenCodeSemver {
 
 /** Normalize only the measured whole V2 CLI spelling; V1 remains bare semver. */
 function normalizeOpenCodeVersionText(raw: string): string {
-  return raw.trim().replace(/^opencode v(?=2\.)/, '').replace(/^v/, '');
+  return raw
+    .trim()
+    .replace(/^opencode v(?=2\.)/, '')
+    .replace(/^v/, '');
 }
 
 /** Whole CLI output only; never extract a version from arbitrary diagnostic text. */
@@ -58,7 +61,10 @@ export function classifyNativeVersion(raw: string): NativeVersionClassification 
     };
   }
   // V2 build metadata cannot establish an exact qualified dialect.
-  if (normalizeOpenCodeVersionText(raw) === version && (version === '2.0.0' || version === '2.0.21')) {
+  if (
+    normalizeOpenCodeVersionText(raw) === version &&
+    (version === '2.0.0' || version === '2.0.32')
+  ) {
     return {
       kind: 'recognized',
       generation: 'v2',

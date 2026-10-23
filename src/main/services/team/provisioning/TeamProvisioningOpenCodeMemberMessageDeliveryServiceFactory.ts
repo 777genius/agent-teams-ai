@@ -50,6 +50,7 @@ export interface TeamProvisioningOpenCodeMemberMessageDeliveryHost {
   >;
   tryRecoverOpenCodeRuntimeLaneBeforeDelivery?: OpenCodeRuntimeDeliveryRecoveryShim['tryRecoverOpenCodeRuntimeLaneBeforeDelivery'];
   tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery?: OpenCodeRuntimeDeliveryRecoveryShim['tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery'];
+  isMemberLifecycleOperationActive: OpenCodeMemberMessageDeliveryFactoryPorts['isMemberLifecycleOperationActive'];
   stoppingSecondaryRuntimeTeams: OpenCodeMemberMessageDeliveryFactoryPorts['stoppingSecondaryRuntimeTeams'];
   readPersistedTeamProjectPath: OpenCodeMemberMessageDeliveryFactoryPorts['readPersistedTeamProjectPath'];
   runTracking: {
@@ -143,6 +144,8 @@ export function createOpenCodeMemberMessageDeliveryServiceFromHost(
         memberName,
         directory
       ),
+    isMemberLifecycleOperationActive: (teamName, memberName) =>
+      host.isMemberLifecycleOperationActive(teamName, memberName),
     stoppingSecondaryRuntimeTeams: host.stoppingSecondaryRuntimeTeams,
     readPersistedTeamProjectPath: (teamName) => host.readPersistedTeamProjectPath(teamName),
     resolveDeliverableTrackedRuntimeRunId: (teamName) =>
@@ -222,6 +225,8 @@ export function createTeamProvisioningOpenCodeMemberMessageDeliveryHostFromServi
     getOpenCodeRuntimeMessageAdapter: () =>
       service.appShellBoundary.getOpenCodeRuntimeMessageAdapter(),
     openCodeRuntimeRecoveryFacade: service.openCodeRuntimeRecoveryFacade,
+    isMemberLifecycleOperationActive: (teamName, memberName) =>
+      service.isMemberLifecycleOperationActive(teamName, memberName),
     stoppingSecondaryRuntimeTeams: service.stoppingSecondaryRuntimeTeams,
     readPersistedTeamProjectPath: (teamName) => service.readPersistedTeamProjectPath(teamName),
     runTracking: {

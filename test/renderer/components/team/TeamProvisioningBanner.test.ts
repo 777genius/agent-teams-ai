@@ -191,6 +191,28 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
     await act(async () => root.unmount());
   });
 
+  it('keeps a disconnected cleanup error visible after the member dialog is gone', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const error = 'Exact cleanup owner changed';
+    storeState.progress = {
+      ...storeState.progress,
+      state: 'disconnected',
+      message: 'OpenCode runtime lane stopped but exact cleanup failed',
+      messageSeverity: 'error',
+      error,
+    };
+    storeState.provisioningErrorByTeam = { 'northstar-core': error };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+    });
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain(error);
+    expect(host.querySelector('[data-testid="progress-block"]')).toBeNull();
+    await act(async () => root.unmount());
+  });
+
   it('does not render another team error when this team has no progress or error', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.progress = null;

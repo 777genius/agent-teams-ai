@@ -216,7 +216,7 @@
     "cronstrue": "^3.13.0",
     "date-fns": "^3.6.0",
     "diff": "^8.0.3",
-    "dompurify": "^3.4.12",
+    "dompurify": "^3.4.17",
     "drizzle-orm": "^0.45.2",
     "builder-util-runtime": "9.7.0",
     "electron-updater": "^6.8.9",

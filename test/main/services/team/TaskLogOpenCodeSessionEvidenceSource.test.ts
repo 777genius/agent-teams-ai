@@ -1,14 +1,14 @@
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm,writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { TaskLogOpenCodeSessionEvidenceSource } from '../../../../src/main/services/team/taskLogs/stream/TaskLogOpenCodeSessionEvidenceSource';
 import {
   OPENCODE_PROMPT_DELIVERY_LEDGER_SCHEMA_VERSION,
   type OpenCodePromptDeliveryLedgerRecord,
 } from '../../../../src/main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
+import { TaskLogOpenCodeSessionEvidenceSource } from '../../../../src/main/services/team/taskLogs/stream/TaskLogOpenCodeSessionEvidenceSource';
 
 import type { TeamTask } from '../../../../src/shared/types';
 
@@ -194,6 +194,7 @@ describe('TaskLogOpenCodeSessionEvidenceSource', () => {
         scope: 'member_session_window',
         laneId: 'lane-a',
         sessionId: 'session-new',
+        runId: 'run-a',
         source: 'delivery_ledger',
         startMessageUuid: 'runtime-user-new',
       }),

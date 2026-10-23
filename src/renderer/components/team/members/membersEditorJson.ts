@@ -3,11 +3,7 @@ import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
-import {
-  createMemberDraft,
-  getMemberDraftRole,
-  getWorkflowForExport,
-} from './membersEditorUtils';
+import { createMemberDraft, getMemberDraftRole, getWorkflowForExport } from './membersEditorUtils';
 
 import type { MemberDraft } from './membersEditorTypes';
 import type { EffortLevel } from '@shared/types';
@@ -41,7 +37,9 @@ export function parseJsonToDrafts(text: string): MemberDraft[] {
     const isolation = item.isolation === 'worktree' ? 'worktree' : undefined;
     const providerId = normalizeOptionalTeamProviderId(item.providerId);
     const model = typeof item.model === 'string' ? item.model.trim() : '';
-    const effort: EffortLevel | undefined = isTeamEffortLevel(item.effort) ? item.effort : undefined;
+    const effort: EffortLevel | undefined = isTeamEffortLevel(item.effort)
+      ? item.effort
+      : undefined;
     const mcpPolicy = normalizeTeamMemberMcpPolicy(item.mcpPolicy);
     const presetRoles: readonly string[] = PRESET_ROLES;
     const isPreset = presetRoles.includes(role);

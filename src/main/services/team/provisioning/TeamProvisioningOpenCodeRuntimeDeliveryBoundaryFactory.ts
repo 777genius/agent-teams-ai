@@ -29,7 +29,12 @@ export interface TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactoryPorts<
   readMetaMembers: DeliveryBoundaryPorts<Run>['readMetaMembers'];
   readPersistedRuntimeMembers: DeliveryBoundaryPorts<Run>['readPersistedRuntimeMembers'];
   getTrackedRunId(teamName: string): string | null | undefined;
-  canDeliverToTrackedRuntimeRun(teamName: string, runId: string): boolean;
+  canDeliverToTrackedRuntimeRun(
+    teamName: string,
+    runId: string,
+    laneId?: string,
+    laneRunId?: string
+  ): boolean;
   resolveDeliverableTrackedRuntimeRunId(teamName: string): string | null;
   getRun(runId: string): Run | null | undefined;
   persistLaunchStateSnapshot(run: Run, launchPhase: PersistedTeamLaunchPhase): Promise<unknown>;
@@ -246,8 +251,8 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<
     readPersistedRuntimeMembers: (teamName) => service.readPersistedRuntimeMembers(teamName),
     runTracking: {
       getTrackedRunId: (teamName) => service.runTracking.getTrackedRunId(teamName),
-      canDeliverToTrackedRuntimeRun: (teamName, runId) =>
-        service.runTracking.canDeliverToTrackedRuntimeRun(teamName, runId),
+      canDeliverToTrackedRuntimeRun: (teamName, runId, laneId, laneRunId) =>
+        service.runTracking.canDeliverToTrackedRuntimeRun(teamName, runId, laneId, laneRunId),
       resolveDeliverableTrackedRuntimeRunId: (teamName) =>
         service.runTracking.resolveDeliverableTrackedRuntimeRunId(teamName),
     },
@@ -341,8 +346,8 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryHostFromSer
     readPersistedRuntimeMembers: (teamName) => service.readPersistedRuntimeMembers(teamName),
     runTracking: {
       getTrackedRunId: (teamName) => service.runTracking.getTrackedRunId(teamName),
-      canDeliverToTrackedRuntimeRun: (teamName, runId) =>
-        service.runTracking.canDeliverToTrackedRuntimeRun(teamName, runId),
+      canDeliverToTrackedRuntimeRun: (teamName, runId, laneId, laneRunId) =>
+        service.runTracking.canDeliverToTrackedRuntimeRun(teamName, runId, laneId, laneRunId),
       resolveDeliverableTrackedRuntimeRunId: (teamName) =>
         service.runTracking.resolveDeliverableTrackedRuntimeRunId(teamName),
     },
@@ -417,7 +422,13 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromHost<
       if (
         runId &&
         host.runTracking.getTrackedRunId(teamName) &&
-        !host.runTracking.resolveDeliverableTrackedRuntimeRunId(teamName)
+        !host.runTracking.resolveDeliverableTrackedRuntimeRunId(teamName) &&
+        !host.runTracking.canDeliverToTrackedRuntimeRun(
+          teamName,
+          host.runTracking.getTrackedRunId(teamName)!,
+          laneId,
+          runId
+        )
       ) {
         return null;
       }
@@ -440,8 +451,8 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromHost<
     readMetaMembers: (teamName) => host.membersMetaStore.getMembers(teamName),
     readPersistedRuntimeMembers: (teamName) => host.readPersistedRuntimeMembers(teamName),
     getTrackedRunId: (teamName) => host.runTracking.getTrackedRunId(teamName),
-    canDeliverToTrackedRuntimeRun: (teamName, runId) =>
-      host.runTracking.canDeliverToTrackedRuntimeRun(teamName, runId),
+    canDeliverToTrackedRuntimeRun: (teamName, runId, laneId, laneRunId) =>
+      host.runTracking.canDeliverToTrackedRuntimeRun(teamName, runId, laneId, laneRunId),
     resolveDeliverableTrackedRuntimeRunId: (teamName) =>
       host.runTracking.resolveDeliverableTrackedRuntimeRunId(teamName),
     getRun: (runId) => host.runs.get(runId),
@@ -512,7 +523,13 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromPorts<
       if (
         runId &&
         ports.getTrackedRunId(teamName) &&
-        !ports.resolveDeliverableTrackedRuntimeRunId(teamName)
+        !ports.resolveDeliverableTrackedRuntimeRunId(teamName) &&
+        !ports.canDeliverToTrackedRuntimeRun(
+          teamName,
+          ports.getTrackedRunId(teamName)!,
+          laneId,
+          runId
+        )
       ) {
         return null;
       }

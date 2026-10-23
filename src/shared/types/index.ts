@@ -25,6 +25,7 @@ export type * from './api';
 export type * from './ipc';
 
 // Re-export Team Management types
+export type * from './openCodeStopHandshakeFailure';
 export type * from './team';
 
 // Re-export Schedule types

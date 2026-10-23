@@ -34,7 +34,11 @@ import {
 import { TeamRuntimeAdapterRegistry } from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
 import { resolveAgentTeamsMcpLaunchSpec } from '../../../../src/main/services/team/TeamMcpConfigBuilder';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
-import { getClaudeBasePath, getTeamsBasePath, setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
+import {
+  getClaudeBasePath,
+  getTeamsBasePath,
+  setClaudeBasePathOverride,
+} from '../../../../src/main/utils/pathDecoder';
 
 import type { HttpServices } from '../../../../src/main/http';
 import type { TaskRef } from '../../../../src/shared/types';
@@ -310,16 +314,41 @@ export async function waitForOpenCodeLanesStopped(
   }, timeoutMs);
 }
 
+export interface OpenCodeOriginalTranscriptBinding {
+  runId: string;
+  laneId: string;
+  runtimeSessionId: string;
+}
+
 export async function getRuntimeTranscript(input: {
   bridgeClient: OpenCodeBridgeCommandClient;
   teamName: string;
   memberName: string;
   projectPath: string;
+  originalBinding?: OpenCodeOriginalTranscriptBinding;
 }): Promise<unknown> {
-  const laneId = await resolveOpenCodeMemberLaneId(input.teamName, input.memberName);
+  const binding = input.originalBinding;
+  if (
+    binding &&
+    [binding.runId, binding.laneId, binding.runtimeSessionId].some(
+      (value) => typeof value !== 'string' || !value || value !== value.trim()
+    )
+  ) {
+    throw new Error('Original OpenCode transcript binding incomplete');
+  }
+  const laneId = binding
+    ? binding.laneId
+    : await resolveOpenCodeMemberLaneId(input.teamName, input.memberName);
   return input.bridgeClient
     .execute<
-      { teamId: string; teamName: string; laneId: string; memberName: string },
+      {
+        teamId: string;
+        teamName: string;
+        laneId: string;
+        memberName: string;
+        runId?: string;
+        runtimeSessionId?: string;
+      },
       { logProjection?: { messages?: unknown[] }; messages?: unknown[] }
     >(
       'opencode.getRuntimeTranscript',
@@ -328,6 +357,7 @@ export async function getRuntimeTranscript(input: {
         teamName: input.teamName,
         laneId,
         memberName: input.memberName,
+        ...(binding ? { runId: binding.runId, runtimeSessionId: binding.runtimeSessionId } : {}),
       },
       { cwd: input.projectPath, timeoutMs: 60_000 }
     )

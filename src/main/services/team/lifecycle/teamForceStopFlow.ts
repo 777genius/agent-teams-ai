@@ -22,7 +22,12 @@ import {
   getOpenCodeLaneScopedRuntimeFilePath,
   OpenCodeRuntimeManifestEvidenceReader,
   readOpenCodeRuntimeLaneIndex,
+  withOpenCodeRuntimeLaneLifecycleLock,
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import {
+  openCodeRegularStopRejectionCode,
+  OpenCodeRuntimeStopUnconfirmedError,
+} from '../provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
 import type { TeamLaunchStateReadResult, TeamLaunchStopAuthority } from '../TeamLaunchStateStore';
@@ -340,6 +345,7 @@ async function runTeamStopFlow(
   const timeoutMs = ports.stopTimeoutMs ?? DEFAULT_STOP_TIMEOUT_MS;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let stopOutcome: TeamForceStopResult['stopOutcome'];
+  let causalFailure: TeamForceStopResult['causalFailure'];
   let timedOut = false;
   let runtimeHostsGone: { promise: Promise<'runtime_already_down'>; cancel(): void } | null = null;
   try {
@@ -365,12 +371,25 @@ async function runTeamStopFlow(
           ports.logWarning(
             `[${teamName}] Regular stop failed before force stop cleanup: ${message}`
           );
+          if (error instanceof OpenCodeRuntimeStopUnconfirmedError) {
+            causalFailure = error.causalFailure;
+            diagnostics.push(...error.diagnosticCodes.map((code) => `stop_failure_code:${code}`));
+            if (error.diagnosticCodes.length === 0) {
+              diagnostics.push(`stop_failure_code:${openCodeRegularStopRejectionCode(error)}`);
+            }
+          } else {
+            diagnostics.push(`stop_failure_code:${openCodeRegularStopRejectionCode(error)}`);
+          }
           diagnostics.push(`Regular stop failed: ${message}`);
         }
         return 'stop_failed' as const;
       }
     );
-    runtimeHostsGone = watchRuntimeHostsGone(teamName, ports);
+    // Recorded host exit does not acknowledge native lane/session cleanup.
+    // Keep its original stop attempt authoritative until the existing deadline.
+    runtimeHostsGone = ownedLaneIds?.length
+      ? { promise: new Promise<'runtime_already_down'>(() => {}), cancel() {} }
+      : watchRuntimeHostsGone(teamName, ports);
     stopOutcome = await Promise.race([
       stopAttempt,
       runtimeHostsGone.promise,
@@ -448,6 +467,7 @@ async function runTeamStopFlow(
   await markStopped(teamName, ports, diagnostics, publicationAuthority);
   return {
     stopOutcome,
+    ...(causalFailure ? { causalFailure } : {}),
     cleanupOutcome: stopOutcome === 'stopped' && !cleanupIncomplete ? 'completed' : 'incomplete',
     killedRuntimePids,
     clearedPendingDeliveries,
@@ -695,18 +715,26 @@ export async function clearPendingOpenCodePromptDeliveriesForTeam(input: {
       laneId,
       fileName: 'opencode-prompt-delivery-ledger.json',
     });
-    if (!fs.existsSync(ledgerPath)) {
-      continue;
-    }
+    if (!fs.existsSync(ledgerPath)) continue;
     try {
-      const ledger = createOpenCodePromptDeliveryLedgerStore({ filePath: ledgerPath });
-      const result = await ledger.cancelNonTerminalRecords({
-        now: (input.now?.() ?? new Date()).toISOString(),
-        reason: input.reason ?? FORCE_STOP_DELIVERY_CANCEL_REASON,
-        includeRecoverableTerminal: input.includeRecoverableTerminal,
-        ownedRunIds: input.ownedRunIds,
-        createdAtOrBeforeMs: input.requestedAtMs,
-      });
+      // Lane removal takes this same outer lock; ledger writes must finish
+      // before cleanup can delete their directory. The inner store lock never
+      // calls lifecycle operations, so ordering remains lane -> ledger.
+      const result = await withOpenCodeRuntimeLaneLifecycleLock(
+        { teamsBasePath, teamName: input.teamName, laneId },
+        async () => {
+          if (!fs.existsSync(ledgerPath)) return null;
+          const ledger = createOpenCodePromptDeliveryLedgerStore({ filePath: ledgerPath });
+          return await ledger.cancelNonTerminalRecords({
+            now: (input.now?.() ?? new Date()).toISOString(),
+            reason: input.reason ?? FORCE_STOP_DELIVERY_CANCEL_REASON,
+            includeRecoverableTerminal: input.includeRecoverableTerminal,
+            ownedRunIds: input.ownedRunIds,
+            createdAtOrBeforeMs: input.requestedAtMs,
+          });
+        }
+      );
+      if (!result) continue;
       cleared += result.cancelled;
       keptForLaterRun += result.keptForLaterRun;
     } catch (error) {

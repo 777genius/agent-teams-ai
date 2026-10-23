@@ -1,4 +1,8 @@
-import { isLoopbackHostname, isPrivateNetworkHostname, isUnusableNetworkHostname } from '@shared/utils/networkHost';
+import {
+  isLoopbackHostname,
+  isPrivateNetworkHostname,
+  isUnusableNetworkHostname,
+} from '@shared/utils/networkHost';
 
 import type {
   RuntimeLocalProviderPresetDto,

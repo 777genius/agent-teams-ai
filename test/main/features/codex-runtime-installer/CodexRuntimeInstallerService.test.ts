@@ -107,6 +107,94 @@ describe('CodexRuntimeInstallerService resolver', () => {
     }
   });
 
+  function stubPackageDownload(response: unknown, tarball: Buffer = Buffer.from('unused')) {
+    const selected = getCodexRuntimePlatformCandidates()[0];
+    const metadata = {
+      version: '1.0.0',
+      optionalDependencies: { [selected.optionalDependencyName]: 'npm:@openai/codex@1.0.0' },
+      dist: {
+        tarball: 'https://registry.npmjs.org/TEST-codex.tgz',
+        integrity: `sha512-${createHash('sha512').update(tarball).digest('base64')}`,
+      },
+    };
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(metadata)))
+      .mockResolvedValueOnce(new Response(JSON.stringify(metadata)))
+      .mockResolvedValueOnce(response);
+    vi.stubGlobal('fetch', fetch);
+    return fetch;
+  }
+
+  it.each([172_854_349, 192 * 1024 * 1024])(
+    'admits advertised package size %s and completes verified fixture installation',
+    async (advertisedBytes) => {
+      const selected = getCodexRuntimePlatformCandidates()[0];
+      const binaryName = process.platform === 'win32' ? 'codex.exe' : 'codex';
+      const tarball = createTarball([
+        {
+          name: `package/vendor/${selected.vendorTarget}/codex/${binaryName}`,
+          data: 'TEST binary',
+        },
+      ]);
+      // Exercise the observed official header and exact policy boundary without
+      // downloading or allocating a production-sized package. Integrity and
+      // extraction still run against a complete small fixture payload.
+      const fetch = stubPackageDownload(
+        new Response(new Uint8Array(tarball), {
+          headers: { 'content-length': String(advertisedBytes) },
+        }),
+        tarball
+      );
+      const status = await createCodexRuntimeInstallerFeature().install();
+      expect(status).toMatchObject({ installed: true, state: 'ready', source: 'app-managed' });
+      expect(resolveAppManagedCodexRuntimeBinaryPath()).toBe(status.binaryPath);
+      expect(fetch).toHaveBeenCalledTimes(3);
+      expect(execCliMock).toHaveBeenCalled();
+    }
+  );
+
+  it('rejects an advertised package above 192 MiB before reading its body', async () => {
+    const getReader = vi.fn();
+    stubPackageDownload({
+      ok: true,
+      headers: new Headers({
+        'content-length': String(192 * 1024 * 1024 + 1),
+      }),
+      body: { getReader },
+    });
+    await expect(createCodexRuntimeInstallerFeature().install()).resolves.toMatchObject({
+      installed: false,
+      state: 'failed',
+      error: 'Codex package is unexpectedly large',
+    });
+    expect(getReader).not.toHaveBeenCalled();
+    expect(execCliMock).not.toHaveBeenCalled();
+    expect(resolveAppManagedCodexRuntimeBinaryPath()).toBeNull();
+  });
+
+  it.each([undefined, '1'])(
+    'rejects streamed bytes above 192 MiB despite missing/understated header %s',
+    async (contentLength) => {
+      // Reuse a single synthetic chunk; no network, full tarball or binary execution.
+      const chunk = new Uint8Array(1024 * 1024);
+      const read = vi.fn(async () => ({ done: false, value: chunk }));
+      stubPackageDownload({
+        ok: true,
+        headers: new Headers(contentLength ? { 'content-length': contentLength } : {}),
+        body: { getReader: () => ({ read }) },
+      });
+      await expect(createCodexRuntimeInstallerFeature().install()).resolves.toMatchObject({
+        installed: false,
+        state: 'failed',
+        error: 'Codex package exceeded the maximum allowed download size',
+      });
+      expect(read).toHaveBeenCalledTimes(193);
+      expect(execCliMock).not.toHaveBeenCalled();
+      expect(resolveAppManagedCodexRuntimeBinaryPath()).toBeNull();
+    }
+  );
+
   it('returns the current app-managed Codex binary path only when manifest and binary exist', async () => {
     const binaryPath = path.join(
       tempRoot!,

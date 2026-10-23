@@ -18,6 +18,7 @@ import {
 import { addMainBreadcrumb } from '@main/sentry';
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { markTeamEngaged } from '@main/services/infrastructure/teamWatchScope';
+import { OpenCodeRetainedPrimaryRestartError } from '@main/services/team/provisioning/OpenCodeRetainedPrimaryRestartError';
 import {
   getTeamDataWorkerClient,
   isTeamDataWorkerFatalError,
@@ -124,6 +125,10 @@ import { wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
 import {
+  parseTeamMemberRestartResult,
+  type TeamMemberRestartResult,
+} from '@shared/types/teamMemberRestart';
+import {
   extractFlagsFromHelp,
   extractUserFlags,
   PROTECTED_CLI_FLAGS,
@@ -183,6 +188,7 @@ import {
   buildOriginalUserRequestBlock,
 } from '../services/team/messageDeliveryText';
 import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '../services/team/opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
+import { assertEscalatedStopConfirmed } from '../services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamConfigReader } from '../services/team/TeamConfigReader';
 import { capMessagesPageLiveOverlay } from '../services/team/teamInboxOrdering';
@@ -3891,7 +3897,7 @@ async function handleRestartMember(
   teamName: unknown,
   memberName: unknown,
   expectedSecondary?: unknown
-): Promise<IpcResult<void>> {
+): Promise<IpcResult<TeamMemberRestartResult>> {
   const validatedTeamName = validateTeamName(teamName);
   if (!validatedTeamName.valid) {
     return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
@@ -3910,6 +3916,20 @@ async function handleRestartMember(
         validatedMemberName.value!,
         ...(expectedSecondary === undefined ? [] : [expectedSecondary])
       );
+      return { status: 'restarted' } as const;
+    } catch (error) {
+      if (
+        error instanceof OpenCodeRetainedPrimaryRestartError &&
+        error.retention.teamName === validatedTeamName.value &&
+        error.retention.memberName === validatedMemberName.value
+      ) {
+        return parseTeamMemberRestartResult({
+          status: error.outcome,
+          error: error.message,
+          ...error.retention,
+        });
+      }
+      throw error;
     } finally {
       getTeamDataService().invalidateMessageFeed(validatedTeamName.value!);
     }
@@ -4018,6 +4038,7 @@ async function handleStopTeam(
         `[${tn}] Regular stop ${result.stopOutcome}; escalated to force stop (killed ${result.killedRuntimePids.length} runtime pid(s), cancelled ${result.clearedPendingDeliveries} pending deliveries)`
       );
     }
+    assertEscalatedStopConfirmed(result);
   });
 }
 

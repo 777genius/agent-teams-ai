@@ -156,18 +156,51 @@ test('complete candidate publication replaces stale published JS/Bun and detects
       payloadArchiveSha256: 'b'.repeat(64),
     };
     const verified = await verifyCandidatePayload(source, expected);
+    assert.equal(verified.bunVersion, '1.3.11');
     assert.equal(verified.entrySha256, hash(js));
     assert.equal(verified.bunSha256, hash(bun));
-    const deliveryPath = path.join(source, 'opencode-delivery.json');
-    await writeFile(deliveryPath, JSON.stringify({ ...delivery, bunVersion: '1.4.3' }));
-    const windowsPin = await verifyCandidatePayload(source, expected);
-    assert.equal(windowsPin.bunSha256, hash(bun));
-    assert.notEqual(windowsPin.deliverySha256, verified.deliverySha256);
-    await assert.rejects(verifyCandidatePayload(source, { ...expected, ...verified }));
-    await writeFile(deliveryPath, JSON.stringify({ ...delivery, bunVersion: '1.99.0' }));
-    await assert.rejects(verifyCandidatePayload(source, expected));
-    await writeFile(deliveryPath, JSON.stringify(delivery));
-    publishRuntimePayload(
+    for (const bunVersion of [null, '', '1.4.4', false, ['1.4.3']])
+      await assert.rejects(verifyCandidatePayload(source, { ...expected, bunVersion }));
+    await assert.rejects(verifyCandidatePayload(source, { ...expected, bunVersion: '1.4.3' }));
+    delivery.bunVersion = '1.4.3';
+    await writeFile(path.join(source, 'opencode-delivery.json'), JSON.stringify(delivery));
+    await assert.rejects(
+      verifyCandidatePayload(source, expected),
+      'Legacy default must not admit Bun 1.4.3'
+    );
+    const nativeExpected = { ...expected, bunVersion: '1.4.3' };
+    const nativeVerified = await verifyCandidatePayload(source, nativeExpected);
+    assert.equal(nativeVerified.bunVersion, '1.4.3');
+    const nativeTarget = path.join(root, 'native-staged');
+    await publishRuntimePayload(
+      path.join(source, 'claude-multimodel.exe'),
+      nativeTarget,
+      expected.payloadArchiveSha256
+    );
+    Object.assign(nativeExpected, nativeVerified, {
+      payloadReceiptSha256: hash(await readFile(path.join(nativeTarget, '.archive-payload.json'))),
+    });
+    const evidencePath = path.join(root, 'native-candidate-evidence.json');
+    await writeFile(evidencePath, JSON.stringify(nativeExpected));
+    const evidence = JSON.parse(await readFile(evidencePath, 'utf8'));
+    assert.equal(evidence.bunVersion, '1.4.3');
+    await verifyCandidatePayload(nativeTarget, evidence);
+    const nativePackaged = path.join(root, 'native-packaged');
+    await copyDir(nativeTarget, nativePackaged, { isUseHardLink: () => false });
+    await verifyCandidatePayload(nativePackaged, evidence, { packaged: true });
+    await assert.rejects(
+      verifyCandidatePayload(
+        nativePackaged,
+        { ...evidence, bunVersion: '1.3.11' },
+        { packaged: true }
+      )
+    );
+    delivery.bunVersion = '1.4.4';
+    await writeFile(path.join(source, 'opencode-delivery.json'), JSON.stringify(delivery));
+    await assert.rejects(verifyCandidatePayload(source, nativeExpected));
+    delivery.bunVersion = '1.3.11';
+    await writeFile(path.join(source, 'opencode-delivery.json'), JSON.stringify(delivery));
+    await publishRuntimePayload(
       path.join(source, 'claude-multimodel.exe'),
       target,
       expected.payloadArchiveSha256

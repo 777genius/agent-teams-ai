@@ -11,6 +11,8 @@ import {
   closePackagedBrowser,
   packagedStopOrder,
   packagedDrainSnapshot,
+  retainPackagedLineage,
+  packagedOrphanObservation,
   packagedEnvironment,
   packagedTarget,
   containedPath,
@@ -29,6 +31,7 @@ import {
   waitForPackagedPreload,
   matchesPackagedPreload,
   refreshSettled,
+  waitForSettledDirectory,
   qualifySummary,
   qualifyProjectStatus,
   qualifySettings,
@@ -834,6 +837,7 @@ const uiDirectory = (entries) =>
     runtimeId: 'opencode',
     directory: {
       runtimeId: 'opencode',
+      diagnostics: [],
       entries,
       cursor: null,
       nextCursor: null,
@@ -841,6 +845,40 @@ const uiDirectory = (entries) =>
       totalCount: entries.length,
     },
   });
+
+test('pending directory never qualifies a ready measured UI refresh with fresh models', async () => {
+  const directory = uiDirectory([{ providerId: 'opencode' }]);
+  directory.response.directory.diagnostics = ['capabilities_pending'];
+  const records = [directory, uiRecord('loadModels', modelPage(['one'], null, null, 1))];
+  await assert.rejects(
+    qualifyUIRefresh(records, { state: 'ready', models: ['opencode/one'] }),
+    /Pending\/degraded provider directory/
+  );
+});
+
+test('directory readiness waits for authoritative capabilities and preserves a finite budget', async () => {
+  const pending = uiDirectory([{ providerId: 'opencode' }]).response;
+  pending.directory.diagnostics = ['capabilities_pending'];
+  const ready = uiDirectory([{ providerId: 'opencode' }, { providerId: 'kiro' }]).response;
+  const attempts = [];
+  assert.equal(
+    await waitForSettledDirectory(async (remaining, attempt) => {
+      assert(remaining > 0 && remaining <= 2000);
+      attempts.push(attempt);
+      return attempt === 0 ? pending : ready;
+    }, 2000),
+    ready
+  );
+  assert.deepEqual(attempts, [0, 1]);
+  await assert.rejects(
+    waitForSettledDirectory(async () => pending, 1),
+    /bootstrap budget/
+  );
+  await assert.rejects(
+    waitForSettledDirectory(async () => ({ ...ready, error: { message: 'failed' } })),
+    /readiness failed/
+  );
+});
 
 test('measured unknown UI freshness fails even with ready UI and identical fresh separate API models', async () => {
   const fresh = modelPage(['one'], null, null, 1);
@@ -1124,6 +1162,36 @@ test('settings refresh waits for fresh explicit request and delayed settlement',
   );
 });
 
+test('diagnostic lineage retains exited parents and exposes orphan candidates without cleanup authority', () => {
+  const launcher = { pid: 1, parent: 0, birth: '2026-01-01T00:00:00Z' };
+  const helper = { pid: 2, parent: 1, birth: '2026-01-01T00:00:01Z' };
+  const first = retainPackagedLineage([], [launcher, helper], 100);
+  const second = retainPackagedLineage(first.records, [launcher], 200);
+  assert.equal(second.records.length, 2);
+  assert.equal(second.records[1].lastSeen, 100);
+  assert.equal(second.records[1].parentBirth, launcher.birth);
+  const child = { pid: 3, parent: 2, birth: '2026-01-01T00:00:02Z' };
+  const unrelated = { pid: 4, parent: 2, birth: '2025-12-31T00:00:00Z' };
+  const observation = packagedOrphanObservation(second.records, [launcher, child, unrelated]);
+  assert.deepEqual(
+    observation.candidates.map((p) => p.pid),
+    [3]
+  );
+  assert.equal(observation.candidates[0].relation, 'historical-parent-absent');
+  assert.equal(observation.candidates[0].signalAuthorized, false);
+  assert.equal(packagedDrainSnapshot([], [], [99]).drained, false);
+  const reused = { ...helper, birth: '2026-01-01T00:00:01.500Z' };
+  assert.equal(
+    packagedOrphanObservation(second.records, [reused, child]).candidates.find(
+      (p) => p.pid === child.pid
+    ).relation,
+    'ambiguous-parent-identity'
+  );
+  const full = Array.from({ length: 500 }, (_, i) => ({ ...helper, pid: i + 100 }));
+  const bounded = retainPackagedLineage(full, [launcher], 300);
+  assert.equal(bounded.records.length, 500);
+  assert.equal(bounded.truncated, true);
+});
 test('completed warm settings failures retain the native cause without waiting for UI loading', () => {
   // Minimal relevant fields from the actual H0e58 warm-1 and warm-2 receipts.
   const cases = [
@@ -1370,7 +1438,7 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
     mock,
     `
     import assert from 'node:assert/strict';
-    export { packagedArguments, packagedStopOrder } from ${JSON.stringify(helper.href)};
+    export { packagedArguments, packagedStopOrder, retainPackagedLineage } from ${JSON.stringify(helper.href)};
     export async function packagedArtifact(executable, candidateEvidence) {
       assert.equal(candidateEvidence, ${JSON.stringify(evidence)}, 'Explicit evidence lost during manifest handoff');
       return { app: {path: executable}, candidate: {testOnly:true} };

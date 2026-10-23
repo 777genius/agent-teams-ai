@@ -16,6 +16,7 @@ import {
   packagedTarget,
   packagedStopOrder,
   closePackagedBrowser,
+  retainPackagedLineage,
 } from './opencode-diagnostics/packaged.mjs';
 import { verifyPackaged } from './opencode-diagnostics/packaged-verify.mjs';
 import { catalogScenarios, verifyCatalog } from './opencode-diagnostics/catalog.mjs';
@@ -71,6 +72,15 @@ async function ownedProcesses() {
         owned.push(prior);
     }
     data.observedProcesses = owned;
+    try {
+      const lineage = retainPackagedLineage(data.diagnosticLineage?.records, owned);
+      data.diagnosticLineage = {
+        ...lineage,
+        truncated: lineage.truncated || data.diagnosticLineage?.truncated === true,
+      };
+    } catch {
+      data.diagnosticLineageCollectionFailed = true;
+    }
     await writeFile(path.join(root, 'manifest.json'), JSON.stringify(data, null, 2));
   }
   return owned;

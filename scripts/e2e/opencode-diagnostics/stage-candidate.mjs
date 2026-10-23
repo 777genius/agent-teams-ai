@@ -8,6 +8,12 @@ import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { extractArchive, publishRuntimePayload } from '../../lib/runtime-payload-cache.mjs';
 
+function candidateBunVersion(value) {
+  const version = value === undefined ? '1.3.11' : value;
+  assert(['1.3.11', '1.4.3'].includes(version), 'Unsupported candidate Bun version');
+  return version;
+}
+
 // Bound API work and reject partial/changing listings before selecting a producer or artifact.
 export function candidatePages(api, endpoint, key) {
   const perPage = 100;
@@ -47,6 +53,7 @@ export function candidatePages(api, endpoint, key) {
 export async function verifyCandidatePayload(root, expected, { packaged = false } = {}) {
   assert(expected?.testOnly === true && /^[a-f0-9]{40}$/.test(expected.sourceSha ?? ''));
   assert(/^\d+\.\d+\.\d+$/.test(expected.sourceVersion ?? ''));
+  const bunVersion = candidateBunVersion(expected.bunVersion);
   const digest = async (relative) => {
     const file = path.join(root, relative);
     const leaf = await lstat(file);
@@ -62,14 +69,13 @@ export async function verifyCandidatePayload(root, expected, { packaged = false 
     delivery.schema === 1 &&
       delivery.platform === 'win32' &&
       delivery.arch === 'x64' &&
-      // Preserve historical candidates and the new Windows platform pin.
-      // Both remain bound to the exact source/artifact and physical Bun digest.
-      ['1.3.11', '1.4.3'].includes(delivery.bunVersion)
+      delivery.bunVersion === bunVersion
   );
   assert(/^[a-f0-9]{64}$/.test(delivery.bunSha256) && /^[a-f0-9]{64}$/.test(delivery.entrySha256));
   const binary = await readFile(path.join(root, 'claude-multimodel.exe'));
   assert(binary.length > 1024 && binary.subarray(0, 2).toString() === 'MZ');
   const identity = {
+    bunVersion,
     binarySha256: await digest('claude-multimodel.exe'),
     entrySha256: await digest('local-cli/cli.js'),
     bunSha256: await digest('bun/bun.exe'),
@@ -93,13 +99,13 @@ export async function verifyCandidatePayload(root, expected, { packaged = false 
   if (expected.payloadReceiptSha256) {
     assert.equal(await digest('.archive-payload.json'), expected.payloadReceiptSha256);
     const receipt = JSON.parse(await readFile(path.join(root, '.archive-payload.json'), 'utf8'));
-    assert(
-      receipt.version === 1 &&
-        receipt.archiveSha256 === expected.payloadArchiveSha256 &&
-        receipt.binaryName === 'claude-multimodel.exe' &&
-        Array.isArray(receipt.entries) &&
-        receipt.entries.length <= 100000
-    );
+    assert.equal(receipt.version, 1);
+    assert.equal(receipt.archiveSha256, expected.payloadArchiveSha256);
+    assert.equal(receipt.binaryName, 'claude-multimodel.exe');
+    assert(Array.isArray(receipt.entries), 'Candidate payload receipt entries must be a list');
+    // Fail-closed work bound for the per-entry verification below. The shipped
+    // portable graph alone already carries >100k node_modules entries.
+    assert(receipt.entries.length <= 250000, 'Candidate payload receipt lists too many entries');
     // Pinned builder-util copyDir omits these markers and directories without copied files.
     const marker = (file) => ['.DS_Store', '.gitkeep'].includes(path.posix.basename(file));
     const pruned = (file) =>
@@ -145,6 +151,7 @@ async function stageCandidate() {
   const repo = '777genius/agent_teams_orchestrator';
   const runId = process.env.RUNTIME_CANDIDATE_RUN;
   const sha = process.env.RUNTIME_CANDIDATE_SHA;
+  const bunVersion = candidateBunVersion(process.env.RUNTIME_CANDIDATE_BUN_VERSION);
   assert(process.env.GITHUB_ACTIONS === 'true' && process.platform === 'win32');
   assert(/^\d+$/.test(runId ?? ''), 'Expected numeric candidate CI run');
   assert(/^[a-f0-9]{40}$/.test(sha ?? ''), 'Expected exact candidate source SHA');
@@ -203,6 +210,7 @@ async function stageCandidate() {
       runId,
       sourceSha: sha,
       sourceVersion,
+      bunVersion,
       publishedVersion: lock.version,
       producerJobId: producers[0].id,
       artifactId: artifact.id,
@@ -211,7 +219,7 @@ async function stageCandidate() {
     };
     Object.assign(provenance, await verifyCandidatePayload(payload, provenance));
     await writeFile(path.join(payload, 'TEST-CANDIDATE.json'), JSON.stringify(provenance, null, 2));
-    publishRuntimePayload(
+    await publishRuntimePayload(
       path.join(payload, 'claude-multimodel.exe'),
       path.resolve('resources/runtime'),
       payloadArchiveSha256

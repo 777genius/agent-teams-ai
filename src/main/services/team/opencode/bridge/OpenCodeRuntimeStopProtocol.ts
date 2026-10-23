@@ -6,6 +6,8 @@ import {
   stableHash,
 } from './OpenCodeBridgeCommandContract';
 
+import type { OpenCodeStopCausalFailure } from '@shared/types';
+
 export interface OpenCodeStopTeamCommandBody {
   runId: string;
   laneId: string;
@@ -19,6 +21,7 @@ export interface OpenCodeStopTeamCommandBody {
   allowEmptyLaneStop?: boolean;
 }
 export interface OpenCodeStopTeamCommandData {
+  causalFailure?: OpenCodeStopCausalFailure;
   runId: string;
   stopped: boolean;
   members: Record<string, { sessionId?: string; stopped: boolean; diagnostics: string[] }>;

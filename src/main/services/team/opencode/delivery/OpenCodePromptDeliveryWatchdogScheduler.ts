@@ -19,6 +19,7 @@ export interface OpenCodePromptDeliveryWatchdogSchedulerDependencies {
    * that never received a new inbox row explained itself nowhere.
    */
   relay(input: {
+    isCurrent?: () => boolean;
     teamName: string;
     memberName: string;
     messageId: string;
@@ -48,8 +49,10 @@ export interface OpenCodePromptDeliveryWatchdogStaleErrorInput {
 }
 
 export class OpenCodePromptDeliveryWatchdogScheduler {
-  private readonly timers = new Map<string, NodeJS.Timeout>();
-  private readonly deadlines = new Map<string, number>();
+  private readonly timers = new Map<
+    string,
+    { timer: NodeJS.Timeout; deadlineMs: number; isCurrent?: () => boolean }
+  >();
   private readonly queue: {
     teamName: string;
     memberName: string;
@@ -89,8 +92,9 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
     memberName: string;
     messageId?: string | null;
     delayMs: number;
+    isCurrent?: () => boolean;
   }): void {
-    if (!this.isEnabled()) {
+    if (!this.isEnabled() || input.isCurrent?.() === false) {
       return;
     }
     const messageId = input.messageId?.trim();
@@ -100,64 +104,71 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
       memberName: input.memberName,
       messageId,
     });
-    const delayMs = Math.max(500, Math.min(input.delayMs, 60_000));
-    const deadlineMs = Date.now() + delayMs;
+    let deadlineMs = Date.now() + Math.max(500, Math.min(input.delayMs, 60_000));
+    let isCurrent = input.isCurrent;
     const existing = this.timers.get(key);
     if (existing) {
-      const existingDeadlineMs = this.deadlines.get(key);
-      if (typeof existingDeadlineMs === 'number' && existingDeadlineMs <= deadlineMs + 25) {
-        return;
-      }
-      clearTimeout(existing);
+      const revoked = existing.isCurrent?.() === false;
+      const upgradesToUnscoped = existing.isCurrent != null && isCurrent == null;
+      if (!revoked && !upgradesToUnscoped && existing.deadlineMs <= deadlineMs + 25) return;
+      // An unscoped wake keeps its broader existing intent. A new current
+      // generation replaces a revoked one, retaining the earliest deadline.
+      if (!revoked && existing.isCurrent == null) isCurrent = undefined;
+      deadlineMs = Math.min(existing.deadlineMs, deadlineMs);
+      clearTimeout(existing.timer);
     }
-    const timer = setTimeout(() => {
-      this.timers.delete(key);
-      this.deadlines.delete(key);
-      this.enqueue({
-        teamName: input.teamName,
-        memberName: input.memberName,
-        run: async () => {
-          if (!this.deps.canDeliverToTeamRuntime(input.teamName)) {
-            const recovered = await this.deps.recoverBeforeDelivery({
-              teamName: input.teamName,
-              memberName: input.memberName,
-            });
-            if (!recovered) {
-              return;
+    const timer = setTimeout(
+      () => {
+        this.timers.delete(key);
+        this.enqueue({
+          teamName: input.teamName,
+          memberName: input.memberName,
+          run: async () => {
+            if (isCurrent?.() === false) return;
+            if (!this.deps.canDeliverToTeamRuntime(input.teamName)) {
+              const recovered = await this.deps.recoverBeforeDelivery({
+                teamName: input.teamName,
+                memberName: input.memberName,
+              });
+              if (!recovered) {
+                return;
+              }
             }
-          }
-          try {
-            this.logRelayDiagnostics({
-              teamName: input.teamName,
-              memberName: input.memberName,
-              messageId,
-              outcome: await this.deps.relay({
+            if (isCurrent?.() === false) return;
+            try {
+              this.logRelayDiagnostics({
                 teamName: input.teamName,
                 memberName: input.memberName,
                 messageId,
-              }),
-            });
-          } catch (error) {
-            if (
-              await this.isStaleError({
-                teamName: input.teamName,
-                memberName: input.memberName,
-                messageId,
-                error,
-              })
-            ) {
-              this.deps.debug(
-                `[${input.teamName}] Ignoring stale OpenCode prompt delivery watchdog job for ${input.memberName}/${messageId}: ${this.deps.getErrorMessage(error)}`
-              );
-              return;
+                outcome: await this.deps.relay({
+                  teamName: input.teamName,
+                  memberName: input.memberName,
+                  messageId,
+                  ...(isCurrent ? { isCurrent } : {}),
+                }),
+              });
+            } catch (error) {
+              if (
+                await this.isStaleError({
+                  teamName: input.teamName,
+                  memberName: input.memberName,
+                  messageId,
+                  error,
+                })
+              ) {
+                this.deps.debug(
+                  `[${input.teamName}] Ignoring stale OpenCode prompt delivery watchdog job for ${input.memberName}/${messageId}: ${this.deps.getErrorMessage(error)}`
+                );
+                return;
+              }
+              throw error;
             }
-            throw error;
-          }
-        },
-      });
-    }, delayMs);
-    this.timers.set(key, timer);
-    this.deadlines.set(key, deadlineMs);
+          },
+        });
+      },
+      Math.max(0, deadlineMs - Date.now())
+    );
+    this.timers.set(key, { timer, deadlineMs, isCurrent });
   }
 
   /**
@@ -228,9 +239,8 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
     for (const key of Array.from(this.timers.keys())) {
       if (key.startsWith(`opencode-delivery:${teamName}:`)) {
         const timer = this.timers.get(key);
-        if (timer) clearTimeout(timer);
+        if (timer) clearTimeout(timer.timer);
         this.timers.delete(key);
-        this.deadlines.delete(key);
       }
     }
     for (let index = this.queue.length - 1; index >= 0; index -= 1) {
