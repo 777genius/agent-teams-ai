@@ -1,7 +1,6 @@
 import { type ChildProcess, execFile, type ExecFileException } from 'node:child_process';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
-import http from 'node:http';
 import net from 'node:net';
 import * as path from 'node:path';
 
@@ -20,6 +19,10 @@ import { createLogger } from '@shared/utils/logger';
 
 import { createOpenCodeMcpAppContext } from './opencode/bridge/OpenCodeMcpBridgeEnv';
 import { type FileLockOptions, withFileLock } from './fileLock';
+import {
+  probeAuthenticatedLoopbackHealth,
+  waitForAuthenticatedLoopbackHealth,
+} from './mcpHttpHealthClient';
 import {
   assertNoLiveMcpConsumers,
   canCleanupPriorDesktopMcpChild,
@@ -41,12 +44,12 @@ const MCP_HTTP_STABLE_PORT_BASE = 43_100;
 const MCP_HTTP_STABLE_PORT_SPAN = 700;
 const MCP_HTTP_STABLE_PORT_SCAN_LIMIT = 20;
 const MCP_HTTP_PORT_ENV = 'CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT';
-const MCP_HTTP_HEALTH_BODY_MAX_BYTES = 8 * 1024;
 const MCP_HTTP_IDENTITY_SERVICE = 'agent-teams-mcp-http';
 const MCP_HTTP_IDENTITY_SERVICE_ENV = 'AGENT_TEAMS_MCP_HTTP_IDENTITY_SERVICE';
 const MCP_HTTP_CLAUDE_DIR_HASH_ENV = 'AGENT_TEAMS_MCP_HTTP_CLAUDE_DIR_HASH';
 const MCP_HTTP_LAUNCH_SPEC_HASH_ENV = 'AGENT_TEAMS_MCP_HTTP_LAUNCH_SPEC_HASH';
 const MCP_HTTP_OWNER_INSTANCE_ID_ENV = 'AGENT_TEAMS_MCP_HTTP_OWNER_INSTANCE_ID';
+const MCP_HTTP_AUTH_TOKEN_ENV = 'AGENT_TEAMS_MCP_HTTP_AUTH_TOKEN';
 const MCP_HTTP_STATE_DIR = 'mcp-http-server';
 const MCP_HTTP_STATE_FILE = 'state.json';
 const MCP_HTTP_STATE_LOCK_OPTIONS: FileLockOptions = {
@@ -89,6 +92,7 @@ export interface AgentTeamsMcpHttpServerHandle {
   urlHash: string;
   transportEvidence: AgentTeamsMcpHttpTransportEvidence;
   diagnostics: string[];
+  authToken: string;
 }
 
 export interface AgentTeamsMcpHttpHealthProbe {
@@ -101,8 +105,17 @@ export interface AgentTeamsMcpHttpServerDeps {
   resolveLaunchSpec?: () => Promise<McpLaunchSpec>;
   allocatePort?: () => Promise<number>;
   spawnProcess?: (command: string, args: string[], env: NodeJS.ProcessEnv) => ChildProcess;
-  waitForPort?: (host: string, port: number, timeoutMs: number) => Promise<void>;
-  probeHealth?: (host: string, port: number) => Promise<AgentTeamsMcpHttpHealthProbe>;
+  waitForPort?: (
+    host: string,
+    port: number,
+    timeoutMs: number,
+    authToken?: string
+  ) => Promise<void>;
+  probeHealth?: (
+    host: string,
+    port: number,
+    authToken?: string
+  ) => Promise<AgentTeamsMcpHttpHealthProbe>;
   canListenOnPort?: (host: string, port: number) => Promise<boolean>;
   statePath?: string | null;
   withStateLock?: <T>(
@@ -144,6 +157,7 @@ interface AgentTeamsMcpHttpState {
   claudeDirHash: string;
   launchSpecHash: string;
   ownerInstanceId: string;
+  authToken: string;
   startedAt: string;
   updatedAt: string;
 }
@@ -265,66 +279,19 @@ function parseHealthIdentity(raw: string): AgentTeamsMcpHttpIdentity | null {
 
 async function probeLoopbackHealth(
   host: string,
-  port: number
+  port: number,
+  authToken?: string
 ): Promise<AgentTeamsMcpHttpHealthProbe> {
-  return new Promise((resolve) => {
-    let settled = false;
-    let body = '';
-    const finish = (probe: AgentTeamsMcpHttpHealthProbe): void => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      resolve(probe);
-    };
-
-    const request = http.get(
-      {
-        host,
-        port,
-        path: '/health',
-        timeout: MCP_HTTP_READY_POLL_MS,
-      },
-      (response) => {
-        response.setEncoding('utf8');
-        response.on('data', (chunk: string) => {
-          if (body.length >= MCP_HTTP_HEALTH_BODY_MAX_BYTES) {
-            return;
-          }
-          body += chunk.slice(0, MCP_HTTP_HEALTH_BODY_MAX_BYTES - body.length);
-        });
-        response.on('end', () => {
-          const statusCode = response.statusCode ?? null;
-          const healthy = statusCode !== null && statusCode >= 200 && statusCode < 300;
-          finish({
-            healthy,
-            statusCode,
-            identity: healthy ? parseHealthIdentity(body) : null,
-          });
-        });
-      }
-    );
-    request.once('timeout', () => {
-      request.destroy();
-      finish({ healthy: false, statusCode: null, identity: null });
-    });
-    request.once('error', () => {
-      finish({ healthy: false, statusCode: null, identity: null });
-    });
-  });
+  return probeAuthenticatedLoopbackHealth(host, port, authToken, parseHealthIdentity);
 }
 
-async function waitForLoopbackPort(host: string, port: number, timeoutMs: number): Promise<void> {
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < timeoutMs) {
-    if ((await probeLoopbackHealth(host, port)).healthy) {
-      return;
-    }
-    await sleep(MCP_HTTP_READY_POLL_MS);
-  }
-  throw new Error(
-    `Agent Teams MCP HTTP server did not become healthy at ${host}:${port} in ${timeoutMs}ms`
-  );
+async function waitForLoopbackPort(
+  host: string,
+  port: number,
+  timeoutMs: number,
+  authToken?: string
+): Promise<void> {
+  return waitForAuthenticatedLoopbackHealth(host, port, timeoutMs, authToken, parseHealthIdentity);
 }
 
 function defaultSpawnProcess(
@@ -384,17 +351,20 @@ function resolveDefaultStablePort(): number {
 
 function buildTransportEvidence(
   port: number,
-  generation: number
+  generation: number,
+  authToken: string
 ): AgentTeamsMcpHttpTransportEvidence {
-  const url = `http://${MCP_HTTP_HOST}:${port}${MCP_HTTP_ENDPOINT}`;
+  const url = new URL(`http://${MCP_HTTP_HOST}:${port}${MCP_HTTP_ENDPOINT}`);
+  url.searchParams.set('access_token', authToken);
+  const urlString = url.toString();
   return {
     schemaVersion: 1,
     transport: 'httpStream',
     host: MCP_HTTP_HOST,
     port,
     endpoint: MCP_HTTP_ENDPOINT,
-    url,
-    urlHash: sha256Hex(url),
+    url: urlString,
+    urlHash: sha256Hex(urlString),
     generation,
     observedAt: new Date().toISOString(),
   };
@@ -465,6 +435,7 @@ function buildState(
     claudeDirHash: identity.claudeDirHash,
     launchSpecHash: identity.launchSpecHash,
     ownerInstanceId: identity.ownerInstanceId,
+    authToken: handle.authToken,
     startedAt,
     updatedAt: new Date().toISOString(),
   };
@@ -486,6 +457,7 @@ function parseState(raw: string): AgentTeamsMcpHttpState | null {
     const claudeDirHash = asString(parsed.claudeDirHash);
     const launchSpecHash = asString(parsed.launchSpecHash);
     const ownerInstanceId = asString(parsed.ownerInstanceId);
+    const authToken = asString(parsed.authToken);
     const startedAt = asString(parsed.startedAt);
     const updatedAt = asString(parsed.updatedAt);
     if (
@@ -501,6 +473,8 @@ function parseState(raw: string): AgentTeamsMcpHttpState | null {
       !claudeDirHash ||
       !launchSpecHash ||
       !ownerInstanceId ||
+      !authToken ||
+      !/^\S{32,512}$/.test(authToken) ||
       !startedAt ||
       !updatedAt
     ) {
@@ -520,6 +494,7 @@ function parseState(raw: string): AgentTeamsMcpHttpState | null {
       claudeDirHash,
       launchSpecHash,
       ownerInstanceId,
+      authToken,
       startedAt,
       updatedAt,
     };
@@ -533,7 +508,8 @@ function stateMatchesExpected(
   expected: AgentTeamsMcpExpectedHttpIdentity
 ): boolean {
   return (
-    state.url === `http://${MCP_HTTP_HOST}:${state.port}${MCP_HTTP_ENDPOINT}` &&
+    state.url ===
+      `http://${MCP_HTTP_HOST}:${state.port}${MCP_HTTP_ENDPOINT}?access_token=${encodeURIComponent(state.authToken)}` &&
     state.urlHash === sha256Hex(state.url) &&
     identityMatchesExpected(state, expected, state.port)
   );
@@ -590,6 +566,15 @@ function hasManagedMcpDetails(details: string, port: number): boolean {
     processDetailsIncludeMarker(details, `AGENT_TEAMS_MCP_HTTP_ENDPOINT=${MCP_HTTP_ENDPOINT}`) &&
     processDetailsIncludeMarker(details, `AGENT_TEAMS_MCP_CLAUDE_DIR=${getClaudeBasePath()}`)
   );
+}
+
+function parseManagedMcpAuthToken(details: string): string | undefined {
+  const marker = `${MCP_HTTP_AUTH_TOKEN_ENV}=`;
+  const token = details
+    .split(/\s+/)
+    .find((part) => part.startsWith(marker))
+    ?.slice(marker.length);
+  return token && token.length >= 32 && token.length <= 512 ? token : undefined;
 }
 
 function isNativeProcessAlive(pid: number): boolean {
@@ -749,14 +734,19 @@ export class AgentTeamsMcpHttpServer {
   ): Promise<AgentTeamsMcpHttpServerHandle> {
     const waitForPort = this.deps.waitForPort ?? waitForLoopbackPort;
     try {
-      await waitForPort(MCP_HTTP_HOST, handle.port, MCP_HTTP_EXISTING_HANDLE_READY_TIMEOUT_MS);
+      await waitForPort(
+        MCP_HTTP_HOST,
+        handle.port,
+        MCP_HTTP_EXISTING_HANDLE_READY_TIMEOUT_MS,
+        handle.authToken
+      );
       if (this.handle === handle) {
         return handle;
       }
     } catch (error) {
       if (this.handle === handle) {
         logger.warn(
-          `Agent Teams MCP HTTP server at ${handle.url} failed health reuse check, restarting: ${
+          `Agent Teams MCP HTTP server on port ${handle.port} failed health reuse check, restarting: ${
             error instanceof Error ? error.message : String(error)
           }`
         );
@@ -802,7 +792,10 @@ export class AgentTeamsMcpHttpServer {
       return;
     }
     try {
-      await atomicWriteAsync(statePath, `${JSON.stringify(state, null, 2)}\n`);
+      await atomicWriteAsync(statePath, `${JSON.stringify(state, null, 2)}\n`, {
+        mode: 0o600,
+        directoryMode: 0o700,
+      });
     } catch {
       diagnostic('opencode_app_mcp_state_ignored:write_failed', diagnostics);
     }
@@ -873,7 +866,7 @@ export class AgentTeamsMcpHttpServer {
     }
 
     const probeHealth = this.deps.probeHealth ?? probeLoopbackHealth;
-    const probe = await probeHealth(MCP_HTTP_HOST, state.port);
+    const probe = await probeHealth(MCP_HTTP_HOST, state.port, state.authToken);
     if (!probe.healthy) {
       diagnostic('opencode_app_mcp_state_ignored:unhealthy', diagnostics);
       return null;
@@ -889,13 +882,13 @@ export class AgentTeamsMcpHttpServer {
       diagnostics,
       diagnosticMessage: `opencode_app_mcp_adopted_state_server:${state.port}`,
       statePath,
+      authToken: state.authToken,
     });
   }
 
   private async tryAdoptPortHandle(
     port: number,
     expectedIdentity: AgentTeamsMcpExpectedHttpIdentity,
-    statePath: string | null,
     diagnostics: string[]
   ): Promise<AgentTeamsMcpHttpServerHandle | null> {
     const classification = await this.classifyPort(port, expectedIdentity);
@@ -903,13 +896,8 @@ export class AgentTeamsMcpHttpServer {
       return null;
     }
     if (classification.kind === 'owned') {
-      return this.adoptHandle({
-        identity: classification.identity,
-        pid: null,
-        diagnostics,
-        diagnosticMessage: `opencode_app_mcp_adopted_port_server:${port}`,
-        statePath,
-      });
+      diagnostic(`opencode_app_mcp_port_auth_unavailable:${port}`, diagnostics);
+      return null;
     }
     diagnostic(`opencode_app_mcp_port_occupied_unknown:${port}`, diagnostics);
     return null;
@@ -921,10 +909,15 @@ export class AgentTeamsMcpHttpServer {
     diagnostics: string[];
     diagnosticMessage: string;
     statePath: string | null;
+    authToken: string;
   }): Promise<AgentTeamsMcpHttpServerHandle> {
     diagnostic(input.diagnosticMessage, input.diagnostics);
     const generation = this.generation + 1;
-    const transportEvidence = buildTransportEvidence(input.identity.port, generation);
+    const transportEvidence = buildTransportEvidence(
+      input.identity.port,
+      generation,
+      input.authToken
+    );
     this.generation = generation;
     this.child = null;
     this.handle = {
@@ -935,13 +928,14 @@ export class AgentTeamsMcpHttpServer {
       urlHash: transportEvidence.urlHash,
       transportEvidence,
       diagnostics: input.diagnostics,
+      authToken: input.authToken,
     };
     await this.writeStateSafe(
       input.statePath,
       buildState(this.handle, input.identity, input.pid, new Date().toISOString()),
       input.diagnostics
     );
-    logger.info(`Agent Teams MCP HTTP server adopted at ${this.handle.url}`);
+    logger.info(`Agent Teams MCP HTTP server adopted on port ${this.handle.port}`);
     emitDiagnostics(input.diagnostics);
     this.scheduleOrphanCleanup(input.identity, this.handle);
     return this.handle;
@@ -960,12 +954,7 @@ export class AgentTeamsMcpHttpServer {
       if (await canListen(MCP_HTTP_HOST, preferredPort)) {
         return { kind: 'port', port: preferredPort };
       }
-      const adopted = await this.tryAdoptPortHandle(
-        preferredPort,
-        expectedIdentity,
-        statePath,
-        diagnostics
-      );
+      const adopted = await this.tryAdoptPortHandle(preferredPort, expectedIdentity, diagnostics);
       if (adopted) {
         return { kind: 'handle', handle: adopted };
       }
@@ -994,16 +983,8 @@ export class AgentTeamsMcpHttpServer {
         return { kind: 'port', port: candidate };
       }
       if (classification.kind === 'owned') {
-        return {
-          kind: 'handle',
-          handle: await this.adoptHandle({
-            identity: classification.identity,
-            pid: null,
-            diagnostics,
-            diagnosticMessage: `opencode_app_mcp_adopted_port_server:${candidate}`,
-            statePath,
-          }),
-        };
+        diagnostic(`opencode_app_mcp_port_auth_unavailable:${candidate}`, diagnostics);
+        continue;
       }
       stablePortUnavailable = stablePortUnavailable || candidate === stablePort;
       diagnostic(`opencode_app_mcp_port_occupied_unknown:${candidate}`, diagnostics);
@@ -1082,6 +1063,7 @@ export class AgentTeamsMcpHttpServer {
     }
 
     const port = selectedTarget.port;
+    const authToken = randomBytes(32).toString('base64url');
     const args = buildHttpServerArgs(launchSpec, port);
     const childIdentity: AgentTeamsMcpHttpIdentity = {
       schemaVersion: 1,
@@ -1106,6 +1088,7 @@ export class AgentTeamsMcpHttpServer {
       [MCP_HTTP_CLAUDE_DIR_HASH_ENV]: expectedIdentity.claudeDirHash,
       [MCP_HTTP_LAUNCH_SPEC_HASH_ENV]: expectedIdentity.launchSpecHash,
       [MCP_HTTP_OWNER_INSTANCE_ID_ENV]: expectedIdentity.ownerInstanceId,
+      [MCP_HTTP_AUTH_TOKEN_ENV]: authToken,
     });
     ensureMinimumNodeOldSpaceEnv(childEnv);
     const child = spawnProcess(launchSpec.command, args, childEnv);
@@ -1157,7 +1140,7 @@ export class AgentTeamsMcpHttpServer {
 
     try {
       await Promise.race([
-        waitForPort(MCP_HTTP_HOST, port, MCP_HTTP_READY_TIMEOUT_MS),
+        waitForPort(MCP_HTTP_HOST, port, MCP_HTTP_READY_TIMEOUT_MS, authToken),
         startupFailure,
       ]);
       if (this.child !== child) {
@@ -1176,7 +1159,7 @@ export class AgentTeamsMcpHttpServer {
 
     startupSettled = true;
     const generation = this.generation + 1;
-    const transportEvidence = buildTransportEvidence(port, generation);
+    const transportEvidence = buildTransportEvidence(port, generation, authToken);
     this.generation = generation;
     if (input.previousUrlHash && input.previousUrlHash !== transportEvidence.urlHash) {
       diagnostic('opencode_app_mcp_public_url_changed', diagnostics);
@@ -1192,13 +1175,14 @@ export class AgentTeamsMcpHttpServer {
       urlHash: transportEvidence.urlHash,
       transportEvidence,
       diagnostics,
+      authToken,
     };
     await this.writeStateSafe(
       statePath,
       buildState(this.handle, childIdentity, child.pid ?? null, new Date().toISOString()),
       diagnostics
     );
-    logger.info(`Agent Teams MCP HTTP server running at ${this.handle.url}`);
+    logger.info(`Agent Teams MCP HTTP server running on port ${this.handle.port}`);
     emitDiagnostics(diagnostics);
     this.scheduleOrphanCleanup(childIdentity, this.handle);
     return this.handle;
@@ -1271,6 +1255,7 @@ export class AgentTeamsMcpHttpServer {
       if (!details || !hasManagedMcpDetails(details, port)) {
         continue;
       }
+      const orphanAuthToken = parseManagedMcpAuthToken(details);
 
       const canCleanup = () =>
         expectedIdentity.requireOwner
@@ -1282,7 +1267,7 @@ export class AgentTeamsMcpHttpServer {
               readDetails,
               readStartTimeMs,
               isProcessAlive,
-              probe: () => probeHealth(MCP_HTTP_HOST, port),
+              probe: () => probeHealth(MCP_HTTP_HOST, port, orphanAuthToken),
               matchesIdentity: (identity) =>
                 identityMatchesExpected(
                   identity,
@@ -1291,9 +1276,12 @@ export class AgentTeamsMcpHttpServer {
                 ),
               hasManagedDetails: (value) => hasManagedMcpDetails(value, port),
             })
-          : probeHealth(MCP_HTTP_HOST, port).then(
+          : probeHealth(MCP_HTTP_HOST, port, orphanAuthToken).then(
               (probe) =>
-                !probe.identity || identityMatchesExpected(probe.identity, expectedIdentity, port)
+                probe.healthy &&
+                Boolean(
+                  !probe.identity || identityMatchesExpected(probe.identity, expectedIdentity, port)
+                )
             );
       if (!(await canCleanup())) continue;
 

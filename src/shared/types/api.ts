@@ -434,6 +434,8 @@ export interface ContextInfo {
 export interface HttpServerStatus {
   running: boolean;
   port: number;
+  /** Authenticated browser URL. Present only while the sidecar is running. */
+  accessUrl?: string;
 }
 
 /**

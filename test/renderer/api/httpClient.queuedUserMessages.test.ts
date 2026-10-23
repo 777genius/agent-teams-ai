@@ -1,6 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { HttpAPIClient } from '@renderer/api/httpClient';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 class MockEventSource {
   onopen: (() => void) | null = null;
@@ -48,5 +47,27 @@ describe('HttpAPIClient queued user messages in browser mode', () => {
       client.teams.discardQueuedUserMessages('demo team', 'bob/qa', ['message-1'])
     ).rejects.toThrow('Discarding queued messages is not available in browser mode');
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('sends the local API bearer token on sensitive browser requests', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ connected: false }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    );
+    const client = new HttpAPIClient(
+      'http://127.0.0.1:53123',
+      'sandbox-http-auth-token-0123456789abcdef'
+    );
+
+    await client.ssh.getState();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://127.0.0.1:53123/api/ssh/state',
+      expect.objectContaining({
+        headers: { Authorization: 'Bearer sandbox-http-auth-token-0123456789abcdef' },
+      })
+    );
   });
 });

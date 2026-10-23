@@ -103,7 +103,7 @@ export const GeneralSection = ({
     }
   }, []);
 
-  const serverUrl = `http://localhost:${serverStatus.port}`;
+  const serverUrl = serverStatus.accessUrl ?? `http://localhost:${serverStatus.port}`;
 
   const handleCopyUrl = useCallback(() => {
     void navigator.clipboard.writeText(serverUrl);

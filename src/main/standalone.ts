@@ -10,6 +10,7 @@
  * - PORT: Listen port (default 3456)
  * - CLAUDE_ROOT: Path to .claude directory (default ~/.claude)
  * - CORS_ORIGIN: CORS origin policy (default '*')
+ * - AGENT_TEAMS_HTTP_AUTH_TOKEN: Optional fixed API bearer token (32+ characters)
  */
 
 // Note: Sentry is NOT imported here. @sentry/electron/main requires Electron
@@ -183,7 +184,7 @@ async function start(): Promise<void> {
   // Start the server
   const port = await httpServer.start(services, modeSwitchHandler, PORT, HOST);
   logger.info(`Standalone server running at http://${HOST}:${port}`);
-  logger.info('Open in your browser to view Claude Code sessions');
+  logger.info(`Open this authenticated browser URL: ${httpServer.getAccessUrl()}`);
 }
 
 async function shutdown(): Promise<void> {

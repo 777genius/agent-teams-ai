@@ -81,19 +81,20 @@ const hostEnv = () => ({
   }),
 });
 const handle: NonNullable<ReturnType<typeof server.getCurrentHandle>> = {
-  url: 'http://127.0.0.1:41001/mcp',
+  url: 'http://127.0.0.1:41001/mcp?access_token=sandbox-mcp-auth-token-0123456789abcdef',
   port: 41001,
   urlHash: 'review-hash',
   pid: 123,
   generation: 1,
   diagnostics: [],
+  authToken: 'sandbox-mcp-auth-token-0123456789abcdef',
   transportEvidence: {
     schemaVersion: 1,
     transport: 'httpStream',
     host: '127.0.0.1',
     port: 41001,
     endpoint: '/mcp',
-    url: 'http://127.0.0.1:41001/mcp',
+    url: 'http://127.0.0.1:41001/mcp?access_token=sandbox-mcp-auth-token-0123456789abcdef',
     urlHash: 'review-hash',
     generation: 1,
     observedAt: '2026-09-10T00:00:00.000Z',
@@ -241,6 +242,7 @@ describe('shutdown MCP transport authority', () => {
       getMainContents: () => null,
       isLocalContext: () => true,
       getControlUrl: () => 'http://127.0.0.1:41000',
+      getControlAuthToken: () => 'sandbox-control-token-0123456789abcdef',
       startControl: async () => undefined,
       reconfigureRoot: async () => undefined,
     });
@@ -349,6 +351,7 @@ describe('shutdown MCP transport authority', () => {
             getRoot: getClaudeBasePath,
             getAppVersion: () => 'test',
             getCdpEnabled: () => false,
+            getControlAuthToken: () => 'sandbox-control-token-0123456789abcdef',
             mcp: server,
             httpEnabled: true,
           });
@@ -429,7 +432,7 @@ describe('shutdown MCP transport authority', () => {
     const resolveEnv = bridgeResolver(env) as () => Promise<NodeJS.ProcessEnv>;
     const accepted = new Error('authorized Stop intercepted; no subprocess');
     let acceptedStops = 0;
-    const expectedUrl = `http://127.0.0.1:41001/mcp#agent-teams-app-instance=review-host&agent-teams-app-profile=${profile}`;
+    const expectedUrl = `http://127.0.0.1:41001/mcp?access_token=sandbox-mcp-auth-token-0123456789abcdef#agent-teams-app-instance=review-host&agent-teams-app-profile=${profile}`;
     const client = new OpenCodeBridgeCommandClient({
       binaryPath: '/sandbox/cli',
       tempDirectory: directory,

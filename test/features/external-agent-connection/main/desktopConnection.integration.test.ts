@@ -2,7 +2,10 @@
 import { request as httpRequest } from 'node:http';
 
 import { createDesktopExternalAgentConnection } from '@features/external-agent-connection/main/composition/createDesktopExternalAgentConnection';
-import { getDesktopMcpChildEnvironment, isDesktopMcpControlAvailable } from '@features/external-agent-connection/main/desktopMcpEnvironment';
+import {
+  getDesktopMcpChildEnvironment,
+  isDesktopMcpControlAvailable,
+} from '@features/external-agent-connection/main/desktopMcpEnvironment';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -64,6 +67,7 @@ describe('desktop connection bound HTTP lifecycle', () => {
       getAppVersion: () => 'test',
       isLocalContext: () => local,
       getControlUrl: () => (controlReady ? controlUrl : null),
+      getControlAuthToken: () => (controlReady ? 'sandbox-control-token-0123456789abcdef' : null),
       startControl: async () => {
         controlReady = true;
       },
@@ -197,7 +201,9 @@ describe('desktop connection bound HTTP lifecycle', () => {
       const firstChild = getDesktopMcpChildEnvironment();
       const secondChild = getDesktopMcpChildEnvironment();
       expect(JSON.parse(firstChild.AGENT_TEAMS_BOUND_CONTEXT_JSON)).toEqual(resumed.context);
-      expect(secondChild.AGENT_TEAMS_BOUND_CONTEXT_JSON).toBe(firstChild.AGENT_TEAMS_BOUND_CONTEXT_JSON);
+      expect(secondChild.AGENT_TEAMS_BOUND_CONTEXT_JSON).toBe(
+        firstChild.AGENT_TEAMS_BOUND_CONTEXT_JSON
+      );
       expect((await connection.getConnectionInfo()).context).toEqual(resumed.context);
       expect(isDesktopMcpControlAvailable()).toBe(true);
       const rootOrderOffset = order.length;

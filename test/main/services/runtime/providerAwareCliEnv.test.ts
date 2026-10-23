@@ -279,7 +279,10 @@ describe('buildProviderAwareCliEnv', () => {
     try {
       await clearTeamControlApiState();
       for (const port of [4580, 4581]) {
-        await writeTeamControlApiState(`http://127.0.0.1:${port}`);
+        await writeTeamControlApiState(
+          `http://127.0.0.1:${port}`,
+          'sandbox-control-token-0123456789abcdef'
+        );
         const client = new AgentTeamsRuntimeProviderManagementCliClient();
         const startedAt = Date.now();
         const catalog = await client.loadModels({ runtimeId: 'opencode', providerId: 'xai' });
@@ -369,20 +372,22 @@ describe('buildProviderAwareCliEnv', () => {
       });
       try {
         for (const port of [41001, 41002]) {
+          const authToken = 'sandbox-mcp-auth-token-0123456789abcdef';
           handle.mockReturnValue({
-            url: `http://127.0.0.1:${port}/mcp`,
+            url: `http://127.0.0.1:${port}/mcp?access_token=${authToken}`,
             port,
             urlHash: 'hash',
             pid: 123,
             generation: 1,
             diagnostics: [],
+            authToken,
             transportEvidence: {
               schemaVersion: 1,
               transport: 'httpStream',
               host: '127.0.0.1',
               port,
               endpoint: '/mcp',
-              url: `http://127.0.0.1:${port}/mcp`,
+              url: `http://127.0.0.1:${port}/mcp?access_token=${authToken}`,
               urlHash: 'hash',
               generation: 1,
               observedAt: '2026-09-10T00:00:00.000Z',
@@ -395,7 +400,7 @@ describe('buildProviderAwareCliEnv', () => {
           const env = execCliMock.mock.calls.at(-1)![2].env;
           // Independent literal oracle: do not compute expected values with the production mapper.
           expect(env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBe(
-            `http://127.0.0.1:${port}/mcp#agent-teams-app-instance=sandbox-host&agent-teams-app-profile=${profile}`
+            `http://127.0.0.1:${port}/mcp?access_token=${authToken}#agent-teams-app-instance=sandbox-host&agent-teams-app-profile=${profile}`
           );
           expect(env.CLAUDE_CONFIG_DIR).toBe('/sandbox/selected-auth');
           expect(env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND).toBe('/sandbox/host-node');

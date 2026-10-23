@@ -191,6 +191,7 @@ describe('agent-teams-mcp stdio e2e', () => {
       ['--transport', 'stdio', '--tool-profile', 'management'], {
         AGENT_TEAMS_BOUND_CONTROL_URL: control.baseUrl,
         AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify(context),
+        AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN: 'sandbox-control-token-0123456789abcdef',
         AGENT_TEAMS_MCP_CLAUDE_DIR: claudeDir,
         // The CLI transport must win over an inherited desktop HTTP transport.
         AGENT_TEAMS_MCP_TRANSPORT: 'httpStream',
@@ -324,6 +325,7 @@ describe('agent-teams-mcp stdio e2e', () => {
     const client = new McpStdIoClient(serverPath, workspaceRoot, [], {
       AGENT_TEAMS_BOUND_CONTROL_URL: control.baseUrl,
       AGENT_TEAMS_BOUND_CONTEXT_JSON: JSON.stringify(context),
+      AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN: 'sandbox-control-token-0123456789abcdef',
       AGENT_TEAMS_MCP_CLAUDE_DIR: claudeDir,
     });
 

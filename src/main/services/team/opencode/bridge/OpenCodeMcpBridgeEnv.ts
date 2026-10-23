@@ -111,7 +111,11 @@ export function applyOpenCodeBoundControlEnvironment(
   desktopEnvironment: Readonly<Record<string, string>>
 ): void {
   const binding: OpenCodeMcpBridgeEnv = {};
-  for (const key of ['AGENT_TEAMS_BOUND_CONTROL_URL', 'AGENT_TEAMS_BOUND_CONTEXT_JSON'] as const) {
+  for (const key of [
+    'AGENT_TEAMS_BOUND_CONTROL_URL',
+    'AGENT_TEAMS_BOUND_CONTEXT_JSON',
+    'AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN',
+  ] as const) {
     const value = desktopEnvironment[key];
     if (value === undefined) {
       delete env[key];
@@ -280,7 +284,14 @@ export function createOpenCodeMcpAppContext(
       }
       const handle = getCurrentHandle();
       if (httpEnabled && handle) {
-        if (handle.url !== `http://127.0.0.1:${handle.port}/mcp`) {
+        const handleUrl = new URL(handle.url);
+        if (
+          handleUrl.origin !== `http://127.0.0.1:${handle.port}` ||
+          handleUrl.pathname !== '/mcp' ||
+          !handleUrl.searchParams.get('access_token') ||
+          handleUrl.username ||
+          handleUrl.password
+        ) {
           throw new Error('Invalid current Host MCP transport');
         }
         result[HTTP_MCP_URL_ENV] = buildOpenCodeAppScopedMcpUrl(handle.url, instance, profile);

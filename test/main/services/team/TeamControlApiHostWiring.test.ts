@@ -77,6 +77,7 @@ function createHost(publish = writeTeamControlApiState) {
   const server = {
     isRunning: () => running,
     getPort: () => 4591,
+    getAuthToken: () => 'sandbox-control-token-0123456789abcdef',
     start: vi.fn(() => {
       running = true;
       return Promise.resolve(4591);
@@ -176,7 +177,10 @@ describe('existing app Host endpoint wiring', () => {
   });
 
   it('clears both publications when server startup fails', async () => {
-    await writeTeamControlApiState('http://127.0.0.1:4590');
+    await writeTeamControlApiState(
+      'http://127.0.0.1:4590',
+      'sandbox-control-token-0123456789abcdef'
+    );
     const host = createHost();
     host.server.start.mockRejectedValueOnce(new Error('all ports occupied'));
     await expect(host.start()).rejects.toThrow('all ports occupied');
@@ -218,7 +222,7 @@ describe('existing app Host endpoint wiring', () => {
       });
       const publish = vi.fn(async (baseUrl: string) => {
         await gate;
-        await writeTeamControlApiState(baseUrl);
+        await writeTeamControlApiState(baseUrl, 'sandbox-control-token-0123456789abcdef');
       });
       const host = createHost(publish);
       const starting = host.start();
@@ -242,7 +246,10 @@ describe('existing app Host endpoint wiring', () => {
   );
 
   it('clears both publications when shutdown interrupts server startup', async () => {
-    await writeTeamControlApiState('http://127.0.0.1:4590');
+    await writeTeamControlApiState(
+      'http://127.0.0.1:4590',
+      'sandbox-control-token-0123456789abcdef'
+    );
     const host = createHost();
     host.server.start.mockImplementationOnce(() => {
       host.shutdown();

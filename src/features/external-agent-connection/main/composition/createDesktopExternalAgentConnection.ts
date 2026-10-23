@@ -2,7 +2,11 @@ import { createHash } from 'node:crypto';
 
 import { buildOpenCodeAppProfileScope } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
 
-import { BOUND_CONTROL_CONTEXT_ENV, BOUND_CONTROL_URL_ENV } from '../../contracts';
+import {
+  BOUND_CONTROL_AUTH_TOKEN_ENV,
+  BOUND_CONTROL_CONTEXT_ENV,
+  BOUND_CONTROL_URL_ENV,
+} from '../../contracts';
 import { BoundControlContext } from '../BoundControlContext';
 import { configureDesktopMcpEnvironment } from '../desktopMcpEnvironment';
 import { ExternalAgentConnection } from '../ExternalAgentConnection';
@@ -23,6 +27,7 @@ interface Dependencies {
   getAppVersion(): string;
   isLocalContext(): boolean;
   getControlUrl(): string | null;
+  getControlAuthToken(): string | null;
   startControl(): Promise<void>;
   reconfigureRoot(): Promise<void> | void;
   mcp: {
@@ -78,25 +83,41 @@ export function createDesktopExternalAgentConnection(
     revokeAuthority = deps.mcp.appContext.bind(identity, deps.httpEnabled);
   };
   bindAuthority();
-  const revokeEnvironment = configureDesktopMcpEnvironment(() => {
-    const controlUrl = deps.getControlUrl();
-    if (stopping || !context.isOpen || !deps.isLocalContext() || !controlUrl) {
-      throw new Error('Desktop MCP control context is unavailable');
-    }
-    // This factory is invoked only for a new owned child, never for discovery reads.
-    boundControlUrl = controlUrl;
-    return Object.freeze({
-      [BOUND_CONTROL_URL_ENV]: controlUrl,
-      [BOUND_CONTROL_CONTEXT_ENV]: JSON.stringify(context.snapshot()),
-      AGENT_TEAMS_MCP_CLAUDE_DIR: deps.getRoot(),
-      CLAUDE_TEAM_APP_INSTANCE_ID: deps.appInstanceId,
-      AGENT_TEAMS_MCP_HTTP_OWNER_PID: String(process.pid),
-      CLAUDE_TEAM_APP_PROFILE_SCOPE: buildOpenCodeAppProfileScope(
-        deps.userDataPath,
-        deps.getRoot()
-      ),
-    });
-  }, () => !stopping && context.isOpen && deps.isLocalContext() && !!deps.getControlUrl());
+  const revokeEnvironment = configureDesktopMcpEnvironment(
+    () => {
+      const controlUrl = deps.getControlUrl();
+      const controlAuthToken = deps.getControlAuthToken();
+      if (
+        stopping ||
+        !context.isOpen ||
+        !deps.isLocalContext() ||
+        !controlUrl ||
+        !controlAuthToken
+      ) {
+        throw new Error('Desktop MCP control context is unavailable');
+      }
+      // This factory is invoked only for a new owned child, never for discovery reads.
+      boundControlUrl = controlUrl;
+      return Object.freeze({
+        [BOUND_CONTROL_URL_ENV]: controlUrl,
+        [BOUND_CONTROL_AUTH_TOKEN_ENV]: controlAuthToken,
+        [BOUND_CONTROL_CONTEXT_ENV]: JSON.stringify(context.snapshot()),
+        AGENT_TEAMS_MCP_CLAUDE_DIR: deps.getRoot(),
+        CLAUDE_TEAM_APP_INSTANCE_ID: deps.appInstanceId,
+        AGENT_TEAMS_MCP_HTTP_OWNER_PID: String(process.pid),
+        CLAUDE_TEAM_APP_PROFILE_SCOPE: buildOpenCodeAppProfileScope(
+          deps.userDataPath,
+          deps.getRoot()
+        ),
+      });
+    },
+    () =>
+      !stopping &&
+      context.isOpen &&
+      deps.isLocalContext() &&
+      !!deps.getControlUrl() &&
+      !!deps.getControlAuthToken()
+  );
   const connection = new ExternalAgentConnection({
     ...deps,
     context,

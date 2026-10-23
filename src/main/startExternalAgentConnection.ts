@@ -43,6 +43,7 @@ export function composeExternalAgentConnection(options: {
   getMainContents(): WebContents | null;
   isLocalContext(): boolean;
   getControlUrl(): string | null;
+  getControlAuthToken(): string | null;
   startControl(): Promise<void>;
   reconfigureRoot(): Promise<void>;
   hasLiveRuntimeConsumers?(): boolean;
