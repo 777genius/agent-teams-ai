@@ -14,6 +14,8 @@ interface UseDraftPersistenceResult {
   setValue: (v: string) => void;
   isSaved: boolean;
   clearDraft: () => void;
+  /** True once the initial asynchronous draft load has settled. */
+  isLoaded: boolean;
 }
 
 export function useDraftPersistence({
@@ -24,6 +26,7 @@ export function useDraftPersistence({
 }: UseDraftPersistenceOptions): UseDraftPersistenceResult {
   const [value, setValueState] = useState(initialValue ?? '');
   const [isSaved, setIsSaved] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingValueRef = useRef<{ key: string; value: string } | null>(null);
   const keyRef = useRef(key);
@@ -67,19 +70,31 @@ export function useDraftPersistence({
     setValueState(initialValue ?? '');
 
     setIsSaved(false);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset hydration readiness on key change
+    setIsLoaded(false);
 
-    if (!enabled)
+    if (!enabled) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronous readiness when disabled
+      setIsLoaded(true);
       return () => {
         cancelled = true;
       };
+    }
     const loadRevision = editRevisionRef.current;
     void (async () => {
       const draft = await draftStorage.loadDraft(key);
-      if (cancelled || editRevisionRef.current !== loadRevision) return;
+      if (cancelled) return;
+      if (editRevisionRef.current !== loadRevision) {
+        // A user edit already happened; the late load must not overwrite it,
+        // but hydration is still considered settled.
+        if (mountedRef.current) setIsLoaded(true);
+        return;
+      }
       if (draft != null && initialValue == null) {
         setValueState(draft);
         setIsSaved(true);
       }
+      if (mountedRef.current) setIsLoaded(true);
     })();
 
     return () => {
@@ -135,10 +150,11 @@ export function useDraftPersistence({
     pendingValueRef.current = null;
     setValueState('');
     setIsSaved(false);
+    setIsLoaded(true);
     if (enabled) {
       void draftStorage.deleteDraft(keyRef.current);
     }
   }, [enabled]);
 
-  return { value, setValue, isSaved, clearDraft };
+  return { value, setValue, isSaved, clearDraft, isLoaded };
 }

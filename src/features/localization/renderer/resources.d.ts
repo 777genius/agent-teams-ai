@@ -3943,6 +3943,21 @@ export default interface Resources {
         "saveAsTemplate": "Save as Template",
         "templates": "Templates"
       },
+      "createFromTemplate": {
+        "builtinGroup": "Built-in templates",
+        "customGroup": "My templates",
+        "description": "Apply a built-in or saved custom template to prefill the team prompt and members. You can still edit everything before creating the team.",
+        "membersCount_few": "{{count}} members",
+        "membersCount_many": "{{count}} members",
+        "membersCount_one": "{{count}} member",
+        "membersCount_other": "{{count}} members",
+        "noneHint": "Create a blank team with the usual settings.",
+        "noneLabel": "No template",
+        "readOnlySource": "Built-in template (read-only source)",
+        "sourceCustom": "Custom template (read-only source)",
+        "staleWarning": "The selected custom template no longer exists. The form keeps the previously applied values — choose another template to replace them, or continue with the current values.",
+        "title": "Start from a template (optional)"
+      },
       "errors": {
         "issues": {
           "invalidContent": "The team content cannot be saved as a template.",
