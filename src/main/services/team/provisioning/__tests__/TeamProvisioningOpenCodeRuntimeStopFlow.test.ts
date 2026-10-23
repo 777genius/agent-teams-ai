@@ -704,6 +704,107 @@ describe('OpenCode runtime stop flow', () => {
     expectFinalSingleLaneState(lane);
   });
 
+  it.each(['enabled', 'disabled', 'throwing logger'] as const)(
+    'records bounded custody diagnostics without changing successful restoration (%s)',
+    async (mode) => {
+      vi.stubEnv('CLAUDE_MULTIMODEL_DEBUG_OPENCODE_COMMAND', mode === 'disabled' ? '0' : '1');
+      const run = makeSingleLaneRun();
+      const lane = makeSingleLane();
+      const previous = run.progress;
+      const ports = makeSingleLaneStopPorts({
+        adapter: makeAdapter(async (input) => ({
+          runId: input.runId,
+          teamName: input.teamName,
+          stopped: true,
+          members: {},
+          warnings: [],
+          diagnostics: [],
+        })),
+      });
+      if (mode === 'throwing logger')
+        ports.logger.info.mockImplementation(() => {
+          throw new Error('diagnostic sink failure');
+        });
+      try {
+        await expect(
+          stopSingleMixedSecondaryRuntimeLane(run, lane, 'relaunch', ports)
+        ).resolves.toBeUndefined();
+        expect(run.progress).toBe(previous);
+        const rows = ports.logger.info.mock.calls.map(([line]) =>
+          JSON.parse(line.slice('[opencode_secondary_stop_custody] '.length))
+        );
+        if (mode === 'disabled') expect(rows).toEqual([]);
+        else {
+          expect(rows).toHaveLength(2);
+          expect(rows[0]).toMatchObject({
+            stage: 'begin',
+            baselinePhase: 'ready',
+            currentPhase: 'disconnected',
+            exactProgressPointer: true,
+            exactCustody: true,
+            authorized: true,
+            trackedRunCurrent: true,
+            activeCount: 1,
+          });
+          expect(rows[1]).toMatchObject({
+            stage: 'finish',
+            baselinePhase: 'ready',
+            currentPhase: 'disconnected',
+            exactProgressPointer: true,
+            exactCustody: true,
+            authorized: true,
+            clearedOwnedLane: true,
+            failed: false,
+            metadataChanged: false,
+            restored: true,
+            afterPhase: 'ready',
+          });
+          for (const row of rows) {
+            for (const key of ['message', 'assistantOutput', 'cliLogsTail', 'context']) {
+              expect(row).not.toHaveProperty(key);
+            }
+          }
+        }
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    }
+  );
+
+  it('records a revoked progress pointer without changing the fail-closed restoration decision', async () => {
+    vi.stubEnv('CLAUDE_MULTIMODEL_DEBUG_OPENCODE_COMMAND', '1');
+    const run = makeSingleLaneRun();
+    const lane = makeSingleLane();
+    run.onProgress.mockImplementationOnce(() => {
+      run.progress = { ...run.progress };
+    });
+    const ports = makeSingleLaneStopPorts({
+      adapter: makeAdapter(async (input) => ({
+        runId: input.runId,
+        teamName: input.teamName,
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      })),
+    });
+    try {
+      await stopSingleMixedSecondaryRuntimeLane(run, lane, 'relaunch', ports);
+      const line = ports.logger.info.mock.calls.at(-1)?.[0];
+      expect(JSON.parse(line!.slice('[opencode_secondary_stop_custody] '.length))).toMatchObject({
+        stage: 'finish',
+        exactProgressPointer: false,
+        exactCustody: true,
+        authorized: true,
+        restored: false,
+        afterPhase: 'disconnected',
+      });
+      expect(run.progress.state).toBe('disconnected');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it('owns the stop phase before its first read and cannot start an adapter effect after revocation during that read', async () => {
     const run = makeSingleLaneRun();
     const lane = makeSingleLane();

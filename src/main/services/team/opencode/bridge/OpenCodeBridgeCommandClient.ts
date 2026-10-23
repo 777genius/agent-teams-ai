@@ -28,6 +28,7 @@ import {
   hasOpenCodeOwnedChildBinding,
   prepareOpenCodeShutdownCleanupEnvironment,
 } from './OpenCodeMcpBridgeEnv';
+import { appendOpenCodeRegistryLockDiagnostics } from './OpenCodeRegistryLockDiagnostics';
 import {
   isStartupCleanupData,
   type OpenCodeStartupCleanupData,
@@ -42,7 +43,6 @@ export interface OpenCodeBridgeProcessRunInput {
   stderrLimitBytes: number;
   env: NodeJS.ProcessEnv;
 }
-
 export interface OpenCodeBridgeProcessRunResult {
   stdout: string;
   stderr: string;
@@ -50,7 +50,6 @@ export interface OpenCodeBridgeProcessRunResult {
   timedOut: boolean;
   outcomeUnknownReason?: 'transport_timeout' | 'output_limit' | 'termination_failed';
 }
-
 export interface OpenCodeBridgeProcessRunner {
   run(input: OpenCodeBridgeProcessRunInput): Promise<OpenCodeBridgeProcessRunResult>;
 }
@@ -426,6 +425,12 @@ export class OpenCodeBridgeCommandClient {
           stderrLimitBytes: options.stderrLimitBytes ?? DEFAULT_STDERR_LIMIT_BYTES,
           env: { ...env },
         });
+        await appendOpenCodeRegistryLockDiagnostics(
+          processResult.stderr,
+          env,
+          this.diagnostics,
+          envelope
+        );
         const bridgeOutput = await this.readBridgeOutput(processResult.stdout, outputPath);
         let observedOutputWriteError: string | null = null;
         if (retainStartupEvidence && bridgeOutput.content) {

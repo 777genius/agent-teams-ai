@@ -41,6 +41,38 @@ describe('OpenCodeBridgeCommandClient', () => {
     await fs.rm(tempDir, { recursive: true, force: true });
   });
 
+  it('retains only closed registry receipts from successful bridge stderr in debug mode', async () => {
+    const receipt = {
+      operation: 'ensure_read', phase: 'failed', stage: 'acquire',
+      lockAttemptId: '12345678-1234-4234-8234-123456789abc', pid: 321,
+      processStartedAtMs: 1000, atMs: 2000, waitMs: 2655, heldMs: 0,
+      errorCode: 'ELOCKED', lockMtimeAgeMs: 8200,
+    };
+    runner.nextResult = {
+      stdout: JSON.stringify(bridgeSuccess()), exitCode: 0, timedOut: false,
+      stderr: [
+        'unrelated secret-payload',
+        '[opencode-registry-lock] ' + JSON.stringify({ ...receipt, token: 'secret-payload' }),
+        ...[{ operation: 'unknown-secret-operation' }, { phase: 'unknown' }, { pid: -1 },
+          { waitMs: 1.5 }, { errorCode: 'secret-payload' }].map((change) =>
+          '[opencode-registry-lock] ' + JSON.stringify({ ...receipt, ...change })),
+        '[opencode-registry-lock] {malformed',
+        '[opencode-registry-lock] ' + JSON.stringify(receipt),
+      ].join('\n'),
+    };
+    const client = createClient({ env: { CLAUDE_MULTIMODEL_DEBUG_OPENCODE_COMMAND: '1' } });
+    expect(await client.execute('opencode.launchTeam', { runId: 'run-1' },
+      { cwd: tempDir, timeoutMs: 1000 })).toMatchObject({ ok: true });
+    expect(diagnostics.events).toEqual([expect.objectContaining({
+      type: 'opencode_registry_lock', runId: 'run-1',
+      data: { ...receipt, command: 'opencode.launchTeam', requestId: 'req-1' },
+    })]);
+    expect(JSON.stringify(diagnostics.events)).not.toContain('secret-payload');
+    diagnostics.events.length = 0;
+    await createClient().execute('opencode.launchTeam', {}, { cwd: tempDir, timeoutMs: 1000 });
+    expect(diagnostics.events).toEqual([]);
+  });
+
   it('prepares only one shutdown registry child before real admission closure, with copied authority', async () => {
     const context = new BoundControlContext('app-test', tempDir);
     const binding = {
