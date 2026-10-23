@@ -6,7 +6,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
-import { copyRuntimePayload, inventoryRuntimePayload } from './runtime-payload-inventory.mts';
+import {
+  copyRuntimePayload,
+  inventoryRuntimePayload,
+  removeOwnedRuntimePayload,
+} from './runtime-payload-inventory.mts';
 
 interface CachePort {
   publishRuntimePayload(binary: string, destination: string, sha256: string): Promise<string>;
@@ -366,3 +370,112 @@ test(
     }
   }
 );
+
+test(
+  'nonroot publication retires readonly children and cleans a failed readonly stage without masking its error',
+  { skip: process.platform === 'win32' || process.getuid?.() === 0 },
+  async (context) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-cache-readonly-retirement-'));
+    const source = path.join(root, 'source');
+    const destination = path.join(root, 'published');
+    const child = path.join(source, 'nested');
+    try {
+      fs.mkdirSync(child, { recursive: true });
+      const binary = path.join(source, 'orchestrator');
+      fs.writeFileSync(binary, 'first');
+      fs.writeFileSync(path.join(child, 'companion'), 'retained bytes');
+      fs.chmodSync(child, 0o555);
+      await cache.publishRuntimePayload(binary, destination, sha256);
+      assert.equal(fs.statSync(path.join(destination, 'nested')).mode & 0o777, 0o555);
+      fs.writeFileSync(binary, 'second');
+      await cache.publishRuntimePayload(binary, destination, sha256);
+      assert.equal(
+        await cache.isRuntimePayloadCacheValid(destination, sha256, 'orchestrator'),
+        true
+      );
+      assert.equal(fs.statSync(path.join(destination, 'nested')).mode & 0o777, 0o555);
+      assert.deepEqual(fs.readdirSync(root).sort(), ['published', 'source']);
+      const failure = new Error('TEST final publication failure');
+      const rename = fs.renameSync;
+      context.mock.method(fs, 'renameSync', (from: fs.PathLike, to: fs.PathLike) => {
+        if (String(from).includes('.stage-') && to === destination) throw failure;
+        return rename(from, to);
+      });
+      await assert.rejects(
+        cache.publishRuntimePayload(binary, destination, sha256),
+        (error: unknown) => error === failure
+      );
+      assert.deepEqual(fs.readdirSync(root).sort(), ['published', 'source']);
+      assert.equal(fs.statSync(path.join(destination, 'nested')).mode & 0o777, 0o555);
+      assert.equal(fs.statSync(child).mode & 0o777, 0o555);
+    } finally {
+      await removeOwnedRuntimePayload(root);
+    }
+  }
+);
+
+test(
+  'owned removal never repairs a linked directory outside its generation',
+  { skip: process.platform === 'win32' },
+  async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-cache-remove-link-'));
+    const owned = path.join(root, 'owned');
+    const outside = path.join(root, 'outside');
+    try {
+      fs.mkdirSync(owned);
+      fs.mkdirSync(outside);
+      fs.writeFileSync(path.join(outside, 'sentinel'), 'preserved');
+      fs.chmodSync(outside, 0o555);
+      fs.symlinkSync(outside, path.join(owned, 'link'));
+      fs.chmodSync(owned, 0o555);
+      await removeOwnedRuntimePayload(owned);
+      assert.equal(fs.statSync(outside).mode & 0o777, 0o555);
+      assert.equal(fs.readFileSync(path.join(outside, 'sentinel'), 'utf8'), 'preserved');
+    } finally {
+      await removeOwnedRuntimePayload(root);
+    }
+  }
+);
+
+test('stage cleanup failure reports its issue while retaining the original publication exception', async (context) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-cache-cleanup-error-'));
+  try {
+    const source = path.join(root, 'source');
+    const destination = path.join(root, 'published');
+    fs.mkdirSync(source);
+    const binary = path.join(source, 'orchestrator');
+    fs.writeFileSync(binary, 'fixture');
+    const failure = new Error('TEST publication original');
+    context.mock.method(fs, 'renameSync', () => {
+      throw failure;
+    });
+    const remove = fs.promises.rm;
+    context.mock.method(fs.promises, 'rm', async (target: fs.PathLike, options: fs.RmOptions) => {
+      if (String(target).includes('.stage-')) throw new Error('TEST cleanup denied');
+      await remove(target, options);
+    });
+    let diagnostic = '';
+    context.mock.method(process.stderr, 'write', (chunk: string | Uint8Array) => {
+      diagnostic += String(chunk);
+      return true;
+    });
+    await assert.rejects(
+      cache.publishRuntimePayload(binary, destination, sha256),
+      (error: unknown) => error === failure
+    );
+    assert.match(diagnostic, /Failed to remove owned runtime stage: Error: TEST cleanup denied/u);
+  } finally {
+    context.mock.restoreAll();
+    await removeOwnedRuntimePayload(root);
+  }
+});
+
+test('writable owned generations are removed without an additional permission census', async (context) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-cache-direct-removal-'));
+  fs.writeFileSync(path.join(root, 'file'), 'owned');
+  context.mock.method(fs.promises, 'readdir', () => {
+    throw new Error('TEST unexpected permission census');
+  });
+  await removeOwnedRuntimePayload(root);
+  assert.equal(fs.existsSync(root), false);
+});

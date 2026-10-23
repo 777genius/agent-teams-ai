@@ -117,3 +117,40 @@ export async function copyRuntimePayload(
   // Keep stage ownership until every admitted copy has settled on error as well.
   await scope.settle((children.get('') ?? []).map(copy));
 }
+
+/** Caller owns this retired generation or failed stage; never repair a live payload. */
+export async function removeOwnedRuntimePayload(root: string): Promise<void> {
+  try {
+    await fs.promises.rm(root, { recursive: true, force: true });
+    return;
+  } catch (error: unknown) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (process.platform === 'win32' || (code !== 'EACCES' && code !== 'EPERM')) throw error;
+  }
+  // Writable release trees take the direct removal above, without another census.
+  const scope = createPayloadIoScope();
+  async function prepare(directory: string): Promise<void> {
+    const entries = await scope.io(async () => {
+      let stat: fs.Stats;
+      try {
+        stat = await fs.promises.lstat(directory);
+      } catch (error: unknown) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+        throw error;
+      }
+      // lstat deliberately excludes links: cleanup must never chmod their targets.
+      if (!stat.isDirectory()) return [];
+      if ((stat.mode & 0o700) !== 0o700)
+        await fs.promises.chmod(directory, (stat.mode & 0o7777) | 0o700);
+      return fs.promises.readdir(directory, { withFileTypes: true });
+    });
+    await scope.settle(
+      entries
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => prepare(path.join(directory, entry.name)))
+    );
+  }
+  // Drain all admitted repairs before removal or before reporting a repair failure.
+  await prepare(root);
+  await fs.promises.rm(root, { recursive: true, force: true });
+}

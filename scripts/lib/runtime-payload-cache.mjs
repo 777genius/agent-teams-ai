@@ -8,6 +8,7 @@ import { phase } from './runtime-bootstrap-diagnostics.mts';
 import { extractWindowsRuntimeZip } from './runtime-windows-zip-extraction.mts';
 import {
   copyRuntimePayload,
+  removeOwnedRuntimePayload,
   inventoryRuntimePayload as inventory,
   RUNTIME_PAYLOAD_RECEIPT_NAME as receiptName,
 } from './runtime-payload-inventory.mts';
@@ -47,7 +48,7 @@ export async function isRuntimePayloadCacheValid(payloadDir, archiveSha256, bina
 // Publish the entire binary + companions with one directory rename. Retain the
 // previous generation until publication succeeds; never expose a partial copy.
 // Generation roots remain private and writable (0700), independent of archive root mode,
-// so receipt publication and later generation retirement do not require permission repair.
+// so receipt publication is writable; retired child directories are repaired only during removal.
 export async function publishRuntimePayload(extractedBinaryPath, payloadDir, archiveSha256) {
   const binaryName = path.basename(extractedBinaryPath);
   const source = path.dirname(extractedBinaryPath);
@@ -55,6 +56,7 @@ export async function publishRuntimePayload(extractedBinaryPath, payloadDir, arc
   const stage = `${payloadDir}.stage-${randomUUID()}`;
   const previous = `${payloadDir}.previous-${randomUUID()}`;
   let movedPrevious = false;
+  let publicationFailed = false;
   try {
     await phase('payload-copy', () => copyRuntimePayload(source, stage, expectedEntries));
     if (
@@ -90,10 +92,20 @@ export async function publishRuntimePayload(extractedBinaryPath, payloadDir, arc
       if (movedPrevious) fs.renameSync(previous, payloadDir);
       throw error;
     }
-    if (movedPrevious) fs.rmSync(previous, { recursive: true, force: true });
+    if (movedPrevious) await removeOwnedRuntimePayload(previous);
     return path.join(payloadDir, binaryName);
+  } catch (error) {
+    publicationFailed = true;
+    throw error;
   } finally {
-    fs.rmSync(stage, { recursive: true, force: true });
+    try {
+      await removeOwnedRuntimePayload(stage);
+    } catch (cleanupError) {
+      if (!publicationFailed) throw cleanupError;
+      logRuntimePhase(
+        `Failed to remove owned runtime stage: ${String(cleanupError).slice(0, 512)}`
+      );
+    }
   }
 }
 
