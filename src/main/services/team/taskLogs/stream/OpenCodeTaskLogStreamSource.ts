@@ -1213,6 +1213,7 @@ export class OpenCodeTaskLogStreamSource {
       const nativeParentIdsUnavailable = nativeSource && Boolean(record.sessionId?.trim());
       const filteredMessages = filterMessagesForAttribution(projectedMessages, record, {
         nativeParentIdsUnavailable,
+        taskRefs: buildTaskRefSet(task),
       });
       if (filteredMessages.length === 0) {
         continue;

@@ -83,6 +83,48 @@ function valueReferencesTask(value: unknown, taskRefs: Set<string>, depth = 0): 
   return false;
 }
 
+const TASK_MARKER_TASK_REFERENCE_KEYS = new Set<string>([
+  'taskid',
+  'task_id',
+  'targetid',
+  'targettaskid',
+  'target_task_id',
+  'canonicalid',
+  'canonical_id',
+  'displayid',
+  'display_id',
+]);
+
+/** A marker call is foreign when it names a task explicitly and none of its
+ * explicit refs resolve to this task. Implicit markers stay neutral. */
+function markerCallExplicitTaskRef(
+  toolCall: { name?: string; input?: unknown },
+  taskRefs: Set<string>
+): 'match' | 'foreign' | 'none' {
+  const canonicalName = canonicalizeAgentTeamsToolName(toolCall.name ?? '')
+    .trim()
+    .toLowerCase();
+  if (!TASK_LOG_MARKER_TOOL_NAMES.has(canonicalName)) {
+    return 'none';
+  }
+  const input = toolCall.input;
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    return 'none';
+  }
+  let explicit: 'match' | 'foreign' | 'none' = 'none';
+  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    if (!TASK_MARKER_TASK_REFERENCE_KEYS.has(key.trim().toLowerCase())) continue;
+    const normalized = normalizeTaskRef(value);
+    if (!normalized) continue;
+    if (taskRefs.has(normalized)) {
+      explicit = 'match';
+    } else if (explicit === 'none') {
+      explicit = 'foreign';
+    }
+  }
+  return explicit;
+}
+
 function markerCallReferencesTask(
   toolCall: { name?: string; input?: unknown },
   taskRefs: Set<string>
@@ -162,6 +204,7 @@ function extendDeliveryTurnAcrossTaskLifecycle(
 
   const baseRoots = new Set(base.map((message) => resolveTurnRootUuid(messages, message)));
   let terminalEndIndex = -1;
+  let terminalRootUuid: string | null = null;
   for (const message of messages) {
     if (!message.toolCalls.some((toolCall) => terminalMarkerCallReferencesTask(toolCall, taskRefs))) {
       continue;
@@ -176,6 +219,7 @@ function extendDeliveryTurnAcrossTaskLifecycle(
     for (let index = messages.length - 1; index >= 0; index -= 1) {
       if (terminalTurnUuids.has(messages[index].uuid)) {
         terminalEndIndex = index;
+        terminalRootUuid = rootUuid;
         break;
       }
     }
@@ -190,7 +234,35 @@ function extendDeliveryTurnAcrossTaskLifecycle(
   if (baseStartIndex < 0) {
     baseStartIndex = 0;
   }
-  return messages.filter((message, index) => index >= baseStartIndex && index <= terminalEndIndex);
+  const widened = messages.filter(
+    (message, index) => index >= baseStartIndex && index <= terminalEndIndex
+  );
+  // Turns that explicitly mark another task's lifecycle interleave inside the
+  // same window; their evidence belongs to that task and must never land here.
+  const foreignTurnRoots = new Set<string>();
+  for (const message of widened) {
+    if (baseUuids.has(message.uuid)) continue;
+    if (
+      !message.toolCalls.some(
+        (toolCall) => markerCallExplicitTaskRef(toolCall, taskRefs) === 'foreign'
+      )
+    ) {
+      continue;
+    }
+    const rootUuid = resolveTurnRootUuid(messages, message);
+    if (rootUuid === terminalRootUuid) continue;
+    foreignTurnRoots.add(rootUuid);
+  }
+  if (foreignTurnRoots.size === 0) {
+    return widened;
+  }
+  const excluded = new Set<string>();
+  for (const rootUuid of foreignTurnRoots) {
+    for (const item of collectTurnClosure(messages, rootUuid)) {
+      excluded.add(item.uuid);
+    }
+  }
+  return widened.filter((message) => !excluded.has(message.uuid));
 }
 
 /** V2 has no native parent IDs. This is a conservative display window, never turn authority. */
@@ -225,7 +297,7 @@ function filterV2NativeInputWindow(messages: ParsedMessage[], promptUuid: string
 export function filterMessagesForAttribution(
   projectedMessages: OpenCodeRuntimeTranscriptLogMessage[],
   record: OpenCodeTaskLogAttributionRecord,
-  options: { nativeParentIdsUnavailable?: boolean } = {}
+  options: { nativeParentIdsUnavailable?: boolean; taskRefs?: Iterable<string> } = {}
 ): ParsedMessage[] {
   const messages = mapOpenCodeRuntimeTranscriptMessagesToParsedMessages(projectedMessages).filter(
     (message) => !record.sessionId || message.sessionId === record.sessionId
@@ -258,9 +330,13 @@ export function filterMessagesForAttribution(
     return [];
 
   const range = messages.slice(startIndex, endIndex + 1);
-  const taskRefs = new Set(
-    [record.taskId].map(normalizeTaskRef).filter((value): value is string => value !== null)
-  );
+  // The caller's ref set carries both id and displayId; markers commonly name
+  // only the display id, which record.taskId alone would miss.
+  const taskRefs = new Set<string>();
+  for (const ref of options.taskRefs ?? [record.taskId]) {
+    const normalized = normalizeTaskRef(ref);
+    if (normalized) taskRefs.add(normalized);
+  }
   const turn =
     record.source === 'delivery_ledger'
       ? record.startMessageUuid
