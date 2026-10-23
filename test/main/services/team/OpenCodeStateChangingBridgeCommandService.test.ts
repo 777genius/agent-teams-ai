@@ -655,6 +655,36 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     expect((handshakePort.calls[0] as { timeoutMs?: number }).timeoutMs).toBeLessThanOrEqual(2_000);
   });
 
+  it('applies the shared pre-dispatch deadline to the actual stop dispatch', async () => {
+    vi.useRealTimers();
+    const input = { ...enableRuntimeStop(), timeoutMs: 2_000 };
+    const slowHandshake: OpenCodeBridgeHandshakePort = {
+      async handshake(callInput) {
+        await sleep(300);
+        return handshakePort.handshake(callInput);
+      },
+    };
+    const execute = vi.fn(async (command, body, options) => {
+      const request = (body as { stopRecovery: RuntimeStopRequest }).stopRecovery;
+      return bridgeSuccess({
+        command,
+        requestId: options.requestId,
+        runtime: { ...bridgeSuccess().runtime, capabilitySnapshotId: input.capabilitySnapshotId },
+        data: runtimeData(true, request.idempotencyKey),
+      });
+    });
+    await createService({
+      bridge: { execute } as OpenCodeBridgeCommandExecutor,
+      handshakePort: slowHandshake,
+    }).execute(input);
+    const dispatch = execute.mock.calls.find(([command]) => command === 'opencode.stopTeam');
+    expect(dispatch).toBeDefined();
+    // The handshake already consumed part of the command budget; the dispatch
+    // must draw from what remains instead of restarting the full clock.
+    expect(dispatch![2].timeoutMs).toBeLessThanOrEqual(1_700);
+    expect(dispatch![2].timeoutMs).toBeGreaterThanOrEqual(1);
+  });
+
   it('bounds the stop-recovery handshake by the command budget', async () => {
     const { input } = await seedLegacyStop('unknown_after_timeout');
     ledger = createOpenCodeBridgeCommandLedgerStore({
@@ -2945,6 +2975,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
   function createService(
     overrides: {
       bridge?: OpenCodeBridgeCommandExecutor;
+      handshakePort?: OpenCodeBridgeHandshakePort;
       leaseAcquireTimeoutMs?: number;
       leaseAcquireRetryDelayMs?: number;
       requestIdFactory?: () => string;
@@ -3226,4 +3257,8 @@ class FakeManifestReader implements RuntimeStoreManifestReader {
 
 class FakeDiagnosticsSink implements OpenCodeStateChangingBridgeDiagnosticsSink {
   readonly append = vi.fn(async () => {});
+}
+
+function sleep(delayMs: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
 }

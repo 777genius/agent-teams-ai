@@ -397,7 +397,7 @@ export class OpenCodeStateChangingBridgeCommandService {
             handshakePort: this.handshakePort,
             bridge: this.bridge,
             ledger: this.ledger,
-            timeoutMs: input.timeoutMs,
+            timeoutMs: Math.max(1, preDispatchDeadlineMs - Date.now()),
             handshakeTimeoutMs: Math.max(1, preDispatchDeadlineMs - Date.now()),
           });
         } catch (error) {
@@ -574,7 +574,9 @@ export class OpenCodeStateChangingBridgeCommandService {
         bodyWithPreconditions,
         {
           cwd: stopRequest?.target.projectPath ?? input.cwd,
-          timeoutMs: input.timeoutMs,
+          // The dispatch settles inside the same shared budget instead of
+          // restarting the full command clock after the pre-dispatch phases.
+          timeoutMs: Math.max(1, preDispatchDeadlineMs - Date.now()),
           requestId: commandRequestId,
         }
       );
