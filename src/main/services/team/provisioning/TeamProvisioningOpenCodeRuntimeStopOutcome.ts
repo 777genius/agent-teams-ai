@@ -57,6 +57,9 @@ const STOP_FAILURE_CODES = [
   'secondary_lane_stop_unconfirmed',
   'runtime_stop_unconfirmed',
   'regular_stop_rejected_unknown',
+  'persistent_runtime_stop_unconfirmed_pane_kill_failed',
+  'persistent_runtime_stop_unconfirmed_process_table_unreadable',
+  'persistent_runtime_stop_unconfirmed_live_agent_processes',
 ] as const;
 
 /**
@@ -84,6 +87,17 @@ export function openCodeRegularStopRejectionCode(error: unknown): string {
     return 'secondary_lane_stop_unconfirmed';
   }
   if (message.includes('did not confirm stop')) return 'runtime_stop_unconfirmed';
+  if (message.includes('Persistent runtime termination could not be confirmed')) {
+    if (message.includes('process_table_unreadable')) {
+      return 'persistent_runtime_stop_unconfirmed_process_table_unreadable';
+    }
+    if (message.includes('live_agent_processes')) {
+      return 'persistent_runtime_stop_unconfirmed_live_agent_processes';
+    }
+    if (message.includes('pane_kill_failed')) {
+      return 'persistent_runtime_stop_unconfirmed_pane_kill_failed';
+    }
+  }
   return stopRejectionHintCode(error);
 }
 
@@ -93,7 +107,7 @@ function stopRejectionHintCode(error: unknown): string {
   const tokens = message
     .toLowerCase()
     .split(/[^a-z_]+/)
-    .filter((token) => token.length >= 3 && token.length <= 16)
+    .filter((token) => token.length >= 3 && token.length <= 24)
     .slice(0, 10);
   if (tokens.length === 0) return 'regular_stop_rejected_unknown';
   return `reject_${tokens.join('_')}`.slice(0, 90);

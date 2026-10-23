@@ -1,3 +1,5 @@
+import { sleep } from './TeamProvisioningAsyncUtils';
+
 import type { PersistedRuntimeMemberLike } from './TeamProvisioningRuntimeSnapshot';
 
 export type PersistentRuntimeStopReason =
@@ -13,6 +15,9 @@ export interface PersistentRuntimeStopVerdict {
 export interface TeamProvisioningPersistentRuntimeCleanupLogger {
   warn(message: string): void;
 }
+
+const STOP_CONFIRMATION_RECHECKS = 4;
+const STOP_CONFIRMATION_RECHECK_BACKOFF_MS = 400;
 
 export interface TeamProvisioningPersistentRuntimeCleanupPorts {
   readPersistedRuntimeMembers(teamName: string): PersistedRuntimeMemberLike[];
@@ -31,6 +36,7 @@ export interface TeamProvisioningPersistentRuntimeCleanupPorts {
   }): Promise<void>;
   getClaudeBasePath(): string;
   clearPersistedLiveRuntimeHandles?(teamName: string): boolean;
+  sleep?: (ms: number) => Promise<void>;
   confirmNativeTeamStopped?(teamName: string): Promise<void>;
   logger: TeamProvisioningPersistentRuntimeCleanupLogger;
 }
@@ -75,12 +81,24 @@ export function createTeamProvisioningPersistentRuntimeCleanup(
       // the scan runs before the lane stops settle, so an unconfirmed dispatch
       // is re-checked here: this cleanup runs when the explicit stop completed,
       // and only leftovers that are still live keep the stop unconfirmed.
-      if (confirmedStops.get(teamName) === false && !stopPersistentTeamMembers(teamName)) {
-        throw new Error(
-          `[${teamName}] Persistent runtime termination could not be confirmed: ${
-            stopReasons.get(teamName) ?? 'process_table_unreadable'
-          }`
-        );
+      if (confirmedStops.get(teamName) === false) {
+        const delay = ports.sleep ?? sleep;
+        let confirmed = false;
+        for (let attempt = 1; attempt <= STOP_CONFIRMATION_RECHECKS; attempt += 1) {
+          // Each re-check first lets the previous kill dispatch settle and gives
+          // the process-table probe a fresh try, so only leftovers that survive
+          // the whole bounded window are reported as still live.
+          await delay(STOP_CONFIRMATION_RECHECK_BACKOFF_MS * attempt);
+          confirmed = stopPersistentTeamMembers(teamName);
+          if (confirmed) break;
+        }
+        if (!confirmed) {
+          throw new Error(
+            `[${teamName}] Persistent runtime termination could not be confirmed: ${
+              stopReasons.get(teamName) ?? 'process_table_unreadable'
+            }`
+          );
+        }
       }
       if (confirmedStops.get(teamName) === true) {
         // StopFlow calls this only after its tracked lead/lane stops also settle.

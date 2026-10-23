@@ -134,6 +134,19 @@ describe('runTeamForceStopFlow', () => {
       'secondary_lane_stop_unconfirmed',
     ],
     ['OpenCode team did not confirm stop: result unconfirmed', 'runtime_stop_unconfirmed'],
+    [
+      '[team-a] Persistent runtime termination could not be confirmed: pane_kill_failed',
+      'persistent_runtime_stop_unconfirmed_pane_kill_failed',
+    ],
+    [
+      '[team-a] Persistent runtime termination could not be confirmed: process_table_unreadable',
+      'persistent_runtime_stop_unconfirmed_process_table_unreadable',
+    ],
+    [
+      '[team-a] Persistent runtime termination could not be confirmed: live_agent_processes',
+      'persistent_runtime_stop_unconfirmed_live_agent_processes',
+    ],
+    ['process_table_unreadable scan', 'reject_process_table_unreadable_scan'],
     ['freshness unreadable', 'reject_freshness_unreadable'],
     ['!@#$%', 'regular_stop_rejected_unknown'],
   ])('classifies regular stop rejection %s as %s', async (message, code) => {

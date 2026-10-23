@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createTeamProvisioningPersistentRuntimeCleanup } from '../TeamProvisioningPersistentRuntimeCleanup';
 
+import type { PersistentRuntimeStopVerdict } from '../TeamProvisioningPersistentRuntimeCleanup';
 import type { PersistedRuntimeMemberLike } from '../TeamProvisioningRuntimeSnapshot';
 
 type Ports = Parameters<typeof createTeamProvisioningPersistentRuntimeCleanup>[0];
@@ -14,6 +15,7 @@ function createPorts(overrides: Partial<Ports> = {}): Ports {
     getCurrentRunPid: vi.fn(() => 123),
     cleanupAnthropicTeamApiKeyHelperForTeam: vi.fn(async () => undefined),
     getClaudeBasePath: vi.fn(() => '/claude'),
+    sleep: vi.fn(async () => undefined),
     logger: {
       warn: vi.fn(),
     },
@@ -200,9 +202,37 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     ).rejects.toThrow(
       '[team-a] Persistent runtime termination could not be confirmed: live_agent_processes'
     );
-    expect(ports.killOrphanedTeamAgentProcesses).toHaveBeenCalledTimes(2);
+    expect(ports.killOrphanedTeamAgentProcesses).toHaveBeenCalledTimes(5);
     expect(ports.confirmNativeTeamStopped).not.toHaveBeenCalled();
     expect(ports.clearPersistedLiveRuntimeHandles).not.toHaveBeenCalled();
     expect(ports.cleanupAnthropicTeamApiKeyHelperForTeam).not.toHaveBeenCalled();
   });
+
+  it.each(['live_agent_processes', 'process_table_unreadable'] as const)(
+    'settles dispatched kills before declaring the stop unconfirmed (%s)',
+    async (reason) => {
+      const killOrphanedTeamAgentProcesses = vi
+        .fn((): PersistentRuntimeStopVerdict => ({ confirmed: true }))
+        .mockReturnValueOnce({ confirmed: false, reason })
+        .mockReturnValueOnce({ confirmed: false, reason })
+        .mockReturnValueOnce({ confirmed: true });
+      const confirmNativeTeamStopped = vi.fn(async () => undefined);
+      const clearPersistedLiveRuntimeHandles = vi.fn(() => true);
+      const ports = createPorts({
+        killOrphanedTeamAgentProcesses,
+        confirmNativeTeamStopped,
+        clearPersistedLiveRuntimeHandles,
+      });
+      const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
+
+      expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(false);
+      await expect(
+        cleanup.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam('team-a')
+      ).resolves.toBeUndefined();
+
+      expect(killOrphanedTeamAgentProcesses).toHaveBeenCalledTimes(3);
+      expect(confirmNativeTeamStopped).toHaveBeenCalledWith('team-a');
+      expect(clearPersistedLiveRuntimeHandles).toHaveBeenCalledWith('team-a');
+    }
+  );
 });
