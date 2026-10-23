@@ -4820,7 +4820,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           visible: true,
         });
         if (state.selectedTeamName === progress.teamName && state.selectedTeamData == null) {
-          void state.selectTeam(progress.teamName, { allowReloadWhileProvisioning: true });
+          void state.selectTeam(progress.teamName, {
+            allowReloadWhileProvisioning: true,
+            ...(progress.state === 'cancelled' ? { forceFreshSnapshot: true } : {}),
+          });
         } else {
           void state.refreshTeamData(progress.teamName, { withDedup: true });
         }

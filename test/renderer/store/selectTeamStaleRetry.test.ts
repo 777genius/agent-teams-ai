@@ -441,9 +441,14 @@ describe('cancelled provisioning draft selection recovery', () => {
     vi.clearAllMocks();
   });
 
-  it.each(['held', 'in-flight'] as const)(
-    'resolves a %s provisioning-only selection to the real draft after canonical cancellation',
-    async (phase) => {
+  it.each([
+    { phase: 'held', configReady: false },
+    { phase: 'in-flight', configReady: false },
+    { phase: 'held', configReady: true },
+    { phase: 'in-flight', configReady: true },
+  ] as const)(
+    'resolves a $phase provisioning-only selection after cancellation (first config-ready: $configReady)',
+    async ({ phase, configReady }) => {
       const store = createHarnessStore();
       const progress = {
         runId: 'cancel-run',
@@ -456,6 +461,27 @@ describe('cancelled provisioning draft selection recovery', () => {
       store.setState({
         currentProvisioningRunIdByTeam: { [TEAM]: progress.runId },
         provisioningRuns: { [progress.runId]: progress },
+      });
+      const pane = store.getState().paneLayout.panes[0];
+      store.setState({
+        paneLayout: {
+          ...store.getState().paneLayout,
+          panes: [
+            {
+              ...pane,
+              activeTabId: 'team-tab',
+              tabs: [
+                {
+                  id: 'team-tab',
+                  type: 'team',
+                  teamName: TEAM,
+                  label: TEAM,
+                  createdAt: 0,
+                },
+              ],
+            },
+          ],
+        },
       });
       let rejectFirst!: (error: Error) => void;
       const first = new Promise<TeamViewSnapshot>((_resolve, reject) => {
@@ -472,6 +498,7 @@ describe('cancelled provisioning draft selection recovery', () => {
       store.getState().onProvisioningProgress({
         ...progress,
         state: 'cancelled',
+        ...(configReady ? { configReady: true } : {}),
         message: 'Cancelled',
         updatedAt: '2026-10-24T00:00:02.000Z',
       });
