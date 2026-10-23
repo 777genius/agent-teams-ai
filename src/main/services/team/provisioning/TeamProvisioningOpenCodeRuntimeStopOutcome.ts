@@ -48,13 +48,68 @@ const STOP_FAILURE_CODES = [
   'transport_watchdog_timeout',
   'contract_violation',
   'internal_error',
+  'team_process_exit_unconfirmed',
+  'primary_lane_ownership_mismatch',
+  'provisioning_cancel_stop_unconfirmed',
+  'prompt_delivery_ledger_error',
+  'runtime_adapter_unavailable',
+  'lane_ownership_changed_after_stop',
+  'secondary_lane_stop_unconfirmed',
+  'runtime_stop_unconfirmed',
+  'regular_stop_rejected_unknown',
+  'persistent_runtime_stop_unconfirmed_pane_kill_failed',
+  'persistent_runtime_stop_unconfirmed_process_table_unreadable',
+  'persistent_runtime_stop_unconfirmed_live_agent_processes',
 ] as const;
+
+/**
+ * Finite closed code for a regular-stop rejection. The rejection's own text only
+ * reaches diagnostics, which the IPC boundary drops, so the stop failure has to
+ * name its cause in a code the caller can carry away.
+ */
+export function openCodeRegularStopRejectionCode(error: unknown): string {
+  const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+  if (message.includes('did not stop after SIGKILL')) return 'team_process_exit_unconfirmed';
+  if (message.includes('primary lane is not owned by')) {
+    return 'primary_lane_ownership_mismatch';
+  }
+  if (message.includes('did not confirm stop during cancellation')) {
+    return 'provisioning_cancel_stop_unconfirmed';
+  }
+  if (message.includes('File lock timeout:') || message.includes('VersionedJsonStoreError')) {
+    return 'prompt_delivery_ledger_error';
+  }
+  if (message.includes('runtime adapter is unavailable')) return 'runtime_adapter_unavailable';
+  if (message.includes('ownership changed before stopped storage cleanup')) {
+    return 'lane_ownership_changed_after_stop';
+  }
+  if (message.includes('did not confirm stop') && message.includes('secondary lane')) {
+    return 'secondary_lane_stop_unconfirmed';
+  }
+  if (message.includes('did not confirm stop')) return 'runtime_stop_unconfirmed';
+  if (message.includes('Persistent runtime termination could not be confirmed')) {
+    if (message.includes('process_table_unreadable')) {
+      return 'persistent_runtime_stop_unconfirmed_process_table_unreadable';
+    }
+    if (message.includes('live_agent_processes')) {
+      return 'persistent_runtime_stop_unconfirmed_live_agent_processes';
+    }
+    if (message.includes('pane_kill_failed')) {
+      return 'persistent_runtime_stop_unconfirmed_pane_kill_failed';
+    }
+  }
+  // A rejection's own text must never shape a code: message-derived tokens can
+  // leak paths or user data through IPC/HTTP/E2E surfaces, so an unrecognized
+  // rejection maps to the single closed unknown code.
+  return 'regular_stop_rejected_unknown';
+}
 
 /** Finite diagnostics only: never forward native/provider message text. */
 export function openCodeStopFailureCodes(diagnostics: unknown): string[] {
   const codes = stringList(diagnostics).flatMap((row) => {
     const code = /^(?:info:|warning:|error:|stop_failure_code:)([a-z_]+)(?::|$)/.exec(row)?.[1];
-    return STOP_FAILURE_CODES.filter((known) => known === code);
+    if (!code) return [];
+    return STOP_FAILURE_CODES.some((known) => known === code) ? [code] : [];
   });
   return [...new Set(codes)];
 }

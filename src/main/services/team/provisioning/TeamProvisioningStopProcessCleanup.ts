@@ -1,5 +1,6 @@
 import { killTmuxPaneForCurrentPlatformSync } from '@features/tmux-installer/main';
 import { collectExternalProcessTreeIdentities } from '@main/utils/externalProcessTreeKill';
+import { isProcessAlive } from '@main/utils/processHealth';
 import { killProcessByPid } from '@main/utils/processKill';
 import {
   isSameUnixProcessIdentity,
@@ -11,7 +12,10 @@ import { execFileSync } from 'child_process';
 
 import { commandArgEquals } from '../TeamRuntimeLivenessResolver';
 
-import type { PendingPersistentProcessStop } from './TeamProvisioningPersistentRuntimeCleanup';
+import type {
+  PendingPersistentProcessStop,
+  PersistentRuntimeStopVerdict,
+} from './TeamProvisioningPersistentRuntimeCleanup';
 import type { PersistedRuntimeMemberLike } from './TeamProvisioningRuntimeSnapshot';
 
 export interface StopProcessCleanupLogger {
@@ -38,7 +42,7 @@ export function killPersistedPaneMembers(
   teamName: string,
   members: PersistedRuntimeMemberLike[],
   logger: StopProcessCleanupLogger
-): boolean {
+): PersistentRuntimeStopVerdict {
   let confirmed = true;
   for (const { name, paneId } of getPersistedPaneMemberKillTargets(members)) {
     try {
@@ -53,13 +57,63 @@ export function killPersistedPaneMembers(
       );
     }
   }
-  return confirmed;
+  return confirmed ? { confirmed } : { confirmed, reason: 'pane_kill_failed' };
+}
+
+/**
+ * Decide stop confirmation from whatever evidence is available. The process
+ * table is only the discovery channel for unrecorded orphans; recorded pids are
+ * evidence for the verdict, never kill targets: after a crash or reboot a stale
+ * recorded pid can belong to a foreign process, so only table-attributed
+ * processes are ever signalled and only under a captured birth identity.
+ */
+export function resolveOrphanedTeamAgentStopVerdict(input: {
+  rows: { pid: number; command: string }[] | null;
+  teamName: string;
+  currentRunPid?: number;
+  knownPids?: readonly number[];
+  isPidAlive: (pid: number) => boolean;
+}): { verdict: PersistentRuntimeStopVerdict; targetPids: number[] } {
+  const recordedPids = (input.knownPids ?? []).filter(
+    (pid) => Number.isFinite(pid) && pid > 0 && pid !== input.currentRunPid
+  );
+  const discoveredPids = input.rows
+    ? [...selectOrphanedTeamAgentPids(input.rows, input.teamName, input.currentRunPid)]
+    : [];
+  // When the table is readable it is the attribution authority: a recorded pid
+  // counts as live only while the table attributes it to the team. Without the
+  // table liveness is the fallback evidence for the recorded launch pids.
+  const attributedRows = input.rows
+    ? input.rows.filter((row) => commandArgEquals(row.command, '--team-name', input.teamName))
+    : null;
+  const liveRecordedPids = recordedPids.filter((pid) => {
+    try {
+      return attributedRows ? attributedRows.some((row) => row.pid === pid) : input.isPidAlive(pid);
+    } catch {
+      return false;
+    }
+  });
+  const targetPids = discoveredPids;
+  if (!input.rows && recordedPids.length === 0) {
+    return {
+      verdict: { confirmed: false, reason: 'process_table_unreadable' },
+      targetPids,
+    };
+  }
+  return {
+    verdict:
+      targetPids.length === 0 && liveRecordedPids.length === 0
+        ? { confirmed: true }
+        : { confirmed: false, reason: 'live_agent_processes' },
+    targetPids,
+  };
 }
 
 interface OrphanedProcessStopPorts {
   readRows(): { pid: number; command: string }[] | null;
   readIdentities(): Map<number, UnixProcessIdentity> | null;
   killPid(pid: number): void;
+  isPidAlive(pid: number): boolean;
 }
 
 const ORPHAN_EXIT_TIMEOUT_MS = 5_000;
@@ -69,32 +123,50 @@ export function killOrphanedTeamAgentProcesses(
   input: {
     teamName: string;
     currentRunPid?: number;
+    knownPids?: readonly number[];
+    isRecheck?: boolean;
     logger: StopProcessCleanupLogger;
   },
   overrides: Partial<OrphanedProcessStopPorts> = {}
-): boolean | PendingPersistentProcessStop {
+): PersistentRuntimeStopVerdict | PendingPersistentProcessStop {
+  // The Windows probe is synchronous and times out slowly under load; honour
+  // its failure cooldown only when recorded pids can prove exit without the
+  // table and this is not a settle re-check that needs fresh evidence.
+  const allowCooldown = (input.knownPids?.length ?? 0) > 0 && input.isRecheck !== true;
   const ports: OrphanedProcessStopPorts = {
-    readRows: readProcessRows,
+    readRows: () => readProcessRows({ allowCooldown }),
     readIdentities: tryReadUnixProcessTable,
     killPid: killProcessByPid,
+    isPidAlive: isProcessAlive,
     ...overrides,
   };
   const rows = ports.readRows();
-  if (!rows) return false;
-  const targetPids = selectOrphanedTeamAgentPids(rows, input.teamName, input.currentRunPid);
-  if (targetPids.size === 0) return true;
+  const { verdict, targetPids } = resolveOrphanedTeamAgentStopVerdict({
+    rows,
+    teamName: input.teamName,
+    currentRunPid: input.currentRunPid,
+    knownPids: input.knownPids,
+    isPidAlive: (pid) => ports.isPidAlive(pid),
+  });
+  if (verdict.confirmed) return verdict;
+  if (!rows || targetPids.length === 0) return verdict;
   // Windows has no captured birth identities on this legacy taskkill path.
   if (process.platform === 'win32') {
     for (const pid of targetPids) {
       try {
         ports.killPid(pid);
+        input.logger.info(
+          `[${input.teamName}] Killed orphaned teammate process pid=${pid} during stop`
+        );
       } catch (error) {
         input.logger.debug(
-          `[${input.teamName}] Failed to kill orphaned teammate process pid=${pid}: ${String(error)}`
+          `[${input.teamName}] Failed to kill orphaned teammate process pid=${pid}: ${
+            error instanceof Error ? error.message : String(error)
+          }`
         );
       }
     }
-    return false;
+    return verdict;
   }
   const captured = new Map<number, UnixProcessIdentity>();
   const signalSent = new Set<number>();
@@ -165,13 +237,17 @@ export function killOrphanedTeamAgentProcesses(
         );
       } catch (error) {
         input.logger.debug(
-          `[${input.teamName}] Failed to kill orphaned teammate process pid=${pid}: ${String(error)}`
+          `[${input.teamName}] Failed to kill orphaned teammate process pid=${pid}: ${
+            error instanceof Error ? error.message : String(error)
+          }`
         );
       }
     }
   }
   stopNewProcesses(currentRunPid);
-  if (!discoveryComplete && captured.size === 0) return false;
+  if (!discoveryComplete && captured.size === 0) {
+    return { confirmed: false, reason: 'live_agent_processes' };
+  }
   return {
     stopNewProcesses,
     async confirmStopped() {
@@ -231,15 +307,29 @@ export function selectOrphanedTeamAgentPids(
   return pids;
 }
 
-export function readProcessRows(): { pid: number; command: string }[] | null {
+const WIN32_PROBE_FAILURE_COOLDOWN_MS = 15_000;
+let win32ProbeUnreadableUntil = 0;
+
+export function readProcessRows(options: { allowCooldown?: boolean } = {}):
+  | {
+      pid: number;
+      command: string;
+    }[]
+  | null {
   const rows: { pid: number; command: string }[] = [];
 
   if (process.platform === 'win32') {
+    // The probe is synchronous and times out slowly under load; hammering it
+    // stacks blocked probes on the stop path while recorded pids can already
+    // prove exit without it. Re-checks and evidence-less calls bypass the
+    // cooldown so they always get a fresh probe.
+    if (options.allowCooldown !== false && Date.now() < win32ProbeUnreadableUntil) return null;
     try {
       rows.push(
         ...listWindowsProcessTableSync().map((row) => ({ pid: row.pid, command: row.command }))
       );
     } catch {
+      win32ProbeUnreadableUntil = Date.now() + WIN32_PROBE_FAILURE_COOLDOWN_MS;
       return null;
     }
     return rows;

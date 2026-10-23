@@ -1,10 +1,24 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { isPendingPersistentProcessStop } from '../TeamProvisioningPersistentRuntimeCleanup';
 import {
   getPersistedPaneMemberKillTargets,
   killOrphanedTeamAgentProcesses,
+  resolveOrphanedTeamAgentStopVerdict,
   selectOrphanedTeamAgentPids,
 } from '../TeamProvisioningStopProcessCleanup';
+
+import type {
+  PendingPersistentProcessStop,
+  PersistentRuntimeStopVerdict,
+} from '../TeamProvisioningPersistentRuntimeCleanup';
+
+function asPendingStop(
+  value: PersistentRuntimeStopVerdict | PendingPersistentProcessStop
+): PendingPersistentProcessStop {
+  if (!isPendingPersistentProcessStop(value)) throw new Error('Expected captured pending stop');
+  return value;
+}
 
 describe('stop process cleanup helpers', () => {
   it('selects tmux teammate pane kill targets from persisted members', () => {
@@ -43,6 +57,79 @@ describe('stop process cleanup helpers', () => {
   });
 });
 
+describe('resolveOrphanedTeamAgentStopVerdict', () => {
+  it('confirms recorded runtime exit when the process table is unreadable', () => {
+    expect(
+      resolveOrphanedTeamAgentStopVerdict({
+        rows: null,
+        teamName: 'alpha',
+        currentRunPid: 999,
+        knownPids: [10, 11],
+        isPidAlive: () => false,
+      })
+    ).toEqual({ verdict: { confirmed: true }, targetPids: [] });
+  });
+
+  it('reports live recorded processes without targeting them when the table is unreadable', () => {
+    expect(
+      resolveOrphanedTeamAgentStopVerdict({
+        rows: null,
+        teamName: 'alpha',
+        knownPids: [10, 11],
+        isPidAlive: (pid) => pid === 11,
+      })
+    ).toEqual({
+      verdict: { confirmed: false, reason: 'live_agent_processes' },
+      targetPids: [],
+    });
+  });
+
+  it('cannot prove exit without a table and without recorded pids', () => {
+    expect(
+      resolveOrphanedTeamAgentStopVerdict({
+        rows: null,
+        teamName: 'alpha',
+        knownPids: [],
+        isPidAlive: () => false,
+      })
+    ).toEqual({
+      verdict: { confirmed: false, reason: 'process_table_unreadable' },
+      targetPids: [],
+    });
+  });
+
+  it('targets only table-discovered orphans and keeps unattributed recorded pids out', () => {
+    expect(
+      resolveOrphanedTeamAgentStopVerdict({
+        rows: [
+          { pid: 20, command: 'node worker --team-name alpha --agent-id dev' },
+          { pid: 21, command: 'node worker --team-name beta --agent-id dev' },
+        ],
+        teamName: 'alpha',
+        knownPids: [30, 31],
+        isPidAlive: (pid) => pid === 31,
+      })
+    ).toEqual({
+      verdict: { confirmed: false, reason: 'live_agent_processes' },
+      targetPids: [20],
+    });
+  });
+
+  it('counts a recorded pid the table attributes to the team', () => {
+    expect(
+      resolveOrphanedTeamAgentStopVerdict({
+        rows: [{ pid: 20, command: 'node worker --team-name alpha' }],
+        teamName: 'alpha',
+        knownPids: [20],
+        isPidAlive: () => true,
+      })
+    ).toEqual({
+      verdict: { confirmed: false, reason: 'live_agent_processes' },
+      targetPids: [],
+    });
+  });
+});
+
 describe.skipIf(process.platform === 'win32')('owned orphan stop confirmation', () => {
   afterEach(() => vi.useRealTimers());
   const identity = { pid: 41, parentPid: 1, processGroupId: 41, startIdentity: 'test:original' };
@@ -54,11 +141,12 @@ describe.skipIf(process.platform === 'win32')('owned orphan stop confirmation', 
       (): Map<number, typeof identity> | null => new Map([[41, identity]])
     );
     const killPid = vi.fn();
-    const pending = killOrphanedTeamAgentProcesses(
-      { teamName: 'TEST-owned', logger },
-      { readRows, readIdentities, killPid }
+    const pending = asPendingStop(
+      killOrphanedTeamAgentProcesses(
+        { teamName: 'TEST-owned', logger },
+        { readRows, readIdentities, killPid }
+      )
     );
-    if (typeof pending === 'boolean') throw new Error('Expected captured pending stop');
     return { pending, readRows, readIdentities, killPid };
   }
 
@@ -113,15 +201,16 @@ describe.skipIf(process.platform === 'win32')('owned orphan stop confirmation', 
     const readRows = vi.fn((): { pid: number; command: string }[] => [
       { pid: 41, command: 'node --team-name TEST-owned --agent-id bob' },
     ]);
-    const pending = killOrphanedTeamAgentProcesses(
-      { teamName: 'TEST-owned', logger },
-      {
-        readRows,
-        readIdentities,
-        killPid,
-      }
+    const pending = asPendingStop(
+      killOrphanedTeamAgentProcesses(
+        { teamName: 'TEST-owned', logger },
+        {
+          readRows,
+          readIdentities,
+          killPid,
+        }
+      )
     );
-    if (typeof pending === 'boolean') throw new Error('Expected captured pending stop');
     expect(killPid.mock.calls).toEqual([[43], [42], [41]]);
     readRows.mockReturnValue([]);
     readIdentities.mockReturnValue(new Map([[42, child]]));
@@ -158,11 +247,12 @@ describe.skipIf(process.platform === 'win32')('owned orphan stop confirmation', 
         killPid.mockImplementationOnce(() => {
           throw new Error('transient');
         });
-      const pending = killOrphanedTeamAgentProcesses(
-        { teamName: 'TEST-owned', logger },
-        { readRows: () => rows, readIdentities, killPid }
+      const pending = asPendingStop(
+        killOrphanedTeamAgentProcesses(
+          { teamName: 'TEST-owned', logger },
+          { readRows: () => rows, readIdentities, killPid }
+        )
       );
-      if (typeof pending === 'boolean') throw new Error('Expected retained capture');
       pending.stopNewProcesses(undefined);
       pending.stopNewProcesses(undefined);
       expect(killPid).toHaveBeenCalledTimes(variant === 'kill-failure' ? 2 : 1);
@@ -175,11 +265,12 @@ describe.skipIf(process.platform === 'win32')('owned orphan stop confirmation', 
     const killPid = vi.fn().mockImplementationOnce(() => {
       throw new Error('transient');
     });
-    const pending = killOrphanedTeamAgentProcesses(
-      { teamName: 'TEST-owned', logger },
-      { readRows: () => rows, readIdentities, killPid }
+    const pending = asPendingStop(
+      killOrphanedTeamAgentProcesses(
+        { teamName: 'TEST-owned', logger },
+        { readRows: () => rows, readIdentities, killPid }
+      )
     );
-    if (typeof pending === 'boolean') throw new Error('Expected retained capture');
     const child = { ...identity, pid: 42, parentPid: 41, startIdentity: 'test:new-child' };
     readIdentities.mockReturnValue(
       new Map([
@@ -253,7 +344,7 @@ describe.skipIf(process.platform === 'win32')('owned orphan stop confirmation', 
           killPid,
         }
       )
-    ).toBe(false);
+    ).toEqual({ confirmed: false, reason: 'live_agent_processes' });
     expect(killPid).not.toHaveBeenCalled();
   });
 });

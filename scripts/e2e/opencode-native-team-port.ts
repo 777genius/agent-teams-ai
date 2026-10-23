@@ -8,7 +8,7 @@ export type NativeCausalFailure = OpenCodeStopCausalFailure & {
 
 type NativeCommandExecution = Extract<Awaited<ReturnType<ElectronAPI['teams']['getTaskLogStream']>>['segments'][number]['chunks'][number], { chunkType: 'ai' }>['toolExecutions'][number];
 export type NativeCommandExpectation = {
-  session: string; program: string; marker: string; model: string;
+  session: string; program: string; marker: string; model: string; comment?: string;
 };
 
 /** The exact acceptance predicates, also used for finite failure observations. */
@@ -573,6 +573,24 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
           };
         } catch { return null; }
       }));
+      const commentRows = (task?.comments ?? []).map((entry) => {
+        const value = row(entry);
+        return {
+          author: typeof value.author === 'string' ? value.author : '',
+          text: typeof value.text === 'string' ? value.text : '',
+        };
+      });
+      const expectedComment =
+        command && typeof command.comment === 'string' && command.comment.length > 0
+          ? command.comment
+          : null;
+      const commentObservation = {
+        count: count(commentRows.length),
+        ownerAuthored: commentRows.some((entry) => entry.author === expectedOwner),
+        exactMatch: !!expectedComment && commentRows.some((entry) => entry.author === expectedOwner && entry.text === expectedComment),
+        trimmedExactMatch: !!expectedComment && commentRows.some((entry) => entry.author === expectedOwner && entry.text.trim() === expectedComment),
+        containsToken: !!expectedComment && commentRows.some((entry) => entry.author === expectedOwner && entry.text.includes(expectedComment)),
+      };
       return {
         taskId: id,
         commandObservation,
@@ -583,6 +601,7 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
         taskStatus: task ? statuses.find((value) => value === task.status) ?? 'unknown' : 'missing',
         ownerMatches: !!task && task.owner === expectedOwner,
         commentCount: count(task?.comments?.length),
+        commentObservation,
         log: log ? { segments: count(log.segments.length),
           projectedMessages: count(log.runtimeProjection?.projectedMessageCount),
           nativeTools: count(log.runtimeProjection?.nativeToolCount),

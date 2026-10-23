@@ -123,6 +123,7 @@ export async function recoverRuntimeStop<TData>(input: {
   bridge: OpenCodeBridgeCommandExecutor;
   ledger: OpenCodeBridgeCommandLedger;
   timeoutMs: number;
+  handshakeTimeoutMs?: number;
 }): Promise<OpenCodeBridgeResult<TData>> {
   const { entry, manifest } = input;
   const retained = entry.stopTarget ?? entry.stopRecovery?.target;
@@ -170,6 +171,7 @@ export async function recoverRuntimeStop<TData>(input: {
     cwd: request.target.projectPath,
     teamId: retained.teamName,
     laneId: retained.laneId,
+    ...(input.handshakeTimeoutMs === undefined ? {} : { timeoutMs: input.handshakeTimeoutMs }),
   });
   const validation = validateOpenCodeBridgeHandshake({
     handshake,

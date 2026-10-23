@@ -38,6 +38,40 @@ function record(): OpenCodeTaskLogAttributionRecord {
 function project(messages = fixture().logProjection.messages, attribution = record()) {
   return filterMessagesForAttribution(messages, attribution, { nativeParentIdsUnavailable: true });
 }
+/** Synthetic V1 parent-chained turns: delivered turn, a foreign task marker turn, terminal turn. */
+function lifecycleMessages(terminalRef: string): OpenCodeRuntimeTranscriptLogMessage[] {
+  const sessionId = fixture().sessionId;
+  const message = (
+    uuid: string,
+    parentUuid: string | null,
+    isoMs: number,
+    toolCalls: { id: string; name: string; input: Record<string, unknown> }[] = []
+  ): OpenCodeRuntimeTranscriptLogMessage => ({
+    uuid,
+    parentUuid,
+    type: parentUuid === null ? 'user' : 'assistant',
+    timestamp: new Date(isoMs).toISOString(),
+    content: [],
+    isMeta: false,
+    sessionId,
+    toolCalls: toolCalls.map((toolCall) => ({ ...toolCall, isTask: false })),
+    toolResults: [],
+  });
+  return [
+    message('msg_TESTinput', null, 10),
+    message('msg_TESTwork', 'msg_TESTinput', 20, [
+      { id: 'TEST-work', name: 'shell', input: {} },
+    ]),
+    message('msg_TESTforeignturn', null, 30),
+    message('msg_TESTforeignmarker', 'msg_TESTforeignturn', 40, [
+      { id: 'TEST-foreign', name: 'task_complete', input: { taskId: 'task-b' } },
+    ]),
+    message('msg_TESTterminalturn', null, 50),
+    message('msg_TESTterminal', 'msg_TESTterminalturn', 60, [
+      { id: 'TEST-terminal', name: 'task_complete', input: { taskId: terminalRef } },
+    ]),
+  ];
+}
 async function service(
   transcript: Fixture,
   attribution: OpenCodeTaskLogAttributionRecord | OpenCodeTaskLogAttributionRecord[] = record(),
@@ -223,4 +257,26 @@ describe('V2 native task-log attribution', () => {
       expect(response?.runtimeProjection?.projectedMessageCount).toBe(1);
     }
   );
+
+  it('excludes turns marking another task from the V1 lifecycle widening', () => {
+    const selected = filterMessagesForAttribution(lifecycleMessages('task-a'), record()).map(
+      (message) => message.uuid
+    );
+    expect(selected).toContain('msg_TESTwork');
+    expect(selected).toContain('msg_TESTterminal');
+    expect(selected).not.toContain('msg_TESTforeignmarker');
+    expect(selected).not.toContain('msg_TESTforeignturn');
+  });
+
+  it('widens to a terminal marker naming only the display id when the ref set includes it', () => {
+    const messages = lifecycleMessages('TASK-1');
+    expect(
+      filterMessagesForAttribution(messages, record()).map((message) => message.uuid)
+    ).not.toContain('msg_TESTterminal');
+    const selected = filterMessagesForAttribution(messages, record(), {
+      taskRefs: ['task-a', 'task-1'],
+    }).map((message) => message.uuid);
+    expect(selected).toContain('msg_TESTterminal');
+    expect(selected).not.toContain('msg_TESTforeignmarker');
+  });
 });

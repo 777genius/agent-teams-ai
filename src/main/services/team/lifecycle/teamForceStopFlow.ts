@@ -24,7 +24,10 @@ import {
   readOpenCodeRuntimeLaneIndex,
   withOpenCodeRuntimeLaneLifecycleLock,
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
-import { OpenCodeRuntimeStopUnconfirmedError } from '../provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
+import {
+  openCodeRegularStopRejectionCode,
+  OpenCodeRuntimeStopUnconfirmedError,
+} from '../provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
 import type { TeamLaunchStateReadResult, TeamLaunchStopAuthority } from '../TeamLaunchStateStore';
@@ -371,6 +374,11 @@ async function runTeamStopFlow(
           if (error instanceof OpenCodeRuntimeStopUnconfirmedError) {
             causalFailure = error.causalFailure;
             diagnostics.push(...error.diagnosticCodes.map((code) => `stop_failure_code:${code}`));
+            if (error.diagnosticCodes.length === 0) {
+              diagnostics.push(`stop_failure_code:${openCodeRegularStopRejectionCode(error)}`);
+            }
+          } else {
+            diagnostics.push(`stop_failure_code:${openCodeRegularStopRejectionCode(error)}`);
           }
           diagnostics.push(`Regular stop failed: ${message}`);
         }

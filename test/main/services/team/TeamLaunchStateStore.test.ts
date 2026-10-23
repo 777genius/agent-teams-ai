@@ -3,6 +3,7 @@ import {
   getTeamLaunchStatePath,
   getTeamLaunchStoppedMarkerPath,
   getTeamLaunchSummaryPath,
+  readPersistedLaunchRuntimePidsSync,
   TeamLaunchStateStore,
   withTeamLaunchStatePublicationLock,
 } from '@main/services/team/TeamLaunchStateStore';
@@ -128,7 +129,11 @@ describe('TeamLaunchStateStore', () => {
     });
     await Promise.all([stopping, restoring]);
 
-    expect(order).toEqual(['stop-marker:launch-freshness.json', 'stop-marker:launch-stopped.json', 'restore-commit']);
+    expect(order).toEqual([
+      'stop-marker:launch-freshness.json',
+      'stop-marker:launch-stopped.json',
+      'restore-commit',
+    ]);
   });
 
   it('rejects when a live team directory cannot persist the complete launch publication', async () => {
@@ -289,9 +294,7 @@ describe('TeamLaunchStateStore', () => {
     });
     mocks.atomicWriteAsync.mockRejectedValueOnce(missingDirectoryError);
 
-    await expect(
-      new TeamLaunchStateStore().write('removed-team', snapshot())
-    ).resolves.toBe(false);
+    await expect(new TeamLaunchStateStore().write('removed-team', snapshot())).resolves.toBe(false);
     expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
   });
 
@@ -532,5 +535,77 @@ describe('TeamLaunchStateStore', () => {
     } finally {
       remove.mockRestore();
     }
+  });
+});
+
+describe('readPersistedLaunchRuntimePidsSync', () => {
+  const teamName = 'demo';
+
+  beforeEach(() => {
+    fs.rmSync(mocks.teamsBasePath, { recursive: true, force: true });
+    fs.mkdirSync(path.join(mocks.teamsBasePath, teamName), { recursive: true });
+  });
+
+  afterEach(() => {
+    fs.rmSync(mocks.teamsBasePath, { recursive: true, force: true });
+  });
+
+  function writeLaunchState(content: string): void {
+    fs.writeFileSync(getTeamLaunchStatePath(teamName), content);
+  }
+
+  function memberEntry(name: string, runtimePid?: unknown): Record<string, unknown> {
+    return {
+      name,
+      launchState: 'confirmed_alive',
+      agentToolAccepted: true,
+      runtimeAlive: true,
+      bootstrapConfirmed: true,
+      hardFailure: false,
+      lastEvaluatedAt: '2026-01-01T00:00:00.000Z',
+      ...(runtimePid !== undefined ? { runtimePid } : {}),
+    };
+  }
+
+  it('collects the deduplicated recorded runtime pids of persisted launch members', () => {
+    writeLaunchState(
+      JSON.stringify({
+        version: 2,
+        teamName,
+        expectedMembers: ['team-lead', 'alice', 'bob', 'jack', 'tom'],
+        launchPhase: 'finished',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        members: {
+          'team-lead': memberEntry('team-lead', 97771),
+          alice: memberEntry('alice', 97771),
+          bob: memberEntry('bob', 97771),
+          jack: memberEntry('jack', 0),
+          tom: memberEntry('tom'),
+        },
+      })
+    );
+
+    expect(readPersistedLaunchRuntimePidsSync(teamName)).toEqual([97771]);
+  });
+
+  it('answers no pids when the launch state is absent or does not describe a launch', () => {
+    expect(readPersistedLaunchRuntimePidsSync(teamName)).toEqual([]);
+    writeLaunchState('not json');
+    expect(readPersistedLaunchRuntimePidsSync(teamName)).toEqual([]);
+    writeLaunchState(JSON.stringify({ version: 2, teamName, members: 'nonsense' }));
+    expect(readPersistedLaunchRuntimePidsSync(teamName)).toEqual([]);
+  });
+
+  it('answers no pids when the persisted launch state names a different team', () => {
+    writeLaunchState(
+      JSON.stringify({
+        version: 2,
+        teamName: 'other-team',
+        expectedMembers: ['alice'],
+        members: { alice: memberEntry('alice', 4242) },
+      })
+    );
+
+    expect(readPersistedLaunchRuntimePidsSync(teamName)).toEqual([]);
   });
 });
