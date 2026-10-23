@@ -1237,6 +1237,45 @@ it('retains returned send failures as dispatch facts through serialized task and
   ]) expect(project(value)).toBeNull();
 });
 
+it('keeps only the closed native stage token on returned dispatch failures', async () => {
+  const project = runInNewContext(`(${serializedFunction(projectIpcCausalFailure)})`) as typeof projectIpcCausalFailure;
+  const returned = project('error:runtime_not_ready: OpenCode message bridge failed: run_control_process_identity:process_image_open:0 @native:runStateSelect');
+  expect(returned).toMatchObject({ phase: 'dispatch', bridgeFailure: {
+    kind: 'runtime_not_ready', sdkCode: 'run_control_process_identity', nativeOperation: 'runStateSelect',
+    nativeErrno: 0, nativeStage: 'process_image_open' } });
+  // The stage is a closed token only; an open shape never survives projection.
+  expect(project('error:runtime_not_ready: OpenCode message bridge failed: run_control_process_identity:PROCESS_IMAGE_OPEN:0 @native:runStateSelect')).toBeNull();
+  const carried = project({ phase: 'dispatch', bridgeFailure: { kind: 'runtime_not_ready',
+    sdkCode: 'run_control_process_identity', nativeOperation: 'runStateSelect',
+    nativeStage: 'process_alive', nativeErrno: 0 } } as never);
+  expect(carried).toMatchObject({ bridgeFailure: { nativeStage: 'process_alive', nativeErrno: 0 } });
+  const dropped = project({ phase: 'dispatch', bridgeFailure: { kind: 'runtime_not_ready',
+    sdkCode: 'run_control_process_identity', nativeStage: 'PRIVATE TOKEN' } } as never);
+  expect(dropped?.bridgeFailure).not.toHaveProperty('nativeStage');
+  expect(dropped?.bridgeFailure).toMatchObject({ sdkCode: 'run_control_process_identity' });
+  for (const nativeStage of ['a', 'x'.repeat(91)])
+    expect(project({ phase: 'dispatch', bridgeFailure: { kind: 'runtime_not_ready',
+      sdkCode: 'run_control_process_identity', nativeStage } } as never)?.bridgeFailure).not.toHaveProperty('nativeStage');
+});
+
+it('pins the exact durable comment expectation and its closed mismatch classification', async () => {
+  const full = await readFile('scripts/e2e/opencode-native-windows-full.ts', 'utf8');
+  const prompts = await readFile('scripts/e2e/opencode-native-real-task-prompts.ts', 'utf8');
+  // The nonce comment is an exact-text durable receipt; the shared prompt
+  // contract demands those characters alone so a paraphrase can never satisfy
+  // the assertion, and every task passes its nonce as the comment token.
+  expect(full).toContain('commentToken: `TASK_COMMENT:${nonce.alice}`');
+  expect(full).toContain('commentToken: `TASK_COMMENT:${nonce.bob}`');
+  expect(full).toContain('commentToken: `TASK_COMMENT:${nonce.new}`');
+  expect(prompts).toContain('The text value must be exactly ${commentToken}, copied byte-for-byte');
+  expect(prompts).toContain('A comment with any other text fails the task.');
+  for (const field of ['exactComment:', 'exactTextAnyAuthor:', 'commentTextIncludesExpected:',
+    'commentTextStartsWithExpected:', 'firstCommentLength:', 'commentBeforeTerminal:'])
+    expect(full).toContain(field);
+  // A failed durable receipt is classified without carrying any comment text.
+  expect(full).not.toContain('row.text,');
+});
+
 it.each(['valid', 'foreign-run', 'foreign-team', 'wrong-state', 'wrong-message', 'getter', 'rejected', 'event'] as const)(
   'observes retained Stop %s once without issuing actions or accepting another run', async (scenario) => {
     const teamName = 'test-opencode-retained', runId = 'TEST-original-run';
@@ -1285,6 +1324,23 @@ it('projects the exact additional source-owned send guards including case-sensit
   }
   expect(project('error:runtime_not_ready: OpenCode message bridge failed: missing_deliveryattemptid')).toBeNull();
   expect(project('error:internal_error: OpenCode message bridge failed: delivery_lock_foreign')).toBeNull();
+});
+
+it('projects the precise run-control deadline codes instead of one ambiguous token', () => {
+  const project = runInNewContext(`(${serializedFunction(projectIpcCausalFailure)})`) as typeof projectIpcCausalFailure;
+  const codes = ['run_state_wall_deadline_expired', 'run_control_client_budget_exhausted',
+    'run_control_connect_no_listener_expired', 'run_control_connect_busy_timeout_expired',
+    'run_control_connect_idle_expired'];
+  for (const sdkCode of codes) {
+    expect(project('error:runtime_not_ready: OpenCode message bridge failed: ' + sdkCode))
+      .toMatchObject({ phase: 'dispatch', bridgeFailure: { kind: 'runtime_not_ready', sdkCode } });
+    expect(project('error:runtime_not_ready: OpenCode message bridge failed: ' + sdkCode + ' @native:runStateRequest'))
+      .toMatchObject({ phase: 'dispatch', bridgeFailure: { kind: 'runtime_not_ready', sdkCode, nativeOperation: 'runStateRequest' } });
+  }
+  // The ambiguous predecessor token stays recognized, but the precise tokens
+  // must never be folded back into it or dropped as unknown.
+  expect(project('error:runtime_not_ready: OpenCode message bridge failed: run_deadline_expired'))
+    .toMatchObject({ phase: 'dispatch', bridgeFailure: { kind: 'runtime_not_ready', sdkCode: 'run_deadline_expired' } });
 });
 
 it('retains only exact existing V2 cleanup and member Stop codes from the same-run failure', async () => {

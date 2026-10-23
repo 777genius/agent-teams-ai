@@ -45,6 +45,7 @@ describe('native real-task prompt contract', () => {
 
   it('forbids task_complete before the work and the exact comment', () => {
     expect(prompt).toContain('Never call task_complete before');
+    expect(prompt).toContain('final two actions must be task_add_comment then task_complete');
   });
 
   it('requires retrying failed tool calls before finishing', () => {
@@ -66,6 +67,7 @@ describe('native verification command contract', () => {
     expect(instruction).toContain(command);
     expect(instruction).toContain('Do not substitute a relative path');
     expect(instruction).toContain('print its marker yourself');
+    expect(instruction).toContain('Never create or edit *-result.txt yourself');
     expect(instruction).toContain('never counts as the marker');
   });
 
