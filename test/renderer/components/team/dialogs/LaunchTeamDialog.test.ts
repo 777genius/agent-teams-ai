@@ -490,14 +490,16 @@ const draftPersistenceMock = vi.hoisted(() => ({
 vi.mock('@renderer/hooks/useDraftPersistence', () => ({
   useDraftPersistence: ({ key }: { key: string }) => {
     const [value, setValue] = React.useState('');
+    const [isLoaded, setIsLoaded] = React.useState(false);
     React.useEffect(() => {
-      const saved = draftPersistenceMock.savedDrafts.get(key);
-      if (saved === undefined) return undefined;
       // Mirrors the real hook: the draft lands only after the first render,
       // so consumers must tolerate selection/prompt values arriving late.
       let cancelled = false;
       void Promise.resolve().then(() => {
-        if (!cancelled) setValue(saved);
+        if (cancelled) return;
+        const saved = draftPersistenceMock.savedDrafts.get(key);
+        if (saved !== undefined) setValue(saved);
+        setIsLoaded(true);
       });
       return () => {
         cancelled = true;
@@ -508,6 +510,7 @@ vi.mock('@renderer/hooks/useDraftPersistence', () => ({
       setValue,
       isSaved: false,
       clearDraft: vi.fn(),
+      isLoaded,
     };
   },
 }));

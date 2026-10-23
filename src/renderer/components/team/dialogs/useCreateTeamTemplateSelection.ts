@@ -26,7 +26,10 @@ export interface UseCreateTeamTemplateSelectionResult {
     setValue: (value: string) => void;
     isSaved: boolean;
     clearDraft: () => void;
+    isLoaded: boolean;
   };
+  /** True once the persisted template selection has been restored (or confirmed absent). */
+  templateSelectionHydrated: boolean;
   /** Template source that prefilled the current form; keeps the prompt field
    * visible for template-driven config-only creation (`launchTeam=false`). */
   appliedTemplateSource: CreateTeamTemplateSource;
@@ -85,5 +88,6 @@ export function useCreateTeamTemplateSelection({
     setAppliedTemplateSource,
     storedTemplateSelection,
     clearTemplateSelection,
+    templateSelectionHydrated: templateSelectionDraft.isLoaded,
   };
 }

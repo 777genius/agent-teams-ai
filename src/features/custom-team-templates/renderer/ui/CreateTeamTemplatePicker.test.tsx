@@ -380,6 +380,48 @@ describe('CreateTeamTemplatePicker', () => {
     });
   });
 
+  it('blocks option changes until the persisted selection is hydrated', async () => {
+    listTemplates.mockResolvedValue({ status: 'ready', templates: customTemplates() });
+    // Use direct render to control readiness.
+    root.render(
+      <CreateTeamTemplatePicker
+        open={true}
+        initialSelection=""
+        initialSelectionReady={false}
+        onApply={onApply}
+      />
+    );
+    await act(async () => {});
+    expect(optionNone()?.hasAttribute('disabled')).toBe(true);
+    await act(async () => {
+      optionNone()?.click();
+    });
+    await act(async () => {});
+    expect(onApply).not.toHaveBeenCalled();
+
+    // Resolve hydration to a previously saved custom selection.
+    root.render(
+      <CreateTeamTemplatePicker
+        open={true}
+        initialSelection="custom:tmpl-custom-1"
+        initialSelectionReady={true}
+        onApply={onApply}
+      />
+    );
+    await flush();
+    expect(optionCustom('tmpl-custom-1')?.getAttribute('aria-pressed')).toBe('true');
+    expect(optionNone()?.hasAttribute('disabled')).toBe(false);
+
+    // After hydration, clicking "No template" performs the real selection change.
+    await click(optionNone());
+    expect(onApply).toHaveBeenCalledTimes(1);
+    expect(onApply).toHaveBeenLastCalledWith(
+      expect.objectContaining({ description: '', prompt: '', members: [] }),
+      'none',
+      'none'
+    );
+  });
+
   it('keeps selection controls keyboard-focusable with accessible pressed state', async () => {
     listTemplates.mockResolvedValueOnce({ status: 'ready', templates: customTemplates() });
     renderPicker(true);

@@ -2462,6 +2462,7 @@ export const CreateTeamDialog = ({
             <CreateTeamTemplatePicker
               open={open}
               initialSelection={initialData ? '' : storedTemplateSelection.value}
+              initialSelectionReady={initialData ? true : templateSelectionDraft.isLoaded !== false}
               onApply={(draft, source, selectionValue) => {
                 setAppliedTemplateSource(source);
                 templateSelectionDraft.setValue(
