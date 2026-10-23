@@ -208,3 +208,47 @@ describe('OpenCodePromptDeliveryWatchdogScheduler relay diagnostics', () => {
     expect(deps.warn).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('OpenCodePromptDeliveryWatchdogScheduler scoped bootstrap wakes', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('rechecks generation authorization after asynchronous recovery before relaying', async () => {
+    let current = true;
+    const { scheduler, deps } = makeScheduler({
+      canDeliverToTeamRuntime: () => false,
+      recoverBeforeDelivery: async () => {
+        current = false;
+        return true;
+      },
+    });
+    scheduler.schedule({
+      teamName: 'team',
+      memberName: 'jack',
+      messageId: 'queued',
+      delayMs: 500,
+      isCurrent: () => current,
+    });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(deps.relay).not.toHaveBeenCalled();
+    scheduler.cancelTeam('team');
+  });
+
+  it('refuses already revoked wakes at admission', async () => {
+    const { scheduler, deps } = makeScheduler();
+    scheduler.schedule({
+      teamName: 'team',
+      memberName: 'jack',
+      messageId: 'queued',
+      delayMs: 500,
+      isCurrent: () => false,
+    });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(deps.relay).not.toHaveBeenCalled();
+    scheduler.cancelTeam('team');
+  });
+});

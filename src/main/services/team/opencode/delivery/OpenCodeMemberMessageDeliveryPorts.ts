@@ -302,6 +302,7 @@ export interface OpenCodeMemberMessageDeliveryServiceDependencies {
     memberName: string;
     messageId?: string | null;
     delayMs: number;
+    isCurrent?: () => boolean;
   }): void;
   logOpenCodePromptDeliveryEvent(
     event: string,

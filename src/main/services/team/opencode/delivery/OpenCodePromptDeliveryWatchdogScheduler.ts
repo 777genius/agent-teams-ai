@@ -89,8 +89,9 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
     memberName: string;
     messageId?: string | null;
     delayMs: number;
+    isCurrent?: () => boolean;
   }): void {
-    if (!this.isEnabled()) {
+    if (!this.isEnabled() || input.isCurrent?.() === false) {
       return;
     }
     const messageId = input.messageId?.trim();
@@ -117,6 +118,7 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
         teamName: input.teamName,
         memberName: input.memberName,
         run: async () => {
+          if (input.isCurrent?.() === false) return;
           if (!this.deps.canDeliverToTeamRuntime(input.teamName)) {
             const recovered = await this.deps.recoverBeforeDelivery({
               teamName: input.teamName,
@@ -126,6 +128,7 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
               return;
             }
           }
+          if (input.isCurrent?.() === false) return;
           try {
             this.logRelayDiagnostics({
               teamName: input.teamName,

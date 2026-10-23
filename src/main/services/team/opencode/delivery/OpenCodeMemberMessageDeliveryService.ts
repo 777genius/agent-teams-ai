@@ -17,6 +17,7 @@ import {
   recoverStaleOpenCodeRuntimeLaneIndexEntry,
 } from '../store/OpenCodeRuntimeManifestEvidenceReader';
 
+import { createOpenCodeBootstrapPendingDeliveryWake } from './OpenCodeBootstrapPendingDeliveryWake';
 import { recoverOpenCodeActiveDeliveryBlocker } from './OpenCodeActiveDeliveryPreemption';
 import {
   prepareOpenCodeDeliveryAttachments,
@@ -384,6 +385,15 @@ export class OpenCodeMemberMessageDeliveryService {
       null;
     let forceOpenCodeSessionRefreshReason: string | undefined;
     if (laneIdentity.laneOwnerProviderId === 'opencode') {
+      const wakePendingDelivery = createOpenCodeBootstrapPendingDeliveryWake(this.deps, {
+        teamName,
+        memberName: canonicalMemberName,
+        messageId: input.messageId,
+        laneId: laneIdentity.laneId,
+        trackedRunId,
+        trackedRun,
+        runtimeRunId,
+      });
       const bootstrapSession =
         await this.deps.findDeliverableOpenCodeRuntimeBootstrapSessionEvidence({
           teamName,
@@ -393,6 +403,7 @@ export class OpenCodeMemberMessageDeliveryService {
         });
       if (!bootstrapSession) {
         if (laneIdentity.laneKind === 'secondary') {
+          wakePendingDelivery();
           return {
             delivered: false,
             reason: 'opencode_runtime_not_active',
