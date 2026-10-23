@@ -5,6 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
+  zod@4: 4.6.7
   '@modelcontextprotocol/sdk': 1.32.0
   '@terminal-platform/design-tokens': file:vendor/terminal-platform/sdk/terminal-platform-design-tokens-0.1.0.tgz
   '@terminal-platform/foundation': file:vendor/terminal-platform/sdk/terminal-platform-foundation-0.1.0.tgz
@@ -108,6 +109,7 @@ patchedDependencies:
   http-cache-semantics@4.2.0: 39b101be02f9463a5819ac4962be9f413d12a4c4d159b3976e2441ec7e6316d7
   mcp-proxy@6.4.1: 7cf3a2a315a73ab85c37769cde2848c5e0c4236b2e384c31b5937b36cbc5bfb5
   node-forge@1.4.0: 7af5fa910c9692d7af8fa33df2f5a3d74505f4e7c46a012d0e0137903d01215c
+  zod@3.25.76: 66f4b1ea83216d447c0085bc9cded813f82e07e2ce45d6b2d02ec0bc1cbf4b69
 
 importers:
 
@@ -229,16 +231,16 @@ importers:
         version: 1.7.0(@headless-tree/core@1.7.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@openuidev/lang-core':
         specifier: 0.3.2
-        version: 0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.5))(zod@4.6.5)
+        version: 0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.7))(zod@4.6.7)
       '@openuidev/react-headless':
         specifier: 0.17.0
         version: 0.17.0(react@19.2.4)(zustand@4.5.7(@types/react@19.2.14)(react@19.2.4))
       '@openuidev/react-lang':
         specifier: 0.3.2
-        version: 0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.5))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.6.5)
+        version: 0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.7))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.6.7)
       '@openuidev/react-ui':
         specifier: 0.17.0
-        version: 0.17.0(@openuidev/react-headless@0.17.0(react@19.2.4)(zustand@4.5.7(@types/react@19.2.14)(react@19.2.4)))(@openuidev/react-lang@0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.5))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.6.5))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(supports-color@10.2.2)(zod@4.6.5)(zustand@4.5.7(@types/react@19.2.14)(react@19.2.4))
+        version: 0.17.0(@openuidev/react-headless@0.17.0(react@19.2.4)(zustand@4.5.7(@types/react@19.2.14)(react@19.2.4)))(@openuidev/react-lang@0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.7))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.6.7))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(supports-color@10.2.2)(zod@4.6.7)(zustand@4.5.7(@types/react@19.2.14)(react@19.2.4))
       '@radix-ui/react-alert-dialog':
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -507,8 +509,8 @@ importers:
         specifier: ^3.29.1
         version: 3.29.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       zod:
-        specifier: 4.6.5
-        version: 4.6.5
+        specifier: 4.6.7
+        version: 4.6.7
       zustand:
         specifier: ^4.5.0
         version: 4.5.7(@types/react@19.2.14)(react@19.2.4)
@@ -775,8 +777,8 @@ importers:
         specifier: ^3.35.0
         version: 3.35.0(patch_hash=d75d6f9f9057373a9e00809a3a4a637023626e29e47d5a03c1f299b977455809)(supports-color@10.2.2)
       zod:
-        specifier: ^4.3.6
-        version: 4.3.6
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@types/node':
         specifier: ^24.12.4
@@ -2028,7 +2030,7 @@ packages:
     engines: {node: '>=18'}
     peerDependencies:
       '@cfworker/json-schema': ^4.1.1
-      zod: ^3.25 || ^4.0
+      zod: 4.6.7
     peerDependenciesMeta:
       '@cfworker/json-schema':
         optional: true
@@ -2389,6 +2391,7 @@ packages:
   '@opentelemetry/sdk-trace-base@2.6.0':
     resolution: {integrity: sha512-g/OZVkqlxllgFM7qMKqbPV9c1DUPhQ7d4n3pgZFcrnrNft9eJXZM2TNHTPYREJBrtNdRytYyvwjgL5geDKl3EQ==}
     engines: {node: ^18.19.0 || >=20.6.0}
+    deprecated: Use @opentelemetry/sdk-trace package
     peerDependencies:
       '@opentelemetry/api': '>=1.3.0 <1.10.0'
 
@@ -2417,7 +2420,7 @@ packages:
     resolution: {integrity: sha512-HSOWwPLQAFA/MgVBDDnKOrGFT5Ubcf1QNCmYm2nG18cug+mo3p4U9+gqU8j8nkF2A9V5+i41mb0CTZHF+C1mSg==}
     peerDependencies:
       '@modelcontextprotocol/sdk': 1.32.0
-      zod: ^3.25.0 || ^4.0.0
+      zod: 4.6.7
     peerDependenciesMeta:
       '@modelcontextprotocol/sdk':
         optional: true
@@ -2441,7 +2444,7 @@ packages:
       '@modelcontextprotocol/sdk': 1.32.0
       react: '*'
       react-dom: '*'
-      zod: ^3.25.0 || ^4.0.0
+      zod: 4.6.7
     peerDependenciesMeta:
       '@modelcontextprotocol/sdk':
         optional: true
@@ -2455,7 +2458,7 @@ packages:
       '@openuidev/react-lang': '>=0.3.0 <0.4.0'
       react: ^18.3.1 || ^19.0.0
       react-dom: ^18.0.0 || ^19.0.0
-      zod: ^3.25.0 || ^4.0.0
+      zod: 4.6.7
       zustand: ^4.5.5
 
   '@oxc-minify/binding-android-arm-eabi@0.143.0':
@@ -12480,7 +12483,7 @@ packages:
       arktype: ^2.1.20
       effect: ^3.16.0
       sury: ^10.0.0
-      zod: ^3.25.0 || ^4.0.0
+      zod: 4.6.7
       zod-to-json-schema: ^3.25.0
     peerDependenciesMeta:
       '@valibot/to-json-schema':
@@ -12578,22 +12581,19 @@ packages:
   zod-to-json-schema@3.25.1:
     resolution: {integrity: sha512-pM/SU9d3YAggzi6MtR4h7ruuQlqKtad8e9S0fmxcMi+ueAK5Korys/aWcV9LIIHTVbj01NdzxcnXSN+O74ZIVA==}
     peerDependencies:
-      zod: ^3.25 || ^4
+      zod: 4.6.7
 
   zod-validation-error@4.0.2:
     resolution: {integrity: sha512-Q6/nZLe6jxuU80qb/4uJ4t5v2VEZ44lzQjPDhYJNztRQ4wyWc6VF3D3Kb/fAuPetZQnhS3hnajCf9CsWesghLQ==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
-      zod: ^3.25.0 || ^4.0.0
+      zod: 4.6.7
 
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
-  zod@4.3.6:
-    resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
-
-  zod@4.6.5:
-    resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
+  zod@4.6.7:
+    resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
 
   zustand@4.5.7:
     resolution: {integrity: sha512-CHOUy7mu3lbD6o6LJLfllpjkzhHXSBlX8B9+qPddUsIfeF5S/UZ5q0kmCsnRqT1UHFQZchNFDDzMbQsuesHWlw==}
@@ -12617,7 +12617,7 @@ snapshots:
 
   '@ag-ui/core@0.0.53':
     dependencies:
-      zod: 3.25.76
+      zod: 3.25.76(patch_hash=66f4b1ea83216d447c0085bc9cded813f82e07e2ce45d6b2d02ec0bc1cbf4b69)
 
   '@alloc/quick-lru@5.2.0': {}
 
@@ -14164,7 +14164,7 @@ snapshots:
       json5: 2.2.3
       rollup: 4.59.0
 
-  '@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.3.6)':
+  '@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.7)':
     dependencies:
       '@hono/node-server': 1.19.13(hono@4.12.30)
       ajv: 8.20.0
@@ -14181,33 +14181,10 @@ snapshots:
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
       raw-body: 3.0.2
-      zod: 4.3.6
-      zod-to-json-schema: 3.25.1(zod@4.3.6)
+      zod: 4.6.7
+      zod-to-json-schema: 3.25.1(zod@4.6.7)
     transitivePeerDependencies:
       - supports-color
-
-  '@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.5)':
-    dependencies:
-      '@hono/node-server': 1.19.13(hono@4.12.30)
-      ajv: 8.20.0
-      ajv-formats: 3.0.1(ajv@8.20.0)
-      content-type: 1.0.5
-      cors: 2.8.6
-      cross-spawn: 7.0.6
-      eventsource: 3.0.7
-      eventsource-parser: 3.0.6
-      express: 5.2.1(supports-color@10.2.2)
-      express-rate-limit: 8.3.0(express@5.2.1(supports-color@10.2.2))
-      hono: 4.12.30
-      jose: 6.2.0
-      json-schema-typed: 8.0.2
-      pkce-challenge: 5.0.1
-      raw-body: 3.0.2
-      zod: 4.6.5
-      zod-to-json-schema: 3.25.1(zod@4.6.5)
-    transitivePeerDependencies:
-      - supports-color
-    optional: true
 
   '@mux/mux-data-google-ima@0.3.17':
     dependencies:
@@ -15086,21 +15063,21 @@ snapshots:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/core': 2.8.0(@opentelemetry/api@1.9.0)
 
-  '@openuidev/devtools@0.2.2(@openuidev/observability@0.0.4)(@openuidev/react-lang@0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.5))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.6.5))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+  '@openuidev/devtools@0.2.2(@openuidev/observability@0.0.4)(@openuidev/react-lang@0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.7))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.6.7))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
     dependencies:
       '@openuidev/observability': 0.0.4
       lucide-react: 0.575.0(react@19.2.4)
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
     optionalDependencies:
-      '@openuidev/react-lang': 0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.5))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.6.5)
+      '@openuidev/react-lang': 0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.7))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.6.7)
 
-  '@openuidev/lang-core@0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.5))(zod@4.6.5)':
+  '@openuidev/lang-core@0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.7))(zod@4.6.7)':
     dependencies:
       ci-info: 4.4.0
-      zod: 4.6.5
+      zod: 4.6.7
     optionalDependencies:
-      '@modelcontextprotocol/sdk': 1.32.0(supports-color@10.2.2)(zod@4.6.5)
+      '@modelcontextprotocol/sdk': 1.32.0(supports-color@10.2.2)(zod@4.6.7)
 
   '@openuidev/observability@0.0.4': {}
 
@@ -15111,22 +15088,22 @@ snapshots:
       react: 19.2.4
       zustand: 4.5.7(@types/react@19.2.14)(react@19.2.4)
 
-  '@openuidev/react-lang@0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.5))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.6.5)':
+  '@openuidev/react-lang@0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.7))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.6.7)':
     dependencies:
-      '@openuidev/devtools': 0.2.2(@openuidev/observability@0.0.4)(@openuidev/react-lang@0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.5))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.6.5))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      '@openuidev/lang-core': 0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.5))(zod@4.6.5)
+      '@openuidev/devtools': 0.2.2(@openuidev/observability@0.0.4)(@openuidev/react-lang@0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.7))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.6.7))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@openuidev/lang-core': 0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.7))(zod@4.6.7)
       '@openuidev/observability': 0.0.4
       react: 19.2.4
-      zod: 4.6.5
+      zod: 4.6.7
     optionalDependencies:
-      '@modelcontextprotocol/sdk': 1.32.0(supports-color@10.2.2)(zod@4.6.5)
+      '@modelcontextprotocol/sdk': 1.32.0(supports-color@10.2.2)(zod@4.6.7)
       react-dom: 19.2.4(react@19.2.4)
 
-  '@openuidev/react-ui@0.17.0(@openuidev/react-headless@0.17.0(react@19.2.4)(zustand@4.5.7(@types/react@19.2.14)(react@19.2.4)))(@openuidev/react-lang@0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.5))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.6.5))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(supports-color@10.2.2)(zod@4.6.5)(zustand@4.5.7(@types/react@19.2.14)(react@19.2.4))':
+  '@openuidev/react-ui@0.17.0(@openuidev/react-headless@0.17.0(react@19.2.4)(zustand@4.5.7(@types/react@19.2.14)(react@19.2.4)))(@openuidev/react-lang@0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.7))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.6.7))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(supports-color@10.2.2)(zod@4.6.7)(zustand@4.5.7(@types/react@19.2.14)(react@19.2.4))':
     dependencies:
       '@floating-ui/react-dom': 2.1.7(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@openuidev/react-headless': 0.17.0(react@19.2.4)(zustand@4.5.7(@types/react@19.2.14)(react@19.2.4))
-      '@openuidev/react-lang': 0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.5))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.6.5)
+      '@openuidev/react-lang': 0.3.2(@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.6.7))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.6.7)
       '@radix-ui/react-accordion': 1.2.21(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@radix-ui/react-aspect-ratio': 1.1.16(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@radix-ui/react-checkbox': 1.3.3(patch_hash=80a226b85c8e8a94674990c0eedf6d3709af6649df83bbed6f3ae930783e6d7d)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -15162,7 +15139,7 @@ snapshots:
       remark-math: 6.0.0(supports-color@10.2.2)
       tiny-invariant: 1.3.3
       unist-util-visit: 5.1.0
-      zod: 4.6.5
+      zod: 4.6.7
       zustand: 4.5.7(@types/react@19.2.14)(react@19.2.4)
     transitivePeerDependencies:
       - '@types/react'
@@ -20127,8 +20104,8 @@ snapshots:
       '@babel/parser': 7.28.6
       eslint: 9.39.4(jiti@1.21.7)(supports-color@10.2.2)
       hermes-parser: 0.25.1
-      zod: 4.6.5
-      zod-validation-error: 4.0.2(zod@4.6.5)
+      zod: 4.6.7
+      zod-validation-error: 4.0.2(zod@4.6.7)
     transitivePeerDependencies:
       - supports-color
 
@@ -20595,7 +20572,7 @@ snapshots:
 
   fastmcp@3.35.0(patch_hash=d75d6f9f9057373a9e00809a3a4a637023626e29e47d5a03c1f299b977455809)(supports-color@10.2.2):
     dependencies:
-      '@modelcontextprotocol/sdk': 1.32.0(supports-color@10.2.2)(zod@4.3.6)
+      '@modelcontextprotocol/sdk': 1.32.0(supports-color@10.2.2)(zod@4.6.7)
       '@standard-schema/spec': 1.1.0
       execa: 9.6.1
       file-type: 21.3.2(supports-color@10.2.2)
@@ -20605,10 +20582,10 @@ snapshots:
       strict-event-emitter-types: 2.0.0
       undici: 7.30.0
       uri-templates: 0.2.0
-      xsschema: 0.4.3(zod-to-json-schema@3.25.1(zod@4.3.6))(zod@4.3.6)
+      xsschema: 0.4.3(zod-to-json-schema@3.25.1(zod@4.6.7))(zod@4.6.7)
       yargs: 18.0.0
-      zod: 4.3.6
-      zod-to-json-schema: 3.25.1(zod@4.3.6)
+      zod: 4.6.7
+      zod-to-json-schema: 3.25.1(zod@4.6.7)
     transitivePeerDependencies:
       - '@cfworker/json-schema'
       - '@valibot/to-json-schema'
@@ -21815,7 +21792,7 @@ snapshots:
       smol-toml: 1.8.0
       strip-json-comments: 5.0.3
       typescript: 5.9.3
-      zod: 4.6.5
+      zod: 4.6.7
 
   knitwork@1.3.0: {}
 
@@ -26320,10 +26297,10 @@ snapshots:
 
   xmlbuilder@15.1.1: {}
 
-  xsschema@0.4.3(zod-to-json-schema@3.25.1(zod@4.3.6))(zod@4.3.6):
+  xsschema@0.4.3(zod-to-json-schema@3.25.1(zod@4.6.7))(zod@4.6.7):
     optionalDependencies:
-      zod: 4.3.6
-      zod-to-json-schema: 3.25.1(zod@4.3.6)
+      zod: 4.6.7
+      zod-to-json-schema: 3.25.1(zod@4.6.7)
 
   xtend@4.0.2: {}
 
@@ -26398,24 +26375,17 @@ snapshots:
       compress-commons: 6.0.2
       readable-stream: 4.7.0
 
-  zod-to-json-schema@3.25.1(zod@4.3.6):
+  zod-to-json-schema@3.25.1(zod@4.6.7):
     dependencies:
-      zod: 4.3.6
+      zod: 4.6.7
 
-  zod-to-json-schema@3.25.1(zod@4.6.5):
+  zod-validation-error@4.0.2(zod@4.6.7):
     dependencies:
-      zod: 4.6.5
-    optional: true
+      zod: 4.6.7
 
-  zod-validation-error@4.0.2(zod@4.6.5):
-    dependencies:
-      zod: 4.6.5
+  zod@3.25.76(patch_hash=66f4b1ea83216d447c0085bc9cded813f82e07e2ce45d6b2d02ec0bc1cbf4b69): {}
 
-  zod@3.25.76: {}
-
-  zod@4.3.6: {}
-
-  zod@4.6.5: {}
+  zod@4.6.7: {}
 
   zustand@4.5.7(@types/react@19.2.14)(react@19.2.4):
     dependencies:

@@ -15,11 +15,15 @@ import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 type BehaviorProbe = typeof import('./transitive-security-probe');
+type ZodBehaviorProbe = typeof import('./zod-security-probe');
 // Node's native stripping requires the .ts URL; the erased type import keeps
 // this compatible with the application's existing bundler typecheck settings.
 const { verifyBracesBehavior, verifyCacheBehavior } = (await import(
   new URL('./transitive-security-probe.ts', import.meta.url).href
 )) as BehaviorProbe;
+const { verifyZodBehavior } = (await import(
+  new URL('./zod-security-probe.ts', import.meta.url).href
+)) as ZodBehaviorProbe;
 
 interface Backport {
   name: string;
@@ -27,6 +31,9 @@ interface Backport {
   main: string;
   advisory: string;
   patch: string;
+  // Exact fixed releases may coexist with the pinned vulnerable major. Unknown
+  // versions still enter verification and fail the strict metadata check.
+  unaffectedVersions?: string[];
   files: { path: string; original: string; patched: string }[];
 }
 export const BACKPORTS = JSON.parse(
@@ -142,7 +149,7 @@ export function installedBackportPackages(
   cwd: string,
   { npm, nodes = [] }: { npm?: boolean; nodes?: string[] } = {}
 ): string[] {
-  specFor(name);
+  const spec = specFor(name);
   const userAgent = process.env.npm_config_user_agent ?? '';
   npm ??= userAgent.startsWith('npm/');
   let workspace = resolve(cwd);
@@ -163,6 +170,14 @@ export function installedBackportPackages(
     const target = realpathSync(candidate);
     if (!target.startsWith(realpathSync(base) + sep))
       throw new Error(`Installed ${name} escaped node_modules`);
+    if (spec.unaffectedVersions) {
+      const metadata = JSON.parse(readFileSync(join(target, 'package.json'), 'utf8')) as {
+        name?: string;
+        version?: string;
+      };
+      if (metadata.name === name && spec.unaffectedVersions.includes(metadata.version ?? ''))
+        return;
+    }
     targets.add(target);
   };
   add(join(base, name));
@@ -191,6 +206,7 @@ if (process.argv[1] && resolve(process.argv[1]) === script) {
       const [, , , name, root] = process.argv;
       if (name === 'braces') verifyBracesBehavior(resolve(root));
       else if (name === 'http-cache-semantics') verifyCacheBehavior(resolve(root));
+      else if (name === 'zod') await verifyZodBehavior(resolve(root));
       else throw new Error(`Unsupported probe: ${name}`);
     } else {
       if (process.argv.length > 3 || (process.argv[2] && process.argv[2] !== '--apply'))
