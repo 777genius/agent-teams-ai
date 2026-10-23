@@ -14,10 +14,11 @@ minimumReleaseAgeExclude:
   - handlebars@4.7.10
   - dompurify@3.4.17
   - tmp@0.2.6
-strictPeerDependencies: false
+strictPeerDependencies: true
 peerDependencyRules:
   allowedVersions:
     '@nuxt/schema': '3.21.11'
+    'vite': '6.4.4'
 
 overrides:
   '@modelcontextprotocol/sdk': '1.32.0'
