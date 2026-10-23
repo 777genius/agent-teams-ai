@@ -19,11 +19,19 @@ descendants inherit, so nothing flashes. The wrapper:
 
 - rebuilds the command line with the real binary in place of its own argv[0] and
   passes the rest through unchanged;
-- inherits stdin/stdout/stderr, so the orchestrator still reads the host's output;
+- inherits only the explicit stdin/stdout/stderr handle list, so unrelated
+  inheritable sockets and handles cannot reach the real host;
 - starts the real binary with `CREATE_NO_WINDOW`;
 - propagates the real binary's exit code;
 - puts the real host in a kill-on-job-close job object, so the whole process tree
   dies with the wrapper rather than outliving it.
+
+Job creation, configuration and assignment must succeed before the suspended
+child resumes. A failure exits `112` and terminates only that invocation's owned
+child. The packaged Windows workflow compiles `WrapperNativeFixture.cs` and
+checks a real unrelated inheritable loopback socket is excluded, stdio and exit
+code survive, and terminating the fixture-owned wrapper drains its child tree.
+This does not claim a fix for a socket already inherited by the wrapper itself.
 
 It finds the real binary through the `OPENCODE_CONSOLE_WRAPPER_TARGET` env var,
 then an `opencode.real.path` sidecar next to itself, then an `opencode.real.exe`

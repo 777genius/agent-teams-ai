@@ -140,6 +140,15 @@ jobs:
         run: pnpm build
       - name: Stage native OpenCode wrapper
         run: node scripts/stage-opencode-console-wrapper.mjs --platform win32-x64 --require
+      - name: Verify wrapper native handle and job isolation
+        shell: pwsh
+        run: |
+          $compiler = Join-Path $env:SystemRoot 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
+          $fixture = Join-Path $env:RUNNER_TEMP 'TEST-wrapper-native-fixture.exe'
+          & $compiler /nologo /target:exe /optimize "/out:$fixture" tools/opencode-console-wrapper/WrapperNativeFixture.cs
+          if ($LASTEXITCODE -ne 0) { throw 'Native wrapper fixture compilation failed' }
+          & $fixture (Resolve-Path resources/runtime/opencode-console/opencode.exe).Path
+          if ($LASTEXITCODE -ne 0) { throw 'Native wrapper handle/job isolation failed' }
       - name: Package without publishing
         run: pnpm pack:win:x64 --dir --publish never
       - name: Verify packaged candidate identity
