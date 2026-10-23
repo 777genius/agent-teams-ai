@@ -23,7 +23,10 @@ import { promisify } from 'node:util';
 import { parseSingleBridgeJsonResult, validateBridgeResultEnvelope } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import { projectV2NativeTranscript } from './opencode-native-v2-transcript';
 import { stageNativeTestNode } from './opencode-native-test-node';
-import { realTaskPrompt } from './opencode-native-real-task-prompts';
+import {
+  realTaskPrompt,
+  verificationInstruction,
+} from './opencode-native-real-task-prompts';
 import { redactLaunchFailureArtifactText } from '../../src/main/services/team/TeamLaunchFailureArtifactPack';
 import {
   NativeDesktopIpcError,
@@ -2089,8 +2092,6 @@ async function main() {
       // JSON string escaping doubles backslashes in cmd/PowerShell arguments.
       return `"${testNode.executable}" "${program}"`;
     };
-    const verificationInstruction = (name: string) =>
-      `Execute this supplied literal absolute Node command verbatim in your native shell: ${command(name)}. Do not substitute a relative path, recreate or copy the verifier, or print its marker yourself. Let the unchanged verifier produce its own output.`;
     const checkSum = `const a=require('node:assert/strict');a.equal(process.platform,'win32');const sum=require('./sum.cjs');a.equal(sum([]),0);a.equal(sum([2,-5,7]),4);a.equal(sum([1.5,2.5]),4);a.equal(sum([-2,-3]),-5);for(const v of [null,[NaN],[Infinity],['1']])a.throws(()=>sum(v),TypeError);`;
     await writeFile(
       path.join(desktop.projectPath, 'alice-verify.cjs'),
@@ -2165,7 +2166,7 @@ async function main() {
         work: [
           'Own only sum.cjs and alice-result.txt. Export sum(array) as module.exports; accept only an array of finite numbers, throw TypeError otherwise.',
           'Read alice-verify.cjs and create sum.cjs.',
-          verificationInstruction('alice-verify.cjs'),
+          verificationInstruction(command('alice-verify.cjs')),
           ...(short ? [] : [`Send bob CHALLENGE:${nonce.alice} with agent-teams_message_send.`]),
         ],
       }),
@@ -2230,7 +2231,7 @@ async function main() {
         work: [
           'Own only sum.test.cjs and bob-result.txt. Read sum.cjs, do not modify it.',
           "Write sum.test.cjs using node:assert/strict, covering []=>0,[2,-5,7]=>4,[1.5,2.5]=>4,[-2,-3]=>-5 and TypeError for null,[NaN],[Infinity],['1'].",
-          verificationInstruction('bob-verify.cjs'),
+          verificationInstruction(command('bob-verify.cjs')),
           `Send alice CHALLENGE:${nonce.bob} with agent-teams_message_send.`,
         ],
       }),
@@ -2543,7 +2544,7 @@ async function main() {
         teamName: desktop.teamName,
         owner: 'alice',
         commentToken: `TASK_COMMENT:${nonce.new}`,
-        work: [verificationInstruction('new-verify.cjs')],
+        work: [verificationInstruction(command('new-verify.cjs'))],
       }),
     });
     proof.taskIds.push(task.id);

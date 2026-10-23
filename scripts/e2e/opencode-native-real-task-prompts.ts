@@ -35,3 +35,18 @@ export function realTaskPrompt(input: RealTaskPromptInput): string {
     '4. task_complete must be your very last action. Never call task_complete before every task-work step has succeeded and the exact comment has been saved.',
   ].join('\n');
 }
+
+// The supplied verifier command is the evidence contract: only its own zero-exit
+// run counts as proof. The generic completion protocol tells the model to
+// "fix its arguments" after an error, which invites re-spelling this literal
+// command instead of repairing the model's own file, so this instruction
+// resolves that conflict explicitly.
+export function verificationInstruction(command: string): string {
+  return [
+    `Execute this supplied literal absolute Node command verbatim in your native shell: ${command}.`,
+    'Do not substitute a relative path, recreate or copy the verifier, or print its marker yourself. Let the unchanged verifier produce its own output.',
+    'This step is done only when that exact command exits zero and its own output prints the marker line.',
+    'If it exits non-zero because a file you wrote is wrong, fix only your file and execute this identical command again until it exits zero. Its arguments are already correct: never alter, wrap, cd around or re-spell the command.',
+    'Anything you print yourself never counts as the marker.',
+  ].join(' ');
+}
