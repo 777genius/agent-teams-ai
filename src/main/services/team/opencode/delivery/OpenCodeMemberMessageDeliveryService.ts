@@ -35,6 +35,9 @@ import { isOpenCodeLeadRecipient } from './OpenCodeLeadTurnActivity';
 import { deliverOpenCodeMemberMessageWithoutWatchdog } from './OpenCodeLegacyMemberMessageDelivery';
 import {
   assertOpenCodePromptDeliveryNotCancelled,
+  createOpenCodeCurrentDeliveryAssertion,
+  createOpenCodeDeliveryAuthorization,
+  createOpenCodePreSubmissionAssertion,
   OpenCodePromptDeliveryCancelledError,
 } from './OpenCodePromptDeliveryCancellationGuard';
 import {
@@ -175,12 +178,8 @@ export class OpenCodeMemberMessageDeliveryService {
     teamName: string,
     input: OpenCodeMemberMessageDeliveryInput
   ): Promise<OpenCodeMemberInboxDelivery> {
-    const assertAuthorized = (restore?: () => void): void => {
-      if (input.isCurrent?.() === false) {
-        restore?.();
-        throw new OpenCodePromptDeliveryCancelledError();
-      }
-    };
+    let admissionRequired = true;
+    let assertAuthorized = createOpenCodeDeliveryAuthorization(input.isCurrent);
     assertAuthorized();
     const adapter = this.deps.getOpenCodeRuntimeMessageAdapter();
     if (!adapter) {
@@ -234,7 +233,6 @@ export class OpenCodeMemberMessageDeliveryService {
       restoreConsumedLane();
       return { delivered: false, reason: 'opencode_project_path_unavailable' };
     }
-
     const trackedRunId = this.deps.resolveDeliverableTrackedRuntimeRunId(teamName);
     const trackedRun = trackedRunId ? this.deps.runs.get(trackedRunId) : null;
     const deliveryModel = resolveOpenCodeDeliveryModel({ identity, directory, run: trackedRun });
@@ -275,6 +273,23 @@ export class OpenCodeMemberMessageDeliveryService {
       restoreConsumedLane();
       return { delivered: false, reason: 'group_runtime_run_changed' };
     }
+    const wakePendingDelivery = createOpenCodeBootstrapPendingDeliveryWake(this.deps, {
+      teamName,
+      memberName: canonicalMemberName,
+      messageId: input.messageId,
+      laneId: laneIdentity.laneId,
+      trackedRunId,
+      trackedRun,
+      runtimeRunId,
+    });
+    assertAuthorized = createOpenCodeDeliveryAuthorization(
+      input.isCurrent,
+      () =>
+        admissionRequired &&
+        this.deps.isMemberLifecycleOperationActive(teamName, canonicalMemberName),
+      wakePendingDelivery
+    );
+    assertAuthorized(restoreConsumedLane);
     let runtimeActive = Boolean(runtimeRunId);
     if (!runtimeActive) {
       if (
@@ -297,6 +312,7 @@ export class OpenCodeMemberMessageDeliveryService {
       laneIdentity.laneKind === 'secondary' &&
       laneIdentity.laneOwnerProviderId === 'opencode'
     ) {
+      assertAuthorized(restoreConsumedLane);
       let recovered = await this.deps.tryRecoverOpenCodeRuntimeLaneBeforeDelivery({
         teamName,
         laneId: laneIdentity.laneId,
@@ -316,6 +332,7 @@ export class OpenCodeMemberMessageDeliveryService {
           config?.projectPath?.trim() || this.deps.readPersistedTeamProjectPath(teamName),
       });
       if (!recovered) {
+        assertAuthorized(restoreConsumedLane);
         recovered = await this.deps.tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery(
           {
             teamName,
@@ -361,11 +378,13 @@ export class OpenCodeMemberMessageDeliveryService {
         teamName,
         laneId: laneIdentity.laneId,
       });
+      assertAuthorized(restoreConsumedLane);
       const staleLane = await recoverStaleOpenCodeRuntimeLaneIndexEntry({
         teamsBasePath: getTeamsBasePath(),
         teamName,
         laneId: laneIdentity.laneId,
       });
+      assertAuthorized(restoreConsumedLane);
       if (!laneStorage.hasRuntimeEvidenceOnDisk) {
         if (staleLane.stale) {
           this.deps.deleteSecondaryRuntimeRun(teamName, laneIdentity.laneId);
@@ -383,26 +402,17 @@ export class OpenCodeMemberMessageDeliveryService {
       }
     }
     if (!runtimeActive) {
+      assertAuthorized(restoreConsumedLane);
       this.deps.cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(teamName);
       restoreConsumedLane();
       return { delivered: false, reason: 'opencode_runtime_not_active' };
     }
-
     let legacyOpenCodeBootstrapSessionToStamp: OpenCodeCommittedBootstrapSessionRecord | null =
       null;
     let refreshedOpenCodeBootstrapSessionToStamp: OpenCodeCommittedBootstrapSessionRecord | null =
       null;
     let forceOpenCodeSessionRefreshReason: string | undefined;
     if (laneIdentity.laneOwnerProviderId === 'opencode') {
-      const wakePendingDelivery = createOpenCodeBootstrapPendingDeliveryWake(this.deps, {
-        teamName,
-        memberName: canonicalMemberName,
-        messageId: input.messageId,
-        laneId: laneIdentity.laneId,
-        trackedRunId,
-        trackedRun,
-        runtimeRunId,
-      });
       const bootstrapSession =
         await this.deps.findDeliverableOpenCodeRuntimeBootstrapSessionEvidence({
           teamName,
@@ -445,9 +455,7 @@ export class OpenCodeMemberMessageDeliveryService {
         if (appMcpTransportMismatch) {
           refreshedOpenCodeBootstrapSessionToStamp = bootstrapSession;
           forceOpenCodeSessionRefreshReason = appMcpTransportMismatch;
-          // Durable: a forced session refresh is the only trace that this
-          // delivery started from a rebuilt session, and it has to still be
-          // readable when the lane-scoped ledger is gone.
+          // Persist refresh evidence beyond the lifetime of the lane ledger.
           logger.diagnostic(
             `[${teamName}] opencode_delivery_app_mcp_transport_stale ` +
               `${canonicalMemberName}/${laneIdentity.laneId} ` +
@@ -456,23 +464,19 @@ export class OpenCodeMemberMessageDeliveryService {
         }
       }
     }
-
-    const assertCurrentRun = (): void => {
-      assertAuthorized();
-      const current =
-        laneIdentity.laneKind === 'primary'
-          ? this.deps.resolveDeliverableTrackedRuntimeRunId(teamName)
-          : this.deps.getCurrentOpenCodeRuntimeRunId(teamName, laneIdentity.laneId);
-      const hadTrackedRun =
-        laneIdentity.laneKind === 'primary' ? trackedRunId : inMemorySecondaryLaneRunId;
-      if (
-        (current && runtimeRunId && current !== runtimeRunId) ||
-        (hadTrackedRun && !current) ||
-        this.deps.stoppingSecondaryRuntimeTeams.has(teamName)
-      ) {
-        throw new OpenCodePromptDeliveryCancelledError();
-      }
-    };
+    const assertCurrentRun = createOpenCodePreSubmissionAssertion(
+      createOpenCodeCurrentDeliveryAssertion(this.deps, {
+        teamName,
+        laneKind: laneIdentity.laneKind,
+        laneId: laneIdentity.laneId,
+        runtimeRunId,
+        trackedRunId,
+        inMemorySecondaryLaneRunId,
+        assertAuthorized,
+      }),
+      restoreConsumedLane,
+      () => admissionRequired
+    );
     const preparedAttachments = await prepareOpenCodeDeliveryAttachments({
       projectPath: cwd,
       model: deliveryModel,
@@ -491,6 +495,9 @@ export class OpenCodeMemberMessageDeliveryService {
       return await deliverOpenCodeMemberMessageWithoutWatchdog({
         ports: this.deps,
         assertCurrentRun,
+        onSubmitting: () => {
+          admissionRequired = false;
+        },
         adapter,
         message: input,
         teamName,
@@ -506,7 +513,6 @@ export class OpenCodeMemberMessageDeliveryService {
         teamDisplayName: config?.name,
       });
     }
-
     const isLeadRecipient =
       laneIdentity.laneKind === 'primary' &&
       isOpenCodeLeadRecipient(canonicalMemberName, directory);
@@ -530,6 +536,7 @@ export class OpenCodeMemberMessageDeliveryService {
       );
     };
     const messageId = input.messageId?.trim();
+    assertAuthorized(restoreConsumedLane);
     const ledger = messageId
       ? this.deps.createOpenCodePromptDeliveryLedger(teamName, laneIdentity.laneId)
       : null;
@@ -553,7 +560,6 @@ export class OpenCodeMemberMessageDeliveryService {
         memberName: canonicalMemberName,
       });
     }
-
     if (active && active.inboxMessageId !== messageId) {
       const activeDueMs = active.nextAttemptAt ? Date.parse(active.nextAttemptAt) : NaN;
       this.deps.scheduleOpenCodePromptDeliveryWatchdog({
@@ -689,10 +695,8 @@ export class OpenCodeMemberMessageDeliveryService {
         notifyActivity('idle');
         return observedOpenCodeDelivery(ledgerRecord, laneIdentity.laneId);
       }
-
       const unknownHandoff = unknownGroupHandoffSnapshot(ledgerRecord, laneIdentity.laneId);
       if (unknownHandoff) return unknownHandoff;
-
       if (!ledgerRecord.groupChatId) {
         ledgerRecord = await this.deps.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded({
           ledger,
@@ -700,7 +704,6 @@ export class OpenCodeMemberMessageDeliveryService {
         });
       }
       await checkpoint();
-
       if (ledgerRecord.status === 'failed_terminal') {
         this.deps.logOpenCodePromptDeliveryEvent(
           'opencode_prompt_delivery_terminal_failure',
@@ -719,7 +722,6 @@ export class OpenCodeMemberMessageDeliveryService {
           diagnostics: ledgerRecord.diagnostics,
         };
       }
-
       let attemptDue = isOpenCodePromptDeliveryAttemptDue(ledgerRecord);
       if (!ledgerRecord.groupChatId && isOpenCodeAcceptedDeliveryMissingPromptProof(ledgerRecord)) {
         ledgerRecord = await this.deps.markOpenCodeAcceptedDeliveryMissingPromptProofForRetry({
@@ -756,7 +758,6 @@ export class OpenCodeMemberMessageDeliveryService {
           diagnostics: ledgerRecord.diagnostics,
         };
       }
-
       const retryDueBeforeObserve = isOpenCodePromptDeliveryRetryAttemptDue({
         attemptDue,
         ledgerRecord,
@@ -787,7 +788,6 @@ export class OpenCodeMemberMessageDeliveryService {
           ],
         };
       }
-
       const retryShouldRefreshSessionBeforeObserve =
         retryDueBeforeObserve &&
         ledgerRecord.status === 'retry_scheduled' &&
@@ -919,7 +919,6 @@ export class OpenCodeMemberMessageDeliveryService {
             diagnostics: ledgerRecord.diagnostics,
           };
         }
-
         // Turn activity is decided before the stale-pending guard: both read the
         // same observation, and the guard must see the richer signal.
         const turnActivity = decideOpenCodePromptDeliveryTurnActivity({
@@ -938,7 +937,6 @@ export class OpenCodeMemberMessageDeliveryService {
         ) {
           notifyActivity('active');
         }
-
         // Stale-pending guard: an accepted prompt the bridge keeps reporting as
         // `pending` has no attempt budget, so bound it here. A lead plain-text
         // turn end settles non-user messages; stale idle records go terminal.
@@ -1010,7 +1008,6 @@ export class OpenCodeMemberMessageDeliveryService {
             };
           }
         }
-
         const pendingReason = this.deps.getOpenCodeDeliveryPendingReason({
           responseState: ledgerRecord.responseState,
           actionMode: ledgerRecord.actionMode,
@@ -1165,8 +1162,11 @@ export class OpenCodeMemberMessageDeliveryService {
             send,
           }),
         sendMessage: async () => {
+          assertCurrentRun();
+          admissionRequired = false;
           if (ledgerRecord?.groupChatId && ledger)
             ledgerRecord = await markOpenCodeGroupHandoff(ledger, ledgerRecord, now);
+          assertCurrentRun();
           return adapter.sendMessageToMember({
             ...payload(deliveryText),
             deliveryAttemptId,

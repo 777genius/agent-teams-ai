@@ -4,6 +4,11 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createTeamProvisioningMemberLifecycleOperationRunner } from '../../../provisioning/TeamProvisioningMemberLifecycleOperationRunner';
+import { createDefaultOpenCodeRuntimeBootstrapEvidencePorts } from '../../../provisioning/TeamProvisioningOpenCodeBootstrapEvidence';
+import { createOpenCodeBootstrapWakePorts } from '../../../provisioning/TeamProvisioningOpenCodeDeliveryComposition';
+import { stopSingleMixedSecondaryRuntimeLane } from '../../../provisioning/TeamProvisioningOpenCodeRuntimeStopFlow';
+import { updateProvisioningProgressMetadata } from '../../../provisioning/TeamProvisioningSecondaryStopProgress';
 import { openCodeLaneTurnActivityRegistry } from '../OpenCodeLaneTurnActivityRegistry';
 import {
   type OpenCodeLeadTurnActivityNotification,
@@ -18,9 +23,13 @@ import {
   type OpenCodePromptDeliveryLedgerRecord,
 } from '../OpenCodePromptDeliveryLedger';
 import { OPENCODE_STALE_PENDING_POLICY_CONFIG } from '../OpenCodePromptDeliveryStalePendingPolicy';
+import { createOpenCodePromptDeliveryWatchdogCoordinator } from '../OpenCodePromptDeliveryWatchdogCoordinator';
 import { OpenCodePromptDeliveryWatchdogScheduler } from '../OpenCodePromptDeliveryWatchdogScheduler';
 
+import type { MixedSecondaryRuntimeLaneState } from '../../../provisioning/TeamProvisioningSecondaryRuntimeRuns';
+import type { TeamRuntimeStopInput } from '../../../runtime';
 import type { OpenCodeTeamRuntimeMessageResult } from '../../../runtime';
+import type { TeamProvisioningProgress } from '@shared/types';
 
 const PRIMARY_LANE: OpenCodeMemberLaneIdentity = {
   laneId: 'primary',
@@ -81,6 +90,7 @@ function createDeps(input: {
       metaMember: { name: input.memberName, providerId: 'opencode' as const },
       memberRuntimeCwd: '/repo',
     })),
+    isMemberLifecycleOperationActive: () => false,
     stoppingSecondaryRuntimeTeams: { has: () => false },
     readPersistedTeamProjectPath: vi.fn(() => '/repo'),
     resolveDeliverableTrackedRuntimeRunId: vi.fn(() => 'run-1'),
@@ -402,6 +412,334 @@ describe('secondary delivery waiting for a native bootstrap commit', () => {
     };
   }
 
+  it('keeps an admitted Relaunch task raw, restores copied stop progress, and submits only to the new lane after release', async () => {
+    const h = harness();
+    const lifecycle = createTeamProvisioningMemberLifecycleOperationRunner({
+      memberLifecycleOperations: new Map(),
+      invalidateRuntimeSnapshotCaches: vi.fn(),
+      nowMs: Date.now,
+    });
+    h.deps.isMemberLifecycleOperationActive = lifecycle.isMemberLifecycleOperationActive;
+    h.commit();
+    const lane: MixedSecondaryRuntimeLaneState = Object.assign(h.lane, {
+      providerId: 'opencode' as const,
+      state: 'finished' as const,
+      result: null,
+      warnings: [],
+      diagnostics: [],
+    });
+    const run = Object.assign(h.root, {
+      runId: 'run-1',
+      teamName: 'team-a',
+      request: { cwd: ledgerDir },
+      progress: {
+        runId: 'run-1',
+        teamName: 'team-a',
+        state: 'ready',
+        message: 'Ready',
+        startedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as TeamProvisioningProgress,
+    });
+    h.deps.resolveDeliverableTrackedRuntimeRunId = () =>
+      run.progress.state === 'ready' ? run.runId : null;
+    h.deps.getCurrentOpenCodeRuntimeRunId = () => lane.runId;
+    let admit!: () => void;
+    let release!: () => void;
+    const admitted = new Promise<void>((resolve) => {
+      admit = resolve;
+    });
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let bootstrapped!: () => void;
+    const bootstrapReady = new Promise<void>((resolve) => {
+      bootstrapped = resolve;
+    });
+    let continueStop!: () => void;
+    const stopBarrier = new Promise<void>((resolve) => {
+      continueStop = resolve;
+    });
+    const operation = lifecycle.runMemberLifecycleOperation(
+      'team-a',
+      'Muse',
+      'manual_restart',
+      async () => {
+        admit();
+        await stopBarrier;
+        await stopSingleMixedSecondaryRuntimeLane(run, lane, 'relaunch', {
+          teamsBasePath: ledgerDir,
+          isCurrentRun: () => true,
+          getOpenCodeRuntimeAdapter: () =>
+            ({
+              stop: async (input: TeamRuntimeStopInput) => {
+                updateProvisioningProgressMetadata(run, {
+                  cliLogsTail: 'Fresh diagnostics copied during Stop',
+                });
+                return {
+                  runId: input.runId,
+                  teamName: input.teamName,
+                  stopped: true,
+                  members: {},
+                  warnings: [],
+                  diagnostics: [],
+                };
+              },
+            }) as never,
+          readLaunchState: async () => null,
+          isRuntimeProcessAlive: () => false,
+          upsertOpenCodeRuntimeLaneIndexEntry: async () => undefined,
+          clearOpenCodeRuntimeLaneStorage: async () => true,
+          deleteSecondaryRuntimeRun: vi.fn(),
+          logger: { warn: vi.fn(), info: vi.fn() },
+        });
+        expect(run.progress.state).toBe('ready');
+        expect(run.progress.cliLogsTail).toBe('Fresh diagnostics copied during Stop');
+        lane.runId = 'runtime-run-new';
+        h.commit();
+        const evidence = createDefaultOpenCodeRuntimeBootstrapEvidencePorts({
+          teamsBasePath: ledgerDir,
+        });
+        evidence.readCommittedBootstrapSessionEvidence = async () => ({
+          state: 'healthy',
+          committed: true,
+          activeRunId: lane.runId,
+          diagnostics: [],
+          sessions: [
+            {
+              id: 'new-session',
+              teamName: 'team-a',
+              laneId: lane.laneId,
+              runId: 'runtime-run-new',
+              memberName: 'Muse',
+              observedAt: new Date().toISOString(),
+              source: 'runtime_bootstrap_checkin',
+            },
+          ],
+        });
+        const coordinator = createOpenCodePromptDeliveryWatchdogCoordinator({
+          ...createOpenCodeBootstrapWakePorts(
+            {
+              runTracking: {
+                resolveDeliverableTrackedRuntimeRunId: h.deps.resolveDeliverableTrackedRuntimeRunId,
+              },
+              runs: new Map([[run.runId, run]]),
+            },
+            () => evidence
+          ),
+          watchdogScheduler: h.scheduler,
+          canDeliverToTeamRuntime: () => run.progress.state === 'ready',
+          hasAcceptedMemberWorkSyncReport: async () => false,
+          taskRefsIncludeAll: () => true,
+          visibleReplyProofService: h.deps.openCodeVisibleReplyProofService,
+          maybeSyncRuntimePermissionsAfterDelivery: async () => undefined,
+          rememberRuntimePidFromBridge: async () => undefined,
+          recoverRuntimeLanesForWatchdog: async () => [],
+          stopRuntimeLanesForStoppedTeam: async () => 0,
+          readActiveRuntimeLaneIds: async () => [lane.laneId],
+          createLedger: h.deps.createOpenCodePromptDeliveryLedger,
+          resolveMembersForRuntimeLane: async () => ['Muse'],
+          getInboxMessages: async () => [
+            {
+              from: 'team-lead',
+              to: 'Muse',
+              read: false,
+              text: h.message.text,
+              timestamp: new Date().toISOString(),
+              messageId: h.message.messageId,
+            },
+          ],
+          resolveCurrentRuntimeRunId: async () => lane.runId,
+          hasStableInboxMessageId: (message): message is typeof message & { messageId: string } =>
+            Boolean(message.messageId),
+          logPromptDeliveryEvent: vi.fn(),
+        });
+        expect(
+          await coordinator.wakeAfterBootstrapCommit({
+            teamName: 'team-a',
+            memberName: 'Muse',
+            laneId: lane.laneId,
+            runId: lane.runId,
+          })
+        ).toBe(1);
+        bootstrapped();
+        await released;
+      }
+    );
+    try {
+      await admitted;
+      await h.service.deliver('team-a', h.message);
+      expect(h.deps.createOpenCodePromptDeliveryLedger).not.toHaveBeenCalled();
+      expect(h.send).not.toHaveBeenCalled();
+      expect(h.deps.tryRecoverOpenCodeRuntimeLaneBeforeDelivery).not.toHaveBeenCalled();
+      continueStop();
+      // New bootstrap arms the same owned timer while its lifecycle operation remains admitted.
+      await bootstrapReady;
+      expect(lane.runId).toBe('runtime-run-new');
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(h.send).not.toHaveBeenCalled();
+      expect(h.deps.createOpenCodePromptDeliveryLedger).not.toHaveBeenCalled();
+      release();
+      await operation;
+      await vi.advanceTimersByTimeAsync(3_000);
+      await vi.waitFor(() => expect(h.send).toHaveBeenCalledTimes(1));
+      const ledger = h.deps.createOpenCodePromptDeliveryLedger('team-a', lane.laneId);
+      await vi.waitFor(async () =>
+        expect(await ledger.list()).toEqual([
+          expect.objectContaining({ runId: 'runtime-run-new', attempts: 1 }),
+        ])
+      );
+      await vi.advanceTimersByTimeAsync(9_000);
+      expect(h.send).toHaveBeenCalledTimes(1);
+    } finally {
+      continueStop();
+      release();
+      await operation;
+      h.scheduler.cancelTeam('team-a');
+    }
+  });
+
+  it.each([
+    ['primary_member_updated', true],
+    ['skip_for_launch', true],
+    ['primary_member_updated', false],
+  ] as const)(
+    'records an accepted prompt when non-replacing %s is admitted during SDK submission (watchdog=%s)',
+    async (kind, watchdog) => {
+      const h = harness();
+      h.commit();
+      h.deps.openCodePromptDeliveryWatchdogScheduler = { isEnabled: () => watchdog };
+      const lifecycle = createTeamProvisioningMemberLifecycleOperationRunner({
+        memberLifecycleOperations: new Map(),
+        invalidateRuntimeSnapshotCaches: vi.fn(),
+        nowMs: Date.now,
+      });
+      h.deps.isMemberLifecycleOperationActive = (team, member) =>
+        lifecycle.isMemberLifecycleOperationActive(team, member);
+      let release!: () => void;
+      const hold = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let operation: Promise<void> | undefined;
+      h.send.mockImplementationOnce(async () => {
+        operation = lifecycle.runMemberLifecycleOperation('team-a', 'Muse', kind, async () => {
+          await hold;
+        });
+        return acceptedResult('Muse');
+      });
+      try {
+        const result = await h.service.deliver('team-a', h.message);
+        expect(result.accepted).toBe(true);
+        if (watchdog) {
+          const ledger = h.deps.createOpenCodePromptDeliveryLedger('team-a', SECONDARY_LANE.laneId);
+          expect(await ledger.list()).toEqual([
+            expect.objectContaining({
+              attempts: 1,
+              runtimeSessionId: 'session-1',
+              lastRuntimePromptMessageId: 'prompt-1',
+            }),
+          ]);
+        } else expect(h.deps.createOpenCodePromptDeliveryLedger).not.toHaveBeenCalled();
+        expect(h.send).toHaveBeenCalledTimes(1);
+        release();
+        await operation;
+        await vi.advanceTimersByTimeAsync(9_000);
+        expect(h.send).toHaveBeenCalledTimes(1);
+      } finally {
+        release();
+        await operation;
+        h.scheduler.cancelTeam('team-a');
+      }
+    }
+  );
+
+  it('commits a group submission before a non-replacing admission during the durable handoff write', async () => {
+    const h = harness();
+    h.commit();
+    const lifecycle = createTeamProvisioningMemberLifecycleOperationRunner({
+      memberLifecycleOperations: new Map(),
+      invalidateRuntimeSnapshotCaches: vi.fn(),
+      nowMs: Date.now,
+    });
+    h.deps.isMemberLifecycleOperationActive = (team, member) =>
+      lifecycle.isMemberLifecycleOperationActive(team, member);
+    let release!: () => void;
+    const hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let operation: Promise<void> | undefined;
+    const ledger = h.deps.createOpenCodePromptDeliveryLedger('team-a', SECONDARY_LANE.laneId);
+    const mark = ledger.markNextAttemptScheduled.bind(ledger);
+    const handoff = vi
+      .spyOn(ledger, 'markNextAttemptScheduled')
+      .mockImplementation(async (input) => {
+        const persisted = await mark(input);
+        if (input.reason === 'group_handoff_started_acceptance_unknown') {
+          expect(persisted.status).toBe('accepted');
+          expect(h.send).not.toHaveBeenCalled();
+          operation = lifecycle.runMemberLifecycleOperation(
+            'team-a',
+            'Muse',
+            'primary_member_updated',
+            async () => {
+              await hold;
+            }
+          );
+        }
+        return persisted;
+      });
+    try {
+      const result = await h.service.deliver('team-a', {
+        ...h.message,
+        groupChatId: 'owned-test-group',
+        groupRunKey: h.lane.runId,
+        groupMessageId: 'group-message-1',
+        groupChatProtocolVersion: 1,
+      });
+      expect(result.accepted).toBe(true);
+      expect(handoff).toHaveBeenCalledOnce();
+      expect(h.send).toHaveBeenCalledOnce();
+      expect(await ledger.list()).toEqual([
+        expect.objectContaining({
+          attempts: 1,
+          runtimeSessionId: 'session-1',
+          lastRuntimePromptMessageId: 'prompt-1',
+        }),
+      ]);
+      release();
+      await operation;
+      await vi.advanceTimersByTimeAsync(9_000);
+      expect(h.send).toHaveBeenCalledOnce();
+    } finally {
+      release();
+      await operation;
+      h.scheduler.cancelTeam('team-a');
+    }
+  });
+
+  it('leaves the message raw if restart admission happens during the bootstrap read', async () => {
+    const h = harness();
+    let active = false;
+    h.deps.isMemberLifecycleOperationActive = () => active;
+    h.deps.findDeliverableOpenCodeRuntimeBootstrapSessionEvidence = async () => {
+      active = true;
+      return { appMcpTransportHash: 'hash' } as never;
+    };
+    try {
+      const result = await h.service.deliver('team-a', h.message);
+      expect(result.delivered).toBe(false);
+      expect(h.deps.createOpenCodePromptDeliveryLedger).not.toHaveBeenCalled();
+      expect(h.send).not.toHaveBeenCalled();
+      expect(h.scheduled).toHaveBeenCalledOnce();
+      h.lane.runId = 'new-owner';
+      await vi.advanceTimersByTimeAsync(9_000);
+      expect(h.relay).not.toHaveBeenCalled();
+      expect(h.send).not.toHaveBeenCalled();
+    } finally {
+      h.scheduler.cancelTeam('team-a');
+    }
+  });
+
   it.each(['policy-followup', 'queued-behind', 'not-due', 'new-retry'] as const)(
     'keeps %s watchdog descendants scoped when the lane is replaced',
     async (path) => {
@@ -547,34 +885,116 @@ describe('secondary delivery waiting for a native bootstrap commit', () => {
     }
   });
 
-  it('does not restore a consumed lane ticket after the provider has accepted a revoked scoped send', async () => {
+  it.each([true, false])(
+    'restores a consumed reservation after admission during serialization (watchdog=%s)',
+    async (watchdog) => {
+      const h = harness();
+      h.commit();
+      const ticket = {
+        teamName: 'team-a',
+        memberName: 'Muse',
+        teamIncarnation: 'inc-1',
+        runtimeInstanceId: 'opencode:secondary:session-1',
+        expectedGeneration: 1,
+        ticketId: 'serialization-ticket',
+        intentId: h.message.messageId!,
+        controlRevision: 1,
+        admissionPayloadHash: 'owned-test-hash',
+      };
+      memberWorkSync.restoreOpenCodeWorkSyncLane(ticket);
+      expect(memberWorkSync.peekOpenCodeWorkSyncLane(ticket)).toEqual(ticket);
+      let active = false;
+      h.deps.isMemberLifecycleOperationActive = () => active;
+      h.deps.openCodePromptDeliveryWatchdogScheduler = { isEnabled: () => watchdog };
+      h.deps.sendOpenCodeMemberMessageToRuntimeSerialized = async ({ send }) => {
+        expect(memberWorkSync.peekOpenCodeWorkSyncLane(ticket)).toBeUndefined();
+        active = true;
+        return await send();
+      };
+      try {
+        const result = await h.service.deliver('team-a', { ...h.message, source: 'ui-send' });
+        expect(result.reason).toBe('opencode_prompt_delivery_cancelled');
+        expect(h.send).not.toHaveBeenCalled();
+        expect(memberWorkSync.peekOpenCodeWorkSyncLane(ticket)).toEqual(ticket);
+      } finally {
+        memberWorkSync.consumeOpenCodeWorkSyncLane({ ...ticket, messageId: ticket.intentId });
+        h.scheduler.cancelTeam('team-a');
+      }
+    }
+  );
+
+  it('does not restore a ticket after a durable group handoff has begun', async () => {
     const h = harness();
     h.commit();
     let current = true;
     const restore = vi.fn();
-    const consumed = vi.fn(() => ({}));
     const gate = vi
       .spyOn(memberWorkSync, 'gateOpenCodeWorkSyncLaneDelivery')
-      .mockResolvedValueOnce({ restore, consumeForSend: consumed });
-    h.send.mockImplementationOnce(async () => {
+      .mockResolvedValueOnce({ restore });
+    const ledger = h.deps.createOpenCodePromptDeliveryLedger('team-a', SECONDARY_LANE.laneId);
+    const mark = ledger.markNextAttemptScheduled.bind(ledger);
+    vi.spyOn(ledger, 'markNextAttemptScheduled').mockImplementationOnce(async (input) => {
+      const row = await mark(input);
       current = false;
-      return acceptedResult('Muse');
+      return row;
     });
     try {
-      await h.service.deliver('team-a', {
+      const result = await h.service.deliver('team-a', {
         ...h.message,
-        messageKind: 'member_work_sync_nudge',
-        workSyncRuntimeTicketId: 'ticket',
         isCurrent: () => current,
+        groupChatId: 'owned-test-group',
+        groupRunKey: h.lane.runId,
+        groupMessageId: 'cancelled-group-message',
+        groupChatProtocolVersion: 1,
       });
-      expect(consumed).toHaveBeenCalledTimes(1);
-      expect(h.send).toHaveBeenCalledTimes(1);
+      expect(result.reason).toBe('opencode_prompt_delivery_cancelled');
+      expect(h.send).not.toHaveBeenCalled();
       expect(restore).not.toHaveBeenCalled();
+      expect(await ledger.list()).toEqual([
+        expect.objectContaining({
+          status: 'accepted',
+          lastReason: 'group_handoff_started_acceptance_unknown',
+          attempts: 0,
+        }),
+      ]);
     } finally {
       gate.mockRestore();
       h.scheduler.cancelTeam('team-a');
     }
   });
+
+  it.each([true, false])(
+    'does not restore a consumed lane ticket after the provider accepted a revoked scoped send (watchdog=%s)',
+    async (watchdog) => {
+      const h = harness();
+      h.commit();
+      h.deps.openCodePromptDeliveryWatchdogScheduler = { isEnabled: () => watchdog };
+      let current = true;
+      const restore = vi.fn();
+      const consumed = vi.fn(() => ({}));
+      const gate = vi
+        .spyOn(memberWorkSync, 'gateOpenCodeWorkSyncLaneDelivery')
+        .mockResolvedValueOnce({ restore, consumeForSend: consumed });
+      h.send.mockImplementationOnce(async () => {
+        current = false;
+        return acceptedResult('Muse');
+      });
+      try {
+        await h.service.deliver('team-a', {
+          ...h.message,
+          messageKind: 'member_work_sync_nudge',
+          workSyncRuntimeTicketId: 'ticket',
+          isCurrent: () => current,
+        });
+        expect(consumed).toHaveBeenCalledTimes(watchdog ? 1 : 0);
+        expect(h.send).toHaveBeenCalledTimes(1);
+        expect(restore).not.toHaveBeenCalled();
+      } finally {
+        gate.mockRestore();
+        h.scheduler.cancelTeam('team-a');
+      }
+    }
+  );
 
   it('restores a lane ticket before scheduling a bootstrap-pending retry', async () => {
     const h = harness();

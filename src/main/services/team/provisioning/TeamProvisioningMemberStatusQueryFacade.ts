@@ -41,6 +41,7 @@ import {
 } from './TeamProvisioningRuntimeRecipientResolution';
 import { type TeamProvisioningRuntimeSnapshotFacade } from './TeamProvisioningRuntimeSnapshotFacade';
 import { type TeamProvisioningRunTrackingDeliveryHelper } from './TeamProvisioningRunTrackingDelivery';
+import { updateProvisioningProgressMetadata } from './TeamProvisioningSecondaryStopProgress';
 import { TeamProvisioningTaskActivityCompatibilityFacade } from './TeamProvisioningTaskActivityCompatibilityFacade';
 
 import type {
@@ -165,11 +166,10 @@ export abstract class TeamProvisioningMemberStatusQueryFacade<
     if (!launchDiagnostics) {
       return;
     }
-    run.progress = {
-      ...run.progress,
+    updateProvisioningProgressMetadata(run, {
       updatedAt: observedAt,
       launchDiagnostics,
-    };
+    });
     run.onProgress(run.progress);
   }
 

@@ -193,9 +193,9 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
   it('wires queue and stop ports through the same explicit service boundary', async () => {
     const deps = createDeps();
     const queuePorts = createMixedSecondaryLaunchQueuePorts(deps);
-    const stopPorts = createSingleMixedSecondaryRuntimeLaneStopPorts(deps);
     const lane = createLane();
     const run = createRun({ mixedSecondaryLanes: [lane] });
+    const stopPorts = createSingleMixedSecondaryRuntimeLaneStopPorts(deps, run);
 
     await queuePorts.launchSingleMixedSecondaryLane(run, lane);
     await queuePorts.publishMixedSecondaryLaneStatusChange(run, lane);

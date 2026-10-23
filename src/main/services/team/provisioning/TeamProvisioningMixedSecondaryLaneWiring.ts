@@ -240,9 +240,11 @@ export function createMixedSecondaryLaneLaunchFlowPorts<
 export function createSingleMixedSecondaryRuntimeLaneStopPorts<
   TRun extends TeamProvisioningMixedSecondaryLaneWiringRun,
 >(
-  deps: TeamProvisioningMixedSecondaryLaneWiringDeps<TRun>
+  deps: TeamProvisioningMixedSecondaryLaneWiringDeps<TRun>,
+  run: TRun
 ): SingleMixedSecondaryRuntimeLaneStopPorts {
   return {
+    isCurrentRun: () => deps.isCurrentTrackedRun(run),
     teamsBasePath: getTeamsBasePath(),
     getOpenCodeRuntimeAdapter: () => deps.service.getOpenCodeRuntimeAdapter(),
     readLaunchState: (teamName) => deps.service.readLaunchState(teamName),
@@ -396,7 +398,7 @@ export function createTeamProvisioningMixedSecondaryLaneWiring<
         run,
         lane,
         reason,
-        createSingleMixedSecondaryRuntimeLaneStopPorts(deps)
+        createSingleMixedSecondaryRuntimeLaneStopPorts(deps, run)
       ),
     launchQueuedMixedSecondaryLaneInBackground: (run, lane) =>
       launchQueuedMixedSecondaryLaneInBackgroundHelper(
