@@ -328,20 +328,10 @@ export function createPackagedSmokeOwnership(
     // Retain every verified discovery even if reconciliation below finds debt
     // in another process. A wait retry must never forget a newly owned child.
     for (const identity of identities) observed.set(`${identity.pid}:${identity.birth}`, identity);
-    for (const expected of observed.values()) {
-      if (currentKeys.has(`${expected.pid}:${expected.birth}`)) continue;
-      const current =
-        platform === 'linux'
-          ? linuxIdentity(expected.pid, deadline, true)
-          : darwinIdentity(expected.pid, deadline);
-      if (current && live(current) && current.birth === expected.birth)
-        throw new OwnershipDebtError(
-          `Owned packaged smoke process lost verifiable ownership: pid=${expected.pid}`
-        );
-    }
     // Unreadable identities keep exit-only debt only when recorded parentage
     // reaches the owned tree; unrelated non-dumpable processes (browser
-    // zygotes) are forgotten.
+    // zygotes) are forgotten. Link before reconciliation can throw: a retry
+    // may see the same child only after its parent exited and it reparented.
     const trackedPids = new Set<number>([...observed.values()].map((entry) => entry.pid));
     if (leaderPid !== undefined) trackedPids.add(leaderPid);
     for (const entry of unverifiable.values()) trackedPids.add(entry.pid);
@@ -358,6 +348,17 @@ export function createPackagedSmokeOwnership(
     unreadable.clear();
     if (unverifiable.size > MAX_OWNED)
       throw new Error('Packaged smoke ownership exceeded its unverifiable process bound');
+    for (const expected of observed.values()) {
+      if (currentKeys.has(`${expected.pid}:${expected.birth}`)) continue;
+      const current =
+        platform === 'linux'
+          ? linuxIdentity(expected.pid, deadline, true)
+          : darwinIdentity(expected.pid, deadline);
+      if (current && live(current) && current.birth === expected.birth)
+        throw new OwnershipDebtError(
+          `Owned packaged smoke process lost verifiable ownership: pid=${expected.pid}`
+        );
+    }
     budget(deadline);
     return identities;
   }
