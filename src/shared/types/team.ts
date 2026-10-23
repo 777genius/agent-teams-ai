@@ -1,4 +1,5 @@
 import type { NotificationTarget, TeamEventType } from './notifications';
+import type { OpenCodeStopHandshakeFailureFacts } from './openCodeStopHandshakeFailure';
 import type { TaskRef } from './teamBoardTask';
 import type * as TeamProvisioningTypes from './teamProvisioning';
 import type {
@@ -616,15 +617,7 @@ export type OpenCodeRuntimeDeliveryStatus = NonNullable<SendMessageResult['runti
 
 /** Finite observation of a failed OpenCode bridge operation; never stop authority. */
 export interface OpenCodeStopCausalFailure {
-  handshakeFailure?: {
-    kind: string;
-    sdkCode?: string;
-    nativeOperation?: string;
-    nativeErrno?: number;
-    lockCode?: 'ELOCKED' | 'ECOMPROMISED';
-    lockCategory?: 'registry' | 'profile' | 'startup' | 'unknown';
-    messageShape?: 'code' | 'lock_operation' | 'unclassified';
-  };
+  handshakeFailure?: OpenCodeStopHandshakeFailureFacts;
   phase: string;
   reason: string | null;
   errno: string | null;
