@@ -17,12 +17,12 @@ import {
   recoverStaleOpenCodeRuntimeLaneIndexEntry,
 } from '../store/OpenCodeRuntimeManifestEvidenceReader';
 
-import { createOpenCodeBootstrapPendingDeliveryWake } from './OpenCodeBootstrapPendingDeliveryWake';
 import { recoverOpenCodeActiveDeliveryBlocker } from './OpenCodeActiveDeliveryPreemption';
 import {
   prepareOpenCodeDeliveryAttachments,
   resolveOpenCodeDeliveryModel,
 } from './OpenCodeAttachmentPreparation';
+import { createOpenCodeBootstrapPendingDeliveryWake } from './OpenCodeBootstrapPendingDeliveryWake';
 import {
   markOpenCodeGroupHandoff,
   observedOpenCodeDelivery,
@@ -175,11 +175,19 @@ export class OpenCodeMemberMessageDeliveryService {
     teamName: string,
     input: OpenCodeMemberMessageDeliveryInput
   ): Promise<OpenCodeMemberInboxDelivery> {
+    const assertAuthorized = (restore?: () => void): void => {
+      if (input.isCurrent?.() === false) {
+        restore?.();
+        throw new OpenCodePromptDeliveryCancelledError();
+      }
+    };
+    assertAuthorized();
     const adapter = this.deps.getOpenCodeRuntimeMessageAdapter();
     if (!adapter) {
       return { delivered: false, reason: 'opencode_runtime_message_bridge_unavailable' };
     }
     const directory = await this.deps.readOpenCodeMemberDirectory(teamName);
+    assertAuthorized();
     const identity = this.deps.resolveOpenCodeMemberIdentityFromDirectory(
       teamName,
       input.memberName,
@@ -199,6 +207,7 @@ export class OpenCodeMemberMessageDeliveryService {
       buildOpenCodeWorkSyncLaneDeliveryGateInput({ teamName, ...input })
     );
     const restoreConsumedLane = lane.restore;
+    assertAuthorized(restoreConsumedLane);
     if (lane.reason && lane.reason !== 'work_sync_ticket_consumed') {
       return { delivered: false, reason: lane.reason };
     }
@@ -401,8 +410,10 @@ export class OpenCodeMemberMessageDeliveryService {
           laneId: laneIdentity.laneId,
           memberName: canonicalMemberName,
         });
+      assertAuthorized(restoreConsumedLane);
       if (!bootstrapSession) {
         if (laneIdentity.laneKind === 'secondary') {
+          restoreConsumedLane();
           wakePendingDelivery();
           return {
             delivered: false,
@@ -413,17 +424,10 @@ export class OpenCodeMemberMessageDeliveryService {
             ],
           };
         }
-        // The primary lane used to fall through and send anyway, into a bridge
-        // that can only refuse a lane with no stored session. Returning the
-        // settled refusal here is what makes the unwinnable send never happen;
-        // a null answer means the lane was not provably unbootstrapped and the
-        // old path stands.
-        //
-        // A team whose tracked run is not deliverable (a stop in flight, or a
-        // cleanup fence owning the lane) is never healed: relaunching there
-        // would race the very stop that is running, and the send path already
-        // reports that refusal with its own reason. `trackedRunId` is exactly
-        // the "this team's run is deliverable right now" answer that fence uses.
+        // A primary with no stored session cannot accept a send. Settle its
+        // refusal through self-heal; null leaves the existing path unchanged.
+        // Only a deliverable tracked owner may heal: Stop/cleanup fences must
+        // never trigger a replacement launch while they own the lane.
         const healed = trackedRunId
           ? await healUndeliverableOpenCodePrimaryLaneBootstrap(this.deps, input, {
               teamName,
@@ -457,6 +461,7 @@ export class OpenCodeMemberMessageDeliveryService {
     }
 
     const assertCurrentRun = (): void => {
+      assertAuthorized(restoreConsumedLane);
       const current =
         laneIdentity.laneKind === 'primary'
           ? this.deps.resolveDeliverableTrackedRuntimeRunId(teamName)

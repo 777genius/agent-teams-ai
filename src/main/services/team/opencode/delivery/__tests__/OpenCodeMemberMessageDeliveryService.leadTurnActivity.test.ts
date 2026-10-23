@@ -1,3 +1,4 @@
+import * as memberWorkSync from '@features/member-work-sync/main';
 import { mkdtemp, rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -15,8 +16,8 @@ import {
   createOpenCodePromptDeliveryLedgerStore,
   type OpenCodePromptDeliveryLedgerRecord,
 } from '../OpenCodePromptDeliveryLedger';
-import { OpenCodePromptDeliveryWatchdogScheduler } from '../OpenCodePromptDeliveryWatchdogScheduler';
 import { OPENCODE_STALE_PENDING_POLICY_CONFIG } from '../OpenCodePromptDeliveryStalePendingPolicy';
+import { OpenCodePromptDeliveryWatchdogScheduler } from '../OpenCodePromptDeliveryWatchdogScheduler';
 
 import type { OpenCodeTeamRuntimeMessageResult } from '../../../runtime';
 
@@ -351,9 +352,9 @@ describe('secondary delivery waiting for a native bootstrap commit', () => {
       complete = resolve;
     });
     const message = { ...leadMessage, memberName: 'Muse', source: 'watcher' as const };
-    const relay = vi.fn(async () => {
+    const relay = vi.fn(async (wake: { isCurrent?: () => boolean }) => {
       try {
-        return await service.deliver('team-a', message);
+        return await service.deliver('team-a', { ...message, isCurrent: wake.isCurrent });
       } finally {
         complete();
       }
@@ -372,9 +373,14 @@ describe('secondary delivery waiting for a native bootstrap commit', () => {
       diagnostic: vi.fn(),
       getErrorMessage: String,
     });
-    deps.scheduleOpenCodePromptDeliveryWatchdog = vi.fn((input) => scheduler.schedule(input));
+    const scheduled = vi.fn(
+      (input: Parameters<OpenCodePromptDeliveryWatchdogScheduler['schedule']>[0]) =>
+        scheduler.schedule(input)
+    );
+    deps.scheduleOpenCodePromptDeliveryWatchdog = scheduled;
     return {
       deps,
+      scheduled,
       service,
       scheduler,
       send,
@@ -414,7 +420,7 @@ describe('secondary delivery waiting for a native bootstrap commit', () => {
       const accepted = await h.service.deliver('team-a', h.message);
       expect(accepted.accepted).toBe(true);
       expect(h.send).toHaveBeenCalledTimes(1);
-      const probe = h.deps.findDeliverableOpenCodeRuntimeBootstrapSessionEvidence;
+      const probe = h.deps.findDeliverableOpenCodeRuntimeBootstrapSessionEvidence.bind(h.deps);
       h.deps.findDeliverableOpenCodeRuntimeBootstrapSessionEvidence = async () => null;
       await h.service.deliver('team-a', h.message);
       h.deps.findDeliverableOpenCodeRuntimeBootstrapSessionEvidence = probe;
@@ -453,12 +459,81 @@ describe('secondary delivery waiting for a native bootstrap commit', () => {
       h.scheduler.cancelTeam('team-a');
       finish();
       await delivery;
-      expect(h.deps.scheduleOpenCodePromptDeliveryWatchdog).not.toHaveBeenCalled();
+      expect(h.scheduled).not.toHaveBeenCalled();
       await vi.advanceTimersByTimeAsync(6_000);
       expect(h.relay).not.toHaveBeenCalled();
       expect(h.send).not.toHaveBeenCalled();
     }
   );
+
+  it('restores the existing lane ticket when authorization is revoked during gate hydration', async () => {
+    const h = harness();
+    let current = true;
+    const restore = vi.fn();
+    const gate = vi
+      .spyOn(memberWorkSync, 'gateOpenCodeWorkSyncLaneDelivery')
+      .mockImplementationOnce(async () => {
+        current = false;
+        return { restore };
+      });
+    try {
+      const result = await h.service.deliver('team-a', { ...h.message, isCurrent: () => current });
+      expect(result.reason).toBe('opencode_prompt_delivery_cancelled');
+      expect(restore).toHaveBeenCalledTimes(1);
+      expect(h.send).not.toHaveBeenCalled();
+      expect(h.scheduled).not.toHaveBeenCalled();
+    } finally {
+      gate.mockRestore();
+      h.scheduler.cancelTeam('team-a');
+    }
+  });
+
+  it('restores a lane ticket before scheduling a bootstrap-pending retry', async () => {
+    const h = harness();
+    const restore = vi.fn();
+    const gate = vi
+      .spyOn(memberWorkSync, 'gateOpenCodeWorkSyncLaneDelivery')
+      .mockResolvedValueOnce({ restore });
+    try {
+      await h.service.deliver('team-a', h.message);
+      expect(restore).toHaveBeenCalledTimes(1);
+      expect(h.scheduled).toHaveBeenCalledTimes(1);
+      expect(h.send).not.toHaveBeenCalled();
+    } finally {
+      gate.mockRestore();
+      h.scheduler.cancelTeam('team-a');
+    }
+  });
+
+  it('delivers once for a replacement generation whose wake shares the previous message key', async () => {
+    const h = harness();
+    await h.service.deliver('team-a', h.message);
+    h.lane.runId = 'runtime-run-2';
+    h.deps.getCurrentOpenCodeRuntimeRunId = () => 'runtime-run-2';
+    await h.service.deliver('team-a', h.message);
+    h.commit();
+    await vi.advanceTimersByTimeAsync(3_000);
+    await h.completed;
+    expect(h.relay).toHaveBeenCalledTimes(1);
+    expect(h.send).toHaveBeenCalledTimes(1);
+    h.scheduler.cancelTeam('team-a');
+  });
+
+  it('keeps the originating generation fence while the relay is reading delivery context', async () => {
+    const h = harness();
+    await h.service.deliver('team-a', h.message);
+    h.commit();
+    const readDirectory = h.deps.readOpenCodeMemberDirectory.bind(h.deps);
+    h.deps.readOpenCodeMemberDirectory = async (teamName) => {
+      const directory = await readDirectory(teamName);
+      h.lane.runId = 'replacement-run';
+      return directory;
+    };
+    await vi.advanceTimersByTimeAsync(3_000);
+    await h.completed;
+    expect(h.send).not.toHaveBeenCalled();
+    h.scheduler.cancelTeam('team-a');
+  });
 
   it('drops an already scheduled wake when its lane owner changes', async () => {
     const h = harness();

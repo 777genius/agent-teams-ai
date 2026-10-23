@@ -50,6 +50,7 @@ export type OpenCodeMemberMessageDeliverySource =
   | 'member-work-sync-review-pickup';
 
 export interface OpenCodeMemberMessageDeliveryInput {
+  isCurrent?: () => boolean;
   memberName: string;
   text: string;
   messageId?: string;
