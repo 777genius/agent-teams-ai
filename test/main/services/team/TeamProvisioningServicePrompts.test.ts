@@ -26,6 +26,15 @@ vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
   ClaudeBinaryResolver: { resolve: vi.fn() },
 }));
 
+// Prompt construction uses the real config writer, with compilation isolated
+// from the provider-diagnostic execCli fixture below.
+vi.mock('@main/services/team/WorkspaceMcpBundle', () => ({
+  resolveWorkspaceMcpBundle: (...args: [root: string, node: string, outputRoot: string]) =>
+    Promise.resolve(
+      path.join(args[2], 'dev', '12345-eaf6e8d0-0daf-4aa7-89e8-90d9f315d531', 'index.js')
+    ),
+}));
+
 vi.mock('@main/utils/childProcess', () => ({
   execCli: vi.fn(async (_binaryPath: string | null, args: string[]) => {
     if (args[0] === '-e' && args[1]?.includes('process.execPath')) {
