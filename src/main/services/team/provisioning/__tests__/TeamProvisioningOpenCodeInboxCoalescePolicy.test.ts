@@ -40,7 +40,8 @@ function ledgerRecord(
 
 function message(overrides: Partial<RelayInboxMessage> = {}): RelayInboxMessage {
   return {
-    from: 'Scribe',
+    from: 'system',
+    source: 'system_notification',
     to: 'team-lead',
     text: 'section 2 done',
     timestamp: '2026-01-01T00:00:00.000Z',
@@ -64,20 +65,62 @@ function createPorts(
   overrides: Partial<OpenCodeReplyOptionalCoalescePorts> = {}
 ): OpenCodeReplyOptionalCoalescePorts {
   return {
-    resolveReplyRecipient: () => 'Scribe',
+    resolveReplyRecipient: (row) => (row.source === 'system_notification' ? 'system' : row.from),
     hasExistingRecord: vi.fn().mockResolvedValue(false),
     ...overrides,
   };
 }
 
 describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
-  it('coalesces the reply-optional notices queued behind the anchor', async () => {
+  it('keeps an explicit peer request out of no-reply riders and preserves its own delivery', async () => {
+    const peer = message({
+      from: 'bob',
+      source: undefined,
+      messageId: 'peer-request',
+      text: 'Reply exactly MAIN133_OC_BOB_ACK to bob using message_send.',
+    });
+    const unread = [
+      message({ from: 'system', messageId: 'task-anchor', source: 'system_notification' }),
+      message({ from: 'system', messageId: 'task-notice', source: 'system_notification' }),
+      peer,
+      message({ from: 'system', messageId: 'later-notice', source: 'system_notification' }),
+    ];
+    const ports = createPorts({
+      resolveReplyRecipient: (row) => (row.source === 'system_notification' ? 'system' : row.from),
+    });
+    const followers = await selectOpenCodeReplyOptionalCoalescedFollowers({
+      unread,
+      index: 0,
+      anchorReplyRecipient: 'system',
+      ports,
+    });
+    expect(followers.map((row) => row.messageId)).toEqual(['task-notice']);
+    expect(buildOpenCodeCoalescedNoticeText(followers)).not.toContain('MAIN133_OC_BOB_ACK');
+    expect(unread[2]).toBe(peer);
+    expect(peer).toMatchObject({
+      read: false,
+      from: 'bob',
+      messageId: 'peer-request',
+      text: 'Reply exactly MAIN133_OC_BOB_ACK to bob using message_send.',
+    });
+    expect(ports.resolveReplyRecipient(peer)).toBe('bob');
+    expect(
+      await selectOpenCodeReplyOptionalCoalescedFollowers({
+        unread,
+        index: 2,
+        anchorReplyRecipient: 'bob',
+        ports,
+      })
+    ).toEqual([]);
+  });
+
+  it('coalesces the app-authored notices queued behind the anchor', async () => {
     const unread = [message({ messageId: 'anchor' }), ...notices(3)];
 
     const followers = await selectOpenCodeReplyOptionalCoalescedFollowers({
       unread,
       index: 0,
-      anchorReplyRecipient: 'Scribe',
+      anchorReplyRecipient: 'system',
       ports: createPorts(),
     });
 
@@ -114,9 +157,9 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
     const followers = await selectOpenCodeReplyOptionalCoalescedFollowers({
       unread,
       index: 0,
-      anchorReplyRecipient: 'Scribe',
+      anchorReplyRecipient: 'system',
       ports: createPorts({
-        resolveReplyRecipient: (candidate) => (candidate.from === 'user' ? 'user' : 'Scribe'),
+        resolveReplyRecipient: (candidate) => (candidate.from === 'user' ? 'user' : 'system'),
       }),
     });
 
@@ -135,7 +178,7 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
         ...notices(OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT),
       ],
       index: 0,
-      anchorReplyRecipient: 'Scribe',
+      anchorReplyRecipient: 'system',
       ports: createPorts(),
     });
     expect(atLimit).toHaveLength(OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT);
@@ -147,7 +190,7 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
         ...notices(OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT + 1),
       ],
       index: 0,
-      anchorReplyRecipient: 'Scribe',
+      anchorReplyRecipient: 'system',
       ports: createPorts(),
     });
     expect(pastLimit).toHaveLength(OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT);
@@ -174,7 +217,7 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
         message({ messageId: 'notice-1' }),
       ],
       index: 0,
-      anchorReplyRecipient: 'Scribe',
+      anchorReplyRecipient: 'system',
       ports: createPorts(),
     });
     expect(riders).toEqual([]);
@@ -185,7 +228,7 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
         message({ messageId: 'notice-1' }),
       ],
       index: 0,
-      anchorReplyRecipient: 'Scribe',
+      anchorReplyRecipient: 'system',
       ports: createPorts(),
     });
     expect(fromNudgeAnchor).toEqual([]);
@@ -199,7 +242,7 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
         message({ messageId: 'notice-2' }),
       ],
       index: 0,
-      anchorReplyRecipient: 'Scribe',
+      anchorReplyRecipient: 'system',
       ports: createPorts(),
     });
     expect(alreadyRead).toEqual([]);
@@ -207,7 +250,7 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
     const blank = await selectOpenCodeReplyOptionalCoalescedFollowers({
       unread: [message({ messageId: 'anchor' }), message({ messageId: 'notice-1', text: '   ' })],
       index: 0,
-      anchorReplyRecipient: 'Scribe',
+      anchorReplyRecipient: 'system',
       ports: createPorts(),
     });
     expect(blank).toEqual([]);
@@ -219,7 +262,7 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
         message({ messageId: 'notice-2' }),
       ],
       index: 0,
-      anchorReplyRecipient: 'Scribe',
+      anchorReplyRecipient: 'system',
       ports: createPorts({
         hasExistingRecord: (candidate) => Promise.resolve(candidate.messageId === 'notice-1'),
       }),
@@ -338,45 +381,30 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
     expect(isInformationalOpenCodeRuntimeDeliveryDiagnostic(notDispatched)).toBe(true);
   });
 
-  // Batching keeps a message's text; absorbing throws it away. The two walks
-  // therefore accept different sets, and this is the boundary between them.
-  it('settles app-written notices only, while coalescing still batches teammate messages', async () => {
-    const unread = [message({ messageId: 'anchor' }), ...notices(3)];
+  it('neither settles nor coalesces peer-authored messages', async () => {
+    const unread = [
+      message({ from: 'Scribe', source: undefined, messageId: 'anchor' }),
+      ...notices(3).map((row) => ({ ...row, from: 'Scribe', source: undefined })),
+    ];
     const teammatePorts = createPorts({ resolveReplyRecipient: () => 'Scribe' });
-
-    // A teammate wrote every row here: reply-optional (so it may ride along in
-    // one prompt), but never absorbable.
-    await expect(
-      selectOpenCodeSettleableQueuedNotices({
-        unread,
-        index: 0,
-        anchorReplyRecipient: 'Scribe',
-        ports: teammatePorts,
-      })
-    ).resolves.toEqual([]);
-    await expect(
-      selectOpenCodeReplyOptionalCoalescedFollowers({
-        unread,
-        index: 0,
-        anchorReplyRecipient: 'Scribe',
-        ports: teammatePorts,
-      })
-    ).resolves.toHaveLength(3);
-
-    // An app-written anchor stops the settlement walk at the first row a
-    // teammate wrote, so that row keeps its own delivery.
+    for (const select of [
+      selectOpenCodeSettleableQueuedNotices,
+      selectOpenCodeReplyOptionalCoalescedFollowers,
+    ]) {
+      await expect(
+        select({ unread, index: 0, anchorReplyRecipient: 'Scribe', ports: teammatePorts })
+      ).resolves.toEqual([]);
+    }
     await expect(
       selectOpenCodeSettleableQueuedNotices({
         unread: [
-          message({ messageId: 'anchor', from: 'system' }),
-          message({ messageId: 'app-notice', from: 'system' }),
-          message({ messageId: 'teammate-note' }),
+          message({ messageId: 'anchor' }),
+          message({ messageId: 'app-notice' }),
+          message({ messageId: 'teammate-note', from: 'Scribe', source: undefined }),
         ],
         index: 0,
         anchorReplyRecipient: 'system',
-        ports: createPorts({
-          resolveReplyRecipient: (candidate) => (candidate.from === 'system' ? 'system' : 'Scribe'),
-        }),
+        ports: createPorts(),
       })
     ).resolves.toMatchObject([{ messageId: 'app-notice' }]);
   });
@@ -406,7 +434,7 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
     const delivered = await selectOpenCodeReplyOptionalCoalescedFollowers({
       unread,
       index: 0,
-      anchorReplyRecipient: 'Scribe',
+      anchorReplyRecipient: 'system',
       ports: createPorts(),
     });
     expect(delivered).toHaveLength(OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT);
@@ -501,7 +529,7 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
         message({ messageId: 'notice-2' }),
       ],
       index: 0,
-      anchorReplyRecipient: 'Scribe',
+      anchorReplyRecipient: 'system',
       ports: createPorts(),
     });
 
