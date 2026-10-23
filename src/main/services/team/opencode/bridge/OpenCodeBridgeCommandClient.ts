@@ -28,7 +28,7 @@ import {
   hasOpenCodeOwnedChildBinding,
   prepareOpenCodeShutdownCleanupEnvironment,
 } from './OpenCodeMcpBridgeEnv';
-import { appendOpenCodeRegistryLockDiagnostics } from './OpenCodeRegistryLockDiagnostics';
+import { appendRegistryLockDiagnostics } from './OpenCodeRegistryLockDiagnostics';
 import {
   isStartupCleanupData,
   type OpenCodeStartupCleanupData,
@@ -425,12 +425,7 @@ export class OpenCodeBridgeCommandClient {
           stderrLimitBytes: options.stderrLimitBytes ?? DEFAULT_STDERR_LIMIT_BYTES,
           env: { ...env },
         });
-        await appendOpenCodeRegistryLockDiagnostics(
-          processResult.stderr,
-          env,
-          this.diagnostics,
-          envelope
-        );
+        await appendRegistryLockDiagnostics(processResult.stderr, env, this.diagnostics, envelope);
         const bridgeOutput = await this.readBridgeOutput(processResult.stdout, outputPath);
         let observedOutputWriteError: string | null = null;
         if (retainStartupEvidence && bridgeOutput.content) {

@@ -39,7 +39,7 @@ const nonnegative = (value: unknown): value is number =>
   typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 
 /** Accept only the payload-free debug vocabulary; raw stderr never reaches this sink. */
-export async function appendOpenCodeRegistryLockDiagnostics(
+export async function appendRegistryLockDiagnostics(
   stderr: string,
   env: NodeJS.ProcessEnv,
   sink: OpenCodeBridgeDiagnosticsSink | null,
