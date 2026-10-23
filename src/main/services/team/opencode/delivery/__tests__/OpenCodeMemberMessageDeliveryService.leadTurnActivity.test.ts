@@ -653,6 +653,70 @@ describe('secondary delivery waiting for a native bootstrap commit', () => {
     }
   );
 
+  it('commits a group submission before a non-replacing admission during the durable handoff write', async () => {
+    const h = harness();
+    h.commit();
+    const lifecycle = createTeamProvisioningMemberLifecycleOperationRunner({
+      memberLifecycleOperations: new Map(),
+      invalidateRuntimeSnapshotCaches: vi.fn(),
+      nowMs: Date.now,
+    });
+    h.deps.isMemberLifecycleOperationActive = (team, member) =>
+      lifecycle.isMemberLifecycleOperationActive(team, member);
+    let release!: () => void;
+    const hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let operation: Promise<void> | undefined;
+    const ledger = h.deps.createOpenCodePromptDeliveryLedger('team-a', SECONDARY_LANE.laneId);
+    const mark = ledger.markNextAttemptScheduled.bind(ledger);
+    const handoff = vi
+      .spyOn(ledger, 'markNextAttemptScheduled')
+      .mockImplementation(async (input) => {
+        const persisted = await mark(input);
+        if (input.reason === 'group_handoff_started_acceptance_unknown') {
+          expect(persisted.status).toBe('accepted');
+          expect(h.send).not.toHaveBeenCalled();
+          operation = lifecycle.runMemberLifecycleOperation(
+            'team-a',
+            'Muse',
+            'primary_member_updated',
+            async () => {
+              await hold;
+            }
+          );
+        }
+        return persisted;
+      });
+    try {
+      const result = await h.service.deliver('team-a', {
+        ...h.message,
+        groupChatId: 'owned-test-group',
+        groupRunKey: h.lane.runId,
+        groupMessageId: 'group-message-1',
+        groupChatProtocolVersion: 1,
+      });
+      expect(result.accepted).toBe(true);
+      expect(handoff).toHaveBeenCalledOnce();
+      expect(h.send).toHaveBeenCalledOnce();
+      expect(await ledger.list()).toEqual([
+        expect.objectContaining({
+          attempts: 1,
+          runtimeSessionId: 'session-1',
+          lastRuntimePromptMessageId: 'prompt-1',
+        }),
+      ]);
+      release();
+      await operation;
+      await vi.advanceTimersByTimeAsync(9_000);
+      expect(h.send).toHaveBeenCalledOnce();
+    } finally {
+      release();
+      await operation;
+      h.scheduler.cancelTeam('team-a');
+    }
+  });
+
   it('leaves the message raw if restart admission happens during the bootstrap read', async () => {
     const h = harness();
     let active = false;

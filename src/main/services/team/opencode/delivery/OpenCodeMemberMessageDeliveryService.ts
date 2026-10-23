@@ -1008,7 +1008,6 @@ export class OpenCodeMemberMessageDeliveryService {
             };
           }
         }
-
         const pendingReason = this.deps.getOpenCodeDeliveryPendingReason({
           responseState: ledgerRecord.responseState,
           actionMode: ledgerRecord.actionMode,
@@ -1163,10 +1162,11 @@ export class OpenCodeMemberMessageDeliveryService {
             send,
           }),
         sendMessage: async () => {
+          assertCurrentRun();
+          admissionRequired = false;
           if (ledgerRecord?.groupChatId && ledger)
             ledgerRecord = await markOpenCodeGroupHandoff(ledger, ledgerRecord, now);
           assertCurrentRun();
-          admissionRequired = false;
           return adapter.sendMessageToMember({
             ...payload(deliveryText),
             deliveryAttemptId,
