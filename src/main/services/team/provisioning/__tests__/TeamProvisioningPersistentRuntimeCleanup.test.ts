@@ -34,7 +34,7 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(true);
 
     expect(ports.killPersistedPaneMembers).toHaveBeenCalledWith('team-a', members);
-    expect(ports.killOrphanedTeamAgentProcesses).toHaveBeenCalledWith('team-a', 123);
+    expect(ports.killOrphanedTeamAgentProcesses).toHaveBeenCalledWith('team-a', 123, []);
   });
 
   it('clears leftover live runtime handles in the awaited stopped-team cleanup', async () => {
@@ -55,7 +55,7 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(true);
 
     expect(ports.killPersistedPaneMembers).not.toHaveBeenCalled();
-    expect(ports.killOrphanedTeamAgentProcesses).toHaveBeenCalledWith('team-a', 123);
+    expect(ports.killOrphanedTeamAgentProcesses).toHaveBeenCalledWith('team-a', 123, []);
   });
 
   it('reports unconfirmed persistent cleanup when any owned process stop fails', () => {
@@ -72,7 +72,7 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
 
     expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(false);
-    expect(ports.killOrphanedTeamAgentProcesses).toHaveBeenCalledWith('team-a', 123);
+    expect(ports.killOrphanedTeamAgentProcesses).toHaveBeenCalledWith('team-a', 123, []);
     expect(clearPersistedLiveRuntimeHandles).not.toHaveBeenCalled();
   });
 
@@ -206,6 +206,21 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     expect(ports.confirmNativeTeamStopped).not.toHaveBeenCalled();
     expect(ports.clearPersistedLiveRuntimeHandles).not.toHaveBeenCalled();
     expect(ports.cleanupAnthropicTeamApiKeyHelperForTeam).not.toHaveBeenCalled();
+  });
+
+  it('passes recorded runtime pids to the process stop so exit is provable', () => {
+    const members = [
+      { name: 'Worker', tmuxPaneId: '%1', backendType: 'tmux', runtimePid: 51 },
+      { name: 'Solo', runtimePid: 52 },
+    ];
+    const ports = createPorts({
+      readPersistedRuntimeMembers: vi.fn(() => members as PersistedRuntimeMemberLike[]),
+    });
+    const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
+
+    expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(true);
+
+    expect(ports.killOrphanedTeamAgentProcesses).toHaveBeenCalledWith('team-a', 123, [51, 52]);
   });
 
   it.each(['live_agent_processes', 'process_table_unreadable'] as const)(

@@ -1,4 +1,5 @@
 import { killTmuxPaneForCurrentPlatformSync } from '@features/tmux-installer/main';
+import { isProcessAlive } from '@main/utils/processHealth';
 import { killProcessByPid } from '@main/utils/processKill';
 import { listWindowsProcessTableSync } from '@main/utils/windowsProcessTable';
 import { execFileSync } from 'child_process';
@@ -50,21 +51,65 @@ export function killPersistedPaneMembers(
   return confirmed ? { confirmed } : { confirmed, reason: 'pane_kill_failed' };
 }
 
+/**
+ * Decide stop confirmation from whatever evidence is available. The process
+ * table is only the discovery channel for unrecorded orphans; exit proof for
+ * the owned runtime comes from the recorded launch-snapshot pids, which hold
+ * even when the table probe is unreadable.
+ */
+export function resolveOrphanedTeamAgentStopVerdict(input: {
+  rows: { pid: number; command: string }[] | null;
+  teamName: string;
+  currentRunPid?: number;
+  knownPids?: readonly number[];
+  isPidAlive: (pid: number) => boolean;
+}): { verdict: PersistentRuntimeStopVerdict; targetPids: number[] } {
+  const recordedPids = (input.knownPids ?? []).filter(
+    (pid) => Number.isFinite(pid) && pid > 0 && pid !== input.currentRunPid
+  );
+  const discoveredPids = input.rows
+    ? [...selectOrphanedTeamAgentPids(input.rows, input.teamName, input.currentRunPid)]
+    : [];
+  const liveRecordedPids = recordedPids.filter((pid) => {
+    try {
+      return input.isPidAlive(pid);
+    } catch {
+      return false;
+    }
+  });
+  const targetPids = [...new Set([...discoveredPids, ...liveRecordedPids])];
+  if (!input.rows && recordedPids.length === 0) {
+    return {
+      verdict: { confirmed: false, reason: 'process_table_unreadable' },
+      targetPids,
+    };
+  }
+  return {
+    verdict:
+      targetPids.length === 0
+        ? { confirmed: true }
+        : { confirmed: false, reason: 'live_agent_processes' },
+    targetPids,
+  };
+}
+
 export function killOrphanedTeamAgentProcesses(input: {
   teamName: string;
   currentRunPid?: number;
+  knownPids?: readonly number[];
   logger: StopProcessCleanupLogger;
 }): PersistentRuntimeStopVerdict {
   const rows = readProcessRows();
-  if (!rows) {
-    return { confirmed: false, reason: 'process_table_unreadable' };
-  }
-
-  const targetPids = selectOrphanedTeamAgentPids(rows, input.teamName, input.currentRunPid);
+  const { verdict, targetPids } = resolveOrphanedTeamAgentStopVerdict({
+    rows,
+    teamName: input.teamName,
+    currentRunPid: input.currentRunPid,
+    knownPids: input.knownPids,
+    isPidAlive: isProcessAlive,
+  });
   // The legacy helper only dispatches termination (and is fire-and-forget on
-  // Windows), so finding any live target means strict cleanup is unconfirmed.
-  // Callers that require proof must retain degraded ownership until an explicit
-  // stop completes instead of treating a dispatched signal as process exit.
+  // Windows), so any still-live target keeps the stop unconfirmed until a later
+  // settle re-check finds it gone. A dispatched signal is not process exit.
   for (const pid of targetPids) {
     try {
       killProcessByPid(pid);
@@ -79,9 +124,7 @@ export function killOrphanedTeamAgentProcesses(input: {
       );
     }
   }
-  return targetPids.size === 0
-    ? { confirmed: true }
-    : { confirmed: false, reason: 'live_agent_processes' };
+  return verdict;
 }
 
 export function selectOrphanedTeamAgentPids(
@@ -103,15 +146,23 @@ export function selectOrphanedTeamAgentPids(
   return pids;
 }
 
+const WIN32_PROBE_FAILURE_COOLDOWN_MS = 15_000;
+let win32ProbeUnreadableUntil = 0;
+
 export function readProcessRows(): { pid: number; command: string }[] | null {
   const rows: { pid: number; command: string }[] = [];
 
   if (process.platform === 'win32') {
+    // The probe is synchronous and times out slowly under load; hammering it
+    // stacks blocked probes on the stop path while recorded pids can already
+    // prove exit without it.
+    if (Date.now() < win32ProbeUnreadableUntil) return null;
     try {
       rows.push(
         ...listWindowsProcessTableSync().map((row) => ({ pid: row.pid, command: row.command }))
       );
     } catch {
+      win32ProbeUnreadableUntil = Date.now() + WIN32_PROBE_FAILURE_COOLDOWN_MS;
       return null;
     }
     return rows;

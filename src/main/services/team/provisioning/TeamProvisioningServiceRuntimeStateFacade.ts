@@ -403,8 +403,8 @@ export abstract class TeamProvisioningServiceRuntimeStateFacade extends TeamProv
     readPersistedRuntimeMembers: (teamName) => this.readPersistedRuntimeMembers(teamName),
     killPersistedPaneMembers: (teamName, members) =>
       killPersistedPaneMembers(teamName, members, logger),
-    killOrphanedTeamAgentProcesses: (teamName, currentRunPid) =>
-      killOrphanedTeamAgentProcesses({ teamName, currentRunPid, logger }),
+    killOrphanedTeamAgentProcesses: (teamName, currentRunPid, knownPids) =>
+      killOrphanedTeamAgentProcesses({ teamName, currentRunPid, knownPids, logger }),
     getCurrentRunPid: (teamName) => {
       const currentRunId = this.runTracking.getTrackedRunId(teamName);
       return currentRunId ? this.runs.get(currentRunId)?.child?.pid : undefined;

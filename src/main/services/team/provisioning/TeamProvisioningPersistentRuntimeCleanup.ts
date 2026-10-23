@@ -27,7 +27,8 @@ export interface TeamProvisioningPersistentRuntimeCleanupPorts {
   ): PersistentRuntimeStopVerdict;
   killOrphanedTeamAgentProcesses(
     teamName: string,
-    currentRunPid: number | undefined
+    currentRunPid: number | undefined,
+    knownPids: readonly number[]
   ): PersistentRuntimeStopVerdict;
   getCurrentRunPid(teamName: string): number | undefined;
   cleanupAnthropicTeamApiKeyHelperForTeam(input: {
@@ -61,7 +62,12 @@ export function createTeamProvisioningPersistentRuntimeCleanup(
         : ({ confirmed: true } satisfies PersistentRuntimeStopVerdict);
     const processes = ports.killOrphanedTeamAgentProcesses(
       teamName,
-      ports.getCurrentRunPid(teamName)
+      ports.getCurrentRunPid(teamName),
+      members.flatMap((member) =>
+        typeof member.runtimePid === 'number' && Number.isFinite(member.runtimePid)
+          ? [member.runtimePid]
+          : []
+      )
     );
     const confirmed = panes.confirmed && processes.confirmed;
     confirmedStops.set(teamName, confirmed);
