@@ -16,7 +16,9 @@ export const OPEN_CODE_BRIDGE_TIMEOUTS_MS = {
   // finish bridge-side observation and emit member-work-sync signals.
   send: 45_000,
   observe: 20_000,
-  stop: 45_000,
+  // The desktop must outlive the 45s stop operation plus the 10s lost-reply
+  // reconciliation window that can still deliver a valid stopped receipt.
+  stop: 60_000,
   cleanup: 10_000,
   permission: 30_000,
   backfill: 45_000,
