@@ -98,30 +98,18 @@ export function openCodeRegularStopRejectionCode(error: unknown): string {
       return 'persistent_runtime_stop_unconfirmed_pane_kill_failed';
     }
   }
-  return stopRejectionHintCode(error);
+  // A rejection's own text must never shape a code: message-derived tokens can
+  // leak paths or user data through IPC/HTTP/E2E surfaces, so an unrecognized
+  // rejection maps to the single closed unknown code.
+  return 'regular_stop_rejected_unknown';
 }
 
-/** Bounded closed-token fallback: an unrecognized rejection still names its own shape. */
-function stopRejectionHintCode(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  const tokens = message
-    .toLowerCase()
-    .split(/[^a-z_]+/)
-    .filter((token) => token.length >= 3 && token.length <= 24)
-    .slice(0, 10);
-  if (tokens.length === 0) return 'regular_stop_rejected_unknown';
-  return `reject_${tokens.join('_')}`.slice(0, 90);
-}
-
-/** Finite diagnostics only: never forward native/provider message text.
- * A `reject_*` code is the bounded closed-token projection the fallback
- * classifier builds from a rejection shape, allowed through by the same rule. */
+/** Finite diagnostics only: never forward native/provider message text. */
 export function openCodeStopFailureCodes(diagnostics: unknown): string[] {
   const codes = stringList(diagnostics).flatMap((row) => {
     const code = /^(?:info:|warning:|error:|stop_failure_code:)([a-z_]+)(?::|$)/.exec(row)?.[1];
     if (!code) return [];
-    if (STOP_FAILURE_CODES.some((known) => known === code)) return [code];
-    return /^reject_[a-z_]{2,80}$/.test(code) ? [code] : [];
+    return STOP_FAILURE_CODES.some((known) => known === code) ? [code] : [];
   });
   return [...new Set(codes)];
 }

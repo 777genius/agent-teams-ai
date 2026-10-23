@@ -146,8 +146,8 @@ describe('runTeamForceStopFlow', () => {
       '[team-a] Persistent runtime termination could not be confirmed: live_agent_processes',
       'persistent_runtime_stop_unconfirmed_live_agent_processes',
     ],
-    ['process_table_unreadable scan', 'reject_process_table_unreadable_scan'],
-    ['freshness unreadable', 'reject_freshness_unreadable'],
+    ['process_table_unreadable scan', 'regular_stop_rejected_unknown'],
+    ['freshness unreadable', 'regular_stop_rejected_unknown'],
     ['!@#$%', 'regular_stop_rejected_unknown'],
   ])('classifies regular stop rejection %s as %s', async (message, code) => {
     const ports = createPorts({
