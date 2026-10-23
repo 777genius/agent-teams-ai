@@ -1986,6 +1986,7 @@ describe('LaunchTeamDialog', () => {
         expect(host.querySelector('[data-testid="create-team-template-picker"]')).toBeNull();
 
         // Reopen through a brand-new instance on the same host.
+        createTeamDraftMock.state.setMembers.mockClear();
         const reopenedRoot = createRoot(host);
         await act(async () => {
           reopenedRoot.render(
@@ -2032,6 +2033,13 @@ describe('LaunchTeamDialog', () => {
         expect(host.textContent).toContain('backend-dev');
         // Template was not reapplied over the restored user edits (prompt stays edited).
         expect(host.textContent).toContain('Edited unmount prompt');
+        // The template roster (with its original Build APIs workflow) must not have
+        // been reapplied over the restored, user-edited roster.
+        expect(createTeamDraftMock.state.setMembers).not.toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({ name: 'backend-dev', workflow: 'Build APIs' }),
+          ])
+        );
 
         act(() => reopenedRoot.unmount());
       } finally {

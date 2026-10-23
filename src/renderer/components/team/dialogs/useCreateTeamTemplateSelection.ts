@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 
@@ -67,10 +67,18 @@ export function useCreateTeamTemplateSelection({
     useState<CreateTeamTemplateSource>('none');
   const storedTemplateSelection = readStoredTemplateSelection(templateSelectionDraft.value);
 
+  // Copy Team's initial template reset must happen only once per dialog session,
+  // not on every persisted draft change (which would repeatedly clear drafts and
+  // race with later restoration).
+  const initialResetDoneRef = useRef(false);
+
   useEffect(() => {
     if (initialData) {
-      setAppliedTemplateSource('none');
-      templateSelectionDraft.clearDraft();
+      if (!initialResetDoneRef.current) {
+        initialResetDoneRef.current = true;
+        setAppliedTemplateSource('none');
+        templateSelectionDraft.clearDraft();
+      }
       return;
     }
     const { source } = readStoredTemplateSelection(templateSelectionDraft.value);
