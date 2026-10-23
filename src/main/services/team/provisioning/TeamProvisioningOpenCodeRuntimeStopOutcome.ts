@@ -94,7 +94,7 @@ function stopRejectionHintCode(error: unknown): string {
     .toLowerCase()
     .split(/[^a-z_]+/)
     .filter((token) => token.length >= 3 && token.length <= 16)
-    .slice(0, 5);
+    .slice(0, 10);
   if (tokens.length === 0) return 'regular_stop_rejected_unknown';
   return `reject_${tokens.join('_')}`.slice(0, 90);
 }

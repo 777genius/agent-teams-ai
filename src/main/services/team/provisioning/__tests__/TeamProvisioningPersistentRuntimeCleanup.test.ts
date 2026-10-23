@@ -9,8 +9,8 @@ type Ports = Parameters<typeof createTeamProvisioningPersistentRuntimeCleanup>[0
 function createPorts(overrides: Partial<Ports> = {}): Ports {
   return {
     readPersistedRuntimeMembers: vi.fn((): PersistedRuntimeMemberLike[] => []),
-    killPersistedPaneMembers: vi.fn(() => true),
-    killOrphanedTeamAgentProcesses: vi.fn(() => true),
+    killPersistedPaneMembers: vi.fn(() => ({ confirmed: true })),
+    killOrphanedTeamAgentProcesses: vi.fn(() => ({ confirmed: true })),
     getCurrentRunPid: vi.fn(() => 123),
     cleanupAnthropicTeamApiKeyHelperForTeam: vi.fn(async () => undefined),
     getClaudeBasePath: vi.fn(() => '/claude'),
@@ -61,7 +61,10 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     const clearPersistedLiveRuntimeHandles = vi.fn(() => true);
     const ports = createPorts({
       readPersistedRuntimeMembers: vi.fn(() => members as PersistedRuntimeMemberLike[]),
-      killPersistedPaneMembers: vi.fn(() => false),
+      killPersistedPaneMembers: vi.fn(() => ({
+        confirmed: false,
+        reason: 'pane_kill_failed' as const,
+      })),
       clearPersistedLiveRuntimeHandles,
     });
     const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
@@ -157,9 +160,36 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     expect(ports.clearPersistedLiveRuntimeHandles).toHaveBeenCalledWith('team-a');
   });
 
+  it('confirms termination at cleanup once the explicit stop settled the dispatch-time leftovers', async () => {
+    const killOrphanedTeamAgentProcesses = vi
+      .fn()
+      .mockReturnValueOnce({ confirmed: false, reason: 'live_agent_processes' as const })
+      .mockReturnValueOnce({ confirmed: true });
+    const confirmNativeTeamStopped = vi.fn(async () => undefined);
+    const clearPersistedLiveRuntimeHandles = vi.fn(() => true);
+    const ports = createPorts({
+      killOrphanedTeamAgentProcesses,
+      confirmNativeTeamStopped,
+      clearPersistedLiveRuntimeHandles,
+    });
+    const cleanup = createTeamProvisioningPersistentRuntimeCleanup(ports);
+
+    expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(false);
+    await expect(
+      cleanup.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam('team-a')
+    ).resolves.toBeUndefined();
+
+    expect(killOrphanedTeamAgentProcesses).toHaveBeenCalledTimes(2);
+    expect(confirmNativeTeamStopped).toHaveBeenCalledWith('team-a');
+    expect(clearPersistedLiveRuntimeHandles).toHaveBeenCalledWith('team-a');
+  });
+
   it('cannot publish terminal facts or clear discovery after an unconfirmed stop', async () => {
     const ports = createPorts({
-      killOrphanedTeamAgentProcesses: vi.fn(() => false),
+      killOrphanedTeamAgentProcesses: vi.fn(() => ({
+        confirmed: false,
+        reason: 'live_agent_processes' as const,
+      })),
       confirmNativeTeamStopped: vi.fn(async () => undefined),
       clearPersistedLiveRuntimeHandles: vi.fn(() => true),
     });
@@ -167,7 +197,10 @@ describe('TeamProvisioningPersistentRuntimeCleanup', () => {
     expect(cleanup.stopPersistentTeamMembers('team-a')).toBe(false);
     await expect(
       cleanup.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam('team-a')
-    ).rejects.toThrow('could not be confirmed');
+    ).rejects.toThrow(
+      '[team-a] Persistent runtime termination could not be confirmed: live_agent_processes'
+    );
+    expect(ports.killOrphanedTeamAgentProcesses).toHaveBeenCalledTimes(2);
     expect(ports.confirmNativeTeamStopped).not.toHaveBeenCalled();
     expect(ports.clearPersistedLiveRuntimeHandles).not.toHaveBeenCalled();
     expect(ports.cleanupAnthropicTeamApiKeyHelperForTeam).not.toHaveBeenCalled();

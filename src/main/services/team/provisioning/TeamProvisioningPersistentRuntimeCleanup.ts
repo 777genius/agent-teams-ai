@@ -1,13 +1,29 @@
 import type { PersistedRuntimeMemberLike } from './TeamProvisioningRuntimeSnapshot';
 
+export type PersistentRuntimeStopReason =
+  | 'pane_kill_failed'
+  | 'process_table_unreadable'
+  | 'live_agent_processes';
+
+export interface PersistentRuntimeStopVerdict {
+  confirmed: boolean;
+  reason?: PersistentRuntimeStopReason;
+}
+
 export interface TeamProvisioningPersistentRuntimeCleanupLogger {
   warn(message: string): void;
 }
 
 export interface TeamProvisioningPersistentRuntimeCleanupPorts {
   readPersistedRuntimeMembers(teamName: string): PersistedRuntimeMemberLike[];
-  killPersistedPaneMembers(teamName: string, members: PersistedRuntimeMemberLike[]): boolean;
-  killOrphanedTeamAgentProcesses(teamName: string, currentRunPid: number | undefined): boolean;
+  killPersistedPaneMembers(
+    teamName: string,
+    members: PersistedRuntimeMemberLike[]
+  ): PersistentRuntimeStopVerdict;
+  killOrphanedTeamAgentProcesses(
+    teamName: string,
+    currentRunPid: number | undefined
+  ): PersistentRuntimeStopVerdict;
   getCurrentRunPid(teamName: string): number | undefined;
   cleanupAnthropicTeamApiKeyHelperForTeam(input: {
     teamName: string;
@@ -28,26 +44,43 @@ export function createTeamProvisioningPersistentRuntimeCleanup(
   ports: TeamProvisioningPersistentRuntimeCleanupPorts
 ): TeamProvisioningPersistentRuntimeCleanup {
   const confirmedStops = new Map<string, boolean>();
+  const stopReasons = new Map<string, PersistentRuntimeStopReason>();
+  const stopPersistentTeamMembers = (teamName: string): boolean => {
+    confirmedStops.set(teamName, false);
+    stopReasons.delete(teamName);
+    const members = ports.readPersistedRuntimeMembers(teamName);
+    const panes =
+      members.length > 0
+        ? ports.killPersistedPaneMembers(teamName, members)
+        : ({ confirmed: true } satisfies PersistentRuntimeStopVerdict);
+    const processes = ports.killOrphanedTeamAgentProcesses(
+      teamName,
+      ports.getCurrentRunPid(teamName)
+    );
+    const confirmed = panes.confirmed && processes.confirmed;
+    confirmedStops.set(teamName, confirmed);
+    if (!confirmed) {
+      const reason: PersistentRuntimeStopReason = !panes.confirmed
+        ? (panes.reason ?? 'pane_kill_failed')
+        : (processes.reason ?? 'process_table_unreadable');
+      stopReasons.set(teamName, reason);
+    }
+    return confirmed;
+  };
   return {
-    stopPersistentTeamMembers(teamName) {
-      confirmedStops.set(teamName, false);
-      const members = ports.readPersistedRuntimeMembers(teamName);
-      let panesConfirmed = true;
-      if (members.length > 0) {
-        panesConfirmed = ports.killPersistedPaneMembers(teamName, members);
-      }
-      const processesConfirmed = ports.killOrphanedTeamAgentProcesses(
-        teamName,
-        ports.getCurrentRunPid(teamName)
-      );
-      const confirmed = panesConfirmed && processesConfirmed;
-      confirmedStops.set(teamName, confirmed);
-      return confirmed;
-    },
+    stopPersistentTeamMembers,
 
     async cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName) {
-      if (confirmedStops.get(teamName) === false) {
-        throw new Error(`[${teamName}] Persistent runtime termination could not be confirmed`);
+      // A dispatched kill is not proof of exit (fire-and-forget on Windows) and
+      // the scan runs before the lane stops settle, so an unconfirmed dispatch
+      // is re-checked here: this cleanup runs when the explicit stop completed,
+      // and only leftovers that are still live keep the stop unconfirmed.
+      if (confirmedStops.get(teamName) === false && !stopPersistentTeamMembers(teamName)) {
+        throw new Error(
+          `[${teamName}] Persistent runtime termination could not be confirmed: ${
+            stopReasons.get(teamName) ?? 'process_table_unreadable'
+          }`
+        );
       }
       if (confirmedStops.get(teamName) === true) {
         // StopFlow calls this only after its tracked lead/lane stops also settle.

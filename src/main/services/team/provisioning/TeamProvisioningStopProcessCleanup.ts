@@ -5,6 +5,7 @@ import { execFileSync } from 'child_process';
 
 import { commandArgEquals } from '../TeamRuntimeLivenessResolver';
 
+import type { PersistentRuntimeStopVerdict } from './TeamProvisioningPersistentRuntimeCleanup';
 import type { PersistedRuntimeMemberLike } from './TeamProvisioningRuntimeSnapshot';
 
 export interface StopProcessCleanupLogger {
@@ -31,7 +32,7 @@ export function killPersistedPaneMembers(
   teamName: string,
   members: PersistedRuntimeMemberLike[],
   logger: StopProcessCleanupLogger
-): boolean {
+): PersistentRuntimeStopVerdict {
   let confirmed = true;
   for (const { name, paneId } of getPersistedPaneMemberKillTargets(members)) {
     try {
@@ -46,17 +47,17 @@ export function killPersistedPaneMembers(
       );
     }
   }
-  return confirmed;
+  return confirmed ? { confirmed } : { confirmed, reason: 'pane_kill_failed' };
 }
 
 export function killOrphanedTeamAgentProcesses(input: {
   teamName: string;
   currentRunPid?: number;
   logger: StopProcessCleanupLogger;
-}): boolean {
+}): PersistentRuntimeStopVerdict {
   const rows = readProcessRows();
   if (!rows) {
-    return false;
+    return { confirmed: false, reason: 'process_table_unreadable' };
   }
 
   const targetPids = selectOrphanedTeamAgentPids(rows, input.teamName, input.currentRunPid);
@@ -64,7 +65,6 @@ export function killOrphanedTeamAgentProcesses(input: {
   // Windows), so finding any live target means strict cleanup is unconfirmed.
   // Callers that require proof must retain degraded ownership until an explicit
   // stop completes instead of treating a dispatched signal as process exit.
-  const confirmed = targetPids.size === 0;
   for (const pid of targetPids) {
     try {
       killProcessByPid(pid);
@@ -79,7 +79,9 @@ export function killOrphanedTeamAgentProcesses(input: {
       );
     }
   }
-  return confirmed;
+  return targetPids.size === 0
+    ? { confirmed: true }
+    : { confirmed: false, reason: 'live_agent_processes' };
 }
 
 export function selectOrphanedTeamAgentPids(
