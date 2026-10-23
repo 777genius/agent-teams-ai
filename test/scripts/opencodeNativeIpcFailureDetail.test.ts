@@ -1260,11 +1260,15 @@ it('keeps only the closed native stage token on returned dispatch failures', asy
 
 it('pins the exact durable comment expectation and its closed mismatch classification', async () => {
   const full = await readFile('scripts/e2e/opencode-native-windows-full.ts', 'utf8');
-  // The nonce comment is an exact-text durable receipt; the prompt demands
-  // those characters alone so a paraphrase can never satisfy the assertion.
-  expect(full).toContain('call task_add_comment with the comment text exactly TASK_COMMENT:${nonce.alice} (that text alone, no quotes or extra words)');
-  expect(full).toContain('call task_add_comment with the comment text exactly TASK_COMMENT:${nonce.bob} (that text alone, no quotes or extra words)');
-  expect(full).toContain('Call task_add_comment with the comment text exactly TASK_COMMENT:${nonce.new} (that text alone, no quotes or extra words)');
+  const prompts = await readFile('scripts/e2e/opencode-native-real-task-prompts.ts', 'utf8');
+  // The nonce comment is an exact-text durable receipt; the shared prompt
+  // contract demands those characters alone so a paraphrase can never satisfy
+  // the assertion, and every task passes its nonce as the comment token.
+  expect(full).toContain('commentToken: `TASK_COMMENT:${nonce.alice}`');
+  expect(full).toContain('commentToken: `TASK_COMMENT:${nonce.bob}`');
+  expect(full).toContain('commentToken: `TASK_COMMENT:${nonce.new}`');
+  expect(prompts).toContain('The text value must be exactly ${commentToken}, copied byte-for-byte');
+  expect(prompts).toContain('A comment with any other text fails the task.');
   for (const field of ['exactComment:', 'exactTextAnyAuthor:', 'commentTextIncludesExpected:',
     'commentTextStartsWithExpected:', 'firstCommentLength:', 'commentBeforeTerminal:'])
     expect(full).toContain(field);
