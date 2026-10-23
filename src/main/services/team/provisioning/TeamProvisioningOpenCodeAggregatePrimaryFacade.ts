@@ -43,7 +43,6 @@ import { hasDeliverableOpenCodeRuntimeBootstrapSessionEvidence } from './TeamPro
 import { rebootstrapOpenCodeAggregatePrimaryLane as rebootstrapOpenCodeAggregatePrimaryLaneHelper } from './TeamProvisioningOpenCodePrimaryLaneRebootstrap';
 import { hasRetainableOpenCodeRuntimeMember } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import { type ProvisioningRun } from './TeamProvisioningRunModel';
-import { nowIso } from './TeamProvisioningRunProgress';
 import { type MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
 import {
   type OpenCodeAggregatePrimaryRestartLease,
@@ -526,7 +525,12 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       );
     }
 
-    await this.launchSingleMixedSecondaryLane(run, lane);
+    let secondaryError: string | undefined;
+    try {
+      await this.launchSingleMixedSecondaryLane(run, lane);
+    } catch (error) {
+      secondaryError = getErrorMessage(error) || 'OpenCode secondary lane setup failed';
+    }
     await assertRestartCurrentAfterPersistence();
     await this.persistLaunchStateSnapshot(run, this.getMixedSecondaryLaunchPhase(run));
     await assertRestartCurrentAfterPersistence();
@@ -534,23 +538,20 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       const memberRestartRetained =
         lane.result != null && hasRetainableOpenCodeRuntimeMember(lane.result);
       const restartRetained =
-        memberRestartRetained && hasRetainablePrimaryLead(primaryRelaunchResult, leadMemberName);
-      run.progress = this.runtimeAdapterProgressState.setRuntimeAdapterProgress(
-        {
-          ...run.progress,
-          state: 'ready',
-          message: restartRetained
-            ? 'OpenCode member lane restart is ready'
-            : 'OpenCode team is running with unavailable members',
-          messageSeverity: restartRetained ? undefined : 'warning',
-          updatedAt: nowIso(),
-          error: undefined,
-        },
-        run.onProgress
-      );
+        secondaryError === undefined &&
+        memberRestartRetained &&
+        hasRetainablePrimaryLead(primaryRelaunchResult, leadMemberName);
+      this.aggregatePrimaryProgress.publishRestartedMember(run, restartRetained, secondaryError);
     } else {
       this.runTracking.deleteAliveRunId(teamName);
     }
+    if (secondaryError !== undefined)
+      throw createAggregatePrimaryRestoredRestartFailure(
+        run,
+        restartLease,
+        incarnationPorts,
+        secondaryError
+      );
   }
 
   private stopUnretainableOpenCodePrimaryLane(input: {

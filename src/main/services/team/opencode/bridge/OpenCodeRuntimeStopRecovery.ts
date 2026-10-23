@@ -27,15 +27,17 @@ import type {
   OpenCodeBridgeHandshakePort,
 } from './OpenCodeStateChangingBridgeCommandService';
 
-function canonicalStopProjectPath(projectPath: string): string {
+function canonicalStopProjectPath(projectPath: string, retainedProjectPath?: string): string {
   const resolved = path.normalize(path.resolve(projectPath.trim()));
   try {
     return path.normalize(realpathSync(resolved));
   } catch (error) {
     const code = (error as NodeJS.ErrnoException | null)?.code;
-    // Match runtime canonicalization when the launch directory is no longer
-    // accessible. Retained target equality still fences alias retargeting.
-    if (['ENOENT', 'ENOTDIR', 'EACCES', 'ELOOP', 'EPERM'].includes(code ?? '')) return resolved;
+    // An unavailable alias cannot identify its original directory again. Only
+    // already-retained canonical authority may supply that identity; a reachable
+    // retarget still resolves above and fails exact target equality.
+    if (['ENOENT', 'ENOTDIR', 'EACCES', 'ELOOP', 'EPERM'].includes(code ?? ''))
+      return retainedProjectPath ?? resolved;
     throw error;
   }
 }
@@ -122,10 +124,28 @@ export async function recoverRuntimeStop<TData>(input: {
   ledger: OpenCodeBridgeCommandLedger;
   timeoutMs: number;
 }): Promise<OpenCodeBridgeResult<TData>> {
-  const { entry, current, manifest } = input;
+  const { entry, manifest } = input;
+  const retained = entry.stopTarget ?? entry.stopRecovery?.target;
+  // Rebuild only the canonical path lost with an unavailable alias. All other
+  // caller, generation and session bytes remain subject to exact target equality.
+  const current =
+    retained?.runtimeTarget &&
+    input.current.runtimeTarget &&
+    input.current.runtimeTarget.projectPath ===
+      path.normalize(path.resolve(input.current.cwd.trim()))
+      ? {
+          ...input.current,
+          runtimeTarget: {
+            ...input.current.runtimeTarget,
+            projectPath: canonicalStopProjectPath(
+              input.current.cwd,
+              retained.runtimeTarget.projectPath
+            ),
+          },
+        }
+      : input.current;
   if (entry.status === 'completed' && entry.stopRecovery)
     return recoverCompletedStop(entry, current, manifest);
-  const retained = entry.stopTarget;
   if (!retained?.runtimeTarget || !current.sessionIdentityHash)
     throw new Error('Stop reconciliation unknown: insufficient retained original target evidence');
   if (
@@ -136,7 +156,12 @@ export async function recoverRuntimeStop<TData>(input: {
     stableHash(retained) !== stableHash(current)
   )
     throw new Error('Stop original target mismatch; reconciliation required');
-  const request = runtimeStopRequest(entry, retained);
+  // The full current/retained comparison above authorizes this ledger identity,
+  // independently of an alias which may have disappeared since the first Stop.
+  const request = runtimeStopRequest(entry, {
+    ...retained,
+    cwd: retained.runtimeTarget.projectPath,
+  });
   const handshake = await input.handshakePort.handshake({
     requiredCommand: 'opencode.stopOutcome',
     expectedRunId: null,

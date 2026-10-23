@@ -12,6 +12,7 @@ import {
   type OpenCodeMemberMessageDeliveryServiceDependencies,
 } from '../OpenCodeMemberMessageDeliveryPorts';
 import { OpenCodeMemberMessageDeliveryService } from '../OpenCodeMemberMessageDeliveryService';
+import { OpenCodePromptDeliveryFollowUpPolicy } from '../OpenCodePromptDeliveryFollowUpPolicy';
 import {
   createOpenCodePromptDeliveryLedgerStore,
   type OpenCodePromptDeliveryLedgerRecord,
@@ -325,7 +326,7 @@ describe('secondary delivery waiting for a native bootstrap commit', () => {
     await rm(ledgerDir, { recursive: true, force: true });
   });
 
-  function harness(responsePending = false) {
+  function harness(responsePending = false, realFollowUps = false) {
     const send = vi.fn(async () => acceptedResult('Muse'));
     const deps = createDeps({
       ledgerDir,
@@ -378,6 +379,12 @@ describe('secondary delivery waiting for a native bootstrap commit', () => {
         scheduler.schedule(input)
     );
     deps.scheduleOpenCodePromptDeliveryWatchdog = scheduled;
+    if (realFollowUps)
+      deps.openCodePromptDeliveryFollowUpPolicy = new OpenCodePromptDeliveryFollowUpPolicy({
+        scheduleWatchdog: scheduled,
+        logEvent: vi.fn(),
+        markFailedTerminal: async (input) => await input.ledger.markFailedTerminal(input),
+      });
     return {
       deps,
       scheduled,
@@ -394,6 +401,58 @@ describe('secondary delivery waiting for a native bootstrap commit', () => {
       },
     };
   }
+
+  it.each(['policy-followup', 'queued-behind', 'not-due', 'new-retry'] as const)(
+    'keeps %s watchdog descendants scoped when the lane is replaced',
+    async (path) => {
+      const h = harness(true, path !== 'queued-behind');
+      h.commit();
+      let current = true;
+      if (path === 'new-retry')
+        h.send.mockResolvedValueOnce({
+          ...acceptedResult('Muse'),
+          runtimePromptMessageId: undefined,
+        });
+      try {
+        await h.service.deliver('team-a', { ...h.message, isCurrent: () => current });
+        if (path === 'queued-behind' || path === 'not-due') {
+          h.scheduler.cancelTeam('team-a');
+          await h.service.deliver('team-a', {
+            ...h.message,
+            messageId: path === 'queued-behind' ? 'queued-second' : h.message.messageId,
+            isCurrent: () => current,
+          });
+        }
+        expect(h.scheduled.mock.calls.length).toBeGreaterThan(0);
+        const ledger = h.deps.createOpenCodePromptDeliveryLedger('team-a', SECONDARY_LANE.laneId);
+        const before = await ledger.list();
+        current = false;
+        h.lane.runId = 'replacement-run';
+        h.deps.getCurrentOpenCodeRuntimeRunId = () => 'replacement-run';
+        await vi.advanceTimersByTimeAsync(15_000);
+        if (h.relay.mock.calls.length) await h.completed;
+        expect(h.relay).not.toHaveBeenCalled();
+        expect(h.send).toHaveBeenCalledTimes(1);
+        expect(await ledger.list()).toEqual(before);
+      } finally {
+        h.scheduler.cancelTeam('team-a');
+      }
+    }
+  );
+
+  it('keeps a current scoped followup observing its one accepted send', async () => {
+    const h = harness(true, true);
+    h.commit();
+    try {
+      await h.service.deliver('team-a', { ...h.message, isCurrent: () => true });
+      await vi.advanceTimersByTimeAsync(15_000);
+      await h.completed;
+      expect(h.relay).toHaveBeenCalledTimes(1);
+      expect(h.send).toHaveBeenCalledTimes(1);
+    } finally {
+      h.scheduler.cancelTeam('team-a');
+    }
+  });
 
   it('submits a message queued during Relaunch once after late native commit without another inbox mutation', async () => {
     const h = harness();

@@ -1157,13 +1157,19 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     };
 
     const result = await createService({ bridge: executor }).execute(input);
+    await fs.unlink(projectAlias);
     expect(await createService({ bridge: executor }).execute(input)).toEqual(result);
     expect(executor.execute).toHaveBeenCalledTimes(1);
   });
 
-  it.each(['reconciled_stopped', 'active'] as const)(
-    'projects failed alias Stop recovery through real wire bytes without replay: %s',
-    async (observation) => {
+  it.each([
+    ['reconciled_stopped', false],
+    ['active', false],
+    ['reconciled_stopped', true],
+    ['active', true],
+  ] as const)(
+    'projects failed alias Stop recovery through real wire bytes without replay: %s removed=%s',
+    async (observation, removeAlias) => {
       const projectPath = path.join(tempDir, 'wire-project');
       const projectAlias = path.join(tempDir, 'wire-project-alias');
       await fs.mkdir(projectPath);
@@ -1246,6 +1252,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
         status: 'failed',
         lastError: 'OpenCode Stop target project mismatch',
       });
+      if (removeAlias) await fs.unlink(projectAlias);
       const recovering = createService({ bridge: client }).execute(input);
       if (observation === 'active')
         await expect(recovering).rejects.toThrow('Stop reconciliation active');

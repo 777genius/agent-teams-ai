@@ -424,10 +424,7 @@ export class OpenCodeMemberMessageDeliveryService {
             ],
           };
         }
-        // A primary with no stored session cannot accept a send. Settle its
-        // refusal through self-heal; null leaves the existing path unchanged.
-        // Only a deliverable tracked owner may heal: Stop/cleanup fences must
-        // never trigger a replacement launch while they own the lane.
+        // A sessionless primary may self-heal only while its tracked owner is deliverable.
         const healed = trackedRunId
           ? await healUndeliverableOpenCodePrimaryLaneBootstrap(this.deps, input, {
               teamName,
@@ -547,6 +544,7 @@ export class OpenCodeMemberMessageDeliveryService {
       : null;
     if (active && active.inboxMessageId !== messageId && ledger) {
       active = await recoverOpenCodeActiveDeliveryBlocker({
+        ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
         assertCurrentRun,
         ports: this.deps,
         ledger,
@@ -559,12 +557,14 @@ export class OpenCodeMemberMessageDeliveryService {
     if (active && active.inboxMessageId !== messageId) {
       const activeDueMs = active.nextAttemptAt ? Date.parse(active.nextAttemptAt) : NaN;
       this.deps.scheduleOpenCodePromptDeliveryWatchdog({
+        ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
         teamName,
         memberName: canonicalMemberName,
         messageId,
         delayMs: OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
       });
       this.deps.scheduleOpenCodePromptDeliveryWatchdog({
+        ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
         teamName,
         memberName: canonicalMemberName,
         messageId: active.inboxMessageId,
@@ -734,6 +734,7 @@ export class OpenCodeMemberMessageDeliveryService {
           : NaN;
         await checkpoint();
         this.deps.scheduleOpenCodePromptDeliveryWatchdog({
+          ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
           teamName,
           memberName: canonicalMemberName,
           messageId,
@@ -821,9 +822,8 @@ export class OpenCodeMemberMessageDeliveryService {
           observed.responseObservation
         );
         await checkpoint();
-        // Snapshot every turn-activity dimension before `applyObservation`
-        // overwrites the record with this observation: comparing the record
-        // against itself afterwards would never show progress.
+        // Snapshot turn activity before applyObservation overwrites it;
+        // comparing the updated record against itself cannot show progress.
         const previousAssistantMessageId = ledgerRecord.observedAssistantMessageId?.trim() ?? '';
         const previousToolCallCount = ledgerRecord.observedToolCallNames.length;
         const previousAssistantPreview = ledgerRecord.observedAssistantPreview?.trim() ?? '';
@@ -1037,9 +1037,8 @@ export class OpenCodeMemberMessageDeliveryService {
             }
           );
         }
-        // Retry-due passes only, and durable: reconstructing why a retry did or
-        // did not fire needs the observation the decision saw, and the
-        // lane-scoped ledger holding it is gone once the team stops.
+        // Persist retry-due decisions with their observation before Stop
+        // removes the lane ledger needed to reconstruct the decision.
         if (retryDueBeforeObserve) {
           logger[selectOpenCodeDeliveryTurnActivityLogLevel()](
             `[${teamName}] opencode_prompt_delivery_turn_activity ` +
@@ -1057,6 +1056,7 @@ export class OpenCodeMemberMessageDeliveryService {
           isOpenCodeSessionRefreshRetryRecord(ledgerRecord, pendingReason)
         ) {
           ledgerRecord = await this.deps.openCodePromptDeliveryFollowUpPolicy.schedule({
+            ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
             ledger,
             ledgerRecord,
             teamName,
@@ -1098,6 +1098,7 @@ export class OpenCodeMemberMessageDeliveryService {
         }
         if (!retryDue || !retryable) {
           ledgerRecord = await this.deps.openCodePromptDeliveryFollowUpPolicy.schedule({
+            ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
             ledger,
             ledgerRecord,
             teamName,
@@ -1228,6 +1229,7 @@ export class OpenCodeMemberMessageDeliveryService {
           'opencode-prompt-delivery-send-exception'
         );
         ledgerRecord = await this.deps.openCodePromptDeliveryFollowUpPolicy.schedule({
+          ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
           ledger,
           ledgerRecord,
           teamName,
@@ -1306,10 +1308,8 @@ export class OpenCodeMemberMessageDeliveryService {
     );
     const promptAcceptedByObservation = isOpenCodePromptAcceptedByObservation(responseObservation);
     const promptAccepted = promptAcceptedByRuntimeIdentity || promptAcceptedByObservation;
-    // Riders reach the model only when the attempt carrying them is accepted AND
-    // actually carried them. `promptBodyAlreadyDelivered` redelivers missing-proof
-    // control text and drops `input.text`, where coalesced notices live. Marking
-    // riders delivered then would read-commit text that never reached the model.
+    // Read-commit riders only when this accepted attempt carried them.
+    // Missing-proof control redelivery drops input.text and its coalesced riders.
     const coalescedNoticesDispatched =
       Boolean(input.coalescedNoticeText?.trim()) &&
       promptAccepted &&
@@ -1431,6 +1431,7 @@ export class OpenCodeMemberMessageDeliveryService {
         readAllowed,
       });
       ledgerRecord = await this.deps.openCodePromptDeliveryFollowUpPolicy.schedule({
+        ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
         ledger: ledger!,
         ledgerRecord,
         teamName,
@@ -1482,6 +1483,7 @@ export class OpenCodeMemberMessageDeliveryService {
         });
         await checkpoint();
         this.deps.scheduleOpenCodePromptDeliveryWatchdog({
+          ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
           teamName,
           memberName: canonicalMemberName,
           messageId: ledgerRecord.inboxMessageId,
@@ -1494,6 +1496,7 @@ export class OpenCodeMemberMessageDeliveryService {
         );
       } else {
         ledgerRecord = await this.deps.openCodePromptDeliveryFollowUpPolicy.schedule({
+          ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
           ledger: ledger!,
           ledgerRecord,
           teamName,
@@ -1527,11 +1530,9 @@ export class OpenCodeMemberMessageDeliveryService {
         : ledgerRecord?.diagnostics.length
           ? ledgerRecord.diagnostics
           : result.diagnostics;
-    // INVARIANT: `delivered: true` alone is NOT proof of acceptance. When
-    // acceptanceUnknown is set, responsePending stays true until read-commit
-    // is allowed, and callers MUST keep the inbox row unread while
-    // responsePending is true — reacting to `delivered` only would mark an
-    // unconfirmed message as read and silently lose it on a dead lane.
+    // INVARIANT: delivered alone never proves acceptance. Keep an uncertain
+    // or responsePending inbox row unread until read-commit is allowed;
+    // otherwise an unconfirmed message can silently disappear on a dead lane.
     if (!promptAccepted || !responsePending) {
       // Settled in this frame: response read-committable, or the prompt was not
       // (or not provably) accepted. An accepted-but-pending turn stays 'active'

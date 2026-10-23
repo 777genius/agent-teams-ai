@@ -50,6 +50,24 @@ export class OpenCodeAggregatePrimaryProgressPublisher {
     this.ports.invalidateRuntimeSnapshotCaches(run.teamName);
   }
 
+  publishRestartedMember(run: ProvisioningRun, retained: boolean, setupError?: unknown): void {
+    run.progress = this.ports.setRuntimeAdapterProgress(
+      {
+        ...run.progress,
+        state: 'ready',
+        retainedSecondaryRuntime: undefined,
+        message: retained
+          ? 'OpenCode member lane restart is ready'
+          : 'OpenCode team is running with unavailable members',
+        messageSeverity: retained ? undefined : 'warning',
+        updatedAt: nowIso(),
+        error: undefined,
+        ...(setupError === undefined ? {} : { cliLogsTail: getErrorMessage(setupError) }),
+      },
+      run.onProgress
+    );
+  }
+
   publishRestoredPrimary(run: ProvisioningRun, error: unknown): void {
     run.progress = this.ports.setRuntimeAdapterProgress(
       {

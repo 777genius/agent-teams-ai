@@ -19,6 +19,7 @@ vi.mock('fs', async (importOriginal) => {
 
 import {
   createStopTarget,
+  recoverRuntimeStop,
   runtimeStopRequest,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeRuntimeStopRecovery';
 
@@ -78,7 +79,7 @@ describe('Stop project filesystem fallback', () => {
     expect(() => runtimeStopRequest(entry, target)).toThrow(failure);
   });
 
-  it('rejects an unavailable alias rather than rewriting its retained canonical target', () => {
+  it('rejects a fresh unavailable alias without ledger recovery authority', () => {
     filesystem.canonical = path.resolve('/TEST/original-canonical');
     const target = createStopTarget(input, manifest);
     const original = structuredClone(target);
@@ -86,4 +87,41 @@ describe('Stop project filesystem fallback', () => {
     expect(() => runtimeStopRequest(entry, target)).toThrow('project identity mismatch');
     expect(target).toEqual(original);
   });
+
+  it.each(['run', 'capability', 'session', 'path'] as const)(
+    'rejects a foreign current %s identity after alias removal before any observation',
+    async (kind) => {
+      filesystem.canonical = path.resolve('/TEST/original-canonical');
+      const retained = createStopTarget(input, manifest);
+      filesystem.failure = Object.assign(new Error('gone'), { code: 'ENOENT' });
+      const current = createStopTarget(input, manifest);
+      if (kind === 'run') current.runId = 'foreign-run';
+      if (kind === 'capability') current.capabilitySnapshotId = `opencode:${'c'.repeat(32)}`;
+      if (kind === 'session') current.runtimeTarget!.members[0].sessionId = 'foreign-session';
+      if (kind === 'path')
+        current.runtimeTarget!.projectPath = path.resolve('/TEST/foreign-project');
+      const handshake = vi.fn();
+      await expect(
+        recoverRuntimeStop({
+          entry: {
+            ...entry,
+            command: 'opencode.stopTeam',
+            status: 'failed',
+            teamName: input.teamName,
+            laneId: input.laneId,
+            runId: input.runId,
+            stopTarget: retained,
+          } as Parameters<typeof recoverRuntimeStop>[0]['entry'],
+          current,
+          manifest,
+          handshakePort: { handshake },
+          expectedClient: {} as never,
+          bridge: {} as never,
+          ledger: {} as never,
+          timeoutMs: 100,
+        })
+      ).rejects.toThrow('target mismatch');
+      expect(handshake).not.toHaveBeenCalled();
+    }
+  );
 });

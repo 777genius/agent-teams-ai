@@ -80,6 +80,8 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
   readonly launchedMemberNames: string[][] = [];
   readonly launchedRunIds: string[] = [];
   productionLaunch = false;
+  secondarySetupError?: Error;
+  beforeSecondarySetupFailure?: () => void;
   initialStop?: (runId: string) => Promise<void>;
   manifest: RuntimeStoreManifestEvidence = {
     highWatermark: 0,
@@ -283,6 +285,10 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
     _run: ProvisioningRun,
     lane: ProvisioningRun['mixedSecondaryLanes'][number]
   ): Promise<void> {
+    if (this.secondarySetupError) {
+      this.beforeSecondarySetupFailure?.();
+      throw this.secondarySetupError;
+    }
     lane.runId = 'TEST-target-secondary';
     lane.state = 'finished';
     lane.result = materializedResult(lane.runId, [lane.member.name]);
@@ -368,6 +374,56 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
     );
     expect(deleteRuntimeOwner).toHaveBeenCalledWith(run.teamName);
   });
+
+  it.each(['current', 'cancelled'] as const)(
+    'returns only current correlated successor authority when secondary setup fails after successful primary relaunch: %s',
+    async (scope) => {
+      const facade = new TestOpenCodeAggregatePrimaryFacade();
+      facade.productionLaunch = true;
+      facade.secondarySetupError = new Error('secondary worktree setup failed');
+      const run = createRun();
+      const predecessorRunId = run.runId;
+      const launch = vi.fn(async (input: Parameters<TeamLaunchRuntimeAdapter['launch']>[0]) =>
+        materializedResult(
+          input.runId,
+          input.expectedMembers.map((entry) => entry.name)
+        )
+      );
+      facade.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          { providerId: 'opencode', launch, stop: vi.fn() } as unknown as TeamLaunchRuntimeAdapter,
+        ])
+      );
+      facade.trackRun(run, { runId: run.runId, providerId: 'opencode', cwd: run.request.cwd });
+      if (scope === 'cancelled')
+        facade.beforeSecondarySetupFailure = () => facade.cancelRestart(run.teamName);
+      const restarting = facade.restartMember(run.teamName, 'Worker', false);
+      if (scope === 'cancelled') {
+        await expect(restarting).rejects.not.toHaveProperty('retention');
+        return;
+      }
+      await expect(restarting).rejects.toMatchObject({
+        message: 'secondary worktree setup failed',
+        outcome: 'failed_restored',
+        retention: {
+          teamName: run.teamName,
+          memberName: 'Worker',
+          predecessorRunId,
+          successorRunId: expect.any(String),
+        },
+      });
+      await expect(restarting).rejects.toHaveProperty('retention.successorRunId', run.runId);
+      expect(run.runId).not.toBe(predecessorRunId);
+      expect(facade.getPrimaryOwner(run.teamName)?.runId).toBe(run.runId);
+      expect(run.progress).toMatchObject({
+        runId: run.runId,
+        state: 'ready',
+        messageSeverity: 'warning',
+        cliLogsTail: 'secondary worktree setup failed',
+      });
+      expect(launch).toHaveBeenCalledTimes(1);
+    }
+  );
 
   it.each([0, 1, 2])(
     'uses fresh incarnations with materialized sessions; failed launches=%s',
