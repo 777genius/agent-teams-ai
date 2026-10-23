@@ -87,15 +87,17 @@ export async function appendRegistryLockDiagnostics(
         body && typeof body === 'object' && 'runId' in body && typeof body.runId === 'string'
           ? body.runId
           : undefined;
-      await sink.append({
-        type: 'opencode_registry_lock',
-        providerId: 'opencode',
-        runId,
-        severity: value.phase === 'failed' ? 'warning' : 'info',
-        message: `OpenCode registry lock ${value.phase}`,
-        data: { ...value, command: envelope.command, requestId: envelope.requestId },
-        createdAt: new Date().toISOString(),
-      });
+      void sink
+        .append({
+          type: 'opencode_registry_lock',
+          providerId: 'opencode',
+          runId,
+          severity: value.phase === 'failed' ? 'warning' : 'info',
+          message: `OpenCode registry lock ${value.phase}`,
+          data: { ...value, command: envelope.command, requestId: envelope.requestId },
+          createdAt: new Date().toISOString(),
+        })
+        .catch(() => undefined);
     } catch {
       /* Parsing or diagnostic storage cannot change bridge command outcomes. */
     }

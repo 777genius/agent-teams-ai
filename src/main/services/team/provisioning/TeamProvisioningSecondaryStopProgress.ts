@@ -83,7 +83,10 @@ export function failSecondaryStopProgress(
   if (!ownsSecondaryStopProgress(run, custody)) return null;
   const failed: TeamProvisioningProgress = {
     ...custody.current,
-    state: 'disconnected',
+    state:
+      custody.current.state === 'failed' || custody.current.state === 'cancelled'
+        ? custody.current.state
+        : 'disconnected',
     message: 'OpenCode runtime lane stopped but exact cleanup failed',
     messageSeverity: 'error',
     updatedAt: new Date().toISOString(),

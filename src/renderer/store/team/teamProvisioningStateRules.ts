@@ -47,7 +47,8 @@ export function shouldIgnoreProvisioningProgressRegression(
 export function getProvisioningProgressError(progress: TeamProvisioningProgress): string | null {
   if (
     progress.state === 'failed' ||
-    (progress.state === 'disconnected' && progress.messageSeverity === 'error')
+    ((progress.state === 'disconnected' || progress.state === 'cancelled') &&
+      progress.messageSeverity === 'error')
   ) {
     return progress.error?.trim() ? progress.error : progress.message;
   }

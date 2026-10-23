@@ -73,6 +73,48 @@ describe('OpenCodeBridgeCommandClient', () => {
     expect(diagnostics.events).toEqual([]);
   });
 
+  it('returns a completed bridge result while diagnostic storage remains pending and handles late rejection', async () => {
+    const receipt = {
+      operation: 'ensure_read',
+      phase: 'released',
+      stage: 'release',
+      lockAttemptId: '12345678-1234-4234-8234-123456789abc',
+      pid: 321,
+      processStartedAtMs: 1000,
+      atMs: 2000,
+      waitMs: 0,
+      heldMs: 10,
+      errorCode: null,
+      lockMtimeAgeMs: null,
+    };
+    let rejectAppend!: (reason: Error) => void;
+    const appendPending = new Promise<void>((_resolve, reject) => {
+      rejectAppend = reject;
+    });
+    diagnostics.append.mockReturnValueOnce(appendPending);
+    runner.nextResult = {
+      stdout: JSON.stringify(bridgeSuccess()),
+      exitCode: 0,
+      timedOut: false,
+      stderr: '[opencode-registry-lock] ' + JSON.stringify(receipt),
+    };
+    let completed = false;
+    const execution = createClient({ env: { CLAUDE_MULTIMODEL_DEBUG_OPENCODE_COMMAND: '1' } })
+      .execute('opencode.launchTeam', { runId: 'run-1' }, { cwd: tempDir, timeoutMs: 1000 })
+      .then((result) => {
+        completed = true;
+        return result;
+      });
+    try {
+      await vi.waitFor(() => expect(completed).toBe(true), { timeout: 1000 });
+      expect(await execution).toMatchObject({ ok: true, data: { runId: 'run-1' } });
+      expect(diagnostics.append).toHaveBeenCalledOnce();
+    } finally {
+      rejectAppend(new Error('diagnostic storage unavailable'));
+      await execution;
+    }
+  });
+
   it('prepares only one shutdown registry child before real admission closure, with copied authority', async () => {
     const context = new BoundControlContext('app-test', tempDir);
     const binding = {

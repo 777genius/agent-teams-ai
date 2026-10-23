@@ -2,12 +2,12 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 
+import { describe, expect, it, vi } from 'vitest';
+
 import {
   getProvisioningProgressError,
   shouldIgnoreProvisioningProgressRegression,
-} from '@renderer/store/team/teamProvisioningStateRules';
-import { describe, expect, it, vi } from 'vitest';
-
+} from '../../../../../renderer/store/team/teamProvisioningStateRules';
 import { bindLifecycleManifest } from '../../opencode/bridge/OpenCodeLifecycleManifestBinding';
 import { getOpenCodeRuntimeManifestPath } from '../../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { createMemberSpawnStatusMutationPortsFromService } from '../TeamProvisioningMemberSpawnSnapshots';
@@ -700,6 +700,30 @@ describe('OpenCode runtime stop flow', () => {
       });
       await stopSingleMixedSecondaryRuntimeLane(run, lane, 'cleanup', ports);
       expect(run.progress).toBe(previous);
+    }
+  );
+
+  it.each(['failed', 'cancelled'] as const)(
+    'keeps %s cleanup failure visible through the actual renderer terminal guard',
+    async (state) => {
+      const run = makeSingleLaneRun();
+      run.progress = { ...run.progress, state, error: 'Previous error' };
+      let rendererProgress = run.progress;
+      run.onProgress.mockImplementation((progress) => {
+        if (!shouldIgnoreProvisioningProgressRegression(rendererProgress.state, progress.state))
+          rendererProgress = progress;
+      });
+      const ports = makeSingleLaneStopPorts({ clearLane: async () => false });
+      await expect(
+        stopSingleMixedSecondaryRuntimeLane(run, makeSingleLane(), 'cleanup', ports)
+      ).rejects.toThrow('ownership changed before stopped storage cleanup');
+      expect(rendererProgress).toBe(run.progress);
+      expect(rendererProgress.state).toBe(state);
+      expect(getProvisioningProgressError(rendererProgress)).toContain(
+        'ownership changed before stopped storage cleanup'
+      );
+      run.onProgress({ ...run.progress, state: 'ready' });
+      expect(rendererProgress.state).toBe(state);
     }
   );
 
