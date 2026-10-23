@@ -82,16 +82,17 @@ export function createOpenCodeDeliveryAuthorization(
   };
 }
 
-/** Attachment preparation precedes submission, so cancellation can still return its ticket. */
+/** Return a cancelled ticket only before SDK dispatch or the durable group handoff begins. */
 export function createOpenCodePreSubmissionAssertion(
   assertCurrent: () => void,
-  restore: () => void
+  restore: () => void,
+  isBeforeSubmission: () => boolean
 ): () => void {
   return () => {
     try {
       assertCurrent();
     } catch (error) {
-      if (error instanceof OpenCodePromptDeliveryCancelledError) restore();
+      if (error instanceof OpenCodePromptDeliveryCancelledError && isBeforeSubmission()) restore();
       throw error;
     }
   };

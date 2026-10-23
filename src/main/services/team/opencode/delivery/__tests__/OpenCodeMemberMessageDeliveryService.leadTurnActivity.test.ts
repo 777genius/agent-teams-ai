@@ -885,34 +885,116 @@ describe('secondary delivery waiting for a native bootstrap commit', () => {
     }
   });
 
-  it('does not restore a consumed lane ticket after the provider has accepted a revoked scoped send', async () => {
+  it.each([true, false])(
+    'restores a consumed reservation after admission during serialization (watchdog=%s)',
+    async (watchdog) => {
+      const h = harness();
+      h.commit();
+      const ticket = {
+        teamName: 'team-a',
+        memberName: 'Muse',
+        teamIncarnation: 'inc-1',
+        runtimeInstanceId: 'opencode:secondary:session-1',
+        expectedGeneration: 1,
+        ticketId: 'serialization-ticket',
+        intentId: h.message.messageId!,
+        controlRevision: 1,
+        admissionPayloadHash: 'owned-test-hash',
+      };
+      memberWorkSync.restoreOpenCodeWorkSyncLane(ticket);
+      expect(memberWorkSync.peekOpenCodeWorkSyncLane(ticket)).toEqual(ticket);
+      let active = false;
+      h.deps.isMemberLifecycleOperationActive = () => active;
+      h.deps.openCodePromptDeliveryWatchdogScheduler = { isEnabled: () => watchdog };
+      h.deps.sendOpenCodeMemberMessageToRuntimeSerialized = async ({ send }) => {
+        expect(memberWorkSync.peekOpenCodeWorkSyncLane(ticket)).toBeUndefined();
+        active = true;
+        return await send();
+      };
+      try {
+        const result = await h.service.deliver('team-a', { ...h.message, source: 'ui-send' });
+        expect(result.reason).toBe('opencode_prompt_delivery_cancelled');
+        expect(h.send).not.toHaveBeenCalled();
+        expect(memberWorkSync.peekOpenCodeWorkSyncLane(ticket)).toEqual(ticket);
+      } finally {
+        memberWorkSync.consumeOpenCodeWorkSyncLane({ ...ticket, messageId: ticket.intentId });
+        h.scheduler.cancelTeam('team-a');
+      }
+    }
+  );
+
+  it('does not restore a ticket after a durable group handoff has begun', async () => {
     const h = harness();
     h.commit();
     let current = true;
     const restore = vi.fn();
-    const consumed = vi.fn(() => ({}));
     const gate = vi
       .spyOn(memberWorkSync, 'gateOpenCodeWorkSyncLaneDelivery')
-      .mockResolvedValueOnce({ restore, consumeForSend: consumed });
-    h.send.mockImplementationOnce(async () => {
+      .mockResolvedValueOnce({ restore });
+    const ledger = h.deps.createOpenCodePromptDeliveryLedger('team-a', SECONDARY_LANE.laneId);
+    const mark = ledger.markNextAttemptScheduled.bind(ledger);
+    vi.spyOn(ledger, 'markNextAttemptScheduled').mockImplementationOnce(async (input) => {
+      const row = await mark(input);
       current = false;
-      return acceptedResult('Muse');
+      return row;
     });
     try {
-      await h.service.deliver('team-a', {
+      const result = await h.service.deliver('team-a', {
         ...h.message,
-        messageKind: 'member_work_sync_nudge',
-        workSyncRuntimeTicketId: 'ticket',
         isCurrent: () => current,
+        groupChatId: 'owned-test-group',
+        groupRunKey: h.lane.runId,
+        groupMessageId: 'cancelled-group-message',
+        groupChatProtocolVersion: 1,
       });
-      expect(consumed).toHaveBeenCalledTimes(1);
-      expect(h.send).toHaveBeenCalledTimes(1);
+      expect(result.reason).toBe('opencode_prompt_delivery_cancelled');
+      expect(h.send).not.toHaveBeenCalled();
       expect(restore).not.toHaveBeenCalled();
+      expect(await ledger.list()).toEqual([
+        expect.objectContaining({
+          status: 'accepted',
+          lastReason: 'group_handoff_started_acceptance_unknown',
+          attempts: 0,
+        }),
+      ]);
     } finally {
       gate.mockRestore();
       h.scheduler.cancelTeam('team-a');
     }
   });
+
+  it.each([true, false])(
+    'does not restore a consumed lane ticket after the provider accepted a revoked scoped send (watchdog=%s)',
+    async (watchdog) => {
+      const h = harness();
+      h.commit();
+      h.deps.openCodePromptDeliveryWatchdogScheduler = { isEnabled: () => watchdog };
+      let current = true;
+      const restore = vi.fn();
+      const consumed = vi.fn(() => ({}));
+      const gate = vi
+        .spyOn(memberWorkSync, 'gateOpenCodeWorkSyncLaneDelivery')
+        .mockResolvedValueOnce({ restore, consumeForSend: consumed });
+      h.send.mockImplementationOnce(async () => {
+        current = false;
+        return acceptedResult('Muse');
+      });
+      try {
+        await h.service.deliver('team-a', {
+          ...h.message,
+          messageKind: 'member_work_sync_nudge',
+          workSyncRuntimeTicketId: 'ticket',
+          isCurrent: () => current,
+        });
+        expect(consumed).toHaveBeenCalledTimes(watchdog ? 1 : 0);
+        expect(h.send).toHaveBeenCalledTimes(1);
+        expect(restore).not.toHaveBeenCalled();
+      } finally {
+        gate.mockRestore();
+        h.scheduler.cancelTeam('team-a');
+      }
+    }
+  );
 
   it('restores a lane ticket before scheduling a bootstrap-pending retry', async () => {
     const h = harness();

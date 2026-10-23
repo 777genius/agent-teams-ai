@@ -464,22 +464,26 @@ export class OpenCodeMemberMessageDeliveryService {
         }
       }
     }
-    const assertCurrentRun = createOpenCodeCurrentDeliveryAssertion(this.deps, {
-      teamName,
-      laneKind: laneIdentity.laneKind,
-      laneId: laneIdentity.laneId,
-      runtimeRunId,
-      trackedRunId,
-      inMemorySecondaryLaneRunId,
-      assertAuthorized,
-    });
+    const assertCurrentRun = createOpenCodePreSubmissionAssertion(
+      createOpenCodeCurrentDeliveryAssertion(this.deps, {
+        teamName,
+        laneKind: laneIdentity.laneKind,
+        laneId: laneIdentity.laneId,
+        runtimeRunId,
+        trackedRunId,
+        inMemorySecondaryLaneRunId,
+        assertAuthorized,
+      }),
+      restoreConsumedLane,
+      () => admissionRequired
+    );
     const preparedAttachments = await prepareOpenCodeDeliveryAttachments({
       projectPath: cwd,
       model: deliveryModel,
       text: input.text,
       attachments: input.attachments,
       resolveOpenCodeInputDeclaration: this.deps.resolveOpenCodeInputDeclaration,
-      assertCurrentRun: createOpenCodePreSubmissionAssertion(assertCurrentRun, restoreConsumedLane),
+      assertCurrentRun,
     });
     if ('failure' in preparedAttachments) return preparedAttachments.failure;
     const openCodeFileParts = preparedAttachments.fileParts;
@@ -596,7 +600,7 @@ export class OpenCodeMemberMessageDeliveryService {
         ],
       };
     }
-    createOpenCodePreSubmissionAssertion(assertCurrentRun, restoreConsumedLane)();
+    assertCurrentRun();
     let ledgerRecord = messageId
       ? await ledger?.ensurePending({
           teamName,
@@ -754,7 +758,6 @@ export class OpenCodeMemberMessageDeliveryService {
           diagnostics: ledgerRecord.diagnostics,
         };
       }
-
       const retryDueBeforeObserve = isOpenCodePromptDeliveryRetryAttemptDue({
         attemptDue,
         ledgerRecord,
@@ -785,7 +788,6 @@ export class OpenCodeMemberMessageDeliveryService {
           ],
         };
       }
-
       const retryShouldRefreshSessionBeforeObserve =
         retryDueBeforeObserve &&
         ledgerRecord.status === 'retry_scheduled' &&
@@ -917,7 +919,6 @@ export class OpenCodeMemberMessageDeliveryService {
             diagnostics: ledgerRecord.diagnostics,
           };
         }
-
         // Turn activity is decided before the stale-pending guard: both read the
         // same observation, and the guard must see the richer signal.
         const turnActivity = decideOpenCodePromptDeliveryTurnActivity({
@@ -936,7 +937,6 @@ export class OpenCodeMemberMessageDeliveryService {
         ) {
           notifyActivity('active');
         }
-
         // Stale-pending guard: an accepted prompt the bridge keeps reporting as
         // `pending` has no attempt budget, so bound it here. A lead plain-text
         // turn end settles non-user messages; stale idle records go terminal.
