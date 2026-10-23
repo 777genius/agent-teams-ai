@@ -369,9 +369,8 @@ export class SaveCustomTeamTemplateUseCase {
           }
           return { retry: false, result: { status: 'storageUnavailable' } };
         }
-        // execution === 'unknown' - this attempt may have reached the database.
-        // Record that we've seen unknown execution so future attempts preserve it.
-        hadUnknownExecution = true;
+        // execution === 'unknown' - this attempt may have reached the database;
+        // the caller's loop state already remembers that uncertainty.
         return {
           retry: false,
           result: {
@@ -393,10 +392,9 @@ export class SaveCustomTeamTemplateUseCase {
         return { retry: true, result: { status: 'storageUnavailable' } };
       }
       // execution === 'unknown' and settlement completed - this attempt may have
-      // reached the database. Preserve the uncertainty.
-      hadUnknownExecution = true;
+      // reached the database, so reconciliation decides instead of a blind retry.
     }
-    return this.reconcile(gateway, request, hadUnknownExecution);
+    return this.reconcile(gateway, request);
   }
 
   /**
@@ -408,16 +406,13 @@ export class SaveCustomTeamTemplateUseCase {
    * confirmed save and a later re-check can never disagree about the same
    * operation.
    *
-   * If a previous attempt had execution: 'unknown', we must preserve that
-   * uncertainty only when reconciliation itself cannot establish a definitive
-   * result (i.e., returns 'unresolved'). When reconciliation returns 'absent',
-   * 'saved', or 'conflict', the authoritative lookup has established the
-   * result, so the uncertainty is resolved.
+   * Uncertainty carried by earlier attempts is the caller's loop state in
+   * `createWithRecovery`; reconciliation itself only reports what the
+   * authoritative lookup established.
    */
   private async reconcile(
     gateway: CustomTeamTemplateStorageGateway,
-    request: CreateCustomTeamTemplateRecordRequest,
-    hadUnknownExecution: boolean
+    request: CreateCustomTeamTemplateRecordRequest
   ): Promise<WriteDecision> {
     const check = await checkStoredTemplate(gateway, toWriteIdentity(request), this.deps.hasher);
     switch (check.status) {
@@ -433,21 +428,14 @@ export class SaveCustomTeamTemplateUseCase {
         // persist, so one more identical attempt is allowed, and an attempt
         // that runs out is honestly reported as refused storage rather than as
         // an unknown outcome — absence was proven, not left uncertain.
-        // The authoritative lookup has established the result, so even if a
-        // previous attempt had unknown execution, the uncertainty is resolved.
         return {
           retry: true,
           result: { status: 'storageUnavailable' },
         };
       case 'unresolved':
-        // Reconciliation could not establish a definitive result. If we had an
-        // unknown execution earlier, preserve that uncertainty.
-        if (hadUnknownExecution) {
-          return {
-            retry: false,
-            result: { status: 'unresolvedWriteOutcome', templateId: check.templateId },
-          };
-        }
+        // Reconciliation could not establish a definitive result, so the
+        // outcome stays honestly unresolved either way — the caller's loop
+        // state decides whether an earlier unknown execution is remembered.
         return {
           retry: false,
           result: { status: 'unresolvedWriteOutcome', templateId: check.templateId },

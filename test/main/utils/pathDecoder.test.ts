@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   __setPathDecoderCopyDirectoryForTests,
+  applyConfiguredClaudeRoot,
   buildSessionPath,
   buildSubagentsPath,
   buildTodoPath,
@@ -13,8 +14,9 @@ import {
   encodePathPortable,
   extractProjectName,
   extractSessionId,
-  getProjectDirNameCandidates,
   getAppDataPath,
+  getClaudeBasePath,
+  getProjectDirNameCandidates,
   getProjectsBasePath,
   getSchedulesBasePath,
   getTodosBasePath,
@@ -341,6 +343,39 @@ describe('pathDecoder', () => {
       });
 
       expect(getSchedulesBasePath()).toBe(legacyRoot);
+    });
+  });
+
+  describe('applyConfiguredClaudeRoot ownership', () => {
+    it('clears the override while the configured root still owns it', () => {
+      const configured = path.join(defaultHome, 'configured-claude');
+      applyConfiguredClaudeRoot(configured);
+      expect(getClaudeBasePath()).toBe(configured);
+
+      applyConfiguredClaudeRoot(null);
+      expect(getClaudeBasePath()).toBe(path.join(defaultHome, '.claude'));
+    });
+
+    it('preserves an explicit override whose path equals the configured root', () => {
+      const root = path.join(defaultHome, 'explicit-claude');
+      applyConfiguredClaudeRoot(root);
+      // Explicit setter call (e.g. the standalone CLAUDE_ROOT) with the very
+      // same path: ownership moves to the explicit call.
+      setClaudeBasePathOverride(root);
+      const explicit = getClaudeBasePath();
+
+      applyConfiguredClaudeRoot(null);
+      expect(getClaudeBasePath()).toBe(explicit);
+    });
+
+    it('lets a configured root replace an explicit override and then clear it', () => {
+      setClaudeBasePathOverride(path.join(defaultHome, 'explicit-claude'));
+      const configured = path.join(defaultHome, 'configured-claude');
+      applyConfiguredClaudeRoot(configured);
+      expect(getClaudeBasePath()).toBe(configured);
+
+      applyConfiguredClaudeRoot(null);
+      expect(getClaudeBasePath()).toBe(path.join(defaultHome, '.claude'));
     });
   });
 

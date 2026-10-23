@@ -67,5 +67,50 @@
         "patched": "7e9f2231d0a955704a70a434c6e8bdfbc6e5a9b5cc68238aba0c1546b51e191f"
       }
     ]
+  },
+  {
+    "name": "zod",
+    "version": "3.25.76",
+    "main": "./index.cjs",
+    "advisory": "GHSA-mrhx-c7xc-m3w5",
+    "patch": "patches/zod@3.25.76.patch",
+    "provenance": [
+      "https://github.com/colinhacks/zod/commit/a0ebf970f2d752e5f58527cd2942ff48be4f46bd",
+      "https://registry.npmjs.org/zod/3.25.76"
+    ],
+    "license": "MIT",
+    "files": [
+      {
+        "path": "src/v3/types.ts",
+        "original": "70309a0877c35d036842e291fe7c8a4439d5db49411d233f8a22bf8a59c41419",
+        "patched": "43e7d808270d2521f9969d81fcddce1df165618483454b72d0c19df98f6e61f3"
+      },
+      {
+        "path": "v3/types.js",
+        "original": "9763a2938f0e7f983363ef4bf6530e7583e3f2d54f8a4a6684efad58febc6e8e",
+        "patched": "7b994f7652ae24855e9fe3066de3463f9bfd1083ca7d56d22434942fcddfbffe"
+      },
+      {
+        "path": "v3/types.cjs",
+        "original": "06487cc05ed45c5dd29789bf0aa75734d1ce06592a7f2665ba4ca90a68e8a3e1",
+        "patched": "674e29beb1bafb0ac61ad688431322e9397ab9b91272173f19dcf11e310f8e3a"
+      },
+      {
+        "path": "src/v4/core/schemas.ts",
+        "original": "5910d2a181b6570189730578df0ff7c90bd7b2cda6ae1064026d236a47fb687d",
+        "patched": "b8c5a2dac8d30604df8dbddbcf55aab8797d88c74c401e81d32775d8d895fb43"
+      },
+      {
+        "path": "v4/core/schemas.js",
+        "original": "d466582c022b08a3f9eb1a65d5970d8ca25064d73a5a838d76414ae36440a76b",
+        "patched": "42cd5c177f42fff6126f6eec687fed4ee0c5a0b564aa1de48719b5f34716ceeb"
+      },
+      {
+        "path": "v4/core/schemas.cjs",
+        "original": "f5d17a7db487c943c9d07cc624010ebb6d93683eabd14339846f4912cc88b51f",
+        "patched": "30a9ac46c1ce2f52eee5fc8a7920ab81253094b565bd4cfdff067616fec0d70f"
+      }
+    ],
+    "unaffectedVersions": ["4.6.7"]
   }
 ]

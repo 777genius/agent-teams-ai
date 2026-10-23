@@ -57,23 +57,36 @@ export const SaveAsTemplateAction = ({
         <TooltipContent side="bottom">{label}</TooltipContent>
       </Tooltip>
       {open ? (
-        <Suspense
-          fallback={
-            <div
-              role="status"
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 text-sm text-[var(--color-text-muted)]"
-            >
-              {t('customTemplates.states.loading')}
-            </div>
-          }
+        // Event-only boundary for everything mounted by this action. The
+        // loading fallback renders inline inside the team row (the dialog
+        // itself stops its own events), so a click on the overlay or an
+        // Enter/Space press must not bubble into the row's open-team handler.
+        // `display: contents` keeps the wrapper out of the row's layout.
+        <div
+          className="contents"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
+          }}
         >
-          <SaveAsTemplateDialog
-            open={open}
-            sourceTeamName={team.teamName}
-            initialName={team.displayName}
-            onClose={() => setOpen(false)}
-          />
-        </Suspense>
+          <Suspense
+            fallback={
+              <div
+                role="status"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 text-sm text-[var(--color-text-muted)]"
+              >
+                {t('customTemplates.states.loading')}
+              </div>
+            }
+          >
+            <SaveAsTemplateDialog
+              open={open}
+              sourceTeamName={team.teamName}
+              initialName={team.displayName}
+              onClose={() => setOpen(false)}
+            />
+          </Suspense>
+        </div>
       ) : null}
     </>
   );

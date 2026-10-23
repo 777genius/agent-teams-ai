@@ -1,8 +1,17 @@
 // @vitest-environment node
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -26,7 +35,12 @@ function copyPackage(name: string): string {
   const directory = mkdtempSync(join(tmpdir(), 'TEST-transitive-security-'));
   temporary.push(directory);
   const root = join(directory, name);
-  cpSync(installed, root, { recursive: true });
+  // Keep published runtime and attested sources; upstream's own test corpus is
+  // not needed to exercise the installed package and is expensive to copy.
+  cpSync(installed, root, {
+    recursive: true,
+    filter: (source) => !relative(installed, source).split(sep).includes('tests'),
+  });
   // Read-only dependency resolution for the copied braces package; never install into it.
   symlinkSync(
     dirname(installed),
@@ -104,6 +118,63 @@ describe('verified transitive security backports', () => {
       })
     ).toThrow(/Unsafe/);
   });
+  it.each([false, true])(
+    'keeps vulnerable Zod copies visible alongside a fixed release (npm=%s)',
+    (npm) => {
+      const directory = mkdtempSync(join(tmpdir(), 'TEST-zod-security-'));
+      temporary.push(directory);
+      const packages = npm
+        ? ['node_modules/zod', 'node_modules/parent/node_modules/zod']
+        : ['node_modules/zod', 'node_modules/.pnpm/zod@3.25.76/node_modules/zod'];
+      if (!npm) writeFileSync(join(directory, 'pnpm-workspace.yaml'), 'packages: []\n');
+      for (const [index, path] of packages.entries()) {
+        const root = join(directory, path);
+        mkdirSync(root, { recursive: true });
+        writeFileSync(
+          join(root, 'package.json'),
+          JSON.stringify({
+            name: 'zod',
+            version: index === 0 ? '4.6.7' : '3.25.76',
+            main: './index.cjs',
+          })
+        );
+      }
+      if (npm)
+        writeFileSync(
+          join(directory, 'package-lock.json'),
+          JSON.stringify({
+            packages: Object.fromEntries(packages.map((path) => [path, {}])),
+          })
+        );
+      const targets = installedBackportPackages('zod', directory, { npm });
+      expect(targets).toEqual([realpathSync(join(directory, packages[1]))]);
+      expect(() => verifyBackport('zod', targets[0])).toThrow();
+      // An unreviewed release must not inherit the exemption for the fixed version.
+      writeFileSync(
+        join(directory, packages[0], 'package.json'),
+        JSON.stringify({
+          name: 'zod',
+          version: '4.6.5',
+          main: './index.cjs',
+        })
+      );
+      const unknown = installedBackportPackages('zod', directory, { npm });
+      expect(unknown).toContain(realpathSync(join(directory, packages[0])));
+      expect(() => verifyBackport('zod', join(directory, packages[0]))).toThrow(/Unsupported/);
+      writeFileSync(
+        join(directory, packages[0], 'package.json'),
+        JSON.stringify({
+          name: 'other',
+          version: '4.6.7',
+          main: './index.cjs',
+        })
+      );
+      expect(installedBackportPackages('zod', directory, { npm })).toContain(
+        realpathSync(join(directory, packages[0]))
+      );
+      expect(() => verifyBackport('zod', join(directory, packages[0]))).toThrow(/Unsupported/);
+    }
+  );
 });
 
 describe('audit backport exceptions stay bounded', () => {

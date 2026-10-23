@@ -264,7 +264,7 @@ describe('MyTemplatesDialog', () => {
   });
 
   it('ignores a late custom-template response after the dialog closes', async () => {
-    let resolveList: (value: ListCustomTeamTemplatesResult) => void = () => undefined;
+    let resolveList!: (value: ListCustomTeamTemplatesResult) => void;
     listTemplates.mockImplementationOnce(
       () =>
         new Promise<ListCustomTeamTemplatesResult>((resolve) => {

@@ -88,6 +88,7 @@ export class RecheckCustomTeamTemplateSaveUseCase {
         this.deps.previewStore.clearUnresolvedWrite(token);
         return { status: 'templateIdConflict', templateId: check.templateId };
       case 'absent':
+        this.deps.previewStore.clearUnresolvedWrite(token);
         return { status: 'notSaved', templateId: check.templateId };
       case 'unresolved':
         return { status: 'unresolved', templateId: check.templateId };
