@@ -1136,6 +1136,67 @@ it('carries closed lock facts of a held handshake lock into the serialized cause
   expect(JSON.stringify(safeProject(message))).not.toContain('host-registry');
 });
 
+it('classifies deterministic handshake rejections into closed message families and digests', () => {
+  const family = (text: string, details?: Record<string, unknown>) =>
+    projectOpenCodeStateChangingFailure(
+      createOpenCodeBridgeHandshakeFailure({
+        kind: 'provider_error',
+        retryable: true,
+        message: text,
+        ...(details ? { details } : {}),
+      })
+    ).handshakeFailure;
+  expect(family('OpenCode confirmed stop authority mismatch')).toMatchObject({
+    kind: 'provider_error',
+    messageShape: 'unclassified',
+    messageFamily: 'stop_authority_mismatch',
+    messageDigest: /^[a-f0-9]{12}$/,
+  });
+  expect(family('OpenCode lifecycle selected lane authority is unavailable')?.messageFamily).toBe(
+    'lane_authority_unavailable'
+  );
+  expect(
+    family('OpenCode lifecycle stored run authority mismatch; another run is active')?.messageFamily
+  ).toBe('run_authority_conflict');
+  expect(
+    family('OpenCode selected session runtime process changed (expected pid=1, actual pid=2)')
+      ?.messageFamily
+  ).toBe('runtime_process_changed');
+  expect(
+    family('OpenCode lock operation failed [code=ELOCKED, lock=host-registry.json.lock]', {
+      lockCode: 'ELOCKED',
+      lockCategory: 'registry',
+    })?.messageFamily
+  ).toBe('lock_operation');
+  expect(family('fetch failed at TLS handshake')?.messageFamily).toBe('unclassified');
+  const first = family('OpenCode lifecycle selected lane authority is unavailable');
+  expect(family('OpenCode lifecycle selected lane authority is unavailable')?.messageDigest).toBe(
+    first?.messageDigest
+  );
+  expect(
+    family('OpenCode lifecycle selected run authority is unavailable')?.messageDigest
+  ).not.toBe(first?.messageDigest);
+  const packet = family('C:/private/token body=secret-value');
+  expect(JSON.stringify(packet)).not.toMatch(/private|secret/);
+  expect(packet).toMatchObject({ messageDigest: /^[a-f0-9]{12}$/ });
+  const owned = projectOpenCodeStateChangingFailure(
+    createOpenCodeBridgeHandshakeFailure({
+      kind: 'provider_error',
+      retryable: true,
+      message: 'OpenCode confirmed stop authority mismatch',
+    })
+  );
+  const message = 'team_stop_unconfirmed:stop_failed' + formatOpenCodeStopCausalSuffix(owned);
+  const safeProject = runInNewContext(
+    `(${serializedFunction(projectIpcCausalFailure)})`
+  ) as typeof projectIpcCausalFailure;
+  expect(safeProject(message)?.handshakeFailure).toMatchObject({
+    kind: 'provider_error',
+    messageFamily: 'stop_authority_mismatch',
+    messageDigest: /^[a-f0-9]{12}$/,
+  });
+});
+
 it.each(['current-pass', 'current-fail', 'floor'] as const)(
   '%s preserves original Stop after readiness and the one fresh-owner observation', async (scenario) => {
     const source = await readFile('scripts/e2e/opencode-native-windows-preflight.ts', 'utf8');

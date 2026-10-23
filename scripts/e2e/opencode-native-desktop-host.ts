@@ -126,6 +126,10 @@ export function projectIpcCausalFailure(value: unknown): NativeCausalFailure | n
   const handshakeLockCode = (['ELOCKED', 'ECOMPROMISED'] as const).find(value => value === own(handshake, 'lockCode'));
   const handshakeLockCategory = (['registry', 'profile', 'startup', 'unknown'] as const).find(value => value === own(handshake, 'lockCategory'));
   const handshakeShape = (['code', 'lock_operation', 'unclassified'] as const).find(value => value === own(handshake, 'messageShape'));
+  const handshakeFamily = (['stop_authority_mismatch', 'empty_lane_mismatch', 'lane_authority_unavailable', 'capability_snapshot_required', 'run_authority_conflict', 'run_authority_unavailable', 'run_identity_required', 'lane_scope_unavailable', 'lane_scope_ambiguous', 'lane_project_mismatch', 'host_authority_ambiguous', 'process_authority_ambiguous', 'delivery_lane_stopped', 'delivery_authority_required', 'delivery_session_changed', 'observation_launch_unavailable', 'precondition_mismatch', 'strict_launch_evidence', 'strict_launch_model', 'runtime_process_changed', 'lock_operation', 'lifecycle_rejection', 'unclassified'] as const).find(value => value === own(handshake, 'messageFamily'));
+  const handshakeDigestRaw = own(handshake, 'messageDigest');
+  const handshakeDigest = typeof handshakeDigestRaw === 'string' && /^[a-f0-9]{12}$/.test(handshakeDigestRaw)
+    ? handshakeDigestRaw : undefined;
   const kind = ['unsupported_schema', 'unsupported_command', 'invalid_input', 'runtime_not_ready', 'provider_error',
     'timeout', 'transport_watchdog_timeout', 'contract_violation', 'internal_error'].find(value => value === handshakeKind);
   const sdkCode = [
@@ -195,7 +199,7 @@ export function projectIpcCausalFailure(value: unknown): NativeCausalFailure | n
   return {
     phase, errno: errno(input.errno),
     ...(returnedDispatch && kind && sdkCode ? { bridgeFailure: { kind, sdkCode, ...(nativeOperation ? { nativeOperation } : {}), ...(handshakeErrno !== undefined ? { nativeErrno: handshakeErrno } : {}) } }
-      : kind ? { handshakeFailure: { kind, ...(sdkCode ? { sdkCode } : {}), ...(nativeOperation ? { nativeOperation } : {}), ...(handshakeErrno !== undefined ? { nativeErrno: handshakeErrno } : {}), ...(handshakeLockCode ? { lockCode: handshakeLockCode } : {}), ...(handshakeLockCategory ? { lockCategory: handshakeLockCategory } : {}), ...(handshakeShape ? { messageShape: handshakeShape } : {}) } } : {}),
+      : kind ? { handshakeFailure: { kind, ...(sdkCode ? { sdkCode } : {}), ...(nativeOperation ? { nativeOperation } : {}), ...(handshakeErrno !== undefined ? { nativeErrno: handshakeErrno } : {}), ...(handshakeLockCode ? { lockCode: handshakeLockCode } : {}), ...(handshakeLockCategory ? { lockCategory: handshakeLockCategory } : {}), ...(handshakeShape ? { messageShape: handshakeShape } : {}), ...(handshakeFamily ? { messageFamily: handshakeFamily } : {}), ...(handshakeDigest ? { messageDigest: handshakeDigest } : {}) } } : {}),
     ...(Object.hasOwn(input, 'cleanupErrno') ? { cleanupErrno: errno(input.cleanupErrno) } : {}),
     reason: [
       'OpenCode lifecycle command requires the exact persisted lane run and capability snapshot',

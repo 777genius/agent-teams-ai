@@ -1,8 +1,10 @@
 import type { ElectronAPI } from '@shared/types/api';
+import type { OpenCodeStopHandshakeFailureFacts } from '@shared/types';
 import type { OpenCodeStopCausalFailure, TeamCreateRequest, TeamProvisioningProgress } from '@shared/types/team';
 
 // Proof-only projection; production lifecycle and delivery contracts remain unchanged.
-export type NativeCausalFailure = OpenCodeStopCausalFailure & {
+export type NativeCausalFailure = Omit<OpenCodeStopCausalFailure, 'handshakeFailure'> & {
+  handshakeFailure?: OpenCodeStopHandshakeFailureFacts;
   bridgeFailure?: { kind: string; sdkCode: string; nativeOperation?: string; nativeErrno?: number };
 };
 

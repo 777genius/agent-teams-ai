@@ -1411,6 +1411,37 @@ describe('OpenCodeReadinessBridge', () => {
     );
     expect(executor.execute).not.toHaveBeenCalled();
   });
+
+  it('keeps the stop command budget above the SDK owner Stop envelope', async () => {
+    const executor = fakeExecutor(
+      bridgeCommandFailure({
+        command: 'opencode.stopTeam',
+        requestId: 'stop-req-1',
+        kind: 'provider_error',
+        message: 'OpenCode stop failed',
+      })
+    );
+    const bridge = new OpenCodeReadinessBridge(executor);
+
+    await bridge.stopOpenCodeTeam({
+      runId: 'run-1',
+      laneId: 'primary',
+      teamId: 'team-a',
+      teamName: 'team-a',
+      projectPath: '/repo',
+      reason: 'TEST-stop-budget',
+    });
+
+    expect(executor.execute).toHaveBeenCalledOnce();
+    const call = (executor.execute as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      unknown,
+      { timeoutMs: number },
+    ];
+    expect(call[0]).toBe('opencode.stopTeam');
+    expect(call[2].timeoutMs).toBeGreaterThanOrEqual(40_000);
+    expect(call[2].timeoutMs).toBeLessThanOrEqual(45_000);
+  });
 });
 
 function fakeExecutor(

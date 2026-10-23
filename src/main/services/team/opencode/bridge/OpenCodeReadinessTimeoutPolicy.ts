@@ -16,7 +16,10 @@ export const OPEN_CODE_BRIDGE_TIMEOUTS_MS = {
   // finish bridge-side observation and emit member-work-sync signals.
   send: 45_000,
   observe: 20_000,
-  stop: 30_000,
+  // Aligned with the SDK run-control Stop cap (45s): Windows DACL and physical
+  // process retirement alone can exceed 30s, so a shorter app budget aborts a
+  // healthy physical stop before its confirmation arrives.
+  stop: 45_000,
   cleanup: 10_000,
   permission: 30_000,
   backfill: 45_000,

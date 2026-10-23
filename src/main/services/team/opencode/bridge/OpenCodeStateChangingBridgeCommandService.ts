@@ -50,7 +50,7 @@ import type {
   OpenCodeBridgeCommandLeaseStore,
   OpenCodeBridgeCommandLedger,
 } from './OpenCodeBridgeCommandLedgerStore';
-import type { OpenCodeStopCausalFailure } from '@shared/types';
+import type { OpenCodeStopHandshakeFailureFacts } from '@shared/types';
 const DEFAULT_COMMAND_LEASE_ACQUIRE_RETRY_DELAY_MS = 100;
 
 export interface OpenCodeBridgeCommandExecutor {
@@ -129,12 +129,12 @@ const causalFailures = new WeakMap<
   {
     phase: string;
     cleanupErrno?: string | null;
-    handshakeFailure?: OpenCodeStopCausalFailure['handshakeFailure'];
+    handshakeFailure?: OpenCodeStopHandshakeFailureFacts;
   }
 >();
 export function rememberOpenCodeHandshakeFailure(
   error: Error,
-  failure: NonNullable<OpenCodeStopCausalFailure['handshakeFailure']>
+  failure: OpenCodeStopHandshakeFailureFacts
 ): void {
   const lockCode = (['ELOCKED', 'ECOMPROMISED'] as const).find(
     (value) => value === failure.lockCode
@@ -145,6 +145,10 @@ export function rememberOpenCodeHandshakeFailure(
   const messageShape = (['code', 'lock_operation', 'unclassified'] as const).find(
     (value) => value === failure.messageShape
   );
+  const messageDigest =
+    typeof failure.messageDigest === 'string' && /^[a-f0-9]{12}$/.test(failure.messageDigest)
+      ? failure.messageDigest
+      : undefined;
   causalFailures.set(error, {
     ...(causalFailures.get(error) ?? { phase: 'handshake' }),
     handshakeFailure: Object.freeze({
@@ -159,6 +163,8 @@ export function rememberOpenCodeHandshakeFailure(
       ...(lockCode ? { lockCode } : {}),
       ...(lockCategory ? { lockCategory } : {}),
       ...(messageShape ? { messageShape } : {}),
+      ...(failure.messageFamily ? { messageFamily: failure.messageFamily } : {}),
+      ...(messageDigest ? { messageDigest } : {}),
     }),
   });
 }
