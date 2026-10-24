@@ -63,8 +63,8 @@ export interface HostMemberActivityLog {
   events: HostActivityFact[];
   gaps: string[];
   lastOutputPreview?: string;
-  lastThinkingPreview?: undefined;
-  recentPreviews?: undefined;
+  lastThinkingPreview?: never;
+  recentPreviews?: never;
 }
 export interface HostMemberActivityStats {
   kind: 'host_activity_stats';

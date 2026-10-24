@@ -14,6 +14,8 @@ import {
   registerAgentBackendIpc,
 } from '../../../src/features/agent-backend/main';
 
+import { parseBackendOperation } from '../../../src/features/agent-backend/main/adapters/input/validateBackendOperation';
+
 import type {
   BackendOperationRequest,
   BackendOperationResult,
@@ -54,6 +56,38 @@ function setup() {
 }
 
 describe('finite captured backend transport facade', () => {
+  it.each([
+    'runtime.read',
+    'runtime.open',
+    'runtime.dispatch',
+    'runtime.stop',
+    'runtime.reconcile',
+    'runtime.activity.snapshot',
+  ] as const)(
+    'keeps %s on the member-selection boundary rather than checkpoint restore',
+    (operation) => {
+      for (const payload of [
+        { memberId: 'member-1' },
+        { memberId: 'member-1', expectedGeneration: 'generation-1' },
+      ])
+        expect(parseBackendOperation({ ...create, operation, payload })).toMatchObject({
+          operation,
+          payload,
+        });
+      for (const payload of [
+        {},
+        { memberId: '' },
+        { memberId: 'member-1', expectedGeneration: '' },
+        { memberId: 'member-1', reference: 'cp1-' + 'a'.repeat(64) },
+        { memberId: 'member-1', resumeId: 'resume-1' },
+        { memberId: 'member-1', nativeSessionId: 'PRIVATE-session' },
+      ])
+        expect(() => parseBackendOperation({ ...create, operation, payload })).toThrow(
+          'Invalid backend operation'
+        );
+    }
+  );
+
   it('validates ordinary Task creation choices and projects separate prompt refs without private fields', async () => {
     const { router, facade } = setup();
     const payload = {

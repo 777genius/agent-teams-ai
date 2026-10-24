@@ -200,14 +200,12 @@ it('snapshot/history preserve validated group envelopes, expose only logical gro
     timestamp: '2026-10-23T00:00:00.000Z',
   };
   f.snapshot.messages.push(earlier);
-  const legacyRead = vi.fn(async () => {
-    throw new Error('Host history must not use legacy IPC');
-  });
-  const api = createHostTeamsApi(
-    { getMessagesPage: legacyRead } as TeamsAPI,
-    f.backend,
-    () => () => true
-  );
+  const legacyRead = vi
+    .fn<TeamsAPI['getMessagesPage']>()
+    .mockRejectedValue(new Error('Host history must not use legacy IPC'));
+  const legacy = {} as TeamsAPI;
+  legacy.getMessagesPage = legacyRead;
+  const api = createHostTeamsApi(legacy, f.backend, () => () => true);
   const page = await api.getMessagesPage(key, { groupChatId: id, limit: 1 });
   expect(page.messages.map((message) => message.messageId)).toEqual([post]);
   expect(page.hasMore).toBe(true);

@@ -12,7 +12,7 @@ function interactionData(value: unknown, keys: readonly string[]): Record<string
   if (
     (prototype !== Object.prototype && prototype !== null) ||
     Reflect.ownKeys(descriptors).some(
-      (key) => typeof key !== 'string' || !('value' in descriptors[key]!)
+      (key) => typeof key !== 'string' || !('value' in descriptors[key])
     )
   )
     throw new InvalidBackendOperation();
@@ -29,6 +29,15 @@ export function parseBackendRuntimeOperation(
     case 'runtime.dispatch':
     case 'runtime.stop':
     case 'runtime.reconcile':
+    case 'runtime.activity.snapshot': {
+      const p = object(value, ['memberId', 'expectedGeneration']);
+      return {
+        memberId: text(p.memberId),
+        ...(p.expectedGeneration === undefined
+          ? {}
+          : { expectedGeneration: text(p.expectedGeneration) }),
+      };
+    }
     case 'runtime.restore': {
       const p = object(value, ['memberId', 'reference', 'expectedGeneration', 'resumeId']);
       const reference = text(p.reference, 68);

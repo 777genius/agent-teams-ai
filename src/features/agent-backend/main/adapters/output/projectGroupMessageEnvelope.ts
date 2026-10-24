@@ -2,6 +2,7 @@ import {
   assertValidGroupInboxRows,
   copyGroupChatEnvelope,
 } from '@agent-teams/legacy-agent-host/group-chats/contracts';
+
 import type { GroupChatEnvelope } from '@agent-teams/legacy-agent-host/group-chats/contracts';
 /** Transport allowlist; canonical storage remains unchanged and private nested extras never escape. */
 export function projectGroupMessageEnvelope(raw: Record<string, unknown>): GroupChatEnvelope {
