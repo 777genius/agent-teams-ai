@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v1; independent plan and UX critique pending.
+Status: implementation plan v2; independent lifecycle, transport and UX critiques incorporated.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -110,8 +110,10 @@ Never silently map local/project to user.
 A source-project dependency manifest is not automatically materialized in an agent
 worktree. A focused environment preparation port must restore exact locked
 dependencies into the actual execution cwd before a new run. Do not copy .uap state
-directories. Active runs keep their launch environment; updates apply to next
-launch unless the runtime has qualified safe reload.
+directories. Shared native profile files can be re-read by active agents. V1 refuses/defer
+mutations affecting an active captured profile/project before effects, using a
+focused runtime-activity port. Unaffected profiles remain usable. A next-launch
+label alone is not isolation; no new per-run snapshot framework is introduced.
 
 Project/worktree success cannot be claimed until prerequisite project support and
 registry policy are qualified. Unsupported capability is a first-class tested UI
@@ -134,7 +136,7 @@ state, not a hidden fallback.
 | Native external items | Preserved identity and existing native behavior |
 | HTTP and IPC | Same facade and equivalent validation/result semantics |
 | Project/worktree | Qualified scope/root, exact execution-cwd materialization |
-| Active run | Next-launch behavior visible; no silent effective-environment rewrite |
+| Active run | Affected shared-profile mutation refused before effects; unrelated profile permitted |
 | Package | Exact SDK/UAP artifact identity; no dev-only path or implicit latest |
 | Electron UX | Actual clicks/screenshots, no renderer errors, compact normal install flow |
 
@@ -178,6 +180,59 @@ scenario results, sanitized logs, and screenshots.
 Never test real user projects, open native folder pickers, or substitute browser
 dev for desktop E2E. Stop only processes created by this harness.
 
+## Resolved integration decisions from v1 critics
+
+### Exact package and runtime delivery
+
+Vendor the SDK .tgz built from an exact reviewed UAP source SHA, with package
+identity and SHA-256, using the existing vendor/terminal-platform/sdk precedent.
+Build native UAP during app build/CI from the same source pin using UAP's declared
+Go toolchain and read-only module resolution. Stage it into packaged resources.
+Include license/third-party notices and record both identities in test evidence.
+
+No end-user Go compilation, implicit latest download, unpublished npm dependency,
+sibling-workspace requirement or expiring artifact URL. Clean-checkout build and
+packed SDK consumer are acceptance gates. A public release remains a separate
+authorization; source build is the concrete delivery path for this change.
+
+### HTTP authority
+
+Current HttpServer CORS behavior is insufficient authority for native management.
+New feature routes require exact trusted Host/Origin and loopback client, bounded
+JSON mutation bodies, and the same captured context validation as IPC. Untrusted
+Origin/Host, CORS='*', and non-loopback callers must be refused before invoking the
+facade unless an existing authenticated trusted deployment adapter supplies
+authority. Keep this feature-local; do not start a global authentication rewrite.
+
+HTTP parity covers new management endpoints only. Existing legacy native store web
+limitations are not silently added to this task.
+
+### Context, lifecycle and readiness
+
+A UAP session binds an immutable host context with explicit manifest/state/profile
+roots. A second profile of the same client uses a separate environment unless the
+engine advertises multiple profile binding. Root collisions are refused.
+
+Accepted request lookup precedes expired plan lookup, including combined lost
+response and process restart. SDK waiting cancellation never kills the engine.
+Only the host's explicit close controls its own child; graceful shutdown is bounded
+and interruption remains recoverable. Navigation does not dispose accepted work.
+
+Active shared-profile mutation refusal is required for install, update, repair,
+restore and remove. Check again immediately before applying; frontend disabling
+alone is insufficient. Test an affected running context and an unaffected profile.
+
+Do not flatten materialization/activation/authentication/verification to one
+installed boolean. A completed HTTP operation may still require a manual action.
+Unknown future outcomes are conservative, never success.
+
+### Prerequisites and completion
+
+Independent foundation/API work can merge when its own supported capabilities
+qualify. Full project/worktree integration cannot be called complete until the
+separate qualified project engine passes S25/S26. Disabled project actions are
+correct fallback evidence, not successful project-installation evidence.
+
 ## Required checks and constraints
 
 Follow AGENTS.md, CLAUDE.md, AGENT_CRITICAL_GUARDRAILS.md,
@@ -199,3 +254,15 @@ v1: incorporates repository/source research and initial critic discoveries:
 HTTP parity, distinct native identity, backend Skill ownership, frozen file caps,
 project/worktree prerequisites, Host migration context, and real desktop evidence.
 Independent review of this written plan is pending.
+
+### v2 critic dispositions
+
+- Replaced unenforceable active-run freeze wording with backend affected-profile
+  mutation refusal/defer and explicit unaffected-profile behavior.
+- Added strict feature-local HTTP admission; broad CORS is not authorization.
+- Chose same-source vendored SDK/native build before host implementation.
+- Limited HTTP parity to this feature; preserved existing native/local domains.
+- Incorporated immutable profile context, durable retry ordering, host lifetime,
+  readiness axes, and honest project/worktree completion gates from UAP review.
+
+Implementation and final UX reviews remain separate gates.
