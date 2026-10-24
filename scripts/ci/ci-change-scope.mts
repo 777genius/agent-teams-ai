@@ -13,10 +13,11 @@ export type ChangeClassification = {
 const SHA = /^[a-f0-9]{40}$/;
 const REPOSITORY = '777genius/agent-teams-ai';
 const image = /\.(png|jpe?g|webp|gif|ico|icns)$/i;
-// Markdown that no build, test, package or workflow reads: docs/, repository-root
-// files and GitHub community files. Markdown under src/ or landing/ stays full.
+// Markdown that no build, test, package or workflow reads. Root agent guides and
+// the PR template already pass the focused formatting check. Legal texts and issue
+// templates are not listed: editing them must not force reformatting their wording.
 const documentation =
-  /^(docs\/.*|[A-Za-z0-9_.-]+|\.github\/[A-Za-z0-9_.-]+|\.github\/ISSUE_TEMPLATE\/[A-Za-z0-9_.-]+)\.md$/;
+  /^(docs\/.*|README|CHANGELOG|CONTRIBUTING|AGENTS|AGENT_CRITICAL_GUARDRAILS|CLAUDE|\.github\/pull_request_template)\.md$/;
 // Events whose PR head and base come from the payload and are verified below.
 // Label and title/body edits keep the commits, so the same diff decides the scope.
 const SCOPED_ACTIONS = [

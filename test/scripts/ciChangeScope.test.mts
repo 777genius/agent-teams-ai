@@ -111,23 +111,30 @@ test('every event reports the required qualification under its static name', asy
   assert.doesNotMatch(yaml, /Metadata qualification/);
 });
 
-test('repository-root, docs and GitHub community markdown are documentation', () => {
+test('only listed markdown is documentation; legal texts and issue templates run full CI', () => {
   for (const path of [
+    'README.md',
     'AGENTS.md',
+    'AGENT_CRITICAL_GUARDRAILS.md',
     'CLAUDE.md',
     'docs/RELEASE.md',
     'docs/nested/guide.md',
     '.github/pull_request_template.md',
-    '.github/ISSUE_TEMPLATE/bug_report.md',
   ])
     assert.equal(classifyChanges([entry(path)]).scope, 'docs', path);
   for (const path of [
+    'SECURITY.md',
+    '.github/CLA.md',
+    '.github/CODE_OF_CONDUCT.md',
+    '.github/CONTRIBUTING.md',
+    '.github/SECURITY.md',
+    '.github/ISSUE_TEMPLATE/bug_report.md',
+    '.github/ISSUE_TEMPLATE/feature_request.md',
     'src/features/README.md',
     'landing/product-docs/index.md',
     'landing/README.md',
     'announcements/release/body.md',
     '.github/workflows/notes.md',
-    '.github/ISSUE_TEMPLATE/config.yml',
     'docs/release.json',
     'README.mdx',
   ])

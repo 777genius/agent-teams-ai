@@ -106,17 +106,23 @@ incomplete evidence requires fresh CI. Final reads recheck the selected full run
 each crossed metadata attempt and the unchanged run listing. Metadata never
 extends the source evidence expiry or creates full qualification by itself.
 The plan name is assigned before strict classification, so `Metadata CI plan`
-may also belong to a conservatively classified complete full run. Only the
-`Metadata CI result` aggregate selects metadata proof; the exact successful
-plan alias still requires every canonical full-run check and source binding.
+may also belong to a conservatively classified complete full run. Only a gate
+whose metadata verification step succeeded selects metadata proof. Current runs
+name that gate `Full qualification`; older runs may still show
+`Metadata qualification` or `Metadata CI result`. The exact successful plan
+alias still requires every canonical full-run check and source binding.
 All four configured root test shards are required; partial or mixed topology
 cannot qualify for reuse.
 
 All `edited` events use a unique concurrency group without cancellation before
-planning. Proven metadata runs skip dependency installation, tests, lint and
-Windows execution, and use noncanonical check names. Only successful planning
-that proves metadata may name the aggregate `Metadata CI result`. Failed or
-unclassified planning retains a failing canonical `Full qualification`, including
-base edits. A successful canonical full run for the current PR head remains
-mandatory. Unknown/base edits still run full CI. Verify title/body edits while a full run is pending and after it succeeds,
-plus base/unknown edits, on a disposable test PR using `gh`.
+planning. The gate job is named `Full qualification` on every event, so the
+required context is always reported for the PR head. A proven title/body edit
+with reusable full evidence skips dependency installation, tests, lint and
+Windows execution; its `Full qualification` passes only after it
+re-authenticates a successful full run for the same head, base and current
+target tip. A failed metadata gate is never crossed by later proofs. A
+title/body edit without reusable evidence classifies its unchanged diff again
+and runs that scope's checks, so a code PR runs full CI. Failed or unclassified
+planning fails `Full qualification`. Base and unknown edits run full CI. Verify
+title/body edits while a full run is pending and after it succeeds, plus
+base/unknown edits, on a disposable test PR using `gh`.
