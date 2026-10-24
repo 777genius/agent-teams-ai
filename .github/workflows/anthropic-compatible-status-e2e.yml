@@ -18,7 +18,9 @@ on:
       - src/main/services/runtime/providerRuntimeEnv.ts
       - src/main/services/team/provisioning/TeamProvisioningAnthropicDiagnosticModel.ts
       - src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts
+      - src/renderer/components/runtime/ConnectionMethodCards.tsx
       - src/renderer/components/runtime/ProviderRuntimeSettingsDialog.tsx
+      - src/renderer/components/runtime/providerAuthModeUiState.ts
       - src/renderer/components/runtime/providerConnectionUi.ts
       - src/renderer/components/team/dialogs/CreateTeamDialog.tsx
       - src/renderer/components/team/dialogs/TeamModelSelector.tsx

@@ -3159,9 +3159,9 @@ export default interface Resources {
         "description": "Use an Anthropic-compatible local runtime endpoint.",
         "keepSavedToken": "Leave blank to keep saved token",
         "status": {
-          "endpointDisabledTokenKept": "Endpoint disabled. Saved token was kept.",
           "endpointSaved": "Endpoint saved",
-          "endpointSavedTokenMissing": "Endpoint saved. Auth token is not configured."
+          "endpointSavedTokenMissing": "Endpoint saved. Auth token is not configured.",
+          "notActiveUntilSaved": "Not active yet. Save the endpoint to switch; until then launches keep the previous connection method."
         },
         "title": "Local / compatible endpoint",
         "tokenStatus": "Token {{status}}",
@@ -3293,8 +3293,6 @@ export default interface Resources {
         "apiKeySavedRefreshFailed": "API key saved, but failed to refresh provider status.",
         "connectionUpdatedRefreshFailed": "Connection updated, but failed to refresh provider status.",
         "deleteApiKey": "Failed to delete API key",
-        "disableEndpoint": "Failed to disable endpoint",
-        "endpointDisabledRefreshFailed": "Endpoint disabled, but failed to refresh provider status.",
         "endpointSavedRefreshFailed": "Endpoint saved, but failed to refresh provider status.",
         "refreshCodexAccount": "Failed to refresh Codex account",
         "saveApiKey": "Failed to save API key",
@@ -3337,10 +3335,8 @@ export default interface Resources {
       "runtimeSummary": "Runtime: {{runtime}}",
       "status": {
         "configured": "configured",
-        "enabled": "Enabled",
         "notConfigured": "Not configured",
         "notSet": "not set",
-        "off": "Off",
         "unknown": "Unknown"
       },
       "title": "Provider Settings",
@@ -4756,7 +4752,7 @@ export default interface Resources {
         "keyRequired": "Enter the gateway API key first.",
         "modelLabel": "Model",
         "modelPlaceholder": "Select a model",
-        "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route.",
+        "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. Bindings saved before opening this form update immediately and keep those changes if you cancel the team form.",
         "probeButton": "Check key and load models",
         "probing": "Checking...",
         "profileLabel": "Gateway profile",

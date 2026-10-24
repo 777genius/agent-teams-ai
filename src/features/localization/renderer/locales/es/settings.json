@@ -806,9 +806,9 @@
         "noCredentials": "Base URL no debe incluir credenciales"
       },
       "status": {
-        "endpointDisabledTokenKept": "Punto final discapacitado. Se guardó la ficha salvada.",
         "endpointSaved": "Punto final salvado",
-        "endpointSavedTokenMissing": "Endpoint salvado. Auth token no está configurado."
+        "endpointSavedTokenMissing": "Endpoint salvado. Auth token no está configurado.",
+        "notActiveUntilSaved": "Aún no activo. Guarde el punto final para cambiar; hasta entonces, los lanzamientos usan el método de conexión anterior."
       }
     },
     "connection": {
@@ -909,10 +909,8 @@
     "runtimeSummary": "Duración: {{runtime}}",
     "status": {
       "configured": "configurado",
-      "enabled": "Enabled",
       "notConfigured": "No configurado",
       "notSet": "no establecido",
-      "off": "Fuera.",
       "unknown": "Desconocida"
     },
     "title": "Configuración del proveedor",
@@ -928,8 +926,6 @@
       "apiKeySavedRefreshFailed": "API llave guardada, pero no refrescó el estado del proveedor.",
       "connectionUpdatedRefreshFailed": "Conexión actualizada, pero no refrescó el estado del proveedor.",
       "deleteApiKey": "Failed to delete API key",
-      "disableEndpoint": "No se puede desactivar el punto final",
-      "endpointDisabledRefreshFailed": "Endpoint discapacitado, pero no refrescó el estado del proveedor.",
       "endpointSavedRefreshFailed": "Endpoint se salvó, pero no refrescó el estado del proveedor.",
       "refreshCodexAccount": "Failed to refrescan Codex account",
       "saveApiKey": "Failed to save API key",

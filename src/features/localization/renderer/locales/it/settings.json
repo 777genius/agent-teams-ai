@@ -806,9 +806,9 @@
         "noCredentials": "L'URL di base non deve includere credenziali"
       },
       "status": {
-        "endpointDisabledTokenKept": "Endpoint disabilitato. Il token salvato è stato mantenuto.",
         "endpointSaved": "Endpoint salvato",
-        "endpointSavedTokenMissing": "Endpoint salvato. Il token di autenticazione non è configurato."
+        "endpointSavedTokenMissing": "Endpoint salvato. Il token di autenticazione non è configurato.",
+        "notActiveUntilSaved": "Non ancora attivo. Salva il punto finale per passare; fino ad allora gli avvii usano il metodo di connessione precedente."
       }
     },
     "connection": {
@@ -909,10 +909,8 @@
     "runtimeSummary": "Runtime: {{runtime}}",
     "status": {
       "configured": "configurato",
-      "enabled": "Abilitato",
       "notConfigured": "Non configurato",
       "notSet": "non impostato",
-      "off": "Disattivo",
       "unknown": "Sconosciuto"
     },
     "title": "Impostazioni del provider",
@@ -928,8 +926,6 @@
       "apiKeySavedRefreshFailed": "Chiave API salvata, ma impossibile aggiornare lo stato del provider.",
       "connectionUpdatedRefreshFailed": "Connessione aggiornata, ma impossibile aggiornare lo stato del provider.",
       "deleteApiKey": "Impossibile eliminare la chiave API",
-      "disableEndpoint": "Impossibile disabilitare l'endpoint",
-      "endpointDisabledRefreshFailed": "Endpoint disabilitato, ma impossibile aggiornare lo stato del provider.",
       "endpointSavedRefreshFailed": "Endpoint salvato, ma impossibile aggiornare lo stato del provider.",
       "refreshCodexAccount": "Impossibile aggiornare l'account Codex",
       "saveApiKey": "Impossibile salvare la chiave API",

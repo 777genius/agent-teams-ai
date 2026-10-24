@@ -688,6 +688,44 @@ describe('ProviderConnectionService', () => {
     expect(result.ANTHROPIC_API_KEY).toBe('explicit-local-token');
   });
 
+  it.each(['auto', 'oauth', 'api_key'] as const)(
+    'ignores the stored compatible token in %s mode when the endpoint is disabled',
+    async (authMode) => {
+      const lookupPreferred = vi.fn(async (envVarName: string) =>
+        envVarName === 'ANTHROPIC_AUTH_TOKEN'
+          ? {
+              envVarName,
+              value: 'stored-local-token',
+            }
+          : null
+      );
+      const { ProviderConnectionService } =
+        await import('@main/services/runtime/ProviderConnectionService');
+
+      const service = new ProviderConnectionService(
+        {
+          lookupPreferred,
+        } as never,
+        {
+          getConfig: () =>
+            createConfig(authMode, {
+              enabled: false,
+              baseUrl: 'http://127.0.0.1:1234',
+            }),
+        } as never
+      );
+
+      const applied = await service.applyConfiguredConnectionEnv({}, 'anthropic');
+      const augmented = await service.augmentConfiguredConnectionEnv({}, 'anthropic');
+
+      for (const env of [applied, augmented]) {
+        expect(env.ANTHROPIC_BASE_URL).toBeUndefined();
+        expect(env.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
+      }
+      expect(lookupPreferred).not.toHaveBeenCalledWith('ANTHROPIC_AUTH_TOKEN');
+    }
+  );
+
   it('does not require an Anthropic API key when app-managed compatible endpoint is enabled', async () => {
     const { ProviderConnectionService } =
       await import('@main/services/runtime/ProviderConnectionService');

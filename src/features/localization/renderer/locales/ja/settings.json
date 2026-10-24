@@ -806,9 +806,9 @@
         "noCredentials": "ベースURLは、資格情報が含まれていません"
       },
       "status": {
-        "endpointDisabledTokenKept": "エンドポイントが無効になっています。 保存されたトークンが保存されました。",
         "endpointSaved": "エンドポイント保存",
-        "endpointSavedTokenMissing": "エンドポイントを保存します。 Auth トークンは設定されていません。"
+        "endpointSavedTokenMissing": "エンドポイントを保存します。 Auth トークンは設定されていません。",
+        "notActiveUntilSaved": "まだ有効ではありません。切り替えるにはエンドポイントを保存してください。それまで起動には以前の接続方式が使われます。"
       }
     },
     "connection": {
@@ -909,10 +909,8 @@
     "runtimeSummary": "稼働時間: {{runtime}}",
     "status": {
       "configured": "仕様",
-      "enabled": "有効化",
       "notConfigured": "設定されていない",
       "notSet": "設定しない",
-      "off": "オフ",
       "unknown": "未知の"
     },
     "title": "プロバイダの設定",
@@ -928,8 +926,6 @@
       "apiKeySavedRefreshFailed": "API キーは保存しましたが、プロバイダの状態をリフレッシュできませんでした。",
       "connectionUpdatedRefreshFailed": "接続が更新されましたが、プロバイダのステータスを更新できませんでした。",
       "deleteApiKey": "APIキーを削除できなかった",
-      "disableEndpoint": "エンドポイントを無効にできない",
-      "endpointDisabledRefreshFailed": "エンドポイントが無効になっていますが、プロバイダのステータスをリフレッシュできませんでした。",
       "endpointSavedRefreshFailed": "エンドポイントは保存されますが、プロバイダのステータスを更新できませんでした。",
       "refreshCodexAccount": "Codexアカウントを更新できなかった",
       "saveApiKey": "APIキーを保存できなかった",

@@ -821,9 +821,9 @@
         "noCredentials": "Base URL இல் credentials இருக்கக் கூடாது"
       },
       "status": {
-        "endpointDisabledTokenKept": "Endpoint முடக்கப்பட்டது. சேமிக்கப்பட்ட token வைக்கப்பட்டது.",
         "endpointSaved": "Endpoint சேமிக்கப்பட்டது",
-        "endpointSavedTokenMissing": "Endpoint சேமிக்கப்பட்டது. Auth token கட்டமைக்கப்படவில்லை."
+        "endpointSavedTokenMissing": "Endpoint சேமிக்கப்பட்டது. Auth token கட்டமைக்கப்படவில்லை.",
+        "notActiveUntilSaved": "இன்னும் செயல்படவில்லை. மாற்ற எண்முனையைச் சேமிக்கவும்; அதுவரை தொடக்கங்கள் முந்தைய இணைப்பு முறையைப் பயன்படுத்தும்."
       }
     },
     "connection": {
@@ -924,10 +924,8 @@
     "runtimeSummary": "Runtime: {{runtime}}",
     "status": {
       "configured": "கட்டமைக்கப்பட்டது",
-      "enabled": "இயக்கப்பட்டது",
       "notConfigured": "கட்டமைக்கப்படவில்லை",
       "notSet": "அமைக்கப்படவில்லை",
-      "off": "ஆஃப்",
       "unknown": "தெரியாதது"
     },
     "title": "வழங்குநர் அமைப்புகள்",
@@ -943,8 +941,6 @@
       "apiKeySavedRefreshFailed": "API key சேமிக்கப்பட்டது, ஆனால் வழங்குநர் நிலையைப் புதுப்பிக்க முடியவில்லை.",
       "connectionUpdatedRefreshFailed": "இணைப்பு புதுப்பிக்கப்பட்டது, ஆனால் வழங்குநர் நிலையைப் புதுப்பிக்க முடியவில்லை.",
       "deleteApiKey": "API key ஐ நீக்க முடியவில்லை",
-      "disableEndpoint": "endpoint ஐ முடக்க முடியவில்லை",
-      "endpointDisabledRefreshFailed": "Endpoint முடக்கப்பட்டது, ஆனால் வழங்குநர் நிலையைப் புதுப்பிக்க முடியவில்லை.",
       "endpointSavedRefreshFailed": "Endpoint சேமிக்கப்பட்டது, ஆனால் வழங்குநர் நிலையைப் புதுப்பிக்க முடியவில்லை.",
       "refreshCodexAccount": "Codex கணக்கைப் புதுப்பிக்க முடியவில்லை",
       "saveApiKey": "API key ஐ சேமிக்க முடியவில்லை",

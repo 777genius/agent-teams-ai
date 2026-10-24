@@ -806,9 +806,9 @@
         "noCredentials": "기초 URL는 credentials를 포함하지 않아야 합니다"
       },
       "status": {
-        "endpointDisabledTokenKept": "끝점 비활성화. 저장된 토큰은 보관되었습니다.",
         "endpointSaved": "Endpoint 저장",
-        "endpointSavedTokenMissing": "저장되는 Endpoint. Auth 토큰은 구성되지 않습니다."
+        "endpointSavedTokenMissing": "저장되는 Endpoint. Auth 토큰은 구성되지 않습니다.",
+        "notActiveUntilSaved": "아직 활성화되지 않았습니다. 전환하려면 엔드포인트를 저장하세요. 그 전까지 실행은 이전 연결 방식을 사용합니다."
       }
     },
     "connection": {
@@ -909,10 +909,8 @@
     "runtimeSummary": "런타임: {{runtime}}",
     "status": {
       "configured": "설치하기",
-      "enabled": "이름 *",
       "notConfigured": "이름 *",
       "notSet": "이름 *",
-      "off": "이름 *",
       "unknown": "이름 *"
     },
     "title": "공급자 설정",
@@ -928,8 +926,6 @@
       "apiKeySavedRefreshFailed": "API 키 저장했지만 공급자 상태를 새로 고침하지 못했습니다.",
       "connectionUpdatedRefreshFailed": "연결 업데이트, 하지만 새로 고침 공급자 상태 실패.",
       "deleteApiKey": "API 키 삭제",
-      "disableEndpoint": "Endpoint 비활성화",
-      "endpointDisabledRefreshFailed": "Endpoint 비활성화, 하지만 공급자 상태를 새로 고침 실패.",
       "endpointSavedRefreshFailed": "Endpoint가 저장되었지만 공급자 상태를 새로 고침하지 못했습니다.",
       "refreshCodexAccount": "Codex 계정 새로 고침",
       "saveApiKey": "API 키 저장 실패",

@@ -806,9 +806,9 @@
         "noCredentials": "बेस URL में क्रेडेंशियल शामिल नहीं होना चाहिए"
       },
       "status": {
-        "endpointDisabledTokenKept": "एंडपॉइंट विकलांग। बचाया टोकन रखा गया था।",
         "endpointSaved": "एंडपॉइंट बचाया",
-        "endpointSavedTokenMissing": "समापन बिंदु बचाया। Auth token को कॉन्फ़िगर नहीं किया गया है।"
+        "endpointSavedTokenMissing": "समापन बिंदु बचाया। Auth token को कॉन्फ़िगर नहीं किया गया है।",
+        "notActiveUntilSaved": "अभी सक्रिय नहीं। स्विच करने के लिए एंडपॉइंट सहेजें; तब तक लॉन्च पिछली कनेक्शन विधि का उपयोग करते हैं।"
       }
     },
     "connection": {
@@ -909,10 +909,8 @@
     "runtimeSummary": "रनटाइम: {{runtime}}",
     "status": {
       "configured": "विन्यास",
-      "enabled": "सक्षम",
       "notConfigured": "कॉन्फ़िगर नहीं किया गया",
       "notSet": "नहीं",
-      "off": "बंद",
       "unknown": "अज्ञात"
     },
     "title": "प्रदाता सेटिंग्स",
@@ -928,8 +926,6 @@
       "apiKeySavedRefreshFailed": "API कुंजी बचाया, लेकिन प्रदाता की स्थिति को ताज़ा करने में विफल रहा।",
       "connectionUpdatedRefreshFailed": "कनेक्शन अद्यतन किया गया, लेकिन प्रदाता की स्थिति को ताज़ा करने में विफल रहा।",
       "deleteApiKey": "API कुंजी को हटाने में विफल",
-      "disableEndpoint": "निष्क्रिय करने में विफल",
-      "endpointDisabledRefreshFailed": "एंडपॉइंट विकलांग, लेकिन प्रदाता की स्थिति को रीफ्रेश करने में विफल रहा।",
       "endpointSavedRefreshFailed": "एंडपॉइंट बचाया, लेकिन प्रदाता की स्थिति को रीफ्रेश करने में विफल रहा।",
       "refreshCodexAccount": "कोडेक्स खाते को रीफ्रेश करने में विफल रहा",
       "saveApiKey": "API कुंजी को बचाने में विफल रहा",

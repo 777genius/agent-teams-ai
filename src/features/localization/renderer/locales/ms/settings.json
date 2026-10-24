@@ -806,9 +806,9 @@
         "noCredentials": "URL Asas tidak boleh menyertakan kelayakan"
       },
       "status": {
-        "endpointDisabledTokenKept": "Endpoint dilumpuhkan. Token yang disimpan dikekalkan.",
         "endpointSaved": "Endpoint disimpan",
-        "endpointSavedTokenMissing": "Endpoint disimpan. Token pengesahan tidak dikonfigurasi."
+        "endpointSavedTokenMissing": "Endpoint disimpan. Token pengesahan tidak dikonfigurasi.",
+        "notActiveUntilSaved": "Belum aktif. Simpan endpoint untuk beralih; sehingga itu, pelancaran menggunakan kaedah sambungan sebelumnya."
       }
     },
     "connection": {
@@ -909,10 +909,8 @@
     "runtimeSummary": "Runtime: {{runtime}}",
     "status": {
       "configured": "dikonfigurasi",
-      "enabled": "Didayakan",
       "notConfigured": "Tidak dikonfigurasi",
       "notSet": "tidak ditetapkan",
-      "off": "Mati",
       "unknown": "Tidak diketahui"
     },
     "title": "Tetapan Pembekal",
@@ -928,8 +926,6 @@
       "apiKeySavedRefreshFailed": "Kunci API disimpan, tetapi gagal menyegarkan status pembekal.",
       "connectionUpdatedRefreshFailed": "Sambungan dikemas kini, tetapi gagal menyegarkan status pembekal.",
       "deleteApiKey": "Gagal memadam kunci API",
-      "disableEndpoint": "Gagal melumpuhkan endpoint",
-      "endpointDisabledRefreshFailed": "Endpoint dilumpuhkan, tetapi gagal menyegarkan status pembekal.",
       "endpointSavedRefreshFailed": "Endpoint disimpan, tetapi gagal menyegarkan status pembekal.",
       "refreshCodexAccount": "Gagal menyegarkan akaun Codex",
       "saveApiKey": "Gagal menyimpan kunci API",

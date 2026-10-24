@@ -821,9 +821,9 @@
         "noCredentials": "URL ya msingi haipaswi kujumuisha hati za utambulisho"
       },
       "status": {
-        "endpointDisabledTokenKept": "Endpoint imezimwa. Tokeni iliyohifadhiwa imewekwa.",
         "endpointSaved": "Endpoint imehifadhiwa",
-        "endpointSavedTokenMissing": "Endpoint imehifadhiwa. Tokeni ya uthibitishaji haijasanidiwa."
+        "endpointSavedTokenMissing": "Endpoint imehifadhiwa. Tokeni ya uthibitishaji haijasanidiwa.",
+        "notActiveUntilSaved": "Bado haijaamilishwa. Hifadhi mwisho ili kubadilisha; hadi wakati huo, uzinduzi hutumia njia ya awali ya kuunganisha."
       }
     },
     "connection": {
@@ -924,10 +924,8 @@
     "runtimeSummary": "Runtime: {{runtime}}",
     "status": {
       "configured": "imesanidiwa",
-      "enabled": "Imewezeshwa",
       "notConfigured": "Haijasanidiwa",
       "notSet": "haijawekwa",
-      "off": "Imezimwa",
       "unknown": "Haijulikani"
     },
     "title": "Mipangilio ya Mtoa Huduma",
@@ -943,8 +941,6 @@
       "apiKeySavedRefreshFailed": "Ufunguo wa API umehifadhiwa, lakini imeshindwa kuonyesha upya hali ya mtoa huduma.",
       "connectionUpdatedRefreshFailed": "Muunganisho umesasishwa, lakini imeshindwa kuonyesha upya hali ya mtoa huduma.",
       "deleteApiKey": "Imeshindwa kufuta ufunguo wa API",
-      "disableEndpoint": "Imeshindwa kuzima endpoint",
-      "endpointDisabledRefreshFailed": "Endpoint imezimwa, lakini imeshindwa kuonyesha upya hali ya mtoa huduma.",
       "endpointSavedRefreshFailed": "Endpoint imehifadhiwa, lakini imeshindwa kuonyesha upya hali ya mtoa huduma.",
       "refreshCodexAccount": "Imeshindwa kuonyesha upya akaunti ya Codex",
       "saveApiKey": "Imeshindwa kuhifadhi ufunguo wa API",
