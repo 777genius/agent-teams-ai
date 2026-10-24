@@ -1155,6 +1155,16 @@ describe('ProviderRuntimeSettingsDialog', () => {
     });
 
     await act(async () => {
+      clickConnectionMethodCard(host, 'connection-method-compatible');
+      await Promise.resolve();
+    });
+
+    expect(storeState.updateConfig).not.toHaveBeenCalled();
+    expect(
+      (host.querySelector('#anthropic-compatible-base-url') as HTMLInputElement | null)?.value
+    ).toBe('http://localhost:1234');
+
+    await act(async () => {
       findButtonByText(host, 'Save endpoint').click();
       await Promise.resolve();
     });
@@ -1167,6 +1177,11 @@ describe('ProviderRuntimeSettingsDialog', () => {
         },
       },
     });
+    expectSingleCheckedCard(host, 'connection-method-compatible');
+    const compatibleCard = findButtonByText(host, 'Local / compatible endpoint');
+    expect(compatibleCard.textContent).toContain('Selected');
+    expect(compatibleCard.textContent).toContain('http://localhost:1234');
+    expect(host.textContent).not.toContain('Not active yet');
   });
 
   it('exits the compatible endpoint draft without saving when another card is selected', async () => {
@@ -1680,6 +1695,12 @@ describe('ProviderRuntimeSettingsDialog', () => {
       'Choose whether Codex should prefer your ChatGPT subscription or an API key when the native runtime launches.'
     );
     expect(host.textContent).toContain('Connection method');
+    expect(getConnectionMethodCards(host).map((card) => card.dataset.testid)).toEqual([
+      'connection-method-auto',
+      'connection-method-chatgpt',
+      'connection-method-api_key',
+    ]);
+    expectSingleCheckedCard(host, 'connection-method-auto');
     expect(host.textContent).toContain('ChatGPT account');
     expect(host.textContent).toContain('Use an OpenAI API key as a secondary Codex auth path.');
     expect(host.textContent).toContain('Set API key');

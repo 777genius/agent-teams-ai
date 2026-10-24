@@ -48,7 +48,12 @@ export const ConnectionMethodCards = ({
             role="radio"
             aria-checked={selected}
             data-testid={`connection-method-${option.id}`}
-            onClick={() => onSelect(option.id)}
+            onClick={() => {
+              // Re-selecting the checked card must not reset an in-progress endpoint draft.
+              if (!selected) {
+                onSelect(option.id);
+              }
+            }}
             disabled={disabled}
             className="rounded-md border p-3 text-left transition-colors disabled:opacity-60"
             style={{
