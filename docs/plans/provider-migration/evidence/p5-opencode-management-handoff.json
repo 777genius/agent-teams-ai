@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "status": "scoped-proofs-pass-full-stage-incomplete",
+  "proofs": {
+    "adapter": {
+      "status": "PASS",
+      "archive": "docs/plans/provider-migration/evidence/p5-opencode-management-native-v1.tar.gz",
+      "archiveSha256": "09dccb9ba26c03f8ba8e60cd188cec610759a77a55a81b130ba2ad48b46e73d0",
+      "receiptSha256": "d79e924159f4ce0d7c786d3fc004770952d67b7a7680698de08eeeafb4d8b578",
+      "scope": "Actual native management catalog and TEST dummy auth persistence/forget; no conversation, OAuth login, Desktop or real credentials.",
+      "sourceSha256": "8b15b46ed02e6c56311f90231ce0bf35c01f86b4594a9331cfa1c8114d943c3a",
+      "distSha256": "cd86d7d3b9d41e47a6813ddfd91522a9683e678b11a66b8dc8178d8771ec974c",
+      "providerSha256": "64df7bcfed0e7e58d709cf79ab3723677461fd5ab1a76cc96fe96e7cdc85346b",
+      "nativeSha256": "8c3c351b138cfe35905ab11846a1373f1beea590aee7eda412fb765b72c79d82",
+      "controllerSourceSha256": null
+    },
+    "hostCatalog": {
+      "status": "PASS",
+      "archive": "docs/plans/provider-migration/evidence/p5-opencode-management-host-native-v1.tar.gz",
+      "archiveSha256": "55269b40d23482ca492f06a5229b2b48a4bee2275e6827fc375dce3d54e4449d",
+      "receiptSha256": "16868ec0dfa3976fb196af6104d5415cd4c65090c5b5c4acdf42c24df2a9dee1",
+      "scope": "Actual standalone Host stdio and native OpenCode catalog/model metadata; no conversation or Desktop/OAuth qualification.",
+      "sourceSha256": "103040fbcfb186b76db45943c715c5b42ae6ac3c83615e9603aaf54ae1da555b",
+      "distSha256": "061df0156a69be96f0a6e9deecec5cb208865c92fe4c64ab9e015c269b273063",
+      "providerSha256": "64df7bcfed0e7e58d709cf79ab3723677461fd5ab1a76cc96fe96e7cdc85346b",
+      "nativeSha256": "8c3c351b138cfe35905ab11846a1373f1beea590aee7eda412fb765b72c79d82",
+      "controllerSourceSha256": null
+    },
+    "credentialRestart": {
+      "status": "PASS",
+      "archive": "docs/plans/provider-migration/evidence/p5-opencode-credential-host-native-v1.tar.gz",
+      "archiveSha256": "62bf095b8fba501f5da96e97c2f23b83a55c5c64da9a11d8748417250cf47c57",
+      "receiptSha256": "687415b1de5fc6dd5a94e33f173268828740d2ed3fa316dfd5199f0f3c2b9eb7",
+      "scope": "Actual Host stdio/native OpenCode catalog, dummy credential set/forget, stable conflict/lookup and restart replay without native reallocation or credential resurrection. No successful model/auth login, conversation or Desktop/OAuth qualification.",
+      "sourceSha256": "be1ea0ea6dc982aa6463f3ab7d5067812a75e08142c5bbddd98215f28be75ceb",
+      "distSha256": "4497b5590cd7eb96df0623ed6fdd1fc411cd5604d4f620f9c425dab8fcfd9b84",
+      "providerSha256": "64df7bcfed0e7e58d709cf79ab3723677461fd5ab1a76cc96fe96e7cdc85346b",
+      "nativeSha256": "8c3c351b138cfe35905ab11846a1373f1beea590aee7eda412fb765b72c79d82",
+      "controllerSourceSha256": "78b0fde82e011523caaae6d6d71b3a8e3483a3cc8a704ae9ad7679df98796449"
+    }
+  },
+  "postNativeDelta": {
+    "sourceSha256": "880a8f0397b4902548b60812ad65ca4c4d9d7955ba696e7475bf7c18e41182a6",
+    "distSha256": "597145ef05135ffd42d7813a5f29a8239effc18a512c03fddffe8b6d3f10e41b",
+    "sourceChanges": [
+      "adapters/providers/FileCredentialCommandStore.ts"
+    ],
+    "distChanges": [
+      "adapters/providers/FileCredentialCommandStore.js"
+    ],
+    "behavior": "Non-authoritative temp cleanup cannot mask the actual receipt publication outcome; private orphan temp files remain non-authoritative. No native mutation was replayed for this cleanup-only change.",
+    "validation": "Build, focused5 credential owner/filesystem tests, fast lint pass. Native archive stays bound to its pre-delta tuple; root TS7 verified separately."
+  },
+  "remaining": [
+    "Desktop RuntimeProviderManagementPort native cutover",
+    "OAuth progress/code/cancel and late-result fencing",
+    "Defaults/model-test/setup-form parity",
+    "Claude/Codex native status and existing 12 sentinel refusals",
+    "All remaining M01-M19/P0-P8 requirements"
+  ],
+  "invalidatedChecks": {
+    "reason": "Initial agent-wait-on login wrapper rewrote PATH to Node26.11; those results are not qualification. Corrected jobs set PATH inside command and use absolute pinned Node24.21.",
+    "typecheckJob": "9cf0c3f547f47df91bcd9a26eae2dd58",
+    "terminatedHostTestsJob": "a71b7f8bffadff62ac4287f3d4ced420"
+  },
+  "qualifiedJobs": {
+    "nativeCredential": "2fead80d46466bce70d68f5911b136eb",
+    "full187HostTests": "5d2101d3064a3f7f632231ac6eb3feb2",
+    "strictRootLintSize": "675c3216973ed645ec5475a982a440bb",
+    "postDeltaRootTypecheck": "d04e4110aa0450b68e210eb71e77bbbd"
+  }
+}

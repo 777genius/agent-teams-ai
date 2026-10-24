@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "status": "source-tested-awaiting-same-root-ui-continuation",
+  "nativeAttempt": {
+    "jobId": "9b93a2936526e971688b83ace70e4897",
+    "retainedByRoot": ".artifacts/provider-migration/p6-native-review-ui-attempt1",
+    "rawRootReadOnly": "/private/var/folders/7b/ydmc_b0n251bc4hss4tz8y880000gn/T/TEST-desktop-launch-issuer-blbKwD/tmp/TEST-desktop-backend-WIeLLf",
+    "diskSha256": "e468e9675096badd808ec43a94667e12254939bba2ebaef49dbff257f1da3dc6",
+    "persistedPostimageSha256": "e468e9675096badd808ec43a94667e12254939bba2ebaef49dbff257f1da3dc6",
+    "postimageEqualsDisk": true,
+    "diskNlink": 1,
+    "durableHistoryEntries": 2,
+    "replayed": false
+  },
+  "diagnosis": {
+    "demonstrated": [
+      "Delivery after the 2-second cutoff skips byte verification.",
+      "An older awaited conflict result can erase a newer postimage.",
+      "A disposed callback can erase replacement scope expectation."
+    ],
+    "actualRunLimitation": "The failed native UI receipt did not record exact watch delivery/check timing; which race fired is not proven."
+  },
+  "fix": {
+    "layer": "renderer existing review file monitor",
+    "semantics": [
+      "Verify authorized current bytes for retained original-scope expectations without wall-clock cutoff.",
+      "Wait for active own mutations; recheck exact expectation identity, busy state, disposal and changeSetEpoch after await.",
+      "Mismatch, missing expectation and failed authorized check continue to block as external changes."
+    ],
+    "unchanged": [
+      "Host authorization",
+      "Main watcher delivery",
+      "portable writer",
+      "native capture"
+    ]
+  },
+  "sources": [
+    {
+      "path": "src/renderer/components/team/review/ChangeReviewDialog.tsx",
+      "sha256": "9223f55898d7c9fc5f56099afd47fa5d3c4cd15441b9ecf64c08a1039b451e6f",
+      "bytes": 205571
+    },
+    {
+      "path": "src/renderer/components/team/review/reviewFileChangeMonitor.ts",
+      "sha256": "ba90c4e7c11a47d1d0b05f948de08c0a3350fb06d290a47a8a13d4e51954d1d3",
+      "bytes": 1835
+    },
+    {
+      "path": "test/renderer/components/team/review/reviewFileChangeMonitor.test.ts",
+      "sha256": "75fc304a161314688466b5993198d0cde6a141b7ca01a385721a66409dc98f9b",
+      "bytes": 6097
+    }
+  ],
+  "checks": {
+    "sourceEquivalentRed": {
+      "jobId": "95f0fd16327f31d8118eba572f64145d",
+      "exitCode": 1,
+      "failed": 4,
+      "passed": 4
+    },
+    "renderer47": {
+      "jobId": "274095e645b9ce7946d2106e10606e6c",
+      "exitCode": 0,
+      "passed": 47
+    },
+    "fastLint": {
+      "jobId": "3a558353dfa353075a74171cf7dc25de",
+      "exitCode": 0
+    },
+    "directPinnedNoEmit": {
+      "jobId": "b0724838b64a61b7ef511ea9170d67a5",
+      "exitCode": 0
+    }
+  },
+  "verificationMistake": {
+    "jobId": "6dfdc33a9cd99c697a329d85c5994702",
+    "command": "pnpm typecheck",
+    "effect": "pretypecheck rebuilt ledger/Host before noEmit; Root notified immediately; completed EXIT0 before TERM; canonical Root reconciliation required",
+    "noAppOrNative": true
+  },
+  "scopeLimits": [
+    "Same retained native root UI continuation is not run by this worker.",
+    "No global M13 or Stage1 completion claim."
+  ]
+}

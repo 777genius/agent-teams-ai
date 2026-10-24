@@ -1,0 +1,20 @@
+{
+  "status": "PASS for post-native auth clock rollback safety delta; no new Native effects executed",
+  "patch": "docs/plans/provider-migration/evidence/p5-codex-clock-rollback.patch",
+  "patchSha256": "18ddcb00d2d1c893afb1c9cdf698b5a3ab789d62d4c0487069a6ff231e011402",
+  "baseNativeHostSource": "780f1f6e3caa93d4a599432b6a0ad201ed0a627cad66821c6d24e4bf190824ae",
+  "currentHostSource": "95893b27d219d3da7a26a94553ca61fe944cd6ddd329c807d01468ee8026843b",
+  "currentHostDist": "301247fde369115c78f99afdf3339aff29d1893e86972cca0a5bbeaa7df4af65",
+  "behavior": "Wall-clock rollback conservatively reuses the original completed rotation, matching Desktop canonical refresh policy. It cannot cause an immediate second rotation. Existing expiry, alias/restart and logout cases remain green.",
+  "jobId": "258900a7ac41e0491a64601022f02e41",
+  "checks": {
+    "rootTS7": "PASS",
+    "HostTestStrict": "PASS",
+    "credentialOwnerTests": 8
+  },
+  "retainedLogs": {
+    "stdout": "a0a2300a77edec104230458a9673a3e675b8fe22c0727be3aa0e05938e48d3a8",
+    "stderr": "73d50d7902ee000a4e136ac6b617b0090d4194d15b63f11d0baafcab2360276c"
+  },
+  "evidenceBoundary": "Actual mixed Native and Electron proofs retain their exact preceding tuples. This auth-only predicate/test delta is separately qualified; no claim that a later whole Native/packaged E2E ran."
+}

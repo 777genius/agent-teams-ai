@@ -1,0 +1,98 @@
+{
+  "status": "Scoped selected native history restore PASS; full P0-P8/M01-M19 objective INCOMPLETE",
+  "archive": "docs/plans/provider-migration/evidence/p4-mixed-native-restore-v2.tar.gz",
+  "archiveSha256": "78bb0498a84def962df5741a8afa7fc2a51904fb0bafb136db98b65261fc3da1",
+  "receiptSha256": "2876a24fcd0c70e437a2f4329a1184bbc7d596b2a699c4d69ff24abd5f9b26c5",
+  "jobId": "f350f203f6be8c2b82d57cb3f63403b6",
+  "hostSourceSha256": "ec9a0330a9f10d80c14a0efba38a38441789c5f0390661146f4ebdce321c7260",
+  "hostDistSha256": "40ab68c65dbfca676fe0e7429c0b3e7c0b7bd40f8faa3b11113d53ce347cb7f0",
+  "providerSha256": "3baf16ca2276d0a444be273fe6c36d5f71c0586a3ae521f01bfc22d8adff0204",
+  "scope": "One static Team, actual pinned Claude SDK/CLI0.3.305, Codex0.162.0, OpenCode1.18.35; localhost scripted inference; actual native tools, MCP, Host/Team/Runtime, persistence and session history.",
+  "facts": {
+    "ready": 3,
+    "completedTasks": 3,
+    "humanInputs": 6,
+    "sourceInputsIncludingNotifications": 7,
+    "restoredInputs": 3,
+    "visibleReplies": 6,
+    "modelRequests": [
+      13,
+      12,
+      12
+    ],
+    "hostExits": [
+      0,
+      0,
+      0
+    ],
+    "cleanupConfirmed": true,
+    "selectedHistory": "Each explicit restore keeps the exact private native session/thread identity, verified by checkpoint A/B identity hashes; every actual TWO model request contains original ONE history. New generation queues start empty.",
+    "duplicateRestore": "Two concurrent RPCs for each original restore return the same result without a second native allocation.",
+    "staleControls": "Original generation stop commands rejected after replacement; original human commands replay their immutable receipts after a second Host restart without native submit."
+  },
+  "implementation": {
+    "ownership": "Existing launch record is the sole persisted active binding selection. Team owns membership/grants/receipts/outbox. Runtime owns checkpoints, native allocation, inputs and custody.",
+    "providerBoundary": "OpenCode private checkpoint identity is read/validated through public D; full compatibility proof still precedes native probe/allocation. No Host native-protocol parser or second session queue.",
+    "recovery": "Original restore command/reference/fingerprint preserved; corrupted restoration journal fails closed; source history/config/custody validated before publishing replacement. Same-incarnation duplicate continuations share a pending promise."
+  },
+  "checks": {
+    "hostSuite": {
+      "jobId": "ff460276b2ca9828b5e2da3ce4773017",
+      "tests": 226,
+      "pass": 226,
+      "fail": 0,
+      "note": "Subsequent frontend command in same workload failed one outdated fixture; Host suite independently passed, aggregate job exit remains1."
+    },
+    "frontend": {
+      "jobId": "3543c67cceb8626cdba648dda0fd1a99",
+      "tests": 27,
+      "status": "PASS",
+      "fix": "Controlled provider now supplies initial native context proof required by production launch; no timeout increase or production readiness weakening."
+    },
+    "typecheck": {
+      "jobId": "a83d73ec9cbf1c9dd611a1c2621f8c25",
+      "status": "PASS"
+    },
+    "lintAndGuards": {
+      "jobId": "f578bda72320c6e3b6b6a28e1d4def11",
+      "status": "PASS",
+      "sourceFiles": 3261,
+      "legacyCaps": 153
+    },
+    "providerPackage": {
+      "jobId": "435bc982ab40359c25af8ced7f5295b4",
+      "tests": 182,
+      "status": "PASS"
+    },
+    "foundationFmsLint": {
+      "jobId": "c1201df4f4db8a7ac3c82550ba2d6c4c",
+      "status": "PASS"
+    },
+    "providerAggregate": {
+      "jobId": "e029033bd40cc3b74baeaf45db8f496a",
+      "status": "FAIL retained",
+      "reason": "29 CI contract fixture failures retained; observed examples are macOS /var vs /private/var canonical ancestry refusals. A preceding aggregate also has the separately retained Bash3.2 mapfile incompatibility. No gates weakened; package/native PASS does not qualify aggregate gates or canonical Node26.11.1."
+    }
+  },
+  "predecessor": {
+    "archive": "docs/plans/provider-migration/evidence/p4-mixed-native-restore-v1.tar.gz",
+    "sha256": "fcec80e268f46f1c5de8a25655956258f9b126ed09f411fc4b760775ae49f336",
+    "nativeJobId": "e93ef9e21ef019ef9c1cfb639bb1bb9d",
+    "status": "PASS before final concurrency/corruption hardening; not current code",
+    "retainedFailureJobId": "98d68f3b22e506f52cb297b605bfa5aa",
+    "retainedFailure": "Checkpoint was published but test collector wrongly expected runtime snapshot keys. Original INCOMPLETE retained with confirmed cleanup. Corrected collector uses the narrow checkpoint receipt schema.",
+    "raceRegression": "Concurrent original resume red test retained TEST-runtime-team-host-BgTgca with predecessor source. Pending same-member restore barrier repairs divergent replies/in-memory generation race."
+  },
+  "archiveExclusions": [
+    "Reproducible node_modules/.npm caches only; histories, SQLite/WAL, journals, profiles and receipts retained."
+  ],
+  "remaining": [
+    "Ordinary Desktop Resume/launch controls and native workflow",
+    "Mixed native peer/group/cross-Team and second Team",
+    "Complete10 MCP groups, dynamic Team/roster/archive/import",
+    "Full M13 review/apply/undo/evidence",
+    "Settings/auth/attachments/compaction/subagent provenance and typed feeds",
+    "P7 fork-free startup/P8 packaging and true packaged Quit/Relaunch",
+    "Host CMS adoption and failed provider aggregate gates"
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "status": "PASS scoped captured Team model-preflight adapter and native mechanism replay; complete P5/P8 existing-dialog acceptance and stage1 P0-P8/M01-M19 remain INCOMPLETE",
+  "evidence": "docs/plans/provider-migration/evidence/p5-existing-team-preflight-v1/manifest.json",
+  "hostSource": "005e610b12634213520b527d7cff12074f969cbe65f3255a9684234b2e41fb28",
+  "hostDist": "7dc1c77b216dce1acea100c7d1a007736830d5782b99f1ddbf40f2ff0e1cc1ba",
+  "providerSha256": "543cfa030a0d0cda0c5b091c207906c6f175ed6cd9eec28090094ff0b085af59",
+  "implementation": {
+    "existingUi": "Original LaunchTeamDialog sends its desired model choices in the finite context, including when existing diagnostics invoke a cached runtime-only check. No new UI/form/control was added. Existing Create remains on the explicit incomplete path.",
+    "main": "Existing prepareProvisioning IPC normalizes all old arguments before calling the captured Team port. The shell captures its original active context, exact sender and original opaque handle; no owner/root/account overrides. Legacy destinations retain their existing path, Host intents cannot fall through to fork preflight.",
+    "intent": "One deterministic application command ID per captured handle/launch/roster/member/model/effort/context is computed before dispatch. Original read precedes start. Only current Host durable absence is a first admission; errors/UNKNOWN/held/expired results never produce a replacement ID. All outcomes remain in the existing Host ModelProbeOwner journal, with no second Main outcome journal.",
+    "lifecycle": "Lost responses can recover the original completed result without a second start. Foreground changes and local deadline cleanup address only original captured probe IDs, including while an original read is outstanding. The Host retains authority revision and native cleanup fences.",
+    "mapping": "Claude members support one shared selected model/effort, or multiple choices that map unambiguously to saved member choices. All mapping/workspace/capability checks precede model dispatch. Defaults resolve from the captured member. Ambiguous edited mappings and unsupported efforts/options refuse explicitly.",
+    "readiness": "ready:true describes selected Team model preflight only. It is not global authentication, native member readiness, launch/bootstrap success, or full configuration/roster acceptance. Runtime member sessions remain unopened. Final launch must validate effective settings and current authority separately."
+  },
+  "checks": {
+    "finalJobId": "fecee05d3bd8484bbeb55b2a2d0c386a",
+    "frontend": "506 passed/34 files;2 opt-in native tests skipped in the broad suite. The model native case was then run explicitly and passed. Includes239 Team IPC,73 existing dialog,13 captured preparation,6 context and4 preload tests.",
+    "shellFocusedJobId": "9edf8ab06c905df29dc9f09e0a3b14ac",
+    "shellFocused": "3 additional tests PASS for the actual Main shell port using mocked descriptor/facade (no disk/native effects): forged frame/handle refusal, request capture before initialization and intervening context switch, original-only cancellation without foreground work authority. Final root typecheck, scoped lint, JSON parsing and whitespace PASS. Production code unchanged after native qualification.",
+    "shellEvidence": "docs/plans/provider-migration/evidence/p5-existing-team-preflight-shell-v1/SHA256SUMS",
+    "typesAndGuards": "Root typecheck/Host build, scoped fast lint, frozen source-size caps and Team provisioning architecture guards PASS. One pre-existing closeDialog hook dependency warning remains. Full lint/final required delivery gates remain open.",
+    "hostSuite": "234 passed in b6d853cd222908af4cea66cd7d5f5efc before its aggregate failed the frozen LaunchDialog cap. Fixed the call shape without raising caps; final job passed that guard. Host source was unchanged after the passing Host suite.",
+    "retainedFailures": "31d6cf20f5882ce30b48dfbec39ced23 rejected a lint flag as a filename before checks; fe096ecff2c6082977fa414ae3831d73 and a49c17553eb1b9e6e0e092a61083b305 failed new TypeScript effort typing before tests/native effects; repaired. b6d853cd222908af4cea66cd7d5f5efc passed types/211 frontend/234 Host tests, then failed frozen file size; retained log shows the actual nonzero aggregate exit."
+  },
+  "native": {
+    "test": "test/features/runtime-provider-management/capturedClaudeModelProbe.native.test.ts",
+    "scope": "Main application adapter -> DesktopBackendFeature facade -> standalone Host NDJSON -> public D -> actual SDK0.3.305/Claude CLI with two isolated loopback inference APIs. No Electron IPC sender/dialog or real vendor/auth qualification.",
+    "requests": "6 total:3 global mechanism cases and3 Team namespace cases. Team preflight adds1 model request, then warm and cold caller/Host replay add0. All Team requests use medium effort and0 tools; configured SessionStart hook marker absent.",
+    "outcomes": "Success, wrong-model refusal, original cancellation/disconnect, stale roster and revoke/regrant protection;6 durable records,4 completed/2 cancelled, all resourceHeld:false. Both Main Host exits confirmed. No independent census of every provider descendant; no full Quit/Relaunch/P8 claim.",
+    "sourceBoundary": "Receipt pins listed executed Main surfaces and complete Host source/dist; retained exact native test bytes. This is a working-tree milestone, not a frozen complete Main dependency closure or final release source tuple."
+  },
+  "remainingImmediate": [
+    "Explicit terminal/expired check renewal with a new user intent while preserving UNKNOWN/held originals; current deterministic selection ID refuses expired/cancelled outcomes.",
+    "Exact draft member/provider/model/workspace/effort mapping for edited and dynamic rosters, including different member workspaces and other providers.",
+    "Full selected configuration/capability/auth and launch authority integration; ordinary replaceMembers -> launchTeam -> progress, unbound create and Resume/relaunch.",
+    "Actual Electron E2E through the existing Launch/Create/Resume controls; React callback and direct Main native proofs do not replace it."
+  ],
+  "scopeAndDelivery": "Full stage1 remains active, including all other outstanding P0-P8/M01-M19 acceptance. Stage2 future Orchestrator/runtime integration is excluded. Isolated worktree only; existing UI only; draft PRs only with exact-head plan/contracts/matrix links, no main/release merge. No commit/push/PR/merge in this slice."
+}

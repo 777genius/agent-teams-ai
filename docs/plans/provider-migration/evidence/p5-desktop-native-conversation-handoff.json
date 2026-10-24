@@ -1,0 +1,38 @@
+{
+  "status": "PASS scoped ordinary Composer/native actions/Stop; full P0-P8/M01-M19 INCOMPLETE",
+  "archive": "docs/plans/provider-migration/evidence/p5-desktop-native-conversation-v1.tar.gz",
+  "archiveSha256": "d59ed3ced3d9afb62e10784c2ae62aabbae3d3083de0aaa2ec390e9270b89b92",
+  "receiptSha256": "e2d3d7430a3b54e1b35e9f8a2c35a6be83f4289f28ddd8b6c66b5967c4e7f9e8",
+  "jobId": "adfdb06cb30ac31d9a271ac86b0ea1a8",
+  "hostSource": "ccdf8f7758c2b685454957249aa3b2a5c7c800169694801462abcb316240916f",
+  "hostDist": "8797b1963e44613e08e5b89048cbc1baa4d1c5d136bf9a302eba5b708a2fa17b",
+  "providerSha256": "3baf16ca2276d0a444be273fe6c36d5f71c0586a3ae521f01bfc22d8adff0204",
+  "verified": {
+    "app": "Actual isolated Electron dev:mcp, CDP trusted Input, preload/Main/standalone Host/D/Claude SDK0.3.305; launch through explicit sandbox setup API, not ordinary Launch controls.",
+    "conversation": "Exactly two ordinary Send clicks: canonical UUID command/message identity, original delivery input and captured alice-id/gen1; eleven actual native model requests, no fixture failures, prior first-turn history in all second-turn requests.",
+    "effects": "Actual native MCP created/assigned/started/commented/completed one Task and sent two canonical replies from alice. Actual Bash wrote ONE/TWO; first command exit7 was deliberately handled in the continued turn.",
+    "rendering": "Both native reply texts rendered in the ordinary direct thread. First reply viewport is visible; screenshot shows second reply near/below the scroll edge, so full viewport visibility/auto-scroll of that reply is NOT qualified by the body.innerText observer.",
+    "stop": "After settled inputs, one ordinary Stop click. Original Runtime closed/released and exact captured native PID37609 absent before any app Quit. This closes the missing Stop observation in the earlier attempt through a different required conversation scenario.",
+    "cleanup": "Guarded API Quit, app exit0, captured Host absent, TEST group empty,9222 free; no legacy sentinel refusals. Allowed --version/shell discovery dependency remains, so no fork-free startup claim."
+  },
+  "fix": "Actual red/green shows Send moving between mouse press/release after textarea blur hid its hint. Retain editor focus on mouse-down; keyboard click behavior remains unchanged. One production line; frozen size1303/1303.",
+  "attempts": [
+    {
+      "jobId": "b55419abcedeb6d24d890e43216eb1d7",
+      "result": "INCOMPLETE before native launch: modelUrl leaked into strict executable fixture. Fixed fixture shape and added real readTeamHostProfile preflight. Initial cleanup observer met a transient defunct wrapper and refused signals; later readonly census confirms captured group absent, original receipt unchanged."
+    },
+    {
+      "jobId": "902e2220e396d48a8e33836f77c7f39c",
+      "result": "INCOMPLETE before input: ordinary UI opens chat list first, collector expected a recipient chooser. Followed actual direct-chat control; captured Native/Host/app cleaned."
+    },
+    {
+      "jobId": "a6ed7898edd58f2b3d46ebf4fa13c4ff",
+      "result": "INCOMPLETE: trusted pointerdown hit Send, release hit displaced non-button. No command/model input occurred. Production focus fix, no successful input replay."
+    }
+  ],
+  "checks": {
+    "pinnedNode24": "2652fbb252c34ca47fe03d106f8a5d66: root TS7 and47/47 focused frontend PASS. Earlier4200d898 run passed47 but shell selected Node26; retained separately, not canonical Node24 evidence.",
+    "host": "80beb412cd6be8cfca311b3a100f151a: full226/226, strict Host/script types, affected lint0errors (one existing no-unsafe-finally warning), both architecture/size guards PASS on Node24.21."
+  },
+  "remaining": "Canonical Native Task is absent from the current Kanban/sidebar snapshot until refresh: Host change-feed cutover remains required. Ordinary Launch/Resume/config, full runtime widgets, group/cross-Team/dynamic Team/M13, auth and P7/P8 remain incomplete. No vendor credentials, packaging or release claim."
+}

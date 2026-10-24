@@ -1,5 +1,21 @@
 # Этап 1: протоколы реализации и восстановления
 
+**Обязательное правило UI (прямое указание владельца, 22 октября): использовать
+только существующий UI. Не писать новые альтернативные формы/диалоги запуска,
+создания команды, resume/relaunch, задач или review.** Сохраняются существующие
+компоненты, поля и сценарии. Интеграция меняет backend/API adapters и необходимые
+источники данных; недостающая поддержка доводится в backend. E2E проходит через
+эти же пользовательские controls, прямой API setup не заменяет приёмку диалога.
+Для Launch/Create используются именно `LaunchTeamDialog` и `CreateTeamDialog`:
+полноценный E2E включает ввод/изменение значений, submit существующей кнопкой,
+наблюдение progress и проверку сохранённых/effective настроек через backend.
+Сохранение проверяется повторным открытием того же диалога после reload; ошибки
+валидации, отмена и отказ backend показываются его существующими controls.
+Тестовая альтернативная форма также запрещена: автоматизация работает с теми же
+компонентами и пользовательским маршрутом, которые будут доступны пользователю.
+Ссылка на этот план обязательна в описании каждого draft PR; формат закреплён
+в [правилах доставки программы](README.md#описание-каждого-draft-pr).
+
 Это детали [основного плана](stage-1-legacy-host.md), а не новый этап или public
 runtime framework. P1 закрепляет точные TypeScript shapes и profile limits;
 ниже фиксируется необходимая семантика. Имена полей рабочие. Готовые DTO, locks,
@@ -554,6 +570,39 @@ register/list → host restart → UI stop своего test child → stopped h
 отдельно metadata-only stop и отказ stale/чужому process binding.
 
 ## 9. Config, auth, context и attachments
+
+### Сохранённый выбор и effective настройки — разные данные
+
+Владелец сохранённых общих/lead-настроек и состава — тот же Team owner. Его
+`savedSettings` содержит application choices, включая prompt, worktree/custom args,
+presentation и local-model opt-in. Отсутствие объекта означает неизвестный источник,
+а `{ cwd }` — известную конфигурацию без явных overrides. Отсутствие `model`/`effort`
+в ней не заполняется observed runtime моделью, предыдущим запуском или localStorage.
+Явные `false`/off сохраняются. В replace omission внешнего объекта сохраняет прежние
+settings; переданный объект заменяет их полностью и очищает пропущенные overrides.
+
+Состав и эти choices входят в одну CAS revision и атомарную публикацию с исходным
+receipt. Settings-only edit требует той же проверки released Runtime custody,
+что изменение состава. Trusted descriptor задаёт начальные choices только при
+первом создании owner; reopen не переписывает их. Текст extra args сам по себе не
+разрешает запуск executable, доступ к account/environment или обход native capture.
+
+Существующий диалог получает эту revision вместе с configured значениями;
+правки во время async hydration и поздняя загрузка local draft не затирают ввод.
+Прочитать более свежую revision перед сохранением устаревшей формы и молча
+использовать её вместо исходной запрещено. Snapshot/configuration mismatch
+не смешивает roster одного состояния с настройками другого.
+
+Обычный `replaceMembers` передаёт command/idempotency identity первого submit и
+именно эту исходную revision. Обновление model-preflight не заменяет ID сохранения.
+После UNKNOWN неизменённый submit остаётся тем же intent; изменение payload требует
+закрыть и заново открыть форму. Один read-only lookup исходного ID с ожидаемым
+исходным payload может подтвердить commit; отсутствие/недоступность результата
+оставляет UNKNOWN и не запускает повторный effect с новым ID.
+Member-settings editor передаёт owner-issued version tokens всего исходного состава,
+target kind и исходную Team revision. Team проверяет их в своём CAS fence; такой
+intent не добавляет/удаляет/переименовывает участников. Descriptive role не меняет
+canonical lead identity. Это тот же roster receipt/state, без второго owner.
 
 ### Выбранное значение должно стать effective configuration
 

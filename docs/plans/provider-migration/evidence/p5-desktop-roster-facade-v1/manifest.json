@@ -1,0 +1,67 @@
+{
+  "scope": "Finite Desktop roster read/replace/original lookup, IPC/authorized HTTP marshalling and real Main-facade->NDJSON Host/Runtime/controller integration with a controlled Session. Team immutable admission copy is not a live Runtime custody cache. Not SDK/Electron dialog or full stage1 acceptance.",
+  "sourceBoundary": "Working-tree hashes retained after successful checks and no later production edits. Full Host source/dist and listed Main/client/test surfaces only; not a pre/post immutable full Main dependency closure or release qualification.",
+  "hostSource": "b4debba646d119b4c59ba5ab0f05d6abe9d68751a979a60728c8464303ebbaf6",
+  "hostDist": "3b5702dcfb54bb68283d7b275735486bc7a6553e2caa70d6267d51e62430af70",
+  "sources": {
+    "src/features/agent-backend/contracts/roster.ts": "8b5c1e83696ff873d4fc60fd1ff50873f240d1a39d5b4d1b7fed536df2d14de8",
+    "src/features/agent-backend/contracts/operations.ts": "7830b3c1073739ccd771512200503004ee37edbc972a2ed2b7db47ea89d6afa0",
+    "src/features/agent-backend/contracts/index.ts": "5b2aac36a0a07dfcf06ded67794392b59cad5b32852cdcef7e25ee5c69023191",
+    "src/features/agent-backend/main/adapters/rosterValues.ts": "0f0a0ee249ae55aa0af3662d6dce16070b507f534182729ffb7053eda822f0c7",
+    "src/features/agent-backend/main/adapters/input/validateBackendOperation.ts": "574902870c99a2433e3dd35b89a1cd5dce281aeb055d22f71f329466688e8ea8",
+    "src/features/agent-backend/main/adapters/input/BackendOperationsFacade.ts": "c1baef315da24ab5008104c68d5c9eaed52d506fe791a6516a1c96a8fe13e40f",
+    "src/features/agent-backend/main/adapters/output/projectBackendResult.ts": "33baffd581f1b9143b22fb2031472963499c966e903f2e7f2c996536c12f7e73",
+    "src/features/agent-backend/main/adapters/output/projectRoster.ts": "27d969c0e2a0bac2c0fc450e1b0f7b7f3c85190040653d869ba925cfc326f854",
+    "src/features/agent-backend/renderer/createHostBackendRenderer.ts": "25543feb05c7d78b21fc1d32a83744f7e5696d71cbc25401a660f5adc522cff1",
+    "src/features/agent-backend/preload/createAgentBackendBridge.ts": "3b34b39bd9fd7008e5bded6849848c2ed68526ad90374c8721ace97ec5d74f96",
+    "src/features/agent-backend/renderer/adapters/http/createAgentBackendHttpClient.ts": "915106957973398ce450701c0403a3e83a17ce06aa92f7aee7be6ac37822c31a",
+    "packages/legacy-agent-host/src/team/TeamRosterTransitions.ts": "e58059e283f5283b5e79d8ff5d7dec6bb3bb34ec84439b7e4212cf2f1eea2341",
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts": "9f00a4012879c0dfeaefcd3161ec9bfedb17726d479484ce8ab3f11877ff0f04",
+    "test/features/agent-backend/hostRosterFacade.test.ts": "60e1c1bd7733bd9add84bf8eddfc22d40a8bf5853ee1904fb1c1c5a41829cf25",
+    "test/features/agent-backend/runtimeActivityFacade.test.ts": "e119c5ca737a89119bdf80931a782317958bcd9c12b94fd6e3f6eb0d7cf4a7a9"
+  },
+  "checks": [
+    {
+      "id": "3f944c80894d383ead540c16bb9b4fa8",
+      "scope": "Root/strict Host types/build,254 Host and178 frontend tests, frozen source/provisioning guards and whitespace."
+    },
+    {
+      "id": "360df8bb70757880dbcf04c4c30472a3",
+      "scope": "Final affected-files fast lint across new DTO/facade/projectors and changed Main/Host tests."
+    }
+  ],
+  "files": [
+    {
+      "path": "jobs/3f944c80894d383ead540c16bb9b4fa8/stdout.log",
+      "sha256": "3ea1082d5b75386796e2a15cff8ab05067f92362adf47e8c9b1e5fec2af586ea"
+    },
+    {
+      "path": "jobs/3f944c80894d383ead540c16bb9b4fa8/stderr.log",
+      "sha256": "693c9ed37cfdc1c2c5fa97d566a7bbf030569530bc1e28841414da7a86a2763f"
+    },
+    {
+      "path": "jobs/360df8bb70757880dbcf04c4c30472a3/stdout.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "jobs/360df8bb70757880dbcf04c4c30472a3/stderr.log",
+      "sha256": "ac133ed2cfcb435d17856faeda6cddc3e5da5b70dffff7932bccf41e7d55dbea"
+    },
+    {
+      "path": "executed-tests/packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "sha256": "9f00a4012879c0dfeaefcd3161ec9bfedb17726d479484ce8ab3f11877ff0f04"
+    },
+    {
+      "path": "executed-tests/test/features/agent-backend/hostRosterFacade.test.ts",
+      "sha256": "60e1c1bd7733bd9add84bf8eddfc22d40a8bf5853ee1904fb1c1c5a41829cf25"
+    },
+    {
+      "path": "executed-tests/test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "sha256": "e119c5ca737a89119bdf80931a782317958bcd9c12b94fd6e3f6eb0d7cf4a7a9"
+    }
+  ],
+  "predecessors": [
+    "5b7e4e5354da85aee0222580c4b077d0 stopped at mock JsonValue typing before tests; fixture serializes explicit wire JSON",
+    "c5254da962a987703fc21e5d39327fb0 stopped at Host test store API typo before tests; fixed to the existing fenced read"
+  ]
+}

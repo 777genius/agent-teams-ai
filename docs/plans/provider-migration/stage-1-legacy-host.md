@@ -1,7 +1,24 @@
 # Этап 1: совместимый legacy-host поверх provider-implementations
 
-Статус: P0/P1 и ограниченные slices P2/P3 реализуются в изолированных lanes;
-полный этап 1 ещё не завершён.
+**Обязательное правило UI (прямое указание владельца, 22 октября): использовать
+только существующий UI. Не писать новые альтернативные формы/диалоги запуска,
+создания команды, resume/relaunch, задач или review.** Сохраняются существующие
+компоненты, поля и сценарии. Интеграция меняет backend/API adapters и необходимые
+источники данных; недостающая поддержка доводится в backend. E2E проходит через
+эти же пользовательские controls, прямой API setup не заменяет приёмку диалога.
+Для Launch/Create используются именно `LaunchTeamDialog` и `CreateTeamDialog`:
+полноценный E2E включает ввод/изменение значений, submit существующей кнопкой,
+наблюдение progress и проверку сохранённых/effective настроек через backend.
+Ссылка на этот план обязательна в описании каждого draft PR; формат закреплён
+в [правилах доставки программы](README.md#описание-каждого-draft-pr).
+
+Это весь текущий implementation scope: P0–P8 / M01–M19. Этап 2 с будущими
+Orchestrator и agent-runtime сейчас не выполняется и не нужен для завершения
+этого плана; см. [зафиксированное решение](README.md).
+
+Статус: P0–P6 и dev E2E из P8 реализуются в изолированных lanes;
+сохранённые scoped proofs перечислены в матрице совместимости. Packed candidate
+P7 и итоговая приёмка P8 ещё не завершены; весь этап 1 остаётся открытым.
 Направление принято владельцем; производственная готовность не объявляется.
 Основание и оценки: [двухэтапная программа](README.md).
 Функциональный denominator: [матрица совместимости](compatibility-matrix.md).
@@ -46,8 +63,10 @@ Merge/release допускается обсуждать после резуль�
 проверенным delta. Dirty работа не захватывается whole-tree copy/cherry-pick.
 
 Каждый запуск использует новый `TEST-*` project/workspace, отдельные HOME,
-provider config/data/cache и Electron userData. CDP 9222 резервируется только для
-одного текущего Electron smoke; остальные тесты не стартуют второй dev window.
+provider config/data/cache и Electron userData. CDP 9222 используется по умолчанию;
+если он занят, штатный `dev:mcp` launcher выбирает следующий свободный порт.
+Smoke фиксирует этот TEST endpoint и проверяет принадлежность captured app process
+group перед подключением и каждым действием. Чужое окно не подключается/останавливается.
 Cleanup действует только на captured run/process/port/storage данного harness.
 Не меняются пользовательские auth, teams, worktrees, inboxes или updater channels.
 
@@ -364,8 +383,11 @@ inputs. Архив/receipts остаются исходному owner. Его г
 
 ## 7. Фазы реализации
 
-P0–P3 — **in progress**, P4–P8 — **planned**; первый native Team slice готовится
-для P4, owner routing для P5 уже проверен отдельно от IPC/UI cutover.
+P0–P6 и dev E2E P8 — **in progress**; packed candidate P7 и итоговый handoff P8
+ещё не приняты. Для P4 сохранены native mixed-team/restore/peer proofs, для P5/P6 —
+scoped Electron Create/Launch/Resume/import/Changes и native Claude/Codex evidence.
+Их точный scope и ограничения указаны в [матрице](compatibility-matrix.md).
+Полный UI cutover, остальные сценарии и вся приёмка этапа остаются открытыми.
 Для завершённой фазы фиксируются actual ref,
 артефакт, выполненная проверка и конкретный acceptance, а не процент по LOC.
 
@@ -569,6 +591,10 @@ runtime части M13–M19 проходят actual host path; целые ст�
 
 1. Заменить CLI/bootstrap calls для выбранного нового owner на host API. В UI
    сохранять формы/канбан/диалоги; добавить только реально нужные статусы/ошибки.
+   Уточнение владельца: переиспользуются существующие CreateTeamDialog,
+   LaunchTeamDialog и Resume/relaunch controls со всеми текущими полями и
+   сценариями. Отдельный урезанный Host UI не создаётся. Недостающую поддержку
+   existing API/fields реализует backend adapter/owner; она не заменяется новой формой.
 2. Сохранить target generations/command identities до dispatch и после restart;
    missing/offline target показывает connection state, не fallback в fork.
 3. Направить live reads/log streams/task evidence/review/config в host projections.
@@ -604,6 +630,79 @@ runtime части M13–M19 проходят actual host path; целые ст�
 старых CLI/readers; IPC и HTTP вызывают те же semantics, late feeds не меняют target.
 **Не входит:** browser dev mode, native folder picker automation, переписывание
 глобального Zustand store/старых сервисов ради новой структуры.
+
+#### Подключение существующих Launch/Create/Resume форм
+
+UI остаётся один. Для адаптации проверяется фактическая цепочка существующего
+`LaunchTeamDialog`: hydrate → provider/model/workspace preflight →
+`replaceMembers` → `launchTeam` → существующий provisioning progress.
+Прямой `team.launch.start` в TEST setup проверяет backend, но эту цепочку не закрывает.
+
+| Existing API / consumer                                 | Что должен дать Host adapter                                                                                                                               | Условие приёмки                                                                                                                           |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `getSavedRequest`, `getData`                            | Авторизованные settings, workspace и provider/model каждого captured member в existing DTO; metadata не берётся из legacy files/global defaults            | Существующий prefill сохраняет выбранные значения, включая `false`/off; поздний ответ не меняет текущий контекст                          |
+| `prepareProvisioning`, project/provider/model checks    | Явный captured Team/default-owner context, проверка выбранной configuration/capabilities и actual required native evidence через provider-management ports | Нет fork preflight, speculative agent allocation или fabricated model/auth success; несовместимый параметр объясняется тем же existing UI |
+| `replaceMembers`, member settings                       | Authoritative roster use case с исходной revision/intent и policy, включая workspaces/instructions/MCP settings                                            | Нет renderer-owned roster writer; смена состава не теряет product data и не дублирует работающих members                                  |
+| `launchTeam`, `createTeam`, `createConfig`              | Полный used request mapping в Team/Runtime owners, stable command до dispatch; unbound create захватывает backend до effects                               | Все сохранённые поля имеют effective mapping; UNKNOWN не создаёт повторный intent, capability gap остаётся незакрытым acceptance          |
+| `getProvisioningStatus`, existing progress subscription | Owner-qualified application run identity и правдивые individual/aggregate outcomes, source timestamps, reconnect/read path                                 | Нет lookup по совпавшему legacy имени, invented PID/ready либо отката progress поздним ответом                                            |
+| Existing Resume/relaunch controls                       | Explicit selected checkpoint/new run semantics и сохранённые settings/history через того же owner                                                          | Обычный dialog/control выполняет restore; API-only proof не закрывает UI acceptance                                                       |
+
+E2E идёт через обычные controls этих компонентов: выбор проекта/provider/model,
+настройки участников и advanced options → preflight → ровно один submit →
+видимый progress → сообщения/задачи → stop/selected resume. TEST API допускается
+для изолированного staging/диагностики; actual launch/create/resume в приёмке
+диалога выполняется его существующей кнопкой. Неизвестный outcome проверяется
+чтением исходного intent, без повторного клика. Новая сокращённая форма не
+является допустимым ускорением этих шагов.
+Автоматизация использует Electron `pnpm dev:mcp` и renderer CDP; не создаёт
+тестовую замену диалога. Сохранённые значения проверяются повторным открытием
+того же диалога после reload. Ошибки валидации, отмена и отказ backend проверяются
+через существующие controls, с сохранением введённых пользователем значений
+при исправимой ошибке.
+
+Приёмка существующих диалогов фиксируется раздельно:
+
+- **Create:** открыть существующий `CreateTeamDialog` штатной кнопкой, заполнить
+  состав и настройки, создать команду и проверить сохранённый состав после reload.
+  Если выбран запуск при создании, его progress и native allocation также проверяются.
+- **Launch:** открыть существующий `LaunchTeamDialog` из сохранённой команды,
+  проверить prefill, изменить параметры и запустить штатной кнопкой. Проверить
+  effective configuration в Host и наблюдаемые native параметры, затем сообщение,
+  задачу, ответ и остановку через существующие controls.
+- **Resume/relaunch:** использовать существующий control и его диалог; проверить
+  выбранную историю, новую generation и сохранение настроек. Для fresh relaunch
+  проверить новую историю согласно прежнему сценарию, без скрытого resume.
+
+Для каждого используемого поля проверяется путь значение формы → request →
+сохранённое решение owner → effective запуск/поведение. Одной видимой галочки,
+успешного mock handler или появления окна недостаточно. Не требуется полный
+перебор комбинаций: сохраняется покрытие существенных режимов из матрицы и
+проверяется риск потери/игнорирования настроек. Без Claude TEST-доступа actual
+SDK/CLI работает с локальным fixture API; результат явно отделяется от проверки
+реального vendor API/auth. Это не отменяет полноценные команды, задачи и сообщения.
+
+Обычный Launch передаёт исходный подтверждённый roster command в
+`team.launch.capture`, затем запускает полученный run с исходным launch command.
+Capture использует сохранённые Team settings и private provider recipes; desktop
+не передаёт executable, account или environment. Регистрация новых bindings/grants
+атомарна в прежнем Team owner state, source хранится в существующей launch record.
+Запись capture не запускает native agent. Current capture определяется также по
+launch ID: одинаковая версия настроек не даёт предыдущему run снова стать текущим.
+Исторические reads выбирают исходный run/generation и не разрешают старые controls.
+
+При retry существующего Relaunch сохраняются исходный run ID, member-settings
+baseline и подтверждённые шаги. Stop адресуется этому run через существующий
+`cancelProvisioning(runId)`. После подтверждённого roster save потеря launch ACK
+не повторяет stop/save и не останавливает новую команду. Неопределённый roster save
+восстанавливается с прежними command/payload у того же owner; обновлённые UI tokens
+не подменяют исходный baseline. Continuation остаётся локальным состоянием прежнего
+диалога и не сериализуется в roster DTO. Это не новый journal или lifecycle owner.
+
+Первоначальный compiler требует private recipe каждого выбранного участника и
+провайдера. Отказы для новых участников, неподключённого backend, worktree/custom
+args и дополнительных MCP policies остаются открытой реализацией этапа 1, а не
+сужением матрицы. Положительный API/controlled-provider proof этих границ не
+закрывает actual SDK или Electron dialog E2E.
 
 ### P6. Change evidence, review и user-visible parity
 
