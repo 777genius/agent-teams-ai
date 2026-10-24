@@ -41,12 +41,17 @@ export function captureLegacyNativeStopPublication(options: {
     }
   };
   // beginStop advances the existing publication epoch synchronously, before its queue await.
-  let admission: Promise<TeamLaunchStopAuthority | null>;
-  try {
-    admission = beginStop(teamName).catch(() => {
+  // A synchronous admission call may throw before returning its promise. The
+  // bundle keeps that capture distinct from the existing async rejection handler.
+  const admit = (): { promise: Promise<TeamLaunchStopAuthority | null> } => ({
+    promise: beginStop(teamName).catch(() => {
       report();
       return null;
-    });
+    }),
+  });
+  let admission: Promise<TeamLaunchStopAuthority | null>;
+  try {
+    admission = admit().promise;
   } catch {
     report();
     return null;
@@ -54,29 +59,32 @@ export function captureLegacyNativeStopPublication(options: {
   let completion: Promise<boolean> | undefined;
   return Object.freeze({
     complete() {
-      return (completion ??= (async () => {
-        const authority = await admission;
-        if (
-          !authority ||
-          !current() ||
-          authority.teamName !== teamName ||
-          (authority.freshness?.kind === 'launch'
-            ? authority.freshness.runId !== runId
-            : authority.freshness?.kind !== 'stop' || authority.freshness.stoppedRunId !== runId)
-        )
-          return false;
-        const proof = captured.complete();
-        if (!proof) return false;
-        try {
-          return await publishStopped(teamName, authority, proof);
-        } catch {
+      if (completion === undefined) {
+        completion = (async () => {
+          const authority = await admission;
+          if (
+            !authority ||
+            !current() ||
+            authority.teamName !== teamName ||
+            (authority.freshness?.kind === 'launch'
+              ? authority.freshness.runId !== runId
+              : authority.freshness?.kind !== 'stop' || authority.freshness.stoppedRunId !== runId)
+          )
+            return false;
+          const proof = captured.complete();
+          if (!proof) return false;
+          try {
+            return await publishStopped(teamName, authority, proof);
+          } catch {
+            report();
+            return false;
+          }
+        })().catch(() => {
           report();
           return false;
-        }
-      })().catch(() => {
-        report();
-        return false;
-      }));
+        });
+      }
+      return completion;
     },
   });
 }

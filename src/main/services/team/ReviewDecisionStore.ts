@@ -34,7 +34,7 @@ export class ReviewDecisionStore {
     reviewActionHistory?: ReviewUndoAction[];
     reviewRedoHistory?: ReviewRedoAction[];
   }): void {
-    return this.store().assertValidSnapshot(data);
+    return void this.store().assertValidSnapshot(data);
   }
   load(
     teamName: string,

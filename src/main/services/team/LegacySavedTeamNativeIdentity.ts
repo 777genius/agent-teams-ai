@@ -48,7 +48,7 @@ export function classifyLegacySavedTeamNativeRecords(
       : [{ name: 'team-lead' }];
     if (leads.length !== 1 || (!config && members.some((member) => member.name === 'team-lead')))
       return 'unknown';
-    const leadName = leads[0]!.name as string;
+    const leadName = leads[0].name as string;
     const names = new Set([leadName, ...members.map((member) => member.name)]);
     const productIds = new Map<object, string>();
     for (const member of [...members, ...configured]) {

@@ -65,7 +65,7 @@ export function createHostTeamLaunch(
       );
     if (!result.value || !('launch' in result.value) || !('members' in result.value))
       throw new Error('Launch capture result unknown. Retry the same intent.');
-    return result.value as BackendLaunchConfigurationView;
+    return result.value;
   }
   async function start(
     view: BackendLaunchConfigurationView,

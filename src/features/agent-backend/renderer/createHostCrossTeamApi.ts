@@ -54,7 +54,7 @@ export function createHostCrossTeamApi(
     if (!result.ok) throw new HostTeamOperationError(result.code, result.outcome);
     if (!result.value || !('revision' in result.value) || !('kanbanState' in result.value))
       throw new HostTeamOperationError('invalid-result', 'unknown');
-    return result.value as BackendTeamSnapshot;
+    return result.value;
   }
   function references(request: CrossTeamSendRequest): CrossTeamReference[] | undefined {
     return request.taskRefs?.map((ref) => {

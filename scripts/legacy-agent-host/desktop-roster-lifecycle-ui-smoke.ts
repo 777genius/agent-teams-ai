@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { createDesktopUiControls } from "./desktop-ui-controls.ts";
+import { createDesktopUiControls, desktopJsLiteral } from "./desktop-ui-controls.ts";
 import { fileDigest } from "./desktop-backend-fixture.ts";
 import { hostTeamSelectionKey } from "../../src/features/agent-backend/contracts/teamSelection.ts";
 import { readDesktopNativeStopSessions } from "./desktop-native-stop-fixture.ts";
@@ -250,7 +250,7 @@ export async function runDesktopRosterLifecycleUiSmoke(
   );
   const restoreSelector = '[data-section-id="team"] button[aria-label="Restore teammate"]';
   await ui.waitRead(
-    `(() => {const controls=[...document.querySelectorAll(${JSON.stringify(restoreSelector)})];return controls.length===1&&controls[0].closest('[role="button"]')?.querySelector('span.font-medium')?.textContent.trim()===${JSON.stringify(memberName)};})()`,
+    `(() => {const controls=[...document.querySelectorAll(${desktopJsLiteral(restoreSelector)})];return controls.length===1&&controls[0].closest('[role="button"]')?.querySelector('span.font-medium')?.textContent.trim()===${desktopJsLiteral(memberName)};})()`,
     "Restore belongs to the exact original removed teammate",
   );
   await ui.scrollTo(restoreSelector, "original removed teammate control");

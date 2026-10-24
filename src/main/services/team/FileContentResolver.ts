@@ -15,7 +15,7 @@ export class FileContentResolver {
     });
   }
   invalidateFile(filePath: string): void {
-    return this.resolver.invalidateFile(filePath);
+    return void this.resolver.invalidateFile(filePath);
   }
   resolveFileContent(
     teamName: string,

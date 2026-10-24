@@ -21,5 +21,5 @@ export async function readHostRosterConfiguration(
     !('removedMembers' in result.value)
   )
     throw new Error('Invalid saved team settings');
-  return result.value as BackendRosterConfiguration;
+  return result.value;
 }

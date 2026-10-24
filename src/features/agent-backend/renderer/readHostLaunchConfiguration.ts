@@ -18,5 +18,5 @@ export async function readHostLaunchConfiguration(
   if (result.value === null) return null;
   if (!result.value || !('launch' in result.value) || !('members' in result.value))
     throw new Error('Invalid launch settings');
-  return result.value as BackendLaunchConfigurationView;
+  return result.value;
 }
