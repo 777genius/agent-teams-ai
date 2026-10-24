@@ -368,3 +368,36 @@ actual Electron clicking, native discovery, signed packaging, full CI and final
 independent review remain open. The managed/local Skill adapter is still being
 integrated. Project/worktree S25/S26 remain blocked on the separately qualified
 engine workstream; a disabled control is only fallback evidence.
+
+### v5 host scope and recovery review
+
+- The standalone HTTP process is an existing read-only session viewer without a
+  team runtime owner. It will advertise that managed mutations are unavailable
+  and direct the user to the desktop app. Building a second runtime ownership
+  subsystem solely for this integration would exceed this feature's scope. HTTP
+  parity is required and tested on the desktop sidecar, which owns the same
+  admission gate as Electron IPC. Standalone refusal is a separate acceptance
+  test; it is not reported as successful standalone mutation support.
+- A staged, pinned UAP executable is a required desktop dependency in development
+  and packaged builds. Missing or corrupt engine resources produce an actionable
+  error. An empty, valid environment must preserve existing team launch behavior;
+  engine failure cannot be treated as proof that no pending mutation exists.
+- Admission lives once per stable environment, across immutable captures. An
+  observed pending operation can widen the held resource set atomically, and a
+  new capture of the same environment can review recovery without conflicting
+  with its own earlier fence. Tests cover both transitions.
+- Every unresolved partial result, and failed or cancelled work with recorded
+  mutations, has a visible recovery action even when the engine's next-action
+  list is empty. Local work selects the exact local restoration request; native
+  plugin recovery is never substituted for it.
+- Target availability and action support are separate checks. Source and catalog
+  install controls require both, with the native target's reason shown nearby.
+  Transitive dependencies remain visible but cannot be updated or removed as
+  independently declared roots. No dependency graph editor is introduced.
+- Local restore points survive restart in the engine ledger. The UI explains
+  retention of at least 30 days and shows up to the latest 100 restore points.
+  Restoration always revalidates ownership and current files in a fresh plan.
+
+The focused admission/application suite currently has 22 passing tests. Full CI,
+actual Electron UX, local authoring integration, and signed package qualification
+remain required; this revision does not change the project/worktree dependency.
