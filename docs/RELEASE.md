@@ -2276,18 +2276,18 @@ DevTools Protocol (CDP). Otherwise the standard launch above applies.
 
 - Complete the download, digest, bundle version, signature, and notarization
   checks above first.
-- Confirm the debugging port is free before launch. This command must print
-  nothing:
-
-  ```bash
-  lsof -nP -iTCP:9222 -sTCP:LISTEN
-  ```
-
 - Quit the app fully (Cmd+Q). `open` ignores `--args` for an app that is already
   running, so confirm that this command prints nothing:
 
   ```bash
   pgrep -fl "Agent Teams AI"
+  ```
+
+- Confirm the debugging port is free before launch. This command must print
+  nothing:
+
+  ```bash
+  lsof -nP -iTCP:9222 -sTCP:LISTEN
   ```
 
 - Launch the installed app with the remote debugging port and no other override:
