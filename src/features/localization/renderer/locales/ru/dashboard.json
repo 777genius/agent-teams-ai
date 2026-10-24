@@ -156,6 +156,8 @@
       "openCodeOverrideUnknownVersion": "неизвестна",
       "openCodeRequired": "Установите OpenCode, чтобы подключить и использовать этих провайдеров в Agent Teams.",
       "openCodeTitle": "Подготовка OpenCode",
+      "openCodeV2LaunchDetail": "Запуск команд на OpenCode V2 пока не поддерживается. Бесплатные модели OpenCode Zen, например big-pickle, отклоняют запросы V2, поэтому для V2 нужен платный провайдер, а запуск команд на V2 ждёт обновления runtime Agent Teams. Для бесплатных моделей и запуска команд используйте OpenCode V1.",
+      "openCodeV2LaunchTitle": "Выбран OpenCode V2 {{version}}",
       "openKiroGuide": "Открыть официальное руководство",
       "planConnected": "План подключён",
       "planCredentialUnverified": "Данные плана не проверены",

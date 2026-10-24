@@ -118,23 +118,143 @@ function selectedWindowsV2PackageBinary(binaryPath: string): string | null {
       path.basename(path.dirname(selected)).toLowerCase() !== 'bin'
     )
       return null;
-    const manifest = path.join(path.dirname(path.dirname(selected)), 'package.json');
-    const info = fs.lstatSync(manifest);
+    const metadata = readOpenCodePackageManifest(
+      path.join(path.dirname(path.dirname(selected)), 'package.json')
+    );
+    if (
+      !metadata ||
+      !WINDOWS_V2_CLI_PACKAGE_NAMES.has(metadata.name) ||
+      !OPENCODE_V2_PACKAGE_VERSION.test(metadata.version)
+    )
+      return null;
+    return selected;
+  } catch {
+    return null;
+  }
+}
+
+const OPENCODE_V2_PACKAGE_VERSION = /^2\.\d+\.\d+$/;
+const OPENCODE_V2_NPM_WRAPPER_PACKAGE = '@opencode/cli';
+
+function readOpenCodePackageManifest(
+  manifestPath: string
+): { name: string; version: string } | null {
+  try {
+    const info = fs.lstatSync(manifestPath);
     if (!info.isFile() || info.isSymbolicLink() || info.size <= 0 || info.size > 64 * 1024)
       return null;
-    const metadata: unknown = JSON.parse(fs.readFileSync(manifest, 'utf8'));
+    const metadata: unknown = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
     if (
       !metadata ||
       typeof metadata !== 'object' ||
       !('name' in metadata) ||
       typeof metadata.name !== 'string' ||
-      !WINDOWS_V2_CLI_PACKAGE_NAMES.has(metadata.name) ||
       !('version' in metadata) ||
-      typeof metadata.version !== 'string' ||
-      !/^2\.\d+\.\d+$/.test(metadata.version)
+      typeof metadata.version !== 'string'
     )
       return null;
-    return selected;
+    return { name: metadata.name, version: metadata.version };
+  } catch {
+    return null;
+  }
+}
+
+function hasSameFileContent(left: string, right: string): boolean {
+  const chunkSize = 1024 * 1024;
+  const leftBuffer = Buffer.alloc(chunkSize);
+  const rightBuffer = Buffer.alloc(chunkSize);
+  const leftFd = fs.openSync(left, 'r');
+  try {
+    const rightFd = fs.openSync(right, 'r');
+    try {
+      for (;;) {
+        const leftRead = fs.readSync(leftFd, leftBuffer, 0, chunkSize, null);
+        const rightRead = fs.readSync(rightFd, rightBuffer, 0, chunkSize, null);
+        if (leftRead !== rightRead) return false;
+        if (leftRead === 0) return true;
+        if (!leftBuffer.subarray(0, leftRead).equals(rightBuffer.subarray(0, rightRead)))
+          return false;
+      }
+    } finally {
+      fs.closeSync(rightFd);
+    }
+  } finally {
+    fs.closeSync(leftFd);
+  }
+}
+
+const npmWrapperCopyMatches = new Map<string, string | null>();
+
+/**
+ * `npm i -g @opencode/cli` links `opencode` to the wrapper package's `bin/opencode.exe`,
+ * which its postinstall hard-links (or copies) from one platform package. The runtime
+ * admits only the platform package delivery, so this returns that package's binary:
+ * the same file, or a byte-identical copy. Any other path returns null.
+ */
+export function resolveOpenCodeV2NpmWrapperBinary(
+  binaryPath: string,
+  platform: NodeJS.Platform = process.platform
+): string | null {
+  if (!path.isAbsolute(binaryPath)) return null;
+  try {
+    const selected = fs.realpathSync(binaryPath);
+    const binDirectory = path.dirname(selected);
+    if (path.basename(binDirectory) !== 'bin') return null;
+    const wrapperRoot = path.dirname(binDirectory);
+    const wrapper = readOpenCodePackageManifest(path.join(wrapperRoot, 'package.json'));
+    if (
+      wrapper?.name !== OPENCODE_V2_NPM_WRAPPER_PACKAGE ||
+      !OPENCODE_V2_PACKAGE_VERSION.test(wrapper.version)
+    )
+      return null;
+    const selectedStat = fs.statSync(selected);
+    if (!selectedStat.isFile()) return null;
+
+    const packagePrefix = `cli-${platform === 'win32' ? 'windows' : platform}-`;
+    const executableName = platform === 'win32' ? 'opencode.exe' : 'opencode';
+    const scopeDirectories = [path.join(wrapperRoot, 'node_modules', '@opencode')];
+    // npm hoists optional dependencies next to the wrapper when it can.
+    if (path.basename(path.dirname(wrapperRoot)) === '@opencode') {
+      scopeDirectories.push(path.dirname(wrapperRoot));
+    }
+    const sameSizeCandidates: string[] = [];
+    for (const scopeDirectory of scopeDirectories) {
+      let entries: string[];
+      try {
+        entries = fs.readdirSync(scopeDirectory);
+      } catch {
+        continue;
+      }
+      for (const entry of entries
+        .filter((name) => name.startsWith(packagePrefix))
+        .sort((left, right) => left.localeCompare(right))) {
+        const packageRoot = path.join(scopeDirectory, entry);
+        const manifest = readOpenCodePackageManifest(path.join(packageRoot, 'package.json'));
+        if (manifest?.name !== `@opencode/${entry}` || manifest.version !== wrapper.version) {
+          continue;
+        }
+        const candidate = path.join(packageRoot, 'bin', executableName);
+        let candidateStat: fs.Stats;
+        try {
+          candidateStat = fs.statSync(candidate);
+        } catch {
+          continue;
+        }
+        if (!candidateStat.isFile()) continue;
+        if (candidateStat.dev === selectedStat.dev && candidateStat.ino === selectedStat.ino) {
+          return candidate;
+        }
+        if (candidateStat.size === selectedStat.size) sameSizeCandidates.push(candidate);
+      }
+    }
+
+    // A copied binary (no hard link) is matched by content once per file version.
+    const cacheKey = `${selected}\0${selectedStat.size}\0${selectedStat.mtimeMs}`;
+    if (npmWrapperCopyMatches.has(cacheKey)) return npmWrapperCopyMatches.get(cacheKey) ?? null;
+    const copied =
+      sameSizeCandidates.find((candidate) => hasSameFileContent(candidate, selected)) ?? null;
+    npmWrapperCopyMatches.set(cacheKey, copied);
+    return copied;
   } catch {
     return null;
   }
@@ -167,11 +287,21 @@ export function applyOpenCodeRuntimeBinaryEnv(
 ): void {
   const existingBinaryPath = env[OPENCODE_RUNTIME_BINARY_PATH_ENV]?.trim();
   const existingLegacyBinaryPath = env[OPENCODE_LEGACY_BINARY_PATH_ENV]?.trim();
-  const nextBinaryPath =
+  const configuredBinaryPath =
     existingBinaryPath || existingLegacyBinaryPath || discoveredBinaryPath?.trim() || '';
-  if (!nextBinaryPath) {
+  if (!configuredBinaryPath) {
     return;
   }
+  const npmWrapperTarget = resolveOpenCodeV2NpmWrapperBinary(
+    configuredBinaryPath,
+    wrapperOptions.platform ?? process.platform
+  );
+  if (npmWrapperTarget) {
+    // The runtime rejects the npm wrapper copy, so both variables name the platform binary.
+    env[OPENCODE_RUNTIME_BINARY_PATH_ENV] = npmWrapperTarget;
+    env[OPENCODE_LEGACY_BINARY_PATH_ENV] = npmWrapperTarget;
+  }
+  const nextBinaryPath = npmWrapperTarget ?? configuredBinaryPath;
 
   if ((wrapperOptions.platform ?? process.platform) === 'win32') {
     // Only an already-selected wrapper may resolve through its explicit target.

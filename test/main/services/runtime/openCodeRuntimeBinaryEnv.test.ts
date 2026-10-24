@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   applyOpenCodeRuntimeBinaryEnv,
   resolveOpenCodeConsoleWrapperPath,
+  resolveOpenCodeV2NpmWrapperBinary,
 } from '../../../../src/main/services/runtime/openCodeRuntimeBinaryEnv';
 
 const tempDirs: string[] = [];
@@ -354,5 +355,72 @@ describe('applyOpenCodeRuntimeBinaryEnv console wrapper', () => {
     expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(wrapperPath);
     expect(env.OPENCODE_CONSOLE_WRAPPER_TARGET).toBeUndefined();
     expect(env.PATH?.split(path.delimiter)).toEqual([path.dirname(wrapperPath)]);
+  });
+});
+
+describe('resolveOpenCodeV2NpmWrapperBinary', () => {
+  function npmInstall(options: { hoisted: boolean; link: boolean; version?: string }): {
+    wrapperBinary: string;
+    platformBinary: string;
+  } {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'at-opencode-npm-'));
+    tempDirs.push(root);
+    const version = options.version ?? '2.0.32';
+    const scope = path.join(root, 'node_modules', '@opencode');
+    const wrapperRoot = path.join(scope, 'cli');
+    fs.mkdirSync(path.join(wrapperRoot, 'bin'), { recursive: true });
+    fs.writeFileSync(
+      path.join(wrapperRoot, 'package.json'),
+      JSON.stringify({ name: '@opencode/cli', version })
+    );
+    const platformScope = options.hoisted
+      ? scope
+      : path.join(wrapperRoot, 'node_modules', '@opencode');
+    const writePlatformPackage = (name: string, content: string): string => {
+      const packageRoot = path.join(platformScope, name);
+      fs.mkdirSync(path.join(packageRoot, 'bin'), { recursive: true });
+      fs.writeFileSync(
+        path.join(packageRoot, 'package.json'),
+        JSON.stringify({ name: `@opencode/${name}`, version: '2.0.32' })
+      );
+      const binary = path.join(packageRoot, 'bin', 'opencode');
+      fs.writeFileSync(binary, content);
+      return binary;
+    };
+    // Same size, different bytes: only an exact copy may be selected.
+    writePlatformPackage('cli-linux-x64-baseline', 'TEST-native-B');
+    const platformBinary = writePlatformPackage('cli-linux-x64', 'TEST-native-A');
+    const wrapperBinary = path.join(wrapperRoot, 'bin', 'opencode.exe');
+    if (options.link) fs.linkSync(platformBinary, wrapperBinary);
+    else fs.copyFileSync(platformBinary, wrapperBinary);
+    return { wrapperBinary, platformBinary: fs.realpathSync(platformBinary) };
+  }
+
+  it.each([
+    { hoisted: false, link: true },
+    { hoisted: true, link: true },
+    { hoisted: false, link: false },
+    { hoisted: true, link: false },
+  ])('selects the platform package binary behind the npm wrapper: %j', (layout) => {
+    const { wrapperBinary, platformBinary } = npmInstall(layout);
+
+    expect(resolveOpenCodeV2NpmWrapperBinary(wrapperBinary, 'linux')).toBe(platformBinary);
+
+    const env: NodeJS.ProcessEnv = { CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: wrapperBinary, PATH: '' };
+    applyOpenCodeRuntimeBinaryEnv(env, null, { platform: 'linux' });
+    expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(platformBinary);
+    expect(env.OPENCODE_BIN_PATH).toBe(platformBinary);
+    expect(env.PATH?.split(path.delimiter)[0]).toBe(path.dirname(platformBinary));
+  });
+
+  it('keeps the configured path when no platform package matches the wrapper', () => {
+    const { wrapperBinary } = npmInstall({ hoisted: false, link: false, version: '2.0.0' });
+
+    expect(resolveOpenCodeV2NpmWrapperBinary(wrapperBinary, 'linux')).toBeNull();
+    expect(resolveOpenCodeV2NpmWrapperBinary(wrapperBinary, 'darwin')).toBeNull();
+
+    const env: NodeJS.ProcessEnv = { CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: wrapperBinary, PATH: '' };
+    applyOpenCodeRuntimeBinaryEnv(env, null, { platform: 'linux' });
+    expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(wrapperBinary);
   });
 });
