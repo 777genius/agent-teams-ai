@@ -9,9 +9,9 @@ import {
   isAgentActionMode,
 } from '../../../src/main/services/team/actionModeInstructions';
 
-// Exact existing Desktop outputs captured before extracting its helper from HEAD.
+// Exact Desktop outputs with the accepted fresh-main bounded ASK communication acknowledgement.
 const frozenHashes = {
-  protocol: '16df937b24eb189f620d8478964e8752e626e01e83702da0b5764de7bdb82418',
+  protocol: '59f7bce2540f4f3fe5ff961d1c4611896a332a6d8a14374c047f1d21d8b6f2bd',
   do: '68e3046525da572ead202081fc01dcfef53fdbb2337ea1417bf138235b3df99a',
   ask: '16a3071867cc04ccbc13dede9af221cecb5404c057039bc5566e45c976e4b9c6',
   delegate: '0c97bdac275a1c6789b189bcc3c7722c7d0d918bc2fac7a652157f16b04a30a8',
@@ -21,6 +21,9 @@ const hash = (text: string) => createHash('sha256').update(text).digest('hex');
 describe('portable action mode helper extraction', () => {
   it('keeps existing lead protocol and each per-mode Desktop block byte-identical', () => {
     expect(hash(buildActionModeProtocol())).toBe(frozenHashes.protocol);
+    expect(buildActionModeProtocol()).toContain(
+      'The optional group_chat_react communication acknowledgement is allowed; it does not grant file, task, or process writes.'
+    );
     for (const mode of ['do', 'ask', 'delegate'] as const)
       expect(hash(buildActionModeAgentBlock(mode))).toBe(frozenHashes[mode]);
     expect(buildActionModeAgentBlock(undefined)).toBe('');

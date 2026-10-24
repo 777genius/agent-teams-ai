@@ -67,15 +67,15 @@ describe('taskReferenceUtils', () => {
     expect(linkifyTaskIdsInMarkdown('[#1 #1](task://1) #1', [first, second, third])).toBe(
       '[#1 #1](task://canonical-a?team=team-a&display=1) [#1](task://canonical-c?team=team-c&display=1)'
     );
-    expect(
-      linkifyTaskIdsInMarkdown(`[${encoded}](https://example.test) #1`, [first, second])
-    ).toBe(`[${encoded}](https://example.test) [#1](task://canonical-b?team=team-b&display=1)`);
+    expect(linkifyTaskIdsInMarkdown(`[${encoded}](https://example.test) #1`, [first, second])).toBe(
+      `[${encoded}](https://example.test) [#1](task://canonical-b?team=team-b&display=1)`
+    );
     expect(linkifyTaskIdsInMarkdown('[\\#1](https://example.test) #1', [first])).toBe(
       '[\\#1](https://example.test) [#1](task://canonical-a?team=team-a&display=1)'
     );
-    expect(
-      linkifyTaskIdsInMarkdown('```\n[#1](task://1)\n```\n[#1](task://1)', [first])
-    ).toBe('```\n[#1](task://1)\n```\n[#1](task://canonical-a?team=team-a&display=1)');
+    expect(linkifyTaskIdsInMarkdown('```\n[#1](task://1)\n```\n[#1](task://1)', [first])).toBe(
+      '```\n[#1](task://1)\n```\n[#1](task://canonical-a?team=team-a&display=1)'
+    );
     expect(
       linkifyTaskIdsInMarkdown('[Task #1](task://canonical-a?team=team-a&display=1)', [first])
     ).toBe('[Task #1](task://canonical-a?team=team-a&display=1)');
@@ -204,12 +204,11 @@ describe('taskReferenceUtils', () => {
     ])('preserves the explicit owner %s without local scrolling', (teamName) => {
       const local = vi.fn(),
         global = vi.fn();
-      // Match the existing Host href codec's extra owner encoding.
       const parsed = parseTaskLinkHref(
         buildTaskLinkHref({
           taskId: 'same-id',
           displayId: '99',
-          teamName: encodeURIComponent(teamName),
+          teamName,
         })
       )!;
       navigateTaskReference(parsed, selection, local, global);

@@ -170,7 +170,7 @@ describe('Create exact model during passive discovery', () => {
       change === 'model'
         ? 'claude-opus-4-7[1m]'
         : change === 'limit'
-          ? 'opus'
+          ? 'claude-opus-4-6'
           : 'claude-opus-4-6[1m]'
     );
   });

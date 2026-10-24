@@ -39,10 +39,7 @@ const features: DesktopBackendFeature[] = [];
 let native: Pick<SelectedHostProfile, 'nodeExecutable' | 'nodeVersion' | 'nodeSha256'>;
 let serverUrl: string;
 beforeAll(async () => {
-  const nodeExecutable = await realpath(
-    process.env.AGENT_BACKEND_TEST_NODE ??
-      join(process.cwd(), 'resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node')
-  );
+  const nodeExecutable = await realpath(process.env.AGENT_BACKEND_TEST_NODE ?? process.execPath);
   native = {
     nodeExecutable,
     nodeVersion: execFileSync(nodeExecutable, ['--version'], { env: {}, encoding: 'utf8' }).trim(),
@@ -184,7 +181,9 @@ it('leaves unconfigured mode empty and initializes configured handles without st
         label: 'Team A',
         members: [{ memberId: 'member-1', label: 'Worker' }],
         ownerResourceRef: expect.stringMatching(/^[a-f0-9]{64}$/),
-        teamResourceRef: expect.stringMatching(/^[a-f0-9]{8}-[a-f0-9]{4}-5[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/),
+        teamResourceRef: expect.stringMatching(
+          /^[a-f0-9]{8}-[a-f0-9]{4}-5[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/
+        ),
       },
     ],
   });
@@ -308,13 +307,21 @@ it('routes paired facade sends through the original captured owner with both imm
   });
   expect(captured.payload).toEqual({
     request: paired.payload,
-    targetBinding: { ...captured.binding, handleId: destination.handleId, scope: destination.scope },
+    targetBinding: {
+      ...captured.binding,
+      handleId: destination.handleId,
+      scope: destination.scope,
+    },
   });
   expect(
     await desktop.facade.invoke({
       ...paired,
       commandId: 'TEST-foreign-pair',
-      payload: { ...paired.payload, messageId: 'TEST-foreign-pair', target: { handleId: 'opaque-B' } },
+      payload: {
+        ...paired.payload,
+        messageId: 'TEST-foreign-pair',
+        target: { handleId: 'opaque-B' },
+      },
     })
   ).toMatchObject({ ok: false });
   expect(
@@ -490,8 +497,16 @@ it('connection discovery ignores renderer context claims and denies navigation/c
   context = null;
   expect(await invoke({})).toEqual({ state: 'hold', bindings: [] });
   expect(vi.mocked(console.warn).mock.calls).toEqual([
-    ['[Feature:AgentBackendConnections]', 'Captured backend discovery held', { phase: 'context-after-initialize', code: 'context-changed' }],
-    ['[Feature:AgentBackendConnections]', 'Captured backend discovery held', { phase: 'capture-context', code: 'missing-context' }],
+    [
+      '[Feature:AgentBackendConnections]',
+      'Captured backend discovery held',
+      { phase: 'context-after-initialize', code: 'context-changed' },
+    ],
+    [
+      '[Feature:AgentBackendConnections]',
+      'Captured backend discovery held',
+      { phase: 'capture-context', code: 'missing-context' },
+    ],
   ]);
   vi.mocked(console.warn).mockClear();
 });
@@ -523,7 +538,11 @@ it('HTTP discovery uses the same captured context and rejects client context ove
     // This finite warning may already be deduplicated by the preceding IPC case.
     expect(vi.mocked(console.warn).mock.calls.length).toBeLessThanOrEqual(1);
     for (const call of vi.mocked(console.warn).mock.calls)
-      expect(call).toEqual(['[Feature:AgentBackendConnections]', 'Captured backend discovery held', { phase: 'capture-context', code: 'missing-context' }]);
+      expect(call).toEqual([
+        '[Feature:AgentBackendConnections]',
+        'Captured backend discovery held',
+        { phase: 'capture-context', code: 'missing-context' },
+      ]);
     vi.mocked(console.warn).mockClear();
   } finally {
     await app.close();

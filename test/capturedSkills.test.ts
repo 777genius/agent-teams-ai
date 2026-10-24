@@ -6,11 +6,13 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import {
@@ -62,7 +64,7 @@ function fixture(
     afterRoute?(method: string, result: unknown): void;
   } = {}
 ) {
-  const root = mkdtempSync('/private/tmp/TEST-m15-skills-');
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-m15-skills-')));
   roots.push(root);
   const home = join(root, 'home'),
     cwd = join(root, 'project'),
@@ -854,7 +856,8 @@ test('captured Skills IPC rejects unavailable context without invoking ambient l
   );
   assert.deepEqual(ipc.calls, []);
   expect(console.error).toHaveBeenCalledExactlyOnceWith(
-    '[IPC:skills]', 'skillsPreviewImport failed',
+    '[IPC:skills]',
+    'skillsPreviewImport failed',
     expect.objectContaining({ message: 'TEST original captured context unavailable' })
   );
   vi.mocked(console.error).mockClear();
@@ -885,7 +888,8 @@ test('captured Skills collection fences awaited response and scopes existing wat
   assert.equal(result.success, false);
   assert.deepEqual(ipc.calls, [['legacy-stop', 'TEST-original-watch-id']]);
   expect(console.error).toHaveBeenCalledExactlyOnceWith(
-    '[IPC:skills]', 'skillsList failed',
+    '[IPC:skills]',
+    'skillsList failed',
     expect.objectContaining({ message: 'Backend routing: forbidden' })
   );
   vi.mocked(console.error).mockClear();

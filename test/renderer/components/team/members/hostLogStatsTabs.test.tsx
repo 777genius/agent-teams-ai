@@ -4,6 +4,8 @@ import { createRoot } from 'react-dom/client';
 import { MemberLogsTab } from '@renderer/components/team/members/MemberLogsTab';
 import { MemberStatsTab } from '@renderer/components/team/members/MemberStatsTab';
 import { expect, it, vi } from 'vitest';
+
+import type { AppState } from '@renderer/store/types';
 const mocks = vi.hoisted(() => ({
   stats: vi.fn(),
   logs: vi.fn(),
@@ -26,9 +28,23 @@ vi.mock('@features/token-usage/renderer', () => ({
   formatKiroCredits: String,
 }));
 vi.mock('@renderer/contexts/useTabUIContext', () => ({ useTabIdOptional: () => null }));
-vi.mock('@renderer/store', () => ({
-  useStore: (selector: (state: unknown) => unknown) => selector({ activeTabId: null }),
-}));
+vi.mock('@renderer/store', async () => {
+  const { create } = await import('zustand');
+  return {
+    useStore: create<
+      Pick<
+        AppState,
+        'activeTabId' | 'activeContextId' | 'connectionMode' | 'connectionState' | 'connectedHost'
+      >
+    >(() => ({
+      activeTabId: null,
+      activeContextId: 'local',
+      connectionMode: 'local',
+      connectionState: 'disconnected',
+      connectedHost: null,
+    })),
+  };
+});
 vi.mock('@renderer/components/team/members/MemberExecutionLog', () => ({
   MemberExecutionLog: () => null,
 }));

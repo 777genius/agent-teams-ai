@@ -32,9 +32,7 @@ async function fixture() {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-configured-team-')));
   roots.push(root);
   for (const name of ['home', 'store', 'workspace', 'tmp']) await mkdir(join(root, name));
-  const node = await realpath(
-    join(process.cwd(), 'resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node')
-  );
+  const node = await realpath(process.env.AGENT_BACKEND_TEST_NODE ?? process.execPath);
   const host = await realpath(join(process.cwd(), 'packages/legacy-agent-host/dist/cli.js'));
   const owner = {
     ownerId: 'TEST-registry-owner',

@@ -77,7 +77,7 @@ function fixture() {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-legacy-stopped-source-')));
   roots.push(root);
   paths.root = root;
-  const teamName = 'TEST-source';
+  const teamName = 'test-source';
   const selectedRoots = [
     { category: 'team' as const, path: join(root, 'claude/teams', teamName) },
     { category: 'tasks' as const, path: join(root, 'claude/tasks', teamName) },

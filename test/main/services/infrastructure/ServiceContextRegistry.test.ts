@@ -11,6 +11,7 @@ function context(id: string) {
     type: id === 'local' ? 'local' : 'ssh',
     startFileWatcher: vi.fn(),
     stopFileWatcher: vi.fn(),
+    retireDetailReads: vi.fn(),
     dispose: vi.fn(),
   } as unknown as ServiceContext;
 }

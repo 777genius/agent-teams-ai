@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
@@ -90,10 +91,8 @@ it('actual IPC facade → captured Desktop owner → standalone Host → separat
   const sourceHashes = Object.fromEntries(
     await Promise.all(sourcePaths.map(async (path) => [path, await digest(join(repo, path))]))
   );
-  const node = await realpath(
-    join(repo, 'resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node')
-  );
-  expect(await realpath(process.execPath)).toBe(node);
+  const node = await realpath(process.env.AGENT_BACKEND_TEST_NODE ?? process.execPath);
+  expect(execFileSync(node, ['--version'], { env: {}, encoding: 'utf8' }).trim()).toBe('v24.21.0');
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-oauth-host-desktop-management-')));
   console.log(`TEST management E2E receipt: ${join(root, 'desktop-management-receipt.json')}`);
   for (const name of [
@@ -288,7 +287,7 @@ it('actual IPC facade → captured Desktop owner → standalone Host → separat
     registerCliInstallerHandlers(ipc);
     return feature;
   };
-  const invoke = <T,>(channel: string, payload: unknown) =>
+  const invoke = <T>(channel: string, payload: unknown) =>
     handlers.get(channel)!({}, payload) as Promise<T>;
   let passed = false;
   let nativePids: number[] = [];
@@ -302,7 +301,7 @@ it('actual IPC facade → captured Desktop owner → standalone Host → separat
   };
   try {
     connect();
-    const invokeStatus = <T,>(channel: string, ...payload: unknown[]) =>
+    const invokeStatus = <T>(channel: string, ...payload: unknown[]) =>
       handlers.get(channel)!(sender, ...payload) as Promise<IpcResult<T>>;
     const status = await invokeStatus<CliInstallationStatus>(CLI_INSTALLER_GET_STATUS);
     expect(status.success).toBe(true);
@@ -328,8 +327,14 @@ it('actual IPC facade → captured Desktop owner → standalone Host → separat
     expect(console.warn).toHaveBeenCalledExactlyOnceWith(
       '[IPC:AgentBackend]',
       'Captured backend sender refused',
-      { windowAvailable: true, mainSender: false, frameAvailable: false,
-        mainFrame: false, frameUrl: false, contentsUrl: true }
+      {
+        windowAvailable: true,
+        mainSender: false,
+        frameAvailable: false,
+        mainFrame: false,
+        frameUrl: false,
+        contentsUrl: true,
+      }
     );
     vi.mocked(console.warn).mockClear();
     const directory = await invoke<Dto.RuntimeProviderManagementDirectoryResponse>(

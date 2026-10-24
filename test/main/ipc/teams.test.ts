@@ -1045,9 +1045,13 @@ describe('ipc teams handlers', () => {
             cwd: '/TEST/not-touched',
             members: [],
           })
-        ).toEqual({ success: false, error: channel === TEAM_CREATE
-          ? 'Captured Host creation unavailable. Refresh teams or retry the unchanged form.'
-          : 'Captured Host configuration unavailable. Refresh teams or retry the unchanged form.' });
+        ).toEqual({
+          success: false,
+          error:
+            channel === TEAM_CREATE
+              ? 'Captured Host creation unavailable. Refresh teams or retry the unchanged form.'
+              : 'Captured Host configuration unavailable. Refresh teams or retry the unchanged form.',
+        });
       }
       expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
       expect(service.createTeamConfig).not.toHaveBeenCalled();
@@ -1826,7 +1830,7 @@ describe('ipc teams handlers', () => {
           id: 'video-1',
           filename: 'clip.mp4',
           mimeType: 'video/mp4',
-          size: 8 * 1024 * 1024 + 1,
+          size: 5, // Decodes to four bytes, while the declared size remains within the video cap.
           data: Buffer.from('test').toString('base64'),
         },
       ],
