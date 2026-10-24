@@ -210,7 +210,9 @@ describe('RuntimeProviderOnboardingView', () => {
   it('asks before spending quota to verify an already connected plan', async () => {
     const beginVerification = vi.fn();
     const beginConnect = vi.fn();
-    const plan = RUNTIME_PROVIDER_ONBOARDING_PLANS.find((candidate) => candidate.id === 'supergrok')!;
+    const plan = RUNTIME_PROVIDER_ONBOARDING_PLANS.find(
+      (candidate) => candidate.id === 'supergrok'
+    )!;
     await act(async () => {
       root.render(
         React.createElement(RuntimeProviderOnboardingView, {
@@ -317,6 +319,39 @@ describe('RuntimeProviderOnboardingView', () => {
     );
     act(() => keyButton?.click());
     expect(openCredentialPage).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers both Kimi console domains as alternatives', async () => {
+    const openCredentialPage = vi.fn(async () => undefined);
+    const plan = RUNTIME_PROVIDER_ONBOARDING_PLANS.find(
+      (entry) => entry.id === 'kimi-code-membership'
+    )!;
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderOnboardingView, {
+          state: onboardingState({
+            mode: 'provider',
+            selectedPlanIds: [plan.id],
+            activePlan: plan,
+            stage: 'connect',
+            management: managementState({ setupFormLoading: true }),
+          }),
+          actions: onboardingActions({ openCredentialPage }),
+          onAdvancedSettings: vi.fn(),
+          onDone: vi.fn(),
+        })
+      );
+    });
+
+    const keyButtons = [...host.querySelectorAll('button')].filter((button) =>
+      button.textContent?.includes('Open subscription key page')
+    );
+    expect(keyButtons.map((button) => button.textContent)).toEqual([
+      'Open subscription key page (kimi.com)',
+      'Open subscription key page (kimi.ai)',
+    ]);
+    act(() => keyButtons[1]?.click());
+    expect(openCredentialPage).toHaveBeenCalledWith('https://www.kimi.ai/code/console');
   });
 
   it('shows provider setup loading immediately while the directory is still resolving', async () => {

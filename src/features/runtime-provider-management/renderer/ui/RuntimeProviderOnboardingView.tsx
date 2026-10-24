@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 
 import {
+  getRuntimeProviderOnboardingCredentialUrls,
   isRuntimeProviderOnboardingPlanRoutable,
   rankRecommendedRuntimeProviderModels,
 } from '../../core/domain';
@@ -57,6 +58,37 @@ const STEP_LABELS: Readonly<Record<Exclude<RuntimeProviderOnboardingStage, 'erro
   verifying: 'Verify',
   'choose-model': 'Choose model',
   ready: 'Ready',
+};
+
+function credentialPageHost(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
+/** One button per key page; with several, each names its domain so the user can pick. */
+const CredentialPageButtons = ({
+  urls,
+  onOpen,
+}: {
+  urls: readonly string[];
+  onOpen: (url: string) => void;
+}): JSX.Element | null => {
+  if (urls.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {urls.map((url) => (
+        <Button key={url} type="button" variant="outline" size="sm" onClick={() => onOpen(url)}>
+          <ExternalLink className="mr-1.5 size-3.5" />
+          {urls.length > 1
+            ? `Open subscription key page (${credentialPageHost(url)})`
+            : 'Open subscription key page'}
+        </Button>
+      ))}
+    </div>
+  );
 };
 
 function stageOrder(stage: RuntimeProviderOnboardingStage): number {
@@ -469,18 +501,11 @@ const ActivePlanFlow = ({
               </div>
             </div>
           ) : null}
-          {!alreadyConnected &&
-          plan.credentialUrl &&
-          !plan.providerId.startsWith('xiaomi-token-plan-') ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => void actions.openCredentialPage()}
-            >
-              <ExternalLink className="mr-1.5 size-3.5" />
-              Open subscription key page
-            </Button>
+          {!alreadyConnected && !plan.providerId.startsWith('xiaomi-token-plan-') ? (
+            <CredentialPageButtons
+              urls={getRuntimeProviderOnboardingCredentialUrls(plan)}
+              onOpen={(url) => void actions.openCredentialPage(url)}
+            />
           ) : null}
           {!alreadyConnected || state.management.activeFormProviderId === plan.providerId ? (
             <ProviderSetupFormPanel

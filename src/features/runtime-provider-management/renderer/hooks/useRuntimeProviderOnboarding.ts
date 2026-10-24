@@ -11,6 +11,7 @@ import {
   completeRuntimeProviderOnboardingPlan,
   createRuntimeProviderOnboardingProgress,
   findRuntimeProviderOnboardingPlanByProviderId,
+  getRuntimeProviderOnboardingCredentialUrls,
   getRuntimeProviderOnboardingPlan,
   isRuntimeProviderOnboardingPlanRoutable,
   rankRecommendedRuntimeProviderModels,
@@ -77,7 +78,8 @@ export interface RuntimeProviderOnboardingActions {
   submitConnect(): Promise<boolean>;
   verifyModel(modelId: string): Promise<void>;
   acceptVerifiedModel(): void;
-  openCredentialPage(): Promise<void>;
+  /** Opens the given key page of the active plan, or its primary page. */
+  openCredentialPage(url?: string): Promise<void>;
   clearCompletedWizard(): void;
 }
 
@@ -688,19 +690,28 @@ export function useRuntimeProviderOnboarding({
     );
   }, [activePlan, managementActions, mode, recordOnboardingStep, verifiedModelId]);
 
-  const openCredentialPage = useCallback(async (): Promise<void> => {
-    const startedAtMs = Date.now();
-    if (!activePlan?.credentialUrl) {
-      return;
-    }
-    try {
-      await api.openExternal(activePlan.credentialUrl);
-      recordOnboardingStep('credential_open', true, startedAtMs, null, activePlan.providerId);
-    } catch (error) {
-      recordOnboardingStep('credential_open', false, startedAtMs, error, activePlan.providerId);
-      throw error;
-    }
-  }, [activePlan, recordOnboardingStep]);
+  const openCredentialPage = useCallback(
+    async (url?: string): Promise<void> => {
+      const startedAtMs = Date.now();
+      const credentialUrls = activePlan
+        ? getRuntimeProviderOnboardingCredentialUrls(activePlan)
+        : [];
+      // Only the plan's own pages may be opened.
+      const credentialUrl =
+        url === undefined ? credentialUrls[0] : credentialUrls.find((item) => item === url);
+      if (!activePlan || !credentialUrl) {
+        return;
+      }
+      try {
+        await api.openExternal(credentialUrl);
+        recordOnboardingStep('credential_open', true, startedAtMs, null, activePlan.providerId);
+      } catch (error) {
+        recordOnboardingStep('credential_open', false, startedAtMs, error, activePlan.providerId);
+        throw error;
+      }
+    },
+    [activePlan, recordOnboardingStep]
+  );
 
   const clearCompletedWizard = useCallback((): void => {
     repositoryRef.current?.clear();

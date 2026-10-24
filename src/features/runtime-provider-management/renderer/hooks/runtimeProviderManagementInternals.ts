@@ -72,6 +72,25 @@ export function resolveSetupAuthOption(
   );
 }
 
+/**
+ * Selector fields for a connect request. A plain key option (no native method index and
+ * no prompts) is the provider's native key method and needs no selector: the runtime picks
+ * it by default, and the OpenCode V2 runtime refuses a key connect that carries one.
+ */
+export function buildSetupAuthSelector(option: RuntimeProviderSetupAuthOptionDto | null): {
+  authMethodIndex?: number;
+  authOptionId?: string;
+} {
+  if (!option) return {};
+  if (option.method === 'api' && option.methodIndex === null && option.prompts.length === 0) {
+    return {};
+  }
+  return {
+    ...(option.methodIndex !== null ? { authMethodIndex: option.methodIndex } : {}),
+    ...(option.id ? { authOptionId: option.id } : {}),
+  };
+}
+
 export function createOAuthOperationId(): string {
   const randomUuid = globalThis.crypto?.randomUUID?.();
   if (randomUuid) {

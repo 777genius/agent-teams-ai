@@ -57,6 +57,8 @@ export interface RuntimeProviderOnboardingPlan {
   readonly description: string;
   readonly credentialKind: 'oauth' | 'subscription-key';
   readonly credentialUrl: string | null;
+  /** Equivalent pages on other domains, offered next to credentialUrl. */
+  readonly alternateCredentialUrls?: readonly string[];
   readonly preferredModelFragments: readonly string[];
   readonly requireOAuthCredentialHint: boolean;
   readonly connectionStrategy: RuntimeProviderConnectionStrategy;
@@ -134,6 +136,8 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
     description: 'Use an API key from Kimi Code Console with your membership quota.',
     credentialKind: 'subscription-key',
     credentialUrl: 'https://www.kimi.com/code/console',
+    // Kimi serves the same console on both domains; which one works depends on the account region.
+    alternateCredentialUrls: ['https://www.kimi.ai/code/console'],
     preferredModelFragments: [
       'kimi-for-coding/kimi-for-coding',
       'kimi-for-coding/k3',
@@ -327,6 +331,13 @@ export function findRuntimeProviderOnboardingPlanByProviderId(
       (plan) => plan.providerId.toLowerCase() === normalizedProviderId
     ) ?? null
   );
+}
+
+/** The plan's key pages, primary first. */
+export function getRuntimeProviderOnboardingCredentialUrls(
+  plan: Pick<RuntimeProviderOnboardingPlan, 'credentialUrl' | 'alternateCredentialUrls'>
+): readonly string[] {
+  return plan.credentialUrl ? [plan.credentialUrl, ...(plan.alternateCredentialUrls ?? [])] : [];
 }
 
 export function getRuntimeProviderCredentialUrl(providerId: string): string | null {
