@@ -15,6 +15,41 @@ const record = (value: unknown): Record<string, unknown> =>
     ? (value as Record<string, unknown>)
     : {};
 
+export function assertSafeRuntimeProjection(value: unknown): void {
+  const safe = record(value);
+  assert.ok(
+    Object.keys(safe).every((key) =>
+      [
+        'memberId',
+        'generation',
+        'phase',
+        'sealed',
+        'custody',
+        'nativeReady',
+        'attached',
+        'inputs',
+        'interactions',
+        'diagnostic',
+        'attachmentCapabilities',
+      ].includes(key)
+    ),
+    'runtime RPC exposes only its explicit safe projection'
+  );
+  assert.ok(
+    (safe.inputs as unknown[])
+      .map(record)
+      .every((input) =>
+        Object.keys(input).every((key) => ['inputId', 'phase', 'terminal'].includes(key))
+      )
+  );
+  if (Object.hasOwn(safe, 'attachmentCapabilities')) {
+    const capabilities = record(safe.attachmentCapabilities);
+    assert.deepEqual(Object.keys(capabilities).sort(), ['documents', 'images', 'textFiles']);
+    assert.ok(Object.values(capabilities).every((value) => typeof value === 'boolean'));
+  }
+  assert.equal(JSON.stringify(safe).includes('Bearer '), false);
+}
+
 // Pins the complete compiled/source host, including transitive composition changes.
 // Sorted relative path + NUL + exact file bytes + NUL, recursively for .js/.ts.
 export async function treeHash(root: string, suffix: string): Promise<string> {
@@ -165,32 +200,7 @@ export function startHost(options: {
         assert.ok(['published', 'unsupported', 'held'].includes(String(safe.status)));
         if (safe.status === 'published') assert.match(String(safe.reference), /^cp1-[a-f0-9]{64}$/);
       } else if (method.startsWith('runtime.') && result.ok === true) {
-        const safe = record(result.value);
-        assert.ok(
-          Object.keys(safe).every((key) =>
-            [
-              'memberId',
-              'generation',
-              'phase',
-              'sealed',
-              'custody',
-              'nativeReady',
-              'attached',
-              'inputs',
-              'interactions',
-              'diagnostic',
-            ].includes(key)
-          ),
-          'runtime RPC exposes only its explicit safe projection'
-        );
-        assert.ok(
-          (safe.inputs as unknown[])
-            .map(record)
-            .every((input) =>
-              Object.keys(input).every((key) => ['inputId', 'phase', 'terminal'].includes(key))
-            )
-        );
-        assert.equal(JSON.stringify(safe).includes('Bearer '), false);
+        assertSafeRuntimeProjection(result.value);
       }
       frameFacts.push({ id, method, ok: result.ok !== false });
       return result;

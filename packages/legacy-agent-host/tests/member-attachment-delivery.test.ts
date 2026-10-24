@@ -5,6 +5,7 @@ import { test } from 'node:test';
 
 import { AttachmentArtifactStore } from '../dist/attachments/AttachmentArtifactStore.js';
 import { createMemberAttachmentPort } from '../dist/composition/createMemberAttachmentPort.js';
+import { assertSafeRuntimeProjection } from './fixtures/native-host.ts';
 import { fixture } from './native-member-actions-fixture.ts';
 
 import type { Input } from '@agent-teams/provider-session-contracts';
@@ -314,6 +315,7 @@ test('native attachment capability projection requires the exact attached curren
     textFiles: false,
   });
   assert.equal(JSON.stringify(positive).includes('TEST-private-capability-path'), false);
+  assert.doesNotThrow(() => assertSafeRuntimeProjection(positive));
   for (const overridden of [
     { isCurrent: () => false },
     { binding: { ...entry.binding, generation: 'TEST-historical' } },
@@ -330,4 +332,35 @@ test('native attachment capability projection requires the exact attached curren
   const stopped = projectRuntimeMember(options);
   assert.ok(stopped && typeof stopped === 'object' && !Array.isArray(stopped));
   assert.equal(stopped.attachmentCapabilities, undefined);
+});
+
+test('native Host fixture admits only exact boolean attachment capability projections', () => {
+  const safe = { memberId: 'TEST-member', inputs: [{ inputId: 'TEST-input', phase: 'consumed' }] };
+  assert.doesNotThrow(() => assertSafeRuntimeProjection(safe));
+  for (let mask = 0; mask < 8; mask++) {
+    assert.doesNotThrow(() => assertSafeRuntimeProjection({
+      ...safe,
+      attachmentCapabilities: {
+        images: Boolean(mask & 1),
+        documents: Boolean(mask & 2),
+        textFiles: Boolean(mask & 4),
+      },
+    }));
+  }
+  const valid = { images: true, documents: false, textFiles: false };
+  for (const attachmentCapabilities of [
+    undefined, null, [], {},
+    { images: true, documents: false },
+    { ...valid, privatePath: '/TEST-private' },
+    { ...valid, images: 'true' },
+    { ...valid, documents: 1 },
+    { ...valid, textFiles: null },
+  ]) {
+    assert.throws(() => assertSafeRuntimeProjection({ ...safe, attachmentCapabilities }));
+  }
+  assert.throws(() => assertSafeRuntimeProjection({ ...safe, privatePath: '/TEST-private' }));
+  assert.throws(() => assertSafeRuntimeProjection({
+    ...safe, inputs: [{ inputId: 'TEST-input', operationRef: 'TEST-private' }],
+  }));
+  assert.throws(() => assertSafeRuntimeProjection({ ...safe, diagnostic: 'Bearer TEST-private' }));
 });
