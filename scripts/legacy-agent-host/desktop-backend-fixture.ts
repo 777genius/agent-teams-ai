@@ -321,6 +321,7 @@ export async function prepareDesktopBackendFixture(
       bob.principalId = 'bob-session';
       bob.sessionId = 'TEST-native-group-bob';
       bob.configRevision = 'TEST-native-group-bob-config';
+      bob.accountBinding = 'TEST-LOCALHOST-BOB-ONLY';
       for (const directory of [
         'native-claude-bob',
         'native-claude-bob/home',
