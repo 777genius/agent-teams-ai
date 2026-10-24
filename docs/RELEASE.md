@@ -103,13 +103,13 @@ Cost figures are estimates, not provider invoices.
 
 ### Downloads
 
-| Platform | Version | Download |
-| --- | --- | --- |
-| Windows x64 | 2.17.9 | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI.Setup.2.17.9.exe) |
-| Windows ARM64 | 2.17.9 | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI.Setup.2.17.9-arm64.exe) |
-| Linux x64 | 2.17.9 | [AppImage](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI-2.17.9.AppImage), [DEB](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/agent-teams-ai_2.17.9_amd64.deb), [RPM](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/agent-teams-ai-2.17.9.x86_64.rpm), [Arch Linux](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/agent-teams-ai-2.17.9.pacman) |
-| macOS Apple Silicon | 2.17.9 | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI-2.17.9-arm64.dmg) |
-| macOS Intel | 2.17.9 | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI-2.17.9-x64.dmg) |
+| Platform            | Version | Download                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Windows x64         | 2.17.9  | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI.Setup.2.17.9.exe)                                                                                                                                                                                                                                                                                                                                              |
+| Windows ARM64       | 2.17.9  | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI.Setup.2.17.9-arm64.exe)                                                                                                                                                                                                                                                                                                                                        |
+| Linux x64           | 2.17.9  | [AppImage](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI-2.17.9.AppImage), [DEB](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/agent-teams-ai_2.17.9_amd64.deb), [RPM](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/agent-teams-ai-2.17.9.x86_64.rpm), [Arch Linux](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/agent-teams-ai-2.17.9.pacman) |
+| macOS Apple Silicon | 2.17.9  | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI-2.17.9-arm64.dmg)                                                                                                                                                                                                                                                                                                                                                    |
+| macOS Intel         | 2.17.9  | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI-2.17.9-x64.dmg)                                                                                                                                                                                                                                                                                                                                                      |
 
 ### macOS installation
 
@@ -2283,6 +2283,13 @@ DevTools Protocol (CDP). Otherwise the standard launch above applies.
   lsof -nP -iTCP:9222 -sTCP:LISTEN
   ```
 
+- Quit the app fully (Cmd+Q). `open` ignores `--args` for an app that is already
+  running, so confirm that this command prints nothing:
+
+  ```bash
+  pgrep -fl "Agent Teams AI"
+  ```
+
 - Launch the installed app with the remote debugging port and no other override:
 
   ```bash
@@ -2291,13 +2298,17 @@ DevTools Protocol (CDP). Otherwise the standard launch above applies.
 
 - Do not add `--user-data-dir`, a temporary profile, or any other override. The
   app must use the standard `~/Library/Application Support/agent-teams-ai` profile.
-- Confirm the port listens only on loopback. Chromium binds the debugging port to
-  `127.0.0.1` by default. If the same `lsof` command shows any other address, quit
-  the app and stop the check.
+- Confirm the port listens only on loopback. Electron binds the debugging port to
+  `127.0.0.1` by default. Run `lsof -nP -iTCP:9222 -sTCP:LISTEN` after launch. If it
+  prints nothing, quit the app and stop the check. Do not retry with `open -n` or
+  the executable. If it shows any other address, quit the app and stop the check.
 - Confirm the process runs from `/Applications/Agent Teams AI.app`, then connect
   over CDP to `http://127.0.0.1:9222`.
-- When the check ends, remove the test data it created, such as test teams and
-  messages, then quit the app and relaunch it without the debugging port.
+- Record each test item you create, such as a test team or message. Do not change
+  existing teams or settings.
+- When the check ends, remove the test data it created, quit the app, run the
+  `lsof` command above again and confirm it prints nothing, then relaunch the app
+  without the debugging port.
 - A CDP check does not replace the digest, signature, or notarization checks, and
   it does not authorize publication.
 
@@ -2438,14 +2449,14 @@ The `Claude-Agent-Teams-UI-*` aliases are kept only for backward compatibility w
 
 macOS builds are signed and notarized via the `macos-signing` environment secrets:
 
-| Secret | Description |
-| --- | --- |
-| `CSC_LINK` | Base64-encoded Developer ID Application .p12 certificate |
-| `CSC_KEY_PASSWORD` | Certificate password |
-| `APPLE_TEAM_ID` | Must equal `86399583GS` |
-| `APPLE_API_KEY_BASE64` | Base64-encoded team App Store Connect API .p8 key |
-| `APPLE_API_KEY_ID` | API key ID |
-| `APPLE_API_ISSUER` | Team API issuer UUID |
+| Secret                 | Description                                              |
+| ---------------------- | -------------------------------------------------------- |
+| `CSC_LINK`             | Base64-encoded Developer ID Application .p12 certificate |
+| `CSC_KEY_PASSWORD`     | Certificate password                                     |
+| `APPLE_TEAM_ID`        | Must equal `86399583GS`                                  |
+| `APPLE_API_KEY_BASE64` | Base64-encoded team App Store Connect API .p8 key        |
+| `APPLE_API_KEY_ID`     | API key ID                                               |
+| `APPLE_API_ISSUER`     | Team API issuer UUID                                     |
 
 macOS packaging fails when required credentials are missing or the publisher
 is wrong. It does not produce an unsigned release fallback. Apple ID/password
@@ -2543,7 +2554,6 @@ git push origin :refs/tags/v1.0.0
 # Check workflow status
 gh run list --repo 777genius/agent-teams-ai --workflow release.yml --limit 3
 ```
-
 
 ### Managed GitHub Actions runners
 
