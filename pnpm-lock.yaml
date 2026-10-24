@@ -25,7 +25,7 @@ overrides:
   '@vue/server-renderer': 3.5.43
   '@xmldom/xmldom': 0.8.15
   axios: 1.20.0
-  body-parser: 2.3.0
+  body-parser: 2.4.0
   browserslist: 4.28.8
   brace-expansion@1: 5.0.12
   brace-expansion@2: 5.0.12
@@ -67,7 +67,7 @@ overrides:
   prosemirror-model: 1.25.12
   prosemirror-view: 1.42.6
   proxy-addr: 2.0.8
-  qs: 6.15.2
+  qs: 6.16.1
   rollup: 4.59.0
   serialize-javascript: 7.0.5
   seroval: 1.6.8
@@ -80,8 +80,8 @@ overrides:
   tar: 7.5.22
   form-data: 4.0.6
   tmp: 0.2.7
-  undici@6: 6.29.0
-  undici@7: 7.30.0
+  undici@6: 6.29.1
+  undici@7: 7.30.1
   unhead: 2.1.13
   uuid: ^11.1.1
   vitest>tinypool: 2.2.0
@@ -567,7 +567,7 @@ importers:
         version: 4.7.0(supports-color@10.2.2)(vite@6.4.4(@types/node@24.12.4)(jiti@1.21.7)(sass@1.98.0)(terser@5.46.0)(tsx@4.23.15)(yaml@2.9.0))
       '@vitest/coverage-v8':
         specifier: ^3.2.5
-        version: 3.2.6(supports-color@10.2.2)(vitest@3.2.6(@types/debug@4.1.12)(@types/node@24.12.4)(happy-dom@20.9.0)(jiti@1.21.7)(sass@1.98.0)(supports-color@10.2.2)(terser@5.46.0)(tsx@4.23.15)(yaml@2.9.0))
+        version: 3.2.6(supports-color@10.2.2)(vitest@3.2.6(@types/debug@4.1.12)(@types/node@24.12.4)(happy-dom@21.0.4)(jiti@1.21.7)(sass@1.98.0)(supports-color@10.2.2)(terser@5.46.0)(tsx@4.23.15)(yaml@2.9.0))
       autoprefixer:
         specifier: ^10.4.17
         version: 10.4.23(postcss@8.5.28)
@@ -575,8 +575,8 @@ importers:
         specifier: npm:better-sqlite3@12.10.1
         version: better-sqlite3@12.10.1
       electron:
-        specifier: ^44.4.5
-        version: 44.4.5(supports-color@10.2.2)
+        specifier: ^44.9.3
+        version: 44.9.3(supports-color@10.2.2)
       electron-builder:
         specifier: 26.17.0
         version: 26.17.0(electron-builder-squirrel-windows@26.17.0)(supports-color@10.2.2)
@@ -629,8 +629,8 @@ importers:
         specifier: ^17.2.0
         version: 17.2.0
       happy-dom:
-        specifier: ^20.9.0
-        version: 20.9.0
+        specifier: ^21.0.4
+        version: 21.0.4
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -675,7 +675,7 @@ importers:
         version: 6.4.4(@types/node@24.12.4)(jiti@1.21.7)(sass@1.98.0)(terser@5.46.0)(tsx@4.23.15)(yaml@2.9.0)
       vitest:
         specifier: ^3.2.5
-        version: 3.2.6(@types/debug@4.1.12)(@types/node@24.12.4)(happy-dom@20.9.0)(jiti@1.21.7)(sass@1.98.0)(supports-color@10.2.2)(terser@5.46.0)(tsx@4.23.15)(yaml@2.9.0)
+        version: 3.2.6(@types/debug@4.1.12)(@types/node@24.12.4)(happy-dom@21.0.4)(jiti@1.21.7)(sass@1.98.0)(supports-color@10.2.2)(terser@5.46.0)(tsx@4.23.15)(yaml@2.9.0)
 
   agent-teams-controller: {}
 
@@ -796,7 +796,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.5
-        version: 3.2.6(@types/debug@4.1.12)(@types/node@24.12.4)(happy-dom@20.9.0)(jiti@2.7.0)(sass@1.98.0)(supports-color@10.2.2)(terser@5.46.0)(tsx@4.23.15)(yaml@2.9.0)
+        version: 3.2.6(@types/debug@4.1.12)(@types/node@24.12.4)(happy-dom@21.0.4)(jiti@2.7.0)(sass@1.98.0)(supports-color@10.2.2)(terser@5.46.0)(tsx@4.23.15)(yaml@2.9.0)
 
   packages/agent-graph:
     dependencies:
@@ -6265,8 +6265,8 @@ packages:
   bluebird@3.7.2:
     resolution: {integrity: sha512-XpNj6GDQzdfW+r2Wnn7xiSAd7TM3jzkxGXBGTtWKuSXv1xUV+azxAm8jdWZN06QTQk+2N2XB9jRDkvbmQmcRtg==}
 
-  body-parser@2.3.0:
-    resolution: {integrity: sha512-2cGmJupaNgg+QUwVLAucDuWuoMZ6EX9iHDRswZ5lsNYEmwPaRknMPCLZz07yTzVq/83p4o/wzbDZbBrTvGGTIw==}
+  body-parser@2.4.0:
+    resolution: {integrity: sha512-Ifk1KcLrxaGt1occQagQNFNNOqRt1LFuehEnHHzB8Z6cRgIxRU1TBaiIsUiCdA+gy5PL7Y1IX31DNKkRmxtXjQ==}
     engines: {node: '>=18'}
 
   boolbase@1.0.0:
@@ -6295,6 +6295,10 @@ packages:
 
   buffer-from@1.1.2:
     resolution: {integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==}
+
+  buffer-image-size@0.6.4:
+    resolution: {integrity: sha512-nEh+kZOPY1w+gcCMobZ6ETUp9WfibndnosbpwB1iJk/8Gt5ZF2bhS6+B6bPYz424KtwsR6Rflc3tCz1/ghX2dQ==}
+    engines: {node: '>=4.0'}
 
   buffer@5.7.1:
     resolution: {integrity: sha512-EHcyIPBQ4BSGlvjB16k5KgAJ27CIsHY/2JBmCRReo48y9rQ3MaUzWX3KVlBa4U7MyX02HdVj0K7C3WaB3ju7FQ==}
@@ -6621,6 +6625,10 @@ packages:
 
   content-type@2.0.0:
     resolution: {integrity: sha512-j/O/d7GcZCyNl7/hwZAb606rzqkyvaDctLmckbxLzHvFBzTJHuGEdodATcP3yIRoDrLHkIATJuvzbFlp/ki2cQ==}
+    engines: {node: '>=18'}
+
+  content-type@2.1.0:
+    resolution: {integrity: sha512-mj7UPXE0jaqaOsukNZRUEfEi2AcL7C/vwmwcHV0O97eO1E1pxBZuyjlZrx5seTaNBg1U6+o35wpa35Qfcc+7ag==}
     engines: {node: '>=18'}
 
   convert-source-map@2.0.0:
@@ -7309,8 +7317,8 @@ packages:
     resolution: {integrity: sha512-bO3y10YikuUwUuDUQRM4KfwNkKhnpVO7IPdbsrejwN9/AABJzzTQ4GeHwyzNSrVO+tEH3/Np255a3sVZpZDjvg==}
     engines: {node: '>=8.0.0'}
 
-  electron@44.4.5:
-    resolution: {integrity: sha512-SjgoaeYsSWZfJzubgQU7juvuXMTvn6/e1gAHdGFA/yuMbpF+I+skYqIJ6DdXBXHeWbkbpNpmwZCTpiivtlWZSw==}
+  electron@44.9.3:
+    resolution: {integrity: sha512-Cv9/yMnZxNWsMlIe8T4v//NKHdUvbeyoTJoXE3BIcRxus2meeFaO9h/P3zB5d4cBXum51IgAYrT2QjpIDWKpJA==}
     engines: {node: '>= 22.12.0'}
     hasBin: true
 
@@ -8229,8 +8237,8 @@ packages:
     engines: {node: '>=0.4.7'}
     hasBin: true
 
-  happy-dom@20.9.0:
-    resolution: {integrity: sha512-GZZ9mKe8r646NUAf/zemnGbjYh4Bt8/MqASJY+pSm5ZDtc3YQox+4gsLI7yi1hba6o+eCsGxpHn5+iEVn31/FQ==}
+  happy-dom@21.0.4:
+    resolution: {integrity: sha512-tFm+GaLBgo6o0awHnvHaNoraVo27qJ+2tZEtZ+cIa08hXbeitrxAJajLI05hsUy/2/YTKcUjQYzHe5mCcraLBw==}
     engines: {node: '>=20.0.0'}
 
   has-bigints@1.1.0:
@@ -8442,6 +8450,10 @@ packages:
 
   iconv-lite@0.7.2:
     resolution: {integrity: sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw==}
+    engines: {node: '>=0.10.0'}
+
+  iconv-lite@0.7.3:
+    resolution: {integrity: sha512-IKXpvIzjnC9XTAUbVBcMfGS0EPaIXtW6v+zr+RRp+hqULEpo0owZax6wyRwPOJbWbzjYspQwusTsfVr0ifh4uQ==}
     engines: {node: '>=0.10.0'}
 
   idb-keyval@6.2.2:
@@ -10502,8 +10514,8 @@ packages:
     resolution: {integrity: sha512-KTqnxsgGiQ6ZAzZCVlJH5eOjSnvlyEgx1m8bkRJfOhmGRqfo5KLvmAlACQkrjEtOQ4B7wF9TdSLIs9O90MX9xA==}
     engines: {node: '>=16.0.0'}
 
-  qs@6.15.2:
-    resolution: {integrity: sha512-Rzq0KEyX/w/tEybncDgdkZrJgVUsUMk3xjh3t5bv3S1HTAtg+uOYt72+ZfwiQwKdysThkTBdL/rTi6HDmX9Ddw==}
+  qs@6.16.1:
+    resolution: {integrity: sha512-5Px6J7rfHBAGUhNQ3es4YzcOdBBw0SDcVtThJml4RdnKw4tKs2epA0kPZ+K8X+WiHktT93RHVcQ/3ym5aTCgtg==}
     engines: {node: '>=0.6'}
 
   quansync@0.2.11:
@@ -11073,6 +11085,10 @@ packages:
     resolution: {integrity: sha512-FCLHtRD/gnpCiCHEiJLOwdmFP+wzCmDEkc9y7NsYxeF4u7Btsn1ZuwgwJGxImImHicJArLP4R0yX4c2KCrMrTA==}
     engines: {node: '>= 0.4'}
 
+  side-channel-list@1.0.1:
+    resolution: {integrity: sha512-mjn/0bi/oUURjc5Xl7IaWi/OJJJumuoJFQJfDDyO46+hBWsfaVM65TBHq2eoZBhzl9EchxOijpkbRC8SVBQU0w==}
+    engines: {node: '>= 0.4'}
+
   side-channel-map@1.0.1:
     resolution: {integrity: sha512-VCjCNfgMsby3tTdo02nbjtM/ewra6jPHmpThenkTYh8pG9ucZ/1P8So4u4FGBek/BjpOVsDCMoLA/iuBKIFXRA==}
     engines: {node: '>= 0.4'}
@@ -11083,6 +11099,10 @@ packages:
 
   side-channel@1.1.0:
     resolution: {integrity: sha512-ZX99e6tRweoUXqR+VBrslhda51Nh5MTQwou5tnUDgbtyM0dBgmhEDtWGP/xbKn6hqfPRHujUNwz5fy/wbbhnpw==}
+    engines: {node: '>= 0.4'}
+
+  side-channel@1.1.1:
+    resolution: {integrity: sha512-6x6dK6zJdpTzF4sQeNYxwtvBzf6Eg4GtlesS94HOvTudUeyK2WXAaIfmDgsyslYrRBeFIlsi54AYsFGUuhmvrQ==}
     engines: {node: '>= 0.4'}
 
   siginfo@2.0.0:
@@ -11764,12 +11784,12 @@ packages:
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
 
-  undici@6.29.0:
-    resolution: {integrity: sha512-R+RODBqp6i2pPflGdq+xIOUkl+RNfGgHwoinecKu/JCuf2uO06cOKoDbI2P7Dn6KcswdKwrczbU6IYJ6K8X+wg==}
+  undici@6.29.1:
+    resolution: {integrity: sha512-EvRlUt/QqAEvXdQeRMYUfwOQsfzpDztykrG2owGEE/rBOBoYv9uF39ZzsNDh4lTFHhTr2XOZjKkYgueD12ZmGA==}
     engines: {node: '>=18.17'}
 
-  undici@7.30.0:
-    resolution: {integrity: sha512-dkrQXeHSaoamnItlYbmzG0wFYrM0ZwDxCIg0A7aKjTyyhh9svRzCNFEzV+Vm05/yehjCzjDZ31KXfGEjYSztDQ==}
+  undici@7.30.1:
+    resolution: {integrity: sha512-03KrMbjIFDWQR5RNPrSw3bd1r12JpyFQl9/yxjUbJtqkjmllqC5lFjZh6ujeuJCKr8EOQvRW872Oy/az+nLYxg==}
     engines: {node: '>=20.18.1'}
 
   unenv@2.0.0-rc.24:
@@ -13277,7 +13297,7 @@ snapshots:
       semver: 7.8.5
       sumchecker: 3.0.1(supports-color@10.2.2)
     optionalDependencies:
-      undici: 7.30.0
+      undici: 7.30.1
     transitivePeerDependencies:
       - supports-color
 
@@ -17871,7 +17891,7 @@ snapshots:
       vite: 7.3.7(@types/node@24.12.4)(jiti@2.7.0)(sass@1.98.0)(terser@5.46.0)(tsx@4.23.15)(yaml@2.9.0)
       vue: 3.5.43(typescript@5.9.3)
 
-  '@vitest/coverage-v8@3.2.6(supports-color@10.2.2)(vitest@3.2.6(@types/debug@4.1.12)(@types/node@24.12.4)(happy-dom@20.9.0)(jiti@1.21.7)(sass@1.98.0)(supports-color@10.2.2)(terser@5.46.0)(tsx@4.23.15)(yaml@2.9.0))':
+  '@vitest/coverage-v8@3.2.6(supports-color@10.2.2)(vitest@3.2.6(@types/debug@4.1.12)(@types/node@24.12.4)(happy-dom@21.0.4)(jiti@1.21.7)(sass@1.98.0)(supports-color@10.2.2)(terser@5.46.0)(tsx@4.23.15)(yaml@2.9.0))':
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@bcoe/v8-coverage': 1.0.2
@@ -17886,7 +17906,7 @@ snapshots:
       std-env: 3.10.0
       test-exclude: 7.0.2
       tinyrainbow: 2.0.0
-      vitest: 3.2.6(@types/debug@4.1.12)(@types/node@24.12.4)(happy-dom@20.9.0)(jiti@1.21.7)(sass@1.98.0)(supports-color@10.2.2)(terser@5.46.0)(tsx@4.23.15)(yaml@2.9.0)
+      vitest: 3.2.6(@types/debug@4.1.12)(@types/node@24.12.4)(happy-dom@21.0.4)(jiti@1.21.7)(sass@1.98.0)(supports-color@10.2.2)(terser@5.46.0)(tsx@4.23.15)(yaml@2.9.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -18671,15 +18691,15 @@ snapshots:
 
   bluebird@3.7.2: {}
 
-  body-parser@2.3.0(supports-color@10.2.2):
+  body-parser@2.4.0(supports-color@10.2.2):
     dependencies:
       bytes: 3.1.2
-      content-type: 2.0.0
+      content-type: 2.1.0
       debug: 4.4.3(supports-color@10.2.2)
       http-errors: 2.0.1
-      iconv-lite: 0.7.2
+      iconv-lite: 0.7.3
       on-finished: 2.4.1
-      qs: 6.15.2
+      qs: 6.16.1
       raw-body: 3.0.2
       type-is: 2.1.0
     transitivePeerDependencies:
@@ -18709,6 +18729,10 @@ snapshots:
   buffer-crc32@1.0.0: {}
 
   buffer-from@1.1.2: {}
+
+  buffer-image-size@0.6.4:
+    dependencies:
+      '@types/node': 24.12.4
 
   buffer@5.7.1:
     dependencies:
@@ -19043,6 +19067,8 @@ snapshots:
   content-type@1.0.5: {}
 
   content-type@2.0.0: {}
+
+  content-type@2.1.0: {}
 
   convert-source-map@2.0.0: {}
 
@@ -19695,7 +19721,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  electron@44.4.5(supports-color@10.2.2):
+  electron@44.9.3(supports-color@10.2.2):
     dependencies:
       '@electron-internal/extract-zip': 1.0.5
       '@electron/get': 5.1.0(supports-color@10.2.2)
@@ -20422,7 +20448,7 @@ snapshots:
   express@5.2.1(supports-color@10.2.2):
     dependencies:
       accepts: 2.0.0
-      body-parser: 2.3.0(supports-color@10.2.2)
+      body-parser: 2.4.0(supports-color@10.2.2)
       content-disposition: 1.0.1
       content-type: 1.0.5
       cookie: 0.7.2
@@ -20441,7 +20467,7 @@ snapshots:
       once: 1.4.0
       parseurl: 1.3.3
       proxy-addr: 2.0.8
-      qs: 6.15.2
+      qs: 6.16.1
       range-parser: 1.2.1
       router: 2.2.0(supports-color@10.2.2)
       send: 1.2.1(supports-color@10.2.2)
@@ -20577,7 +20603,7 @@ snapshots:
       hono: 4.12.30
       mcp-proxy: 6.4.1(patch_hash=7cf3a2a315a73ab85c37769cde2848c5e0c4236b2e384c31b5937b36cbc5bfb5)(supports-color@10.2.2)
       strict-event-emitter-types: 2.0.0
-      undici: 7.30.0
+      undici: 7.30.1
       uri-templates: 0.2.0
       xsschema: 0.4.3(zod-to-json-schema@3.25.1(zod@4.6.7))(zod@4.6.7)
       yargs: 18.0.0
@@ -20998,11 +21024,12 @@ snapshots:
     optionalDependencies:
       uglify-js: 3.19.3
 
-  happy-dom@20.9.0:
+  happy-dom@21.0.4:
     dependencies:
       '@types/node': 24.12.4
       '@types/whatwg-mimetype': 3.0.2
       '@types/ws': 8.18.1
+      buffer-image-size: 0.6.4
       entities: 7.0.1
       whatwg-mimetype: 3.0.0
       ws: 8.21.0
@@ -21316,6 +21343,10 @@ snapshots:
       safer-buffer: 2.1.2
 
   iconv-lite@0.7.2:
+    dependencies:
+      safer-buffer: 2.1.2
+
+  iconv-lite@0.7.3:
     dependencies:
       safer-buffer: 2.1.2
 
@@ -22839,7 +22870,7 @@ snapshots:
       semver: 7.8.5
       tar: 7.5.22
       tinyglobby: 0.2.17
-      undici: 6.29.0
+      undici: 6.29.1
       which: 6.0.1
 
   node-int64@0.4.0: {}
@@ -23922,9 +23953,10 @@ snapshots:
 
   pvutils@1.1.5: {}
 
-  qs@6.15.2:
+  qs@6.16.1:
     dependencies:
-      side-channel: 1.1.0
+      es-define-property: 1.0.1
+      side-channel: 1.1.1
 
   quansync@0.2.11: {}
 
@@ -24637,6 +24669,11 @@ snapshots:
       es-errors: 1.3.0
       object-inspect: 1.13.4
 
+  side-channel-list@1.0.1:
+    dependencies:
+      es-errors: 1.3.0
+      object-inspect: 1.13.4
+
   side-channel-map@1.0.1:
     dependencies:
       call-bound: 1.0.4
@@ -24657,6 +24694,14 @@ snapshots:
       es-errors: 1.3.0
       object-inspect: 1.13.4
       side-channel-list: 1.0.0
+      side-channel-map: 1.0.1
+      side-channel-weakmap: 1.0.2
+
+  side-channel@1.1.1:
+    dependencies:
+      es-errors: 1.3.0
+      object-inspect: 1.13.4
+      side-channel-list: 1.0.1
       side-channel-map: 1.0.1
       side-channel-weakmap: 1.0.2
 
@@ -25405,9 +25450,9 @@ snapshots:
 
   undici-types@7.16.0: {}
 
-  undici@6.29.0: {}
+  undici@6.29.1: {}
 
-  undici@7.30.0: {}
+  undici@7.30.1: {}
 
   unenv@2.0.0-rc.24:
     dependencies:
@@ -26040,7 +26085,7 @@ snapshots:
       - universal-cookie
       - yaml
 
-  vitest@3.2.6(@types/debug@4.1.12)(@types/node@24.12.4)(happy-dom@20.9.0)(jiti@1.21.7)(sass@1.98.0)(supports-color@10.2.2)(terser@5.46.0)(tsx@4.23.15)(yaml@2.9.0):
+  vitest@3.2.6(@types/debug@4.1.12)(@types/node@24.12.4)(happy-dom@21.0.4)(jiti@1.21.7)(sass@1.98.0)(supports-color@10.2.2)(terser@5.46.0)(tsx@4.23.15)(yaml@2.9.0):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/expect': 3.2.6
@@ -26068,7 +26113,7 @@ snapshots:
     optionalDependencies:
       '@types/debug': 4.1.12
       '@types/node': 24.12.4
-      happy-dom: 20.9.0
+      happy-dom: 21.0.4
     transitivePeerDependencies:
       - jiti
       - less
@@ -26083,7 +26128,7 @@ snapshots:
       - tsx
       - yaml
 
-  vitest@3.2.6(@types/debug@4.1.12)(@types/node@24.12.4)(happy-dom@20.9.0)(jiti@2.7.0)(sass@1.98.0)(supports-color@10.2.2)(terser@5.46.0)(tsx@4.23.15)(yaml@2.9.0):
+  vitest@3.2.6(@types/debug@4.1.12)(@types/node@24.12.4)(happy-dom@21.0.4)(jiti@2.7.0)(sass@1.98.0)(supports-color@10.2.2)(terser@5.46.0)(tsx@4.23.15)(yaml@2.9.0):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/expect': 3.2.6
@@ -26111,7 +26156,7 @@ snapshots:
     optionalDependencies:
       '@types/debug': 4.1.12
       '@types/node': 24.12.4
-      happy-dom: 20.9.0
+      happy-dom: 21.0.4
     transitivePeerDependencies:
       - jiti
       - less
