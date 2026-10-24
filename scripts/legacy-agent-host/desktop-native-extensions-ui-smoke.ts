@@ -11,6 +11,7 @@ import {
   extensionNativeCli,
   extensionPlugin,
 } from "./desktop-native-extensions-fixture.ts";
+import type { McpCatalogItem } from "../../src/shared/types/extensions/mcp.ts";
 import type { NativeExtensionProofSelection } from "./desktop-native-extensions-fixture.ts";
 import type { UiCdpPort } from "./desktop-ui-controls.ts";
 
@@ -21,7 +22,7 @@ const record = (value: unknown): Record<string, unknown> => {
   return value as Record<string, unknown>;
 };
 
-/** Real existing controls. DOM evaluation observes only; all UI effects use trusted CDP input. */
+/** Real existing controls. One labeled TEST metadata setup; all user actions use trusted CDP input. */
 export async function runDesktopNativeExtensionsUiSmoke(
   cdp: UiCdpPort,
   options: {
@@ -46,12 +47,13 @@ export async function runDesktopNativeExtensionsUiSmoke(
       "real user projects/config",
       "UI lost-ACK transport injection",
       "second actual workspace context",
+      "live MCP registry catalog/search qualification",
     ],
     nativeSetup: selected.setup,
     nativeExecutableSha256: selected.profile.executable.sha256,
     publicNetwork: [
       "official public plugin marketplace registration/catalog",
-      "ordinary MCP public registry search",
+      "incidental ordinary MCP browse (not required for config-only proof)",
     ],
     steps,
   };
@@ -127,12 +129,12 @@ export async function runDesktopNativeExtensionsUiSmoke(
     await cdp.send("Input.insertText", { text });
     await ui.waitRead(`document.querySelector(${desktopJsLiteral(selector)})?.value===${desktopJsLiteral(text)}`, "original input retained " + selector);
   };
-  const context7Card = async () =>
+  const testMcpCard = async () =>
     String(await ui.waitRead(`(() => {
       const cards=[...document.querySelectorAll('.mcp-servers-grid > [role="button"]')];
-      const match=cards.filter(e=>e.querySelector('h3')?.textContent.trim().toLowerCase()==='context7');
+      const match=cards.filter(e=>e.querySelector('h3')?.textContent.trim().toLowerCase()===${desktopJsLiteral(extensionMcpName)});
       return match.length===1?'.mcp-servers-grid > [role="button"]:nth-child('+(cards.indexOf(match[0])+1)+')':null;
-    })()`, "one exact public Context7 card"));
+    })()`, "one exact TEST metadata MCP card"));
   const disk = async (
     read: () => Promise<boolean>,
     label: string,
@@ -258,8 +260,6 @@ export async function runDesktopNativeExtensionsUiSmoke(
     "open original MCP Servers tab",
     "MCP Servers",
   );
-  await fill('input[placeholder="Search MCP servers..."]', "context7");
-  await context7Card();
   await click("button", "open original Add Custom dialog", "Add Custom");
   await ui.waitRead(`document.querySelector('[role="dialog"] #custom-name')?.value===''&&Boolean(document.querySelector('[role="dialog"] #custom-npm'))`, "original Custom MCP defaults hydrated");
   await fill("#custom-name", extensionMcpName);
@@ -293,9 +293,40 @@ export async function runDesktopNativeExtensionsUiSmoke(
     "original native CLI diagnostics expose configured TEST server",
     60_000,
   );
+  // Catalog metadata only. Installed inventory, diagnostics, native config, API methods,
+  // capability/admission state and mutation receipts are never seeded or replaced.
+  await ui.waitRead(
+    `(() => {const s=window.__agentTeamsDevStore?.getState();return s&&!s.isContextSwitching&&!s.mcpBrowseLoading&&document.querySelector('input[placeholder="Search MCP servers..."]')?.value==='';})()`,
+    "ordinary MCP browse settled before TEST metadata setup",
+  );
+  const metadata = {
+    id: "test.local/native-extension-config-only",
+    name: extensionMcpName,
+    description: "TEST metadata only; not a public registry entry or connectivity proof",
+    source: "official",
+    installSpec: { type: "http", url: extensionMcpUrl, transportType: "http" },
+    envVars: [],
+    tools: [],
+    requiresAuth: false,
+  } satisfies McpCatalogItem;
+  proof.mcpMetadataFixture = await cdp.evaluate(`(() => {
+    const store=window.__agentTeamsDevStore,s=store?.getState();
+    const row=${desktopJsLiteral(metadata)};
+    if(!store||!s||s.isContextSwitching||s.mcpBrowseLoading||s.mcpBrowseCatalog.some(e=>e.id===row.id||e.name===row.name))
+      throw new Error('TEST MCP metadata setup refused');
+    store.setState({mcpBrowseCatalog:[...s.mcpBrowseCatalog,row]});
+    return {id:row.id,name:row.name,synthetic:true,sourceField:'schema-required display value only',
+      claim:'catalog metadata only; native state and operation outcomes untouched'};
+  })()`);
+  proof.nativeMcpInventory = await ui.waitRead(`(() => {
+    const s=window.__agentTeamsDevStore?.getState(),name=${desktopJsLiteral(extensionMcpName)};
+    const entries=[...(s?.mcpInstalledServers??[]),...Object.values(s?.mcpInstalledServersByProjectPath??{}).flat()];
+    const matches=entries.filter(e=>e.name===name);
+    return matches.length?matches.map(e=>({name:e.name,scope:e.scope,targetKey:e.targetKey??null})):null;
+  })()`, "actual native installed inventory contains exact TEST name");
   await click(
-    await context7Card(),
-    "open catalog detail matching configured TEST MCP name",
+    await testMcpCard(),
+    "open existing detail for exact TEST metadata and native installed MCP",
   );
   await screenshot("native-extensions-mcp-installed.png");
   await click(

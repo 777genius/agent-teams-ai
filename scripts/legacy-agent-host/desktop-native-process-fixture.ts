@@ -15,7 +15,7 @@ import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/comp
 import type { Service } from './desktop-native-process-model.ts';
 
 export const PROCESS_ARTIFACT = {
-  directory: '/private/tmp/TEST-m19-native-ancestry-artifact-20261024-a0HlV7IZ',
+  directory: '/Volumes/Transcend/dev/TEST-m19-cold-reboot-prep-xqpztswh/native-artifact',
   manifestSha256: '17cc2429f59a5261dfd65c2af414ed307f669bc271a2bb5f51c131be05cd2278',
 };
 const quote = (s: string) => "'" + s.replaceAll("'", "'\\''") + "'";

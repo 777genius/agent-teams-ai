@@ -142,13 +142,36 @@ export async function runDesktopNativeGroupUiSmoke(
   assert.equal(group.name, 'TEST-ui-group');
   assert.deepEqual(group.membership, { kind: 'fixed', memberNames: ['alice', 'bob'] });
   assert.equal(group.archivedAt, null);
-  const groupId = String(group.id),
-    groupSelector = '[data-group-chat-id=' + JSON.stringify(groupId) + ']';
+  const groupId = String(group.id);
   const composer = '[data-testid="group-chat-composer"]';
-  await ui.waitRead(
-    `document.querySelector(${desktopJsLiteral(groupSelector)})?.getAttribute('aria-pressed')==='true'`,
-    'exact UI-created group selected'
-  );
+  const back = 'button[aria-label="Back to chats"]';
+  const showList = async (label: string) => {
+    await ui.scrollTo(back, label);
+    await ui.click(back, label);
+    await ui.waitRead(
+      `Boolean(document.querySelector('[data-testid="group-chat-list"]'))&&!document.querySelector(${desktopJsLiteral(composer)})`,
+      label + ' list visible'
+    );
+  };
+  const observeGroupRow = async (id: string, name: string, archived: boolean, label: string) => {
+    const selector = '[data-group-chat-id=' + JSON.stringify(id) + ']';
+    await ui.waitRead(
+      `(() => {const rows=[...document.querySelectorAll(${desktopJsLiteral(selector)})];return rows.length===1&&rows[0].getAttribute('data-archived')===${desktopJsLiteral(String(archived))}&&[...rows[0].querySelectorAll('span')].some(e=>e.textContent.trim()===${desktopJsLiteral(name)});})()`,
+      label
+    );
+    return selector;
+  };
+  const openOriginalGroup = async (archived: boolean, label: string) => {
+    const selector = await observeGroupRow(groupId, String(group.name), archived, label + ' exact canonical row');
+    await ui.scrollTo(selector, label);
+    await ui.click(selector, label);
+    await ui.waitRead(
+      `(() => {const titles=[...document.querySelectorAll('span.text-sm')].filter(e=>e.textContent.trim()===${desktopJsLiteral(group.name)}&&e.getBoundingClientRect().width>0);return titles.length===1&&Boolean(document.querySelector(${desktopJsLiteral(composer)}))&&Boolean(document.querySelector(${desktopJsLiteral(back)}))&&!document.querySelector('[data-testid="group-chat-list"]');})()`,
+      label + ' exact group header and Composer'
+    );
+  };
+  await showList('Back after original UI group Create');
+  await openOriginalGroup(false, 'open original canonical UI-created group');
   await ui.click(
     composer + ' .message-composer-recipient-selector',
     'open existing group recipient selector'
@@ -252,10 +275,10 @@ export async function runDesktopNativeGroupUiSmoke(
   const nativeGroup = (await groups()).find((value) => value.name === 'TEST-native-created-group')!;
   assert.ok(nativeGroup);
   assert.equal(row(nativeGroup.agentCreation).sourceMessageId, humanId);
-  await ui.waitRead(
-    `document.querySelector(${desktopJsLiteral('[data-group-chat-id=' + JSON.stringify(String(nativeGroup.id)) + ']')})?.textContent.includes('TEST-native-created-group')`,
-    'source-authorized native-created group appears in existing UI'
-  );
+  await showList('Back to observe native-created group');
+  await observeGroupRow(String(nativeGroup.id), String(nativeGroup.name), false,
+    'exact source-authorized native-created group appears in existing list');
+  await openOriginalGroup(false, 'return to original group conversation');
   assert.deepEqual(row(nativeGroup.agentCreation).recipientNames, ['alice']);
   assert.equal(row(nativeReply.request).messageId, GROUP_REPLY_ID);
   const inputProofs: Row[] = [];
@@ -403,12 +426,14 @@ export async function runDesktopNativeGroupUiSmoke(
   );
   await ui.click('button[aria-label="Archive chat"]', 'archive original group once');
   await ui.waitRead(
-    `document.querySelector(${desktopJsLiteral(groupSelector)})?.getAttribute('data-archived')==='true'`,
-    'original group archived visibly'
+    `Boolean(document.querySelector('button[aria-label="Restore chat"]'))&&document.querySelector(${desktopJsLiteral(composer + ' textarea')})?.readOnly===true`,
+    'original open group archived and read-only'
   );
   const archived = (await groups()).find((value) => value.id === groupId)!;
   assert.ok(archived.archivedAt);
   snapshots.push({ phase: 'archived', groups: await groups(), reactions: await reactions() });
+  await showList('Back to observe original archived group');
+  await observeGroupRow(groupId, String(group.name), true, 'exact original archived group list row');
   const origin = await cdp.evaluate('performance.timeOrigin');
   await cdp.send('Page.reload', { ignoreCache: false });
   await ui.waitRead(
@@ -417,7 +442,7 @@ export async function runDesktopNativeGroupUiSmoke(
   );
   await ui.observeInput();
   await ui.clickSidebar(options.seed.subject);
-  await ui.click(groupSelector, 'open exact archived group after reload');
+  await openOriginalGroup(true, 'open exact archived group after reload');
   await ui.waitRead(
     `document.querySelector(${desktopJsLiteral(composer + ' textarea')})?.readOnly===true`,
     'archived group remains read-only'
@@ -433,11 +458,13 @@ export async function runDesktopNativeGroupUiSmoke(
   );
   await ui.click('button[aria-label="Restore chat"]', 'restore original group once');
   await ui.waitRead(
-    `document.querySelector(${desktopJsLiteral(groupSelector)})?.getAttribute('data-archived')==='false'`,
-    'original group restored visibly'
+    `Boolean(document.querySelector('button[aria-label="Archive chat"]'))&&document.querySelector(${desktopJsLiteral(composer + ' textarea')})?.readOnly===false`,
+    'original open group restored and writable'
   );
   assert.equal((await groups()).find((value) => value.id === groupId)!.archivedAt, null);
   snapshots.push({ phase: 'restored', groups: await groups(), reactions: await reactions() });
+  await showList('Back to observe original restored group');
+  await openOriginalGroup(false, 'return to exact restored original group');
   await ui.click(await revealReply(), 'remove original human reaction once');
   const retainedAck = await poll(
     reactions,

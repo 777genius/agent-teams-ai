@@ -15,7 +15,7 @@ import type { ClaudeManagementProfile } from "../../packages/legacy-agent-host/d
 
 type Fixture = Awaited<ReturnType<typeof prepareDesktopBackendFixture>>;
 export const extensionPlugin = "frontend-design@claude-plugins-official";
-export const extensionMcpName = "context7";
+export const extensionMcpName = "test-native-extension-config-only";
 export const extensionMcpUrl =
   "http://127.0.0.1:9/TEST-native-extension-config-only";
 export interface NativeExtensionProofSelection {
