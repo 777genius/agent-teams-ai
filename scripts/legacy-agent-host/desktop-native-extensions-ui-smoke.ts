@@ -219,6 +219,12 @@ export async function runDesktopNativeExtensionsUiSmoke(
     "native pending install control disabled",
   );
   await disk(enabled, "native settings did not record selected plugin");
+  // Native settings are written before installation finishes. Observe the
+  // original completed UI operation before querying the installed inventory.
+  await ui.waitRead(
+    `Array.from(document.querySelectorAll('[role="dialog"] button')).some(e=>e.textContent.trim()==='Uninstall'&&!e.disabled)`,
+    "native plugin installed control",
+  );
   const nativePluginList = extensionNativeCli(selected.profile, [
     "plugin",
     "list",
@@ -228,10 +234,6 @@ export async function runDesktopNativeExtensionsUiSmoke(
     "actual CLI lists UI-installed plugin",
   );
   proof.nativePluginListObserved = true;
-  await ui.waitRead(
-    `Array.from(document.querySelectorAll('[role="dialog"] button')).some(e=>e.textContent.trim()==='Uninstall'&&!e.disabled)`,
-    "native plugin installed control",
-  );
   await screenshot("native-extensions-plugin-installed.png");
   await click(
     '[role="dialog"] button',
