@@ -80,8 +80,8 @@ overrides:
   tar: 7.5.22
   form-data: 4.0.6
   tmp: 0.2.7
-  undici@6: 6.29.0
-  undici@7: 7.30.0
+  undici@6: 6.29.1
+  undici@7: 7.30.1
   unhead: 2.1.13
   uuid: ^11.1.1
   vitest>tinypool: 2.2.0
@@ -11783,12 +11783,12 @@ packages:
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
 
-  undici@6.29.0:
-    resolution: {integrity: sha512-R+RODBqp6i2pPflGdq+xIOUkl+RNfGgHwoinecKu/JCuf2uO06cOKoDbI2P7Dn6KcswdKwrczbU6IYJ6K8X+wg==}
+  undici@6.29.1:
+    resolution: {integrity: sha512-EvRlUt/QqAEvXdQeRMYUfwOQsfzpDztykrG2owGEE/rBOBoYv9uF39ZzsNDh4lTFHhTr2XOZjKkYgueD12ZmGA==}
     engines: {node: '>=18.17'}
 
-  undici@7.30.0:
-    resolution: {integrity: sha512-dkrQXeHSaoamnItlYbmzG0wFYrM0ZwDxCIg0A7aKjTyyhh9svRzCNFEzV+Vm05/yehjCzjDZ31KXfGEjYSztDQ==}
+  undici@7.30.1:
+    resolution: {integrity: sha512-03KrMbjIFDWQR5RNPrSw3bd1r12JpyFQl9/yxjUbJtqkjmllqC5lFjZh6ujeuJCKr8EOQvRW872Oy/az+nLYxg==}
     engines: {node: '>=20.18.1'}
 
   unenv@2.0.0-rc.24:
@@ -13296,7 +13296,7 @@ snapshots:
       semver: 7.8.5
       sumchecker: 3.0.1(supports-color@10.2.2)
     optionalDependencies:
-      undici: 7.30.0
+      undici: 7.30.1
     transitivePeerDependencies:
       - supports-color
 
@@ -20610,7 +20610,7 @@ snapshots:
       hono: 4.12.30
       mcp-proxy: 6.4.1(patch_hash=7cf3a2a315a73ab85c37769cde2848c5e0c4236b2e384c31b5937b36cbc5bfb5)(supports-color@10.2.2)
       strict-event-emitter-types: 2.0.0
-      undici: 7.30.0
+      undici: 7.30.1
       uri-templates: 0.2.0
       xsschema: 0.4.3(zod-to-json-schema@3.25.1(zod@4.6.7))(zod@4.6.7)
       yargs: 18.0.0
@@ -22877,7 +22877,7 @@ snapshots:
       semver: 7.8.5
       tar: 7.5.22
       tinyglobby: 0.2.17
-      undici: 6.29.0
+      undici: 6.29.1
       which: 6.0.1
 
   node-int64@0.4.0: {}
@@ -25457,9 +25457,9 @@ snapshots:
 
   undici-types@7.16.0: {}
 
-  undici@6.29.0: {}
+  undici@6.29.1: {}
 
-  undici@7.30.0: {}
+  undici@7.30.1: {}
 
   unenv@2.0.0-rc.24:
     dependencies:
