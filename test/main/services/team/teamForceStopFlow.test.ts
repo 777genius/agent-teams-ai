@@ -31,11 +31,31 @@ import {
   assertEscalatedStopConfirmed,
   OpenCodeRuntimeStopUnconfirmedError,
 } from '@main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeStopOutcome';
-import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
+import { applyStoppedTeamRuntimeResources } from '@main/services/team/provisioning/TeamProvisioningStoppedTeamRuntimeProjection';
+import { applyStoppedTeamSpawnProjection } from '@main/services/team/provisioning/TeamProvisioningStoppedTeamSpawnProjection';
+import {
+  getTeamLaunchFreshnessPath,
+  readTeamLaunchFreshness,
+} from '@main/services/team/TeamLaunchFreshness';
+import { createPersistedLaunchSnapshot } from '@main/services/team/TeamLaunchStateEvaluator';
+import {
+  getTeamLaunchStatePath,
+  getTeamLaunchStoppedMarkerPath,
+  getTeamLaunchSummaryPath,
+  TeamLaunchStateStore,
+} from '@main/services/team/TeamLaunchStateStore';
+import * as pathDecoder from '@main/utils/pathDecoder';
 
 import type { TeamForceStopFlowPorts } from '@main/services/team/lifecycle/teamForceStopFlow';
-import type { TeamLaunchStateReadResult } from '@main/services/team/TeamLaunchStateStore';
-import type { PersistedTeamLaunchSnapshot } from '@shared/types';
+import type {
+  TeamLaunchStateReadResult,
+  TeamLaunchStopAuthority,
+} from '@main/services/team/TeamLaunchStateStore';
+import type {
+  MemberSpawnStatusEntry,
+  PersistedTeamLaunchSnapshot,
+  TeamAgentRuntimeSnapshot,
+} from '@shared/types';
 
 function createPorts(overrides: Partial<TeamForceStopFlowPorts> = {}): {
   [K in keyof TeamForceStopFlowPorts]: TeamForceStopFlowPorts[K];
@@ -402,7 +422,7 @@ describe('runTeamForceStopFlow', () => {
     expect(order).toEqual(['clearPendingPromptDeliveries', 'markTeamStopped']);
   });
 
-  it('marks the team stopped even when the regular stop never confirmed', async () => {
+  it('keeps the launch publication when the regular stop never confirmed', async () => {
     const markTeamStopped = vi.fn(() => Promise.resolve());
     const ports = createPorts({
       stopTeam: vi.fn(() => Promise.reject(new Error('did not confirm stop'))),
@@ -412,10 +432,166 @@ describe('runTeamForceStopFlow', () => {
     const result = await runTeamForceStopFlow('fixteam', ports);
 
     expect(result.stopOutcome).toBe('stop_failed');
-    expect(markTeamStopped).toHaveBeenCalledWith(
-      'fixteam',
-      expect.objectContaining({ teamName: 'fixteam', stopIntent: expect.any(Number) })
-    );
+    expect(result.cleanupOutcome).toBe('incomplete');
+    expect(markTeamStopped).not.toHaveBeenCalled();
+  });
+
+  it.each(['unknown', 'timeout', 'kill-error'] as const)(
+    'preserves durable launch ownership and no stopped marker after %s cleanup',
+    async (failure) => {
+      const base = fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-force-stop-truthful-'));
+      const directory = vi.spyOn(pathDecoder, 'getTeamsBasePath').mockReturnValue(base);
+      try {
+        const store = new TeamLaunchStateStore();
+        const snapshot = createPersistedLaunchSnapshot({
+          teamName: 'truthful',
+          expectedMembers: ['Bob'],
+          launchPhase: 'active',
+          members: {
+            Bob: {
+              name: 'Bob',
+              providerId: 'opencode',
+              laneId: 'primary',
+              runtimePid: 86544,
+              launchState: 'confirmed_alive',
+              runtimeAlive: true,
+              agentToolAccepted: true,
+              bootstrapConfirmed: true,
+              hardFailure: false,
+              lastEvaluatedAt: '2026-10-24T00:00:00.000Z',
+            },
+          },
+          updatedAt: '2026-10-24T00:00:00.000Z',
+        });
+        fs.mkdirSync(path.join(base, 'truthful'));
+        expect(await store.write('truthful', snapshot)).toBe(true);
+        const publication = [
+          getTeamLaunchStatePath('truthful'),
+          getTeamLaunchSummaryPath('truthful'),
+        ];
+        const before = publication.map((file) => fs.readFileSync(file, 'utf8'));
+        const markTeamStopped = vi.fn((team: string, authority: TeamLaunchStopAuthority) =>
+          store.markStopped(team, authority)
+        );
+        const ports = createPorts({
+          stopTeam: vi.fn(() =>
+            failure === 'timeout'
+              ? new Promise<void>(() => {})
+              : Promise.reject(new OpenCodeRuntimeStopUnconfirmedError('authority unknown', []))
+          ),
+          observeOwnedRuntimeLaneIds: vi.fn(async () => ['primary']),
+          killRetainedRuntimeProcesses: vi.fn(async () => {
+            if (failure === 'kill-error') throw new Error('process authority unreadable');
+            return {
+              killedPids: [],
+              incomplete: true,
+              diagnostics: ['Runtime authority unknown; kept shared host'],
+            };
+          }),
+          markTeamStopped,
+        });
+        const result = await runTeamForceStopFlow('truthful', ports);
+        expect(result.cleanupOutcome).toBe('incomplete');
+        expect(result.stopOutcome).toBe(failure === 'timeout' ? 'timed_out' : 'stop_failed');
+        expect(result.killedRuntimePids).toEqual([]);
+        expect(markTeamStopped).not.toHaveBeenCalled();
+        expect(publication.map((file) => fs.readFileSync(file, 'utf8'))).toEqual(before);
+        expect(await store.read('truthful')).toMatchObject(snapshot);
+        expect(fs.existsSync(getTeamLaunchStoppedMarkerPath('truthful'))).toBe(false);
+        expect(() => assertEscalatedStopConfirmed(result)).toThrow('team_stop_unconfirmed');
+      } finally {
+        directory.mockRestore();
+        fs.rmSync(base, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it('keeps live secondary UI evidence retryable without a persisted launch or tracked primary', async () => {
+    const base = fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-force-stop-live-secondary-'));
+    const directory = vi.spyOn(pathDecoder, 'getTeamsBasePath').mockReturnValue(base);
+    try {
+      const teamName = 'secondary-only';
+      fs.mkdirSync(path.join(base, teamName));
+      // Finished clean_success intentionally clears launch-state.json while
+      // retaining launch freshness. Primary Stop has already removed its maps.
+      fs.writeFileSync(
+        getTeamLaunchFreshnessPath(teamName),
+        JSON.stringify({
+          version: 1,
+          teamName,
+          kind: 'launch',
+          runId: 'retained-run',
+        })
+      );
+      const store = new TeamLaunchStateStore();
+      expect(await store.read(teamName)).toBeNull();
+      const ports = createPorts({
+        stopTeam: vi.fn(async () => {
+          throw new OpenCodeRuntimeStopUnconfirmedError('Bob authority unknown', []);
+        }),
+        observeOwnedRuntimeLaneIds: vi.fn(async () => ['member-bob']),
+        killRetainedRuntimeProcesses: vi.fn(async () => ({
+          killedPids: [],
+          incomplete: true,
+          diagnostics: [],
+        })),
+        markTeamStopped: (name, authority) => store.markStopped(name, authority),
+      });
+      const statuses: Record<string, MemberSpawnStatusEntry> = {
+        Bob: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          runtimeAlive: true,
+          agentToolAccepted: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          updatedAt: '2026-10-24T00:00:00.000Z',
+          livenessSource: 'process',
+        },
+      };
+      const nativeSnapshot: TeamAgentRuntimeSnapshot = {
+        teamName,
+        runId: null,
+        updatedAt: '2026-10-24T00:00:00.000Z',
+        members: {
+          Bob: {
+            memberName: 'Bob',
+            alive: true,
+            restartable: true,
+            providerId: 'opencode',
+            laneId: 'member-bob',
+            runtimePid: 86544,
+            updatedAt: '2026-10-24T00:00:00.000Z',
+          },
+        },
+      };
+      for (let retry = 0; retry < 2; retry++) {
+        const result = await runTeamForceStopFlow(teamName, ports);
+        expect(result.cleanupOutcome).toBe('incomplete');
+        const spawn = await applyStoppedTeamSpawnProjection(
+          teamName,
+          false,
+          statuses,
+          readTeamLaunchFreshness,
+          null
+        );
+        expect(spawn.stopped).toBe(false);
+        expect(spawn.statuses.Bob.runtimeAlive).toBe(true);
+        const runtime = applyStoppedTeamRuntimeResources({
+          snapshot: nativeSnapshot,
+          isTeamAlive: false,
+          hasProvisioningRun: false,
+          freshnessKind: (await readTeamLaunchFreshness(teamName))?.kind,
+        });
+        expect(runtime.members.Bob.alive).toBe(true);
+        expect(await store.isStopped(teamName)).toBe(false);
+        expect(await store.read(teamName)).toBeNull();
+      }
+      expect(ports.stopTeam).toHaveBeenCalledTimes(2);
+    } finally {
+      directory.mockRestore();
+      fs.rmSync(base, { recursive: true, force: true });
+    }
   });
 
   it('reports a failing stopped-state write as a diagnostic instead of failing the force stop', async () => {
@@ -919,9 +1095,9 @@ describe('post-stop external lead process tree reap', () => {
   /**
    * A reap that threw left a tree standing, which is what an incomplete cleanup
    * means - but the stop itself has already done everything else it owed, so it
-   * still finishes and still writes the stopped state.
+   * returns its cleanup debt and retains the launch publication.
    */
-  it('reports a reap that threw as an incomplete cleanup and still finishes the stop', async () => {
+  it('retains the launch publication when a confirmed stop leaves a lead reap debt', async () => {
     const ports = createPorts({
       reapOwnedLeadProcessTrees: vi.fn(() =>
         Promise.reject(new Error('process table unavailable'))
@@ -936,10 +1112,7 @@ describe('post-stop external lead process tree reap', () => {
     expect(result.diagnostics).toEqual([
       'Lead process tree reap failed: process table unavailable',
     ]);
-    expect(ports.markTeamStopped).toHaveBeenCalledWith(
-      'fixteam',
-      expect.objectContaining({ teamName: 'fixteam', stopIntent: expect.any(Number) })
-    );
+    expect(ports.markTeamStopped).not.toHaveBeenCalled();
   });
 });
 

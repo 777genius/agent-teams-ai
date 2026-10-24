@@ -8,6 +8,9 @@ minimumReleaseAgeExclude:
   - '@esbuild/*'
   - brace-expansion@5.0.12
   - esbuild
+  # Exact fixes for GHSA-jr5w-w6x2-84p9 and GHSA-27r3-jxmh-p828.
+  - electron@44.9.3
+  - body-parser@2.4.0
   - fast-uri@3.1.7
   - find-my-way@9.7.0
   # Exact critical security fix; retain release-age protection for other versions.
@@ -41,7 +44,7 @@ overrides:
   '@vue/server-renderer': '3.5.43'
   '@xmldom/xmldom': '0.8.15'
   'axios': '1.20.0'
-  'body-parser': '2.3.0'
+  'body-parser': '2.4.0'
   'browserslist': '4.28.8'
   'brace-expansion@1': '5.0.12'
   'brace-expansion@2': '5.0.12'
@@ -85,7 +88,7 @@ overrides:
   'prosemirror-model': '1.25.12'
   'prosemirror-view': '1.42.6'
   'proxy-addr': '2.0.8'
-  'qs': '6.15.2'
+  'qs': '6.16.1'
   'rollup': '4.59.0'
   'serialize-javascript': '7.0.5'
   'seroval': '1.6.8'

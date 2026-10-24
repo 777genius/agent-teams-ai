@@ -5,12 +5,14 @@ import {
   stableHash,
 } from '../../opencode/bridge/OpenCodeBridgeCommandContract';
 import { bindLifecycleManifest } from '../../opencode/bridge/OpenCodeLifecycleManifestBinding';
+import { createOpenCodePromptDeliveryWatchdogCoordinator } from '../../opencode/delivery/OpenCodePromptDeliveryWatchdogCoordinator';
 import { TeamRuntimeAdapterRegistry } from '../../runtime';
 import { createPersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
 import { stopUnretainableOpenCodePrimaryLane } from '../OpenCodeAggregatePrimaryLaneStopHelpers';
 import { launchOpenCodeAggregatePrimaryLane } from '../TeamProvisioningOpenCodeAggregateLaunchPersistence';
 import { TeamProvisioningOpenCodeAggregatePrimaryFacade } from '../TeamProvisioningOpenCodeAggregatePrimaryFacade';
 import { createOpenCodeAggregateProvisioningRun } from '../TeamProvisioningOpenCodeAggregateRun';
+import { getTrackedOpenCodeBootstrapWakeRunId } from '../TeamProvisioningSecondaryRuntimeRuns';
 
 import type {
   TeamLaunchRuntimeAdapter,
@@ -20,7 +22,7 @@ import type {
 import type { ProvisioningRun } from '../TeamProvisioningRunModel';
 import type { RuntimeAdapterRunByTeamEntry } from '../TeamProvisioningServiceComposition';
 import type { TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
-import type { PersistedTeamLaunchSnapshot, TeamCreateRequest } from '@shared/types';
+import type { InboxMessage, PersistedTeamLaunchSnapshot, TeamCreateRequest } from '@shared/types';
 
 type OpenCodeMember = Extract<
   TeamRuntimeLanePlan,
@@ -86,6 +88,97 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
   readonly finalPersistence = vi.fn();
   beforeSecondarySetupFailure?: () => void;
   initialStop?: (runId: string) => Promise<void>;
+  beforeSecondaryBootstrap?: (
+    run: ProvisioningRun,
+    lane: ProvisioningRun['mixedSecondaryLanes'][number]
+  ) => Promise<void>;
+  readonly queuedMessages = new Map<string, InboxMessage[]>();
+  readonly inboxWakes: {
+    memberName: string;
+    messageId?: string | null;
+    restarting: boolean;
+    aggregateRestarting: boolean;
+  }[] = [];
+  protected override readonly openCodePromptDeliveryWatchdogCoordinator =
+    createOpenCodePromptDeliveryWatchdogCoordinator({
+      hasAcceptedMemberWorkSyncReport: async () => false,
+      taskRefsIncludeAll: () => false,
+      visibleReplyProofService: {
+        applyDestinationProof: vi.fn(),
+        materializePlainTextReplyIfNeeded: vi.fn(),
+      },
+      maybeSyncRuntimePermissionsAfterDelivery: async () => {},
+      rememberRuntimePidFromBridge: async () => {},
+      watchdogScheduler: {
+        isEnabled: () => true,
+        isStaleError: async () => false,
+        schedule: (input) =>
+          this.inboxWakes.push({
+            ...input,
+            restarting: this.memberLifecycleOperationRunner.isMemberLifecycleOperationActive(
+              input.teamName,
+              input.memberName
+            ),
+            aggregateRestarting: this.openCodeAggregatePrimaryRestartByTeam.has(input.teamName),
+          }),
+      },
+      canDeliverToTeamRuntime: (teamName) =>
+        this.runTracking.resolveDeliverableTrackedRuntimeRunId(teamName) !== null,
+      recoverRuntimeLanesForWatchdog: async () => [],
+      stopRuntimeLanesForStoppedTeam: async () => {},
+      readActiveRuntimeLaneIds: async () => [
+        'primary',
+        ...this.currentWakeRun().mixedSecondaryLanes.map((lane) => lane.laneId),
+      ],
+      createLedger: () => {
+        throw new Error('Wake must not create a delivery ledger');
+      },
+      resolveMembersForRuntimeLane: async (_team, laneId) =>
+        laneId === 'primary'
+          ? ['Lead']
+          : this.currentWakeRun()
+              .mixedSecondaryLanes.filter((lane) => lane.laneId === laneId)
+              .map((lane) => lane.member.name),
+      getInboxMessages: async (_team, memberName) => this.queuedMessages.get(memberName) ?? [],
+      resolveCurrentRuntimeRunId: async (teamName, laneId) =>
+        laneId === 'primary'
+          ? (this.runtimeAdapterRunByTeam.get(teamName)?.runId ?? null)
+          : (this.currentWakeRun().mixedSecondaryLanes.find((lane) => lane.laneId === laneId)
+              ?.runId ?? null),
+      resolveTrackedBootstrapRunId: (input) =>
+        getTrackedOpenCodeBootstrapWakeRunId(input, {
+          runTracking: this.runTracking,
+          runs: this.runs,
+        }),
+      hasCommittedBootstrapSession: async ({ laneId, runId, memberName }) =>
+        laneId === 'primary' ||
+        Boolean(
+          this.currentWakeRun().mixedSecondaryLanes.find(
+            (lane) => lane.laneId === laneId && lane.runId === runId
+          )?.result?.members[memberName]?.bootstrapConfirmed
+        ),
+      hasStableInboxMessageId: (message): message is InboxMessage & { messageId: string } =>
+        Boolean(message.messageId),
+      logPromptDeliveryEvent: () => {},
+    });
+
+  private currentWakeRun(): ProvisioningRun {
+    const run = this.runs.get(this.runTracking.getTrackedRunId('alpha') ?? '');
+    if (!run) throw new Error('TEST wake run is missing');
+    return run;
+  }
+
+  observeBootstrapCommit(
+    run: ProvisioningRun,
+    lane: ProvisioningRun['mixedSecondaryLanes'][number]
+  ): Promise<number> {
+    return this.openCodePromptDeliveryWatchdogCoordinator.wakeAfterBootstrapCommit({
+      teamName: run.teamName,
+      runId: lane.runId!,
+      laneId: lane.laneId,
+      memberName: lane.member.name,
+    });
+  }
   manifest: RuntimeStoreManifestEvidence = {
     highWatermark: 0,
     activeRunId: 'restart-run',
@@ -309,6 +402,7 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
     lane.runId = 'TEST-target-secondary';
     lane.state = 'finished';
     lane.result = materializedResult(lane.runId, [lane.member.name]);
+    await this.beforeSecondaryBootstrap?.(_run, lane);
   }
 
   protected override persistSentMessage(): void {}
@@ -354,6 +448,103 @@ function materializedResult(
 }
 
 describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
+  it.each(['success', 'restored'] as const)(
+    'wakes queued inboxes after primary restart readiness and both operation leases release: %s',
+    async (outcome) => {
+      const facade = new TestOpenCodeAggregatePrimaryFacade();
+      facade.productionLaunch = true;
+      const run = createRun();
+      const sibling = {
+        laneId: 'secondary:opencode:bob',
+        providerId: 'opencode' as const,
+        member: member('bob'),
+        runId: 'TEST-retained-bob',
+        state: 'finished' as const,
+        result: materializedResult('TEST-retained-bob', ['bob']),
+        warnings: [],
+        diagnostics: [],
+      };
+      run.mixedSecondaryLanes = [sibling];
+      facade.trackSecondaryRuns(run);
+      const queueWhileDisconnected = async (
+        current: ProvisioningRun,
+        lane: ProvisioningRun['mixedSecondaryLanes'][number]
+      ): Promise<void> => {
+        for (const name of outcome === 'restored' ? ['bob'] : ['Worker', 'bob'])
+          facade.queuedMessages.set(name, [
+            {
+              from: 'user',
+              to: name,
+              text: 'TEST assigned task during restart',
+              timestamp: '2026-10-23T21:57:35.005Z',
+              read: false,
+              messageId: `TEST-task-${name}`,
+            },
+          ]);
+        expect(current.progress.state).toBe('disconnected');
+        await expect(facade.observeBootstrapCommit(current, lane)).resolves.toBe(0);
+        expect(facade.inboxWakes).toEqual([]);
+      };
+      facade.clearPrimaryLaneIfOwned.mockImplementation(() => {
+        facade.simulatePrimaryCleanup(run.teamName, run.runId);
+        return Promise.resolve(undefined);
+      });
+      let launchAttempt = 0;
+      facade.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: async () => {
+              throw new Error('Unexpected TEST prepare');
+            },
+            reconcile: async () => {
+              throw new Error('Unexpected TEST reconcile');
+            },
+            launch: async (input) => {
+              launchAttempt += 1;
+              if (outcome === 'restored' && launchAttempt === 2)
+                await queueWhileDisconnected(run, sibling);
+              return materializedResult(
+                input.runId,
+                input.expectedMembers.map((entry) => entry.name),
+                outcome === 'restored' && launchAttempt === 1
+              );
+            },
+            stop: async (input) => ({
+              runId: input.runId,
+              teamName: input.teamName,
+              stopped: true,
+              members: {},
+              warnings: [],
+              diagnostics: [],
+            }),
+          } satisfies TeamLaunchRuntimeAdapter,
+        ])
+      );
+      facade.trackRun(run, { runId: run.runId, providerId: 'opencode', cwd: run.request.cwd });
+      facade.beforeSecondaryBootstrap = queueWhileDisconnected;
+      const restarting = facade.restartMember(run.teamName, 'Worker', false);
+      if (outcome === 'restored')
+        await expect(restarting).rejects.toMatchObject({ outcome: 'failed_restored' });
+      else await restarting;
+      expect(run.progress.state).toBe('ready');
+      expect(facade.inboxWakes).toEqual(
+        (outcome === 'restored' ? ['bob'] : ['bob', 'Worker']).map((memberName): unknown =>
+          expect.objectContaining({
+            memberName,
+            messageId: `TEST-task-${memberName}`,
+            restarting: false,
+            aggregateRestarting: false,
+          })
+        )
+      );
+      expect(sibling.runId).toBe('TEST-retained-bob');
+      expect([...facade.queuedMessages.values()].flat().every((message) => !message.read)).toBe(
+        true
+      );
+    }
+  );
+
   it('stops an unretainable primary using its retained owner cwd', async () => {
     const run = createRun();
     const owner = {
