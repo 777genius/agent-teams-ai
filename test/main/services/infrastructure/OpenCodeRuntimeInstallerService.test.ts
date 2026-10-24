@@ -187,13 +187,15 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
   it.each([
     ['2.0.0', true],
     ['opencode v2.0.32', true],
-    ['2.0.21', false],
-    ['opencode v2.0.21', false],
-    ['opencode v2.0.26', false],
+    ['2.0.21', true],
+    ['opencode v2.0.21', true],
+    ['opencode v2.0.26', true],
+    ['2.1.4', true],
+    ['3.0.0', false],
     ['2.0.32-beta.1', false],
     ['2.0.32+build.7', false],
   ])(
-    'discovers only recognized native runtime versions on PATH (%s)',
+    'discovers native runtime versions recognized by the pinned range on PATH (%s)',
     async (version, supported) => {
       const binDir = path.join(tempRoot!, 'TEST-bin');
       await mkdir(binDir, { recursive: true });
@@ -210,13 +212,15 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
   it.each([
     ['2.0.0', true],
     ['opencode v2.0.32', true],
-    ['2.0.21', false],
-    ['opencode v2.0.21', false],
-    ['opencode v2.0.26', false],
+    ['2.0.21', true],
+    ['opencode v2.0.21', true],
+    ['opencode v2.0.26', true],
+    ['2.1.4', true],
+    ['3.0.0', false],
     ['2.0.32-beta.1', false],
     ['2.0.32+build.7', false],
   ])(
-    'discovers only recognized managed native runtime versions (%s)',
+    'discovers managed native runtime versions recognized by the pinned range (%s)',
     async (version, supported) => {
       const binaryPath = path.join(tempRoot!, 'TEST-managed-opencode');
       await writeFile(binaryPath, 'TEST native version probe', { mode: 0o755 });
@@ -249,10 +253,10 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     ['1.18.3', true],
     ['2.0.0', true],
     ['opencode v2.0.32', true],
-    ['2.0.21', false],
-    ['opencode v2.0.21', false],
+    ['2.0.21', true],
+    ['opencode v2.0.21', true],
     ['1.15.9', false],
-    ['2.0.22', false],
+    ['2.1.4', true],
     ['2.0.32-beta.1', false],
     ['2.0.32+unqualified', false],
     ['3.0.0', false],
@@ -373,7 +377,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     });
 
     it('names an unsupported override and its version next to the fallback binary', async () => {
-      mockOverrideVersion('opencode v2.1.4');
+      mockOverrideVersion('opencode v3.0.0');
 
       const status = await new OpenCodeRuntimeInstallerService().getReadinessStatus();
 
@@ -386,7 +390,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         ignoredOverride: {
           binaryPath: overridePath,
           envName: 'CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH',
-          version: '2.1.4',
+          version: '3.0.0',
         },
       });
       expect(status.ignoredOverride?.reason).toContain('unsupported native generation');

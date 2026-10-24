@@ -17,6 +17,15 @@ const TARGET_BINARY_FORMAT = {
 
 // Collected per afterPack run so a deficient runtime payload is loud in build logs.
 const missingPortableBunPtyTargets = new Set();
+// Each staged OpenCode V2 graph other than the hoisted one nests its packages under
+// its version-derived server alias (see runtime local-cli/opencode-v2-graphs.json).
+const NESTED_RUNTIME_GRAPH = '@opencode/server-v\\d+\\.\\d+\\.\\d+/node_modules/';
+const BUN_PTY_RELEASE = new RegExp(
+  `^((?:${NESTED_RUNTIME_GRAPH}@opencode/core/node_modules/)?)bun-pty/rust-pty/target/release/([^/]+)$`
+);
+const TREE_SITTER_PREBUILDS = new RegExp(
+  `^((?:${NESTED_RUNTIME_GRAPH})?@opencode/core/node_modules/tree-sitter-bash/prebuilds)/`
+);
 
 function getArchLabel(arch) {
   return ARCH_LABELS[arch] ?? String(arch);
@@ -276,12 +285,10 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
     ) {
       return filePath;
     }
-    // Both the current graph and the frozen V2 floor ship multi-platform bun-pty libraries.
-    // Require a compatible sibling except for the frozen, unused Windows ARM64 floor PTY below.
-    const bunPtyReleases = [
-      'bun-pty/rust-pty/target/release',
-      '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release',
-    ];
+    // The hoisted graph and nested graphs ship multi-platform bun-pty libraries.
+    // Require a compatible sibling except for a frozen, unused nested Windows ARM64 PTY below.
+    const bunPtyRelease = portableRuntimeGraph[1].match(BUN_PTY_RELEASE);
+    const nestedBunPty = Boolean(bunPtyRelease?.[1]);
     const libraryTargets = {
       'librust_pty.so': ['linux', 'x64'],
       'librust_pty_musl.so': ['linux', 'x64'],
@@ -298,13 +305,13 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
       (arch === targetArch || (targetPlatform === 'darwin' && targetArch === 'universal'));
     if (
       Object.hasOwn(libraryTargets, library) &&
-      bunPtyReleases.some((root) => portableRuntimeGraph[1] === `${root}/${library}`)
+      bunPtyRelease?.[2] === library
     ) {
       // The frozen floor's PTY is not used by bounded Windows transports. Retain
       // its preexisting ARM64 packaging exception without enabling ARM64 execution.
       if (
         targetPlatform === 'win32' && targetArch === 'arm64' &&
-        portableRuntimeGraph[1] === `${bunPtyReleases[1]}/${library}` &&
+        nestedBunPty &&
         ['librust_pty.so', 'librust_pty_arm64.so', 'librust_pty.dylib', 'librust_pty_arm64.dylib', 'rust_pty.dll'].includes(library)
       ) {
         try {
@@ -320,8 +327,8 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
       }
       // A malformed target-named file must fail validation rather than disappear.
       if (matchesTarget(libraryTargets[library])) return null;
-      // The frozen floor keeps its sibling-gated retention below.
-      if (portableRuntimeGraph[1] === `${bunPtyReleases[0]}/${library}`) {
+      // Nested graphs keep their sibling-gated retention below.
+      if (!nestedBunPty) {
         // The loader's per-platform filename map is exhaustive, so a foreign-named
         // library can never load on the target; the win32-arm64 runtime also omits
         // rust_pty_arm64.dll entirely. Prune current-graph foreigns outright, but
@@ -392,12 +399,8 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
   const runtimePath = segments.slice(runtimePrefix.length).join('/');
   let rootToRemove = null;
   let targetSibling = null;
-  const treeSitterRoots = [
-    '@opencode/core/node_modules/tree-sitter-bash/prebuilds',
-    '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/tree-sitter-bash/prebuilds',
-  ];
-  for (const prebuildRoot of treeSitterRoots) {
-    if (!runtimePath.startsWith(`${prebuildRoot}/`)) continue;
+  const treeSitterRoot = runtimePath.match(TREE_SITTER_PREBUILDS);
+  for (const prebuildRoot of treeSitterRoot ? [treeSitterRoot[1]] : []) {
     const [variant, filename, extra] = runtimePath.slice(prebuildRoot.length + 1).split('/');
     if (
       !extra &&

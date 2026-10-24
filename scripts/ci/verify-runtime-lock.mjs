@@ -85,4 +85,17 @@ for (const [platform, asset] of Object.entries(lock.assets ?? {})) {
   }
 }
 
+// The runtime release manifest publishes its OpenCode V2 contract (supported range and
+// qualified versions); the lock pins it verbatim. Its exact shape is checked by the
+// opencode-compatibility unit tests through the same parser the app uses.
+const opencodeV2 = lock.opencodeV2;
+if (
+  !opencodeV2 ||
+  typeof opencodeV2 !== 'object' ||
+  !opencodeV2.range ||
+  !Array.isArray(opencodeV2.qualified)
+) {
+  fail('opencodeV2 must copy the published runtime manifest contract ({ range, qualified }).');
+}
+
 console.log('[verify-runtime-lock] OK');

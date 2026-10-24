@@ -262,7 +262,7 @@ describe('serialized native IPC failure details', () => {
       await mkdir(stdioRoot, { recursive: true });
       await writeFile(path.join(stdioRoot, 'main.stderr'), [
         'error: Cannot read file "C:\\TEST-sdk\\": EPERM',
-        'error: Cannot find module "@opencode/client-v2-floor" from "C:\\TEST-private\\entry.ts"',
+        'error: Cannot find module "@opencode/client-v2.0.0" from "C:\\TEST-private\\entry.ts"',
         JSON.stringify({ event: 'opencode-v2-startup', stage: 'runtime-import',
           cause: 'execution_graph_dependency_missing', reason: 'failed', errno: 'ENOENT',
           operation: 'open', errorName: 'Error', elapsedMs: 123 }),
@@ -274,7 +274,7 @@ describe('serialized native IPC failure details', () => {
         readTargetKind?: string; childStartup: { stage: string; cause: string };
       } };
       expect(stdioPacket.stdio).toMatchObject({ kind: 'module_resolution',
-        errorKinds: ['access_denied', 'module_resolution'], moduleTargetRole: '@opencode/client-v2-floor',
+        errorKinds: ['access_denied', 'module_resolution'], moduleTargetRole: '@opencode/client-v2.0.0',
         childStartup: { stage: 'runtime-import', cause: 'execution_graph_dependency_missing' } });
       expect(stdioPacket.stdio.readTargetKind).toBeUndefined();
       expect(stdioPacket.stdio.errorLine).toContain('Cannot find module');

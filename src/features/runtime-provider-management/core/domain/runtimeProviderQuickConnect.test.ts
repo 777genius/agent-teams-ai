@@ -71,7 +71,7 @@ describe('resolveOpenCodeQuickConnectGate', () => {
     ).toBe('ready');
   });
 
-  it.each(['2.0.0', '2.0.32', 'opencode v2.0.32'])(
+  it.each(['2.0.0', '2.0.32', 'opencode v2.0.32', '2.0.21', 'opencode v2.0.21', '2.0.26', '2.1.4'])(
     'allows provider connection for the recognized installed native runtime %s',
     (version) => {
       expect(
@@ -85,23 +85,19 @@ describe('resolveOpenCodeQuickConnectGate', () => {
     }
   );
 
-  it.each([
-    '2.0.21',
-    'opencode v2.0.21',
-    '2.0.26',
-    '2.0.32-beta.1',
-    '2.0.0-rc.1',
-    '2.0.32+unqualified',
-  ])('keeps provider connection blocked for the unrecognized runtime %s', (version) => {
-    expect(
-      resolveOpenCodeQuickConnectGate({
-        runtimeStatus: { installed: true, source: 'path', state: 'ready', version },
-        runtimeStatusLoading: false,
-        provider: null,
-        cliStatusLoading: false,
-      })
-    ).toBe('missing');
-  });
+  it.each(['3.0.0', 'opencode v3.0.0', '2.0.32-beta.1', '2.0.0-rc.1', '2.0.32+unqualified'])(
+    'keeps provider connection blocked for the unrecognized runtime %s',
+    (version) => {
+      expect(
+        resolveOpenCodeQuickConnectGate({
+          runtimeStatus: { installed: true, source: 'path', state: 'ready', version },
+          runtimeStatusLoading: false,
+          provider: null,
+          cliStatusLoading: false,
+        })
+      ).toBe('missing');
+    }
+  );
 
   it('requires an OpenCode update before loading provider and model catalogs', () => {
     expect(

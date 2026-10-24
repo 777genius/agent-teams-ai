@@ -75,7 +75,7 @@ function writePortableTreeSitterFixtures(
     ['win32', 'arm64', createPortableExecutableBuffer('arm64')],
   ] as const;
   const retained: { path: string; bytes: Buffer }[] = [];
-  for (const prefix of ['', '@opencode/server-v2-floor/node_modules/']) {
+  for (const prefix of ['', '@opencode/server-v2.0.0/node_modules/', '@opencode/server-v2.1.4/node_modules/']) {
     for (const [p, a, bytes] of binaries) {
       const file = path.join(
         graph,
@@ -107,7 +107,7 @@ function writePortableBunPtyFixtures(
     ['win32', 'arm64', 'rust_pty_arm64.dll', createPortableExecutableBuffer('arm64')],
   ] as const;
   const retained: { path: string; bytes: Buffer }[] = [];
-  for (const prefix of ['', '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/']) {
+  for (const prefix of ['', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/', '@opencode/server-v2.1.4/node_modules/@opencode/core/node_modules/']) {
     for (const [p, a, name, bytes] of libraries) {
       const file = path.join(graph, prefix, 'bun-pty/rust-pty/target/release', name);
       writeFile(file, bytes);
@@ -291,7 +291,7 @@ describe('electron-builder afterPack', () => {
     const foreignFiles: string[] = [];
     for (const coreRoot of [
       path.join(modules, '@opencode', 'core'),
-      path.join(modules, '@opencode', 'server-v2-floor', 'node_modules', '@opencode', 'core'),
+      path.join(modules, '@opencode', 'server-v2.0.0', 'node_modules', '@opencode', 'core'),
     ]) {
       const prebuilds = path.join(coreRoot, 'node_modules', 'tree-sitter-bash', 'prebuilds');
       const target = path.join(prebuilds, `${platform}-${targetArch}`, 'tree-sitter-bash.node');
@@ -518,7 +518,8 @@ describe('electron-builder afterPack', () => {
     const mixedDirectoryFile = path.join(graph, '@opencode/core/node_modules/tree-sitter-bash/prebuilds', platform === 'linux' ? 'darwin-arm64' : 'linux-arm64', 'compatible-extra.node');
     writeFile(mixedDirectoryFile, targetBytes);
     await afterPackModule({appOutDir: tempDir, electronPlatformName: platform, arch: archCode});
-    expect(retained).toHaveLength(platform === 'linux' ? 6 : 4);
+    // One tree-sitter target and one or two bun-pty targets in each of the three graph positions.
+    expect(retained).toHaveLength(platform === 'linux' ? 9 : 6);
     for (const file of retained) expect(fs.readFileSync(file.path)).toEqual(file.bytes);
     expect(fs.readFileSync(mixedDirectoryFile)).toEqual(targetBytes);
     expect(fs.existsSync(documentation)).toBe(true);
@@ -535,20 +536,20 @@ describe('electron-builder afterPack', () => {
     const graph = path.join(tempDir, resources, 'runtime/local-cli/node_modules');
     const retained = writePortableBunPtyFixtures(graph, platform, arch);
     await afterPackModule({ appOutDir: tempDir, electronPlatformName: platform, arch: archCode });
-    expect(retained).toHaveLength(4); // Both Linux libc variants, or both Darwin architectures, in each package.
+    expect(retained).toHaveLength(6); // Both Linux libc variants, or both Darwin architectures, in each package.
     for (const file of retained) expect(fs.readFileSync(file.path)).toEqual(file.bytes);
     await expect(validateNativeBinaries(tempDir, platform, arch)).resolves.toEqual([]);
   });
 
   it.each([
-    ['missing sibling', '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release/librust_pty_musl.so', null],
-    ['malformed sibling', '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release/librust_pty_musl.so', Buffer.from('invalid')],
-    ['wrong sibling format', '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release/librust_pty_musl.so', createElfBuffer('x64')],
-    ['wrong sibling architecture', '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release/librust_pty_musl.so', createPortableExecutableBuffer('arm64')],
+    ['missing sibling', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release/librust_pty_musl.so', null],
+    ['malformed sibling', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release/librust_pty_musl.so', Buffer.from('invalid')],
+    ['wrong sibling format', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release/librust_pty_musl.so', createElfBuffer('x64')],
+    ['wrong sibling architecture', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release/librust_pty_musl.so', createPortableExecutableBuffer('arm64')],
     ['unknown filename', 'bun-pty/rust-pty/target/release/unknown.so', createPortableExecutableBuffer('x64')],
     ['unknown package path', 'other/node_modules/bun-pty/rust-pty/target/release/librust_pty.so', createPortableExecutableBuffer('x64')],
     ['unknown nested path', 'bun-pty/rust-pty/target/release/nested/librust_pty.so', createPortableExecutableBuffer('x64')],
-    ['floor without its own sibling', '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release/librust_pty.so', null],
+    ['floor without its own sibling', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release/librust_pty.so', null],
   ] as const)('keeps bun-pty pruning fail-closed for %s', async (_label, relative, siblingBytes) => {
     const tempDir = createTempDir();
     tempDirs.push(tempDir);
@@ -572,7 +573,7 @@ describe('electron-builder afterPack', () => {
     tempDirs.push(tempDir);
     const graph = path.join(tempDir, 'resources/runtime/local-cli/node_modules');
     writeFile(path.join(graph, 'bun-pty/rust-pty/target/release/rust_pty_arm64.dll'), createPortableExecutableBuffer('arm64'));
-    const floor = path.join(graph, '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release');
+    const floor = path.join(graph, '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release');
     const oldLibraries = [
       ['librust_pty.so', createElfBuffer('x64')],
       ['librust_pty_arm64.so', createElfBuffer('arm64')],
@@ -598,12 +599,12 @@ describe('electron-builder afterPack', () => {
   });
 
   it.each([
-    ['wrong version', '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/bun-pty', 'librust_pty.so', { name: 'bun-pty', version: '0.4.11' }],
-    ['wrong package name', '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/bun-pty', 'librust_pty.so', { name: 'other', version: '0.4.8' }],
-    ['missing manifest', '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/bun-pty', 'librust_pty.so', null],
+    ['wrong version', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty', 'librust_pty.so', { name: 'bun-pty', version: '0.4.11' }],
+    ['wrong package name', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty', 'librust_pty.so', { name: 'other', version: '0.4.8' }],
+    ['missing manifest', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty', 'librust_pty.so', null],
     ['other nested path', 'other/node_modules/bun-pty', 'librust_pty.so', { name: 'bun-pty', version: '0.4.8' }],
-    ['unknown filename', '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/bun-pty', 'unknown.so', { name: 'bun-pty', version: '0.4.8' }],
-    ['new library filename', '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/bun-pty', 'librust_pty_musl.so', { name: 'bun-pty', version: '0.4.8' }],
+    ['unknown filename', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty', 'unknown.so', { name: 'bun-pty', version: '0.4.8' }],
+    ['new library filename', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty', 'librust_pty_musl.so', { name: 'bun-pty', version: '0.4.8' }],
   ] as const)('keeps the frozen Windows arm64 PTY exception closed for %s', async (_label, relative, filename, manifest) => {
     const tempDir = createTempDir();
     tempDirs.push(tempDir);
