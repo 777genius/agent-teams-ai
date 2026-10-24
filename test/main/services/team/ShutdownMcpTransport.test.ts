@@ -478,6 +478,7 @@ describe('shutdown MCP transport authority', () => {
       expect(prepareShutdownCleanup).toHaveBeenCalledExactlyOnceWith();
     });
     const noOp = vi.fn();
+    const stopContinuityScan = vi.fn();
     const teardown = vi.spyOn(server, 'stop').mockImplementation(() => {
       // Revocation must already hold on entry, even when server.stop is slow.
       expect(server.appContext.read(getClaudeBasePath())).toBeNull();
@@ -504,11 +505,13 @@ describe('shutdown MCP transport authority', () => {
       runShutdownStep: async (_name: string, step: () => unknown) => {
         // Polling must stop before the first async cleanup can yield, and stay stopped.
         expect(disposeTokenUsage).toHaveBeenCalledExactlyOnceWith();
+        expect(stopContinuityScan).toHaveBeenCalledExactlyOnceWith();
         return await step();
       },
       clearStartupTimers: noOp,
       clearInboxNotifyTimers: noOp,
       rendererRecoveryController: null,
+      openCodePromptDeliveryContinuityScan: { stop: stopContinuityScan },
       stopPeriodicOpenCodeHostStartupLockPurge: null,
       teamRuntimeRecoveryFeature: null,
       teamProvisioningService: { setRuntimeRecoveryFailureObserver: noOp, stopAllTeams: stop },
