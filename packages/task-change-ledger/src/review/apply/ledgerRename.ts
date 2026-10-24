@@ -91,7 +91,9 @@ export function createLedgerRename(getContext: () => ApplierContext) {
               if (content === oldContent) return 'rejected';
               if (content === newContent) return 'reapplying';
             }
-            throw new Error('Ledger rename changed since review update; durable state is ambiguous');
+            throw new Error(
+              'Ledger rename changed since review update; durable state is ambiguous'
+            );
           }
           const accepted =
             oldCurrent.missing && !newCurrent.missing && newCurrent.content === newContent;
@@ -233,22 +235,11 @@ export function createLedgerRename(getContext: () => ApplierContext) {
       hasUnavailableState: boolean
     ): Promise<LedgerApplyOutcome> {
       const ctx = getContext();
-      const oldSnippet =
-        snippets.find(
-          (snippet) =>
-            snippet.ledger?.operation === 'delete' &&
-            ctx.pathMatchesRelationPath(snippet.filePath, relation.oldPath)
-        ) ?? snippets.find((snippet) => snippet.ledger?.operation === 'delete');
-      const newSnippet =
-        snippets.find(
-          (snippet) =>
-            snippet.ledger?.operation === 'create' &&
-            ctx.pathMatchesRelationPath(snippet.filePath, relation.newPath)
-        ) ?? snippets.find((snippet) => snippet.ledger?.operation === 'create');
-      const oldFilePath =
-        oldSnippet?.filePath ??
-        ctx.resolveRelatedLedgerPath(newSnippet?.filePath, relation.newPath, relation.oldPath);
-      const newFilePath = newSnippet?.filePath;
+      const endpoints = ctx.resolveLedgerRenameEndpoints(snippets, relation);
+      const oldSnippet = endpoints?.oldSnippet;
+      const newSnippet = endpoints?.newSnippet;
+      const oldFilePath = endpoints?.oldFilePath;
+      const newFilePath = endpoints?.newFilePath;
       const oldContent = oldSnippet?.ledger?.originalFullContent ?? original;
       const authoritativeNewContent = newSnippet?.ledger?.modifiedFullContent;
       const newHash = newSnippet?.ledger?.afterState?.sha256 ?? newSnippet?.ledger?.afterHash;

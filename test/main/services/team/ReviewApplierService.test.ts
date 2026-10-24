@@ -735,13 +735,16 @@ describe('ReviewApplierService', () => {
 
     await expect(classify()).resolves.toBe('accepted');
     await expect(classify()).resolves.toBe('accepted');
-    expect(atomicWriteMocks.resumePreparedReviewFileTransaction).toHaveBeenCalledWith({
-      kind: 'move',
-      sourcePath: oldPath,
-      targetPath: newPath,
-      expectedContent: oldContent,
-      nextContent: newContent,
-    });
+    expect(atomicWriteMocks.resumePreparedReviewFileTransaction).toHaveBeenCalledWith(
+      {
+        kind: 'move',
+        sourcePath: oldPath,
+        targetPath: newPath,
+        expectedContent: oldContent,
+        nextContent: newContent,
+      },
+      {}
+    );
     expect(atomicWriteMocks.inspectReviewFileTransaction).toHaveBeenCalledWith(transaction);
     expect(atomicWriteMocks.executeReviewFileTransaction).not.toHaveBeenCalled();
 
