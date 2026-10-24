@@ -4674,9 +4674,19 @@ describe('CLI status visibility during completed install state', () => {
       expect((storeState.cliStatus.providers as unknown[])[0]).toBe(anthropic);
       expect((storeState.cliStatus.providers as unknown[])[2]).toBe(opencode);
       expect(openCodeCatalogHookInputs.at(-1)?.enabled).toBe(true);
+      let finishOpenCodeCheck!: (refreshed: boolean) => void;
+      storeState.fetchCliProviderStatus.mockImplementationOnce(
+        () =>
+          new Promise<boolean>((resolve) => {
+            finishOpenCodeCheck = resolve;
+          })
+      );
       await act(async () => {
         (host.querySelector('[title="Re-check OpenCode"]') as HTMLButtonElement).click();
       });
+      // The directory readers refresh after the status check, not alongside it.
+      expect(quickConnectRefreshKeys.at(-1)).toBe(0);
+      await act(async () => finishOpenCodeCheck(true));
       expect(quickConnectRefreshKeys.at(-1)).toBe(1);
       expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBe(1);
       expect(storeState.fetchCliProviderStatus).toHaveBeenLastCalledWith('opencode', {

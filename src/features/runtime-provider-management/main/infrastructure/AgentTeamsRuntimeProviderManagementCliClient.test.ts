@@ -455,6 +455,31 @@ describe('AgentTeamsRuntimeProviderManagementCliClient OpenCode runtime changes'
     expect(execCliMock).toHaveBeenCalledTimes(2);
   });
 
+  it('drops cached model reads after the runtime changed', async () => {
+    let generation = 0;
+    execCliMock
+      .mockResolvedValueOnce({ stdout: modelResponse('before'), stderr: '' })
+      .mockResolvedValueOnce({ stdout: modelResponse('after'), stderr: '' });
+    const client = new AgentTeamsRuntimeProviderManagementCliClient({
+      getOpenCodeRuntimeGeneration: () => generation,
+    });
+    const input = {
+      runtimeId: 'opencode' as const,
+      providerId: 'openrouter',
+      projectPath: '/test/project',
+    };
+
+    await client.loadModels(input);
+    await client.loadModels(input);
+    expect(execCliMock).toHaveBeenCalledTimes(1);
+
+    generation = 1;
+    await expect(client.loadModels(input)).resolves.toMatchObject({
+      models: { diagnostics: ['after'] },
+    });
+    expect(execCliMock).toHaveBeenCalledTimes(2);
+  });
+
   it('does not join a directory read that started before the runtime changed', async () => {
     let generation = 0;
     const beforeInstall = deferred<ReturnType<typeof directoryOutput>>();

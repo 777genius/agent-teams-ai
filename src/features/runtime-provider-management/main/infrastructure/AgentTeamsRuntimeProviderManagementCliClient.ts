@@ -8,6 +8,7 @@ import {
   ensureOpenCodeGlobalDefaultContextPath,
   getOpenCodeGlobalDefaultContextPath,
 } from './OpenCodeGlobalDefaultContext';
+import { OpenCodeRuntimeGenerationGuard } from './openCodeRuntimeGeneration';
 import {
   ensureOpenCodeProfileNodeModulesJunction,
   extractProfileIdFromSymlinkError,
@@ -33,7 +34,11 @@ import {
   sanitizeCommandErrorMessage,
   truncateCommandErrorDetail,
 } from './runtimeProviderCommandPresentation';
-import { normalizeRuntimeProviderDirectoryResponse } from './runtimeProviderDirectoryResponse';
+import {
+  getRuntimeProviderDirectoryCacheKey,
+  getRuntimeProviderDirectoryCacheTtlMs,
+  normalizeRuntimeProviderDirectoryResponse,
+} from './runtimeProviderDirectoryResponse';
 import { sanitizeRuntimeProviderDiagnostics } from './runtimeProviderErrorBoundary';
 import { RuntimeProviderModelRequestTracker } from './runtimeProviderModelRequestTracker';
 import {
@@ -80,8 +85,6 @@ const OPENCODE_API_KEY_COMMAND_TIMEOUT_MS = 180_000;
 // cancellable from the UI.
 const OAUTH_COMMAND_TIMEOUT_MS = 17 * 60_000;
 const OAUTH_CANCEL_FORCE_KILL_DELAY_MS = 2_000;
-const DIRECTORY_RESPONSE_CACHE_TTL_MS = 30_000;
-const DEFAULT_DIRECTORY_RESPONSE_CACHE_TTL_MS = 2 * 60_000;
 const MAX_DIRECTORY_RESPONSE_CACHE_ENTRIES = 32;
 const MODEL_RESPONSE_CACHE_TTL_MS = 30_000;
 const DEFAULT_MODEL_RESPONSE_CACHE_TTL_MS = 2 * 60_000;
@@ -139,11 +142,7 @@ interface ModelResponseCacheEntry {
 export interface RuntimeProviderCliClientDependencies {
   openExternal?: (url: string) => Promise<void>;
   emitOAuthProgress?: (event: RuntimeProviderOAuthProgressDto) => void;
-  /**
-   * Changes whenever the OpenCode runtime may have been installed, replaced or
-   * re-resolved. Cached directory and model reads from another generation
-   * describe a different runtime and are dropped.
-   */
+  /** OpenCode runtime resolver generation, see OpenCodeRuntimeGenerationGuard. */
   getOpenCodeRuntimeGeneration?: () => number;
 }
 
@@ -1298,8 +1297,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   private readonly activeOAuthOperations = new Map<string, ActiveRuntimeProviderOAuthOperation>();
   private readonly openExternal: (url: string) => Promise<void>;
   private readonly emitOAuthProgress: (event: RuntimeProviderOAuthProgressDto) => void;
-  private readonly getOpenCodeRuntimeGeneration: () => number;
-  private cachedOpenCodeRuntimeGeneration: number;
+  private readonly openCodeRuntimeGeneration: OpenCodeRuntimeGenerationGuard;
 
   constructor(deps: RuntimeProviderCliClientDependencies = {}) {
     this.openExternal =
@@ -1308,39 +1306,16 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
         throw new Error('OAuth browser integration is unavailable');
       });
     this.emitOAuthProgress = deps.emitOAuthProgress ?? (() => {});
-    this.getOpenCodeRuntimeGeneration = deps.getOpenCodeRuntimeGeneration ?? (() => 0);
-    this.cachedOpenCodeRuntimeGeneration = this.getOpenCodeRuntimeGeneration();
+    this.openCodeRuntimeGeneration = new OpenCodeRuntimeGenerationGuard(
+      deps.getOpenCodeRuntimeGeneration ?? (() => 0)
+    );
   }
 
-  /**
-   * A directory read while OpenCode was missing still succeeds with seed-only
-   * entries. Once the runtime changes (install, update, status re-check), drop
-   * every cached and in-flight read so the next caller asks the new runtime.
-   */
   private dropCachesFromPreviousOpenCodeRuntime(): void {
-    const generation = this.getOpenCodeRuntimeGeneration();
-    if (generation === this.cachedOpenCodeRuntimeGeneration) {
-      return;
-    }
-    this.cachedOpenCodeRuntimeGeneration = generation;
+    if (!this.openCodeRuntimeGeneration.consumeChange()) return;
     this.invalidateDirectoryResponseCache();
-    // Same rule as a catalog refresh: a visible model load must not abort.
+    // Running model loads are detached and finish as stale; they are not aborted.
     this.invalidateModelResponseCache(false);
-  }
-
-  private getDirectoryResponseCacheKey(
-    input: RuntimeProviderManagementLoadDirectoryInput,
-    projectPath: string | null
-  ): string {
-    return JSON.stringify([
-      input.runtimeId,
-      input.summary === true ? 'summary' : 'full',
-      projectPath,
-      input.query?.trim() || null,
-      input.filter ?? null,
-      input.limit ?? null,
-      input.cursor?.trim() || null,
-    ]);
   }
 
   private readDirectoryResponseCache(
@@ -1517,18 +1492,6 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     }
   }
 
-  private getDirectoryResponseCacheTtlMs(
-    input: RuntimeProviderManagementLoadDirectoryInput
-  ): number {
-    const isDefaultDirectory =
-      !input.query?.trim() &&
-      (input.filter === undefined || input.filter === null || input.filter === 'all') &&
-      !input.cursor?.trim();
-    return isDefaultDirectory
-      ? DEFAULT_DIRECTORY_RESPONSE_CACHE_TTL_MS
-      : DIRECTORY_RESPONSE_CACHE_TTL_MS;
-  }
-
   async loadView(
     input: RuntimeProviderManagementLoadViewInput
   ): Promise<RuntimeProviderManagementViewResponse> {
@@ -1610,7 +1573,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   ): Promise<RuntimeProviderManagementDirectoryResponse> {
     this.dropCachesFromPreviousOpenCodeRuntime();
     const projectPath = normalizeProjectPath(input.projectPath);
-    const cacheKey = this.getDirectoryResponseCacheKey(input, projectPath);
+    const cacheKey = getRuntimeProviderDirectoryCacheKey(input, projectPath);
     const previous = this.directoryResponseCache.get(cacheKey)?.response;
     const refreshInFlightKey = `refresh:${cacheKey}`;
     const cachedInFlightKey = `cached:${cacheKey}`;
@@ -1648,7 +1611,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       this.writeDirectoryResponseCache(
         cacheKey,
         normalize(response),
-        this.getDirectoryResponseCacheTtlMs(input),
+        getRuntimeProviderDirectoryCacheTtlMs(input),
         generation
       )
     )
