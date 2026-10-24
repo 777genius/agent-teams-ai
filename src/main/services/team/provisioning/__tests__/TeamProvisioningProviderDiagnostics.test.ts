@@ -334,6 +334,147 @@ describe('TeamProvisioningProviderDiagnostics MCP helpers', () => {
 /* eslint-enable sonarjs/publicly-writable-directories -- Re-enable after temp-path fixtures. */
 
 describe('TeamProvisioningProviderDiagnostics provider probes', () => {
+  it.each<{
+    name: string;
+    env: NodeJS.ProcessEnv;
+    providerId?: 'anthropic' | 'codex' | 'gemini';
+    diagnosticModel?: string;
+    expected: string;
+  }>([
+    {
+      name: 'compatible legacy small/fast override',
+      env: {
+        ANTHROPIC_BASE_URL: 'https://gateway.example/v1',
+        ANTHROPIC_SMALL_FAST_MODEL: ' gateway/legacy-fast ',
+      },
+      expected: 'gateway/legacy-fast',
+    },
+    {
+      name: 'managed Anthropic compatible route',
+      providerId: 'anthropic',
+      env: {
+        ANTHROPIC_BASE_URL: 'http://127.0.0.1:3100',
+        ANTHROPIC_SMALL_FAST_MODEL: 'gateway/legacy-fast',
+        CLAUDE_CODE_ENTRY_PROVIDER: 'anthropic',
+      },
+      expected: 'gateway/legacy-fast',
+    },
+    {
+      name: 'blank legacy override falls back',
+      env: { ANTHROPIC_BASE_URL: 'https://gateway.example', ANTHROPIC_SMALL_FAST_MODEL: '  ' },
+      expected: 'haiku',
+    },
+    {
+      name: 'modern Haiku mapping remains runtime-owned',
+      env: {
+        ANTHROPIC_BASE_URL: 'https://gateway.example',
+        ANTHROPIC_DEFAULT_HAIKU_MODEL: 'gateway/modern-haiku',
+      },
+      expected: 'haiku',
+    },
+    {
+      name: 'first-party endpoint retains Haiku',
+      env: {
+        ANTHROPIC_BASE_URL: 'https://api.anthropic.com',
+        ANTHROPIC_SMALL_FAST_MODEL: 'gateway/legacy-fast',
+      },
+      expected: 'haiku',
+    },
+    {
+      name: 'missing endpoint retains Haiku',
+      env: { ANTHROPIC_SMALL_FAST_MODEL: 'gateway/legacy-fast' },
+      expected: 'haiku',
+    },
+    {
+      name: 'invalid endpoint retains Haiku',
+      env: { ANTHROPIC_BASE_URL: 'not-a-url', ANTHROPIC_SMALL_FAST_MODEL: 'gateway/legacy-fast' },
+      expected: 'haiku',
+    },
+    {
+      name: 'Bedrock route retains Haiku',
+      env: {
+        ANTHROPIC_BASE_URL: 'https://gateway.example',
+        ANTHROPIC_SMALL_FAST_MODEL: 'gateway/legacy-fast',
+        CLAUDE_CODE_USE_BEDROCK: '1',
+      },
+      expected: 'haiku',
+    },
+    {
+      name: 'Vertex route retains Haiku',
+      env: {
+        ANTHROPIC_BASE_URL: 'https://gateway.example',
+        ANTHROPIC_SMALL_FAST_MODEL: 'gateway/legacy-fast',
+        CLAUDE_CODE_USE_VERTEX: '1',
+      },
+      expected: 'haiku',
+    },
+    {
+      name: 'Foundry route retains Haiku',
+      env: {
+        ANTHROPIC_BASE_URL: 'https://gateway.example',
+        ANTHROPIC_SMALL_FAST_MODEL: 'gateway/legacy-fast',
+        CLAUDE_CODE_USE_FOUNDRY: '1',
+      },
+      expected: 'haiku',
+    },
+    {
+      name: 'AWS workspace route retains Haiku',
+      env: {
+        ANTHROPIC_BASE_URL: 'https://gateway.example',
+        ANTHROPIC_SMALL_FAST_MODEL: 'gateway/legacy-fast',
+        ANTHROPIC_AWS_WORKSPACE_ID: 'fixture-workspace',
+      },
+      expected: 'haiku',
+    },
+    {
+      name: 'explicit cloud entry pin retains Haiku',
+      env: {
+        ANTHROPIC_BASE_URL: 'https://gateway.example',
+        ANTHROPIC_SMALL_FAST_MODEL: 'gateway/legacy-fast',
+        CLAUDE_CODE_ENTRY_PROVIDER: 'vertex',
+      },
+      expected: 'haiku',
+    },
+    {
+      name: 'Codex selected model is unaffected',
+      providerId: 'codex',
+      diagnosticModel: 'selected-codex',
+      env: {
+        ANTHROPIC_BASE_URL: 'https://gateway.example',
+        ANTHROPIC_SMALL_FAST_MODEL: 'gateway/legacy-fast',
+      },
+      expected: 'selected-codex',
+    },
+    {
+      name: 'Gemini default is unaffected',
+      providerId: 'gemini',
+      env: {
+        ANTHROPIC_BASE_URL: 'https://gateway.example',
+        ANTHROPIC_SMALL_FAST_MODEL: 'gateway/legacy-fast',
+      },
+      expected: 'gemini-2.5-flash-lite',
+    },
+  ])(
+    'uses generic diagnostic policy: $name',
+    async ({ env, providerId, diagnosticModel, expected }) => {
+      const ports = createFakePorts();
+      await runProviderOneShotDiagnostic({
+        claudePath: '/fake/cli',
+        cwd: '/sandbox/model-probe',
+        env,
+        providerId,
+        diagnosticModel,
+        ports,
+      });
+      const [executable, args, cwd, actualEnv] = vi.mocked(ports.spawnProbe).mock.calls[0];
+      expect(executable).toBe('/fake/cli');
+      expect(cwd).toBe('/sandbox/model-probe');
+      expect(actualEnv).toBe(env);
+      expect(args[args.indexOf('--model') + 1]).toBe(expected);
+      expect(args.filter((arg) => arg === '--model')).toHaveLength(1);
+    }
+  );
+
   it.each([
     ['gpt-5.6-luna', 'custom-codex', 'gpt-5.6-luna'],
     [undefined, 'custom-codex', 'custom-codex'],

@@ -469,11 +469,17 @@ async function runTeamStopFlow(
   // After the kills, never before them: a startup lock a live host still holds
   // open cannot be unlinked, so it is the kill that turns it into an orphan.
   await releaseSharedRuntimeResources(teamName, ports, diagnostics);
-  await markStopped(teamName, ports, diagnostics, publicationAuthority);
+  const cleanupOutcome =
+    stopOutcome === 'stopped' && !cleanupIncomplete ? 'completed' : 'incomplete';
+  // Withdrawing launch ownership is a claim that the whole stop completed.
+  // Unknown authority or surviving processes must keep that evidence retryable.
+  if (cleanupOutcome === 'completed') {
+    await markStopped(teamName, ports, diagnostics, publicationAuthority);
+  }
   return {
     stopOutcome,
     ...(causalFailure ? { causalFailure } : {}),
-    cleanupOutcome: stopOutcome === 'stopped' && !cleanupIncomplete ? 'completed' : 'incomplete',
+    cleanupOutcome,
     killedRuntimePids,
     clearedPendingDeliveries,
     diagnostics,

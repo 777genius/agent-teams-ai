@@ -45,6 +45,88 @@ function makeScheduler(overrides: Partial<SchedulerDeps> = {}): {
   };
 }
 
+/**
+ * A wake waits behind the per-member serialization queue and fires after the
+ * relay generation it was armed under has rotated. The wake then saw a revoked
+ * `isCurrent` and returned without running at all: the unread row it existed
+ * for lost its only scheduled pass and no file event would ever re-arm it, so
+ * the message was silently lost. A stale wake must therefore re-arm unscoped
+ * while its row is still unread - the walk re-derives identity and authority
+ * from durable state, exactly like the manual relay path.
+ */
+describe('OpenCodePromptDeliveryWatchdogScheduler superseded wake recovery', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('re-arms an unread row whose wake fired under a superseded generation', async () => {
+    let current = true;
+    const { scheduler, deps } = makeScheduler({
+      getInboxMessages: vi.fn(async () => [{ messageId: 'msg-stale-1', read: false }]),
+    });
+
+    scheduler.schedule({
+      teamName: 'team',
+      memberName: 'alice',
+      messageId: 'msg-stale-1',
+      delayMs: 0,
+      isCurrent: () => current,
+    });
+    current = false;
+    await vi.advanceTimersByTimeAsync(500);
+    expect(deps.relay).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(31_000);
+    expect(deps.relay).toHaveBeenCalledTimes(1);
+    expect(deps.relay).toHaveBeenCalledWith(
+      expect.objectContaining({ teamName: 'team', memberName: 'alice', messageId: 'msg-stale-1' })
+    );
+  });
+
+  it('does not re-arm a stale wake for a row that is already read', async () => {
+    let current = true;
+    const { scheduler, deps } = makeScheduler({
+      getInboxMessages: vi.fn(async () => [{ messageId: 'msg-stale-2', read: true }]),
+    });
+
+    scheduler.schedule({
+      teamName: 'team',
+      memberName: 'alice',
+      messageId: 'msg-stale-2',
+      delayMs: 0,
+      isCurrent: () => current,
+    });
+    current = false;
+    await vi.advanceTimersByTimeAsync(500);
+    await vi.advanceTimersByTimeAsync(61_000);
+    expect(deps.relay).not.toHaveBeenCalled();
+    expect(deps.getInboxMessages).toHaveBeenCalled();
+  });
+
+  it('drops a stale wake for a row that no longer exists', async () => {
+    let current = true;
+    const { scheduler, deps } = makeScheduler({
+      getInboxMessages: vi.fn(async () => []),
+    });
+
+    scheduler.schedule({
+      teamName: 'team',
+      memberName: 'alice',
+      messageId: 'msg-stale-3',
+      delayMs: 0,
+      isCurrent: () => current,
+    });
+    current = false;
+    await vi.advanceTimersByTimeAsync(500);
+    await vi.advanceTimersByTimeAsync(61_000);
+    expect(deps.relay).not.toHaveBeenCalled();
+  });
+});
+
 describe('OpenCodePromptDeliveryWatchdogScheduler stale error policy', () => {
   it('keeps record-not-found watchdog errors live when the unread target is on an active lane', async () => {
     const { scheduler, deps } = makeScheduler({
@@ -241,7 +323,7 @@ describe('OpenCodePromptDeliveryWatchdogScheduler scoped bootstrap wakes', () =>
   it('replaces a revoked generation wake with its successor on the same message key', async () => {
     const { scheduler, deps } = makeScheduler();
     let firstCurrent = true;
-    const successorCurrent = () => true;
+    const successorCurrent = (): boolean => true;
     scheduler.schedule({
       teamName: 'team',
       memberName: 'jack',

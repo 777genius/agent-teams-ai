@@ -210,8 +210,13 @@ export abstract class TeamProvisioningOpenCodePromptDeliveryCompatibilityFacade<
     this.openCodeRuntimeDeliveryAdvisory.emitRuntimeDeliveryReplyAdvisoryRefresh(teamName, message);
   }
 
-  async scanOpenCodePromptDeliveryWatchdog(teamName: string): Promise<number> {
-    return await this.openCodePromptDeliveryWatchdogCoordinator.scan(teamName);
+  async scanOpenCodePromptDeliveryWatchdog(
+    teamName: string,
+    pass: 'startup_recovery' | 'continuity' = 'startup_recovery'
+  ): Promise<number> {
+    return pass === 'continuity'
+      ? await this.openCodePromptDeliveryWatchdogCoordinator.scanContinuity(teamName)
+      : await this.openCodePromptDeliveryWatchdogCoordinator.scan(teamName);
   }
 
   protected async scanOpenCodePromptDeliveryWatchdogForActiveLanes(

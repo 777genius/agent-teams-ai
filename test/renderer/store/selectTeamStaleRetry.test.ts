@@ -31,12 +31,12 @@ const apiMock = vi.hoisted(() => ({
     getTeamAgentRuntime: vi.fn(),
     getTaskChangePresence: vi.fn(),
     getDeletedTasks: vi.fn(),
-    updateToolApprovalSettings: vi.fn(async () => undefined),
-    showMessageNotification: vi.fn(async () => undefined),
+    updateToolApprovalSettings: vi.fn(() => Promise.resolve(undefined)),
+    showMessageNotification: vi.fn(() => Promise.resolve(undefined)),
     onProvisioningProgress: vi.fn(() => () => undefined),
   },
   review: {
-    invalidateTaskChangeSummaries: vi.fn(async () => undefined),
+    invalidateTaskChangeSummaries: vi.fn(() => Promise.resolve(undefined)),
   },
   crossTeam: {
     listTargets: vi.fn(),
@@ -46,7 +46,7 @@ const apiMock = vi.hoisted(() => ({
 vi.mock('@renderer/api', () => ({ api: apiMock }));
 vi.mock('@renderer/services/composerDraftRepository', () => ({
   composerDraftRepository: {
-    discardNamespace: vi.fn(async () => undefined),
+    discardNamespace: vi.fn(() => Promise.resolve(undefined)),
   },
 }));
 
@@ -88,10 +88,10 @@ function createHarnessStore() {
     setActiveTab: vi.fn(),
     updateTabLabel: vi.fn(),
     getAllPaneTabs: vi.fn(() => []),
-    warmTaskChangeSummaries: vi.fn(async () => undefined),
+    warmTaskChangeSummaries: vi.fn(() => Promise.resolve(undefined)),
     invalidateTaskChangePresence: vi.fn(),
-    fetchTeams: vi.fn(async () => undefined),
-    fetchAllTasks: vi.fn(async () => undefined),
+    fetchTeams: vi.fn(() => Promise.resolve(undefined)),
+    fetchAllTasks: vi.fn(() => Promise.resolve(undefined)),
   }));
 }
 
@@ -430,5 +430,120 @@ describe('selectTeam context generation ownership', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('cancelled provisioning draft selection recovery', () => {
+  beforeEach(() => {
+    __resetTeamSliceModuleStateForTests();
+    resetSelectTeamLoadLatchForTests();
+    clearAllTeamLocalStateEpochs();
+    vi.clearAllMocks();
+  });
+
+  it.each([
+    { phase: 'held', configReady: false },
+    { phase: 'in-flight', configReady: false },
+    { phase: 'held', configReady: true },
+    { phase: 'in-flight', configReady: true },
+  ] as const)(
+    'resolves a $phase provisioning-only selection after cancellation (first config-ready: $configReady)',
+    async ({ phase, configReady }) => {
+      const store = createHarnessStore();
+      const progress = {
+        runId: 'cancel-run',
+        teamName: TEAM,
+        state: 'configuring' as const,
+        message: 'Configuring',
+        startedAt: '2026-10-24T00:00:00.000Z',
+        updatedAt: '2026-10-24T00:00:01.000Z',
+      };
+      store.setState({
+        currentProvisioningRunIdByTeam: { [TEAM]: progress.runId },
+        provisioningRuns: { [progress.runId]: progress },
+      });
+      const pane = store.getState().paneLayout.panes[0];
+      store.setState({
+        paneLayout: {
+          ...store.getState().paneLayout,
+          panes: [
+            {
+              ...pane,
+              activeTabId: 'team-tab',
+              tabs: [
+                {
+                  id: 'team-tab',
+                  type: 'team',
+                  teamName: TEAM,
+                  label: TEAM,
+                  createdAt: 0,
+                },
+              ],
+            },
+          ],
+        },
+      });
+      let rejectFirst!: (error: Error) => void;
+      const first = new Promise<TeamViewSnapshot>((_resolve, reject) => {
+        rejectFirst = reject;
+      });
+      apiMock.teams.getData.mockReturnValueOnce(first).mockRejectedValue(new Error('TEAM_DRAFT'));
+      const load = store.getState().selectTeam(TEAM, { skipProjectAutoSelect: true });
+      await vi.waitFor(() => expect(apiMock.teams.getData).toHaveBeenCalledTimes(1));
+      if (phase === 'held') {
+        rejectFirst(new Error('TEAM_PROVISIONING'));
+        await load;
+      }
+      expect(store.getState().selectedTeamLoading).toBe(true);
+      store.getState().onProvisioningProgress({
+        ...progress,
+        state: 'cancelled',
+        ...(configReady ? { configReady: true } : {}),
+        message: 'Cancelled',
+        updatedAt: '2026-10-24T00:00:02.000Z',
+      });
+      if (phase === 'in-flight') {
+        rejectFirst(new Error('TEAM_PROVISIONING'));
+        await load;
+      }
+      await vi.waitFor(() => {
+        expect(store.getState().selectedTeamLoading).toBe(false);
+        expect(store.getState().selectedTeamError).toBe('TEAM_DRAFT');
+      });
+      expect(store.getState().selectedTeamData).toBeNull();
+      expect(apiMock.teams.getData).toHaveBeenCalledTimes(2);
+      expect(store.getState().provisioningRuns[progress.runId]?.state).toBe('cancelled');
+      // Tab revisit must be admitted instead of being dropped as an in-flight load.
+      await store.getState().selectTeam(TEAM, { skipProjectAutoSelect: true });
+      expect(apiMock.teams.getData).toHaveBeenCalledTimes(3);
+      expect(store.getState().selectedTeamError).toBe('TEAM_DRAFT');
+    }
+  );
+
+  it('does not let a foreign cancelled run reload a newer provisioning-only selection', () => {
+    const store = createHarnessStore();
+    const progress = {
+      runId: 'new-run',
+      teamName: TEAM,
+      state: 'configuring' as const,
+      message: 'Configuring',
+      startedAt: '2026-10-24T00:00:03.000Z',
+      updatedAt: '2026-10-24T00:00:03.000Z',
+    };
+    store.setState({
+      selectedTeamName: TEAM,
+      selectedTeamLoading: true,
+      currentProvisioningRunIdByTeam: { [TEAM]: progress.runId },
+      provisioningRuns: { [progress.runId]: progress },
+    });
+    store.getState().onProvisioningProgress({
+      ...progress,
+      runId: 'old-run',
+      state: 'cancelled',
+      startedAt: '2026-10-24T00:00:00.000Z',
+    });
+    expect(apiMock.teams.getData).not.toHaveBeenCalled();
+    expect(store.getState().selectedTeamLoading).toBe(true);
+    expect(store.getState().currentProvisioningRunIdByTeam[TEAM]).toBe('new-run');
   });
 });

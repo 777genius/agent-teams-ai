@@ -22,6 +22,7 @@ import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
 import { atomicWriteAsync } from '../atomicWrite';
 import { getConfiguredCliCommandLabel } from '../cliFlavor';
 
+import { getAnthropicCompatibleDiagnosticModelOverride } from './TeamProvisioningAnthropicDiagnosticModel';
 import { buildCombinedLogs } from './TeamProvisioningCliExitPresentation';
 import { boundProbeOutputBuffer } from './TeamProvisioningProgressBuffers';
 import {
@@ -425,11 +426,10 @@ export async function runProviderOneShotDiagnostic({
     });
     return {};
   }
-
   const modelOverride =
     resolvedProviderId === 'codex'
       ? diagnosticModel?.trim() || ports.getConfiguredCodexCustomProviderModel()
-      : undefined;
+      : getAnthropicCompatibleDiagnosticModelOverride(resolvedProviderId, env);
   const args = buildProviderCliCommandArgs(
     providerArgs,
     buildProviderPreflightPingArgs(providerId, { modelOverride })

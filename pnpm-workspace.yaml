@@ -8,6 +8,9 @@ minimumReleaseAgeExclude:
   - '@esbuild/*'
   - brace-expansion@5.0.12
   - esbuild
+  # Exact fixes for GHSA-jr5w-w6x2-84p9 and GHSA-27r3-jxmh-p828.
+  - electron@44.9.3
+  - body-parser@2.4.0
   - fast-uri@3.1.7
   - find-my-way@9.7.0
   # Exact critical security fix; retain release-age protection for other versions.
@@ -19,6 +22,9 @@ peerDependencyRules:
     '@nuxt/schema': '3.21.11'
 
 overrides:
+  # Fixed Zod collections; retain the headless consumer's unchanged EventType wire API.
+  '@openuidev/react-headless>@ag-ui/core': '1.0.3'
+  'zod@4': '4.6.7'
   '@modelcontextprotocol/sdk': '1.32.0'
   '@terminal-platform/design-tokens': 'file:vendor/terminal-platform/sdk/terminal-platform-design-tokens-0.1.0.tgz'
   '@terminal-platform/foundation': 'file:vendor/terminal-platform/sdk/terminal-platform-foundation-0.1.0.tgz'
@@ -38,7 +44,7 @@ overrides:
   '@vue/server-renderer': '3.5.43'
   '@xmldom/xmldom': '0.8.15'
   'axios': '1.20.0'
-  'body-parser': '2.3.0'
+  'body-parser': '2.4.0'
   'browserslist': '4.28.8'
   'brace-expansion@1': '5.0.12'
   'brace-expansion@2': '5.0.12'
@@ -82,7 +88,7 @@ overrides:
   'prosemirror-model': '1.25.12'
   'prosemirror-view': '1.42.6'
   'proxy-addr': '2.0.8'
-  'qs': '6.15.2'
+  'qs': '6.16.1'
   'rollup': '4.59.0'
   'serialize-javascript': '7.0.5'
   'seroval': '1.6.8'
@@ -95,12 +101,13 @@ overrides:
   'tar': '7.5.22'
   'form-data': '4.0.6'
   'tmp': '0.2.7'
-  'undici@6': '6.29.0'
-  'undici@7': '7.30.0'
+  'undici@6': '6.29.1'
+  'undici@7': '7.30.1'
   'unhead': '2.1.13'
   'uuid': '^11.1.1'
   # Security fixes require Tinypool 2; Node 26 satisfies its engine requirement.
   'vitest>tinypool': '2.2.0'
+  'vitest>vite': '6.4.4'
   'vitepress>vite': '7.3.7'
   '@nuxt/vite-builder>vite': '7.3.7'
   'vue': '3.5.43'

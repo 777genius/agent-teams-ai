@@ -2,7 +2,10 @@ import { createLogger } from '@shared/utils/logger';
 
 import { isContextScopedRequestEpochCurrent } from '../utils/contextScopedRequestEpoch';
 
+import { isTeamLocalStateEpochCurrent } from './teamLocalStateEpoch';
+
 import type { AppState } from '../types';
+import type { TeamProvisioningProgress } from '@shared/types';
 
 const logger = createLogger('selectTeamLoadLatch');
 
@@ -21,6 +24,8 @@ export interface SelectTeamLoadOptions {
   allowReloadWhileProvisioning?: boolean;
   /** Internal: set by the bounded stale-read retry so it keeps its budget. */
   staleReadRetry?: boolean;
+  /** Internal: do not join a read that predates settled provisioning cancellation. */
+  forceFreshSnapshot?: true;
 }
 
 type SelectTeamLoadState = Pick<
@@ -156,4 +161,42 @@ export function settleLatchedSelectTeamLoad(
 export function resetSelectTeamLoadLatchForTests(): void {
   staleRetriesByTeam.clear();
   provisioningHolds.clear();
+}
+
+/** Resolve a cancelled provisioning hold through actual draft/config storage. */
+export function recoverCancelledTeamSelection(
+  get: () => AppState,
+  progress: TeamProvisioningProgress,
+  canonicalUnhydrated: boolean
+): void {
+  if (!canonicalUnhydrated || progress.state !== 'cancelled') return;
+  const state = get();
+  if (
+    state.currentProvisioningRunIdByTeam[progress.teamName] !== progress.runId ||
+    state.selectedTeamName !== progress.teamName ||
+    !state.selectedTeamLoading ||
+    state.selectedTeamData != null
+  )
+    return;
+  // Capture fresh-read intent synchronously; never join the pre-cancel read whose
+  // TEAM_PROVISIONING result originally parked the selection on its skeleton.
+  void state.selectTeam(progress.teamName, {
+    allowReloadWhileProvisioning: true,
+    forceFreshSnapshot: true,
+  });
+}
+
+/** Post-load enrichments share the selection's context, nonce and local-state epoch. */
+export function isSelectedTeamLoadStillCurrent(
+  get: () => AppState,
+  teamName: string,
+  requestNonce: number,
+  requestScope: SelectTeamLoadContext & { teamStateEpoch: number }
+): boolean {
+  const state = get();
+  return (
+    isLoadStillOwned(state, requestScope, teamName, requestNonce) &&
+    isTeamLocalStateEpochCurrent(teamName, requestScope.teamStateEpoch) &&
+    state.selectedTeamData?.teamName === teamName
+  );
 }
