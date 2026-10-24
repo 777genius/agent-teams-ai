@@ -1849,8 +1849,15 @@ export const CliStatusBanner = ({
     refreshOpenCodeDashboardCatalog,
   ]);
 
+  // An explicit OpenCode re-check must bypass the provider directory cache for
+  // every dashboard reader: the key drives both the connected-model catalog
+  // (refreshRevision) and the Providers & plans grid (refreshKey).
+  const refreshOpenCodeProviderDirectory = useCallback(() => {
+    setProviderQuickConnectRefreshKey((current) => current + 1);
+  }, []);
+
   const handleOpenCodeRefresh = useCallback(() => {
-    refreshOpenCodeDashboardCatalog();
+    refreshOpenCodeProviderDirectory();
     void (async () => {
       await invalidateOpenCodeRuntimeStatus();
       await fetchOpenCodeRuntimeStatus();
@@ -1858,7 +1865,7 @@ export const CliStatusBanner = ({
   }, [
     fetchOpenCodeRuntimeStatus,
     invalidateOpenCodeRuntimeStatus,
-    refreshOpenCodeDashboardCatalog,
+    refreshOpenCodeProviderDirectory,
   ]);
 
   const handleToggleProvidersCollapsed = useCallback(() => {
@@ -1999,14 +2006,21 @@ export const CliStatusBanner = ({
       providerId: CliProviderId,
       checkReason: AnalyticsProviderCheckReason = 'manual_refresh'
     ) => {
-      if (providerId === 'opencode') refreshOpenCodeDashboardCatalog();
-      const refreshed = await fetchCliProviderStatus(providerId, { checkReason });
+      let refreshed: boolean;
+      try {
+        refreshed = await fetchCliProviderStatus(providerId, { checkReason });
+      } finally {
+        // After the status check, so the grid and the connected-model catalog
+        // (which waits for status checks) start their refresh reads together
+        // and the main process can serve both with one runtime call.
+        if (providerId === 'opencode') refreshOpenCodeProviderDirectory();
+      }
       if (refreshed && providerId === 'anthropic') {
         setAnthropicRateLimitsRefreshVersion((current) => current + 1);
       }
       return refreshed;
     },
-    [fetchCliProviderStatus, refreshOpenCodeDashboardCatalog]
+    [fetchCliProviderStatus, refreshOpenCodeProviderDirectory]
   );
 
   const handleProviderBackendChange = useCallback(
@@ -2109,8 +2123,7 @@ export const CliStatusBanner = ({
             disabled={isBusy || cliStatusLoading}
             onInstallOrUpdateRuntime={() => installOpenCodeRuntime()}
             onProviderChanged={() => {
-              setProviderQuickConnectRefreshKey((current) => current + 1);
-              handleProviderRefresh('opencode');
+              void handleProviderRefresh('opencode');
             }}
             onAdvancedSettings={handleOnboardingAdvancedSettings}
           />

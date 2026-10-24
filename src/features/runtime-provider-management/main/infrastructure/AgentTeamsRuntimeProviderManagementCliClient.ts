@@ -8,6 +8,7 @@ import {
   ensureOpenCodeGlobalDefaultContextPath,
   getOpenCodeGlobalDefaultContextPath,
 } from './OpenCodeGlobalDefaultContext';
+import { OpenCodeRuntimeGenerationGuard } from './openCodeRuntimeGeneration';
 import {
   ensureOpenCodeProfileNodeModulesJunction,
   extractProfileIdFromSymlinkError,
@@ -33,7 +34,11 @@ import {
   sanitizeCommandErrorMessage,
   truncateCommandErrorDetail,
 } from './runtimeProviderCommandPresentation';
-import { normalizeRuntimeProviderDirectoryResponse } from './runtimeProviderDirectoryResponse';
+import {
+  getRuntimeProviderDirectoryCacheKey,
+  getRuntimeProviderDirectoryCacheTtlMs,
+  normalizeRuntimeProviderDirectoryResponse,
+} from './runtimeProviderDirectoryResponse';
 import { sanitizeRuntimeProviderDiagnostics } from './runtimeProviderErrorBoundary';
 import { RuntimeProviderModelRequestTracker } from './runtimeProviderModelRequestTracker';
 import {
@@ -80,8 +85,6 @@ const OPENCODE_API_KEY_COMMAND_TIMEOUT_MS = 180_000;
 // cancellable from the UI.
 const OAUTH_COMMAND_TIMEOUT_MS = 17 * 60_000;
 const OAUTH_CANCEL_FORCE_KILL_DELAY_MS = 2_000;
-const DIRECTORY_RESPONSE_CACHE_TTL_MS = 30_000;
-const DEFAULT_DIRECTORY_RESPONSE_CACHE_TTL_MS = 2 * 60_000;
 const MAX_DIRECTORY_RESPONSE_CACHE_ENTRIES = 32;
 const MODEL_RESPONSE_CACHE_TTL_MS = 30_000;
 const DEFAULT_MODEL_RESPONSE_CACHE_TTL_MS = 2 * 60_000;
@@ -136,9 +139,11 @@ interface ModelResponseCacheEntry {
   response: RuntimeProviderManagementModelsResponse;
 }
 
-export interface RuntimeProviderOAuthClientDependencies {
+export interface RuntimeProviderCliClientDependencies {
   openExternal?: (url: string) => Promise<void>;
   emitOAuthProgress?: (event: RuntimeProviderOAuthProgressDto) => void;
+  /** OpenCode runtime resolver generation, see OpenCodeRuntimeGenerationGuard. */
+  getOpenCodeRuntimeGeneration?: () => number;
 }
 
 interface ActiveRuntimeProviderOAuthOperation {
@@ -1292,29 +1297,25 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   private readonly activeOAuthOperations = new Map<string, ActiveRuntimeProviderOAuthOperation>();
   private readonly openExternal: (url: string) => Promise<void>;
   private readonly emitOAuthProgress: (event: RuntimeProviderOAuthProgressDto) => void;
+  private readonly openCodeRuntimeGeneration: OpenCodeRuntimeGenerationGuard;
 
-  constructor(deps: RuntimeProviderOAuthClientDependencies = {}) {
+  constructor(deps: RuntimeProviderCliClientDependencies = {}) {
     this.openExternal =
       deps.openExternal ??
       (async () => {
         throw new Error('OAuth browser integration is unavailable');
       });
     this.emitOAuthProgress = deps.emitOAuthProgress ?? (() => {});
+    this.openCodeRuntimeGeneration = new OpenCodeRuntimeGenerationGuard(
+      deps.getOpenCodeRuntimeGeneration ?? (() => 0)
+    );
   }
 
-  private getDirectoryResponseCacheKey(
-    input: RuntimeProviderManagementLoadDirectoryInput,
-    projectPath: string | null
-  ): string {
-    return JSON.stringify([
-      input.runtimeId,
-      input.summary === true ? 'summary' : 'full',
-      projectPath,
-      input.query?.trim() || null,
-      input.filter ?? null,
-      input.limit ?? null,
-      input.cursor?.trim() || null,
-    ]);
+  private dropCachesFromPreviousOpenCodeRuntime(): void {
+    if (!this.openCodeRuntimeGeneration.consumeChange()) return;
+    this.invalidateDirectoryResponseCache();
+    // Running model loads are detached and finish as stale; they are not aborted.
+    this.invalidateModelResponseCache(false);
   }
 
   private readDirectoryResponseCache(
@@ -1491,18 +1492,6 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     }
   }
 
-  private getDirectoryResponseCacheTtlMs(
-    input: RuntimeProviderManagementLoadDirectoryInput
-  ): number {
-    const isDefaultDirectory =
-      !input.query?.trim() &&
-      (input.filter === undefined || input.filter === null || input.filter === 'all') &&
-      !input.cursor?.trim();
-    return isDefaultDirectory
-      ? DEFAULT_DIRECTORY_RESPONSE_CACHE_TTL_MS
-      : DIRECTORY_RESPONSE_CACHE_TTL_MS;
-  }
-
   async loadView(
     input: RuntimeProviderManagementLoadViewInput
   ): Promise<RuntimeProviderManagementViewResponse> {
@@ -1582,8 +1571,9 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   async loadProviderDirectory(
     input: RuntimeProviderManagementLoadDirectoryInput
   ): Promise<RuntimeProviderManagementDirectoryResponse> {
+    this.dropCachesFromPreviousOpenCodeRuntime();
     const projectPath = normalizeProjectPath(input.projectPath);
-    const cacheKey = this.getDirectoryResponseCacheKey(input, projectPath);
+    const cacheKey = getRuntimeProviderDirectoryCacheKey(input, projectPath);
     const previous = this.directoryResponseCache.get(cacheKey)?.response;
     const refreshInFlightKey = `refresh:${cacheKey}`;
     const cachedInFlightKey = `cached:${cacheKey}`;
@@ -1621,7 +1611,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       this.writeDirectoryResponseCache(
         cacheKey,
         normalize(response),
-        this.getDirectoryResponseCacheTtlMs(input),
+        getRuntimeProviderDirectoryCacheTtlMs(input),
         generation
       )
     )
@@ -2214,6 +2204,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   async loadModels(
     input: RuntimeProviderManagementLoadModelsInput
   ): Promise<RuntimeProviderManagementModelsResponse> {
+    this.dropCachesFromPreviousOpenCodeRuntime();
     const projectPath = normalizeProjectPath(input.projectPath);
     const cacheKey = this.getModelResponseCacheKey(input, projectPath);
     const requestGroupId = input.requestGroupId?.trim() || null;

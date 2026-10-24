@@ -16,6 +16,7 @@ import {
   isOpenCodeProviderOAuthBridgeOutdated,
   isRuntimeProviderOnboardingPlanRoutable,
   resolveOpenCodeQuickConnectGate,
+  resolveOpenCodeQuickConnectRuntimeRevision,
   resolveOpenCodeQuickPlanState,
 } from '../core/domain';
 
@@ -192,6 +193,12 @@ export const RuntimeProviderQuickConnect = ({
     enabled: enabled && (gate === 'checking' || gate === 'ready'),
     projectPath,
     refreshKey,
+    // Reads cached before an install or update completed describe the old
+    // runtime; a settled runtime change forces a fresh directory read.
+    runtimeRevision: resolveOpenCodeQuickConnectRuntimeRevision({
+      gate,
+      runtimeStatus: openCodeRuntimeStatus,
+    }),
   });
   const canWarmProviderStatus = enabled && (gate === 'checking' || gate === 'ready');
   const kiroCompanion = useRuntimeProviderCompanion(
