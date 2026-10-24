@@ -19,6 +19,7 @@ import {
 import { CodexRuntimeUpdateDialog } from '@features/codex-runtime-installer/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
+  canManagedInstallChangeOpenCodeRuntime,
   isOpenCodeProviderOAuthBridgeOutdated,
   isOpenCodeRuntimeUsable,
   OpenCodeCatalogErrorAlert,
@@ -651,6 +652,7 @@ function shouldShowOpenCodeInstallAction(
   return (
     provider.providerId === 'opencode' &&
     !showSkeleton &&
+    canManagedInstallChangeOpenCodeRuntime(openCodeRuntimeStatus) &&
     (openCodeRuntimeStatus?.updateAvailable === true ||
       isOpenCodeFreeTierVersionOutdated(openCodeRuntimeStatus?.version) ||
       (!isOpenCodeProviderEffectivelyReady(provider) &&
@@ -1000,6 +1002,7 @@ const InstalledBanner = ({
               {(providersCollapsed ||
                 !visibleProviders.some((provider) => provider.providerId === 'opencode')) &&
               openCodeRuntimeStatus?.installed &&
+              canManagedInstallChangeOpenCodeRuntime(openCodeRuntimeStatus) &&
               (openCodeRuntimeStatus.updateAvailable ||
                 isOpenCodeFreeTierVersionOutdated(openCodeRuntimeStatus.version)) ? (
                 <OpenCodeFreeTierUpdateAction

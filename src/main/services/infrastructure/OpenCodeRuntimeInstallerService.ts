@@ -7,6 +7,7 @@ import {
   type OpenCodeBinaryVersionProbe,
   probeOpenCodeBinaryVersion,
 } from '@features/runtime-provider-management/main';
+import { resolveExistingOpenCodeRuntimeBinaryEnvPath } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
 import { readOpenCodeBinaryOverride } from '@main/services/runtime/openCodeRuntimeBinaryEnv';
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { execCli } from '@main/utils/childProcess';
@@ -164,22 +165,27 @@ type OpenCodeOverrideStatusResult =
   | { kind: 'selected'; status: OpenCodeRuntimeStatus }
   | { kind: 'ignored'; ignoredOverride: OpenCodeRuntimeIgnoredOverride };
 
-/** Mirrors isSupportedOpenCodeRuntimeBinaryPath: the status must name the binary launch uses. */
+/**
+ * The status must name the binary the team bridge launches: it selects the first override
+ * variable that names an existing file and then applies isSupportedOpenCodeRuntimeBinaryPath.
+ */
 async function resolveOpenCodeOverrideStatus(
-  override: OpenCodeBinaryOverride
+  configured: OpenCodeBinaryOverride,
+  env: NodeJS.ProcessEnv
 ): Promise<OpenCodeOverrideStatusResult> {
-  const { binaryPath, envName } = override;
-  if (!isAbsoluteExistingFile(binaryPath)) {
+  const selected = resolveExistingOpenCodeRuntimeBinaryEnvPath(env);
+  if (!selected) {
     return {
       kind: 'ignored',
       ignoredOverride: {
-        binaryPath,
-        envName,
+        binaryPath: configured.binaryPath,
+        envName: configured.envName,
         version: null,
-        reason: `${envName} does not point to an existing file. Using the default OpenCode instead.`,
+        reason: `${configured.envName} does not name an existing file. Using the default OpenCode instead.`,
       },
     };
   }
+  const { binaryPath, envName } = selected;
   const version = await probeOpenCodeBinaryVersionCached(binaryPath);
   if (!version.ok) {
     // Launch fails closed for an override it cannot verify, so status does too.
@@ -827,7 +833,7 @@ export class OpenCodeRuntimeInstallerService {
   private async resolveInstalledStatus(): Promise<OpenCodeRuntimeStatus> {
     const override = readOpenCodeBinaryOverride(process.env);
     if (!override) return this.resolveDefaultInstalledStatus();
-    const overrideStatus = await resolveOpenCodeOverrideStatus(override);
+    const overrideStatus = await resolveOpenCodeOverrideStatus(override, process.env);
     if (overrideStatus.kind === 'selected') return overrideStatus.status;
     return {
       ...(await this.resolveDefaultInstalledStatus()),
@@ -891,6 +897,7 @@ export class OpenCodeRuntimeInstallerService {
       ...(currentStatus?.version ? { version: currentStatus.version } : {}),
       ...(currentStatus?.latestVersion ? { latestVersion: currentStatus.latestVersion } : {}),
       ...(currentStatus?.updateAvailable ? { updateAvailable: true } : {}),
+      ...(currentStatus?.ignoredOverride ? { ignoredOverride: currentStatus.ignoredOverride } : {}),
       source: currentStatus?.source ?? 'missing',
       state: progress.phase,
       progress,
@@ -988,10 +995,14 @@ export class OpenCodeRuntimeInstallerService {
   }
 
   private async installInternal(): Promise<OpenCodeRuntimeStatus> {
-    const previousStatus = preserveKnownOpenCodeUpdate(
-      await this.resolveFreshInstalledStatusBeforeInstall(),
-      this.latestStatus?.latestVersion
-    );
+    // With an override, the status during and after a failed install keeps naming the
+    // binary that launch uses (or the ignored override), not the managed runtime.
+    const previousStatus = readOpenCodeBinaryOverride(process.env)
+      ? await this.resolveInstalledStatus()
+      : preserveKnownOpenCodeUpdate(
+          await this.resolveFreshInstalledStatusBeforeInstall(),
+          this.latestStatus?.latestVersion
+        );
     if (previousStatus) {
       this.rememberStatus(previousStatus);
     }

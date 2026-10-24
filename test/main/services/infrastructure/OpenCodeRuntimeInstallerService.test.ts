@@ -408,9 +408,52 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
           binaryPath: missingPath,
           envName: 'OPENCODE_BIN_PATH',
           version: null,
-          reason: expect.stringContaining('does not point to an existing file'),
+          reason: expect.stringContaining('does not name an existing file'),
         },
       });
+    });
+
+    it('selects the legacy override like the bridge when the preferred one names no file', async () => {
+      const legacyPath = path.join(tempRoot!, 'TEST-legacy-opencode');
+      await writeFile(legacyPath, 'TEST legacy binary', { mode: 0o755 });
+      process.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH = path.join(tempRoot!, 'TEST-removed');
+      process.env.OPENCODE_BIN_PATH = legacyPath;
+      execCliMock.mockImplementation(async (binaryPath: string) => ({
+        stdout: `${binaryPath === legacyPath ? 'opencode v2.0.32' : '1.18.3'}\n`,
+        stderr: '',
+      }));
+
+      await expect(
+        new OpenCodeRuntimeInstallerService().getReadinessStatus()
+      ).resolves.toMatchObject({
+        installed: true,
+        binaryPath: legacyPath,
+        version: '2.0.32',
+        source: 'override',
+      });
+    });
+
+    it('keeps the override status when a managed install fails', async () => {
+      mockOverrideVersion('opencode v2.0.32');
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => new Response('unavailable', { status: 503 }))
+      );
+
+      const status = await new OpenCodeRuntimeInstallerService().install();
+
+      expect(status).toMatchObject({
+        binaryPath: overridePath,
+        version: '2.0.32',
+        source: 'override',
+        state: 'failed',
+      });
+      expect(consoleError).toHaveBeenCalledWith(
+        '[OpenCodeRuntimeInstallerService]',
+        'Failed to install OpenCode runtime:',
+        expect.stringContaining('HTTP 503')
+      );
     });
 
     it('fails closed like launch when the override version cannot be read', async () => {

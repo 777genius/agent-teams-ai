@@ -23,6 +23,8 @@ import {
   Settings2,
 } from 'lucide-react';
 
+import { canManagedInstallChangeOpenCodeRuntime } from '../../core/domain';
+
 import { ProviderBrandIcon } from './providerBrandIcons';
 
 import type {
@@ -215,6 +217,8 @@ const OpenCodePrerequisite = ({
   }
 
   const isError = gate === 'error';
+  // An override decides what launches; installing the managed runtime would not change it.
+  const canInstall = canManagedInstallChangeOpenCodeRuntime(runtimeStatus);
   const isOutdated =
     Boolean(runtimeStatus?.version) &&
     !isAgentTeamsOpenCodeVersionSupported(runtimeStatus?.version);
@@ -260,15 +264,17 @@ const OpenCodePrerequisite = ({
         </div>
       </div>
       <div className="flex items-center gap-1.5">
-        <Button type="button" variant="outline" size="sm" className="h-7" onClick={onInstall}>
-          <Download className="mr-1.5 size-3.5" />
-          {isOutdated
-            ? t('cliStatus.quickConnect.updateOpenCode')
-            : isError
-              ? t('cliStatus.quickConnect.retryOpenCode')
-              : t('cliStatus.quickConnect.installOpenCode')}
-        </Button>
-        {isError ? (
+        {canInstall ? (
+          <Button type="button" variant="outline" size="sm" className="h-7" onClick={onInstall}>
+            <Download className="mr-1.5 size-3.5" />
+            {isOutdated
+              ? t('cliStatus.quickConnect.updateOpenCode')
+              : isError
+                ? t('cliStatus.quickConnect.retryOpenCode')
+                : t('cliStatus.quickConnect.installOpenCode')}
+          </Button>
+        ) : null}
+        {isError || !canInstall ? (
           <Button
             type="button"
             data-testid="provider-quick-opencode-refresh"
