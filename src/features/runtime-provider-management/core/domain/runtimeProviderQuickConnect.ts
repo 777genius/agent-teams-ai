@@ -97,6 +97,29 @@ export function resolveOpenCodeQuickConnectGate(input: {
   return 'missing';
 }
 
+/**
+ * Identifies the OpenCode runtime a provider directory read belongs to.
+ *
+ * Returns null while the runtime is unknown, checking or installing, so callers
+ * keep the last settled identity instead of treating every progress event as a
+ * change. A different settled identity (missing -> ready after an install, a new
+ * version or binary after an update) means earlier directory reads describe
+ * another runtime and must not be reused.
+ */
+export function resolveOpenCodeQuickConnectRuntimeRevision(input: {
+  gate: RuntimeProviderQuickConnectGate;
+  runtimeStatus: OpenCodeRuntimeStatus | null;
+}): string | null {
+  const { gate, runtimeStatus } = input;
+  if (!runtimeStatus || gate === 'checking' || gate === 'installing') {
+    return null;
+  }
+  if (gate !== 'ready') {
+    return 'unavailable';
+  }
+  return JSON.stringify(['ready', runtimeStatus.version ?? null, runtimeStatus.binaryPath ?? null]);
+}
+
 export function isOAuthCredentialHint(authHint: string | null | undefined): boolean {
   return Boolean(authHint && /(oauth|subscription|account|chatgpt|supergrok)/i.test(authHint));
 }

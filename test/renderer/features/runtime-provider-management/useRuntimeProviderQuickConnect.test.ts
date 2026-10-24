@@ -71,17 +71,27 @@ describe('useRuntimeProviderQuickConnect', () => {
     enabled = true,
     refreshKey = 0,
     projectPath = '/tmp/test-project',
+    runtimeRevision = null,
   }: {
     enabled?: boolean;
     refreshKey?: number;
     projectPath?: string;
+    runtimeRevision?: string | null;
   }) {
     current = useRuntimeProviderQuickConnect({
       enabled,
       refreshKey,
       projectPath,
+      runtimeRevision,
     });
     return null;
+  }
+
+  async function renderHarness(props: Parameters<typeof Harness>[0] = {}): Promise<void> {
+    await act(async () => root.render(React.createElement(Harness, props)));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
   }
 
   beforeEach(() => {
@@ -171,6 +181,46 @@ describe('useRuntimeProviderQuickConnect', () => {
       limit: 100,
       refresh: true,
     });
+  });
+
+  it('bypasses the cached directory once OpenCode becomes ready after an install', async () => {
+    // Missing at startup: the grid is disabled and the runtime is unavailable.
+    await renderHarness({ enabled: false, runtimeRevision: 'unavailable' });
+    // Install starts: the readiness check warms the directory from the cache.
+    await renderHarness({ enabled: true, runtimeRevision: null });
+    await renderHarness({ enabled: false, runtimeRevision: null });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(1);
+    expect(loadProviderDirectory.mock.calls[0]?.[0]).toMatchObject({ refresh: false });
+
+    loadProviderDirectory.mockResolvedValueOnce(directoryResponse('github-copilot'));
+    await renderHarness({ enabled: true, runtimeRevision: '["ready","1.17.18","/opencode"]' });
+
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
+    expect(loadProviderDirectory.mock.calls[1]?.[0]).toMatchObject({ refresh: true });
+    expect(current?.entries[0]?.providerId).toBe('github-copilot');
+
+    await renderHarness({ enabled: true, runtimeRevision: '["ready","1.17.18","/opencode"]' });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the settled runtime across a re-check and reloads only on a real change', async () => {
+    const ready = '["ready","1.17.18","/opencode"]';
+    // The first settled identity after startup is a baseline, not a change.
+    await renderHarness({ runtimeRevision: null });
+    await renderHarness({ runtimeRevision: ready });
+    // A re-check clears the status while it runs, then reports the same runtime.
+    await renderHarness({ runtimeRevision: null });
+    await renderHarness({ runtimeRevision: ready });
+    await renderHarness({ runtimeRevision: ready });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(1);
+    expect(loadProviderDirectory.mock.calls[0]?.[0]).toMatchObject({ refresh: false });
+
+    await renderHarness({ runtimeRevision: '["ready","1.18.0","/opencode"]' });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
+    expect(loadProviderDirectory.mock.calls[1]?.[0]).toMatchObject({ refresh: true });
   });
 
   it('surfaces directory errors without discarding the last successful entries', async () => {

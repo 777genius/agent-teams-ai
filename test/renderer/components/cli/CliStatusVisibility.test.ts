@@ -84,6 +84,7 @@ let terminalModalProps: {
   onExit?: (exitCode: number) => void;
 } | null = null;
 let quickConnectConnectedCount = 0;
+let quickConnectRefreshKeys: (number | undefined)[] = [];
 const refreshOpenCodeCatalog = vi.fn();
 let openCodeCatalogHookInputs: {
   refreshRevision?: number;
@@ -129,10 +130,12 @@ vi.mock('@features/runtime-provider-management/renderer', async (importOriginal)
       return { providerStatus: input.passiveProviderStatus, refresh: refreshOpenCodeCatalog };
     },
     RuntimeProviderQuickConnect: (props: {
+      refreshKey?: number;
       onRefreshOpenCode?: () => void;
       onOpenCodeProviderAction?: (providerId: string, action: 'connect' | 'select') => void;
       onConnectedCountChange?: (count: number) => void;
     }) => {
+      quickConnectRefreshKeys.push(props.refreshKey);
       React.useEffect(() => {
         props.onConnectedCountChange?.(quickConnectConnectedCount);
       }, [props.onConnectedCountChange]);
@@ -451,6 +454,7 @@ describe('CLI status visibility during completed install state', () => {
     terminalModalProps = null;
     quickConnectConnectedCount = 0;
     openCodeCatalogHookInputs = [];
+    quickConnectRefreshKeys = [];
     refreshOpenCodeCatalog.mockClear();
     codexAccountHookState.snapshot = null;
     codexAccountHookState.loading = false;
@@ -4603,7 +4607,7 @@ describe('CLI status visibility during completed install state', () => {
     }
   });
 
-  it('refreshes the connected catalog when rechecking the OpenCode runtime', async () => {
+  it('refreshes the connected catalog and provider grid when rechecking the OpenCode runtime', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
     storeState.cliStatus = createInstalledCliStatus({ flavor: 'agent_teams_orchestrator' });
@@ -4612,12 +4616,16 @@ describe('CLI status visibility during completed install state', () => {
     try {
       await act(async () => root.render(React.createElement(CliStatusBanner)));
       storeState.fetchOpenCodeRuntimeStatus.mockClear();
+      expect(quickConnectRefreshKeys.at(-1)).toBe(0);
+      expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBe(0);
       await act(async () => {
         (
           host.querySelector('[data-testid="refresh-opencode-runtime"]') as HTMLButtonElement
         ).click();
       });
-      expect(refreshOpenCodeCatalog).toHaveBeenCalledOnce();
+      // Both directory readers get a new revision, which they load with refresh: true.
+      expect(quickConnectRefreshKeys.at(-1)).toBe(1);
+      expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBe(1);
       expect(storeState.invalidateOpenCodeRuntimeStatus).toHaveBeenCalledOnce();
       expect(storeState.fetchOpenCodeRuntimeStatus).toHaveBeenCalledOnce();
     } finally {
@@ -4661,13 +4669,16 @@ describe('CLI status visibility during completed install state', () => {
       expect(storeState.invalidateCliStatus).not.toHaveBeenCalled();
       expect(storeState.invalidateCliProviderModelCatalog).not.toHaveBeenCalled();
       expect(refreshOpenCodeCatalog).not.toHaveBeenCalled();
+      expect(quickConnectRefreshKeys.at(-1)).toBe(0);
+      expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBe(0);
       expect((storeState.cliStatus.providers as unknown[])[0]).toBe(anthropic);
       expect((storeState.cliStatus.providers as unknown[])[2]).toBe(opencode);
       expect(openCodeCatalogHookInputs.at(-1)?.enabled).toBe(true);
       await act(async () => {
         (host.querySelector('[title="Re-check OpenCode"]') as HTMLButtonElement).click();
       });
-      expect(refreshOpenCodeCatalog).toHaveBeenCalledOnce();
+      expect(quickConnectRefreshKeys.at(-1)).toBe(1);
+      expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBe(1);
       expect(storeState.fetchCliProviderStatus).toHaveBeenLastCalledWith('opencode', {
         checkReason: 'manual_refresh',
       });

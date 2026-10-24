@@ -1835,8 +1835,15 @@ export const CliStatusBanner = ({
     refreshOpenCodeDashboardCatalog,
   ]);
 
+  // An explicit OpenCode re-check must bypass the provider directory cache for
+  // every dashboard reader: the key drives both the connected-model catalog
+  // (refreshRevision) and the Providers & plans grid (refreshKey).
+  const refreshOpenCodeProviderDirectory = useCallback(() => {
+    setProviderQuickConnectRefreshKey((current) => current + 1);
+  }, []);
+
   const handleOpenCodeRefresh = useCallback(() => {
-    refreshOpenCodeDashboardCatalog();
+    refreshOpenCodeProviderDirectory();
     void (async () => {
       await invalidateOpenCodeRuntimeStatus();
       await fetchOpenCodeRuntimeStatus();
@@ -1844,7 +1851,7 @@ export const CliStatusBanner = ({
   }, [
     fetchOpenCodeRuntimeStatus,
     invalidateOpenCodeRuntimeStatus,
-    refreshOpenCodeDashboardCatalog,
+    refreshOpenCodeProviderDirectory,
   ]);
 
   const handleToggleProvidersCollapsed = useCallback(() => {
@@ -1985,14 +1992,14 @@ export const CliStatusBanner = ({
       providerId: CliProviderId,
       checkReason: AnalyticsProviderCheckReason = 'manual_refresh'
     ) => {
-      if (providerId === 'opencode') refreshOpenCodeDashboardCatalog();
+      if (providerId === 'opencode') refreshOpenCodeProviderDirectory();
       const refreshed = await fetchCliProviderStatus(providerId, { checkReason });
       if (refreshed && providerId === 'anthropic') {
         setAnthropicRateLimitsRefreshVersion((current) => current + 1);
       }
       return refreshed;
     },
-    [fetchCliProviderStatus, refreshOpenCodeDashboardCatalog]
+    [fetchCliProviderStatus, refreshOpenCodeProviderDirectory]
   );
 
   const handleProviderBackendChange = useCallback(

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   isOpenCodeProviderOAuthBridgeOutdated,
   resolveOpenCodeQuickConnectGate,
+  resolveOpenCodeQuickConnectRuntimeRevision,
   resolveOpenCodeQuickPlanState,
 } from '../../../../src/features/runtime-provider-management/core/domain/runtimeProviderQuickConnect';
 import { RuntimeProviderQuickConnect } from '../../../../src/features/runtime-provider-management/renderer/RuntimeProviderQuickConnect';
@@ -21,7 +22,7 @@ import type { CliProviderStatus, OpenCodeRuntimeStatus } from '../../../../src/s
 const mocks = vi.hoisted(() => ({
   directory: null as RuntimeProviderQuickConnectDirectoryState | null,
   companions: new Map<string, RuntimeProviderCompanionState>(),
-  quickConnectOptions: null as { enabled: boolean } | null,
+  quickConnectOptions: null as { enabled: boolean; runtimeRevision: string | null } | null,
   companionOptions: new Map<string, boolean>(),
   fetchCliProviderStatus: vi.fn(async () => true),
   localProviderDialogProps: null as {
@@ -54,7 +55,10 @@ vi.mock('@features/localization/renderer', () => ({
 vi.mock(
   '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect',
   () => ({
-    useRuntimeProviderQuickConnect: (options: { enabled: boolean }) => {
+    useRuntimeProviderQuickConnect: (options: {
+      enabled: boolean;
+      runtimeRevision: string | null;
+    }) => {
       mocks.quickConnectOptions = options;
       return mocks.directory;
     },
@@ -661,7 +665,7 @@ describe('RuntimeProviderQuickConnect', () => {
       );
     });
 
-    expect(mocks.quickConnectOptions).toMatchObject({ enabled: true });
+    expect(mocks.quickConnectOptions).toMatchObject({ enabled: true, runtimeRevision: null });
     expect(mocks.companionOptions).toEqual(
       new Map([
         ['kiro-cli', true],
@@ -738,6 +742,39 @@ describe('runtimeProviderQuickConnect domain policy', () => {
         cliStatusLoading: false,
       })
     ).toBe('ready');
+  });
+
+  it('changes the runtime revision only between settled runtimes', () => {
+    const ready = runtimeStatus({ version: '1.17.18', binaryPath: '/opencode' });
+    const revision = resolveOpenCodeQuickConnectRuntimeRevision({
+      gate: 'ready',
+      runtimeStatus: ready,
+    });
+
+    for (const gate of ['checking', 'installing', 'ready'] as const) {
+      expect(resolveOpenCodeQuickConnectRuntimeRevision({ gate, runtimeStatus: null })).toBeNull();
+    }
+    expect(
+      resolveOpenCodeQuickConnectRuntimeRevision({ gate: 'installing', runtimeStatus: ready })
+    ).toBeNull();
+    expect(
+      resolveOpenCodeQuickConnectRuntimeRevision({
+        gate: 'missing',
+        runtimeStatus: runtimeStatus({ installed: false, state: 'idle' }),
+      })
+    ).toBe('unavailable');
+    expect(
+      resolveOpenCodeQuickConnectRuntimeRevision({
+        gate: 'ready',
+        runtimeStatus: { ...ready, progress: { phase: 'ready', detail: 'Installed' } },
+      })
+    ).toBe(revision);
+    expect(
+      resolveOpenCodeQuickConnectRuntimeRevision({
+        gate: 'ready',
+        runtimeStatus: runtimeStatus({ version: '1.18.0', binaryPath: '/opencode' }),
+      })
+    ).not.toBe(revision);
   });
 
   it('only reports SuperGrok connected when the saved credential is OAuth', () => {
