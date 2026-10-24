@@ -7,6 +7,7 @@ import {
   hostTeamSelectionKey,
 } from '../../../src/features/agent-backend/renderer/createHostTeamsApi';
 import { translateHostTaskReferences } from '../../../src/features/agent-backend/renderer/translateHostTaskReferences';
+import { selectResolvedMembersForTeamName } from '../../../src/renderer/store/team/teamResolvedMembers';
 import {
   buildTaskLinkHref,
   createEncodedTaskReference,
@@ -14,7 +15,9 @@ import {
   parseTaskLinkHref,
 } from '../../../src/renderer/utils/taskReferenceUtils';
 
+import type { BackendLaunchSnapshot } from '../../../src/features/agent-backend/contracts/launch';
 import type { AgentBackendApi } from '../../../src/features/agent-backend/contracts/operations';
+import type { BackendRuntimeSnapshot } from '../../../src/features/agent-backend/contracts/operations';
 import type { BackendRosterConfiguration } from '../../../src/features/agent-backend/contracts/roster';
 import type { BackendTeamSnapshot } from '../../../src/features/agent-backend/contracts/teamSnapshot';
 import type { TeamsAPI } from '../../../src/shared/types/api';
@@ -105,7 +108,9 @@ function savedDescription(f: ReturnType<typeof fixture>) {
     revision: 'd'.repeat(64),
     savedSettings: { cwd: '/TEST', description: 'TEST saved description\nwith original detail' },
     members: f.snapshot.members.map((member, index) => ({
-      ...member, memberId: `TEST-member-${index}`, settings: {},
+      ...member,
+      memberId: `TEST-member-${index}`,
+      settings: {},
     })),
     removedMembers: [],
   };
@@ -119,7 +124,275 @@ function savedDescription(f: ReturnType<typeof fixture>) {
   return configuration;
 }
 
+function attachmentRuntime(f: ReturnType<typeof fixture>) {
+  f.snapshot.members.push({ name: 'TEST-live-member', role: 'member' });
+  const configuration = savedDescription(f);
+  const member = configuration.members[1];
+  const launch: BackendLaunchSnapshot = {
+    launchId: 'TEST-launch',
+    rosterRevision: 'TEST-runtime-definition-digest',
+    status: 'ready',
+    ready: 1,
+    expected: 1,
+    retryCapability: 'same-binding-no-allocation-only',
+    members: [
+      {
+        memberId: member.memberId,
+        generation: 'TEST-current-generation',
+        attemptId: 'TEST-attempt',
+        status: 'ready',
+        nativeReady: true,
+        usable: true,
+        controlAvailable: true,
+        noAllocation: false,
+        reason: 'context-applied',
+      },
+    ],
+  };
+  const runtime: BackendRuntimeSnapshot = {
+    memberId: member.memberId,
+    generation: 'TEST-current-generation',
+    phase: 'allocated',
+    sealed: false,
+    custody: 'owned',
+    nativeReady: true,
+    attached: true,
+    inputs: [],
+    interactions: [],
+    attachmentCapabilities: { images: true, documents: true, textFiles: true },
+  };
+  let unknown = false;
+  const invoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
+  vi.mocked(f.backend.invoke).mockImplementation(async (request) =>
+    request.operation === 'team.launch.read'
+      ? { ok: true, value: structuredClone(launch) }
+      : request.operation === 'runtime.read'
+        ? unknown
+          ? { ok: false, code: 'unavailable', outcome: 'not-dispatched' }
+          : { ok: true, value: structuredClone(runtime) }
+        : invoke(request)
+  );
+  return {
+    configuration,
+    member,
+    launch,
+    runtime,
+    setUnknown: () => {
+      unknown = true;
+    },
+  };
+}
+
 describe('ordinary Host team read selection', () => {
+  it.each([
+    ['anthropic', true],
+    ['codex', false],
+  ] as const)(
+    'hydrates the existing %s member attachment controls only from its exact current native declaration',
+    async (providerId, textFiles) => {
+      const f = fixture();
+      const captured = attachmentRuntime(f);
+      captured.member.settings = { providerId, model: 'TEST-configured-model' };
+      captured.runtime.attachmentCapabilities = { images: true, documents: textFiles, textFiles };
+      // A runtime-definition digest is not a saved configuration revision.
+      expect(captured.launch.rosterRevision).not.toBe(captured.configuration.revision);
+      const teams = createHostTeamsApi(f.legacy, f.backend);
+      const data = await teams.getData(f.key);
+      const resolved = selectResolvedMembersForTeamName(
+        {
+          selectedTeamName: f.key,
+          selectedTeamData: data,
+          teamDataCacheByName: { [f.key]: data },
+          memberActivityMetaByTeam: {},
+        },
+        f.key
+      );
+      expect(resolved.find((row) => row.name === 'TEST-live-member')).toMatchObject({
+        nativeInboxAttachmentsSupported: true,
+        nativeInboxTextAttachmentsSupported: textFiles,
+      });
+      expect(f.backend.invoke).toHaveBeenCalledWith(
+        expect.objectContaining({
+          handle: { handleId: 'TEST-original-A' },
+          operation: 'runtime.read',
+          payload: {
+            memberId: captured.member.memberId,
+            expectedGeneration: 'TEST-current-generation',
+          },
+        })
+      );
+      captured.runtime.attached = false;
+      captured.runtime.custody = 'released';
+      delete captured.runtime.attachmentCapabilities;
+      const stopped = await teams.getData(f.key);
+      expect(
+        stopped.members.find((row) => row.name === 'TEST-live-member')
+          ?.nativeInboxAttachmentsSupported
+      ).toBeUndefined();
+      expect(
+        stopped.members.find((row) => row.name === 'TEST-live-member')
+          ?.nativeInboxTextAttachmentsSupported
+      ).toBeUndefined();
+      expect(f.legacy.getData).not.toHaveBeenCalled();
+    }
+  );
+  it.each([
+    'no-declaration',
+    'detached',
+    'sealed',
+    'unknown',
+    'retired',
+    'foreign-name',
+    'unusable-capture',
+  ] as const)(
+    'keeps native attachment controls unavailable for %s runtime evidence',
+    async (gap) => {
+      const f = fixture();
+      const captured = attachmentRuntime(f);
+      captured.member.settings = { providerId: 'anthropic', model: 'TEST-configured-model' };
+      if (gap === 'no-declaration') delete captured.runtime.attachmentCapabilities;
+      if (gap === 'detached') captured.runtime.attached = false;
+      if (gap === 'sealed') captured.runtime.sealed = true;
+      if (gap === 'unknown') captured.setUnknown();
+      if (gap === 'foreign-name') captured.member.name = 'TEST-foreign-name';
+      if (gap === 'unusable-capture') captured.launch.members[0].usable = false;
+      if (gap === 'retired') {
+        captured.configuration.members = [captured.configuration.members[0]];
+        captured.configuration.removedMembers = [
+          {
+            memberId: captured.member.memberId,
+            name: captured.member.name,
+            settings: captured.member.settings,
+            removedAt: '2026-10-24T07:25:51.476Z',
+          },
+        ];
+        f.snapshot.members = [f.snapshot.members[0]];
+      }
+      const data = await createHostTeamsApi(f.legacy, f.backend).getData(f.key);
+      for (const member of data.members) {
+        expect(member.nativeInboxAttachmentsSupported).toBeUndefined();
+        expect(member.nativeInboxTextAttachmentsSupported).toBeUndefined();
+      }
+      expect(f.legacy.getData).not.toHaveBeenCalled();
+    }
+  );
+  it.each(['memberId', 'generation'] as const)(
+    'rejects a runtime %s mismatch without borrowing another native member capability',
+    async (field) => {
+      const f = fixture();
+      const captured = attachmentRuntime(f);
+      captured.runtime[field] = 'TEST-foreign';
+      await expect(createHostTeamsApi(f.legacy, f.backend).getData(f.key)).rejects.toThrow(
+        'invalid-result'
+      );
+      expect(f.legacy.getData).not.toHaveBeenCalled();
+    }
+  );
+
+  it('projects coherent removed roster history into the existing member UI and clears it after restoration', async () => {
+    const f = fixture();
+    const configuration = savedDescription(f);
+    const removedAt = '2026-10-24T07:25:51.476Z';
+    const settings = { role: 'Developer', providerId: 'codex' as const, model: 'gpt-5.5' };
+    configuration.removedMembers = [
+      { memberId: 'TEST-retired', name: 'TEST-retired', removedAt, settings },
+    ];
+    f.snapshot.tasks.push({
+      id: 'retired-task',
+      subject: 'Historical task',
+      owner: 'TEST-retired',
+      status: 'in_progress',
+    });
+    const teams = createHostTeamsApi(f.legacy, f.backend);
+    const removed = await teams.getData(f.key);
+    expect(removed.members.find((member) => member.name === 'TEST-retired')).toMatchObject({
+      name: 'TEST-retired',
+      removedAt: Date.parse(removedAt),
+      agentType: 'general-purpose',
+      role: 'Developer',
+      providerId: 'codex',
+      model: 'gpt-5.5',
+      currentTaskId: null,
+      taskCount: 1,
+    });
+    expect(removed.config.members?.map((member) => member.name)).toEqual(['alice']);
+    expect((await teams.list()).find((team) => team.teamName === f.key)?.memberCount).toBe(0);
+    const resolved = selectResolvedMembersForTeamName(
+      {
+        selectedTeamName: f.key,
+        selectedTeamData: removed,
+        teamDataCacheByName: { [f.key]: removed },
+        memberActivityMetaByTeam: {},
+      },
+      f.key
+    );
+    expect(resolved.filter((member) => member.removedAt).map((member) => member.name)).toEqual([
+      'TEST-retired',
+    ]);
+    expect(
+      resolved.find((member) => member.name === 'TEST-retired')?.configuredRuntimeSettings
+    ).toMatchObject({ providerId: 'codex', model: 'gpt-5.5' });
+
+    configuration.members.push({
+      memberId: 'TEST-retired',
+      name: 'TEST-retired',
+      role: 'member',
+      settings,
+    });
+    configuration.removedMembers = [];
+    configuration.revision = 'e'.repeat(64);
+    f.snapshot.configurationRevision = configuration.revision;
+    f.snapshot.revision = 'f'.repeat(64);
+    f.snapshot.feed.sequence++;
+    f.snapshot.members.push({ name: 'TEST-retired', role: 'member' });
+    const restored = await teams.getData(f.key);
+    expect(restored.members.map((member) => member.name)).toEqual(['alice', 'TEST-retired']);
+    expect(restored.members.find((member) => member.name === 'TEST-retired')).toMatchObject({
+      providerId: 'codex',
+      model: 'gpt-5.5',
+    });
+    expect(restored.members.some((member) => member.removedAt)).toBe(false);
+    expect((await teams.list()).find((team) => team.teamName === f.key)?.memberCount).toBe(1);
+    expect(f.legacy.getData).not.toHaveBeenCalled();
+  });
+
+  it.each(['revision', 'roster', 'unavailable', 'active-name', 'removed-name'] as const)(
+    'does not expose removed members from a %s configuration read',
+    async (gap) => {
+      const f = fixture();
+      const configuration = savedDescription(f);
+      configuration.removedMembers = [
+        {
+          memberId: 'TEST-retired',
+          name: 'TEST-retired',
+          removedAt: '2026-10-24T07:25:51.476Z',
+          settings: {},
+        },
+      ];
+      if (gap === 'active-name') configuration.removedMembers[0].name = 'ALICE';
+      if (gap === 'removed-name')
+        configuration.removedMembers.push({
+          ...configuration.removedMembers[0],
+          memberId: 'TEST-other-retired',
+          name: 'test-RETIRED',
+        });
+      if (gap === 'revision') configuration.revision = 'e'.repeat(64);
+      if (gap === 'roster') configuration.members[0].name = 'TEST-foreign-lead';
+      if (gap === 'unavailable') {
+        const invoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
+        vi.mocked(f.backend.invoke).mockImplementation(async (request) =>
+          request.operation === 'team.roster.read'
+            ? { ok: false, code: 'hold', outcome: 'not-dispatched' }
+            : invoke(request)
+        );
+      }
+      const data = await createHostTeamsApi(f.legacy, f.backend).getData(f.key);
+      expect(data.members.map((member) => member.name)).toEqual(['alice']);
+      expect(data.warnings).toContain('Saved launch settings are unavailable.');
+      expect(f.legacy.getData).not.toHaveBeenCalled();
+    }
+  );
+
   it.each(['configured', 'unversioned'] as const)(
     'projects original saved description for %s product snapshots',
     async (version) => {
@@ -130,9 +403,13 @@ describe('ordinary Host team read selection', () => {
       const teams = createHostTeamsApi(f.legacy, f.backend);
       const summary = (await teams.list()).find((team) => team.teamName === f.key);
       expect(summary?.description).toBe(configuration.savedSettings!.description);
-      expect(f.backend.invoke).toHaveBeenCalledWith(expect.objectContaining({
-        handle: { handleId: 'TEST-original-A' }, operation: 'team.roster.read', payload: {},
-      }));
+      expect(f.backend.invoke).toHaveBeenCalledWith(
+        expect.objectContaining({
+          handle: { handleId: 'TEST-original-A' },
+          operation: 'team.roster.read',
+          payload: {},
+        })
+      );
     }
   );
   it.each(['revision', 'roster', 'unavailable'] as const)(

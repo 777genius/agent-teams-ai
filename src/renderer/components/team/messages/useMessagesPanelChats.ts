@@ -62,6 +62,7 @@ export function useDirectThreadAutoOlder({
   scopedCount,
   hasMore,
   loadingOlder,
+  historyReloadRequired = false,
   loadOlder,
 }: {
   renderSurface: ConversationSurface;
@@ -70,6 +71,7 @@ export function useDirectThreadAutoOlder({
   scopedCount: number;
   hasMore: boolean;
   loadingOlder: boolean;
+  historyReloadRequired?: boolean;
   loadOlder: () => Promise<void>;
 }): void {
   const pagesRef = useRef(0);
@@ -78,11 +80,11 @@ export function useDirectThreadAutoOlder({
   }, [threadOpenedAt, scope]);
   useEffect(() => {
     if (renderSurface !== 'thread' || scope.kind !== 'direct') return;
-    if (scopedCount > 0 || !hasMore || loadingOlder) return;
+    if (historyReloadRequired || scopedCount > 0 || !hasMore || loadingOlder) return;
     if (pagesRef.current >= TEAM_DIRECT_CHAT_AUTO_OLDER_PAGE_CAP) return;
     pagesRef.current += 1;
     void loadOlder();
-  }, [hasMore, loadOlder, loadingOlder, renderSurface, scope, scopedCount]);
+  }, [hasMore, historyReloadRequired, loadOlder, loadingOlder, renderSurface, scope, scopedCount]);
 }
 
 export function useThreadUnreadSnapshot({

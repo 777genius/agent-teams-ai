@@ -1,3 +1,4 @@
+import { NATIVE_IMAGE_MIME_TYPES } from '../../attachments/mimeTypes.js';
 import { capturedMcpSourceCurrent } from '../../mcp-catalog/capturedSource.js';
 import { codexMcpPolicy } from './codexMcpPolicy.js';
 import { readCodexMcpCatalog } from './readCodexMcpCatalog.js';
@@ -239,6 +240,17 @@ export function createCodexMemberProvider(
   };
   return {
     factory,
+    ...(context.attachments
+      ? {
+          attachmentCapabilities: {
+            images: NATIVE_IMAGE_MIME_TYPES.some(
+              (mime) => context.attachments?.mimeTypes.includes(mime) === true
+            ),
+            documents: false,
+            textFiles: false,
+          },
+        }
+      : {}),
     ...(custody.captureRegisteredProcess
       ? { captureRegisteredProcess: custody.captureRegisteredProcess.bind(custody) }
       : {}),

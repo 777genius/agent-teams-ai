@@ -50,69 +50,6 @@ describe('agent attachment validation', () => {
     if (!result.ok) expect(result.code).toBe('attachment_type_unsupported');
   });
 
-  it('blocks known non-vision OpenCode models', () => {
-    const capability = resolveAgentAttachmentCapability({
-      providerId: 'opencode',
-      model: 'openrouter/z-ai/glm-5.1',
-    });
-    const result = validateAttachmentForCapability({
-      attachment: fakeImageAttachment(),
-      capability,
-    });
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.code).toBe('attachment_model_unsupported');
-  });
-
-  it.each([
-    'openrouter/moonshotai/kimi-k2.6',
-    'kimi-for-coding/kimi-for-coding',
-    'kimi-for-coding/kimi-for-coding-highspeed',
-    'kimi-for-coding/k3',
-    'zai-coding-plan/glm-5v-turbo',
-    'minimax-coding-plan/MiniMax-M3',
-    'xai/grok-4.5',
-    'xai/grok-4.3',
-    'xai/grok-4.20-0309-reasoning',
-    'xai/grok-4.20-0309-non-reasoning',
-    'xai/grok-build-0.1',
-    'github-copilot/gpt-5-mini',
-    'github-copilot/gpt-5.3-codex',
-    'github-copilot/gpt-5.4',
-    'github-copilot/gpt-5.4-mini',
-    'github-copilot/gpt-5.5',
-    'github-copilot/gpt-5.6-luna',
-    'github-copilot/gpt-5.6-sol',
-    'github-copilot/gpt-5.6-terra',
-    'github-copilot/claude-fable-5',
-    'github-copilot/claude-haiku-4.5',
-    'github-copilot/claude-opus-4.5',
-    'github-copilot/claude-opus-4.6',
-    'github-copilot/claude-opus-4.7',
-    'github-copilot/claude-opus-4.8',
-    'github-copilot/claude-sonnet-4.5',
-    'github-copilot/claude-sonnet-4.6',
-    'github-copilot/claude-sonnet-5',
-    'github-copilot/gemini-2.5-pro',
-    'github-copilot/gemini-3-flash-preview',
-    'github-copilot/gemini-3.1-pro-preview',
-    'github-copilot/gemini-3.5-flash',
-    'github-copilot/kimi-k2.7-code',
-    'xiaomi-token-plan-ams/mimo-v2.5',
-    'xiaomi-token-plan-sgp/mimo-v2.5',
-    'xiaomi-token-plan-cn/mimo-v2.5',
-  ])('allows verified OpenCode subscription model %s', (model) => {
-    const capability = resolveAgentAttachmentCapability({
-      providerId: 'opencode',
-      model,
-    });
-    expect(
-      validateAttachmentForCapability({ attachment: fakeImageAttachment(), capability })
-    ).toEqual({
-      ok: true,
-      warnings: [],
-    });
-  });
-
   it('allows Claude text file delivery through document blocks', () => {
     const capability = resolveAgentAttachmentCapability({
       providerId: 'anthropic',
@@ -196,7 +133,7 @@ describe('agent attachment validation', () => {
   it('blocks non-image files for OpenCode even when the model supports images', () => {
     const capability = resolveAgentAttachmentCapability({
       providerId: 'opencode',
-      model: 'openrouter/moonshotai/kimi-k2.6',
+      declaredInputModalities: ['image'],
     });
     const result = validateAttachmentForCapability({
       attachment: fakeImageAttachment({
@@ -212,7 +149,7 @@ describe('agent attachment validation', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.code).toBe('attachment_type_unsupported');
-      expect(result.message).toContain('image attachments only');
+      expect(result.message).toContain('non-image file attachments');
     }
   });
 
@@ -225,10 +162,10 @@ describe('agent attachment validation', () => {
     expect(classifyAttachmentMime('video/mp2t')).toBe('unsupported');
   });
 
-  it('allows video delivery for the OpenCode model verified for video attachments', () => {
+  it('allows video delivery for declared OpenCode video input', () => {
     const capability = resolveAgentAttachmentCapability({
       providerId: 'opencode',
-      model: 'minimax-coding-plan/MiniMax-M3',
+      declaredInputModalities: ['image', 'video'],
     });
     expect(capability.supportsVideo).toBe(true);
     const result = validateAttachmentForCapability({
@@ -249,7 +186,7 @@ describe('agent attachment validation', () => {
   it('rejects video delivery for OpenCode models that only support images', () => {
     const capability = resolveAgentAttachmentCapability({
       providerId: 'opencode',
-      model: 'openrouter/moonshotai/kimi-k2.6',
+      declaredInputModalities: ['image'],
     });
     expect(capability.supportsVideo).toBe(false);
     const result = validateAttachmentForCapability({
@@ -270,10 +207,10 @@ describe('agent attachment validation', () => {
     }
   });
 
-  it('rejects videos that exceed the verified per-video byte budget', () => {
+  it('rejects videos that exceed the per-video byte budget', () => {
     const capability = resolveAgentAttachmentCapability({
       providerId: 'opencode',
-      model: 'minimax-coding-plan/MiniMax-M3',
+      declaredInputModalities: ['image', 'video'],
     });
     const result = validateAttachmentForCapability({
       attachment: fakeImageAttachment({
@@ -296,7 +233,7 @@ describe('agent attachment validation', () => {
   it('uses an 8 MiB per-video and mixed attachment budget', () => {
     const capability = resolveAgentAttachmentCapability({
       providerId: 'opencode',
-      model: 'minimax-coding-plan/MiniMax-M3',
+      declaredInputModalities: ['image', 'video'],
     });
 
     expect(capability.maxBytesPerVideo).toBe(8 * 1024 * 1024);
@@ -306,7 +243,7 @@ describe('agent attachment validation', () => {
   it('rejects more videos than the capability allows', () => {
     const capability = resolveAgentAttachmentCapability({
       providerId: 'opencode',
-      model: 'minimax-coding-plan/MiniMax-M3',
+      declaredInputModalities: ['image', 'video'],
     });
     const result = validateAttachmentBatchForCapability({
       capability,
@@ -326,7 +263,7 @@ describe('agent attachment validation', () => {
   it('preserves batch warnings when a later attachment fails validation', () => {
     const capability = resolveAgentAttachmentCapability({
       providerId: 'opencode',
-      model: 'minimax-coding-plan/MiniMax-M3',
+      declaredInputModalities: ['image', 'video'],
     });
     const warning = {
       code: 'image_was_resized' as const,
@@ -357,7 +294,7 @@ describe('agent attachment validation', () => {
   it('rejects mixed image and video bytes above the total capability budget', () => {
     const capability = resolveAgentAttachmentCapability({
       providerId: 'opencode',
-      model: 'minimax-coding-plan/MiniMax-M3',
+      declaredInputModalities: ['image', 'video'],
     });
     const result = validateAttachmentBatchForCapability({
       capability,

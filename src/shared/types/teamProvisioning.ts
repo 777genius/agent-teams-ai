@@ -1,4 +1,9 @@
-export interface LocalModelLaunchOptions {
+export interface RuntimeSelectionVersioned {
+  /** New drafts require an explicit provider; absent preserves legacy defaults. */
+  runtimeSelectionVersion?: 1;
+}
+
+export interface LocalModelLaunchOptions extends RuntimeSelectionVersioned {
   allowExperimentalLocalModels?: boolean;
 }
 

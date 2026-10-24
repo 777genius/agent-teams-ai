@@ -6,12 +6,10 @@ import { Badge } from '@renderer/components/ui/badge';
 import { SyncedLoader2 } from '@renderer/components/ui/SyncedLoader2';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
-import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { renderLinkifiedText } from '@renderer/utils/linkifiedText';
 import {
-  agentAvatarUrl,
   buildMemberLaunchPresentation,
   displayMemberName,
   isOpenCodeRelaunchActionable,
@@ -47,8 +45,8 @@ import {
 } from 'lucide-react';
 
 import { CurrentTaskIndicator } from './CurrentTaskIndicator';
+import { MemberIdentityAvatar } from './MemberIdentityAvatar';
 import { MemberLaunchDiagnosticsButton } from './MemberLaunchDiagnosticsButton';
-import { MemberPresenceDot } from './MemberPresenceDot';
 import { MemberQuickActions } from './MemberQuickActions';
 
 import type { PendingMemberDeliveryState } from '../messages/messagesPanelLogic';
@@ -77,6 +75,8 @@ interface MemberCardProps {
   memberColor: string;
   avatarUrl?: string;
   fullBleedSurface?: boolean;
+  /** Presentation for selection rows: no profile target or quick actions. */
+  passive?: boolean;
   runtimeSummary?: string;
   runtimeEntry?: TeamAgentRuntimeEntry;
   runtimeRunId?: string | null;
@@ -635,6 +635,7 @@ export const MemberCard = memo(function MemberCard({
   memberColor,
   avatarUrl,
   fullBleedSurface = true,
+  passive = false,
   runtimeSummary,
   runtimeEntry,
   runtimeRunId,
@@ -754,7 +755,6 @@ export const MemberCard = memo(function MemberCard({
       ? (launchStatusLabel ?? presenceLabel)
       : presenceLabel;
   const colors = getTeamColorSet(memberColor);
-  const { isLight } = useTheme();
   const pending = taskCounts?.pending ?? 0;
   const inProgress = taskCounts?.inProgress ?? 0;
   const completed = taskCounts?.completed ?? 0;
@@ -1079,12 +1079,12 @@ export const MemberCard = memo(function MemberCard({
           rowSurfaceBleedClass
         )}
         style={undefined}
-        title={rowTitle}
-        role="button"
-        tabIndex={0}
-        onClick={onClick}
+        title={passive ? undefined : rowTitle}
+        role={passive ? undefined : 'button'}
+        tabIndex={passive ? undefined : 0}
+        onClick={passive ? undefined : onClick}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
+          if (!passive && (e.key === 'Enter' || e.key === ' ')) {
             e.preventDefault();
             onClick?.();
           }
@@ -1095,23 +1095,13 @@ export const MemberCard = memo(function MemberCard({
         ) : null}
         <div className="pointer-events-none absolute inset-0 z-10 rounded transition-colors group-hover:bg-white/5" />
         <div className="relative z-20 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2.5 gap-y-1">
-          <div className="relative shrink-0">
-            <div
-              className="rounded-full border-2 p-px"
-              style={{
-                borderColor: colors.border,
-                boxShadow: isLight ? 'none' : `0 0 0 1px ${colors.badge}`,
-              }}
-            >
-              <img
-                src={avatarUrl ?? agentAvatarUrl(member.name)}
-                alt={member.name}
-                className="size-7 rounded-full bg-[var(--color-surface-raised)]"
-                loading="lazy"
-              />
-            </div>
-            <MemberPresenceDot className={`size-2.5 ${dotClass}`} label={displayPresenceLabel} />
-          </div>
+          <MemberIdentityAvatar
+            name={member.name}
+            color={memberColor}
+            avatarUrl={avatarUrl}
+            presenceClass={dotClass}
+            presenceLabel={displayPresenceLabel}
+          />
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-1.5 text-sm">
               <span className="shrink-0 font-medium text-[var(--color-text)]">
@@ -1508,7 +1498,7 @@ export const MemberCard = memo(function MemberCard({
               totalTasks={totalTasks}
               progressPercent={progressPercent}
             />
-            {!isRemoved && (
+            {!isRemoved && !passive && (
               <MemberQuickActions
                 onSendMessage={onSendMessage}
                 onAssignTask={onAssignTask}

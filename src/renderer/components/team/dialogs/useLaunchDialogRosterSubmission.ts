@@ -57,7 +57,8 @@ export function useLaunchDialogRosterSubmission(
     request: TeamLaunchRequest,
     members: ReplaceMembersRequest['members'],
     configuredModel: string,
-    replaceMembers: TeamsAPI['replaceMembers']
+    replaceMembers: TeamsAPI['replaceMembers'],
+    onMembersSaved?: () => void
   ): Promise<void> {
     const intent = submitted.current
       ? submitted.current.intent
@@ -134,11 +135,15 @@ export function useLaunchDialogRosterSubmission(
         }
       : request;
     if (props.mode === 'relaunch') {
-      if (metadata) await props.onRelaunch(launchRequest, members, intent, metadata);
+      if (metadata)
+        await props.onRelaunch(launchRequest, members, intent, metadata, onMembersSaved);
+      else if (onMembersSaved)
+        await props.onRelaunch(request, members, intent, undefined, onMembersSaved);
       else await props.onRelaunch(request, members, intent);
     } else {
       await props.validateMemberSettings?.();
       await replaceMembers(teamName, { members, memberSettingsRelaunch: intent, ...metadata });
+      onMembersSaved?.();
       await props.onLaunch(launchRequest);
     }
   }

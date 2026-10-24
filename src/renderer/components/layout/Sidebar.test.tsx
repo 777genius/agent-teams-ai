@@ -16,6 +16,11 @@ vi.mock('@renderer/store', () => ({
   useStore: <T,>(selector: (state: typeof storeMock.state) => T): T => selector(storeMock.state),
 }));
 
+vi.mock('@features/task-folders/renderer', () => ({
+  TaskFoldersHost: () => null,
+  useTaskFoldersDocked: () => false,
+}));
+
 vi.mock('../sidebar/GlobalTaskList', () => ({
   GlobalTaskList: () => React.createElement('div', { 'data-testid': 'tasks-panel' }, 'Tasks panel'),
 }));

@@ -52,7 +52,7 @@ function snapshot(): TokenUsageAnalyticsSnapshotDto {
     },
     byTeam: [
       {
-        id: 'alpha',
+        id: 'team:alpha',
         label: 'alpha',
         teamName: 'alpha',
         summary: {
@@ -483,7 +483,7 @@ describe('toTokenUsageDashboardViewModel', () => {
       expect.arrayContaining([expect.objectContaining({ label: 'Legacy unclassified' })])
     );
     expect(viewModel.runtimeBars[0]?.percent).toBe(100);
-    expect(viewModel.teamFilterOptions.map((option) => option.id)).toEqual(['alpha']);
+    expect(viewModel.teamFilterOptions.map((option) => option.id)).toEqual(['team:alpha']);
     expect(viewModel.agentRows[0]).toEqual(
       expect.objectContaining({ teamName: 'alpha', agentName: 'builder' })
     );
@@ -499,14 +499,17 @@ describe('toTokenUsageDashboardViewModel', () => {
     expect(viewModel.unmappedEventCount).toBe(3);
   });
 
+  it('labels UTC heatmap days consistently with their calendar IDs in every viewer timezone', () => {
+    const viewModel = toTokenUsageDashboardViewModel(snapshot(), { locale: 'en-US' });
+    expect(viewModel.activityDays.map((day) => ({ id: day.id, label: day.label }))).toEqual([
+      { id: '2026-06-29', label: 'Jun 29' },
+      { id: '2026-06-30', label: 'Jun 30' },
+    ]);
+    expect(viewModel.activityDays[0].title).toContain('Jun 29, 2026');
+  });
+
   it('excludes cache tokens from dashboard token statistics by default', () => {
-    const viewModel = toTokenUsageDashboardViewModel(snapshot(), {
-      budgetLimits: {
-        global: { monthlyTokenLimit: 300 },
-        projects: { 'project:workspace-a': { monthlyTokenLimit: 300 } },
-        teams: { alpha: { monthlyTokenLimit: 200 } },
-      },
-    });
+    const viewModel = toTokenUsageDashboardViewModel(snapshot());
 
     expect(viewModel.metrics.find((metric) => metric.id === 'tokens')?.value).toBe('150');
     expect(viewModel.tokenMix.map((segment) => segment.id)).toEqual(['input', 'output']);
@@ -555,34 +558,20 @@ describe('toTokenUsageDashboardViewModel', () => {
     ]);
     expect(viewModel.activityDays.map((day) => day.tokenValue)).toEqual([75, 150]);
     expect(viewModel.teamRows[0]).toEqual(
-      expect.objectContaining({ id: 'alpha', tokenValue: 150 })
+      expect.objectContaining({ id: 'team:alpha', tokenValue: 150 })
     );
     expect(viewModel.teamFilterOptions[0]).toEqual(
-      expect.objectContaining({ id: 'alpha', tokens: '150', tokenValue: 150 })
+      expect.objectContaining({ id: 'team:alpha', tokens: '150', tokenValue: 150 })
     );
-    expect(
-      viewModel.budgetTargetOptions.map((option) => [option.scope, option.id, option.tokens])
-    ).toEqual([
-      ['global', 'global', '150'],
-      ['team', 'alpha', '150'],
-      ['project', 'project:workspace-a', '150'],
-    ]);
-    expect(viewModel.budgetAlerts.find((alert) => alert.id === 'global')?.percent).toBe(50);
-    expect(viewModel.budgetAlerts.find((alert) => alert.id === 'alpha')?.percent).toBe(75);
     expect(viewModel.commandRuns[0]?.tokens).toBe('75');
     expect(viewModel.sessionRuns[0]?.tokens).toBe('50');
     expect(viewModel.recentRuns[0]?.tokens).toBe('50');
     expect(viewModel.expensiveRuns[0]?.tokens).toBe('25');
   });
 
-  it('builds billing split, burn rate, and budget alerts', () => {
+  it('builds billing split and burn rate', () => {
     const viewModel = toTokenUsageDashboardViewModel(snapshot(), {
       includeCacheTokens: true,
-      budgetLimits: {
-        global: { monthlyTokenLimit: 500 },
-        projects: { 'project:workspace-a': { monthlyTokenLimit: 100 } },
-        teams: { alpha: { monthlyTokenLimit: 250 } },
-      },
       locale: 'en-US',
     });
 
@@ -605,38 +594,6 @@ describe('toTokenUsageDashboardViewModel', () => {
         weekForecastTokens: '1.6K',
       })
     );
-    expect(viewModel.budgetAlerts.map((alert) => alert.id)).toEqual([
-      'project:workspace-a',
-      'alpha',
-      'global',
-    ]);
-    expect(viewModel.budgetAlerts[0]).toEqual(
-      expect.objectContaining({
-        id: 'project:workspace-a',
-        scope: 'project',
-        severity: 'critical',
-        percent: 300,
-      })
-    );
-    expect(viewModel.budgetAlerts[1]).toEqual(
-      expect.objectContaining({
-        id: 'alpha',
-        severity: 'critical',
-        percent: 120,
-      })
-    );
-    expect(viewModel.budgetAlerts[2]).toEqual(
-      expect.objectContaining({
-        id: 'global',
-        severity: 'ok',
-        percent: 60,
-      })
-    );
-    expect(viewModel.budgetTargetOptions.map((option) => `${option.scope}:${option.id}`)).toEqual([
-      'global:global',
-      'team:alpha',
-      'project:project:workspace-a',
-    ]);
   });
 
   it('keeps unclassified billing data out of user-facing billing panels', () => {

@@ -287,6 +287,11 @@
   },
   "tokenUsage": {
     "title": "Usage",
+    "gateway": {
+      "dailyGranularity": "Gateway usage is aggregated by UTC day.",
+      "lastSuccessfulImport": "Last complete gateway import:",
+      "noConfirmedImport": "A complete gateway import is not yet confirmed; totals may be partial."
+    },
     "partialData": "Partial data",
     "actions": {
       "refresh": "Refresh",
@@ -336,7 +341,45 @@
       "tokenLimit": "Token limit",
       "tokenLimitDetail": "{{tokens}} of {{limit}}",
       "warning": "Warning",
-      "project": "Project"
+      "project": "Project",
+      "editor": {
+        "title": "Configure budget",
+        "description": "USD is an API-equivalent estimate, not a provider invoice.",
+        "scope": "Budget scope",
+        "notifications": "Budget notifications",
+        "thresholds": "Notification thresholds",
+        "threshold": "Threshold {{index}}",
+        "removeThreshold": "Remove threshold {{index}}",
+        "newThreshold": "New threshold",
+        "addThreshold": "Add threshold",
+        "noThresholds": "No threshold notifications configured.",
+        "invalidLimit": "Enter a finite positive number.",
+        "requiredLimit": "Set at least one limit. Use Delete to remove a budget.",
+        "invalidThresholds": "Use up to 10 unique whole percentages from 1 to 100.",
+        "invalidDraft": "Check the limits and thresholds in your edited scopes.",
+        "reconciliationRequired": "Another client changed a scope you edited. Cancel and reopen the editor to reconcile your changes before saving.",
+        "compareDraft": "Current settings loaded. Compare your draft before saving.",
+        "reload": "Load current settings",
+        "delete": "Delete budget",
+        "legacyCombinedExplanation": "This migrated budget combines anonymous runs and the team named unassigned. It can be edited or deleted. Once deleted, it cannot be created again.",
+        "deletePending": "Budget will be deleted when you Save. Editing restores it.",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saving": "Saving..."
+      },
+      "card": {
+        "updated": "Usage updated: {{time}}",
+        "stale": "Collected usage is stale. Alerts are paused until a successful refresh.",
+        "degraded": "Usage data has errors. Alerts are paused.",
+        "masterOff": "Budget alerts are disabled in notification settings.",
+        "paused": "Notifications paused for this budget.",
+        "over": "Over budget: {{value}}",
+        "remaining": "Remaining: {{value}}",
+        "next": "Next threshold: {{threshold}}%",
+        "incomplete": "Known subtotal only. Some API-equivalent costs are unavailable.",
+        "basis": "Canonical token total includes cache. All collected billing modes count.",
+        "unavailable": "Budget status unavailable. Load current settings to retry."
+      }
     },
     "dateRange": {
       "allCollectedUsage": "All collected app usage",
@@ -388,7 +431,7 @@
       "tokens": "tokens",
       "tokensCost": "{{tokens}} tokens / {{cost}}",
       "total": "Total",
-      "unassigned": "Unassigned",
+      "unassigned": "Anonymous runs",
       "unknownAgent": "Unknown agent",
       "eventCount": "{{count}} events",
       "streakCount": "{{count}} day streak"

@@ -1,3 +1,4 @@
+import { getAuthoritativeReviewedActionFile } from './authoritativeReviewFiles.js';
 import type { ReviewWriterContext } from './ports.js';
 import type {
   ExecuteReviewMutationResult,
@@ -9,7 +10,6 @@ import type {
 import { MAX_REVIEW_MUTATION_STEPS } from './limits.js';
 import {
   resolveReviewPathAuthorization,
-  getAuthoritativeReviewedFile,
 } from './scopeAuthorization.js';
 import { parseDecisionPersistenceScope } from './validation.js';
 import { withReviewDecisionPersistenceLock } from './persistenceLock.js';
@@ -105,7 +105,8 @@ export async function handleExecuteReviewMutation(
         env,
         request.diskSteps,
         scope,
-        authorization
+        authorization,
+        persistedState
       );
       const diskPostimages = await buildDirectReviewMutationDiskPostimages(env, diskSteps);
       await assertDirectReviewMutationPreimages(env, diskSteps);
@@ -214,8 +215,8 @@ export async function handleRestoreReviewHistory(
         reviewActionHistory: current.reviewActionHistory,
         reviewRedoHistory: current.reviewRedoHistory,
       };
-      const plan = buildReviewHistoryRestorePlan(currentState, target, (filePath) =>
-        getAuthoritativeReviewedFile(authorization, filePath)
+      const plan = buildReviewHistoryRestorePlan(currentState, target, (filePath, source) =>
+        getAuthoritativeReviewedActionFile(authorization, filePath, source)
       );
       if (plan.actionCount === 0) {
         return {
@@ -240,7 +241,8 @@ export async function handleRestoreReviewHistory(
         env,
         plannedDiskSteps,
         scope,
-        authorization
+        authorization,
+        plan.persistedState
       );
       const diskPostimages = await buildDirectReviewMutationDiskPostimages(env, diskSteps);
       await assertDirectReviewMutationPreimages(env, diskSteps);

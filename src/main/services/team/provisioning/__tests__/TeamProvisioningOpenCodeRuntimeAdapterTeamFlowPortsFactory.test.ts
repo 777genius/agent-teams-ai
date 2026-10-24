@@ -1,3 +1,5 @@
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
 import path from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
@@ -32,6 +34,47 @@ function createService(): TeamProvisioningOpenCodeRuntimeAdapterTeamFlowServiceH
 }
 
 describe('TeamProvisioningOpenCodeRuntimeAdapterTeamFlowPortsFactory', () => {
+  it.skipIf(process.platform === 'win32')(
+    'creates fresh team state privately through default ports under umask 002 without repairing existing paths',
+    async () => {
+      const root = await fs.mkdtemp(path.join(os.tmpdir(), 'test-opencode-private-state-'));
+      // eslint-disable-next-line sonarjs/file-permissions -- TEST-only umask reproduces group-write defaults; restored in finally and confined to this temporary directory.
+      const previousUmask = process.umask(0o002);
+      try {
+        const claudeRoot = path.join(root, 'claude');
+        const teamsRoot = path.join(claudeRoot, 'teams');
+        const tasksRoot = path.join(claudeRoot, 'tasks');
+        const ports = createOpenCodeRuntimeAdapterTeamFlowPortsFromService(createService(), {
+          getTeamsBasePath: () => teamsRoot,
+          getTasksBasePath: () => tasksRoot,
+        });
+        const teamDir = path.join(ports.getTeamsBasePath(), 'fresh');
+        const tasksDir = path.join(ports.getTasksBasePath(), 'fresh');
+        const inboxDir = path.join(teamDir, 'inboxes');
+        const created = await ports.mkdir(teamDir);
+        expect(created).toBe(claudeRoot);
+        await ports.mkdir(tasksDir);
+        if (created) await ports.mkdir(inboxDir);
+        for (const directory of [claudeRoot, teamsRoot, teamDir, inboxDir, tasksRoot, tasksDir]) {
+          const stat = await fs.stat(directory);
+          expect(stat.mode & 0o777).toBe(0o700);
+          expect(stat.uid).toBe(process.getuid?.());
+        }
+        const unsafeDirectory = path.join(teamsRoot, 'existing');
+        await fs.mkdir(unsafeDirectory);
+        const before = await fs.stat(unsafeDirectory);
+        expect(before.mode & 0o777).toBe(0o775);
+        expect(await ports.mkdir(unsafeDirectory)).toBeUndefined();
+        const after = await fs.stat(unsafeDirectory);
+        expect(after.ino).toBe(before.ino);
+        expect(after.mode & 0o777).toBe(0o775);
+      } finally {
+        process.umask(previousUmask);
+        await fs.rm(root, { recursive: true, force: true });
+      }
+    }
+  );
+
   it('builds ports from service-shaped dependencies without freezing mutable functions', async () => {
     const service = createService();
     const secondPathExists = vi.fn(async () => true);

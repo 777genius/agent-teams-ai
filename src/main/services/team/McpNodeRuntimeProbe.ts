@@ -2,10 +2,8 @@ import { execCli } from '@main/utils/childProcess';
 
 const ELECTRON_NODE_RUNTIME_PROBE_TIMEOUT_MS = 5_000;
 const ELECTRON_RUN_AS_NODE_ENV = 'ELECTRON_RUN_AS_NODE';
-// The packaged Electron runtime can lag the source toolchain patch version,
-// so MCP launch validation pins the Node 24 runtime line, not .node-version.
-const MIN_MCP_NODE_MAJOR_VERSION = 24;
-const MAX_MCP_NODE_MAJOR_VERSION = 25;
+// Packaged Electron can run Node 24 while the source toolchain runs Node 26.
+const SUPPORTED_MCP_NODE_MAJOR_VERSIONS = new Set([24, 26]);
 
 export const NODE_RUNTIME_PROBE_SCRIPT =
   'process.stdout.write(JSON.stringify({execPath:process.execPath,version:process.versions.node}))';
@@ -70,13 +68,9 @@ export function assertSupportedMcpNodeRuntime(
 ): void {
   const match = /^v?(\d+)(?:\.|$)/.exec(metadata.version.trim());
   const major = match ? Number.parseInt(match[1] ?? '', 10) : Number.NaN;
-  if (
-    !Number.isFinite(major) ||
-    major < MIN_MCP_NODE_MAJOR_VERSION ||
-    major >= MAX_MCP_NODE_MAJOR_VERSION
-  ) {
+  if (!Number.isFinite(major) || !SUPPORTED_MCP_NODE_MAJOR_VERSIONS.has(major)) {
     throw new Error(
-      `${command} resolved ${metadata.path} with Node.js ${metadata.version}; Agent Teams MCP requires Node.js 24.x`
+      `${command} resolved ${metadata.path} with Node.js ${metadata.version}; Agent Teams MCP requires Node.js 24.x or 26.x`
     );
   }
 }

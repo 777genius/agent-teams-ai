@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { getTrackedOpenCodeBootstrapWakeRunId } from '../../../provisioning/TeamProvisioningSecondaryRuntimeRuns';
+import { OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS } from '../OpenCodePromptDeliveryWatchdog';
 import { createOpenCodePromptDeliveryWatchdogCoordinator } from '../OpenCodePromptDeliveryWatchdogCoordinator';
 import { OpenCodePromptDeliveryWatchdogScheduler } from '../OpenCodePromptDeliveryWatchdogScheduler';
 
@@ -98,6 +99,8 @@ function makeCoordinator(
     logPromptDeliveryEvent?: ReturnType<typeof vi.fn>;
     notifyLeadTurnActivity?: ReturnType<typeof vi.fn>;
     canDeliverToTeamRuntime?: () => boolean;
+    recoverRuntimeLanesForWatchdog?: () => Promise<string[]>;
+    stopRuntimeLanesForStoppedTeam?: () => Promise<unknown>;
     resolveCurrentRuntimeRunId?: (teamName: string, laneId: string) => Promise<string | null>;
     resolveMembersForRuntimeLane?: (teamName: string, laneId: string) => Promise<string[]>;
     hasCommittedBootstrapSession?: (input: { memberName: string }) => Promise<boolean>;
@@ -135,8 +138,10 @@ function makeCoordinator(
     rememberRuntimePidFromBridge: vi.fn(async () => undefined),
     watchdogScheduler: scheduler,
     canDeliverToTeamRuntime: overrides.canDeliverToTeamRuntime ?? vi.fn(() => true),
-    recoverRuntimeLanesForWatchdog: vi.fn(async () => []),
-    stopRuntimeLanesForStoppedTeam: vi.fn(async () => undefined),
+    recoverRuntimeLanesForWatchdog:
+      overrides.recoverRuntimeLanesForWatchdog ?? vi.fn(async () => []),
+    stopRuntimeLanesForStoppedTeam:
+      overrides.stopRuntimeLanesForStoppedTeam ?? vi.fn(async () => undefined),
     readActiveRuntimeLaneIds: vi.fn(async () => overrides.activeLaneIds ?? ['lane-1']),
     createLedger: vi.fn(() => overrides.ledger ?? ({} as OpenCodePromptDeliveryLedgerStore)),
     resolveMembersForRuntimeLane:
@@ -633,5 +638,66 @@ describe('OpenCodePromptDeliveryWatchdogCoordinator', () => {
         reason: 'opencode_prompt_delivery_ledger_rebuilt_from_unread_inbox',
       }
     );
+  });
+
+  describe('continuity pass', () => {
+    const unread: InboxMessage = {
+      from: 'bob',
+      to: 'alice',
+      text: 'Peer challenge.',
+      timestamp: ISO,
+      read: false,
+      messageId: 'msg-1',
+    };
+
+    it('wakes a record-less unread row without writing a ledger record', async () => {
+      const ledger = {
+        pruneTerminalRecords: vi.fn(async () => undefined),
+        list: vi.fn(async () => []),
+        getByInboxMessage: vi.fn(async () => null),
+        ensurePending: vi.fn(),
+        markAcceptanceUnknown: vi.fn(),
+      } as unknown as OpenCodePromptDeliveryLedgerStore;
+      const scheduler = {
+        isEnabled: vi.fn(() => true),
+        schedule: vi.fn(),
+        isStaleError: vi.fn(async () => false),
+      };
+      const coordinator = makeCoordinator({ scheduler, ledger, inboxMessages: [unread] });
+
+      await expect(coordinator.scanContinuity('team')).resolves.toBe(1);
+
+      expect(ledger.ensurePending).not.toHaveBeenCalled();
+      expect(ledger.markAcceptanceUnknown).not.toHaveBeenCalled();
+      expect(scheduler.schedule).toHaveBeenCalledExactlyOnceWith({
+        teamName: 'team',
+        memberName: 'alice',
+        messageId: 'msg-1',
+        delayMs: OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
+      });
+    });
+
+    it('leaves a team that cannot deliver to its lane recovery and stop cleanup owners', async () => {
+      const recoverRuntimeLanesForWatchdog = vi.fn(async () => ['lane-1']);
+      const stopRuntimeLanesForStoppedTeam = vi.fn(async () => undefined);
+      const scheduler = {
+        isEnabled: vi.fn(() => true),
+        schedule: vi.fn(),
+        isStaleError: vi.fn(async () => false),
+      };
+      const coordinator = makeCoordinator({
+        scheduler,
+        inboxMessages: [unread],
+        canDeliverToTeamRuntime: () => false,
+        recoverRuntimeLanesForWatchdog,
+        stopRuntimeLanesForStoppedTeam,
+      });
+
+      await expect(coordinator.scanContinuity('team')).resolves.toBe(0);
+
+      expect(recoverRuntimeLanesForWatchdog).not.toHaveBeenCalled();
+      expect(stopRuntimeLanesForStoppedTeam).not.toHaveBeenCalled();
+      expect(scheduler.schedule).not.toHaveBeenCalled();
+    });
   });
 });

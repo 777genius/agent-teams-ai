@@ -13,6 +13,7 @@ import {
   reconcileChips,
   removeChipTokenFromText,
 } from '@renderer/utils/chipUtils';
+import { handleComposerEnterKey } from '@renderer/utils/composerEnterKey';
 import { isImeComposing } from '@renderer/utils/imeComposition';
 import {
   doesSuggestionMatchQuery,
@@ -350,6 +351,7 @@ interface MentionableTextareaProps extends Omit<
   commandSuggestions?: MentionSuggestion[];
   /** Called when Enter (without Shift) is pressed. */
   onModEnter?: () => void;
+  onQueue?: () => void;
   /** Called when Shift+Tab is pressed. */
   onShiftTab?: () => void;
   /** Ref that receives the dismiss callback to close mention dropdown from outside */
@@ -383,6 +385,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       taskSuggestions = [],
       commandSuggestions = [],
       onModEnter,
+      onQueue,
       onShiftTab,
       dismissMentionsRef,
       extraTips = [],
@@ -943,18 +946,15 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
           onShiftTab();
           return;
         }
-        // Enter (without Shift) → submit; Shift+Enter → newline
-        if (e.key === 'Enter' && !e.shiftKey && onModEnter) {
-          e.preventDefault();
-          e.stopPropagation();
+        if (handleComposerEnterKey(e, onModEnter, onQueue)) {
           dismiss();
-          onModEnter();
           return;
         }
         handleChipKeyDown(e);
       },
       [
         onModEnter,
+        onQueue,
         suggestionPlacement,
         onShiftTab,
         handleChipKeyDown,
@@ -1397,7 +1397,9 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
         </div>
 
         {showFooter ? (
-          <div className={cn('mt-1 flex items-start justify-between gap-2', footerClassName)}>
+          <div
+            className={cn('mt-1 flex items-start justify-end gap-2 empty:hidden', footerClassName)}
+          >
             {showHintRow ? (
               <span
                 className="block min-h-6 flex-1 overflow-hidden text-[10px] leading-3 text-[var(--color-text-muted)] transition-opacity duration-300"
@@ -1405,9 +1407,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
               >
                 {resolvedHintText}
               </span>
-            ) : (
-              <span className="min-h-6 flex-1" />
-            )}
+            ) : null}
             {footerRight}
           </div>
         ) : null}

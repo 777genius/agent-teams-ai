@@ -20,6 +20,7 @@ import type { FileChangeSummary } from '@shared/types/review';
 
 interface FileSectionHeaderProps {
   file: FileChangeSummary;
+  reviewEntryKey?: string;
   fileContent: FileChangeWithContent | null;
   contentResolved: boolean;
   fileDecision: HunkDecision | undefined;
@@ -42,6 +43,7 @@ interface FileSectionHeaderProps {
 
 export const FileSectionHeader = ({
   file,
+  reviewEntryKey,
   fileContent,
   contentResolved,
   fileDecision,
@@ -299,7 +301,7 @@ export const FileSectionHeader = ({
                 <TooltipTrigger asChild>
                   <span>
                     <button
-                      onClick={() => onAcceptFile(file.filePath)}
+                      onClick={() => onAcceptFile(reviewEntryKey ?? file.filePath)}
                       disabled={applying || acceptDisabled}
                       className={[
                         'rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50',
@@ -330,7 +332,7 @@ export const FileSectionHeader = ({
                 <TooltipTrigger asChild>
                   <span>
                     <button
-                      onClick={() => onRejectFile(file.filePath)}
+                      onClick={() => onRejectFile(reviewEntryKey ?? file.filePath)}
                       disabled={applying || rejectDisabled}
                       className={[
                         'rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50',

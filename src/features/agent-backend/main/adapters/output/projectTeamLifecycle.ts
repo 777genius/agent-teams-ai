@@ -1,7 +1,7 @@
 import type {
-  BackendTeamLifecycleValue,
-  BackendTeamLifecycle,
   BackendQueuedDiscardReceipt,
+  BackendTeamLifecycle,
+  BackendTeamLifecycleValue,
 } from '../../../contracts/teamLifecycle';
 function row(value: unknown, keys: readonly string[]): Record<string, unknown> {
   if (

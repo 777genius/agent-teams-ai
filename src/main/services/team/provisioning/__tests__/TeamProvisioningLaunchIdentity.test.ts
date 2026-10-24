@@ -81,6 +81,71 @@ function buildLaunchIdentity(
 }
 
 describe('team provisioning launch identity facts', () => {
+  it('uses current configured Anthropic identity before a different model-list or catalog recommendation', () => {
+    const facts = buildRuntimeProviderLaunchFacts({
+      providerId: 'anthropic',
+      limitContext: true,
+      modelListStdout: JSON.stringify({
+        providers: {
+          anthropic: {
+            defaultModel: 'first-listed',
+            models: ['first-listed', 'gateway-selected'],
+          },
+        },
+      }),
+      runtimeStatusStdout: JSON.stringify({
+        providers: {
+          anthropic: {
+            providerId: 'anthropic',
+            verificationState: 'verified',
+            statusCheckOutcome: 'authoritative',
+            effectiveDefaultModel: 'gateway-selected',
+            modelCatalog: buildCatalog({
+              providerId: 'anthropic',
+              defaultLaunchModel: 'catalog-recommendation',
+            }),
+          },
+        },
+      }),
+    });
+    expect(facts.defaultModel).toBe('gateway-selected');
+    expect(facts.modelIds.has('gateway-selected')).toBe(true);
+  });
+
+  it.each([
+    { providerId: 'codex' },
+    { statusCheckOutcome: 'pending' },
+    { statusCheckOutcome: 'transient_error' },
+    { verificationState: 'unknown' },
+    { statusCheckErrorCode: 'unavailable' },
+    { effectiveDefaultModel: 42 },
+  ])('does not promote unconfirmed effective model %j', (change) => {
+    const facts = buildRuntimeProviderLaunchFacts({
+      providerId: 'anthropic',
+      limitContext: true,
+      modelListStdout: JSON.stringify({
+        providers: {
+          anthropic: {
+            defaultModel: 'legacy-model',
+            models: ['legacy-model'],
+          },
+        },
+      }),
+      runtimeStatusStdout: JSON.stringify({
+        providers: {
+          anthropic: {
+            providerId: 'anthropic',
+            verificationState: 'verified',
+            statusCheckOutcome: 'authoritative',
+            effectiveDefaultModel: 'unconfirmed-model',
+            ...change,
+          },
+        },
+      }),
+    });
+    expect(facts.defaultModel).toBe('legacy-model');
+  });
+
   it('builds runtime launch facts from model list and status catalog output', () => {
     const catalog = buildCatalog();
 
@@ -117,6 +182,85 @@ describe('team provisioning launch identity facts', () => {
     expect(facts.providerStatus?.providerId).toBe('codex');
     expect(facts.modelCatalog).toStrictEqual(catalog);
   });
+
+  it('keeps Anthropic model-list default identity when an incomplete catalog only exposes aliases', () => {
+    const catalog = buildCatalog({
+      providerId: 'anthropic',
+      source: 'anthropic-models-api',
+      defaultModelId: 'opus',
+      defaultLaunchModel: 'opus',
+      models: [
+        {
+          id: 'opus',
+          launchModel: 'opus',
+          displayName: 'Opus alias',
+          hidden: true,
+          supportedReasoningEfforts: [],
+          defaultReasoningEffort: null,
+          inputModalities: [],
+          supportsPersonality: false,
+          isDefault: true,
+          upgrade: false,
+          source: 'anthropic-models-api',
+        },
+      ],
+    });
+
+    const facts = buildRuntimeProviderLaunchFacts({
+      providerId: 'anthropic',
+      limitContext: true,
+      modelListStdout: JSON.stringify({
+        providers: {
+          anthropic: {
+            defaultModel: 'claude-opus-5-5',
+            models: ['opus'],
+          },
+        },
+      }),
+      runtimeStatusStdout: JSON.stringify({
+        providers: {
+          anthropic: {
+            defaultModel: 'claude-opus-5-5',
+            modelCatalog: catalog,
+          },
+        },
+      }),
+    });
+
+    expect(facts.defaultModel).toBe('claude-opus-5-5');
+    expect([...facts.modelIds].sort()).toEqual(['claude-opus-5-5', 'opus']);
+    expect(facts.modelCatalog).toStrictEqual(catalog);
+  });
+
+  it.each([true, false])(
+    'keeps status-only Anthropic default with limitContext=%s',
+    (limitContext) => {
+      const aliasCatalog = buildCatalog({
+        providerId: 'anthropic',
+        source: 'anthropic-models-api',
+        defaultModelId: 'opus',
+        defaultLaunchModel: 'opus',
+        models: [],
+      });
+      for (const modelListStdout of [
+        undefined,
+        JSON.stringify({ providers: { anthropic: { models: ['opus'] } } }),
+      ]) {
+        for (const modelCatalog of [null, aliasCatalog]) {
+          const facts = buildRuntimeProviderLaunchFacts({
+            providerId: 'anthropic',
+            limitContext,
+            modelListStdout,
+            runtimeStatusStdout: JSON.stringify({
+              providers: { anthropic: { defaultModel: 'claude-opus-5-5', modelCatalog } },
+            }),
+          });
+          expect(facts.defaultModel).toBe('claude-opus-5-5');
+          expect(facts.modelIds.has('claude-opus-5-5')).toBe(true);
+        }
+      }
+    }
+  );
 
   it('keeps parsed model-list facts when runtime status output is malformed', () => {
     const warnings: string[] = [];
@@ -636,5 +780,17 @@ describe('codex chatgpt model gate during launch identity validation', () => {
     expect(validatedFacts[0]?.providerStatus?.modelAvailability).toEqual([
       expect.objectContaining({ modelId: 'catalog-model', status: 'unavailable' }),
     ]);
+  });
+});
+
+describe('malformed runtime default', () => {
+  it.each([42, {}, []])('ignores a non-string status default %j', (defaultModel) => {
+    expect(() =>
+      buildRuntimeProviderLaunchFacts({
+        providerId: 'anthropic',
+        modelListStdout: '',
+        runtimeStatusStdout: JSON.stringify({ providers: { anthropic: { defaultModel } } }),
+      })
+    ).not.toThrow();
   });
 });

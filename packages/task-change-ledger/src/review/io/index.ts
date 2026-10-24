@@ -1,7 +1,8 @@
 export * from './atomicPersistence.js';
+export { hasUnexpectedMoveSource } from './moveSourceIdentity.js';
 export * from './safePersistenceDirectory.js';
 export * from './transientFsRetry.js';
-export { atomicCreateAsync, cleanupAtomicCreateTempLinks } from './atomicCreate.js';
+export { atomicCreateAsync, cleanupAtomicCreateTempLinks, syncDirectoryBestEffort } from './atomicCreate.js';
 export type { AtomicCreateResult } from './atomicCreate.js';
 export {
   prepareReviewFileTransaction,

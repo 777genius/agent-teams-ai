@@ -1,7 +1,6 @@
 import * as path from 'node:path';
 import type { LedgerChangeRelation, SnippetDiff } from './contracts.js';
 import type { LedgerSummaryFileV2 } from './ledgerTypes.js';
-import { isWindowsishPath, normalizePathForComparison } from './platformPath.js';
 
 export function normalizeSummaryChangeKey(file: LedgerSummaryFileV2): string {
   if (file.relation) {
@@ -10,7 +9,7 @@ export function normalizeSummaryChangeKey(file: LedgerSummaryFileV2): string {
   const slashNormalized = file.changeKey.replace(/\\/g, '/');
   const pathKeyMatch = /^(path|create|delete):(.+)$/.exec(slashNormalized);
   if (pathKeyMatch) {
-    return `${pathKeyMatch[1]}:${normalizePathForComparison(pathKeyMatch[2] ?? '')}`;
+    return `${pathKeyMatch[1]}:${pathKeyMatch[2]}`;
   }
   return slashNormalized;
 }
@@ -31,13 +30,13 @@ export function groupKeyForFileSummary(
   if (relation) {
     return relationChangeKey(relation, worktreePath);
   }
-  return `path:${normalizePathForComparison(filePath)}`;
+  return `path:${filePath.replace(/\\/g, '/')}`;
 }
 
 export function relationChangeKey(relation: LedgerChangeRelation, worktreePath?: string): string {
-  const pathPart = `${normalizePathForComparison(relation.oldPath)}->${normalizePathForComparison(relation.newPath)}`;
+  const pathPart = `${relation.oldPath.replace(/\\/g, '/')}->${relation.newPath.replace(/\\/g, '/')}`;
   return worktreePath
-    ? `${relation.kind}:${normalizePathForComparison(worktreePath)}:${pathPart}`
+    ? `${relation.kind}:${worktreePath.replace(/\\/g, '/')}:${pathPart}`
     : `${relation.kind}:${pathPart}`;
 }
 
@@ -74,9 +73,8 @@ export function resolveGroupedDisplayPath(
 }
 
 export function pathMatchesRelationPath(filePath: string, relationPath: string): boolean {
-  const caseInsensitive = isWindowsReviewPath(filePath) || isWindowsReviewPath(relationPath);
-  const normalizedFilePath = normalizeRelationComparisonPath(filePath, caseInsensitive);
-  const normalizedRelationPath = normalizeRelationComparisonPath(relationPath, caseInsensitive);
+  const normalizedFilePath = filePath.replace(/\\/g, '/');
+  const normalizedRelationPath = relationPath.replace(/\\/g, '/');
   return (
     normalizedFilePath === normalizedRelationPath ||
     normalizedFilePath.endsWith(`/${normalizedRelationPath}`)
@@ -90,32 +88,13 @@ export function resolveRelatedPathFromRelation(
 ): string | null {
   const slashAnchor = anchorPath.replace(/\\/g, '/');
   const slashAnchorRelation = anchorRelationPath.replace(/\\/g, '/');
-  const caseInsensitive =
-    isWindowsReviewPath(anchorPath) || isWindowsReviewPath(anchorRelationPath);
-  const normalizedAnchor = normalizeRelationComparisonPath(anchorPath, caseInsensitive);
-  const normalizedAnchorRelation = normalizeRelationComparisonPath(
-    anchorRelationPath,
-    caseInsensitive
-  );
-  if (!matchesRelationSuffix(normalizedAnchor, normalizedAnchorRelation)) {
+  if (!matchesRelationSuffix(slashAnchor, slashAnchorRelation)) {
     return null;
   }
 
   return normalizeLedgerFilePath(
     `${slashAnchor.slice(0, slashAnchor.length - slashAnchorRelation.length)}${targetRelationPath.replace(/\\/g, '/')}`
   );
-}
-
-export function normalizeRelationComparisonPath(
-  filePath: string,
-  caseInsensitive: boolean
-): string {
-  const normalized = normalizePathForComparison(filePath);
-  return caseInsensitive ? normalized.toLowerCase() : normalized;
-}
-
-export function isWindowsReviewPath(filePath: string): boolean {
-  return isWindowsishPath(filePath) || filePath.includes('\\');
 }
 
 export function matchesRelationSuffix(
@@ -147,15 +126,7 @@ export function relativePath(
   }
   const normalizedFilePath = filePath.replace(/\\/g, '/');
   const normalizedProjectPath = projectPath?.replace(/\\/g, '/');
-  const comparableFilePath = normalizePathForComparison(normalizedFilePath);
-  const comparableProjectPath = normalizedProjectPath
-    ? normalizePathForComparison(normalizedProjectPath)
-    : undefined;
-  if (
-    normalizedProjectPath &&
-    comparableProjectPath &&
-    comparableFilePath.startsWith(`${comparableProjectPath}/`)
-  ) {
+  if (normalizedProjectPath && normalizedFilePath.startsWith(`${normalizedProjectPath}/`)) {
     return normalizedFilePath.slice(normalizedProjectPath.length + 1);
   }
   return normalizedFilePath.split('/').slice(-3).join('/');

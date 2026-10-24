@@ -1,21 +1,20 @@
-import { atomicWriteAsync } from '@main/utils/atomicWrite';
+import {
+  discardQueuedUserMessagesFromRows,
+  listQueuedUserMessagesFromRows,
+} from '@agent-teams/legacy-agent-host/lifecycle';
 import { isPathWithinRoot, validateFileName } from '@main/utils/pathValidation';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { atomicWriteInboxAsync } from '../../services/team/atomicWrite';
 import { withFileLock } from '../../services/team/fileLock';
 import { withInboxLock } from '../../services/team/inboxLock';
 
 import type { DiscardQueuedUserMessagesResult, QueuedUserMessageSummary } from '@shared/types';
-
-import {
-  listQueuedUserMessagesFromRows,
-  discardQueuedUserMessagesFromRows,
-} from '@agent-teams/legacy-agent-host/lifecycle';
 export {
+  discardQueuedUserMessagesFromRows,
   isQueuedUserInboxRow,
   listQueuedUserMessagesFromRows,
-  discardQueuedUserMessagesFromRows,
 } from '@agent-teams/legacy-agent-host/lifecycle';
 
 function realpathIfExists(inputPath: string): string | null {
@@ -153,7 +152,7 @@ export async function discardQueuedUserMessages(
       const { kept, discarded } = discardQueuedUserMessagesFromRows(rows, messageIds);
       const remainingQueued = listQueuedUserMessagesFromRows(kept).length;
       if (discarded > 0) {
-        await atomicWriteAsync(inboxPath, JSON.stringify(kept, null, 2));
+        await atomicWriteInboxAsync(inboxPath, JSON.stringify(kept, null, 2));
       }
       result = { discarded, remainingQueued };
     });

@@ -10,6 +10,11 @@ import {
   writeTeamControlApiState,
 } from '@main/services/team/TeamControlApiState';
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import {
+  assertStartupActive,
+  createStartupStage,
+  StartupCancelledError,
+} from '@main/utils/startupCancellation';
 import ts from 'typescript';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -73,6 +78,7 @@ function createHost(publish = writeTeamControlApiState) {
     isCurrent: () => !shuttingDown,
   });
   const captureHttpScope = vi.fn(() => httpScope);
+  const isShutdownStarted = () => shuttingDown;
   const server = {
     isRunning: () => running,
     getPort: () => 4591,
@@ -100,7 +106,11 @@ function createHost(publish = writeTeamControlApiState) {
   const host = runInNewContext(`${code}\n({ startHttpServer, provisioning, memberWorkSync })`, {
     httpServer: server,
     captureDesktopAgentBackendHttpScope: captureHttpScope,
-    isShutdownStarted: () => shuttingDown,
+    externalAgentConnection: null,
+    isShutdownStarted,
+    assertStartupActive,
+    startupStage: createStartupStage(isShutdownStarted),
+    StartupCancelledError,
     buildTeamControlApiBaseUrl,
     clearTeamControlApiState,
     writeTeamControlApiState: publish,
@@ -108,6 +118,7 @@ function createHost(publish = writeTeamControlApiState) {
     configManager: { getConfig: () => ({ httpServer: { port: 3456 } }) },
     contextRegistry: { getActive: () => ({}) },
     teamHttpHandlerApis: {},
+    teamGroupChatsFeature: {},
     bindTeamHttpDataApi: () => ({}),
     teamDataService: {},
     recentProjectsFeature: {},
@@ -168,7 +179,9 @@ describe('existing app Host endpoint wiring', () => {
       return found;
     });
     expect(firstAwait).toBeGreaterThanOrEqual(0);
-    expect(statements[firstAwait].getText(source)).toBe('await clearTeamControlApiState();');
+    expect(statements[firstAwait].getText(source)).toBe(
+      'await startupStage(clearTeamControlApiState);'
+    );
     const registration = statements.findIndex((statement) =>
       statement.getText(source).startsWith('initializeAgentBackendConnection(')
     );
@@ -176,7 +189,7 @@ describe('existing app Host endpoint wiring', () => {
     expect(registration).toBeLessThan(firstAwait);
     for (const boundary of [
       'localContext.startCacheOnly()',
-      'new TeamProvisioningService()',
+      'createDefaultTeamProvisioningService(',
       'createMemberWorkSyncFeature(',
       'initializeIpcHandlers(',
     ]) {
@@ -278,7 +291,7 @@ describe('existing app Host endpoint wiring', () => {
       host.shutdown();
       return Promise.resolve(4591);
     });
-    await host.start();
+    await expect(host.start()).rejects.toBeInstanceOf(StartupCancelledError);
     expect(host.server.stop).toHaveBeenCalledOnce();
     expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
     await expect(readFile(path.join(root, 'team-control-api.json'))).rejects.toMatchObject({

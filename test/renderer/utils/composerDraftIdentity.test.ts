@@ -1,5 +1,6 @@
 import {
   composerDraftAddressKey,
+  describeComposerDraftTarget,
   resolveComposerDraftTarget,
 } from '@renderer/utils/composerDraftIdentity';
 import { describe, expect, it } from 'vitest';
@@ -28,12 +29,27 @@ describe('composer draft identity', () => {
       }),
     ];
     expect(new Set(keys).size).toBe(3);
+    const group = { kind: 'group' as const, groupChatId: 'stable-group' };
+    const namedGroup = { ...group, groupChatName: 'Release discussion' };
+    expect(composerDraftAddressKey({ ...base, target: namedGroup })).toBe(
+      composerDraftAddressKey({ ...base, target: group })
+    );
+    expect(describeComposerDraftTarget(namedGroup)).toBe('Release discussion');
+    expect(describeComposerDraftTarget(group)).toBe('Group chat');
   });
 
   it('isolates equal team names in different contexts and encodes delimiters', () => {
     const target = { kind: 'direct' as const, participant: 'alice' };
-    const first = composerDraftAddressKey({ contextId: 'context:a', teamName: 'same/team', target });
-    const second = composerDraftAddressKey({ contextId: 'context:b', teamName: 'same/team', target });
+    const first = composerDraftAddressKey({
+      contextId: 'context:a',
+      teamName: 'same/team',
+      target,
+    });
+    const second = composerDraftAddressKey({
+      contextId: 'context:b',
+      teamName: 'same/team',
+      target,
+    });
     expect(first).not.toBe(second);
     expect(first).toContain('context%3Aa');
     expect(first).toContain('same%2Fteam');

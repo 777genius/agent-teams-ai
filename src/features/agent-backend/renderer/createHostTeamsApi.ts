@@ -23,6 +23,7 @@ import {
   hostTeamSelectionKey,
   isHostTeamSelectionKey,
 } from './hostTeamRouting';
+import { projectHostMemberAttachmentCapabilities } from './projectHostMemberAttachmentCapabilities';
 import { projectHostSavedTeamRequest } from './projectHostSavedTeamRequest';
 import { readHostRosterConfiguration } from './readHostRosterConfiguration';
 import { remapHostCrossTeamMessages } from './remapHostCrossTeamMessages';
@@ -346,7 +347,21 @@ export function createHostTeamsApi(
         const configuration = await readHostRosterConfiguration(backend, connection.handle);
         assertMatchingConfiguration(snapshot, configuration);
         const saved = projectHostSavedTeamRequest(key, configuration);
-        const settings = configuration.members.map((member) => ({
+        const visibleNames = new Set(snapshot.members.map((member) => member.name.toLowerCase()));
+        for (const member of configuration.removedMembers) {
+          const name = member.name.toLowerCase();
+          if (visibleNames.has(name)) throw new Error('Removed team member name conflict');
+          visibleNames.add(name);
+        }
+        const configuredMembers = [
+          ...configuration.members,
+          ...configuration.removedMembers.map((member) => ({
+            ...member,
+            role: 'member' as const,
+            settingsFingerprint: undefined,
+          })),
+        ];
+        const settings = configuredMembers.map((member) => ({
           ...member.settings,
           name: member.name,
           configuredSettingsFingerprint: member.settingsFingerprint,
@@ -377,7 +392,24 @@ export function createHostTeamsApi(
           };
         };
         result.config = { ...result.config, members: result.config.members?.map(withSettings) };
-        result.members = result.members.map(withSettings);
+        result.members = [
+          ...result.members,
+          ...configuration.removedMembers.map((member) => ({
+            name: member.name,
+            role: 'member',
+            agentType: 'general-purpose',
+            removedAt: Date.parse(member.removedAt),
+            taskCount: snapshot.tasks.filter(
+              (task) => task.owner === member.name && task.status !== 'deleted'
+            ).length,
+            currentTaskId: null,
+          })),
+        ].map(withSettings);
+        result.members = projectHostMemberAttachmentCapabilities(
+          result.members,
+          configuration,
+          state
+        );
         if (saved) {
           result.config = {
             ...result.config,

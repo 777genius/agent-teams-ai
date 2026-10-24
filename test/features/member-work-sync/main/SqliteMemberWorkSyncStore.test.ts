@@ -944,6 +944,10 @@ describe('SqliteMemberWorkSyncStore', () => {
     });
 
     it('imports large outboxes in chunks without losing items', async () => {
+      // Measured at the four-vCPU CI quota, under concurrent durable suites: the
+      // three-chunk legacy import consistently takes ~60-62s. Doubling this
+      // explicit per-test ceiling to 120s keeps the completion assertion intact
+      // while sizing to the measured worst case (~2x margin).
       const { store, jsonStore } = await makeHarness('sqlite');
       // 450 items span three insert chunks (chunk size 200).
       for (let index = 0; index < 450; index += 1) {
@@ -965,7 +969,7 @@ describe('SqliteMemberWorkSyncStore', () => {
         limit: 2000,
       });
       expect(claimed).toHaveLength(450);
-    }, 60_000);
+    }, 120_000);
 
     it('excludes foreign-team entries from the import and still verifies', async () => {
       const { store, jsonStore, root } = await makeHarness('sqlite');

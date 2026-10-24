@@ -210,6 +210,11 @@ export class OpenCodeSessionStoreRunSourceDiscovery implements TokenUsageRunSour
       teamName,
       agentId: `${teamName}:${agentName}`,
       agentName,
+      terminationConfirmed: ['stopped', 'completed', 'failed', 'closed', 'cancelled'].includes(
+        lastKnownDurableState ?? ''
+      )
+        ? true
+        : undefined,
       commandId: `team-launch:${teamName}`,
       commandInvocationId: `team-launch:${teamName}:opencode`,
       runtimeKind: 'opencode',

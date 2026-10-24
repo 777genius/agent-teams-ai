@@ -15,7 +15,7 @@ export interface TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerServiceH
   relayOpenCodeMemberInboxMessages(
     teamName: string,
     memberName: string,
-    options: { onlyMessageId?: string; source: 'watchdog' }
+    options: { onlyMessageId?: string; source: 'watchdog'; isCurrent?: () => boolean }
   ): Promise<OpenCodeMemberInboxRelayResult>;
   inboxReader: {
     getMessagesFor(
@@ -60,17 +60,20 @@ export function createOpenCodePromptDeliveryWatchdogSchedulerDepsFromService(
         {
           onlyMessageId: input.messageId,
           source: 'watchdog',
+          ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
         }
       );
       // Terminal ledger writes do not emit an inbox event. Wake queued rows once,
       // while preserving the failed row as unread for explicit manual recovery.
       if (
+        input.isCurrent?.() !== false &&
         result.lastDelivery?.ledgerStatus === 'failed_terminal' &&
         result.lastDelivery.reason === OPENCODE_STALE_PENDING_TERMINAL_REASON &&
         service.canDeliverToOpenCodeRuntimeForTeam(input.teamName)
       ) {
         await service.relayOpenCodeMemberInboxMessages(input.teamName, input.memberName, {
           source: 'watchdog',
+          ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
         });
       }
       // The wake's own account travels back to the scheduler. Discarding it is

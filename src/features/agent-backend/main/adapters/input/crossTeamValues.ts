@@ -1,4 +1,5 @@
 import { InvalidBackendOperation, object, text } from './validateBackendOperation';
+
 import type { BackendCrossTeamSend, CrossTeamReference } from '../../../contracts/crossTeam';
 
 /** Public opaque handles are data; Main captures both actual bindings before dispatch. */

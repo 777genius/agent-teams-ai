@@ -17,6 +17,7 @@ export interface TeamNotificationMessage {
   to?: string;
   source?: string;
   leadSessionId?: string;
+  groupChatId?: string;
 }
 
 interface TeamNotificationSink {
@@ -138,7 +139,7 @@ export class TeamMessageNotificationScanner {
       config.teamRuntimeRecovery?.rateLimitsEnabled ?? config.notifications.autoResumeOnRateLimit;
 
     for (const msg of messages) {
-      if (msg.from === 'user') continue;
+      if (msg.from === 'user' || msg.groupChatId) continue;
       if (!this.#isRateLimit(msg.text)) continue;
 
       const rawKey = msg.messageId ?? `${msg.from}:${msg.timestamp}`;
@@ -202,7 +203,7 @@ export class TeamMessageNotificationScanner {
     context: TeamMessageNotificationContext
   ): void {
     for (const msg of messages) {
-      if (msg.from === 'user') continue;
+      if (msg.from === 'user' || msg.groupChatId) continue;
       if (!this.#isApiError(msg.text)) continue;
       if (this.#isRateLimit(msg.text)) continue;
 

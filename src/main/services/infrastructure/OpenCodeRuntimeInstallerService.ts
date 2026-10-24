@@ -1,3 +1,4 @@
+import { isRecognizedOpenCodeRuntimeVersion } from '@features/opencode-compatibility';
 import {
   type OpenCodeBinaryCandidateFailure,
   type OpenCodeBinaryVersionProbe,
@@ -15,15 +16,17 @@ import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { getShellPreferredHome, resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
-import {
-  getUnsupportedAgentTeamsOpenCodeVersionMessage,
-  isAgentTeamsOpenCodeVersionSupported,
-} from '@shared/utils/version';
+import { getUnsupportedAgentTeamsOpenCodeVersionMessage } from '@shared/utils/version';
 import { createHash, randomUUID } from 'crypto';
 import { promises as fsp, readdirSync, readFileSync } from 'fs';
 import path from 'path';
 import { gunzipSync } from 'zlib';
 
+import {
+  preserveKnownOpenCodeUpdate,
+  withLatestOpenCodeVersion,
+} from './openCodeRuntimeLatestVersion';
+import { fetchOpenCodePackageMetadata } from './openCodeRuntimePackageMetadata';
 import {
   clearOpenCodeRuntimeResolverCache,
   getOpenCodeRuntimeResolverCacheGeneration,
@@ -53,26 +56,16 @@ const logger = createLogger('OpenCodeRuntimeInstallerService');
 
 const CHANNEL = 'openCodeRuntime:progress';
 const ROOT_PACKAGE_NAME = 'opencode-ai';
-const NPM_REGISTRY_BASE_URL = 'https://registry.npmjs.org';
 const CURRENT_MANIFEST_SCHEMA_VERSION = 1;
 const MAX_TARBALL_BYTES = 250 * 1024 * 1024;
 const MAX_BINARY_BYTES = 350 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 60_000;
+const STATUS_LATEST_VERSION_TIMEOUT_MS = 3_000;
 const VERSION_TIMEOUT_MS = 30_000;
 const VERSION_PROBE_SUCCESS_CACHE_TTL_MS = 30_000;
 const VERSION_PROBE_FAILURE_CACHE_TTL_MS = 5_000;
 const RUNTIME_STATUS_SUCCESS_CACHE_TTL_MS = 30_000;
 const RUNTIME_STATUS_FAILURE_CACHE_TTL_MS = 5_000;
-
-interface NpmPackageMetadata {
-  name?: string;
-  version?: string;
-  dist?: {
-    tarball?: string;
-    integrity?: string;
-  };
-  optionalDependencies?: Record<string, string>;
-}
 
 interface OpenCodeRuntimeManifest {
   schemaVersion: 1;
@@ -134,7 +127,7 @@ export async function resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath(): Prom
     return null;
   }
   const version = await probeOpenCodeBinaryVersionCached(binaryPath);
-  return version.ok && isAgentTeamsOpenCodeVersionSupported(version.version) ? binaryPath : null;
+  return version.ok && isRecognizedOpenCodeRuntimeVersion(version.version) ? binaryPath : null;
 }
 
 export async function isSupportedOpenCodeRuntimeBinaryPath(binaryPath: string): Promise<boolean> {
@@ -142,7 +135,16 @@ export async function isSupportedOpenCodeRuntimeBinaryPath(binaryPath: string): 
     return false;
   }
   const version = await probeOpenCodeBinaryVersionCached(binaryPath);
-  return version.ok && isAgentTeamsOpenCodeVersionSupported(version.version);
+  if (!version.ok) {
+    // A failed probe does not establish that the selected delivery is unsupported.
+    // Preserve explicit selection so a transient timeout cannot launch another binary.
+    throw new Error(
+      `Could not verify the explicitly selected OpenCode binary: ${binaryPath}. ` +
+        'Retry the version check, or update/remove the binary override before launching. ' +
+        'The app will not substitute its managed OpenCode runtime.'
+    );
+  }
+  return isRecognizedOpenCodeRuntimeVersion(version.version);
 }
 
 function getExecutableName(): string {
@@ -304,7 +306,7 @@ async function probeFirstWorkingOpenCodeBinaryCandidate(
       }
       seen.add(normalized);
       const version = await probeOpenCodeBinaryVersionCached(launchBinaryPath);
-      if (version.ok && isAgentTeamsOpenCodeVersionSupported(version.version)) {
+      if (version.ok && isRecognizedOpenCodeRuntimeVersion(version.version)) {
         return {
           ok: true,
           binaryPath: launchBinaryPath,
@@ -545,31 +547,13 @@ export function getOpenCodeRuntimePlatformCandidates(
   throw new Error(`OpenCode app install is not supported on ${platform}/${arch}`);
 }
 
-async function fetchText(url: string): Promise<string> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    const response = await fetch(url, { signal: controller.signal });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} from ${url}`);
-    }
-    return await response.text();
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function fetchPackageMetadata(
-  packageName: string,
-  version = 'latest'
-): Promise<NpmPackageMetadata> {
-  const url = `${NPM_REGISTRY_BASE_URL}/${encodeURIComponent(packageName)}/${encodeURIComponent(version)}`;
-  const raw = await fetchText(url);
-  const parsed = JSON.parse(raw) as NpmPackageMetadata;
-  if (!parsed.version || !parsed.dist?.tarball || !parsed.dist.integrity) {
-    throw new Error(`Invalid npm metadata for ${packageName}@${version}`);
-  }
-  return parsed;
+async function resolveLatestOpenCodeVersion(): Promise<string> {
+  const metadata = await fetchOpenCodePackageMetadata(
+    ROOT_PACKAGE_NAME,
+    'latest',
+    STATUS_LATEST_VERSION_TIMEOUT_MS
+  );
+  return metadata.version!;
 }
 
 export function verifyOpenCodeRuntimePackageIntegrity(buffer: Buffer, integrity: string): void {
@@ -746,22 +730,34 @@ export class OpenCodeRuntimeInstallerService {
     return request;
   }
 
+  /** Version-only readiness checks must not wait for npm update metadata. */
+  getReadinessStatus(): Promise<OpenCodeRuntimeStatus> {
+    return this.resolveInstalledStatus();
+  }
+
   private async resolveStatus(statusCacheGeneration: number): Promise<OpenCodeRuntimeStatus> {
+    const status = await this.resolveInstalledStatus();
+    const versionAwareStatus = status.installed
+      ? await withLatestOpenCodeVersion(
+          status,
+          resolveLatestOpenCodeVersion,
+          this.latestStatus?.latestVersion
+        )
+      : status;
+    this.rememberStatusIfCurrent(versionAwareStatus, statusCacheGeneration);
+    return versionAwareStatus;
+  }
+
+  private async resolveInstalledStatus(): Promise<OpenCodeRuntimeStatus> {
     const appManagedStatus = await this.getAppManagedStatus();
-    if (appManagedStatus.installed) {
-      this.rememberStatusIfCurrent(appManagedStatus, statusCacheGeneration);
-      return appManagedStatus;
-    }
+    if (appManagedStatus.installed) return appManagedStatus;
 
     const pathStatus = await this.getPathStatus();
-    const status =
-      pathStatus.installed ||
+    return pathStatus.installed ||
       appManagedStatus.source !== 'app-managed' ||
       appManagedStatus.state !== 'failed'
-        ? pathStatus
-        : appManagedStatus;
-    this.rememberStatusIfCurrent(status, statusCacheGeneration);
-    return status;
+      ? pathStatus
+      : appManagedStatus;
   }
 
   async install(): Promise<OpenCodeRuntimeStatus> {
@@ -806,6 +802,8 @@ export class OpenCodeRuntimeInstallerService {
       installed: currentStatus?.installed ?? false,
       ...(currentStatus?.binaryPath ? { binaryPath: currentStatus.binaryPath } : {}),
       ...(currentStatus?.version ? { version: currentStatus.version } : {}),
+      ...(currentStatus?.latestVersion ? { latestVersion: currentStatus.latestVersion } : {}),
+      ...(currentStatus?.updateAvailable ? { updateAvailable: true } : {}),
       source: currentStatus?.source ?? 'missing',
       state: progress.phase,
       progress,
@@ -818,7 +816,7 @@ export class OpenCodeRuntimeInstallerService {
       return { installed: false, source: 'missing', state: 'idle' };
     }
     const version = await probeOpenCodeBinaryVersionCached(manifest.binaryPath);
-    if (version.ok && isAgentTeamsOpenCodeVersionSupported(version.version)) {
+    if (version.ok && isRecognizedOpenCodeRuntimeVersion(version.version)) {
       return {
         installed: true,
         binaryPath: manifest.binaryPath,
@@ -874,7 +872,7 @@ export class OpenCodeRuntimeInstallerService {
       isAbsoluteExistingFile(latestStatus.binaryPath)
     ) {
       const version = await probeOpenCodeBinaryVersion(latestStatus.binaryPath);
-      if (version.ok && isAgentTeamsOpenCodeVersionSupported(version.version)) {
+      if (version.ok && isRecognizedOpenCodeRuntimeVersion(version.version)) {
         return {
           installed: true,
           binaryPath: latestStatus.binaryPath,
@@ -890,7 +888,7 @@ export class OpenCodeRuntimeInstallerService {
       return null;
     }
     const version = await probeOpenCodeBinaryVersion(manifest.binaryPath);
-    if (!version.ok || !isAgentTeamsOpenCodeVersionSupported(version.version)) {
+    if (!version.ok || !isRecognizedOpenCodeRuntimeVersion(version.version)) {
       return null;
     }
     return {
@@ -903,13 +901,16 @@ export class OpenCodeRuntimeInstallerService {
   }
 
   private async installInternal(): Promise<OpenCodeRuntimeStatus> {
-    const previousStatus = await this.resolveFreshInstalledStatusBeforeInstall();
+    const previousStatus = preserveKnownOpenCodeUpdate(
+      await this.resolveFreshInstalledStatusBeforeInstall(),
+      this.latestStatus?.latestVersion
+    );
     if (previousStatus) {
       this.rememberStatus(previousStatus);
     }
     try {
       this.publishProgress({ phase: 'checking', detail: 'Resolving latest OpenCode package...' });
-      const rootMetadata = await fetchPackageMetadata(ROOT_PACKAGE_NAME);
+      const rootMetadata = await fetchOpenCodePackageMetadata(ROOT_PACKAGE_NAME);
       const candidates = getOpenCodeRuntimePlatformCandidates();
       const optionalDependencies = rootMetadata.optionalDependencies ?? {};
       const selected = candidates.find((candidate) => optionalDependencies[candidate.packageName]);
@@ -920,7 +921,10 @@ export class OpenCodeRuntimeInstallerService {
       }
       const platformVersion = optionalDependencies[selected.packageName] ?? rootMetadata.version!;
       const normalizedVersion = platformVersion.replace(/^[~^]/, '');
-      const platformMetadata = await fetchPackageMetadata(selected.packageName, normalizedVersion);
+      const platformMetadata = await fetchOpenCodePackageMetadata(
+        selected.packageName,
+        normalizedVersion
+      );
 
       this.publishProgress({
         phase: 'downloading',
@@ -992,6 +996,8 @@ export class OpenCodeRuntimeInstallerService {
         installed: true,
         binaryPath,
         version: manifest.version,
+        latestVersion: manifest.version,
+        updateAvailable: false,
         source: 'app-managed',
         state: 'ready',
         progress: {

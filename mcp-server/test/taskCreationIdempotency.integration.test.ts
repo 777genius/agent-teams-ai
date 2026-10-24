@@ -2,7 +2,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import * as controllerModule from '../src/controller';
 
 import { registerTools } from '../src/tools';
 
@@ -32,6 +34,7 @@ describe('MCP task creation idempotency', () => {
   const tempDirs: string[] = [];
 
   afterEach(() => {
+    vi.restoreAllMocks();
     for (const dir of tempDirs.splice(0)) {
       fs.rmSync(dir, { recursive: true, force: true });
     }
@@ -57,6 +60,148 @@ describe('MCP task creation idempotency', () => {
       .readdirSync(path.join(claudeDir, 'tasks', teamName))
       .filter((fileName) => fileName.endsWith('.json'));
   }
+
+  // Inject only the existing catalog port; task storage/provenance/idempotency remain real.
+  function catalogFixture(teamName: string) {
+    const original = controllerModule.getController;
+    const groups = [
+      { id: '00000000-0000-4000-8000-000000000001', archivedAt: null as string | null },
+      { id: '11111111-1111-4111-8111-111111111111', archivedAt: null as string | null },
+    ];
+    let unavailable = false;
+    const list = vi.fn(async (flags: Record<string, unknown>) => {
+      expect(flags.from).toBe('lead');
+      if (unavailable) throw new Error('Catalog unavailable');
+      return groups;
+    });
+    vi.spyOn(controllerModule, 'getController').mockImplementation((team, dir) => {
+      const controller = original(team, dir);
+      controller.groupChats.listGroupChats = team === teamName ? list : async () => [];
+      return controller;
+    });
+    return {
+      groups,
+      list,
+      fail: () => {
+        unavailable = true;
+      },
+    };
+  }
+
+  it('admits associated tasks through the active team catalog and replays before mutable catalog checks', async () => {
+    const teamName = 'associated-create';
+    const claudeDir = makeTeam(teamName);
+    const catalog = catalogFixture(teamName);
+    const tools = collectTools();
+    const create = tools.get('task_create')!;
+    const request = {
+      teamName,
+      claudeDir,
+      subject: 'Associated work',
+      createdBy: 'lead',
+      groupChatId: catalog.groups[0]!.id,
+      idempotencyKey: 'associated-intent',
+    };
+    const first = parseJsonToolResult(await create.execute(request));
+    expect(first.groupChatId).toBe(request.groupChatId);
+    expect(
+      parseJsonToolResult(
+        await tools.get('task_get')!.execute({ teamName, claudeDir, taskId: first.id })
+      ).groupChatId
+    ).toBe(request.groupChatId);
+    expect(
+      parseJsonToolResult(await tools.get('task_list')!.execute({ teamName, claudeDir }))
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: first.id, groupChatId: request.groupChatId }),
+      ])
+    );
+    await expect(
+      create.execute({ ...request, idempotencyKey: 'no-actor', createdBy: 'user' })
+    ).rejects.toThrow('configured non-user');
+    await expect(
+      create.execute({
+        ...request,
+        idempotencyKey: 'foreign',
+        groupChatId: '22222222-2222-4222-8222-222222222222',
+      })
+    ).rejects.toThrow('group in this team');
+    catalog.groups[0]!.archivedAt = '2026-10-10T00:00:00.000Z';
+    await expect(create.execute({ ...request, idempotencyKey: 'fresh-archived' })).rejects.toThrow(
+      'archived group'
+    );
+    const calls = catalog.list.mock.calls.length;
+    catalog.fail();
+    expect(parseJsonToolResult(await collectTools().get('task_create')!.execute(request)).id).toBe(
+      first.id
+    );
+    await expect(
+      create.execute({ ...request, groupChatId: catalog.groups[1]!.id })
+    ).rejects.toThrow('Task creation command conflict');
+    expect(catalog.list).toHaveBeenCalledTimes(calls);
+    expect(taskFiles(claudeDir, teamName)).toHaveLength(1);
+  });
+
+  it('infers group context only from the original canonical user message and rejects conflicting targets/relays', async () => {
+    const teamName = 'associated-message';
+    const claudeDir = makeTeam(teamName);
+    const catalog = catalogFixture(teamName);
+    const originalId = '33333333-3333-4333-8333-333333333333';
+    const original = {
+      messageId: originalId,
+      groupMessageId: originalId,
+      groupChatId: catalog.groups[0]!.id,
+      groupChatProtocolVersion: 1,
+      from: 'user',
+      to: 'user',
+      text: 'Group request',
+      timestamp: '2026-10-10T00:00:00.000Z',
+      source: 'user_sent',
+      read: false,
+      groupRecipientNames: ['lead'],
+      groupRecipientRunKeys: { lead: 'run:lead' },
+    };
+    const inbox = path.join(claudeDir, 'teams', teamName, 'inboxes');
+    fs.mkdirSync(inbox, { recursive: true });
+    fs.writeFileSync(path.join(inbox, 'user.json'), JSON.stringify([original]));
+    fs.writeFileSync(
+      path.join(inbox, 'lead.json'),
+      JSON.stringify([
+        { ...original, messageId: 'physical-group-relay', to: 'lead', groupRunKey: 'run:lead' },
+      ])
+    );
+    const create = collectTools().get('task_create_from_message')!;
+    const request = {
+      teamName,
+      claudeDir,
+      messageId: originalId,
+      requestKey: 'group-intent',
+      subject: 'Inferred association',
+      createdBy: 'lead',
+    };
+    const first = parseJsonToolResult(await create.execute(request));
+    expect(first.groupChatId).toBe(original.groupChatId);
+    await expect(
+      create.execute({
+        ...request,
+        requestKey: 'conflicting-source',
+        groupChatId: catalog.groups[1]!.id,
+      })
+    ).rejects.toThrow('must agree with the original');
+    await expect(
+      create.execute({
+        ...request,
+        requestKey: 'physical-source',
+        messageId: 'physical-group-relay',
+      })
+    ).rejects.toThrow('relay copy');
+    catalog.groups[0]!.archivedAt = '2026-10-10T00:00:00.000Z';
+    catalog.fail();
+    expect(
+      parseJsonToolResult(await collectTools().get('task_create_from_message')!.execute(request)).id
+    ).toBe(first.id);
+    expect(taskFiles(claudeDir, teamName)).toHaveLength(1);
+  });
 
   it('keeps new idempotency fields optional and validates explicit identities', () => {
     const tools = collectTools();

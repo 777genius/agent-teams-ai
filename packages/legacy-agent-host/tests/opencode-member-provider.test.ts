@@ -78,6 +78,7 @@ function fixture(
     extraArgs?: string[];
     onCreateProcess?(): void;
     nativeLimitsCwd?: string;
+    attachments?: MemberProviderContext['attachments'];
   } = {}
 ) {
   const profile: OpenCodeMemberProfile = {
@@ -142,6 +143,8 @@ function fixture(
   const order: string[] = [];
   const writes: { path: string; body: Record<string, unknown> }[] = [];
   const messages: { info: Record<string, unknown>; parts: Record<string, unknown>[] }[] = [];
+  let nativeProviders: unknown[] = [{ id: 'TEST-provider', models: { 'TEST-model': {} } }];
+  let beforeCatalogReply = () => {};
   let catalogNames: string[] | undefined;
   let mcpReads = 0;
   let disconnected = false;
@@ -192,6 +195,7 @@ function fixture(
       },
       listTasks: () => [],
     },
+    ...(options.attachments ? { attachments: options.attachments } : {}),
     instructions: 'TEST fixed role/team/cwd',
     isCurrent: () => current,
     canAllocate: () => allocate,
@@ -247,8 +251,9 @@ function fixture(
         JSON.parse(captured!.environment.OPENCODE_CONFIG_CONTENT!) as unknown
       );
       const server = Object.keys(record(nativeConfig.mcp))[0]!;
-      const required = Object.keys(record(record(record(nativeConfig.agent).build).permission))
-        .filter((name) => name.startsWith(server + '_'));
+      const required = Object.keys(
+        record(record(record(nativeConfig.agent).build).permission)
+      ).filter((name) => name.startsWith(server + '_'));
       let body: unknown;
       if (request.method === 'POST') {
         const payload = record(await request.json());
@@ -318,15 +323,19 @@ function fixture(
         const agent = record(record(record(body).agent).build);
         agent.permission = nativeAgentPermission({
           ...agent,
-          tools: { ...options.inheritedAgentTools, ...(agent.tools === undefined ? {} : record(agent.tools)) },
+          tools: {
+            ...options.inheritedAgentTools,
+            ...(agent.tools === undefined ? {} : record(agent.tools)),
+          },
         });
         if (options.deniedManagedPermission) record(agent.permission).team_task_get = 'deny';
         if (options.promptMismatch)
           record(record(record(body).agent).build).prompt = 'TEST foreign context';
       } else if (url.pathname === '/agent') body = [{ name: 'build', mode: 'primary' }];
-      else if (url.pathname === '/config/providers')
-        body = { providers: [{ id: 'TEST-provider', models: { 'TEST-model': {} } }] };
-      else if (url.pathname === '/mcp') {
+      else if (url.pathname === '/config/providers') {
+        body = { providers: structuredClone(nativeProviders) };
+        beforeCatalogReply();
+      } else if (url.pathname === '/mcp') {
         mcpReads++;
         // Controlled native boundary: connected follows the owner's served tools/list catalog.
         // Real authenticated HTTP-finish receipt semantics are covered by endpoint tests.
@@ -376,6 +385,12 @@ function fixture(
     },
     cleanup: () => cleanup,
     running: () => running,
+    setNativeProviders: (providers: unknown[]) => {
+      nativeProviders = providers;
+    },
+    beforeCatalogReply: (callback: () => void) => {
+      beforeCatalogReply = callback;
+    },
     disconnect: () => {
       disconnected = true;
     },
@@ -658,14 +673,23 @@ for (const mode of ['manual', 'auto'] as const)
     }
   });
 
-
 test('captured OpenCode ordered argv reaches selected serve without replacing managed endpoint', async () => {
   const extraArgs = ['--log-level', 'INFO', '--print-logs=false', '--log-level=DEBUG'];
   const f = fixture({ extraArgs });
   extraArgs.splice(0, extraArgs.length, '--port', '9999');
   const opened = await f.provider.factory.open(f.context.request);
   try {
-    assert.deepEqual(f.launches[0]!.args, ['serve', '--hostname', '127.0.0.1', '--port', '14321', '--log-level', 'INFO', '--print-logs=false', '--log-level=DEBUG']);
+    assert.deepEqual(f.launches[0]!.args, [
+      'serve',
+      '--hostname',
+      '127.0.0.1',
+      '--port',
+      '14321',
+      '--log-level',
+      'INFO',
+      '--print-logs=false',
+      '--log-level=DEBUG',
+    ]);
     assert.equal(f.launches[0]!.command, '/TEST-opencode');
     assert.equal(f.launches[0]!.cwd, '/TEST-workspace');
     assert.ok((await opened.driver.checkReadiness()).ok);
@@ -677,11 +701,23 @@ test('captured OpenCode ordered argv reaches selected serve without replacing ma
 
 test('captured OpenCode endpoint and root overrides refuse before custody allocation', () => {
   let created = 0;
-  for (const extraArgs of [['--port=9999'], ['--hostname', 'FOREIGN'], ['--agent', 'FOREIGN'], ['run'], ['--']])
-    assert.throws(() => fixture({ extraArgs, onCreateProcess: () => { created++; } }));
+  for (const extraArgs of [
+    ['--port=9999'],
+    ['--hostname', 'FOREIGN'],
+    ['--agent', 'FOREIGN'],
+    ['run'],
+    ['--'],
+  ])
+    assert.throws(() =>
+      fixture({
+        extraArgs,
+        onCreateProcess: () => {
+          created++;
+        },
+      })
+    );
   assert.equal(created, 0);
 });
-
 
 test('captured native agent emits ordered permissions without deprecated managed tool seeds', () => {
   const f = fixture({
@@ -710,7 +746,6 @@ test('captured native agent emits ordered permissions without deprecated managed
   assert.equal(f.launches.length, 0);
 });
 
-
 for (const defect of ['inherited-managed-tools', 'native-managed-deny'] as const)
   test(`effective GET/config ${defect} refuses before native input despite raw managed allow`, async () => {
     const f = fixture({
@@ -720,7 +755,134 @@ for (const defect of ['inherited-managed-tools', 'native-managed-deny'] as const
         : { deniedManagedPermission: true }),
     });
     await assert.rejects(f.provider.factory.open(f.context.request));
-    assert.equal(f.writes.some((write) => write.path.endsWith('/prompt_async')), false);
+    assert.equal(
+      f.writes.some((write) => write.path.endsWith('/prompt_async')),
+      false
+    );
     assert.equal(f.cleanup(), 1);
     assert.equal(f.running(), false);
   });
+
+test('native media uses the exact current OpenCode declaration before submit without model-name inference', async (t) => {
+  const bytes = Buffer.from('TEST image bytes');
+  const reference = {
+    artifactId: 'TEST-image',
+    mimeType: 'image/png',
+    byteLength: bytes.length,
+    digest: createHash('sha256').update(bytes).digest('hex'),
+  };
+  const supported = {
+    id: 'TEST-provider',
+    models: { 'TEST-model': { capabilities: { input: ['text', 'image'] } } },
+  };
+  for (const scenario of [
+    'image',
+    'video',
+    'video-only-reject-image',
+    'image-only-reject-video',
+    'unknown',
+    'none',
+    'malformed',
+    'foreign-provider',
+    'foreign-model',
+    'duplicate-provider',
+    'changed-during-proof',
+    'changed-at-native-readiness',
+    'revoked',
+  ] as const) {
+    let resolves = 0;
+    const video = scenario === 'video' || scenario === 'image-only-reject-video';
+    const selectedReference = { ...reference, mimeType: video ? 'video/mp4' : 'image/png' };
+    const f = fixture({
+      attachments: {
+        model: 'TEST-provider/TEST-model',
+        revision: 'TEST-transport-ceiling',
+        mimeTypes: ['image/png', 'video/mp4'],
+        async resolve(binding) {
+          resolves++;
+          return { binding, bytes };
+        },
+      },
+    });
+    t.after(() => f.provider.cleanup());
+    f.setNativeProviders([supported]);
+    const opened = await f.provider.factory.open(f.context.request);
+    try {
+      if (scenario === 'video' || scenario === 'video-only-reject-image')
+        f.setNativeProviders([
+          { id: 'TEST-provider', models: { 'TEST-model': { capabilities: { input: ['video'] } } } },
+        ]);
+      else if (scenario === 'duplicate-provider') f.setNativeProviders([supported, supported]);
+      else if (scenario === 'unknown')
+        f.setNativeProviders([{ id: 'TEST-provider', models: { 'TEST-model': {} } }]);
+      else if (scenario === 'none')
+        f.setNativeProviders([
+          { id: 'TEST-provider', models: { 'TEST-model': { capabilities: { input: [] } } } },
+        ]);
+      else if (scenario === 'malformed')
+        f.setNativeProviders([
+          {
+            id: 'TEST-provider',
+            models: { 'TEST-model': { capabilities: { input: ['image', null] } } },
+          },
+        ]);
+      else if (scenario === 'foreign-provider')
+        f.setNativeProviders([{ ...supported, id: 'FOREIGN-provider' }]);
+      else if (scenario === 'foreign-model')
+        f.setNativeProviders([
+          { id: 'TEST-provider', models: { 'foreign-model': supported.models['TEST-model'] } },
+        ]);
+      else if (scenario === 'changed-during-proof')
+        f.beforeCatalogReply(() => {
+          f.setNativeProviders([
+            {
+              id: 'TEST-provider',
+              models: { 'TEST-model': { capabilities: { input: ['text'] } } },
+            },
+          ]);
+        });
+      else if (scenario === 'changed-at-native-readiness') {
+        let replies = 0;
+        f.beforeCatalogReply(() => {
+          if (++replies === 2)
+            f.setNativeProviders([
+              { id: 'TEST-provider', models: { 'TEST-model': { capabilities: { input: [] } } } },
+            ]);
+        });
+      } else if (scenario === 'revoked') f.beforeCatalogReply(() => f.revoke());
+      const reply = await opened.driver.submit({
+        inputId: 'TEST-media',
+        operationRef: 'TEST-media-operation',
+        content: 'Inspect this image',
+        attachments: [selectedReference],
+      });
+      if (scenario === 'image' || scenario === 'video') {
+        assert.equal(reply.ok, true);
+        const posts = f.writes.filter((value) => value.path.endsWith('/prompt_async'));
+        assert.equal(posts.length, 1);
+        assert.deepEqual((posts[0]!.body.parts as Record<string, unknown>[])[1], {
+          type: 'file',
+          mime: selectedReference.mimeType,
+          url: 'data:' + selectedReference.mimeType + ';base64,' + bytes.toString('base64'),
+          filename: reference.artifactId,
+        });
+        assert.equal(resolves, 1);
+      } else {
+        assert.deepEqual(
+          reply,
+          { ok: false, code: 'dependency-unavailable', delivery: 'known-not-sent' },
+          scenario
+        );
+        assert.equal(
+          f.writes.some((value) => value.path.endsWith('/prompt_async')),
+          false,
+          scenario
+        );
+        assert.equal(resolves, 0, scenario);
+      }
+      assert.equal(f.launches.length, 1, 'catalog reads reuse the original server');
+    } finally {
+      await opened.driver.close();
+    }
+  }
+});

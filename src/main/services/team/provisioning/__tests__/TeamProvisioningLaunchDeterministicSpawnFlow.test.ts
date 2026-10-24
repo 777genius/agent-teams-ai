@@ -1,7 +1,9 @@
 import { EventEmitter } from 'events';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('electron', () => ({ app: { getLocale: () => 'en', getPath: () => '/tmp', isPackaged: false } }));
+vi.mock('electron', () => ({
+  app: { getLocale: () => 'en', getPath: () => '/tmp', isPackaged: false },
+}));
 
 const flowMocks = vi.hoisted(() => ({
   materializeDeterministicLaunchBootstrapFiles: vi.fn(),
@@ -43,6 +45,7 @@ import {
 } from '../TeamProvisioningLaunchDeterministicSpawnFlow';
 import { buildLaunchSyntheticRequest } from '../TeamProvisioningLaunchTeamFlow';
 
+import type { MemberGatewayRuntimeArgs } from '../TeamProvisioningMemberGatewayRuntime';
 import type {
   ProviderModelLaunchIdentity,
   TeamCreateRequest,
@@ -220,7 +223,8 @@ function createSpawnFlowPorts(
 
 function runPreSpawnFailureFlow(
   run: DeterministicLaunchSpawnFlowRun,
-  ports: RunDeterministicLaunchSpawnFlowPorts<DeterministicLaunchSpawnFlowRun>
+  ports: RunDeterministicLaunchSpawnFlowPorts<DeterministicLaunchSpawnFlowRun>,
+  memberArgsByMember = new Map<string, MemberGatewayRuntimeArgs>()
 ) {
   return runDeterministicLaunchSpawnFlow(
     {
@@ -234,7 +238,14 @@ function runPreSpawnFailureFlow(
       stopAllGenerationAtStart: 7,
       resolvedProviderId: 'codex',
       providerArgsForLaunch: [],
-      crossProviderMemberArgsForLaunch: { args: [] },
+      crossProviderMemberArgsForLaunch: {
+        args: [],
+        providerArgsByProvider: new Map(),
+        envPatch: {},
+        memberArgsByMember,
+        usesAnthropicApiKeyHelper: false,
+        anthropicApiKeyHelper: null,
+      },
       launchIdentity,
       effectiveMemberSpecs: syntheticRequest.members,
       allEffectiveMemberSpecs: syntheticRequest.members,
@@ -258,6 +269,55 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     flowMocks.removeDeterministicBootstrapSpecFile.mockReset().mockResolvedValue(undefined);
     flowMocks.removeDeterministicBootstrapUserPromptFile.mockReset().mockResolvedValue(undefined);
   });
+
+  it('preserves the original launch error and restores config when snapshot abort fails', async () => {
+    const run = createRun();
+    const ports = createSpawnFlowPorts([]);
+    const spawnError = new Error('original launch failure');
+    ports.spawnCli = vi.fn(() => {
+      throw spawnError;
+    });
+    const abort = vi.fn(async () => {
+      throw new Error('metadata unavailable');
+    });
+    await expect(
+      runPreSpawnFailureFlow(
+        run,
+        ports,
+        new Map([['builder', { envPatch: {}, abortUnspawnedLaunch: abort }]])
+      )
+    ).rejects.toBe(spawnError);
+    expect(abort).toHaveBeenCalledOnce();
+    expect(console.warn).toHaveBeenCalledExactlyOnceWith(
+      '[GatewayMemberLaunch]',
+      'Could not close an unspawned gateway launch: Error: metadata unavailable'
+    );
+    vi.mocked(console.warn).mockClear();
+    expect(ports.restorePrelaunchConfig).toHaveBeenCalledWith(request.teamName);
+    expect(ports.deleteRun).toHaveBeenCalledWith(run.runId);
+    expect(ports.removeRunMemberMcpConfigFiles).toHaveBeenCalledWith(run);
+  });
+
+  it.each([undefined, 123])(
+    'aborts async launch failures only when no child PID exists (%s)',
+    async (pid) => {
+      const run = createRun();
+      const ports = createSpawnFlowPorts([]);
+      const child = Object.assign(new EventEmitter(), { pid }) as ChildProcess;
+      ports.spawnCli = vi.fn(() => child);
+      const abort = vi.fn(async () => undefined);
+      const beginLaunch = vi.fn(async () => undefined);
+      await runPreSpawnFailureFlow(
+        run,
+        ports,
+        new Map([['builder', { envPatch: {}, beginLaunch, abortUnspawnedLaunch: abort }]])
+      );
+      expect(beginLaunch).toHaveBeenCalledOnce();
+      child.emit('error', new Error('ENOENT'));
+      await vi.waitFor(() => expect(ports.cleanupRun).toHaveBeenCalledWith(run));
+      expect(abort).toHaveBeenCalledTimes(pid === undefined ? 1 : 0);
+    }
+  );
 
   it('builds launch team metadata without persistence side effects', () => {
     expect(
@@ -285,6 +345,38 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       launchIdentity,
       createdAt: 123,
     });
+  });
+
+  // Catches a sparse relaunch clearing saved lead instructions or resetting draft identity metadata.
+  it('preserves saved lead instructions and original metadata identity on sparse relaunch', async () => {
+    const writeMeta = vi.fn(async () => undefined);
+    await persistDeterministicLaunchMetadata(
+      {
+        request: { ...request, prompt: undefined },
+        syntheticRequest,
+        launchIdentity,
+        allEffectiveMemberSpecs: syntheticRequest.members,
+        configuredMemberSpecs: syntheticRequest.members,
+      },
+      {
+        teamMetaStore: {
+          writeMeta,
+          getMeta: async () => ({
+            version: 1,
+            cwd: '/repo',
+            runtimeSelectionVersion: 1,
+            prompt: 'Saved management instructions',
+            createdAt: 77,
+          }),
+        },
+        membersMetaStore: { getMembers: async () => [], writeMembers: async () => undefined },
+        nowMs: () => 123,
+      }
+    );
+    expect(writeMeta).toHaveBeenCalledWith(
+      'demo',
+      expect.objectContaining({ prompt: 'Saved management instructions', createdAt: 77 })
+    );
   });
 
   it('persists normalized synthetic metadata and tombstones when the relaunch request is sparse', async () => {

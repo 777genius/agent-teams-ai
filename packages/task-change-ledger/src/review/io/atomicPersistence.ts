@@ -8,6 +8,8 @@ import type { ArtifactIdentity } from './mutationAuthority.js';
 export interface AtomicWriteOptions {
   assertCurrent?: () => void;
   mode?: number;
+  /** Mode for newly created parent directories; existing paths are never chmodded. */
+  directoryMode?: number;
   durability?: 'best-effort' | 'strict';
   syncDirectory?: boolean;
   /**
@@ -73,7 +75,10 @@ export async function atomicWriteAsync(
 
   try {
     options.assertCurrent?.();
-    await fs.promises.mkdir(dir, { recursive: true });
+    await fs.promises.mkdir(dir, {
+      recursive: true,
+      ...(options.directoryMode === undefined ? {} : { mode: options.directoryMode }),
+    });
     options.assertCurrent?.();
     if (options.assertCurrent)
       await writeGuardedTemp(tmpPath, data, options.mode, options, (identity) => {

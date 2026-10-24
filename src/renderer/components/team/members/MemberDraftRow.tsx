@@ -1,15 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { MemberGatewaySelector } from '@features/gateway-provider/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { OpenCodeLocalModelLimitsCard } from '@features/runtime-provider-management/renderer';
-import { AnthropicExtraUsageWarning } from '@renderer/components/team/dialogs/AnthropicExtraUsageWarning';
 import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
 import { LimitContextCheckbox } from '@renderer/components/team/dialogs/LimitContextCheckbox';
 import { TeamModelBrandIcon } from '@renderer/components/team/dialogs/TeamModelBrandIcon';
 import {
   formatTeamModelSummary,
-  getProviderScopedTeamModelLabel,
-  getTeamProviderLabel,
   TeamModelSelector,
   type TeamModelSelectorProps,
 } from '@renderer/components/team/dialogs/TeamModelSelector';
@@ -21,13 +19,6 @@ import { HoverTooltip } from '@renderer/components/ui/hover-tooltip';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@renderer/components/ui/select';
 import {
   Tooltip,
   TooltipContent,
@@ -46,10 +37,6 @@ import {
 } from '@renderer/utils/teamModelCatalog';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import {
-  normalizeTeamMemberMcpPolicy,
-  resolveTeamMemberMcpScopes,
-} from '@shared/utils/teamMemberMcpPolicy';
-import {
   AlertTriangle,
   ChevronDown,
   ChevronRight,
@@ -61,17 +48,20 @@ import {
   Workflow as WorkflowIcon,
 } from 'lucide-react';
 
-import { FLAT_ROSTER_GRID_COLUMNS } from './flatRosterLayout';
 import {
   formatMemberMcpButtonLabel,
-  MEMBER_MCP_SCOPE_LABEL_KEYS,
+  resolveMemberModelButtonLabels,
   resolveMemberModelReasonTexts,
 } from './memberDraftRowText';
+import { MemberDraftStatusNotices } from './MemberDraftStatusNotices';
+import { MemberMcpPolicyPanel } from './MemberMcpPolicyPanel';
 import * as modelTone from './memberModelToneClasses';
 import { MemberModelTooltipContent } from './MemberModelTooltipContent';
+import { RosterParticipantFrame, RosterParticipantIdentity } from './RosterParticipantFrame';
 
 import type { ModelReasonByProvider } from './memberDraftRowText';
 import type { MemberDraft } from './membersEditorTypes';
+import type { GatewayMemberBindingsState } from '@features/gateway-provider/renderer';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type {
@@ -82,6 +72,7 @@ import type {
 } from '@shared/types';
 interface MemberDraftRowProps {
   member: MemberDraft;
+  teamName?: string;
   index: number;
   avatarSrc?: string;
   resolvedColor?: string;
@@ -95,6 +86,8 @@ interface MemberDraftRowProps {
   onWorkflowChipsChange?: (id: string, chips: InlineChip[]) => void;
   onProviderChange: (id: string, providerId: TeamProviderId) => void;
   onModelChange: (id: string, model: string) => void;
+  gatewayBindings?: GatewayMemberBindingsState;
+  preserveSelectedModel?: boolean;
   onEffortChange: (id: string, effort: string) => void;
   onLimitContextChange?: (value: boolean) => void;
   inheritedProviderId?: TeamProviderId;
@@ -107,6 +100,7 @@ interface MemberDraftRowProps {
   taskSuggestions?: MentionSuggestion[];
   teamSuggestions?: MentionSuggestion[];
   onWorkflowSuggestionsNeeded?: () => void;
+  runtimeSelectionUnresolved?: boolean;
   lockProviderModel?: boolean;
   providerDisabledReasonById?: Partial<Record<TeamProviderId, string | null | undefined>>;
   lockRole?: boolean;
@@ -119,6 +113,7 @@ interface MemberDraftRowProps {
   onRestore?: (id: string) => void;
   hideActionButton?: boolean;
   warningText?: string | null;
+  errorText?: string | null;
   infoText?: string | null;
   disableGeminiOption?: boolean;
   providerReadyById?: Partial<Record<TeamProviderId, boolean>>;
@@ -143,6 +138,7 @@ interface MemberDraftRowProps {
 }
 export const MemberDraftRow = ({
   member,
+  teamName,
   index,
   avatarSrc,
   resolvedColor,
@@ -156,6 +152,7 @@ export const MemberDraftRow = ({
   onWorkflowChipsChange,
   onProviderChange,
   onModelChange,
+  gatewayBindings,
   onEffortChange,
   onLimitContextChange,
   inheritedProviderId = 'anthropic',
@@ -168,6 +165,7 @@ export const MemberDraftRow = ({
   taskSuggestions,
   teamSuggestions,
   onWorkflowSuggestionsNeeded,
+  runtimeSelectionUnresolved = false,
   lockProviderModel = false,
   providerDisabledReasonById,
   lockRole = false,
@@ -180,6 +178,7 @@ export const MemberDraftRow = ({
   onRestore,
   hideActionButton = false,
   warningText,
+  errorText,
   infoText,
   disableGeminiOption = false,
   providerReadyById,
@@ -189,6 +188,7 @@ export const MemberDraftRow = ({
   modelUnavailableReasonByProvider,
   onOpenCodeProviderScopedStatusChange,
   onOpenProviderSettings,
+  preserveSelectedModel = false,
   showWorktreeIsolationControls = false,
   worktreeIsolationDisabledReason,
   onWorktreeIsolationChange,
@@ -253,10 +253,6 @@ export const MemberDraftRow = ({
     [agentTeamsMcpLocked, member.mcpPolicy]
   );
   const mcpMode: TeamMemberMcpMode = effectiveMcpPolicy?.mode ?? 'inheritLead';
-  const mcpScopes = useMemo(
-    () => resolveTeamMemberMcpScopes(effectiveMcpPolicy),
-    [effectiveMcpPolicy]
-  );
   const mcpServerNames = useMemo(
     () => effectiveMcpPolicy?.serverNames ?? [],
     [effectiveMcpPolicy?.serverNames]
@@ -265,69 +261,6 @@ export const MemberDraftRow = ({
     scopes: t('memberDraft.mcp.buttonScopes'),
     inherit: t('memberDraft.mcp.buttonInherit'),
   });
-  const updateMcpPolicy = useCallback(
-    (policy: TeamMemberMcpPolicy | undefined) => {
-      if (agentTeamsMcpLocked) {
-        return;
-      }
-      onMcpPolicyChange?.(member.id, normalizeTeamMemberMcpPolicy(policy));
-    },
-    [agentTeamsMcpLocked, member.id, onMcpPolicyChange]
-  );
-  const handleMcpModeChange = useCallback(
-    (mode: string) => {
-      if (mode === 'inheritLead') {
-        updateMcpPolicy(undefined);
-        return;
-      }
-      if (mode === 'appOnly') {
-        updateMcpPolicy({ mode: 'appOnly' });
-        return;
-      }
-      if (mode === 'inheritScopes' || mode === 'strictAllowlist') {
-        updateMcpPolicy({
-          mode,
-          scopes: mcpScopes,
-          ...(mode === 'strictAllowlist' && mcpServerNames.length > 0
-            ? { serverNames: mcpServerNames }
-            : {}),
-        });
-      }
-    },
-    [mcpScopes, mcpServerNames, updateMcpPolicy]
-  );
-  const updateMcpScope = useCallback(
-    (scope: 'user' | 'project' | 'local', enabled: boolean) => {
-      if (mcpMode !== 'inheritScopes' && mcpMode !== 'strictAllowlist') {
-        return;
-      }
-      updateMcpPolicy({
-        mode: mcpMode,
-        scopes: { ...mcpScopes, [scope]: enabled },
-        ...(mcpMode === 'strictAllowlist' && mcpServerNames.length > 0
-          ? { serverNames: mcpServerNames }
-          : {}),
-      });
-    },
-    [mcpMode, mcpScopes, mcpServerNames, updateMcpPolicy]
-  );
-  const updateMcpServerNames = useCallback(
-    (value: string) => {
-      const serverNames = value
-        .split(',')
-        .map((name) => name.trim())
-        .filter(Boolean);
-      updateMcpPolicy({
-        mode: 'strictAllowlist',
-        scopes: mcpScopes,
-        serverNames,
-      });
-    },
-    [mcpScopes, updateMcpPolicy]
-  );
-
-  const getMcpScopeLabel = (scope: 'user' | 'project' | 'local'): string =>
-    t(MEMBER_MCP_SCOPE_LABEL_KEYS[scope]);
   useEffect(() => {
     if (
       onWorkflowChange &&
@@ -340,38 +273,35 @@ export const MemberDraftRow = ({
   const suggestionsExcludingSelf = mentionSuggestions.filter(
     (s) => s.name.toLowerCase() !== member.name.trim().toLowerCase()
   );
-  const { inheritsLeadModel, effectiveProviderId, effectiveModel, openCodeDefaultRoute } =
+  const forceLeadModelSettings =
+    forceInheritedModelSettings && !gatewayBindings?.boundMemberNames.has(member.name.trim());
+  const { inheritsLeadModel, effectiveProviderId, effectiveModel, defaultModelLabel } =
     useMemberDraftRowModel({
       member,
       inheritedProviderId,
       inheritedModel,
-      forced: forceInheritedModelSettings,
+      forced: forceLeadModelSettings,
+      limitContext,
       projectPath,
     });
   const memberProviderId = member.providerId;
   const explicitMemberModel = member.model?.trim() ?? '';
   const inheritsDefaultRuntime = !memberProviderId || memberProviderId === inheritedProviderId;
-  const effectiveEffort = forceInheritedModelSettings
+  const effectiveEffort = forceLeadModelSettings
     ? inheritedEffort
     : (member.effort ??
       (inheritsDefaultRuntime && !explicitMemberModel ? inheritedEffort : undefined));
-  const modelButtonLabelBase = effectiveModel?.trim()
-    ? getProviderScopedTeamModelLabel(effectiveProviderId, effectiveModel.trim())
-    : openCodeDefaultRoute
-      ? t('modelSelector.defaultWithResolved', { model: openCodeDefaultRoute.label })
-      : t('memberDraft.model.default');
-  const modelButtonLabel = inheritsLeadModel
-    ? t('memberDraft.model.leadSuffix', { label: modelButtonLabelBase })
-    : modelButtonLabelBase;
-  const modelButtonText = openCodeDefaultRoute
-    ? t('modelSelector.defaultCompact', { model: openCodeDefaultRoute.modelLabel })
-    : modelButtonLabel;
-  const modelButtonAriaLabel = t('memberDraft.model.ariaLabel', {
-    provider: getTeamProviderLabel(effectiveProviderId),
-    model: modelButtonLabel,
-  });
+  const { modelButtonLabel, modelButtonText, modelButtonAriaLabel } =
+    resolveMemberModelButtonLabels({
+      effectiveProviderId,
+      effectiveModel,
+      defaultModelLabel,
+      inheritsLeadModel,
+      unresolved: runtimeSelectionUnresolved,
+      t,
+    });
   const canOpenLockedModelPanel = lockProviderModel && !isRemoved && Boolean(lockedModelAction);
-  const modelTooltipText = forceInheritedModelSettings
+  const modelTooltipText = forceLeadModelSettings
     ? t('memberDraft.model.inheritedTooltip')
     : lockProviderModel
       ? (lockedModelAction?.description ?? modelLockReason)
@@ -412,7 +342,7 @@ export const MemberDraftRow = ({
     />
   );
   const hasCustomProviderOrModel =
-    !forceInheritedModelSettings && Boolean(member.providerId || member.model?.trim());
+    !forceLeadModelSettings && Boolean(member.providerId || member.model?.trim());
   const showSonnetExtraUsageWarning =
     effectiveProviderId === 'anthropic' &&
     !limitContext &&
@@ -421,7 +351,6 @@ export const MemberDraftRow = ({
   const warningMessages = [warningText?.trim() || null].filter((message): message is string =>
     Boolean(message)
   );
-  const hasWarnings = warningMessages.length > 0 || showSonnetExtraUsageWarning;
   const anthropicContextModeLabel = limitContext
     ? t('memberDraft.anthropicContext.limitEnabled')
     : t('memberDraft.anthropicContext.defaultSetting');
@@ -430,10 +359,6 @@ export const MemberDraftRow = ({
     ? t('memberDraft.workflow.editTooltip')
     : t('memberDraft.workflow.addTooltip');
   const mcpTooltipText = t('memberDraft.mcp.tooltip', { label: mcpButtonLabel });
-  const mcpLockedInfoText = t('memberDraft.mcp.lockedInfo');
-  const mcpSettingInfoText = agentTeamsMcpLocked
-    ? mcpLockedInfoText
-    : t('memberDraft.mcp.settingInfo');
   const runtimeSummary = formatTeamModelSummary(
     effectiveProviderId,
     effectiveModel?.trim() ?? '',
@@ -449,49 +374,15 @@ export const MemberDraftRow = ({
     });
   }, [onWorkflowSuggestionsNeeded]);
   return (
-    <div
-      className={cn(
-        'relative grid grid-cols-1 gap-2 md:items-start',
-        isFlatRoster
-          ? cn(
-              'hover:bg-[var(--color-surface-raised)]/45 rounded-sm px-4 py-2 transition-colors',
-              FLAT_ROSTER_GRID_COLUMNS
-            )
-          : 'rounded-md p-2 shadow-sm md:grid-cols-[minmax(0,1fr)_156px_auto]',
-        isRemoved && 'opacity-55'
-      )}
-      data-role="member-row"
-      style={{
-        backgroundColor: isFlatRoster
-          ? undefined
-          : isLight
-            ? 'color-mix(in srgb, var(--color-surface-raised) 22%, white 78%)'
-            : 'var(--color-surface-raised)',
-        boxShadow: isFlatRoster
-          ? undefined
-          : isLight
-            ? '0 1px 2px rgba(15, 23, 42, 0.06)'
-            : '0 1px 2px rgba(0, 0, 0, 0.28)',
-      }}
+    <RosterParticipantFrame
+      accentColor={memberColorSet.border}
+      isLight={isLight}
+      layout={isFlatRoster ? 'flat' : 'member'}
+      dataRole="member-row"
+      removed={isRemoved}
     >
-      <div
-        className={cn(
-          'absolute inset-y-0 left-0 w-1',
-          isFlatRoster ? 'my-2 rounded-full' : 'rounded-l-md'
-        )}
-        style={{ backgroundColor: memberColorSet.border }}
-        aria-hidden="true"
-      />
       <div className="min-w-0 space-y-0.5">
-        <div className="flex items-center gap-2">
-          {avatarSrc ? (
-            <img
-              src={avatarSrc}
-              alt=""
-              className="size-8 shrink-0 rounded-full bg-[var(--color-surface-raised)]"
-              loading="lazy"
-            />
-          ) : null}
+        <RosterParticipantIdentity avatarSrc={avatarSrc}>
           <Input
             className="h-8 text-xs"
             value={member.name}
@@ -501,7 +392,7 @@ export const MemberDraftRow = ({
             onChange={(event) => onNameChange(member.id, event.target.value)}
             placeholder={t('memberDraft.placeholders.name')}
           />
-        </div>
+        </RosterParticipantIdentity>
         {nameError ? (
           <p className="text-[10px] text-[var(--field-error-text)]">{nameError}</p>
         ) : null}
@@ -567,10 +458,12 @@ export const MemberDraftRow = ({
                       ) : (
                         <ChevronRight className="size-3.5" />
                       )}
-                      <TeamModelBrandIcon
-                        providerId={effectiveProviderId}
-                        model={effectiveModel ?? ''}
-                      />
+                      {!runtimeSelectionUnresolved && (
+                        <TeamModelBrandIcon
+                          providerId={effectiveProviderId}
+                          model={effectiveModel ?? ''}
+                        />
+                      )}
                       <span className="min-w-0 flex-1 truncate">{modelButtonText}</span>
                       {hasModelIssue ? (
                         <AlertTriangle className="size-3.5 shrink-0 text-red-700 dark:text-red-300" />
@@ -752,111 +645,21 @@ export const MemberDraftRow = ({
           </div>
         ) : null}
       </div>
-      {!isRemoved && hasWarnings ? (
-        <div className="md:col-span-3">
-          <div className="bg-amber-500/8 ml-3 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-700 dark:text-amber-200">
-            <Info className="mt-0.5 size-3.5 shrink-0 text-amber-700 dark:text-amber-300" />
-            <div className="space-y-1">
-              {warningMessages.map((message) => (
-                <p key={message}>{message}</p>
-              ))}
-              {showSonnetExtraUsageWarning ? <AnthropicExtraUsageWarning /> : null}
-            </div>
-          </div>
-        </div>
-      ) : null}
-      {!isRemoved && infoText ? (
-        <div className="md:col-span-3">
-          <div className="ml-3 flex items-start gap-2 rounded-md border border-sky-600/25 bg-sky-500/10 px-3 py-2 text-[11px] leading-relaxed text-sky-800 dark:border-sky-400/25 dark:text-sky-100">
-            <Info className="mt-0.5 size-3.5 shrink-0 text-sky-700 dark:text-sky-300" />
-            <p className="min-w-0 whitespace-pre-wrap break-words">{infoText}</p>
-          </div>
-        </div>
+      {!isRemoved ? (
+        <MemberDraftStatusNotices
+          warningMessages={warningMessages}
+          showSonnetExtraUsageWarning={showSonnetExtraUsageWarning}
+          errorText={errorText}
+          infoText={infoText}
+        />
       ) : null}
       {!isRemoved && onMcpPolicyChange && mcpExpanded ? (
-        <div className="space-y-3 pl-3 md:col-span-3">
-          <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-            <div className="grid gap-3 sm:grid-cols-[minmax(160px,220px)_1fr]">
-              <div className="space-y-1">
-                <Label
-                  htmlFor={`member-${member.id}-mcp-mode`}
-                  className="text-[10px] text-[var(--color-text-muted)]"
-                >
-                  {t('memberDraft.mcp.mode')}
-                </Label>
-                <Select
-                  value={mcpMode}
-                  onValueChange={handleMcpModeChange}
-                  disabled={agentTeamsMcpLocked}
-                >
-                  <SelectTrigger
-                    id={`member-${member.id}-mcp-mode`}
-                    className="h-8 text-xs"
-                    disabled={agentTeamsMcpLocked}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="inheritLead">{t('memberDraft.mcp.inheritLead')}</SelectItem>
-                    <SelectItem value="inheritScopes">
-                      {t('memberDraft.mcp.chooseScopes')}
-                    </SelectItem>
-                    <SelectItem value="strictAllowlist">
-                      {t('memberDraft.mcp.strictAllowlist')}
-                    </SelectItem>
-                    <SelectItem value="appOnly">{t('memberDraft.mcp.agentTeamsMcp')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {(['user', 'project', 'local'] as const).map((scope) => (
-                    <label
-                      key={scope}
-                      className={cn(
-                        'flex h-8 items-center gap-2 rounded-md border border-[var(--color-border)] px-2 text-xs text-[var(--color-text-secondary)]',
-                        (agentTeamsMcpLocked ||
-                          mcpMode === 'inheritLead' ||
-                          mcpMode === 'appOnly') &&
-                          'opacity-50'
-                      )}
-                    >
-                      <Checkbox
-                        checked={mcpMode === 'appOnly' ? false : mcpScopes[scope]}
-                        disabled={
-                          agentTeamsMcpLocked || mcpMode === 'inheritLead' || mcpMode === 'appOnly'
-                        }
-                        onCheckedChange={(checked) => updateMcpScope(scope, checked === true)}
-                      />
-                      <span className="capitalize">{getMcpScopeLabel(scope)}</span>
-                    </label>
-                  ))}
-                </div>
-                {mcpMode === 'strictAllowlist' ? (
-                  <div className="space-y-1">
-                    <Label
-                      htmlFor={`member-${member.id}-mcp-servers`}
-                      className="text-[10px] text-[var(--color-text-muted)]"
-                    >
-                      {t('memberDraft.mcp.serverNames')}
-                    </Label>
-                    <Input
-                      id={`member-${member.id}-mcp-servers`}
-                      className="h-8 text-xs"
-                      value={mcpServerNames.join(', ')}
-                      disabled={agentTeamsMcpLocked}
-                      onChange={(event) => updateMcpServerNames(event.target.value)}
-                      placeholder={t('memberDraft.placeholders.mcpServers')}
-                    />
-                  </div>
-                ) : null}
-                {mcpMode !== 'inheritLead' ? (
-                  <p className={modelTone.MCP_SETTING_NOTE_CLASS}>{mcpSettingInfoText}</p>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </div>
+        <MemberMcpPolicyPanel
+          memberId={member.id}
+          mcpPolicy={member.mcpPolicy}
+          agentTeamsMcpLocked={agentTeamsMcpLocked}
+          onMcpPolicyChange={onMcpPolicyChange}
+        />
       ) : null}
       {showWorkflow && onWorkflowChange && workflowExpanded ? (
         <div className="space-y-0.5 pl-3 md:col-span-3">
@@ -927,13 +730,19 @@ export const MemberDraftRow = ({
                   onProviderChange(member.id, providerId);
                 }}
                 value={effectiveModel ?? ''}
+                limitContext={limitContext}
+                preserveSelectedModel={
+                  preserveSelectedModel || gatewayBindings?.boundMemberNames.has(member.name.trim())
+                }
                 onValueChange={(value) => {
                   if (lockProviderModel) return;
                   onModelChange(member.id, value);
                 }}
                 projectPath={projectPath}
                 id={`member-${member.id}-model`}
-                disableGeminiOption={disableGeminiOption}
+                disableGeminiOption={
+                  disableGeminiOption || gatewayBindings?.boundMemberNames.has(member.name.trim())
+                }
                 providerReadyById={providerReadyById}
                 providerDisabledReasonById={providerDisabledReasonById}
                 modelAdvisoryReasonByValue={modelAdvisoryReasonByProvider?.[effectiveProviderId]}
@@ -949,6 +758,24 @@ export const MemberDraftRow = ({
                 onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
                 onOpenProviderSettings={onOpenProviderSettings}
               />
+              {teamName?.trim() &&
+              !lockProviderModel &&
+              ['anthropic', 'codex', 'opencode'].includes(effectiveProviderId) ? (
+                <MemberGatewaySelector
+                  teamName={teamName.trim()}
+                  memberName={member.name}
+                  originalName={member.originalName}
+                  selectedModel={member.model}
+                  onBindingsChange={gatewayBindings?.refresh}
+                  onBindRequest={gatewayBindings?.runBinding}
+                  onBindingPendingChange={gatewayBindings?.onBindingPendingChange}
+                  disabled={gatewayBindings?.pending}
+                  onModelChange={(model) => {
+                    if (lockProviderModel) return;
+                    onModelChange(member.id, model);
+                  }}
+                />
+              ) : null}
               <EffortLevelSelector
                 value={effectiveEffort ?? ''}
                 onValueChange={(value) => {
@@ -958,6 +785,7 @@ export const MemberDraftRow = ({
                 id={`member-${member.id}-effort`}
                 providerId={effectiveProviderId}
                 model={effectiveModel}
+                projectPath={projectPath}
                 limitContext={limitContext}
               />
               {effectiveProviderId === 'opencode' ? (
@@ -996,6 +824,6 @@ export const MemberDraftRow = ({
           )}
         </div>
       )}
-    </div>
+    </RosterParticipantFrame>
   );
 };

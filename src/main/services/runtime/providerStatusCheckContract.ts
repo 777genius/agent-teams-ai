@@ -12,6 +12,11 @@ import {
   selectProviderModelDisplayPair,
 } from '@shared/utils/providerStatusAuthority';
 
+import {
+  getRuntimeStatusErrorDetails,
+  RuntimeStatusCommandError,
+} from './runtimeStatusCommandDiagnostics';
+
 import type {
   CliProviderId,
   CliProviderStatus,
@@ -155,6 +160,7 @@ export function createDefaultProviderStatus(providerId: CliProviderId): CliProvi
     statusMessage: null,
     detailMessage: null,
     models: [],
+    defaultModel: null,
     modelAvailability: [],
     canLoginFromUi: providerId !== 'opencode',
     capabilities: {
@@ -182,6 +188,9 @@ export function createPendingProviderStatus(providerId: CliProviderId): CliProvi
 }
 
 export function getProviderStatusCheckErrorCode(error: unknown): CliProviderStatusCheckErrorCode {
+  if (error instanceof RuntimeStatusCommandError) {
+    return getProviderStatusCheckErrorCode(error.cause);
+  }
   if (isWorkingDirectoryMissingError(error)) {
     return 'project_missing';
   }
@@ -223,8 +232,13 @@ export function createRuntimeStatusErrorProviderStatus(
       ? 'OpenCode is still loading'
       : CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
     detailMessage: isOpenCodeTimeout
-      ? 'OpenCode is taking longer than expected to load provider status. Your saved connections were not changed. Retry in a moment.'
-      : message,
+      ? [
+          'OpenCode is taking longer than expected to load provider status. Your saved connections were not changed. Retry in a moment.',
+          error instanceof RuntimeStatusCommandError ? getRuntimeStatusErrorDetails(error) : null,
+        ]
+          .filter(Boolean)
+          .join('\n\n')
+      : getRuntimeStatusErrorDetails(error),
   };
 }
 
@@ -236,6 +250,7 @@ export function createDegradedProviderStatus(
   const degraded = createRuntimeStatusErrorProviderStatus(previous.providerId, error);
   return {
     ...previous,
+    effectiveDefaultModel: previous.effectiveDefaultModel === undefined ? undefined : null,
     teamLaunchAuthorityRestriction: undefined,
     verificationState: degraded.verificationState,
     statusCheckOutcome: degraded.statusCheckOutcome,
@@ -323,6 +338,13 @@ export function mergeProviderStatusDisplayEvidence(
       ? incoming.resolvedBackendId
       : current.resolvedBackendId,
     ...displayPair,
+    defaultModel: incoming.defaultModel?.trim() || current.defaultModel?.trim() || null,
+    effectiveDefaultModel:
+      incoming.effectiveDefaultModel === undefined
+        ? undefined
+        : hasAuthoritativeStatusEvidence && typeof incoming.effectiveDefaultModel === 'string'
+          ? incoming.effectiveDefaultModel.trim() || null
+          : null,
     availableBackends:
       (incoming.availableBackends?.length ?? 0) > 0
         ? incoming.availableBackends

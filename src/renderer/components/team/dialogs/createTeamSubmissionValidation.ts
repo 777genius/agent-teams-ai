@@ -34,7 +34,7 @@ export function validateTeamNameInline(
   if (!sanitized) {
     return t('create.validation.nameMustContainLetterOrDigit');
   }
-  if (sanitized.length > 128) {
+  if (sanitized.length > 64) {
     return t('create.validation.nameTooLong');
   }
   return null;
@@ -55,7 +55,7 @@ export function validateRequest(
       },
     };
   }
-  if (sanitized.length > 128) {
+  if (sanitized.length > 64) {
     return {
       valid: false,
       errors: {

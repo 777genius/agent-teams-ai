@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  canMemberShowAttachmentControl,
   getAttachmentInputAcceptForMember,
   getMemberAttachmentUnavailableReason,
+  isReferenceAttachmentForMember,
   validateAttachmentFilesForMember,
   validateAttachmentPayloadsForMember,
 } from '../../../src/renderer/utils/attachmentRecipientCapabilities';
@@ -37,149 +39,177 @@ function payload(overrides: Partial<AttachmentPayload>): AttachmentPayload {
 }
 
 describe('attachmentRecipientCapabilities', () => {
-  it('blocks OpenCode non-vision models before file selection or send', () => {
-    const bob = member({
-      providerId: 'opencode',
-      model: 'openrouter/z-ai/glm-5.1',
+  it('keeps references available while native attachments require current capability', () => {
+    const native = member({ providerId: 'codex', model: 'gpt-5.5' });
+    const ready = member({
+      providerId: 'codex',
+      model: 'gpt-5.5',
+      nativeInboxAttachmentsSupported: true,
     });
 
-    expect(getMemberAttachmentUnavailableReason(bob)).toBe(
-      'This OpenCode model is not verified for image attachments. Choose a vision-capable model or remove the image.'
-    );
+    expect(getMemberAttachmentUnavailableReason(native)).toBeNull();
+    expect(canMemberShowAttachmentControl(native)).toBe(true);
+    const binary = payload({ mimeType: 'application/octet-stream' });
+    expect(isReferenceAttachmentForMember(native, binary)).toBe(true);
     expect(
-      validateAttachmentFilesForMember({ member: bob, files: [file('diagram.png', 'image/png')] })
-    ).toBe(
-      'This OpenCode model is not verified for image attachments. Choose a vision-capable model or remove the image.'
-    );
-    expect(validateAttachmentPayloadsForMember({ member: bob, attachments: [payload({})] })).toBe(
-      'This OpenCode model is not verified for image attachments. Choose a vision-capable model or remove the image.'
-    );
+      validateAttachmentPayloadsForMember({ member: native, attachments: [binary] })
+    ).toBeNull();
+    expect(
+      validateAttachmentFilesForMember({
+        member: native,
+        files: [file('diagram.png', 'image/png')],
+      })
+    ).toContain('current attachment-capable runtime');
+    expect(getMemberAttachmentUnavailableReason(ready)).toBeNull();
+    expect(
+      validateAttachmentPayloadsForMember({ member: ready, attachments: [payload({})] })
+    ).toBeNull();
   });
 
-  it.each([
-    'openrouter/moonshotai/kimi-k2.6',
-    'kimi-for-coding/kimi-for-coding',
-    'kimi-for-coding/kimi-for-coding-highspeed',
-    'kimi-for-coding/k3',
-    'zai-coding-plan/glm-5v-turbo',
-    'xai/grok-4.5',
-    'xai/grok-4.3',
-    'xai/grok-4.20-0309-reasoning',
-    'xai/grok-4.20-0309-non-reasoning',
-    'xai/grok-build-0.1',
-    'github-copilot/gpt-5-mini',
-    'github-copilot/gpt-5.3-codex',
-    'github-copilot/gpt-5.4',
-    'github-copilot/gpt-5.4-mini',
-    'github-copilot/gpt-5.5',
-    'github-copilot/gpt-5.6-luna',
-    'github-copilot/gpt-5.6-sol',
-    'github-copilot/gpt-5.6-terra',
-    'github-copilot/claude-fable-5',
-    'github-copilot/claude-haiku-4.5',
-    'github-copilot/claude-opus-4.5',
-    'github-copilot/claude-opus-4.6',
-    'github-copilot/claude-opus-4.7',
-    'github-copilot/claude-opus-4.8',
-    'github-copilot/claude-sonnet-4.5',
-    'github-copilot/claude-sonnet-4.6',
-    'github-copilot/claude-sonnet-5',
-    'github-copilot/gemini-2.5-pro',
-    'github-copilot/gemini-3-flash-preview',
-    'github-copilot/gemini-3.1-pro-preview',
-    'github-copilot/gemini-3.5-flash',
-    'github-copilot/kimi-k2.7-code',
-    'xiaomi-token-plan-ams/mimo-v2.5',
-    'xiaomi-token-plan-sgp/mimo-v2.5',
-    'xiaomi-token-plan-cn/mimo-v2.5',
-  ])('allows image picker input for verified OpenCode subscription model %s', (model) => {
-    const bob = member({
-      providerId: 'opencode',
-      model,
+  it('routes Codex text by explicit native capability while retaining legacy routing', () => {
+    const ready = member({
+      providerId: 'codex',
+      nativeInboxAttachmentsSupported: true,
+      nativeInboxTextAttachmentsSupported: true,
     });
-
-    expect(getMemberAttachmentUnavailableReason(bob)).toBeNull();
-    expect(getAttachmentInputAcceptForMember(bob)).toBe('image/png,image/jpeg,image/webp');
+    const text = payload({ filename: 'notes.txt', mimeType: 'text/plain' });
+    expect(getAttachmentInputAcceptForMember(ready)).toBe('*/*');
     expect(
-      validateAttachmentFilesForMember({ member: bob, files: [file('diagram.png', 'image/png')] })
+      validateAttachmentFilesForMember({
+        member: ready,
+        files: [
+          file('notes.txt', 'text/plain'),
+          file('data.json', 'application/json'),
+          file('main.ts', 'video/mp2t'),
+        ],
+      })
     ).toBeNull();
+    expect(
+      validateAttachmentPayloadsForMember({
+        member: ready,
+        attachments: [text, payload({ id: 'image' })],
+      })
+    ).toBeNull();
+    for (const filename of ['Dockerfile', 'Makefile', '.env.local']) {
+      expect(
+        validateAttachmentFilesForMember({ member: ready, files: [file(filename, '')] })
+      ).toBeNull();
+    }
+    const withoutTextCapability = member({ ...ready, nativeInboxTextAttachmentsSupported: false });
+    expect(isReferenceAttachmentForMember(withoutTextCapability, text)).toBe(true);
+    expect(
+      validateAttachmentPayloadsForMember({ member: withoutTextCapability, attachments: [text] })
+    ).toBeNull();
+    const legacy = member({ ...ready, nativeInboxTextAttachmentsSupported: undefined });
+    expect(isReferenceAttachmentForMember(legacy, text)).toBe(false);
+    expect(
+      validateAttachmentPayloadsForMember({ member: legacy, attachments: [text] })
+    ).not.toBeNull();
+    for (const referenceRecipient of [
+      member({ ...ready, name: 'team-lead' }),
+      member({ ...ready, providerId: 'opencode', model: 'gpt-5.4-mini' }),
+    ]) {
+      expect(isReferenceAttachmentForMember(referenceRecipient, text)).toBe(true);
+      expect(
+        validateAttachmentPayloadsForMember({ member: referenceRecipient, attachments: [text] })
+      ).toBeNull();
+    }
+    for (const mimeType of ['application/pdf', 'image/gif', 'application/octet-stream']) {
+      expect(
+        validateAttachmentPayloadsForMember({ member: ready, attachments: [payload({ mimeType })] })
+      ).toBeNull();
+      expect(isReferenceAttachmentForMember(ready, payload({ mimeType }))).toBe(true);
+    }
+  });
+
+  it('keeps references usable while native OpenCode media requires scoped declarations', () => {
+    const bob = member({ providerId: 'opencode', model: 'novel-source/FutureModel' });
+    const binary = payload({ mimeType: 'application/octet-stream' });
+    expect(getMemberAttachmentUnavailableReason(bob)).toBeNull();
+    expect(validateAttachmentPayloadsForMember({ member: bob, attachments: [binary] })).toBeNull();
     expect(
       validateAttachmentPayloadsForMember({ member: bob, attachments: [payload({})] })
-    ).toBeNull();
-  });
-
-  it.each([
-    ['demo.mp4', 'video/mp4'],
-    ['demo.webm', 'video/webm'],
-    ['demo.mov', 'video/quicktime'],
-  ])('allows %s video input only for the video-capable MiniMax model', (filename, mimeType) => {
-    const miniMax = member({
-      providerId: 'opencode',
-      model: 'minimax-coding-plan/MiniMax-M3',
-    });
-    const kimi = member({
-      providerId: 'opencode',
-      model: 'openrouter/moonshotai/kimi-k2.6',
-    });
-    const videoFile = file(filename, mimeType);
-    const videoPayload = payload({ filename, mimeType });
-
-    expect(getAttachmentInputAcceptForMember(miniMax)).toBe(
-      'image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime'
-    );
-    expect(validateAttachmentFilesForMember({ member: miniMax, files: [videoFile] })).toBeNull();
-    expect(
-      validateAttachmentPayloadsForMember({ member: miniMax, attachments: [videoPayload] })
-    ).toBeNull();
-    expect(validateAttachmentFilesForMember({ member: kimi, files: [videoFile] })).toBe(
-      'This provider path does not support video attachments through this delivery path.'
-    );
-    expect(
-      validateAttachmentPayloadsForMember({ member: kimi, attachments: [videoPayload] })
-    ).toBe('This provider path does not support video attachments through this delivery path.');
-  });
-
-  it('enforces one video and the 8MiB per-video/mixed budget for MiniMax', () => {
-    const miniMax = member({
-      providerId: 'opencode',
-      model: 'minimax-coding-plan/MiniMax-M3',
-    });
-    const eightMiB = 8 * 1024 * 1024;
-
+    ).toContain('unknown image input');
     expect(
       validateAttachmentFilesForMember({
-        member: miniMax,
-        files: [file('one.mp4', 'video/mp4'), file('two.webm', 'video/webm')],
+        member: bob,
+        files: [file('diagram.png', 'image/png')],
+        resolveDeclaration: () => ({ declaredInputModalities: ['image'] }),
+      })
+    ).toBeNull();
+    expect(
+      validateAttachmentPayloadsForMember({
+        member: bob,
+        attachments: [payload({})],
+        resolveDeclaration: () => ({
+          declaredInputModalities: null,
+          unavailableReason: 'Catalog expired. Refresh to retry.',
+        }),
+      })
+    ).toBe('Catalog expired. Refresh to retry.');
+  });
+
+  it('checks the requested recipient declaration without granting another model media support', () => {
+    const supported = member({ providerId: 'opencode', model: 'novel-source/FutureModel' });
+    const unsupported = member({ ...supported, name: 'other', model: 'novel-source/OtherModel' });
+    const resolveDeclaration = (recipient: ResolvedTeamMember) => ({
+      declaredInputModalities: recipient.model === supported.model ? ['image'] : [],
+    });
+    expect(
+      validateAttachmentPayloadsForMember({
+        member: supported,
+        attachments: [payload({})],
+        resolveDeclaration,
+      })
+    ).toBeNull();
+    expect(
+      validateAttachmentPayloadsForMember({
+        member: unsupported,
+        attachments: [payload({})],
+        resolveDeclaration,
+      })
+    ).toContain('does not declare image input');
+  });
+
+  it('enforces video-only count and byte limits from declarations', () => {
+    const recipient = member({ providerId: 'opencode', model: 'custom-source/NewVideoModel' });
+    const resolveDeclaration = () => ({ declaredInputModalities: ['video'] });
+    const video = payload({ filename: 'clip.mp4', mimeType: 'video/mp4' });
+    expect(
+      validateAttachmentFilesForMember({
+        member: recipient,
+        files: [file('clip.mp4', 'video/mp4')],
+        resolveDeclaration,
+      })
+    ).toBeNull();
+    expect(
+      validateAttachmentPayloadsForMember({
+        member: recipient,
+        attachments: [video],
+        resolveDeclaration,
+      })
+    ).toBeNull();
+    expect(
+      validateAttachmentPayloadsForMember({
+        member: recipient,
+        attachments: [payload({})],
+        resolveDeclaration,
+      })
+    ).toContain('does not declare image input');
+    expect(
+      validateAttachmentPayloadsForMember({
+        member: recipient,
+        attachments: [video, { ...video, id: 'two' }],
+        resolveDeclaration,
       })
     ).toBe('Maximum 1 video attachment for this model.');
     expect(
       validateAttachmentPayloadsForMember({
-        member: miniMax,
-        attachments: [
-          payload({ filename: 'one.mp4', mimeType: 'video/mp4' }),
-          payload({ id: 'att-2', filename: 'two.webm', mimeType: 'video/webm' }),
-        ],
-      })
-    ).toBe('Maximum 1 video attachment for this model.');
-    expect(
-      validateAttachmentFilesForMember({
-        member: miniMax,
-        files: [file('too-large.mp4', 'video/mp4', eightMiB + 1)],
+        member: recipient,
+        attachments: [{ ...video, size: 8 * 1024 * 1024 + 1 }],
+        resolveDeclaration,
       })
     ).toBe('Video is too large for the selected model.');
-    expect(
-      validateAttachmentPayloadsForMember({
-        member: miniMax,
-        attachments: [
-          payload({
-            filename: 'clip.mp4',
-            mimeType: 'video/mp4',
-            size: eightMiB - 4,
-          }),
-          payload({ id: 'att-2', size: 8 }),
-        ],
-      })
-    ).toBe('Attachments exceed the selected model size limit.');
   });
 
   it('keeps browser video/mp2t for TypeScript files on the text-file path', () => {
@@ -198,12 +228,17 @@ describe('attachmentRecipientCapabilities', () => {
     expect(
       validateAttachmentFilesForMember({ member: anthropicLead, files: [typeScriptFile] })
     ).toBeNull();
-    expect(validateAttachmentFilesForMember({ member: miniMax, files: [typeScriptFile] })).toBe(
-      'This provider path currently supports image attachments only. Non-image files are blocked before provider delivery.'
-    );
+    expect(
+      validateAttachmentFilesForMember({ member: miniMax, files: [typeScriptFile] })
+    ).toBeNull();
+    const textPayload = payload({ filename: 'worker.ts', mimeType: 'text/plain' });
+    expect(isReferenceAttachmentForMember(miniMax, textPayload)).toBe(true);
+    expect(
+      validateAttachmentPayloadsForMember({ member: miniMax, attachments: [textPayload] })
+    ).toBeNull();
   });
 
-  it('blocks image MIME types not supported by an otherwise image-capable provider', () => {
+  it('routes unsupported Codex GIF images as references rather than native images', () => {
     const codexLead = member({
       name: 'lead',
       agentType: 'team-lead',
@@ -216,13 +251,19 @@ describe('attachmentRecipientCapabilities', () => {
         member: codexLead,
         files: [file('animation.gif', 'image/gif')],
       })
-    ).toBe('This image type is not supported by the selected model.');
+    ).toBeNull();
     expect(
       validateAttachmentPayloadsForMember({
         member: codexLead,
         attachments: [payload({ filename: 'animation.gif', mimeType: 'image/gif' })],
       })
-    ).toBe('This image type is not supported by the selected model.');
+    ).toBeNull();
+    expect(
+      isReferenceAttachmentForMember(
+        codexLead,
+        payload({ filename: 'animation.gif', mimeType: 'image/gif' })
+      )
+    ).toBe(true);
   });
 
   it('allows Claude GIF and WebP image payloads', () => {
@@ -247,7 +288,7 @@ describe('attachmentRecipientCapabilities', () => {
     ).toBeNull();
   });
 
-  it('blocks non-image files for image-only providers', () => {
+  it('routes Codex lead text files as references without enabling native text', () => {
     const codexLead = member({
       name: 'lead',
       agentType: 'team-lead',
@@ -260,17 +301,36 @@ describe('attachmentRecipientCapabilities', () => {
         member: codexLead,
         files: [file('notes.md', 'text/markdown')],
       })
-    ).toBe(
-      'This provider path currently supports image attachments only. Non-image files are blocked before provider delivery.'
-    );
+    ).toBeNull();
     expect(
       validateAttachmentPayloadsForMember({
         member: codexLead,
         attachments: [payload({ filename: 'notes.md', mimeType: 'text/plain' })],
       })
-    ).toBe(
-      'This provider path currently supports image attachments only. Non-image files are blocked before provider delivery.'
+    ).toBeNull();
+    expect(
+      isReferenceAttachmentForMember(
+        codexLead,
+        payload({ filename: 'notes.md', mimeType: 'text/plain' })
+      )
+    ).toBe(true);
+  });
+
+  it('keeps unsupported recipients unavailable for both references and native files', () => {
+    const unsupported = member({ model: 'custom' });
+    expect(canMemberShowAttachmentControl(unsupported)).toBe(false);
+    expect(getMemberAttachmentUnavailableReason(unsupported)).toBe(
+      'Attachments require a supported recipient provider.'
     );
+    for (const mimeType of ['image/png', 'application/octet-stream']) {
+      expect(isReferenceAttachmentForMember(unsupported, payload({ mimeType }))).toBe(false);
+      expect(
+        validateAttachmentPayloadsForMember({
+          member: unsupported,
+          attachments: [payload({ mimeType })],
+        })
+      ).toBe('Attachments require a supported recipient provider.');
+    }
   });
 
   it('allows text/PDF files for Anthropic lead recipients', () => {

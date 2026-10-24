@@ -1,3 +1,4 @@
+import { mergeMessageAttachments } from '@features/agent-attachments/contracts';
 import { createHash } from 'crypto';
 import * as nodeFs from 'fs';
 import * as fs from 'fs/promises';
@@ -10,8 +11,12 @@ import { getEffectiveInboxMessageId } from '../../../../src/main/services/team/i
 import { buildTaskChangePresenceDescriptor } from '../../../../src/main/services/team/taskChangePresenceUtils';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
+import { TeamInboxReader } from '../../../../src/main/services/team/TeamInboxReader';
 import { TeamMemberResolver } from '../../../../src/main/services/team/TeamMemberResolver';
+import { TeamMembersMetaStore } from '../../../../src/main/services/team/TeamMembersMetaStore';
+import { TeamMetaStore } from '../../../../src/main/services/team/TeamMetaStore';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
+import { TeamSentMessagesStore } from '../../../../src/main/services/team/TeamSentMessagesStore';
 import { TeamTaskReader } from '../../../../src/main/services/team/TeamTaskReader';
 import { encodePath, setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
 
@@ -543,6 +548,85 @@ describe('TeamDataService task projection cache invalidation', () => {
 });
 
 describe('TeamDataService draft metadata', () => {
+  // Catches two draft renames acquiring each other's destination lock before rejecting occupied targets.
+  it('rejects concurrent occupied draft destinations before waiting for a second team lock', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-team-draft-rename-admission-'));
+    tempPaths.push(root);
+    setClaudeBasePathOverride(root);
+    const service = new TeamDataService();
+    const lifecycle = new TeamProvisioningService();
+    service.setConfigurationGate((name, operation) =>
+      lifecycle.runLiveRosterMutation(name, operation)
+    );
+    await service.createTeamConfig({ teamName: 'draft-a', members: [] });
+    await service.createTeamConfig({ teamName: 'draft-b', members: [] });
+    const outcomes = await Promise.allSettled([
+      service.renameDraftTeam('draft-a', 'draft-b'),
+      service.renameDraftTeam('draft-b', 'draft-a'),
+    ]);
+    for (const outcome of outcomes) {
+      expect(outcome.status).toBe('rejected');
+      if (outcome.status === 'rejected')
+        expect(outcome.reason.message).toMatch(/^Team already exists:/);
+    }
+    expect(await service.getSavedRequest('draft-a')).toMatchObject({ teamName: 'draft-a' });
+    expect(await service.getSavedRequest('draft-b')).toMatchObject({ teamName: 'draft-b' });
+  });
+
+  it('makes fresh app-owned inbox history readable before publishing draft metadata', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-team-data-empty-inbox-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    const inboxReader = new TeamInboxReader();
+    const writeMeta = TeamMetaStore.prototype.writeMeta;
+    const publishDraft = vi
+      .spyOn(TeamMetaStore.prototype, 'writeMeta')
+      .mockImplementation(async function (this: TeamMetaStore, teamName, meta) {
+        await expect(inboxReader.getMessagesWindow(teamName, { limit: 20 })).resolves.toMatchObject(
+          {
+            messages: [],
+            truncated: false,
+            sourceMessageCount: 0,
+          }
+        );
+        await writeMeta.call(this, teamName, meta);
+      });
+
+    await new TeamDataService().createTeamConfig({
+      teamName: 'test-empty-inbox',
+      providerId: 'opencode',
+      members: [{ name: 'researcher' }],
+    });
+
+    expect(publishDraft).toHaveBeenCalledTimes(1);
+    await expect(
+      fs.access(path.join(claudeRoot, 'teams', 'test-empty-inbox', 'team.meta.json'))
+    ).resolves.toBeUndefined();
+  });
+
+  it('rolls back a fresh draft when its inbox directory cannot be initialized', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-team-data-inbox-rollback-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    const teamDir = path.join(claudeRoot, 'teams', 'test-inbox-rollback');
+    const tasksDir = path.join(claudeRoot, 'tasks', 'test-inbox-rollback');
+    const inboxDir = path.join(teamDir, 'inboxes');
+    const mkdir = nodeFs.promises.mkdir;
+    vi.spyOn(nodeFs.promises, 'mkdir').mockImplementation(async (directoryPath, options) => {
+      if (directoryPath === inboxDir) throw new Error('TEST inbox initialization failed');
+      return mkdir(directoryPath, options);
+    });
+    const publishDraft = vi.spyOn(TeamMetaStore.prototype, 'writeMeta');
+
+    await expect(
+      new TeamDataService().createTeamConfig({ teamName: 'test-inbox-rollback', members: [] })
+    ).rejects.toThrow('TEST inbox initialization failed');
+
+    expect(publishDraft).not.toHaveBeenCalled();
+    await expect(fs.access(teamDir)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(fs.access(tasksDir)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
   it('rejects an existing draft without overwriting its artifacts', async () => {
     const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-draft-collision-'));
     tempPaths.push(claudeRoot);
@@ -606,15 +690,21 @@ describe('TeamDataService draft metadata', () => {
     tempPaths.push(claudeRoot);
     setClaudeBasePathOverride(claudeRoot);
     const service = new TeamDataService();
-    await service.createTeamConfig({ teamName: 'inheritance-team', members: [{ name: 'inherited' }] });
+    await service.createTeamConfig({
+      teamName: 'inheritance-team',
+      members: [{ name: 'inherited' }],
+    });
     const metaPath = path.join(claudeRoot, 'teams', 'inheritance-team', 'members.meta.json');
     const meta = JSON.parse(await fs.readFile(metaPath, 'utf8'));
     meta.members.push({ name: 'team-lead', model: 'old-lead' });
     meta.members.push({ name: 'legacy-lead', role: 'Team Lead', model: 'old-lead' });
     meta.members.push({ name: 'feature-owner', role: 'Lead', model: 'teammate-model' });
     await fs.writeFile(metaPath, JSON.stringify(meta));
-    expect((await service.getSavedRequest('inheritance-team'))?.members.map(member => member.name).sort())
-      .toEqual(['feature-owner', 'inherited']);
+    expect(
+      (await service.getSavedRequest('inheritance-team'))?.members
+        .map((member) => member.name)
+        .sort()
+    ).toEqual(['feature-owner', 'inherited']);
   });
 
   it('round-trips create config metadata through getSavedRequest', async () => {
@@ -685,6 +775,169 @@ describe('TeamDataService draft metadata', () => {
     });
   });
 
+  it('rejects oversized UTF-8 launch instructions without losing readable saved metadata', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'test-team-metadata-bytes-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    const service = new TeamDataService();
+    await service.createTeamConfig({
+      teamName: 'byte-team',
+      prompt: 'Keep the saved instructions',
+      members: [{ name: 'builder' }],
+    });
+    const metaPath = path.join(claudeRoot, 'teams', 'byte-team', 'team.meta.json');
+    const previous = await fs.readFile(metaPath, 'utf8');
+    const store = new TeamMetaStore();
+    const oversizedPrompt = 'ж'.repeat(150_000);
+    await expect(
+      store.updateMeta('byte-team', (meta) => ({ ...meta!, prompt: oversizedPrompt }))
+    ).rejects.toMatchObject({ code: 'TEAM_METADATA_TOO_LARGE', statusCode: 413 });
+    const meta = await store.getMeta('byte-team');
+    await expect(
+      store.writeMeta('byte-team', { ...meta!, prompt: oversizedPrompt })
+    ).rejects.toMatchObject({ code: 'TEAM_METADATA_TOO_LARGE', statusCode: 413 });
+    expect(await fs.readFile(metaPath, 'utf8')).toBe(previous);
+    await expect(service.getSavedRequest('byte-team')).resolves.toMatchObject({
+      prompt: 'Keep the saved instructions',
+      members: [{ name: 'builder' }],
+    });
+  });
+
+  it('rejects combined saved metadata before changing the CLI config', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'test-team-combined-bytes-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    const service = new TeamDataService();
+    const prompt = 'p'.repeat(100_000);
+    await service.createTeamConfig({
+      teamName: 'byte-team',
+      displayName: 'Previous name',
+      description: 'Previous description',
+      prompt,
+      members: [{ name: 'builder' }],
+    });
+    const teamDir = path.join(claudeRoot, 'teams', 'byte-team');
+    const configPath = path.join(teamDir, 'config.json');
+    const previousConfig = JSON.stringify({
+      name: 'Previous name',
+      description: 'Previous description',
+      members: [{ name: 'builder' }],
+    });
+    await fs.writeFile(configPath, previousConfig);
+    const metaPath = path.join(teamDir, 'team.meta.json');
+    const previousMeta = await fs.readFile(metaPath, 'utf8');
+    await expect(
+      service.updateConfig('byte-team', { name: 'New name', description: 'd'.repeat(200_000) })
+    ).rejects.toMatchObject({ code: 'TEAM_METADATA_TOO_LARGE', statusCode: 413 });
+    expect(await fs.readFile(configPath, 'utf8')).toBe(previousConfig);
+    expect(await fs.readFile(metaPath, 'utf8')).toBe(previousMeta);
+    await expect(new TeamConfigReader().getConfig('byte-team')).resolves.toMatchObject({
+      name: 'Previous name',
+      description: 'Previous description',
+    });
+    await expect(service.getSavedRequest('byte-team')).resolves.toMatchObject({
+      displayName: 'Previous name',
+      description: 'Previous description',
+      prompt,
+    });
+  });
+
+  it('includes preserved member tombstones in the UTF-8 roster limit', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'test-team-roster-bytes-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    const service = new TeamDataService();
+    const workflow = 'ж'.repeat(100_000);
+    await service.createTeamConfig({
+      teamName: 'byte-team',
+      members: [{ name: 'previous', workflow }],
+    });
+    const membersPath = path.join(claudeRoot, 'teams', 'byte-team', 'members.meta.json');
+    const previousMembers = await fs.readFile(membersPath, 'utf8');
+    await expect(
+      service.replaceMembers('byte-team', {
+        members: [{ name: 'replacement', workflow: 'w'.repeat(100_000) }],
+      })
+    ).rejects.toMatchObject({ code: 'TEAM_METADATA_TOO_LARGE', statusCode: 413 });
+    expect(await fs.readFile(membersPath, 'utf8')).toBe(previousMembers);
+    await expect(service.getSavedRequest('byte-team')).resolves.toMatchObject({
+      members: [{ name: 'previous', workflow }],
+    });
+  });
+
+  it('keeps an explicit unresolved draft through unrelated metadata edits and reopen', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-unresolved-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    await new TeamDataService().createTeamConfig({
+      teamName: 'unresolved-team',
+      runtimeSelectionVersion: 1,
+      prompt: 'Coordinate the investigation',
+      members: [{ name: 'investigator', role: 'Researcher' }],
+    });
+    const store = new TeamMetaStore();
+    await store.updateMeta('unresolved-team', (meta) => ({
+      ...meta!,
+      description: 'Edited description',
+    }));
+    const current = await store.getMeta('unresolved-team');
+    // Existing writers replacing presentation/settings must not remove opt-in authority.
+    const { runtimeSelectionVersion: _marker, ...oldWriterPayload } = current!;
+    await store.writeMeta('unresolved-team', oldWriterPayload);
+    const reopened = await new TeamDataService().getSavedRequest('unresolved-team');
+    expect(reopened).toMatchObject({
+      runtimeSelectionVersion: 1,
+      description: 'Edited description',
+      prompt: 'Coordinate the investigation',
+      members: [{ name: 'investigator', role: 'Researcher' }],
+    });
+    expect(reopened?.providerId).toBeUndefined();
+    expect(reopened?.model).toBeUndefined();
+    await expect(
+      fs.stat(path.join(claudeRoot, 'teams', 'unresolved-team', 'config.json'))
+    ).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('keeps every draft artifact on the captured root when the active root changes during persistence', async () => {
+    const firstRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'draft-captured-root-'));
+    const secondRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'draft-new-root-'));
+    tempPaths.push(firstRoot, secondRoot);
+    setClaudeBasePathOverride(firstRoot);
+    const writeMeta = TeamMetaStore.prototype.writeMeta;
+    vi.spyOn(TeamMetaStore.prototype, 'writeMeta').mockImplementation(function (
+      this: TeamMetaStore,
+      teamName,
+      metadata,
+      capturedBase
+    ) {
+      setClaudeBasePathOverride(secondRoot);
+      return writeMeta.call(this, teamName, metadata, capturedBase);
+    });
+    await new TeamDataService().createTeamConfig({
+      teamName: 'captured-team',
+      runtimeSelectionVersion: 1,
+      members: [{ name: 'investigator', workflow: 'Read and report evidence' }],
+    });
+    const writtenTeam = path.join(firstRoot, 'teams', 'captured-team');
+    const meta = JSON.parse(await fs.readFile(path.join(writtenTeam, 'team.meta.json'), 'utf8'));
+    const members = JSON.parse(
+      await fs.readFile(path.join(writtenTeam, 'members.meta.json'), 'utf8')
+    );
+    expect(meta.runtimeSelectionVersion).toBe(1);
+    expect(members.members).toMatchObject([
+      { name: 'investigator', workflow: 'Read and report evidence' },
+    ]);
+    await expect(
+      fs.access(path.join(firstRoot, 'tasks', 'captured-team'))
+    ).resolves.toBeUndefined();
+    await expect(fs.access(path.join(secondRoot, 'teams'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fs.access(path.join(secondRoot, 'tasks'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+  });
+
   it('omits removed members from saved request members', async () => {
     const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-saved-request-removed-'));
     tempPaths.push(claudeRoot);
@@ -745,7 +998,9 @@ describe('TeamDataService draft metadata', () => {
     await expect(
       fs.access(path.join(claudeRoot, 'teams', 'fixteam-test', 'team.meta.json'))
     ).resolves.toBeUndefined();
-    await expect(fs.access(path.join(claudeRoot, 'tasks', 'fixteam-test'))).resolves.toBeUndefined();
+    await expect(
+      fs.access(path.join(claudeRoot, 'tasks', 'fixteam-test'))
+    ).resolves.toBeUndefined();
 
     await expect(service.getSavedRequest('signal-ops')).resolves.toBeNull();
     await expect(service.getSavedRequest('fixteam-test')).resolves.toMatchObject({
@@ -994,7 +1249,9 @@ function createGetTeamDataHarness(
     getTeamMeta?: () => Promise<TeamMetaFile | null>;
     getState?: () => Promise<KanbanState>;
     readMessages?: () => Promise<InboxMessage[]>;
-    resolveMembers?: (...args: Parameters<TeamMemberResolver['resolveMembers']>) => ResolvedTeamMember[];
+    resolveMembers?: (
+      ...args: Parameters<TeamMemberResolver['resolveMembers']>
+    ) => ResolvedTeamMember[];
     listProcesses?: () => TeamProcess[];
     getMemberAdvisories?: () => Promise<Map<string, unknown>>;
   } = {}
@@ -1197,8 +1454,10 @@ function createDurableTaskStartNotificationHarness(options: {
 describe('TeamDataService', () => {
   it('rejects duplicate member names in replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
+    const getMembers = vi.fn(async () => []);
     const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
+      getMembers,
+      getMeta: vi.fn(async () => ({ version: 1, members: await getMembers() })),
       writeMembers,
     } as never;
 
@@ -1231,8 +1490,10 @@ describe('TeamDataService', () => {
 
   it('rejects invalid or reserved member names in replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
+    const getMembers = vi.fn(async () => []);
     const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
+      getMembers,
+      getMeta: vi.fn(async () => ({ version: 1, members: await getMembers() })),
       writeMembers,
     } as never;
 
@@ -1268,19 +1529,25 @@ describe('TeamDataService', () => {
 
   it('preserves agentId for existing members during replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
+    const getMembers = vi.fn(async () => [
+      {
+        name: 'alice',
+        role: 'Developer',
+        providerId: 'codex',
+        model: 'gpt-5.4-mini',
+        effort: 'medium',
+        agentType: 'general-purpose',
+        agentId: 'alice@runtime-team',
+        joinedAt: 1710000000000,
+      },
+    ]);
     const membersMetaStore = {
-      getMembers: vi.fn(async () => [
-        {
-          name: 'alice',
-          role: 'Developer',
-          providerId: 'codex',
-          model: 'gpt-5.4-mini',
-          effort: 'medium',
-          agentType: 'general-purpose',
-          agentId: 'alice@runtime-team',
-          joinedAt: 1710000000000,
-        },
-      ]),
+      getMembers,
+      getMeta: vi.fn(async () => ({
+        version: 1,
+        providerBackendId: 'codex-native',
+        members: await getMembers(),
+      })),
       writeMembers,
     } as never;
 
@@ -1322,14 +1589,17 @@ describe('TeamDataService', () => {
           effort: 'high',
           agentId: 'alice@runtime-team',
         }),
-      ])
+      ]),
+      { providerBackendId: 'codex-native' }
     );
   });
 
   it('persists teammate worktree isolation in replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
+    const getMembers = vi.fn(async () => []);
     const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
+      getMembers,
+      getMeta: vi.fn(async () => ({ version: 1, members: await getMembers() })),
       writeMembers,
     } as never;
 
@@ -1366,12 +1636,17 @@ describe('TeamDataService', () => {
       isolation: 'worktree',
     });
     expect(writtenMembers.find((member) => member.name === 'bob')?.isolation).toBeUndefined();
+    expect(writeMembers).toHaveBeenCalledWith('runtime-team', writtenMembers, {
+      providerBackendId: undefined,
+    });
   });
 
   it('persists member-level provider backend and fast mode during replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
+    const getMembers = vi.fn(async () => []);
     const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
+      getMembers,
+      getMeta: vi.fn(async () => ({ version: 1, members: await getMembers() })),
       writeMembers,
     } as never;
 
@@ -1417,7 +1692,8 @@ describe('TeamDataService', () => {
           effort: 'high',
           fastMode: 'on',
         }),
-      ])
+      ]),
+      { providerBackendId: undefined }
     );
   });
 
@@ -1468,8 +1744,10 @@ describe('TeamDataService', () => {
 
   it('allows multiple OpenCode teammates in replaceMembers drafts before they are persisted', async () => {
     const writeMembers = vi.fn(async () => {});
+    const getMembers = vi.fn(async () => []);
     const membersMetaStore = {
-      getMembers: vi.fn(async () => []),
+      getMembers,
+      getMeta: vi.fn(async () => ({ version: 1, members: await getMembers() })),
       writeMembers,
     } as never;
 
@@ -1501,6 +1779,14 @@ describe('TeamDataService', () => {
     ).resolves.toBeUndefined();
 
     expect(writeMembers).toHaveBeenCalledTimes(1);
+    expect(writeMembers).toHaveBeenCalledWith(
+      'runtime-team',
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'alice', providerId: 'opencode' }),
+        expect.objectContaining({ name: 'bob', providerId: 'opencode' }),
+      ]),
+      { providerBackendId: undefined }
+    );
   });
 
   it('blocks live addMember on a running mixed team', async () => {
@@ -1565,16 +1851,18 @@ describe('TeamDataService', () => {
 
   it('blocks live replaceMembers on a running mixed team', async () => {
     const writeMembers = vi.fn(async () => {});
+    const getMembers = vi.fn(async () => [
+      {
+        name: 'alice',
+        role: 'Reviewer',
+        providerId: 'opencode',
+        model: 'minimax-m2.5-free',
+        agentType: 'general-purpose',
+      },
+    ]);
     const membersMetaStore = {
-      getMembers: vi.fn(async () => [
-        {
-          name: 'alice',
-          role: 'Reviewer',
-          providerId: 'opencode',
-          model: 'minimax-m2.5-free',
-          agentType: 'general-purpose',
-        },
-      ]),
+      getMembers,
+      getMeta: vi.fn(async () => ({ version: 1, members: await getMembers() })),
       writeMembers,
     } as never;
 
@@ -1671,20 +1959,22 @@ describe('TeamDataService', () => {
 
   it('does not carry over agentId from a previously removed member with the same name', async () => {
     const writeMembers = vi.fn(async () => {});
+    const getMembers = vi.fn(async () => [
+      {
+        name: 'alice',
+        role: 'Developer',
+        providerId: 'codex',
+        model: 'gpt-5.4-mini',
+        effort: 'medium',
+        agentType: 'general-purpose',
+        agentId: 'alice@old-runtime-team',
+        joinedAt: 1710000000000,
+        removedAt: 1715000000000,
+      },
+    ]);
     const membersMetaStore = {
-      getMembers: vi.fn(async () => [
-        {
-          name: 'alice',
-          role: 'Developer',
-          providerId: 'codex',
-          model: 'gpt-5.4-mini',
-          effort: 'medium',
-          agentType: 'general-purpose',
-          agentId: 'alice@old-runtime-team',
-          joinedAt: 1710000000000,
-          removedAt: 1715000000000,
-        },
-      ]),
+      getMembers,
+      getMeta: vi.fn(async () => ({ version: 1, members: await getMembers() })),
       writeMembers,
     } as never;
 
@@ -1727,7 +2017,8 @@ describe('TeamDataService', () => {
           agentId: undefined,
           removedAt: undefined,
         }),
-      ])
+      ]),
+      { providerBackendId: undefined }
     );
   });
 
@@ -1755,6 +2046,9 @@ describe('TeamDataService', () => {
         },
       ]),
       writeMembers,
+      serializeMembers: TeamMembersMetaStore.prototype.serializeMembers.bind(
+        new TeamMembersMetaStore()
+      ),
     } as never;
 
     const service = new TeamDataService(
@@ -1927,7 +2221,13 @@ describe('TeamDataService', () => {
       .mockResolvedValue(undefined);
     const service = new TeamDataService();
     Object.assign(service as unknown as { membersMetaStore: unknown }, {
-      membersMetaStore: { getMembers: vi.fn(async () => []), writeMembers },
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+        writeMembers,
+        serializeMembers: TeamMembersMetaStore.prototype.serializeMembers.bind(
+          new TeamMembersMetaStore()
+        ),
+      },
     });
 
     await expect(service.restoreMember('runtime-team', 'alice')).rejects.toThrow(
@@ -2724,7 +3024,7 @@ describe('TeamDataService', () => {
       () =>
         ({
           taskBoard: { createTask: vi.fn(() => task) },
-          messages: { sendMessage },
+          messages: { sendMessageAsync: sendMessage },
         }) as never
     );
 
@@ -3064,8 +3364,14 @@ describe('TeamDataService', () => {
     expect(createTaskMock).toHaveBeenCalledWith(expect.objectContaining({ related: ['1', '2'] }));
   });
 
-  it('routes durable inbox writes through controller message API', async () => {
-    const sendMessageMock = vi.fn(() => ({ deliveredToInbox: true, messageId: 'm-1' }));
+  it('awaits the async controller message API for durable inbox writes', async () => {
+    let settle!: (value: { deliveredToInbox: boolean; messageId: string }) => void;
+    const pendingWrite = new Promise<{ deliveredToInbox: boolean; messageId: string }>(
+      (resolve) => {
+        settle = resolve;
+      }
+    );
+    const sendMessageMock = vi.fn(() => pendingWrite);
 
     const service = new TeamDataService(
       {
@@ -3084,19 +3390,28 @@ describe('TeamDataService', () => {
       () =>
         ({
           messages: {
-            sendMessage: sendMessageMock,
+            sendMessageAsync: sendMessageMock,
           },
         }) as never
     );
 
-    const result = await service.sendMessage('my-team', {
-      member: 'alice',
-      text: 'hello',
-      summary: 'ping',
-      actionMode: 'ask',
-      commentId: 'comment-1',
-    });
-
+    let settled = false;
+    const resultPromise = service
+      .sendMessage('my-team', {
+        member: 'alice',
+        text: 'hello',
+        summary: 'ping',
+        actionMode: 'ask',
+        commentId: 'comment-1',
+      })
+      .then((result) => {
+        settled = true;
+        return result;
+      });
+    await vi.waitFor(() => expect(sendMessageMock).toHaveBeenCalledTimes(1));
+    expect(settled).toBe(false);
+    settle({ deliveredToInbox: true, messageId: 'm-1' });
+    const result = await resultPromise;
     expect(result).toEqual({ deliveredToInbox: true, messageId: 'm-1' });
     expect(sendMessageMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -5748,6 +6063,51 @@ describe('TeamDataService', () => {
     expect(data).toEqual({ 'task-1': 'needs_attention' });
   });
 
+  it('retains lead reference classification through real sent history and reloaded message projection', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-lead-reference-history-'));
+    tempPaths.push(root);
+    setClaudeBasePathOverride(root);
+    const createService = () =>
+      new TeamDataService(
+        {
+          getConfig: vi.fn(async () => ({
+            name: 'My team',
+            members: [{ name: 'team-lead', role: 'Lead' }],
+          })),
+        } as never,
+        {} as never,
+        { getMessages: vi.fn(async () => []), listInboxNames: vi.fn(async () => []) } as never
+      );
+    const png = { id: 'png', filename: 'native.png', mimeType: 'image/png', size: 3, order: 0 };
+    const gif = { id: 'gif', filename: 'reference.gif', mimeType: 'image/gif', size: 3, order: 1 };
+    const result = await createService().sendDirectToLead(
+      'my-team',
+      'team-lead',
+      'Read both files',
+      undefined,
+      [png, gif],
+      undefined,
+      'classified-lead-message',
+      'do',
+      [gif]
+    );
+    expect(result).toMatchObject({ deliveredViaStdin: true, messageId: 'classified-lead-message' });
+    const persisted = await new TeamSentMessagesStore().readMessages('my-team');
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0].attachments).toEqual([png, gif]);
+    expect(persisted[0].fileReferences).toEqual([gif]);
+    const page = await createService().getMessagesPage('my-team', { limit: 20 });
+    const reloaded = page.messages.find((row) => row.messageId === 'classified-lead-message');
+    expect(reloaded).toMatchObject({
+      text: 'Read both files',
+      attachments: [png, gif],
+      fileReferences: [gif],
+    });
+    expect(mergeMessageAttachments(reloaded!).map((item) => item.id)).toEqual(['png', 'gif']);
+    // Renderer generic-file classification uses these reference IDs even for image/gif MIME.
+    expect(new Set(reloaded!.fileReferences?.map((item) => item.id))).toEqual(new Set(['gif']));
+  });
+
   it('persists standalone slash metadata when sending directly to the live lead', async () => {
     const appendSentMessage = vi.fn((payload) => payload);
     const service = new TeamDataService(
@@ -8204,7 +8564,7 @@ describe('TeamDataService', () => {
       const fillerMessages = Array.from({ length: 55 }, (_, index) => ({
         from: 'alice',
         text: `filler-${index}`,
-        timestamp: `2026-01-01T00:00:${String(10 + index).padStart(2, '0')}.000Z`,
+        timestamp: new Date(Date.UTC(2026, 0, 1, 0, 0, 10 + index)).toISOString(),
         messageId: `filler-${index}`,
         source: 'inbox' as const,
       }));

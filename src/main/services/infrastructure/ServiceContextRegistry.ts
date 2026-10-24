@@ -96,6 +96,8 @@ export class ServiceContextRegistry {
     }
 
     if (this.activeContextId === contextId) this.activeSelection = {};
+    existing.retireDetailReads();
+    replacement.retireDetailReads();
     this.contexts.set(contextId, replacement);
     existing.dispose();
     logger.info(`Context replaced: ${contextId} (${replacement.type})`);
@@ -152,6 +154,8 @@ export class ServiceContextRegistry {
     logger.info(`Switching context: ${previous.id} → ${current.id}`);
 
     this.activeSelection = {};
+    previous.retireDetailReads();
+    current.retireDetailReads();
 
     // Stop file watcher on previous context (pause, don't dispose)
     previous.stopFileWatcher();
@@ -201,6 +205,7 @@ export class ServiceContextRegistry {
       this.activeContextId = 'local';
       const local = this.contexts.get('local');
       if (local) {
+        local.retireDetailReads();
         local.startFileWatcher();
       }
     }

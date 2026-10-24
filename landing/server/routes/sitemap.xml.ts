@@ -13,9 +13,9 @@ const buildDate = new Date().toISOString().split("T")[0];
 
 export default defineEventHandler((event) => {
   const config = useRuntimeConfig();
-  const siteUrl = ((config.public.siteUrl as string) || "https://777genius.github.io/agent-teams-ai").replace(/\/+$/, "");
+  const siteUrl = ((config.public.siteUrl as string) || "https://agentteams.live").replace(/\/+$/, "");
   const toSiteUrl = (path: string) => `${siteUrl}${path === "/" ? "/" : `/${path.replace(/^\/+/, "")}`}`;
-  const ogImagePath = "og-image-agent-teams-v6.png";
+  const ogImagePath = "og-image-agent-teams-v7.png";
   const homeImagePaths = [ogImagePath, ...screenshots.map((screenshot) => screenshot.path)];
   const downloadImagePaths = [ogImagePath, "logo-192.png"];
 

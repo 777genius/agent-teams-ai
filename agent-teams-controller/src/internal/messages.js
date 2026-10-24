@@ -42,11 +42,20 @@ function findResolvedMember(paths, memberName) {
   if (!resolvedName) return null;
   const key = resolvedName.toLowerCase();
   const members = runtimeHelpers.resolveTeamMembers(paths).members || [];
-  return members.find((member) => String(member?.name || '').trim().toLowerCase() === key) || null;
+  return (
+    members.find(
+      (member) =>
+        String(member?.name || '')
+          .trim()
+          .toLowerCase() === key
+    ) || null
+  );
 }
 
 function isLeadRecipient(paths, to) {
-  const target = String(to || '').trim().toLowerCase();
+  const target = String(to || '')
+    .trim()
+    .toLowerCase();
   if (!target) return false;
   const lead = runtimeHelpers.inferLeadName(paths).trim().toLowerCase();
   return target === 'lead' || target === 'team-lead' || (lead && target === lead);
@@ -71,7 +80,9 @@ function normalizeMessageSendFlags(context, flags) {
       allowLeadAliases: true,
     });
     if (!resolvedTo && runtimeHelpers.looksLikeCrossTeamToolRecipient(rawTo)) {
-      throw new Error('message_send cannot target cross_team_send. Use cross_team_send with toTeam.');
+      throw new Error(
+        'message_send cannot target cross_team_send. Use cross_team_send with toTeam.'
+      );
     }
     if (!resolvedTo && runtimeHelpers.looksLikeCrossTeamRecipient(rawTo)) {
       throw new Error('message_send cannot target another team. Use cross_team_send with toTeam.');
@@ -139,21 +150,42 @@ function assertOpenCodeMessageIsNotBootstrapNoise(context, flags) {
   );
 }
 
-function sendMessage(context, flags) {
+function assertNotGroupReply(context, flags) {
+  if (flags.groupChatId || flags.groupMessageId) {
+    throw new Error('Group messages must use group_chat_send with an explicit groupChatId.');
+  }
+  if (typeof flags.relayOfMessageId !== 'string' || !flags.relayOfMessageId.trim()) return;
+  let inbound;
+  try {
+    inbound = messageStore.lookupMessage(context.paths, flags.relayOfMessageId).message;
+  } catch {
+    return;
+  } // Existing DM validation owns unknown relay ids.
+  if (inbound.groupChatId) {
+    throw new Error(
+      'This inbound message belongs to a group chat. Use group_chat_send; do not send a private reply.'
+    );
+  }
+}
+
+function prepareMessageSend(context, flags) {
+  assertNotGroupReply(context, flags);
   const normalized = normalizeMessageSendFlags(context, normalizePlaceholderTaskRefPrefixes(flags));
   assertUserDirectedMessageHasSender(context, normalized);
   assertOpenCodeMessageIsNotBootstrapNoise(context, normalized);
-  return messageStore.sendInboxMessage(context.paths, normalized);
+  return normalized;
+}
+
+function sendMessage(context, flags) {
+  return messageStore.sendInboxMessage(context.paths, prepareMessageSend(context, flags));
+}
+
+async function sendMessageAsync(context, flags) {
+  return messageStore.sendInboxMessageAsync(context.paths, prepareMessageSend(context, flags));
 }
 
 function sendTrustedMessage(context, flags) {
-  const normalized = normalizeMessageSendFlags(
-    { ...context, allowUserMessageSender: true },
-    normalizePlaceholderTaskRefPrefixes(flags),
-  );
-  assertUserDirectedMessageHasSender(context, normalized);
-  assertOpenCodeMessageIsNotBootstrapNoise(context, normalized);
-  return messageStore.sendInboxMessage(context.paths, normalized);
+  return sendMessage({ ...context, allowUserMessageSender: true }, flags);
 }
 
 function appendSentMessage(context, flags) {
@@ -173,5 +205,6 @@ module.exports = {
   lookupMessage,
   retractUnreadTaskNotifications,
   sendMessage,
+  sendMessageAsync,
   sendTrustedMessage,
 };

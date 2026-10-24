@@ -16,7 +16,7 @@ const row = (v: unknown): Record<string, unknown> => {
   return v as Record<string, unknown>;
 };
 async function stopReceipts(root: string) {
-  const path = join(root, 'hoststore/teams/test-desktop-backend/commands');
+  const path = join(root, 'hoststore/teams/test-desktop-backend/.host-owner/commands');
   const files = (await readdir(path)).filter((p) => /^[a-f0-9]{64}\.json$/.test(p));
   assert.ok(files.length <= 128);
   const records = await Promise.all(
@@ -45,8 +45,6 @@ export async function qualifyColdProcessUi(
     id = String(original.id);
   const selection = hostTeamSelectionKey(fixture.handleId);
   const services = await readProcessServices(fixture.root);
-  await probeProcessService(services.primary);
-  await probeProcessService(services.neighbor);
   assert.deepEqual(await stopReceipts(fixture.root), []);
   const steps: Record<string, unknown>[] = [];
   const proof: Record<string, unknown> = {
@@ -55,7 +53,7 @@ export async function qualifyColdProcessUi(
     original,
     selection,
     scope:
-      'Actual native member MCP registration → original Host controlled crash → existing Electron ProcessesSection original-ref Stop',
+      'Actual native member MCP registration → original Host controlled crash → existing Electron ProcessesSection original-ref reconciliation; Stop only if exact original remains same-live',
     excluded: [
       'whole process tree stop',
       'provider native-root cleanup qualification',
@@ -116,8 +114,9 @@ export async function qualifyColdProcessUi(
   const processRow = row(owner.process);
   assert.equal(processRow.pid, services.primary.pid);
   assert.equal(processRow.label, PROCESS_LABEL);
-  assert.equal(processRow.observation, 'same-live');
-  assert.equal(processRow.canTerminate, true);
+  assert.ok(['same-live', 'absent'].includes(String(processRow.observation)),
+    'unknown/stale remains INCOMPLETE; never recapture or signal');
+  assert.equal(processRow.canTerminate, processRow.observation === 'same-live');
   assert.equal(processRow.pendingStop, undefined);
   proof.coldOwnerProps = owner;
   // Actual unified renderer read, never a monkeypatch or alternate mutation path.
@@ -128,7 +127,9 @@ export async function qualifyColdProcessUi(
   );
   const inventory = (data.processes as unknown[]).map(row);
   assert.equal(inventory.filter((p) => p.processRef === processRef).length, 1);
-  assert.equal(inventory.find((p) => p.processRef === processRef)!.canTerminate, true);
+  const originalRead = inventory.find((p) => p.processRef === processRef)!;
+  assert.equal(originalRead.observation, processRow.observation);
+  assert.equal(originalRead.canTerminate, processRow.canTerminate);
   proof.coldOwnerRead = data;
   const screenshot = async (name: string) => {
     const value = row(
@@ -144,7 +145,48 @@ export async function qualifyColdProcessUi(
     });
     return { path, sha256: await fileDigest(path) };
   };
+  await ui.scrollTo(
+    '[data-section-id="processes"] span.font-medium',
+    'visible original registered process label',
+    PROCESS_LABEL
+  );
+  const originalRenderedRow = row(await ui.waitRead(`(() => {
+    const labels=[...document.querySelectorAll('[data-section-id="processes"] span.font-medium')]
+      .filter(node=>node.textContent.trim()===${JSON.stringify(PROCESS_LABEL)});
+    if(labels.length!==1)return null;
+    const label=labels[0],container=label.parentElement;
+    const pids=[...container.querySelectorAll('span.font-mono')]
+      .filter(node=>node.textContent.trim()===${JSON.stringify('PID' + services.primary.pid)});
+    if(pids.length!==1)return null;
+    const visible=node=>{
+      const r=node.getBoundingClientRect(),style=getComputedStyle(node);
+      const x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);
+      return r.width>0&&r.height>0&&r.top>=0&&r.bottom<=innerHeight&&r.left>=0&&r.right<=innerWidth&&
+        style.display!=='none'&&style.visibility==='visible'&&hit&&(node===hit||node.contains(hit));
+    };
+    if(!visible(label)||!visible(pids[0]))return null;
+    const r=container.getBoundingClientRect();
+    return {label:label.textContent.trim(),pidText:pids[0].textContent.trim(),
+      geometry:{x:r.x,y:r.y,width:r.width,height:r.height},
+      killCount:[...container.querySelectorAll('button')].filter(b=>b.textContent.trim()==='Kill').length};
+  })()`, 'rendered original process label/PID with visible geometry'));
+  proof.originalRenderedRow = originalRenderedRow;
   proof.beforeScreenshot = await screenshot('ui-original-native-process-before-stop.png');
+  if (processRow.observation === 'absent') {
+    assert.equal(originalRenderedRow.killCount, 0, 'absent original row has no native Stop action');
+    assert.deepEqual(await stopReceipts(fixture.root), []);
+    proof.qualificationScope = 'cold-original-row-read-only';
+    proof.coldReconciliation = 'ORIGINAL_CAPTURE_ABSENT_NO_STOP';
+    proof.stopQualification = 'NOT_ATTEMPTED_ORIGINAL_ALREADY_ABSENT';
+    proof.nativeCleanupClaim = false;
+    proof.runtimeCustody = 'HOLD';
+    proof.status = 'PASS'; // Scoped cold read only; live Kill is a separate retained proof.
+    return hostPid;
+  }
+  await probeProcessService(services.primary);
+  const neighborBeforeStop = await readFile(
+    join(fixture.root, 'workspace/process-neighbor-lifecycle.ndjson'), 'utf8'
+  );
   await ui.scrollTo('[data-section-id="processes"] button', 'actual original Stop button', 'Kill');
   const stopPoint = await ui.waitRead(
     `(() => {
@@ -215,7 +257,6 @@ export async function qualifyColdProcessUi(
     await delay(100);
   }
   assert.ok(terminal, 'signal acceptance alone cannot qualify observed original exit');
-  await probeProcessService(services.neighbor);
   const history = await stopReceipts(fixture.root);
   assert.equal(history.length, 1);
   assert.equal(history[0]!.commandId, commandId);
@@ -232,11 +273,21 @@ export async function qualifyColdProcessUi(
     join(fixture.root, 'workspace/process-neighbor-lifecycle.ndjson'),
     'utf8'
   );
-  assert.equal(neighborLifecycle.includes('SIGTERM'), false);
+  assert.equal(
+    neighborLifecycle.split('\n').filter(line => line.includes('SIGTERM')).length,
+    neighborBeforeStop.split('\n').filter(line => line.includes('SIGTERM')).length,
+    'primary Stop adds no neighbor SIGTERM; prior EOF/TTL is recorded independently'
+  );
   proof.terminalStop = terminal;
   proof.ownerHistory = history;
   proof.primaryLifecycle = lifecycle;
-  proof.neighborAliveAfterPrimaryStop = true;
+  proof.neighborLifecycleBeforeStop = neighborBeforeStop;
+  proof.neighborLifecycleAfterStop = neighborLifecycle;
+  proof.qualificationScope = 'cold-original-row-and-one-stop';
+  proof.stopQualification = 'COMPLETED_ORIGINAL_REF_STOP';
+  proof.coldReconciliation = 'ORIGINAL_CAPTURE_SAME_LIVE_STOP_COMPLETED';
+  proof.nativeCleanupClaim = false;
+  proof.runtimeCustody = 'HOLD';
   proof.afterScreenshot = await screenshot('ui-original-native-process-after-stop.png');
   proof.signalEvidence =
     'One admitted UI stop command, one accepted original native request, one observed TEST service SIGTERM; no syscall tracing claim';

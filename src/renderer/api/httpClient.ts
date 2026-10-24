@@ -1,7 +1,3 @@
-import {
-  AGENT_BACKEND_REVIEW_EVENTS_ROUTE,
-  AGENT_BACKEND_REVIEW_FILE_CHANGE_CHANNEL,
-} from '@features/agent-backend/contracts';
 /**
  * HTTP-based implementation of ElectronAPI for browser mode.
  *
@@ -36,12 +32,17 @@ import {
   type UpsertOrganizationRelationRequest,
   type UpsertOrganizationUnitRequest,
 } from '@features/organizations/contracts';
+import { createHttpTeamGroupChatsAPI } from '@features/team-group-chats';
 import {
   TOKEN_USAGE_BUDGET_SETTINGS_ROUTE,
+  TOKEN_USAGE_BUDGET_STATUS_CHANGED,
+  TOKEN_USAGE_BUDGET_STATUS_ROUTE,
   TOKEN_USAGE_SNAPSHOT_CHANGED,
   TOKEN_USAGE_SNAPSHOT_ROUTE,
   type TokenUsageAnalyticsSnapshotDto,
   type TokenUsageBudgetSettingsDto,
+  type TokenUsageBudgetSettingsUpdateRequestDto,
+  type TokenUsageBudgetStatusDto,
   type TokenUsageElectronApi,
   type TokenUsageSnapshotRequest,
 } from '@features/token-usage/contracts';
@@ -53,6 +54,7 @@ import {
 import { SENTRY_ENVIRONMENT, SENTRY_RELEASE } from '@shared/utils/sentryConfig';
 
 import { createBrowserReviewApi } from './browserReviewApi';
+import { createAgentBackendReviewHttpTransport } from './createAgentBackendReviewHttpTransport';
 
 import type { AnnouncementsApi, AnnouncementsSnapshot } from '@features/announcements/contracts';
 import type {
@@ -60,6 +62,11 @@ import type {
   CodexStartChatgptLoginOptions,
 } from '@features/codex-account/contracts';
 import type { CodexRuntimeAPI } from '@features/codex-runtime-installer/contracts';
+import type {
+  ConnectionInfoV1,
+  ExternalAgentConnectionApi,
+} from '@features/external-agent-connection/contracts';
+import type { GatewayProviderApi } from '@features/gateway-provider/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { DashboardRecentProjectsPayload } from '@features/recent-projects/contracts';
@@ -122,6 +129,7 @@ import type {
   SshConnectionStatus,
   SshLastConnection,
   SubagentDetail,
+  TaskFieldUpdates,
   TeamChangeEvent,
   TeamClaudeLogsQuery,
   TeamClaudeLogsResponse,
@@ -159,9 +167,11 @@ import type { TerminalAPI } from '@shared/types/terminal';
 
 function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): string {
   const query = new URLSearchParams();
-  if (request?.teamName) query.set('teamName', request.teamName);
-  for (const teamName of request?.teamNames ?? []) {
-    query.append('teamNames', teamName);
+  if (request?.teamIds !== undefined) {
+    for (const teamId of request.teamIds) query.append('teamIds', teamId);
+  } else {
+    if (request?.teamName) query.set('teamName', request.teamName);
+    for (const teamName of request?.teamNames ?? []) query.append('teamNames', teamName);
   }
   if (request?.agentId) query.set('agentId', request.agentId);
   if (request?.commandId) query.set('commandId', request.commandId);
@@ -218,28 +228,36 @@ function createBrowserRuntimeProviderError<T extends RuntimeProviderModelTestRun
   };
 }
 
+function gatewayUnavailable(): never {
+  throw new Error('Gateway providers are available in the desktop app.');
+}
+
 export class HttpAPIClient implements ElectronAPI {
   agentBackend = createAgentBackendHttpClient(
     (route, request) => this.post(route, request),
     (route) => this.get(route),
-    {
-      post: (route, request) => this.post<void>(route, request),
-      subscribe: (callback, status) => {
-        const stream = new EventSource(`${this.baseUrl}${AGENT_BACKEND_REVIEW_EVENTS_ROUTE}`);
-        let opened = false;
-        stream.onopen = () => {
-          status?.(opened ? 'stream-reconnected' : 'ready');
-          opened = true;
-        };
-        stream.onerror = () => status?.('stream-lost');
-        stream.addEventListener(AGENT_BACKEND_REVIEW_FILE_CHANGE_CHANNEL, (event) =>
-          callback(JSON.parse((event as MessageEvent<string>).data))
-        );
-        return () => stream.close();
-      },
-    },
+    createAgentBackendReviewHttpTransport(
+      () => this.baseUrl,
+      (route, request) => this.post<void>(route, request)
+    ),
     (route, request) => this.post(route, request)
   );
+  gatewayProvider: GatewayProviderApi = {
+    listGatewayProfiles: async () => [],
+    saveGatewayProfile: async () => gatewayUnavailable(),
+    deleteGatewayProfile: async () => gatewayUnavailable(),
+    probeGatewayModels: async () => gatewayUnavailable(),
+    listGatewayBindings: async () => [],
+    bindGatewayMember: async () => gatewayUnavailable(),
+    unbindGatewayMember: async () => gatewayUnavailable(),
+  };
+  get teamGroupChats() {
+    return createHttpTeamGroupChatsAPI(this.baseUrl);
+  }
+  externalAgentConnection: ExternalAgentConnectionApi = {
+    getConnectionInfo: () => this.get<ConnectionInfoV1>('/api/app/connection'),
+    retryConnection: () => this.post<ConnectionInfoV1>('/api/app/connection/retry'),
+  };
   announcements: AnnouncementsApi = {
     getSnapshot: async () => this.unavailableAnnouncements(),
     refresh: async () => this.unavailableAnnouncements(),
@@ -344,22 +362,25 @@ export class HttpAPIClient implements ElectronAPI {
     return value;
   }
 
-  private async parseJson<T>(res: Response): Promise<T> {
+  private async parseJson<T>(res: Response, reviveDates = true): Promise<T> {
     const text = await res.text();
     if (res.ok && res.status === 204) return undefined as T;
     if (!res.ok) {
       const parsed = JSON.parse(text) as { error?: string };
       throw new Error(parsed.error ?? `HTTP ${res.status}`);
     }
-    return JSON.parse(text, (key, value) => HttpAPIClient.reviveDates(key, value)) as T;
+    return JSON.parse(
+      text,
+      reviveDates ? (key, value) => HttpAPIClient.reviveDates(key, value) : undefined
+    ) as T;
   }
 
-  private async get<T>(path: string): Promise<T> {
+  private async get<T>(path: string, reviveDates = true): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
       const res = await fetch(`${this.baseUrl}${path}`, { signal: controller.signal });
-      return this.parseJson<T>(res);
+      return this.parseJson<T>(res, reviveDates);
     } finally {
       clearTimeout(timeout);
     }
@@ -397,7 +418,7 @@ export class HttpAPIClient implements ElectronAPI {
     }
   }
 
-  private async put<T>(path: string, body?: unknown): Promise<T> {
+  private async put<T>(path: string, body?: unknown, reviveDates = true): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
@@ -407,7 +428,7 @@ export class HttpAPIClient implements ElectronAPI {
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
-      return this.parseJson<T>(res);
+      return this.parseJson<T>(res, reviveDates);
     } finally {
       clearTimeout(timeout);
     }
@@ -552,12 +573,16 @@ export class HttpAPIClient implements ElectronAPI {
       request?: TokenUsageSnapshotRequest
     ): Promise<TokenUsageAnalyticsSnapshotDto> =>
       this.get<TokenUsageAnalyticsSnapshotDto>(buildTokenUsageSnapshotRoute(request)),
+    getBudgetStatus: (): Promise<TokenUsageBudgetStatusDto> =>
+      this.get<TokenUsageBudgetStatusDto>(TOKEN_USAGE_BUDGET_STATUS_ROUTE, false),
+    onBudgetStatusChanged: (callback): (() => void) =>
+      this.addEventListener(TOKEN_USAGE_BUDGET_STATUS_CHANGED, callback),
     getBudgetSettings: (): Promise<TokenUsageBudgetSettingsDto> =>
-      this.get<TokenUsageBudgetSettingsDto>(TOKEN_USAGE_BUDGET_SETTINGS_ROUTE),
+      this.get<TokenUsageBudgetSettingsDto>(TOKEN_USAGE_BUDGET_SETTINGS_ROUTE, false),
     updateBudgetSettings: (
-      settings: TokenUsageBudgetSettingsDto
+      settings: TokenUsageBudgetSettingsUpdateRequestDto
     ): Promise<TokenUsageBudgetSettingsDto> =>
-      this.put<TokenUsageBudgetSettingsDto>(TOKEN_USAGE_BUDGET_SETTINGS_ROUTE, settings),
+      this.put<TokenUsageBudgetSettingsDto>(TOKEN_USAGE_BUDGET_SETTINGS_ROUTE, settings, false),
     onSnapshotChanged: (
       callback: (snapshot: TokenUsageAnalyticsSnapshotDto) => void
     ): (() => void) => this.addEventListener(TOKEN_USAGE_SNAPSHOT_CHANGED, callback),
@@ -1175,7 +1200,7 @@ export class HttpAPIClient implements ElectronAPI {
     updateTaskFields: async (
       _teamName: string,
       _taskId: string,
-      _fields: { subject?: string; description?: string }
+      _fields: TaskFieldUpdates
     ): Promise<void> => {
       throw new Error('Team task fields update is not available in browser mode');
     },
@@ -1325,7 +1350,7 @@ export class HttpAPIClient implements ElectronAPI {
         members: {},
       };
     },
-    restartMember: async (): Promise<void> => {
+    restartMember: async () => {
       throw new Error('Member restart is not available in browser mode');
     },
     retryFailedOpenCodeSecondaryLanes: async () => {
@@ -1726,6 +1751,9 @@ export class HttpAPIClient implements ElectronAPI {
   // ---------------------------------------------------------------------------
 
   editor: EditorAPI = {
+    readDocumentPreview: async () => {
+      throw new Error('Editor not available in browser mode');
+    },
     open: async () => {
       throw new Error('Editor not available in browser mode');
     },

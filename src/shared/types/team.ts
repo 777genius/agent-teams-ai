@@ -1,11 +1,47 @@
 import type { CliProviderModelCatalogSource } from './cliInstaller';
 import type { NotificationTarget, TeamEventType } from './notifications';
-import type { HostMemberActivityLog, HostMemberActivityStats } from './teamActivity';
+import type { OpenCodeStopHandshakeFailureFacts } from './openCodeStopHandshakeFailure';
 import type { TaskRef } from './teamBoardTask';
 import type * as TeamProvisioningTypes from './teamProvisioning';
+import type {
+  AttachmentMediaType,
+  AttachmentMeta,
+  AttachmentPayload,
+  NativeAttachmentDeliveryEnvelope,
+  NativeMemberCapability,
+} from '@features/agent-attachments/contracts';
+import type { GroupChatEnvelope } from '@features/team-group-chats/contracts';
+import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
 
 export type * from './teamBoardTask';
+export type {
+  FileLineStats,
+  LeadActivitySnapshot,
+  LeadActivityState,
+  LeadContextUsage,
+  LeadContextUsageSnapshot,
+  LegacyMemberLogSummary,
+  MemberActivityMetaEntry,
+  MemberFullStats,
+  MemberLeadSessionLogSummary,
+  MemberLogKind,
+  MemberLogSummary,
+  MemberLogSummaryBase,
+  MemberSessionLogSummary,
+  MemberStatsResult,
+  MemberSubagentLogSummary,
+  MemberSubagentSummary,
+  TeamMemberActivityMeta,
+} from './teamObservability';
 export type * from './teamProvisioning';
+export type {
+  AttachmentFileData,
+  AttachmentMediaType,
+  AttachmentMeta,
+  AttachmentPayload,
+  ImageMimeType,
+  NativeAttachmentDeliveryEnvelope,
+} from '@features/agent-attachments/contracts';
 
 export interface TeamMember {
   name: string;
@@ -230,13 +266,9 @@ export interface SourceMessageSnapshot {
   /** Message source type (e.g. "user_sent", "inbox"). */
   source?: string;
   /** Attachment metadata references (IDs only, no blobs). filePath present when file is stored on disk. */
-  attachments?: {
-    id: string;
-    filename: string;
-    mimeType: string;
-    size: number;
-    filePath?: string;
-  }[];
+  attachments?: AttachmentMeta[];
+  /** IDs classified as generic file references in the original message. */
+  fileReferenceIds?: string[];
 }
 
 export type InboxMessageKind =
@@ -306,6 +338,8 @@ export interface TeamTask {
   subject: string;
   description?: string;
   descriptionTaskRefs?: TaskRef[];
+  /** Optional same-team group context; does not change task assignment or delivery. */
+  groupChatId?: string;
   activeForm?: string;
   prompt?: string;
   promptTaskRefs?: TaskRef[];
@@ -388,39 +422,6 @@ export interface CommentAttachmentPayload {
   base64Data: string;
 }
 
-/**
- * Broad MIME type string (e.g. "image/png", "application/pdf").
- *
- * Note: the UI may still choose to preview only certain types (e.g. images),
- * but tasks/comments can store arbitrary attachments for agent workflows.
- */
-// eslint-disable-next-line sonarjs/redundant-type-aliases -- semantic alias for documentation/readability
-export type AttachmentMediaType = string;
-
-/** Supported image MIME types (used for preview/validation in UI). */
-export type ImageMimeType = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
-
-export interface AttachmentMeta {
-  id: string;
-  filename: string;
-  mimeType: AttachmentMediaType;
-  size: number;
-  /** Absolute path to the file on disk. Absent for metadata-only references. */
-  filePath?: string;
-}
-
-export interface AttachmentPayload extends AttachmentMeta {
-  data: string;
-}
-
-export interface AttachmentFileData {
-  id: string;
-  data: string;
-  mimeType: AttachmentMediaType;
-  /** Absolute path to the persisted attachment file when available. */
-  filePath?: string;
-}
-
 /** Lightweight metadata for a single tool call (for UI display in tooltips). */
 export interface ToolCallMeta {
   /** Tool name, e.g. "Read", "Bash", "Grep" */
@@ -466,7 +467,7 @@ export interface ToolActivityEventPayload {
   isError?: boolean;
 }
 
-export interface InboxMessage {
+export interface InboxMessage extends GroupChatEnvelope {
   /** Captured Host scope navigation; absence of a key means unavailable, never a name lookup. */
   crossTeamNavigation?: {
     fromTeamName: string;
@@ -499,6 +500,9 @@ export interface InboxMessage {
     | 'cross_team'
     | 'cross_team_sent';
   attachments?: AttachmentMeta[];
+  fileReferences?: AttachmentMeta[];
+  /** Main-generated delivery identity; never accepted from renderer message input. */
+  nativeAttachmentDelivery?: NativeAttachmentDeliveryEnvelope;
   /** Lead session ID that produced this message (for session boundary detection). */
   leadSessionId?: string;
   /** Stable cross-team thread ID shared across request/reply turns. */
@@ -552,7 +556,7 @@ export interface MessagesPage {
 
 export type AgentActionMode = 'do' | 'ask' | 'delegate';
 
-export interface SendMessageRequest {
+export interface SendMessageRequest extends GroupChatEnvelope {
   member: string;
   text: string;
   taskRefs?: TaskRef[];
@@ -645,7 +649,18 @@ export type OpenCodeRuntimeDeliveryStatus = NonNullable<SendMessageResult['runti
   messageId: string;
 };
 
+/** Finite observation of a failed OpenCode bridge operation; never stop authority. */
+export interface OpenCodeStopCausalFailure {
+  handshakeFailure?: OpenCodeStopHandshakeFailureFacts;
+  phase: string;
+  reason: string | null;
+  errno: string | null;
+  cleanupErrno?: string | null;
+  sourceFrame: { source: string; line: number; column: number } | null;
+}
+
 export interface TeamForceStopResult {
+  causalFailure?: OpenCodeStopCausalFailure;
   /**
    * Outcome of the bounded regular stop attempt.
    * `runtime_already_down`: the recorded runtime hosts exited before the
@@ -724,7 +739,7 @@ export type UpdateKanbanPatch =
   | { op: 'remove' }
   | { op: 'disapprove' }
   | { op: 'request_changes'; comment?: string; taskRefs?: TaskRef[] };
-export interface ResolvedTeamMember extends Pick<TeamMember, 'joinedAt'> {
+export interface ResolvedTeamMember extends Pick<TeamMember, 'joinedAt'>, NativeMemberCapability {
   name: string;
   /** Opaque configured-state token from an application owner, never native identity. */
   configuredSettingsFingerprint?: string;
@@ -803,7 +818,7 @@ export interface TeamProcess {
   registeredAt: string;
   stoppedAt?: string;
 }
-export interface TeamMemberSnapshot extends Pick<TeamMember, 'joinedAt'> {
+export interface TeamMemberSnapshot extends Pick<TeamMember, 'joinedAt'>, NativeMemberCapability {
   name: string;
   /** Opaque configured-state token from an application owner, never native identity. */
   configuredSettingsFingerprint?: string;
@@ -836,20 +851,6 @@ export type TeamMemberConfiguredRuntimeSettings = Pick<
   TeamMember,
   'providerId' | 'providerBackendId' | 'model' | 'effort' | 'fastMode'
 >;
-
-export interface MemberActivityMetaEntry {
-  memberName: string;
-  lastAuthoredMessageAt: string | null;
-  messageCountExact: number;
-  latestAuthoredMessageSignalsTermination: boolean;
-}
-
-export interface TeamMemberActivityMeta {
-  teamName: string;
-  computedAt: string;
-  members: Record<string, MemberActivityMetaEntry>;
-  feedRevision: string;
-}
 
 export interface TeamGetDataOptions {
   /**
@@ -943,9 +944,17 @@ export interface ApplicationCommandRequestIdentity {
   idempotencyKey: string;
 }
 
+/** Omitted fields preserve existing values; null explicitly removes the group association. */
+export interface TaskFieldUpdates {
+  subject?: string;
+  description?: string;
+  groupChatId?: string | null;
+}
+
 export interface CreateTaskRequest {
   /** Stable for one user intent so transport retries cannot create a second task. */
   command?: ApplicationCommandRequestIdentity;
+  groupChatId?: string;
   subject: string;
   description?: string;
   descriptionTaskRefs?: TaskRef[];
@@ -955,39 +964,6 @@ export interface CreateTaskRequest {
   prompt?: string;
   promptTaskRefs?: TaskRef[];
   startImmediately?: boolean;
-}
-
-export type LeadActivityState = 'active' | 'idle' | 'offline';
-
-export interface LeadActivitySnapshot {
-  state: LeadActivityState;
-  runId: string | null;
-}
-
-export interface LeadContextUsage {
-  /** Prompt-side tokens currently occupying the context window. */
-  promptInputTokens: number | null;
-  /** Tokens generated in the latest response. */
-  outputTokens: number | null;
-  /** Total occupied context window tokens (prompt input + output). */
-  contextUsedTokens: number | null;
-  /** Model's context window size */
-  contextWindowTokens: number | null;
-  /** Context usage percentage (0-100) */
-  contextUsedPercent: number | null;
-  /** Which usage contract produced the prompt-side numbers. */
-  promptInputSource:
-    | 'anthropic_usage'
-    | 'openai_responses_usage'
-    | 'openai_chat_usage'
-    | 'unavailable';
-  /** ISO timestamp of last update */
-  updatedAt: string;
-}
-
-export interface LeadContextUsageSnapshot {
-  usage: LeadContextUsage | null;
-  runId: string | null;
 }
 
 export interface PersistedTeamLaunchMemberSources {
@@ -1208,9 +1184,11 @@ export interface TeamAgentRuntimeSnapshot {
 }
 
 export interface TeamChangeEvent {
+  management?: TeamManagementCommittedChange;
   type:
     | 'config'
     | 'inbox'
+    | 'group-reactions'
     | 'log-source-change'
     | 'task-log-change'
     | 'task'
@@ -1382,7 +1360,7 @@ export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunc
   extraCliArgs?: string;
 }
 
-export interface TeamCreateConfigRequest {
+export interface TeamCreateConfigRequest extends TeamProvisioningTypes.RuntimeSelectionVersioned {
   /** One save intent, retained across an uncertain transport response. */
   command?: ApplicationCommandRequestIdentity;
   teamName: string;
@@ -1527,6 +1505,8 @@ export interface TeamProvisioningProgress {
   assistantOutput?: string;
   /** True once provisioning has written a readable config.json for this team. */
   configReady?: boolean;
+  /** Main confirmed owned secondary lanes survive this failed run under its current Stop generation. */
+  retainedSecondaryRuntime?: true;
   /** Bounded structured launch diagnostics for the progress UI. */
   launchDiagnostics?: TeamLaunchDiagnosticItem[];
 }
@@ -1595,85 +1575,6 @@ export interface GlobalTask extends TeamTaskWithKanban {
   /** True when the parent team has been soft-deleted. */
   teamDeleted?: boolean;
 }
-
-export interface MemberSubagentSummary {
-  subagentId: string;
-  sessionId: string;
-  projectId: string;
-  description: string;
-  memberName: string | null;
-  startTime: string;
-  durationMs: number;
-  messageCount: number;
-  isOngoing: boolean;
-}
-
-export type MemberLogKind = 'subagent' | 'lead_session' | 'member_session';
-
-export interface MemberLogSummaryBase {
-  kind: MemberLogKind;
-  sessionId: string;
-  projectId: string;
-  description: string;
-  memberName: string | null;
-  startTime: string;
-  durationMs: number;
-  messageCount: number;
-  isOngoing: boolean;
-  /** Absolute path to JSONL file when known (avoids redundant findMemberLogPaths scan). */
-  filePath?: string;
-  /** Short preview of the last assistant output (truncated). */
-  lastOutputPreview?: string;
-  /** Short preview of the last thinking block (truncated). */
-  lastThinkingPreview?: string;
-  /** Recent thinking/output previews with timestamps for task-scoped filtering. */
-  recentPreviews?: { text: string; timestamp: string; kind: 'thinking' | 'output' }[];
-}
-
-export interface MemberSubagentLogSummary extends MemberLogSummaryBase {
-  kind: 'subagent';
-  subagentId: string;
-}
-
-export interface MemberLeadSessionLogSummary extends MemberLogSummaryBase {
-  kind: 'lead_session';
-}
-
-export interface MemberSessionLogSummary extends MemberLogSummaryBase {
-  kind: 'member_session';
-}
-
-/** Legacy transcript readers always return file-backed, timestamped log summaries. */
-export type LegacyMemberLogSummary =
-  | MemberSubagentLogSummary
-  | MemberLeadSessionLogSummary
-  | MemberSessionLogSummary;
-
-export type MemberLogSummary = HostMemberActivityLog | LegacyMemberLogSummary;
-
-export interface FileLineStats {
-  added: number;
-  removed: number;
-}
-
-export interface MemberFullStats {
-  linesAdded: number;
-  linesRemoved: number;
-  filesTouched: string[];
-  fileStats: Record<string, FileLineStats>;
-  toolUsage: Record<string, number>;
-  inputTokens: number;
-  outputTokens: number;
-  cacheReadTokens: number;
-  costUsd: number;
-  tasksCompleted: number;
-  messageCount: number;
-  totalDurationMs: number;
-  sessionCount: number;
-  computedAt: string;
-}
-
-export type MemberStatsResult = MemberFullStats | HostMemberActivityStats;
 
 export interface AddMemberRequest {
   name: string;

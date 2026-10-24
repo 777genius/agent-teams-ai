@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SafeConfig } from '@renderer/components/settings/hooks/useSettingsConfig';
+import type { AppConfig } from '@renderer/types/data';
 
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({
@@ -13,6 +14,10 @@ vi.mock('@features/localization/renderer', () => ({
 
 vi.mock('@renderer/api', () => ({
   api: {
+    config: {
+      getClaudeRootInfo: vi.fn(),
+      update: vi.fn(),
+    },
     notifications: {
       testNotification: vi.fn(async () => ({ success: true })),
     },
@@ -73,9 +78,14 @@ vi.mock('@renderer/components/settings/NotificationTriggerSettings', () => ({
   NotificationTriggerSettings: () => React.createElement('div'),
 }));
 
+import { api } from '@renderer/api';
+import { useSettingsHandlers } from '@renderer/components/settings/hooks/useSettingsHandlers';
+import { useStore } from '@renderer/store';
+import { captureContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
+
 import { NotificationsSection } from '@renderer/components/settings/sections/NotificationsSection';
 
-function makeSafeConfig(): SafeConfig {
+function makeSafeConfig(): SafeConfig & AppConfig {
   return {
     general: {
       launchAtLogin: false,
@@ -89,6 +99,7 @@ function makeSafeConfig(): SafeConfig {
       autoExpandAIGroups: false,
       useNativeTitleBar: false,
       telemetryEnabled: false,
+      externalAgentCdpEnabled: false,
     },
     notifications: {
       enabled: false,
@@ -123,6 +134,34 @@ function makeSafeConfig(): SafeConfig {
       initialDelaySeconds: 60,
       maxAttempts: 2,
     },
+    providerConnections: {
+      anthropic: {
+        authMode: 'auto',
+        fastModeDefault: false,
+        compatibleEndpoint: {
+          enabled: false,
+          baseUrl: '',
+        },
+      },
+      codex: {
+        preferredAuthMode: 'auto',
+        customProvider: {
+          enabled: false,
+          baseUrl: '',
+          model: '',
+        },
+      },
+    },
+    runtime: {
+      providerBackends: {
+        gemini: 'auto',
+        codex: 'codex-native',
+      },
+    },
+    sessions: {
+      pinnedSessions: {},
+      hiddenSessions: {},
+    },
     display: {
       showTimestamps: true,
       compactMode: false,
@@ -152,6 +191,7 @@ describe('NotificationsSection recovery settings', () => {
     await act(async () => root.unmount());
     container.remove();
     vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('updates recovery toggles and limits independently from the notification master switch', async () => {
@@ -209,5 +249,231 @@ describe('NotificationsSection recovery settings', () => {
     expect(onTeamRuntimeRecoveryUpdate).toHaveBeenCalledWith({ rateLimitsEnabled: true });
     expect(onTeamRuntimeRecoveryUpdate).toHaveBeenCalledWith({ initialDelaySeconds: 120 });
     expect(onTeamRuntimeRecoveryUpdate).toHaveBeenCalledWith({ maxAttempts: 4 });
+  });
+  it('invalidates a changed root before later reset writes fail and preserves an unchanged root', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const originalState = useStore.getState();
+    const config = makeSafeConfig();
+    const setError = vi.fn();
+    const setConfig = vi.fn();
+    const setOptimisticConfig = vi.fn();
+    const setSaving = vi.fn();
+    let reset: () => Promise<void> = () => Promise.resolve();
+
+    function ResetHarness(): null {
+      reset = useSettingsHandlers({
+        config,
+        setError,
+        setConfig,
+        setOptimisticConfig,
+        setSaving,
+        updateConfig: vi.fn(),
+      }).handleResetToDefaults;
+      return null;
+    }
+
+    act(() => root.render(<ResetHarness />));
+    try {
+      for (const rootChanges of [false, true]) {
+        const fetchProjects = vi.fn(() => Promise.resolve());
+        const fetchRepositoryGroups = vi.fn(() => Promise.resolve());
+        const tabs = [
+          {
+            id: 'old-team-tab',
+            type: 'team' as const,
+            teamName: 'old-team',
+            label: 'Old team',
+            createdAt: 1,
+          },
+        ];
+        useStore.setState({
+          connectionMode: 'local',
+          activeContextId: 'local',
+          selectedProjectId: 'old-project',
+          selectedSessionId: 'old-session',
+          selectedTeamName: 'old-team',
+          openTabs: tabs,
+          activeTabId: 'old-team-tab',
+          fetchProjects,
+          fetchRepositoryGroups,
+        });
+        const epoch = captureContextScopedRequestEpoch();
+        vi.mocked(api.config.getClaudeRootInfo).mockResolvedValue({
+          resolvedPath: rootChanges ? '/sandbox/root-a' : '/sandbox/root-b',
+          defaultPath: '/sandbox/root-b',
+          customPath: rootChanges ? '/sandbox/root-a' : null,
+        });
+        let stateAtLaterWrite = originalState;
+        let epochAtLaterWrite = epoch;
+        vi.mocked(api.config.update).mockImplementation((section) => {
+          if (section === 'providerConnections') {
+            stateAtLaterWrite = useStore.getState();
+            epochAtLaterWrite = captureContextScopedRequestEpoch();
+            return Promise.reject(new Error('Later provider settings write failed'));
+          }
+          return Promise.resolve(config);
+        });
+
+        await act(async () => reset());
+
+        const observation = {
+          epoch: epochAtLaterWrite,
+          activeContextId: stateAtLaterWrite.activeContextId,
+          selectedProjectId: stateAtLaterWrite.selectedProjectId,
+          selectedSessionId: stateAtLaterWrite.selectedSessionId,
+          selectedTeamName: stateAtLaterWrite.selectedTeamName,
+          openTabs: stateAtLaterWrite.openTabs,
+          activeTabId: stateAtLaterWrite.activeTabId,
+          projectRefreshes: fetchProjects.mock.calls.length,
+          repositoryRefreshes: fetchRepositoryGroups.mock.calls.length,
+        };
+        expect(observation).toEqual(
+          rootChanges
+            ? {
+                epoch: epoch + 1,
+                activeContextId: 'local',
+                selectedProjectId: null,
+                selectedSessionId: null,
+                selectedTeamName: null,
+                openTabs: [],
+                activeTabId: null,
+                projectRefreshes: 1,
+                repositoryRefreshes: 1,
+              }
+            : {
+                epoch,
+                activeContextId: 'local',
+                selectedProjectId: 'old-project',
+                selectedSessionId: 'old-session',
+                selectedTeamName: 'old-team',
+                openTabs: tabs,
+                activeTabId: 'old-team-tab',
+                projectRefreshes: 0,
+                repositoryRefreshes: 0,
+              }
+        );
+        expect(setError).toHaveBeenLastCalledWith('Later provider settings write failed');
+        expect(setSaving).toHaveBeenLastCalledWith(false);
+        expect(setConfig).not.toHaveBeenCalled();
+        expect(setOptimisticConfig).not.toHaveBeenCalled();
+      }
+    } finally {
+      useStore.setState(originalState, true);
+    }
+  });
+  it('invalidates an imported root before a later display failure but preserves omitted or unchanged roots', async () => {
+    const originalState = useStore.getState();
+    const config = makeSafeConfig();
+    const setError = vi.fn();
+    const selection: { input?: HTMLInputElement } = {};
+    vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(function (
+      this: HTMLInputElement
+    ) {
+      selection.input = this;
+    });
+    let importConfig: () => void = () => undefined;
+    let finishImport = (): void => undefined;
+
+    function ImportHarness(): null {
+      importConfig = useSettingsHandlers({
+        config,
+        setError,
+        setConfig: vi.fn(),
+        setOptimisticConfig: vi.fn(),
+        setSaving: (saving) => {
+          if (!saving) finishImport();
+        },
+        updateConfig: vi.fn(),
+      }).handleImportConfig;
+      return null;
+    }
+
+    act(() => root.render(<ImportHarness />));
+    try {
+      for (const scenario of [
+        { general: { claudeRootPath: '/sandbox/root-b' }, changesRoot: true },
+        { general: { theme: 'light' }, changesRoot: false },
+        { general: { claudeRootPath: '/sandbox/root-a' }, changesRoot: false },
+      ]) {
+        const fetchProjects = vi.fn(() => Promise.resolve());
+        const fetchRepositoryGroups = vi.fn(() => Promise.resolve());
+        useStore.setState({
+          connectionMode: 'local',
+          activeContextId: 'local',
+          selectedProjectId: 'old-project',
+          selectedTeamName: 'old-team',
+          activeTabId: 'old-tab',
+          fetchProjects,
+          fetchRepositoryGroups,
+        });
+        vi.mocked(api.config.getClaudeRootInfo).mockResolvedValue({
+          resolvedPath: '/sandbox/root-a',
+          defaultPath: '/sandbox/root-b',
+          customPath: '/sandbox/root-a',
+        });
+        const epoch = captureContextScopedRequestEpoch();
+        let stateAtDisplayWrite = originalState;
+        let epochAtDisplayWrite = epoch;
+        vi.mocked(api.config.update).mockImplementation((section) => {
+          if (section === 'display') {
+            stateAtDisplayWrite = useStore.getState();
+            epochAtDisplayWrite = captureContextScopedRequestEpoch();
+            return Promise.reject(new Error('Imported display settings write failed'));
+          }
+          return Promise.resolve(config);
+        });
+
+        act(() => importConfig());
+        const input = selection.input;
+        if (!input) throw new Error('Import did not request a settings file');
+        Object.defineProperty(input, 'files', {
+          value: [
+            new File(
+              [JSON.stringify({ general: scenario.general, display: { compactMode: true } })],
+              'settings.json',
+              { type: 'application/json' }
+            ),
+          ],
+        });
+        const completed = new Promise<void>((resolve) => {
+          finishImport = resolve;
+        });
+        await act(async () => {
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+          await completed;
+        });
+
+        expect({
+          epoch: epochAtDisplayWrite,
+          selectedProjectId: stateAtDisplayWrite.selectedProjectId,
+          selectedTeamName: stateAtDisplayWrite.selectedTeamName,
+          activeTabId: stateAtDisplayWrite.activeTabId,
+          projectRefreshes: fetchProjects.mock.calls.length,
+          repositoryRefreshes: fetchRepositoryGroups.mock.calls.length,
+        }).toEqual(
+          scenario.changesRoot
+            ? {
+                epoch: epoch + 1,
+                selectedProjectId: null,
+                selectedTeamName: null,
+                activeTabId: null,
+                projectRefreshes: 1,
+                repositoryRefreshes: 1,
+              }
+            : {
+                epoch,
+                selectedProjectId: 'old-project',
+                selectedTeamName: 'old-team',
+                activeTabId: 'old-tab',
+                projectRefreshes: 0,
+                repositoryRefreshes: 0,
+              }
+        );
+        expect(stateAtDisplayWrite.activeContextId).toBe('local');
+        expect(setError).toHaveBeenLastCalledWith('Imported display settings write failed');
+      }
+    } finally {
+      useStore.setState(originalState, true);
+    }
   });
 });

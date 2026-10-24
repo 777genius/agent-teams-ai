@@ -1,7 +1,7 @@
-import type { BackendTeamLifecycle } from './teamLifecycle';
 import type { BackendCrossTeamOutboxRow } from './crossTeam';
 import type { BackendProcess } from './processes';
 import type { BackendTeamPosition } from './teamChanges';
+import type { BackendTeamLifecycle } from './teamLifecycle';
 import type { InboxMessage, KanbanState, TeamTaskWithKanban } from '@shared/types/team';
 
 /** Consumer-owned product read; runtime/process readiness is a separate conversation. */

@@ -23,6 +23,7 @@ export function canOpenComposerDraftAddress(
   targets: readonly CrossTeamTarget[]
 ): boolean {
   if (address.target.kind === 'team-feed') return true;
+  if (address.target.kind === 'group') return address.target.groupChatId.length > 0;
   if (address.target.kind === 'direct') {
     const participant = normalizeConversationParticipant(address.target.participant);
     return [...memberNames].some(
@@ -32,8 +33,7 @@ export function canOpenComposerDraftAddress(
   const { toMember, toTeam } = address.target;
   const available = targets.find((target) => target.teamName === toTeam);
   return Boolean(
-    available &&
-      (!toMember || available.members?.some((member) => member.name === toMember))
+    available && (!toMember || available.members?.some((member) => member.name === toMember))
   );
 }
 

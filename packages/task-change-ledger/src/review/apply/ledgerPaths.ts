@@ -1,4 +1,3 @@
-import { isWindowsishPath, normalizePathForComparison } from '../../platformPath.js';
 import type { LedgerChangeRelation, SnippetDiff } from '../../contracts.js';
 import {
   type LedgerApplyOutcome,
@@ -8,6 +7,50 @@ import {
 
 export function createLedgerPaths(getContext: () => ApplierContext) {
   return {
+    resolveLedgerRenameEndpoints(
+      snippets: SnippetDiff[],
+      relation: LedgerChangeRelation
+    ): {
+      oldSnippet: SnippetDiff | undefined;
+      newSnippet: SnippetDiff;
+      oldFilePath: string;
+      newFilePath: string;
+    } | null {
+      const ctx = getContext();
+      if (relation.kind !== 'rename' || !snippets.length) return null;
+      const sameRelation = (snippet: SnippetDiff): boolean => {
+        const candidate = snippet.ledger?.relation;
+        return (
+          candidate?.kind === 'rename' &&
+          ctx.normalizeRelationComparisonPath(candidate.oldPath) ===
+            ctx.normalizeRelationComparisonPath(relation.oldPath) &&
+          ctx.normalizeRelationComparisonPath(candidate.newPath) ===
+            ctx.normalizeRelationComparisonPath(relation.newPath)
+        );
+      };
+      if (!snippets.every(sameRelation)) return null;
+      const oldCandidates = snippets.filter((snippet) => snippet.ledger?.operation === 'delete');
+      const newCandidates = snippets.filter((snippet) => snippet.ledger?.operation === 'create');
+      if (
+        newCandidates.length !== 1 ||
+        oldCandidates.length > 1 ||
+        oldCandidates.length + newCandidates.length !== snippets.length
+      )
+        return null;
+      const newSnippet = newCandidates[0];
+      const oldSnippet = oldCandidates[0];
+      if (
+        !ctx.pathMatchesRelationPath(newSnippet.filePath, relation.newPath) ||
+        (oldSnippet && !ctx.pathMatchesRelationPath(oldSnippet.filePath, relation.oldPath))
+      )
+        return null;
+      const oldFilePath =
+        oldSnippet?.filePath ??
+        ctx.resolveRelatedLedgerPath(newSnippet.filePath, relation.newPath, relation.oldPath);
+      if (!oldFilePath) return null;
+      return { oldSnippet, newSnippet, oldFilePath, newFilePath: newSnippet.filePath };
+    },
+
     resolveLedgerOperation(snippets: SnippetDiff[]): 'create' | 'modify' | 'delete' {
       const ledgerSnippets = snippets.filter((snippet) => snippet.ledger);
       const firstLedger = ledgerSnippets[0]?.ledger;
@@ -36,39 +79,17 @@ export function createLedgerPaths(getContext: () => ApplierContext) {
 
       const relation = ctx.resolveLedgerRelation(snippets);
       if (relation?.kind === 'rename') {
-        const newSnippet = snippets.find(
-          (snippet) =>
-            snippet.ledger?.operation === 'create' &&
-            ctx.pathMatchesRelationPath(snippet.filePath, relation.newPath)
-        );
-        const oldSnippet = snippets.find(
-          (snippet) =>
-            snippet.ledger?.operation === 'delete' &&
-            ctx.pathMatchesRelationPath(snippet.filePath, relation.oldPath)
-        );
-        const inferredOldPath = ctx.resolveRelatedLedgerPath(
-          newSnippet?.filePath,
-          relation.newPath,
-          relation.oldPath
-        );
-        if (oldSnippet?.filePath) paths.add(oldSnippet.filePath);
-        if (inferredOldPath) paths.add(inferredOldPath);
+        const endpoints = ctx.resolveLedgerRenameEndpoints(snippets, relation);
+        if (endpoints) paths.add(endpoints.oldFilePath);
       }
 
       return [...paths];
     },
     pathMatchesRelationPath(filePath: string, relationPath: string): boolean {
       const ctx = getContext();
-      const caseInsensitive =
-        ctx.isWindowsReviewPath(filePath) || ctx.isWindowsReviewPath(relationPath);
-      const normalizedFilePath = ctx.normalizeRelationComparisonPath(filePath, caseInsensitive);
-      const normalizedRelationPath = ctx.normalizeRelationComparisonPath(
-        relationPath,
-        caseInsensitive
-      );
-      return (
-        normalizedFilePath === normalizedRelationPath ||
-        normalizedFilePath.endsWith(`/${normalizedRelationPath}`)
+      return ctx.matchesRelationSuffix(
+        ctx.normalizeRelationComparisonPath(filePath),
+        ctx.normalizeRelationComparisonPath(relationPath)
       );
     },
     resolveRelatedLedgerPath(
@@ -82,24 +103,15 @@ export function createLedgerPaths(getContext: () => ApplierContext) {
       }
       const slashAnchor = anchorPath.replace(/\\/g, '/');
       const slashRelation = anchorRelationPath.replace(/\\/g, '/');
-      const caseInsensitive =
-        ctx.isWindowsReviewPath(anchorPath) || ctx.isWindowsReviewPath(anchorRelationPath);
-      const normalizedAnchor = ctx.normalizeRelationComparisonPath(anchorPath, caseInsensitive);
-      const normalizedRelation = ctx.normalizeRelationComparisonPath(
-        anchorRelationPath,
-        caseInsensitive
-      );
+      const normalizedAnchor = ctx.normalizeRelationComparisonPath(anchorPath);
+      const normalizedRelation = ctx.normalizeRelationComparisonPath(anchorRelationPath);
       if (!ctx.matchesRelationSuffix(normalizedAnchor, normalizedRelation)) {
         return null;
       }
       return `${slashAnchor.slice(0, slashAnchor.length - slashRelation.length)}${targetRelationPath.replace(/\\/g, '/')}`;
     },
-    normalizeRelationComparisonPath(filePath: string, caseInsensitive: boolean): string {
-      const normalized = normalizePathForComparison(filePath);
-      return caseInsensitive ? normalized.toLowerCase() : normalized;
-    },
-    isWindowsReviewPath(filePath: string): boolean {
-      return isWindowsishPath(filePath) || filePath.includes('\\');
+    normalizeRelationComparisonPath(filePath: string): string {
+      return filePath.replace(/\\/g, '/');
     },
     matchesRelationSuffix(normalizedPath: string, normalizedRelationPath: string): boolean {
       return (

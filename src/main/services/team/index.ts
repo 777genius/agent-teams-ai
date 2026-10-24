@@ -99,7 +99,10 @@ export { TeammateToolTracker } from './TeammateToolTracker';
 export { TeamMemberLogsFinder } from './TeamMemberLogsFinder';
 export { TeamMemberResolver } from './TeamMemberResolver';
 export { TeamMembersMetaStore } from './TeamMembersMetaStore';
-export { TeamProvisioningService } from './TeamProvisioningService';
+export {
+  createDefaultTeamProvisioningService,
+  TeamProvisioningService,
+} from './TeamProvisioningService';
 export { TeamSentMessagesStore } from './TeamSentMessagesStore';
 export { TeamTaskReader } from './TeamTaskReader';
 export { TeamTaskWriter } from './TeamTaskWriter';

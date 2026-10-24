@@ -52,14 +52,19 @@ export function useLaunchDialogSavedRequest(open: boolean, launch: boolean, team
           throw new Error('Saved source Team changed');
         setSource({ scope: identity, request });
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (current())
           setSource({
             scope: identity,
             request: null,
             ...(host
               ? { error: 'Saved Team configuration unavailable. Close and reopen Launch.' }
-              : {}),
+              : String(error).includes('RUNTIME_SELECTION_UNSUPPORTED')
+                ? {
+                    error:
+                      'RUNTIME_SELECTION_UNSUPPORTED: Unsupported saved team runtime selection.',
+                  }
+                : {}),
           });
       })
       .finally(() => clearTimeout(deadline));

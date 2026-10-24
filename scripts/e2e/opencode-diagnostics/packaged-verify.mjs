@@ -3,7 +3,16 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { clickControl, correlateReport } from './catalog.mjs';
-import { runtimeProvenance, packagedEnvironment, probeOrchestratorVersion } from './packaged.mjs';
+import {
+  runtimeProvenance,
+  packagedEnvironment,
+  probeOrchestratorVersion,
+  installerPublicationSnapshot,
+  packagedRefreshControlState,
+  packagedSettingsPreparationState,
+  packagedSettingsRequestObservation,
+  waitForPackagedRefreshPreparation,
+} from './packaged.mjs';
 
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const refreshControl = `[...document.querySelectorAll('button')].find(b =>
@@ -310,9 +319,15 @@ export function qualifyProjectStatus(provider) {
   assert(provider?.providerId === 'opencode' && provider.supported, 'OpenCode was not detected');
   assert(!provider.statusCheckErrorCode, 'Project status returned an error code');
   assert(!['error', 'offline'].includes(provider.verificationState), 'Project status failed');
-  assert(!['transient_error', 'pending'].includes(provider.statusCheckOutcome), 'Project status did not settle');
+  assert(
+    !['transient_error', 'pending'].includes(provider.statusCheckOutcome),
+    'Project status did not settle'
+  );
   assert(!/\bEEXIST\b|file already exists.*mkdir/i.test(JSON.stringify(provider)));
-  return { verificationState: provider.verificationState, statusCheckOutcome: provider.statusCheckOutcome };
+  return {
+    verificationState: provider.verificationState,
+    statusCheckOutcome: provider.statusCheckOutcome,
+  };
 }
 
 export function refreshSettled(observation, current) {
@@ -322,6 +337,41 @@ export function refreshSettled(observation, current) {
     observation.records.length > 0 &&
     observation.records.every((record) => Number.isFinite(record.completedAt))
   );
+}
+
+export function assertSettledDirectoryPage(payload) {
+  assert(
+    Array.isArray(payload?.diagnostics) && payload.diagnostics.length === 0,
+    'Pending/degraded provider directory does not qualify'
+  );
+}
+
+// Readiness is a separate main API precondition, never measured UI evidence.
+export async function waitForSettledDirectory(load, timeoutMs = 120000) {
+  const deadline = Date.now() + timeoutMs;
+  let attempt = 0;
+  for (;;) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) break;
+    const response = await load(remaining, attempt++);
+    assert.equal(response?.schemaVersion, 1);
+    assert.equal(response.runtimeId, 'opencode');
+    assert(!response.error, 'Provider directory readiness failed');
+    assert.equal(response.directory?.runtimeId, 'opencode');
+    const diagnostics = response.directory.diagnostics;
+    assert(Array.isArray(diagnostics), 'Missing directory readiness diagnostics');
+    if (!diagnostics.length) {
+      assertSettledDirectoryPage(response.directory);
+      assert(Date.now() < deadline, 'Provider directory did not settle within bootstrap budget');
+      return response;
+    }
+    assert(
+      diagnostics.every((item) => item === 'capabilities_pending'),
+      'Provider directory readiness failed'
+    );
+    await pause(Math.min(250, Math.max(0, deadline - Date.now())));
+  }
+  throw new Error('Provider directory did not settle within bootstrap budget');
 }
 
 export async function qualifyUIRefresh(records, completed) {
@@ -361,6 +411,7 @@ export async function qualifyUIRefresh(records, completed) {
   assert(directory.every((r) => r.input.summary === true && r.input.filter === 'all'));
   for (const record of directory) {
     const payload = record.response.directory;
+    assertSettledDirectoryPage(payload);
     assert(
       Number.isInteger(payload?.totalCount) && Number.isInteger(payload?.returnedCount),
       'Missing UI directory completeness metadata'
@@ -423,24 +474,103 @@ export async function qualifyUIRefresh(records, completed) {
 
 export function settingsRefreshSettled(observation, now, quietMs = 500) {
   const records = observation.records;
-  return !observation.overflow && records.some(record =>
-    record.method === 'loadProviderDirectory' && record.input?.runtimeId === 'opencode'
-    && record.input.refresh === true && record.input.summary !== true)
-    && records.every(record => Number.isFinite(record.completedAt) && record.response
-      && !record.error && !record.response.error && now - record.completedAt >= quietMs
-      && record.response.schemaVersion === 1 && record.response.runtimeId === 'opencode'
-      && (record.method === 'loadProviderDirectory'
-        ? record.response.directory?.runtimeId === 'opencode'
-          && Array.isArray(record.response.directory.entries)
-          && record.response.directory.returnedCount === record.response.directory.entries.length
-          && Number.isInteger(record.response.directory.totalCount)
-          && record.response.directory.totalCount >= record.response.directory.returnedCount
-          && Array.isArray(record.response.directory.diagnostics)
-          && record.response.directory.diagnostics.length === 0
-        : record.method === 'loadModels'
-          && record.response.models?.catalogState === 'fresh'
-          && record.response.models?.runtimeId === 'opencode'
-          && Array.isArray(record.response.models.models)));
+  return (
+    !observation.overflow &&
+    records.some(
+      (record) =>
+        record.method === 'loadProviderDirectory' &&
+        record.input?.runtimeId === 'opencode' &&
+        record.input.refresh === true &&
+        record.input.summary !== true
+    ) &&
+    records.every(
+      (record) =>
+        Number.isFinite(record.completedAt) &&
+        record.response &&
+        !record.error &&
+        !record.response.error &&
+        now - record.completedAt >= quietMs &&
+        record.response.schemaVersion === 1 &&
+        record.response.runtimeId === 'opencode' &&
+        (record.method === 'loadProviderDirectory'
+          ? record.response.directory?.runtimeId === 'opencode' &&
+            Array.isArray(record.response.directory.entries) &&
+            record.response.directory.returnedCount === record.response.directory.entries.length &&
+            Number.isInteger(record.response.directory.totalCount) &&
+            record.response.directory.totalCount >= record.response.directory.returnedCount &&
+            Array.isArray(record.response.directory.diagnostics) &&
+            record.response.directory.diagnostics.length === 0
+          : record.method === 'loadModels' &&
+            record.response.models?.catalogState === 'fresh' &&
+            record.response.models?.runtimeId === 'opencode' &&
+            Array.isArray(record.response.models.models))
+    )
+  );
+}
+
+export function settingsRefreshFailure(observation) {
+  for (const [recordIndex, record] of observation.records.entries()) {
+    // The observer is cleared immediately before the real settings click. Only
+    // that explicit OpenCode directory refresh can establish this failure.
+    if (
+      record.method !== 'loadProviderDirectory' ||
+      record.input?.runtimeId !== 'opencode' ||
+      record.input.refresh !== true ||
+      record.input.summary === true ||
+      !Number.isFinite(record.completedAt)
+    )
+      continue;
+    let category, cause;
+    const diagnostics = record.response?.directory?.diagnostics;
+    if (record.error) category = cause = 'transport-error';
+    else if (record.response?.error) category = cause = 'runtime-error';
+    else if (
+      record.response?.runtimeId === 'opencode' &&
+      record.response.directory?.runtimeId === 'opencode' &&
+      Array.isArray(diagnostics) &&
+      diagnostics.length
+    ) {
+      category = 'native-diagnostics';
+      // Classify bounded text locally. Never put native messages, paths,
+      // credentials or arbitrary error strings into the CI summary.
+      const messages = diagnostics
+        .slice(0, 32)
+        .map((item) => (typeof item === 'string' ? item : item?.message))
+        .filter((item) => typeof item === 'string')
+        .map((item) => item.slice(0, 4096));
+      cause = messages.some((message) => /inventory probe timed out/i.test(message))
+        ? 'inventory-timeout'
+        : messages.some((message) => /query OpenCode providers:.*timed out/i.test(message))
+          ? 'providers-timeout'
+          : 'native-diagnostics';
+    }
+    if (category)
+      return {
+        phase: 'settings-refresh',
+        category,
+        cause,
+        recordIndex,
+        startedAt: Number.isFinite(record.startedAt) ? record.startedAt : null,
+        completedAt: record.completedAt,
+        diagnosticsCount: Array.isArray(diagnostics) ? diagnostics.length : 0,
+      };
+  }
+  return null;
+}
+
+export function settingsRefreshFailureSummary(failure) {
+  const causes = {
+    'transport-error': ['transport-error'],
+    'runtime-error': ['runtime-error'],
+    'native-diagnostics': ['inventory-timeout', 'providers-timeout', 'native-diagnostics'],
+  };
+  if (
+    failure?.phase !== 'settings-refresh' ||
+    !Object.hasOwn(causes, failure.category) ||
+    !causes[failure.category].includes(failure.cause)
+  )
+    return null;
+  return { phase: 'settings-refresh', category: failure.category, cause: failure.cause };
 }
 
 export function qualifySettings(response) {
@@ -451,8 +581,15 @@ export function qualifySettings(response) {
   assert.equal(view?.runtimeId, 'opencode');
   assert(['ready', 'needs-auth'].includes(view.runtime?.state), 'Provider settings is incomplete');
   assert(Array.isArray(view.providers) && Array.isArray(view.configuredModels));
-  assert(Array.isArray(view.diagnostics) && view.diagnostics.length === 0, 'Settings diagnostics present');
-  return { state: view.runtime.state, providers: view.providers.length, models: view.configuredModels.length };
+  assert(
+    Array.isArray(view.diagnostics) && view.diagnostics.length === 0,
+    'Settings diagnostics present'
+  );
+  return {
+    state: view.runtime.state,
+    providers: view.providers.length,
+    models: view.configuredModels.length,
+  };
 }
 
 export async function verifyPackaged({
@@ -483,6 +620,22 @@ export async function verifyPackaged({
     const deadline = Date.now() + timeout;
     do {
       const result = await evaluate('window.__packagedProbe');
+      if (
+        name === 'runtimeSetup' &&
+        evidence.installerPublication.records.length < 120 &&
+        Date.now() - evidence.installerPublication.lastSampleAt >= 1000
+      ) {
+        evidence.installerPublication.lastSampleAt = Date.now();
+        try {
+          evidence.installerPublication.records.push(await installerPublicationSnapshot(data));
+        } catch {
+          evidence.installerPublication.records.push({
+            at: Date.now(),
+            collectionFailed: true,
+            holder: 'unknown',
+          });
+        }
+      }
       if (result.done) {
         Object.assign(outcome, result, { completedAt: new Date().toISOString() });
         assert(!result.error, `${name}: ${result.error}`);
@@ -537,7 +690,37 @@ export async function verifyPackaged({
       data.runtimeSetup === 'app-install' &&
       data.run === 'cold'
     ) {
-      await probe('runtimeSetup', 'window.electronAPI.openCodeRuntime.install()', 180000);
+      evidence.installerPublication = {
+        records: [],
+        lastSampleAt: 0,
+        progress: [],
+        holder: 'unknown',
+      };
+      try {
+        try {
+          await evaluate(`window.__packagedInstallObservation = {records:[],overflow:false};
+            window.__packagedInstallUnsubscribe = window.electronAPI.openCodeRuntime.onProgress((_event, status) => {
+              const o = window.__packagedInstallObservation;
+              if (o.records.length >= 120) { o.overflow = true; return; }
+              o.records.push({at:Date.now(), state:String(status.state).slice(0,64),
+                phase:status.progress?.phase ? String(status.progress.phase).slice(0,64) : null,
+                detail:typeof status.progress?.detail === 'string' ? status.progress.detail.slice(0,256) : null});
+            }); void 0`);
+        } catch {
+          evidence.installerPublication.progressSubscriptionFailed = true;
+        }
+        await probe('runtimeSetup', 'window.electronAPI.openCodeRuntime.install()', 180000);
+      } finally {
+        try {
+          const progress = await evaluate(`(() => {
+            window.__packagedInstallUnsubscribe?.(); window.__packagedInstallUnsubscribe = null;
+            return window.__packagedInstallObservation; })()`);
+          evidence.installerPublication.progress = progress?.records ?? [];
+          evidence.installerPublication.progressOverflow = progress?.overflow ?? null;
+        } catch {
+          evidence.installerPublication.progressCollectionFailed = true;
+        }
+      }
       await probe(
         'invalidateInstalledVersion',
         'window.electronAPI.openCodeRuntime.invalidateStatus()'
@@ -565,7 +748,11 @@ export async function verifyPackaged({
       evidence.managedRuntime.integrity &&
         evidence.managedRuntime.platformPackage !== 'diagnostics-fixture'
     );
-    assert.equal(await readFile(data.projectSentinel, 'utf8'), 'preserve-existing-project\n', 'Existing project sentinel changed before status');
+    assert.equal(
+      await readFile(data.projectSentinel, 'utf8'),
+      'preserve-existing-project\n',
+      'Existing project sentinel changed before status'
+    );
     evidence.projectStatus = { path: data.project, sentinel: data.projectSentinel, attempts: [] };
     for (let attempt = 0; attempt < 2; attempt++) {
       const response = await probe(
@@ -574,7 +761,11 @@ export async function verifyPackaged({
         125000
       );
       evidence.projectStatus.attempts.push(qualifyProjectStatus(response));
-      assert.equal(await readFile(data.projectSentinel, 'utf8'), 'preserve-existing-project\n', 'Existing project sentinel changed during status');
+      assert.equal(
+        await readFile(data.projectSentinel, 'utf8'),
+        'preserve-existing-project\n',
+        'Existing project sentinel changed during status'
+      );
     }
     await probe('invalidateSummary', 'window.electronAPI.cliInstaller.invalidateStatus()');
     const statusSnapshot = await probe(
@@ -590,18 +781,31 @@ export async function verifyPackaged({
     );
     evidence.summaryQualification = qualifySummary(provider);
 
-    // Wait for bootstrap catalog to settle before starting the measured UI refresh.
-    let before;
-    for (let i = 0; i < 240; i++) {
-      before = await evaluate(catalogState);
-      if (before && before.state !== 'loading') break;
-      await pause(500);
-    }
-    assert(
-      before && before.state !== 'loading',
-      'Real dashboard catalog props unavailable/unsettled'
+    // The UI can be ready while its source directory still reports capabilities_pending.
+    // Share the existing bootstrap-settle budget with an independent readiness read.
+    const bootstrapDeadline = Date.now() + 120000;
+    await waitForSettledDirectory(
+      (remaining, attempt) =>
+        probe(
+          `directoryReady:${attempt}`,
+          'window.electronAPI.runtimeProviderManagement.loadProviderDirectory({runtimeId:"opencode",projectPath:null,summary:true,filter:"all",limit:100,cursor:null,refresh:true})',
+          remaining
+        ),
+      bootstrapDeadline - Date.now()
     );
-    evidence.ui = { before, startedAt: new Date().toISOString(), transitions: [] };
+    // The preparation gate subsumes the warm-start catalog/refresh-control polling:
+    // it rejects disabled/hidden/zero-size/disconnected controls and loading/empty
+    // catalogs with a bounded budget and a recorded reason.
+    const preparation = await waitForPackagedRefreshPreparation(() =>
+      evaluate(`({catalog: ${catalogState}, control:
+        (${packagedRefreshControlState.toString()})(${refreshControl})})`)
+    );
+    evidence.ui = { before: preparation.catalog, preparation, transitions: [] };
+    evidence.ui.startedAt = new Date().toISOString();
+    assert(
+      preparation.ready,
+      `Dashboard refresh preparation unavailable: ${preparation.lastReason}`
+    );
     await observe('globalThis.__packagedCatalogObservation.active = true');
     try {
       await clickControl(evaluate, send, refreshControl);
@@ -638,7 +842,7 @@ export async function verifyPackaged({
 
     // Separate fresh main API attempts corroborate source/model payloads. Never injected
     // into UI state or claimed to carry the UI attempt's report IDs.
-    const entries = await collectPages((cursor, page) => {
+    const entries = await collectPages(async (cursor, page) => {
       const input = {
         runtimeId: 'opencode',
         projectPath: null,
@@ -648,10 +852,12 @@ export async function verifyPackaged({
         refresh: true,
         cursor,
       };
-      return probe(
+      const response = await probe(
         `directory:${page}`,
         `window.electronAPI.runtimeProviderManagement.loadProviderDirectory(${JSON.stringify(input)})`
       );
+      assertSettledDirectoryPage(response.directory);
+      return response;
     }, 'directory');
     const sources = entries
       .filter(
@@ -723,40 +929,98 @@ export async function verifyPackaged({
       );
       evidence.settings.push(qualifySettings(response));
     }
-    await observe('globalThis.__packagedCatalogObservation.records = []; globalThis.__packagedCatalogObservation.active = true');
-    await clickControl(evaluate, send, `document.querySelector('[data-testid="runtime-manage-opencode"]')`);
+    await observe(
+      'globalThis.__packagedCatalogObservation.records = []; globalThis.__packagedCatalogObservation.active = true'
+    );
+    await clickControl(
+      evaluate,
+      send,
+      `document.querySelector('[data-testid="runtime-manage-opencode"]')`
+    );
+    const settingsPreparation = await waitForPackagedRefreshPreparation(
+      async () => {
+        const sample = await evaluate(`(${packagedSettingsPreparationState.toString()})(document,
+        ${packagedRefreshControlState.toString()})`);
+        const requests = await observe('globalThis.__packagedCatalogObservation');
+        const observation = packagedSettingsRequestObservation(requests);
+        return { ...sample, requests: observation, requestsSettled: observation.settled };
+      },
+      { phase: 'settings' }
+    );
+    evidence.settingsPreparation = settingsPreparation;
+    assert(
+      settingsPreparation.ready,
+      `Settings preparation unavailable: ${settingsPreparation.lastReason}`
+    );
+    await observe('globalThis.__packagedCatalogObservation.records = []');
+    evidence.settingsRefreshClick = [];
+    await clickControl(
+      evaluate,
+      async (method, params) => {
+        if (method === 'Input.dispatchMouseEvent') {
+          try {
+            const geometry = await evaluate(`(() => {
+            const target = document.querySelector('[role="dialog"] [data-testid="runtime-provider-refresh-catalog"]');
+            const hit = document.elementFromPoint(${JSON.stringify(params.x)}, ${JSON.stringify(params.y)});
+            const describe = node => { if (!node) return null; const r = node.getBoundingClientRect();
+              const style = getComputedStyle(node); return {tag:node.tagName, id:node.id.slice(0,128),
+                testId:node.getAttribute('data-testid')?.slice(0,128), role:node.getAttribute('role')?.slice(0,64),
+                disabled:Boolean(node.disabled), rect:{x:r.x,y:r.y,width:r.width,height:r.height},
+                display:style.display, visibility:style.visibility, pointerEvents:style.pointerEvents}; };
+            return {at:Date.now(), target:describe(target), hit:describe(hit), hitWithinTarget:Boolean(target && hit && target.contains(hit))};
+          })()`);
+            evidence.settingsRefreshClick.push({
+              type: params.type,
+              x: params.x,
+              y: params.y,
+              ...geometry,
+            });
+          } catch {
+            evidence.settingsRefreshClick.push({ type: params.type, observationFailed: true });
+          }
+        }
+        return send(method, params);
+      },
+      `document.querySelector('[role="dialog"] [data-testid="runtime-provider-refresh-catalog"]:not(:disabled)')`
+    );
     let settingsRendered = false;
     for (let attempt = 0; attempt < 360; attempt++) {
-      settingsRendered = await evaluate(`Boolean(document.querySelector('[role="dialog"] [data-testid="runtime-provider-catalog-list"]'))
-        && !document.querySelector('[role="dialog"] [data-testid="runtime-provider-loading-skeleton"]')`);
       const requests = await observe('globalThis.__packagedCatalogObservation');
-      settingsRendered = settingsRendered && !requests.overflow && requests.records.length > 0
-        && requests.records.every(record => record.completedAt && record.response && !record.error && !record.response.error);
-      if (settingsRendered) break;
-      await pause(250);
-    }
-    assert(settingsRendered, 'Provider settings initial load did not finish');
-    await observe('globalThis.__packagedCatalogObservation.records = []');
-    await clickControl(evaluate, send,
-      `document.querySelector('[role="dialog"] [data-testid="runtime-provider-refresh-catalog"]:not(:disabled)')`);
-    settingsRendered = false;
-    for (let attempt = 0; attempt < 360; attempt++) {
-      const requests = await observe('globalThis.__packagedCatalogObservation');
+      evidence.settingsRefresh = requests.records;
       const now = await observe('Date.now()');
-      const ready = await evaluate(`Boolean(document.querySelector('[role="dialog"] [data-testid="runtime-provider-catalog-list"]'))
+      const settled = settingsRefreshSettled(requests, now);
+      evidence.settingsRefreshObservation = {
+        attempt,
+        at: now,
+        ready: null,
+        settled,
+        overflow: requests.overflow,
+        recordsCount: requests.records.length,
+      };
+      const ready =
+        await evaluate(`Boolean(document.querySelector('[role="dialog"] [data-testid="runtime-provider-catalog-list"]'))
         && Boolean(document.querySelector('[role="dialog"] [data-testid="runtime-provider-refresh-catalog"]:not(:disabled)'))
         && !document.querySelector('[role="dialog"] [data-testid="runtime-provider-loading-skeleton"]')`);
-      if (ready && settingsRefreshSettled(requests, now)) {
+      evidence.settingsRefreshObservation.ready = ready;
+      const failure = settingsRefreshFailure(requests);
+      if (failure) {
+        evidence.settingsRefreshFailure = failure;
+        throw new Error(`Settings refresh completed with ${failure.category}: ${failure.cause}`);
+      }
+      if (ready && settled) {
         settingsRendered = true;
-        evidence.settingsRefresh = requests.records;
         break;
       }
       await pause(250);
     }
     await shot('provider-settings');
     assert(settingsRendered, 'Provider settings dialog did not finish loading');
-    assert(!await evaluate(`Boolean(document.querySelector('[role="dialog"] [data-testid="runtime-provider-directory-error"], [role="dialog"] [data-testid="runtime-provider-error"]'))`),
-      'Provider settings dialog displays an error');
+    assert(
+      !(await evaluate(
+        `Boolean(document.querySelector('[role="dialog"] [data-testid="runtime-provider-directory-error"], [role="dialog"] [data-testid="runtime-provider-error"]'))`
+      )),
+      'Provider settings dialog displays an error'
+    );
     evidence.settingsDialog = { rendered: true, completedAt: new Date().toISOString() };
     evidence.passed = true;
   } catch (error) {

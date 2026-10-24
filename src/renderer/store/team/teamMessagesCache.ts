@@ -1,9 +1,33 @@
 import { mergeTeamMessages } from '@renderer/utils/mergeTeamMessages';
-import { toMessageKey } from '@renderer/utils/teamMessageKey';
 
 import type { InboxMessage, SendMessageRequest, SendMessageResult } from '@shared/types';
 
+export interface TeamMessagesRequestScope {
+  contextId: string;
+  contextEpoch: number;
+  teamStateEpoch: number;
+}
+
+export interface TeamMessagesLoadedPage {
+  messages: InboxMessage[];
+  inputCursor: string;
+  outputCursor: string | null;
+  hasMore: boolean;
+  sourceRevision: string;
+  requestScope: TeamMessagesRequestScope;
+}
+
+export interface TeamMessagesProvenance {
+  head: InboxMessage[];
+  pages: TeamMessagesLoadedPage[];
+  requestScope: TeamMessagesRequestScope;
+}
+
 export interface TeamMessagesCacheEntry {
+  // Absent only on legacy/pre-hydration entries. Never infer page provenance from canonical data.
+  provenance?: TeamMessagesProvenance;
+  messagesError?: string | null;
+  historyReloadRequired?: boolean;
   canonicalMessages: InboxMessage[];
   optimisticMessages: InboxMessage[];
   feedRevision: string | null;
@@ -224,50 +248,6 @@ export function pruneOptimisticMessages(
     const messageId = typeof message.messageId === 'string' ? message.messageId.trim() : '';
     return !messageId || !canonicalIds.has(messageId);
   });
-}
-
-export function getCanonicalHeadSlice(
-  canonicalMessages: readonly InboxMessage[],
-  headLength: number
-): readonly InboxMessage[] {
-  if (headLength <= 0) {
-    return [];
-  }
-  return canonicalMessages.slice(0, headLength);
-}
-
-export function extractRetainedCanonicalOlderTail(
-  canonicalMessages: readonly InboxMessage[],
-  freshHeadMessages: readonly InboxMessage[]
-): InboxMessage[] | null {
-  if (canonicalMessages.length === 0) {
-    return [];
-  }
-  if (freshHeadMessages.length === 0) {
-    return null;
-  }
-
-  const freshHeadKeys = new Set(freshHeadMessages.map((message) => toMessageKey(message)));
-  let hasMessagesOutsideFreshHead = false;
-  for (const message of canonicalMessages) {
-    if (!freshHeadKeys.has(toMessageKey(message))) {
-      hasMessagesOutsideFreshHead = true;
-      break;
-    }
-  }
-  if (!hasMessagesOutsideFreshHead) {
-    return [];
-  }
-
-  const anchorKey = toMessageKey(freshHeadMessages[freshHeadMessages.length - 1]);
-  const anchorIndex = canonicalMessages.findIndex((message) => toMessageKey(message) === anchorKey);
-  if (anchorIndex < 0) {
-    return null;
-  }
-
-  return canonicalMessages
-    .slice(anchorIndex + 1)
-    .filter((message) => !freshHeadKeys.has(toMessageKey(message)));
 }
 
 export function selectTeamMessages(

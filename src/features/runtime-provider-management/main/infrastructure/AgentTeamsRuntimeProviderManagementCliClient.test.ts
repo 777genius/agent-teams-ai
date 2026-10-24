@@ -1,12 +1,19 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { EventEmitter } from 'node:events';
+import { PassThrough } from 'node:stream';
 
-const { execCliMock } = vi.hoisted(() => ({ execCliMock: vi.fn() }));
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { execCliMock, spawnCliMock, killProcessTreeMock } = vi.hoisted(() => ({
+  execCliMock: vi.fn(),
+  spawnCliMock: vi.fn(),
+  killProcessTreeMock: vi.fn(),
+}));
 
 vi.mock('@main/utils/childProcess', () => ({
   execCli: execCliMock,
-  killProcessTree: vi.fn(),
-  spawnCli: vi.fn(),
+  killProcessTree: killProcessTreeMock,
+  spawnCli: spawnCliMock,
 }));
 vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
   ClaudeBinaryResolver: {
@@ -91,6 +98,27 @@ describe('AgentTeamsRuntimeProviderManagementCliClient model refresh generations
       models: { diagnostics: ['fresh'], catalogState: 'fresh' },
     });
     expect(execCliMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('preserves the original snapshot deadline on cache hits', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    try {
+      execCliMock.mockResolvedValue({ stdout: modelResponse('fresh'), stderr: '' });
+      const client = new AgentTeamsRuntimeProviderManagementCliClient();
+      const input = {
+        runtimeId: 'opencode' as const,
+        providerId: 'openrouter',
+        projectPath: '/TEST/cache',
+      };
+      const first = await client.loadModels(input);
+      clock.mockReturnValue(1_060_000);
+      const cached = await client.loadModels(input);
+      expect(cached.models?.freshUntil).toBe(first.models?.freshUntil);
+      expect(Date.parse(cached.models!.freshUntil!)).toBe(1_120_000);
+      expect(execCliMock).toHaveBeenCalledTimes(1);
+    } finally {
+      clock.mockRestore();
+    }
   });
 
   it('fences recovered model JSON from a superseded generation', async () => {
@@ -393,5 +421,106 @@ describe('AgentTeamsRuntimeProviderManagementCliClient passive directory timeout
     );
     expect(execCliMock).toHaveBeenCalledTimes(2);
     expectDirectoryWarnings(1);
+  });
+});
+
+describe('AgentTeamsRuntimeProviderManagementCliClient API-key command deadline', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    spawnCliMock.mockReset();
+    killProcessTreeMock.mockReset();
+  });
+  afterEach(() => vi.useRealTimers());
+
+  function childProcess() {
+    const child = Object.assign(new EventEmitter(), {
+      stdin: new PassThrough(),
+      stdout: new PassThrough(),
+      stderr: new PassThrough(),
+    });
+    spawnCliMock.mockReturnValue(child);
+    return child;
+  }
+
+  function succeed(child: ReturnType<typeof childProcess>) {
+    child.stdout.write(
+      JSON.stringify({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        provider: {
+          runtimeId: 'opencode',
+          providerId: 'groq',
+          authenticated: true,
+          actions: [],
+          authMethods: [],
+          ownership: [],
+        },
+      })
+    );
+    child.emit('close', 0);
+  }
+
+  const input = {
+    runtimeId: 'opencode' as const,
+    providerId: 'groq',
+    apiKey: 'TEST-DUMMY-KEY',
+    projectPath: '/test/project',
+  };
+
+  it('allows a native key connection to finish after the old 90-second boundary', async () => {
+    const child = childProcess();
+    let stdin = '';
+    child.stdin.on('data', (chunk: Buffer) => {
+      stdin += chunk.toString();
+    });
+    const pending = new AgentTeamsRuntimeProviderManagementCliClient().connectWithApiKey(input);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(spawnCliMock).toHaveBeenCalledTimes(1);
+    expect(spawnCliMock.mock.calls[0]?.[1]).not.toContain(input.apiKey);
+    expect(stdin).toBe(input.apiKey);
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(killProcessTreeMock).not.toHaveBeenCalled();
+    succeed(child);
+    await expect(pending).resolves.toMatchObject({ provider: { providerId: 'groq' } });
+  });
+
+  it('keeps the absolute 180-second key deadline and refuses late output', async () => {
+    const child = childProcess();
+    const pending = new AgentTeamsRuntimeProviderManagementCliClient().connectWithApiKey(input);
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(179_999);
+    expect(killProcessTreeMock).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    const result = await pending;
+    expect(killProcessTreeMock).toHaveBeenCalledExactlyOnceWith(child, 'SIGKILL');
+    expect(result.error).toBeDefined();
+    expect(result.provider).toBeUndefined();
+    succeed(child);
+    expect(await pending).toBe(result);
+    expect(result.provider).toBeUndefined();
+  });
+
+  it('keeps the default 90-second budget for the generic connect command', async () => {
+    const child = childProcess();
+    const pending = new AgentTeamsRuntimeProviderManagementCliClient().connectProvider({
+      ...input,
+      method: 'api',
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(89_999);
+    expect(killProcessTreeMock).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(killProcessTreeMock).toHaveBeenCalledExactlyOnceWith(child, 'SIGKILL');
+    expect((await pending).error).toBeDefined();
+  });
+
+  it('preserves prompt key-connection success and clears its timer', async () => {
+    const child = childProcess();
+    const pending = new AgentTeamsRuntimeProviderManagementCliClient().connectWithApiKey(input);
+    await vi.advanceTimersByTimeAsync(0);
+    succeed(child);
+    await expect(pending).resolves.toMatchObject({ provider: { providerId: 'groq' } });
+    await vi.advanceTimersByTimeAsync(180_000);
+    expect(killProcessTreeMock).not.toHaveBeenCalled();
   });
 });

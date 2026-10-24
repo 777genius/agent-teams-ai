@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "เพิ่มปฏิกิริยา ({{count}})",
+      "remove": "ลบปฏิกิริยา ({{count}})",
+      "count": "ปฏิกิริยา: {{count}}",
+      "failed": "ไม่สามารถอัปเดตปฏิกิริยาได้"
+    },
     "actions": {
       "createTaskFromMessage": "สร้างงานจากข้อความ",
       "editMessage": "แก้ไขข้อความ",
@@ -194,7 +200,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "ชื่อต้องมีตัวอักษรหรือตัวเลขอย่างน้อยหนึ่งตัว",
-      "nameTooLong": "ชื่อยาวเกินไป (สูงสุด 128 อักขระ)",
+      "nameTooLong": "ชื่อยาวเกินไป (สูงสุด 64 อักขระ)",
       "selectWorkingDirectory": "เลือกไดเรกทอรีทำงาน (cwd)",
       "memberNameRequired": "ชื่อสมาชิกต้องไม่ว่างเปล่า",
       "memberNameInvalid": "ชื่อสมาชิกต้องขึ้นต้นด้วยตัวอักษรหรือตัวเลข ใช้ได้เฉพาะ [a-zA-Z0-9._-] สูงสุด 128 อักขระ",
@@ -262,6 +268,8 @@
       "name": "ชื่อ"
     },
     "memberRestartWarning": "การบันทึกจะรีสตาร์ทเพื่อนร่วมทีมคนนี้เพื่อใช้การเปลี่ยนแปลงบทบาท เวิร์กโฟลว์ การแยก worktree ผู้ให้บริการ โมเดล ระดับความพยายาม หรือการเข้าถึง MCP",
+    "displayedRuntimeHint": "ในการ์ดสมาชิก: {{runtime}} การตั้งค่าที่บันทึกไว้แตกต่างกัน",
+    "useDisplayedRuntime": "ใช้การตั้งค่าจากการ์ด",
     "notices": {
       "liveRenameBlocked": "การบันทึกแบบสดถูกบล็อกเนื่องจากมีการเปลี่ยนชื่อเพื่อนร่วมทีมที่มีอยู่ ยกเลิกการเปลี่ยนชื่อเหล่านั้นหรือหยุดทีมก่อน",
       "newLiveTeammates": "ไม่สามารถเพิ่มเพื่อนร่วมทีมใหม่จากแก้ไขทีมขณะทีมทำงานสดได้ ใช้กล่องโต้ตอบเพิ่มสมาชิกแทน",
@@ -351,6 +359,30 @@
     "placeholders": {
       "name": "member-name",
       "mcpServers": "github, sentry"
+    },
+    "gateway": {
+      "apiKeyLabel": "Gateway API key",
+      "apiKeyPlaceholder": "Paste the teammate gateway API key",
+      "authRejected": "Key authorization was rejected.",
+      "bindButton": "Bind teammate",
+      "bindingStatus": "Bound to {{profile}}",
+      "credentialChanged": "stored key changed — bind again with a new key",
+      "credentialMissing": "stored key missing — bind again with a new key",
+      "credentialReady": "key stored",
+      "emptyCatalog": "The model catalog is empty.",
+      "keyRequired": "Enter the gateway API key first.",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. การผูกที่บันทึกไว้ก่อนเปิดแบบฟอร์มนี้จะอัปเดตทันที และยังคงการเปลี่ยนแปลงเมื่อยกเลิกแบบฟอร์มทีม",
+      "probeButton": "Check key and load models",
+      "probing": "Checking...",
+      "profileLabel": "Gateway profile",
+      "profilePlaceholder": "Select a gateway profile",
+      "profileRequired": "Select a gateway profile first.",
+      "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+      "title": "Gateway provider",
+      "unbindButton": "Unbind",
+      "unavailable": "The gateway is unavailable right now."
     }
   },
   "detail": {
@@ -730,6 +762,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "สร้างแชตกลุ่ม",
+      "description": "เลือกเอเจนต์อย่างน้อยสองคน คุณจะเข้าร่วมโดยอัตโนมัติ",
+      "name": "ชื่อแชต",
+      "autoInclude": "เพิ่มสมาชิกใหม่โดยอัตโนมัติ",
+      "minimum": "เลือกเอเจนต์อย่างน้อยสองคน",
+      "creating": "กำลังสร้าง…",
+      "retryCreate": "ลองสร้างอีกครั้ง",
+      "unavailable": "แชตไม่พร้อมใช้งาน",
+      "message": "ส่งข้อความถึงกลุ่มนี้",
+      "archivedHint": "แชตนี้ถูกเก็บถาวรแล้ว กู้คืนเพื่อส่งข้อความ",
+      "restartHint": "ผู้เข้าร่วมทุกคนต้องเปิดใช้รันไทม์ที่เข้ากันได้ก่อนส่งข้อความ",
+      "unknownDelivery": "บันทึกแล้ว ไม่ทราบสถานะการส่ง",
+      "sending": "กำลังส่ง…",
+      "retrySend": "ส่งข้อความเดิมอีกครั้ง",
+      "send": "ส่ง",
+      "archived": "แชตที่เก็บถาวร",
+      "restore": "กู้คืนแชต",
+      "archive": "เก็บแชตถาวร",
+      "delivery": {
+        "queued": "อยู่ในคิว",
+        "accepted": "ยอมรับแล้ว",
+        "failed": "ล้มเหลว",
+        "unknown": "ไม่ทราบ",
+        "skipped": "ข้ามแล้ว"
+      }
+    },
     "actions": {
       "toLatest": "ไปข้อความล่าสุด",
       "bottomSheetActions": "การดำเนินการชีตด้านล่างของข้อความ",
@@ -969,7 +1028,8 @@
       "cancel": "ยกเลิก",
       "delete": "ลบ",
       "markResolved": "ทำเครื่องหมายว่าแก้ไขแล้ว",
-      "save": "บันทึก"
+      "save": "บันทึก",
+      "openInTaskTab": "เปิดในแท็บแยกต่างหาก"
     },
     "attachments": {
       "commentAttachment": "ไฟล์แนบความคิดเห็น",
@@ -2966,6 +3026,25 @@
         "weight_few": "agirlik {{count}}",
         "weight_many": "agirlik {{count}}"
       }
+    }
+  },
+  "externalPrompt": {
+    "requestHelp": "Name the templates to use and describe any edits in your request.",
+    "editAvailable": "Editing draft/stopped configuration is available.",
+    "trashAvailable": "Reversible trash for draft/stopped teams is available."
+  },
+  "managementChanges": {
+    "title": "Recent changes",
+    "created": "Created",
+    "edited": "Edited",
+    "hidden": "Some recent changes are hidden by the current filters.",
+    "roster": "Roles: +{{added}}/-{{removed}}",
+    "fields": {
+      "displayName": "Name changed",
+      "description": "Description changed",
+      "color": "Color changed",
+      "leadInstructions": "Lead instructions changed",
+      "members": "Members changed"
     }
   }
 }

@@ -18,6 +18,10 @@ import {
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { getSharedTelemetryBuildProperties } from '@shared/utils/buildMetadata';
 import {
+  sentryArtifactGuardIntegration,
+  type SentryArtifactPolicy,
+} from '@shared/utils/sentryArtifactPolicy';
+import {
   filterSafeSentryIntegrations,
   isValidDsn,
   redactSentryEvent,
@@ -28,6 +32,9 @@ import {
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { loadMainSentryArtifactPolicy } from './sentryArtifactPolicy';
+
+import type { RendererLoadDiagnostics } from '@main/utils/rendererEntry';
 import type { SentryTelemetryStatus } from '@shared/types/api';
 
 // ---------------------------------------------------------------------------
@@ -82,6 +89,7 @@ export function readPersistedTelemetryEnabled(basePath = getClaudeBasePath()): b
 // so telemetry-disabled users do not start Sentry sessions on app startup.
 let telemetryAllowed = readPersistedTelemetryEnabled();
 let telemetryIdentitySyncToken = 0;
+let artifactPolicy: SentryArtifactPolicy | null = null;
 
 export function getSafeSentryTelemetryTags(
   identitySource: AgentTeamsIdentitySource
@@ -111,7 +119,7 @@ export function syncTelemetryFlag(enabled: boolean): void {
 }
 
 export function filterSentryEventForTelemetry(event: unknown): unknown {
-  return telemetryAllowed ? redactSentryEvent(event) : null;
+  return telemetryAllowed ? redactSentryEvent(event, artifactPolicy) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -123,7 +131,11 @@ interface SentryMainApi {
   init?: (options: SentryInitOptions) => void;
   captureException?: (
     error: unknown,
-    context?: { tags?: Record<string, string> }
+    context?: {
+      tags?: Record<string, string>;
+      contexts?: Record<string, Record<string, number>>;
+      fingerprint?: string[];
+    }
   ) => string | undefined;
   setUser?: (user: { id: string } | null) => void;
   setTags?: (tags: Record<string, string>) => void;
@@ -145,9 +157,7 @@ interface SentryInitOptions {
   sendDefaultPii: false;
   beforeSend: (event: unknown) => unknown;
   beforeSendTransaction: (event: unknown) => unknown;
-  integrations: <TIntegration extends { name?: string }>(
-    integrations: TIntegration[]
-  ) => TIntegration[];
+  integrations: (integrations: { name?: string }[]) => { name?: string }[];
   ipcMode: number;
 }
 
@@ -223,6 +233,7 @@ function shutdownSentry(): void {
 
   initialized = false;
   Sentry = null;
+  artifactPolicy = null;
 }
 
 export function getMainSentryStatus(): SentryTelemetryStatus {
@@ -331,6 +342,7 @@ export function initializeMainSentry(): void {
       throw new Error('Sentry Electron classic IPC is unavailable');
     }
 
+    artifactPolicy = loadMainSentryArtifactPolicy();
     sentryApi.init({
       dsn,
       release: SENTRY_RELEASE,
@@ -340,7 +352,10 @@ export function initializeMainSentry(): void {
 
       beforeSend: filterSentryEventForTelemetry,
       beforeSendTransaction: filterSentryEventForTelemetry,
-      integrations: filterSafeSentryIntegrations,
+      integrations: (integrations) => [
+        sentryArtifactGuardIntegration(artifactPolicy),
+        ...filterSafeSentryIntegrations(integrations),
+      ],
       // The app provides an explicit classic preload bridge. Protocol mode
       // cannot be registered after Electron ready when telemetry is enabled later.
       ipcMode: classicIpcMode,
@@ -381,6 +396,68 @@ export function captureMainException(error: unknown, operation: string): string 
   const exception = error instanceof Error ? error : new Error('Non-Error exception');
   return Sentry.captureException(exception, {
     tags: { 'error.operation': safeOperation },
+  });
+}
+
+/** Add path-free local entry facts without changing the existing load exception. */
+export function captureRendererLoadFailure(
+  error: unknown,
+  operation: 'renderer_load_file' | 'renderer_did_fail_load',
+  diagnostics?: RendererLoadDiagnostics
+): string | undefined {
+  if (!diagnostics) return captureMainException(error, operation);
+  if (!initialized || !telemetryAllowed || !Sentry?.captureException) return undefined;
+  const safeDiagnostics: Record<string, number> = {};
+  for (const field of [
+    'packaged',
+    'selected_candidate',
+    'primary_present_at_selection',
+    'fallback_present_at_selection',
+    'primary_present',
+    'fallback_present',
+  ] as const) {
+    const value = diagnostics[field];
+    if (value === 0 || value === 1) safeDiagnostics[field] = value;
+  }
+  const code = diagnostics.error_code;
+  if (typeof code === 'number' && Number.isInteger(code) && code < 0 && code >= -10_000) {
+    safeDiagnostics.error_code = code;
+  }
+  return Sentry.captureException(
+    error instanceof Error ? error : new Error('Non-Error exception'),
+    {
+      tags: { 'error.operation': operation },
+      contexts: { renderer_load: safeDiagnostics },
+      fingerprint: ['{{ default }}', operation, String(safeDiagnostics.error_code ?? 'unknown')],
+    }
+  );
+}
+
+/** Preserve crash evidence without accepting arbitrary renderer or project metadata. */
+export function captureRendererProcessGone(
+  details: { reason: string; exitCode: number },
+  recoveryAttempts: number
+): string | undefined {
+  if (!initialized || !telemetryAllowed || !Sentry?.captureException) return undefined;
+  const reasons = [
+    'clean-exit',
+    'abnormal-exit',
+    'killed',
+    'crashed',
+    'oom',
+    'launch-failed',
+    'integrity-failure',
+    'memory-eviction',
+  ];
+  const reason = reasons.includes(details.reason) ? details.reason : 'unknown';
+  const diagnostics: Record<string, number> = {};
+  if (Number.isSafeInteger(details.exitCode)) diagnostics.exit_code = details.exitCode;
+  if (Number.isInteger(recoveryAttempts) && recoveryAttempts >= 0 && recoveryAttempts <= 2) {
+    diagnostics.recovery_attempts = recoveryAttempts;
+  }
+  return Sentry.captureException(new Error(`Renderer process terminated: ${reason}`), {
+    tags: { 'error.operation': 'renderer_process_gone', 'renderer.reason': reason },
+    contexts: { renderer_crash: diagnostics },
   });
 }
 

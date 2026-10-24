@@ -119,6 +119,7 @@ import { OpenCodeSourceProviderTabTrigger } from './OpenCodeSourceProviderTabTri
 import * as unavailableSelection from './openCodeUnavailableSelection';
 import { selectVisibleOpenCodeModelOptions } from './openCodeVisibleModelOptions';
 import { getModelAdvisoryBadgeLabel, localizeOptionReason } from './providerPrepareReasonCodes';
+import { resolveRuntimeDefaultModelLabel } from './runtimeDefaultModelLabel';
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
 import {
   OpenCodeCatalogRefreshErrorCard,
@@ -145,6 +146,7 @@ import {
 import { useOpenCodeProjectDefaultModel } from './useOpenCodeDefaultRouteLabel';
 import { usePublishOpenCodeProviderScopedStatus } from './useOpenCodeProviderScopedModelAuthority';
 import { useTeamDefaultModelTooltip } from './useTeamDefaultModelTooltip';
+import { useTeamModelProviderStatus } from './useTeamModelProviderStatus';
 export {
   computeEffectiveTeamModel,
   formatTeamModelSummary,
@@ -1077,6 +1079,8 @@ export interface TeamModelSelectorProps {
   onProviderChange: (providerId: TeamProviderId) => void;
   value: string;
   onValueChange: (value: string) => void;
+  preserveSelectedModel?: boolean;
+  limitContext?: boolean;
   projectPath?: string | null;
   id?: string;
   disableGeminiOption?: boolean;
@@ -1098,6 +1102,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   onProviderChange,
   value,
   onValueChange,
+  preserveSelectedModel = false,
+  limitContext = false,
   projectPath = null,
   id,
   disableGeminiOption = false,
@@ -1144,18 +1150,12 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   } | null>(null);
   const effectiveProviderId = inspectedProviderId ?? selectedProviderId;
   const isInspectingInactiveProvider = inspectedProviderId !== null;
-  useOpenCodePassiveStatusPrefetch({
-    enabled: effectiveProviderId === 'opencode',
-    projectPath: openCodeCatalogScopeKey || null,
-  });
   const {
     cliStatus: effectiveCliStatus,
     sourceCliStatus,
     providerStatus: passiveRuntimeProviderStatus,
     codexSnapshotPending,
-  } = useEffectiveCliProviderStatus(effectiveProviderId, {
-    projectPath: effectiveProviderId === 'opencode' ? openCodeCatalogScopeKey || null : null,
-  });
+  } = useTeamModelProviderStatus(effectiveProviderId, openCodeCatalogScopeKey, true);
   const { providerStatus: openCodePassiveProviderStatus } = useEffectiveCliProviderStatus(
     'opencode',
     { projectPath: openCodeCatalogScopeKey || null }
@@ -1241,6 +1241,16 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       : passiveRuntimeProviderStatus;
   const scopedAuthorityIsFresh =
     openCodeScopedCatalog.status === 'ready' && openCodeScopedCatalog.catalogState === 'fresh';
+  useOpenCodePassiveStatusPrefetch({
+    enabled: effectiveProviderId === 'opencode',
+    projectPath: openCodeCatalogScopeKey || null,
+    catalogRecovery: scopedAuthorityIsFresh
+      ? {
+          projectPath: openCodeCatalogScopeKey || null,
+          freshUntil: runtimeProviderStatus?.modelCatalog?.staleAt ?? null,
+        }
+      : null,
+  });
   const passiveCatalogFreshForAuth = usePassiveOpenCodeAuthCatalogFreshness(
     openCodeScopedCatalog.sourceProviderId === null ? runtimeProviderStatus : null
   );
@@ -1463,19 +1473,17 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const defaultModelTooltip = useTeamDefaultModelTooltip(
     effectiveProviderId,
     runtimeProviderStatus,
-    openCodeDefaultLabelModel
+    openCodeDefaultLabelModel,
+    limitContext
   );
-  const openCodeDefaultOptionLabel = useMemo(() => {
-    if (effectiveProviderId !== 'opencode' || !openCodeDefaultLabelModel) {
-      return t('modelSelector.defaultModel');
-    }
-    return t('modelSelector.defaultWithResolved', {
-      model: formatOpenCodeDefaultRouteLabel(
-        openCodeDefaultLabelModel,
-        openCodePassiveProviderStatus
-      ),
-    });
-  }, [effectiveProviderId, openCodeDefaultLabelModel, openCodePassiveProviderStatus, t]);
+  const defaultLabelModel =
+    effectiveProviderId === 'opencode' && openCodeDefaultLabelModel
+      ? formatOpenCodeDefaultRouteLabel(openCodeDefaultLabelModel, openCodePassiveProviderStatus)
+      : resolveRuntimeDefaultModelLabel(effectiveProviderId, runtimeProviderStatus, limitContext)
+          ?.label;
+  const defaultOptionLabel = defaultLabelModel
+    ? t('modelSelector.defaultWithResolved', { model: defaultLabelModel })
+    : t('modelSelector.defaultModel');
   const getProviderOverrideDisabledReason = (candidateProviderId: string): string | null => {
     if (!isTeamProviderId(candidateProviderId)) {
       return null;
@@ -1644,6 +1652,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           providerId: effectiveProviderId,
           value,
           runtimeNormalizedValue: scopeAwareRuntimeNormalizedValue,
+          preserveSelectedModel,
           isAppManagedLocalModel: selectedAppManagedLocalModel,
           isInLocalOverlay: openCodeLocalModelOverlay.modelIds.has(value),
           isLocalLookupAuthoritative: openCodeLocalProviderLookupAuthoritative,
@@ -1655,11 +1664,16 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     !preserveAuthRequiredOpenCodeSelection &&
     normalizedValue === value &&
     scopeAwareRuntimeNormalizedValue !== value;
+  const preserveUnavailablePreview =
+    preserveSelectedModel &&
+    effectiveProviderId === 'opencode' &&
+    Boolean(value.trim()) &&
+    scopeAwareRuntimeNormalizedValue !== value;
   const selectedLocalModelFallbackOption = useMemo(
     () =>
       unavailableSelection.buildSelectedOpenCodeFallbackOption({
         value,
-        keepUnavailable: keepUnavailableOpenCodeSelection,
+        keepUnavailable: keepUnavailableOpenCodeSelection || preserveUnavailablePreview,
         unavailableReason: t('modelSelector.openCodeSelectedRouteUnavailable'),
         catalogStatus: runtimeProviderStatus,
         selectedUnverifiedLocalModel,
@@ -1668,6 +1682,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       }),
     [
       keepUnavailableOpenCodeSelection,
+      preserveUnavailablePreview,
       openCodeLocalProviderLookupError,
       openCodeLocalProvidersLoading,
       runtimeProviderStatus,
@@ -1725,7 +1740,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       const pendingOptions: TeamRuntimeModelOption[] = [
         {
           value: '',
-          label: openCodeDefaultOptionLabel,
+          label: defaultOptionLabel,
           badgeLabel: t('modelSelector.defaultModel'),
         },
       ];
@@ -1736,7 +1751,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     }
     const unscopedRuntimeOptions = getAvailableTeamProviderModelOptions(
       effectiveProviderId,
-      runtimeProviderStatus
+      runtimeProviderStatus,
+      normalizedValue
     );
     const catalogModelById = new Map<string, ProviderModelCatalogItem>();
     for (const model of runtimeProviderStatus?.modelCatalog?.models ?? []) {
@@ -1758,11 +1774,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         : unscopedRuntimeOptions;
     const presentedRuntimeOptions = addCodexAstraUpdatePreview(
       effectiveProviderId,
-      effectiveProviderId === 'opencode'
-        ? runtimeOptions.map((option) =>
-            option.value.trim() ? option : { ...option, label: openCodeDefaultOptionLabel }
-          )
-        : runtimeOptions,
+      runtimeOptions.map((option) =>
+        option.value.trim() ? option : { ...option, label: defaultOptionLabel }
+      ),
       codexRuntimeStatus
     );
     if (
@@ -1786,9 +1800,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     codexRuntimeStatus,
     effectiveProviderId,
     openCodeLocalProviderLookupAuthoritative,
-    openCodeDefaultOptionLabel,
+    defaultOptionLabel,
     openCodeLocalModelOverlay.modelIds,
     openCodeLocalModelOverlay.options,
+    normalizedValue,
     runtimeProviderStatus,
     selectedLocalModelFallbackOption,
     shouldAwaitRuntimeModelList,
@@ -2779,10 +2794,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     const showFreeRibbon =
       openCodePricingInfo?.free === true || openCodeRouteKind === 'builtin_free';
     const isSelectedModel = normalizedValue === opt.value;
-    const optionDisplayLabel =
-      effectiveProviderId === 'opencode' && isSelectedModel && opt.value.trim()
-        ? t('modelSelector.explicitChoice', { model: opt.label })
-        : opt.label;
     const isFlatOpenCodeCell = effectiveProviderId === 'opencode';
     const flatCellBackgroundClass =
       'bg-[color-mix(in_srgb,var(--color-surface-raised)_58%,var(--color-surface)_42%)]';
@@ -2793,12 +2804,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         id={opt.value === normalizedValue ? id : undefined}
         data-testid="team-model-selector-model-option"
         aria-pressed={localModelActions.canAddOrRetry ? undefined : isSelectedModel}
+        aria-current={localModelActions.canAddOrRetry && isSelectedModel ? 'true' : undefined}
         aria-disabled={!modelInteractable}
-        aria-label={
-          modelButtonDescription
-            ? `${optionDisplayLabel}. ${modelButtonDescription}`
-            : optionDisplayLabel
-        }
+        aria-label={modelButtonDescription ? `${opt.label}. ${modelButtonDescription}` : opt.label}
         className={cn(
           isFlatOpenCodeCell
             ? 'relative flex min-h-[58px] items-center justify-start gap-1.5 overflow-hidden border-0 border-b border-r border-[var(--color-border-subtle)] px-3 py-2 text-left text-xs font-medium transition-[background-color,color] duration-150'
@@ -2870,7 +2878,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           )}
         >
           <OverflowModelName
-            text={optionDisplayLabel}
+            text={opt.label}
             className={cn(
               'max-w-full break-words leading-tight',
               isFlatOpenCodeCell &&

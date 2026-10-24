@@ -65,7 +65,7 @@ function parsePid(value) {
 }
 
 function writeComplete(name, content) {
-  const fd = fs.openSync(name, 'wx');
+  const fd = fs.openSync(name, 'wx', 0o600);
   try {
     const bytes = Buffer.from(content, 'utf8');
     let offset = 0;
@@ -117,7 +117,7 @@ function acquireGate(gate, token) {
   }
   const candidate = `${gate}.candidate-${process.pid}-${randomUUID()}`;
   const entry = `owner-${process.pid}-${token}`;
-  fs.mkdirSync(candidate);
+  fs.mkdirSync(candidate, { mode: 0o700 });
   let published = false;
   try {
     writeComplete(
@@ -189,7 +189,7 @@ function releaseLock(lockPath, token) {
 }
 
 function tryAcquire(lockPath, token) {
-  fs.mkdirSync(path.dirname(lockPath), { recursive: true });
+  fs.mkdirSync(path.dirname(lockPath), { recursive: true, mode: 0o700 });
   const gate = `${lockPath}-transition-v2`;
   const entry = acquireGate(gate, token);
   if (entry === null) return false;
@@ -271,4 +271,30 @@ function withFileLockSync(filePath, fn, options = {}) {
   }
 }
 
-module.exports = { withFileLockSync, acquireFileLockSync };
+// Yield while acquiring so async writers in this process can complete and release.
+async function withFileLock(filePath, fn, options = {}) {
+  const resolvedOptions = resolveLockOptions(options);
+  const lockPath = `${filePath}.lock`;
+  const deadline = Date.now() + resolvedOptions.acquireTimeoutMs;
+  const token = randomUUID();
+
+  while (!tryAcquire(lockPath, token)) {
+    if (Date.now() >= deadline) {
+      throw new Error(`File lock timeout: ${filePath}`);
+    }
+    await new Promise((resolve) =>
+      setTimeout(
+        resolve,
+        Math.min(resolvedOptions.retryIntervalMs, Math.max(0, deadline - Date.now()))
+      )
+    );
+  }
+
+  try {
+    return await fn();
+  } finally {
+    releaseLock(lockPath, token);
+  }
+}
+
+module.exports = { withFileLock, withFileLockSync, acquireFileLockSync };

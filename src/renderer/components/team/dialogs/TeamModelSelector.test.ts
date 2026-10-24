@@ -297,6 +297,20 @@ describe('resolveTeamModelSelectorValue', () => {
     ).toBe('');
   });
 
+  it('keeps an explicitly selected Copilot model visible even when the catalog rejects it', () => {
+    expect(
+      resolveTeamModelSelectorValue({
+        providerId: 'opencode',
+        value: 'github-copilot/gpt-5-mini',
+        runtimeNormalizedValue: '',
+        preserveSelectedModel: true,
+        isAppManagedLocalModel: false,
+        isInLocalOverlay: false,
+        isLocalLookupAuthoritative: true,
+      })
+    ).toBe('github-copilot/gpt-5-mini');
+  });
+
   it('preserves a qualified OpenCode selection while local lookup is not authoritative', () => {
     expect(
       resolveTeamModelSelectorValue({

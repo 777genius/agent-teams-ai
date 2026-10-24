@@ -11,13 +11,13 @@ import {
 import { InternalStorageBackendSelector } from '@features/internal-storage/main/composition/InternalStorageBackendSelector';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { MemberWorkSyncNudgeOutboxPlanner } from '@features/member-work-sync/core/application/MemberWorkSyncNudgeOutboxPlanner';
-import { MEMBER_WORK_SYNC_STATUS_MUTATION_MAX_CONFLICT_ATTEMPTS } from '@features/member-work-sync/core/application/MemberWorkSyncStatusMutation';
 import { hasActiveAcceptedWorkLease } from '@features/member-work-sync/core/application/MemberWorkSyncNudgeRecoveryPolicy';
 import {
   finalizeMemberWorkSyncAgenda,
   MemberWorkSyncReconciler,
 } from '@features/member-work-sync/core/application/MemberWorkSyncReconciler';
 import { MemberWorkSyncReporter } from '@features/member-work-sync/core/application/MemberWorkSyncReporter';
+import { MEMBER_WORK_SYNC_STATUS_MUTATION_MAX_CONFLICT_ATTEMPTS } from '@features/member-work-sync/core/application/MemberWorkSyncStatusMutation';
 import { MemberWorkSyncTeamOperationGate } from '@features/member-work-sync/core/application/MemberWorkSyncTeamOperationGate';
 import { createAdmittedMemberWorkSyncStatusPort } from '@features/member-work-sync/main/composition/createAdmittedMemberWorkSyncStatusPort';
 import { getAcceptedWorkLeaseStaleness } from '@features/member-work-sync/main/composition/memberWorkSyncStatusRefreshPolicy';
@@ -55,6 +55,9 @@ afterEach(async () => {
   for (const core of cores.splice(0)) core.close();
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
+/**
+ * Create a manually resolvable promise for deterministic async test control.
+ */
 function deferred() {
   let resolve!: () => void;
   const promise = new Promise<void>((done) => {
@@ -62,6 +65,9 @@ function deferred() {
   });
   return { promise, resolve };
 }
+/**
+ * Build the JSON or SQLite-backed fixture harness for conditional use-case tests.
+ */
 async function setup(kind: 'json' | 'sqlite') {
   const root = await mkdtemp(join(tmpdir(), 'mws-usecase-sandbox-'));
   roots.push(root);
@@ -204,6 +210,12 @@ async function setup(kind: 'json' | 'sqlite') {
     },
   };
 }
+
+// Measured at the four-vCPU CI quota: the admitted conditional use cases drive
+// chained durable JSON storage, with individual tests legitimately taking up to
+// ~33s under concurrent durable suites. The 60s ceiling sizes the wait to the
+// measured worst case (~1.8x margin) without changing any assertion.
+vi.setConfig({ testTimeout: 60_000 });
 
 describe.each(['json', 'sqlite'] as const)('conditional use cases on real %s storage', (kind) => {
   it('recomputes stale reconcile and preserves the concurrent accepted report', async () => {

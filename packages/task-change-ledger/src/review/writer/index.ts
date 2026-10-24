@@ -32,3 +32,5 @@ export type {
   ReviewCommandReceiptObserver,
   ReviewCommandCommitProof,
 } from './reviewCommandJournal.js';
+
+export * from './authoritativeReviewFiles.js';

@@ -97,7 +97,8 @@ export const TabBarActions = (): React.JSX.Element => {
       style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
     >
       {/* Update app button — compact header action so tabs stay usable */}
-      {(updateStatus === 'available' ||
+      {(updateStatus === 'error' ||
+        updateStatus === 'available' ||
         updateStatus === 'downloading' ||
         updateStatus === 'downloaded') && (
         <Tooltip>
@@ -114,7 +115,9 @@ export const TabBarActions = (): React.JSX.Element => {
                 backgroundColor: updateHover ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
               }}
             >
-              {updateStatus === 'downloading' ? (
+              {updateStatus === 'error' ? (
+                t('updates.updateFailed')
+              ) : updateStatus === 'downloading' ? (
                 <>
                   <Loader2 className="size-3.5 shrink-0 animate-spin" />
                   <span className="tabular-nums">{Math.round(downloadProgress)}%</span>
@@ -127,11 +130,13 @@ export const TabBarActions = (): React.JSX.Element => {
             </button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            {updateStatus === 'downloading'
-              ? t('updates.updatingApp')
-              : updateStatus === 'downloaded'
-                ? t('updates.downloadedRestartTooltip')
-                : t('updates.newVersionAvailable')}
+            {updateStatus === 'error'
+              ? t('updates.updateFailed')
+              : updateStatus === 'downloading'
+                ? t('updates.updatingApp')
+                : updateStatus === 'downloaded'
+                  ? t('updates.downloadedRestartTooltip')
+                  : t('updates.newVersionAvailable')}
           </TooltipContent>
         </Tooltip>
       )}

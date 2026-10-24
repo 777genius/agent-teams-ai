@@ -1,7 +1,8 @@
+import { basename, dirname } from 'path';
 import { getReviewFileTransactionFromTransition } from './reviewFileTransition.js';
 import { normalizePathForComparison } from '../../platformPath.js';
 import { createHash } from 'crypto';
-import { lstat, readFile } from 'fs/promises';
+import { lstat, readdir, readFile } from 'fs/promises';
 import type { ApplyReviewDiskTransition, SnippetDiff } from '../../contracts.js';
 import {
   type ReviewApplyMutationContext,
@@ -15,6 +16,22 @@ import {
 
 export function createFileMutation(getContext: () => ApplierContext) {
   return {
+    async caseOnlyRenameEntry(
+      oldFilePath: string,
+      newFilePath: string
+    ): Promise<'old' | 'new'> {
+      if (dirname(oldFilePath) !== dirname(newFilePath)) {
+        throw new Error('Ledger rename directory spelling is ambiguous');
+      }
+      const entries = await readdir(dirname(oldFilePath));
+      const hasOld = entries.includes(basename(oldFilePath));
+      const hasNew = entries.includes(basename(newFilePath));
+      if (hasOld === hasNew) {
+        throw new Error('Ledger rename directory spelling is ambiguous');
+      }
+      return hasOld ? 'old' : 'new';
+    },
+
     async classifyEditedFileTransition(
       filePath: string,
       beforeContent: string | null,
@@ -210,7 +227,7 @@ export function createFileMutation(getContext: () => ApplierContext) {
       });
     },
     async finalizeRejectedRenameTransaction(
-      filePath: string,
+      _filePath: string,
       original: string | null,
       modified: string | null,
       snippets: SnippetDiff[],
@@ -220,25 +237,16 @@ export function createFileMutation(getContext: () => ApplierContext) {
       const ledgerSnippets = snippets.filter((snippet) => snippet.ledger && !snippet.isError);
       const relation = ctx.resolveLedgerRelation(ledgerSnippets);
       if (relation?.kind !== 'rename') return;
-      const oldSnippet =
-        ledgerSnippets.find(
-          (snippet) =>
-            snippet.ledger?.operation === 'delete' &&
-            ctx.pathMatchesRelationPath(snippet.filePath, relation.oldPath)
-        ) ?? ledgerSnippets.find((snippet) => snippet.ledger?.operation === 'delete');
-      const newSnippet =
-        ledgerSnippets.find(
-          (snippet) =>
-            snippet.ledger?.operation === 'create' &&
-            ctx.pathMatchesRelationPath(snippet.filePath, relation.newPath)
-        ) ?? ledgerSnippets.find((snippet) => snippet.ledger?.operation === 'create');
-      const oldFilePath =
-        oldSnippet?.filePath ??
-        ctx.resolveRelatedLedgerPath(newSnippet?.filePath, relation.newPath, relation.oldPath);
-      const newFilePath = newSnippet?.filePath ?? filePath;
+      const endpoints = ctx.resolveLedgerRenameEndpoints(ledgerSnippets, relation);
+      const oldSnippet = endpoints?.oldSnippet;
+      const newSnippet = endpoints?.newSnippet;
+      const oldFilePath = endpoints?.oldFilePath;
+      const newFilePath = endpoints?.newFilePath;
       const oldContent = oldSnippet?.ledger?.originalFullContent ?? original;
       const newContent = newSnippet?.ledger?.modifiedFullContent ?? modified;
-      if (!oldFilePath || oldContent === null || newContent === null) return;
+      if (!oldFilePath || !newFilePath || oldContent === null || newContent === null) {
+        throw new Error('Ledger rename recovery metadata is incomplete.');
+      }
       const sourcePath = direction === 'restore' ? oldFilePath : newFilePath;
       const targetPath = direction === 'restore' ? newFilePath : oldFilePath;
       const expectedContent = direction === 'restore' ? oldContent : newContent;
@@ -350,7 +358,8 @@ export function createFileMutation(getContext: () => ApplierContext) {
     },
     async assertSafeExpectedFile(
       filePath: string,
-      expectedCurrentContent: string
+      expectedCurrentContent: string,
+      allowOwnedPublishedAlias = false
     ): Promise<{ dev: number; ino: number; mode: number }> {
       const ctx = getContext();
       let stats;
@@ -359,16 +368,18 @@ export function createFileMutation(getContext: () => ApplierContext) {
       } catch (error) {
         const code = (error as NodeJS.ErrnoException).code;
         if (code === 'ENOENT' || code === 'ENOTDIR') {
-          throw Object.assign(
-            new Error('File changed during review update; refusing to overwrite'),
-            {
-              code,
-            }
-          );
+          throw Object.assign(new Error('File changed during review update; refusing to overwrite'), {
+            code,
+          });
         }
         throw error;
       }
-      if (stats.isSymbolicLink() || !stats.isFile() || stats.nlink > 1) {
+      if (
+        stats.isSymbolicLink() ||
+        !stats.isFile() ||
+        (stats.nlink > 1 &&
+          (!allowOwnedPublishedAlias || !(await ctx.io.isOwnedReviewFileTransactionHardlink(filePath))))
+      ) {
         throw new Error('Review mutation refuses symbolic or multiply-linked files');
       }
       const current = await ctx.readCurrentText(filePath);

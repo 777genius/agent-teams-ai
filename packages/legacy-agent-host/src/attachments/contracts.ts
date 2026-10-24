@@ -23,12 +23,12 @@ export const attachmentMetadataSchema = z
     filename: z
       .string()
       .min(1)
-      .max(1024)
+      .max(4096)
       .refine((value) => !/[\0\r\n]/.test(value)),
     mimeType: z
       .string()
       .min(1)
-      .max(256)
+      .max(255)
       .refine((value) => !/[\0\r\n]/.test(value)),
     size: z.number().int().min(0).max(ATTACHMENT_MAX_BYTES),
     addedAt: z.string().min(1).max(128).optional(),

@@ -4,10 +4,12 @@ import {
   normalizeTokenUsageBudgetSettings,
   normalizeTokenUsageSnapshot,
   TOKEN_USAGE_BUDGET_SETTINGS_ROUTE,
+  TOKEN_USAGE_BUDGET_STATUS_ROUTE,
   TOKEN_USAGE_SNAPSHOT_ROUTE,
-  type TokenUsageAnalyticsSnapshotDto,
-  type TokenUsageBudgetSettingsDto,
+  type TokenUsageBudgetSettingsUpdateRequestDto,
   type TokenUsageSnapshotRequest,
+  validateBudgetUpdate,
+  validateTeamIds,
 } from '../../../../contracts';
 
 import type { TokenUsageFeatureFacade } from '../../../composition/createTokenUsageFeature';
@@ -19,11 +21,13 @@ export function registerTokenUsageHttp(
   app: FastifyInstance,
   feature: TokenUsageFeatureFacade
 ): void {
-  app.get(TOKEN_USAGE_SNAPSHOT_ROUTE, async (request): Promise<TokenUsageAnalyticsSnapshotDto> => {
+  app.get(TOKEN_USAGE_SNAPSHOT_ROUTE, async (request, reply) => {
     try {
       const snapshot = await feature.refreshSnapshot(readSnapshotRequest(request.query));
       return normalizeTokenUsageSnapshot(snapshot) ?? snapshot;
     } catch (error) {
+      if ((error as { code?: string }).code === 'SNAPSHOT_FILTER_VALIDATION')
+        return reply.code(400).send({ error: (error as Error).message });
       logger.error('Failed to load token usage snapshot via HTTP', error);
       const now = new Date().toISOString();
       return {
@@ -82,25 +86,33 @@ export function registerTokenUsageHttp(
     }
   });
 
-  app.get(TOKEN_USAGE_BUDGET_SETTINGS_ROUTE, async (): Promise<TokenUsageBudgetSettingsDto> => {
+  app.get(TOKEN_USAGE_BUDGET_STATUS_ROUTE, async (_request, reply) => {
+    try {
+      return await feature.getBudgetStatus();
+    } catch (error) {
+      logger.error('Failed to load budget status', error);
+      return reply.code(503).send({ error: 'Budget status unavailable' });
+    }
+  });
+  app.get(TOKEN_USAGE_BUDGET_SETTINGS_ROUTE, async (_request, reply) => {
     try {
       return normalizeTokenUsageBudgetSettings(await feature.getBudgetSettings());
     } catch (error) {
-      logger.error('Failed to load token usage budget settings via HTTP', error);
-      return {};
+      logger.error('Failed to load budget settings', error);
+      return reply.code(503).send({ error: 'Budget settings unavailable' });
     }
   });
-
-  app.put<{ Body: TokenUsageBudgetSettingsDto }>(
+  app.put<{ Body: TokenUsageBudgetSettingsUpdateRequestDto }>(
     TOKEN_USAGE_BUDGET_SETTINGS_ROUTE,
-    async (request): Promise<TokenUsageBudgetSettingsDto> => {
+    async (request, reply) => {
       try {
-        return normalizeTokenUsageBudgetSettings(
-          await feature.updateBudgetSettings(normalizeTokenUsageBudgetSettings(request.body))
-        );
+        return await feature.updateBudgetSettings(validateBudgetUpdate(request.body));
       } catch (error) {
-        logger.error('Failed to update token usage budget settings via HTTP', error);
-        return normalizeTokenUsageBudgetSettings(request.body);
+        const code = (error as { code?: string }).code;
+        if (code !== 'BUDGET_VALIDATION') logger.error('Failed to save budget settings', error);
+        return reply
+          .code(code === 'BUDGET_VALIDATION' ? 400 : code === 'BUDGET_CONFLICT' ? 409 : 503)
+          .send({ error: error instanceof Error ? error.message : 'Budget settings unavailable' });
       }
     }
   );
@@ -110,6 +122,11 @@ function readSnapshotRequest(query: unknown): TokenUsageSnapshotRequest | undefi
   const record =
     query !== null && typeof query === 'object' ? (query as Record<string, unknown>) : {};
   const request: TokenUsageSnapshotRequest = {};
+  if (record.teamIds !== undefined) {
+    const teamIds = Array.isArray(record.teamIds) ? record.teamIds : [record.teamIds];
+    validateTeamIds(teamIds);
+    request.teamIds = teamIds;
+  }
   const teamNames = readStringList(record.teamNames);
   if (teamNames.length > 0) request.teamNames = teamNames;
   for (const key of [

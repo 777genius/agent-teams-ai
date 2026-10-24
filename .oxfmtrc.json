@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "semi": true,
+  "singleQuote": true,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "printWidth": 100,
+  "bracketSpacing": true,
+  "arrowParens": "always",
+  "endOfLine": "lf",
+  "jsxSingleQuote": false,
+  "bracketSameLine": false,
+  "sortImports": false,
+  "sortPackageJson": false,
+  "sortTailwindcss": { "config": "./tailwind.config.js" },
+  "overrides": [
+    { "files": ["*.json", "*.jsonc"], "options": { "trailingComma": "none" } },
+    { "files": ["*.md"], "options": { "proseWrap": "preserve" } }
+  ],
+  "ignorePatterns": [
+    "dist/", "dist-electron/", "build/", "out/", "node_modules/", "pnpm-lock.yaml",
+    "*.min.js", "*.min.css", "src/features/localization/renderer/resources.d.ts",
+    "*.config.js", "*.config.ts", ".idea/", ".vscode/", ".DS_Store", "*.log"
+  ]
+}

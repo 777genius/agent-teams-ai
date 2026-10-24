@@ -51,6 +51,7 @@ const RECONCILE_DEBOUNCE_MS = 250;
 // If a new team artifact should produce TeamChangeEvent, add it here too.
 const TEAM_ROOT_FILES = new Set([
   'config.json',
+  'group-chats.json',
   'kanban-state.json',
   'processes.json',
   'sentMessages.json',

@@ -6,6 +6,7 @@ import {
 import {
   isAddressedToUser,
   isAttentionUnread,
+  isUserAttentionMessage,
   isUserUnreadMessage,
 } from '@features/team-direct-chats/core/domain/isUserUnreadMessage';
 import { pickPreviewMessage } from '@features/team-direct-chats/core/domain/pickPreviewMessage';
@@ -180,8 +181,83 @@ describe('pickPreviewMessage', () => {
   });
 
   it('falls back to newest visible when nothing is addressed to the user', () => {
-    const newest = msg({ from: 'cody', to: 'oscar', text: 'newest', timestamp: '2026-09-17T13:00:00.000Z' });
-    const older = msg({ from: 'system', to: 'lead', text: 'older', timestamp: '2026-09-17T12:00:00.000Z' });
+    const newest = msg({
+      from: 'cody',
+      to: 'oscar',
+      text: 'newest',
+      timestamp: '2026-09-17T13:00:00.000Z',
+    });
+    const older = msg({
+      from: 'system',
+      to: 'lead',
+      text: 'older',
+      timestamp: '2026-09-17T12:00:00.000Z',
+    });
     expect(pickPreviewMessage([newest, older])?.text).toBe('newest');
   });
+});
+
+describe('group user mention attention', () => {
+  it('counts normal group activity separately from explicit unread mentions and deduplicates copies', () => {
+    const plain = msg({
+      from: 'alice',
+      to: 'user',
+      text: 'Progress update',
+      groupChatId: 'g',
+      messageId: 'plain',
+      groupMessageId: 'plain',
+    });
+    const mentioned = msg({
+      from: 'bob',
+      to: 'user',
+      text: '@User, please check',
+      groupChatId: 'g',
+      messageId: 'mentioned',
+      groupMessageId: 'mentioned',
+    });
+    const readMention = msg({
+      from: 'bob',
+      to: 'user',
+      text: '@user read',
+      groupChatId: 'g',
+      messageId: 'read',
+      groupMessageId: 'read',
+    });
+    const outgoing = msg({
+      from: 'user',
+      text: '@user outgoing',
+      groupChatId: 'g',
+      messageId: 'out',
+      groupMessageId: 'out',
+    });
+    const rows = [plain, mentioned, { ...mentioned }, readMention, outgoing];
+    const read = new Set(['read']);
+    expect(countUniqueUnread(rows, read, toTestKey)).toEqual({ unreadCount: 2, attentionCount: 1 });
+    const scope = { kind: 'group' as const, groupChatId: 'g' };
+    expect(
+      countUnreadByConversation(rows, [scope], read, toTestKey, []).get(conversationScopeKey(scope))
+    ).toEqual({ unreadCount: 2, attentionCount: 1 });
+    expect(isAttentionUnread(plain, read, toTestKey)).toBe(false);
+    expect(isAttentionUnread(mentioned, read, toTestKey)).toBe(true);
+    expect(isAttentionUnread(readMention, read, toTestKey)).toBe(false);
+    expect(isAttentionUnread(outgoing, read, toTestKey)).toBe(false);
+  });
+
+  it.each(['@username', 'foo@user.example', '@user.example', '@user_name', '@user-name'])(
+    'rejects non-mention token %s',
+    (text) => {
+      expect(
+        isUserAttentionMessage(msg({ from: 'alice', to: 'user', text, groupChatId: 'g' }))
+      ).toBe(false);
+    }
+  );
+
+  it.each(['@user', 'Hello @USER!', '(@user)', '**@user**', '"@user"', '@user.'])(
+    'accepts bounded user mention %s',
+    (text) => {
+      expect(
+        isUserAttentionMessage(msg({ from: 'alice', to: 'user', text, groupChatId: 'g' }))
+      ).toBe(true);
+    }
+  );
 });

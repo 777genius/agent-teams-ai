@@ -1,21 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { useDirectMessageQueue } from '@features/manual-message-queue/renderer';
 import { normalizeConversationParticipant } from '@features/team-direct-chats/renderer';
 import { api } from '@renderer/api';
+import { AttachmentCatalogRefresh } from '@renderer/components/team/attachments/AttachmentCatalogRefresh';
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
 import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneOverlay';
-import {
-  ComposerSurface,
-  ComposerTextarea,
-} from '@renderer/components/team/composer/ComposerSurface';
-import { MemberBadge } from '@renderer/components/team/MemberBadge';
+import { ComposerSurface } from '@renderer/components/team/composer/ComposerSurface';
 import { ActionModeSelector } from '@renderer/components/team/messages/ActionModeSelector';
 import { ComposerLockedRecipient } from '@renderer/components/team/messages/ComposerLockedRecipient';
 import { useTeamStartupCopy } from '@renderer/components/team/useTeamStartupCopy';
-import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
+import { useAttachmentValidation } from '@renderer/hooks/useAttachmentValidation';
+import { useRecipientAttachmentDeclarations } from '@renderer/hooks/useRecipientAttachmentDeclarations';
 import {
   getTaskSuggestionsForTeamNow,
   useTaskSuggestions,
@@ -32,7 +31,6 @@ import {
   canMemberShowAttachmentControl,
   getAttachmentInputAcceptForMember,
   getMemberAttachmentUnavailableReason,
-  validateAttachmentFilesForMember,
   validateAttachmentPayloadsForMember,
 } from '@renderer/utils/attachmentRecipientCapabilities';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
@@ -51,7 +49,7 @@ import {
   inferTeamProviderIdFromModel,
   normalizeOptionalTeamProviderId,
 } from '@shared/utils/teamProvider';
-import { Check, ChevronDown, Mic, Paperclip, Search, Send } from 'lucide-react';
+import { Paperclip } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { crossTeamDraftMeta, memberDraftPreviews } from './composerDraftPreviews';
@@ -63,10 +61,14 @@ import {
   preparedCrossTeamReplyArgs,
 } from './composerSendUtils';
 import { runComposerSubmission } from './composerSubmission';
+import { MessageComposerFooter, MessageComposerInput } from './MessageComposerInput';
+import { MessageComposerRecipientSelector } from './MessageComposerRecipientSelector';
 import { MessageComposerRevisionNotice } from './MessageComposerRevisionNotice';
 import { MessageComposerStatusNotice } from './MessageComposerStatusNotice';
 import { MessageComposerTeamSelector } from './MessageComposerTeamSelector';
 import { acquireRevisionOperation, releaseRevisionOperation } from './revisionOperationLease';
+import { TeamFeedMessageComposer } from './TeamFeedMessageComposer';
+import { TextMessageComposer, type TextMessageComposerProps } from './TextMessageComposer';
 import { useAutoDelegateActionMode } from './useAutoDelegateActionMode';
 import {
   type ComposerDraftAddressRequest,
@@ -79,6 +81,7 @@ import { useMessageComposerDraft } from './useMessageComposerDraft';
 import { useMessageComposerRevisionCancel } from './useMessageComposerRevisionCancel';
 
 import type { CapturedCrossTeamReply, ComposerCrossTeamSend } from './capturedCrossTeamReply';
+import type { TeamGroupChatDTO } from '@features/team-group-chats/contracts';
 import type { ActionMode } from '@renderer/components/team/messages/ActionModeSelector';
 import type { ComposerDraftDestination } from '@renderer/components/team/messages/composerDraftDestination';
 import type { MessageRevisionTargetController } from '@renderer/components/team/messages/messageRevisionTarget';
@@ -97,7 +100,7 @@ import type {
   TaskRef,
 } from '@shared/types';
 
-interface MessageComposerProps {
+export interface MemberMessageComposerProps {
   teamName: string;
   members: ResolvedTeamMember[];
   layout?: 'default' | 'compact';
@@ -113,6 +116,9 @@ interface MessageComposerProps {
   revisableMessageId?: string | null;
   cornerActionPrefix?: React.ReactNode;
   lockedRecipient?: string;
+  initialRecipient?: string;
+  onSelectAll?: () => void;
+  groupBroadcast?: { group?: TeamGroupChatDTO };
   /** Ref to the underlying textarea element for external focus management. */
   textareaRef?: React.Ref<HTMLTextAreaElement>;
   suggestionPlacement?: 'above';
@@ -153,7 +159,23 @@ export interface MessageRevisionRequest {
 const EMPTY_MENTION_SUGGESTIONS: MentionSuggestion[] = [];
 const EMPTY_SKILL_CATALOG = [] as const;
 
-export const MessageComposer = ({
+type MessageComposerProps = MemberMessageComposerProps | TextMessageComposerProps;
+
+/** Select the editor before mounting member-only draft and recipient hooks. */
+export const MessageComposer = (props: MessageComposerProps): React.JSX.Element =>
+  'textInput' in props ? (
+    <TextMessageComposer {...props} />
+  ) : props.lockedRecipient || !props.groupBroadcast ? (
+    <MemberMessageComposer {...props} />
+  ) : (
+    <TeamFeedMessageComposer {...props} renderMember={renderMemberComposer} />
+  );
+
+const renderMemberComposer = (props: MemberMessageComposerProps): React.JSX.Element => (
+  <MemberMessageComposer {...props} />
+);
+
+const MemberMessageComposer = ({
   teamName,
   members,
   layout = 'default',
@@ -170,6 +192,8 @@ export const MessageComposer = ({
   textareaRef: externalTextareaRef,
   suggestionPlacement,
   lockedRecipient,
+  initialRecipient,
+  onSelectAll,
   autoFocusKey,
   draftAddressRequest,
   crossTeamReply,
@@ -182,7 +206,7 @@ export const MessageComposer = ({
   onRevisionPreparationChange,
   onRevisionCancel,
   onRevisionComplete,
-}: MessageComposerProps): React.JSX.Element => {
+}: MemberMessageComposerProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { textareaRef, internalTextareaRef, focusComposerTextarea } = useComposerTextarea(
     externalTextareaRef,
@@ -190,12 +214,14 @@ export const MessageComposer = ({
   );
   const [recipient, setRecipient] = useState<string>(() => {
     const lead = members.find((m) => isLeadMember(m));
-    return lead?.name ?? members[0]?.name ?? '';
+    return initialRecipient ?? lead?.name ?? members[0]?.name ?? '';
   });
-  const [recipientOpen, setRecipientOpen] = useState(false);
-  const [recipientSearch, setRecipientSearch] = useState('');
-  const recipientSearchRef = useRef<HTMLInputElement>(null);
-  const [groupChatSelected, setGroupChatSelected] = useState(() => !lockedRecipient);
+  const [groupChatSelected, setGroupChatSelected] = useState(
+    () =>
+      !lockedRecipient &&
+      (!initialRecipient ||
+        members.some((member) => member.name === initialRecipient && isLeadMember(member)))
+  );
   const composerFocus = useComposerFocus();
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounterRef = useRef(0);
@@ -476,17 +502,16 @@ export const MessageComposer = ({
   const effectiveRecipient =
     lockedRecipient ?? (groupChatSelected ? groupChatRecipient : recipient);
   const selectedMember = members.find((m) => m.name === effectiveRecipient);
-  const selectedResolvedColor = selectedMember ? colorMap.get(selectedMember.name) : undefined;
   const isLeadRecipient = selectedMember ? isLeadMember(selectedMember) : false;
-  const selectedProviderId =
-    normalizeOptionalTeamProviderId(selectedMember?.providerId) ??
-    inferTeamProviderIdFromModel(selectedMember?.model);
-  const isOpenCodeRecipient = selectedProviderId === 'opencode';
+  const {
+    resolveDeclaration,
+    refresh: refreshDeclarations,
+    isOpenCode: isOpenCodeRecipient,
+  } = useRecipientAttachmentDeclarations(selectedMember, projectPath, !!isTeamAlive);
   const showAttachmentControl = canMemberShowAttachmentControl(selectedMember);
   const memberAttachmentUnavailableReason = showAttachmentControl
     ? getMemberAttachmentUnavailableReason(selectedMember)
     : null;
-  const attachmentInputAccept = getAttachmentInputAcceptForMember(selectedMember);
   const hasTeammates = members.length > 1;
   const canDelegate = isCrossTeam ? crossTeamRecipient === null : hasTeammates && isLeadRecipient;
   const shouldAutoDelegate = canDelegate && (isCrossTeam || isLeadRecipient);
@@ -510,11 +535,6 @@ export const MessageComposer = ({
     actionMode,
     setActionMode,
   });
-  // NOTE: lead context ring disabled — usage formula is inaccurate
-  // const isLeadAgentRecipient = selectedMember?.agentType === 'team-lead';
-  // const leadContext = useStore((s) =>
-  //   isLeadAgentRecipient ? s.leadContextByTeam[teamName] : undefined
-  // );
   const supportsAttachments =
     !isCrossTeam &&
     !!isTeamAlive &&
@@ -540,6 +560,7 @@ export const MessageComposer = ({
   const attachmentPayloadRestrictionReason = validateAttachmentPayloadsForMember({
     member: selectedMember,
     attachments: draft.attachments,
+    resolveDeclaration,
   });
   const attachmentsBlocked =
     draft.attachments.length > 0 &&
@@ -588,12 +609,21 @@ export const MessageComposer = ({
     ) => boolean
   >(() => false);
   currentSendEligibilityRef.current = (content, request, editorContext) =>
-    isPreparedSendAllowed(content, request, members, teamName, isTeamAlive) &&
+    isPreparedSendAllowed(content, request, members, teamName, isTeamAlive, resolveDeclaration) &&
     (editorContext.kind !== 'revision' ||
       ((activeRevision == null || editorContext.requestId === activeRevision.requestId) &&
         (revisableMessageId === undefined ||
           editorContext.originalMessageId === revisableMessageId)));
 
+  const manualQueue = useDirectMessageQueue({
+    teamName,
+    recipient: effectiveRecipient,
+    members,
+    draft,
+    onSend,
+    disabled: isContextSwitching || sending || isLaunchBlocking,
+    isCrossTeam,
+  });
   const handleCycleActionMode = useCallback(() => {
     if (sending) return;
     const modes: ActionMode[] = canDelegate ? ['do', 'ask', 'delegate'] : ['do', 'ask'];
@@ -601,8 +631,28 @@ export const MessageComposer = ({
     setActionMode(modes[(idx + 1) % modes.length]);
   }, [actionMode, canDelegate, sending, setActionMode]);
 
+  const showFileRestrictionError = useCallback(
+    (reason?: string) => {
+      setFileRestrictionError(
+        reason ??
+          attachmentRestrictionReason ??
+          attachmentPayloadRestrictionReason ??
+          t('messageComposer.attachments.restrictions.leadOnly')
+      );
+      window.clearTimeout(fileRestrictionTimerRef.current);
+      fileRestrictionTimerRef.current = window.setTimeout(() => {
+        setFileRestrictionError(null);
+      }, 4000);
+    },
+    [attachmentPayloadRestrictionReason, attachmentRestrictionReason, t]
+  );
+
+  const { validateFiles: validateSelectedAttachmentFiles, validatePayloads } =
+    useAttachmentValidation(selectedMember, resolveDeclaration, showFileRestrictionError);
+
   const handleSend = useCallback(() => {
     if (!canSend) return;
+    if (!validatePayloads(draft.attachments)) return;
     dismissMentionsRef.current?.();
     onSubmitIntent?.();
     const attemptId = createPendingSendId();
@@ -696,6 +746,7 @@ export const MessageComposer = ({
     focusComposerTextarea();
   }, [
     canSend,
+    validatePayloads,
     lockedRecipient,
     effectiveRecipient,
     onSend,
@@ -713,37 +764,6 @@ export const MessageComposer = ({
     taskSuggestions,
     teamName,
   ]);
-
-  const showFileRestrictionError = useCallback(() => {
-    setFileRestrictionError(
-      attachmentRestrictionReason ??
-        attachmentPayloadRestrictionReason ??
-        t('messageComposer.attachments.restrictions.leadOnly')
-    );
-    window.clearTimeout(fileRestrictionTimerRef.current);
-    fileRestrictionTimerRef.current = window.setTimeout(() => {
-      setFileRestrictionError(null);
-    }, 4000);
-  }, [attachmentPayloadRestrictionReason, attachmentRestrictionReason, t]);
-
-  const validateSelectedAttachmentFiles = useCallback(
-    (files: FileList | File[]): boolean => {
-      const reason = validateAttachmentFilesForMember({
-        member: selectedMember,
-        files,
-      });
-      if (!reason) {
-        return true;
-      }
-      setFileRestrictionError(reason);
-      window.clearTimeout(fileRestrictionTimerRef.current);
-      fileRestrictionTimerRef.current = window.setTimeout(() => {
-        setFileRestrictionError(null);
-      }, 4000);
-      return false;
-    },
-    [selectedMember]
-  );
 
   const { addFiles: draftAddFiles } = draft;
   const handleFileInputChange = useCallback(
@@ -882,29 +902,12 @@ export const MessageComposer = ({
       deduplicated={submissionFeedback.deduplicated}
     />
   ) : null;
-  const shouldShowFooterCharCount = remaining < 200;
   const shouldShowSavedIndicator = composerFocus.isTextareaFocused && draft.isSaved;
   const nonCompactFooterRight =
-    compactFooterNotice || shouldShowFooterCharCount || shouldShowSavedIndicator ? (
-      <div className="flex flex-col items-end gap-1">
+    compactFooterNotice || remaining < 200 || shouldShowSavedIndicator ? (
+      <MessageComposerFooter remaining={remaining} showSaved={shouldShowSavedIndicator}>
         {compactFooterNotice}
-        {shouldShowFooterCharCount || shouldShowSavedIndicator ? (
-          <div className="flex items-center gap-2">
-            {shouldShowFooterCharCount ? (
-              <span
-                className={`text-[10px] ${remaining < 100 ? 'text-yellow-400' : 'text-[var(--color-text-muted)]'}`}
-              >
-                {t('messageComposer.input.charsLeft', { count: remaining })}
-              </span>
-            ) : null}
-            {shouldShowSavedIndicator ? (
-              <span className="text-[10px] text-[var(--color-text-muted)]">
-                {t('tasks.createTask.saved')}
-              </span>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+      </MessageComposerFooter>
     ) : null;
   const composerFooterRight = isCompactLayout ? compactFooterNotice : nonCompactFooterRight;
 
@@ -928,7 +931,7 @@ export const MessageComposer = ({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept={attachmentInputAccept}
+                  accept={getAttachmentInputAcceptForMember(selectedMember)}
                   multiple
                   className="hidden"
                   onChange={handleFileInputChange}
@@ -1001,217 +1004,60 @@ export const MessageComposer = ({
                   }}
                 />
 
-                <Popover open={recipientOpen} onOpenChange={setRecipientOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className={cn(
-                        'message-composer-recipient-selector inline-flex min-w-0 items-center justify-end gap-1 overflow-hidden whitespace-nowrap pl-2 pr-1 text-xs transition-colors',
-                        isCrossTeam
-                          ? 'hover:bg-[var(--cross-team-bg)]/80 bg-[var(--cross-team-bg)]'
-                          : 'hover:bg-white/[0.025]'
-                      )}
-                    >
-                      {(isCrossTeam ? crossTeamRecipient !== null : !groupChatSelected) ? (
-                        <MemberBadge
-                          name={isCrossTeam ? (crossTeamRecipient ?? '') : recipient}
-                          color={
-                            isCrossTeam
-                              ? selectedTargetMembers.find(
-                                  (member) => member.name === crossTeamRecipient
-                                )?.color
-                              : selectedResolvedColor
-                          }
-                          size="sm"
-                          avatarUrl={isCrossTeam ? undefined : avatarMap.get(recipient)}
-                          hideAvatar={!isCrossTeam && recipient === 'user'}
-                          disableHoverCard
-                          variant="text"
-                        />
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 text-[var(--color-text-secondary)]">
-                          <span
-                            className="inline-block size-2 shrink-0 rounded-full"
-                            style={{
-                              backgroundColor: isCrossTeam
-                                ? selectedTarget?.color
-                                  ? getTeamColorSet(selectedTarget.color).border
-                                  : nameColorSet(targetDisplayName ?? '').border
-                                : currentTeamColor,
-                            }}
-                          />
-                          {t('messages.chats.teamFeed')}
-                        </span>
-                      )}
-                      <ChevronDown size={12} className="shrink-0 text-[var(--color-text-muted)]" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    align="end"
-                    className="w-56 p-1.5"
-                    onOpenAutoFocus={(e) => {
-                      e.preventDefault();
-                      setRecipientSearch('');
-                      setTimeout(() => recipientSearchRef.current?.focus(), 0);
-                    }}
-                  >
-                    {(isCrossTeam ? selectedTargetMembers.length : members.length) > 5 && (
-                      <div className="relative mb-1">
-                        <Search
-                          size={12}
-                          className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
-                        />
-                        <input
-                          ref={recipientSearchRef}
-                          type="text"
-                          className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] py-1 pl-6 pr-2 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-emphasis)] focus:outline-none"
-                          placeholder={t('messageComposer.recipient.searchPlaceholder')}
-                          value={recipientSearch}
-                          onChange={(e) => setRecipientSearch(e.target.value)}
-                        />
-                      </div>
-                    )}
-                    <div className="max-h-48 space-y-0.5 overflow-y-auto">
-                      <button
-                        type="button"
-                        className={cn(
-                          'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)]',
-                          (isCrossTeam ? crossTeamRecipient === null : groupChatSelected) &&
-                            'bg-[var(--color-surface-raised)]'
-                        )}
-                        onClick={() => {
-                          if (isCrossTeam) {
-                            setCrossTeamRecipient(null);
-                          } else {
-                            selectLocalGroupChat();
-                          }
-                          setRecipientOpen(false);
-                          setRecipientSearch('');
-                          focusComposerTextarea();
-                        }}
-                      >
-                        <span
-                          className="inline-block size-2 shrink-0 rounded-full"
-                          style={{
-                            backgroundColor: isCrossTeam
-                              ? selectedTarget?.color
-                                ? getTeamColorSet(selectedTarget.color).border
-                                : nameColorSet(targetDisplayName ?? '').border
-                              : currentTeamColor,
-                          }}
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-[var(--color-text)]">
-                            {t('messages.chats.teamFeed')}
-                          </span>
-                          {isCrossTeam && selectedTeamDraftsByMember.has('') ? (
-                            <span className="block truncate text-[10px] text-[var(--color-text-secondary)]">
-                              <span className="font-medium text-blue-400">
-                                {t('messages.chats.draft')}:
-                              </span>{' '}
-                              {selectedTeamDraftsByMember.get('')}
-                            </span>
-                          ) : null}
-                        </span>
-                        {(isCrossTeam ? crossTeamRecipient === null : groupChatSelected) ? (
-                          <Check size={12} className="ml-auto shrink-0 text-blue-400" />
-                        ) : null}
-                      </button>
-                      <div className="my-1 h-px bg-[var(--color-border)]" />
-                      {/* eslint-disable-next-line sonarjs/function-return-type -- IIFE rendering mixed elements/null */}
-                      {(() => {
-                        const query = recipientSearch.toLowerCase().trim();
-                        const availableMembers = isCrossTeam ? selectedTargetMembers : members;
-                        const filtered = query
-                          ? availableMembers.filter((m) => m.name.toLowerCase().includes(query))
-                          : availableMembers;
-                        if (filtered.length === 0) {
-                          return (
-                            <div className="px-2 py-3 text-center text-xs text-[var(--color-text-muted)]">
-                              {t('messageComposer.recipient.noResults')}
-                            </div>
-                          );
-                        }
-                        const sorted = [...filtered].sort((a, b) => {
-                          const aIsLead = isCrossTeam
-                            ? a.name === selectedTarget?.leadName
-                              ? 1
-                              : 0
-                            : isLeadMember(a)
-                              ? 1
-                              : 0;
-                          const bIsLead = isCrossTeam
-                            ? b.name === selectedTarget?.leadName
-                              ? 1
-                              : 0
-                            : isLeadMember(b)
-                              ? 1
-                              : 0;
-                          return bIsLead - aIsLead;
-                        });
-                        return sorted.map((m) => {
-                          const resolvedColor = isCrossTeam ? m.color : colorMap.get(m.name);
-                          const role =
-                            formatAgentRole(m.role) ??
-                            (!isCrossTeam
-                              ? formatAgentRole((m as ResolvedTeamMember).agentType)
-                              : undefined);
-                          const isSelected = isCrossTeam
-                            ? m.name === crossTeamRecipient
-                            : !groupChatSelected && m.name === recipient;
-                          return (
-                            <button
-                              key={m.name}
-                              type="button"
-                              className={cn(
-                                'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)]',
-                                isSelected && 'bg-[var(--color-surface-raised)]'
-                              )}
-                              onClick={() => {
-                                if (isCrossTeam) {
-                                  setCrossTeamRecipient(m.name);
-                                } else {
-                                  setRecipient(m.name);
-                                  setGroupChatSelected(false);
-                                }
-                                setRecipientOpen(false);
-                                setRecipientSearch('');
-                                focusComposerTextarea();
-                              }}
-                            >
-                              <span className="min-w-0 flex-1">
-                                <MemberBadge
-                                  name={m.name}
-                                  color={resolvedColor}
-                                  size="sm"
-                                  avatarUrl={avatarMap.get(m.name)}
-                                  hideAvatar={m.name === 'user'}
-                                  disableHoverCard
-                                />
-                                {isCrossTeam && selectedTeamDraftsByMember.has(m.name) ? (
-                                  <span className="block truncate pl-5 text-[10px] text-[var(--color-text-secondary)]">
-                                    <span className="font-medium text-blue-400">
-                                      {t('messages.chats.draft')}:
-                                    </span>{' '}
-                                    {selectedTeamDraftsByMember.get(m.name)}
-                                  </span>
-                                ) : null}
-                              </span>
-                              {role ? (
-                                <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
-                                  {role}
-                                </span>
-                              ) : null}
-                              {isSelected ? (
-                                <Check size={12} className="ml-auto shrink-0 text-blue-400" />
-                              ) : null}
-                            </button>
-                          );
-                        });
-                      })()}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                <MessageComposerRecipientSelector
+                  members={(isCrossTeam ? selectedTargetMembers : members).map((member) => ({
+                    name: member.name,
+                    color: isCrossTeam ? member.color : colorMap.get(member.name),
+                    avatarUrl: isCrossTeam ? undefined : avatarMap.get(member.name),
+                    role:
+                      formatAgentRole(member.role) ??
+                      (!isCrossTeam
+                        ? formatAgentRole((member as ResolvedTeamMember).agentType)
+                        : undefined) ??
+                      undefined,
+                    isLead: isCrossTeam
+                      ? member.name === selectedTarget?.leadName
+                      : isLeadMember(member as ResolvedTeamMember),
+                    draftPreview: isCrossTeam
+                      ? selectedTeamDraftsByMember.get(member.name)
+                      : undefined,
+                  }))}
+                  selectedName={
+                    isCrossTeam
+                      ? crossTeamRecipient
+                      : groupChatSelected
+                        ? onSelectAll
+                          ? groupChatRecipient
+                          : null
+                        : recipient
+                  }
+                  allLabel={t(
+                    !isCrossTeam && onSelectAll
+                      ? 'messageComposer.recipient.all'
+                      : 'messages.chats.teamFeed'
+                  )}
+                  allColor={
+                    isCrossTeam
+                      ? selectedTarget?.color
+                        ? getTeamColorSet(selectedTarget.color).border
+                        : nameColorSet(targetDisplayName ?? '').border
+                      : currentTeamColor
+                  }
+                  allDraftPreview={isCrossTeam ? selectedTeamDraftsByMember.get('') : undefined}
+                  crossTeam={isCrossTeam}
+                  onSelect={(name) => {
+                    if (isCrossTeam) setCrossTeamRecipient(name);
+                    else if (name === null) {
+                      if (onSelectAll) onSelectAll();
+                      else selectLocalGroupChat();
+                    } else if (onSelectAll && name === groupChatRecipient) selectLocalGroupChat();
+                    else {
+                      setRecipient(name);
+                      setGroupChatSelected(false);
+                    }
+                    focusComposerTextarea();
+                  }}
+                />
               </div>
             )}
           </div>
@@ -1221,6 +1067,7 @@ export const MessageComposer = ({
           <div className="px-2 pt-2">
             <AttachmentPreviewList
               attachments={draft.attachments}
+              member={selectedMember}
               onRemove={draft.removeAttachment}
               error={
                 draft.attachmentError ?? fileRestrictionError ?? attachmentPayloadRestrictionReason
@@ -1238,15 +1085,23 @@ export const MessageComposer = ({
         {revisionNotice ? <div className="px-2 pt-2">{revisionNotice}</div> : null}
       </div>
 
+      <AttachmentCatalogRefresh
+        visible={!!isOpenCodeRecipient && (attachmentsBlocked || !!fileRestrictionError)}
+        onRefresh={() => {
+          setFileRestrictionError(null);
+          refreshDeclarations();
+        }}
+      />
+      {manualQueue.list}
       <div className="relative">
         <DropZoneOverlay
           active={isDragOver}
           rejected={!canAttach}
           rejectionReason={attachmentRestrictionReason}
         />
-        <ComposerTextarea
+        <MessageComposerInput
           suggestionPlacement={suggestionPlacement}
-          ref={textareaRef}
+          textareaRef={textareaRef}
           connectedToHeader
           id={`compose-${teamName}`}
           placeholder={
@@ -1271,7 +1126,6 @@ export const MessageComposer = ({
           onBlur={composerFocus.onTextareaBlur}
           projectPath={projectPath}
           onFileChipInsert={draft.addChip}
-          onModEnter={handleSend}
           onShiftTab={handleCycleActionMode}
           dismissMentionsRef={dismissMentionsRef}
           extraTips={[t('messageComposer.input.slashTip')]}
@@ -1280,7 +1134,6 @@ export const MessageComposer = ({
           maxLength={MAX_TEXT_LENGTH}
           hintText={crossTeamHintText}
           showHint={!isCompactLayout && composerFocus.isComposerFocused}
-          cornerActionInset={isCompactLayout ? 'compact' : 'default'}
           cornerActionLeft={
             <ActionModeSelector
               value={actionMode}
@@ -1289,55 +1142,25 @@ export const MessageComposer = ({
               disabled={sending}
             />
           }
-          cornerAction={
-            <div className="flex items-center gap-2">
-              {cornerActionPrefix}
-              {/* NOTE: ContextRing disabled — usage formula is inaccurate */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--color-text-muted)] transition-colors hover:bg-white/[0.035] hover:text-[var(--color-text-secondary)]"
-                    onClick={() => void window.electronAPI.openExternal('https://voicetext.site')}
-                  >
-                    <Mic size={16} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  {t('messageComposer.actions.voiceToText')}
-                </TooltipContent>
-              </Tooltip>
-              <span
-                className="message-composer-send-slot"
-                data-visible={trimmed.length > 0 ? 'true' : 'false'}
-              >
-                {trimmed.length > 0 ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-flex">
-                        <button
-                          type="button"
-                          className="message-composer-send-button inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-xs font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-45"
-                          disabled={!canSend}
-                          onMouseDown={(event) => event.preventDefault()}
-                          onClick={handleSend}
-                        >
-                          <Send size={14} />
-                          {t('messageComposer.actions.send')}
-                        </button>
-                      </span>
-                    </TooltipTrigger>
-                    {slashCommandRestrictionReason ? (
-                      <TooltipContent side="top">{slashCommandRestrictionReason}</TooltipContent>
-                    ) : isLaunchBlocking && !sending ? (
-                      <TooltipContent side="top">{startupCopy.sendingUnavailable}</TooltipContent>
-                    ) : null}
-                  </Tooltip>
-                ) : null}
-              </span>
-            </div>
+          layout={layout}
+          canSend={canSend}
+          onSend={handleSend}
+          onQueue={manualQueue.onEnqueue}
+          cornerActionPrefix={cornerActionPrefix}
+          sendUnavailableReason={
+            slashCommandRestrictionReason ||
+            (isLaunchBlocking && !sending ? startupCopy.sendingUnavailable : undefined)
           }
-          footerRight={composerFooterRight}
+          footerRight={
+            <>
+              {composerFooterRight}
+              {manualQueue.unavailableReason ? (
+                <p role="status" className="text-xs text-[var(--color-text-muted)]">
+                  {manualQueue.unavailableReason}
+                </p>
+              ) : null}
+            </>
+          }
         />
       </div>
     </ComposerSurface>

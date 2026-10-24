@@ -6,6 +6,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { GlobalTask } from '@shared/types';
 
+const makeTask = (overrides: Partial<GlobalTask> = {}): GlobalTask => ({
+  id: 'task-1',
+  teamName: 'alpha-team',
+  teamDisplayName: 'Alpha Team',
+  subject: 'Task',
+  status: 'pending',
+  ...overrides,
+});
+
 const contextMenuMockState = vi.hoisted(() => ({
   autoOpen: false,
 }));
@@ -69,7 +78,7 @@ function renderTaskContextMenu(options?: {
   act(() => {
     root.render(
       <TaskContextMenu
-        task={{ id: 'task-1' } as GlobalTask}
+        task={makeTask()}
         isPinned={false}
         isArchived={false}
         onTogglePin={vi.fn()}

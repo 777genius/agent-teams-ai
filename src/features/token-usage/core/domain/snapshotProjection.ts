@@ -1,5 +1,26 @@
 import { keepOnlyMappedUsageEvents } from './attributionPolicy';
-import { addEventToSummary, addRunToSummary, ZERO_TOKEN_USAGE_SUMMARY } from './tokenUsageTotals';
+import { runProjectKey, runTeamKey } from './budgetScopeKeys';
+import {
+  gatewayAgentKey,
+  gatewayModelKey,
+  gatewayRuntimeKey,
+  gatewayTeamKey,
+  isGatewayAggregateEvent,
+} from './gatewayUsageEvents';
+import {
+  firstModeledEventModel,
+  modeledEventModels,
+  runAgentKey,
+  runModelKey,
+  runRuntimeKey,
+} from './snapshotBreakdownKeys';
+import { buildTeamFilter, matchesTeamFilter } from './snapshotTeamFilter';
+import {
+  addEventToSummary,
+  addRunToSummary,
+  buildSourceCounts,
+  ZERO_TOKEN_USAGE_SUMMARY,
+} from './tokenUsageTotals';
 
 import type {
   TokenUsageAnalyticsSnapshotDto,
@@ -10,7 +31,6 @@ import type {
   TokenUsageRunDto,
   TokenUsageSessionRunDto,
   TokenUsageSnapshotRequest,
-  TokenUsageSourceKind,
   TokenUsageTaskAttributionDto,
   TokenUsageTaskBreakdownItemDto,
   TokenUsageTimeSeriesPointDto,
@@ -31,6 +51,8 @@ interface BuildSnapshotInput {
   request?: TokenUsageSnapshotRequest;
   nowIso: string;
   degraded?: boolean;
+  gatewayLastSuccessfulAt?: string;
+  gatewaySourceCount?: number;
 }
 
 interface NormalizedTaskAttribution {
@@ -49,7 +71,7 @@ interface NormalizedTaskWorkInterval {
 
 export function buildTokenUsageSnapshot(input: BuildSnapshotInput): TokenUsageAnalyticsSnapshotDto {
   const runs = filterRuns(input.runs, input.request);
-  const eventsForRequest = filterEvents(input.events, input.request);
+  const eventsForRequest = filterEvents(input.events, input.runs, input.request);
   const attribution = keepOnlyMappedUsageEvents({ runs, events: eventsForRequest });
   const events = attribution.attributed;
 
@@ -64,17 +86,20 @@ export function buildTokenUsageSnapshot(input: BuildSnapshotInput): TokenUsageAn
     updatedAt: input.nowIso,
     stale: false,
     degraded: input.degraded === true,
+    gatewayLastSuccessfulAt: input.gatewayLastSuccessfulAt,
+    gatewaySourceCount: input.gatewaySourceCount,
     summary,
-    byTeam: buildBreakdown(runs, events, runTeamKey),
-    byAgent: buildBreakdown(runs, events, runAgentKey),
+    byTeam: buildBreakdown(runs, events, runTeamKey, gatewayTeamKey),
+    byAgent: buildBreakdown(runs, events, runAgentKey, gatewayAgentKey),
     byCommand: buildBreakdown(runs, events, runCommandKey),
     bySession: buildBreakdown(runs, events, runSessionKey),
     byProject: buildBreakdown(runs, events, runProjectKey),
-    byRuntime: buildBreakdown(runs, events, runRuntimeKey),
+    byRuntime: buildBreakdown(runs, events, runRuntimeKey, gatewayRuntimeKey),
     byModel: buildBreakdown(
       runs,
       events,
       (run) => runModelKey(run, eventsByRun.get(run.appRunId)),
+      gatewayModelKey,
       compareBreakdownItemsByTokens
     ),
     byTask: buildTaskBreakdown(input.tasks ?? [], events, input.nowIso),
@@ -110,11 +135,22 @@ function filterRuns(
 
 function filterEvents(
   events: readonly TokenUsageEventDto[],
+  runs: readonly TokenUsageRunDto[],
   request: TokenUsageSnapshotRequest | undefined
 ): TokenUsageEventDto[] {
   const teamFilter = buildTeamFilter(request);
+  const runById = new Map(runs.map((run) => [run.appRunId, run]));
   return events.filter((event) => {
-    if (teamFilter && !matchesTeamFilter(event.teamName, teamFilter)) return false;
+    const run = runById.get(event.appRunId);
+    if (teamFilter) {
+      if (run) {
+        if (!matchesTeamFilter(run.teamName, teamFilter)) return false;
+      } else if (isGatewayAggregateEvent(event)) {
+        if (!matchesTeamFilter(event.teamName, teamFilter)) return false;
+      } else {
+        return false;
+      }
+    }
     if (request?.agentId && event.agentId !== request.agentId) return false;
     if (request?.commandId && event.commandId !== request.commandId) return false;
     if (request?.commandInvocationId && event.commandInvocationId !== request.commandInvocationId) {
@@ -125,20 +161,6 @@ function filterEvents(
     }
     return isWithinRange(event.occurredAt, request);
   });
-}
-
-function buildTeamFilter(
-  request: TokenUsageSnapshotRequest | undefined
-): ReadonlySet<string> | undefined {
-  const names = (request?.teamNames ?? [])
-    .map((teamName) => teamName.trim())
-    .filter((teamName, index, items) => teamName.length > 0 && items.indexOf(teamName) === index);
-  if (names.length > 0) return new Set(names);
-  return request?.teamName ? new Set([request.teamName]) : undefined;
-}
-
-function matchesTeamFilter(teamName: string | undefined, filter: ReadonlySet<string>): boolean {
-  return teamName !== undefined && filter.has(teamName);
 }
 
 function runOverlapsRange(
@@ -185,16 +207,22 @@ function buildBreakdown(
     teamName?: string;
     agentName?: string;
   },
+  keyForGateway?: (event: TokenUsageEventDto) => {
+    id: string;
+    label: string;
+    teamName?: string;
+    agentName?: string;
+  },
   compareItems: (
     left: TokenUsageBreakdownItemDto,
     right: TokenUsageBreakdownItemDto
   ) => number = compareBreakdownItems
 ): TokenUsageBreakdownItemDto[] {
   const groups = new Map<string, TokenUsageBreakdownItemDto>();
-
-  for (const run of runs) {
-    const key = keyForRun(run);
-    const current = groups.get(key.id) ?? {
+  const ensureGroup = (key: ReturnType<typeof keyForRun>): TokenUsageBreakdownItemDto => {
+    const current = groups.get(key.id);
+    if (current) return current;
+    const created = {
       id: key.id,
       label: key.label,
       teamName: key.teamName,
@@ -202,18 +230,27 @@ function buildBreakdown(
       summary: { ...ZERO_TOKEN_USAGE_SUMMARY },
       lastActivityAt: undefined,
     };
+    groups.set(key.id, created);
+    return created;
+  };
+
+  for (const run of runs) {
+    const current = ensureGroup(keyForRun(run));
     current.summary = addRunToSummary(current.summary, run.status === 'running');
     current.lastActivityAt = maxIso(current.lastActivityAt, run.endedAt ?? run.startedAt);
-    groups.set(key.id, current);
   }
 
   const runById = new Map(runs.map((run) => [run.appRunId, run]));
   for (const event of events) {
     const run = runById.get(event.appRunId);
-    if (!run) continue;
-    const key = keyForRun(run);
-    const current = groups.get(key.id);
-    if (!current) continue;
+    const key =
+      run !== undefined
+        ? keyForRun(run)
+        : keyForGateway && isGatewayAggregateEvent(event)
+          ? keyForGateway(event)
+          : undefined;
+    if (!key) continue;
+    const current = ensureGroup(key);
     current.summary = addEventToSummary(current.summary, event);
     current.lastActivityAt = maxIso(current.lastActivityAt, event.occurredAt);
   }
@@ -230,6 +267,7 @@ function buildTaskBreakdown(
   const groups = new Map<string, TokenUsageTaskBreakdownItemDto>();
 
   for (const event of events) {
+    if (isGatewayAggregateEvent(event)) continue;
     const task = selectTaskForEvent(event, tasksByTeam);
     if (!task) continue;
 
@@ -508,7 +546,7 @@ function buildCommandRuns(
     }
     current.runCount += 1;
     current.startedAt = minIso(current.startedAt, run.startedAt) ?? current.startedAt;
-    current.endedAt = maxCommandEnd(current.endedAt, run.endedAt);
+    current.endedAt = maxIso(current.endedAt, run.endedAt);
     current.statuses.push(run.status);
     current.summary = addRunToSummary(current.summary, run.status === 'running');
     groups.set(key.id, current);
@@ -712,44 +750,6 @@ function dayKeyForIso(iso: string): string | undefined {
   return utcDateKey(new Date(timestamp));
 }
 
-function buildSourceCounts(
-  events: readonly TokenUsageEventDto[]
-): Record<TokenUsageSourceKind, number> {
-  const counts: Record<TokenUsageSourceKind, number> = {
-    sdk_exact: 0,
-    gateway_exact: 0,
-    log_parsed: 0,
-    tokenizer_estimated: 0,
-    cost_estimated: 0,
-  };
-  for (const event of events) {
-    counts[event.usageSourceKind] += 1;
-  }
-  return counts;
-}
-
-function runTeamKey(run: TokenUsageRunDto): { id: string; label: string; teamName?: string } {
-  return {
-    id: run.teamName ?? 'unassigned',
-    label: run.teamName ?? 'Unassigned',
-    teamName: run.teamName,
-  };
-}
-
-function runAgentKey(run: TokenUsageRunDto): {
-  id: string;
-  label: string;
-  teamName?: string;
-  agentName?: string;
-} {
-  return {
-    id: run.agentId ?? `${run.teamName ?? 'unassigned'}:${run.agentName ?? 'unknown'}`,
-    label: run.agentName ?? run.agentId ?? 'Unknown agent',
-    teamName: run.teamName,
-    agentName: run.agentName,
-  };
-}
-
 function runCommandKey(run: TokenUsageRunDto): { id: string; label: string; teamName?: string } {
   if (run.commandId) return { id: run.commandId, label: run.commandId, teamName: run.teamName };
   if (run.commandHash)
@@ -765,44 +765,6 @@ function runSessionKey(run: TokenUsageRunDto): { id: string; label: string; team
   const source = primaryRunSource(run);
   const id = source?.nativeSessionId ?? source?.nativeLogPath ?? run.appRunId;
   return { id, label: buildSessionLabel(run, id), teamName: run.teamName };
-}
-
-function runProjectKey(run: TokenUsageRunDto): { id: string; label: string; teamName?: string } {
-  const id = run.workspacePathHash ? `project:${run.workspacePathHash}` : 'unknown-project';
-  const label =
-    run.workspaceLabel ??
-    (run.workspacePathHash ? `Project ${shortId(run.workspacePathHash)}` : 'Unknown project');
-  return {
-    id,
-    label,
-    teamName: run.teamName,
-  };
-}
-
-function runRuntimeKey(run: TokenUsageRunDto): { id: string; label: string } {
-  return { id: run.runtimeKind, label: run.runtimeKind };
-}
-
-function runModelKey(
-  run: TokenUsageRunDto,
-  events: readonly TokenUsageEventDto[] | undefined
-): { id: string; label: string } {
-  const model = firstModeledEventModel(events) ?? run.model;
-  return { id: model ?? 'unknown-model', label: model ?? 'Unknown model' };
-}
-
-function firstModeledEventModel(
-  events: readonly TokenUsageEventDto[] | undefined
-): string | undefined {
-  return events?.find((event) => event.model)?.model;
-}
-
-function modeledEventModels(events: readonly TokenUsageEventDto[] | undefined): string[] {
-  const models = new Set<string>();
-  for (const event of events ?? []) {
-    if (event.model) models.add(event.model);
-  }
-  return [...models];
 }
 
 function compareBreakdownItems(
@@ -925,11 +887,6 @@ function maxIso(left: string | undefined, right: string | undefined): string | u
     (parseIso(left) ?? Number.NEGATIVE_INFINITY)
     ? right
     : left;
-}
-
-function maxCommandEnd(left: string | undefined, right: string | undefined): string | undefined {
-  if (!right) return left;
-  return maxIso(left, right);
 }
 
 function shortId(value: string): string {

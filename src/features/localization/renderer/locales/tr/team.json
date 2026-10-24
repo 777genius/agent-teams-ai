@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "Tepki ekle ({{count}})",
+      "remove": "Tepkiyi kaldır ({{count}})",
+      "count": "Tepkiler: {{count}}",
+      "failed": "Tepkiler güncellenemedi"
+    },
     "actions": {
       "createTaskFromMessage": "Mesajdan görev oluştur",
       "editMessage": "Mesajı düzenle",
@@ -194,7 +200,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Ad en az bir harf veya rakam içermelidir",
-      "nameTooLong": "Ad çok uzun (en fazla 128 karakter)",
+      "nameTooLong": "Ad çok uzun (en fazla 64 karakter)",
       "selectWorkingDirectory": "Çalışma dizinini seçin (cwd)",
       "memberNameRequired": "Üye adı boş olamaz",
       "memberNameInvalid": "Üye adı alfasayısal ile başlamalı, yalnızca [a-zA-Z0-9._-] kullanmalı, en fazla 128 karakter olmalıdır",
@@ -262,6 +268,8 @@
       "name": "Ad"
     },
     "memberRestartWarning": "Kaydetme; rol, iş akışı, worktree yalıtımı, sağlayıcı, model, çaba veya MCP erişim değişikliklerini uygulamak için bu takım arkadaşını yeniden başlatacak.",
+    "displayedRuntimeHint": "Üye kartında: {{runtime}}. Kayıtlı ayarlar farklı.",
+    "useDisplayedRuntime": "Karttaki ayarları kullan",
     "notices": {
       "liveRenameBlocked": "Mevcut takım arkadaşları yeniden adlandırıldığı için canlı kaydetme engellendi. Bu kimlik değişikliklerini geri alın veya önce ekibi durdurun.",
       "newLiveTeammates": "Ekip canlıyken Ekibi Düzenle'den yeni takım arkadaşları eklenemez. Bunun yerine Üye ekle iletişim kutusunu kullanın.",
@@ -351,6 +359,30 @@
     "placeholders": {
       "name": "uye-adi",
       "mcpServers": "github, sentry"
+    },
+    "gateway": {
+      "apiKeyLabel": "Gateway API key",
+      "apiKeyPlaceholder": "Paste the teammate gateway API key",
+      "authRejected": "Key authorization was rejected.",
+      "bindButton": "Bind teammate",
+      "bindingStatus": "Bound to {{profile}}",
+      "credentialChanged": "stored key changed — bind again with a new key",
+      "credentialMissing": "stored key missing — bind again with a new key",
+      "credentialReady": "key stored",
+      "emptyCatalog": "The model catalog is empty.",
+      "keyRequired": "Enter the gateway API key first.",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. Bu form açılmadan önce kaydedilen bağlantılar hemen güncellenir ve takım formunu iptal etseniz de değişiklikler korunur.",
+      "probeButton": "Check key and load models",
+      "probing": "Checking...",
+      "profileLabel": "Gateway profile",
+      "profilePlaceholder": "Select a gateway profile",
+      "profileRequired": "Select a gateway profile first.",
+      "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+      "title": "Gateway provider",
+      "unbindButton": "Unbind",
+      "unavailable": "The gateway is unavailable right now."
     }
   },
   "detail": {
@@ -730,6 +762,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Grup sohbeti oluştur",
+      "description": "En az iki ajan seçin. Siz otomatik olarak dahil edilirsiniz.",
+      "name": "Sohbet adı",
+      "autoInclude": "Yeni üyeleri otomatik ekle",
+      "minimum": "En az iki ajan seçin.",
+      "creating": "Oluşturuluyor…",
+      "retryCreate": "Oluşturmayı yeniden dene",
+      "unavailable": "Sohbet kullanılamıyor",
+      "message": "Bu gruba mesaj yaz",
+      "archivedHint": "Bu sohbet arşivlendi. Mesaj göndermek için geri yükleyin.",
+      "restartHint": "Mesaj göndermek için tüm katılımcılarda uyumlu bir çalışma ortamı çalışıyor olmalıdır.",
+      "unknownDelivery": "Kaydedildi. Teslim durumu bilinmiyor.",
+      "sending": "Gönderiliyor…",
+      "retrySend": "Aynı mesajı yeniden gönder",
+      "send": "Gönder",
+      "archived": "Arşivlenen sohbetler",
+      "restore": "Sohbeti geri yükle",
+      "archive": "Sohbeti arşivle",
+      "delivery": {
+        "queued": "sırada",
+        "accepted": "kabul edildi",
+        "failed": "başarısız",
+        "unknown": "bilinmiyor",
+        "skipped": "atlandı"
+      }
+    },
     "actions": {
       "toLatest": "En son mesajlara",
       "bottomSheetActions": "Mesaj alt sayfa eylemleri",
@@ -969,7 +1028,8 @@
       "cancel": "İptal",
       "delete": "Sil",
       "markResolved": "Çözüldü olarak işaretle",
-      "save": "Kaydet"
+      "save": "Kaydet",
+      "openInTaskTab": "Ayrı sekmede aç"
     },
     "attachments": {
       "commentAttachment": "Yorum eki",
@@ -2966,6 +3026,25 @@
         "weight_few": "agirlik {{count}}",
         "weight_many": "agirlik {{count}}"
       }
+    }
+  },
+  "externalPrompt": {
+    "requestHelp": "Name the templates to use and describe any edits in your request.",
+    "editAvailable": "Editing draft/stopped configuration is available.",
+    "trashAvailable": "Reversible trash for draft/stopped teams is available."
+  },
+  "managementChanges": {
+    "title": "Recent changes",
+    "created": "Created",
+    "edited": "Edited",
+    "hidden": "Some recent changes are hidden by the current filters.",
+    "roster": "Roles: +{{added}}/-{{removed}}",
+    "fields": {
+      "displayName": "Name changed",
+      "description": "Description changed",
+      "color": "Color changed",
+      "leadInstructions": "Lead instructions changed",
+      "members": "Members changed"
     }
   }
 }

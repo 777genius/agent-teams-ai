@@ -1,3 +1,5 @@
+export * from './durablePathOperations';
+export { atomicWriteSync, renamePathWithRetrySync } from '@agent-teams/legacy-agent-host/lifecycle';
 export type {
   AtomicCreateResult,
   ExpectedTextFileIdentity,
@@ -22,5 +24,3 @@ export {
   syncDirectoryDurably,
   unlinkPathDurably,
 } from '@agent-teams/task-change-ledger/review-io';
-export { atomicWriteSync, renamePathWithRetrySync } from '@agent-teams/legacy-agent-host/lifecycle';
-export * from './durablePathOperations';

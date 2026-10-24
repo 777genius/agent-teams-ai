@@ -25,6 +25,7 @@ import {
   settleOpenCodePartialStatus,
   shouldRetryCliProviderStatusCheck,
 } from './cliInstallerStatusReconciliation';
+import { preserveOpenCodeRuntimeUpdateMetadata } from './openCodeRuntimeUpdateMetadata';
 
 import type { AppState } from '../types';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
@@ -368,8 +369,7 @@ function areProviderBackendsEqual(
  * IPC path (`CliInstallerService.cloneCliInstallationStatus()` then
  * `publishStatusSnapshot()`) hands the renderer freshly-deserialised
  * provider objects on every tick — reference equality on those nested
- * fields would never hold even when the snapshot is structurally
- * identical.
+ * fields would never hold even when the snapshot is structurally identical.
  */
 function areProviderStatusContentEqual(a: CliProviderStatus, b: CliProviderStatus): boolean {
   if (a === b) return true;
@@ -379,6 +379,7 @@ function areProviderStatusContentEqual(a: CliProviderStatus, b: CliProviderStatu
     a.supported === b.supported &&
     a.authenticated === b.authenticated &&
     a.authMethod === b.authMethod &&
+    a.effectiveDefaultModel === b.effectiveDefaultModel &&
     a.verificationState === b.verificationState &&
     (a.statusCheckOutcome ?? null) === (b.statusCheckOutcome ?? null) &&
     (a.statusCheckErrorCode ?? null) === (b.statusCheckErrorCode ?? null) &&
@@ -962,6 +963,7 @@ function createFailedOpenCodeRuntimeStatus(
     installed: previousStatus?.installed ?? false,
     ...(previousStatus?.binaryPath ? { binaryPath: previousStatus.binaryPath } : {}),
     ...(previousStatus?.version ? { version: previousStatus.version } : {}),
+    ...preserveOpenCodeRuntimeUpdateMetadata(previousStatus),
     source: previousStatus?.source ?? 'missing',
     state: 'failed',
     progress: {
@@ -1634,6 +1636,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         installed: previousStatus?.installed ?? false,
         ...(previousStatus?.binaryPath ? { binaryPath: previousStatus.binaryPath } : {}),
         ...(previousStatus?.version ? { version: previousStatus.version } : {}),
+        ...preserveOpenCodeRuntimeUpdateMetadata(previousStatus),
         source: previousStatus?.source ?? 'missing',
         state: 'checking',
         progress: {

@@ -1,3 +1,4 @@
+import { summarizeVisualizationFences } from '@features/chat-visualizations/contracts';
 import {
   getSanitizedInboxMessageSummary,
   getSanitizedInboxMessageText,
@@ -33,15 +34,17 @@ export interface ChatListDraftPreview {
   editorKind: 'plain' | 'revision';
 }
 
-function previewCopy(
+export function getChatMessagePreview(
   message: InboxMessage | null,
   emptyPreview: string
 ): Pick<ChatListViewItem, 'previewText' | 'previewFrom'> {
   if (!message) {
     return { previewText: emptyPreview, previewFrom: null };
   }
-  const summary = getSanitizedInboxMessageSummary(message).replace(/\s+/g, ' ').trim();
-  const text = (summary || getSanitizedInboxMessageText(message)).replace(/\s+/g, ' ').trim();
+  const summary = getSanitizedInboxMessageSummary(message).trim();
+  const text = summarizeVisualizationFences(summary || getSanitizedInboxMessageText(message))
+    .replace(/\s+/g, ' ')
+    .trim();
   if (!text) {
     return { previewText: emptyPreview, previewFrom: null };
   }
@@ -51,6 +54,22 @@ function previewCopy(
       isLeadThoughtSourceMessage(message) && message.from !== 'system' && message.from !== 'user'
         ? LEAD_THOUGHT_SPEAKER_NAME
         : message.from,
+  };
+}
+
+export function projectChatPreview(
+  message: Pick<ChatListViewItem, 'previewText' | 'previewFrom' | 'previewTimestamp'>,
+  draft: ChatListDraftPreview | undefined
+): Pick<ChatListViewItem, 'previewText' | 'previewFrom' | 'previewTimestamp'> & {
+  isDraft: boolean;
+} {
+  if (!draft) return { ...message, isDraft: false };
+  const date = typeof draft.updatedAt === 'number' ? new Date(draft.updatedAt) : null;
+  return {
+    previewText: truncateChatPreview(draft.preview.replace(/\s+/g, ' ').trim()),
+    previewFrom: null,
+    previewTimestamp: date && Number.isFinite(date.getTime()) ? date.toISOString() : null,
+    isDraft: true,
   };
 }
 
@@ -68,7 +87,7 @@ export function toChatListViewItems(
       unreadCount: item.unreadCount,
       attentionCount: item.attentionCount,
       previewTimestamp: item.latestActivityTimestamp,
-      ...previewCopy(item.previewMessage, emptyPreview),
+      ...getChatMessagePreview(item.previewMessage, emptyPreview),
       ...(draft ? { draft } : {}),
     };
   });

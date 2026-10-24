@@ -84,7 +84,11 @@ export function buildProviderModelChecksMap(input: {
   }
 
   for (const member of input.members) {
-    if (member.removedAt) {
+    if (
+      member.removedAt ||
+      input.scopeContext.gatewayBindingsPending ||
+      input.scopeContext.gatewayBoundMemberNames?.has(member.name.trim())
+    ) {
       continue;
     }
     const target: TeamProvisioningModelTarget = {
@@ -141,14 +145,19 @@ export function buildProviderModelChecksMap(input: {
 export function collectDialogMemberProviderIds(
   multimodelEnabled: boolean,
   selectedProviderId: TeamProviderId,
-  members: readonly MemberDraft[]
+  members: readonly MemberDraft[],
+  gatewayBoundMemberNames?: ReadonlySet<string>
 ): TeamProviderId[] {
   if (!multimodelEnabled) return ['anthropic'];
   return Array.from(
     new Set([
       selectedProviderId,
       ...members.flatMap((member) =>
-        !member.removedAt && isTeamProviderId(member.providerId) ? [member.providerId] : []
+        !member.removedAt &&
+        !gatewayBoundMemberNames?.has(member.name.trim()) &&
+        isTeamProviderId(member.providerId)
+          ? [member.providerId]
+          : []
       ),
     ])
   );

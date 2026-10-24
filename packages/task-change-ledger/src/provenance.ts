@@ -5,7 +5,6 @@ import type {
 } from './contracts.js';
 import { normalizeSummaryChangeKey } from './ledgerPaths.js';
 import type { LedgerFreshnessV2, LedgerSummaryBundleV2 } from './ledgerTypes.js';
-import { normalizePathForComparison } from './platformPath.js';
 import { createHash } from 'node:crypto';
 
 export function bundleMatchesFreshness(
@@ -75,9 +74,9 @@ export function buildProjectedSummaryIdentity(bundle: LedgerSummaryBundleV2): un
     files: [...bundle.files]
       .map((file) => ({
         changeKey: normalizeSummaryChangeKey(file),
-        filePath: normalizePathForComparison(file.filePath),
-        relativePath: normalizePathForComparison(file.relativePath),
-        displayPath: file.displayPath ? normalizePathForComparison(file.displayPath) : undefined,
+        filePath: file.filePath.replace(/\\/g, '/'),
+        relativePath: file.relativePath.replace(/\\/g, '/'),
+        displayPath: file.displayPath ? file.displayPath.replace(/\\/g, '/') : undefined,
         linesAdded: file.linesAdded,
         linesRemoved: file.linesRemoved,
         diffStatKnown: file.diffStatKnown,
@@ -95,14 +94,14 @@ export function buildProjectedSummaryIdentity(bundle: LedgerSummaryBundleV2): un
         relation: file.relation
           ? {
               kind: file.relation.kind,
-              oldPath: normalizePathForComparison(file.relation.oldPath),
-              newPath: normalizePathForComparison(file.relation.newPath),
+              oldPath: file.relation.oldPath.replace(/\\/g, '/'),
+              newPath: file.relation.newPath.replace(/\\/g, '/'),
             }
           : undefined,
-        worktreePath: file.worktreePath ? normalizePathForComparison(file.worktreePath) : undefined,
+        worktreePath: file.worktreePath ? file.worktreePath.replace(/\\/g, '/') : undefined,
         worktreeBranch: file.worktreeBranch,
         baseWorkspaceRoot: file.baseWorkspaceRoot
-          ? normalizePathForComparison(file.baseWorkspaceRoot)
+          ? file.baseWorkspaceRoot.replace(/\\/g, '/')
           : undefined,
       }))
       .sort(

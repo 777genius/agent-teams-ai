@@ -7,6 +7,7 @@ const FLOATING_FOOTER_FADE_HEIGHT = 28;
 interface MessagesThreadViewProps {
   variant: 'sidebar' | 'wide';
   header?: React.ReactNode;
+  headerFooter?: React.ReactNode;
   search?: React.ReactNode;
   composer: React.ReactNode;
   status: React.ReactNode;
@@ -25,6 +26,7 @@ interface MessagesThreadViewProps {
 export const MessagesThreadView = ({
   variant,
   header,
+  headerFooter,
   search,
   composer,
   status,
@@ -90,6 +92,7 @@ export const MessagesThreadView = ({
       {header ? (
         <div className="shrink-0 border-b border-[var(--color-border)] px-4 py-2.5">{header}</div>
       ) : null}
+      {headerFooter}
       {search ? (
         <div ref={searchRef} className="shrink-0 border-b border-[var(--color-border)] px-3 py-1.5">
           {search}

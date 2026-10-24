@@ -12,7 +12,7 @@ permissions: {}
 jobs:
   interaction:
     name: interaction
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     if: ${{ github.event_name == 'workflow_dispatch' || ((github.event_name != 'issue_comment' || github.event.issue.pull_request) && github.event.comment.user.type != 'Bot') }}
     permissions:
       contents: read
@@ -45,7 +45,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
-          node-version: "24"
+          # This job does not check out the repository, so .node-version is unavailable.
+          # Keep in sync with .node-version.
+          node-version: "26.11.1"
 
       - name: Preflight ReviewRouter interaction
         id: preflight

@@ -1,4 +1,10 @@
 declare module 'agent-teams-controller' {
+  export interface TaskFieldUpdates {
+    subject?: string;
+    description?: string;
+    groupChatId?: string | null;
+  }
+
   export interface ControllerContextOptions {
     teamName: string;
     claudeDir?: string;
@@ -31,7 +37,7 @@ declare module 'agent-teams-controller' {
     softDeleteTask(taskId: string, actor?: string): unknown;
     restoreTask(taskId: string, actor?: string): unknown;
     setTaskOwner(taskId: string, owner: string | null, actor?: string): unknown;
-    updateTaskFields(taskId: string, fields: { subject?: string; description?: string }): unknown;
+    updateTaskFields(taskId: string, fields: TaskFieldUpdates): unknown;
     addTaskComment(taskId: string, flags: Record<string, unknown>): unknown;
     attachTaskFile(taskId: string, flags: Record<string, unknown>): unknown;
     attachCommentFile(taskId: string, commentId: string, flags: Record<string, unknown>): unknown;
@@ -59,7 +65,7 @@ declare module 'agent-teams-controller' {
     softDeleteTask(taskId: string, actor?: string): unknown;
     restoreTask(taskId: string, actor?: string): unknown;
     setTaskOwner(taskId: string, owner: string | null, actor?: string): unknown;
-    updateTaskFields(taskId: string, fields: { subject?: string; description?: string }): unknown;
+    updateTaskFields(taskId: string, fields: TaskFieldUpdates): unknown;
     addTaskComment(taskId: string, flags: Record<string, unknown>): unknown;
     attachTaskFile(taskId: string, flags: Record<string, unknown>): unknown;
     attachCommentFile(taskId: string, commentId: string, flags: Record<string, unknown>): unknown;
@@ -91,7 +97,7 @@ declare module 'agent-teams-controller' {
     /** @deprecated Internal task lifecycle write. Use controller.taskBoard.setTaskOwner. */
     setTaskOwner(taskId: string, owner: string | null, actor?: string): unknown;
     /** @deprecated Internal task lifecycle write. Use controller.taskBoard.updateTaskFields. */
-    updateTaskFields(taskId: string, fields: { subject?: string; description?: string }): unknown;
+    updateTaskFields(taskId: string, fields: TaskFieldUpdates): unknown;
     /** @deprecated Internal task lifecycle write. Use controller.taskBoard.addTaskComment. */
     addTaskComment(taskId: string, flags: Record<string, unknown>): unknown;
     /** @deprecated Internal task lifecycle write. Use controller.taskBoard.attachTaskFile. */
@@ -184,9 +190,12 @@ declare module 'agent-teams-controller' {
   }
 
   export interface ControllerRuntimeApi {
+    getConnectionInfo(): Promise<unknown>;
     listTeams(flags?: Record<string, unknown>): Promise<unknown>;
     getTeam(flags?: Record<string, unknown>): Promise<unknown>;
     createTeam(flags: Record<string, unknown>): Promise<unknown>;
+    updateTeam(flags: Record<string, unknown>): Promise<unknown>;
+    trashTeam(flags: Record<string, unknown>): Promise<unknown>;
     launchTeam(flags: Record<string, unknown>): Promise<unknown>;
     stopTeam(flags?: Record<string, unknown>): Promise<unknown>;
     getRuntimeState(flags?: Record<string, unknown>): Promise<unknown>;
@@ -207,6 +216,31 @@ declare module 'agent-teams-controller' {
     review: ControllerReviewApi;
     taskBoard: ControllerTaskBoardApi;
     messages: ControllerMessageApi;
+    groupChats: {
+      createGroupChat(flags: {
+        from: string;
+        sourceMessageId: string;
+        name: string;
+        selectedMemberNames: string[];
+        autoIncludeNewMembers?: boolean;
+      }): Promise<unknown>;
+      listGroupChats(flags: Record<string, unknown>): Promise<unknown>;
+      sendGroupMessage(flags: Record<string, unknown>): Promise<unknown>;
+      reactToGroupMessage(flags: {
+        from: string;
+        groupChatId: string;
+        relayOfMessageId: string;
+      }): Promise<{
+        teamName: string;
+        saved: true;
+        acknowledged: true;
+        groupChatId: string;
+        messageId: string;
+        relayOfMessageId: string;
+        from: string;
+        groupRunKey: string;
+      }>;
+    };
     processes: ControllerProcessApi;
     maintenance: ControllerMaintenanceApi;
     crossTeam: ControllerCrossTeamApi;
@@ -260,6 +294,7 @@ declare module 'agent-teams-controller' {
     toolNames: readonly string[];
   }
 
+  export const AGENT_TEAMS_MANAGEMENT_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_TASK_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_LEAD_TOOL_NAMES: readonly string[];
   export const AGENT_TEAMS_REVIEW_TOOL_NAMES: readonly string[];

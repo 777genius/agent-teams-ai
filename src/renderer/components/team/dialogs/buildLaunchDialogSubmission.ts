@@ -14,6 +14,7 @@ import type {
 
 /** Fresh Launch and unchanged-form Resume inspect the same existing dialog choices. */
 export function buildLaunchDialogSubmission(input: {
+  runtimeSelectionVersion?: 1;
   teamName: string;
   cwd: string;
   prompt: string;
@@ -33,6 +34,7 @@ export function buildLaunchDialogSubmission(input: {
   members: MemberDraft[];
 }) {
   const request: TeamLaunchRequest = {
+    runtimeSelectionVersion: input.runtimeSelectionVersion,
     teamName: input.teamName,
     cwd: input.cwd,
     prompt: input.prompt.trim() || undefined,

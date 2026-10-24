@@ -144,6 +144,56 @@ describe('useCreateTeamDraft', () => {
     });
   });
 
+  it.each([undefined, '', 'gpt-5.4'])(
+    'preserves lead model intent %s across draft save and remount',
+    async (model) => {
+      loadSnapshotMock.mockResolvedValue(null);
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      let root = createRoot(host);
+      let loadedDraft: ReturnType<typeof useCreateTeamDraft> | null = null;
+      const render = async () => {
+        await act(async () => {
+          root.render(
+            React.createElement(HookProbeWithDraft, {
+              onLoaded: (draft) => {
+                loadedDraft = draft;
+              },
+            })
+          );
+          await Promise.resolve();
+          await Promise.resolve();
+        });
+      };
+      await render();
+      act(() => {
+        loadedDraft?.setTeamName('draft-runtime-intent');
+        loadedDraft?.setRuntimeSelection(1, 'codex', model);
+        root.unmount();
+      });
+      const saved = saveSnapshotMock.mock.calls.at(-1)?.[0];
+      expect(saved).toEqual(
+        expect.objectContaining({
+          runtimeSelectionVersion: 1,
+          runtimeProviderId: 'codex',
+          runtimeModel: model,
+        })
+      );
+      loadSnapshotMock.mockResolvedValue(saved);
+      loadedDraft = null;
+      root = createRoot(host);
+      await render();
+      expect(loadedDraft).toEqual(
+        expect.objectContaining({
+          runtimeSelectionVersion: 1,
+          runtimeProviderId: 'codex',
+          runtimeModel: model,
+        })
+      );
+      act(() => root.unmount());
+    }
+  );
+
   it('preserves per-member MCP policy in saved create-team drafts', async () => {
     loadSnapshotMock.mockResolvedValue({
       version: 1,

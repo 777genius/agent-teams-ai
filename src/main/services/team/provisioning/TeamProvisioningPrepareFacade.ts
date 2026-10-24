@@ -5,6 +5,10 @@ import { execCli as defaultExecCli } from '@main/utils/childProcess';
 import { ClaudeBinaryResolver } from '../ClaudeBinaryResolver';
 
 import {
+  type MemberGatewayRuntimeSeams,
+  resolveOpenCodeGatewayMemberModels,
+} from './TeamProvisioningMemberGatewayRuntime';
+import {
   type PreparedOpenCodeRuntimeAdapterLaunch,
   prepareOpenCodeRuntimeAdapterLaunch,
 } from './TeamProvisioningOpenCodeRuntimeAdapterPreparation';
@@ -33,6 +37,7 @@ import type {
 
 export interface TeamProvisioningPrepareFacadePorts {
   getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null;
+  getMemberGatewayRuntimeSeams?(): MemberGatewayRuntimeSeams | null;
   buildProvisioningEnv(
     providerId?: TeamProviderId,
     providerBackendId?: string,
@@ -70,6 +75,7 @@ export interface TeamProvisioningPrepareFacadePorts {
   providerProbeCache?: ProviderProbeCachePort;
   execCli?: TeamProvisioningPrepareCoordinatorPorts['execCli'];
   readOpenCodeProviderStatus?: TeamProvisioningPrepareCoordinatorPorts['readOpenCodeProviderStatus'];
+  readOpenCodeRuntimeStatus?: TeamProvisioningPrepareCoordinatorPorts['readOpenCodeRuntimeStatus'];
   inspectOpenCodeLocalModelRuntime?: TeamProvisioningPrepareCoordinatorPorts['inspectOpenCodeLocalModelRuntime'];
   planRuntimeLanesOrThrow(
     leadProviderId: TeamProviderId | undefined,
@@ -83,6 +89,7 @@ export interface TeamProvisioningPrepareFacadePorts {
 export interface TeamProvisioningPrepareFacadeServiceHost {
   appShellBoundary: {
     getOpenCodeRuntimeAdapter: TeamProvisioningPrepareFacadePorts['getOpenCodeRuntimeAdapter'];
+    getMemberGatewayRuntimeSeams?(): MemberGatewayRuntimeSeams | null;
   };
   buildProvisioningEnv: TeamProvisioningPrepareFacadePorts['buildProvisioningEnv'];
   providerRuntime: Pick<
@@ -105,6 +112,7 @@ export interface TeamProvisioningPrepareFacadeServiceHostOptions
         | 'execCli'
         | 'inspectOpenCodeLocalModelRuntime'
         | 'readOpenCodeProviderStatus'
+        | 'readOpenCodeRuntimeStatus'
         | 'providerProbeCache'
         | 'resolveClaudeBinaryPath'
       >
@@ -116,6 +124,8 @@ export function createTeamProvisioningPrepareFacadeFromService(
 ): TeamProvisioningPrepareFacade {
   return new TeamProvisioningPrepareFacade({
     getOpenCodeRuntimeAdapter: () => service.appShellBoundary.getOpenCodeRuntimeAdapter(),
+    getMemberGatewayRuntimeSeams: () =>
+      service.appShellBoundary.getMemberGatewayRuntimeSeams?.() ?? null,
     buildProvisioningEnv: (providerId, providerBackendId, envOptions) =>
       service.buildProvisioningEnv(providerId, providerBackendId, envOptions),
     runProviderOneShotDiagnostic: (...args) =>
@@ -128,6 +138,7 @@ export function createTeamProvisioningPrepareFacadeFromService(
     providerProbeCache: options.providerProbeCache,
     execCli: options.execCli,
     readOpenCodeProviderStatus: options.readOpenCodeProviderStatus,
+    readOpenCodeRuntimeStatus: options.readOpenCodeRuntimeStatus,
     inspectOpenCodeLocalModelRuntime: options.inspectOpenCodeLocalModelRuntime,
     planRuntimeLanesOrThrow: (leadProviderId, members, baseCwd) =>
       service.planRuntimeLanesOrThrow(leadProviderId, members, baseCwd),
@@ -167,6 +178,7 @@ export class TeamProvisioningPrepareFacade {
               })
             : null;
         }),
+      readOpenCodeRuntimeStatus: ports.readOpenCodeRuntimeStatus,
       inspectOpenCodeLocalModelRuntime: ports.inspectOpenCodeLocalModelRuntime,
       info: (message) => ports.info(message),
       warn: (message) => ports.warn(message),
@@ -231,7 +243,7 @@ export class TeamProvisioningPrepareFacade {
           limitContext
         ),
       resolveOpenCodeMemberWorkspacesForRuntime: (workspaceParams) =>
-        this.coordinator.resolveOpenCodeMemberWorkspacesForRuntime(workspaceParams),
+        this.resolveOpenCodeMemberWorkspacesForRuntime(workspaceParams),
       planRuntimeLanesOrThrow: (leadProviderId, members, cwd) =>
         this.ports.planRuntimeLanesOrThrow(leadProviderId, members, cwd),
       buildOpenCodeRuntimeAdapterLaunchMembers: (launchRequest, members, lanePlan) =>
@@ -253,7 +265,14 @@ export class TeamProvisioningPrepareFacade {
     leadProviderId?: TeamProviderId;
     members: TeamCreateRequest['members'];
   }): Promise<TeamCreateRequest['members']> {
-    return this.coordinator.resolveOpenCodeMemberWorkspacesForRuntime(params);
+    const routedMembers = await resolveOpenCodeGatewayMemberModels({
+      ...params,
+      seams: this.ports.getMemberGatewayRuntimeSeams?.() ?? null,
+    });
+    return this.coordinator.resolveOpenCodeMemberWorkspacesForRuntime({
+      ...params,
+      members: routedMembers,
+    });
   }
 
   getFreshCachedProbeResult(

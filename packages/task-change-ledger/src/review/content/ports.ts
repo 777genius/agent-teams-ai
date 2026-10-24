@@ -16,7 +16,7 @@ export interface ResolverLogger {
   debug(message: string): void;
 }
 export type FileContentResolverOptions =
-  | { mode: 'ledger-only'; logger?: ResolverLogger }
+  | { mode: 'ledger-only' | 'preview-only'; logger?: ResolverLogger }
   | {
       mode: 'legacy';
       history: ResolverHistoryPort;

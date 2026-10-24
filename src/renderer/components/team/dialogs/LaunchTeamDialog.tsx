@@ -58,15 +58,15 @@ import {
   isTeamProvisioningActive,
   selectResolvedMembersForTeamName,
 } from '@renderer/store/slices/teamSlice';
+import { resolveAnthropicProviderRuntimeSelection } from '@renderer/utils/anthropicRuntimeSelection';
 import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { nameColorSet } from '@renderer/utils/projectColor';
-import { resolveUiOwnedProviderBackendId } from '@renderer/utils/providerBackendIdentity';
 import { getAvailableTeamEffortValue } from '@renderer/utils/teamEffortOptions';
 import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvailability';
 import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
-import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { getAnthropicRuntimeDefaultLaunchModel } from '@shared/utils/providerDefaultModel';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { bindTeamProvisioningContext } from '@shared/utils/teamProvisioningContext';
 import {
@@ -97,6 +97,7 @@ import {
   normalizeSavedBackendId,
   resolveLaunchDialogPrefill,
   resolveLaunchDialogRoster,
+  resolveLaunchProviderBackendId,
 } from './launchDialogPrefill';
 import { migrateLegacyLaunchDialogStorage } from './launchDialogStorageMigration';
 import {
@@ -112,11 +113,13 @@ import {
 } from './launchTeamDialogHelpers';
 import {
   clearInheritedMemberModelsUnavailableForProvider,
+  getDialogMemberModelIssues,
   getDialogTeamModelValidationError,
 } from './memberModelScope';
 import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
 import * as optionalPreflight from './optionalProviderPreflight';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
+import { resolvePersistedTeamModel } from './persistedTeamModel';
 import {
   isDeletedProjectPathSelection,
   isLaunchPreflightProjectSelectionReady,
@@ -165,6 +168,7 @@ import {
 } from './TeamModelSelector';
 import { useCapturedTeamLaunchReadiness } from './useCapturedTeamLaunchReadiness';
 import { useCustomProjectFolder } from './useCustomProjectFolder';
+import { useDialogMemberModelScope } from './useDialogMemberModelScope';
 import { useHostTeamResume } from './useHostTeamResume';
 import {
   useLaunchDialogAdvancedSettings,
@@ -173,7 +177,6 @@ import {
 import { useLaunchDialogRosterSubmission } from './useLaunchDialogRosterSubmission';
 import { useLaunchDialogSavedRequest } from './useLaunchDialogSavedRequest';
 import { useMemberWorkspaceInfo } from './useMemberWorkspaceInfo';
-import { useOpenCodeLocalModelScope } from './useOpenCodeLocalModelScope';
 import { useOpenCodeProviderScopedDialogModelState } from './useOpenCodeProviderScopedModelAuthority';
 import { useProjectScopedRuntimeProviderStatuses } from './useProjectScopedRuntimeProviderStatuses';
 import { useProviderModelChecks } from './useProviderModelChecks';
@@ -379,6 +382,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     () => applyMemberSettingsRelaunch(sourceMembers, memberSettingsDraft),
     [sourceMembers, memberSettingsDraft]
   );
+  const [runtimeSelectionVersion, setRuntimeSelectionVersion] = useState<1 | undefined>();
+  const [runtimeSelectionUnresolved, setRuntimeSelectionUnresolved] = useState(false);
   const [savedLaunchProviderId, setSavedLaunchProviderId] = useState<TeamProviderId | null>(null);
   const [savedLaunchProviderBackendId, setSavedLaunchProviderBackendId] = useState<string | null>(
     null
@@ -428,7 +433,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       : selectedProjectPath.trim();
   const effectiveCwd = cwdMode === 'project' ? selectedProjectCwd : customCwd.trim();
   const launchPreflightSelectionReady = isLaunchPreflightProjectSelectionReady({
-    draftLoaded: !ownerHydrationPending && launchHydratedTeamName === savedLaunchSource.key,
+    draftLoaded:
+      !isLaunchMode || (!ownerHydrationPending && launchHydratedTeamName === savedLaunchSource.key),
     effectiveCwd,
     cwdMode,
     projectsLoading,
@@ -437,10 +443,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     defaultProjectPath,
     appliedDefaultProjectPath: appliedDefaultProjectPathRef.current,
   });
-  const { projectScopedCliStatus, projectScopedOpenCodeStatus, runtimeProviderStatusById } =
-    useProjectScopedRuntimeProviderStatuses(globalRuntimeProviderStatusById, effectiveCwd);
-  const openCodeLocalModelScope = useOpenCodeLocalModelScope({
+  const { scope: openCodeLocalModelScope, gatewayBindings } = useDialogMemberModelScope({
     enabled: open,
+    teamName: isLaunchMode ? effectiveTeamName : undefined,
     projectPath: effectiveCwd,
     selectedProviderId,
     members: membersDrafts,
@@ -458,6 +463,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       ),
     [membersDrafts, multimodelEnabled, selectedProviderId, syncModelsWithLead]
   );
+  const { projectScopedCliStatus, projectScopedOpenCodeStatus, runtimeProviderStatusById } =
+    useProjectScopedRuntimeProviderStatuses(
+      globalRuntimeProviderStatusById,
+      effectiveCwd,
+      open && launchPreflightSelectionReady && requestedMemberProviders.includes('anthropic')
+    );
   const openCodeCatalogEnabled =
     open && isLaunchMode && multimodelEnabled && requestedMemberProviders.includes('opencode');
   const {
@@ -485,8 +496,21 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   });
   const selectedMemberProviders = useMemo<TeamProviderId[]>(
     () =>
-      collectDialogMemberProviderIds(multimodelEnabled, selectedProviderId, effectiveMemberDrafts),
-    [effectiveMemberDrafts, multimodelEnabled, selectedProviderId]
+      runtimeSelectionUnresolved
+        ? []
+        : collectDialogMemberProviderIds(
+            multimodelEnabled,
+            selectedProviderId,
+            gatewayBindings.pending ? [] : effectiveMemberDrafts,
+            gatewayBindings.boundMemberNames
+          ),
+    [
+      runtimeSelectionUnresolved,
+      effectiveMemberDrafts,
+      multimodelEnabled,
+      selectedProviderId,
+      gatewayBindings,
+    ]
   );
   const tmuxRuntime = useTmuxRuntimeReadiness(open && isLaunchMode);
   const workspaceTrustStatus = useWorkspaceTrustStatus({
@@ -638,10 +662,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   const setSelectedProviderId = (value: TeamProviderId): void => {
     hydrationRef.current.dirty = true;
+    setRuntimeSelectionUnresolved(false);
     const normalizedValue = isLaunchMode
       ? normalizeLeadProviderForMode(value, multimodelEnabled)
       : normalizeOneShotProviderForMode(value, multimodelEnabled);
-    const nextModel = getStoredTeamModel(normalizedValue);
+    const nextModel = runtimeSelectionVersion === 1 ? '' : getStoredTeamModel(normalizedValue);
     const nextEffort = getAvailableTeamEffortValue({
       providerId: normalizedValue,
       model: nextModel,
@@ -864,6 +889,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       applyEditableRoster();
 
     if (savedLaunchSource.error) {
+      setRuntimeSelectionUnresolved(
+        savedLaunchSource.error.includes('RUNTIME_SELECTION_UNSUPPORTED')
+      );
       setLocalError(savedLaunchSource.error);
       return;
     }
@@ -892,6 +920,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       storedLimitContext: localStorage.getItem('team:lastLimitContext') === 'true',
       getStoredModel: getStoredTeamModel,
     });
+    setRuntimeSelectionVersion(savedRequest?.runtimeSelectionVersion);
+    setRuntimeSelectionUnresolved(launchPrefill.runtimeSelectionUnresolved === true);
     setSavedLaunchProviderId(normalizeOptionalTeamProviderId(savedRequest?.providerId) ?? null);
     const savedBackendId = normalizeSavedBackendId(savedRequest?.providerBackendId);
     setSavedLaunchProviderBackendId(launchPrefill.providerBackendId ?? savedBackendId);
@@ -975,15 +1005,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   );
   const selectedProviderBackendId = useMemo(
     () =>
-      resolveUiOwnedProviderBackendId(
+      resolveLaunchProviderBackendId(
         selectedProviderId,
-        runtimeProviderStatusById.get(selectedProviderId)
-      ) ??
-      migrateProviderBackendId(
-        selectedProviderId,
+        runtimeProviderStatusById.get(selectedProviderId),
         previousLaunchParams?.providerBackendId ?? savedLaunchProviderBackendId
-      ) ??
-      undefined,
+      ),
     [
       previousLaunchParams?.providerBackendId,
       runtimeProviderStatusById,
@@ -1013,34 +1039,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       tmuxRuntime.status,
     ]
   );
-  const teammateRuntimeProviderNoticeById:
-    | Partial<Record<TeamProviderId, React.ReactNode>>
-    | undefined = teammateRuntimeCompatibility.providerNoticeProviderId
-    ? {
-        [teammateRuntimeCompatibility.providerNoticeProviderId]: (
-          <TeammateRuntimeCompatibilityNotice
-            analysis={teammateRuntimeCompatibility}
-            onOpenDashboard={() => {
-              closeDialog();
-              openDashboard();
-            }}
-          />
-        ),
-      }
-    : undefined;
   const showRosterTeammateRuntimeCompatibility =
     teammateRuntimeCompatibility.visible && !teammateRuntimeCompatibility.providerNoticeProviderId;
   const anthropicRuntimeSelection = useMemo(
     () =>
       selectedProviderId === 'anthropic'
-        ? resolveAnthropicRuntimeSelection({
-            source: {
-              modelCatalog: runtimeProviderStatusById.get('anthropic')?.modelCatalog,
-              runtimeCapabilities: runtimeProviderStatusById.get('anthropic')?.runtimeCapabilities,
-            },
+        ? resolveAnthropicProviderRuntimeSelection(
+            runtimeProviderStatusById.get('anthropic'),
             selectedModel,
-            limitContext: effectiveAnthropicRuntimeLimitContext,
-          })
+            effectiveAnthropicRuntimeLimitContext
+          )
         : null,
     [
       effectiveAnthropicRuntimeLimitContext,
@@ -1071,13 +1079,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         ? resolveCodexRuntimeSelection({
             source: {
               providerStatus: runtimeProviderStatusById.get('codex'),
-              providerBackendId:
-                resolveUiOwnedProviderBackendId('codex', runtimeProviderStatusById.get('codex')) ??
-                migrateProviderBackendId(
-                  'codex',
-                  previousLaunchParams?.providerBackendId ?? savedLaunchProviderBackendId
-                ) ??
-                undefined,
+              providerBackendId: resolveLaunchProviderBackendId(
+                'codex',
+                runtimeProviderStatusById.get('codex'),
+                previousLaunchParams?.providerBackendId ?? savedLaunchProviderBackendId
+              ),
             },
             selectedModel,
           })
@@ -1142,12 +1148,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             selection:
               anthropicRuntimeSelection ??
               resolveAnthropicRuntimeSelection({
-                source: {
-                  modelCatalog: null,
-                  runtimeCapabilities: null,
-                },
+                source: {},
                 selectedModel,
                 limitContext: effectiveAnthropicRuntimeLimitContext,
+                defaultLaunchModel: getAnthropicRuntimeDefaultLaunchModel(
+                  runtimeProviderStatusById.get('anthropic')
+                ),
               }),
             selectedEffort: selectedEffortForCurrentSelection,
             selectedFastMode,
@@ -1163,16 +1169,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 resolveCodexRuntimeSelection({
                   source: {
                     providerStatus: runtimeProviderStatusById.get('codex'),
-                    providerBackendId:
-                      resolveUiOwnedProviderBackendId(
-                        'codex',
-                        runtimeProviderStatusById.get('codex')
-                      ) ??
-                      migrateProviderBackendId(
-                        'codex',
-                        previousLaunchParams?.providerBackendId ?? savedLaunchProviderBackendId
-                      ) ??
-                      undefined,
+                    providerBackendId: resolveLaunchProviderBackendId(
+                      'codex',
+                      runtimeProviderStatusById.get('codex'),
+                      previousLaunchParams?.providerBackendId ?? savedLaunchProviderBackendId
+                    ),
                   },
                   selectedModel,
                 }),
@@ -1885,7 +1886,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   );
 
   // Launch-only: internal args preview
-
   const internalArgs = useMemo(() => {
     if (!isLaunchMode) return [];
     const args: string[] = [];
@@ -2007,6 +2007,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   ]);
   const modelValidationError = useMemo(
     () =>
+      gatewayBindings.error ??
       (isLaunchMode ? openCodeDefaultSelectionError : null) ??
       getDialogTeamModelValidationError({
         selectedProviderId,
@@ -2019,6 +2020,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         openCodeProviderScopedStatusBySourceId,
       }),
     [
+      gatewayBindings,
       effectiveMemberDrafts,
       isLaunchMode,
       openCodeDefaultSelectionError,
@@ -2038,35 +2040,15 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     );
     return issue?.reason ?? issue?.detail ?? null;
   }, [effectiveLeadRuntimeModel, prepareChecks, selectedModel, selectedProviderId]);
-  const memberModelIssueById = useMemo(() => {
-    const next: Record<string, string> = {};
-    if (!isLaunchMode) {
-      return next;
-    }
-    for (const member of effectiveMemberDrafts) {
-      if (member.removedAt) {
-        continue;
-      }
-      if (syncModelsWithLead && leadModelIssueText) {
-        next[member.id] = leadModelIssueText;
-        continue;
-      }
-      const providerId = normalizeOptionalTeamProviderId(member.providerId) ?? selectedProviderId;
-      const issue = getProvisioningModelIssue(prepareChecks, providerId, member.model);
-      const issueText = issue?.reason ?? issue?.detail ?? null;
-      if (issueText) {
-        next[member.id] = issueText;
-      }
-    }
-    return next;
-  }, [
-    effectiveMemberDrafts,
-    isLaunchMode,
-    leadModelIssueText,
-    prepareChecks,
+  const memberModelIssueById = getDialogMemberModelIssues({
+    members: effectiveMemberDrafts,
     selectedProviderId,
+    prepareChecks,
     syncModelsWithLead,
-  ]);
+    leadModelIssueText,
+    gatewayBoundMemberNames: gatewayBindings.boundMemberNames,
+    validateMembers: isLaunchMode,
+  });
   const hasInvalidLaunchMemberNames = useMemo(
     () =>
       isLaunchMode &&
@@ -2151,6 +2133,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   ]);
 
   const launchSubmission = buildLaunchDialogSubmission({
+    runtimeSelectionVersion,
     teamName: effectiveTeamName,
     cwd: effectiveCwd,
     prompt: promptDraft.value,
@@ -2178,6 +2161,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   });
 
   const handleSubmit = (): void => {
+    if (gatewayBindings.pending) return;
     if (ownerHydrationPending) return;
     if (resume.selected) {
       void resume
@@ -2190,6 +2174,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       return;
     }
     if (submissionFence.busy || isSubmitting || launchInFlight) return;
+    if (runtimeSelectionUnresolved) {
+      setLocalError('Choose a team provider before launching');
+      return;
+    }
     if (prepareState === 'loading' && !canSkipPreflight()) return;
     if (validationErrors.length > 0) {
       setLocalError(validationErrors[0]);
@@ -2238,31 +2226,40 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     void (async () => {
       try {
         if (isLaunchMode) {
-          await submitTeam(
-            props,
-            launchSubmission.request,
-            launchSubmission.members,
-            effectiveSelectedModel,
-            api.teams.replaceMembers
+          await gatewayBindings.run(
+            () =>
+              submitTeam(
+                props,
+                launchSubmission.request,
+                launchSubmission.members,
+                effectiveSelectedModel,
+                api.teams.replaceMembers,
+                () =>
+                  gatewayBindings.markSaved(launchSubmission.members.map((member) => member.name))
+              ),
+            []
           );
           openTeamTab(effectiveTeamName, effectiveCwd || defaultProjectPath);
           closeDialog();
         } else {
           // Schedule mode: create or update
           const parsedBudget = maxBudgetUsd ? parseFloat(maxBudgetUsd) : undefined;
-          const scheduleProviderBackendId =
-            resolveUiOwnedProviderBackendId(
+          const scheduleModel = resolvePersistedTeamModel({
+            model: computeEffectiveTeamModel(
+              effectiveSelectedModel,
+              false,
               selectedProviderId,
               runtimeProviderStatusById.get(selectedProviderId)
-            ) ??
-            selectedProviderBackendId ??
-            undefined;
-          const scheduleModel = computeEffectiveTeamModel(
-            effectiveSelectedModel,
-            false,
-            selectedProviderId,
-            runtimeProviderStatusById.get(selectedProviderId)
-          );
+            ),
+            selectedModel: effectiveSelectedModel,
+            providerId: selectedProviderId,
+            globalStatus: globalRuntimeProviderStatusById.get('anthropic'),
+            scopedStatus: runtimeProviderStatusById.get(selectedProviderId),
+            projectSelectionReady: launchPreflightSelectionReady,
+            probedCwd: effectiveCwd,
+            persistedCwd: effectiveCwd,
+            limitContext: false,
+          });
           const explicitScheduleEffort = selectedEffortForCurrentSelection
             ? (selectedEffortForCurrentSelection as EffortLevel)
             : undefined;
@@ -2274,7 +2271,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             cwd: effectiveCwd,
             prompt: promptDraft.value.trim(),
             providerId: selectedProviderId,
-            providerBackendId: scheduleProviderBackendId,
+            providerBackendId: selectedProviderBackendId,
             model: scheduleModel,
             effort: scheduleEffort,
             fastMode:
@@ -2346,6 +2343,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
 
   const isDisabled =
+    gatewayBindings.pending ||
+    runtimeSelectionUnresolved ||
     ownerHydrationPending ||
     (resume.selected
       ? resume.disabled
@@ -2640,6 +2639,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                       onValueChange={setSelectedFastMode}
                       providerFastModeDefault={anthropicProviderFastModeDefault}
                       model={selectedModel}
+                      projectPath={effectiveCwd}
                       limitContext={effectiveAnthropicRuntimeLimitContext}
                       id="launch-fast-mode"
                     />
@@ -2657,17 +2657,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                       value={selectedFastMode}
                       onValueChange={setSelectedFastMode}
                       model={selectedModel}
-                      providerBackendId={
-                        resolveUiOwnedProviderBackendId(
-                          'codex',
-                          runtimeProviderStatusById.get('codex')
-                        ) ??
-                        migrateProviderBackendId(
-                          'codex',
-                          previousLaunchParams?.providerBackendId ?? savedLaunchProviderBackendId
-                        ) ??
-                        undefined
-                      }
+                      providerBackendId={resolveLaunchProviderBackendId(
+                        'codex',
+                        runtimeProviderStatusById.get('codex'),
+                        previousLaunchParams?.providerBackendId ?? savedLaunchProviderBackendId
+                      )}
                       id="launch-fast-mode"
                     />
                     {anthropicRuntimeNotice ? (
@@ -2680,8 +2674,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 ) : null}
 
                 <TeamRosterEditorSection
+                  runtimeSelectionUnresolved={runtimeSelectionUnresolved}
                   members={membersDrafts}
                   onMembersChange={setMembersDraftsFromUser}
+                  teamName={effectiveTeamName}
+                  gatewayBindings={gatewayBindings}
                   validateMemberName={validateMemberNameInline}
                   showWorkflow
                   showJsonEditor
@@ -2695,8 +2692,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   inheritedModel={selectedModel}
                   inheritedEffort={(selectedEffortForCurrentSelection as EffortLevel) || undefined}
                   inheritModelSettingsByDefault
-                  lockProviderModel={syncModelsWithLead}
-                  forceInheritedModelSettings={syncModelsWithLead}
+                  lockProviderModel={runtimeSelectionUnresolved || syncModelsWithLead}
+                  forceInheritedModelSettings={runtimeSelectionUnresolved || syncModelsWithLead}
                   teammatesInheritLeadModel={relaunchInheritedSync !== false}
                   modelLockReason="This teammate is synced with the lead model. Turn off sync to set a custom provider, model, or effort."
                   providerId={selectedProviderId}
@@ -2707,7 +2704,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   onOpenCodeProviderScopedStatusChange={handleOpenCodeProviderScopedStatusChange}
                   onOpenProviderSettings={setProviderSettingsProviderId}
                   providerReadyById={providerReadyById}
-                  leadProviderNoticeById={teammateRuntimeProviderNoticeById}
                   onProviderChange={setSelectedProviderId}
                   onModelChange={setSelectedModel}
                   onEffortChange={setSelectedEffort}
@@ -2721,6 +2717,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   onTeammateWorktreeDefaultChange={setTeammateWorktreeDefaultFromUser}
                   leadWarningText={leadRuntimeWarningText}
                   memberWarningById={combinedMemberRuntimeWarningById}
+                  memberErrorById={teammateRuntimeCompatibility.memberErrorById}
                   memberInfoById={memberWorktreeContinuationInfoById}
                   leadModelIssueText={leadModelIssueText}
                   memberModelIssueById={memberModelIssueById}
@@ -2887,12 +2884,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   </div>
                 ) : null}
               </div>
-
               <div>
                 <TeamModelSelector
                   providerId={selectedProviderId}
                   onProviderChange={setSelectedProviderId}
                   value={selectedModel}
+                  limitContext={effectiveAnthropicRuntimeLimitContext}
                   onValueChange={setSelectedModel}
                   projectPath={effectiveCwd || null}
                   id="dialog-model"
@@ -2911,6 +2908,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   id="dialog-effort"
                   providerId={selectedProviderId}
                   model={selectedModel}
+                  projectPath={effectiveCwd}
                   limitContext={effectiveAnthropicRuntimeLimitContext}
                 />
                 {selectedProviderId === 'anthropic' ? (
@@ -2920,6 +2918,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                       onValueChange={setSelectedFastMode}
                       providerFastModeDefault={anthropicProviderFastModeDefault}
                       model={selectedModel}
+                      projectPath={effectiveCwd}
                       limitContext={effectiveAnthropicRuntimeLimitContext}
                       id="dialog-fast-mode"
                     />
@@ -2936,17 +2935,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                       value={selectedFastMode}
                       onValueChange={setSelectedFastMode}
                       model={selectedModel}
-                      providerBackendId={
-                        resolveUiOwnedProviderBackendId(
-                          'codex',
-                          runtimeProviderStatusById.get('codex')
-                        ) ??
-                        migrateProviderBackendId(
-                          'codex',
-                          previousLaunchParams?.providerBackendId ?? savedLaunchProviderBackendId
-                        ) ??
-                        undefined
-                      }
+                      providerBackendId={resolveLaunchProviderBackendId(
+                        'codex',
+                        runtimeProviderStatusById.get('codex'),
+                        previousLaunchParams?.providerBackendId ?? savedLaunchProviderBackendId
+                      )}
                       id="dialog-fast-mode"
                     />
                     {anthropicRuntimeNotice ? (
@@ -3072,7 +3065,17 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 </>
               ) : null}
 
-              {presentedPrepareState === 'ready' && !launchAuthorityBlocked ? (
+              {teammateRuntimeCompatibility.blocksSubmission &&
+              !teammateRuntimeCompatibility.checking ? (
+                <TeammateRuntimeCompatibilityNotice
+                  analysis={teammateRuntimeCompatibility}
+                  showMemberErrors
+                />
+              ) : null}
+
+              {presentedPrepareState === 'ready' &&
+              !teammateRuntimeCompatibility.blocksSubmission &&
+              !launchAuthorityBlocked ? (
                 <ProviderPrepareReadyNotice
                   checks={prepareChecks}
                   message={effectivePrepare.message}
@@ -3193,7 +3196,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           <WorkspaceTrustLaunchControl
             status={workspaceTrustStatus}
             isLaunchMode={isLaunchMode}
-            disabled={isDisabled}
+            disabled={isDisabled || gatewayBindings.pending}
             describedBy={
               isLaunchMode &&
               prepareState !== 'idle' &&

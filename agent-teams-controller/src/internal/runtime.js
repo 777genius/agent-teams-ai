@@ -1,5 +1,26 @@
+const desktopBinding = require('./desktopControlBinding.js');
 const fs = require('fs');
 const path = require('path');
+const runtimeHelpers = require('./runtimeHelpers.js');
+const { buildMemberRosterContext } = require('./briefingProtocols.js');
+
+function getMemberRosterContext(context, memberName, launchMembers = []) {
+  const resolved = runtimeHelpers.resolveTeamMembers(context.paths);
+  const members = new Map(
+    launchMembers.map((member) => [member.name.trim().toLowerCase(), member])
+  );
+  for (const member of resolved.members) {
+    const key = member.name.toLowerCase();
+    members.set(key, { ...members.get(key), ...member });
+  }
+  for (const removedName of resolved.removedNames) members.delete(removedName);
+  return buildMemberRosterContext(
+    [...members.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    memberName,
+    runtimeHelpers.inferLeadName(context.paths),
+    48
+  );
+}
 
 const READY_STATES = new Set(['ready', 'failed', 'disconnected', 'cancelled']);
 const DEFAULT_WAIT_TIMEOUT_MS = 120000;
@@ -62,6 +83,8 @@ function describeControlApiLookup(context, flags, stateFileUrl, envUrl) {
 }
 
 function resolveControlBaseUrls(context, flags = {}) {
+  const boundUrls = desktopBinding.boundControlBaseUrls(context, flags);
+  if (boundUrls) return boundUrls;
   const explicit =
     (typeof flags.controlUrl === 'string' && flags.controlUrl.trim()) ||
     (typeof flags['control-url'] === 'string' && flags['control-url'].trim()) ||
@@ -116,10 +139,13 @@ async function requestJson(baseUrl, pathname, options = {}) {
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
+    const boundOptions = desktopBinding.boundRequestOptions(baseUrl);
     const response = await fetch(`${baseUrl}${pathname}`, {
+      ...boundOptions,
       method: options.method || 'GET',
       headers: {
         accept: 'application/json',
+        ...boundOptions.headers,
         ...(options.body ? { 'content-type': 'application/json' } : {}),
       },
       ...(options.body ? { body: JSON.stringify(options.body) } : {}),
@@ -482,20 +508,64 @@ async function listTeams(context, flags = {}) {
   });
 }
 
+async function getConnectionInfo(context) {
+  return requestJsonWithFallback(resolveControlBaseUrls(context), '/api/app/connection');
+}
+
 async function getTeam(context, flags = {}) {
   const baseUrls = resolveControlBaseUrls(context, flags);
-  return requestJsonWithFallback(baseUrls, `/api/teams/${encodeURIComponent(context.teamName)}`, {
-    timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'] || 10000),
-  });
+  return requestJsonWithFallback(
+    baseUrls,
+    `/api/teams/${encodeURIComponent(context.teamName)}${flags.configuration === true ? '?configuration=1' : ''}`,
+    {
+      timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'] || 10000),
+    }
+  );
+}
+
+async function updateTeam(context, flags = {}) {
+  desktopBinding.assertManagementExpectation(flags);
+  return requestJson(
+    resolveControlBaseUrls(context, flags)[0],
+    `/api/teams/${encodeURIComponent(context.teamName)}/update`,
+    {
+      method: 'POST',
+      body: compactBody(flags, [
+        'expectedContext',
+        'expectedRevision',
+        'metadata',
+        'leadInstructions',
+        'members',
+      ]),
+      timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'] || 10000),
+    }
+  );
+}
+
+async function trashTeam(context, flags = {}) {
+  desktopBinding.assertManagementExpectation(flags);
+  return requestJson(
+    resolveControlBaseUrls(context, flags)[0],
+    `/api/teams/${encodeURIComponent(context.teamName)}/trash`,
+    {
+      method: 'POST',
+      body: compactBody(flags, ['expectedContext', 'expectedRevision']),
+      timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'] || 10000),
+    }
+  );
 }
 
 async function createTeam(context, flags = {}) {
+  desktopBinding.assertDraftExpectation(flags);
   const baseUrls = resolveControlBaseUrls(context, flags);
   return requestJsonWithFallback(baseUrls, '/api/teams', {
     method: 'POST',
     body: {
       teamName: context.teamName,
       ...compactBody(flags, [
+        'runtimeSelectionVersion',
+        'expectedContext',
+        'syncModelsWithLead',
         'displayName',
         'description',
         'color',
@@ -630,9 +700,13 @@ async function runtimeHeartbeat(context, flags = {}) {
 }
 
 module.exports = {
+  getMemberRosterContext,
   listTeams,
+  getConnectionInfo,
   getTeam,
   createTeam,
+  updateTeam,
+  trashTeam,
   launchTeam,
   stopTeam,
   getRuntimeState,

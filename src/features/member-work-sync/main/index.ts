@@ -15,7 +15,15 @@ export {
   consumeOpenCodeWorkSyncLaneForSend,
   gateOpenCodeWorkSyncLaneDelivery,
 } from './adapters/output/gateOpenCodeWorkSyncLaneDelivery';
-export { readNativeWorkSyncCurrentRuntimeInstanceId } from './adapters/output/NativeMailboxMemberWorkSyncRuntimeTicketAdmission';
+export type {
+  NativeInboxAttachmentCapabilityProof,
+  NativeWorkSyncAdmissionCapability,
+  NativeWorkSyncAdmissionProviderId,
+} from './adapters/output/NativeMailboxMemberWorkSyncRuntimeTicketAdmission';
+export {
+  readNativeInboxAttachmentCapability,
+  readNativeWorkSyncCurrentRuntimeInstanceId,
+} from './adapters/output/NativeMailboxMemberWorkSyncRuntimeTicketAdmission';
 export {
   consumeOpenCodeWorkSyncLane,
   hasOpenCodeWorkSyncLaneReservation,

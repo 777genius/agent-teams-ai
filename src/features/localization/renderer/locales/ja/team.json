@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "リアクションを追加 ({{count}})",
+      "remove": "リアクションを削除 ({{count}})",
+      "count": "リアクション：{{count}}",
+      "failed": "リアクションを更新できませんでした"
+    },
     "actions": {
       "createTaskFromMessage": "メッセージからタスクを作成する",
       "editMessage": "メッセージを編集",
@@ -194,7 +200,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "名前には、少なくとも1文字または数字を含む必要があります。",
-      "nameTooLong": "お名前が長すぎる(最大128文字)",
+      "nameTooLong": "お名前が長すぎる(最大64文字)",
       "selectWorkingDirectory": "作業ディレクトリ(cwd)を選択します。",
       "memberNameRequired": "会員名を空にすることはできません",
       "memberNameInvalid": "会員名は英数字で始まり、[a-zA-Z0-9. -]、最大128文字を使用する必要があります。",
@@ -262,6 +268,8 @@
       "name": "お名前 (必須)"
     },
     "memberRestartWarning": "このチームメイトを保存して、ロール、ワークフロー、ワークツリーの分離、プロバイダー、モデル、努力、またはMCPアクセスの変更を適用します。",
+    "displayedRuntimeHint": "メンバーカード: {{runtime}}。保存済みの設定とは異なります。",
+    "useDisplayedRuntime": "カードの設定を使用",
     "notices": {
       "liveRenameBlocked": "既存のチームメイトの名前が変更されたため、ライブセーブはブロックされます。 これらのアイデンティティの変更を反転するか、チームを最初に停止します。",
       "newLiveTeammates": "チームをライブ中に編集チームからチームメイトを追加することはできません。 代わりにメンバーの追加ダイアログを使用します。",
@@ -351,6 +359,30 @@
     "placeholders": {
       "name": "メンバー名",
       "mcpServers": "github の sendry"
+    },
+    "gateway": {
+      "apiKeyLabel": "Gateway API key",
+      "apiKeyPlaceholder": "Paste the teammate gateway API key",
+      "authRejected": "Key authorization was rejected.",
+      "bindButton": "Bind teammate",
+      "bindingStatus": "Bound to {{profile}}",
+      "credentialChanged": "stored key changed — bind again with a new key",
+      "credentialMissing": "stored key missing — bind again with a new key",
+      "credentialReady": "key stored",
+      "emptyCatalog": "The model catalog is empty.",
+      "keyRequired": "Enter the gateway API key first.",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. このフォームを開く前に保存された関連付けは即座に更新され、チームのフォームをキャンセルしても変更は保持されます。",
+      "probeButton": "Check key and load models",
+      "probing": "Checking...",
+      "profileLabel": "Gateway profile",
+      "profilePlaceholder": "Select a gateway profile",
+      "profileRequired": "Select a gateway profile first.",
+      "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+      "title": "Gateway provider",
+      "unbindButton": "Unbind",
+      "unavailable": "The gateway is unavailable right now."
     }
   },
   "detail": {
@@ -730,6 +762,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "グループチャットを作成",
+      "description": "エージェントを2人以上選択してください。あなたは自動的に参加します。",
+      "name": "チャット名",
+      "autoInclude": "新しいメンバーを自動追加",
+      "minimum": "エージェントを2人以上選択してください。",
+      "creating": "作成中…",
+      "retryCreate": "作成を再試行",
+      "unavailable": "チャットを利用できません",
+      "message": "このグループにメッセージ",
+      "archivedHint": "このチャットはアーカイブ済みです。復元するとメッセージを送信できます。",
+      "restartHint": "送信するには、すべての参加者が互換性のあるランタイムを実行している必要があります。",
+      "unknownDelivery": "保存済み。配信状況は不明です。",
+      "sending": "送信中…",
+      "retrySend": "同じメッセージを再送",
+      "send": "送信",
+      "archived": "アーカイブ済みチャット",
+      "restore": "チャットを復元",
+      "archive": "チャットをアーカイブ",
+      "delivery": {
+        "queued": "待機中",
+        "accepted": "受付済み",
+        "failed": "失敗",
+        "unknown": "不明",
+        "skipped": "スキップ"
+      }
+    },
     "actions": {
       "toLatest": "最新へ",
       "bottomSheetActions": "メッセージの一番下のシートアクション",
@@ -969,7 +1028,8 @@
       "cancel": "キャンセル",
       "delete": "削除",
       "markResolved": "マークが解決",
-      "save": "保存する"
+      "save": "保存する",
+      "openInTaskTab": "別のタブで開く"
     },
     "attachments": {
       "commentAttachment": "コメント添付",
@@ -2966,6 +3026,25 @@
         "weight_few": "weight {{count}}",
         "weight_many": "weight {{count}}"
       }
+    }
+  },
+  "externalPrompt": {
+    "requestHelp": "Name the templates to use and describe any edits in your request.",
+    "editAvailable": "Editing draft/stopped configuration is available.",
+    "trashAvailable": "Reversible trash for draft/stopped teams is available."
+  },
+  "managementChanges": {
+    "title": "Recent changes",
+    "created": "Created",
+    "edited": "Edited",
+    "hidden": "Some recent changes are hidden by the current filters.",
+    "roster": "Roles: +{{added}}/-{{removed}}",
+    "fields": {
+      "displayName": "Name changed",
+      "description": "Description changed",
+      "color": "Color changed",
+      "leadInstructions": "Lead instructions changed",
+      "members": "Members changed"
     }
   }
 }

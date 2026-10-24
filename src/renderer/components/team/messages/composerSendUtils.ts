@@ -1,6 +1,7 @@
 import {
   canMemberShowAttachmentControl,
   getMemberAttachmentUnavailableReason,
+  type MemberAttachmentDeclarationLookup,
   validateAttachmentPayloadsForMember,
 } from '@renderer/utils/attachmentRecipientCapabilities';
 import { stripEncodedTaskReferenceMetadata } from '@renderer/utils/taskReferenceUtils';
@@ -124,7 +125,8 @@ export function isPreparedSendAllowed(
   request: ComposerPreparedRequest,
   members: readonly ResolvedTeamMember[],
   teamName: string,
-  isTeamAlive?: boolean
+  isTeamAlive?: boolean,
+  resolveDeclaration?: MemberAttachmentDeclarationLookup
 ): boolean {
   const crossTeam = request.kind === 'cross-team';
   const originTeam = crossTeam ? request.request.fromTeam : request.teamName;
@@ -139,7 +141,11 @@ export function isPreparedSendAllowed(
   if (
     content.attachments.length &&
     (!canAttach ||
-      validateAttachmentPayloadsForMember({ member, attachments: content.attachments }))
+      validateAttachmentPayloadsForMember({
+        member,
+        attachments: content.attachments,
+        resolveDeclaration,
+      }))
   )
     return false;
   const slash = parseStandaloneSlashCommand(stripEncodedTaskReferenceMetadata(content.text).trim());

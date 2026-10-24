@@ -4,6 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { ExternalAgentConnectionSettings } from '@features/external-agent-connection/renderer';
 import { normalizeAppLocalePreference } from '@features/localization';
 import { AppLanguageSelect, useAppTranslation } from '@features/localization/renderer';
 import { api, isElectronMode } from '@renderer/api';
@@ -12,13 +13,13 @@ import { Combobox } from '@renderer/components/ui/combobox';
 import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
-import { getFullResetState } from '@renderer/store/utils/stateResetHelpers';
 import { requestCloseActiveChangeReviewLifecycle } from '@renderer/utils/changeReviewLifecycleCoordinator';
 import { AGENT_LANGUAGE_OPTIONS, resolveLanguageName } from '@shared/utils/agentLanguage';
 import { Check, Copy, FolderOpen, Laptop, Loader2, RotateCcw } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { SettingRow, SettingsSectionHeader, SettingsToggle } from '../components';
+import { resetWorkspaceForRootChange } from '../resetWorkspaceForRootChange';
 
 import type { SafeConfig } from '../hooks/useSettingsConfig';
 import type { ClaudeRootInfo, WslClaudeRootCandidate } from '@shared/types';
@@ -111,28 +112,6 @@ export const GeneralSection = ({
   }, [serverUrl]);
 
   // Claude Root handlers
-  const resetWorkspaceForRootChange = useCallback((): void => {
-    useStore.setState({
-      projects: [],
-      repositoryGroups: [],
-      openTabs: [],
-      activeTabId: null,
-      selectedTabIds: [],
-      paneLayout: {
-        panes: [
-          {
-            id: 'pane-default',
-            tabs: [],
-            activeTabId: null,
-            selectedTabIds: [],
-            widthFraction: 1,
-          },
-        ],
-        focusedPaneId: 'pane-default',
-      },
-      ...getFullResetState(),
-    });
-  }, []);
 
   const applyClaudeRootPath = useCallback(
     async (claudeRootPath: string | null): Promise<void> => {
@@ -158,14 +137,7 @@ export const GeneralSection = ({
         setUpdatingClaudeRoot(false);
       }
     },
-    [
-      connectionMode,
-      fetchProjects,
-      fetchRepositoryGroups,
-      loadClaudeRootInfo,
-      resetWorkspaceForRootChange,
-      t,
-    ]
+    [connectionMode, fetchProjects, fetchRepositoryGroups, loadClaudeRootInfo, t]
   );
 
   const handleSelectClaudeRootFolder = useCallback(async (): Promise<void> => {
@@ -726,6 +698,16 @@ export const GeneralSection = ({
             {t('general.server.standaloneModeDescription')}
           </p>
         </>
+      )}
+
+      {isElectron && (
+        <ExternalAgentConnectionSettings
+          api={api.externalAgentConnection}
+          local={connectionMode === 'local'}
+          cdpEnabled={safeConfig.general.externalAgentCdpEnabled}
+          saving={saving}
+          onCdpEnabledChange={(enabled) => onGeneralToggle('externalAgentCdpEnabled', enabled)}
+        />
       )}
 
       {/* Privacy / Telemetry - only visible when telemetry is baked into the build */}

@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "افزودن واکنش ({{count}})",
+      "remove": "حذف واکنش ({{count}})",
+      "count": "واکنش‌ها: {{count}}",
+      "failed": "به‌روزرسانی واکنش‌ها انجام نشد"
+    },
     "actions": {
       "createTaskFromMessage": "ایجاد وظیفه از پیام",
       "editMessage": "ویرایش پیام",
@@ -194,7 +200,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "نام باید حداقل شامل یک حرف یا رقم باشد",
-      "nameTooLong": "نام بیش از حد طولانی است (حداکثر ۱۲۸ نویسه)",
+      "nameTooLong": "نام بیش از حد طولانی است (حداکثر ۶۴ نویسه)",
       "selectWorkingDirectory": "انتخاب دایرکتوری کاری (cwd)",
       "memberNameRequired": "نام عضو نمی‌تواند خالی باشد",
       "memberNameInvalid": "نام عضو باید با حرف یا عدد شروع شود، فقط از [a-zA-Z0-9._-] استفاده کند، حداکثر ۱۲۸ نویسه",
@@ -262,6 +268,8 @@
       "name": "نام"
     },
     "memberRestartWarning": "ذخیره این هم‌تیمی را برای اعمال تغییرات نقش، گردش‌کار، جداسازی worktree، ارائه‌دهنده، مدل، تلاش یا دسترسی MCP راه‌اندازی مجدد می‌کند.",
+    "displayedRuntimeHint": "در کارت عضو: {{runtime}}. تنظیمات ذخیره‌شده متفاوت است.",
+    "useDisplayedRuntime": "استفاده از تنظیمات کارت",
     "notices": {
       "liveRenameBlocked": "ذخیره زنده مسدود شده است زیرا هم‌تیمی‌های موجود تغییر نام داده شدند. آن تغییرات هویتی را بازگردانید یا ابتدا تیم را متوقف کنید.",
       "newLiveTeammates": "هم‌تیمی‌های جدید را نمی‌توان از ویرایش تیم در حالی که تیم زنده است اضافه کرد. به‌جای آن از گفت‌وگوی افزودن عضو استفاده کنید.",
@@ -351,6 +359,30 @@
     "placeholders": {
       "name": "member-name",
       "mcpServers": "github, sentry"
+    },
+    "gateway": {
+      "apiKeyLabel": "Gateway API key",
+      "apiKeyPlaceholder": "Paste the teammate gateway API key",
+      "authRejected": "Key authorization was rejected.",
+      "bindButton": "Bind teammate",
+      "bindingStatus": "Bound to {{profile}}",
+      "credentialChanged": "stored key changed — bind again with a new key",
+      "credentialMissing": "stored key missing — bind again with a new key",
+      "credentialReady": "key stored",
+      "emptyCatalog": "The model catalog is empty.",
+      "keyRequired": "Enter the gateway API key first.",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. اتصال‌های ذخیره‌شده پیش از باز کردن این فرم فوراً به‌روزرسانی می‌شوند و با لغو فرم تیم، تغییراتشان باقی می‌ماند.",
+      "probeButton": "Check key and load models",
+      "probing": "Checking...",
+      "profileLabel": "Gateway profile",
+      "profilePlaceholder": "Select a gateway profile",
+      "profileRequired": "Select a gateway profile first.",
+      "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+      "title": "Gateway provider",
+      "unbindButton": "Unbind",
+      "unavailable": "The gateway is unavailable right now."
     }
   },
   "detail": {
@@ -730,6 +762,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "ایجاد گفتگوی گروهی",
+      "description": "حداقل دو عامل را انتخاب کنید. شما به‌طور خودکار اضافه می‌شوید.",
+      "name": "نام گفتگو",
+      "autoInclude": "افزودن خودکار اعضای جدید",
+      "minimum": "حداقل دو عامل را انتخاب کنید.",
+      "creating": "در حال ایجاد…",
+      "retryCreate": "تلاش دوباره برای ایجاد",
+      "unavailable": "گفتگو در دسترس نیست",
+      "message": "ارسال پیام به این گروه",
+      "archivedHint": "این گفتگو بایگانی شده است. برای ارسال پیام آن را بازیابی کنید.",
+      "restartHint": "برای ارسال پیام، همه شرکت‌کنندگان باید محیط اجرای سازگار و فعال داشته باشند.",
+      "unknownDelivery": "ذخیره شد. وضعیت تحویل نامشخص است.",
+      "sending": "در حال ارسال…",
+      "retrySend": "ارسال دوباره همین پیام",
+      "send": "ارسال",
+      "archived": "گفتگوهای بایگانی‌شده",
+      "restore": "بازیابی گفتگو",
+      "archive": "بایگانی گفتگو",
+      "delivery": {
+        "queued": "در صف",
+        "accepted": "پذیرفته‌شده",
+        "failed": "ناموفق",
+        "unknown": "نامشخص",
+        "skipped": "ردشده"
+      }
+    },
     "actions": {
       "toLatest": "رفتن به جدیدترین",
       "bottomSheetActions": "اقدامات برگه پایینی پیام",
@@ -969,7 +1028,8 @@
       "cancel": "لغو",
       "delete": "حذف",
       "markResolved": "علامت‌گذاری حل‌شده",
-      "save": "ذخیره"
+      "save": "ذخیره",
+      "openInTaskTab": "در برگه جداگانه باز کنید"
     },
     "attachments": {
       "commentAttachment": "پیوست نظر",
@@ -2966,6 +3026,25 @@
         "weight_few": "weight {{count}}",
         "weight_many": "weight {{count}}"
       }
+    }
+  },
+  "externalPrompt": {
+    "requestHelp": "Name the templates to use and describe any edits in your request.",
+    "editAvailable": "Editing draft/stopped configuration is available.",
+    "trashAvailable": "Reversible trash for draft/stopped teams is available."
+  },
+  "managementChanges": {
+    "title": "Recent changes",
+    "created": "Created",
+    "edited": "Edited",
+    "hidden": "Some recent changes are hidden by the current filters.",
+    "roster": "Roles: +{{added}}/-{{removed}}",
+    "fields": {
+      "displayName": "Name changed",
+      "description": "Description changed",
+      "color": "Color changed",
+      "leadInstructions": "Lead instructions changed",
+      "members": "Members changed"
     }
   }
 }

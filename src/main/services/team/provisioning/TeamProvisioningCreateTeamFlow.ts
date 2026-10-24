@@ -9,6 +9,7 @@ import { buildDesktopTeammateModeCliArgs } from '../runtimeTeammateMode';
 import {
   buildDeterministicCreateBootstrapSpec,
   type RuntimeBootstrapMemberMcpLaunchConfig,
+  type RuntimeBootstrapSpec,
   writeDeterministicBootstrapSpecFile,
   writeDeterministicBootstrapUserPromptFile,
 } from './TeamProvisioningBootstrapSpec';
@@ -24,6 +25,7 @@ import {
 } from './TeamProvisioningProgressBuffers';
 import { getPromptSizeSummary, type PromptSizeSummary } from './TeamProvisioningRuntimeDiagnostics';
 
+import type { MemberGatewayRuntimeArgs } from './TeamProvisioningMemberGatewayRuntime';
 import type {
   TeamRuntimeLaunchArgsPlan,
   TeamsBaseLocation,
@@ -44,6 +46,7 @@ export interface TeamProvisioningCreateBootstrapRun extends TeamProvisioningChec
   runId: string;
   progress: TeamProvisioningProgress;
   bootstrapSpecPath: string | null;
+  bootstrapSpecSnapshot?: RuntimeBootstrapSpec | null;
   bootstrapUserPromptPath: string | null;
   mcpConfigPath: string | null;
   requiresFirstRealTurnSuccess: boolean;
@@ -73,6 +76,8 @@ export interface MaterializeDeterministicCreateTeamBootstrapFilesInput {
   run: TeamProvisioningCreateBootstrapRun;
   effectiveMemberSpecs: TeamCreateRequest['members'];
   allEffectiveMemberSpecs: TeamCreateRequest['members'];
+  /** Per-member gateway artifacts carried from the create setup result. */
+  memberArgsByMember?: ReadonlyMap<string, MemberGatewayRuntimeArgs>;
   launchIdentity: ProviderModelLaunchIdentity | null;
   initialUserPrompt: string;
   promptSize?: PromptSizeSummary;
@@ -113,6 +118,7 @@ export function buildCreateTeamMetaPayload(
   launchIdentity: ProviderModelLaunchIdentity | null,
   createdAt: number = Date.now()
 ): {
+  runtimeSelectionVersion: TeamCreateRequest['runtimeSelectionVersion'];
   displayName: TeamCreateRequest['displayName'];
   description: TeamCreateRequest['description'];
   color: TeamCreateRequest['color'];
@@ -132,6 +138,7 @@ export function buildCreateTeamMetaPayload(
   createdAt: number;
 } {
   return {
+    runtimeSelectionVersion: request.runtimeSelectionVersion,
     displayName: request.displayName,
     description: request.description,
     color: request.color,
@@ -296,6 +303,7 @@ export async function materializeDeterministicCreateTeamBootstrapFiles({
   run,
   effectiveMemberSpecs,
   allEffectiveMemberSpecs,
+  memberArgsByMember,
   launchIdentity,
   initialUserPrompt,
   promptSize = getPromptSizeSummary(initialUserPrompt),
@@ -311,15 +319,18 @@ export async function materializeDeterministicCreateTeamBootstrapFiles({
   emitProvisioningCheckpoint(run, 'Persisting team metadata before spawn');
   const teamDir = path.join(getTeamsBasePath(), request.teamName);
   const tasksDir = path.join(getTasksBasePath(), request.teamName);
-  await fs.promises.mkdir(teamDir, { recursive: true });
-  await fs.promises.mkdir(tasksDir, { recursive: true });
+  const createdTeamDirectory = await fs.promises.mkdir(teamDir, { recursive: true, mode: 0o700 });
+  await fs.promises.mkdir(tasksDir, { recursive: true, mode: 0o700 });
+  if (createdTeamDirectory) await fs.promises.mkdir(path.join(teamDir, 'inboxes'), { mode: 0o700 });
   await teamMetaStore.writeMeta(
     request.teamName,
     buildCreateTeamMetaPayload(request, launchIdentity)
   );
   await membersMetaStore.writeMembers(
     request.teamName,
-    buildMembersMetaWritePayload(buildConfiguredMembersForPersistence(request.members, allEffectiveMemberSpecs)),
+    buildMembersMetaWritePayload(
+      buildConfiguredMembersForPersistence(request.members, allEffectiveMemberSpecs)
+    ),
     {
       providerBackendId: request.providerBackendId,
     }
@@ -356,11 +367,13 @@ export async function materializeDeterministicCreateTeamBootstrapFiles({
     request,
     effectiveMemberSpecs,
     nativeBootstrapBuild.specs,
-    memberMcpLaunchConfigs
+    memberMcpLaunchConfigs,
+    memberArgsByMember ?? new Map()
   );
   emitProvisioningCheckpoint(run, 'Writing deterministic bootstrap spec file');
   const bootstrapSpecPath = await writeDeterministicBootstrapSpecFile(bootstrapSpec);
   run.bootstrapSpecPath = bootstrapSpecPath;
+  run.bootstrapSpecSnapshot = structuredClone(bootstrapSpec);
 
   let bootstrapUserPromptPath: string | null = null;
   if (initialUserPrompt) {

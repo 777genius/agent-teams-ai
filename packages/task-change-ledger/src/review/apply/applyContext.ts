@@ -244,12 +244,6 @@ export interface ApplierContext {
     expectedCurrentContent: string | null
   ): Promise<{ success: boolean }>;
   deleteEditedFile(filePath: string, expectedCurrentContent: string): Promise<{ success: boolean }>;
-  rejectNonLedgerNewFile(
-    filePath: string,
-    modified: string | null
-  ): Promise<
-    { status: 'applied' } | { status: 'conflict' | 'error'; error: string; code: ApplyErrorCode }
-  >;
   tryApplyLedgerDecision(
     filePath: string,
     original: string | null,
@@ -272,6 +266,10 @@ export interface ApplierContext {
   ): Promise<LedgerApplyOutcome>;
   resolveLedgerOperation(snippets: SnippetDiff[]): 'create' | 'modify' | 'delete';
   resolveLedgerRelation(snippets: SnippetDiff[]): LedgerChangeRelation | undefined;
+  resolveLedgerRenameEndpoints(snippets: SnippetDiff[], relation: LedgerChangeRelation): {
+    oldSnippet: SnippetDiff | undefined; newSnippet: SnippetDiff; oldFilePath: string; newFilePath: string;
+  } | null;
+  caseOnlyRenameEntry(oldFilePath: string, newFilePath: string): Promise<'old' | 'new'>;
   resolveLedgerMutationPaths(filePath: string, snippets: SnippetDiff[]): string[];
   rejectLedgerRename(
     snippets: SnippetDiff[],
@@ -291,8 +289,7 @@ export interface ApplierContext {
     anchorRelationPath: string,
     targetRelationPath: string
   ): string | null;
-  normalizeRelationComparisonPath(filePath: string, caseInsensitive: boolean): string;
-  isWindowsReviewPath(filePath: string): boolean;
+  normalizeRelationComparisonPath(filePath: string): string;
   matchesRelationSuffix(normalizedPath: string, normalizedRelationPath: string): boolean;
   checkLedgerCurrentHash(
     filePath: string,
@@ -330,7 +327,8 @@ export interface ApplierContext {
   ): Promise<void>;
   assertSafeExpectedFile(
     filePath: string,
-    expectedCurrentContent: string
+    expectedCurrentContent: string,
+    allowOwnedPublishedAlias?: boolean
   ): Promise<{ dev: number; ino: number; mode: number }>;
   deleteExpectedTextFile(filePath: string, expectedCurrentContent: string): Promise<void>;
   pathsReferToSameFile(firstPath: string, secondPath: string): Promise<boolean>;

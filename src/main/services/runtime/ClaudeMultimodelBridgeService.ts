@@ -31,6 +31,11 @@ import {
   type RuntimeExtensionCapabilitiesResponse,
   sanitizeProviderStatusAuthority,
 } from './providerStatusCheckContract';
+import {
+  extractRuntimeStatusJsonObject as extractJsonObject,
+  readRuntimeStatusCommand,
+  RuntimeStatusCommandError,
+} from './runtimeStatusCommandDiagnostics';
 
 import type {
   CliProviderId,
@@ -152,6 +157,7 @@ interface ProviderStatusPayloadResponse {
   canLoginFromUi?: boolean;
   statusMessage?: string | null;
   detailMessage?: string | null;
+  defaultModel?: string | null;
   capabilities?: {
     teamLaunch?: boolean;
     oneShot?: boolean;
@@ -180,6 +186,7 @@ interface ProviderModelsCommandResponse {
   providers?: Record<
     string,
     {
+      defaultModel?: string | null;
       models?: (string | { id?: string; label?: string; description?: string })[];
     }
   >;
@@ -200,6 +207,8 @@ interface UnifiedRuntimeStatusResponse {
       canLoginFromUi?: boolean;
       statusMessage?: string | null;
       detailMessage?: string | null;
+      defaultModel?: string | null;
+      effectiveDefaultModel?: string | null;
       selectedBackendId?: string | null;
       resolvedBackendId?: string | null;
       availableBackends?: {
@@ -360,20 +369,6 @@ export interface OpenCodeRuntimeTranscriptLogMessage {
 
 const ORDERED_PROVIDER_IDS: CliProviderId[] = ['anthropic', 'codex', 'gemini', 'opencode'];
 const DEFAULT_PROVIDER_STATUS_IDS: CliProviderId[] = ['anthropic', 'codex', 'opencode'];
-
-function extractJsonObject<T>(raw: string): T {
-  const trimmed = raw.trim();
-  try {
-    return JSON.parse(trimmed) as T;
-  } catch {
-    const start = trimmed.indexOf('{');
-    const end = trimmed.lastIndexOf('}');
-    if (start >= 0 && end > start) {
-      return JSON.parse(trimmed.slice(start, end + 1)) as T;
-    }
-    throw new Error('No JSON object found in CLI output');
-  }
-}
 
 function extractModelIds(
   models: (string | { id?: string; label?: string; description?: string })[] | undefined
@@ -817,6 +812,9 @@ export class ClaudeMultimodelBridgeService {
   }
 
   private isRuntimeStatusTimeoutError(error: unknown): boolean {
+    if (error instanceof RuntimeStatusCommandError) {
+      return this.isRuntimeStatusTimeoutError(error.cause);
+    }
     const message = error instanceof Error ? error.message : String(error);
     const lower = message.toLowerCase();
     return lower.includes('timed out') || lower.includes('timeout');
@@ -877,6 +875,7 @@ export class ClaudeMultimodelBridgeService {
       verificationState: runtimeStatus.verificationState ?? 'unknown',
       statusMessage: runtimeStatus.statusMessage ?? null,
       detailMessage: runtimeStatus.detailMessage ?? null,
+      defaultModel: runtimeStatus.defaultModel?.trim() || provider.defaultModel || null,
       canLoginFromUi: runtimeStatus.canLoginFromUi !== false,
       capabilities: {
         teamLaunch: runtimeStatus.capabilities?.teamLaunch === true,
@@ -953,11 +952,19 @@ export class ClaudeMultimodelBridgeService {
 
     if (modelListResult.status === 'fulfilled') {
       const parsed = extractJsonObject<ProviderModelsCommandResponse>(modelListResult.value.stdout);
-      const runtimeModels = extractModelIds(parsed.providers?.[providerId]?.models);
+      const providerModels = parsed.providers?.[providerId];
+      const runtimeDefaultModel = providerModels?.defaultModel?.trim();
+      const runtimeModels = extractModelIds(providerModels?.models);
       if (runtimeModels.length > 0) {
         provider = {
           ...provider,
           models: runtimeModels,
+        };
+      }
+      if (runtimeDefaultModel) {
+        provider = {
+          ...provider,
+          defaultModel: runtimeDefaultModel,
         };
       }
       fulfilledProbeCount += 1;
@@ -1044,6 +1051,13 @@ export class ClaudeMultimodelBridgeService {
       ...statusCheck,
       statusMessage: runtimeStatus.statusMessage ?? null,
       detailMessage: runtimeStatus.detailMessage ?? null,
+      defaultModel: runtimeStatus.defaultModel?.trim() || provider.defaultModel || null,
+      effectiveDefaultModel:
+        runtimeStatus.effectiveDefaultModel === undefined
+          ? undefined
+          : isAuthoritativeStatus && typeof runtimeStatus.effectiveDefaultModel === 'string'
+            ? runtimeStatus.effectiveDefaultModel.trim() || null
+            : null,
       canLoginFromUi: runtimeStatus.canLoginFromUi !== false,
       capabilities: {
         teamLaunch: isAuthoritativeStatus && runtimeStatus.capabilities?.teamLaunch === true,
@@ -1206,13 +1220,17 @@ export class ClaudeMultimodelBridgeService {
       args.push('--summary');
     }
     const timeout = this.getProviderStatusRuntimeTimeout(binaryPath, providerId, options);
-    const { stdout } = await execCli(binaryPath, args, {
-      timeout,
-      maxBuffer: PROVIDER_STATUS_MAX_BUFFER_BYTES,
-      env,
-      cwd: getProviderStatusCommandCwd(options.projectPath),
-    });
-    const parsed = extractJsonObject<UnifiedRuntimeStatusResponse>(stdout);
+    const parsed = await readRuntimeStatusCommand(
+      binaryPath,
+      args,
+      {
+        timeout,
+        maxBuffer: PROVIDER_STATUS_MAX_BUFFER_BYTES,
+        env,
+        cwd: getProviderStatusCommandCwd(options.projectPath),
+      },
+      extractJsonObject<UnifiedRuntimeStatusResponse>
+    );
     const mappedProvider = this.applyConnectionIssue(
       this.mapRuntimeProviderStatus(providerId, parsed.providers?.[providerId]),
       connectionIssues
@@ -1738,6 +1756,7 @@ export class ClaudeMultimodelBridgeService {
       limit?: number;
       laneId?: string;
       sessionId?: string;
+      runId?: string;
       timeoutMs?: number;
     }
   ): Promise<OpenCodeRuntimeTranscriptResponse['transcript'] | null> {
@@ -1762,6 +1781,10 @@ export class ClaudeMultimodelBridgeService {
     }
     if (typeof params.sessionId === 'string' && params.sessionId.trim().length > 0) {
       args.push('--session-id', params.sessionId.trim());
+    }
+
+    if (typeof params.runId === 'string' && params.runId.trim().length > 0) {
+      args.push('--run-id', params.runId.trim());
     }
 
     const outputDir = await mkdtemp(path.join(tmpdir(), 'opencode-transcript-'));

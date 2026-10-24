@@ -15,6 +15,12 @@ export const OPENCODE_APP_PROFILE_FRAGMENT_KEY = 'agent-teams-app-profile';
 const HTTP_MCP_URL_ENV = 'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL';
 const HTTP_MCP_URL_HASH_ENV = 'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH';
 
+const OWNED_CHILD_BINDING_KEYS = [
+  'AGENT_TEAMS_MCP_CLAUDE_DIR',
+  'CLAUDE_TEAM_APP_INSTANCE_ID',
+  'CLAUDE_TEAM_APP_PROFILE_SCOPE',
+] as const;
+
 export type OpenCodeMcpBridgeEnv = Record<string, string | undefined>;
 
 function normalizeOpenCodeAppInstanceId(appInstanceId: string): string {
@@ -74,7 +80,7 @@ export function buildOpenCodeAppScopedMcpUrl(
 
 export function mergeOpenCodeLocalMcpChildEnvironment(
   env: OpenCodeMcpBridgeEnv,
-  additions: Readonly<Record<string, string>>
+  additions: Readonly<Record<string, string | undefined>>
 ): void {
   const rawEnvironment = env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON?.trim();
   let currentEnvironment: Record<string, string> = {};
@@ -97,6 +103,46 @@ export function mergeOpenCodeLocalMcpChildEnvironment(
     ...currentEnvironment,
     ...additions,
   });
+}
+
+/** Project the current binding into an owned bridge child and its local MCP fallback. */
+export function applyOpenCodeBoundControlEnvironment(
+  env: OpenCodeMcpBridgeEnv,
+  desktopEnvironment: Readonly<Record<string, string>>
+): void {
+  const binding: OpenCodeMcpBridgeEnv = {};
+  for (const key of ['AGENT_TEAMS_BOUND_CONTROL_URL', 'AGENT_TEAMS_BOUND_CONTEXT_JSON'] as const) {
+    const value = desktopEnvironment[key];
+    if (value === undefined) {
+      delete env[key];
+    } else {
+      env[key] = value;
+    }
+    // JSON serialization removes an old child binding when the current one is absent.
+    binding[key] = value;
+  }
+  mergeOpenCodeLocalMcpChildEnvironment(env, binding);
+}
+
+/** Authority is nonempty and exact for the same root, app instance and profile scope. */
+export function hasOpenCodeOwnedChildBinding(
+  env: Readonly<OpenCodeMcpBridgeEnv>,
+  current: Readonly<OpenCodeMcpBridgeEnv> = env
+): boolean {
+  return OWNED_CHILD_BINDING_KEYS.every(
+    (key) => Boolean(env[key]?.trim()) && env[key] === current[key]
+  );
+}
+
+/** Copy only a successful child whose authority still matches the current app binding. */
+export function prepareOpenCodeShutdownCleanupEnvironment(
+  previous: Readonly<OpenCodeMcpBridgeEnv> | null,
+  currentBoundChildEnv: Readonly<Record<string, string>>
+): OpenCodeMcpBridgeEnv | null {
+  if (!previous || !hasOpenCodeOwnedChildBinding(previous, currentBoundChildEnv)) return null;
+  const prepared = { ...previous };
+  applyOpenCodeBoundControlEnvironment(prepared, currentBoundChildEnv);
+  return prepared;
 }
 
 export function isOpenCodeMcpHttpBridgeEnabled(env: OpenCodeMcpBridgeEnv = process.env): boolean {

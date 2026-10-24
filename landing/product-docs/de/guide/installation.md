@@ -46,7 +46,7 @@ Für die Entwicklung aus dem Quellcode benötigen Sie außerdem:
 
 | Werkzeug | Version |
 | ------- | ------- |
-| Node.js | 24.16.0 LTS |
+| Node.js | 26.10.0 Current oder 24.16.0 LTS |
 | pnpm    | 11.22.0     |
 
 Unter macOS erfordern die offiziellen vorkompilierten Node.js-24-Binaries macOS 13.5+.

@@ -24,6 +24,15 @@ const positive = (value: unknown): number | null => {
 };
 const nullableText = (value: unknown): string | null =>
   value === null ? null : value === '' ? '' : text(value);
+function declaredInputs(value: unknown): readonly string[] | null {
+  return Array.isArray(value) &&
+    value.length <= 64 &&
+    value.every(
+      (item) => typeof item === 'string' && !!item && item.trim() === item && item.length <= 128
+    )
+    ? [...value]
+    : null;
+}
 function authOptions(value: unknown): ProviderAuthenticationMethod[] | undefined {
   if (value === undefined) return undefined;
   if (!Array.isArray(value) || value.length > 128) throw new Error('Invalid management response');
@@ -129,6 +138,11 @@ export function parseManagementCatalog(
           contextTokens: positive(model.contextTokens),
           outputTokens: positive(model.outputTokens),
           free: model.free,
+          ...(model.declaredInputModalities === undefined
+            ? {}
+            : {
+                declaredInputModalities: declaredInputs(model.declaredInputModalities),
+              }),
         };
       }),
     };
@@ -224,5 +238,10 @@ export function models(provider: CatalogProvider): Dto.RuntimeProviderModelDto[]
     requiresExecutionProof: true,
     catalogContextTokens: model.contextTokens,
     catalogOutputTokens: model.outputTokens,
+    ...(model.declaredInputModalities === undefined
+      ? {}
+      : {
+          declaredInputModalities: model.declaredInputModalities,
+        }),
   }));
 }

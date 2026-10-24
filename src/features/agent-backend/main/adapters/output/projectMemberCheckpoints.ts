@@ -1,4 +1,5 @@
 import { checkpointAvailabilityReasons } from '../../../contracts/checkpoints';
+
 import type { BackendMemberCheckpoints } from '../../../contracts/checkpoints';
 import type { BackendOperationRequest } from '../../../contracts/operations';
 

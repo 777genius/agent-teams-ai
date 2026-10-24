@@ -76,7 +76,7 @@ describe('buildReviewDecisionScopeToken', () => {
     expect(tokenA).not.toBe(tokenB);
   });
 
-  it('keeps fallback content identity stable for relative Windows slash and case variants', () => {
+  it('keeps fallback content identity sensitive to file case on Windows', () => {
     const baseFile = {
       relativePath: 'SRC\\File.ts',
       linesAdded: 1,
@@ -130,6 +130,6 @@ describe('buildReviewDecisionScopeToken', () => {
       ],
     };
 
-    expect(fingerprintReviewChangeSet(left)).toBe(fingerprintReviewChangeSet(right));
+    expect(fingerprintReviewChangeSet(left)).not.toBe(fingerprintReviewChangeSet(right));
   });
 });

@@ -47,7 +47,10 @@ export function createRuntimeMemberProviderFactory(options: {
     delivery: NonNullable<NativeWorkSyncMemberContext['delivery']>
   ): ReturnType<ReturnType<typeof createHostWorkSyncComposition>['member']> | undefined;
   settleDeliveries(entry: MemberEntry, assertOriginal: () => void): Promise<void>;
-  nativeCreation?(entry: MemberEntry, captureSource: MemberInputCapture): TeamMcpNativeMemberCreationPort;
+  nativeCreation?(
+    entry: MemberEntry,
+    captureSource: MemberInputCapture
+  ): TeamMcpNativeMemberCreationPort;
   nativeActions?(
     entry: MemberEntry,
     captureSource: MemberInputCapture
@@ -166,6 +169,12 @@ export function createRuntimeMemberProviderFactory(options: {
           readRuntime: options.readRuntime,
           observe: options.observe,
         });
+        const attachmentDelivery = createMemberAttachmentPort({
+          entry,
+          storageRoot: options.storageRoot,
+          assertCurrent: authority.assertCurrent,
+          readRuntime: options.readRuntime,
+        });
         const provider = (
           options.createProvider ??
           (entry.profile.provider === 'claude'
@@ -186,7 +195,7 @@ export function createRuntimeMemberProviderFactory(options: {
             entry.profile.cwd
           ),
           ...evidence,
-          attachments: createMemberAttachmentPort({ entry, storageRoot: options.storageRoot, assertCurrent: authority.assertCurrent, readRuntime: options.readRuntime }),
+          attachments: attachmentDelivery.port,
           ...(subagents ? { subagents } : {}),
           isCurrent: authority.isCurrent,
           canAllocate: authority.canAllocate,
@@ -196,7 +205,22 @@ export function createRuntimeMemberProviderFactory(options: {
         });
         options.captureInteractions(entry);
         entry.provider = provider;
-        return await provider.factory.open(request);
+        const opened = await provider.factory.open(request);
+        const source = opened.driver;
+        return {
+          ...opened,
+          driver: {
+            sessionRef: source.sessionRef,
+            submit: (input) => source.submit(attachmentDelivery.prepareInput(input)),
+            observe: () => source.observe(),
+            respondToInteraction: (reference, reply) =>
+              source.respondToInteraction(reference, reply),
+            interrupt: (operation) => source.interrupt(operation),
+            checkReadiness: () => source.checkReadiness(),
+            checkpoint: () => source.checkpoint(),
+            close: () => source.close(),
+          },
+        };
       } catch (error) {
         endpoint.revoke();
         await endpoint.close();

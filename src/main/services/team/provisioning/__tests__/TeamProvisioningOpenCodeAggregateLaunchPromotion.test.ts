@@ -295,6 +295,24 @@ describe('summarizeOpenCodeAggregateLaunchPromotion', () => {
     );
   });
 
+  it('shows the provider-reported minimum in the lead launch failure', () => {
+    const promotion = summarizeOpenCodeAggregateLaunchPromotion({
+      launchState: 'partial_failure',
+      leadBootstrap: 'failed',
+      leadName: 'team-lead',
+      primaryResult: buildFailedOpenCodeLaunchResult(
+        'team-lead',
+        'Error from provider (Console): OpenCode 1.19.2 or newer is required to use the free tier'
+      ),
+      lanes: [],
+    });
+
+    expect(promotion.terminalFailureError).toBe(
+      'OpenCode team lead "team-lead" has no committed runtime session on the primary lane: ' +
+        'OpenCode free-tier models require OpenCode 1.19.2 or newer. Update the OpenCode runtime from the provider status card before launching this team.'
+    );
+  });
+
   it('carries the primary lane diagnostics into the aggregate tail', () => {
     const promotion = summarizeOpenCodeAggregateLaunchPromotion({
       launchState: 'clean_success',
@@ -481,9 +499,7 @@ describe('resolveOpenCodeAggregatePrimaryLeadName', () => {
       ])
     ).toBeNull();
     expect(
-      resolveOpenCodeAggregatePrimaryLeadName([
-        { name: 'team-lead', providerId: 'anthropic' },
-      ])
+      resolveOpenCodeAggregatePrimaryLeadName([{ name: 'team-lead', providerId: 'anthropic' }])
     ).toBeNull();
   });
 

@@ -37,6 +37,21 @@ vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
 
 vi.mock('@main/utils/childProcess', () => ({
   execCli: vi.fn(async (_binaryPath: string | null, args: string[]) => {
+    if (
+      args.length === 3 &&
+      args[0]?.endsWith(path.join('tsup', 'dist', 'cli-default.js')) &&
+      args[1] === '--out-dir'
+    ) {
+      // Simulate only compilation; the real bundle resolver and config writer
+      // still materialize and validate their app-owned launch artifacts.
+      const output = args[2];
+      if (!output.startsWith(path.join(hoisted.paths.claudeRoot, 'mcp-server', 'dev') + path.sep)) {
+        throw new Error('Unexpected TEST compiler output directory');
+      }
+      fs.mkdirSync(output, { recursive: true });
+      fs.writeFileSync(path.join(output, 'index.js'), '// TEST compiled MCP bundle\n');
+      return { stdout: '', stderr: '' };
+    }
     if (args[0] === '-e' && args[1]?.includes('process.execPath')) {
       return {
         stdout: JSON.stringify({ execPath: process.execPath, version: process.versions.node }),
@@ -397,6 +412,15 @@ function expectAppOnlyMcpConfigPath(mcpConfigPath: string): void {
   });
   expect(memberMcpConfig.mcpServers.tavily).toBeUndefined();
   expect(memberMcpConfig.mcpServers['brave-real-browser']).toBeUndefined();
+  const server = memberMcpConfig.mcpServers['agent-teams'];
+  expect(server.command).toBe(process.execPath);
+  expect(server.args).toHaveLength(1);
+  const entry = server.args?.[0] ?? '';
+  expect(entry.startsWith(path.join(tempClaudeRoot, 'mcp-server', 'dev') + path.sep)).toBe(true);
+  expect(fs.readFileSync(entry, 'utf8')).toBe('// TEST compiled MCP bundle\n');
+  expect(
+    JSON.parse(fs.readFileSync(path.join(path.dirname(entry), 'package.json'), 'utf8'))
+  ).toEqual({ type: 'module' });
 }
 
 function expectAppOnlyMemberMcpConfig(member: BootstrapSpecMember | undefined): void {

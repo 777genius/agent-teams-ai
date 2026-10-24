@@ -14,3 +14,69 @@ index 6d64173785227bbb12d7801cf4e4f56ca2fb0429..dc0c0bcb1f0272e6dd0ef618f7f2298e
  
  // src/DiscoveryDocumentCache.ts
  var DiscoveryDocumentCache = class {
+diff --git a/dist/chunk-UVX47AE5.js b/dist/chunk-UVX47AE5.js
+--- a/dist/chunk-UVX47AE5.js
++++ b/dist/chunk-UVX47AE5.js
+@@ -1570,6 +1570,8 @@
+             const sessionId = Array.isArray(request.headers["mcp-session-id"]) ? request.headers["mcp-session-id"][0] : request.headers["mcp-session-id"];
+             return this.#createSession(auth, sessionId);
+           },
++          cors: this.#options.httpRequestGate ? false : undefined,
++          requestGate: this.#options.httpRequestGate,
+           enableJsonResponse: httpConfig.enableJsonResponse,
+           eventStore: httpConfig.eventStore,
+           host: httpConfig.host,
+@@ -1615,6 +1617,8 @@
+             const sessionId = Array.isArray(request.headers["mcp-session-id"]) ? request.headers["mcp-session-id"][0] : request.headers["mcp-session-id"];
+             return this.#createSession(auth, sessionId);
+           },
++          cors: this.#options.httpRequestGate ? false : undefined,
++          requestGate: this.#options.httpRequestGate,
+           enableJsonResponse: httpConfig.enableJsonResponse,
+           eventStore: httpConfig.eventStore,
+           host: httpConfig.host,
+diff --git a/dist/chunk-JP7QSER3.cjs b/dist/chunk-JP7QSER3.cjs
+--- a/dist/chunk-JP7QSER3.cjs
++++ b/dist/chunk-JP7QSER3.cjs
+@@ -1570,6 +1570,8 @@
+             const sessionId = Array.isArray(request.headers["mcp-session-id"]) ? request.headers["mcp-session-id"][0] : request.headers["mcp-session-id"];
+             return this.#createSession(auth, sessionId);
+           },
++          cors: this.#options.httpRequestGate ? false : undefined,
++          requestGate: this.#options.httpRequestGate,
+           enableJsonResponse: httpConfig.enableJsonResponse,
+           eventStore: httpConfig.eventStore,
+           host: httpConfig.host,
+@@ -1615,6 +1617,8 @@
+             const sessionId = Array.isArray(request.headers["mcp-session-id"]) ? request.headers["mcp-session-id"][0] : request.headers["mcp-session-id"];
+             return this.#createSession(auth, sessionId);
+           },
++          cors: this.#options.httpRequestGate ? false : undefined,
++          requestGate: this.#options.httpRequestGate,
+           enableJsonResponse: httpConfig.enableJsonResponse,
+           eventStore: httpConfig.eventStore,
+           host: httpConfig.host,
+diff --git a/dist/FastMCP.d.ts b/dist/FastMCP.d.ts
+--- a/dist/FastMCP.d.ts
++++ b/dist/FastMCP.d.ts
+@@ -297,6 +297,8 @@
+      */
+     auth?: AuthProvider<T extends OAuthSession ? T : OAuthSession>;
+     authenticate?: Authenticate<T>;
++    /** Request admission before CORS, sessions, or transport processing. */
++    httpRequestGate?: (request: http.IncomingMessage, response: http.ServerResponse) => boolean | Promise<boolean>;
+     /**
+      * Configuration for the health-check endpoint that can be exposed when the
+      * server is running using the HTTP Stream transport. When enabled, the
+diff --git a/dist/FastMCP.d.cts b/dist/FastMCP.d.cts
+--- a/dist/FastMCP.d.cts
++++ b/dist/FastMCP.d.cts
+@@ -297,6 +297,8 @@
+      */
+     auth?: AuthProvider<T extends OAuthSession ? T : OAuthSession>;
+     authenticate?: Authenticate<T>;
++    /** Request admission before CORS, sessions, or transport processing. */
++    httpRequestGate?: (request: http.IncomingMessage, response: http.ServerResponse) => boolean | Promise<boolean>;
+     /**
+      * Configuration for the health-check endpoint that can be exposed when the
+      * server is running using the HTTP Stream transport. When enabled, the

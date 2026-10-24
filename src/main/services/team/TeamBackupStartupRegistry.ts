@@ -1,6 +1,6 @@
+export type { BackupRegistry, BackupRegistryEntry } from '@agent-teams/legacy-agent-host/lifecycle';
 export {
-  prefetchTeamBackupStartupRegistry,
   loadTeamBackupStartupRegistry,
+  prefetchTeamBackupStartupRegistry,
   readTeamBackupRegistry,
 } from '@agent-teams/legacy-agent-host/lifecycle';
-export type { BackupRegistry, BackupRegistryEntry } from '@agent-teams/legacy-agent-host/lifecycle';

@@ -5,82 +5,32 @@ import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Label } from '@renderer/components/ui/label';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
+import { CUSTOM_ROLE, NO_ROLE } from '@renderer/constants/teamRoles';
 import { cn } from '@renderer/lib/utils';
 import { getParticipantAvatarUrlByIndex } from '@renderer/utils/memberAvatarCatalog';
 import { getAvailableTeamEffortValue } from '@renderer/utils/teamEffortOptions';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
-import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { GitBranch, Plug, Plus } from 'lucide-react';
 
 import { MembersJsonEditor } from '../dialogs/MembersJsonEditor';
 
 import { MemberDraftRow } from './MemberDraftRow';
 import { getNextSuggestedMemberName } from './memberNameSets';
+import { membersToJsonText, parseJsonToDrafts } from './membersEditorJson';
 import {
   buildMemberDraftColorMap,
   buildMemberDraftSuggestions,
   createMemberDraft,
-  getMemberDraftRole,
-  getWorkflowForExport,
 } from './membersEditorUtils';
 
 import type { MemberDraft } from './membersEditorTypes';
+import type { GatewayMemberBindingsState } from '@features/gateway-provider/renderer';
 import type { TeamModelSelectorProps } from '@renderer/components/team/dialogs/TeamModelSelector';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { CliProviderStatus, EffortLevel, TeamProviderId } from '@shared/types';
-
-function membersToJsonText(drafts: MemberDraft[]): string {
-  const arr = drafts
-    .filter((d) => d.name.trim())
-    .map((d) => {
-      const role = getMemberDraftRole(d);
-      const obj: Record<string, unknown> = { name: d.name.trim() };
-      if (role) obj.role = role;
-      const workflow = getWorkflowForExport(d);
-      if (workflow) obj.workflow = workflow;
-      if (d.isolation === 'worktree') obj.isolation = 'worktree';
-      if (d.providerId) obj.providerId = d.providerId;
-      if (d.model?.trim()) obj.model = d.model.trim();
-      if (d.effort) obj.effort = d.effort;
-      if (d.mcpPolicy) obj.mcpPolicy = d.mcpPolicy;
-      return obj;
-    });
-  return JSON.stringify(arr, null, 2);
-}
-
-function parseJsonToDrafts(text: string): MemberDraft[] {
-  const arr: unknown = JSON.parse(text);
-  if (!Array.isArray(arr)) return [];
-  return (arr as Record<string, unknown>[]).map((item) => {
-    const name = typeof item.name === 'string' ? item.name : '';
-    const role = typeof item.role === 'string' ? item.role.trim() : '';
-    const workflow = typeof item.workflow === 'string' ? item.workflow.trim() : '';
-    const isolation = item.isolation === 'worktree' ? 'worktree' : undefined;
-    const providerId = normalizeOptionalTeamProviderId(item.providerId);
-    const model = typeof item.model === 'string' ? item.model.trim() : '';
-    const effort: EffortLevel | undefined = isTeamEffortLevel(item.effort)
-      ? item.effort
-      : undefined;
-    const mcpPolicy = normalizeTeamMemberMcpPolicy(item.mcpPolicy);
-    const presetRoles: readonly string[] = PRESET_ROLES;
-    const isPreset = presetRoles.includes(role);
-    return createMemberDraft({
-      name,
-      roleSelection: role ? (isPreset ? role : CUSTOM_ROLE) : '',
-      customRole: role && !isPreset ? role : '',
-      workflow: workflow || undefined,
-      isolation,
-      providerId,
-      model,
-      effort,
-      mcpPolicy,
-    });
-  });
-}
 
 function cloneMcpPolicy(policy: MemberDraft['mcpPolicy']): MemberDraft['mcpPolicy'] {
   const normalized = normalizeTeamMemberMcpPolicy(policy);
@@ -103,6 +53,9 @@ function forceActiveMembersToAgentTeamsMcp(drafts: MemberDraft[]): MemberDraft[]
 export interface MembersEditorSectionProps {
   members: MemberDraft[];
   onChange: (members: MemberDraft[]) => void;
+  /** Team name used for per-teammate gateway bindings on the member row. */
+  teamName?: string;
+  gatewayBindings?: GatewayMemberBindingsState;
   fieldError?: string;
   validateMemberName?: (name: string) => string | null;
   showWorkflow?: boolean;
@@ -132,12 +85,14 @@ export interface MembersEditorSectionProps {
   /** Default provider to use for newly added member rows. */
   defaultProviderId?: TeamProviderId;
   /** When true, provider/model controls stay read-only for existing rows. */
+  runtimeSelectionUnresolved?: boolean;
   lockProviderModel?: boolean;
   /** When true, existing teammate names stay read-only while the team is live. */
   lockExistingMemberIdentity?: boolean;
   identityLockReason?: string;
   inheritedProviderId?: TeamProviderId;
   inheritedModel?: string;
+  preserveSelectedModel?: boolean;
   inheritedEffort?: EffortLevel;
   limitContext?: boolean;
   onLimitContextChange?: (value: boolean) => void;
@@ -148,6 +103,7 @@ export interface MembersEditorSectionProps {
   modelLockReason?: string;
   softDeleteMembers?: boolean;
   memberWarningById?: Record<string, string | null | undefined>;
+  memberErrorById?: Record<string, string | null | undefined>;
   memberInfoById?: Record<string, string | null | undefined>;
   disableGeminiOption?: boolean;
   memberModelIssueById?: Record<string, string | null | undefined>;
@@ -177,6 +133,8 @@ export interface MembersEditorSectionProps {
 export const MembersEditorSection = ({
   members,
   onChange,
+  teamName,
+  gatewayBindings,
   fieldError,
   validateMemberName,
   showWorkflow = false,
@@ -193,11 +151,13 @@ export const MembersEditorSection = ({
   existingMembers,
   existingMemberColorMap,
   defaultProviderId = 'anthropic',
+  runtimeSelectionUnresolved = false,
   lockProviderModel = false,
   lockExistingMemberIdentity = false,
   identityLockReason,
   inheritedProviderId,
   inheritedModel,
+  preserveSelectedModel = false,
   inheritedEffort,
   limitContext = false,
   onLimitContextChange,
@@ -208,6 +168,7 @@ export const MembersEditorSection = ({
   modelLockReason,
   softDeleteMembers = false,
   memberWarningById,
+  memberErrorById,
   memberInfoById,
   disableGeminiOption = false,
   memberModelIssueById,
@@ -274,6 +235,9 @@ export const MembersEditorSection = ({
     try {
       const drafts = parseJsonToDrafts(text).map((draft) => {
         const providerId = draft.providerId ?? inheritedProviderId ?? defaultProviderId;
+        if (providerId === 'gemini' && gatewayBindings?.boundMemberNames.has(draft.name.trim())) {
+          throw new Error('Unbind the gateway before switching this teammate to Gemini.');
+        }
         const effort = getCompatibleMemberEffort(providerId, draft.model, draft.effort);
         return effort === draft.effort ? draft : { ...draft, effort };
       });
@@ -322,7 +286,8 @@ export const MembersEditorSection = ({
           ? (() => {
               const previousProviderId = c.providerId ?? inheritedProviderId ?? defaultProviderId;
               const providerChanged = previousProviderId !== providerId;
-              const nextModel = providerChanged ? '' : c.model;
+              const gatewayBound = gatewayBindings?.boundMemberNames.has(c.name.trim());
+              const nextModel = providerChanged && !gatewayBound ? '' : c.model;
               const nextEffort = providerChanged
                 ? undefined
                 : getCompatibleMemberEffort(providerId, nextModel, c.effort);
@@ -633,8 +598,10 @@ export const MembersEditorSection = ({
             >
               {activeMembers.map((member, index) => (
                 <MemberDraftRow
+                  runtimeSelectionUnresolved={runtimeSelectionUnresolved}
                   key={member.id}
                   member={member}
+                  teamName={teamName}
                   index={index}
                   avatarSrc={getParticipantAvatarUrlByIndex(index + 1)}
                   resolvedColor={memberColorMap.get(member.id)}
@@ -649,6 +616,7 @@ export const MembersEditorSection = ({
                   onWorkflowChipsChange={showWorkflow ? updateMemberWorkflowChips : undefined}
                   onProviderChange={updateMemberProvider}
                   onModelChange={updateMemberModel}
+                  gatewayBindings={gatewayBindings}
                   onEffortChange={updateMemberEffort}
                   onLimitContextChange={onLimitContextChange}
                   showWorktreeIsolationControls={showWorktreeIsolationControls}
@@ -658,6 +626,7 @@ export const MembersEditorSection = ({
                   agentTeamsMcpLocked={agentTeamsMcpLockedForAll}
                   inheritedProviderId={inheritedProviderId}
                   inheritedModel={inheritedModel}
+                  preserveSelectedModel={preserveSelectedModel}
                   inheritedEffort={inheritedEffort}
                   limitContext={limitContext}
                   forceInheritedModelSettings={forceInheritedModelSettings}
@@ -689,6 +658,7 @@ export const MembersEditorSection = ({
                   identityLockReason={identityLockReason}
                   modelLockReason={modelLockReason}
                   warningText={memberWarningById?.[member.id] ?? null}
+                  errorText={memberErrorById?.[member.id] ?? null}
                   infoText={memberInfoById?.[member.id] ?? null}
                   disableGeminiOption={disableGeminiOption}
                   modelIssueText={memberModelIssueById?.[member.id] ?? null}
@@ -709,6 +679,7 @@ export const MembersEditorSection = ({
                   <div className="space-y-2">
                     {removedMembers.map((member, index) => (
                       <MemberDraftRow
+                        runtimeSelectionUnresolved={runtimeSelectionUnresolved}
                         key={member.id}
                         member={member}
                         index={activeMembers.length + index}

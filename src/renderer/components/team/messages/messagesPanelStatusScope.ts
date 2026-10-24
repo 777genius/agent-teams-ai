@@ -1,4 +1,7 @@
-import { belongsToConversation, type ConversationScope } from '@features/team-direct-chats/renderer';
+import {
+  belongsToConversation,
+  type ConversationScope,
+} from '@features/team-direct-chats/renderer';
 
 import type { InboxMessage, ToolApprovalRequest } from '@shared/types';
 
@@ -14,6 +17,7 @@ export function pendingRepliesForConversation(
   leadNames: Iterable<string>
 ): Record<string, number> {
   if (scope.kind === 'team-feed') return pendingRepliesByMember;
+  if (scope.kind === 'group') return {};
 
   return Object.fromEntries(
     Object.entries(pendingRepliesByMember).filter(([memberName]) =>
@@ -40,6 +44,7 @@ export function pendingApprovalsForConversation(
   scope: ConversationScope,
   leadNames: Iterable<string>
 ): ToolApprovalRequest[] {
+  if (scope.kind === 'group') return [];
   return approvals.filter((approval) => {
     if (teamName && approval.teamName !== teamName) return false;
     if (scope.kind === 'team-feed') return true;

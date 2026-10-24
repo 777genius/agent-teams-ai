@@ -4,6 +4,7 @@ export function fingerprintSavedLaunchSettings(value: object | null): string {
   const keys = [
     'cwd',
     'prompt',
+    'runtimeSelectionVersion',
     'providerId',
     'providerBackendId',
     'model',

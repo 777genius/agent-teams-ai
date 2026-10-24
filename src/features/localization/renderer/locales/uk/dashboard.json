@@ -284,6 +284,11 @@
   },
   "tokenUsage": {
     "title": "Використання",
+    "gateway": {
+      "dailyGranularity": "Витрати gateway згруповано за днями UTC.",
+      "lastSuccessfulImport": "Останній повний імпорт gateway:",
+      "noConfirmedImport": "Повний імпорт gateway ще не підтверджено; суми можуть бути неповними."
+    },
     "partialData": "Часткові дані",
     "actions": {
       "refresh": "Оновити",
@@ -333,7 +338,10 @@
       "tokenLimit": "Ліміт токенів",
       "tokenLimitDetail": "{{tokens}} з {{limit}}",
       "warning": "Попередження",
-      "project": "Проєкт"
+      "project": "Проєкт",
+      "editor": {
+        "legacyCombinedExplanation": "Цей перенесений бюджет об'єднує анонімні запуски та команду з назвою unassigned. Його можна змінити або видалити. Після видалення його неможливо створити знову."
+      }
     },
     "dateRange": {
       "allCollectedUsage": "Усе зібране використання застосунку",
@@ -385,7 +393,7 @@
       "tokens": "токени",
       "tokensCost": "{{tokens}} токенів / {{cost}}",
       "total": "Усього",
-      "unassigned": "Без команди",
+      "unassigned": "Анонімні запуски",
       "unknownAgent": "Невідомий агент",
       "eventCount": "{{count}} подій",
       "streakCount": "{{count}} дн. поспіль"

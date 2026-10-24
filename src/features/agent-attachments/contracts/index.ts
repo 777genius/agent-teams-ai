@@ -23,3 +23,25 @@ export {
   estimateAgentAttachmentSerializedPayloadBytes,
   MAX_AGENT_ATTACHMENT_SERIALIZED_PAYLOAD_BYTES,
 } from '../core/domain';
+export {
+  decorateFileReferences,
+  getMessageAttachmentRoute,
+  isStrictUtf8,
+  mergeMessageAttachments,
+} from '../core/domain/messageFileReferences';
+export type {
+  AttachmentFileData,
+  AttachmentMediaType,
+  AttachmentMeta,
+  AttachmentPayload,
+  ImageMimeType,
+  NativeAttachmentDeliveryEnvelope,
+  NativeAttachmentDigest,
+  NativeMemberCapability,
+} from './nativeTeammateAttachment';
+
+/** The actual model and cwd of the recipient, never a selector default. */
+export type ResolveOpenCodeInputDeclaration = (input: {
+  projectPath: string;
+  model: string;
+}) => Promise<readonly string[] | null>;

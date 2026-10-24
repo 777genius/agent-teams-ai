@@ -120,6 +120,7 @@ function isOpenCodePromptDeliveryLedgerRecord(
     isOptionalNullableString(record.lastRuntimePromptMessageId) &&
     isOptionalNullableString(record.lastDeliveryAttemptIdWithAcceptedPrompt) &&
     typeof record.inboxMessageId === 'string' &&
+    isOptionalNullableString(record.groupChatId) &&
     typeof record.inboxTimestamp === 'string' &&
     isOpenCodePromptDeliverySource(record.source) &&
     isOptionalNullableInboxMessageKind(record.messageKind) &&

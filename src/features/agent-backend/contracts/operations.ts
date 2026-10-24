@@ -60,6 +60,7 @@ import type {
   BackendToolApprovalPayloads,
   BackendToolApprovalSettingsView,
 } from './toolApprovals';
+import type { NativeAttachmentCapabilities } from '@agent-teams/legacy-agent-host/attachments/attachmentTypes';
 import type {
   AttachmentReference,
   AttachmentUpload,
@@ -282,6 +283,7 @@ export interface BackendCommandReceipt {
 
 export interface BackendRuntimeSnapshot {
   memberId: string;
+  attachmentCapabilities?: NativeAttachmentCapabilities;
   generation?: string;
   phase: string;
   sealed: boolean;

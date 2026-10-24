@@ -20,16 +20,22 @@ let heroMessageObserver: IntersectionObserver | null = null;
 let heroMotionQuery: MediaQueryList | null = null;
 
 const downloadStore = useDownloadStore();
-const { resolve, data: releaseData } = useReleaseDownloads();
+const { resolve, platformInfo, data: releaseData } = useReleaseDownloads();
+const { trackDownloadClick } = useAnalytics();
 const { latestReleaseUrl, releaseDownloadUrl } = useGithubRepo();
-const { selectedDownloadAsset } = useDownloadAssetPresentation();
+const { selectedDownloadAsset } = useDownloadAssetPresentation(platformInfo);
 
 useCyberHeroParallax(heroRef);
 
-const releaseVersion = computed(() => releaseData.value?.version || null);
+const selectedRelease = computed(() => {
+  const asset = selectedDownloadAsset.value;
+  return asset ? platformInfo(asset.os, asset.resolvedArch) : releaseData.value;
+});
+const releaseLabel = computed(() => selectedDownloadAsset.value?.label || 'GitHub Release');
+const releaseVersion = computed(() => selectedRelease.value?.version || null);
 const releaseDate = computed(() => {
-  if (!releaseData.value?.pubDate) return "";
-  return new Date(releaseData.value.pubDate).toLocaleDateString(locale.value, {
+  if (!selectedRelease.value?.pubDate) return "";
+  return new Date(selectedRelease.value.pubDate).toLocaleDateString(locale.value, {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -52,6 +58,11 @@ const supportedProviders = [
     id: "opencode",
     name: "OpenCode",
     accent: "#a78bfa",
+  },
+  {
+    id: "openrouter",
+    name: "OpenRouter",
+    accent: "#b7c9f8",
   },
   {
     id: "cursor",
@@ -83,6 +94,36 @@ const supportedProviders = [
     name: "Kiro",
     accent: "#a66bff",
   },
+  {
+    id: "google",
+    name: "Google Gemini",
+    accent: "#4285f4",
+  },
+  {
+    id: "deepseek",
+    name: "DeepSeek",
+    accent: "#4d84ff",
+  },
+  {
+    id: "moonshotai",
+    name: "Kimi",
+    accent: "#f8fafc",
+  },
+  {
+    id: "xiaomi",
+    name: "Xiaomi MiMo",
+    accent: "#ff6900",
+  },
+  {
+    id: "mistral",
+    name: "Mistral AI",
+    accent: "#fa520f",
+  },
+  {
+    id: "alibaba",
+    name: "Alibaba Cloud",
+    accent: "#ff6a00",
+  },
 ] as const;
 const supportedProvidersLabel = computed(() => (
   t("hero.supportedProviders")
@@ -107,6 +148,13 @@ const heroDownloadTarget = computed(() => (
     : "_blank"
 ));
 
+function handleHeroDownloadClick() {
+  const asset = selectedDownloadAsset.value;
+  if (!asset || ((asset.os === 'windows' || asset.os === 'macos') && asset.resolvedArch === 'unknown')) return;
+  trackDownloadClick({ os: asset.os, arch: asset.resolvedArch,
+    version: resolve(asset.os, asset.resolvedArch)?.version ?? null, source: 'hero' });
+}
+
 const docsHref = computed(() => buildDocsHref({
   locale: locale.value,
   docsSiteUrl: runtimeConfig.public.docsSiteUrl,
@@ -117,7 +165,8 @@ const downloadActionSubtitle = computed(() => {
     return t("hero.platformDefault");
   }
 
-  return selectedDownloadAsset.value.actionSubtitle;
+  const asset = selectedDownloadAsset.value;
+  return asset.actionSubtitle;
 });
 const docsActionSubtitle = computed(() => (
   t("hero.guidesSetup")
@@ -234,11 +283,11 @@ onUnmounted(() => {
               </p>
               <dl class="cyber-hero__provider-coverage">
                 <div class="cyber-hero__provider-coverage-item">
-                  <dt>75+</dt>
+                  <dt>200+</dt>
                   <dd>{{ t("hero.providers") }}</dd>
                 </div>
                 <div class="cyber-hero__provider-coverage-item">
-                  <dt>200+</dt>
+                  <dt>300+</dt>
                   <dd>{{ t("hero.models") }}</dd>
                 </div>
               </dl>
@@ -267,6 +316,7 @@ onUnmounted(() => {
               tone="primary"
               :icon="mdiDownload"
               :subtitle="downloadActionSubtitle"
+              @click="handleHeroDownloadClick"
             >
               {{ t("hero.downloadNow") }}
             </CyberHeroActionButton>
@@ -285,7 +335,7 @@ onUnmounted(() => {
             class="cyber-hero__terminal-note cyber-panel"
           >
             <span class="cyber-hero__release">
-              v{{ releaseVersion }}
+              {{ releaseLabel }} · v{{ releaseVersion }}
               <span v-if="releaseDate" class="cyber-hero__release-date">
                 · {{ releaseDate }}
               </span>

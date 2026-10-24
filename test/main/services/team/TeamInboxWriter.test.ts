@@ -15,7 +15,7 @@ const hoisted = vi.hoisted(() => {
   // Normalize path separators so tests pass on Windows (backslash → forward slash)
   const norm = (p: string): string => p.replace(/\\/g, '/');
 
-  const readFile = vi.fn(async (filePath: string) => {
+  const readFile = vi.fn(async (filePath: string, encoding?: BufferEncoding) => {
     if (pendingReadFailures > 0) {
       pendingReadFailures -= 1;
       const error = new Error('EIO') as NodeJS.ErrnoException;
@@ -28,7 +28,7 @@ const hoisted = vi.hoisted(() => {
       error.code = 'ENOENT';
       throw error;
     }
-    return data;
+    return encoding ? data : Buffer.from(data);
   });
 
   const atomicWrite = vi.fn(
@@ -141,7 +141,7 @@ vi.mock('../../../../src/main/utils/pathDecoder', () => ({
 }));
 
 vi.mock('../../../../src/main/services/team/atomicWrite', () => ({
-  atomicWriteAsync: hoisted.atomicWrite,
+  atomicWriteInboxAsync: hoisted.atomicWrite,
 }));
 
 vi.mock('../../../../src/main/services/team/fileLock', () => ({
@@ -189,6 +189,70 @@ describe('TeamInboxWriter', () => {
       messageId: result.messageId,
     });
     expect(typeof persisted[0].timestamp).toBe('string');
+  });
+
+  it('writes trusted native metadata and replaces any untrusted envelope', async () => {
+    const request = {
+      member: 'alice',
+      text: 'native attachment message',
+      messageId: 'native-message-1',
+      attachments: [
+        {
+          id: 'att-1',
+          filename: 'image.png',
+          mimeType: 'image/png',
+          size: 3,
+          filePath: '/owned/att-1--image.png',
+          sha256: 'digest-1',
+        },
+      ],
+      recipientRuntimeInstanceId: 'runtime-current',
+      nativeAttachmentDelivery: {
+        version: 1,
+        recipientRuntimeInstanceId: 'runtime-untrusted',
+      },
+    } as Parameters<TeamInboxWriter['sendNativeAttachmentMessage']>[1];
+
+    await writer.sendNativeAttachmentMessage('my-team', request);
+
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Array<
+      Record<string, unknown> & {
+        attachments?: Array<Record<string, unknown>>;
+        nativeAttachmentDelivery?: Record<string, unknown>;
+      }
+    >;
+    expect(persisted[0]?.attachments).toEqual([
+      {
+        id: 'att-1',
+        filename: 'image.png',
+        mimeType: 'image/png',
+        size: 3,
+        filePath: '/owned/att-1--image.png',
+        sha256: 'digest-1',
+      },
+    ]);
+    expect(persisted[0]?.attachments?.[0]).not.toHaveProperty('data');
+    expect(persisted[0]?.nativeAttachmentDelivery).toEqual({
+      version: 1,
+      recipientRuntimeInstanceId: 'runtime-current',
+    });
+  });
+
+  it('does not persist a renderer-supplied native delivery envelope', async () => {
+    const request = {
+      member: 'alice',
+      text: 'ordinary message',
+      messageId: 'ordinary-message-1',
+      nativeAttachmentDelivery: {
+        version: 1,
+        recipientRuntimeInstanceId: 'runtime-untrusted',
+      },
+    } as SendMessageRequest;
+
+    await writer.sendMessage('my-team', request);
+
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Record<string, unknown>[];
+    expect(persisted[0]).not.toHaveProperty('nativeAttachmentDelivery');
   });
 
   it('rejects unsafe inbox member names before writing', async () => {

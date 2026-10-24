@@ -1,8 +1,8 @@
+import { type AuthoritativeReviewFiles, normalizeReviewPathForIdentity, collectAuthoritativeReviewedFiles, getAuthoritativeReviewedFile } from './authoritativeReviewFiles.js';
 import { hasUnqualifiedNativeChain } from '../../nativeCaptureProof.js';
 import type { ReviewConfiguredTeam, ReviewWriterContext } from './ports.js';
 import type { AuthorizedReviewRoot, ReviewPathAuthorization } from './displayedSnapshots.js';
 import type {
-  FileChangeSummary,
   ReviewFileScope,
   FileChangeWithContent,
   ReviewRenameRecoveryExpectation,
@@ -56,28 +56,9 @@ export async function resolveAuthorizedReviewRoot(
   }
 }
 
-export function normalizeReviewPathForIdentity(filePath: string): string {
-  const normalized = path.resolve(path.normalize(filePath));
-  return process.platform === 'win32' ? normalized.toLocaleLowerCase() : normalized;
-}
 
-export function collectAuthoritativeReviewedFiles(
-  files: FileChangeSummary[]
-): Map<string, FileChangeSummary> {
-  const reviewedFiles = new Map<string, FileChangeSummary>();
-  const add = (filePath: string | null, owner: FileChangeSummary): void => {
-    if (filePath && path.isAbsolute(path.normalize(filePath))) {
-      reviewedFiles.set(normalizeReviewPathForIdentity(filePath), owner);
-    }
-  };
-  for (const file of files) {
-    add(file.filePath, file);
-    for (const snippet of file.snippets) {
-      add(snippet.filePath, file);
-    }
-  }
-  return reviewedFiles;
-}
+
+
 
 export async function resolveReviewPathAuthorization(
   env: Pick<ReviewWriterContext, 'assertActive' | 'authorization' | 'changes'>,
@@ -103,7 +84,7 @@ export async function resolveReviewPathAuthorization(
   if (roots.length === 0) {
     throw new Error('Review project/worktree root is unavailable');
   }
-  let reviewedFiles: Map<string, FileChangeSummary> | null = null;
+  let reviewedFiles: AuthoritativeReviewFiles | null = null;
   let resolutionMemberName = scope.memberName ?? '';
   if (scope.taskId) {
     const changeSet = await (env.assertActive(),
@@ -168,7 +149,7 @@ export async function validateAuthorizedReviewFilePath(
     throw new Error('File is not part of the reviewed scope');
   }
   const reviewed = authorization.reviewedFiles?.get(normalizeReviewPathForIdentity(normalizedPath));
-  if (reviewed && hasUnqualifiedNativeChain(reviewed.snippets))
+  if (reviewed?.some(file => hasUnqualifiedNativeChain(file.snippets)))
     throw new Error('Native file attribution is unqualified; review mutation refused');
   let targetRealPath: string;
   let targetStat: Awaited<ReturnType<typeof fs.lstat>> | null = null;
@@ -194,7 +175,7 @@ export async function validateAuthorizedReviewFilePath(
     (root) =>
       (isPathWithinRoot(normalizedPath, root.lexicalPath) ||
         isPathWithinRoot(normalizedPath, root.realPath)) &&
-      isPathWithinRoot(targetRealPath, root.realPath)
+      isPathWithinRoot(targetRealPath, root.realPath, { preserveCase: true })
   );
   if (!allowed) {
     throw new Error('Review file path is outside the authoritative project/worktree');
@@ -211,7 +192,7 @@ export async function validateAuthorizedReviewFilePath(
           (root) =>
             (isPathWithinRoot(normalizedPath, root.lexicalPath) ||
               isPathWithinRoot(normalizedPath, root.realPath)) &&
-            isPathWithinRoot(targetRealPath, root.realPath)
+            isPathWithinRoot(targetRealPath, root.realPath, { preserveCase: true })
         );
       if (!stillAllowed || !resolvedStat.isFile()) {
         throw new Error('Review file path changed during authorization');
@@ -220,7 +201,11 @@ export async function validateAuthorizedReviewFilePath(
     const ownedReviewTransactionLink =
       !targetStat.isSymbolicLink() &&
       resolvedStat.nlink > 1 &&
-      (await isOwnedReviewFileTransactionHardlink(normalizedPath));
+      (await isOwnedReviewFileTransactionHardlink(
+        normalizedPath,
+        [...(authorization.reviewedFiles?.keys() ?? [])],
+        authorization.roots.map((root) => root.realPath)
+      ));
     if (targetStat.isSymbolicLink() || (resolvedStat.nlink > 1 && !ownedReviewTransactionLink)) {
       throw new Error('Review mutation refuses symbolic or multiply-linked files');
     }
@@ -228,26 +213,15 @@ export async function validateAuthorizedReviewFilePath(
   return normalizedPath;
 }
 
-export function getAuthoritativeReviewedFile(
-  authorization: ReviewPathAuthorization,
-  filePath: string
-): FileChangeSummary {
-  const file = authorization.reviewedFiles?.get(normalizeReviewPathForIdentity(filePath));
-  if (!file) {
-    throw new Error('File is not part of the reviewed scope');
-  }
-  if (hasUnqualifiedNativeChain(file.snippets))
-    throw new Error('Native file attribution is unqualified; review mutation refused');
-  return file;
-}
+
 
 export async function resolveAuthoritativeFileContent(
   env: Pick<ReviewWriterContext, 'assertActive' | 'content'>,
   scope: ReviewFileScope,
   authorization: ReviewPathAuthorization,
-  filePath: string
+  filePath: string,
+  authoritativeFile = getAuthoritativeReviewedFile(authorization, filePath)
 ): Promise<FileChangeWithContent> {
-  const authoritativeFile = getAuthoritativeReviewedFile(authorization, filePath);
   assertSnippetShapes(authoritativeFile.snippets);
   await validateSnippetPaths(authorization, authoritativeFile.snippets, {
     requireReviewedFile: true,
@@ -306,3 +280,5 @@ export function invalidateAuthoritativeReviewContent(
     env.content.invalidateFile(filePath);
   }
 }
+
+export { normalizeReviewPathForIdentity, collectAuthoritativeReviewedFiles, getAuthoritativeReviewedFile } from './authoritativeReviewFiles.js';

@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "Tambahkan reaksi ({{count}})",
+      "remove": "Hapus reaksi ({{count}})",
+      "count": "Reaksi: {{count}}",
+      "failed": "Tidak dapat memperbarui reaksi"
+    },
     "actions": {
       "createTaskFromMessage": "Membuat tugas dari pesan",
       "editMessage": "Edit pesan",
@@ -194,7 +200,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Nama harus berisi paling tidak satu huruf atau digit",
-      "nameTooLong": "Nama terlalu panjang (max 128 chars)",
+      "nameTooLong": "Nama terlalu panjang (max 64 chars)",
       "selectWorkingDirectory": "Pilih direktori kerja (cwd)",
       "memberNameRequired": "Nama anggota tidak dapat kosong",
       "memberNameInvalid": "Nama anggota harus dimulai dengan alfanumerik, hanya gunakan [a-zA-Z0-9.], maksimal 128 chars",
@@ -262,6 +268,8 @@
       "name": "Nama"
     },
     "memberRestartWarning": "Menyimpan akan menghidupkan ulang rekan satu tim ini untuk menerapkan peran, alur kerja, isolasi worktree, penyedia, model, usaha, atau MCP Akses berubah.",
+    "displayedRuntimeHint": "Di kartu anggota: {{runtime}}. Pengaturan tersimpan berbeda.",
+    "useDisplayedRuntime": "Gunakan pengaturan dari kartu",
     "notices": {
       "liveRenameBlocked": "Penyelamatan langsung diblokir karena rekan tim yang ada diubah namanya. Revert perubahan identitas atau menghentikan tim pertama.",
       "newLiveTeammates": "Rekan baru tidak dapat ditambahkan dari Tim Edit sementara tim masih hidup. Gunakan dialog Tambah anggota sebagai gantinya.",
@@ -351,6 +359,30 @@
     "placeholders": {
       "name": "Nama anggota",
       "mcpServers": "github, penjaga"
+    },
+    "gateway": {
+      "apiKeyLabel": "Gateway API key",
+      "apiKeyPlaceholder": "Paste the teammate gateway API key",
+      "authRejected": "Key authorization was rejected.",
+      "bindButton": "Bind teammate",
+      "bindingStatus": "Bound to {{profile}}",
+      "credentialChanged": "stored key changed — bind again with a new key",
+      "credentialMissing": "stored key missing — bind again with a new key",
+      "credentialReady": "key stored",
+      "emptyCatalog": "The model catalog is empty.",
+      "keyRequired": "Enter the gateway API key first.",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. Binding yang disimpan sebelum formulir ini dibuka langsung diperbarui dan perubahannya tetap tersimpan jika formulir tim dibatalkan.",
+      "probeButton": "Check key and load models",
+      "probing": "Checking...",
+      "profileLabel": "Gateway profile",
+      "profilePlaceholder": "Select a gateway profile",
+      "profileRequired": "Select a gateway profile first.",
+      "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+      "title": "Gateway provider",
+      "unbindButton": "Unbind",
+      "unavailable": "The gateway is unavailable right now."
     }
   },
   "detail": {
@@ -730,6 +762,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Buat obrolan grup",
+      "description": "Pilih setidaknya dua agen. Anda otomatis disertakan.",
+      "name": "Nama obrolan",
+      "autoInclude": "Tambahkan anggota baru secara otomatis",
+      "minimum": "Pilih setidaknya dua agen.",
+      "creating": "Membuat…",
+      "retryCreate": "Coba buat lagi",
+      "unavailable": "Obrolan tidak tersedia",
+      "message": "Kirim pesan ke grup ini",
+      "archivedHint": "Obrolan ini diarsipkan. Pulihkan untuk mengirim pesan.",
+      "restartHint": "Semua peserta harus menjalankan runtime yang kompatibel sebelum mengirim pesan.",
+      "unknownDelivery": "Tersimpan. Status pengiriman tidak diketahui.",
+      "sending": "Mengirim…",
+      "retrySend": "Kirim ulang pesan yang sama",
+      "send": "Kirim",
+      "archived": "Obrolan yang diarsipkan",
+      "restore": "Pulihkan obrolan",
+      "archive": "Arsipkan obrolan",
+      "delivery": {
+        "queued": "dalam antrean",
+        "accepted": "diterima",
+        "failed": "gagal",
+        "unknown": "tidak diketahui",
+        "skipped": "dilewati"
+      }
+    },
     "actions": {
       "toLatest": "Ke pesan terbaru",
       "bottomSheetActions": "Aksi lembar bawah pesan",
@@ -969,7 +1028,8 @@
       "cancel": "Batal",
       "delete": "Hapus",
       "markResolved": "Tandai diselesaikan",
-      "save": "Simpan"
+      "save": "Simpan",
+      "openInTaskTab": "Buka di tab terpisah"
     },
     "attachments": {
       "commentAttachment": "Komentar lampiran",
@@ -2966,6 +3026,25 @@
         "weight_few": "weight {{count}}",
         "weight_many": "weight {{count}}"
       }
+    }
+  },
+  "externalPrompt": {
+    "requestHelp": "Name the templates to use and describe any edits in your request.",
+    "editAvailable": "Editing draft/stopped configuration is available.",
+    "trashAvailable": "Reversible trash for draft/stopped teams is available."
+  },
+  "managementChanges": {
+    "title": "Recent changes",
+    "created": "Created",
+    "edited": "Edited",
+    "hidden": "Some recent changes are hidden by the current filters.",
+    "roster": "Roles: +{{added}}/-{{removed}}",
+    "fields": {
+      "displayName": "Name changed",
+      "description": "Description changed",
+      "color": "Color changed",
+      "leadInstructions": "Lead instructions changed",
+      "members": "Members changed"
     }
   }
 }

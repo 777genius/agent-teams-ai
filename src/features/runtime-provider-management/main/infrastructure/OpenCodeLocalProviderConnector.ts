@@ -27,31 +27,28 @@ import {
   type LocalServerModelMetadata,
 } from './localServerRuntimeApi';
 import {
+  assertGatewayProviderInput,
+  type OpenCodeGatewayProviderRetireTarget,
+  type OpenCodeGatewayProviderTarget,
+} from './OpenCodeGatewayArtifactOwnership';
+import {
   createOpenCodeGlobalConfigEnvironmentResolver,
   readOpenCodeConfigTarget,
 } from './openCodeGlobalConfigOverrides';
+import { OpenCodeLocalProviderConfigWriter } from './OpenCodeLocalProviderConfigWriter';
 import {
   buildLocalProviderConfigureError,
   buildLocalProviderProbeError,
-  createModelRecord,
   hasDuplicateObjectProperties,
   type LocalModelConfigMetadata,
-  type LocalProviderConfigWriteInput,
-  type LocalProviderConfigWriteResult,
-  mergeAvailableConfiguredModelIds,
   readObjectEntries,
   readOpenAiModels,
   readStringNode,
   resolveRequestedLocalProviderModelIds,
-  setJsoncValue,
-  updateJsoncProviderModels,
 } from './openCodeLocalProviderConnectorUtils';
 import { filterOllamaCompletionModels } from './OpenCodeLocalProviderModelFilter';
 import {
-  assertProviderApiKeyReplacement,
   buildDeferredProviderListEntry,
-  commitProviderConfigWithCredential,
-  createProviderApiKeyReference,
   LocalProviderOperationError,
   normalizeOptionalProviderApiKey,
   resolveConfiguredProviderPreset,
@@ -103,13 +100,14 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
   private readonly privateNetworkApprovalStore: LocalProviderPrivateNetworkApprovalStore;
   // Serializes config read-modify-write so concurrent configure calls read the previous result.
   // Configure is rare, so a single chain avoids config-path key subtleties.
-  private configWriteChain: Promise<unknown> = Promise.resolve();
+  private readonly configWriter: OpenCodeLocalProviderConfigWriter;
 
   constructor(options: OpenCodeLocalProviderConnectorOptions = {}) {
     this.fetchImpl = options.fetchImpl ?? globalThis.fetch;
     this.homePath = path.resolve(options.homePath ?? os.homedir());
     this.getEnvironment = createOpenCodeGlobalConfigEnvironmentResolver(options.environment);
     this.now = options.now ?? Date.now;
+    this.configWriter = new OpenCodeLocalProviderConfigWriter(this.homePath, this.getEnvironment);
     this.privateNetworkApprovalStore =
       options.privateNetworkApprovalStore ?? new JsonLocalProviderPrivateNetworkApprovalStore();
   }
@@ -360,8 +358,39 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     }
   }
 
-  async configureLocalProvider(
+  async configureGatewayProvider(
+    input: RuntimeLocalProviderConfigureInput,
+    target: OpenCodeGatewayProviderTarget
+  ): Promise<{ providerId: string; modelRoute: string }> {
+    assertGatewayProviderInput(input, target);
+    const result = await this.configureProvider(input, target);
+    if (!result.configuration) {
+      throw new LocalProviderOperationError(
+        result.error?.code ?? 'write-failed',
+        result.error?.message ?? 'Could not configure the gateway provider.'
+      );
+    }
+    return {
+      providerId: result.configuration.providerId,
+      modelRoute: result.configuration.modelRoute,
+    };
+  }
+
+  retireGatewayProvider(
+    target: OpenCodeGatewayProviderRetireTarget
+  ): Promise<{ retired: boolean }> {
+    return this.configWriter.retireGatewayProvider(target);
+  }
+
+  configureLocalProvider(
     input: RuntimeLocalProviderConfigureInput
+  ): Promise<RuntimeLocalProviderConfigureResponse> {
+    return this.configureProvider(input);
+  }
+
+  private async configureProvider(
+    input: RuntimeLocalProviderConfigureInput,
+    gatewayOwner?: OpenCodeGatewayProviderTarget
   ): Promise<RuntimeLocalProviderConfigureResponse> {
     if (
       input?.runtimeId !== 'opencode' ||
@@ -416,7 +445,8 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
         : await this.fetchModelConfigMetadata(target, defaultModelId);
       const setAsSmallModel = input.setAsSmallModel ?? input.setAsDefault;
 
-      const configured = await this.writeConfig({
+      const configured = await this.configWriter.writeConfig({
+        gatewayOwner,
         scope: input.scope,
         projectPath: input.projectPath,
         providerId: target.providerId,
@@ -649,155 +679,6 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
     } finally {
       clearTimeout(timeout);
     }
-  }
-
-  private async writeConfig(
-    input: LocalProviderConfigWriteInput
-  ): Promise<LocalProviderConfigWriteResult> {
-    // Chain onto any in-flight write so the read-modify-write below runs after
-    // the previous one fully committed (no lost update on concurrent configures).
-    const run = this.configWriteChain.then(
-      () => this.writeConfigNow(input),
-      () => this.writeConfigNow(input)
-    );
-    this.configWriteChain = run.then(
-      () => undefined,
-      () => undefined
-    );
-    return run;
-  }
-
-  private async writeConfigNow(
-    input: LocalProviderConfigWriteInput
-  ): Promise<LocalProviderConfigWriteResult> {
-    const configTarget = await readOpenCodeConfigTarget({
-      scope: input.scope,
-      projectPath: input.projectPath,
-      homePath: this.homePath,
-      getEnvironment: this.getEnvironment,
-      ensureGlobalDirectory: true,
-      inlineContext: input,
-    });
-    const configPath = configTarget.configPath;
-    const raw = configTarget.raw ?? '{}\n';
-    const isNewConfig = configTarget.raw === null;
-    const parseErrors: ParseError[] = [];
-    const configTree = parseTree(raw, parseErrors, {
-      allowTrailingComma: true,
-      disallowComments: false,
-    });
-    if (parseErrors.length > 0 || !configTree || configTree.type !== 'object') {
-      throw new LocalProviderOperationError(
-        'config-invalid',
-        'The existing OpenCode config contains invalid JSON or JSONC.'
-      );
-    }
-    if (hasDuplicateObjectProperties(configTree)) {
-      throw new LocalProviderOperationError(
-        'config-invalid',
-        'The existing OpenCode config contains duplicate object keys and must be fixed manually.'
-      );
-    }
-
-    const providerRootNode = findNodeAtLocation(configTree, ['provider']);
-    if (providerRootNode && providerRootNode.type !== 'object') {
-      throw new LocalProviderOperationError(
-        'config-invalid',
-        'The existing OpenCode provider configuration must be an object.'
-      );
-    }
-
-    const previousApiKeyReference = assertProviderApiKeyReplacement(configTree, input);
-    const apiKeyReference = input.apiKey
-      ? createProviderApiKeyReference({
-          configPath,
-          providerId: input.providerId,
-        })
-      : null;
-    let nextRaw = raw;
-    if (isNewConfig) {
-      nextRaw = setJsoncValue(nextRaw, ['$schema'], 'https://opencode.ai/config.json');
-    }
-    const providerNode = findNodeAtLocation(configTree, ['provider', input.providerId]);
-    const modelsNode = findNodeAtLocation(configTree, ['provider', input.providerId, 'models']);
-    const persistedModelIds =
-      input.replaceModels && input.preserveAvailableConfiguredModels
-        ? mergeAvailableConfiguredModelIds(input.modelIds, input.availableModelIds, modelsNode)
-        : input.modelIds;
-    if (!providerNode || providerNode.type !== 'object') {
-      nextRaw = setJsoncValue(nextRaw, ['provider', input.providerId], {
-        npm: '@ai-sdk/openai-compatible',
-        options: {
-          baseURL: input.baseUrl,
-          ...(apiKeyReference ? { apiKey: apiKeyReference } : {}),
-        },
-        models: createModelRecord(
-          persistedModelIds,
-          input.defaultModelId,
-          input.selectedModelConfig
-        ),
-      });
-    } else {
-      nextRaw = setJsoncValue(
-        nextRaw,
-        ['provider', input.providerId, 'npm'],
-        '@ai-sdk/openai-compatible'
-      );
-      const optionsNode = findNodeAtLocation(configTree, ['provider', input.providerId, 'options']);
-      nextRaw =
-        optionsNode && optionsNode.type !== 'object'
-          ? setJsoncValue(nextRaw, ['provider', input.providerId, 'options'], {
-              baseURL: input.baseUrl,
-              ...(apiKeyReference ? { apiKey: apiKeyReference } : {}),
-            })
-          : setJsoncValue(
-              nextRaw,
-              ['provider', input.providerId, 'options', 'baseURL'],
-              input.baseUrl
-            );
-      if (apiKeyReference && (!optionsNode || optionsNode.type === 'object')) {
-        nextRaw = setJsoncValue(
-          nextRaw,
-          ['provider', input.providerId, 'options', 'apiKey'],
-          apiKeyReference
-        );
-      }
-
-      nextRaw = updateJsoncProviderModels(
-        nextRaw,
-        modelsNode,
-        input.providerId,
-        persistedModelIds,
-        input.defaultModelId,
-        input.selectedModelConfig,
-        input.replaceModels
-      );
-    }
-    if (input.setAsDefault) {
-      const modelRoute = buildRuntimeLocalProviderModelRoute(
-        input.providerId,
-        input.defaultModelId
-      );
-      nextRaw = setJsoncValue(nextRaw, ['model'], modelRoute);
-    }
-    if (input.setAsSmallModel) {
-      nextRaw = setJsoncValue(
-        nextRaw,
-        ['small_model'],
-        buildRuntimeLocalProviderModelRoute(input.providerId, input.defaultModelId)
-      );
-    }
-    await commitProviderConfigWithCredential({
-      homePath: this.homePath,
-      configPath,
-      providerId: input.providerId,
-      apiKey: input.apiKey,
-      apiKeyReference,
-      previousApiKeyReference,
-      contents: `${nextRaw.trimEnd()}\n`,
-      mode: configTarget.mode ?? 0o600,
-    });
-    return { configPath, modelIds: persistedModelIds };
   }
 
   private listError(

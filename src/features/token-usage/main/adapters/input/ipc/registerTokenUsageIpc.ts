@@ -4,13 +4,16 @@ import {
   normalizeTokenUsageBudgetSettings,
   normalizeTokenUsageSnapshot,
   TOKEN_USAGE_GET_BUDGET_SETTINGS,
+  TOKEN_USAGE_GET_BUDGET_STATUS,
   TOKEN_USAGE_GET_SNAPSHOT,
   TOKEN_USAGE_REFRESH_SNAPSHOT,
   TOKEN_USAGE_SNAPSHOT_CHANGED,
   TOKEN_USAGE_UPDATE_BUDGET_SETTINGS,
   type TokenUsageAnalyticsSnapshotDto,
   type TokenUsageBudgetSettingsDto,
+  type TokenUsageBudgetSettingsUpdateRequestDto,
   type TokenUsageSnapshotRequest,
+  validateBudgetUpdate,
 } from '../../../../contracts';
 
 import type { TokenUsageFeatureFacade } from '../../../composition/createTokenUsageFeature';
@@ -19,6 +22,7 @@ import type { IpcMain } from 'electron';
 const logger = createLogger('Feature:TokenUsage:IPC');
 
 export function registerTokenUsageIpc(ipcMain: IpcMain, feature: TokenUsageFeatureFacade): void {
+  ipcMain.handle(TOKEN_USAGE_GET_BUDGET_STATUS, () => feature.getBudgetStatus());
   ipcMain.handle(
     TOKEN_USAGE_GET_SNAPSHOT,
     async (
@@ -63,10 +67,13 @@ export function registerTokenUsageIpc(ipcMain: IpcMain, feature: TokenUsageFeatu
 
   ipcMain.handle(
     TOKEN_USAGE_UPDATE_BUDGET_SETTINGS,
-    async (_event, settings: TokenUsageBudgetSettingsDto): Promise<TokenUsageBudgetSettingsDto> => {
+    async (
+      _event,
+      settings: TokenUsageBudgetSettingsUpdateRequestDto
+    ): Promise<TokenUsageBudgetSettingsDto> => {
       try {
         return normalizeTokenUsageBudgetSettings(
-          await feature.updateBudgetSettings(normalizeTokenUsageBudgetSettings(settings))
+          await feature.updateBudgetSettings(validateBudgetUpdate(settings))
         );
       } catch (error) {
         logger.error('Failed to update token usage budget settings', error);
@@ -77,6 +84,7 @@ export function registerTokenUsageIpc(ipcMain: IpcMain, feature: TokenUsageFeatu
 }
 
 export function removeTokenUsageIpc(ipcMain: IpcMain): void {
+  ipcMain.removeHandler(TOKEN_USAGE_GET_BUDGET_STATUS);
   ipcMain.removeHandler(TOKEN_USAGE_GET_SNAPSHOT);
   ipcMain.removeHandler(TOKEN_USAGE_REFRESH_SNAPSHOT);
   ipcMain.removeHandler(TOKEN_USAGE_GET_BUDGET_SETTINGS);

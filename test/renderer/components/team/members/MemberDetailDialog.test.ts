@@ -27,12 +27,21 @@ vi.mock('@renderer/hooks/useMemberStats', () => ({
 }));
 
 vi.mock('@renderer/components/ui/button', () => ({
-  Button: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) =>
+  Button: ({
+    children,
+    onClick,
+    disabled,
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    disabled?: boolean;
+  }) =>
     React.createElement(
       'button',
       {
         type: 'button',
         onClick,
+        disabled,
       },
       children
     ),
@@ -136,10 +145,6 @@ vi.mock('@renderer/components/team/members/MemberLogsTab', () => ({
   MemberLogsTab: () => React.createElement('div', null, 'logs-tab'),
 }));
 
-vi.mock('@features/member-work-sync/renderer', () => ({
-  MemberWorkSyncStatusPanel: () => null,
-}));
-
 vi.mock('@features/member-log-stream/renderer', async () => {
   const ReactModule = await import('react');
   return {
@@ -189,6 +194,46 @@ describe('MemberDetailDialog activity count', () => {
     vi.clearAllMocks();
     useStore.setState({ teamMessagesByName: {} } as never);
     vi.unstubAllGlobals();
+  });
+
+  it('does not render the member work sync card in the profile dialog', async () => {
+    const member: ResolvedTeamMember = {
+      name: 'jack',
+      status: 'active',
+      currentTaskId: null,
+      taskCount: 0,
+      lastActiveAt: null,
+      messageCount: 0,
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberDetailDialog, {
+          open: true,
+          member,
+          teamName: 'demo-team',
+          members: [member],
+          tasks: [],
+          initialTab: 'tasks',
+          onClose: () => undefined,
+          onSendMessage: () => undefined,
+          onAssignTask: () => undefined,
+          onTaskClick: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="member-work-sync-badge"]')).toBeNull();
+    expect(host.textContent).not.toContain('Member work sync');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
   });
 
   it.each([
@@ -760,11 +805,160 @@ describe('MemberDetailDialog activity count', () => {
     });
 
     expect(host.textContent).toContain('5.4 Mini · Medium · Codex');
-    expect(host.textContent).not.toMatch(/\d+(?:\.\d+)?\sMB/);
+    expect(host.textContent).not.toMatch(/\d\sMB/);
 
     await act(async () => {
       root.unmount();
       await Promise.resolve();
     });
   });
+
+  function deferredRestart() {
+    let resolve!: () => void;
+    let reject!: (error: Error) => void;
+    const promise = new Promise<void>((done, fail) => {
+      resolve = done;
+      reject = fail;
+    });
+    return { promise, resolve, reject };
+  }
+
+  function restartHarness(onRestartMember: (name: string) => Promise<void>) {
+    const member: ResolvedTeamMember = {
+      name: 'bob',
+      providerId: 'codex',
+      status: 'active',
+      currentTaskId: null,
+      taskCount: 0,
+      lastActiveAt: null,
+      messageCount: 0,
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    let props: React.ComponentProps<typeof MemberDetailDialog> = {
+      open: true,
+      member,
+      teamName: 'demo-team',
+      members: [member],
+      tasks: [],
+      initialTab: 'tasks',
+      isTeamAlive: true,
+      onClose: () => undefined,
+      onSendMessage: () => undefined,
+      onAssignTask: () => undefined,
+      onTaskClick: () => undefined,
+      onRestartMember,
+    };
+    return {
+      host,
+      member,
+      render: async (update: Partial<typeof props> = {}) => {
+        props = { ...props, ...update };
+        await act(async () => {
+          root.render(React.createElement(MemberDetailDialog, props));
+          await Promise.resolve();
+        });
+      },
+      restartButton: () => {
+        const button = Array.from(host.querySelectorAll('button')).find(
+          (node) => node.textContent === 'Restart'
+        );
+        if (!button) throw new Error('Expected member Restart button');
+        return button;
+      },
+      close: async () => {
+        await act(async () => {
+          root.unmount();
+          await Promise.resolve();
+        });
+      },
+    };
+  }
+
+  it('keeps a pending restart disabled when polling replaces the same member object', async () => {
+    const pending = deferredRestart();
+    const restart = vi.fn(() => pending.promise);
+    const view = restartHarness(restart);
+    await view.render();
+    await act(async () => {
+      view.restartButton().click();
+      await Promise.resolve();
+    });
+    expect(view.restartButton().disabled).toBe(true);
+    await view.render({ member: { ...view.member, messageCount: 1 } });
+    expect(view.restartButton().disabled).toBe(true);
+    await act(async () => {
+      view.restartButton().click();
+      await Promise.resolve();
+    });
+    expect(restart).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      pending.resolve();
+      await Promise.resolve();
+    });
+    expect(view.restartButton().disabled).toBe(false);
+    await view.close();
+  });
+
+  it('keeps a restart failure visible when polling replaces the same member object', async () => {
+    const pending = deferredRestart();
+    const view = restartHarness(() => pending.promise);
+    await view.render();
+    await act(async () => {
+      view.restartButton().click();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      pending.reject(new Error('restart failed visibly'));
+      await Promise.resolve();
+    });
+    expect(view.host.textContent).toContain('restart failed visibly');
+    await view.render({ member: { ...view.member, messageCount: 2 } });
+    expect(view.host.textContent).toContain('restart failed visibly');
+    await view.close();
+  });
+
+  it.each(['member', 'team', 'reopen'] as const)(
+    'ignores the previous restart completion after switching %s context',
+    async (context) => {
+      const first = deferredRestart();
+      const second = deferredRestart();
+      const restart = vi
+        .fn()
+        .mockReturnValueOnce(first.promise)
+        .mockReturnValueOnce(second.promise);
+      const view = restartHarness(restart);
+      await view.render();
+      await act(async () => {
+        view.restartButton().click();
+        await Promise.resolve();
+      });
+      if (context === 'member') await view.render({ member: { ...view.member, name: 'alice' } });
+      if (context === 'team') await view.render({ teamName: 'other-team' });
+      if (context === 'reopen') {
+        await view.render({ open: false });
+        await view.render({ open: true });
+      }
+      expect(view.restartButton().disabled).toBe(false);
+      await act(async () => {
+        view.restartButton().click();
+        await Promise.resolve();
+      });
+      expect(restart).toHaveBeenCalledTimes(2);
+      await act(async () => {
+        first.reject(new Error('old context failure'));
+        await Promise.resolve();
+      });
+      expect(view.host.textContent).not.toContain('old context failure');
+      expect(view.restartButton().disabled).toBe(true);
+      await act(async () => {
+        second.reject(new Error('current context failure'));
+        await Promise.resolve();
+      });
+      expect(view.host.textContent).toContain('current context failure');
+      expect(view.restartButton().disabled).toBe(false);
+      await view.close();
+    }
+  );
 });

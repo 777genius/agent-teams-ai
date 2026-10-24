@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "প্রতিক্রিয়া যোগ করুন ({{count}})",
+      "remove": "প্রতিক্রিয়া সরান ({{count}})",
+      "count": "প্রতিক্রিয়া: {{count}}",
+      "failed": "প্রতিক্রিয়া আপডেট করা যায়নি"
+    },
     "actions": {
       "createTaskFromMessage": "বার্তা থেকে একটি নতুন কাজ তৈরি করুন",
       "editMessage": "বার্তা সম্পাদনা করুন",
@@ -262,6 +268,8 @@
       "name": "নাম"
     },
     "memberRestartWarning": "এই দলের সদস্য হিসেবে দায়িত্ব, কর্মফ্লো, ওয়ার্কট্রি বিচ্ছিন্ন হয়ে যাওয়া, সরবরাহকারী, মডেল, প্রচেষ্টা অথবা কর্ম সংক্রান্ত তথ্য প্রয়োগ করে পুনরায় আরম্ভ করা হবে MCP পরিবর্তনসমূহ বাতিল করা হবে।",
+    "displayedRuntimeHint": "সদস্যের কার্ডে: {{runtime}}। সংরক্ষিত সেটিংস ভিন্ন।",
+    "useDisplayedRuntime": "কার্ডের সেটিংস ব্যবহার করুন",
     "notices": {
       "liveRenameBlocked": "বিদ্যমান দলের সদস্যদের নাম পরিবর্তন করা হয়েছে বলে লাইভ সংরক্ষণ করা হচ্ছে। পরিচয়ের পরিবর্তন বাতিল করুন অথবা প্রথমে দলটা বন্ধ করুন।",
       "newLiveTeammates": "টিম থাকার সময় সম্পাদনা টিমের সাথে নতুন দল যোগ করা যাবে না। পরিবর্তে বৈশিষ্ট্য প্রয়োগ করা হবে",
@@ -351,6 +359,30 @@
     "placeholders": {
       "name": "দলের নাম",
       "mcpServers": "♪ হাকুনা মাতাতা ♪"
+    },
+    "gateway": {
+      "apiKeyLabel": "Gateway API key",
+      "apiKeyPlaceholder": "Paste the teammate gateway API key",
+      "authRejected": "Key authorization was rejected.",
+      "bindButton": "Bind teammate",
+      "bindingStatus": "Bound to {{profile}}",
+      "credentialChanged": "stored key changed — bind again with a new key",
+      "credentialMissing": "stored key missing — bind again with a new key",
+      "credentialReady": "key stored",
+      "emptyCatalog": "The model catalog is empty.",
+      "keyRequired": "Enter the gateway API key first.",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. এই ফর্ম খোলার আগে সংরক্ষিত সংযোগ সঙ্গে সঙ্গে বদলায় এবং দলের ফর্ম বাতিল করলেও সেই পরিবর্তন থাকে।",
+      "probeButton": "Check key and load models",
+      "probing": "Checking...",
+      "profileLabel": "Gateway profile",
+      "profilePlaceholder": "Select a gateway profile",
+      "profileRequired": "Select a gateway profile first.",
+      "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+      "title": "Gateway provider",
+      "unbindButton": "Unbind",
+      "unavailable": "The gateway is unavailable right now."
     }
   },
   "detail": {
@@ -730,6 +762,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "গ্রুপ চ্যাট তৈরি করুন",
+      "description": "অন্তত দুজন এজেন্ট বেছে নিন। আপনি স্বয়ংক্রিয়ভাবে অন্তর্ভুক্ত হন।",
+      "name": "চ্যাটের নাম",
+      "autoInclude": "নতুন সদস্যদের স্বয়ংক্রিয়ভাবে যোগ করুন",
+      "minimum": "অন্তত দুজন এজেন্ট বেছে নিন।",
+      "creating": "তৈরি হচ্ছে…",
+      "retryCreate": "আবার তৈরির চেষ্টা করুন",
+      "unavailable": "চ্যাট উপলব্ধ নয়",
+      "message": "এই গ্রুপে বার্তা পাঠান",
+      "archivedHint": "এই চ্যাট আর্কাইভ করা হয়েছে। বার্তা পাঠাতে এটি পুনরুদ্ধার করুন।",
+      "restartHint": "বার্তা পাঠাতে সব অংশগ্রহণকারীর সামঞ্জস্যপূর্ণ রানটাইম চালু থাকতে হবে।",
+      "unknownDelivery": "সংরক্ষিত হয়েছে। পৌঁছানোর অবস্থা অজানা।",
+      "sending": "পাঠানো হচ্ছে…",
+      "retrySend": "একই বার্তা আবার পাঠান",
+      "send": "পাঠান",
+      "archived": "আর্কাইভ করা চ্যাট",
+      "restore": "চ্যাট পুনরুদ্ধার করুন",
+      "archive": "চ্যাট আর্কাইভ করুন",
+      "delivery": {
+        "queued": "সারিতে আছে",
+        "accepted": "গৃহীত",
+        "failed": "ব্যর্থ",
+        "unknown": "অজানা",
+        "skipped": "বাদ দেওয়া হয়েছে"
+      }
+    },
     "actions": {
       "toLatest": "সাম্প্রতিক বার্তায়",
       "bottomSheetActions": "বার্তার প্রধান অংশ",
@@ -969,7 +1028,8 @@
       "cancel": "বাতিল",
       "delete": "মুছে ফেলুন",
       "markResolved": "চিহ্ন সুসংগত করা হবে",
-      "save": "সংরক্ষণ"
+      "save": "সংরক্ষণ",
+      "openInTaskTab": "পৃথক ট্যাবে খুলুন"
     },
     "attachments": {
       "commentAttachment": "অ্যাটাচমেন্ট",
@@ -2966,6 +3026,25 @@
         "weight_few": "weight {{count}}",
         "weight_many": "weight {{count}}"
       }
+    }
+  },
+  "externalPrompt": {
+    "requestHelp": "Name the templates to use and describe any edits in your request.",
+    "editAvailable": "Editing draft/stopped configuration is available.",
+    "trashAvailable": "Reversible trash for draft/stopped teams is available."
+  },
+  "managementChanges": {
+    "title": "Recent changes",
+    "created": "Created",
+    "edited": "Edited",
+    "hidden": "Some recent changes are hidden by the current filters.",
+    "roster": "Roles: +{{added}}/-{{removed}}",
+    "fields": {
+      "displayName": "Name changed",
+      "description": "Description changed",
+      "color": "Color changed",
+      "leadInstructions": "Lead instructions changed",
+      "members": "Members changed"
     }
   }
 }

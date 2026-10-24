@@ -6,6 +6,9 @@ export interface PromotionLayout {
     windowsX64: string;
     windowsArm64: string;
     linux: string;
+    linuxDeb: string;
+    linuxRpm: string;
+    linuxPacman: string;
     macArm64Zip: string;
     macArm64Dmg: string;
     macX64Zip: string;
@@ -29,6 +32,8 @@ export interface UpdaterFeedInput {
   version: string;
   releaseDate: string;
   feedSources: PromotionLayout['feedSources'];
+  macMinimumSystemVersion: string;
+  releaseNotes?: string;
 }
 
 export function getPromotionLayout(version: string): PromotionLayout;
@@ -36,17 +41,21 @@ export function parsePromotionConfig(
   environment?: Record<string, string | undefined>
 ): PromotionConfig;
 export function buildUpdaterFeeds(input: UpdaterFeedInput): Promise<Record<string, string>>;
+export function getMacUpdaterMinimumSystemVersion(macMinimumSystemVersion: unknown): string;
 export function promoteExistingDraft(options?: {
   environment?: Record<string, string | undefined>;
   now?: () => Date;
-}): Promise<{
-  repository: string;
-  tag: string;
-  targetCommit: string;
-  sourceAssets: number;
-  aliases: number;
-  feeds: string[];
-  dryRun: boolean;
-  published: boolean;
-  outputDirectory?: string;
-}>;
+}): Promise<
+  | {
+      repository: string;
+      tag: string;
+      targetCommit: string;
+      sourceAssets: number;
+      aliases: number;
+      feeds: string[];
+      dryRun: boolean;
+      published: boolean;
+      outputDirectory?: string;
+    }
+  | { mode: 'carry-mac'; operation: 'prepare' | 'stage-draft'; published: false }
+>;

@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "Ongeza hisia ({{count}})",
+      "remove": "Ondoa hisia ({{count}})",
+      "count": "Hisia: {{count}}",
+      "failed": "Imeshindwa kusasisha hisia"
+    },
     "actions": {
       "createTaskFromMessage": "Unda kazi kutoka ujumbe",
       "editMessage": "Hariri ujumbe",
@@ -194,7 +200,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Jina lazima liwe na angalau herufi moja au tarakimu moja",
-      "nameTooLong": "Jina ni refu mno (kiwango cha juu herufi 128)",
+      "nameTooLong": "Jina ni refu mno (kiwango cha juu herufi 64)",
       "selectWorkingDirectory": "Chagua saraka ya kazi (cwd)",
       "memberNameRequired": "Jina la mwanachama haliwezi kuwa tupu",
       "memberNameInvalid": "Jina la mwanachama lazima lianze na alfanumeriki, litumie [a-zA-Z0-9._-] pekee, kiwango cha juu herufi 128",
@@ -262,6 +268,8 @@
       "name": "Jina"
     },
     "memberRestartWarning": "Kuhifadhi kutaanzisha upya mwenzako huyu wa timu ili kutumia mabadiliko ya jukumu, mtiririko wa kazi, kutengana kwa worktree, mtoa huduma, modeli, juhudi, au ufikiaji wa MCP.",
+    "displayedRuntimeHint": "Kwenye kadi ya mshiriki: {{runtime}}. Mipangilio iliyohifadhiwa ni tofauti.",
+    "useDisplayedRuntime": "Tumia mipangilio ya kadi",
     "notices": {
       "liveRenameBlocked": "Kuhifadhi kwa moja kwa moja kumezuiwa kwa sababu wenzako waliopo wa timu walibadilishwa jina. Tendua mabadiliko hayo ya utambulisho au simamisha timu kwanza.",
       "newLiveTeammates": "Wenzako wapya wa timu hawawezi kuongezwa kutoka Hariri Timu wakati timu iko hai. Tumia kidirisha cha Ongeza mwanachama badala yake.",
@@ -351,6 +359,30 @@
     "placeholders": {
       "name": "member-name",
       "mcpServers": "github, sentry"
+    },
+    "gateway": {
+      "apiKeyLabel": "Gateway API key",
+      "apiKeyPlaceholder": "Paste the teammate gateway API key",
+      "authRejected": "Key authorization was rejected.",
+      "bindButton": "Bind teammate",
+      "bindingStatus": "Bound to {{profile}}",
+      "credentialChanged": "stored key changed — bind again with a new key",
+      "credentialMissing": "stored key missing — bind again with a new key",
+      "credentialReady": "key stored",
+      "emptyCatalog": "The model catalog is empty.",
+      "keyRequired": "Enter the gateway API key first.",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. Miunganisho iliyohifadhiwa kabla ya kufungua fomu hii husasishwa mara moja na huhifadhi mabadiliko ukighairi fomu ya timu.",
+      "probeButton": "Check key and load models",
+      "probing": "Checking...",
+      "profileLabel": "Gateway profile",
+      "profilePlaceholder": "Select a gateway profile",
+      "profileRequired": "Select a gateway profile first.",
+      "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+      "title": "Gateway provider",
+      "unbindButton": "Unbind",
+      "unavailable": "The gateway is unavailable right now."
     }
   },
   "detail": {
@@ -730,6 +762,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Unda gumzo la kikundi",
+      "description": "Chagua angalau mawakala wawili. Unajumuishwa kiotomatiki.",
+      "name": "Jina la gumzo",
+      "autoInclude": "Ongeza wanachama wapya kiotomatiki",
+      "minimum": "Chagua angalau mawakala wawili.",
+      "creating": "Inaunda…",
+      "retryCreate": "Jaribu kuunda tena",
+      "unavailable": "Gumzo halipatikani",
+      "message": "Tuma ujumbe kwa kikundi hiki",
+      "archivedHint": "Gumzo hili limehifadhiwa kwenye kumbukumbu. Lirejeshe ili utume ujumbe.",
+      "restartHint": "Washiriki wote lazima wawe na mazingira yanayooana ya utekelezaji yanayoendelea kabla ya kutuma ujumbe.",
+      "unknownDelivery": "Imehifadhiwa. Hali ya uwasilishaji haijulikani.",
+      "sending": "Inatuma…",
+      "retrySend": "Tuma tena ujumbe uleule",
+      "send": "Tuma",
+      "archived": "Mazungumzo yaliyohifadhiwa",
+      "restore": "Rejesha gumzo",
+      "archive": "Hifadhi gumzo kwenye kumbukumbu",
+      "delivery": {
+        "queued": "kwenye foleni",
+        "accepted": "imekubaliwa",
+        "failed": "imeshindwa",
+        "unknown": "haijulikani",
+        "skipped": "imerukwa"
+      }
+    },
     "actions": {
       "toLatest": "Nenda kwa za karibuni",
       "bottomSheetActions": "Vitendo vya karatasi ya chini ya ujumbe",
@@ -971,7 +1030,8 @@
       "cancel": "Ghairi",
       "delete": "Futa",
       "markResolved": "Weka alama kuwa imesuluhishwa",
-      "save": "Hifadhi"
+      "save": "Hifadhi",
+      "openInTaskTab": "Fungua kwenye kichupo tofauti"
     },
     "attachments": {
       "commentAttachment": "Kiambatisho cha maoni",
@@ -2968,6 +3028,25 @@
         "weight_few": "uzito {{count}}",
         "weight_many": "uzito {{count}}"
       }
+    }
+  },
+  "externalPrompt": {
+    "requestHelp": "Name the templates to use and describe any edits in your request.",
+    "editAvailable": "Editing draft/stopped configuration is available.",
+    "trashAvailable": "Reversible trash for draft/stopped teams is available."
+  },
+  "managementChanges": {
+    "title": "Recent changes",
+    "created": "Created",
+    "edited": "Edited",
+    "hidden": "Some recent changes are hidden by the current filters.",
+    "roster": "Roles: +{{added}}/-{{removed}}",
+    "fields": {
+      "displayName": "Name changed",
+      "description": "Description changed",
+      "color": "Color changed",
+      "leadInstructions": "Lead instructions changed",
+      "members": "Members changed"
     }
   }
 }

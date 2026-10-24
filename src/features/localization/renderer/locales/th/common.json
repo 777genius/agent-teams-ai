@@ -642,7 +642,8 @@
       "byTime": "ตามเวลา",
       "byUnread": "ตามที่ยังไม่อ่าน",
       "byProject": "ตามโปรเจกต์",
-      "byTeam": "ตามทีม"
+      "byTeam": "ตามทีม",
+      "manualOrder": "ลำดับด้วยตนเอง"
     }
   },
   "toolViewer": {

@@ -1,3 +1,4 @@
+import { assertReviewReplayEvidence } from './reviewReplayEvidence.js';
 import { hasUnqualifiedNativeChain } from '../../nativeCaptureProof.js';
 import { threeWayTextMerge } from './threeWayTextMerge.js';
 import { mkdir } from 'fs/promises';
@@ -14,7 +15,6 @@ import {
   reviewApplyMutationContext,
   type LedgerApplyOutcome,
   getCurrentTextReadError,
-  withFileMutationLock,
   withFileMutationLocks,
   mapRejectedHunkIndicesByHashStrict,
   type ApplierContext,
@@ -32,13 +32,42 @@ export function createDecisionApply(getContext: () => ApplierContext) {
         hooks,
         observedPreimages: new Map(),
         plannedTransitions: new Map(
-          (hooks?.initialDiskTransitions ?? []).map((transition) => [
-            transition.filePath,
-            transition,
-          ])
+          (hooks?.initialDiskTransitions ?? []).map((transition) => [transition.filePath, transition])
         ),
       };
       return reviewApplyMutationContext.run(context, async () => {
+        assertReviewReplayEvidence(request, fileContents, hooks?.initialDiskTransitions ?? []);
+        if (hooks?.initialDiskTransitions?.length) {
+          const renameEndpoints: { oldFilePath: string; newFilePath: string }[] = [];
+          for (const change of fileContents.values()) {
+            const ledgerSnippets = change.snippets.filter(
+              (snippet) => snippet.ledger && !snippet.isError
+            );
+            const relation = ctx.resolveLedgerRelation(ledgerSnippets);
+            if (relation?.kind === 'rename') {
+              const endpoints = ctx.resolveLedgerRenameEndpoints(ledgerSnippets, relation);
+              if (!endpoints) throw new Error('Ledger rename recovery metadata is incomplete.');
+              renameEndpoints.push(endpoints);
+            }
+          }
+          for (const transition of hooks.initialDiskTransitions) {
+            if (transition.operation !== 'move') continue;
+            const source = ctx.normalizeRelationComparisonPath(transition.filePath);
+            const target = ctx.normalizeRelationComparisonPath(transition.relatedFilePath ?? '');
+            if (
+              !renameEndpoints.some((endpoints) => {
+                const oldPath = ctx.normalizeRelationComparisonPath(endpoints.oldFilePath);
+                const newPath = ctx.normalizeRelationComparisonPath(endpoints.newFilePath);
+                return (
+                  (source === newPath && target === oldPath) ||
+                  (source === oldPath && target === newPath)
+                );
+              })
+            ) {
+              throw new Error('Review replay evidence path does not match ledger rename');
+            }
+          }
+        }
         await ctx.resumeInitialReviewFileTransactions(context);
         const result = await ctx.applyReviewDecisionsInContext(request, fileContents);
         const diskTransitions = new Map(context.plannedTransitions);
@@ -68,7 +97,6 @@ export function createDecisionApply(getContext: () => ApplierContext) {
           continue;
         }
 
-        // Skip files where all hunks are accepted (nothing to reject)
         if (decision.fileDecision === 'accepted') {
           skipped++;
           continue;
@@ -84,18 +112,6 @@ export function createDecisionApply(getContext: () => ApplierContext) {
         const allHunksRejected =
           Object.keys(decision.hunkDecisions).length > 0 &&
           Object.values(decision.hunkDecisions).every((d) => d === 'rejected');
-        const hasNewFileSnippet = fileContent.snippets.some(
-          (s) => s.type === 'write-new' || s.ledger?.operation === 'create'
-        );
-
-        // Special case: rejecting an entirely new file should remove it from disk.
-        // IMPORTANT: Do NOT delete on partial reject — users may want to keep parts of the new file.
-        const shouldDeleteNewFile =
-          fileContent.isNewFile &&
-          hasNewFileSnippet &&
-          original === '' &&
-          (decision.fileDecision === 'rejected' || allHunksRejected);
-
         const ledgerOutcome = await ctx.tryApplyLedgerDecision(
           decision.filePath,
           original,
@@ -122,92 +138,13 @@ export function createDecisionApply(getContext: () => ApplierContext) {
           continue;
         }
 
-        if (shouldDeleteNewFile) {
-          const outcome = await withFileMutationLock(decision.filePath, () =>
-            ctx.rejectNonLedgerNewFile(decision.filePath, modified)
-          );
-          if (outcome.status === 'applied') {
-            applied++;
-          } else {
-            if (outcome.status === 'conflict') conflicts++;
-            errors.push({
-              filePath: decision.filePath,
-              error: outcome.error,
-              code: outcome.code,
-            });
-          }
-          continue;
-        }
-
-        if (original === null || modified === null) {
-          errors.push({
-            filePath: decision.filePath,
-            error: 'Содержимое файла недоступно для применения review',
-            code: 'unavailable',
-          });
-          continue;
-        }
-
-        try {
-          if (decision.fileDecision === 'rejected') {
-            // Reject entire file
-            const result = await ctx.rejectFile(
-              request.teamName,
-              decision.filePath,
-              original,
-              modified
-            );
-            if (result.success) {
-              applied++;
-            } else {
-              if (result.hadConflicts) conflicts++;
-              errors.push({
-                filePath: decision.filePath,
-                error: result.conflictDescription || 'Не удалось применить reject',
-              });
-            }
-          } else {
-            // Partial reject — only specific hunks
-            if (rejectedHunkIndices.length === 0) {
-              skipped++;
-              continue;
-            }
-            if (!decision.hunkContextHashes) {
-              conflicts++;
-              errors.push({
-                filePath: decision.filePath,
-                error: 'Partial reject requires stable hunk context hashes.',
-                code: 'conflict',
-              });
-              continue;
-            }
-
-            const result = await ctx.rejectHunks(
-              request.teamName,
-              decision.filePath,
-              original,
-              modified,
-              rejectedHunkIndices,
-              fileContent.snippets,
-              decision.hunkContextHashes
-            );
-
-            if (result.success) {
-              applied++;
-            } else {
-              if (result.hadConflicts) conflicts++;
-              errors.push({
-                filePath: decision.filePath,
-                error: result.conflictDescription || 'Не удалось применить reject',
-              });
-            }
-          }
-        } catch (err) {
-          errors.push({
-            filePath: decision.filePath,
-            error: `Неожиданная ошибка: ${String(err)}`,
-          });
-        }
+        // Native snippets have no task-time filesystem identity. Current bytes
+        // cannot justify deleting or restoring a file through a mutable path.
+        errors.push({
+          filePath: decision.filePath,
+          error: 'Исходное состояние файла не подтверждено для reject',
+          code: 'unavailable',
+        });
       }
 
       return { applied, skipped, conflicts, errors };

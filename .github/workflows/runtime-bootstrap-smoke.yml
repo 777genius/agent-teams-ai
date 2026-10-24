@@ -11,6 +11,18 @@ on:
       - 'scripts/ci/verify-runtime-lock.mjs'
       - 'scripts/lib/github-release-download-error.mjs'
       - 'scripts/lib/runtime-cli-version.mjs'
+      - 'scripts/lib/runtime-bootstrap-diagnostics.mts'
+      - 'scripts/lib/runtime-command-capture.mts'
+      - 'scripts/lib/runtime-archive-checksum.mjs'
+      - 'scripts/lib/runtime-payload-cache.mjs'
+      - 'scripts/lib/runtime-payload-cache.test.mjs'
+      - 'scripts/lib/runtime-payload-cache-async.test.mts'
+      - 'scripts/lib/runtime-payload-inventory.mts'
+      - 'scripts/lib/runtime-windows-zip-extraction.mts'
+      - 'scripts/lib/runtime-windows-zip-extraction.test.mts'
+      - 'scripts/lib/runtime-archive-extraction.mts'
+      - 'scripts/lib/runtime-archive-extraction.test.mts'
+      - 'scripts/lib/runtime-zip.test-fixture.mts'
       - '.github/workflows/runtime-bootstrap-smoke.yml'
   pull_request:
     paths:
@@ -20,26 +32,43 @@ on:
       - 'scripts/ci/verify-runtime-lock.mjs'
       - 'scripts/lib/github-release-download-error.mjs'
       - 'scripts/lib/runtime-cli-version.mjs'
+      - 'scripts/lib/runtime-bootstrap-diagnostics.mts'
+      - 'scripts/lib/runtime-command-capture.mts'
+      - 'scripts/lib/runtime-archive-checksum.mjs'
+      - 'scripts/lib/runtime-payload-cache.mjs'
+      - 'scripts/lib/runtime-payload-cache.test.mjs'
+      - 'scripts/lib/runtime-payload-cache-async.test.mts'
+      - 'scripts/lib/runtime-payload-inventory.mts'
+      - 'scripts/lib/runtime-windows-zip-extraction.mts'
+      - 'scripts/lib/runtime-windows-zip-extraction.test.mts'
+      - 'scripts/lib/runtime-archive-extraction.mts'
+      - 'scripts/lib/runtime-archive-extraction.test.mts'
+      - 'scripts/lib/runtime-zip.test-fixture.mts'
       - '.github/workflows/runtime-bootstrap-smoke.yml'
 
 permissions:
   contents: read
 
+# Cancel obsolete PR checks without sharing custody with push or manual runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   bootstrap:
     name: anonymous bootstrap (${{ matrix.platform }})
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 15
+    timeout-minutes: ${{ matrix.platform == 'win32-x64' && 45 || 15 }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: linux-x64
-            runner: ubuntu-24.04
+            runner: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
           - platform: win32-x64
             runner: windows-2022
           - platform: darwin-arm64
-            runner: macos-14
+            runner: ${{ vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15' }}
           - platform: darwin-x64
             runner: macos-15-intel
 
@@ -52,5 +81,26 @@ jobs:
         with:
           node-version-file: .node-version
 
+      - name: Verify native Windows ZIP extraction and containment
+        if: matrix.platform == 'win32-x64'
+        run: node --test --test-name-pattern="Windows inbox ZIP" scripts/lib/runtime-payload-cache.test.mjs
+
+      - name: Verify ZIP metadata and native reader differentials
+        if: matrix.platform != 'linux-x64'
+        run: node --test scripts/lib/runtime-archive-extraction.test.mts
+      - name: Verify ZIP extraction and companion integrity
+        run: node --test --test-name-pattern="ZIP extraction" scripts/lib/runtime-payload-cache.test.mjs
+
+      - name: Verify literal Windows ZIP reader and streamed integrity
+        run: node --test scripts/lib/runtime-windows-zip-extraction.test.mts
+
+      - name: Verify complete payload cache and publication lock ordering
+        run: node --test scripts/lib/runtime-payload-cache.test.mjs
+
+      - name: Verify asynchronous payload inventory, rollback, and reader drain
+        run: node --test scripts/lib/runtime-payload-cache-async.test.mts
+
       - name: Download, extract, and execute pinned runtime anonymously
+        env:
+          CLAUDE_DEV_RUNTIME_DIAGNOSTICS: '1'
         run: node ./scripts/ci/verify-public-runtime-bootstrap.mjs

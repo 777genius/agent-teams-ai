@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "Adaugă reacție ({{count}})",
+      "remove": "Elimină reacția ({{count}})",
+      "count": "Reacții: {{count}}",
+      "failed": "Reacțiile nu au putut fi actualizate"
+    },
     "actions": {
       "createTaskFromMessage": "Creează sarcină din mesaj",
       "editMessage": "Editează mesajul",
@@ -194,7 +200,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Numele trebuie să conțină cel puțin o literă sau o cifră",
-      "nameTooLong": "Numele este prea lung (max 128 de caractere)",
+      "nameTooLong": "Numele este prea lung (max 64 de caractere)",
       "selectWorkingDirectory": "Selectează directorul de lucru (cwd)",
       "memberNameRequired": "Numele membrului nu poate fi gol",
       "memberNameInvalid": "Numele membrului trebuie să înceapă cu un caracter alfanumeric, să folosească doar [a-zA-Z0-9._-], max 128 de caractere",
@@ -262,6 +268,8 @@
       "name": "Nume"
     },
     "memberRestartWarning": "Salvarea va reporni acest coechipier pentru a aplica modificările de rol, flux de lucru, izolare worktree, furnizor, model, efort sau acces MCP.",
+    "displayedRuntimeHint": "Pe fișa membrului: {{runtime}}. Setările salvate sunt diferite.",
+    "useDisplayedRuntime": "Folosește setările din fișă",
     "notices": {
       "liveRenameBlocked": "Salvarea live este blocată deoarece coechipierii existenți au fost redenumiți. Anulează acele modificări de identitate sau oprește mai întâi echipa.",
       "newLiveTeammates": "Coechipierii noi nu pot fi adăugați din Editează echipa cât timp echipa este live. Folosește în schimb dialogul Adaugă membru.",
@@ -351,6 +359,30 @@
     "placeholders": {
       "name": "nume-membru",
       "mcpServers": "github, sentry"
+    },
+    "gateway": {
+      "apiKeyLabel": "Gateway API key",
+      "apiKeyPlaceholder": "Paste the teammate gateway API key",
+      "authRejected": "Key authorization was rejected.",
+      "bindButton": "Bind teammate",
+      "bindingStatus": "Bound to {{profile}}",
+      "credentialChanged": "stored key changed — bind again with a new key",
+      "credentialMissing": "stored key missing — bind again with a new key",
+      "credentialReady": "key stored",
+      "emptyCatalog": "The model catalog is empty.",
+      "keyRequired": "Enter the gateway API key first.",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. Asocierile salvate înainte de deschiderea acestui formular se actualizează imediat și păstrează modificările dacă anulați formularul echipei.",
+      "probeButton": "Check key and load models",
+      "probing": "Checking...",
+      "profileLabel": "Gateway profile",
+      "profilePlaceholder": "Select a gateway profile",
+      "profileRequired": "Select a gateway profile first.",
+      "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+      "title": "Gateway provider",
+      "unbindButton": "Unbind",
+      "unavailable": "The gateway is unavailable right now."
     }
   },
   "detail": {
@@ -730,6 +762,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Creează chat de grup",
+      "description": "Alege cel puțin doi agenți. Ești inclus automat.",
+      "name": "Numele chatului",
+      "autoInclude": "Adaugă automat membri noi",
+      "minimum": "Selectează cel puțin doi agenți.",
+      "creating": "Se creează…",
+      "retryCreate": "Reîncearcă crearea",
+      "unavailable": "Chat indisponibil",
+      "message": "Mesaj către acest grup",
+      "archivedHint": "Acest chat este arhivat. Restaurează-l pentru a trimite mesaje.",
+      "restartHint": "Toți participanții trebuie să aibă un mediu de execuție compatibil pornit pentru a trimite mesaje.",
+      "unknownDelivery": "Salvat. Starea livrării este necunoscută.",
+      "sending": "Se trimite…",
+      "retrySend": "Retrimite același mesaj",
+      "send": "Trimite",
+      "archived": "Chaturi arhivate",
+      "restore": "Restaurează chatul",
+      "archive": "Arhivează chatul",
+      "delivery": {
+        "queued": "în coadă",
+        "accepted": "acceptat",
+        "failed": "eșuat",
+        "unknown": "necunoscut",
+        "skipped": "omis"
+      }
+    },
     "actions": {
       "toLatest": "La cele mai recente",
       "bottomSheetActions": "Acțiuni panou inferior pentru mesaje",
@@ -969,7 +1028,8 @@
       "cancel": "Anulează",
       "delete": "Șterge",
       "markResolved": "Marchează ca rezolvată",
-      "save": "Salvează"
+      "save": "Salvează",
+      "openInTaskTab": "Deschide într-o filă separată"
     },
     "attachments": {
       "commentAttachment": "Atașament comentariu",
@@ -2966,6 +3026,25 @@
         "weight_few": "greutate {{count}}",
         "weight_many": "greutate {{count}}"
       }
+    }
+  },
+  "externalPrompt": {
+    "requestHelp": "Name the templates to use and describe any edits in your request.",
+    "editAvailable": "Editing draft/stopped configuration is available.",
+    "trashAvailable": "Reversible trash for draft/stopped teams is available."
+  },
+  "managementChanges": {
+    "title": "Recent changes",
+    "created": "Created",
+    "edited": "Edited",
+    "hidden": "Some recent changes are hidden by the current filters.",
+    "roster": "Roles: +{{added}}/-{{removed}}",
+    "fields": {
+      "displayName": "Name changed",
+      "description": "Description changed",
+      "color": "Color changed",
+      "leadInstructions": "Lead instructions changed",
+      "members": "Members changed"
     }
   }
 }

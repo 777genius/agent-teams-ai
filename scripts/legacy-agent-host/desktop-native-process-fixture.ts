@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { copyFile, readFile, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import {
   prepareDesktopBackendFixture,
   desktopBackendEnvironment,
@@ -15,8 +15,8 @@ import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/comp
 import type { Service } from './desktop-native-process-model.ts';
 
 export const PROCESS_ARTIFACT = {
-  directory: resolve(import.meta.dirname, '../../.artifacts/provider-migration/m19-native-artifact-20261023'),
-  manifestSha256: 'ae2ebdc8c0deddbee0cb4cdd84f79dda95bef6b800f142ad82a729caaabf0f99',
+  directory: '/private/tmp/TEST-m19-native-ancestry-artifact-20261024-a0HlV7IZ',
+  manifestSha256: '17cc2429f59a5261dfd65c2af414ed307f669bc271a2bb5f51c131be05cd2278',
 };
 const quote = (s: string) => "'" + s.replaceAll("'", "'\\''") + "'";
 export async function readProcessServices(
@@ -88,15 +88,15 @@ export async function prepareProcessFixture(
       primary: { nonce: `TEST-${randomUUID()}` },
       neighbor: { nonce: `TEST-${randomUUID()}` },
     },
-    ttlMs: 300_000,
-    nativeActions: { bash: 1, register: 1 },
+    ttlMs: 45_000,
+    nativeActions: { bash: 2, register: 1 },
   };
   await writeFile(join(fixture.root, 'process-ui-seed.json'), JSON.stringify(seed), {
     mode: 0o600,
     flag: 'wx',
   });
   const scripts: Record<string, string> = {};
-  for (const name of ['process-service.ts', 'process-bootstrap.ts']) {
+  for (const name of ['process-foreground-service.ts']) {
     const from = join(import.meta.dirname, 'fixtures', name),
       to = join(fixture.root, 'workspace', name);
     await copyFile(from, to);
@@ -175,7 +175,7 @@ export async function prepareProcessFixture(
       fixture.descriptorPath,
       pins.descriptorSha256
     ),
-    bashCommand: `${quote(fixture.node)} ${quote(join(fixture.root, 'workspace/process-bootstrap.ts'))} ${quote(fixture.root)}`,
+    bashCommand: `${quote(fixture.node)} ${quote(join(fixture.root, 'workspace/process-foreground-service.ts'))} ${quote(fixture.root)}`,
   };
 }
 export type ProcessFixture = Awaited<ReturnType<typeof prepareProcessFixture>>;

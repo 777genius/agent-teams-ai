@@ -1,4 +1,5 @@
 import {
+  announcementRuntimeAllowed,
   consumeAnnouncement,
   createAnnouncementState,
   dismissAnnouncement,
@@ -14,6 +15,7 @@ import { AnnouncementUsageTracker } from './AnnouncementUsageTracker';
 import type {
   Announcement,
   AnnouncementDocument,
+  AnnouncementFeed,
   AnnouncementsSnapshot,
   AnnouncementState,
   AnnouncementSummary,
@@ -50,6 +52,7 @@ export interface AnnouncementsServiceOptions {
   origin: AnnouncementState['origin'];
   firstOpenedAt?: string;
   networkEnabled: boolean;
+  runtime?: { platform: string; appVersion: string };
   diagnostic?: (reason: string) => void;
 }
 
@@ -94,6 +97,17 @@ export class AnnouncementsService {
     this.assets = new AnnouncementAssetCapabilities(options.source, assetScheduler);
     this.covers = new AnnouncementCoverCapabilities(options.source, assetScheduler);
     this.firstOpenedAt = options.firstOpenedAt;
+  }
+  private currentFeed(): AnnouncementFeed | null {
+    const feed = this.options.source.current();
+    return feed
+      ? {
+          ...feed,
+          items: feed.items.filter((item) =>
+            announcementRuntimeAllowed(item, this.options.runtime)
+          ),
+        }
+      : null;
   }
   private lifecycle<T>(operation: () => Promise<T>): Promise<T> {
     const result = this.lifecycleTail.then(operation);
@@ -299,7 +313,7 @@ export class AnnouncementsService {
       : null;
   }
   private snapshot(): AnnouncementsSnapshot {
-    const feed = this.options.source.current();
+    const feed = this.currentFeed();
     const state = this.effectiveState();
     const ready = this.owned && !this.storageFailed && this.isFresh();
     return {
@@ -386,7 +400,7 @@ export class AnnouncementsService {
     )
       return null;
     const state = this.effectiveState();
-    const feed = this.options.source.current();
+    const feed = this.currentFeed();
     const item =
       feed && state ? selectAutoAnnouncement(feed, state, this.options.clock.now()) : null;
     return item && this.failedBodyKey !== `${feed?.revision}:${item.id}:${item.bodySha256}`
@@ -395,7 +409,7 @@ export class AnnouncementsService {
   }
   async prepareAuto(context: AnnouncementWindowContext): Promise<PreparedAnnouncement | null> {
     const item = this.candidate(context);
-    const feed = this.options.source.current();
+    const feed = this.currentFeed();
     if (!item || !feed) return null;
     const generation = this.generation;
     try {
@@ -405,7 +419,7 @@ export class AnnouncementsService {
         generation !== this.generation ||
         current?.id !== item.id ||
         current.bodySha256 !== item.bodySha256 ||
-        this.options.source.current()?.revision !== feed.revision
+        this.currentFeed()?.revision !== feed.revision
       )
         return null;
       const document = {
@@ -449,7 +463,7 @@ export class AnnouncementsService {
         prepared.document.announcement.id !== input.id ||
         prepared.document.announcement.bodySha256 !== input.bodySha256 ||
         prepared.document.revision !== input.revision ||
-        this.options.source.current()?.revision !== input.revision
+        this.currentFeed()?.revision !== input.revision
       )
         return null;
       const generation = this.generation;
@@ -461,7 +475,7 @@ export class AnnouncementsService {
         generation !== this.generation ||
         rechecked?.id !== item.id ||
         rechecked.bodySha256 !== item.bodySha256 ||
-        this.options.source.current()?.revision !== input.revision
+        this.currentFeed()?.revision !== input.revision
       )
         return null;
       try {
@@ -476,7 +490,7 @@ export class AnnouncementsService {
       }
       this.options.diagnostic?.('claim_committed');
       this.emit();
-      const currentFeed = this.options.source.current();
+      const currentFeed = this.currentFeed();
       const stillPublished = currentFeed?.items.some(
         (entry) =>
           entry.id === item.id &&
@@ -520,7 +534,7 @@ export class AnnouncementsService {
         this.documentOpenTokens.delete(context.windowId);
       return null;
     }
-    const feed = this.options.source.current();
+    const feed = this.currentFeed();
     const item =
       feed && visibleAnnouncements(feed, this.options.clock.now()).find((entry) => entry.id === id);
     if (!item) {
@@ -532,7 +546,7 @@ export class AnnouncementsService {
     try {
       const body = await this.options.source.body(item, this.controller.signal);
       return await this.mutation(async () => {
-        const current = this.options.source.current();
+        const current = this.currentFeed();
         if (
           this.documentOpenTokens.get(context.windowId) !== token ||
           !this.owned ||
@@ -556,7 +570,7 @@ export class AnnouncementsService {
           }
         }
         this.emit();
-        const latest = this.options.source.current();
+        const latest = this.currentFeed();
         if (
           this.documentOpenTokens.get(context.windowId) !== token ||
           !this.owned ||
@@ -602,7 +616,7 @@ export class AnnouncementsService {
       !context.isDocumentCurrent()
     )
       return null;
-    const feed = this.options.source.current();
+    const feed = this.currentFeed();
     const item = feed
       ? visibleAnnouncements(feed, this.options.clock.now()).find((entry) => entry.id === id)
       : undefined;
@@ -612,7 +626,7 @@ export class AnnouncementsService {
     const heroImagePath = item.heroImagePath;
     const result = await this.covers.load(item, revision, requestId, context);
     if (!result || !context.isDocumentCurrent()) return null;
-    const current = this.options.source.current();
+    const current = this.currentFeed();
     const stillCurrent = current
       ? visibleAnnouncements(current, this.options.clock.now()).some(
           (entry) =>

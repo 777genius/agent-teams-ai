@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "Magdagdag ng reaksyon ({{count}})",
+      "remove": "Alisin ang reaksyon ({{count}})",
+      "count": "Mga reaksyon: {{count}}",
+      "failed": "Hindi ma-update ang mga reaksyon"
+    },
     "actions": {
       "createTaskFromMessage": "Lumikha ng task mula sa mensahe",
       "editMessage": "I-edit ang mensahe",
@@ -194,7 +200,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Ang pangalan ay dapat maglaman ng kahit isang letra o numero",
-      "nameTooLong": "Masyadong mahaba ang pangalan (max 128 chars)",
+      "nameTooLong": "Masyadong mahaba ang pangalan (max 64 chars)",
       "selectWorkingDirectory": "Pumili ng working directory (cwd)",
       "memberNameRequired": "Hindi maaaring blangko ang pangalan ng miyembro",
       "memberNameInvalid": "Ang pangalan ng miyembro ay dapat magsimula sa alphanumeric, gumamit lang ng [a-zA-Z0-9._-], max 128 chars",
@@ -262,6 +268,8 @@
       "name": "Pangalan"
     },
     "memberRestartWarning": "Ang pag-save ay magre-restart sa teammate na ito para ilapat ang mga pagbabago sa role, workflow, worktree isolation, provider, model, effort, o MCP access.",
+    "displayedRuntimeHint": "Sa card ng miyembro: {{runtime}}. Iba ang mga naka-save na setting.",
+    "useDisplayedRuntime": "Gamitin ang mga setting sa card",
     "notices": {
       "liveRenameBlocked": "Naka-block ang live save dahil pinalitan ng pangalan ang mga umiiral na teammate. Ibalik ang mga pagbabago sa identity na iyon o ihinto muna ang team.",
       "newLiveTeammates": "Hindi maaaring magdagdag ng mga bagong teammate mula sa Edit Team habang live ang team. Gamitin ang Add member dialog sa halip.",
@@ -351,6 +359,30 @@
     "placeholders": {
       "name": "member-name",
       "mcpServers": "github, sentry"
+    },
+    "gateway": {
+      "apiKeyLabel": "Gateway API key",
+      "apiKeyPlaceholder": "Paste the teammate gateway API key",
+      "authRejected": "Key authorization was rejected.",
+      "bindButton": "Bind teammate",
+      "bindingStatus": "Bound to {{profile}}",
+      "credentialChanged": "stored key changed — bind again with a new key",
+      "credentialMissing": "stored key missing — bind again with a new key",
+      "credentialReady": "key stored",
+      "emptyCatalog": "The model catalog is empty.",
+      "keyRequired": "Enter the gateway API key first.",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. Agad ina-update ang mga binding na na-save bago buksan ang form na ito at nananatili ang mga pagbabago kapag kinansela ang form ng team.",
+      "probeButton": "Check key and load models",
+      "probing": "Checking...",
+      "profileLabel": "Gateway profile",
+      "profilePlaceholder": "Select a gateway profile",
+      "profileRequired": "Select a gateway profile first.",
+      "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+      "title": "Gateway provider",
+      "unbindButton": "Unbind",
+      "unavailable": "The gateway is unavailable right now."
     }
   },
   "detail": {
@@ -730,6 +762,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Gumawa ng group chat",
+      "description": "Pumili ng hindi bababa sa dalawang agent. Awtomatiko kang kasama.",
+      "name": "Pangalan ng chat",
+      "autoInclude": "Awtomatikong magdagdag ng mga bagong miyembro",
+      "minimum": "Pumili ng hindi bababa sa dalawang agent.",
+      "creating": "Ginagawa…",
+      "retryCreate": "Subukang gumawa muli",
+      "unavailable": "Hindi available ang chat",
+      "message": "Magpadala ng mensahe sa grupong ito",
+      "archivedHint": "Naka-archive ang chat na ito. Ibalik ito para makapagpadala ng mga mensahe.",
+      "restartHint": "Dapat may tumatakbong compatible na runtime ang lahat ng kalahok bago magpadala.",
+      "unknownDelivery": "Na-save. Hindi alam ang katayuan ng paghahatid.",
+      "sending": "Ipinapadala…",
+      "retrySend": "Ipadala muli ang parehong mensahe",
+      "send": "Ipadala",
+      "archived": "Mga naka-archive na chat",
+      "restore": "Ibalik ang chat",
+      "archive": "I-archive ang chat",
+      "delivery": {
+        "queued": "nakapila",
+        "accepted": "tinanggap",
+        "failed": "nabigo",
+        "unknown": "hindi alam",
+        "skipped": "nilaktawan"
+      }
+    },
     "actions": {
       "toLatest": "Sa pinakabago",
       "bottomSheetActions": "Mga aksyon ng message bottom sheet",
@@ -969,7 +1028,8 @@
       "cancel": "Kanselahin",
       "delete": "Tanggalin",
       "markResolved": "Markahan bilang naayos",
-      "save": "I-save"
+      "save": "I-save",
+      "openInTaskTab": "Buksan sa hiwalay na tab"
     },
     "attachments": {
       "commentAttachment": "Attachment ng komento",
@@ -2966,6 +3026,25 @@
         "weight_few": "weight {{count}}",
         "weight_many": "weight {{count}}"
       }
+    }
+  },
+  "externalPrompt": {
+    "requestHelp": "Name the templates to use and describe any edits in your request.",
+    "editAvailable": "Editing draft/stopped configuration is available.",
+    "trashAvailable": "Reversible trash for draft/stopped teams is available."
+  },
+  "managementChanges": {
+    "title": "Recent changes",
+    "created": "Created",
+    "edited": "Edited",
+    "hidden": "Some recent changes are hidden by the current filters.",
+    "roster": "Roles: +{{added}}/-{{removed}}",
+    "fields": {
+      "displayName": "Name changed",
+      "description": "Description changed",
+      "color": "Color changed",
+      "leadInstructions": "Lead instructions changed",
+      "members": "Members changed"
     }
   }
 }

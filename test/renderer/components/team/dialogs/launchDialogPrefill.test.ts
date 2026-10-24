@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import { resolveLaunchDialogPrefill } from '@renderer/components/team/dialogs/launchDialogPrefill';
+import { describe, expect, it } from 'vitest';
 
 import type { ResolvedTeamMember, TeamCreateRequest, TeamProviderId } from '@shared/types';
 
@@ -9,6 +8,83 @@ function createStoredModelGetter(models: Partial<Record<TeamProviderId, string>>
 }
 
 describe('resolveLaunchDialogPrefill', () => {
+  it.each([
+    { saved: undefined, previous: undefined, stored: 'off' as const, expected: 'off' },
+    { saved: 'on' as const, previous: 'off' as const, stored: 'off' as const, expected: 'on' },
+    { saved: undefined, previous: 'on' as const, stored: 'off' as const, expected: 'on' },
+    {
+      saved: 'inherit' as const,
+      previous: 'on' as const,
+      stored: 'off' as const,
+      expected: 'inherit',
+    },
+  ])(
+    'preserves fast mode precedence for unresolved runtime: $expected',
+    ({ saved, previous, stored, expected }) => {
+      const result = resolveLaunchDialogPrefill({
+        members: [],
+        savedRequest: {
+          teamName: 'unresolved-team',
+          runtimeSelectionVersion: 1,
+          cwd: '/sandbox/test-project',
+          members: [],
+          fastMode: saved,
+        },
+        previousLaunchParams: { fastMode: previous },
+        multimodelEnabled: true,
+        storedProviderId: 'anthropic',
+        storedEffort: '',
+        storedFastMode: stored,
+        storedLimitContext: false,
+        getStoredModel: createStoredModelGetter({}),
+      });
+      expect(result.runtimeSelectionUnresolved).toBe(true);
+      expect(result.fastMode).toBe(expected);
+    }
+  );
+
+  it.each([
+    { runtimeSelectionVersion: 1 as const, source: 'stored', expectedModel: '' },
+    { runtimeSelectionVersion: 1 as const, source: 'lead', expectedModel: '' },
+    { runtimeSelectionVersion: 1 as const, source: 'previous', expectedModel: '' },
+    { runtimeSelectionVersion: undefined, source: 'stored', expectedModel: 'gpt-5.4' },
+    { runtimeSelectionVersion: undefined, source: 'lead', expectedModel: 'gpt-5.3-codex' },
+    { runtimeSelectionVersion: undefined, source: 'previous', expectedModel: 'gpt-5.4' },
+  ])(
+    'keeps persisted default model intent for marker $runtimeSelectionVersion and $source model',
+    ({ runtimeSelectionVersion, source, expectedModel }) => {
+      const result = resolveLaunchDialogPrefill({
+        members: (source === 'lead'
+          ? [
+              {
+                name: 'team-lead',
+                agentType: 'team-lead',
+                providerId: 'codex',
+                model: 'gpt-5.3-codex',
+              },
+            ]
+          : []) as ResolvedTeamMember[],
+        savedRequest: {
+          teamName: 'default-model-team',
+          runtimeSelectionVersion,
+          providerId: 'codex',
+          cwd: '/sandbox/test-project',
+          members: [],
+        },
+        previousLaunchParams:
+          source === 'previous' ? { providerId: 'codex', model: 'gpt-5.4' } : undefined,
+        multimodelEnabled: true,
+        storedProviderId: 'anthropic',
+        storedEffort: 'medium',
+        storedFastMode: 'inherit',
+        storedLimitContext: false,
+        getStoredModel: createStoredModelGetter({ codex: 'gpt-5.4' }),
+      });
+      expect(result.providerId).toBe('codex');
+      expect(result.model).toBe(expectedModel);
+    }
+  );
+
   it('prefills from the current lead runtime before localStorage defaults', () => {
     const members = [
       {

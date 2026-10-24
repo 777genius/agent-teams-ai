@@ -2,6 +2,7 @@ import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 
 import { getController } from '../controller';
+import { registerGroupChatTools } from './groupChatTools';
 import { assertConfiguredTeam } from '../utils/teamConfig';
 import { jsonTextContent } from '../utils/format';
 import { taskRefSchema } from '../utils/schemas';
@@ -12,6 +13,7 @@ const toolContextSchema = {
 };
 
 export function registerMessageTools(server: Pick<FastMCP, 'addTool'>) {
+  registerGroupChatTools(server);
   server.addTool({
     name: 'message_send',
     description:
@@ -64,7 +66,9 @@ export function registerMessageTools(server: Pick<FastMCP, 'addTool'>) {
         ...(taskRefs?.length ? { taskRefs } : {}),
       });
       const deduplicated =
-        result && typeof result === 'object' && (result as { deduplicated?: unknown }).deduplicated === true;
+        result &&
+        typeof result === 'object' &&
+        (result as { deduplicated?: unknown }).deduplicated === true;
       let protocolInstruction =
         'Delivered. If this answered one app/user instruction, do not call message_send again for the same answer.';
       if (deduplicated) {

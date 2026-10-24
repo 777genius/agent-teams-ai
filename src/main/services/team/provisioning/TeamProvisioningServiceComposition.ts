@@ -1,5 +1,6 @@
 import * as runtimeProviderManagementMain from '@features/runtime-provider-management/main';
 import { createTeamProvisioningStatusFeature } from '@features/team-provisioning/main';
+import { readOpenCodeCurrentRuntimeStatus } from '@main/services/runtime/openCodeEffectiveRuntimeVersion';
 import { execCli, spawnCli } from '@main/utils/childProcess';
 import { getAutoDetectedClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
@@ -65,6 +66,7 @@ import {
   type TeamProvisioningCreateDeterministicSpawnFlowBoundary,
   type TeamProvisioningCreateDeterministicSpawnFlowServiceHost,
 } from './TeamProvisioningCreateDeterministicSpawnFlowPortsFactory';
+import { createProvisioningGroupChatPorts } from './TeamProvisioningGroupChatPorts';
 import {
   createTeamProvisioningIdlePromptInjectionBoundaryFromService,
   type TeamProvisioningIdlePromptInjectionBoundary,
@@ -93,6 +95,7 @@ import {
   type TeamProvisioningLeadInboxRelayCompatibilityFacade,
   type TeamProvisioningLeadInboxRelayCompatibilityServiceHost,
 } from './TeamProvisioningLeadInboxRelayCompatibilityFacade';
+import { withLeadInboxRelayClock } from './TeamProvisioningLeadInboxRelayPortsFactory';
 import {
   createTeamProvisioningMemberMcpLaunchConfigProvisionerFromService,
   TeamProvisioningMemberMcpLaunchConfigProvisioner,
@@ -191,7 +194,7 @@ import {
   type TeamProvisioningVerificationProbeServiceHost,
 } from './TeamProvisioningVerificationProbePortsFactory';
 
-import type { TeamRuntimeMemberLaunchEvidence } from '../runtime';
+import type { TeamRuntimeLaunchInput, TeamRuntimeMemberLaunchEvidence } from '../runtime';
 import type { TeamProvisioningServiceCompositionDeps } from './TeamProvisioningServiceCompositionDeps';
 import type { TeamProviderId } from '@shared/types';
 
@@ -205,6 +208,9 @@ export interface RuntimeAdapterRunByTeamEntry {
   cwd?: string;
   allowExperimentalLocalModels?: boolean;
   members?: Record<string, TeamRuntimeMemberLaunchEvidence>;
+  launchInput?: TeamRuntimeLaunchInput;
+  launchStopGeneration?: number;
+  launchStopAllGeneration?: number;
 }
 
 interface ServiceCompositionPorts extends TeamProvisioningOpenCodeDeliveryCompositionPorts {
@@ -409,8 +415,10 @@ function assignCompositionPart<K extends keyof TeamProvisioningServiceCompositio
 }
 
 export function createTeamProvisioningServiceComposition(
-  service: object
+  service: object,
+  groupChats?: Parameters<typeof createProvisioningGroupChatPorts>[0]
 ): TeamProvisioningServiceComposition {
+  const groupMessaging = createProvisioningGroupChatPorts(groupChats);
   const host = createTeamProvisioningServiceCompositionHostAdapters(service);
   const servicePorts = host.ports;
   const deps = host.deps;
@@ -647,6 +655,7 @@ export function createTeamProvisioningServiceComposition(
   );
   assignCompositionPart(host.installTarget, 'processExitPorts', processExitPorts);
   const prepareFacade = createTeamProvisioningPrepareFacadeFromService(host.prepare, {
+    readOpenCodeRuntimeStatus: readOpenCodeCurrentRuntimeStatus,
     resolveClaudeBinaryPath: () => ClaudeBinaryResolver.resolve(),
     execCli,
     inspectOpenCodeLocalModelRuntime: (
@@ -674,6 +683,8 @@ export function createTeamProvisioningServiceComposition(
   const openCodeVisibleReplyProofService = createOpenCodeVisibleReplyProofServiceFromHost(
     host.visibleReplyProof,
     {
+      sendGroupChatReply: groupMessaging.sendReply,
+      hasAcknowledgedInbound: groupMessaging.hasAcknowledgedInbound,
       warn: (message) => logger.warn(message),
       getErrorMessage,
       nowIso,
@@ -686,6 +697,7 @@ export function createTeamProvisioningServiceComposition(
   );
   const openCodePromptDeliveryWatchdogCoordinator = createOpenCodePromptDeliveryWatchdogCoordinator(
     {
+      hasAcknowledgedInbound: groupMessaging.hasAcknowledgedInbound,
       hasAcceptedMemberWorkSyncReport: (input) =>
         servicePorts.memberWorkSyncProofBoundary.hasAcceptedMemberWorkSyncReport(input),
       taskRefsIncludeAll: openCodeTaskRefsIncludeAllValue,
@@ -771,14 +783,7 @@ export function createTeamProvisioningServiceComposition(
   assignCompositionPart(host.installTarget, 'bootstrapEvidenceFacade', bootstrapEvidenceFacade);
   const leadInboxRelayFacade = createTeamProvisioningLeadInboxRelayCompatibilityFacadeFromService(
     host.leadInboxRelay,
-    {
-      logger,
-      getErrorMessage,
-      nowIso,
-      nowMs: () => Date.now(),
-      setTimeout: (callback, ms) => setTimeout(callback, ms),
-      clearTimeout: (handle) => clearTimeout(handle),
-    }
+    withLeadInboxRelayClock({ logger, getErrorMessage, nowIso })
   );
   assignCompositionPart(host.installTarget, 'leadInboxRelayFacade', leadInboxRelayFacade);
   const cleanupRunPorts = createTeamProvisioningCleanupRunPorts<ProvisioningRun>(

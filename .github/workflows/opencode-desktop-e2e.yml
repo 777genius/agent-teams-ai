@@ -6,6 +6,7 @@ on:
     paths:
       - scripts/e2e/opencode-diagnostics-desktop.mjs
       - scripts/e2e/opencode-diagnostics/**
+      - test/scripts/opencodeStartupCleanupFixture.test.mjs
       - .github/workflows/opencode-desktop-e2e.yml
 
 permissions:
@@ -17,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && (vars.CI_LINUX_RUNNER || 'ubicloud-standard-4') || matrix.os }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
@@ -72,3 +73,5 @@ jobs:
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/manifest.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/desktop.log
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/**/app-errors.ndjson
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/**/opencode-bridge/diagnostics/latest.json
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/**/opencode-bridge/diagnostics/events.ndjson

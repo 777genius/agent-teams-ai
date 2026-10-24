@@ -28,6 +28,7 @@ interface FileSectionDiffProps {
   file: FileChangeSummary;
   fileContent: FileChangeWithContent | null;
   draftContent?: string;
+  editable: boolean;
   isLoading: boolean;
   applying: boolean;
   collapseUnchanged: boolean;
@@ -56,6 +57,7 @@ export const FileSectionDiff = ({
   file,
   fileContent,
   draftContent,
+  editable,
   isLoading,
   applying,
   collapseUnchanged,
@@ -85,24 +87,36 @@ export const FileSectionDiff = ({
   const initialModifiedRef = useRef<{
     baseline: string | null;
     discardCounter: number;
+    editable: boolean;
     value: string | null;
   }>({
     baseline: null,
     discardCounter: -1,
+    editable,
     value: null,
   });
   if (
     initialModifiedRef.current.baseline !== baselineModified ||
-    initialModifiedRef.current.discardCounter !== discardCounter
+    initialModifiedRef.current.discardCounter !== discardCounter ||
+    initialModifiedRef.current.editable !== editable
   ) {
     initialModifiedRef.current = {
       baseline: baselineModified,
       discardCounter,
+      editable,
       value: draftContent ?? baselineModified,
     };
   }
   const resolvedModified = initialModifiedRef.current.value;
   const hasDraft = draftContent !== undefined;
+  const duplicateEntryNotice = editable ? null : (
+    <div
+      role="note"
+      className="border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 text-xs text-amber-300"
+    >
+      This earlier change is read-only. Edit the latest change for this file.
+    </div>
+  );
 
   // Notify parent whenever CodeMirrorDiffView creates or destroys its EditorView.
   // This fires on every editor lifecycle event: initial mount, key-change remount,
@@ -137,11 +151,17 @@ export const FileSectionDiff = ({
   // Loading state
   if (isLoading) {
     if (!hasSnippetText) {
-      return <FileSectionPlaceholder fileName={file.relativePath} />;
+      return (
+        <>
+          {duplicateEntryNotice}
+          <FileSectionPlaceholder fileName={file.relativePath} />
+        </>
+      );
     }
 
     return (
       <div className="overflow-auto">
+        {duplicateEntryNotice}
         {canRenderSnippetPreview ? (
           <ReviewDiffContent file={file} />
         ) : (
@@ -155,7 +175,6 @@ export const FileSectionDiff = ({
   // Resolve modified content: prefer full content, fall back to write-type snippet
   // Only write-new/write-update snippets contain the full file - edit snippets are partial
   const resolvedOriginal = fileContent?.originalFullContent ?? null;
-  const isNewFile = fileContent?.isNewFile ?? file.isNewFile;
   const isMissingOnDisk = isReviewFileMissingOnDisk(fileContent);
   const isContentUnavailable = isReviewTextContentUnavailable(file, fileContent);
   const hasLedgerManualAction = file.snippets.some(
@@ -169,11 +188,9 @@ export const FileSectionDiff = ({
   );
 
   // Show CodeMirror only when we have a trustworthy original baseline:
-  // - new files: original is legitimately empty
-  // - otherwise: original must be known (non-null). If original is unknown, do not
-  //   pretend it's empty; fall back to snippet-level diff.
-  const canRenderCodeMirror = resolvedModified !== null && (isNewFile || resolvedOriginal !== null);
-  const originalForDiff = isNewFile ? '' : (resolvedOriginal ?? '');
+  // Unknown originals cannot be treated as empty, including for metadata-only creations.
+  const canRenderCodeMirror = resolvedModified !== null && resolvedOriginal !== null;
+  const originalForDiff = resolvedOriginal ?? '';
   const canRenderCodeMirrorSafely =
     canRenderCodeMirror &&
     shouldRenderCodeMirrorReviewDiff(originalForDiff, resolvedModified ?? '');
@@ -186,10 +203,13 @@ export const FileSectionDiff = ({
   if (!canRenderCodeMirrorSafely) {
     return (
       <div className="overflow-auto">
+        {duplicateEntryNotice}
         <OversizedDiffNotice
           message={
             canRenderCurrentDiskContext
-              ? 'No original baseline is available; showing current disk content for context only. Reject is disabled for this file.'
+              ? canRenderSnippetPreview
+                ? 'No original baseline is available; showing recorded edit snippets. Reject is disabled for this file.'
+                : 'No original baseline is available; showing current disk content for context only. Reject is disabled for this file.'
               : hasLedgerManualAction || isContentUnavailable
                 ? 'No text diff is available for this ledger change. Binary, large, or metadata-only content requires manual review.'
                 : canRenderCodeMirror && !canRenderSnippetPreview
@@ -246,6 +266,7 @@ export const FileSectionDiff = ({
 
   return (
     <div className="overflow-auto">
+      {duplicateEntryNotice}
       {isMissingOnDisk && (
         <div
           className="border-b border-border bg-red-500/10 px-4 py-2 text-xs"
@@ -265,8 +286,15 @@ export const FileSectionDiff = ({
           original={originalForDiff}
           modified={resolvedModified}
           fileName={file.relativePath}
-          readOnly={hasLedgerManualAction || applying}
-          showMergeControls={!isMissingOnDisk && !hasLedgerManualAction && !hasDraft && !applying}
+          readOnly={!editable || hasLedgerManualAction || applying}
+          showMergeControls={
+            editable &&
+            !isMissingOnDisk &&
+            !hasLedgerManualAction &&
+            !hasDraft &&
+            !applying &&
+            fileContent?.contentSource !== 'disk-current'
+          }
           collapseUnchanged={collapseUnchanged}
           usePortionCollapse={true}
           onHunkAccepted={(idx) => onHunkAccepted(file.filePath, idx)}

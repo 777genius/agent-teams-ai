@@ -1,5 +1,5 @@
 import { countLineChanges } from './lineDiffStats.js';
-import { normalizePathForComparison } from '../../platformPath.js';
+
 import type {
   ReviewDirectDiskMutationStep,
   ReviewDiskUndoSnapshot,
@@ -12,7 +12,6 @@ interface ReviewHistoryDiskAction {
 }
 
 export type ReviewHistoryDiskTransitionKind = 'create' | 'update' | 'delete' | 'rename';
-
 export type ReviewHistoryLineStatsStatus =
   | 'exact'
   | 'omitted-large-update'
@@ -28,7 +27,6 @@ export interface ReviewHistoryDiskTransition {
 }
 
 const MAX_EXACT_LINE_STATS_TRANSITIONS = 5;
-
 const MAX_EXACT_UPDATE_DIFF_CHARACTERS = 512 * 1024;
 
 export function buildUndoDiskMutationSteps(
@@ -188,7 +186,8 @@ export function buildReviewHistoryRestoreDiskSteps(
 
   const byPath = new Map<string, { filePath: string; steps: ReviewDirectDiskMutationStep[] }>();
   for (const step of logicalSteps) {
-    const key = normalizePathForComparison(step.filePath);
+    // Durable history must distinguish case-sensitive siblings even on Windows paths.
+    const key = step.filePath.replaceAll('\\', '/');
     const existing = byPath.get(key) ?? { filePath: step.filePath, steps: [] };
     existing.steps.push(step);
     byPath.set(key, existing);

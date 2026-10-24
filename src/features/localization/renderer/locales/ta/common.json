@@ -642,7 +642,8 @@
       "byTime": "நேரம் வாரியாக",
       "byUnread": "படிக்காதது வாரியாக",
       "byProject": "project வாரியாக",
-      "byTeam": "team வாரியாக"
+      "byTeam": "team வாரியாக",
+      "manualOrder": "கைமுறை வரிசை"
     }
   },
   "toolViewer": {

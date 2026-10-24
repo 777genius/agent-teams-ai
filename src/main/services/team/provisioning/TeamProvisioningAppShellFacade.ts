@@ -2,6 +2,7 @@ import { TeamProvisioningAppShellBoundary } from './TeamProvisioningAppShellBoun
 
 import type { TeamLaunchRuntimeAdapter, TeamRuntimeAdapterRegistry } from '../runtime';
 import type { TeamProvisioningMemberRuntimeAdvisoryInvalidator } from './TeamProvisioningAppShellBoundary';
+import type { MemberGatewayRuntimeSeams } from './TeamProvisioningMemberGatewayRuntime';
 import type {
   MemberWorkSyncAcceptedReportChecker,
   MemberWorkSyncProofMissingRecoveryScheduler,
@@ -14,7 +15,10 @@ import type { WorkspaceTrustCoordinator } from '@features/workspace-trust/main';
 import type { CrossTeamSendRequest, CrossTeamSendResult } from '@shared/types';
 
 export abstract class TeamProvisioningAppShellFacade {
-  protected readonly appShellBoundary = new TeamProvisioningAppShellBoundary();
+  protected readonly appShellBoundary: TeamProvisioningAppShellBoundary;
+  constructor(memberGatewayRuntimeSeams: MemberGatewayRuntimeSeams | null = null) {
+    this.appShellBoundary = new TeamProvisioningAppShellBoundary(memberGatewayRuntimeSeams);
+  }
 
   setRuntimeAdapterRegistry(registry: TeamRuntimeAdapterRegistry | null): void {
     this.appShellBoundary.setRuntimeAdapterRegistry(registry);
@@ -66,5 +70,9 @@ export abstract class TeamProvisioningAppShellFacade {
     provider: RuntimeTurnSettledEnvironmentProvider | null
   ): void {
     this.appShellBoundary.setRuntimeTurnSettledEnvironmentProvider(provider);
+  }
+
+  getMemberGatewayRuntimeSeams(): MemberGatewayRuntimeSeams | null {
+    return this.appShellBoundary.getMemberGatewayRuntimeSeams();
   }
 }

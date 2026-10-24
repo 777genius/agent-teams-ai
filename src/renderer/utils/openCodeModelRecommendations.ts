@@ -35,10 +35,6 @@ const OPENCODE_TEAM_TESTED_MODELS = new Set<string>([
   'openrouter/google/gemini-3.1-flash-lite-preview',
   'openrouter/google/gemini-3-flash-preview',
   'openrouter/google/gemma-4-26b-a4b-it',
-  'openrouter/minimax/minimax-m2',
-  'openrouter/minimax/minimax-m2.1',
-  'openrouter/minimax/minimax-m2.5',
-  'openrouter/minimax/minimax-m2.7',
   'openrouter/moonshotai/kimi-k2.6',
   'openrouter/mistralai/codestral-2508',
   'openrouter/openai/gpt-5.1-codex-mini',
@@ -52,14 +48,9 @@ const OPENCODE_TEAM_TESTED_MODELS = new Set<string>([
   'openrouter/z-ai/glm-5.1',
 ]);
 
-const OPENCODE_TEAM_TESTED_WITH_LIMITS_MODELS = new Set<string>(['opencode/minimax-m2.5-free']);
+const OPENCODE_TEAM_TESTED_WITH_LIMITS_MODELS = new Set<string>([]);
 
-const OPENCODE_TEAM_TESTED_WITH_LIMITS_REASONS = new Map<string, string>([
-  [
-    'opencode/minimax-m2.5-free',
-    'This exact free model route passed simple OpenCode Agent Teams provider stress, but a deeper repeated gauntlet hit duplicate or missing reply tokens. Keep it below Recommended until a clean repeated gauntlet passes.',
-  ],
-]);
+const OPENCODE_TEAM_TESTED_WITH_LIMITS_REASONS = new Map<string, string>([]);
 
 const OPENCODE_TEAM_UNAVAILABLE_MODELS = new Map<string, string>([
   [
@@ -725,6 +716,10 @@ const OPENCODE_TEAM_UNAVAILABLE_MODELS = new Map<string, string>([
 ]);
 
 const OPENCODE_TEAM_NOT_RECOMMENDED_MODELS = new Map<string, string>([
+  [
+    'opencode/minimax-m2.5-free',
+    'This exact free model route passed simple OpenCode Agent Teams provider stress, but a deeper repeated gauntlet hit duplicate or missing reply tokens. Keep it below Recommended until a clean repeated gauntlet passes.',
+  ],
   [
     'opencode/ling-2.6-flash-free',
     'Real OpenCode Agent Teams E2E showed unreliable peer relay for this model.',

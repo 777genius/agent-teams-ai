@@ -6,6 +6,8 @@ import { RENAME_TREE_RETRY, retryOnTransientFsError } from '@agent-teams/task-ch
 
 import type { AtomicCreateResult } from '@agent-teams/task-change-ledger/review-io';
 
+export { hasUnexpectedMoveSource } from '@agent-teams/task-change-ledger/review-io';
+
 export interface DurablePathIdentity {
   dev: number;
   ino: number;

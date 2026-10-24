@@ -9,11 +9,13 @@ import type { TeammateRuntimeCompatibility } from './teammateRuntimeCompatibilit
 interface TeammateRuntimeCompatibilityNoticeProps {
   readonly analysis: TeammateRuntimeCompatibility;
   readonly onOpenDashboard?: () => void;
+  readonly showMemberErrors?: boolean;
 }
 
 export const TeammateRuntimeCompatibilityNotice = ({
   analysis,
   onOpenDashboard,
+  showMemberErrors = false,
 }: TeammateRuntimeCompatibilityNoticeProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
 
@@ -21,20 +23,28 @@ export const TeammateRuntimeCompatibilityNotice = ({
     return null;
   }
   const Icon = analysis.checking ? Info : AlertTriangle;
+  const isError = analysis.blocksSubmission && !analysis.checking;
+  const memberErrors = showMemberErrors ? Object.values(analysis.memberErrorById) : [];
   return (
     <div
       className="rounded-md border p-3 text-xs"
+      data-testid={showMemberErrors ? 'teammate-runtime-preflight-error' : undefined}
+      role={isError ? 'alert' : 'status'}
       style={{
-        backgroundColor: 'var(--warning-bg)',
-        borderColor: 'var(--warning-border)',
-        color: 'var(--warning-text)',
+        backgroundColor: isError ? 'var(--field-error-bg)' : 'var(--warning-bg)',
+        borderColor: isError ? 'var(--field-error-border)' : 'var(--warning-border)',
+        color: isError ? 'var(--field-error-text)' : 'var(--warning-text)',
       }}
     >
       <div className="flex items-start gap-2">
         <Icon className="mt-0.5 size-4 shrink-0" />
         <div className="min-w-0 flex-1 space-y-1">
           <p className="font-medium">{analysis.title}</p>
-          <p className="opacity-80">{analysis.message}</p>
+          {memberErrors.length > 0 ? (
+            memberErrors.map((error) => <p key={error}>{error}</p>)
+          ) : (
+            <p className="opacity-80">{analysis.message}</p>
+          )}
           {analysis.tmuxDetail ? (
             <p className="text-[11px] opacity-70">{analysis.tmuxDetail}</p>
           ) : null}

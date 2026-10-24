@@ -6,20 +6,23 @@ import * as path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock fs/promises before importing the service
-vi.mock('fs/promises', () => ({
-  lstat: vi.fn(),
-  stat: vi.fn(),
-  readdir: vi.fn(),
-  readFile: vi.fn(),
-  realpath: vi.fn(),
-  writeFile: vi.fn(),
-  access: vi.fn(),
-  mkdir: vi.fn(),
-  rename: vi.fn(),
-  cp: vi.fn(),
-  copyFile: vi.fn(),
-  rm: vi.fn(),
-}));
+vi.mock('fs/promises', () => {
+  const mocked = {
+    lstat: vi.fn(),
+    stat: vi.fn(),
+    readdir: vi.fn(),
+    readFile: vi.fn(),
+    realpath: vi.fn(),
+    writeFile: vi.fn(),
+    access: vi.fn(),
+    mkdir: vi.fn(),
+    rename: vi.fn(),
+    cp: vi.fn(),
+    copyFile: vi.fn(),
+    rm: vi.fn(),
+  };
+  return { ...mocked, default: mocked };
+});
 
 vi.mock('@main/utils/atomicWrite', () => ({
   atomicWriteAsync: vi.fn(),
@@ -31,6 +34,17 @@ vi.mock('@main/utils/atomicWrite', () => ({
 
 vi.mock('isbinaryfile', () => ({
   isBinaryFile: vi.fn(),
+}));
+
+vi.mock('@main/services/editor/boundedTextRead', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../../../src/main/services/editor/boundedTextRead')>(),
+  boundedTextRead: vi.fn(async (filePath: string) => {
+    const stats = await fs.lstat(filePath);
+    const binary = await isBinaryFile(filePath);
+    const content = binary ? '' : String(await fs.readFile(filePath, 'utf8'));
+    return { content, size: stats.size, mtimeMs: stats.mtimeMs, truncated: false,
+      encoding: binary ? 'binary' : 'utf-8', isBinary: binary, mode: binary ? 'binary' : 'full' };
+  }),
 }));
 
 vi.mock('electron', () => ({
@@ -103,6 +117,7 @@ function createDirent(
 
 beforeEach(() => {
   vi.resetAllMocks();
+  mockRealpath.mockImplementation(async (filePath) => String(filePath));
   service = new ProjectFileService();
 });
 
@@ -267,7 +282,7 @@ describe('ProjectFileService.readFile', () => {
     mockLstat.mockResolvedValue(createStats({ size: content.length, mtimeMs: now }));
     mockIsBinary.mockResolvedValue(false);
     mockReadFile.mockResolvedValue(content);
-    mockRealpath.mockResolvedValue(filePath);
+    mockRealpath.mockImplementation(async (value) => String(value));
 
     const result = await service.readFile(PROJECT_ROOT, filePath);
 
@@ -284,38 +299,13 @@ describe('ProjectFileService.readFile', () => {
 
     mockLstat.mockResolvedValue(createStats({ size: 4096, mtimeMs: Date.now() }));
     mockIsBinary.mockResolvedValue(true);
+    mockRealpath.mockImplementation(async (value) => String(value));
 
     const result = await service.readFile(PROJECT_ROOT, filePath);
 
     expect(result.isBinary).toBe(true);
     expect(result.content).toBe('');
     expect(result.encoding).toBe('binary');
-  });
-
-  it('rejects files larger than 5MB preview limit', async () => {
-    const filePath = PROJECT_ROOT + '/huge.log';
-    const hugeSize = 6 * 1024 * 1024;
-
-    mockLstat.mockResolvedValue(createStats({ size: hugeSize }));
-
-    await expect(service.readFile(PROJECT_ROOT, filePath)).rejects.toThrow('File too large');
-  });
-
-  it('returns preview (100 lines) for files between 2-5MB', async () => {
-    const filePath = PROJECT_ROOT + '/large.json';
-    const fileSize = 3 * 1024 * 1024;
-    const lines = Array.from({ length: 200 }, (_, i) => `line ${i}`);
-    const fullContent = lines.join('\n');
-
-    mockLstat.mockResolvedValue(createStats({ size: fileSize, mtimeMs: Date.now() }));
-    mockIsBinary.mockResolvedValue(false);
-    mockReadFile.mockResolvedValue(fullContent);
-    mockRealpath.mockResolvedValue(filePath);
-
-    const result = await service.readFile(PROJECT_ROOT, filePath);
-
-    expect(result.truncated).toBe(true);
-    expect(result.content.split('\n')).toHaveLength(100);
   });
 
   it('rejects sensitive file paths (.env, .ssh)', async () => {
@@ -349,7 +339,11 @@ describe('ProjectFileService.readFile', () => {
     mockIsBinary.mockResolvedValue(false);
     mockReadFile.mockResolvedValue('content');
     // realpath returns a path OUTSIDE project root (symlink swapped)
-    mockRealpath.mockResolvedValue('/etc/shadow');
+    let fileResolutions = 0;
+    mockRealpath.mockImplementation(async (value) => {
+      if (String(value) === PROJECT_ROOT) return PROJECT_ROOT;
+      return ++fileResolutions === 1 ? filePath : '/etc/shadow';
+    });
 
     await expect(service.readFile(PROJECT_ROOT, filePath)).rejects.toThrow(
       'Path changed during read (TOCTOU)'
@@ -369,6 +363,7 @@ describe('ProjectFileService.writeFile', () => {
   beforeEach(() => {
     mockAtomicWrite.mockResolvedValue(undefined);
     mockStat.mockResolvedValue(createStats({ size: CONTENT.length, mtimeMs: Date.now() }));
+    mockLstat.mockResolvedValue(createStats({ size: CONTENT.length }));
   });
 
   it('writes file via atomic write and returns stats', async () => {
@@ -378,7 +373,8 @@ describe('ProjectFileService.writeFile', () => {
 
     const result = await service.writeFile(PROJECT_ROOT, filePath, CONTENT);
 
-    expect(mockAtomicWrite).toHaveBeenCalledWith(path.resolve(filePath), CONTENT);
+    expect(mockAtomicWrite).toHaveBeenCalledWith(path.resolve(filePath), CONTENT,
+      { beforeCommit: expect.any(Function) });
     expect(result.size).toBe(28);
     expect(result.mtimeMs).toBe(now);
   });
@@ -404,9 +400,9 @@ describe('ProjectFileService.writeFile', () => {
     await expect(service.writeFile(PROJECT_ROOT, envPath, 'SECRET=key')).rejects.toThrow();
   });
 
-  it('rejects content larger than 2MB', async () => {
+  it('rejects content larger than 32MiB', async () => {
     const filePath = PROJECT_ROOT + '/src/large.ts';
-    const largeContent = 'a'.repeat(3 * 1024 * 1024);
+    const largeContent = 'a'.repeat(33 * 1024 * 1024);
 
     await expect(service.writeFile(PROJECT_ROOT, filePath, largeContent)).rejects.toThrow(
       'Content too large'

@@ -62,6 +62,7 @@ function createEnvRuntimePorts(): TeamProvisioningEnvRuntimePorts {
         ['codex', ['--provider', 'codex']],
       ]),
       envPatch: { CODEX_HOME: '/repo/codex-home' },
+      memberArgsByMember: new Map(),
       usesAnthropicApiKeyHelper: false,
       ...({ anthropicApiKeyHelper: null } as const),
     })),
@@ -91,6 +92,7 @@ describe('TeamProvisioningProviderRuntimeFacade', () => {
       getControlApiBaseUrlResolver: vi.fn(() => null),
       getRuntimeTurnSettledEnvironmentProvider: vi.fn(() => null),
       getRuntimeTurnSettledHookSettingsProvider: vi.fn(() => null),
+      getMemberGatewayRuntimeSeams: vi.fn(() => null),
     };
     const logger = {
       info: vi.fn(),

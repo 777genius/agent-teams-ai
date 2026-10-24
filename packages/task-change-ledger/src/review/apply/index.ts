@@ -4,3 +4,5 @@ export type {
   ReviewFileTransitionState,
   ReviewRenameTransitionState,
 } from './applyContext.js';
+
+export { assertReviewRecoveryContent, assertReviewReplayEvidence } from './reviewReplayEvidence.js';

@@ -46,6 +46,9 @@ export function getPromotionLayout(version) {
     windowsX64: `Agent.Teams.AI.Setup.${version}.exe`,
     windowsArm64: `Agent.Teams.AI.Setup.${version}-arm64.exe`,
     linux: `Agent.Teams.AI-${version}.AppImage`,
+    linuxDeb: `agent-teams-ai_${version}_amd64.deb`,
+    linuxRpm: `agent-teams-ai-${version}.x86_64.rpm`,
+    linuxPacman: `agent-teams-ai-${version}.pacman`,
     macArm64Zip: `Agent.Teams.AI-${version}-arm64-mac.zip`,
     macArm64Dmg: `Agent.Teams.AI-${version}-arm64.dmg`,
     macX64Zip: `Agent.Teams.AI-${version}-x64-mac.zip`,
@@ -132,9 +135,8 @@ function runCommand(command, args, { capture = false, environment = process.env 
   }
   if (result.status !== 0) {
     const details = capture ? (result.stderr || result.stdout || '').trim() : '';
-    throw new Error(
-      `${command} ${args.join(' ')} failed with status ${result.status}${details ? `: ${details}` : ''}`
-    );
+    const suffix = details ? `: ${details}` : '';
+    throw new Error(`${command} ${args.join(' ')} failed with status ${result.status}${suffix}`);
   }
   return capture ? result.stdout : '';
 }
@@ -163,7 +165,28 @@ async function describeUpdaterAsset(directory, name) {
   return { name, size: fileStats.size, sha512 };
 }
 
-export async function buildUpdaterFeeds({ directory, version, releaseDate, feedSources }) {
+export function getMacUpdaterMinimumSystemVersion(macMinimumSystemVersion) {
+  // Only the product-version floors we support are mapped. Minor macOS releases
+  // do not have a simple arithmetic relationship to Darwin minor versions.
+  switch (macMinimumSystemVersion) {
+    case '12.0':
+      return '21.0.0';
+    case '13.0':
+      return '22.0.0';
+    default:
+      throw new Error(`Unsupported release macOS minimum: ${macMinimumSystemVersion}`);
+  }
+}
+
+export async function buildUpdaterFeeds({
+  directory,
+  version,
+  releaseDate,
+  feedSources,
+  macMinimumSystemVersion,
+  releaseNotes = '',
+}) {
+  const darwinMinimumSystemVersion = getMacUpdaterMinimumSystemVersion(macMinimumSystemVersion);
   const [windowsX64, windowsArm64, linux, macArm64Zip, macArm64Dmg, macX64Zip, macX64Dmg] =
     await Promise.all([
       describeUpdaterAsset(directory, feedSources.windowsX64),
@@ -192,12 +215,24 @@ files:
   - url: ${linux.name}
     sha512: ${linux.sha512}
     size: ${linux.size}
+${(
+  await Promise.all(
+    [feedSources.linuxDeb, feedSources.linuxRpm, feedSources.linuxPacman].map((name) =>
+      describeUpdaterAsset(directory, name)
+    )
+  )
+)
+  .map((asset) => `  - url: ${asset.name}\n    sha512: ${asset.sha512}\n    size: ${asset.size}`)
+  .join('\n')}
 path: ${linux.name}
 sha512: ${linux.sha512}
 releaseDate: '${releaseDate}'
 `;
   const macFiles = [macArm64Zip, macArm64Dmg, macX64Zip, macX64Dmg];
+  // electron-updater compares this with os.release() (Darwin), not the macOS product version.
+  // Use the release target's minimum, including historical Electron 41 recovery.
   const latestMac = `version: ${version}
+minimumSystemVersion: ${darwinMinimumSystemVersion}
 files:
 ${macFiles
   .map(
@@ -211,10 +246,12 @@ sha512: ${macArm64Zip.sha512}
 releaseDate: '${releaseDate}'
 `;
 
+  // JSON strings are YAML scalars: preserve Markdown/newlines without injecting feed keys.
+  const notes = releaseNotes.trim() ? `releaseNotes: ${JSON.stringify(releaseNotes)}\n` : '';
   return {
-    'latest.yml': latest,
-    'latest-linux.yml': latestLinux,
-    'latest-mac.yml': latestMac,
+    'latest.yml': latest + notes,
+    'latest-linux.yml': latestLinux + notes,
+    'latest-mac.yml': latestMac + notes,
   };
 }
 
@@ -260,11 +297,110 @@ function validateRelease(release, config) {
   }
 }
 
+function carryPrepareArguments(environment) {
+  const variables = [
+    ['--release-tag', 'RELEASE_TAG'],
+    ['--application-sha', 'RELEASE_APPLICATION_SHA'],
+    ['--tooling-sha', 'RELEASE_TOOLING_SHA'],
+    ['--mac-source-tag', 'MAC_SOURCE_TAG'],
+    ['--output', 'PROMOTION_OUTPUT_DIR'],
+    ['--build-run-id', 'RELEASE_BUILD_RUN_ID'],
+    ['--build-attempt', 'RELEASE_BUILD_ATTEMPT'],
+    ['--build-job-ids', 'RELEASE_BUILD_JOB_IDS'],
+  ];
+  return [
+    '--repository',
+    environment.RELEASE_REPOSITORY || environment.GITHUB_REPOSITORY || '',
+    '--mode',
+    'carry-mac',
+    ...variables.flatMap(([flag, variable]) => [flag, environment[variable] || '']),
+  ];
+}
+
+function delegateCarryAssembly(environment) {
+  if (environment.PUBLISH_RELEASE === 'true')
+    throw new Error(
+      'Carry publication requires separate native evidence and an approved publication operation'
+    );
+  const operation = environment.PROMOTION_OPERATION || 'prepare';
+  if (operation !== 'prepare' && operation !== 'stage-draft')
+    throw new Error('PROMOTION_OPERATION must be prepare or stage-draft');
+  const args =
+    operation === 'prepare'
+      ? carryPrepareArguments(environment)
+      : [
+          '--plan',
+          environment.RELEASE_STAGE_PLAN || '',
+          '--plan-digest',
+          environment.RELEASE_STAGE_PLAN_DIGEST || '',
+        ];
+  if (operation === 'stage-draft' && environment.PROMOTE_DRY_RUN === 'true')
+    throw new Error('Use prepare for a read-only carry dry run');
+  const script = operation === 'prepare' ? 'prepare-existing-draft.ts' : 'stage-existing-draft.ts';
+  runCommand('pnpm', ['exec', 'tsx', `scripts/ci/${script}`, ...args], { environment });
+  return { mode: 'carry-mac', operation, published: false };
+}
+
+async function prepareAliases(outputDirectory, layout) {
+  const aliasGroups = [
+    ['stable', layout.stableAliases],
+    ['legacy stable', layout.legacyStableAliases],
+    ['legacy updater', layout.legacyUpdaterAliases],
+  ];
+  const aliasPaths = [];
+  for (const [label, aliases] of aliasGroups) {
+    for (const [aliasName, sourceName] of Object.entries(aliases)) {
+      process.stdout.write(`Preparing ${label} alias: ${aliasName} -> ${sourceName}\n`);
+      const aliasPath = path.join(outputDirectory, aliasName);
+      await rm(aliasPath, { force: true });
+      await linkOrCopy(path.join(outputDirectory, sourceName), aliasPath);
+      aliasPaths.push(aliasPath);
+    }
+  }
+  return aliasPaths;
+}
+
+async function uploadPreparedFiles(config, filePaths, environment) {
+  for (const filePath of filePaths) {
+    await uploadWithRetry({
+      repository: config.repository,
+      tag: config.tag,
+      filePath,
+      environment,
+    });
+  }
+}
+
+function validatedSourceAssets(release, sourceNames) {
+  const assetsByName = new Map(release.assets.map((asset) => [asset.name, asset]));
+  for (const sourceName of sourceNames) {
+    const asset = assetsByName.get(sourceName);
+    if (!asset) throw new Error(`Missing source release asset ${sourceName}`);
+    if (!/^sha256:[a-f0-9]{64}$/.test(asset.digest || '')) {
+      throw new Error(`Missing SHA-256 digest for source release asset ${sourceName}`);
+    }
+  }
+  return assetsByName;
+}
+
 export async function promoteExistingDraft({
   environment = process.env,
   now = () => new Date(),
 } = {}) {
+  const mode = environment.RELEASE_MODE || 'full';
+  if (mode !== 'full' && mode !== 'carry-mac')
+    throw new Error('RELEASE_MODE must be full or carry-mac');
+  if (mode === 'carry-mac') return delegateCarryAssembly(environment);
   const config = parsePromotionConfig(environment);
+  if (
+    config.tag === 'v2.17.7' ||
+    config.tag === 'v2.17.8' ||
+    config.tag === 'v2.17.9' ||
+    config.tag === 'v2.17.10'
+  )
+    throw new Error(
+      'Full220 requires publish-full-release.ts with immutable prepared plan and native receipt; legacy feed regeneration is forbidden'
+    );
   const layout = getPromotionLayout(config.version);
   const release = JSON.parse(
     runGh(
@@ -292,16 +428,23 @@ export async function promoteExistingDraft({
     );
   }
 
-  const assetsByName = new Map(release.assets.map((asset) => [asset.name, asset]));
-  for (const sourceName of layout.sourceAssets) {
-    const asset = assetsByName.get(sourceName);
-    if (!asset) {
-      throw new Error(`Missing source release asset ${sourceName}`);
-    }
-    if (!/^sha256:[a-f0-9]{64}$/.test(asset.digest || '')) {
-      throw new Error(`Missing SHA-256 digest for source release asset ${sourceName}`);
-    }
-  }
+  const releaseManifest = JSON.parse(
+    runGh(
+      [
+        'api',
+        `repos/${config.repository}/contents/package.json?ref=${resolvedTagCommit}`,
+        '--jq',
+        '.content | @base64d',
+      ],
+      { capture: true, environment }
+    )
+  );
+  const macMinimumSystemVersion = releaseManifest.build?.mac?.minimumSystemVersion;
+  // Validate before any asset upload or alias mutation. Never use moving main's
+  // minimum when recovering an older release, and never silently omit the floor.
+  getMacUpdaterMinimumSystemVersion(macMinimumSystemVersion);
+
+  const assetsByName = validatedSourceAssets(release, layout.sourceAssets);
 
   const ownsOutputDirectory = !config.outputDirectory;
   const outputDirectory =
@@ -336,27 +479,15 @@ export async function promoteExistingDraft({
       }
     }
 
-    const aliasGroups = [
-      ['stable', layout.stableAliases],
-      ['legacy stable', layout.legacyStableAliases],
-      ['legacy updater', layout.legacyUpdaterAliases],
-    ];
-    const aliasPaths = [];
-    for (const [label, aliases] of aliasGroups) {
-      for (const [aliasName, sourceName] of Object.entries(aliases)) {
-        process.stdout.write(`Preparing ${label} alias: ${aliasName} -> ${sourceName}\n`);
-        const aliasPath = path.join(outputDirectory, aliasName);
-        await rm(aliasPath, { force: true });
-        await linkOrCopy(path.join(outputDirectory, sourceName), aliasPath);
-        aliasPaths.push(aliasPath);
-      }
-    }
+    const aliasPaths = await prepareAliases(outputDirectory, layout);
 
     const feeds = await buildUpdaterFeeds({
       directory: outputDirectory,
       version: config.version,
       releaseDate: now().toISOString(),
       feedSources: layout.feedSources,
+      macMinimumSystemVersion,
+      releaseNotes: release.body || '',
     });
     const feedPaths = [];
     for (const [name, contents] of Object.entries(feeds)) {
@@ -366,22 +497,7 @@ export async function promoteExistingDraft({
     }
 
     if (!config.dryRun) {
-      for (const filePath of aliasPaths) {
-        await uploadWithRetry({
-          repository: config.repository,
-          tag: config.tag,
-          filePath,
-          environment,
-        });
-      }
-      for (const filePath of feedPaths) {
-        await uploadWithRetry({
-          repository: config.repository,
-          tag: config.tag,
-          filePath,
-          environment,
-        });
-      }
+      await uploadPreparedFiles(config, [...aliasPaths, ...feedPaths], environment);
     }
 
     if (config.publishRelease) {

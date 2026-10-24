@@ -7,6 +7,7 @@ import { LeadModelRow } from './LeadModelRow';
 import { MembersEditorSection } from './MembersEditorSection';
 
 import type { MemberDraft } from './membersEditorTypes';
+import type { GatewayMemberBindingsState } from '@features/gateway-provider/renderer';
 import type { TeamModelSelectorProps } from '@renderer/components/team/dialogs/TeamModelSelector';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { CliProviderStatus, EffortLevel, TeamProviderId } from '@shared/types';
@@ -14,6 +15,9 @@ import type { CliProviderStatus, EffortLevel, TeamProviderId } from '@shared/typ
 interface TeamRosterEditorSectionProps {
   members: MemberDraft[];
   onMembersChange: (members: MemberDraft[]) => void;
+  /** Team name used for per-teammate gateway bindings on the member row. */
+  teamName?: string;
+  gatewayBindings?: GatewayMemberBindingsState;
   fieldError?: string;
   validateMemberName?: (name: string) => string | null;
   showWorkflow?: boolean;
@@ -35,6 +39,7 @@ interface TeamRosterEditorSectionProps {
   teammatesInheritLeadModel?: boolean;
   lockProviderModel?: boolean;
   modelLockReason?: string;
+  runtimeSelectionUnresolved?: boolean;
   providerId: TeamProviderId;
   model: string;
   effort?: EffortLevel;
@@ -54,6 +59,7 @@ interface TeamRosterEditorSectionProps {
   softDeleteMembers?: boolean;
   leadWarningText?: string | null;
   memberWarningById?: Record<string, string | null | undefined>;
+  memberErrorById?: Record<string, string | null | undefined>;
   memberInfoById?: Record<string, string | null | undefined>;
   disableGeminiOption?: boolean;
   leadModelIssueText?: string | null;
@@ -78,6 +84,8 @@ interface TeamRosterEditorSectionProps {
 const TeamRosterEditorSectionImpl = ({
   members,
   onMembersChange,
+  teamName,
+  gatewayBindings,
   fieldError,
   validateMemberName,
   showWorkflow = false,
@@ -98,6 +106,7 @@ const TeamRosterEditorSectionImpl = ({
   teammatesInheritLeadModel,
   lockProviderModel = false,
   modelLockReason,
+  runtimeSelectionUnresolved = false,
   providerId,
   model,
   effort,
@@ -117,6 +126,7 @@ const TeamRosterEditorSectionImpl = ({
   softDeleteMembers = false,
   leadWarningText,
   memberWarningById,
+  memberErrorById,
   memberInfoById,
   disableGeminiOption = false,
   leadModelIssueText,
@@ -167,8 +177,11 @@ const TeamRosterEditorSectionImpl = ({
     // Create/Launch launch OpenCode Default as its concrete route (see the context).
     <OpenCodeDefaultMaterializationContext.Provider value={defaultMaterialization}>
       <MembersEditorSection
+        runtimeSelectionUnresolved={runtimeSelectionUnresolved}
         members={members}
         onChange={onMembersChange}
+        teamName={teamName}
+        gatewayBindings={gatewayBindings}
         fieldError={fieldError}
         validateMemberName={validateMemberName}
         showWorkflow={showWorkflow}
@@ -210,6 +223,7 @@ const TeamRosterEditorSectionImpl = ({
           <div className="space-y-3">
             <LeadModelRow
               projectPath={projectPath}
+              runtimeSelectionUnresolved={runtimeSelectionUnresolved}
               providerId={providerId}
               model={model}
               effort={effort}
@@ -239,6 +253,7 @@ const TeamRosterEditorSectionImpl = ({
           </div>
         }
         memberWarningById={memberWarningById}
+        memberErrorById={memberErrorById}
         memberInfoById={memberInfoById}
       />
     </OpenCodeDefaultMaterializationContext.Provider>

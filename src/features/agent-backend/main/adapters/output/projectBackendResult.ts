@@ -239,6 +239,23 @@ function runtime(value: unknown, request: BackendOperationRequest): BackendRunti
       };
     }),
   };
+  if (source.attachmentCapabilities !== undefined) {
+    if (
+      !result.generation ||
+      !result.attached ||
+      !result.nativeReady ||
+      result.sealed ||
+      result.phase !== 'allocated' ||
+      result.custody !== 'owned'
+    )
+      throw new Error('Inactive native attachment capability');
+    const capabilities = row(source.attachmentCapabilities);
+    result.attachmentCapabilities = {
+      images: boolean(capabilities.images),
+      documents: boolean(capabilities.documents),
+      textFiles: boolean(capabilities.textFiles),
+    };
+  }
   if (source.diagnostic !== undefined)
     result.diagnostic = oneOf(source.diagnostic, [
       'open-unknown',

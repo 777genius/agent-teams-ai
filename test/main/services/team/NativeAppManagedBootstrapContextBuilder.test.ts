@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -43,8 +43,7 @@ describe('NativeAppManagedBootstrapContextBuilder', () => {
       {
         name: 'alice',
         providerId: 'anthropic',
-        role:
-          'Reviewer ANTHROPIC_API_KEY=sk-ant-secret ANTHROPIC_AUTH_TOKEN="lmstudio local token"',
+        role: 'Reviewer ANTHROPIC_API_KEY=sk-ant-secret ANTHROPIC_AUTH_TOKEN="lmstudio local token"',
       },
       {
         name: 'bob',
@@ -70,8 +69,7 @@ describe('NativeAppManagedBootstrapContextBuilder', () => {
         {
           name: 'alice',
           providerId: 'anthropic',
-          role:
-            'Reviewer ANTHROPIC_API_KEY=sk-ant-secret ANTHROPIC_AUTH_TOKEN="lmstudio local token"',
+          role: 'Reviewer ANTHROPIC_API_KEY=sk-ant-secret ANTHROPIC_AUTH_TOKEN="lmstudio local token"',
         },
         {
           name: 'bob',
@@ -142,6 +140,26 @@ describe('NativeAppManagedBootstrapContextBuilder', () => {
     expect(result.diagnostics.warning).toMatch(/Large native team startup context/);
   });
 
+  it('retains own workflow and action-mode rules when a colleague has an oversized role', async () => {
+    const teamName = 'peer-role-budget-sandbox';
+    const members = [
+      { name: 'alice', role: 'Reviewer', workflow: 'OWN_WORKFLOW_SENTINEL' },
+      { name: 'bob', role: 'x'.repeat(40_000) },
+      { name: 'lead', providerId: 'opencode' as const, role: 'team-lead' },
+    ];
+    await new TeamMembersMetaStore().writeMembers(teamName, members);
+    const specs = await buildNativeAppManagedBootstrapSpecs({
+      teamName,
+      cwd: '/tmp/workspace',
+      members,
+    });
+    const context = specs.get('alice')?.contextText ?? '';
+    expect(context).toContain('- bob (role:');
+    expect(context).toContain('- lead (role: team-lead)');
+    expect(context).toContain('OWN_WORKFLOW_SENTINEL');
+    expect(context).toContain('TURN ACTION MODE PROTOCOL');
+  });
+
   it('compacts thirty large native contexts within the aggregate budget', async () => {
     const hugeRole = 'x'.repeat(40_000);
     await new TeamMetaStore().writeMeta('large-native-team', {
@@ -150,14 +168,19 @@ describe('NativeAppManagedBootstrapContextBuilder', () => {
       model: 'claude-opus-4-6',
       createdAt: Date.now(),
     });
-    await new TeamMembersMetaStore().writeMembers(
+    // Keep persisted metadata below its existing reader limit while retaining extreme launch input.
+    // Peer role labels are bounded to 48 characters; 8k saved roles preserve the same context stress.
+    const membersStore = new TeamMembersMetaStore();
+    await membersStore.writeMembers(
       'large-native-team',
       Array.from({ length: 30 }, (_, index) => ({
         name: `member-${index}`,
         providerId: 'anthropic' as const,
-        role: hugeRole,
+        role: hugeRole.slice(0, 8_000),
       }))
     );
+
+    expect(await membersStore.getMembers('large-native-team')).toHaveLength(30);
 
     const result = await buildNativeAppManagedBootstrapSpecsWithDiagnostics({
       teamName: 'large-native-team',
@@ -212,4 +235,61 @@ describe('NativeAppManagedBootstrapContextBuilder', () => {
     expect(firstContext).toContain('Do not use SendMessage');
   });
 
+  it('includes all roles in compact startup and excludes persisted removals from stale launch input', async () => {
+    const teamName = 'compact-roster-sandbox';
+    const members = Array.from({ length: 10 }, (_, index) => ({
+      name: `member-${index}`,
+      providerId: 'codex' as const,
+      role: 'Developer',
+    }));
+    await new TeamMembersMetaStore().writeMembers(teamName, [
+      ...members,
+      { name: 'lead', providerId: 'opencode', role: 'team-lead' },
+      { name: 'reviewer', providerId: 'opencode', role: 'Security reviewer' },
+      { name: 'removed-reviewer', removedAt: Date.now() },
+    ]);
+    const specs = await buildNativeAppManagedBootstrapSpecs({
+      teamName,
+      cwd: '/tmp/workspace',
+      members: [
+        ...members,
+        { name: 'removed-reviewer', providerId: 'opencode', role: 'Old reviewer' },
+      ],
+    });
+    const context = specs.get('member-0')?.contextText ?? '';
+    expect(context).toContain('The app loaded compact startup context');
+    expect(context).toContain('- member-9 (role: Developer)');
+    expect(context).toContain('- reviewer (role: Security reviewer)');
+    expect(context).toContain('- lead (role: team-lead)');
+    expect(context).not.toContain('removed-reviewer');
+  });
+
+  it('uses launch roles in metadata-unavailable fallback without resurrecting removed colleagues', async () => {
+    const teamName = 'fallback-roster-sandbox';
+    const teamDir = join(tempClaudeRoot, 'teams', teamName);
+    await mkdir(join(teamDir, 'inboxes'), { recursive: true });
+    await writeFile(
+      join(teamDir, 'members.meta.json'),
+      JSON.stringify({
+        version: 1,
+        members: [{ name: 'removed-reviewer', removedAt: Date.now() }],
+      })
+    );
+    await writeFile(join(teamDir, 'inboxes', 'removed-reviewer.json'), '[]');
+    await writeFile(join(teamDir, 'inboxes', 'reviewer.json'), '[]');
+    const specs = await buildNativeAppManagedBootstrapSpecs({
+      teamName,
+      cwd: '/tmp/workspace',
+      members: [
+        { name: 'developer', providerId: 'codex', role: 'Backend engineer' },
+        { name: 'reviewer', providerId: 'opencode', role: 'Security reviewer' },
+        { name: 'removed-reviewer', providerId: 'opencode', role: 'Old reviewer' },
+      ],
+    });
+    const context = specs.get('developer')?.contextText ?? '';
+    expect(context).toContain('canonical member_briefing metadata was not available yet');
+    expect(context).toContain('- developer (role: Backend engineer) [you]');
+    expect(context).toContain('- reviewer (role: Security reviewer)');
+    expect(context).not.toContain('removed-reviewer');
+  });
 });

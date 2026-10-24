@@ -47,6 +47,7 @@ export interface TeamProvisioningCleanupRun
   isLaunch: boolean;
   launchStateClearedForRun: boolean;
   provisioningComplete: boolean;
+  bootstrapSpecSnapshot?: unknown;
   cancelRequested: boolean;
   launchCleanupStateFinalized?: boolean;
   pendingDirectCrossTeamSendRefresh: boolean;
@@ -336,6 +337,7 @@ export function cleanupProvisioningRun<TRun extends TeamProvisioningCleanupRun>(
     run.mcpConfigPath = null;
   }
   ports.removeRunMemberMcpConfigFilesLater(run);
+  run.bootstrapSpecSnapshot = null;
   if (run.bootstrapSpecPath) {
     void Promise.resolve(removeDeterministicBootstrapSpecFile(run.bootstrapSpecPath)).catch(
       () => undefined

@@ -101,6 +101,7 @@ export interface ProviderManagementCatalog {
       contextTokens: number | null;
       outputTokens: number | null;
       free: boolean | null;
+      declaredInputModalities?: readonly string[] | null;
     }[];
     authMethods: ('api' | 'oauth')[];
     /** Explicit provider reads only; native indices remain stable across omitted unknown methods. */

@@ -1,11 +1,13 @@
+import type { TaskDetailReadEntry } from '@features/team-task-detail/core';
+
+type GlobalTaskDialogReadState = Pick<
+  TaskDetailReadEntry,
+  'identity' | 'phase' | 'full' | 'error' | 'loading' | 'refreshPending'
+>;
+
 interface GlobalTaskDialogLoadingParams {
-  teamName: string;
-  taskId: string;
-  selectedTeamName: string | null;
-  selectedTeamDataPresent: boolean;
-  selectedTeamLoading: boolean;
-  selectedTeamError: string | null;
-  hasTaskInMap: boolean;
+  identity: GlobalTaskDialogReadState['identity'] | null;
+  taskDetail: GlobalTaskDialogReadState | null;
 }
 
 export function hasSelectedTargetTeamData(
@@ -17,18 +19,29 @@ export function hasSelectedTargetTeamData(
 }
 
 export function shouldKeepGlobalTaskDialogLoading({
-  teamName,
-  taskId,
-  selectedTeamName,
-  selectedTeamDataPresent,
-  selectedTeamLoading,
-  selectedTeamError,
-  hasTaskInMap,
+  identity,
+  taskDetail,
 }: GlobalTaskDialogLoadingParams): boolean {
-  if (!teamName || !taskId) return false;
-  if (selectedTeamName !== teamName) return true;
-  if (selectedTeamLoading && !selectedTeamDataPresent) return true;
-  if (selectedTeamDataPresent) return false;
-  if (selectedTeamError) return false;
-  return !hasTaskInMap;
+  if (!identity?.teamName || !identity.taskId) return false;
+  if (!taskDetail) return true;
+  if (
+    taskDetail.identity.contextId !== identity.contextId ||
+    taskDetail.identity.teamName !== identity.teamName ||
+    taskDetail.identity.taskId !== identity.taskId
+  )
+    return true;
+  if (taskDetail.full) return false;
+  if (
+    taskDetail.error ||
+    taskDetail.phase === 'missing' ||
+    taskDetail.phase === 'deleted' ||
+    taskDetail.phase === 'unavailable'
+  )
+    return false;
+  return (
+    taskDetail.loading ||
+    taskDetail.refreshPending ||
+    taskDetail.phase === 'hydrating' ||
+    taskDetail.phase === 'provisioning'
+  );
 }

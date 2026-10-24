@@ -3,6 +3,10 @@ import {
   hasExplicitFreeOpenCodeModelId,
   isOpenCodeLocalProviderId,
 } from '@shared/utils/opencodeModelRoute';
+import {
+  isOpenCodeFreeTierVersionOutdated,
+  MINIMUM_OPENCODE_FREE_TIER_VERSION,
+} from '@shared/utils/version';
 
 import {
   evaluateOpenCodeSupport,
@@ -11,6 +15,11 @@ import {
   type OpenCodeSupportedVersionPolicy,
   type OpenCodeSupportLevel,
 } from '../version/OpenCodeVersionPolicy';
+
+import {
+  buildOpenCodeFreeTierVersionMessage,
+  formatOpenCodeFreeTierVersionFailure,
+} from './OpenCodeFailureDiagnostics';
 
 import type { OpenCodeApiCapabilities } from '../capabilities/OpenCodeApiCapabilities';
 import type { OpenCodeMcpToolProof } from '../mcp/OpenCodeMcpToolAvailability';
@@ -167,6 +176,31 @@ export class OpenCodeTeamLaunchReadinessService {
         });
       }
 
+      if (
+        isFreeOpenCodeModelRoute(modelId) &&
+        parseOpenCodeQualifiedModelRef(modelId)?.sourceId === 'opencode' &&
+        isOpenCodeFreeTierVersionOutdated(inventory.version)
+      ) {
+        const message = buildOpenCodeFreeTierVersionMessage(
+          MINIMUM_OPENCODE_FREE_TIER_VERSION,
+          inventory.version
+        );
+        return readiness({
+          state: 'unsupported_version',
+          inventory,
+          modelId,
+          supportLevel: 'unsupported_too_old',
+          missing: [message],
+          diagnostics: appendDiagnostics(
+            [
+              message,
+              ...(inventory.binaryPath ? [`OpenCode runtime binary: ${inventory.binaryPath}`] : []),
+            ],
+            inventory.diagnostics
+          ),
+        });
+      }
+
       const usingFreeModelWithoutProvider =
         !hasConnectedProvider && isFreeOpenCodeModelRoute(modelId);
       const usingConfiguredAuthlessModelWithoutProvider =
@@ -252,6 +286,25 @@ export class OpenCodeTeamLaunchReadinessService {
           inventory,
         });
         if (modelProbe.outcome !== 'available') {
+          const versionFailure = [modelProbe.reason, ...modelProbe.diagnostics]
+            .filter((diagnostic): diagnostic is string => typeof diagnostic === 'string')
+            .map((diagnostic) =>
+              formatOpenCodeFreeTierVersionFailure(diagnostic, inventory.version)
+            )
+            .find((diagnostic) => diagnostic !== null);
+          if (versionFailure) {
+            return readiness({
+              state: 'unsupported_version',
+              inventory,
+              modelId,
+              capabilities,
+              toolProof,
+              runtimeStoreReadiness,
+              supportLevel: 'unsupported_too_old',
+              missing: [versionFailure],
+              diagnostics: appendDiagnostics([versionFailure], inventory.diagnostics),
+            });
+          }
           return readiness({
             state:
               modelProbe.outcome === 'not_authenticated'

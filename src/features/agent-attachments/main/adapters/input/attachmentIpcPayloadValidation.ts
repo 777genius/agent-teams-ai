@@ -1,6 +1,5 @@
 import {
   estimateAgentAttachmentSerializedPayloadBytes,
-  isAgentVideoMimeType,
   MAX_AGENT_ATTACHMENT_DELIVERY_BYTES_TOTAL,
   MAX_AGENT_ATTACHMENT_SERIALIZED_PAYLOAD_BYTES,
 } from '../../../core/domain';
@@ -11,21 +10,17 @@ export {
   MAX_AGENT_IPC_ATTACHMENTS,
   validateAgentAttachmentIpcPayload,
 } from '@agent-teams/legacy-agent-host/attachments/portable';
-const MAX_VIDEO_ATTACHMENT_BASE64_PAYLOAD_BYTES =
-  Math.ceil(MAX_AGENT_ATTACHMENT_DELIVERY_BYTES_TOTAL / 3) * 4;
-const utf8Encoder = new TextEncoder();
 
 export function validateAgentAttachmentSerializedIpcPayload(input: {
   text: string;
   attachments: AttachmentPayload[];
+  /** Main confirms the selected native video route, never renderer-controlled. */
+  nativeVideoDelivery?: boolean;
 }): { valid: true } | { valid: false; error: string } {
   const estimatedBytes = estimateAgentAttachmentSerializedPayloadBytes(input);
-  const includesVideo = input.attachments.some((attachment) =>
-    isAgentVideoMimeType(attachment.mimeType)
-  );
-  const serializedLimit = includesVideo
-    ? MAX_VIDEO_ATTACHMENT_BASE64_PAYLOAD_BYTES +
-      utf8Encoder.encode(JSON.stringify(input.text)).byteLength +
+  const serializedLimit = input.nativeVideoDelivery
+    ? Math.ceil(MAX_AGENT_ATTACHMENT_DELIVERY_BYTES_TOTAL / 3) * 4 +
+      new TextEncoder().encode(JSON.stringify(input.text)).byteLength +
       4096
     : MAX_AGENT_ATTACHMENT_SERIALIZED_PAYLOAD_BYTES;
   if (estimatedBytes <= serializedLimit) return { valid: true };

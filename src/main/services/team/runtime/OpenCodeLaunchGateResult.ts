@@ -1,4 +1,7 @@
-import { isOpenCodeTerminalProbeTechnicalDiagnostic } from '../opencode/readiness/OpenCodeFailureDiagnostics';
+import {
+  formatOpenCodeFreeTierVersionFailure,
+  isOpenCodeTerminalProbeTechnicalDiagnostic,
+} from '../opencode/readiness/OpenCodeFailureDiagnostics';
 
 import type { OpenCodeTeamLaunchReadiness } from '../opencode/readiness/OpenCodeTeamLaunchReadiness';
 import type {
@@ -100,7 +103,8 @@ export function blockedLaunchResult(
     reason === 'not_authenticated' ||
     reason === 'mcp_unavailable' ||
     reason === 'runtime_store_blocked' ||
-    reason === 'not_installed';
+    reason === 'not_installed' ||
+    reason === 'unsupported_version';
   const hardFailureReason = readinessFailure
     ? (firstDisplayableOpenCodeFailureMessage(diagnostics, { includeGeneric: false }) ?? reason)
     : reason;
@@ -166,10 +170,11 @@ export function normalizeOpenCodeFailureMessage(value: string | undefined): stri
   if (!trimmed) {
     return undefined;
   }
-  return trimmed
+  const redacted = trimmed
     .replace(SECRET_FLAG_PATTERN, '$1[redacted]')
     .replace(BEARER_TOKEN_PATTERN, 'Bearer [redacted]')
     .replace(SECRET_KEY_PATTERN, '[redacted-api-key]');
+  return formatOpenCodeFreeTierVersionFailure(redacted) ?? redacted;
 }
 
 function isGenericOpenCodeFailureMessage(message: string): boolean {

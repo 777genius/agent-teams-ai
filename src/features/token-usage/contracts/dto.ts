@@ -13,6 +13,8 @@ export type TokenUsageBillingMode = 'api' | 'subscription' | 'free' | 'unknown';
 export type TokenUsageRunStatus = 'running' | 'completed' | 'failed' | 'unknown';
 
 export interface TokenUsageSnapshotRequest {
+  /** Canonical identities take priority over legacy raw-name filters. */
+  teamIds?: string[];
   teamName?: string;
   teamNames?: string[];
   agentId?: string;
@@ -24,6 +26,8 @@ export interface TokenUsageSnapshotRequest {
 }
 
 export interface TokenUsageBudgetLimitDto {
+  thresholds: number[];
+  notificationsEnabled: boolean;
   monthlyTokenLimit?: number;
   monthlyApiEquivalentCostLimitUsd?: number;
 }
@@ -33,6 +37,45 @@ export interface TokenUsageBudgetSettingsDto {
   teams?: Record<string, TokenUsageBudgetLimitDto>;
   projects?: Record<string, TokenUsageBudgetLimitDto>;
   updatedAt?: string;
+}
+
+export type TokenUsageBudgetScope = 'global' | 'team' | 'project';
+export type TokenUsageBudgetMetric = 'tokens' | 'apiEquivalentCostUsd';
+export interface TokenUsageBudgetMetricStatusDto {
+  metric: TokenUsageBudgetMetric;
+  value: number | null;
+  limit: number;
+  percent: number | null;
+  remaining: number | null;
+  nextThreshold?: number;
+  incomplete: boolean;
+}
+export interface TokenUsageBudgetTargetStatusDto {
+  scope: TokenUsageBudgetScope;
+  id: string;
+  label: string;
+  thresholds: number[];
+  notificationsEnabled: boolean;
+  metrics: TokenUsageBudgetMetricStatusDto[];
+}
+export interface TokenUsageBudgetStatusDto {
+  /** Orders projections independently of wall-clock changes and transport delay. */
+  statusOrder?: { epoch: string; sequence: number };
+  period: { key: string; from: string; to: string; timeZone: 'UTC' };
+  computedAt: string;
+  usageUpdatedAt?: string;
+  settingsUpdatedAt?: string;
+  stale: boolean;
+  degraded: boolean;
+  notificationPolicy: { enabled: boolean; nativeToasts: boolean };
+  targets: TokenUsageBudgetTargetStatusDto[];
+  options: { scope: TokenUsageBudgetScope; id: string; label: string }[];
+}
+export interface TokenUsageBudgetSettingsUpdateRequestDto {
+  /** Reject raw-name drafts from clients predating canonical team identities. */
+  teamIdentityVersion: 1;
+  settings: Omit<TokenUsageBudgetSettingsDto, 'updatedAt'>;
+  expectedUpdatedAt: string | null;
 }
 
 export interface TokenUsageTokenBreakdownDto {
@@ -88,6 +131,10 @@ export interface TokenUsageRunDto {
   teamName?: string;
   agentId?: string;
   agentName?: string;
+  /** Gateway usage source snapshot captured when the run started. */
+  gatewayUsageRef?: string;
+  /** Runtime evidence confirms the consumer stopped; inactivity alone is insufficient. */
+  terminationConfirmed?: boolean;
   commandId?: string;
   commandInvocationId?: string;
   runtimeKind: TokenUsageRuntimeKind;
@@ -128,9 +175,34 @@ export interface TokenUsageEventDto {
   /** Provider-native metering that must not be converted to tokens or USD. */
   providerUsage?: TokenUsageProviderUsageDto;
   usageSourceKind: TokenUsageSourceKind;
+  /** Gateway source snapshot; only set for gateway aggregate events. */
+  gatewayUsageRef?: string;
+  /** UTC day covered by a gateway aggregate event. */
+  gatewayDay?: string;
+  /** Requests represented by one event; older events default to 1. */
+  requestCount?: number;
   rawUsageJson?: unknown;
   occurredAt: string;
   createdAt: string;
+}
+
+export type TokenUsageGatewayDegradedReason =
+  | 'http_unavailable'
+  | 'credential_changed'
+  | 'credential_missing';
+
+export interface TokenUsageGatewaySourceStateDto {
+  gatewayUsageRef: string;
+  teamName: string;
+  agentName: string;
+  agentId?: string;
+  /** Last continuously imported and stabilized UTC day. */
+  watermarkDay?: string;
+  lastUsedAt?: string;
+  finalUsageDay?: string;
+  degraded: boolean;
+  degradedReason?: TokenUsageGatewayDegradedReason;
+  lastSuccessfulAt?: string;
 }
 
 export interface TokenUsageSummaryDto {
@@ -265,6 +337,10 @@ export interface TokenUsageAnalyticsSnapshotDto {
   updatedAt: string;
   stale: boolean;
   degraded: boolean;
+  /** Earliest last-successful gateway load across active sources. */
+  gatewayLastSuccessfulAt?: string;
+  /** Number of known gateway sources, including sources awaiting their first import. */
+  gatewaySourceCount?: number;
   summary: TokenUsageSummaryDto;
   byTeam: TokenUsageBreakdownItemDto[];
   byAgent: TokenUsageBreakdownItemDto[];

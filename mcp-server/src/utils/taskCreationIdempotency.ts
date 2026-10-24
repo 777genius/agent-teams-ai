@@ -5,6 +5,7 @@ export const CANONICAL_TASK_UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 interface TaskCreationBoard {
+  getTask?(taskId: string): unknown;
   createTask(input: Record<string, unknown>): unknown;
   reconcileTaskCreation(input: Record<string, unknown>): unknown;
 }
@@ -57,9 +58,13 @@ export function createTaskWithOptionalIdempotency(input: {
   operation: 'task.create' | 'task.create_from_message';
   payload: Record<string, unknown>;
   commandId?: string;
+  /** New mutable catalog admission runs only after existing keyed provenance is reconciled. */
+  admitCreate?: () => Promise<void>;
 }): unknown {
   if (!input.commandId) {
-    return input.taskBoard.createTask(input.payload);
+    return input.admitCreate
+      ? input.admitCreate().then(() => input.taskBoard.createTask(input.payload))
+      : input.taskBoard.createTask(input.payload);
   }
 
   const commandPayload = {
@@ -77,14 +82,27 @@ export function createTaskWithOptionalIdempotency(input: {
     },
   };
 
-  try {
-    return withoutCreationCommand(input.taskBoard.createTask(commandPayload));
-  } catch (error) {
-    if (!isExistingCommandTaskError(error, input.commandId)) {
-      throw error;
+  if (input.admitCreate) {
+    if (!input.taskBoard.getTask) throw new Error('Task creation admission requires task lookup');
+    let exists = false;
+    try {
+      input.taskBoard.getTask(input.commandId);
+      exists = true;
+    } catch (error) {
+      if ((error as { code?: string }).code !== 'TASK_NOT_FOUND') throw error;
     }
-    return withoutCreationCommand(input.taskBoard.reconcileTaskCreation(commandPayload));
+    if (exists)
+      return withoutCreationCommand(input.taskBoard.reconcileTaskCreation(commandPayload));
   }
+  const create = () => {
+    try {
+      return withoutCreationCommand(input.taskBoard.createTask(commandPayload));
+    } catch (error) {
+      if (!isExistingCommandTaskError(error, input.commandId!)) throw error;
+      return withoutCreationCommand(input.taskBoard.reconcileTaskCreation(commandPayload));
+    }
+  };
+  return input.admitCreate ? input.admitCreate().then(create) : create();
 }
 
 function normalizeOptionalValue(value: string | undefined): string | undefined {

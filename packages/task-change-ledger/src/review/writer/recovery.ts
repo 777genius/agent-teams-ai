@@ -1,3 +1,4 @@
+import { assertReviewRecoveryContent } from '../apply/reviewReplayEvidence.js';
 import type { ReviewWriterContext } from './ports.js';
 import { ReviewMutationJournalStore } from '../storage/ReviewMutationJournalStore.js';
 import {
@@ -144,9 +145,8 @@ export async function recoverReviewMutationJournal(
           requireReviewedFile: false,
           rejectHardlinks: true,
         });
-        if (filePath !== path.resolve(path.normalize(step.filePath))) {
+        if (filePath !== path.resolve(path.normalize(step.filePath)))
           throw new Error('Review mutation recovery file mismatch');
-        }
         if (step.authoritativeContent) {
           await validateSnippetPaths(authorization, step.authoritativeContent.snippets, {
             requireReviewedFile: false,
@@ -181,6 +181,7 @@ export async function recoverReviewMutationJournal(
           if (filePath !== path.resolve(path.normalize(savedContent.filePath))) {
             throw new Error('Review mutation recovery file mismatch');
           }
+          assertReviewRecoveryContent(savedDecision, savedContent, current.decisionStatuses?.[index] === 'applied');
         }
         return applyJournalDecisionBatchDisk(env, current);
       },
@@ -308,7 +309,8 @@ export async function handleRetryReviewMutationRecovery(
             env,
             expectedRestore.diskSteps,
             scope,
-            authorization
+            authorization,
+            expectedRestore.persistedState
           );
           const postimageStates = await Promise.all(
             normalizedSteps.map((step) => classifyDirectReviewMutationStep(env, step))

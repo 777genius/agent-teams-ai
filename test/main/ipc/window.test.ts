@@ -1,3 +1,5 @@
+import { EventEmitter } from 'node:events';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const electronMock = vi.hoisted(() => ({
@@ -103,8 +105,8 @@ describe('window IPC handlers', () => {
 
   it('awaits configured guarded lifecycle actions before resolving window commands', async () => {
     const ipcMain = createMockIpcMain();
-    const quit = vi.fn(async () => undefined);
-    const relaunch = vi.fn(async () => undefined);
+    const quit = vi.fn(() => Promise.resolve());
+    const relaunch = vi.fn(() => Promise.resolve());
     configureWindowLifecycleActions({ quit, relaunch });
     registerWindowHandlers(ipcMain);
 
@@ -139,5 +141,57 @@ describe('window IPC handlers', () => {
 
     expect(ipcMain.removeHandler).toHaveBeenCalledWith('window:close');
     expect(ipcMain.removeHandler).toHaveBeenCalledWith('app:relaunch');
+  });
+
+  it.each([false, true])(
+    'waits for the window manager acknowledgment (maximized=%s)',
+    async (maximized) => {
+      const win = Object.assign(new EventEmitter(), createMockWindow());
+      win.isMaximized.mockReturnValue(maximized);
+      vi.mocked(BrowserWindow.fromWebContents).mockReturnValue(win as never);
+      const ipcMain = createMockIpcMain();
+      registerWindowHandlers(ipcMain);
+      let completed = false;
+      const pending = ipcMain.invoke('window:maximize').then(() => {
+        completed = true;
+      });
+      await new Promise<void>((resolve) => setImmediate(resolve));
+
+      expect(completed).toBe(false);
+      expect(maximized ? win.unmaximize : win.maximize).toHaveBeenCalledTimes(1);
+      win.isMaximized.mockReturnValue(!maximized);
+      win.emit(maximized ? 'unmaximize' : 'maximize');
+      await pending;
+      expect(await ipcMain.invoke('window:isMaximized')).toBe(!maximized);
+      expect(win.eventNames()).toEqual([]);
+    }
+  );
+
+  it('releases pending window listeners when the window closes', async () => {
+    const win = Object.assign(new EventEmitter(), createMockWindow());
+    vi.mocked(BrowserWindow.fromWebContents).mockReturnValue(win as never);
+    const ipcMain = createMockIpcMain();
+    registerWindowHandlers(ipcMain);
+    const pending = ipcMain.invoke('window:maximize');
+    expect(win.listenerCount('maximize')).toBe(1);
+    win.emit('closed');
+    await pending;
+    expect(win.eventNames()).toEqual([]);
+  });
+
+  it('bounds missing window manager acknowledgments and removes listeners', async () => {
+    vi.useFakeTimers();
+    try {
+      const win = Object.assign(new EventEmitter(), createMockWindow());
+      vi.mocked(BrowserWindow.fromWebContents).mockReturnValue(win as never);
+      const ipcMain = createMockIpcMain();
+      registerWindowHandlers(ipcMain);
+      const pending = expect(ipcMain.invoke('window:maximize')).rejects.toThrow('Window manager');
+      await vi.runAllTimersAsync();
+      await pending;
+      expect(win.eventNames()).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

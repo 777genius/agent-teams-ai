@@ -5,11 +5,13 @@
  * - get-subagent-detail: Get detailed information for a specific subagent
  */
 
+import { DetailReadAdapterLifetime, readSubagentDetail } from '@features/member-log-reads/main';
 import { createLogger } from '@shared/utils/logger';
 import { type IpcMain, type IpcMainInvokeEvent } from 'electron';
 
 import { type SubagentDetail } from '../types';
 
+import { normalizeDetailReadOptions } from './detailReadOptions';
 import { validateProjectId, validateSessionId, validateSubagentId } from './guards';
 
 import type { ServiceContextRegistry } from '../services';
@@ -18,12 +20,15 @@ const logger = createLogger('IPC:subagents');
 
 // Service registry - set via initialize
 let registry: ServiceContextRegistry;
+let adapter: DetailReadAdapterLifetime | undefined;
 
 /**
  * Initializes subagent handlers with service registry.
  */
 export function initializeSubagentHandlers(contextRegistry: ServiceContextRegistry): void {
+  adapter?.retire();
   registry = contextRegistry;
+  adapter = new DetailReadAdapterLifetime();
 }
 
 /**
@@ -39,6 +44,8 @@ export function registerSubagentHandlers(ipcMain: IpcMain): void {
  * Removes all subagent IPC handlers.
  */
 export function removeSubagentHandlers(ipcMain: IpcMain): void {
+  adapter?.retire();
+  adapter = undefined;
   ipcMain.removeHandler('get-subagent-detail');
 
   logger.info('Subagent handlers removed');
@@ -63,59 +70,28 @@ async function handleGetSubagentDetail(
     const validatedProject = validateProjectId(projectId);
     const validatedSession = validateSessionId(sessionId);
     const validatedSubagent = validateSubagentId(subagentId);
-    if (!validatedProject.valid || !validatedSession.valid || !validatedSubagent.valid) {
-      logger.error(
-        `get-subagent-detail rejected: ${
-          validatedProject.error ??
-          validatedSession.error ??
-          validatedSubagent.error ??
-          'Invalid parameters'
-        }`
-      );
+    const detailOptions = normalizeDetailReadOptions(options);
+    const lifetime = adapter;
+    if (
+      !validatedProject.valid ||
+      !validatedSession.valid ||
+      !validatedSubagent.valid ||
+      !detailOptions ||
+      !lifetime
+    ) {
       return null;
     }
-    const safeProjectId = validatedProject.value!;
-    const safeSessionId = validatedSession.value!;
-    const safeSubagentId = validatedSubagent.value!;
-
-    const { chunkBuilder, sessionParser, subagentResolver, projectScanner, dataCache } =
-      registry.getActive();
-
-    const cacheKey = `subagent-${safeProjectId}-${safeSessionId}-${safeSubagentId}`;
-
-    // Check cache first
-    let subagentDetail = dataCache.getSubagent(cacheKey);
-
-    if (subagentDetail && !options?.bypassCache) {
-      return subagentDetail;
-    }
-
-    // Get provider and projectsDir from projectScanner
-    const fsProvider = projectScanner.getFileSystemProvider();
-    const projectsDir = projectScanner.getProjectsDir();
-
-    // Build subagent detail
-    const builtDetail = await chunkBuilder.buildSubagentDetail(
-      safeProjectId,
-      safeSessionId,
-      safeSubagentId,
-      sessionParser,
-      subagentResolver,
-      fsProvider,
-      projectsDir
+    const context = registry.getActive();
+    const source = context.getDetailReadSource();
+    const detail = await readSubagentDetail(
+      context,
+      lifetime,
+      validatedProject.value!,
+      validatedSession.value!,
+      validatedSubagent.value!,
+      detailOptions.bypassCache
     );
-
-    if (!builtDetail) {
-      logger.error(`Subagent not found: ${safeSubagentId}`);
-      return null;
-    }
-
-    subagentDetail = builtDetail;
-
-    // Cache the result
-    dataCache.setSubagent(cacheKey, subagentDetail);
-
-    return subagentDetail;
+    return lifetime.isCurrent() && context.isDetailReadSourceCurrent(source) ? detail : null;
   } catch (error) {
     logger.error(`Error in get-subagent-detail for ${subagentId}:`, error);
     return null;

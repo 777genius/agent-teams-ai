@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 
+import { ownedOpenCodeStateChangingFailure } from '../opencode/bridge/OpenCodeStateChangingCausalFailure';
 import {
   freshOpenCodeExecutionProof,
   openCodeReadinessArtifactKey,
@@ -37,6 +38,7 @@ import type {
   OpenCodeObserveMessageDeliveryCommandBody,
   OpenCodeObserveMessageDeliveryCommandData,
   OpenCodeReconcileTeamCommandBody,
+  OpenCodeReconcileTeamCommandData,
   OpenCodeRuntimePermissionCommandData,
   OpenCodeSendMessageCommandBody,
   OpenCodeSendMessageCommandData,
@@ -88,7 +90,7 @@ export interface OpenCodeTeamRuntimeBridgePort {
   launchOpenCodeTeam?(input: OpenCodeLaunchTeamCommandBody): Promise<OpenCodeLaunchTeamCommandData>;
   reconcileOpenCodeTeam?(
     input: OpenCodeReconcileTeamCommandBody
-  ): Promise<OpenCodeLaunchTeamCommandData>;
+  ): Promise<OpenCodeReconcileTeamCommandData>;
   stopOpenCodeTeam?(
     input: OpenCodeStopTeamCommandBody
   ): Promise<OpenCodeStopTeamCommandData | RuntimeStopObservation>;
@@ -114,6 +116,14 @@ export interface OpenCodeTeamRuntimeMessageInput {
   cwd: string;
   text: string;
   messageId?: string;
+  groupChatId?: string;
+  groupRunKey?: string;
+  from?: string;
+  groupChatName?: string;
+  timestamp?: string;
+  groupMessageId?: string;
+  groupChatProtocolVersion?: 1;
+  relayOfMessageId?: string;
   deliveryAttemptId?: string;
   fileParts?: OpenCodeSendMessageCommandBody['fileParts'];
   replyRecipient?: string;
@@ -623,6 +633,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       );
       return {
         ...mapped,
+        observationUnavailable: data.observationUnavailable,
         snapshot: input.previousLaunchState,
       };
     }
@@ -689,6 +700,14 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       memberName: input.memberName,
       text: buildOpenCodeRuntimeMessageText(input),
       messageId: input.messageId,
+      groupChatId: input.groupChatId,
+      groupRunKey: input.groupRunKey,
+      from: input.from,
+      groupChatName: input.groupChatName,
+      timestamp: input.timestamp,
+      groupMessageId: input.groupMessageId,
+      groupChatProtocolVersion: input.groupChatProtocolVersion,
+      relayOfMessageId: input.relayOfMessageId,
       ...(input.deliveryAttemptId ? { deliveryAttemptId: input.deliveryAttemptId } : {}),
       ...(input.forceSessionRefreshReason
         ? { forceSessionRefreshReason: input.forceSessionRefreshReason }
@@ -710,7 +729,24 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       prePromptCursor: data.prePromptCursor,
       runtimePromptMessageId: data.runtimePromptMessageId,
       responseObservation: data.responseObservation,
-      diagnostics: data.diagnostics.map((diagnostic) => diagnostic.message),
+      diagnostics: data.diagnostics.map((diagnostic) =>
+        // Only transport/contract failure kinds need a typed rejection category.
+        // Keep native policy messages unchanged: their text also participates
+        // in session-refresh classification, where a severity prefix is not a failure.
+        [
+          'unsupported_schema',
+          'unsupported_command',
+          'invalid_input',
+          'runtime_not_ready',
+          'provider_error',
+          'timeout',
+          'transport_watchdog_timeout',
+          'contract_violation',
+          'internal_error',
+        ].includes(diagnostic.code)
+          ? formatOpenCodeBridgeDiagnostic(diagnostic)
+          : diagnostic.message
+      ),
     };
   }
 
@@ -746,6 +782,14 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       projectPath: input.cwd,
       memberName: input.memberName,
       messageId: input.messageId,
+      groupChatId: input.groupChatId,
+      groupRunKey: input.groupRunKey,
+      from: input.from,
+      groupChatName: input.groupChatName,
+      timestamp: input.timestamp,
+      groupMessageId: input.groupMessageId,
+      groupChatProtocolVersion: input.groupChatProtocolVersion,
+      relayOfMessageId: input.relayOfMessageId,
       sessionId: input.sessionId,
       runtimePromptMessageId: input.runtimePromptMessageId,
       prePromptCursor: input.prePromptCursor ?? null,
@@ -870,6 +914,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         runId: input.runId,
         teamName: input.teamName,
         stopped: data.stopped,
+        causalFailure: ownedOpenCodeStateChangingFailure(data.causalFailure),
         members: Object.fromEntries(
           Object.entries(data.members).map(([memberName, member]) => [
             memberName,

@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { TaskFoldersHost, useTaskFoldersDocked } from '@features/task-folders/renderer';
 import { useStore } from '@renderer/store';
 import { formatShortcut } from '@renderer/utils/stringUtils';
 import { PanelLeft } from 'lucide-react';
@@ -36,14 +37,16 @@ const DEFAULT_WIDTH = 280;
 
 export const Sidebar = (): React.JSX.Element => {
   const { t } = useAppTranslation('common');
-  const { sidebarCollapsed, toggleSidebar } = useStore(
+  const { activeContextId, sidebarCollapsed, toggleSidebar } = useStore(
     useShallow((s) => ({
+      activeContextId: s.activeContextId,
       sidebarCollapsed: s.sidebarCollapsed,
       toggleSidebar: s.toggleSidebar,
     }))
   );
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
+  const foldersDocked = useTaskFoldersDocked();
   // const [sidebarTab, setSidebarTab] = useState<SidebarTab>('tasks');
   // const [hasOpenedSessionsTab, setHasOpenedSessionsTab] = useState(false);
   const [taskFilters, setTaskFilters] = useState<TaskFiltersState>(defaultTaskFiltersState);
@@ -137,18 +140,28 @@ export const Sidebar = (): React.JSX.Element => {
             <PanelLeft className="size-3.5" />
           </button>
 
-          <span className="text-[13px] font-semibold text-text">{t('tasksPanel.title')}</span>
+          <span className="flex-1 text-[13px] font-semibold text-text">
+            {t('tasksPanel.title')}
+          </span>
+          <TaskFoldersHost
+            contextId={activeContextId}
+            sidebar={sidebarRef}
+            collapsed={sidebarCollapsed}
+          />
         </div>
 
-        {/* Content: tasks list. Sessions panel is temporarily hidden with the mode switcher above. */}
+        {/* Content: tasks list, or the docked folders tree portal target. */}
         <div id="sidebar-tasks-panel" className="min-w-0 flex-1 overflow-hidden">
-          <GlobalTaskList
-            hideHeader
-            filters={taskFilters}
-            onFiltersChange={setTaskFilters}
-            filtersPopoverOpen={taskFiltersPopoverOpen}
-            onFiltersPopoverOpenChange={setTaskFiltersPopoverOpen}
-          />
+          {!foldersDocked && (
+            <GlobalTaskList
+              hideHeader
+              contextId={activeContextId}
+              filters={taskFilters}
+              onFiltersChange={setTaskFilters}
+              filtersPopoverOpen={taskFiltersPopoverOpen}
+              onFiltersPopoverOpenChange={setTaskFiltersPopoverOpen}
+            />
+          )}
         </div>
         {/*
         <div id="sidebar-sessions-panel" className="min-w-0 flex-1 overflow-hidden">

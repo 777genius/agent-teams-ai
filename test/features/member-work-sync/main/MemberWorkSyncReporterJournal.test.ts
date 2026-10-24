@@ -45,6 +45,13 @@ import type {
 } from '@features/member-work-sync/core/application/ports';
 import type { MemberWorkSyncStatusAuthorityDeps } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStatusAuthority';
 
+// Measured at the four-vCPU CI quota: the durable JSON reporter journal tests
+// legitimately take up to ~27.6s each when several durable suites run
+// concurrently (single-file runs finish each test in ~3-10s). The 60s ceiling
+// sizes the wait to the measured worst case (~2.2x margin) without changing
+// any assertion.
+vi.setConfig({ testTimeout: 60_000 });
+
 const member = { teamName: 'sandbox', memberName: 'alice' };
 const incarnation = 'inc-journal';
 const initialTime = '2026-09-10T00:00:00.000Z';

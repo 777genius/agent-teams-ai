@@ -15,6 +15,15 @@ import { AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV } from '@shared/constants/ant
 import { describe, expect, it } from 'vitest';
 
 describe('TeamProvisioningDirectRestart', () => {
+  it('carries the 200K context cap into a tmux restart command', () => {
+    const assignments = buildDirectTmuxRestartEnvAssignments(
+      { CLAUDE_CODE_DISABLE_1M_CONTEXT: '1' },
+      'anthropic'
+    );
+    expect(assignments).toContain('CLAUDE_CODE_DISABLE_1M_CONTEXT=');
+    expect(assignments).toContain("CLAUDE_CODE_DISABLE_1M_CONTEXT='1'");
+  });
+
   it('quotes shell values without losing apostrophes or empty strings', () => {
     expect(shellQuote('')).toBe("''");
     expect(shellQuote('/tmp/demo path')).toBe("'/tmp/demo path'");
@@ -134,9 +143,7 @@ describe('TeamProvisioningDirectRestart', () => {
       'anthropic'
     );
 
-    expect(assignments).toContain(
-      `${AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV}='api_key'`
-    );
+    expect(assignments).toContain(`${AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV}='api_key'`);
     expect(assignments).toContain("CLAUDE_CODE_ENTRY_PROVIDER='anthropic'");
     expect(assignments).toContain("CLAUDE_CODE_USE_BEDROCK=''");
   });
@@ -290,40 +297,75 @@ describe('TeamProvisioningDirectRestart', () => {
         ANTHROPIC_AUTH_TOKEN: 'ambient-token',
         ANTHROPIC_BASE_URL: 'https://gateway.example/anthropic',
         ANTHROPIC_CUSTOM_HEADERS: 'Authorization: Bearer ambient-token',
+        ANTHROPIC_MODEL: 'gateway-large',
+        ANTHROPIC_SMALL_FAST_MODEL: 'gateway-small',
         ANTHROPIC_DEFAULT_SONNET_MODEL: 'bedrock-model-id',
         CLAUDE_CODE_OAUTH_TOKEN: 'ambient-oauth-token',
       },
       'anthropic'
     );
 
-    expect(assignments).toContain(
-      `${AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV}='api_key'`
-    );
+    expect(assignments).toContain(`${AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV}='api_key'`);
     expect(assignments).toContain("ANTHROPIC_API_KEY='sk-ant-direct'");
     expect(assignments).toContain("ANTHROPIC_AUTH_TOKEN=''");
     expect(assignments).toContain("ANTHROPIC_BASE_URL=''");
     expect(assignments).toContain("ANTHROPIC_CUSTOM_HEADERS=''");
+    expect(assignments).toContain("ANTHROPIC_MODEL=''");
+    expect(assignments).toContain("ANTHROPIC_SMALL_FAST_MODEL=''");
     expect(assignments).toContain("ANTHROPIC_DEFAULT_SONNET_MODEL=''");
     expect(assignments).toContain("CLAUDE_CODE_OAUTH_TOKEN=''");
   });
 
-  it('keeps the configured compatible endpoint while scrubbing external model aliases', () => {
-    const assignments = buildDirectTmuxRestartEnvAssignments(
-      {
+  it.skipIf(process.platform === 'win32')(
+    'preserves compatible model overrides through an actual POSIX restart',
+    () => {
+      const customModels = {
+        ANTHROPIC_MODEL: "gateway's large model",
+        ANTHROPIC_SMALL_FAST_MODEL: 'gateway-small',
+        ANTHROPIC_DEFAULT_SONNET_MODEL: 'gateway-sonnet',
+      };
+      const env = {
+        ...customModels,
         [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: 'compatible',
         ANTHROPIC_BASE_URL: 'http://localhost:1234',
         ANTHROPIC_AUTH_TOKEN: 'local-token',
         ANTHROPIC_CUSTOM_HEADERS: 'X-Gateway-Tenant: team-1',
-        ANTHROPIC_DEFAULT_OPUS_MODEL: 'bedrock-opus-id',
-      },
-      'anthropic'
-    );
+        ANTHROPIC_BEDROCK_BASE_URL: 'https://bedrock.example.test',
+        CLAUDE_CODE_USE_BEDROCK: '1',
+      };
+      const assignments = buildDirectTmuxRestartEnvAssignments(env, 'anthropic');
 
-    expect(assignments).toContain("ANTHROPIC_BASE_URL='http://localhost:1234'");
-    expect(assignments).toContain("ANTHROPIC_AUTH_TOKEN='local-token'");
-    expect(assignments).toContain("ANTHROPIC_CUSTOM_HEADERS='X-Gateway-Tenant: team-1'");
-    expect(assignments).toContain("ANTHROPIC_DEFAULT_OPUS_MODEL=''");
-  });
+      expect(assignments).toContain("ANTHROPIC_BASE_URL='http://localhost:1234'");
+      expect(assignments).toContain("ANTHROPIC_AUTH_TOKEN='local-token'");
+      expect(assignments).toContain("ANTHROPIC_CUSTOM_HEADERS='X-Gateway-Tenant: team-1'");
+      expect(assignments).toContain("ANTHROPIC_MODEL='gateway'\\''s large model'");
+      expect(assignments).toContain("ANTHROPIC_SMALL_FAST_MODEL='gateway-small'");
+      expect(assignments).toContain("ANTHROPIC_DEFAULT_SONNET_MODEL='gateway-sonnet'");
+      expect(assignments).toContain("ANTHROPIC_BEDROCK_BASE_URL=''");
+      expect(assignments).toContain("CLAUDE_CODE_USE_BEDROCK=''");
+
+      const command = buildDirectTmuxRestartCommand({
+        cwd: process.cwd(),
+        env,
+        providerId: 'anthropic',
+        binaryPath: '/usr/bin/env',
+        args: [],
+      });
+      const output = execFileSync('/bin/sh', ['-c', command], {
+        encoding: 'utf8',
+        env: { PATH: process.env.PATH ?? '/usr/bin:/bin' },
+      });
+      const outputLines = new Set(output.split('\n'));
+      for (const [key, value] of Object.entries(customModels)) {
+        expect(outputLines.has(`${key}=${value}`)).toBe(true);
+      }
+      expect(outputLines.has('ANTHROPIC_BASE_URL=http://localhost:1234')).toBe(true);
+      expect(outputLines.has('ANTHROPIC_AUTH_TOKEN=local-token')).toBe(true);
+      expect(outputLines.has('ANTHROPIC_BEDROCK_BASE_URL=')).toBe(true);
+      expect(outputLines.has('CLAUDE_CODE_USE_BEDROCK=')).toBe(true);
+      expect(output).toContain('__CLAUDE_TEAMMATE_EXIT__:0');
+    }
+  );
 
   it('blanks competing Anthropic helper auth carriers for direct restart helper mode', () => {
     const assignments = buildDirectTmuxRestartEnvAssignments(

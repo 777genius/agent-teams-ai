@@ -56,6 +56,12 @@ function mergeProviderCatalogCache(
       incomingProvider.statusCheckErrorCode === 'partial_response');
   return {
     ...incomingProvider,
+    effectiveDefaultModel:
+      incomingProvider.effectiveDefaultModel === undefined
+        ? undefined
+        : hasAuthoritativeStatusEvidence
+          ? incomingProvider.effectiveDefaultModel
+          : null,
     teamLaunchAuthorityRestriction: hasProviderCatalogRefreshLaunchSupport(incomingProvider)
       ? incomingProvider.teamLaunchAuthorityRestriction
       : undefined,
@@ -103,6 +109,7 @@ export function revokeProviderLaunchAuthority(provider: CliProviderStatus): CliP
   const hasAuthoritativeStatusEvidence = hasAuthoritativeProviderStatusEvidence(provider);
   return {
     ...provider,
+    effectiveDefaultModel: provider.effectiveDefaultModel === undefined ? undefined : null,
     teamLaunchAuthorityRestriction: hasProviderCatalogRefreshLaunchSupport(provider)
       ? provider.teamLaunchAuthorityRestriction
       : undefined,

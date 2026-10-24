@@ -41,7 +41,8 @@ interface LaunchDialogRelaunchMode extends LaunchDialogBase {
     intent?: import('@shared/types').ReplaceMembersRequest['memberSettingsRelaunch'],
     rosterMetadata?: Parameters<
       typeof import('./teamRelaunchFlow').executeTeamRelaunch
-    >[0]['rosterMetadata']
+    >[0]['rosterMetadata'],
+    onMembersSaved?: () => void
   ) => Promise<void>;
 }
 

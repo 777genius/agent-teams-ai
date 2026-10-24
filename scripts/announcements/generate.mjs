@@ -52,6 +52,11 @@ export function normalizeMetadata(value, folder) {
     fail(`${folder}: invalid title`);
   if (!['draft', 'published', 'archived', 'withdrawn'].includes(value.status))
     fail(`${folder}: invalid status`);
+  if (
+    Object.hasOwn(value, 'macosManualUpdate2171Only') &&
+    typeof value.macosManualUpdate2171Only !== 'boolean'
+  )
+    fail(`${folder}: macosManualUpdate2171Only must be boolean`);
   const publishedAt = date(value.publishedAt, `${folder}.publishedAt`);
   const validUntil =
     value.validUntil === undefined
@@ -73,6 +78,9 @@ export function normalizeMetadata(value, folder) {
       ? undefined
       : localImagePath(value.heroImage, `${folder}.heroImage`);
   return {
+    ...(Object.hasOwn(value, 'macosManualUpdate2171Only')
+      ? { macosManualUpdate2171Only: value.macosManualUpdate2171Only }
+      : {}),
     id: value.id,
     title: value.title.trim(),
     publishedAt,
@@ -216,7 +224,7 @@ export function validateImmutable({ repoDir, sourceDir, baseRef, metadata }) {
     const current = metadata.get(old.id);
     if (!current) fail(`previously published ${old.id} cannot be deleted; use withdrawn`);
     if (current.status === 'draft') fail(`${old.id} cannot return to draft; use withdrawn`);
-    for (const field of ['id', 'publishedAt', 'showToNewUsers'])
+    for (const field of ['id', 'publishedAt', 'showToNewUsers', 'macosManualUpdate2171Only'])
       if (old[field] !== current[field]) fail(`${old.id}: immutable ${field} changed`);
   }
 }

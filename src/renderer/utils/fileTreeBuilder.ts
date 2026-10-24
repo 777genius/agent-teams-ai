@@ -38,11 +38,14 @@ export function buildTree<T>(
       const isLast = i === parts.length - 1;
       const fullPath = parts.slice(0, i + 1).join('/');
 
-      let child = current.children.find((c) => c.name === part);
+      // Distinct review lifecycle entries may have the same destination path.
+      // Keep both leaves while still sharing their parent directories.
+      const existing = current.children.find((c) => c.name === part);
+      let child = isLast ? undefined : existing;
       if (!child) {
         child = {
           name: part,
-          fullPath,
+          fullPath: isLast && existing ? `${fullPath}\u0000${current.children.length}` : fullPath,
           isFile: isLast,
           data: isLast ? item : undefined,
           children: [],

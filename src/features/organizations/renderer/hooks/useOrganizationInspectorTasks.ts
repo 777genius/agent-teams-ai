@@ -12,10 +12,13 @@ import type { OrganizationAgentTaskDto } from '../../contracts';
 import type { TeamTask, TeamTaskWithKanban } from '@shared/types';
 
 export interface OrganizationInspectorTaskBindings {
+  contextId: string;
   tasks: TeamTaskWithKanban[];
   taskMap: Map<string, TeamTask>;
   memberColorMap: Map<string, string>;
-  kanbanTaskStateById: NonNullable<ReturnType<typeof selectTeamDataForName>>['kanbanState']['tasks'] | undefined;
+  kanbanTaskStateById:
+    | NonNullable<ReturnType<typeof selectTeamDataForName>>['kanbanState']['tasks']
+    | undefined;
   openTaskDetail: (task: TeamTask) => void;
   openTaskSummaryDetail: (task: OrganizationAgentTaskDto) => void;
   onStartTask: (taskId: string) => void;
@@ -29,6 +32,7 @@ export interface OrganizationInspectorTaskBindings {
 
 export function useOrganizationInspectorTasks(teamName: string): OrganizationInspectorTaskBindings {
   const {
+    contextId,
     globalTasks,
     members,
     openGlobalTaskDetail,
@@ -39,6 +43,7 @@ export function useOrganizationInspectorTasks(teamName: string): OrganizationIns
     updateTaskStatus,
   } = useStore(
     useShallow((state) => ({
+      contextId: state.activeContextId,
       globalTasks: state.globalTasks,
       members: selectResolvedMembersForTeamName(state, teamName),
       openGlobalTaskDetail: state.openGlobalTaskDetail,
@@ -146,6 +151,7 @@ export function useOrganizationInspectorTasks(teamName: string): OrganizationIns
   );
 
   return {
+    contextId,
     tasks,
     taskMap,
     memberColorMap,

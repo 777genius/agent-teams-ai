@@ -52,12 +52,18 @@ import {
   buildReviewDecisionScopeToken,
   reviewChangeSetMatchesScope,
 } from '@renderer/utils/reviewDecisionScope';
-import { buildHunkDecisionKey, getFileReviewKey } from '@renderer/utils/reviewKey';
+import {
+  buildHunkDecisionKey,
+  findReviewFileByPath,
+  getFileReviewKey,
+  getReviewEntryKey,
+  hasDuplicateReviewFilePaths,
+} from '@renderer/utils/reviewKey';
+import { normalizeReviewPathForIdentity as normalizePathForComparison } from '@renderer/utils/reviewKey';
 import {
   buildTaskChangeSignature,
   type TaskChangeRequestOptions,
 } from '@renderer/utils/taskChangeRequest';
-import { normalizePathForComparison } from '@shared/utils/platformPath';
 import { classifyTaskChangeReviewability } from '@shared/utils/taskChangeReviewability';
 import { threeWayTextMerge } from '@shared/utils/threeWayTextMerge';
 import { AlertTriangle, ChevronDown, Clock, X } from 'lucide-react';
@@ -108,6 +114,18 @@ import {
   isReviewRejectable,
   isReviewTextContentUnavailable,
 } from './reviewContentPreview';
+import {
+  getReviewPhysicalPathEntries,
+  hasReviewDraftForEntry,
+  resolveReviewHistoryActionFile,
+} from './reviewDialogIdentity';
+import {
+  canMutateReviewHunk,
+  getReviewDiskPath,
+  getReviewFileLabels,
+  getReviewHunkOrder,
+  getReviewNavigationFiles,
+} from './reviewEntryNavigation';
 import { handleReviewFileChange } from './reviewFileChangeMonitor';
 import { resolveReviewFilePath } from './reviewFilePathResolution';
 import { ReviewFileTree } from './ReviewFileTree';
@@ -124,6 +142,7 @@ import {
   getReviewActionDiskSnapshots,
   markReviewMutationDiskPostimages,
 } from './reviewHistoryTimeline';
+import { selectReviewRestoreSnapshots } from './reviewRestoreSnapshotSelection';
 import { ReviewToolbar } from './ReviewToolbar';
 import { SavedReviewStateRecoveryGate } from './SavedReviewStateRecoveryGate';
 import { ScopeWarningBanner } from './ScopeWarningBanner';
@@ -444,7 +463,6 @@ export const ChangeReviewDialog = ({
     draftHistoryHydration.key === decisionHydrationKey &&
     draftHistoryHydration.status === 'error';
 
-  // Active file from scroll-spy (replaces selectedReviewFilePath for continuous scroll)
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
   const [autoViewed, setAutoViewed] = useState(true);
   const [timelineOpen, setTimelineOpen] = useState(false);
@@ -478,17 +496,14 @@ export const ChangeReviewDialog = ({
     return new Set<string>();
   });
 
-  // Selection menu state
   const [selectionInfo, setSelectionInfo] = useState<EditorSelectionInfo | null>(null);
   const [containerRect, setContainerRect] = useState<DOMRect>(new DOMRect());
   const diffContentRef = useRef<HTMLDivElement>(null);
   const selectionTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const activeSelectionFileRef = useRef<string | null>(null);
 
-  // EditorView map for all visible file editors
   const editorViewMapRef = useRef(new Map<string, EditorView>());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  // Last focused CM editor - for Cmd+Z outside editor
   const lastFocusedEditorRef = useRef<EditorView | null>(null);
   // Ordered, self-contained history. The ref keeps keyboard routing synchronous while the
   // matching Zustand array is persisted atomically with decisions.
@@ -629,7 +644,6 @@ export const ChangeReviewDialog = ({
     teamName,
   ]);
 
-  // Proxy ref for useDiffNavigation (points to active file's editor)
   const activeEditorViewRef = useRef<EditorView | null>(null);
   const activeFilePathRef = useRef<string | null>(null);
 
@@ -1084,7 +1098,6 @@ export const ChangeReviewDialog = ({
     return null;
   }, []);
 
-  // Keep refs in sync with activeFilePath
   useEffect(() => {
     activeFilePathRef.current = activeFilePath;
     activeEditorViewRef.current = activeFilePath
@@ -1684,29 +1697,18 @@ export const ChangeReviewDialog = ({
     });
   }, []);
 
-  // One-shot scroll-to-file ref (for initialFilePath)
   const initialScrollDoneKeyRef = useRef<string | null>(null);
 
-  // Continuous scroll navigation
   const { scrollToFile, isProgrammaticScroll } = useContinuousScrollNav({
     scrollContainerRef,
   });
 
-  // Sort files to match the visual order of the file tree (directories first, then alphabetical)
   const sortedFiles = useMemo(
     () => sortItemsAsTree(activeChangeSet?.files ?? [], (f) => f.relativePath),
     [activeChangeSet]
   );
-  const reviewFileLabels = useMemo(
-    () =>
-      new Map(
-        sortedFiles.map((file) => [
-          normalizePathForComparison(file.filePath),
-          file.relativePath || file.filePath,
-        ])
-      ),
-    [sortedFiles]
-  );
+  const navigationFiles = useMemo(() => getReviewNavigationFiles(sortedFiles), [sortedFiles]);
+  const reviewFileLabels = useMemo(() => getReviewFileLabels(sortedFiles), [sortedFiles]);
   const resolveReviewFileLabel = useCallback(
     (filePath: string): string =>
       reviewFileLabels.get(normalizePathForComparison(filePath)) ?? filePath,
@@ -1721,7 +1723,7 @@ export const ChangeReviewDialog = ({
   const watchedReviewFilePathsKeyRef = useRef(watchedReviewFilePathsKey);
   watchedReviewFilePathsKeyRef.current = watchedReviewFilePathsKey;
   const loadingFiles = useMemo(
-    () => sortedFiles.filter((file) => fileContentsLoading[file.filePath]),
+    () => sortedFiles.filter((file) => fileContentsLoading[getReviewEntryKey(sortedFiles, file)]),
     [sortedFiles, fileContentsLoading]
   );
   const globalDiffLoadingState = useMemo(() => {
@@ -1738,14 +1740,15 @@ export const ChangeReviewDialog = ({
 
     return {
       totalFilesCount: sortedFiles.length,
-      readyFilesCount: sortedFiles.filter((file) => file.filePath in fileContents).length,
+      readyFilesCount: sortedFiles.filter(
+        (file) => getReviewEntryKey(sortedFiles, file) in fileContents
+      ).length,
       loadingFilesCount: loadingFiles.length,
       snippetCount,
       activeFileName: preferredFile?.relativePath ?? preferredFile?.filePath,
     };
   }, [activeFilePath, loadingFiles, sortedFiles, fileContents]);
 
-  // File paths for viewed tracking
   const allFilePaths = useMemo(() => sortedFiles.map((f) => f.filePath), [sortedFiles]);
 
   const pathChangeLabels = useMemo(() => {
@@ -1759,7 +1762,11 @@ export const ChangeReviewDialog = ({
         const fileDecision = fileDecisions[reviewKey] ?? fileDecisions[file.filePath] ?? 'pending';
         if (fileDecision !== 'pending') return false;
         if (file.filePath in editedContents) return false;
-        const count = getFileHunkCount(file.filePath, file.snippets.length, fileChunkCounts);
+        const count = getFileHunkCount(
+          getReviewEntryKey(sortedFiles, file),
+          file.snippets.length,
+          fileChunkCounts
+        );
         if (
           isReviewFileFullyRejected(file, count, {
             hunkDecisions,
@@ -1768,17 +1775,20 @@ export const ChangeReviewDialog = ({
         ) {
           return false;
         }
-        return isReviewRejectable(file, fileContents[file.filePath] ?? null);
+        return isReviewRejectable(file, fileContents[getReviewEntryKey(sortedFiles, file)] ?? null);
       }),
     [editedContents, fileChunkCounts, fileContents, fileDecisions, hunkDecisions, sortedFiles]
   );
-  const canRejectAll = rejectablePendingFiles.length > 0;
+  const canRejectAll =
+    rejectablePendingFiles.length > 0 && !hasDuplicateReviewFilePaths(sortedFiles);
   const canAcceptAll = useMemo(
     () =>
       sortedFiles.length > 0 &&
+      !hasDuplicateReviewFilePaths(sortedFiles) &&
       sortedFiles.every((file) => {
-        if (!(file.filePath in fileContents) || file.filePath in editedContents) return false;
-        const content = fileContents[file.filePath] ?? null;
+        const entryKey = getReviewEntryKey(sortedFiles, file);
+        if (!(entryKey in fileContents) || file.filePath in editedContents) return false;
+        const content = fileContents[entryKey] ?? null;
         const reviewKey = getFileReviewKey(file);
         const fileDecision = fileDecisions[reviewKey] ?? fileDecisions[file.filePath];
         return !isReviewAcceptDisabled({
@@ -1816,7 +1826,6 @@ export const ChangeReviewDialog = ({
     return blocked;
   }, []);
 
-  // Scroll-spy handler
   const handleVisibleFileChange = useCallback((filePath: string) => {
     setActiveFilePath(filePath);
   }, []);
@@ -1858,7 +1867,11 @@ export const ChangeReviewDialog = ({
         isCurrent: () => !disposed && useStore.getState().changeSetEpoch === eventEpoch,
         isWriteInFlight: () =>
           [...fileApplyInFlightRef.current].some(
-            (filePath) => normalizePathForComparison(filePath) === normalizedPath
+            (entryKey) =>
+              normalizePathForComparison(
+                getReviewDiskPath(useStore.getState().activeChangeSet?.files ?? [], entryKey) ??
+                  entryKey
+              ) === normalizedPath
           ) ||
           undoInFlightRef.current ||
           useStore.getState().applying,
@@ -1917,7 +1930,6 @@ export const ChangeReviewDialog = ({
     [handleTreeFileClick, sortedFiles]
   );
 
-  // Accept/Reject all across all files
   const handleAcceptAll = useCallback(() => {
     if (
       !activeChangeSet ||
@@ -1969,6 +1981,12 @@ export const ChangeReviewDialog = ({
 
   const handleRejectAll = useCallback(() => {
     if (!activeChangeSet || hasReviewActionInFlight() || blockReviewMutationForExternalChange()) {
+      return;
+    }
+    if (hasDuplicateReviewFilePaths(activeChangeSet.files)) {
+      useStore.setState({
+        applyError: 'Review files share a disk path. Review each change separately.',
+      });
       return;
     }
     const operationScope = captureReviewOperationScope();
@@ -2202,9 +2220,11 @@ export const ChangeReviewDialog = ({
     setUndoInFlight,
   ]);
 
-  // File-level accept/reject (Cursor-style)
   const handleRestoreRejectedFileAsAccepted = useCallback(
-    async (filePath: string): Promise<void> => {
+    async (entryKey: string): Promise<void> => {
+      const file = findReviewFileByPath(activeChangeSet?.files, entryKey);
+      if (!file) return;
+      const filePath = file.filePath;
       if (
         hasReviewDraft(filePath) ||
         hasReviewActionInFlight() ||
@@ -2215,11 +2235,8 @@ export const ChangeReviewDialog = ({
       const operationEpoch = changeSetEpoch;
       const operationScope = captureReviewOperationScope();
       if (!operationScope) return;
-      const file = activeChangeSet?.files.find((candidate) => candidate.filePath === filePath);
-      if (!file) return;
-      const content = fileContents[filePath] ?? null;
+      const content = fileContents[entryKey] ?? null;
       const isExpectedDeletion = isReviewFileExpectedDeleted(file);
-      const normalizedFilePath = normalizePathForComparison(filePath);
       const diskHistory = reviewUndoActionsRef.current.flatMap((action): ReviewDiskUndoAction[] =>
         action.kind === 'disk'
           ? [action.action]
@@ -2227,18 +2244,11 @@ export const ChangeReviewDialog = ({
             ? action.diskSnapshots.map((snapshot) => ({ snapshot }))
             : []
       );
-      const latestDiskSnapshot = [...diskHistory]
-        .reverse()
-        .find(
-          (action) => normalizePathForComparison(action.snapshot.filePath) === normalizedFilePath
-        )?.snapshot;
-      const sessionSnapshot = [...diskHistory]
-        .reverse()
-        .find(
-          (action) =>
-            action.originalIndex === undefined &&
-            normalizePathForComparison(action.snapshot.filePath) === normalizedFilePath
-        )?.snapshot;
+      const { latestDiskSnapshot, sessionSnapshot } = selectReviewRestoreSnapshots(
+        activeChangeSet?.files ?? [],
+        file,
+        diskHistory
+      );
       const hasAuthoritativeAgentContent =
         content?.contentSource === 'ledger-exact' || content?.contentSource === 'ledger-snapshot';
       const canReconstructCreatedFile = resolveReviewFileIsNew(file, content);
@@ -2260,7 +2270,7 @@ export const ChangeReviewDialog = ({
         fileDecisions: { ...useStore.getState().fileDecisions },
       };
       const rejectedHunkCount = getFileHunkCount(
-        file.filePath,
+        entryKey,
         file.snippets.length,
         useStore.getState().fileChunkCounts
       );
@@ -2268,8 +2278,8 @@ export const ChangeReviewDialog = ({
         canReconstructCreatedFile &&
         isReviewFileFullyRejected(file, rejectedHunkCount, decisionSnapshot);
       useStore.setState({ applyError: null });
-      fileApplyInFlightRef.current.add(filePath);
-      setFileApplying(filePath, true);
+      fileApplyInFlightRef.current.add(entryKey);
+      setFileApplying(entryKey, true);
       markRecentReviewWrite(filePath, isExpectedDeletion ? null : desiredContent);
       try {
         if (!decisionScopeToken) {
@@ -2424,12 +2434,12 @@ export const ChangeReviewDialog = ({
         }
         markRecentReviewWrite(filePath, restoredDiskContent);
         clearReviewFileExternalChange(filePath);
-        useStore.getState().invalidateResolvedFileContent(filePath);
+        useStore.getState().invalidateResolvedFileContent(entryKey);
         setDiscardCounters((previous) => ({
           ...previous,
           [filePath]: (previous[filePath] ?? 0) + 1,
         }));
-        void fetchFileContent(teamName, memberName, filePath);
+        void fetchFileContent(teamName, memberName, entryKey);
       } catch (error) {
         if (
           isCurrentReviewOperationScope(operationScope) &&
@@ -2438,20 +2448,20 @@ export const ChangeReviewDialog = ({
           useStore.setState({
             applyError: error instanceof Error ? error.message : 'Unable to restore the file.',
           });
-          useStore.getState().invalidateResolvedFileContent(filePath);
+          useStore.getState().invalidateResolvedFileContent(entryKey);
           setDiscardCounters((previous) => ({
             ...previous,
             [filePath]: (previous[filePath] ?? 0) + 1,
           }));
-          void fetchFileContent(teamName, memberName, filePath);
+          void fetchFileContent(teamName, memberName, entryKey);
         }
       } finally {
         if (
           isCurrentReviewOperationScope(operationScope) &&
           useStore.getState().changeSetEpoch === operationEpoch
         ) {
-          fileApplyInFlightRef.current.delete(filePath);
-          setFileApplying(filePath, false);
+          fileApplyInFlightRef.current.delete(entryKey);
+          setFileApplying(entryKey, false);
         }
       }
     },
@@ -2486,7 +2496,10 @@ export const ChangeReviewDialog = ({
   );
 
   const handleAcceptFile = useCallback(
-    (filePath: string) => {
+    (entryKey: string) => {
+      const file = findReviewFileByPath(activeChangeSet?.files, entryKey);
+      if (!file) return;
+      const filePath = file.filePath;
       if (
         hasReviewDraft(filePath) ||
         hasReviewActionInFlight() ||
@@ -2494,10 +2507,8 @@ export const ChangeReviewDialog = ({
       ) {
         return;
       }
-      const file = activeChangeSet?.files.find((candidate) => candidate.filePath === filePath);
-      if (!file) return;
       const state = useStore.getState();
-      const content = state.fileContents[file.filePath];
+      const content = state.fileContents[entryKey];
       const currentFileDecision =
         state.fileDecisions[getFileReviewKey(file)] ?? state.fileDecisions[file.filePath];
       if (
@@ -2511,21 +2522,21 @@ export const ChangeReviewDialog = ({
       ) {
         return;
       }
-      const count = getFileHunkCount(file.filePath, file.snippets.length, state.fileChunkCounts);
+      const count = getFileHunkCount(entryKey, file.snippets.length, state.fileChunkCounts);
       if (
         hasReviewFileRejections(file, count, {
           hunkDecisions: state.hunkDecisions,
           fileDecisions: state.fileDecisions,
         })
       ) {
-        void handleRestoreRejectedFileAsAccepted(filePath);
+        void handleRestoreRejectedFileAsAccepted(entryKey);
         return;
       }
       const decisionSnapshot: ReviewDecisionSnapshot = {
         hunkDecisions: { ...state.hunkDecisions },
         fileDecisions: { ...state.fileDecisions },
       };
-      if (!acceptAllFile(filePath)) return;
+      if (!acceptAllFile(entryKey)) return;
       pushReviewUndoAction({
         kind: 'bulk',
         descriptor: { intent: 'accept-file', filePath },
@@ -2533,7 +2544,7 @@ export const ChangeReviewDialog = ({
         diskSnapshots: [],
       });
       void persistLatestAcceptedReviewAction();
-      const view = editorViewMapRef.current.get(filePath);
+      const view = editorViewMapRef.current.get(entryKey);
       if (view) {
         requestAnimationFrame(() => acceptAllChunks(view));
       }
@@ -2551,7 +2562,10 @@ export const ChangeReviewDialog = ({
   );
 
   const handleRejectFile = useCallback(
-    async (filePath: string) => {
+    async (entryKey: string) => {
+      const file = findReviewFileByPath(activeChangeSet?.files, entryKey);
+      if (!file) return;
+      const filePath = file.filePath;
       if (
         hasReviewDraft(filePath) ||
         hasReviewActionInFlight() ||
@@ -2559,21 +2573,19 @@ export const ChangeReviewDialog = ({
       ) {
         return;
       }
-      fileApplyInFlightRef.current.add(filePath);
-      setFileApplying(filePath, true);
+      fileApplyInFlightRef.current.add(entryKey);
+      setFileApplying(entryKey, true);
       const operationEpoch = changeSetEpoch;
       const operationScope = captureReviewOperationScope();
       if (!operationScope) {
-        fileApplyInFlightRef.current.delete(filePath);
-        setFileApplying(filePath, false);
+        fileApplyInFlightRef.current.delete(entryKey);
+        setFileApplying(entryKey, false);
         return;
       }
       try {
-        const file = activeChangeSet?.files.find((f) => f.filePath === filePath);
-        if (!file) return;
         const state = useStore.getState();
-        if (!isReviewRejectable(file, state.fileContents[file.filePath] ?? null)) return;
-        const count = getFileHunkCount(file.filePath, file.snippets.length, state.fileChunkCounts);
+        if (!isReviewRejectable(file, state.fileContents[entryKey] ?? null)) return;
+        const count = getFileHunkCount(entryKey, file.snippets.length, state.fileChunkCounts);
         if (
           isReviewFileFullyRejected(file, count, {
             hunkDecisions: state.hunkDecisions,
@@ -2586,15 +2598,15 @@ export const ChangeReviewDialog = ({
           hunkDecisions: { ...state.hunkDecisions },
           fileDecisions: { ...state.fileDecisions },
         };
-        const isNew = resolveReviewFileIsNew(file, fileContents[filePath]);
+        const isNew = resolveReviewFileIsNew(file, fileContents[entryKey]);
         const shouldDeleteOnUndo = shouldDeleteFileWhenUndoingReject(file, count, decisionSnapshot);
-        const view = editorViewMapRef.current.get(filePath);
+        const view = editorViewMapRef.current.get(entryKey);
         const beforeContent =
           view?.state.doc.toString() ??
-          (file ? getResolvedReviewModifiedContent(file, fileContents[filePath] ?? null) : null);
-        const afterContent = isNew ? null : (fileContents[filePath]?.originalFullContent ?? null);
+          getResolvedReviewModifiedContent(file, fileContents[entryKey] ?? null);
+        const afterContent = isNew ? null : (fileContents[entryKey]?.originalFullContent ?? null);
         const restoreContent =
-          beforeContent ?? getResolvedReviewModifiedContent(file, fileContents[filePath] ?? null);
+          beforeContent ?? getResolvedReviewModifiedContent(file, fileContents[entryKey] ?? null);
         if (restoreContent === null || (!isNew && afterContent === null)) {
           useStore.setState({
             applyError: 'Exact disk contents are unavailable; refusing a reject without Undo.',
@@ -2609,7 +2621,9 @@ export const ChangeReviewDialog = ({
           fileIndex: isNew
             ? Math.max(
                 0,
-                activeChangeSet?.files.findIndex((entry) => entry.filePath === filePath) ?? 0
+                activeChangeSet?.files.findIndex(
+                  (entry) => getFileReviewKey(entry) === getFileReviewKey(file)
+                ) ?? 0
               )
             : undefined,
           restoreMode: isNew ? 'create-file' : shouldDeleteOnUndo ? 'delete-file' : undefined,
@@ -2617,7 +2631,7 @@ export const ChangeReviewDialog = ({
         };
 
         // Mark rejected in store + update CM view immediately for feedback
-        rejectAllFile(filePath);
+        rejectAllFile(entryKey);
         if (view) {
           rejectAllChunks(view);
         }
@@ -2636,11 +2650,11 @@ export const ChangeReviewDialog = ({
           );
           if (!ensureDurableReviewScope()) {
             restoreFileDecisions(file, decisionSnapshot);
-            rollbackEditorContent(filePath, restoreContent);
+            rollbackEditorContent(entryKey, restoreContent);
             discardLatestReviewAction(preparedAction);
             return;
           }
-          const result = await applySingleFileDecision(teamName, filePath, taskId, memberName);
+          const result = await applySingleFileDecision(teamName, entryKey, taskId, memberName);
           if (
             !isCurrentReviewOperationScope(operationScope) ||
             useStore.getState().changeSetEpoch !== operationEpoch
@@ -2660,18 +2674,18 @@ export const ChangeReviewDialog = ({
               );
             if (!hasErrorForFile) {
               markRecentReviewWrite(filePath, null);
-              useStore.getState().invalidateResolvedFileContent(filePath);
-              void fetchFileContent(teamName, memberName, filePath);
+              useStore.getState().invalidateResolvedFileContent(entryKey);
+              void fetchFileContent(teamName, memberName, entryKey);
             } else {
               discardLatestReviewAction(preparedAction);
               restoreFileDecisions(file, decisionSnapshot);
-              if (beforeContent != null) rollbackEditorContent(filePath, beforeContent);
-              useStore.getState().invalidateResolvedFileContent(filePath);
+              if (beforeContent != null) rollbackEditorContent(entryKey, beforeContent);
+              useStore.getState().invalidateResolvedFileContent(entryKey);
               setDiscardCounters((previous) => ({
                 ...previous,
-                [filePath]: (previous[filePath] ?? 0) + 1,
+                [entryKey]: (previous[entryKey] ?? 0) + 1,
               }));
-              void fetchFileContent(teamName, memberName, filePath);
+              void fetchFileContent(teamName, memberName, entryKey);
             }
           } else {
             const hasErrorForFile =
@@ -2702,13 +2716,13 @@ export const ChangeReviewDialog = ({
             } else {
               discardLatestReviewAction(preparedAction);
               restoreFileDecisions(file, decisionSnapshot);
-              if (beforeContent != null) rollbackEditorContent(filePath, beforeContent);
-              useStore.getState().invalidateResolvedFileContent(filePath);
+              if (beforeContent != null) rollbackEditorContent(entryKey, beforeContent);
+              useStore.getState().invalidateResolvedFileContent(entryKey);
               setDiscardCounters((previous) => ({
                 ...previous,
-                [filePath]: (previous[filePath] ?? 0) + 1,
+                [entryKey]: (previous[entryKey] ?? 0) + 1,
               }));
-              void fetchFileContent(teamName, memberName, filePath);
+              void fetchFileContent(teamName, memberName, entryKey);
             }
           }
         }
@@ -2717,8 +2731,8 @@ export const ChangeReviewDialog = ({
           isCurrentReviewOperationScope(operationScope) &&
           useStore.getState().changeSetEpoch === operationEpoch
         ) {
-          fileApplyInFlightRef.current.delete(filePath);
-          setFileApplying(filePath, false);
+          fileApplyInFlightRef.current.delete(entryKey);
+          setFileApplying(entryKey, false);
         }
       }
     },
@@ -2751,10 +2765,10 @@ export const ChangeReviewDialog = ({
     ]
   );
 
-  // Per-file callbacks for ContinuousScrollView
   const handleHunkAccepted = useCallback(
     (filePath: string, hunkIndex: number) => {
       if (
+        !canMutateReviewHunk(activeChangeSet?.files ?? [], filePath) ||
         hasReviewDraft(filePath) ||
         hasReviewActionInFlight() ||
         blockReviewMutationForExternalChange(filePath)
@@ -2783,6 +2797,7 @@ export const ChangeReviewDialog = ({
       return true;
     },
     [
+      activeChangeSet,
       hasReviewActionInFlight,
       hasReviewDraft,
       blockReviewMutationForExternalChange,
@@ -2796,6 +2811,7 @@ export const ChangeReviewDialog = ({
   const handleHunkRejected = useCallback(
     (filePath: string, hunkIndex: number, beforeContent?: string, afterContent?: string) => {
       if (
+        !canMutateReviewHunk(activeChangeSet?.files ?? [], filePath) ||
         hasReviewDraft(filePath) ||
         hasReviewActionInFlight() ||
         blockReviewMutationForExternalChange(filePath)
@@ -3139,13 +3155,10 @@ export const ChangeReviewDialog = ({
             throw new Error('Unable to finish saving the previous review state. Retry Reload.');
           }
           const state = useStore.getState();
-          const file = state.activeChangeSet?.files.find(
-            (candidate) =>
-              normalizePathForComparison(candidate.filePath) ===
-              normalizePathForComparison(filePath)
-          );
-          if (!file) throw new Error('Reviewed file is unavailable for Reload.');
-          const next = buildReviewExternalReloadState(file, {
+          const files = state.activeChangeSet?.files ?? [];
+          const entries = getReviewPhysicalPathEntries(files, filePath);
+          if (entries.length === 0) throw new Error('Reviewed file is unavailable for Reload.');
+          const next = buildReviewExternalReloadState(entries, {
             hunkDecisions: state.hunkDecisions,
             fileDecisions: state.fileDecisions,
             hunkContextHashesByFile: state.hunkContextHashesByFile,
@@ -3202,7 +3215,9 @@ export const ChangeReviewDialog = ({
           }
           reloadReviewFileFromDisk(filePath);
           setDiscardCounters((prev) => ({ ...prev, [filePath]: (prev[filePath] ?? 0) + 1 }));
-          void fetchFileContent(teamName, memberName, filePath);
+          for (const entry of entries) {
+            void fetchFileContent(teamName, memberName, getReviewEntryKey(files, entry));
+          }
         } catch (error) {
           if (
             isCurrentReviewOperationScope(operationScope) &&
@@ -3365,7 +3380,6 @@ export const ChangeReviewDialog = ({
     ]
   );
 
-  // Undo last bulk review operation (Accept All / Reject All)
   const refreshAfterDurableUndo = useCallback(
     (snapshots: readonly ReviewDiskUndoSnapshot[]): void => {
       for (const snapshot of snapshots) {
@@ -3701,11 +3715,8 @@ export const ChangeReviewDialog = ({
           reviewRedoHistory: reviewRedoActionsRef.current,
         },
         target,
-        (filePath) =>
-          activeChangeSet?.files.find(
-            (file) =>
-              normalizePathForComparison(file.filePath) === normalizePathForComparison(filePath)
-          ) ?? null
+        (filePath, action) =>
+          resolveReviewHistoryActionFile(activeChangeSet?.files ?? [], filePath, action)
       );
       return { state, plan };
     },
@@ -4053,7 +4064,6 @@ export const ChangeReviewDialog = ({
     ]
   );
 
-  // Selection change handler (debounced for non-empty, immediate for clear)
   const handleSelectionChange = useCallback((info: EditorSelectionInfo | null) => {
     if (!info) {
       if (selectionTimerRef.current) clearTimeout(selectionTimerRef.current);
@@ -4067,7 +4077,6 @@ export const ChangeReviewDialog = ({
     }, SELECTION_DEBOUNCE_MS);
   }, []);
 
-  // Scroll repositioning - re-query coords when parent scrolls (rAF-throttled)
   const hasData =
     lifecycleAuthorized &&
     !changeSetLoading &&
@@ -4108,7 +4117,6 @@ export const ChangeReviewDialog = ({
     };
   }, [hasData]);
 
-  // Track container rect for menu positioning
   useEffect(() => {
     const el = diffContentRef.current;
     if (!el) return;
@@ -4467,13 +4475,12 @@ export const ChangeReviewDialog = ({
     teamName,
   ]);
 
-  // Save active file (for Cmd+S keyboard shortcut)
   const handleSaveActiveFile = useCallback(() => {
     if (!activeFilePath || hasReviewActionInFlight()) return;
-    void handleSaveFile(activeFilePath);
-  }, [activeFilePath, handleSaveFile, hasReviewActionInFlight]);
+    const diskPath = getReviewDiskPath(sortedFiles, activeFilePath);
+    if (diskPath) void handleSaveFile(diskPath);
+  }, [activeFilePath, sortedFiles, handleSaveFile, hasReviewActionInFlight]);
 
-  // Continuous navigation options for cross-file hunk navigation
   const continuousOptions = useMemo(
     () => ({
       editorViewMapRef,
@@ -4485,7 +4492,7 @@ export const ChangeReviewDialog = ({
   );
 
   const diffNav = useDiffNavigation(
-    sortedFiles,
+    navigationFiles,
     activeFilePath,
     scrollToFile,
     activeEditorViewRef,
@@ -4499,15 +4506,10 @@ export const ChangeReviewDialog = ({
       getFileHunkCount(filePath, fallbackSnippetsLength, fileChunkCounts)
   );
 
-  const reviewHunkOrder = useMemo(() => {
-    const offsets: Record<string, number> = {};
-    let total = 0;
-    for (const file of sortedFiles) {
-      offsets[file.filePath] = total;
-      total += getFileHunkCount(file.filePath, file.snippets.length, fileChunkCounts);
-    }
-    return { offsets, total };
-  }, [sortedFiles, fileChunkCounts]);
+  const reviewHunkOrder = useMemo(
+    () => getReviewHunkOrder(sortedFiles, fileChunkCounts),
+    [sortedFiles, fileChunkCounts]
+  );
 
   const toggleCollapsedFile = useCallback((filePath: string) => {
     setCollapsedFiles((prev) => {
@@ -4518,7 +4520,6 @@ export const ChangeReviewDialog = ({
     });
   }, []);
 
-  // Persist collapsed state (best-effort)
   useEffect(() => {
     if (!open) return;
     if (typeof window === 'undefined') return;
@@ -4532,7 +4533,6 @@ export const ChangeReviewDialog = ({
     return () => window.clearTimeout(id);
   }, [open, collapseStorageKey, collapsedFiles]);
 
-  // Prune collapsed entries to only current files to avoid stale growth
   useEffect(() => {
     if (!activeChangeSet) return;
     const allowed = new Set(activeChangeSet.files.map((f) => f.filePath));
@@ -4545,7 +4545,6 @@ export const ChangeReviewDialog = ({
     });
   }, [activeChangeSet]);
 
-  // Load data on open
   useEffect(() => {
     if (!open || !lifecycleAuthorized) return;
 
@@ -4689,14 +4688,12 @@ export const ChangeReviewDialog = ({
     });
   }, [activeChangeSet, initialFilePath, scrollToFile]);
 
-  // Clear selection state on close
   useEffect(() => {
     if (!open) {
       setSelectionInfo(null);
     }
   }, [open]);
 
-  // Cleanup refs/timers on close
   useEffect(() => {
     if (!open) {
       activeSelectionFileRef.current = null;
@@ -4763,7 +4760,13 @@ export const ChangeReviewDialog = ({
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       const activeElement = document.activeElement;
       const editorFilePath = getEditorFilePathForTarget(activeElement);
-      const hasDraftInFocusedEditor = editorFilePath ? hasReviewDraft(editorFilePath) : false;
+      const hasDraftInFocusedEditor = editorFilePath
+        ? hasReviewDraftForEntry(
+            activeChangeSet?.files ?? [],
+            useStore.getState().editedContents,
+            editorFilePath
+          )
+        : false;
       const focusedEditor = editorFilePath
         ? (editorViewMapRef.current.get(editorFilePath) ?? null)
         : null;
@@ -4819,7 +4822,7 @@ export const ChangeReviewDialog = ({
     handleRedoLatestReviewAction,
     handleUndoLatestReviewAction,
     hasReviewActionInFlight,
-    hasReviewDraft,
+    activeChangeSet,
   ]);
 
   // Cmd+N IPC listener (forwarded from main process)
@@ -5318,6 +5321,7 @@ export const ChangeReviewDialog = ({
               >
                 <ContinuousScrollView
                   files={sortedFiles}
+                  sourceFiles={activeChangeSet.files}
                   fileContents={fileContents}
                   fileContentsLoading={fileContentsLoading}
                   globalDiffLoadingState={globalDiffLoadingState}

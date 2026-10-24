@@ -7,7 +7,7 @@ export type AgentVideoMimeType = 'video/mp4' | 'video/webm' | 'video/quicktime';
 export type NativeAgentAttachmentMimeType =
   | Exclude<AgentImageMimeType, 'image/gif'>
   | AgentVideoMimeType;
-export type ProviderFileMimeType = 'application/pdf' | 'text/*';
+export type ProviderFileMimeType = 'application/pdf' | 'text/*' | 'text/plain';
 
 export type AttachmentDeliveryFailureCode =
   | 'attachment_too_large'
@@ -96,6 +96,8 @@ export type AgentAttachmentProviderId = 'anthropic' | 'codex' | 'opencode' | 'un
 export interface AgentAttachmentCapabilityTarget {
   providerId: AgentAttachmentProviderId | string;
   model?: string | null;
+  declaredInputModalities?: readonly string[] | null;
+  nativeInboxTextAttachmentsSupported?: boolean;
 }
 
 export interface AgentAttachmentCapability {
@@ -131,3 +133,10 @@ export type AttachmentValidationResult =
       message: string;
       warnings: AttachmentWarning[];
     };
+
+/** Native transport channels configured on one captured driver; model execution is separate. */
+export interface NativeAttachmentCapabilities {
+  images: boolean;
+  documents: boolean;
+  textFiles: boolean;
+}

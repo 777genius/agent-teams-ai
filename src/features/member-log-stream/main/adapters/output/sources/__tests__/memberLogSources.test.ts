@@ -1,12 +1,7 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdir, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
 
-import {
-  OPENCODE_PROMPT_DELIVERY_LEDGER_SCHEMA_VERSION,
-  type OpenCodePromptDeliveryLedgerRecord,
-} from '@main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
-import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { type OpenCodePromptDeliveryLedgerRecord } from '@main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_MEMBER_LOG_PREVIEW_BUDGET } from '../../../../../core/domain/models/MemberLogPreviewBudget';
@@ -18,6 +13,13 @@ import { CodexNativeMemberTraceStreamSource } from '../CodexNativeMemberTraceStr
 import { OpenCodeMemberRuntimePreviewSource } from '../OpenCodeMemberRuntimePreviewSource';
 import { OpenCodeMemberRuntimeStreamSource } from '../OpenCodeMemberRuntimeStreamSource';
 import { OpenCodeMemberVisibleActivityReader } from '../OpenCodeMemberVisibleActivityReader';
+
+import {
+  cleanupMemberLogFixtureRoots,
+  createTempClaudeRoot,
+  writeOpenCodePromptLedger,
+  writeTeamLeadInbox,
+} from './memberLogFixtureFiles';
 
 import type { MemberLogPreviewSourceInput } from '../../../../../core/application/ports/MemberLogPreviewSource';
 import type { MemberLogStreamSourceInput } from '../../../../../core/application/ports/MemberLogStreamSource';
@@ -89,68 +91,7 @@ function previewInput(
   };
 }
 
-const tempClaudeRoots: string[] = [];
-
-afterEach(async () => {
-  setClaudeBasePathOverride(null);
-  const roots = tempClaudeRoots.splice(0);
-  await Promise.all(roots.map((root) => rm(root, { recursive: true, force: true })));
-});
-
-async function createTempClaudeRoot(): Promise<string> {
-  const root = await mkdtemp(path.join(tmpdir(), 'member-log-source-'));
-  tempClaudeRoots.push(root);
-  setClaudeBasePathOverride(root);
-  return root;
-}
-
-async function writeOpenCodePromptLedger(input: {
-  claudeRoot: string;
-  teamName: string;
-  laneId: string;
-  records: OpenCodePromptDeliveryLedgerRecord[];
-}): Promise<string> {
-  const ledgerPath = path.join(
-    input.claudeRoot,
-    'teams',
-    input.teamName,
-    '.opencode-runtime',
-    'lanes',
-    encodeURIComponent(input.laneId),
-    'opencode-prompt-delivery-ledger.json'
-  );
-  await mkdir(path.dirname(ledgerPath), { recursive: true });
-  await writeFile(
-    ledgerPath,
-    `${JSON.stringify(
-      {
-        schemaVersion: OPENCODE_PROMPT_DELIVERY_LEDGER_SCHEMA_VERSION,
-        updatedAt: '2026-04-04T00:00:00.000Z',
-        data: input.records,
-      },
-      null,
-      2
-    )}\n`
-  );
-  return ledgerPath;
-}
-
-async function writeTeamLeadInbox(input: {
-  claudeRoot: string;
-  teamName: string;
-  messages: InboxMessage[];
-}): Promise<string> {
-  const inboxPath = path.join(
-    input.claudeRoot,
-    'teams',
-    input.teamName,
-    'inboxes',
-    'team-lead.json'
-  );
-  await mkdir(path.dirname(inboxPath), { recursive: true });
-  await writeFile(inboxPath, `${JSON.stringify(input.messages, null, 2)}\n`);
-  return inboxPath;
-}
+afterEach(cleanupMemberLogFixtureRoots);
 
 function inboxMessage(overrides: Partial<InboxMessage> = {}): InboxMessage {
   return {
@@ -445,6 +386,7 @@ describe('OpenCodeMemberRuntimeStreamSource', () => {
   });
 
   it('reports ambiguous OpenCode lane errors as skipped provider warnings', async () => {
+    await createTempClaudeRoot();
     const source = new OpenCodeMemberRuntimeStreamSource(
       {
         getOpenCodeTranscript: vi
@@ -1467,6 +1409,7 @@ describe('OpenCodeMemberRuntimePreviewSource', () => {
   });
 
   it('uses bounded OpenCode projection messages and preserves safe lane ids', async () => {
+    await createTempClaudeRoot();
     const getOpenCodeTranscript = vi.fn().mockResolvedValue({
       sessionId: 'opencode-session',
       logProjection: {

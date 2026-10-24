@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import * as fs from 'fs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createAnthropicApiKeyHelperCleanupRetryOwner } from '../TeamProvisioningAnthropicApiKeyHelperLease';
@@ -7,6 +8,11 @@ import {
   type TeamProvisioningAuthRetryPorts,
   type TeamProvisioningAuthRetryRun,
 } from '../TeamProvisioningAuthRetryRecovery';
+import {
+  removeDeterministicBootstrapSpecFile,
+  type RuntimeBootstrapSpec,
+  writeDeterministicBootstrapSpecFile,
+} from '../TeamProvisioningBootstrapSpec';
 import {
   recordProvisioningFirstTurnStart,
   scheduleProvisioningRunTimeout,
@@ -152,6 +158,8 @@ function makePorts(): TeamProvisioningAuthRetryPorts<TeamProvisioningAuthRetryRu
     },
     readBootstrapRealTaskSubmissionState: vi.fn(async () => 'not_submitted' as const),
     writeDeterministicBootstrapUserPromptFile: vi.fn(async () => '/new-prompt'),
+    writeDeterministicBootstrapSpecFile: vi.fn(async () => '/restored-spec'),
+    removeDeterministicBootstrapSpecFile: vi.fn(async () => undefined),
     validateAgentTeamsMcpRuntime: vi.fn(async () => undefined),
     spawnCli: vi.fn(() => spawnedChild),
     isStopAllTeamsGenerationChanged: vi.fn(() => false),
@@ -625,4 +633,108 @@ describe('team provisioning auth retry recovery', () => {
     expect(run.child).toBeNull();
     expect(ports.cleanupRun).toHaveBeenCalledWith(run);
   });
+});
+
+function originalBootstrapSpec(): RuntimeBootstrapSpec {
+  return {
+    version: 1,
+    runId: 'run-1',
+    mode: 'create',
+    initiator: { kind: 'app', source: 'claude_team_agent_teams_orchestrator' },
+    team: { name: 'team-a', cwd: '/TEST-bootstrap-project' },
+    lead: {},
+    members: [
+      {
+        name: 'coder',
+        provider: 'codex',
+        model: 'test-model',
+        gatewayUsageRef: 'source-original',
+        env: { OPENAI_API_KEY: 'test-original-key' },
+        codex: { configOverrides: ['model_provider="team_gateway"'], forcedLoginMethod: 'api' },
+      },
+    ],
+  };
+}
+
+describe('auth retry with consumed one-shot bootstrap spec', () => {
+  it.each(['not_submitted', 'submitted', 'unknown'] as const)(
+    'restores original member intent while preserving first-task %s guard',
+    async (state) => {
+      const original = originalBootstrapSpec();
+      const originalBytes = JSON.stringify(original);
+      const originalPath = await writeDeterministicBootstrapSpecFile(original);
+      // The first runtime has read and consumed its one-shot file before auth failure.
+      await removeDeterministicBootstrapSpecFile(originalPath);
+      expect(fs.existsSync(originalPath)).toBe(false);
+      const run = makeRun({ bootstrapSpecPath: originalPath, bootstrapSpecSnapshot: original });
+      run.spawnContext!.args.push('--team-bootstrap-spec', originalPath);
+      const ports = makePorts();
+      const paths: string[] = [];
+      ports.writeDeterministicBootstrapSpecFile = vi.fn(async (snapshot) => {
+        const restored = await writeDeterministicBootstrapSpecFile(snapshot);
+        paths.push(restored);
+        return restored;
+      });
+      ports.removeDeterministicBootstrapSpecFile = vi.fn(removeDeterministicBootstrapSpecFile);
+      ports.readBootstrapRealTaskSubmissionState = vi.fn(async () => state);
+      try {
+        await respawnCliAfterAuthFailure(run, ports, { preflightAuthRetryDelayMs: 1 });
+        expect(run.bootstrapSpecSnapshot).toBeNull();
+        if (state === 'unknown') {
+          expect(ports.spawnCli).not.toHaveBeenCalled();
+          expect(paths).toEqual([]);
+        } else {
+          expect(ports.spawnCli).toHaveBeenCalledOnce();
+          expect(paths).toHaveLength(1);
+          expect(paths[0]).not.toBe(originalPath);
+          // Exact serialized bytes cover keys, source reference, model and Codex overrides.
+          expect(await fs.promises.readFile(paths[0], 'utf8')).toBe(originalBytes);
+          expect(run.bootstrapSpecPath).toBe(paths[0]);
+          expect(run.spawnContext!.args).toContain(paths[0]);
+          if (state === 'submitted') {
+            expect(run.spawnContext!.args).not.toContain('--team-bootstrap-user-prompt-file');
+            expect(ports.writeDeterministicBootstrapUserPromptFile).not.toHaveBeenCalled();
+            expect(ports.spawnedChild.stdin!.write).not.toHaveBeenCalled();
+          }
+        }
+      } finally {
+        for (const restored of paths) await removeDeterministicBootstrapSpecFile(restored);
+      }
+    }
+  );
+
+  it.each(['cancel-after-write', 'spawn-error', 'write-error'] as const)(
+    'releases original snapshot and replacement secret file on %s',
+    async (failure) => {
+      const run = makeRun({
+        bootstrapSpecPath: '/consumed-original',
+        bootstrapSpecSnapshot: originalBootstrapSpec(),
+      });
+      run.spawnContext!.args.push('--team-bootstrap-spec', '/consumed-original');
+      const ports = makePorts();
+      const paths: string[] = [];
+      ports.writeDeterministicBootstrapSpecFile = vi.fn(async (snapshot) => {
+        if (failure === 'write-error') throw new Error('test write failure');
+        const restored = await writeDeterministicBootstrapSpecFile(snapshot);
+        paths.push(restored);
+        if (failure === 'cancel-after-write') run.cancelRequested = true;
+        return restored;
+      });
+      ports.removeDeterministicBootstrapSpecFile = vi.fn(removeDeterministicBootstrapSpecFile);
+      if (failure === 'spawn-error')
+        vi.mocked(ports.spawnCli).mockImplementationOnce(() => {
+          throw new Error('test spawn failure');
+        });
+      try {
+        await respawnCliAfterAuthFailure(run, ports, { preflightAuthRetryDelayMs: 1 });
+        expect(run.bootstrapSpecSnapshot).toBeNull();
+        expect(run.progress.state).toBe('failed');
+        expect(ports.cleanupRun).toHaveBeenCalledWith(run);
+        for (const restored of paths) expect(fs.existsSync(restored)).toBe(false);
+        if (failure !== 'spawn-error') expect(ports.spawnCli).not.toHaveBeenCalled();
+      } finally {
+        for (const restored of paths) await removeDeterministicBootstrapSpecFile(restored);
+      }
+    }
+  );
 });

@@ -1,5 +1,14 @@
 # Этап 1: протоколы реализации и восстановления
 
+**Физическое отделение провайдеров (24 октября):** исходники `provider-implementations`
+и независимого Session SPI теперь находятся в [old-provider-implementations](https://github.com/agent-teams-ai/old-provider-implementations).
+Перенос подготовлен в [draft PR #1](https://github.com/agent-teams-ai/old-provider-implementations/pull/1), CI Node 24/26 прошёл;
+merge не выполнялся. Зависимости от движка старого `agent-runtime` у этих пакетов нет.
+Host/Team/Runtime owner и адаптеры Desktop остаются во frontend. Выбранные архивы
+не меняются: все 206 provider и 10 SPI emitted-файлов совпадают с отдельным репозиторием.
+Этап 2 по-прежнему не входит в работу.
+
+
 **Обязательное правило UI (прямое указание владельца, 22 октября): использовать
 только существующий UI. Не писать новые альтернативные формы/диалоги запуска,
 создания команды, resume/relaunch, задач или review.** Сохраняются существующие

@@ -77,7 +77,11 @@ export async function handleApplyDecisions(
         requireReviewedFile: true,
         rejectHardlinks: true,
       });
-      const authoritativeFile = getAuthoritativeReviewedFile(authorization, filePath);
+      const authoritativeFile = getAuthoritativeReviewedFile(
+        authorization,
+        filePath,
+        decision.reviewKey
+      );
       const authoritativeReviewKey = authoritativeFile.changeKey ?? authoritativeFile.filePath;
       const normalizedDecisionPath = normalizeReviewPathForIdentity(filePath);
       if (
@@ -102,13 +106,14 @@ export async function handleApplyDecisions(
       fileContents.set(
         filePath,
         hasLedgerSnapshot
-          ? await resolveAuthoritativeFileContent(env, scope, authorization, filePath)
+          ? await resolveAuthoritativeFileContent(env, scope, authorization, filePath, authoritativeFile)
           : resolveDisplayedReviewSnapshot(
               env,
               decision.contentSnapshotToken,
               scope.teamName,
               filePath,
-              authoritativeFile.snippets
+              authoritativeFile.snippets,
+              authoritativeReviewKey
             )
       );
       validatedDecisions.push({
@@ -248,7 +253,15 @@ export async function applyDecisionsWithDurableJournal(
         persistedState,
         current,
         scope,
-        authorization
+        {
+          ...authorization,
+          selectedReviewKeys: new Map(
+            decisions.map((decision) => [
+              normalizeReviewPathForIdentity(decision.filePath),
+              decision.reviewKey,
+            ])
+          ),
+        }
       );
       let result: ApplyReviewResult | null = null;
       await (env.assertActive(),

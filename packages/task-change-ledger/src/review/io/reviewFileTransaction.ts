@@ -1,6 +1,8 @@
 import { createHash, randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
+
+import { hasUnexpectedMoveSource } from './moveSourceIdentity.js';
 import {
   atomicWriteAsync,
   renameWithRetry,
@@ -10,6 +12,8 @@ import {
 import { syncDirectoryBestEffort } from './atomicCreate.js';
 import { sameArtifact, unlinkOwnedArtifact, writeGuardedTemp } from './mutationAuthority.js';
 import type { MutationAuthorityOptions } from './mutationAuthority.js';
+
+export { isOwnedReviewFileTransactionHardlink } from './reviewFileTransactionOwnership.js';
 
 export interface ExpectedTextFileIdentity {
   dev: number;
@@ -412,6 +416,9 @@ async function inspectOrDetachReviewTransactionSource(
     if (!source || !isSameFileIdentity(source, before)) {
       throw new Error('File changed during review update; refusing to mutate it');
     }
+    if (!source.isFile() || source.nlink !== 2) {
+      throw new Error('Review mutation refuses symbolic or multiply-linked files');
+    }
     try {
       await renameWithRetry(
         transaction.sourcePath,
@@ -475,7 +482,10 @@ export async function executeReviewFileTransaction(
   if (!isSameFileIdentity(published, after)) {
     throw new Error('Review mutation target changed during publish; refusing overwrite');
   }
-  if (transaction.kind === 'move' && (await lstatOrNull(transaction.sourcePath))) {
+  if (
+    transaction.kind === 'move' &&
+    (await hasUnexpectedMoveSource(transaction.sourcePath, transaction.targetPath, published))
+  ) {
     throw new Error('Review rename source reappeared during publish; refusing ambiguous state');
   }
   await writeReviewFileTransactionManifest(transaction, 'published', options);
@@ -490,7 +500,20 @@ export async function inspectReviewFileTransaction(
     const paths = getReviewFileTransactionPaths(transaction.targetPath, transaction.id);
     const before = await lstatOrNull(paths.beforePath);
     const detached = await lstatOrNull(paths.detachedPath);
-    if (manifest.phase === 'prepared' && !before && !detached) return 'prepared';
+    if (manifest.phase === 'prepared' && !detached) {
+      if (!before) return 'prepared';
+      const source = await lstatOrNull(transaction.sourcePath);
+      if (
+        !source?.isFile() ||
+        !isSameFileIdentity(before, source) ||
+        before.nlink !== 2 ||
+        source.nlink !== 2
+      ) {
+        return 'conflict';
+      }
+      await assertRegularTextArtifact(paths.beforePath, transaction.expectedContent, source);
+      return 'prepared';
+    }
     if (!before || !detached || !isSameFileIdentity(before, detached)) return 'conflict';
     await assertRegularTextArtifact(paths.beforePath, transaction.expectedContent);
     if (manifest.phase !== 'published') return 'detached';
@@ -502,7 +525,10 @@ export async function inspectReviewFileTransaction(
     const after = await lstatOrNull(paths.afterPath);
     if (!after || !target || !isSameFileIdentity(after, target)) return 'conflict';
     await assertRegularTextArtifact(paths.afterPath, transaction.nextContent);
-    if (transaction.kind === 'move' && (await lstatOrNull(transaction.sourcePath))) {
+    if (
+      transaction.kind === 'move' &&
+      (await hasUnexpectedMoveSource(transaction.sourcePath, transaction.targetPath, target))
+    ) {
       return 'conflict';
     }
     return 'published';
@@ -560,20 +586,6 @@ export async function finalizeReviewFileTransaction(
   if (path.dirname(transaction.sourcePath) !== path.dirname(transaction.targetPath)) {
     await syncDirectoryBestEffort(path.dirname(transaction.sourcePath));
   }
-}
-
-export async function isOwnedReviewFileTransactionHardlink(targetPath: string): Promise<boolean> {
-  const target = await lstatOrNull(targetPath);
-  if (!target || target.nlink <= 1 || target.isSymbolicLink() || !target.isFile()) return false;
-  let matchingLinks = 0;
-  for (const id of await listReviewFileTransactionIds(targetPath)) {
-    const paths = getReviewFileTransactionPaths(targetPath, id);
-    for (const artifactPath of [paths.beforePath, paths.detachedPath, paths.afterPath]) {
-      const artifact = await lstatOrNull(artifactPath);
-      if (artifact && isSameFileIdentity(target, artifact)) matchingLinks++;
-    }
-  }
-  return matchingLinks > 0 && target.nlink === matchingLinks + 1;
 }
 
 async function syncRenamedDirectoriesBestEffort(src: string, dest: string): Promise<void> {

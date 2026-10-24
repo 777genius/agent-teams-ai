@@ -1,9 +1,9 @@
-import { projectTeamLifecycleSnapshot } from './projectTeamLifecycle';
 import { readBackendProcesses } from '../../../contracts/processes';
 
 import { projectAttachmentMetadata } from './projectAttachmentMetadata';
 import { projectTaskSourceMessage } from './projectSourceMessage';
 import { projectTeamPosition } from './projectTeamChanges';
+import { projectTeamLifecycleSnapshot } from './projectTeamLifecycle';
 
 import type { BackendTeamSnapshot } from '../../../contracts/teamSnapshot';
 import type { KanbanState, TaskComment, TeamTaskWithKanban } from '@shared/types/team';

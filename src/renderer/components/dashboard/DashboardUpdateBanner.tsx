@@ -17,6 +17,7 @@ const DISMISSED_KEY = 'update:dashboard-dismissed-version';
 
 export const DashboardUpdateBanner = (): React.JSX.Element | null => {
   const { t } = useAppTranslation('dashboard');
+  const { t: commonT } = useAppTranslation('common');
   const { updateStatus, availableVersion, openUpdateDialog, installUpdate } = useStore(
     useShallow((s) => ({
       updateStatus: s.updateStatus,
@@ -34,11 +35,12 @@ export const DashboardUpdateBanner = (): React.JSX.Element | null => {
   // Reset dismissed state when a new version becomes available
   useEffect(() => {
     const saved = localStorage.getItem(DISMISSED_KEY);
-    setDismissed(saved === availableVersion);
-  }, [availableVersion]);
+    setDismissed(updateStatus === 'error' ? false : saved === availableVersion);
+  }, [availableVersion, updateStatus]);
 
   if (dismissed) return null;
-  if (updateStatus !== 'available' && updateStatus !== 'downloaded') return null;
+  if (updateStatus !== 'available' && updateStatus !== 'downloaded' && updateStatus !== 'error')
+    return null;
 
   const handleDismiss = (): void => {
     if (availableVersion) {
@@ -59,7 +61,9 @@ export const DashboardUpdateBanner = (): React.JSX.Element | null => {
     >
       <ArrowUpCircle className="size-4 shrink-0 text-[var(--color-positive-text)]" />
       <span className="flex-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-        {t('updateBanner.newVersionAvailable')}{' '}
+        {updateStatus === 'error'
+          ? commonT('updates.updateFailed')
+          : t('updateBanner.newVersionAvailable')}{' '}
         {availableVersion && (
           <span className="font-medium text-[var(--color-positive-text)]">v{availableVersion}</span>
         )}

@@ -1,0 +1,95 @@
+name: Sentry owned process native gates
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/sentry-owned-process-native.yml'
+      - 'tools/owned-process-broker/**'
+      - 'src/main/utils/ownedProcess/**'
+      - 'scripts/build/buildOwnedProcessBroker.ts'
+      - 'eslint.config.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    name: owned native (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-2022
+          - arch: arm64
+            runner: windows-11-arm
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: pnpm/action-setup@v6.1.0
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Bind checkout and stage locations
+        run: |
+          $head = (git rev-parse HEAD).Trim()
+          if ($head -ne $env:EXPECTED_SOURCE_SHA) { throw 'Unexpected checkout identity' }
+          "NATIVE_BUILD=$env:RUNNER_TEMP\owned-build-${{ matrix.arch }}" >> $env:GITHUB_ENV
+          "NATIVE_STAGE=$env:RUNNER_TEMP\owned-stage-${{ matrix.arch }}" >> $env:GITHUB_ENV
+          New-Item -ItemType Directory -Path native-evidence | Out-Null
+          $head | Set-Content native-evidence/source-sha.txt
+      - name: Install frozen dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Check typed protocol and policy
+        run: |
+          node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json
+          if ($LASTEXITCODE -ne 0) { throw 'Owned protocol typecheck failed' }
+          node node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts
+          if ($LASTEXITCODE -ne 0) { throw 'Owned protocol tests failed' }
+      - name: Build native fixtures and stage only product broker
+        run: |
+          $cmake = (Get-Command cmake.exe -ErrorAction Stop).Source
+          pnpm exec tsx scripts/build/buildOwnedProcessBroker.ts '${{ matrix.arch }}' $env:NATIVE_BUILD $env:NATIVE_STAGE $cmake
+          if ($LASTEXITCODE -ne 0) { throw 'Native build or staging failed' }
+          $staged = @(Get-ChildItem -File $env:NATIVE_STAGE | Select-Object -ExpandProperty Name)
+          if ((($staged | Sort-Object) -join ',') -ne 'manifest.json,owned-process-broker.exe') { throw 'Unexpected staged fixture' }
+          Copy-Item "$env:NATIVE_STAGE\manifest.json" native-evidence/staged-manifest.json
+          Get-ChildItem -File "$env:NATIVE_BUILD\Release\*.exe" | Get-FileHash -Algorithm SHA256 | Format-List | Out-File native-evidence/binary-sha256.txt
+      - name: Genuine Node Job and control gates
+        run: |
+          $controller = "$env:NATIVE_BUILD\Release\owned-process-gate-controller.exe"
+          $node = (Get-Command node.exe -ErrorAction Stop).Source
+          $runner = Join-Path $PWD 'node_modules\tsx\dist\cli.mjs'
+          $gate = Join-Path $PWD 'tools\owned-process-broker\nativeGate.ts'
+          & $controller $node $runner $gate "$env:NATIVE_STAGE\owned-process-broker.exe" "$env:NATIVE_BUILD\Release\owned-process-fixture.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-birth-failure.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-accounting-failure.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-release-delay.exe" 2>&1 | Tee-Object native-evidence/node-native.log
+          if ($LASTEXITCODE -ne 0) { throw 'Node native controller gate failed' }
+      - name: Genuine pinned Electron fd3 and control gates
+        env:
+          ELECTRON_RUN_AS_NODE: '1'
+        run: |
+          $controller = "$env:NATIVE_BUILD\Release\owned-process-gate-controller.exe"
+          $electron = Join-Path $PWD 'node_modules\electron\dist\electron.exe'
+          if (-not (Test-Path $electron -PathType Leaf)) { throw 'Pinned Electron is absent' }
+          $runner = Join-Path $PWD 'node_modules\tsx\dist\cli.mjs'
+          $gate = Join-Path $PWD 'tools\owned-process-broker\nativeGate.ts'
+          & $controller $electron $runner $gate "$env:NATIVE_STAGE\owned-process-broker.exe" "$env:NATIVE_BUILD\Release\owned-process-fixture.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-birth-failure.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-accounting-failure.exe" "$env:NATIVE_BUILD\Release\owned-process-broker-release-delay.exe" 2>&1 | Tee-Object native-evidence/electron-native.log
+          if ($LASTEXITCODE -ne 0) { throw 'Electron native controller gate failed' }
+      - name: Retain exact-source binary and independent controller evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: owned-native-${{ matrix.arch }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: native-evidence
+          if-no-files-found: error
+          retention-days: 14

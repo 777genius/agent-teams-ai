@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
+import { verifyMacSigningPreflight } from './mac-signing-preflight.mts';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const require = createRequire(import.meta.url);
+const { prepareCpuFeaturesRebuild } = require('../prepare-cpu-features-rebuild.cjs');
 const {
   buildElectronBuilderInvocations,
   buildNativeRebuildPlan,
   buildNativeRestorePlan,
+  runElectronBuilderOnce,
+  runWithDmgDetachRetry,
   runWithNativeDependencyRestore,
 } = require('./dist-invocations.cjs');
 
@@ -15,10 +19,14 @@ export {
   buildElectronBuilderInvocations,
   buildNativeRebuildPlan,
   buildNativeRestorePlan,
+  runWithDmgDetachRetry,
   runWithNativeDependencyRestore,
 };
 
 async function rebuildNativeDependencies(plan, action = 'rebuilding') {
+  if (plan.modules.includes('cpu-features')) {
+    prepareCpuFeaturesRebuild();
+  }
   const { rebuild } = await import('@electron/rebuild');
   const electronVersion = require('electron/package.json').version;
 
@@ -75,27 +83,19 @@ async function runRendererBundleGuard() {
 
 async function runElectronBuilder(args) {
   const cliPath = require.resolve('electron-builder/cli.js');
-  await new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [cliPath, ...args], {
-      stdio: 'inherit',
-      env: process.env,
-    });
-
-    child.on('error', reject);
-    child.on('exit', (code, signal) => {
-      if (code === 0) {
-        resolve();
-        return;
-      }
-      reject(new Error(`electron-builder failed with ${signal ?? `exit code ${code}`}`));
-    });
-  });
+  await runWithDmgDetachRetry(() => runElectronBuilderOnce(cliPath, args));
 }
 
-async function main(argv) {
-  const invocations = buildElectronBuilderInvocations(argv, process.platform, process.arch);
+export async function main(argv, {
+  platform = process.platform,
+  arch = process.arch,
+  env = process.env,
+  guard = runRendererBundleGuard,
+  packageInvocation = runElectronBuilderInvocation,
+} = {}) {
+  const invocations = buildElectronBuilderInvocations(argv, platform, arch);
 
-  if (process.env.ELECTRON_BUILDER_DIST_DRY_RUN === '1') {
+  if (env.ELECTRON_BUILDER_DIST_DRY_RUN === '1') {
     console.log(
       JSON.stringify(
         invocations.map((invocation) => invocation.args),
@@ -106,10 +106,13 @@ async function main(argv) {
     return;
   }
 
-  await runRendererBundleGuard();
+  for (const invocation of invocations) {
+    verifyMacSigningPreflight(invocation.args, platform, env);
+  }
+  await guard();
 
   for (const invocation of invocations) {
-    await runElectronBuilderInvocation(invocation);
+    await packageInvocation(invocation);
   }
 }
 

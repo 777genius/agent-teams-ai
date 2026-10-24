@@ -1,3 +1,4 @@
+import { CLAUDE_IMAGE_MIME_TYPES } from '../../attachments/mimeTypes.js';
 import { capturedMcpSourceCurrent } from '../../mcp-catalog/capturedSource.js';
 import { initialContextDigest } from '../../team-launch/context.js';
 import { join } from 'node:path';
@@ -139,6 +140,19 @@ export function createClaudeMemberProvider(context: MemberProviderContext): Memb
         return { ...opened, driver };
       },
     },
+    ...(context.attachments
+      ? {
+          attachmentCapabilities: {
+            images: CLAUDE_IMAGE_MIME_TYPES.some(
+              (mime) => context.attachments?.mimeTypes.includes(mime) === true
+            ),
+            documents: context.attachments.mimeTypes.includes('application/pdf'),
+            textFiles:
+              context.attachments.mimeTypes.includes('text/plain') ||
+              context.attachments.mimeTypes.includes('text/*'),
+          },
+        }
+      : {}),
     ...(custody.captureRegisteredProcess
       ? { captureRegisteredProcess: custody.captureRegisteredProcess.bind(custody) }
       : {}),

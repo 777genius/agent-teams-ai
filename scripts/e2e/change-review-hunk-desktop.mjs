@@ -1188,7 +1188,11 @@ async function main() {
     );
     const reviewCloseButton = `Array.from(document.querySelectorAll('h2'))
       .find((heading) => heading.textContent?.startsWith('Changes for task #'))
-      ?.parentElement?.parentElement?.querySelector('button')`;
+      ?.parentElement?.parentElement?.querySelector('button[aria-label="Close Changes"]')`;
+    await client.waitFor(
+      `(${reviewCloseButton}) && !(${reviewCloseButton}).disabled`,
+      'enabled Changes close button'
+    );
     await client.domClick(reviewCloseButton);
     await client.waitFor(
       `!Array.from(document.querySelectorAll('h2'))

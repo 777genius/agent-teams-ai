@@ -3,7 +3,14 @@ import { dirname, relative, resolve, sep } from 'node:path';
 
 import { format, type Options as PrettierOptions } from 'prettier';
 import ts from 'typescript';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// Measured at the four-vCPU CI quota: this guard suite parses the provisioning
+// facade graph and formats rendered sources, and its first execution after a
+// cold vitest worker/transform was observed at ~16.5s, while warm runs take
+// ~3.5-4s. The 60s ceiling sizes the wait to the measured worst case (~3.6x
+// margin) without changing any assertion.
+vi.setConfig({ testTimeout: 60_000 });
 
 const TEAM_PROVISIONING_SERVICE_PATH = resolve(
   process.cwd(),
@@ -28,8 +35,11 @@ const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
   // The launch prompt reaches the lead through the inbox rather than the
   // orchestrator leadPrompt, and the launch flow drives it from outside.
   'deliverOpenCodeLaunchPromptToLead',
+  // App composition reads HTTP runtime ownership and installs the synchronous launch fence.
+  'hasLiveOpenCodeMcpConsumers',
   'launchTeam',
   'restartLeadRuntime',
+  'setLaunchAdmissionGuard',
   'setRuntimeRecoveryFailureObserver',
   'setTeamChangeEmitter',
 ] as const;
@@ -60,6 +70,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'getLeadActivityState',
   'getLeadContextUsage',
   'getLiveLeadProcessMessages',
+  'getMemberGatewayRuntimeSeams',
   'getMemberToolApprovalBusyStatus',
   'getMemberSpawnStatuses',
   'getMemberSpawnStatusesReadOnly',
@@ -71,6 +82,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'getTeamAgentRuntimeSnapshot',
   'getTeamAgentRuntimeSnapshotReadOnly',
   'hasActiveTeamRuntimes',
+  'hasLiveOpenCodeMcpConsumers',
   'hasProvisioningRun',
   'hasTrackedRuntimeObligations',
   'initializeToolApprovalSettingsForLaunch',
@@ -111,6 +123,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'sendMessageToTeam',
   'setControlApiBaseUrlResolver',
   'setCrossTeamSender',
+  'setLaunchAdmissionGuard',
   'setMainWindow',
   'setMemberRuntimeAdvisoryInvalidator',
   'setMemberWorkSyncAcceptedReportChecker',
@@ -221,6 +234,27 @@ const CONSTRUCTOR_DEPENDENCIES = [
     name: 'attachmentStore',
     readonly: true,
     type: 'TeamAttachmentStore',
+  },
+  {
+    accessibility: 'none',
+    defaultNew: null,
+    name: 'groupChats',
+    readonly: false,
+    type: 'ProvisioningGroupChatCallbacks',
+  },
+  {
+    accessibility: 'none',
+    defaultNew: null,
+    name: 'resolveOpenCodeInputDeclaration',
+    readonly: false,
+    type: 'ResolveOpenCodeInputDeclaration',
+  },
+  {
+    accessibility: 'none',
+    defaultNew: null,
+    name: 'memberGatewayRuntimeSeams',
+    readonly: false,
+    type: 'MemberGatewayRuntimeSeams | null',
   },
 ] as const;
 
@@ -723,7 +757,7 @@ describe('TeamProvisioningService facade guard', () => {
       [...DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS].sort((a, b) => a.localeCompare(b))
     );
     expect(publicMemberNames.some((memberName) => !declaredEntryPoints.has(memberName))).toBe(true);
-  });
+  }, 60_000);
 
   it('keeps the constructor dependency surface explicit and bounded', () => {
     const source = readTeamProvisioningServiceSource();

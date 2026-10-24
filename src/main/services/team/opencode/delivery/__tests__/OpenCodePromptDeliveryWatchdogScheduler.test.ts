@@ -45,6 +45,88 @@ function makeScheduler(overrides: Partial<SchedulerDeps> = {}): {
   };
 }
 
+/**
+ * A wake waits behind the per-member serialization queue and fires after the
+ * relay generation it was armed under has rotated. The wake then saw a revoked
+ * `isCurrent` and returned without running at all: the unread row it existed
+ * for lost its only scheduled pass and no file event would ever re-arm it, so
+ * the message was silently lost. A stale wake must therefore re-arm unscoped
+ * while its row is still unread - the walk re-derives identity and authority
+ * from durable state, exactly like the manual relay path.
+ */
+describe('OpenCodePromptDeliveryWatchdogScheduler superseded wake recovery', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('re-arms an unread row whose wake fired under a superseded generation', async () => {
+    let current = true;
+    const { scheduler, deps } = makeScheduler({
+      getInboxMessages: vi.fn(async () => [{ messageId: 'msg-stale-1', read: false }]),
+    });
+
+    scheduler.schedule({
+      teamName: 'team',
+      memberName: 'alice',
+      messageId: 'msg-stale-1',
+      delayMs: 0,
+      isCurrent: () => current,
+    });
+    current = false;
+    await vi.advanceTimersByTimeAsync(500);
+    expect(deps.relay).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(31_000);
+    expect(deps.relay).toHaveBeenCalledTimes(1);
+    expect(deps.relay).toHaveBeenCalledWith(
+      expect.objectContaining({ teamName: 'team', memberName: 'alice', messageId: 'msg-stale-1' })
+    );
+  });
+
+  it('does not re-arm a stale wake for a row that is already read', async () => {
+    let current = true;
+    const { scheduler, deps } = makeScheduler({
+      getInboxMessages: vi.fn(async () => [{ messageId: 'msg-stale-2', read: true }]),
+    });
+
+    scheduler.schedule({
+      teamName: 'team',
+      memberName: 'alice',
+      messageId: 'msg-stale-2',
+      delayMs: 0,
+      isCurrent: () => current,
+    });
+    current = false;
+    await vi.advanceTimersByTimeAsync(500);
+    await vi.advanceTimersByTimeAsync(61_000);
+    expect(deps.relay).not.toHaveBeenCalled();
+    expect(deps.getInboxMessages).toHaveBeenCalled();
+  });
+
+  it('drops a stale wake for a row that no longer exists', async () => {
+    let current = true;
+    const { scheduler, deps } = makeScheduler({
+      getInboxMessages: vi.fn(async () => []),
+    });
+
+    scheduler.schedule({
+      teamName: 'team',
+      memberName: 'alice',
+      messageId: 'msg-stale-3',
+      delayMs: 0,
+      isCurrent: () => current,
+    });
+    current = false;
+    await vi.advanceTimersByTimeAsync(500);
+    await vi.advanceTimersByTimeAsync(61_000);
+    expect(deps.relay).not.toHaveBeenCalled();
+  });
+});
+
 describe('OpenCodePromptDeliveryWatchdogScheduler stale error policy', () => {
   it('keeps record-not-found watchdog errors live when the unread target is on an active lane', async () => {
     const { scheduler, deps } = makeScheduler({
@@ -206,5 +288,130 @@ describe('OpenCodePromptDeliveryWatchdogScheduler relay diagnostics', () => {
     await runWake(scheduler, { teamName: 'team', memberName: 'bob', messageId: 'msg-2' });
 
     expect(deps.warn).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('OpenCodePromptDeliveryWatchdogScheduler scoped bootstrap wakes', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('rechecks generation authorization after asynchronous recovery before relaying', async () => {
+    let current = true;
+    const { scheduler, deps } = makeScheduler({
+      canDeliverToTeamRuntime: () => false,
+      recoverBeforeDelivery: async () => {
+        current = false;
+        return true;
+      },
+    });
+    scheduler.schedule({
+      teamName: 'team',
+      memberName: 'jack',
+      messageId: 'queued',
+      delayMs: 500,
+      isCurrent: () => current,
+    });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(deps.relay).not.toHaveBeenCalled();
+    scheduler.cancelTeam('team');
+  });
+
+  it('replaces a revoked generation wake with its successor on the same message key', async () => {
+    const { scheduler, deps } = makeScheduler();
+    let firstCurrent = true;
+    const successorCurrent = (): boolean => true;
+    scheduler.schedule({
+      teamName: 'team',
+      memberName: 'jack',
+      messageId: 'queued',
+      delayMs: 500,
+      isCurrent: () => firstCurrent,
+    });
+    firstCurrent = false;
+    scheduler.schedule({
+      teamName: 'team',
+      memberName: 'jack',
+      messageId: 'queued',
+      delayMs: 3_000,
+      isCurrent: successorCurrent,
+    });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(deps.relay).toHaveBeenCalledTimes(1);
+    expect(deps.relay).toHaveBeenCalledWith(
+      expect.objectContaining({ isCurrent: successorCurrent })
+    );
+    scheduler.cancelTeam('team');
+  });
+
+  it('upgrades a scoped timer to an unscoped wake without postponing it', async () => {
+    const { scheduler, deps } = makeScheduler();
+    let current = true;
+    scheduler.schedule({
+      teamName: 'team',
+      memberName: 'jack',
+      messageId: 'queued',
+      delayMs: 500,
+      isCurrent: () => current,
+    });
+    scheduler.schedule({
+      teamName: 'team',
+      memberName: 'jack',
+      messageId: 'queued',
+      delayMs: 3_000,
+    });
+    current = false;
+    await vi.advanceTimersByTimeAsync(500);
+    expect(deps.relay).toHaveBeenCalledTimes(1);
+    expect(deps.relay).toHaveBeenCalledWith({
+      teamName: 'team',
+      memberName: 'jack',
+      messageId: 'queued',
+    });
+    scheduler.cancelTeam('team');
+  });
+
+  it('does not narrow an existing unscoped wake when a scoped wake advances its deadline', async () => {
+    const { scheduler, deps } = makeScheduler();
+    let current = true;
+    scheduler.schedule({
+      teamName: 'team',
+      memberName: 'jack',
+      messageId: 'queued',
+      delayMs: 3_000,
+    });
+    scheduler.schedule({
+      teamName: 'team',
+      memberName: 'jack',
+      messageId: 'queued',
+      delayMs: 500,
+      isCurrent: () => current,
+    });
+    current = false;
+    await vi.advanceTimersByTimeAsync(500);
+    expect(deps.relay).toHaveBeenCalledTimes(1);
+    expect(deps.relay).toHaveBeenCalledWith({
+      teamName: 'team',
+      memberName: 'jack',
+      messageId: 'queued',
+    });
+    scheduler.cancelTeam('team');
+  });
+
+  it('refuses already revoked wakes at admission', async () => {
+    const { scheduler, deps } = makeScheduler();
+    scheduler.schedule({
+      teamName: 'team',
+      memberName: 'jack',
+      messageId: 'queued',
+      delayMs: 500,
+      isCurrent: () => false,
+    });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(deps.relay).not.toHaveBeenCalled();
+    scheduler.cancelTeam('team');
   });
 });

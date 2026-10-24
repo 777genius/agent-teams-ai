@@ -1,10 +1,12 @@
+import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments/contracts';
+import { TeamReadFailureError } from '@features/team-read-recovery/main';
 import { bindTeamProvisioningStartApi } from '@main/services/team/contracts/TeamProvisioningApis';
 import {
   beginOpenCodeStartupRuntimeSweep,
   OpenCodeStartupCleanupBusyError,
   whenOpenCodeStartupRuntimeSweepSettled,
 } from '@main/services/team/opencode/bridge/OpenCodeStartupSweepGate';
-import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { setAppDataBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -29,15 +31,23 @@ import type {
   TeamViewSnapshot,
 } from '@shared/types/team';
 
+const resolveInputDeclaration = vi.fn<ResolveOpenCodeInputDeclaration>();
+
 const modelRelaunchPersistence = vi.hoisted(() => vi.fn());
 vi.mock('@features/team-provisioning/main/composition/persistNodeMemberSettingsRelaunch', () => ({
   persistNodeMemberSettingsRelaunch: modelRelaunchPersistence,
 }));
 
-const cleanupPreload = vi.hoisted(() => ({
-  exposeInMainWorld: vi.fn(),
-  invoke: vi.fn(),
-}));
+const cleanupPreload = vi.hoisted(() => {
+  const exposed: { current?: ElectronAPI } = {};
+  return {
+    exposed,
+    exposeInMainWorld: vi.fn((name: string, value: unknown) => {
+      if (name === 'electronAPI') exposed.current = value as ElectronAPI;
+    }),
+    invoke: vi.fn(),
+  };
+});
 vi.mock('@preload/installRendererLogForwarding', () => ({
   installRendererLogForwarding: vi.fn(),
 }));
@@ -475,6 +485,15 @@ describe('ipc teams handlers', () => {
   };
 
   const service = {
+    runConfigurationOperation: vi.fn(
+      async <T>(teamName: string, operation: () => Promise<T>): Promise<T> => {
+        let result!: T;
+        await teamHandlerMocks.runLiveRosterMutation(teamName, async () => {
+          result = await operation();
+        });
+        return result;
+      }
+    ),
     listTeams: vi.fn(() => resolved([{ teamName: 'my-team', displayName: 'My Team' }])),
     getTeamData: vi.fn(
       (): Promise<TeamViewSnapshot & { messages?: InboxMessage[] }> =>
@@ -791,7 +810,11 @@ describe('ipc teams handlers', () => {
     ),
   };
 
+  let attachmentTestRoot = '';
   beforeEach(() => {
+    attachmentTestRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-team-ipc-storage-'));
+    setAppDataBasePath(attachmentTestRoot);
+    setClaudeBasePathOverride(attachmentTestRoot);
     resetTeamWatchScopeForTests();
     handlers.clear();
     vi.clearAllMocks();
@@ -799,6 +822,8 @@ describe('ipc teams handlers', () => {
     service.getTeamData.mockReset();
     service.getAllTasks.mockReset();
     service.restoreMember.mockReset();
+    service.getSavedRequest.mockReset();
+    service.getSavedRequest.mockResolvedValue(null);
     service.listTeams.mockResolvedValue([{ teamName: 'my-team', displayName: 'My Team' }]);
     service.getTeamData.mockResolvedValue({
       teamName: 'my-team',
@@ -840,8 +865,41 @@ describe('ipc teams handlers', () => {
     teamHandlerMocks.getCliHelpOutput.mockResolvedValue('Usage');
     teamHandlerMocks.sendMessageToTeam.mockReset();
     teamHandlerMocks.sendMessageToTeam.mockResolvedValue(undefined);
+    teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockReset();
+    teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockResolvedValue({
+      relayed: 0,
+      attempted: 0,
+      delivered: 0,
+      failed: 0,
+      lastDelivery: undefined,
+    });
+    teamHandlerMocks.getOpenCodeRuntimeDeliveryStatus.mockReset();
+    teamHandlerMocks.getOpenCodeRuntimeDeliveryStatus.mockResolvedValue(null);
     teamHandlerMocks.resolveRuntimeRecipientProviderId.mockReset();
-    teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValue(undefined);
+    teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValue('anthropic');
+    teamHandlerMocks.getTeamAgentRuntimeSnapshot.mockResolvedValue({
+      teamName: 'my-team',
+      runId: 'run-2',
+      updatedAt: new Date().toISOString(),
+      members: {
+        bob: {
+          memberName: 'bob',
+          alive: true,
+          pid: process.pid,
+          runtimePid: process.pid,
+          restartable: true,
+          updatedAt: new Date().toISOString(),
+        },
+        'team-lead': {
+          memberName: 'team-lead',
+          alive: true,
+          pid: process.pid,
+          runtimePid: process.pid,
+          restartable: true,
+          updatedAt: new Date().toISOString(),
+        },
+      },
+    } as never);
     teamHandlerMocks.attachLiveRosterMember.mockReset();
     teamHandlerMocks.attachLiveRosterMember.mockResolvedValue(undefined);
     teamHandlerMocks.detachLiveRosterMember.mockReset();
@@ -894,6 +952,8 @@ describe('ipc teams handlers', () => {
         (target) => completed.has(target)
       );
     });
+    resolveInputDeclaration.mockReset();
+    resolveInputDeclaration.mockResolvedValue(null);
     launchIoGovernor = new LaunchIoGovernor({ quietWindowMs: 100 });
     initializeTeamHandlers(
       service as never,
@@ -910,7 +970,9 @@ describe('ipc teams handlers', () => {
       boardTaskExactLogsService as never,
       boardTaskExactLogDetailService as never,
       launchIoGovernor,
-      permanentDeletionLifecycle
+      permanentDeletionLifecycle,
+      undefined,
+      resolveInputDeclaration
     );
     registerTeamHandlers(ipcMain as never);
   });
@@ -920,6 +982,8 @@ describe('ipc teams handlers', () => {
     launchIoGovernor.clearForTests();
     vi.useRealTimers();
     setClaudeBasePathOverride(null);
+    setAppDataBasePath(null);
+    fs.rmSync(attachmentTestRoot, { recursive: true, force: true });
   });
 
   it('registers all expected handlers', () => {
@@ -1369,6 +1433,123 @@ describe('ipc teams handlers', () => {
     });
   });
 
+  it.each([
+    ['anthropic', 'team-lead'],
+    ['codex', 'team-lead'],
+    ['opencode', 'team-lead'],
+    ['anthropic', 'bob'],
+    ['codex', 'bob'],
+    ['opencode', 'bob'],
+  ] as const)(
+    'saves one immutable reference bundle before %s/%s dispatch',
+    async (providerId, member) => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-reference-ipc-'));
+      setAppDataBasePath(root);
+      setClaudeBasePathOverride(root);
+      const messageId = 'reference-message';
+      const mixedCodexLead = providerId === 'codex' && member === 'team-lead';
+      const attachment = {
+        id: 'binary',
+        filename: mixedCodexLead ? 'data.gif' : 'data.bin',
+        mimeType: mixedCodexLead ? 'image/gif' : 'application/octet-stream',
+        size: 3,
+        data: Buffer.from([0, 255, 1]).toString('base64'),
+      };
+      const nativePng = {
+        ...attachment,
+        id: 'native-png',
+        filename: 'native.png',
+        mimeType: 'image/png',
+      };
+      const attachments = mixedCodexLead ? [nativePng, attachment] : [attachment];
+      const save = vi.spyOn(TeamAttachmentStore.prototype, 'saveNativeAttachments');
+      teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValue(providerId);
+      teamHandlerMocks.getTeamAgentRuntimeSnapshot.mockResolvedValue({
+        teamName: 'my-team',
+        runId: 'run-2',
+        updatedAt: new Date().toISOString(),
+        members: {
+          [member]: {
+            memberName: member,
+            alive: true,
+            pid: process.pid,
+            runtimePid: process.pid,
+            updatedAt: new Date().toISOString(),
+            restartable: true,
+          },
+        },
+      } as never);
+      teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockResolvedValue({
+        relayed: 1,
+        attempted: 1,
+        delivered: 1,
+        failed: 0,
+        lastDelivery: { delivered: true, accepted: true },
+      });
+      const index = path.join(getAppDataPath(), 'attachments', 'my-team', messageId, '_index.json');
+      teamHandlerMocks.sendMessageToTeam.mockImplementation(async (...args: unknown[]) => {
+        const [, text, native] = args;
+        expect(fs.existsSync(index)).toBe(true);
+        expect(native).toEqual(mixedCodexLead ? [nativePng] : []);
+        expect(text).toContain('"sha256":');
+      });
+      try {
+        const result = await handlers.get(TEAM_SEND_MESSAGE)!({} as never, 'my-team', {
+          member,
+          messageId,
+          text: 'Read the file',
+          attachments,
+        });
+        expect(result).toMatchObject({ success: true });
+        expect(save).toHaveBeenCalledTimes(1);
+        const bundle = JSON.parse(fs.readFileSync(index, 'utf8'));
+        expect(bundle.map((item: { id: string }) => item.id)).toEqual(
+          mixedCodexLead ? ['native-png', 'binary'] : ['binary']
+        );
+        if (member !== 'team-lead' || providerId === 'opencode') {
+          const inbox = JSON.parse(
+            fs.readFileSync(
+              path.join(root, 'teams', 'my-team', 'inboxes', `${member}.json`),
+              'utf8'
+            )
+          );
+          expect(inbox).toHaveLength(1);
+          expect(inbox[0].attachments).toBeUndefined();
+          expect(inbox[0].nativeAttachmentDelivery).toBeUndefined();
+          expect(inbox[0].fileReferences[0]).toMatchObject({ id: 'binary', order: 0, size: 3 });
+          expect(fs.readFileSync(inbox[0].fileReferences[0].filePath)).toEqual(
+            Buffer.from([0, 255, 1])
+          );
+        } else {
+          expect(service.sendDirectToLead).toHaveBeenCalledWith(
+            'my-team',
+            member,
+            'Read the file',
+            undefined,
+            expect.arrayContaining(
+              attachments.map((item, order) => expect.objectContaining({ id: item.id, order }))
+            ),
+            undefined,
+            messageId,
+            'do',
+            [expect.objectContaining({ id: 'binary', order: mixedCodexLead ? 1 : 0 })]
+          );
+          const live = teamHandlerMocks.pushLiveLeadProcessMessage.mock.calls[0][1] as InboxMessage;
+          expect(live.text).toBe('Read the file');
+          expect(live.attachments?.map((item) => item.id)).toEqual(
+            attachments.map((item) => item.id)
+          );
+          expect(live.fileReferences?.map((item) => item.id)).toEqual(['binary']);
+        }
+      } finally {
+        save.mockRestore();
+        setAppDataBasePath(null);
+        setClaudeBasePathOverride(null);
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }
+  );
+
   it('returns success false on invalid sendMessage args', async () => {
     const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
     expect(sendHandler).toBeDefined();
@@ -1384,8 +1565,15 @@ describe('ipc teams handlers', () => {
     ['clip.webm', 'video/webm'],
     ['clip.mov', 'video/quicktime'],
   ])(
-    'accepts %s IPC payloads for the video-capable MiniMax recipient',
+    'accepts %s IPC payloads for the declared video-capable recipient',
     async (filename, mimeType) => {
+      resolveInputDeclaration.mockImplementationOnce(({ projectPath, model }) =>
+        Promise.resolve(
+          projectPath === TEST_PROJECT_PATH && model === 'minimax-coding-plan/minimax-m3'
+            ? ['text', 'video']
+            : null
+        )
+      );
       teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
       teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
         relayed: 1,
@@ -1396,7 +1584,7 @@ describe('ipc teams handlers', () => {
       });
       service.getTeamData.mockResolvedValueOnce({
         teamName: 'my-team',
-        config: { name: 'My Team' },
+        config: { name: 'My Team', projectPath: TEST_PROJECT_PATH },
         tasks: [],
         members: [
           {
@@ -1410,9 +1598,7 @@ describe('ipc teams handlers', () => {
         kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
         processes: [],
       });
-      const saveSpy = vi
-        .spyOn(TeamAttachmentStore.prototype, 'saveAttachments')
-        .mockResolvedValue(new Map());
+      const saveSpy = vi.spyOn(TeamAttachmentStore.prototype, 'saveNativeAttachments');
       try {
         const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
         expect(sendHandler).toBeDefined();
@@ -1430,11 +1616,20 @@ describe('ipc teams handlers', () => {
           attachments: [attachment],
         })) as { success: boolean };
 
+        expect(resolveInputDeclaration).toHaveBeenCalledWith({
+          projectPath: TEST_PROJECT_PATH,
+          model: 'minimax-coding-plan/minimax-m3',
+        });
         expect(result.success).toBe(true);
-        expect(service.sendRuntimeRecipientMessage).toHaveBeenCalledWith(
-          'my-team',
-          expect.objectContaining({ attachments: [attachment] })
+        const [inbox] = JSON.parse(
+          fs.readFileSync(
+            path.join(attachmentTestRoot, 'teams', 'my-team', 'inboxes', 'bob.json'),
+            'utf8'
+          )
         );
+        expect(inbox.attachments[0]).toMatchObject({ id: 'video-1', mimeType, size: 4, order: 0 });
+        expect(inbox.fileReferences).toBeUndefined();
+        expect(inbox.nativeAttachmentDelivery).toBeUndefined();
       } finally {
         saveSpy.mockRestore();
       }
@@ -1442,6 +1637,13 @@ describe('ipc teams handlers', () => {
   );
 
   it('allows an exact 8MiB video through the video-only serialized IPC envelope', async () => {
+    resolveInputDeclaration.mockImplementationOnce(({ projectPath, model }) =>
+      Promise.resolve(
+        projectPath === TEST_PROJECT_PATH && model === 'minimax-coding-plan/minimax-m3'
+          ? ['text', 'video']
+          : null
+      )
+    );
     const eightMiB = 8 * 1024 * 1024;
     teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
     teamHandlerMocks.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
@@ -1453,7 +1655,7 @@ describe('ipc teams handlers', () => {
     });
     service.getTeamData.mockResolvedValueOnce({
       teamName: 'my-team',
-      config: { name: 'My Team' },
+      config: { name: 'My Team', projectPath: TEST_PROJECT_PATH },
       tasks: [],
       members: [
         {
@@ -1467,9 +1669,7 @@ describe('ipc teams handlers', () => {
       kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
       processes: [],
     });
-    const saveSpy = vi
-      .spyOn(TeamAttachmentStore.prototype, 'saveAttachments')
-      .mockResolvedValue(new Map());
+    const saveSpy = vi.spyOn(TeamAttachmentStore.prototype, 'saveNativeAttachments');
     try {
       const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
       expect(sendHandler).toBeDefined();
@@ -1520,10 +1720,15 @@ describe('ipc teams handlers', () => {
   });
 
   it('rejects video IPC payloads for a non-video OpenCode model', async () => {
+    resolveInputDeclaration.mockImplementationOnce(({ projectPath, model }) =>
+      Promise.resolve(
+        projectPath === TEST_PROJECT_PATH && model === 'moonshotai/kimi-k2.6' ? ['text'] : null
+      )
+    );
     teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValueOnce('opencode');
     service.getTeamData.mockResolvedValueOnce({
       teamName: 'my-team',
-      config: { name: 'My Team' },
+      config: { name: 'My Team', projectPath: TEST_PROJECT_PATH },
       tasks: [],
       members: [
         {
@@ -1554,68 +1759,84 @@ describe('ipc teams handlers', () => {
       ],
     })) as { success: boolean; error?: string };
 
+    expect(resolveInputDeclaration).toHaveBeenCalledWith({
+      projectPath: TEST_PROJECT_PATH,
+      model: 'moonshotai/kimi-k2.6',
+    });
     expect(result.success).toBe(false);
-    expect(result.error).toContain(
-      'This provider path does not support video attachments through this delivery path.'
-    );
+    expect(result.error).toContain('This OpenCode model does not declare video input support.');
     expect(service.sendRuntimeRecipientMessage).not.toHaveBeenCalled();
     vi.mocked(console.error).mockClear();
   });
 
-  it('enforces one video and the 8MiB per-video/mixed IPC budget', async () => {
-    const eightMiB = 8 * 1024 * 1024;
-    const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
-    expect(sendHandler).toBeDefined();
-    const baseVideo = {
-      id: 'video-1',
-      filename: 'clip.mp4',
-      mimeType: 'video/mp4',
-      size: 4,
-      data: Buffer.from('test').toString('base64'),
-    };
+  it('keeps the one-video native OpenCode guard before immutable storage', async () => {
+    resolveInputDeclaration.mockImplementationOnce(({ projectPath, model }) =>
+      Promise.resolve(
+        projectPath === TEST_PROJECT_PATH && model === 'minimax-coding-plan/minimax-m3'
+          ? ['text', 'video']
+          : null
+      )
+    );
+    teamHandlerMocks.resolveRuntimeRecipientProviderId.mockResolvedValue('opencode');
+    service.getTeamData.mockResolvedValueOnce({
+      teamName: 'my-team',
+      config: { name: 'My Team', projectPath: TEST_PROJECT_PATH },
+      members: [
+        {
+          name: 'bob',
+          providerId: 'opencode',
+          model: 'minimax-coding-plan/minimax-m3',
+          currentTaskId: null,
+          taskCount: 0,
+        },
+      ],
+      tasks: [],
+      kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+      processes: [],
+    });
+    const save = vi.spyOn(TeamAttachmentStore.prototype, 'saveNativeAttachments');
+    try {
+      const attachments = ['first', 'second'].map((id) => ({
+        id,
+        filename: `${id}.mp4`,
+        mimeType: 'video/mp4',
+        size: 4,
+        data: Buffer.from('test').toString('base64'),
+      }));
+      const result = await handlers.get(TEAM_SEND_MESSAGE)!({} as never, 'my-team', {
+        member: 'bob',
+        text: 'Read clips',
+        attachments,
+      });
+      expect(result).toMatchObject({ success: false, error: 'Maximum 1 video attachment allowed' });
+      expect(save).not.toHaveBeenCalled();
+      vi.mocked(console.error).mockClear();
+    } finally {
+      save.mockRestore();
+    }
+  });
 
-    await expect(
-      sendHandler!({} as never, 'my-team', {
-        member: 'bob',
-        text: 'Two clips',
-        attachments: [
-          baseVideo,
-          { ...baseVideo, id: 'video-2', filename: 'second.webm', mimeType: 'video/webm' },
-        ],
-      })
-    ).resolves.toMatchObject({
-      success: false,
-      error: 'Maximum 1 video attachment allowed',
+  it('rejects false decoded sizes before native routing or storage', async () => {
+    const handler = handlers.get(TEAM_SEND_MESSAGE)!;
+    const result = await handler({} as never, 'my-team', {
+      member: 'bob',
+      text: 'Read file',
+      attachments: [
+        {
+          id: 'video-1',
+          filename: 'clip.mp4',
+          mimeType: 'video/mp4',
+          size: 8 * 1024 * 1024 + 1,
+          data: Buffer.from('test').toString('base64'),
+        },
+      ],
     });
-    await expect(
-      sendHandler!({} as never, 'my-team', {
-        member: 'bob',
-        text: 'Large clip',
-        attachments: [{ ...baseVideo, size: eightMiB + 1 }],
-      })
-    ).resolves.toMatchObject({
+    expect(result).toMatchObject({
       success: false,
-      error: 'Attachment "clip.mp4" exceeds 8MB limit',
+      error: 'Attachment data must be canonical base64 with exact size',
     });
-    await expect(
-      sendHandler!({} as never, 'my-team', {
-        member: 'bob',
-        text: 'Mixed payload',
-        attachments: [
-          { ...baseVideo, size: eightMiB - 4 },
-          {
-            id: 'image-1',
-            filename: 'diagram.png',
-            mimeType: 'image/png',
-            size: 8,
-            data: Buffer.from('image').toString('base64'),
-          },
-        ],
-      })
-    ).resolves.toMatchObject({
-      success: false,
-      error: 'Video and other attachments exceed the 8MB total size limit',
-    });
+    expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
+    expect(service.sendRuntimeRecipientMessage).not.toHaveBeenCalled();
   });
 
   it('keeps the legacy serialized payload cap for non-video attachments', async () => {
@@ -1689,7 +1910,8 @@ describe('ipc teams handlers', () => {
         | { text?: string; messageId?: string }
         | undefined;
       expect(request).toBeDefined();
-      expect(request).not.toHaveProperty('messageId');
+      expect(request?.messageId).toEqual(expect.any(String));
+      expect(request?.text).toContain(`Original User MessageId: ${request?.messageId}`);
       expect(request?.text).toContain('Reply using the SendMessage tool');
       expect(request?.text).toContain('to="user"');
       expect(request?.text).not.toContain('agent-teams_message_send');
@@ -2240,7 +2462,9 @@ describe('ipc teams handlers', () => {
       undefined,
       undefined,
       undefined,
-      expect.any(String)
+      expect.any(String),
+      'ask',
+      undefined
     );
   });
 
@@ -2266,7 +2490,9 @@ describe('ipc teams handlers', () => {
       undefined,
       undefined,
       undefined,
-      'attempt-lead-1'
+      'attempt-lead-1',
+      'do',
+      undefined
     );
   });
 
@@ -2415,7 +2641,9 @@ describe('ipc teams handlers', () => {
       undefined,
       undefined,
       undefined,
-      expect.any(String)
+      expect.any(String),
+      'do',
+      undefined
     );
   });
 
@@ -2450,14 +2678,17 @@ describe('ipc teams handlers', () => {
       undefined,
       undefined,
       undefined,
-      expect.any(String)
+      expect.any(String),
+      'do',
+      undefined
     );
   });
 
   it('does not route slash commands through raw stdin when attachments are present', async () => {
     const sendHandler = handlers.get(TEAM_SEND_MESSAGE);
     expect(sendHandler).toBeDefined();
-    vi.stubEnv('HOME', os.tmpdir());
+    const attachmentsHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-attachments-home-'));
+    vi.stubEnv('HOME', attachmentsHome);
     try {
       const result = (await sendHandler!({} as never, 'my-team', {
         member: 'team-lead',
@@ -2486,6 +2717,7 @@ describe('ipc teams handlers', () => {
       );
     } finally {
       vi.unstubAllEnvs();
+      fs.rmSync(attachmentsHome, { recursive: true, force: true });
     }
   });
 
@@ -2879,22 +3111,79 @@ describe('ipc teams handlers', () => {
     (electron.app as { isPackaged: boolean }).isPackaged = false;
   });
 
-  it('does not fall back TEAM_GET_DATA to main after worker OOM', async () => {
+  it.each([
+    undefined,
+    { kind: 'recovering', retryAt: 30001, recoveryId: 'TEST-recovery' },
+    { kind: 'busy' },
+    { kind: 'disposed' },
+  ] as const)(
+    'does not fall back TEAM_GET_DATA to main after worker OOM or typed failure %j',
+    async (failure) => {
+      mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
+      mockTeamDataWorkerClient.getTeamData.mockRejectedValueOnce(
+        failure
+          ? new TeamReadFailureError('TEST-worker-status', failure)
+          : new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
+      );
+
+      const handler = handlers.get(TEAM_GET_DATA)!;
+      const result = (await handler({} as never, 'my-team')) as {
+        success: boolean;
+        error?: string;
+        failure?: unknown;
+      };
+      if (failure) {
+        expect(vi.mocked(console.error).mock.calls).toHaveLength(1);
+        expect(vi.mocked(console.error).mock.calls[0]?.join(' ')).toContain('TEST-worker-status');
+      }
+      vi.mocked(console.error).mockClear();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
+      expect(result.failure).toEqual(failure ?? { kind: 'fatal' });
+      expect(service.getTeamData).not.toHaveBeenCalled();
+    }
+  );
+
+  it('preserves worker recovery through registered IPC, actual preload and renderer unwrap', async () => {
+    const failure = {
+      kind: 'recovering',
+      retryAt: 30001,
+      recoveryId: 'TEST-transport-episode',
+    } as const;
     mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
     mockTeamDataWorkerClient.getTeamData.mockRejectedValueOnce(
-      new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
+      new TeamReadFailureError('TEST-recovery', failure)
     );
-
-    const handler = handlers.get(TEAM_GET_DATA)!;
-    const result = (await handler({} as never, 'my-team')) as {
-      success: boolean;
-      error?: string;
-    };
-    vi.mocked(console.error).mockClear();
-
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
-    expect(service.getTeamData).not.toHaveBeenCalled();
+    await import('../../../src/preload/index');
+    expect(cleanupPreload.exposed.current?.teams.readRecovery).toBeDefined();
+    cleanupPreload.invoke.mockImplementation(async (channel: string, ...args: unknown[]) => {
+      const result = await handlers.get(channel)!({ sender: {} } as never, ...args);
+      return JSON.parse(JSON.stringify(result)) as unknown;
+    });
+    vi.stubGlobal('window', { electronAPI: cleanupPreload.exposed.current });
+    try {
+      const { readTeamData } = await import('@features/team-read-recovery/renderer');
+      const { unwrapIpc } = await import('@renderer/utils/unwrapIpc');
+      await expect(unwrapIpc('team:getData', () => readTeamData('my-team'))).rejects.toMatchObject({
+        name: 'IpcError',
+        operation: 'team:getData',
+        message: 'TEAM_DATA_WORKER_FAILED: TEST-recovery',
+        failure,
+      });
+      expect(service.getTeamData).not.toHaveBeenCalled();
+      expect(cleanupPreload.invoke).toHaveBeenCalledExactlyOnceWith(TEAM_GET_DATA, 'my-team');
+      expect(vi.mocked(console.error).mock.calls).toHaveLength(2);
+      expect(
+        vi
+          .mocked(console.error)
+          .mock.calls.every((call) => call.join(' ').includes('TEST-recovery'))
+      ).toBe(true);
+      vi.mocked(console.error).mockClear();
+    } finally {
+      vi.unstubAllGlobals();
+      cleanupPreload.invoke.mockReset();
+    }
   });
 
   it('forwards thin TEAM_GET_DATA options to the worker without changing full request shape', async () => {
@@ -3526,31 +3815,46 @@ describe('ipc teams handlers', () => {
     expect(service.getMessagesPage).not.toHaveBeenCalled();
   });
 
-  it('does not fall back live TEAM_GET_MESSAGES_PAGE overlay to main after worker OOM', async () => {
-    mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
-    const liveMessage: InboxMessage = {
-      from: 'team-lead',
-      text: 'Команда поднята, приступаю к раздаче задач.',
-      timestamp: '2026-02-23T10:00:01.000Z',
-      read: true,
-      source: 'lead_process' as const,
-      messageId: 'live-1',
-    };
-    mockTeamDataWorkerClient.getMessagesPage.mockRejectedValueOnce(
-      new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
-    );
-    teamHandlerMocks.getLiveLeadProcessMessages.mockReturnValueOnce([liveMessage]);
+  it.each([
+    undefined,
+    { kind: 'recovering', retryAt: 30001, recoveryId: 'TEST-recovery' },
+    { kind: 'busy' },
+    { kind: 'disposed' },
+  ] as const)(
+    'does not fall back live TEAM_GET_MESSAGES_PAGE overlay to main after worker OOM or typed failure %j',
+    async (failure) => {
+      mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
+      const liveMessage: InboxMessage = {
+        from: 'team-lead',
+        text: 'Команда поднята, приступаю к раздаче задач.',
+        timestamp: '2026-02-23T10:00:01.000Z',
+        read: true,
+        source: 'lead_process' as const,
+        messageId: 'live-1',
+      };
+      mockTeamDataWorkerClient.getMessagesPage.mockRejectedValueOnce(
+        failure
+          ? new TeamReadFailureError('TEST-worker-status', failure)
+          : new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
+      );
+      teamHandlerMocks.getLiveLeadProcessMessages.mockReturnValueOnce([liveMessage]);
 
-    const handler = handlers.get(TEAM_GET_MESSAGES_PAGE)!;
-    const result = (await handler({} as never, 'my-team', {
-      limit: 20,
-    })) as { success: boolean; error?: string };
-    vi.mocked(console.error).mockClear();
+      const handler = handlers.get(TEAM_GET_MESSAGES_PAGE)!;
+      const result = (await handler({} as never, 'my-team', {
+        limit: 20,
+      })) as { success: boolean; error?: string; failure?: unknown };
+      if (failure) {
+        expect(vi.mocked(console.error).mock.calls).toHaveLength(1);
+        expect(vi.mocked(console.error).mock.calls[0]?.join(' ')).toContain('TEST-worker-status');
+      }
+      vi.mocked(console.error).mockClear();
 
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
-    expect(service.getMessagesPage).not.toHaveBeenCalled();
-  });
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
+      expect(result.failure).toEqual(failure ?? { kind: 'fatal' });
+      expect(service.getMessagesPage).not.toHaveBeenCalled();
+    }
+  );
 
   it('scans rate-limit notifications from message-page results without hydrating TEAM_GET_DATA feed', async () => {
     mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
@@ -3652,22 +3956,37 @@ describe('ipc teams handlers', () => {
     (electron.app as { isPackaged: boolean }).isPackaged = false;
   });
 
-  it('does not fall back TEAM_GET_MESSAGES_PAGE to main after worker OOM', async () => {
-    mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
-    mockTeamDataWorkerClient.getMessagesPage.mockRejectedValueOnce(
-      new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
-    );
+  it.each([
+    undefined,
+    { kind: 'recovering', retryAt: 30001, recoveryId: 'TEST-recovery' },
+    { kind: 'busy' },
+    { kind: 'disposed' },
+  ] as const)(
+    'does not fall back TEAM_GET_MESSAGES_PAGE to main after worker OOM or typed failure %j',
+    async (failure) => {
+      mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
+      mockTeamDataWorkerClient.getMessagesPage.mockRejectedValueOnce(
+        failure
+          ? new TeamReadFailureError('TEST-worker-status', failure)
+          : new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
+      );
 
-    const handler = handlers.get(TEAM_GET_MESSAGES_PAGE)!;
-    const result = (await handler({} as never, 'my-team', {
-      limit: 50,
-    })) as { success: boolean; error?: string };
-    vi.mocked(console.error).mockClear();
+      const handler = handlers.get(TEAM_GET_MESSAGES_PAGE)!;
+      const result = (await handler({} as never, 'my-team', {
+        limit: 50,
+      })) as { success: boolean; error?: string; failure?: unknown };
+      if (failure) {
+        expect(vi.mocked(console.error).mock.calls).toHaveLength(1);
+        expect(vi.mocked(console.error).mock.calls[0]?.join(' ')).toContain('TEST-worker-status');
+      }
+      vi.mocked(console.error).mockClear();
 
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
-    expect(service.getMessagesPage).not.toHaveBeenCalled();
-  });
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
+      expect(result.failure).toEqual(failure ?? { kind: 'fatal' });
+      expect(service.getMessagesPage).not.toHaveBeenCalled();
+    }
+  );
 
   it('uses the team-data worker for TEAM_GET_MEMBER_ACTIVITY_META when available', async () => {
     mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
@@ -3716,40 +4035,69 @@ describe('ipc teams handlers', () => {
     (electron.app as { isPackaged: boolean }).isPackaged = false;
   });
 
-  it('does not fall back TEAM_GET_MEMBER_ACTIVITY_META to main after worker OOM', async () => {
-    mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
-    mockTeamDataWorkerClient.getMemberActivityMeta.mockRejectedValueOnce(
-      new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
-    );
+  it.each([
+    undefined,
+    { kind: 'recovering', retryAt: 30001, recoveryId: 'TEST-recovery' },
+    { kind: 'busy' },
+    { kind: 'disposed' },
+  ] as const)(
+    'does not fall back TEAM_GET_MEMBER_ACTIVITY_META to main after worker OOM or typed failure %j',
+    async (failure) => {
+      mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
+      mockTeamDataWorkerClient.getMemberActivityMeta.mockRejectedValueOnce(
+        failure
+          ? new TeamReadFailureError('TEST-worker-status', failure)
+          : new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
+      );
 
-    const handler = handlers.get(TEAM_GET_MEMBER_ACTIVITY_META)!;
-    const result = (await handler({} as never, 'my-team')) as {
-      success: boolean;
-      error?: string;
-    };
-    vi.mocked(console.error).mockClear();
+      const handler = handlers.get(TEAM_GET_MEMBER_ACTIVITY_META)!;
+      const result = (await handler({} as never, 'my-team')) as {
+        success: boolean;
+        error?: string;
+        failure?: unknown;
+      };
+      if (failure) {
+        expect(vi.mocked(console.error).mock.calls).toHaveLength(1);
+        expect(vi.mocked(console.error).mock.calls[0]?.join(' ')).toContain('TEST-worker-status');
+      }
+      vi.mocked(console.error).mockClear();
 
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
-    expect(service.getMemberActivityMeta).not.toHaveBeenCalled();
-  });
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
+      expect(result.failure).toEqual(failure ?? { kind: 'fatal' });
+      expect(service.getMemberActivityMeta).not.toHaveBeenCalled();
+    }
+  );
 
-  it('does not fall back TEAM_GET_LOGS_FOR_TASK to main after worker OOM', async () => {
-    mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
-    mockTeamDataWorkerClient.findLogsForTask.mockRejectedValueOnce(
-      new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
-    );
+  it.each([
+    undefined,
+    { kind: 'recovering', retryAt: 30001, recoveryId: 'TEST-recovery' },
+    { kind: 'busy' },
+    { kind: 'disposed' },
+  ] as const)(
+    'does not fall back TEAM_GET_LOGS_FOR_TASK to main after worker OOM or typed failure %j',
+    async (failure) => {
+      mockTeamDataWorkerClient.isAvailable.mockReturnValue(true);
+      mockTeamDataWorkerClient.findLogsForTask.mockRejectedValueOnce(
+        failure
+          ? new TeamReadFailureError('TEST-worker-status', failure)
+          : new Error('Worker terminated due to reaching memory limit: JS heap out of memory')
+      );
 
-    const handler = handlers.get(TEAM_GET_LOGS_FOR_TASK)!;
-    const result = (await handler({} as never, 'my-team', 'task-1')) as {
-      success: boolean;
-      error?: string;
-    };
-    vi.mocked(console.error).mockClear();
+      const handler = handlers.get(TEAM_GET_LOGS_FOR_TASK)!;
+      const result = (await handler({} as never, 'my-team', 'task-1')) as {
+        success: boolean;
+        error?: string;
+        failure?: unknown;
+      };
+      if (failure) expect(vi.mocked(console.error).mock.calls).toHaveLength(0);
+      vi.mocked(console.error).mockClear();
 
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
-  });
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
+      expect(result.failure).toEqual(failure ?? { kind: 'fatal' });
+    }
+  );
 
   it('does not rebuild legacy auto-resume from persisted rate-limit history', async () => {
     vi.useFakeTimers();
@@ -6566,9 +6914,38 @@ describe('ipc teams handlers', () => {
       expect(invalid).toEqual({ success: false, error: 'Invalid expectedSecondary' });
       expect(teamHandlerMocks.restartMember).not.toHaveBeenCalled();
       const result = await handler({} as never, 'my-team', 'alice', true);
-      expect(result).toEqual({ success: true, data: undefined });
+      expect(result).toEqual({ success: true, data: { status: 'restarted' } });
       expect(teamHandlerMocks.restartMember).toHaveBeenCalledWith('my-team', 'alice', true);
     });
+
+    it.each(['failed_retained', 'failed_restored'] as const)(
+      'serializes confirmed %s primary failure as a plain same-call domain outcome',
+      async (outcome) => {
+        const { OpenCodeRetainedPrimaryRestartError } =
+          await import('@main/services/team/provisioning/OpenCodeRetainedPrimaryRestartError');
+        const retention = {
+          teamName: 'my-team',
+          memberName: 'alice',
+          predecessorRunId: 'run-old',
+          successorRunId: 'run-new',
+        };
+        teamHandlerMocks.restartMember.mockRejectedValueOnce(
+          new OpenCodeRetainedPrimaryRestartError('quota exceeded', retention, outcome)
+        );
+        const handler = handlers.get(TEAM_RESTART_MEMBER)!;
+        const result = await handler({} as never, 'my-team', 'alice');
+        expect(JSON.parse(JSON.stringify(result))).toEqual({
+          success: true,
+          data: { status: outcome, error: 'quota exceeded', ...retention },
+        });
+        teamHandlerMocks.restartMember.mockRejectedValueOnce(new Error('ordinary restart failed'));
+        await expect(handler({} as never, 'my-team', 'alice')).resolves.toEqual({
+          success: false,
+          error: 'ordinary restart failed',
+        });
+        vi.mocked(console.error).mockClear();
+      }
+    );
 
     it('blocks live replaceMembers when a member migrates from primary runtime ownership to OpenCode', async () => {
       const handler = handlers.get(TEAM_REPLACE_MEMBERS)!;
@@ -7138,13 +7515,16 @@ describe('ipc teams handlers', () => {
           members: [
             expect.objectContaining({
               name: 'builder',
-              providerId: undefined,
               providerBackendId: 'codex-native',
               effort: 'xhigh',
             }),
           ],
         })
       );
+      expect(
+        (mockCallArg(service.createTeamConfig.mock.calls[0], 0) as TeamCreateRequest).members[0]
+          .providerId
+      ).toBeUndefined();
     });
 
     it('handleCreateConfig rejects stale inherited teammate backends for the selected team provider', async () => {
@@ -7179,10 +7559,11 @@ describe('ipc teams handlers', () => {
       expect(service.createTeamConfig).toHaveBeenCalledWith(
         expect.objectContaining({
           teamName: 'draft-stale-top-level-runtime',
-          providerId: undefined,
-          providerBackendId: undefined,
         })
       );
+      const saved = mockCallArg(service.createTeamConfig.mock.calls[0], 0) as TeamCreateRequest;
+      expect(saved.providerId).toBeUndefined();
+      expect(saved.providerBackendId).toBeUndefined();
     });
 
     it('handleCreateConfig validates teammate effort against default Anthropic provider metadata', async () => {
@@ -7225,11 +7606,116 @@ describe('ipc teams handlers', () => {
       expect(service.createTeamConfig).toHaveBeenCalledWith(
         expect.objectContaining({
           teamName: 'draft-default-anthropic-effort',
-          providerId: undefined,
           effort: 'max',
         })
       );
+      expect(
+        (mockCallArg(service.createTeamConfig.mock.calls[0], 0) as TeamCreateRequest).providerId
+      ).toBeUndefined();
     });
+
+    // Launch intent, watch engagement and cwd creation must follow runtime admission.
+    it.each(['create', 'draft', 'persisted', 'unsupported-persisted'] as const)(
+      'rejects unresolved or unsupported selection without launch effects (%s)',
+      async (entry) => {
+        const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-selection-admission-'));
+        setClaudeBasePathOverride(claudeRoot);
+        const noteIntent = vi.spyOn(launchIoGovernor, 'noteLaunchIntent');
+        try {
+          const teamName = 'selection-team';
+          const teamDir = path.join(claudeRoot, 'teams', teamName);
+          const cwd = entry === 'create' ? path.join(claudeRoot, 'must-not-create') : claudeRoot;
+          const meta = JSON.stringify({
+            version: 1,
+            cwd,
+            runtimeSelectionVersion: entry === 'unsupported-persisted' ? 2 : 1,
+            createdAt: Date.now(),
+          });
+          if (entry !== 'create') {
+            fs.mkdirSync(teamDir, { recursive: true });
+            fs.writeFileSync(path.join(teamDir, 'team.meta.json'), meta);
+            if (entry !== 'draft')
+              fs.writeFileSync(path.join(teamDir, 'config.json'), JSON.stringify({ members: [] }));
+            service.getSavedRequest.mockResolvedValueOnce({
+              teamName,
+              cwd,
+              runtimeSelectionVersion: 1,
+              members: [{ name: 'builder' }],
+            });
+          }
+          const result = await handlers.get(entry === 'create' ? TEAM_CREATE : TEAM_LAUNCH)!(
+            { sender: { send: vi.fn() } } as never,
+            { teamName, cwd, runtimeSelectionVersion: 1, members: [{ name: 'builder' }] }
+          );
+          expect(result).toEqual({
+            success: false,
+            error: expect.stringContaining(
+              entry === 'unsupported-persisted'
+                ? 'RUNTIME_SELECTION_UNSUPPORTED'
+                : 'RUNTIME_SELECTION_REQUIRED'
+            ),
+          });
+          expect(noteIntent).not.toHaveBeenCalled();
+          expect(computeTeamWatchScope()?.has(teamName)).not.toBe(true);
+          expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
+          expect(teamHandlerMocks.launchTeam).not.toHaveBeenCalled();
+          expect(teamBackupService.withTeamIdentityFence).not.toHaveBeenCalled();
+          expect(fs.existsSync(path.join(teamDir, 'launch-state.json'))).toBe(false);
+          if (entry === 'create') expect(fs.existsSync(cwd)).toBe(false);
+          else expect(fs.readFileSync(path.join(teamDir, 'team.meta.json'), 'utf8')).toBe(meta);
+        } finally {
+          noteIntent.mockRestore();
+          setClaudeBasePathOverride(null);
+          fs.rmSync(claudeRoot, { recursive: true, force: true });
+        }
+      }
+    );
+
+    it.each([true, false])(
+      'rejects unsupported inbound marker before saved metadata masks it (draft=%s)',
+      async (draft) => {
+        const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-unsupported-marker-'));
+        setClaudeBasePathOverride(claudeRoot);
+        try {
+          const teamDir = path.join(claudeRoot, 'teams', 'marker-team');
+          fs.mkdirSync(teamDir, { recursive: true });
+          fs.writeFileSync(
+            path.join(teamDir, 'team.meta.json'),
+            JSON.stringify({
+              version: 1,
+              runtimeSelectionVersion: 1,
+              providerId: 'codex',
+              createdAt: Date.now(),
+            })
+          );
+          if (!draft)
+            fs.writeFileSync(path.join(teamDir, 'config.json'), JSON.stringify({ members: [] }));
+          service.getSavedRequest.mockResolvedValueOnce({
+            teamName: 'marker-team',
+            runtimeSelectionVersion: 1,
+            providerId: 'codex',
+            cwd: claudeRoot,
+            members: [],
+          });
+          const result = await handlers.get(TEAM_LAUNCH)!({ sender: { send: vi.fn() } } as never, {
+            teamName: 'marker-team',
+            cwd: claudeRoot,
+            runtimeSelectionVersion: 2,
+          });
+          expect(result).toEqual({
+            success: false,
+            error: expect.stringContaining('RUNTIME_SELECTION_UNSUPPORTED'),
+          });
+          expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
+          expect(teamHandlerMocks.launchTeam).not.toHaveBeenCalled();
+          expect(computeTeamWatchScope()?.has('marker-team')).not.toBe(true);
+          expect(fs.existsSync(path.join(teamDir, 'launch-state.json'))).toBe(false);
+        } finally {
+          setClaudeBasePathOverride(null);
+          fs.rmSync(claudeRoot, { recursive: true, force: true });
+        }
+      }
+    );
 
     it('launches draft team through saved request without dropping Electron draft metadata', async () => {
       const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-draft-launch-'));

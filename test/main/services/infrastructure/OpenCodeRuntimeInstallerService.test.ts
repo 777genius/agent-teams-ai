@@ -42,6 +42,7 @@ import {
   clearOpenCodeRuntimeBinaryResolverCache,
   extractOpenCodeRuntimeBinaryFromTarball,
   getOpenCodeRuntimePlatformCandidates,
+  isSupportedOpenCodeRuntimeBinaryPath,
   OpenCodeRuntimeInstallerService,
   resolveAppManagedOpenCodeRuntimeBinaryPath,
   resolveCachedVerifiedOpenCodeRuntimeBinaryPath,
@@ -49,6 +50,7 @@ import {
   resolveVerifiedOpenCodeRuntimeBinaryPath,
   verifyOpenCodeRuntimePackageIntegrity,
 } from '@main/services/infrastructure/OpenCodeRuntimeInstallerService';
+import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
 import { setAppDataBasePath } from '@main/utils/pathDecoder';
 
 let tempRoot: string | null = null;
@@ -136,7 +138,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     delete process.env.NVM_SYMLINK;
     clearOpenCodeRuntimeBinaryResolverCache();
     execCliMock.mockReset();
-    execCliMock.mockResolvedValue({ stdout: 'opencode 1.18.3\n', stderr: '' });
+    execCliMock.mockResolvedValue({ stdout: '1.18.3\n', stderr: '' });
     buildMergedCliPathMock.mockReset();
     buildMergedCliPathMock.mockReturnValue('');
     getCachedShellEnvMock.mockReset();
@@ -145,6 +147,15 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     getShellPreferredHomeMock.mockReturnValue(os.homedir());
     resolveInteractiveShellEnvBestEffortMock.mockReset();
     resolveInteractiveShellEnvBestEffortMock.mockResolvedValue(process.env);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json({
+          version: '1.18.3',
+          dist: { tarball: 'https://example.test/opencode.tgz', integrity: 'sha512-test' },
+        })
+      )
+    );
   });
 
   afterEach(async () => {
@@ -171,6 +182,134 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       await rm(tempRoot, { recursive: true, force: true });
       tempRoot = null;
     }
+  });
+
+  it.each([
+    ['2.0.0', true],
+    ['opencode v2.0.32', true],
+    ['2.0.21', false],
+    ['opencode v2.0.21', false],
+    ['opencode v2.0.26', false],
+    ['2.0.32-beta.1', false],
+    ['2.0.32+build.7', false],
+  ])(
+    'discovers only recognized native runtime versions on PATH (%s)',
+    async (version, supported) => {
+      const binDir = path.join(tempRoot!, 'TEST-bin');
+      await mkdir(binDir, { recursive: true });
+      const binaryPath = path.join(binDir, 'opencode');
+      await writeFile(binaryPath, 'TEST native version probe', { mode: 0o755 });
+      process.env.PATH = binDir;
+      execCliMock.mockResolvedValue({ stdout: version + '\n', stderr: '' });
+      expect(await resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })).toBe(
+        supported ? binaryPath : null
+      );
+    }
+  );
+
+  it.each([
+    ['2.0.0', true],
+    ['opencode v2.0.32', true],
+    ['2.0.21', false],
+    ['opencode v2.0.21', false],
+    ['opencode v2.0.26', false],
+    ['2.0.32-beta.1', false],
+    ['2.0.32+build.7', false],
+  ])(
+    'discovers only recognized managed native runtime versions (%s)',
+    async (version, supported) => {
+      const binaryPath = path.join(tempRoot!, 'TEST-managed-opencode');
+      await writeFile(binaryPath, 'TEST native version probe', { mode: 0o755 });
+      const runtimeRoot = path.join(tempRoot!, 'data', 'runtimes', 'opencode');
+      await mkdir(runtimeRoot, { recursive: true });
+      await writeFile(
+        path.join(runtimeRoot, 'current.json'),
+        JSON.stringify({
+          schemaVersion: 1,
+          version,
+          platformPackage: '@opencode/cli-linux-x64',
+          binaryPath,
+          integrity: 'TEST',
+          installedAt: new Date().toISOString(),
+        })
+      );
+      execCliMock.mockResolvedValue({ stdout: version + '\n', stderr: '' });
+      expect(await resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()).toBe(
+        supported ? binaryPath : null
+      );
+      expect(await new OpenCodeRuntimeInstallerService().getReadinessStatus()).toMatchObject({
+        installed: supported,
+        source: 'app-managed',
+        state: supported ? 'ready' : 'failed',
+      });
+    }
+  );
+
+  it.each([
+    ['1.18.3', true],
+    ['2.0.0', true],
+    ['opencode v2.0.32', true],
+    ['2.0.21', false],
+    ['opencode v2.0.21', false],
+    ['1.15.9', false],
+    ['2.0.22', false],
+    ['2.0.32-beta.1', false],
+    ['2.0.32+unqualified', false],
+    ['3.0.0', false],
+    ['unknown', false],
+  ])('preserves only recognized native binary overrides (%s)', async (version, supported) => {
+    const binaryPath = path.join(tempRoot!, 'selected-opencode');
+    await writeFile(binaryPath, 'TEST selected native binary', { mode: 0o755 });
+    execCliMock.mockResolvedValue({ stdout: version + '\n', stderr: '' });
+    const targetEnv: NodeJS.ProcessEnv = {
+      CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: binaryPath,
+      OPENCODE_BIN_PATH: binaryPath,
+    };
+    const bridgeEnv = { ...targetEnv };
+    const resolveVerifiedBinary = vi.fn(async () => null);
+    const onOverrideRejected = vi.fn();
+
+    await ensureOpenCodeBridgeRuntimeBinaryEnv({
+      targetEnv,
+      bridgeEnv,
+      resolveVerifiedOpenCodeRuntimeBinaryPath: resolveVerifiedBinary,
+      isSupportedOpenCodeRuntimeBinaryPath,
+      onOverrideRejected,
+    });
+
+    for (const env of [targetEnv, bridgeEnv]) {
+      expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(supported ? binaryPath : undefined);
+      expect(env.OPENCODE_BIN_PATH).toBe(supported ? binaryPath : undefined);
+    }
+    expect(onOverrideRejected).toHaveBeenCalledTimes(supported ? 0 : 1);
+    expect(resolveVerifiedBinary).toHaveBeenCalledTimes(supported ? 0 : 1);
+    expect(execCliMock).toHaveBeenCalledTimes(1);
+    expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], expect.anything());
+  });
+
+  it('refuses a timed-out explicit version probe without replacing either bridge environment', async () => {
+    const binaryPath = path.join(tempRoot!, 'selected-opencode');
+    await writeFile(binaryPath, 'TEST selected native binary', { mode: 0o755 });
+    execCliMock.mockRejectedValueOnce(new Error('Command timed out after 30000ms: TEST --version'));
+    const targetEnv = { OPENCODE_BIN_PATH: binaryPath };
+    const bridgeEnv = { ...targetEnv };
+    const resolver = vi.fn(() => Promise.resolve('/TEST/managed-old-opencode'));
+    const onOverrideRejected = vi.fn();
+
+    await expect(
+      ensureOpenCodeBridgeRuntimeBinaryEnv({
+        targetEnv,
+        bridgeEnv,
+        resolveVerifiedOpenCodeRuntimeBinaryPath: resolver,
+        isSupportedOpenCodeRuntimeBinaryPath,
+        onOverrideRejected,
+      })
+    ).rejects.toThrow('Could not verify the explicitly selected OpenCode binary');
+
+    expect(targetEnv).toEqual({ OPENCODE_BIN_PATH: binaryPath });
+    expect(bridgeEnv).toEqual(targetEnv);
+    expect(resolver).not.toHaveBeenCalled();
+    expect(onOverrideRejected).not.toHaveBeenCalled();
   });
 
   it('returns the current app-managed OpenCode binary path only when manifest and binary exist', async () => {
@@ -290,7 +429,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       })}\n`,
       'utf8'
     );
-    execCliMock.mockResolvedValue({ stdout: 'opencode 1.15.6\n', stderr: '' });
+    execCliMock.mockResolvedValue({ stdout: '1.15.6\n', stderr: '' });
 
     await expect(resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()).resolves.toBeNull();
     await expect(new OpenCodeRuntimeInstallerService().getStatus()).resolves.toMatchObject({
@@ -335,7 +474,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     const second = resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath();
     await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
 
-    versionProbe.resolve({ stdout: 'opencode 1.18.3\n', stderr: '' });
+    versionProbe.resolve({ stdout: '1.18.3\n', stderr: '' });
     await expect(Promise.all([first, second])).resolves.toEqual([binaryPath, binaryPath]);
 
     await expect(resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()).resolves.toBe(binaryPath);
@@ -381,7 +520,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     const second = resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 });
     await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
 
-    versionProbe.resolve({ stdout: 'opencode 1.18.3\n', stderr: '' });
+    versionProbe.resolve({ stdout: '1.18.3\n', stderr: '' });
     await expect(Promise.all([first, second])).resolves.toEqual([binaryPath, binaryPath]);
 
     await expect(resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })).resolves.toBe(
@@ -406,7 +545,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
 
     clearOpenCodeRuntimeBinaryResolverCache();
-    versionProbe.resolve({ stdout: 'opencode 1.18.3\n', stderr: '' });
+    versionProbe.resolve({ stdout: '1.18.3\n', stderr: '' });
     await expect(staleResolve).resolves.toBe(binaryPath);
 
     await expect(resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })).resolves.toBe(
@@ -431,7 +570,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     const second = service.getStatus();
     await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
 
-    versionProbe.resolve({ stdout: 'opencode 1.18.3\n', stderr: '' });
+    versionProbe.resolve({ stdout: '1.18.3\n', stderr: '' });
     await expect(Promise.all([first, second])).resolves.toMatchObject([
       { installed: true, source: 'path', binaryPath },
       { installed: true, source: 'path', binaryPath },
@@ -443,6 +582,73 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       binaryPath,
     });
     expect(execCliMock).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch as ReturnType<typeof vi.fn>).toHaveBeenCalledOnce();
+  });
+
+  it('compares the installed OpenCode version with the registry latest version', async () => {
+    const binaryPath = path.join(tempRoot!, 'homebrew', 'bin', 'opencode');
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await writeFile(binaryPath, 'binary', { mode: 0o755 });
+    resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({ PATH: path.dirname(binaryPath) });
+    getShellPreferredHomeMock.mockReturnValue(tempRoot!);
+    execCliMock.mockResolvedValue({ stdout: '1.17.18\n', stderr: '' });
+    const service = new OpenCodeRuntimeInstallerService();
+
+    await expect(service.getStatus()).resolves.toMatchObject({
+      version: '1.17.18',
+      latestVersion: '1.18.3',
+      updateAvailable: true,
+    });
+  });
+
+  it('keeps a known update available when a later registry refresh fails', async () => {
+    const binaryPath = path.join(tempRoot!, 'homebrew', 'bin', 'opencode');
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await writeFile(binaryPath, 'binary', { mode: 0o755 });
+    resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({ PATH: path.dirname(binaryPath) });
+    getShellPreferredHomeMock.mockReturnValue(tempRoot!);
+    execCliMock.mockResolvedValue({ stdout: '1.17.18\n', stderr: '' });
+    const service = new OpenCodeRuntimeInstallerService();
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      await expect(service.getStatus()).resolves.toMatchObject({
+        latestVersion: '1.18.3',
+        updateAvailable: true,
+      });
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('registry unavailable')));
+      now.mockReturnValue(1_031_000);
+
+      await expect(service.getStatus()).resolves.toMatchObject({
+        latestVersion: '1.18.3',
+        updateAvailable: true,
+      });
+      expect(consoleWarn).toHaveBeenCalledWith(
+        '[OpenCodeRuntimeInstallerService]',
+        'Failed to resolve latest OpenCode version:',
+        'registry unavailable'
+      );
+    } finally {
+      now.mockRestore();
+      consoleWarn.mockRestore();
+    }
+  });
+
+  it('reads the installed version for readiness without fetching update metadata', async () => {
+    const binaryPath = path.join(tempRoot!, 'homebrew', 'bin', 'opencode');
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await writeFile(binaryPath, 'binary', { mode: 0o755 });
+    resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({ PATH: path.dirname(binaryPath) });
+    getShellPreferredHomeMock.mockReturnValue(tempRoot!);
+
+    await expect(new OpenCodeRuntimeInstallerService().getReadinessStatus()).resolves.toMatchObject(
+      {
+        installed: true,
+        binaryPath,
+        version: '1.18.3',
+      }
+    );
+    expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 
   it('does not remember OpenCode runtime status from a stale in-flight check', async () => {
@@ -455,7 +661,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     getShellPreferredHomeMock.mockReturnValue(tempRoot!);
     const versionProbe = deferred<{ stdout: string; stderr: string }>();
     execCliMock.mockReturnValueOnce(versionProbe.promise).mockResolvedValue({
-      stdout: 'opencode 2.0.0\n',
+      stdout: '1.18.34\n',
       stderr: '',
     });
     const service = new OpenCodeRuntimeInstallerService();
@@ -464,19 +670,19 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
 
     service.invalidateStatusCache();
-    versionProbe.resolve({ stdout: 'opencode 1.18.3\n', stderr: '' });
+    versionProbe.resolve({ stdout: '1.18.3\n', stderr: '' });
     await expect(staleStatus).resolves.toMatchObject({
       installed: true,
       source: 'path',
       binaryPath,
-      version: 'opencode 1.18.3',
+      version: '1.18.3',
     });
 
     await expect(service.getStatus()).resolves.toMatchObject({
       installed: true,
       source: 'path',
       binaryPath,
-      version: 'opencode 2.0.0',
+      version: '1.18.34',
     });
     expect(execCliMock).toHaveBeenCalledTimes(2);
   });
@@ -781,7 +987,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       if (binaryPath === brokenBinaryPath) {
         throw new Error('broken nvm runtime');
       }
-      return { stdout: 'opencode 1.18.3\n', stderr: '' };
+      return { stdout: '1.18.3\n', stderr: '' };
     });
 
     await expect(resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })).resolves.toBe(
@@ -792,7 +998,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       source: 'path',
       state: 'ready',
       binaryPath: workingBinaryPath,
-      version: 'opencode 1.18.3',
+      version: '1.18.3',
     });
   });
 
@@ -813,7 +1019,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       if (binaryPath === brokenBinaryPath) {
         throw new Error('broken nvm runtime');
       }
-      return { stdout: 'opencode 1.18.3\n', stderr: '' };
+      return { stdout: '1.18.3\n', stderr: '' };
     });
 
     await expect(resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })).resolves.toBe(
@@ -840,7 +1046,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       source: 'path',
       state: 'ready',
       binaryPath,
-      version: 'opencode 1.18.3',
+      version: '1.18.3',
     });
   });
 
@@ -879,7 +1085,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       if (binaryPath === appManagedBinaryPath) {
         throw new Error('broken app-managed runtime');
       }
-      return { stdout: 'opencode 1.18.3\n', stderr: '' };
+      return { stdout: '1.18.3\n', stderr: '' };
     });
 
     await expect(new OpenCodeRuntimeInstallerService().getStatus()).resolves.toMatchObject({
@@ -887,7 +1093,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       source: 'path',
       state: 'ready',
       binaryPath: pathBinaryPath,
-      version: 'opencode 1.18.3',
+      version: '1.18.3',
     });
   });
 

@@ -14,10 +14,77 @@ import {
 } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import process from 'node:process';
+import { URL } from 'node:url';
 import test from 'node:test';
-import { assertEmptyCleanupState } from '../../scripts/e2e/opencode-diagnostics/startup-cleanup.mjs';
+import {
+  assertEmptyCleanupState,
+  startupCleanupFailureDiagnostic,
+} from '../../scripts/e2e/opencode-diagnostics/startup-cleanup.mjs';
 const fixture = new URL('../../scripts/e2e/opencode-diagnostics/fixture.cjs', import.meta.url);
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+test('startup failure evidence selects the current cleanup record without unrelated fields', async (t) => {
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'cleanup-diagnostic-')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const dir = path.join(root, 'user-data', 'opencode-bridge', 'diagnostics');
+  await mkdir(dir, { recursive: true });
+  const started = Date.now() - 1000;
+  const row = {
+    id: 'cleanup-diagnostic',
+    type: 'opencode_bridge_contract_violation',
+    providerId: 'opencode',
+    createdAt: new Date(started + 1).toISOString(),
+    data: {
+      command: 'opencode.cleanupStartupHosts',
+      requestId: 'cleanup-request',
+      mutationStarted: false,
+      preparationError: 'Desktop MCP control context is unavailable',
+      cwd: 'DO_NOT_EXPORT',
+      binaryPath: 'DO_NOT_EXPORT',
+      stdout: 'DO_NOT_EXPORT',
+    },
+  };
+  const foreign = { ...row, data: { ...row.data, command: 'opencode.listModels' } };
+  const old = { ...row, createdAt: new Date(started - 1).toISOString() };
+  await writeFile(
+    path.join(dir, 'events.ndjson'),
+    [old, row, foreign].map(JSON.stringify).join('\n') + '\n{"partial":'
+  );
+  assert.deepEqual(await startupCleanupFailureDiagnostic(root, started), {
+    id: row.id,
+    type: row.type,
+    providerId: row.providerId,
+    createdAt: row.createdAt,
+    command: row.data.command,
+    requestId: row.data.requestId,
+    mutationStarted: false,
+    preparationError: row.data.preparationError,
+  });
+  await writeFile(path.join(dir, 'events.ndjson'), JSON.stringify(old) + '\n');
+  assert.equal(await startupCleanupFailureDiagnostic(root, started), null);
+  await writeFile(
+    path.join(dir, 'events.ndjson'),
+    JSON.stringify({ ...row, data: { ...row.data, mutationStarted: true } }) + '\n'
+  );
+  assert.equal(await startupCleanupFailureDiagnostic(root, started), null);
+  await writeFile(path.join(dir, 'events.ndjson'), 'x'.repeat(4 * 1024 * 1024 + 1));
+  assert.equal(await startupCleanupFailureDiagnostic(root, started), null);
+});
+
+test('startup failure evidence refuses linked diagnostic ancestry', async (t) => {
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'cleanup-diagnostic-link-')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const other = path.join(root, 'other');
+  await mkdir(other);
+  await symlink(
+    other,
+    path.join(root, 'user-data'),
+    process.platform === 'win32' ? 'junction' : 'dir'
+  );
+  assert.equal(await startupCleanupFailureDiagnostic(root, Date.now() - 1000), null);
+});
+
 async function setup(t) {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'cleanup-fixture-test-')));
   t.after(() => rm(root, { recursive: true, force: true }));
@@ -63,8 +130,12 @@ async function setup(t) {
     });
     return { done };
   };
-  const events = async () =>
-    (await readFile(path.join(root, 'calls.ndjson'), 'utf8')).trim().split('\n').map(JSON.parse);
+  const events = async () => {
+    const lines = (await readFile(path.join(root, 'calls.ndjson'), 'utf8')).split('\n');
+    // The final segment may still be in flight while the fixture appends a record.
+    lines.pop();
+    return lines.map(JSON.parse);
+  };
   const waitAccepted = async () => {
     for (let i = 0; i < 100; i++) {
       try {
@@ -83,6 +154,65 @@ async function setup(t) {
   };
   return { root, input, output, request, args, run, events, waitAccepted, release };
 }
+for (const existing of [false, true])
+  test(`startup-cleanup seed enables its real control listener with existing config=${existing}`, async (t) => {
+    const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'cleanup-seed-test-')));
+    t.after(() => rm(root, { recursive: true, force: true }));
+    const configPath = path.join(root, 'home/.claude/agent-teams-config.json');
+    await mkdir(path.dirname(configPath), { recursive: true });
+    if (existing)
+      await writeFile(
+        configPath,
+        JSON.stringify({
+          theme: 'dark',
+          httpServer: { enabled: false, port: 4567, token: 'TEST-preserved' },
+        })
+      );
+    const seed = new URL(
+      '../../scripts/e2e/opencode-diagnostics/startup-cleanup.mjs',
+      import.meta.url
+    );
+    const child = spawn(
+      process.execPath,
+      [
+        '--input-type=module',
+        '-e',
+        `const {seedStartupCleanup} = await import(${JSON.stringify(seed.href)}); Object.defineProperty(process,'platform',{value:'win32'}); await seedStartupCleanup(process.argv[1]);`,
+        root,
+      ],
+      { stdio: ['ignore', 'ignore', 'pipe'] }
+    );
+    let stderr = '';
+    child.stderr.on('data', (bytes) => {
+      stderr += bytes;
+    });
+    const code = await new Promise((resolve, reject) => {
+      child.once('error', reject);
+      child.once('exit', resolve);
+    });
+    assert.equal(code, 0, stderr);
+    assert.deepEqual(
+      JSON.parse(await readFile(configPath, 'utf8')),
+      existing
+        ? { theme: 'dark', httpServer: { enabled: true, port: 3456, token: 'TEST-preserved' } }
+        : { httpServer: { enabled: true, port: 3456 } }
+    );
+    await assertEmptyCleanupState(root);
+  });
+
+test('event reader ignores an incomplete trailing record', async (t) => {
+  const f = await setup(t);
+  const calls = path.join(f.root, 'calls.ndjson');
+  await writeFile(calls, '{"event":"accepted"}\n{"event":');
+  assert.deepEqual(await f.events(), [{ event: 'accepted' }]);
+  await writeFile(calls, '{"event":"accepted"}\n{"event":"exit"}\n');
+  assert.deepEqual(await f.events(), [{ event: 'accepted' }, { event: 'exit' }]);
+});
+test('event reader rejects a malformed completed record', async (t) => {
+  const f = await setup(t);
+  await writeFile(path.join(f.root, 'calls.ndjson'), '{"event":"accepted"}\n{"event":\n');
+  await assert.rejects(f.events(), SyntaxError);
+});
 for (const coverage of ['partial', 'complete'])
   test(`held ${coverage} response and correlated normal exit`, async (t) => {
     const f = await setup(t);

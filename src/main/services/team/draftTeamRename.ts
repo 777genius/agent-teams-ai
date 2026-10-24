@@ -16,6 +16,16 @@ async function pathExists(targetPath: string): Promise<boolean> {
   }
 }
 
+/** Reject occupied destinations before acquiring a second team lock. */
+export async function assertDraftRenameDestinationAvailable(teamName: string): Promise<void> {
+  if (
+    (await pathExists(path.join(getTeamsBasePath(), teamName))) ||
+    (await pathExists(path.join(getTasksBasePath(), teamName)))
+  ) {
+    throw new Error(`Team already exists: ${teamName}`);
+  }
+}
+
 /**
  * Rename a draft team (team.meta.json without config.json) so the final create
  * uses the final team name for the directory.
@@ -44,9 +54,7 @@ export async function renameDraftTeamDirectory(
   if (await pathExists(path.join(oldTeamDir, 'config.json'))) {
     throw new Error(`Cannot rename non-draft team: ${oldTeamName}`);
   }
-  if ((await pathExists(newTeamDir)) || (await pathExists(newTasksDir))) {
-    throw new Error(`Team already exists: ${newTeamName}`);
-  }
+  await assertDraftRenameDestinationAvailable(newTeamName);
 
   await renamePathWithRetry(oldTeamDir, newTeamDir);
   try {

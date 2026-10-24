@@ -1,3 +1,4 @@
+import { evaluateLegacyOpenCodeSupport } from '@features/opencode-compatibility';
 import { MINIMUM_AGENT_TEAMS_OPENCODE_VERSION } from '@shared/utils/version';
 import { createHash } from 'crypto';
 import { promises as fs } from 'fs';
@@ -7,12 +8,20 @@ import type {
   OpenCodeApiEndpointKey,
   OpenCodeEndpointEvidence,
 } from '../capabilities/OpenCodeApiCapabilities';
+import type {
+  OpenCodeSemver,
+  OpenCodeSupportDecision,
+  OpenCodeSupportedVersionPolicy,
+  OpenCodeSupportLevel,
+} from '@features/opencode-compatibility';
 
-export interface OpenCodeSupportedVersionPolicy {
-  minimumVersion: string;
-  allowedPrerelease: boolean;
-  requireCapabilities: boolean;
-}
+export type {
+  OpenCodeSemver,
+  OpenCodeSupportDecision,
+  OpenCodeSupportedVersionPolicy,
+  OpenCodeSupportLevel,
+} from '@features/opencode-compatibility';
+export { parseOpenCodeSemver, semverLt } from '@features/opencode-compatibility';
 
 export const OPENCODE_TEAM_LAUNCH_VERSION_POLICY: OpenCodeSupportedVersionPolicy = {
   minimumVersion: MINIMUM_AGENT_TEAMS_OPENCODE_VERSION,
@@ -21,19 +30,6 @@ export const OPENCODE_TEAM_LAUNCH_VERSION_POLICY: OpenCodeSupportedVersionPolicy
 };
 
 export type OpenCodeInstallMethod = 'brew' | 'npm' | 'bun' | 'manual' | 'unknown';
-
-export interface OpenCodeSemver {
-  major: number;
-  minor: number;
-  patch: number;
-  prerelease: string[];
-}
-
-export type OpenCodeSupportLevel =
-  | 'unsupported_too_old'
-  | 'unsupported_prerelease'
-  | 'supported_capabilities_pending'
-  | 'production_supported';
 
 export interface OpenCodeCompatibilitySnapshot {
   schemaVersion: 1;
@@ -46,13 +42,6 @@ export interface OpenCodeCompatibilitySnapshot {
   supported: boolean;
   supportLevel: OpenCodeSupportLevel;
   apiCapabilities: OpenCodeApiCapabilities;
-  diagnostics: string[];
-}
-
-export interface OpenCodeSupportDecision {
-  supported: boolean;
-  supportLevel: OpenCodeSupportLevel;
-  semver: OpenCodeSemver | null;
   diagnostics: string[];
 }
 
@@ -111,45 +100,11 @@ export function evaluateOpenCodeSupport(input: {
   capabilities: OpenCodeApiCapabilities;
   policy?: OpenCodeSupportedVersionPolicy;
 }): OpenCodeSupportDecision {
-  const policy = input.policy ?? OPENCODE_TEAM_LAUNCH_VERSION_POLICY;
-  const parsed = parseOpenCodeSemver(input.version);
-  if (!parsed || semverCoreLt(parsed, policy.minimumVersion)) {
-    return {
-      supported: false,
-      supportLevel: 'unsupported_too_old',
-      semver: parsed,
-      diagnostics: [
-        `OpenCode ${input.version} is below supported minimum ${policy.minimumVersion}`,
-      ],
-    };
-  }
-
-  if (parsed.prerelease.length > 0 && !policy.allowedPrerelease) {
-    return {
-      supported: false,
-      supportLevel: 'unsupported_prerelease',
-      semver: parsed,
-      diagnostics: [
-        `OpenCode prerelease ${input.version} is not enabled for production team launch`,
-      ],
-    };
-  }
-
-  if (policy.requireCapabilities && !input.capabilities.requiredForTeamLaunch.ready) {
-    return {
-      supported: false,
-      supportLevel: 'supported_capabilities_pending',
-      semver: parsed,
-      diagnostics: input.capabilities.requiredForTeamLaunch.missing,
-    };
-  }
-
-  return {
-    supported: true,
-    supportLevel: 'production_supported',
-    semver: parsed,
-    diagnostics: [],
-  };
+  return evaluateLegacyOpenCodeSupport({
+    version: input.version,
+    policy: input.policy ?? OPENCODE_TEAM_LAUNCH_VERSION_POLICY,
+    capabilities: () => input.capabilities.requiredForTeamLaunch,
+  });
 }
 
 export function selectPermissionReplyRouteFromCache(
@@ -174,60 +129,6 @@ export function selectPermissionReplyRouteFromCache(
   }
 
   return null;
-}
-
-export function parseOpenCodeSemver(version: string): OpenCodeSemver | null {
-  const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+.*)?$/.exec(version.trim());
-  if (!match) {
-    return null;
-  }
-
-  return {
-    major: Number(match[1]),
-    minor: Number(match[2]),
-    patch: Number(match[3]),
-    prerelease: match[4]?.split('.').filter(Boolean) ?? [],
-  };
-}
-
-export function semverLt(left: OpenCodeSemver, right: string | OpenCodeSemver): boolean {
-  const parsedRight = typeof right === 'string' ? parseOpenCodeSemver(right) : right;
-  if (!parsedRight) {
-    return true;
-  }
-
-  for (const key of ['major', 'minor', 'patch'] as const) {
-    if (left[key] < parsedRight[key]) {
-      return true;
-    }
-    if (left[key] > parsedRight[key]) {
-      return false;
-    }
-  }
-
-  if (left.prerelease.length > 0 && parsedRight.prerelease.length === 0) {
-    return true;
-  }
-
-  return false;
-}
-
-function semverCoreLt(left: OpenCodeSemver, right: string | OpenCodeSemver): boolean {
-  const parsedRight = typeof right === 'string' ? parseOpenCodeSemver(right) : right;
-  if (!parsedRight) {
-    return true;
-  }
-
-  for (const key of ['major', 'minor', 'patch'] as const) {
-    if (left[key] < parsedRight[key]) {
-      return true;
-    }
-    if (left[key] > parsedRight[key]) {
-      return false;
-    }
-  }
-
-  return false;
 }
 
 function stableHash(value: unknown): string {

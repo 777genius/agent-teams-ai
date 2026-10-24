@@ -1,7 +1,10 @@
 import { TeamPermanentDeletionCoordinator } from '@agent-teams/legacy-agent-host/lifecycle';
-import type { TeamPermanentDeletionCoordinatorPorts } from '@agent-teams/legacy-agent-host/lifecycle';
+
 import { TeamConfigReader } from '../TeamConfigReader';
+
 import { legacyLifecycleRoots } from './legacyLifecycleRoots';
+
+import type { TeamPermanentDeletionCoordinatorPorts } from '@agent-teams/legacy-agent-host/lifecycle';
 export type {
   TeamPermanentDeletionCoordinator,
   TeamPermanentDeletionCoordinatorPorts,

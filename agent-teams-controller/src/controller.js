@@ -1,3 +1,4 @@
+const { boundControllerOptions } = require('./internal/desktopControlBinding.js');
 const { createControllerContext } = require('./internal/context.js');
 const tasks = require('./internal/tasks.js');
 const kanban = require('./internal/kanban.js');
@@ -9,10 +10,15 @@ const maintenance = require('./internal/maintenance.js');
 const crossTeam = require('./internal/crossTeam.js');
 const runtime = require('./internal/runtime.js');
 const workSync = require('./internal/workSync.js');
+const groupChats = require('./internal/groupChats.js');
 const agentBlocks = require('./internal/agentBlocks.js');
 const taskStartNotification = require('./internal/taskStartNotification.js');
 const actionModeInstructions = require('./internal/actionModeInstructions.js');
 const taskCompletionClaim = require('./internal/taskCompletionClaim.js');
+const {
+  buildChatVisualizationProtocolText,
+  buildChatVisualizationRefreshInstruction,
+} = require('./internal/chatVisualizationProtocol.js');
 
 function bindModule(context, moduleApi) {
   return Object.fromEntries(
@@ -21,7 +27,7 @@ function bindModule(context, moduleApi) {
 }
 
 function createController(options) {
-  const context = createControllerContext(options);
+  const context = createControllerContext(boundControllerOptions(options));
 
   // tasks/kanban/review stay exposed for low-level compatibility.
   // New task-board lifecycle writes should enter through taskBoard.
@@ -37,6 +43,7 @@ function createController(options) {
     crossTeam: bindModule(context, crossTeam),
     runtime: bindModule(context, runtime),
     workSync: bindModule(context, workSync),
+    groupChats: bindModule(context, groupChats),
   };
 }
 
@@ -51,6 +58,8 @@ module.exports = {
     buildTaskStartNotification: taskStartNotification.buildTaskStartNotification,
     buildActionModeProtocol: actionModeInstructions.buildActionModeProtocol,
     buildActionModeAgentBlock: actionModeInstructions.buildActionModeAgentBlock,
+    buildChatVisualizationProtocolText,
+    buildChatVisualizationRefreshInstruction,
     buildActionModeProtocolText: tasks.buildActionModeProtocolText,
     MEMBER_DELEGATE_DESCRIPTION: tasks.MEMBER_DELEGATE_DESCRIPTION,
     buildProcessProtocolText: tasks.buildProcessProtocolText,
@@ -65,4 +74,5 @@ module.exports = {
   crossTeam,
   runtime,
   workSync,
+  groupChats,
 };

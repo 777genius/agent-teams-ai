@@ -14,7 +14,19 @@ import type {
 import type { FileChangeSummary } from '@agent-teams/task-change-ledger/contracts';
 import { createReviewWriter } from '@agent-teams/task-change-ledger/review-writer';
 import { ReviewApplier } from '@agent-teams/task-change-ledger/review-apply';
-async function fixture(t: TestContext) {
+function exactLedgerSnippet(
+  snippet: FileChangeSummary['snippets'][number], before: string, after: string
+): FileChangeSummary['snippets'][number] {
+  const hash = (text: string) => createHash('sha256').update(text).digest('hex');
+  return { ...snippet, ledger: {
+    eventId: snippet.toolUseId, source: 'ledger-snapshot', confidence: 'high',
+    originalFullContent: before, modifiedFullContent: after,
+    beforeHash: hash(before), afterHash: hash(after), operation: 'modify',
+    beforeState: { exists: true, sha256: hash(before) },
+    afterState: { exists: true, sha256: hash(after) },
+  } };
+}
+async function fixture(t: TestContext, exactLedger = false) {
   const root = await mkdtemp(join(tmpdir(), 'TEST-portable-review-writer-'));
   const workspace = join(root, 'workspace');
   await mkdir(workspace);
@@ -33,6 +45,7 @@ async function fixture(t: TestContext) {
       isError: false,
     },
   ];
+  if (exactLedger) snippets[0] = exactLedgerSnippet(snippets[0]!, 'before\n', 'after\n');
   const file: FileChangeSummary = {
     filePath,
     relativePath: 'test.txt',
@@ -71,7 +84,7 @@ async function fixture(t: TestContext) {
             ...file,
             originalFullContent: 'before\n',
             modifiedFullContent: 'after\n',
-            contentSource: 'disk-current',
+            contentSource: exactLedger ? 'ledger-snapshot' : 'disk-current',
           };
         },
         invalidateFile(path) {
@@ -99,7 +112,7 @@ async function fixture(t: TestContext) {
   });
   return { root, workspace, filePath, snippets, file, make, invalidations };
 }
-test('captured instances cannot use one another displayed tokens and the original writer applies real disk changes', async (t: TestContext) => {
+test('captured instances cannot share displayed tokens and non-ledger previews cannot authorize Apply', async (t: TestContext) => {
   const f = await fixture(t),
     a = await f.make('owner-a'),
     b = await f.make('owner-b');
@@ -120,9 +133,10 @@ test('captured instances cannot use one another displayed tokens and the origina
   await assert.rejects(b.applyDecisions(request), /Displayed review snapshot is stale/);
   assert.equal(await readFile(f.filePath, 'utf8'), 'after\n');
   const result = await a.applyDecisions(request);
-  assert.equal(result.applied, 1);
-  assert.equal(result.errors.length, 0);
-  assert.equal(await readFile(f.filePath, 'utf8'), 'before\n');
+  assert.equal(result.applied, 0);
+  assert.equal(result.errors.length, 1);
+  assert.equal(result.errors[0]!.code, 'unavailable');
+  assert.equal(await readFile(f.filePath, 'utf8'), 'after\n');
   assert.ok(f.invalidations.includes(f.filePath));
   a.dispose();
   await assert.rejects(
@@ -428,7 +442,7 @@ for (const method of ['rejectHunks', 'rejectFile'] as const) {
 }
 
 test('standalone Apply without a persistence scope settles actual publications before a reopened manual edit', async (t: TestContext) => {
-  const f = await fixture(t),
+  const f = await fixture(t, true),
     first = await f.make('standalone-apply');
   const shown = await first.getFileContent('test-review', 'alice', f.filePath, f.snippets);
   const result = await first.applyDecisions({
@@ -581,7 +595,7 @@ test('standalone reject finalizer failure retains the exact actual preimage and 
 });
 
 test('standalone Apply preserves known partial errors while settling only its completed file', async (t: TestContext) => {
-  const f = await fixture(t),
+  const f = await fixture(t, true),
     otherPath = join(f.workspace, 'conflicting.txt');
   await writeFile(otherPath, 'TEST external conflict\n');
   const other: FileChangeSummary = {
@@ -589,12 +603,10 @@ test('standalone Apply preserves known partial errors while settling only its co
     filePath: otherPath,
     relativePath: 'conflicting.txt',
     snippets: [
-      {
-        ...f.snippets[0]!,
-        filePath: otherPath,
-        oldString: 'before other',
-        newString: 'after other',
-      },
+      exactLedgerSnippet({
+        ...f.snippets[0]!, toolUseId: 'TEST-other-edit', filePath: otherPath,
+        oldString: 'before other', newString: 'after other',
+      }, 'before other\n', 'after other\n'),
     ],
   };
   const writer = await f.make('standalone-partial', {

@@ -304,7 +304,8 @@ describe('sessionSlice', () => {
   describe('fetchSessionDetail', () => {
     it('should ignore stale responses and keep the latest session detail', async () => {
       store.setState({
-        selectedSessionId: 'session-2',
+        selectedProjectId: 'project-1',
+        selectedSessionId: 'session-1',
       });
 
       let resolveFirst: ((value: unknown) => void) | undefined;
@@ -325,6 +326,7 @@ describe('sessionSlice', () => {
         );
 
       const first = store.getState().fetchSessionDetail('project-1', 'session-1');
+      store.setState({ selectedSessionId: 'session-2' });
       const second = store.getState().fetchSessionDetail('project-1', 'session-2');
 
       resolveSecond?.({

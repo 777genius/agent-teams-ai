@@ -13,18 +13,40 @@ export function projectRuntimeMember(options: {
   isCurrent(): boolean;
 }): JsonValue {
   const { entry, record, binding } = options;
+  const observed = options.runtime.readSession(binding);
+  const nativeReady =
+    runtimeDigest(binding) === runtimeDigest(entry.binding) &&
+    !!record?.nativeReady &&
+    !!entry.provider?.isReady() &&
+    options.isCurrent();
+  const attachmentCapabilities =
+    nativeReady &&
+    observed.attached &&
+    record !== undefined &&
+    record.phase === 'allocated' &&
+    record.custody === 'owned' &&
+    !record.sealed &&
+    runtimeDigest(record.binding) === runtimeDigest(binding) &&
+    runtimeDigest(observed.record) === runtimeDigest(record)
+      ? entry.provider?.attachmentCapabilities
+      : undefined;
   return {
     memberId: entry.profile.memberId,
     generation: binding.generation,
     phase: record?.phase ?? 'unopened',
     sealed: record?.sealed ?? false,
     custody: record?.custody ?? 'released',
-    nativeReady:
-      runtimeDigest(binding) === runtimeDigest(entry.binding) &&
-      !!record?.nativeReady &&
-      !!entry.provider?.isReady() &&
-      options.isCurrent(),
-    attached: options.runtime.readSession(binding).attached,
+    nativeReady,
+    attached: observed.attached,
+    ...(attachmentCapabilities
+      ? {
+          attachmentCapabilities: {
+            images: attachmentCapabilities.images,
+            documents: attachmentCapabilities.documents,
+            textFiles: attachmentCapabilities.textFiles,
+          },
+        }
+      : {}),
     inputs: (record?.inputs ?? []).map((input) => ({
       inputId: input.intent.inputId,
       phase: input.phase,

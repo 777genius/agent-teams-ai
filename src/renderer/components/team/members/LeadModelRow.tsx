@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { OpenCodeLocalModelLimitsCard } from '@features/runtime-provider-management/renderer';
+import { UnselectedTeamProvider } from '@features/team-templates/renderer';
 import {
   ANTHROPIC_LONG_CONTEXT_PRICING_URL,
   ANTHROPIC_SONNET_EXTRA_USAGE_WARNING,
@@ -17,6 +18,7 @@ import {
   type TeamModelSelectorProps,
 } from '@renderer/components/team/dialogs/TeamModelSelector';
 import { useOpenCodeDefaultRouteLabel } from '@renderer/components/team/dialogs/useOpenCodeDefaultRouteLabel';
+import { useRuntimeDefaultModelLabel } from '@renderer/components/team/dialogs/useRuntimeDefaultModelLabel';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Label } from '@renderer/components/ui/label';
 import {
@@ -38,14 +40,15 @@ import { AlertTriangle, ChevronDown, ChevronRight, Info } from 'lucide-react';
 
 import { Button } from '../../ui/button';
 
-import { FLAT_ROSTER_GRID_COLUMNS } from './flatRosterLayout';
 import { getModelTriggerToneClass } from './memberModelToneClasses';
+import { RosterParticipantFrame, RosterParticipantIdentity } from './RosterParticipantFrame';
 
 import type { EffortLevel, TeamProviderId } from '@shared/types';
 
 export { ANTHROPIC_LONG_CONTEXT_PRICING_URL, ANTHROPIC_SONNET_EXTRA_USAGE_WARNING };
 
 interface LeadModelRowProps {
+  runtimeSelectionUnresolved?: boolean;
   providerId: TeamProviderId;
   model: string;
   effort?: EffortLevel;
@@ -74,6 +77,7 @@ interface LeadModelRowProps {
 }
 
 export const LeadModelRow = ({
+  runtimeSelectionUnresolved = false,
   providerId,
   model,
   effort,
@@ -105,19 +109,26 @@ export const LeadModelRow = ({
   const hasActiveProviderNotice = Boolean(providerNoticeById?.[providerId]);
   const [modelExpanded, setModelExpanded] = useState(hasActiveProviderNotice);
   const leadColorSet = getTeamColorSet(resolveTeamLeadColorName());
-  const resolvedOpenCodeDefault = useOpenCodeDefaultRouteLabel(
+  const openCodeDefault = useOpenCodeDefaultRouteLabel(
     projectPath,
     providerId === 'opencode' && !model.trim()
   );
+  const runtimeDefault = useRuntimeDefaultModelLabel(
+    providerId,
+    limitContext,
+    !model.trim(),
+    projectPath
+  );
+  const resolvedDefault = openCodeDefault ?? runtimeDefault;
   const modelButtonLabel = model.trim()
     ? getProviderScopedTeamModelLabel(providerId, model.trim())
-    : resolvedOpenCodeDefault
-      ? t('modelSelector.defaultWithResolved', { model: resolvedOpenCodeDefault.label })
+    : resolvedDefault
+      ? t('modelSelector.defaultWithResolved', { model: resolvedDefault.label })
       : t('members.leadModel.defaultModel');
   // The trigger is narrow: lead with the model so truncation cuts the marker,
   // not the model. The full label stays in the tooltip and aria-label.
-  const modelButtonText = resolvedOpenCodeDefault
-    ? t('modelSelector.defaultCompact', { model: resolvedOpenCodeDefault.modelLabel })
+  const modelButtonText = resolvedDefault
+    ? t('modelSelector.defaultCompact', { model: resolvedDefault.modelLabel })
     : modelButtonLabel;
   const modelButtonAriaLabel = t('members.leadModel.providerModelAria', {
     provider: getTeamProviderLabel(providerId),
@@ -176,46 +187,14 @@ export const LeadModelRow = ({
   );
 
   return (
-    <div
-      className={cn(
-        'relative grid grid-cols-1 gap-2 md:items-start',
-        isFlatRoster
-          ? cn(
-              'hover:bg-[var(--color-surface-raised)]/45 rounded-sm px-4 py-2 transition-colors',
-              FLAT_ROSTER_GRID_COLUMNS
-            )
-          : 'rounded-md p-2 shadow-sm md:grid-cols-[minmax(220px,1fr)_minmax(230px,1fr)_190px]'
-      )}
-      data-role="lead-row"
-      style={{
-        backgroundColor: isFlatRoster
-          ? undefined
-          : isLight
-            ? 'color-mix(in srgb, var(--color-surface-raised) 22%, white 78%)'
-            : 'var(--color-surface-raised)',
-        boxShadow: isFlatRoster
-          ? undefined
-          : isLight
-            ? '0 1px 2px rgba(15, 23, 42, 0.06)'
-            : '0 1px 2px rgba(0, 0, 0, 0.28)',
-      }}
+    <RosterParticipantFrame
+      accentColor={leadColorSet.border}
+      isLight={isLight}
+      layout={isFlatRoster ? 'flat' : 'lead'}
+      dataRole="lead-row"
     >
-      <div
-        className={cn(
-          'absolute inset-y-0 left-0 w-1',
-          isFlatRoster ? 'my-2 rounded-full' : 'rounded-l-md'
-        )}
-        style={{ backgroundColor: leadColorSet.border }}
-        aria-hidden="true"
-      />
       <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <img
-            src={agentAvatarUrl('team-lead', 32)}
-            alt=""
-            className="size-8 shrink-0 rounded-full bg-[var(--color-surface-raised)]"
-            loading="lazy"
-          />
+        <RosterParticipantIdentity avatarSrc={agentAvatarUrl('team-lead', 32)}>
           <div className="flex h-8 min-w-0 items-center gap-3">
             <span className="truncate text-sm font-semibold text-[var(--color-text)]">
               {t('members.leadModel.leadShort')}
@@ -226,7 +205,7 @@ export const LeadModelRow = ({
               </span>
             ) : null}
           </div>
-        </div>
+        </RosterParticipantIdentity>
       </div>
       <div className="min-w-0">
         <div className="flex h-8 items-center px-1 text-xs text-[var(--color-text-secondary)]">
@@ -234,58 +213,64 @@ export const LeadModelRow = ({
         </div>
       </div>
       <div className="min-w-0 space-y-1">
-        <div
-          className={cn(
-            'flex flex-col gap-2 sm:flex-row sm:items-start',
-            isFlatRoster && 'sm:flex-wrap sm:gap-1.5'
-          )}
-        >
+        {runtimeSelectionUnresolved ? (
+          <UnselectedTeamProvider onSelect={onProviderChange} />
+        ) : (
           <div
             className={cn(
-              'w-full min-w-0 space-y-1',
-              isFlatRoster ? 'sm:w-[170px] sm:min-w-[170px]' : 'sm:w-[150px] sm:min-w-[150px]'
+              'flex flex-col gap-2 sm:flex-row sm:items-start',
+              isFlatRoster && 'sm:flex-wrap sm:gap-1.5'
             )}
           >
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      'h-8 w-full justify-start gap-1 overflow-hidden text-left',
-                      getModelTriggerToneClass(hasModelIssue, hasModelAdvisory)
-                    )}
-                    aria-label={modelButtonAriaLabel}
-                    onClick={() => setModelExpanded((prev) => !prev)}
-                  >
-                    {modelExpanded ? (
-                      <ChevronDown className="size-3.5" />
-                    ) : (
-                      <ChevronRight className="size-3.5" />
-                    )}
-                    <TeamModelBrandIcon providerId={providerId} model={model} />
-                    <span className="min-w-0 flex-1 truncate">{modelButtonText}</span>
-                    {hasModelIssue ? (
-                      <AlertTriangle className="size-3.5 shrink-0 text-red-700 dark:text-red-300" />
-                    ) : null}
-                    {hasModelAdvisory ? (
-                      <Info className="size-3.5 shrink-0 text-amber-700 dark:text-amber-300" />
-                    ) : null}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-80 break-words">{modelButtonLabel}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-          {isFlatRoster ? (
-            <div className="flex h-8 min-w-0 items-center px-2 text-xs text-[var(--color-text-secondary)]">
-              {syncModelControl}
+            <div
+              className={cn(
+                'w-full min-w-0 space-y-1',
+                isFlatRoster ? 'sm:w-[170px] sm:min-w-[170px]' : 'sm:w-[150px] sm:min-w-[150px]'
+              )}
+            >
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        'h-8 w-full justify-start gap-1 overflow-hidden text-left',
+                        getModelTriggerToneClass(hasModelIssue, hasModelAdvisory)
+                      )}
+                      aria-label={modelButtonAriaLabel}
+                      onClick={() => setModelExpanded((prev) => !prev)}
+                    >
+                      {!runtimeSelectionUnresolved && modelExpanded ? (
+                        <ChevronDown className="size-3.5" />
+                      ) : (
+                        <ChevronRight className="size-3.5" />
+                      )}
+                      <TeamModelBrandIcon providerId={providerId} model={model} />
+                      <span className="min-w-0 flex-1 truncate">{modelButtonText}</span>
+                      {hasModelIssue ? (
+                        <AlertTriangle className="size-3.5 shrink-0 text-red-700 dark:text-red-300" />
+                      ) : null}
+                      {hasModelAdvisory ? (
+                        <Info className="size-3.5 shrink-0 text-amber-700 dark:text-amber-300" />
+                      ) : null}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-80 break-words">
+                    {modelButtonLabel}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
-          ) : null}
-        </div>
+            {isFlatRoster ? (
+              <div className="flex h-8 min-w-0 items-center px-2 text-xs text-[var(--color-text-secondary)]">
+                {syncModelControl}
+              </div>
+            ) : null}
+          </div>
+        )}
       </div>
-      {hasWarnings ? (
+      {!runtimeSelectionUnresolved && hasWarnings ? (
         <div className="md:col-span-3">
           <div className="bg-amber-500/8 ml-3 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-700 dark:text-amber-200">
             <Info className="mt-0.5 size-3.5 shrink-0 text-amber-700 dark:text-amber-300" />
@@ -298,12 +283,13 @@ export const LeadModelRow = ({
           </div>
         </div>
       ) : null}
-      {modelExpanded ? (
+      {!runtimeSelectionUnresolved && modelExpanded ? (
         <div className="space-y-2 md:col-span-3">
           <TeamModelSelector
             providerId={providerId}
             onProviderChange={onProviderChange}
             value={model}
+            limitContext={limitContext}
             onValueChange={onModelChange}
             projectPath={projectPath}
             id="lead-model"
@@ -326,6 +312,7 @@ export const LeadModelRow = ({
             id="lead-effort"
             providerId={providerId}
             model={model}
+            projectPath={projectPath}
             limitContext={limitContext}
           />
           {providerId === 'opencode' ? (
@@ -353,6 +340,6 @@ export const LeadModelRow = ({
           </div>
         </div>
       ) : null}
-    </div>
+    </RosterParticipantFrame>
   );
 };

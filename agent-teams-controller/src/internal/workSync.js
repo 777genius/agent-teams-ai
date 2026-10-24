@@ -1,3 +1,4 @@
+const desktopBinding = require('./desktopControlBinding.js');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -46,6 +47,8 @@ function describeControlApiLookup(context, flags, stateFileUrl, envUrl) {
 }
 
 function resolveControlBaseUrls(context, flags = {}) {
+  const boundUrls = desktopBinding.boundControlBaseUrls(context, flags);
+  if (boundUrls) return boundUrls;
   const explicit =
     (typeof flags.controlUrl === 'string' && flags.controlUrl.trim()) ||
     (typeof flags['control-url'] === 'string' && flags['control-url'].trim()) ||
@@ -73,10 +76,13 @@ async function requestJson(baseUrl, pathname, options = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), normalizeTimeoutMs(options.timeoutMs));
   try {
+    const boundOptions = desktopBinding.boundRequestOptions(baseUrl);
     const response = await fetch(`${baseUrl}${pathname}`, {
+      ...boundOptions,
       method: options.method || 'GET',
       headers: {
         accept: 'application/json',
+        ...boundOptions.headers,
         ...(options.body ? { 'content-type': 'application/json' } : {}),
       },
       ...(options.body ? { body: JSON.stringify(options.body) } : {}),
@@ -322,14 +328,15 @@ async function memberWorkSyncReport(context, flags = {}) {
   let baseUrls;
   try {
     baseUrls = resolveControlBaseUrls(context, flags);
-  } catch {
+  } catch (error) {
+    if (desktopBinding.isDesktopBound()) throw error;
     return appendPendingReportIntent(context, body, 'control_api_unavailable');
   }
 
   try {
     return await requestJsonWithFallback(baseUrls, pathname, options);
   } catch (error) {
-    if (error && error.controlApiStatus) {
+    if (desktopBinding.isDesktopBound() || (error && error.controlApiStatus)) {
       throw error;
     }
     return appendPendingReportIntent(context, body, 'control_api_unavailable');

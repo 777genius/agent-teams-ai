@@ -1,6 +1,7 @@
+import { resolveAgentAttachmentArtifactPath as resolvePortable } from '@agent-teams/legacy-agent-host/attachments/storage';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { getAppDataPath } from '@main/utils/pathDecoder';
-import { resolveAgentAttachmentArtifactPath as resolvePortable } from '@agent-teams/legacy-agent-host/attachments/storage';
+
 import type { ResolveAgentAttachmentArtifactPathInput as PortableArtifactPathInput } from '@agent-teams/legacy-agent-host/attachments/storage';
 export type { AgentAttachmentArtifactFileName } from '@agent-teams/legacy-agent-host/attachments/storage';
 export type ResolveAgentAttachmentArtifactPathInput = Omit<

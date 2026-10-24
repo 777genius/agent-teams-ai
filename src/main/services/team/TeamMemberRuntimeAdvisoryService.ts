@@ -11,6 +11,7 @@ import {
   getOpenCodeRuntimeDeliveryRecordTimeMs,
   isPotentialOpenCodeRuntimeDeliveryError,
   isTerminalSuccessfulOpenCodeDeliveryRecord,
+  parseOpenCodeRetryAt,
 } from './opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 import {
   type OpenCodeRuntimeDeliveryProofIndex,
@@ -653,7 +654,7 @@ export class TeamMemberRuntimeAdvisoryService {
       record.nextAttemptAt,
     ];
     for (const candidate of candidates) {
-      const retryAt = this.parseOpenCodeRetryAt(candidate);
+      const retryAt = parseOpenCodeRetryAt(candidate);
       if (!retryAt || retryAt <= now) {
         continue;
       }
@@ -663,38 +664,6 @@ export class TeamMemberRuntimeAdvisoryService {
       };
     }
     return null;
-  }
-
-  private parseOpenCodeRetryAt(value: string | null | undefined): number | null {
-    const text = value?.trim();
-    if (!text) {
-      return null;
-    }
-    const lowerText = text.toLowerCase();
-    const nextMarker = 'next=';
-    const tokenStart = lowerText.indexOf(nextMarker);
-    const valueStart = tokenStart >= 0 ? tokenStart + nextMarker.length : 0;
-    let valueEnd = valueStart;
-    while (valueEnd < text.length) {
-      const char = text[valueEnd];
-      if (
-        char === ' ' ||
-        char === '\t' ||
-        char === '\n' ||
-        char === '\r' ||
-        char === ',' ||
-        char === ';'
-      ) {
-        break;
-      }
-      valueEnd += 1;
-    }
-    let cleaned = text.slice(valueStart, valueEnd);
-    while (cleaned.endsWith('.') || cleaned.endsWith(')') || cleaned.endsWith(']')) {
-      cleaned = cleaned.slice(0, -1);
-    }
-    const parsed = Date.parse(cleaned);
-    return Number.isFinite(parsed) ? parsed : null;
   }
 
   private isOpenCodeDeliveryAdvisoryCandidate(

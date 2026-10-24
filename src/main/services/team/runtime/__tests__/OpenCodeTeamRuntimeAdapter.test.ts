@@ -108,6 +108,33 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
     });
   });
 
+  it('shows the version requirement when readiness blocks a free-tier model', async () => {
+    const message =
+      'This app is using OpenCode 1.17.18. OpenCode free-tier models require OpenCode 1.18.0 or newer. The OPENCODE_BIN_PATH override pins this version. Update that binary or remove the override, then restart Agent Teams.';
+    const launchOpenCodeTeam =
+      vi.fn<NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>>();
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: vi.fn(async () =>
+        readiness({
+          launchAllowed: false,
+          state: 'unsupported_version',
+          diagnostics: [message],
+        })
+      ),
+      launchOpenCodeTeam,
+    });
+
+    const result = await adapter.launch(launchInput());
+
+    expect(launchOpenCodeTeam).not.toHaveBeenCalled();
+    expect(result.members.Worker?.hardFailureReason).toBe(message);
+    expect(result.preLaunchGate).toEqual({
+      blocked: true,
+      reason: 'unsupported_version',
+      retryable: false,
+    });
+  });
+
   it('fails closed when launching with confirmed members returns a mismatched fingerprint', async () => {
     const expectedFingerprint =
       validExecutionProof().expectedBehaviorEvidence?.expectedBehaviorFingerprint;
@@ -155,8 +182,50 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
   });
 });
 
+describe('OpenCodeTeamRuntimeAdapter delivery failure diagnostics', () => {
+  it.each([
+    {
+      code: 'contract_violation',
+      message: 'OpenCode message bridge failed: Bridge stdout was empty',
+    },
+    {
+      code: 'provider_error',
+      message: 'OpenCode message bridge failed: OpenCode bridge command failed',
+    },
+  ])('retains $code without claiming prompt acceptance', async ({ code, message }) => {
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      sendOpenCodeTeamMessage: vi.fn(async () => ({
+        accepted: false,
+        memberName: 'alice',
+        diagnostics: [
+          {
+            code,
+            severity: 'error',
+            message,
+          },
+        ],
+      })),
+    } as unknown as OpenCodeTeamRuntimeBridgePort);
+    const result = await adapter.sendMessageToMember({
+      teamName: 'team-a',
+      laneId: 'primary',
+      memberName: 'alice',
+      cwd: '/repo',
+      text: 'Review hand-off',
+      messageId: 'peer-original',
+      replyRecipient: 'bob',
+    });
+    expect(result.ok).toBe(false);
+    expect(result.runtimePromptMessageId).toBeUndefined();
+    expect(result.diagnostics).toEqual([`error:${code}: ${message}`]);
+  });
+});
+
 describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
-  async function deliveredPromptText(replyRecipient: string | undefined): Promise<string> {
+  async function deliveredPromptText(
+    replyRecipient: string | undefined,
+    groupChatId?: string
+  ): Promise<string> {
     const sendOpenCodeTeamMessage = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['sendOpenCodeTeamMessage']>
     >(async (_input) => ({
@@ -177,6 +246,7 @@ describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
       text: 'Dependency resolved for task 7.',
       messageId: 'origin-1',
       replyRecipient,
+      groupChatId,
       taskRefs: [{ teamName: 'team-a', taskId: 'task-7', displayId: '7' }],
     });
 
@@ -194,13 +264,39 @@ describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
     expect(text).not.toContain('You must not end this turn empty.');
   });
 
-  it('keeps the visible reply contract for lead reply recipients', async () => {
+  it('keeps requested replies visible and permits exact-origin group acknowledgements', async () => {
     const text = await deliveredPromptText('team-lead');
 
     expect(text).toContain('Required message_send argument envelope');
     expect(text).toContain('to="team-lead"');
     expect(text).not.toContain('informational system notice');
     expect(text).not.toContain('status report from your teammate');
+
+    const groupText = await deliveredPromptText('team-lead', 'group-a');
+    expect(groupText).toContain(
+      JSON.stringify({
+        teamName: 'team-a',
+        groupChatId: 'group-a',
+        from: 'Worker',
+        relayOfMessageId: 'origin-1',
+      })
+    );
+    expect(groupText).toContain('Dependency resolved for task 7.');
+    expect(groupText).toContain(
+      'For a requested reply or substantive contribution, use group_chat_send'
+    );
+    expect(groupText).not.toContain('Reply using group_chat_send');
+    expect(groupText).toContain(
+      'For an informational message, you may use group_chat_react if available'
+    );
+    expect(groupText).toContain('with the exact origin envelope');
+    expect(groupText).toContain('saved=true and acknowledged=true for this exact incoming origin');
+    expect(groupText).toContain('A failed or unmatched result is not an acknowledgement');
+    expect(groupText).toContain('stop without an extra OK or confirmation message');
+    expect(groupText).toContain('After a successful group_chat_send, stop.');
+    expect(groupText).toContain('Never substitute message_send or a private user reply.');
+    expect(groupText).toContain('Do not repair, retry in another destination, or echo privately.');
+    expect(groupText).not.toContain('Required message_send argument envelope');
   });
 
   it('builds a reply-optional teammate report envelope for teammate reply recipients', async () => {
@@ -225,6 +321,32 @@ describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
     expect(text).not.toContain('Required message_send argument envelope');
     expect(text).not.toContain('You must not end this turn empty.');
     expect(text).not.toContain('informational system notice');
+  });
+
+  it('preserves explicit and previously agreed peer responses without requiring unsolicited receipts', () => {
+    for (const inbound of [
+      'Please confirm this hand-off with the exact text READY:step-3.',
+      'The previously agreed review hand-off has arrived: review-step-3.',
+    ]) {
+      const text = buildOpenCodeRuntimeMessageText({
+        teamName: 'team-a',
+        laneId: 'primary',
+        memberName: 'bob',
+        cwd: '/repo',
+        from: 'alice',
+        replyRecipient: 'alice',
+        messageId: 'peer-original',
+        text: inbound,
+      });
+      expect(text).toContain(inbound);
+      expect(text).toContain('Never send unsolicited acknowledgement');
+      expect(text).toContain('explicitly requests a response');
+      expect(text).toContain('previously agreed response protocol applies');
+      expect(text).toContain('"to":"alice"');
+      expect(text).toContain('"relayOfMessageId":"peer-original"');
+      expect(text).not.toContain('Never send acknowledgement, confirmation');
+      expect(text).not.toContain('Required message_send argument envelope');
+    }
   });
 
   it('adds the automated-notice rule to informational envelopes (no owner nudges)', async () => {

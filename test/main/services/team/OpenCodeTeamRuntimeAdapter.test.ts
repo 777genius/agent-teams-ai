@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { openCodeRuntimeMessagePayload } from '../../../../src/main/services/team/opencode/delivery/OpenCodeRuntimeMessagePayload';
 import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
 import {
   createOpenCodeCanonicalProjectPathFingerprint,
@@ -2129,6 +2130,24 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     });
   });
 
+  it('carries the full physical group envelope through payload and actual bridge send', async () => {
+    const sendOpenCodeTeamMessage = vi.fn(async () => ({ accepted: true,
+      sessionId: 'oc-session-bob', memberName: 'bob', runtimePid: 456, diagnostics: [] }));
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridgePort(
+      readiness({ state: 'ready', launchAllowed: true }), { sendOpenCodeTeamMessage }));
+    const envelope = { groupChatId: 'group-1', groupChatName: 'Review', groupRunKey: 'lane-run-1',
+      groupMessageId: 'canonical-1', groupChatProtocolVersion: 1 as const,
+      messageId: 'physical-1', from: 'user', timestamp: '2026-10-10T00:00:00.000Z' };
+    await adapter.sendMessageToMember(openCodeRuntimeMessagePayload({ ...envelope,
+      memberName: 'bob', text: 'group text', inboxTimestamp: envelope.timestamp }, {
+      teamName: 'team-a', laneId: 'secondary:opencode:bob', runId: 'lane-run-1',
+      memberName: 'bob', cwd: '/repo', text: 'group text' }));
+    expect(sendOpenCodeTeamMessage).toHaveBeenCalledWith(expect.objectContaining(envelope));
+    expect(sendOpenCodeTeamMessage).toHaveBeenCalledWith(expect.objectContaining({
+      text: expect.stringContaining('Canonical original sourceMessageId for group_chat_create: canonical-1.'),
+    }));
+  });
+
   it('sends direct teammate messages through the OpenCode message bridge', async () => {
     const sendOpenCodeTeamMessage = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['sendOpenCodeTeamMessage']>
@@ -2211,6 +2230,24 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(sentText).not.toContain('The inbound app messageId is');
     expect(sentText).toContain('Do not use SendMessage or runtime_deliver_message');
     expect(sentText).toContain('never use #00000000');
+    expect(sentText).not.toContain('Original User MessageId:');
+
+    await adapter.sendMessageToMember(openCodeRuntimeMessagePayload({
+      memberName: 'bob', from: 'user', text: 'Create Release with alice and bob',
+      messageId: 'human-direct-1', replyRecipient: 'user', actionMode: 'do',
+    }, {
+      runId: 'run-1', teamName: 'team-a', laneId: 'secondary:opencode:bob',
+      memberName: 'bob', cwd: '/repo', text: 'Create Release with alice and bob',
+    }));
+    const humanText = sendOpenCodeTeamMessage.mock.calls.at(-1)?.[0]?.text ?? '';
+    expect(humanText).not.toContain('<opencode_delivery_context>');
+    expect(humanText).toContain('Original User MessageId: human-direct-1');
+    expect(humanText).toContain('Use this exact sourceMessageId, never guess one; ASK cannot authorize creation.');
+    const replyEnvelope = /Required message_send argument envelope: (.+)\. Copy every/.exec(humanText);
+    expect(JSON.parse(replyEnvelope?.[1] ?? '{}')).toEqual({
+      teamName: 'team-a', to: 'user', from: 'bob', source: 'runtime_delivery',
+      relayOfMessageId: 'human-direct-1',
+    });
   });
 
   it('delivers teammate-originated messages with the reply-optional teammate report contract', async () => {

@@ -1,3 +1,8 @@
+import {
+  formatOpenCodeFreeTierVersionFailure,
+  parseOpenCodeFreeTierRequiredVersion,
+} from '../opencode/readiness/OpenCodeFailureDiagnostics';
+
 import type { MemberRuntimeAdvisory } from '@shared/types';
 
 export interface RuntimeDiagnosticClassification {
@@ -222,6 +227,13 @@ export function hasHttpRateLimitStatusCode(message: string): boolean {
 }
 
 const RUNTIME_DIAGNOSTIC_RULES: readonly RuntimeDiagnosticRule[] = [
+  {
+    reasonCode: 'backend_error',
+    match: (message) => parseOpenCodeFreeTierRequiredVersion(message) !== null,
+    priority: 98,
+    actionRequired: true,
+    normalizeMessage: (message) => formatOpenCodeFreeTierVersionFailure(message) ?? message,
+  },
   {
     reasonCode: 'backend_error',
     match: isCleanOpenCodeSessionRefreshDiagnostic,

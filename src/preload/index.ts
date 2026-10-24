@@ -3,19 +3,25 @@ import { createAnnouncementsBridge } from '@features/announcements/preload';
 import { createAppCloseCoordinationBridge } from '@features/app-close-coordination/preload';
 import { createCodexAccountBridge } from '@features/codex-account/preload';
 import { createCodexRuntimeInstallerBridge } from '@features/codex-runtime-installer/preload';
+import { createDocumentPreviewBridge } from '@features/document-preview/preload';
+import { createExternalAgentConnectionBridge } from '@features/external-agent-connection/preload';
+import { createGatewayProviderBridge } from '@features/gateway-provider/preload';
 import { createMemberLogStreamBridge } from '@features/member-log-stream/preload';
 import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
 import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createProjectFolderBridge } from '@features/project-folder/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
+import { createTeamGroupChatsBridge } from '@features/team-group-chats/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
 import { createTeamMemberSettingsBridge } from '@features/team-provisioning/preload';
+import { createTeamReadRecoveryBridge } from '@features/team-read-recovery/preload';
 import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/preload';
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
 import { createWorkspaceTrustBridge } from '@features/workspace-trust/preload';
 import { WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
+import { parseTeamMemberRestartResult } from '@shared/types/teamMemberRestart';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 import {
@@ -373,6 +379,7 @@ import type {
   TaskChangeRequestOptions,
   TaskChangeSetV2,
   TaskComment,
+  TaskFieldUpdates,
   TeamAgentRuntimeSnapshot,
   TeamChangeEvent,
   TeamClaudeLogsQuery,
@@ -471,10 +478,6 @@ interface IpcFileChangePayload {
   isSubagent: boolean;
 }
 
-/**
- * Type-safe IPC invoker for operations that return IpcResult<T>.
- * Throws an Error if the IPC call fails, otherwise returns the typed data.
- */
 async function invokeIpcWithResult<T>(channel: string, ...args: unknown[]): Promise<T> {
   const result = (await ipcRenderer.invoke(channel, ...args)) as IpcResult<T>;
   if (!result.success) {
@@ -510,12 +513,15 @@ ipcRenderer.on(
 
 const electronAPI: ElectronAPI = {
   agentBackend: createAgentBackendBridge(ipcRenderer, ipcRenderer, ipcRenderer),
+  externalAgentConnection: createExternalAgentConnectionBridge(ipcRenderer),
   appCloseCoordination: createAppCloseCoordinationBridge(ipcRenderer),
   ...createCodexAccountBridge({
     ipcRenderer,
   }),
   ...createRecentProjectsBridge(),
+  teamGroupChats: createTeamGroupChatsBridge(),
   announcements: createAnnouncementsBridge(),
+  gatewayProvider: createGatewayProviderBridge(),
   ...createWorkspaceTrustBridge(ipcRenderer),
   ...createProjectFolderBridge(ipcRenderer),
   teamImport: createTeamImportBridge(ipcRenderer),
@@ -914,6 +920,9 @@ const electronAPI: ElectronAPI = {
   },
   teams: {
     ...createTeamMemberSettingsBridge(invokeIpcWithResult),
+    readRecovery: createTeamReadRecoveryBridge((channel, ...args) =>
+      ipcRenderer.invoke(channel, ...args)
+    ),
     list: async () => {
       return invokeIpcWithResult<TeamSummary[]>(TEAM_LIST);
     },
@@ -1024,7 +1033,7 @@ const electronAPI: ElectronAPI = {
     },
     getMessagesPage: async (
       teamName: string,
-      options?: { cursor?: string | null; limit?: number }
+      options?: { cursor?: string | null; limit?: number; groupChatId?: string }
     ) => {
       return invokeIpcWithResult<MessagesPage>(TEAM_GET_MESSAGES_PAGE, teamName, options);
     },
@@ -1061,11 +1070,7 @@ const electronAPI: ElectronAPI = {
     updateTaskOwner: async (teamName: string, taskId: string, owner: string | null) => {
       return invokeIpcWithResult<void>(TEAM_UPDATE_TASK_OWNER, teamName, taskId, owner);
     },
-    updateTaskFields: async (
-      teamName: string,
-      taskId: string,
-      fields: { subject?: string; description?: string }
-    ) => {
+    updateTaskFields: async (teamName: string, taskId: string, fields: TaskFieldUpdates) => {
       return invokeIpcWithResult<void>(TEAM_UPDATE_TASK_FIELDS, teamName, taskId, fields);
     },
     startTask: async (teamName: string, taskId: string) => {
@@ -1243,11 +1248,13 @@ const electronAPI: ElectronAPI = {
       );
     },
     restartMember: async (teamName: string, memberName: string, expectedSecondary?: boolean) => {
-      return invokeIpcWithResult<void>(
-        TEAM_RESTART_MEMBER,
-        teamName,
-        memberName,
-        ...(expectedSecondary === undefined ? [] : [expectedSecondary])
+      return parseTeamMemberRestartResult(
+        await invokeIpcWithResult<unknown>(
+          TEAM_RESTART_MEMBER,
+          teamName,
+          memberName,
+          ...(expectedSecondary === undefined ? [] : [expectedSecondary])
+        )
       );
     },
     skipMemberForLaunch: async (teamName: string, memberName: string) => {
@@ -1891,6 +1898,7 @@ const electronAPI: ElectronAPI = {
 
   // ===== Editor API =====
   editor: {
+    ...createDocumentPreviewBridge(),
     open: (projectPath: string) => invokeIpcWithResult<void>(EDITOR_OPEN, projectPath),
     close: () => invokeIpcWithResult<void>(EDITOR_CLOSE),
     readDir: (dirPath: string, maxEntries?: number) =>

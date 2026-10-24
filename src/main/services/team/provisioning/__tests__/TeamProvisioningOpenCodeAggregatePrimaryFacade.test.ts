@@ -5,12 +5,14 @@ import {
   stableHash,
 } from '../../opencode/bridge/OpenCodeBridgeCommandContract';
 import { bindLifecycleManifest } from '../../opencode/bridge/OpenCodeLifecycleManifestBinding';
+import { createOpenCodePromptDeliveryWatchdogCoordinator } from '../../opencode/delivery/OpenCodePromptDeliveryWatchdogCoordinator';
 import { TeamRuntimeAdapterRegistry } from '../../runtime';
 import { createPersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
 import { stopUnretainableOpenCodePrimaryLane } from '../OpenCodeAggregatePrimaryLaneStopHelpers';
 import { launchOpenCodeAggregatePrimaryLane } from '../TeamProvisioningOpenCodeAggregateLaunchPersistence';
 import { TeamProvisioningOpenCodeAggregatePrimaryFacade } from '../TeamProvisioningOpenCodeAggregatePrimaryFacade';
 import { createOpenCodeAggregateProvisioningRun } from '../TeamProvisioningOpenCodeAggregateRun';
+import { getTrackedOpenCodeBootstrapWakeRunId } from '../TeamProvisioningSecondaryRuntimeRuns';
 
 import type {
   TeamLaunchRuntimeAdapter,
@@ -20,7 +22,7 @@ import type {
 import type { ProvisioningRun } from '../TeamProvisioningRunModel';
 import type { RuntimeAdapterRunByTeamEntry } from '../TeamProvisioningServiceComposition';
 import type { TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
-import type { PersistedTeamLaunchSnapshot, TeamCreateRequest } from '@shared/types';
+import type { InboxMessage, PersistedTeamLaunchSnapshot, TeamCreateRequest } from '@shared/types';
 
 type OpenCodeMember = Extract<
   TeamRuntimeLanePlan,
@@ -80,7 +82,103 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
   readonly launchedMemberNames: string[][] = [];
   readonly launchedRunIds: string[] = [];
   productionLaunch = false;
+  secondarySetupError?: Error;
+  finalPersistenceError?: Error;
+  beforeFinalPersistenceFailure?: () => void;
+  readonly finalPersistence = vi.fn();
+  beforeSecondarySetupFailure?: () => void;
   initialStop?: (runId: string) => Promise<void>;
+  beforeSecondaryBootstrap?: (
+    run: ProvisioningRun,
+    lane: ProvisioningRun['mixedSecondaryLanes'][number]
+  ) => Promise<void>;
+  readonly queuedMessages = new Map<string, InboxMessage[]>();
+  readonly inboxWakes: {
+    memberName: string;
+    messageId?: string | null;
+    restarting: boolean;
+    aggregateRestarting: boolean;
+  }[] = [];
+  protected override readonly openCodePromptDeliveryWatchdogCoordinator =
+    createOpenCodePromptDeliveryWatchdogCoordinator({
+      hasAcceptedMemberWorkSyncReport: async () => false,
+      taskRefsIncludeAll: () => false,
+      visibleReplyProofService: {
+        applyDestinationProof: vi.fn(),
+        materializePlainTextReplyIfNeeded: vi.fn(),
+      },
+      maybeSyncRuntimePermissionsAfterDelivery: async () => {},
+      rememberRuntimePidFromBridge: async () => {},
+      watchdogScheduler: {
+        isEnabled: () => true,
+        isStaleError: async () => false,
+        schedule: (input) =>
+          this.inboxWakes.push({
+            ...input,
+            restarting: this.memberLifecycleOperationRunner.isMemberLifecycleOperationActive(
+              input.teamName,
+              input.memberName
+            ),
+            aggregateRestarting: this.openCodeAggregatePrimaryRestartByTeam.has(input.teamName),
+          }),
+      },
+      canDeliverToTeamRuntime: (teamName) =>
+        this.runTracking.resolveDeliverableTrackedRuntimeRunId(teamName) !== null,
+      recoverRuntimeLanesForWatchdog: async () => [],
+      stopRuntimeLanesForStoppedTeam: async () => {},
+      readActiveRuntimeLaneIds: async () => [
+        'primary',
+        ...this.currentWakeRun().mixedSecondaryLanes.map((lane) => lane.laneId),
+      ],
+      createLedger: () => {
+        throw new Error('Wake must not create a delivery ledger');
+      },
+      resolveMembersForRuntimeLane: async (_team, laneId) =>
+        laneId === 'primary'
+          ? ['Lead']
+          : this.currentWakeRun()
+              .mixedSecondaryLanes.filter((lane) => lane.laneId === laneId)
+              .map((lane) => lane.member.name),
+      getInboxMessages: async (_team, memberName) => this.queuedMessages.get(memberName) ?? [],
+      resolveCurrentRuntimeRunId: async (teamName, laneId) =>
+        laneId === 'primary'
+          ? (this.runtimeAdapterRunByTeam.get(teamName)?.runId ?? null)
+          : (this.currentWakeRun().mixedSecondaryLanes.find((lane) => lane.laneId === laneId)
+              ?.runId ?? null),
+      resolveTrackedBootstrapRunId: (input) =>
+        getTrackedOpenCodeBootstrapWakeRunId(input, {
+          runTracking: this.runTracking,
+          runs: this.runs,
+        }),
+      hasCommittedBootstrapSession: async ({ laneId, runId, memberName }) =>
+        laneId === 'primary' ||
+        Boolean(
+          this.currentWakeRun().mixedSecondaryLanes.find(
+            (lane) => lane.laneId === laneId && lane.runId === runId
+          )?.result?.members[memberName]?.bootstrapConfirmed
+        ),
+      hasStableInboxMessageId: (message): message is InboxMessage & { messageId: string } =>
+        Boolean(message.messageId),
+      logPromptDeliveryEvent: () => {},
+    });
+
+  private currentWakeRun(): ProvisioningRun {
+    const run = this.runs.get(this.runTracking.getTrackedRunId('alpha') ?? '');
+    if (!run) throw new Error('TEST wake run is missing');
+    return run;
+  }
+
+  observeBootstrapCommit(
+    run: ProvisioningRun,
+    lane: ProvisioningRun['mixedSecondaryLanes'][number]
+  ): Promise<number> {
+    return this.openCodePromptDeliveryWatchdogCoordinator.wakeAfterBootstrapCommit({
+      teamName: run.teamName,
+      runId: lane.runId!,
+      laneId: lane.laneId,
+      memberName: lane.member.name,
+    });
+  }
   manifest: RuntimeStoreManifestEvidence = {
     highWatermark: 0,
     activeRunId: 'restart-run',
@@ -124,6 +222,45 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
     this.runs.set(run.runId, run);
     this.runTracking.setAliveRunId(run.teamName, run.runId);
     this.runtimeAdapterRunByTeam.set(run.teamName, owner);
+  }
+
+  trackSecondaryRuns(run: ProvisioningRun): void {
+    this.secondaryRuntimeRunByTeam.set(
+      run.teamName,
+      new Map(
+        run.mixedSecondaryLanes.map((lane) => [
+          lane.laneId,
+          {
+            runId: lane.runId!,
+            providerId: 'opencode',
+            laneId: lane.laneId,
+            memberName: lane.member.name,
+          },
+        ])
+      )
+    );
+  }
+
+  simulatePrimaryCleanup(teamName: string, runId: string): void {
+    if (this.runtimeAdapterRunByTeam.get(teamName)?.runId === runId)
+      this.runtimeAdapterRunByTeam.delete(teamName);
+    if (this.runTracking.getAliveRunId(teamName) === runId)
+      this.runTracking.deleteAliveRunId(teamName);
+    if (this.provisioningRunByTeam.get(teamName) === runId)
+      this.provisioningRunByTeam.delete(teamName);
+  }
+
+  markDisconnected(run: ProvisioningRun): void {
+    run.progress = { ...run.progress, state: 'disconnected' };
+    this.runtimeAdapterProgressByRunId.set(run.runId, run.progress);
+  }
+
+  getAliveAggregateRun(teamName: string): string | null {
+    return this.runTracking.getAliveRunId(teamName);
+  }
+
+  getTrackedAggregateRun(teamName: string): string | null {
+    return this.runTracking.getTrackedRunId(teamName);
   }
 
   publishNewOwner(teamName: string, owner: RuntimeAdapterRunByTeamEntry): void {
@@ -246,6 +383,11 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
   }
 
   protected override async persistLaunchStateSnapshot(): Promise<PersistedTeamLaunchSnapshot | null> {
+    this.finalPersistence();
+    if (this.finalPersistenceError) {
+      this.beforeFinalPersistenceFailure?.();
+      throw this.finalPersistenceError;
+    }
     return null;
   }
 
@@ -253,9 +395,14 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
     _run: ProvisioningRun,
     lane: ProvisioningRun['mixedSecondaryLanes'][number]
   ): Promise<void> {
+    if (this.secondarySetupError) {
+      this.beforeSecondarySetupFailure?.();
+      throw this.secondarySetupError;
+    }
     lane.runId = 'TEST-target-secondary';
     lane.state = 'finished';
     lane.result = materializedResult(lane.runId, [lane.member.name]);
+    await this.beforeSecondaryBootstrap?.(_run, lane);
   }
 
   protected override persistSentMessage(): void {}
@@ -301,6 +448,103 @@ function materializedResult(
 }
 
 describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
+  it.each(['success', 'restored'] as const)(
+    'wakes queued inboxes after primary restart readiness and both operation leases release: %s',
+    async (outcome) => {
+      const facade = new TestOpenCodeAggregatePrimaryFacade();
+      facade.productionLaunch = true;
+      const run = createRun();
+      const sibling = {
+        laneId: 'secondary:opencode:bob',
+        providerId: 'opencode' as const,
+        member: member('bob'),
+        runId: 'TEST-retained-bob',
+        state: 'finished' as const,
+        result: materializedResult('TEST-retained-bob', ['bob']),
+        warnings: [],
+        diagnostics: [],
+      };
+      run.mixedSecondaryLanes = [sibling];
+      facade.trackSecondaryRuns(run);
+      const queueWhileDisconnected = async (
+        current: ProvisioningRun,
+        lane: ProvisioningRun['mixedSecondaryLanes'][number]
+      ): Promise<void> => {
+        for (const name of outcome === 'restored' ? ['bob'] : ['Worker', 'bob'])
+          facade.queuedMessages.set(name, [
+            {
+              from: 'user',
+              to: name,
+              text: 'TEST assigned task during restart',
+              timestamp: '2026-10-23T21:57:35.005Z',
+              read: false,
+              messageId: `TEST-task-${name}`,
+            },
+          ]);
+        expect(current.progress.state).toBe('disconnected');
+        await expect(facade.observeBootstrapCommit(current, lane)).resolves.toBe(0);
+        expect(facade.inboxWakes).toEqual([]);
+      };
+      facade.clearPrimaryLaneIfOwned.mockImplementation(() => {
+        facade.simulatePrimaryCleanup(run.teamName, run.runId);
+        return Promise.resolve(undefined);
+      });
+      let launchAttempt = 0;
+      facade.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: async () => {
+              throw new Error('Unexpected TEST prepare');
+            },
+            reconcile: async () => {
+              throw new Error('Unexpected TEST reconcile');
+            },
+            launch: async (input) => {
+              launchAttempt += 1;
+              if (outcome === 'restored' && launchAttempt === 2)
+                await queueWhileDisconnected(run, sibling);
+              return materializedResult(
+                input.runId,
+                input.expectedMembers.map((entry) => entry.name),
+                outcome === 'restored' && launchAttempt === 1
+              );
+            },
+            stop: async (input) => ({
+              runId: input.runId,
+              teamName: input.teamName,
+              stopped: true,
+              members: {},
+              warnings: [],
+              diagnostics: [],
+            }),
+          } satisfies TeamLaunchRuntimeAdapter,
+        ])
+      );
+      facade.trackRun(run, { runId: run.runId, providerId: 'opencode', cwd: run.request.cwd });
+      facade.beforeSecondaryBootstrap = queueWhileDisconnected;
+      const restarting = facade.restartMember(run.teamName, 'Worker', false);
+      if (outcome === 'restored')
+        await expect(restarting).rejects.toMatchObject({ outcome: 'failed_restored' });
+      else await restarting;
+      expect(run.progress.state).toBe('ready');
+      expect(facade.inboxWakes).toEqual(
+        (outcome === 'restored' ? ['bob'] : ['bob', 'Worker']).map((memberName): unknown =>
+          expect.objectContaining({
+            memberName,
+            messageId: `TEST-task-${memberName}`,
+            restarting: false,
+            aggregateRestarting: false,
+          })
+        )
+      );
+      expect(sibling.runId).toBe('TEST-retained-bob');
+      expect([...facade.queuedMessages.values()].flat().every((message) => !message.read)).toBe(
+        true
+      );
+    }
+  );
+
   it('stops an unretainable primary using its retained owner cwd', async () => {
     const run = createRun();
     const owner = {
@@ -339,6 +583,141 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
     expect(deleteRuntimeOwner).toHaveBeenCalledWith(run.teamName);
   });
 
+  it.each(['current', 'cancelled', 'double-failure', 'publication-replacement'] as const)(
+    'returns only current correlated successor authority when secondary setup fails after successful primary relaunch: %s',
+    async (scope) => {
+      const facade = new TestOpenCodeAggregatePrimaryFacade();
+      facade.productionLaunch = true;
+      facade.secondarySetupError = new Error('secondary worktree setup failed');
+      const run = createRun();
+      const predecessorRunId = run.runId;
+      if (scope === 'double-failure')
+        facade.finalPersistenceError = new Error('snapshot disk failed');
+      if (scope === 'publication-replacement')
+        run.onProgress = vi.fn((progress: ProvisioningRun['progress']) => {
+          if (progress.state === 'ready' && progress.messageSeverity === 'warning')
+            facade.publishNewOwner(run.teamName, {
+              runId: run.runId,
+              providerId: 'opencode',
+              cwd: run.request.cwd,
+            });
+        });
+      const launch = vi.fn(async (input: Parameters<TeamLaunchRuntimeAdapter['launch']>[0]) =>
+        materializedResult(
+          input.runId,
+          input.expectedMembers.map((entry) => entry.name)
+        )
+      );
+      facade.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          { providerId: 'opencode', launch, stop: vi.fn() } as unknown as TeamLaunchRuntimeAdapter,
+        ])
+      );
+      facade.trackRun(run, { runId: run.runId, providerId: 'opencode', cwd: run.request.cwd });
+      if (scope === 'cancelled')
+        facade.beforeSecondarySetupFailure = () => facade.cancelRestart(run.teamName);
+      const restarting = facade.restartMember(run.teamName, 'Worker', false);
+      if (scope === 'cancelled' || scope === 'publication-replacement') {
+        await expect(restarting).rejects.not.toHaveProperty('retention');
+        expect(facade.finalPersistence).toHaveBeenCalledTimes(scope === 'cancelled' ? 0 : 1);
+        return;
+      }
+      await expect(restarting).rejects.toMatchObject({
+        message:
+          scope === 'double-failure'
+            ? 'secondary worktree setup failed. Final snapshot persistence failed: snapshot disk failed'
+            : 'secondary worktree setup failed',
+        outcome: 'failed_restored',
+        retention: {
+          teamName: run.teamName,
+          memberName: 'Worker',
+          predecessorRunId,
+          successorRunId: expect.any(String),
+        },
+      });
+      await expect(restarting).rejects.toHaveProperty('retention.successorRunId', run.runId);
+      expect(run.runId).not.toBe(predecessorRunId);
+      expect(facade.getPrimaryOwner(run.teamName)?.runId).toBe(run.runId);
+      expect(run.progress).toMatchObject({
+        runId: run.runId,
+        state: 'ready',
+        messageSeverity: 'warning',
+        cliLogsTail:
+          scope === 'double-failure'
+            ? 'secondary worktree setup failed. Final snapshot persistence failed: snapshot disk failed'
+            : 'secondary worktree setup failed',
+      });
+      expect(launch).toHaveBeenCalledTimes(1);
+      expect(facade.finalPersistence).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it.each(['current', 'cancelled', 'replaced', 'publication', 'disconnected'] as const)(
+    'correlates final persistence failure only while the successful successor primary is still owned: %s',
+    async (scope) => {
+      const facade = new TestOpenCodeAggregatePrimaryFacade();
+      facade.productionLaunch = true;
+      const failureMessage =
+        scope === 'publication' ? 'ready notification failed' : 'final snapshot persistence failed';
+      if (scope !== 'publication') facade.finalPersistenceError = new Error(failureMessage);
+      const run = createRun();
+      const predecessorRunId = run.runId;
+      if (scope === 'publication')
+        run.onProgress = vi.fn((progress) => {
+          if (progress.state === 'ready') throw new Error(failureMessage);
+        });
+      const launch = vi.fn(async (input: Parameters<TeamLaunchRuntimeAdapter['launch']>[0]) =>
+        materializedResult(
+          input.runId,
+          input.expectedMembers.map((entry) => entry.name)
+        )
+      );
+      facade.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          { providerId: 'opencode', launch, stop: vi.fn() } as unknown as TeamLaunchRuntimeAdapter,
+        ])
+      );
+      facade.trackRun(run, { runId: run.runId, providerId: 'opencode', cwd: run.request.cwd });
+      if (scope === 'cancelled')
+        facade.beforeFinalPersistenceFailure = () => facade.cancelRestart(run.teamName);
+      if (scope === 'disconnected')
+        facade.beforeFinalPersistenceFailure = () => facade.markDisconnected(run);
+      if (scope === 'replaced')
+        facade.beforeFinalPersistenceFailure = () =>
+          facade.publishNewOwner(run.teamName, {
+            runId: 'foreign-successor',
+            providerId: 'opencode',
+            cwd: run.request.cwd,
+          });
+      const restarting = facade.restartMember(run.teamName, 'Worker', false);
+      if (scope === 'current' || scope === 'publication') {
+        await expect(restarting).rejects.toMatchObject({
+          message:
+            scope === 'publication' ? expect.stringContaining(failureMessage) : failureMessage,
+          outcome: 'failed_restored',
+          retention: { teamName: run.teamName, memberName: 'Worker', predecessorRunId },
+        });
+        await expect(restarting).rejects.toHaveProperty('retention.successorRunId', run.runId);
+        expect(run.progress).toMatchObject({
+          runId: run.runId,
+          state: 'ready',
+          messageSeverity: 'warning',
+          cliLogsTail: failureMessage,
+        });
+        expect(facade.getPrimaryOwner(run.teamName)?.runId).toBe(run.runId);
+      } else await expect(restarting).rejects.not.toHaveProperty('retention');
+      if (scope === 'disconnected') {
+        expect(run.progress.state).toBe('disconnected');
+        expect(facade.getAliveAggregateRun(run.teamName)).toBeNull();
+        expect(facade.isTeamAlive(run.teamName)).toBe(false);
+      }
+      expect(run.runId).not.toBe(predecessorRunId);
+      expect(launch).toHaveBeenCalledTimes(1);
+      expect(facade.finalPersistence).toHaveBeenCalledTimes(1);
+      expect(run.mixedSecondaryLanes.at(-1)?.result?.runId).toBe('TEST-target-secondary');
+    }
+  );
+
   it.each([0, 1, 2])(
     'uses fresh incarnations with materialized sessions; failed launches=%s',
     async (failedLaunches) => {
@@ -367,6 +746,11 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
         })),
       ];
       run.mixedSecondaryLanes = siblings;
+      facade.trackSecondaryRuns(run);
+      facade.clearPrimaryLaneIfOwned.mockImplementation(() => {
+        facade.simulatePrimaryCleanup(run.teamName, run.runId);
+        return Promise.resolve(undefined);
+      });
       const stopped = new Set<string>();
       const stop = vi.fn(async (input: TeamRuntimeStopInput) => {
         const bound = bindLifecycleManifest(
@@ -430,9 +814,21 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
       facade.trackRun(run, { runId: originalRunId, providerId: 'opencode', cwd: run.request.cwd });
       const restarting = facade.restartMember(run.teamName, 'Worker', false);
       if (failedLaunches === 2) await expect(restarting).rejects.toThrow('Primary rollback failed');
-      else if (failedLaunches === 1)
+      else if (failedLaunches === 1) {
         await expect(restarting).rejects.toThrow('did not retain the team lead');
-      else await expect(restarting).resolves.toBeUndefined();
+        await expect(restarting).rejects.toMatchObject({
+          outcome: 'failed_restored',
+          retention: {
+            teamName: run.teamName,
+            memberName: 'Worker',
+            predecessorRunId: originalRunId,
+            successorRunId: run.runId,
+          },
+        });
+        expect(run.detectedSessionId).toBe(`ses_TEST_${run.runId}_Lead`);
+        expect(run.progress.messageSeverity).toBe('warning');
+        expect(run.progress.retainedSecondaryRuntime).toBeUndefined();
+      } else await expect(restarting).resolves.toBeUndefined();
       siblings.forEach((entry, index) => expect(run.mixedSecondaryLanes[index]).toBe(entry));
       expect(sibling.result.members['grok-one'].sessionId).toBe('ses_TEST_TEST-grok-run_grok-one');
       expect(new Set([originalRunId, ...facade.launchedRunIds]).size).toBe(failedLaunches ? 3 : 2);
@@ -450,6 +846,8 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
         expect(facade.writeFailureArtifact).not.toHaveBeenCalled();
       }
       expect(run.progress.state).toBe(failedLaunches === 2 ? 'failed' : 'ready');
+      expect(facade.isTeamAlive(run.teamName)).toBe(true);
+      expect(facade.getTrackedAggregateRun(run.teamName)).toBe(run.runId);
       expect(run.effectiveMembers.map((entry) => entry.name)).toEqual(
         failedLaunches ? ['Lead', 'Worker'] : ['Lead']
       );

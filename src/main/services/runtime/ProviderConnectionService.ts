@@ -30,7 +30,7 @@ import {
   isUsableAnthropicCompatibleEndpoint,
 } from './anthropicCompatibleEndpoint';
 import { readClaudeUserAnthropicSettingsAuthEnv } from './claudeUserSettingsEnv';
-import { isCodexExecBinary } from './codexCliBinary';
+import { type CodexLaunchDialect, isCodexExecBinary } from './codexCliBinary';
 import { mergeProviderCatalogDisplayAuthority } from './providerCatalogDisplayAuthority';
 
 import type {
@@ -109,14 +109,14 @@ const PROVIDER_API_KEY_ENV_VARS: Partial<Record<CliProviderId, string>> = {
 
 const ANTHROPIC_BASE_URL_ENV_VAR = 'ANTHROPIC_BASE_URL';
 const ANTHROPIC_AUTH_TOKEN_ENV_VAR = 'ANTHROPIC_AUTH_TOKEN';
-const CODEX_NATIVE_API_KEY_ENV_VAR = 'CODEX_API_KEY';
+export const CODEX_NATIVE_API_KEY_ENV_VAR = 'CODEX_API_KEY';
 const CODEX_CLI_PATH_ENV_VAR = 'CODEX_CLI_PATH';
 const CODEX_HOME_ENV_VAR = 'CODEX_HOME';
 const CODEX_FORCED_LOGIN_METHOD_ENV_VAR = 'CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD';
-const CODEX_CUSTOM_PROVIDER_ID = 'agent_teams_custom';
-const CODEX_CUSTOM_PROVIDER_NAME = 'Agent Teams Custom';
-const CODEX_CUSTOM_PROVIDER_SETTINGS_KEY = 'agent_teams_custom_provider';
-const CODEX_LAUNCH_CONFIG_SETTINGS_KEY = 'agent_teams_launch_config';
+export const CODEX_CUSTOM_PROVIDER_ID = 'agent_teams_custom';
+export const CODEX_CUSTOM_PROVIDER_NAME = 'Agent Teams Custom';
+export const CODEX_CUSTOM_PROVIDER_SETTINGS_KEY = 'agent_teams_custom_provider';
+export const CODEX_LAUNCH_CONFIG_SETTINGS_KEY = 'agent_teams_launch_config';
 const CODEX_NATIVE_BACKEND_ID = 'codex-native';
 const CODEX_LOGIN_STATUS_TIMEOUT_MS = 5_000;
 const CODEX_LOGIN_STATUS_CONFIG_OVERRIDES = ['service_tier="fast"'] as const;
@@ -185,7 +185,9 @@ function tomlString(value: string): string {
   return JSON.stringify(value);
 }
 
-function buildCodexCustomProviderConfigOverrides(config: CodexCustomProviderConfig): string[] {
+export function buildCodexCustomProviderConfigOverrides(
+  config: CodexCustomProviderConfig
+): string[] {
   return [
     `model_provider=${tomlString(CODEX_CUSTOM_PROVIDER_ID)}`,
     `model_providers.${CODEX_CUSTOM_PROVIDER_ID}.name=${tomlString(CODEX_CUSTOM_PROVIDER_NAME)}`,
@@ -195,17 +197,18 @@ function buildCodexCustomProviderConfigOverrides(config: CodexCustomProviderConf
   ];
 }
 
-function buildCodexLaunchArgs(
+export function buildCodexLaunchArgs(
   binaryPath: string | null | undefined,
   loginMethod: 'chatgpt' | 'api',
   options: {
+    dialect?: CodexLaunchDialect;
     customProviderConfigOverrides?: readonly string[];
     cliConfigOverrides?: readonly string[];
   } = {}
 ): string[] {
   const customProviderConfigOverrides = options.customProviderConfigOverrides ?? [];
   const cliConfigOverrides = [...(options.cliConfigOverrides ?? [])];
-  if (isCodexExecBinary(binaryPath)) {
+  if (options.dialect === 'native' || (!options.dialect && isCodexExecBinary(binaryPath))) {
     return [
       '-c',
       `forced_login_method="${loginMethod}"`,
@@ -227,14 +230,6 @@ function buildCodexLaunchArgs(
   }
 
   return ['--settings', JSON.stringify({ codex: codexSettings })];
-}
-
-function buildCodexForcedLoginLaunchArgs(
-  binaryPath: string | null | undefined,
-  loginMethod: 'chatgpt' | 'api',
-  cliConfigOverrides: readonly string[] = []
-): string[] {
-  return buildCodexLaunchArgs(binaryPath, loginMethod, { cliConfigOverrides });
 }
 
 function isCodexCustomProviderBaseUrlUsable(baseUrl: string): boolean {
@@ -379,7 +374,10 @@ async function checkCodexCliLoginStatus({
 }): Promise<CodexCliLoginStatusCheckResult> {
   const executable = binaryPath?.trim() || 'codex';
   const args = [
-    ...buildCodexForcedLoginLaunchArgs(executable, 'chatgpt', CODEX_LOGIN_STATUS_CONFIG_OVERRIDES),
+    ...buildCodexLaunchArgs(executable, 'chatgpt', {
+      dialect: 'native',
+      cliConfigOverrides: CODEX_LOGIN_STATUS_CONFIG_OVERRIDES,
+    }),
     'login',
     'status',
   ];
@@ -1082,7 +1080,8 @@ export class ProviderConnectionService {
     env: NodeJS.ProcessEnv,
     providerId: CliProviderId,
     runtimeBackendOverride?: string | null,
-    binaryPath?: string | null
+    binaryPath?: string | null,
+    dialect?: CodexLaunchDialect
   ): Promise<string[]> {
     if (providerId !== 'codex') {
       return [];
@@ -1106,12 +1105,13 @@ export class ProviderConnectionService {
     });
 
     if (readiness.effectiveAuthMode === 'chatgpt') {
-      return buildCodexLaunchArgs(binaryPath, 'chatgpt');
+      return buildCodexLaunchArgs(binaryPath, 'chatgpt', { dialect });
     }
 
     if (readiness.effectiveAuthMode === 'api_key') {
       const customProvider = this.getConfiguredCodexCustomProvider();
       return buildCodexLaunchArgs(binaryPath, 'api', {
+        dialect,
         customProviderConfigOverrides: customProvider
           ? buildCodexCustomProviderConfigOverrides(customProvider)
           : [],

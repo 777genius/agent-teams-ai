@@ -1,3 +1,4 @@
+import { getAuthoritativeReviewedPhysicalFiles, getAuthoritativeReviewedActionFile, findLatestRestorableReviewSnapshot, isAuthoritativeReviewDeletion } from './authoritativeReviewFiles.js';
 import type {
   ReviewPersistedStateSnapshot,
   ReviewUndoAction,
@@ -62,7 +63,7 @@ export function assertExactGenericReviewHistoryTransition(
   if (!authorization.reviewedFiles) {
     throw new Error('Authoritative review file set is unavailable');
   }
-  for (const file of authorization.reviewedFiles.values()) {
+  for (const file of [...authorization.reviewedFiles.values()].flat()) {
     canonicalFiles.set(file.changeKey ?? file.filePath, file);
   }
   const resolveHunkKey = (filePath: string, originalIndex: number): string => {
@@ -207,8 +208,8 @@ export function assertExactReviewHistoryTransition(
     if (typeof request.externalFilePath !== 'string' || request.diskSteps.length !== 0) {
       throw new Error('External review reload requires one reviewed file and no disk mutation');
     }
-    const file = getAuthoritativeReviewedFile(authorization, request.externalFilePath);
-    const expected = buildReviewExternalReloadState(file, {
+    const files = getAuthoritativeReviewedPhysicalFiles(authorization, request.externalFilePath);
+    const expected = buildReviewExternalReloadState(files, {
       hunkDecisions: current?.hunkDecisions ?? {},
       fileDecisions: current?.fileDecisions ?? {},
       hunkContextHashesByFile: current?.hunkContextHashesByFile ?? {},
@@ -230,7 +231,7 @@ export function assertExactReviewHistoryTransition(
     const isRenameSnapshot =
       restoreMode === 'restore-rejected-rename' || restoreMode === 'reapply-rejected-rename';
     const authoritativeFile = snapshot
-      ? getAuthoritativeReviewedFile(authorization, snapshot.filePath)
+      ? getAuthoritativeReviewedActionFile(authorization, snapshot.filePath, action!)
       : null;
     const expectedDecisions = authoritativeFile
       ? buildReviewRestoreDecisionState(authoritativeFile, {
@@ -289,7 +290,7 @@ export function assertExactReviewHistoryTransition(
     const expectedDecisions = buildReviewUndoDecisionState(
       action,
       { hunkDecisions: current.hunkDecisions, fileDecisions: current.fileDecisions },
-      (filePath) => getAuthoritativeReviewedFile(authorization, filePath)
+      (filePath, source) => getAuthoritativeReviewedActionFile(authorization, filePath, source)
     );
     const transitionMatches =
       expectedDecisions !== null &&
@@ -342,46 +343,9 @@ export function assertExactReviewHistoryTransition(
   assertExactReviewDiskSteps(request, redoEntry.action, 'redo');
 }
 
-export function findLatestRestorableDiskSnapshot(
-  current: Awaited<ReturnType<ReviewDecisionStore['load']>>,
-  filePath: string
-): ReturnType<typeof getReviewActionDiskSnapshots>[number] | null {
-  if (!current) return null;
-  const normalizedPath = normalizeReviewPathForIdentity(filePath);
-  for (let index = current.reviewActionHistory.length - 1; index >= 0; index--) {
-    const action = current.reviewActionHistory[index];
-    if (!action) continue;
-    const matchingSnapshot = [...getReviewActionDiskSnapshots(action)]
-      .reverse()
-      .find((candidate) => normalizeReviewPathForIdentity(candidate.filePath) === normalizedPath);
-    if (!matchingSnapshot) continue;
-    if (matchingSnapshot.restoreConflict) throw new Error(matchingSnapshot.restoreConflict);
-    if (!isAuthoritativelyBoundReviewSnapshot(matchingSnapshot)) {
-      throw new Error('Review history predates authoritative disk snapshots; reload Changes');
-    }
-    if (matchingSnapshot.renameExpectation) return null;
-    if (action.kind === 'disk' && action.action.originalIndex !== undefined) continue;
-    return matchingSnapshot;
-  }
-  return null;
-}
 
-export function isAuthoritativeReviewDeletion(file: FileChangeSummary): boolean {
-  if (file.ledgerSummary?.latestOperation) {
-    return file.ledgerSummary.latestOperation === 'delete';
-  }
-  if (file.ledgerSummary?.afterState?.exists !== undefined) {
-    return !file.ledgerSummary.afterState.exists;
-  }
-  const latestLedger = file.snippets
-    .filter((snippet) => snippet.ledger && !snippet.isError)
-    .at(-1)?.ledger;
-  return (
-    latestLedger?.operation === 'delete' ||
-    latestLedger?.afterState?.exists === false ||
-    file.ledgerSummary?.deletedInTask === true
-  );
-}
+
+
 
 export async function assertAuthoritativeForwardReviewMutation(
   env: Pick<ReviewWriterContext, 'assertActive' | 'content'>,
@@ -400,7 +364,11 @@ export async function assertAuthoritativeForwardReviewMutation(
     requireReviewedFile: true,
     rejectHardlinks: true,
   });
-  const authoritativeFile = getAuthoritativeReviewedFile(authorization, snapshot.filePath);
+  const authoritativeFile = getAuthoritativeReviewedActionFile(
+    authorization,
+    snapshot.filePath,
+    action
+  );
   const restoreMode =
     snapshot.restoreMode ?? (snapshot.renameExpectation ? 'restore-rejected-rename' : 'content');
   if (request.kind === 'rename') {
@@ -427,9 +395,12 @@ export async function assertAuthoritativeForwardReviewMutation(
     env,
     scope,
     authorization,
-    filePath
+    filePath,
+    authoritativeFile
   );
-  const previous = findLatestRestorableDiskSnapshot(current, filePath);
+  const previous = current
+    ? findLatestRestorableReviewSnapshot(current.reviewActionHistory, filePath, authoritativeFile, authorization, isAuthoritativelyBoundReviewSnapshot)
+    : null;
   const observedBeforeContent = await readAuthorizedReviewDiskContent(filePath);
   let expectedAfterContent: string | null;
   if (isAuthoritativeReviewDeletion(authoritativeFile)) {
@@ -508,3 +479,5 @@ export async function assertAuthoritativeForwardReviewMutation(
     ],
   };
 }
+
+export { isAuthoritativeReviewDeletion } from './authoritativeReviewFiles.js';

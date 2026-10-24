@@ -143,6 +143,7 @@ export async function runDeterministicCreateRunFlow<
     resolvedProviderId,
     providerArgsForLaunch,
     inheritedProviderArgsForLaunch,
+    memberArgsByMember,
     effectiveMemberSpecs,
     allEffectiveMemberSpecs,
     launchIdentity,
@@ -152,6 +153,7 @@ export async function runDeterministicCreateRunFlow<
     largeTeamWarning,
     anthropicApiKeyHelperLease,
   } = createSetup;
+  shellEnv.CLAUDE_CODE_BOOTSTRAP_RUN_ID = runId;
   const run = ports.createProvisioningRun({
     runId,
     teamName: request.teamName,
@@ -196,6 +198,7 @@ export async function runDeterministicCreateRunFlow<
       runId,
       effectiveMemberSpecs,
       allEffectiveMemberSpecs,
+      memberArgsByMember,
       launchIdentity,
       provisioningEnv,
       claudePath,

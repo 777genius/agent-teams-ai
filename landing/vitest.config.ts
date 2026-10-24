@@ -10,8 +10,10 @@ export default defineConfig({
     environment: "happy-dom",
     include: ["stores/**/*.test.ts", "utils/**/*.test.ts"],
   },
-  define: {
-    "import.meta.client": "true",
+  esbuild: {
+    define: {
+      "import.meta.client": "true",
+    },
   },
   resolve: {
     alias: {

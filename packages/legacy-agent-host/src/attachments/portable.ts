@@ -1,3 +1,9 @@
+export {
+  getMessageAttachmentRoute,
+  isStrictUtf8,
+  decorateFileReferences,
+} from './messageFileReferences.js';
+export type { MessageAttachmentTarget } from './messageFileReferences.js';
 /** Browser-safe attachment normalization shared by the existing UI and selected Team owner. */
 export interface NormalizedAttachmentPayload {
   id: string;
@@ -18,17 +24,6 @@ export function isSafeAttachmentStorageId(value: string): boolean {
 export function assertSafeAttachmentStorageId(label: string, value: string): void {
   if (!isSafeAttachmentStorageId(value)) throw new Error(`Invalid ${label}`);
 }
-const ALLOWED_ATTACHMENT_TYPES = new Set([
-  'image/png',
-  'image/jpeg',
-  'image/gif',
-  'image/webp',
-  'video/mp4',
-  'video/webm',
-  'video/quicktime',
-  'application/pdf',
-  'text/plain',
-]);
 export const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
 export const MAX_TOTAL_ATTACHMENT_SIZE = 20 * 1024 * 1024;
 export const MAX_TASK_ATTACHMENT_SIZE = MAX_TOTAL_ATTACHMENT_SIZE;
@@ -52,6 +47,7 @@ export function validateAgentAttachmentIpcPayload(
 
   let totalSize = 0;
   let videoCount = 0;
+  const ids = new Set<string>();
   const result: NormalizedAttachmentPayload[] = [];
   for (const attachment of attachments) {
     if (!attachment || typeof attachment !== 'object') {
@@ -63,11 +59,15 @@ export function validateAgentAttachmentIpcPayload(
       !isSafeAttachmentStorageId(candidate.id) ||
       typeof candidate.filename !== 'string' ||
       !candidate.filename.trim() ||
-      candidate.filename.length > 1024 ||
+      candidate.filename.length > 4096 ||
       /[\0\r\n]/.test(candidate.filename)
     ) {
       return { valid: false, error: 'Attachment must have id and filename' };
     }
+    if (ids.has(candidate.id)) {
+      return { valid: false, error: 'Invalid or duplicate attachment ID' };
+    }
+    ids.add(candidate.id);
     if (typeof candidate.data !== 'string' || typeof candidate.mimeType !== 'string') {
       return { valid: false, error: 'Attachment must have data and mimeType' };
     }
@@ -80,9 +80,8 @@ export function validateAgentAttachmentIpcPayload(
     }
     if (
       !candidate.mimeType ||
-      candidate.mimeType.length > 256 ||
-      /[\0\r\n]/.test(candidate.mimeType) ||
-      (purpose === 'message' && !ALLOWED_ATTACHMENT_TYPES.has(candidate.mimeType))
+      candidate.mimeType.length > 255 ||
+      /[\x00-\x1f\x7f-\x9f]/.test(candidate.mimeType)
     ) {
       return { valid: false, error: `Unsupported attachment type: ${candidate.mimeType}` };
     }
@@ -101,21 +100,28 @@ export function validateAgentAttachmentIpcPayload(
       };
     }
 
-    const paddingBytes = candidate.data.endsWith('==') ? 2 : candidate.data.endsWith('=') ? 1 : 0;
-    const estimatedBinarySize = Math.max(0, Math.ceil(candidate.data.length * 0.75) - paddingBytes);
-    if (estimatedBinarySize > perAttachmentLimit * 1.1) {
-      return { valid: false, error: `Attachment "${candidate.filename}" data exceeds size limit` };
+    if (candidate.data.length > Math.ceil(perAttachmentLimit / 3) * 4) {
+      return { valid: false, error: 'Attachment encoded data exceeds size limit' };
+    }
+    let binary: string;
+    try {
+      binary = atob(candidate.data);
+      if (btoa(binary) !== candidate.data || binary.length !== candidate.size) {
+        return { valid: false, error: 'Attachment data must be canonical base64 with exact size' };
+      }
+    } catch {
+      return { valid: false, error: 'Attachment data must be canonical base64 with exact size' };
     }
     if (isVideo && ++videoCount > MAX_VIDEO_ATTACHMENTS) {
       return { valid: false, error: `Maximum ${MAX_VIDEO_ATTACHMENTS} video attachment allowed` };
     }
 
-    totalSize += Math.max(candidate.size, estimatedBinarySize);
+    totalSize += binary.length;
     result.push({
       id: candidate.id,
-      filename: candidate.filename.trim(),
+      filename: candidate.filename,
       data: candidate.data,
-      mimeType: candidate.mimeType.trim(),
+      mimeType: candidate.mimeType,
       size: candidate.size,
     });
   }

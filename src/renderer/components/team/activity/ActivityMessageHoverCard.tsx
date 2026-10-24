@@ -11,6 +11,7 @@ import {
 } from 'react';
 
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@renderer/components/ui/hover-card';
+import { useOverlaySnapshot } from '@renderer/hooks/useOverlayOccupancy';
 
 import { ActivityMessageHoverToolbar } from './ActivityMessageHoverToolbar';
 
@@ -40,7 +41,8 @@ export const ActivityMessageHoverCard = memo(function ActivityMessageHoverCard({
   onCreateTask,
 }: ActivityMessageHoverCardProps): React.JSX.Element {
   const isWide = appearance === 'wide-chat';
-  const [wideOpen, setWideOpen] = useState(false);
+  const [hoverOpen, setHoverOpen] = useState(false);
+  const modalOpen = useOverlaySnapshot().count > 0;
   const triggerRef = useRef<HTMLElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const closeAfterFocusLeaves = useCallback((): void => {
@@ -52,7 +54,7 @@ export const ActivityMessageHoverCard = memo(function ActivityMessageHoverCard({
       ) {
         return;
       }
-      setWideOpen(false);
+      setHoverOpen(false);
     }, 0);
   }, []);
   const trigger = isWide
@@ -62,7 +64,7 @@ export const ActivityMessageHoverCard = memo(function ActivityMessageHoverCard({
         },
         onFocusCapture: (event: FocusEvent<HTMLElement>) => {
           triggerRef.current = event.currentTarget;
-          setWideOpen(true);
+          if (!modalOpen && event.currentTarget.contains(event.target)) setHoverOpen(true);
         },
         onBlurCapture: closeAfterFocusLeaves,
       })
@@ -86,11 +88,13 @@ export const ActivityMessageHoverCard = memo(function ActivityMessageHoverCard({
     <HoverCard
       openDelay={120}
       closeDelay={220}
-      open={isWide ? wideOpen : undefined}
-      onOpenChange={isWide ? setWideOpen : undefined}
+      open={!modalOpen && hoverOpen}
+      onOpenChange={(nextOpen) => {
+        if (!modalOpen) setHoverOpen(nextOpen);
+      }}
     >
       <HoverCardTrigger asChild>{trigger}</HoverCardTrigger>
-      {showToolbar ? (
+      {showToolbar && !modalOpen ? (
         <HoverCardContent
           ref={contentRef}
           portalContainer={portalContainer}
@@ -99,7 +103,7 @@ export const ActivityMessageHoverCard = memo(function ActivityMessageHoverCard({
           alignOffset={0}
           sideOffset={isWide ? -2 : 0}
           avoidCollisions={isWide}
-          collisionBoundary={isWide ? scrollContainer ?? undefined : undefined}
+          collisionBoundary={isWide ? (scrollContainer ?? undefined) : undefined}
           collisionPadding={isWide ? collisionPadding : undefined}
           hideWhenDetached={false}
           data-chat-toolbar-appearance={isWide ? 'wide-chat' : undefined}
@@ -111,7 +115,7 @@ export const ActivityMessageHoverCard = memo(function ActivityMessageHoverCard({
           }
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
-          onFocusCapture={() => setWideOpen(true)}
+          onFocusCapture={() => setHoverOpen(true)}
           onBlurCapture={closeAfterFocusLeaves}
         >
           <ActivityMessageHoverToolbar

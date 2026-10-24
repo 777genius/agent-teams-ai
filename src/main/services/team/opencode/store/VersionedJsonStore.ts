@@ -155,6 +155,21 @@ export class VersionedJsonStore<TData> {
       };
     }
 
+    // Unsupported schema is preserved before validating fields this reader cannot interpret.
+    if (
+      isRecord(parsed) &&
+      typeof parsed.schemaVersion === 'number' &&
+      Number.isInteger(parsed.schemaVersion) &&
+      parsed.schemaVersion > this.schemaVersion
+    ) {
+      return {
+        ok: false,
+        reason: 'future_schema',
+        message: `Future schema ${parsed.schemaVersion} in ${this.filePath}; supported ${this.schemaVersion}`,
+        quarantinePath: null,
+      };
+    }
+
     const envelopeResult = this.normalizeEnvelope(parsed);
     if (!envelopeResult.ok) {
       const quarantinePath = await this.quarantine(raw, envelopeResult.reason);
@@ -162,16 +177,6 @@ export class VersionedJsonStore<TData> {
         ok: false,
         reason: envelopeResult.reason,
         message: envelopeResult.message,
-        quarantinePath,
-      };
-    }
-
-    if (envelopeResult.envelope.schemaVersion > this.schemaVersion) {
-      const quarantinePath = await this.quarantine(raw, 'future_schema');
-      return {
-        ok: false,
-        reason: 'future_schema',
-        message: `Future schema ${envelopeResult.envelope.schemaVersion} in ${this.filePath}; supported ${this.schemaVersion}`,
         quarantinePath,
       };
     }

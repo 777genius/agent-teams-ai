@@ -18,10 +18,7 @@ import type {
   SnapshotHeader,
   StoppedTeamSource,
 } from '@agent-teams/legacy-agent-host/stopped-team-import';
-import type { TeamBackupService } from '@main/services/team/TeamBackupService';
-import type { TeamDataService } from '@main/services/team/TeamDataService';
 import type { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
-import type { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
 
 export type LegacyStoppedImportReason =
   | 'source-changed'
@@ -44,24 +41,33 @@ export interface CapturedLegacyStoppedSource {
   roots: StoppedTeamSource['roots'];
   isCurrent(): boolean;
 }
+interface StoppedImportPublicationFacts {
+  known: boolean;
+  pending: number;
+  revision: string;
+}
+/** Read capabilities required by this source; actual services remain composition-owned. */
 export interface LegacyStoppedSourceOwners {
-  backup: Pick<TeamBackupService, 'withTeamIdentityFence'>;
-  provisioning: Pick<
-    TeamProvisioningService,
-    | 'withStoppedTeamImportFence'
-    | 'readStoppedTeamImportRuntimeFacts'
-    | 'readStoppedTeamImportLifecycleFacts'
-    | 'readStoppedTeamImportStopFacts'
-    | 'readStoppedTeamImportDeliveryFacts'
-  >;
-  data: Pick<
-    TeamDataService,
-    | 'readStoppedTeamImportBackgroundFacts'
-    | 'readStoppedTeamImportCommandFacts'
-    | 'readStoppedTeamImportNotificationFacts'
-  >;
+  backup: {
+    withTeamIdentityFence<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
+  };
+  provisioning: {
+    withStoppedTeamImportFence<T>(teamName: string, read: () => Promise<T>): Promise<T>;
+    readStoppedTeamImportRuntimeFacts(teamName: string): Readonly<Record<string, number>>;
+    readStoppedTeamImportLifecycleFacts(teamName: string): Readonly<Record<string, number>>;
+    readStoppedTeamImportStopFacts(teamName: string): Readonly<Record<string, number>>;
+    readStoppedTeamImportDeliveryFacts(teamName: string): Readonly<Record<string, number>>;
+  };
+  data: {
+    readStoppedTeamImportBackgroundFacts(teamName: string): Readonly<Record<string, number>>;
+    readStoppedTeamImportCommandFacts(teamName: string): Promise<StoppedImportPublicationFacts>;
+    readStoppedTeamImportNotificationFacts(
+      teamName: string
+    ): Promise<StoppedImportPublicationFacts>;
+  };
   launch: Pick<TeamLaunchStateStore, 'readResult'>;
 }
+
 const settings = [
   'cwd',
   'displayName',

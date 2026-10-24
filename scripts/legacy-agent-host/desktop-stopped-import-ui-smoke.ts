@@ -415,7 +415,7 @@ export async function runDesktopStoppedImportUiSmoke(
     const paragraph = `[role="dialog"] p:has(a[href^="task://${seed.externalTaskId}?"])`;
     const link = `${paragraph} a[href^="task://${id}?"]`;
     const renderedOwner = await ui.waitRead(
-      `(() => {const a=document.querySelector(${JSON.stringify(link)});if(!a)return null;return decodeURIComponent(new URL(a.href).searchParams.get('team')??'');})()`,
+      `(() => {const a=document.querySelector(${JSON.stringify(link)});if(!a)return null;return new URL(a.href).searchParams.get('team')??'';})()`,
       'rendered TaskRef owner'
     );
     assert.equal(renderedOwner, expectedOwner);
@@ -437,7 +437,7 @@ export async function runDesktopStoppedImportUiSmoke(
     } else {
       const owner = record(
         await ui.waitRead(
-          `(() => {const node=document.querySelector('[role="dialog"]');if(!node||!node.innerText.includes('Task not found'))return null;const key=Object.keys(node).find(key=>key.startsWith('__reactFiber$'));let fiber=key?node[key]:null;for(let depth=0;fiber&&depth<128;depth++,fiber=fiber.return){const p=fiber.memoizedProps;if(p?.open===true&&p.teamName===${JSON.stringify(expectedOwner)}&&'task' in p&&'taskMap' in p&&!p.loading)return {teamName:p.teamName,taskId:p.task?.id??null};}return null;})()`,
+          `(() => {const node=document.querySelector('[role="dialog"]');if(!node||!node.getClientRects().length||!node.querySelector('[role="alert"],[role="status"]'))return null;const key=Object.keys(node).find(key=>key.startsWith('__reactFiber$'));let fiber=key?node[key]:null;let phase=null;for(let depth=0;fiber&&depth<128;depth++,fiber=fiber.return){const p=fiber.memoizedProps;if(p?.open===true&&(p.phase==='unavailable'||p.phase==='missing'))phase=p.phase;if(p?.open===true&&p.teamName===${JSON.stringify(expectedOwner)}&&p.sessionController?.identity?.taskId===${JSON.stringify(id)}&&p.sessionController.identity.teamName===${JSON.stringify(expectedOwner)}&&'task' in p&&'taskMap' in p&&!p.loading&&p.task===null&&(phase==='unavailable'||phase==='missing'))return {teamName:p.teamName,taskId:null};}return null;})()`,
           'original captured source owner remains unavailable without local fallback'
         )
       );

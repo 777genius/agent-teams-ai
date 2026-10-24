@@ -29,7 +29,413 @@ Before publishing:
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
-## Draft: v2.16.0 (2026-09-27)
+## v2.17.10 (Prepared draft)
+
+Source base: `main` at `f934272fd7ef6ab27bbfc83ff47d7d8da6cea542`.
+The unpublished `v2.17.7`, `v2.17.8` and `v2.17.9` tags remain unchanged. All five platforms use freshly built `2.17.10` apps.
+Agent Teams runtime `v0.0.106` includes the historical OpenCode session compatibility fix. Published archive hashes, versions and source commit were verified; the actual CLI reports `2.777.777`. Verify the final reviewed source and native installer evidence before publication.
+
+Release body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.17.10 -->
+
+Agent Teams 2.17.10 brings the current desktop release to macOS, Windows and Linux, including new signed Mac builds.
+
+### What's New
+
+- Preview PDF, Word, Excel and PowerPoint documents directly in the project editor.
+- Restore open project editor tabs when returning to a project.
+- Start from ready-made team templates and save drafts before choosing a provider for launch.
+- Copy a team prompt with its roster and connect external agents to the desktop app.
+- On macOS, set monthly token and estimated API cost budgets for teams and projects.
+- On macOS, explore model breakdowns and activity calendars in the Usage dashboard.
+
+Cost figures are estimates, not provider invoices.
+
+### Fixes
+
+- Fix OpenCode launch failures after upgrading with existing session history.
+
+### Downloads
+
+| Platform            | Version | Download                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Windows x64         | 2.17.10 | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/Agent.Teams.AI.Setup.2.17.10.exe)                                                                                                                                                                                                                                                                                                                                                    |
+| Windows ARM64       | 2.17.10 | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/Agent.Teams.AI.Setup.2.17.10-arm64.exe)                                                                                                                                                                                                                                                                                                                                              |
+| Linux x64           | 2.17.10 | [AppImage](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/Agent.Teams.AI-2.17.10.AppImage), [DEB](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/agent-teams-ai_2.17.10_amd64.deb), [RPM](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/agent-teams-ai-2.17.10.x86_64.rpm), [Arch Linux](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/agent-teams-ai-2.17.10.pacman) |
+| macOS Apple Silicon | 2.17.10 | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/Agent.Teams.AI-2.17.10-arm64.dmg)                                                                                                                                                                                                                                                                                                                                                          |
+| macOS Intel         | 2.17.10 | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.10/Agent.Teams.AI-2.17.10-x64.dmg)                                                                                                                                                                                                                                                                                                                                                            |
+
+### macOS installation
+
+macOS 2.17.10 requires macOS 13 or later. macOS 12 users can keep using the existing signed 2.17.1 builds.
+
+If you have signed macOS 2.17.1 installed, quit the app and install the appropriate 2.17.10 DMG over your existing app once. Your local settings, teams and projects stay in place. Automatic updates cannot perform this one-time migration.
+
+Windows installers may trigger SmartScreen - click "More info" then "Run anyway".
+
+Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.
+
+<!-- RELEASE_BODY_END v2.17.10 -->
+
+## v2.17.9 (Unpublished archive)
+
+Source base: `main` at `3781d144dbf013a2f6d0ef73ea64e472548286c7`.
+The unpublished failed `v2.17.7` and `v2.17.8` tags remain unchanged. All five platforms use freshly built `2.17.9` apps. Publish `2.17.6` before preparing this release's GitHub draft.
+Publication is blocked by an existing OpenCode session compatibility regression. Preserve this tag and its build assets; use the corrected successor release.
+
+Release body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.17.9 -->
+
+Agent Teams 2.17.9 brings the current desktop release to macOS, Windows and Linux, including new signed Mac builds.
+
+### What's New
+
+- Preview PDF, Word, Excel and PowerPoint documents directly in the project editor.
+- Restore open project editor tabs when returning to a project.
+- Start from ready-made team templates and save drafts before choosing a provider for launch.
+- Copy a team prompt with its roster and connect external agents to the desktop app.
+- On macOS, set monthly token and estimated API cost budgets for teams and projects.
+- On macOS, explore model breakdowns and activity calendars in the Usage dashboard.
+
+Cost figures are estimates, not provider invoices.
+
+### Downloads
+
+| Platform | Version | Download |
+| --- | --- | --- |
+| Windows x64 | 2.17.9 | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI.Setup.2.17.9.exe) |
+| Windows ARM64 | 2.17.9 | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI.Setup.2.17.9-arm64.exe) |
+| Linux x64 | 2.17.9 | [AppImage](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI-2.17.9.AppImage), [DEB](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/agent-teams-ai_2.17.9_amd64.deb), [RPM](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/agent-teams-ai-2.17.9.x86_64.rpm), [Arch Linux](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/agent-teams-ai-2.17.9.pacman) |
+| macOS Apple Silicon | 2.17.9 | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI-2.17.9-arm64.dmg) |
+| macOS Intel | 2.17.9 | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI-2.17.9-x64.dmg) |
+
+### macOS installation
+
+macOS 2.17.9 requires macOS 13 or later. macOS 12 users can keep using the existing signed 2.17.1 builds.
+
+If you have signed macOS 2.17.1 installed, quit the app and install the appropriate 2.17.9 DMG over your existing app once. Your local settings, teams and projects stay in place. Automatic updates cannot perform this one-time migration.
+
+Windows installers may trigger SmartScreen - click "More info" then "Run anyway".
+
+Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.
+
+<!-- RELEASE_BODY_END v2.17.9 -->
+
+## v2.17.5 (Draft)
+
+Target branch: `main`.
+
+Runtime gate for the new Windows/Linux builds:
+
+- Agent Teams runtime: `v0.0.105`, including the OpenCode provider catalog fix.
+- Terminal Platform runtime: `v0.3.3`.
+- Published runtime archives and manifest must be verified before app build dispatch.
+
+Platform versions:
+
+- Windows x64/ARM64 and Linux x64: `2.17.5`.
+- macOS Apple Silicon/Intel: existing signed `2.17.1` builds, requiring macOS 12 or later.
+
+macOS source: `v2.17.1`, application commit `395572f9ff2a261cb28224754883a39d2c3c8827`.
+
+Release body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.17.5 -->
+
+Windows and Linux 2.17.5 introduce monthly usage budgets for teams and projects. macOS downloads remain the existing signed 2.17.1 builds.
+
+### What's New
+
+- Set monthly token and estimated API cost budgets for all teams, individual teams, or projects.
+- Choose custom budget thresholds for notifications.
+- Explore model breakdowns and activity calendars in the updated Usage dashboard.
+
+Cost figures are estimates, not provider invoices.
+
+### Fixes
+
+- Keep task Changes available after app restarts, including renamed files and interrupted recovery.
+- Retry failed update downloads or use manual download guidance when an update cannot finish.
+- Stop provider cards getting stuck loading and ignore stale Claude CLI settings that blocked sign-in.
+- Find Zen and OpenRouter models and recover selection after temporary OpenCode failures, keeping launches blocked during continuing failures.
+- Install and update the Arch Linux package with working Chromium sandbox permissions and no obsolete http-parser dependency.
+- Include security updates for bundled dependencies.
+
+### Downloads
+
+| Platform            | Version | Download                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Windows x64         | 2.17.5  | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.5/Agent.Teams.AI.Setup.2.17.5.exe)                                                                                                                                                                                                                                                                                                                                              |
+| Windows ARM64       | 2.17.5  | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.5/Agent.Teams.AI.Setup.2.17.5-arm64.exe)                                                                                                                                                                                                                                                                                                                                        |
+| Linux x64           | 2.17.5  | [AppImage](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.5/Agent.Teams.AI-2.17.5.AppImage), [DEB](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.5/agent-teams-ai_2.17.5_amd64.deb), [RPM](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.5/agent-teams-ai-2.17.5.x86_64.rpm), [Arch Linux](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.5/agent-teams-ai-2.17.5.pacman) |
+| macOS Apple Silicon | 2.17.1  | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.1/Agent.Teams.AI-2.17.1-arm64.dmg)                                                                                                                                                                                                                                                                                                                                                    |
+| macOS Intel         | 2.17.1  | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.1/Agent.Teams.AI-2.17.1-x64.dmg)                                                                                                                                                                                                                                                                                                                                                      |
+
+macOS downloads require macOS 12 or later. The What's New and Fixes sections apply to Windows and Linux 2.17.5.
+
+Windows installers may trigger SmartScreen - click "More info" then "Run anyway".
+
+Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.
+
+<!-- RELEASE_BODY_END v2.17.5 -->
+
+## v2.17.4 (Superseded draft)
+
+Not published. Native Arch OTA revealed missing upgrade permissions for the Chromium sandbox helper. Use the 2.17.5 candidate.
+
+### Archived v2.17.4 release body (never published)
+
+Target branch: `main`.
+
+Runtime gate for the new Windows/Linux builds:
+
+- Agent Teams runtime: `v0.0.105`, including the OpenCode provider catalog fix.
+- Terminal Platform runtime: `v0.3.3`.
+- Published runtime archives and manifest must be verified before app build dispatch.
+
+Platform versions:
+
+- Windows x64/ARM64 and Linux x64: `2.17.4`.
+- macOS Apple Silicon/Intel: existing signed `2.17.1` builds, requiring macOS 12 or later.
+
+macOS source: `v2.17.1`, application commit `395572f9ff2a261cb28224754883a39d2c3c8827`.
+
+Release body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.17.4 -->
+
+Windows and Linux 2.17.4 introduce monthly usage budgets for teams and projects. macOS downloads remain the existing signed 2.17.1 builds.
+
+### What's New
+
+- Set monthly token and estimated API cost budgets for all teams, individual teams, or projects.
+- Choose custom budget thresholds for notifications.
+- Explore model breakdowns and activity calendars in the updated Usage dashboard.
+
+Cost figures are estimates, not provider invoices.
+
+### Fixes
+
+- Keep task Changes available after app restarts, including renamed files and interrupted recovery.
+- Retry failed update downloads or use manual download guidance when an update cannot finish.
+- Stop provider cards getting stuck loading and ignore stale Claude CLI settings that blocked sign-in.
+- Find Zen and OpenRouter models in the OpenCode provider catalog.
+- Restore OpenCode model selection after temporary runtime failures while keeping launch blocked if the failure continues.
+- Install the Arch Linux package without requiring the obsolete http-parser dependency.
+- Include security updates for bundled dependencies.
+
+### Downloads
+
+| Platform            | Version | Download                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Windows x64         | 2.17.4  | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.4/Agent.Teams.AI.Setup.2.17.4.exe)                                                                                                                                                                                                                                                                                                                                              |
+| Windows ARM64       | 2.17.4  | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.4/Agent.Teams.AI.Setup.2.17.4-arm64.exe)                                                                                                                                                                                                                                                                                                                                        |
+| Linux x64           | 2.17.4  | [AppImage](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.4/Agent.Teams.AI-2.17.4.AppImage), [DEB](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.4/agent-teams-ai_2.17.4_amd64.deb), [RPM](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.4/agent-teams-ai-2.17.4.x86_64.rpm), [Arch Linux](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.4/agent-teams-ai-2.17.4.pacman) |
+| macOS Apple Silicon | 2.17.1  | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.1/Agent.Teams.AI-2.17.1-arm64.dmg)                                                                                                                                                                                                                                                                                                                                                    |
+| macOS Intel         | 2.17.1  | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.1/Agent.Teams.AI-2.17.1-x64.dmg)                                                                                                                                                                                                                                                                                                                                                      |
+
+macOS downloads require macOS 12 or later. The What's New and Fixes sections apply to Windows and Linux 2.17.4.
+
+Windows installers may trigger SmartScreen - click "More info" then "Run anyway".
+
+Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.
+
+<!-- RELEASE_BODY_END v2.17.4 -->
+
+## v2.17.3 (Draft)
+
+Application target (frozen): `acda6e3a0990aec3cd37b9bd696f36e78aaa4322`.
+
+Platform versions:
+
+- Windows x64/ARM64 and Linux x64: `2.17.3`.
+- macOS Apple Silicon/Intel: existing signed `2.17.1` builds, requiring macOS 12 or later.
+
+macOS source: `v2.17.1`, application commit `395572f9ff2a261cb28224754883a39d2c3c8827`.
+
+Release body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.17.3 -->
+
+Windows and Linux 2.17.3 introduce monthly usage budgets for teams and projects. macOS downloads remain the existing signed 2.17.1 builds.
+
+### What's New
+
+- Set monthly token and estimated API cost budgets for all teams, individual teams, or projects.
+- Choose custom budget thresholds for notifications.
+- Explore model breakdowns and activity calendars in the updated Usage dashboard.
+
+Cost figures are estimates, not provider invoices.
+
+### Fixes
+
+- Keep task Changes available after app restarts, including renamed files and interrupted recovery.
+- Retry failed update downloads or use manual download guidance when an update cannot finish.
+- Stop provider cards getting stuck loading and ignore stale Claude CLI settings that blocked sign-in.
+- Keep Linux maximize and restore controls aligned with the actual window state.
+- Install the Arch Linux package without requiring the obsolete http-parser dependency.
+- Include security updates for bundled dependencies.
+
+### Downloads
+
+| Platform            | Version | Download                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Windows x64         | 2.17.3  | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/Agent.Teams.AI.Setup.2.17.3.exe)                                                                                                                                                                                                                                                                                                                                              |
+| Windows ARM64       | 2.17.3  | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/Agent.Teams.AI.Setup.2.17.3-arm64.exe)                                                                                                                                                                                                                                                                                                                                        |
+| Linux x64           | 2.17.3  | [AppImage](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/Agent.Teams.AI-2.17.3.AppImage), [DEB](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/agent-teams-ai_2.17.3_amd64.deb), [RPM](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/agent-teams-ai-2.17.3.x86_64.rpm), [Arch Linux](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.3/agent-teams-ai-2.17.3.pacman) |
+| macOS Apple Silicon | 2.17.1  | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.1/Agent.Teams.AI-2.17.1-arm64.dmg)                                                                                                                                                                                                                                                                                                                                                    |
+| macOS Intel         | 2.17.1  | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.1/Agent.Teams.AI-2.17.1-x64.dmg)                                                                                                                                                                                                                                                                                                                                                      |
+
+macOS downloads require macOS 12 or later. The What's New and Fixes sections apply to Windows and Linux 2.17.3.
+
+Windows installers may trigger SmartScreen - click "More info" then "Run anyway".
+
+Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.
+
+<!-- RELEASE_BODY_END v2.17.3 -->
+
+## v2.17.2 (2026-10-01)
+
+Target branch: `main`.
+
+Runtime gate:
+
+- Agent Teams runtime: `v0.0.104`.
+- Terminal Platform runtime: `v0.3.3`.
+
+Release body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.17.2 -->
+
+Claude models can start without outdated client-version errors, and provider checks finish instead of leaving the dashboard loading indefinitely.
+
+### Fixes
+
+- Ignore stale Claude CLI settings that broke sign-in and team creation.
+- Keep task Changes available after relaunch, including Codex edits, renamed files, and interrupted recovery.
+- Stop provider cards from returning to loading after checks finish.
+- Keep maximize controls in sync with the actual window state.
+- Include security updates for bundled dependencies.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.2/Agent.Teams.AI-2.17.2-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.2/Agent.Teams.AI-2.17.2-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+  <br />
+  <sub>Requires macOS 13 or later.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.2/Agent.Teams.AI.Setup.2.17.2.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.2/Agent.Teams.AI.Setup.2.17.2-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.2/Agent.Teams.AI-2.17.2.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.2/agent-teams-ai_2.17.2_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.2/agent-teams-ai-2.17.2.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.2/agent-teams-ai-2.17.2.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+<!-- RELEASE_BODY_END v2.17.2 -->
+
+## v2.17.1 (2026-09-28)
+
+Target branch: `main`.
+
+Runtime gate:
+
+- Agent Teams runtime: `v0.0.103`.
+- Terminal Platform runtime: `v0.3.3`.
+
+Release body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.17.1 -->
+
+OpenCode users can keep choosing models when optional Cursor tools are unavailable.
+
+### Improvements
+
+- Find Cursor sixth among dashboard provider options, after GitHub Copilot, SuperGrok, Z.AI, Kimi, and Kiro.
+- See new task times relative in the sidebar, with exact dates on hover.
+
+### Bug Fixes
+
+- Open Provider Settings and select non-Cursor models without installing Cursor CLI.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.1/Agent.Teams.AI-2.17.1-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.1/Agent.Teams.AI-2.17.1-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.1/Agent.Teams.AI.Setup.2.17.1.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.1/Agent.Teams.AI.Setup.2.17.1-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.1/Agent.Teams.AI-2.17.1.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.1/agent-teams-ai_2.17.1_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.1/agent-teams-ai-2.17.1.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.1/agent-teams-ai-2.17.1.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+<!-- RELEASE_BODY_END v2.17.1 -->
+
+## Published: v2.17.0 (2026-09-28)
 
 Target branch: `main`.
 
@@ -40,44 +446,46 @@ Runtime gate:
 
 Release body source for GitHub release:
 
-<!-- RELEASE_BODY_START v2.16.0 -->
-OpenCode keeps your model choices clear and consistent. Create Team handles missing folders, and Messages preserves drafts while you switch chats or send.
+<!-- RELEASE_BODY_START v2.17.0 -->
+
+OpenCode setup errors now explain what to do next. Messages keeps drafts when switching chats and sender avatars visible while scrolling.
 
 ### What's New
 
-- See which OpenCode Default model will launch before you create a team.
-- Keep an unavailable OpenCode model selected instead of silently switching to Default.
-- Continue Messages drafts, see direct-chat recipients, and open full-screen teammate chats.
-- Create a missing custom project folder when you create a team.
+- See which model OpenCode will use when Default is selected.
+- Keep unavailable OpenCode models selected and see why they cannot launch.
+- See who receives your messages and open teammate chats full screen.
+- Create missing project folders from the Create Team dialog.
+- Update OpenCode from the dashboard, with installed and available versions shown together.
 
 ### Fixes
 
-- Explain OpenCode authentication and billing needs without changing the selected model.
-- Load OpenCode models when local provider checks are slow or interrupted.
-- Keep OpenCode teammates on their shared host after relaunch and unblock stalled lanes.
-- Preserve Messages drafts and pending sends across chat switches and storage failures.
-- Detect missing project folders before launch and keep status text readable in light theme.
-- Hide passwords and API keys from launch diagnostics.
+- Show when an OpenCode model needs sign-in, a paid plan, or a newer OpenCode version.
+- Load OpenCode models even when local model checks are slow or interrupted.
+- Keep OpenCode teammates connected after relaunch and recover stalled work.
+- Preserve chat drafts and pending sends; sending no longer shifts the message input.
+- Keep one sender avatar visible while scrolling consecutive messages.
+- Keep passwords and API keys out of launch diagnostics.
 
 ### Downloads
 
 <table>
 <tr>
 <td align="center">
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.16.0/Agent.Teams.AI-2.16.0-arm64.dmg">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.0/Agent.Teams.AI-2.17.0-arm64.dmg">
     <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
   </a>
   <br />
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.16.0/Agent.Teams.AI-2.16.0-x64.dmg">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.0/Agent.Teams.AI-2.17.0-x64.dmg">
     <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
   </a>
 </td>
 <td align="center">
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.16.0/Agent.Teams.AI.Setup.2.16.0.exe">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.0/Agent.Teams.AI.Setup.2.17.0.exe">
     <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
   </a>
   <br />
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.16.0/Agent.Teams.AI.Setup.2.16.0-arm64.exe">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.0/Agent.Teams.AI.Setup.2.17.0-arm64.exe">
     <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
   </a>
   <br />
@@ -86,23 +494,23 @@ OpenCode keeps your model choices clear and consistent. Create Team handles miss
   <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
 </td>
 <td align="center">
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.16.0/Agent.Teams.AI-2.16.0.AppImage">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.0/Agent.Teams.AI-2.17.0.AppImage">
     <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
   </a>
   <br />
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.16.0/agent-teams-ai_2.16.0_amd64.deb">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.0/agent-teams-ai_2.17.0_amd64.deb">
     <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu" alt=".deb" />
   </a>&nbsp;
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.16.0/agent-teams-ai-2.16.0.x86_64.rpm">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.0/agent-teams-ai-2.17.0.x86_64.rpm">
     <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat" alt=".rpm" />
   </a>&nbsp;
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.16.0/agent-teams-ai-2.16.0.pacman">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.17.0/agent-teams-ai-2.17.0.pacman">
     <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux" alt=".pacman" />
   </a>
 </td>
 </tr>
 </table>
-<!-- RELEASE_BODY_END v2.16.0 -->
+<!-- RELEASE_BODY_END v2.17.0 -->
 
 ## Draft: v2.15.0 (2026-09-19)
 
@@ -116,6 +524,7 @@ Runtime gate:
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.15.0 -->
+
 Recover stalled teammate work from the team page, chat 1:1 in Messages, use extra local catalog models, and keep Cursor CLI detection honest.
 
 ### What's New
@@ -195,6 +604,7 @@ Runtime gate:
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.14.4 -->
+
 Keeps local OpenCode models such as Ollama visible after a catalog refresh, and lets you test them from Provider Settings.
 
 ### Fixes
@@ -263,6 +673,7 @@ Runtime gate:
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.14.3 -->
+
 Keeps local OpenCode models such as Ollama visible after a catalog refresh, and shows them as ready instead of missing.
 
 ### Fixes
@@ -330,6 +741,7 @@ Runtime gate:
 Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.14.2 -->
+
 Fixes OpenCode startup, stop, and catalog errors, and keeps teammate models after relaunch.
 
 ### What's New
@@ -407,6 +819,7 @@ Owner approved publication of v2.14.1 after the fresh draft passes the required 
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.14.1 -->
+
 Fixes startup and recovery for existing Cursor, GLM (Z.AI), and SuperGrok integrations, with safer team stopping and individual teammate retries.
 
 ### Improvements
@@ -1425,17 +1838,18 @@ Format: `MAJOR.MINOR.PATCH`
 ### Critical stable-release invariant
 
 > [!CAUTION]
-> A draft becoming public is not enough to complete a stable release. The only
-> supported publication path is a successful `release.yml` run for the exact
-> release tag with `publish_release=true`. Publishing through GitHub's
+> A draft becoming public is not enough to complete a stable release. The supported full publication path is a successful `release.yml` run for the exact
+> release tag with `publish_release=true`. A carried Mac release instead requires
+> `publish-carried-release.yml` at the immutable reviewed tooling commit with
+> `publish_release=true` and all native readiness evidence verified. Publishing through GitHub's
 > **Publish release** button or `gh release edit --draft=false` skips the updater
 > feed job. Existing installations then receive no update event, dialog, or
 > banner.
 
 A stable release is complete only when all of these are true:
 
-- The final `release.yml` run used `publish_release=true`.
-- Its `upload-stable-links` job succeeded rather than being skipped.
+- The final supported publication run used `publish_release=true`: `release.yml` for full releases or `publish-carried-release.yml` for a reviewed carried Mac release.
+- Its publication job succeeded: `promote-existing-draft` for full draft reuse, `upload-stable-links` for a full rebuild, or `publish-reviewed-carry` for a carried Mac release.
 - The release is public, non-prerelease, and selected as GitHub's latest release.
 - The release assets contain `latest.yml`, `latest-linux.yml`, and `latest-mac.yml`.
 - All three `/releases/latest/download/latest*.yml` URLs return successfully.
@@ -1525,18 +1939,23 @@ git checkout dev
 git tag "v$RUNTIME_VERSION"
 git push origin "v$RUNTIME_VERSION"
 
-gh run list \
-  --repo 777genius/agent_teams_orchestrator \
-  --workflow release-runtime.yml \
-  --branch "v$RUNTIME_VERSION" \
-  --limit 1
+gh api --paginate \
+  'repos/777genius/agent_teams_orchestrator/actions/workflows/release-runtime.yml/runs?per_page=100' \
+  --jq ".workflow_runs[] |
+    select(.head_branch == \"v${RUNTIME_VERSION}\" or
+      (.display_title | startswith(\"runtime ${RUNTIME_VERSION} -> \")) or
+      (.display_title | startswith(\"runtime v${RUNTIME_VERSION} -> \"))) |
+    {id, event, status, conclusion, html_url}"
 ```
 
-Pushing the runtime tag automatically starts `release-runtime.yml`. Do not also
-dispatch the workflow manually after pushing the tag: the two runs can race and
-create duplicate target releases. Use `gh workflow run` only as recovery when no
-tag-triggered run exists, and first confirm that there is no active or successful
-run for the same runtime tag.
+Pushing the runtime tag automatically starts the draft build in
+`release-runtime.yml`. Do not dispatch another build while that run is active:
+the runs can race and replace target assets. A manual draft build is recovery
+only when no tag-triggered run exists; first confirm there is no active or
+successful draft build for the same tag. Inspect the complete paginated run
+list above, including tag-triggered and manual runs; the latest run alone is
+not enough to establish this. If a tag-triggered run already exists, retry its
+failed jobs instead of creating a competing draft build.
 
 Watch the returned run until it succeeds:
 
@@ -1544,7 +1963,25 @@ Watch the returned run until it succeeds:
 gh run watch <RUN_ID> --repo 777genius/agent_teams_orchestrator
 ```
 
-After the runtime workflow succeeds, update this repo's `runtime.lock.json`:
+After the draft build succeeds and the owner authorizes publication, run the
+supported publication mode on the same immutable source tag:
+
+```bash
+gh workflow run release-runtime.yml \
+  --repo 777genius/agent_teams_orchestrator \
+  --ref "v$RUNTIME_VERSION" \
+  -f source_ref="v$RUNTIME_VERSION" \
+  -f runtime_version="$RUNTIME_VERSION" \
+  -f publish_release=true \
+  -f target_release_repo=777genius/agent_teams_orchestrator_binaries \
+  -f target_release_tag="runtime-v$RUNTIME_VERSION"
+```
+
+The current publication workflow rebuilds the platform archives and verifies
+public downloads. Wait for it to succeed before pinning checksums: the published
+manifest, rather than the earlier draft, is authoritative.
+
+After publication succeeds, update this repo's `runtime.lock.json`:
 
 - `version`: the new runtime version, for example `0.0.52`
 - `cliVersion`: the exact first token of the released binary's `--version` output,
@@ -1588,16 +2025,70 @@ CLI authentication is not required. A local runtime override remains available t
 ```bash
 git tag v<VERSION>
 git push origin v<VERSION>
+git fetch origin main
+RELEASE_SOURCE_SHA="$(git rev-parse 'v<VERSION>^{commit}')"
+git merge-base --is-ancestor "$RELEASE_SOURCE_SHA" origin/main
+git push origin "$RELEASE_SOURCE_SHA:refs/heads/release/macos-signing"
+test "$(gh api repos/777genius/agent-teams-ai/git/ref/heads/release/macos-signing --jq '.object.sha')" = "$RELEASE_SOURCE_SHA"
 
 gh workflow run release.yml \
   --repo 777genius/agent-teams-ai \
-  --ref v<VERSION> \
+  --ref release/macos-signing \
   -f release_tag=v<VERSION> \
   -f publish_release=false
 ```
 
 Pushing the tag does not start the release workflow. `release.yml` is
 `workflow_dispatch`-only, so the explicit `gh workflow run` command is required.
+Fresh builds require the owner to dispatch from `release/macos-signing`, whose
+SHA must match the reviewed tagged commit. Reusing already validated draft
+assets runs from the release tag with `reuse_existing_draft_assets=true`, without
+moving the signing branch. A historical tag cannot be reached by fast-forward
+when the signing branch has already advanced.
+
+For a necessary historical rebuild, only the owner may temporarily move the
+same trusted branch. First wait for every signing run to finish and prevent new
+dispatches during recovery. Confirm the old tag was independently reviewed and
+is on `main`. The tag itself must also contain the current signing contract:
+`macos-signing` environment, owner checks for both actor and triggering actor,
+exact trusted-ref custody gate, API-only notarization pinned to team `86399583GS`,
+fail-closed packaging, and signature/notarization checks for transported artifacts.
+Review the files at that exact tag; ancestry or an earlier review is insufficient.
+
+Tags predating this contract cannot be rebuilt merely by rewinding the branch.
+Use already-qualified existing assets or a separately reviewed recovery contract;
+never restore old secrets or allow unsigned output. Use existing owner permissions
+only, without weakening branch rules. If they do not permit the operation, use
+accepted assets or prepare a new reviewed patch release. For an eligible tag,
+save the exact observed branch head:
+
+```bash
+set -euo pipefail
+git fetch origin main
+RECOVERY_SOURCE_SHA="$(git rev-parse 'v<VERSION>^{commit}')"
+git merge-base --is-ancestor "$RECOVERY_SOURCE_SHA" origin/main
+SAVED_SIGNING_SHA="$(gh api repos/777genius/agent-teams-ai/git/ref/heads/release/macos-signing --jq '.object.sha')"
+git fetch origin refs/heads/release/macos-signing
+test "$(git rev-parse FETCH_HEAD^{commit})" = "$SAVED_SIGNING_SHA"
+git cat-file -e "$SAVED_SIGNING_SHA^{commit}"
+git push --force-with-lease="refs/heads/release/macos-signing:$SAVED_SIGNING_SHA" origin "$RECOVERY_SOURCE_SHA:refs/heads/release/macos-signing"
+test "$(gh api repos/777genius/agent-teams-ai/git/ref/heads/release/macos-signing --jq '.object.sha')" = "$RECOVERY_SOURCE_SHA"
+gh workflow run release.yml --repo 777genius/agent-teams-ai --ref release/macos-signing -f release_tag=v<VERSION> -f publish_release=false
+```
+
+Set `RECOVERY_RUN_ID` to that dispatched run, verify its `headSha` equals
+`RECOVERY_SOURCE_SHA`, and wait for its full completion before restoring the
+saved branch head. Restore even after a failed build; failure does not qualify
+its artifacts. The exact lease refuses to overwrite a concurrent branch change:
+
+```bash
+test "$(gh run view "$RECOVERY_RUN_ID" --repo 777genius/agent-teams-ai --json headSha --jq '.headSha')" = "$RECOVERY_SOURCE_SHA"
+gh run watch "$RECOVERY_RUN_ID" --repo 777genius/agent-teams-ai
+test "$(gh run view "$RECOVERY_RUN_ID" --repo 777genius/agent-teams-ai --json status --jq '.status')" = completed
+git push --force-with-lease="refs/heads/release/macos-signing:$RECOVERY_SOURCE_SHA" origin "$SAVED_SIGNING_SHA:refs/heads/release/macos-signing"
+test "$(gh api repos/777genius/agent-teams-ai/git/ref/heads/release/macos-signing --jq '.object.sha')" = "$SAVED_SIGNING_SHA"
+```
+
 The draft workflow:
 
 - Builds the app (ubuntu)
@@ -1677,9 +2168,9 @@ be rebuilt before publication. The full build path runs the same promotion
 script after packaging succeeds.
 
 Do not use GitHub's **Publish release** button, `gh release edit --draft=false`,
-or any other direct draft-to-public action. Those paths bypass the
-`upload-stable-links` job. That job uploads the stable aliases and canonical
-updater feeds before making the release public.
+or any other direct draft-to-public action. Those paths bypass the publication job (`promote-existing-draft` or
+`upload-stable-links`), which uploads the stable aliases and canonical updater
+feeds before making the release public.
 
 After the publish workflow finishes, run this required fail-fast gate. Replace
 `v<VERSION>` with the exact tag that was published:
@@ -1707,7 +2198,8 @@ gh workflow run release.yml \
   --repo 777genius/agent-teams-ai \
   --ref v<VERSION> \
   -f release_tag=v<VERSION> \
-  -f publish_release=true
+  -f publish_release=true \
+  -f reuse_existing_draft_assets=true
 
 gh run list \
   --repo 777genius/agent-teams-ai \
@@ -1735,7 +2227,7 @@ Do not publish or call a release finished until this is true:
 - The asset names in the notes match the assets uploaded by `release.yml`.
 - For a draft handoff, `gh release view v<VERSION> --json name,body,assets,isDraft,isPrerelease,targetCommitish` confirms the title equals the tag, the release is still a draft, targets the intended commit, has current notes, and has the expected installer assets.
 - For final publication, `gh release view v<VERSION> --json name,body,assets,isDraft,isPrerelease,targetCommitish` confirms the title equals the tag, the release is public, has current notes, targets the intended commit, and has the expected installer assets.
-- The successful final `release.yml` run used `publish_release=true`, including a successful `upload-stable-links` job.
+- The successful final `release.yml` run used `publish_release=true`, including a successful `promote-existing-draft` job for draft reuse or `upload-stable-links` job for a full rebuild.
 - The public release assets include `latest.yml`, `latest-linux.yml`, and `latest-mac.yml`.
 
 If a draft was published before notes were written, immediately edit the public release body with `gh release edit`; do not leave a release with only generated notes.
@@ -1911,17 +2403,51 @@ The `Claude-Agent-Teams-UI-*` aliases are kept only for backward compatibility w
 
 ## macOS Code Signing
 
-macOS builds are signed and notarized via GitHub Actions secrets:
+macOS builds are signed and notarized via the `macos-signing` environment secrets:
 
-| Secret                        | Description                                  |
-| ----------------------------- | -------------------------------------------- |
-| `CSC_LINK`                    | Base64-encoded .p12 certificate              |
-| `CSC_KEY_PASSWORD`            | Certificate password                         |
-| `APPLE_ID`                    | Apple Developer account email                |
-| `APPLE_APP_SPECIFIC_PASSWORD` | App-specific password from appleid.apple.com |
-| `APPLE_TEAM_ID`               | Apple Developer Team ID                      |
+| Secret | Description |
+| --- | --- |
+| `CSC_LINK` | Base64-encoded Developer ID Application .p12 certificate |
+| `CSC_KEY_PASSWORD` | Certificate password |
+| `APPLE_TEAM_ID` | Must equal `86399583GS` |
+| `APPLE_API_KEY_BASE64` | Base64-encoded team App Store Connect API .p8 key |
+| `APPLE_API_KEY_ID` | API key ID |
+| `APPLE_API_ISSUER` | Team API issuer UUID |
 
-Without these secrets, macOS builds will be unsigned (users need to bypass Gatekeeper manually).
+macOS packaging fails when required credentials are missing or the publisher
+is wrong. It does not produce an unsigned release fallback. Apple ID/password
+credentials are not used. CI writes the API key to a mode-600 temporary file;
+the packaged app and transported ZIP/DMG app must pass signature and notarization
+checks before upload.
+
+Signing secrets are available only on `release/macos-signing`, whose updates
+are restricted to the repository administrator. There are no required environment
+reviewers and no per-build approval. Repository-level copies of these signing
+secrets must be absent. Pull request builds remain unsigned.
+
+Before signing, the owner fast-forwards `release/macos-signing` to the reviewed
+and CI-qualified source SHA, then confirms the remote branch SHA matches it.
+The same protected ref is required for the Release workflow's macOS jobs.
+
+For artifact-only qualification on that reviewed source:
+
+```bash
+gh workflow run macos-signing-qualification.yml --ref release/macos-signing -f use_github_runner=true
+```
+
+For artifact-only pre-merge qualification, the owner may instead fast-forward
+the signing branch to an independently reviewed candidate SHA and verify that
+remote SHA before dispatch. Full current-head CI must pass before merging.
+Use a merge commit to preserve the qualified candidate in ancestry, then compare
+its complete Git tree with the merged tree. Reuse artifact evidence when the
+tree hashes match. The accepted exception is an unbundled-documentation-only
+diff: exhaustively inspect the complete `git diff` and prove every build input
+and workflow is identical; fresh current-head CI must still pass. In either
+case, original receipts retain the actual candidate SHA. This path does not
+authorize release publication.
+
+This manual workflow verifies both architectures and uploads Actions artifacts;
+it does not publish a release or change updater channels.
 
 ## Auto-Update
 
@@ -1935,6 +2461,16 @@ all platform assets are uploaded:
 `latest-mac.yml` includes both Apple Silicon and Intel assets. Draft workflows
 do not upload updater metadata because draft releases are intentionally hidden
 from the stable update channel.
+Electron 44 requires macOS 13+. The published `latest-mac.yml` must include
+`minimumSystemVersion: 22.0.0` (Darwin kernel version) so existing macOS 12
+installations reject the update before downloading it. The app bundle separately
+declares `LSMinimumSystemVersion: 13.0`.
+Promotion reads `build.mac.minimumSystemVersion` from `package.json` at the
+verified release target SHA, not the workflow checkout. Recovering an Electron 41
+release therefore retains macOS 12 / Darwin 21 eligibility. Unknown minimums
+stop promotion before assets are changed; add a reviewed mapping when support
+changes. The shipped updater's eligibility pipeline is tested with generated
+feeds for Darwin 21 and 22.
 
 Both the publish workflow and the independent `release.published` workflow run
 the shared updater release guard. A stable release that is missing required
@@ -1947,7 +2483,11 @@ version, or has broken latest URLs is automatically returned to draft.
 # Create a draft release
 git tag v1.0.0
 git push origin v1.0.0
-gh workflow run release.yml --repo 777genius/agent-teams-ai --ref v1.0.0 \
+# After review, fast-forward the owner-controlled signing branch to the tagged commit.
+RELEASE_SOURCE_SHA="$(git rev-parse 'v1.0.0^{commit}')"
+git push origin "$RELEASE_SOURCE_SHA:refs/heads/release/macos-signing"
+test "$(gh api repos/777genius/agent-teams-ai/git/ref/heads/release/macos-signing --jq '.object.sha')" = "$RELEASE_SOURCE_SHA"
+gh workflow run release.yml --repo 777genius/agent-teams-ai --ref release/macos-signing \
   -f release_tag=v1.0.0 -f publish_release=false
 # Wait for CI, review the assets, and update the draft notes
 
@@ -1970,3 +2510,19 @@ git push origin :refs/tags/v1.0.0
 # Check workflow status
 gh run list --repo 777genius/agent-teams-ai --workflow release.yml --limit 3
 ```
+
+
+### Managed GitHub Actions runners
+
+Linux jobs use Ubicloud (`CI_LINUX_RUNNER`, default `ubicloud-standard-4`).
+The Ubuntu 22.04 package test uses `CI_LINUX_2204_RUNNER` (default
+`ubicloud-standard-4-ubuntu-2204`) to preserve its host OS baseline.
+ARM macOS jobs use Namespace (`CI_MACOS_ARM_RUNNER`, default
+`namespace-profile-macos-15`, macOS 15 / Apple Silicon). Windows and Intel macOS
+jobs keep their GitHub-hosted runners to preserve platform and architecture coverage.
+Both provider GitHub Apps must include this repository in their allowed repositories.
+The runner variables can select a different provisioned label without editing every
+workflow. They are scalar labels, not JSON arrays. To roll back routing, set
+`CI_LINUX_RUNNER=ubuntu-24.04`, `CI_LINUX_2204_RUNNER=ubuntu-22.04`,
+and `CI_MACOS_ARM_RUNNER=macos-15`.
+Runner routing does not change release publication approval or signing requirements.

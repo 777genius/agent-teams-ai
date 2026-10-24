@@ -1,5 +1,6 @@
 import { isOpenCodePromptDeliveryCancelled } from './OpenCodePromptDeliveryLedger';
 
+import type { OpenCodeMemberMessageDeliveryServiceDependencies } from './OpenCodeMemberMessageDeliveryPorts';
 import type {
   OpenCodePromptDeliveryLedgerRecord,
   OpenCodePromptDeliveryLedgerStore,
@@ -25,4 +26,74 @@ export async function assertOpenCodePromptDeliveryNotCancelled(
     throw new OpenCodePromptDeliveryCancelledError(current ?? record);
   }
   await checkpoint?.();
+}
+
+/** A recipient restart revokes delivery before its retiring lane can accept another effect. */
+export function createOpenCodeCurrentDeliveryAssertion(
+  ports: Pick<
+    OpenCodeMemberMessageDeliveryServiceDependencies,
+    | 'resolveDeliverableTrackedRuntimeRunId'
+    | 'getCurrentOpenCodeRuntimeRunId'
+    | 'stoppingSecondaryRuntimeTeams'
+  >,
+  input: {
+    teamName: string;
+    laneKind: 'primary' | 'secondary';
+    laneId: string;
+    runtimeRunId: string | null;
+    trackedRunId: string | null;
+    inMemorySecondaryLaneRunId: string | null;
+    assertAuthorized(): void;
+  }
+): () => void {
+  return () => {
+    input.assertAuthorized();
+    const current =
+      input.laneKind === 'primary'
+        ? ports.resolveDeliverableTrackedRuntimeRunId(input.teamName)
+        : ports.getCurrentOpenCodeRuntimeRunId(input.teamName, input.laneId);
+    const hadTrackedRun =
+      input.laneKind === 'primary' ? input.trackedRunId : input.inMemorySecondaryLaneRunId;
+    if (
+      (current && input.runtimeRunId && current !== input.runtimeRunId) ||
+      (hadTrackedRun && !current) ||
+      ports.stoppingSecondaryRuntimeTeams.has(input.teamName)
+    ) {
+      throw new OpenCodePromptDeliveryCancelledError();
+    }
+  };
+}
+
+export function createOpenCodeDeliveryAuthorization(
+  isCurrent?: () => boolean,
+  isRecipientRestarting?: () => boolean,
+  wakePendingDelivery?: () => void
+): (restore?: () => void) => void {
+  return (restore) => {
+    if (isCurrent?.() === false) {
+      restore?.();
+      throw new OpenCodePromptDeliveryCancelledError();
+    }
+    if (isRecipientRestarting?.()) {
+      restore?.();
+      wakePendingDelivery?.();
+      throw new OpenCodePromptDeliveryCancelledError();
+    }
+  };
+}
+
+/** Return a cancelled ticket only before SDK dispatch or the durable group handoff begins. */
+export function createOpenCodePreSubmissionAssertion(
+  assertCurrent: () => void,
+  restore: () => void,
+  isBeforeSubmission: () => boolean
+): () => void {
+  return () => {
+    try {
+      assertCurrent();
+    } catch (error) {
+      if (error instanceof OpenCodePromptDeliveryCancelledError && isBeforeSubmission()) restore();
+      throw error;
+    }
+  };
 }

@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+
 import {
   TokenUsageAnalyticsService,
   TokenUsageBudgetNotificationEvaluator,
@@ -6,6 +8,7 @@ import { ClaudeJsonlUsageImporter } from '../infrastructure/ClaudeJsonlUsageImpo
 import { createCliUsageImporter } from '../infrastructure/CliUsageImporters';
 import { CodexJsonlUsageImporter } from '../infrastructure/CodexJsonlUsageImporter';
 import { CompositeTokenUsageRunSourceDiscovery } from '../infrastructure/CompositeTokenUsageRunSourceDiscovery';
+import { GatewayUsageImporter } from '../infrastructure/GatewayUsageImporter';
 import { JsonTokenUsageBudgetNotificationStateRepository } from '../infrastructure/JsonTokenUsageBudgetNotificationStateRepository';
 import { JsonTokenUsageBudgetSettingsRepository } from '../infrastructure/JsonTokenUsageBudgetSettingsRepository';
 import { JsonTokenUsageLedgerRepository } from '../infrastructure/JsonTokenUsageLedgerRepository';
@@ -17,6 +20,8 @@ import { TeamLaunchRunSourceDiscovery } from '../infrastructure/TeamLaunchRunSou
 import type {
   TokenUsageAnalyticsSnapshotDto,
   TokenUsageBudgetSettingsDto,
+  TokenUsageBudgetSettingsUpdateRequestDto,
+  TokenUsageBudgetStatusDto,
   TokenUsageEventDto,
   TokenUsageRunDto,
   TokenUsageSnapshotRequest,
@@ -25,6 +30,7 @@ import type {
   TokenUsageAnalyticsServicePort,
   TokenUsageBudgetNotificationSettingsPort,
   TokenUsageBudgetNotificationSinkPort,
+  TokenUsageGatewayUsagePort,
   TokenUsageImporterPort,
   TokenUsageLoggerPort,
   TokenUsageRealtimePublisherPort,
@@ -37,7 +43,11 @@ export interface TokenUsageFeatureFacade {
   recordRuns(runs: readonly TokenUsageRunDto[]): Promise<void>;
   ingestEvents(events: readonly TokenUsageEventDto[]): Promise<void>;
   getBudgetSettings(): Promise<TokenUsageBudgetSettingsDto>;
-  updateBudgetSettings(settings: TokenUsageBudgetSettingsDto): Promise<TokenUsageBudgetSettingsDto>;
+  getBudgetStatus(): Promise<TokenUsageBudgetStatusDto>;
+  dispose(): void;
+  updateBudgetSettings(
+    settings: TokenUsageBudgetSettingsUpdateRequestDto
+  ): Promise<TokenUsageBudgetSettingsDto>;
 }
 
 export interface CreateTokenUsageFeatureDeps {
@@ -59,6 +69,8 @@ export interface CreateTokenUsageFeatureDeps {
   budgetNotificationSettings?: TokenUsageBudgetNotificationSettingsPort;
   publisher?: TokenUsageRealtimePublisherPort;
   taskAttributionSource?: TokenUsageTaskAttributionSourcePort;
+  gatewayUsage?: TokenUsageGatewayUsagePort;
+  runMetadata?: { reconcileRuns(runs: readonly TokenUsageRunDto[]): Promise<TokenUsageRunDto[]> };
   logger?: TokenUsageLoggerPort;
 }
 
@@ -66,7 +78,10 @@ export function createTokenUsageFeature(
   deps: CreateTokenUsageFeatureDeps
 ): TokenUsageFeatureFacade {
   const budgetSettingsRepository = deps.budgetSettingsPath
-    ? new JsonTokenUsageBudgetSettingsRepository(deps.budgetSettingsPath)
+    ? new JsonTokenUsageBudgetSettingsRepository(
+        deps.budgetSettingsPath,
+        deps.budgetNotificationSettings
+      )
     : undefined;
   const budgetNotificationEvaluator =
     budgetSettingsRepository &&
@@ -74,7 +89,6 @@ export function createTokenUsageFeature(
     deps.budgetNotificationSink &&
     deps.budgetNotificationSettings
       ? new TokenUsageBudgetNotificationEvaluator({
-          budgets: budgetSettingsRepository,
           state: new JsonTokenUsageBudgetNotificationStateRepository(
             deps.budgetNotificationStatePath
           ),
@@ -91,19 +105,51 @@ export function createTokenUsageFeature(
         new OpenCodeSessionStoreRunSourceDiscovery(deps.teamsBasePath, deps.openCodeDataHomePath),
       ])
     : teamLaunchDiscovery;
+  const clock = { now: () => new Date() };
+  const ledger = new JsonTokenUsageLedgerRepository(deps.ledgerPath);
+  const importers = buildImporters(deps);
+  if (deps.gatewayUsage) {
+    importers.push(
+      new GatewayUsageImporter({
+        usage: deps.gatewayUsage,
+        ledger,
+        clock,
+        logger: deps.logger,
+      })
+    );
+  }
   const service: TokenUsageAnalyticsServicePort = new TokenUsageAnalyticsService({
-    ledger: new JsonTokenUsageLedgerRepository(deps.ledgerPath),
-    discovery,
-    importers: buildImporters(deps),
-    clock: { now: () => new Date() },
+    statusEpoch: randomUUID(),
+    ledger,
+    discovery: deps.runMetadata
+      ? {
+          discoverAppRuns: async () =>
+            deps.runMetadata!.reconcileRuns(await discovery.discoverAppRuns()),
+        }
+      : discovery,
+    importers,
+    clock,
     budgets: budgetSettingsRepository,
     budgetNotifications: budgetNotificationEvaluator,
+    budgetNotificationSettings: deps.budgetNotificationSettings,
     publisher: deps.publisher,
     taskAttributionSource: deps.taskAttributionSource,
+    gatewayUsage: deps.gatewayUsage,
     logger: deps.logger,
   });
 
+  const timer = setInterval(() => {
+    void service
+      .tick()
+      .catch((error: unknown) =>
+        deps.logger?.warn('Failed to update background budget status', error)
+      );
+  }, 60_000);
+  timer.unref?.();
+
   return {
+    dispose: () => clearInterval(timer),
+    getBudgetStatus: () => service.getBudgetStatus(),
     getSnapshot: (request) => service.getSnapshot(request),
     refreshSnapshot: (request) => service.refreshSnapshot(request),
     recordRuns: (runs) => service.recordRuns(runs),

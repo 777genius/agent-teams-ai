@@ -1,4 +1,14 @@
 [data-chat-appearance='wide-chat'] {
+  --wide-chat-own-bg: #243454;
+  --wide-chat-own-bg-hover: #2b4168;
+}
+
+:root.light [data-chat-appearance='wide-chat'] {
+  --wide-chat-own-bg: #deebff;
+  --wide-chat-own-bg-hover: #d1e3ff;
+}
+
+[data-chat-appearance='wide-chat'] {
   container-name: team-chat-timeline;
   container-type: inline-size;
 }
@@ -42,7 +52,7 @@
 }
 
 [data-chat-appearance='wide-chat'] .wide-chat-message[data-message-presentation='ordinary-user'] {
-  --wide-chat-bubble-bg: color-mix(in srgb, var(--color-surface-raised) 86%, transparent);
+  --wide-chat-bubble-bg: var(--wide-chat-own-bg);
 
   width: fit-content;
   max-width: min(72%, 640px);
@@ -83,7 +93,7 @@
   .wide-chat-message[data-message-presentation='ordinary-user']:focus-within,
 [data-chat-appearance='wide-chat']
   .wide-chat-message[data-message-presentation='ordinary-user'][data-state='open'] {
-  --wide-chat-bubble-bg: color-mix(in srgb, var(--color-surface-raised) 98%, transparent);
+  --wide-chat-bubble-bg: var(--wide-chat-own-bg-hover);
 
   background-color: var(--wide-chat-bubble-bg) !important;
 }
@@ -147,6 +157,13 @@
   width: 32px;
   height: 32px;
   box-shadow: 0 2px 8px rgb(0 0 0 / 18%);
+}
+
+[data-chat-appearance='wide-chat']
+  .wide-chat-message
+  [data-chat-sender='true']
+  img[data-sticky-native-hidden='true'] {
+  visibility: hidden;
 }
 
 [data-chat-appearance='wide-chat']
@@ -294,4 +311,64 @@
 [data-chat-toolbar-appearance='wide-chat'] {
   max-width: calc(100vw - 16px);
   z-index: 100;
+}
+
+/* The expanded main thread overlays reactions; compact/sidebar footers keep their flow. */
+[data-messages-thread-slot='main']
+  [data-chat-appearance='wide-chat']
+  .wide-chat-message:has([data-group-message-reaction='true']) {
+  content-visibility: visible;
+}
+
+[data-messages-thread-slot='main']
+  [data-chat-appearance='wide-chat']
+  .wide-chat-message
+  > [data-activity-message-footer='reaction'] {
+  padding: 0;
+}
+
+[data-messages-thread-slot='main']
+  [data-chat-appearance='wide-chat']
+  .wide-chat-message
+  [data-group-message-reaction='true'] {
+  position: absolute;
+  inset-block-end: -10px;
+  inset-inline-end: 8px;
+  z-index: 2;
+  max-width: calc(100% - 16px);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface-raised);
+}
+
+[data-messages-thread-slot='main']
+  [data-chat-appearance='wide-chat']
+  .wide-chat-message[data-message-presentation='ordinary-user']
+  [data-group-message-reaction='true'] {
+  inset-inline-start: 8px;
+  inset-inline-end: auto;
+}
+
+[data-messages-thread-slot='main']
+  [data-chat-appearance='wide-chat']
+  .wide-chat-message
+  [data-group-message-reaction='true']
+  button {
+  height: 18px;
+  border-radius: 999px;
+}
+
+/* Empty add controls retain their space and keyboard access without an invisible hit target. */
+.activity-timeline-card
+  > [data-activity-message-footer]
+  > [data-group-message-reaction][data-reaction-hover-only='true'] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.activity-timeline-card:is(:hover, :focus-within)
+  > [data-activity-message-footer]
+  > [data-group-message-reaction][data-reaction-hover-only='true'] {
+  opacity: 1;
+  pointer-events: auto;
 }

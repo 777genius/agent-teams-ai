@@ -5,7 +5,8 @@ import { stat } from 'fs/promises';
 import * as readline from 'readline';
 
 import { estimateCachedValueBytes } from './cacheMemoryEstimate';
-import { normalizeTaskChangePresenceFilePath } from './taskChangePresenceUtils';
+import { extractEditToolSnippets } from './extractEditToolSnippets';
+import { taskChangeFileIdentity } from './taskChangeFileIdentity';
 import { countLineChanges } from './UnifiedLineCounter';
 
 import type { TaskBoundaryParser } from './TaskBoundaryParser';
@@ -41,16 +42,12 @@ interface ParsedSnippetRecord {
   sourceLine: number;
   linesAdded: number;
   linesRemoved: number;
+  fileIdentity?: string;
 }
 
 interface LogFileRef {
   filePath: string;
   memberName: string;
-}
-
-interface MetadataChangePath {
-  filePath: string;
-  kind?: string;
 }
 
 function shouldWarnAboutUnavailableTaskChangeEvidence(
@@ -134,11 +131,14 @@ export class TaskChangeComputer {
     }
 
     const allScopes: TaskChangeScope[] = [];
+    const scopesByLogPath = new Map<string, TaskChangeScope>();
     for (const ref of logRefs) {
       const boundaries = await this.boundaryParser.parseBoundaries(ref.filePath);
       const scope = boundaries.scopes.find((candidate) => candidate.taskId === taskId);
       if (scope) {
-        allScopes.push({ ...scope, memberName: ref.memberName });
+        const scoped = { ...scope, memberName: ref.memberName };
+        allScopes.push(scoped);
+        scopesByLogPath.set(ref.filePath, scoped);
       }
     }
 
@@ -159,7 +159,12 @@ export class TaskChangeComputer {
       return this.fallbackSingleTaskScope(input, logRefs);
     }
 
-    const files = await this.extractScopedChanges(logRefs, allScopes, projectPath, includeDetails);
+    const files = await this.extractScopedChanges(
+      logRefs,
+      scopesByLogPath,
+      projectPath,
+      includeDetails
+    );
 
     const worstTier = Math.max(...allScopes.map((scope) => scope.confidence.tier));
     if (worstTier >= 3) {
@@ -359,12 +364,11 @@ export class TaskChangeComputer {
 
   private async extractScopedChanges(
     logRefs: LogFileRef[],
-    scopes: TaskChangeScope[],
+    scopesByLogPath: ReadonlyMap<string, TaskChangeScope>,
     projectPath?: string,
     includeDetails = true
   ): Promise<FileChangeSummary[]> {
-    const scopesWithTools = scopes.filter((scope) => scope.toolUseIds.length > 0);
-    if (scopesWithTools.length === 0) {
+    if (![...scopesByLogPath.values()].some((scope) => scope.toolUseIds.length > 0)) {
       return [];
     }
 
@@ -378,11 +382,11 @@ export class TaskChangeComputer {
       const ref = logRefs[index];
       const parsed = allParsed[index];
       if (!ref || !parsed) continue;
-      const matchingScopes = this.selectScopesForLogRef(scopesWithTools, ref);
-      if (matchingScopes.length === 0) continue;
+      const scope = scopesByLogPath.get(ref.filePath);
+      if (!scope || scope.toolUseIds.length === 0) continue;
 
       for (const record of parsed.snippets) {
-        if (this.recordMatchesAnyScope(record, matchingScopes)) allSnippets.push(record);
+        if (this.recordMatchesScope(record, scope)) allSnippets.push(record);
       }
     }
 
@@ -391,17 +395,6 @@ export class TaskChangeComputer {
       projectPath,
       includeDetails
     );
-  }
-
-  private selectScopesForLogRef(scopes: TaskChangeScope[], ref: LogFileRef): TaskChangeScope[] {
-    return scopes.filter((scope) => {
-      if (!scope.memberName) return true;
-      return scope.memberName === ref.memberName;
-    });
-  }
-
-  private recordMatchesAnyScope(record: ParsedSnippetRecord, scopes: TaskChangeScope[]): boolean {
-    return scopes.some((scope) => this.recordMatchesScope(record, scope));
   }
 
   private recordMatchesScope(record: ParsedSnippetRecord, scope: TaskChangeScope): boolean {
@@ -677,37 +670,15 @@ export class TaskChangeComputer {
           const isError = erroredIds.has(toolUseId);
 
           if (toolName === 'Edit') {
-            const targetPath = typeof input.file_path === 'string' ? input.file_path : '';
-            const oldString = typeof input.old_string === 'string' ? input.old_string : '';
-            const newString = typeof input.new_string === 'string' ? input.new_string : '';
-            const replaceAll = input.replace_all === true;
-            const hasTextPayload =
-              typeof input.old_string === 'string' || typeof input.new_string === 'string';
-            const metadataPaths = hasTextPayload ? [] : this.extractMetadataChangePaths(input);
-            const targetPaths =
-              metadataPaths.length > 0
-                ? metadataPaths
-                : targetPath
-                  ? [{ filePath: targetPath }]
-                  : [];
-
-            for (const target of targetPaths) {
-              const snippetType: SnippetDiff['type'] =
-                !hasTextPayload && target.kind === 'add' ? 'write-new' : 'edit';
-              addSnippet(lineNumber, {
-                toolUseId,
-                filePath: target.filePath,
-                toolName: 'Edit',
-                type: snippetType,
-                oldString,
-                newString,
-                replaceAll,
-                timestamp,
-                isError,
-                contextHash: includeDetails
-                  ? this.computeContextHash(oldString, newString)
-                  : undefined,
-              });
+            for (const snippet of extractEditToolSnippets(input, {
+              toolUseId,
+              timestamp,
+              isError,
+              includeDetails,
+              computeContextHash: (oldString, newString) =>
+                this.computeContextHash(oldString, newString),
+            })) {
+              addSnippet(lineNumber, snippet);
             }
           } else if (toolName === 'Write') {
             const targetPath = typeof input.file_path === 'string' ? input.file_path : '';
@@ -1147,26 +1118,6 @@ export class TaskChangeComputer {
     return null;
   }
 
-  private extractMetadataChangePaths(input: Record<string, unknown>): MetadataChangePath[] {
-    const changes = Array.isArray(input.changes) ? input.changes : [];
-    const paths: MetadataChangePath[] = [];
-    const seen = new Set<string>();
-
-    for (const change of changes) {
-      if (!change || typeof change !== 'object') continue;
-      const changeObj = change as Record<string, unknown>;
-      const filePath = typeof changeObj.path === 'string' ? changeObj.path : '';
-      if (!filePath) continue;
-      const kind = typeof changeObj.kind === 'string' ? changeObj.kind : undefined;
-      const normalized = this.normalizeFilePathKey(filePath);
-      if (seen.has(normalized)) continue;
-      seen.add(normalized);
-      paths.push({ filePath, ...(kind ? { kind } : {}) });
-    }
-
-    return paths;
-  }
-
   private collectErroredToolUseIdsFromEntry(entry: Record<string, unknown>): Set<string> {
     const erroredIds = new Set<string>();
 
@@ -1216,11 +1167,10 @@ export class TaskChangeComputer {
       const { snippet } = record;
       if (snippet.isError) continue;
 
-      const normalizedFilePath = this.normalizeFilePathKey(snippet.filePath);
+      const normalizedFilePath = record.fileIdentity ?? this.normalizeFilePathKey(snippet.filePath);
       const existing = fileMap.get(normalizedFilePath);
       if (existing) {
         existing.records.push(record);
-        if (snippet.type === 'write-new') existing.isNewFile = true;
       } else {
         fileMap.set(normalizedFilePath, {
           filePath: snippet.filePath,
@@ -1333,25 +1283,26 @@ export class TaskChangeComputer {
 
   private sortSnippetRecordsChronologically(records: ParsedSnippetRecord[]): ParsedSnippetRecord[] {
     return records
-      .map((record, originalIndex) => ({ record, originalIndex }))
+      .map((record, originalIndex) => ({
+        record: { ...record, fileIdentity: this.normalizeFilePathKey(record.snippet.filePath) },
+        originalIndex,
+      }))
       .sort((a, b) => {
         const aMs = Date.parse(a.record.snippet.timestamp);
         const bMs = Date.parse(b.record.snippet.timestamp);
         const safeA = Number.isFinite(aMs) ? aMs : Number.MAX_SAFE_INTEGER;
         const safeB = Number.isFinite(bMs) ? bMs : Number.MAX_SAFE_INTEGER;
         if (safeA !== safeB) return safeA - safeB;
-        if (a.record.snippet.filePath !== b.record.snippet.filePath) {
-          return a.record.snippet.filePath.localeCompare(b.record.snippet.filePath);
-        }
-        if (a.record.snippet.toolUseId !== b.record.snippet.toolUseId) {
-          return a.record.snippet.toolUseId.localeCompare(b.record.snippet.toolUseId);
-        }
+        const aPath = a.record.fileIdentity ?? '';
+        const bPath = b.record.fileIdentity ?? '';
+        if (aPath !== bPath) return aPath < bPath ? -1 : 1;
+        // Tool IDs are opaque. For equal timestamps, keep transcript order.
         return a.originalIndex - b.originalIndex;
       })
       .map(({ record }) => record);
   }
 
   private normalizeFilePathKey(filePath: string): string {
-    return normalizeTaskChangePresenceFilePath(filePath);
+    return taskChangeFileIdentity(filePath);
   }
 }

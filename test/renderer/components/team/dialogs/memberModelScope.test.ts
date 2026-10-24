@@ -1,7 +1,17 @@
 import {
+  buildProviderModelChecksMap,
+  collectDialogMemberProviderIds,
+} from '@renderer/components/team/dialogs/defaultModelSelection';
+import {
   clearInheritedMemberModelsUnavailableForProvider,
+  getDialogTeamModelValidationError,
   resolveProviderScopedMemberModel,
 } from '@renderer/components/team/dialogs/memberModelScope';
+import {
+  getAvailableTeamProviderModels,
+  getTeamModelSelectionError,
+  normalizeTeamModelForUi,
+} from '@renderer/utils/teamModelAvailability';
 import { describe, expect, it } from 'vitest';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
@@ -50,6 +60,36 @@ describe('memberModelScope', () => {
     });
   });
 
+  it.each([
+    'minimax/MiniMax-M2.7',
+    'openrouter/minimax/minimax-m2.7',
+    'opencode/minimax-m2.5-free',
+  ])('preserves saved %s without offering it as a new choice', (model) => {
+    const status = freshScopedProviderStatus([model, 'minimax/MiniMax-M3.1-Flash']);
+    expect(getAvailableTeamProviderModels('opencode', status)).toEqual([
+      'minimax/MiniMax-M3.1-Flash',
+    ]);
+    expect(normalizeTeamModelForUi('opencode', model, status)).toBe(model);
+    expect(getTeamModelSelectionError('opencode', model, status)).toBeNull();
+    expect(
+      resolveProviderScopedMemberModel({
+        memberModel: model,
+        selectedProviderId: 'opencode',
+        runtimeProviderStatusById: providerStatuses([status]),
+      })
+    ).toEqual({ providerId: 'opencode', model });
+
+    const unavailable = {
+      ...status,
+      modelAvailability: [{ modelId: model, status: 'unavailable' as const, reason: 'Retired' }],
+    };
+    expect(normalizeTeamModelForUi('opencode', model, unavailable)).toBe('');
+    expect(getTeamModelSelectionError('opencode', model, unavailable)).toContain('Retired');
+    expect(
+      getTeamModelSelectionError('opencode', model, terminalAuthoritativeEmptyCatalogStatus())
+    ).toContain('not available');
+  });
+
   it('preserves a saved teammate model until cold-start provider status arrives', () => {
     const scoped = resolveProviderScopedMemberModel({
       memberProviderId: 'opencode',
@@ -75,9 +115,7 @@ describe('memberModelScope', () => {
     const result = clearInheritedMemberModelsUnavailableForProvider({
       members: [inheritedStale, explicitGemini],
       selectedProviderId: 'opencode',
-      runtimeProviderStatusById: providerStatuses([
-        terminalAuthoritativeEmptyCatalogStatus(),
-      ]),
+      runtimeProviderStatusById: providerStatuses([terminalAuthoritativeEmptyCatalogStatus()]),
     });
 
     expect(result.changed).toBe(true);
@@ -427,3 +465,78 @@ function draft(overrides: Partial<MemberDraft>): MemberDraft {
     ...overrides,
   };
 }
+
+describe('gateway member model authority', () => {
+  const gatewayBoundMemberNames = new Set(['gateway']);
+  const runtimeProviderStatusById = providerStatuses([providerStatus('codex', ['listed-model'])]);
+  const member = draft({ name: 'gateway', model: 'private-gateway-model' });
+  const input = {
+    selectedProviderId: 'codex' as const,
+    selectedModel: 'listed-model',
+    members: [member],
+    validateMembers: true,
+    runtimeProviderStatusById,
+    runtimeProviderLoadingById: new Map(),
+  };
+
+  it('preserves a bound private model and waits for binding hydration before clearing', () => {
+    expect(
+      clearInheritedMemberModelsUnavailableForProvider({
+        ...input,
+        gatewayBoundMemberNames,
+      })
+    ).toEqual({ members: [member], changed: false });
+    expect(
+      clearInheritedMemberModelsUnavailableForProvider({
+        ...input,
+        gatewayBindingsPending: true,
+      })
+    ).toEqual({ members: [member], changed: false });
+    expect(clearInheritedMemberModelsUnavailableForProvider(input).members[0].model).toBe('');
+  });
+
+  it('validates the lead and unbound members while allowing a bound private model', () => {
+    expect(
+      getDialogTeamModelValidationError({
+        ...input,
+        gatewayBoundMemberNames,
+      })
+    ).toBeNull();
+    expect(getDialogTeamModelValidationError(input)).not.toBeNull();
+    expect(
+      getDialogTeamModelValidationError({
+        ...input,
+        gatewayBoundMemberNames,
+        selectedModel: 'private-gateway-model',
+      })
+    ).not.toBeNull();
+  });
+
+  it('never probes bound models or requires the global account for a gateway-only provider', () => {
+    const scopeContext = { runtimeProviderStatusById, gatewayBoundMemberNames };
+    expect(
+      buildProviderModelChecksMap({
+        leadProviderId: 'codex',
+        leadModel: 'listed-model',
+        members: [member],
+        scopeContext,
+      }).get('codex')
+    ).toEqual([{ providerId: 'codex', model: 'listed-model' }]);
+    expect(
+      collectDialogMemberProviderIds(
+        true,
+        'anthropic',
+        [{ ...member, providerId: 'codex' }],
+        gatewayBoundMemberNames
+      )
+    ).toEqual(['anthropic']);
+    expect(
+      collectDialogMemberProviderIds(
+        true,
+        'anthropic',
+        [{ ...member, name: 'unbound', providerId: 'codex' }],
+        gatewayBoundMemberNames
+      )
+    ).toEqual(['anthropic', 'codex']);
+  });
+});

@@ -1,6 +1,4 @@
 import { FileContentResolver as PortableResolver } from '@agent-teams/task-change-ledger/review-content';
-import { readJsonlLines } from '@main/utils/jsonlLineReader';
-import { getHomeDir } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 
 import type { GitDiffFallback } from '@main/services/team/GitDiffFallback';
@@ -8,15 +6,11 @@ import type { TeamMemberLogsFinder } from '@main/services/team/TeamMemberLogsFin
 import type { FileChangeWithContent, SnippetDiff } from '@shared/types';
 export class FileContentResolver {
   private readonly resolver: PortableResolver;
-  constructor(logsFinder: TeamMemberLogsFinder, gitFallback?: GitDiffFallback) {
+  constructor(_logsFinder: TeamMemberLogsFinder, _gitFallback?: GitDiffFallback) {
     this.resolver = new PortableResolver({
-      mode: 'legacy',
-      history: {
-        findMemberLogPaths: logsFinder.findMemberLogPaths.bind(logsFinder),
-        getHomeDir,
-        readJsonlLines,
-      },
-      ...(gitFallback ? { git: gitFallback } : {}),
+      // Current disk bytes are preview-only. Historical backups and Git commits
+      // cannot prove a task-bound postimage or authorize rejection.
+      mode: 'preview-only',
       logger: createLogger('Service:FileContentResolver'),
     });
   }

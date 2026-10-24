@@ -372,6 +372,8 @@ export interface AppConfig {
     useNativeTitleBar: boolean;
     /** Send anonymous crash & performance telemetry (requires SENTRY_DSN at build time) */
     telemetryEnabled: boolean;
+    /** Full renderer CDP access; changes apply after an app restart. */
+    externalAgentCdpEnabled?: boolean;
   };
   /** Provider connection preferences for app-launched multimodel sessions */
   providerConnections: {

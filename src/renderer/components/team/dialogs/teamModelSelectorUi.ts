@@ -191,12 +191,14 @@ export function resolveTeamModelSelectorValue(input: {
   providerId: string;
   value: string;
   runtimeNormalizedValue: string;
+  preserveSelectedModel?: boolean;
   isAppManagedLocalModel: boolean;
   isInLocalOverlay: boolean;
   isLocalLookupAuthoritative: boolean;
   currentLocalAuthorityConfirmsSelection?: boolean;
   shouldPreserveOpenCodeSelection?: boolean;
 }): string {
+  if (input.preserveSelectedModel && input.value.trim()) return input.value;
   return input.providerId === 'opencode' &&
     (input.shouldPreserveOpenCodeSelection !== false ||
       input.currentLocalAuthorityConfirmsSelection === true) &&

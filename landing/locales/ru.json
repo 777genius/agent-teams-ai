@@ -160,10 +160,10 @@
     }
   },
   "meta": {
-    "homeTitle": "Agent Teams - Оркестрация ИИ-агентов для разработчиков",
-    "homeDescription": "Бесплатное open-source desktop-приложение для команд ИИ-агентов с Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax и Kiro.",
+    "homeTitle": "Agent Teams - Вы руководите, ИИ-агенты работают командой",
+    "homeDescription": "Руководите командами ИИ-агентов: они выполняют задачи, общаются и проверяют работу. 300+ моделей, 200+ LLM-провайдеров и бесплатные модели без авторизации.",
     "downloadTitle": "Скачать Agent Teams для macOS, Windows и Linux",
-    "downloadDescription": "Скачайте Agent Teams для macOS, Windows и Linux. Собирайте смешанные команды с Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax и Kiro."
+    "downloadDescription": "Скачайте Agent Teams для macOS, Windows и Linux. Команды ИИ-агентов, 300+ моделей и 200+ LLM-провайдеров. Начните бесплатно без авторизации."
   },
   "error": {
     "notFoundTitle": "Страница не найдена",

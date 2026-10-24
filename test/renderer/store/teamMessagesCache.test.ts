@@ -5,8 +5,6 @@ import {
   clearTeamMessageSelectorCaches,
   clearTeamMessageSelectorCachesForTeam,
   EMPTY_TEAM_MESSAGES_CACHE_ENTRY,
-  extractRetainedCanonicalOlderTail,
-  getCanonicalHeadSlice,
   getTeamMessagesCacheEntry,
   getTeamMessageSelectorCacheSnapshotForTeam,
   pruneOptimisticMessages,
@@ -104,33 +102,9 @@ describe('teamMessagesCache', () => {
         createMessage({ messageId: 'msg-2' }),
       ])
     ).toBe(false);
-    expect(pruneOptimisticMessages(optimistic, canonical).map((message) => message.messageId)).toEqual(
-      ['msg-local']
-    );
-  });
-
-  it('retains already-loaded older tail only when the fresh head anchors into canonical data', () => {
-    const canonical = [
-      createMessage({ messageId: 'msg-4', timestamp: '2026-03-12T10:00:04.000Z' }),
-      createMessage({ messageId: 'msg-3', timestamp: '2026-03-12T10:00:03.000Z' }),
-      createMessage({ messageId: 'msg-2', timestamp: '2026-03-12T10:00:02.000Z' }),
-      createMessage({ messageId: 'msg-1', timestamp: '2026-03-12T10:00:01.000Z' }),
-    ];
-    const freshHead = [
-      createMessage({ messageId: 'msg-5', timestamp: '2026-03-12T10:00:05.000Z' }),
-      createMessage({ messageId: 'msg-3', timestamp: '2026-03-12T10:00:03.000Z' }),
-    ];
-
-    expect(getCanonicalHeadSlice(canonical, 2).map((message) => message.messageId)).toEqual([
-      'msg-4',
-      'msg-3',
-    ]);
     expect(
-      extractRetainedCanonicalOlderTail(canonical, freshHead)?.map((message) => message.messageId)
-    ).toEqual(['msg-2', 'msg-1']);
-    expect(
-      extractRetainedCanonicalOlderTail(canonical, [createMessage({ messageId: 'disjoint' })])
-    ).toBeNull();
+      pruneOptimisticMessages(optimistic, canonical).map((message) => message.messageId)
+    ).toEqual(['msg-local']);
   });
 
   it('memoizes merged and member-scoped selectors and clears team-scoped caches', () => {

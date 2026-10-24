@@ -17,6 +17,7 @@ import {
   formatUpdaterReleaseNotes,
   getUpdaterReleaseNoteForVersion,
 } from '@shared/utils/releaseNotes';
+import { classifyUpdaterFailure } from '@shared/utils/updaterRecovery';
 import { isVersionOlder, normalizeVersion } from '@shared/utils/version';
 import { app, net } from 'electron';
 import electronUpdater from 'electron-updater';
@@ -25,11 +26,17 @@ import {
   getExpectedReleaseAssetUrls,
   getLatestMacMetadataUrls,
   getReleaseApiUrls,
+  getReleaseAtomUrls,
+  getReleaseHistoryApiUrl,
+  getUpdaterAtomHistory,
+  getUpdaterReleaseHistory,
   isLatestMacMetadataCompatible,
+  MAX_UPDATER_ATOM_BYTES,
+  mergeUpdaterReleaseNotes,
   shouldSkipReleaseForUpdater,
 } from './updaterReleaseMetadata';
 
-import type { GithubReleaseMetadata } from './updaterReleaseMetadata';
+import type { GithubReleaseMetadata, UpdaterReleaseNote } from './updaterReleaseMetadata';
 import type { UpdaterStatus } from '@shared/types';
 import type { BrowserWindow } from 'electron';
 
@@ -65,23 +72,47 @@ async function assetExistsInAnyRepo(urls: readonly string[]): Promise<boolean> {
   return false;
 }
 
-async function fetchText(url: string): Promise<string | null> {
+async function fetchText(
+  url: string,
+  signal?: AbortSignal,
+  maximumBytes?: number
+): Promise<string | null> {
   try {
-    const response = await net.fetch(url, { method: 'GET' });
+    const response = await net.fetch(url, { method: 'GET', signal });
     if (!response.ok) {
       return null;
     }
-    return await response.text();
+    if (maximumBytes !== undefined && response.body) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let bytes = 0;
+      let text = '';
+      while (true) {
+        const chunk = await reader.read();
+        if (chunk.done) return text + decoder.decode();
+        bytes += chunk.value.byteLength;
+        if (bytes > maximumBytes) {
+          void reader.cancel().catch(() => undefined);
+          return null;
+        }
+        text += decoder.decode(chunk.value, { stream: true });
+      }
+    }
+    const text = await response.text();
+    return maximumBytes === undefined || Buffer.byteLength(text, 'utf8') <= maximumBytes
+      ? text
+      : null;
   } catch {
     return null;
   }
 }
 
-async function fetchJson<T>(url: string): Promise<T | null> {
+async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T | null> {
   try {
     const response = await net.fetch(url, {
       method: 'GET',
       headers: { Accept: 'application/vnd.github+json' },
+      signal,
     });
     if (!response.ok) {
       return null;
@@ -92,10 +123,17 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   }
 }
 
+interface UpdaterOperationContext {
+  operation: NonNullable<UpdaterStatus['operation']>;
+  reportedError: string | null;
+}
+
 export class UpdaterService {
   private mainWindow: BrowserWindow | null = null;
   private periodicTimer: ReturnType<typeof setInterval> | null = null;
   private downloadedVersion: string | null = null;
+  private activeOperation: UpdaterOperationContext | null = null;
+  private lastOperation: UpdaterOperationContext | null = null;
   private beforeQuitAndInstall: (() => Promise<void>) | null = null;
 
   constructor() {
@@ -121,15 +159,18 @@ export class UpdaterService {
    * Check for available updates.
    */
   async checkForUpdates(): Promise<void> {
-    if (shouldSkipDevUpdateCheck()) {
+    if (shouldSkipDevUpdateCheck() || this.activeOperation) {
       return;
     }
 
+    const context = this.beginOperation('check');
     try {
       await autoUpdater.checkForUpdates();
     } catch (error) {
       logger.error('Check for updates failed:', getErrorMessage(error));
-      this.sendStatus({ type: 'error', error: getErrorMessage(error) });
+      this.reportError(error, context);
+    } finally {
+      this.finishOperation(context);
     }
   }
 
@@ -137,11 +178,14 @@ export class UpdaterService {
    * Download the available update.
    */
   async downloadUpdate(): Promise<void> {
+    const context = this.beginOperation('download');
     try {
       await autoUpdater.downloadUpdate();
     } catch (error) {
       logger.error('Download update failed:', getErrorMessage(error));
-      this.sendStatus({ type: 'error', error: getErrorMessage(error) });
+      this.reportError(error, context);
+    } finally {
+      this.finishOperation(context);
     }
   }
 
@@ -151,19 +195,25 @@ export class UpdaterService {
    * isForceRunAfter=true launches the app after install. Other platforms ignore these.
    */
   async quitAndInstall(): Promise<void> {
+    const context = this.beginOperation('install');
     if (!this.downloadedVersion || !this.isNewerThanCurrent(this.downloadedVersion)) {
       logger.warn(
         `Refusing to install non-newer update. current=${app.getVersion()} downloaded=${this.downloadedVersion ?? 'unknown'}`
       );
-      this.sendStatus({
-        type: 'error',
-        error: 'Refused to install a non-newer app version.',
-      });
+      this.reportError(new Error('Refused to install a non-newer app version.'), context);
+      this.finishOperation(context);
       return;
     }
 
-    await this.beforeQuitAndInstall?.();
-    autoUpdater.quitAndInstall(true, true);
+    try {
+      await this.beforeQuitAndInstall?.();
+      // Installation can report a native error after this void call returns.
+      autoUpdater.quitAndInstall(true, true);
+    } catch (error) {
+      logger.error('Install update failed:', getErrorMessage(error));
+      this.reportError(error, context);
+      this.finishOperation(context);
+    }
   }
 
   /**
@@ -185,6 +235,28 @@ export class UpdaterService {
       clearInterval(this.periodicTimer);
       this.periodicTimer = null;
     }
+  }
+
+  private beginOperation(operation: UpdaterOperationContext['operation']): UpdaterOperationContext {
+    const context = { operation, reportedError: null };
+    this.activeOperation = context;
+    this.lastOperation = context;
+    return context;
+  }
+
+  private finishOperation(context: UpdaterOperationContext): void {
+    if (this.activeOperation === context) this.activeOperation = null;
+  }
+
+  private reportError(error: unknown, context: UpdaterOperationContext): void {
+    const message = getErrorMessage(error);
+    if (context.reportedError === message) return;
+    context.reportedError = message;
+    if (context.operation !== 'check' || classifyUpdaterFailure(message) === 'signature') {
+      this.downloadedVersion = null;
+    }
+    this.sendStatus({ type: 'error', operation: context.operation, error: message });
+    if (context.operation === 'install') this.finishOperation(context);
   }
 
   private sendStatus(status: UpdaterStatus): void {
@@ -215,18 +287,72 @@ export class UpdaterService {
     return false;
   }
 
-  private async isSkippedRelease(version: string): Promise<boolean> {
+  private async fetchReleaseMetadata(version: string): Promise<{
+    release: GithubReleaseMetadata;
+    apiUrl: string;
+  } | null> {
     const metadataUrls = getReleaseApiUrls(version);
     for (const metadataUrl of metadataUrls) {
       const release = await fetchJson<GithubReleaseMetadata>(metadataUrl);
-      if (!release) {
+      if (
+        !release ||
+        typeof release.tag_name !== 'string' ||
+        release.tag_name.replace(/^v/i, '') !== version.replace(/^v/i, '')
+      ) {
         continue;
       }
-      return shouldSkipReleaseForUpdater(release);
+      return { release, apiUrl: metadataUrl };
     }
 
     logger.warn(`GitHub release metadata is not available for ${version}, allowing updater check`);
-    return false;
+    return null;
+  }
+
+  private async fetchRestReleaseHistory(
+    apiUrl: string,
+    candidateVersion: string,
+    signal: AbortSignal
+  ): Promise<UpdaterReleaseNote[]> {
+    const releases: unknown[] = [];
+    for (let page = 1; page <= 3; page++) {
+      const batch = await fetchJson<unknown>(getReleaseHistoryApiUrl(apiUrl, page), signal);
+      if (!Array.isArray(batch)) break;
+      const pageReleases: unknown[] = batch;
+      releases.push(...pageReleases);
+      if (batch.length < 100 || signal.aborted) break;
+    }
+    return getUpdaterReleaseHistory(releases, app.getVersion(), candidateVersion);
+  }
+
+  private async fetchAtomReleaseHistory(
+    apiUrl: string | undefined,
+    candidateVersion: string,
+    signal: AbortSignal
+  ): Promise<UpdaterReleaseNote[]> {
+    for (const url of getReleaseAtomUrls(apiUrl)) {
+      if (signal.aborted) break;
+      const raw = await fetchText(url, signal, MAX_UPDATER_ATOM_BYTES);
+      if (!raw) continue;
+      const history = getUpdaterAtomHistory(raw, url, app.getVersion(), candidateVersion);
+      if (history !== null) return history;
+    }
+    return [];
+  }
+
+  private async fetchReleaseHistory(
+    apiUrl: string | undefined,
+    candidateVersion: string
+  ): Promise<UpdaterReleaseNote[]> {
+    // Both independent transports share one deadline. Start Atom immediately so
+    // a rate-limited or stalled REST request cannot consume its fallback budget.
+    const signal = AbortSignal.timeout(5_000);
+    const [rest, atom] = await Promise.all([
+      apiUrl ? this.fetchRestReleaseHistory(apiUrl, candidateVersion, signal) : [],
+      this.fetchAtomReleaseHistory(apiUrl, candidateVersion, signal),
+    ]);
+    const history = new Map(atom.map((entry) => [entry.version, entry]));
+    for (const entry of rest) history.set(entry.version, entry);
+    return [...history.values()];
   }
 
   /**
@@ -247,7 +373,6 @@ export class UpdaterService {
     }
 
     const latestReleaseNote = getUpdaterReleaseNoteForVersion(info.releaseNotes, info.version);
-    const releaseNotes = formatUpdaterReleaseNotes(info.releaseNotes);
 
     if (
       shouldSkipReleaseForUpdater({
@@ -260,10 +385,26 @@ export class UpdaterService {
       return;
     }
 
-    if (await this.isSkippedRelease(info.version)) {
+    const metadata = await this.fetchReleaseMetadata(info.version);
+    if (metadata && shouldSkipReleaseForUpdater(metadata.release)) {
       logger.warn(`Suppressing updater notification for skipped release ${info.version}`);
       return;
     }
+
+    // Embedded scalar notes bypass electron-updater's Atom fullChangelog.
+    // Fetch older stable bodies only when the provider lacks a candidate entry.
+    const hasCandidateChangelog =
+      Array.isArray(info.releaseNotes) &&
+      Boolean(formatUpdaterReleaseNotes(latestReleaseNote)?.trim());
+    const releaseNotes = hasCandidateChangelog
+      ? formatUpdaterReleaseNotes(info.releaseNotes)
+      : mergeUpdaterReleaseNotes(
+          info.releaseNotes,
+          app.getVersion(),
+          info.version,
+          metadata?.release.body,
+          await this.fetchReleaseHistory(metadata?.apiUrl, info.version)
+        );
 
     const urls = getExpectedReleaseAssetUrls(info.version, process.platform, process.arch);
     if (urls.length > 0) {
@@ -293,7 +434,7 @@ export class UpdaterService {
   private bindEvents(): void {
     autoUpdater.on('checking-for-update', () => {
       logger.info('Checking for update...');
-      this.sendStatus({ type: 'checking' });
+      this.sendStatus({ type: 'checking', operation: 'check' });
     });
 
     autoUpdater.on('update-available', (info) => {
@@ -335,10 +476,9 @@ export class UpdaterService {
 
     autoUpdater.on('error', (error) => {
       logger.error('Updater error:', getErrorMessage(error));
-      this.sendStatus({
-        type: 'error',
-        error: getErrorMessage(error),
-      });
+      const context = this.activeOperation ??
+        this.lastOperation ?? { operation: 'check', reportedError: null };
+      this.reportError(error, context);
     });
   }
 }

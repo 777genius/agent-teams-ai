@@ -203,6 +203,8 @@ interface OpenCodeProviderScopedDialogModelStateOptions {
   /** What main applies to unset teammates; defaults to syncModelsWithLead. */
   inheritsLeadModel?: boolean;
   selectedProviderId: TeamProviderId;
+  /** False while a draft has no explicit lead runtime selection. */
+  leadProviderResolved?: boolean;
   selectedModel: string | null | undefined;
   runtimeProviderStatusById: ReadonlyMap<
     TeamProviderId,
@@ -210,6 +212,8 @@ interface OpenCodeProviderScopedDialogModelStateOptions {
   >;
   deferredProviderIds?: ReadonlySet<TeamProviderId>;
   openCodeLocalProviderIds?: ReadonlySet<string>;
+  gatewayBoundMemberNames?: ReadonlySet<string>;
+  gatewayBindingsPending?: boolean;
   openCodeLocalProviderLookupAuthoritative?: boolean;
 }
 
@@ -222,11 +226,14 @@ export function useOpenCodeProviderScopedDialogModelState({
   syncModelsWithLead,
   inheritsLeadModel,
   selectedProviderId,
+  leadProviderResolved = true,
   selectedModel,
   runtimeProviderStatusById,
   deferredProviderIds,
   openCodeLocalProviderIds,
   openCodeLocalProviderLookupAuthoritative,
+  gatewayBoundMemberNames,
+  gatewayBindingsPending,
 }: OpenCodeProviderScopedDialogModelStateOptions) {
   useOpenCodePassiveStatusPrefetch({
     enabled: passiveStatusPrefetchEnabled === true,
@@ -238,25 +245,38 @@ export function useOpenCodeProviderScopedDialogModelState({
   const { t } = useAppTranslation('team');
   const openCodeProjectDefault = useOpenCodeProjectDefaultModel(passiveProviderStatus, projectPath);
   const openCodeDefaultSelection = useMemo(() => {
-    const scopedMembers = syncModelsWithLead ? members.map(clearMemberModelOverrides) : members;
+    const scopedMembers = syncModelsWithLead
+      ? members.map((member) =>
+          gatewayBoundMemberNames?.has(member.name.trim())
+            ? member
+            : clearMemberModelOverrides(member)
+        )
+      : members;
     return materializeOpenCodeDefaultSelections({
-      selectedProviderId,
+      selectedProviderId: leadProviderResolved ? selectedProviderId : undefined,
       selectedModel,
       syncModelsWithLead: inheritsLeadModel ?? syncModelsWithLead,
       projectDefault: openCodeProjectDefault,
-      members: clearInheritedMemberModelsUnavailableForProvider({
-        members: [...scopedMembers],
-        selectedProviderId,
-        runtimeProviderStatusById,
-        deferredProviderIds,
-        openCodeLocalProviderIds,
-        openCodeLocalProviderLookupAuthoritative,
-        openCodeProviderScopedStatusBySourceId,
-      }).members,
+      members: !leadProviderResolved
+        ? [...scopedMembers]
+        : clearInheritedMemberModelsUnavailableForProvider({
+            members: [...scopedMembers],
+            selectedProviderId,
+            runtimeProviderStatusById,
+            deferredProviderIds,
+            gatewayBoundMemberNames,
+            gatewayBindingsPending,
+            openCodeLocalProviderIds,
+            openCodeLocalProviderLookupAuthoritative,
+            openCodeProviderScopedStatusBySourceId,
+          }).members,
     });
   }, [
     deferredProviderIds,
+    gatewayBoundMemberNames,
+    gatewayBindingsPending,
     inheritsLeadModel,
+    leadProviderResolved,
     members,
     openCodeLocalProviderIds,
     openCodeLocalProviderLookupAuthoritative,
@@ -284,7 +304,8 @@ export function useOpenCodeProviderScopedDialogModelState({
       selectedModels: getSelectedOpenCodeModels(
         selectedProviderId,
         effectiveSelectedModel,
-        effectiveMemberDrafts
+        gatewayBindingsPending ? [] : effectiveMemberDrafts,
+        gatewayBoundMemberNames
       ),
       scopedStatusBySourceId: openCodeProviderScopedStatusBySourceId,
       localSourceIds: openCodeLocalProviderIds ?? new Set<string>(),
@@ -292,6 +313,8 @@ export function useOpenCodeProviderScopedDialogModelState({
     }),
     [
       effectiveMemberDrafts,
+      gatewayBoundMemberNames,
+      gatewayBindingsPending,
       openCodeLocalProviderIds,
       openCodeLocalProviderLookupAuthoritative,
       openCodeProviderScopedStatusBySourceId,

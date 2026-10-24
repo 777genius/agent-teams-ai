@@ -6,18 +6,25 @@ import { normalizeCostBreakdown, normalizeTokenBreakdown } from '../../core/doma
 
 import type {
   TokenUsageEventDto,
+  TokenUsageGatewayDegradedReason,
+  TokenUsageGatewaySourceStateDto,
   TokenUsageRunDto,
   TokenUsageRunSourceDto,
   TokenUsageRunStatus,
   TokenUsageRuntimeKind,
   TokenUsageSourceKind,
 } from '../../contracts';
-import type { TokenUsageLedgerRepositoryPort } from '../../core/application';
+import type {
+  TokenUsageImportBatch,
+  TokenUsageLedgerRepositoryPort,
+  TokenUsageLedgerSnapshot,
+} from '../../core/application';
 
 interface TokenUsageLedgerFile {
   schemaVersion: 1;
   runs: Record<string, TokenUsageRunDto>;
   events: Record<string, TokenUsageEventDto>;
+  sourceStates: Record<string, TokenUsageGatewaySourceStateDto>;
 }
 
 const MAX_LEDGER_BYTES = 64 * 1024 * 1024;
@@ -50,6 +57,48 @@ function readSourceKind(value: unknown): TokenUsageSourceKind {
     value === 'cost_estimated'
     ? value
     : 'log_parsed';
+}
+
+function readUtcDay(value: unknown): string | undefined {
+  const day = readString(value);
+  return day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : undefined;
+}
+
+function readRequestCount(value: unknown): number | undefined {
+  return typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    Number.isFinite(value)
+    ? value
+    : undefined;
+}
+
+function readDegradedReason(value: unknown): TokenUsageGatewayDegradedReason | undefined {
+  return value === 'http_unavailable' ||
+    value === 'credential_changed' ||
+    value === 'credential_missing'
+    ? value
+    : undefined;
+}
+
+function normalizeSourceState(value: unknown): TokenUsageGatewaySourceStateDto | null {
+  const record = asRecord(value);
+  const gatewayUsageRef = readString(record?.gatewayUsageRef);
+  const teamName = readString(record?.teamName);
+  const agentName = readString(record?.agentName);
+  if (!gatewayUsageRef || !teamName || !agentName) return null;
+  return {
+    gatewayUsageRef,
+    teamName,
+    agentName,
+    agentId: readString(record?.agentId),
+    watermarkDay: readString(record?.watermarkDay),
+    lastUsedAt: readString(record?.lastUsedAt),
+    finalUsageDay: readString(record?.finalUsageDay),
+    degraded: record?.degraded === true,
+    degradedReason: readDegradedReason(record?.degradedReason),
+    lastSuccessfulAt: readString(record?.lastSuccessfulAt),
+  };
 }
 
 function normalizeRunSource(value: unknown): TokenUsageRunSourceDto | null {
@@ -107,6 +156,8 @@ function normalizeRun(value: unknown): TokenUsageRunDto | null {
     workspacePathHash: readString(record?.workspacePathHash),
     workspaceLabel: readString(record?.workspaceLabel),
     commandHash: readString(record?.commandHash),
+    gatewayUsageRef: readString(record?.gatewayUsageRef),
+    terminationConfirmed: record?.terminationConfirmed === true ? true : undefined,
     startedAt,
     endedAt: readString(record?.endedAt),
     status: readRunStatus(record?.status),
@@ -171,6 +222,9 @@ function normalizeEvent(value: unknown): TokenUsageEventDto | null {
         ? { kiro: { credits: kiroCredits, creditsUnit: kiroCreditsUnit } }
         : undefined,
     usageSourceKind: readSourceKind(record?.usageSourceKind),
+    gatewayUsageRef: readString(record?.gatewayUsageRef),
+    gatewayDay: readUtcDay(record?.gatewayDay),
+    requestCount: readRequestCount(record?.requestCount),
     rawUsageJson: record?.rawUsageJson,
     occurredAt,
     createdAt,
@@ -178,11 +232,28 @@ function normalizeEvent(value: unknown): TokenUsageEventDto | null {
 }
 
 function emptyLedger(): TokenUsageLedgerFile {
-  return { schemaVersion: 1, runs: {}, events: {} };
+  return { schemaVersion: 1, runs: {}, events: {}, sourceStates: {} };
+}
+
+function normalizeRuns(runs: readonly TokenUsageRunDto[]): TokenUsageRunDto[] {
+  return runs.map((value) => {
+    const run = normalizeRun(value);
+    if (!run) throw new Error('Invalid token usage run entry');
+    return run;
+  });
 }
 
 export class JsonTokenUsageLedgerRepository implements TokenUsageLedgerRepositoryPort {
   constructor(private readonly filePath: string) {}
+
+  async readSnapshot(): Promise<TokenUsageLedgerSnapshot> {
+    const ledger = await this.readLedger();
+    return {
+      runs: Object.values(ledger.runs),
+      events: Object.values(ledger.events),
+      sourceStates: Object.values(ledger.sourceStates),
+    };
+  }
 
   async listRuns(): Promise<TokenUsageRunDto[]> {
     const ledger = await this.readLedger();
@@ -200,8 +271,9 @@ export class JsonTokenUsageLedgerRepository implements TokenUsageLedgerRepositor
 
   async upsertRuns(runs: readonly TokenUsageRunDto[]): Promise<void> {
     if (runs.length === 0) return;
+    const normalizedRuns = normalizeRuns(runs);
     const ledger = await this.readLedger();
-    for (const run of runs) {
+    for (const run of normalizedRuns) {
       const existing = ledger.runs[run.appRunId];
       ledger.runs[run.appRunId] = existing ? mergeRun(existing, run) : run;
     }
@@ -212,8 +284,12 @@ export class JsonTokenUsageLedgerRepository implements TokenUsageLedgerRepositor
     source: TokenUsageRunDto['source'],
     runs: readonly TokenUsageRunDto[]
   ): Promise<void> {
+    if (source !== 'app_launcher' && source !== 'team_launch_state' && source !== 'manual_import') {
+      throw new Error('Invalid token usage run source');
+    }
+    const normalizedRuns = normalizeRuns(runs);
     const ledger = await this.readLedger();
-    const nextRunIds = new Set(runs.map((run) => run.appRunId));
+    const nextRunIds = new Set(normalizedRuns.map((run) => run.appRunId));
     const eventRunIds = new Set(Object.values(ledger.events).map((event) => event.appRunId));
 
     for (const [appRunId, run] of Object.entries(ledger.runs)) {
@@ -223,7 +299,7 @@ export class JsonTokenUsageLedgerRepository implements TokenUsageLedgerRepositor
       delete ledger.runs[appRunId];
     }
 
-    for (const run of runs) {
+    for (const run of normalizedRuns) {
       const existing = ledger.runs[run.appRunId];
       ledger.runs[run.appRunId] = existing ? mergeRun(existing, run) : run;
     }
@@ -231,10 +307,27 @@ export class JsonTokenUsageLedgerRepository implements TokenUsageLedgerRepositor
   }
 
   async upsertEvents(events: readonly TokenUsageEventDto[]): Promise<void> {
-    if (events.length === 0) return;
+    await this.commitImportBatch({ events });
+  }
+
+  async commitImportBatch(batch: TokenUsageImportBatch): Promise<void> {
+    if (batch.events.length === 0 && (batch.sourceStates?.length ?? 0) === 0) return;
+    const normalizedEvents = batch.events.map((value) => {
+      const event = normalizeEvent(value);
+      if (!event) throw new Error('Invalid token usage event entry');
+      return event;
+    });
+    const normalizedStates = (batch.sourceStates ?? []).map((value) => {
+      const state = normalizeSourceState(value);
+      if (!state) throw new Error('Invalid gateway usage source state');
+      return state;
+    });
     const ledger = await this.readLedger();
-    for (const event of events) {
+    for (const event of normalizedEvents) {
       ledger.events[event.id] = event;
+    }
+    for (const state of normalizedStates) {
+      ledger.sourceStates[state.gatewayUsageRef] = state;
     }
     await this.writeLedger(ledger);
   }
@@ -243,34 +336,50 @@ export class JsonTokenUsageLedgerRepository implements TokenUsageLedgerRepositor
     try {
       const fileStat = await stat(this.filePath);
       if (!fileStat.isFile() || fileStat.size > MAX_LEDGER_BYTES) {
-        return emptyLedger();
+        throw new Error('Token usage ledger exceeds its size limit or is not a file');
       }
       const raw = await readFile(this.filePath, 'utf8');
       const parsed = JSON.parse(raw) as unknown;
       const record = asRecord(parsed);
-      const runsRecord = asRecord(record?.runs) ?? {};
+      if (record?.schemaVersion !== 1 || !asRecord(record.runs) || !asRecord(record.events))
+        throw new Error('Invalid token usage ledger schema');
+      const runsRecord = asRecord(record.runs)!;
       const eventsRecord = asRecord(record?.events) ?? {};
+      const statesRecord = asRecord(record?.sourceStates) ?? {};
       const runs: Record<string, TokenUsageRunDto> = {};
       const events: Record<string, TokenUsageEventDto> = {};
+      const sourceStates: Record<string, TokenUsageGatewaySourceStateDto> = {};
 
       for (const value of Object.values(runsRecord)) {
         const run = normalizeRun(value);
-        if (run) runs[run.appRunId] = run;
+        if (!run) throw new Error('Invalid token usage run entry');
+        runs[run.appRunId] = run;
       }
       for (const value of Object.values(eventsRecord)) {
         const event = normalizeEvent(value);
-        if (event) events[event.id] = event;
+        if (!event) throw new Error('Invalid token usage event entry');
+        events[event.id] = event;
+      }
+      for (const value of Object.values(statesRecord)) {
+        const state = normalizeSourceState(value);
+        if (!state) throw new Error('Invalid gateway usage source state');
+        sourceStates[state.gatewayUsageRef] = state;
       }
 
-      return { schemaVersion: 1, runs, events };
-    } catch {
-      return emptyLedger();
+      return { schemaVersion: 1, runs, events, sourceStates };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return emptyLedger();
+      throw error;
     }
   }
 
   private async writeLedger(ledger: TokenUsageLedgerFile): Promise<void> {
+    const serialized = `${JSON.stringify(ledger, null, 2)}\n`;
+    if (Buffer.byteLength(serialized, 'utf8') > MAX_LEDGER_BYTES) {
+      throw new Error('Token usage ledger exceeds its size limit');
+    }
     await mkdir(dirname(this.filePath), { recursive: true });
-    await atomicWriteAsync(this.filePath, `${JSON.stringify(ledger, null, 2)}\n`);
+    await atomicWriteAsync(this.filePath, serialized);
   }
 }
 

@@ -26,6 +26,7 @@ import {
   isOpenCodeLocalProviderId,
   isOpenCodeModelExplicitlyFree,
 } from '@shared/utils/opencodeModelRoute';
+import { isCurrentMiniMaxCatalogModel } from '@shared/utils/providerModelVisibility';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   AlertTriangle,
@@ -49,6 +50,7 @@ import {
   getRuntimeProviderSetupPresentation,
   supportsScopedDefaultModelInheritance,
 } from '../../core/domain';
+import { qualifyModelId } from '../../core/domain/openCodeModelIdentity';
 
 import { LegacyConfiguredModelsPanel } from './LegacyConfiguredModelsPanel';
 import {
@@ -1798,6 +1800,11 @@ const ProviderModelList = ({
   const visibleModels = useMemo(
     () =>
       state.models
+        .filter((model) =>
+          isCurrentMiniMaxCatalogModel(
+            qualifyModelId(model.providerId, model.modelId) || model.modelId
+          )
+        )
         .map((model, index) => ({ model, index }))
         .filter(
           ({ model }) =>
@@ -2518,6 +2525,22 @@ export const RuntimeProviderManagementPanelView = ({
               </>
             )}
           </div>
+
+          {state.activeFormProviderId &&
+          !(useDirectoryRows ? visibleDirectoryRows : filteredProviders).some(
+            (provider) => provider.providerId === state.activeFormProviderId
+          ) ? (
+            <ProviderSetupFormPanel
+              provider={{
+                providerId: state.activeFormProviderId,
+                displayName: state.setupForm?.displayName ?? state.activeFormProviderId,
+              }}
+              state={state}
+              busy={state.savingProviderId === state.activeFormProviderId}
+              disabled={disabled}
+              actions={actions}
+            />
+          ) : null}
 
           {useDirectoryRows &&
           !state.directoryLoading &&

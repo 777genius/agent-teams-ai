@@ -48,7 +48,10 @@ interface ConfigResult<T = void> {
   error?: string;
 }
 
-export function registerConfigRoutes(app: FastifyInstance): void {
+export function registerConfigRoutes(
+  app: FastifyInstance,
+  updateRoot?: (applyConfig: () => void) => Promise<void>
+): void {
   const configManager = ConfigManager.getInstance();
 
   // Get full config
@@ -71,7 +74,14 @@ export function registerConfigRoutes(app: FastifyInstance): void {
         return { success: false, error: validation.error };
       }
 
-      configManager.updateConfig(validation.section, validation.data);
+      const applyConfig = () => {
+        configManager.updateConfig(validation.section, validation.data);
+      };
+      if (validation.section === 'general' && 'claudeRootPath' in validation.data && updateRoot) {
+        await updateRoot(applyConfig);
+      } else {
+        applyConfig();
+      }
       const updatedConfig = configManager.getConfig();
       return { success: true, data: updatedConfig };
     } catch (error) {

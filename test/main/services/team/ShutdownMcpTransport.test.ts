@@ -5,16 +5,37 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import {
+  configureDesktopMcpEnvironment,
+  createDesktopExternalAgentConnection,
+  getDesktopMcpChildEnvironment,
+  isDesktopMcpEnvironmentBound,
+  type NativeRendererCdp,
+} from '@features/external-agent-connection/main';
+import * as memberWorkSync from '@features/member-work-sync/main';
 import { applyAgentTeamsMcpAppContext } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import {
   AgentTeamsMcpHttpServer,
   agentTeamsMcpHttpServer as server,
 } from '@main/services/team/AgentTeamsMcpHttpServer';
-import { OpenCodeBridgeCommandClient } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
+import {
+  OpenCodeBridgeCommandClient,
+  type OpenCodeBridgeProcessRunInput,
+} from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
 import { buildOpenCodeAppScopedMcpUrl } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
+import {
+  composeExternalAgentConnection,
+  refreshDesktopBridgeEnvironment,
+} from '@main/startExternalAgentConnection';
+import { startPreparedMemberWorkSyncFeature } from '@main/startMemberWorkSyncFeature';
+import * as pathDecoder from '@main/utils/pathDecoder';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import ts from 'typescript';
 import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('electron', () => ({
+  app: { getPath: () => '/sandbox/shutdown-profile', getVersion: () => 'test' },
+}));
 
 // Execute exact source boundaries without booting Electron, discovering binaries,
 // or contacting providers. Extract AST nodes, not a rewritten algorithm.
@@ -79,9 +100,22 @@ const handle: NonNullable<ReturnType<typeof server.getCurrentHandle>> = {
   },
 };
 function bridgeResolver(env: Record<string, string>, overrides: Record<string, unknown> = {}) {
-  const node = sourceNode('resolveBridgeCommandEnv') as ts.VariableDeclaration;
-  return compileExpression(node.initializer!.getText(mainSource), {
+  const node = sourceNode('bridgeClient') as ts.VariableDeclaration;
+  const constructor = node.initializer;
+  if (!constructor || !ts.isNewExpression(constructor))
+    throw new Error('Bridge client constructor missing');
+  const options = constructor.arguments?.[0];
+  if (!options || !ts.isObjectLiteralExpression(options))
+    throw new Error('Bridge client options missing');
+  const provider = options.properties.find(
+    (property): property is ts.PropertyAssignment =>
+      ts.isPropertyAssignment(property) && property.name.getText(mainSource) === 'envProvider'
+  );
+  if (!provider || !ts.isArrowFunction(provider.initializer))
+    throw new Error('Bridge client environment provider missing');
+  return compileExpression(provider.initializer.getText(mainSource), {
     bridgeEnv: env,
+    getTeamControlApiBaseUrl: () => 'http://127.0.0.1:41000',
     useHttpMcpBridge: true,
     agentTeamsMcpHttpServer: server,
     ensureOpenCodeRuntimeBinaryEnv: vi.fn().mockResolvedValue(undefined),
@@ -89,13 +123,303 @@ function bridgeResolver(env: Record<string, string>, overrides: Record<string, u
     buildOpenCodeAppScopedMcpUrl,
     openCodeManagedHostInstanceId: 'review-host',
     profileScope: profile,
-    applyAgentTeamsMcpAppContext,
+    refreshDesktopBridgeEnvironment: async (nextEnv: NodeJS.ProcessEnv) =>
+      applyAgentTeamsMcpAppContext(nextEnv),
     logger: { warn: vi.fn() },
     ...overrides,
   });
 }
 
 describe('shutdown MCP transport authority', () => {
+  it.each([false, true])(
+    'dispatches startup retirement without control, but refuses launch (HTTP=%s)',
+    async (useHttpMcpBridge) => {
+      const directory = await mkdtemp(join(tmpdir(), 'startup-no-control-'));
+      const unavailable = vi.fn(() => {
+        throw new Error('Desktop MCP control context is unavailable');
+      });
+      const revoke = configureDesktopMcpEnvironment(unavailable, () => false);
+      const env = {
+        ...hostEnv(),
+        CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: 'http://127.0.0.1:49999/mcp',
+        CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH: 'stale-http-hash',
+        AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:49999',
+        AGENT_TEAMS_BOUND_CONTEXT_JSON: '{"stale":true}',
+        CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON: JSON.stringify({
+          ...JSON.parse(hostEnv().CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON),
+          AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:49999',
+          AGENT_TEAMS_BOUND_CONTEXT_JSON: '{"stale":true}',
+        }),
+      };
+      const resolveEnv = bridgeResolver(env, {
+        useHttpMcpBridge,
+        getTeamControlApiBaseUrl: () => null,
+        refreshDesktopBridgeEnvironment,
+      }) as NonNullable<
+        ConstructorParameters<typeof OpenCodeBridgeCommandClient>[0]['envProvider']
+      >;
+      const run = vi.fn(async (_input: OpenCodeBridgeProcessRunInput) => ({
+        stdout: JSON.stringify({
+          ok: true,
+          schemaVersion: 1,
+          requestId: 'cleanup-test',
+          command: 'opencode.cleanupStartupHosts',
+          completedAt: '2026-10-11T00:00:00.000Z',
+          durationMs: 1,
+          runtime: {
+            providerId: 'opencode',
+            binaryPath: '/sandbox/opencode',
+            binaryFingerprint: 'test-bin',
+            version: '1.0.0',
+            capabilitySnapshotId: 'test-cap',
+          },
+          diagnostics: [],
+          data: {
+            cleaned: 0,
+            remaining: 0,
+            hosts: [],
+            diagnostics: [],
+            startupCleanup: { completion: 'drained', coverage: 'partial', survivingPids: [] },
+          },
+        }),
+        stderr: '',
+        exitCode: 0,
+        timedOut: false,
+      }));
+      const client = new OpenCodeBridgeCommandClient({
+        binaryPath: '/sandbox/cli',
+        tempDirectory: directory,
+        envProvider: resolveEnv,
+        requestIdFactory: () => 'cleanup-test',
+        processRunner: { run },
+      });
+      try {
+        expect(
+          (
+            await client.execute(
+              'opencode.cleanupStartupHosts',
+              {},
+              { cwd: directory, timeoutMs: 100 }
+            )
+          ).ok
+        ).toBe(true);
+        expect(run).toHaveBeenCalledTimes(1);
+        expect(unavailable).not.toHaveBeenCalled();
+        const cleanupEnv = run.mock.calls[0][0].env;
+        expect(cleanupEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBeUndefined();
+        expect(cleanupEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH).toBeUndefined();
+        expect(cleanupEnv.AGENT_TEAMS_BOUND_CONTROL_URL).toBeUndefined();
+        expect(cleanupEnv.AGENT_TEAMS_BOUND_CONTEXT_JSON).toBeUndefined();
+        expect(
+          JSON.parse(cleanupEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON!)
+        ).not.toHaveProperty('AGENT_TEAMS_BOUND_CONTROL_URL');
+        expect(
+          JSON.parse(cleanupEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON!)
+        ).not.toHaveProperty('AGENT_TEAMS_BOUND_CONTEXT_JSON');
+        await expect(
+          client.execute('opencode.launchTeam', {}, { cwd: directory, timeoutMs: 100 })
+        ).rejects.toThrow(
+          useHttpMcpBridge
+            ? 'Desktop MCP control server is not ready'
+            : 'Desktop MCP control context is unavailable'
+        );
+        expect(run).toHaveBeenCalledTimes(1);
+      } finally {
+        revoke();
+        await rm(directory, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it('drains admitted mutations and tears down transport when native run shutdown fails', async () => {
+    const connection = composeExternalAgentConnection({
+      appInstanceId: 'sandbox-native-stop-failure',
+      nativeRun: [{ getProviderStatus: vi.fn() }, () => undefined],
+      cdp: {
+        read: async () => ({ cdp: { status: 'disabled' }, reason: null }),
+      } as unknown as NativeRendererCdp,
+      getMainContents: () => null,
+      isLocalContext: () => true,
+      getControlUrl: () => 'http://127.0.0.1:41000',
+      startControl: async () => undefined,
+      reconfigureRoot: async () => undefined,
+    });
+    const stopError = new Error('owned native process could not be stopped');
+    const nativeStop = vi.spyOn(connection.directRun, 'shutdown').mockRejectedValue(stopError);
+    const transportStop = vi.spyOn(server, 'stop').mockImplementation(async () => {
+      expect(server.appContext.read(getClaudeBasePath())).toBeNull();
+    });
+    let finishMutation!: () => void;
+    const mutationDone = new Promise<void>((resolve) => {
+      finishMutation = resolve;
+    });
+    let mutation: Promise<void> | undefined;
+    let closing: Promise<void> | undefined;
+    let closeSettled = false;
+    try {
+      const { context } = await connection.getConnectionInfo();
+      mutation = connection.withExpectedContext(context, () => mutationDone);
+      closing = connection.closeAdmission();
+      const closeFailure = expect(closing).rejects.toBe(stopError);
+      void closing.then(
+        () => {
+          closeSettled = true;
+        },
+        () => {
+          closeSettled = true;
+        }
+      );
+      // Allow the native rejection to propagate without releasing the admitted mutation.
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(nativeStop).toHaveBeenCalledExactlyOnceWith();
+      expect(closeSettled).toBe(false);
+      expect(transportStop).not.toHaveBeenCalled();
+      await expect(connection.withExpectedContext(context, async () => undefined)).rejects.toThrow(
+        'APP_CONTEXT_MISMATCH'
+      );
+      expect(server.appContext.read(getClaudeBasePath())).not.toBeNull();
+      expect(isDesktopMcpEnvironmentBound()).toBe(true);
+      finishMutation();
+      await mutation;
+      await closeFailure;
+      await expect(connection.shutdown()).rejects.toBe(stopError);
+      expect(transportStop).toHaveBeenCalledExactlyOnceWith({ preventRestart: true });
+      expect(server.appContext.read(getClaudeBasePath())).toBeNull();
+      expect(isDesktopMcpEnvironmentBound()).toBe(false);
+    } finally {
+      finishMutation();
+      await mutation;
+      await closing?.catch(() => undefined);
+      await connection.shutdown().catch(() => undefined);
+      nativeStop.mockRestore();
+      transportStop.mockRestore();
+    }
+  });
+
+  it('binds before the first bridge consumer and refuses pre-control startup without spawning', async () => {
+    const initialize = sourceNode('initializeServices') as ts.FunctionDeclaration;
+    const boundaries = initialize.body!.statements.filter((statement) => {
+      const text = statement.getText(mainSource);
+      return (
+        text.startsWith('externalAgentConnection = composeExternalAgentConnection(') ||
+        text.startsWith('const runtimeAdapterRegistry = await startupStage(') ||
+        text.startsWith('teamProvisioningService.setRuntimeAdapterRegistry(') ||
+        text.startsWith('await startPreparedMemberWorkSyncFeature(') ||
+        text.startsWith('await externalAgentConnection.start()') ||
+        text.startsWith('memberWorkSyncFeature?.startBackground()') ||
+        text.startsWith('teamRuntimeRecoveryFeature.start()')
+      );
+    });
+    let controlUrl: string | null = null;
+    let currentHandle: typeof handle | null = null;
+    const spawnedEnvironments: NodeJS.ProcessEnv[] = [];
+    const start = vi.spyOn(server, 'ensureStarted').mockImplementation(async () => {
+      if (!currentHandle) {
+        spawnedEnvironments.push(getDesktopMcpChildEnvironment());
+        currentHandle = handle;
+      }
+      return currentHandle;
+    });
+    const live = vi.spyOn(server, 'getCurrentHandle').mockImplementation(() => currentHandle);
+    const stop = vi.spyOn(server, 'stop').mockResolvedValue(undefined);
+    const resolveEnv = bridgeResolver(hostEnv(), {
+      getTeamControlApiBaseUrl: () => controlUrl,
+      refreshDesktopBridgeEnvironment,
+    }) as () => Promise<NodeJS.ProcessEnv>;
+    const pendingConsumers: Promise<NodeJS.ProcessEnv>[] = [];
+    const restore = vi.fn(async () => {
+      expect(controlUrl).toBeNull();
+      expect(start).not.toHaveBeenCalled();
+    });
+    const startBackground = vi.fn(() => {
+      expect(controlUrl).toBe('http://127.0.0.1:41000');
+      pendingConsumers.push(resolveEnv());
+    });
+    let connection: ReturnType<typeof createDesktopExternalAgentConnection> | undefined;
+    const gatewayLaunchRuntime = {};
+    const initializeBoundary = compileExpression(
+      `async () => { let externalAgentConnection = null, memberWorkSyncFeature = null; ${boundaries.map((node) => node.getText(mainSource)).join('\n')} }`,
+      {
+        composeExternalAgentConnection: (
+          options: Parameters<typeof createDesktopExternalAgentConnection>[0]
+        ) => {
+          connection = createDesktopExternalAgentConnection({
+            ...options,
+            userDataPath: '/sandbox/app-profile',
+            getRoot: getClaudeBasePath,
+            getAppVersion: () => 'test',
+            getCdpEnabled: () => false,
+            mcp: server,
+            httpEnabled: true,
+          });
+          return { ...connection, start: () => connection!.retryConnection() };
+        },
+        teamDataService: {},
+        gatewayLaunchRuntime,
+        cliInstallerService: { getProviderStatus: vi.fn() },
+        codexAccountFeature: undefined,
+        forwardTeamChangeToRendererAndHttp: vi.fn(),
+        initializedBackupOwner: { initialize: restore },
+        preparedMemberWorkSyncFeature: { startBackground, dispose: vi.fn() },
+        startPreparedMemberWorkSyncFeature,
+        memberWorkSyncStallObservation: { attach: vi.fn() },
+        mainWindow: null,
+        openCodeManagedHostInstanceId: 'review-host',
+        nativeRendererCdp: {
+          read: async () => ({ cdp: { status: 'disabled' }, reason: null }),
+        } as unknown as NativeRendererCdp,
+        contextRegistry: { getActiveContextId: () => 'local' },
+        sshConnectionManager: { getStatus: () => ({ state: 'disconnected' }) },
+        getTeamControlApiBaseUrl: () => controlUrl,
+        startHttpServer: async () => {
+          controlUrl = 'http://127.0.0.1:41000';
+        },
+        handleModeSwitch: vi.fn(),
+        startupStage: (operation: () => unknown) => operation(),
+        createOpenCodeRuntimeAdapterRegistry: async (
+          _publish: unknown,
+          gatewayRuntime: unknown
+        ) => {
+          expect(gatewayRuntime).toBe(gatewayLaunchRuntime);
+          // An early env request must fail without touching the unbound supervisor.
+          await expect(resolveEnv()).rejects.toThrow('Desktop MCP control server is not ready');
+          expect(start).not.toHaveBeenCalled();
+          expect(server.appContext.read(getClaudeBasePath())).toMatchObject({
+            CLAUDE_TEAM_APP_INSTANCE_ID: 'review-host',
+          });
+          return {};
+        },
+        publishStartupStatus: vi.fn(),
+        assertStartupActive: vi.fn(),
+        isShutdownStarted: () => false,
+        teamProvisioningService: { setRuntimeAdapterRegistry: vi.fn() },
+        teamRuntimeRecoveryFeature: { start: () => pendingConsumers.push(resolveEnv()) },
+      }
+    ) as () => Promise<void>;
+    try {
+      await initializeBoundary();
+      await Promise.all(pendingConsumers);
+      expect(restore).toHaveBeenCalledExactlyOnceWith(expect.any(Function));
+      expect(startBackground).toHaveBeenCalledExactlyOnceWith();
+      expect(pendingConsumers).toHaveLength(2);
+      expect(spawnedEnvironments).toHaveLength(1);
+      expect(spawnedEnvironments[0]).toMatchObject({
+        AGENT_TEAMS_BOUND_CONTROL_URL: 'http://127.0.0.1:41000',
+        AGENT_TEAMS_MCP_CLAUDE_DIR: getClaudeBasePath(),
+      });
+      expect(JSON.parse(spawnedEnvironments[0].AGENT_TEAMS_BOUND_CONTEXT_JSON!)).toMatchObject({
+        appInstanceId: 'review-host',
+        // Preparing the bridge now binds the listener before its first MCP spawn.
+        connectionGeneration: 1,
+      });
+    } finally {
+      await connection?.shutdown();
+      stop.mockRestore();
+      start.mockRestore();
+      live.mockRestore();
+    }
+  });
+
   it('retains matching Stop authority through both cleanup phases and revokes at teardown', async () => {
     const env = hostEnv();
     const revoke = server.appContext.bind(env, true);
@@ -149,7 +473,13 @@ describe('shutdown MCP transport authority', () => {
     const finished = new Error('bounded shutdown completed MCP teardown');
     const stopStartupAdmission = vi.fn();
     const legacyMaintenance = vi.fn().mockResolvedValue(true);
+    const disposeTokenUsage = vi.fn();
+    const prepareShutdownCleanup = vi.fn();
+    const closeAdmission = vi.fn(() => {
+      expect(prepareShutdownCleanup).toHaveBeenCalledExactlyOnceWith();
+    });
     const noOp = vi.fn();
+    const stopContinuityScan = vi.fn();
     const teardown = vi.spyOn(server, 'stop').mockImplementation(() => {
       // Revocation must already hold on entry, even when server.stop is slow.
       expect(server.appContext.read(getClaudeBasePath())).toBeNull();
@@ -162,12 +492,29 @@ describe('shutdown MCP transport authority', () => {
       stopAdmittingOpenCodeStartupCleanup: stopStartupAdmission,
       nativeLegacyMaintenanceRequired: legacyMaintenance,
       shutdownDesktopAgentBackend: vi.fn().mockResolvedValue(undefined),
-      revokeMcpAppContext: revoke,
+      openCodeLifecycleBridge: { prepareShutdownCleanup },
+      externalAgentConnection: {
+        closeAdmission,
+        shutdown: async () => {
+          revoke();
+          await server.stop({ preventRestart: true });
+        },
+      },
+      removeExternalAgentConnectionIpc: noOp,
+      ipcMain: {},
       logger: { info: noOp, diagnostic: noOp },
       announcementsLifecycle: { dispose: noOp },
-      runShutdownStep: async (_name: string, step: () => unknown) => await step(),
+      tokenUsageFeature: { dispose: disposeTokenUsage },
+      runShutdownStep: async (_name: string, step: () => unknown) => {
+        // Polling must stop before the first async cleanup can yield, and stay stopped.
+        expect(disposeTokenUsage).toHaveBeenCalledExactlyOnceWith();
+        expect(stopContinuityScan).toHaveBeenCalledExactlyOnceWith();
+        return await step();
+      },
       clearStartupTimers: noOp,
       clearInboxNotifyTimers: noOp,
+      rendererRecoveryController: null,
+      openCodePromptDeliveryContinuityScan: { stop: stopContinuityScan },
       stopPeriodicOpenCodeHostStartupLockPurge: null,
       teamRuntimeRecoveryFeature: null,
       teamProvisioningService: {
@@ -198,6 +545,10 @@ describe('shutdown MCP transport authority', () => {
       await vi.waitFor(() => expect(resume).toBeTypeOf('function'));
       await expect(shutdown()).rejects.toBe(finished);
       expect(stopStartupAdmission).toHaveBeenCalledExactlyOnceWith();
+      expect(closeAdmission).toHaveBeenCalledExactlyOnceWith();
+      expect(prepareShutdownCleanup.mock.invocationCallOrder[0]).toBeLessThan(
+        closeAdmission.mock.invocationCallOrder[0]
+      );
       expect(acceptedStops).toBe(2);
       expect(teardown).toHaveBeenCalledExactlyOnceWith({ preventRestart: true });
       const after = await resolveEnv();
@@ -240,10 +591,18 @@ describe('shutdown MCP transport authority', () => {
         return Promise.resolve(false);
       },
       shutdownDesktopAgentBackend: backend,
+      tokenUsageFeature: null,
+      rendererRecoveryController: null,
+      openCodePromptDeliveryContinuityScan: null,
+      removeExternalAgentConnectionIpc: vi.fn(),
+      ipcMain: {},
+      openCodeLifecycleBridge: null,
+      externalAgentConnection: { closeAdmission: vi.fn() },
       logger: { info: vi.fn() },
       runShutdownStep: async (name: string, step: () => unknown) => {
         order.push(name);
-        if (name !== 'agent backend cleanup') throw finished;
+        if (name !== 'agent backend cleanup' && name !== 'external connection admission drain')
+          throw finished;
         await step();
       },
     }) as () => Promise<void>;
@@ -253,16 +612,66 @@ describe('shutdown MCP transport authority', () => {
       'legacy-admission-sealed',
       'legacy-census-captured',
       'backend-sealed',
-      'agent backend cleanup',
+      'external connection admission drain',
     ]);
     const repeated = shutdown();
     const rejectedRepeated = expect(repeated).rejects.toBe(finished);
     expect(backend).toHaveBeenCalledTimes(2);
-    expect(order.filter((entry) => entry === 'agent backend cleanup')).toHaveLength(1);
+    await vi.waitFor(() => {
+      expect(order.filter((entry) => entry === 'agent backend cleanup')).toHaveLength(1);
+    });
     release();
     await rejectedFirst;
     await rejectedRepeated;
   });
+
+  it.each([true, false])(
+    'refreshes a new main command spool with current authority=%s',
+    async (bound) => {
+      const old = hostEnv();
+      old.AGENT_TEAMS_MCP_CLAUDE_DIR = '/sandbox/old';
+      const command = { ...old, AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT: '/sandbox/old/spool' };
+      const current = {
+        ...hostEnv(),
+        AGENT_TEAMS_MCP_CLAUDE_DIR: '/sandbox/new',
+        CLAUDE_TEAM_APP_PROFILE_SCOPE: 'b'.repeat(64),
+        CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON: undefined,
+      };
+      const root = vi.spyOn(pathDecoder, 'getClaudeBasePath').mockReturnValue('/sandbox/new');
+      const teams = vi.spyOn(pathDecoder, 'getTeamsBasePath').mockReturnValue('/sandbox/new/teams');
+      const spool = vi
+        .spyOn(memberWorkSync, 'buildMemberWorkSyncRuntimeTurnSettledEnvironment')
+        .mockResolvedValue({ AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT: '/sandbox/new/spool' });
+      const revoke = bound ? server.appContext.bind(current, true) : () => undefined;
+      try {
+        // The generic validator still rejects the stale child; only this trusted copy is refreshed.
+        if (bound)
+          expect(() => applyAgentTeamsMcpAppContext({ ...command })).toThrow(
+            'Foreign Host MCP child context'
+          );
+        await refreshDesktopBridgeEnvironment(command);
+        expect(command.AGENT_TEAMS_MCP_CLAUDE_DIR).toBe('/sandbox/new');
+        expect(command.AGENT_TEAMS_RUNTIME_TURN_SETTLED_SPOOL_ROOT).toBe('/sandbox/new/spool');
+        expect(JSON.parse(command.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON)).toMatchObject({
+          ...(bound ? { CLAUDE_TEAM_APP_PROFILE_SCOPE: 'b'.repeat(64) } : {}),
+          AGENT_TEAMS_MCP_CLAUDE_DIR: '/sandbox/new',
+        });
+        expect(old.AGENT_TEAMS_MCP_CLAUDE_DIR).toBe('/sandbox/old');
+        expect(
+          JSON.parse(old.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON).CLAUDE_TEAM_APP_PROFILE_SCOPE
+        ).toBe(profile);
+        expect(spool).toHaveBeenCalledWith({
+          teamsBasePath: '/sandbox/new/teams',
+          provider: 'opencode',
+        });
+      } finally {
+        revoke();
+        spool.mockRestore();
+        teams.mockRestore();
+        root.mockRestore();
+      }
+    }
+  );
 
   it('does not publish a stopped in-flight child when readiness completes late', async () => {
     const child = Object.assign(new EventEmitter(), { stderr: new EventEmitter(), pid: undefined });
@@ -282,8 +691,9 @@ describe('shutdown MCP transport authority', () => {
     const pending = owned.ensureStarted();
     const rejected = expect(pending).rejects.toThrow('exited before startup completed');
     await vi.waitFor(() => expect(ready).toBeTypeOf('function'));
-    await owned.stop({ preventRestart: true });
+    const stopping = owned.stop({ preventRestart: true });
     ready();
+    await stopping;
     await rejected;
     expect(owned.getCurrentHandle()).toBeNull();
     expect(

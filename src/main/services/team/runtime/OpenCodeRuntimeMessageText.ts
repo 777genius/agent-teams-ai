@@ -1,5 +1,6 @@
 import { wrapAgentBlock } from '@shared/constants/agentBlocks';
 
+import { buildOriginalUserRequestBlock } from '../messageDeliveryText';
 import {
   classifyOpenCodeDeliveryReplyContract,
   OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT,
@@ -38,11 +39,40 @@ export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessag
     );
   }
 
+  if (input.groupChatId) {
+    const envelope = {
+      teamName: input.teamName,
+      groupChatId: input.groupChatId,
+      from: input.memberName,
+      relayOfMessageId: input.messageId,
+    };
+    return [
+      wrapAgentBlock(
+        [
+          'This message comes from a group chat. Its immutable origin is:',
+          JSON.stringify(envelope),
+          ...(input.groupMessageId
+            ? [
+                `Canonical original sourceMessageId for group_chat_create: ${input.groupMessageId}. Use only if this original is an explicit human creation request addressed to you; provenance alone is not creation permission.`,
+              ]
+            : []),
+          'Call group_chat_list with teamName and from to discover current groups, membership, and archived state.',
+          'For a requested reply or substantive contribution, use group_chat_send with the exact origin envelope, a new stable UUID messageId, and text. Never substitute message_send or a private user reply.',
+          'For an informational message, you may use group_chat_react if available with the exact origin envelope to acknowledge it. Treat it as acknowledged only when the tool returns saved=true and acknowledged=true for this exact incoming origin. A failed or unmatched result is not an acknowledgement. After that successful acknowledgement, stop without an extra OK or confirmation message.',
+          'If the group is archived, you are no longer a member, or relay is rejected, report the diagnostic and stop. Do not repair, retry in another destination, or echo privately.',
+          'After a successful group_chat_send, stop. Proactive messages may target another available group you belong to, but do not count as replying to this origin.',
+          'Use only the agent-teams MCP tools for communication. Do not call HTTP endpoints or read team state files.',
+        ].join('\n')
+      ),
+      input.text,
+    ].join('\n\n');
+  }
+
   const requestedReplyRecipient = input.replyRecipient?.trim() ?? '';
   const replyContract = classifyOpenCodeDeliveryReplyContract(requestedReplyRecipient);
   const isInformationalNotice = replyContract === 'informational';
   // A teammate (not the lead, not the user) sent this message: by team
-  // contract that is a status report. Replies are optional; mandatory replies
+  // contract replies are optional, but the message may still request a response. Mandatory replies
   // produced "received"/"standing by" ping-pong between teammates.
   const isTeammateReport = replyContract === 'teammate_report';
   const replyRecipient =
@@ -131,10 +161,10 @@ export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessag
           ]
         : isTeammateReport
           ? [
-              `This delivered app message is a status report from your teammate "${replyRecipient}" (task done/started/progress, or an acknowledgement). It is informational: no reply is expected.`,
-              `Do NOT reply by default. Never send acknowledgement, confirmation, thanks, "received", "noted", "standing by", "no further work", or status-recap messages to "${replyRecipient}" or anyone else for this report: every message you send costs the recipient a full model turn and it will answer back, creating an endless loop.`,
-              'The task board already reflects what the report says (task tools update it directly). Do not forward the report, do not re-assign the task, and do not tell the owner or the next owner to start, continue, or confirm: the app notifies task owners automatically when their work is unblocked or assigned.',
-              `Reply ONLY if the report asks you a direct question, requests a decision or hand-off, or describes a blocker that only you can clear. In that case call agent-teams_message_send exactly once with the envelope ${requiredMessageEnvelope} plus concrete text and summary, then stop.`,
+              `This delivered app message may be a status report from your teammate "${replyRecipient}" (task done/started/progress, or an acknowledgement) or an actionable request. A status-only report needs no reply; follow any explicit request or previously agreed response protocol.`,
+              `Do NOT reply by default to status-only reports. Never send unsolicited acknowledgement, confirmation, thanks, "received", "noted", "standing by", "no further work", or status-recap messages to "${replyRecipient}" or anyone else: every unnecessary message costs the recipient a full model turn and can create an endless loop. A requested response is not an unsolicited receipt.`,
+              'For status-only reports, the task board already reflects what the report says (task tools update it directly). Do not forward the report, do not re-assign the task, and do not tell the owner or the next owner to start, continue, or confirm: the app notifies task owners automatically when their work is unblocked or assigned.',
+              `Reply ONLY if the report asks you a direct question, requests a decision or hand-off, describes a blocker that only you can clear, explicitly requests a response, or a previously agreed response protocol applies. Honor the requested recipient and exact response text, while preserving the message envelope below. In that case call agent-teams_message_send exactly once with the envelope ${requiredMessageEnvelope} plus concrete text and summary, then stop.`,
               `If this report is the one that completes the work the user originally requested (this task was the last open task and the required deliverables now exist), send the user exactly one final message with teamName="${input.teamName}", to="user", from="${input.memberName}", source="runtime_delivery", text, and summary. If the board was already complete before this report, that final message was almost certainly sent in an earlier turn: check your own recent messages to the user first and send one only if it is verifiably missing. A "Duplicate message ignored" result means it was already sent.`,
               'Otherwise end the turn with one short plain-text sentence stating what the report was about and that no reply is needed. Do not end this turn empty.',
             ]
@@ -167,6 +197,9 @@ export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessag
     'REPLAY GUARD: this same inbound message may reach you more than once (delivery retries and session rebuilds replay it). Before acting, check the current task board and your recent sent messages for what this message already produced. Do NOT redo an action that is already complete: do not create a task that already exists, and do not re-send a reply you already sent. Work that is only started or partly done is NOT handled: continue it and finish what is missing. Only when everything this message asked for is verifiably complete, end the turn with one short plain-text line noting it was already handled. Never declare overall completion (for example "ALL DONE") unless the required final state verifiably exists right now.',
     actionModeWorkScopeReminder,
     teamToolAccessRule,
+    input.from?.trim().toLowerCase() === 'user' && input.messageId && !input.relayOfMessageId
+      ? buildOriginalUserRequestBlock(input.messageId)
+      : null,
     ...responseInstructions,
     'Do not call runtime_bootstrap_checkin or member_briefing just to answer this delivered app message.',
     'Do not use SendMessage or runtime_deliver_message for ordinary visible replies.',

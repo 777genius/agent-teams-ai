@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "స్పందనను జోడించు ({{count}})",
+      "remove": "స్పందనను తీసివేయి ({{count}})",
+      "count": "స్పందనలు: {{count}}",
+      "failed": "స్పందనలను నవీకరించలేకపోయాము"
+    },
     "actions": {
       "createTaskFromMessage": "సందేశం నుండి టాస్క్ సృష్టించు",
       "editMessage": "సందేశాన్ని సవరించు",
@@ -194,7 +200,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "పేరులో కనీసం ఒక అక్షరం లేదా అంకె ఉండాలి",
-      "nameTooLong": "పేరు చాలా పొడవుగా ఉంది (గరిష్టం 128 అక్షరాలు)",
+      "nameTooLong": "పేరు చాలా పొడవుగా ఉంది (గరిష్టం 64 అక్షరాలు)",
       "selectWorkingDirectory": "వర్కింగ్ డైరెక్టరీని ఎంచుకోండి (cwd)",
       "memberNameRequired": "సభ్యుని పేరు ఖాళీగా ఉండకూడదు",
       "memberNameInvalid": "సభ్యుని పేరు తప్పనిసరిగా ఆల్ఫాన్యూమరిక్‌తో ప్రారంభం కావాలి, [a-zA-Z0-9._-] మాత్రమే ఉపయోగించండి, గరిష్టం 128 అక్షరాలు",
@@ -262,6 +268,8 @@
       "name": "పేరు"
     },
     "memberRestartWarning": "సేవ్ చేయడం రోల్, వర్క్‌ఫ్లో, worktree ఐసొలేషన్, ప్రొవైడర్, మోడల్, ఎఫర్ట్ లేదా MCP యాక్సెస్ మార్పులను వర్తింపజేయడానికి ఈ టీమ్‌మేట్‌ను పునఃప్రారంభిస్తుంది.",
+    "displayedRuntimeHint": "సభ్యుడి కార్డ్‌లో: {{runtime}}. సేవ్ చేసిన సెట్టింగ్‌లు భిన్నంగా ఉన్నాయి.",
+    "useDisplayedRuntime": "కార్డ్ సెట్టింగ్‌లను ఉపయోగించండి",
     "notices": {
       "liveRenameBlocked": "ప్రస్తుత టీమ్‌మేట్‌ల పేరు మార్చబడినందున లైవ్ సేవ్ నిరోధించబడింది. ఆ గుర్తింపు మార్పులను తిరిగి మార్చండి లేదా మొదట టీమ్‌ను ఆపండి.",
       "newLiveTeammates": "టీమ్ లైవ్‌లో ఉన్నప్పుడు Edit Team నుండి కొత్త టీమ్‌మేట్‌లను జోడించలేరు. బదులుగా Add member డైలాగ్‌ను ఉపయోగించండి.",
@@ -351,6 +359,30 @@
     "placeholders": {
       "name": "member-name",
       "mcpServers": "github, sentry"
+    },
+    "gateway": {
+      "apiKeyLabel": "Gateway API key",
+      "apiKeyPlaceholder": "Paste the teammate gateway API key",
+      "authRejected": "Key authorization was rejected.",
+      "bindButton": "Bind teammate",
+      "bindingStatus": "Bound to {{profile}}",
+      "credentialChanged": "stored key changed — bind again with a new key",
+      "credentialMissing": "stored key missing — bind again with a new key",
+      "credentialReady": "key stored",
+      "emptyCatalog": "The model catalog is empty.",
+      "keyRequired": "Enter the gateway API key first.",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. ఈ ఫారమ్ తెరవకముందు సేవ్ చేసిన బైండింగ్‌లు వెంటనే నవీకరించబడతాయి; టీమ్ ఫారమ్‌ను రద్దు చేసినా మార్పులు అలాగే ఉంటాయి.",
+      "probeButton": "Check key and load models",
+      "probing": "Checking...",
+      "profileLabel": "Gateway profile",
+      "profilePlaceholder": "Select a gateway profile",
+      "profileRequired": "Select a gateway profile first.",
+      "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+      "title": "Gateway provider",
+      "unbindButton": "Unbind",
+      "unavailable": "The gateway is unavailable right now."
     }
   },
   "detail": {
@@ -730,6 +762,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "గ్రూప్ చాట్ సృష్టించండి",
+      "description": "కనీసం ఇద్దరు ఏజెంట్లను ఎంచుకోండి. మీరు స్వయంచాలకంగా చేర్చబడతారు.",
+      "name": "చాట్ పేరు",
+      "autoInclude": "కొత్త సభ్యులను స్వయంచాలకంగా చేర్చు",
+      "minimum": "కనీసం ఇద్దరు ఏజెంట్లను ఎంచుకోండి.",
+      "creating": "సృష్టిస్తోంది…",
+      "retryCreate": "మళ్లీ సృష్టించడానికి ప్రయత్నించండి",
+      "unavailable": "చాట్ అందుబాటులో లేదు",
+      "message": "ఈ గ్రూప్‌కు సందేశం పంపండి",
+      "archivedHint": "ఈ చాట్ ఆర్కైవ్ చేయబడింది. సందేశాలు పంపడానికి దాన్ని పునరుద్ధరించండి.",
+      "restartHint": "సందేశం పంపడానికి పాల్గొనేవారందరూ అనుకూలమైన రన్‌టైమ్‌ను నడుపుతూ ఉండాలి.",
+      "unknownDelivery": "సేవ్ అయింది. డెలివరీ స్థితి తెలియదు.",
+      "sending": "పంపుతోంది…",
+      "retrySend": "అదే సందేశాన్ని మళ్లీ పంపండి",
+      "send": "పంపు",
+      "archived": "ఆర్కైవ్ చేసిన చాట్‌లు",
+      "restore": "చాట్‌ను పునరుద్ధరించు",
+      "archive": "చాట్‌ను ఆర్కైవ్ చేయి",
+      "delivery": {
+        "queued": "వరుసలో",
+        "accepted": "అంగీకరించబడింది",
+        "failed": "విఫలమైంది",
+        "unknown": "తెలియదు",
+        "skipped": "దాటవేయబడింది"
+      }
+    },
     "actions": {
       "toLatest": "తాజా సందేశాలకు",
       "bottomSheetActions": "సందేశ బాటమ్ షీట్ చర్యలు",
@@ -969,7 +1028,8 @@
       "cancel": "రద్దు చేయి",
       "delete": "తొలగించు",
       "markResolved": "పరిష్కరించబడినట్లుగా గుర్తించు",
-      "save": "సేవ్ చేయి"
+      "save": "సేవ్ చేయి",
+      "openInTaskTab": "వేరే ట్యాబ్‌లో తెరవండి"
     },
     "attachments": {
       "commentAttachment": "వ్యాఖ్య అటాచ్‌మెంట్",
@@ -2966,6 +3026,25 @@
         "weight_few": "agirlik {{count}}",
         "weight_many": "agirlik {{count}}"
       }
+    }
+  },
+  "externalPrompt": {
+    "requestHelp": "Name the templates to use and describe any edits in your request.",
+    "editAvailable": "Editing draft/stopped configuration is available.",
+    "trashAvailable": "Reversible trash for draft/stopped teams is available."
+  },
+  "managementChanges": {
+    "title": "Recent changes",
+    "created": "Created",
+    "edited": "Edited",
+    "hidden": "Some recent changes are hidden by the current filters.",
+    "roster": "Roles: +{{added}}/-{{removed}}",
+    "fields": {
+      "displayName": "Name changed",
+      "description": "Description changed",
+      "color": "Color changed",
+      "leadInstructions": "Lead instructions changed",
+      "members": "Members changed"
     }
   }
 }

@@ -2,24 +2,27 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@renderer/store', () => ({ useStore: vi.fn() }));
 vi.mock('./messagesPanelConversations', () => ({
-  conversationScopeKey: vi.fn(),
-  filterScopedMessages: vi.fn(),
+  conversationScopeKey: vi.fn((scope) => JSON.stringify(scope)),
+  filterScopedMessages: vi.fn((messages) => messages),
 }));
 vi.mock('../activity/LeadThoughtsGroup', () => ({
   getThoughtGroupKey: vi.fn(),
   groupTimelineItems: vi.fn(),
 }));
 
+import { DEFAULT_TEAM_GROUP_CHAT_ID } from '@features/team-group-chats/contracts';
+
 import {
   canonicalTeamMessages,
   canOpenConversationAddress,
   conversationDraftAddress,
+  localDraftsByConversationScope,
   memberConversationParticipants,
   outboxViewAddress,
   visibleTeamMessages,
 } from './messagesPanelDerivedData';
 
-import type { ComposerDraftAddress } from '@renderer/types/composerDraft';
+import type { ComposerDraftAddress, ComposerWorkingSummary } from '@renderer/types/composerDraft';
 import type { CrossTeamTarget, InboxMessage } from '@shared/types';
 
 const message: InboxMessage = {
@@ -41,6 +44,78 @@ describe('messages panel derived data', () => {
       teamName: 'team-alpha',
       target: { kind: 'direct', participant: 'alice' },
     });
+    const allAddress: ComposerDraftAddress = {
+      contextId: 'local',
+      teamName: 'team-alpha',
+      target: { kind: 'group', groupChatId: DEFAULT_TEAM_GROUP_CHAT_ID },
+    };
+    const allDraft: ComposerWorkingSummary = {
+      version: 1,
+      workingRevision: 'test-draft',
+      address: allAddress,
+      preview: 'All draft',
+      updatedAt: 2,
+      attachmentCount: 0,
+      chipCount: 0,
+      editorKind: 'plain',
+    };
+    const leadDraft: ComposerWorkingSummary = {
+      ...allDraft,
+      address: { ...allAddress, target: { kind: 'team-feed' } },
+      preview: 'Lead draft',
+      updatedAt: 1,
+    };
+    const key = JSON.stringify({ kind: 'team-feed' });
+    expect(
+      localDraftsByConversationScope([allDraft, leadDraft], 'local', 'team-alpha').get(key)?.preview
+    ).toBe('All draft');
+    expect(
+      localDraftsByConversationScope([leadDraft, allDraft], 'local', 'team-alpha').get(key)?.preview
+    ).toBe('All draft');
+    expect(allDraft.address).toBe(allAddress);
+  });
+
+  it('filters root and team before mapping summaries with the same group UUID', () => {
+    const current: ComposerWorkingSummary = {
+      version: 1,
+      workingRevision: 'current',
+      address: {
+        contextId: 'root-a',
+        teamName: 'same-team',
+        target: { kind: 'group', groupChatId: 'same-uuid' },
+      },
+      preview: 'Current group draft',
+      updatedAt: 1,
+      attachmentCount: 0,
+      chipCount: 0,
+      editorKind: 'plain',
+    };
+    const otherRoot = {
+      ...current,
+      preview: 'Foreign root draft',
+      updatedAt: 100,
+      address: { ...current.address, contextId: 'root-b' },
+    };
+    const otherTeam = {
+      ...current,
+      preview: 'Foreign team draft',
+      updatedAt: 200,
+      address: { ...current.address, teamName: 'another-team' },
+    };
+    const drafts = localDraftsByConversationScope(
+      [current, otherRoot, otherTeam],
+      'root-a',
+      'same-team'
+    );
+    expect([...drafts.entries()]).toEqual([
+      [
+        JSON.stringify({ kind: 'group', groupChatId: 'same-uuid' }),
+        expect.objectContaining({ preview: 'Current group draft', updatedAt: 1 }),
+      ],
+    ]);
+    expect(localDraftsByConversationScope([otherRoot, otherTeam], 'root-a', 'same-team').size).toBe(
+      0
+    );
   });
 
   it('recognizes a normalized direct address for a mixed-case member', () => {

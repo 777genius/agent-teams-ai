@@ -1,7 +1,7 @@
 {
   "name": "agent-teams-ai",
   "type": "module",
-  "version": "2.1.2",
+  "version": "2.17.10",
   "dynamicFlags": {
     "showSponsorFluxion": true
   },
@@ -20,7 +20,7 @@
     "url": "https://github.com/777genius/agent-teams-ai/issues"
   },
   "engines": {
-    "node": ">=24.15.0 <25"
+    "node": ">=24.15.0 <25 || >=26 <27"
   },
   "main": "dist-electron/main/index.cjs",
   "scripts": {
@@ -68,7 +68,7 @@
     "dist:linux": "pnpm build && node ./scripts/stage-runtime.mjs --platform linux-x64 && node ./scripts/stage-terminal-platform-runtime.mjs --platform linux-x64 && node ./scripts/electron-builder/dist.mjs --linux",
     "smoke:packaged": "node ./scripts/electron-builder/smokePackagedApp.cjs",
     "preview": "electron-vite preview",
-    "typecheck": "node ./node_modules/@typescript/native/bin/tsc --noEmit",
+    "typecheck": "node ./node_modules/@typescript/native/bin/tsc --noEmit && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.updater-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.release-tooling.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-preload.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-renderer.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.desktop-e2e.json",
     "typecheck:legacy": "node ./node_modules/typescript/bin/tsc --noEmit",
     "typecheck:workspace": "pnpm typecheck && pnpm typecheck:legacy-host-scripts && pnpm --filter @agent-teams/legacy-agent-host typecheck:test && pnpm --filter agent-teams-mcp typecheck && pnpm --filter agent-teams-mcp typecheck:test",
     "lint": "node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js src/ --cache --cache-location .eslintcache --cache-strategy content",
@@ -92,6 +92,7 @@
     "guard:runtime-artifacts": "node ./scripts/ci/forbid-runtime-artifacts.cjs",
     "guard:source-file-size": "node ./scripts/ci/check-source-file-size.mjs",
     "guard:team-provisioning-architecture": "node ./scripts/ci/check-team-provisioning-architecture.mjs",
+    "test:sentry-inventory": "vitest run test/scripts/sentryArtifactInventory.test.ts test/scripts/sentryArtifactInventory.integration.test.ts",
     "test:chunks": "tsx test/test-chunk-building.ts",
     "test:semantic": "tsx test/test-semantic-steps.ts",
     "test:noise": "tsx test/test-noise-filtering.ts",
@@ -103,6 +104,7 @@
     "test": "vitest run",
     "test:ci": "vitest run --maxWorkers=1",
     "test:task-change-ledger": "vitest run test/main/services/team/TaskChangeLedgerReader.test.ts test/main/services/team/taskChangeLedgerFixtures.integration.test.ts test/main/services/team/ReviewApplierService.test.ts test/main/services/team/FileContentResolver.test.ts test/main/services/team/ChangeExtractorService.test.ts test/renderer/store/changeReviewSlice.test.ts test/renderer/utils/reviewKey.test.ts test/main/services/team/TeamLogSourceTracker.test.ts test/main/services/team/stallMonitor/TeamTaskLogFreshnessReader.test.ts",
+    "test:e2e:select-team-latch": "tsx scripts/e2e/select-team-latch-desktop.ts",
     "test:e2e:change-review": "node scripts/e2e/change-review-hunk-desktop.mjs",
     "test:e2e:change-review:dev-mcp": "node scripts/e2e/change-review-hunk-desktop.mjs --dev-mcp --single-window",
     "test:e2e:change-review:dev-mcp:restart": "node scripts/e2e/change-review-hunk-desktop.mjs --dev-mcp",
@@ -114,7 +116,13 @@
     "standalone:build": "node --max-old-space-size=8192 ./node_modules/electron-vite/bin/electron-vite.js build && node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build --config docker/vite.standalone.config.ts",
     "standalone:start": "node dist-standalone/index.cjs",
     "prepare": "husky",
-    "postinstall": "electron-rebuild -f -o node-pty,ssh2,cpu-features,better-sqlite3 || echo 'native Electron rebuild failed (terminal/ssh/sqlite features may be degraded)'; node ./scripts/ensure-electron-install.cjs",
+    "postinstall": "node ./scripts/postinstall-electron.cjs",
+    "lint:native:candidate": "oxlint --config .oxlintrc.json src/ && pnpm lint",
+    "format:native:check": "node scripts/local-checks/desktop-native-check.ts --check",
+    "format:native:proposal": "node scripts/local-checks/desktop-native-check.ts --proposal",
+    "test:native:parity": "vitest run --config scripts/local-checks/vitest.native-parity.config.ts",
+    "typecheck:native:tooling": "node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/local-checks/tsconfig.native-tooling.json",
+    "test:native:retained": "vitest run --config scripts/local-checks/vitest.retained-policy.config.ts",
     "pretypecheck": "pnpm --filter @agent-teams/legacy-agent-host build",
     "test:legacy-agent-host": "pnpm --filter @agent-teams/legacy-agent-host test && pnpm exec vitest run test/features/agent-backend --maxWorkers=1",
     "stage:legacy-host-node": "node scripts/legacy-agent-host/stage-node.ts",
@@ -162,7 +170,11 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@fastify/cors": "^11.2.0",
     "@fastify/static": "^10.1.2",
+    "@file-viewer/preset-office": "3.1.2",
+    "@file-viewer/react": "3.1.2",
     "@floating-ui/dom": "^1.7.6",
+    "@headless-tree/core": "1.7.0",
+    "@headless-tree/react": "1.7.0",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-checkbox": "^1.3.3",
     "@radix-ui/react-collapsible": "^1.1.12",
@@ -208,17 +220,18 @@
     "cronstrue": "^3.13.0",
     "date-fns": "^3.6.0",
     "diff": "^8.0.3",
-    "dompurify": "^3.4.12",
+    "dompurify": "^3.4.17",
     "drizzle-orm": "^0.45.2",
+    "builder-util-runtime": "9.7.0",
     "electron-updater": "^6.8.9",
     "fast-json-stringify": "^6.4.0",
-    "fastify": "^5.10.0",
+    "fastify": "^5.12.5",
     "highlight.js": "^11.11.1",
     "i18next": "26.2.0",
     "idb-keyval": "^6.2.2",
     "isbinaryfile": "^6.0.0",
-    "jsonc-parser": "3.3.1",
     "json-schema-ref-resolver": "^3.0.0",
+    "jsonc-parser": "3.3.1",
     "lucide-react": "^0.577.0",
     "mdast-util-to-hast": "^13.2.1",
     "mermaid": "^11.15.0",
@@ -240,7 +253,7 @@
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
-    "simple-git": "^3.36.0",
+    "simple-git": "4.0.2",
     "ssh-config": "^5.0.4",
     "ssh2": "^1.17.0",
     "strip-markdown": "^6.0.0",
@@ -252,13 +265,19 @@
     "yaml": "^2.9.0",
     "yet-another-react-lightbox": "^3.29.1",
     "zustand": "^4.5.0",
+    "@openuidev/lang-core": "0.3.2",
+    "@openuidev/react-headless": "0.17.0",
+    "@openuidev/react-lang": "0.3.2",
+    "@openuidev/react-ui": "0.17.0",
+    "zod": "4.6.7",
     "@agent-teams/legacy-agent-host": "workspace:*",
     "@agent-teams/task-change-ledger": "workspace:*"
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.4",
+    "@electron/rebuild": "^4.2.0",
     "@eslint-community/eslint-plugin-eslint-comments": "^4.6.0",
     "@eslint/js": "^9.39.2",
+    "@file-viewer/vite-plugin": "3.1.2",
     "@sentry/vite-plugin": "^5.1.1",
     "@tailwindcss/typography": "^0.5.19",
     "@types/better-sqlite3": "^7.6.13",
@@ -274,8 +293,8 @@
     "@vitest/coverage-v8": "^3.2.5",
     "autoprefixer": "^10.4.17",
     "better-sqlite3-node": "npm:better-sqlite3@12.10.1",
-    "electron": "^41.10.6",
-    "electron-builder": "^26.15.3",
+    "electron": "^44.9.3",
+    "electron-builder": "26.17.0",
     "electron-vite": "^5.0.0",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
@@ -290,21 +309,24 @@
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-sonarjs": "^3.0.6",
     "eslint-plugin-tailwindcss": "^3.18.2",
+    "fake-indexeddb": "6.2.5",
     "globals": "^17.2.0",
-    "happy-dom": "^20.9.0",
+    "happy-dom": "^21.0.4",
     "husky": "^9.1.7",
     "i18next-cli": "1.58.0",
     "knip": "^5.82.1",
     "lint-staged": "^16.2.7",
-    "postcss": "^8.5.23",
+    "postcss": "^8.5.28",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "tailwindcss": "^3.4.1",
-    "tsx": "^4.21.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.54.0",
-    "vite": "^6.4.3",
-    "vitest": "^3.2.5"
+    "vite": "^6.4.4",
+    "vitest": "^3.2.5",
+    "oxlint": "1.87.0",
+    "oxfmt": "0.72.0"
   },
   "build": {
     "appId": "com.agent-teams.app",
@@ -378,9 +400,11 @@
       "main": "dist-electron/main/index.cjs"
     },
     "mac": {
+      "identity": "ILLIA ZELENKO (86399583GS)",
+      "forceCodeSigning": true,
       "artifactName": "Agent.Teams.AI-${version}-${arch}-mac.${ext}",
       "category": "public.app-category.developer-tools",
-      "minimumSystemVersion": "12.0",
+      "minimumSystemVersion": "13.0",
       "target": [
         "dmg",
         "zip"
@@ -394,7 +418,24 @@
     },
     "dmg": {
       "sign": false,
-      "artifactName": "Agent.Teams.AI-${version}-${arch}.${ext}"
+      "artifactName": "Agent.Teams.AI-${version}-${arch}.${ext}",
+      "title": "Agent Teams AI Installer",
+      "background": "resources/dmg/background.png",
+      "iconSize": 112,
+      "iconTextSize": 14,
+      "contents": [
+        {
+          "x": 229,
+          "y": 245,
+          "type": "file"
+        },
+        {
+          "x": 571,
+          "y": 245,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     },
     "win": {
       "target": [
@@ -431,7 +472,23 @@
     "pacman": {
       "afterInstall": "resources/afterInstall.sh",
       "fpm": [
+        "--after-upgrade=resources/afterInstall.sh",
         "resources/linux/bin/agent-teams-ai=/usr/bin/agent-teams-ai"
+      ],
+      "depends": [
+        "c-ares",
+        "ffmpeg",
+        "gtk3",
+        "libevent",
+        "libvpx",
+        "libxslt",
+        "libxss",
+        "minizip",
+        "nss",
+        "re2",
+        "snappy",
+        "libnotify",
+        "libappindicator-gtk3"
       ]
     },
     "nsis": {
@@ -464,7 +521,8 @@
       "src/**/*.{ts,tsx}!"
     ],
     "ignore": [
-      "tsconfig*.json"
+      "tsconfig*.json",
+      "scripts/tsconfig/*.json"
     ],
     "paths": {
       "@features/*": [

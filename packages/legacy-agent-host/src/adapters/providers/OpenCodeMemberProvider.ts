@@ -1,3 +1,4 @@
+import { readOpenCodeInputModalities } from './readOpenCodeInputModalities.js';
 import { captureOpenCodeExtraArgs } from '@agent-teams/provider-implementations/opencode';
 import { capturedMcpSourceCurrent } from '../../mcp-catalog/capturedSource.js';
 import { createHash, randomBytes } from 'node:crypto';
@@ -27,7 +28,7 @@ import type {
   OpenCodeClient,
   OpenCodeV1DriverConfig,
 } from '@agent-teams/provider-implementations/opencode';
-import type { DriverFactory, Session } from '@agent-teams/provider-session-contracts';
+import type { DriverFactory, Input, Session } from '@agent-teams/provider-session-contracts';
 import type { CapturedProcessPort } from './CapturedProcess.js';
 import type { MemberProvider, MemberProviderContext } from './MemberProvider.js';
 import type { OpenCodeMemberProfile } from '../../composition/runtimeProfile.js';
@@ -185,6 +186,8 @@ export function createOpenCodeMemberProvider(
   const contextDigest = initialContextDigest(context.instructions);
   let allocated = false;
   let nativeSessionId: string | undefined;
+  // Pending calls, not a delivery queue: D readiness must recheck their media until native handoff.
+  const nativeMediaSubmits = new Set<Input>();
   const abort = new AbortController();
   const current = () => !sealed && context.isCurrent() && custody.isRunning();
   const fetchImpl = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -231,15 +234,31 @@ export function createOpenCodeMemberProvider(
     const providers = await api.getConfigProviders({
       initializeInstance: true,
     });
+    const selected = providers.providers?.filter(
+      (item) => item.id === profile.nativeOptions.providerId
+    );
     if (
-      !providers.providers?.some(
-        (item) =>
-          item.id === profile.nativeOptions.providerId &&
-          item.models &&
-          Object.hasOwn(item.models, profile.model)
-      )
+      selected?.length !== 1 ||
+      !selected[0]?.models ||
+      !Object.hasOwn(selected[0].models, profile.model)
     )
       return false;
+    const references = [...nativeMediaSubmits].flatMap((input) => input.attachments ?? []);
+    if (references.length) {
+      const declaration = readOpenCodeInputModalities(selected[0].models[profile.model]);
+      if (
+        !declaration ||
+        references.some((reference) => {
+          const modality = reference.mimeType.startsWith('image/')
+            ? 'image'
+            : reference.mimeType.startsWith('video/')
+              ? 'video'
+              : undefined;
+          return !modality || !declaration.includes(modality);
+        })
+      )
+        return false;
+    }
     return current();
   };
   const validCatalogReceipt = (receipt: TeamMcpCatalogReceipt | undefined): boolean =>
@@ -408,23 +427,30 @@ export function createOpenCodeMemberProvider(
         const driver: Session = {
           sessionRef: source.sessionRef,
           async submit(input) {
-            if (!capturedPolicy) return source.submit(input);
+            if (!capturedPolicy && !input.attachments?.length) return source.submit(input);
             const capturedInput = structuredClone(input);
+            if (capturedInput.attachments?.length) {
+              if (nativeMediaSubmits.size >= profile.limits.queuedInputs + 1)
+                return { ok: false, code: 'backpressure', delivery: 'known-not-sent' } as const;
+              nativeMediaSubmits.add(capturedInput);
+            }
             try {
-              if (!(await probe(abort.signal)))
+              let approved = false;
+              try {
+                approved = await probe(abort.signal);
+              } catch {
+                /* No native handoff yet. */
+              }
+              if (!approved)
                 return {
                   ok: false,
                   code: 'dependency-unavailable',
                   delivery: 'known-not-sent',
                 } as const;
-            } catch {
-              return {
-                ok: false,
-                code: 'dependency-unavailable',
-                delivery: 'known-not-sent',
-              } as const;
+              return await source.submit(capturedInput);
+            } finally {
+              nativeMediaSubmits.delete(capturedInput);
             }
-            return source.submit(capturedInput);
           },
           async *observe() {
             for await (const event of source.observe()) {

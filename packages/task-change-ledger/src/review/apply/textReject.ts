@@ -3,7 +3,6 @@ import { threeWayTextMerge } from './threeWayTextMerge.js';
 import { readFile } from 'fs/promises';
 import type { ConflictCheckResult, RejectResult, SnippetDiff } from '../../contracts.js';
 import {
-  type ApplyErrorCode,
   getCurrentTextReadError,
   withFileMutationLock,
   mapRejectedHunkIndicesByHashStrict,
@@ -219,57 +218,7 @@ export function createTextReject(getContext: () => ApplierContext) {
         ? { preview: modified, hasConflicts: true }
         : { preview: rejected, hasConflicts: false };
     },
-    async rejectNonLedgerNewFile(
-      filePath: string,
-      modified: string | null
-    ): Promise<
-      { status: 'applied' } | { status: 'conflict' | 'error'; error: string; code: ApplyErrorCode }
-    > {
-      const ctx = getContext();
-      if (modified === null) {
-        const current = await ctx.readCurrentText(filePath);
-        if (current.missing) return { status: 'applied' };
-        const currentError = getCurrentTextReadError(current);
-        return {
-          status: 'error',
-          error:
-            currentError ?? 'Cannot delete new file: expected modified content is unavailable.',
-          code: currentError ? 'io-error' : 'unavailable',
-        };
-      }
 
-      const current = await ctx.readCurrentText(filePath);
-      if (current.missing) return { status: 'applied' };
-      const currentError = getCurrentTextReadError(current);
-      if (currentError) {
-        return { status: 'error', error: currentError, code: 'io-error' };
-      }
-      if (current.content !== modified) {
-        return {
-          status: 'conflict',
-          error:
-            'File was modified since review was computed; refusing to delete new file automatically.',
-          code: 'conflict',
-        };
-      }
-
-      try {
-        await ctx.deleteExpectedTextFile(filePath, current.content);
-        return { status: 'applied' };
-      } catch (err) {
-        const code =
-          err && typeof err === 'object' && 'code' in err
-            ? String((err as { code?: unknown }).code)
-            : '';
-        return code === 'ENOENT'
-          ? { status: 'applied' }
-          : {
-              status: 'error',
-              error: `Failed to delete new file: ${String(err)}`,
-              code: 'io-error',
-            };
-      }
-    },
     tryStrictHunkLevelReject(
       original: string,
       modified: string,

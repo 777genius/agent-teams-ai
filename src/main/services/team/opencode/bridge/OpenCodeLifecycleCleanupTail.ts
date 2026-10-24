@@ -20,11 +20,15 @@ import { buildOpenCodeAppScopedMcpOwnershipMarker } from './OpenCodeMcpBridgeEnv
 import { runOpenCodeStartupRuntimeSweepTail } from './OpenCodeStartupRuntimeSweep';
 
 import type { CursorAgentTreeSweepPort } from './CursorAgentProcessCleanup';
+import type {
+  OpenCodeCleanupHostsCommandBody,
+  OpenCodeCleanupHostsCommandData,
+} from './OpenCodeBridgeCommandContract';
 
 /**
- * Everything the app does about OpenCode hosts after the host registry has
- * answered, for both lifecycle reasons: the process-level fallback sweep the
- * registry cannot reach, and the startup-only tail behind it.
+ * Host lifecycle cleanup admission and the process-level fallback sweep,
+ * including the startup-only maintenance behind it. Registry reconciliation
+ * is admitted only at startup; shutdown proves the current app instance.
  *
  * It sits beside the sweeps it drives rather than in the entry point because
  * this is the destructive half of the lifecycle, and the entry point is the one
@@ -81,6 +85,62 @@ export interface OpenCodeLifecycleCleanupTailInput {
    */
   releaseSharedRuntime?: () => Promise<void>;
   ports: OpenCodeLifecycleCleanupTailPorts;
+}
+
+/** Existing Host orchestration, kept beside the scoped process cleanup it admits. */
+export async function runOpenCodeLifecycleHostCleanup(
+  input: Omit<
+    OpenCodeLifecycleCleanupTailInput,
+    'registryHostPids' | 'registryCleanupAvailable' | 'sweepCommandSettledAtMs'
+  > & {
+    logRegistryResult: (message: string) => void;
+    cleanupRegistry?: (
+      body: OpenCodeCleanupHostsCommandBody
+    ) => Promise<OpenCodeCleanupHostsCommandData>;
+  }
+): Promise<void> {
+  const { reason, ports } = input;
+  let registryHostPids = new Set<number>();
+  let registryCleanupAvailable = input.registryMaintenanceSkipped === true;
+  try {
+    // The registry is shared across app instances. Its administrative force
+    // mode ignores active leases, so ordinary shutdown has no authority to use
+    // it. The existing fallback below proves this app instance before effects.
+    if (reason === 'startup' && input.cleanupRegistry) {
+      const result = await input.cleanupRegistry({
+        reason,
+        mode: 'stale',
+        staleAgeMs: 5 * 60_000,
+        leaseStaleAgeMs: 24 * 60 * 60_000,
+        preflightLeaseStaleAgeMs: 6 * 60_000,
+      });
+      registryHostPids = new Set(
+        result.hosts
+          .filter((host) => host.action.startsWith('kept_'))
+          .map((host) => host.pid)
+          .filter((pid) => Number.isFinite(pid) && pid > 0)
+      );
+      if (result.cleaned > 0) {
+        input.logRegistryResult(
+          `[OpenCode] ${reason} host cleanup removed ${result.cleaned} registry host(s), ${result.remaining} remaining`
+        );
+      }
+      for (const diagnostic of result.diagnostics) {
+        ports.logWarning(`[OpenCode] ${reason} host cleanup: ${diagnostic}`);
+      }
+      registryCleanupAvailable = !result.diagnostics.some((diagnostic) =>
+        diagnostic.startsWith('OpenCode host cleanup bridge failed:')
+      );
+    }
+  } finally {
+    // The registry may create a command host, so its settling time fences the tail.
+    await runOpenCodeLifecycleCleanupTail({
+      ...input,
+      registryHostPids,
+      registryCleanupAvailable,
+      sweepCommandSettledAtMs: Date.now(),
+    });
+  }
 }
 
 /**

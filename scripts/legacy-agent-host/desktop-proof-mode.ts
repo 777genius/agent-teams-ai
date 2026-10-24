@@ -6,6 +6,7 @@ import { startDesktopApprovalModel } from './desktop-approval-model.ts';
 import { startNativeReviewModel } from './desktop-native-review-model.ts';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 import {
   startNativeTeamModel,
   record,
@@ -59,7 +60,23 @@ export async function prepareDesktopProofMode(mode: string, fixtureRoot: () => s
           assert.ok(processBashCommand, 'original prepared process fixture command');
           return processBashCommand();
         },
-        services: () => readProcessServices(fixtureRoot()),
+        async services() {
+          for (const end = Date.now() + 10_000; Date.now() < end;) {
+            try { return await readProcessServices(fixtureRoot()); }
+            catch (error) {
+              if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
+            }
+            await delay(25); // Original background publication only; never rerun Bash.
+          }
+          throw new Error('Original finite service publication exhausted; no replay');
+        },
+        async serviceLifecycle(role) {
+          const text = readFileSync(
+            join(fixtureRoot(), 'workspace', `process-${role}-lifecycle.ndjson`), 'utf8'
+          );
+          assert.ok(Buffer.byteLength(text) <= 8192, 'finite original service lifecycle');
+          return text.trim().split('\n').map(line => record(JSON.parse(line)));
+        },
       })
     : undefined;
   const nativeReviewContinuationMode = mode === 'native-review-continuation-ui';

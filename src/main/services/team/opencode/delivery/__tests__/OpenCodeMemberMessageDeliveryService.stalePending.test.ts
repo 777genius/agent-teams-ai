@@ -233,6 +233,7 @@ function createHarness(input: {
     })),
     // Left undefined unless a test wires it, exactly like production today.
     readOpenCodeMemberContextUsage: input.readOpenCodeMemberContextUsage,
+    isMemberLifecycleOperationActive: () => false,
     stoppingSecondaryRuntimeTeams: { has: () => false },
     readPersistedTeamProjectPath: vi.fn(() => input.ledgerDir),
     resolveDeliverableTrackedRuntimeRunId: vi.fn(() => input.runtimeRunId?.() ?? 'run-1'),

@@ -1189,6 +1189,7 @@ export class FileWatcher extends EventEmitter {
 
     if (
       relative === 'config.json' ||
+      relative === 'group-chats.json' ||
       relative === 'kanban-state.json' ||
       relative === 'team.meta.json' ||
       relative === 'members.meta.json'

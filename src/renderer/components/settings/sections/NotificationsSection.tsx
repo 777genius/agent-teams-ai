@@ -10,8 +10,10 @@ import {
   RepositoryDropdown,
   SelectedRepositoryItem,
 } from '@renderer/components/common/RepositoryDropdown';
+import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { useStore } from '@renderer/store';
 import {
   AlertTriangle,
   ArrowRightLeft,
@@ -131,6 +133,7 @@ export const NotificationsSection = ({
   onRemoveTrigger,
   onStatusChangeStatusesUpdate,
 }: NotificationsSectionProps): React.JSX.Element => {
+  const openTab = useStore((state) => state.openTab);
   const { t } = useAppTranslation('settings');
   const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [testError, setTestError] = useState<string | null>(null);
@@ -392,36 +395,14 @@ export const NotificationsSection = ({
               disabled={saving || !safeConfig.notifications.enabled}
             />
           </SettingRow>
-          <SettingRow
-            label={t('notifications.usageBudgets.warning.label')}
-            description={t('notifications.usageBudgets.warning.description')}
-            icon={<AlertTriangle className="size-4" />}
+          <Button
+            type="button"
+            variant="link"
+            className="my-3 p-0 text-xs"
+            onClick={() => openTab({ type: 'token-usage', label: 'Usage' })}
           >
-            <SettingsToggle
-              enabled={safeConfig.notifications.notifyOnUsageBudgetWarning}
-              onChange={(v) => onNotificationToggle('notifyOnUsageBudgetWarning', v)}
-              disabled={
-                saving ||
-                !safeConfig.notifications.enabled ||
-                !safeConfig.notifications.notifyOnUsageBudgetAlerts
-              }
-            />
-          </SettingRow>
-          <SettingRow
-            label={t('notifications.usageBudgets.critical.label')}
-            description={t('notifications.usageBudgets.critical.description')}
-            icon={<AlertTriangle className="size-4" />}
-          >
-            <SettingsToggle
-              enabled={safeConfig.notifications.notifyOnUsageBudgetCritical}
-              onChange={(v) => onNotificationToggle('notifyOnUsageBudgetCritical', v)}
-              disabled={
-                saving ||
-                !safeConfig.notifications.enabled ||
-                !safeConfig.notifications.notifyOnUsageBudgetAlerts
-              }
-            />
-          </SettingRow>
+            {t('notifications.usageBudgets.editorLink')}
+          </Button>
           <SettingRow
             label={t('notifications.usageBudgets.nativeToast.label')}
             description={t('notifications.usageBudgets.nativeToast.description')}
@@ -660,7 +641,7 @@ export const NotificationsSection = ({
         dropUp
       />
 
-      {/* Task Completion Notifications */}
+      {/* Agent Notifications */}
       <SettingsSectionHeader
         title={t('notifications.taskCompletion.title')}
         icon={<PartyPopper className="size-3.5" />}
@@ -676,9 +657,7 @@ export const NotificationsSection = ({
           {t('notifications.taskCompletion.description')}
         </p>
         <button
-          onClick={() =>
-            void api.openExternal('https://github.com/777genius/claude-notifications-go')
-          }
+          onClick={() => void api.openExternal('https://github.com/777genius/agent-notifications')}
           className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors hover:brightness-125"
           style={{
             backgroundColor: 'var(--color-border-emphasis)',

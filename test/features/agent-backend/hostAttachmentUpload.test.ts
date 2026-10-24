@@ -551,7 +551,7 @@ describe('selected Team attachment publication', () => {
     });
   });
 
-  it('resolves native bytes only for the exact current claimed input; unsupported recipients get an empty native MIME policy', async () => {
+  it('resolves native bytes only for the exact current claimed input and preserves actual teammate native channels', async () => {
     const f = fixture(),
       reference = f.upload(Buffer.from('TEST native bytes'), 'TEST-native', {
         kind: 'message',
@@ -579,13 +579,13 @@ describe('selected Team attachment publication', () => {
       sessionRef: 'TEST-native-session',
       inputs: [{ intent, operationRef, phase: 'claimed' }],
     } as unknown as RuntimeSessionRecord;
-    const port = createMemberAttachmentPort({
+    const { port } = createMemberAttachmentPort({
       entry,
       storageRoot: f.root,
       assertCurrent() {},
       readRuntime: () => ({ record, attached: true }),
     });
-    const stablePolicy = createMemberAttachmentPort({
+    const { port: stablePolicy } = createMemberAttachmentPort({
       entry: {
         ...entry,
         binding: { ...entry.binding, generation: '2' },
@@ -617,7 +617,7 @@ describe('selected Team attachment publication', () => {
     expect((await port.resolve(request, signal))?.bytes).toEqual(Buffer.from('TEST native bytes'));
     expect(await port.resolve({ ...request, inputId: 'TEST-other-input' }, signal)).toBeUndefined();
     expect(await port.resolve({ ...request, fingerprint: 'f'.repeat(64) }, signal)).toBeUndefined();
-    const unsupported = {
+    const teammate = {
       ...entry,
       team: {
         ...entry.team,
@@ -632,11 +632,11 @@ describe('selected Team attachment publication', () => {
     };
     expect(
       createMemberAttachmentPort({
-        entry: unsupported,
+        entry: teammate,
         storageRoot: f.root,
         assertCurrent() {},
         readRuntime: () => ({ record, attached: true }),
-      }).mimeTypes
-    ).toEqual([]);
+      }).port.mimeTypes
+    ).toEqual(port.mimeTypes);
   });
 });

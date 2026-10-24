@@ -441,6 +441,7 @@ export interface RuntimeProviderModelDto {
   managedContextTokens?: number | null;
   managedOutputTokens?: number | null;
   managedUpdatedAt?: string | null;
+  declaredInputModalities?: readonly string[] | null;
 }
 
 export interface RuntimeProviderManagementModelsDto {
@@ -451,6 +452,8 @@ export interface RuntimeProviderManagementModelsDto {
   diagnostics: readonly string[];
   /** Optional while older packaged orchestrators are still supported. */
   catalogState?: 'fresh' | 'stale';
+  /** App-owned catalog snapshot expiry, preserved on cache hits. */
+  freshUntil?: string | null;
   totalCount?: number;
   returnedCount?: number;
   limit?: number | null;

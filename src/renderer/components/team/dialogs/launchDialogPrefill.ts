@@ -6,19 +6,41 @@ import {
   normalizeMemberDraftForProviderMode,
 } from '@renderer/components/team/members/MembersEditorSection';
 import { normalizeCreateLaunchProviderForUi } from '@renderer/utils/geminiUiFreeze';
-import { getDefaultProviderBackendId } from '@renderer/utils/providerBackendIdentity';
+import {
+  getDefaultProviderBackendId,
+  resolveUiOwnedProviderBackendId,
+} from '@renderer/utils/providerBackendIdentity';
 import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvailability';
 import { extractProviderScopedBaseModel } from '@renderer/utils/teamModelContext';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
+import { resolveTeamRuntimeSelection } from '@shared/utils/teamRuntimeSelection';
 
 import {
   buildWorktreePathByMemberName,
   deriveTeammateWorktreeDefault,
 } from './launchTeamDialogHelpers';
 
-import type { ResolvedTeamMember, TeamCreateRequest, TeamProviderId } from '@shared/types';
+import type {
+  CliProviderStatus,
+  ResolvedTeamMember,
+  TeamCreateRequest,
+  TeamProviderId,
+} from '@shared/types';
+
+/** Prefer current runtime authority; reuse configured backend identity only as a fallback. */
+export function resolveLaunchProviderBackendId(
+  providerId: TeamProviderId,
+  status: CliProviderStatus | undefined,
+  configuredBackendId: string | null | undefined
+) {
+  return (
+    resolveUiOwnedProviderBackendId(providerId, status) ??
+    migrateProviderBackendId(providerId, configuredBackendId) ??
+    undefined
+  );
+}
 
 interface PreviousLaunchParamsLike {
   providerId?: TeamProviderId;
@@ -42,6 +64,7 @@ interface LaunchDialogPrefillInput {
 }
 
 interface LaunchDialogPrefillResult {
+  runtimeSelectionUnresolved?: boolean;
   providerId: TeamProviderId;
   providerBackendId?: string;
   model: string;
@@ -100,6 +123,18 @@ export function resolveLaunchDialogPrefill({
   storedLimitContext,
   getStoredModel,
 }: LaunchDialogPrefillInput): LaunchDialogPrefillResult {
+  const fastMode =
+    savedRequest?.fastMode ?? previousLaunchParams?.fastMode ?? storedFastMode ?? 'off';
+  if (savedRequest && resolveTeamRuntimeSelection(savedRequest).status === 'unresolved') {
+    return {
+      runtimeSelectionUnresolved: true,
+      providerId: storedProviderId,
+      model: '',
+      effort: '',
+      fastMode,
+      limitContext: false,
+    };
+  }
   if (savedRequest && isHostSavedRequest(savedRequest)) {
     const providerId = normalizeCreateLaunchProviderForUi(
       savedRequest.providerId ?? 'anthropic',
@@ -135,20 +170,24 @@ export function resolveLaunchDialogPrefill({
     multimodelEnabled
   );
 
-  const modelCandidates = [
-    {
-      providerId: currentLeadProviderId,
-      model: normalizeModelCandidate(currentLead?.model, currentLeadProviderId),
-    },
-    {
-      providerId: savedRequestProviderId,
-      model: normalizeModelCandidate(savedRequest?.model, savedRequestProviderId),
-    },
-    {
-      providerId: previousLaunchProviderId,
-      model: normalizeModelCandidate(previousLaunchParams?.model, previousLaunchProviderId),
-    },
-  ];
+  const savedModel = normalizeModelCandidate(savedRequest?.model, savedRequestProviderId);
+  const modelCandidates =
+    savedRequest?.runtimeSelectionVersion === 1 && !savedModel
+      ? []
+      : [
+          {
+            providerId: currentLeadProviderId,
+            model: normalizeModelCandidate(currentLead?.model, currentLeadProviderId),
+          },
+          {
+            providerId: savedRequestProviderId,
+            model: savedModel,
+          },
+          {
+            providerId: previousLaunchProviderId,
+            model: normalizeModelCandidate(previousLaunchParams?.model, previousLaunchProviderId),
+          },
+        ];
 
   const matchingModel = modelCandidates.find(
     (candidate) =>
@@ -157,8 +196,6 @@ export function resolveLaunchDialogPrefill({
 
   const effort =
     currentLead?.effort ?? savedRequest?.effort ?? previousLaunchParams?.effort ?? storedEffort;
-  const fastMode =
-    savedRequest?.fastMode ?? previousLaunchParams?.fastMode ?? storedFastMode ?? 'inherit';
   const limitContext =
     previousLaunchParams?.limitContext ?? savedRequest?.limitContext ?? storedLimitContext;
   const providerBackendId =
@@ -175,7 +212,9 @@ export function resolveLaunchDialogPrefill({
     providerBackendId,
     model: matchingModel
       ? normalizeExplicitTeamModelForUi(providerId, matchingModel)
-      : getStoredModel(providerId),
+      : savedRequest?.runtimeSelectionVersion === 1
+        ? ''
+        : getStoredModel(providerId),
     effort,
     fastMode,
     limitContext,

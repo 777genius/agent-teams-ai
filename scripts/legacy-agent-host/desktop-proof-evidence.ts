@@ -41,7 +41,7 @@ export async function desktopProofEvidence(options: {
         }
       : {}),
     scope:
-      mode === 'native-process-ui' ? 'Actual native Bash/private MCP registers original services, original captured Host crash/cold reconnect, existing Processes UI Stop by exact native birth identity; neighbor remains live'
+      mode === 'native-process-ui' ? 'Actual native Bash/private MCP registration and original Host crash/cold reconnect; visible original row with no Stop if absent, or one original-ref Stop if same-live; Runtime custody stays HOLD, no native cleanup or natural-expiry claim'
       : mode === 'native-activity-readback-ui' ? 'Original Member Logs/Stats and reload from exact retained native child proof; original profile/store unchanged through Host close, zero native replay'
       : mode === 'native-mixed-create-launch-ui' ? 'Original Create save-only three-provider roster, saved Launch model checks and native capture, original Composer messages/MCP/Bash/replies for three providers, Stop and reload; localhost inference only'
       : mode === 'native-quit-ui'

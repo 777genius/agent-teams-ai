@@ -1,3 +1,4 @@
+import type { NativeAttachmentCapabilities } from '../../attachments/attachmentTypes.js';
 import type { ClaudeConfig } from '@agent-teams/provider-implementations/claude';
 import type {
   RegisteredProcessRootSource,
@@ -34,6 +35,7 @@ export interface MemberProviderContext {
 
 export interface MemberProvider {
   factory: DriverFactory;
+  readonly attachmentCapabilities?: Readonly<NativeAttachmentCapabilities>;
   captureRegisteredProcess?(pid: number, registrar: RegistrarBinding): RegisteredProcessCapture;
   isReady(): boolean;
   /** Installed exact initial context, acknowledged through successful D native configuration/readiness. */

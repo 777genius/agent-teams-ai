@@ -29,6 +29,7 @@ import {
   binaryLooksLikeOpenCode,
   formatCommandForDisplay,
   getOutputPreview,
+  isCommandTimeoutMessage,
   outputLooksLikeOpenCodeCliHelp,
   sanitizeCommandErrorMessage,
   truncateCommandErrorDetail,
@@ -75,6 +76,7 @@ import type { RuntimeProviderManagementPort } from '@features/runtime-provider-m
 import type { ChildProcessWithoutNullStreams } from 'child_process';
 
 const COMMAND_TIMEOUT_MS = 90_000;
+const OPENCODE_API_KEY_COMMAND_TIMEOUT_MS = 180_000;
 // Outlive the runtime's provider callback window while remaining bounded and
 // cancellable from the UI.
 const OAUTH_COMMAND_TIMEOUT_MS = 17 * 60_000;
@@ -503,8 +505,8 @@ function formatNonJsonCliOutputError(input: {
     : 'The runtime command printed logs, help text, or a crash message instead of JSON.';
   const hints = likelyWrongBinary
     ? [
-        'Check CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH and CLAUDE_CLI_PATH.',
-        'Those environment variables must not point to opencode.',
+        'Check CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH.',
+        'This environment variable must not point to opencode.',
         'The expected binary is the Agent Teams runtime/orchestrator CLI, not the OpenCode CLI.',
       ]
     : [
@@ -562,8 +564,8 @@ function formatWrongRuntimeBinaryError(
 ): RuntimeProviderCommandFailure {
   const likelyCause = 'The app resolved the OpenCode CLI itself as the Agent Teams runtime binary.';
   const hints = [
-    'Check CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH and CLAUDE_CLI_PATH.',
-    'Those environment variables must not point to opencode.',
+    'Check CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH.',
+    'This environment variable must not point to opencode.',
     'The expected binary is the Agent Teams runtime/orchestrator CLI, not the OpenCode CLI.',
   ];
   const lines = [
@@ -636,11 +638,6 @@ function formatCommandExecutionError(input: {
   };
 }
 
-function isCommandTimeoutMessage(value: string): boolean {
-  const normalized = value.toLowerCase();
-  return normalized.includes('timed out') || normalized.includes('timeout');
-}
-
 function formatCommandTimeoutError(input: {
   context: RuntimeProviderCommandContext;
   errorMessage: string;
@@ -702,7 +699,7 @@ function formatMissingRuntimeBinaryError(
   const likelyCause =
     'The Agent Teams runtime/orchestrator CLI could not be resolved from the current environment.';
   const hints = [
-    'Check CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH and CLAUDE_CLI_PATH.',
+    'Check CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH.',
     'If you are developing locally, start the desktop app from a shell that can resolve the orchestrator CLI.',
     'The expected binary is the Agent Teams runtime/orchestrator CLI, not the OpenCode CLI.',
   ];
@@ -904,7 +901,8 @@ async function resolveCliEnv(): Promise<{
 
 function collectSpawnOutput(
   child: ChildProcessWithoutNullStreams,
-  stdinValue: string
+  stdinValue: string,
+  timeoutMs = COMMAND_TIMEOUT_MS
 ): Promise<{ stdout: string; stderr: string; code: number | null; stdinError: string | null }> {
   return new Promise((resolve, reject) => {
     const stdout = createBoundedSpawnOutputBuffer();
@@ -921,7 +919,7 @@ function collectSpawnOutput(
       const error = new Error('Runtime provider management command timed out');
       Object.assign(error, readSpawnOutputSnapshot(stdout, stderr));
       reject(error);
-    }, COMMAND_TIMEOUT_MS);
+    }, timeoutMs);
 
     child.stdout.on('data', (chunk: Buffer) => appendBoundedSpawnOutput(stdout, chunk));
     child.stderr.on('data', (chunk: Buffer) => appendBoundedSpawnOutput(stderr, chunk));
@@ -1326,7 +1324,6 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       this.directoryResponseCache.delete(cacheKey);
       return null;
     }
-    // Refresh insertion order so the bounded map behaves as an LRU cache.
     this.directoryResponseCache.delete(cacheKey);
     this.directoryResponseCache.set(cacheKey, cached);
     return cached.response;
@@ -1401,7 +1398,6 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       this.modelResponseCache.delete(cacheKey);
       return null;
     }
-    // Refresh insertion order so the bounded map behaves as an LRU cache.
     this.modelResponseCache.delete(cacheKey);
     this.modelResponseCache.set(cacheKey, cached);
     return cached.response;
@@ -1441,12 +1437,14 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       };
     }
     if (response.models && !response.error) {
+      const expiresAt = Date.now() + ttlMs;
+      response = {
+        ...response,
+        models: { ...response.models, freshUntil: new Date(expiresAt).toISOString() },
+      };
       this.modelResponseCache.delete(cacheKey);
       this.pruneModelResponseCache();
-      this.modelResponseCache.set(cacheKey, {
-        expiresAt: Date.now() + ttlMs,
-        response,
-      });
+      this.modelResponseCache.set(cacheKey, { expiresAt, response });
     }
     return response;
   }
@@ -2118,7 +2116,11 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
           projectPath
         )
       ) as ChildProcessWithoutNullStreams;
-      const result = await collectSpawnOutput(child, input.apiKey);
+      const result = await collectSpawnOutput(
+        child,
+        input.apiKey,
+        input.runtimeId === 'opencode' ? OPENCODE_API_KEY_COMMAND_TIMEOUT_MS : COMMAND_TIMEOUT_MS
+      );
       return this.recoverConnectVerifyFailure(
         input,
         parseProviderCommandResponse(input.runtimeId, context, result)

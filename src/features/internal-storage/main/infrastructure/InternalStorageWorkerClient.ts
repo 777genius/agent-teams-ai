@@ -7,6 +7,8 @@ import { createLogger } from '@shared/utils/logger';
 
 import { InternalStorageOperationInterruptedError } from '../../core/application/InternalStorageOperationInterruptedError';
 
+import { pinInternalStorageNativeDriver } from './internalStorageNativeDriver';
+
 import type {
   CommentJournalEntryRecord,
   InternalStorageBackendInfo,
@@ -533,6 +535,9 @@ export class InternalStorageWorkerClient
       return this.worker;
     }
 
+    // Pin in the main isolate before the worker can load the native addon.
+    // Worker termination must not become its last process-wide owner.
+    pinInternalStorageNativeDriver();
     const workerData: InternalStorageWorkerData = { databasePath: this.options.databasePath };
     const worker = new Worker(this.workerPath, { workerData });
     this.worker = worker;

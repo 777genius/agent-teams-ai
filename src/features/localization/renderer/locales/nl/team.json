@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "Reactie toevoegen ({{count}})",
+      "remove": "Reactie verwijderen ({{count}})",
+      "count": "Reacties: {{count}}",
+      "failed": "Reacties bijwerken mislukt"
+    },
     "actions": {
       "createTaskFromMessage": "Taak aanmaken vanuit bericht",
       "editMessage": "Bericht bewerken",
@@ -194,7 +200,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Naam moet minstens één letter of cijfer bevatten",
-      "nameTooLong": "Naam is te lang (max. 128 tekens)",
+      "nameTooLong": "Naam is te lang (max. 64 tekens)",
       "selectWorkingDirectory": "Selecteer werkdirectory (cwd)",
       "memberNameRequired": "Ledennaam mag niet leeg zijn",
       "memberNameInvalid": "Ledennaam moet beginnen met een alfanumeriek teken, gebruik alleen [a-zA-Z0-9._-], max. 128 tekens",
@@ -262,6 +268,8 @@
       "name": "Naam"
     },
     "memberRestartWarning": "Door op te slaan wordt dit teamlid opnieuw gestart om wijzigingen in rol, workflow, worktree-isolatie, provider, model, inspanning of MCP-toegang toe te passen.",
+    "displayedRuntimeHint": "Op de ledenkaart: {{runtime}}. De opgeslagen instellingen wijken af.",
+    "useDisplayedRuntime": "Instellingen van de kaart gebruiken",
     "notices": {
       "liveRenameBlocked": "Live opslaan is geblokkeerd omdat bestaande teamleden zijn hernoemd. Maak die identiteitswijzigingen ongedaan of stop eerst het team.",
       "newLiveTeammates": "Nieuwe teamleden kunnen niet worden toegevoegd via Team bewerken terwijl het team live is. Gebruik in plaats daarvan het dialoogvenster Lid toevoegen.",
@@ -351,6 +359,30 @@
     "placeholders": {
       "name": "ledennaam",
       "mcpServers": "github, sentry"
+    },
+    "gateway": {
+      "apiKeyLabel": "Gateway API key",
+      "apiKeyPlaceholder": "Paste the teammate gateway API key",
+      "authRejected": "Key authorization was rejected.",
+      "bindButton": "Bind teammate",
+      "bindingStatus": "Bound to {{profile}}",
+      "credentialChanged": "stored key changed — bind again with a new key",
+      "credentialMissing": "stored key missing — bind again with a new key",
+      "credentialReady": "key stored",
+      "emptyCatalog": "The model catalog is empty.",
+      "keyRequired": "Enter the gateway API key first.",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. Koppelingen die vóór het openen van dit formulier zijn opgeslagen, worden direct bijgewerkt en behouden wijzigingen als je het teamformulier annuleert.",
+      "probeButton": "Check key and load models",
+      "probing": "Checking...",
+      "profileLabel": "Gateway profile",
+      "profilePlaceholder": "Select a gateway profile",
+      "profileRequired": "Select a gateway profile first.",
+      "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+      "title": "Gateway provider",
+      "unbindButton": "Unbind",
+      "unavailable": "The gateway is unavailable right now."
     }
   },
   "detail": {
@@ -730,6 +762,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Groepschat maken",
+      "description": "Kies minstens twee agents. Je neemt automatisch deel.",
+      "name": "Chatnaam",
+      "autoInclude": "Nieuwe leden automatisch toevoegen",
+      "minimum": "Selecteer minstens twee agents.",
+      "creating": "Wordt gemaakt…",
+      "retryCreate": "Opnieuw maken",
+      "unavailable": "Chat niet beschikbaar",
+      "message": "Bericht aan deze groep",
+      "archivedHint": "Deze chat is gearchiveerd. Herstel de chat om berichten te verzenden.",
+      "restartHint": "Alle deelnemers moeten een compatibele runtime hebben draaien om berichten te verzenden.",
+      "unknownDelivery": "Opgeslagen. Bezorgstatus onbekend.",
+      "sending": "Wordt verzonden…",
+      "retrySend": "Hetzelfde bericht opnieuw verzenden",
+      "send": "Verzenden",
+      "archived": "Gearchiveerde chats",
+      "restore": "Chat herstellen",
+      "archive": "Chat archiveren",
+      "delivery": {
+        "queued": "in wachtrij",
+        "accepted": "geaccepteerd",
+        "failed": "mislukt",
+        "unknown": "onbekend",
+        "skipped": "overgeslagen"
+      }
+    },
     "actions": {
       "toLatest": "Naar nieuwste",
       "bottomSheetActions": "Acties berichtenpaneel onderaan",
@@ -969,7 +1028,8 @@
       "cancel": "Annuleren",
       "delete": "Verwijderen",
       "markResolved": "Markeren als opgelost",
-      "save": "Opslaan"
+      "save": "Opslaan",
+      "openInTaskTab": "Openen in afzonderlijk tabblad"
     },
     "attachments": {
       "commentAttachment": "Opmerkingbijlage",
@@ -2966,6 +3026,25 @@
         "weight_few": "weight {{count}}",
         "weight_many": "weight {{count}}"
       }
+    }
+  },
+  "externalPrompt": {
+    "requestHelp": "Name the templates to use and describe any edits in your request.",
+    "editAvailable": "Editing draft/stopped configuration is available.",
+    "trashAvailable": "Reversible trash for draft/stopped teams is available."
+  },
+  "managementChanges": {
+    "title": "Recent changes",
+    "created": "Created",
+    "edited": "Edited",
+    "hidden": "Some recent changes are hidden by the current filters.",
+    "roster": "Roles: +{{added}}/-{{removed}}",
+    "fields": {
+      "displayName": "Name changed",
+      "description": "Description changed",
+      "color": "Color changed",
+      "leadInstructions": "Lead instructions changed",
+      "members": "Members changed"
     }
   }
 }

@@ -9,7 +9,9 @@ import {
 describe('Agent Teams OpenCode version compatibility', () => {
   it('accepts the storage-compatible minimum and newer versions', () => {
     expect(MINIMUM_AGENT_TEAMS_OPENCODE_VERSION).toBe('1.16.0');
-    expect(isAgentTeamsOpenCodeVersionSupported('opencode 1.16.0')).toBe(true);
+    expect(isAgentTeamsOpenCodeVersionSupported('1.16.0')).toBe(true);
+    expect(isAgentTeamsOpenCodeVersionSupported('v1.16.0')).toBe(true);
+    expect(isAgentTeamsOpenCodeVersionSupported('opencode 1.16.0')).toBe(false);
     expect(isAgentTeamsOpenCodeVersionSupported('1.18.3')).toBe(true);
   });
 

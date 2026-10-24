@@ -18,7 +18,7 @@ vi.mock('@features/announcements/main', () => ({
 }));
 vi.mock('electron', async () => {
   const { EventEmitter } = await import('node:events');
-  return { powerMonitor: new EventEmitter() };
+  return { powerMonitor: new EventEmitter(), app: { getVersion: () => '2.17.1' } };
 });
 import { type BrowserWindow, type IpcMainInvokeEvent, powerMonitor } from 'electron';
 

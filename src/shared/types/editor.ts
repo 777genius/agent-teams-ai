@@ -1,3 +1,6 @@
+import type { DocumentPreviewAPI } from '@features/document-preview/contracts';
+import type { EditorDocumentMode } from '@shared/editorPolicy';
+
 /**
  * Editor types shared between main and renderer processes.
  */
@@ -30,6 +33,8 @@ export interface ReadDirResult {
 }
 
 export interface ReadFileResult {
+  /** Full text, reduced-cost editable text, bounded read-only preview, or binary. */
+  mode?: EditorDocumentMode;
   content: string;
   size: number;
   /** Unix timestamp (stats.mtimeMs) — baseline for conflict detection */
@@ -176,7 +181,7 @@ export interface QuickOpenFile {
   relativePath: string;
 }
 
-export interface EditorAPI {
+export interface EditorAPI extends DocumentPreviewAPI {
   open: (projectPath: string) => Promise<void>;
   close: () => Promise<void>;
   readDir: (dirPath: string, maxEntries?: number) => Promise<ReadDirResult>;

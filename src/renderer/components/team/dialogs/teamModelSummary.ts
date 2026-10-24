@@ -7,6 +7,7 @@ import {
 } from '@renderer/utils/teamModelCatalog';
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
 import { getAnthropicDefaultTeamModel } from '@shared/utils/anthropicModelDefaults';
+import { getAnthropicRuntimeDefaultLaunchModel } from '@shared/utils/providerDefaultModel';
 
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
@@ -58,7 +59,18 @@ export function computeEffectiveTeamModel(
   selectedModel: string,
   limitContext: boolean,
   providerId: TeamProviderId = 'anthropic',
-  providerStatus?: Pick<CliProviderStatus, 'providerId' | 'modelCatalog'> | null
+  providerStatus?:
+    | (Pick<
+        CliProviderStatus,
+        'providerId' | 'defaultModel' | 'effectiveDefaultModel' | 'modelCatalog'
+      > &
+        Partial<
+          Pick<
+            CliProviderStatus,
+            'verificationState' | 'statusCheckOutcome' | 'statusCheckErrorCode'
+          >
+        >)
+    | null
 ): string | undefined {
   if (providerId !== 'anthropic') return selectedModel.trim() || undefined;
   const catalog =
@@ -68,7 +80,10 @@ export function computeEffectiveTeamModel(
       selectedModel,
       limitContext,
       availableLaunchModels: catalog?.models.map((model) => model.launchModel),
-      defaultLaunchModel: catalog?.defaultLaunchModel ?? null,
+      defaultLaunchModel:
+        getAnthropicRuntimeDefaultLaunchModel(providerStatus) ||
+        catalog?.defaultLaunchModel ||
+        null,
     }) ?? getAnthropicDefaultTeamModel(limitContext)
   );
 }

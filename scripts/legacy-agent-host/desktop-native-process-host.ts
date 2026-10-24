@@ -50,7 +50,7 @@ export async function qualifyNativeRegistrationThenCrash(
         registerCommandId: PROCESS_REGISTER_ID,
         boundedActions: [
           'original launch',
-          'one Bash bootstrap',
+          'two foreground finite native background Bash tasks',
           'one actual member MCP registration',
           'one original Host ChildProcess SIGKILL',
         ],
@@ -150,7 +150,7 @@ export async function qualifyNativeRegistrationThenCrash(
       await delay(25);
     }
     assert.equal(terminal, true, 'only original native input reaches terminal');
-    assert.equal(model.observations.length, 3);
+    assert.equal(model.observations.length, 4);
     assert.deepEqual(model.failures, []);
     const inventory = await host.rpc(
       'team.process.list',
@@ -193,14 +193,14 @@ export async function qualifyNativeRegistrationThenCrash(
       'packages/legacy-agent-host/src/process/DarwinRegisteredProcess.ts',
       'packages/legacy-agent-host/dist/process/DarwinRegisteredProcess.js',
       'packages/legacy-agent-host/dist/composition/processCustody.js',
-      '.artifacts/provider-migration/m19-native-artifact-20261023/manifest.json',
-      '.artifacts/provider-migration/m19-native-artifact-20261023/registered-process.node',
-      '.artifacts/provider-migration/m19-native-artifact-20261023/registered-process-darwin.c',
-      '.artifacts/provider-migration/m19-native-artifact-20261023/candidate-native-capture.json',
     ];
-    const sourceOracle = await Promise.all(oraclePaths.map(async (path) => ({
-      path, sha256: await fileDigest(resolve(import.meta.dirname, '../..', path)),
-    })));
+    assert.ok(profile.processCustody);
+    const sourceOracle = await Promise.all([
+      ...oraclePaths.map(path => resolve(import.meta.dirname, '../..', path)),
+      ...['manifest.json', 'registered-process.node', 'registered-process-darwin.c'].map(
+        name => join(profile.processCustody!.directory, name)
+      ),
+    ].map(async path => ({ path, sha256: await fileDigest(path) })));
     const beforeCrash = {
       original,
       canonicalPrimary: primary,
@@ -215,6 +215,8 @@ export async function qualifyNativeRegistrationThenCrash(
       host: host.facts(),
       model: model.observations,
       rawModelTurns: model.rawTurns,
+      originalBackgroundTasks: model.backgroundTasks,
+      notificationAcksBeforeCrash: structuredClone(model.notificationAcks),
     };
     await writeFile(
       join(fixture.root, 'native-process-before-crash.json'),
@@ -286,11 +288,18 @@ export async function qualifyNativeRegistrationThenCrash(
       JSON.stringify(rootObservation, null, 2), { mode: 0o600, flag: 'wx' });
     assert.equal(observation, 'absent',
       'INCOMPLETE/HOLD: original native root absence unproven; no UI continuation or signal/replay');
-    await probeProcessService(services.primary);
-    await probeProcessService(services.neighbor);
+    // Cold reconciliation observes the exact original target. EOF may legitimately stop it;
+    // survival is never a prerequisite or a reason to relaunch/recapture a replacement.
+    const targetAfterRootExit = {
+      originalCapture: primary.capturedNative,
+      observation: custody.observe(primary.capturedNative),
+      signals: 0, recaptures: 0, adoptions: 0, nativeCleanupClaim: false,
+    };
+    await writeFile(join(fixture.root, 'original-native-target-after-root-exit.json'),
+      JSON.stringify(targetAfterRootExit, null, 2), { mode: 0o600, flag: 'wx' });
     assert.equal(await fileDigest(fixture.profilePath), fixture.pins.profileSha256);
     assert.equal(await fileDigest(fixture.descriptorPath), fixture.pins.descriptorSha256);
-    return { ...beforeCrash, rootObservation };
+    return { ...beforeCrash, rootObservation, targetAfterRootExit };
   } finally {
     await writeFile(
       join(fixture.root, 'native-process-host-diagnostics.log'),

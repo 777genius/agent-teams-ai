@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "Додати реакцію ({{count}})",
+      "remove": "Прибрати реакцію ({{count}})",
+      "count": "Реакції: {{count}}",
+      "failed": "Не вдалося оновити реакції"
+    },
     "actions": {
       "createTaskFromMessage": "Створити завдання з повідомлення",
       "editMessage": "Редагувати повідомлення",
@@ -194,7 +200,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Назва має містити щонайменше одну літеру чи цифру",
-      "nameTooLong": "Назва задовга (макс. 128 симв.)",
+      "nameTooLong": "Назва задовга (макс. 64 симв.)",
       "selectWorkingDirectory": "Виберіть робочий каталог (cwd)",
       "memberNameRequired": "Ім'я учасника не може бути порожнім",
       "memberNameInvalid": "Ім'я учасника має починатися з літери чи цифри, використовувати лише [a-zA-Z0-9._-], макс. 128 симв.",
@@ -262,6 +268,8 @@
       "name": "Назва"
     },
     "memberRestartWarning": "Збереження перезапустить цього учасника, щоб застосувати зміни ролі, робочого процесу, ізоляції worktree, провайдера, моделі, зусиль чи доступу до MCP.",
+    "displayedRuntimeHint": "У картці учасника: {{runtime}}. Збережені налаштування відрізняються.",
+    "useDisplayedRuntime": "Використати налаштування з картки",
     "notices": {
       "liveRenameBlocked": "Живе збереження заблоковано, бо наявних учасників було перейменовано. Скасуйте ці зміни ідентичності або спочатку зупиніть команду.",
       "newLiveTeammates": "Нових учасників не можна додавати з «Редагувати команду», поки команда активна. Використовуйте натомість діалог «Додати учасника».",
@@ -351,6 +359,30 @@
     "placeholders": {
       "name": "member-name",
       "mcpServers": "github, sentry"
+    },
+    "gateway": {
+      "apiKeyLabel": "Gateway API key",
+      "apiKeyPlaceholder": "Paste the teammate gateway API key",
+      "authRejected": "Key authorization was rejected.",
+      "bindButton": "Bind teammate",
+      "bindingStatus": "Bound to {{profile}}",
+      "credentialChanged": "stored key changed — bind again with a new key",
+      "credentialMissing": "stored key missing — bind again with a new key",
+      "credentialReady": "key stored",
+      "emptyCatalog": "The model catalog is empty.",
+      "keyRequired": "Enter the gateway API key first.",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. Прив’язки, збережені до відкриття форми, оновлюються одразу й зберігають зміни після скасування форми команди.",
+      "probeButton": "Check key and load models",
+      "probing": "Checking...",
+      "profileLabel": "Gateway profile",
+      "profilePlaceholder": "Select a gateway profile",
+      "profileRequired": "Select a gateway profile first.",
+      "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+      "title": "Gateway provider",
+      "unbindButton": "Unbind",
+      "unavailable": "The gateway is unavailable right now."
     }
   },
   "detail": {
@@ -732,6 +764,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Створити груповий чат",
+      "description": "Виберіть щонайменше двох агентів. Ви берете участь автоматично.",
+      "name": "Назва чату",
+      "autoInclude": "Автоматично додавати нових учасників",
+      "minimum": "Виберіть щонайменше двох агентів.",
+      "creating": "Створення…",
+      "retryCreate": "Повторити створення",
+      "unavailable": "Чат недоступний",
+      "message": "Повідомлення до групи",
+      "archivedHint": "Чат в архіві. Відновіть його, щоб надсилати повідомлення.",
+      "restartHint": "Для надсилання всі учасники мають працювати в сумісному середовищі виконання.",
+      "unknownDelivery": "Збережено. Стан доставки невідомий.",
+      "sending": "Надсилання…",
+      "retrySend": "Повторити надсилання цього повідомлення",
+      "send": "Надіслати",
+      "archived": "Архівні чати",
+      "restore": "Відновити чат",
+      "archive": "Архівувати чат",
+      "delivery": {
+        "queued": "у черзі",
+        "accepted": "прийнято",
+        "failed": "помилка",
+        "unknown": "невідомо",
+        "skipped": "пропущено"
+      }
+    },
     "actions": {
       "toLatest": "До останніх",
       "bottomSheetActions": "Дії нижнього аркуша повідомлень",
@@ -833,6 +892,34 @@
     },
     "search": {
       "placeholder": "Пошук..."
+    },
+    "manualQueue": {
+      "title": "Черга повідомлень",
+      "send": "Надіслати",
+      "edit": "Редагувати",
+      "delete": "Видалити",
+      "save": "Зберегти",
+      "cancel": "Скасувати",
+      "editorLabel": "Редагувати повідомлення в черзі",
+      "all": "Усі",
+      "allHint": "Усі поточні учасники групи на момент надсилання",
+      "do": "Виконати",
+      "ask": "Запитати",
+      "sending": "Надсилання",
+      "unknownWarning": "Доставка невідома. Видалення запису не скасує повідомлення; повторне надсилання тексту може створити дублікат.",
+      "removeRecord": "Прибрати запис; доставка не скасовується",
+      "copy": "Копіювати текст",
+      "checkHistory": "Перевірити в історії",
+      "invalidText": "Введіть текст довжиною до {{maximum}} символів.",
+      "operationFailed": "Не вдалося оновити чергу.",
+      "queueDisabled": "Додати до черги (Cmd/Ctrl+Enter)",
+      "richUnsupported": "До черги можна додати лише звичайний текст у режимі «Виконати» або «Запитати». Спочатку приберіть вкладення, файли, команди або дії ревʼю.",
+      "persistenceRequired": "Перед додаванням до черги чернетку потрібно надійно зберегти.",
+      "rootUnavailable": "Адресат повідомлення ще завантажується.",
+      "recipientUnavailable": "Цей учасник більше недоступний.",
+      "schemaError": "Збережена черга містить непідтримувані дані; їх залишено без змін.",
+      "conflict": "Черга або чернетка змінилися. Ваш текст збережено; спробуйте ще раз.",
+      "notFound": "У завантаженій історії немає відповідного повідомлення. Доставка залишається невідомою."
     }
   },
   "modelSelector": {
@@ -971,7 +1058,8 @@
       "cancel": "Скасувати",
       "delete": "Видалити",
       "markResolved": "Позначити вирішеним",
-      "save": "Зберегти"
+      "save": "Зберегти",
+      "openInTaskTab": "Відкрити в окремій вкладці"
     },
     "attachments": {
       "commentAttachment": "Вкладення коментаря",
@@ -2968,6 +3056,25 @@
         "weight_many": "вага {{count}}",
         "weight_other": "вага {{count}}"
       }
+    }
+  },
+  "externalPrompt": {
+    "requestHelp": "Вкажіть потрібні шаблони та зміни в запиті.",
+    "editAvailable": "Доступне редагування чернеток і зупинених команд.",
+    "trashAvailable": "Доступний кошик для чернеток і зупинених команд."
+  },
+  "managementChanges": {
+    "title": "Останні зміни",
+    "created": "Створена",
+    "edited": "Змінена",
+    "hidden": "Деякі останні зміни приховані поточними фільтрами.",
+    "roster": "Ролі: +{{added}}/-{{removed}}",
+    "fields": {
+      "displayName": "Змінено назву",
+      "description": "Змінено опис",
+      "color": "Змінено колір",
+      "leadInstructions": "Змінено інструкції координатора",
+      "members": "Змінено учасників"
     }
   }
 }

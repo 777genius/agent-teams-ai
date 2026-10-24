@@ -29,6 +29,7 @@ import type {
   OpenCodeTeamRuntimeMessageInput,
   OpenCodeTeamRuntimeMessageResult,
 } from '../../runtime';
+import type { OpenCodeGroupAcknowledgementReader } from './OpenCodeGroupAcknowledgement';
 import type {
   OpenCodeLeadTurnActivityNotification,
   OpenCodeRuntimeMessageAdapter,
@@ -42,6 +43,7 @@ type OpenCodeDeliveryResponseState = NonNullable<
 >['state'];
 
 export interface OpenCodePromptDeliveryWatchdogCoordinatorPorts {
+  hasAcknowledgedInbound?: OpenCodeGroupAcknowledgementReader;
   hasAcceptedMemberWorkSyncReport(input: {
     teamName: string;
     memberName: string;
@@ -135,6 +137,7 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
   }): Promise<boolean> {
     return isOpenCodeDeliveryResponseReadCommitAllowed({
       ...input,
+      hasAcknowledgedInbound: this.ports.hasAcknowledgedInbound,
       hasAcceptedMemberWorkSyncReport: (report) =>
         this.ports.hasAcceptedMemberWorkSyncReport(report),
       taskRefsIncludeAll: this.ports.taskRefsIncludeAll,
@@ -597,7 +600,32 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
     return scheduled;
   }
 
-  async scanActiveLanes(teamName: string, laneIds: string[]): Promise<number> {
+  /**
+   * Periodic continuity pass for a running app. Rebuilding records is crash
+   * recovery: in a live process an unread row without a record was left that
+   * way on purpose (queued behind a live delivery, or a rider waiting for its
+   * anchor), and a rebuilt record would replace the relay's delivery decision
+   * with a lossy one - its payload hash then mismatches and the row goes
+   * terminal undelivered, and a recorded rider can no longer coalesce. Such a
+   * row only lost its trigger, so it gets a wake and the relay records it.
+   * Lane recovery and stopped-team cleanup stay with the startup scan.
+   */
+  async scanContinuity(teamName: string): Promise<number> {
+    if (
+      !this.ports.watchdogScheduler.isEnabled() ||
+      !this.ports.canDeliverToTeamRuntime(teamName)
+    ) {
+      return 0;
+    }
+    const laneIds = (await this.ports.readActiveRuntimeLaneIds(teamName)) ?? [];
+    return await this.scanActiveLanes(teamName, laneIds, { recordlessUnreadRows: 'wake' });
+  }
+
+  async scanActiveLanes(
+    teamName: string,
+    laneIds: string[],
+    options: { recordlessUnreadRows: 'rebuild' | 'wake' } = { recordlessUnreadRows: 'rebuild' }
+  ): Promise<number> {
     if (!this.ports.watchdogScheduler.isEnabled()) {
       return 0;
     }
@@ -651,6 +679,16 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
             })
             .catch(() => null);
           if (existing) {
+            continue;
+          }
+          if (options.recordlessUnreadRows === 'wake') {
+            this.schedule({
+              teamName,
+              memberName,
+              messageId: message.messageId,
+              delayMs: OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
+            });
+            scheduled += 1;
             continue;
           }
           const replyRecipient =

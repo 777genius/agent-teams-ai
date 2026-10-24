@@ -1,4 +1,7 @@
 name: CI
+# Immutable event inputs are available through run.display_title before jobs start.
+run-name: >-
+  ${{ format('CI proof: PR={0} | head={1} | base={2} | merge={3} | action={4} | draft={5}', github.event.pull_request.number || 0, github.event.pull_request.head.sha || github.sha, github.event.pull_request.base.sha || 'none', github.sha, github.event.action || github.event_name, github.event.pull_request.draft && 'true' || 'false') }}
 
 on:
   push:
@@ -9,73 +12,106 @@ on:
       # through PR #252's merge CI).
       - refactor/team-provisioning-round2-reapply
       - refactor/hosted-web-feature-boundaries
-    paths:
-      - 'src/**'
-      - 'landing/**'
-      - 'bin/**'
-      - 'scripts/**'
-      - 'agent-teams-controller/**'
-      - 'mcp-server/**'
-      - 'packages/**'
-      - 'patches/**'
-      - 'resources/runtime/**'
-      - 'resources/terminal-platform/**'
-      - '.runtime-download/**'
-      - 'runtime.lock.json'
-      - 'terminal-platform.lock.json'
-      - 'vendor/terminal-platform/**'
-      - 'test/**'
-      - '.github/workflows/**'
-      - '.github/dependabot.yml'
-      - 'pnpm-workspace.yaml'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'tsconfig*.json'
-      - 'vite*.config.*'
-      - 'vitest*.config.*'
-      - 'tailwind.config.*'
-      - 'eslint.config.*'
-      - '*.js'
-      - '*.cjs'
-      - '*.mjs'
-      - '*.ts'
-      - '*.tsx'
   pull_request:
-    paths:
-      - 'src/**'
-      - 'landing/**'
-      - 'bin/**'
-      - 'scripts/**'
-      - 'agent-teams-controller/**'
-      - 'mcp-server/**'
-      - 'packages/**'
-      - 'patches/**'
-      - 'resources/runtime/**'
-      - 'resources/terminal-platform/**'
-      - '.runtime-download/**'
-      - 'runtime.lock.json'
-      - 'terminal-platform.lock.json'
-      - 'vendor/terminal-platform/**'
-      - 'test/**'
-      - '.github/workflows/**'
-      - '.github/dependabot.yml'
-      - 'pnpm-workspace.yaml'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'tsconfig*.json'
-      - 'vite*.config.*'
-      - 'vitest*.config.*'
-      - 'tailwind.config.*'
-      - 'eslint.config.*'
-      - '*.js'
-      - '*.cjs'
-      - '*.mjs'
-      - '*.ts'
-      - '*.tsx'
+    types:
+      [
+        opened,
+        synchronize,
+        reopened,
+        ready_for_review,
+        converted_to_draft,
+        edited,
+        labeled,
+        unlabeled,
+      ]
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+# Every edited event is isolated before the stricter Node classifier runs.
+# Even malformed edits or failed planning must not cancel current-code CI.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.run_id }}-${{ github.event_name == 'pull_request' && github.event.action == 'edited' && format('edited-{0}', github.run_id) || 'checks' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'edited' }}
+
+env:
+  CI_ROOT_TEST_SHARDS: '4'
 
 jobs:
+  plan:
+    name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'Metadata CI plan' || 'plan' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    outputs:
+      scope: ${{ steps.plan.outputs.scope }}
+      full: ${{ steps.plan.outputs.full }}
+      metadata: ${{ steps.plan.outputs.metadata }}
+      reuse: ${{ steps.plan.outputs.reuse }}
+      source_run: ${{ steps.plan.outputs.source_run }}
+      image: ${{ steps.plan.outputs.image }}
+      linux_arch: ${{ steps.plan.outputs.linux_arch }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+      - name: "CI source proof: PR=${{ github.event.pull_request.number || 0 }} | base=${{ github.event.pull_request.base.sha || 'none' }} | head=${{ github.event.pull_request.head.sha || github.sha }}"
+        run: echo 'Source event identity recorded in job metadata'
+      - name: Plan feedback and verify reusable evidence
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_LINUX_RUNNER: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+        run: node scripts/ci/ci-feedback.mts plan
+
+  feedback:
+    name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata fast feedback' || 'Fast feedback' }}
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    needs: plan
+    if: needs.plan.outputs.full == 'false' && needs.plan.outputs.metadata == 'false'
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Test feedback policy
+        run: node --test test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts
+      - name: Install dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Guard runtime artifacts
+        run: node ./scripts/ci/forbid-runtime-artifacts.cjs
+      - name: Guard production source file size
+        run: node ./scripts/ci/check-source-file-size.mjs
+      - name: Guard Team Provisioning architecture
+        run: node ./scripts/ci/check-team-provisioning-architecture.mjs
+      - name: Typecheck workspace
+        run: pnpm typecheck:workspace
+      - name: Fast lint
+        run: pnpm lint:fast
+
   validate:
-    runs-on: ubuntu-latest
+    name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata validate' || 'validate' }}
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    needs: plan
+    if: needs.plan.outputs.full == 'true' && needs.plan.outputs.scope == 'full'
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
 
     steps:
       - name: Checkout
@@ -119,7 +155,10 @@ jobs:
         run: node ./scripts/ci/rebuild-better-sqlite3-node.cjs
 
       - name: Audit dependencies
-        run: pnpm dlx pnpm@11.4.0 --pm-on-fail=ignore audit --audit-level high
+        run: node ./scripts/ci/audit-dependencies.mjs
+
+      - name: Verify release download transport protocol
+        run: node --test scripts/e2e/release-updater/github-download.test.mts
 
       - name: Validate workspace truth gate
         env:
@@ -127,14 +166,21 @@ jobs:
         run: pnpm validate:ci
 
   test:
-    name: test (${{ matrix.shard }}/2)
-    runs-on: ubuntu-latest
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata test' || 'test' }} (${{ matrix.shard }}/4)
+    needs: plan
+    if: needs.plan.outputs.full == 'true' && (needs.plan.outputs.scope == 'full' || needs.plan.outputs.scope == 'source') && needs.plan.outputs.reuse != 'true'
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3, 4]
 
     steps:
+      - name: "CI runner proof: ${{ runner.os }} | ${{ runner.arch }} | ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}"
+        run: echo 'Runner identity recorded in job metadata'
       - name: Checkout
         uses: actions/checkout@v6
 
@@ -147,6 +193,12 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
 
+      - name: Read runner image identity
+        id: image
+        run: node scripts/ci/ci-feedback.mts image
+      - name: 'CI image proof: ${{ steps.image.outputs.image }}'
+        run: echo 'Runner image identity recorded in job metadata'
+
       - name: Restore pnpm node-gyp executable bit
         run: |
           PNPM_STORE="$(pnpm store path)"
@@ -157,6 +209,25 @@ jobs:
             fi
           done
 
+      - name: Install lsof for diagnostics ownership checks
+        run: |
+          if ! command -v lsof >/dev/null 2>&1; then
+            # lsof is not in the ubuntu-24.04 runner image package list, but Homebrew
+            # is preinstalled there (see actions/runner-images Ubuntu2404-Readme.md)
+            # and its lsof formula ships Linux bottles, so install without su/apt:
+            if ! command -v brew >/dev/null 2>&1 && [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+              eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+            fi
+            if ! command -v brew >/dev/null 2>&1; then
+              echo "lsof is required by the opencode diagnostics ownership harness"
+              echo "and neither lsof nor Homebrew is available on this runner"
+              exit 1
+            fi
+            brew install lsof
+            # Each Actions step starts a fresh shell; preserve Homebrew discovery.
+            echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
+            echo "$(brew --prefix)/sbin" >> "$GITHUB_PATH"
+          fi
       - name: Install dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
 
@@ -171,14 +242,26 @@ jobs:
         if: matrix.shard == 1
         run: |
           set -o pipefail
-          node --test test/scripts/installDependenciesWithRetry.test.mjs test/scripts/proveOpenCode*.test.mjs test/scripts/opencodeProofVitest.integration.test.mjs 2>&1 | tail -20
+          node --test test/scripts/nodeForgeSecurity.test.mjs test/scripts/installDependenciesWithRetry.test.mjs test/scripts/proveOpenCode*.test.mjs test/scripts/opencodeProofVitest.integration.test.mjs 2>&1 | tail -20
+
+      - name: Build MCP server for root integration tests
+        run: pnpm --filter agent-teams-mcp build
 
       - name: Test root shard
-        run: pnpm test:ci --shard=${{ matrix.shard }}/2
+        run: pnpm exec vitest run --maxWorkers=2 --shard=${{ matrix.shard }}/4
+
+      - name: Test feedback policy
+        if: matrix.shard == 1
+        run: node --test test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts
 
   lint:
-    name: lint (${{ matrix.scope }})
-    runs-on: ubuntu-latest
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata lint' || 'lint' }} (${{ matrix.scope }})
+    needs: plan
+    if: needs.plan.outputs.full == 'true' && needs.plan.outputs.scope == 'full' && needs.plan.outputs.reuse != 'true'
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     strategy:
       fail-fast: false
       matrix:
@@ -191,6 +274,8 @@ jobs:
             paths: src/features
 
     steps:
+      - name: "CI runner proof: ${{ runner.os }} | ${{ runner.arch }} | ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}"
+        run: echo 'Runner identity recorded in job metadata'
       - name: Checkout
         uses: actions/checkout@v6
 
@@ -202,6 +287,12 @@ jobs:
         with:
           node-version-file: .node-version
           cache: pnpm
+
+      - name: Read runner image identity
+        id: image
+        run: node scripts/ci/ci-feedback.mts image
+      - name: 'CI image proof: ${{ steps.image.outputs.image }}'
+        run: echo 'Runner image identity recorded in job metadata'
 
       - name: Restore pnpm node-gyp executable bit
         run: |
@@ -220,7 +311,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: .eslintcache-${{ matrix.scope }}
-          key: eslint-v3-${{ runner.os }}-${{ matrix.scope }}-${{ hashFiles('.node-version', 'pnpm-lock.yaml', 'package.json', 'pnpm-workspace.yaml', 'eslint.config.*', 'tsconfig*.json', 'electron.vite.config.ts', 'src/**', 'test/**', 'packages/agent-graph/src/**', 'scripts/team-changes-real-data-smoke.ts', 'scripts/smoke/codex-runtime-install.ts', 'resources/pricing.json') }}
+          key: eslint-v3-${{ runner.os }}-${{ matrix.scope }}-${{ hashFiles('.node-version', 'pnpm-lock.yaml', 'package.json', 'pnpm-workspace.yaml', 'eslint.config.*', 'tsconfig*.json', 'scripts/tsconfig/*.json', 'electron.vite.config.ts', 'src/**', 'test/**', 'packages/agent-graph/src/**', 'scripts/team-changes-real-data-smoke.ts', 'scripts/smoke/codex-runtime-install.ts', 'resources/pricing.json') }}
 
       - name: Lint source shard
         run: pnpm lint:ci:files ${{ matrix.paths }} --cache-location .eslintcache-${{ matrix.scope }}
@@ -230,11 +321,18 @@ jobs:
         run: pnpm lint:mcp
 
   task-change-ledger-windows:
-    name: Task change ledger Windows smoke
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata Windows smoke' || 'Task change ledger Windows smoke' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' && needs.plan.outputs.scope == 'full'
     runs-on: windows-latest
     timeout-minutes: 15
 
     steps:
+      - name: 'CI runner proof: ${{ runner.os }} | ${{ runner.arch }} | windows-latest'
+        run: echo 'Runner identity recorded in job metadata'
       - name: Checkout
         uses: actions/checkout@v6
 
@@ -242,60 +340,182 @@ jobs:
         shell: pwsh
         run: git config --global core.longpaths true
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+
+      - name: Read runner image identity
+        id: image
+        run: node scripts/ci/ci-feedback.mts image
+      - name: 'CI image proof: ${{ steps.image.outputs.image }}'
+        run: echo 'Runner image identity recorded in job metadata'
+
+      - name: Verify reusable Windows evidence
+        id: windows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODE_REUSE: ${{ needs.plan.outputs.reuse }}
+          SOURCE_RUN: ${{ needs.plan.outputs.source_run }}
+          CI_LINUX_RUNNER: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+          CI_LINUX_IMAGE: ${{ needs.plan.outputs.image }}
+          CI_LINUX_ARCH: ${{ needs.plan.outputs.linux_arch }}
+        run: node scripts/ci/ci-feedback.mts windows
+
+      # Reused evidence needs Node only. Register cache post-actions only when
+      # dependencies will be installed, so an absent pnpm store cannot fail reuse.
       - name: Setup pnpm
+        if: steps.windows.outputs.reuse != 'true'
         uses: pnpm/action-setup@v6
 
-      - name: Setup Node.js
+      - name: Setup Node.js dependency cache
+        if: steps.windows.outputs.reuse != 'true'
         uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
           cache: pnpm
 
       - name: Install dependencies
+        if: steps.windows.outputs.reuse != 'true'
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
 
-      - name: Test Windows CLI shell fallback
-        run: pnpm exec vitest run test/main/utils/childProcess.windows.test.ts
-
       - name: Test crash-safe app lock publication
+        if: steps.windows.outputs.reuse != 'true'
         run: pnpm exec vitest run --environment node test/main/services/team/fileLock.test.ts test/main/services/team/fileLock.publication.test.ts
 
       - name: Test controller lock compatibility
+        if: steps.windows.outputs.reuse != 'true'
         run: pnpm --dir agent-teams-controller exec vitest run test/fileLock.test.js
 
       - name: Test task change ledger
-        run: pnpm test:task-change-ledger
-
-      - name: Test OpenCode nvm-windows runtime resolution
-        run: pnpm exec vitest run test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts
-
-      - name: Test Windows cleanup probe diagnostics
-        run: pnpm exec vitest run --maxWorkers=1 test/main/utils/processStartTime.test.ts test/main/utils/windowsProcessTable.test.ts test/main/services/team/OpenCodeManagedHostProcessCleanup.test.ts
-
-      - name: Test startup cleanup admission and IPC recovery
-        run: pnpm exec vitest run --maxWorkers=1 src/main/services/team/contracts/__tests__/TeamProvisioningStartupCleanupBusy.test.ts src/main/services/team/contracts/__tests__/TeamProvisioningApis.test.ts test/main/ipc/teams.test.ts test/renderer/store/teamSlice.test.ts
-
-      - name: Test startup cleanup budget and recovery payloads
+        if: steps.windows.outputs.reuse != 'true'
         run: >-
           pnpm exec vitest run --maxWorkers=1
+          test/main/services/team/TaskChangeLedgerReader.test.ts
+          test/main/utils/childProcess.windows.test.ts
+          test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts
+          test/main/utils/processStartTime.test.ts
+          test/main/utils/windowsProcessTable.test.ts
+          test/main/services/team/OpenCodeManagedHostProcessCleanup.test.ts
+          src/main/services/team/contracts/__tests__/TeamProvisioningStartupCleanupBusy.test.ts
+          src/main/services/team/contracts/__tests__/TeamProvisioningApis.test.ts
+          test/main/ipc/teams.test.ts
+          test/renderer/store/teamSlice.test.ts
           test/main/services/team/OpenCodeStartupCleanupBudget.test.ts
-          test/main/services/team/OpenCodeStartupCleanupRecovery.test.tsx
+          test/main/services/team/OpenCodeStartupCleanupRecovery.test.ts
           test/main/services/team/OpenCodeBridgeCommandClient.test.ts
           test/main/services/team/OpenCodeHostStartupLockCleanup.test.ts
           test/main/utils/processKill.test.ts
-
-      - name: Test startup cleanup deadline and late-response lifecycle
-        run: node --experimental-transform-types --test test/main/services/team/startup-cleanup/startup-cleanup.node.mjs
-
-      - name: Test delayed provider summaries through real subprocesses
-        run: pnpm exec vitest run --maxWorkers=1 test/main/services/runtime/ProviderSummaryTimeout.safe-e2e.test.ts
-
-      - name: Test OpenCode catalog diagnostic boundaries
-        run: >-
-          pnpm exec vitest run --maxWorkers=1
+          test/main/services/runtime/ProviderSummaryTimeout.safe-e2e.test.ts
           src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.test.ts
           test/main/features/runtime-provider-management/catalogDiagnostics.test.ts
           test/main/features/runtime-provider-management/AgentTeamsRuntimeProviderManagementCliClient.test.ts
-          src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.test.tsx
+          src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.test.ts
           test/renderer/features/runtime-provider-management/OpenCodeCatalogErrorAlert.test.ts
           test/renderer/features/runtime-provider-management/RuntimeProviderErrorAlert.test.ts
+          test/main/services/team/taskChangeLedgerFixtures.integration.test.ts
+          test/main/services/team/ReviewApplierService.test.ts
+          test/main/services/team/FileContentResolver.test.ts
+          test/main/services/team/ChangeExtractorService.test.ts
+          test/renderer/store/changeReviewSlice.test.ts
+          test/renderer/utils/reviewKey.test.ts
+          test/main/services/team/TeamLogSourceTracker.test.ts
+          test/main/services/team/stallMonitor/TeamTaskLogFreshnessReader.test.ts
+
+      - name: Test startup cleanup deadline and late-response lifecycle
+        if: steps.windows.outputs.reuse != 'true'
+        run: node --import tsx --test test/main/services/team/startup-cleanup/startup-cleanup.node.mjs
+
+  focused:
+    name: Focused documentation and asset validation
+    needs: plan
+    if: needs.plan.outputs.full == 'true' && (needs.plan.outputs.scope == 'docs' || needs.plan.outputs.scope == 'assets' || needs.plan.outputs.scope == 'dmg')
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+      - name: Validate selected immutable diff
+        env:
+          EXPECTED_SCOPE: ${{ needs.plan.outputs.scope }}
+        run: node scripts/ci/ci-change-scope-check.mts
+      - name: Test CI scope and feedback policy
+        run: node --test test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts
+      - name: Check changed text formatting
+        run: node scripts/ci/ci-change-scope-check.mts format
+
+  source:
+    name: Renderer source validation
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    needs: plan
+    if: needs.plan.outputs.full == 'true' && needs.plan.outputs.scope == 'source'
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Guard source architecture
+        run: node scripts/ci/check-source-file-size.mjs && node scripts/ci/check-team-provisioning-architecture.mjs
+      - name: Typecheck workspace
+        run: pnpm typecheck:workspace
+      - name: Lint renderer and features
+        run: pnpm lint:ci:files src/renderer src/features
+
+  dmg-artwork:
+    name: macOS DMG artwork end-to-end
+    needs: plan
+    if: needs.plan.outputs.full == 'true' && needs.plan.outputs.scope == 'dmg'
+    runs-on: macos-latest
+    timeout-minutes: 15
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install dependencies
+        run: node scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build and mount DMG fixture
+        run: node scripts/ci/verify-dmg-artwork.mts
+
+  full-qualification:
+    name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata qualification' || 'Full qualification' }}
+    needs: [plan, validate, test, lint, task-change-ledger-windows, focused, source, dmg-artwork]
+    if: always()
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+      - name: Verify completed current-code qualification after metadata edits
+        if: needs.plan.result == 'success' && needs.plan.outputs.metadata == 'true' && needs.plan.outputs.full == 'false' && needs.plan.outputs.reuse == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ci/ci-feedback.mts metadata-gate
+      - name: Require complete current-code qualification
+        if: needs.plan.result != 'success' || needs.plan.outputs.metadata != 'true' || needs.plan.outputs.full != 'false' || needs.plan.outputs.reuse != 'false'
+        env:
+          JOB_RESULTS: ${{ toJSON(needs) }}
+          MODE_FULL: ${{ needs.plan.outputs.full }}
+          MODE_REUSE: ${{ needs.plan.outputs.reuse }}
+          SOURCE_RUN: ${{ needs.plan.outputs.source_run }}
+        run: node scripts/ci/ci-feedback.mts gate

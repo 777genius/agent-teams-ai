@@ -19,6 +19,15 @@ import {
   refreshTeamMemberSettings,
   TeamMemberSettingsDialogBridge,
 } from '@features/team-provisioning/renderer';
+import {
+  type TaskDetailFileLinkIntent,
+  type TaskDetailIdentity,
+  taskDetailKey,
+  useTaskDetailEditorHost,
+  useTaskDetailReviewRoute,
+  useTaskDetailSession,
+  useTeamTaskReferenceNavigation,
+} from '@features/team-task-detail/renderer';
 import { TerminalWorkspaceFloatingLauncher } from '@features/terminal-workspace/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
@@ -47,6 +56,7 @@ import {
   isTeamProvisioningActive,
   selectResolvedMemberForTeamName,
   selectResolvedMembersForTeamName,
+  selectTeamDataForName,
   selectTeamMemberSnapshotsForName,
   selectTeamMessages,
 } from '@renderer/store/slices/teamSlice';
@@ -54,6 +64,7 @@ import {
   SIDEBAR_LOGS_MAX_HEIGHT,
   SIDEBAR_LOGS_MIN_HEIGHT,
 } from '@renderer/store/team/sidebarLogsHeight';
+import { getInboxMessageQuoteText } from '@renderer/utils/agentMessageFormatting';
 import {
   buildChangeReviewLifecycleSessionId,
   requestChangeReviewLifecycleReservation,
@@ -77,7 +88,6 @@ import {
   type TaskChangeRequestOptions,
 } from '@renderer/utils/taskChangeRequest';
 import { buildPendingRuntimeSummaryCopy } from '@renderer/utils/teamLaunchSummaryCopy';
-import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
@@ -107,10 +117,11 @@ import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadi
 import { ReviewDialog } from './dialogs/ReviewDialog';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
 import { useStoppedTeamLaunchDialog } from './dialogs/useStoppedTeamLaunchDialog';
-import { KanbanBoard } from './kanban/KanbanBoard';
-import { UNASSIGNED_OWNER } from './kanban/KanbanFilterPopover';
+import { useTeamCreateTaskDialog } from './dialogs/useTeamCreateTaskDialog';
 import { KanbanSearchInput } from './kanban/KanbanSearchInput';
+import { TeamKanbanBoardBridge } from './kanban/TeamKanbanBoardBridge';
 import { TrashDialog } from './kanban/TrashDialog';
+import { useTeamTaskFilters } from './kanban/useTeamTaskFilters';
 import { MemberDetailDialog } from './members/MemberDetailDialog';
 import { type MemberActivityFilter, type MemberDetailTab } from './members/memberDetailTypes';
 import { deriveMetrics } from './context-metric-alias';
@@ -121,6 +132,7 @@ import { useTeamStopControl } from './useTeamStopControl';
 
 import type { AddMemberEntry } from './dialogs/AddMemberDialog';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
+import type { InboxMessage } from '@shared/types';
 import type { ComponentProps, CSSProperties } from 'react';
 
 const sumInjectionTokens = tokenMath[
@@ -226,7 +238,7 @@ interface TaskDetailDialogHostProps {
   members: ResolvedTeamMember[];
   onOwnerChange: (taskId: string, owner: string | null) => void;
   onViewChanges: (taskId: string, filePath?: string) => void;
-  onOpenInEditor: (filePath: string) => void;
+  onOpenInEditor: (intent: TaskDetailFileLinkIntent) => void;
   onDeleteTask: (taskId: string) => void;
 }
 
@@ -244,63 +256,68 @@ const TaskDetailDialogHost = memo(
     },
     ref
   ) {
-    const [selectedTask, setSelectedTask] = useState<TeamTaskWithKanban | null>(null);
-    const [loadedTask, setLoadedTask] = useState<TeamTaskWithKanban | null>(null);
-    const selectedTaskId = selectedTask?.id ?? null;
-    const selectedTaskSnapshot =
-      selectedTaskId !== null ? (taskMap.get(selectedTaskId) ?? selectedTask) : null;
-    const selectedTaskUpdatedAt = selectedTaskSnapshot?.updatedAt ?? null;
-    const currentTask =
-      loadedTask && loadedTask.id === selectedTaskId ? loadedTask : selectedTaskSnapshot;
-    const dialogTaskMap = useMemo(() => {
-      if (!currentTask) {
-        return taskMap;
-      }
-      const next = new Map(taskMap);
-      next.set(currentTask.id, currentTask);
-      return next;
-    }, [currentTask, taskMap]);
+    const contextId = useStore((state) => state.activeContextId);
+    const [selectedIdentity, setSelectedIdentity] = useState<TaskDetailIdentity | null>(null);
+    const selectedKey = selectedIdentity ? taskDetailKey(selectedIdentity) : null;
+    const detailEntry = useStore((state) =>
+      selectedKey ? state.taskDetailById[selectedKey] : undefined
+    );
+    const setTaskDetailSurfaceInterest = useStore((state) => state.setTaskDetailSurfaceInterest);
+    const projectPath = useStore(
+      (state) => selectTeamDataForName(state, teamName)?.config.projectPath ?? null
+    );
+    const currentTask = detailEntry?.full ?? null;
+    const surfaceIdRef = useRef(crypto.randomUUID());
+    const sessionIdentity = useMemo(
+      () => selectedIdentity ?? { contextId, teamName, taskId: '' },
+      [contextId, selectedIdentity, teamName]
+    );
+    const sessionController = useTaskDetailSession({
+      identity: sessionIdentity,
+      surfaceId: surfaceIdRef.current,
+      currentTask,
+      enabled: Boolean(selectedIdentity),
+    });
 
     useImperativeHandle(
       ref,
       () => ({
         openTask: (task) => {
-          setLoadedTask(null);
-          setSelectedTask(task);
+          const identity = { contextId, teamName, taskId: task.id };
+          setSelectedIdentity(identity);
         },
         close: () => {
-          setLoadedTask(null);
-          setSelectedTask(null);
+          setSelectedIdentity(null);
         },
       }),
-      []
+      [contextId, teamName]
     );
 
     useEffect(() => {
-      if (!selectedTaskId) {
-        setLoadedTask(null);
-        return undefined;
+      if (!selectedIdentity) return;
+      if (selectedIdentity.contextId !== contextId || selectedIdentity.teamName !== teamName) {
+        setSelectedIdentity(null);
       }
+    }, [contextId, selectedIdentity, teamName]);
 
-      let cancelled = false;
-      setLoadedTask(null);
-      void api.teams
-        .getTask(teamName, selectedTaskId)
-        .then((task) => {
-          if (!cancelled && task?.id === selectedTaskId) {
-            setLoadedTask(task);
-          }
-        })
-        .catch(() => undefined);
+    const registeredIdentity =
+      selectedIdentity?.contextId === contextId && selectedIdentity.teamName === teamName
+        ? selectedIdentity
+        : null;
+    useEffect(() => {
+      const surfaceId = surfaceIdRef.current;
+      setTaskDetailSurfaceInterest(surfaceId, registeredIdentity);
+      return () => setTaskDetailSurfaceInterest(surfaceId, null);
+    }, [registeredIdentity, setTaskDetailSurfaceInterest]);
 
-      return () => {
-        cancelled = true;
-      };
-    }, [selectedTaskId, selectedTaskUpdatedAt, teamName]);
+    const dialogTaskMap = useMemo(() => {
+      const next = new Map<string, TeamTaskWithKanban>(taskMap);
+      if (currentTask) next.set(currentTask.id, currentTask);
+      return next;
+    }, [currentTask, taskMap]);
 
     const handleScrollToTask = useCallback((taskId: string) => {
-      setSelectedTask(null);
-      setLoadedTask(null);
+      setSelectedIdentity(null);
       const el = document.querySelector(`[data-task-id="${taskId}"]`);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -313,7 +330,7 @@ const TaskDetailDialogHost = memo(
       }
     }, []);
 
-    if (currentTask === null) {
+    if (!registeredIdentity) {
       return null;
     }
 
@@ -321,20 +338,34 @@ const TaskDetailDialogHost = memo(
     const dialog = (
       <DialogComponent
         open
+        loading={
+          currentTask === null &&
+          ['hydrating', 'provisioning'].includes(detailEntry?.phase ?? 'hydrating')
+        }
         task={currentTask}
         teamName={teamName}
-        kanbanTaskState={kanbanTaskStateByTaskId[currentTask.id]}
+        kanbanTaskState={kanbanTaskStateByTaskId[registeredIdentity.taskId]}
         taskMap={dialogTaskMap}
         members={members}
-        onClose={() => {
-          setLoadedTask(null);
-          setSelectedTask(null);
+        onClose={() => setSelectedIdentity(null)}
+        onOpenInTaskTab={() => {
+          if (sessionController.openInTaskTab()) setSelectedIdentity(null);
         }}
+        projectPath={projectPath}
+        sessionController={sessionController}
         onScrollToTask={handleScrollToTask}
-        onOwnerChange={onOwnerChange}
-        onViewChanges={onViewChanges}
-        onOpenInEditor={onOpenInEditor}
-        onDeleteTask={onDeleteTask}
+        onOwnerChange={(...args) => {
+          if (sessionController.canEditNow()) onOwnerChange(...args);
+        }}
+        onViewChanges={(...args) => {
+          if (sessionController.isOriginCurrent()) onViewChanges(...args);
+        }}
+        onOpenInEditor={(...args) => {
+          if (sessionController.isOriginCurrent()) onOpenInEditor(...args);
+        }}
+        onDeleteTask={(...args) => {
+          if (sessionController.canEditNow()) onDeleteTask(...args);
+        }}
       />
     );
 
@@ -360,15 +391,6 @@ interface TeamReviewDialogState {
   taskId?: string;
   initialFilePath?: string;
   taskChangeRequestOptions?: TaskChangeRequestOptions;
-}
-
-interface CreateTaskDialogState {
-  open: boolean;
-  defaultSubject: string;
-  defaultDescription: string;
-  defaultOwner: string;
-  defaultStartImmediately?: boolean;
-  defaultChip?: InlineChip;
 }
 
 const TEAM_PENDING_REPLY_REFRESH_DELAY_MS = 10_000;
@@ -429,11 +451,6 @@ function getSummaryKnownTeammateCount(summary: TeamSummary | undefined): number 
       (summary.failedCount ?? 0) +
       (summary.skippedCount ?? 0)
   );
-}
-
-interface TimeWindow {
-  start: number;
-  end: number;
 }
 
 function filterKanbanTasks(tasks: TeamTaskWithKanban[], query: string): TeamTaskWithKanban[] {
@@ -543,7 +560,6 @@ type TeamMemberDetailDialogBridgeProps = Omit<
   'leadActivity' | 'spawnEntry' | 'runtimeEntry'
 >;
 type EditTarget = { kind: 'team' } | { kind: 'member'; memberName: string } | null;
-type TeamKanbanBoardBridgeProps = Omit<ComponentProps<typeof KanbanBoard>, 'activeTaskLogActivity'>;
 type TeamSidebarRailBridgeProps = Omit<
   ComponentProps<typeof TeamSidebarRail>,
   'messagesPanelProps'
@@ -1281,17 +1297,6 @@ const TeamMemberDetailDialogBridge = memo(function TeamMemberDetailDialogBridge(
   );
 });
 
-const TeamKanbanBoardBridge = memo(function TeamKanbanBoardBridge({
-  teamName,
-  ...props
-}: TeamKanbanBoardBridgeProps): React.JSX.Element {
-  const activeTaskLogActivity = useStore((s) => s.activeTaskLogActivityByTeam[teamName]);
-
-  return (
-    <KanbanBoard {...props} teamName={teamName} activeTaskLogActivity={activeTaskLogActivity} />
-  );
-});
-
 export const TeamDetailView = memo(function TeamDetailView({
   teamName,
   isActive = true,
@@ -1307,12 +1312,16 @@ export const TeamDetailView = memo(function TeamDetailView({
     initialTab?: MemberDetailTab;
     initialActivityFilter?: MemberActivityFilter;
   } | null>(null);
-  const [createTaskDialog, setCreateTaskDialog] = useState<CreateTaskDialogState>({
-    open: false,
-    defaultSubject: '',
-    defaultDescription: '',
-    defaultOwner: '',
-  });
+  const {
+    createTaskDialog,
+    setCreateTaskDialog,
+    openCreateTaskDialog,
+    closeCreateTaskDialog,
+    handleCreateTaskFromMessage,
+    isCreateTaskOriginCurrent,
+    assertCreateTaskOriginCurrent,
+    defaultMessageGroupChatId,
+  } = useTeamCreateTaskDialog(teamName);
   const [creatingTask, setCreatingTask] = useState(false);
   const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
   const [addingMemberLoading, setAddingMemberLoading] = useState(false);
@@ -1480,8 +1489,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     setSidebarLogsHeight,
     applyDefaultSidebarLogsHeight,
     selectReviewFile,
-    pendingReviewRequest,
-    setPendingReviewRequest,
     summaryKnownTeammateCount,
     isTeamKnownOffline,
     teamSummaryColor,
@@ -1544,8 +1551,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       setSidebarLogsHeight: s.setSidebarLogsHeight,
       applyDefaultSidebarLogsHeight: s.applyDefaultSidebarLogsHeight,
       selectReviewFile: s.selectReviewFile,
-      pendingReviewRequest: s.pendingReviewRequest,
-      setPendingReviewRequest: s.setPendingReviewRequest,
     }))
   );
 
@@ -1554,14 +1559,20 @@ export const TeamDetailView = memo(function TeamDetailView({
     if (tabId) useStore.getState().setActiveTab(tabId);
   }, [tabId]);
   const requestOpenChangeReview = useCallback(
-    async (next: Omit<TeamReviewDialogState, 'open'>): Promise<boolean> => {
+    async (
+      next: Omit<TeamReviewDialogState, 'open'>,
+      isCurrent: () => boolean = () => true
+    ): Promise<boolean> => {
       const sessionId = buildChangeReviewLifecycleSessionId({ teamName, ...next });
-      const reserved = await requestChangeReviewLifecycleReservation({
-        hostId: reviewLifecycleHostId,
-        sessionId,
-        tabId: tabId ?? undefined,
-      });
-      if (!reserved) return false;
+      const reserved = await requestChangeReviewLifecycleReservation(
+        {
+          hostId: reviewLifecycleHostId,
+          sessionId,
+          tabId: tabId ?? undefined,
+        },
+        isCurrent
+      );
+      if (!reserved || !isCurrent()) return false;
       setReviewDialogState({ ...next, open: true });
       if (next.initialFilePath) selectReviewFile(next.initialFilePath);
       return true;
@@ -1687,14 +1698,14 @@ export const TeamDetailView = memo(function TeamDetailView({
 
   const [kanbanSearch, setKanbanSearch] = useState('');
 
-  // Open editor overlay when a file reveal is requested (e.g. from chip click)
-  const pendingRevealFile = useStore((s) => s.editorPendingRevealFile);
-  useEffect(() => {
-    if (!isThisTabActive) return;
-    if (pendingRevealFile && data?.config.projectPath) {
-      setEditorOpen(true);
-    }
-  }, [isThisTabActive, pendingRevealFile, data?.config.projectPath]);
+  const handleOpenTaskFileInEditor = useTaskDetailEditorHost({
+    teamName,
+    tabId,
+    active: isThisTabActive,
+    projectPath: data?.config.projectPath ?? null,
+    metadataUnavailable: Boolean(error) || (!loading && data !== null && !data.config.projectPath),
+    openEditor: () => setEditorOpen(true),
+  });
 
   useEffect(() => {
     if (!isThisTabActive || !isPaneFocused || !teamName) {
@@ -1949,74 +1960,17 @@ export const TeamDetailView = memo(function TeamDetailView({
     [membersWithLiveBranches]
   );
 
-  // Filter sessions to team-only using sessionHistory + leadSessionId
-  const teamSessionIds = useMemo(() => {
-    const sessionIds = new Set<string>();
-    if (data?.config.leadSessionId) {
-      sessionIds.add(data.config.leadSessionId);
-    }
-    if (data?.config.sessionHistory) {
-      for (const id of data.config.sessionHistory) {
-        sessionIds.add(id);
-      }
-    }
-    return sessionIds;
-  }, [data?.config.leadSessionId, data?.config.sessionHistory]);
-
-  const teamSessions = useMemo(() => {
-    // If no session IDs known (backward compat), show all sessions
-    if (teamSessionIds.size === 0) return sessions;
-    return sessions.filter((s) => teamSessionIds.has(s.id));
-  }, [sessions, teamSessionIds]);
-
-  // Auto-reset session filter if the selected session is no longer in teamSessions
-  useEffect(() => {
-    if (
-      kanbanFilter.sessionId !== null &&
-      !teamSessions.some((s) => s.id === kanbanFilter.sessionId)
-    ) {
-      setKanbanFilter((prev) => ({ ...prev, sessionId: null }));
-    }
-  }, [kanbanFilter.sessionId, teamSessions]);
-
-  // Compute time-window for session filtering
-  const timeWindow = useMemo<TimeWindow | null>(() => {
-    if (kanbanFilter.sessionId === null) return null;
-
-    const sorted = [...teamSessions].sort((a, b) => a.createdAt - b.createdAt);
-    const idx = sorted.findIndex((s) => s.id === kanbanFilter.sessionId);
-    if (idx === -1) return null;
-
-    const start = sorted[idx].createdAt;
-    const end = idx + 1 < sorted.length ? sorted[idx + 1].createdAt : Infinity;
-    return { start, end };
-  }, [kanbanFilter.sessionId, teamSessions]);
-
-  // Filter tasks by time-window and owner
-  const filteredTasks = useMemo(() => {
-    if (!data) return [];
-    let result = data.tasks;
-
-    // Session time-window filter
-    if (timeWindow) {
-      result = result.filter((t) => {
-        if (!t.createdAt) return true; // legacy tasks always included
-        const ts = new Date(t.createdAt).getTime();
-        return ts >= timeWindow.start && ts < timeWindow.end;
-      });
-    }
-
-    // Owner filter
-    if (kanbanFilter.selectedOwners.size > 0) {
-      result = result.filter((t) =>
-        t.owner
-          ? kanbanFilter.selectedOwners.has(t.owner)
-          : kanbanFilter.selectedOwners.has(UNASSIGNED_OWNER)
-      );
-    }
-
-    return result;
-  }, [data, timeWindow, kanbanFilter.selectedOwners]);
+  const { teamSessions, timeWindow, filteredTasks, taskGroupOptions } = useTeamTaskFilters(
+    teamName,
+    data,
+    sessions,
+    kanbanFilter,
+    setKanbanFilter,
+    setKanbanSearch,
+    isThisTabActive,
+    contentRef,
+    collapseExpandedChat
+  );
 
   const activeMembers = useStableActiveMembers(membersWithLiveBranches);
 
@@ -2124,46 +2078,13 @@ export const TeamDetailView = memo(function TeamDetailView({
 
   const memberTaskCounts = useMemo(() => buildTaskCountsByOwner(data?.tasks ?? []), [data?.tasks]);
 
-  const openCreateTaskDialog = useCallback(
-    (subject = '', description = '', owner = '', startImmediately?: boolean): void => {
-      setCreateTaskDialog({
-        open: true,
-        defaultSubject: subject,
-        defaultDescription: description,
-        defaultOwner: owner,
-        defaultStartImmediately: startImmediately,
-      });
-    },
-    []
-  );
-
-  const closeCreateTaskDialog = useCallback((): void => {
-    setCreateTaskDialog({
-      open: false,
-      defaultSubject: '',
-      defaultDescription: '',
-      defaultOwner: '',
-      defaultStartImmediately: undefined,
-    });
+  const handleReplyToMessage = useCallback((message: InboxMessage, recipientHint?: string) => {
+    setSendDialogRecipient(recipientHint ?? message.from);
+    setSendDialogDefaultText(undefined);
+    setSendDialogDefaultChip(undefined);
+    setReplyQuote({ from: message.from, text: getInboxMessageQuoteText(message) });
+    setSendDialogOpen(true);
   }, []);
-
-  const handleCreateTaskFromMessage = useCallback(
-    (subject: string, description: string) => {
-      openCreateTaskDialog(subject, description);
-    },
-    [openCreateTaskDialog]
-  );
-
-  const handleReplyToMessage = useCallback(
-    (message: { from: string; text: string }, recipientHint?: string) => {
-      setSendDialogRecipient(recipientHint ?? message.from);
-      setSendDialogDefaultText(undefined);
-      setSendDialogDefaultChip(undefined);
-      setReplyQuote({ from: message.from, text: stripAgentBlocks(message.text) });
-      setSendDialogOpen(true);
-    },
-    []
-  );
 
   const validateMemberSettingsRelaunch = useCallback(async (): Promise<void> => {
     const { memberSettingsDraft, baselineMembers } = launchDialogState;
@@ -2182,7 +2103,8 @@ export const TeamDetailView = memo(function TeamDetailView({
       request: TeamLaunchRequest,
       nextMembers: TeamCreateRequest['members'],
       memberSettingsRelaunch?: import('@shared/types').ReplaceMembersRequest['memberSettingsRelaunch'],
-      rosterMetadata?: Parameters<typeof executeTeamRelaunch>[0]['rosterMetadata']
+      rosterMetadata?: Parameters<typeof executeTeamRelaunch>[0]['rosterMetadata'],
+      onMembersSaved?: () => void
     ): Promise<void> => {
       await executeTeamRelaunch({
         teamName,
@@ -2191,6 +2113,7 @@ export const TeamDetailView = memo(function TeamDetailView({
         members: nextMembers,
         memberSettingsRelaunch,
         rosterMetadata,
+        onMembersSaved,
         validateBeforeReplace: validateMemberSettingsRelaunch,
         stopTeam: async (nextTeamName) => {
           try {
@@ -2316,13 +2239,10 @@ export const TeamDetailView = memo(function TeamDetailView({
     [handleOpenTaskById]
   );
 
-  const handleTaskIdClick = useCallback(
-    (taskId: string) => {
-      const task =
-        taskMap.get(taskId) ?? data?.tasks.find((candidate) => candidate.displayId === taskId);
-      if (task) openTaskDetailDialog(task);
-    },
-    [data?.tasks, openTaskDetailDialog, taskMap]
+  const handleTaskIdClick = useTeamTaskReferenceNavigation(
+    teamName,
+    data?.tasks ?? [],
+    openTaskDetailDialog
   );
 
   const handleTaskOwnerChange = useCallback(
@@ -2337,11 +2257,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     },
     [teamName, updateTaskOwner]
   );
-
-  const handleOpenTaskFileInEditor = useCallback((filePath: string) => {
-    const { revealFileInEditor } = useStore.getState();
-    revealFileInEditor(filePath);
-  }, []);
 
   const handleEditorAction = useCallback(
     (action: EditorSelectionAction) => {
@@ -2389,19 +2304,13 @@ export const TeamDetailView = memo(function TeamDetailView({
     });
   }, [data?.isAlive, data?.members, data?.tasks, teamName, refreshTeamData, teamStopControl]);
 
-  // Pick up pending review request from GlobalTaskDetailDialog
-  useEffect(() => {
-    if (!isThisTabActive) return;
-    if (!pendingReviewRequest) return;
-    const request = pendingReviewRequest;
-    setPendingReviewRequest(null);
-    void requestOpenChangeReview({
-      mode: 'task',
-      taskId: request.taskId,
-      initialFilePath: request.filePath,
-      taskChangeRequestOptions: request.requestOptions,
-    });
-  }, [isThisTabActive, pendingReviewRequest, requestOpenChangeReview, setPendingReviewRequest]);
+  useTaskDetailReviewRoute({
+    teamName,
+    tabId,
+    active: isThisTabActive,
+    ready: data?.teamName === teamName,
+    openReview: requestOpenChangeReview,
+  });
 
   const pendingTeamSectionFocus = useStore((s) => s.pendingTeamSectionFocus);
   const clearTeamSectionFocus = useStore((s) => s.clearTeamSectionFocus);
@@ -2713,6 +2622,7 @@ export const TeamDetailView = memo(function TeamDetailView({
   }, [teamName, deleteTeam, openTeamsTab, closeTab, tabId, reviewLifecycleHostId, t]);
 
   const handleCreateTask = async (request: CreateTaskRequest): Promise<void> => {
+    assertCreateTaskOriginCurrent();
     const { owner, prompt, startImmediately, subject } = request;
     setCreatingTask(true);
     try {
@@ -2728,8 +2638,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       }
 
       closeCreateTaskDialog();
-    } catch {
-      // error shown via store
     } finally {
       setCreatingTask(false);
     }
@@ -3305,6 +3213,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                   teamName={teamName}
                   kanbanState={data.kanbanState}
                   filter={kanbanFilter}
+                  taskGroupOptions={taskGroupOptions}
                   sort={kanbanSort}
                   sessions={teamSessions}
                   leadSessionId={data.config.leadSessionId}
@@ -3478,7 +3387,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 }}
               />
 
-              {createTaskDialog.open && (
+              {createTaskDialog.open && isCreateTaskOriginCurrent && (
                 <Suspense fallback={null}>
                   <CreateTaskDialog
                     open={createTaskDialog.open}
@@ -3489,6 +3398,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                     defaultSubject={createTaskDialog.defaultSubject}
                     defaultDescription={createTaskDialog.defaultDescription}
                     defaultOwner={createTaskDialog.defaultOwner}
+                    defaultGroupChatId={defaultMessageGroupChatId(kanbanFilter.groupChatId)}
                     defaultStartImmediately={createTaskDialog.defaultStartImmediately}
                     defaultChip={createTaskDialog.defaultChip}
                     onClose={closeCreateTaskDialog}
@@ -3540,31 +3450,28 @@ export const TeamDetailView = memo(function TeamDetailView({
                   projectPath={data.config.projectPath}
                   adding={addingMemberLoading}
                   onClose={() => setAddMemberDialogOpen(false)}
-                  onAdd={(entries: AddMemberEntry[]) => {
+                  onAdd={async (entries: AddMemberEntry[], onMemberAdded) => {
                     setAddingMemberLoading(true);
-                    void (async () => {
-                      try {
-                        for (const entry of entries) {
-                          await addMember(teamName, {
-                            name: entry.name,
-                            role: entry.role,
-                            workflow: entry.workflow,
-                            isolation: entry.isolation,
-                            providerId: entry.providerId,
-                            providerBackendId: entry.providerBackendId,
-                            model: entry.model,
-                            effort: entry.effort,
-                            fastMode: entry.fastMode,
-                            mcpPolicy: entry.mcpPolicy,
-                          });
-                        }
-                        setAddMemberDialogOpen(false);
-                      } catch {
-                        // error shown via store
-                      } finally {
-                        setAddingMemberLoading(false);
+                    try {
+                      for (const entry of entries) {
+                        await addMember(teamName, {
+                          name: entry.name,
+                          role: entry.role,
+                          workflow: entry.workflow,
+                          isolation: entry.isolation,
+                          providerId: entry.providerId,
+                          providerBackendId: entry.providerBackendId,
+                          model: entry.model,
+                          effort: entry.effort,
+                          fastMode: entry.fastMode,
+                          mcpPolicy: entry.mcpPolicy,
+                        });
+                        onMemberAdded?.(entry.name);
                       }
-                    })();
+                      setAddMemberDialogOpen(false);
+                    } finally {
+                      setAddingMemberLoading(false);
+                    }
                   }}
                 />
               )}

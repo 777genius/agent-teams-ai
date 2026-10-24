@@ -19,11 +19,13 @@ import {
 } from '@features/task-board-commands';
 import { type AgentTeamsController, createController } from 'agent-teams-controller';
 import Database from 'better-sqlite3-node';
+import { TeamDataService } from '../../../src/main/services/team/TeamDataService';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { InProcessGateway } from '../internal-storage/helpers/InProcessGateway';
 
 import type { TeamTask } from '@shared/types';
+import type { TeamGroupChatDTO } from '@features/team-group-chats/contracts';
 
 const TEAM_NAME = 'task-command-e2e';
 const CREATE_TASK_OPERATION = 'task.create';
@@ -67,6 +69,85 @@ describe('task-board commands E2E', () => {
         }
       ).creationCommand?.idempotencyKey
     ).toBe(identity.idempotencyKey);
+    expect(harness.controller.taskBoard.listTasks()).toHaveLength(1);
+  });
+
+  it('admits fresh group links without blocking committed replay or existing-link edits', async () => {
+    const harness = await makeHarness();
+    const group: TeamGroupChatDTO = {
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      name: 'Task context',
+      createdAt: '2026-10-10T12:00:00.000Z',
+      membership: { kind: 'fixed', memberNames: ['lead', 'worker'] },
+      memberNames: ['lead', 'worker'],
+      availableRecipientNames: [],
+      canSend: false,
+      archivedAt: null,
+    };
+    const catalog = vi.fn(() => Promise.resolve([group]));
+    const service = new TeamDataService(
+      { getConfigSnapshot: () => Promise.resolve({ name: TEAM_NAME, members: [] }) } as never,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      () => harness.controller
+    );
+    service.setTaskBoardCommandFacade(harness.facade);
+    service.setTaskGroupChatCatalog(catalog);
+    const request = {
+      subject: 'Associated durable task',
+      groupChatId: group.id,
+      command: makeIdentity('abababab-abab-4bab-8bab-abababababab'),
+    };
+    const first = await service.createTask(TEAM_NAME, request);
+    expect(first.groupChatId).toBe(group.id);
+    expect(catalog).toHaveBeenCalledWith(TEAM_NAME);
+
+    group.archivedAt = '2026-10-10T12:01:00.000Z';
+    catalog.mockClear();
+    const replay = await service.createTask(TEAM_NAME, request);
+    expect(replay.id).toBe(first.id);
+    expect(catalog).not.toHaveBeenCalled();
+    await expect(
+      service.createTask(TEAM_NAME, {
+        ...request,
+        groupChatId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      })
+    ).rejects.toThrow(/conflict/i);
+    expect(catalog).not.toHaveBeenCalled();
+
+    await expect(
+      service.createTask(TEAM_NAME, {
+        subject: 'Archived destination',
+        groupChatId: group.id,
+      })
+    ).rejects.toThrow('archived group chat');
+    await expect(
+      service.createTask(TEAM_NAME, {
+        subject: 'Foreign destination',
+        groupChatId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      })
+    ).rejects.toThrow('does not belong to this team');
+    await expect(
+      service.createTask(TEAM_NAME, {
+        subject: 'Malformed destination',
+        groupChatId: 'not-a-uuid',
+      })
+    ).rejects.toThrow('UUID');
+    catalog.mockClear();
+    catalog.mockRejectedValue(new Error('Catalog is unavailable'));
+    await service.updateTaskFields(TEAM_NAME, first.id, { subject: 'Edited title' });
+    await service.updateTaskFields(TEAM_NAME, first.id, { groupChatId: group.id });
+    expect((harness.controller.taskBoard.getTask(first.id) as TeamTask).groupChatId).toBe(group.id);
+    await service.updateTaskFields(TEAM_NAME, first.id, { groupChatId: null });
+    expect(harness.controller.taskBoard.getTask(first.id)).not.toHaveProperty('groupChatId');
+    expect(catalog).not.toHaveBeenCalled();
     expect(harness.controller.taskBoard.listTasks()).toHaveLength(1);
   });
 

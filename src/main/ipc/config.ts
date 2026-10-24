@@ -54,8 +54,7 @@ const execFileAsync = promisify(execFile);
 
 // Get singleton instance
 const configManager = ConfigManager.getInstance();
-let onClaudeRootPathUpdated: ((claudeRootPath: string | null) => Promise<void> | void) | null =
-  null;
+let updateClaudeRoot: ((applyConfig: () => void) => Promise<void>) | null = null;
 let onAgentLanguageUpdated: ((newLangCode: string) => Promise<void> | void) | null = null;
 
 function isPathLikeCommand(command: string): boolean {
@@ -129,11 +128,11 @@ function launchExternalEditor(editor: string, configPath: string): Promise<void>
  */
 export function initializeConfigHandlers(
   options: {
-    onClaudeRootPathUpdated?: (claudeRootPath: string | null) => Promise<void> | void;
+    updateClaudeRoot?: (applyConfig: () => void) => Promise<void>;
     onAgentLanguageUpdated?: (newLangCode: string) => Promise<void> | void;
   } = {}
 ): void {
-  onClaudeRootPathUpdated = options.onClaudeRootPathUpdated ?? null;
+  updateClaudeRoot = options.updateClaudeRoot ?? null;
   onAgentLanguageUpdated = options.onAgentLanguageUpdated ?? null;
 }
 
@@ -237,7 +236,11 @@ async function handleUpdateConfig(
         ? configManager.getConfig().general.agentLanguage
         : undefined;
 
-    configManager.updateConfig(validation.section, validation.data);
+    const applyConfig = () => {
+      configManager.updateConfig(validation.section, validation.data);
+    };
+    if (isClaudeRootUpdate && updateClaudeRoot) await updateClaudeRoot(applyConfig);
+    else applyConfig();
 
     // Sync Sentry opt-in when general.telemetryEnabled changes
     if (
@@ -245,16 +248,6 @@ async function handleUpdateConfig(
       Object.prototype.hasOwnProperty.call(validation.data, 'telemetryEnabled')
     ) {
       syncTelemetryFlag(configManager.getConfig().general.telemetryEnabled);
-    }
-
-    if (isClaudeRootUpdate && onClaudeRootPathUpdated) {
-      const nextClaudeRootPath = (validation.data as { claudeRootPath?: string | null })
-        .claudeRootPath;
-      try {
-        await onClaudeRootPathUpdated(nextClaudeRootPath ?? null);
-      } catch (callbackError) {
-        logger.error('Failed to apply updated Claude root path at runtime:', callbackError);
-      }
     }
 
     if (prevAgentLanguage !== undefined && onAgentLanguageUpdated) {

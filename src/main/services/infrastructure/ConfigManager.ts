@@ -25,6 +25,7 @@ import type { CodexAccountAuthMode } from '@features/codex-account/contracts';
 import type { TeamRuntimeRecoveryConfig } from '@features/team-runtime-recovery/contracts';
 import type { TriggerColor } from '@shared/constants/triggerColors';
 import type { SshConnectionProfile } from '@shared/types';
+import type { AppConfig as SharedAppConfig } from '@shared/types/notifications';
 
 const logger = createLogger('Service:ConfigManager');
 
@@ -265,22 +266,10 @@ export interface NotificationTrigger {
   color?: TriggerColor;
 }
 
-export interface GeneralConfig {
-  launchAtLogin: boolean;
-  showDockIcon: boolean;
-  theme: 'dark' | 'light' | 'system';
-  defaultTab: 'dashboard' | 'last-session';
-  multimodelEnabled: boolean;
-  claudeRootPath: string | null;
-  agentLanguage: string;
-  appLocale: string;
-  autoExpandAIGroups: boolean;
-  useNativeTitleBar: boolean;
+export type GeneralConfig = SharedAppConfig['general'] & {
   /** Paths manually added via "Select Folder" that persist across app restarts */
   customProjectPaths: string[];
-  /** Send anonymous crash & performance telemetry (requires SENTRY_DSN at build time) */
-  telemetryEnabled: boolean;
-}
+};
 
 export interface RuntimeConfig {
   providerBackends: {
@@ -412,6 +401,7 @@ const DEFAULT_CONFIG: AppConfig = {
     useNativeTitleBar: false,
     customProjectPaths: [],
     telemetryEnabled: true,
+    externalAgentCdpEnabled: false,
   },
   providerConnections: {
     anthropic: {

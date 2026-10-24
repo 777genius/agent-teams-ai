@@ -45,6 +45,7 @@ function buildAssignmentMessage(context, task, options = {}) {
         wrapAgentBlock(`Use the board MCP tools to work this task correctly:
 1. Check the latest full context before starting:
    task_get { teamName: "${context.teamName}", taskId: "${task.id}" }
+   If task_get returns groupChatId, it is task context metadata, not membership or reply routing. Refresh group_chat_list before proactive group sends. To create a group-associated task, pass groupChatId plus your configured non-user createdBy/from actor.
 2. Assignment notifications can become stale after a reassignment or completion. After task_get, compare task.owner with your configured teammate name and check task.status. If task.owner is empty or belongs to someone else, or task.status is completed or deleted, do not start or reopen the task, modify files for it, add a completion comment, or complete it. Stop and wait unless the current owner explicitly asks you to collaborate on fresh follow-up work.
 3. If you are still the current owner, are idle, and the task is ready to start after checking dependencies and context, call task_start now:
    task_start { teamName: "${context.teamName}", taskId: "${task.id}", actor: "<your-name>" }

@@ -1,3 +1,8 @@
+import { act, createElement, type ReactElement } from 'react';
+import { createRoot } from 'react-dom/client';
+
+import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
+import { draftStorage } from '@renderer/services/draftStorage';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock idb-keyval before importing draftStorage
@@ -17,8 +22,6 @@ vi.mock('idb-keyval', () => ({
   }),
   keys: vi.fn(() => Promise.resolve([...store.keys()])),
 }));
-
-import { draftStorage } from '@renderer/services/draftStorage';
 
 describe('draftStorage', () => {
   beforeEach(() => {
@@ -127,5 +130,55 @@ describe('draftStorage', () => {
       expect(store.get('draft:compose:team-a:chips')).toEqual(old);
       expect(store.has('draft:expired-other')).toBe(false);
     });
+  });
+});
+
+describe('draft hydration ordering', () => {
+  beforeEach(() => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('preserves fresh input and its pending save when an older draft finishes loading', async () => {
+    let finishLoad!: (value: string | null) => void;
+    const load = vi.spyOn(draftStorage, 'loadDraft').mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishLoad = resolve;
+        })
+    );
+    const save = vi.spyOn(draftStorage, 'saveDraft').mockResolvedValue(undefined);
+    let draft!: ReturnType<typeof useDraftPersistence>;
+    function Input(): ReactElement {
+      draft = useDraftPersistence({ key: 'sandbox:prompt-hydration', debounceMs: 10000 });
+      return createElement('textarea', { value: draft.value, readOnly: true });
+    }
+    const host = document.createElement('div');
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(createElement(Input));
+      });
+      await act(async () => {
+        draft.setValue('Freshly typed request');
+      });
+      await act(async () => {
+        finishLoad('Older saved request');
+      });
+      expect(host.querySelector('textarea')?.value).toBe('Freshly typed request');
+      await act(async () => {
+        root.unmount();
+      });
+      expect(save).toHaveBeenCalledWith('sandbox:prompt-hydration', 'Freshly typed request');
+    } finally {
+      await act(async () => {
+        root.unmount();
+      });
+      load.mockRestore();
+      save.mockRestore();
+    }
   });
 });

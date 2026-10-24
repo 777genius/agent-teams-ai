@@ -302,8 +302,121 @@ describe('TeamProvisioningOpenCodeRuntimeLaneCleanup', () => {
         'active'
       );
       expect(logWarning).toHaveBeenCalledWith(
-        '[team] OpenCode lane primary did not confirm stop; retaining runtime ownership and storage.'
+        '[team] OpenCode lane primary did not confirm stop; retaining runtime ownership and storage. ' +
+          'Attempts: run=run-1 runtime still active'
       );
+    } finally {
+      rmSync(teamsBasePath, { recursive: true, force: true });
+    }
+  });
+
+  it('records an explicit fallback when an unconfirmed stop returns no diagnostics', async () => {
+    const teamsBasePath = mkdtempSync(join(tmpdir(), 'stopped-team-lane-cleanup-'));
+    const laneId = 'primary';
+    const stop = vi.fn(async () => ({
+      runId: 'run-1',
+      teamName: 'team',
+      stopped: false,
+      members: {},
+      warnings: [],
+      diagnostics: [],
+    }));
+    const markStoppedTeamOpenCodeRuntimeLanesCleaned = vi.fn();
+    const logWarning = vi.fn();
+
+    try {
+      await writeOpenCodeRuntimeLaneIndex(teamsBasePath, 'team', {
+        version: 1,
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        lanes: {
+          [laneId]: { laneId, state: 'active', updatedAt: '2026-01-01T00:00:00.000Z' },
+        },
+      });
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath,
+        teamName: 'team',
+        laneId,
+        runId: 'run-1',
+      });
+
+      await stopOpenCodeRuntimeLanesForStoppedTeam({
+        teamName: 'team',
+        teamsBasePath,
+        ports: {
+          withTeamLock: async (_teamName, operation) => operation(),
+          canDeliverToOpenCodeRuntimeForTeam: () => false,
+          getOpenCodeRuntimeAdapter: () => ({ providerId: 'opencode', stop }) as never,
+          readPreviousLaunchState: async () => null,
+          readConfigForObservation: async () => null,
+          readMembersMeta: async () => [],
+          readPersistedTeamProjectPath: () => null,
+          tryStopPersistedOpenCodeRuntimePidForStoppedLane: () => 'no_pid',
+          deleteSecondaryRuntimeRun: vi.fn(),
+          clearPrimaryRuntimeRun: vi.fn(),
+          markStoppedTeamOpenCodeRuntimeLanesCleaned,
+          logWarning,
+        },
+      });
+
+      expect(markStoppedTeamOpenCodeRuntimeLanesCleaned).not.toHaveBeenCalled();
+      // A silent false result must still be attributable to the run that produced it.
+      expect(logWarning).toHaveBeenCalledWith(
+        '[team] OpenCode lane primary did not confirm stop; retaining runtime ownership and storage. ' +
+          'Attempts: run=run-1 no stop diagnostics returned'
+      );
+    } finally {
+      rmSync(teamsBasePath, { recursive: true, force: true });
+    }
+  });
+
+  it('bounds and flattens an adapter exception carried into the retention warning', async () => {
+    const teamsBasePath = mkdtempSync(join(tmpdir(), 'stopped-team-lane-cleanup-'));
+    const laneId = 'primary';
+    const stop = vi.fn(async () => {
+      throw new Error(`bridge exploded\n${'y'.repeat(20_000)}`);
+    });
+    const logWarning = vi.fn();
+
+    try {
+      await writeOpenCodeRuntimeLaneIndex(teamsBasePath, 'team', {
+        version: 1,
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        lanes: {
+          [laneId]: { laneId, state: 'active', updatedAt: '2026-01-01T00:00:00.000Z' },
+        },
+      });
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath,
+        teamName: 'team',
+        laneId,
+        runId: 'run-1',
+      });
+
+      await stopOpenCodeRuntimeLanesForStoppedTeam({
+        teamName: 'team',
+        teamsBasePath,
+        ports: {
+          withTeamLock: async (_teamName, operation) => operation(),
+          canDeliverToOpenCodeRuntimeForTeam: () => false,
+          getOpenCodeRuntimeAdapter: () => ({ providerId: 'opencode', stop }) as never,
+          readPreviousLaunchState: async () => null,
+          readConfigForObservation: async () => null,
+          readMembersMeta: async () => [],
+          readPersistedTeamProjectPath: () => null,
+          tryStopPersistedOpenCodeRuntimePidForStoppedLane: () => 'no_pid',
+          deleteSecondaryRuntimeRun: vi.fn(),
+          clearPrimaryRuntimeRun: vi.fn(),
+          markStoppedTeamOpenCodeRuntimeLanesCleaned: vi.fn(),
+          logWarning,
+        },
+      });
+
+      const retention = logWarning.mock.calls
+        .map((call) => String(call[0]))
+        .find((message) => message.includes('did not confirm stop'));
+      expect(retention).toBeDefined();
+      expect(retention).not.toContain('\n');
+      expect(retention!.length).toBeLessThan(1_500);
     } finally {
       rmSync(teamsBasePath, { recursive: true, force: true });
     }

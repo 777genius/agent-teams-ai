@@ -30,7 +30,7 @@ describe('electron-builder Linux packaging', () => {
   it('fixes chrome-sandbox permissions at the actual fpm install directory', () => {
     const afterInstall = fs.readFileSync(path.join(repoRoot, 'resources/afterInstall.sh'), 'utf8');
 
-    expect(afterInstall).toContain('/opt/${sanitizedProductName}/chrome-sandbox');
+    expect(afterInstall).toContain('/opt/Agent-Teams-AI/chrome-sandbox');
     expect(afterInstall).not.toContain('/opt/${productFilename}/chrome-sandbox');
   });
 });

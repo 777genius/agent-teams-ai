@@ -6,6 +6,45 @@ import {
 } from '../../../../src/main/services/team/runtime/RuntimeDiagnosticClassifier';
 
 describe('RuntimeDiagnosticClassifier', () => {
+  it('prioritizes a provider-reported OpenCode free-tier version requirement', () => {
+    const selected = selectRuntimeDiagnosticClassification([
+      'OpenCode session status busy',
+      'Latest assistant message msg_1 failed with APIError - Error from provider (Console): OpenCode 1.19.2 or newer is required to use the free tier',
+    ]);
+
+    expect(selected).toMatchObject({
+      reasonCode: 'backend_error',
+      normalizedMessage: expect.stringContaining('OpenCode 1.19.2 or newer'),
+      actionRequired: true,
+      generic: false,
+    });
+  });
+
+  it('keeps a normalized OpenCode free-tier version failure action-required on a second classification', () => {
+    const raw = classifyRuntimeDiagnostic(
+      'OpenCode 1.19.2 or newer is required to use the free tier'
+    );
+    const repeated = classifyRuntimeDiagnostic(raw.normalizedMessage!);
+
+    expect(repeated).toMatchObject({
+      reasonCode: raw.reasonCode,
+      priority: raw.priority,
+      actionRequired: true,
+      normalizedMessage: raw.normalizedMessage,
+    });
+  });
+
+  it('keeps pinned-binary guidance through repeated diagnostic classification', () => {
+    const message =
+      'This app is using OpenCode 1.17.18. OpenCode free-tier models require OpenCode 1.18.0 or newer. The OPENCODE_BIN_PATH override pins this version. Update that binary or remove the override, then restart Agent Teams.';
+    const first = classifyRuntimeDiagnostic(message);
+    const repeated = classifyRuntimeDiagnostic(first.normalizedMessage!);
+
+    expect(first.normalizedMessage).toBe(message);
+    expect(repeated.normalizedMessage).toBe(message);
+    expect(repeated.actionRequired).toBe(true);
+  });
+
   it('selects disk-full errors over aborted and empty OpenCode noise', () => {
     const selected = selectRuntimeDiagnosticClassification([
       'Latest assistant message msg_1 failed with MessageAbortedError - Aborted',
@@ -15,7 +54,8 @@ describe('RuntimeDiagnosticClassifier', () => {
 
     expect(selected).toMatchObject({
       reasonCode: 'filesystem_error',
-      normalizedMessage: 'Local disk is full (ENOSPC). Free disk space and retry OpenCode delivery.',
+      normalizedMessage:
+        'Local disk is full (ENOSPC). Free disk space and retry OpenCode delivery.',
       actionRequired: true,
       generic: false,
     });
@@ -201,9 +241,7 @@ describe('RuntimeDiagnosticClassifier', () => {
       generic: true,
       actionRequired: false,
     });
-    expect(
-      classifyRuntimeDiagnostic('opencode_app_mcp_transport_changed:old->new')
-    ).toMatchObject({
+    expect(classifyRuntimeDiagnostic('opencode_app_mcp_transport_changed:old->new')).toMatchObject({
       reasonCode: 'backend_error',
       normalizedMessage: 'OpenCode session changed; refreshing the session before retry.',
       generic: true,
@@ -294,9 +332,7 @@ describe('RuntimeDiagnosticClassifier', () => {
       'resolved_behavior_changed:old->new unexpected detail'
     );
 
-    expect(result.normalizedMessage).toBe(
-      'resolved_behavior_changed:old->new unexpected detail'
-    );
+    expect(result.normalizedMessage).toBe('resolved_behavior_changed:old->new unexpected detail');
     expect(result.generic).toBe(false);
   });
 
@@ -305,9 +341,7 @@ describe('RuntimeDiagnosticClassifier', () => {
       'OpenCode API errorresolved_behavior_changed:old->new'
     );
 
-    expect(result.normalizedMessage).toBe(
-      'OpenCode API errorresolved_behavior_changed:old->new'
-    );
+    expect(result.normalizedMessage).toBe('OpenCode API errorresolved_behavior_changed:old->new');
     expect(result.generic).toBe(false);
   });
 
@@ -370,7 +404,16 @@ describe('RuntimeDiagnosticClassifier', () => {
     });
   });
 
-  it.each(['error', 'failed', 'failure', 'aborted', 'canceled', 'cancelled', 'interrupted', 'enospc'])(
+  it.each([
+    'error',
+    'failed',
+    'failure',
+    'aborted',
+    'canceled',
+    'cancelled',
+    'interrupted',
+    'enospc',
+  ])(
     'does not classify directly attached OpenCode refresh suffix _%s as clean refresh',
     (suffix) => {
       const result = classifyRuntimeDiagnostic(`resolved_behavior_changed:old->new_${suffix}`);
@@ -441,7 +484,9 @@ describe('RuntimeDiagnosticClassifier', () => {
 
   it('does not let OpenCode refresh markers hide protocol proof failures', () => {
     expect(
-      classifyRuntimeDiagnostic('resolved_behavior_changed:old->new visible_reply_missing_task_refs')
+      classifyRuntimeDiagnostic(
+        'resolved_behavior_changed:old->new visible_reply_missing_task_refs'
+      )
     ).toMatchObject({
       reasonCode: 'protocol_proof_missing',
       generic: true,

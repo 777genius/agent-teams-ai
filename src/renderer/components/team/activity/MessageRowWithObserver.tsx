@@ -1,4 +1,11 @@
-import React, { type RefObject, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, {
+  type RefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   areInboxMessagesEquivalentForRender,
@@ -13,6 +20,8 @@ import { useMessageReadVisibility } from './useMessageReadVisibility';
 
 import type { ChatAppearance } from './activityMessagePresentation';
 import type { TimelineCardPosition } from './timelineCardStack';
+import type { MessageTaskSeed } from '@renderer/types/messageTaskSeed';
+import type { TaskIdClickHandler } from '@renderer/utils/taskReferenceUtils';
 import type { InboxMessage } from '@shared/types';
 
 const NEW_MESSAGE_HIGHLIGHT_MS = 3_000;
@@ -38,13 +47,13 @@ interface MessageRowWithObserverProps {
   memberColorMap?: Map<string, string>;
   localMemberNames?: Set<string>;
   onMemberNameClick?: (name: string) => void;
-  onCreateTask?: (subject: string, description: string) => void;
+  onCreateTask?: (seed: MessageTaskSeed) => void;
   onReply?: (message: InboxMessage) => void;
   revisionMessageId?: string | null;
   onRevise?: (message: InboxMessage) => void;
   onVisible?: (message: InboxMessage) => void;
   observationEnabled?: boolean;
-  onTaskIdClick?: (taskId: string) => void;
+  onTaskIdClick?: TaskIdClickHandler;
   onRestartTeam?: () => void;
   collapseMode: 'default' | 'managed';
   isCollapsed: boolean;

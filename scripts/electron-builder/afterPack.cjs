@@ -15,6 +15,9 @@ const TARGET_BINARY_FORMAT = {
   win32: 'pe',
 };
 
+// Collected per afterPack run so a deficient runtime payload is loud in build logs.
+const missingPortableBunPtyTargets = new Set();
+
 function getArchLabel(arch) {
   return ARCH_LABELS[arch] ?? String(arch);
 }
@@ -247,13 +250,119 @@ function findNodeModulesSequence(segments, sequence) {
   return -1;
 }
 
-function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPlatform, targetArch) {
-  if (targetPlatform !== 'win32') {
-    return null;
-  }
-
+async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPlatform, targetArch) {
   const relativePath = path.relative(appOutDir, filePath);
   const segments = relativePath.split(path.sep);
+  const normalizedPath = segments.join('/');
+  const portableRuntimeGraph = normalizedPath.match(
+    /^(?:resources|(?:[^/]+\.app\/)?Contents\/Resources)\/runtime\/local-cli\/node_modules\/(.+)$/
+  );
+  const isPortableRuntimeGraph = portableRuntimeGraph !== null;
+
+  if (isPortableRuntimeGraph) {
+    // Portable payloads can contain these exact host-built msgpackr outputs.
+    // Prune individual files only after the metadata compatibility check below.
+    const msgpackrIndex = findNodeModulesSequence(segments, [
+      'node_modules',
+      'msgpackr-extract',
+      'build',
+      'Release',
+    ]);
+    if (
+      msgpackrIndex >= 0 &&
+      ['extract.node', 'obj.target/extract.node', 'obj.target/extract/src/extract.o'].includes(
+        segments.slice(msgpackrIndex + 4).join('/')
+      )
+    ) {
+      return filePath;
+    }
+    // Both the current graph and the frozen V2 floor ship multi-platform bun-pty libraries.
+    // Require a compatible sibling except for the frozen, unused Windows ARM64 floor PTY below.
+    const bunPtyReleases = [
+      'bun-pty/rust-pty/target/release',
+      '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release',
+    ];
+    const libraryTargets = {
+      'librust_pty.so': ['linux', 'x64'],
+      'librust_pty_musl.so': ['linux', 'x64'],
+      'librust_pty_arm64.so': ['linux', 'arm64'],
+      'librust_pty_arm64_musl.so': ['linux', 'arm64'],
+      'librust_pty.dylib': ['darwin', 'x64'],
+      'librust_pty_arm64.dylib': ['darwin', 'arm64'],
+      'rust_pty.dll': ['win32', 'x64'],
+      'rust_pty_arm64.dll': ['win32', 'arm64'],
+    };
+    const library = path.basename(filePath);
+    const matchesTarget = ([platform, arch]) =>
+      platform === targetPlatform &&
+      (arch === targetArch || (targetPlatform === 'darwin' && targetArch === 'universal'));
+    if (
+      Object.hasOwn(libraryTargets, library) &&
+      bunPtyReleases.some((root) => portableRuntimeGraph[1] === `${root}/${library}`)
+    ) {
+      // The frozen floor's PTY is not used by bounded Windows transports. Retain
+      // its preexisting ARM64 packaging exception without enabling ARM64 execution.
+      if (
+        targetPlatform === 'win32' && targetArch === 'arm64' &&
+        portableRuntimeGraph[1] === `${bunPtyReleases[1]}/${library}` &&
+        ['librust_pty.so', 'librust_pty_arm64.so', 'librust_pty.dylib', 'librust_pty_arm64.dylib', 'rust_pty.dll'].includes(library)
+      ) {
+        try {
+          const manifestPath = path.join(path.dirname(filePath), '../../..', 'package.json');
+          const manifestStat = await fs.promises.lstat(manifestPath);
+          if (manifestStat.isFile() && !manifestStat.isSymbolicLink() && manifestStat.size <= 65536) {
+            const manifest = JSON.parse(await fs.promises.readFile(manifestPath, 'utf8'));
+            if (manifest?.name === 'bun-pty' && manifest.version === '0.4.8') return filePath;
+          }
+        } catch {
+          // An absent or invalid frozen-package manifest cannot authorize this exception.
+        }
+      }
+      // A malformed target-named file must fail validation rather than disappear.
+      if (matchesTarget(libraryTargets[library])) return null;
+      // The frozen floor keeps its sibling-gated retention below.
+      if (portableRuntimeGraph[1] === `${bunPtyReleases[0]}/${library}`) {
+        // The loader's per-platform filename map is exhaustive, so a foreign-named
+        // library can never load on the target; the win32-arm64 runtime also omits
+        // rust_pty_arm64.dll entirely. Prune current-graph foreigns outright, but
+        // surface the absent target binding so the degradation is not silent.
+        const targetFilenames = Object.entries(libraryTargets)
+          .filter(([, target]) => matchesTarget(target))
+          .map(([filename]) => filename);
+        if (targetFilenames.length > 0) {
+          const siblings = await Promise.all(
+            targetFilenames.map((filename) => fileExists(path.join(path.dirname(filePath), filename)))
+          );
+          if (!siblings.some(Boolean)) {
+            missingPortableBunPtyTargets.add(path.join(path.dirname(filePath), targetFilenames[0]));
+          }
+        }
+        return filePath;
+      }
+      for (const [filename, target] of Object.entries(libraryTargets)) {
+        if (!matchesTarget(target)) continue;
+        const sibling = path.join(path.dirname(filePath), filename);
+        if (!(await fileExists(sibling))) continue;
+        try {
+          const metadata = await detectBinaryMetadata(sibling);
+          if (metadata && isBinaryCompatible(metadata.format, metadata.archs, targetPlatform, targetArch)) {
+            return filePath;
+          }
+        } catch {
+          // Missing or unreadable target bytes cannot authorize pruning.
+        }
+      }
+      return null;
+    }
+  }
+
+  if (
+    targetPlatform !== 'win32' &&
+    !(targetPlatform === 'linux' && targetArch === 'x64') &&
+    !(targetPlatform === 'darwin' && (targetArch === 'arm64' || targetArch === 'x64'))
+  ) {
+    return null;
+  }
 
   const conptyIndex = findNodeModulesSequence(segments, [
     'node_modules',
@@ -263,11 +372,72 @@ function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPlatform,
   ]);
   const conptyArchIndex = conptyIndex + 5;
   const conptyArchDir = conptyIndex >= 0 ? segments[conptyArchIndex] : null;
-  if (conptyArchDir?.startsWith('win10-') && conptyArchDir !== `win10-${targetArch}`) {
+  if (
+    targetPlatform === 'win32' &&
+    conptyArchDir?.startsWith('win10-') &&
+    conptyArchDir !== `win10-${targetArch}`
+  ) {
     return path.join(appOutDir, ...segments.slice(0, conptyArchIndex + 1));
   }
 
-  return null;
+  if (targetPlatform === 'darwin' && !segments[0]?.endsWith('.app')) return null;
+  const runtimePrefix =
+    targetPlatform === 'darwin'
+      ? [segments[0], 'Contents', 'Resources', 'runtime', 'local-cli', 'node_modules']
+      : ['resources', 'runtime', 'local-cli', 'node_modules'];
+  if (!runtimePrefix.every((segment, index) => segments[index] === segment)) {
+    return null;
+  }
+  const runtimeRoot = path.join(appOutDir, ...runtimePrefix);
+  const runtimePath = segments.slice(runtimePrefix.length).join('/');
+  let rootToRemove = null;
+  let targetSibling = null;
+  const treeSitterRoots = [
+    '@opencode/core/node_modules/tree-sitter-bash/prebuilds',
+    '@opencode/server-v2-floor/node_modules/@opencode/core/node_modules/tree-sitter-bash/prebuilds',
+  ];
+  for (const prebuildRoot of treeSitterRoots) {
+    if (!runtimePath.startsWith(`${prebuildRoot}/`)) continue;
+    const [variant, filename, extra] = runtimePath.slice(prebuildRoot.length + 1).split('/');
+    if (
+      !extra &&
+      filename === 'tree-sitter-bash.node' &&
+      /^(darwin|linux|win32)-(arm64|x64)$/.test(variant) &&
+      variant !== `${targetPlatform}-${targetArch}`
+    ) {
+      rootToRemove = filePath;
+      targetSibling = path.join(
+        runtimeRoot,
+        ...prebuildRoot.split('/'),
+        `${targetPlatform}-${targetArch}`,
+        filename
+      );
+    }
+  }
+
+  const ffiMatch = runtimePath.match(
+    /^@yuuang\/ffi-rs-win32-(ia32|x64|arm64)-msvc\/ffi-rs\.win32-\1-msvc\.node$/
+  );
+  if (targetPlatform === 'win32' && ffiMatch && ffiMatch[1] !== targetArch) {
+    rootToRemove = filePath;
+    targetSibling = path.join(
+      runtimeRoot,
+      '@yuuang',
+      `ffi-rs-win32-${targetArch}-msvc`,
+      `ffi-rs.win32-${targetArch}-msvc.node`
+    );
+  }
+
+  if (!rootToRemove || !targetSibling || !(await fileExists(targetSibling))) return null;
+  try {
+    const metadata = await detectBinaryMetadata(targetSibling);
+    return metadata &&
+      isBinaryCompatible(metadata.format, metadata.archs, targetPlatform, targetArch)
+      ? rootToRemove
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 // tools/opencode-console-wrapper, staged by scripts/stage-opencode-console-wrapper.mjs.
@@ -300,7 +470,7 @@ async function pruneKnownIncompatibleNativeArtifacts(appOutDir, targetPlatform, 
   const rootsToRemove = new Set();
 
   for (const filePath of files) {
-    const rootToRemove = getKnownPrunableNativeArtifactRoot(
+    const rootToRemove = await getKnownPrunableNativeArtifactRoot(
       appOutDir,
       filePath,
       targetPlatform,
@@ -316,6 +486,14 @@ async function pruneKnownIncompatibleNativeArtifacts(appOutDir, targetPlatform, 
     }
 
     if (isBinaryCompatible(metadata.format, metadata.archs, targetPlatform, targetArch)) {
+      continue;
+    }
+
+    // The ffi-rs optional artifact must also match its advertised PE ia32 header.
+    if (
+      path.basename(rootToRemove) === 'ffi-rs.win32-ia32-msvc.node' &&
+      (metadata.format !== 'pe' || metadata.archs.size !== 1 || !metadata.archs.has('ia32'))
+    ) {
       continue;
     }
 
@@ -530,6 +708,7 @@ async function validateNativeBinaries(appOutDir, targetPlatform, targetArch) {
 async function afterPack(context) {
   const targetPlatform = context.electronPlatformName;
   const targetArch = getArchLabel(context.arch);
+  missingPortableBunPtyTargets.clear();
 
   const removedPaths = [
     ...(await pruneNodePtyArtifacts(context.appOutDir, targetPlatform, targetArch)),
@@ -552,6 +731,13 @@ async function afterPack(context) {
       `[afterPack] pruned ${removedPaths.length} incompatible native artifact(s) for ${targetPlatform}-${targetArch}`
     );
   }
+
+  for (const missingTarget of missingPortableBunPtyTargets) {
+    console.log(
+      `[afterPack] notice: no loadable bun-pty binding for ${targetPlatform}-${targetArch} (missing ${missingTarget}); PTY stays unavailable until the runtime ships it`
+    );
+  }
+  missingPortableBunPtyTargets.clear();
 }
 
 module.exports = afterPack;
@@ -559,6 +745,7 @@ module.exports._internal = {
   OPENCODE_CONSOLE_WRAPPER_PATH,
   detectBinaryMetadata,
   getArchLabel,
+  getKnownPrunableNativeArtifactRoot,
   isBinaryCompatible,
   isKnownAllowedNativeMismatch,
   parseElf,

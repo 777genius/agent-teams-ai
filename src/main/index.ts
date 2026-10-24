@@ -1,35 +1,44 @@
-/**
- * Main process entry point for Agent Teams AI.
- *
- * Responsibilities:
- * - Initialize Electron app and main window
- * - Set up IPC handlers for data access
- * - Initialize ServiceContextRegistry with local context
- * - Start file watcher for live updates
- * - Manage application lifecycle
- */
-
-// Increase UV thread pool size BEFORE any async I/O.
-// Default is 4 threads which is far too few for startup:
-// binary resolution stat() calls, CLI subprocess spawning, fs.watch(),
-// and readFile/readdir from IPC handlers all compete for the pool.
-// On Windows this saturates all threads, blocking the event loop.
+import type { createGatewayLaunchRuntime } from '@main/services/gateway/createGatewayLaunchRuntime';
+// Increase UV thread pool size BEFORE async I/O: startup binary resolution,
+// subprocess work, watchers, and IPC filesystem requests share this pool.
+// The default four threads can block Windows startup.
 process.env.UV_THREADPOOL_SIZE ??= '16';
-
 // Keep userData stable before any integration can initialize Electron storage.
 // Sentry must stay near the top to capture early errors after storage migration.
 // eslint-disable-next-line simple-import-sort/imports -- userData migration must run before Sentry initializes Electron storage.
+import './bootstrapStandardOutput';
 import {
   earlyElectronDevPathOverrideResult,
   earlyElectronUserDataMigrationResult,
 } from './bootstrapUserDataMigration';
 import { earlyAnnouncementsProfile } from './bootstrapAnnouncementsProfile';
 import './sentryBootstrap';
+import { cleanupOrphanedDeterministicBootstrapSpecs } from '@main/services/team/provisioning/TeamProvisioningBootstrapSpec';
 
+import {
+  createDesktopTeamGroupChats,
+  registerTeamGroupChatsIpc,
+  type TeamGroupChatsFeature,
+} from '@features/team-group-chats/main';
+import { composeOpenCodeDesktopBridge } from '@main/services/team/opencode/bridge/composeOpenCodeDesktopBridge';
+import {
+  composeExternalAgentConnection,
+  refreshDesktopBridgeEnvironment,
+} from './startExternalAgentConnection';
+import {
+  assertStartupActive,
+  createStartupStage,
+  StartupCancelledError,
+} from './utils/startupCancellation';
 import type {
   AppCloseReadinessResult,
   AppCloseReason,
 } from '@features/app-close-coordination/contracts';
+import {
+  prepareNativeRendererCdp,
+  registerExternalAgentConnectionIpc,
+  removeExternalAgentConnectionIpc,
+} from '@features/external-agent-connection/main';
 import { RendererCloseReadinessCoordinator } from '@features/app-close-coordination/main';
 import {
   type CodexAccountFeatureFacade,
@@ -74,17 +83,11 @@ import {
   removeRecentProjectsIpc,
 } from '@features/recent-projects/main';
 import {
-  createRuntimeProviderManagementFeature,
   inspectOpenCodeLocalModelRuntimeReadiness,
   registerRuntimeProviderManagementIpc,
   removeRuntimeProviderManagementIpc,
   type RuntimeProviderManagementFeatureFacade,
 } from '@features/runtime-provider-management/main';
-import {
-  RUNTIME_PROVIDER_COMPANION_PROGRESS,
-  RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS,
-  type RuntimeProviderOAuthProgressDto,
-} from '@features/runtime-provider-management/contracts';
 import {
   createTerminalWorkspaceFeature,
   registerTerminalWorkspaceIpc,
@@ -102,7 +105,10 @@ import {
   createTeamRuntimeRecoveryFeature,
   type TeamRuntimeRecoveryFeatureFacade,
 } from '@features/team-runtime-recovery/main';
-import { TOKEN_USAGE_SNAPSHOT_CHANGED } from '@features/token-usage/contracts';
+import {
+  TOKEN_USAGE_SNAPSHOT_CHANGED,
+  TOKEN_USAGE_BUDGET_STATUS_CHANGED,
+} from '@features/token-usage/contracts';
 import {
   createApplicationCommandLedgerFeature,
   NodeApplicationCommandHasher,
@@ -117,13 +123,15 @@ import {
   type TokenUsageFeatureFacade,
 } from '@features/token-usage/main';
 import * as workspaceTrustFeature from '@features/workspace-trust/main';
-import {
-  applyAgentTeamsMcpAppContext,
-  ensureAgentTeamsMcpLocalLaunchEnv,
-} from '@main/services/runtime/agentTeamsMcpLaunchEnv';
+import { ensureAgentTeamsMcpLocalLaunchEnv } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import { ensureOpenCodeBridgeRuntimeBinaryEnv } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
+import {
+  hasExplicitOpenCodeBinaryOverride,
+  readOpenCodeEffectiveRuntimeStatus,
+  resolveOpenCodeRuntimeBinaryForBridgeEnv,
+} from '@main/services/runtime/openCodeEffectiveRuntimeVersion';
 import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
-import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
+import { createAttachmentBridgeEnvironment } from '@features/agent-attachments/main';
 import { providerConnectionService } from '@main/services/runtime/ProviderConnectionService';
 import {
   computeLiveTeamWatchScope,
@@ -152,7 +160,6 @@ import {
   hasOpenCodeLocalMcpLaunchEnv,
   isOpenCodeMcpHttpBridgeEnabled,
   mergeOpenCodeLocalMcpChildEnvironment,
-  shouldEnsureOpenCodeLocalMcpLaunchEnv,
   snapshotOpenCodeLocalMcpLaunchEnv,
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
 import {
@@ -177,12 +184,10 @@ import {
 import { TeamTranscriptProjectResolver } from '@main/services/team/TeamTranscriptProjectResolver';
 import { createTeamProvisioningLeadRuntimeSettingsCapability } from '@main/services/team/provisioning/TeamProvisioningLeadRuntimeSettingsCapability';
 import { killTrackedCliProcesses } from '@main/utils/childProcess';
-import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { extractNotificationContent } from '@main/utils/inboxNotificationContent';
-import {
-  formatTokenUsageBudgetMetricLabel,
-  formatTokenUsageBudgetValue,
-} from '@main/utils/tokenUsageBudgetNotificationText';
+import { createBudgetNotificationSink } from '@features/token-usage/main';
+import { RendererRecoveryController } from '@main/utils/RendererRecoveryController';
+import { resolveRendererEntry } from '@main/utils/rendererEntry';
 import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
 import {
   APP_GET_WINDOWS_ELEVATION_STATUS,
@@ -208,7 +213,7 @@ import { shouldSuppressDesktopNotificationForInboxText } from '@shared/utils/idl
 import { createLogger } from '@shared/utils/logger';
 import { isReviewPickupEscalationMessage } from '@shared/utils/teamAutomationMessages';
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import { AnnouncementsLifecycle } from './announcementsLifecycle';
 import {
   bindMemberWorkSyncProvisioningRuntime,
@@ -220,10 +225,12 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 
 import { createDesktopCodexFeatures } from './composition/createDesktopCodexFeatures';
+import { createDesktopStoppedImportContext } from './composition/createDesktopStoppedImportContext';
+import { createDesktopOpenCodeLifecycle } from './composition/createDesktopOpenCodeLifecycle';
+import { createDesktopProviderManagementFeatures } from './composition/createDesktopProviderManagementFeatures';
 import {
   captureDesktopAgentBackendHttpScope,
   captureDesktopStatusRequest,
-  configureDesktopStoppedImportOwners,
   getDesktopProviderStatusPort,
   isDesktopAgentBackendSelected,
   configureDesktopBackendPersistence,
@@ -231,7 +238,6 @@ import {
 import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
 import {
   initializeAgentBackendConnection,
-  getDesktopProviderManagementPort,
   initializeIpcHandlers,
   removeIpcHandlers,
   shutdownDesktopAgentBackend,
@@ -266,21 +272,7 @@ import { agentTeamsMcpHttpServer } from './services/team/AgentTeamsMcpHttpServer
 import { LaunchIoGovernor } from './services/team/LaunchIoGovernor';
 import { OpenCodeBridgeCommandClient } from './services/team/opencode/bridge/OpenCodeBridgeCommandClient';
 import { OpenCodeBridgeDiagnosticsStore } from './services/team/opencode/bridge/OpenCodeBridgeDiagnosticsStore';
-import {
-  createOpenCodeBridgeCommandLeaseStore,
-  createOpenCodeBridgeCommandLedgerStore,
-} from './services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
-import {
-  createOpenCodeBridgeClientIdentity,
-  OpenCodeBridgeCommandHandshakePort,
-} from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
-import {
-  resolveClaudeMultimodelDataDir,
-  startPeriodicOpenCodeHostStartupLockPurge,
-} from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
-import { createLegacyOpenCodeMaintenanceRequirement } from './services/team/opencode/bridge/OpenCodeLegacyMaintenanceCensus';
-import { cleanupLegacyOpenCodeLifecycle } from './services/team/opencode/bridge/OpenCodeLifecycleCleanup';
-import { resolveCursorAgentAttributionDirectory } from './services/team/opencode/bridge/CursorAgentAttributionRecords';
+import { startPeriodicOpenCodeHostStartupLockPurge } from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
 import {
   buildOpenCodeProcessOwnershipMarkers,
   cleanupOpenCodeHostProcessFallback,
@@ -294,9 +286,8 @@ import {
   stopAdmittingOpenCodeStartupCleanup,
 } from './services/team/opencode/bridge/OpenCodeWindowsStartupCleanup';
 import { beginOpenCodeStartupRuntimeSweep } from './services/team/opencode/bridge/OpenCodeStartupSweepGate';
-import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
-import { OpenCodeRuntimeLaunchAuthorityWriter } from './services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
-import { OpenCodeRuntimeManifestEvidenceReader } from './services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { OpenCodePromptDeliveryContinuityScan } from './services/team/opencode/delivery/OpenCodePromptDeliveryContinuityScan';
+import { isOpenCodePromptDeliveryWatchdogEnabled } from './services/team/opencode/delivery/OpenCodePromptDeliveryWatchdogScheduler';
 import {
   buildTeamControlApiBaseUrl,
   clearTeamControlApiState,
@@ -338,7 +329,13 @@ import {
   captureStartupMemorySnapshot,
   formatStartupMemorySnapshot,
 } from './utils/startupTelemetry';
-import { captureMainException, getMainSentryStatus, syncTelemetryFlag } from './sentry';
+import {
+  captureMainException,
+  captureRendererLoadFailure,
+  captureRendererProcessGone,
+  getMainSentryStatus,
+  syncTelemetryFlag,
+} from './sentry';
 import { setCodexRuntimeMainWindow } from './ipc/codexRuntime';
 import {
   ActiveTeamRegistry,
@@ -371,7 +368,7 @@ import {
   TeammateToolTracker,
   TeamMemberLogsFinder,
   TeamMembersMetaStore,
-  TeamProvisioningService,
+  createDefaultTeamProvisioningService,
   TeamRuntimeAdapterRegistry,
   TeamTaskReader,
   TeamTaskStallJournal,
@@ -382,9 +379,7 @@ import {
   TeamTranscriptSourceLocator,
   UpdaterService,
   applyCursorAgentAttributionEnv,
-  resolveVerifiedOpenCodeRuntimeBinaryPath,
 } from './services';
-
 import type { FileChangeEvent } from '@main/types';
 import type {
   AppStartupMemorySnapshot,
@@ -392,18 +387,20 @@ import type {
   AppStartupStep,
   TeamChangeEvent,
 } from '@shared/types';
-
 const logger = createLogger('App');
 let persistentAppLog: ReturnType<typeof installPersistentAppLog> | null = null;
 const appStartedAtMs = Date.now();
 const openCodeManagedHostInstanceId = `${process.pid}-${appStartedAtMs}`;
 let openCodeLifecycleBridge: OpenCodeReadinessBridge | null = null;
-
+let readOpenCodeGroupRun: ReturnType<typeof composeOpenCodeDesktopBridge>['groupRun'] | null = null;
+const nativeRendererCdp = prepareNativeRendererCdp(
+  configManager.getConfig().general.externalAgentCdpEnabled === true
+);
+let externalAgentConnection: ReturnType<typeof composeExternalAgentConnection> | null = null;
 if (process.env.AGENT_TEAMS_DISABLE_GPU?.trim() === '1') {
   app.disableHardwareAcceleration();
   logger.info('Hardware acceleration disabled by AGENT_TEAMS_DISABLE_GPU=1');
 }
-
 if (
   earlyElectronDevPathOverrideResult.userDataDir ||
   earlyElectronDevPathOverrideResult.claudeRoot
@@ -416,19 +413,16 @@ if (
 for (const warning of earlyElectronDevPathOverrideResult.warnings) {
   logger.warn(warning);
 }
-
 function readOptionalEnv(name: string): string | undefined {
   const value = process.env[name]?.trim();
   return value ? value : undefined;
 }
-
 function readOptionalEnvNumber(name: string): number | undefined {
   const value = readOptionalEnv(name);
   if (!value) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
-
 function readOptionalEnvArgs(name: string): string[] | undefined {
   const value = readOptionalEnv(name);
   if (!value) return undefined;
@@ -493,37 +487,15 @@ const INBOX_NOTIFY_DEBOUNCE_MS = 500;
 /** Messages sent from our UI (user_sent) - suppress notifications for these. */
 const suppressedSources = new Set(['user_sent']);
 
-async function resolveOpenCodeRuntimeBinaryForBridgeEnv(options?: {
-  includeShellEnv?: boolean;
-}): Promise<string | null> {
-  const resolvedBinaryPath = await resolveVerifiedOpenCodeRuntimeBinaryPath({
-    includeShellEnv: options?.includeShellEnv,
-  });
-  if (resolvedBinaryPath) return resolvedBinaryPath;
-
-  if (options?.includeShellEnv === false) {
-    return null;
-  }
-
-  try {
-    const status = await openCodeRuntimeInstallerService?.getStatus();
-    return status?.installed === true && status.binaryPath ? status.binaryPath : null;
-  } catch (error) {
-    logger.warn(
-      `[OpenCode] Runtime installer status unavailable while resolving bridge binary: ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
-    return null;
-  }
-}
-
 async function createOpenCodeRuntimeAdapterRegistry(
-  reportProgress: (phase: string, message: string) => void = () => undefined
+  reportProgress: (phase: string, message: string) => void = () => undefined,
+  gatewayRuntime?: ReturnType<typeof createGatewayLaunchRuntime>
 ): Promise<TeamRuntimeAdapterRegistry> {
-  const binaryPath = await ClaudeBinaryResolver.resolve({
-    onProgress: ({ phase, message }) => reportProgress(`runtime-${phase}`, message),
-  });
+  const binaryPath = await startupStage(() =>
+    ClaudeBinaryResolver.resolve({
+      onProgress: ({ phase, message }) => reportProgress(`runtime-${phase}`, message),
+    })
+  );
   if (!binaryPath) {
     logger.warn('[OpenCode] Runtime adapter bridge disabled: orchestrator CLI binary not resolved');
     reportProgress(
@@ -531,21 +503,30 @@ async function createOpenCodeRuntimeAdapterRegistry(
       'Runtime not found. Continuing with limited launch support...'
     );
     openCodeLifecycleBridge = null;
+    readOpenCodeGroupRun = null;
     configureCursorAgentAtomicReapBridge(null);
     return new TeamRuntimeAdapterRegistry();
   }
 
   reportProgress('runtime-environment', 'Preparing runtime environment...');
-  const bridgeEnv = applyOpenCodeAutoUpdatePolicy({
-    ...process.env,
-    PATH: buildMergedCliPath(binaryPath),
-  });
+  const bridgeEnv = await createAttachmentBridgeEnvironment(binaryPath);
+  let explicitOpenCodeBinaryOverride = hasExplicitOpenCodeBinaryOverride(bridgeEnv);
+  const readOpenCodeRuntimeStatus = () => {
+    if (explicitOpenCodeBinaryOverride) {
+      return readOpenCodeEffectiveRuntimeStatus(bridgeEnv, () =>
+        openCodeRuntimeInstallerService.getReadinessStatus()
+      );
+    }
+    return openCodeRuntimeInstallerService.getReadinessStatus();
+  };
   applyAgentTeamsIdentityEnv(bridgeEnv);
   const profileScope = buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath());
   // Where the runtime records the agent processes it starts, for the sweeps that
   // may only reap a tree they can prove this app owns - read back under this
   // same scope, however the Claude root moves later.
-  await applyCursorAgentAttributionEnv(bridgeEnv, { appProfileScope: profileScope });
+  await startupStage(() =>
+    applyCursorAgentAttributionEnv(bridgeEnv, { appProfileScope: profileScope })
+  );
   bridgeEnv.CLAUDE_TEAM_APP_PROFILE_SCOPE = profileScope;
   bridgeEnv.CLAUDE_TEAM_APP_INSTANCE_ID = openCodeManagedHostInstanceId;
   mergeOpenCodeLocalMcpChildEnvironment(bridgeEnv, {
@@ -554,8 +535,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
   });
   bridgeEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = getClaudeBasePath();
   const useHttpMcpBridge = isOpenCodeMcpHttpBridgeEnabled(bridgeEnv);
-  if (isShutdownStarted()) throw new Error('Host MCP composition cancelled during shutdown');
-  revokeMcpAppContext = agentTeamsMcpHttpServer.appContext.bind(bridgeEnv, useHttpMcpBridge);
+  assertStartupActive(isShutdownStarted);
   const explicitLocalMcpLaunchEnv = snapshotOpenCodeLocalMcpLaunchEnv(bridgeEnv);
   delete bridgeEnv.ELECTRON_RUN_AS_NODE;
   if (explicitLocalMcpLaunchEnv) {
@@ -612,131 +592,104 @@ async function createOpenCodeRuntimeAdapterRegistry(
       targetEnv,
       bridgeEnv,
       resolveVerifiedOpenCodeRuntimeBinaryPath: () =>
-        resolveOpenCodeRuntimeBinaryForBridgeEnv({ includeShellEnv: options.includeShellEnv }),
+        resolveOpenCodeRuntimeBinaryForBridgeEnv(
+          { includeShellEnv: options.includeShellEnv },
+          async () => openCodeRuntimeInstallerService?.getStatus(),
+          (message) => logger.warn(message)
+        ),
       isSupportedOpenCodeRuntimeBinaryPath,
+      refreshAutoResolvedBinary: !explicitOpenCodeBinaryOverride,
+      onOverrideRejected: () => {
+        explicitOpenCodeBinaryOverride = false;
+      },
       onWarning: (message) => logger.warn(message),
     });
   };
   try {
     reportProgress('runtime-work-sync', 'Preparing runtime work sync hooks...');
-    const turnSettledEnv = await buildMemberWorkSyncRuntimeTurnSettledEnvironment({
-      teamsBasePath: getTeamsBasePath(),
-      provider: 'opencode',
-    });
+    const turnSettledEnv = await startupStage(() =>
+      buildMemberWorkSyncRuntimeTurnSettledEnvironment({
+        teamsBasePath: getTeamsBasePath(),
+        provider: 'opencode',
+      })
+    );
     if (turnSettledEnv) {
       Object.assign(bridgeEnv, turnSettledEnv);
     }
   } catch (error) {
+    assertStartupActive(isShutdownStarted);
     logger.warn(
       `[OpenCode] Runtime adapter bridge turn-settled spool unavailable: ${
         error instanceof Error ? error.message : String(error)
       }`
     );
   }
-  if (useHttpMcpBridge) {
-    try {
-      reportProgress('runtime-mcp-http', 'Starting Agent Teams MCP server...');
-      const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
-      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = buildOpenCodeAppScopedMcpUrl(
-        mcpHttpServer.url,
-        openCodeManagedHostInstanceId,
-        profileScope
-      );
-      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
-      reportProgress('runtime-mcp-http-ready', 'Agent Teams MCP server is ready...');
-    } catch (error) {
-      logger.warn(
-        `[OpenCode] Runtime adapter bridge MCP HTTP server unavailable: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-  }
-  if (
-    shouldEnsureOpenCodeLocalMcpLaunchEnv({
-      httpBridgeEnabled: useHttpMcpBridge,
-      mcpUrl: bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL,
-    })
-  ) {
-    await ensureOpenCodeLocalMcpLaunchEnv(bridgeEnv, { emitProgress: true });
-  }
+  await startupStage(() => ensureOpenCodeLocalMcpLaunchEnv(bridgeEnv, { emitProgress: true }));
 
   reportProgress('runtime-bridge', 'Preparing OpenCode bridge...');
-  const resolveBridgeCommandEnv = async (): Promise<NodeJS.ProcessEnv> => {
-    const nextEnv = { ...bridgeEnv };
-    await ensureOpenCodeRuntimeBinaryEnv(nextEnv, { includeShellEnv: true });
-    if (!useHttpMcpBridge) {
-      applyAgentTeamsMcpAppContext(nextEnv);
-      return nextEnv;
-    }
-    try {
-      const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
-      const appScopedMcpUrl = buildOpenCodeAppScopedMcpUrl(
-        mcpHttpServer.url,
-        openCodeManagedHostInstanceId,
-        profileScope
-      );
-      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = appScopedMcpUrl;
-      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
-      nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = appScopedMcpUrl;
-      nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
-      await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
-    } catch (error) {
-      delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
-      delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH;
-      await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
-      logger.warn(
-        `[OpenCode] Runtime adapter bridge MCP HTTP server refresh failed: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-    applyAgentTeamsMcpAppContext(nextEnv);
-    return nextEnv;
-  };
+
   const bridgeControlDir = join(app.getPath('userData'), 'opencode-bridge');
   const bridgeClient = new OpenCodeBridgeCommandClient({
     binaryPath,
     tempDirectory: join(app.getPath('temp'), 'claude-team-opencode-bridge'),
     env: bridgeEnv,
-    envProvider: resolveBridgeCommandEnv,
+    envProvider: async (command) => {
+      const nextEnv = { ...bridgeEnv };
+      await ensureOpenCodeRuntimeBinaryEnv(nextEnv, { includeShellEnv: true });
+      if (!useHttpMcpBridge || command === 'opencode.cleanupStartupHosts') {
+        await refreshDesktopBridgeEnvironment(nextEnv, command !== 'opencode.cleanupStartupHosts');
+        return nextEnv;
+      }
+      if (!getTeamControlApiBaseUrl()) throw new Error('Desktop MCP control server is not ready');
+      try {
+        const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
+        const appScopedMcpUrl = buildOpenCodeAppScopedMcpUrl(
+          mcpHttpServer.url,
+          openCodeManagedHostInstanceId,
+          profileScope
+        );
+        bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = appScopedMcpUrl;
+        bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
+        nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = appScopedMcpUrl;
+        nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
+        await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
+      } catch (error) {
+        delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
+        delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH;
+        await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
+        logger.warn(
+          `[OpenCode] Runtime adapter bridge MCP HTTP server refresh failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
+      await refreshDesktopBridgeEnvironment(nextEnv);
+      return nextEnv;
+    },
     diagnostics: new OpenCodeBridgeDiagnosticsStore({
       directory: join(bridgeControlDir, 'diagnostics'),
     }),
   });
   configureCursorAgentAtomicReapBridge(bridgeClient);
-  const clientIdentity = createOpenCodeBridgeClientIdentity({
-    appVersion: typeof app.getVersion === 'function' ? app.getVersion() : '1.3.0',
-    gitSha: process.env.VITE_GIT_SHA ?? process.env.GIT_SHA ?? null,
-    buildId: process.env.VITE_BUILD_ID ?? process.env.BUILD_ID ?? null,
-  });
-  const manifestOptions = { teamsBasePath: getTeamsBasePath() };
-  const stateChangingCommands = new OpenCodeStateChangingBridgeCommandService({
-    expectedClientIdentity: clientIdentity,
-    handshakePort: new OpenCodeBridgeCommandHandshakePort({
-      bridge: bridgeClient,
-      clientIdentity,
-    }),
-    leaseStore: createOpenCodeBridgeCommandLeaseStore({
-      filePath: join(bridgeControlDir, 'command-leases.json'),
-    }),
-    ledger: createOpenCodeBridgeCommandLedgerStore({
-      filePath: join(bridgeControlDir, 'command-ledger.json'),
-    }),
+  const desktopBridge = composeOpenCodeDesktopBridge({
     bridge: bridgeClient,
-    launchAuthorityWriter: new OpenCodeRuntimeLaunchAuthorityWriter(manifestOptions),
-    manifestReader: new OpenCodeRuntimeManifestEvidenceReader(manifestOptions),
+    controlDirectory: bridgeControlDir,
+    teamsBasePath: getTeamsBasePath(),
+    identity: {
+      appVersion: app.getVersion(),
+      gitSha: process.env.VITE_GIT_SHA ?? process.env.GIT_SHA ?? null,
+      buildId: process.env.VITE_BUILD_ID ?? process.env.BUILD_ID ?? null,
+    },
+    readOpenCodeRuntimeStatus,
+    runtimeSnapshots: teamProvisioningService,
   });
-  const readinessBridge = new OpenCodeReadinessBridge(bridgeClient, {
-    stateChangingCommands,
-    appVersion: clientIdentity.appVersion,
-  });
+  const readinessBridge = desktopBridge.readiness;
+  readOpenCodeGroupRun = desktopBridge.groupRun;
   openCodeLifecycleBridge = readinessBridge;
-  return new TeamRuntimeAdapterRegistry([
-    new OpenCodeTeamRuntimeAdapter(readinessBridge, {
-      inspectLocalModelRuntime: inspectOpenCodeLocalModelRuntimeReadiness,
-    }),
-  ]);
+  const adapter = new OpenCodeTeamRuntimeAdapter(readinessBridge, {
+    inspectLocalModelRuntime: inspectOpenCodeLocalModelRuntimeReadiness,
+  });
+  return new TeamRuntimeAdapterRegistry([gatewayRuntime?.wrapOpenCodeAdapter(adapter) ?? adapter]);
 }
 let stopPeriodicOpenCodeHostStartupLockPurge: (() => void) | null = null;
 
@@ -746,25 +699,19 @@ const openCodeLifecycleCleanupTailPorts: OpenCodeLifecycleCleanupTailPorts = {
   logError: (message) => logger.error(message),
 };
 
-const nativeLegacyMaintenanceRequired = createLegacyOpenCodeMaintenanceRequirement(() => ({
-  teamsBasePath: getTeamsBasePath(),
-  multimodelDataPath: resolveClaudeMultimodelDataDir(),
-  attributionPath: resolveCursorAgentAttributionDirectory(),
+const {
+  nativeMaintenanceRequired: nativeLegacyMaintenanceRequired,
+  cleanup: cleanupOpenCodeHostsForLifecycle,
+} = createDesktopOpenCodeLifecycle({
+  appStartedAtMs,
+  managedHostInstanceId: openCodeManagedHostInstanceId,
+  getBridge: () => openCodeLifecycleBridge,
+  getUserDataPath: () => app.getPath('userData'),
   hasTrackedObligations: () => teamProvisioningService?.hasTrackedRuntimeObligations() ?? false,
-}));
-async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'): Promise<void> {
-  await cleanupLegacyOpenCodeLifecycle({
-    reason,
-    bridge: openCodeLifecycleBridge,
-    nativeMaintenanceRequired: nativeLegacyMaintenanceRequired,
-    appStartedAtMs,
-    managedHostInstanceId: openCodeManagedHostInstanceId,
-    profileScope: buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath()),
-    releaseSharedRuntime: releaseLoopbackRuntimesOnAppShutdown,
-    ports: openCodeLifecycleCleanupTailPorts,
-    logInfo: (message) => logger.info(message),
-  });
-}
+  releaseSharedRuntime: releaseLoopbackRuntimesOnAppShutdown,
+  ports: openCodeLifecycleCleanupTailPorts,
+  logRegistryResult: (message) => logger.info(message),
+});
 
 // --- Team display name cache (avoid listTeams() on every notification) ---
 const TEAM_DISPLAY_NAME_TTL_MS = 30_000;
@@ -1013,6 +960,7 @@ let sshConnectionManager: SshConnectionManager;
 let codexAccountFeature: CodexAccountFeatureFacade | null = null;
 let codexModelCatalogFeature: CodexModelCatalogFeatureFacade | null = null;
 let recentProjectsFeature: RecentProjectsFeatureFacade;
+let teamGroupChatsFeature: TeamGroupChatsFeature;
 let teamImportFeature: TeamImportFeatureFacade;
 let organizationsFeature: OrganizationsFeatureFacade;
 let runtimeProviderManagementFeature: RuntimeProviderManagementFeatureFacade;
@@ -1021,7 +969,7 @@ let tokenUsageFeature: TokenUsageFeatureFacade | null = null;
 let memberWorkSyncFeature: MemberWorkSyncFeatureFacade | null = null;
 let teamRuntimeRecoveryFeature: TeamRuntimeRecoveryFeatureFacade | null = null;
 let teamDataService: TeamDataService;
-let teamProvisioningService: TeamProvisioningService;
+let teamProvisioningService: ReturnType<typeof createDefaultTeamProvisioningService>;
 let teamHttpHandlerApis: TeamHttpHandlerApis | null = null;
 let launchIoGovernor: LaunchIoGovernor | null = null;
 let cliInstallerService: CliInstallerService;
@@ -1030,12 +978,12 @@ let ptyTerminalService: PtyTerminalService;
 let httpServer: HttpServer;
 let schedulerService: SchedulerService;
 let teamTaskStallMonitor: TeamTaskStallMonitor | null = null;
+let openCodePromptDeliveryContinuityScan: OpenCodePromptDeliveryContinuityScan | null = null;
 let internalStorageFeature: InternalStorageFeature | null = null;
 let skillsWatcherService: SkillsWatcherService | null = null;
 let teamBackupService: TeamBackupService | null = null;
 let branchStatusService: BranchStatusService | null = null;
-let rendererRecoveryTimer: ReturnType<typeof setTimeout> | null = null;
-let rendererRecoveryAttempts = 0;
+let rendererRecoveryController: RendererRecoveryController | null = null;
 let servicesReady = false;
 let rendererDidFinishLoad = false;
 let backgroundStartupTasksStarted = false;
@@ -1045,7 +993,6 @@ let appStartupHandlersRegistered = false;
 let fileChangeCleanup: (() => void) | null = null;
 let todoChangeCleanup: (() => void) | null = null;
 let teamChangeCleanup: (() => void) | null = null;
-let revokeMcpAppContext: (() => void) | null = null;
 let shutdownPromise: Promise<void> | null = null;
 let shutdownComplete = false;
 const startupTimers = new Set<ReturnType<typeof setTimeout>>();
@@ -1175,6 +1122,7 @@ function notifyCoreTeamChangeObservers(event: TeamChangeEvent): void {
 function isShutdownStarted(): boolean {
   return shutdownComplete || shutdownPromise !== null;
 }
+const startupStage = createStartupStage(isShutdownStarted);
 
 function hasActiveTeamRuntimesForWindowClose(): boolean {
   if (!servicesReady || !teamProvisioningService) {
@@ -1819,18 +1767,22 @@ function onContextSwitched(context: ServiceContext): void {
   });
 }
 
-/**
- * Rebuilds the local ServiceContext using the current configured Claude root paths.
- * Called when general.claudeRootPath changes.
- */
+const configureStoppedImportContext = createDesktopStoppedImportContext(() => [
+  teamBackupService,
+  teamProvisioningService,
+  teamDataService,
+  contextRegistry,
+]);
+
+/** Rebuilds local context and retires root-bound team reads after a Claude root change. */
 function reconfigureLocalContextForClaudeRoot(): void {
   try {
     const currentLocal = contextRegistry.get('local');
     if (!currentLocal) {
-      logger.error('Cannot reconfigure local context: local context not found');
-      return;
+      throw new Error('Cannot reconfigure local context: local context not found');
     }
 
+    getTeamDataWorkerClient().dispose();
     const wasLocalActive = contextRegistry.getActiveContextId() === 'local';
     const projectsDir = getProjectsBasePath();
     const todosDir = getTodosBasePath();
@@ -1859,20 +1811,18 @@ function reconfigureLocalContextForClaudeRoot(): void {
     }
 
     contextRegistry.replaceContext('local', replacementLocal);
-    // prettier-ignore
-    if (teamBackupService) configureDesktopStoppedImportOwners({ backup: teamBackupService, provisioning: teamProvisioningService, data: teamDataService }, (id) => id === replacementLocal.id && contextRegistry.get('local') === replacementLocal && contextRegistry.getActive() === replacementLocal);
+    configureStoppedImportContext(replacementLocal);
 
     if (wasLocalActive) {
       wireFileWatcherEvents(replacementLocal);
     }
   } catch (error) {
     logger.error('Failed to reconfigure local context for Claude root change:', error);
+    throw error;
   }
 }
 
-/**
- * Initializes all services.
- */
+/** Initializes all services. */
 const announcementsLifecycle = new AnnouncementsLifecycle();
 
 async function initializeServices(): Promise<void> {
@@ -1894,13 +1844,10 @@ async function initializeServices(): Promise<void> {
     ready: false,
     error: null,
   });
-  // Initialize SSH connection manager
   sshConnectionManager = new SshConnectionManager();
-  // Create ServiceContextRegistry
   contextRegistry = new ServiceContextRegistry();
   const localProjectsDir = getProjectsBasePath();
   const localTodosDir = getTodosBasePath();
-  // Create local context
   const localContext = new ServiceContext({
     id: 'local',
     type: 'local',
@@ -1917,7 +1864,7 @@ async function initializeServices(): Promise<void> {
     rendererIndexPath: resolveRendererIndexPath(__dirname),
   });
   // An inherited endpoint belongs to a previous process, not this Host's server.
-  await clearTeamControlApiState();
+  await startupStage(clearTeamControlApiState);
   localContext.startCacheOnly();
   logger.info(`Projects directory: ${localContext.projectScanner.getProjectsDir()}`);
   // Initialize notification manager (singleton, not context-scoped)
@@ -2021,7 +1968,40 @@ async function initializeServices(): Promise<void> {
   teamDataService.setTaskCommentNotificationJournalStore(
     internalStorageFeature.taskCommentNotificationJournalStore
   );
-  teamProvisioningService = new TeamProvisioningService();
+  const apiKeyService = new ApiKeyService();
+  const providers = createDesktopProviderManagementFeatures({
+    ipcMain,
+    configuration: teamDataService,
+    apiKeys: apiKeyService,
+    appDataPath: getAppDataPath(),
+    getMainWindow: () => mainWindow,
+  });
+  const { gatewayProviderRuntime, gatewayLaunchRuntime, resolveOpenCodeInputDeclaration } =
+    providers;
+  runtimeProviderManagementFeature = providers.runtimeProviderManagementFeature;
+  await cleanupOrphanedDeterministicBootstrapSpecs().catch(() =>
+    console.warn('Could not clean retired bootstrap files')
+  );
+  teamProvisioningService = createDefaultTeamProvisioningService(
+    () => teamGroupChatsFeature,
+    resolveOpenCodeInputDeclaration,
+    gatewayLaunchRuntime.seams
+  );
+  teamGroupChatsFeature = createDesktopTeamGroupChats({
+    snapshot: (teamName) => teamProvisioningService.getTeamAgentRuntimeSnapshot(teamName),
+    openCodeRun: (...args) => readOpenCodeGroupRun?.(...args) ?? Promise.resolve(null),
+    configurationOperation: (name, op) => teamDataService.runConfigurationOperation(name, op),
+    leadName: (teamName) => teamDataService.getLeadMemberName(teamName),
+    inboxWriter: teamInboxWriter,
+    reactionChanged: (teamName, detail) =>
+      forwardTeamChangeToRendererAndHttp({ teamName, detail, type: 'group-reactions' }),
+    changed: (teamName) => {
+      const event: TeamChangeEvent = { teamName, type: 'inbox' };
+      invalidateTeamChangeMessageFeed(event);
+      forwardTeamChangeToRendererAndHttp(event);
+    },
+  });
+  teamDataService.setTaskGroupChatCatalog((teamName) => teamGroupChatsFeature.list({ teamName }));
   const teamIpcHandlerApis: TeamIpcHandlerApis = bindTeamIpcHandlerApis(teamProvisioningService);
   const teamDiagnosticsApi = teamIpcHandlerApis.diagnostics;
   const teamMessagingApi = teamIpcHandlerApis.messaging;
@@ -2042,6 +2022,28 @@ async function initializeServices(): Promise<void> {
   teamProvisioningService.setWorkspaceTrustCoordinator(workspaceTrust.coordinator);
   workspaceTrustFeature.registerWorkspaceTrustIpc(ipcMain, workspaceTrust.status);
   projectFolderFeature.registerProjectFolderFeature(ipcMain);
+  externalAgentConnection = composeExternalAgentConnection({
+    appInstanceId: openCodeManagedHostInstanceId,
+    nativeRun: [
+      cliInstallerService,
+      () => codexAccountFeature?.refreshSnapshot({ bypassCache: true }),
+    ],
+    teamManagement: [teamDataService, teamProvisioningService, forwardTeamChangeToRendererAndHttp],
+    hasLiveRuntimeConsumers: () => teamProvisioningService.hasLiveOpenCodeMcpConsumers(),
+    cdp: nativeRendererCdp,
+    getMainContents: () => mainWindow?.webContents ?? null,
+    isLocalContext: () =>
+      contextRegistry.getActiveContextId() === 'local' &&
+      !['connecting', 'connected'].includes(sshConnectionManager.getStatus().state),
+    getControlUrl: getTeamControlApiBaseUrl,
+    startControl: () => startHttpServer(handleModeSwitch),
+    reconfigureRoot: async () => {
+      reconfigureLocalContextForClaudeRoot();
+      await schedulerService?.reloadForClaudeRootChange();
+      if (httpServer?.isRunning()) await syncTeamControlApiState();
+    },
+  });
+  teamProvisioningService.setLaunchAdmissionGuard(externalAgentConnection.assertLaunchAdmission);
   teamRuntimeRecoveryFeature = createTeamRuntimeRecoveryFeature({
     teamsBasePath: getTeamsBasePath(),
     configManager,
@@ -2096,42 +2098,36 @@ async function initializeServices(): Promise<void> {
           logWarning: (message) => logger.warn(message),
         })
       : null;
-  if (windowsStartupCleanup) await windowsStartupCleanup.preflight();
+  if (windowsStartupCleanup) await startupStage(() => windowsStartupCleanup.preflight());
   else
-    await reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
-      appStartedAtMs,
-      requiredProfileScope: buildOpenCodeAppProfileScope(
-        app.getPath('userData'),
-        getClaudeBasePath()
-      ),
-      logSweepResult: (message) => logger.diagnostic(`[OpenCode] ${message}`),
-      logWarning: (message) => logger.warn(message),
-      logError: (message) => logger.error(message),
-    });
+    await startupStage(() =>
+      reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
+        appStartedAtMs,
+        requiredProfileScope: buildOpenCodeAppProfileScope(
+          app.getPath('userData'),
+          getClaudeBasePath()
+        ),
+        logSweepResult: (message) => logger.diagnostic(`[OpenCode] ${message}`),
+        logWarning: (message) => logger.warn(message),
+        logError: (message) => logger.error(message),
+      })
+    );
   publishStartupStatus({
     phase: 'runtime',
     message: 'Resolving local runtime...',
   });
-  teamProvisioningService.setRuntimeAdapterRegistry(
-    await createOpenCodeRuntimeAdapterRegistry((phase, message) =>
-      publishStartupStatus({ phase, message })
+  const runtimeAdapterRegistry = await startupStage(() =>
+    createOpenCodeRuntimeAdapterRegistry(
+      (phase, message) => publishStartupStatus({ phase, message }),
+      gatewayLaunchRuntime
     )
   );
-  teamRuntimeRecoveryFeature.start();
-  // Armed before the delay, not inside the task, so a launch requested during
-  // the scheduling delay serialises behind the sweep as well.
-  if (windowsStartupCleanup) {
-    void windowsStartupCleanup.finish(openCodeLifecycleBridge);
-  } else {
-    const settleStartupRuntimeSweep = beginOpenCodeStartupRuntimeSweep();
-    scheduleStartupTask(() => {
-      void cleanupOpenCodeHostsForLifecycle('startup')
-        .catch((error: unknown) =>
-          logger.error(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
-        )
-        .finally(settleStartupRuntimeSweep);
-    }, STARTUP_RECOVERY_DELAY_MS);
-  }
+  assertStartupActive(isShutdownStarted);
+  teamProvisioningService.setRuntimeAdapterRegistry(runtimeAdapterRegistry);
+  // Fence launches before the control listener opens; run cleanup after bounded startup.
+  const settleStartupRuntimeSweep = windowsStartupCleanup
+    ? undefined
+    : beginOpenCodeStartupRuntimeSweep();
   stopPeriodicOpenCodeHostStartupLockPurge = isShutdownStarted()
     ? null
     : startPeriodicOpenCodeHostStartupLockPurge({
@@ -2141,10 +2137,9 @@ async function initializeServices(): Promise<void> {
   // Startup GC: remove stale MCP config files from previous sessions (best-effort)
   void new TeamMcpConfigBuilder().gcStaleConfigs();
   const workSyncRestoreGate = new MemberWorkSyncTeamOperationGate();
-  const initializedBackupOwner = (teamBackupService = new TeamBackupService());
+  const initializedBackupOwner = (teamBackupService = new TeamBackupService(teamDataService));
   configureDesktopBackendPersistence(initializedBackupOwner, applicationCommandRunner);
-  // prettier-ignore
-  configureDesktopStoppedImportOwners({ backup: initializedBackupOwner, provisioning: teamProvisioningService, data: teamDataService }, (id) => id === localContext.id && contextRegistry.get('local') === localContext && contextRegistry.getActive() === localContext);
+  configureStoppedImportContext(localContext);
 
   // Cross-team communication service
   const crossTeamConfigReader = new TeamConfigReader();
@@ -2172,6 +2167,20 @@ async function initializeServices(): Promise<void> {
       memberWorkSyncStallObservation
     )
   );
+  openCodePromptDeliveryContinuityScan = new OpenCodePromptDeliveryContinuityScan({
+    isEnabled: () => isOpenCodePromptDeliveryWatchdogEnabled(),
+    listLiveTeamNames: async () => {
+      const scope = computeTeamWatchScope();
+      if (scope) {
+        return [...scope];
+      }
+      const teams = await teamDataService.listTeams();
+      return teams.filter((team) => !team.deletedAt).map((team) => team.teamName);
+    },
+    scanTeam: (teamName) =>
+      teamProvisioningService.scanOpenCodePromptDeliveryWatchdog(teamName, 'continuity'),
+    warn: (message) => logger.warn(message),
+  });
   let teammateToolTracker: TeammateToolTracker | null = null;
   branchStatusService = new BranchStatusService((event) => {
     safeSendToRenderer(mainWindow, TEAM_PROJECT_BRANCH_CHANGE, event);
@@ -2230,7 +2239,6 @@ async function initializeServices(): Promise<void> {
     extensionsRuntimeAdapter
   );
   const mcpInstallService = new McpInstallService(mcpAggregator, extensionsRuntimeAdapter);
-  const apiKeyService = new ApiKeyService();
   providerConnectionService.setApiKeyService(apiKeyService);
   publishStartupStatus({
     phase: 'settings',
@@ -2345,24 +2353,6 @@ async function initializeServices(): Promise<void> {
     crossTeamService,
     logger: createLogger('Feature:Organizations'),
   });
-  const runtimeProviderOAuth = {
-    openExternal: async (url: string) => {
-      await shell.openExternal(url);
-    },
-    emitOAuthProgress: (event: RuntimeProviderOAuthProgressDto) => {
-      safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS, event);
-    },
-  };
-  runtimeProviderManagementFeature = createRuntimeProviderManagementFeature({
-    ...runtimeProviderOAuth,
-    port: getDesktopProviderManagementPort({
-      openExternal: runtimeProviderOAuth.openExternal,
-      emitProgress: runtimeProviderOAuth.emitOAuthProgress,
-    }),
-    emitProgress: (event) => {
-      safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_COMPANION_PROGRESS, event);
-    },
-  });
   terminalWorkspaceFeature = createTerminalWorkspaceFeature({
     teamsBasePath: getTeamsBasePath(),
     logger: createLogger('Feature:TerminalWorkspace'),
@@ -2379,6 +2369,8 @@ async function initializeServices(): Promise<void> {
     teamsBasePath: getTeamsBasePath(),
     claudeProjectsBasePath: getProjectsBasePath(),
     openCodeDataHomePath: resolveClaudeMultimodelDataHomePath(),
+    gatewayUsage: gatewayProviderRuntime.gatewayUsage,
+    runMetadata: gatewayLaunchRuntime,
     ccusageJsonPath: process.env.AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_JSON,
     tokscaleJsonPath: process.env.AGENT_TEAMS_TOKEN_USAGE_TOKSCALE_JSON,
     ccusageCommand: readOptionalEnv('AGENT_TEAMS_TOKEN_USAGE_CCUSAGE_COMMAND'),
@@ -2399,23 +2391,12 @@ async function initializeServices(): Promise<void> {
         };
       },
     },
-    budgetNotificationSink: {
-      notifyBudgetThreshold: async (event) => {
-        await notificationManager.addTeamNotification({
-          teamEventType:
-            event.severity === 'critical' ? 'usage_budget_exceeded' : 'usage_budget_warning',
-          teamName: 'token-usage',
-          teamDisplayName: 'Usage budgets',
-          from: 'Usage',
-          summary: `${event.label} reached ${Math.round(event.percent)}% of ${formatTokenUsageBudgetMetricLabel(event.metric)} budget`,
-          body: `${formatTokenUsageBudgetValue(event.value, event.metric)} used of ${formatTokenUsageBudgetValue(event.limit, event.metric)} ${event.metric === 'apiEquivalentCostUsd' ? 'API-equivalent estimate' : 'limit'}.`,
-          dedupeKey: event.dedupeKey,
-          target: { kind: 'token_usage', focus: 'budgets' },
-          suppressToast: event.suppressToast,
-        });
-      },
-    },
+    budgetNotificationSink: createBudgetNotificationSink(notificationManager),
     publisher: {
+      publishBudgetStatus: (status) => {
+        safeSendToRenderer(mainWindow, TOKEN_USAGE_BUDGET_STATUS_CHANGED, status);
+        httpServer?.broadcast(TOKEN_USAGE_BUDGET_STATUS_CHANGED, status);
+      },
       publishSnapshot: (snapshot) => {
         safeSendToRenderer(mainWindow, TOKEN_USAGE_SNAPSHOT_CHANGED, snapshot);
         httpServer?.broadcast(TOKEN_USAGE_SNAPSHOT_CHANGED, snapshot);
@@ -2834,16 +2815,22 @@ async function initializeServices(): Promise<void> {
     phase: 'team-backups',
     message: 'Checking team backups...',
   });
-  memberWorkSyncFeature = await startPreparedMemberWorkSyncFeature({
+  await startPreparedMemberWorkSyncFeature({
     backup: initializedBackupOwner,
     prepared: preparedMemberWorkSyncFeature,
+    startBackground: false,
     stallObservation: memberWorkSyncStallObservation,
+    isShutdownStarted,
+    onStarted: (feature) => {
+      memberWorkSyncFeature = feature;
+    },
     onRestoreProgress: ({ current, total }) => {
       publishStartupStatus({
         message: `Checking team backups (${current} of ${total})...`,
       });
     },
   });
+  assertStartupActive(isShutdownStarted);
   void teamDataService
     .getAllTasks()
     .catch((error: unknown) => logger.warn(`[Init] task list prefetch failed: ${String(error)}`));
@@ -2882,7 +2869,8 @@ async function initializeServices(): Promise<void> {
     },
   });
 
-  // Initialize IPC handlers with registry
+  registerExternalAgentConnectionIpc(ipcMain, externalAgentConnection);
+
   initializeIpcHandlers(
     contextRegistry,
     updaterService,
@@ -2902,13 +2890,8 @@ async function initializeServices(): Promise<void> {
     {
       rewire: rewireContextEvents,
       full: onContextSwitched,
-      onClaudeRootPathUpdated: (_claudeRootPath: string | null) => {
-        reconfigureLocalContextForClaudeRoot();
-        void schedulerService?.reloadForClaudeRootChange();
-        if (httpServer?.isRunning()) {
-          void syncTeamControlApiState().catch(() => undefined);
-        }
-      },
+      updateClaudeRoot: (applyConfig) => externalAgentConnection!.updateRoot(applyConfig),
+      changeContext: (operation) => externalAgentConnection!.changeContext(operation),
       onAgentLanguageUpdated: (newLangCode: string) => {
         void teamProvisioningService.notifyLanguageChange(newLangCode);
       },
@@ -2936,14 +2919,20 @@ async function initializeServices(): Promise<void> {
     crossTeamService,
     teamBackupService ?? undefined,
     launchIoGovernor ?? undefined,
-    memberWorkSyncFeature ?? undefined
+    memberWorkSyncFeature ?? undefined,
+    resolveOpenCodeInputDeclaration,
+    (teamName) => gatewayProviderRuntime.feature.retireTeamGatewayBindings(teamName)
   );
+  void gatewayProviderRuntime.feature.recoverGatewayDraftBindings().catch(() => {
+    logger.warn('Could not recover gateway drafts; their saved ownership is preserved.');
+  });
   registerCodexAccountIpc(
     ipcMain,
     codexAccountFeature,
     codexFeatures.native ? captureDesktopStatusRequest : undefined
   );
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
+  registerTeamGroupChatsIpc(ipcMain, teamGroupChatsFeature);
   registerTeamImportIpc(ipcMain, teamImportFeature);
   teamMemberSettings.registerTeamMemberSettingsIpc(ipcMain, teamMemberSettingsFeature);
   registerOrganizationsIpc(ipcMain, organizationsFeature);
@@ -2959,13 +2948,11 @@ async function initializeServices(): Promise<void> {
   registerMemberWorkSyncIpc(ipcMain, memberWorkSyncFeature);
   registerMemberLogStreamIpc(ipcMain, memberLogStreamFeature);
 
-  // Forward SSH state changes to renderer and HTTP SSE clients
   sshConnectionManager.on('state-change', (status: unknown) => {
     safeSendToRenderer(mainWindow, SSH_STATUS, status);
     httpServer.broadcast('ssh:status', status);
   });
 
-  // Forward notification events to HTTP SSE clients
   notificationManager.on('notification-new', (notification: unknown) => {
     httpServer.broadcast('notification:new', notification);
   });
@@ -2976,12 +2963,20 @@ async function initializeServices(): Promise<void> {
     httpServer.broadcast('notification:clicked', data);
   });
 
-  // Start HTTP server if enabled in config
-  const appConfig = configManager.getConfig();
-  if (appConfig.httpServer?.enabled) {
-    void startHttpServer(handleModeSwitch).catch(() => undefined);
+  await externalAgentConnection.start();
+  memberWorkSyncFeature?.startBackground();
+  teamRuntimeRecoveryFeature.start();
+  if (windowsStartupCleanup) {
+    void windowsStartupCleanup.finish(openCodeLifecycleBridge);
+  } else {
+    scheduleStartupTask(() => {
+      void cleanupOpenCodeHostsForLifecycle('startup')
+        .catch((error: unknown) =>
+          logger.error(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
+        )
+        .finally(settleStartupRuntimeSweep);
+    }, STARTUP_RECOVERY_DELAY_MS);
   }
-
   logger.info('Services initialized successfully');
   publishStartupStatus({
     phase: 'readying',
@@ -2989,19 +2984,17 @@ async function initializeServices(): Promise<void> {
   });
 }
 
-/**
- * Starts the HTTP sidecar server with services from the active context.
- */
+/** Starts the HTTP sidecar server with services from the active context. */
 async function startHttpServer(
   modeSwitchHandler: (mode: 'local' | 'ssh') => Promise<void>
 ): Promise<void> {
   if (isShutdownStarted()) {
-    return;
+    throw new StartupCancelledError();
   }
 
   try {
     if (httpServer.isRunning()) {
-      await syncTeamControlApiState();
+      await startupStage(syncTeamControlApiState);
       return;
     }
 
@@ -3019,10 +3012,12 @@ async function startHttpServer(
         chunkBuilder: activeContext.chunkBuilder,
         dataCache: activeContext.dataCache,
         recentProjectsFeature,
+        teamGroupChatsFeature,
         organizationsFeature,
         workspaceTrust: workspaceTrustStatus,
         tokenUsageFeature: tokenUsageFeature ?? undefined,
         memberWorkSyncFeature: memberWorkSyncFeature ?? undefined,
+        externalAgentConnection: externalAgentConnection ?? undefined,
         updaterService,
         sshConnectionManager,
         teamDataApi: bindTeamHttpDataApi(teamDataService),
@@ -3034,17 +3029,19 @@ async function startHttpServer(
     if (isShutdownStarted()) {
       await httpServer.stop().catch(() => undefined);
       await clearTeamControlApiState().catch(() => undefined);
-      return;
+      throw new StartupCancelledError();
     }
-    await syncTeamControlApiState();
+    await startupStage(syncTeamControlApiState);
     logger.info(`HTTP sidecar server running on port ${port}`);
   } catch (error) {
     await clearTeamControlApiState().catch(() => undefined);
+    assertStartupActive(isShutdownStarted);
     logger.error('Failed to start HTTP server:', error);
     throw error;
   }
 }
 
+/** Shuts down all services. */
 async function shutdownServices(): Promise<void> {
   stopAdmittingOpenCodeStartupCleanup();
   const legacyMaintenanceAtShutdown = nativeLegacyMaintenanceRequired();
@@ -3053,8 +3050,17 @@ async function shutdownServices(): Promise<void> {
     return shutdownPromise;
   }
 
+  tokenUsageFeature?.dispose();
+  rendererRecoveryController?.dispose();
+  openCodePromptDeliveryContinuityScan?.stop();
+  openCodePromptDeliveryContinuityScan = null;
   shutdownPromise = (async () => {
     logger.info('Shutting down services...');
+    removeExternalAgentConnectionIpc(ipcMain);
+    openCodeLifecycleBridge?.prepareShutdownCleanup();
+    await runShutdownStep('external connection admission drain', () =>
+      externalAgentConnection?.closeAdmission()
+    );
     await runShutdownStep('agent backend cleanup', () => backendDrain, 10_000);
     await runShutdownStep('announcements cleanup', () => announcementsLifecycle.dispose());
 
@@ -3085,11 +3091,12 @@ async function shutdownServices(): Promise<void> {
       () => cleanupOpenCodeHostsForLifecycle('shutdown'),
       10_000
     );
-    await runShutdownStep('Agent Teams MCP HTTP server cleanup', () => {
-      revokeMcpAppContext?.(); // Cleanup Stop needs live authority until transport teardown.
-      revokeMcpAppContext = null;
-      return agentTeamsMcpHttpServer.stop({ preventRestart: true });
-    });
+    await runShutdownStep(
+      'Agent Teams MCP HTTP server cleanup',
+      () =>
+        externalAgentConnection?.shutdown() ??
+        agentTeamsMcpHttpServer.stop({ preventRestart: true })
+    );
     await runShutdownStep('tracked CLI subprocess cleanup', () =>
       killTrackedCliProcesses('SIGKILL')
     );
@@ -3276,6 +3283,7 @@ function runPostRendererStartupTasks(): void {
       logger.warn(`[Init] task comment notification init failed: ${String(error)}`)
     );
   teamTaskStallMonitor?.start();
+  openCodePromptDeliveryContinuityScan?.start();
   scheduleStartupTask(() => {
     void teamDataService
       .listTeams()
@@ -3306,44 +3314,7 @@ function runPostRendererStartupTasks(): void {
   }, STARTUP_CLI_WARMUP_DELAY_MS);
 }
 
-function scheduleRendererRecovery(win: BrowserWindow): void {
-  if (isShutdownStarted()) {
-    return;
-  }
-  if (rendererRecoveryTimer) {
-    return;
-  }
-  if (rendererRecoveryAttempts >= 2) {
-    logger.error('Renderer recovery limit reached; skipping automatic reload');
-    return;
-  }
-
-  rendererRecoveryAttempts += 1;
-  const delayMs = rendererRecoveryAttempts * 1000;
-  logger.warn(`Scheduling renderer recovery attempt ${rendererRecoveryAttempts} in ${delayMs}ms`);
-
-  rendererRecoveryTimer = setTimeout(() => {
-    rendererRecoveryTimer = null;
-    if (isShutdownStarted()) {
-      return;
-    }
-    if (!mainWindow || mainWindow !== win || win.isDestroyed()) {
-      return;
-    }
-
-    markRendererUnavailable(win);
-    try {
-      win.webContents.reload();
-    } catch (error) {
-      logger.error(`Renderer recovery reload failed: ${String(error)}`);
-    }
-  }, delayMs);
-  rendererRecoveryTimer.unref?.();
-}
-
-/**
- * Creates the main application window.
- */
+/** Creates the main application window. */
 function createWindow(): void {
   if (isShutdownStarted()) {
     return;
@@ -3352,6 +3323,7 @@ function createWindow(): void {
 
   const isMac = process.platform === 'darwin';
   const isDev = process.env.NODE_ENV === 'development';
+  const rendererEntry = isDev ? undefined : resolveRendererEntry(__dirname);
   const iconPath = isMac ? undefined : getAppIconPath();
   const useNativeTitleBar = !isMac && configManager.getConfig().general.useNativeTitleBar;
   mainWindow = new BrowserWindow({
@@ -3372,6 +3344,24 @@ function createWindow(): void {
     ...(isMac && { trafficLightPosition: getTrafficLightPositionForZoom(1) }),
     title: 'Agent Teams AI',
   });
+  const recoveryWindow = mainWindow;
+  const recovery = new RendererRecoveryController({
+    canRecover: () =>
+      !isShutdownStarted() &&
+      mainWindow === recoveryWindow &&
+      !recoveryWindow.isDestroyed() &&
+      !recoveryWindow.webContents.isDestroyed(),
+    reload: () => {
+      markRendererUnavailable(recoveryWindow);
+      recoveryWindow.webContents.reload();
+    },
+    onScheduled: (attempt, delayMs) =>
+      logger.warn(`Scheduling renderer recovery attempt ${attempt} in ${delayMs}ms`),
+    onLimitReached: () =>
+      logger.error('Renderer recovery limit reached; skipping automatic reload'),
+    onReloadError: (error) => logger.error(`Renderer recovery reload failed: ${String(error)}`),
+  });
+  rendererRecoveryController = recovery;
   announcementsLifecycle.registerMainWindow(mainWindow);
   markRendererUnavailable(mainWindow);
 
@@ -3389,10 +3379,11 @@ function createWindow(): void {
       logger.warn(`[dev] loading renderer from ${devUrl}`);
     }
     void mainWindow.loadURL(devUrl);
-  } else {
-    void mainWindow.loadFile(resolveRendererIndexPath(__dirname)).catch((error: unknown) => {
-      logger.error('Failed to load renderer entry HTML:', error);
-      captureMainException(error, 'renderer_load_file');
+  } else if (rendererEntry) {
+    void mainWindow.loadFile(rendererEntry.filePath).catch((error: unknown) => {
+      const diagnostics = rendererEntry.diagnostics(app.isPackaged, error);
+      logger.error('Failed to load renderer entry HTML:', error, diagnostics);
+      captureRendererLoadFailure(error, 'renderer_load_file', diagnostics);
     });
   }
 
@@ -3405,6 +3396,7 @@ function createWindow(): void {
   });
 
   mainWindow.webContents.on('did-start-loading', () => {
+    recovery.loadStarted();
     if (isShutdownStarted()) {
       return;
     }
@@ -3420,11 +3412,7 @@ function createWindow(): void {
         return;
       }
       markRendererReady(mainWindow);
-      rendererRecoveryAttempts = 0;
-      if (rendererRecoveryTimer) {
-        clearTimeout(rendererRecoveryTimer);
-        rendererRecoveryTimer = null;
-      }
+      recovery.loadFinished();
       logger.warn('[startup] renderer did-finish-load');
       syncTrafficLightPosition(mainWindow);
       const fullscreenSyncTimer = setTimeout(() => {
@@ -3447,12 +3435,15 @@ function createWindow(): void {
     'did-fail-load',
     (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
       if (isMainFrame) {
+        const diagnostics = rendererEntry?.diagnostics(app.isPackaged, errorCode);
         logger.error(
-          `Failed to load renderer (code=${errorCode}): ${errorDescription} - ${validatedURL}`
+          `Failed to load renderer (code=${errorCode}): ${errorDescription} - ${validatedURL}`,
+          diagnostics
         );
-        captureMainException(
+        captureRendererLoadFailure(
           new Error(`Renderer main-frame load failed with code ${errorCode}`),
-          'renderer_did_fail_load'
+          'renderer_did_fail_load',
+          diagnostics
         );
       }
     }
@@ -3523,10 +3514,9 @@ function createWindow(): void {
   });
 
   mainWindow.on('closed', () => {
-    if (rendererRecoveryTimer) {
-      clearTimeout(rendererRecoveryTimer);
-      rendererRecoveryTimer = null;
-    }
+    nativeRendererCdp.invalidateRenderer();
+    recovery.dispose();
+    if (rendererRecoveryController === recovery) rendererRecoveryController = null;
     clearRendererAvailability(mainWindow);
     mainWindow = null;
     // Clear main window references
@@ -3559,22 +3549,18 @@ function createWindow(): void {
 
   // Handle renderer process crashes (render-process-gone replaces deprecated 'crashed' event)
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    nativeRendererCdp.invalidateRenderer();
     logger.error('Renderer process gone:', details.reason, details.exitCode);
     if (isShutdownStarted()) {
       return;
     }
     if (details.reason !== 'clean-exit' && details.reason !== 'killed') {
-      captureMainException(
-        new Error(`Renderer process terminated: ${details.reason}`),
-        'renderer_process_gone'
-      );
+      captureRendererProcessGone(details, recovery.recoveryAttempts);
     }
     markRendererUnavailable(mainWindow);
     rendererDidFinishLoad = false;
     branchStatusService?.resetAllTracking();
-    if (mainWindow) {
-      scheduleRendererRecovery(mainWindow);
-    }
+    recovery.processGone();
   });
 
   attachMainWindowToServices();
@@ -3582,10 +3568,9 @@ function createWindow(): void {
   logger.info('Main window created');
 }
 
-/**
- * Application ready handler.
- */
+/** Application ready handler. */
 void app.whenReady().then(async () => {
+  if (isShutdownStarted()) return;
   persistentAppLog ??= installPersistentAppLog({
     directory: app.getPath('logs'),
     appVersion: app.getVersion(),
@@ -3641,7 +3626,8 @@ void app.whenReady().then(async () => {
 
     createWindow();
 
-    await initializeServices();
+    await startupStage(initializeServices);
+    assertStartupActive(isShutdownStarted);
     servicesReady = true;
     attachMainWindowToServices();
     publishStartupStatus({
@@ -3664,6 +3650,7 @@ void app.whenReady().then(async () => {
       }
     });
   } catch (error) {
+    if (isShutdownStarted() || error instanceof StartupCancelledError) return;
     logger.error('Startup initialization failed:', error);
     captureMainException(error, 'startup_initialization');
     publishStartupStatus({

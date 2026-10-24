@@ -76,6 +76,26 @@ describe('task_create dedup and delete-time notification retraction', () => {
       expect(assignments).toHaveLength(1);
     });
 
+    it('keeps keyless tasks in different groups distinct and exposes the association in inventory', () => {
+      const claudeDir = makeClaudeDir();
+      const controller = createController({ teamName: 'my-team', claudeDir });
+      const payload = { subject: 'Same work title', from: 'alice',
+        groupChatId: '00000000-0000-4000-8000-000000000001' };
+      const first = controller.taskBoard.createTask(payload);
+      const second = controller.taskBoard.createTask({ ...payload,
+        groupChatId: '11111111-1111-4111-8111-111111111111' });
+      expect(second.id).not.toBe(first.id);
+      expect(controller.taskBoard.createTask(payload).id).toBe(first.id);
+      expect(controller.taskBoard.listTaskInventory().map(row => row.groupChatId).sort()).toEqual([
+        '00000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
+      ]);
+      expect(controller.taskBoard.getTask(first.id).groupChatId).toBe(payload.groupChatId);
+      const legacy = { subject: 'Legacy matching task', from: 'alice' };
+      controller.taskBoard.createTask(legacy);
+      expect(() => controller.taskBoard.createTask({ ...legacy, groupChatId: null }))
+        .toThrow('Invalid task groupChatId');
+    });
+
     // An explicit creation command id is the caller's own dedup key, so identical content
     // under two different ids stays two tasks while keyless creates keep content dedup.
     const buildCommandInput = (id, idempotencyKey) => ({

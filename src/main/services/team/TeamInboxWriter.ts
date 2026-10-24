@@ -1,77 +1,35 @@
-import { getTeamsBasePath } from '@main/utils/pathDecoder';
-import { isPathWithinRoot, validateFileName } from '@main/utils/pathValidation';
+import { assertValidGroupInboxRows } from '@features/team-group-chats/contracts';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
-import * as path from 'path';
 import { isDeepStrictEqual } from 'util';
 
-import { atomicWriteAsync } from './atomicWrite';
+import { atomicWriteInboxAsync } from './atomicWrite';
 import { withFileLock } from './fileLock';
 import { withInboxLock } from './inboxLock';
 import { getEffectiveInboxMessageId } from './inboxMessageIdentity';
+import { resolveInboxPath } from './teamInboxPath';
+import { MAX_INBOX_FILE_BYTES } from './TeamInboxReader';
 import { pickTeamInboxWorkSyncFields } from './teamInboxWorkSyncFields';
 
-import type { InboxMessage, SendMessageRequest, SendMessageResult, TaskRef } from '@shared/types';
+import type {
+  AttachmentMeta,
+  InboxMessage,
+  NativeAttachmentDeliveryEnvelope,
+  SendMessageRequest,
+  SendMessageResult,
+  TaskRef,
+} from '@shared/types';
 
-function realpathIfExists(inputPath: string): string | null {
-  try {
-    return fs.realpathSync.native(inputPath);
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code === 'ENOENT' || code === 'ENOTDIR') {
-      return null;
-    }
-    throw error;
-  }
-}
-
-function resolveInboxPath(teamName: string, inboxName: string): string {
-  const safeTeamName = teamName.trim();
-  const safeInboxName = inboxName.trim();
-  if (!validateFileName(safeTeamName).valid || !validateFileName(safeInboxName).valid) {
-    throw new Error('Invalid inbox path');
-  }
-
-  const teamsBasePath = getTeamsBasePath();
-  const teamDir = path.join(teamsBasePath, safeTeamName);
-  const inboxDir = path.join(teamsBasePath, safeTeamName, 'inboxes');
-  const inboxPath = path.join(inboxDir, `${safeInboxName}.json`);
+function serializeInboxRows(rows: unknown): string {
+  assertValidGroupInboxRows(rows);
+  const raw = JSON.stringify(rows, null, 2);
   if (
-    !isPathWithinRoot(teamDir, teamsBasePath) ||
-    !isPathWithinRoot(inboxDir, teamDir) ||
-    !isPathWithinRoot(inboxPath, inboxDir)
+    rows.some((row) => row && typeof row === 'object' && 'groupChatId' in row) &&
+    Buffer.byteLength(raw) > MAX_INBOX_FILE_BYTES
   ) {
-    throw new Error('Invalid inbox path');
+    throw new Error('Group inbox size limit reached');
   }
-
-  const realTeamsBasePath = realpathIfExists(teamsBasePath) ?? path.resolve(teamsBasePath);
-  const realTeamDir = realpathIfExists(teamDir);
-  if (realTeamDir && !isPathWithinRoot(realTeamDir, realTeamsBasePath)) {
-    throw new Error('Invalid inbox path');
-  }
-
-  const teamRootForRealCheck = realTeamDir ?? path.resolve(teamDir);
-  const realInboxDir = realpathIfExists(inboxDir);
-  if (
-    realInboxDir &&
-    (!isPathWithinRoot(realInboxDir, teamRootForRealCheck) ||
-      !isPathWithinRoot(realInboxDir, realTeamsBasePath))
-  ) {
-    throw new Error('Invalid inbox path');
-  }
-
-  const inboxRootForRealCheck = realInboxDir ?? path.resolve(inboxDir);
-  const realInboxPath = realpathIfExists(inboxPath);
-  if (
-    realInboxPath &&
-    (!isPathWithinRoot(realInboxPath, inboxRootForRealCheck) ||
-      !isPathWithinRoot(realInboxPath, teamRootForRealCheck) ||
-      !isPathWithinRoot(realInboxPath, realTeamsBasePath))
-  ) {
-    throw new Error('Invalid inbox path');
-  }
-
-  return inboxPath;
+  return raw;
 }
 
 export interface UpdateInboxMessageTextRequest {
@@ -129,6 +87,21 @@ export interface SendInboxMessageOptions {
   shouldStillWrite?: () => boolean | Promise<boolean>;
 }
 
+type TeamInboxWriteRequest = Omit<SendMessageRequest, 'attachments'> & {
+  attachments?: AttachmentMeta[];
+  nativeAttachmentDelivery?: NativeAttachmentDeliveryEnvelope;
+  fileReferences?: AttachmentMeta[];
+};
+
+export interface SendNativeAttachmentMessageRequest extends Omit<
+  SendMessageRequest,
+  'attachments'
+> {
+  attachments: AttachmentMeta[];
+  fileReferences?: AttachmentMeta[];
+  recipientRuntimeInstanceId?: string;
+}
+
 class TeamInboxWriteAbortedError extends Error {
   constructor() {
     super('Inbox write aborted before commit');
@@ -142,16 +115,51 @@ export class TeamInboxWriter {
     request: SendMessageRequest,
     options?: SendInboxMessageOptions
   ): Promise<SendMessageResult> {
+    const {
+      attachments,
+      nativeAttachmentDelivery: _untrustedEnvelope,
+      ...message
+    } = request as SendMessageRequest & {
+      nativeAttachmentDelivery?: NativeAttachmentDeliveryEnvelope;
+    };
+    return this.writeMessage(
+      teamName,
+      {
+        ...message,
+        attachments: attachments?.map(({ data: _data, ...meta }) => meta),
+      },
+      options
+    );
+  }
+
+  async sendNativeAttachmentMessage(
+    teamName: string,
+    request: SendNativeAttachmentMessageRequest,
+    options?: SendInboxMessageOptions
+  ): Promise<SendMessageResult> {
+    const { recipientRuntimeInstanceId, ...message } = request;
+    return this.writeMessage(
+      teamName,
+      {
+        ...message,
+        nativeAttachmentDelivery: recipientRuntimeInstanceId
+          ? { version: 1, recipientRuntimeInstanceId }
+          : undefined,
+      },
+      options
+    );
+  }
+
+  private async writeMessage(
+    teamName: string,
+    request: TeamInboxWriteRequest,
+    options?: SendInboxMessageOptions
+  ): Promise<SendMessageResult> {
     const inboxPath = resolveInboxPath(teamName, request.member);
     const explicitMessageId = request.messageId?.trim();
     const messageId = explicitMessageId || randomUUID();
 
-    const attachmentMeta = request.attachments?.map((a) => ({
-      id: a.id,
-      filename: a.filename,
-      mimeType: a.mimeType,
-      size: a.size,
-    }));
+    const attachmentMeta = request.attachments;
 
     const payload: InboxMessage = {
       from: request.from ?? 'user',
@@ -166,6 +174,10 @@ export class TeamInboxWriter {
       messageId,
       ...(request.relayOfMessageId && { relayOfMessageId: request.relayOfMessageId }),
       attachments: attachmentMeta?.length ? attachmentMeta : undefined,
+      fileReferences: request.fileReferences?.length ? request.fileReferences : undefined,
+      ...(request.nativeAttachmentDelivery && {
+        nativeAttachmentDelivery: request.nativeAttachmentDelivery,
+      }),
       ...(request.source && { source: request.source }),
       ...(request.leadSessionId && { leadSessionId: request.leadSessionId }),
       ...(request.color && { color: request.color }),
@@ -179,6 +191,17 @@ export class TeamInboxWriter {
       ...(request.agentError && { agentError: request.agentError }),
       ...(request.runtimeRecovery && { runtimeRecovery: request.runtimeRecovery }),
       ...pickTeamInboxWorkSyncFields(request),
+      ...(request.groupChatId
+        ? {
+            groupChatId: request.groupChatId,
+            groupChatName: request.groupChatName,
+            groupMessageId: request.groupMessageId,
+            groupChatProtocolVersion: request.groupChatProtocolVersion,
+            groupRunKey: request.groupRunKey,
+            groupRecipientNames: request.groupRecipientNames,
+            groupRecipientRunKeys: request.groupRecipientRunKeys,
+          }
+        : {}),
       ...(request.slashCommand && { slashCommand: request.slashCommand }),
       ...(request.commandOutput && { commandOutput: request.commandOutput }),
     };
@@ -197,7 +220,8 @@ export class TeamInboxWriter {
         };
         const writeInboxList = async (list: InboxMessage[]): Promise<'aborted' | 'written'> => {
           try {
-            await atomicWriteAsync(inboxPath, JSON.stringify(list, null, 2), {
+            const serialized = serializeInboxRows(list);
+            await atomicWriteInboxAsync(inboxPath, serialized, {
               beforeCommit: async () => {
                 if (await shouldAbortWrite()) {
                   throw new TeamInboxWriteAbortedError();
@@ -271,7 +295,11 @@ export class TeamInboxWriter {
             return;
           }
           const written = await this.readInbox(inboxPath);
-          if (written.some((msg) => msg.messageId === messageId)) {
+          if (
+            written.some(
+              (msg) => msg != null && typeof msg === 'object' && msg.messageId === messageId
+            )
+          ) {
             return;
           }
           await new Promise((resolve) => setTimeout(resolve, 10 * 2 ** attempt));
@@ -296,7 +324,10 @@ export class TeamInboxWriter {
   ): number {
     return messages.findIndex(
       (candidate) =>
-        typeof candidate.messageId === 'string' && candidate.messageId.trim() === messageId
+        candidate != null &&
+        typeof candidate === 'object' &&
+        typeof candidate.messageId === 'string' &&
+        candidate.messageId.trim() === messageId
     );
   }
 
@@ -326,6 +357,13 @@ export class TeamInboxWriter {
     // act on. findRuntimeDeliveryDuplicateIndex below is the separate,
     // intentionally more tolerant match used for non-explicit retries.
     return {
+      groupChatId: message.groupChatId,
+      groupChatName: message.groupChatName,
+      groupMessageId: message.groupMessageId,
+      groupChatProtocolVersion: message.groupChatProtocolVersion,
+      groupRunKey: message.groupRunKey,
+      groupRecipientNames: message.groupRecipientNames,
+      groupRecipientRunKeys: message.groupRecipientRunKeys,
       from: isRuntimeDelivery ? this.normalizeComparableParticipant(message.from) : message.from,
       to: isRuntimeDelivery ? this.normalizeComparableParticipant(message.to) : message.to,
       text: isRuntimeDelivery ? this.normalizeComparableText(message.text) : message.text,
@@ -336,6 +374,8 @@ export class TeamInboxWriter {
         ? message.relayOfMessageId?.trim()
         : message.relayOfMessageId,
       attachments: message.attachments,
+      fileReferences: message.fileReferences,
+      nativeAttachmentDelivery: message.nativeAttachmentDelivery,
       source: message.source,
       conversationId: message.conversationId,
       replyToConversationId: message.replyToConversationId,
@@ -365,25 +405,7 @@ export class TeamInboxWriter {
 
     await withFileLock(inboxPath, async () => {
       await withInboxLock(inboxPath, async () => {
-        let raw: string;
-        try {
-          raw = await fs.promises.readFile(inboxPath, 'utf8');
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-            return;
-          }
-          throw error;
-        }
-
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(raw) as unknown;
-        } catch {
-          return;
-        }
-        if (!Array.isArray(parsed)) {
-          return;
-        }
+        const parsed: unknown[] = await this.readInbox(inboxPath);
 
         let changed = false;
         for (const item of parsed) {
@@ -416,7 +438,7 @@ export class TeamInboxWriter {
         if (!changed) {
           return;
         }
-        await atomicWriteAsync(inboxPath, JSON.stringify(parsed, null, 2));
+        await atomicWriteInboxAsync(inboxPath, serializeInboxRows(parsed));
       });
     });
 
@@ -432,14 +454,7 @@ export class TeamInboxWriter {
     const messageIds: string[] = [];
     await withFileLock(inboxPath, async () => {
       await withInboxLock(inboxPath, async () => {
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(await fs.promises.readFile(inboxPath, 'utf8')) as unknown;
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-          return;
-        }
-        if (!Array.isArray(parsed)) return;
+        const parsed: unknown[] = await this.readInbox(inboxPath);
         for (const item of parsed) {
           if (!item || typeof item !== 'object') continue;
           const row = item as Record<string, unknown>;
@@ -459,7 +474,7 @@ export class TeamInboxWriter {
           }
         }
         if (messageIds.length > 0) {
-          await atomicWriteAsync(inboxPath, JSON.stringify(parsed, null, 2));
+          await atomicWriteInboxAsync(inboxPath, serializeInboxRows(parsed));
         }
       });
     });
@@ -490,6 +505,7 @@ export class TeamInboxWriter {
         for (let attempt = 0; attempt < 3; attempt++) {
           const list = await this.readInbox(inboxPath);
           const index = list.findIndex((message) => {
+            if (message == null || typeof message !== 'object') return false;
             const rowMessageId =
               typeof message.messageId === 'string' ? message.messageId.trim() : '';
             const rowRelayOf =
@@ -519,9 +535,10 @@ export class TeamInboxWriter {
           }
 
           list[index] = { ...existing, taskRefs: merged.taskRefs };
-          await atomicWriteAsync(inboxPath, JSON.stringify(list, null, 2));
+          await atomicWriteInboxAsync(inboxPath, serializeInboxRows(list));
           const written = await this.readInbox(inboxPath);
           const verified = written.find((message) => {
+            if (message == null || typeof message !== 'object') return false;
             const rowMessageId =
               typeof message.messageId === 'string' ? message.messageId.trim() : '';
             const rowRelayOf =
@@ -572,6 +589,7 @@ export class TeamInboxWriter {
         for (let attempt = 0; attempt < 3; attempt++) {
           const list = await this.readInbox(inboxPath);
           const index = list.findIndex((message) => {
+            if (message == null || typeof message !== 'object') return false;
             const rowMessageId =
               typeof message.messageId === 'string' ? message.messageId.trim() : '';
             const rowSource = message.source;
@@ -605,9 +623,10 @@ export class TeamInboxWriter {
             ...(merged.taskRefs ? { taskRefs: merged.taskRefs } : {}),
           };
           list[index] = nextMessage;
-          await atomicWriteAsync(inboxPath, JSON.stringify(list, null, 2));
+          await atomicWriteInboxAsync(inboxPath, serializeInboxRows(list));
           const written = await this.readInbox(inboxPath);
           const verified = written.find((message) => {
+            if (message == null || typeof message !== 'object') return false;
             const rowMessageId =
               typeof message.messageId === 'string' ? message.messageId.trim() : '';
             const rowRelayOf =
@@ -643,6 +662,7 @@ export class TeamInboxWriter {
     payload: InboxMessage
   ): number {
     if (
+      payload.groupChatId ||
       payload.source !== 'runtime_delivery' ||
       typeof payload.relayOfMessageId !== 'string' ||
       payload.relayOfMessageId.trim().length === 0
@@ -662,8 +682,12 @@ export class TeamInboxWriter {
     // deliberately excluded from the duplicate key.
     return messages.findIndex(
       (candidate) =>
+        candidate != null &&
+        typeof candidate === 'object' &&
+        !candidate.groupChatId &&
         candidate.source === 'runtime_delivery' &&
-        (candidate.relayOfMessageId ?? '').trim() === relayOfMessageId &&
+        typeof candidate.relayOfMessageId === 'string' &&
+        candidate.relayOfMessageId.trim() === relayOfMessageId &&
         this.normalizeComparableParticipant(candidate.from) === from &&
         this.normalizeComparableParticipant(candidate.to) === to
     );
@@ -747,9 +771,9 @@ export class TeamInboxWriter {
   }
 
   private async readInbox(inboxPath: string): Promise<InboxMessage[]> {
-    let raw: string;
+    let raw: Buffer;
     try {
-      raw = await fs.promises.readFile(inboxPath, 'utf8');
+      raw = await fs.promises.readFile(inboxPath);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return [];
@@ -757,22 +781,12 @@ export class TeamInboxWriter {
       throw error;
     }
 
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
+    if (raw.length > MAX_INBOX_FILE_BYTES) throw new Error('Inbox storage exceeds size limit');
+    const parsed = JSON.parse(
+      new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(raw)
+    ) as unknown;
+    assertValidGroupInboxRows(parsed);
 
-    return parsed.filter((item): item is InboxMessage => {
-      if (!item || typeof item !== 'object') {
-        return false;
-      }
-      const row = item as Partial<InboxMessage>;
-      return (
-        typeof row.from === 'string' &&
-        typeof row.text === 'string' &&
-        typeof row.timestamp === 'string' &&
-        typeof row.read === 'boolean'
-      );
-    });
+    return parsed as InboxMessage[];
   }
 }

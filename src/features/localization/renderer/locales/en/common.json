@@ -638,11 +638,17 @@
       "fallbackMessage": "An unexpected error occurred",
       "confirmLabel": "OK"
     },
+    "restoreFailed": {
+      "title": "Failed to restore task",
+      "fallbackMessage": "An unexpected error occurred",
+      "confirmLabel": "OK"
+    },
     "sort": {
       "byTime": "By time",
       "byUnread": "By unread",
       "byProject": "By project",
-      "byTeam": "By team"
+      "byTeam": "By team",
+      "manualOrder": "Manual order"
     }
   },
   "toolViewer": {
@@ -662,6 +668,7 @@
     "unpin": "Unpin",
     "pin": "Pin",
     "rename": "Rename",
+    "restoreTask": "Restore task",
     "markUnread": "Mark as unread",
     "unarchive": "Unarchive",
     "archive": "Archive",
@@ -675,7 +682,21 @@
     "viewOnGitHub": "View on GitHub",
     "later": "Later",
     "restartNow": "Restart now",
-    "download": "Download"
+    "download": "Download",
+    "errorTitle": "Update could not be completed",
+    "manualDownload": "Download from website",
+    "retry": "Try again",
+    "checking": "Checking for updates",
+    "errorDetails": "Technical details",
+    "openLinkFailed": "Could not open your browser. Open this address manually:",
+    "manualMac": "Download the latest macOS installer from our website. Quit Agent Teams, open the downloaded DMG, and drag Agent Teams into Applications. Replace the existing app, then open it again.",
+    "manualOther": "Download the latest installer for your operating system from our website. Quit Agent Teams, install the update, then open the app again.",
+    "keepData": "Keep your app data and project folders. You do not need to uninstall the app or delete any data.",
+    "recovery": {
+      "signature": "The automatic update could not verify the app signature. Install the latest version manually from our official website.",
+      "network": "The update failed because of a connection or temporary server problem. Check your connection and try again, or install the latest version manually.",
+      "generic": "The automatic update failed. You can install the latest version manually from our official website."
+    }
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -737,6 +758,8 @@
     "searchProjects": "Search projects...",
     "noProjects": "No projects",
     "comments": "Comments",
+    "showArchived": "Show archived tasks",
+    "showDeleted": "Show deleted tasks",
     "apply": "Apply",
     "read": {
       "all": "All",
@@ -818,7 +841,8 @@
     "newVersionAvailable": "New version available",
     "updatingApp": "Updating app",
     "updateReady": "Update ready",
-    "restartNow": "Restart now"
+    "restartNow": "Restart now",
+    "updateFailed": "Update failed"
   },
   "layout": {
     "github": "GitHub",
@@ -950,5 +974,39 @@
       "unavailable": "News is available in the desktop app.",
       "state_unavailable": "Reading is available, but your progress cannot be saved right now. Automatic news is paused."
     }
+  },
+  "taskFolders": {
+    "unreadTasks_one": "{{count}} unread task",
+    "unreadTasks_other": "{{count}} unread tasks",
+    "title": "Task folders",
+    "dockToSidebar": "Folders as the sidebar",
+    "newFolder": "New folder",
+    "newSubfolder": "New subfolder",
+    "renameFolder": "Rename folder",
+    "deleteFolder": "Delete folder",
+    "move": "Move to…",
+    "reset": "Reset folder organization",
+    "folderName": "Folder name",
+    "destination": "Destination folder",
+    "unfiled": "Unfiled",
+    "moveHere": "Put it here",
+    "cannotMoveHere": "You can't move tasks here",
+    "root": "Root",
+    "showArchived": "Show archived tasks",
+    "archived": "Archived task",
+    "dragTask": "Drag task to a folder",
+    "dragFolder": "Drag folder",
+    "expand": "Expand folder",
+    "collapse": "Collapse folder",
+    "actions": "Folder or task actions",
+    "invalidName": "Use a name with 1–120 characters.",
+    "saveError": "Could not save folder organization. Your last saved structure is preserved.",
+    "readOnly": "Folder storage is unavailable or invalid. Organization is read only.",
+    "loading": "Loading folders…",
+    "retry": "Retry",
+    "deleteDescription": "Tasks and subfolders move to the parent. Tasks in a root folder become unfiled. No tasks are deleted.",
+    "resetDescription": "Remove all folder organization. Tasks, pins, archives and task names are preserved.",
+    "organizationDescription": "Organize tasks without changing their team, project or status.",
+    "counts": "{{active}} active, {{archived}} archived, {{unavailable}} unavailable"
   }
 }

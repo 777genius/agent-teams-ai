@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "எதிர்வினையைச் சேர் ({{count}})",
+      "remove": "எதிர்வினையை அகற்று ({{count}})",
+      "count": "எதிர்வினைகள்: {{count}}",
+      "failed": "எதிர்வினைகளைப் புதுப்பிக்க முடியவில்லை"
+    },
     "actions": {
       "createTaskFromMessage": "செய்தியிலிருந்து task ஐ உருவாக்கு",
       "editMessage": "செய்தியைத் திருத்து",
@@ -194,7 +200,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "பெயரில் குறைந்தது ஒரு எழுத்து அல்லது இலக்கம் இருக்க வேண்டும்",
-      "nameTooLong": "பெயர் மிக நீளமானது (அதிகபட்சம் 128 எழுத்துகள்)",
+      "nameTooLong": "பெயர் மிக நீளமானது (அதிகபட்சம் 64 எழுத்துகள்)",
       "selectWorkingDirectory": "working directory ஐத் தேர்ந்தெடு (cwd)",
       "memberNameRequired": "உறுப்பினர் பெயர் காலியாக இருக்க முடியாது",
       "memberNameInvalid": "உறுப்பினர் பெயர் alphanumeric உடன் தொடங்க வேண்டும், [a-zA-Z0-9._-] மட்டுமே பயன்படுத்தவும், அதிகபட்சம் 128 எழுத்துகள்",
@@ -262,6 +268,8 @@
       "name": "பெயர்"
     },
     "memberRestartWarning": "சேமித்தல் role, workflow, worktree தனிமைப்படுத்தல், provider, model, effort அல்லது MCP அணுகல் மாற்றங்களைப் பயன்படுத்த இந்த teammate ஐ மறுதொடக்கம் செய்யும்.",
+    "displayedRuntimeHint": "உறுப்பினர் அட்டையில்: {{runtime}}. சேமிக்கப்பட்ட அமைப்புகள் வேறுபடுகின்றன.",
+    "useDisplayedRuntime": "அட்டையின் அமைப்புகளைப் பயன்படுத்து",
     "notices": {
       "liveRenameBlocked": "தற்போதுள்ள teammates மறுபெயரிடப்பட்டதால் live save தடுக்கப்பட்டுள்ளது. அந்த identity மாற்றங்களை மாற்றியமைக்கவும் அல்லது முதலில் team ஐ நிறுத்தவும்.",
       "newLiveTeammates": "team live ஆக இருக்கும்போது Edit Team இலிருந்து புதிய teammates ஐச் சேர்க்க முடியாது. அதற்கு பதிலாக Add member dialog ஐப் பயன்படுத்தவும்.",
@@ -351,6 +359,30 @@
     "placeholders": {
       "name": "member-name",
       "mcpServers": "github, sentry"
+    },
+    "gateway": {
+      "apiKeyLabel": "Gateway API key",
+      "apiKeyPlaceholder": "Paste the teammate gateway API key",
+      "authRejected": "Key authorization was rejected.",
+      "bindButton": "Bind teammate",
+      "bindingStatus": "Bound to {{profile}}",
+      "credentialChanged": "stored key changed — bind again with a new key",
+      "credentialMissing": "stored key missing — bind again with a new key",
+      "credentialReady": "key stored",
+      "emptyCatalog": "The model catalog is empty.",
+      "keyRequired": "Enter the gateway API key first.",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. இந்தப் படிவத்தைத் திறப்பதற்கு முன் சேமித்த இணைப்புகள் உடனடியாகப் புதுப்பிக்கப்படும்; குழுப் படிவத்தை ரத்து செய்தாலும் மாற்றங்கள் நீடிக்கும்.",
+      "probeButton": "Check key and load models",
+      "probing": "Checking...",
+      "profileLabel": "Gateway profile",
+      "profilePlaceholder": "Select a gateway profile",
+      "profileRequired": "Select a gateway profile first.",
+      "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+      "title": "Gateway provider",
+      "unbindButton": "Unbind",
+      "unavailable": "The gateway is unavailable right now."
     }
   },
   "detail": {
@@ -730,6 +762,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "குழு அரட்டையை உருவாக்கு",
+      "description": "குறைந்தது இரண்டு முகவர்களைத் தேர்ந்தெடுக்கவும். நீங்கள் தானாகச் சேர்க்கப்படுவீர்கள்.",
+      "name": "அரட்டையின் பெயர்",
+      "autoInclude": "புதிய உறுப்பினர்களைத் தானாகச் சேர்",
+      "minimum": "குறைந்தது இரண்டு முகவர்களைத் தேர்ந்தெடுக்கவும்.",
+      "creating": "உருவாக்கப்படுகிறது…",
+      "retryCreate": "மீண்டும் உருவாக்க முயற்சி",
+      "unavailable": "அரட்டை கிடைக்கவில்லை",
+      "message": "இந்தக் குழுவுக்குச் செய்தி அனுப்பு",
+      "archivedHint": "இந்த அரட்டை காப்பகப்படுத்தப்பட்டுள்ளது. செய்திகளை அனுப்ப அதை மீட்டெடுக்கவும்.",
+      "restartHint": "செய்தி அனுப்ப அனைத்து பங்கேற்பாளர்களும் இணக்கமான இயக்கச் சூழலை இயக்க வேண்டும்.",
+      "unknownDelivery": "சேமிக்கப்பட்டது. சென்றடைந்த நிலை தெரியவில்லை.",
+      "sending": "அனுப்பப்படுகிறது…",
+      "retrySend": "அதே செய்தியை மீண்டும் அனுப்பு",
+      "send": "அனுப்பு",
+      "archived": "காப்பகப்படுத்திய அரட்டைகள்",
+      "restore": "அரட்டையை மீட்டெடு",
+      "archive": "அரட்டையைக் காப்பகப்படுத்து",
+      "delivery": {
+        "queued": "வரிசையில்",
+        "accepted": "ஏற்கப்பட்டது",
+        "failed": "தோல்வி",
+        "unknown": "தெரியவில்லை",
+        "skipped": "தவிர்க்கப்பட்டது"
+      }
+    },
     "actions": {
       "toLatest": "சமீபத்தியவற்றுக்கு",
       "bottomSheetActions": "செய்தி bottom sheet நடவடிக்கைகள்",
@@ -969,7 +1028,8 @@
       "cancel": "ரத்துசெய்",
       "delete": "நீக்கு",
       "markResolved": "தீர்க்கப்பட்டதாகக் குறி",
-      "save": "சேமி"
+      "save": "சேமி",
+      "openInTaskTab": "தனி தாவலில் திறக்கவும்"
     },
     "attachments": {
       "commentAttachment": "கருத்து இணைப்பு",
@@ -2966,6 +3026,25 @@
         "weight_few": "agirlik {{count}}",
         "weight_many": "agirlik {{count}}"
       }
+    }
+  },
+  "externalPrompt": {
+    "requestHelp": "Name the templates to use and describe any edits in your request.",
+    "editAvailable": "Editing draft/stopped configuration is available.",
+    "trashAvailable": "Reversible trash for draft/stopped teams is available."
+  },
+  "managementChanges": {
+    "title": "Recent changes",
+    "created": "Created",
+    "edited": "Edited",
+    "hidden": "Some recent changes are hidden by the current filters.",
+    "roster": "Roles: +{{added}}/-{{removed}}",
+    "fields": {
+      "displayName": "Name changed",
+      "description": "Description changed",
+      "color": "Color changed",
+      "leadInstructions": "Lead instructions changed",
+      "members": "Members changed"
     }
   }
 }

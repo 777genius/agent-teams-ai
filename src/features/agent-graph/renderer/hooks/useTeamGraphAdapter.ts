@@ -67,6 +67,7 @@ export function useTeamGraphAdapter(
 ): GraphDataPort {
   const isActive = options?.active ?? true;
   const { t } = useAppTranslation('team');
+  const activeContextId = useStore((state) => state.activeContextId);
   const adapterRef = useRef<TeamGraphAdapter>(TeamGraphAdapter.create());
   const inactiveGraphData = useMemo(() => emptyGraphData(teamName), [teamName]);
   const lastActiveGraphDataRef = useRef<GraphDataPort>(inactiveGraphData);
@@ -226,7 +227,8 @@ export function useTeamGraphAdapter(
       graphLayoutMode ?? DEFAULT_TEAM_GRAPH_LAYOUT_MODE,
       gridOwnerOrder,
       activeTaskLogActivity,
-      adapterText
+      adapterText,
+      activeContextId
     );
   }, [
     isActive,
@@ -247,6 +249,7 @@ export function useTeamGraphAdapter(
     gridOwnerOrder,
     activeTaskLogActivity,
     adapterText,
+    activeContextId,
   ]);
 
   useLayoutEffect(() => {

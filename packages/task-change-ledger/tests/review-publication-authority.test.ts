@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
@@ -25,7 +26,22 @@ function gate() {
     release = resolve;
   });
   return {
-    ready,
+    async revokeAtHook(effect: Promise<unknown>, revoke: () => void) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([
+          ready,
+          effect.then(() => { throw new Error('Operation completed before expected publication hook'); }),
+          new Promise<never>((_resolve, reject) => {
+            timer = setTimeout(() => reject(new Error('Expected publication hook was not reached')), 5_000);
+          }),
+        ]);
+        revoke();
+      } finally {
+        if (timer) clearTimeout(timer);
+        release(); // Always unblock the original operation, including early refusal/failure.
+      }
+    },
     release,
     wait: async () => {
       entered();
@@ -63,7 +79,18 @@ test('captured Applier guard after awaited WAL staging prevents a new disk publi
   const file: FileChangeWithContent = {
     filePath: f.file,
     relativePath: 'work.txt',
-    snippets: [],
+    snippets: [{
+      toolUseId: 'TEST-authority-ledger-edit', filePath: f.file, toolName: 'Edit',
+      type: 'edit', oldString: 'before\n', newString: 'after\n', replaceAll: false,
+      timestamp: '2026-10-23T00:00:00Z', isError: false,
+      ledger: {
+        eventId: 'TEST-authority-ledger-edit', source: 'ledger-exact', confidence: 'high',
+        originalFullContent: 'before\n', modifiedFullContent: 'after\n', operation: 'modify',
+        beforeHash: createHash('sha256').update('before\n').digest('hex'),
+        afterHash: createHash('sha256').update('after\n').digest('hex'),
+        beforeState: { exists: true }, afterState: { exists: true },
+      },
+    }],
     linesAdded: 1,
     linesRemoved: 1,
     isNewFile: false,
@@ -79,9 +106,7 @@ test('captured Applier guard after awaited WAL staging prevents a new disk publi
     new Map([[f.file, file]]),
     { checkpointDiskTransitions: staged.wait }
   );
-  await staged.ready;
-  f.revoke();
-  staged.release();
+  await staged.revokeAtHook(pending, f.revoke);
   const result = await pending;
   assert.equal(result.applied, 0);
   assert.ok(result.errors.length > 0);
@@ -104,9 +129,7 @@ test('revocation during before-detach await preserves original source bytes', as
     ...f.authority,
     beforeDetach: staged.wait,
   });
-  await staged.ready;
-  f.revoke();
-  staged.release();
+  await staged.revokeAtHook(pending, f.revoke);
   await assert.rejects(pending, /authority revoked/);
   assert.equal(await readFile(f.file, 'utf8'), 'after\n');
 });
@@ -128,9 +151,7 @@ test('revocation after an accepted detach stays partial; original transaction ca
     ...f.authority,
     beforePublish: staged.wait,
   });
-  await staged.ready;
-  f.revoke();
-  staged.release();
+  await staged.revokeAtHook(pending, f.revoke);
   await assert.rejects(pending, /authority revoked/);
   assert.equal(existsSync(f.file), false);
   assert.equal(existsSync(target), false);
@@ -147,12 +168,13 @@ test('atomic replace cannot publish after staging revocation and cleanup preserv
     ...f.authority,
     beforeCommit: staged.wait,
   });
-  await staged.ready;
-  const temp = join(f.root, (await readdir(f.root)).find((name) => name.startsWith('.tmp.'))!);
-  unlinkSync(temp);
-  writeFileSync(temp, 'TEST external replacement\n');
-  f.revoke();
-  staged.release();
+  let temp = '';
+  await staged.revokeAtHook(pending, () => {
+    temp = join(f.root, readdirSync(f.root).find((name) => name.startsWith('.tmp.'))!);
+    unlinkSync(temp);
+    writeFileSync(temp, 'TEST external replacement\n');
+    f.revoke();
+  });
   await assert.rejects(pending, /authority revoked/);
   assert.equal(await readFile(f.file, 'utf8'), 'after\n');
   assert.equal(await readFile(temp, 'utf8'), 'TEST external replacement\n');

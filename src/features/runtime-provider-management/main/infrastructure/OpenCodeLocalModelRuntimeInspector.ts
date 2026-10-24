@@ -1,3 +1,4 @@
+import { boundedDiagnosticString } from '@shared/utils/diagnosticsRedaction';
 import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 
@@ -83,11 +84,27 @@ export async function inspectOpenCodeLocalModelRuntimeReadiness(
   if (!parsed) return null;
 
   const inventory = dependencies.inventory ?? new OpenCodeLocalProviderConnector();
-  const provider = await resolveConfiguredLocalProvider(
+  const { provider, inspectionError } = await resolveConfiguredLocalProvider(
     inventory,
     input.projectPath,
     parsed.sourceId
   );
+  if (inspectionError && (provider || isOpenCodeLocalProviderId(parsed.sourceId))) {
+    return {
+      providerId: parsed.sourceId,
+      modelId: parsed.modelId,
+      presetId: provider?.preset.id ?? 'custom',
+      toolCapable: null,
+      parameterCount: null,
+      trainedContextTokens: null,
+      configuredContextTokens: null,
+      effectiveContextTokens: null,
+      coordinationProbeStatus: null,
+      severity: 'blocking',
+      code: 'local_runtime_inspection_failed',
+      message: `Could not inspect local provider ${parsed.sourceId} for ${input.modelRoute}. ${inspectionError} Fix the configuration error, then retry the check.`,
+    };
+  }
   if (!provider) {
     if (!isOpenCodeLocalProviderId(parsed.sourceId)) return null;
     return {
@@ -636,7 +653,10 @@ async function resolveConfiguredLocalProvider(
   inventory: Pick<RuntimeLocalProviderConnectorPort, 'listLocalProviders'>,
   projectPath: string,
   providerId: string
-): Promise<RuntimeLocalProviderListEntryDto | null> {
+): Promise<{
+  provider: RuntimeLocalProviderListEntryDto | null;
+  inspectionError: string | null;
+}> {
   const projectResult = await inventory.listLocalProviders({
     runtimeId: 'opencode',
     scope: 'project',
@@ -646,14 +666,28 @@ async function resolveConfiguredLocalProvider(
   const projectProvider = projectResult.providers?.find(
     (provider) => provider.providerId === providerId
   );
-  if (projectProvider) return projectProvider;
+  if (projectProvider && !projectResult.error)
+    return { provider: projectProvider, inspectionError: null };
 
   const globalResult = await inventory.listLocalProviders({
     runtimeId: 'opencode',
     scope: 'global',
     providerId,
   });
-  return globalResult.providers?.find((provider) => provider.providerId === providerId) ?? null;
+  const errors = [
+    projectResult.error
+      ? `project configuration (${boundedDiagnosticString(projectPath, 400)}): [${projectResult.error.code}] ${boundedDiagnosticString(projectResult.error.message, 1_000) ?? 'Configuration check failed.'}`
+      : null,
+    globalResult.error
+      ? `global configuration: [${globalResult.error.code}] ${boundedDiagnosticString(globalResult.error.message, 1_000) ?? 'Configuration check failed.'}`
+      : null,
+  ].filter(Boolean);
+  return {
+    provider: globalResult.error
+      ? null
+      : (globalResult.providers?.find((provider) => provider.providerId === providerId) ?? null),
+    inspectionError: errors.length > 0 ? errors.join(' ') : null,
+  };
 }
 
 async function fetchJsonText(

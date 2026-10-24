@@ -2,7 +2,6 @@
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
@@ -16,15 +15,21 @@ import {
   extractArchive,
   findExtractedBinary,
   isRuntimePayloadCacheValid,
+  logRuntimePhase,
   publishRuntimePayload,
 } from './lib/runtime-payload-cache.mjs';
 import { verifyRuntimeArchiveChecksum } from './lib/runtime-archive-checksum.mjs';
+import { phase } from './lib/runtime-bootstrap-diagnostics.mts';
+import { createRuntimeCommandCapture } from './lib/runtime-command-capture.mts';
 import {
   formatRuntimeVersionForDisplay,
   getExpectedRuntimeCliVersion,
   matchesRuntimeCliVersion,
 } from './lib/runtime-cli-version.mjs';
 import { spawnSyncWithWindowsShell } from './lib/windows-shell-spawn.mjs';
+import { resolveElectronViteArgs } from './lib/dev-remote-debugging.ts';
+
+const runAndCapture = createRuntimeCommandCapture(spawnSyncWithWindowsShell);
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const uiRepoRoot = path.resolve(scriptDir, '..');
@@ -40,7 +45,6 @@ const runtimeCacheRoot = process.env.CLAUDE_DEV_RUNTIME_CACHE_ROOT?.trim()
 const scriptArgs = process.argv.slice(2);
 const shouldPrintRuntimePath = scriptArgs.includes('--print-runtime-path');
 const electronViteArgs = scriptArgs.filter((arg) => arg !== '--print-runtime-path' && arg !== '--');
-const remoteDebuggingPortArg = '--remoteDebuggingPort';
 const terminalPlatformRootEnv = 'CLAUDE_TERMINAL_PLATFORM_ROOT';
 const legacyTerminalPlatformRootEnv = 'TERMINAL_PLATFORM_ROOT';
 const terminalDaemonBinaryEnv = 'CLAUDE_TERMINAL_DAEMON_BINARY';
@@ -129,27 +133,6 @@ function applyOrganizationDemoMode() {
   return demoMode === 'restore';
 }
 
-function runAndCapture(cmd, args, options = {}) {
-  const result = spawnSyncWithWindowsShell(cmd, args, {
-    encoding: 'utf8',
-    ...options,
-  });
-
-  if (result.error) {
-    throw new Error(`Failed to run ${cmd}: ${result.error.message}`);
-  }
-
-  if (result.status !== 0) {
-    const details = [result.stdout, result.stderr]
-      .map((value) => value?.trim())
-      .filter(Boolean)
-      .join('\n');
-    throw new Error(`Command failed: ${cmd} ${args.join(' ')}${details ? `\n${details}` : ''}`);
-  }
-
-  return result.stdout?.trim() ?? '';
-}
-
 function hasTerminalPlatformOverride() {
   return Boolean(
     process.env[terminalPlatformRootEnv]?.trim() ||
@@ -228,10 +211,6 @@ function getReleaseAssetDownload(runtimeLock, asset) {
   };
 }
 
-function ensureDir(dirPath) {
-  fs.mkdirSync(dirPath, { recursive: true });
-}
-
 function formatBytes(bytes) {
   if (!Number.isFinite(bytes) || bytes < 0) {
     return '0 B';
@@ -305,82 +284,8 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function parseRemoteDebuggingPortArg(args) {
-  // Explicit run arguments override the package script's default port.
-  for (let index = args.length - 1; index >= 0; index -= 1) {
-    const arg = args[index];
-    if (arg === remoteDebuggingPortArg) {
-      const rawPort = args[index + 1];
-      const port = Number.parseInt(rawPort ?? '', 10);
-      return Number.isFinite(port) && port > 0
-        ? { index, valueIndex: index + 1, port, style: 'split' }
-        : null;
-    }
-
-    const prefix = `${remoteDebuggingPortArg}=`;
-    if (arg.startsWith(prefix)) {
-      const port = Number.parseInt(arg.slice(prefix.length), 10);
-      return Number.isFinite(port) && port > 0 ? { index, port, style: 'equals' } : null;
-    }
-  }
-
-  return null;
-}
-
-function isTcpPortAvailable(port) {
-  return new Promise((resolve) => {
-    const server = net.createServer();
-    let settled = false;
-
-    const finish = (available) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      resolve(available);
-    };
-
-    server.unref();
-    server.once('error', () => finish(false));
-    server.listen({ host: '127.0.0.1', port }, () => {
-      server.close(() => finish(true));
-    });
-  });
-}
-
-async function findAvailableTcpPort(preferredPort) {
-  for (let port = preferredPort; port < preferredPort + 100; port += 1) {
-    if (await isTcpPortAvailable(port)) {
-      return port;
-    }
-  }
-
-  throw new Error(`No available remote debugging port near ${preferredPort}`);
-}
-
-async function resolveElectronViteArgs(args) {
-  const remoteDebuggingPort = parseRemoteDebuggingPortArg(args);
-  if (!remoteDebuggingPort) {
-    return args;
-  }
-
-  const availablePort = await findAvailableTcpPort(remoteDebuggingPort.port);
-  if (availablePort !== remoteDebuggingPort.port) {
-    process.stdout.write(
-      `Remote debugging port ${remoteDebuggingPort.port} is busy; using ${availablePort}.\n`
-    );
-  }
-  // Forward exactly one value: repeated options can become an array in the Vite CLI.
-  const prefix = `${remoteDebuggingPortArg}=`;
-  const nextArgs = args.filter((arg, index) =>
-    arg !== remoteDebuggingPortArg && !arg.startsWith(prefix) &&
-    (index === 0 || args[index - 1] !== remoteDebuggingPortArg)
-  );
-  return [...nextArgs, `${remoteDebuggingPortArg}=${availablePort}`];
-}
-
 function readBinaryVersion(binaryPath) {
-  return runAndCapture(binaryPath, ['--version']);
+  return runAndCapture(binaryPath, ['--version'], { timeout: 30_000 });
 }
 
 function isExecutable(filePath) {
@@ -586,18 +491,18 @@ async function ensureBootstrappedRuntime() {
   const cacheDir = path.join(runtimeCacheRoot, runtimeLock.version, platformKey);
   const payloadDir = path.join(cacheDir, 'payload-v1');
   const cachedBinaryPath = path.join(payloadDir, asset.binaryName);
-  const isCacheValid = () =>
-    isRuntimePayloadCacheValid(payloadDir, asset.sha256, asset.binaryName) &&
+  const isCacheValid = async () =>
+    (await isRuntimePayloadCacheValid(payloadDir, asset.sha256, asset.binaryName)) &&
     isCachedBinaryValid(cachedBinaryPath, expectedCliVersion);
 
-  ensureDir(cacheDir);
+  fs.mkdirSync(cacheDir, { recursive: true });
   const lockHandle = await acquireBootstrapLock(path.join(cacheDir, '.bootstrap.lock'));
 
   try {
-    if (isCacheValid()) {
+    if (await phase('cache-validation', isCacheValid)) {
       return {
         binaryPath: cachedBinaryPath,
-        versionText: readBinaryVersion(cachedBinaryPath),
+        versionText: phase('cached-version', () => readBinaryVersion(cachedBinaryPath)),
         sourceLabel: `cached release ${runtimeLock.sourceRef}`,
         cacheDir,
         downloaded: false,
@@ -605,29 +510,47 @@ async function ensureBootstrappedRuntime() {
     }
 
     const workDir = path.join(cacheDir, `.bootstrap-${process.pid}-${Date.now()}`);
-    ensureDir(workDir);
+    fs.mkdirSync(workDir, { recursive: true });
 
     try {
       const archivePath = path.join(workDir, asset.file);
       const download = getReleaseAssetDownload(runtimeLock, asset);
-      if (!downloadReleaseAssetWithGh(download, archivePath)) {
-        await downloadWithProgress(download, archivePath);
-      }
+      logRuntimePhase(`downloading release asset: ${asset.file}`);
+      await phase('download', async () => {
+        if (!downloadReleaseAssetWithGh(download, archivePath)) {
+          await downloadWithProgress(download, archivePath);
+        }
+      });
 
-      await verifyRuntimeArchiveChecksum(archivePath, asset, platformKey);
+      logRuntimePhase('verifying archive checksum');
+      await phase('checksum', () => verifyRuntimeArchiveChecksum(archivePath, asset, platformKey));
 
       const extractDir = path.join(workDir, 'extracted');
-      extractArchive(archivePath, extractDir, asset.archiveKind, runOrExit);
+      logRuntimePhase(`extracting ${asset.archiveKind} archive`);
+      phase('extract', () =>
+        extractArchive(archivePath, extractDir, asset.archiveKind, (command, args, options) => {
+          const result = spawnSyncWithWindowsShell(command, args, { stdio: 'inherit', ...options });
+          if (result.error)
+            throw new Error(`Runtime archive extraction failed: ${result.error.message}`);
+          if (result.status !== 0)
+            throw new Error(
+              `Runtime archive extraction failed (exit ${result.status ?? result.signal ?? 'unknown'})`
+            );
+        })
+      );
+      logRuntimePhase('archive extracted');
 
       const extractedBinaryPath = findExtractedBinary(extractDir, asset.binaryName);
       if (process.platform !== 'win32') fs.chmodSync(extractedBinaryPath, 0o755);
-      const versionText = readBinaryVersion(extractedBinaryPath);
+      const versionText = phase('extracted-version', () => readBinaryVersion(extractedBinaryPath));
       if (!matchesRuntimeCliVersion(versionText, expectedCliVersion)) {
         throw new Error(
           `Bootstrapped runtime CLI version mismatch for release ${runtimeLock.version}. Expected ${expectedCliVersion}, got: ${versionText}`
         );
       }
-      publishRuntimePayload(extractedBinaryPath, payloadDir, asset.sha256);
+      await phase('publish', () =>
+        publishRuntimePayload(extractedBinaryPath, payloadDir, asset.sha256)
+      );
       return {
         binaryPath: cachedBinaryPath,
         versionText,
@@ -636,7 +559,7 @@ async function ensureBootstrappedRuntime() {
         downloaded: true,
       };
     } finally {
-      fs.rmSync(workDir, { recursive: true, force: true });
+      phase('work-cleanup', () => fs.rmSync(workDir, { recursive: true, force: true }));
     }
   } finally {
     await lockHandle.close();
@@ -652,12 +575,66 @@ function validateRuntimeRepoRoot(repoRoot) {
   }
 }
 
+function assertSourceRuntimeIncludesOriginMain(repoRoot) {
+  let root;
+  let originMain;
+  let head;
+  try {
+    root = runAndCapture('git', ['-C', repoRoot, 'rev-parse', '--show-toplevel']);
+    runAndCapture('git', [
+      '-C',
+      root,
+      'fetch',
+      '--no-tags',
+      'origin',
+      '+refs/heads/main:refs/remotes/origin/main',
+    ]);
+    originMain = runAndCapture('git', [
+      '-C',
+      root,
+      'rev-parse',
+      '--verify',
+      'refs/remotes/origin/main^{commit}',
+    ]);
+    head = runAndCapture('git', ['-C', root, 'rev-parse', 'HEAD']);
+  } catch (error) {
+    throw new Error(
+      `Cannot verify the development orchestrator source at ${repoRoot} against origin/main. ` +
+        `Check access to origin/main before starting the app. ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+
+  const result = spawnSyncWithWindowsShell(
+    'git',
+    ['-C', root, 'merge-base', '--is-ancestor', originMain, head],
+    { encoding: 'utf8' }
+  );
+  if (result.status === 0) return;
+  if (result.status !== 1) {
+    throw new Error(
+      `Cannot compare the development orchestrator source at ${root} with origin/main: ` +
+        (result.error?.message ?? result.stderr?.trim() ?? 'git merge-base failed')
+    );
+  }
+  throw new Error(
+    `Development orchestrator source is missing commits from origin/main: ${root} ` +
+      `(HEAD ${head.slice(0, 12)}, origin/main ${originMain.slice(0, 12)}). ` +
+      'Update that checkout from origin/main or select a fresh checkout with ' +
+      'CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH.'
+  );
+}
+
 async function resolveRuntimeCli() {
   if (explicitRuntimeCliPath) {
     if (!isExecutable(explicitRuntimeCliPath)) {
       throw new Error(
         `CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH is not executable: ${explicitRuntimeCliPath}`
       );
+    }
+
+    const resolvedCliPath = fs.realpathSync(explicitRuntimeCliPath);
+    if (path.basename(resolvedCliPath) === 'cli-source') {
+      assertSourceRuntimeIncludesOriginMain(path.dirname(resolvedCliPath));
     }
 
     return {
@@ -669,6 +646,7 @@ async function resolveRuntimeCli() {
 
   if (runtimeRepoRoot) {
     validateRuntimeRepoRoot(runtimeRepoRoot);
+    assertSourceRuntimeIncludesOriginMain(runtimeRepoRoot);
     const runtimePackageManager = readPackageManagerCommand(runtimeRepoRoot);
 
     runOrExit(runtimePackageManager, ['run', 'build:dev'], { cwd: runtimeRepoRoot });

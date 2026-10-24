@@ -21,7 +21,11 @@ import {
 import { TeamConfigReader } from './TeamConfigReader';
 import { TeamInboxReader } from './TeamInboxReader';
 import { TeamLaunchStateStore } from './TeamLaunchStateStore';
-import { buildTeamLogWatchSessionIds, extractRuntimeSessionIds } from './teamLogSourceWatchScope';
+import {
+  buildTeamLogWatchSessionIds,
+  extractRuntimeSessionIds,
+  getLeadSessionIds,
+} from './teamLogSourceWatchScope';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamTranscriptProjectResolver } from './TeamTranscriptProjectResolver';
 
@@ -434,15 +438,15 @@ export class TeamMemberLogsFinder {
     const leadMemberName =
       config.members?.find((m) => isLeadMemberCheck(m))?.name?.trim() || 'team-lead';
 
-    if (config.leadSessionId) {
-      const leadJsonl = path.join(projectDir, `${config.leadSessionId}.jsonl`);
+    for (const leadSessionId of getLeadSessionIds(config)) {
+      const leadJsonl = path.join(projectDir, `${leadSessionId}.jsonl`);
       try {
         await fs.access(leadJsonl);
         if (await this.fileMentionsTaskIdCached(leadJsonl, teamName, taskId, true, sinceMs)) {
           const leadSummary = await this.parseLeadSessionSummary(
             leadJsonl,
             projectId,
-            config.leadSessionId,
+            leadSessionId,
             leadMemberName
           );
           if (leadSummary) results.push(leadSummary);
@@ -694,8 +698,9 @@ export class TeamMemberLogsFinder {
       refs.push({ kind, filePath, memberName, sessionId, sortTime });
     };
 
-    if (config.leadSessionId) {
-      const leadJsonl = path.join(projectDir, `${config.leadSessionId}.jsonl`);
+    const leadSessionIds = getLeadSessionIds(config);
+    for (const leadSessionId of leadSessionIds) {
+      const leadJsonl = path.join(projectDir, `${leadSessionId}.jsonl`);
       try {
         await fs.access(leadJsonl);
         if (await this.fileMentionsTaskIdCached(leadJsonl, teamName, taskId, true, sinceMs)) {
@@ -705,7 +710,7 @@ export class TeamMemberLogsFinder {
             leadMemberName,
             await this.getSortTime(leadJsonl, firstTimestamp),
             'lead_session',
-            config.leadSessionId
+            leadSessionId
           );
         }
       } catch {
@@ -1291,17 +1296,7 @@ export class TeamMemberLogsFinder {
     config: NonNullable<Awaited<ReturnType<TeamConfigReader['getConfig']>>>
   ): Promise<LogCandidate[]> {
     const candidates: LogCandidate[] = [];
-    const leadSessionIds = new Set<string>();
-    if (typeof config.leadSessionId === 'string' && config.leadSessionId.trim().length > 0) {
-      leadSessionIds.add(config.leadSessionId.trim());
-    }
-    if (Array.isArray(config.sessionHistory)) {
-      for (const sessionId of config.sessionHistory) {
-        if (typeof sessionId === 'string' && sessionId.trim().length > 0) {
-          leadSessionIds.add(sessionId.trim());
-        }
-      }
-    }
+    const leadSessionIds = getLeadSessionIds(config);
 
     for (const sessionId of sessionIds) {
       const mainTranscript = path.join(projectDir, `${sessionId}.jsonl`);

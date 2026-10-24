@@ -2,8 +2,11 @@ import {
   restoreReviewDecisionRecordsForFile,
   restoreReviewDecisionRecordsForFiles,
 } from '@features/review-mutations';
-import { buildHunkDecisionKey, getFileReviewKey } from '@renderer/utils/reviewKey';
-import { normalizePathForComparison } from '@shared/utils/platformPath';
+import {
+  buildHunkDecisionKey,
+  getFileReviewKey,
+  normalizeReviewPathForIdentity,
+} from '@renderer/utils/reviewKey';
 
 import {
   getEffectiveReviewFileDecision,
@@ -77,11 +80,11 @@ export function replaceReviewScopedRecord<T>(
   recovered: Readonly<Record<string, T>>
 ): Record<string, T> {
   const normalizedScopePaths = new Set(
-    [...scopeFilePaths].map((filePath) => normalizePathForComparison(filePath))
+    [...scopeFilePaths].map((filePath) => normalizeReviewPathForIdentity(filePath))
   );
   const next = { ...current };
   for (const filePath of Object.keys(next)) {
-    if (normalizedScopePaths.has(normalizePathForComparison(filePath))) {
+    if (normalizedScopePaths.has(normalizeReviewPathForIdentity(filePath))) {
       delete next[filePath];
     }
   }
@@ -262,9 +265,9 @@ export function hasUnresolvedReviewExternalChange(
   filePath: string,
   changes: Record<string, unknown>
 ): boolean {
-  const normalizedFilePath = normalizePathForComparison(filePath);
+  const normalizedFilePath = normalizeReviewPathForIdentity(filePath);
   return Object.keys(changes).some(
-    (candidatePath) => normalizePathForComparison(candidatePath) === normalizedFilePath
+    (candidatePath) => normalizeReviewPathForIdentity(candidatePath) === normalizedFilePath
   );
 }
 
@@ -273,17 +276,21 @@ export function partitionReviewFilesByApplyErrors(
   errorPaths: readonly string[] | null
 ): { successful: FileChangeSummary[]; failed: FileChangeSummary[] } {
   if (errorPaths === null) return { successful: [], failed: [...files] };
-  const normalizedErrors = new Set(errorPaths.map(normalizePathForComparison));
-  const requestedPaths = new Set(files.map((file) => normalizePathForComparison(file.filePath)));
+  const normalizedErrors = new Set(errorPaths.map(normalizeReviewPathForIdentity));
+  const requestedPaths = new Set(
+    files.map((file) => normalizeReviewPathForIdentity(file.filePath))
+  );
   const hasUnknownError = [...normalizedErrors].some((filePath) => !requestedPaths.has(filePath));
   if (hasUnknownError) {
     return { successful: [], failed: [...files] };
   }
   return {
     successful: files.filter(
-      (file) => !normalizedErrors.has(normalizePathForComparison(file.filePath))
+      (file) => !normalizedErrors.has(normalizeReviewPathForIdentity(file.filePath))
     ),
-    failed: files.filter((file) => normalizedErrors.has(normalizePathForComparison(file.filePath))),
+    failed: files.filter((file) =>
+      normalizedErrors.has(normalizeReviewPathForIdentity(file.filePath))
+    ),
   };
 }
 

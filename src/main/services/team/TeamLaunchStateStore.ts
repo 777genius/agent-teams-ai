@@ -65,6 +65,47 @@ export function getTeamLaunchStoppedMarkerPath(teamName: string): string {
   return path.join(getTeamsBasePath(), teamName, TEAM_LAUNCH_STOPPED_MARKER_FILE);
 }
 
+/**
+ * The recorded runtime pids of the team's persisted launch members. The stop
+ * confirmation path needs this synchronously and without shelling out: an
+ * absent or unreadable snapshot answers with no pids, and the caller keeps the
+ * process table as its discovery channel for unrecorded processes.
+ */
+export function readPersistedLaunchRuntimePidsSync(teamName: string): number[] {
+  const targetPath = getTeamLaunchStatePath(teamName);
+  let parsed: unknown;
+  try {
+    const stat = fs.statSync(targetPath);
+    if (!stat.isFile() || stat.size > MAX_LAUNCH_STATE_BYTES) {
+      return [];
+    }
+    parsed = JSON.parse(fs.readFileSync(targetPath, 'utf8'));
+  } catch {
+    return [];
+  }
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    const record = parsed as Record<string, unknown>;
+    if (
+      record.version === 2 &&
+      (typeof record.teamName !== 'string' || record.teamName.trim() !== teamName)
+    ) {
+      return [];
+    }
+  }
+  const snapshot = normalizePersistedLaunchSnapshot(teamName, parsed);
+  if (!snapshot) {
+    return [];
+  }
+  const pids = new Set<number>();
+  for (const member of Object.values(snapshot.members)) {
+    const pid = member?.runtimePid;
+    if (typeof pid === 'number' && Number.isFinite(pid) && pid > 0) {
+      pids.add(Math.trunc(pid));
+    }
+  }
+  return [...pids];
+}
+
 export interface TeamLaunchStatePublicationOptions {
   /**
    * True when the write republishes launch truth that already existed instead

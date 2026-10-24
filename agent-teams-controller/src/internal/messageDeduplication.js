@@ -17,7 +17,9 @@ function normalizeComparableText(value) {
 }
 
 function normalizeComparableParticipant(value) {
-  return String(value || '').trim().toLowerCase();
+  return String(value || '')
+    .trim()
+    .toLowerCase();
 }
 
 function normalizeRestatedText(value) {
@@ -88,6 +90,8 @@ function getMessageSemanticKey(row) {
 }
 
 function getRuntimeDeliveryDuplicate(list, row, options = {}) {
+  if (row.groupChatId) return null;
+  list = list.filter((candidate) => !candidate?.groupChatId);
   if (
     row.source !== 'runtime_delivery' ||
     typeof row.relayOfMessageId !== 'string' ||
@@ -123,6 +127,8 @@ function getRuntimeDeliveryDuplicate(list, row, options = {}) {
 }
 
 function getRepeatedMessageDuplicate(list, row, options = {}) {
+  if (row.groupChatId) return null;
+  list = list.filter((candidate) => !candidate?.groupChatId);
   if (isUserParticipant(row.from)) {
     return null;
   }
@@ -180,6 +186,8 @@ function getAttachmentIds(row) {
 }
 
 function getRelayScopedUserRestatement(list, row, options = {}) {
+  if (row.groupChatId) return null;
+  list = list.filter((candidate) => !candidate?.groupChatId);
   if (!isUserParticipant(row.to) || isUserParticipant(row.from)) return null;
   const relayOfMessageId = String((row && row.relayOfMessageId) || '').trim();
   const from = normalizeComparableParticipant(row.from);

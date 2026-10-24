@@ -5,6 +5,7 @@ export type Screenshot = {
   ruAlt?: string;
   width: number;
   height: number;
+  version?: string;
 };
 
 /**
@@ -13,6 +14,14 @@ export type Screenshot = {
  * docs/screenshots directory.
  */
 export const screenshots: Screenshot[] = [
+  {
+    path: 'screenshots/team-chat.png',
+    previewPath: 'screenshots/previews/team-chat.webp',
+    alt: 'Full-screen team chat with replies, attachments, mentions, and drafts',
+    ruAlt: 'Полноэкранный чат команды с ответами, вложениями, упоминаниями и черновиками',
+    width: 1500,
+    height: 1000,
+  },
   {
     path: 'screenshots/1.png',
     previewPath: 'screenshots/previews/1.webp',
@@ -26,8 +35,9 @@ export const screenshots: Screenshot[] = [
     previewPath: 'screenshots/previews/14.webp',
     alt: 'Token usage, costs, runs, and budget analytics',
     ruAlt: 'Аналитика токенов, расходов, запусков и бюджетов',
-    width: 1854,
-    height: 1156,
+    width: 1312,
+    height: 900,
+    version: '1cff3f1128ca',
   },
   {
     path: 'screenshots/15.png',
@@ -110,8 +120,8 @@ export const screenshots: Screenshot[] = [
     height: 1640,
   },
   {
-    path: 'screenshots/12.png',
-    previewPath: 'screenshots/previews/12.webp',
+    path: 'screenshots/organization-map.png',
+    previewPath: 'screenshots/organization-map.png',
     alt: 'Organization structure map with team and task details',
     ruAlt: 'Карта структуры организации с командами и деталями задач',
     width: 2624,

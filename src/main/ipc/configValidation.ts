@@ -464,6 +464,7 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
     'autoExpandAIGroups',
     'useNativeTitleBar',
     'telemetryEnabled',
+    'externalAgentCdpEnabled',
   ];
 
   const result: Partial<GeneralConfig> = {};
@@ -547,22 +548,19 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
         result.appLocale = value;
         break;
       case 'autoExpandAIGroups':
-        if (typeof value !== 'boolean') {
-          return { valid: false, error: `general.${key} must be a boolean` };
-        }
-        result.autoExpandAIGroups = value;
-        break;
       case 'useNativeTitleBar':
-        if (typeof value !== 'boolean') {
-          return { valid: false, error: `general.${key} must be a boolean` };
-        }
-        result.useNativeTitleBar = value;
-        break;
       case 'telemetryEnabled':
+      case 'externalAgentCdpEnabled':
         if (typeof value !== 'boolean') {
           return { valid: false, error: `general.${key} must be a boolean` };
         }
-        result.telemetryEnabled = value;
+        result[
+          key as
+            | 'autoExpandAIGroups'
+            | 'useNativeTitleBar'
+            | 'telemetryEnabled'
+            | 'externalAgentCdpEnabled'
+        ] = value;
         break;
       default:
         return { valid: false, error: `Unsupported general key: ${key}` };

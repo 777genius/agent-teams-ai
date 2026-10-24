@@ -43,6 +43,7 @@ export interface OpenCodePromptDeliveryLedgerRecord extends OpenCodeTurnProgress
   lastRuntimePromptMessageId?: string | null;
   lastDeliveryAttemptIdWithAcceptedPrompt?: string | null;
   inboxMessageId: string;
+  groupChatId?: string;
   inboxTimestamp: string;
   source: 'watcher' | 'ui-send' | 'manual' | 'watchdog' | 'member-work-sync-review-pickup';
   messageKind: InboxMessageKind | null;
@@ -91,6 +92,7 @@ export interface EnsureOpenCodePromptDeliveryInput {
   laneId: string;
   runId?: string | null;
   inboxMessageId: string;
+  groupChatId?: string;
   inboxTimestamp: string;
   source: OpenCodePromptDeliveryLedgerRecord['source'];
   messageKind?: InboxMessageKind | null;
@@ -199,6 +201,7 @@ export class OpenCodePromptDeliveryLedgerStore {
         lastRuntimePromptMessageId: null,
         lastDeliveryAttemptIdWithAcceptedPrompt: null,
         inboxMessageId: input.inboxMessageId,
+        ...(input.groupChatId ? { groupChatId: input.groupChatId } : {}),
         inboxTimestamp: input.inboxTimestamp,
         source: input.source,
         messageKind: input.messageKind ?? null,
@@ -540,6 +543,9 @@ export class OpenCodePromptDeliveryLedgerStore {
     return await this.updateExisting(input.id, (record) => ({
       ...record,
       status: input.status,
+      // A write-ahead group marker records uncertainty, never acceptance.
+      acceptanceUnknown:
+        input.reason === 'group_handoff_started_acceptance_unknown' || record.acceptanceUnknown,
       nextAttemptAt: input.nextAttemptAt,
       lastReason: input.reason,
       updatedAt: input.scheduledAt,
@@ -863,29 +869,7 @@ export function buildOpenCodePromptDeliveryRecordId(input: {
   })}`;
 }
 
-export function hashOpenCodePromptDeliveryPayload(input: {
-  text: string;
-  replyRecipient: string;
-  actionMode?: AgentActionMode | null;
-  taskRefs?: TaskRef[];
-  attachments?: { id?: string; filename?: string; mimeType?: string; size?: number }[];
-  source?: string;
-}): string {
-  return `sha256:${stableHash({
-    text: input.text,
-    replyRecipient: input.replyRecipient,
-    actionMode: input.actionMode ?? null,
-    taskRefs: input.taskRefs ?? [],
-    attachments:
-      input.attachments?.map((attachment) => ({
-        id: attachment.id ?? null,
-        filename: attachment.filename ?? null,
-        mimeType: attachment.mimeType ?? null,
-        size: attachment.size ?? null,
-      })) ?? [],
-    source: input.source ?? null,
-  })}`;
-}
+export { hashOpenCodePromptDeliveryPayload } from './OpenCodePromptDeliveryPayload';
 
 export function getOpenCodeRuntimePromptMessageIds(
   record: Pick<
@@ -1047,7 +1031,10 @@ function shouldPruneOpenCodePromptDeliveryRecord(
   failedRetentionMs: number
 ): boolean {
   // Unread inbox rows can outlive the retention window and rebuild a pruned delivery.
-  if (isOpenCodePromptDeliveryCancelled(record)) {
+  if (
+    isOpenCodePromptDeliveryCancelled(record) ||
+    (record.groupChatId && !record.inboxReadCommittedAt)
+  ) {
     return false;
   }
   if (record.status === 'responded' && record.inboxReadCommittedAt) {

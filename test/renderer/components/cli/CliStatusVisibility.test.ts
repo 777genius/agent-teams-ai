@@ -646,7 +646,7 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
-  it('keeps authenticated dashboard actions visible after install completion', async () => {
+  it('hides Extensions while keeping Usage visible after install completion', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = createInstalledCliStatus({
       authLoggedIn: true,
@@ -661,7 +661,8 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Extensions');
+    expect(host.textContent).not.toContain('Extensions');
+    expect(host.textContent).toContain('Usage');
 
     await act(async () => {
       root.unmount();
@@ -669,7 +670,7 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
-  it('keeps the dashboard Extensions button visible before authentication completes', async () => {
+  it('hides the dashboard Extensions button before authentication completes', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = createInstalledCliStatus({
       authLoggedIn: false,
@@ -687,14 +688,9 @@ describe('CLI status visibility during completed install state', () => {
     const extensionsButton = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('Extensions')
     );
-    expect(extensionsButton).not.toBeNull();
-
-    await act(async () => {
-      extensionsButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      await Promise.resolve();
-    });
-
-    expect(storeState.openExtensionsTab).toHaveBeenCalledTimes(1);
+    expect(extensionsButton).toBeUndefined();
+    expect(storeState.openExtensionsTab).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('Usage');
 
     await act(async () => {
       root.unmount();
@@ -1357,7 +1353,7 @@ describe('CLI status visibility during completed install state', () => {
     });
 
     const dashboardUpdateButton = Array.from(host.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('Update to v0.144.1')
+      button.textContent?.includes('v0.139.0 → v0.144.1')
     );
     expect(dashboardUpdateButton).toBeDefined();
 
@@ -1368,9 +1364,9 @@ describe('CLI status visibility during completed install state', () => {
 
     expect(storeState.installCodexRuntime).not.toHaveBeenCalled();
     const dialog = document.body.querySelector('[role="dialog"]');
-    expect(dialog?.textContent).toContain('v0.139.0 -> v0.144.1');
+    expect(dialog?.textContent).toContain('v0.139.0 → v0.144.1');
     const dialogUpdateButton = Array.from(dialog?.querySelectorAll('button') ?? []).find((button) =>
-      button.textContent?.includes('Update to v0.144.1')
+      button.textContent?.includes('v0.139.0 → v0.144.1')
     );
 
     await act(async () => {
@@ -1812,6 +1808,42 @@ describe('CLI status visibility during completed install state', () => {
     }
   });
 
+  it('shows runtime inventory when only a retired MiniMax route is available', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      binaryPath: '/app-data/runtimes/opencode/opencode',
+      version: '1.17.18',
+      source: 'app-managed',
+      state: 'ready',
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          ...createDeferredMultimodelProvider('opencode', 'OpenCode'),
+          supported: true,
+          verificationState: 'verified',
+          statusMessage: null,
+          statusCheckOutcome: 'model_only',
+          modelCatalogRefreshState: 'ready',
+          models: ['opencode/minimax-m2.5-free'],
+        },
+      ],
+    });
+    const host = document.createElement('div');
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(CliStatusBanner)));
+      expect(host.textContent).not.toContain('No models from connected providers');
+      expect(host.textContent).not.toContain('Models unavailable for this runtime build');
+      expect(host.textContent).toContain('minimax-m2.5-free');
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
   it('shows available models without endless loading for a completed OpenCode passive summary', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
@@ -1975,6 +2007,65 @@ describe('CLI status visibility during completed install state', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('removes the OpenCode update action after the installed version reaches latest', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      binaryPath: '/app-data/runtimes/opencode/opencode',
+      version: '1.17.18',
+      latestVersion: '1.18.32',
+      updateAvailable: true,
+      source: 'app-managed',
+      state: 'ready',
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      providers: [
+        {
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          models: ['opencode/big-pickle'],
+          capabilities: { teamLaunch: true, oneShot: true },
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+        },
+      ],
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      act(() => root.render(React.createElement(CliStatusBanner)));
+      expect(host.textContent).toContain('v1.17.18 → v1.18.32');
+
+      storeState.openCodeRuntimeStatus = { ...storeState.openCodeRuntimeStatus, state: 'failed' };
+      act(() => root.render(React.createElement(CliStatusBanner)));
+      expect(host.textContent).toContain('Retry install');
+
+      storeState.openCodeRuntimeStatus = {
+        ...storeState.openCodeRuntimeStatus,
+        version: '1.18.32',
+        updateAvailable: false,
+        state: 'ready',
+      };
+      act(() => root.render(React.createElement(CliStatusBanner)));
+      expect(host.textContent).not.toContain('v1.17.18 → v1.18.32');
+      expect(
+        Array.from(host.querySelectorAll('button')).some((button) =>
+          button.textContent?.includes('Update')
+        )
+      ).toBe(false);
+    } finally {
+      act(() => root.unmount());
+    }
   });
 
   it('keeps loaded models visible while refreshing and replaces them with the refreshed list', async () => {

@@ -863,7 +863,10 @@ describe('createMemberWorkSyncFeature composition', () => {
       await waitForAssertion(() => {
         const diagnostics = feature.getQueueDiagnostics();
         expect(diagnostics.reconciled).toBe(0);
-        expect(diagnostics.failed).toBeGreaterThanOrEqual(1);
+        // Quiescence parks work instead of failing it, and the parked work is retried
+        // rather than dropped.
+        expect(diagnostics.quiesced).toBeGreaterThanOrEqual(1);
+        expect(diagnostics.failed).toBe(0);
         expect(diagnostics.dropped).toBe(0);
         expect(diagnostics.queued + diagnostics.running).toBeGreaterThan(0);
       });
@@ -2574,6 +2577,8 @@ describe('createMemberWorkSyncFeature composition', () => {
       const feature = createMemberWorkSyncFeature({
         lifecycleIdentity: createTestWorkSyncIdentity(),
         teamsBasePath,
+        // The explicit drain below owns event consumption.
+        startBackground: false,
         recoveryAllocation: { enabled: true },
         configReader: {
           getConfig: vi.fn(async () => ({

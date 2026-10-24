@@ -112,3 +112,59 @@ it('qualified native content is usable; old, malformed, missing and intervening 
     assert.equal(result.content.modifiedFullContent, 'authored\n', 'legacy journals retain behavior');
   } finally { await rm(root, { recursive: true, force: true }); }
 });
+
+it('preview-only mode displays current bytes without inventing a rejection baseline', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'TEST-ledger-preview-'));
+  try {
+    const filePath = join(root, 'created.txt');
+    await writeFile(filePath, 'current user bytes\n');
+    const snippets = [{
+      filePath, toolUseId: 'metadata-add', toolName: 'Edit' as const,
+      type: 'write-new' as const, oldString: '', newString: 'task-time bytes\n',
+      replaceAll: false, timestamp: '2026-03-01T10:00:00.000Z', isError: false,
+    }];
+    const content = await new FileContentResolver({ mode: 'preview-only' }).getFileContent(
+      'test-team', 'alice', filePath, snippets
+    );
+    assert.equal(content.isNewFile, true, 'display lifecycle is distinct from writable evidence');
+    assert.equal(content.originalFullContent, null);
+    assert.equal(content.modifiedFullContent, 'current user bytes\n');
+    assert.equal(content.contentSource, 'disk-current');
+    const { ReviewApplier } = await import('@agent-teams/task-change-ledger/review-apply');
+    const rejected = await new ReviewApplier().applyReviewDecisions({
+      teamName: 'test-team', memberName: 'alice',
+      decisions: [{ filePath, fileDecision: 'rejected', hunkDecisions: {} }],
+    }, new Map([[filePath, content]]));
+    assert.equal(rejected.applied, 0, 'preview cannot authorize deletion');
+    assert.equal(await readFile(filePath, 'utf8'), 'current user bytes\n');
+    const strict = await new FileContentResolver({ mode: 'ledger-only' }).getFileContent(
+      'test-team', 'alice', filePath, snippets
+    );
+    assert.equal(strict.contentSource, 'unavailable');
+    assert.equal(strict.modifiedFullContent, null, 'Host strict owner never acquires disk fallback');
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+it('preview creation display respects the earliest event and conflicting tied timestamps', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'TEST-ledger-preview-lifecycle-'));
+  try {
+    const filePath = join(root, 'recreated.txt');
+    await writeFile(filePath, 'replacement\n');
+    const remove = {
+      filePath, toolUseId: 'remove-original', toolName: 'Edit' as const,
+      type: 'edit' as const, oldString: 'original\n', newString: '',
+      replaceAll: false, timestamp: '2026-03-01T10:00:00.000Z', isError: false,
+    };
+    const add = {
+      ...remove, toolUseId: 'recreate', type: 'write-new' as const,
+      oldString: '', newString: 'replacement\n', timestamp: '2026-03-01T10:01:00.000Z',
+    };
+    const resolver = new FileContentResolver({ mode: 'preview-only' });
+    for (const snippets of [[remove, add], [{ ...add, timestamp: remove.timestamp }, remove]]) {
+      const content = await resolver.getFileContent('test-team', 'alice', filePath, snippets);
+      assert.equal(content.isNewFile, false);
+      assert.equal(content.originalFullContent, null);
+      assert.equal(content.modifiedFullContent, 'replacement\n');
+    }
+  } finally { await rm(root, { recursive: true, force: true }); }
+});

@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "Thêm phản ứng ({{count}})",
+      "remove": "Xóa phản ứng ({{count}})",
+      "count": "Phản ứng: {{count}}",
+      "failed": "Không thể cập nhật phản ứng"
+    },
     "actions": {
       "createTaskFromMessage": "Tạo tác vụ từ tin nhắn",
       "editMessage": "Chỉnh sửa tin nhắn",
@@ -194,7 +200,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Tên phải chứa ít nhất một chữ cái hoặc chữ số",
-      "nameTooLong": "Tên quá dài (tối đa 128 ký tự)",
+      "nameTooLong": "Tên quá dài (tối đa 64 ký tự)",
       "selectWorkingDirectory": "Chọn thư mục làm việc (cwd)",
       "memberNameRequired": "Tên thành viên không được để trống",
       "memberNameInvalid": "Tên thành viên phải bắt đầu bằng ký tự chữ và số, chỉ dùng [a-zA-Z0-9._-], tối đa 128 ký tự",
@@ -262,6 +268,8 @@
       "name": "Tên"
     },
     "memberRestartWarning": "Việc lưu sẽ khởi động lại thành viên này để áp dụng các thay đổi về vai trò, quy trình, cô lập worktree, nhà cung cấp, mô hình, mức độ nỗ lực hoặc quyền truy cập MCP.",
+    "displayedRuntimeHint": "Trên thẻ thành viên: {{runtime}}. Cài đặt đã lưu khác với thông tin này.",
+    "useDisplayedRuntime": "Dùng cài đặt từ thẻ",
     "notices": {
       "liveRenameBlocked": "Lưu trực tiếp bị chặn vì các thành viên hiện có đã bị đổi tên. Hãy hoàn nguyên những thay đổi danh tính đó hoặc dừng đội ngũ trước.",
       "newLiveTeammates": "Không thể thêm thành viên mới từ Chỉnh sửa đội ngũ khi đội ngũ đang hoạt động. Hãy dùng hộp thoại Thêm thành viên thay thế.",
@@ -351,6 +359,30 @@
     "placeholders": {
       "name": "ten-thanh-vien",
       "mcpServers": "github, sentry"
+    },
+    "gateway": {
+      "apiKeyLabel": "Gateway API key",
+      "apiKeyPlaceholder": "Paste the teammate gateway API key",
+      "authRejected": "Key authorization was rejected.",
+      "bindButton": "Bind teammate",
+      "bindingStatus": "Bound to {{profile}}",
+      "credentialChanged": "stored key changed — bind again with a new key",
+      "credentialMissing": "stored key missing — bind again with a new key",
+      "credentialReady": "key stored",
+      "emptyCatalog": "The model catalog is empty.",
+      "keyRequired": "Enter the gateway API key first.",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. Các liên kết được lưu trước khi mở biểu mẫu này được cập nhật ngay và giữ thay đổi khi bạn hủy biểu mẫu nhóm.",
+      "probeButton": "Check key and load models",
+      "probing": "Checking...",
+      "profileLabel": "Gateway profile",
+      "profilePlaceholder": "Select a gateway profile",
+      "profileRequired": "Select a gateway profile first.",
+      "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+      "title": "Gateway provider",
+      "unbindButton": "Unbind",
+      "unavailable": "The gateway is unavailable right now."
     }
   },
   "detail": {
@@ -730,6 +762,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Tạo cuộc trò chuyện nhóm",
+      "description": "Chọn ít nhất hai tác nhân. Bạn được tự động thêm vào.",
+      "name": "Tên cuộc trò chuyện",
+      "autoInclude": "Tự động thêm thành viên mới",
+      "minimum": "Chọn ít nhất hai tác nhân.",
+      "creating": "Đang tạo…",
+      "retryCreate": "Thử tạo lại",
+      "unavailable": "Cuộc trò chuyện không khả dụng",
+      "message": "Nhắn tin cho nhóm này",
+      "archivedHint": "Cuộc trò chuyện đã được lưu trữ. Khôi phục để gửi tin nhắn.",
+      "restartHint": "Tất cả người tham gia phải chạy môi trường thực thi tương thích để gửi tin nhắn.",
+      "unknownDelivery": "Đã lưu. Chưa rõ trạng thái gửi.",
+      "sending": "Đang gửi…",
+      "retrySend": "Gửi lại cùng tin nhắn",
+      "send": "Gửi",
+      "archived": "Cuộc trò chuyện đã lưu trữ",
+      "restore": "Khôi phục cuộc trò chuyện",
+      "archive": "Lưu trữ cuộc trò chuyện",
+      "delivery": {
+        "queued": "đang chờ",
+        "accepted": "đã chấp nhận",
+        "failed": "thất bại",
+        "unknown": "chưa rõ",
+        "skipped": "đã bỏ qua"
+      }
+    },
     "actions": {
       "toLatest": "Đến mới nhất",
       "bottomSheetActions": "Thao tác bảng tin nhắn dưới cùng",
@@ -969,7 +1028,8 @@
       "cancel": "Hủy",
       "delete": "Xóa",
       "markResolved": "Đánh dấu đã giải quyết",
-      "save": "Lưu"
+      "save": "Lưu",
+      "openInTaskTab": "Mở trong tab riêng"
     },
     "attachments": {
       "commentAttachment": "Tệp đính kèm bình luận",
@@ -2966,6 +3026,25 @@
         "weight_few": "agirlik {{count}}",
         "weight_many": "agirlik {{count}}"
       }
+    }
+  },
+  "externalPrompt": {
+    "requestHelp": "Name the templates to use and describe any edits in your request.",
+    "editAvailable": "Editing draft/stopped configuration is available.",
+    "trashAvailable": "Reversible trash for draft/stopped teams is available."
+  },
+  "managementChanges": {
+    "title": "Recent changes",
+    "created": "Created",
+    "edited": "Edited",
+    "hidden": "Some recent changes are hidden by the current filters.",
+    "roster": "Roles: +{{added}}/-{{removed}}",
+    "fields": {
+      "displayName": "Name changed",
+      "description": "Description changed",
+      "color": "Color changed",
+      "leadInstructions": "Lead instructions changed",
+      "members": "Members changed"
     }
   }
 }

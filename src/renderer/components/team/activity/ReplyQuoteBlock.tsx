@@ -1,7 +1,10 @@
 import { memo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
+import {
+  CompactMarkdownPreview,
+  MarkdownViewer,
+} from '@renderer/components/chat/viewers/MarkdownViewer';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { linkifyTaskIdsInMarkdown } from '@renderer/utils/taskReferenceUtils';
 
@@ -42,10 +45,17 @@ export const ReplyQuoteBlock = memo(
       return (
         <div className="min-w-0" data-reply-quote-presentation="wide-chat">
           <div
-            className="min-w-0 overflow-hidden border-l-2 border-blue-400/80 bg-blue-500/[0.08] px-2.5 py-1.5 leading-none"
+            className="relative min-w-0 overflow-hidden border-l-2 border-blue-400/80 bg-blue-500/[0.08] px-2.5 py-1.5 leading-none"
             data-wide-reply-quote="true"
           >
-            <div className="flex h-5 min-w-0 items-center" data-wide-reply-author="true">
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 select-none font-serif text-[52px] leading-none text-blue-400/20 dark:text-blue-300/20"
+              data-wide-reply-watermark="true"
+            >
+              &ldquo;
+            </span>
+            <div className="relative flex h-5 min-w-0 items-center" data-wide-reply-author="true">
               <MemberBadge
                 name={reply.agentName}
                 color={memberColor}
@@ -56,13 +66,12 @@ export const ReplyQuoteBlock = memo(
               />
             </div>
             <div
-              className="mt-0.5 h-4 min-w-0 overflow-hidden text-[11px] leading-4 text-[var(--color-text-secondary)] [&_div]:!m-0 [&_div]:!max-h-none [&_div]:!overflow-hidden [&_div]:!p-0 [&_p]:!m-0 [&_p]:truncate [&_p]:whitespace-nowrap [&_p]:text-[11px] [&_p]:leading-4"
+              className="relative mt-0.5 h-4 min-w-0 overflow-hidden text-[11px] leading-4 text-[var(--color-text-secondary)] [&_div]:!m-0 [&_div]:!max-h-none [&_div]:!overflow-hidden [&_div]:!p-0 [&_p]:!m-0 [&_p]:truncate [&_p]:whitespace-nowrap [&_p]:text-[11px] [&_p]:leading-4"
               data-wide-reply-preview="true"
             >
-              <MarkdownViewer
+              <CompactMarkdownPreview
                 content={linkifyTaskIdsInMarkdown(reply.originalText)}
-                bare
-                maxHeight="max-h-4"
+                taskOriginTeamName={teamName}
               />
             </div>
           </div>
@@ -72,6 +81,7 @@ export const ReplyQuoteBlock = memo(
               maxHeight={bodyMaxHeight}
               copyable
               bare
+              taskOriginTeamName={teamName}
             />
           </div>
         </div>
@@ -97,11 +107,19 @@ export const ReplyQuoteBlock = memo(
 
           {/* Quote text */}
           <div className={`pr-5 opacity-50 ${expanded ? '' : 'max-h-[3.75rem] overflow-hidden'}`}>
-            <MarkdownViewer
-              content={linkifyTaskIdsInMarkdown(reply.originalText)}
-              bare
-              maxHeight={quoteMaxHeight}
-            />
+            {expanded ? (
+              <MarkdownViewer
+                content={linkifyTaskIdsInMarkdown(reply.originalText)}
+                bare
+                maxHeight={quoteMaxHeight}
+                taskOriginTeamName={teamName}
+              />
+            ) : (
+              <CompactMarkdownPreview
+                content={linkifyTaskIdsInMarkdown(reply.originalText)}
+                taskOriginTeamName={teamName}
+              />
+            )}
           </div>
 
           {/* More/less toggle */}
@@ -122,6 +140,7 @@ export const ReplyQuoteBlock = memo(
           maxHeight={bodyMaxHeight}
           copyable
           bare
+          taskOriginTeamName={teamName}
         />
       </div>
     );

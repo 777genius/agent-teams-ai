@@ -1,13 +1,10 @@
 import {
   type AgentAttachmentCapability,
+  getMessageAttachmentRoute,
+  isStrictUtf8,
   resolveAgentAttachmentCapability,
 } from '@features/agent-attachments/renderer';
-import {
-  categorizeFile,
-  getEffectiveMimeType,
-  isImageMime,
-  isVideoMime,
-} from '@shared/constants/attachments';
+import { getEffectiveMimeType, isImageMime, isVideoMime } from '@shared/constants/attachments';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import {
   inferTeamProviderIdFromModel,
@@ -15,6 +12,24 @@ import {
 } from '@shared/utils/teamProvider';
 
 import type { AttachmentPayload, ResolvedTeamMember } from '@shared/types';
+
+export function attachmentTargetForMember(member: ResolvedTeamMember, projectPath: string | null) {
+  return {
+    model: member.model,
+    projectPath:
+      member.laneKind === 'secondary' && member.laneOwnerProviderId === 'opencode'
+        ? member.cwd?.trim() || projectPath
+        : projectPath || member.cwd?.trim() || null,
+  };
+}
+
+export interface MemberAttachmentDeclaration {
+  declaredInputModalities: readonly string[] | null;
+  unavailableReason?: string;
+}
+export type MemberAttachmentDeclarationLookup = (
+  member: ResolvedTeamMember
+) => MemberAttachmentDeclaration;
 
 export interface MemberAttachmentCapabilityResult {
   capability: AgentAttachmentCapability;
@@ -44,19 +59,24 @@ function isSupportedVideoMime(mimeType: string, supported: readonly string[]): b
   return supported.includes(mimeType);
 }
 
-function canReceiveAnyAttachment(capability: AgentAttachmentCapability): boolean {
-  return capability.supportsImages || capability.supportsFiles || capability.supportsVideo;
-}
-
 export function resolveMemberAttachmentCapability(
-  member: ResolvedTeamMember
+  member: ResolvedTeamMember,
+  declaration?: MemberAttachmentDeclaration
 ): MemberAttachmentCapabilityResult {
   const providerId = getMemberProviderId(member);
   const model = member.model ?? '';
   return {
     providerId,
     model,
-    capability: resolveAgentAttachmentCapability({ providerId, model }),
+    capability: resolveAgentAttachmentCapability({
+      providerId,
+      model,
+      declaredInputModalities: declaration?.declaredInputModalities,
+      nativeInboxTextAttachmentsSupported:
+        !isLeadMember(member) &&
+        member.nativeInboxAttachmentsSupported === true &&
+        member.nativeInboxTextAttachmentsSupported === true,
+    }),
   };
 }
 
@@ -66,117 +86,95 @@ export function getMemberAttachmentUnavailableReason(
   if (!member) {
     return 'Select a recipient before attaching files.';
   }
-  const { capability } = resolveMemberAttachmentCapability(member);
-  if (canReceiveAnyAttachment(capability)) {
-    return null;
-  }
-  return capability.displayText;
+  return ['anthropic', 'codex', 'opencode'].includes(getMemberProviderId(member))
+    ? null
+    : 'Attachments require a supported recipient provider.';
 }
 
 export function getAttachmentInputAcceptForMember(
-  member: ResolvedTeamMember | null | undefined
+  _member: ResolvedTeamMember | null | undefined
 ): string {
-  if (!member) {
-    return '*/*';
-  }
-  const { capability } = resolveMemberAttachmentCapability(member);
-  if (!capability.supportsFiles) {
-    return [
-      ...(capability.supportsImages ? capability.supportedImageMimeTypes : []),
-      ...(capability.supportsVideo ? capability.supportedVideoMimeTypes : []),
-    ].join(',');
-  }
   return '*/*';
 }
 
 export function validateAttachmentFilesForMember(input: {
   member: ResolvedTeamMember | null | undefined;
   files: FileList | File[];
+  resolveDeclaration?: MemberAttachmentDeclarationLookup;
 }): string | null {
-  const member = input.member;
-  if (!member) {
-    return 'Select a recipient before attaching files.';
-  }
-  const files = Array.from(input.files);
-  if (files.length === 0) {
-    return null;
-  }
-  const { capability } = resolveMemberAttachmentCapability(member);
-  if (!canReceiveAnyAttachment(capability)) {
-    return capability.displayText;
-  }
-
-  let videoCount = 0;
-  for (const file of files) {
-    const category = categorizeFile(file);
-    if (category === 'unsupported') {
-      continue;
-    }
-    if (category === 'image') {
-      if (!capability.supportsImages) {
-        return capability.displayText;
-      }
-      const mimeType = getEffectiveMimeType(file);
-      if (!isSupportedImageMime(mimeType, capability.supportedImageMimeTypes)) {
-        return 'This image type is not supported by the selected model.';
-      }
-      continue;
-    }
-    if (category === 'video') {
-      videoCount += 1;
-      if (!capability.supportsVideo) {
-        return capability.videoDisplayText;
-      }
-      const mimeType = getEffectiveMimeType(file);
-      if (!isSupportedVideoMime(mimeType, capability.supportedVideoMimeTypes)) {
-        return 'This video type is not supported by the selected model.';
-      }
-      if (file.size > capability.maxBytesPerVideo) {
-        return 'Video is too large for the selected model.';
-      }
-      continue;
-    }
-    if (!capability.supportsFiles) {
-      return capability.filesDisplayText;
-    }
-    const mimeType = getEffectiveMimeType(file);
-    if (!isSupportedFileMime(mimeType, capability.supportedFileMimeTypes)) {
-      return 'This file type is not supported by the selected model.';
-    }
-  }
-
-  if (videoCount > capability.maxVideos) {
-    return `Maximum ${capability.maxVideos} video attachment${
-      capability.maxVideos === 1 ? '' : 's'
-    } for this model.`;
-  }
-
-  return null;
+  const unavailable = getMemberAttachmentUnavailableReason(input.member);
+  if (unavailable) return unavailable;
+  // Text eligibility requires original bytes; defer it to the payload boundary.
+  return validateAttachmentPayloadsForMember({
+    member: input.member,
+    resolveDeclaration: input.resolveDeclaration,
+    attachments: Array.from(input.files)
+      .filter((file) => getEffectiveMimeType(file) !== 'text/plain')
+      .map((file) => ({
+        id: '',
+        filename: file.name,
+        mimeType: getEffectiveMimeType(file),
+        size: file.size,
+        data: '',
+      })),
+  });
 }
 
 export function validateAttachmentPayloadsForMember(input: {
   member: ResolvedTeamMember | null | undefined;
   attachments: readonly AttachmentPayload[];
+  resolveDeclaration?: MemberAttachmentDeclarationLookup;
 }): string | null {
   const member = input.member;
   if (!member || input.attachments.length === 0) {
     return null;
   }
-  const { capability } = resolveMemberAttachmentCapability(member);
-  if (!canReceiveAnyAttachment(capability)) {
-    return capability.displayText;
-  }
+  const unavailable = getMemberAttachmentUnavailableReason(member);
+  if (unavailable) return unavailable;
+  const declaration = input.resolveDeclaration?.(member);
+  const { capability } = resolveMemberAttachmentCapability(member, declaration);
 
   let imageCount = 0;
   let fileCount = 0;
   let videoCount = 0;
   let totalBytes = 0;
   for (const attachment of input.attachments) {
+    let validUtf8 = true;
+    if (attachment.mimeType === 'text/plain') {
+      try {
+        validUtf8 = isStrictUtf8(
+          Uint8Array.from(atob(attachment.data), (char) => char.charCodeAt(0))
+        );
+      } catch {
+        return 'Attachment data is invalid.';
+      }
+    }
+    if (
+      getMessageAttachmentRoute(
+        {
+          providerId: getMemberProviderId(member),
+          isLeadRecipient: isLeadMember(member),
+          ...(member.nativeInboxTextAttachmentsSupported !== undefined
+            ? { nativeInboxTextAttachmentsSupported: member.nativeInboxTextAttachmentsSupported }
+            : {}),
+        },
+        attachment.mimeType,
+        validUtf8
+      ) === 'reference'
+    )
+      continue;
+    if (
+      !isLeadMember(member) &&
+      ['anthropic', 'codex'].includes(getMemberProviderId(member)) &&
+      member.nativeInboxAttachmentsSupported !== true
+    ) {
+      return 'Native teammate attachments require a current attachment-capable runtime.';
+    }
     totalBytes += attachment.size;
     if (isImageMime(attachment.mimeType)) {
       imageCount += 1;
       if (!capability.supportsImages) {
-        return capability.displayText;
+        return declaration?.unavailableReason ?? capability.displayText;
       }
       if (!isSupportedImageMime(attachment.mimeType, capability.supportedImageMimeTypes)) {
         return 'This image type is not supported by the selected model.';
@@ -189,7 +187,7 @@ export function validateAttachmentPayloadsForMember(input: {
     if (isVideoMime(attachment.mimeType)) {
       videoCount += 1;
       if (!capability.supportsVideo) {
-        return capability.videoDisplayText;
+        return declaration?.unavailableReason ?? capability.videoDisplayText;
       }
       if (!isSupportedVideoMime(attachment.mimeType, capability.supportedVideoMimeTypes)) {
         return 'This video type is not supported by the selected model.';
@@ -236,6 +234,35 @@ export function canMemberShowAttachmentControl(
   if (!member) {
     return false;
   }
-  const providerId = getMemberProviderId(member);
-  return isLeadMember(member) || providerId === 'opencode';
+  return ['anthropic', 'codex', 'opencode'].includes(getMemberProviderId(member));
+}
+
+export function isReferenceAttachmentForMember(
+  member: ResolvedTeamMember | null | undefined,
+  attachment: AttachmentPayload
+): boolean {
+  if (!member || getMemberAttachmentUnavailableReason(member)) return false;
+  let validUtf8 = true;
+  if (attachment.mimeType === 'text/plain') {
+    try {
+      validUtf8 = isStrictUtf8(
+        Uint8Array.from(atob(attachment.data), (char) => char.charCodeAt(0))
+      );
+    } catch {
+      return false;
+    }
+  }
+  return (
+    getMessageAttachmentRoute(
+      {
+        providerId: getMemberProviderId(member),
+        isLeadRecipient: isLeadMember(member),
+        ...(member.nativeInboxTextAttachmentsSupported !== undefined
+          ? { nativeInboxTextAttachmentsSupported: member.nativeInboxTextAttachmentsSupported }
+          : {}),
+      },
+      attachment.mimeType,
+      validUtf8
+    ) === 'reference'
+  );
 }

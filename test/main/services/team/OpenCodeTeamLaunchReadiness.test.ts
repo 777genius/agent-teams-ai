@@ -41,6 +41,7 @@ describe('OpenCodeTeamLaunchReadinessService', () => {
   it('allows unauthenticated OpenCode when the selected model is a free route', async () => {
     const ports = createPorts({
       inventory: {
+        version: '1.18.0',
         authenticated: false,
         connectedProviders: [],
         models: ['opencode/big-pickle'],
@@ -64,6 +65,7 @@ describe('OpenCodeTeamLaunchReadinessService', () => {
   it('uses the first free OpenCode model for unauthenticated default selection', async () => {
     const ports = createPorts({
       inventory: {
+        version: '1.18.0',
         authenticated: false,
         connectedProviders: [],
         models: ['openai/gpt-5.4-mini', 'opencode/big-pickle'],
@@ -97,6 +99,76 @@ describe('OpenCodeTeamLaunchReadinessService', () => {
     });
     expect(ports.capabilities.detect).not.toHaveBeenCalled();
     expect(ports.mcpTools.prove).not.toHaveBeenCalled();
+  });
+
+  it.each(['opencode/big-pickle', 'opencode/mimo-v2.6-flash-free'])(
+    'blocks %s on an older app runtime before probing execution',
+    async (modelId) => {
+      const ports = createPorts({
+        inventory: {
+          version: '1.17.18',
+          binaryPath: '/app/runtimes/opencode/1.17.18/opencode',
+          models: [modelId],
+        },
+      });
+
+      await expect(
+        service(ports).check(
+          readinessInput({ selectedModel: modelId, requireExecutionProbe: true })
+        )
+      ).resolves.toMatchObject({
+        state: 'unsupported_version',
+        launchAllowed: false,
+        opencodeVersion: '1.17.18',
+        missing: [expect.stringContaining('OpenCode 1.18.0 or newer')],
+        diagnostics: [
+          expect.stringContaining('This app is using OpenCode 1.17.18'),
+          'OpenCode runtime binary: /app/runtimes/opencode/1.17.18/opencode',
+        ],
+      });
+      expect(ports.capabilities.detect).not.toHaveBeenCalled();
+      expect(ports.modelExecution.verify).not.toHaveBeenCalled();
+    }
+  );
+
+  it('keeps provider-backed routes available on the integration minimum', async () => {
+    const ports = createPorts({
+      inventory: {
+        version: '1.17.18',
+        models: ['github-copilot/example-free'],
+      },
+    });
+
+    await expect(
+      service(ports).check(readinessInput({ selectedModel: 'github-copilot/example-free' }))
+    ).resolves.toMatchObject({ state: 'ready', launchAllowed: true });
+  });
+
+  it('uses a newer minimum reported by the provider during execution proof', async () => {
+    const ports = createPorts({
+      inventory: {
+        version: '1.18.4',
+        models: ['opencode/big-pickle'],
+      },
+      modelProbe: {
+        outcome: 'unavailable',
+        reason: 'provider rejected the request',
+        diagnostics: [
+          'Latest assistant message msg_1 failed with APIError - Error from provider (Console): OpenCode 1.19.2 or newer is required to use the free tier',
+        ],
+      },
+    });
+
+    await expect(
+      service(ports).check(
+        readinessInput({ selectedModel: 'opencode/big-pickle', requireExecutionProbe: true })
+      )
+    ).resolves.toMatchObject({
+      state: 'unsupported_version',
+      launchAllowed: false,
+      missing: [expect.stringContaining('1.19.2 or newer')],
+      diagnostics: [expect.stringContaining('This app is using OpenCode 1.18.4')],
+    });
   });
 
   it('blocks unauthenticated OpenCode when the selected model needs a provider', async () => {

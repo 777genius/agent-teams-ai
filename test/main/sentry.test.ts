@@ -13,7 +13,7 @@ const electronMock = vi.hoisted(() => ({
 vi.mock('electron', () => electronMock);
 
 const requireFromTest = createRequire(import.meta.url);
-let restoreCommonJsStubs: Array<() => void> = [];
+let restoreCommonJsStubs: (() => void)[] = [];
 
 function stubCommonJsModule(specifier: string, exports: unknown): void {
   const filename = requireFromTest.resolve(specifier);
@@ -63,7 +63,8 @@ describe('main Sentry telemetry gate', () => {
   });
 
   afterEach(() => {
-    for (const restore of restoreCommonJsStubs.reverse()) {
+    restoreCommonJsStubs.reverse();
+    for (const restore of restoreCommonJsStubs) {
       restore();
     }
     if (previousDsn === undefined) {
@@ -225,7 +226,128 @@ describe('main Sentry telemetry gate', () => {
     sentry.syncTelemetryFlag(false);
 
     expect(sentry.captureMainException(new Error('ignored'), 'app-startup')).toBeUndefined();
+    expect(
+      sentry.captureRendererProcessGone({ reason: 'crashed', exitCode: 139 }, 1)
+    ).toBeUndefined();
+    expect(
+      sentry.captureRendererLoadFailure(new Error('ignored'), 'renderer_load_file', {
+        packaged: 1,
+        selected_candidate: 0,
+        primary_present_at_selection: 1,
+        fallback_present_at_selection: 0,
+        primary_present: 0,
+        fallback_present: 0,
+        error_code: -6,
+      })
+    ).toBeUndefined();
     expect(sentryApi.captureException).not.toHaveBeenCalled();
+  });
+
+  it('preserves path-free renderer load facts and grouping through the privacy filter', async () => {
+    const sentry = await import('@main/sentry');
+    const captureException = vi.fn(() => 'load-event');
+    sentry.setMainSentryApiForTesting({ captureException });
+    const error = new Error('ERR_FAILED (-2) loading C:\\Users\\alice\\private\\index.html');
+    const diagnostics = {
+      packaged: 1,
+      selected_candidate: 0,
+      primary_present_at_selection: 1,
+      fallback_present_at_selection: 0,
+      primary_present: 1,
+      fallback_present: 0,
+      error_code: -2,
+      message: error.message,
+      token: 'private-token',
+    };
+
+    expect(sentry.captureRendererLoadFailure(error, 'renderer_load_file', diagnostics)).toBe(
+      'load-event'
+    );
+    const [capturedError, context] = captureException.mock.calls[0] as unknown as [Error, unknown];
+    expect(capturedError).toBe(error);
+    expect(sentry.filterSentryEventForTelemetry(context)).toEqual({
+      tags: { 'error.operation': 'renderer_load_file' },
+      contexts: {
+        renderer_load: {
+          packaged: 1,
+          selected_candidate: 0,
+          primary_present_at_selection: 1,
+          fallback_present_at_selection: 0,
+          primary_present: 1,
+          fallback_present: 0,
+          error_code: -2,
+        },
+      },
+      fingerprint: ['{{ default }}', 'renderer_load_file', '-2'],
+    });
+    expect(JSON.stringify(context)).not.toContain('private');
+    expect(JSON.stringify(context)).not.toContain('alice');
+    expect(
+      sentry.filterSentryEventForTelemetry({ exception: { values: [{ value: error.message }] } })
+    ).toEqual({
+      exception: {
+        values: [{ value: 'ERR_FAILED (-2) loading C:\\Users\\[redacted]\\[redacted-path]' }],
+      },
+    });
+  });
+
+  it('drops invalid load diagnostics and keeps the default capture when no local entry exists', async () => {
+    const sentry = await import('@main/sentry');
+    const captureException = vi.fn(() => 'load-event');
+    sentry.setMainSentryApiForTesting({ captureException });
+    const error = new Error('Renderer main-frame load failed with code -6');
+    sentry.captureRendererLoadFailure(error, 'renderer_did_fail_load', {
+      packaged: 99,
+      selected_candidate: -1,
+      primary_present_at_selection: NaN,
+      fallback_present_at_selection: Infinity,
+      primary_present: 1,
+      fallback_present: 0,
+      error_code: -10_001,
+    });
+    expect(captureException).toHaveBeenLastCalledWith(error, {
+      tags: { 'error.operation': 'renderer_did_fail_load' },
+      contexts: { renderer_load: { primary_present: 1, fallback_present: 0 } },
+      fingerprint: ['{{ default }}', 'renderer_did_fail_load', 'unknown'],
+    });
+    sentry.captureRendererLoadFailure(error, 'renderer_did_fail_load');
+    expect(captureException).toHaveBeenLastCalledWith(error, {
+      tags: { 'error.operation': 'renderer_did_fail_load' },
+    });
+  });
+
+  it('preserves renderer crash diagnostics through the telemetry privacy filter', async () => {
+    const sentry = await import('@main/sentry');
+    const captureException = vi.fn(() => 'crash-event');
+    sentry.setMainSentryApiForTesting({ captureException });
+    expect(sentry.captureRendererProcessGone({ reason: 'crashed', exitCode: 139 }, 2)).toBe(
+      'crash-event'
+    );
+    const [error, context] = captureException.mock.calls[0] as unknown as [Error, unknown];
+    expect(error.message).toBe('Renderer process terminated: crashed');
+    expect(sentry.filterSentryEventForTelemetry(context)).toEqual({
+      tags: { 'error.operation': 'renderer_process_gone', 'renderer.reason': 'crashed' },
+      contexts: { renderer_crash: { exit_code: 139, recovery_attempts: 2 } },
+    });
+  });
+
+  it('drops arbitrary crash metadata and invalid diagnostics', async () => {
+    const sentry = await import('@main/sentry');
+    const captureException = vi.fn(() => 'crash-event');
+    sentry.setMainSentryApiForTesting({ captureException });
+    const details = {
+      reason: '/Users/alice/private-repo secret',
+      exitCode: NaN,
+      token: 'private-token',
+    };
+    sentry.captureRendererProcessGone(details, 999);
+    const [error, context] = captureException.mock.calls[0] as unknown as [Error, unknown];
+    expect(error.message).toBe('Renderer process terminated: unknown');
+    expect(context).toEqual({
+      tags: { 'error.operation': 'renderer_process_gone', 'renderer.reason': 'unknown' },
+      contexts: { renderer_crash: {} },
+    });
+    expect(JSON.stringify(context)).not.toContain('private');
   });
 
   it('cleans classic IPC listeners before closing and reinitializing Sentry', async () => {

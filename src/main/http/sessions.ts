@@ -141,6 +141,7 @@ export function registerSessionRoutes(app: FastifyInstance, services: HttpServic
     Params: { projectId: string; sessionId: string };
     Querystring: { bypassCache?: string };
   }>('/api/projects/:projectId/sessions/:sessionId', async (request) => {
+    let fill: ReturnType<DataCache['beginSessionFill']> | undefined;
     try {
       const validatedProject = validateProjectId(request.params.projectId);
       const validatedSession = validateSessionId(request.params.sessionId);
@@ -161,6 +162,8 @@ export function registerSessionRoutes(app: FastifyInstance, services: HttpServic
       if (sessionDetail && !bypassCache) {
         return sessionDetail;
       }
+
+      fill = services.dataCache.beginSessionFill(safeProjectId, safeSessionId);
 
       const fsType = services.projectScanner.getFileSystemProvider().type;
       // In SSH mode, avoid an extra deep metadata scan before full parse.
@@ -196,7 +199,8 @@ export function registerSessionRoutes(app: FastifyInstance, services: HttpServic
       );
 
       // Cache the result
-      services.dataCache.set(cacheKey, sessionDetail);
+      if (!fill.isSourceCurrent()) return null;
+      fill.commit(sessionDetail);
 
       return sessionDetail;
     } catch (error) {
@@ -205,6 +209,8 @@ export function registerSessionRoutes(app: FastifyInstance, services: HttpServic
         error
       );
       return null;
+    } finally {
+      fill?.release();
     }
   });
 
@@ -304,26 +310,32 @@ export function registerSessionRoutes(app: FastifyInstance, services: HttpServic
         let detail = services.dataCache.get(cacheKey);
 
         if (!detail) {
-          const session = await services.projectScanner.getSession(safeProjectId, safeSessionId);
-          if (!session) return null;
+          const fill = services.dataCache.beginSessionFill(safeProjectId, safeSessionId);
+          try {
+            const session = await services.projectScanner.getSession(safeProjectId, safeSessionId);
+            if (!session) return null;
 
-          const parsedSession = await services.sessionParser.parseSession(
-            safeProjectId,
-            safeSessionId
-          );
-          const subagents = await services.subagentResolver.resolveSubagents(
-            safeProjectId,
-            safeSessionId,
-            parsedSession.taskCalls,
-            parsedSession.messages
-          );
+            const parsedSession = await services.sessionParser.parseSession(
+              safeProjectId,
+              safeSessionId
+            );
+            const subagents = await services.subagentResolver.resolveSubagents(
+              safeProjectId,
+              safeSessionId,
+              parsedSession.taskCalls,
+              parsedSession.messages
+            );
 
-          detail = services.chunkBuilder.buildSessionDetail(
-            session,
-            parsedSession.messages,
-            subagents
-          );
-          services.dataCache.set(cacheKey, detail);
+            detail = services.chunkBuilder.buildSessionDetail(
+              session,
+              parsedSession.messages,
+              subagents
+            );
+            if (!fill.isSourceCurrent()) return null;
+            fill.commit(detail);
+          } finally {
+            fill.release();
+          }
         }
 
         return services.chunkBuilder.buildWaterfallData(detail.chunks, detail.processes);

@@ -1393,11 +1393,12 @@ describe('ClaudeMultimodelBridgeService', () => {
       statusCheckOutcome: 'transient_error',
       statusCheckErrorCode: 'timeout',
       statusMessage: 'OpenCode is still loading',
-      detailMessage:
-        'OpenCode is taking longer than expected to load provider status. Your saved connections were not changed. Retry in a moment.',
+      detailMessage: expect.stringContaining(
+        'OpenCode is taking longer than expected to load provider status. Your saved connections were not changed. Retry in a moment.'
+      ),
     });
-    expect(provider.detailMessage).not.toContain('/mock/runtime');
-    expect(provider.detailMessage).not.toContain('30000ms');
+    expect(provider.detailMessage).toContain('Executable: /mock/runtime');
+    expect(provider.detailMessage).toContain('30000ms');
     expect(execCliMock.mock.calls[0][2]?.timeout).toBe(30_000);
     vi.mocked(console.warn).mockClear();
   });
@@ -3654,7 +3655,7 @@ describe('ClaudeMultimodelBridgeService', () => {
 
       if (
         normalizedArgs.startsWith(
-          'runtime transcript --json --provider opencode --team team-a --member alice --projection-only --limit 20 --session-id session-exact --output '
+          'runtime transcript --json --provider opencode --team team-a --member alice --projection-only --limit 20 --lane primary --session-id session-exact --run-id run-original --output '
         )
       ) {
         const outputIndex = Array.isArray(args) ? args.indexOf('--output') : -1;
@@ -3697,12 +3698,21 @@ describe('ClaudeMultimodelBridgeService', () => {
       memberName: 'alice',
       limit: 20,
       sessionId: ' session-exact ',
+      laneId: 'primary',
+      runId: ' run-original ',
     });
 
     expect(transcript?.sessionId).toBe('session-exact');
     expect(execCliMock).toHaveBeenCalledWith(
       '/mock/agent_teams_orchestrator',
-      expect.arrayContaining(['--session-id', 'session-exact']),
+      expect.arrayContaining([
+        '--lane',
+        'primary',
+        '--session-id',
+        'session-exact',
+        '--run-id',
+        'run-original',
+      ]),
       expect.any(Object)
     );
   });

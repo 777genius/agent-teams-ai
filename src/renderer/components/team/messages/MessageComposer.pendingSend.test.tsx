@@ -206,6 +206,9 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => {
       value: string;
       placeholder?: string;
       disabled?: boolean;
+      readOnly?: boolean;
+      onModEnter?: () => void;
+      onValueChange?: (value: string) => void;
       className?: string;
       surfaceClassName?: string;
       footerClassName?: string;
@@ -222,6 +225,9 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => {
         value,
         placeholder,
         disabled,
+        readOnly = true,
+        onModEnter,
+        onValueChange,
         className,
         surfaceClassName,
         footerClassName,
@@ -246,7 +252,12 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => {
             disabled,
             onBlur,
             onFocus,
-            readOnly: true,
+            readOnly,
+            onInput: (event: React.FormEvent<HTMLTextAreaElement>) =>
+              onValueChange?.(event.currentTarget.value),
+            onKeyDown: (event: React.KeyboardEvent) => {
+              if (event.key === 'Enter') onModEnter?.();
+            },
             ref,
             value,
             placeholder,
@@ -470,7 +481,7 @@ vi.mock('@renderer/store/slices/teamSlice', () => ({
   getCurrentProvisioningProgressForTeam: () => provisioningHarness.state.progress,
 }));
 
-import { MessageComposer } from './MessageComposer';
+import { type MemberMessageComposerProps, MessageComposer } from './MessageComposer';
 import { acquireRevisionOperation, releaseRevisionOperation } from './revisionOperationLease';
 
 const members: ResolvedTeamMember[] = [
@@ -496,9 +507,9 @@ const members: ResolvedTeamMember[] = [
   },
 ];
 
-function renderComposer(overrides: Partial<React.ComponentProps<typeof MessageComposer>> = {}): {
+function renderComposer(overrides: Partial<MemberMessageComposerProps> = {}): {
   host: HTMLDivElement;
-  render: (next?: Partial<React.ComponentProps<typeof MessageComposer>>) => void;
+  render: (next?: Partial<MemberMessageComposerProps>) => void;
   root: ReturnType<typeof createRoot>;
   onSend: ReturnType<typeof vi.fn>;
 } {
@@ -510,7 +521,7 @@ function renderComposer(overrides: Partial<React.ComponentProps<typeof MessageCo
     deliveredViaStdin: false,
     messageId: 'message-1',
   });
-  const baseProps: React.ComponentProps<typeof MessageComposer> = {
+  const baseProps: MemberMessageComposerProps = {
     teamName: 'team-alpha',
     members,
     isTeamAlive: true,
@@ -522,7 +533,7 @@ function renderComposer(overrides: Partial<React.ComponentProps<typeof MessageCo
     onSend,
   };
 
-  const render = (next: Partial<React.ComponentProps<typeof MessageComposer>> = {}): void => {
+  const render = (next: Partial<MemberMessageComposerProps> = {}): void => {
     act(() => {
       root.render(React.createElement(MessageComposer, { ...baseProps, ...overrides, ...next }));
     });
@@ -585,6 +596,71 @@ describe('MessageComposer pending send lifecycle', () => {
     document.body.innerHTML = '';
     vi.clearAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it('uses the shared controlled editor without member hooks and fences keyboard submission', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const send = vi.fn();
+    const textInput = {
+      label: 'Release discussion',
+      ariaLabel: 'Message',
+      value: 'Group reply',
+      readOnly: false,
+      disabled: false,
+      canSend: true,
+      sendLabel: 'Send',
+      onChange: vi.fn(),
+      onSend: send,
+    };
+    const render = (canSend: boolean, readOnly: boolean): void =>
+      act(() => {
+        root.render(
+          <MessageComposer teamName="team-alpha" textInput={{ ...textInput, canSend, readOnly }} />
+        );
+      });
+    try {
+      render(true, false);
+      expect(suggestionHarness.state.taskOptions).toEqual([]);
+      expect(suggestionHarness.state.teamOptions).toEqual([]);
+      expect(host.querySelector('.message-composer-recipient-selector')).toBeNull();
+      expect(host.textContent).not.toContain('Do');
+      expect(getTextarea(host).readOnly).toBe(false);
+      act(() => getSendButton(host).click());
+      expect(send).toHaveBeenCalledTimes(1);
+      render(false, true);
+      act(() => getTextarea(host).dispatchEvent(new Event('input', { bubbles: true })));
+      expect(textInput.onChange).not.toHaveBeenCalled();
+      expect(getTextarea(host).readOnly).toBe(true);
+      expect(getSendButton(host).disabled).toBe(true);
+      act(() =>
+        getTextarea(host).dispatchEvent(
+          new KeyboardEvent('keydown', {
+            key: 'Enter',
+            bubbles: true,
+          })
+        )
+      );
+      expect(send).toHaveBeenCalledTimes(1);
+      act(() =>
+        root.render(
+          <MessageComposer
+            teamName="team-alpha"
+            members={members}
+            sending={false}
+            sendError={null}
+            onSend={vi.fn()}
+          />
+        )
+      );
+      expect(suggestionHarness.state.taskOptions.length).toBeGreaterThan(0);
+      render(true, false);
+      expect(getTextarea(host).value).toBe('Group reply');
+      expect(host.querySelector('.message-composer-recipient-selector')).toBeNull();
+    } finally {
+      act(() => root.unmount());
+    }
   });
 
   it('renders the footer below the flat composer card', () => {

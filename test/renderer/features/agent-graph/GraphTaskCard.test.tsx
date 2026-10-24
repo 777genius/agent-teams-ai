@@ -13,6 +13,7 @@ const graphActivityMock = vi.hoisted(() => ({
 
 vi.mock('@features/agent-graph/renderer/hooks/useGraphActivityContext', () => ({
   useGraphActivityContext: () => ({
+    contextId: 'local',
     teamData: graphActivityMock.teamData,
   }),
 }));

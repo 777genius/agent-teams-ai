@@ -29,6 +29,9 @@ export interface OpenCodeRuntimeAdapterRunEntry {
   cwd?: string;
   allowExperimentalLocalModels?: boolean;
   members?: TeamRuntimeLaunchResult['members'];
+  launchInput?: TeamRuntimeLaunchInput;
+  launchStopGeneration?: number;
+  launchStopAllGeneration?: number;
 }
 
 export interface OpenCodeRuntimeAdapterLaunchInputParams {
@@ -147,6 +150,9 @@ export interface OpenCodeRuntimeAdapterLaunchPorts extends OpenCodeRuntimeAdapte
       cwd: string;
       allowExperimentalLocalModels?: boolean;
       members: TeamRuntimeLaunchResult['members'];
+      launchInput: TeamRuntimeLaunchInput;
+      launchStopGeneration: number;
+      launchStopAllGeneration: number;
     }
   ): void;
   setAliveRunId(teamName: string, runId: string): void;
@@ -690,6 +696,9 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
           ? { allowExperimentalLocalModels: true }
           : {}),
         members: result.members,
+        launchInput,
+        launchStopGeneration: stopGeneration,
+        launchStopAllGeneration: stopAllGeneration,
       });
       ports.setAliveRunId(teamName, runId);
       ports.invalidateRuntimeSnapshotCaches(teamName);

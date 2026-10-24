@@ -413,6 +413,14 @@ export async function stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(input
     });
     if (!cleared) {
       rollbackPendingStopIfExact();
+    } else if (
+      previousProgress?.state === 'cancelled' &&
+      ports.runtimeAdapterProgressByRunId?.get(runId) === pendingStopProgress
+    ) {
+      ports.setRuntimeAdapterProgress({
+        ...previousProgress,
+        updatedAt: ports.nowIso(),
+      });
     }
     return cleared;
   } catch (error) {

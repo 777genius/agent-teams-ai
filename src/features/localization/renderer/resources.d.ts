@@ -774,6 +774,7 @@ export default interface Resources {
       "markUnread": "Mark as unread",
       "pin": "Pin",
       "rename": "Rename",
+      "restoreTask": "Restore task",
       "unarchive": "Unarchive",
       "unpin": "Unpin"
     },
@@ -794,6 +795,8 @@ export default interface Resources {
       "searchProjects": "Search projects...",
       "searchTeams": "Search teams...",
       "selectAll": "Select all",
+      "showArchived": "Show archived tasks",
+      "showDeleted": "Show deleted tasks",
       "status": "Status",
       "statusOptions": {
         "approved": "APPROVED",
@@ -804,6 +807,40 @@ export default interface Resources {
         "todo": "TODO"
       },
       "team": "Team"
+    },
+    "taskFolders": {
+      "actions": "Folder or task actions",
+      "archived": "Archived task",
+      "cannotMoveHere": "You can't move tasks here",
+      "collapse": "Collapse folder",
+      "counts": "{{active}} active, {{archived}} archived, {{unavailable}} unavailable",
+      "deleteDescription": "Tasks and subfolders move to the parent. Tasks in a root folder become unfiled. No tasks are deleted.",
+      "deleteFolder": "Delete folder",
+      "destination": "Destination folder",
+      "dockToSidebar": "Folders as the sidebar",
+      "dragFolder": "Drag folder",
+      "dragTask": "Drag task to a folder",
+      "expand": "Expand folder",
+      "folderName": "Folder name",
+      "invalidName": "Use a name with 1–120 characters.",
+      "loading": "Loading folders…",
+      "move": "Move to…",
+      "moveHere": "Put it here",
+      "newFolder": "New folder",
+      "newSubfolder": "New subfolder",
+      "organizationDescription": "Organize tasks without changing their team, project or status.",
+      "readOnly": "Folder storage is unavailable or invalid. Organization is read only.",
+      "renameFolder": "Rename folder",
+      "reset": "Reset folder organization",
+      "resetDescription": "Remove all folder organization. Tasks, pins, archives and task names are preserved.",
+      "retry": "Retry",
+      "root": "Root",
+      "saveError": "Could not save folder organization. Your last saved structure is preserved.",
+      "showArchived": "Show archived tasks",
+      "title": "Task folders",
+      "unfiled": "Unfiled",
+      "unreadTasks_one": "{{count}} unread task",
+      "unreadTasks_other": "{{count}} unread tasks"
     },
     "tasks": {
       "date": {
@@ -841,6 +878,11 @@ export default interface Resources {
       },
       "hideArchived": "Hide archived",
       "pinned": "Pinned",
+      "restoreFailed": {
+        "confirmLabel": "OK",
+        "fallbackMessage": "An unexpected error occurred",
+        "title": "Failed to restore task"
+      },
       "searchPlaceholder": "Search tasks...",
       "showArchived": "Show archived",
       "showLess": "Show less",
@@ -849,7 +891,8 @@ export default interface Resources {
         "byProject": "By project",
         "byTeam": "By team",
         "byTime": "By time",
-        "byUnread": "By unread"
+        "byUnread": "By unread",
+        "manualOrder": "Manual order"
       },
       "teamLabel": "Team: {{team}}",
       "title": "Tasks"
@@ -930,11 +973,25 @@ export default interface Resources {
       "replaceAll": "(replace all)"
     },
     "updateDialog": {
+      "checking": "Checking for updates",
       "closeDialog": "Close dialog",
       "download": "Download",
+      "errorDetails": "Technical details",
+      "errorTitle": "Update could not be completed",
+      "keepData": "Keep your app data and project folders. You do not need to uninstall the app or delete any data.",
       "later": "Later",
+      "manualDownload": "Download from website",
+      "manualMac": "Download the latest macOS installer from our website. Quit Agent Teams, open the downloaded DMG, and drag Agent Teams into Applications. Replace the existing app, then open it again.",
+      "manualOther": "Download the latest installer for your operating system from our website. Quit Agent Teams, install the update, then open the app again.",
       "noReleaseNotes": "No release notes available.",
+      "openLinkFailed": "Could not open your browser. Open this address manually:",
+      "recovery": {
+        "generic": "The automatic update failed. You can install the latest version manually from our official website.",
+        "network": "The update failed because of a connection or temporary server problem. Check your connection and try again, or install the latest version manually.",
+        "signature": "The automatic update could not verify the app signature. Install the latest version manually from our official website."
+      },
       "restartNow": "Restart now",
+      "retry": "Try again",
       "updateAvailable": "Update available",
       "updateReady": "Update Ready",
       "viewOnGitHub": "View on GitHub"
@@ -945,6 +1002,7 @@ export default interface Resources {
       "restartNow": "Restart now",
       "restartToUpdate": "Restart to update",
       "updateApp": "Update app",
+      "updateFailed": "Update failed",
       "updateReady": "Update ready",
       "updatingApp": "Updating app"
     },
@@ -1248,10 +1306,48 @@ export default interface Resources {
       },
       "budgets": {
         "allTeams": "All teams",
+        "card": {
+          "basis": "Canonical token total includes cache. All collected billing modes count.",
+          "degraded": "Usage data has errors. Alerts are paused.",
+          "incomplete": "Known subtotal only. Some API-equivalent costs are unavailable.",
+          "masterOff": "Budget alerts are disabled in notification settings.",
+          "next": "Next threshold: {{threshold}}%",
+          "over": "Over budget: {{value}}",
+          "paused": "Notifications paused for this budget.",
+          "remaining": "Remaining: {{value}}",
+          "stale": "Collected usage is stale. Alerts are paused until a successful refresh.",
+          "unavailable": "Budget status unavailable. Load current settings to retry.",
+          "updated": "Usage updated: {{time}}"
+        },
         "configureFor": "Budget for {{scope}}",
         "costLimit": "API-equivalent $ limit",
         "costLimitDetail": "{{cost}} of {{limit}}",
         "critical": "Over budget",
+        "editor": {
+          "addThreshold": "Add threshold",
+          "cancel": "Cancel",
+          "compareDraft": "Current settings loaded. Compare your draft before saving.",
+          "delete": "Delete budget",
+          "deletePending": "Budget will be deleted when you Save. Editing restores it.",
+          "description": "USD is an API-equivalent estimate, not a provider invoice.",
+          "invalidDraft": "Check the limits and thresholds in your edited scopes.",
+          "invalidLimit": "Enter a finite positive number.",
+          "invalidThresholds": "Use up to 10 unique whole percentages from 1 to 100.",
+          "legacyCombinedExplanation": "This migrated budget combines anonymous runs and the team named unassigned. It can be edited or deleted. Once deleted, it cannot be created again.",
+          "newThreshold": "New threshold",
+          "noThresholds": "No threshold notifications configured.",
+          "notifications": "Budget notifications",
+          "reconciliationRequired": "Another client changed a scope you edited. Cancel and reopen the editor to reconcile your changes before saving.",
+          "reload": "Load current settings",
+          "removeThreshold": "Remove threshold {{index}}",
+          "requiredLimit": "Set at least one limit. Use Delete to remove a budget.",
+          "save": "Save",
+          "saving": "Saving...",
+          "scope": "Budget scope",
+          "threshold": "Threshold {{index}}",
+          "thresholds": "Notification thresholds",
+          "title": "Configure budget"
+        },
         "loadFailed": "Failed to load budget settings",
         "noBudgets": "No budgets configured",
         "notificationSettings": "Notification settings",
@@ -1308,6 +1404,11 @@ export default interface Resources {
         "filterTeams": "Filter teams",
         "selectedTeams": "{{count}} teams"
       },
+      "gateway": {
+        "dailyGranularity": "Gateway usage is aggregated by UTC day.",
+        "lastSuccessfulImport": "Last complete gateway import:",
+        "noConfirmedImport": "A complete gateway import is not yet confirmed; totals may be partial."
+      },
       "labels": {
         "cost": "Cost",
         "days": "{{count}} days",
@@ -1325,7 +1426,7 @@ export default interface Resources {
         "tokens": "tokens",
         "tokensCost": "{{tokens}} tokens / {{cost}}",
         "total": "Total",
-        "unassigned": "Unassigned",
+        "unassigned": "Anonymous runs",
         "unknownAgent": "Unknown agent"
       },
       "metrics": {
@@ -2464,6 +2565,42 @@ export default interface Resources {
       },
       "title": "Remote Connection"
     },
+    "gatewayProviders": {
+      "actions": {
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "save": "Save"
+      },
+      "addProfile": "Add profile",
+      "badges": {
+        "privateNetwork": "Private network allowed"
+      },
+      "boundTeammates": "Bound teammates: {{total}}",
+      "description": "Gateway endpoints for per-teammate gateway models. API keys are entered on the teammate row and are never kept in app settings.",
+      "dialog": {
+        "createTitle": "Add gateway profile",
+        "description": "Profiles point at a gateway root URL. The connection and key are checked when a teammate API key is probed on the member row.",
+        "editTitle": "Edit gateway profile"
+      },
+      "empty": "No gateway profiles yet.",
+      "errors": {
+        "boundUrl": "This profile still has teammates bound to it. Unbind them first, or create another profile for the new URL.",
+        "fieldsRequired": "Display name and gateway URL are required."
+      },
+      "fields": {
+        "allowPrivateNetwork": "Allow private network address",
+        "allowPrivateNetworkHint": "This gateway runs on another machine on your network. Traffic is sent over your local network, unencrypted when using HTTP.",
+        "baseUrl": "Gateway URL",
+        "baseUrlHint": "Gateway root without a trailing /v1.",
+        "displayName": "Display name"
+      },
+      "hints": {
+        "deleteKeepsHistory": "Deleting a profile does not hide historical usage sources from reports and budgets.",
+        "probeIsTest": "There is no separate connection test: the connection is checked when a teammate API key is probed on the member row."
+      },
+      "title": "Gateway providers"
+    },
     "general": {
       "agentLanguage": {
         "description": "Language for agent communication",
@@ -2510,6 +2647,27 @@ export default interface Resources {
           "label": "Enable server mode"
         },
         "title": "Browser Access"
+      },
+      "externalAgentConnection": {
+        "cdpDescription": "Grants local processes full renderer access, including the preload API. The browser endpoint can see other app targets. Enabling and disabling require an app restart.",
+        "cdpLabel": "Allow full renderer access (CDP)",
+        "description": "Local agents can create saved drafts through the app's MCP server. Connection readiness does not mean an external client is connected. Cloud agents need a local executor.",
+        "localOnly": "External connections are available in the local desktop app context only.",
+        "restartRequired": "Restart the app to apply the saved setting.",
+        "retry": "Retry connection",
+        "retrying": "Retrying...",
+        "status": "MCP: {{mcp}}; control: {{control}}; renderer CDP: {{cdp}}",
+        "statuses": {
+          "disabled": "disabled",
+          "error": "error",
+          "loading": "loading",
+          "ready": "ready",
+          "restart-required": "restart required",
+          "starting": "starting",
+          "stopped": "stopped"
+        },
+        "stillOpen": "Renderer access is still open until restart.",
+        "title": "External agent connection"
       },
       "localClaudeRoot": {
         "actions": {
@@ -2768,9 +2926,9 @@ export default interface Resources {
         "selectDuration": "Select duration..."
       },
       "taskCompletion": {
-        "description": "Get native OS notifications when Claude finishes tasks - sounds, banners, and Dock/taskbar badges. Works on macOS, Linux, and Windows.",
-        "installPlugin": "Install claude-notifications-go plugin",
-        "title": "Task Completion Notifications"
+        "description": "🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Gemini. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.",
+        "installPlugin": "Agent Notifications",
+        "title": "Agent Notifications"
       },
       "team": {
         "allTasksCompleted": {
@@ -2850,6 +3008,7 @@ export default interface Resources {
           "description": "Create a notification when a configured usage budget reaches 100%.",
           "label": "Notify at 100%"
         },
+        "editorLink": "Configure thresholds in Usage / Budget",
         "enabled": {
           "description": "Create notifications when Usage budgets cross configured thresholds.",
           "label": "Enable budget notifications"
@@ -3353,6 +3512,10 @@ export default interface Resources {
         "description": "Power-user options: export/import config, reset defaults, and raw configuration editing.",
         "label": "Advanced"
       },
+      "gatewayProviders": {
+        "description": "Manage gateway endpoints for per-teammate model access.",
+        "label": "Gateway providers"
+      },
       "general": {
         "description": "Core app preferences like theme, language, display density, and startup behavior.",
         "label": "General"
@@ -3454,6 +3617,13 @@ export default interface Resources {
         "restarting": "Restarting teammate",
         "starting": "Starting teammate"
       },
+      "chatVisualization": {
+        "description": "Full visualization view",
+        "exceedsLimits": "Visualization exceeds display limits",
+        "incomplete": "Visualization incomplete",
+        "open": "Open visualization",
+        "unavailable": "Visualization unavailable"
+      },
       "expandDialog": {
         "description": "Expanded message view"
       },
@@ -3491,6 +3661,12 @@ export default interface Resources {
         "user": "user"
       },
       "rawJson": "Raw JSON",
+      "reactions": {
+        "add": "Add reaction ({{count}})",
+        "count": "Reactions: {{count}}",
+        "failed": "Could not update reactions",
+        "remove": "Remove reaction ({{count}})"
+      },
       "reply": {
         "action": "Reply",
         "replyingTo": "Replying to"
@@ -3809,7 +3985,7 @@ export default interface Resources {
         "memberNameRequired": "Member name cannot be empty",
         "memberNamesUnique": "Member names must be unique",
         "nameMustContainLetterOrDigit": "Name must contain at least one letter or digit",
-        "nameTooLong": "Name is too long (max 128 chars)",
+        "nameTooLong": "Name is too long (max 64 chars)",
         "openCodeLeadModelRequired": "OpenCode lead requires a selected model.",
         "openCodeTeammateRequired": "OpenCode lead requires at least one OpenCode teammate.",
         "selectWorkingDirectory": "Select working directory (cwd)",
@@ -3925,6 +4101,7 @@ export default interface Resources {
       },
       "addMemberLockReason": "Use the dedicated Add member dialog to add new teammates while the team is live.",
       "description": "Change team name, description and color",
+      "displayedRuntimeHint": "Member card: {{runtime}}. This differs from saved settings.",
       "errors": {
         "changesSavedRefreshFailed": "Team changes were saved, but failed to refresh the latest view: {{message}}",
         "liveRenameBlocked": "Existing teammates cannot be renamed while the team is live. renamed: {{names}}",
@@ -3971,7 +4148,8 @@ export default interface Resources {
         "readOnlyHint": "Team lead name and role stay read-only here. Open the runtime panel on the lead row to change provider, model, or effort.",
         "role": "Team Lead"
       },
-      "title": "Edit Team"
+      "title": "Edit Team",
+      "useDisplayedRuntime": "Use settings from card"
     },
     "editor": {
       "actions": {
@@ -4002,6 +4180,13 @@ export default interface Resources {
         "unsavedDescription": "You have unsaved changes. What would you like to do?",
         "unsavedFileDescription": "This file has unsaved changes. What would you like to do?",
         "unsavedTitle": "Unsaved Changes"
+      },
+      "documentPreview": {
+        "limit": "Preview is available for documents up to {{size}} MiB.",
+        "loading": "Loading document preview...",
+        "readOnly": "Read-only document preview",
+        "title": "Document preview",
+        "unavailable": "Preview unavailable. The document may be encrypted, damaged, or unsupported."
       },
       "draftRecovered": "Recovered unsaved changes from a previous session.",
       "empty": {
@@ -4035,6 +4220,8 @@ export default interface Resources {
         "openFullSize": "Open full-size preview",
         "openSystemViewer": "Open in System Viewer"
       },
+      "largeFileMode": "Large file mode: full text is editable. Syntax parsing, folding, wrapping and Markdown preview are disabled; drafts stay in memory.",
+      "largeFilePreview": "Preview: only the first 256 KiB are shown. The full file can be opened in an external application.",
       "newFile": {
         "aria": {
           "newFileName": "New file name",
@@ -4118,6 +4305,7 @@ export default interface Resources {
         },
         "title": "Keyboard Shortcuts"
       },
+      "showInFolder": "Show in folder",
       "sidebar": {
         "explorer": "Explorer",
         "hide": "Hide sidebar",
@@ -4148,6 +4336,54 @@ export default interface Resources {
       "label": "Effort level (optional)",
       "maxDescription": "Max gives the model the most reasoning time for difficult tasks."
     },
+    "externalPrompt": {
+      "connectionRequired": "Wait for the MCP app connection or retry it before copying.",
+      "connectionSettings": "Connection settings",
+      "connectionStatus": "MCP: {{mcp}}; UI access: {{cdp}}",
+      "contextChanged": "The app or data root changed. Refresh the connection before copying.",
+      "coordinator": "Coordinator",
+      "copied": "Copied",
+      "copiedDescription": "Prompt copied. This does not mean the external agent has connected or completed your request.",
+      "copy": "Copy prompt for agent",
+      "copyFailed": "Clipboard write failed. Select and copy the final prompt manually.",
+      "copying": "Copying...",
+      "createOnly": "Currently supports creating one or more saved drafts only. Editing, trash and launch are unavailable in this flow.",
+      "description": "Write a request for your external agent. Templates below are read-only references.",
+      "editAvailable": "Editing draft/stopped configuration is available.",
+      "loading": "Reading the local app connection...",
+      "localOnly": "External prompts require the local desktop app context.",
+      "preview": "View final prompt",
+      "previewLabel": "Final prompt",
+      "previewPlaceholder": "Enter a request to see the final prompt. A ready MCP connection is required.",
+      "requestHelp": "Name the templates to use and describe any edits in your request.",
+      "responsibilities": "Responsibilities",
+      "responsibilitiesFor": "Responsibilities for {{name}}",
+      "retry": "Retry connection",
+      "runCancel": "Cancel run",
+      "runClaude": "Run in Claude Code",
+      "runClaudeMissing": "Claude Code is unavailable. Install or reconnect it in provider settings.",
+      "runClaudeNotReady": "Claude Code needs authenticated native one-shot readiness.",
+      "runCodex": "Run in Codex",
+      "runCodexMissing": "Codex is unavailable. Install or reconnect it in provider settings.",
+      "runCodexNotReady": "Codex needs authenticated one-shot readiness and an available account.",
+      "runCompletedHelp": "The agent process finished successfully. Check its output for the result of each requested change.",
+      "runRequestFailed": "Cannot update the run. Refresh the connection and provider status, then retry.",
+      "runStatuses": {
+        "cancelled": "Cancelled",
+        "completed": "Process completed",
+        "failed": "Run failed",
+        "preparing": "Preparing",
+        "running": "Running"
+      },
+      "runTask": "Running request: {{task}}",
+      "taskLabel": "What should the agent do?",
+      "taskPlaceholder": "Create a marketing team for my project. Start from Marketing Team and add a designer.",
+      "taskRequired": "Enter a request to copy a prompt. Currently supports creating saved drafts only.",
+      "taskTooLong": "Native runs support requests up to {{limit}} characters. Shorten the request to run it.",
+      "templatesTitle": "Available team templates (reference)",
+      "title": "Manage teams with a prompt",
+      "trashAvailable": "Reversible trash for draft/stopped teams is available."
+    },
     "kanban": {
       "board": {
         "addTask": "Add task",
@@ -4166,9 +4402,11 @@ export default interface Resources {
         "todo": "TODO"
       },
       "filter": {
+        "allGroups": "All groups",
         "allSessions": "All sessions",
         "clearAll": "Clear all",
         "column": "Column",
+        "group": "Group chat",
         "session": "Session",
         "teammate": "Teammate",
         "title": "Filter tasks",
@@ -4475,6 +4713,20 @@ export default interface Resources {
       "title": "Live runtime status",
       "updated": "updated {{value}}"
     },
+    "managementChanges": {
+      "created": "Created",
+      "edited": "Edited",
+      "fields": {
+        "color": "Color changed",
+        "description": "Description changed",
+        "displayName": "Name changed",
+        "leadInstructions": "Lead instructions changed",
+        "members": "Members changed"
+      },
+      "hidden": "Some recent changes are hidden by the current filters.",
+      "roster": "Roles: +{{added}}/-{{removed}}",
+      "title": "Recent changes"
+    },
     "memberDraft": {
       "actions": {
         "remove": "Remove member",
@@ -4490,6 +4742,30 @@ export default interface Resources {
         "defaultSetting": "default context setting",
         "description": "Anthropic context is team-wide for this launch: {{mode}}. Use Limit context to 200K tokens to avoid long-context behavior.",
         "limitEnabled": "200K limit enabled"
+      },
+      "gateway": {
+        "apiKeyLabel": "Gateway API key",
+        "apiKeyPlaceholder": "Paste the teammate gateway API key",
+        "authRejected": "Key authorization was rejected.",
+        "bindButton": "Bind teammate",
+        "bindingStatus": "Bound to {{profile}}",
+        "credentialChanged": "stored key changed — bind again with a new key",
+        "credentialMissing": "stored key missing — bind again with a new key",
+        "credentialReady": "key stored",
+        "emptyCatalog": "The model catalog is empty.",
+        "keyRequired": "Enter the gateway API key first.",
+        "modelLabel": "Model",
+        "modelPlaceholder": "Select a model",
+        "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route.",
+        "probeButton": "Check key and load models",
+        "probing": "Checking...",
+        "profileLabel": "Gateway profile",
+        "profilePlaceholder": "Select a gateway profile",
+        "profileRequired": "Select a gateway profile first.",
+        "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+        "title": "Gateway provider",
+        "unavailable": "The gateway is unavailable right now.",
+        "unbindButton": "Unbind"
       },
       "mcp": {
         "agentTeamsMcp": "Agent Teams MCP",
@@ -4766,6 +5042,8 @@ export default interface Resources {
         "teamLaunchingPlaceholder": "Team is launching... message will be queued for inbox delivery."
       },
       "recipient": {
+        "all": "All",
+        "broadcastTextOnly": "Plain text to all agents. Attachments and action modes are available for a single recipient.",
         "noResults": "No results",
         "searchPlaceholder": "Search...",
         "select": "Select..."
@@ -4892,6 +5170,65 @@ export default interface Resources {
       "fullScreen": {
         "label": "Full Screen",
         "teamOnly": "Full Screen is available on the team screen"
+      },
+      "groups": {
+        "archive": "Archive chat",
+        "archived": "Archived chats",
+        "archivedHint": "This chat is archived. Restore it to send messages.",
+        "autoInclude": "Automatically add new members",
+        "create": "Create group chat",
+        "creating": "Creating…",
+        "delivery": {
+          "accepted": "accepted",
+          "failed": "failed",
+          "queued": "queued",
+          "skipped": "skipped",
+          "unknown": "unknown"
+        },
+        "description": "Choose at least two agents. You are included automatically.",
+        "mentions": "{{count}} mentions of you",
+        "message": "Message this group",
+        "minimum": "Select at least two agents.",
+        "name": "Chat name",
+        "recipient": "To {{name}}",
+        "recipientRestartHint": "{{name}} must be running a compatible runtime before sending.",
+        "restartHint": "All participants must be running a compatible runtime before sending.",
+        "restore": "Restore chat",
+        "retryCreate": "Retry creation",
+        "retrySend": "Retry the same message",
+        "send": "Send",
+        "sending": "Sending…",
+        "showTasksOnBoard": "Show tasks on board",
+        "unavailable": "Chat unavailable",
+        "unknownDelivery": "Saved. Delivery status is unknown."
+      },
+      "manualQueue": {
+        "all": "All",
+        "allHint": "All current group members when you send",
+        "ask": "Ask",
+        "cancel": "Cancel",
+        "checkHistory": "Check in history",
+        "conflict": "Queue or draft changed. Your text was kept; try again.",
+        "copy": "Copy text",
+        "delete": "Delete",
+        "do": "Do",
+        "edit": "Edit",
+        "editorLabel": "Edit queued message",
+        "invalidText": "Enter text of up to {{maximum}} characters.",
+        "notFound": "No matching message in loaded history. Delivery remains unknown.",
+        "operationFailed": "Could not update the queue.",
+        "persistenceRequired": "The draft must be saved durably before adding it to the queue.",
+        "queueDisabled": "Add to queue (Cmd/Ctrl+Enter)",
+        "recipientUnavailable": "This recipient is no longer available.",
+        "removeRecord": "Remove record; delivery is not cancelled",
+        "richUnsupported": "Only plain text in Do or Ask mode can be queued. Remove attachments, file chips, commands or review actions first.",
+        "rootUnavailable": "The message destination is still loading.",
+        "save": "Save",
+        "schemaError": "Saved queue uses unsupported data; left untouched.",
+        "send": "Send",
+        "sending": "Sending",
+        "title": "Queued messages",
+        "unknownWarning": "Delivery is unknown. Removing this record will not cancel the message; sending the text again may create a duplicate."
       },
       "outbox": {
         "actions": {
@@ -6126,6 +6463,7 @@ export default interface Resources {
         "cancel": "Cancel",
         "delete": "Delete",
         "markResolved": "Mark resolved",
+        "openInTaskTab": "Open in a separate tab",
         "save": "Save"
       },
       "attachments": {
@@ -6228,7 +6566,16 @@ export default interface Resources {
       "logs": {
         "newArriving": "New task logs arriving"
       },
+      "navigation": {
+        "editorRefused": "The file could not be opened in the team editor. The request is saved.",
+        "reviewRefused": "Changes could not be opened. The request is saved."
+      },
       "notFound": "Task not found",
+      "page": {
+        "deleted": "Task deleted",
+        "provisioning": "Task is temporarily unavailable while the team is provisioning",
+        "unavailable": "Task unavailable"
+      },
       "related": {
         "blockedBy": "Blocked by",
         "blocks": "Blocks",
@@ -6333,6 +6680,14 @@ export default interface Resources {
         "message": "Move task #{{taskId}} to trash?",
         "title": "Delete task"
       },
+      "groupChat": {
+        "archived": " (archived)",
+        "catalogError": "Group chats could not be loaded. You can still remove the current link.",
+        "label": "Group chat",
+        "loading": "Group ({{id}})",
+        "none": "None",
+        "unavailable": "Unavailable group ({{id}})"
+      },
       "list": {
         "columns": {
           "blockedBy": "Blocked By",
@@ -6406,6 +6761,33 @@ export default interface Resources {
       "warningMissingClaudeMd": "No .claude/CLAUDE.md or CLAUDE.md was found; the lead prompt will be empty.",
       "warningUnknownTaskOwner": "Task {{description}} referenced unknown member {{owner}} and was imported without an owner.",
       "warningUnsafeTaskCall": "Could not safely rewrite Task call: {{call}}"
+    },
+    "templates": {
+      "descriptions": {
+        "content": "Create clear articles, newsletters, educational content and scripts.",
+        "customer-support": "Resolve customer questions and turn recurring issues into useful help content.",
+        "learning": "Learn a topic or skill through clear explanations, practice and feedback.",
+        "marketing": "Develop campaigns and messaging for a product or small business.",
+        "operations": "Organize projects and everyday work with practical plans and process improvements.",
+        "research": "Investigate markets, topics and practical decisions using evidence.",
+        "sales": "Understand customer needs and prepare offers, outreach and follow-ups.",
+        "software-product": "Design, build and validate apps, websites and digital products."
+      },
+      "label": "Team template",
+      "modelAfterProvider": "Model selection is available after choosing a provider.",
+      "names": {
+        "content": "Content Studio",
+        "customer-support": "Customer Support Team",
+        "learning": "Learning Team",
+        "marketing": "Marketing Team",
+        "operations": "Operations Team",
+        "research": "Research Team",
+        "sales": "Sales Team",
+        "software-product": "Software Product Team"
+      },
+      "placeholder": "Start from a team template",
+      "providerLabel": "Choose team provider",
+      "providerPlaceholder": "Choose a provider"
     },
     "terminalWorkspace": {
       "backgroundModeImage": "Image",

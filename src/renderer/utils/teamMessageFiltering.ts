@@ -1,3 +1,4 @@
+import { omitVisualizationSourceForSearch } from '@features/chat-visualizations/contracts';
 import {
   getSanitizedInboxMessageSummary,
   getSanitizedInboxMessageText,
@@ -239,8 +240,12 @@ export function filterTeamMessages(
     }
 
     if (q) {
-      const text = getSanitizedInboxMessageText(message).toLowerCase();
-      const summary = getSanitizedInboxMessageSummary(message).toLowerCase();
+      const text = omitVisualizationSourceForSearch(
+        getSanitizedInboxMessageText(message)
+      ).toLowerCase();
+      const summary = omitVisualizationSourceForSearch(
+        getSanitizedInboxMessageSummary(message)
+      ).toLowerCase();
       const from = (message.from ?? '').toLowerCase();
       const to = (message.to ?? '').toLowerCase();
       if (!text.includes(q) && !summary.includes(q) && !from.includes(q) && !to.includes(q)) {

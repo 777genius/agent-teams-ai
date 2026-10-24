@@ -111,6 +111,7 @@ export const FullScreenControl = ({
 };
 
 interface WideThreadHeaderProps {
+  actions?: React.ReactNode;
   title: string;
   participant?: string;
   unreadCount: number;
@@ -125,6 +126,7 @@ interface WideThreadHeaderProps {
 }
 
 export const WideThreadHeader = ({
+  actions,
   title,
   participant,
   unreadCount,
@@ -141,6 +143,7 @@ export const WideThreadHeader = ({
     <div className="flex min-w-0 items-center gap-2">
       <ConversationHeader
         title={title}
+        actions={actions}
         participant={participant}
         unreadCount={unreadCount}
         attentionCount={attentionCount}

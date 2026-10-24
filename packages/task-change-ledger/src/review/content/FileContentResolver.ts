@@ -113,6 +113,17 @@ export class FileContentResolver {
       return { original: cached.original, modified: cached.modified, source: cached.source };
     }
 
+    if (this.mode === 'preview-only') {
+      // Today's bytes cannot prove task-time path identity or a baseline, even
+      // for a metadata-only add through a symlink or a parent-segment alias.
+      const result =
+        currentContent === null
+          ? { original: null, modified: null, source: 'unavailable' as const }
+          : { original: null, modified: currentContent, source: 'disk-current' as const };
+      this.cacheResult(cacheKey, validationFingerprint, result);
+      return result;
+    }
+
     // Fast path only for creation backed by explicit lifecycle evidence. Older legacy
     // summaries may label the first observed Write as write-new even when it overwrote
     // an existing file, so that label alone must never synthesize an empty baseline.
@@ -549,10 +560,6 @@ export class FileContentResolver {
 
   // ── Private: Lifecycle evidence ──
 
-  private hasProvenCreationEvidence(snippets: SnippetDiff[]): boolean {
-    return snippets.some((snippet) => !snippet.isError && this.isProvenCreationSnippet(snippet));
-  }
-
   /**
    * Whether the reviewed path is absent before the first ledger event and present
    * after the last one. Looking for any intermediate create is insufficient:
@@ -570,7 +577,20 @@ export class FileContentResolver {
         return first.beforeState.exists === false && last.afterState.exists === true;
       }
     }
-    return this.hasProvenCreationEvidence(snippets);
+    const successful = snippets.filter((snippet) => !snippet.isError);
+    const timestamps = successful.map((snippet) => Date.parse(snippet.timestamp));
+    if (timestamps.length === 0 || timestamps.some((timestamp) => !Number.isFinite(timestamp))) {
+      return false;
+    }
+    const earliest = timestamps.reduce(
+      (minimum, timestamp) => Math.min(minimum, timestamp),
+      Infinity
+    );
+    // Identical timestamps across transcripts cannot establish which event came
+    // first. A pre-existing path may have been deleted before a later add.
+    return successful.every(
+      (snippet, index) => timestamps[index] !== earliest || this.isProvenCreationSnippet(snippet)
+    );
   }
 
   private isProvenCreationSnippet(snippet: SnippetDiff): boolean {
@@ -696,6 +716,8 @@ export class FileContentResolver {
       hash.update(this.normalizeResolverPath(snippet.filePath));
       hash.update('\u0000');
       hash.update(snippet.toolUseId);
+      hash.update('\u0000');
+      hash.update(snippet.toolName);
       hash.update('\u0000');
       hash.update(snippet.type);
       hash.update('\u0000');

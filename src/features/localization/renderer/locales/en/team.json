@@ -1,5 +1,18 @@
 {
   "activity": {
+    "chatVisualization": {
+      "description": "Full visualization view",
+      "exceedsLimits": "Visualization exceeds display limits",
+      "incomplete": "Visualization incomplete",
+      "open": "Open visualization",
+      "unavailable": "Visualization unavailable"
+    },
+    "reactions": {
+      "add": "Add reaction ({{count}})",
+      "remove": "Remove reaction ({{count}})",
+      "count": "Reactions: {{count}}",
+      "failed": "Could not update reactions"
+    },
     "actions": {
       "createTaskFromMessage": "Create task from message",
       "editMessage": "Edit message",
@@ -194,7 +207,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "Name must contain at least one letter or digit",
-      "nameTooLong": "Name is too long (max 128 chars)",
+      "nameTooLong": "Name is too long (max 64 chars)",
       "selectWorkingDirectory": "Select working directory (cwd)",
       "memberNameRequired": "Member name cannot be empty",
       "memberNameInvalid": "Member name must start with alphanumeric, use only [a-zA-Z0-9._-], max 128 chars",
@@ -263,6 +276,8 @@
     },
     "leadRestartWarning": "Saving will restart the lead to apply model or effort changes. Teammate processes will keep running.",
     "memberRestartWarning": "Saving will restart this teammate to apply role, workflow, worktree isolation, provider, model, effort, or MCP access changes.",
+    "displayedRuntimeHint": "Member card: {{runtime}}. This differs from saved settings.",
+    "useDisplayedRuntime": "Use settings from card",
     "notices": {
       "liveRenameBlocked": "Live save is blocked because existing teammates were renamed. Revert those identity changes or stop the team first.",
       "newLiveTeammates": "New teammates cannot be added from Edit Team while the team is live. Use the Add member dialog instead.",
@@ -352,6 +367,30 @@
     "placeholders": {
       "name": "member-name",
       "mcpServers": "github, sentry"
+    },
+    "gateway": {
+      "apiKeyLabel": "Gateway API key",
+      "apiKeyPlaceholder": "Paste the teammate gateway API key",
+      "authRejected": "Key authorization was rejected.",
+      "bindButton": "Bind teammate",
+      "bindingStatus": "Bound to {{profile}}",
+      "credentialChanged": "stored key changed — bind again with a new key",
+      "credentialMissing": "stored key missing — bind again with a new key",
+      "credentialReady": "key stored",
+      "emptyCatalog": "The model catalog is empty.",
+      "keyRequired": "Enter the gateway API key first.",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. Bindings saved before opening this form update immediately and keep those changes if you cancel the team form.",
+      "probeButton": "Check key and load models",
+      "probing": "Checking...",
+      "profileLabel": "Gateway profile",
+      "profilePlaceholder": "Select a gateway profile",
+      "profileRequired": "Select a gateway profile first.",
+      "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+      "title": "Gateway provider",
+      "unbindButton": "Unbind",
+      "unavailable": "The gateway is unavailable right now."
     }
   },
   "detail": {
@@ -733,6 +772,37 @@
     }
   },
   "messages": {
+    "groups": {
+      "mentions": "{{count}} mentions of you",
+      "create": "Create group chat",
+      "description": "Choose at least two agents. You are included automatically.",
+      "name": "Chat name",
+      "autoInclude": "Automatically add new members",
+      "minimum": "Select at least two agents.",
+      "creating": "Creating…",
+      "retryCreate": "Retry creation",
+      "unavailable": "Chat unavailable",
+      "message": "Message this group",
+      "archivedHint": "This chat is archived. Restore it to send messages.",
+      "restartHint": "All participants must be running a compatible runtime before sending.",
+      "unknownDelivery": "Saved. Delivery status is unknown.",
+      "sending": "Sending…",
+      "retrySend": "Retry the same message",
+      "send": "Send",
+      "archived": "Archived chats",
+      "restore": "Restore chat",
+      "archive": "Archive chat",
+      "delivery": {
+        "queued": "queued",
+        "accepted": "accepted",
+        "failed": "failed",
+        "unknown": "unknown",
+        "skipped": "skipped"
+      },
+      "recipient": "To {{name}}",
+      "recipientRestartHint": "{{name}} must be running a compatible runtime before sending.",
+      "showTasksOnBoard": "Show tasks on board"
+    },
     "actions": {
       "toLatest": "To latest",
       "bottomSheetActions": "Message bottom sheet actions",
@@ -870,6 +940,34 @@
         "active": "This message is still being sent.",
         "deleteBlocked": "The local copy could not be removed safely."
       }
+    },
+    "manualQueue": {
+      "title": "Queued messages",
+      "send": "Send",
+      "edit": "Edit",
+      "delete": "Delete",
+      "save": "Save",
+      "cancel": "Cancel",
+      "editorLabel": "Edit queued message",
+      "all": "All",
+      "allHint": "All current group members when you send",
+      "do": "Do",
+      "ask": "Ask",
+      "sending": "Sending",
+      "unknownWarning": "Delivery is unknown. Removing this record will not cancel the message; sending the text again may create a duplicate.",
+      "removeRecord": "Remove record; delivery is not cancelled",
+      "copy": "Copy text",
+      "checkHistory": "Check in history",
+      "invalidText": "Enter text of up to {{maximum}} characters.",
+      "operationFailed": "Could not update the queue.",
+      "queueDisabled": "Add to queue (Cmd/Ctrl+Enter)",
+      "richUnsupported": "Only plain text in Do or Ask mode can be queued. Remove attachments, file chips, commands or review actions first.",
+      "persistenceRequired": "The draft must be saved durably before adding it to the queue.",
+      "rootUnavailable": "The message destination is still loading.",
+      "recipientUnavailable": "This recipient is no longer available.",
+      "schemaError": "Saved queue uses unsupported data; left untouched.",
+      "conflict": "Queue or draft changed. Your text was kept; try again.",
+      "notFound": "No matching message in loaded history. Delivery remains unknown."
     }
   },
   "modelSelector": {
@@ -1051,11 +1149,16 @@
     "explicitChoice": "Explicit choice - {{model}}"
   },
   "taskDetail": {
+    "navigation": {
+      "reviewRefused": "Changes could not be opened. The request is saved.",
+      "editorRefused": "The file could not be opened in the team editor. The request is saved."
+    },
     "actions": {
       "cancel": "Cancel",
       "delete": "Delete",
       "markResolved": "Mark resolved",
-      "save": "Save"
+      "save": "Save",
+      "openInTaskTab": "Open in a separate tab"
     },
     "attachments": {
       "commentAttachment": "Comment attachment",
@@ -1130,6 +1233,11 @@
       "newArriving": "New task logs arriving"
     },
     "notFound": "Task not found",
+    "page": {
+      "deleted": "Task deleted",
+      "provisioning": "Task is temporarily unavailable while the team is provisioning",
+      "unavailable": "Task unavailable"
+    },
     "related": {
       "blockedBy": "Blocked by",
       "blocks": "Blocks",
@@ -1287,9 +1395,27 @@
       "message": "Move task #{{taskId}} to trash?",
       "confirmLabel": "Delete",
       "cancelLabel": "Cancel"
+    },
+    "groupChat": {
+      "label": "Group chat",
+      "none": "None",
+      "archived": " (archived)",
+      "unavailable": "Unavailable group ({{id}})",
+      "loading": "Group ({{id}})",
+      "catalogError": "Group chats could not be loaded. You can still remove the current link."
     }
   },
   "editor": {
+    "documentPreview": {
+      "limit": "Preview is available for documents up to {{size}} MiB.",
+      "readOnly": "Read-only document preview",
+      "loading": "Loading document preview...",
+      "unavailable": "Preview unavailable. The document may be encrypted, damaged, or unsupported.",
+      "title": "Document preview"
+    },
+    "largeFilePreview": "Preview: only the first 256 KiB are shown. The full file can be opened in an external application.",
+    "showInFolder": "Show in folder",
+    "largeFileMode": "Large file mode: full text is editable. Syntax parsing, folding, wrapping and Markdown preview are disabled; drafts stay in memory.",
     "actions": {
       "cancel": "Cancel",
       "closeEditor": "Close editor",
@@ -1766,7 +1892,9 @@
     "recipient": {
       "select": "Select...",
       "searchPlaceholder": "Search...",
-      "noResults": "No results"
+      "noResults": "No results",
+      "all": "All",
+      "broadcastTextOnly": "Plain text to all agents. Attachments and action modes are available for a single recipient."
     },
     "actions": {
       "voiceToText": "Voice to text",
@@ -2479,7 +2607,9 @@
       "teammate": "Teammate",
       "unassigned": "(unassigned)",
       "column": "Column",
-      "clearAll": "Clear all"
+      "clearAll": "Clear all",
+      "group": "Group chat",
+      "allGroups": "All groups"
     },
     "board": {
       "addTask": "Add task",
@@ -3144,6 +3274,95 @@
         "weight_few": "weight {{count}}",
         "weight_many": "weight {{count}}"
       }
+    }
+  },
+  "templates": {
+    "label": "Team template",
+    "placeholder": "Start from a team template",
+    "names": {
+      "software-product": "Software Product Team",
+      "marketing": "Marketing Team",
+      "content": "Content Studio",
+      "research": "Research Team",
+      "sales": "Sales Team",
+      "customer-support": "Customer Support Team",
+      "operations": "Operations Team",
+      "learning": "Learning Team"
+    },
+    "providerLabel": "Choose team provider",
+    "providerPlaceholder": "Choose a provider",
+    "modelAfterProvider": "Model selection is available after choosing a provider.",
+    "descriptions": {
+      "software-product": "Design, build and validate apps, websites and digital products.",
+      "marketing": "Develop campaigns and messaging for a product or small business.",
+      "content": "Create clear articles, newsletters, educational content and scripts.",
+      "research": "Investigate markets, topics and practical decisions using evidence.",
+      "sales": "Understand customer needs and prepare offers, outreach and follow-ups.",
+      "customer-support": "Resolve customer questions and turn recurring issues into useful help content.",
+      "operations": "Organize projects and everyday work with practical plans and process improvements.",
+      "learning": "Learn a topic or skill through clear explanations, practice and feedback."
+    }
+  },
+  "externalPrompt": {
+    "runCodex": "Run in Codex",
+    "runClaude": "Run in Claude Code",
+    "runCancel": "Cancel run",
+    "runCodexNotReady": "Codex needs authenticated one-shot readiness and an available account.",
+    "runClaudeNotReady": "Claude Code needs authenticated native one-shot readiness.",
+    "runCodexMissing": "Codex is unavailable. Install or reconnect it in provider settings.",
+    "runClaudeMissing": "Claude Code is unavailable. Install or reconnect it in provider settings.",
+    "runTask": "Running request: {{task}}",
+    "runCompletedHelp": "The agent process finished successfully. Check its output for the result of each requested change.",
+    "runRequestFailed": "Cannot update the run. Refresh the connection and provider status, then retry.",
+    "runStatuses": {
+      "preparing": "Preparing",
+      "running": "Running",
+      "completed": "Process completed",
+      "failed": "Run failed",
+      "cancelled": "Cancelled"
+    },
+    "title": "Manage teams with a prompt",
+    "description": "Write a request for your external agent. Templates below are read-only references.",
+    "taskLabel": "What should the agent do?",
+    "taskTooLong": "Native runs support requests up to {{limit}} characters. Shorten the request to run it.",
+    "taskPlaceholder": "Create a marketing team for my project. Start from Marketing Team and add a designer.",
+    "createOnly": "Currently supports creating one or more saved drafts only. Editing, trash and launch are unavailable in this flow.",
+    "taskRequired": "Enter a request to copy a prompt. Currently supports creating saved drafts only.",
+    "templatesTitle": "Available team templates (reference)",
+    "coordinator": "Coordinator",
+    "responsibilities": "Responsibilities",
+    "connectionStatus": "MCP: {{mcp}}; UI access: {{cdp}}",
+    "connectionSettings": "Connection settings",
+    "connectionRequired": "Wait for the MCP app connection or retry it before copying.",
+    "contextChanged": "The app or data root changed. Refresh the connection before copying.",
+    "loading": "Reading the local app connection...",
+    "localOnly": "External prompts require the local desktop app context.",
+    "retry": "Retry connection",
+    "preview": "View final prompt",
+    "previewLabel": "Final prompt",
+    "copy": "Copy prompt for agent",
+    "copying": "Copying...",
+    "copied": "Copied",
+    "copiedDescription": "Prompt copied. This does not mean the external agent has connected or completed your request.",
+    "copyFailed": "Clipboard write failed. Select and copy the final prompt manually.",
+    "responsibilitiesFor": "Responsibilities for {{name}}",
+    "requestHelp": "Name the templates to use and describe any edits in your request.",
+    "editAvailable": "Editing draft/stopped configuration is available.",
+    "trashAvailable": "Reversible trash for draft/stopped teams is available.",
+    "previewPlaceholder": "Enter a request to see the final prompt. A ready MCP connection is required."
+  },
+  "managementChanges": {
+    "title": "Recent changes",
+    "created": "Created",
+    "edited": "Edited",
+    "hidden": "Some recent changes are hidden by the current filters.",
+    "roster": "Roles: +{{added}}/-{{removed}}",
+    "fields": {
+      "displayName": "Name changed",
+      "description": "Description changed",
+      "color": "Color changed",
+      "leadInstructions": "Lead instructions changed",
+      "members": "Members changed"
     }
   }
 }

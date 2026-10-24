@@ -21,7 +21,6 @@ import type {
   LedgerSummaryFileV2,
   LedgerSummaryScopeV2,
 } from './ledgerTypes.js';
-import { normalizePathForComparison } from './platformPath.js';
 import { diffLines } from 'diff';
 
 export function mapV2SummaryFile(
@@ -173,7 +172,7 @@ export function buildFallbackFilesFromGroupedSnippets(
           : isCreatedLifecycle),
       changeKey: relation
         ? relationChangeKey(relation, worktreeLedger?.worktreePath)
-        : `path:${normalizePathForComparison(displayPath)}`,
+        : `path:${displayPath.replace(/\\/g, '/')}`,
       diffStatKnown: true,
       ledgerSummary: {
         ...(relation ? { relation } : {}),

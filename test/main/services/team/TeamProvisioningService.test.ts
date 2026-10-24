@@ -15,6 +15,9 @@
   "sonarjs/publicly-writable-directories": "off",
   "sonarjs/use-type-alias": "warn"
 */
+import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments/contracts';
+import { createDesktopExternalAgentConnection } from '@features/external-agent-connection/main/composition/createDesktopExternalAgentConnection';
+import type { NativeRendererCdp } from '@features/external-agent-connection/main/NativeRendererCdp';
 import {
   buildWorkspaceTrustPathCandidates,
   type WorkspaceTrustWorkspace,
@@ -1345,6 +1348,139 @@ describe('TeamProvisioningService', () => {
     hoisted.paths.tasksBase = '';
     hoisted.paths.projectsBase = '';
   });
+
+  // Missing pending or mixed ownership would let a root switch kill a launch's HTTP MCP child.
+  it.each([
+    ['pending OpenCode', 'opencode', 'pending', false, false, true],
+    ['active OpenCode', 'opencode', 'active', false, false, true],
+    ['pending mixed roster', 'anthropic', 'pending', true, false, true],
+    ['active mixed queued lane', 'anthropic', 'active', false, true, true],
+    ['active mixed finished lane', 'anthropic', 'secondary', false, false, true],
+    ['runtime adapter OpenCode', 'opencode', 'adapter', false, false, true],
+    ['Anthropic runtime', 'anthropic', 'active', false, false, false],
+    ['stopped OpenCode', 'opencode', 'stopped', false, false, false],
+    ['finished unowned mixed lane', 'anthropic', 'active', false, false, false],
+  ] as const)(
+    'identifies HTTP MCP runtime consumers: %s',
+    (_name, provider, owner, mixedRoster, queuedLane, expected) => {
+      const service = new TeamProvisioningService();
+      const state = service as unknown as OpenCodeIsolationHarness & {
+        provisioningRunByTeam: Map<string, string>;
+      };
+      const run = createMemberSpawnRun();
+      run.request.providerId = provider;
+      run.allEffectiveMembers = mixedRoster ? [{ name: 'alice', providerId: 'opencode' }] : [];
+      run.mixedSecondaryLanes = [
+        { providerId: 'opencode', state: queuedLane ? 'queued' : 'finished' },
+      ];
+      state.runs.set(run.runId, run);
+      if (owner === 'pending') state.provisioningRunByTeam.set(run.teamName, run.runId);
+      if (owner === 'active' || owner === 'secondary')
+        state.aliveRunByTeam.set(run.teamName, run.runId);
+      if (owner === 'adapter')
+        state.runtimeAdapterRunByTeam.set(run.teamName, { runId: run.runId, providerId: provider });
+      if (owner === 'secondary')
+        state.setSecondaryRuntimeRun({
+          teamName: run.teamName,
+          runId: 'side-run',
+          providerId: 'opencode',
+          laneId: 'alice',
+          memberName: 'alice',
+        });
+      expect(service.hasLiveOpenCodeMcpConsumers()).toBe(expected);
+      expect(spawnCli).not.toHaveBeenCalled();
+    }
+  );
+
+  // Either ordering must stop a native IPC launch from crossing a root/context rebind.
+  it.each(['createTeam', 'launchTeam'] as const)(
+    'fences %s before its first await and rejects during context drain',
+    async (method) => {
+      const service = new TeamProvisioningService();
+      const internals = service as unknown as {
+        waitForOpenCodeAggregatePrimaryRestart(teamName: string): Promise<string | null>;
+        requestAdmissionBoundary: {
+          createTeam: typeof service.createTeam;
+          launchTeam: typeof service.launchTeam;
+        };
+        provisioningRunByTeam: Map<string, string>;
+      };
+      let resume!: () => void;
+      const wait = vi
+        .spyOn(internals, 'waitForOpenCodeAggregatePrimaryRestart')
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              resume = () => resolve(null);
+            })
+        );
+      const boundary = vi
+        .spyOn(internals.requestAdmissionBoundary, method)
+        .mockRejectedValue(new Error('sandbox launch stopped'));
+      const applyContext = vi.fn();
+      const connection = createDesktopExternalAgentConnection({
+        appInstanceId: 'sandbox-launch-admission',
+        userDataPath: tempClaudeRoot,
+        getRoot: () => tempClaudeRoot,
+        getMainContents: () => null,
+        getCdpEnabled: () => false,
+        getAppVersion: () => 'test',
+        isLocalContext: () => true,
+        getControlUrl: () => 'http://127.0.0.1:41000',
+        startControl: async () => undefined,
+        reconfigureRoot: async () => undefined,
+        httpEnabled: true,
+        assertNoLiveRuntimeConsumers: () => {
+          if (service.hasLiveOpenCodeMcpConsumers())
+            throw new Error('Stop teams before context switch');
+        },
+        cdp: {
+          read: async () => ({ cdp: { status: 'disabled' }, reason: null }),
+        } as unknown as NativeRendererCdp,
+        mcp: {
+          getCurrentHandle: () => null,
+          ensureStarted: async () => undefined,
+          stop: async () => undefined,
+          appContext: { bind: () => () => undefined },
+        },
+      });
+      service.setLaunchAdmissionGuard(connection.assertLaunchAdmission);
+      const request: TeamCreateRequest = {
+        teamName: 'sandbox-admission',
+        cwd: tempClaudeRoot,
+        members: [],
+        providerId: 'opencode',
+      };
+      let finishChange!: () => void;
+      try {
+        const pending = service[method](request, vi.fn());
+        const stopped = expect(pending).rejects.toThrow('sandbox launch stopped');
+        // The reservation is visible synchronously, before metadata/run registration.
+        await expect(connection.changeContext(applyContext)).rejects.toThrow('Stop teams');
+        expect(applyContext).not.toHaveBeenCalled();
+        resume();
+        await stopped;
+        const changing = connection.changeContext(
+          () =>
+            new Promise<void>((resolve) => {
+              finishChange = resolve;
+            })
+        );
+        await vi.waitFor(() => expect(finishChange).toBeTypeOf('function'));
+        await expect(service[method](request, vi.fn())).rejects.toThrow('changing context');
+        expect(wait).toHaveBeenCalledTimes(1);
+        expect(boundary).toHaveBeenCalledTimes(1);
+        expect(internals.provisioningRunByTeam.size).toBe(0);
+        expect(spawnCli).not.toHaveBeenCalled();
+        finishChange();
+        await changing;
+      } finally {
+        resume?.();
+        finishChange?.();
+        await connection.shutdown();
+      }
+    }
+  );
 
   describe('warmup', () => {
     it('does not throw when spawnCli rejects', async () => {
@@ -10684,7 +10820,27 @@ describe('TeamProvisioningService', () => {
     }, 10_000);
 
     it('resolves stored attachment payloads for OpenCode inbox relay before delivery', async () => {
-      const svc = new TeamProvisioningService();
+      const resolveInputDeclaration = vi
+        .fn<ResolveOpenCodeInputDeclaration>()
+        .mockImplementation(({ projectPath, model }) =>
+          Promise.resolve(
+            projectPath === '/repo' && model === 'openai/gpt-5.4-mini' ? ['text', 'image'] : null
+          )
+        );
+      const svc = new TeamProvisioningService(
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        resolveInputDeclaration
+      );
       const sendMessageToMember = vi.fn(async (input: Record<string, unknown>) => ({
         ok: true,
         providerId: 'opencode',
@@ -10756,6 +10912,10 @@ describe('TeamProvisioningService', () => {
         failed: 0,
         relayed: 1,
       });
+      expect(resolveInputDeclaration).toHaveBeenCalledWith({
+        projectPath: '/repo',
+        model: 'openai/gpt-5.4-mini',
+      });
       expect(sendMessageToMember).toHaveBeenCalledWith(
         expect.objectContaining({
           messageId: 'msg-image-attachment',
@@ -10771,8 +10931,28 @@ describe('TeamProvisioningService', () => {
       );
     });
 
-    it('keeps OpenCode inbox relay unread and surfaces a clear reason when the model is not vision-capable', async () => {
-      const svc = new TeamProvisioningService();
+    it('keeps OpenCode inbox relay unread and surfaces a clear reason when the model declares no image input', async () => {
+      const resolveInputDeclaration = vi
+        .fn<ResolveOpenCodeInputDeclaration>()
+        .mockImplementation(({ projectPath, model }) =>
+          Promise.resolve(
+            projectPath === '/repo' && model === 'openrouter/z-ai/glm-5.1' ? ['text'] : null
+          )
+        );
+      const svc = new TeamProvisioningService(
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        resolveInputDeclaration
+      );
       const sendMessageToMember = vi.fn();
       await configureOpenCodeBobDeliveryService({
         svc,
@@ -10832,14 +11012,17 @@ describe('TeamProvisioningService', () => {
           userVisibleImpact: {
             state: 'error',
             reasonCode: 'backend_error',
-            message:
-              'This OpenCode model is not verified for image attachments. Choose a vision-capable model or remove the image.',
+            message: 'This OpenCode model does not declare image input support.',
           },
         },
       });
       expect(relay.diagnostics?.join('\n')).toContain(
-        'opencode_attachment_delivery_prepare_failed: This OpenCode model is not verified for image attachments. Choose a vision-capable model or remove the image.'
+        'opencode_attachment_delivery_prepare_failed: This OpenCode model does not declare image input support.'
       );
+      expect(resolveInputDeclaration).toHaveBeenCalledWith({
+        projectPath: '/repo',
+        model: 'openrouter/z-ai/glm-5.1',
+      });
       expect(sendMessageToMember).not.toHaveBeenCalled();
       const rows = JSON.parse(
         await fsPromises.readFile(path.join(inboxDir, 'bob.json'), 'utf8')
@@ -16653,15 +16836,16 @@ describe('TeamProvisioningService', () => {
         runId: laneRunId,
       });
 
-      const stopping = harness.stopSingleMixedSecondaryRuntimeLane(
-        run,
-        lane,
-        'relaunch'
-      ) as Promise<void>;
+      const stopping = memberLifecycleControllerHarness(svc).runMemberLifecycleOperationInternal(
+        teamName,
+        'bob',
+        'manual_restart',
+        () => harness.stopSingleMixedSecondaryRuntimeLane(run, lane, 'relaunch') as Promise<void>
+      );
       await stopStarted.promise;
 
       expect(run.progress).toMatchObject({
-        state: 'disconnected',
+        state: 'ready',
         message: 'Stopping OpenCode runtime lane before cleanup or relaunch',
       });
       expect(harness.getSecondaryRuntimeRun(teamName, laneId)).toMatchObject({
@@ -16669,11 +16853,22 @@ describe('TeamProvisioningService', () => {
         laneId,
       });
       expect(lane.runId).toBe(laneRunId);
+      expect(
+        memberLifecycleControllerHarness(svc).isMemberLifecycleOperationActive(teamName, 'bob')
+      ).toBe(true);
+      expect(
+        memberLifecycleControllerHarness(svc).isMemberLifecycleOperationActive(
+          teamName,
+          'team-lead'
+        )
+      ).toBe(false);
       expect(harness.runTracking.canDeliverToTrackedRuntimeRun(teamName, aggregateRunId)).toBe(
-        false
+        true
       );
-      expect(harness.runTracking.resolveDeliverableTrackedRuntimeRunId(teamName)).toBeNull();
-      expect(harness.runTracking.canDeliverToOpenCodeRuntimeForTeam(teamName)).toBe(false);
+      expect(harness.runTracking.resolveDeliverableTrackedRuntimeRunId(teamName)).toBe(
+        aggregateRunId
+      );
+      expect(harness.runTracking.canDeliverToOpenCodeRuntimeForTeam(teamName)).toBe(true);
       await expect(
         svc.deliverOpenCodeMemberMessage(teamName, {
           memberName: 'bob',
@@ -21167,7 +21362,8 @@ describe('TeamProvisioningService', () => {
       );
 
       const run = (svc as any).runs.get(runId);
-      await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
+      // This verifies cwd after launch completion, not cancellation during session persistence.
+      await (svc as any).launchMixedSecondaryLaneIfNeeded(run, { waitForCompletion: true });
       await vi.waitFor(() => expect(adapterLaunch).toHaveBeenCalledTimes(1));
       expect(adapterLaunch).toHaveBeenCalledWith(
         expect.objectContaining({

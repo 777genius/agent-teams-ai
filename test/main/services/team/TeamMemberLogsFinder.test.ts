@@ -1997,6 +1997,67 @@ describe('TeamMemberLogsFinder', () => {
     expect(refs[0].filePath).toContain('agent-ref1.jsonl');
   });
 
+  it('retains task edit logs from a previous lead session after relaunch', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-refs-history-'));
+    setClaudeBasePathOverride(tmpDir);
+    const teamName = 'refs-history-team';
+    const projectPath = '/Users/test/refs-history';
+    const projectRoot = path.join(tmpDir, 'projects', '-Users-test-refs-history');
+    const oldSessionId = 'lead-before-relaunch';
+    await fs.mkdir(path.join(tmpDir, 'teams', teamName), { recursive: true });
+    await fs.mkdir(projectRoot, { recursive: true });
+    await fs.writeFile(
+      path.join(tmpDir, 'teams', teamName, 'config.json'),
+      JSON.stringify({
+        name: teamName,
+        projectPath,
+        leadSessionId: 'lead-after-relaunch',
+        sessionHistory: [oldSessionId, '../../outside'],
+        members: [{ name: 'team-lead', agentType: 'team-lead', cwd: projectPath }],
+      }),
+      'utf8'
+    );
+    const oldTranscript = path.join(projectRoot, `${oldSessionId}.jsonl`);
+    const taskTranscript =
+      JSON.stringify({
+        timestamp: '2026-03-01T10:00:00.000Z',
+        type: 'assistant',
+        message: {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              name: 'mcp__agent-teams__task_complete',
+              input: { teamName, taskId: 'completed-task', actor: 'team-lead' },
+            },
+          ],
+        },
+      }) + '\n';
+    await fs.writeFile(oldTranscript, taskTranscript, 'utf8');
+    await fs.writeFile(
+      path.join(tmpDir, 'outside.jsonl'),
+      JSON.stringify({
+        timestamp: '2026-03-01T09:59:00.000Z',
+        type: 'user',
+        message: {
+          role: 'user',
+          content: `You are team-lead, a developer on team "${teamName}" (${teamName}).`,
+        },
+      }) +
+        '\n' +
+        taskTranscript,
+      'utf8'
+    );
+
+    const finder = new TeamMemberLogsFinder();
+    const context = await finder.getLogSourceWatchContext(teamName);
+    expect(context?.sessionIds).not.toContain('../../outside');
+    const refs = await finder.findLogFileRefsForTask(teamName, 'completed-task');
+    expect(refs).toEqual([{ filePath: oldTranscript, memberName: 'team-lead' }]);
+    const logs = await finder.findLogsForTask(teamName, 'completed-task');
+    expect(logs.map((log) => log.sessionId)).toEqual([oldSessionId]);
+  });
+
   it('indexes task mentions without changing matching semantics', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-refs-index-'));
     setClaudeBasePathOverride(tmpDir);

@@ -43,6 +43,52 @@ describe('releaseNotes utilities', () => {
     );
   });
 
+  it('removes Downloads and its subsections until a same-level or higher-level heading', () => {
+    const notes =
+      'Summary.\n\n### Downloads\nlinks\n#### Linux\nmore links\n### macOS installation\nManual install required.\n\n### Downloads\nother links\n## Compatibility\nRequires macOS 13.';
+    expect(stripDownloadsSection(notes)).toBe(
+      'Summary.\n\n### macOS installation\nManual install required.\n\n## Compatibility\nRequires macOS 13.'
+    );
+  });
+
+  it('preserves sibling HTML installation headings and higher-level Markdown sections', () => {
+    const notes =
+      '<h3 class="notes">Downloads</h3>\n<table>links</table>\n<h4>Windows</h4>\nmore links\n<h3>macOS installation</h3>\nInstall the DMG once.\n<h3>Downloads</h3>\nlinks\n## Requirements\nmacOS 13 or later.';
+    expect(stripDownloadsSection(notes)).toBe(
+      '<h3>macOS installation</h3>\nInstall the DMG once.\n## Requirements\nmacOS 13 or later.'
+    );
+  });
+
+  it.each(['`', '~'])(
+    'ignores section-like headings and short closing markers inside %s fences',
+    (marker) => {
+      const fence = marker.repeat(4);
+      const shortFence = marker.repeat(3);
+      const example = `${fence}markdown\n### Downloads\n<h2>Downloads</h2>\n${shortFence}\n## Still a code example\n${fence}`;
+      const notes = `Example:\n${example}\n\n### Downloads\ninstaller links\n${fence}markdown\n### Fake boundary\n${shortFence}\n## Another fake boundary\n${fence}\n### Installation\nManual migration.`;
+      expect(stripDownloadsSection(notes)).toBe(
+        `Example:\n${example}\n\n### Installation\nManual migration.`
+      );
+    }
+  );
+
+  it('keeps subsequent version sections when the formatted changelog is filtered again', () => {
+    const notes = formatUpdaterReleaseNotes([
+      {
+        version: '2.17.10',
+        note: 'New changes.\n\n### Downloads\nlinks\n### macOS installation\nManual migration.',
+      },
+      {
+        version: '2.17.6',
+        note: 'Older changes.\n\n### Downloads\nold links\n## Compatibility\nOlder guidance.',
+      },
+    ]);
+    expect(notes).toBe(
+      '## v2.17.10\n\nNew changes.\n\n### macOS installation\nManual migration.\n\n## v2.17.6\n\nOlder changes.\n\n## Compatibility\nOlder guidance.'
+    );
+    expect(stripDownloadsSection(notes!)).toBe(notes);
+  });
+
   it('formats full-changelog updater notes as a version list', () => {
     const notes = formatUpdaterReleaseNotes([
       {

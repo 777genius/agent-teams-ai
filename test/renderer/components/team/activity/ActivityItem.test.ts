@@ -9,18 +9,28 @@ import {
   isNoiseMessage,
   isQualifiedExternalRecipient,
 } from '@renderer/components/team/activity/ActivityItem';
+import { MessageExpandDialog } from '@renderer/components/team/activity/MessageExpandDialog';
+import { CreateTaskDialog } from '@renderer/components/team/dialogs/CreateTaskDialog';
+import { useTeamCreateTaskDialog } from '@renderer/components/team/dialogs/useTeamCreateTaskDialog';
+import { useMessagesTimelineActions } from '@renderer/components/team/messages/useMessagesTimelineActions';
+import { useStore } from '@renderer/store';
 import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { InboxMessage } from '@shared/types';
+import type { CreateTaskRequest, InboxMessage } from '@shared/types';
 
 vi.mock('@renderer/hooks/useTheme', () => ({
   useTheme: () => ({ theme: 'dark', resolvedTheme: 'dark', isDark: true, isLight: false }),
 }));
 vi.mock('@renderer/components/chat/viewers/MarkdownViewer', () => ({
-  MarkdownViewer: ({ content }: { content: string }) => React.createElement('div', null, content),
+  MarkdownViewer: ({ content, maxHeight }: { content: string; maxHeight?: string }) =>
+    React.createElement(
+      'div',
+      { 'data-markdown-renderer': 'full', 'data-max-height': maxHeight },
+      content
+    ),
   CompactMarkdownPreview: ({ content, className }: { content: string; className?: string }) =>
-    React.createElement('div', { className }, content),
+    React.createElement('div', { className, 'data-markdown-renderer': 'compact' }, content),
 }));
 vi.mock('@renderer/components/common/CopyButton', () => ({
   CopyButton: () => null,
@@ -29,8 +39,24 @@ vi.mock('@renderer/components/team/attachments/AttachmentDisplay', () => ({
   AttachmentDisplay: () => null,
 }));
 vi.mock('@renderer/components/team/MemberBadge', () => ({
-  MemberBadge: ({ name, hideAvatar }: { name: string; hideAvatar?: boolean }) =>
-    React.createElement('span', { 'data-member-avatar-hidden': String(!!hideAvatar) }, name),
+  MemberBadge: ({
+    name,
+    hideAvatar,
+    onClick,
+  }: {
+    name: string;
+    hideAvatar?: boolean;
+    onClick?: (name: string) => void;
+  }) =>
+    React.createElement(
+      'span',
+      {
+        'data-member-avatar-hidden': String(!!hideAvatar),
+        'data-member-interactive': String(!!onClick),
+        onClick: onClick ? () => onClick(name) : undefined,
+      },
+      name
+    ),
 }));
 vi.mock('@renderer/components/team/TaskTooltip', () => ({
   TaskTooltip: ({ children }: { children: React.ReactNode }) =>
@@ -103,9 +129,6 @@ vi.mock('@renderer/components/ui/tooltip', () => ({
     React.createElement(React.Fragment, null, children),
   TooltipContent: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', null, children),
-}));
-vi.mock('@renderer/components/team/activity/ReplyQuoteBlock', () => ({
-  ReplyQuoteBlock: () => null,
 }));
 
 describe('ActivityItem compact header preview', () => {
@@ -219,7 +242,11 @@ describe('ActivityItem compact header preview', () => {
       );
     });
     expect(article?.dataset.continuesNextAuthor).toBeUndefined();
-    expect(article?.textContent).toContain('alice');
+    // The final row retains the native avatar for viewport pinning. Wide-chat CSS
+    // hides the repeated name while keeping that avatar in the DOM.
+    expect(
+      article?.querySelector('[data-chat-sender="true"] [data-member-avatar-hidden="false"]')
+    ).not.toBeNull();
 
     await act(async () => root.unmount());
   });
@@ -697,6 +724,34 @@ describe('ActivityItem compact header preview', () => {
     expect(preview?.textContent).toContain('Собрать fix-batch');
     expect(preview?.textContent).not.toContain('info_for_agent');
     expect(preview?.textContent).not.toContain('internal only');
+
+    const directMessage: InboxMessage = {
+      ...message,
+      from: 'alice',
+      to: 'user',
+      source: 'inbox',
+      text: '**Visible direct message**\n<info_for_agent>\ninternal only\n</info_for_agent>\n```info_for_agent\nlegacy internal only\n```',
+    };
+    for (const isCollapsed of [true, false]) {
+      await act(async () => {
+        root.render(
+          React.createElement(ActivityItem, {
+            message: directMessage,
+            teamName: 'my-team',
+            directParticipant: 'alice',
+            compactHeader: true,
+            collapseMode: 'managed',
+            isCollapsed,
+            canToggleCollapse: true,
+            collapseToggleKey: 'message-key-strip-agent-block',
+          })
+        );
+        await Promise.resolve();
+      });
+      expect(host.textContent).toContain('Visible direct message');
+      expect(host.textContent).not.toContain('info_for_agent');
+      expect(host.textContent).not.toContain('internal only');
+    }
 
     await act(async () => {
       root.unmount();
@@ -1250,12 +1305,60 @@ describe('ActivityItem bootstrap recipient route', () => {
       taskChip?.click();
       await Promise.resolve();
     });
-    expect(onTaskIdClick).toHaveBeenCalledWith('task-abc123');
+    expect(onTaskIdClick).toHaveBeenCalledWith('task-abc123', 'demo', 'canonical');
 
     await act(async () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('routes literal same-display-ID task chips to their explicit A/B teams', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onTaskIdClick = vi.fn();
+    const messageFor = (teamName: string, taskId: string): InboxMessage => ({
+      from: 'alice',
+      to: 'user',
+      text: 'please review',
+      timestamp: new Date('2026-10-14T12:00:00.000Z').toISOString(),
+      read: false,
+      source: 'inbox',
+      messageKind: 'task_comment_notification',
+      taskRefs: [{ taskId, displayId: '#7', teamName }],
+    });
+
+    for (const [teamName, taskId] of [
+      ['team-a', 'canonical-a'],
+      ['team-b', 'canonical-b'],
+    ] as const) {
+      await act(async () => {
+        root.render(
+          React.createElement(ActivityItem, {
+            message: messageFor(teamName, taskId),
+            teamName,
+            directParticipant: 'alice',
+            onTaskIdClick,
+          })
+        );
+        await Promise.resolve();
+      });
+      const taskChip = Array.from(host.querySelectorAll('button')).find((button) =>
+        (button.textContent ?? '').includes('#7')
+      );
+      expect(taskChip).toBeDefined();
+      await act(async () => {
+        taskChip?.click();
+        await Promise.resolve();
+      });
+    }
+
+    expect(onTaskIdClick).toHaveBeenNthCalledWith(1, 'canonical-a', 'team-a', 'canonical');
+    expect(onTaskIdClick).toHaveBeenNthCalledWith(2, 'canonical-b', 'team-b', 'canonical');
+
+    await act(async () => root.unmount());
   });
 
   it('keeps lead→teammate routes visible in the lead thread', async () => {
@@ -1289,5 +1392,488 @@ describe('ActivityItem bootstrap recipient route', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+});
+
+// These UI primitives keep the actual message/action/dialog state boundary under test.
+vi.mock('@renderer/components/ui/dialog', () => {
+  const Container = ({ children }: { children: React.ReactNode }) =>
+    React.createElement('div', null, children);
+  return {
+    Dialog: Container,
+    DialogContent: Container,
+    DialogDescription: Container,
+    DialogHeader: Container,
+    DialogTitle: Container,
+    DialogFooter: Container,
+  };
+});
+vi.mock('@renderer/services/draftStorage', () => ({
+  draftStorage: {
+    loadDraft: () => Promise.resolve(null),
+    saveDraft: () => Promise.resolve(),
+    deleteDraft: () => Promise.resolve(),
+  },
+}));
+vi.mock('@renderer/hooks/useTaskSuggestions', () => ({
+  useTaskSuggestions: () => ({ suggestions: [] }),
+}));
+vi.mock('@renderer/components/ui/MemberSelect', () => ({ MemberSelect: () => null }));
+vi.mock('@renderer/components/ui/tiptap', () => ({
+  TiptapEditor: ({ content, onChange }: { content: string; onChange: (value: string) => void }) =>
+    React.createElement('textarea', {
+      'aria-label': 'Description',
+      value: content,
+      onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value),
+    }),
+}));
+vi.mock('@renderer/components/ui/MentionableTextarea', () => ({
+  MentionableTextarea: ({
+    value,
+    onValueChange,
+  }: {
+    value: string;
+    onValueChange: (value: string) => void;
+  }) =>
+    React.createElement('textarea', {
+      'aria-label': 'Prompt',
+      value,
+      onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) =>
+        onValueChange(event.target.value),
+    }),
+}));
+
+describe('message task action and dialog ownership', () => {
+  afterEach(() => {
+    useStore.setState({ activeContextId: 'local' });
+    document.body.innerHTML = '';
+    vi.unstubAllGlobals();
+  });
+  const message: InboxMessage = {
+    from: 'alice',
+    text: 'Keep the original group\n<info_for_agent>\nprivate task context\n</info_for_agent>',
+    summary: 'Group task',
+    groupChatId: 'group-a',
+    messageId: 'message-a',
+    timestamp: '2026-10-10T12:00:00.000Z',
+    read: true,
+    source: 'inbox',
+  };
+  const taskAction = (host: HTMLElement) =>
+    host.querySelector<HTMLButtonElement>('button[aria-label="Create task from message"]')!;
+  const createButton = (host: HTMLElement) =>
+    [...host.querySelectorAll<HTMLButtonElement>('button')].find(
+      (button) => button.textContent === 'Create'
+    )!;
+
+  it('preserves source A over filter B and keeps the rejected form and command for explicit retry', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    useStore.setState({ activeContextId: 'root-a' });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const submit = vi
+      .fn<(request: CreateTaskRequest) => Promise<void>>()
+      .mockRejectedValueOnce(new Error('Group A is archived'))
+      .mockRejectedValueOnce(new Error('Group A is archived'))
+      .mockResolvedValue(undefined);
+    let dialog!: ReturnType<typeof useTeamCreateTaskDialog>;
+    function Boundary() {
+      dialog = useTeamCreateTaskDialog('demo');
+      const onSubmit = async (request: CreateTaskRequest) => {
+        dialog.assertCreateTaskOriginCurrent();
+        await submit(request);
+        dialog.closeCreateTaskDialog();
+      };
+      return React.createElement(
+        React.Fragment,
+        null,
+        React.createElement(ActivityItem, {
+          message,
+          teamName: 'demo',
+          onCreateTask: dialog.handleCreateTaskFromMessage,
+        }),
+        dialog.createTaskDialog.open && dialog.isCreateTaskOriginCurrent
+          ? React.createElement(CreateTaskDialog, {
+              open: true,
+              teamName: 'demo',
+              members: [],
+              tasks: [],
+              defaultSubject: dialog.createTaskDialog.defaultSubject,
+              defaultDescription: dialog.createTaskDialog.defaultDescription,
+              defaultGroupChatId: dialog.defaultMessageGroupChatId('group-b'),
+              onClose: dialog.closeCreateTaskDialog,
+              onSubmit,
+            })
+          : null
+      );
+    }
+    await act(() => Promise.resolve(root.render(React.createElement(Boundary))));
+    await act(() => Promise.resolve(taskAction(host).click()));
+    expect(host.querySelector<HTMLInputElement>('#task-subject')?.value).toBe('Group task');
+    const description = host.querySelector<HTMLTextAreaElement>(
+      '[aria-label="Description"]'
+    )?.value;
+    expect(description).toContain('Keep the original group');
+    expect(description).not.toContain('info_for_agent');
+    expect(description).not.toContain('private task context');
+    await act(() => Promise.resolve(createButton(host).click()));
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe('Group A is archived');
+    expect(submit.mock.calls[0][0].groupChatId).toBe('group-a');
+    const command = submit.mock.calls[0][0].command;
+    expect(command?.commandId).toBeTruthy();
+    expect(createButton(host).disabled).toBe(false);
+    expect(host.querySelector<HTMLInputElement>('#task-subject')?.value).toBe('Group task');
+    expect(host.querySelector<HTMLTextAreaElement>('[aria-label="Description"]')?.value).toContain(
+      'Keep the original group'
+    );
+    await act(() => Promise.resolve(createButton(host).click()));
+    expect(submit.mock.calls[1][0].command).toEqual(command);
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe('Group A is archived');
+    await act(() => {
+      const subject = host.querySelector<HTMLInputElement>('#task-subject')!;
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+      setter.call(subject, 'Edited subject');
+      subject.dispatchEvent(new Event('input', { bubbles: true }));
+      return Promise.resolve();
+    });
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    await act(() => Promise.resolve(createButton(host).click()));
+    expect(submit.mock.calls[2][0].groupChatId).toBe('group-a');
+    expect(submit.mock.calls[2][0].subject).toBe('Edited subject');
+    expect(submit.mock.calls[2][0].command).not.toEqual(command);
+    expect(host.querySelector('#task-subject')).toBeNull();
+    await act(() => Promise.resolve(dialog.openCreateTaskDialog('Ordinary task')));
+    await act(() => Promise.resolve(createButton(host).click()));
+    expect(submit.mock.calls[3][0].groupChatId).toBe('group-b');
+    await act(() =>
+      Promise.resolve(
+        dialog.handleCreateTaskFromMessage({
+          subject: 'Legacy DM',
+          description: 'No group',
+          source: { teamName: 'demo' },
+        })
+      )
+    );
+    await act(() => Promise.resolve(createButton(host).click()));
+    expect(submit.mock.calls[4][0].groupChatId).toBeUndefined();
+    await act(() => Promise.resolve(root.unmount()));
+  });
+
+  it('invalidates same-team root A to B before render or a retained submit/action callback', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    useStore.setState({ activeContextId: 'root-a' });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    let dialog!: ReturnType<typeof useTeamCreateTaskDialog>;
+    let actions!: ReturnType<typeof useMessagesTimelineActions>;
+    const submit = vi.fn();
+    const reply = vi.fn();
+    const revise = vi.fn();
+    function Boundary() {
+      dialog = useTeamCreateTaskDialog('demo');
+      const contextId = useStore((state) => state.activeContextId);
+      const [expandedItemKey, setExpandedItemKey] = React.useState<string | null>(null);
+      actions = useMessagesTimelineActions({
+        contextId,
+        teamName: 'demo',
+        scopeKey: 'group-a',
+        scope: { kind: 'group', groupChatId: 'group-a' },
+        members: [],
+        messages: [message],
+        expandedItemKey,
+        setExpandedItemKey,
+        groupId: 'group-a',
+        groupQuote: reply,
+        onRevise: revise,
+        onCreateTask: dialog.handleCreateTaskFromMessage,
+      });
+      return React.createElement(
+        React.Fragment,
+        null,
+        React.createElement(ActivityItem, {
+          message,
+          teamName: 'demo',
+          onCreateTask: actions.createTask,
+        }),
+        dialog.createTaskDialog.open && dialog.isCreateTaskOriginCurrent
+          ? React.createElement(
+              'div',
+              { role: 'dialog' },
+              dialog.defaultMessageGroupChatId('group-b')
+            )
+          : null
+      );
+    }
+    await act(() => Promise.resolve(root.render(React.createElement(Boundary))));
+    await act(() => Promise.resolve(taskAction(host).click()));
+    expect(host.querySelector('[role="dialog"]')?.textContent).toBe('group-a');
+    const oldOpen = actions.createTask!;
+    const oldReply = actions.reply!;
+    const oldSubmit = () => {
+      try {
+        dialog.assertCreateTaskOriginCurrent();
+        submit();
+        return Promise.resolve();
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    };
+    await act(async () => {
+      useStore.setState({ activeContextId: 'root-b' });
+      await expect(oldSubmit()).rejects.toThrow('context has changed');
+      oldOpen({
+        subject: 'Old intent',
+        description: '',
+        source: { teamName: 'demo', groupChatId: 'group-a' },
+      });
+      oldReply(message);
+    });
+    expect(host.querySelector('[role="dialog"]')).toBeNull();
+    expect(submit).not.toHaveBeenCalled();
+    expect(reply).not.toHaveBeenCalled();
+    expect(dialog.createTaskDialog.defaultSubject).toBe('Group task');
+    await act(() => Promise.resolve(root.unmount()));
+  });
+
+  it('retains expansion text while removing contextual actions for missing or changed owners', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const owner = { contextId: 'root-a', teamName: 'demo', scopeKey: 'group-a' };
+    const create = vi.fn(),
+      reply = vi.fn(),
+      revise = vi.fn();
+    const restart = vi.fn(),
+      memberNavigate = vi.fn(),
+      taskNavigate = vi.fn(),
+      teamNavigate = vi.fn();
+    let displayedMessage = message;
+    const render = async (current = owner, live = true, open = true) => {
+      await act(() =>
+        Promise.resolve(
+          root.render(
+            React.createElement(MessageExpandDialog, {
+              expandedItem: live ? { type: 'message', message: displayedMessage } : null,
+              open,
+              onOpenChange: vi.fn(),
+              teamName: current.teamName,
+              actionOwner: current,
+              expandedOwner: owner,
+              onCreateTaskFromMessage: create,
+              onReplyToMessage: reply,
+              revisionMessageId: message.messageId,
+              onReviseMessage: revise,
+              onRestartTeam: restart,
+              onMemberClick: memberNavigate,
+              onTaskIdClick: taskNavigate,
+              onTeamClick: teamNavigate,
+            })
+          )
+        )
+      );
+    };
+    await render();
+    await act(() => Promise.resolve(taskAction(host).click()));
+    expect(create.mock.calls[0][0].source).toEqual({ teamName: 'demo', groupChatId: 'group-a' });
+    for (const current of [
+      { ...owner, contextId: 'root-b' },
+      { ...owner, teamName: 'other' },
+      { ...owner, scopeKey: 'group-b' },
+    ]) {
+      await render(current);
+      expect(host.textContent).toContain('Keep the original group');
+      expect(taskAction(host)).toBeNull();
+      expect(host.querySelector('button[aria-label="Reply to message"]')).toBeNull();
+      expect(host.querySelector('button[aria-label="Edit message"]')).toBeNull();
+    }
+    await render(owner, false, false);
+    expect(host.textContent).toContain('Keep the original group');
+    expect(taskAction(host)).toBeNull();
+    expect(host.querySelector('button[aria-label="Copy to clipboard"]')).not.toBeNull();
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(reply).not.toHaveBeenCalled();
+    expect(revise).not.toHaveBeenCalled();
+    await act(() => Promise.resolve(root.render(null)));
+    displayedMessage = {
+      ...message,
+      groupChatId: undefined,
+      to: 'other-team',
+      text: 'API Error: 401 authentication_error: token expired',
+      summary: undefined,
+    };
+    await render();
+    const restartAction = () =>
+      Array.from(host.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes('Restart team')
+      );
+    expect(host.querySelector('[data-member-interactive="true"]')).not.toBeNull();
+    expect(restartAction()).toBeDefined();
+    await act(() => Promise.resolve(restartAction()!.click()));
+    expect(restart).toHaveBeenCalledTimes(1);
+    await render({ ...owner, contextId: 'root-b' });
+    expect(host.textContent).toContain('authentication_error: token expired');
+    expect(restartAction()).toBeUndefined();
+    expect(host.querySelector('[data-member-interactive="true"]')).toBeNull();
+    expect(memberNavigate).not.toHaveBeenCalled();
+    expect(taskNavigate).not.toHaveBeenCalled();
+    expect(teamNavigate).not.toHaveBeenCalled();
+    await act(() => Promise.resolve(root.unmount()));
+  });
+});
+
+describe('collapsed message visualization access', () => {
+  it.each(['openui-lang', 'mermaid'])(
+    'keeps %s on the rich rendering path instead of a label-only preview',
+    async (language) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const host = document.createElement('div');
+      document.body.append(host);
+      const root = createRoot(host);
+      const text = `Report\n\n\`\`\`${language}\n${language === 'mermaid' ? 'graph TD; A-->B;' : 'root = Stack([Card([TextContent("Result")])]);'}\n\`\`\``;
+      try {
+        await act(async () =>
+          root.render(
+            React.createElement(ActivityItem, {
+              message: {
+                from: 'alice',
+                to: 'user',
+                text,
+                timestamp: '2026-10-13T10:00:00.000Z',
+                read: true,
+              },
+              teamName: 'sandbox',
+              collapseMode: 'managed',
+              isCollapsed: true,
+              canToggleCollapse: true,
+            })
+          )
+        );
+        expect(host.querySelector('[data-markdown-renderer="full"]')?.textContent).toBe(text);
+        expect(host.querySelector('[data-markdown-renderer="compact"]')).toBeNull();
+        const heightBudget = host
+          .querySelector('[data-expandable-content="true"]')
+          ?.getAttribute('data-collapsed-height');
+        // Both visualization controls must remain reachable without Show more,
+        // even when their combined message body is taller than the normal preview.
+        expect(Number(heightBudget)).toBeGreaterThan(2000);
+      } finally {
+        await act(async () => root.unmount());
+        host.remove();
+      }
+    }
+  );
+  it('retains ordinary collapsed message previews', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    try {
+      await act(async () =>
+        root.render(
+          React.createElement(ActivityItem, {
+            message: {
+              from: 'alice',
+              to: 'user',
+              text: 'Ordinary short reply',
+              timestamp: '2026-10-13T10:00:00.000Z',
+              read: true,
+            },
+            teamName: 'sandbox',
+            collapseMode: 'managed',
+            isCollapsed: true,
+            canToggleCollapse: true,
+          })
+        )
+      );
+      expect(host.querySelector('[data-markdown-renderer="compact"]')?.textContent).toBe(
+        'Ordinary short reply'
+      );
+      expect(host.querySelector('[data-markdown-renderer="full"]')).toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
+  });
+});
+
+describe('reply visualization presentation', () => {
+  it.each(['openui-lang', 'mermaid'])(
+    'does not height-limit an actual %s reply body',
+    async (language) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const body = `Report\n\`\`\`${language}\n${language === 'mermaid' ? 'graph TD; A-->B;' : 'root = Stack([Card([TextContent("Result")])]);'}\n\`\`\``;
+      const host = document.createElement('div');
+      document.body.append(host);
+      const root = createRoot(host);
+      try {
+        for (const appearance of ['compact', 'wide-chat'] as const) {
+          await act(async () =>
+            root.render(
+              React.createElement(ActivityItem, {
+                message: {
+                  from: 'alice',
+                  to: 'user',
+                  text: buildReplyBlock('bob', 'Quoted original', body),
+                  timestamp: '2026-10-13T10:00:00.000Z',
+                  read: true,
+                },
+                teamName: 'sandbox',
+                appearance,
+                collapseMode: 'managed',
+                isCollapsed: true,
+              })
+            )
+          );
+          const replyBody = host.querySelector('[data-markdown-renderer="full"]');
+          expect(replyBody?.textContent).toBe(body);
+          expect(replyBody?.getAttribute('data-max-height')).toBe('max-h-none');
+          expect(host.querySelector('[data-markdown-renderer="compact"]')?.textContent).toBe(
+            'Quoted original'
+          );
+        }
+      } finally {
+        await act(async () => root.unmount());
+        host.remove();
+      }
+    }
+  );
+  it('projects cross-team visualization fences before flattening a collapsed preview', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const quoted = '```openui-lang\nroot = Stack([Card([TextContent("privateDSL")])]);\n```';
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    try {
+      await act(async () =>
+        root.render(
+          React.createElement(ActivityItem, {
+            message: {
+              from: 'alice',
+              to: 'user',
+              source: 'cross_team',
+              text: `${quoted}\n${buildReplyBlock('bob', 'Quoted original', 'Ordinary reply')}`,
+              timestamp: '2026-10-13T10:00:00.000Z',
+              read: true,
+            },
+            teamName: 'sandbox',
+            collapseMode: 'managed',
+            isCollapsed: true,
+            compactHeader: true,
+          })
+        )
+      );
+      const preview = host.querySelector('[data-markdown-renderer="compact"]');
+      expect(preview?.textContent).toContain('Visualization');
+      expect(preview?.textContent).toContain('Ordinary reply');
+      expect(preview?.textContent).not.toContain('privateDSL');
+      expect(preview?.textContent).not.toContain('Stack');
+      expect(host.querySelector('[data-markdown-renderer="full"]')).toBeNull();
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
   });
 });

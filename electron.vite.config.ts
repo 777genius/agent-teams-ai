@@ -1,3 +1,4 @@
+import { fileViewerRenderers } from '@file-viewer/vite-plugin';
 import { defineConfig } from 'electron-vite'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
 import react from '@vitejs/plugin-react'
@@ -10,6 +11,8 @@ import {
   resolvePostHogBuildKey,
 } from './src/shared/utils/posthogBuildPolicy'
 import { resolveSentryBuildEnvironment } from './src/shared/utils/sentryBuildPolicy'
+import { pinDocumentPreviewWorkers, sentryArtifactInventoryPlugin } from './scripts/build/sentryArtifactInventory'
+import { resolveSentryBuildIdentity } from './scripts/build/sentryBuildIdentity'
 
 // Read all production dependencies from package.json
 // so they get bundled into the main process output.
@@ -20,8 +23,17 @@ const terminalPlatformLocalRoot = resolveTerminalPlatformLocalRoot()
 const terminalPlatformSdkAliases = createTerminalPlatformSdkAliases()
 const rendererDependencyEsbuildTarget = 'esnext'
 const localEnv = loadEnv(process.env.NODE_ENV ?? 'development', __dirname, '')
-const buildGitSha = resolveBuildGitSha()
-const buildId = resolveBuildId(buildGitSha)
+const sentryBuildCovered = Boolean(process.env.SENTRY_AUTH_TOKEN)
+const { gitSha: buildGitSha, buildId } = resolveSentryBuildIdentity({
+  env: process.env,
+  localEnv,
+  covered: sentryBuildCovered,
+  readGitSha: () => execSync('git rev-parse HEAD', {
+    cwd: __dirname,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  }),
+})
 const sentryEnvironment = resolveSentryBuildEnvironment(process.env)
 const releaseChannel = resolveReleaseChannel()
 const officialPostHogBuild = isOfficialPostHogReleaseBuild(process.env)
@@ -51,41 +63,6 @@ const bundledDeps = prodDeps.filter(d => !runtimeExternalDeps.has(d))
 
 function firstNonEmptyEnv(...values: Array<string | undefined>): string {
   return values.map(value => value?.trim() ?? '').find(Boolean) ?? ''
-}
-
-function resolveBuildGitSha(): string {
-  const fromEnv = firstNonEmptyEnv(
-    process.env.GIT_SHA,
-    localEnv.GIT_SHA,
-    process.env.GITHUB_SHA,
-    localEnv.GITHUB_SHA,
-    process.env.VERCEL_GIT_COMMIT_SHA,
-    localEnv.VERCEL_GIT_COMMIT_SHA,
-    process.env.COMMIT_SHA,
-    localEnv.COMMIT_SHA
-  )
-  if (fromEnv) return fromEnv
-
-  try {
-    return execSync('git rev-parse HEAD', {
-      cwd: __dirname,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim()
-  } catch {
-    return ''
-  }
-}
-
-function resolveBuildId(gitSha: string): string {
-  return (
-    firstNonEmptyEnv(
-      process.env.BUILD_ID,
-      localEnv.BUILD_ID,
-      process.env.VITE_BUILD_ID,
-      localEnv.VITE_BUILD_ID
-    ) || gitSha.slice(0, 12)
-  )
 }
 
 function resolveReleaseChannel(): string {
@@ -136,17 +113,32 @@ const sourceMapSetting = process.env.AGENT_TEAMS_DISABLE_SOURCEMAPS === '1' ? fa
 
 // Sentry source map upload - only active in CI when SENTRY_AUTH_TOKEN is set.
 function createSentryPlugins(target: keyof typeof sentrySourceMapTargets): Plugin[] {
-  if (!process.env.SENTRY_AUTH_TOKEN) return []
-
+  const covered = sentryBuildCovered
   return [
-    sentryVitePlugin({
+    ...(covered ? [sentryVitePlugin({
       org: process.env.SENTRY_ORG ?? 'quant-jump-pro',
       project: process.env.SENTRY_PROJECT ?? 'electron',
       authToken: process.env.SENTRY_AUTH_TOKEN,
       telemetry: false,
       release: { name: `agent-teams-ai@${pkg.version}` },
       sourcemaps: sentrySourceMapTargets[target],
-    }) as Plugin,
+    }) as Plugin] : []),
+    sentryArtifactInventoryPlugin({
+      target,
+      covered,
+      release: `agent-teams-ai@${pkg.version}`,
+      buildId,
+      gitSha: buildGitSha,
+      ...(covered && target === 'renderer'
+        ? { documentPreviewWorkers: pinDocumentPreviewWorkers(__dirname) }
+        : {}),
+      evidenceDirectory: resolve(
+        __dirname,
+        '.artifacts/sentry',
+        buildGitSha || 'unknown',
+        buildId || 'unknown'
+      ),
+    }),
   ]
 }
 
@@ -307,12 +299,28 @@ export default defineConfig({
         '@claude-teams/agent-graph': resolve(__dirname, 'packages/agent-graph/src/index.ts')
       }
     },
-    plugins: [react(), ...createSentryPlugins('renderer')],
+    plugins: [react(), fileViewerRenderers({ preset: 'office', inject: false, chunkStrategy: 'none',
+      copyAssets: { baseDir: 'file-viewer', publicDir: resolve(__dirname, 'node_modules/.cache/document-preview-public') } }),
+      ...createSentryPlugins('renderer')],
+    publicDir: resolve(__dirname, 'src/renderer/public'),
     build: {
       sourcemap: sourceMapSetting,
       rollupOptions: {
         input: {
-          index: resolve(__dirname, 'src/renderer/index.html')
+          index: resolve(__dirname, 'src/renderer/index.html'),
+          'document-preview': resolve(__dirname, 'src/renderer/document-preview.html')
+        },
+        output: {
+          // OpenUI's catalog imports Lucide's lazy icon map. Keep it in one
+          // chunk instead of emitting a separate file for every unused icon.
+          manualChunks(id, { getModuleInfo }) {
+            if (
+              id.includes('/lucide-react/dist/esm/icons/') &&
+              getModuleInfo(id)?.dynamicImporters.some((importer) =>
+                importer.endsWith('/lucide-react/dist/esm/dynamicIconImports.js')
+              )
+            ) return 'openui-icons'
+          }
         }
       }
     }

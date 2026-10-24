@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "Adicionar reação ({{count}})",
+      "remove": "Remover reação ({{count}})",
+      "count": "Reações: {{count}}",
+      "failed": "Não foi possível atualizar as reações"
+    },
     "actions": {
       "createTaskFromMessage": "Criar tarefa a partir da mensagem",
       "editMessage": "Editar mensagem",
@@ -194,7 +200,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "O nome deve conter pelo menos uma letra ou algarismo",
-      "nameTooLong": "O nome é muito longo (máx. 128 caracteres)",
+      "nameTooLong": "O nome é muito longo (máx. 64 caracteres)",
       "selectWorkingDirectory": "Selecionar diretório de trabalho (cwd)",
       "memberNameRequired": "O nome do membro não pode estar vazio",
       "memberNameInvalid": "Nome do membro deve começar com alfanumérico, usar apenas [a-zA-Z0-9. -], máximo 128 caracteres",
@@ -262,6 +268,8 @@
       "name": "Nome"
     },
     "memberRestartWarning": "Salvar irá reiniciar este companheiro de equipe para aplicar funções, fluxo de trabalho, isolamento de worktree, provedor, modelo, esforço ou alterações de acesso MCP.",
+    "displayedRuntimeHint": "No cartão do membro: {{runtime}}. As configurações salvas são diferentes.",
+    "useDisplayedRuntime": "Usar configurações do cartão",
     "notices": {
       "liveRenameBlocked": "O Live Save está bloqueado porque os companheiros de equipa existentes foram renomeados. Reverter essas mudanças de identidade ou parar a equipe primeiro.",
       "newLiveTeammates": "Novos companheiros de equipe não podem ser adicionados da equipe de edição enquanto a equipe estiver ao vivo. Use a janela Adicionar membro.",
@@ -351,6 +359,30 @@
     "placeholders": {
       "name": "nome do membro",
       "mcpServers": "github, sentinela"
+    },
+    "gateway": {
+      "apiKeyLabel": "Gateway API key",
+      "apiKeyPlaceholder": "Paste the teammate gateway API key",
+      "authRejected": "Key authorization was rejected.",
+      "bindButton": "Bind teammate",
+      "bindingStatus": "Bound to {{profile}}",
+      "credentialChanged": "stored key changed — bind again with a new key",
+      "credentialMissing": "stored key missing — bind again with a new key",
+      "credentialReady": "key stored",
+      "emptyCatalog": "The model catalog is empty.",
+      "keyRequired": "Enter the gateway API key first.",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. Os vínculos salvos antes de abrir este formulário são atualizados imediatamente e mantêm as alterações se você cancelar o formulário da equipe.",
+      "probeButton": "Check key and load models",
+      "probing": "Checking...",
+      "profileLabel": "Gateway profile",
+      "profilePlaceholder": "Select a gateway profile",
+      "profileRequired": "Select a gateway profile first.",
+      "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+      "title": "Gateway provider",
+      "unbindButton": "Unbind",
+      "unavailable": "The gateway is unavailable right now."
     }
   },
   "detail": {
@@ -730,6 +762,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "Criar chat em grupo",
+      "description": "Escolha pelo menos dois agentes. Você é incluído automaticamente.",
+      "name": "Nome do chat",
+      "autoInclude": "Adicionar novos membros automaticamente",
+      "minimum": "Selecione pelo menos dois agentes.",
+      "creating": "Criando…",
+      "retryCreate": "Tentar criar novamente",
+      "unavailable": "Chat indisponível",
+      "message": "Mensagem para este grupo",
+      "archivedHint": "Este chat está arquivado. Restaure-o para enviar mensagens.",
+      "restartHint": "Todos os participantes precisam estar com um ambiente de execução compatível ativo para enviar mensagens.",
+      "unknownDelivery": "Salvo. Status de entrega desconhecido.",
+      "sending": "Enviando…",
+      "retrySend": "Reenviar a mesma mensagem",
+      "send": "Enviar",
+      "archived": "Chats arquivados",
+      "restore": "Restaurar chat",
+      "archive": "Arquivar chat",
+      "delivery": {
+        "queued": "na fila",
+        "accepted": "aceito",
+        "failed": "falhou",
+        "unknown": "desconhecido",
+        "skipped": "ignorado"
+      }
+    },
     "actions": {
       "toLatest": "Ir para as últimas",
       "bottomSheetActions": "Acções da folha inferior da mensagem",
@@ -969,7 +1028,8 @@
       "cancel": "Cancelar",
       "delete": "Apagar",
       "markResolved": "Marcar resolvido",
-      "save": "Gravar"
+      "save": "Gravar",
+      "openInTaskTab": "Abrir em uma aba separada"
     },
     "attachments": {
       "commentAttachment": "Anexo de comentários",
@@ -2966,6 +3026,25 @@
         "weight_few": "weight {{count}}",
         "weight_many": "weight {{count}}"
       }
+    }
+  },
+  "externalPrompt": {
+    "requestHelp": "Name the templates to use and describe any edits in your request.",
+    "editAvailable": "Editing draft/stopped configuration is available.",
+    "trashAvailable": "Reversible trash for draft/stopped teams is available."
+  },
+  "managementChanges": {
+    "title": "Recent changes",
+    "created": "Created",
+    "edited": "Edited",
+    "hidden": "Some recent changes are hidden by the current filters.",
+    "roster": "Roles: +{{added}}/-{{removed}}",
+    "fields": {
+      "displayName": "Name changed",
+      "description": "Description changed",
+      "color": "Color changed",
+      "leadInstructions": "Lead instructions changed",
+      "members": "Members changed"
     }
   }
 }

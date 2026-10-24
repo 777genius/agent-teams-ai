@@ -1,5 +1,7 @@
 import path from 'node:path';
 
+export type CodexLaunchDialect = 'native' | 'orchestrator';
+
 export function isCodexExecBinary(binaryPath?: string | null): boolean {
   const binaryName = path.basename(binaryPath?.trim() ?? '').toLowerCase();
   return (

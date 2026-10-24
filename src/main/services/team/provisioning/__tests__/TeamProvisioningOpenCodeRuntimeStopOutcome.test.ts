@@ -1,13 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  assertEscalatedStopConfirmed,
   assertOpenCodeRuntimeStopEffective,
   collectOpenCodeLaneRuntimePids,
   describeOpenCodeRuntimeStopResult,
+  OpenCodeRuntimeStopUnconfirmedError,
   resolveOpenCodeRuntimeStopOutcome,
+  sanitizeOpenCodeRuntimeStopDetail,
+  summarizeOpenCodeRuntimeStopFailure,
 } from '../TeamProvisioningOpenCodeRuntimeStopOutcome';
 
-import type { PersistedTeamLaunchSnapshot } from '@shared/types';
+import type { PersistedTeamLaunchSnapshot, TeamForceStopResult } from '@shared/types';
 
 function snapshot(
   members: Record<string, { laneId?: string; laneKind?: string; runtimePid?: number }>
@@ -79,6 +83,125 @@ describe('describeOpenCodeRuntimeStopResult', () => {
   });
 });
 
+describe('summarizeOpenCodeRuntimeStopFailure', () => {
+  it('redacts bare containers and generic credentials before emitting a stop warning', () => {
+    const summary = summarizeOpenCodeRuntimeStopFailure({
+      diagnostics: [
+        'abort failed: token={"value":"TEST_SECRET_OBJECT"} ' +
+          'credentials="TEST_SECRET_CREDENTIAL" status=public cookie=session-TEST_SECRET_COOKIE',
+      ],
+    });
+    expect(summary).not.toContain('TEST_SECRET');
+    expect(summary).toContain('status=public');
+    expect(summary).toContain('[redacted]');
+    expect(sanitizeOpenCodeRuntimeStopDetail(summary)).toBe(summary);
+  });
+
+  it('removes every cookie pair from console-facing stop details', () => {
+    const detail = sanitizeOpenCodeRuntimeStopDetail(
+      'abort failed: Cookie: sid=TEST_SECRET; other=TEST_SECRET_SECOND\r\n folded=TEST_SECRET_THIRD'
+    );
+    expect(detail).toBe('abort failed: Cookie: [redacted]');
+  });
+
+  it.each([
+    [
+      JSON.stringify({
+        token: { value: 'TEST_SECRET', nested: ['}"TEST_SECRET'] },
+        status: 'public',
+      }),
+      true,
+    ],
+    ['{"token":["TEST_SECRET",{"nested":"TEST_SECRET"}],"status":"public"}', true],
+    [
+      JSON.stringify({ token: { value: 'TEST_SECRET' }, status: 'public' }).replaceAll('"', '\\"'),
+      true,
+    ],
+    ['{"token":{"value":"TEST_SECRET"', false],
+    ['{"token":["TEST_SECRET",{"nested":"TEST_SECRET"}', false],
+    ['{"token":{"value":"TEST_SECRET"]},"status":"TEST_SECRET_TRAILING"}', false],
+    ['{"token":{"value":"TEST_SECRET",BROKEN},"status":"TEST_SECRET_TRAILING"}', false],
+    ['{"token":[redacted]TEST_SECRET,"status":"TEST_SECRET_TRAILING"}', false],
+    ['{"token":[redacted] TEST_SECRET,"status":"TEST_SECRET_TRAILING"}', false],
+    ['{"token":{}TEST_SECRET,"status":"TEST_SECRET_TRAILING"}', false],
+    ['{"token":[] TEST_SECRET,"status":"TEST_SECRET_TRAILING"}', false],
+    ['{"token":"TEST_SECRET"TEST_SECRET_TRAILING}', false],
+  ])('redacts an entire structured credential from stop diagnostics: %s', (detail, valid) => {
+    const summary = summarizeOpenCodeRuntimeStopFailure({
+      diagnostics: [`abort failed: ${detail}`],
+    });
+
+    expect(summary).toContain('abort failed:');
+    expect(summary).toContain('[redacted]');
+    expect(summary).not.toContain('TEST_SECRET');
+    if (valid) expect(summary).toContain('public');
+    expect(sanitizeOpenCodeRuntimeStopDetail(summary)).toBe(summary);
+  });
+
+  it('redacts quoted credentials in stop results and exception details before bounding', () => {
+    const detail =
+      'abort failed: {"token":"TEST_SECRET_JSON"} AUTH_TOKEN="TEST_SECRET_ENV\nmore secret"';
+    const summary = summarizeOpenCodeRuntimeStopFailure({
+      members: { worker: { stopped: false, diagnostics: [detail] } },
+    });
+
+    expect(summary).toContain('worker: abort failed');
+    expect(summary).not.toContain('TEST_SECRET');
+    expect(summary).not.toContain('more secret');
+    expect(summary).not.toContain('\n');
+    expect(summary.length).toBeLessThanOrEqual(400);
+
+    const exceptionDetail = sanitizeOpenCodeRuntimeStopDetail(
+      `${'x'.repeat(160)} password="TEST_SECRET_PREFIX${'s'.repeat(4_000)}"`,
+      200
+    );
+    expect(exceptionDetail).not.toContain('TEST_SECRET');
+    expect(exceptionDetail.length).toBeLessThanOrEqual(200);
+  });
+
+  it('names the run-less reason when the adapter reported nothing', () => {
+    expect(summarizeOpenCodeRuntimeStopFailure({ stopped: false, members: {} })).toBe(
+      'no stop diagnostics returned'
+    );
+    expect(summarizeOpenCodeRuntimeStopFailure(null)).toBe('no stop diagnostics returned');
+  });
+
+  it('keeps the summary on one line and inside the size bound', () => {
+    const summary = summarizeOpenCodeRuntimeStopFailure(
+      { diagnostics: ['host gone\n  retry scheduled'] },
+      40
+    );
+    expect(summary).not.toContain('\n');
+    expect(summary.length).toBeLessThanOrEqual(40);
+
+    const long = summarizeOpenCodeRuntimeStopFailure(
+      { diagnostics: [`owner check failed: ${'x'.repeat(500)}`] },
+      60
+    );
+    expect(long.length).toBe(60);
+    expect(long.endsWith('…')).toBe(true);
+  });
+
+  it('redacts credential shaped values and strips control sequences from adapter text', () => {
+    const summary = summarizeOpenCodeRuntimeStopFailure({
+      diagnostics: [
+        'AUTH_TOKEN=TEST_SECRET_VALUE bearer Authorization: Bearer SUPER_SECRET\r\nsecond line',
+        'esc\u001b[31mRED\u001b[0m sep\u2028tail nul\u0000end',
+      ],
+    });
+
+    expect(summary).not.toContain('TEST_SECRET_VALUE');
+    expect(summary).not.toContain('SUPER_SECRET');
+    expect(summary).not.toContain('\u001b');
+    expect(summary).not.toContain('\r');
+    expect(summary).not.toContain('\n');
+    expect(summary).not.toContain('\u2028');
+    expect(summary).not.toContain('\u0000');
+    // Control bytes become separators; the readable part of the message survives.
+    expect(summary).toContain('esc [31mRED [0m sep tail nul end');
+  });
+});
+
 describe('resolveOpenCodeRuntimeStopOutcome', () => {
   it('accepts a confirmed stop without looking at any process', () => {
     const isRuntimeProcessAlive = vi.fn(() => true);
@@ -92,6 +215,32 @@ describe('resolveOpenCodeRuntimeStopOutcome', () => {
 
     expect(outcome).toEqual({ kind: 'stopped' });
     expect(isRuntimeProcessAlive).not.toHaveBeenCalled();
+  });
+
+  it('retains only fixed diagnostic codes on a still-unconfirmed Stop', () => {
+    try {
+      assertOpenCodeRuntimeStopEffective({
+        result: {
+          stopped: false,
+          diagnostics: [
+            'warning:opencode_stop_status_unconfirmed: SECRET',
+            'error:provider_error: SECRET',
+            'error:unrecognized_SECRET: SECRET',
+          ],
+        },
+        laneId: 'primary',
+        previousLaunchState: null,
+        message: 'Stop failed',
+        logWarning: vi.fn(),
+      });
+      expect.fail('Unconfirmed Stop must reject');
+    } catch (error) {
+      expect(error).toBeInstanceOf(OpenCodeRuntimeStopUnconfirmedError);
+      expect((error as OpenCodeRuntimeStopUnconfirmedError).diagnosticCodes).toEqual([
+        'opencode_stop_status_unconfirmed',
+        'provider_error',
+      ]);
+    }
   });
 
   it('rejects an unconfirmed stop even when recorded hosts are gone', () => {
@@ -253,5 +402,44 @@ describe('assertOpenCodeRuntimeStopEffective', () => {
         isRuntimeProcessAlive: () => false,
       })
     ).toThrow('OpenCode lane lane-a did not confirm stop (no recorded host pid to verify)');
+  });
+});
+
+describe('assertEscalatedStopConfirmed', () => {
+  const finished: TeamForceStopResult = {
+    stopOutcome: 'stopped',
+    cleanupOutcome: 'completed',
+    killedRuntimePids: [],
+    clearedPendingDeliveries: 0,
+    diagnostics: [],
+  };
+
+  it('accepts the runtime-already-down outcome as the finished stop it is', () => {
+    // A team with no owned OpenCode lane ids whose recorded hosts exit before
+    // the orchestrator acknowledges: the flow deliberately returns this after
+    // its force cleanup and both entry points describe it as having finished
+    // the stop, so it must not read as an unconfirmed stop failure.
+    expect(() =>
+      assertEscalatedStopConfirmed({
+        ...finished,
+        stopOutcome: 'runtime_already_down',
+        cleanupOutcome: 'incomplete',
+        diagnostics: [
+          'Runtime hosts were gone 12ms into the stop; finished without waiting for the orchestrator acknowledgement',
+        ],
+      })
+    ).not.toThrow();
+  });
+
+  it('still rejects an unconfirmed stop and a stop with incomplete cleanup', () => {
+    expect(() => assertEscalatedStopConfirmed({ ...finished, stopOutcome: 'timed_out' })).toThrow(
+      'team_stop_unconfirmed:timed_out'
+    );
+    expect(() => assertEscalatedStopConfirmed({ ...finished, stopOutcome: 'stop_failed' })).toThrow(
+      'team_stop_unconfirmed:stop_failed'
+    );
+    expect(() =>
+      assertEscalatedStopConfirmed({ ...finished, cleanupOutcome: 'incomplete' })
+    ).toThrow('team_stop_unconfirmed:stopped');
   });
 });

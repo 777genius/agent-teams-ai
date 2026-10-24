@@ -626,6 +626,69 @@ describe('inspectOpenCodeLocalModelRuntimeReadiness', () => {
     expect(inventory.listLocalProviders).toHaveBeenCalledTimes(2);
   });
 
+  it.each(['project', 'global'] as const)(
+    'reports a failed %s config read instead of claiming Ollama is unconfigured',
+    async (failedScope) => {
+      const inventory = {
+        listLocalProviders: vi.fn(async (input: { scope: 'project' | 'global' }) =>
+          input.scope === failedScope
+            ? {
+                schemaVersion: 1 as const,
+                runtimeId: 'opencode' as const,
+                error: {
+                  code: 'config-invalid' as const,
+                  message: 'The existing OpenCode config contains invalid JSON or JSONC.',
+                  recoverable: true,
+                },
+              }
+            : { schemaVersion: 1 as const, runtimeId: 'opencode' as const, providers: [] }
+        ),
+      };
+      const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+        { projectPath: TEST_PROJECT_PATH, modelRoute: 'ollama/qwen2.5-coder:7b' },
+        { inventory }
+      );
+      expect(result).toMatchObject({
+        severity: 'blocking',
+        code: 'local_runtime_inspection_failed',
+      });
+      expect(result?.message).toContain(`${failedScope} configuration`);
+      expect(result?.message).toContain('config-invalid');
+      expect(result?.message).toContain('invalid JSON or JSONC');
+      expect(result?.message).not.toContain('is not configured');
+    }
+  );
+
+  it('does not trust a global provider when the project config could not be inspected', async () => {
+    const inventory = {
+      listLocalProviders: vi
+        .fn()
+        .mockResolvedValueOnce({
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          error: {
+            code: 'config-conflict',
+            message: 'OPENCODE_CONFIG_CONTENT overrides provider settings. API_KEY=private-value',
+            recoverable: true,
+          },
+        })
+        .mockResolvedValueOnce({
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          providers: [ollamaProvider()],
+        }),
+    };
+    const fetchImpl = vi.fn<typeof fetch>();
+    const result = await inspectOpenCodeLocalModelRuntimeReadiness(
+      { projectPath: TEST_PROJECT_PATH, modelRoute: 'ollama/qwen2.5-coder:7b' },
+      { inventory, fetchImpl }
+    );
+    expect(result).toMatchObject({ severity: 'blocking', code: 'local_runtime_inspection_failed' });
+    expect(result?.message).toContain('config-conflict');
+    expect(result?.message).not.toContain('private-value');
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it('ignores an unconfigured cloud provider route', async () => {
     const inventory = createInventory([]);
 

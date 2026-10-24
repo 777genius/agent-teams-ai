@@ -26,8 +26,7 @@ export function translateHostTaskReferences(
     return buildTaskLinkHref({
       taskId: ref.taskId,
       displayId: ref.displayId ?? ref.taskId,
-      // Existing app href parser decodes the URLSearchParams value once more.
-      teamName: encodeURIComponent(mapTeam(ref.teamName)),
+      teamName: mapTeam(ref.teamName),
     });
   });
 }

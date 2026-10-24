@@ -300,6 +300,10 @@ export interface CliProviderStatus {
   statusMessage?: string | null;
   detailMessage?: string | null;
   models: string[];
+  /** Runtime model-list default, retained separately from catalog fallbacks. */
+  defaultModel?: string | null;
+  /** Current runtime-resolved inherited team model; never retained as stale evidence. */
+  effectiveDefaultModel?: string | null;
   modelCatalog?: CliProviderModelCatalog | null;
   modelCatalogRefreshState?: 'idle' | 'loading' | 'ready' | 'error';
   modelAvailability?: CliProviderModelAvailability[];
@@ -469,6 +473,8 @@ export interface OpenCodeRuntimeStatus {
   installed: boolean;
   binaryPath?: string;
   version?: string;
+  latestVersion?: string | null;
+  updateAvailable?: boolean;
   source: OpenCodeRuntimeSource;
   state: OpenCodeRuntimeInstallerState;
   progress?: OpenCodeRuntimeInstallProgress;

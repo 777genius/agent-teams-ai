@@ -1,6 +1,8 @@
+import { getAuthoritativeRenameStepFile } from './authoritativeReviewFiles.js';
 import type { ReviewWriterContext } from './ports.js';
 import type {
   ReviewDirectDiskMutationStep,
+  ReviewPersistedStateSnapshot,
   ReviewFileScope,
   ReviewMutationDiskPostimage,
 } from '../../contracts.js';
@@ -22,10 +24,15 @@ export async function normalizeDirectReviewMutationSteps(
   env: Pick<ReviewWriterContext, 'assertActive' | 'content'>,
   steps: readonly ReviewDirectDiskMutationStep[],
   scope: ReviewFileScope,
-  authorization: ReviewPathAuthorization
+  authorization: ReviewPathAuthorization,
+  history: Pick<ReviewPersistedStateSnapshot, 'reviewActionHistory' | 'reviewRedoHistory'>
 ): Promise<ReviewMutationJournalDiskStep[]> {
   const ids = new Set<string>();
   const normalized: ReviewMutationJournalDiskStep[] = [];
+  const actions = [
+    ...history.reviewActionHistory,
+    ...history.reviewRedoHistory.map((entry) => entry.action),
+  ];
   for (const step of steps) {
     if (
       !step ||
@@ -66,7 +73,8 @@ export async function normalizeDirectReviewMutationSteps(
       env,
       scope,
       authorization,
-      filePath
+      filePath,
+      getAuthoritativeRenameStepFile(authorization, step, actions)
     );
     await validateSnippetPaths(authorization, authoritativeContent.snippets, {
       requireReviewedFile: true,

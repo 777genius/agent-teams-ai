@@ -21,6 +21,7 @@ interface ExecuteTeamRelaunchOptions {
   stopRun?: (runId: string) => Promise<void>;
   replaceMembers: (teamName: string, request: ReplaceMembersRequest) => Promise<void>;
   launchTeam: (request: TeamLaunchRequest) => Promise<unknown>;
+  onMembersSaved?: () => void;
 }
 
 export async function executeTeamRelaunch({
@@ -35,6 +36,7 @@ export async function executeTeamRelaunch({
   stopRun,
   replaceMembers,
   launchTeam,
+  onMembersSaved,
 }: ExecuteTeamRelaunchOptions): Promise<void> {
   const { relaunch, ...persistedMetadata } = rosterMetadata ?? {};
   if (relaunch) {
@@ -58,6 +60,7 @@ export async function executeTeamRelaunch({
         ...(memberSettingsRelaunch ? { memberSettingsRelaunch } : {}),
       });
       relaunch.replaceConfirmed = true;
+      onMembersSaved?.();
     }
     await launchTeam(request);
     return;
@@ -72,5 +75,6 @@ export async function executeTeamRelaunch({
     ...persistedMetadata,
     ...(memberSettingsRelaunch ? { memberSettingsRelaunch } : {}),
   });
+  onMembersSaved?.();
   await launchTeam(request);
 }

@@ -73,7 +73,7 @@ function parsePid(value: string): number | null {
 }
 
 function writeComplete(name: string, content: string): void {
-  const fd = fs.openSync(name, 'wx');
+  const fd = fs.openSync(name, 'wx', 0o600);
   try {
     const bytes = Buffer.from(content, 'utf8');
     let offset = 0;
@@ -126,7 +126,7 @@ function acquireGate(gate: string, token: string): string | null {
   }
   const candidate = `${gate}.candidate-${process.pid}-${randomUUID()}`;
   const entry = `owner-${process.pid}-${token}`;
-  fs.mkdirSync(candidate);
+  fs.mkdirSync(candidate, { mode: 0o700 });
   let published = false;
   try {
     writeComplete(
@@ -210,7 +210,7 @@ function releaseLock(lockPath: string, token: string): void {
 }
 
 function tryAcquire(lockPath: string, options: Required<FileLockOptions>, token: string): boolean {
-  fs.mkdirSync(path.dirname(lockPath), { recursive: true });
+  fs.mkdirSync(path.dirname(lockPath), { recursive: true, mode: 0o700 });
   const gate = `${lockPath}-transition-v2`;
   const entry = acquireGate(gate, token);
   if (entry === null) return false;

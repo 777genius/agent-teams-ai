@@ -11,7 +11,7 @@ This guide gets you from a fresh install to a running team in a few minutes.
 
 ```bash
 # 1. Install prerequisites
-node --version    # use 24.16.0
+node --version    # use 26.10.0 or 24.16.0
 pnpm --version    # use 11.22.0
 
 # 2. Clone and install
@@ -51,7 +51,7 @@ For project conventions and architecture guidance, refer to these canonical file
 
 **Or run from source** for development:
 
-Requires Node.js 24.16.0 LTS and pnpm 11.22.0. On macOS, official Node.js 24 prebuilt binaries require macOS 13.5+.
+Requires Node.js 26.10.0 Current or 24.16.0 LTS and pnpm 11.22.0. Node.js 26 does not bundle Corepack, so install pnpm separately if needed. On macOS, official Node.js 24 prebuilt binaries require macOS 13.5+.
 
 ```bash
 git clone https://github.com/777genius/agent-teams-ai.git

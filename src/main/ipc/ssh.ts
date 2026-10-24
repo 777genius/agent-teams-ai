@@ -40,6 +40,9 @@ const logger = createLogger('IPC:ssh');
 
 let connectionManager: SshConnectionManager;
 let registry: ServiceContextRegistry;
+let changeContext = async (operation: () => Promise<void> | void): Promise<void> => {
+  await operation();
+};
 let onContextRewire: (context: ServiceContext) => void;
 
 // =============================================================================
@@ -55,11 +58,17 @@ let onContextRewire: (context: ServiceContext) => void;
 export function initializeSshHandlers(
   manager: SshConnectionManager,
   contextRegistry: ServiceContextRegistry,
-  onRewire: (context: ServiceContext) => void
+  onRewire: (context: ServiceContext) => void,
+  withContextChange?: typeof changeContext
 ): void {
   connectionManager = manager;
   registry = contextRegistry;
   onContextRewire = onRewire;
+  changeContext =
+    withContextChange ??
+    (async (operation) => {
+      await operation();
+    });
 }
 
 // =============================================================================
@@ -69,43 +78,45 @@ export function initializeSshHandlers(
 export function registerSshHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(SSH_CONNECT, async (_event, config: SshConnectionConfig) => {
     try {
-      // Connect to SSH host
-      await connectionManager.connect(config);
+      await changeContext(async () => {
+        // Connect to SSH host
+        await connectionManager.connect(config);
 
-      // Get provider and remote path
-      const provider = connectionManager.getProvider();
-      const remoteProjectsPath = connectionManager.getRemoteProjectsPath() ?? undefined;
-      const remoteTodosPath = remoteProjectsPath
-        ? path.join(path.dirname(remoteProjectsPath), 'todos')
-        : undefined;
+        // Get provider and remote path
+        const provider = connectionManager.getProvider();
+        const remoteProjectsPath = connectionManager.getRemoteProjectsPath() ?? undefined;
+        const remoteTodosPath = remoteProjectsPath
+          ? path.join(path.dirname(remoteProjectsPath), 'todos')
+          : undefined;
 
-      // Generate context ID
-      const contextId = `ssh-${config.host}`;
+        // Generate context ID
+        const contextId = `ssh-${config.host}`;
 
-      // Destroy existing SSH context if any (reconnection case)
-      if (registry.has(contextId)) {
-        logger.info(`Destroying existing SSH context: ${contextId}`);
-        registry.destroy(contextId);
-      }
+        // Destroy existing SSH context if any (reconnection case)
+        if (registry.has(contextId)) {
+          logger.info(`Destroying existing SSH context: ${contextId}`);
+          registry.destroy(contextId);
+        }
 
-      // Create new SSH context
-      const sshContext = new ServiceContext({
-        id: contextId,
-        type: 'ssh',
-        fsProvider: provider,
-        projectsDir: remoteProjectsPath,
-        todosDir: remoteTodosPath,
+        // Create new SSH context
+        const sshContext = new ServiceContext({
+          id: contextId,
+          type: 'ssh',
+          fsProvider: provider,
+          projectsDir: remoteProjectsPath,
+          todosDir: remoteTodosPath,
+        });
+
+        // Register and start SSH context
+        registry.registerContext(sshContext);
+        sshContext.start();
+
+        // Switch to SSH context
+        registry.switch(contextId);
+
+        // Re-wire file watcher events only (renderer's connectSsh() handles state)
+        onContextRewire(sshContext);
       });
-
-      // Register and start SSH context
-      registry.registerContext(sshContext);
-      sshContext.start();
-
-      // Switch to SSH context
-      registry.switch(contextId);
-
-      // Re-wire file watcher events only (renderer's connectSsh() handles state)
-      onContextRewire(sshContext);
 
       return { success: true, data: connectionManager.getStatus() };
     } catch (err) {
@@ -117,25 +128,27 @@ export function registerSshHandlers(ipcMain: IpcMain): void {
 
   ipcMain.handle(SSH_DISCONNECT, async () => {
     try {
-      // Get current SSH context ID before disconnecting
-      const currentContextId = registry.getActiveContextId();
-      const isSshContext = currentContextId.startsWith('ssh-');
+      await changeContext(() => {
+        // Get current SSH context ID before disconnecting
+        const currentContextId = registry.getActiveContextId();
+        const isSshContext = currentContextId.startsWith('ssh-');
 
-      // Disconnect from SSH
-      connectionManager.disconnect();
+        // Disconnect from SSH
+        connectionManager.disconnect();
 
-      // If we were on an SSH context, destroy it
-      if (isSshContext) {
-        // Switch back to local first (this also starts local file watcher)
-        registry.switch('local');
+        // If we were on an SSH context, destroy it
+        if (isSshContext) {
+          // Switch back to local first (this also starts local file watcher)
+          registry.switch('local');
 
-        // Destroy the SSH context
-        registry.destroy(currentContextId);
+          // Destroy the SSH context
+          registry.destroy(currentContextId);
 
-        // Re-wire file watcher events only (renderer's disconnectSsh() handles state)
-        const localContext = registry.getActive();
-        onContextRewire(localContext);
-      }
+          // Re-wire file watcher events only (renderer's disconnectSsh() handles state)
+          const localContext = registry.getActive();
+          onContextRewire(localContext);
+        }
+      });
 
       return { success: true, data: connectionManager.getStatus() };
     } catch (err) {

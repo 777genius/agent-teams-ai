@@ -77,7 +77,6 @@ import type {
   LeadContextUsageSnapshot,
   MemberLogSummary,
   MemberSpawnStatusesSnapshot,
-  MessagesPage,
   OpenCodeRuntimeDeliveryStatus,
   ProjectBranchChangeEvent,
   QueuedUserMessagesSnapshot,
@@ -88,6 +87,7 @@ import type {
   TaskAttachmentMeta,
   TaskChangePresenceState,
   TaskComment,
+  TaskFieldUpdates,
   TeamAgentRuntimeSnapshot,
   TeamChangeEvent,
   TeamClaudeLogsQuery,
@@ -98,11 +98,9 @@ import type {
   TeamCreateRequest,
   TeamCreateResponse,
   TeamForceStopResult,
-  TeamGetDataOptions,
   TeamLaunchFailureDiagnosticsBundle,
   TeamLaunchRequest,
   TeamLaunchResponse,
-  TeamMemberActivityMeta,
   TeamMessageNotificationData,
   TeamProvisioningModelCheckRequest,
   TeamProvisioningModelVerificationMode,
@@ -114,7 +112,6 @@ import type {
   TeamTaskStatus,
   TeamTaskWithKanban,
   TeamUpdateConfigRequest,
-  TeamViewSnapshot,
   TeamWorktreeGitStatus,
   ToolApprovalEvent,
   ToolApprovalFileContent,
@@ -128,6 +125,7 @@ import type {
   HostTaskLogDetailResult,
   HostTaskLogStream,
 } from './teamActivity';
+import type { TeamMemberRestartResult } from './teamMemberRestart';
 import type { TerminalAPI } from './terminal';
 import type { TmuxAPI } from './tmux';
 import type { WaterfallData } from './visualization';
@@ -141,6 +139,8 @@ import type {
 } from '@features/change-review-history/contracts';
 import type { CodexAccountElectronApi } from '@features/codex-account/contracts';
 import type { CodexRuntimeAPI } from '@features/codex-runtime-installer/contracts';
+import type { ExternalAgentConnectionApi } from '@features/external-agent-connection/contracts';
+import type { GatewayProviderApi } from '@features/gateway-provider/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
 import type {
   MemberWorkSyncMetricsRequest,
@@ -154,8 +154,13 @@ import type { OrganizationsElectronApi } from '@features/organizations/contracts
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
+import type { TeamGroupChatsAPI } from '@features/team-group-chats/contracts';
 import type { TeamImportApi } from '@features/team-import/contracts';
 import type { TeamMemberSettingsApi } from '@features/team-provisioning/contracts';
+import type {
+  TeamReadLegacyApi,
+  TeamReadRecoveryApi,
+} from '@features/team-read-recovery/contracts';
 import type { TerminalWorkspaceElectronApi } from '@features/terminal-workspace/contracts';
 import type { TokenUsageElectronApi } from '@features/token-usage/contracts';
 import type { WorkspaceTrustElectronApi } from '@features/workspace-trust/contracts';
@@ -173,7 +178,6 @@ import type {
   SessionsPaginationOptions,
   SubagentDetail,
 } from '@main/types';
-
 export type {
   SentryTelemetryContext,
   SentryTelemetryStatus,
@@ -360,6 +364,8 @@ export interface ClaudeMdFileInfo {
  * Status payload sent from the main process updater to the renderer.
  */
 export interface UpdaterStatus {
+  /** The operation that produced this status, including background checks. */
+  operation?: 'check' | 'download' | 'install';
   type: 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error';
   version?: string;
   releaseNotes?: string;
@@ -452,9 +458,9 @@ export interface HttpServerAPI {
 // Teams API
 // =============================================================================
 
-export interface TeamsAPI extends TeamMemberSettingsApi {
+export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi {
+  readRecovery?: TeamReadRecoveryApi;
   list: () => Promise<TeamSummary[]>;
-  getData: (teamName: string, options?: TeamGetDataOptions) => Promise<TeamViewSnapshot>;
   getTaskChangePresence: (teamName: string) => Promise<Record<string, TaskChangePresenceState>>;
   setChangePresenceTracking: (teamName: string, enabled: boolean) => Promise<void>;
   setToolActivityTracking: (teamName: string, enabled: boolean) => Promise<void>;
@@ -490,11 +496,6 @@ export interface TeamsAPI extends TeamMemberSettingsApi {
     teamName: string,
     messageId: string
   ) => Promise<OpenCodeRuntimeDeliveryStatus | null>;
-  getMessagesPage: (
-    teamName: string,
-    options?: { cursor?: string | null; limit?: number }
-  ) => Promise<MessagesPage>;
-  getMemberActivityMeta: (teamName: string) => Promise<TeamMemberActivityMeta>;
   createTask: (teamName: string, request: CreateTaskRequest) => Promise<TeamTask>;
   getTask: (teamName: string, taskId: string) => Promise<TeamTaskWithKanban | null>;
   requestReview: (teamName: string, taskId: string) => Promise<void>;
@@ -506,11 +507,7 @@ export interface TeamsAPI extends TeamMemberSettingsApi {
   ) => Promise<void>;
   updateTaskStatus: (teamName: string, taskId: string, status: TeamTaskStatus) => Promise<void>;
   updateTaskOwner: (teamName: string, taskId: string, owner: string | null) => Promise<void>;
-  updateTaskFields: (
-    teamName: string,
-    taskId: string,
-    fields: { subject?: string; description?: string }
-  ) => Promise<void>;
+  updateTaskFields: (teamName: string, taskId: string, fields: TaskFieldUpdates) => Promise<void>;
   startTask: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean }>;
   startTaskByUser: (teamName: string, taskId: string) => Promise<{ notifiedOwner: boolean }>;
   processSend: (teamName: string, message: string) => Promise<void>;
@@ -530,18 +527,6 @@ export interface TeamsAPI extends TeamMemberSettingsApi {
   ) => Promise<DiscardQueuedUserMessagesResult>;
   createConfig: (request: TeamCreateConfigRequest) => Promise<void | TeamCreateConfigResponse>;
   getMemberLogs: (teamName: string, memberName: string) => Promise<MemberLogSummary[]>;
-  getLogsForTask: (
-    teamName: string,
-    taskId: string,
-    options?: {
-      owner?: string;
-      status?: string;
-      /** Persisted work intervals (preferred for reliable owner-log attribution). */
-      intervals?: { startedAt: string; completedAt?: string }[];
-      /** Back-compat: single since timestamp (deprecated). */
-      since?: string;
-    }
-  ) => Promise<MemberLogSummary[]>;
   getTaskActivity: (
     teamName: string,
     taskId: string
@@ -608,7 +593,7 @@ export interface TeamsAPI extends TeamMemberSettingsApi {
     teamName: string,
     memberName: string,
     expectedSecondary?: boolean
-  ) => Promise<void>;
+  ) => Promise<TeamMemberRestartResult>;
   skipMemberForLaunch: (teamName: string, memberName: string) => Promise<void>;
   softDeleteTask: (teamName: string, taskId: string) => Promise<void>;
   restoreTask: (teamName: string, taskId: string) => Promise<void>;
@@ -899,7 +884,10 @@ export interface ElectronAPI
     CodexAccountElectronApi,
     TokenUsageElectronApi,
     ProjectFolderElectronApi {
+  teamGroupChats: TeamGroupChatsAPI;
   announcements: AnnouncementsApi;
+  gatewayProvider: GatewayProviderApi;
+  externalAgentConnection: ExternalAgentConnectionApi;
   startup?: AppStartupAPI;
   appCloseCoordination?: AppCloseCoordinationElectronApi;
   workspaceTrust?: WorkspaceTrustElectronApi['workspaceTrust'];

@@ -1,0 +1,39 @@
+diff --git a/dist/stdio-vt8L9uwX.mjs b/dist/stdio-vt8L9uwX.mjs
+--- a/dist/stdio-vt8L9uwX.mjs
++++ b/dist/stdio-vt8L9uwX.mjs
+@@ -15572,7 +15572,7 @@
+ 	}
+ 	return false;
+ };
+-const startHTTPServer = async ({ apiKey, authenticate, cors, createServer, enableJsonResponse, eventStore, host = "::", oauth, onClose, onConnect, onUnhandledRequest, port, sseEndpoint = "/sse", sslCa, sslCert, sslKey, stateless, streamEndpoint = "/mcp" }) => {
++const startHTTPServer = async ({ requestGate, apiKey, authenticate, cors, createServer, enableJsonResponse, eventStore, host = "::", oauth, onClose, onConnect, onUnhandledRequest, port, sseEndpoint = "/sse", sslCa, sslCert, sslKey, stateless, streamEndpoint = "/mcp" }) => {
+ 	const activeSSETransports = {};
+ 	const activeStreamTransports = {};
+ 	const authMiddleware = new AuthenticationMiddleware({
+@@ -15583,6 +15583,7 @@
+ 	* @author https://dev.classmethod.jp/articles/mcp-sse/
+ 	*/
+ 	const requestListener = async (req, res) => {
++		if (requestGate && !await requestGate(req, res)) return;
+ 		applyCorsHeaders(req, res, cors);
+ 		if (req.method === "OPTIONS") {
+ 			res.writeHead(204);
+diff --git a/dist/index.d.mts b/dist/index.d.mts
+--- a/dist/index.d.mts
++++ b/dist/index.d.mts
+@@ -106,6 +106,7 @@
+   connect: Server["connect"];
+ };
+ declare const startHTTPServer: <T extends ServerLike>({
++  requestGate,
+   apiKey,
+   authenticate,
+   cors,
+@@ -127,6 +128,7 @@
+ }: {
+   apiKey?: string;
+   authenticate?: (request: http.IncomingMessage) => Promise<unknown>;
++  requestGate?: (request: http.IncomingMessage, response: http.ServerResponse) => boolean | Promise<boolean>;
+   cors?: boolean | CorsOptions;
+   createServer: (request: http.IncomingMessage) => Promise<T>;
+   enableJsonResponse?: boolean;

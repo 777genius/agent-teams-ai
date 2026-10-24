@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "إضافة تفاعل ({{count}})",
+      "remove": "إزالة التفاعل ({{count}})",
+      "count": "التفاعلات: {{count}}",
+      "failed": "تعذر تحديث التفاعلات"
+    },
     "actions": {
       "createTaskFromMessage": "إنشاء مهمة من الرسالة",
       "editMessage": "تعديل الرسالة",
@@ -194,7 +200,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "يجب أن يحتوي الاسم على رسالة واحدة أو رقم واحد على الأقل",
-      "nameTooLong": "الاسم طويل جدا (ماكس 128 تشارز)",
+      "nameTooLong": "الاسم طويل جدا (ماكس 64 تشارز)",
       "selectWorkingDirectory": "دليل عمل مختار",
       "memberNameRequired": "اسم العضو لا يمكن أن يكون فارغا",
       "memberNameInvalid": "يجب أن يبدأ اسم العضو بالألبانوميريك، ويستخدم فقط [A-zA-Z0-9.]",
@@ -262,6 +268,8 @@
       "name": "الاسم"
     },
     "memberRestartWarning": "الادخار سوف يعيد هذا الفريق إلى عمله ليقوم بدوره، وسير عمله، وعزلته عن العمل، ومقدمه، أو نموذجه، أو جهده، أو MCP تغيرات الدخول",
+    "displayedRuntimeHint": "في بطاقة العضو: {{runtime}}. تختلف الإعدادات المحفوظة.",
+    "useDisplayedRuntime": "استخدام إعدادات البطاقة",
     "notices": {
       "liveRenameBlocked": "الادخار الحي مغلق لأن زملاء الفريق الحاليين أعيد تسميتهم اعيدوا تغيير الهوية أو اوقفوا الفريق أولاً",
       "newLiveTeammates": "لا يمكن إضافة زملاء جدد من فريق إديت بينما الفريق على الهواء استعملي جهاز الاتصال بدلاً من ذلك",
@@ -351,6 +359,30 @@
     "placeholders": {
       "name": "اسم العضو",
       "mcpServers": "(غيثوب)"
+    },
+    "gateway": {
+      "apiKeyLabel": "Gateway API key",
+      "apiKeyPlaceholder": "Paste the teammate gateway API key",
+      "authRejected": "Key authorization was rejected.",
+      "bindButton": "Bind teammate",
+      "bindingStatus": "Bound to {{profile}}",
+      "credentialChanged": "stored key changed — bind again with a new key",
+      "credentialMissing": "stored key missing — bind again with a new key",
+      "credentialReady": "key stored",
+      "emptyCatalog": "The model catalog is empty.",
+      "keyRequired": "Enter the gateway API key first.",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. تُحدَّث الارتباطات المحفوظة قبل فتح هذا النموذج فورًا وتحتفظ بالتغييرات عند إلغاء نموذج الفريق.",
+      "probeButton": "Check key and load models",
+      "probing": "Checking...",
+      "profileLabel": "Gateway profile",
+      "profilePlaceholder": "Select a gateway profile",
+      "profileRequired": "Select a gateway profile first.",
+      "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+      "title": "Gateway provider",
+      "unbindButton": "Unbind",
+      "unavailable": "The gateway is unavailable right now."
     }
   },
   "detail": {
@@ -730,6 +762,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "إنشاء محادثة جماعية",
+      "description": "اختر وكيلين على الأقل. تتم إضافتك تلقائيًا.",
+      "name": "اسم المحادثة",
+      "autoInclude": "إضافة الأعضاء الجدد تلقائيًا",
+      "minimum": "اختر وكيلين على الأقل.",
+      "creating": "جارٍ الإنشاء…",
+      "retryCreate": "إعادة محاولة الإنشاء",
+      "unavailable": "المحادثة غير متاحة",
+      "message": "مراسلة هذه المجموعة",
+      "archivedHint": "هذه المحادثة مؤرشفة. استعدها لإرسال الرسائل.",
+      "restartHint": "يجب أن يشغّل جميع المشاركين بيئة تنفيذ متوافقة قبل إرسال الرسائل.",
+      "unknownDelivery": "تم الحفظ. حالة التسليم غير معروفة.",
+      "sending": "جارٍ الإرسال…",
+      "retrySend": "إعادة إرسال الرسالة نفسها",
+      "send": "إرسال",
+      "archived": "المحادثات المؤرشفة",
+      "restore": "استعادة المحادثة",
+      "archive": "أرشفة المحادثة",
+      "delivery": {
+        "queued": "في قائمة الانتظار",
+        "accepted": "مقبولة",
+        "failed": "فشل",
+        "unknown": "غير معروف",
+        "skipped": "تم التخطي"
+      }
+    },
     "actions": {
       "toLatest": "إلى الأحدث",
       "bottomSheetActions": "تصوّرات في الجزء السفلي",
@@ -969,7 +1028,8 @@
       "cancel": "إلغاء",
       "delete": "تحذف",
       "markResolved": "(مارك)",
-      "save": "أنقذ"
+      "save": "أنقذ",
+      "openInTaskTab": "فتح في تبويب منفصل"
     },
     "attachments": {
       "commentAttachment": "التعليق",
@@ -2966,6 +3026,25 @@
         "weight_few": "weight {{count}}",
         "weight_many": "weight {{count}}"
       }
+    }
+  },
+  "externalPrompt": {
+    "requestHelp": "Name the templates to use and describe any edits in your request.",
+    "editAvailable": "Editing draft/stopped configuration is available.",
+    "trashAvailable": "Reversible trash for draft/stopped teams is available."
+  },
+  "managementChanges": {
+    "title": "Recent changes",
+    "created": "Created",
+    "edited": "Edited",
+    "hidden": "Some recent changes are hidden by the current filters.",
+    "roster": "Roles: +{{added}}/-{{removed}}",
+    "fields": {
+      "displayName": "Name changed",
+      "description": "Description changed",
+      "color": "Color changed",
+      "leadInstructions": "Lead instructions changed",
+      "members": "Members changed"
     }
   }
 }

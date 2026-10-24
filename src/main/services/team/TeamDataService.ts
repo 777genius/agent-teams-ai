@@ -3,7 +3,7 @@ import { TaskBoardCommandFacade } from '@features/task-board-commands';
 import { fingerprintSavedLaunchSettings } from '@features/team-provisioning/contracts';
 import { fromProvisioningMembers, isMixedOpenCodeSideLanePlan } from '@features/team-runtime-lanes';
 import { yieldToEventLoop } from '@main/utils/asyncYield';
-import { getClaudeBasePath, getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
+import { getClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
 import { stripAgentBlocks, wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { getMemberColorByName } from '@shared/constants/memberColors';
@@ -19,7 +19,6 @@ import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { getReviewStateFromTask } from '@shared/utils/reviewState';
 import { buildStandaloneSlashCommandMeta } from '@shared/utils/slashCommands';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
-import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import {
   createCliAutoSuffixNameGuard,
@@ -28,6 +27,7 @@ import {
   validateTeamMemberNameFormat,
 } from '@shared/utils/teamMemberName';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
+import { resolveTeamRuntimeSelection } from '@shared/utils/teamRuntimeSelection';
 import { extractToolPreview, formatToolSummaryFromCalls } from '@shared/utils/toolSummary';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { randomUUID } from 'crypto';
@@ -44,10 +44,10 @@ import {
 } from './cache/LeadSessionParseCache';
 import { mapLimitLocal } from './stopped-import/teamReadConcurrency';
 import { atomicWriteAsync } from './atomicWrite';
-import { renameDraftTeamDirectory } from './draftTeamRename';
+import { createDraftTeamConfig } from './createDraftTeamConfig';
+import { assertDraftRenameDestinationAvailable, renameDraftTeamDirectory } from './draftTeamRename';
 import { extractLeadSessionMessagesFromJsonl } from './leadSessionMessageExtractor';
 import { MemberActivityMetaService } from './MemberActivityMetaService';
-import { mergeLiveLeadProcessMessagesPage } from './mergeLiveLeadProcessMessages';
 import {
   permanentlyDeleteTeamData,
   type PermanentTeamDataDeletionOptions,
@@ -59,11 +59,15 @@ import {
   isControllerTaskNotFoundError,
 } from './taskCreationIdempotency';
 import {
+  assertTaskGroupChatAssociation,
+  type TaskGroupChatCatalog,
+} from './taskGroupChatAssociation';
+import {
   choosePreferredLaunchSnapshot,
   readBootstrapLaunchSnapshot,
 } from './TeamBootstrapStateReader';
 import { resolveProjectPathFromConfig, TeamConfigReader } from './TeamConfigReader';
-import { capMessagesPageLiveOverlay } from './teamInboxOrdering';
+import { setTeamDeleted, updateTeamConfiguration } from './TeamConfigurationMutations';
 import { TeamInboxReader } from './TeamInboxReader';
 import { TeamInboxWriter } from './TeamInboxWriter';
 import { TeamKanbanManager } from './TeamKanbanManager';
@@ -74,7 +78,9 @@ import { planTeamMemberRestore } from './TeamMemberRestorePlan';
 import { TeamMemberRuntimeAdvisoryService } from './TeamMemberRuntimeAdvisoryService';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamMessageFeedService } from './TeamMessageFeedService';
+import { readTeamMessagesPage } from './TeamMessagePageRead';
 import { TeamMetaStore } from './TeamMetaStore';
+import { applyDistinctRosterColors } from './teamRosterColors';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 import { getTeamTaskWorkflowColumn, selectCurrentActiveTeamTask } from './teamTaskActiveState';
 import { TeamTaskCommentNotificationJournal } from './TeamTaskCommentNotificationJournal';
@@ -88,6 +94,7 @@ import type { TaskChangePresenceRepository } from './cache/TaskChangePresenceRep
 import type { TaskCommentNotificationJournalStore } from './TaskCommentNotificationJournalStore';
 import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
 import type { TeamMetaFile } from './TeamMetaStore';
+import type { AgentActionMode } from '@shared/types';
 import type {
   AddMemberRequest,
   AttachmentMeta,
@@ -104,6 +111,7 @@ import type {
   TaskAttachmentMeta,
   TaskChangePresenceState,
   TaskComment,
+  TaskFieldUpdates,
   TaskRef,
   TeamConfig,
   TeamCreateConfigRequest,
@@ -298,16 +306,6 @@ interface GlobalTaskTeamInfo {
   deletedAt?: string;
 }
 
-function applyDistinctRosterColors<T extends { name: string; color?: string; removedAt?: number }>(
-  members: readonly T[]
-): T[] {
-  const colorMap = buildTeamMemberColorMap(members, { preferProvidedColors: false });
-  return members.map((member) => ({
-    ...member,
-    color: colorMap.get(member.name) ?? member.color ?? getMemberColorByName(member.name),
-  }));
-}
-
 function readConfigForUiSnapshot(
   configReader: TeamConfigReader & {
     getConfigSnapshot?: (teamName: string) => Promise<TeamConfig | null>;
@@ -422,6 +420,7 @@ export class TeamDataService {
   private readonly notificationContextInFlight = new Map<string, InFlightTeamNotificationContext>();
   private readonly notificationContextGenerationByTeam = new Map<string, number>();
   private taskBoardCommandFacade = createNonDurableTaskBoardCommandFacade();
+  private taskGroupChatCatalog: TaskGroupChatCatalog | null = null;
 
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
@@ -656,6 +655,10 @@ export class TeamDataService {
 
   setMemberRuntimeAdvisoryService(service: TeamMemberRuntimeAdvisoryService): void {
     this.memberRuntimeAdvisoryService = service;
+  }
+
+  setTaskGroupChatCatalog(catalog: TaskGroupChatCatalog): void {
+    this.taskGroupChatCatalog = catalog;
   }
 
   setTaskBoardCommandFacade(facade: TaskBoardCommandFacade | null): void {
@@ -1079,7 +1082,8 @@ export class TeamDataService {
 
     const membersMeta = await this.membersMetaStore.getMeta(teamName);
     const members = membersMeta?.members ?? [];
-    const resolvedProviderId = meta.providerId ?? 'anthropic';
+    const selection = resolveTeamRuntimeSelection(meta);
+    const resolvedProviderId = selection.status === 'selected' ? selection.providerId : undefined;
     return {
       teamName,
       displayName: meta.displayName,
@@ -1088,6 +1092,7 @@ export class TeamDataService {
       cwd: meta.cwd,
       prompt: meta.prompt,
       savedSettingsFingerprint: fingerprintSavedLaunchSettings(meta),
+      runtimeSelectionVersion: meta.runtimeSelectionVersion,
       providerId: resolvedProviderId,
       providerBackendId: migrateProviderBackendId(
         resolvedProviderId,
@@ -1243,37 +1248,70 @@ export class TeamDataService {
     return out;
   }
 
+  private configurationGate: (teamName: string, operation: () => Promise<void>) => Promise<void> = (
+    _name,
+    operation
+  ) => operation();
+
+  private configurationIdentityFence: (
+    teamName: string,
+    operation: () => Promise<void>
+  ) => Promise<void> = (_name, operation) => operation();
+
+  setConfigurationIdentityFence(
+    fence: (teamName: string, operation: () => Promise<void>) => Promise<void>
+  ): void {
+    this.configurationIdentityFence = fence;
+  }
+
+  setConfigurationGate(
+    gate: (teamName: string, operation: () => Promise<void>) => Promise<void>
+  ): void {
+    this.configurationGate = gate;
+  }
+
+  async runConfigurationOperation<T>(teamName: string, operation: () => Promise<T>): Promise<T> {
+    let result!: T;
+    const lockName = teamName.trim().toLowerCase();
+    await this.configurationIdentityFence(lockName, () =>
+      this.configurationGate(lockName, async () => {
+        result = await operation();
+      })
+    );
+    return result;
+  }
+
   async updateConfig(
     teamName: string,
     updates: { name?: string; description?: string; color?: string }
   ): Promise<TeamConfig | null> {
-    const updated = await this.configReader.updateConfig(teamName, updates);
-    this.invalidateNotificationContext(teamName);
-    return updated;
+    return this.runConfigurationOperation(teamName, () =>
+      updateTeamConfiguration(teamName, updates, {
+        configReader: this.configReader,
+        teamMetaStore: this.teamMetaStore,
+        invalidate: (name) => this.invalidateNotificationContext(name),
+      })
+    );
   }
 
   async deleteTeam(teamName: string): Promise<void> {
-    const config = await this.configReader.getConfig(teamName);
-    if (!config) {
-      throw new Error(`Team not found: ${teamName}`);
-    }
-    config.deletedAt = new Date().toISOString();
-    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    await atomicWriteAsync(configPath, JSON.stringify(config, null, 2));
-    await TeamConfigReader.primeConfig(teamName, config);
-    this.invalidateNotificationContext(teamName);
+    return this.runConfigurationOperation(teamName, () =>
+      setTeamDeleted(teamName, true, {
+        configReader: this.configReader,
+        teamMetaStore: this.teamMetaStore,
+        invalidate: (name) => this.invalidateNotificationContext(name),
+      })
+    );
   }
 
   async restoreTeam(teamName: string): Promise<void> {
-    const config = await this.configReader.getConfig(teamName);
-    if (!config) {
-      throw new Error(`Team not found: ${teamName}`);
-    }
-    delete config.deletedAt;
-    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    await atomicWriteAsync(configPath, JSON.stringify(config, null, 2));
-    await TeamConfigReader.primeConfig(teamName, config);
-    this.invalidateNotificationContext(teamName);
+    return this.runConfigurationOperation(teamName, () =>
+      setTeamDeleted(teamName, false, {
+        configReader: this.configReader,
+        teamMetaStore: this.teamMetaStore,
+        invalidate: (name) => this.invalidateNotificationContext(name),
+      })
+    );
   }
 
   async permanentlyDeleteTeam(
@@ -1282,17 +1320,19 @@ export class TeamDataService {
     isTaskDataCurrent: (detachedPath?: string) => Promise<boolean> = async () => true,
     options: PermanentTeamDataDeletionOptions = {}
   ): Promise<boolean> {
-    return permanentlyDeleteTeamData({
-      teamName,
-      isTeamDataCurrent,
-      isTaskDataCurrent,
-      options,
-      onTeamDataDeleted: () => {
-        TeamConfigReader.invalidateTeam(teamName);
-        this.invalidateNotificationContext(teamName);
-      },
-      onTaskDataDeleted: () => TeamTaskReader.invalidateAllTasksCache(),
-    });
+    return this.runConfigurationOperation(teamName, () =>
+      permanentlyDeleteTeamData({
+        teamName,
+        isTeamDataCurrent,
+        isTaskDataCurrent,
+        options,
+        onTeamDataDeleted: () => {
+          TeamConfigReader.invalidateTeam(teamName);
+          this.invalidateNotificationContext(teamName);
+        },
+        onTaskDataDeleted: () => TeamTaskReader.invalidateAllTasksCache(),
+      })
+    );
   }
 
   async getTeamData(teamName: string, options?: TeamGetDataOptions): Promise<TeamViewSnapshot> {
@@ -1622,36 +1662,18 @@ export class TeamDataService {
    */
   async getMessagesPage(
     teamName: string,
-    options: { cursor?: string | null; limit: number; liveMessages?: InboxMessage[] }
-  ): Promise<MessagesPage> {
-    const liveMessages = capMessagesPageLiveOverlay(options.liveMessages);
-    const pageOptions =
-      liveMessages.length > 0
-        ? {
-            ...options,
-            liveMessages,
-          }
-        : {
-            cursor: options.cursor,
-            limit: options.limit,
-          };
-    const page = await this.messageFeedService.getPage(teamName, pageOptions);
-    if (options.cursor || liveMessages.length === 0) {
-      return {
-        messages: page.messages,
-        nextCursor: page.nextCursor,
-        hasMore: page.hasMore,
-        feedRevision: page.feedRevision,
-      };
+    options: {
+      cursor?: string | null;
+      limit: number;
+      liveMessages?: InboxMessage[];
+      groupChatId?: string;
     }
-
-    return mergeLiveLeadProcessMessagesPage({
-      durableMessages: page.durableWindowMessages,
-      liveMessages,
-      limit: options.limit,
-      feedRevision: page.feedRevision,
-      durableHasMoreAfterWindow: page.durableHasMoreAfterWindow,
-    });
+  ): Promise<MessagesPage> {
+    return readTeamMessagesPage(
+      { inboxReader: this.inboxReader, messageFeedService: this.messageFeedService },
+      teamName,
+      options
+    );
   }
 
   async getMessageFeed(
@@ -1963,7 +1985,17 @@ export class TeamDataService {
   }
 
   async replaceMembers(teamName: string, request: ReplaceMembersRequest): Promise<void> {
-    const existing = await this.membersMetaStore.getMembers(teamName);
+    return this.runConfigurationOperation(teamName, () =>
+      this.replaceMembersUnlocked(teamName, request)
+    );
+  }
+
+  private async replaceMembersUnlocked(
+    teamName: string,
+    request: ReplaceMembersRequest
+  ): Promise<void> {
+    const existingMeta = await this.membersMetaStore.getMeta(teamName);
+    const existing = existingMeta?.members ?? [];
     const existingLead = existing.find(isLeadMember) ?? null;
     const existingByName = new Map(existing.map((m) => [m.name.toLowerCase(), m]));
     const joinedAt = Date.now();
@@ -2013,6 +2045,7 @@ export class TeamDataService {
               ? member.fastMode
               : undefined,
           mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
+          cwd: isSameActiveMember ? prev?.cwd : undefined,
           agentType: prev?.agentType ?? 'general-purpose',
           agentId: isSameActiveMember ? prev?.agentId : undefined,
           color: prev?.color,
@@ -2044,7 +2077,9 @@ export class TeamDataService {
         out.unshift({ ...existingLead, removedAt: undefined });
       }
     }
-    await this.membersMetaStore.writeMembers(teamName, out);
+    await this.membersMetaStore.writeMembers(teamName, out, {
+      providerBackendId: existingMeta?.providerBackendId,
+    });
   }
 
   async removeMember(teamName: string, memberName: string): Promise<void> {
@@ -2079,6 +2114,8 @@ export class TeamDataService {
 
     await this.assertRosterMutationAllowed(teamName, toProvisioningMemberShape(nextMembers));
 
+    this.membersMetaStore.serializeMembers(nextMembers);
+
     const persistConfig = async (): Promise<void> => {
       if (!plan.nextConfig) return;
       const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
@@ -2110,6 +2147,7 @@ export class TeamDataService {
     const shouldStart = Boolean(request.owner && request.startImmediately === true);
     const commandPayload: Record<string, unknown> = {
       subject: request.subject,
+      ...(request.groupChatId !== undefined ? { groupChatId: request.groupChatId } : {}),
       ...(request.description?.trim() ? { description: request.description.trim() } : {}),
       ...(request.descriptionTaskRefs?.length
         ? { descriptionTaskRefs: request.descriptionTaskRefs }
@@ -2154,6 +2192,12 @@ export class TeamDataService {
               idempotencyKey
             ),
           create: async (input) => {
+            await assertTaskGroupChatAssociation(
+              teamName,
+              input.groupChatId,
+              undefined,
+              this.taskGroupChatCatalog
+            );
             const projectPath = await this.readTaskCreateProjectPath(teamName);
             return taskBoard.createTask({
               ...input,
@@ -2166,6 +2210,12 @@ export class TeamDataService {
       task = commandResult.task;
       createdInAttempt = commandResult.createdInAttempt;
     } else {
+      await assertTaskGroupChatAssociation(
+        teamName,
+        request.groupChatId,
+        undefined,
+        this.taskGroupChatCatalog
+      );
       const projectPath = await this.readTaskCreateProjectPath(teamName);
       task = taskBoard.createTask({
         ...commandPayload,
@@ -2391,9 +2441,18 @@ export class TeamDataService {
   async updateTaskFields(
     teamName: string,
     taskId: string,
-    fields: { subject?: string; description?: string }
+    fields: TaskFieldUpdates
   ): Promise<void> {
-    this.getTaskBoard(teamName).updateTaskFields(taskId, fields);
+    const taskBoard = this.getTaskBoard(teamName);
+    if (fields.groupChatId !== undefined && fields.groupChatId !== null) {
+      await assertTaskGroupChatAssociation(
+        teamName,
+        fields.groupChatId,
+        (taskBoard.getTask(taskId) as TeamTask).groupChatId,
+        this.taskGroupChatCatalog
+      );
+    }
+    taskBoard.updateTaskFields(taskId, fields);
     this.invalidateGlobalTaskProjectionCache();
   }
 
@@ -2515,7 +2574,7 @@ export class TeamDataService {
 
   async sendMessage(teamName: string, request: SendMessageRequest): Promise<SendMessageResult> {
     const enrichedRequest = await this.buildEnrichedSendMessageRequest(teamName, request);
-    const result = this.getController(teamName).messages.sendMessage({
+    const result = (await this.getController(teamName).messages.sendMessageAsync({
       member: enrichedRequest.member,
       from: enrichedRequest.from,
       text: enrichedRequest.text,
@@ -2540,7 +2599,7 @@ export class TeamDataService {
       source: enrichedRequest.source,
       leadSessionId: enrichedRequest.leadSessionId,
       attachments: enrichedRequest.attachments,
-    }) as SendMessageResult;
+    })) as SendMessageResult;
     this.invalidateMessageFeed(teamName);
     return result;
   }
@@ -3151,7 +3210,9 @@ export class TeamDataService {
     summary?: string,
     attachments?: AttachmentMeta[],
     taskRefs?: TaskRef[],
-    messageId?: string
+    messageId?: string,
+    actionMode: AgentActionMode = 'do',
+    fileReferences?: AttachmentMeta[]
   ): Promise<SendMessageResult> {
     let leadSessionId: string | undefined;
     try {
@@ -3169,7 +3230,9 @@ export class TeamDataService {
       taskRefs,
       summary,
       source: 'user_sent',
+      actionMode,
       attachments: attachments?.length ? attachments : undefined,
+      fileReferences: fileReferences?.length ? fileReferences : undefined,
       leadSessionId,
       ...(slashCommandMeta
         ? {
@@ -3329,116 +3392,29 @@ export class TeamDataService {
     });
   }
 
-  async createTeamConfig(request: TeamCreateConfigRequest): Promise<void> {
-    const teamDir = path.join(getTeamsBasePath(), request.teamName);
-    const tasksDir = path.join(getTasksBasePath(), request.teamName);
-    await Promise.all([
-      fs.promises.mkdir(getTeamsBasePath(), { recursive: true }),
-      fs.promises.mkdir(getTasksBasePath(), { recursive: true }),
-    ]);
-
-    const pathExists = async (targetPath: string): Promise<boolean> => {
-      try {
-        await fs.promises.lstat(targetPath);
-        return true;
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
-        throw error;
-      }
-    };
-    if ((await pathExists(teamDir)) || (await pathExists(tasksDir))) {
-      throw new Error(`Team already exists: ${request.teamName}`);
-    }
-
-    try {
-      await fs.promises.mkdir(teamDir);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
-        throw new Error(`Team already exists: ${request.teamName}`);
-      }
-      throw error;
-    }
-
-    let tasksDirectoryCreated = false;
-    try {
-      await fs.promises.mkdir(tasksDir);
-      tasksDirectoryCreated = true;
-
-      const joinedAt = Date.now();
-      // Save team-level metadata to team.meta.json (NOT config.json).
-      // config.json is CLI territory — created by TeamCreate during provisioning.
-      // team.meta.json preserves user's configuration for the Launch flow.
-      await this.teamMetaStore.writeMeta(request.teamName, {
-        displayName: request.displayName,
-        description: request.description,
-        color: request.color,
-        cwd: request.cwd?.trim() || '',
-        prompt: request.prompt,
-        providerId: request.providerId,
-        providerBackendId: request.providerBackendId,
-        model: request.model,
-        effort: request.effort,
-        fastMode: request.fastMode,
-        syncModelsWithLead: request.syncModelsWithLead,
-        skipPermissions: request.skipPermissions,
-        worktree: request.worktree,
-        extraCliArgs: request.extraCliArgs,
-        limitContext: request.limitContext,
-        createdAt: joinedAt,
-      });
-
-      const membersToWrite = applyDistinctRosterColors(
-        request.members.map((member) => ({
-          name: (() => {
-            const name = member.name.trim();
-            if (!name) throw new Error('Member name cannot be empty');
-            const formatError = validateTeamMemberNameFormat(name);
-            if (formatError) {
-              throw new Error(`Member name "${name}" is invalid: ${formatError}`);
-            }
-            if (name.toLowerCase() === 'user') {
-              throw new Error('Member name "user" is reserved');
-            }
-            if (name.toLowerCase() === 'team-lead')
-              throw new Error('Member name "team-lead" is reserved');
-            const suffixInfo = parseNumericSuffixName(name);
-            if (suffixInfo && suffixInfo.suffix >= 2) {
-              throw new Error(
-                `Member name "${name}" is not allowed (reserved for runtime-managed numeric suffixes). Use "${suffixInfo.base}" instead.`
-              );
-            }
-            return name;
-          })(),
-          role: member.role?.trim() || undefined,
-          workflow: member.workflow?.trim() || undefined,
-          isolation: member.isolation === 'worktree' ? ('worktree' as const) : undefined,
-          providerId: normalizeOptionalTeamProviderId(member.providerId),
-          providerBackendId: member.providerBackendId,
-          model: member.model?.trim() || undefined,
-          effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
-          fastMode: member.fastMode,
-          mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
-          agentType: 'general-purpose' as const,
-          joinedAt,
-        }))
-      );
-      await this.membersMetaStore.writeMembers(request.teamName, membersToWrite, {
-        providerBackendId: request.providerBackendId,
-      });
-      TeamConfigReader.invalidateListTeamsCache();
-    } catch (error) {
-      if (tasksDirectoryCreated) {
-        await fs.promises.rm(tasksDir, { recursive: true, force: true }).catch(() => undefined);
-      }
-      await fs.promises.rm(teamDir, { recursive: true, force: true }).catch(() => undefined);
-      if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
-        throw new Error(`Team already exists: ${request.teamName}`);
-      }
-      throw error;
-    }
+  createTeamConfig(request: TeamCreateConfigRequest): Promise<void> {
+    return this.runConfigurationOperation(request.teamName, () =>
+      createDraftTeamConfig(request, {
+        teamMetaStore: this.teamMetaStore,
+        membersMetaStore: this.membersMetaStore,
+      })
+    );
   }
 
-  readonly renameDraftTeam = renameDraftTeamDirectory;
+  /** The continuation keeps destination identity and lifecycle admission through draft provisioning. */
+  readonly renameDraftTeam = (
+    oldName: string,
+    newName: string,
+    afterRename?: () => Promise<void>
+  ): Promise<void> =>
+    this.runConfigurationOperation(oldName, async () => {
+      if (oldName === newName) return afterRename?.();
+      await assertDraftRenameDestinationAvailable(newName);
+      return this.runConfigurationOperation(newName, async () => {
+        await renameDraftTeamDirectory(oldName, newName);
+        await afterRename?.();
+      });
+    });
 
   async reconcileTeamArtifacts(
     teamName: string,

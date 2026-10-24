@@ -16,6 +16,7 @@ import { StringDecoder } from 'string_decoder';
 
 import { JsonTeamTranscriptAffinityIndexStore } from './cache/JsonTeamTranscriptAffinityIndexStore';
 import { TeamConfigReader } from './TeamConfigReader';
+import { normalizeLogSourceSessionId } from './teamLogSourceWatchScope';
 
 import type {
   PersistedTeamTranscriptAffinityEntry,
@@ -269,13 +270,8 @@ function parseTeamAffinityHeadLine(rawLine: string): TeamAffinityHeadLineMetadat
 function collectKnownSessionIds(config: TeamConfig): string[] {
   const knownSessionIds = new Set<string>();
   const push = (value: unknown): void => {
-    if (typeof value !== 'string') {
-      return;
-    }
-    const trimmed = value.trim();
-    if (trimmed.length > 0) {
-      knownSessionIds.add(trimmed);
-    }
+    const sessionId = normalizeLogSourceSessionId(value);
+    if (sessionId) knownSessionIds.add(sessionId);
   };
 
   push(config.leadSessionId);
@@ -932,11 +928,12 @@ export class TeamTranscriptProjectResolver {
     const orderedSessionIds: string[] = [];
     const seen = new Set<string>();
     const push = (sessionId: string): void => {
-      if (seen.has(sessionId)) {
+      const normalized = normalizeLogSourceSessionId(sessionId);
+      if (!normalized || seen.has(normalized)) {
         return;
       }
-      seen.add(sessionId);
-      orderedSessionIds.push(sessionId);
+      seen.add(normalized);
+      orderedSessionIds.push(normalized);
     };
 
     for (const sessionId of knownSessionIds) {

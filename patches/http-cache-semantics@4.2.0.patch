@@ -1,0 +1,257 @@
+diff --git a/index.js b/index.js
+--- a/index.js
++++ b/index.js
+@@ -394,8 +394,8 @@
+     evaluateRequest(req) {
+         this._assertRequestHasHeaders(req);
+ 
+-        // In all circumstances, a cache MUST NOT ignore the must-revalidate directive
+-        if (this._rescc['must-revalidate']) {
++        // Request directives cannot override restrictions on reusing the response.
++        if (this._requiresRevalidation()) {
+             return this._evaluateRequestMissResult(req);
+         }
+ 
+@@ -408,7 +408,7 @@
+         // unless the stored response is successfully validated (Section 4.3), and
+         const requestCC = parseCacheControl(req.headers['cache-control']);
+ 
+-        if (requestCC['no-cache'] || /no-cache/.test(req.headers.pragma)) {
++        if (this._requestRequiresRevalidation(req, requestCC)) {
+             return this._evaluateRequestMissResult(req);
+         }
+ 
+@@ -423,6 +423,10 @@
+         // the stored response is either:
+         // fresh, or allowed to be served stale
+         if (this.stale()) {
++            if (this._forbidsStale()) {
++                return this._evaluateRequestMissResult(req);
++            }
++
+             // If a value is present, then the client is willing to accept a response that has
+             // exceeded its freshness lifetime by no more than the specified number of seconds
+             const allowsStaleWithoutRevalidation = 'max-stale' in requestCC &&
+@@ -462,6 +466,24 @@
+     }
+ 
+     /**
++     * Request no-cache requires successful validation, including after an error.
++     * Cache-Control takes precedence over the legacy Pragma request header.
++     * @param {HttpRequest} req - The incoming HTTP request.
++     * @param {Record<string, string|boolean>} [requestCC] - Parsed request directives.
++     * @returns {boolean} Whether this request requires validation.
++     */
++    _requestRequiresRevalidation(
++        req,
++        requestCC = parseCacheControl(req.headers['cache-control'])
++    ) {
++        return !!(
++            requestCC['no-cache'] ||
++            (req.headers['cache-control'] == null &&
++                /(?:^|,)\s*no-cache\s*(?:,|$)/i.test(req.headers.pragma))
++        );
++    }
++
++    /**
+      * Determines whether storing authenticated responses is allowed.
+      * @returns {boolean} `true` if allowed.
+      */
+@@ -479,24 +501,61 @@
+      * @param {HttpRequest} req - incoming HTTP request
+      * @returns {boolean} `true` if the vary headers match.
+      */
+-    _varyMatches(req) {
+-        if (!this._resHeaders.vary) {
+-            return true;
+-        }
+-
+-        // A Vary header field-value of "*" always fails to match
+-        if (this._resHeaders.vary === '*') {
++_varyMatches(req) {
++    if (!this._resHeaders.vary) {
++        return true;
++    }
++
++    const fields = this._resHeaders.vary
++        .trim()
++        .toLowerCase()
++        .split(/\s*,\s*/);
++
++    // A Vary header field-value of '*' always fails to match.
++    if (fields.includes('*')) {
++        return false;
++    }
++
++    for (const name of fields) {
++        const reqHasOwn = Object.prototype.hasOwnProperty.call(
++            req.headers,
++            name
++        );
++        const cachedHasOwn = Object.prototype.hasOwnProperty.call(
++            this._reqHeaders,
++            name
++        );
++
++        // A Vary field must not match inherited properties.
++        if (!reqHasOwn && !cachedHasOwn) {
++            if (name in req.headers || name in this._reqHeaders) {
++                return false;
++            }
++
++            continue;
++        }
++
++        if (!reqHasOwn || !cachedHasOwn) {
+             return false;
+         }
+ 
+-        const fields = this._resHeaders.vary
+-            .trim()
+-            .toLowerCase()
+-            .split(/\s*,\s*/);
+-        for (const name of fields) {
+-            if (req.headers[name] !== this._reqHeaders[name]) return false;
+-        }
+-        return true;
++        if (req.headers[name] !== this._reqHeaders[name]) {
++            return false;
++        }
++    }
++
++    return true;
++}
++
++    /**
++     * A wildcard anywhere in the Vary field value always fails to match.
++     * @returns {boolean} Whether the response has a Vary wildcard.
++     */
++    _hasVaryWildcard() {
++        return !!(
++            this._resHeaders.vary &&
++            this._resHeaders.vary.split(',').some(field => field.trim() === '*')
++        );
+     }
+ 
+     /**
+@@ -588,6 +647,35 @@
+     }
+ 
+     /**
++     * Distinguishes reuse restrictions from ordinary expiration.
++     * @returns {boolean} Whether this response must not be reused without validation.
++     */
++    _requiresRevalidation() {
++        return !!(
++            !this.storable() ||
++            this._rescc['no-cache'] ||
++            this._hasVaryWildcard() ||
++            (this._isShared &&
++                (this._rescc['proxy-revalidate'] ||
++                    // Sharing responses with cookies requires an explicit opt-in.
++                    (this._resHeaders['set-cookie'] &&
++                        !this._rescc.public &&
++                        !this._rescc.immutable)))
++        );
++    }
++
++    /**
++     * Unlike no-cache, these directives only restrict reuse once stale.
++     * @returns {boolean} Whether explicit response directives prohibit stale reuse.
++     */
++    _forbidsStale() {
++        return !!(
++            this._rescc['must-revalidate'] ||
++            (this._isShared && this._rescc['s-maxage'] !== undefined)
++        );
++    }
++
++    /**
+      * Possibly outdated value of applicable max-age (or heuristic equivalent) in seconds.
+      * This counts since response's `Date`.
+      *
+@@ -597,29 +685,11 @@
+      * @returns {number} The max-age value in seconds.
+      */
+     maxAge() {
+-        if (!this.storable() || this._rescc['no-cache']) {
++        if (this._requiresRevalidation()) {
+             return 0;
+         }
+ 
+-        // Shared responses with cookies are cacheable according to the RFC, but IMHO it'd be unwise to do so by default
+-        // so this implementation requires explicit opt-in via public header
+-        if (
+-            this._isShared &&
+-            (this._resHeaders['set-cookie'] &&
+-                !this._rescc.public &&
+-                !this._rescc.immutable)
+-        ) {
+-            return 0;
+-        }
+-
+-        if (this._resHeaders.vary === '*') {
+-            return 0;
+-        }
+-
+         if (this._isShared) {
+-            if (this._rescc['proxy-revalidate']) {
+-                return 0;
+-            }
+             // if a response includes the s-maxage directive, a shared cache recipient MUST ignore the Expires field.
+             if (this._rescc['s-maxage']) {
+                 return toNumberOrZero(this._rescc['s-maxage']);
+@@ -664,7 +734,13 @@
+      * @returns {number} Time-to-live in milliseconds.
+      */
+     timeToLive() {
++        if (this._requiresRevalidation()) {
++            return 0;
++        }
+         const age = this.maxAge() - this.age();
++        if (this._forbidsStale()) {
++            return Math.round(Math.max(0, age) * 1000);
++        }
+         const staleIfErrorAge = age + toNumberOrZero(this._rescc['stale-if-error']);
+         const staleWhileRevalidateAge = age + toNumberOrZero(this._rescc['stale-while-revalidate']);
+         return Math.round(Math.max(0, age, staleIfErrorAge, staleWhileRevalidateAge) * 1000);
+@@ -683,7 +759,11 @@
+      * @returns {boolean} `true` if `stale-if-error` condition allows use of a stale response.
+      */
+     _useStaleIfError() {
+-        return this.maxAge() + toNumberOrZero(this._rescc['stale-if-error']) > this.age();
++        return (
++            !this._requiresRevalidation() &&
++            (!this.stale() || !this._forbidsStale()) &&
++            this.maxAge() + toNumberOrZero(this._rescc['stale-if-error']) > this.age()
++        );
+     }
+ 
+     /** See `evaluateRequest()` for a more complete solution
+@@ -691,7 +771,11 @@
+      */
+     useStaleWhileRevalidate() {
+         const swr = toNumberOrZero(this._rescc['stale-while-revalidate']);
+-        return swr > 0 && this.maxAge() + swr > this.age();
++        return (
++            !this._requiresRevalidation() &&
++            !this._forbidsStale() &&
++            swr > 0 && this.maxAge() + swr > this.age()
++        );
+     }
+ 
+     /**
+@@ -832,7 +916,12 @@
+     revalidatedPolicy(request, response) {
+         this._assertRequestHasHeaders(request);
+ 
+-        if (this._useStaleIfError() && isErrorResponse(response)) {
++        if (
++            this._requestMatches(request, true) &&
++            !this._requestRequiresRevalidation(request) &&
++            this._useStaleIfError() &&
++            isErrorResponse(response)
++        ) {
+           return {
+               policy: this,
+               modified: false,

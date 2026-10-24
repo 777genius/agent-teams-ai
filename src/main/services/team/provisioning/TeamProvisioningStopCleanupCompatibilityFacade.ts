@@ -98,6 +98,7 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
           {
             withTeamLock: (teamName, operation) => service.withTeamLock(teamName, operation),
             canDeliverToOpenCodeRuntimeForTeam: (teamName) =>
+              (service.hasSecondaryRuntimeRuns(teamName) && this.isTeamAlive(teamName)) ||
               service.runTracking.canDeliverToOpenCodeRuntimeForTeam(teamName),
             getOpenCodeRuntimeAdapter: () => service.appShellBoundary.getOpenCodeRuntimeAdapter(),
             readPreviousLaunchState: (teamName) => service.launchStateStore.read(teamName),

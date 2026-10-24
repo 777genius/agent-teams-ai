@@ -5,13 +5,16 @@ import { createLogger } from '@shared/utils/logger';
 import { isTeamInternalControlMessageText } from '@shared/utils/teamInternalControlMessages';
 import { extractToolPreview } from '@shared/utils/toolSummary';
 
-import { isAgentTeamsToolUse } from '../agentTeamsToolNames';
 import { isWorkspaceTrustLaunchFailureText } from '../TeamLaunchFailureArtifactPack';
 
 import {
   extractProvisioningStreamError,
   extractStreamUserText,
 } from './extractProvisioningStreamError';
+import {
+  hasCapturedUserVisibleSendMessage,
+  hasCapturedVisibleSendMessage,
+} from './leadRelayCapturedMessageTools';
 import {
   appendLeadRelayCaptureAssistantText,
   isSyntheticLeadTextChunk,
@@ -283,82 +286,10 @@ export function extractStreamContentBlocks(
   return Array.isArray(innerContent) ? (innerContent as Record<string, unknown>[]) : [];
 }
 
-export function hasCapturedVisibleSendMessage(
-  content: Record<string, unknown>[],
-  teamName: string
-): boolean {
-  return content.some((part) => {
-    if (!part || typeof part !== 'object') return false;
-    if (part.type !== 'tool_use' || typeof part.name !== 'string') return false;
-
-    const input = part.input;
-    if (!input || typeof input !== 'object') return false;
-    const inp = input as Record<string, unknown>;
-
-    if (part.name === 'SendMessage') {
-      const target = (typeof inp.recipient === 'string' ? inp.recipient : '').trim();
-      const text = (typeof inp.content === 'string' ? inp.content : '').trim();
-      return target.length > 0 && text.length > 0;
-    }
-
-    const isTeamMessageSendTool = isAgentTeamsToolUse({
-      rawName: part.name,
-      canonicalName: 'message_send',
-      toolInput: inp,
-      currentTeamName: teamName,
-    });
-    const isDirectCrossTeamSendTool = isAgentTeamsToolUse({
-      rawName: part.name,
-      canonicalName: 'cross_team_send',
-      toolInput: inp,
-      currentTeamName: teamName,
-    });
-    if (!isTeamMessageSendTool && !isDirectCrossTeamSendTool) return false;
-
-    const target = isTeamMessageSendTool
-      ? typeof inp.to === 'string'
-        ? inp.to
-        : ''
-      : typeof inp.toTeam === 'string'
-        ? inp.toTeam
-        : '';
-    const text = typeof inp.text === 'string' ? inp.text : '';
-
-    return target.trim().length > 0 && text.trim().length > 0;
-  });
-}
-
-export function hasCapturedUserVisibleSendMessage(
-  content: Record<string, unknown>[],
-  teamName: string
-): boolean {
-  return content.some((part) => {
-    if (!part || typeof part !== 'object') return false;
-    if (part.type !== 'tool_use' || typeof part.name !== 'string') return false;
-
-    const input = part.input;
-    if (!input || typeof input !== 'object') return false;
-    const inp = input as Record<string, unknown>;
-
-    if (part.name === 'SendMessage') {
-      const target = (typeof inp.recipient === 'string' ? inp.recipient : '').trim().toLowerCase();
-      const text = (typeof inp.content === 'string' ? inp.content : '').trim();
-      return target === 'user' && text.length > 0;
-    }
-
-    const isTeamMessageSendTool = isAgentTeamsToolUse({
-      rawName: part.name,
-      canonicalName: 'message_send',
-      toolInput: inp,
-      currentTeamName: teamName,
-    });
-    if (!isTeamMessageSendTool) return false;
-
-    const target = typeof inp.to === 'string' ? inp.to.trim().toLowerCase() : '';
-    const text = typeof inp.text === 'string' ? inp.text.trim() : '';
-    return target === 'user' && text.length > 0;
-  });
-}
+export {
+  hasCapturedUserVisibleSendMessage,
+  hasCapturedVisibleSendMessage,
+} from './leadRelayCapturedMessageTools';
 
 export function getStableLeadThoughtMessageId(msg: Record<string, unknown>): string | null {
   const entryUuid = typeof msg.uuid === 'string' ? msg.uuid.trim() : '';

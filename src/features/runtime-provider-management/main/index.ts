@@ -16,6 +16,10 @@ export {
 } from './composition/createRuntimeProviderManagementFeature';
 export { FileCodexAuthIntentStore } from './infrastructure/FileCodexAuthIntentStore';
 export { FileProviderOAuthIntentStore } from './infrastructure/FileProviderOAuthIntentStore';
+export type {
+  OpenCodeGatewayProviderRetireTarget,
+  OpenCodeGatewayProviderTarget,
+} from './infrastructure/OpenCodeGatewayArtifactOwnership';
 export {
   inspectOpenCodeLocalModelRuntimeReadiness,
   MIN_AGENT_TEAMS_LOCAL_CONTEXT_TOKENS,

@@ -1572,6 +1572,7 @@ describe('cli child process helpers', () => {
           status: 0,
           stdout: unixProcessTable([
             { pid: 301, parentPid: 1, processGroupId: 300, startIdentity: 'child-birth' },
+            { pid: 302, parentPid: 301, processGroupId: 302, startIdentity: 'detached-birth' },
           ]),
         });
       const trackedChild = Object.assign(createMockProcess<SpawnCliChild>(), {
@@ -1589,7 +1590,45 @@ describe('cli child process helpers', () => {
         await killProcessTreeAndWait(trackedChild, 'SIGKILL');
 
         expect(killSpy).toHaveBeenCalledWith(301, 'SIGKILL');
+        expect(killSpy).toHaveBeenCalledWith(302, 'SIGKILL');
         expect(killSpy).not.toHaveBeenCalledWith(300, 'SIGKILL');
+      } finally {
+        trackedChild.emit('close', 0);
+        killSpy.mockRestore();
+      }
+    });
+
+    it('includes detached native teammate descendants outside the tracked launcher group', async () => {
+      setPlatform('darwin');
+      const spawnSyncMock = child.spawnSync as unknown as Mock;
+      const root = { pid: 300, parentPid: 1, processGroupId: 300 };
+      spawnSyncMock
+        .mockReturnValueOnce({ status: 0, stdout: unixProcessTable([root]) })
+        .mockReturnValue({
+          status: 0,
+          stdout: unixProcessTable([
+            root,
+            { pid: 301, parentPid: 300, processGroupId: 301 },
+            { pid: 302, parentPid: 301, processGroupId: 301 },
+            { pid: 999, parentPid: 1, processGroupId: 999 },
+          ]),
+        });
+      const trackedChild = Object.assign(createMockProcess<SpawnCliChild>(), {
+        pid: 300,
+        exitCode: null,
+        signalCode: null,
+      });
+      (child.spawn as unknown as Mock).mockReturnValue(trackedChild);
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(reportProcessGoneForProbe);
+      try {
+        spawnCli('/usr/bin/claude', ['--version']);
+        await killProcessTreeAndWait(trackedChild, 'SIGKILL');
+        expect(killSpy.mock.calls.filter(([, signal]) => signal === 'SIGKILL')).toEqual([
+          [302, 'SIGKILL'],
+          [301, 'SIGKILL'],
+          [300, 'SIGKILL'],
+        ]);
+        expect(killSpy).not.toHaveBeenCalledWith(999, 'SIGKILL');
       } finally {
         trackedChild.emit('close', 0);
         killSpy.mockRestore();

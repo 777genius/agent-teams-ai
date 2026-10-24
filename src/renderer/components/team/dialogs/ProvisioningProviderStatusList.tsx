@@ -9,9 +9,11 @@ import {
   OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE,
   OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE,
 } from '@shared/utils/openCodeWindowsAccessDenied';
+import { sanitizeRuntimeDiagnosticText } from '@shared/utils/runtimeDiagnosticText';
 import { AlertTriangle, Check, CheckCircle2, Copy, Loader2, SlidersHorizontal } from 'lucide-react';
 
 import { localizeModelStatusWithReason } from './providerPrepareReasonCodes';
+import { getSupportDiagnosticsPayload } from './provisioningSupportDiagnostics';
 
 import type {
   ProvisioningPrepareState,
@@ -945,16 +947,6 @@ function getProvisioningProviderSettingsActionLabel(
     : null;
 }
 
-function getSupportDiagnosticsPayload(check: ProvisioningProviderCheck): string | null {
-  if (check.providerId !== 'opencode') {
-    return null;
-  }
-  const payloads = (check.supportDiagnostics ?? [])
-    .map((diagnostic) => diagnostic.copyText.trim())
-    .filter(Boolean);
-  return payloads.length > 0 ? payloads.join('\n\n---\n\n') : null;
-}
-
 export const ProvisioningProviderStatusList = ({
   checks,
   className = '',
@@ -994,9 +986,9 @@ export const ProvisioningProviderStatusList = ({
     <div className={`space-y-1 pl-5 ${className}`.trim()}>
       {checks.map((check) => {
         const suppressDetailsMatchingTrimmed = (suppressDetailsMatching ?? '').trim();
-        const visibleDetails = getPublicProvisioningDetails(check.details).filter(
-          (detail) => detail.trim() !== suppressDetailsMatchingTrimmed
-        );
+        const visibleDetails = getPublicProvisioningDetails(check.details)
+          .filter((detail) => detail.trim() !== suppressDetailsMatchingTrimmed)
+          .map((detail) => sanitizeRuntimeDiagnosticText(detail, 6_000) ?? '');
         const settingsActionLabel = onOpenProviderSettings
           ? getProvisioningProviderSettingsActionLabel(check, t)
           : null;
@@ -1024,7 +1016,7 @@ export const ProvisioningProviderStatusList = ({
                 {visibleDetails.map((detail, index) => (
                   <p
                     key={`${check.providerId}:${index}:${detail}`}
-                    className={`text-[10px] ${getDetailColorClass(
+                    className={`whitespace-pre-wrap break-words text-[10px] ${getDetailColorClass(
                       detail,
                       check.status,
                       check.providerId
@@ -1133,11 +1125,9 @@ export function getProvisioningFailureHint(
       'Restart the app and OpenCode runtime, then retry. If it repeats, copy diagnostics.'
     );
   }
-
   const combined = [message ?? '', ...checks.flatMap((check) => check.details)]
     .join('\n')
     .toLowerCase();
-
   if (isMissingWorkingDirectoryText(combined)) {
     return (
       t?.('provisioning.providerStatus.failureHints.workingDirectoryMissing') ??
@@ -1160,9 +1150,12 @@ export function getProvisioningFailureHint(
     combined.includes('opencode') &&
     (combined.includes('below supported minimum') ||
       combined.includes('below the supported minimum') ||
+      combined.includes('free-tier models require opencode') ||
       combined.includes('unsupported_version'))
   ) {
-    return 'Update OpenCode from the provider status card, then retry launch.';
+    return combined.includes('override pins this version')
+      ? 'Update or remove the OpenCode binary override, then restart Agent Teams and retry launch.'
+      : 'Update OpenCode from the provider status card, then retry launch.';
   }
   if (
     combined.includes('opencode cli not detected on path') ||

@@ -23,6 +23,7 @@ import {
 } from './openCodeRuntimeBinaryEnv';
 import { providerConnectionService } from './ProviderConnectionService';
 
+import type { CodexLaunchDialect } from './codexCliBinary';
 import type { CliProviderId, TeamProviderId } from '@shared/types';
 
 type ProviderEnvTargetId = CliProviderId | TeamProviderId | undefined;
@@ -37,12 +38,13 @@ const AGGREGATE_PROVIDER_STATUS_STORED_CREDENTIAL_ALLOWLIST = [
 ] as const;
 
 export interface ProviderAwareCliEnvOptions {
+  codexLaunchDialect?: CodexLaunchDialect;
   binaryPath?: string | null;
   providerId?: ProviderEnvTargetId;
   providerBackendId?: string | null;
   shellEnv?: NodeJS.ProcessEnv | null;
   env?: NodeJS.ProcessEnv;
-  connectionMode?: 'strict' | 'augment';
+  connectionMode?: 'strict' | 'augment' | 'runtime-only';
   allowStoredApiKeyDecryption?: boolean;
   allowedStoredApiKeyEnvVarNames?: readonly string[];
   allowClaudeUserSettingsAuthEnv?: boolean;
@@ -154,9 +156,11 @@ export async function buildProviderAwareCliEnv(
   });
   if (!resolvedProviderId || resolvedProviderId === 'opencode') {
     const explicitOpenCodeBinary = resolveExplicitOpenCodeBinary(options);
+    // Generic shells and management commands only inherit the override; the
+    // OpenCode launch path owns verification and its fail-closed errors.
     const supportedExplicitOpenCodeBinary =
       explicitOpenCodeBinary &&
-      (await isSupportedOpenCodeRuntimeBinaryPath(explicitOpenCodeBinary).catch(() => false))
+      (!resolvedProviderId || (await isSupportedOpenCodeRuntimeBinaryPath(explicitOpenCodeBinary)))
         ? explicitOpenCodeBinary
         : null;
     const openCodeBinary =
@@ -181,6 +185,13 @@ export async function buildProviderAwareCliEnv(
   if (!resolvedProviderId || resolvedProviderId === 'opencode') {
     await ensureAgentTeamsMcpLocalLaunchEnv(env);
     applyAgentTeamsMcpAppContext(env);
+  }
+
+  // Member gateways supply their own verified credentials and launch arguments.
+  // Keep binary/MCP preparation above, without consulting the global connection.
+  if (connectionMode === 'runtime-only') {
+    removeGlobalElectronRunAsNodeEnv(env);
+    return { env, connectionIssues: {}, providerArgs: [] };
   }
 
   if (options.providerId) {
@@ -214,7 +225,8 @@ export async function buildProviderAwareCliEnv(
       env,
       resolvedProviderId,
       options.providerBackendId,
-      options.binaryPath
+      options.binaryPath,
+      options.codexLaunchDialect
     );
     const connectionIssues = await providerConnectionService.getConfiguredConnectionIssues(
       env,

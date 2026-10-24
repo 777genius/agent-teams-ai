@@ -1,14 +1,16 @@
 import {
-  validateAgentAttachmentIpcPayload,
   type NormalizedAttachmentPayload,
+  validateAgentAttachmentIpcPayload,
 } from '@agent-teams/legacy-agent-host/attachments/portable';
+
+import { BACKEND_ATTACHMENT_CHUNK_BYTES } from '../contracts/attachments';
+
+import type { BackendHandle } from '../contracts';
+import type { AgentBackendApi } from '../contracts/operations';
 import type {
   AttachmentReference,
   AttachmentUpload,
 } from '@agent-teams/legacy-agent-host/attachments/contracts';
-import { BACKEND_ATTACHMENT_CHUNK_BYTES } from '../contracts/attachments';
-import type { BackendHandle } from '../contracts';
-import type { AgentBackendApi } from '../contracts/operations';
 import type { AttachmentPayload, CommentAttachmentPayload } from '@shared/types/team';
 
 /** Normalize existing comment/chat DTOs before any owner lookup or upload effect. */

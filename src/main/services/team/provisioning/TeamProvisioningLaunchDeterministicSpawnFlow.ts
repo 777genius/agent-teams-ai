@@ -33,6 +33,10 @@ import {
   type MaterializeDeterministicLaunchBootstrapFilesPorts,
   type TeamProvisioningLaunchBootstrapRun,
 } from './TeamProvisioningLaunchTeamFlow';
+import {
+  abortUnspawnedGatewayMembers,
+  beginGatewayMemberLaunches,
+} from './TeamProvisioningMemberGatewayRuntime';
 import { emitProvisioningCheckpoint } from './TeamProvisioningProgressBuffers';
 import { buildDeterministicLaunchHydrationPrompt } from './TeamProvisioningPromptBuilders';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
@@ -48,6 +52,7 @@ import {
 } from './TeamProvisioningRuntimeLaunchSelection';
 import { scheduleProvisioningRunTimeout } from './TeamProvisioningTimeoutLifecycle';
 
+import type { CrossProviderMemberArgsResult } from './TeamProvisioningEnvBuilder';
 import type { RuntimeLaunchLogger } from './TeamProvisioningRuntimeDiagnostics';
 import type {
   ProviderModelLaunchIdentity,
@@ -108,7 +113,7 @@ export interface RunDeterministicLaunchSpawnFlowInput<
   stopAllGenerationAtStart: number;
   resolvedProviderId: TeamProviderId;
   providerArgsForLaunch: string[];
-  crossProviderMemberArgsForLaunch: { args: string[] };
+  crossProviderMemberArgsForLaunch: CrossProviderMemberArgsResult;
   launchIdentity: ProviderModelLaunchIdentity | null;
   effectiveMemberSpecs: TeamCreateRequest['members'];
   allEffectiveMemberSpecs: TeamCreateRequest['members'];
@@ -144,6 +149,7 @@ export interface RunDeterministicLaunchSpawnFlowPorts<
     input: BuildTeamRuntimeLaunchArgsPlanInput
   ): Promise<TeamRuntimeLaunchArgsPlan>;
   teamMetaStore: {
+    getMeta?(teamName: string): Promise<TeamMetaFile | null>;
     writeMeta(teamName: string, payload: LaunchTeamMetaPayload): Promise<void>;
   };
   membersMetaStore: {
@@ -197,6 +203,7 @@ export function buildLaunchTeamMetaPayload(input: {
     description: syntheticRequest.description,
     color: syntheticRequest.color,
     cwd: request.cwd,
+    runtimeSelectionVersion: request.runtimeSelectionVersion,
     prompt: request.prompt,
     providerId: syntheticRequest.providerId,
     providerBackendId: syntheticRequest.providerBackendId,
@@ -228,16 +235,24 @@ export async function persistDeterministicLaunchMetadata<
     'teamMetaStore' | 'membersMetaStore' | 'nowMs'
   >
 ): Promise<void> {
-  const { request, syntheticRequest, launchIdentity, allEffectiveMemberSpecs, configuredMemberSpecs } = input;
-  await ports.teamMetaStore.writeMeta(
-    request.teamName,
-    buildLaunchTeamMetaPayload({
+  const {
+    request,
+    syntheticRequest,
+    launchIdentity,
+    allEffectiveMemberSpecs,
+    configuredMemberSpecs,
+  } = input;
+  const savedMeta = await ports.teamMetaStore.getMeta?.(request.teamName);
+  await ports.teamMetaStore.writeMeta(request.teamName, {
+    ...savedMeta,
+    ...buildLaunchTeamMetaPayload({
       request,
       syntheticRequest,
       launchIdentity,
-      nowMs: ports.nowMs(),
-    })
-  );
+      nowMs: savedMeta?.createdAt ?? ports.nowMs(),
+    }),
+    prompt: request.prompt ?? savedMeta?.prompt,
+  });
   const existingMembers = await ports.membersMetaStore.getMembers(request.teamName);
   // Runtime materialization supplies workspaces, but never configured model authority.
   const configuredByName = new Map(
@@ -386,6 +401,7 @@ export function registerDeterministicLaunchChildHandlers<
   input: {
     run: TRun;
     child: ChildProcess;
+    memberArgsByMember?: CrossProviderMemberArgsResult['memberArgsByMember'];
   },
   ports: Pick<
     RunDeterministicLaunchSpawnFlowPorts<TRun>,
@@ -479,11 +495,10 @@ export function registerDeterministicLaunchChildHandlers<
       cliLogsTail: extractCliLogsFromRun(run),
     });
     run.onProgress(progress);
-    void cleanupAnthropicHelperIfPresent(run, ports).then((helperReleased) => {
-      if (helperReleased) {
-        ports.cleanupRun(run);
-      }
-    });
+    void (async () => {
+      if (child.pid === undefined) await abortUnspawnedGatewayMembers(input.memberArgsByMember);
+      if (await cleanupAnthropicHelperIfPresent(run, ports)) ports.cleanupRun(run);
+    })().catch(() => undefined);
   });
 
   child.once('close', (code: number | null) => {
@@ -539,6 +554,7 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
         run,
         effectiveMemberSpecs,
         allEffectiveMemberSpecs,
+        memberArgsByMember: crossProviderMemberArgsForLaunch.memberArgsByMember,
         controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
         isValidationCancelled: () =>
           isDeterministicLaunchSpawnCancelled({
@@ -673,12 +689,14 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
       'Spawning Claude CLI process for team launch',
       `args=${finalLaunchArgs.length} cwd=${request.cwd}`
     );
+    await beginGatewayMemberLaunches(crossProviderMemberArgsForLaunch.memberArgsByMember);
     child = ports.spawnCli(claudePath, finalLaunchArgs, {
       cwd: request.cwd,
       env: { ...shellEnv },
       stdio: ['pipe', 'pipe', 'pipe'],
     });
   } catch (error) {
+    await abortUnspawnedGatewayMembers(crossProviderMemberArgsForLaunch.memberArgsByMember);
     await cleanupDeterministicLaunchSpawnFailure({ request, run, runId, provisioningEnv }, ports);
     throw error;
   }
@@ -708,7 +726,10 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
   ports.updateProgress(run, 'configuring', 'CLI running - deterministic launch in progress');
   run.onProgress(run.progress);
 
-  registerDeterministicLaunchChildHandlers({ run, child }, ports);
+  registerDeterministicLaunchChildHandlers(
+    { run, child, memberArgsByMember: crossProviderMemberArgsForLaunch.memberArgsByMember },
+    ports
+  );
 
   return { runId };
 }

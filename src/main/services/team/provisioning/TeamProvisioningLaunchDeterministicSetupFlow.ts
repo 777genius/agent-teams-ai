@@ -7,6 +7,7 @@ import {
 
 import { ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS } from '../../runtime/anthropicTeamApiKeyHelper';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
+import { getExplicitDesktopTeammateMode } from '../runtimeTeammateMode';
 
 import {
   type AnthropicApiKeyHelperCleanupRetryOwner,
@@ -16,6 +17,7 @@ import {
   throwIfAnthropicApiKeyHelperCleanupRemainsSourceOwned,
 } from './TeamProvisioningAnthropicApiKeyHelperLease';
 import { ensureCwdExists } from './TeamProvisioningAsyncUtils';
+import { applyTeamContextLimitEnv } from './TeamProvisioningEnvGuards';
 import {
   assertDeterministicBootstrapPrimaryMemberLimit,
   assertOpenCodeNotLaunchedThroughLegacyProvisioning,
@@ -35,6 +37,10 @@ import {
   parseLaunchConfigProjectPath,
   resolveExistingLaunchRunReuse,
 } from './TeamProvisioningLaunchTeamFlow';
+import {
+  assertMemberGatewaySpawnCompatibility,
+  getRuntimeCatalogMembers,
+} from './TeamProvisioningMemberGatewayRuntime';
 import {
   buildEffectiveTeamMemberSpecs,
   teamRequestIncludesCodexMember,
@@ -289,6 +295,8 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
     );
     anthropicApiKeyHelperLease.coalesce(provisioningEnv.anthropicApiKeyHelper);
     const { env: shellEnv, providerArgs = [], warning: envWarning } = provisioningEnv;
+    shellEnv.CLAUDE_CODE_BOOTSTRAP_RUN_ID = runId;
+    applyTeamContextLimitEnv(shellEnv, request.limitContext);
     if (envWarning) {
       throw new Error(envWarning);
     }
@@ -379,6 +387,12 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
       { teamRuntimeAuth }
     );
     anthropicApiKeyHelperLease.coalesce(crossProviderMemberArgs.anthropicApiKeyHelper);
+    assertMemberGatewaySpawnCompatibility({
+      memberArgsByMember: crossProviderMemberArgs.memberArgsByMember,
+      usesAnthropicApiKeyHelper: crossProviderMemberArgs.usesAnthropicApiKeyHelper,
+      teammateModeIsInProcess:
+        getExplicitDesktopTeammateMode(request.extraCliArgs) === 'in-process',
+    });
     const workspaceTrustFullWorkspaces = workspaceTrustFeatureFlags.enabled
       ? await collectWorkspaceTrustWorkspaces({
           cwd: request.cwd,
@@ -418,7 +432,10 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
       cwd: request.cwd,
       env: shellEnv,
       request,
-      effectiveMembers: effectiveMemberSpecs,
+      effectiveMembers: getRuntimeCatalogMembers(
+        effectiveMemberSpecs,
+        crossProviderMemberArgs.memberArgsByMember
+      ),
       providerArgsByProvider,
     });
 

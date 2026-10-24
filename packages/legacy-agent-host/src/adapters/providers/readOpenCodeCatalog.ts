@@ -1,3 +1,4 @@
+import { readOpenCodeInputModalities } from './readOpenCodeInputModalities.js';
 import { OpenCodeManagementError } from './OpenCodeManagementHost.js';
 import { isConfiguredAuthless } from './openCodeConfiguredAuthless.js';
 import { readProviderAuthMethods } from './readProviderAuthMethods.js';
@@ -67,6 +68,7 @@ export async function readOpenCodeCatalog(
           contextTokens: positive(limit.context),
           outputTokens: positive(limit.output),
           free: costsKnown ? cost.input === 0 && cost.output === 0 : null,
+          declaredInputModalities: readOpenCodeInputModalities(model),
         };
       }
     );

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
-import { promises as fs } from 'node:fs';
+import { constants, promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { promisify } from 'node:util';
 
@@ -38,9 +38,20 @@ import {
   successfulTools,
 } from './openCodeMixedTeamEvidence';
 import { createMixedHarness as createHarness } from './openCodeMixedTeamHarness';
+import {
+  classifyTeamTranscriptGeneration,
+  hasV2CommandInvocationWithOuterMarker,
+  hasV2Message,
+  hasV2TaskCompletion,
+  readV2TeamInvocationEvidence,
+} from './openCodeV2TeamEvidence';
 
 import type { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
-import type { TeamProvisioningProgress } from '../../../../src/shared/types';
+import type {
+  TeamAgentRuntimeSnapshot,
+  TeamProvisioningProgress,
+} from '../../../../src/shared/types';
+import type { OpenCodeOriginalTranscriptBinding } from './openCodeLiveTestHarness';
 
 const liveDescribe =
   process.env.OPENCODE_E2E === '1' && process.env.OPENCODE_E2E_FULL_TEAM === '1'
@@ -94,15 +105,21 @@ liveDescribe('OpenCode full paid team collaboration', () => {
         await pendingProofWrite;
       }
       let harness: Awaited<ReturnType<typeof createHarness>> | undefined;
+      let activeTranscript: { runId: string; snapshot: TeamAgentRuntimeSnapshot } | undefined;
       const observed: Partial<Record<Member, ReturnType<typeof transcriptMetadata>>> = {};
       async function observe(member: Member) {
-        if (!harness) return;
+        if (!harness || !activeTranscript) return;
         observed[member] = transcriptMetadata(
           await getRuntimeTranscript({
             bridgeClient: harness.bridgeClient,
             teamName,
             memberName: member,
             projectPath,
+            originalBinding: transcriptBinding(
+              activeTranscript.runId,
+              activeTranscript.snapshot,
+              member
+            ),
           })
         );
         proof.memberRuntime = observed;
@@ -126,6 +143,19 @@ liveDescribe('OpenCode full paid team collaboration', () => {
         await Promise.all(members.map((member) => observe(member).catch(() => undefined)));
       }
       try {
+        // Hosted Linux may not provide a usable system Node. Use the actual
+        // test runner's Node inside this disposable project, without granting
+        // the team access to an unrelated host installation.
+        const nodeCommand = process.platform === 'linux' ? './.TEST-node-runtime' : 'node';
+        if (process.platform === 'linux') {
+          const nodeSource = await fs.realpath(process.execPath);
+          const sourceStat = await fs.lstat(nodeSource);
+          expect(sourceStat.isFile()).toBe(true);
+          await fs.access(nodeSource, constants.X_OK);
+          const nodeFixture = path.join(projectPath, '.TEST-node-runtime');
+          await fs.copyFile(nodeSource, nodeFixture, constants.COPYFILE_EXCL);
+          await fs.chmod(nodeFixture, 0o700);
+        }
         harness = await createHarness(tempDir, claudeRoot);
         const { svc, bridgeClient } = harness;
         // Neither host nor setup writes these agent-owned artifacts.
@@ -184,15 +214,20 @@ liveDescribe('OpenCode full paid team collaboration', () => {
         proof.initialSessions = Object.fromEntries(
           members.map((name) => [name, snapshot.members[name].runtimeSessionId])
         );
+        activeTranscript = { runId, snapshot };
 
         await checkpoint('assigned-work');
         const taskService = new TeamDataService();
         const reader = new TeamTaskReader();
         const aliceNonce = randomUUID();
         const bobNonce = randomUUID();
+        const aliceCommand = `${nodeCommand} -e 'const {sum}=require("./sum.cjs"); const a=require("node:assert/strict"); a.equal(sum([2,-5,7]),4); a.equal(sum([]),0); a.throws(()=>sum([NaN]),TypeError); console.log("ALICE_EXEC:${aliceNonce}")'`;
+        const bobCommand = `${nodeCommand} sum.test.cjs`;
         const taskBase = [
           `Work only in ${projectPath}; do not delegate or install packages.`,
-          'Use bash to execute the verification command. Complete this assigned task with task_complete only after success.',
+          'Use bash to execute the supplied verification command verbatim in the project directory. Do not prepend cd or append commands.',
+          `Set the bash tool's workdir field to exactly ${projectPath}.`,
+          'Complete this assigned task with task_complete only after success.',
           'Do not modify peer-owned files. Never sleep or poll for messages.',
           'For any CHALLENGE:token peer message, send its sender exactly ACK:token using agent-teams_message_send. Never respond to ACK messages.',
         ];
@@ -205,7 +240,7 @@ liveDescribe('OpenCode full paid team collaboration', () => {
             'Own only sum.cjs and alice-result.txt. Implement sum(values) returning the sum of finite numbers.',
             'Throw TypeError for non-arrays or any non-finite/non-number element. Empty input returns 0.',
             'Export with module.exports = { sum }.',
-            `Run node -e 'const {sum}=require("./sum.cjs"); const a=require("node:assert/strict"); a.equal(sum([2,-5,7]),4); a.equal(sum([]),0); a.throws(()=>sum([NaN]),TypeError); console.log("ALICE_EXEC:${aliceNonce}")'`,
+            `Run exactly: ${aliceCommand}`,
             `After successful execution write alice-result.txt containing exactly ALICE_EXEC:${aliceNonce} and one newline.`,
             `Send bob the exact team message CHALLENGE:${aliceNonce} using agent-teams_message_send.`,
           ].join('\n'),
@@ -226,7 +261,7 @@ liveDescribe('OpenCode full paid team collaboration', () => {
             'Own only sum.test.cjs and bob-result.txt. Read sum.cjs but do not change it.',
             'Create sum.test.cjs using node:assert/strict. Test sum([2,-5,7])===4 and sum([])===0;',
             'also test sum([1.5,2.5])===4, sum([-2,-3])===-5, and TypeError for null, [NaN], [Infinity], and ["1"].',
-            `At the end print BOB_EXEC:${bobNonce}. Run node sum.test.cjs using bash.`,
+            `At the end print BOB_EXEC:${bobNonce}. Run exactly: ${bobCommand}`,
             `After it passes write bob-result.txt containing exactly BOB_EXEC:${bobNonce} and one newline.`,
             `Send alice the exact team message CHALLENGE:${bobNonce} using agent-teams_message_send.`,
           ].join('\n'),
@@ -274,23 +309,71 @@ liveDescribe('OpenCode full paid team collaboration', () => {
             teamName,
             memberName: member,
             projectPath,
+            originalBinding: transcriptBinding(runId, snapshot, member),
           });
           const calls = successfulTools(transcript);
           assertTranscriptModel(transcript, model);
           assertTranscriptSession(transcript, snapshot.members[member].runtimeSessionId);
+          const v2Evidence =
+            classifyTeamTranscriptGeneration(transcript) === 'v2'
+              ? readV2TeamInvocationEvidence(transcript, {
+                  teamName,
+                  memberName: member,
+                  selectedModel: model,
+                  ...transcriptBinding(runId, snapshot, member),
+                })
+              : null;
           const marker = member === 'alice' ? `ALICE_EXEC:${aliceNonce}` : `BOB_EXEC:${bobNonce}`;
-          expect(hasExecution(calls, marker)).toBe(true);
+          expect(
+            v2Evidence
+              ? hasV2CommandInvocationWithOuterMarker(v2Evidence, {
+                  command: member === 'alice' ? aliceCommand : bobCommand,
+                  workdir: projectPath,
+                  marker,
+                })
+              : hasExecution(calls, marker)
+          ).toBe(true);
           const taskId = member === 'alice' ? aliceTask.id : bobTask.id;
-          expect(hasTaskCompletion(calls, teamName, taskId, member)).toBe(true);
+          const actualTask = (await reader.getTasks(teamName)).find((task) => task.id === taskId);
+          expect(
+            v2Evidence
+              ? hasV2TaskCompletion(v2Evidence, { taskId }, actualTask)
+              : hasTaskCompletion(calls, teamName, taskId, member)
+          ).toBe(true);
           const peerNonce = member === 'alice' ? bobNonce : aliceNonce;
           const peer = member === 'alice' ? 'bob' : 'alice';
-          expect(hasMessage(calls, teamName, member, peer, `ACK:${peerNonce}`)).toBe(true);
+          const reply = `ACK:${peerNonce}`;
           expect(
-            hasMessage(calls, teamName, member, peer,
-              `CHALLENGE:${member === 'alice' ? aliceNonce : bobNonce}`)
+            v2Evidence
+              ? hasV2Message(
+                  v2Evidence,
+                  { to: peer, text: reply },
+                  acknowledgements.find(
+                    (message) =>
+                      message.from === member && message.to === peer && message.text === reply
+                  )
+                )
+              : hasMessage(calls, teamName, member, peer, reply)
+          ).toBe(true);
+          const challenge = `CHALLENGE:${member === 'alice' ? aliceNonce : bobNonce}`;
+          expect(
+            v2Evidence
+              ? hasV2Message(
+                  v2Evidence,
+                  { to: peer, text: challenge },
+                  challenges.find(
+                    (message) =>
+                      message.from === member && message.to === peer && message.text === challenge
+                  )
+                )
+              : hasMessage(calls, teamName, member, peer, challenge)
           ).toBe(true);
           toolProofs.push({
             member,
+            evidencePolicy: v2Evidence
+              ? 'v2_invocation_outer_output_and_durable_effect'
+              : 'v1_native_pair',
+            ...(v2Evidence ? { nestedChildResultSynthesized: false } : {}),
             executionConfirmed: true,
             taskCompletionConfirmed: true,
             peerResponseConfirmed: true,
@@ -343,25 +426,26 @@ liveDescribe('OpenCode full paid team collaboration', () => {
             snapshot.members[member].runtimeSessionId
           );
         }
+        activeTranscript = { runId: relaunch.runId, snapshot: relaunched };
         await checkpoint('parallel-work-after-relaunch');
         const followups = await Promise.all(
           members.map(async (member) => {
             const nonce = randomUUID();
             const file = `relaunch-${member}.txt`;
             const marker = `RELAUNCH_EXEC:${member}:${nonce}`;
+            const command = `${nodeCommand} sum.test.cjs && ${nodeCommand} -e 'console.log("${marker}")'`;
             const task = await taskService.createTask(teamName, {
               subject: `Fresh ${member} verification after relaunch`,
               owner: member,
               startImmediately: true,
               prompt: [
                 `Work only in ${projectPath}. Do not delegate or install anything.`,
-                `Own only ${file}. Run node sum.test.cjs with bash to verify the existing implementation.`,
-                `Then run node -e 'console.log("${marker}")' with bash.`,
+                `Own only ${file}. Set the bash tool's workdir field to exactly ${projectPath}. Execute this command verbatim; do not prepend cd or append commands: ${command}`,
                 `If both commands succeed, write ${file} containing exactly ${marker} and one newline.`,
                 'Then complete this assigned task with task_complete.',
               ].join('\n'),
             });
-            return { member, task, marker, file };
+            return { member, task, marker, file, command };
           })
         );
         proof.relaunchTasks = followups.map(({ member, task }) => ({
@@ -371,7 +455,7 @@ liveDescribe('OpenCode full paid team collaboration', () => {
         await checkpoint('parallel-relaunch-tasks-submitted');
         await Promise.all(followups.map(({ member }) => submitTaskOnce(svc, teamName, member)));
         await Promise.all(
-          followups.map(async ({ member, task, marker, file }) => {
+          followups.map(async ({ member, task, marker, file, command }) => {
             await completed(reader, teamName, task.id, member, () => observe(member));
             await exactFile(projectPath, file, `${marker}\n`);
             const transcript = await getRuntimeTranscript({
@@ -379,12 +463,37 @@ liveDescribe('OpenCode full paid team collaboration', () => {
               teamName,
               memberName: member,
               projectPath,
+              originalBinding: transcriptBinding(relaunch.runId, relaunched, member),
             });
             assertTranscriptModel(transcript, model);
             assertTranscriptSession(transcript, relaunched.members[member].runtimeSessionId);
             const calls = successfulTools(transcript);
-            expect(hasExecution(calls, marker)).toBe(true);
-            expect(hasTaskCompletion(calls, teamName, task.id, member)).toBe(true);
+            const v2Evidence =
+              classifyTeamTranscriptGeneration(transcript) === 'v2'
+                ? readV2TeamInvocationEvidence(transcript, {
+                    teamName,
+                    memberName: member,
+                    selectedModel: model,
+                    ...transcriptBinding(relaunch.runId, relaunched, member),
+                  })
+                : null;
+            expect(
+              v2Evidence
+                ? hasV2CommandInvocationWithOuterMarker(v2Evidence, {
+                    command,
+                    workdir: projectPath,
+                    marker,
+                  })
+                : hasExecution(calls, marker)
+            ).toBe(true);
+            const actualTask = (await reader.getTasks(teamName)).find(
+              (value) => value.id === task.id
+            );
+            expect(
+              v2Evidence
+                ? hasV2TaskCompletion(v2Evidence, { taskId: task.id }, actualTask)
+                : hasTaskCompletion(calls, teamName, task.id, member)
+            ).toBe(true);
           })
         );
         await verifyImplementation(projectPath);
@@ -451,7 +560,10 @@ liveDescribe('OpenCode full paid team collaboration', () => {
         }
         proof.phase = phase;
         proof.finishedAt = new Date().toISOString();
-        await finalizeProof(() => checkpoint(phase), () => setClaudeBasePathOverride(null));
+        await finalizeProof(
+          () => checkpoint(phase),
+          () => setClaudeBasePathOverride(null)
+        );
       }
       if (cleanupFailure)
         throw new Error('Owned host cleanup not confirmed; failed state retained');
@@ -459,6 +571,19 @@ liveDescribe('OpenCode full paid team collaboration', () => {
     25 * 60_000
   );
 });
+
+function transcriptBinding(
+  runId: string,
+  snapshot: TeamAgentRuntimeSnapshot,
+  member: Member
+): OpenCodeOriginalTranscriptBinding {
+  expect(snapshot.runId).toBe(runId);
+  return {
+    runId,
+    laneId: snapshot.members[member]?.laneId ?? '',
+    runtimeSessionId: snapshot.members[member]?.runtimeSessionId ?? '',
+  };
+}
 
 function requiredEnv(key: string): string {
   const value = process.env[key]?.trim();
@@ -524,7 +649,11 @@ async function submitPeerOnce(
   return { member, messageId, ...relayMetadata(result) };
 }
 
-async function stopped(svc: TeamProvisioningService, teamName: string, runId: string): Promise<void> {
+async function stopped(
+  svc: TeamProvisioningService,
+  teamName: string,
+  runId: string
+): Promise<void> {
   await svc.stopTeam(teamName);
   await waitForOpenCodeLanesStopped(teamName);
   const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);

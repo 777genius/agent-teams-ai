@@ -12,7 +12,7 @@ Ce guide vous fait passer d'une installation neuve à une équipe en fonctionnem
 
 ```bash
 # 1. Install prerequisites
-node --version    # use 24.16.0
+node --version    # use 26.10.0 or 24.16.0
 pnpm --version    # use 11.22.0
 
 # 2. Clone and install
@@ -52,7 +52,7 @@ Pour les conventions de projet et les recommandations d'architecture, reportez-v
 
 **Ou exécutez depuis les sources** pour le développement :
 
-Nécessite Node.js 24.16.0 LTS et pnpm 11.22.0. Sur macOS, les binaires précompilés officiels de Node.js 24 nécessitent macOS 13.5+.
+Nécessite Node.js 26.10.0 Current ou 24.16.0 LTS et pnpm 11.22.0. Sur macOS, les binaires précompilés officiels de Node.js 24 nécessitent macOS 13.5+.
 
 ```bash
 git clone https://github.com/777genius/agent-teams-ai.git

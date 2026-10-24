@@ -1,12 +1,15 @@
+### [Boss, watch the video](https://agentteams.live/)
+
 <p align="center">
   <a href="https://agentteams.live/">
-    <img src="docs/assets/github-header-agent-teams-ai.png" alt="Agent Teams AI - Get a lot done by doing very little" width="100%" />
+    <img alt="Agent Teams AI - Get a lot done by doing very little" width="100%" src="docs/assets/agent-teams-overview.webp" />
   </a>
 </p>
 
 <p align="center">
   <a href="https://github.com/777genius/agent-teams-ai/releases/latest"><img src="https://img.shields.io/github/v/release/777genius/agent-teams-ai?style=flat-square&label=version&color=007ec6" alt="Latest Release" /></a>&nbsp;
   <a href="https://discord.gg/qtqSZSyuEc"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdiscord.com%2Fapi%2Fv10%2Finvites%2FqtqSZSyuEc%3Fwith_counts%3Dtrue&query=%24.approximate_member_count&label=Discord&logo=discord&logoColor=white&color=5865F2&style=flat-square&suffix=%20members" alt="Discord" /></a>&nbsp;
+  <a href="https://trendshift.io/repositories/24276?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-24276" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/24276" alt="777genius%2Fagent-teams-ai | Trendshift" width="125" height="26"/></a>
   <a href="https://agentteams.live/"><img src="https://img.shields.io/badge/site-agentteams.live-8B5CF6?style=flat-square&logo=googlechrome&logoColor=white" alt="AgentTeams" /></a>&nbsp;
   <a href="https://github.com/777genius/agent-teams-ai/actions/workflows/ci.yml"><img src="https://github.com/777genius/agent-teams-ai/actions/workflows/ci.yml/badge.svg" alt="CI Status" /></a>&nbsp;
 </p>
@@ -22,6 +25,8 @@
   </a>
 </p>
 -->
+
+### Screenshots ([watch on our site](https://agentteams.live/#screenshots)):
 
 <table>
 <tr>
@@ -50,8 +55,8 @@
 </tr>
 <tr>
 <td width="50%">
-  <a href="docs/screenshots/14.png">
-    <img src="docs/screenshots/previews/14.webp" alt="Token usage, costs, runs, and budget analytics" width="100%" loading="lazy" />
+  <a href="docs/screenshots/12.png">
+    <img src="docs/screenshots/previews/12.webp" alt="Full-screen team chat with replies, attachments, mentions, and drafts" width="100%" loading="lazy" />
   </a>
 </td>
 <td width="50%">
@@ -91,8 +96,8 @@
   </a>
 </td>
 <td width="50%">
-  <a href="docs/screenshots/12.png">
-    <img src="docs/screenshots/previews/12.webp" alt="Organization structure map with team and task details" width="100%" loading="lazy" />
+  <a href="docs/screenshots/14.png?v=1cff3f1128ca">
+    <img src="docs/screenshots/previews/14.webp?v=1cff3f1128ca" alt="Token usage, costs, runs, and budget analytics" width="100%" loading="lazy" />
   </a>
 </td>
 </tr>
@@ -198,29 +203,32 @@ No prerequisites - the app can detect installed Claude Code, Codex, and OpenCode
 - [Security](#security)
 - [License](#license)
 
+## ❤️ Sponsors
+
 <p>
-  <a href="https://fluxionai.world/register?source=github&campaign=github-agent-teams&promo=AGENTTEAMS"><img src="docs/assets/sponsor-fluxion.png" alt="Sponsor: Fluxion AI - one gateway to the world's leading AI models. $3 signup credit" width="72%" /></a>
+  <a href="https://fluxionai.world/register?source=github&campaign=github-agent-teams&promo=AGENTTEAMS"><img src="docs/assets/sponsor-fluxion.png" alt="Sponsor: Fluxion AI - one gateway to the world's leading AI models. $3 signup credit" /></a>
+
+
   <a href="#partnerships"><img src="docs/assets/sponsor-become.png" alt="Become a sponsor - partner with or sponsor Agent Teams" width="26%" /></a>
 </p>
 
 ## What is this
 
-An orchestration layer for AI agent teams across Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, and Kiro.
-
-- **Assemble your team** — create agent teams with different roles that work autonomously in parallel
+An orchestration layer for AI agent teams across Codex/Claude/OpenCode/Cursor/Grok/GitHub/Kiro/Z.AI/Xiaomi/MiniMax/Kimi...(300+ models, 200+ LLM providers, free models no auth)
+- **Assemble your team** — create agent teams (using 1 prompt) with different roles that work autonomously in parallel
 - **Sit back and watch** — tasks change status on the kanban board while agents handle everything on their own
 - **Agents talk to each other** — they communicate, create and manage their own tasks, review, leave comments
-- **Review changes like in Cursor** — see what code each task changed, then approve, reject, or comment
+- **Cross-team communication** — agents can fully communicate across different teams; you can configure or prompt them to collaborate and message each other between teams
 - **Built-in review workflow** — easily see how agents review each other's tasks to make sure everything went exactly as planned
 - **Token analytics and budgets** — see input, output, cache, and reasoning usage across teams, agents, tasks, projects, models, runtimes, sessions, commands, and runs. Spot expensive work, track trends and forecasts, set monthly token or estimated-cost budgets, and get alerts at 80% and 100%
 - **Organizations and global overview** — group teams into departments, squads, or any nested structure. Track every organization on one live map with team and agent status, task progress, dependencies, delegation, and cross-team communication
-- **Cross-team communication** — agents can fully communicate across different teams; you can configure or prompt them to collaborate and message each other between teams
-- **Stay in control** — send a direct message to any agent, drop a comment on a task, or pick a quick action right on the kanban card whenever you want to clarify something or add new work
+- **Stay in control** — send a direct message to any agent (DM or group chat), drop a comment on a task, or pick a quick action right on the kanban card whenever you want to clarify something or add new work
 - **Flexible autonomy** — let agents run fully autonomous, or review and approve supported tool actions one by one (you'll get a notification) — configure the level of control that fits your security needs
 - **Task-specific logs and messages** — clearly see agent/runtime logs (tools), actions and messages in isolation for each individual task, making it easy to trace what happened for any assignment
 - **Integrated terminal workspace** — run commands in a visual PTY scoped to each team and project, with local shell tabs, persistent history, autocomplete, and terminal settings
 - **Solo mode** — one-member team: a single agent that creates its own tasks and shows live progress. Saves tokens; can expand to a full team anytime
-- **Multi-provider orchestration** — start with a free model with no auth, auto-detect available Claude Code, Codex, and OpenCode runtimes, or connect Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, and Kiro using the subscriptions or API keys you already have
+- **Multi-provider orchestration** — start with a free model with no auth, auto-detect available Claude Code, Codex, and OpenCode runtimes, or connect Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, Kiro and more, using the subscriptions or API keys you already have
+- **Review changes like in Cursor** — see what code each task changed, then approve, reject, or comment
 
 <details>
 <summary><strong>More features</strong></summary>
@@ -267,27 +275,28 @@ An orchestration layer for AI agent teams across Claude Code, Codex, OpenCode, C
 
 ## Comparison
 
-| Feature                             | Agent Teams                                                                                             | Gas Town                                                             | Paperclip                                                              | Cursor                                                         | Claude Code CLI                                              |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------ |
-| **Live team collaboration**         | ✅ █████████░ 9/10 · Agents plan, delegate, work, and review together                                   | ✅ ████████░░ 8/10 · Persistent teams with coordination and recovery | ⚠️ ███████░░░ 7/10 · Durable scheduled agents, less live peer teamwork | ⚠️ ██████░░░░ 6/10 · Parallel agents + subagents, no peer team | ⚠️ ███████░░░ 7/10 · Experimental teams + cross-session messaging; recovery limits |
-| **Human control and approvals**     | ✅ Per-action approvals, roles, and notifications                                                       | ✅ Gates, roles, escalation, recovery                                | ✅ Board approvals, roles, pause, stop                                 | ⚠️ Command controls and admin policies                         | ✅ Permissions + hooks                                       |
-| **Visual team progress**            | ✅ Teammates, tasks, blockers, handoffs, activity, logs                                                 | ⚠️ Agent tree + feed panels                                          | ⚠️ Org chart and run status, not a task/log map                        | ⚠️ Agents Window, no shared peer-team map                      | ⚠️ Terminal team panel, no graphical UI                      |
-| **Team workspace**                  | ✅ Tasks, code, terminal, review, and teammates in one app                                              | ⚠️ Mail/feed/dashboard across tools                                  | ⚠️ Board + task chats, less live teammate view                         | ⚠️ Agents Window, no peer team workspace                       | ❌ No desktop UI                                             |
-| **Easy setup**                      | ✅ Start free, no signup or API key                                                                     | ❌ Manual CLI stack                                                  | ⚠️ `npx` onboarding + browser app                                      | ⚠️ App install + account                                       | ⚠️ CLI + env flag                                            |
-| **Agent readiness and recovery**    | ✅ Clear ready/stuck status with launch diagnostics                                                     | ✅ Working/stalled/failed health with recovery controls              | ⚠️ Run status and orphan recovery                                      | ⚠️ Agent status in Agents Window                               | ⚠️ Statuses in terminal, no graphical UI                     |
-| **Kanban board**                    | ✅ 5 columns, real-time                                                                                 | ❌ Dashboard, not Kanban                                             | ✅ 7 columns, drag-and-drop                                            | ❌                                                             | ❌                                                           |
-| **Code review**                     | ✅ Agent review plus accept, reject, and comment in the app                                             | ⚠️ Merge queue, no diff UI                                           | ⚠️ Review gates, not inline code review                                | ✅ Local Agent Review + PR Bugbot                               | ⚠️ Agent review, no review UI                                |
-| **Cross-team communication**        | ✅ Direct agent messages and shared task links across teams                                             | ⚠️ Mailboxes + handoffs                                              | ⚠️ Comments + @mentions                                                | N/A                                                            | ⚠️ Cross-session messaging, no shared cross-team task graph   |
-| **Linked tasks**                    | ✅ Tasks can link to and block each other                                                               | ✅ Task deps + grouped work                                          | ✅ Goals, parent tasks, blockers                                       | ❌                                                             | ✅ Shared task list                                          |
-| **Agent activity and history**      | ✅ Messages, tool calls, timeline, token use, and cost                                                  | ⚠️ Session recall, feed, metrics                                     | ⚠️ Run transcripts + cost audit                                        | ⚠️ Agent chat + terminal                                       | ⚠️ CLI transcripts + background logs                         |
-| **Organizations & global overview** | ✅ Nested groups, live team/task status, relations, cross-team activity                                 | ⚠️ Coordination hierarchy, no editable org map                       | ✅ Org chart + board governance                                        | ⚠️ Team admin, no live org map                                 | ❌                                                           |
-| **Mixed AI teammates**              | ✅ Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, and Kiro in one team | ✅ Many providers, terminal-first                                    | ✅ Bring your own agents/runtimes                                      | ⚠️ Multi-model parent + subagents, no peer team                | ⚠️ Claude-only experimental teams                            |
-| **Budget controls**                 | ✅ Budget alerts + hard caps for scheduled runs                                                         | ⚠️ Cost tiers + digest, no hard caps                                 | ✅ Per-agent budgets + hard stops                                      | ⚠️ Usage + cloud spend limits                                  | ⚠️ Usage/org limits + print-mode hard cap                    |
-| **Separate agent workspaces**       | ✅ Optional workspace per teammate                                                                      | ✅ Core primitive                                                    | ✅ Worktrees / branches                                                | ✅ Agents Window worktrees                                     | ✅ Built-in for sessions and subagents                       |
-| **Terminal**                        | ✅ Built-in visual terminal for team and local commands                                                 | ⚠️ Terminal-based workflow, no built-in terminal                     | ⚠️ Runs commands, no interactive terminal                              | ✅ Built-in IDE terminal                                       | ⚠️ Runs in your terminal                                     |
-| **Built-in code editor**            | ✅ With Git support                                                                                     | ❌                                                                   | ❌ Control plane, not editor                                           | ✅ Full IDE                                                    | ❌                                                           |
-| **Task attachments**                | ✅ Auto-attach, agents read & attach files                                                              | ❌ Not task-level                                                    | ✅ Docs, attachments, work products                                    | ⚠️ Prompt context, not task attachments                        | ⚠️ Prompt files/images, not task attachments                 |
-| **Price**                           | **Free OSS UI + free model with no auth**, paid providers optional                                      | Free OSS, runtime plans needed                                       | Free OSS, self-hosted + infra                                          | Free + paid usage                                              | Claude plan or API usage                                     |
+| Feature                             | Agent Teams                                                                                             | Gas Town                                                             | Paperclip                                                              | Cursor                                                         | Claude Code CLI                                              | OpenRig |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------ | ------- |
+| **Live team collaboration**         | ✅ █████████░ 9/10 · Agents plan, delegate, work, and review together                                   | ✅ ████████░░ 8/10 · Persistent teams with coordination and recovery | ⚠️ ███████░░░ 7/10 · Durable scheduled agents, less live peer teamwork | ⚠️ ██████░░░░ 6/10 · Parallel agents + subagents, no peer team | ⚠️ ███████░░░ 7/10 · Experimental teams + cross-session messaging; recovery limits | ✅ ████████░░ 8/10 · Persistent roles, delegation, owned-work queues, and review handoffs |
+| **Human control and approvals**     | ✅ Per-action approvals, roles, and notifications                                                       | ✅ Gates, roles, escalation, recovery                                | ✅ Board approvals, roles, pause, stop                                 | ⚠️ Command controls and admin policies                         | ✅ Permissions + hooks                                       | ✅ Native permissions, audited seat policies, typing guard, and stop controls |
+| **Visual team progress**            | ✅ Teammates, tasks, blockers, handoffs, activity, logs                                                 | ⚠️ Agent tree + feed panels                                          | ⚠️ Org chart and run status, not a task/log map                        | ⚠️ Agents Window, no shared peer-team map                      | ⚠️ Terminal team panel, no graphical UI                      | ✅ TUI topology graph, seat state, missions, and activity feed |
+| **Team workspace**                  | ✅ Tasks, code, terminal, review, and teammates in one app                                              | ⚠️ Mail/feed/dashboard across tools                                  | ⚠️ Board + task chats, less live teammate view                         | ⚠️ Agents Window, no peer team workspace                       | ❌ No desktop UI                                             | ⚠️ TUI coordination + tmux terminals; optional maintenance web UI |
+| **Easy setup**                      | ✅ Start free, no signup or API key                                                                     | ❌ Manual CLI stack                                                  | ⚠️ `npx` onboarding + browser app                                      | ⚠️ App install + account                                       | ⚠️ CLI + env flag                                            | ⚠️ Node + tmux + provider login; guided setup on macOS/Linux |
+| **Agent readiness and recovery**    | ✅ Clear ready/stuck status with launch diagnostics                                                     | ✅ Working/stalled/failed health with recovery controls              | ⚠️ Run status and orphan recovery                                      | ⚠️ Agent status in Agents Window                               | ⚠️ Statuses in terminal, no graphical UI                     | ✅ Readiness checks, snapshots, and explicit per-seat restore outcomes |
+| **Kanban board**                    | ✅ 5 columns, real-time                                                                                 | ❌ Dashboard, not Kanban                                             | ✅ 7 columns, drag-and-drop                                            | ❌                                                             | ❌                                                           | ❌ Owned-work queue and mission views; no Kanban board |
+| **Code review**                     | ✅ Agent review plus accept, reject, and comment in the app                                             | ⚠️ Merge queue, no diff UI                                           | ⚠️ Review gates, not inline code review                                | ✅ Local Agent Review + PR Bugbot                               | ⚠️ Agent review, no review UI                                | ⚠️ Reviewer rigs and proof approvals; no task-level hunk review UI |
+| **Cross-team communication**        | ✅ Direct agent messages and shared task links across teams                                             | ⚠️ Mailboxes + handoffs                                              | ⚠️ Comments + @mentions                                                | N/A                                                            | ⚠️ Cross-session messaging, no shared cross-team task graph   | ✅ Cross-rig messages, broadcasts, chatrooms, and queue handoffs |
+| **Linked tasks**                    | ✅ Tasks can link to and block each other                                                               | ✅ Task deps + grouped work                                          | ✅ Goals, parent tasks, blockers                                       | ❌                                                             | ✅ Shared task list                                          | ✅ Queue blockers, workflow dependencies, and transactional handoffs |
+| **Agent activity and history**      | ✅ Messages, tool calls, timeline, token use, and cost                                                  | ⚠️ Session recall, feed, metrics                                     | ⚠️ Run transcripts + cost audit                                        | ⚠️ Agent chat + terminal                                       | ⚠️ CLI transcripts + background logs                         | ✅ Activity feed, transcripts, queue audit, and runtime-dependent telemetry |
+| **Organizations & global overview** | ✅ Nested groups, live team/task status, relations, cross-team activity                                 | ⚠️ Coordination hierarchy, no editable org map                       | ✅ Org chart + board governance                                        | ⚠️ Team admin, no live org map                                 | ❌                                                           | ⚠️ Rigs, pods, seats, and topology graph; no editable company org map |
+| **Mixed AI teammates**              | ✅ Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, and Kiro in one team | ✅ Many providers, terminal-first                                    | ✅ Bring your own agents/runtimes                                      | ⚠️ Multi-model parent + subagents, no peer team                | ⚠️ Claude-only experimental teams                            | ✅ Claude Code, Codex, Pi, and Oh My Pi in mixed rigs |
+| **Budget controls**                 | ✅ Budget alerts + hard caps for scheduled runs                                                         | ⚠️ Cost tiers + digest, no hard caps                                 | ✅ Per-agent budgets + hard stops                                      | ⚠️ Usage + cloud spend limits                                  | ⚠️ Usage/org limits + print-mode hard cap                    | ⚠️ Token-burn/provider-window monitoring; no documented spend cap |
+| **Separate agent workspaces**       | ✅ Optional workspace per teammate                                                                      | ✅ Core primitive                                                    | ✅ Worktrees / branches                                                | ✅ Agents Window worktrees                                     | ✅ Built-in for sessions and subagents                       | ⚠️ Per-seat working directories; externally managed Git worktrees |
+| **Terminal**                        | ✅ Built-in visual terminal for team and local commands                                                 | ⚠️ Terminal-based workflow, no built-in terminal                     | ⚠️ Runs commands, no interactive terminal                              | ✅ Built-in IDE terminal                                       | ⚠️ Runs in your terminal                                     | ✅ tmux + herdr/cmux integration; optional maintenance web terminal |
+| **Built-in code editor**            | ✅ With Git support                                                                                     | ❌                                                                   | ❌ Control plane, not editor                                           | ✅ Full IDE                                                    | ❌                                                           | ⚠️ Basic file editor in optional maintenance web UI |
+| **Task attachments**                | ✅ Auto-attach, agents read & attach files                                                              | ❌ Not task-level                                                    | ✅ Docs, attachments, work products                                    | ⚠️ Prompt context, not task attachments                        | ⚠️ Prompt files/images, not task attachments                 | ⚠️ Queue evidence refs, proof media, and Slack file attachments |
+| **Price**                           | **Free OSS UI + free model with no auth**, paid providers optional                                      | Free OSS, runtime plans needed                                       | Free OSS, self-hosted + infra                                          | Free + paid usage                                              | Claude plan or API usage                                     | Free OSS; Apache-2.0; provider usage and hosting costs apply |
+
 
 _Live collaboration scores are qualitative editorial assessments of documented communication, task ownership and dependencies, completion, and review capabilities; they are not benchmark results._
 
@@ -296,13 +305,14 @@ _Live collaboration scores are qualitative editorial assessments of documented c
 
 <br />
 
-Product evidence was checked on August 27, 2026. Live collaboration scores are qualitative editorial assessments, not benchmark results.
+Existing product evidence was checked on August 27, 2026. OpenRig was checked on October 6, 2026 against stable v0.6.5 (`5ea35e93`); newer default-branch features are not assumed to be released. Live collaboration scores are qualitative editorial assessments, not benchmark results.
 
 - **Agent Teams:** [collaboration controller](agent-teams-controller/src/internal), [organizations feature](src/features/organizations/README.md), [terminal workspace](src/features/terminal-workspace/renderer/ui/TerminalWorkspacePanel.tsx), [token usage budgets](src/features/token-usage/contracts/dto.ts), [scheduled run budget cap](src/main/services/schedule/ScheduledTaskExecutor.ts)
 - **Gas Town:** [README](https://github.com/gastownhall/gastown), [provider guide](https://github.com/gastownhall/gastown/blob/main/docs/agent-provider-integration.md), [scheduler](https://github.com/gastownhall/gastown/blob/main/docs/design/scheduler.md), [dashboard source](https://github.com/gastownhall/gastown/blob/main/internal/web/templates/convoy.html), [v1.2.1 release](https://github.com/gastownhall/gastown/releases/tag/v1.2.1)
 - **Paperclip:** [README](https://github.com/paperclipai/paperclip), [adapters](https://github.com/paperclipai/paperclip/blob/master/docs/adapters/overview.md), [heartbeat protocol](https://github.com/paperclipai/paperclip/blob/master/docs/guides/agent-developer/heartbeat-protocol.md), [org chart](https://github.com/paperclipai/paperclip#the-systems), [OrgChart source](https://github.com/paperclipai/paperclip/blob/master/ui/src/pages/OrgChart.tsx), [budgets](https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/costs-and-budgets.md), [runtime services](https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/execution-workspaces-and-runtime-services.md), [Kanban source](https://github.com/paperclipai/paperclip/blob/master/ui/src/components/KanbanBoard.tsx), [work products](https://github.com/paperclipai/paperclip/blob/master/packages/shared/src/validators/work-product.ts), [v2026.824.1 release](https://github.com/paperclipai/paperclip/releases/tag/v2026.824.1)
 - **Cursor:** [terminal](https://cursor.com/docs/agent/tools/terminal), [Cloud Agents](https://cursor.com/docs/cloud-agent), [Agents Window](https://cursor.com/docs/agent/agents-window), [subagents](https://cursor.com/docs/subagents), [Agent Review](https://cursor.com/docs/agent/agent-review), [Bugbot](https://cursor.com/docs/bugbot), [worktrees](https://cursor.com/docs/configuration/worktrees), [models and pricing](https://cursor.com/docs/models-and-pricing), [team pricing](https://cursor.com/docs/account/teams/pricing)
 - **Claude Code CLI:** [CLI](https://code.claude.com/docs/en/cli-usage), [agent teams](https://code.claude.com/docs/en/agent-teams), [cross-session messaging](https://code.claude.com/docs/en/cross-session-messaging), [worktrees](https://code.claude.com/docs/en/worktrees), [subagents](https://code.claude.com/docs/en/sub-agents), [dynamic workflows](https://code.claude.com/docs/en/workflows), [costs](https://code.claude.com/docs/en/costs), [Claude pricing](https://claude.com/pricing), [v2.1.246 release](https://github.com/anthropics/claude-code/releases/tag/v2.1.246)
+- **OpenRig:** [OpenRig v0.6.5 README](https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/README.md), [OpenRig coordination and queue](https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/docs/as-built/architecture/coordination-primitive.md), [OpenRig snapshot and restore](https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/docs/as-built/architecture/lifecycle-snapshot-restore.md), [OpenRig workspace model](https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/docs/as-built/architecture/workspace-primitive.md), [OpenRig basic web editor](https://github.com/mvschwarz/openrig/blob/5ea35e93bca9460db94da0fc31afbc3716ea14ba/packages/ui/src/components/files/FilesWorkspace.tsx); [row-by-row evidence](docs/research/openrig-comparison-2026-10-06.md)
 - **Detailed fact ledger:** [comparison research notes](docs/research/gastown-paperclip-comparison-2026-06-25.md)
 
 </details>
@@ -387,7 +397,6 @@ This vision is not tied to a specific SDLC or workflow. Users should be free to 
 
 For feature architecture and implementation guidance:
 
-- Design and implementation plans - [docs/plans/README.md](docs/plans/README.md)
 - Canonical standard - [docs/FEATURE_ARCHITECTURE_STANDARD.md](docs/FEATURE_ARCHITECTURE_STANDARD.md)
 - Repo working instructions - [CLAUDE.md](CLAUDE.md)
 - Feature root guidance - [src/features/README.md](src/features/README.md)
@@ -402,9 +411,10 @@ Electron 40, React 19, TypeScript 5, Tailwind CSS 3, Zustand 4. The desktop app 
 
 <br />
 
-**Prerequisites:** Node.js 24.21.0 LTS, pnpm 10+
+**Prerequisites:** Node.js 26.11.1 Current (recommended for source builds) or Node.js 24.16.0 LTS, pnpm 11.22.0
 
 On macOS, official Node.js 24 prebuilt binaries require macOS 13.5+.
+Node.js 26 does not bundle Corepack; install the pinned pnpm version separately if `pnpm` is unavailable.
 
 ```bash
 git clone https://github.com/777genius/agent-teams-ai.git

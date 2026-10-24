@@ -9,12 +9,17 @@ const MAX_BROWSER_TIMEOUT_MS = 2_147_483_647;
 export function useOpenCodePassiveStatusPrefetch({
   enabled,
   projectPath,
+  catalogRecovery,
 }: {
   enabled: boolean;
   projectPath: string | null | undefined;
+  catalogRecovery?: { projectPath: string | null; freshUntil: string | null } | null;
 }): void {
   const normalizedProjectPath = projectPath?.trim() || '';
+  const recoveryProjectPath = catalogRecovery?.projectPath?.trim() || '';
+  const recoveryFreshUntil = catalogRecovery?.freshUntil;
   const cliStatus = useStore((state) => state.cliStatus);
+  const runtimeStatus = useStore((state) => state.openCodeRuntimeStatus);
   const scopeRevision = useStore((state) => state.cliProviderStatusScopeRevision) ?? 0;
   const fetchCliProviderStatus = useStore((state) => state.fetchCliProviderStatus);
   const scopedProviderStatus = useStore((state) =>
@@ -27,6 +32,7 @@ export function useOpenCodePassiveStatusPrefetch({
   const requestedRevisionByScopeRef = useRef(new Map<string, number>());
   const refreshedExpiryByScopeRef = useRef(new Map<string, string>());
   const scopesWithObservedStatusRef = useRef(new Set<string>());
+  const recoveredFailuresByScopeRef = useRef(new Set<string>());
   const activeScopeRef = useRef('');
   const [refreshSequence, publishCompletion] = useReducer((sequence: number) => sequence + 1, 0);
 
@@ -43,6 +49,20 @@ export function useOpenCodePassiveStatusPrefetch({
   }, [enabled, normalizedProjectPath, scopedProviderStatus, scopeRevision, refreshSequence]);
 
   useEffect(() => {
+    if (scopedProviderStatus?.statusCheckOutcome === 'authoritative') {
+      recoveredFailuresByScopeRef.current.delete(normalizedProjectPath);
+    }
+    // A catalog proves that runtime reads work again, but does not grant launch
+    // authority. Recheck the failed project status once per unresolved incident.
+    const catalogRecoveryDue =
+      normalizedProjectPath !== '' &&
+      recoveryProjectPath === normalizedProjectPath &&
+      Date.parse(recoveryFreshUntil ?? '') > Date.now() &&
+      runtimeStatus?.installed === true &&
+      runtimeStatus.state === 'ready' &&
+      scopedProviderStatus?.statusCheckOutcome === 'transient_error' &&
+      scopedProviderStatus.statusCheckErrorCode !== 'project_missing' &&
+      !recoveredFailuresByScopeRef.current.has(normalizedProjectPath);
     const catalog = scopedProviderStatus?.modelCatalog;
     const staleAt = Date.parse(catalog?.staleAt ?? '');
     const expiryKey =
@@ -62,6 +82,7 @@ export function useOpenCodePassiveStatusPrefetch({
       if (
         !requestedRevisionByScopeRef.current.has(normalizedProjectPath) &&
         !expiryRefreshDue &&
+        !catalogRecoveryDue &&
         scopedProviderStatus.statusCheckOutcome !== 'pending'
       ) {
         requestedRevisionByScopeRef.current.set(normalizedProjectPath, scopeRevision);
@@ -80,12 +101,14 @@ export function useOpenCodePassiveStatusPrefetch({
       cliStatus?.flavor !== 'agent_teams_orchestrator' ||
       typeof fetchCliProviderStatus !== 'function' ||
       (requestedRevisionByScopeRef.current.get(normalizedProjectPath) === scopeRevision &&
-        !expiryRefreshDue)
+        !expiryRefreshDue &&
+        !catalogRecoveryDue)
     ) {
       return;
     }
 
     requestedRevisionByScopeRef.current.set(normalizedProjectPath, scopeRevision);
+    if (catalogRecoveryDue) recoveredFailuresByScopeRef.current.add(normalizedProjectPath);
     if (expiryKey !== null) refreshedExpiryByScopeRef.current.set(normalizedProjectPath, expiryKey);
     let cancelled = false;
     // A settled failure (including the same expired payload) gets one attempt.
@@ -111,6 +134,10 @@ export function useOpenCodePassiveStatusPrefetch({
     enabled,
     fetchCliProviderStatus,
     normalizedProjectPath,
+    recoveryProjectPath,
+    recoveryFreshUntil,
+    runtimeStatus?.installed,
+    runtimeStatus?.state,
     scopedProviderStatus,
     scopeRevision,
     refreshSequence,

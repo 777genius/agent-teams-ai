@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@renderer/components/ui/dialog';
-import { normalizeVersion } from '@shared/utils/version';
+import { formatRuntimeVersionTransition, normalizeVersion } from '@shared/utils/version';
 import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 
 import { getCodexRuntimeProgressPercent } from '../utils/codexRuntimeProgress';
@@ -55,21 +55,20 @@ export const CodexRuntimeUpdateDialog = ({
     status.progress?.phase === 'ready';
   const actionLabel = useMemo(() => {
     if (status?.updateAvailable && status.latestVersion) {
-      return dashboardT('cliStatus.actions.updateTo', { version: status.latestVersion });
+      return status.version
+        ? `${dashboardT('cliStatus.runtimeInstall.update')} ${formatRuntimeVersionTransition(status.version, status.latestVersion)}`
+        : dashboardT('cliStatus.actions.updateTo', { version: status.latestVersion });
     }
     if (status?.state === 'failed') {
       return dashboardT('cliStatus.runtimeInstall.retryInstall');
     }
     return dashboardT('cliStatus.runtimeInstall.install');
-  }, [dashboardT, status?.latestVersion, status?.state, status?.updateAvailable]);
+  }, [dashboardT, status?.latestVersion, status?.state, status?.updateAvailable, status?.version]);
   const versionSummary =
     completed && status?.version
       ? `v${normalizeVersion(status.version)}`
       : status?.version && status.latestVersion
-        ? settingsT('cliStatus.versionUpgrade', {
-            current: normalizeVersion(status.version),
-            latest: status.latestVersion,
-          })
+        ? formatRuntimeVersionTransition(status.version, status.latestVersion)
         : status?.latestVersion
           ? `v${status.latestVersion}`
           : status?.version

@@ -395,6 +395,21 @@ describe('provider model verification normalization', () => {
 });
 
 describe('provider runtime readiness normalization', () => {
+  it('does not mistake a failed runtime check for missing setup or invalid authentication', () => {
+    const warning = buildRuntimeProviderReadinessWarning('opencode', {
+      supported: false,
+      authenticated: false,
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'unavailable',
+      detailMessage: 'Runtime status command failed. Exit code: 1. Unexpected',
+    });
+    expect(warning).toContain('runtime status could not be checked');
+    expect(warning).toContain('Authentication and launch readiness are unconfirmed');
+    expect(warning).toContain('Exit code: 1. Unexpected');
+    expect(warning).not.toContain('not authenticated');
+    expect(warning).not.toContain('not configured');
+  });
+
   it('normalizes runtime status and auth fallback readiness', () => {
     expect(
       buildRuntimeProviderReadinessWarning('codex', {

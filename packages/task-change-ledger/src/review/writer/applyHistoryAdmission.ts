@@ -40,7 +40,11 @@ export function assertExactApplyReviewHistoryTransition(
   }
   const filesByPath = new Map(
     decisions.map((decision) => {
-      const file = getAuthoritativeReviewedFile(authorization, decision.filePath);
+      const file = getAuthoritativeReviewedFile(
+        authorization,
+        decision.filePath,
+        decision.reviewKey
+      );
       const canonicalKey = file.changeKey ?? file.filePath;
       if (decision.reviewKey !== canonicalKey) {
         throw new Error('Durable reviewKey does not match the authoritative review identity');

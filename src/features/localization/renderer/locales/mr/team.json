@@ -1,5 +1,11 @@
 {
   "activity": {
+    "reactions": {
+      "add": "प्रतिक्रिया जोडा ({{count}})",
+      "remove": "प्रतिक्रिया काढा ({{count}})",
+      "count": "प्रतिक्रिया: {{count}}",
+      "failed": "प्रतिक्रिया अद्ययावत करता आल्या नाहीत"
+    },
     "actions": {
       "createTaskFromMessage": "संदेशातून टास्क तयार करा",
       "editMessage": "संदेश संपादित करा",
@@ -194,7 +200,7 @@
     },
     "validation": {
       "nameMustContainLetterOrDigit": "नावात किमान एक अक्षर किंवा अंक असणे आवश्यक आहे",
-      "nameTooLong": "नाव खूप लांब आहे (कमाल 128 अक्षरे)",
+      "nameTooLong": "नाव खूप लांब आहे (कमाल 64 अक्षरे)",
       "selectWorkingDirectory": "वर्किंग डिरेक्टरी निवडा (cwd)",
       "memberNameRequired": "सदस्य नाव रिकामे असू शकत नाही",
       "memberNameInvalid": "सदस्य नाव अल्फान्यूमेरिकने सुरू झाले पाहिजे, फक्त [a-zA-Z0-9._-] वापरा, कमाल 128 अक्षरे",
@@ -262,6 +268,8 @@
       "name": "नाव"
     },
     "memberRestartWarning": "जतन केल्याने भूमिका, वर्कफ्लो, worktree पृथक्करण, प्रोव्हायडर, मॉडेल, प्रयत्न किंवा MCP प्रवेश बदल लागू करण्यासाठी या सहकाऱ्याला रीस्टार्ट केले जाईल.",
+    "displayedRuntimeHint": "सदस्याच्या कार्डमध्ये: {{runtime}}. जतन केलेली सेटिंग्ज वेगळी आहेत.",
+    "useDisplayedRuntime": "कार्डवरील सेटिंग्ज वापरा",
     "notices": {
       "liveRenameBlocked": "विद्यमान सहकाऱ्यांचे नाव बदलल्यामुळे लाइव्ह जतन अवरोधित आहे. ते ओळख बदल मागे घ्या किंवा प्रथम टीम थांबवा.",
       "newLiveTeammates": "टीम लाइव्ह असताना टीम संपादित करा मधून नवीन सहकारी जोडता येत नाहीत. त्याऐवजी सदस्य जोडा डायलॉग वापरा.",
@@ -351,6 +359,30 @@
     "placeholders": {
       "name": "member-name",
       "mcpServers": "github, sentry"
+    },
+    "gateway": {
+      "apiKeyLabel": "Gateway API key",
+      "apiKeyPlaceholder": "Paste the teammate gateway API key",
+      "authRejected": "Key authorization was rejected.",
+      "bindButton": "Bind teammate",
+      "bindingStatus": "Bound to {{profile}}",
+      "credentialChanged": "stored key changed — bind again with a new key",
+      "credentialMissing": "stored key missing — bind again with a new key",
+      "credentialReady": "key stored",
+      "emptyCatalog": "The model catalog is empty.",
+      "keyRequired": "Enter the gateway API key first.",
+      "modelLabel": "Model",
+      "modelPlaceholder": "Select a model",
+      "nextLaunchHint": "Changes apply on the next team launch only; a running team keeps its current gateway route. हा फॉर्म उघडण्यापूर्वी जतन केलेली जोडणी लगेच अद्ययावत होते आणि टीमचा फॉर्म रद्द केला तरी बदल कायम राहतात.",
+      "probeButton": "Check key and load models",
+      "probing": "Checking...",
+      "profileLabel": "Gateway profile",
+      "profilePlaceholder": "Select a gateway profile",
+      "profileRequired": "Select a gateway profile first.",
+      "renamedHint": "Renaming a teammate removes the gateway binding. After saving, bind again manually with a new key — the previous key keeps its historical owner.",
+      "title": "Gateway provider",
+      "unbindButton": "Unbind",
+      "unavailable": "The gateway is unavailable right now."
     }
   },
   "detail": {
@@ -730,6 +762,33 @@
     }
   },
   "messages": {
+    "groups": {
+      "create": "गट चॅट तयार करा",
+      "description": "किमान दोन एजंट निवडा. तुम्ही आपोआप समाविष्ट होता.",
+      "name": "चॅटचे नाव",
+      "autoInclude": "नवीन सदस्यांना आपोआप जोडा",
+      "minimum": "किमान दोन एजंट निवडा.",
+      "creating": "तयार करत आहे…",
+      "retryCreate": "पुन्हा तयार करण्याचा प्रयत्न करा",
+      "unavailable": "चॅट उपलब्ध नाही",
+      "message": "या गटाला संदेश पाठवा",
+      "archivedHint": "ही चॅट संग्रहित आहे. संदेश पाठवण्यासाठी ती पुनर्संचयित करा.",
+      "restartHint": "संदेश पाठवण्यासाठी सर्व सहभागींचे सुसंगत रनटाइम सुरू असणे आवश्यक आहे.",
+      "unknownDelivery": "जतन केले. वितरणाची स्थिती अज्ञात आहे.",
+      "sending": "पाठवत आहे…",
+      "retrySend": "हाच संदेश पुन्हा पाठवा",
+      "send": "पाठवा",
+      "archived": "संग्रहित चॅट",
+      "restore": "चॅट पुनर्संचयित करा",
+      "archive": "चॅट संग्रहित करा",
+      "delivery": {
+        "queued": "रांगेत",
+        "accepted": "स्वीकारले",
+        "failed": "अयशस्वी",
+        "unknown": "अज्ञात",
+        "skipped": "वगळले"
+      }
+    },
     "actions": {
       "toLatest": "नवीनतम संदेशांकडे",
       "bottomSheetActions": "संदेश तळ शीट कृती",
@@ -969,7 +1028,8 @@
       "cancel": "रद्द करा",
       "delete": "हटवा",
       "markResolved": "निराकरण झाले म्हणून चिन्हांकित करा",
-      "save": "जतन करा"
+      "save": "जतन करा",
+      "openInTaskTab": "स्वतंत्र टॅबमध्ये उघडा"
     },
     "attachments": {
       "commentAttachment": "टिप्पणी संलग्नक",
@@ -2966,6 +3026,25 @@
         "weight_few": "weight {{count}}",
         "weight_many": "weight {{count}}"
       }
+    }
+  },
+  "externalPrompt": {
+    "requestHelp": "Name the templates to use and describe any edits in your request.",
+    "editAvailable": "Editing draft/stopped configuration is available.",
+    "trashAvailable": "Reversible trash for draft/stopped teams is available."
+  },
+  "managementChanges": {
+    "title": "Recent changes",
+    "created": "Created",
+    "edited": "Edited",
+    "hidden": "Some recent changes are hidden by the current filters.",
+    "roster": "Roles: +{{added}}/-{{removed}}",
+    "fields": {
+      "displayName": "Name changed",
+      "description": "Description changed",
+      "color": "Color changed",
+      "leadInstructions": "Lead instructions changed",
+      "members": "Members changed"
     }
   }
 }

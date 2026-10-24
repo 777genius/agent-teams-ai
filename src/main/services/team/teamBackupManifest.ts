@@ -1,6 +1,7 @@
 import { writeBackupManifestSync as writePortable } from '@agent-teams/legacy-agent-host/lifecycle';
-import type { BackupManifest } from '@agent-teams/legacy-agent-host/lifecycle';
 import { createLogger } from '@shared/utils/logger';
+
+import type { BackupManifest } from '@agent-teams/legacy-agent-host/lifecycle';
 export type {
   BackupManifest,
   BackupManifestWriteOptions,
@@ -8,10 +9,10 @@ export type {
 export {
   getBackupManifestPath,
   readBackupManifest,
-  readBackupManifestSync,
-  writeBackupManifest,
   readBackupManifestStrict,
   readBackupManifestStrictSync,
+  readBackupManifestSync,
+  writeBackupManifest,
   writeBackupManifestStrictAware,
 } from '@agent-teams/legacy-agent-host/lifecycle';
 const logger = createLogger('TeamBackupService');

@@ -420,8 +420,10 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
       provider: { 'home-server': { options: { apiKey: string } } };
     };
     expect(config.small_model).toBe('home-server/team-model');
-    expect(config.provider['home-server'].options.apiKey).toMatch(
-      /^\{file:~\/\.config\/opencode\/agent-teams-credentials\/home-server-/
+    await resolvePersistedCredentialPath(
+      config.provider['home-server'].options.apiKey,
+      tempDir,
+      'home-server'
     );
   });
 
@@ -608,8 +610,10 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
       'phi-4',
       'qwen3:8b',
     ]);
-    expect(config.provider['protected-local'].options.apiKey).toMatch(
-      /^\{file:~\/\.config\/opencode\/agent-teams-credentials\/protected-local-/
+    await resolvePersistedCredentialPath(
+      config.provider['protected-local'].options.apiKey,
+      tempDir,
+      'protected-local'
     );
   });
 
@@ -682,20 +686,12 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
         };
       };
     };
-    expect(parsed.provider.omniroute.options.apiKey).toMatch(
-      /^\{file:~\/\.config\/opencode\/agent-teams-credentials\/omniroute-[a-f0-9]{16}-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.key\}$/
-    );
-    const credentialFilename = parsed.provider.omniroute.options.apiKey.slice(
-      '{file:~/.config/opencode/agent-teams-credentials/'.length,
-      -1
-    );
-    const credentialDirectory = path.join(
+    const credentialPath = await resolvePersistedCredentialPath(
+      parsed.provider.omniroute.options.apiKey,
       tempDir,
-      '.config',
-      'opencode',
-      'agent-teams-credentials'
+      'omniroute'
     );
-    const credentialPath = path.join(credentialDirectory, credentialFilename);
+    const credentialDirectory = path.dirname(credentialPath);
     expect(await fs.readFile(credentialPath, 'utf8')).toBe(apiKey);
     if (process.platform !== 'win32') {
       expect((await fs.stat(credentialDirectory)).mode & 0o777).toBe(0o700);
@@ -724,9 +720,10 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
       }
     ).provider.omniroute.options.apiKey;
     expect(rotatedReference).not.toBe(parsed.provider.omniroute.options.apiKey);
-    const rotatedCredentialPath = path.join(
-      credentialDirectory,
-      rotatedReference.slice('{file:~/.config/opencode/agent-teams-credentials/'.length, -1)
+    const rotatedCredentialPath = await resolvePersistedCredentialPath(
+      rotatedReference,
+      tempDir,
+      'omniroute'
     );
     expect(await fs.readFile(rotatedCredentialPath, 'utf8')).toBe(rotatedApiKey);
     await expect(fs.readFile(credentialPath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
@@ -765,17 +762,13 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
           provider: { omniroute: { options: { apiKey: string } } };
         }
       ).provider.omniroute.options.apiKey;
-      const credentialFilename = credentialReference.slice(
-        '{file:~/.config/opencode/agent-teams-credentials/'.length,
-        -1
-      );
-      const credentialDirectory = path.join(
+      const credentialPath = await resolvePersistedCredentialPath(
+        credentialReference,
         tempDir,
-        '.config',
-        'opencode',
-        'agent-teams-credentials'
+        'omniroute'
       );
-      const credentialPath = path.join(credentialDirectory, credentialFilename);
+      const credentialFilename = path.basename(credentialPath);
+      const credentialDirectory = path.dirname(credentialPath);
 
       await fs.chmod(projectPath, 0o500);
       let rotated;
@@ -843,16 +836,10 @@ describe('OpenCodeLocalProviderConnector safe e2e', () => {
         provider: { omniroute: { options: { apiKey: string } } };
       }
     ).provider.omniroute.options.apiKey;
-    const credentialFilename = credentialReference.slice(
-      '{file:~/.config/opencode/agent-teams-credentials/'.length,
-      -1
-    );
-    const credentialPath = path.join(
+    const credentialPath = await resolvePersistedCredentialPath(
+      credentialReference,
       tempDir,
-      '.config',
-      'opencode',
-      'agent-teams-credentials',
-      credentialFilename
+      'omniroute'
     );
 
     const collision = await connector.configureLocalProvider({
@@ -1461,6 +1448,26 @@ function closeServer(server: http.Server): Promise<void> {
   return new Promise((resolve, reject) => {
     server.close((error) => (error ? reject(error) : resolve()));
   });
+}
+
+async function resolvePersistedCredentialPath(
+  reference: string,
+  homePath: string,
+  providerId: string
+): Promise<string> {
+  expect(reference.startsWith('{file:')).toBe(true);
+  expect(reference.endsWith('}')).toBe(true);
+  const credentialPath = reference.slice('{file:'.length, -1);
+  expect(path.isAbsolute(credentialPath)).toBe(true);
+  expect(path.dirname(credentialPath)).toBe(
+    path.join(await fs.realpath(homePath), '.config', 'opencode', 'agent-teams-credentials')
+  );
+  expect(path.basename(credentialPath)).toMatch(
+    new RegExp(
+      `^${providerId}-[a-f0-9]{16}-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\\.key$`
+    )
+  );
+  return credentialPath;
 }
 
 /* eslint-enable sonarjs/no-clear-text-protocols -- re-enable after the safe local HTTP fixtures */

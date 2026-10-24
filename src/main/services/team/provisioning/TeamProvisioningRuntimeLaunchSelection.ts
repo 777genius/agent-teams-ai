@@ -20,7 +20,10 @@ import {
   type TeamProviderId,
   type TeamProvisioningModelCheckRequest,
 } from '@shared/types';
-import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
+import {
+  isAnthropicContextPolicyLaunchModelAvailable,
+  resolveAnthropicLaunchModel,
+} from '@shared/utils/anthropicLaunchModel';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { inferProviderBillingMode } from '@shared/utils/providerBillingMode';
 import { randomUUID } from 'crypto';
@@ -39,6 +42,8 @@ import {
 import { TeamLaunchValidationError } from './TeamLaunchValidationError';
 import { assertCodexChatGptLaunchModelSupported } from './TeamProvisioningCodexChatGptModelGate';
 import { getExplicitLaunchModelSelection } from './TeamProvisioningMemberSpecs';
+
+export { normalizeProviderModelListModels } from './TeamProvisioningModelListNormalization';
 
 export interface ProviderModelListCommandResponse {
   schemaVersion?: number;
@@ -212,20 +217,6 @@ export function getLaunchModelArg(
   return undefined;
 }
 
-export function normalizeProviderModelListModels(
-  provider: NonNullable<ProviderModelListCommandResponse['providers']>[string] | undefined
-): Set<string> {
-  const models = new Set<string>();
-  for (const entry of provider?.models ?? []) {
-    const modelId = typeof entry === 'string' ? entry : entry.id;
-    const trimmed = modelId?.trim();
-    if (trimmed) {
-      models.add(trimmed);
-    }
-  }
-  return models;
-}
-
 export function normalizeProviderSelectedModelChecks(
   modelIds: readonly string[],
   modelChecks?: readonly ProviderSelectedModelCheck[]
@@ -379,7 +370,10 @@ export function hasAuthoritativeAnthropicLaunchCatalog(
 export function resolveAnthropicSelectionFromFacts(params: {
   selectedModel?: string;
   limitContext?: boolean;
-  facts: Pick<RuntimeProviderLaunchFacts, 'modelCatalog' | 'modelIds' | 'runtimeCapabilities'>;
+  facts: Pick<
+    RuntimeProviderLaunchFacts,
+    'modelCatalog' | 'modelIds' | 'runtimeCapabilities' | 'defaultModel'
+  >;
 }): ReturnType<typeof resolveAnthropicRuntimeSelection> {
   return resolveAnthropicRuntimeSelection({
     source: {
@@ -389,6 +383,7 @@ export function resolveAnthropicSelectionFromFacts(params: {
     selectedModel: params.selectedModel,
     limitContext: params.limitContext === true,
     availableLaunchModels: params.facts.modelCatalog ? undefined : params.facts.modelIds,
+    defaultLaunchModel: params.facts.defaultModel,
   });
 }
 
@@ -809,7 +804,7 @@ export function validateRuntimeLaunchSelection(params: {
     if (
       params.facts.modelIds.size > 0 &&
       hasAuthoritativeAnthropicLaunchCatalog(params.facts) &&
-      !params.facts.modelIds.has(resolvedLaunchModel)
+      !isAnthropicContextPolicyLaunchModelAvailable(params.facts.modelIds, resolvedLaunchModel)
     ) {
       throw new TeamLaunchValidationError(
         `${params.actorLabel} resolves to Anthropic model "${resolvedLaunchModel}", but the current runtime does not list it as launchable.`

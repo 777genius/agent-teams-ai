@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { FileIcon } from '@renderer/components/team/editor/FileIcon';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import { isImageMime } from '@renderer/utils/attachmentUtils';
 import { Loader2 } from 'lucide-react';
@@ -16,12 +17,14 @@ interface AttachmentDisplayProps {
   teamName: string;
   messageId: string;
   attachments: AttachmentMeta[];
+  referenceIds?: ReadonlySet<string>;
 }
 
 export const AttachmentDisplay = ({
   teamName,
   messageId,
   attachments,
+  referenceIds,
 }: AttachmentDisplayProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
   const revealFileInEditor = useStore((s) => s.revealFileInEditor);
@@ -72,22 +75,23 @@ export const AttachmentDisplay = ({
   const items = attachments
     .map((meta) => {
       const data = dataById.get(meta.id);
-      if (!data) return null;
-      const isImage = isImageMime(data.mimeType);
+      const isImage = !!data && !referenceIds?.has(meta.id) && isImageMime(data.mimeType);
       return {
         meta,
-        data: data.data,
+        data: data?.data,
         dataUrl: isImage ? `data:${data.mimeType};base64,${data.data}` : undefined,
-        filePath: data.filePath ?? meta.filePath,
+        filePath: data?.filePath ?? meta.filePath,
+        unavailable: !data,
         isImage,
       };
     })
     .filter(Boolean) as {
     meta: AttachmentMeta;
-    data: string;
+    data: string | undefined;
     dataUrl: string | undefined;
     filePath: string | undefined;
     isImage: boolean;
+    unavailable: boolean;
   }[];
 
   if (items.length === 0) return null;
@@ -118,36 +122,60 @@ export const AttachmentDisplay = ({
                   : undefined
               }
             />
+          ) : !item.unavailable ? (
+            <Tooltip key={item.meta.id}>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="flex size-20 flex-col items-center justify-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] transition-colors hover:border-[var(--color-border-emphasis)] hover:bg-[var(--color-surface)]"
+                  aria-label={`${item.filePath ? 'Open' : 'Download'} ${item.meta.filename}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    if (item.filePath) revealFileInEditor(item.filePath);
+                    else if (item.data !== undefined) {
+                      const bytes = Uint8Array.from(atob(item.data), (character) =>
+                        character.charCodeAt(0)
+                      );
+                      const url = URL.createObjectURL(
+                        new Blob([bytes], { type: item.meta.mimeType })
+                      );
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = item.meta.filename;
+                      document.body.appendChild(link);
+                      link.click();
+                      link.remove();
+                      URL.revokeObjectURL(url);
+                    }
+                  }}
+                  onKeyDown={(event) => event.stopPropagation()}
+                >
+                  <FileIcon fileName={item.meta.filename} className="size-5" />
+                  <span className="max-w-[72px] truncate text-[9px] text-[var(--color-text-muted)]">
+                    {item.meta.filename}
+                  </span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{item.meta.filename}</TooltipContent>
+            </Tooltip>
           ) : (
-            <button
-              key={item.meta.id}
-              type="button"
-              className="flex size-20 flex-col items-center justify-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] transition-colors hover:border-[var(--color-border-emphasis)] hover:bg-[var(--color-surface)]"
-              aria-label={`${item.filePath ? 'Open' : 'Download'} ${item.meta.filename}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                if (item.filePath) revealFileInEditor(item.filePath);
-                else {
-                  const bytes = Uint8Array.from(atob(item.data), (character) =>
-                    character.charCodeAt(0)
-                  );
-                  const url = URL.createObjectURL(new Blob([bytes], { type: item.meta.mimeType }));
-                  const link = document.createElement('a');
-                  link.href = url;
-                  link.download = item.meta.filename;
-                  document.body.appendChild(link);
-                  link.click();
-                  link.remove();
-                  URL.revokeObjectURL(url);
-                }
-              }}
-              onKeyDown={(event) => event.stopPropagation()}
-            >
-              <FileIcon fileName={item.meta.filename} className="size-5" />
-              <span className="max-w-[72px] truncate text-[9px] text-[var(--color-text-muted)]">
+            <Tooltip key={item.meta.id}>
+              <TooltipTrigger asChild>
+                <div
+                  aria-disabled={item.unavailable || undefined}
+                  className="flex size-20 flex-col items-center justify-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)]"
+                >
+                  <FileIcon fileName={item.meta.filename} className="size-5" />
+                  <span className="max-w-[72px] truncate text-[9px] text-[var(--color-text-muted)]">
+                    {item.meta.filename}
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
                 {item.meta.filename}
-              </span>
-            </button>
+                {item.unavailable ? ` (${t('sendMessage.attachments.unavailable')})` : ''}
+              </TooltipContent>
+            </Tooltip>
           )
         )}
       </div>

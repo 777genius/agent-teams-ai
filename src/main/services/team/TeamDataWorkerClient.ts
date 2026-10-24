@@ -14,6 +14,8 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
 
+import { TeamReadFailureError } from '@features/team-read-recovery/main';
+import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 
 import { formatCurrentProcessMemorySnapshot } from '../../utils/startupTelemetry';
@@ -130,6 +132,16 @@ function getLiveMessagesRequestKey(liveMessages?: InboxMessage[]): unknown {
     commentId: message.commentId,
     color: message.color,
     relayOfMessageId: message.relayOfMessageId,
+    groupChatId: message.groupChatId,
+    groupChatName: message.groupChatName,
+    groupMessageId: message.groupMessageId,
+    groupChatProtocolVersion: message.groupChatProtocolVersion,
+    groupRunKey: message.groupRunKey,
+    groupRecipientNames: message.groupRecipientNames,
+    groupRecipientRunKeys: message.groupRecipientRunKeys,
+    groupDeliverySummary: message.groupDeliverySummary,
+    groupHandoffStartedAt: message.groupHandoffStartedAt,
+
     leadSessionId: message.leadSessionId,
     conversationId: message.conversationId,
     replyToConversationId: message.replyToConversationId,
@@ -141,6 +153,7 @@ function getLiveMessagesRequestKey(liveMessages?: InboxMessage[]): unknown {
     summaryHash: shortHash(message.summary),
     taskRefsHash: shortHash(message.taskRefs),
     attachmentsHash: shortHash(message.attachments),
+    fileReferencesHash: shortHash(message.fileReferences),
     toolSummaryHash: shortHash(message.toolSummary),
     toolCallsHash: shortHash(message.toolCalls),
     workSyncReviewRequestEventIdsHash: shortHash(message.workSyncReviewRequestEventIds),
@@ -164,7 +177,8 @@ function normalizeMessagesPageOptions(options: {
   cursor?: string | null;
   limit: number;
   liveMessages?: InboxMessage[];
-}): { cursor?: string | null; limit: number; liveMessages?: InboxMessage[] } {
+  groupChatId?: string;
+}): { cursor?: string | null; limit: number; liveMessages?: InboxMessage[]; groupChatId?: string } {
   if (!options.liveMessages?.length) {
     return options;
   }
@@ -236,6 +250,7 @@ export class TeamDataWorkerClient {
   private getMemberActivityMetaInFlight = new Map<string, Promise<TeamMemberActivityMeta>>();
   private fatalRestartCooldownUntilMs = 0;
   private lastFatalWorkerError: string | null = null;
+  private recoveryFailure: TeamReadFailureError | null = null;
   /**
    * Advisory run-scope floors, mirrored on the main thread.
    *
@@ -255,6 +270,12 @@ export class TeamDataWorkerClient {
     if (isTeamDataWorkerFatalError(error)) {
       this.lastFatalWorkerError = error.message;
       this.fatalRestartCooldownUntilMs = Date.now() + WORKER_FATAL_RESTART_COOLDOWN_MS;
+      this.recoveryFailure = new TeamReadFailureError(error.message, {
+        kind: 'recovering',
+        retryAt: this.fatalRestartCooldownUntilMs,
+        recoveryId: crypto.randomUUID(),
+      });
+      error = this.recoveryFailure;
       const pendingSummary = [
         ...Array.from(this.pending.values()).map((entry) => ({ ...entry, state: 'active' })),
         ...this.queue.map((entry) => ({ ...entry, state: 'queued' })),
@@ -300,15 +321,18 @@ export class TeamDataWorkerClient {
     if (!this.workerPath) throw new Error('Worker not available');
     if (this.worker) return this.worker;
     if (Date.now() < this.fatalRestartCooldownUntilMs) {
-      throw new Error(
-        `Team data worker recovering after fatal failure: ${this.lastFatalWorkerError ?? 'unknown'}`
+      throw new TeamReadFailureError(
+        `Team data worker recovering after fatal failure: ${this.lastFatalWorkerError ?? 'unknown'}`,
+        this.recoveryFailure!.failure
       );
     }
 
-    const w = new Worker(this.workerPath);
+    const w = new Worker(this.workerPath, { workerData: getClaudeBasePath() });
     this.worker = w;
+    this.recoveryFailure = null;
 
     w.on('message', (msg: TeamDataWorkerResponse) => {
+      if (this.worker !== w) return;
       const entry = this.pending.get(msg.id);
       if (!entry) return;
       this.pending.delete(msg.id);
@@ -582,13 +606,19 @@ export class TeamDataWorkerClient {
 
   async getMessagesPage(
     teamName: string,
-    options: { cursor?: string | null; limit: number; liveMessages?: InboxMessage[] }
+    options: {
+      cursor?: string | null;
+      limit: number;
+      liveMessages?: InboxMessage[];
+      groupChatId?: string;
+    }
   ): Promise<MessagesPage> {
     if (!SAFE_NAME_RE.test(teamName)) throw new Error('Invalid teamName');
     const normalizedOptions = normalizeMessagesPageOptions(options);
     const key = JSON.stringify({
       teamName,
       cursor: normalizedOptions.cursor ?? null,
+      groupChatId: normalizedOptions.groupChatId,
       limit: normalizedOptions.limit,
       liveMessages: getLiveMessagesRequestKey(normalizedOptions.liveMessages),
     });
@@ -645,16 +675,19 @@ export class TeamDataWorkerClient {
   dispose(): void {
     this.worker?.terminate().catch(() => undefined);
     this.worker = null;
+    this.fatalRestartCooldownUntilMs = 0;
+    this.lastFatalWorkerError = null;
+    this.recoveryFailure = null;
     this.getTeamDataInFlight.clear();
     this.getMessagesPageInFlight.clear();
     this.getMemberActivityMetaInFlight.clear();
     this.advisoryRunFloorMsByTeam.clear();
     this.clearActiveCall();
     for (const [, entry] of this.pending) {
-      entry.reject(new Error('Client disposed'));
+      entry.reject(new TeamReadFailureError('Client disposed', { kind: 'disposed' }));
     }
     for (const entry of this.queue) {
-      entry.reject(new Error('Client disposed'));
+      entry.reject(new TeamReadFailureError('Client disposed', { kind: 'disposed' }));
     }
     this.pending.clear();
     this.queue = [];

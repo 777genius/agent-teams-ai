@@ -1,6 +1,8 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { TaskDragHandle } from '@features/task-folders/renderer';
+import { Slot } from '@radix-ui/react-slot';
 import { preloadGlobalTaskDetailDialog } from '@renderer/components/layout/GlobalTaskDetailDialogSlot';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
@@ -19,8 +21,7 @@ import {
   getTeamTaskWorkflowColumn,
   isTeamTaskNeedsFixActionable,
 } from '@shared/utils/teamTaskState';
-import { format, isThisYear, isToday, isYesterday } from 'date-fns';
-import { CheckCircle2, Circle, Eye, Loader2, ShieldCheck, Trash2 } from 'lucide-react';
+import { Archive, CheckCircle2, Circle, Eye, Loader2, ShieldCheck, Trash2 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import {
@@ -39,18 +40,16 @@ const statusConfig: Record<TeamTaskStatus, { icon: LucideIcon; color: string; ke
   deleted: { icon: Circle, color: 'text-zinc-500', key: 'deleted' },
 };
 
-function formatTaskDate(dateStr: string | undefined, yesterdayLabel: string): string | null {
-  if (!dateStr) return null;
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return null;
-  if (isToday(d)) return format(d, 'HH:mm');
-  if (isYesterday(d)) return yesterdayLabel;
-  if (isThisYear(d)) return format(d, 'MMM d');
-  return format(d, 'MMM d, yyyy');
-}
+type SidebarTaskItemInjectedProps = Omit<
+  React.ComponentProps<'div'>,
+  'children' | 'className' | 'style' | 'ref'
+>;
 
-interface SidebarTaskItemProps {
+interface SidebarTaskItemProps extends SidebarTaskItemInjectedProps {
   task: GlobalTask;
+  contextId: string;
+  ref?: React.Ref<HTMLDivElement>;
+  cardScope?: 'sidebar' | 'tree';
   hideTeamName?: boolean;
   hideProjectName?: boolean;
   showTeamName?: boolean;
@@ -70,10 +69,19 @@ interface SidebarTaskItemProps {
   /** Precomputed custom display subject from list parents. */
   displaySubjectOverride?: string;
   ownerColorName?: string | null;
+  isArchived?: boolean;
+  /** Tree integration keeps Headless Tree/native props on the shared presentation root. */
+  containerProps?: React.ComponentProps<'div'>;
+  /** Injects the tree's real sibling drag Button without copying row presentation JSX. */
+  renderDragHandle?: (defaultHandle: React.ReactNode) => React.ReactNode;
+  menuSlot?: React.ReactNode;
+  onOpenDetail?: (teamName: string, taskId: string) => void;
 }
 
 const SidebarTaskItemContent = ({
   task,
+  contextId,
+  cardScope,
   hideTeamName,
   hideProjectName,
   showTeamName,
@@ -86,6 +94,13 @@ const SidebarTaskItemContent = ({
   getDisplaySubject,
   displaySubjectOverride,
   ownerColorName,
+  isArchived = false,
+  containerProps,
+  renderDragHandle,
+  menuSlot,
+  onOpenDetail,
+  ref: forwardedRef,
+  ...triggerProps
 }: SidebarTaskItemProps & { isLight: boolean }): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { t: tCommon, resolvedLanguage } = useAppTranslation('common');
@@ -96,7 +111,10 @@ const SidebarTaskItemContent = ({
       shouldResolveOwnerColorFromStore ? s.teamByName[task.teamName]?.members : undefined
     )
   );
-  const unreadCount = useUnreadCommentCount(task.teamName, task.id, task.comments);
+  const unreadCount = useUnreadCommentCount(
+    { contextId, teamName: task.teamName, taskId: task.id },
+    task.comments
+  );
 
   const isRenaming = renamingKey === `${task.teamName}:${task.id}`;
   const displaySubject = displaySubjectOverride ?? getDisplaySubject?.(task) ?? task.subject;
@@ -121,6 +139,7 @@ const SidebarTaskItemContent = ({
   }, [isRenaming, displaySubject]);
 
   const reviewColumn = getTeamTaskWorkflowColumn(task);
+  const needsFix = isTeamTaskNeedsFixActionable(task);
   const cfg =
     reviewColumn === 'approved'
       ? ({ icon: ShieldCheck, color: 'text-teal-400', key: 'approved' } as const)
@@ -135,14 +154,14 @@ const SidebarTaskItemContent = ({
     shouldAnimateStatusIcon && 'animate-spin'
   );
   const meaningfulUpdatedAt = getMeaningfulTaskUpdatedAt(task);
-  const relativeTimeNowMs = useRelativeTimeClock(meaningfulUpdatedAt !== null);
-  const updatedLabel = meaningfulUpdatedAt
-    ? formatTaskUpdatedRelativeTime(meaningfulUpdatedAt, resolvedLanguage, relativeTimeNowMs)
+  const createdAt = task.createdAt ? new Date(task.createdAt) : null;
+  const timestamp =
+    meaningfulUpdatedAt ?? (createdAt && !Number.isNaN(createdAt.getTime()) ? createdAt : null);
+  const relativeTimeNowMs = useRelativeTimeClock(timestamp !== null);
+  const dateLabel = timestamp
+    ? formatTaskUpdatedRelativeTime(timestamp, resolvedLanguage, relativeTimeNowMs)
     : null;
-  const updatedExactLabel = meaningfulUpdatedAt
-    ? formatExactTaskDateTime(meaningfulUpdatedAt, resolvedLanguage)
-    : null;
-  const dateLabel = updatedLabel ?? formatTaskDate(task.createdAt, tCommon('tasks.date.yesterday'));
+  const exactDateLabel = timestamp ? formatExactTaskDateTime(timestamp, resolvedLanguage) : null;
 
   const resolvedOwnerColorName = useMemo(() => {
     if (!task.owner) return null;
@@ -178,27 +197,44 @@ const SidebarTaskItemContent = ({
   );
 
   const showTeamRow = showTeamName && !hideTeamName;
+  const treeCard = cardScope === 'tree';
   const unreadBackgroundClass =
     unreadCount > 0 ? (isLight ? 'bg-blue-500/[0.015]' : 'bg-blue-500/[0.025]') : '';
-
-  return (
-    <button
-      type="button"
-      className={`group/task-row sidebar-task-item flex w-full cursor-pointer flex-col justify-center border-b px-2 py-1.5 text-left transition-colors hover:bg-surface-raised ${unreadBackgroundClass} ${task.teamDeleted ? 'opacity-50' : ''}`}
-      style={{ borderColor: 'var(--color-border)' }}
-      onPointerEnter={preloadGlobalTaskDetailDialog}
+  const defaultDragHandle = (
+    <TaskDragHandle
+      identity={{ teamName: task.teamName, taskId: task.id }}
+      subject={displaySubject}
+      className="absolute left-[22px] top-1.5 z-10"
       onFocus={preloadGlobalTaskDetailDialog}
-      onClick={() => {
-        if (!isRenaming) {
-          clearTaskManualUnread(task.teamName, task.id);
-          openGlobalTaskDetail(task.teamName, task.id);
-        }
-      }}
-    >
-      {/* Row 1: status + subject */}
-      <div className="w-full overflow-hidden">
+    />
+  );
+
+  const { ref: containerRef, ...nativeContainerProps } = containerProps ?? {};
+  return (
+    <Slot {...triggerProps} ref={forwardedRef}>
+      <div
+        {...nativeContainerProps}
+        ref={containerRef}
+        data-task-key={JSON.stringify([task.teamName, task.id])}
+        data-task-card-scope={cardScope ?? 'sidebar'}
+        data-testid={`${cardScope ?? 'sidebar'}-task-card`}
+        className={cn(
+          'group/task-row sidebar-task-item relative flex w-full flex-col justify-center border-b px-2 py-1.5 text-left transition-colors hover:bg-surface-raised',
+          treeCard && 'grid grid-cols-[20px_minmax(0,1fr)_20px] items-start gap-x-1',
+          unreadBackgroundClass,
+          task.teamDeleted && 'opacity-50',
+          isArchived && 'text-text-muted opacity-60',
+          task.status === 'deleted' && 'text-text-muted opacity-60',
+          containerProps?.className
+        )}
+        style={{ borderColor: 'var(--color-border)', ...containerProps?.style }}
+        onPointerEnter={(event) => {
+          preloadGlobalTaskDetailDialog();
+          containerProps?.onPointerEnter?.(event);
+        }}
+      >
         {isRenaming ? (
-          <div className="flex items-start gap-1.5">
+          <div className="flex w-full items-start gap-1.5">
             <StatusIcon className={cn('mt-0.5', statusIconClassName)} />
             <input
               ref={inputRef}
@@ -230,107 +266,183 @@ const SidebarTaskItemContent = ({
               className="min-w-0 flex-1 border-none bg-transparent p-0 text-[13px] font-medium leading-tight focus:outline-none"
               style={{ color: 'var(--color-text-muted)' }}
               onClick={(e) => e.stopPropagation()}
+              onFocus={preloadGlobalTaskDetailDialog}
             />
           </div>
         ) : (
-          <span
-            className="line-clamp-2 text-[13px] font-medium leading-tight"
-            style={{ color: 'var(--color-text-muted)' }}
-            title={displaySubject}
-          >
-            <StatusIcon className={cn('mr-1.5 inline-block align-[-1px]', statusIconClassName)} />
-            {unreadCount > 0 &&
-              (unreadCount === 1 ? (
-                <span className="mr-1 inline-block size-1.5 rounded-full bg-blue-400 align-middle" />
-              ) : (
-                <span className="mr-1 inline-flex size-3.5 items-center justify-center rounded-full bg-blue-500 align-middle text-[8px] font-bold leading-none text-white">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              ))}
-            {displaySubject}
-            {isTeamTaskNeedsFixActionable(task) && (
-              <span
-                className={`ml-1.5 inline-block rounded-full px-1.5 py-0.5 align-middle text-[10px] font-medium leading-none ${REVIEW_STATE_DISPLAY.needsFix.bg} ${REVIEW_STATE_DISPLAY.needsFix.text}`}
-              >
-                {tCommon('tasks.reviewState.needsFix')}
-              </span>
-            )}
-          </span>
-        )}
-      </div>
-
-      {/* Row 2: project + owner (when no team row) + date */}
-      <div
-        className="mt-0.5 flex w-full items-center gap-1.5 text-[10px] leading-tight"
-        style={{ color: 'var(--color-text-muted)' }}
-      >
-        {task.teamDeleted && <Trash2 className="size-2.5 shrink-0 text-zinc-500" />}
-        {projectLabel && (
-          <span
-            className="min-w-0 truncate"
-            style={projectColorSet ? { color: projectColorSet.text } : undefined}
-          >
-            {projectLabel}
-          </span>
-        )}
-        {!showTeamRow && (
           <>
-            {projectLabel && (
-              <span className="hidden opacity-100 group-hover/task-row:inline dark:opacity-40">
-                ·
-              </span>
-            )}
-            <span
-              className="hidden shrink-0 opacity-100 group-hover/task-row:inline dark:opacity-60"
-              style={ownerTextColor ? { color: ownerTextColor } : undefined}
+            <button
+              type="button"
+              data-testid="sidebar-task-detail"
+              className={cn(
+                'flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left',
+                treeCard && 'col-start-2 row-start-1'
+              )}
+              onFocus={preloadGlobalTaskDetailDialog}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (onOpenDetail) {
+                  onOpenDetail(task.teamName, task.id);
+                } else {
+                  clearTaskManualUnread({ contextId, teamName: task.teamName, taskId: task.id });
+                  openGlobalTaskDetail(task.teamName, task.id);
+                }
+              }}
             >
-              {task.owner ?? t('tasks.unassigned')}
-            </span>
+              {/* Row 1: status + subject */}
+              <div className="w-full overflow-hidden">
+                <span
+                  className={cn(
+                    'text-[13px] font-medium leading-tight',
+                    treeCard ? 'block' : 'line-clamp-2 break-words'
+                  )}
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
+                  <span className={treeCard ? 'flex items-start gap-1.5' : undefined}>
+                    <StatusIcon
+                      data-task-card-field="status"
+                      data-task-card-value={cfg.key}
+                      aria-label={cfg.key}
+                      className={cn(
+                        treeCard ? 'mt-0.5' : 'mr-1.5 inline-block align-[-1px]',
+                        statusIconClassName
+                      )}
+                    />
+                    {isArchived && (
+                      <Archive
+                        aria-label={tCommon('taskFolders.archived')}
+                        className="mr-1 inline-block size-3 align-[-1px]"
+                      />
+                    )}
+                    {!treeCard && (
+                      <span aria-hidden className="mr-1 inline-block size-3 align-middle" />
+                    )}
+                    {unreadCount > 0 &&
+                      (unreadCount === 1 ? (
+                        <span
+                          data-task-card-field="unread"
+                          className="mr-1 inline-block size-1.5 rounded-full bg-blue-400 align-middle"
+                        />
+                      ) : (
+                        <span
+                          data-task-card-field="unread"
+                          className="mr-1 inline-flex size-3.5 items-center justify-center rounded-full bg-blue-500 align-middle text-[8px] font-bold leading-none text-white"
+                        >
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      ))}
+                    <span
+                      data-task-card-field="subject"
+                      className={treeCard ? 'line-clamp-2 min-w-0 flex-1 break-words' : undefined}
+                    >
+                      {displaySubject}
+                    </span>
+                  </span>
+                  {needsFix && (
+                    <span
+                      data-task-card-field="needsFix"
+                      data-task-card-value="needsFix"
+                      className={cn(
+                        'inline-block rounded-full px-1.5 py-0.5 align-middle text-[10px] font-medium leading-none',
+                        treeCard
+                          ? 'ml-[18px] mt-0.5 max-w-[calc(100%-18px)] break-words'
+                          : 'ml-1.5',
+                        REVIEW_STATE_DISPLAY.needsFix.bg,
+                        REVIEW_STATE_DISPLAY.needsFix.text
+                      )}
+                    >
+                      {tCommon('tasks.reviewState.needsFix')}
+                    </span>
+                  )}
+                </span>
+              </div>
+
+              {/* Row 2: project + owner (when no team row) + date */}
+              <div
+                className="mt-0.5 flex w-full items-center gap-1.5 text-[10px] leading-tight"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                {task.teamDeleted && <Trash2 className="size-2.5 shrink-0 text-zinc-500" />}
+                {projectLabel && (
+                  <span
+                    data-task-card-field="project"
+                    className="min-w-0 truncate"
+                    style={projectColorSet ? { color: projectColorSet.text } : undefined}
+                  >
+                    {projectLabel}
+                  </span>
+                )}
+                {!showTeamRow && (
+                  <>
+                    {projectLabel && (
+                      <span className="hidden opacity-100 group-hover/task-row:inline dark:opacity-40">
+                        ·
+                      </span>
+                    )}
+                    <span
+                      data-task-card-field="owner"
+                      className="hidden min-w-0 shrink truncate opacity-100 group-hover/task-row:inline dark:opacity-60"
+                      style={ownerTextColor ? { color: ownerTextColor } : undefined}
+                    >
+                      {task.owner ?? t('tasks.unassigned')}
+                    </span>
+                  </>
+                )}
+                {dateLabel && exactDateLabel ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        data-task-card-field="updated"
+                        data-testid="sidebar-task-relative-time"
+                        dir="auto"
+                        className="ml-auto max-w-[55%] shrink-0 truncate italic opacity-100 dark:opacity-70"
+                      >
+                        {dateLabel}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="whitespace-nowrap">
+                      {exactDateLabel}
+                    </TooltipContent>
+                  </Tooltip>
+                ) : null}
+              </div>
+
+              {/* Row 3: Team: name · owner */}
+              {showTeamRow && (
+                <div
+                  className={cn(
+                    'mt-0.5 w-full items-center gap-1.5 text-[10px] leading-tight',
+                    revealTeamNameOnTaskHover ? 'hidden group-hover/task-row:flex' : 'flex'
+                  )}
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
+                  <span className="shrink-0 opacity-100 dark:opacity-50">
+                    {t('tasks.teamPrefix')}
+                  </span>
+                  <span
+                    data-task-card-field="team"
+                    className="min-w-0 shrink truncate"
+                    style={teamColor ? { color: teamColor.text } : undefined}
+                  >
+                    {task.teamDisplayName}
+                  </span>
+                  <span className="opacity-100 dark:opacity-40">·</span>
+                  <span
+                    data-task-card-field="owner"
+                    className="min-w-0 shrink truncate opacity-100 dark:opacity-60"
+                    style={ownerTextColor ? { color: ownerTextColor } : undefined}
+                  >
+                    {task.owner ?? t('tasks.unassigned')}
+                  </span>
+                </div>
+              )}
+            </button>
+            {renderDragHandle ? renderDragHandle(defaultDragHandle) : defaultDragHandle}
           </>
         )}
-        {dateLabel && updatedExactLabel ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span
-                data-testid="sidebar-task-relative-time"
-                dir="auto"
-                className="ml-auto max-w-[55%] shrink-0 truncate italic opacity-100 dark:opacity-70"
-              >
-                {dateLabel}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="whitespace-nowrap">
-              {updatedExactLabel}
-            </TooltipContent>
-          </Tooltip>
-        ) : dateLabel ? (
-          <span className="ml-auto shrink-0">{dateLabel}</span>
-        ) : null}
+        {menuSlot}
       </div>
-
-      {/* Row 3: Team: name · owner */}
-      {showTeamRow && (
-        <div
-          className={cn(
-            'mt-0.5 w-full items-center gap-1.5 text-[10px] leading-tight',
-            revealTeamNameOnTaskHover ? 'hidden group-hover/task-row:flex' : 'flex'
-          )}
-          style={{ color: 'var(--color-text-muted)' }}
-        >
-          <span className="shrink-0 opacity-100 dark:opacity-50">{t('tasks.teamPrefix')}</span>
-          <span className="shrink-0" style={teamColor ? { color: teamColor.text } : undefined}>
-            {task.teamDisplayName}
-          </span>
-          <span className="opacity-100 dark:opacity-40">·</span>
-          <span
-            className="shrink-0 opacity-100 dark:opacity-60"
-            style={ownerTextColor ? { color: ownerTextColor } : undefined}
-          >
-            {task.owner ?? t('tasks.unassigned')}
-          </span>
-        </div>
-      )}
-    </button>
+    </Slot>
   );
 };
 

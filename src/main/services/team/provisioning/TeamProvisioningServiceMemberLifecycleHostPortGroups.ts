@@ -57,6 +57,7 @@ export interface TeamProvisioningServiceMemberLifecycleHostPortGroupPorts {
     TeamProvisioningServiceMemberLifecycleHostPortGroups['runtimeLaunch']['resolveDirectMemberLaunchIdentity']
   >;
   buildTeamRuntimeLaunchArgsPlan: TeamProvisioningServiceMemberLifecycleHostPortGroups['runtimeLaunch']['buildTeamRuntimeLaunchArgsPlan'];
+  getMemberGatewayRuntimeSeams: TeamProvisioningServiceMemberLifecycleHostPortGroups['runtimeLaunch']['getMemberGatewayRuntimeSeams'];
   sendMessageToRun: TeamProvisioningServiceMemberLifecycleHostPortGroups['runtimeLaunch']['sendMessageToRun'];
   memberMcpLaunchConfigProvisioner: MemberMcpLaunchConfigPorts['memberMcpLaunchConfigProvisioner'];
   launchStateStore: TeamProvisioningServiceMemberLifecycleHostPortGroups['launchState']['launchStateStore'];
@@ -137,6 +138,7 @@ export function createTeamProvisioningServiceMemberLifecycleHostPortGroups(
       resolveDirectMemberLaunchIdentity: (input) =>
         service.resolveDirectMemberLaunchIdentity(input as never),
       buildTeamRuntimeLaunchArgsPlan: (input) => service.buildTeamRuntimeLaunchArgsPlan(input),
+      getMemberGatewayRuntimeSeams: () => service.getMemberGatewayRuntimeSeams(),
       sendMessageToRun: (run, message) => service.sendMessageToRun(run, message),
     },
     memberMcpLaunchConfig: {

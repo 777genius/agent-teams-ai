@@ -1,8 +1,9 @@
 // @vitest-environment node
 import { expect, it, vi } from 'vitest';
 
-import { createCapturedRuntimeProviderManagementClient } from '../../../src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient';
 import { parseManagementCatalog } from '../../../src/features/runtime-provider-management/main/adapters/output/capturedManagementCatalog';
+import { createCapturedRuntimeProviderManagementClient } from '../../../src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient';
+
 import type {
   CapturedProviderManagement,
   ProviderManagementOperation,
@@ -10,7 +11,7 @@ import type {
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 
 const binding = { profileId: 'TEST-original', configRevision: 'TEST-v1' };
-function fixture() {
+function fixture(declaredInputModalities?: JsonValue) {
   const calls: { operation: string; payload: Record<string, JsonValue> }[] = [];
   let connected = false;
   let fail = false;
@@ -64,6 +65,7 @@ function fixture() {
                       contextTokens: 8192,
                       outputTokens: 1024,
                       free: true,
+                      ...(declaredInputModalities === undefined ? {} : { declaredInputModalities }),
                     },
                   ]
                 : [],
@@ -279,4 +281,28 @@ it('missing API key in a malformed connect cannot be interpreted as credential f
   expect(result.error).toBeDefined();
   expect(f.capture).not.toHaveBeenCalled();
   expect(f.calls).toEqual([]);
+});
+
+it('preserves native model declarations through the captured catalog without inventing missing support', async () => {
+  for (const [declaration, expected] of [
+    [
+      ['image', 'video'],
+      ['image', 'video'],
+    ],
+    [[], []],
+    [null, null],
+    [['image', 1], null],
+    [undefined, undefined],
+  ] as const) {
+    const f = fixture(
+      declaration === undefined ? undefined : declaration === null ? null : [...declaration]
+    );
+    const result = await f.port.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'TEST-provider',
+      projectPath: '/TEST/recipient-project',
+    });
+    expect(result.models?.models[0]?.declaredInputModalities).toEqual(expected);
+    expect(f.capture).toHaveBeenCalledWith('/TEST/recipient-project');
+  }
 });

@@ -10,6 +10,7 @@ import {
 } from '@renderer/components/ui/dialog';
 import { CARD_ICON_MUTED } from '@renderer/constants/cssVariables';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
+import { sameMessageActionOwner } from '@renderer/types/messageTaskSeed';
 import {
   agentAvatarUrl,
   buildMemberAvatarMap,
@@ -24,6 +25,8 @@ import { buildMessageContext, resolveMessageRenderProps } from './activityMessag
 import { ThoughtBodyContent } from './ThoughtBodyContent';
 
 import type { LeadThoughtGroup, TimelineItem } from './LeadThoughtsGroup';
+import type { MessageActionOwner, MessageTaskSeed } from '@renderer/types/messageTaskSeed';
+import type { TaskIdClickHandler } from '@renderer/utils/taskReferenceUtils';
 import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
 
 function formatTime(timestamp: string): string {
@@ -34,9 +37,10 @@ function formatTime(timestamp: string): string {
 
 interface DialogThoughtsContentProps {
   group: LeadThoughtGroup;
+  teamName: string;
   members?: ResolvedTeamMember[];
   memberColor?: string;
-  onTaskIdClick?: (taskId: string) => void;
+  onTaskIdClick?: TaskIdClickHandler;
   onReply?: (message: InboxMessage) => void;
   memberColorMap?: Map<string, string>;
   teamNames?: string[];
@@ -46,6 +50,7 @@ interface DialogThoughtsContentProps {
 
 const DialogThoughtsContent = ({
   group,
+  teamName,
   members,
   memberColor,
   onTaskIdClick,
@@ -99,6 +104,7 @@ const DialogThoughtsContent = ({
           <ThoughtBodyContent
             key={thought.messageId ?? idx}
             thought={thought}
+            teamName={teamName}
             showDivider={idx > 0}
             onTaskIdClick={onTaskIdClick}
             onReply={onReply}
@@ -115,16 +121,18 @@ const DialogThoughtsContent = ({
 
 interface MessageExpandDialogProps {
   expandedItem: TimelineItem | null;
+  actionOwner: MessageActionOwner;
+  expandedOwner: MessageActionOwner | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   teamName: string;
   members?: ResolvedTeamMember[];
-  onCreateTaskFromMessage?: (subject: string, description: string) => void;
+  onCreateTaskFromMessage?: (seed: MessageTaskSeed) => void;
   onReplyToMessage?: (message: InboxMessage) => void;
   revisionMessageId?: string | null;
   onReviseMessage?: (message: InboxMessage) => void;
   onMemberClick?: (member: ResolvedTeamMember) => void;
-  onTaskIdClick?: (taskId: string) => void;
+  onTaskIdClick?: TaskIdClickHandler;
   onRestartTeam?: () => void;
   teamNames?: string[];
   teamColorByName?: ReadonlyMap<string, string>;
@@ -133,6 +141,8 @@ interface MessageExpandDialogProps {
 
 export const MessageExpandDialog = memo(function MessageExpandDialog({
   expandedItem,
+  actionOwner,
+  expandedOwner,
   open,
   onOpenChange,
   teamName,
@@ -150,9 +160,12 @@ export const MessageExpandDialog = memo(function MessageExpandDialog({
 }: MessageExpandDialogProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
   // Keep last valid item for exit animation
-  const lastItemRef = useRef<TimelineItem | null>(null);
-  if (expandedItem) lastItemRef.current = expandedItem;
-  const displayItem = expandedItem ?? lastItemRef.current;
+  const lastItemRef = useRef<{ item: TimelineItem; owner: MessageActionOwner } | null>(null);
+  const isLiveItem = !!expandedItem && open && sameMessageActionOwner(expandedOwner, actionOwner);
+  if (isLiveItem && expandedOwner)
+    lastItemRef.current = { item: expandedItem, owner: expandedOwner };
+  const displayItem = isLiveItem ? expandedItem : lastItemRef.current?.item;
+  const displayTeamName = isLiveItem ? teamName : (lastItemRef.current?.owner.teamName ?? teamName);
 
   const ctx = useMemo(() => buildMessageContext(members), [members]);
 
@@ -198,36 +211,37 @@ export const MessageExpandDialog = memo(function MessageExpandDialog({
           {displayItem?.type === 'message' ? (
             <ActivityItem
               message={displayItem.message}
-              teamName={teamName}
+              teamName={displayTeamName}
               memberRole={renderProps?.memberRole}
               memberColor={renderProps?.memberColor}
               recipientColor={renderProps?.recipientColor}
               memberColorMap={ctx.colorMap}
               localMemberNames={ctx.localMemberNames}
-              onMemberNameClick={onMemberClick ? handleMemberNameClick : undefined}
-              onCreateTask={onCreateTaskFromMessage}
-              onReply={onReplyToMessage}
-              canRevise={displayItem.message.messageId === revisionMessageId}
-              onRevise={onReviseMessage}
-              onTaskIdClick={onTaskIdClick}
-              onRestartTeam={onRestartTeam}
+              onMemberNameClick={isLiveItem && onMemberClick ? handleMemberNameClick : undefined}
+              onCreateTask={isLiveItem ? onCreateTaskFromMessage : undefined}
+              onReply={isLiveItem ? onReplyToMessage : undefined}
+              canRevise={isLiveItem && displayItem.message.messageId === revisionMessageId}
+              onRevise={isLiveItem ? onReviseMessage : undefined}
+              onTaskIdClick={isLiveItem ? onTaskIdClick : undefined}
+              onRestartTeam={isLiveItem ? onRestartTeam : undefined}
               compactHeader={false}
               isCollapsed={false}
               teamNames={teamNames}
               teamColorByName={teamColorByName}
-              onTeamClick={onTeamClick}
+              onTeamClick={isLiveItem ? onTeamClick : undefined}
             />
           ) : displayItem?.type === 'lead-thoughts' ? (
             <DialogThoughtsContent
               group={displayItem.group}
+              teamName={displayTeamName}
               members={members}
               memberColor={thoughtMemberColor}
-              onTaskIdClick={onTaskIdClick}
-              onReply={onReplyToMessage}
+              onTaskIdClick={isLiveItem ? onTaskIdClick : undefined}
+              onReply={isLiveItem ? onReplyToMessage : undefined}
               memberColorMap={ctx.colorMap}
               teamNames={teamNames}
               teamColorByName={teamColorByName}
-              onTeamClick={onTeamClick}
+              onTeamClick={isLiveItem ? onTeamClick : undefined}
             />
           ) : null}
         </div>

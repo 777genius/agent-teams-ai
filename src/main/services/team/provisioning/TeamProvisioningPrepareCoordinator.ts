@@ -45,6 +45,7 @@ import {
   cloneCachedProviderProbeResult,
   cloneProviderProbeResult,
 } from './TeamProvisioningProviderProbeCache';
+import { resolveRuntimeStatusDefaultModel } from './TeamProvisioningRuntimeDefaultModel';
 import { getTeamProviderLabel } from './TeamProvisioningRuntimeDiagnostics';
 import { buildMissingCliError } from './TeamProvisioningRuntimeFailureLabels';
 import {
@@ -153,11 +154,11 @@ export interface TeamProvisioningPrepareCoordinatorPorts {
     limitContext: boolean
   ): Promise<string | null>;
   readOpenCodeProviderStatus?: OpenCodeSelectedModelPreparationInput['readProviderStatus'];
+  readOpenCodeRuntimeStatus?: OpenCodeSelectedModelPreparationInput['readOpenCodeRuntimeStatus'];
   inspectOpenCodeLocalModelRuntime?: OpenCodeSelectedModelPreparationInput['inspectLocalModelRuntime'];
   info(message: string): void;
   warn(message: string): void;
 }
-
 export class TeamProvisioningPrepareCoordinator {
   private readonly prepareForProvisioningInFlight = new Map<
     string,
@@ -165,7 +166,6 @@ export class TeamProvisioningPrepareCoordinator {
   >();
 
   constructor(private readonly ports: TeamProvisioningPrepareCoordinatorPorts) {}
-
   async warmup(): Promise<void> {
     try {
       const cwd = process.cwd();
@@ -302,6 +302,7 @@ export class TeamProvisioningPrepareCoordinator {
           verificationMode,
           appendPreflightDebugLog,
           readProviderStatus: this.ports.readOpenCodeProviderStatus,
+          readOpenCodeRuntimeStatus: this.ports.readOpenCodeRuntimeStatus,
           inspectLocalModelRuntime: this.ports.inspectOpenCodeLocalModelRuntime,
         });
         details.push(...openCodeModelPrepare.details);
@@ -636,19 +637,8 @@ export class TeamProvisioningPrepareCoordinator {
       }
     );
     const parsed = extractJsonObjectFromCli<RuntimeStatusCommandResponse>(stdout);
-    const providerStatus = parsed.providers?.[providerId] ?? null;
-    const modelCatalog =
-      providerStatus?.modelCatalog?.providerId === providerId ? providerStatus.modelCatalog : null;
-    const defaultLaunchModel = modelCatalog?.defaultLaunchModel?.trim() || null;
-
-    if (providerId === 'anthropic') {
-      return resolveAnthropicLaunchModel({
-        limitContext,
-        availableLaunchModels: modelCatalog?.models.map((model) => model.launchModel) ?? [],
-        defaultLaunchModel,
-      });
-    }
-    return defaultLaunchModel;
+    const status = parsed.providers?.[providerId] ?? null;
+    return resolveRuntimeStatusDefaultModel(status, providerId, limitContext);
   }
 
   async materializeEffectiveTeamMemberSpecs(params: {

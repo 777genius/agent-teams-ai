@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { getAuthoritativePersistedReviewFile, getAuthoritativeReviewedActionFile, hashReviewPreimage, isAuthoritativelyBoundReviewSnapshot } from './authoritativeReviewFiles.js';
 import type {
   ReviewDiskUndoSnapshot,
   ReviewUndoAction,
@@ -13,7 +13,6 @@ import type { ReviewWriterContext } from './ports.js';
 import type { ReviewPathAuthorization } from './displayedSnapshots.js';
 import {
   validateAuthorizedReviewFilePath,
-  getAuthoritativeReviewedFile,
   resolveAuthoritativeFileContent,
   assertExpectedAuthoritativeRename,
 } from './scopeAuthorization.js';
@@ -28,23 +27,9 @@ import { buildReviewUndoDecisionState } from './reviewHistoryDecisions.js';
 
 import * as fs from 'fs/promises';
 
-export function hashReviewPreimage(content: string): string {
-  return createHash('sha256').update(content).digest('hex');
-}
 
-export function isAuthoritativelyBoundReviewSnapshot(snapshot: ReviewDiskUndoSnapshot): boolean {
-  if (snapshot.authoritativeBeforeSha256 === undefined) return false;
-  if (snapshot.authoritativeBeforeSha256 === null) {
-    const mode =
-      snapshot.restoreMode ?? (snapshot.renameExpectation ? 'restore-rejected-rename' : 'content');
-    return (
-      mode === 'delete-file' ||
-      mode === 'restore-rejected-rename' ||
-      mode === 'reapply-rejected-rename'
-    );
-  }
-  return snapshot.authoritativeBeforeSha256 === hashReviewPreimage(snapshot.beforeContent);
-}
+
+
 
 export function assertAuthoritativelyBoundReviewAction(action: ReviewUndoAction): void {
   if (
@@ -70,13 +55,17 @@ export async function bindNewReviewDiskSnapshot(
   env: Pick<ReviewWriterContext, 'assertActive' | 'content'>,
   snapshot: ReviewDiskUndoSnapshot,
   scope: ReviewFileScope,
-  authorization: ReviewPathAuthorization
+  authorization: ReviewPathAuthorization,
+  actionFile?: FileChangeSummary
 ): Promise<ReviewDiskUndoSnapshot> {
   const filePath = await validateAuthorizedReviewFilePath(authorization, snapshot.filePath, {
     requireReviewedFile: true,
     rejectHardlinks: true,
   });
-  const file = getAuthoritativeReviewedFile(authorization, filePath);
+  const file = getAuthoritativePersistedReviewFile(authorization, filePath, [
+    snapshot.file,
+    actionFile,
+  ]);
   const restoreMode =
     snapshot.restoreMode ?? (snapshot.renameExpectation ? 'restore-rejected-rename' : 'content');
   const isRenameMode =
@@ -90,7 +79,8 @@ export async function bindNewReviewDiskSnapshot(
       env,
       scope,
       authorization,
-      filePath
+      filePath,
+      file
     );
     assertExpectedAuthoritativeRename(authoritativeContent, expectation);
     return {
@@ -113,7 +103,8 @@ export async function bindNewReviewDiskSnapshot(
     env,
     scope,
     authorization,
-    filePath
+    filePath,
+    file
   );
   if (restoreMode === 'create-file' && !authoritativeContent.isNewFile) {
     throw new Error('Create-file review history does not match an authoritative new file');
@@ -188,7 +179,8 @@ export async function bindNewReviewAction(
     env,
     action.action.snapshot,
     scope,
-    authorization
+    authorization,
+    action.action.file
   );
   return {
     ...action,
@@ -289,8 +281,8 @@ export function isGenericReviewSnapshotContainedByCurrent(
   ) {
     const action = current.reviewActionHistory[index];
     if (!action) return false;
-    const previous = buildReviewUndoDecisionState(action, expectedDecisions, (filePath) =>
-      getAuthoritativeReviewedFile(authorization, filePath)
+    const previous = buildReviewUndoDecisionState(action, expectedDecisions, (filePath, source) =>
+      getAuthoritativeReviewedActionFile(authorization, filePath, source)
     );
     if (!previous) return false;
     expectedDecisions = previous;
@@ -338,7 +330,7 @@ export function assertReviewCandidateWithinAuthorization(
     throw new Error('Authoritative review file set is unavailable');
   }
   const canonicalFiles = new Map<string, FileChangeSummary>();
-  for (const file of authorization.reviewedFiles.values()) {
+  for (const file of [...authorization.reviewedFiles.values()].flat()) {
     canonicalFiles.set(file.changeKey ?? file.filePath, file);
   }
   if (
@@ -358,7 +350,11 @@ export function assertReviewCandidateWithinAuthorization(
   ];
   for (const action of actions) {
     if (action.kind === 'hunk') {
-      const file = getAuthoritativeReviewedFile(authorization, action.action.filePath);
+      const file = getAuthoritativeReviewedActionFile(
+        authorization,
+        action.action.filePath,
+        action
+      );
       const key = `${file.changeKey ?? file.filePath}:${action.action.originalIndex}`;
       if (!isAuthorizedReviewDecisionKey(canonicalFiles, key, true)) {
         throw new Error('Review recovery branch contains an unauthorized hunk action');
@@ -426,3 +422,5 @@ export function assertReviewCandidateWithinAuthorization(
     }
   }
 }
+
+export { hashReviewPreimage, isAuthoritativelyBoundReviewSnapshot } from './authoritativeReviewFiles.js';

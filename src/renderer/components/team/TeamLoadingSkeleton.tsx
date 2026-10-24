@@ -355,7 +355,7 @@ const TeamContentLoadingSkeleton = ({
               <SkeletonBlock className="h-7 w-[66px]" />
             </div>
           </div>
-          <div className="mt-2 grid grid-cols-12 gap-y-3" style={{ gridAutoRows: '18px' }}>
+          <div className="mt-2 grid grid-cols-12" style={{ gridAutoRows: '30px' }}>
             {TEAM_LOADING_KANBAN_COLUMNS.map((column) => (
               <div
                 key={column.id}

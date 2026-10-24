@@ -4,7 +4,7 @@ const runtimeHelpers = require('./runtimeHelpers.js');
 const reviewStateHelpers = require('./reviewState.js');
 const { withTeamBoardLock } = require('./boardLock.js');
 
-const INVENTORY_KANBAN_COLUMNS = new Set(['review', 'approved']);
+const { buildTaskInventoryRow, INVENTORY_KANBAN_COLUMNS } = require('./taskInventoryRow.js');
 const MAX_MEMBER_ACTIONABLE_ITEMS = 50;
 const MAX_MEMBER_AWARENESS_ITEMS = 30;
 const MAX_LEAD_SECTION_ITEMS = 50;
@@ -583,27 +583,6 @@ function buildAgendaSnapshot(paths, teamName, actor) {
   });
 }
 
-function buildInventoryRow(task, reviewState, kanbanEntry) {
-  return {
-    id: task.id,
-    displayId: task.displayId,
-    subject: truncateText(task.subject, MAX_SUBJECT_CHARS),
-    status: task.status,
-    ...(normalizeName(task.owner) ? { owner: task.owner } : {}),
-    reviewState,
-    ...(kanbanEntry && INVENTORY_KANBAN_COLUMNS.has(kanbanEntry.column)
-      ? { kanbanColumn: kanbanEntry.column }
-      : {}),
-    ...(task.needsClarification ? { needsClarification: task.needsClarification } : {}),
-    ...(Array.isArray(task.blockedBy) && task.blockedBy.length > 0 ? { blockedBy: task.blockedBy } : {}),
-    ...(Array.isArray(task.blocks) && task.blocks.length > 0 ? { blocks: task.blocks } : {}),
-    ...(Array.isArray(task.related) && task.related.length > 0 ? { related: task.related } : {}),
-    commentCount: Array.isArray(task.comments) ? task.comments.length : 0,
-    ...(normalizeName(task.createdAt) ? { createdAt: task.createdAt } : {}),
-    ...(normalizeName(task.updatedAt) ? { updatedAt: task.updatedAt } : {}),
-  };
-}
-
 function matchesInventoryFilters(row, filters) {
   if (normalizeName(filters.owner) && normalizeKey(row.owner) !== normalizeKey(filters.owner)) {
     return false;
@@ -678,7 +657,7 @@ function listTaskInventory(paths, teamName, filters = {}) {
     for (const task of taskRows.tasks) {
       const kanbanEntry = kanbanState.tasks ? kanbanState.tasks[task.id] : undefined;
       const reviewState = resolveEffectiveReviewState(task, kanbanEntry).state;
-      const row = buildInventoryRow(task, reviewState, kanbanEntry);
+      const row = buildTaskInventoryRow(task, reviewState, kanbanEntry, truncateText(task.subject, MAX_SUBJECT_CHARS));
       if (!matchesInventoryFilters(row, resolvedFilters)) {
         continue;
       }

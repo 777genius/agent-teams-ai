@@ -1,5 +1,11 @@
-import { isLeadMember } from '@shared/utils/leadDetection';
-
+import {
+  buildGroupPlainTextVisibleReplyMessageId,
+  buildPlainTextVisibleReplyMessageId,
+  buildPlainTextVisibleReplySummary,
+  matchesOpenCodeGroupReply,
+  materializeOpenCodeGroupReply,
+  type OpenCodeGroupReplySender,
+} from './OpenCodeGroupVisibleReply';
 import {
   assertOpenCodePromptDeliveryNotCancelled,
   OpenCodePromptDeliveryCancelledError,
@@ -23,11 +29,12 @@ import {
 
 import type { TeamInboxReader } from '../../TeamInboxReader';
 import type { TeamInboxWriter } from '../../TeamInboxWriter';
+import type { OpenCodeGroupAcknowledgementReader } from './OpenCodeGroupAcknowledgement';
 import type {
   OpenCodePromptDeliveryLedgerRecord,
   OpenCodePromptDeliveryLedgerStore,
 } from './OpenCodePromptDeliveryLedger';
-import type { InboxMessage, TeamCreateRequest } from '@shared/types/team';
+import type { InboxMessage } from '@shared/types/team';
 
 type OpenCodeVisibleReplyCorrelation = NonNullable<
   OpenCodePromptDeliveryLedgerRecord['visibleReplyCorrelation']
@@ -50,44 +57,8 @@ export interface OpenCodeVisibleReplyProofServiceDependencies {
   warn: (message: string) => void;
   getErrorMessage: (error: unknown) => string;
   nowIso?: () => string;
-}
-
-export interface OpenCodeVisibleReplyProofServiceHost {
-  inboxReader: OpenCodeVisibleReplyProofServiceDependencies['inboxReader'];
-  inboxWriter: OpenCodeVisibleReplyProofServiceDependencies['inboxWriter'];
-  configFacade: {
-    readConfigForObservation(teamName: string): Promise<{
-      members?: TeamCreateRequest['members'];
-    } | null>;
-  };
-  emitRuntimeDeliveryReplyAdvisoryRefresh: OpenCodeVisibleReplyProofServiceDependencies['emitRuntimeDeliveryReplyAdvisoryRefresh'];
-}
-
-export interface OpenCodeVisibleReplyProofServiceHostOptions
-  extends
-    Pick<OpenCodeVisibleReplyProofServiceDependencies, 'warn' | 'getErrorMessage'>,
-    Partial<Pick<OpenCodeVisibleReplyProofServiceDependencies, 'nowIso'>> {}
-
-export function createOpenCodeVisibleReplyProofServiceFromHost(
-  service: OpenCodeVisibleReplyProofServiceHost,
-  options: OpenCodeVisibleReplyProofServiceHostOptions
-): OpenCodeVisibleReplyProofService {
-  return new OpenCodeVisibleReplyProofService({
-    inboxReader: service.inboxReader,
-    inboxWriter: service.inboxWriter,
-    getConfiguredLeadName: async (teamName) =>
-      service.configFacade
-        .readConfigForObservation(teamName)
-        .then(
-          (config) => config?.members?.find((member) => isLeadMember(member))?.name?.trim() || null
-        )
-        .catch(() => null),
-    emitRuntimeDeliveryReplyAdvisoryRefresh: (teamName, message) =>
-      service.emitRuntimeDeliveryReplyAdvisoryRefresh(teamName, message),
-    warn: options.warn,
-    getErrorMessage: options.getErrorMessage,
-    nowIso: options.nowIso,
-  });
+  sendGroupChatReply?: OpenCodeGroupReplySender;
+  hasAcknowledgedInbound?: OpenCodeGroupAcknowledgementReader;
 }
 
 export class OpenCodeVisibleReplyProofService {
@@ -103,6 +74,7 @@ export class OpenCodeVisibleReplyProofService {
     from: string;
     relayOfMessageId: string;
     expectedMessageId?: string | null;
+    groupChatId?: string;
     allowUserFallbackForLeadRecipient?: boolean;
   }): Promise<OpenCodeVisibleReplyProof | null> {
     const relayOfMessageId = input.relayOfMessageId.trim();
@@ -110,13 +82,15 @@ export class OpenCodeVisibleReplyProofService {
       return null;
     }
     const expectedMessageId = input.expectedMessageId?.trim() || null;
-    const candidates = await this.getInboxCandidates({
-      teamName: input.teamName,
-      replyRecipient: input.replyRecipient,
-      includeUserFallbackForLeadRecipient: Boolean(
-        expectedMessageId || input.allowUserFallbackForLeadRecipient
-      ),
-    });
+    const candidates = input.groupChatId
+      ? ['user']
+      : await this.getInboxCandidates({
+          teamName: input.teamName,
+          replyRecipient: input.replyRecipient,
+          includeUserFallbackForLeadRecipient: Boolean(
+            expectedMessageId || input.allowUserFallbackForLeadRecipient
+          ),
+        });
     const explicitRecipient = input.replyRecipient?.trim() || 'user';
     const expectedFrom = input.from.trim().toLowerCase();
     for (const inboxName of candidates) {
@@ -132,6 +106,7 @@ export class OpenCodeVisibleReplyProofService {
           const messageRelayOf =
             typeof message.relayOfMessageId === 'string' ? message.relayOfMessageId.trim() : '';
           return (
+            matchesOpenCodeGroupReply(message, input.groupChatId) &&
             messageId.length > 0 &&
             (!expectedMessageId || messageId === expectedMessageId) &&
             messageRelayOf === relayOfMessageId &&
@@ -470,6 +445,7 @@ export class OpenCodeVisibleReplyProofService {
       replyRecipient: input.replyRecipient ?? input.ledgerRecord.replyRecipient,
       from: input.memberName,
       relayOfMessageId: input.ledgerRecord.inboxMessageId,
+      groupChatId: input.ledgerRecord.groupChatId,
       expectedMessageId:
         input.ledgerRecord.visibleReplyCorrelation === 'relayOfMessageId'
           ? input.ledgerRecord.visibleReplyMessageId
@@ -479,7 +455,7 @@ export class OpenCodeVisibleReplyProofService {
     });
     let visibleReplyCorrelation: OpenCodeVisibleReplyCorrelation = 'relayOfMessageId';
     let recoveryDiagnostics: string[] = [];
-    if (!visibleReply) {
+    if (!visibleReply && !input.ledgerRecord.groupChatId) {
       const recoveredByMessageId = await this.findByObservedMessageId({
         checkpoint: () =>
           assertOpenCodePromptDeliveryNotCancelled(
@@ -498,7 +474,7 @@ export class OpenCodeVisibleReplyProofService {
         recoveryDiagnostics = recoveredByMessageId.diagnostics;
       }
     }
-    if (!visibleReply) {
+    if (!visibleReply && !input.ledgerRecord.groupChatId) {
       const recoveredByTaskRefs = await this.findByTaskRefs({
         checkpoint: () =>
           assertOpenCodePromptDeliveryNotCancelled(
@@ -582,16 +558,6 @@ export class OpenCodeVisibleReplyProofService {
     return { ledgerRecord, visibleReply: visibleReplyForProof };
   }
 
-  buildPlainTextVisibleReplyMessageId(record: OpenCodePromptDeliveryLedgerRecord): string {
-    const safeId = record.id.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 96);
-    return `opencode-plain-reply-${safeId}`;
-  }
-
-  buildPlainTextVisibleReplySummary(text: string): string {
-    const normalized = text.replace(/\s+/g, ' ').trim();
-    return normalized.length > 120 ? `${normalized.slice(0, 117).trimEnd()}...` : normalized;
-  }
-
   async materializePlainTextReplyIfNeeded(
     input: Parameters<
       OpenCodeVisibleReplyProofService['materializePlainTextReplyIfNeededCurrent']
@@ -624,6 +590,21 @@ export class OpenCodeVisibleReplyProofService {
     if (input.visibleReply) {
       return { ledgerRecord: input.ledgerRecord, visibleReply: input.visibleReply };
     }
+    if (input.ledgerRecord.groupChatId) {
+      return materializeOpenCodeGroupReply({
+        ...input,
+        send: this.deps.sendGroupChatReply,
+        hasAcknowledgedInbound: this.deps.hasAcknowledgedInbound,
+        messageId: buildGroupPlainTextVisibleReplyMessageId(input.ledgerRecord),
+        nowIso: this.nowIso,
+        checkpoint: () =>
+          assertOpenCodePromptDeliveryNotCancelled(
+            input.ledger,
+            input.ledgerRecord,
+            input.checkpoint
+          ),
+      });
+    }
     const materializedFromMessageSendToolError =
       input.ledgerRecord.responseState === 'tool_error' &&
       hasOpenCodeObservedMessageSendToolCall(input.ledgerRecord);
@@ -649,7 +630,7 @@ export class OpenCodeVisibleReplyProofService {
       return { ledgerRecord: input.ledgerRecord, visibleReply: null };
     }
 
-    const messageId = this.buildPlainTextVisibleReplyMessageId(input.ledgerRecord);
+    const messageId = buildPlainTextVisibleReplyMessageId(input.ledgerRecord);
     const existing = await this.findByRelayOfMessageId({
       teamName: input.teamName,
       replyRecipient: 'user',
@@ -718,7 +699,7 @@ export class OpenCodeVisibleReplyProofService {
         from: input.memberName,
         to: 'user',
         text,
-        summary: this.buildPlainTextVisibleReplySummary(text),
+        summary: buildPlainTextVisibleReplySummary(text),
         timestamp,
         messageId,
         relayOfMessageId: input.ledgerRecord.inboxMessageId,
@@ -733,7 +714,7 @@ export class OpenCodeVisibleReplyProofService {
           text,
           timestamp,
           read: false,
-          summary: this.buildPlainTextVisibleReplySummary(text),
+          summary: buildPlainTextVisibleReplySummary(text),
           messageId: written.messageId,
           relayOfMessageId: input.ledgerRecord.inboxMessageId,
           source: 'runtime_delivery',
@@ -773,3 +754,9 @@ export class OpenCodeVisibleReplyProofService {
     }
   }
 }
+
+export type {
+  OpenCodeVisibleReplyProofServiceHost,
+  OpenCodeVisibleReplyProofServiceHostOptions,
+} from './OpenCodeVisibleReplyProofComposition';
+export { createOpenCodeVisibleReplyProofServiceFromHost } from './OpenCodeVisibleReplyProofComposition';

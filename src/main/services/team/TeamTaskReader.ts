@@ -3,7 +3,7 @@ import { readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTasksBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { getReviewStateFromTask } from '@shared/utils/reviewState';
-import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
+import { deriveTaskDisplayId, normalizeTaskRefs } from '@shared/utils/taskIdentity';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -16,7 +16,6 @@ import type {
   TaskAttachmentMeta,
   TaskComment,
   TaskHistoryEvent,
-  TaskRef,
   TaskReviewInterval,
   TaskWorkInterval,
   TeamTask,
@@ -117,21 +116,6 @@ function isValidMimeTypeString(value: unknown): value is string {
   const slash = v.indexOf('/');
   if (slash <= 0 || slash === v.length - 1) return false;
   return true;
-}
-
-function normalizeTaskRefs(value: unknown): TaskRef[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  const taskRefs = (value as unknown[])
-    .filter(
-      (entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === 'object'
-    )
-    .map((entry) => ({
-      taskId: typeof entry.taskId === 'string' ? entry.taskId : '',
-      displayId: typeof entry.displayId === 'string' ? entry.displayId : '',
-      teamName: typeof entry.teamName === 'string' ? entry.teamName : '',
-    }))
-    .filter((entry) => entry.taskId && entry.displayId && entry.teamName);
-  return taskRefs.length > 0 ? taskRefs : undefined;
 }
 
 export class TeamTaskReader {
@@ -497,6 +481,7 @@ export class TeamTaskReader {
               ? unescapeLiteralNewlines(parsed.description)
               : undefined,
           descriptionTaskRefs: normalizeTaskRefs(parsed.descriptionTaskRefs),
+          groupChatId: typeof parsed.groupChatId === 'string' ? parsed.groupChatId : undefined,
           activeForm: typeof parsed.activeForm === 'string' ? parsed.activeForm : undefined,
           prompt: typeof parsed.prompt === 'string' ? parsed.prompt : undefined,
           promptTaskRefs: normalizeTaskRefs(parsed.promptTaskRefs),

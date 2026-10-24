@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -22,6 +22,7 @@ describe('ensureOpenCodeBridgeRuntimeBinaryEnv', () => {
 
   async function writeExecutable(relativePath: string): Promise<string> {
     const binaryPath = path.join(tempDir!, relativePath);
+    await mkdir(path.dirname(binaryPath), { recursive: true });
     await writeFile(binaryPath, 'binary', { mode: 0o755 });
     return binaryPath;
   }
@@ -73,6 +74,38 @@ describe('ensureOpenCodeBridgeRuntimeBinaryEnv', () => {
     expect(bridgeEnv.PATH?.split(path.delimiter)[0]).toBe(path.dirname(binaryPath));
   });
 
+  it('uses the newly installed managed binary on the next command without keeping the old override', async () => {
+    const oldBinary = await writeExecutable('versions/1.17.18/opencode');
+    const newBinary = await writeExecutable('versions/1.18.32/opencode');
+    const bridgeEnv: NodeJS.ProcessEnv = { PATH: '/usr/bin' };
+    const resolver = vi
+      .fn<() => Promise<string | null>>()
+      .mockResolvedValueOnce(oldBinary)
+      .mockResolvedValueOnce(newBinary);
+
+    await ensureOpenCodeBridgeRuntimeBinaryEnv({
+      targetEnv: bridgeEnv,
+      bridgeEnv,
+      resolveVerifiedOpenCodeRuntimeBinaryPath: resolver,
+      refreshAutoResolvedBinary: true,
+    });
+    expect(bridgeEnv.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(oldBinary);
+
+    const commandEnv = { ...bridgeEnv };
+    await ensureOpenCodeBridgeRuntimeBinaryEnv({
+      targetEnv: commandEnv,
+      bridgeEnv,
+      resolveVerifiedOpenCodeRuntimeBinaryPath: resolver,
+      refreshAutoResolvedBinary: true,
+    });
+
+    expect(resolver).toHaveBeenCalledTimes(2);
+    expect(commandEnv.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(newBinary);
+    expect(commandEnv.OPENCODE_BIN_PATH).toBe(newBinary);
+    expect(commandEnv.PATH?.split(path.delimiter)[0]).toBe(path.dirname(newBinary));
+    expect(bridgeEnv.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(newBinary);
+  });
+
   it('honors a legacy OpenCode binary override already present in the command env', async () => {
     const binaryPath = await writeExecutable('legacy-opencode');
     const env: NodeJS.ProcessEnv = {
@@ -117,6 +150,43 @@ describe('ensureOpenCodeBridgeRuntimeBinaryEnv', () => {
     expect(onWarning).toHaveBeenCalledWith(
       `[OpenCode] Ignoring unsupported runtime binary override: ${unsupportedBinaryPath}`
     );
+  });
+
+  it('refreshes the managed binary after rejecting an unsupported explicit override', async () => {
+    const unsupportedBinary = await writeExecutable('override/opencode');
+    const oldManagedBinary = await writeExecutable('versions/1.17.18/opencode');
+    const newManagedBinary = await writeExecutable('versions/1.18.32/opencode');
+    const bridgeEnv: NodeJS.ProcessEnv = { OPENCODE_BIN_PATH: unsupportedBinary };
+    const resolver = vi
+      .fn<() => Promise<string | null>>()
+      .mockResolvedValueOnce(oldManagedBinary)
+      .mockResolvedValueOnce(newManagedBinary);
+    let explicitOverrideActive = true;
+    const onOverrideRejected = vi.fn(() => {
+      explicitOverrideActive = false;
+    });
+
+    await ensureOpenCodeBridgeRuntimeBinaryEnv({
+      targetEnv: bridgeEnv,
+      resolveVerifiedOpenCodeRuntimeBinaryPath: resolver,
+      isSupportedOpenCodeRuntimeBinaryPath: async () => false,
+      refreshAutoResolvedBinary: !explicitOverrideActive,
+      onOverrideRejected,
+    });
+
+    expect(onOverrideRejected).toHaveBeenCalledOnce();
+    expect(bridgeEnv.OPENCODE_BIN_PATH).toBe(oldManagedBinary);
+    const commandEnv = { ...bridgeEnv };
+    await ensureOpenCodeBridgeRuntimeBinaryEnv({
+      targetEnv: commandEnv,
+      bridgeEnv,
+      resolveVerifiedOpenCodeRuntimeBinaryPath: resolver,
+      refreshAutoResolvedBinary: !explicitOverrideActive,
+    });
+
+    expect(resolver).toHaveBeenCalledTimes(2);
+    expect(commandEnv.OPENCODE_BIN_PATH).toBe(newManagedBinary);
+    expect(bridgeEnv.OPENCODE_BIN_PATH).toBe(newManagedBinary);
   });
 
   it('normalizes a relative OpenCode binary override before exposing it to the bridge', async () => {

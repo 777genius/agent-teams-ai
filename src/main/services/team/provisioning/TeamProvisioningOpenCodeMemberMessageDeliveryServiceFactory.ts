@@ -16,6 +16,7 @@ import type {
 } from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type { TeamProvisioningOpenCodeRuntimeRecoveryFacade } from './TeamProvisioningOpenCodeRuntimeRecoveryFacade';
 import type { TeamProvisioningOpenCodeStoppedLaneCleanupBoundary } from './TeamProvisioningOpenCodeStoppedLaneCleanupBoundary';
+import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments';
 
 export interface OpenCodeRuntimeBootstrapEvidencePortsFactoryInput {
   teamsBasePath: string;
@@ -49,6 +50,7 @@ export interface TeamProvisioningOpenCodeMemberMessageDeliveryHost {
   >;
   tryRecoverOpenCodeRuntimeLaneBeforeDelivery?: OpenCodeRuntimeDeliveryRecoveryShim['tryRecoverOpenCodeRuntimeLaneBeforeDelivery'];
   tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery?: OpenCodeRuntimeDeliveryRecoveryShim['tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery'];
+  isMemberLifecycleOperationActive: OpenCodeMemberMessageDeliveryFactoryPorts['isMemberLifecycleOperationActive'];
   stoppingSecondaryRuntimeTeams: OpenCodeMemberMessageDeliveryFactoryPorts['stoppingSecondaryRuntimeTeams'];
   readPersistedTeamProjectPath: OpenCodeMemberMessageDeliveryFactoryPorts['readPersistedTeamProjectPath'];
   runTracking: {
@@ -128,9 +130,11 @@ export function createOpenCodeMemberMessageDeliveryService(
 }
 
 export function createOpenCodeMemberMessageDeliveryServiceFromHost(
-  host: TeamProvisioningOpenCodeMemberMessageDeliveryHost
+  host: TeamProvisioningOpenCodeMemberMessageDeliveryHost,
+  resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration
 ): OpenCodeMemberMessageDeliveryService {
   return createOpenCodeMemberMessageDeliveryService({
+    resolveOpenCodeInputDeclaration,
     getOpenCodeRuntimeMessageAdapter: () => host.getOpenCodeRuntimeMessageAdapter(),
     readOpenCodeMemberDirectory: (teamName) =>
       host.openCodeRuntimeRecoveryFacade.readOpenCodeMemberDirectory(teamName),
@@ -140,6 +144,8 @@ export function createOpenCodeMemberMessageDeliveryServiceFromHost(
         memberName,
         directory
       ),
+    isMemberLifecycleOperationActive: (teamName, memberName) =>
+      host.isMemberLifecycleOperationActive(teamName, memberName),
     stoppingSecondaryRuntimeTeams: host.stoppingSecondaryRuntimeTeams,
     readPersistedTeamProjectPath: (teamName) => host.readPersistedTeamProjectPath(teamName),
     resolveDeliverableTrackedRuntimeRunId: (teamName) =>
@@ -219,6 +225,8 @@ export function createTeamProvisioningOpenCodeMemberMessageDeliveryHostFromServi
     getOpenCodeRuntimeMessageAdapter: () =>
       service.appShellBoundary.getOpenCodeRuntimeMessageAdapter(),
     openCodeRuntimeRecoveryFacade: service.openCodeRuntimeRecoveryFacade,
+    isMemberLifecycleOperationActive: (teamName, memberName) =>
+      service.isMemberLifecycleOperationActive(teamName, memberName),
     stoppingSecondaryRuntimeTeams: service.stoppingSecondaryRuntimeTeams,
     readPersistedTeamProjectPath: (teamName) => service.readPersistedTeamProjectPath(teamName),
     runTracking: {

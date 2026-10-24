@@ -56,10 +56,10 @@ describe('Codex runtime update UI', () => {
     });
     const dialog = document.body.querySelector('[role="dialog"]');
     expect(dialog?.textContent).toContain('Update available');
-    expect(dialog?.textContent).toContain('v0.139.0 -> v0.144.1');
+    expect(dialog?.textContent).toContain('v0.139.0 → v0.144.1');
 
     const updateButton = Array.from(dialog?.querySelectorAll('button') ?? []).find((button) =>
-      button.textContent?.includes('Update to v0.144.1')
+      button.textContent?.includes('Update v0.139.0 → v0.144.1')
     );
     await act(async () => {
       updateButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));

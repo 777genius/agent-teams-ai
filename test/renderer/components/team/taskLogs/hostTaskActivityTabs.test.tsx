@@ -5,7 +5,9 @@ import { ExactTaskLogsSection } from '@renderer/components/team/taskLogs/ExactTa
 import { HostTaskActivityIndex } from '@renderer/components/team/taskLogs/HostTaskActivityViews';
 import { TaskActivitySection } from '@renderer/components/team/taskLogs/TaskActivitySection';
 import { TaskLogStreamSection } from '@renderer/components/team/taskLogs/TaskLogStreamSection';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+
+import { TaskResourceTestHost, resetTaskResourceTestState } from './taskResourceTestHost';
 const mocks = vi.hoisted(() => ({
   activity: vi.fn(),
   detail: vi.fn(),
@@ -31,7 +33,6 @@ vi.mock('@renderer/api', () => ({
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
 }));
-vi.mock('@renderer/store', () => ({ useStore: () => [] }));
 vi.mock('@features/member-log-stream/renderer', () => ({
   ExecutionLogStreamView: mocks.legacyChunks,
   normalizeExecutionLogStream: mocks.normalize,
@@ -101,7 +102,12 @@ const detail = {
     log,
   },
 };
-afterEach(() => vi.clearAllMocks());
+const identity = { contextId: 'local', teamName: 'host-team:original', taskId: 'task' };
+beforeEach(resetTaskResourceTestState);
+afterEach(() => {
+  vi.clearAllMocks();
+  vi.unstubAllGlobals();
+});
 it('original Activity/Stream/Exact surfaces show actual source facts or stale refusal without transcript fabrication', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   mocks.activity.mockResolvedValue(activity);
@@ -124,7 +130,11 @@ it('original Activity/Stream/Exact surfaces show actual source facts or stale re
   document.body.appendChild(node);
   try {
     await act(async () => {
-      root.render(<TaskActivitySection teamName="host-team:original" taskId="task" />);
+      root.render(
+        <TaskResourceTestHost identity={identity} kind="activity">
+          <TaskActivitySection identity={identity} />
+        </TaskResourceTestHost>
+      );
     });
     expect(node.textContent).toContain('status changed');
     expect(node.textContent).toContain('2026-10-23T01:00:00Z');
@@ -137,7 +147,9 @@ it('original Activity/Stream/Exact surfaces show actual source facts or stale re
     expect(node.textContent).toContain('timestamps unavailable');
     await act(async () => {
       root.render(
-        <TaskLogStreamSection teamName="host-team:original" taskId="task" liveEnabled={false} />
+        <TaskResourceTestHost identity={identity} kind="log-stream">
+          <TaskLogStreamSection identity={identity} />
+        </TaskResourceTestHost>
       );
     });
     expect(node.textContent).toContain('original input causes');
@@ -148,7 +160,11 @@ it('original Activity/Stream/Exact surfaces show actual source facts or stale re
     expect(mocks.normalize).not.toHaveBeenCalled();
     expect(mocks.legacyChunks.mock.calls.every((call) => !call[0]?.stream)).toBe(true);
     await act(async () => {
-      root.render(<ExactTaskLogsSection teamName="host-team:original" taskId="task" />);
+      root.render(
+        <TaskResourceTestHost identity={identity} kind="exact-summaries">
+          <ExactTaskLogsSection identity={identity} />
+        </TaskResourceTestHost>
+      );
     });
     await act(async () => {
       node.querySelector<HTMLButtonElement>('[aria-expanded]')!.click();

@@ -5,7 +5,10 @@ import {
   parseOpenCodeQualifiedModelRef,
 } from '@shared/utils/opencodeModelRef';
 import { isOpenCodeModelExplicitlyFree } from '@shared/utils/opencodeModelRoute';
-import { filterVisibleProviderRuntimeModels } from '@shared/utils/providerModelVisibility';
+import {
+  filterVisibleProviderRuntimeModels,
+  getUniqueProviderRuntimeModels,
+} from '@shared/utils/providerModelVisibility';
 
 import { compareModelReleaseFreshness } from './modelReleaseFreshness';
 import { getCodexChatGptModeUiDisabledReason } from './teamModelCatalogChatGptGate';
@@ -32,6 +35,7 @@ type RuntimeModelCatalog = NonNullable<RuntimeAwareProviderStatus['modelCatalog'
 type RuntimeCatalogModel = RuntimeModelCatalog['models'][number];
 interface VisibleTeamProviderModelsOptions {
   expandOpenCodeSummaryCatalog?: boolean;
+  includeRetiredMiniMaxModels?: boolean;
 }
 
 export interface TeamProviderModelOption {
@@ -617,17 +621,10 @@ function isFreeOpenCodeModelForOrdering(
 export function sortTeamProviderModels(
   providerId: SupportedProviderId,
   models: readonly string[],
-  providerStatus?: RuntimeAwareProviderStatus | null
+  providerStatus?: RuntimeAwareProviderStatus | null,
+  includeRetiredMiniMaxModels = true
 ): string[] {
-  const seen = new Set<string>();
-  const deduped = models.filter((model) => {
-    const trimmed = model.trim();
-    if (!trimmed || seen.has(trimmed)) {
-      return false;
-    }
-    seen.add(trimmed);
-    return true;
-  });
+  const deduped = getUniqueProviderRuntimeModels(providerId, models, includeRetiredMiniMaxModels);
   const order = TEAM_PROVIDER_MODEL_ORDER[providerId];
   const nowMs = Date.now();
 
@@ -792,7 +789,8 @@ export function getVisibleTeamProviderModels(
       providerId,
       getSupplementalVisibleModels(providerId, sourceModels)
     ),
-    providerStatus
+    providerStatus,
+    options.includeRetiredMiniMaxModels
   ).filter((model) => !isRuntimeHiddenTeamModel(providerId, model, providerStatus));
 }
 

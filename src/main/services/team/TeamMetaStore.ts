@@ -2,10 +2,13 @@ import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRea
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeProviderBillingMode } from '@shared/utils/providerBillingMode';
+import { normalizeRuntimeSelectionVersion } from '@shared/utils/teamRuntimeSelection';
 import * as fs from 'fs';
 import * as path from 'path';
 
 import { atomicWriteAsync } from './atomicWrite';
+import { hasCompleteKnownMetadata } from './TeamMetadataReadFidelity';
+import { MAX_TEAM_METADATA_BYTES, serializeTeamMetadata } from './TeamMetadataSerialization';
 
 import type { ProviderModelLaunchIdentity, TeamFastMode, TeamProviderId } from '@shared/types';
 
@@ -17,6 +20,8 @@ import type { ProviderModelLaunchIdentity, TeamFastMode, TeamProviderId } from '
  */
 export interface TeamMetaFile {
   version: 1;
+  runtimeSelectionVersion?: 1;
+  deletedAt?: string;
   displayName?: string;
   description?: string;
   color?: string;
@@ -36,7 +41,6 @@ export interface TeamMetaFile {
   createdAt: number;
 }
 
-const MAX_META_FILE_BYTES = 256 * 1024;
 const metaMutationLocks = new Map<string, Promise<void>>();
 
 async function withMetaMutationLock<T>(pathKey: string, operation: () => Promise<T>): Promise<T> {
@@ -144,15 +148,19 @@ function normalizeLaunchIdentity(value: unknown): ProviderModelLaunchIdentity | 
 }
 
 export class TeamMetaStore {
-  private getMetaPath(teamName: string): string {
-    return path.join(getTeamsBasePath(), teamName, 'team.meta.json');
+  private getMetaPath(teamName: string, teamsBasePath = getTeamsBasePath()): string {
+    return path.join(teamsBasePath, teamName, 'team.meta.json');
   }
 
-  async getMeta(teamName: string): Promise<TeamMetaFile | null> {
-    const metaPath = this.getMetaPath(teamName);
+  async getMeta(
+    teamName: string,
+    teamsBasePath = getTeamsBasePath(),
+    options?: { requireCompleteFields?: boolean }
+  ): Promise<TeamMetaFile | null> {
+    const metaPath = this.getMetaPath(teamName, teamsBasePath);
     try {
       const stat = await fs.promises.stat(metaPath);
-      if (!stat.isFile() || stat.size > MAX_META_FILE_BYTES) {
+      if (!stat.isFile() || stat.size > MAX_TEAM_METADATA_BYTES) {
         return null;
       }
     } catch {
@@ -187,40 +195,69 @@ export class TeamMetaStore {
       return null;
     }
 
+    if (
+      options?.requireCompleteFields &&
+      file.createdAt !== undefined &&
+      (typeof file.createdAt !== 'number' || !Number.isFinite(file.createdAt))
+    )
+      return null;
     const providerId = normalizeProviderId(file.providerId);
 
-    return {
-      version: 1,
-      displayName:
-        typeof file.displayName === 'string' ? file.displayName.trim() || undefined : undefined,
-      description:
-        typeof file.description === 'string' ? file.description.trim() || undefined : undefined,
-      color: typeof file.color === 'string' ? file.color.trim() || undefined : undefined,
-      cwd: file.cwd.trim(),
-      prompt: typeof file.prompt === 'string' ? file.prompt.trim() || undefined : undefined,
-      providerId,
-      providerBackendId: migrateProviderBackendId(
+    try {
+      const normalized: TeamMetaFile = {
+        version: 1,
+        deletedAt: typeof file.deletedAt === 'string' ? file.deletedAt : undefined,
+        runtimeSelectionVersion: normalizeRuntimeSelectionVersion(file.runtimeSelectionVersion),
+        displayName:
+          typeof file.displayName === 'string' ? file.displayName.trim() || undefined : undefined,
+        description:
+          typeof file.description === 'string' ? file.description.trim() || undefined : undefined,
+        color: typeof file.color === 'string' ? file.color.trim() || undefined : undefined,
+        cwd: file.cwd.trim(),
+        prompt: typeof file.prompt === 'string' ? file.prompt.trim() || undefined : undefined,
         providerId,
-        normalizeOptionalBackendId(file.providerBackendId)
-      ),
-      model: typeof file.model === 'string' ? file.model.trim() || undefined : undefined,
-      effort: typeof file.effort === 'string' ? file.effort.trim() || undefined : undefined,
-      fastMode: normalizeFastMode(file.fastMode) ?? undefined,
-      syncModelsWithLead:
-        typeof file.syncModelsWithLead === 'boolean' ? file.syncModelsWithLead : undefined,
-      skipPermissions: typeof file.skipPermissions === 'boolean' ? file.skipPermissions : undefined,
-      worktree: typeof file.worktree === 'string' ? file.worktree.trim() || undefined : undefined,
-      extraCliArgs:
-        typeof file.extraCliArgs === 'string' ? file.extraCliArgs.trim() || undefined : undefined,
-      limitContext: typeof file.limitContext === 'boolean' ? file.limitContext : undefined,
-      launchIdentity: normalizeLaunchIdentity(file.launchIdentity),
-      createdAt: typeof file.createdAt === 'number' ? file.createdAt : Date.now(),
-    };
+        providerBackendId: migrateProviderBackendId(
+          providerId,
+          normalizeOptionalBackendId(file.providerBackendId)
+        ),
+        model: typeof file.model === 'string' ? file.model.trim() || undefined : undefined,
+        effort: typeof file.effort === 'string' ? file.effort.trim() || undefined : undefined,
+        fastMode: normalizeFastMode(file.fastMode) ?? undefined,
+        syncModelsWithLead:
+          typeof file.syncModelsWithLead === 'boolean' ? file.syncModelsWithLead : undefined,
+        skipPermissions:
+          typeof file.skipPermissions === 'boolean' ? file.skipPermissions : undefined,
+        worktree: typeof file.worktree === 'string' ? file.worktree.trim() || undefined : undefined,
+        extraCliArgs:
+          typeof file.extraCliArgs === 'string' ? file.extraCliArgs.trim() || undefined : undefined,
+        limitContext: typeof file.limitContext === 'boolean' ? file.limitContext : undefined,
+        launchIdentity: normalizeLaunchIdentity(file.launchIdentity),
+        createdAt: typeof file.createdAt === 'number' ? file.createdAt : Date.now(),
+      };
+      return options?.requireCompleteFields && !hasCompleteKnownMetadata(file, normalized)
+        ? null
+        : normalized;
+    } catch (error) {
+      if (options?.requireCompleteFields) return null;
+      throw error;
+    }
   }
 
-  async writeMeta(teamName: string, data: Omit<TeamMetaFile, 'version'>): Promise<void> {
-    const metaPath = this.getMetaPath(teamName);
-    await withMetaMutationLock(metaPath, () => this.writeMetaUnlocked(metaPath, data));
+  async writeMeta(
+    teamName: string,
+    data: Omit<TeamMetaFile, 'version'>,
+    teamsBasePath = getTeamsBasePath()
+  ): Promise<void> {
+    const metaPath = this.getMetaPath(teamName, teamsBasePath);
+    await withMetaMutationLock(metaPath, async () => {
+      const current = await this.getMeta(teamName, teamsBasePath);
+      await this.writeMetaUnlocked(metaPath, {
+        ...data,
+        runtimeSelectionVersion:
+          normalizeRuntimeSelectionVersion(data.runtimeSelectionVersion) ??
+          current?.runtimeSelectionVersion,
+      });
+    });
   }
 
   async updateMeta(
@@ -240,8 +277,14 @@ export class TeamMetaStore {
     metaPath: string,
     data: Omit<TeamMetaFile, 'version'>
   ): Promise<void> {
-    const payload: TeamMetaFile = {
+    await atomicWriteAsync(metaPath, this.serializeMeta(data));
+  }
+
+  serializeMeta(data: Omit<TeamMetaFile, 'version'>): string {
+    return serializeTeamMetadata({
       version: 1,
+      deletedAt: data.deletedAt,
+      runtimeSelectionVersion: normalizeRuntimeSelectionVersion(data.runtimeSelectionVersion),
       displayName: data.displayName?.trim() || undefined,
       description: data.description?.trim() || undefined,
       color: data.color?.trim() || undefined,
@@ -262,8 +305,7 @@ export class TeamMetaStore {
       limitContext: data.limitContext,
       launchIdentity: normalizeLaunchIdentity(data.launchIdentity),
       createdAt: data.createdAt,
-    };
-    await atomicWriteAsync(metaPath, JSON.stringify(payload, null, 2));
+    } satisfies TeamMetaFile);
   }
 
   async deleteMeta(teamName: string): Promise<void> {

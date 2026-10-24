@@ -37,7 +37,7 @@ export function getStoredTeamModel(providerId: TeamProviderId): string {
 
 export function getStoredTeamFastMode(): TeamFastMode {
   const stored = localStorage.getItem('team:lastSelectedFastMode');
-  return stored === 'on' || stored === 'off' || stored === 'inherit' ? stored : 'inherit';
+  return stored === 'on' || stored === 'off' || stored === 'inherit' ? stored : 'off';
 }
 
 export function getProviderLabel(providerId: TeamProviderId): string {
@@ -130,4 +130,34 @@ export function buildWorktreePathByMemberName(
     paths[name] = cwd;
   }
   return paths;
+}
+
+export function getLaunchDialogLabelKeys(
+  isLaunchMode: boolean,
+  isRelaunch: boolean,
+  isEditing: boolean
+) {
+  return {
+    title: isLaunchMode
+      ? isRelaunch
+        ? 'launch.title.relaunch'
+        : 'launch.title.launch'
+      : isEditing
+        ? 'launch.title.editSchedule'
+        : 'launch.title.createSchedule',
+    submit: isLaunchMode
+      ? isRelaunch
+        ? 'launch.actions.relaunchTeam'
+        : 'launch.actions.launchTeam'
+      : isEditing
+        ? 'launch.actions.saveChanges'
+        : 'launch.actions.createSchedule',
+    submitting: isLaunchMode
+      ? isRelaunch
+        ? 'launch.actions.relaunching'
+        : 'launch.actions.launching'
+      : isEditing
+        ? 'launch.actions.saving'
+        : 'launch.actions.creating',
+  } as const;
 }

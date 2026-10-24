@@ -30,6 +30,7 @@ function fixture(
     wrongConfig?: boolean;
     cleanupFails?: boolean;
     providerMetadataInConfigOnly?: boolean;
+    modelMetadata?: Record<string, unknown>;
   } = {}
 ) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-opencode-management-')));
@@ -136,6 +137,7 @@ function fixture(
               name: 'TEST model',
               limit: { context: 4096, output: 1024 },
               privateExtra: 'TEST-must-stay-private',
+              ...options.modelMetadata,
             },
           },
         };
@@ -226,6 +228,7 @@ test('catalog and auth use captured native profile, without Session SPI or ambie
       contextTokens: 4096,
       outputTokens: 1024,
       free: null,
+      declaredInputModalities: null,
     },
   ]);
   assert.equal(JSON.stringify([summary, models]).includes('TEST-must-stay-private'), false);
@@ -331,4 +334,24 @@ test('official native catalog may omit custom npm/options; effective config stil
   assert.equal(result.providers[0]?.configuredAuthless, true);
   assert.equal(JSON.stringify(result).includes('TEST-must-stay-private'), false);
   assert.equal(JSON.stringify(result).includes('baseURL'), false);
+});
+
+test('native input declarations survive the bounded safe management catalog', async (t) => {
+  const f = fixture({
+    modelMetadata: { capabilities: { input: { text: true, image: true, video: true } } },
+  });
+  t.after(() => f.cleanup());
+  const result = await f.host.run((client) =>
+    readOpenCodeCatalog(
+      client,
+      { profileId: f.profile.profileId, configRevision: f.profile.configRevision },
+      'TEST-local'
+    )
+  );
+  assert.deepEqual(result.providers[0]?.models[0]?.declaredInputModalities, [
+    'image',
+    'text',
+    'video',
+  ]);
+  assert.equal(JSON.stringify(result).includes('TEST-must-stay-private'), false);
 });

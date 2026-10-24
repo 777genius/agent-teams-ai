@@ -7,6 +7,7 @@ import { buildDesktopTeammateModeCliArgs } from '../runtimeTeammateMode';
 import {
   buildDeterministicLaunchBootstrapSpec,
   type RuntimeBootstrapMemberMcpLaunchConfig,
+  type RuntimeBootstrapSpec,
   writeDeterministicBootstrapSpecFile,
   writeDeterministicBootstrapUserPromptFile,
 } from './TeamProvisioningBootstrapSpec';
@@ -25,6 +26,7 @@ import {
 } from './TeamProvisioningRuntimeLaunchSelection';
 
 import type { LaunchExpectedMembersResolution } from './TeamProvisioningConfigLaunchNormalization';
+import type { MemberGatewayRuntimeArgs } from './TeamProvisioningMemberGatewayRuntime';
 import type {
   MemberSpawnStatusEntry,
   ProviderModelLaunchIdentity,
@@ -55,6 +57,7 @@ export interface TeamProvisioningLaunchBootstrapRun extends TeamProvisioningChec
   runId: string;
   progress: TeamProvisioningProgress;
   bootstrapSpecPath: string | null;
+  bootstrapSpecSnapshot?: RuntimeBootstrapSpec | null;
   bootstrapUserPromptPath: string | null;
   mcpConfigPath: string | null;
   requiresFirstRealTurnSuccess: boolean;
@@ -73,6 +76,8 @@ export interface MaterializeDeterministicLaunchBootstrapFilesInput<
   run: TRun;
   effectiveMemberSpecs: TeamCreateRequest['members'];
   allEffectiveMemberSpecs: TeamCreateRequest['members'];
+  /** Per-member gateway artifacts carried from the launch setup result. */
+  memberArgsByMember?: ReadonlyMap<string, MemberGatewayRuntimeArgs>;
   controlApiBaseUrl?: string;
   isValidationCancelled(): boolean;
 }
@@ -209,6 +214,7 @@ export function buildLaunchSyntheticRequest(input: {
 
   try {
     const cfg = JSON.parse(input.configRaw) as Record<string, unknown>;
+    if (typeof cfg.description === 'string') syntheticRequest.description = cfg.description;
     if (typeof cfg.color === 'string' && cfg.color.trim().length > 0) {
       syntheticRequest.color = cfg.color.trim();
     }
@@ -451,11 +457,13 @@ export async function materializeDeterministicLaunchBootstrapFiles<
     request,
     effectiveMemberSpecs,
     nativeBootstrapBuild.specs,
-    memberMcpLaunchConfigs
+    memberMcpLaunchConfigs,
+    input.memberArgsByMember ?? new Map()
   );
   emitProvisioningCheckpoint(run, 'Writing deterministic bootstrap spec file');
   const bootstrapSpecPath = await ports.writeDeterministicBootstrapSpecFile(bootstrapSpec);
   run.bootstrapSpecPath = bootstrapSpecPath;
+  run.bootstrapSpecSnapshot = structuredClone(bootstrapSpec);
   emitProvisioningCheckpoint(
     run,
     'Writing launch hydration prompt file',

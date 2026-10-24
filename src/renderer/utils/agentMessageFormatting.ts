@@ -1,4 +1,13 @@
-import { MESSAGE_REPLY_TAG } from '@shared/constants/agentBlocks';
+import { MESSAGE_REPLY_TAG, stripAgentBlocks } from '@shared/constants/agentBlocks';
+
+import { getSanitizedInboxMessageText } from './bootstrapPromptSanitizer';
+
+import type { InboxMessage } from '@shared/types';
+
+/** Visible source text shared by editable group quotes and DM reply preparation. */
+export function getInboxMessageQuoteText(message: InboxMessage): string {
+  return stripAgentBlocks(getSanitizedInboxMessageText(message));
+}
 
 type StructuredAgentMessage = Record<string, unknown>;
 

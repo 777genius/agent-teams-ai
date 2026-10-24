@@ -6,8 +6,15 @@ import * as os from 'os';
 import * as path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const viewerProtocol = vi.hoisted(() => ({
+  registerSchemesAsPrivileged: vi.fn(),
+  handle: vi.fn(),
+  unhandle: vi.fn(),
+}));
 // Mock electron
 vi.mock('electron', () => ({
+  protocol: viewerProtocol,
+  session: { fromPartition: () => ({ protocol: viewerProtocol }) },
   app: { getLocale: vi.fn(() => 'en'), getPath: vi.fn(() => '/tmp') },
   Notification: Object.assign(vi.fn(), { isSupported: vi.fn(() => false) }),
   BrowserWindow: { getAllWindows: vi.fn(() => []) },
@@ -169,8 +176,10 @@ describe('Editor IPC handlers', () => {
   });
 
   describe('registration', () => {
-    it('registers all 18 editor channels', () => {
-      expect(mockIpc.handle).toHaveBeenCalledTimes(18);
+    it('registers all 19 editor channels and the document viewer protocol', () => {
+      expect(mockIpc.handle).toHaveBeenCalledTimes(19);
+      expect(mockIpc._handlers.has('documentPreview:read')).toBe(true);
+      expect(viewerProtocol.handle).toHaveBeenCalledWith('document-preview', expect.any(Function));
       expect(mockIpc._handlers.has('editor:open')).toBe(true);
       expect(mockIpc._handlers.has('editor:close')).toBe(true);
       expect(mockIpc._handlers.has('editor:readDir')).toBe(true);
@@ -193,7 +202,9 @@ describe('Editor IPC handlers', () => {
 
     it('removeEditorHandlers clears all channels', () => {
       removeEditorHandlers(mockIpc as unknown as IpcMain);
-      expect(mockIpc.removeHandler).toHaveBeenCalledTimes(18);
+      expect(mockIpc.removeHandler).toHaveBeenCalledTimes(19);
+      expect(mockIpc._handlers.has('documentPreview:read')).toBe(false);
+      expect(viewerProtocol.unhandle).toHaveBeenCalledWith('document-preview');
     });
   });
 

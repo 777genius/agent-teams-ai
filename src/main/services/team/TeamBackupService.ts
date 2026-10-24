@@ -1,15 +1,15 @@
-import { pruneDeletedTeamBackups } from '@agent-teams/legacy-agent-host/lifecycle';
-import {
-  TEAM_ROOT_FILES,
-  TEAM_SUBDIRS,
-  TEAM_RECURSIVE_SUBDIRS,
-  APP_DATA_SUBDIRS,
-  APP_DATA_DEEP_SUBDIRS,
-} from '@agent-teams/legacy-agent-host/lifecycle';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+import { pruneDeletedTeamBackups } from '@agent-teams/legacy-agent-host/lifecycle';
+import {
+  APP_DATA_DEEP_SUBDIRS,
+  APP_DATA_SUBDIRS,
+  TEAM_RECURSIVE_SUBDIRS,
+  TEAM_ROOT_FILES,
+  TEAM_SUBDIRS,
+} from '@agent-teams/legacy-agent-host/lifecycle';
 import {
   atomicWriteAsync,
   atomicWriteSync,
@@ -52,6 +52,7 @@ import { TEAM_LAUNCH_STOPPED_MARKER_FILE } from './TeamLaunchStateStore';
 import type { TeamPermanentDeletionCoordinator } from './permanent-deletion/TeamPermanentDeletionCoordinator';
 import type { PermanentDeletionLock } from './permanent-deletion/TeamPermanentDeletionLock';
 import type { BackupRegistry, BackupRegistryEntry } from './TeamBackupStartupRegistry';
+import type { TeamDataService } from './TeamDataService';
 import type { TeamWorkSyncRestoreAttemptPorts } from './TeamWorkSyncRestoreAttemptOwner';
 import type { MemberWorkSyncRestoreParticipant } from '@features/member-work-sync/main';
 
@@ -61,10 +62,6 @@ export type {
 } from './permanent-deletion/TeamPermanentDeletionTypes';
 
 const logger = createLogger('TeamBackupService');
-
-// Types
-
-// Constants
 
 const PERIODIC_INTERVAL_MS = 3 * 60 * 1000;
 const TASK_DEBOUNCE_MS = 500;
@@ -138,6 +135,12 @@ export class TeamBackupService {
     restoreGeneric: (name) => this.restoreService.restoreGenericTeamPrivileged(name),
     restoreGenericHoles: (name) => this.restoreService.restoreMissingGenericFromManifest(name),
   });
+
+  constructor(configuration?: Pick<TeamDataService, 'setConfigurationIdentityFence'>) {
+    configuration?.setConfigurationIdentityFence((name, operation) =>
+      this.withTeamIdentityFence(name, operation)
+    );
+  }
 
   configureWorkSyncRestore(
     operationGate: TeamWorkSyncRestoreAttemptPorts['operationGate'],

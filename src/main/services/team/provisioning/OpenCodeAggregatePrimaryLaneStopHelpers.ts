@@ -10,10 +10,23 @@ import type { RuntimeAdapterRunByTeamEntry } from './TeamProvisioningServiceComp
 import type { PersistedTeamLaunchSnapshot, TeamCreateRequest } from '@shared/types';
 
 const confirmedCleanup = new WeakMap<object, string>();
+const blockedBeforeLaunch = new WeakMap<object, string>();
+
+export function recordOpenCodePrimaryBlockedBeforeLaunch(run: object, runId: string): void {
+  blockedBeforeLaunch.set(run, runId);
+}
+
+export function wasOpenCodePrimaryBlockedBeforeLaunch(run: object, runId: string): boolean {
+  return blockedBeforeLaunch.get(run) === runId;
+}
 
 /** Only record after both runtime Stop and exact-owned storage cleanup succeed. */
 export function recordOpenCodePrimaryCleanup(run: object, runId: string): void {
   confirmedCleanup.set(run, runId);
+}
+
+export function wasOpenCodePrimaryCleanupConfirmed(run: object, runId: string): boolean {
+  return confirmedCleanup.get(run) === runId;
 }
 
 /**

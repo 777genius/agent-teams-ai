@@ -1,4 +1,5 @@
-import type { FileChangeWithContent, SnippetDiff, FileChangeSummary } from '../../contracts.js';
+import type { AuthoritativeReviewFiles } from './authoritativeReviewFiles.js';
+import type { FileChangeWithContent, SnippetDiff } from '../../contracts.js';
 import { createHash, randomUUID } from 'crypto';
 import type { ReviewWriterContext } from './ports.js';
 import { MAX_DISPLAYED_REVIEW_SNAPSHOTS, REVIEW_SNAPSHOT_TTL_MS } from './limits.js';
@@ -7,6 +8,7 @@ import { normalizeReviewPathForIdentity } from './scopeAuthorization.js';
 export interface DisplayedReviewSnapshot {
   teamName: string;
   filePath: string;
+  reviewKey: string;
   snippetFingerprint: string;
   content: FileChangeWithContent;
   expiresAt: number;
@@ -21,7 +23,8 @@ export function registerDisplayedReviewSnapshot(
   teamName: string,
   filePath: string,
   snippets: SnippetDiff[],
-  content: FileChangeWithContent
+  content: FileChangeWithContent,
+  reviewKey: string
 ): FileChangeWithContent {
   const now = Date.now();
   for (const [token, snapshot] of env.snapshots) {
@@ -38,6 +41,7 @@ export function registerDisplayedReviewSnapshot(
   env.snapshots.set(token, {
     teamName,
     filePath: normalizeReviewPathForIdentity(filePath),
+    reviewKey,
     snippetFingerprint: fingerprintReviewSnippets(snippets),
     content: snapshotContent,
     expiresAt: now + REVIEW_SNAPSHOT_TTL_MS,
@@ -50,7 +54,8 @@ export function resolveDisplayedReviewSnapshot(
   token: string | undefined,
   teamName: string,
   filePath: string,
-  authoritativeSnippets: SnippetDiff[]
+  authoritativeSnippets: SnippetDiff[],
+  reviewKey: string
 ): FileChangeWithContent {
   if (!token) {
     throw new Error('Displayed review snapshot is unavailable; reload Changes before rejecting.');
@@ -61,6 +66,7 @@ export function resolveDisplayedReviewSnapshot(
     snapshot.expiresAt <= Date.now() ||
     snapshot.teamName !== teamName ||
     snapshot.filePath !== normalizeReviewPathForIdentity(filePath) ||
+    snapshot.reviewKey !== reviewKey ||
     snapshot.snippetFingerprint !== fingerprintReviewSnippets(authoritativeSnippets)
   ) {
     env.snapshots.delete(token);
@@ -81,6 +87,7 @@ export interface AuthorizedReviewRoot {
 
 export interface ReviewPathAuthorization {
   roots: AuthorizedReviewRoot[];
-  reviewedFiles: Map<string, FileChangeSummary> | null;
+  reviewedFiles: AuthoritativeReviewFiles | null;
+  selectedReviewKeys?: ReadonlyMap<string, string>;
   resolutionMemberName: string;
 }

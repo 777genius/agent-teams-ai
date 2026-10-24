@@ -12,6 +12,7 @@ import security from 'eslint-plugin-security';
 import sonarjs from 'eslint-plugin-sonarjs';
 import tailwindcss from 'eslint-plugin-tailwindcss';
 import globals from 'globals';
+import { gatewayBoundaries } from './eslint.gateway-boundaries.mts';
 
 export default defineConfig([
   {
@@ -52,7 +53,7 @@ export default defineConfig([
 
   {
     name: 'fast-typescript',
-    files: ['**/*.{ts,tsx}'],
+    files: ['**/*.{ts,tsx,mts}'],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {
@@ -103,7 +104,7 @@ export default defineConfig([
 
   {
     name: 'fast-node-globals',
-    files: ['src/main/**/*.ts', 'src/preload/**/*.ts', 'scripts/**/*.{js,mjs,ts}', 'test/**/*.ts'],
+    files: ['src/main/**/*.ts', 'src/preload/**/*.ts', 'scripts/**/*.{js,mjs,ts,mts}', 'test/**/*.ts'],
     languageOptions: {
       globals: {
         ...globals.node,
@@ -253,4 +254,5 @@ export default defineConfig([
       ],
     },
   },
+  ...gatewayBoundaries,
 ]);

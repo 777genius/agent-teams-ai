@@ -1,3 +1,4 @@
+import { getDisplayedReviewedFile } from './authoritativeReviewFiles.js';
 import type { ReviewWriterContext } from './ports.js';
 import type { FileChangeWithContent } from '../../contracts.js';
 import {
@@ -40,7 +41,8 @@ export async function handleGetFileContent(
     await validateSnippetPaths(authorization, snippetsValue);
     const content = await (env.assertActive(),
     env.content.getFileContent(scope.teamName, scope.memberName ?? '', filePath, snippetsValue));
-    return registerDisplayedReviewSnapshot(env, scope.teamName, filePath, snippetsValue, content);
+    const file = getDisplayedReviewedFile(authorization.reviewedFiles, filePath, snippetsValue);
+    return registerDisplayedReviewSnapshot(env, scope.teamName, filePath, snippetsValue, content, file?.changeKey ?? file?.filePath ?? filePath);
   })();
 }
 

@@ -25,22 +25,11 @@ export function createLedgerRename(getContext: () => ApplierContext) {
       if (relation?.kind !== 'rename') {
         throw new Error('Review file is not a ledger rename.');
       }
-      const oldSnippet =
-        ledgerSnippets.find(
-          (snippet) =>
-            snippet.ledger?.operation === 'delete' &&
-            ctx.pathMatchesRelationPath(snippet.filePath, relation.oldPath)
-        ) ?? ledgerSnippets.find((snippet) => snippet.ledger?.operation === 'delete');
-      const newSnippet =
-        ledgerSnippets.find(
-          (snippet) =>
-            snippet.ledger?.operation === 'create' &&
-            ctx.pathMatchesRelationPath(snippet.filePath, relation.newPath)
-        ) ?? ledgerSnippets.find((snippet) => snippet.ledger?.operation === 'create');
-      const oldFilePath =
-        oldSnippet?.filePath ??
-        ctx.resolveRelatedLedgerPath(newSnippet?.filePath, relation.newPath, relation.oldPath);
-      const newFilePath = newSnippet?.filePath;
+      const endpoints = ctx.resolveLedgerRenameEndpoints(ledgerSnippets, relation);
+      const oldSnippet = endpoints?.oldSnippet;
+      const newSnippet = endpoints?.newSnippet;
+      const oldFilePath = endpoints?.oldFilePath;
+      const newFilePath = endpoints?.newFilePath;
       const oldContent = oldSnippet?.ledger?.originalFullContent ?? original;
       const newContent = newSnippet?.ledger?.modifiedFullContent ?? modified;
       if (!oldFilePath || !newFilePath || oldContent === null || newContent === null) {
@@ -59,29 +48,55 @@ export function createLedgerRename(getContext: () => ApplierContext) {
       return withFileMutationLocks(
         ctx.resolveLedgerMutationPaths(filePath, ledgerSnippets),
         async () => {
+          const resumedTransaction = await ctx.io.resumePreparedReviewFileTransaction({
+            kind: 'move',
+            sourcePath: oldFilePath,
+            targetPath: newFilePath,
+            expectedContent: oldContent,
+            nextContent: newContent,
+          });
+          const ownsPublishedTarget = resumedTransaction
+            ? (await ctx.io.inspectReviewFileTransaction(resumedTransaction)) === 'published'
+            : false;
+          if (resumedTransaction && !ownsPublishedTarget) {
+            throw new Error('Review file transaction evidence is unavailable or conflicted');
+          }
           const oldCurrent = await ctx.readCurrentText(oldFilePath);
           const oldError = getCurrentTextReadError(oldCurrent);
           if (oldError) throw new Error(oldError);
           const newCurrent = await ctx.readCurrentText(newFilePath);
           const newError = getCurrentTextReadError(newCurrent);
           if (newError) throw new Error(newError);
-          if (!oldCurrent.missing) {
-            await ctx.assertSafeExpectedFile(oldFilePath, oldCurrent.content);
-          }
-          if (!newCurrent.missing) {
-            await ctx.assertSafeExpectedFile(newFilePath, newCurrent.content);
-          }
-
           const aliased =
             !oldCurrent.missing &&
             !newCurrent.missing &&
             (await ctx.pathsReferToSameFile(oldFilePath, newFilePath));
-          const accepted = aliased
-            ? newCurrent.content === newContent
-            : oldCurrent.missing && !newCurrent.missing && newCurrent.content === newContent;
-          const rejected = aliased
-            ? oldCurrent.content === oldContent
-            : !oldCurrent.missing && oldCurrent.content === oldContent && newCurrent.missing;
+          if (!oldCurrent.missing) {
+            await ctx.assertSafeExpectedFile(oldFilePath, oldCurrent.content, aliased);
+          }
+          if (!newCurrent.missing) {
+            await ctx.assertSafeExpectedFile(
+              newFilePath,
+              newCurrent.content,
+              aliased || ownsPublishedTarget
+            );
+          }
+          if (aliased) {
+            const spelling = await ctx.caseOnlyRenameEntry(oldFilePath, newFilePath);
+            const content = oldCurrent.content;
+            if (spelling === 'new') {
+              if (content === newContent) return 'accepted';
+              if (content === oldContent) return 'restoring';
+            } else {
+              if (content === oldContent) return 'rejected';
+              if (content === newContent) return 'reapplying';
+            }
+            throw new Error('Ledger rename changed since review update; durable state is ambiguous');
+          }
+          const accepted =
+            oldCurrent.missing && !newCurrent.missing && newCurrent.content === newContent;
+          const rejected =
+            !oldCurrent.missing && oldCurrent.content === oldContent && newCurrent.missing;
           if (accepted && rejected) return 'both';
           if (accepted) return 'accepted';
           if (rejected) return 'rejected';
@@ -173,22 +188,11 @@ export function createLedgerRename(getContext: () => ApplierContext) {
       if (relation?.kind !== 'rename') {
         throw new Error('Review file is not a ledger rename.');
       }
-      const oldSnippet =
-        ledgerSnippets.find(
-          (snippet) =>
-            snippet.ledger?.operation === 'delete' &&
-            ctx.pathMatchesRelationPath(snippet.filePath, relation.oldPath)
-        ) ?? ledgerSnippets.find((snippet) => snippet.ledger?.operation === 'delete');
-      const newSnippet =
-        ledgerSnippets.find(
-          (snippet) =>
-            snippet.ledger?.operation === 'create' &&
-            ctx.pathMatchesRelationPath(snippet.filePath, relation.newPath)
-        ) ?? ledgerSnippets.find((snippet) => snippet.ledger?.operation === 'create');
-      const oldFilePath =
-        oldSnippet?.filePath ??
-        ctx.resolveRelatedLedgerPath(newSnippet?.filePath, relation.newPath, relation.oldPath);
-      const newFilePath = newSnippet?.filePath;
+      const endpoints = ctx.resolveLedgerRenameEndpoints(ledgerSnippets, relation);
+      const oldSnippet = endpoints?.oldSnippet;
+      const newSnippet = endpoints?.newSnippet;
+      const oldFilePath = endpoints?.oldFilePath;
+      const newFilePath = endpoints?.newFilePath;
       const oldContent = oldSnippet?.ledger?.originalFullContent ?? original;
       const newContent = newSnippet?.ledger?.modifiedFullContent ?? modified;
       if (!oldFilePath || !newFilePath || oldContent === null || newContent === null) {
@@ -313,6 +317,12 @@ export function createLedgerRename(getContext: () => ApplierContext) {
             error: 'Case-only rename content changed; refusing ledger reject.',
           };
         }
+        if (
+          oldMatchesExpected &&
+          (await ctx.caseOnlyRenameEntry(oldFilePath, newFilePath)) === 'old'
+        ) {
+          return { handled: true, status: 'applied' };
+        }
         const currentContent = newMatchesExpected ? newCurrent.content : oldCurrent.content;
         try {
           await ctx.moveExpectedTextFile(newFilePath, oldFilePath, currentContent, oldContent);
@@ -401,22 +411,11 @@ export function createLedgerRename(getContext: () => ApplierContext) {
       modified: string | null
     ): Promise<void> {
       const ctx = getContext();
-      const oldSnippet =
-        snippets.find(
-          (snippet) =>
-            snippet.ledger?.operation === 'delete' &&
-            ctx.pathMatchesRelationPath(snippet.filePath, relation.oldPath)
-        ) ?? snippets.find((snippet) => snippet.ledger?.operation === 'delete');
-      const newSnippet =
-        snippets.find(
-          (snippet) =>
-            snippet.ledger?.operation === 'create' &&
-            ctx.pathMatchesRelationPath(snippet.filePath, relation.newPath)
-        ) ?? snippets.find((snippet) => snippet.ledger?.operation === 'create');
-      const oldFilePath =
-        oldSnippet?.filePath ??
-        ctx.resolveRelatedLedgerPath(newSnippet?.filePath, relation.newPath, relation.oldPath);
-      const newFilePath = newSnippet?.filePath;
+      const endpoints = ctx.resolveLedgerRenameEndpoints(snippets, relation);
+      const oldSnippet = endpoints?.oldSnippet;
+      const newSnippet = endpoints?.newSnippet;
+      const oldFilePath = endpoints?.oldFilePath;
+      const newFilePath = endpoints?.newFilePath;
       const oldContent = oldSnippet?.ledger?.originalFullContent ?? original;
       const newContent = newSnippet?.ledger?.modifiedFullContent ?? modified;
 
@@ -453,12 +452,15 @@ export function createLedgerRename(getContext: () => ApplierContext) {
         (await ctx.pathsReferToSameFile(oldFilePath, newFilePath));
 
       if (aliased) {
-        if (newCurrent.content === newContent) return;
-        if (newCurrent.content !== oldContent) {
+        const spelling = await ctx.caseOnlyRenameEntry(oldFilePath, newFilePath);
+        if (newCurrent.content === newContent && spelling === 'new') {
+          return;
+        }
+        if (newCurrent.content !== oldContent && newCurrent.content !== newContent) {
           throw new Error('Case-only rename content changed after rejection; refusing Undo.');
         }
         try {
-          await ctx.moveExpectedTextFile(oldFilePath, newFilePath, oldContent, newContent);
+          await ctx.moveExpectedTextFile(oldFilePath, newFilePath, newCurrent.content, newContent);
           return;
         } catch (error) {
           throw new Error(`Failed to restore case-only ledger rename: ${String(error)}`);

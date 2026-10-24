@@ -217,11 +217,11 @@ async function resolveBundledOrchestratorBinary(): Promise<string | null> {
   return resolveFromCandidateList([path.join(resourcesPath, 'runtime', binaryName)]);
 }
 
+/** Keep provider CLI path overrides separate from the orchestrator path override. */
 function getConfiguredRuntimeOverrideRaw(flavor: 'claude' | 'agent_teams_orchestrator'): string {
   return (
     (flavor === 'agent_teams_orchestrator'
-      ? (process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() ??
-        process.env.CLAUDE_CLI_PATH?.trim())
+      ? process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim()
       : process.env.CLAUDE_CLI_PATH?.trim()) ?? ''
   );
 }
@@ -243,6 +243,29 @@ let resolveInFlight: Promise<string | null> | null = null;
 let cacheGeneration = 0;
 
 export class ClaudeBinaryResolver {
+  /** Native provider discovery must not reuse the configured orchestrator or its cache. */
+  static async resolveNative(): Promise<string | null> {
+    const override = getConfiguredRuntimeOverrideRaw('claude');
+    const pathEnv = buildMergedCliPath(null);
+    if (override) {
+      const resolved = looksLikeExplicitPath(override)
+        ? await resolveFromExplicitPath(override)
+        : await resolveFromPathEnv(override, pathEnv);
+      if (resolved) return resolved;
+    }
+    const fromPath = await resolveFromPathEnv('claude', pathEnv);
+    if (fromPath) return fromPath;
+    const names = process.platform === 'win32' ? expandWindowsBinaryNames('claude') : ['claude'];
+    const dirs = [
+      path.join(getShellPreferredHome(), '.local', 'bin'),
+      path.join(getClaudeBasePath(), 'local', 'node_modules', '.bin'),
+    ];
+    return resolveFromCandidateList([
+      ...dirs.flatMap((dir) => names.map((name) => path.join(dir, name))),
+      ...(await collectNvmCandidates()),
+    ]);
+  }
+
   /**
    * Clear the cached binary path.
    * Call after CLI install/update so the next resolve() picks up the new location.

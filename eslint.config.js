@@ -14,6 +14,8 @@ import boundaries from 'eslint-plugin-boundaries';
 import eslintComments from '@eslint-community/eslint-plugin-eslint-comments';
 import eslintConfigPrettier from 'eslint-config-prettier/flat';
 import globals from 'globals';
+import { featureOverrides } from './eslint.feature-overrides.mts';
+import { gatewayBoundaries } from './eslint.gateway-boundaries.mts';
 
 export default defineConfig([
   // Global ignores
@@ -592,11 +594,7 @@ export default defineConfig([
   {
     name: 'electron-main',
     files: ['src/main/**/*.ts'],
-    languageOptions: {
-      globals: {
-        ...globals.node,
-      },
-    },
+    languageOptions: { globals: { ...globals.node } },
     rules: {
       // Allow console in main process for logging
       'no-console': 'off',
@@ -632,35 +630,20 @@ export default defineConfig([
     },
   },
 
-  {
-    name: 'team-transcript-project-resolver-sonar-override',
-    files: ['src/main/services/team/TeamTranscriptProjectResolver.ts'],
-    rules: {
-      'sonarjs/no-identical-functions': 'off',
-    },
-  },
+  ...featureOverrides(jsxA11y),
 
   // Preload script (Electron bridge)
   {
     name: 'electron-preload',
     files: ['src/preload/**/*.ts'],
-    languageOptions: {
-      globals: {
-        ...globals.node,
-        ...globals.browser,
-      },
-    },
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
 
   // Renderer process (React + A11y + Tailwind)
   {
     name: 'renderer-react',
     files: ['src/renderer/**/*.{ts,tsx}'],
-    languageOptions: {
-      globals: {
-        ...globals.browser,
-      },
-    },
+    languageOptions: { globals: { ...globals.browser } },
     plugins: {
       react: reactPlugin,
       'react-hooks': reactHooks,
@@ -808,6 +791,7 @@ export default defineConfig([
     },
   },
 
+  { name: 'owned-process-broker-tooling-project', files: ['tools/owned-process-broker/*.ts', 'scripts/build/buildOwnedProcessBroker.ts'], languageOptions: { parserOptions: { projectService: false, project: './tools/owned-process-broker/tsconfig.json' } } },
   // Custom rule overrides for all TypeScript files
   {
     name: 'custom-rules',
@@ -1158,6 +1142,20 @@ export default defineConfig([
           ],
         },
       ],
+    },
+  },
+
+  ...gatewayBoundaries,
+
+  // The existing JavaScript compatibility entrypoint is outside the TS project.
+  // Its replacement graph stays type-aware; retain normal JS/security lint here.
+  {
+    ...tseslint.configs.disableTypeChecked,
+    name: 'legacy-release-javascript-entrypoint',
+    files: ['scripts/ci/promote-existing-draft.mjs'],
+    languageOptions: {
+      ...tseslint.configs.disableTypeChecked.languageOptions,
+      globals: globals.node,
     },
   },
 
