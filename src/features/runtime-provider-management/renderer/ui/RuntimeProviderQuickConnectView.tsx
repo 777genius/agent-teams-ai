@@ -286,6 +286,55 @@ const OpenCodePrerequisite = ({
   );
 };
 
+/** The fallback binary is in use; the user must see which override was skipped and why. */
+const OpenCodeIgnoredOverrideNotice = ({
+  runtimeStatus,
+}: {
+  runtimeStatus: OpenCodeRuntimeStatus | null;
+}): JSX.Element | null => {
+  const { t } = useAppTranslation('dashboard');
+  const ignoredOverride = runtimeStatus?.ignoredOverride;
+  if (!ignoredOverride) {
+    return null;
+  }
+
+  return (
+    <div
+      data-testid="provider-quick-opencode-ignored-override"
+      role="alert"
+      className="mb-3 flex min-w-0 items-start gap-2.5 rounded-lg border px-3 py-2.5"
+      style={{
+        borderColor: 'rgba(251, 191, 36, 0.32)',
+        backgroundColor: 'rgba(251, 191, 36, 0.06)',
+      }}
+    >
+      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-300" />
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold" style={{ color: 'var(--color-text)' }}>
+          {t('cliStatus.quickConnect.openCodeOverrideIgnoredTitle')}
+        </p>
+        <p
+          className="break-all font-mono text-[10.5px] leading-4"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
+          {t('cliStatus.quickConnect.openCodeOverrideIgnoredPath', {
+            envName: ignoredOverride.envName,
+            binaryPath: ignoredOverride.binaryPath,
+            version:
+              ignoredOverride.version ?? t('cliStatus.quickConnect.openCodeOverrideUnknownVersion'),
+          })}
+        </p>
+        <p
+          className="text-pretty text-[10.5px] leading-4"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
+          {ignoredOverride.reason}
+        </p>
+      </div>
+    </div>
+  );
+};
+
 const InlineNotice = ({ children }: { children: ReactNode }): JSX.Element => {
   return (
     <div
@@ -361,6 +410,8 @@ export const RuntimeProviderQuickConnectView = ({
           </Button>
         </div>
       </div>
+
+      <OpenCodeIgnoredOverrideNotice runtimeStatus={runtimeStatus} />
 
       <OpenCodePrerequisite
         gate={gate}

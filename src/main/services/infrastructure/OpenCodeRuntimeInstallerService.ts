@@ -1,9 +1,13 @@
-import { isRecognizedOpenCodeRuntimeVersion } from '@features/opencode-compatibility';
+import {
+  classifyNativeVersion,
+  isRecognizedOpenCodeRuntimeVersion,
+} from '@features/opencode-compatibility';
 import {
   type OpenCodeBinaryCandidateFailure,
   type OpenCodeBinaryVersionProbe,
   probeOpenCodeBinaryVersion,
 } from '@features/runtime-provider-management/main';
+import { readOpenCodeBinaryOverride } from '@main/services/runtime/openCodeRuntimeBinaryEnv';
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { execCli } from '@main/utils/childProcess';
 import { getAppDataPath } from '@main/utils/pathDecoder';
@@ -45,7 +49,12 @@ import {
 } from './openCodeRuntimeResolverCache';
 
 import type { VerifiedOpenCodeBinaryProbe } from './openCodeRuntimeResolverCache';
-import type { OpenCodeRuntimeInstallProgress, OpenCodeRuntimeStatus } from '@shared/types';
+import type { OpenCodeBinaryOverride } from '@main/services/runtime/openCodeRuntimeBinaryEnv';
+import type {
+  OpenCodeRuntimeIgnoredOverride,
+  OpenCodeRuntimeInstallProgress,
+  OpenCodeRuntimeStatus,
+} from '@shared/types';
 import type { BrowserWindow } from 'electron';
 export {
   clearOpenCodeRuntimeResolverCache as clearOpenCodeRuntimeBinaryResolverCache,
@@ -130,6 +139,14 @@ export async function resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath(): Prom
   return version.ok && isRecognizedOpenCodeRuntimeVersion(version.version) ? binaryPath : null;
 }
 
+function getUnverifiedOpenCodeOverrideMessage(binaryPath: string): string {
+  return (
+    `Could not verify the explicitly selected OpenCode binary: ${binaryPath}. ` +
+    'Retry the version check, or update/remove the binary override before launching. ' +
+    'The app will not substitute its managed OpenCode runtime.'
+  );
+}
+
 export async function isSupportedOpenCodeRuntimeBinaryPath(binaryPath: string): Promise<boolean> {
   if (!isAbsoluteExistingFile(binaryPath)) {
     return false;
@@ -138,13 +155,70 @@ export async function isSupportedOpenCodeRuntimeBinaryPath(binaryPath: string): 
   if (!version.ok) {
     // A failed probe does not establish that the selected delivery is unsupported.
     // Preserve explicit selection so a transient timeout cannot launch another binary.
-    throw new Error(
-      `Could not verify the explicitly selected OpenCode binary: ${binaryPath}. ` +
-        'Retry the version check, or update/remove the binary override before launching. ' +
-        'The app will not substitute its managed OpenCode runtime.'
-    );
+    throw new Error(getUnverifiedOpenCodeOverrideMessage(binaryPath));
   }
   return isRecognizedOpenCodeRuntimeVersion(version.version);
+}
+
+type OpenCodeOverrideStatusResult =
+  | { kind: 'selected'; status: OpenCodeRuntimeStatus }
+  | { kind: 'ignored'; ignoredOverride: OpenCodeRuntimeIgnoredOverride };
+
+/** Mirrors isSupportedOpenCodeRuntimeBinaryPath: the status must name the binary launch uses. */
+async function resolveOpenCodeOverrideStatus(
+  override: OpenCodeBinaryOverride
+): Promise<OpenCodeOverrideStatusResult> {
+  const { binaryPath, envName } = override;
+  if (!isAbsoluteExistingFile(binaryPath)) {
+    return {
+      kind: 'ignored',
+      ignoredOverride: {
+        binaryPath,
+        envName,
+        version: null,
+        reason: `${envName} does not point to an existing file. Using the default OpenCode instead.`,
+      },
+    };
+  }
+  const version = await probeOpenCodeBinaryVersionCached(binaryPath);
+  if (!version.ok) {
+    // Launch fails closed for an override it cannot verify, so status does too.
+    return {
+      kind: 'selected',
+      status: {
+        installed: false,
+        binaryPath,
+        source: 'override',
+        state: 'failed',
+        error: getUnverifiedOpenCodeOverrideMessage(binaryPath),
+        diagnostics: version.diagnostics,
+      },
+    };
+  }
+  const classification = version.version ? classifyNativeVersion(version.version) : null;
+  if (classification?.kind === 'recognized') {
+    return {
+      kind: 'selected',
+      status: {
+        installed: true,
+        binaryPath,
+        version: classification.version,
+        source: 'override',
+        state: 'ready',
+      },
+    };
+  }
+  // Keep the reported version exact, without the V2 CLI banner: it may not parse.
+  const reportedVersion = version.version?.replace(/^opencode v/, '') ?? null;
+  return {
+    kind: 'ignored',
+    ignoredOverride: {
+      binaryPath,
+      envName,
+      version: reportedVersion,
+      reason: `${getUnsupportedAgentTeamsOpenCodeVersionMessage(reportedVersion)} Using the default OpenCode instead.`,
+    },
+  };
 }
 
 function getExecutableName(): string {
@@ -737,18 +811,31 @@ export class OpenCodeRuntimeInstallerService {
 
   private async resolveStatus(statusCacheGeneration: number): Promise<OpenCodeRuntimeStatus> {
     const status = await this.resolveInstalledStatus();
-    const versionAwareStatus = status.installed
-      ? await withLatestOpenCodeVersion(
-          status,
-          resolveLatestOpenCodeVersion,
-          this.latestStatus?.latestVersion
-        )
-      : status;
+    // Managed update metadata cannot change which binary an override selects.
+    const versionAwareStatus =
+      status.installed && status.source !== 'override'
+        ? await withLatestOpenCodeVersion(
+            status,
+            resolveLatestOpenCodeVersion,
+            this.latestStatus?.latestVersion
+          )
+        : status;
     this.rememberStatusIfCurrent(versionAwareStatus, statusCacheGeneration);
     return versionAwareStatus;
   }
 
   private async resolveInstalledStatus(): Promise<OpenCodeRuntimeStatus> {
+    const override = readOpenCodeBinaryOverride(process.env);
+    if (!override) return this.resolveDefaultInstalledStatus();
+    const overrideStatus = await resolveOpenCodeOverrideStatus(override);
+    if (overrideStatus.kind === 'selected') return overrideStatus.status;
+    return {
+      ...(await this.resolveDefaultInstalledStatus()),
+      ignoredOverride: overrideStatus.ignoredOverride,
+    };
+  }
+
+  private async resolveDefaultInstalledStatus(): Promise<OpenCodeRuntimeStatus> {
     const appManagedStatus = await this.getAppManagedStatus();
     if (appManagedStatus.installed) return appManagedStatus;
 
@@ -992,20 +1079,24 @@ export class OpenCodeRuntimeInstallerService {
       await atomicWriteAsync(getCurrentManifestPath(), `${JSON.stringify(manifest, null, 2)}\n`);
       clearOpenCodeRuntimeResolverCache();
 
-      const status: OpenCodeRuntimeStatus = {
-        installed: true,
-        binaryPath,
-        version: manifest.version,
-        latestVersion: manifest.version,
-        updateAvailable: false,
-        source: 'app-managed',
-        state: 'ready',
-        progress: {
-          phase: 'ready',
-          percent: 100,
-          detail: `Installed OpenCode ${manifest.version}`,
-        },
+      const progress: OpenCodeRuntimeInstallProgress = {
+        phase: 'ready',
+        percent: 100,
+        detail: `Installed OpenCode ${manifest.version}`,
       };
+      const status: OpenCodeRuntimeStatus = readOpenCodeBinaryOverride(process.env)
+        ? // An override still decides what launches after the managed install.
+          { ...(await this.resolveInstalledStatus()), progress }
+        : {
+            installed: true,
+            binaryPath,
+            version: manifest.version,
+            latestVersion: manifest.version,
+            updateAvailable: false,
+            source: 'app-managed',
+            state: 'ready',
+            progress,
+          };
       this.publish(status);
       return status;
     } catch (error) {

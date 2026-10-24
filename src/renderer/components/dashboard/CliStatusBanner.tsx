@@ -1015,6 +1015,16 @@ const InstalledBanner = ({
                   disabled={openCodeRuntimeInstalling}
                 />
               ) : null}
+              {providersCollapsed && openCodeRuntimeStatus?.ignoredOverride ? (
+                <span
+                  data-testid="opencode-ignored-override-compact"
+                  className="flex items-center gap-1 text-xs text-amber-300"
+                  title={`${openCodeRuntimeStatus.ignoredOverride.binaryPath}: ${openCodeRuntimeStatus.ignoredOverride.reason}`}
+                >
+                  <AlertTriangle className="size-3 shrink-0" />
+                  {t('cliStatus.quickConnect.openCodeOverrideIgnoredTitle')}
+                </span>
+              ) : null}
               {runtimeAuthSummary && (
                 <span
                   className="text-xs"
