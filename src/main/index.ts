@@ -2167,7 +2167,8 @@ async function initializeServices(): Promise<void> {
       const teams = await teamDataService.listTeams();
       return teams.filter((team) => !team.deletedAt).map((team) => team.teamName);
     },
-    scanTeam: (teamName) => teamProvisioningService.scanOpenCodePromptDeliveryWatchdog(teamName),
+    scanTeam: (teamName) =>
+      teamProvisioningService.scanOpenCodePromptDeliveryWatchdog(teamName, 'continuity'),
     warn: (message) => logger.warn(message),
   });
   let teammateToolTracker: TeammateToolTracker | null = null;

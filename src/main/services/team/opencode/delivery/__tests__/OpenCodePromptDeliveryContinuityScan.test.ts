@@ -91,6 +91,35 @@ describe('OpenCodePromptDeliveryContinuityScan', () => {
     scan.stop();
   });
 
+  it('keeps scanning other teams while one team scan hangs, without re-entering it', async () => {
+    vi.useFakeTimers();
+    let releaseHungScan: (() => void) | undefined;
+    const { ports, scanTeam, warn } = createHarness({
+      teamNames: ['team-a', 'team-b'],
+      scanTeam: (teamName) =>
+        teamName === 'team-a' && !releaseHungScan
+          ? new Promise<void>((resolve) => {
+              releaseHungScan = resolve;
+            })
+          : Promise.resolve(),
+    });
+    const scan = new OpenCodePromptDeliveryContinuityScan(ports, INTERVAL_MS);
+    scan.start();
+    const callsFor = (teamName: string): number =>
+      scanTeam.mock.calls.filter(([name]) => name === teamName).length;
+
+    await vi.advanceTimersByTimeAsync(3 * INTERVAL_MS);
+    expect(callsFor('team-a')).toBe(1);
+    expect(callsFor('team-b')).toBe(2);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('[team-a]'));
+
+    releaseHungScan?.();
+    await vi.advanceTimersByTimeAsync(INTERVAL_MS);
+    expect(callsFor('team-a')).toBe(2);
+    expect(callsFor('team-b')).toBe(3);
+    scan.stop();
+  });
+
   it('stops scanning after stop', async () => {
     vi.useFakeTimers();
     const { ports, scanTeam } = createHarness({ teamNames: ['team-a'] });

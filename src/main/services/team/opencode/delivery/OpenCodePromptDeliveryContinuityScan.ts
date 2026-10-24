@@ -16,11 +16,12 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-// Continuity backstop: the watchdog recovery scan rebuilds ledger records from unread inbox rows, but it ran only at startup, so a lost watcher trigger or a dropped wake orphaned the row forever.
+// Continuity backstop: the watchdog recovery scan ran only at startup, so a lost watcher trigger or a dropped wake orphaned an unread row forever. Each tick re-arms open ledger records and wakes record-less unread rows of every live team.
 export class OpenCodePromptDeliveryContinuityScan {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private started = false;
   private scanInFlight = false;
+  private readonly pendingTeamScans = new Set<string>();
   private readonly intervalMs: number;
 
   constructor(
@@ -73,12 +74,38 @@ export class OpenCodePromptDeliveryContinuityScan {
         if (!this.started) {
           return;
         }
-        await this.scanTeamSafely(teamName);
+        await this.scanTeamWithinBudget(teamName);
       }
     } catch (error) {
       this.ports.warn(`OpenCode prompt delivery continuity scan failed: ${getErrorMessage(error)}`);
     } finally {
       this.scanInFlight = false;
+    }
+  }
+
+  // A team scan that never settles must not wedge the backstop for every other
+  // team and every later tick, and must not be re-entered while still pending.
+  private async scanTeamWithinBudget(teamName: string): Promise<void> {
+    if (this.pendingTeamScans.has(teamName)) {
+      return;
+    }
+    this.pendingTeamScans.add(teamName);
+    const settled = this.scanTeamSafely(teamName).finally(() => {
+      this.pendingTeamScans.delete(teamName);
+    });
+    let budgetTimer: ReturnType<typeof setTimeout> | undefined;
+    const budgetExceeded = new Promise<boolean>((resolve) => {
+      budgetTimer = setTimeout(resolve, this.intervalMs, true);
+      unrefBackgroundTimer(budgetTimer);
+    });
+    try {
+      if (await Promise.race([settled.then(() => false), budgetExceeded])) {
+        this.ports.warn(
+          `[${teamName}] OpenCode prompt delivery continuity scan is still running after ${this.intervalMs}ms; skipping the team until it settles`
+        );
+      }
+    } finally {
+      clearTimeout(budgetTimer);
     }
   }
 
