@@ -191,11 +191,30 @@ export async function relayOpenCodeMemberInboxMessagesWithPorts(
     const onlyMessageId = options.onlyMessageId?.trim();
     if (!onlyMessageId) {
       try {
-        return await waitForInboxRelayInFlight({
+        const relayResult = await waitForInboxRelayInFlight({
           promise: existing,
           relayName: 'opencode_member_inbox_relay',
           relayKey,
         });
+        // The coalesced request ran no walk of its own: rows that landed after
+        // the in-flight walk read its inbox snapshot are invisible to it, so
+        // leave the same follow-up wake a walk leaves for its own leftovers.
+        if (options.isCurrent?.() !== false) {
+          const hasDeliveryRecord = await readOpenCodeInboxFollowUpHasRecord({
+            teamName,
+            memberName,
+            ports,
+          });
+          await armOpenCodeInboxFollowUpWake({
+            teamName,
+            memberName,
+            inboxMessages: await ports.readInboxMessages(teamName, memberName).catch(() => []),
+            handledMessageIds: new Set<string>(),
+            hasDeliveryRecord,
+            ports,
+          });
+        }
+        return relayResult;
       } catch (error) {
         if (!isInboxRelayInFlightTimeoutError(error)) {
           throw error;
@@ -438,6 +457,7 @@ async function runOpenCodeMemberInboxRelayWork(
 
   // Cursor-driven walk: a pending non-user delivery may skip ahead to a newer
   // user message (see findNextUnreadUserMessageIndex) instead of breaking.
+  const handledMessageIds = new Set<string>();
   let cursor = 0;
   while (cursor < unread.length) {
     const index = cursor;
@@ -446,6 +466,7 @@ async function runOpenCodeMemberInboxRelayWork(
     if (!message) {
       break;
     }
+    handledMessageIds.add(message.messageId);
     let existingRecord = await promptLedger
       .getByInboxMessage({
         teamName,
@@ -613,6 +634,9 @@ async function runOpenCodeMemberInboxRelayWork(
     if (settlement.kind === 'read_committed') {
       result.relayed += settlement.messages.length;
       result.diagnostics = [...(result.diagnostics ?? []), settlement.diagnostic];
+      for (const settledMessage of settlement.messages) {
+        handledMessageIds.add(settledMessage.messageId);
+      }
       for (let skipIndex = index + 1; skipIndex < unread.length; skipIndex += 1) {
         if (!settlement.messages.includes(unread[skipIndex])) break;
         cursor = Math.max(cursor, skipIndex + 1);
@@ -732,6 +756,9 @@ async function runOpenCodeMemberInboxRelayWork(
     if (coalesced.length > 0 && isOpenCodeCoalescedNoticeDeliveryProven(delivery)) {
       try {
         await ports.markInboxMessagesRead(teamName, memberName, coalesced);
+        for (const coalescedMessage of coalesced) {
+          handledMessageIds.add(coalescedMessage.messageId);
+        }
         result.relayed += coalesced.length;
         result.diagnostics = [
           ...(result.diagnostics ?? []),
@@ -850,7 +877,94 @@ async function runOpenCodeMemberInboxRelayWork(
     break;
   }
 
+  if (options.isCurrent?.() !== false) {
+    await armOpenCodeInboxFollowUpWake({
+      teamName,
+      memberName,
+      inboxMessages,
+      handledMessageIds,
+      hasDeliveryRecord: async (inboxMessageId) =>
+        Boolean(
+          await promptLedger
+            .getByInboxMessage({
+              teamName,
+              memberName: memberIdentity.canonicalMemberName,
+              laneId: memberIdentity.laneId,
+              inboxMessageId,
+            })
+            .catch(() => null)
+        ),
+      ports,
+    });
+  }
+
   return dedupeOpenCodeMemberInboxRelayDiagnostics(result);
+}
+
+// A walk delivers at most one message and stops; unexamined rows are picked up
+// only when some later inbox write re-fires the watcher. Arm the next pass for
+// the first leftover row so the backlog drains even when no further write comes.
+async function armOpenCodeInboxFollowUpWake(input: {
+  teamName: string;
+  memberName: string;
+  inboxMessages: readonly InboxMessage[];
+  handledMessageIds: ReadonlySet<string>;
+  hasDeliveryRecord: (inboxMessageId: string) => Promise<boolean>;
+  ports: RelayOpenCodeMemberInboxMessagesPorts;
+}): Promise<void> {
+  const candidates = selectOpenCodeMemberInboxRelayUnreadMessages({
+    inboxMessages: input.inboxMessages,
+    maxRelay: input.inboxMessages.length,
+  }).filter((message) => !input.handledMessageIds.has(message.messageId));
+  for (const candidate of candidates) {
+    // A row a delivery record already owns belongs to the retry machinery; only
+    // a row nothing owns yet needs a fresh wake.
+    if (await input.hasDeliveryRecord(candidate.messageId)) {
+      continue;
+    }
+    // Unscoped and generation-free on purpose: the wake belongs to the row, not
+    // to the pass that noticed it, and must outlive that pass's revocation.
+    input.ports.scheduleOpenCodeMemberInboxDeliveryWake({
+      teamName: input.teamName,
+      memberName: input.memberName,
+      messageId: candidate.messageId,
+      delayMs: 500,
+    });
+    return;
+  }
+}
+
+async function readOpenCodeInboxFollowUpHasRecord(input: {
+  teamName: string;
+  memberName: string;
+  ports: RelayOpenCodeMemberInboxMessagesPorts;
+}): Promise<(inboxMessageId: string) => Promise<boolean>> {
+  try {
+    const memberIdentity = await input.ports.resolveOpenCodeMemberDeliveryIdentity(
+      input.teamName,
+      input.memberName
+    );
+    if (!memberIdentity.ok) {
+      throw new Error(memberIdentity.reason);
+    }
+    const { canonicalMemberName, laneId } = memberIdentity;
+    const ledger = input.ports.createOpenCodePromptDeliveryLedger(input.teamName, laneId);
+    return async (inboxMessageId) =>
+      Boolean(
+        await ledger
+          .getByInboxMessage({
+            teamName: input.teamName,
+            memberName: canonicalMemberName,
+            laneId,
+            inboxMessageId,
+          })
+          .catch(() => null)
+      );
+  } catch {
+    // Ownership cannot be proven; every leftover row stays wake-worthy and the
+    // woken pass makes the authoritative decision.
+    return async () => false;
+  }
 }
 
 export function selectOpenCodeMemberInboxRelayUnreadMessages(input: {
