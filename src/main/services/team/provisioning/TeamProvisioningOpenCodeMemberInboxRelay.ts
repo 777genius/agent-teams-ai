@@ -879,6 +879,8 @@ async function runOpenCodeMemberInboxRelayWork(
       memberName,
       inboxMessages,
       handledMessageIds,
+      wokenMessageId: onlyMessageId,
+      lastDelivery: result.lastDelivery,
       ports,
     });
   }

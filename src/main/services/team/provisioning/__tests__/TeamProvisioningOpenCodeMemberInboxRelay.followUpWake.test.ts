@@ -268,3 +268,146 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay coalesced full relay follow-u
     expect(wake.isCurrent).toBeUndefined();
   });
 });
+
+/**
+ * Wakes are what chain: every scheduler wake runs a pass scoped to one row, and
+ * that pass may arm the next wake. A pass that left the lane exactly as it found
+ * it - its row queued behind another row's live delivery, or refused before any
+ * ledger record existed - re-armed a wake for the other leftover row, whose pass
+ * failed the same way and armed this row back. Two queued rows woke each other
+ * every 500ms for as long as the blocker lasted. Drive the chain the way the
+ * scheduler would and require it to stop.
+ */
+describe('TeamProvisioningOpenCodeMemberInboxRelay follow-up wake chains', () => {
+  function createLane(input: {
+    rows: RelayInboxMessage[];
+    records?: Map<string, OpenCodePromptDeliveryLedgerRecord>;
+    deliver: RelayOpenCodeMemberInboxMessagesPorts['deliverOpenCodeMemberMessage'];
+  }): {
+    ports: RelayOpenCodeMemberInboxMessagesPorts;
+    scheduleWake: ReturnType<
+      typeof vi.fn<RelayOpenCodeMemberInboxMessagesPorts['scheduleOpenCodeMemberInboxDeliveryWake']>
+    >;
+    deliver: ReturnType<
+      typeof vi.fn<RelayOpenCodeMemberInboxMessagesPorts['deliverOpenCodeMemberMessage']>
+    >;
+  } {
+    const records = input.records ?? new Map<string, OpenCodePromptDeliveryLedgerRecord>();
+    const scheduleWake =
+      vi.fn<RelayOpenCodeMemberInboxMessagesPorts['scheduleOpenCodeMemberInboxDeliveryWake']>();
+    const deliver = vi.fn(input.deliver);
+    const ports = createRelayPorts({
+      readInboxMessages: vi.fn(async () => input.rows.map((row) => ({ ...row }))),
+      markInboxMessagesRead: vi.fn(
+        async (_teamName: string, _memberName: string, messages: RelayInboxMessage[]) => {
+          const readIds = new Set(messages.map((row) => row.messageId));
+          for (const row of input.rows) if (readIds.has(row.messageId)) row.read = true;
+        }
+      ),
+      createOpenCodePromptDeliveryLedger: vi.fn(() => ({
+        getByInboxMessage: vi.fn(
+          async ({ inboxMessageId }: { inboxMessageId: string }) =>
+            records.get(inboxMessageId) ?? null
+        ),
+      })) as unknown as RelayOpenCodeMemberInboxMessagesPorts['createOpenCodePromptDeliveryLedger'],
+      scheduleOpenCodeMemberInboxDeliveryWake: scheduleWake,
+      deliverOpenCodeMemberMessage: deliver,
+    });
+    return { ports, scheduleWake, deliver };
+  }
+
+  async function driveWakeChain(
+    lane: ReturnType<typeof createLane>,
+    maxPasses = 12
+  ): Promise<string[]> {
+    const { ports } = lane;
+    await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'worker', relayKey: 'team/worker' },
+      ports
+    );
+    const wakes = lane.scheduleWake.mock.calls;
+    const woken: string[] = [];
+    while (woken.length < wakes.length && woken.length < maxPasses) {
+      const wake = wakes[woken.length][0];
+      woken.push(wake.messageId);
+      await relayOpenCodeMemberInboxMessagesWithPorts(
+        {
+          teamName: 'team',
+          memberName: 'worker',
+          relayKey: 'team/worker',
+          options: {
+            onlyMessageId: wake.messageId,
+            source: 'watchdog',
+            ...(wake.isCurrent ? { isCurrent: wake.isCurrent } : {}),
+          },
+        },
+        ports
+      );
+    }
+    return woken;
+  }
+
+  it('stops once the woken rows only queue behind a live delivery', async () => {
+    const active = ledgerRecord({ id: 'record-active', inboxMessageId: 'row-active' });
+    const lane = createLane({
+      rows: [
+        message({ messageId: 'row-active', timestamp: '2026-01-01T00:00:00.000Z' }),
+        message({ messageId: 'row-b', timestamp: '2026-01-01T00:00:01.000Z' }),
+        message({ messageId: 'row-c', timestamp: '2026-01-01T00:00:02.000Z' }),
+      ],
+      records: new Map([['row-active', active]]),
+      deliver: async (_teamName, delivery) =>
+        delivery.messageId === 'row-active'
+          ? {
+              delivered: true,
+              accepted: true,
+              responsePending: true,
+              ledgerStatus: 'pending',
+              ledgerRecordId: active.id,
+            }
+          : {
+              delivered: true,
+              accepted: false,
+              responsePending: true,
+              ledgerStatus: 'pending',
+              ledgerRecordId: active.id,
+              queuedBehindMessageId: 'row-active',
+              reason: 'opencode_delivery_response_pending',
+            },
+    });
+
+    const woken = await driveWakeChain(lane);
+
+    expect(woken).toEqual(['row-b']);
+  });
+
+  it('stops once the woken rows are refused before any delivery record exists', async () => {
+    const lane = createLane({
+      rows: [
+        message({ messageId: 'row-a', timestamp: '2026-01-01T00:00:00.000Z' }),
+        message({ messageId: 'row-b', timestamp: '2026-01-01T00:00:01.000Z' }),
+      ],
+      deliver: async () => ({ delivered: false, reason: 'opencode_runtime_not_active' }),
+    });
+
+    const woken = await driveWakeChain(lane);
+
+    expect(woken).toEqual(['row-b']);
+  });
+
+  it('keeps chaining while each woken pass delivers its row', async () => {
+    const lane = createLane({
+      rows: [
+        message({ messageId: 'row-a', timestamp: '2026-01-01T00:00:00.000Z' }),
+        message({ messageId: 'row-b', timestamp: '2026-01-01T00:00:01.000Z' }),
+        message({ messageId: 'row-c', timestamp: '2026-01-01T00:00:02.000Z' }),
+      ],
+      deliver: async () => ({ delivered: true, accepted: true }),
+    });
+
+    const woken = await driveWakeChain(lane);
+
+    expect(woken).toEqual(['row-b', 'row-c']);
+    expect(lane.deliver).toHaveBeenCalledTimes(3);
+  });
+});
