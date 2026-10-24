@@ -43,7 +43,7 @@ Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.18.0 -->
 
-Agent Teams 2.18.0 adds group chats and task folders for organizing team work, and fixes OpenCode tasks and messages getting stuck during relaunch.
+Agent Teams 2.18.0 adds named group chats and task folders for organizing team work, and fixes OpenCode tasks and messages getting stuck during relaunch.
 
 ### What's New
 
@@ -58,7 +58,7 @@ Agent Teams 2.18.0 adds group chats and task folders for organizing team work, a
 
 - Queue chat messages with Cmd or Ctrl+Enter, then edit, send, or remove them manually.
 - OpenCode teammates accept images and videos when their model supports them.
-- Fast mode is off unless you enable it.
+- Team create and launch forms default Fast mode to Off when no earlier choice is saved.
 
 ### Fixes
 
