@@ -1985,6 +1985,8 @@ async function packagedStartupSnapshot(
       ]),
       cleanupElapsedMs: number(row(data.cleanup).elapsedMs),
       cleanupNativeRoot: nativeRootFacts(row(data.cleanup)),
+      cleanupExit: one(row(data.cleanup).exit, ['exit_zero', 'exit_one', 'job_terminated']),
+      cleanupClosedFrame: one(row(data.cleanup).closedFrame, ['accepted', 'rejected', 'absent']),
       initializationPhase: one(row(data.initialization).phase, [
         'MCP-connect',
         'MCP-readback',
