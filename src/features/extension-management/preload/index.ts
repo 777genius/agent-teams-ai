@@ -17,6 +17,8 @@ export function createExtensionManagementBridge(
     detail: (request) => ipc.invoke(extensionManagementChannel('detail'), request),
     discoverSkills: (request) => ipc.invoke(extensionManagementChannel('discoverSkills'), request),
     previewSkill: (request) => ipc.invoke(extensionManagementChannel('previewSkill'), request),
+    discardSkillCatalog: (request) =>
+      ipc.invoke(extensionManagementChannel('discardSkillCatalog'), request),
     environment: (request) => ipc.invoke(extensionManagementChannel('environment'), request),
     localSkillStatus: (request) =>
       ipc.invoke(extensionManagementChannel('localSkillStatus'), request),

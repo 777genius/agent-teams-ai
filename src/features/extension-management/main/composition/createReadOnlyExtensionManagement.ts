@@ -15,6 +15,7 @@ export function createReadOnlyExtensionManagement(): ExtensionManagementFeature 
     detail: unavailable,
     discoverSkills: unavailable,
     previewSkill: unavailable,
+    discardSkillCatalog: unavailable,
     environment: unavailable,
     localSkillStatus: unavailable,
     prepareLocalSkill: unavailable,

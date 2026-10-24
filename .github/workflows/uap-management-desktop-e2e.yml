@@ -1,0 +1,104 @@
+name: UAP management desktop E2E
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/uap-management-desktop-e2e.yml'
+      - 'src/features/extension-management/**'
+      - 'src/renderer/components/extensions/skills/**'
+      - 'src/main/services/extensions/skills/**'
+      - 'src/main/ipc/skills.ts'
+      - 'src/main/index.ts'
+      - 'src/main/httpServer.ts'
+      - 'src/shared/utils/skillFrontmatter.ts'
+      - 'scripts/e2e/uap-management-desktop.ts'
+      - 'scripts/stage-uap-runtime.ts'
+      - 'scripts/dev-with-runtime.mjs'
+      - 'scripts/tsconfig/tsconfig.desktop-e2e.json'
+      - 'vendor/uap/sdk/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'runtime.lock.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  desktop:
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: '1.26.10'
+          cache: false
+      - name: Install native display tools
+        run: sudo apt-get update && sudo apt-get install -y xvfb openssl
+      - name: Install frozen application dependencies
+        run: node scripts/ci/install-dependencies-with-retry.mjs
+      - name: Read the reviewed UAP source identity
+        id: uap
+        run: node -e "const fs=require('node:fs'); const p=JSON.parse(fs.readFileSync('vendor/uap/sdk/provenance.json','utf8')); if(!/^[a-f0-9]{40}$/.test(p.sourceCommit)) throw Error('Invalid source pin'); fs.appendFileSync(process.env.GITHUB_OUTPUT,'commit='+p.sourceCommit+'\n');"
+      - uses: actions/checkout@v6
+        with:
+          repository: 777genius/universal-agent-plugins
+          ref: ${{ steps.uap.outputs.commit }}
+          path: .tmp-uap-source
+          persist-credentials: false
+      - name: Stage the engine from the same reviewed source as the SDK
+        run: node scripts/stage-uap-runtime.ts --source .tmp-uap-source
+      - name: Provision the pinned real native client with UAP's existing qualification helper
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import importlib.util, json, os, pathlib, sys
+          source = pathlib.Path('.tmp-uap-source/scripts/run-native-client-matrix.py').resolve()
+          spec = importlib.util.spec_from_file_location('uap_native_matrix', source)
+          matrix = importlib.util.module_from_spec(spec)
+          sys.modules[spec.name] = matrix
+          spec.loader.exec_module(matrix)
+          destination = pathlib.Path(os.environ['RUNNER_TEMP']) / 'uap-native-opencode'
+          destination.mkdir()
+          executable, evidence = matrix.provision(matrix.PINS['linux-amd64']['opencode'], destination, 'opencode')
+          (destination / 'provenance.json').write_text(json.dumps(evidence, indent=2) + '\n')
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write('UAP_E2E_OPENCODE=' + str(executable) + '\n')
+          PY
+      - name: Provision the real orchestration and terminal runtimes
+        env:
+          CLAUDE_DEV_RUNTIME_DISABLE_GH: '1'
+          CLAUDE_DEV_RUNTIME_CACHE_ROOT: ${{ runner.temp }}/uap-orchestration-runtime
+        run: |
+          node scripts/dev-with-runtime.mjs --print-runtime-path > "$RUNNER_TEMP/uap-runtime-path.txt"
+          tail -1 "$RUNNER_TEMP/uap-runtime-path.txt" | sed 's/^/CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH=/' >> "$GITHUB_ENV"
+          node scripts/ensure-terminal-platform-runtime.mjs
+      - name: Exercise the actual Electron UI and desktop HTTP boundary
+        env:
+          TMPDIR: ${{ runner.temp }}
+          UAP_E2E_REQUIRE_CLEAN: '1'
+        run: xvfb-run -a pnpm exec tsx scripts/e2e/uap-management-desktop.ts
+      - name: Preserve reviewable screenshots and operation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: uap-management-desktop-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/uap-management-desktop-*/screenshots/*.png
+            ${{ runner.temp }}/uap-management-desktop-*/evidence.json
+            ${{ runner.temp }}/uap-management-desktop-*/desktop*.log
+            ${{ runner.temp }}/uap-native-opencode/provenance.json

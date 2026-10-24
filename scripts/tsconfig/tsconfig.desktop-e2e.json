@@ -12,6 +12,7 @@
     "../../scripts/e2e/openui-desktop.ts",
     "../../scripts/e2e/opencode-diagnostics/windows-attachments.mts",
     "../../scripts/e2e/group-chats-desktop.ts",
+    "../../scripts/e2e/uap-management-desktop.ts",
     "../../scripts/native-teammate-attachments-desktop.ts",
     "../../scripts/file-reference-attachments-desktop.ts",
     "../../scripts/fixtures/native-teammate-attachments/fileReferenceProof.ts",

@@ -10,6 +10,7 @@ const manifestSchema = z
   .object({
     schemaVersion: z.literal(1),
     sourceSha: z.string().regex(/^[a-f0-9]{40}$/),
+    engineVersion: z.string(),
     platform: z.string(),
     sha256: z.string().regex(/^[a-f0-9]{64}$/),
     executable: z.enum(['agentplugins', 'agentplugins.exe']),
@@ -33,6 +34,8 @@ export async function resolveUapExecutable(resourceRoot: string): Promise<string
     throw new Error('The bundled extension manager does not match this platform.');
   if (manifest.sourceSha !== sdkProvenance.sourceCommit)
     throw new Error('The bundled extension manager and SDK must use the same reviewed source.');
+  if (manifest.engineVersion !== sdkProvenance.engineVersion)
+    throw new Error('The bundled extension manager does not match its reviewed build version.');
   const executable = await realpath(path.join(resourceRoot, manifest.executable));
   const root = await realpath(resourceRoot);
   if (path.dirname(executable) !== root)

@@ -28,6 +28,8 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
   const [captureRevision, setCaptureRevision] = useState(0);
   const [context, setContext] = useState<ExtensionContext | null>(null);
   const [catalog, setCatalog] = useState<ManagementCatalog | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
   const [environment, setEnvironment] = useState<ManagementEnvironment | null>(null);
   const [plan, setPlan] = useState<ManagementPlan | null>(null);
   const [operation, setOperation] = useState<ManagementOperation | null>(null);
@@ -39,8 +41,22 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
   const [entryDetail, setEntryDetail] = useState<ManagementEntry | null>(null);
   const [copyCandidates, setCopyCandidates] = useState<SkillCopyCandidate[] | null>(null);
   const generation = useRef(0);
+  const discoveryGeneration = useRef(0);
+  const discovery = useRef<{ contextId: string; catalogId: string } | null>(null);
+  const releaseDiscovery = useCallback(async () => {
+    const retained = discovery.current;
+    if (!backend || !retained) return;
+    await backend.discardSkillCatalog(retained);
+    if (discovery.current === retained) discovery.current = null;
+  }, [backend]);
   const acceptance = useRef<{ contextId: string; planId: string; requestId: string } | null>(null);
   const applying = useRef(false);
+  const reviewIntent = useRef<{
+    contextId: string;
+    planId: string;
+    change: ManagementChange;
+    catalogEntryId?: string;
+  } | null>(null);
   const copyOwner = useRef<{ contextId: string; alias: string; targetId: string } | null>(null);
   const copyReview = useRef<{
     contextId: string;
@@ -56,9 +72,23 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
   const refresh = useCallback(
     async (selected: ExtensionContext, version: number) => {
       if (!backend) return;
-      const [observed, available] = await Promise.allSettled([
+      setCatalogLoading(true);
+      setCatalogError(null);
+      void backend
+        .catalog({ contextId: selected.contextId })
+        .then(
+          (available) => {
+            if (version === generation.current) setCatalog(available);
+          },
+          (failure: unknown) => {
+            if (version === generation.current) setCatalogError(message(failure));
+          }
+        )
+        .finally(() => {
+          if (version === generation.current) setCatalogLoading(false);
+        });
+      const [observed] = await Promise.allSettled([
         backend.environment({ contextId: selected.contextId }),
-        backend.catalog({ contextId: selected.contextId }),
       ]);
       if (version !== generation.current) return;
       if (observed.status === 'fulfilled') {
@@ -80,14 +110,14 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
             copyReview.current = null;
         }
       } else setError(message(observed.reason));
-      if (available.status === 'fulfilled') setCatalog(available.value);
-      else setError(message(available.reason));
     },
     [backend]
   );
 
   useEffect(() => {
     const version = ++generation.current;
+    discoveryGeneration.current += 1;
+    void releaseDiscovery().catch(() => {});
     const previousCopy = copyReview.current;
     if (backend && previousCopy && !previousCopy.attempted)
       void backend
@@ -97,6 +127,8 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
     copyOwner.current = null;
     setContext(null);
     setCatalog(null);
+    setCatalogLoading(false);
+    setCatalogError(null);
     setEnvironment(null);
     setPlan(null);
     setCandidates(null);
@@ -107,6 +139,7 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
     setError(null);
     setBusy(Boolean(backend));
     acceptance.current = null;
+    reviewIntent.current = null;
     if (!backend) return;
     void backend
       .hostStatus()
@@ -128,8 +161,10 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
       });
     return () => {
       generation.current += 1;
+      discoveryGeneration.current += 1;
+      void releaseDiscovery().catch(() => {});
     };
-  }, [backend, client, captureRevision, refresh]);
+  }, [backend, client, captureRevision, refresh, releaseDiscovery]);
 
   useEffect(
     () => () => {
@@ -183,7 +218,8 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
     setError(null);
     try {
       const result = await action();
-      if (version === generation.current) apply(result);
+      if (version !== generation.current) return false;
+      apply(result);
       return true;
     } catch (failure) {
       if (version === generation.current) setError(message(failure));
@@ -193,15 +229,37 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
     }
   }
   async function prepare(change: ManagementChange, catalogEntryId?: string) {
-    if (!backend || !context) return;
+    if (!backend || !context) return false;
     acceptance.current = null;
     const scopedChange = ['install', 'install_skills', 'remove'].includes(change.action)
       ? { ...change, targetIds: [client] }
       : change;
-    await request(
+    return request(
       () => backend.prepare({ contextId: context.contextId, change: scopedChange, catalogEntryId }),
-      setPlan
+      (reviewed) => {
+        reviewIntent.current = {
+          contextId: context.contextId,
+          planId: reviewed.planId,
+          change: scopedChange,
+          ...(catalogEntryId ? { catalogEntryId } : {}),
+        };
+        setPlan(reviewed);
+      }
     );
+  }
+  async function attestExternalUninstall() {
+    const intent = reviewIntent.current;
+    if (
+      !context ||
+      !plan ||
+      !intent ||
+      acceptance.current ||
+      intent.contextId !== context.contextId ||
+      intent.planId !== plan.planId ||
+      !plan.conflicts.some((item) => item.code === 'EXTERNAL_UNINSTALL_REQUIRED')
+    )
+      return;
+    await prepare({ ...intent.change, externalUninstalled: true }, intent.catalogEntryId);
   }
   async function apply() {
     if (!backend || !context || !plan) return;
@@ -216,6 +274,7 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
       () => backend.apply(accepted),
       (result) => {
         setOperation(result);
+        reviewIntent.current = null;
         setPlan(null);
         if (finished(result)) void refresh(context, version);
       }
@@ -227,22 +286,49 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
     if (!backend || !context || !plan || acceptance.current) return;
     await request(
       () => backend.discardPlan({ contextId: context.contextId, planId: plan.planId }),
-      () => setPlan(null)
+      () => {
+        reviewIntent.current = null;
+        setPlan(null);
+      }
     );
   }
   async function discover(source: string, ref?: string) {
     if (!backend || !context) return;
-    await request(
-      () =>
-        backend.discoverSkills({
-          contextId: context.contextId,
-          source: { source, ...(ref ? { ref } : {}) },
-        }),
-      setCandidates
-    );
+    const version = generation.current;
+    const attempt = ++discoveryGeneration.current;
+    const contextId = context.contextId;
+    setCandidates(null);
+    setPreview(null);
+    await request(async () => {
+      await releaseDiscovery();
+      if (version !== generation.current || attempt !== discoveryGeneration.current) return null;
+      const catalog = await backend.discoverSkills({
+        contextId,
+        source: { source, ...(ref ? { ref } : {}) },
+      });
+      const retained = { contextId, catalogId: catalog.catalogId };
+      if (version !== generation.current || attempt !== discoveryGeneration.current) {
+        await backend.discardSkillCatalog(retained);
+        return null;
+      }
+      discovery.current = retained;
+      return catalog;
+    }, setCandidates);
+  }
+  async function closeDiscovery() {
+    const version = generation.current;
+    discoveryGeneration.current += 1;
+    setCandidates(null);
+    setPreview(null);
+    try {
+      await releaseDiscovery();
+    } catch (failure) {
+      if (version === generation.current) setError(message(failure));
+    }
   }
   async function previewSkill(candidateId: string) {
     if (!backend || !context || !candidates) return;
+    const attempt = discoveryGeneration.current;
     await request(
       () =>
         backend.previewSkill({
@@ -250,7 +336,9 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
           catalogId: candidates.catalogId,
           candidateId,
         }),
-      setPreview
+      (value) => {
+        if (attempt === discoveryGeneration.current) setPreview(value);
+      }
     );
   }
   async function cancel() {
@@ -263,6 +351,7 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
   async function restoreLocal(rootId: string, skillName: string, operationId: string) {
     if (!backend || !context) return;
     acceptance.current = null;
+    reviewIntent.current = null;
     await request(
       async () => {
         const captured = await backend.capture({ client, scope: 'user', authoringRootId: rootId });
@@ -405,14 +494,20 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
     setClient,
     context,
     catalog,
+    catalogLoading,
+    catalogError,
     environment,
     plan,
     setPlan,
     closeReview,
+    attestExternalUninstall,
+    canAttestExternalUninstall: Boolean(
+      plan && reviewIntent.current?.planId === plan.planId && !acceptance.current
+    ),
     reviewUncertain: Boolean(acceptance.current && plan),
     operation,
     candidates,
-    setCandidates,
+    closeDiscovery,
     error,
     busy,
     isRunning,

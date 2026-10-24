@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
+import { ManagementError } from '@uap/management-sdk';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createLocalSkillMutationExecutor } from '../../../src/features/extension-management/main/adapters/output/createLocalSkillMutationExecutor';
@@ -138,5 +139,40 @@ describe('local Skill engine adapter', () => {
     });
     expect(f.feature.apply.mock.calls[0]).toEqual(f.feature.apply.mock.calls[1]);
     expect(await readFile(path.join(f.skill, 'SKILL.md'), 'utf8')).toBe('original\n');
+  });
+  it('prepares a fresh deletion after a definitive stale-plan refusal', async () => {
+    const f = await fixture();
+    f.feature.apply.mockRejectedValueOnce(new ManagementError('PLAN_STALE', 'Files changed', 409));
+    await expect(f.executor.deleteSkill(f.skill)).rejects.toThrow('Files changed');
+    await f.executor.deleteSkill(f.skill);
+    expect(f.feature.prepareLocalSkill).toHaveBeenCalledTimes(2);
+    expect(f.feature.apply.mock.calls[0]).not.toEqual(f.feature.apply.mock.calls[1]);
+  });
+  it.each(['failed', 'canceled'])(
+    'prepares a fresh deletion after an observed %s with no effects',
+    async (state) => {
+      const f = await fixture();
+      f.feature.apply.mockResolvedValueOnce({
+        operationId: 'failed-delete',
+        state,
+        result: { mutated: false, nextActions: [] },
+      } as Awaited<ReturnType<typeof f.feature.apply>>);
+      await expect(f.executor.deleteSkill(f.skill)).rejects.toThrow(`Skill change ${state}`);
+      await f.executor.deleteSkill(f.skill);
+      expect(f.feature.prepareLocalSkill).toHaveBeenCalledTimes(2);
+      expect(f.feature.apply.mock.calls[0]).not.toEqual(f.feature.apply.mock.calls[1]);
+    }
+  );
+  it('preserves deletion identity when failed work still requires recovery', async () => {
+    const f = await fixture();
+    f.feature.apply.mockResolvedValueOnce({
+      operationId: 'pending-delete',
+      state: 'failed',
+      result: { mutated: true, nextActions: [] },
+    } as Awaited<ReturnType<typeof f.feature.apply>>);
+    await expect(f.executor.deleteSkill(f.skill)).rejects.toThrow('Skill change failed');
+    await f.executor.deleteSkill(f.skill);
+    expect(f.feature.prepareLocalSkill).toHaveBeenCalledTimes(1);
+    expect(f.feature.apply.mock.calls[0]).toEqual(f.feature.apply.mock.calls[1]);
   });
 });

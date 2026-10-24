@@ -35,12 +35,18 @@ interface CommandOptions {
 const provenanceSchema = z.object({
   repository: z.literal('777genius/universal-agent-plugins'),
   sourceCommit: z.string().regex(/^[a-f0-9]{40}$/),
+  engineVersion: z.string().regex(/^\d+\.\d+\.\d+\+agentteams\.[a-f0-9]{12}$/),
+  baselineRelease: z.object({
+    tag: z.string().regex(/^agentplugins-v\d+\.\d+\.\d+$/),
+    sourceCommit: z.string().regex(/^[a-f0-9]{40}$/),
+  }),
   sha256: z.string().regex(/^[a-f0-9]{64}$/),
   file: z.string().regex(/^uap-management-sdk-[A-Za-z0-9.+-]+\.tgz$/),
 });
 const runtimeSchema = z.object({
   schemaVersion: z.literal(1),
   sourceSha: z.string(),
+  engineVersion: z.string(),
   platform: z.string(),
   sha256: z.string(),
   executable: z.string(),
@@ -75,6 +81,12 @@ export async function stageUapRuntime({
   const provenance = provenanceSchema.parse(
     JSON.parse(await readFile(path.join(sdkRoot, 'provenance.json'), 'utf8'))
   );
+  const expectedVersion = `${provenance.baselineRelease.tag.slice('agentplugins-v'.length)}+agentteams.${provenance.sourceCommit.slice(0, 12)}`;
+  if (provenance.engineVersion !== expectedVersion) {
+    throw new Error(
+      'The UAP build version must identify its reviewed release baseline and source.'
+    );
+  }
   if (sha256(await readFile(path.join(sdkRoot, provenance.file))) !== provenance.sha256) {
     throw new Error('The vendored UAP SDK tarball does not match its pinned checksum.');
   }
@@ -86,6 +98,7 @@ export async function stageUapRuntime({
       );
       if (
         staged.sourceSha === provenance.sourceCommit &&
+        staged.engineVersion === provenance.engineVersion &&
         staged.platform === platform &&
         staged.executable === executable &&
         staged.sha256 === sha256(await readFile(path.join(outputRoot, executable)))
@@ -158,7 +171,7 @@ export async function stageUapRuntime({
         '-buildvcs=false',
         '-mod=readonly',
         '-ldflags',
-        `-s -w -X main.version=0.1.0-development+agentteams.${provenance.sourceCommit.slice(0, 12)}`,
+        `-s -w -X main.version=${provenance.engineVersion}`,
         '-o',
         output,
         './cmd/agentplugins',
@@ -187,6 +200,7 @@ export async function stageUapRuntime({
     const manifest = {
       schemaVersion: 1,
       sourceSha: provenance.sourceCommit,
+      engineVersion: provenance.engineVersion,
       platform,
       sha256: digest,
       executable,

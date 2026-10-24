@@ -9,6 +9,7 @@ const manifestSchema = z
   .object({
     schemaVersion: z.literal(1),
     sourceSha: z.string().regex(/^[a-f0-9]{40}$/),
+    engineVersion: z.string().regex(/^\d+\.\d+\.\d+\+agentteams\.[a-f0-9]{12}$/),
     platform: z.string().regex(/^(darwin|linux|win32)-(arm64|x64)$/),
     sha256: z.string().regex(/^[a-f0-9]{64}$/),
     executable: z.enum(['agentplugins', 'agentplugins.exe']),
@@ -73,7 +74,10 @@ export function verifyPackagedUap(context: UapPackContext): void {
   const resourceRoot = bundledUapDirectory(context);
   const { manifest, digest } = readRuntime(resourceRoot);
   const provenance = z
-    .object({ sourceCommit: z.string().regex(/^[a-f0-9]{40}$/) })
+    .object({
+      sourceCommit: z.string().regex(/^[a-f0-9]{40}$/),
+      engineVersion: z.string(),
+    })
     .parse(
       JSON.parse(
         readFileSync(new URL('../../vendor/uap/sdk/provenance.json', import.meta.url), 'utf8')
@@ -82,6 +86,7 @@ export function verifyPackagedUap(context: UapPackContext): void {
   if (
     manifest.platform !== `${context.electronPlatformName}-${Arch[context.arch]}` ||
     manifest.sourceSha !== provenance.sourceCommit ||
+    manifest.engineVersion !== provenance.engineVersion ||
     manifest.sha256 !== digest
   ) {
     throw new Error(

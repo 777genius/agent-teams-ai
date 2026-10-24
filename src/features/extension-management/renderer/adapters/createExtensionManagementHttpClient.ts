@@ -28,6 +28,7 @@ export function createExtensionManagementHttpClient(baseUrl: string): ExtensionM
     detail: (request) => post('detail', request),
     discoverSkills: (request) => post('discoverSkills', request),
     previewSkill: (request) => post('previewSkill', request),
+    discardSkillCatalog: (request) => post('discardSkillCatalog', request),
     environment: (request) => post('environment', request),
     localSkillStatus: (request) => post('localSkillStatus', request),
     prepareLocalSkill: (request) => post('prepareLocalSkill', request),

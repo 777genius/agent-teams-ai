@@ -39,6 +39,7 @@ function createRuntime(root: string, platform = 'darwin-x64') {
     JSON.stringify({
       schemaVersion: 1,
       sourceSha: 'a'.repeat(40),
+      engineVersion: `0.1.91+agentteams.${'a'.repeat(12)}`,
       platform,
       sha256: digest(readFileSync(binary)),
       executable,

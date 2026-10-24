@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
+import { Checkbox } from '@renderer/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,7 @@ export const ManagementPlanDialog = ({
   uncertain,
   onClose,
   onApply,
+  onAttestExternalUninstall,
 }: {
   plan: ManagementPlan | null;
   busy: boolean;
@@ -26,9 +28,12 @@ export const ManagementPlanDialog = ({
   uncertain: boolean;
   onClose(): void;
   onApply(): void;
+  onAttestExternalUninstall?: () => void;
 }) => {
   const { t } = useAppTranslation('extensions');
   const [now, setNow] = useState(Date.now());
+  const [externalUninstalled, setExternalUninstalled] = useState(false);
+  useEffect(() => setExternalUninstalled(false), [plan?.planId]);
   useEffect(() => {
     if (!plan) return;
     const timer = setTimeout(
@@ -50,6 +55,9 @@ export const ManagementPlanDialog = ({
           <DialogTitle>{t('uap.reviewTitle')}</DialogTitle>
           <DialogDescription>{t('uap.reviewHelp')}</DialogDescription>
         </DialogHeader>
+        {(plan?.action === 'update' || plan?.action === 'sync') && (
+          <p className="text-xs text-text-muted">{t('uap.updatePolicy')}</p>
+        )}
         {plan?.actions.map((action, index) => (
           <div
             key={`${action.targetId}-${index}`}
@@ -72,9 +80,35 @@ export const ManagementPlanDialog = ({
             role={item.severity === 'error' ? 'alert' : undefined}
             className="text-sm text-amber-400"
           >
+            {(item.alias || item.targetId) && (
+              <span className="font-medium">
+                {[item.alias, item.targetId].filter(Boolean).join(' · ')}:{' '}
+              </span>
+            )}
             {item.message}
           </p>
         ))}
+        {!uncertain &&
+          onAttestExternalUninstall &&
+          plan?.conflicts.some((item) => item.code === 'EXTERNAL_UNINSTALL_REQUIRED') && (
+            <div className="space-y-3 rounded-md border border-border p-3">
+              <label className="flex items-start gap-3 text-sm">
+                <Checkbox
+                  checked={externalUninstalled}
+                  disabled={busy}
+                  onCheckedChange={(checked) => setExternalUninstalled(checked === true)}
+                />
+                <span>{t('uap.externalUninstallConfirmation')}</span>
+              </label>
+              <Button
+                variant="outline"
+                disabled={busy || !externalUninstalled}
+                onClick={onAttestExternalUninstall}
+              >
+                {t('uap.reviewExternalUninstall')}
+              </Button>
+            </div>
+          )}
         {expired && (
           <p role="alert" className="text-sm text-amber-400">
             {t('uap.expired')}

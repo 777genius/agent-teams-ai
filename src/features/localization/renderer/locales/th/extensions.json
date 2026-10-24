@@ -753,6 +753,9 @@
     "copyLocal": "Make a local copy",
     "chooseCopySkill": "Choose the exact Skill to copy. You will review its files and select a separate local destination.",
     "pendingChanges": "Inspect or recover the outstanding operation before making another change.",
-    "transitiveDependency": "Managed as a dependency. Update or remove it through the plugin or Skill that added it."
+    "transitiveDependency": "Managed as a dependency. Update or remove it through the plugin or Skill that added it.",
+    "externalUninstallConfirmation": "I removed these plugins in the native client, or they were never activated.",
+    "reviewExternalUninstall": "Review confirmed removal",
+    "backToSource": "Back to discovered Skills"
   }
 }

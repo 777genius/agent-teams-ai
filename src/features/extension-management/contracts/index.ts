@@ -64,6 +64,7 @@ export interface ExtensionManagementAPI {
   previewSkill(
     request: ExtensionContextRequest & { catalogId: string; candidateId: string }
   ): Promise<SkillPreview>;
+  discardSkillCatalog(request: ExtensionContextRequest & { catalogId: string }): Promise<void>;
   environment(request: ExtensionContextRequest): Promise<ManagementEnvironment>;
   localSkillStatus(
     request: ExtensionContextRequest & { skillPath: string }
@@ -97,6 +98,7 @@ export const EXTENSION_MANAGEMENT_METHODS = [
   'detail',
   'discoverSkills',
   'previewSkill',
+  'discardSkillCatalog',
   'environment',
   'localSkillStatus',
   'prepareLocalSkill',

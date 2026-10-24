@@ -22,6 +22,7 @@ interface ContextRecord {
   observing: Set<string>;
 }
 interface EnvironmentAdmission {
+  revision: number;
   accepted: Map<string, ManagementOperation>;
   lease?: MutationLease;
   resources: Set<string>;
@@ -52,6 +53,14 @@ export function createExtensionManagementApplication(
     return value;
   };
   const observe = (value: ContextRecord, operation: ManagementOperation): ManagementOperation => {
+    const previous = value.admission.accepted.get(operation.requestId);
+    if (
+      !previous ||
+      previous.state !== operation.state ||
+      previous.resolvedBy !== operation.resolvedBy ||
+      value.admission.uncertainRequests.has(operation.requestId)
+    )
+      value.admission.revision += 1;
     value.admission.accepted.set(operation.requestId, operation);
     value.admission.uncertainRequests.delete(operation.requestId);
     return operation;
@@ -90,8 +99,13 @@ export function createExtensionManagementApplication(
     );
     return { ...environment, uncertainApplications };
   };
-  const inspect = async (value: ContextRecord) =>
-    reconcile(value, await value.connection.client.environment());
+  const inspect = async (value: ContextRecord) => {
+    const revision = value.admission.revision;
+    const environment = await value.connection.client.environment();
+    if (revision !== value.admission.revision)
+      throw new Error('Extension work changed during inspection. Refresh and try again.');
+    return reconcile(value, environment);
+  };
 
   return {
     async hostStatus() {
@@ -117,6 +131,7 @@ export function createExtensionManagementApplication(
         const admission: EnvironmentAdmission = environments.get(
           connection.session.environmentId
         ) ?? {
+          revision: 0,
           accepted: new Map(),
           accepting: 0,
           uncertainRequests: new Map(),
@@ -168,6 +183,9 @@ export function createExtensionManagementApplication(
         input.catalogId,
         input.candidateId
       );
+    },
+    async discardSkillCatalog(input) {
+      await record(input.contextId).connection.client.skills.discard(input.catalogId);
     },
     async environment(raw) {
       const input = raw,
@@ -313,27 +331,31 @@ export function createExtensionManagementApplication(
         !uncertainPlan
       )
         throw new Error('Resolve the outstanding extension operation before another change.');
-      if (!value.admission.lease)
-        value.admission.lease = await gate.reserveMutation(
-          plan && value.captured.resourcesForPlan
-            ? value.captured.resourcesForPlan(plan)
-            : value.captured.resources,
-          () => value.captured.assertInactive(plan)
-        );
-      else await value.captured.assertInactive(plan);
-      value.admission.uncertainRequests.set(input.requestId, {
-        plan,
-        contextId: value.public.contextId,
-      });
       value.admission.accepting += 1;
+      value.admission.revision += 1;
       let accepting = true;
+      let attempted = false;
       const finishAcceptance = () => {
         if (accepting) {
           value.admission.accepting -= 1;
+          value.admission.revision += 1;
           accepting = false;
         }
       };
       try {
+        if (!value.admission.lease)
+          value.admission.lease = await gate.reserveMutation(
+            value.captured.resourcesForPlan
+              ? value.captured.resourcesForPlan(plan)
+              : value.captured.resources,
+            () => value.captured.assertInactive(plan)
+          );
+        else await value.captured.assertInactive(plan);
+        value.admission.uncertainRequests.set(input.requestId, {
+          plan,
+          contextId: value.public.contextId,
+        });
+        attempted = true;
         const accepted = await value.connection.client.apply(input.planId, input.requestId);
         finishAcceptance();
         const operation = observe(value, accepted);
@@ -342,6 +364,10 @@ export function createExtensionManagementApplication(
         return operation;
       } catch (error) {
         finishAcceptance();
+        if (!attempted) {
+          await inspect(value).catch(() => null);
+          throw error;
+        }
         const definitive = isDefinitiveRefusal(error);
         if (definitive) value.admission.uncertainRequests.delete(input.requestId);
         else
@@ -351,7 +377,7 @@ export function createExtensionManagementApplication(
           });
         // An error may follow durable acceptance. Inspect instead of releasing
         // the fence or silently submitting a replacement request identity.
-        const environment = await value.connection.client.environment().catch(() => null);
+        const environment = await inspect(value).catch(() => null);
         const accepted = environment?.pendingOperations?.find(
           (item) => item.requestId === input.requestId
         );
@@ -360,7 +386,6 @@ export function createExtensionManagementApplication(
           follow(value, accepted);
           return accepted;
         }
-        if (definitive && environment) await reconcile(value, environment);
         // Empty inspection cannot prove that a lost acceptance reply had no
         // durable effect. Only the same request's observed result resolves it.
         throw error;

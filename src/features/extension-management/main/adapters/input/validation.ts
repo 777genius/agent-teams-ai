@@ -14,6 +14,7 @@ export const contextSchema = z.object({ contextId: identity }).strict();
 export const catalogSchema = contextSchema.extend({ query: z.string().max(500).optional() });
 export const detailSchema = contextSchema.extend({ id: identity });
 export const discardPlanSchema = contextSchema.extend({ planId: identity });
+export const discardSkillCatalogSchema = contextSchema.extend({ catalogId: identity });
 export const applySchema = contextSchema.extend({
   planId: identity,
   requestId: z
@@ -96,6 +97,7 @@ export const changeSchema = z
     catalogId: identity.optional(),
     candidateIds: z.array(identity).max(256).optional(),
     operationId: identity.optional(),
+    externalUninstalled: z.boolean().optional(),
   })
   .strict();
 export const prepareSchema = contextSchema.extend({

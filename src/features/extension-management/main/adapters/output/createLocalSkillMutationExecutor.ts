@@ -1,6 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 
+import { isDefinitiveManagementRefusal } from '../../infrastructure/managementErrorPolicy';
+
 import type { LocalSkillChange, ManagementOperation, ManagementPlan } from '../../../contracts';
 import type { ExtensionManagementFeature } from '../../../core/application/ports';
 import type {
@@ -106,11 +108,17 @@ export function createLocalSkillMutationExecutor(
   }
   async function apply(retained: RetainedLocalReview): Promise<void> {
     retained.attempted = true;
-    let operation = await feature.apply({
-      contextId: retained.contextId,
-      planId: retained.plan.planId,
-      requestId: retained.requestId,
-    });
+    let operation: ManagementOperation;
+    try {
+      operation = await feature.apply({
+        contextId: retained.contextId,
+        planId: retained.plan.planId,
+        requestId: retained.requestId,
+      });
+    } catch (error) {
+      if (isDefinitiveManagementRefusal(error)) reviews.delete(retained.plan.planId);
+      throw error;
+    }
     const deadline = Date.now() + 120_000;
     while (!terminal(operation)) {
       if (Date.now() >= deadline)
@@ -124,6 +132,11 @@ export function createLocalSkillMutationExecutor(
       });
     }
     if (operation.state !== 'succeeded') {
+      const unchanged =
+        (operation.state === 'failed' || operation.state === 'canceled') &&
+        operation.result?.mutated === false &&
+        !operation.result.nextActions.some((action) => /recover|repair|inspect/.test(action.kind));
+      if (unchanged || operation.resolvedBy) reviews.delete(retained.plan.planId);
       throw new Error(
         `${operation.result?.message || `Skill change ${operation.state}.`} Open Extensions → Skills to inspect recovery.`
       );
@@ -172,7 +185,12 @@ export function createLocalSkillMutationExecutor(
         retained = retain(contextId, plan, skillDir);
         deletions.set(skillDir, retained);
       }
-      await apply(retained);
+      try {
+        await apply(retained);
+      } catch (error) {
+        if (!reviews.has(retained.plan.planId)) deletions.delete(skillDir);
+        throw error;
+      }
       deletions.delete(skillDir);
     },
   };

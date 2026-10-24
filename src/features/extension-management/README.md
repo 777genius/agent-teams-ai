@@ -118,6 +118,14 @@ The source stager selects the exact toolchain declared in that pinned UAP
 The packaged CI matrix provisions Go explicitly on every runner. Refresh the SDK
 tarball, provenance and native source pin together, then run the packaged matrix.
 
+Provenance also records the verified ancestor release and the embedded engine
+version, for example `0.1.91+agentteams.<source-prefix>`. The signed registry uses
+the real installer version for compatibility; the source default
+`0.1.0-development` cannot represent this later release baseline. Staging validates
+the version against the pinned baseline tag and source, records it in runtime.json,
+and invalidates older cached builds. Neither build nor startup queries a latest
+release. A new baseline must be checked against its immutable upstream release tag.
+
 Signing changes executable bytes. The macOS signing hook preserves the existing
 signer options and bounded retry policy, refreshes the helper digest after nested
 signing and before the outer app seal, then verifies without writing. Windows

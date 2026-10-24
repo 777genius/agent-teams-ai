@@ -72,6 +72,7 @@ function fixture(pending: ManagementOperation[] = []) {
     cancel: vi.fn(async () => operation('canceled')),
     plans: { discard: vi.fn(async () => {}) },
     skills: {
+      discard: vi.fn(async () => {}),
       local: {
         prepare: vi.fn(async (change: LocalSkillChange) => ({
           planId: `plan-${change.action}`,
@@ -117,6 +118,33 @@ function fixture(pending: ManagementOperation[] = []) {
   };
 }
 describe('captured extension management', () => {
+  it('releases a discovery through its captured SDK client without discarding a retained review', async () => {
+    const f = fixture();
+    const context = await f.feature.capture({ client: 'claude', scope: 'user' });
+    await f.feature.prepare({ contextId: context.contextId, change: { action: 'sync' } });
+    await f.feature.discardSkillCatalog({ contextId: context.contextId, catalogId: 'catalog-a' });
+    expect(f.client.skills.discard).toHaveBeenCalledWith('catalog-a');
+    expect(f.client.plans.discard).not.toHaveBeenCalled();
+    await f.feature.apply({
+      contextId: context.contextId,
+      planId: 'plan-a',
+      requestId: 'catalog-independent-review',
+    });
+    expect(f.client.apply).toHaveBeenCalledOnce();
+    await f.feature.close();
+  });
+  it('passes explicit native-removal attestation to the engine for the reviewed graph intent', async () => {
+    const f = fixture();
+    const context = await f.feature.capture({ client: 'claude', scope: 'user' });
+    const change: ManagementChange = {
+      action: 'update',
+      aliases: ['root-a'],
+      externalUninstalled: true,
+    };
+    await f.feature.prepare({ contextId: context.contextId, change });
+    expect(f.client.prepare).toHaveBeenCalledWith(change);
+    await f.feature.close();
+  });
   it('admits exact local restoration through a pending fence while refusing new local work', async () => {
     const pending: ManagementOperation = {
       ...operation('partial'),
@@ -241,6 +269,67 @@ describe('captured extension management', () => {
       'extension change'
     );
     accept(operation());
+    await application;
+    await f.feature.close();
+  });
+  it('rejects an old empty inspection after a later acceptance in another capture of the same environment', async () => {
+    const f = fixture();
+    const first = await f.feature.capture({ client: 'claude', scope: 'user' });
+    f.advanceCapture();
+    const second = await f.feature.capture({ client: 'claude', scope: 'user' });
+    await f.feature.prepare({ contextId: second.contextId, change: { action: 'sync' } });
+    const empty = await f.client.environment();
+    let finishInspection!: () => void;
+    f.client.environment.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishInspection = () => resolve(empty);
+      })
+    );
+    const inspection = f.feature.environment({ contextId: first.contextId });
+    const rejection = expect(inspection).rejects.toThrow('changed during inspection');
+    await f.feature.apply({
+      contextId: second.contextId,
+      planId: 'plan-a',
+      requestId: 'request-identity-a',
+    });
+    finishInspection();
+    await rejection;
+    await expect(f.gate.launch(['profile-root'], async () => 'started')).rejects.toThrow(
+      'extension change'
+    );
+    await f.feature.close();
+  });
+  it('keeps an existing recovery fence while asynchronous activity admission is checked', async () => {
+    const f = fixture([operation('interrupted')]);
+    const context = await f.feature.capture({ client: 'claude', scope: 'user' });
+    await f.feature.prepare({
+      contextId: context.contextId,
+      change: { action: 'recover', operationId: 'op-a' },
+    });
+    let admit!: () => void;
+    f.assertInactive.mockClear().mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          admit = resolve;
+        })
+    );
+    const application = f.feature.apply({
+      contextId: context.contextId,
+      planId: 'plan-a',
+      requestId: 'recovery-request',
+    });
+    await vi.waitFor(() => expect(f.assertInactive).toHaveBeenCalledOnce());
+    f.client.environment.mockResolvedValue({
+      contextId: 'engine-a',
+      entries: [],
+      diagnostics: [],
+      pendingOperations: [],
+    });
+    await f.feature.environment({ contextId: context.contextId });
+    await expect(f.gate.launch(['profile-root'], async () => 'started')).rejects.toThrow(
+      'extension change'
+    );
+    admit();
     await application;
     await f.feature.close();
   });

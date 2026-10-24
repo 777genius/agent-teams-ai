@@ -25,6 +25,7 @@ import {
 } from '@renderer/components/ui/select';
 import { Download, Loader2, RefreshCw } from 'lucide-react';
 
+import { ManagedSkillSourcePreview } from './ManagedSkillSourcePreview';
 import { ManagementOperationView } from './ManagementOperationView';
 import { ManagementPlanDialog } from './ManagementPlanDialog';
 
@@ -70,8 +71,7 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
     ((action === 'install' || action === 'install_skills') && selectedTarget?.available !== true);
   const changeSource = (value: string) => {
     setSource(value);
-    model.setCandidates(null);
-    model.setPreview(null);
+    void model.closeDiscovery();
     setSelectedCandidates([]);
   };
   const selectedUpdatable = selected.filter((alias) =>
@@ -180,9 +180,7 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
                 variant="outline"
                 size="sm"
                 disabled={actionDisabled('update')}
-                onClick={() =>
-                  void model.prepare({ action: 'update', aliases: selectedUpdatable })
-                }
+                onClick={() => void model.prepare({ action: 'update', aliases: selectedUpdatable })}
               >
                 {t('uap.updateSelected', { count: selectedUpdatable.length })}
               </Button>
@@ -208,8 +206,9 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
             </Button>
           </div>
         </div>
-        <p className="text-xs text-text-muted">{t('uap.environmentActions')}</p>
-        <p className="text-xs text-text-muted">{t('uap.updatePolicy')}</p>
+        {Boolean(model.environment?.entries.length) && (
+          <p className="text-xs text-text-muted">{t('uap.environmentActions')}</p>
+        )}
         {!model.busy && !model.installed.length && (
           <p className="text-sm text-text-muted">{t('uap.noInstalled')}</p>
         )}
@@ -340,12 +339,22 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
       {kind === 'plugin' && (
         <div className="space-y-3">
           <h3 className="text-sm font-medium">{t('uap.catalog')}</h3>
+          {model.catalogLoading && <p className="text-xs text-text-muted">{t('uap.working')}</p>}
+          {model.catalogError && (
+            <p className="text-xs text-amber-400">
+              {t('uap.catalogUnavailable')} {model.catalogError}
+            </p>
+          )}
           {model.catalog?.freshness !== 'current' && model.catalog && (
             <p className="text-xs text-text-muted">{t('uap.catalogUnavailable')}</p>
           )}
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {model.items.map((entry) => (
-              <article key={entry.id} className="space-y-2 rounded-lg border border-border p-3">
+              <article
+                key={entry.id}
+                data-catalog-id={entry.id}
+                className="space-y-2 rounded-lg border border-border p-3"
+              >
                 <Button
                   variant="link"
                   className="h-auto p-0 text-left font-medium"
@@ -375,147 +384,151 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
           </div>
         </div>
       )}
-      <Dialog open={sourceOpen} onOpenChange={setSourceOpen}>
+      <Dialog
+        open={sourceOpen}
+        onOpenChange={(open) => {
+          if (!open && model.preview) model.setPreview(null);
+          else {
+            setSourceOpen(open);
+            if (!open) void model.closeDiscovery();
+          }
+        }}
+      >
         <DialogContent className="max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{t('uap.fromSource')}</DialogTitle>
-            <DialogDescription>{t('uap.sourceHelp')}</DialogDescription>
-          </DialogHeader>
-          <Label htmlFor={`uap-source-${kind}`}>{t('uap.source')}</Label>
-          <Input
-            id={`uap-source-${kind}`}
-            value={source}
-            onChange={(event) => changeSource(event.target.value)}
-            placeholder="https://github.com/owner/repository"
-          />
-          <Label htmlFor={`uap-ref-${kind}`}>{t('uap.revision')}</Label>
-          <Input
-            id={`uap-ref-${kind}`}
-            value={revision}
-            onChange={(event) => {
-              setRevision(event.target.value);
-              model.setCandidates(null);
-              model.setPreview(null);
-              setSelectedCandidates([]);
-            }}
-          />
-          {kind === 'plugin' && (
+          {model.preview ? (
+            <ManagedSkillSourcePreview
+              preview={model.preview}
+              candidates={model.candidates}
+              onBack={() => model.setPreview(null)}
+            />
+          ) : (
             <>
-              <Label htmlFor="uap-alias">{t('uap.alias')}</Label>
+              <DialogHeader>
+                <DialogTitle>{t('uap.fromSource')}</DialogTitle>
+                <DialogDescription>{t('uap.sourceHelp')}</DialogDescription>
+              </DialogHeader>
+              <Label htmlFor={`uap-source-${kind}`}>{t('uap.source')}</Label>
               <Input
-                id="uap-alias"
-                value={alias}
-                onChange={(event) => setAlias(event.target.value)}
+                id={`uap-source-${kind}`}
+                value={source}
+                onChange={(event) => changeSource(event.target.value)}
+                placeholder="https://github.com/owner/repository"
               />
-            </>
-          )}
-          {model.error && (
-            <p role="alert" className="text-sm text-red-400">
-              {model.error}
-            </p>
-          )}
-          {kind === 'skill' && !model.candidates && (
-            <Button
-              disabled={disabled || !source.trim()}
-              onClick={() => void model.discover(source.trim(), revision.trim() || undefined)}
-            >
-              {t('uap.findSkills')}
-            </Button>
-          )}
-          {model.candidates && (
-            <div className="space-y-3">
-              {model.candidates.diagnostics.map((item, index) => (
-                <p key={index} className="text-xs text-amber-400">
-                  {item.message}
-                </p>
-              ))}
-              {model.candidates.candidates.map((candidate) => (
-                <div
-                  key={candidate.id}
-                  className="flex items-start gap-3 rounded-md border border-border p-3"
-                >
-                  <Checkbox
-                    aria-label={candidate.name}
-                    checked={selectedCandidates.includes(candidate.id)}
-                    disabled={!candidate.available}
-                    onCheckedChange={(checked) =>
-                      setSelectedCandidates((values) =>
-                        checked
-                          ? [...values, candidate.id]
-                          : values.filter((value) => value !== candidate.id)
-                      )
-                    }
+              <Label htmlFor={`uap-ref-${kind}`}>{t('uap.revision')}</Label>
+              <Input
+                id={`uap-ref-${kind}`}
+                value={revision}
+                onChange={(event) => {
+                  setRevision(event.target.value);
+                  void model.closeDiscovery();
+                  setSelectedCandidates([]);
+                }}
+              />
+              {kind === 'plugin' && (
+                <>
+                  <Label htmlFor="uap-alias">{t('uap.alias')}</Label>
+                  <Input
+                    id="uap-alias"
+                    value={alias}
+                    onChange={(event) => setAlias(event.target.value)}
                   />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium">{candidate.name}</span>
-                    <span className="block text-xs text-text-muted">{candidate.description}</span>
-                    {!candidate.available && (
-                      <span className="block text-xs text-amber-400">{candidate.reason}</span>
-                    )}
-                  </span>
+                </>
+              )}
+              {model.error && (
+                <p role="alert" className="text-sm text-red-400">
+                  {model.error}
+                </p>
+              )}
+              {kind === 'skill' && (
+                <Button
+                  disabled={disabled || !source.trim()}
+                  onClick={() => {
+                    setSelectedCandidates([]);
+                    void model.discover(source.trim(), revision.trim() || undefined);
+                  }}
+                >
+                  {t('uap.findSkills')}
+                </Button>
+              )}
+              {model.candidates && (
+                <div className="space-y-3">
+                  {model.candidates.diagnostics.map((item, index) => (
+                    <p key={index} className="text-xs text-amber-400">
+                      {item.message}
+                    </p>
+                  ))}
+                  {model.candidates.candidates.map((candidate) => (
+                    <div
+                      key={candidate.id}
+                      className="flex items-start gap-3 rounded-md border border-border p-3"
+                    >
+                      <Checkbox
+                        aria-label={candidate.name}
+                        checked={selectedCandidates.includes(candidate.id)}
+                        disabled={!candidate.available}
+                        onCheckedChange={(checked) =>
+                          setSelectedCandidates((values) =>
+                            checked
+                              ? [...values, candidate.id]
+                              : values.filter((value) => value !== candidate.id)
+                          )
+                        }
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium">{candidate.name}</span>
+                        <span className="block text-xs text-text-muted">
+                          {candidate.description}
+                        </span>
+                        {!candidate.available && (
+                          <span className="block text-xs text-amber-400">{candidate.reason}</span>
+                        )}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={model.busy}
+                        onClick={() => void model.previewSkill(candidate.id)}
+                      >
+                        {t('uap.preview')}
+                      </Button>
+                    </div>
+                  ))}
                   <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={model.busy}
-                    onClick={() => void model.previewSkill(candidate.id)}
+                    disabled={actionDisabled('install_skills') || !selectedCandidates.length}
+                    onClick={async () => {
+                      const reviewed = await model.prepare({
+                        action: 'install_skills',
+                        catalogId: model.candidates!.catalogId,
+                        candidateIds: selectedCandidates,
+                      });
+                      if (reviewed) {
+                        setSourceOpen(false);
+                        await model.closeDiscovery();
+                      }
+                    }}
                   >
-                    {t('uap.preview')}
+                    {t('uap.reviewInstall')}
                   </Button>
                 </div>
-              ))}
-              <Button
-                disabled={actionDisabled('install_skills') || !selectedCandidates.length}
-                onClick={() => {
-                  void model.prepare({
-                    action: 'install_skills',
-                    catalogId: model.candidates!.catalogId,
-                    candidateIds: selectedCandidates,
-                  });
-                  setSourceOpen(false);
-                }}
-              >
-                {t('uap.reviewInstall')}
-              </Button>
-            </div>
+              )}
+              {kind === 'plugin' && (
+                <Button
+                  disabled={actionDisabled('install') || !source.trim()}
+                  onClick={async () => {
+                    const reviewed = await model.prepare({
+                      action: 'install',
+                      source: source.trim(),
+                      ...(revision.trim() ? { ref: revision.trim() } : {}),
+                      ...(alias.trim() ? { alias: alias.trim() } : {}),
+                    });
+                    if (reviewed) setSourceOpen(false);
+                  }}
+                >
+                  {t('uap.reviewInstall')}
+                </Button>
+              )}
+            </>
           )}
-          {kind === 'plugin' && (
-            <Button
-              disabled={actionDisabled('install') || !source.trim()}
-              onClick={() => {
-                void model.prepare({
-                  action: 'install',
-                  source: source.trim(),
-                  ...(revision.trim() ? { ref: revision.trim() } : {}),
-                  ...(alias.trim() ? { alias: alias.trim() } : {}),
-                });
-                setSourceOpen(false);
-              }}
-            >
-              {t('uap.reviewInstall')}
-            </Button>
-          )}
-        </DialogContent>
-      </Dialog>
-      <Dialog
-        open={Boolean(model.preview)}
-        onOpenChange={(open) => !open && model.setPreview(null)}
-      >
-        <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{t('uap.preview')}</DialogTitle>
-            <DialogDescription>
-              {
-                model.candidates?.candidates.find((item) => item.id === model.preview?.candidateId)
-                  ?.name
-              }
-            </DialogDescription>
-          </DialogHeader>
-          {model.preview?.diagnostics.map((item, index) => (
-            <p key={index} className="text-xs text-amber-400">
-              {item.message}
-            </p>
-          ))}
-          {model.preview && <MarkdownViewer content={model.preview.markdown} bare />}
         </DialogContent>
       </Dialog>
       <ManagementPlanDialog
@@ -525,6 +538,9 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
         uncertain={model.reviewUncertain}
         onClose={() => void model.closeReview()}
         onApply={() => void model.apply()}
+        onAttestExternalUninstall={
+          model.canAttestExternalUninstall ? () => void model.attestExternalUninstall() : undefined
+        }
       />
       <Dialog
         open={Boolean(model.copyCandidates?.length)}

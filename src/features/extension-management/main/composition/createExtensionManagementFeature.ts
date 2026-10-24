@@ -1,7 +1,5 @@
 import { randomUUID } from 'node:crypto';
 
-import { ManagementError } from '@uap/management-sdk';
-
 import { createExtensionManagementApplication } from '../../core/application/createExtensionManagementApplication';
 import { ExtensionRuntimeGate } from '../../core/application/ExtensionRuntimeGate';
 import {
@@ -10,6 +8,7 @@ import {
   contextSchema,
   detailSchema,
   discardPlanSchema,
+  discardSkillCatalogSchema,
   discoverSchema,
   localSkillSchema,
   localSkillStatusSchema,
@@ -20,6 +19,7 @@ import {
   selectionSchema,
   skillCopySourcesSchema,
 } from '../adapters/input/validation';
+import { isDefinitiveManagementRefusal } from '../infrastructure/managementErrorPolicy';
 
 import type {
   ExtensionContextResolver,
@@ -35,8 +35,7 @@ export function createExtensionManagementFeature(
     resolver,
     gate,
     randomUUID,
-    (error) =>
-      error instanceof ManagementError && ['PLAN_STALE', 'HISTORY_FULL'].includes(error.code)
+    isDefinitiveManagementRefusal
   );
   return {
     hostStatus: () => feature.hostStatus(),
@@ -45,6 +44,8 @@ export function createExtensionManagementFeature(
     detail: async (raw) => feature.detail(detailSchema.parse(raw)),
     discoverSkills: async (raw) => feature.discoverSkills(discoverSchema.parse(raw)),
     previewSkill: async (raw) => feature.previewSkill(previewSkillSchema.parse(raw)),
+    discardSkillCatalog: async (raw) =>
+      feature.discardSkillCatalog(discardSkillCatalogSchema.parse(raw)),
     environment: async (raw) => feature.environment(contextSchema.parse(raw)),
     localSkillStatus: async (raw) => feature.localSkillStatus(localSkillStatusSchema.parse(raw)),
     prepareLocalSkill: async (raw) => feature.prepareLocalSkill(localSkillSchema.parse(raw)),
