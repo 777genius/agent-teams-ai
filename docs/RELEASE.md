@@ -43,11 +43,11 @@ Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.18.0 -->
 
-Agent Teams 2.18.0 adds group chats and task folders for organizing team work, and fixes OpenCode teammates getting stuck after relaunch or stop.
+Agent Teams 2.18.0 adds group chats and task folders for organizing team work, and fixes OpenCode tasks and messages getting stuck during relaunch.
 
 ### What's New
 
-- Create named group chats where agents route messages, link tasks, and open chats on request.
+- Create named group chats where agents route messages, link tasks, and create new chats when you ask.
 - Organize tasks in nested folders with drag-and-drop.
 - Send images, documents, and other files to your teammates.
 - See charts, tables, and Mermaid diagrams from teammates rendered directly in chat.
@@ -62,12 +62,12 @@ Agent Teams 2.18.0 adds group chats and task folders for organizing team work, a
 
 ### Fixes
 
-- Deliver tasks and messages sent while an OpenCode teammate relaunches, instead of leaving them stuck in the queue.
+- Deliver tasks and messages to OpenCode teammates, including during relaunch, instead of leaving them stuck unread.
 - Relaunching an OpenCode teammate no longer shows the whole mixed team as disconnected.
 - Stop no longer reports a failure after the team's agents have already exited.
 - Use your configured Anthropic model and team default with compatible endpoints instead of a hard-coded model.
 - After canceling a team launch, show its saved draft and Launch button instead of loading forever.
-- Update Electron and the bundled runtime with security fixes.
+- Update Electron and other dependencies with security fixes.
 
 ### macOS installation
 
