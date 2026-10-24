@@ -43,7 +43,9 @@ import { buildTeamGraphDefaultLayoutSeed } from '@shared/utils/teamGraphDefaultL
 
 import {
   holdSelectTeamLoadForProvisioning,
+  isSelectedTeamLoadStillCurrent,
   isSelectTeamLoadInFlight,
+  recoverCancelledTeamSelection,
   type SelectTeamLoadOptions,
   settleLatchedSelectTeamLoad,
 } from '../team/selectTeamLoadLatch';
@@ -670,21 +672,6 @@ function isTeamRequestScopeCurrent(
   return (
     isContextRequestScopeCurrent(get, scope) &&
     isTeamLocalStateEpochCurrent(teamName, scope.teamStateEpoch)
-  );
-}
-
-function isSelectedTeamLoadStillCurrent(
-  get: () => AppState,
-  teamName: string,
-  requestNonce: number,
-  requestScope: TeamRequestScope
-): boolean {
-  const state = get();
-  return (
-    isTeamRequestScopeCurrent(get, teamName, requestScope) &&
-    state.selectedTeamName === teamName &&
-    state.selectedTeamLoadNonce === requestNonce &&
-    state.selectedTeamData?.teamName === teamName
   );
 }
 
@@ -2896,7 +2883,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     try {
       // A throw after the loading write must still reach settlement, not leave the latch.
       scheduleToolApprovalSettingsSync(teamName, selectedSettings);
-      snapshotRead = fetchTeamDataDeduped(
+      snapshotRead = (opts?.forceFreshSnapshot ? fetchTeamDataFresh : fetchTeamDataDeduped)(
         teamName,
         requestScope,
         () => isTeamRequestScopeCurrent(get, teamName, requestScope),
@@ -4833,7 +4820,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           visible: true,
         });
         if (state.selectedTeamName === progress.teamName && state.selectedTeamData == null) {
-          void state.selectTeam(progress.teamName, { allowReloadWhileProvisioning: true });
+          void state.selectTeam(progress.teamName, {
+            allowReloadWhileProvisioning: true,
+            ...(progress.state === 'cancelled' ? { forceFreshSnapshot: true } : {}),
+          });
         } else {
           void state.refreshTeamData(progress.teamName, { withDedup: true });
         }
@@ -4886,6 +4876,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         };
       });
     }
+
+    recoverCancelledTeamSelection(get, progress, isCanonicalRun && !hydratedVisibleTeam);
 
     if (
       isCanonicalRun &&
