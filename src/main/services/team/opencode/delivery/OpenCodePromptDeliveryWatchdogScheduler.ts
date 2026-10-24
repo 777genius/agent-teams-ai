@@ -1,4 +1,5 @@
 import {
+  OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
   OPENCODE_PROMPT_WATCHDOG_GLOBAL_CONCURRENCY,
   OPENCODE_PROMPT_WATCHDOG_PER_TEAM_CONCURRENCY,
 } from './OpenCodePromptDeliveryWatchdog';
@@ -124,7 +125,14 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
           teamName: input.teamName,
           memberName: input.memberName,
           run: async () => {
-            if (isCurrent?.() === false) return;
+            if (isCurrent?.() === false) {
+              await this.rearmSupersededWake({
+                teamName: input.teamName,
+                memberName: input.memberName,
+                messageId,
+              });
+              return;
+            }
             if (!this.deps.canDeliverToTeamRuntime(input.teamName)) {
               const recovered = await this.deps.recoverBeforeDelivery({
                 teamName: input.teamName,
@@ -134,7 +142,14 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
                 return;
               }
             }
-            if (isCurrent?.() === false) return;
+            if (isCurrent?.() === false) {
+              await this.rearmSupersededWake({
+                teamName: input.teamName,
+                memberName: input.memberName,
+                messageId,
+              });
+              return;
+            }
             try {
               this.logRelayDiagnostics({
                 teamName: input.teamName,
@@ -204,6 +219,33 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
         nowMs: Date.now(),
       }
     );
+  }
+
+  /**
+   * A wake can outlive the relay generation it was armed under: it waits behind
+   * the per-member queue and fires after that generation rotated. Dropping it
+   * silently lost its row, because nothing re-arms a row already sitting in the
+   * inbox. While the row is still unread, re-arm the wake unscoped - the walk
+   * re-derives identity and authority from durable state, exactly like the
+   * manual relay path - so a superseded generation delays delivery instead of
+   * losing the message.
+   */
+  private async rearmSupersededWake(input: {
+    teamName: string;
+    memberName: string;
+    messageId: string;
+  }): Promise<void> {
+    const messages = await this.deps
+      .getInboxMessages({ teamName: input.teamName, memberName: input.memberName })
+      .catch(() => []);
+    const target = messages.find((message) => message.messageId === input.messageId);
+    if (!target || target.read) return;
+    this.schedule({
+      teamName: input.teamName,
+      memberName: input.memberName,
+      messageId: input.messageId,
+      delayMs: OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
+    });
   }
 
   async isStaleError(input: OpenCodePromptDeliveryWatchdogStaleErrorInput): Promise<boolean> {
