@@ -1,9 +1,9 @@
-import type { RuntimeProviderDirectoryEntryDto } from '../../contracts';
 import {
   getRuntimeProviderOnboardingPlanProviderIds,
   resolveRuntimeProviderOnboardingRouteGeneration,
 } from '../../core/domain';
 
+import type { RuntimeProviderDirectoryEntryDto } from '../../contracts';
 import type {
   OpenCodeGeneration,
   RuntimeProviderOnboardingPlan,
