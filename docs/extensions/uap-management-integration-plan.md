@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v3; independent lifecycle, transport and UX critiques incorporated.
+Status: implementation plan v6; independent implementation review and actual desktop findings incorporated.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -401,3 +401,73 @@ engine workstream; a disabled control is only fallback evidence.
 The focused admission/application suite currently has 22 passing tests. Full CI,
 actual Electron UX, local authoring integration, and signed package qualification
 remain required; this revision does not change the project/worktree dependency.
+
+### v6 independent code review and desktop qualification
+
+The implementation review requires these corrections in the existing feature:
+
+- Prevent stale empty environment responses from releasing a newer mutation
+  admission fence. Carry one shared admission generation across captured contexts,
+  including recovery admission. Deferred-response regressions passed 23/23 in the
+  focused application suite; final current-commit qualification remains required.
+- Carry `skills.discard` through the SDK adapter, shared facade, IPC and HTTP.
+  Release catalogs on replacement and dialog close/unmount. A reviewed prepared
+  plan owns its snapshot independently; no additional cache service is needed.
+- Release cached local deletion reviews after definitive pre-effect refusal or a
+  conclusively settled no-effect terminal result. Preserve exact request identity
+  for uncertain acceptance, running work and unresolved effects. A later explicit
+  Delete must be able to obtain a fresh plan without restarting the application.
+- Present the Go review's `EXTERNAL_UNINSTALL_REQUIRED` conflicts with their exact
+  bindings. Offer explicit confirmation only after the user has completed the
+  native uninstall, or confirms the plugin was never activated, then request a new
+  review with `externalUninstalled: true`. Never infer confirmation from a client
+  name or save it as a preference. Applicability follows actual prepared removals,
+  including transitive removals during update/sync and full native convergence.
+  Receipt-only recovery and unrelated graphs refuse this flag. Review warnings
+  identify the exact attested bindings. No pending-operation gate is bypassed.
+
+Desktop inspection also identified practical UX corrections:
+
+- Loading an unavailable remote catalog must not keep installed-state actions
+  globally busy. Inspect the environment independently and report catalog freshness
+  separately; real Electron already verified the source flow remains usable.
+- Escape/close from a Skill preview must return to the source selection without
+  also dismissing that selection. Render one active dialog surface and wait for
+  its actual focus transition in the keyboard/click harness.
+- Reuse existing frontmatter-aware Skill presentation so YAML metadata does not
+  appear as a large Markdown heading. Keep optional update-policy detail close to
+  its applicable action/review; an empty list should not show several paragraphs
+  of update instructions. Keep the visible scope and capability reason.
+
+Packaging uses the exact vendored SDK/native pin. Preserve the existing afterPack
+hook by delegation. On macOS use the existing osx-sign traversal and options:
+refresh runtime.json after nested binary signing and before the outer app seal.
+Reuse the builder's bounded retry helper. afterSign only verifies. On Windows,
+refresh after the existing signed extra-resource copy, before installer sealing.
+The independent transport reviewer found no production lifecycle issue in this
+wiring. Focused tests cover changed bytes, path confinement, partial-sign retry
+and post-seal tampering. A macOS CI test performs real ad-hoc signing of an unsigned
+native fixture, verifies the sealed bundle and executes the helper; release
+certificate/notarization qualification is a separate existing release concern.
+
+Evidence at this checkpoint:
+
+- a213b80e8a4a97b613ffbe35df9f42f4ed7b090e passed remote Fast feedback, including
+  the full pinned TypeScript check. This supersedes the earlier local memory-limit
+  observation; it does not substitute for Full qualification on the final commit.
+- The earlier integration slice passed 148 focused tests in 27 files, feature
+  typechecks and unchanged source-size guards before publication.
+- Actual matching 08a SDK/native local authoring tests verified create, binary/text
+  editing, stale-byte rejection, delete, process restart, visible undo and restore.
+- Real dev:mcp Electron reached Extensions, selected OpenCode, acquired the HTTPS
+  Skill and displayed its content. The complete install/remove/reopen and final UX
+  flow is still in progress; screenshots of early steps are not a completed E2E.
+- Add the reproducible focused desktop CI lane using existing CDP, Xvfb and pinned
+  runtime provisioning. Final evidence must name app SHA, UAP source/digest, SDK
+  identity and exact verified scenarios.
+- #472/#475/#480 and Host migration #982 remain open drafts at their previously
+  recorded heads. Native project/worktree S25/S26 remain dependency-blocked.
+
+Resolve and independently rereview the corrections, publish the refreshed matched
+SDK/native pin, complete Electron clicking and native artifact checks, then run
+current-commit Full qualification and applicable package checks before merge.
