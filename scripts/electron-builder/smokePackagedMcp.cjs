@@ -8,6 +8,10 @@ const { createPackagedSmokeOwnership } = require('./packagedSmokeOwnedProcesses.
 const { findExecutable, resolveBundlePath, terminateChild } =
   require('./smokePackagedApp.cjs')._internal;
 
+// A census probe budget must not shrink with the shutdown grace: a slow ps
+// inventory has to complete before cleanup can decide what to signal.
+const CENSUS_TIMEOUT_MS = Number(process.env.PACKAGED_SMOKE_CENSUS_TIMEOUT_MS ?? 60_000);
+
 async function main() {
   const [bundleArg, platform] = process.argv.slice(2);
   if (!bundleArg || !['darwin', 'win32', 'linux'].includes(platform)) {
@@ -30,7 +34,9 @@ async function main() {
   const userDataDir = path.join(testProject, 'user-data');
   for (const dir of [homeDir, claudeRoot, userDataDir]) fs.mkdirSync(dir);
   const ownership =
-    process.platform === 'win32' ? undefined : createPackagedSmokeOwnership({ timeoutMs: 2_000 });
+    process.platform === 'win32'
+      ? undefined
+      : createPackagedSmokeOwnership({ timeoutMs: CENSUS_TIMEOUT_MS });
   const overrides = {
     ELECTRON_RUN_AS_NODE: '1',
     HOME: homeDir,

@@ -8,9 +8,13 @@ const MAX_PS_BYTES = 16 * 1024 * 1024;
 const MAX_PROC_ENV_BYTES = 1024 * 1024;
 const MAX_BASELINE = 4_096;
 const MAX_PROC_ENTRIES = 16_384;
+const TRANSIENT_RETRY_WINDOW_MS = 2_000;
+const TRANSIENT_RETRY_PAUSE_MS = 150;
 const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const syncPause = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 class CensusDeadlineError extends Error {}
 class OwnershipDebtError extends Error {}
+class UnverifiableEnvironmentError extends Error {}
 
 export interface SmokeProcessIdentity {
   pid: number;
@@ -257,11 +261,13 @@ export function createPackagedSmokeOwnership(
         !/\s/.test(plain.at(-1) ?? '') &&
         !/\s/.test(expanded[plain.length]))
     )
-      throw new Error(`Unverifiable packaged smoke process environment: pid=${pid}`);
+      throw new UnverifiableEnvironmentError(
+        `Unverifiable packaged smoke process environment: pid=${pid}`
+      );
     return expanded.slice(plain.length);
   }
 
-  function darwinMarked(pid: number, deadline: number): SmokeProcessIdentity | undefined {
+  function darwinMarkedAttempt(pid: number, deadline: number): SmokeProcessIdentity | undefined {
     const before = darwinIdentity(pid, deadline);
     if (!before || !live(before)) return undefined;
     const plain = ps(['-ww', '-p', String(pid), '-o', 'command='], deadline, true);
@@ -274,6 +280,50 @@ export function createPackagedSmokeOwnership(
       throw new Error(`Incomplete packaged smoke process environment: pid=${pid}`);
     const suffix = environmentSuffix(plain.replace(/\n$/, ''), expanded.replace(/\n$/, ''), pid);
     return suffix.split(/\s+/).includes(`${MARKER}=${marker}`) ? after : undefined;
+  }
+
+  function darwinMarked(pid: number, deadline: number): SmokeProcessIdentity | undefined {
+    // A retiring helper can answer ps from a failed KERN_PROCARGS2 lookup as
+    // (comm) or from a torn argv snapshot while it is still live. Re-probe its
+    // environment briefly; a persistent unreadable environment stays loud and
+    // fail-closed.
+    const retryUntil = Date.now() + Math.min(TRANSIENT_RETRY_WINDOW_MS, budget(deadline));
+    while (true) {
+      try {
+        return darwinMarkedAttempt(pid, deadline);
+      } catch (error) {
+        if (!(error instanceof UnverifiableEnvironmentError) || Date.now() >= retryUntil)
+          throw error;
+        syncPause(TRANSIENT_RETRY_PAUSE_MS);
+      }
+    }
+  }
+
+  function darwinExpandedCommand(pid: number, deadline: number) {
+    const output = ps(['-E', '-ww', '-p', String(pid), '-o', 'pid=,command='], deadline, true);
+    if (output === undefined) return undefined;
+    const line = output.replace(/\n$/, '');
+    const separator = line.indexOf(' ');
+    if (separator < 0 || Number(line.slice(0, separator)) !== pid)
+      throw new Error(`Incomplete packaged smoke environment census: pid=${pid}`);
+    return line.slice(separator + 1);
+  }
+
+  function censusCommand(pid: number, command: string | undefined, deadline: number) {
+    if (command !== undefined && !/^\(.*\)$/.test(command)) return command;
+    // The batch census can catch the same retiring (comm) race per row.
+    // Re-probe that row briefly; a persistent incomplete census stays loud
+    // and fail-closed.
+    const retryUntil = Date.now() + Math.min(TRANSIENT_RETRY_WINDOW_MS, budget(deadline));
+    while (true) {
+      const current = darwinIdentity(pid, deadline);
+      if (!current || !live(current)) return undefined;
+      const refreshed = darwinExpandedCommand(pid, deadline);
+      if (refreshed !== undefined && !/^\(.*\)$/.test(refreshed)) return refreshed;
+      if (Date.now() >= retryUntil)
+        throw new Error(`Incomplete packaged smoke environment census: pid=${pid}`);
+      syncPause(TRANSIENT_RETRY_PAUSE_MS);
+    }
   }
 
   function inventory(deadline: number): SmokeProcessIdentity[] {
@@ -304,13 +354,8 @@ export function createPackagedSmokeOwnership(
     for (const identity of rows) {
       budget(deadline);
       if (identity.pid === process.pid || !live(identity)) continue;
-      const command = commands.get(identity.pid);
-      if (command === undefined || /^\(.*\)$/.test(command)) {
-        const current = darwinIdentity(identity.pid, deadline);
-        if (current && live(current))
-          throw new Error(`Incomplete packaged smoke environment census: pid=${identity.pid}`);
-        continue;
-      }
+      const command = censusCommand(identity.pid, commands.get(identity.pid), deadline);
+      if (command === undefined) continue;
       if (!command.split(/\s+/).includes(`${MARKER}=${marker}`)) continue;
       const current = darwinMarked(identity.pid, deadline);
       if (current) result.push(current);

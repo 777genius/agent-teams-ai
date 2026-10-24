@@ -7,6 +7,9 @@ const { createPackagedSmokeOwnership } = require('./packagedSmokeOwnedProcesses.
 const STARTUP_TIMEOUT_MS = Number(process.env.PACKAGED_SMOKE_TIMEOUT_MS ?? 60_000);
 const POST_STARTUP_STABLE_MS = Number(process.env.PACKAGED_SMOKE_STABLE_MS ?? 8_000);
 const SHUTDOWN_TIMEOUT_MS = Number(process.env.PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS ?? 5_000);
+// A census probe budget must not shrink with the shutdown grace: a slow ps
+// inventory has to complete before cleanup can decide what to signal.
+const CENSUS_TIMEOUT_MS = Number(process.env.PACKAGED_SMOKE_CENSUS_TIMEOUT_MS ?? 60_000);
 const REQUIRED_LOG_MARKERS = ['renderer did-finish-load'];
 const SQLITE_HEADER = Buffer.from('SQLite format 3\0', 'utf8');
 const INTERNAL_STORAGE_FALLBACK_PATTERNS = [
@@ -316,7 +319,7 @@ async function main() {
   const ownership =
     process.platform === 'win32'
       ? undefined
-      : createPackagedSmokeOwnership({ timeoutMs: SHUTDOWN_TIMEOUT_MS });
+      : createPackagedSmokeOwnership({ timeoutMs: CENSUS_TIMEOUT_MS });
   const overrides = {
     HOME: homeDir,
     USERPROFILE: homeDir,
