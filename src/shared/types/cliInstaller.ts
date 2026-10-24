@@ -446,7 +446,17 @@ export interface CliInstallerAPI {
 // OpenCode Runtime Installer
 // =============================================================================
 
-export type OpenCodeRuntimeSource = 'app-managed' | 'path' | 'missing';
+/** `override` is a binary selected through the OpenCode binary path environment variable. */
+export type OpenCodeRuntimeSource = 'app-managed' | 'override' | 'path' | 'missing';
+
+/** A binary override the app does not launch, and the reason it falls back. */
+export interface OpenCodeRuntimeIgnoredOverride {
+  binaryPath: string;
+  envName: string;
+  /** Version reported by the binary, or null when it could not be read. */
+  version: string | null;
+  reason: string;
+}
 
 export type OpenCodeRuntimeInstallerState =
   | 'idle'
@@ -475,6 +485,8 @@ export interface OpenCodeRuntimeStatus {
   progress?: OpenCodeRuntimeInstallProgress;
   error?: string;
   diagnostics?: RuntimeProviderManagementErrorDiagnosticsDto;
+  /** Set when an override exists but this status describes the fallback binary. */
+  ignoredOverride?: OpenCodeRuntimeIgnoredOverride;
 }
 
 export interface OpenCodeRuntimeAPI {

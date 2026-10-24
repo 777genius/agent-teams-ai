@@ -153,6 +153,7 @@ import {
   setTeamWatchScopeChangeListener,
 } from '@main/services/infrastructure/teamWatchScope';
 import { FileWatcherStartupCoordinator } from '@main/services/infrastructure/FileWatcherStartupCoordinator';
+import { getOpenCodeRuntimeResolverCacheGeneration } from '@main/services/infrastructure/openCodeRuntimeResolverCache';
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
 import { ScheduledTaskExecutor } from '@main/services/schedule/ScheduledTaskExecutor';
 import { SchedulerService } from '@main/services/schedule/SchedulerService';
@@ -1962,6 +1963,7 @@ async function initializeServices(): Promise<void> {
     });
   runtimeProviderManagementFeature = createRuntimeProviderManagementFeature({
     localProviderConnector: gatewayProviderConnector,
+    getOpenCodeRuntimeGeneration: getOpenCodeRuntimeResolverCacheGeneration,
     openExternal: async (url) => {
       await shell.openExternal(url);
     },

@@ -3,7 +3,15 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 const fs = require('fs');
 const path = require('path');
-const { execFileSync, spawnSync } = require('child_process');
+const readline = require('readline');
+const { execFileSync, spawn, spawnSync } = require('child_process');
+
+const DEB_LAUNCHER_ENTRY = './usr/bin/agent-teams-ai';
+const DEB_REQUIRED_ENTRIES = [
+  DEB_LAUNCHER_ENTRY,
+  './opt/Agent-Teams-AI/agent-teams-ai',
+  './opt/Agent-Teams-AI/chrome-sandbox',
+];
 
 function fail(message) {
   console.error(`[verifyLinuxInstallers] ${message}`);
@@ -49,40 +57,55 @@ function getDebMember(archivePath, prefix) {
   return member;
 }
 
-function runDebTar(archivePath, memberName, tarMode, filePath) {
-  const args = filePath
-    ? [
-        '-c',
-        'set -euo pipefail; ar p "$1" "$2" | tar "$3" - "$4"',
-        'bash',
-        archivePath,
-        memberName,
-        tarMode,
-        filePath,
-      ]
-    : [
+// The data listing grows with the bundle (past 16 MiB in 2.18.0), so it is streamed line
+// by line instead of buffered. A failing ar or tar still fails the scan.
+function scanDebTarListing(archivePath, memberName, verbose, onLine) {
+  const flag = getTarCompressionFlag(memberName);
+  const mode = verbose ? `-tv${flag}f` : `-t${flag}f`;
+  return new Promise((resolve, reject) => {
+    const child = spawn(
+      'bash',
+      [
         '-c',
         'set -euo pipefail; ar p "$1" "$2" | tar "$3" -',
         'bash',
         archivePath,
         memberName,
-        tarMode,
-      ];
-  return execFileSync('bash', args, {
-    encoding: 'utf8',
-    maxBuffer: 16 * 1024 * 1024,
+        mode,
+      ],
+      { stdio: ['ignore', 'pipe', 'inherit'] }
+    );
+    readline.createInterface({ input: child.stdout, crlfDelay: Infinity }).on('line', onLine);
+    child.once('error', reject);
+    // 'close' fires only after stdout has ended, so every line has been seen by then.
+    child.once('close', (code, signal) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(
+          new Error(`Listing ${memberName} in ${archivePath} failed (${signal || `exit ${code}`})`)
+        );
+      }
+    });
   });
 }
 
-function listDebTar(archivePath, memberName, verbose = false) {
-  const flag = getTarCompressionFlag(memberName);
-  const mode = verbose ? `-tv${flag}f` : `-t${flag}f`;
-  return runDebTar(archivePath, memberName, mode);
-}
-
+// Extracts one small file; output beyond the buffer throws ENOBUFS instead of truncating.
 function extractDebTarFile(archivePath, memberName, filePath) {
   const flag = getTarCompressionFlag(memberName);
-  return runDebTar(archivePath, memberName, `-xO${flag}f`, filePath);
+  return execFileSync(
+    'bash',
+    [
+      '-c',
+      'set -euo pipefail; ar p "$1" "$2" | tar "$3" - "$4"',
+      'bash',
+      archivePath,
+      memberName,
+      `-xO${flag}f`,
+      filePath,
+    ],
+    { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }
+  );
 }
 
 function listTar(tarBuffer, memberName, verbose = false) {
@@ -102,25 +125,30 @@ function assertContains(haystack, needle, label) {
   }
 }
 
-function verifyDeb(debPath) {
+async function verifyDeb(debPath) {
   const dataMember = getDebMember(debPath, 'data.tar.');
   const controlMember = getDebMember(debPath, 'control.tar.');
   const control = readArMember(debPath, controlMember);
-  const dataList = listDebTar(debPath, dataMember);
-  const dataVerboseList = listDebTar(debPath, dataMember, true);
 
-  assertContains(dataList, './usr/bin/agent-teams-ai\n', path.basename(debPath));
-  assertContains(dataList, './opt/Agent-Teams-AI/agent-teams-ai\n', path.basename(debPath));
-  assertContains(dataList, './opt/Agent-Teams-AI/chrome-sandbox\n', path.basename(debPath));
+  const foundEntries = new Set();
+  await scanDebTarListing(debPath, dataMember, false, (line) => {
+    if (DEB_REQUIRED_ENTRIES.includes(line)) foundEntries.add(line);
+  });
+  for (const entry of DEB_REQUIRED_ENTRIES) {
+    if (!foundEntries.has(entry)) {
+      fail(`${path.basename(debPath)} does not contain ${entry}`);
+    }
+  }
 
-  const launcherLine = dataVerboseList
-    .split(/\r?\n/)
-    .find((line) => line.endsWith('./usr/bin/agent-teams-ai'));
+  let launcherLine;
+  await scanDebTarListing(debPath, dataMember, true, (line) => {
+    if (launcherLine === undefined && line.endsWith(DEB_LAUNCHER_ENTRY)) launcherLine = line;
+  });
   if (!launcherLine || !launcherLine.startsWith('-rwx')) {
     fail(`/usr/bin/agent-teams-ai is not executable in ${debPath}`);
   }
 
-  const launcher = extractDebTarFile(debPath, dataMember, './usr/bin/agent-teams-ai');
+  const launcher = extractDebTarFile(debPath, dataMember, DEB_LAUNCHER_ENTRY);
   assertContains(launcher, '/opt/Agent-Teams-AI/agent-teams-ai', 'CLI launcher');
   if (launcher.includes('--no-sandbox')) {
     fail('CLI launcher must not force --no-sandbox');
@@ -131,7 +159,7 @@ function verifyDeb(debPath) {
   assertContains(postinst, 'chmod 4755 "$SANDBOX_PATH"', 'deb postinst');
 }
 
-function main() {
+async function main() {
   const releaseDir = path.resolve(process.argv[2] || 'release');
   if (!fs.existsSync(releaseDir)) {
     fail(`Release directory does not exist: ${releaseDir}`);
@@ -146,17 +174,15 @@ function main() {
   }
 
   for (const deb of debs) {
-    verifyDeb(deb);
+    await verifyDeb(deb);
     console.log(`[verifyLinuxInstallers] OK ${path.basename(deb)}`);
   }
 }
 
 if (require.main === module) {
-  try {
-    main();
-  } catch (error) {
+  main().catch((error) => {
     fail(error instanceof Error ? error.message : String(error));
-  }
+  });
 }
 
 module.exports = {

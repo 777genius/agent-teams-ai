@@ -10,6 +10,27 @@ export const OPENCODE_CONSOLE_WRAPPER_DISABLE_ENV = 'AGENT_TEAMS_OPENCODE_CONSOL
 const OPENCODE_CONSOLE_WRAPPER_RELATIVE_PATH = ['runtime', 'opencode-console', 'opencode.exe'];
 const OPENCODE_CONSOLE_WRAPPER_SIDECAR = 'opencode.real.path';
 
+export interface OpenCodeBinaryOverride {
+  binaryPath: string;
+  envName: string;
+}
+
+/**
+ * The deliberate OpenCode binary override: the first non-empty override variable,
+ * checking each environment in order. Launch and status share this selection.
+ */
+export function readOpenCodeBinaryOverride(
+  ...envs: (NodeJS.ProcessEnv | null | undefined)[]
+): OpenCodeBinaryOverride | null {
+  for (const env of envs) {
+    for (const envName of [OPENCODE_RUNTIME_BINARY_PATH_ENV, OPENCODE_LEGACY_BINARY_PATH_ENV]) {
+      const binaryPath = env?.[envName]?.trim();
+      if (binaryPath) return { binaryPath, envName };
+    }
+  }
+  return null;
+}
+
 export function isOpenCodeConsoleWrapperBinaryPath(binaryPath: string): boolean {
   return normalizePathEntryForCompare(binaryPath).endsWith(
     path.sep + OPENCODE_CONSOLE_WRAPPER_RELATIVE_PATH.join(path.sep)

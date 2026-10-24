@@ -20,6 +20,7 @@ import {
   applyOpenCodeRuntimeBinaryEnv,
   OPENCODE_LEGACY_BINARY_PATH_ENV,
   OPENCODE_RUNTIME_BINARY_PATH_ENV,
+  readOpenCodeBinaryOverride,
 } from './openCodeRuntimeBinaryEnv';
 import { providerConnectionService } from './ProviderConnectionService';
 
@@ -59,16 +60,7 @@ export interface ProviderAwareCliEnvResult {
 function resolveExplicitOpenCodeBinary(
   options: Pick<ProviderAwareCliEnvOptions, 'env'>
 ): string | null {
-  return (
-    [
-      options.env?.[OPENCODE_RUNTIME_BINARY_PATH_ENV],
-      options.env?.[OPENCODE_LEGACY_BINARY_PATH_ENV],
-      process.env[OPENCODE_RUNTIME_BINARY_PATH_ENV],
-      process.env[OPENCODE_LEGACY_BINARY_PATH_ENV],
-    ]
-      .find((candidate): candidate is string => Boolean(candidate?.trim()))
-      ?.trim() ?? null
-  );
+  return readOpenCodeBinaryOverride(options.env, process.env)?.binaryPath ?? null;
 }
 
 /**
