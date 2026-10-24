@@ -494,8 +494,11 @@ jobs:
       - name: Build and mount DMG fixture
         run: node scripts/ci/verify-dmg-artwork.mts
 
+  # Required by branch protection. Keep the name static for every event: on
+  # PR #985 an edited-event run that reported another name left the required
+  # context "Expected" although earlier runs for the same head had passed.
   full-qualification:
-    name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata qualification' || 'Full qualification' }}
+    name: Full qualification
     needs: [plan, validate, test, lint, task-change-ledger-windows, focused, source, dmg-artwork]
     if: always()
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
