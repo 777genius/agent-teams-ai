@@ -35,6 +35,7 @@
     "../../scripts/lib/runtime-windows-zip-extraction.mts",
     "../../scripts/lib/runtime-windows-zip-extraction.test.mts",
     "../../scripts/stage-uap-runtime.ts",
-    "../../scripts/electron-builder/beforePackUap.ts"
+    "../../scripts/electron-builder/*Uap.ts",
+    "../../scripts/electron-builder/uapRuntimeIntegrity.ts"
   ]
 }

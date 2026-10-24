@@ -146,6 +146,10 @@ export async function stageUapRuntime({
       )
         throw new Error('The fetched UAP source does not match its pin.');
     }
+    const toolchain = (await readFile(path.join(checkout, 'go.work'), 'utf8')).match(
+      /^toolchain (go\d+\.\d+\.\d+)$/m
+    )?.[1];
+    if (!toolchain) throw new Error('The pinned UAP source must declare its Go toolchain.');
     await run(
       'go',
       [
@@ -161,7 +165,13 @@ export async function stageUapRuntime({
       ],
       {
         cwd: path.join(checkout, 'cli'),
-        env: { ...process.env, CGO_ENABLED: '0', GOOS: target[0], GOARCH: target[1] },
+        env: {
+          ...process.env,
+          GOTOOLCHAIN: toolchain,
+          CGO_ENABLED: '0',
+          GOOS: target[0],
+          GOARCH: target[1],
+        },
       }
     );
     const digest = sha256(await readFile(output));

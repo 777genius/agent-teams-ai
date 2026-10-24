@@ -7,6 +7,8 @@
     "../../scripts/ci/packaged-ci-*.mts",
     "../../scripts/ci/verify-dmg-artwork.mts",
     "../../scripts/electron-builder/packagedSmokeOwnedProcesses.ts",
-    "../../scripts/electron-builder/smokePackagedRuntime.ts"
+    "../../scripts/electron-builder/smokePackagedRuntime.ts",
+    "../../scripts/electron-builder/*Uap.ts",
+    "../../scripts/electron-builder/uapRuntimeIntegrity.ts"
   ]
 }

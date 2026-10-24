@@ -113,6 +113,17 @@ The desktop development bootstrap also stages that exact pin when it is missing
 executable; there is no implicit latest lookup, public release or source build in
 the installed app.
 
+The source stager selects the exact toolchain declared in that pinned UAP
+`go.work`; an ambient newer Go installation cannot silently change the compiler.
+The packaged CI matrix provisions Go explicitly on every runner. Refresh the SDK
+tarball, provenance and native source pin together, then run the packaged matrix.
+
+Signing changes executable bytes. The macOS signing hook preserves the existing
+signer options and bounded retry policy, refreshes the helper digest after nested
+signing and before the outer app seal, then verifies without writing. Windows
+refreshes after the builder's signed resource copy. `afterSign` only verifies the
+final source/platform/checksum. A checksum is never silently updated at app startup.
+
 ## Verification
 
 Focused tests live in `test/features/extension-management/` and exercise

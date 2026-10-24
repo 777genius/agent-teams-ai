@@ -392,11 +392,13 @@
       }
     ],
     "npmRebuild": false,
-    "afterPack": "scripts/electron-builder/afterPack.cjs",
+    "afterPack": "scripts/electron-builder/afterPackUap.ts",
+    "afterSign": "scripts/electron-builder/afterSignUap.ts",
     "extraMetadata": {
       "main": "dist-electron/main/index.cjs"
     },
     "mac": {
+      "sign": "scripts/electron-builder/signMacUap.ts",
       "identity": "ILLIA ZELENKO (86399583GS)",
       "forceCodeSigning": true,
       "artifactName": "Agent.Teams.AI-${version}-${arch}-mac.${ext}",
