@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
+import { desktopJsLiteral } from './desktop-ui-controls.ts';
 
 /** Explicit API boundary probe, separate from ordinary control signoff. */
 export async function runDesktopHostRoutingProof(
@@ -36,7 +37,7 @@ export async function runDesktopHostRoutingProof(
   // The frozen preload namespace does not contain the renderer owner decorator.
   const probes = await cdp.evaluate(`(async () => {
     const {api} = await import('/api/index.ts');
-    const request = ${JSON.stringify(request)};
+    const request = ${desktopJsLiteral(request)};
     const probes = [
       ['launchTeam', request],
       ['createTeam', request],
@@ -45,9 +46,9 @@ export async function runDesktopHostRoutingProof(
         commandId: 'TEST-not-dispatched', idempotencyKey: 'TEST-not-dispatched',
         expectedFingerprint: 'TEST-not-dispatched', targetKind: 'member', settings: {}}],
       ['showMessageNotification', {teamName: request.teamName, teamDisplayName: 'TEST',
-        from: 'alice', body: 'TEST route probe'}],
+        from: 'alice', body: 'TEST route probe', nativeSessionId: 'TEST-forbidden-selector'}],
       ['showMessageNotification', {teamDisplayName: 'TEST', from: 'alice',
-        body: 'TEST route probe', target: {kind: 'team', teamName: request.teamName}}],
+        body: 'TEST route probe', target: {kind: 'task', teamName: request.teamName, taskId: ''}}],
     ];
     const outcomes = [];
     for (const [method, argument] of probes) {
@@ -62,16 +63,21 @@ export async function runDesktopHostRoutingProof(
   })()`);
   assert.ok(Array.isArray(probes));
   assert.equal(probes.length, 6);
+  evidence.hostRequestRouting = { status: 'INCOMPLETE', probes };
   for (const probe of probes)
     assert.equal(
       (probe as Record<string, unknown>).outcome,
-      'This operation is not supported for Host teams',
+      (probe as Record<string, unknown>).method === 'launchTeam'
+        ? 'Host team operation launch-source-required (not-dispatched)'
+        : (probe as Record<string, unknown>).method === 'showMessageNotification'
+          ? 'Invalid captured Host notification'
+          : 'This operation is not supported for Host teams',
       'exact renderer routing refusal, not an arbitrary legacy validation or transport failure'
     );
   evidence.hostRequestRouting = {
     status: 'PASS',
     scope:
-      'Actual renderer unified API rejects request-shaped Host destinations before legacy dispatch. This negative API probe does not qualify ordinary Launch/config/member/notification functionality.',
+      'Actual renderer unified API rejects unsupported Host destinations, source-less Launch and malformed notification selectors before mutation dispatch. This negative API probe does not qualify ordinary Launch/config/member/notification functionality.',
     probes,
   };
 }

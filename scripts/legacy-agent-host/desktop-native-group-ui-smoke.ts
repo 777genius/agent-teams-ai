@@ -373,7 +373,7 @@ export async function runDesktopNativeGroupUiSmoke(
     });
     const key = String(
       await ui.waitRead(
-        `(() => {const rows=[...document.querySelectorAll('[data-timeline-row-key]')].filter(e=>e.textContent.includes(${desktopJsLiteral(GROUP_REPLY)}));return rows.length===1&&rows[0].getAttribute('data-timeline-row-key');})()`,
+        `(() => {const rows=[...document.querySelectorAll('[data-timeline-row-key]')].filter(e=>[...e.querySelectorAll('p')].some(p=>p.textContent.trim()===${desktopJsLiteral(GROUP_REPLY)}));return rows.length===1&&rows[0].getAttribute('data-timeline-row-key');})()`,
         'exact original reply row key'
       )
     );
