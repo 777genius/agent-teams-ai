@@ -1,6 +1,11 @@
 import { isDeepStrictEqual } from 'node:util';
 
 import { attachmentReferenceSchema } from '@agent-teams/legacy-agent-host/attachments/contracts';
+import {
+  readGroupCommand,
+  readGroupList,
+  readGroupReaction,
+} from '@agent-teams/legacy-agent-host/group-chats/public-values';
 
 import {
   readBackendAttachmentChunk,
@@ -585,6 +590,16 @@ export function projectBackendResult(
         request.commandId,
         request.operation === 'crossTeam.send' ? request.payload : undefined
       ),
+    };
+  if (request.operation.startsWith('group.'))
+    return {
+      ok: true,
+      value:
+        request.operation === 'group.list'
+          ? readGroupList(source.value)
+          : request.operation === 'group.reaction.read'
+            ? readGroupReaction(source.value)
+            : readGroupCommand(source.value, request.commandId),
     };
   if (request.operation.startsWith('process.'))
     return { ok: true, value: projectProcessResult(request, source.value) };

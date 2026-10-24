@@ -27,7 +27,8 @@ export function commitTeamMessage(
     actor,
     receipt.effects.messageId,
     receipt.messageRecipientRole,
-    receipt.crossTeam
+    receipt.crossTeam,
+    receipt.group
   );
   const member = members.find((candidate) => candidate.name === to);
   if (receipt.messageRecipientRole !== undefined && member?.role !== receipt.messageRecipientRole)
@@ -40,27 +41,29 @@ export function commitTeamMessage(
       digest(member!.delivery) !== digest(receipt.deliveryBinding))
   )
     throw new TeamOwnerError('hold');
-  const row = receipt.crossTeam
-    ? crossTeamInboundRow(receipt, receipt.crossTeam)
-    : {
-        from: actor,
-        to,
-        text,
-        timestamp: receipt.createdAt,
-        messageId: receipt.effects.messageId,
-        read: false,
-        ...(payload.attachments?.length
-          ? {
-              attachments: attachments!.metadata(payload.attachments, {
-                kind: 'message',
-                member: to,
-              }),
-            }
-          : {}),
-        ...(taskRefs?.length ? { taskRefs } : {}),
-        ...(payload.summary?.trim() ? { summary: payload.summary.trim() } : {}),
-        ...(payload.actionMode ? { actionMode: payload.actionMode } : {}),
-      };
+  const row = receipt.group
+    ? receipt.group.message
+    : receipt.crossTeam
+      ? crossTeamInboundRow(receipt, receipt.crossTeam)
+      : {
+          from: actor,
+          to,
+          text,
+          timestamp: receipt.createdAt,
+          messageId: receipt.effects.messageId,
+          read: false,
+          ...(payload.attachments?.length
+            ? {
+                attachments: attachments!.metadata(payload.attachments, {
+                  kind: 'message',
+                  member: to,
+                }),
+              }
+            : {}),
+          ...(taskRefs?.length ? { taskRefs } : {}),
+          ...(payload.summary?.trim() ? { summary: payload.summary.trim() } : {}),
+          ...(payload.actionMode ? { actionMode: payload.actionMode } : {}),
+        };
   // The canonical writer can deduplicate semantically, not just by supplied ID.
   // Only exact identity/bytes can satisfy this command's effect proof.
   const inbox = policy.readInbox(to);
@@ -75,9 +78,11 @@ export function commitTeamMessage(
     if (digest({ ...(existing as Record<string, JsonValue>), read: false }) !== digest(row))
       throw new TeamOwnerError('hold');
   } else {
-    const applied = receipt.crossTeam
-      ? policy.sendCrossTeamMessage?.({ ...row, member: to })
-      : policy.sendMessage(actor, { ...row, member: to });
+    const applied = receipt.group
+      ? policy.sendGroupMessage?.({ ...row, member: to })
+      : receipt.crossTeam
+        ? policy.sendCrossTeamMessage?.({ ...row, member: to })
+        : policy.sendMessage(actor, { ...row, member: to });
     if (!applied) throw new TeamOwnerError('hold');
     if (applied.messageId !== row.messageId || digest(applied.message) !== digest(row))
       throw new TeamOwnerError('hold');

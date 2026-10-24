@@ -1,6 +1,9 @@
+import { hasGroupChatEnvelopeMarker } from '@agent-teams/legacy-agent-host/group-chats/contracts';
+
 import { readBackendProcesses } from '../../../contracts/processes';
 
 import { projectAttachmentMetadata } from './projectAttachmentMetadata';
+import { projectGroupMessageEnvelope } from './projectGroupMessageEnvelope';
 import { projectTaskSourceMessage } from './projectSourceMessage';
 import { projectTeamPosition } from './projectTeamChanges';
 import { projectTeamLifecycleSnapshot } from './projectTeamLifecycle';
@@ -104,6 +107,7 @@ function message(value: unknown): BackendTeamSnapshot['messages'][number] {
   const source = row(value);
   if (typeof source.read !== 'boolean') throw new Error('Invalid snapshot');
   return {
+    ...(hasGroupChatEnvelopeMarker(source) ? projectGroupMessageEnvelope(source) : {}),
     from: text(source.from),
     ...(source.source === undefined
       ? {}

@@ -1,3 +1,4 @@
+import { createGroupMcpTools } from './groupChatTools.js';
 import { createNativeMemberCreationMcpTools } from './nativeMemberCreationTools.js';
 import { createNativeMemberActionMcpTools } from './nativeMemberActionTools.js';
 import { createWorkSyncMcpTools } from './workSyncTools.js';
@@ -39,6 +40,7 @@ export const TEAM_MCP_CATALOG_DISPOSITION = Object.freeze({
   runtime: 'pending-private-runtime-callback',
   workSync: 'pending-host-handler',
   crossTeam: 'captured-host-source-first-send-list-outbox-lookup',
+  groupChat: 'bound-catalog-create-send-reaction-original-lookup',
 } as const);
 
 /** JSON wire objects omit absent optionals; the owner uses exact optional types. */
@@ -51,6 +53,7 @@ function present<T extends object>(value: T): { [K in keyof T]: Exclude<T[K], un
 /** Shared handlers use the injected owner connection. No controller or filesystem access. */
 export function createTeamMcpTools(connection: TeamMcpConnection) {
   const tools: BoundTool[] = [
+    ...createGroupMcpTools(connection.groups),
     define(
       'task_create',
       'Create a task as the authenticated member.',
@@ -272,7 +275,8 @@ export function createTeamMcpTools(connection: TeamMcpConnection) {
   // Do not present product task inventory as an equivalent native-tool alias.
   if (connection.crossTeam) tools.push(...createCrossTeamMcpTools(connection.crossTeam));
   if (connection.process) tools.push(...createProcessMcpTools(connection.process));
-  if (connection.nativeMemberCreation) tools.push(...createNativeMemberCreationMcpTools(connection.nativeMemberCreation));
+  if (connection.nativeMemberCreation)
+    tools.push(...createNativeMemberCreationMcpTools(connection.nativeMemberCreation));
   if (connection.nativeMemberActions)
     tools.push(...createNativeMemberActionMcpTools(connection.nativeMemberActions));
   if (connection.workSync) tools.push(...createWorkSyncMcpTools(connection.workSync));

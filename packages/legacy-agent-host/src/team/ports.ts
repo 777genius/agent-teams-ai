@@ -107,6 +107,7 @@ export interface TeamPolicyPort {
   ): { messageId: string; message: JsonValue };
   readInbox(member: string): JsonValue[];
   /** Trusted paired-source provenance has already been verified by TeamOwner. */
+  sendGroupMessage?(flags: Record<string, unknown>): { messageId: string; message: JsonValue };
   sendCrossTeamMessage?(flags: Record<string, unknown>): { messageId: string; message: JsonValue };
   readSentMessages?(): JsonValue[];
   appendSentMessage?(flags: Record<string, unknown>): JsonValue;

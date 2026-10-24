@@ -13,6 +13,7 @@ import type {
   BackendCrossTeamOutbox,
   BackendCrossTeamReceipt,
 } from './crossTeam';
+import type { BackendGroupPayloads, BackendGroupValue } from './groupChats';
 import type { BackendHandle } from './index';
 import type {
   BackendLaunchConfiguration,
@@ -86,6 +87,7 @@ export interface BackendTaskRef {
 
 export interface BackendOperationPayloads
   extends
+    BackendGroupPayloads,
     BackendReviewOperationPayloads,
     BackendTeamLifecyclePayloads,
     BackendToolApprovalPayloads,
@@ -399,6 +401,7 @@ export type BackendOperationResult =
   | {
       ok: true;
       value:
+        | BackendGroupValue
         | BackendTeamLifecycleValue
         | BackendToolApprovalSettingsView
         | BackendInteractionPreview

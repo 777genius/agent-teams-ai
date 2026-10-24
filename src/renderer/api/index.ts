@@ -16,6 +16,7 @@ import {
   createBoundHostReviewApi,
   createHostBackendRenderer,
   createHostCrossTeamApi,
+  createHostGroupChatsApi,
   createHostReviewApi,
   isHostTeamSelectionKey,
 } from '@features/agent-backend/renderer';
@@ -29,6 +30,7 @@ import { createContextScopedExtensionApi } from './createContextScopedExtensionA
 import { HttpAPIClient } from './httpClient';
 
 import type { ReviewOriginScope } from '@agent-teams/task-change-ledger/review-transport';
+import type { TeamGroupChatsAPI } from '@features/team-group-chats/contracts';
 import type { CrossTeamAPI, ElectronAPI, ReviewAPI } from '@shared/types/api';
 
 /**
@@ -50,6 +52,7 @@ function getHttpBaseUrl(): string {
 let httpClient: HttpAPIClient | null = null;
 const hostAdapters = new WeakMap<ElectronAPI, ReturnType<typeof createHostBackendRenderer>>();
 
+const hostGroupAdapters = new WeakMap<ElectronAPI, TeamGroupChatsAPI>();
 const hostCrossTeamAdapters = new WeakMap<ElectronAPI, CrossTeamAPI>();
 const hostReviewAdapters = new WeakMap<ElectronAPI, ReviewAPI>();
 
@@ -116,10 +119,26 @@ export const api: ElectronAPI = new Proxy({} as ElectronAPI, {
   get(_target, prop, receiver) {
     const impl = getImpl();
     if (
-      (prop === 'teams' || prop === 'agentBackend' || prop === 'review' || prop === 'crossTeam') &&
+      (prop === 'teams' ||
+        prop === 'agentBackend' ||
+        prop === 'review' ||
+        prop === 'crossTeam' ||
+        prop === 'teamGroupChats') &&
       impl.agentBackend
     ) {
       const adapter = hostAdapter(impl);
+      if (prop === 'teamGroupChats') {
+        let groups = hostGroupAdapters.get(impl);
+        if (!groups) {
+          groups = createHostGroupChatsApi(
+            impl.teamGroupChats,
+            adapter.backend,
+            captureReviewContext
+          );
+          hostGroupAdapters.set(impl, groups);
+        }
+        return groups;
+      }
       if (prop === 'crossTeam') {
         let crossTeam = hostCrossTeamAdapters.get(impl);
         if (!crossTeam) {

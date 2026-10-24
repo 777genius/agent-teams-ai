@@ -1,3 +1,5 @@
+import { groupInboundText, groupTargetCommand } from '../group-chats/groupDelivery.js';
+import type { CapturedGroupIntent } from '../group-chats/groupCommandRecords.js';
 import { crossTeamInboundText, crossTeamTargetCommand } from '../cross-team/crossTeamInbound.js';
 import { digest } from './identity.js';
 import type { CapturedCrossTeamIntent } from '../cross-team/contracts.js';
@@ -26,8 +28,18 @@ export function formatTeamMessage(
   actor: string,
   messageId: string,
   recipientRole: 'lead' | 'member' = 'member',
-  crossTeam?: CapturedCrossTeamIntent
+  crossTeam?: CapturedCrossTeamIntent,
+  group?: CapturedGroupIntent
 ): string {
+  if (group) {
+    if (
+      crossTeam ||
+      digest(payload) !== digest(groupTargetCommand(group).payload) ||
+      group.message.messageId !== messageId
+    )
+      throw new TeamOwnerError('hold');
+    return groupInboundText(group);
+  }
   if (crossTeam) {
     if (
       messageId !== crossTeam.request.messageId ||

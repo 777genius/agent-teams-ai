@@ -54,6 +54,7 @@ export class BackendOperationsFacade {
           ...(guard ? [guard] : [])
         );
       } else {
+        const group = request.operation.startsWith('group.');
         const process = request.operation.startsWith('process.');
         const crossTeam = request.operation.startsWith('crossTeam.');
         const review = isBackendReviewOperation(request.operation);
@@ -81,7 +82,7 @@ export class BackendOperationsFacade {
           request.operation === 'tasks.list' ||
           request.operation === 'team.snapshot';
         const method =
-          process || crossTeam
+          group || process || crossTeam
             ? `team.${request.operation}`
             : attachment
               ? `team.${request.operation}`
@@ -99,7 +100,8 @@ export class BackendOperationsFacade {
         raw = await this.router.request(request.handle, {
           commandId: request.commandId,
           method,
-          payload: (crossTeam ||
+          payload: (group ||
+          crossTeam ||
           process ||
           review ||
           runtime ||
@@ -113,6 +115,8 @@ export class BackendOperationsFacade {
             ? request.payload
             : { operation: request.operation, payload: request.payload }) as JsonValue,
           control:
+            (group &&
+              ['group.list', 'group.reaction.read', 'group.lookup'].includes(request.operation)) ||
             (memberAction && request.operation !== 'team.member.action.execute') ||
             crossTeam ||
             process ||

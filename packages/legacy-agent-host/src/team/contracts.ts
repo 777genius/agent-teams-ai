@@ -1,3 +1,4 @@
+import type { CapturedGroupIntent } from '../group-chats/groupCommandRecords.js';
 import type { AttachmentReference } from '../attachments/uploadContracts.js';
 import type { CapturedCrossTeamIntent } from '../cross-team/contracts.js';
 import type { JsonValue } from '../contracts.js';
@@ -148,6 +149,7 @@ export interface PreparedEffects {
 }
 
 export interface CommandReceipt {
+  group?: CapturedGroupIntent;
   /** Private Host pair admission; ordinary commands never accept this field. */
   crossTeam?: CapturedCrossTeamIntent;
   schemaVersion: 1;

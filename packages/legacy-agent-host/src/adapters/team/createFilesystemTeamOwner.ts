@@ -1,3 +1,4 @@
+import { HostGroupStorage } from './HostGroupStorage.js';
 import { AttachmentArtifactStore } from '../../attachments/AttachmentArtifactStore.js';
 import { join } from 'node:path';
 
@@ -38,11 +39,16 @@ export function createFilesystemTeamOwner(options: FilesystemTeamOwnerOptions): 
     grants: options.grants,
     store,
     runtimeBindings: new FileTeamRuntimeBindings(store),
+    groupStorage: (guard, original) =>
+      new HostGroupStorage(options.root, options.binding.teamName, store, guard, original),
     ...(options.assertRosterEditable ? { assertRosterEditable: options.assertRosterEditable } : {}),
     ...(options.crossTeamSourceAuthority
       ? { crossTeamSourceAuthority: options.crossTeamSourceAuthority }
       : {}),
-    policy: { ...createTeamPolicy(options.root, options.binding.teamName), attachments: new AttachmentArtifactStore(options.root, options.binding, store) },
+    policy: {
+      ...createTeamPolicy(options.root, options.binding.teamName),
+      attachments: new AttachmentArtifactStore(options.root, options.binding, store),
+    },
     taskMutations:
       options.taskMutations ?? new TaskEffectPlan(options.root, options.binding.teamName, store),
   });

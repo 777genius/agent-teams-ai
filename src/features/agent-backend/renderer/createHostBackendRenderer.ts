@@ -5,6 +5,9 @@ import type { AgentBackendApi, BackendOperation } from '../contracts/operations'
 import type { TeamsAPI } from '@shared/types/api';
 
 const reads = new Set<BackendOperation>([
+  'group.list',
+  'group.reaction.read',
+  'group.lookup',
   'process.list',
   'process.lookup',
   'process.pending.read',

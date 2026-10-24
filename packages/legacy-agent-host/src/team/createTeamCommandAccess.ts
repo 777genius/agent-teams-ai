@@ -1,3 +1,6 @@
+import { createGroupCommandAccess } from '../group-chats/createGroupCommandAccess.js';
+import type { GroupStorageFactory } from '../group-chats/createGroupCommandAccess.js';
+import type { CapturedGroupIntent } from '../group-chats/groupCommandRecords.js';
 import { createTeamWorkSyncCommands } from '../work-sync/TeamWorkSyncCommands.js';
 import { continueTeamLifecycleCleanup } from './continueTeamLifecycleCleanup.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
@@ -38,22 +41,38 @@ export function createTeamCommandAccess(options: {
   recoverConfig(state: OwnerState): void;
   ownsTaskIntent(intent: DeliveryIntent, receipt: CommandReceipt): boolean;
   runtimeBindings?: TeamRuntimeBindings | undefined;
+  groupStorage?: GroupStorageFactory | undefined;
+  receiveGroup(principalId: string, intent: CapturedGroupIntent): CommandReceipt;
 }) {
   const reserved = (id: string) =>
     !!options.state().rosterCommands?.some((row) => row.commandId === id) ||
     !!options.state().runtimeCaptures?.some((row) => row.commandId === id);
-  const lifecycle = new TeamLifecycleTransitions({ ...options, reserved,
+  const lifecycle = new TeamLifecycleTransitions({
+    ...options,
+    reserved,
     state() {
       options.state(); // Run existing validation/projection recovery, then retain the stored original delivery roots.
       const raw = options.store.read<OwnerState>('state.json');
-      if (!raw || raw.ready !== true || digest(raw.binding) !== digest(options.binding)) throw new TeamOwnerError('hold');
+      if (!raw || raw.ready !== true || digest(raw.binding) !== digest(options.binding))
+        throw new TeamOwnerError('hold');
       return raw;
     },
     captureRuntimeBindings(state) {
-      const initial = [...state.members, ...(state.removedMembers ?? [])].flatMap(member => member.delivery ? [memberBinding(member.delivery)] : []);
-      const captures = (state.runtimeCaptures ?? []).flatMap(capture => capture.members.map(member => memberBinding(member.delivery)));
-      const current = initial.flatMap(binding => { const selected = options.runtimeBindings?.current(binding); return selected ? [selected.binding] : []; });
-      return [...new Map([...initial, ...captures, ...current].map(binding => [digest(binding), binding])).values()];
+      const initial = [...state.members, ...(state.removedMembers ?? [])].flatMap((member) =>
+        member.delivery ? [memberBinding(member.delivery)] : []
+      );
+      const captures = (state.runtimeCaptures ?? []).flatMap((capture) =>
+        capture.members.map((member) => memberBinding(member.delivery))
+      );
+      const current = initial.flatMap((binding) => {
+        const selected = options.runtimeBindings?.current(binding);
+        return selected ? [selected.binding] : [];
+      });
+      return [
+        ...new Map(
+          [...initial, ...captures, ...current].map((binding) => [digest(binding), binding])
+        ).values(),
+      ];
     },
   });
   const queued = new TeamQueuedMessages({ ...options, reserved });
@@ -75,21 +94,40 @@ export function createTeamCommandAccess(options: {
       ),
   });
   return {
+    groups: createGroupCommandAccess({
+      ...options,
+      storage: options.groupStorage,
+      reserved,
+      receive: options.receiveGroup,
+    }),
     lifecycle: (principalId: string) => ({
       view: () => lifecycle.view(principalId),
       execute: (raw: unknown) => lifecycle.execute(principalId, raw),
-      lookup: (commandId: string, expected: unknown) => lifecycle.lookup(principalId, commandId, expected),
+      lookup: (commandId: string, expected: unknown) =>
+        lifecycle.lookup(principalId, commandId, expected),
     }),
     lifecycleContinuation: lifecycle,
-    continueLifecycleCleanup: (commandId: string, runtime: Pick<RuntimeOwner, 'stopCapturedSession' | 'readCapturedSession'>, delivery: TeamRuntimeDeliveryPort) =>
-      continueTeamLifecycleCleanup({ commandId, lifecycle, store: options.store, runtime, delivery }),
+    continueLifecycleCleanup: (
+      commandId: string,
+      runtime: Pick<RuntimeOwner, 'stopCapturedSession' | 'readCapturedSession'>,
+      delivery: TeamRuntimeDeliveryPort
+    ) =>
+      continueTeamLifecycleCleanup({
+        commandId,
+        lifecycle,
+        store: options.store,
+        runtime,
+        delivery,
+      }),
     recoverQueuedMessages: (runtime: TeamRuntimeDeliveryPort) => queued.recover(runtime),
     queuedMessages: (principalId: string, runtime: TeamRuntimeDeliveryPort) => ({
       list: (member: string) => queued.list(principalId, member, runtime),
       discard: (raw: unknown) => queued.discard(principalId, raw, runtime),
-      lookup: (commandId: string, expected: unknown) => queued.lookup(principalId, commandId, expected),
+      lookup: (commandId: string, expected: unknown) =>
+        queued.lookup(principalId, commandId, expected),
     }),
-    authorizeRetainedCancellation: (raw: ImmutableDelivery) => lifecycle.authorizeCancellation(raw) || queued.authorizeCancellation(raw),
+    authorizeRetainedCancellation: (raw: ImmutableDelivery) =>
+      lifecycle.authorizeCancellation(raw) || queued.authorizeCancellation(raw),
     retractingRetainedDelivery: (raw: ImmutableDelivery) => queued.authorizeCancellation(raw, true),
     workSync: (principalId: string) => createTeamWorkSyncCommands(common(principalId)),
     review: (principalId: string) => createTeamReviewCommands(common(principalId)),

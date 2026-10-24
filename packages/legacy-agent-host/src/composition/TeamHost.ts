@@ -1,3 +1,8 @@
+import {
+  createTeamCreationMethods,
+  createTeamRegistryMethods,
+} from './createTeamCreationMethods.js';
+import { createHostGroupComposition } from './createHostGroupComposition.js';
 import { preflightNativeMemberModel } from './preflightNativeMemberModel.js';
 import { createProviderManagementMethods } from './createProviderManagementMethods.js';
 import { join } from 'node:path';
@@ -19,10 +24,7 @@ import { createFilesystemTeamOwner } from '../adapters/team/createFilesystemTeam
 import { admitRegistryTeamNamespace } from '../adapters/team-registry/admitRegistryTeamNamespace.js';
 import { FileTeamRegistryStore } from '../adapters/team-registry/FileTeamRegistryStore.js';
 import { TeamRegistry } from '../team-registry/TeamRegistry.js';
-import {
-  createTeamRegistryPayloadSchema,
-  teamRegistryScopeSchema,
-} from '../team-registry/contracts.js';
+import { teamRegistryScopeSchema } from '../team-registry/contracts.js';
 import { hostedTeamDefinitionSchema } from '../team-registry/definition.js';
 import { createHostServer } from '../index.js';
 import { TeamOwnerError } from '../team/contracts.js';
@@ -143,17 +145,45 @@ export function createTeamHost(
         { onOAuthProgress: (snapshot) => emitOAuthProgress?.(snapshot) }
       );
     const teams = new Map<string, HostedTeam>();
-    const assertCurrent = () => { if (sealed) throw new TeamOwnerError('hold'); lease.assertCurrent(); };
+    const assertCurrent = () => {
+      if (sealed) throw new TeamOwnerError('hold');
+      lease.assertCurrent();
+    };
     const processCustody = createProcessCustody(profile.processCustody);
-    const crossTeam = createHostCrossTeamComposition({ profile, teams, assertCurrent,
-      activeInputs: binding => runtime?.crossTeamActiveInputs(binding) ?? [] });
-    const processes = createTeamProcessComposition({ profile, teams, assertCurrent,
-      ...(processCustody ? { native: processCustody } : {}) });
-    const lifecycle = createHostTeamLifecycleComposition({ profile, teams, assertCurrent,
-      assertWriter: () => lease.assertCurrent(), isShuttingDown: () => sealed,
-      runtime: () => runtime, importer: () => imports, ...(processCustody ? { processCustody } : {}) });
-    const workSync = createHostWorkSyncComposition({ teamsBasePath: join(profile.owner.storageRoot, 'teams'),
-      identity: (teamId, principalId) => lifecycle.storage.identity(teamId, principalId), assertCurrent });
+    const crossTeam = createHostCrossTeamComposition({
+      profile,
+      teams,
+      assertCurrent,
+      activeInputs: (binding) => runtime?.crossTeamActiveInputs(binding) ?? [],
+    });
+    const groups = createHostGroupComposition({
+      profile,
+      teams,
+      assertCurrent,
+      getRun: async (teamId, memberName) => runtime?.groupRun(teamId, memberName) ?? null,
+      kick: () => runtime?.kick(),
+    });
+    const processes = createTeamProcessComposition({
+      profile,
+      teams,
+      assertCurrent,
+      ...(processCustody ? { native: processCustody } : {}),
+    });
+    const lifecycle = createHostTeamLifecycleComposition({
+      profile,
+      teams,
+      assertCurrent,
+      assertWriter: () => lease.assertCurrent(),
+      isShuttingDown: () => sealed,
+      runtime: () => runtime,
+      importer: () => imports,
+      ...(processCustody ? { processCustody } : {}),
+    });
+    const workSync = createHostWorkSyncComposition({
+      teamsBasePath: join(profile.owner.storageRoot, 'teams'),
+      identity: (teamId, principalId) => lifecycle.storage.identity(teamId, principalId),
+      assertCurrent,
+    });
     const attachTeam = (definition: TeamHostProfile['teams'][number], dynamic = false): void => {
       if (lifecycle.retirement.isRetired(definition)) return;
       const prior = teams.get(definition.binding.teamId);
@@ -213,7 +243,9 @@ export function createTeamHost(
     for (const definition of profile.teams) attachTeam(definition);
     const imports = createStoppedImportComposition({
       profile,
-      assertCurrent, assertLifecycleWriter: () => lease.assertCurrent(), isRetired: lifecycle.retirement.isRetired,
+      assertCurrent,
+      assertLifecycleWriter: () => lease.assertCurrent(),
+      isRetired: lifecycle.retirement.isRetired,
       attach: (definition) => attachTeam(definition, true),
       validateConfiguration(raw) {
         const definition = hostedTeamDefinitionSchema.parse(raw);
@@ -261,12 +293,25 @@ export function createTeamHost(
     const runtimeTeams = teams;
     if (profile.runtime)
       runtime = new RuntimeTeamCoordinator({
-        profile: { ...profile, runtime: { ...profile.runtime,
-          members: profile.runtime.members.filter(member => teams.has(member.teamId)) } },
-        teams: runtimeTeams, workSync,
-        ...(management ? { nativeMemberModelPreflight: (input) => preflightNativeMemberModel({ ...input, management: management! }) } : {}),
+        profile: {
+          ...profile,
+          runtime: {
+            ...profile.runtime,
+            members: profile.runtime.members.filter((member) => teams.has(member.teamId)),
+          },
+        },
+        teams: runtimeTeams,
+        workSync,
+        ...(management
+          ? {
+              nativeMemberModelPreflight: (input) =>
+                preflightNativeMemberModel({ ...input, management: management! }),
+            }
+          : {}),
         ...(processCustody ? { processCustody } : {}),
-        crossTeam: (team, principal, binding, current) => crossTeam.memberPort(team, principal, binding, current),
+        groups: (entry, capture, current) => groups.member(entry, capture, current),
+        crossTeam: (team, principal, binding, current) =>
+          crossTeam.memberPort(team, principal, binding, current),
         assertWriter: () => lease.assertCurrent(),
         ...(composition ? { createProvider: composition.createProvider } : {}),
       });
@@ -292,7 +337,10 @@ export function createTeamHost(
         | 'getTask'
         | 'listTasks'
         | 'snapshot'
-        | 'activity.logs' | 'activity.stats' | 'lead.activity' | 'lead.context'
+        | 'activity.logs'
+        | 'activity.stats'
+        | 'lead.activity'
+        | 'lead.context'
         | 'changes'
         | 'roster.read'
         | 'roster.lookup'
@@ -350,11 +398,24 @@ export function createTeamHost(
           if (operation === 'lead.activity' || operation === 'lead.context') {
             z.object({}).strict().parse(input.payload);
             if (!runtime) throw new TeamOwnerError('hold');
-            return { ok: true, value: runtime.readLead(selected.definition.binding.teamId, operation === 'lead.activity' ? 'activity' : 'context') };
+            return {
+              ok: true,
+              value: runtime.readLead(
+                selected.definition.binding.teamId,
+                operation === 'lead.activity' ? 'activity' : 'context'
+              ),
+            };
           }
           if (operation === 'activity.logs' || operation === 'activity.stats') {
             if (!runtime) throw new TeamOwnerError('hold');
-            return { ok: true, value: runtime.readTeamActivity(selected.definition.binding.teamId, operation === 'activity.logs' ? 'logs' : 'stats', input.payload) };
+            return {
+              ok: true,
+              value: runtime.readTeamActivity(
+                selected.definition.binding.teamId,
+                operation === 'activity.logs' ? 'logs' : 'stats',
+                input.payload
+              ),
+            };
           }
           if (operation === 'lookup') {
             const receipt = connection.lookup(input.commandId);
@@ -402,105 +463,31 @@ export function createTeamHost(
       },
     });
 
-    const registryMethods: Record<string, HostMethod> = {};
-    for (const operation of ['create', 'lookup', 'list'] as const) {
-      registryMethods[`team.registry.${operation}`] = {
-        lane: operation === 'create' ? 'work' : 'control',
-        handle(raw): JsonValue {
-          try {
-            if (sealed) throw new TeamOwnerError('hold');
-            lease.assertCurrent();
-            const input = z
-              .object({ owner, commandId: id, payload: z.unknown() })
-              .strict()
-              .parse(raw);
-            if (!registry || !equalFields(input.owner, profile.owner))
-              throw new TeamOwnerError('forbidden');
-            let value;
-            if (operation === 'create') value = registry.create(input.commandId, input.payload);
-            else if (operation === 'lookup') {
-              const payload = z
-                .object({ contextId: id, expected: createTeamRegistryPayloadSchema.optional() })
-                .strict()
-                .parse(input.payload);
-              value = registry.lookup(input.commandId, payload.contextId, payload.expected);
-            } else {
-              const payload = z.object({ contextId: id }).strict().parse(input.payload);
-              value = registry.list(payload.contextId);
-            }
-            return { ok: true, value: json(value) };
-          } catch (error) {
-            const code =
-              error instanceof TeamOwnerError
-                ? error.code
-                : error instanceof z.ZodError
-                  ? 'invalid'
-                  : 'hold';
-            return { ok: false, code, outcome: code === 'hold' ? 'unknown' : 'rejected' };
-          }
-        },
-      };
-    }
+    const registryMethods = createTeamRegistryMethods({
+      select(raw) {
+        if (sealed) throw new TeamOwnerError('hold');
+        lease.assertCurrent();
+        const input = z.object({ owner, commandId: id, payload: z.unknown() }).strict().parse(raw);
+        if (!registry || !equalFields(input.owner, profile.owner))
+          throw new TeamOwnerError('forbidden');
+        return { registry, commandId: input.commandId, payload: input.payload };
+      },
+    });
 
-    const creationMethods: Record<string, HostMethod> = {};
-    for (const operation of [
-      'prepare',
-      'probe.read',
-      'probe.cancel',
-      'submit',
-      'lookup',
-    ] as const) {
-      creationMethods[`team.creation.${operation}`] = {
-        lane:
-          operation === 'probe.read' || operation === 'probe.cancel' || operation === 'lookup'
-            ? 'control'
-            : 'work',
-        async handle(raw): Promise<JsonValue> {
-          try {
-            if (sealed) throw new TeamLaunchError('hold', 'sealed');
-            lease.assertCurrent();
-            const input = z
-              .object({ owner, commandId: id, payload: z.unknown() })
-              .strict()
-              .parse(raw);
-            if (!creationLaunch || !equalFields(input.owner, profile.owner))
-              throw new TeamLaunchError('forbidden', 'creation-owner');
-            const value =
-              operation === 'submit'
-                ? await creationLaunch.submit(input.commandId, input.payload)
-                : operation === 'lookup'
-                  ? creationLaunch.lookup(input.commandId, input.payload)
-                  : await creationLaunch.prepare(
-                      operation === 'prepare'
-                        ? 'start'
-                        : operation === 'probe.read'
-                          ? 'read'
-                          : 'cancel',
-                      input.payload
-                    );
-            return { ok: true, value: json(value) };
-          } catch (error) {
-            const code =
-              error instanceof TeamLaunchError ||
-              error instanceof TeamOwnerError ||
-              error instanceof RuntimeOwnerError ||
-              error instanceof ManagementCommandError
-                ? error.code === 'held' || error.code === 'busy'
-                  ? 'hold'
-                  : error.code
-                : error instanceof z.ZodError
-                  ? 'invalid'
-                  : 'hold';
-            return {
-              ok: false,
-              code,
-              outcome: code === 'hold' ? 'unknown' : 'rejected',
-              ...(error instanceof TeamLaunchError ? { reason: error.reason } : {}),
-            };
-          }
-        },
-      };
-    }
+    const creationMethods = createTeamCreationMethods({
+      select(raw) {
+        if (sealed) throw new TeamLaunchError('hold', 'sealed');
+        lease.assertCurrent();
+        const input = z.object({ owner, commandId: id, payload: z.unknown() }).strict().parse(raw);
+        if (!creationLaunch || !equalFields(input.owner, profile.owner))
+          throw new TeamLaunchError('forbidden', 'creation-owner');
+        return {
+          coordinator: creationLaunch,
+          commandId: input.commandId,
+          payload: input.payload,
+        };
+      },
+    });
 
     const launchMethods: Record<string, HostMethod> = {};
     for (const operation of [
@@ -516,7 +503,8 @@ export function createTeamHost(
       launchMethods[`team.launch.${operation}`] = {
         lane:
           operation === 'read' ||
-          operation === 'configuration.read' || operation === 'model.configuration.read' ||
+          operation === 'configuration.read' ||
+          operation === 'model.configuration.read' ||
           operation === 'restorations.read' ||
           operation === 'resume.prepare'
             ? 'control'
@@ -534,7 +522,15 @@ export function createTeamHost(
             )
               throw new TeamLaunchError('forbidden', 'binding');
             if (operation === 'model.configuration.read' && runtime)
-              return { ok: true, value: await runtime.executeLaunch(selected.definition.binding.teamId, operation, input.commandId, input.payload) };
+              return {
+                ok: true,
+                value: await runtime.executeLaunch(
+                  selected.definition.binding.teamId,
+                  operation,
+                  input.commandId,
+                  input.payload
+                ),
+              };
             if (
               !runtime ||
               !runtimeTeams.has(selected.definition.binding.teamId) ||
@@ -629,16 +625,28 @@ export function createTeamHost(
         };
       }
 
-    const runtimeMethods = runtime ? createRuntimeHostMethods({ runtime, parse(raw) {
-      if (sealed) throw new RuntimeOwnerError('hold');
-      lease.assertCurrent();
-      const input = envelopeSchema.parse(raw);
-      const selected = teams.get(input.binding.scope.teamId);
-      if (!selected || !equalFields(input.binding.owner, profile.owner) ||
-        !equalFields(input.binding.scope, selected.definition.scope))
-        throw new RuntimeOwnerError('forbidden');
-      return { teamId: selected.definition.binding.teamId, commandId: input.commandId, payload: input.payload };
-    } }) : {};
+    const runtimeMethods = runtime
+      ? createRuntimeHostMethods({
+          runtime,
+          parse(raw) {
+            if (sealed) throw new RuntimeOwnerError('hold');
+            lease.assertCurrent();
+            const input = envelopeSchema.parse(raw);
+            const selected = teams.get(input.binding.scope.teamId);
+            if (
+              !selected ||
+              !equalFields(input.binding.owner, profile.owner) ||
+              !equalFields(input.binding.scope, selected.definition.scope)
+            )
+              throw new RuntimeOwnerError('forbidden');
+            return {
+              teamId: selected.definition.binding.teamId,
+              commandId: input.commandId,
+              payload: input.payload,
+            };
+          },
+        })
+      : {};
 
     const managementMethods = createProviderManagementMethods(management, () => sealed);
 
@@ -694,7 +702,10 @@ export function createTeamHost(
           ? ['runtime.member-session', 'runtime.checkpoint', 'runtime.activity', 'team.launch']
           : []),
         ...(runtime && management ? ['team.launch.model-probe'] : []),
-        ...Object.keys(crossTeam.methods), ...Object.keys(processes.methods), ...Object.keys(lifecycle.methods),
+        ...Object.keys(groups.methods),
+        ...Object.keys(crossTeam.methods),
+        ...Object.keys(processes.methods),
+        ...Object.keys(lifecycle.methods),
       ],
       methods: {
         'team.execute': method('execute'),
@@ -706,10 +717,19 @@ export function createTeamHost(
         'team.roster.lookup': method('roster.lookup'),
         'team.roster.replace': method('roster.replace'),
         'team.changes.read': method('changes'),
-        ...(runtime ? { 'team.lead.activity.read': method('lead.activity'), 'team.lead.context.read': method('lead.context'), 'team.activity.logs.read': method('activity.logs'),
-          'team.activity.stats.read': method('activity.stats') } : {}),
+        ...(runtime
+          ? {
+              'team.lead.activity.read': method('lead.activity'),
+              'team.lead.context.read': method('lead.context'),
+              'team.activity.logs.read': method('activity.logs'),
+              'team.activity.stats.read': method('activity.stats'),
+            }
+          : {}),
         ...registryMethods,
-        ...crossTeam.methods, ...processes.methods, ...lifecycle.methods,
+        ...groups.methods,
+        ...crossTeam.methods,
+        ...processes.methods,
+        ...lifecycle.methods,
         ...imports?.methods,
         ...attachments.methods,
         ...creationMethods,
@@ -727,7 +747,11 @@ export function createTeamHost(
       async onDispose() {
         review.seal();
         try {
-          const results = await Promise.allSettled([runtime?.close(), management?.close(), workSync.close()]);
+          const results = await Promise.allSettled([
+            runtime?.close(),
+            management?.close(),
+            workSync.close(),
+          ]);
           const backups = await Promise.allSettled([lifecycle.shutdown()]);
           const failure = [...results, ...backups].find((result) => result.status === 'rejected');
           if (failure?.status === 'rejected') throw failure.reason;

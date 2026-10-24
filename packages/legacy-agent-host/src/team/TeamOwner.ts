@@ -1,4 +1,12 @@
-import { validateCommandAttachments } from './validateCommandAttachments.js';
+import { executeTeamCommand } from './executeTeamCommand.js';
+import { readGroupInputSource } from '../group-chats/readGroupInputSource.js';
+import type { NativeMcpAuthorityProof } from './NativeMcpAuthority.js';
+import { groupTargetCommand, canonicalGroupMessages } from '../group-chats/groupDelivery.js';
+import type {
+  GroupStorageFactory,
+  GroupRuntimeAccess,
+} from '../group-chats/createGroupCommandAccess.js';
+import type { CapturedGroupIntent } from '../group-chats/groupCommandRecords.js';
 import { withNativeMemberActionAuthority } from './NativeMemberActionAuthority.js';
 import type { NativeMemberActionRequest } from './NativeMemberActionAuthority.js';
 import { captureNativeMcpAuthority } from './NativeMcpAuthority.js';
@@ -12,35 +20,24 @@ import { ordinarySubagentAllowed } from './ordinarySubagentPolicy.js';
 import { lookupRetainedTaskStartCause } from './lookupRetainedTaskStartCause.js';
 import { readCrossTeamReplyHints } from './readCrossTeamReplyHints.js';
 import { createTeamDeliveryAuthority } from './TeamDeliveryAuthority.js';
-import {
-  crossTeamTargetCommand,
-  validateCrossTeamTargetContext,
-} from '../cross-team/crossTeamInbound.js';
+import { crossTeamTargetCommand } from '../cross-team/crossTeamInbound.js';
 import type { CapturedCrossTeamIntent } from '../cross-team/contracts.js';
 import { lookupEvidenceCause } from './lookupEvidenceCause.js';
 import { json } from './TeamReviewCommands.js';
 import { createTeamCommandAccess } from './createTeamCommandAccess.js';
 import type { TeamProcessRuntimeAccess } from './createTeamCommandAccess.js';
-import {
-  teamCommandPath,
-  readProductCommand,
-  lookupOwnedProductCommand,
-  listProductCommandReceipts,
-} from './commandEntries.js';
-import { applyTeamTask } from './applyTeamTask.js';
+import { readProductCommand, lookupOwnedProductCommand } from './commandEntries.js';
 import { isUserTaskStartIntent, requiresHumanTaskActor } from './taskStartIntent.js';
-import { commitTeamMessage } from './commitTeamMessage.js';
-import { digest, effectId, safeSegment } from './identity.js';
+import { digest, safeSegment } from './identity.js';
 import { TeamOwnerError } from './contracts.js';
 import { DeliveryRecovery, memberBinding } from './DeliveryRecovery.js';
 import { TaskRecovery } from './TaskRecovery.js';
-import { TaskPolicyRejected } from './ports.js';
 import { TeamProductChanges } from './TeamProductChanges.js';
 import { TeamRuntimeRegistration } from './TeamRuntimeRegistration.js';
 import type { RegisterTeamRuntime } from './runtimeRegistrationContracts.js';
 import { TeamRosterTransitions } from './TeamRosterTransitions.js';
 import { teamRosterRevision } from './rosterSchema.js';
-import { validateTeamCommand, validateTeamText } from './validateTeamCommand.js';
+import { validateTeamText } from './validateTeamCommand.js';
 
 import type {
   TaskMutationPort,
@@ -77,6 +74,7 @@ export interface TeamOwnerOptions {
   runtimeBindings?: TeamRuntimeBindings;
   /** Synchronous Runtime proof; absent composition permits only product-only members. */
   assertRosterEditable?(members: readonly TeamMember[]): void;
+  groupStorage?: GroupStorageFactory;
   crossTeamSourceAuthority?(intent: CapturedCrossTeamIntent): boolean;
 }
 
@@ -106,8 +104,12 @@ export class TeamOwner {
     this.store = options.store;
     this.runtimeBindings = options.runtimeBindings;
     this.policy = options.policy;
-    this.contextReminders = new TeamContextReminders({ store: this.store, policy: this.policy, state: () => this.state(),
-      authorize: principalId => this.authorize(principalId, 'read') });
+    this.contextReminders = new TeamContextReminders({
+      store: this.store,
+      policy: this.policy,
+      state: () => this.state(),
+      authorize: (principalId) => this.authorize(principalId, 'read'),
+    });
     this.commandAccess = createTeamCommandAccess({
       store: this.store,
       binding: this.binding,
@@ -116,10 +118,15 @@ export class TeamOwner {
       recoverConfig: (state) => this.roster.recover(state),
       ownsTaskIntent: (intent, receipt) => this.taskRecovery.owns(intent, receipt),
       runtimeBindings: this.runtimeBindings,
+      groupStorage: options.groupStorage,
+      receiveGroup: (principalId, intent) =>
+        this.execute(principalId, groupTargetCommand(intent), undefined, intent),
       authorize: (principalId, permission) => this.authorize(principalId, permission),
       invalidate: () => this.productChanges.invalidate(),
     });
-    initializeTeamOwner({ ...options, binding: this.binding, store: this.store }, (state) => this.finishBootstrap(state));
+    initializeTeamOwner({ ...options, binding: this.binding, store: this.store }, (state) =>
+      this.finishBootstrap(state)
+    );
     const assertEditable = (members: readonly TeamMember[]): void => {
       if (options.assertRosterEditable) {
         const result: unknown = options.assertRosterEditable(members);
@@ -176,7 +183,10 @@ export class TeamOwner {
   }
 
   assertExecutionAllowed(principalId: string): void {
-    this.store.fenced(() => { this.authorize(principalId, 'admin'); assertTeamExecutionAllowed(this.state(), this.store); });
+    this.store.fenced(() => {
+      this.authorize(principalId, 'admin');
+      assertTeamExecutionAllowed(this.state(), this.store);
+    });
   }
   recoverQueuedMessages(runtime: TeamRuntimeDeliveryPort) {
     return this.commandAccess.recoverQueuedMessages(runtime);
@@ -184,20 +194,43 @@ export class TeamOwner {
   queuedMessages(principalId: string, runtime: TeamRuntimeDeliveryPort) {
     return this.commandAccess.queuedMessages(principalId, runtime);
   }
-  lifecycleCommands(principalId: string) { return this.commandAccess.lifecycle(principalId); }
+  lifecycleCommands(principalId: string) {
+    return this.commandAccess.lifecycle(principalId);
+  }
   /** Trusted composition continuation, never exposed through connect/MCP. */
-  lifecycleContinuation() { return this.commandAccess.lifecycleContinuation; }
-  continueLifecycleCleanup(commandId: string, runtime: Pick<RuntimeOwner, 'stopCapturedSession' | 'readCapturedSession'>, delivery: TeamRuntimeDeliveryPort) {
+  lifecycleContinuation() {
+    return this.commandAccess.lifecycleContinuation;
+  }
+  continueLifecycleCleanup(
+    commandId: string,
+    runtime: Pick<RuntimeOwner, 'stopCapturedSession' | 'readCapturedSession'>,
+    delivery: TeamRuntimeDeliveryPort
+  ) {
     return this.commandAccess.continueLifecycleCleanup(commandId, runtime, delivery);
   }
   reviewCommands(principalId: string) {
     return this.commandAccess.review(principalId);
   }
+  /** Trusted native composition; no raw receipt or filesystem selector crosses this boundary. */
+  groupInputSource(principalId: string, proof: Readonly<NativeMcpAuthorityProof>) {
+    return this.store.fenced(() =>
+      readGroupInputSource({
+        store: this.store,
+        proof,
+        capture: (raw) => this.captureNativeMcpAuthority(principalId, proof.source, raw, false),
+      })
+    );
+  }
+  groupCommands(principalId: string, runtime: GroupRuntimeAccess) {
+    return this.commandAccess.groups(principalId, runtime);
+  }
   crossTeamCommands(principalId: string) {
     return this.commandAccess.crossTeam(principalId);
   }
   /** Private feature composition; actual native original-input proof is required for every mutation. */
-  workSyncCommands(principalId: string) { return this.commandAccess.workSync(principalId); }
+  workSyncCommands(principalId: string) {
+    return this.commandAccess.workSync(principalId);
+  }
   processCommands(principalId: string, runtime?: TeamProcessRuntimeAccess) {
     return this.commandAccess.process(principalId, runtime);
   }
@@ -294,17 +327,33 @@ export class TeamOwner {
     );
   }
 
-  captureNativeMcpAuthority(principalId: string, source: RuntimeMemberBinding, raw: ImmutableDelivery, requireLead: boolean) {
-    return this.store.fenced(() => captureNativeMcpAuthority({
-      principalId, source, raw, requireLead, store: this.store,
-      members: this.state().members,
-      grant: this.authorize(principalId, 'read'),
-      lookupCause: () => lookupEvidenceCause({
-        store: this.store, recovery: this.taskRecovery, raw,
-        authorize: () => { this.authorize(principalId, 'read'); },
-        deliveryAuthorized: (intent) => this.deliveryAuthority.deliveryAuthorized(intent),
-      }),
-    }));
+  captureNativeMcpAuthority(
+    principalId: string,
+    source: RuntimeMemberBinding,
+    raw: ImmutableDelivery,
+    requireLead: boolean
+  ) {
+    return this.store.fenced(() =>
+      captureNativeMcpAuthority({
+        principalId,
+        source,
+        raw,
+        requireLead,
+        store: this.store,
+        members: this.state().members,
+        grant: this.authorize(principalId, 'read'),
+        lookupCause: () =>
+          lookupEvidenceCause({
+            store: this.store,
+            recovery: this.taskRecovery,
+            raw,
+            authorize: () => {
+              this.authorize(principalId, 'read');
+            },
+            deliveryAuthorized: (intent) => this.deliveryAuthority.deliveryAuthorized(intent),
+          }),
+      })
+    );
   }
   /** Trusted composition reads the launch-owned current technical selection, never native tokens. */
   runtimeSelection(principalId: string, memberId: string) {
@@ -378,12 +427,19 @@ export class TeamOwner {
       getTask: (taskId: string) => this.getTask(principalId, taskId),
       listTasks: () => this.listTasks(principalId),
       readSnapshot: () => this.readSnapshot(principalId),
-      ...(this.policy.reads ? { readQueries: createTeamReadQueries({
-        reads: this.policy.reads,
-        fenced: (action) => this.store.fenced(action),
-        authority: () => ({ grant: this.authorize(principalId, 'read'), members: this.state().members }),
-        getTeam: () => this.readSnapshot(principalId),
-      }) } : {}),
+      ...(this.policy.reads
+        ? {
+            readQueries: createTeamReadQueries({
+              reads: this.policy.reads,
+              fenced: (action) => this.store.fenced(action),
+              authority: () => ({
+                grant: this.authorize(principalId, 'read'),
+                members: this.state().members,
+              }),
+              getTeam: () => this.readSnapshot(principalId),
+            }),
+          }
+        : {}),
       readChanges: (cursor?: string) => this.readChanges(principalId, cursor),
       pendingDeliveries: () => this.pendingDeliveries(principalId),
       revoke: (target: string) => this.revoke(principalId, target),
@@ -422,7 +478,8 @@ export class TeamOwner {
 
   private authorize(principalId: string, permission: TeamGrant['permissions'][number]): TeamGrant {
     const state = this.state();
-    if (permission === 'task.write' || permission === 'message.write') assertTeamExecutionAllowed(state, this.store);
+    if (permission === 'task.write' || permission === 'message.write')
+      assertTeamExecutionAllowed(state, this.store);
     const grant = state.grants.find((entry) => entry.principalId === principalId);
     if (!grant || grant.revoked || !grant.permissions.includes(permission))
       throw new TeamOwnerError('forbidden');
@@ -438,7 +495,8 @@ export class TeamOwner {
         receipt.command.operation !== 'message.send' &&
         (!requiresHumanTaskActor(receipt.command) || grant.memberName === 'user') &&
         (!isUserTaskStartIntent(receipt.command) ||
-          receipt.taskStartLeadName === this.state().members.find((member) => member.role === 'lead')?.name) &&
+          receipt.taskStartLeadName ===
+            this.state().members.find((member) => member.role === 'lead')?.name) &&
         receipt.phase !== 'rejected' &&
         receipt.authorityRevision === (grant.revision ?? 1) &&
         !!current &&
@@ -509,7 +567,7 @@ export class TeamOwner {
       messages: projectCrossTeamMessages({
         store: this.store,
         policy: this.policy,
-        messages: recipients.flatMap((name) => this.policy.readInbox(name)),
+        messages: canonicalGroupMessages(recipients.flatMap((name) => this.policy.readInbox(name))),
         actor: grant.memberName,
         readAll: grant.permissions.includes('admin'),
       }),
@@ -588,211 +646,25 @@ export class TeamOwner {
   private execute(
     principalId: string,
     rawCommand: TeamCommand,
-    crossTeam?: CapturedCrossTeamIntent
+    crossTeam?: CapturedCrossTeamIntent,
+    group?: CapturedGroupIntent
   ): CommandReceipt {
-    validateTeamCommand(rawCommand);
-    const command = structuredClone(rawCommand);
-    return this.store.fenced(() => {
-      const grant = this.authorize(
-        principalId,
-        command.operation === 'message.send' ? 'message.write' : 'task.write'
-      );
-      if (crossTeam) {
-        validateCrossTeamTargetContext(
-          this.binding,
-          principalId,
-          command,
-          crossTeam,
-          grant.revision ?? 1
-        );
-        if (!this.deliveryAuthority.crossTeamOriginalAuthorized(crossTeam))
-          throw new TeamOwnerError('hold');
-      }
-      // Completed replay must pass current authority, not only the original mutation's check.
-      this.authorize(principalId, 'read');
-      if (requiresHumanTaskActor(command) && grant.memberName !== 'user')
-        throw new TeamOwnerError('forbidden');
-      validateCommandAttachments(command, this.policy.attachments);
-      const location = teamCommandPath(command.commandId);
-      if (
-        this.state().rosterCommands?.some((receipt) => receipt.commandId === command.commandId) ||
-        this.state().runtimeCaptures?.some((receipt) => receipt.commandId === command.commandId)
-      )
-        throw new TeamOwnerError('conflict');
-      let receipt = readProductCommand(this.store, command.commandId);
-      const messageRecipient =
-        command.operation === 'message.send'
-          ? this.state().members.find((member) => member.name === command.payload.to)
-          : undefined;
-      if (
-        command.operation === 'message.send' &&
-        grant.memberName === 'user' &&
-        command.payload.actionMode === 'delegate' &&
-        messageRecipient?.role !== 'lead'
-      )
-        throw new TeamOwnerError('forbidden');
-      const messageRecipientRole = receipt
-        ? receipt.messageRecipientRole
-        : command.operation === 'message.send' &&
-            (command.payload.messageId !== undefined ||
-              command.payload.summary !== undefined ||
-              command.payload.actionMode !== undefined)
-          ? messageRecipient?.role
-          : undefined;
-      const deliveryBinding =
-        receipt?.deliveryBinding ??
-        (command.operation === 'message.send'
-          ? this.state().members.find((member) => member.name === command.payload.to)?.delivery
-          : undefined);
-      const taskRecipients = receipt
-        ? receipt.taskRecipients
-        : command.operation !== 'message.send'
-          ? this.state().members.map(({ name, delivery }) => ({
-              name,
-              ...(delivery ? { delivery: structuredClone(delivery) } : {}),
-            }))
-          : undefined;
-      if (taskRecipients && taskRecipients.length > 256) throw new TeamOwnerError('hold');
-      const currentLead = this.state().members.find((member) => member.role === 'lead')?.name;
-      const taskStartLeadName = receipt
-        ? receipt.taskStartLeadName
-        : isUserTaskStartIntent(command)
-          ? currentLead
-          : undefined;
-      if (isUserTaskStartIntent(command) && taskStartLeadName !== currentLead)
-        throw new TeamOwnerError('hold');
-      const fingerprint = digest({
+    return executeTeamCommand(
+      {
         binding: this.binding,
-        principalId,
-        command,
-        deliveryBinding,
-        taskRecipients,
-        messageRecipientRole,
-        taskStartLeadName,
-        ...(crossTeam ? { crossTeam } : {}),
-      });
-      if (receipt) {
-        if (
-          receipt.messageRecipientRole !== undefined &&
-          receipt.messageRecipientRole !== messageRecipient?.role
-        )
-          throw new TeamOwnerError('hold');
-        if (receipt.principalId !== principalId || receipt.fingerprint !== fingerprint)
-          throw new TeamOwnerError('conflict');
-        if (receipt.phase === 'completed' || receipt.phase === 'rejected') return receipt;
-        if (
-          command.operation !== 'message.send' &&
-          receipt.phase !== 'prepared' &&
-          !this.taskRecovery.hasPlan(receipt) &&
-          (receipt.taskPlanVersion !== 1 ||
-            receipt.taskPreimage !== this.store.productFingerprint(this.binding.teamName))
-        )
-          throw new TeamOwnerError('hold');
-      } else {
-        if (command.operation === 'message.send') {
-          const to = command.payload.to;
-          if (
-            to === 'user'
-              ? grant.memberName === 'user'
-              : !this.state().members.some((member) => member.name === to && member.delivery)
-          )
-            throw new TeamOwnerError('invalid');
-        }
-        const pending = listProductCommandReceipts(this.store);
-        if (
-          command.operation !== 'message.send' &&
-          pending.some(
-            (entry) =>
-              entry.command.operation !== 'message.send' &&
-              !['completed', 'rejected'].includes(entry.phase)
-          )
-        )
-          throw new TeamOwnerError('hold');
-        const seed = [this.binding.backendId, this.binding.teamId, command.commandId];
-        receipt = {
-          schemaVersion: 1,
-          binding: this.binding,
-          commandId: command.commandId,
-          principalId,
-          fingerprint,
-          command,
-          ...(crossTeam ? { crossTeam: structuredClone(crossTeam) } : {}),
-          ...(taskStartLeadName ? { taskStartLeadName } : {}),
-          ...(messageRecipientRole ? { messageRecipientRole } : {}),
-          effects: {
-            taskId: effectId('task', ...seed),
-            commentId: effectId('comment', ...seed),
-            messageId: crossTeam
-              ? crossTeam.request.messageId
-              : command.operation === 'message.send' && command.payload.messageId !== undefined
-                ? command.payload.messageId
-                : effectId('message', ...seed),
-            deliveryId: effectId('delivery', ...seed),
-          },
-          createdAt: crossTeam?.timestamp ?? new Date().toISOString(),
-          phase: 'prepared',
-          authorityRevision: grant.revision ?? 1,
-          ...(command.operation !== 'message.send'
-            ? {
-                taskPlanVersion: 1 as const,
-                taskPreimage: this.store.productFingerprint(this.binding.teamName),
-                taskRecipients: taskRecipients!,
-              }
-            : {}),
-          ...(deliveryBinding
-            ? {
-                deliveryBinding: structuredClone(deliveryBinding),
-                authorityRevision: grant.revision ?? 1,
-              }
-            : {}),
-        };
-        this.store.write(location, receipt);
-      }
-      receipt.phase = 'applying';
-      this.store.write(location, receipt);
-      const before = this.store.productFingerprint(this.binding.teamName);
-      try {
-        if (command.operation === 'message.send')
-          receipt.result = commitTeamMessage(
-            receipt,
-            grant.memberName,
-            this.state().members,
-            this.store,
-            this.policy,
-            this.policy.attachments
-          );
-        else {
-          const plan = this.taskRecovery.commit(
-            receipt,
-            grant.memberName,
-            this.state().members,
-            (board) => applyTeamTask(receipt, grant.memberName, board, this.binding.teamName, this.policy.attachments)
-          );
-          receipt.result = plan.result;
-          receipt.taskHash = plan.taskHash;
-        }
-        receipt.phase = 'completed';
-        this.store.write(location, receipt);
-        return receipt;
-      } catch (error) {
-        if (
-          command.operation !== 'message.send' &&
-          error instanceof TaskPolicyRejected &&
-          this.store.productFingerprint(this.binding.teamName) === before &&
-          !receipt.result
-        ) {
-          receipt.phase = 'rejected';
-          receipt.result = { rejected: true, reason: 'policy' };
-          this.store.write(location, receipt);
-          return receipt;
-        }
-        // Exception may follow partial filesystem effects; never label it not-applied.
-        receipt.phase = 'held';
-        this.store.write(location, receipt);
-        throw new TeamOwnerError('hold');
-      } finally {
-        this.productChanges.invalidate();
-      }
-    });
+        store: this.store,
+        policy: this.policy,
+        taskRecovery: this.taskRecovery,
+        state: () => this.state(),
+        authorize: (principal, permission) => this.authorize(principal, permission),
+        crossTeamOriginalAuthorized: (intent) =>
+          this.deliveryAuthority.crossTeamOriginalAuthorized(intent),
+        invalidate: () => this.productChanges.invalidate(),
+      },
+      principalId,
+      rawCommand,
+      crossTeam,
+      group
+    );
   }
 }

@@ -1,3 +1,6 @@
+import { readGroupFile, writeGroupFile } from './groupStorageFiles.js';
+import { assertValidGroupInboxRows } from '../../group-chats/envelope.js';
+import { safeSegment } from '../../team/identity.js';
 import { createControllerProcessPolicy } from '../../process/ControllerProcessPolicy.js';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
@@ -125,6 +128,31 @@ export function createTeamPolicy(root: string, teamName: string): TeamPolicyPort
     },
     sendMessage: (actor, flags) =>
       createTeamController(root, teamName, actor === 'user').messages.sendMessage(flags),
+    sendGroupMessage(flags) {
+      const { member, ...row } = flags;
+      if (typeof member !== 'string' || typeof row.messageId !== 'string')
+        throw new Error('Invalid group destination');
+      const file = join(root, 'teams', teamName, 'inboxes', `${safeSegment(member)}.json`);
+      return withTeamFileFence(file, () => {
+        const rows = readGroupFile(file) ?? [];
+        assertValidGroupInboxRows(rows);
+        const matches = rows.filter(
+          (value) =>
+            !!value &&
+            typeof value === 'object' &&
+            'messageId' in value &&
+            value.messageId === row.messageId
+        );
+        if (matches.length) throw new Error('Conflicting group physical identity');
+        assertValidGroupInboxRows([row]);
+        rows.push(row);
+        writeGroupFile(file, rows, writeTeamJson);
+        return {
+          messageId: row.messageId as string,
+          message: JSON.parse(JSON.stringify(row)) as JsonValue,
+        };
+      });
+    },
     sendCrossTeamMessage: (flags) =>
       messageStore.sendInboxMessage(createTeamController(root, teamName).context.paths, flags),
     appendSentMessage: (flags) =>

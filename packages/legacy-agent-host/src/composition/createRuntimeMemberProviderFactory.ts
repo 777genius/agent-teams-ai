@@ -1,3 +1,4 @@
+import type { TeamMcpGroupPort } from '../mcp/groupChatTools.js';
 import { createMemberAttachmentPort } from './createMemberAttachmentPort.js';
 import type { TeamMcpNativeMemberCreationPort } from '../mcp/nativeMemberCreationContracts.js';
 import { createClaudeMemberProvider } from '../adapters/providers/ClaudeMemberProvider.js';
@@ -40,6 +41,11 @@ export function createRuntimeMemberProviderFactory(options: {
   windows: ToolEvidenceWindows;
   processCustody?: ProcessCustody;
   createProvider?(context: MemberProviderContext): MemberProvider;
+  groups?(
+    entry: MemberEntry,
+    capture: MemberInputCapture,
+    current: () => boolean
+  ): TeamMcpGroupPort | undefined;
   crossTeam?(entry: MemberEntry, isCurrent: () => boolean): TeamMcpCrossTeamPort | undefined;
   workSync?(
     entry: MemberEntry,
@@ -109,6 +115,7 @@ export function createRuntimeMemberProviderFactory(options: {
             owner.captureNativeMcpAuthority(principalId, delivery, raw, requireLead),
           assertCurrent: authority.assertCurrent,
         });
+      const groups = options.groups?.(entry, captureSource, authority.isCurrent);
       const crossTeam = options.crossTeam?.(entry, authority.isCurrent),
         workSync = options.workSync?.(entry, captureSource, {
           principalId,
@@ -126,6 +133,7 @@ export function createRuntimeMemberProviderFactory(options: {
       if (workSync) entry.settleWorkSync = workSync.settleAccepted;
       const connection = {
         ...owner.connect(principalId),
+        ...(groups ? { groups } : {}),
         ...(crossTeam ? { crossTeam } : {}),
         ...(workSync ? { workSync } : {}),
         ...(nativeMemberActions ? { nativeMemberActions } : {}),

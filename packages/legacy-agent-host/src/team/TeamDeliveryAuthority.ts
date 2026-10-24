@@ -1,3 +1,4 @@
+import { assertGroupOriginal } from '../group-chats/groupDelivery.js';
 import { teamExecutionAllowed } from './teamLifecycleAdmission.js';
 import { digest, safeSegment } from './identity.js';
 import { deliveryIdentity, memberBinding } from './DeliveryRecovery.js';
@@ -76,10 +77,14 @@ export function createTeamDeliveryAuthority(options: {
       try {
         if (
           (action === 'control' || action === 'read') &&
-          (options.taskRecovery.authorizeRetraction(raw) || options.authorizeRetainedCancellation?.(raw))
+          (options.taskRecovery.authorizeRetraction(raw) ||
+            options.authorizeRetainedCancellation?.(raw))
         )
           return true;
-        if ((action === 'admit' || action === 'dispatch') && (options.taskRecovery.retracting(raw) || options.retractingRetainedDelivery?.(raw)))
+        if (
+          (action === 'admit' || action === 'dispatch') &&
+          (options.taskRecovery.retracting(raw) || options.retractingRetainedDelivery?.(raw))
+        )
           return false;
         safeSegment(raw.deliveryId);
         const intent = options.store.read<DeliveryIntent>(`outbox/${raw.deliveryId}.json`);
@@ -100,15 +105,22 @@ export function createTeamDeliveryAuthority(options: {
   ): boolean {
     try {
       const state = options.state();
-      if ((action === 'admit' || action === 'dispatch') && !teamExecutionAllowed(state, options.store)) return false;
+      if (
+        (action === 'admit' || action === 'dispatch') &&
+        !teamExecutionAllowed(state, options.store)
+      )
+        return false;
       const member = state.members.find(
         (candidate) =>
           candidate.delivery &&
           digest(memberBinding(candidate.delivery)) === digest(memberBinding(binding))
       );
       if (!member) return false;
-      if ((action === 'admit' || action === 'dispatch') &&
-        options.runtimeBindings?.current(memberBinding(member.delivery!))?.workAllowed === false) return false;
+      if (
+        (action === 'admit' || action === 'dispatch') &&
+        options.runtimeBindings?.current(memberBinding(member.delivery!))?.workAllowed === false
+      )
+        return false;
       return state.grants.some(
         (grant) =>
           grant.memberName === member.name &&
@@ -129,6 +141,7 @@ export function createTeamDeliveryAuthority(options: {
     try {
       if (intent.schemaVersion !== 1 || !memberAuthorized(intent.binding, 'admit')) return false;
       const receipt = readProductCommand(options.store, intent.commandId);
+      if (receipt?.group) assertGroupOriginal(options.store, options.binding, receipt.group);
       if (receipt?.crossTeam && !crossTeamOriginalAuthorized(receipt.crossTeam)) return false;
       if (receipt && receipt.command.operation !== 'message.send')
         return options.taskAuthorityCurrent(receipt) && options.taskRecovery.owns(intent, receipt);
@@ -147,7 +160,8 @@ export function createTeamDeliveryAuthority(options: {
           grant.memberName,
           receipt.effects.messageId,
           receipt.messageRecipientRole,
-          receipt.crossTeam
+          receipt.crossTeam,
+          receipt.group
         ) !== intent.content ||
         digest(intent.attachments ?? []) !== digest(receipt.command.payload.attachments ?? []) ||
         !receipt.deliveryBinding ||
@@ -161,6 +175,7 @@ export function createTeamDeliveryAuthority(options: {
             deliveryBinding: receipt.deliveryBinding,
             messageRecipientRole: receipt.messageRecipientRole,
             ...(receipt.crossTeam ? { crossTeam: receipt.crossTeam } : {}),
+            ...(receipt.group ? { group: receipt.group } : {}),
           })
       )
         return false;

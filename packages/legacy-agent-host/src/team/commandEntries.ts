@@ -1,3 +1,5 @@
+import { validateGroupCommandReceipt } from '../group-chats/groupCommandRecords.js';
+import type { GroupCommandReceipt } from '../group-chats/groupCommandRecords.js';
 import { validateWorkSyncCommandReceipt } from '../work-sync/commandContracts.js';
 import type { WorkSyncCommandReceipt } from '../work-sync/commandContracts.js';
 import { validateQueuedDiscardReceipt } from './queuedDiscardContracts.js';
@@ -18,6 +20,7 @@ import type { ReviewCommandReceipt } from './reviewCommandContracts.js';
 import type { TeamStore } from './ports.js';
 export type TeamCommandEntry =
   | CommandReceipt
+  | GroupCommandReceipt
   | ReviewCommandReceipt
   | CrossTeamCommandReceipt
   | ProcessCommandReceipt
@@ -58,9 +61,14 @@ export function validateCommandEntry(value: TeamCommandEntry): TeamCommandEntry 
       !value.binding
     )
       throw new TeamOwnerError('hold');
-    if ('family' in value && value.family === 'queued-discard') return validateQueuedDiscardReceipt(value);
-    if ('family' in value && value.family === 'lifecycle') return validateTeamLifecycleReceipt(value);
-    if ('family' in value && value.family === 'work-sync') return validateWorkSyncCommandReceipt(value);
+    if ('family' in value && value.family === 'group-chat')
+      return validateGroupCommandReceipt(value);
+    if ('family' in value && value.family === 'queued-discard')
+      return validateQueuedDiscardReceipt(value);
+    if ('family' in value && value.family === 'lifecycle')
+      return validateTeamLifecycleReceipt(value);
+    if ('family' in value && value.family === 'work-sync')
+      return validateWorkSyncCommandReceipt(value);
     if ('family' in value && value.family === 'process')
       return validateProcessReceipt(value, digest);
     if ('family' in value && value.family === 'cross-team')
@@ -133,6 +141,7 @@ export function listTeamCommandEntries(store: TeamStore): TeamCommandEntry[] {
     .filter(
       (entry) =>
         !('family' in entry) ||
+        entry.family === 'group-chat' ||
         entry.family === 'cross-team' ||
         entry.family === 'process' ||
         entry.family === 'work-sync' ||

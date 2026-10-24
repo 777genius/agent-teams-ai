@@ -231,6 +231,26 @@
     "./attachments/capabilities": {
       "types": "./dist/attachments/capabilities.d.ts",
       "import": "./dist/attachments/capabilities.js"
+    },
+    "./group-chats/contracts": {
+      "types": "./dist/group-chats/contracts.d.ts",
+      "import": "./dist/group-chats/contracts.js"
+    },
+    "./group-chats/policy": {
+      "types": "./dist/group-chats/policy.d.ts",
+      "import": "./dist/group-chats/policy.js"
+    },
+    "./group-chats/application": {
+      "types": "./dist/group-chats/application.d.ts",
+      "import": "./dist/group-chats/application.js"
+    },
+    "./group-chats/operations": {
+      "types": "./dist/group-chats/operations.d.ts",
+      "import": "./dist/group-chats/operations.js"
+    },
+    "./group-chats/public-values": {
+      "types": "./dist/group-chats/publicValues.d.ts",
+      "import": "./dist/group-chats/publicValues.js"
     }
   },
   "bin": {

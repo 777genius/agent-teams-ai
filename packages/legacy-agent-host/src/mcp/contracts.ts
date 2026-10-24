@@ -1,3 +1,4 @@
+import type { TeamMcpGroupPort } from './groupChatTools.js';
 import type { TeamMcpNativeMemberCreationPort } from './nativeMemberCreationContracts.js';
 import type { TeamMcpNativeMemberActionPort } from './nativeMemberActionContracts.js';
 import type { TeamMcpWorkSyncPort } from './workSyncContracts.js';
@@ -11,6 +12,7 @@ export type TeamMcpConnection = Pick<
   'execute' | 'lookup' | 'getTask' | 'listTasks'
 > & {
   readonly readQueries?: NonNullable<ReturnType<TeamOwner['connect']>['readQueries']>;
+  readonly groups?: TeamMcpGroupPort;
   readonly crossTeam?: TeamMcpCrossTeamPort;
   readonly workSync?: TeamMcpWorkSyncPort;
   readonly nativeMemberCreation?: TeamMcpNativeMemberCreationPort;

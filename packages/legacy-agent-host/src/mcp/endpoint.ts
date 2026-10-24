@@ -116,6 +116,7 @@ export async function startTeamMcpEndpoint(
   const port = options.port ?? 0;
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new McpToolFailure('invalid');
   // Snapshot the actual captured methods, not a later mutable host-service object.
+  const groups = options.connection.groups;
   const crossTeam = options.connection.crossTeam;
   const process = options.connection.process;
   const reads = options.connection.readQueries;
@@ -127,25 +128,42 @@ export async function startTeamMcpEndpoint(
     lookup: options.connection.lookup.bind(options.connection),
     getTask: options.connection.getTask.bind(options.connection),
     listTasks: options.connection.listTasks.bind(options.connection),
-    ...(reads ? { readQueries: Object.freeze({
-      getTeam: reads.getTeam.bind(reads),
-      getKanbanState: reads.getKanbanState.bind(reads),
-      listReviewers: reads.listReviewers.bind(reads),
-      getTaskComment: reads.getTaskComment.bind(reads),
-      listTaskInventory: reads.listTaskInventory.bind(reads),
-      taskBriefing: reads.taskBriefing.bind(reads),
-      leadBriefing: reads.leadBriefing.bind(reads),
-      ...(reads.memberBriefing ? { memberBriefing: reads.memberBriefing.bind(reads) } : {}),
-    }) } : {}),
-    ...(nativeMemberCreation ? {
-      nativeMemberCreation: Object.freeze({ invoke: nativeMemberCreation.invoke.bind(nativeMemberCreation) }),
-    } : {}),
-    ...(nativeMemberActions ? {
-      nativeMemberActions: Object.freeze({ invoke: nativeMemberActions.invoke.bind(nativeMemberActions) }),
-    } : {}),
-    ...(workSync ? {
-      workSync: Object.freeze({ status: workSync.status.bind(workSync), report: workSync.report.bind(workSync) }),
-    } : {}),
+    ...(reads
+      ? {
+          readQueries: Object.freeze({
+            getTeam: reads.getTeam.bind(reads),
+            getKanbanState: reads.getKanbanState.bind(reads),
+            listReviewers: reads.listReviewers.bind(reads),
+            getTaskComment: reads.getTaskComment.bind(reads),
+            listTaskInventory: reads.listTaskInventory.bind(reads),
+            taskBriefing: reads.taskBriefing.bind(reads),
+            leadBriefing: reads.leadBriefing.bind(reads),
+            ...(reads.memberBriefing ? { memberBriefing: reads.memberBriefing.bind(reads) } : {}),
+          }),
+        }
+      : {}),
+    ...(nativeMemberCreation
+      ? {
+          nativeMemberCreation: Object.freeze({
+            invoke: nativeMemberCreation.invoke.bind(nativeMemberCreation),
+          }),
+        }
+      : {}),
+    ...(nativeMemberActions
+      ? {
+          nativeMemberActions: Object.freeze({
+            invoke: nativeMemberActions.invoke.bind(nativeMemberActions),
+          }),
+        }
+      : {}),
+    ...(workSync
+      ? {
+          workSync: Object.freeze({
+            status: workSync.status.bind(workSync),
+            report: workSync.report.bind(workSync),
+          }),
+        }
+      : {}),
     ...(process
       ? {
           process: Object.freeze({
@@ -153,6 +171,15 @@ export async function startTeamMcpEndpoint(
             metadata: process.metadata.bind(process),
             list: process.list.bind(process),
             lookup: process.lookup.bind(process),
+          }),
+        }
+      : {}),
+    ...(groups
+      ? {
+          groups: Object.freeze({
+            list: groups.list.bind(groups),
+            execute: groups.execute.bind(groups),
+            lookup: groups.lookup.bind(groups),
           }),
         }
       : {}),

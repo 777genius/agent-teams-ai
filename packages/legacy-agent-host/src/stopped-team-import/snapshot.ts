@@ -117,6 +117,8 @@ function disposition(category: ImportCategory, path: string): SnapshotFile['disp
       'kanban-state.json',
       'sentMessages.json',
       'sent-cross-team.json',
+      'group-chats.json',
+      'group-chat-reactions.json',
     ].includes(path)
   )
     return path === 'kanban-state.json' ? 'product' : 'archive';

@@ -460,28 +460,42 @@ export function createHostTeamsApi(
       assertCurrent();
       return snapshot.tasks.find((task) => task.id === taskId) ?? null;
     },
-    async getMessagesPage(key: string, options?: { cursor?: string | null; limit?: number }) {
+    async getMessagesPage(
+      key: string,
+      options?: { cursor?: string | null; limit?: number; groupChatId?: string }
+    ) {
       const { snapshot, assertCurrent } = await selected(key, captureScope());
       assertCurrent();
       // A changed product revision invalidates older offsets instead of skipping/duplicating rows silently.
-      const parts = options?.cursor?.split(':') ?? [snapshot.revision, '0'];
+      const scope =
+        options?.groupChatId === undefined
+          ? snapshot.revision
+          : `${snapshot.revision}.${options.groupChatId}`;
+      const parts = options?.cursor?.split(':') ?? [scope, '0'];
       if (parts.length !== 2) throw new Error('Invalid Host messages cursor');
       const [revision, offsetText] = parts;
       const offset = Number(offsetText);
-      if (revision !== snapshot.revision || !Number.isSafeInteger(offset) || offset < 0)
+      if (revision !== scope || !Number.isSafeInteger(offset) || offset < 0)
         throw new Error('Host messages cursor expired');
       const limit = options?.limit ?? 50;
       if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500)
         throw new Error('Invalid Host messages page');
       const unique = new Map<string, InboxMessage>();
-      for (const message of snapshot.messages)
+      for (const message of snapshot.messages) {
+        if (
+          options?.groupChatId !== undefined &&
+          (message.groupChatId !== options.groupChatId ||
+            message.messageId !== message.groupMessageId)
+        )
+          continue;
         unique.set(message.messageId ?? JSON.stringify(message), message);
+      }
       const messages = [...unique.values()].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
       const end = Math.max(0, messages.length - offset);
       const start = Math.max(0, end - limit);
       return {
         messages: messages.slice(start, end),
-        nextCursor: start > 0 ? `${snapshot.revision}:${offset + limit}` : null,
+        nextCursor: start > 0 ? `${scope}:${offset + limit}` : null,
         hasMore: start > 0,
         feedRevision: snapshot.revision,
       };
