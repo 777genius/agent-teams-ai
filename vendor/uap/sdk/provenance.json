@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "repository": "777genius/universal-agent-plugins",
+  "sourceCommit": "b3e0fcc205a64d837bd3cfa2cced4d47fa6d892c",
+  "packageName": "@uap/management-sdk",
+  "packageVersion": "0.0.0-development",
+  "file": "uap-management-sdk-0.0.0-development-b3e0fcc205a6.tgz",
+  "sha256": "2cf5106a3d22717da68290aa18ee88f22e4c553f1a9f6fcaca458f67d19d6593",
+  "integrity": "sha512-mldholGigSbgjAnVwb2Cvk3giJqq0KybHcO5g1lZcdwVBUVyJbN+vIt1e9JGBlCQGQc571J7BlUW39CUjvhadw=="
+}

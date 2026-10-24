@@ -3,6 +3,7 @@ import { createAppCloseCoordinationBridge } from '@features/app-close-coordinati
 import { createCodexAccountBridge } from '@features/codex-account/preload';
 import { createCodexRuntimeInstallerBridge } from '@features/codex-runtime-installer/preload';
 import { createDocumentPreviewBridge } from '@features/document-preview/preload';
+import { createExtensionManagementBridge } from '@features/extension-management/preload';
 import { createExternalAgentConnectionBridge } from '@features/external-agent-connection/preload';
 import { createGatewayProviderBridge } from '@features/gateway-provider/preload';
 import { createMemberLogStreamBridge } from '@features/member-log-stream/preload';
@@ -510,6 +511,7 @@ ipcRenderer.on(
 // =============================================================================
 
 const electronAPI: ElectronAPI = {
+  extensionManagement: createExtensionManagementBridge(ipcRenderer),
   externalAgentConnection: createExternalAgentConnectionBridge(ipcRenderer),
   appCloseCoordination: createAppCloseCoordinationBridge(ipcRenderer),
   ...createCodexAccountBridge({

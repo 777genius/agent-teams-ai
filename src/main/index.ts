@@ -1,3 +1,5 @@
+import { createElectronExtensionManagement } from '@features/extension-management/main';
+
 import type { createGatewayLaunchRuntime } from '@main/services/gateway/createGatewayLaunchRuntime';
 // Increase UV thread pool size BEFORE async I/O: startup binary resolution,
 // subprocess work, watchers, and IPC filesystem requests share this pool.
@@ -974,6 +976,7 @@ let teamTaskStallMonitor: TeamTaskStallMonitor | null = null;
 let openCodePromptDeliveryContinuityScan: OpenCodePromptDeliveryContinuityScan | null = null;
 let internalStorageFeature: InternalStorageFeature | null = null;
 let skillsWatcherService: SkillsWatcherService | null = null;
+let extensionManagement: ReturnType<typeof createElectronExtensionManagement>;
 let teamBackupService: TeamBackupService | null = null;
 let branchStatusService: BranchStatusService | null = null;
 let rendererRecoveryController: RendererRecoveryController | null = null;
@@ -1995,13 +1998,20 @@ async function initializeServices(): Promise<void> {
     },
   });
   teamDataService.setTaskGroupChatCatalog((teamName) => teamGroupChatsFeature.list({ teamName }));
+  extensionManagement = createElectronExtensionManagement({
+    getMainWindow: () => mainWindow,
+    isLocal: () => contextRegistry.getActive().type === 'local',
+    aliveTeams: () => teamProvisioningService.getAliveTeams(),
+    savedRequest: (name) => teamDataService.getSavedRequest(name),
+  });
   const teamIpcHandlerApis: TeamIpcHandlerApis = bindTeamIpcHandlerApis(teamProvisioningService);
+  extensionManagement.guardRuntimeApis(teamIpcHandlerApis);
   const teamDiagnosticsApi = teamIpcHandlerApis.diagnostics;
   const teamMessagingApi = teamIpcHandlerApis.messaging;
   const teamMemberSettingsFeature = teamMemberSettings.createNodeTeamMemberSettingsFeature({
     commandRunner: applicationCommandRunner,
     memberLifecycle: teamIpcHandlerApis.memberLifecycle,
-    /* prettier-ignore */ runtime: createTeamProvisioningLeadRuntimeSettingsCapability({ isTeamAlive: (teamName) => teamProvisioningService.isTeamAlive(teamName), assessLeadRuntimeRestart: (input) => teamProvisioningService.assessLeadRuntimeRestart(input), restartLeadRuntime: (input) => teamProvisioningService.restartLeadRuntime(input) }),
+    /* prettier-ignore */ runtime: createTeamProvisioningLeadRuntimeSettingsCapability({ isTeamAlive: (teamName) => teamProvisioningService.isTeamAlive(teamName), assessLeadRuntimeRestart: (input) => teamProvisioningService.assessLeadRuntimeRestart(input), restartLeadRuntime: (input) => extensionManagement.admitLaunch({ teamName: input.teamName }, () => teamProvisioningService.restartLeadRuntime(input), [input.before.providerId, input.after.providerId]) }),
     getWorkerCache: getTeamDataWorkerClient,
   });
   const workspaceTrust = workspaceTrustFeature.createWorkspaceTrustFeatures({
@@ -2855,6 +2865,7 @@ async function initializeServices(): Promise<void> {
   });
 
   teamHttpHandlerApis = bindTeamHttpHandlerApis(teamProvisioningService);
+  extensionManagement.guardRuntimeApis(teamHttpHandlerApis);
   configureWindowLifecycleActions({
     quit: async () => {
       await requestGuardedAppQuit('app-quit');
@@ -2998,6 +3009,7 @@ async function startHttpServer(
         chunkBuilder: activeContext.chunkBuilder,
         dataCache: activeContext.dataCache,
         recentProjectsFeature,
+        extensionManagement: extensionManagement.feature,
         teamGroupChatsFeature,
         organizationsFeature,
         workspaceTrust: workspaceTrustStatus,
@@ -3153,6 +3165,7 @@ async function shutdownServices(): Promise<void> {
     }
 
     await runShutdownStep('skills watcher stop', () => skillsWatcherService?.stopAll());
+    await runShutdownStep('extension manager stop', () => extensionManagement?.feature.close());
     await runShutdownStep('provider connection feature detach', () => {
       providerConnectionService.setCodexModelCatalogFeature(null);
       providerConnectionService.setCodexAccountFeature(null);

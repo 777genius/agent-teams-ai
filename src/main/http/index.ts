@@ -1,3 +1,7 @@
+import {
+  type ExtensionManagementFeature,
+  registerExtensionManagementHttp,
+} from '@features/extension-management/main';
 /**
  * HTTP Route Registration Orchestrator.
  *
@@ -63,6 +67,7 @@ export interface HttpServices {
   chunkBuilder: ChunkBuilder;
   dataCache: DataCache;
   recentProjectsFeature?: RecentProjectsFeatureFacade;
+  extensionManagement?: ExtensionManagementFeature;
   teamGroupChatsFeature?: TeamGroupChatsFeature;
   organizationsFeature?: OrganizationsFeatureFacade;
   tokenUsageFeature?: TokenUsageFeatureFacade;
@@ -84,6 +89,8 @@ export function registerHttpRoutes(
   sshModeSwitchCallback: (mode: 'local' | 'ssh') => Promise<void>
 ): void {
   services.externalAgentConnection?.registerHttp(app);
+  if (services.extensionManagement)
+    registerExtensionManagementHttp(app, services.extensionManagement);
   if (services.teamGroupChatsFeature)
     registerTeamGroupChatsHttp(app, services.teamGroupChatsFeature);
   registerProjectRoutes(app, services);

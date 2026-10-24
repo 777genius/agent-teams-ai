@@ -3,7 +3,6 @@
  * Uses per-tab UI state via useExtensionsTabState() hook.
  * Global catalog data comes from Zustand store.
  */
-
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -11,6 +10,7 @@ import {
   mergeCodexProviderStatusWithSnapshot,
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
+import { ManagedExtensions } from '@features/extension-management/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
@@ -555,7 +555,7 @@ export const ExtensionStoreView = (): React.JSX.Element => {
   ]);
 
   // Browser mode guard
-  if (!api.plugins && !api.mcpRegistry && !api.skills) {
+  if (!api.plugins && !api.mcpRegistry && !api.skills && !api.extensionManagement) {
     return (
       <div className="flex flex-1 items-center justify-center">
         <div className="text-center">
@@ -646,6 +646,8 @@ export const ExtensionStoreView = (): React.JSX.Element => {
               </div>
 
               <TabsContent value="plugins" className="mt-0 pt-4">
+                <ManagedExtensions kind="plugin" />
+                <h2 className="mb-3 text-sm font-medium">{t('uap.nativePlugins')}</h2>
                 <PluginsPanel
                   projectPath={projectPath}
                   pluginFilters={tabState.pluginFilters}
@@ -684,6 +686,7 @@ export const ExtensionStoreView = (): React.JSX.Element => {
               </TabsContent>
 
               <TabsContent value="skills" className="mt-0 pt-4">
+                <ManagedExtensions kind="skill" />
                 <SkillsPanel
                   projectPath={projectPath}
                   projectLabel={projectLabel}

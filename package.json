@@ -122,7 +122,8 @@
     "format:native:proposal": "node scripts/local-checks/desktop-native-check.ts --proposal",
     "test:native:parity": "vitest run --config scripts/local-checks/vitest.native-parity.config.ts",
     "typecheck:native:tooling": "node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/local-checks/tsconfig.native-tooling.json",
-    "test:native:retained": "vitest run --config scripts/local-checks/vitest.retained-policy.config.ts"
+    "test:native:retained": "vitest run --config scripts/local-checks/vitest.retained-policy.config.ts",
+    "stage-uap-runtime": "node ./scripts/stage-uap-runtime.ts"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx,js,jsx}": [
@@ -203,6 +204,7 @@
     "@tiptap/pm": "3.30.5",
     "@tiptap/react": "3.30.5",
     "@tiptap/starter-kit": "3.30.5",
+    "@uap/management-sdk": "file:vendor/uap/sdk/uap-management-sdk-0.0.0-development-b3e0fcc205a6.tgz",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-web-links": "^0.12.0",
     "@xterm/xterm": "^6.0.0",
@@ -382,6 +384,10 @@
       {
         "from": "mcp-server/package.json",
         "to": "mcp-server/package.json"
+      },
+      {
+        "from": "resources/uap",
+        "to": "uap"
       }
     ],
     "npmRebuild": false,
@@ -495,7 +501,8 @@
         "repo": "agent-teams-ai",
         "releaseType": "release"
       }
-    ]
+    ],
+    "beforePack": "scripts/electron-builder/beforePackUap.ts"
   },
   "packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621",
   "knip": {

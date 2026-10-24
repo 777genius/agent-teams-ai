@@ -1,3 +1,4 @@
+import { createExtensionManagementHttpClient } from '@features/extension-management/renderer';
 /**
  * HTTP-based implementation of ElectronAPI for browser mode.
  *
@@ -231,6 +232,9 @@ function gatewayUnavailable(): never {
 }
 
 export class HttpAPIClient implements ElectronAPI {
+  get extensionManagement() {
+    return createExtensionManagementHttpClient(this.baseUrl);
+  }
   gatewayProvider: GatewayProviderApi = {
     listGatewayProfiles: async () => [],
     saveGatewayProfile: async () => gatewayUnavailable(),
