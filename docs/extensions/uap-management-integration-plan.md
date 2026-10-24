@@ -209,9 +209,12 @@ limitations are not silently added to this task.
 
 ### Context, lifecycle and readiness
 
-A UAP session binds an immutable host context with explicit manifest/state/profile
-roots. A second profile of the same client uses a separate environment unless the
-engine advertises multiple profile binding. Root collisions are refused.
+A UAP session binds an immutable capture of native profile roots and executables.
+Production omits state/dependency root overrides so Go selects the canonical UAP
+CLI home and shared ownership locks. Capture one current profile for each supported
+client in one engine session; runtime selection narrows installation/removal
+targets. A profile change requires a fresh capture. Bindings outside that capture
+are not silently reassigned or presented as active in the replacement profile.
 
 Accepted request lookup precedes expired plan lookup, including combined lost
 response and process restart. SDK waiting cancellation never kills the engine.
@@ -296,3 +299,72 @@ candidate selection, affected active run refusal and unrelated profile success.
 
 Plan direction is ready for implementation. These gates remain mandatory in code
 review and cannot be represented by UI-only disabling or synthetic install results.
+
+### v4 implementation review and authority corrections
+
+This revision follows UAP plan v4 at
+`b16f5396e72ad91e1cdc5e628ba3e364dae77b75`.
+
+- **Shared CLI ownership:** normal startup omits state and dependency roots. Go
+  resolves `AGENTPLUGINS_HOME` or the platform configuration directory. An
+  app-private store cannot authorize writes over projections owned by the default
+  CLI. Explicit isolated roots remain available for tests and registered embedder
+  environments; they do not prove custody across arbitrary foreign stores.
+- **Environment versus capture:** durable work belongs to stable engine-derived
+  `environmentId`. Each plan and operation also retains its immutable `contextId`
+  and dependency root. Changing executable or display labels must not hide pending
+  work; recovery cannot settle an old environment by inspecting a replacement.
+- **One captured native environment:** capture Claude, Codex and OpenCode profiles
+  once and reuse the owned connection as the selected runtime changes. Installs
+  and removals name their target IDs. An update of an existing alias may affect
+  all its bindings; Update environment and Restore locked cover the shared
+  manifest. The reviewed plan, not the currently visible tab, identifies effects.
+- **Admission:** retained plan targets select the affected native roots and active
+  clients. Unknown/recovery scope stays conservative. Existing runtime metadata
+  lacks complete original profile roots, so a different already-running profile
+  of the same client may remain blocked until stronger runtime authority exists;
+  this limitation must not be described as verified unaffected-profile support.
+  Launch and mutation share one admission gate at the existing runtime boundary.
+- **Local Skills:** create/edit/import/delete/copy/restore use Go retained local
+  plans, exact old-file digests and whole-directory snapshot checks under the
+  canonical installer locks. Reuse `dirswap.Manager` and its recovery authority;
+  do not add a generic lease or a Node check-then-write path. Project local Skills
+  authoring does not imply native project plugin activation.
+- **Reversible deletion UX:** engine-owned backups stay outside native discovery.
+  A successful deletion must remain discoverable and restorable after the panel
+  and app restart. Use bounded restore-point metadata from the existing durable
+  ledger, or an already supported history surface. Do not introduce a parallel
+  app receipt database merely to remember completed deletes. Generic native
+  recovery cannot settle a local file operation; restoration names its exact
+  original operation/root/name and receives a fresh review.
+- **Acceptance uncertainty:** main retains request ID and plan across lost replies
+  and exposes that retry handle when the panel remounts. Empty observation is not
+  proof of no acceptance. Only the exact observed operation, or a definitive
+  pre-effect refusal after durable replay lookup (for example `PLAN_STALE`), can
+  resolve uncertainty. Review dismissal discards only unaccepted plans; it never
+  cancels accepted work. Mutated cancellation and unresolved outcomes remain held.
+- **Update wording:** preserve the engine's existing minimum-compatible range
+  policy. Explain ranges and pins briefly; never claim that Update selects the
+  greatest published version. Always display actual proposed version changes.
+- **Packaging:** exact vendored SDK and native executable derive from the same
+  reviewed source commit. Build uses UAP's declared Go toolchain and read-only
+  module resolution. Include notices and record digests. macOS/Windows signing
+  changes executable bytes, so verify the final signed-artifact integrity design
+  rather than assuming a pre-sign checksum remains valid.
+- **HTTP authority:** the desktop sidecar uses the same facade and actual socket
+  peer, exact Host/Origin, JSON and request limits. A standalone host requires a
+  concrete runtime-activity authority; an invented empty activity list is not
+  parity. Resolve or explicitly capability-gate that host before qualification.
+
+Independent v4 review found no reason to add a daemon, second transport, generic
+file lease, parallel installer or new frontend framework. The mandatory remaining
+UX items are restore-point discoverability and truthful range-update wording.
+
+Current local evidence is limited to the focused app contracts/application/
+IPC/HTTP/preload typecheck, 20 focused behavioral tests and the source-size guard.
+The complete repository TypeScript check exceeded the workspace's memory limit;
+it is not recorded as passed. Renderer/integration typechecks, full lint/build,
+actual Electron clicking, native discovery, signed packaging, full CI and final
+independent review remain open. The managed/local Skill adapter is still being
+integrated. Project/worktree S25/S26 remain blocked on the separately qualified
+engine workstream; a disabled control is only fallback evidence.
