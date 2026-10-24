@@ -172,6 +172,7 @@ vi.mock('agent-teams-controller', () => ({
 }));
 
 import { buildLegacyInboxMessageId } from '../../../../src/main/services/team/inboxMessageIdentity';
+import { OpenCodePromptDeliveryContinuityScan } from '../../../../src/main/services/team/opencode/delivery/OpenCodePromptDeliveryContinuityScan';
 import { isOpenCodePromptAcceptedByObservation } from '../../../../src/main/services/team/opencode/delivery/OpenCodePromptDeliveryReadCommitPolicy';
 import * as OpenCodeRuntimeStore from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { inferOpenCodeInboxMessageTaskRefs } from '../../../../src/main/services/team/provisioning/TeamProvisioningInboxRelayPolicy';
@@ -197,6 +198,48 @@ function seedLeadInbox(teamName: string, messages: unknown[]): void {
 function seedMemberInbox(teamName: string, memberName: string, messages: unknown[]): void {
   hoisted.files.set(`/mock/teams/${teamName}/inboxes/${memberName}.json`, JSON.stringify(messages));
 }
+function createPromptDeliveryLedgerFake(records: any[]): Record<string, unknown> {
+  return {
+    pruneTerminalRecords: vi.fn(async () => ({ pruned: 0, remaining: records.length })),
+    list: vi.fn(async () => records),
+    getByInboxMessage: vi.fn(async () => null),
+    ensurePending: vi.fn(async (input: Record<string, unknown>) => {
+      const record = {
+        id: 'ledger-rebuild-1',
+        status: 'pending',
+        responseState: 'not_observed',
+        acceptanceUnknown: false,
+        diagnostics: [] as string[],
+        ...input,
+      };
+      records.push(record);
+      return record;
+    }),
+    markAcceptanceUnknown: vi.fn(
+      async (input: { id: string; reason: string; nextAttemptAt: string; markedAt: string }) => {
+        const record = records.find((candidate) => candidate.id === input.id);
+        Object.assign(record, {
+          status: 'failed_retryable',
+          acceptanceUnknown: true,
+          nextAttemptAt: input.nextAttemptAt,
+          lastReason: input.reason,
+          updatedAt: input.markedAt,
+        });
+        return record;
+      }
+    ),
+    markFailedTerminal: vi.fn(async (input: { id: string; reason: string }) => {
+      const record = records.find((candidate) => candidate.id === input.id);
+      Object.assign(record, {
+        status: 'failed_terminal',
+        lastReason: input.reason,
+        diagnostics: [input.reason],
+      });
+      return record;
+    }),
+  };
+}
+
 
 function createDeferred<T>(): {
   promise: Promise<T>;
@@ -3901,6 +3944,131 @@ Messages:
         delayMs: expect.any(Number),
       })
     );
+  });
+
+  it('leaves a record-less unread peer inbox row orphaned when no continuity pass runs', async () => {
+    vi.useFakeTimers();
+    try {
+      const service = new TeamProvisioningService();
+      const teamName = 'my-team';
+      hoisted.files.set(
+        `/mock/teams/${teamName}/config.json`,
+        JSON.stringify({
+          name: teamName,
+          projectPath: '/tmp/my-team',
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+          ],
+        })
+      );
+      const identity = await (service as any).resolveOpenCodeMemberDeliveryIdentity(teamName, 'jack');
+      expect(identity.ok).toBe(true);
+      const records: any[] = [];
+      vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue(
+        createPromptDeliveryLedgerFake(records)
+      );
+      const scheduleSpy = vi
+        .spyOn(service as any, 'scheduleOpenCodePromptDeliveryWatchdog')
+        .mockImplementation(() => undefined);
+      seedMemberInbox(teamName, 'jack', [
+        {
+          from: 'bob',
+          to: 'jack',
+          text: 'Peer challenge with no ledger record.',
+          timestamp: '2026-02-23T17:00:00.000Z',
+          read: false,
+          messageId: 'opencode-orphan-run13',
+        },
+      ]);
+
+      // Time passes with no watcher event and no relay pass (run-13's lost trigger).
+      await vi.advanceTimersByTimeAsync(120_000);
+
+      expect(records).toHaveLength(0);
+      expect(scheduleSpy).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('heals a record-less unread peer inbox row via the periodic continuity scan', async () => {
+    vi.useFakeTimers();
+    try {
+      const service = new TeamProvisioningService();
+      const teamName = 'my-team';
+      hoisted.files.set(
+        `/mock/teams/${teamName}/config.json`,
+        JSON.stringify({
+          name: teamName,
+          projectPath: '/tmp/my-team',
+          members: [
+            { name: 'team-lead', agentType: 'team-lead' },
+            { name: 'jack', role: 'developer', providerId: 'opencode', model: 'openrouter/test' },
+          ],
+        })
+      );
+      const identity = await (service as any).resolveOpenCodeMemberDeliveryIdentity(teamName, 'jack');
+      expect(identity.ok).toBe(true);
+      const laneId = identity.laneId;
+      const records: any[] = [];
+      vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue(
+        createPromptDeliveryLedgerFake(records)
+      );
+      const scheduleSpy = vi
+        .spyOn(service as any, 'scheduleOpenCodePromptDeliveryWatchdog')
+        .mockImplementation(() => undefined);
+      seedMemberInbox(teamName, 'jack', [
+        {
+          from: 'bob',
+          to: 'jack',
+          text: 'Peer challenge with no ledger record.',
+          timestamp: '2026-02-23T17:00:00.000Z',
+          read: false,
+          messageId: 'opencode-orphan-run13',
+        },
+      ]);
+      const scanPromises: Promise<unknown>[] = [];
+      const continuity = new OpenCodePromptDeliveryContinuityScan(
+        {
+          isEnabled: () => true,
+          listLiveTeamNames: () => [teamName],
+          scanTeam: (name) => {
+            const pending = (service as any).scanOpenCodePromptDeliveryWatchdogForActiveLanes(name, [
+              laneId,
+            ]);
+            scanPromises.push(pending);
+            return pending;
+          },
+          warn: vi.fn(),
+        },
+        30_000
+      );
+      continuity.start();
+
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(scanPromises).toHaveLength(1);
+      await Promise.all(scanPromises);
+
+      expect(records).toHaveLength(1);
+      expect(records[0]).toMatchObject({
+        inboxMessageId: 'opencode-orphan-run13',
+        status: 'failed_retryable',
+        acceptanceUnknown: true,
+        lastReason: 'opencode_prompt_delivery_ledger_rebuilt_from_unread_inbox',
+      });
+      expect(scheduleSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamName,
+          memberName: 'jack',
+          messageId: 'opencode-orphan-run13',
+          delayMs: expect.any(Number),
+        })
+      );
+      continuity.stop();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('queues a specific OpenCode relay behind an active member relay without duplicate prompts', async () => {

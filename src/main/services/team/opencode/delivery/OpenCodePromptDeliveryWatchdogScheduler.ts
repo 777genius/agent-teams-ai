@@ -49,6 +49,10 @@ export interface OpenCodePromptDeliveryWatchdogStaleErrorInput {
   error: unknown;
 }
 
+export function isOpenCodePromptDeliveryWatchdogEnabled(): boolean {
+  return process.env.CLAUDE_TEAM_OPENCODE_PROMPT_DELIVERY_WATCHDOG !== '0';
+}
+
 export class OpenCodePromptDeliveryWatchdogScheduler {
   private readonly timers = new Map<
     string,
@@ -78,7 +82,7 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
   constructor(private readonly deps: OpenCodePromptDeliveryWatchdogSchedulerDependencies) {}
 
   isEnabled(): boolean {
-    const enabled = process.env.CLAUDE_TEAM_OPENCODE_PROMPT_DELIVERY_WATCHDOG !== '0';
+    const enabled = isOpenCodePromptDeliveryWatchdogEnabled();
     if (!enabled && !this.disabledLogged) {
       this.disabledLogged = true;
       this.deps.info(

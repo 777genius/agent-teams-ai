@@ -281,6 +281,8 @@ import {
   stopAdmittingOpenCodeStartupCleanup,
 } from './services/team/opencode/bridge/OpenCodeWindowsStartupCleanup';
 import { beginOpenCodeStartupRuntimeSweep } from './services/team/opencode/bridge/OpenCodeStartupSweepGate';
+import { OpenCodePromptDeliveryContinuityScan } from './services/team/opencode/delivery/OpenCodePromptDeliveryContinuityScan';
+import { isOpenCodePromptDeliveryWatchdogEnabled } from './services/team/opencode/delivery/OpenCodePromptDeliveryWatchdogScheduler';
 import {
   buildTeamControlApiBaseUrl,
   clearTeamControlApiState,
@@ -969,6 +971,7 @@ let ptyTerminalService: PtyTerminalService;
 let httpServer: HttpServer;
 let schedulerService: SchedulerService;
 let teamTaskStallMonitor: TeamTaskStallMonitor | null = null;
+let openCodePromptDeliveryContinuityScan: OpenCodePromptDeliveryContinuityScan | null = null;
 let internalStorageFeature: InternalStorageFeature | null = null;
 let skillsWatcherService: SkillsWatcherService | null = null;
 let teamBackupService: TeamBackupService | null = null;
@@ -2154,6 +2157,19 @@ async function initializeServices(): Promise<void> {
       memberWorkSyncStallObservation
     )
   );
+  openCodePromptDeliveryContinuityScan = new OpenCodePromptDeliveryContinuityScan({
+    isEnabled: () => isOpenCodePromptDeliveryWatchdogEnabled(),
+    listLiveTeamNames: async () => {
+      const scope = computeTeamWatchScope();
+      if (scope) {
+        return [...scope];
+      }
+      const teams = await teamDataService.listTeams();
+      return teams.filter((team) => !team.deletedAt).map((team) => team.teamName);
+    },
+    scanTeam: (teamName) => teamProvisioningService.scanOpenCodePromptDeliveryWatchdog(teamName),
+    warn: (message) => logger.warn(message),
+  });
   let teammateToolTracker: TeammateToolTracker | null = null;
   branchStatusService = new BranchStatusService((event) => {
     safeSendToRenderer(mainWindow, TEAM_PROJECT_BRANCH_CHANGE, event);
@@ -3019,6 +3035,8 @@ async function shutdownServices(): Promise<void> {
 
   tokenUsageFeature?.dispose();
   rendererRecoveryController?.dispose();
+  openCodePromptDeliveryContinuityScan?.stop();
+  openCodePromptDeliveryContinuityScan = null;
   shutdownPromise = (async () => {
     logger.info('Shutting down services...');
     removeExternalAgentConnectionIpc(ipcMain);
@@ -3245,6 +3263,7 @@ function runPostRendererStartupTasks(): void {
       logger.warn(`[Init] task comment notification init failed: ${String(error)}`)
     );
   teamTaskStallMonitor?.start();
+  openCodePromptDeliveryContinuityScan?.start();
   scheduleStartupTask(() => {
     void teamDataService
       .listTeams()
