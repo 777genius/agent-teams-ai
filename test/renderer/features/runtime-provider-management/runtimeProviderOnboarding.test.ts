@@ -381,6 +381,7 @@ describe('Kimi Code routes by OpenCode generation', () => {
     expect(getRuntimeProviderOnboardingPlanProviderIds(plan, 'v2')).toEqual([
       'kimi-code-plan-cn',
       'kimi-code-plan-global',
+      'kimi-for-coding',
     ]);
 
     const global = resolveRuntimeProviderOnboardingPlan(plan, 'v2', 'kimi-code-plan-global');

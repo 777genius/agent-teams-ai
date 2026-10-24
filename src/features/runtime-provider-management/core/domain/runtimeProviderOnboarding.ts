@@ -394,13 +394,16 @@ export function resolveRuntimeProviderOnboardingPlan(
   };
 }
 
-/** Provider ids that can hold the plan's connection under the selected generation. */
+/**
+ * Directory ids for the plan under the selected generation, most specific first. On V2 the
+ * route integrations come before the plan id, which the runtime may still list as curated.
+ */
 export function getRuntimeProviderOnboardingPlanProviderIds(
   plan: RuntimeProviderOnboardingPlan,
   generation: OpenCodeGeneration
 ): readonly string[] {
   return generation === 'v2' && plan.routes?.length
-    ? plan.routes.map((route) => route.v2ProviderId)
+    ? [...plan.routes.map((route) => route.v2ProviderId), plan.providerId]
     : [plan.providerId];
 }
 
