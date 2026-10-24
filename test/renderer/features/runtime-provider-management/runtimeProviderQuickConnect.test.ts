@@ -283,6 +283,8 @@ describe('RuntimeProviderQuickConnect', () => {
     };
 
     await renderQuickConnect('/tmp/local-model-project');
+    // The settled runtime identity reaches the directory hook.
+    expect(mocks.quickConnectOptions?.runtimeRevision).toBe('["ready","1.17.18",null]');
     await act(async () => {
       await mocks.localProviderDialogProps?.onConfigured();
     });

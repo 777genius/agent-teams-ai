@@ -85,8 +85,6 @@ export function useRuntimeProviderQuickConnect({
     const refreshRequested =
       refreshRequestSequence !== previousRefreshRequestSequence.current ||
       refreshKey !== previousRefreshKey.current;
-    previousRefreshKey.current = refreshKey;
-    previousRefreshRequestSequence.current = refreshRequestSequence;
     let cancelled = false;
     const projectScope = projectPath?.trim() ?? '';
     const projectScopeChanged = previousProjectScope.current !== projectScope;
@@ -152,6 +150,11 @@ export function useRuntimeProviderQuickConnect({
     const loadDelay = hasStartedLoad.current ? 0 : INITIAL_LOAD_DELAY_MS;
     const timeout = window.setTimeout(() => {
       hasStartedLoad.current = true;
+      // Consume refresh requests only when the read really starts: if the grid
+      // is disabled before the timer fires, the next enabled read still bypasses
+      // the cache.
+      previousRefreshKey.current = refreshKey;
+      previousRefreshRequestSequence.current = refreshRequestSequence;
       void loadDirectory().then(() => {
         if (!cancelled && requestSequence.current === requestId) {
           setAuthoritativePending(false);

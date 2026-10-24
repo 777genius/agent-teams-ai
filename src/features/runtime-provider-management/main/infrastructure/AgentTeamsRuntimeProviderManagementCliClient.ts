@@ -136,9 +136,15 @@ interface ModelResponseCacheEntry {
   response: RuntimeProviderManagementModelsResponse;
 }
 
-export interface RuntimeProviderOAuthClientDependencies {
+export interface RuntimeProviderCliClientDependencies {
   openExternal?: (url: string) => Promise<void>;
   emitOAuthProgress?: (event: RuntimeProviderOAuthProgressDto) => void;
+  /**
+   * Changes whenever the OpenCode runtime may have been installed, replaced or
+   * re-resolved. Cached directory and model reads from another generation
+   * describe a different runtime and are dropped.
+   */
+  getOpenCodeRuntimeGeneration?: () => number;
 }
 
 interface ActiveRuntimeProviderOAuthOperation {
@@ -1292,14 +1298,34 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   private readonly activeOAuthOperations = new Map<string, ActiveRuntimeProviderOAuthOperation>();
   private readonly openExternal: (url: string) => Promise<void>;
   private readonly emitOAuthProgress: (event: RuntimeProviderOAuthProgressDto) => void;
+  private readonly getOpenCodeRuntimeGeneration: () => number;
+  private cachedOpenCodeRuntimeGeneration: number;
 
-  constructor(deps: RuntimeProviderOAuthClientDependencies = {}) {
+  constructor(deps: RuntimeProviderCliClientDependencies = {}) {
     this.openExternal =
       deps.openExternal ??
       (async () => {
         throw new Error('OAuth browser integration is unavailable');
       });
     this.emitOAuthProgress = deps.emitOAuthProgress ?? (() => {});
+    this.getOpenCodeRuntimeGeneration = deps.getOpenCodeRuntimeGeneration ?? (() => 0);
+    this.cachedOpenCodeRuntimeGeneration = this.getOpenCodeRuntimeGeneration();
+  }
+
+  /**
+   * A directory read while OpenCode was missing still succeeds with seed-only
+   * entries. Once the runtime changes (install, update, status re-check), drop
+   * every cached and in-flight read so the next caller asks the new runtime.
+   */
+  private dropCachesFromPreviousOpenCodeRuntime(): void {
+    const generation = this.getOpenCodeRuntimeGeneration();
+    if (generation === this.cachedOpenCodeRuntimeGeneration) {
+      return;
+    }
+    this.cachedOpenCodeRuntimeGeneration = generation;
+    this.invalidateDirectoryResponseCache();
+    // Same rule as a catalog refresh: a visible model load must not abort.
+    this.invalidateModelResponseCache(false);
   }
 
   private getDirectoryResponseCacheKey(
@@ -1582,6 +1608,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   async loadProviderDirectory(
     input: RuntimeProviderManagementLoadDirectoryInput
   ): Promise<RuntimeProviderManagementDirectoryResponse> {
+    this.dropCachesFromPreviousOpenCodeRuntime();
     const projectPath = normalizeProjectPath(input.projectPath);
     const cacheKey = this.getDirectoryResponseCacheKey(input, projectPath);
     const previous = this.directoryResponseCache.get(cacheKey)?.response;
@@ -2214,6 +2241,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   async loadModels(
     input: RuntimeProviderManagementLoadModelsInput
   ): Promise<RuntimeProviderManagementModelsResponse> {
+    this.dropCachesFromPreviousOpenCodeRuntime();
     const projectPath = normalizeProjectPath(input.projectPath);
     const cacheKey = this.getModelResponseCacheKey(input, projectPath);
     const requestGroupId = input.requestGroupId?.trim() || null;

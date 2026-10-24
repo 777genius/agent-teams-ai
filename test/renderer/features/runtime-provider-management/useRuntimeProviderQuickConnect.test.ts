@@ -223,6 +223,20 @@ describe('useRuntimeProviderQuickConnect', () => {
     expect(loadProviderDirectory.mock.calls[1]?.[0]).toMatchObject({ refresh: true });
   });
 
+  it('keeps a refresh request when the grid is disabled before the read starts', async () => {
+    await renderHarness();
+    // A re-check can briefly move OpenCode out of the ready gate.
+    await act(async () => root.render(React.createElement(Harness, { refreshKey: 1 })));
+    await act(async () =>
+      root.render(React.createElement(Harness, { refreshKey: 1, enabled: false }))
+    );
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(1);
+
+    await renderHarness({ refreshKey: 1 });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
+    expect(loadProviderDirectory.mock.calls[1]?.[0]).toMatchObject({ refresh: true });
+  });
+
   it('surfaces directory errors without discarding the last successful entries', async () => {
     await act(async () => root.render(React.createElement(Harness)));
     await act(async () => {

@@ -1992,8 +1992,15 @@ export const CliStatusBanner = ({
       providerId: CliProviderId,
       checkReason: AnalyticsProviderCheckReason = 'manual_refresh'
     ) => {
-      if (providerId === 'opencode') refreshOpenCodeProviderDirectory();
-      const refreshed = await fetchCliProviderStatus(providerId, { checkReason });
+      let refreshed: boolean;
+      try {
+        refreshed = await fetchCliProviderStatus(providerId, { checkReason });
+      } finally {
+        // After the status check, so the grid and the connected-model catalog
+        // (which waits for status checks) start their refresh reads together
+        // and the main process can serve both with one runtime call.
+        if (providerId === 'opencode') refreshOpenCodeProviderDirectory();
+      }
       if (refreshed && providerId === 'anthropic') {
         setAnthropicRateLimitsRefreshVersion((current) => current + 1);
       }
@@ -2101,8 +2108,7 @@ export const CliStatusBanner = ({
             disabled={isBusy || cliStatusLoading}
             onInstallOrUpdateRuntime={() => installOpenCodeRuntime()}
             onProviderChanged={() => {
-              setProviderQuickConnectRefreshKey((current) => current + 1);
-              handleProviderRefresh('opencode');
+              void handleProviderRefresh('opencode');
             }}
             onAdvancedSettings={handleOnboardingAdvancedSettings}
           />

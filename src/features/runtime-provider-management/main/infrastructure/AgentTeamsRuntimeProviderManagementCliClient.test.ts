@@ -424,6 +424,62 @@ describe('AgentTeamsRuntimeProviderManagementCliClient passive directory timeout
   });
 });
 
+describe('AgentTeamsRuntimeProviderManagementCliClient OpenCode runtime changes', () => {
+  beforeEach(() => {
+    execCliMock.mockReset();
+  });
+
+  function missingOpenCodeDirectory(): RuntimeProviderManagementDirectoryResponse {
+    const response = directoryResponse(true);
+    response.directory!.diagnostics = ['OpenCode CLI not detected on PATH'];
+    return response;
+  }
+
+  it('drops a directory cached before OpenCode was installed', async () => {
+    let generation = 0;
+    execCliMock
+      .mockResolvedValueOnce(directoryOutput(missingOpenCodeDirectory()))
+      .mockResolvedValueOnce(directoryOutput(directoryResponse()));
+    const client = new AgentTeamsRuntimeProviderManagementCliClient({
+      getOpenCodeRuntimeGeneration: () => generation,
+    });
+
+    await client.loadProviderDirectory(directoryInput);
+    await client.loadProviderDirectory(directoryInput);
+    expect(execCliMock).toHaveBeenCalledTimes(1);
+
+    generation = 1;
+    const installed = await client.loadProviderDirectory(directoryInput);
+    expect(installed.directory?.entries[0].state).toBe('connected');
+    await client.loadProviderDirectory(directoryInput);
+    expect(execCliMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not join a directory read that started before the runtime changed', async () => {
+    let generation = 0;
+    const beforeInstall = deferred<ReturnType<typeof directoryOutput>>();
+    execCliMock
+      .mockReturnValueOnce(beforeInstall.promise)
+      .mockResolvedValueOnce(directoryOutput(directoryResponse()));
+    const client = new AgentTeamsRuntimeProviderManagementCliClient({
+      getOpenCodeRuntimeGeneration: () => generation,
+    });
+
+    const stale = client.loadProviderDirectory(directoryInput);
+    await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
+    generation = 1;
+    const fresh = await client.loadProviderDirectory(directoryInput);
+    expect(fresh.directory?.entries[0].state).toBe('connected');
+
+    beforeInstall.resolve(directoryOutput(missingOpenCodeDirectory()));
+    await stale;
+    expect((await client.loadProviderDirectory(directoryInput)).directory?.entries[0].state).toBe(
+      'connected'
+    );
+    expect(execCliMock).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('AgentTeamsRuntimeProviderManagementCliClient API-key command deadline', () => {
   beforeEach(() => {
     vi.useFakeTimers();
