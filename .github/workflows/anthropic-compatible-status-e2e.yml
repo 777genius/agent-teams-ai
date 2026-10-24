@@ -21,6 +21,7 @@ on:
       - src/renderer/components/runtime/ConnectionMethodCards.tsx
       - src/renderer/components/runtime/ProviderRuntimeSettingsDialog.tsx
       - src/renderer/components/runtime/providerAuthModeUiState.ts
+      - src/renderer/components/runtime/providerConnectionCards.ts
       - src/renderer/components/runtime/providerConnectionUi.ts
       - src/renderer/components/team/dialogs/CreateTeamDialog.tsx
       - src/renderer/components/team/dialogs/TeamModelSelector.tsx
