@@ -2260,13 +2260,46 @@ Before opening the app:
   `/Applications/Agent Teams AI.app` copy recoverable, install the verified app
   bundle into `/Applications`, and launch it with `open` without `-n`.
 - Do not set an alternate `--user-data-dir`, temporary profile, sandbox profile,
-  or release-test environment overrides. Confirm the launched process runs from
+  or release-test environment overrides, except the remote debugging port in the
+  CDP check below. Confirm the launched process runs from
   `/Applications/Agent Teams AI.app` and uses the standard
   `~/Library/Application Support/agent-teams-ai` profile.
 - Eject the DMG after the installed app starts successfully.
 
 Never report that the requested build was launched based only on its filename.
 The GitHub digest and bundle version must both match.
+
+#### CDP check of a requested build
+
+Use this only when the user asks to test the downloaded build through the Chrome
+DevTools Protocol (CDP). Otherwise the standard launch above applies.
+
+- Complete the download, digest, bundle version, signature, and notarization
+  checks above first.
+- Confirm the debugging port is free before launch. This command must print
+  nothing:
+
+  ```bash
+  lsof -nP -iTCP:9222 -sTCP:LISTEN
+  ```
+
+- Launch the installed app with the remote debugging port and no other override:
+
+  ```bash
+  open -a "/Applications/Agent Teams AI.app" --args --remote-debugging-port=9222
+  ```
+
+- Do not add `--user-data-dir`, a temporary profile, or any other override. The
+  app must use the standard `~/Library/Application Support/agent-teams-ai` profile.
+- Confirm the port listens only on loopback. Chromium binds the debugging port to
+  `127.0.0.1` by default. If the same `lsof` command shows any other address, quit
+  the app and stop the check.
+- Confirm the process runs from `/Applications/Agent Teams AI.app`, then connect
+  over CDP to `http://127.0.0.1:9222`.
+- When the check ends, remove the test data it created, such as test teams and
+  messages, then quit the app and relaunch it without the debugging port.
+- A CDP check does not replace the digest, signature, or notarization checks, and
+  it does not authorize publication.
 
 ## Release Notes Template
 
