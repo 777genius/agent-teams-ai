@@ -21,6 +21,11 @@ import {
   preparePackagedProfile,
   prepareExistingProject,
   probeOrchestratorVersion,
+  packagedRefreshControlState,
+  packagedSettingsPreparationState,
+  packagedSettingsRequestsSettled,
+  packagedSettingsRequestObservation,
+  waitForPackagedRefreshPreparation,
 } from './packaged.mjs';
 import {
   waitForPackagedPreload,
@@ -31,6 +36,8 @@ import {
   qualifyProjectStatus,
   qualifySettings,
   settingsRefreshSettled,
+  settingsRefreshFailure,
+  settingsRefreshFailureSummary,
   waitForAppVersion,
   qualifyModels,
   collectPages,
@@ -41,6 +48,268 @@ import {
 } from './packaged-verify.mjs';
 
 const exe = 'C:\\test builds\\win-unpacked\\Agent Teams AI.exe';
+const preparationControl = ({ style = {}, rect = {}, ...patch } = {}) => ({
+  isConnected: true,
+  disabled: false,
+  ownerDocument: {
+    defaultView: {
+      getComputedStyle: () => ({ display: 'block', visibility: 'visible', opacity: '1', ...style }),
+    },
+  },
+  getClientRects: () => [{}],
+  getBoundingClientRect: () => ({ width: 24, height: 24, y: 2000, ...rect }),
+  getAttribute: () => 'Re-check OpenCode',
+  ...patch,
+});
+test('packaged refresh preparation waits for a temporarily disabled control with a ready catalog', async () => {
+  let elapsed = 0;
+  let samples = 0;
+  const control = preparationControl({ disabled: true });
+  const result = await waitForPackagedRefreshPreparation(
+    () => {
+      control.disabled = ++samples < 3;
+      return {
+        catalog: { state: 'ready', models: ['model'] },
+        control: packagedRefreshControlState(control),
+      };
+    },
+    {
+      now: () => elapsed,
+      pause: async (ms) => {
+        elapsed += ms;
+      },
+    }
+  );
+  assert.equal(samples, 3);
+  assert.equal(result.ready, true);
+  assert.equal(result.control.disabled, false);
+  assert.equal(result.elapsedMs, 1000);
+});
+
+test('settings preparation waits for enabled refresh despite a ready-looking partial catalog', async () => {
+  let elapsed = 0;
+  let samples = 0;
+  const control = preparationControl({ disabled: true });
+  const document = {
+    querySelector: (selector) =>
+      selector.includes('loading-skeleton')
+        ? null
+        : selector.includes('refresh-catalog')
+          ? control
+          : {},
+  };
+  const result = await waitForPackagedRefreshPreparation(
+    () => {
+      control.disabled = ++samples < 3;
+      return {
+        ...packagedSettingsPreparationState(document, packagedRefreshControlState),
+        requestsSettled: true,
+      };
+    },
+    {
+      phase: 'settings',
+      now: () => elapsed,
+      pause: async (ms) => {
+        elapsed += ms;
+      },
+    }
+  );
+  assert.equal(samples, 3);
+  assert.equal(result.ready, true);
+  assert.equal(result.control.disabled, false);
+  assert.equal(result.elapsedMs, 500);
+  assert.equal(result.budgetMs, 90000);
+});
+
+for (const [label, catalog, control, reason] of [
+  ['missing control', { state: 'ready' }, null, 'control-missing'],
+  [
+    'permanently disabled control',
+    { state: 'ready' },
+    preparationControl({ disabled: true }),
+    'control-disabled',
+  ],
+  [
+    'hidden control',
+    { state: 'ready' },
+    preparationControl({ style: { visibility: 'hidden' } }),
+    'control-hidden',
+  ],
+  [
+    'zero-size control',
+    { state: 'ready' },
+    preparationControl({ rect: { width: 0 } }),
+    'control-hidden',
+  ],
+  [
+    'disconnected control',
+    { state: 'ready' },
+    preparationControl({ isConnected: false }),
+    'control-disconnected',
+  ],
+  ['loading catalog', { state: 'loading' }, preparationControl(), 'catalog-loading'],
+  ['missing catalog state', {}, preparationControl(), 'catalog-unavailable'],
+  ['empty catalog state', { state: '' }, preparationControl(), 'catalog-unavailable'],
+]) {
+  test(`packaged refresh preparation refuses ${label} in both original phase budgets`, async () => {
+    for (const [phase, budgetMs, limit] of [
+      ['dashboard', 120000, 240],
+      ['settings', 90000, 360],
+    ]) {
+      let elapsed = 0;
+      const result = await waitForPackagedRefreshPreparation(
+        () => ({ catalog, control: packagedRefreshControlState(control), requestsSettled: true }),
+        {
+          phase,
+          now: () => elapsed,
+          pause: async (ms) => {
+            elapsed += ms;
+          },
+        }
+      );
+      assert.equal(result.ready, false);
+      assert.equal(result.timedOut, true);
+      assert.equal(result.lastReason, reason);
+      assert.equal(result.samples, limit);
+      assert.equal(result.elapsedMs, budgetMs);
+      assert.equal(result.budgetMs, budgetMs);
+    }
+  });
+}
+
+test('settings preparation preserves initial list, skeleton and observed-request guards', async () => {
+  const control = preparationControl();
+  for (const scenario of ['missing-list', 'skeleton', 'pending-requests', 'missing-settlement']) {
+    let elapsed = 0;
+    const document = {
+      querySelector: (selector) =>
+        selector.includes('refresh-catalog')
+          ? control
+          : selector.includes('loading-skeleton')
+            ? scenario === 'skeleton'
+              ? {}
+              : null
+            : scenario === 'missing-list'
+              ? null
+              : {},
+    };
+    const result = await waitForPackagedRefreshPreparation(
+      () => ({
+        ...packagedSettingsPreparationState(document, packagedRefreshControlState),
+        requestsSettled:
+          scenario === 'missing-settlement' ? undefined : scenario !== 'pending-requests',
+      }),
+      {
+        phase: 'settings',
+        now: () => elapsed,
+        pause: async (ms) => {
+          elapsed += ms;
+        },
+      }
+    );
+    assert.equal(result.ready, false);
+    assert.equal(
+      result.lastReason,
+      ['pending-requests', 'missing-settlement'].includes(scenario)
+        ? 'requests-unsettled'
+        : 'catalog-loading'
+    );
+    assert.equal(result.elapsedMs, 90000);
+  }
+});
+
+test('settings preparation requires nonempty complete successful nonoverflow observations', () => {
+  const complete = { completedAt: 1, response: {} };
+  assert.equal(packagedSettingsRequestsSettled({ overflow: false, records: [complete] }), true);
+  for (const requests of [
+    undefined,
+    { records: [complete] },
+    { overflow: true, records: [complete] },
+    { overflow: false, records: [] },
+    { overflow: false, records: [{ response: {} }] },
+    { overflow: false, records: [{ completedAt: 1 }] },
+    { overflow: false, records: [{ ...complete, error: 'failed' }] },
+    { overflow: false, records: [{ ...complete, response: { error: 'failed' } }] },
+  ])
+    assert.equal(packagedSettingsRequestsSettled(requests), false);
+});
+
+test('settings preparation records terminal request counters without response data', () => {
+  assert.deepEqual(
+    packagedSettingsRequestObservation({
+      overflow: false,
+      records: [
+        { completedAt: 1, response: { secret: 'not retained' } },
+        { completedAt: 2, response: { error: 'not retained' } },
+        {},
+      ],
+    }),
+    { overflow: false, count: 3, completed: 2, errors: 1, settled: false }
+  );
+});
+
+test('packaged refresh preparation includes asynchronous reads in its global deadline', async () => {
+  let elapsed = 0;
+  const result = await waitForPackagedRefreshPreparation(
+    async () => {
+      elapsed += 300;
+      return {
+        catalog: { state: 'ready' },
+        control: packagedRefreshControlState(preparationControl({ disabled: true })),
+      };
+    },
+    {
+      now: () => elapsed,
+      pause: async (ms) => {
+        elapsed += ms;
+      },
+    }
+  );
+  assert.equal(result.ready, false);
+  assert.equal(result.elapsedMs, 120000);
+  assert.equal(result.samples, 150);
+  const late = await waitForPackagedRefreshPreparation(
+    () => {
+      elapsed += 90001;
+      return {
+        catalog: { state: 'ready' },
+        control: packagedRefreshControlState(preparationControl()),
+        requestsSettled: true,
+      };
+    },
+    { phase: 'settings', now: () => elapsed, pause: async () => assert.fail('No time remains') }
+  );
+  assert.equal(late.ready, false);
+  assert.equal(late.timedOut, true);
+  assert.equal(late.elapsedMs, 90001);
+});
+
+test('packaged refresh preparation bounds an unfinished read by the remaining deadline', async () => {
+  let clockReads = 0;
+  const result = await waitForPackagedRefreshPreparation(() => new Promise(() => {}), {
+    now: () => [0, 119999, 120000][Math.min(clockReads++, 2)],
+  });
+  assert.equal(result.ready, false);
+  assert.equal(result.readTimedOut, true);
+  assert.equal(result.elapsedMs, 120000);
+  assert.equal(result.samples, 0);
+});
+
+test('packaged refresh preparation preserves recoverable catalog errors and actual read failures', async () => {
+  const result = await waitForPackagedRefreshPreparation(() => ({
+    catalog: { state: 'error' },
+    control: packagedRefreshControlState(preparationControl()),
+  }));
+  assert.equal(result.ready, true);
+  assert.equal(result.control.title, 'Re-check OpenCode');
+  await assert.rejects(
+    waitForPackagedRefreshPreparation(() => {
+      throw new Error('actual CDP failure');
+    }),
+    /actual CDP failure/
+  );
+});
+
 test('explicit packaged arguments are bounded, Windows-only and never accept runtime overrides', () => {
   assert.deepEqual(packagedArguments(['--packaged-executable', exe], 'win32'), {
     executable: exe,
@@ -922,6 +1191,113 @@ test('diagnostic lineage retains exited parents and exposes orphan candidates wi
   const bounded = retainPackagedLineage(full, [launcher], 300);
   assert.equal(bounded.records.length, 500);
   assert.equal(bounded.truncated, true);
+});
+test('completed warm settings failures retain the native cause without waiting for UI loading', () => {
+  // Minimal relevant fields from the actual H0e58 warm-1 and warm-2 receipts.
+  const cases = [
+    {
+      startedAt: 1792552357554,
+      completedAt: 1792552393444,
+      diagnostics: ['Failed to query OpenCode providers: OpenCode command timed out after 10000ms'],
+      cause: 'providers-timeout',
+    },
+    {
+      startedAt: 1792552683836,
+      completedAt: 1792552746769,
+      diagnostics: [
+        'OpenCode inventory probe timed out after 60000ms during opencode models --refresh',
+      ],
+      cause: 'inventory-timeout',
+    },
+  ];
+  for (const { cause, diagnostics, ...timing } of cases) {
+    const record = {
+      method: 'loadProviderDirectory',
+      input: { runtimeId: 'opencode', projectPath: null, refresh: true },
+      response: {
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        directory: { runtimeId: 'opencode', diagnostics },
+      },
+      ...timing,
+    };
+    const failure = settingsRefreshFailure({ records: [record], overflow: false });
+    assert.deepEqual(failure, {
+      phase: 'settings-refresh',
+      category: 'native-diagnostics',
+      cause,
+      recordIndex: 0,
+      ...timing,
+      diagnosticsCount: 1,
+    });
+    assert.equal(
+      settingsRefreshSettled({ records: [record], overflow: false }, timing.completedAt + 500),
+      false
+    );
+    assert.deepEqual(settingsRefreshFailureSummary(failure), {
+      phase: 'settings-refresh',
+      category: 'native-diagnostics',
+      cause,
+    });
+  }
+});
+
+test('settings completed-failure reporting ignores unfinished and unrelated observations', () => {
+  const own = {
+    method: 'loadProviderDirectory',
+    input: { runtimeId: 'opencode', refresh: true },
+    completedAt: 1000,
+    error: 'transport failed with secret-token-and-path',
+  };
+  for (const unrelated of [
+    { ...own, completedAt: undefined },
+    { ...own, method: 'loadModels' },
+    { ...own, input: { runtimeId: 'codex', refresh: true } },
+    { ...own, input: { runtimeId: 'opencode', refresh: false } },
+    { ...own, input: { runtimeId: 'opencode', refresh: true, summary: true } },
+  ])
+    assert.equal(settingsRefreshFailure({ records: [unrelated], overflow: false }), null);
+  const failure = settingsRefreshFailure({ records: [own], overflow: false });
+  assert.equal(failure.category, 'transport-error');
+  assert(!JSON.stringify(failure).includes('secret-token-and-path'));
+  assert.deepEqual(settingsRefreshFailureSummary(failure), {
+    phase: 'settings-refresh',
+    category: 'transport-error',
+    cause: 'transport-error',
+  });
+  const runtime = { ...own, error: undefined, response: { error: { message: 'secret' } } };
+  assert.equal(
+    settingsRefreshFailure({ records: [runtime], overflow: false }).category,
+    'runtime-error'
+  );
+  assert.equal(settingsRefreshFailureSummary({ ...failure, cause: 'secret' }), null);
+});
+
+test('settings failure observation preserves the existing successful quiet interval', () => {
+  const observation = {
+    records: [
+      {
+        method: 'loadProviderDirectory',
+        input: { runtimeId: 'opencode', refresh: true },
+        response: {
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          directory: {
+            runtimeId: 'opencode',
+            entries: [],
+            returnedCount: 0,
+            totalCount: 0,
+            diagnostics: [],
+          },
+        },
+        completedAt: 1000,
+      },
+    ],
+    overflow: false,
+  };
+  assert.equal(settingsRefreshFailure(observation), null);
+  assert.equal(settingsRefreshSettled(observation, 1499), false);
+  assert.equal(settingsRefreshSettled(observation, 1500), true);
 });
 
 test('packaged cleanup stops main before recovering helpers and drains sockets jointly', () => {

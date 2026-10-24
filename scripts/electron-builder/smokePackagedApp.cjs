@@ -2,10 +2,14 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
+const { createPackagedSmokeOwnership } = require('./packagedSmokeOwnedProcesses.ts');
 
 const STARTUP_TIMEOUT_MS = Number(process.env.PACKAGED_SMOKE_TIMEOUT_MS ?? 60_000);
 const POST_STARTUP_STABLE_MS = Number(process.env.PACKAGED_SMOKE_STABLE_MS ?? 8_000);
 const SHUTDOWN_TIMEOUT_MS = Number(process.env.PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS ?? 5_000);
+// A census probe budget must not shrink with the shutdown grace: a slow ps
+// inventory has to complete before cleanup can decide what to signal.
+const CENSUS_TIMEOUT_MS = Number(process.env.PACKAGED_SMOKE_CENSUS_TIMEOUT_MS ?? 60_000);
 const REQUIRED_LOG_MARKERS = ['renderer did-finish-load'];
 const SQLITE_HEADER = Buffer.from('SQLite format 3\0', 'utf8');
 const INTERNAL_STORAGE_FALLBACK_PATTERNS = [
@@ -216,7 +220,34 @@ async function waitForOwnedGroupExit(groupId, timeoutMs) {
   }
 }
 
-async function terminateChild(child, closePromise, platform, timeoutMs = SHUTDOWN_TIMEOUT_MS) {
+async function terminateChild(
+  child,
+  closePromise,
+  platform,
+  timeoutMs = SHUTDOWN_TIMEOUT_MS,
+  ownership
+) {
+  if (ownership && platform !== 'win32') {
+    ownership.begin(child.pid);
+    ownership.signal('SIGTERM');
+    let [closed, empty] = await Promise.all([
+      waitForProcessClose(closePromise, timeoutMs),
+      ownership.waitForExit(timeoutMs),
+    ]);
+    if (!closed || !empty) {
+      console.error(`[smokePackagedApp] shutdown grace expired: pid=${child.pid}; forcing cleanup`);
+      ownership.signal('SIGKILL');
+      [closed, empty] = await Promise.all([
+        waitForProcessClose(closePromise, timeoutMs),
+        ownership.waitForExit(timeoutMs),
+      ]);
+    }
+    if (!closed || !empty) {
+      throw new Error(`Timed out after ${timeoutMs}ms waiting for owned packaged smoke cleanup`);
+    }
+    ownership.finish();
+    return;
+  }
   // POSIX callers must spawn detached: only this smoke-owned process group is signalled.
   // The leader may already have exited while descendants still hold its output pipes.
   const signalOwnedGroup = (signal) => {
@@ -284,6 +315,11 @@ async function main() {
   const userDataDir = path.join(testRoot, 'user-data');
   for (const dir of [homeDir, claudeRoot, userDataDir]) fs.mkdirSync(dir);
   fs.writeFileSync(path.join(testRoot, '.test-only'), 'packaged-app-smoke-test-v1');
+  // Bundle layout can be a POSIX test fixture; inspect the actual host OS.
+  const ownership =
+    process.platform === 'win32'
+      ? undefined
+      : createPackagedSmokeOwnership({ timeoutMs: CENSUS_TIMEOUT_MS });
   const overrides = {
     HOME: homeDir,
     USERPROFILE: homeDir,
@@ -293,6 +329,7 @@ async function main() {
     AGENT_TEAMS_MCP_CLAUDE_DIR: claudeRoot,
     AGENT_TEAMS_MCP_TRANSPORT: 'stdio',
     AGENT_TEAMS_PACKAGED_SMOKE: '1',
+    ...ownership?.environment,
   };
   const childEnv = { ...process.env };
   // Windows env names are case-insensitive; remove aliases before assigning owned values.
@@ -359,6 +396,15 @@ async function main() {
         storageVerificationError = getInternalStorageVerificationError(userDataDir, log);
         if (storageVerificationError === null) {
           startupVerified = true;
+          console.log(
+            '[smokePackagedApp] startup verified: ' +
+              JSON.stringify({
+                at: new Date().toISOString(),
+                pid: child.pid,
+                stableMs: Date.now() - startupSeenAt,
+                sqlite: true,
+              })
+          );
           break;
         }
       }
@@ -387,7 +433,7 @@ async function main() {
   } finally {
     // Every startup outcome must clean up descendants, including early exit or spawn failure.
     try {
-      await terminateChild(child, closePromise, platform);
+      await terminateChild(child, closePromise, platform, SHUTDOWN_TIMEOUT_MS, ownership);
       fs.rmSync(testRoot, {
         recursive: true,
         force: true,

@@ -3,9 +3,14 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const readline = require('node:readline');
+const { createPackagedSmokeOwnership } = require('./packagedSmokeOwnedProcesses.ts');
 
 const { findExecutable, resolveBundlePath, terminateChild } =
   require('./smokePackagedApp.cjs')._internal;
+
+// A census probe budget must not shrink with the shutdown grace: a slow ps
+// inventory has to complete before cleanup can decide what to signal.
+const CENSUS_TIMEOUT_MS = Number(process.env.PACKAGED_SMOKE_CENSUS_TIMEOUT_MS ?? 60_000);
 
 async function main() {
   const [bundleArg, platform] = process.argv.slice(2);
@@ -28,6 +33,10 @@ async function main() {
   const claudeRoot = path.join(testProject, 'claude');
   const userDataDir = path.join(testProject, 'user-data');
   for (const dir of [homeDir, claudeRoot, userDataDir]) fs.mkdirSync(dir);
+  const ownership =
+    process.platform === 'win32'
+      ? undefined
+      : createPackagedSmokeOwnership({ timeoutMs: CENSUS_TIMEOUT_MS });
   const overrides = {
     ELECTRON_RUN_AS_NODE: '1',
     HOME: homeDir,
@@ -37,6 +46,7 @@ async function main() {
     AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: claudeRoot,
     AGENT_TEAMS_MCP_CLAUDE_DIR: claudeRoot,
     AGENT_TEAMS_MCP_TRANSPORT: 'stdio',
+    ...ownership?.environment,
   };
   const childEnv = { ...process.env };
   // Windows env names are case-insensitive; remove aliases before assigning owned values.
@@ -122,7 +132,7 @@ async function main() {
   } finally {
     child.stdin.destroy();
     try {
-      await terminateChild(child, closePromise, platform, 2_000);
+      await terminateChild(child, closePromise, platform, 2_000, ownership);
     } catch (error) {
       console.error(
         `[smokePackagedMcp] Preserved TEST sandbox after cleanup failure: ${testProject}`

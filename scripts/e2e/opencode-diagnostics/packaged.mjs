@@ -8,6 +8,130 @@ import { verifyCandidatePayload } from './stage-candidate.mjs';
 import { isolatedEnvironment, processes, ownedTree, sameIdentity } from './platform.mjs';
 import { WINDOWS_NATIVE_TEST_PIN } from './native-test-pin.mts';
 
+export function packagedRefreshControlState(control) {
+  if (!control)
+    return { present: false, connected: false, rendered: false, disabled: null, title: null };
+  const style = control.ownerDocument.defaultView.getComputedStyle(control);
+  const rect = control.getBoundingClientRect();
+  return {
+    present: true,
+    connected: control.isConnected === true,
+    rendered:
+      control.getClientRects().length > 0 &&
+      rect.width > 0 &&
+      rect.height > 0 &&
+      style.display !== 'none' &&
+      !['hidden', 'collapse'].includes(style.visibility) &&
+      style.opacity !== '0',
+    disabled: control.disabled === true,
+    title: String(control.getAttribute('title') || '').slice(0, 256),
+  };
+}
+
+export function packagedSettingsPreparationState(document, readControl) {
+  const list = document.querySelector(
+    '[role="dialog"] [data-testid="runtime-provider-catalog-list"]'
+  );
+  const skeleton = document.querySelector(
+    '[role="dialog"] [data-testid="runtime-provider-loading-skeleton"]'
+  );
+  return {
+    catalog: {
+      state: list && !skeleton ? 'ready' : 'loading',
+      listPresent: Boolean(list),
+      skeletonPresent: Boolean(skeleton),
+    },
+    control: readControl(
+      document.querySelector('[role="dialog"] [data-testid="runtime-provider-refresh-catalog"]')
+    ),
+  };
+}
+
+export function packagedSettingsRequestsSettled(requests) {
+  return Boolean(
+    requests?.overflow === false &&
+    Array.isArray(requests.records) &&
+    requests.records.length > 0 &&
+    requests.records.every(
+      (record) => record?.completedAt && record.response && !record.error && !record.response.error
+    )
+  );
+}
+
+export function packagedSettingsRequestObservation(requests) {
+  const records = Array.isArray(requests?.records) ? requests.records : null;
+  return {
+    overflow: typeof requests?.overflow === 'boolean' ? requests.overflow : null,
+    count: records?.length ?? null,
+    completed: records?.filter((record) => record?.completedAt && record.response).length ?? null,
+    errors: records?.filter((record) => record?.error || record?.response?.error).length ?? null,
+    settled: packagedSettingsRequestsSettled(requests),
+  };
+}
+
+function packagedPreparationReason(sample, phase) {
+  if (typeof sample?.catalog?.state !== 'string' || !sample.catalog.state.trim())
+    return 'catalog-unavailable';
+  if (sample.catalog.state === 'loading') return 'catalog-loading';
+  if (!sample.control?.present) return 'control-missing';
+  if (!sample.control.connected) return 'control-disconnected';
+  if (!sample.control.rendered) return 'control-hidden';
+  if (sample.control.disabled !== false) return 'control-disabled';
+  if (phase === 'settings' ? sample.requestsSettled !== true : sample.requestsSettled === false)
+    return 'requests-unsettled';
+  return 'ready';
+}
+
+export async function waitForPackagedRefreshPreparation(
+  read,
+  {
+    phase = 'dashboard',
+    now = () => performance.now(),
+    pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  } = {}
+) {
+  assert(['dashboard', 'settings'].includes(phase));
+  const [budgetMs, maxSamples, intervalMs] =
+    phase === 'settings' ? [90000, 360, 250] : [120000, 240, 500];
+  const startedAt = now();
+  let sample;
+  let samples = 0;
+  let lastReason = 'catalog-unavailable';
+  const expired = Symbol('preparation deadline');
+  const result = (ready, readTimedOut = false) => ({
+    ...sample,
+    ready,
+    phase,
+    budgetMs,
+    maxSamples,
+    samples,
+    elapsedMs: now() - startedAt,
+    lastReason,
+    timedOut: !ready,
+    readTimedOut,
+  });
+  for (; samples < maxSamples; ) {
+    const remaining = budgetMs - (now() - startedAt);
+    if (remaining <= 0) break;
+    let timer;
+    const next = await Promise.race([
+      Promise.resolve().then(read),
+      new Promise((resolve) => {
+        timer = setTimeout(() => resolve(expired), remaining);
+      }),
+    ]).finally(() => clearTimeout(timer));
+    if (next === expired) return result(false, true);
+    sample = next;
+    samples++;
+    lastReason = packagedPreparationReason(sample, phase);
+    const afterRead = budgetMs - (now() - startedAt);
+    if (afterRead >= 0 && lastReason === 'ready') return result(true);
+    if (afterRead <= 0) break;
+    await pause(Math.min(intervalMs, afterRead));
+  }
+  return result(false);
+}
+
 export function packagedArguments(args, platform = process.platform) {
   assert.equal(platform, 'win32', 'Packaged harness requires Windows');
   assert([2, 4, 6].includes(args.length), 'Expected executable and bounded supported options');
