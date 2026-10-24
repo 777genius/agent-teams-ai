@@ -29,6 +29,98 @@ Before publishing:
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
+## v2.18.0 (Prepared draft)
+
+Target branch: `main`.
+
+Runtime gate:
+
+- Agent Teams runtime: `v0.0.136`, including the OpenCode stop, relaunch, and message delivery fixes.
+- Terminal Platform runtime: `v0.3.3`.
+- Published runtime archives and manifest verified before dispatch; the actual CLI reports `2.777.777`.
+
+Release body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.18.0 -->
+
+Agent Teams 2.18.0 adds named group chats and task folders for organizing team work, and fixes OpenCode tasks and messages getting stuck during relaunch.
+
+### What's New
+
+- Create named group chats where agents route messages, link tasks, and create new chats when you ask.
+- Organize tasks in nested folders with drag-and-drop.
+- Send images, documents, and other files to your teammates.
+- See charts, tables, and Mermaid diagrams from teammates rendered directly in chat.
+- Pick one Anthropic connection method and always see which is active: Auto, Subscription, API key, or compatible endpoint.
+- Assign gateway providers per teammate and see usage attributed to each one.
+
+### Improvements
+
+- Queue chat messages with Cmd or Ctrl+Enter, then edit, send, or remove them manually.
+- OpenCode teammates accept images and videos when their model supports them.
+- Team create and launch forms default Fast mode to Off when no earlier choice is saved.
+
+### Fixes
+
+- Deliver tasks and messages to OpenCode teammates, including during relaunch, instead of leaving them stuck unread.
+- Relaunching an OpenCode teammate no longer shows the whole mixed team as disconnected.
+- Stop no longer reports a failure after the team's agents have already exited.
+- Use your configured Anthropic model and team default with compatible endpoints instead of a hard-coded model.
+- After canceling a team launch, show its saved draft and Launch button instead of loading forever.
+- Update Electron and other dependencies with security fixes.
+
+### macOS installation
+
+macOS 2.18.0 requires macOS 13 or later. macOS 12 users can keep using the existing signed 2.17.1 builds.
+
+If you have signed macOS 2.17.1 installed, quit the app and install the appropriate 2.18.0 DMG over your existing app once. Your local settings, teams and projects stay in place. Automatic updates cannot perform this one-time migration.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.0/Agent.Teams.AI-2.18.0-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.0/Agent.Teams.AI-2.18.0-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.0/Agent.Teams.AI.Setup.2.18.0.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.0/Agent.Teams.AI.Setup.2.18.0-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.0/Agent.Teams.AI-2.18.0.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.0/agent-teams-ai_2.18.0_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.0/agent-teams-ai-2.18.0.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat&logoColor=white" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.0/agent-teams-ai-2.18.0.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+
+<!-- RELEASE_BODY_END v2.18.0 -->
+
 ## v2.17.10 (Prepared draft)
 
 Source base: `main` at `f934272fd7ef6ab27bbfc83ff47d7d8da6cea542`.
