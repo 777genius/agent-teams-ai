@@ -78,6 +78,8 @@ export interface RuntimeProviderOnboardingPlan {
   readonly routes?: readonly RuntimeProviderOnboardingRoute[];
   /** Set on a V2 plan whose route is not chosen yet: the user picks one of these. */
   readonly routeChoices?: readonly RuntimeProviderOnboardingRoute[];
+  /** The chosen V2 route; providerId is its integration. */
+  readonly route?: RuntimeProviderOnboardingRoute;
   readonly preferredModelFragments: readonly string[];
   readonly requireOAuthCredentialHint: boolean;
   readonly connectionStrategy: RuntimeProviderConnectionStrategy;
@@ -377,7 +379,7 @@ export function resolveRuntimeProviderOnboardingPlan(
   routeProviderId: string | null
 ): RuntimeProviderOnboardingPlan {
   if (generation === 'v1' || !plan.routes?.length) return plan;
-  if (plan.routes.some((route) => route.v2ProviderId === plan.providerId)) return plan;
+  if (plan.route) return plan;
   const route = plan.routes.find((item) => item.v2ProviderId === routeProviderId);
   if (!route) return { ...plan, routeChoices: plan.routes };
   const modelPrefix = `${plan.providerId}/`;
@@ -385,13 +387,29 @@ export function resolveRuntimeProviderOnboardingPlan(
     ...plan,
     providerId: route.v2ProviderId,
     credentialUrl: route.credentialUrl,
-    routes: [route],
+    route,
     preferredModelFragments: plan.preferredModelFragments.map((fragment) =>
       fragment.startsWith(modelPrefix)
         ? `${route.v2ProviderId}/${fragment.slice(modelPrefix.length)}`
         : fragment
     ),
   };
+}
+
+/**
+ * Guard: route integrations are used only when the runtime lists one of them in its provider
+ * directory, because only then does it serve their setup form and connection state. Until
+ * then a V2 plan connects through its own provider id, the same path as V1.
+ */
+export function resolveRuntimeProviderOnboardingRouteGeneration(
+  plan: RuntimeProviderOnboardingPlan,
+  generation: OpenCodeGeneration,
+  directoryEntries: readonly Pick<RuntimeProviderDirectoryEntryDto, 'providerId'>[]
+): OpenCodeGeneration {
+  const listed = new Set(directoryEntries.map((entry) => entry.providerId.toLowerCase()));
+  return generation === 'v2' && plan.routes?.some((route) => listed.has(route.v2ProviderId))
+    ? 'v2'
+    : 'v1';
 }
 
 /**
@@ -409,8 +427,9 @@ export function getRuntimeProviderOnboardingPlanProviderIds(
 
 /** The plan's key pages, primary first: one per route, else the single credential page. */
 export function getRuntimeProviderOnboardingCredentialUrls(
-  plan: Pick<RuntimeProviderOnboardingPlan, 'credentialUrl' | 'routes' | 'routeChoices'>
+  plan: Pick<RuntimeProviderOnboardingPlan, 'credentialUrl' | 'routes' | 'routeChoices' | 'route'>
 ): readonly string[] {
+  if (plan.route) return [plan.route.credentialUrl];
   const routes = plan.routeChoices ?? plan.routes;
   if (routes?.length) return routes.map((route) => route.credentialUrl);
   return plan.credentialUrl ? [plan.credentialUrl] : [];

@@ -158,6 +158,7 @@ function onboardingActions(
     verifyModel: vi.fn(async () => undefined),
     acceptVerifiedModel: vi.fn(),
     openCredentialPage: vi.fn(async () => undefined),
+    chooseRoute: vi.fn(),
     clearCompletedWizard: vi.fn(),
     ...overrides,
   };
@@ -359,6 +360,7 @@ describe('RuntimeProviderOnboardingView', () => {
   });
 
   it('asks for the account region before showing the V2 Kimi setup form', async () => {
+    const chooseRoute = vi.fn();
     const plan = resolveRuntimeProviderOnboardingPlan(
       RUNTIME_PROVIDER_ONBOARDING_PLANS.find((entry) => entry.id === 'kimi-code-membership')!,
       'v2',
@@ -374,7 +376,7 @@ describe('RuntimeProviderOnboardingView', () => {
             stage: 'connect',
             management: managementState({ setupFormLoading: true }),
           }),
-          actions: onboardingActions(),
+          actions: onboardingActions({ chooseRoute }),
           onAdvancedSettings: vi.fn(),
           onDone: vi.fn(),
         })
@@ -390,6 +392,14 @@ describe('RuntimeProviderOnboardingView', () => {
         .filter((text) => text?.includes('Open subscription key page'))
     ).toEqual(['Open subscription key page (kimi.com)', 'Open subscription key page (kimi.ai)']);
     expect(host.textContent).not.toContain('Loading provider setup');
+    act(() =>
+      host
+        .querySelector<HTMLButtonElement>(
+          '[data-testid="runtime-provider-onboarding-route-kimi.ai"]'
+        )
+        ?.click()
+    );
+    expect(chooseRoute).toHaveBeenCalledWith('kimi-code-plan-global');
   });
 
   it('shows provider setup loading immediately while the directory is still resolving', async () => {

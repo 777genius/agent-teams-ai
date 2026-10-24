@@ -1,5 +1,11 @@
 import type { RuntimeProviderDirectoryEntryDto } from '../../contracts';
+import {
+  getRuntimeProviderOnboardingPlanProviderIds,
+  resolveRuntimeProviderOnboardingRouteGeneration,
+} from '../../core/domain';
+
 import type {
+  OpenCodeGeneration,
   RuntimeProviderOnboardingPlan,
   RuntimeProviderOnboardingPlanId,
 } from '../../core/domain';
@@ -40,4 +46,27 @@ export function findDirectoryEntry(
       (entry) => entry.providerId.toLowerCase() === providerId.toLowerCase()
     ) ?? null
   );
+}
+
+/**
+ * The generation a plan's routes use (the runtime must list a route integration, see
+ * resolveRuntimeProviderOnboardingRouteGeneration) and the route already connected, which is
+ * the account region in use.
+ */
+export function getOnboardingRouteState(
+  plan: RuntimeProviderOnboardingPlan | null,
+  generation: OpenCodeGeneration,
+  state: RuntimeProviderManagementState
+): { routeGeneration: OpenCodeGeneration; connectedRouteProviderId: string | null } {
+  if (!plan) return { routeGeneration: 'v1', connectedRouteProviderId: null };
+  const routeGeneration = resolveRuntimeProviderOnboardingRouteGeneration(
+    plan,
+    generation,
+    state.directoryEntries
+  );
+  const connectedRouteProviderId =
+    getRuntimeProviderOnboardingPlanProviderIds(plan, routeGeneration).find(
+      (id) => findDirectoryEntry(state, id)?.state === 'connected'
+    ) ?? null;
+  return { routeGeneration, connectedRouteProviderId };
 }

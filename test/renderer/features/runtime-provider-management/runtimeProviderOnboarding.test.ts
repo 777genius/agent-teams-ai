@@ -14,6 +14,7 @@ import {
   normalizeRuntimeProviderOnboardingProgress,
   rankRecommendedRuntimeProviderModels,
   resolveRuntimeProviderOnboardingPlan,
+  resolveRuntimeProviderOnboardingRouteGeneration,
   resolveXiaomiMiMoTokenPlanProvider,
   selectRecommendedRuntimeProviderModel,
 } from '../../../../src/features/runtime-provider-management/core/domain/runtimeProviderOnboarding';
@@ -404,5 +405,28 @@ describe('Kimi Code routes by OpenCode generation', () => {
     expect(getRuntimeProviderCredentialUrl('kimi-code-plan-cn')).toBe(
       'https://www.kimi.com/code/console'
     );
+  });
+});
+
+describe('Kimi Code route guard', () => {
+  const plan = getRuntimeProviderOnboardingPlan('kimi-code-membership');
+
+  it('uses routes on V2 only when the runtime lists a route integration', () => {
+    expect(
+      resolveRuntimeProviderOnboardingRouteGeneration(plan, 'v2', [
+        { providerId: 'kimi-for-coding' },
+      ])
+    ).toBe('v1');
+    expect(
+      resolveRuntimeProviderOnboardingRouteGeneration(plan, 'v2', [
+        { providerId: 'kimi-for-coding' },
+        { providerId: 'Kimi-Code-Plan-Global' },
+      ])
+    ).toBe('v2');
+    expect(
+      resolveRuntimeProviderOnboardingRouteGeneration(plan, 'v1', [
+        { providerId: 'kimi-code-plan-global' },
+      ])
+    ).toBe('v1');
   });
 });

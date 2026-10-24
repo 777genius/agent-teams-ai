@@ -13,7 +13,6 @@ import {
   findRuntimeProviderOnboardingPlanByProviderId,
   getRuntimeProviderOnboardingCredentialUrls,
   getRuntimeProviderOnboardingPlan,
-  getRuntimeProviderOnboardingPlanProviderIds,
   isRuntimeProviderOnboardingPlanRoutable,
   rankRecommendedRuntimeProviderModels,
   resolveRuntimeProviderOnboardingPlan,
@@ -28,6 +27,7 @@ import {
   DEFAULT_WIZARD_PLAN_IDS,
   findDirectoryEntry,
   getAutomaticModelProbeLimit,
+  getOnboardingRouteState,
   isCopilotExplicitModelUnsupported,
 } from './runtimeProviderOnboardingInternals';
 import {
@@ -89,6 +89,8 @@ export interface RuntimeProviderOnboardingActions {
   acceptVerifiedModel(): void;
   /** Opens the given key page of the active plan, or its primary page. */
   openCredentialPage(url?: string): Promise<void>;
+  /** Picks the V2 integration for one console domain of the active plan. */
+  chooseRoute(v2ProviderId: string): void;
   clearCompletedWizard(): void;
 }
 
@@ -243,23 +245,22 @@ export function useRuntimeProviderOnboarding({
       ? getRuntimeProviderOnboardingPlan(progress.currentPlanId)
       : null;
   }, [directPlan, mode, progress?.currentPlanId]);
-  // A connected route is the account region already in use.
-  const connectedRouteProviderId = basePlan
-    ? (getRuntimeProviderOnboardingPlanProviderIds(basePlan, openCodeGeneration).find(
-        (id) => findDirectoryEntry(management, id)?.state === 'connected'
-      ) ?? null)
-    : null;
+  const { routeGeneration, connectedRouteProviderId } = getOnboardingRouteState(
+    basePlan,
+    openCodeGeneration,
+    management
+  );
   const chosenRouteProviderId = basePlan ? (routeProviderIds[basePlan.id] ?? null) : null;
   const activePlan = useMemo(
     () =>
       basePlan
         ? resolveRuntimeProviderOnboardingPlan(
             basePlan,
-            openCodeGeneration,
+            routeGeneration,
             chosenRouteProviderId ?? connectedRouteProviderId
           )
         : null,
-    [basePlan, chosenRouteProviderId, connectedRouteProviderId, openCodeGeneration]
+    [basePlan, chosenRouteProviderId, connectedRouteProviderId, routeGeneration]
   );
 
   const recordOnboardingStep = useCallback(
@@ -723,6 +724,21 @@ export function useRuntimeProviderOnboarding({
     [activePlan, recordOnboardingStep]
   );
 
+  const chooseRoute = useCallback(
+    (v2ProviderId: string): void => {
+      if (!activePlan || (!activePlan.routeChoices && !activePlan.route)) return;
+      if (!activePlan.routes?.some((route) => route.v2ProviderId === v2ProviderId)) return;
+      if (activePlan.providerId === v2ProviderId) return;
+      // A form open for the previous route belongs to another integration.
+      if (management.activeFormProviderId === activePlan.providerId) {
+        managementActions.cancelConnect();
+      }
+      connectStartedPlanRef.current = null;
+      setRouteProviderIds((current) => ({ ...current, [activePlan.id]: v2ProviderId }));
+    },
+    [activePlan, management.activeFormProviderId, managementActions]
+  );
+
   const clearCompletedWizard = useCallback((): void => {
     repositoryRef.current?.clear();
     setResumable(false);
@@ -777,6 +793,7 @@ export function useRuntimeProviderOnboarding({
       verifyModel,
       acceptVerifiedModel,
       openCredentialPage,
+      chooseRoute,
       clearCompletedWizard,
     },
   ] as const;

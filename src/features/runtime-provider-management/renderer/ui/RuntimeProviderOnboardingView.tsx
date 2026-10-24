@@ -501,13 +501,30 @@ const ActivePlanFlow = ({
               </div>
             </div>
           ) : null}
-          {plan.routeChoices ? (
-            <div
-              data-testid="runtime-provider-onboarding-route-choice"
-              className="text-xs text-[var(--color-text-muted)]"
-            >
-              Open the key page where your account lives. OpenCode V2 connects each one through its
-              own integration.
+          {plan.routeChoices || plan.route ? (
+            <div data-testid="runtime-provider-onboarding-route-choice" className="space-y-2">
+              <div className="text-xs text-[var(--color-text-muted)]">
+                Where does your account live? OpenCode V2 connects each domain through its own
+                integration.
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(plan.routes ?? []).map((route) => {
+                  const selected = plan.route?.v2ProviderId === route.v2ProviderId;
+                  return (
+                    <Button
+                      key={route.v2ProviderId}
+                      type="button"
+                      size="sm"
+                      variant={selected ? 'default' : 'outline'}
+                      aria-pressed={selected}
+                      data-testid={`runtime-provider-onboarding-route-${route.host}`}
+                      onClick={() => actions.chooseRoute(route.v2ProviderId)}
+                    >
+                      {route.host}
+                    </Button>
+                  );
+                })}
+              </div>
             </div>
           ) : null}
           {!alreadyConnected && !plan.providerId.startsWith('xiaomi-token-plan-') ? (
