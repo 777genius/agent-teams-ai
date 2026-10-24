@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
@@ -88,5 +89,85 @@ test('a second store instance cannot reuse another store held canonical lock', (
     second.fenced(() => true),
     true,
     'outer lock released after denied cross-store nesting'
+  );
+});
+
+test('a captured authority fence never recreates a namespace detached after its preflight', (t) => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-owner-detached-fence-')));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const store = new TeamOwnerStore(root, 'test-detached');
+  const team = join(root, 'teams', 'test-detached');
+  // Controlled filesystem schedule: purge's async unlink can finish after the
+  // synchronous preflight but before controller lock acquisition. No new API.
+  const seam = store as unknown as { validateNamespace(): void };
+  const validate = seam.validateNamespace.bind(store);
+  let detach = true;
+  seam.validateNamespace = () => {
+    validate();
+    if (detach) {
+      detach = false;
+      rmSync(team, { recursive: true });
+    }
+  };
+  let entered = false;
+  assert.throws(() =>
+    store.fenced(() => {
+      entered = true;
+    })
+  );
+  assert.equal(entered, false);
+  assert.equal(existsSync(team), false, 'lock acquisition must not recreate the purged pathname');
+  assert.throws(() =>
+    store.fenced(() => {
+      entered = true;
+    })
+  );
+  assert.equal(existsSync(team), false, 'a later captured read must remain inert');
+});
+
+test('captured controller fences refuse missing parents; ordinary legacy fences still create them', async (t) => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-captured-parent-policy-')));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const controller = createRequire(import.meta.url)(
+    'agent-teams-controller/src/internal/fileLock.js'
+  ) as {
+    withFileLockSync<T>(path: string, action: () => T, options?: { createParent?: boolean }): T;
+    withFileLock<T>(
+      path: string,
+      action: () => Promise<T>,
+      options?: { createParent?: boolean }
+    ): Promise<T>;
+  };
+  const missing = join(root, 'missing', '.host-owner', 'authority');
+  let entered = false;
+  assert.throws(() =>
+    controller.withFileLockSync(
+      missing,
+      () => {
+        entered = true;
+      },
+      { createParent: false }
+    )
+  );
+  await assert.rejects(
+    controller.withFileLock(
+      missing,
+      async () => {
+        entered = true;
+      },
+      { createParent: false }
+    )
+  );
+  assert.equal(entered, false);
+  assert.equal(existsSync(join(root, 'missing')), false);
+  assert.equal(
+    controller.withFileLockSync(missing, () => 'legacy-created'),
+    'legacy-created'
+  );
+  assert.equal(
+    await controller.withFileLock(missing, async () => 'captured-existing', {
+      createParent: false,
+    }),
+    'captured-existing'
   );
 });

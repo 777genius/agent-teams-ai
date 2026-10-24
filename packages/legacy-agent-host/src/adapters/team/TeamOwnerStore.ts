@@ -48,20 +48,24 @@ export class TeamOwnerStore implements TeamStore {
     this.validateNamespace();
     // Only synchronous calls on this exact store may reuse its still-held outer lock.
     if (this.fenceDepth) return action();
-    return withTeamFileFence(join(this.directory, 'authority'), () => {
-      this.validateNamespace();
-      this.fenceDepth++;
-      try {
-        return action();
-      } finally {
-        this.fenceDepth--;
-      }
-    });
+    return withTeamFileFence(
+      join(this.directory, 'authority'),
+      () => {
+        this.validateNamespace();
+        this.fenceDepth++;
+        try {
+          return action();
+        } finally {
+          this.fenceDepth--;
+        }
+      },
+      { createParent: false }
+    );
   }
 
   /** Reject changed/symlinked product paths before the portable controller can follow them. */
   private validateNamespace(): void {
-    const directoryPath = (target: string): void => {
+    const directoryPath = (target: string, required = false): void => {
       let part = parse(target).root;
       for (const segment of target.slice(part.length).split('/')) {
         part = join(part, segment);
@@ -69,7 +73,10 @@ export class TeamOwnerStore implements TeamStore {
           const stat = lstatSync(part);
           if (!stat.isDirectory() || stat.isSymbolicLink()) throw new TeamOwnerError('hold');
         } catch (error) {
-          if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+            if (required) throw new TeamOwnerError('hold');
+            return;
+          }
           throw error;
         }
       }
@@ -90,7 +97,7 @@ export class TeamOwnerStore implements TeamStore {
     };
     const team = join(this.root, 'teams', this.teamName);
     const tasks = join(this.root, 'tasks', this.teamName);
-    directoryPath(this.directory);
+    directoryPath(this.directory, true);
     directoryPath(tasks);
     tree(team);
     tree(tasks);

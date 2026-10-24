@@ -57,7 +57,7 @@ export function createTeamController(
 // These existing IO primitives retain the controller's filesystem lock protocol.
 // Kept at this adapter boundary; Team policy never imports package internals.
 const lock = require('agent-teams-controller/src/internal/fileLock.js') as {
-  withFileLockSync<T>(scope: string, action: () => T): T;
+  withFileLockSync<T>(scope: string, action: () => T, options?: { createParent?: boolean }): T;
 };
 const atomic = require('agent-teams-controller/src/internal/atomicFile.js') as {
   writeJsonFileSync(filePath: string, value: unknown): void;

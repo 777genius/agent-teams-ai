@@ -168,3 +168,45 @@ test('cold prepared purge read is inert, publishes only original retry coordinat
   assert.equal(object(lookup.value).transactionId, prepared.transactionId);
   assert.equal(object(lookup.value).phase, 'deleted');
 });
+
+test('a read during physically completed purge cannot recreate data or lose the original receipt', async (t) => {
+  const f = fixture(t),
+    teamId = f.definition.binding.teamId;
+  const teamPath = join(f.root, 'teams', f.definition.binding.teamName);
+  await f.call('team.lifecycle.change', 'TEST-trash-overlap', {
+    expectedRevision: f.owner.lifecycleCommands('human').view().revision,
+    action: 'trash',
+  });
+  const revision = f.owner.lifecycleCommands('human').view().revision;
+  const coordinator = f.lifecycle.storage.coordinator;
+  const complete = coordinator.completePermanentDeletion.bind(coordinator);
+  let observedRead: Record<string, unknown> | undefined;
+  coordinator.completePermanentDeletion = async (intent) => {
+    assert.equal(existsSync(teamPath), false, 'original physical target was already removed');
+    observedRead = await f.call('team.lifecycle.read', 'TEST-overlapping-read', {});
+    await complete(intent);
+  };
+  const result = await f.call('team.lifecycle.purge', 'TEST-original-overlap-purge', {
+    expectedRevision: revision,
+  });
+  assert.deepEqual(observedRead, { ok: false, code: 'hold', outcome: 'not-dispatched' });
+  assert.equal(result.ok, true);
+  assert.equal(object(result.value).phase, 'deleted');
+  assert.equal(existsSync(teamPath), false, 'no replacement .host-owner directory survives');
+  assert.equal(f.teams.has(teamId), false, 'only original definition was retired');
+  const lookup = await f.call('team.lifecycle.purge.lookup', 'TEST-original-overlap-purge', {
+    expected: { expectedRevision: revision },
+  });
+  assert.equal(lookup.ok, true);
+  assert.deepEqual(
+    lookup.value,
+    result.value,
+    'lookup returns the exact original receipt without replay'
+  );
+  const wrong = await f.call('team.lifecycle.purge.lookup', 'TEST-not-the-original-purge', {
+    expected: { expectedRevision: revision },
+  });
+  assert.equal(wrong.ok, true);
+  assert.equal(wrong.value, null, 'a different command gains no original receipt');
+  assert.equal(existsSync(teamPath), false);
+});
