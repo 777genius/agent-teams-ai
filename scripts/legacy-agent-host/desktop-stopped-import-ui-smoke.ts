@@ -13,7 +13,7 @@ import {
   readStoppedImportAttachmentOwner,
   runDesktopStoppedImportAttachmentUi,
 } from './desktop-stopped-import-attachments-ui.ts';
-import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
@@ -133,7 +133,7 @@ export async function runDesktopStoppedImportUiSmoke(
     const point = record(
       await ui.waitRead(
         `(() => {
-      const cards=[...document.querySelectorAll('.team-row-zebra-card')].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&e.getAttribute('data-team-name')===${JSON.stringify(seed.teamName)}&&e.querySelector('h3')?.textContent.trim()===${JSON.stringify(seed.sourceCardLabel)};});
+      const cards=[...document.querySelectorAll('.team-row-zebra-card')].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&e.getAttribute('data-team-name')===${desktopJsLiteral(seed.teamName)}&&e.querySelector('h3')?.textContent.trim()===${desktopJsLiteral(seed.sourceCardLabel)};});
       if(cards.length!==1)return null;const e=cards[0],r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2;
       const hit=document.elementFromPoint(x,y);return r.width&&r.height&&hit&&e.contains(hit)?{x,y}:null;
     })()`,
@@ -187,7 +187,7 @@ export async function runDesktopStoppedImportUiSmoke(
     }
     try {
       await ui.waitRead(
-        `document.querySelector('[role="dialog"] #dialog-prompt')?.value===${JSON.stringify(seed.savedSettings.prompt)}`,
+        `document.querySelector('[role="dialog"] #dialog-prompt')?.value===${desktopJsLiteral(seed.savedSettings.prompt)}`,
         'saved launch prompt hydrates'
       );
       await ui.waitRead(
@@ -245,7 +245,7 @@ export async function runDesktopStoppedImportUiSmoke(
   const lookupRequest = { teamName: seed.teamName, action: 'lookup' };
   const lookup = record(
     await cdp.evaluate(
-      `window.electronAPI.agentBackend.stoppedImport(${JSON.stringify(lookupRequest)})`
+      `window.electronAPI.agentBackend.stoppedImport(${desktopJsLiteral(lookupRequest)})`
     )
   );
   assert.equal(lookup.ok, true);
@@ -274,7 +274,7 @@ export async function runDesktopStoppedImportUiSmoke(
     payload: {},
   };
   const snapshotResult = record(
-    await cdp.evaluate(`window.electronAPI.agentBackend.invoke(${JSON.stringify(snapshotRequest)})`)
+    await cdp.evaluate(`window.electronAPI.agentBackend.invoke(${desktopJsLiteral(snapshotRequest)})`)
   );
   assert.equal(snapshotResult.ok, true);
   const snapshot = record(snapshotResult.value);
@@ -351,7 +351,7 @@ export async function runDesktopStoppedImportUiSmoke(
   step({ action: 'Page.reload', ignoreCache: false });
   await cdp.send('Page.reload', { ignoreCache: false });
   await ui.waitRead(
-    `performance.timeOrigin!==${JSON.stringify(timeOrigin)}&&Boolean(window.electronAPI)&&!document.getElementById('splash')`,
+    `performance.timeOrigin!==${desktopJsLiteral(timeOrigin)}&&Boolean(window.electronAPI)&&!document.getElementById('splash')`,
     'reloaded renderer document'
   );
   await ui.observeInput();
@@ -364,7 +364,7 @@ export async function runDesktopStoppedImportUiSmoke(
   );
   const afterLookup = record(
     await cdp.evaluate(
-      `window.electronAPI.agentBackend.stoppedImport(${JSON.stringify(lookupRequest)})`
+      `window.electronAPI.agentBackend.stoppedImport(${desktopJsLiteral(lookupRequest)})`
     )
   );
   assert.deepEqual(afterLookup, lookup, 'reopen queries the original canonical import');
@@ -415,7 +415,7 @@ export async function runDesktopStoppedImportUiSmoke(
     const paragraph = `[role="dialog"] p:has(a[href^="task://${seed.externalTaskId}?"])`;
     const link = `${paragraph} a[href^="task://${id}?"]`;
     const renderedOwner = await ui.waitRead(
-      `(() => {const a=document.querySelector(${JSON.stringify(link)});if(!a)return null;return new URL(a.href).searchParams.get('team')??'';})()`,
+      `(() => {const a=document.querySelector(${desktopJsLiteral(link)});if(!a)return null;return new URL(a.href).searchParams.get('team')??'';})()`,
       'rendered TaskRef owner'
     );
     assert.equal(renderedOwner, expectedOwner);
@@ -428,7 +428,7 @@ export async function runDesktopStoppedImportUiSmoke(
       );
       const owner = record(
         await ui.waitRead(
-          `(() => {const node=document.querySelector('.kanban-task-card[data-task-id="${id}"]');if(!node)return null;const key=Object.keys(node).find(key=>key.startsWith('__reactFiber$'));return (${readStoppedImportAttachmentOwner.toString()})(key?node[key]:null,${JSON.stringify(id)});})()`,
+          `(() => {const node=document.querySelector('.kanban-task-card[data-task-id="${id}"]');if(!node)return null;const key=Object.keys(node).find(key=>key.startsWith('__reactFiber$'));return (${readStoppedImportAttachmentOwner.toString()})(key?node[key]:null,${desktopJsLiteral(id)});})()`,
           'internal TaskRef destination owner'
         )
       );
@@ -437,7 +437,7 @@ export async function runDesktopStoppedImportUiSmoke(
     } else {
       const owner = record(
         await ui.waitRead(
-          `(() => {const node=document.querySelector('[role="dialog"]');if(!node||!node.getClientRects().length||!node.querySelector('[role="alert"],[role="status"]'))return null;const key=Object.keys(node).find(key=>key.startsWith('__reactFiber$'));let fiber=key?node[key]:null;let phase=null;for(let depth=0;fiber&&depth<128;depth++,fiber=fiber.return){const p=fiber.memoizedProps;if(p?.open===true&&(p.phase==='unavailable'||p.phase==='missing'))phase=p.phase;if(p?.open===true&&p.teamName===${JSON.stringify(expectedOwner)}&&p.sessionController?.identity?.taskId===${JSON.stringify(id)}&&p.sessionController.identity.teamName===${JSON.stringify(expectedOwner)}&&'task' in p&&'taskMap' in p&&!p.loading&&p.task===null&&(phase==='unavailable'||phase==='missing'))return {teamName:p.teamName,taskId:null};}return null;})()`,
+          `(() => {const node=document.querySelector('[role="dialog"]');if(!node||!node.getClientRects().length||!node.querySelector('[role="alert"],[role="status"]'))return null;const key=Object.keys(node).find(key=>key.startsWith('__reactFiber$'));let fiber=key?node[key]:null;let phase=null;for(let depth=0;fiber&&depth<128;depth++,fiber=fiber.return){const p=fiber.memoizedProps;if(p?.open===true&&(p.phase==='unavailable'||p.phase==='missing'))phase=p.phase;if(p?.open===true&&p.teamName===${desktopJsLiteral(expectedOwner)}&&p.sessionController?.identity?.taskId===${desktopJsLiteral(id)}&&p.sessionController.identity.teamName===${desktopJsLiteral(expectedOwner)}&&'task' in p&&'taskMap' in p&&!p.loading&&p.task===null&&(phase==='unavailable'||phase==='missing'))return {teamName:p.teamName,taskId:null};}return null;})()`,
           'original captured source owner remains unavailable without local fallback'
         )
       );

@@ -3,6 +3,24 @@ import { test } from 'node:test';
 import { runInNewContext } from 'node:vm';
 
 import { readStoppedImportAttachmentOwner } from './desktop-stopped-import-attachments-ui.ts';
+import { desktopJsLiteral } from './desktop-ui-controls.ts';
+
+test('TEST CDP JavaScript literals round-trip hostile data without adding executable source', () => {
+  const values = [
+    '\"\'); globalThis.unexpectedEffects++; //',
+    '</script><script>globalThis.unexpectedEffects++</script>',
+    '\\path\\\"quoted\"\n\r\t\b\f\0',
+    'TEST\u2028separator\u2029Україна😀',
+    { nested: ['<tag>', '\\', null, true, 17] },
+  ];
+  const literal = desktopJsLiteral(values);
+  assert.doesNotMatch(literal, /[<>\b\f\n\r\t\0\u2028\u2029]/);
+  const realm = { unexpectedEffects: 0 };
+  const observed: unknown = runInNewContext(`JSON.stringify(${literal})`, realm);
+  assert.equal(observed, JSON.stringify(values));
+  assert.equal(realm.unexpectedEffects, 0);
+  assert.throws(() => desktopJsLiteral(undefined), TypeError);
+});
 
 test('attachment UI owner oracle uses actual canonical task props across renamed memo components', () => {
   const expected = {

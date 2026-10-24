@@ -6,7 +6,7 @@ import { performance } from 'node:perf_hooks';
 
 import { digest, fileDigest } from './desktop-backend-fixture.ts';
 import { skillsUiMarkdown } from './desktop-skills-fixture.ts';
-import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 
 const object = (value: unknown): Record<string, unknown> => {
@@ -114,7 +114,7 @@ export async function runDesktopSkillsUiSmoke(
   };
   const text = async () => String(await cdp.evaluate('document.body.innerText'));
   const waitText = (value: string) =>
-    ui.waitRead(`document.body.innerText.includes(${JSON.stringify(value)})`, value);
+    ui.waitRead(`document.body.innerText.includes(${desktopJsLiteral(value)})`, value);
   const fill = async (selector: string, value: string) => {
     await ui.scrollTo(selector, 'reveal ' + selector);
     await ui.click(selector, 'focus ' + selector);
@@ -128,7 +128,7 @@ export async function runDesktopSkillsUiSmoke(
     await input('Input.dispatchKeyEvent', { type: 'keyUp', key: 'a', code: 'KeyA', modifiers: 4 });
     await input('Input.insertText', { text: value });
     await ui.waitRead(
-      `document.querySelector(${JSON.stringify(selector)})?.value===${JSON.stringify(value)}`,
+      `document.querySelector(${desktopJsLiteral(selector)})?.value===${desktopJsLiteral(value)}`,
       'typed value ' + selector
     );
   };
@@ -138,7 +138,7 @@ export async function runDesktopSkillsUiSmoke(
   };
   const clickCard = async (name: string) => {
     await fill('input[placeholder="Search by skill name or what it helps with..."]', name);
-    const expression = `(() => {const rows=[...document.querySelectorAll('.skills-grid button')].filter(e=>e.querySelector('h3')?.textContent.trim()===${JSON.stringify(name)});if(rows.length!==1)return null;const e=rows[0],r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return r.width>0&&r.height>0&&hit&&(e===hit||e.contains(hit))?{x,y}:null})()`;
+    const expression = `(() => {const rows=[...document.querySelectorAll('.skills-grid button')].filter(e=>e.querySelector('h3')?.textContent.trim()===${desktopJsLiteral(name)});if(rows.length!==1)return null;const e=rows[0],r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return r.width>0&&r.height>0&&hit&&(e===hit||e.contains(hit))?{x,y}:null})()`;
     const point = object(await ui.waitRead(expression, 'visible skill card ' + name));
     step({ action: 'mouseClick', label: 'skill card ' + name, target: point, state: 'attempted' });
     await input('Input.dispatchMouseEvent', {
@@ -385,7 +385,7 @@ export async function runDesktopSkillsUiSmoke(
       'existing config.update replaces local ServiceContext; no native picker or invented context UI',
   });
   await cdp.evaluate(
-    `window.electronAPI.config.update('general',{claudeRootPath:${JSON.stringify(join(root, 'claude'))}})`
+    `window.electronAPI.config.update('general',{claudeRootPath:${desktopJsLiteral(join(root, 'claude'))}})`
   );
   await ui.click('[role="dialog"] button', 'confirm stale original context once', 'Import Skill');
   await waitText('Review the original skill import before saving');

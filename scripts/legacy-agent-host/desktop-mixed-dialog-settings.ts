@@ -1,3 +1,4 @@
+import { desktopJsLiteral } from './desktop-ui-controls.ts';
 import assert from 'node:assert/strict';
 import type { createDesktopUiControls, UiCdpPort } from './desktop-ui-controls.ts';
 
@@ -26,7 +27,7 @@ export const mixedDescription = 'TEST mixed Create saved settings and Launch hyd
 async function expand(cdp: UiCdpPort, ui: Controls, title: string) {
   const value = record(
     await ui.waitRead(
-      `(()=>{const rows=[...document.querySelectorAll('[role="dialog"] button[aria-controls]')].filter(e=>e.textContent.includes(${JSON.stringify(title)}));return rows.length===1?{id:rows[0].getAttribute('aria-controls'),expanded:rows[0].getAttribute('aria-expanded')}:null})()`,
+      `(()=>{const rows=[...document.querySelectorAll('[role="dialog"] button[aria-controls]')].filter(e=>e.textContent.includes(${desktopJsLiteral(title)}));return rows.length===1?{id:rows[0].getAttribute('aria-controls'),expanded:rows[0].getAttribute('aria-expanded')}:null})()`,
       title
     )
   );
@@ -37,7 +38,7 @@ async function expand(cdp: UiCdpPort, ui: Controls, title: string) {
   }
   assert.equal(
     await cdp.evaluate(
-      `document.querySelector('[role="dialog"] button[aria-controls='+${JSON.stringify(JSON.stringify(value.id))}+']')?.getAttribute('aria-expanded')`
+      `document.querySelector('[role="dialog"] button[aria-controls='+${desktopJsLiteral(JSON.stringify(value.id))}+']')?.getAttribute('aria-expanded')`
     ),
     'true'
   );
@@ -66,7 +67,7 @@ async function replace(
   });
   await cdp.send('Input.insertText', { text: value });
   await ui.waitRead(
-    `document.querySelector(${JSON.stringify(selector)})?.value===${JSON.stringify(value)}`,
+    `document.querySelector(${desktopJsLiteral(selector)})?.value===${desktopJsLiteral(value)}`,
     label + ' retained'
   );
 }
@@ -75,12 +76,12 @@ async function checked(cdp: UiCdpPort, ui: Controls, selector: string, value: bo
   const expected = value ? 'checked' : 'unchecked';
   if (
     (await cdp.evaluate(
-      `document.querySelector(${JSON.stringify(selector)})?.getAttribute('data-state')`
+      `document.querySelector(${desktopJsLiteral(selector)})?.getAttribute('data-state')`
     )) !== expected
   )
     await ui.click(selector, selector);
   await ui.waitRead(
-    `document.querySelector(${JSON.stringify(selector)})?.getAttribute('data-state')===${JSON.stringify(expected)}`,
+    `document.querySelector(${desktopJsLiteral(selector)})?.getAttribute('data-state')===${desktopJsLiteral(expected)}`,
     selector + ' retained'
   );
 }
@@ -183,7 +184,7 @@ export function assertMixedSavedSettings(state: Record<string, unknown>, workspa
 export async function assertMixedLaunchHydration(cdp: UiCdpPort, ui: Controls) {
   const lead = '[role="dialog"] button[aria-label*=" provider,"][aria-label*="Opus 4.6"]';
   await ui.waitRead(
-    `Boolean(document.querySelector(${JSON.stringify(lead)}))`,
+    `Boolean(document.querySelector(${desktopJsLiteral(lead)}))`,
     'saved lead model hydrated'
   );
   if (!(await cdp.evaluate(`Boolean(document.querySelector('[role="dialog"] #lead-effort'))`))) {

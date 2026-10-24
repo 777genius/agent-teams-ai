@@ -1,3 +1,4 @@
+import { desktopJsLiteral } from './desktop-ui-controls.ts';
 import assert from "node:assert/strict";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -75,7 +76,7 @@ export async function runDesktopCodexQuestionUiSmoke(
   for (const turn of CODEX_QUESTION_TURNS) {
     assert.deepEqual(options.model.failures, []);
     await ui.waitRead(
-      `!document.querySelector(${JSON.stringify(sheet)})`,
+      `!document.querySelector(${desktopJsLiteral(sheet)})`,
       "previous original Sheet absent",
     );
     await ui.click(
@@ -84,7 +85,7 @@ export async function runDesktopCodexQuestionUiSmoke(
     );
     await cdp.send("Input.insertText", { text: turn });
     await ui.waitRead(
-      `document.querySelector('.message-composer-flat-layout textarea')?.value===${JSON.stringify(turn)}`,
+      `document.querySelector('.message-composer-flat-layout textarea')?.value===${desktopJsLiteral(turn)}`,
       "original text",
     );
     await ui.click(
@@ -93,7 +94,7 @@ export async function runDesktopCodexQuestionUiSmoke(
       "Send",
     );
     await ui.waitRead(
-      `(() => {const e=document.querySelector(${JSON.stringify(sheet)});return e?.querySelector('.text-sm.font-semibold')?.textContent?.trim()==='Question'&&e.innerText.includes(${JSON.stringify(CODEX_QUESTION_TEXT)});})()`,
+      `(() => {const e=document.querySelector(${desktopJsLiteral(sheet)});return e?.querySelector('.text-sm.font-semibold')?.textContent?.trim()==='Question'&&e.innerText.includes(${desktopJsLiteral(CODEX_QUESTION_TEXT)});})()`,
       "original native Question Sheet",
       60_000,
     );
@@ -132,7 +133,7 @@ export async function runDesktopCodexQuestionUiSmoke(
       const selector = `${sheet} button`;
       const point = row(
         await ui.waitRead(
-          `(() => {const rows=[...document.querySelectorAll(${JSON.stringify(selector)})].filter(e=>e.textContent.includes(${JSON.stringify(CODEX_QUESTION_ANSWER)}));if(rows.length!==1)return null;const e=rows[0],r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return r.width&&r.height&&hit&&(hit===e||e.contains(hit))?{x,y}:null;})()`,
+          `(() => {const rows=[...document.querySelectorAll(${desktopJsLiteral(selector)})].filter(e=>e.textContent.includes(${desktopJsLiteral(CODEX_QUESTION_ANSWER)}));if(rows.length!==1)return null;const e=rows[0],r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return r.width&&r.height&&hit&&(hit===e||e.contains(hit))?{x,y}:null;})()`,
           "original finite answer option",
         ),
       );
@@ -167,7 +168,7 @@ export async function runDesktopCodexQuestionUiSmoke(
       });
     }
     await ui.waitRead(
-      `document.body.innerText.includes(${JSON.stringify(`DONE_${turn}`)})`,
+      `document.body.innerText.includes(${desktopJsLiteral(`DONE_${turn}`)})`,
       "actual canonical native reply",
       60_000,
     );
@@ -236,7 +237,7 @@ export async function runDesktopCodexQuestionUiSmoke(
   assert.deepEqual(options.model.failures, []);
   assert.equal(options.model.observations.length, 6);
   await ui.waitRead(
-    `!document.querySelector(${JSON.stringify(sheet)})`,
+    `!document.querySelector(${desktopJsLiteral(sheet)})`,
     "last original Sheet dismissed",
   );
   await ui.click(

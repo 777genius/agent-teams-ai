@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
@@ -97,8 +97,8 @@ export async function qualifyColdProcessUi(
       const key=Object.keys(node).find(k=>k.startsWith('__reactFiber$'));let fiber=key?node[key]:null;
       for(let depth=0;fiber&&depth<128;depth++,fiber=fiber.return) {
         for(const f of [fiber,fiber.alternate]) {
-          const p=f?.memoizedProps;if(!p||p.teamName!==${JSON.stringify(selection)}||!Array.isArray(p.processes))continue;
-          const rows=p.processes.filter(r=>r.id===${JSON.stringify(id)}&&r.processRef===${JSON.stringify(processRef)});
+          const p=f?.memoizedProps;if(!p||p.teamName!==${desktopJsLiteral(selection)}||!Array.isArray(p.processes))continue;
+          const rows=p.processes.filter(r=>r.id===${desktopJsLiteral(id)}&&r.processRef===${desktopJsLiteral(processRef)});
           if(rows.length===1)return {teamName:p.teamName,process:rows[0],isTeamAlive:p.isTeamAlive??null};
         }
       }
@@ -122,7 +122,7 @@ export async function qualifyColdProcessUi(
   // Actual unified renderer read, never a monkeypatch or alternate mutation path.
   const data = row(
     await cdp.evaluate(
-      `(async()=>{const {api}=await import('/src/renderer/api/index.ts');return await api.teams.getData(${JSON.stringify(selection)});})()`
+      `(async()=>{const {api}=await import('/src/renderer/api/index.ts');return await api.teams.getData(${desktopJsLiteral(selection)});})()`
     )
   );
   const inventory = (data.processes as unknown[]).map(row);
@@ -152,11 +152,11 @@ export async function qualifyColdProcessUi(
   );
   const originalRenderedRow = row(await ui.waitRead(`(() => {
     const labels=[...document.querySelectorAll('[data-section-id="processes"] span.font-medium')]
-      .filter(node=>node.textContent.trim()===${JSON.stringify(PROCESS_LABEL)});
+      .filter(node=>node.textContent.trim()===${desktopJsLiteral(PROCESS_LABEL)});
     if(labels.length!==1)return null;
     const label=labels[0],container=label.parentElement;
     const pids=[...container.querySelectorAll('span.font-mono')]
-      .filter(node=>node.textContent.trim()===${JSON.stringify('PID' + services.primary.pid)});
+      .filter(node=>node.textContent.trim()===${desktopJsLiteral('PID' + services.primary.pid)});
     if(pids.length!==1)return null;
     const visible=node=>{
       const r=node.getBoundingClientRect(),style=getComputedStyle(node);
@@ -192,7 +192,7 @@ export async function qualifyColdProcessUi(
     `(() => {
     const buttons=[...document.querySelectorAll('[data-section-id="processes"] button')].filter(b=>b.textContent.trim()==='Kill');
     if(buttons.length!==1)return null;const b=buttons[0],container=b.parentElement?.parentElement;
-    return container?.textContent.includes(${JSON.stringify(PROCESS_LABEL)})&&container.textContent.includes(${JSON.stringify(String(services.primary.pid))})?true:null;
+    return container?.textContent.includes(${desktopJsLiteral(PROCESS_LABEL)})&&container.textContent.includes(${desktopJsLiteral(String(services.primary.pid))})?true:null;
   })()`,
     'one original displayed primary Stop action'
   );
@@ -239,7 +239,7 @@ export async function qualifyColdProcessUi(
       payload: { originalCommandId: commandId },
     };
     const result = row(
-      await cdp.evaluate(`window.electronAPI.agentBackend.invoke(${JSON.stringify(request)})`)
+      await cdp.evaluate(`window.electronAPI.agentBackend.invoke(${desktopJsLiteral(request)})`)
     );
     assert.equal(result.ok, true, JSON.stringify(result));
     const found = row(result.value);

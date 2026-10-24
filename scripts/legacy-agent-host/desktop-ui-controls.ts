@@ -1,4 +1,24 @@
 import assert from 'node:assert/strict';
+
+const literalEscapes: Readonly<Record<string, string>> = {
+  '<': '\\u003c',
+  '>': '\\u003e',
+  '\b': '\\b',
+  '\f': '\\f',
+  '\n': '\\n',
+  '\r': '\\r',
+  '\t': '\\t',
+  '\0': '\\u0000',
+  '\u2028': '\\u2028',
+  '\u2029': '\\u2029',
+};
+/** Serialize data embedded in TEST CDP JavaScript; never concatenate it as source. */
+export function desktopJsLiteral(value: unknown): string {
+  const serialized = JSON.stringify(value);
+  if (typeof serialized !== 'string') throw new TypeError('TEST CDP value is not JSON-serializable');
+  return serialized.replace(/[<>\b\f\n\r\t\0\u2028\u2029]/g, (char) => literalEscapes[char]!);
+}
+
 export interface UiCdpPort {
   evaluate(expression: string): Promise<unknown>;
   send(method: string, params?: Record<string, unknown>): Promise<unknown>;
@@ -73,8 +93,8 @@ export function createDesktopUiControls(
   };
   // Each expression is a read-only DOM lookup returning at most one exact target.
   const target = (selector: string, text?: string): string => `(() => {
-    const elements = [...document.querySelectorAll(${JSON.stringify(selector)})].filter(e => {
-      const r=e.getBoundingClientRect(); return r.width>0&&r.height>0${text === undefined ? '' : `&&e.textContent.trim()===${JSON.stringify(text)}`};
+    const elements = [...document.querySelectorAll(${desktopJsLiteral(selector)})].filter(e => {
+      const r=e.getBoundingClientRect(); return r.width>0&&r.height>0${text === undefined ? '' : `&&e.textContent.trim()===${desktopJsLiteral(text)}`};
     });
     if(elements.length!==1)return null;
     const e=elements[0], r=e.getBoundingClientRect(), x=r.x+r.width/2,y=r.y+r.height/2;
@@ -126,7 +146,7 @@ export function createDesktopUiControls(
       const found = record(
         await waitRead(
           `(() => {
-        const rows=[...document.querySelectorAll(${JSON.stringify(selector)})]${text === undefined ? '' : `.filter(e=>e.textContent.trim()===${JSON.stringify(text)})`};
+        const rows=[...document.querySelectorAll(${desktopJsLiteral(selector)})]${text === undefined ? '' : `.filter(e=>e.textContent.trim()===${desktopJsLiteral(text)})`};
         if(rows.length!==1)return null;
         const e=rows[0],r=e.getBoundingClientRect();
         let parent=e.parentElement;
@@ -158,7 +178,7 @@ export function createDesktopUiControls(
   };
   const sidebarExpression = (subject: string): string => `(() => {
     const rows=[...document.querySelectorAll('#sidebar-tasks-panel .sidebar-task-item')];
-    const found=rows.filter(e=>[...e.querySelectorAll('span')].some(s=>s.textContent.trim()===${JSON.stringify(subject)}));
+    const found=rows.filter(e=>[...e.querySelectorAll('span')].some(s=>s.textContent.trim()===${desktopJsLiteral(subject)}));
     if(found.length!==1)return null;
     return true;
   })()`;
@@ -171,7 +191,7 @@ export function createDesktopUiControls(
     await waitRead(sidebarExpression(subject), 'canonical sidebar task', 90_000);
     const expression = `(() => {
       const rows=[...document.querySelectorAll('#sidebar-tasks-panel .sidebar-task-item')];
-      const found=rows.filter(e=>[...e.querySelectorAll('span')].some(s=>s.textContent.trim()===${JSON.stringify(subject)}));
+      const found=rows.filter(e=>[...e.querySelectorAll('span')].some(s=>s.textContent.trim()===${desktopJsLiteral(subject)}));
       if(found.length!==1)return null;
       const e=found[0],r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);
       return r.width>0&&r.height>0&&hit&&(e===hit||e.contains(hit))?{x,y}:null;

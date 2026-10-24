@@ -1,3 +1,4 @@
+import { desktopJsLiteral } from './desktop-ui-controls.ts';
 import assert from "node:assert/strict";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -82,7 +83,7 @@ export async function runDesktopNativeExtensionsUiSmoke(
     const provider=s.cliStatus?.providers?.find(p=>p.providerId==='anthropic');
     return {storePresent:true,contextSwitching:Boolean(s.isContextSwitching),
       pluginLoading:Boolean(s.pluginCatalogLoading),pluginError:Boolean(s.pluginCatalogError),pluginErrorText:s.pluginCatalogError?.slice(0,300)??null,pluginCount:s.pluginCatalog.length,
-      expectedPlugin:s.pluginCatalog.some(p=>p.pluginId===${JSON.stringify(extensionPlugin)}),
+      expectedPlugin:s.pluginCatalog.some(p=>p.pluginId===${desktopJsLiteral(extensionPlugin)}),
       pluginNames:s.pluginCatalog.slice(0,16).map(p=>({id:p.pluginId,name:p.name})),
       pluginQuery:document.querySelector('input[placeholder="Search plugins..."]')?.value??null,
       checkedFilterCount:document.querySelectorAll('[role="checkbox"][data-state="checked"]').length,
@@ -124,7 +125,7 @@ export async function runDesktopNativeExtensionsUiSmoke(
       modifiers: 4,
     });
     await cdp.send("Input.insertText", { text });
-    await ui.waitRead(`document.querySelector(${JSON.stringify(selector)})?.value===${JSON.stringify(text)}`, "original input retained " + selector);
+    await ui.waitRead(`document.querySelector(${desktopJsLiteral(selector)})?.value===${desktopJsLiteral(text)}`, "original input retained " + selector);
   };
   const context7Card = async () =>
     String(await ui.waitRead(`(() => {
@@ -189,19 +190,19 @@ export async function runDesktopNativeExtensionsUiSmoke(
     "original Plugins panel",
   );
   proof.preCatalogRead = await cdp.evaluate(stateExpression);
-  await ui.waitRead(`(() => {const s=window.__agentTeamsDevStore?.getState();return s&&!s.pluginCatalogLoading&&!s.pluginCatalogError&&s.pluginCatalog.some(p=>p.pluginId===${JSON.stringify(extensionPlugin)})})()`, "original official plugin catalog hydrated");
+  await ui.waitRead(`(() => {const s=window.__agentTeamsDevStore?.getState();return s&&!s.pluginCatalogLoading&&!s.pluginCatalogError&&s.pluginCatalog.some(p=>p.pluginId===${desktopJsLiteral(extensionPlugin)})})()`, "original official plugin catalog hydrated");
   proof.catalogHydration = await cdp.evaluate(stateExpression);
   await fill('input[placeholder="Search plugins..."]', "frontend-design");
   const pluginCard = String(await ui.waitRead(`(() => {
     const s=window.__agentTeamsDevStore?.getState();if(!s||s.pluginCatalogLoading)return null;
-    const selected=s.pluginCatalog.filter(p=>p.pluginId===${JSON.stringify(extensionPlugin)}&&p.source==='official');
+    const selected=s.pluginCatalog.filter(p=>p.pluginId===${desktopJsLiteral(extensionPlugin)}&&p.source==='official');
     if(selected.length!==1||s.pluginCatalog.filter(p=>p.name===selected[0].name).length!==1)return null;
     const cards=[...document.querySelectorAll('.plugins-grid > [role="button"]')],match=cards.filter(e=>e.querySelector('h3')?.textContent.trim()===selected[0].name);
     return match.length===1?'.plugins-grid > [role="button"]:nth-child('+(cards.indexOf(match[0])+1)+')':null;
   })()`, "one exact frontend-design public identity and card"));
   await click(pluginCard, "open official frontend-design plugin card");
   proof.publicPluginCatalog = await cdp.evaluate(`(() => {
-    const plugin=window.__agentTeamsDevStore?.getState().pluginCatalog.find(p=>p.pluginId===${JSON.stringify(extensionPlugin)});
+    const plugin=window.__agentTeamsDevStore?.getState().pluginCatalog.find(p=>p.pluginId===${desktopJsLiteral(extensionPlugin)});
     return plugin?{pluginId:plugin.pluginId,qualifiedName:plugin.qualifiedName,source:plugin.source,version:plugin.version??null}:null;
   })()`);
   assert.equal(record(proof.publicPluginCatalog).pluginId, extensionPlugin);
@@ -286,7 +287,7 @@ export async function runDesktopNativeExtensionsUiSmoke(
     "Check status",
   );
   await ui.waitRead(
-    `(() => {const s=window.__agentTeamsDevStore?.getState(),b=[...document.querySelectorAll('button')].find(e=>e.textContent.trim()==='Check status');return b&&!b.disabled&&!s.mcpDiagnosticsError&&Object.values(s.mcpDiagnosticsErrorByProjectPath??{}).every(value=>!value)&&document.querySelector('.mcp-diagnostics-list')?.textContent.includes(${JSON.stringify(extensionMcpName)})})()`,
+    `(() => {const s=window.__agentTeamsDevStore?.getState(),b=[...document.querySelectorAll('button')].find(e=>e.textContent.trim()==='Check status');return b&&!b.disabled&&!s.mcpDiagnosticsError&&Object.values(s.mcpDiagnosticsErrorByProjectPath??{}).every(value=>!value)&&document.querySelector('.mcp-diagnostics-list')?.textContent.includes(${desktopJsLiteral(extensionMcpName)})})()`,
     "original native CLI diagnostics expose configured TEST server",
     60_000,
   );
@@ -317,7 +318,7 @@ export async function runDesktopNativeExtensionsUiSmoke(
   const beforeReload = await cdp.evaluate("performance.timeOrigin");
   await cdp.send("Page.reload", { ignoreCache: true });
   await ui.waitRead(
-    `performance.timeOrigin!==${JSON.stringify(beforeReload)}&&document.readyState==='complete'&&window.electronAPI&&!document.getElementById('splash')`,
+    `performance.timeOrigin!==${desktopJsLiteral(beforeReload)}&&document.readyState==='complete'&&window.electronAPI&&!document.getElementById('splash')`,
     "ordinary renderer reload",
     90_000,
   );

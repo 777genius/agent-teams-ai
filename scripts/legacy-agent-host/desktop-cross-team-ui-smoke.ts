@@ -5,7 +5,7 @@ import { basename, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { createFilesystemTeamOwner } from '../../packages/legacy-agent-host/dist/adapters/team/createFilesystemTeamOwner.js';
 import { fileDigest, digest } from './desktop-backend-fixture.ts';
-import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 
@@ -153,7 +153,7 @@ export async function runDesktopCrossTeamUiSmoke(
     'open original Team selector'
   );
   const targetText = await ui.waitRead(
-    `(() => {const rows=[...document.querySelectorAll('[data-radix-popper-content-wrapper] button')].filter(e=>[...e.querySelectorAll('div.truncate')].some(d=>d.textContent.trim()===${JSON.stringify(labels[1])}));return rows.length===1?rows[0].textContent.trim():null;})()`,
+    `(() => {const rows=[...document.querySelectorAll('[data-radix-popper-content-wrapper] button')].filter(e=>[...e.querySelectorAll('div.truncate')].some(d=>d.textContent.trim()===${desktopJsLiteral(labels[1])}));return rows.length===1?rows[0].textContent.trim():null;})()`,
     'one original target row'
   );
   assert.equal(typeof targetText, 'string');
@@ -190,7 +190,7 @@ export async function runDesktopCrossTeamUiSmoke(
   await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
   await ui.click('button[aria-label="Reply to message"]', 'reply through existing message action');
   await ui.waitRead(
-    `document.querySelector('.message-composer-flat-layout button[aria-label^="Select Team:"]')?.textContent.includes(${JSON.stringify(labels[0])})`,
+    `document.querySelector('.message-composer-flat-layout button[aria-label^="Select Team:"]')?.textContent.includes(${desktopJsLiteral(labels[0])})`,
     'Reply selected exact original source'
   );
   await ui.click('.message-composer-flat-layout textarea', 'focus original reply Composer');
@@ -228,7 +228,7 @@ export async function runDesktopCrossTeamUiSmoke(
   const origin = await cdp.evaluate('performance.timeOrigin');
   await cdp.send('Page.reload', { ignoreCache: true });
   await ui.waitRead(
-    `performance.timeOrigin!==${JSON.stringify(origin)}&&Boolean(window.electronAPI)&&!document.getElementById('splash')`,
+    `performance.timeOrigin!==${desktopJsLiteral(origin)}&&Boolean(window.electronAPI)&&!document.getElementById('splash')`,
     'fresh renderer after cross-Team reply'
   );
   await ui.observeInput();

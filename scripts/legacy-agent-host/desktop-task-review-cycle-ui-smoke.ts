@@ -5,7 +5,7 @@ import { basename, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { digest } from '../../packages/legacy-agent-host/dist/team/identity.js';
 import { fileDigest } from './desktop-backend-fixture.ts';
-import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import type { TeamCommand } from '@agent-teams/legacy-agent-host/team/contracts';
 import type { runDesktopTaskBoardUiSmoke } from './desktop-task-board-ui-smoke.ts';
@@ -297,7 +297,7 @@ export async function runDesktopTaskReviewCycleUiSmoke(
     for (let attempt = 0; attempt < 12; attempt++) {
       const geometry = record(
         await ui.waitRead(
-          `(() => {const e=document.querySelector(${JSON.stringify(card)});if(!e)return null;const r=e.getBoundingClientRect();let p=e.parentElement;while(p&&!(p.scrollWidth>p.clientWidth&&/auto|scroll/.test(getComputedStyle(p).overflowX)))p=p.parentElement;if(!p)return {visible:true};const b=p.getBoundingClientRect(),left=Math.max(0,b.left),right=Math.min(innerWidth,b.right),top=Math.max(0,b.top),bottom=Math.min(innerHeight,b.bottom);if(right<=left||bottom<=top)return null;return {visible:r.left>=left&&r.right<=right,x:(left+right)/2,y:(top+bottom)/2,deltaX:Math.max(-600,Math.min(600,r.x+r.width/2-(left+right)/2))};})()`,
+          `(() => {const e=document.querySelector(${desktopJsLiteral(card)});if(!e)return null;const r=e.getBoundingClientRect();let p=e.parentElement;while(p&&!(p.scrollWidth>p.clientWidth&&/auto|scroll/.test(getComputedStyle(p).overflowX)))p=p.parentElement;if(!p)return {visible:true};const b=p.getBoundingClientRect(),left=Math.max(0,b.left),right=Math.min(innerWidth,b.right),top=Math.max(0,b.top),bottom=Math.min(innerHeight,b.bottom);if(right<=left||bottom<=top)return null;return {visible:r.left>=left&&r.right<=right,x:(left+right)/2,y:(top+bottom)/2,deltaX:Math.max(-600,Math.min(600,r.x+r.width/2-(left+right)/2))};})()`,
           'original board horizontal viewport'
         )
       );
@@ -323,7 +323,7 @@ export async function runDesktopTaskReviewCycleUiSmoke(
   const verifyHoveredCard = async () => {
     const hovered = record(
       await ui.waitRead(
-        `(() => {const e=document.querySelector(${JSON.stringify(card)});const open=[...document.querySelectorAll('.kanban-task-card[data-state="open"]')];return e&&open.length===1&&open[0]===e?{taskId:e.dataset.taskId,title:e.querySelector('h5')?.textContent.trim(),state:e.dataset.state}:null;})()`,
+        `(() => {const e=document.querySelector(${desktopJsLiteral(card)});const open=[...document.querySelectorAll('.kanban-task-card[data-state="open"]')];return e&&open.length===1&&open[0]===e?{taskId:e.dataset.taskId,title:e.querySelector('h5')?.textContent.trim(),state:e.dataset.state}:null;})()`,
         'only the original review Task hover toolbar is open'
       )
     );
@@ -336,7 +336,7 @@ export async function runDesktopTaskReviewCycleUiSmoke(
     await revealCard();
     const point = record(
       await ui.waitRead(
-        `(() => {const e=document.querySelector(${JSON.stringify(card)});if(!e)return null;const r=e.getBoundingClientRect();return r.width&&r.height?{x:r.x+r.width/2,y:r.y+r.height/2}:null;})()`,
+        `(() => {const e=document.querySelector(${desktopJsLiteral(card)});if(!e)return null;const r=e.getBoundingClientRect();return r.width&&r.height?{x:r.x+r.width/2,y:r.y+r.height/2}:null;})()`,
         'original Task card'
       )
     );
@@ -363,7 +363,7 @@ export async function runDesktopTaskReviewCycleUiSmoke(
   await revealCard();
   const point = record(
     await ui.waitRead(
-      `(() => {const e=document.querySelector(${JSON.stringify(card)});if(!e)return null;const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()`,
+      `(() => {const e=document.querySelector(${desktopJsLiteral(card)});if(!e)return null;const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()`,
       'original review card'
     )
   );
@@ -448,13 +448,13 @@ export async function runDesktopTaskReviewCycleUiSmoke(
   const origin = await cdp.evaluate('performance.timeOrigin');
   await cdp.send('Page.reload', { ignoreCache: false });
   await ui.waitRead(
-    `performance.timeOrigin!==${JSON.stringify(origin)}&&Boolean(window.electronAPI)&&!document.getElementById('splash')`,
+    `performance.timeOrigin!==${desktopJsLiteral(origin)}&&Boolean(window.electronAPI)&&!document.getElementById('splash')`,
     'new renderer after review cycle'
   );
   await ui.observeInput();
   await ui.clickSidebar(String(original.subject));
   await ui.waitRead(
-    `Boolean(document.querySelector(${JSON.stringify(card)}))`,
+    `Boolean(document.querySelector(${desktopJsLiteral(card)}))`,
     'same approved Task after reload'
   );
   assert.equal(await readFile(taskPath, 'utf8'), frozenTask);
@@ -488,10 +488,10 @@ export async function runDesktopTaskReviewCycleUiSmoke(
   assert.equal(disapprovedHistory.at(-1)!.actor, 'user');
   assert.equal((await commands()).length - frozenCommands.length, 1, 'one original Disapprove command, no second lifecycle intent');
   await revealCard();
-  const donePoint = record(await ui.waitRead(`(() => {const e=document.querySelector(${JSON.stringify(card)});if(!e)return null;const r=e.getBoundingClientRect();return r.width&&r.height?{x:r.x+r.width/2,y:r.y+r.height/2}:null;})()`, 'original Disapproved Task card'));
+  const donePoint = record(await ui.waitRead(`(() => {const e=document.querySelector(${desktopJsLiteral(card)});if(!e)return null;const r=e.getBoundingClientRect();return r.width&&r.height?{x:r.x+r.width/2,y:r.y+r.height/2}:null;})()`, 'original Disapproved Task card'));
   await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...donePoint });
   await verifyHoveredCard();
-  await ui.waitRead(`Boolean(document.querySelector(${JSON.stringify(openToolbar + ' button[aria-label="Request review"]')}))&&!document.querySelector(${JSON.stringify(openToolbar + ' button[aria-label="Disapprove"]')})`, 'same Task now exposes Done controls');
+  await ui.waitRead(`Boolean(document.querySelector(${desktopJsLiteral(openToolbar + ' button[aria-label="Request review"]')}))&&!document.querySelector(${desktopJsLiteral(openToolbar + ' button[aria-label="Disapprove"]')})`, 'same Task now exposes Done controls');
   proof.approvedToDone = { status: 'PASS', commandId: disapprove.commandId, statusAfter: 'completed', reviewStateAfter: 'none', doneControlsVisible: true };
   proof.removedNotificationIds = [...removedNotifications];
   proof.status = 'PASS';
@@ -566,7 +566,7 @@ export async function runDesktopTaskNotificationUiSmoke(
   const notification = matches[0]!, notificationId = String(notification.id);
   assert.match(notificationId, /^[a-f0-9-]{36}$/);
   const message = String(notification.message), preview = message.length > 100 ? message.slice(0, 100) + '...' : message;
-  const rowExpression = `[...document.querySelectorAll('[role="button"]')].filter(e=>e.querySelector('p')?.textContent===${JSON.stringify(preview)})`;
+  const rowExpression = `[...document.querySelectorAll('[role="button"]')].filter(e=>e.querySelector('p')?.textContent===${desktopJsLiteral(preview)})`;
   const hoverNotification = async () => {
     await ui.click('button[aria-label="Notifications"]', 'existing Notifications tab');
     // Await the loaded view, not the identically named tab label or hidden pane scroll areas.
@@ -594,7 +594,7 @@ export async function runDesktopTaskNotificationUiSmoke(
     throw new Error('Original notification row unavailable; no action replay');
   };
   const notificationAction = async (title: string) => {
-    const path = String(await ui.waitRead(`(() => {const rows=${rowExpression};if(rows.length!==1)return null;let e=rows[0].querySelector('button[title='+JSON.stringify(${JSON.stringify(title)})+']');if(!e)return null;const parts=[];while(e&&e!==document.documentElement){const p=e.parentElement;if(!p)return null;parts.unshift(e.tagName.toLowerCase()+':nth-child('+([...p.children].indexOf(e)+1)+')');e=p;}return 'html>'+parts.join('>');})()`, 'exact original notification action path'));
+    const path = String(await ui.waitRead(`(() => {const rows=${rowExpression};if(rows.length!==1)return null;let e=rows[0].querySelector('button[title='+JSON.stringify(${desktopJsLiteral(title)})+']');if(!e)return null;const parts=[];while(e&&e!==document.documentElement){const p=e.parentElement;if(!p)return null;parts.unshift(e.tagName.toLowerCase()+':nth-child('+([...p.children].indexOf(e)+1)+')');e=p;}return 'html>'+parts.join('>');})()`, 'exact original notification action path'));
     await ui.click(path, 'original notification ' + title + ' once');
   };
   await hoverNotification();

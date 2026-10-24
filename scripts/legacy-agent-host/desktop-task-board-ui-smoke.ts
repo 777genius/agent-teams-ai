@@ -6,7 +6,7 @@ import { performance } from 'node:perf_hooks';
 
 import { createTeamController } from '../../packages/legacy-agent-host/dist/adapters/team/ControllerAdapter.js';
 import { fileDigest } from './desktop-backend-fixture.ts';
-import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 
 const teamName = 'test-desktop-backend';
@@ -173,7 +173,7 @@ export async function runDesktopTaskBoardUiSmoke(
   await ui.observeInput();
   await ui.clickSidebar(options.seed.subject);
   await ui.waitRead(
-    `Boolean(document.querySelector(${JSON.stringify(card(options.seed.taskId))}))`,
+    `Boolean(document.querySelector(${desktopJsLiteral(card(options.seed.taskId))}))`,
     'canonical seed card'
   );
   proof.initialScreenshot = await screenshot('ui-task-board-initial.png');
@@ -189,7 +189,7 @@ export async function runDesktopTaskBoardUiSmoke(
   );
   const blockerButton = `(() => {
     const label=[...document.querySelectorAll('[role="dialog"] label')].find(e=>e.textContent.trim()==='Blocked by tasks (optional)');
-    const buttons=label?[...label.parentElement.querySelectorAll('button')].filter(e=>[...e.querySelectorAll('span')].some(s=>s.textContent.trim()===${JSON.stringify(options.seed.subject)})):[];
+    const buttons=label?[...label.parentElement.querySelectorAll('button')].filter(e=>[...e.querySelectorAll('span')].some(s=>s.textContent.trim()===${desktopJsLiteral(options.seed.subject)})):[];
     return buttons.length===1?buttons[0]:null;
   })()`;
   // Wheel input reveals optional fields without scrollIntoView or synthetic app events.
@@ -246,7 +246,7 @@ export async function runDesktopTaskBoardUiSmoke(
   const setupCommandId = 'TEST-task-board-clarification-setup';
   const setup = record(
     await cdp.evaluate(
-      `window.electronAPI.agentBackend.invoke(${JSON.stringify({ handle: { handleId: options.handleId }, commandId: setupCommandId, operation: 'task.clarification', payload: { taskId, value: 'user' } })})`
+      `window.electronAPI.agentBackend.invoke(${desktopJsLiteral({ handle: { handleId: options.handleId }, commandId: setupCommandId, operation: 'task.clarification', payload: { taskId, value: 'user' } })})`
     )
   );
   assert.equal(setup.ok, true);
@@ -274,7 +274,7 @@ export async function runDesktopTaskBoardUiSmoke(
     (payload) => payload.owner === 'alice'
   );
   await ui.waitRead(
-    `[...document.querySelectorAll('[role="dialog"] button')].some(e => e.textContent.trim() === ${JSON.stringify('#' + String(before[0]!.displayId))})`,
+    `[...document.querySelectorAll('[role="dialog"] button')].some(e => e.textContent.trim() === ${desktopJsLiteral('#' + String(before[0]!.displayId))})`,
     'original dependency reference visible'
   );
   proof.dependencyScreenshot = await screenshot('ui-task-board-assigned-blocked.png');
@@ -311,7 +311,7 @@ export async function runDesktopTaskBoardUiSmoke(
   const geometry = record(
     await ui.waitRead(
       `(() => {
-    const a=document.querySelector(${JSON.stringify(card(dragged))}),b=document.querySelector(${JSON.stringify(card(target))});if(!a||!b)return null;
+    const a=document.querySelector(${desktopJsLiteral(card(dragged))}),b=document.querySelector(${desktopJsLiteral(card(target))});if(!a||!b)return null;
     const p=a.getBoundingClientRect(),q=b.getBoundingClientRect();
     if(!p.width||!q.width||p.top<0||q.top<0||p.bottom>innerHeight||q.bottom>innerHeight)return null;
     return {x:p.x+Math.min(100,p.width/2),y:p.y+20,toX:q.x+Math.min(100,q.width/2),toY:q.y+20};
@@ -354,7 +354,7 @@ export async function runDesktopTaskBoardUiSmoke(
         // the drag but does not translate it. Observe React's active state
         // before continuing this same held-pointer gesture.
         const active = await ui.waitRead(
-          `(() => {const e=document.querySelector(${JSON.stringify(card(dragged))})?.parentElement;return e?.getAttribute('aria-pressed')==='true'?{taskId:${JSON.stringify(dragged)},pressed:e.getAttribute('aria-pressed'),transform:e.style.transform}:null;})()`,
+          `(() => {const e=document.querySelector(${desktopJsLiteral(card(dragged))})?.parentElement;return e?.getAttribute('aria-pressed')==='true'?{taskId:${desktopJsLiteral(dragged)},pressed:e.getAttribute('aria-pressed'),transform:e.style.transform}:null;})()`,
           'original sortable source activates during the single drag',
           5_000
         );
@@ -363,7 +363,7 @@ export async function runDesktopTaskBoardUiSmoke(
       await new Promise<void>((done) => setTimeout(done, 25));
     }
     const collision = await ui.waitRead(
-      `(() => {const e=document.querySelector(${JSON.stringify(card(dragged))})?.parentElement;const text=[...document.querySelectorAll('[id^="DndLiveRegion-"]')].map(e=>e.textContent).find(text=>text===${JSON.stringify(`Draggable item ${dragged} was moved over droppable area ${target}.`)});return e?.getAttribute('aria-pressed')==='true'&&text?{dragged:${JSON.stringify(dragged)},target:${JSON.stringify(target)},announcement:text}:null;})()`,
+      `(() => {const e=document.querySelector(${desktopJsLiteral(card(dragged))})?.parentElement;const text=[...document.querySelectorAll('[id^="DndLiveRegion-"]')].map(e=>e.textContent).find(text=>text===${desktopJsLiteral(`Draggable item ${dragged} was moved over droppable area ${target}.`)});return e?.getAttribute('aria-pressed')==='true'&&text?{dragged:${desktopJsLiteral(dragged)},target:${desktopJsLiteral(target)},announcement:text}:null;})()`,
       'existing sortable accessibility announcement confirms the target before release',
       5_000
     );
@@ -408,7 +408,7 @@ export async function runDesktopTaskBoardUiSmoke(
     expectedOrder
   );
   await ui.waitRead(
-    `JSON.stringify([...document.querySelectorAll('.kanban-task-card[data-task-id]')].map(e=>e.dataset.taskId))===${JSON.stringify(JSON.stringify(expectedOrder))}`,
+    `JSON.stringify([...document.querySelectorAll('.kanban-task-card[data-task-id]')].map(e=>e.dataset.taskId))===${desktopJsLiteral(JSON.stringify(expectedOrder))}`,
     'new order visible after actual drag'
   );
   proof.orderReceipt = orders[0];
@@ -468,14 +468,14 @@ export async function runDesktopTaskBoardUiSmoke(
     );
     const point = record(
       await ui.waitRead(
-        pointOf(`return document.querySelector(${JSON.stringify(card(id))});`),
+        pointOf(`return document.querySelector(${desktopJsLiteral(card(id))});`),
         'visible original card'
       )
     );
     await input('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
     const hovered = record(
       await ui.waitRead(
-        `(() => {const e=document.querySelector(${JSON.stringify(card(id))});const open=[...document.querySelectorAll('.kanban-task-card[data-state="open"]')];return e&&open.length===1&&open[0]===e?{taskId:e.dataset.taskId,title:e.querySelector('h5')?.textContent.trim(),state:e.dataset.state}:null;})()`,
+        `(() => {const e=document.querySelector(${desktopJsLiteral(card(id))});const open=[...document.querySelectorAll('.kanban-task-card[data-state="open"]')];return e&&open.length===1&&open[0]===e?{taskId:e.dataset.taskId,title:e.querySelector('h5')?.textContent.trim(),state:e.dataset.state}:null;})()`,
         'only the requested original Task hover toolbar is open'
       )
     );
@@ -536,14 +536,14 @@ export async function runDesktopTaskBoardUiSmoke(
   options.assertOwnedRenderer();
   await cdp.send('Page.reload', { ignoreCache: false });
   await ui.waitRead(
-    `performance.timeOrigin!==${JSON.stringify(origin)}&&Boolean(window.electronAPI)&&!document.getElementById('splash')`,
+    `performance.timeOrigin!==${desktopJsLiteral(origin)}&&Boolean(window.electronAPI)&&!document.getElementById('splash')`,
     'fresh renderer document'
   );
   await ui.observeInput();
-  if (!(await cdp.evaluate(`Boolean(document.querySelector(${JSON.stringify(card(taskId))}))`)))
+  if (!(await cdp.evaluate(`Boolean(document.querySelector(${desktopJsLiteral(card(taskId))}))`)))
     await ui.clickSidebar(subject);
   await ui.waitRead(
-    `Boolean(document.querySelector(${JSON.stringify(card(taskId))}))`,
+    `Boolean(document.querySelector(${desktopJsLiteral(card(taskId))}))`,
     'same task visible after reload'
   );
   assert.deepEqual(await rows(taskDirectory), stableTasks);

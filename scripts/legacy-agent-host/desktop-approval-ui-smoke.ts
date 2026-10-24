@@ -10,7 +10,7 @@ import {
   APPROVAL_ANSWER,
 } from './desktop-approval-model.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
-import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
 const object = (value: unknown): Record<string, unknown> => {
@@ -102,14 +102,14 @@ export async function runDesktopApprovalUiSmoke(
   const header = async () =>
     String(
       await ui.waitRead(
-        `(() => { const e=document.querySelector(${JSON.stringify(sheet)});return e?.querySelector('.text-sm.font-semibold')?.textContent?.trim()||null; })()`,
+        `(() => { const e=document.querySelector(${desktopJsLiteral(sheet)});return e?.querySelector('.text-sm.font-semibold')?.textContent?.trim()||null; })()`,
         'exact original technical Sheet'
       )
     );
   // Prefix selectors only select existing visible original controls. Actions remain CDP mouse events.
   const clickPrefix = async (prefix: string) => {
     const selector = `${sheet} button`;
-    const expression = `(() => { const rows=[...document.querySelectorAll(${JSON.stringify(selector)})].filter(e=>e.textContent.trim().startsWith(${JSON.stringify(prefix)}));if(rows.length!==1)return null;const e=rows[0],r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return r.width>0&&r.height>0&&!e.disabled&&hit&&(e===hit||e.contains(hit))?{x,y,text:e.textContent.trim()}:null; })()`;
+    const expression = `(() => { const rows=[...document.querySelectorAll(${desktopJsLiteral(selector)})].filter(e=>e.textContent.trim().startsWith(${desktopJsLiteral(prefix)}));if(rows.length!==1)return null;const e=rows[0],r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return r.width>0&&r.height>0&&!e.disabled&&hit&&(e===hit||e.contains(hit))?{x,y,text:e.textContent.trim()}:null; })()`;
     await cdp.send('Page.bringToFront');
     let point = object(await ui.waitRead(expression, prefix));
     await cdp.send('Input.dispatchMouseEvent', {
@@ -144,13 +144,13 @@ export async function runDesktopApprovalUiSmoke(
   for (const turn of APPROVAL_TURNS) {
     assert.deepEqual(model.failures, []);
     await ui.waitRead(
-      `!document.querySelector(${JSON.stringify(sheet)})`,
+      `!document.querySelector(${desktopJsLiteral(sheet)})`,
       'previous exact request dismissed'
     );
     await ui.click('.message-composer-flat-layout textarea', 'focus original Composer');
     await cdp.send('Input.insertText', { text: turn });
     await ui.waitRead(
-      `document.querySelector('.message-composer-flat-layout textarea')?.value===${JSON.stringify(turn)}`,
+      `document.querySelector('.message-composer-flat-layout textarea')?.value===${desktopJsLiteral(turn)}`,
       'exact original input text'
     );
     step({ action: 'Input.insertText', turn });
@@ -168,7 +168,7 @@ export async function runDesktopApprovalUiSmoke(
         });
         await ui.click(`${sheet} button`, 'Allow original captured Read', 'Allow');
         await ui.waitRead(
-          `document.querySelector(${JSON.stringify(sheet)})?.querySelector('.text-sm.font-semibold')?.textContent?.trim()==='Write File'`,
+          `document.querySelector(${desktopJsLiteral(sheet)})?.querySelector('.text-sm.font-semibold')?.textContent?.trim()==='Write File'`,
           'next exact captured Write'
         );
         title = await header();
@@ -179,7 +179,7 @@ export async function runDesktopApprovalUiSmoke(
       } else if (turn === 'M06_DENY_QUESTION' || turn === 'M06_ANSWER_QUESTION') {
         assert.equal(title, 'Question');
         await ui.waitRead(
-          `document.querySelector(${JSON.stringify(sheet)})?.innerText.includes('Choose the TEST answer')`,
+          `document.querySelector(${desktopJsLiteral(sheet)})?.innerText.includes('Choose the TEST answer')`,
           'original question text'
         );
         if (turn === 'M06_DENY_QUESTION')
@@ -201,7 +201,7 @@ export async function runDesktopApprovalUiSmoke(
           );
           await clickPrefix('Preview changes');
           await ui.waitRead(
-            `(() => { const e=document.querySelector(${JSON.stringify(sheet)});return e?.innerText.includes('TEST_ORIGINAL_PRIVATE_BYTES')&&e.innerText.includes('TEST_APPROVED_NATIVE_WRITE'); })()`,
+            `(() => { const e=document.querySelector(${desktopJsLiteral(sheet)});return e?.innerText.includes('TEST_ORIGINAL_PRIVATE_BYTES')&&e.innerText.includes('TEST_APPROVED_NATIVE_WRITE'); })()`,
             'actual captured original/modified preview bytes'
           );
           assert.equal(
@@ -234,7 +234,7 @@ export async function runDesktopApprovalUiSmoke(
       }
     }
     await ui.waitRead(
-      `document.body.innerText.includes(${JSON.stringify(`DONE_${turn}`)})`,
+      `document.body.innerText.includes(${desktopJsLiteral(`DONE_${turn}`)})`,
       'actual canonical native reply after permission outcome',
       45_000
     );

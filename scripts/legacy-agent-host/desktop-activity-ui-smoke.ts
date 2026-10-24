@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import {
   assertCapturedActivityUnchanged,
   readCapturedActivitySessions,
@@ -94,8 +94,8 @@ export async function runDesktopActivityUiSmoke(
     options.assertOwnedRenderer();
     const responses = record(
       await cdp.evaluate(`(async () => ({
-      logs:await window.electronAPI.agentBackend.invoke(${JSON.stringify({ handle: { handleId: options.handleId }, commandId: 'TEST-activity-ui-read-logs', operation: 'team.activity.logs.read', payload: { memberName: options.memberName } })}),
-      stats:await window.electronAPI.agentBackend.invoke(${JSON.stringify({ handle: { handleId: options.handleId }, commandId: 'TEST-activity-ui-read-stats', operation: 'team.activity.stats.read', payload: { memberName: options.memberName } })})
+      logs:await window.electronAPI.agentBackend.invoke(${desktopJsLiteral({ handle: { handleId: options.handleId }, commandId: 'TEST-activity-ui-read-logs', operation: 'team.activity.logs.read', payload: { memberName: options.memberName } })}),
+      stats:await window.electronAPI.agentBackend.invoke(${desktopJsLiteral({ handle: { handleId: options.handleId }, commandId: 'TEST-activity-ui-read-stats', operation: 'team.activity.stats.read', payload: { memberName: options.memberName } })})
     }))()`)
     );
     options.assertNoNativeChildren('after-team-read');
@@ -201,8 +201,8 @@ export async function runDesktopActivityUiSmoke(
       await ui.waitRead(
         `(() => {
       const rows=[...document.querySelectorAll('div[role="button"][tabindex="0"]')]
-        .filter(row=>[...row.querySelectorAll('span')].some(span=>span.textContent.trim()===${JSON.stringify(options.memberName)}));
-      if(rows.length!==1)return null;const e=rows[0],name=[...e.querySelectorAll('span')].find(span=>span.textContent.trim()===${JSON.stringify(options.memberName)});
+        .filter(row=>[...row.querySelectorAll('span')].some(span=>span.textContent.trim()===${desktopJsLiteral(options.memberName)}));
+      if(rows.length!==1)return null;const e=rows[0],name=[...e.querySelectorAll('span')].find(span=>span.textContent.trim()===${desktopJsLiteral(options.memberName)});
       if(!name)return null;const r=name.getBoundingClientRect();
       const x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);
       return r.width>0&&r.height>0&&hit&&!hit.closest('button')&&(hit===e||e.contains(hit))?{x,y}:null;
@@ -258,7 +258,7 @@ export async function runDesktopActivityUiSmoke(
       await ui.waitRead(
         `(() => {
       const rows=[...document.querySelectorAll('[role="dialog"] [role="tabpanel"] button[aria-expanded]')]
-        .filter(e=>e.textContent.includes(${JSON.stringify(options.memberName + ' · Captured runtime activity')})&&e.textContent.includes(${JSON.stringify('generation ' + expected.log.generation)}));
+        .filter(e=>e.textContent.includes(${desktopJsLiteral(options.memberName + ' · Captured runtime activity')})&&e.textContent.includes(${desktopJsLiteral('generation ' + expected.log.generation)}));
       return rows.length===1?rows[0].textContent.trim():null;
     })()`,
         'exact original retained generation header'
@@ -291,7 +291,7 @@ export async function runDesktopActivityUiSmoke(
       childText
     );
     await ui.waitRead(
-      `document.querySelector('[role="dialog"] [role="tabpanel"][data-state="active"]')?.innerText.includes(${JSON.stringify(options.source.provenance.childId)})&&document.querySelector('[role="dialog"] [role="tabpanel"][data-state="active"]')?.innerText.includes(${JSON.stringify(options.source.provenance.parentToolRef)})`,
+      `document.querySelector('[role="dialog"] [role="tabpanel"][data-state="active"]')?.innerText.includes(${desktopJsLiteral(options.source.provenance.childId)})&&document.querySelector('[role="dialog"] [role="tabpanel"][data-state="active"]')?.innerText.includes(${desktopJsLiteral(options.source.provenance.parentToolRef)})`,
       'exact original child and parent tool refs are rendered'
     );
     proof[`logsScreenshot${epoch}`] = await screenshot(`ui-host-logs-${epoch}.png`);
@@ -317,7 +317,7 @@ export async function runDesktopActivityUiSmoke(
       ['Observed messages', expected.stats.observedMessages.toLocaleString()],
     ])
       await ui.waitRead(
-        `(() => {const e=document.querySelector('[role="dialog"] [role="tabpanel"][data-state="active"]');const label=[...e.querySelectorAll('div')].find(n=>n.textContent===${JSON.stringify(label)});return label?.parentElement?.firstElementChild?.textContent===${JSON.stringify(value)}})()`,
+        `(() => {const e=document.querySelector('[role="dialog"] [role="tabpanel"][data-state="active"]');const label=[...e.querySelectorAll('div')].find(n=>n.textContent===${desktopJsLiteral(label)});return label?.parentElement?.firstElementChild?.textContent===${desktopJsLiteral(value)}})()`,
         `actual Stats ${label}`
       );
     await ui.waitRead(
@@ -352,7 +352,7 @@ export async function runDesktopActivityUiSmoke(
   const timeOrigin = await cdp.evaluate('performance.timeOrigin');
   await cdp.send('Page.reload', { ignoreCache: false });
   await ui.waitRead(
-    `performance.timeOrigin!==${JSON.stringify(timeOrigin)}&&Boolean(window.electronAPI)&&!document.getElementById('splash')`,
+    `performance.timeOrigin!==${desktopJsLiteral(timeOrigin)}&&Boolean(window.electronAPI)&&!document.getElementById('splash')`,
     'new renderer document'
   );
   await ui.observeInput();

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 
 type Row = Record<string, unknown>;
@@ -45,15 +45,15 @@ export async function runDesktopTaskBoardAttachmentsUi(cdp: UiCdpPort, options: 
   const card = `.kanban-task-card[data-task-id=${JSON.stringify(options.taskId)}] h5`;
   const commentInput = `[role="dialog"] textarea[id=${JSON.stringify('task-comment-' + options.taskId)}]`;
   const openDetail = async () => {
-    if (!(await cdp.evaluate(`Boolean(document.querySelector(${JSON.stringify(commentInput)}))`))) {
+    if (!(await cdp.evaluate(`Boolean(document.querySelector(${desktopJsLiteral(commentInput)}))`))) {
       assert.equal(await cdp.evaluate(`Boolean(document.querySelector('[role="dialog"]'))`), false);
       await ui.scrollTo(card, 'same canonical Task subject');
       await ui.click(card, 'open same Task detail once');
     }
-    await ui.waitRead(`Boolean(document.querySelector(${JSON.stringify(commentInput)}))`, 'exact original Task comment input');
+    await ui.waitRead(`Boolean(document.querySelector(${desktopJsLiteral(commentInput)}))`, 'exact original Task comment input');
   };
   const imageSelector = `[role="dialog"] img[alt=${JSON.stringify(imageName)}]`;
-  const imageLoaded = () => ui.waitRead(`(() => {const e=document.querySelector(${JSON.stringify(imageSelector)});return e?.complete&&e.naturalWidth===2&&e.naturalHeight===1?{src:e.currentSrc||e.src,width:e.naturalWidth,height:e.naturalHeight}:null;})()`, 'original Task PNG decoded');
+  const imageLoaded = () => ui.waitRead(`(() => {const e=document.querySelector(${desktopJsLiteral(imageSelector)});return e?.complete&&e.naturalWidth===2&&e.naturalHeight===1?{src:e.currentSrc||e.src,width:e.naturalWidth,height:e.naturalHeight}:null;})()`, 'original Task PNG decoded');
   const verifyImage = async () => {
     await ui.scrollTo(imageSelector, 'original Task image thumbnail');
     const loaded = row(await imageLoaded());
@@ -74,7 +74,7 @@ export async function runDesktopTaskBoardAttachmentsUi(cdp: UiCdpPort, options: 
   };
   const readAttachment = async (id: string, expected: Buffer): Promise<Row | null> => {
     options.assertOwnedRenderer();
-    const result = row(await cdp.evaluate(`window.electronAPI.agentBackend.invoke(${JSON.stringify({ handle: { handleId: options.handleId }, commandId: randomUUID(), operation: 'task.attachment.read', payload: { taskId: options.taskId, attachmentId: id, offset: 0 } })})`));
+    const result = row(await cdp.evaluate(`window.electronAPI.agentBackend.invoke(${desktopJsLiteral({ handle: { handleId: options.handleId }, commandId: randomUUID(), operation: 'task.attachment.read', payload: { taskId: options.taskId, attachmentId: id, offset: 0 } })})`));
     assert.equal(result.ok, true, 'actual read-only captured Host attachment result');
     if (result.value === null) return null;
     const value = row(result.value), metadata = row(value.attachment);
@@ -102,7 +102,7 @@ export async function runDesktopTaskBoardAttachmentsUi(cdp: UiCdpPort, options: 
 
   await openDetail();
   const imageInput = '[role="dialog"] input[type="file"][accept="image/png,image/jpeg,image/gif,image/webp"]';
-  if (!(await cdp.evaluate(`Boolean(document.querySelector(${JSON.stringify(imageInput)}))`))) {
+  if (!(await cdp.evaluate(`Boolean(document.querySelector(${desktopJsLiteral(imageInput)}))`))) {
     // Derive a unique selector from the existing section header; never create a control.
     const header = await ui.waitRead(`(() => {const d=document.querySelector('[role="dialog"]');const sections=[...d.querySelectorAll('section')].filter(s=>[...s.querySelectorAll(':scope > div span')].some(e=>e.textContent.trim()==='Attachments'));if(sections.length!==1)return null;let e=sections[0].querySelector('button[aria-label="Expand section"]');if(!e)return null;const path=[];while(e!==d){path.unshift(e.localName+':nth-child('+([...e.parentElement.children].indexOf(e)+1)+')');e=e.parentElement;}return '[role="dialog"] > '+path.join(' > ');})()`, 'existing collapsed Attachments section');
     assert.equal(typeof header, 'string');
@@ -125,7 +125,7 @@ export async function runDesktopTaskBoardAttachmentsUi(cdp: UiCdpPort, options: 
   options.assertOwnedRenderer();
   await cdp.send('Input.insertText', { text: 'TEST attachment comment original' });
   await setOriginalFileInput('[role="dialog"] input[type="file"][accept="*/*"]', join(directory, textName));
-  await ui.waitRead(`document.querySelector('[role="dialog"]')?.textContent.includes(${JSON.stringify(textName)})`, 'original pending comment file preview');
+  await ui.waitRead(`document.querySelector('[role="dialog"]')?.textContent.includes(${desktopJsLiteral(textName)})`, 'original pending comment file preview');
   await ui.scrollTo('[role="dialog"] button', 'original Comment submit', 'Comment');
   await ui.click('[role="dialog"] button', 'submit original comment and file once', 'Comment');
   const commentedTask = await options.waitProduct(() => options.task(options.taskId), value => rows(value.comments ?? []).some(item => item.text === 'TEST attachment comment original'), 'canonical comment with attachment');
@@ -141,11 +141,11 @@ export async function runDesktopTaskBoardAttachmentsUi(cdp: UiCdpPort, options: 
   options.assertOwnedRenderer();
   options.step({ action: 'Page.reload', state: 'attempted', scope: 'renderer reload only' });
   await cdp.send('Page.reload', { ignoreCache: false });
-  await ui.waitRead(`performance.timeOrigin!==${JSON.stringify(origin)}&&Boolean(window.electronAPI)&&!document.getElementById('splash')`, 'fresh renderer document');
+  await ui.waitRead(`performance.timeOrigin!==${desktopJsLiteral(origin)}&&Boolean(window.electronAPI)&&!document.getElementById('splash')`, 'fresh renderer document');
   await ui.observeInput();
-  if (!(await cdp.evaluate(`Boolean(document.querySelector(${JSON.stringify(card)}))`)))
+  if (!(await cdp.evaluate(`Boolean(document.querySelector(${desktopJsLiteral(card)}))`)))
     await ui.clickSidebar(options.subject);
-  await ui.waitRead(`Boolean(document.querySelector(${JSON.stringify(card)}))`, 'same canonical Task after reload');
+  await ui.waitRead(`Boolean(document.querySelector(${desktopJsLiteral(card)}))`, 'same canonical Task after reload');
   await openDetail();
   const reloadedTask = await options.task(options.taskId);
   assert.deepEqual(reloadedTask.attachments, commentedTask.attachments);
@@ -174,7 +174,7 @@ export async function runDesktopTaskBoardAttachmentsUi(cdp: UiCdpPort, options: 
   proof.downloadPolicy = { method: 'Page.setDownloadBehavior', ...downloadPolicy, rendererBrowserContextId: targetInfo.browserContextId, acknowledged: true, scope: 'captured TEST renderer context via current Page target' };
   const commentTile = `[role="dialog"] [data-task-comment-id=${JSON.stringify(comment.id)}] div.group.relative.flex.size-14`;
   await ui.scrollTo(commentTile, 'original comment attachment download tile');
-  await ui.waitRead(`document.querySelector(${JSON.stringify(commentTile)})?.textContent.trim()===${JSON.stringify(textName)}`, 'exact original comment file tile');
+  await ui.waitRead(`document.querySelector(${desktopJsLiteral(commentTile)})?.textContent.trim()===${desktopJsLiteral(textName)}`, 'exact original comment file tile');
   proof.downloadAttempt = { path: downloadedPath, state: 'attempted', budgetMs: 45_000, nativePicker: false };
   await ui.click(commentTile, 'download original comment file once');
   const deadline = Date.now() + 45_000;
@@ -195,7 +195,7 @@ export async function runDesktopTaskBoardAttachmentsUi(cdp: UiCdpPort, options: 
   assert.deepEqual(removedTask.comments, reloadedTask.comments, 'Task file removal preserves comment attachment');
   proof.removeReceipt = await options.receiptFor('task.attachment.remove', options.taskId, payload => payload.attachmentId === image.id);
   assert.equal(row(proof.removeReceipt).phase, 'completed');
-  await ui.waitRead(`!document.querySelector(${JSON.stringify(imageSelector)})`, 'removed Task image absent from UI');
+  await ui.waitRead(`!document.querySelector(${desktopJsLiteral(imageSelector)})`, 'removed Task image absent from UI');
   assert.equal(await readAttachment(String(image.id), png), null, 'removed metadata no longer admits owned blob reads');
   assert.ok(await readAttachment(String(files[0]!.id), text), 'comment reference remains readable');
   proof.removedScreenshot = await options.screenshot('ui-task-board-attachment-removed.png');
