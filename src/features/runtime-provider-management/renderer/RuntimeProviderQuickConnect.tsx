@@ -9,7 +9,9 @@ import {
 import { useStore } from '@renderer/store';
 
 import {
+  getOpenCodeGeneration,
   getRuntimeProviderOnboardingPlan,
+  getRuntimeProviderOnboardingPlanProviderIds,
   getXiaomiMiMoTokenPlanResolutionByProviderId,
   isOpenCodeProviderOAuthBridgeOutdated,
   isRuntimeProviderOnboardingPlanRoutable,
@@ -210,6 +212,7 @@ export const RuntimeProviderQuickConnect = ({
   );
   const [localProviderProjects, setLocalProviderProjects] = useState<ProjectPathProject[]>([]);
   const oauthBridgeOutdated = isOpenCodeProviderOAuthBridgeOutdated(openCodeRuntimeStatus);
+  const openCodeGeneration = getOpenCodeGeneration(openCodeRuntimeStatus?.version);
   useEffect(() => {
     if (!localProviderSetupOpen) return;
     setLocalProviderProjectPath(projectPath?.trim() || null);
@@ -528,7 +531,13 @@ export const RuntimeProviderQuickConnect = ({
         };
       }
 
-      const entry = findDirectoryEntry(directory.entries, plan.providerId);
+      // On V2 a plan with routes is connected through one of its route integrations.
+      const routeEntries = getRuntimeProviderOnboardingPlanProviderIds(
+        getRuntimeProviderOnboardingPlan(plan.id),
+        openCodeGeneration
+      ).flatMap((providerId) => findDirectoryEntry(directory.entries, providerId) ?? []);
+      const entry =
+        routeEntries.find((item) => item.state === 'connected') ?? routeEntries[0] ?? null;
       if (!entry && directory.authoritativePending) {
         return {
           id: plan.id,
@@ -602,7 +611,7 @@ export const RuntimeProviderQuickConnect = ({
         state === 'update-required'
           ? onInstallOpenCode
           : state === 'connected' || state === 'manual'
-            ? () => onOpenCodeProviderAction(plan.providerId, 'select')
+            ? () => onOpenCodeProviderAction(entry?.providerId ?? plan.providerId, 'select')
             : state === 'connectable' || state === 'different-credential'
               ? () => onOpenCodeProviderAction(plan.providerId, 'connect')
               : null;
@@ -677,6 +686,7 @@ export const RuntimeProviderQuickConnect = ({
     handleCompanionCardAction,
     oauthBridgeOutdated,
     onInstallOpenCode,
+    openCodeGeneration,
     onOpenCodeProviderAction,
     runCompanionOperation,
     t,

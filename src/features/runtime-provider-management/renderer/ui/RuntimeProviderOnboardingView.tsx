@@ -501,13 +501,23 @@ const ActivePlanFlow = ({
               </div>
             </div>
           ) : null}
+          {plan.routeChoices ? (
+            <div
+              data-testid="runtime-provider-onboarding-route-choice"
+              className="text-xs text-[var(--color-text-muted)]"
+            >
+              Open the key page where your account lives. OpenCode V2 connects each one through its
+              own integration.
+            </div>
+          ) : null}
           {!alreadyConnected && !plan.providerId.startsWith('xiaomi-token-plan-') ? (
             <CredentialPageButtons
               urls={getRuntimeProviderOnboardingCredentialUrls(plan)}
               onOpen={(url) => void actions.openCredentialPage(url)}
             />
           ) : null}
-          {!alreadyConnected || state.management.activeFormProviderId === plan.providerId ? (
+          {!plan.routeChoices &&
+          (!alreadyConnected || state.management.activeFormProviderId === plan.providerId) ? (
             <ProviderSetupFormPanel
               provider={provider}
               state={state.management}

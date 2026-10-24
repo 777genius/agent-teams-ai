@@ -3,7 +3,10 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { RUNTIME_PROVIDER_ONBOARDING_PLANS } from '../../../../src/features/runtime-provider-management/core/domain/runtimeProviderOnboarding';
+import {
+  resolveRuntimeProviderOnboardingPlan,
+  RUNTIME_PROVIDER_ONBOARDING_PLANS,
+} from '../../../../src/features/runtime-provider-management/core/domain/runtimeProviderOnboarding';
 import { RuntimeProviderOnboardingView } from '../../../../src/features/runtime-provider-management/renderer/ui/RuntimeProviderOnboardingView';
 
 import type {
@@ -314,11 +317,12 @@ describe('RuntimeProviderOnboardingView', () => {
       );
     });
 
-    const keyButton = [...host.querySelectorAll('button')].find((button) =>
+    const keyButtons = [...host.querySelectorAll('button')].filter((button) =>
       button.textContent?.includes('Open subscription key page')
     );
-    act(() => keyButton?.click());
-    expect(openCredentialPage).toHaveBeenCalledTimes(1);
+    expect(keyButtons.map((button) => button.textContent)).toEqual(['Open subscription key page']);
+    act(() => keyButtons[0]?.click());
+    expect(openCredentialPage).toHaveBeenCalledWith(plan.credentialUrl);
   });
 
   it('offers both Kimi console domains as alternatives', async () => {
@@ -352,6 +356,40 @@ describe('RuntimeProviderOnboardingView', () => {
     ]);
     act(() => keyButtons[1]?.click());
     expect(openCredentialPage).toHaveBeenCalledWith('https://www.kimi.ai/code/console');
+  });
+
+  it('asks for the account region before showing the V2 Kimi setup form', async () => {
+    const plan = resolveRuntimeProviderOnboardingPlan(
+      RUNTIME_PROVIDER_ONBOARDING_PLANS.find((entry) => entry.id === 'kimi-code-membership')!,
+      'v2',
+      null
+    );
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderOnboardingView, {
+          state: onboardingState({
+            mode: 'provider',
+            selectedPlanIds: [plan.id],
+            activePlan: plan,
+            stage: 'connect',
+            management: managementState({ setupFormLoading: true }),
+          }),
+          actions: onboardingActions(),
+          onAdvancedSettings: vi.fn(),
+          onDone: vi.fn(),
+        })
+      );
+    });
+
+    expect(
+      host.querySelector('[data-testid="runtime-provider-onboarding-route-choice"]')
+    ).not.toBeNull();
+    expect(
+      [...host.querySelectorAll('button')]
+        .map((button) => button.textContent)
+        .filter((text) => text?.includes('Open subscription key page'))
+    ).toEqual(['Open subscription key page (kimi.com)', 'Open subscription key page (kimi.ai)']);
+    expect(host.textContent).not.toContain('Loading provider setup');
   });
 
   it('shows provider setup loading immediately while the directory is still resolving', async () => {

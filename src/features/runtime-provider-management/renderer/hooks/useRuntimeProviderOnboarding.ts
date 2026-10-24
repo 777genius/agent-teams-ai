@@ -13,8 +13,10 @@ import {
   findRuntimeProviderOnboardingPlanByProviderId,
   getRuntimeProviderOnboardingCredentialUrls,
   getRuntimeProviderOnboardingPlan,
+  getRuntimeProviderOnboardingPlanProviderIds,
   isRuntimeProviderOnboardingPlanRoutable,
   rankRecommendedRuntimeProviderModels,
+  resolveRuntimeProviderOnboardingPlan,
   RUNTIME_PROVIDER_ONBOARDING_PLANS,
 } from '../../core/domain';
 import {
@@ -23,13 +25,20 @@ import {
 } from '../adapters/runtimeProviderOnboardingProgressRepository';
 
 import {
+  DEFAULT_WIZARD_PLAN_IDS,
+  findDirectoryEntry,
+  getAutomaticModelProbeLimit,
+  isCopilotExplicitModelUnsupported,
+} from './runtimeProviderOnboardingInternals';
+import {
   type RuntimeProviderManagementActions,
   type RuntimeProviderManagementState,
   useRuntimeProviderManagement,
 } from './useRuntimeProviderManagement';
 
-import type { RuntimeProviderDirectoryEntryDto, RuntimeProviderModelDto } from '../../contracts';
+import type { RuntimeProviderModelDto } from '../../contracts';
 import type {
+  OpenCodeGeneration,
   RuntimeProviderOnboardingPlan,
   RuntimeProviderOnboardingPlanId,
   RuntimeProviderOnboardingProgress,
@@ -89,47 +98,12 @@ interface UseRuntimeProviderOnboardingOptions {
   readonly providerId?: string | null;
   readonly projectPath?: string | null;
   readonly runtimeGate: RuntimeProviderQuickConnectGate;
+  /** Plans with routes connect per route on V2; defaults to V1. */
+  readonly openCodeGeneration?: OpenCodeGeneration;
   readonly runtimeUpdateRequired?: boolean;
   readonly onInstallOrUpdateRuntime: () => Promise<void> | void;
   readonly onProviderChanged?: () => Promise<void> | void;
   readonly progressRepository?: RuntimeProviderOnboardingProgressRepository;
-}
-
-const DEFAULT_WIZARD_PLAN_IDS: readonly RuntimeProviderOnboardingPlanId[] = [
-  'supergrok',
-  'zai-coding-plan',
-  'minimax-token-plan',
-  'github-copilot',
-  'kimi-code-membership',
-];
-
-function getAutomaticModelProbeLimit(plan: RuntimeProviderOnboardingPlan): number {
-  // Unsupported Copilot routes fail before generation. Walk the current live
-  // catalog until one works, while the probe loop below stops on any other
-  // failure so it cannot burn through quota after a real request starts.
-  return plan.id === 'github-copilot' ? Number.POSITIVE_INFINITY : 1;
-}
-
-function isCopilotExplicitModelUnsupported(message: string): boolean {
-  const normalized = message.trim().toLowerCase();
-  return (
-    normalized.includes('requested model is not supported') ||
-    normalized.includes('selected model is not supported') ||
-    normalized.includes('model is unsupported for this copilot account') ||
-    normalized.includes('model is not supported for this copilot account') ||
-    normalized.includes('model is not available for integrator')
-  );
-}
-
-function findDirectoryEntry(
-  state: RuntimeProviderManagementState,
-  providerId: string
-): RuntimeProviderDirectoryEntryDto | null {
-  return (
-    state.directoryEntries.find(
-      (entry) => entry.providerId.toLowerCase() === providerId.toLowerCase()
-    ) ?? null
-  );
 }
 
 export function useRuntimeProviderOnboarding({
@@ -138,6 +112,7 @@ export function useRuntimeProviderOnboarding({
   providerId = null,
   projectPath = null,
   runtimeGate,
+  openCodeGeneration = 'v1',
   runtimeUpdateRequired = false,
   onInstallOrUpdateRuntime,
   onProviderChanged,
@@ -156,6 +131,9 @@ export function useRuntimeProviderOnboarding({
     () => (providerId ? findRuntimeProviderOnboardingPlanByProviderId(providerId) : null),
     [providerId]
   );
+  const [routeProviderIds, setRouteProviderIds] = useState<
+    Partial<Record<RuntimeProviderOnboardingPlanId, string>>
+  >({});
   const [selectedPlanIds, setSelectedPlanIds] =
     useState<readonly RuntimeProviderOnboardingPlanId[]>(DEFAULT_WIZARD_PLAN_IDS);
   const [progress, setProgress] = useState<RuntimeProviderOnboardingProgress | null>(null);
@@ -257,7 +235,7 @@ export function useRuntimeProviderOnboarding({
     }
   }, [mode, progress]);
 
-  const activePlan = useMemo(() => {
+  const basePlan = useMemo(() => {
     if (mode === 'provider') {
       return directPlan;
     }
@@ -265,6 +243,24 @@ export function useRuntimeProviderOnboarding({
       ? getRuntimeProviderOnboardingPlan(progress.currentPlanId)
       : null;
   }, [directPlan, mode, progress?.currentPlanId]);
+  // A connected route is the account region already in use.
+  const connectedRouteProviderId = basePlan
+    ? (getRuntimeProviderOnboardingPlanProviderIds(basePlan, openCodeGeneration).find(
+        (id) => findDirectoryEntry(management, id)?.state === 'connected'
+      ) ?? null)
+    : null;
+  const chosenRouteProviderId = basePlan ? (routeProviderIds[basePlan.id] ?? null) : null;
+  const activePlan = useMemo(
+    () =>
+      basePlan
+        ? resolveRuntimeProviderOnboardingPlan(
+            basePlan,
+            openCodeGeneration,
+            chosenRouteProviderId ?? connectedRouteProviderId
+          )
+        : null,
+    [basePlan, chosenRouteProviderId, connectedRouteProviderId, openCodeGeneration]
+  );
 
   const recordOnboardingStep = useCallback(
     (
@@ -345,7 +341,11 @@ export function useRuntimeProviderOnboarding({
       Boolean(management.setupFormError) &&
       (setupErrorCode === 'runtime-missing' || setupErrorCode === 'runtime-unhealthy') &&
       management.savingProviderId !== activePlan.providerId;
-    if (!transientSetupError || transientSetupRetryPlanRef.current === activePlan.id) {
+    if (
+      !transientSetupError ||
+      activePlan.routeChoices ||
+      transientSetupRetryPlanRef.current === activePlan.id
+    ) {
       return;
     }
 
@@ -421,6 +421,11 @@ export function useRuntimeProviderOnboarding({
 
   useEffect(() => {
     if (!enabled || !activePlan || runtimeGate !== 'ready' || runtimeUpdateRequired) {
+      return;
+    }
+    if (activePlan.routeChoices) {
+      // Nothing can connect before the user picks the account region.
+      setStage('connect');
       return;
     }
     if (!management.directoryLoaded) {
@@ -600,7 +605,7 @@ export function useRuntimeProviderOnboarding({
 
   const beginConnect = useCallback((): void => {
     const startedAtMs = Date.now();
-    if (!activePlan) {
+    if (!activePlan || activePlan.routeChoices) {
       return;
     }
     setStage('connect');
@@ -701,6 +706,11 @@ export function useRuntimeProviderOnboarding({
         url === undefined ? credentialUrls[0] : credentialUrls.find((item) => item === url);
       if (!activePlan || !credentialUrl) {
         return;
+      }
+      // On V2, the key page the user opens picks the integration for that account region.
+      const route = activePlan.routeChoices?.find((item) => item.credentialUrl === credentialUrl);
+      if (route) {
+        setRouteProviderIds((current) => ({ ...current, [activePlan.id]: route.v2ProviderId }));
       }
       try {
         await api.openExternal(credentialUrl);

@@ -73,9 +73,11 @@ export function resolveSetupAuthOption(
 }
 
 /**
- * Selector fields for a connect request. A plain key option (no native method index and
- * no prompts) is the provider's native key method and needs no selector: the runtime picks
- * it by default, and the OpenCode V2 runtime refuses a key connect that carries one.
+ * Selector fields for a connect request. A plain key option (no native method index and no
+ * prompts) needs no selector: V1 then connects its first key option, which is the same option
+ * the form showed, and the OpenCode V2 runtime refuses a key connect that carries a selector.
+ * Without the id, V1 no longer rejects a form that went stale since it loaded; the connect
+ * still uses the current first key option, and required prompts still fail there.
  */
 export function buildSetupAuthSelector(option: RuntimeProviderSetupAuthOptionDto | null): {
   authMethodIndex?: number;

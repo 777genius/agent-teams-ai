@@ -98,12 +98,14 @@ describe('useRuntimeProviderOnboarding', () => {
     runtimeGate = 'ready',
     runtimeUpdateRequired = false,
     onInstall = vi.fn(),
+    openCodeGeneration = 'v1',
   }: {
     mode?: 'provider' | 'wizard';
     providerId?: string | null;
     runtimeGate?: 'ready' | 'missing' | 'error';
     runtimeUpdateRequired?: boolean;
     onInstall?: () => Promise<void> | void;
+    openCodeGeneration?: 'v1' | 'v2';
   }) {
     [currentState, currentActions] = useRuntimeProviderOnboarding({
       enabled: true,
@@ -111,6 +113,7 @@ describe('useRuntimeProviderOnboarding', () => {
       providerId,
       projectPath: '/tmp/agent-teams-provider-onboarding-test',
       runtimeGate,
+      openCodeGeneration,
       runtimeUpdateRequired,
       onInstallOrUpdateRuntime: onInstall,
       progressRepository: repository,
@@ -550,6 +553,87 @@ describe('useRuntimeProviderOnboarding', () => {
     expect(loadSetupForm).toHaveBeenCalledWith(
       expect.objectContaining({ providerId: 'kimi-for-coding' })
     );
+  });
+
+  it('opens only the plan key pages, and the primary one by default', async () => {
+    loadProviderDirectory.mockResolvedValueOnce(
+      directoryResponse([directoryEntry('kimi-for-coding', 'available')])
+    );
+    await act(async () =>
+      root.render(React.createElement(Harness, { mode: 'provider', providerId: 'kimi-for-coding' }))
+    );
+    const openExternal = window.electronAPI.openExternal as ReturnType<typeof vi.fn>;
+
+    await act(async () => currentActions?.openCredentialPage('https://example.test/phishing'));
+    expect(openExternal).not.toHaveBeenCalled();
+    await act(async () => currentActions?.openCredentialPage());
+    expect(openExternal).toHaveBeenLastCalledWith('https://www.kimi.com/code/console');
+    await act(async () => currentActions?.openCredentialPage('https://www.kimi.ai/code/console'));
+    expect(openExternal).toHaveBeenLastCalledWith('https://www.kimi.ai/code/console');
+  });
+
+  it('asks for the Kimi account region on OpenCode V2 and connects the matching integration', async () => {
+    loadProviderDirectory.mockResolvedValue(
+      directoryResponse([
+        directoryEntry('kimi-code-plan-cn', 'available'),
+        directoryEntry('kimi-code-plan-global', 'available'),
+      ])
+    );
+
+    await act(async () =>
+      root.render(
+        React.createElement(Harness, {
+          mode: 'provider',
+          providerId: 'kimi-for-coding',
+          openCodeGeneration: 'v2',
+        })
+      )
+    );
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 100));
+    });
+
+    expect(currentState?.activePlan?.routeChoices?.map((route) => route.v2ProviderId)).toEqual([
+      'kimi-code-plan-cn',
+      'kimi-code-plan-global',
+    ]);
+    expect(loadSetupForm).not.toHaveBeenCalled();
+
+    await act(async () => currentActions?.openCredentialPage('https://www.kimi.ai/code/console'));
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 100));
+    });
+
+    expect(currentState?.activePlan?.providerId).toBe('kimi-code-plan-global');
+    expect(currentState?.activePlan?.routeChoices).toBeUndefined();
+    expect(loadSetupForm).toHaveBeenCalledWith(
+      expect.objectContaining({ providerId: 'kimi-code-plan-global' })
+    );
+  });
+
+  it('uses the connected Kimi integration on OpenCode V2 without asking again', async () => {
+    loadProviderDirectory.mockResolvedValue(
+      directoryResponse([
+        directoryEntry('kimi-code-plan-cn', 'connected', 'api'),
+        directoryEntry('kimi-code-plan-global', 'available'),
+      ])
+    );
+
+    await act(async () =>
+      root.render(
+        React.createElement(Harness, {
+          mode: 'provider',
+          providerId: 'kimi-for-coding',
+          openCodeGeneration: 'v2',
+        })
+      )
+    );
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 100));
+    });
+
+    expect(currentState?.activePlan?.providerId).toBe('kimi-code-plan-cn');
+    expect(currentState?.activePlan?.routeChoices).toBeUndefined();
   });
 
   it('retries one transient runtime setup failure without leaving the user on an error screen', async () => {
