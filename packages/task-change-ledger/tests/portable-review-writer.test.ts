@@ -14,6 +14,17 @@ import type {
 import type { FileChangeSummary } from '@agent-teams/task-change-ledger/contracts';
 import { createReviewWriter } from '@agent-teams/task-change-ledger/review-writer';
 import { ReviewApplier } from '@agent-teams/task-change-ledger/review-apply';
+import { isWindowsReservedFileName } from '../dist/review/writer/reviewGuards.js';
+
+test('Windows reserved-name normalization preserves suffix and stem boundaries on long names', () => {
+  for (const name of ['con', '\tNUL.txt\u00a0', ' COM1 . ', 'LPT9... ']) {
+    assert.equal(isWindowsReservedFileName(name), true);
+  }
+  for (const name of ['console', 'COM10', 'COM1 .txt', 'x.con', ' . ', `${' .'.repeat(500_000)}!`]) {
+    assert.equal(isWindowsReservedFileName(name), false);
+  }
+  assert.equal(isWindowsReservedFileName(`NUL${' .'.repeat(500_000)}`), true);
+});
 function exactLedgerSnippet(
   snippet: FileChangeSummary['snippets'][number], before: string, after: string
 ): FileChangeSummary['snippets'][number] {

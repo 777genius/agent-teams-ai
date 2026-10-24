@@ -105,10 +105,10 @@ export function isWindowsReservedFileName(name: string): boolean {
     return false;
   }
 
-  const normalized = name
-    .trim()
-    .replace(/[. ]+$/g, '')
-    .toLowerCase();
+  const trimmed = name.trim();
+  let end = trimmed.length;
+  while (end > 0 && (trimmed[end - 1] === '.' || trimmed[end - 1] === ' ')) end--;
+  const normalized = trimmed.slice(0, end).toLowerCase();
   if (!normalized) {
     return false;
   }

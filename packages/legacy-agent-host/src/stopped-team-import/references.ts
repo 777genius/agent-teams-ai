@@ -39,8 +39,13 @@ export function collectImportReferences(
     if (found.size > 16384) throw new TeamOwnerError('hold');
   };
   const string = (text: string) => {
-    for (const match of text.matchAll(/\u2063([^\u2064]*)\u2064/gu)) {
-      const encoded = match[1]!;
+    let cursor = 0;
+    while (true) {
+      const start = text.indexOf('\u2063', cursor);
+      if (start === -1) break;
+      const end = text.indexOf('\u2064', start + 1);
+      if (end === -1) throw new TeamOwnerError('hold');
+      const encoded = text.slice(start + 1, end);
       if (encoded.length % 4 || encoded.length > 16384) throw new TeamOwnerError('hold');
       const bytes = new Uint8Array(encoded.length / 4);
       for (let offset = 0; offset < encoded.length; offset += 4) {
@@ -58,13 +63,8 @@ export function collectImportReferences(
         throw new TeamOwnerError('hold');
       }
       add(ref.taskId, ref.displayId, ref.teamName);
+      cursor = end + 1;
     }
-    if (
-      text.includes('\u2063') &&
-      [...text.matchAll(/\u2063/gu)].length !==
-        [...text.matchAll(/\u2063[^\u2064]*\u2064/gu)].length
-    )
-      throw new TeamOwnerError('hold');
     for (const match of text.matchAll(/task:\/\/([^\s)\]<>"']+)/gu)) {
       const raw = match[1]!,
         [path, query] = raw.split('?', 2),

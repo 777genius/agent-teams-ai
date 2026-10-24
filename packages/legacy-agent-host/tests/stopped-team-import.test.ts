@@ -14,6 +14,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { digest } from '../dist/team/identity.js';
+import { collectImportReferences } from '../dist/stopped-team-import/references.js';
 import {
   exportStoppedTeam,
   STOPPED_IMPORT_LIMITS,
@@ -44,6 +45,36 @@ function encoded(ref: { taskId: string; displayId: string; teamName: string }) {
     '\u2064'
   );
 }
+test('reference scanning preserves qualified targets and holds malformed marker streams', () => {
+  const source = 'TEST-source';
+  const internal = { taskId: 'TEST-a', displayId: 'a', teamName: source };
+  const missing = { taskId: 'TEST-missing', displayId: 'missing', teamName: source };
+  const external = { taskId: 'TEST-external', displayId: 'external', teamName: 'TEST-other' };
+  const tasks = new Set([internal.taskId]);
+  const found = collectImportReferences(
+    `\u2064${encoded(internal)} ${encoded(missing)} task://TEST-external?team=TEST-other&display=external`,
+    source,
+    tasks
+  );
+  assert.deepEqual(
+    new Set(found.map((ref) => JSON.stringify(ref))),
+    new Set([
+      JSON.stringify({ ...internal, target: 'internal' }),
+      JSON.stringify({ ...missing, target: 'unresolved' }),
+      JSON.stringify({ ...external, target: 'source-archive' }),
+    ])
+  );
+  for (const text of [
+    '\u2063'.repeat(1_000_000),
+    `${encoded(internal)}\u2063`,
+    `\u2063${encoded(internal)}`,
+    '\u2063x\u2064',
+    `\u2063${'\u200b'.repeat(16_388)}\u2064`,
+    '\u2063\u2064',
+  ]) {
+    assert.throws(() => collectImportReferences(text, source, tasks), { code: 'hold' });
+  }
+});
 function fixture(t: TestContext) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-stopped-team-import-')));
   t.after(() => rmSync(root, { recursive: true, force: true }));
