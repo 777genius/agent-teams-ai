@@ -1,3 +1,4 @@
+import { nativeGroupChatScript } from './group-chat.ts';
 import { assertNativeChatAttachments } from './chat-attachments.ts';
 import { contextCompactionScript } from '../native-claude-compaction/model.ts';
 import type { CompactionScenario } from '../native-claude-compaction/model.ts';
@@ -122,11 +123,12 @@ function emitResponse(
 export async function startNativeTeamModel(
   options: {
     chatAttachments?: boolean;
+    groupChats?: boolean;
     ordinarySubagents?: { workspace: string; parentStopRequested?: () => boolean };
     contextCompaction?: CompactionScenario;
     requireVisibleReply?: boolean;
-  /** TEST Quit proof: hold one real first-turn inference until its client is closed. */
-  holdInitialTurnResponse?: boolean;
+    /** TEST Quit proof: hold one real first-turn inference until its client is closed. */
+    holdInitialTurnResponse?: boolean;
     peerMessaging?: boolean;
     uiGeneratedMessageIds?: boolean;
     /** TEST-only original native tool-use IDs observed in actual model request history. */
@@ -136,8 +138,16 @@ export async function startNativeTeamModel(
     memberName?: 'alice' | 'team-lead';
   } = {}
 ) {
-  const compaction = options.contextCompaction ? contextCompactionScript(options.contextCompaction) : undefined;
-  const ordinary = options.ordinarySubagents ? ordinarySubagentScript(options.ordinarySubagents.workspace, options.ordinarySubagents.parentStopRequested) : undefined;
+  const groupChats = options.groupChats ? nativeGroupChatScript(nativeToolReceipt) : undefined;
+  const compaction = options.contextCompaction
+    ? contextCompactionScript(options.contextCompaction)
+    : undefined;
+  const ordinary = options.ordinarySubagents
+    ? ordinarySubagentScript(
+        options.ordinarySubagents.workspace,
+        options.ordinarySubagents.parentStopRequested
+      )
+    : undefined;
   const observations: Observation[] = [];
   const probes: { requestedModel?: string; requestedEffort?: string }[] = [];
   const unexpectedNoToolsRequests: {
@@ -146,7 +156,7 @@ export async function startNativeTeamModel(
     userContent: { blockTypes: string[]; text: string[] }[];
   }[] = [];
   const failures: string[] = [];
-  const heldInitialRequests: {turn: string; step: number; disconnected: boolean}[] = [];
+  const heldInitialRequests: { turn: string; step: number; disconnected: boolean }[] = [];
   const counters = new Map<string, number>();
   let taskId: string | undefined;
   let sequence = 0;
@@ -154,7 +164,8 @@ export async function startNativeTeamModel(
   const server = createServer((request, response) => {
     void (async () => {
       if (request.url?.includes('count_tokens')) {
-        if (compaction) assert.ok(++compactionTokenRequests <= 8, 'bounded native compact token-count requests');
+        if (compaction)
+          assert.ok(++compactionTokenRequests <= 8, 'bounded native compact token-count requests');
         response.end('{"input_tokens":20}');
         return;
       }
@@ -174,37 +185,79 @@ export async function startNativeTeamModel(
       const tools = (Array.isArray(body.tools) ? body.tools.map(record) : []).map((tool) =>
         String(tool.name)
       );
+      if (groupChats) {
+        emitResponse(
+          response,
+          ++sequence,
+          groupChats.respond(body, tools),
+          typeof body.model === 'string' ? body.model : undefined
+        );
+        return;
+      }
       if (compaction) {
-        emitResponse(response, ++sequence, compaction.respond(body, tools), typeof body.model === 'string' ? body.model : undefined);
+        emitResponse(
+          response,
+          ++sequence,
+          compaction.respond(body, tools),
+          typeof body.model === 'string' ? body.model : undefined
+        );
         return;
       }
       if (ordinary) {
-        emitResponse(response, ++sequence, ordinary.respond(body, tools), typeof body.model === 'string' ? body.model : undefined);
+        emitResponse(
+          response,
+          ++sequence,
+          ordinary.respond(body, tools),
+          typeof body.model === 'string' ? body.model : undefined
+        );
         return;
       }
       const probeMessages = messages.filter((message) => message.role === 'user');
       const probeContent = probeMessages[0]?.content;
-      const probeTexts = typeof probeContent === 'string'
-        ? [probeContent]
-        : Array.isArray(probeContent) && probeContent.every(block => record(block).type === 'text' && typeof record(block).text === 'string')
-          ? probeContent.map(block => String(record(block).text))
-          : [];
+      const probeTexts =
+        typeof probeContent === 'string'
+          ? [probeContent]
+          : Array.isArray(probeContent) &&
+              probeContent.every(
+                (block) => record(block).type === 'text' && typeof record(block).text === 'string'
+              )
+            ? probeContent.map((block) => String(record(block).text))
+            : [];
       const textOnlySystem = (message: Record<string, unknown>) => {
         if (message.role !== 'system') return false;
         if (typeof message.content === 'string') return message.content.length <= 64 * 1024;
-        return Array.isArray(message.content) && message.content.length > 0 && message.content.length <= 8 &&
+        return (
+          Array.isArray(message.content) &&
+          message.content.length > 0 &&
+          message.content.length <= 8 &&
           message.content.every((raw) => {
             const block = record(raw);
-            return block.type === 'text' && typeof block.text === 'string' && block.text.length <= 64 * 1024;
-          });
+            return (
+              block.type === 'text' &&
+              typeof block.text === 'string' &&
+              block.text.length <= 64 * 1024
+            );
+          })
+        );
       };
       // One exact SDK user input may have native reminders and text-only system transport wrappers.
       // Additional user, assistant, tool, or nontext system messages never qualify as a model probe.
-      const probeText = messages.length <= 8 && probeMessages.length === 1 &&
+      const probeText =
+        messages.length <= 8 &&
+        probeMessages.length === 1 &&
         messages.every((message) => message.role === 'user' || textOnlySystem(message))
-        ? probeTexts.map(text => text.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '').trim()).filter(Boolean).join('\n')
-        : undefined;
-      if (options.allowModelProbes && probeText === 'Reply only OK. Do not use tools, access files or run commands.' && tools.length === 0) {
+          ? probeTexts
+              .map((text) =>
+                text.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '').trim()
+              )
+              .filter(Boolean)
+              .join('\n')
+          : undefined;
+      if (
+        options.allowModelProbes &&
+        probeText === 'Reply only OK. Do not use tools, access files or run commands.' &&
+        tools.length === 0
+      ) {
         assert.ok(probes.length < 8, 'finite native model probe request budget');
         probes.push({
           ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
@@ -225,13 +278,25 @@ export async function startNativeTeamModel(
           ...(typeof body.model === 'string' ? { model: body.model.slice(0, 256) } : {}),
           roles: messages.slice(0, 8).map((message) => message.role),
           userContent: probeMessages.slice(0, 8).map((message) => {
-            const blocks = typeof message.content === 'string'
-              ? [{ type: 'text', text: message.content }]
-              : Array.isArray(message.content) ? message.content.map(record) : [];
+            const blocks =
+              typeof message.content === 'string'
+                ? [{ type: 'text', text: message.content }]
+                : Array.isArray(message.content)
+                  ? message.content.map(record)
+                  : [];
             return {
               blockTypes: blocks.slice(0, 8).map((block) => String(block.type).slice(0, 64)),
-              text: blocks.filter((block) => block.type === 'text' && typeof block.text === 'string').slice(0, 8)
-                .map((block) => String(block.text).replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '<system-reminder>[omitted]</system-reminder>').slice(0, 1024)),
+              text: blocks
+                .filter((block) => block.type === 'text' && typeof block.text === 'string')
+                .slice(0, 8)
+                .map((block) =>
+                  String(block.text)
+                    .replace(
+                      /<system-reminder>[\s\S]*?<\/system-reminder>/g,
+                      '<system-reminder>[omitted]</system-reminder>'
+                    )
+                    .slice(0, 1024)
+                ),
             };
           }),
         });
@@ -262,7 +327,8 @@ export async function startNativeTeamModel(
       }
       assert.ok(turn, 'request is tied to a deliberate TEST input');
       const step = counters.get(turn) ?? 0;
-      if (options.chatAttachments && turn === 'NATIVE_TEAM_TWO' && step === 0) assertNativeChatAttachments(messages);
+      if (options.chatAttachments && turn === 'NATIVE_TEAM_TWO' && step === 0)
+        assertNativeChatAttachments(messages);
       const peerActions = options.peerMessaging ? nativePeerActions(turn, 'alice') : undefined;
       const incomingMessageId = /"messageId":"([^"\n]+)"/.exec(turnText)?.[1];
       const expectedMessageId = options.uiGeneratedMessageIds
@@ -315,10 +381,23 @@ export async function startNativeTeamModel(
         step,
         contextEffective,
         priorTurn: JSON.stringify(messages).includes('NATIVE_TEAM_ONE'),
-        ...(options.captureHistoryMarkers ? { priorNativeToolIds: messages.flatMap(message =>
-          Array.isArray(message.content) ? message.content.map(record).filter(block =>
-            block.type === 'tool_use' && typeof block.id === 'string' && /^native_NATIVE_TEAM_ONE_[0-6]$/.test(block.id)
-          ).map(block => String(block.id)) : []) } : {}),
+        ...(options.captureHistoryMarkers
+          ? {
+              priorNativeToolIds: messages.flatMap((message) =>
+                Array.isArray(message.content)
+                  ? message.content
+                      .map(record)
+                      .filter(
+                        (block) =>
+                          block.type === 'tool_use' &&
+                          typeof block.id === 'string' &&
+                          /^native_NATIVE_TEAM_ONE_[0-6]$/.test(block.id)
+                      )
+                      .map((block) => String(block.id))
+                  : []
+              ),
+            }
+          : {}),
         tools,
         toolResultError: last?.is_error === true,
         visibleReplyContract,
@@ -329,14 +408,24 @@ export async function startNativeTeamModel(
       if (options.holdInitialTurnResponse) {
         assert.equal(turn, 'NATIVE_TEAM_ONE', 'queued input must never reach native inference');
         assert.equal(step, 0);
-        assert.equal(heldInitialRequests.length, 0, 'one original native request, no inference retry');
+        assert.equal(
+          heldInitialRequests.length,
+          0,
+          'one original native request, no inference retry'
+        );
         for (const tool of REQUIRED_TOOLS) assert.ok(tools.includes(`mcp__team__${tool}`));
         assert.ok(tools.includes('Bash'));
-        const held = {turn, step, disconnected: false};
+        const held = { turn, step, disconnected: false };
         heldInitialRequests.push(held);
-        await new Promise<void>(resolve => {
-          response.once('close', () => { held.disconnected = true; resolve(); });
-          if (response.destroyed) { held.disconnected = true; resolve(); }
+        await new Promise<void>((resolve) => {
+          response.once('close', () => {
+            held.disconnected = true;
+            resolve();
+          });
+          if (response.destroyed) {
+            held.disconnected = true;
+            resolve();
+          }
         });
         return;
       }
@@ -428,8 +517,11 @@ export async function startNativeTeamModel(
     url: `http://127.0.0.1:${address.port}`,
     ordinaryRequests: ordinary?.requests ?? [],
     compactionRequests: compaction?.requests ?? [],
-    get compactionTokenRequests() { return compactionTokenRequests; },
+    get compactionTokenRequests() {
+      return compactionTokenRequests;
+    },
     observations,
+    ...(groupChats ? { groupRequests: groupChats.requests } : {}),
     ...(options.holdInitialTurnResponse ? { heldInitialRequests } : {}),
     probes,
     unexpectedNoToolsRequests,

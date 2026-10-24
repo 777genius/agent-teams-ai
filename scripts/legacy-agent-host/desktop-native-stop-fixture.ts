@@ -15,7 +15,8 @@ export const desktopNativeProviderArtifact = Object.freeze({
   sha256: 'dad39edf2f02a23ae68768722b5bba2e7beddf2125ae79d0bacb4e8b303d1dce',
 });
 export async function verifyDesktopNativeStopArtifact(
-  repo: string, selected = desktopNativeProviderArtifact
+  repo: string,
+  selected = desktopNativeProviderArtifact
 ): Promise<void> {
   const archive = join(repo, selected.path);
   assert.equal(await fileDigest(archive), selected.sha256);
@@ -62,12 +63,32 @@ export async function prepareDesktopNativeStop(options: {
     `TEST launch read refused: ${String(read.code)}/${String(read.outcome)}`
   );
   const selection = object(read.value);
-  assert.ok(Array.isArray(selection.members) && selection.members.length === 1);
-  const memberId = object(selection.members[0]).memberId;
-  assert.equal(typeof memberId, 'string');
+  const groupChats = process.env.LEGACY_DESKTOP_GROUP_CHATS === '1';
+  const expectedMembers = groupChats ? 2 : 1;
+  assert.ok(Array.isArray(selection.members) && selection.members.length === expectedMembers);
+  const memberIds = selection.members.map((value) => {
+    const id = object(value).memberId;
+    assert.ok(typeof id === 'string' && id.length > 0);
+    return id;
+  });
+  if (groupChats) {
+    assert.deepEqual([...memberIds].sort(), ['alice-id', 'bob-id']);
+    assert.equal(
+      options.returnAt,
+      undefined,
+      'two-ready-actor proof does not qualify pending-open Quit'
+    );
+  }
+  const memberId = memberIds[0]!;
   const configuration = {
-    members: [{ memberId, model: 'claude-opus-4-6', effort: 'medium', fastMode: false,
-      permissions: options.manualPermissions ? 'manual' : 'bypass', context: 'model-default' }],
+    members: memberIds.map((memberId) => ({
+      memberId,
+      model: 'claude-opus-4-6',
+      effort: 'medium',
+      fastMode: false,
+      permissions: options.manualPermissions ? 'manual' : 'bypass',
+      context: 'model-default',
+    })),
   };
   const start = await invokeSetup('team.launch.start', 'TEST-explicit-sandbox-setup-launch', {
     launchId: selection.launchId,
@@ -80,7 +101,9 @@ export async function prepareDesktopNativeStop(options: {
     assert.ok(fixture.root, 'exact TEST Runtime store for pending-open observation');
     const deadline = Date.now() + 45_000;
     do {
-      const sessions: Record<string, unknown>[] = await readDesktopNativeStopSessions(fixture.root).catch(error => {
+      const sessions: Record<string, unknown>[] = await readDesktopNativeStopSessions(
+        fixture.root
+      ).catch((error) => {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
         throw error;
       });
@@ -94,15 +117,25 @@ export async function prepareDesktopNativeStop(options: {
         assert.equal(session.sealed, false);
         assert.deepEqual(session.inputs, []);
         const table = processTable();
-        const hosts = table.filter(row => row.pgid === group && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
+        const hosts = table.filter(
+          (row) => row.pgid === group && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`
+        );
         assert.equal(hosts.length, 1);
         const hostPid = hosts[0]!.pid;
-        const nativeChildren = table.filter(row => row.ppid === hostPid && command(row.pid).startsWith(executable));
+        const nativeChildren = table.filter(
+          (row) => row.ppid === hostPid && command(row.pid).startsWith(executable)
+        );
         if (nativeChildren.length) {
           assert.equal(nativeChildren.length, 1);
-          evidence.nativeSetup = { scope: 'Explicit TEST setup returned during actual native open; no input',
-            configuration, status: 'opening', launch: selection, session, nativeChildren,
-            nativeExecutableSha256: await fileDigest(executable) };
+          evidence.nativeSetup = {
+            scope: 'Explicit TEST setup returned during actual native open; no input',
+            configuration,
+            status: 'opening',
+            launch: selection,
+            session,
+            nativeChildren,
+            nativeExecutableSha256: await fileDigest(executable),
+          };
           return { hostPid, nativeChildren };
         }
       }
@@ -120,7 +153,7 @@ export async function prepareDesktopNativeStop(options: {
     ready = object(progress.value);
   }
   assert.equal(ready.status, 'ready');
-  assert.equal(ready.ready, 1);
+  assert.equal(ready.ready, expectedMembers);
   const table = processTable();
   const hosts = table.filter(
     (row) => row.pgid === group && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`
@@ -132,11 +165,12 @@ export async function prepareDesktopNativeStop(options: {
   );
   assert.equal(
     nativeChildren.length,
-    1,
-    'one captured actual Claude SDK child before ordinary Stop'
+    expectedMembers,
+    'exact captured actual Claude SDK actors before ordinary Stop'
   );
   evidence.nativeSetup = {
-    scope: 'Explicit selected model/effort setup via actual app IPC; ordinary launch UI is not qualified',
+    scope:
+      'Explicit selected model/effort setup via actual app IPC; ordinary launch UI is not qualified',
     configuration,
     status: 'ready',
     launch: ready,
@@ -160,19 +194,21 @@ export async function readDesktopNativeStopSessions(
   for (const namespace of namespaces) {
     const selected = join(directory, namespace.name);
     const entries = await readdir(selected, { withFileTypes: true });
-    const files = entries.filter(entry => /^[a-f0-9]{64}\.json$/.test(entry.name));
+    const files = entries.filter((entry) => /^[a-f0-9]{64}\.json$/.test(entry.name));
     assert.ok(entries.length <= 512 && files.length <= 256);
-    const unknown = entries.filter(entry => {
-      if (/^[a-f0-9]{64}\.json$/.test(entry.name) || /^\.tmp\.[a-f0-9-]{36}$/.test(entry.name))
-        return !entry.isFile();
-      // The controller publishes these finite lock sidecars while writing the
-      // atomic session record. They are never interpreted as Runtime sessions.
-      if (/^member\.lock(?:\.candidate-[1-9]\d*-[a-f0-9-]{36})?$/.test(entry.name))
-        return !entry.isFile();
-      if (/^member\.lock-transition-v2(?:\.candidate-[1-9]\d*-[a-f0-9-]{36})?$/.test(entry.name))
-        return !entry.isDirectory();
-      return true;
-    }).map(entry => entry.name);
+    const unknown = entries
+      .filter((entry) => {
+        if (/^[a-f0-9]{64}\.json$/.test(entry.name) || /^\.tmp\.[a-f0-9-]{36}$/.test(entry.name))
+          return !entry.isFile();
+        // The controller publishes these finite lock sidecars while writing the
+        // atomic session record. They are never interpreted as Runtime sessions.
+        if (/^member\.lock(?:\.candidate-[1-9]\d*-[a-f0-9-]{36})?$/.test(entry.name))
+          return !entry.isFile();
+        if (/^member\.lock-transition-v2(?:\.candidate-[1-9]\d*-[a-f0-9-]{36})?$/.test(entry.name))
+          return !entry.isDirectory();
+        return true;
+      })
+      .map((entry) => entry.name);
     assert.deepEqual(unknown, [], 'Unexpected Runtime namespace entries');
     for (const file of files)
       sessions.push(object(JSON.parse(await readFile(join(selected, file.name), 'utf8'))));

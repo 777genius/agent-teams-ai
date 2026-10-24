@@ -1,3 +1,4 @@
+import { runDesktopNativeGroupUiSmoke } from './desktop-native-group-ui-smoke.ts';
 import { prepareNativeChatAttachments } from './desktop-native-chat-attachments-ui.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import assert from 'node:assert/strict';
@@ -35,6 +36,14 @@ export async function runDesktopComposerUiSmoke(
   }
 ): Promise<void> {
   assert.ok(options.nativeStop && options.model);
+  if (process.env.LEGACY_DESKTOP_GROUP_CHATS === '1') {
+    await runDesktopNativeGroupUiSmoke(cdp, {
+      ...options,
+      nativeStop: options.nativeStop,
+      model: options.model,
+    });
+    return;
+  }
   const model = options.model;
   const steps: Record<string, unknown>[] = [];
   const step = (value: Record<string, unknown>) => {
@@ -78,8 +87,10 @@ export async function runDesktopComposerUiSmoke(
       'typed message retained'
     );
     step({ action: 'Input.insertText', turn });
-    const verifyAttachments = turn === 'NATIVE_TEAM_TWO' && process.env.LEGACY_DESKTOP_CHAT_ATTACHMENTS === '1'
-      ? await prepareNativeChatAttachments(cdp, { ...options, step }) : undefined;
+    const verifyAttachments =
+      turn === 'NATIVE_TEAM_TWO' && process.env.LEGACY_DESKTOP_CHAT_ATTACHMENTS === '1'
+        ? await prepareNativeChatAttachments(cdp, { ...options, step })
+        : undefined;
     await ui.click('button.message-composer-send-button', 'ordinary Send once', 'Send');
     await ui.waitRead(
       `document.querySelector('.message-composer-flat-layout textarea')?.value===''`,
@@ -137,16 +148,22 @@ export async function runDesktopComposerUiSmoke(
     if (turn === 'NATIVE_TEAM_TWO') assert.ok(observations.every((row) => row.priorTurn));
     if (verifyAttachments) {
       const refs = record(record(receipt.command).payload).attachments;
-      assert.ok(Array.isArray(refs) && refs.length === 2, 'same original message receipt retains both canonical references');
+      assert.ok(
+        Array.isArray(refs) && refs.length === 2,
+        'same original message receipt retains both canonical references'
+      );
       assert.deepEqual(outbox.attachments, refs);
       const expected = record(options.evidence.nativeChatAttachments).files;
       assert.ok(Array.isArray(expected) && expected.length === 2);
       refs.forEach((value, index) => {
-        const ref = record(value), file = record(expected[index]);
+        const ref = record(value),
+          file = record(expected[index]);
         assert.match(String(ref.artifactId), /^[a-f0-9]{64}$/);
-        assert.equal(ref.digest, file.sha256); assert.equal(ref.byteLength, file.size);
+        assert.equal(ref.digest, file.sha256);
+        assert.equal(ref.byteLength, file.size);
         assert.equal(ref.mimeType, file.mimeType);
-        assert.equal(ref.filePath, undefined); assert.equal(ref.base64Data, undefined);
+        assert.equal(ref.filePath, undefined);
+        assert.equal(ref.base64Data, undefined);
       });
       await verifyAttachments();
     }

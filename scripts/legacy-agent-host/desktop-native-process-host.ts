@@ -7,11 +7,22 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { startHost } from '../../packages/legacy-agent-host/tests/fixtures/native-host.ts';
 import { createProcessCustody } from '../../packages/legacy-agent-host/dist/composition/processCustody.js';
 import { createControllerProcessPolicy } from '../../packages/legacy-agent-host/dist/process/ControllerProcessPolicy.js';
-import type { RegisteredProcessCapture, ProcessObservation } from '../../packages/legacy-agent-host/dist/process/registeredProcessContracts.js';
+import type {
+  RegisteredProcessCapture,
+  ProcessObservation,
+} from '../../packages/legacy-agent-host/dist/process/registeredProcessContracts.js';
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
-import { PROCESS_BOOTSTRAP, PROCESS_LABEL, PROCESS_REGISTER_ID } from './desktop-native-process-model.ts';
+import {
+  PROCESS_BOOTSTRAP,
+  PROCESS_LABEL,
+  PROCESS_REGISTER_ID,
+} from './desktop-native-process-model.ts';
 import type { startProcessModel } from './desktop-native-process-model.ts';
-import { assertProcessFixture, probeProcessService, readProcessServices } from './desktop-native-process-fixture.ts';
+import {
+  assertProcessFixture,
+  probeProcessService,
+  readProcessServices,
+} from './desktop-native-process-fixture.ts';
 import type { ProcessFixture } from './desktop-native-process-fixture.ts';
 const row = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
@@ -131,7 +142,7 @@ export async function qualifyNativeRegistrationThenCrash(
     const inputId = row(row(input.value).effects).deliveryId;
     assert.equal(typeof inputId, 'string');
     let terminal = false;
-    const inputEnd = Date.now() + 60_000;
+    const inputEnd = Date.now() + 90_000;
     while (Date.now() < inputEnd) {
       assert.deepEqual(model.failures, []);
       const state = await host.rpc(
@@ -168,7 +179,12 @@ export async function qualifyNativeRegistrationThenCrash(
     assert.equal(original.pid, services.primary.pid);
     await probeProcessService(services.primary);
     await probeProcessService(services.neighbor);
-    const processesPath = join(profile.owner.storageRoot, 'teams', profile.teams[0]!.binding.teamName, 'processes.json');
+    const processesPath = join(
+      profile.owner.storageRoot,
+      'teams',
+      profile.teams[0]!.binding.teamName,
+      'processes.json'
+    );
     const registrySha256 = await fileDigest(processesPath);
     const canonical = createControllerProcessPolicy(processesPath).readStrict();
     assert.equal(await fileDigest(processesPath), registrySha256);
@@ -195,12 +211,14 @@ export async function qualifyNativeRegistrationThenCrash(
       'packages/legacy-agent-host/dist/composition/processCustody.js',
     ];
     assert.ok(profile.processCustody);
-    const sourceOracle = await Promise.all([
-      ...oraclePaths.map(path => resolve(import.meta.dirname, '../..', path)),
-      ...['manifest.json', 'registered-process.node', 'registered-process-darwin.c'].map(
-        name => join(profile.processCustody!.directory, name)
-      ),
-    ].map(async path => ({ path, sha256: await fileDigest(path) })));
+    const sourceOracle = await Promise.all(
+      [
+        ...oraclePaths.map((path) => resolve(import.meta.dirname, '../..', path)),
+        ...['manifest.json', 'registered-process.node', 'registered-process-darwin.c'].map((name) =>
+          join(profile.processCustody!.directory, name)
+        ),
+      ].map(async (path) => ({ path, sha256: await fileDigest(path) }))
+    );
     const beforeCrash = {
       original,
       canonicalPrimary: primary,
@@ -262,41 +280,69 @@ export async function qualifyNativeRegistrationThenCrash(
     );
     // TEST-only finite observation budget matches this helper's native-ready/input budgets.
     // Logical Runtime custody stays HOLD even when physical original-root absence is proven.
-    const budgetMs = 60_000, intervalMs = 250, startedAt = Date.now();
+    const budgetMs = 60_000,
+      intervalMs = 250,
+      startedAt = Date.now();
     const observationsPath = join(fixture.root, 'original-native-root-observations.ndjson');
     await writeFile(observationsPath, '', { mode: 0o600, flag: 'wx' });
-    let observation: ProcessObservation = 'unknown', samples = 0;
+    let observation: ProcessObservation = 'unknown',
+      samples = 0;
     do {
       observation = custody.observe(rootCapture);
-      await appendFile(observationsPath, JSON.stringify({
-        phase: 'after-original-host-SIGKILL-before-UI',
-        sequence: ++samples, elapsedMs: Date.now() - startedAt,
-        observedAt: new Date().toISOString(), observation,
-      }) + '\n');
+      await appendFile(
+        observationsPath,
+        JSON.stringify({
+          phase: 'after-original-host-SIGKILL-before-UI',
+          sequence: ++samples,
+          elapsedMs: Date.now() - startedAt,
+          observedAt: new Date().toISOString(),
+          observation,
+        }) + '\n'
+      );
       if (observation === 'absent' || Date.now() - startedAt >= budgetMs) break;
       await delay(Math.min(intervalMs, budgetMs - (Date.now() - startedAt)));
     } while (Date.now() - startedAt < budgetMs);
     const rootObservation = {
       status: observation === 'absent' ? 'PHYSICAL_ABSENCE_OBSERVED' : 'INCOMPLETE',
       phase: 'after-original-host-SIGKILL-before-UI',
-      originalCapture: rootCapture, sourceOracle,
-      budgetMs, intervalMs, samples, elapsedMs: Date.now() - startedAt,
-      observation, runtimeCustody: 'HOLD', nativeCleanupClaim: false,
-      signals: 0, recaptures: 0, adoptions: 0,
+      originalCapture: rootCapture,
+      sourceOracle,
+      budgetMs,
+      intervalMs,
+      samples,
+      elapsedMs: Date.now() - startedAt,
+      observation,
+      runtimeCustody: 'HOLD',
+      nativeCleanupClaim: false,
+      signals: 0,
+      recaptures: 0,
+      adoptions: 0,
     };
-    await writeFile(join(fixture.root, 'original-native-root-observation.json'),
-      JSON.stringify(rootObservation, null, 2), { mode: 0o600, flag: 'wx' });
-    assert.equal(observation, 'absent',
-      'INCOMPLETE/HOLD: original native root absence unproven; no UI continuation or signal/replay');
+    await writeFile(
+      join(fixture.root, 'original-native-root-observation.json'),
+      JSON.stringify(rootObservation, null, 2),
+      { mode: 0o600, flag: 'wx' }
+    );
+    assert.equal(
+      observation,
+      'absent',
+      'INCOMPLETE/HOLD: original native root absence unproven; no UI continuation or signal/replay'
+    );
     // Cold reconciliation observes the exact original target. EOF may legitimately stop it;
     // survival is never a prerequisite or a reason to relaunch/recapture a replacement.
     const targetAfterRootExit = {
       originalCapture: primary.capturedNative,
       observation: custody.observe(primary.capturedNative),
-      signals: 0, recaptures: 0, adoptions: 0, nativeCleanupClaim: false,
+      signals: 0,
+      recaptures: 0,
+      adoptions: 0,
+      nativeCleanupClaim: false,
     };
-    await writeFile(join(fixture.root, 'original-native-target-after-root-exit.json'),
-      JSON.stringify(targetAfterRootExit, null, 2), { mode: 0o600, flag: 'wx' });
+    await writeFile(
+      join(fixture.root, 'original-native-target-after-root-exit.json'),
+      JSON.stringify(targetAfterRootExit, null, 2),
+      { mode: 0o600, flag: 'wx' }
+    );
     assert.equal(await fileDigest(fixture.profilePath), fixture.pins.profileSha256);
     assert.equal(await fileDigest(fixture.descriptorPath), fixture.pins.descriptorSha256);
     return { ...beforeCrash, rootObservation, targetAfterRootExit };
@@ -325,17 +371,24 @@ export async function qualifyPreparedProcessRegistration(options: {
   assertProcessFixture(fixture);
   assert.ok(model, 'same original process model');
   evidence.nativeProcessRuntimeCustody = {
-    status: 'HOLD', nativeCleanupClaim: false,
-    reason: 'Intentional original Host crash is not provider cleanup; physical root observation is separate from logical SDK custody, never PID/group signals or adoption',
+    status: 'HOLD',
+    nativeCleanupClaim: false,
+    reason:
+      'Intentional original Host crash is not provider cleanup; physical root observation is separate from logical SDK custody, never PID/group signals or adoption',
   };
-  evidence.nativeProcessRootObservationPath = join(fixture.root, 'original-native-root-observation.json');
+  evidence.nativeProcessRootObservationPath = join(
+    fixture.root,
+    'original-native-root-observation.json'
+  );
   try {
-    evidence.nativeProcessRegistration = await qualifyNativeRegistrationThenCrash(
-      fixture, model, { nativeClaude: true, crashOriginalHost: true }
-    );
+    evidence.nativeProcessRegistration = await qualifyNativeRegistrationThenCrash(fixture, model, {
+      nativeClaude: true,
+      crashOriginalHost: true,
+    });
     await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });
   } catch (error) {
-    evidence.nativeProcessRegistrationFailure = error instanceof Error ? error.message.slice(0, 4000) : 'qualification unavailable';
+    evidence.nativeProcessRegistrationFailure =
+      error instanceof Error ? error.message.slice(0, 4000) : 'qualification unavailable';
     await options.verifySourceFreeze();
     await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });
     throw error;

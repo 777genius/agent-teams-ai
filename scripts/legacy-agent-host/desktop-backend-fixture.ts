@@ -1,3 +1,7 @@
+import {
+  GROUP_ALICE_CONTEXT,
+  GROUP_BOB_CONTEXT,
+} from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/group-chat.ts';
 import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, realpath, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -32,6 +36,7 @@ export async function prepareDesktopBackendFixture(
     diagnosticHostEntry?: { path: string; sha256: string };
     approvalUi?: boolean;
     nativeChatAttachments?: boolean;
+    nativeGroupChats?: boolean;
     seedUiTask?: boolean;
     seedUiPreferences?: boolean;
     seedCodexApiKey?: boolean;
@@ -45,14 +50,21 @@ export async function prepareDesktopBackendFixture(
     nativeClaude?: { path: string; sha256: string; modelUrl?: string };
   }
 ) {
-  const node = options.candidateRuntime?.nodeExecutable ?? await realpath(
-    join(repo, 'resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node')
-  );
-  const hostEntry = options.candidateRuntime?.hostEntry ?? await realpath(options.diagnosticHostEntry?.path ?? join(repo, 'packages/legacy-agent-host/dist/cli.js'));
-  if (options.diagnosticHostEntry && (options.candidateRuntime ||
-    !options.diagnosticHostEntry.path.startsWith('/private/tmp/TEST-') ||
-    hostEntry !== options.diagnosticHostEntry.path ||
-    await fileDigest(hostEntry) !== options.diagnosticHostEntry.sha256))
+  const node =
+    options.candidateRuntime?.nodeExecutable ??
+    (await realpath(join(repo, 'resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node')));
+  const hostEntry =
+    options.candidateRuntime?.hostEntry ??
+    (await realpath(
+      options.diagnosticHostEntry?.path ?? join(repo, 'packages/legacy-agent-host/dist/cli.js')
+    ));
+  if (
+    options.diagnosticHostEntry &&
+    (options.candidateRuntime ||
+      !options.diagnosticHostEntry.path.startsWith('/private/tmp/TEST-') ||
+      hostEntry !== options.diagnosticHostEntry.path ||
+      (await fileDigest(hostEntry)) !== options.diagnosticHostEntry.sha256)
+  )
     throw new Error('Invalid TEST diagnostic Host entry');
   const nodeSha256 = await fileDigest(node);
   const hostEntrySha256 = await fileDigest(hostEntry);
@@ -91,14 +103,37 @@ export async function prepareDesktopBackendFixture(
     );
   // The outer and nested pnpm invocations use the same selected Corepack bytes
   // and private HOME/cache. PATH must never select an unrelated global shim.
-  const pnpmStubSource = options.candidateRuntime ? "#!/bin/sh\nprintf 'TEST refuses package-manager execution in packed app\\n' >&2\nexit 78\n" : `#!/bin/sh\nexec ${quoteShellArgument(node)} ${quoteShellArgument(pnpmEntry)} "$@"\n`;
+  const pnpmStubSource = options.candidateRuntime
+    ? "#!/bin/sh\nprintf 'TEST refuses package-manager execution in packed app\\n' >&2\nexit 78\n"
+    : `#!/bin/sh\nexec ${quoteShellArgument(node)} ${quoteShellArgument(pnpmEntry)} "$@"\n`;
   await writeFile(join(root, 'bin/pnpm'), pnpmStubSource, { mode: 0o700 });
   if (options.approvalUi) {
-    for (const [name, content] of [['approval-preview.txt', 'TEST_ORIGINAL_PRIVATE_BYTES\n'], ['approval-auto.txt', 'TEST_AUTO_ORIGINAL\n'], ['approval-auto-next.txt', 'TEST_AUTO_NEXT_ORIGINAL\n']])
+    for (const [name, content] of [
+      ['approval-preview.txt', 'TEST_ORIGINAL_PRIVATE_BYTES\n'],
+      ['approval-auto.txt', 'TEST_AUTO_ORIGINAL\n'],
+      ['approval-auto-next.txt', 'TEST_AUTO_NEXT_ORIGINAL\n'],
+    ])
       await writeFile(join(root, 'workspace', name!), content!, { mode: 0o600, flag: 'wx' });
   }
   if (options.candidateRuntime)
-    await writeFile(join(root, 'bin/node'), '#!/bin/sh\nprintf \'TEST refuses Node resolution from PATH\\n\' >&2\nexit 78\n', { mode: 0o700, flag: 'wx' });
+    await writeFile(
+      join(root, 'bin/node'),
+      "#!/bin/sh\nprintf 'TEST refuses Node resolution from PATH\\n' >&2\nexit 78\n",
+      { mode: 0o700, flag: 'wx' }
+    );
+  const assertNativeGroupFixture = () => {
+    if (!options.nativeGroupChats) return;
+    if (
+      !options.nativeClaude?.modelUrl ||
+      options.nativeChatAttachments ||
+      options.launchDialog ||
+      options.creation
+    )
+      throw new Error(
+        'Native group proof requires its own captured localhost conversation fixture'
+      );
+  };
+  assertNativeGroupFixture();
   const namespace = basename(root);
   const owner = {
     ownerId: `TEST-desktop-owner-${namespace}`,
@@ -106,7 +141,9 @@ export async function prepareDesktopBackendFixture(
     storageRoot: join(root, 'hoststore'),
     profileId: `TEST-desktop-profile-${namespace}`,
     protocolVersion: 1 as const,
-    buildId: options.diagnosticHostEntry ? 'TEST-desktop-diagnostic-host' : 'TEST-desktop-real-host',
+    buildId: options.diagnosticHostEntry
+      ? 'TEST-desktop-diagnostic-host'
+      : 'TEST-desktop-real-host',
     nodeSha256,
     hostEntrySha256,
   };
@@ -120,7 +157,9 @@ export async function prepareDesktopBackendFixture(
   };
   const profile: TeamHostProfile = {
     schemaVersion: 1,
-    ...(options.candidateRuntime ? { processCustody: options.candidateRuntime.processCustody } : {}),
+    ...(options.candidateRuntime
+      ? { processCustody: options.candidateRuntime.processCustody }
+      : {}),
     owner,
     principalId: 'TEST-human',
     ...(options.creation ? { creation: { contextIds: ['local'] } } : {}),
@@ -132,7 +171,13 @@ export async function prepareDesktopBackendFixture(
           teamId: scope.teamId,
           teamName: 'test-desktop-backend',
         },
-        members: [{ memberId: 'alice-id', name: 'alice', role: options.nativeChatAttachments ? 'lead' : 'member' }],
+        members: [
+          {
+            memberId: 'alice-id',
+            name: 'alice',
+            role: options.nativeChatAttachments || options.nativeGroupChats ? 'lead' : 'member',
+          },
+        ],
         grants: [
           {
             principalId: 'TEST-human',
@@ -182,9 +227,15 @@ export async function prepareDesktopBackendFixture(
     if (options.launchDialog) {
       team.members[0]!.role = 'lead';
       team.savedSettings = {
-        cwd: join(root, 'workspace'), providerId: 'anthropic', model: 'claude-sonnet-4-6',
-        effort: 'low', fastMode: 'off', skipPermissions: true, limitContext: true,
-        syncModelsWithLead: true, prompt: '',
+        cwd: join(root, 'workspace'),
+        providerId: 'anthropic',
+        model: 'claude-sonnet-4-6',
+        effort: 'low',
+        fastMode: 'off',
+        skipPermissions: true,
+        limitContext: true,
+        syncModelsWithLead: true,
+        prompt: '',
       };
     }
     team.members[0]!.delivery = {
@@ -227,10 +278,27 @@ export async function prepareDesktopBackendFixture(
             DISABLE_ERROR_REPORTING: '1',
             NO_COLOR: '1',
           },
-          nativeTools: options.nativeClaude.modelUrl ? (options.approvalUi ? ['Read', 'Write', 'Bash', 'AskUserQuestion'] : options.nativeReviewUi ? ['Read', 'Edit', 'Write', 'Bash'] : ['Bash']) : [],
-          autoAllowedTools: options.approvalUi ? [] : options.nativeClaude.modelUrl ? (options.nativeReviewUi ? ['Read', 'Edit', 'Write', 'Bash'] : ['Bash']) : [],
+          nativeTools: options.nativeClaude.modelUrl
+            ? options.approvalUi
+              ? ['Read', 'Write', 'Bash', 'AskUserQuestion']
+              : options.nativeReviewUi
+                ? ['Read', 'Edit', 'Write', 'Bash']
+                : ['Bash']
+            : [],
+          autoAllowedTools: options.approvalUi
+            ? []
+            : options.nativeClaude.modelUrl
+              ? options.nativeReviewUi
+                ? ['Read', 'Edit', 'Write', 'Bash']
+                : ['Bash']
+              : [],
           ...(options.nativeClaude.modelUrl
-            ? { nativeOptions: { ...(options.nativeReviewUi ? { settingSources: ['project'] } : {}), projectInstructions: { append: CONTEXT_MARKER } } }
+            ? {
+                nativeOptions: {
+                  ...(options.nativeReviewUi ? { settingSources: ['project'] } : {}),
+                  projectInstructions: { append: CONTEXT_MARKER },
+                },
+              }
             : {}),
           limits: {
             queuedInputs: 2,
@@ -243,16 +311,74 @@ export async function prepareDesktopBackendFixture(
         },
       ],
     };
+    if (options.nativeGroupChats) {
+      assertNativeGroupFixture();
+      const alice = profile.runtime.members[0]!;
+      if (alice.provider !== 'claude')
+        throw new Error('Native group setup must retain actual captured Claude actors');
+      const bob = structuredClone(alice);
+      bob.memberId = 'bob-id';
+      bob.principalId = 'bob-session';
+      bob.sessionId = 'TEST-native-group-bob';
+      bob.configRevision = 'TEST-native-group-bob-config';
+      for (const directory of [
+        'native-claude-bob',
+        'native-claude-bob/home',
+        'native-claude-bob/config',
+        'native-claude-bob/tmp',
+      ])
+        await mkdir(join(root, directory), { mode: 0o700 });
+      bob.environment = {
+        ...bob.environment,
+        HOME: join(root, 'native-claude-bob/home'),
+        CLAUDE_CONFIG_DIR: join(root, 'native-claude-bob/config'),
+        TMPDIR: join(root, 'native-claude-bob/tmp'),
+      };
+      bob.nativeOptions = {
+        ...bob.nativeOptions,
+        projectInstructions: { append: GROUP_BOB_CONTEXT },
+      };
+      alice.nativeOptions = {
+        ...alice.nativeOptions,
+        projectInstructions: { append: CONTEXT_MARKER + '\n' + GROUP_ALICE_CONTEXT },
+      };
+      profile.runtime.members.push(bob);
+      team.members.push({
+        memberId: 'bob-id',
+        name: 'bob',
+        role: 'member',
+        delivery: {
+          ...team.binding,
+          runId: scope.runId,
+          memberId: 'bob-id',
+          generation: '1',
+        },
+      });
+      team.grants.push({
+        principalId: 'bob-session',
+        memberName: 'bob',
+        permissions: ['read', 'task.write', 'message.write'],
+      });
+    }
     if (options.launchDialog) {
       const member = profile.runtime.members[0]!;
       if (options.creation) profile.runtime.providerTemplates = [structuredClone(member)];
-      profile.management = [{
-        provider: 'claude', sdkRevision: '0.3.305', profileId: 'TEST-claude-management',
-        accountBinding: member.accountBinding, configRevision: 'TEST-claude-management-config',
-        configNamespace: 'custom-directory',
-        cwd: member.cwd, environment: member.environment, executable: member.executable,
-        settingSources: [], timeoutMs: 15000, modelProbeTimeoutMs: 30000,
-      }];
+      profile.management = [
+        {
+          provider: 'claude',
+          sdkRevision: '0.3.305',
+          profileId: 'TEST-claude-management',
+          accountBinding: member.accountBinding,
+          configRevision: 'TEST-claude-management-config',
+          configNamespace: 'custom-directory',
+          cwd: member.cwd,
+          environment: member.environment,
+          executable: member.executable,
+          settingSources: [],
+          timeoutMs: 15000,
+          modelProbeTimeoutMs: 30000,
+        },
+      ];
     }
   }
   if (options.nativeCodex) {
@@ -344,9 +470,17 @@ export async function prepareDesktopBackendFixture(
   const descriptor = {
     schemaVersion: 1,
     defaultOwner: ownerRef,
-    ...(options.creation ? { creation: { owner: ownerRef, contextIds: ['local'],
-      ...(options.stoppedImportUi ? { importAuthority: { principalId: profile.principalId } } : {}),
-    } } : {}),
+    ...(options.creation
+      ? {
+          creation: {
+            owner: ownerRef,
+            contextIds: ['local'],
+            ...(options.stoppedImportUi
+              ? { importAuthority: { principalId: profile.principalId } }
+              : {}),
+          },
+        }
+      : {}),
     owners: [
       {
         ...ownerRef,
@@ -386,7 +520,9 @@ export async function prepareDesktopBackendFixture(
               contextId: 'local',
               projectPath: null,
               profileId: options.launchDialog ? 'TEST-claude-management' : 'TEST-codex-metadata',
-              configRevision: options.launchDialog ? 'TEST-claude-management-config' : 'TEST-codex-config',
+              configRevision: options.launchDialog
+                ? 'TEST-claude-management-config'
+                : 'TEST-codex-config',
             },
           ],
         }
@@ -397,7 +533,10 @@ export async function prepareDesktopBackendFixture(
         owner: ownerRef,
         contextId: 'local',
         label: 'TEST private backend',
-        members: [{ memberId: 'alice-id', label: 'alice' }],
+        members: [
+          { memberId: 'alice-id', label: 'alice' },
+          ...(options.nativeGroupChats ? [{ memberId: 'bob-id', label: 'bob' }] : []),
+        ],
         scope,
       },
     ],

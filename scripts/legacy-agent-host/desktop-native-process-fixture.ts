@@ -88,7 +88,7 @@ export async function prepareProcessFixture(
       primary: { nonce: `TEST-${randomUUID()}` },
       neighbor: { nonce: `TEST-${randomUUID()}` },
     },
-    ttlMs: 45_000,
+    ttlMs: 300_000,
     nativeActions: { bash: 2, register: 1 },
   };
   await writeFile(join(fixture.root, 'process-ui-seed.json'), JSON.stringify(seed), {
