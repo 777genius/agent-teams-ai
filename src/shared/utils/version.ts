@@ -55,6 +55,13 @@ export function isAgentTeamsOpenCodeVersionSupported(version: string | null | un
   return isLegacyOpenCodeVersionSupported(version);
 }
 
+/** A recognized native V2 delivery: usable for reads, not qualified for team launch. */
+export function isRecognizedOpenCodeV2Version(version: string | null | undefined): boolean {
+  if (!version) return false;
+  const classification = classifyNativeVersion(version);
+  return classification.kind === 'recognized' && classification.generation === 'v2';
+}
+
 export function getUnsupportedAgentTeamsOpenCodeVersionMessage(
   version: string | null | undefined
 ): string {
