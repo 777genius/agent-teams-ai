@@ -236,6 +236,10 @@ export default defineConfig({
       }
     },
     build: {
+      // Sandboxed preload can require Electron only; inline the portable group DTO/constants.
+      externalizeDeps: {
+        exclude: ['@agent-teams/legacy-agent-host']
+      },
       outDir: 'dist-electron/preload',
       rollupOptions: {
         input: {
