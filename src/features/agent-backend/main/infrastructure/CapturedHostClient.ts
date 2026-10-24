@@ -4,7 +4,6 @@ import { TextDecoder } from 'node:util';
 
 import {
   DEFAULT_HOST_LIMITS,
-  TEAM_HOST_DISPOSE_TIMEOUT_MS,
   HOST_GAP_METHOD,
   HOST_PROTOCOL_VERSION,
   type HostHandshake,
@@ -15,6 +14,7 @@ import {
   resolveHostProfileLimits,
   type RpcNotification,
   type RpcRequest,
+  TEAM_HOST_DISPOSE_TIMEOUT_MS,
 } from '@agent-teams/legacy-agent-host/contracts';
 import { createLogger } from '@shared/utils/logger';
 

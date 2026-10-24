@@ -1397,7 +1397,7 @@ async function runShutdownStep(
   let timeout: ReturnType<typeof setTimeout> | null = null;
   logger.diagnostic('Shutdown step wait started', { label });
   try {
-    if (timeoutMs === null) return await action(); // Caller already supplies a finite drain.
+    if (timeoutMs === null) return void (await action()); // Caller already supplies a finite drain.
     await Promise.race([
       Promise.resolve().then(action),
       new Promise<void>((resolve) => {
