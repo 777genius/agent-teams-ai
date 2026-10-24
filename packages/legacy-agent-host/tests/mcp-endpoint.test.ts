@@ -231,7 +231,10 @@ test('HTTP catalog retains optional original ports, bound receivers and current 
       assert.equal(input.forceNudge, true);
       return record('status');
     },
-    async report(_commandId: string, input: Parameters<NonNullable<TeamMcpConnection['workSync']>['report']>[1]) {
+    async report(
+      _commandId: string,
+      input: Parameters<NonNullable<TeamMcpConnection['workSync']>['report']>[1]
+    ) {
       assert.equal(this.marker, 'original-sync');
       assert.equal(input.state, 'caught_up');
       return record('report');
@@ -246,7 +249,11 @@ test('HTTP catalog retains optional original ports, bound receivers and current 
   };
   const actions = {
     marker: 'original-actions',
-    async invoke(operation: 'prepare' | 'execute' | 'read' | 'lookup' | 'retry', _commandId: string, _raw: unknown) {
+    async invoke(
+      operation: 'prepare' | 'execute' | 'read' | 'lookup' | 'retry',
+      _commandId: string,
+      _raw: unknown
+    ) {
       assert.equal(this.marker, 'original-actions');
       return record(`action-${operation}`);
     },
@@ -261,21 +268,66 @@ test('HTTP catalog retains optional original ports, bound receivers and current 
       return 'original briefing';
     },
   };
-  const connection = { ...f.alice, readQueries: reads, workSync, nativeMemberCreation: creation, nativeMemberActions: actions };
+  const connection = {
+    ...f.alice,
+    readQueries: reads,
+    workSync,
+    nativeMemberCreation: creation,
+    nativeMemberActions: actions,
+  };
   const client = await connect(t, await f.endpoint('alice-session', f.delivery, connection));
-  const replaced = async () => { throw new Error('later caller mutation must not replace captured methods'); };
+  const replaced = async () => {
+    throw new Error('later caller mutation must not replace captured methods');
+  };
   workSync.status = replaced;
   workSync.report = replaced;
   creation.invoke = replaced;
   actions.invoke = replaced;
   reads.memberBriefing = replaced;
   const listed = new Set((await client.listTools()).tools.map((tool) => tool.name));
-  for (const name of ['team_member_create', 'team_member_create_lookup', 'team_member_action_prepare', 'team_member_action_execute', 'team_member_actions_read', 'team_member_action_lookup', 'team_member_retry', 'member_work_sync_status', 'member_work_sync_report', 'member_briefing']) assert.ok(listed.has(name), name);
+  for (const name of [
+    'team_member_create',
+    'team_member_create_lookup',
+    'team_member_action_prepare',
+    'team_member_action_execute',
+    'team_member_actions_read',
+    'team_member_action_lookup',
+    'team_member_retry',
+    'member_work_sync_status',
+    'member_work_sync_report',
+    'member_briefing',
+  ])
+    assert.ok(listed.has(name), name);
   const calls: [string, Record<string, unknown>, unknown][] = [
-    ['team_member_create_lookup', { commandId: 'TEST-create-lookup', expectedRosterRevision: 'a'.repeat(64), member: { name: 'new-member', providerId: 'anthropic' } }, { original: 'creation-lookup' }],
-    ['team_member_actions_read', { commandId: 'TEST-actions-read', launchId: 'TEST-run', memberId: 'alice-id' }, { original: 'action-read' }],
-    ['member_work_sync_status', { commandId: 'TEST-status', forceNudge: true }, { original: 'status' }],
-    ['member_work_sync_report', { commandId: 'TEST-report', state: 'caught_up', agendaFingerprint: 'TEST-agenda', reportToken: 'TEST-token' }, { original: 'report' }],
+    [
+      'team_member_create_lookup',
+      {
+        commandId: 'TEST-create-lookup',
+        expectedRosterRevision: 'a'.repeat(64),
+        member: { name: 'new-member', providerId: 'anthropic' },
+      },
+      { original: 'creation-lookup' },
+    ],
+    [
+      'team_member_actions_read',
+      { commandId: 'TEST-actions-read', launchId: 'TEST-run', memberId: 'alice-id' },
+      { original: 'action-read' },
+    ],
+    [
+      'member_work_sync_status',
+      { commandId: 'TEST-status', forceNudge: true },
+      { original: 'status' },
+    ],
+    [
+      'member_work_sync_report',
+      {
+        commandId: 'TEST-report',
+        state: 'caught_up',
+        agendaFingerprint: 'TEST-agenda',
+        reportToken: 'TEST-token',
+      },
+      { original: 'report' },
+    ],
     ['member_briefing', {}, 'original briefing'],
   ];
   for (const [name, args, expected] of calls) {
@@ -406,7 +458,7 @@ test('message_send persists authenticated sender and exact IDs once; native deli
   assert.equal(f.alice.pendingDeliveries().length, 1, 'human inbox does not create a native input');
 });
 
-test('strict schemas reject authority overrides, missing command IDs and unsupported groups before effects', async (t) => {
+test('strict schemas reject authority overrides, missing command IDs and unsupported aliases before effects', async (t) => {
   const f = fixture(t);
   const client = await connect(t, await f.endpoint());
   for (const key of [
@@ -443,14 +495,27 @@ test('strict schemas reject authority overrides, missing command IDs and unsuppo
   );
   assert.equal(f.human.listTasks().length, 0);
   assert.deepEqual(f.commands(), []);
-  assert.equal(Object.keys(TEAM_MCP_CATALOG_DISPOSITION).length, 10);
+  assert.equal(Object.keys(TEAM_MCP_CATALOG_DISPOSITION).length, 11);
+  assert.equal(
+    TEAM_MCP_CATALOG_DISPOSITION.groupChat,
+    'bound-catalog-create-send-reaction-original-lookup'
+  );
   assert.equal(TEAM_MCP_CATALOG_DISPOSITION.lead, 'canonical-bound-operational-briefing');
   assert.equal(TEAM_MCP_CATALOG_DISPOSITION.runtime, 'pending-private-runtime-callback');
   assert.equal(TEAM_MCP_CATALOG_DISPOSITION.workSync, 'pending-host-handler');
   assert.equal(TEAM_MCP_CATALOG_DISPOSITION.process, 'register-list-metadata-stop-unregister');
-  assert.equal(TEAM_MCP_CATALOG_DISPOSITION.crossTeam, 'captured-host-source-first-send-list-outbox-lookup');
-  assert.equal(TEAM_MCP_CATALOG_DISPOSITION.team, 'partial-bound-read-create-list-pending-owner-ports');
-  assert.equal(TEAM_MCP_CATALOG_DISPOSITION.kanban, 'partial-bound-state-reviewers-repair-mutations-pending');
+  assert.equal(
+    TEAM_MCP_CATALOG_DISPOSITION.crossTeam,
+    'captured-host-source-first-send-list-outbox-lookup'
+  );
+  assert.equal(
+    TEAM_MCP_CATALOG_DISPOSITION.team,
+    'partial-bound-read-create-list-pending-owner-ports'
+  );
+  assert.equal(
+    TEAM_MCP_CATALOG_DISPOSITION.kanban,
+    'partial-bound-state-reviewers-repair-mutations-pending'
+  );
 });
 
 test('actual MCP HTTP authentication rejects wrong/missing bearer and cross-endpoint capabilities', async (t) => {
