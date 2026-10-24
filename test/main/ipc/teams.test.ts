@@ -173,6 +173,8 @@ vi.mock('@main/services/team/AutoResumeService', async (importOriginal) => {
   };
 });
 
+import * as desktopAgentBackend from '@main/ipc/agentBackend';
+
 import {
   initializeTeamHandlers,
   registerTeamHandlers,
@@ -1031,6 +1033,33 @@ describe('ipc teams handlers', () => {
     expect(runtimeCalls).toEqual(['stop:my-team']);
   });
 
+  it('does not let Skip preflight or draft-only create send a selected Host intent to legacy writers', async () => {
+    const selected = vi
+      .spyOn(desktopAgentBackend, 'isDesktopAgentBackendSelected')
+      .mockReturnValue(true);
+    try {
+      for (const channel of [TEAM_CREATE, TEAM_CREATE_CONFIG]) {
+        expect(
+          await handlers.get(channel)!({ sender: {} } as never, {
+            teamName: 'test-unbound-create',
+            cwd: '/TEST/not-touched',
+            members: [],
+          })
+        ).toEqual({
+          success: false,
+          error:
+            channel === TEAM_CREATE
+              ? 'Captured Host creation unavailable. Refresh teams or retry the unchanged form.'
+              : 'Captured Host configuration unavailable. Refresh teams or retry the unchanged form.',
+        });
+      }
+      expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
+      expect(service.createTeamConfig).not.toHaveBeenCalled();
+    } finally {
+      selected.mockRestore();
+    }
+  });
+
   it('forwards selected model checks with effort to prepareProvisioning', async () => {
     const handler = handlers.get(TEAM_PREPARE_PROVISIONING)!;
     const result = (await handler(
@@ -1801,7 +1830,7 @@ describe('ipc teams handlers', () => {
           id: 'video-1',
           filename: 'clip.mp4',
           mimeType: 'video/mp4',
-          size: 8 * 1024 * 1024 + 1,
+          size: 5, // Decodes to four bytes, while the declared size remains within the video cap.
           data: Buffer.from('test').toString('base64'),
         },
       ],

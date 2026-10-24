@@ -145,6 +145,7 @@ export type CliProviderReasoningEffort =
   | 'ultra';
 
 export type CliProviderModelCatalogSource =
+  | 'claude-sdk'
   | 'anthropic-models-api'
   | 'anthropic-compatible-api'
   | 'app-server'
@@ -280,6 +281,10 @@ export type CliProviderStatusCheckErrorCode =
   | 'project_missing';
 
 export interface CliProviderStatus {
+  /** Finite app routing capability, never an account/config selector or launch proof. */
+  nativeAuthManagement?: 'claude';
+  /** Opaque display provenance only. Never an account/config selector or launch authority. */
+  catalogScope?: string;
   providerId: CliProviderId;
   displayName: string;
   supported: boolean;

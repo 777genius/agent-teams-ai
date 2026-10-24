@@ -1,3 +1,1 @@
-export function normalizeMemberKey(memberName: unknown): string {
-  return typeof memberName === 'string' ? memberName.trim().toLowerCase() : '';
-}
+export * from '@agent-teams/legacy-agent-host/work-sync/storage/memberWorkSyncStoreIdentity';

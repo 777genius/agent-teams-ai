@@ -1,5 +1,15 @@
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
+import { filterMemberSettingsRelaunchInputs } from '@features/team-provisioning/renderer';
+import {
+  createMemberDraftsFromInputs,
+  filterEditableMemberInputs,
+  normalizeMemberDraftForProviderMode,
+} from '@renderer/components/team/members/MembersEditorSection';
 import { normalizeCreateLaunchProviderForUi } from '@renderer/utils/geminiUiFreeze';
-import { getDefaultProviderBackendId } from '@renderer/utils/providerBackendIdentity';
+import {
+  getDefaultProviderBackendId,
+  resolveUiOwnedProviderBackendId,
+} from '@renderer/utils/providerBackendIdentity';
 import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvailability';
 import { extractProviderScopedBaseModel } from '@renderer/utils/teamModelContext';
 import { isLeadMember } from '@shared/utils/leadDetection';
@@ -7,7 +17,30 @@ import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { resolveTeamRuntimeSelection } from '@shared/utils/teamRuntimeSelection';
 
-import type { ResolvedTeamMember, TeamCreateRequest, TeamProviderId } from '@shared/types';
+import {
+  buildWorktreePathByMemberName,
+  deriveTeammateWorktreeDefault,
+} from './launchTeamDialogHelpers';
+
+import type {
+  CliProviderStatus,
+  ResolvedTeamMember,
+  TeamCreateRequest,
+  TeamProviderId,
+} from '@shared/types';
+
+/** Prefer current runtime authority; reuse configured backend identity only as a fallback. */
+export function resolveLaunchProviderBackendId(
+  providerId: TeamProviderId,
+  status: CliProviderStatus | undefined,
+  configuredBackendId: string | null | undefined
+) {
+  return (
+    resolveUiOwnedProviderBackendId(providerId, status) ??
+    migrateProviderBackendId(providerId, configuredBackendId) ??
+    undefined
+  );
+}
 
 interface PreviousLaunchParamsLike {
   providerId?: TeamProviderId;
@@ -47,6 +80,15 @@ interface LaunchDialogPrefillResult {
  */
 export function normalizeSavedBackendId(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+/** A captured owner's configured request is authoritative even for omitted overrides. */
+export function isHostSavedRequest(value: TeamCreateRequest | null): boolean {
+  return (
+    !!value &&
+    isHostTeamSelectionKey(value.teamName) &&
+    /^[a-f0-9]{64}$/.test(value.savedSettingsFingerprint ?? '')
+  );
 }
 
 function normalizeModelCandidate(
@@ -91,6 +133,29 @@ export function resolveLaunchDialogPrefill({
       effort: '',
       fastMode,
       limitContext: false,
+    };
+  }
+  if (savedRequest && isHostSavedRequest(savedRequest)) {
+    const providerId = normalizeCreateLaunchProviderForUi(
+      savedRequest.providerId ?? 'anthropic',
+      multimodelEnabled
+    );
+    return {
+      providerId,
+      providerBackendId:
+        migrateProviderBackendId(
+          providerId,
+          normalizeSavedBackendId(savedRequest.providerBackendId)
+        ) ??
+        getDefaultProviderBackendId(providerId) ??
+        undefined,
+      model: normalizeExplicitTeamModelForUi(
+        providerId,
+        normalizeModelCandidate(savedRequest.model, providerId)
+      ),
+      effort: savedRequest.effort ?? '',
+      fastMode: savedRequest.fastMode ?? 'inherit',
+      limitContext: savedRequest.limitContext ?? false,
     };
   }
   const currentLead = members.find((member) => isLeadMember(member));
@@ -153,5 +218,40 @@ export function resolveLaunchDialogPrefill({
     effort,
     fastMode,
     limitContext,
+  };
+}
+
+/** Existing roster presentation and inherited-toggle defaults, separate from source query lifetime. */
+export function resolveLaunchDialogRoster(options: {
+  members: readonly ResolvedTeamMember[];
+  memberSettingsDraft: boolean;
+  savedMembers?: TeamCreateRequest['members'];
+  savedSyncModelsWithLead?: boolean;
+  multimodelEnabled: boolean;
+}) {
+  const { members, memberSettingsDraft, savedMembers, savedSyncModelsWithLead, multimodelEnabled } =
+    options;
+  const source = members.length > 0 ? members : (savedMembers ?? []);
+  const inputs = memberSettingsDraft
+    ? filterMemberSettingsRelaunchInputs(source)
+    : filterEditableMemberInputs(source);
+  return {
+    inputs,
+    drafts: createMemberDraftsFromInputs(inputs).map((member) =>
+      normalizeMemberDraftForProviderMode(member, multimodelEnabled)
+    ),
+    worktreePaths: buildWorktreePathByMemberName(inputs),
+    worktreeDefault: deriveTeammateWorktreeDefault(inputs),
+    syncModelsWithLead:
+      !memberSettingsDraft &&
+      savedSyncModelsWithLead !== false &&
+      !inputs.some(
+        (member) =>
+          member.providerId ||
+          member.providerBackendId ||
+          member.model ||
+          member.effort ||
+          ('fastMode' in member && member.fastMode)
+      ),
   };
 }

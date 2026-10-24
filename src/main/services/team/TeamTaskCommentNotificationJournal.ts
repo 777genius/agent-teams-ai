@@ -1,3 +1,4 @@
+import { unknownStoppedImportCommentFacts } from './stopped-import/commentFacts';
 import { JsonTaskCommentNotificationJournalStore } from './JsonTaskCommentNotificationJournalStore';
 
 import type {
@@ -28,6 +29,10 @@ export class TeamTaskCommentNotificationJournal {
   /** Swaps the backend; must be called before first use (composition only). */
   setStore(store: TaskCommentNotificationJournalStore): void {
     this.store = store;
+  }
+
+  async inspectStoppedImport(teamName: string) {
+    return this.store.inspectStoppedImport?.(teamName) ?? unknownStoppedImportCommentFacts();
   }
 
   async exists(teamName: string): Promise<boolean> {

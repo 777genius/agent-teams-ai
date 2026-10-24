@@ -23,6 +23,7 @@ import {
 } from '@features/workspace-trust/main';
 import { createLogger } from '@shared/utils/logger';
 
+import { registerHttpAgentBackend } from './agentBackend';
 import { registerConfigRoutes } from './config';
 import { registerEventRoutes } from './events';
 import { registerNotificationRoutes } from './notifications';
@@ -49,6 +50,7 @@ import type {
   TeamHttpDataApi,
   TeamHttpHandlerApis,
 } from '../services/team/contracts/TeamProvisioningApis';
+import type { HttpAgentBackendScope } from './agentBackend';
 import type { DesktopExternalAgentConnection } from '@features/external-agent-connection/main';
 import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
 import type { TeamPromptManagement } from '@features/team-prompt-management/main';
@@ -57,6 +59,7 @@ import type { FastifyInstance } from 'fastify';
 const logger = createLogger('HTTP:routes');
 
 export interface HttpServices {
+  agentBackend?: HttpAgentBackendScope;
   projectScanner: ProjectScanner;
   sessionParser: SessionParser;
   subagentResolver: SubagentResolver;
@@ -83,6 +86,7 @@ export function registerHttpRoutes(
   services: HttpServices,
   sshModeSwitchCallback: (mode: 'local' | 'ssh') => Promise<void>
 ): void {
+  if (services.agentBackend) registerHttpAgentBackend(app, services.agentBackend);
   services.externalAgentConnection?.registerHttp(app);
   if (services.teamGroupChatsFeature)
     registerTeamGroupChatsHttp(app, services.teamGroupChatsFeature);

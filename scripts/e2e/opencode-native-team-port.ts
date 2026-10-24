@@ -1,4 +1,5 @@
 import type { ElectronAPI } from '@shared/types/api';
+import type { BoardTaskLogStreamResponse } from '@shared/types/teamBoardTask';
 import type { OpenCodeStopHandshakeFailureFacts } from '@shared/types';
 import type { OpenCodeStopCausalFailure, TeamCreateRequest, TeamProvisioningProgress } from '@shared/types/team';
 
@@ -8,7 +9,7 @@ export type NativeCausalFailure = Omit<OpenCodeStopCausalFailure, 'handshakeFail
   bridgeFailure?: { kind: string; sdkCode: string; nativeOperation?: string; nativeErrno?: number; nativeStage?: string };
 };
 
-type NativeCommandExecution = Extract<Awaited<ReturnType<ElectronAPI['teams']['getTaskLogStream']>>['segments'][number]['chunks'][number], { chunkType: 'ai' }>['toolExecutions'][number];
+type NativeCommandExecution = Extract<BoardTaskLogStreamResponse['segments'][number]['chunks'][number], { chunkType: 'ai' }>['toolExecutions'][number];
 export type NativeCommandExpectation = {
   session: string; program: string; marker: string; model: string; comment?: string;
 };
@@ -105,9 +106,15 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
   // Failure diagnostics reuse only a completed gate read for this exact task.
   // They never start an extra long-lived transcript request before Stop.
   const completedTaskLogs = new Map<string, {
-    stream: Awaited<ReturnType<ElectronAPI['teams']['getTaskLogStream']>>;
+    stream: BoardTaskLogStreamResponse;
     completedAt: number;
   }>();
+  const readNativeTaskLogStream = async (id: string): Promise<BoardTaskLogStreamResponse> => {
+    const stream = await api.teams.getTaskLogStream(teamName, id);
+    if ('kind' in stream || !('segments' in stream) || !Array.isArray(stream.segments))
+      throw new Error('Native Task log stream required');
+    return stream;
+  };
   let disposed = false;
   const check = () => {
     if (disposed) throw new Error('renderer port disposed');
@@ -326,7 +333,7 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
     },
     async getTaskLogStream(id: string) {
       selectedTask(id);
-      const stream = await api.teams.getTaskLogStream(teamName, id);
+      const stream = await readNativeTaskLogStream(id);
       completedTaskLogs.set(id, { stream, completedAt: Date.now() });
       return stream;
     },
@@ -336,7 +343,7 @@ export function electronTeamPort(api: ElectronAPI, teamName: string, projectPath
       const completedLog = completedTaskLogs.get(id);
       const [taskRead, dataRead, logRead, pageRead] = await Promise.allSettled([
         api.teams.getTask(teamName, id), api.teams.getData(teamName),
-        completedLog ? Promise.resolve(completedLog.stream) : api.teams.getTaskLogStream(teamName, id),
+        completedLog ? Promise.resolve(completedLog.stream) : readNativeTaskLogStream(id),
         api.teams.getMessagesPage(teamName, { limit: 100, cursor: null }),
       ]);
       const commandObservation = command && logRead.status === 'fulfilled' ? (() => {

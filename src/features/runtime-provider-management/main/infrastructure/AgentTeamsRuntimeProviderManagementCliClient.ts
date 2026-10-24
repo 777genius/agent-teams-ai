@@ -29,6 +29,7 @@ import {
   binaryLooksLikeOpenCode,
   formatCommandForDisplay,
   getOutputPreview,
+  isCommandTimeoutMessage,
   outputLooksLikeOpenCodeCliHelp,
   sanitizeCommandErrorMessage,
   truncateCommandErrorDetail,
@@ -635,11 +636,6 @@ function formatCommandExecutionError(input: {
       hints,
     },
   };
-}
-
-function isCommandTimeoutMessage(value: string): boolean {
-  const normalized = value.toLowerCase();
-  return normalized.includes('timed out') || normalized.includes('timeout');
 }
 
 function formatCommandTimeoutError(input: {
@@ -2360,6 +2356,8 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   async testModel(
     input: RuntimeProviderManagementTestModelInput
   ): Promise<RuntimeProviderManagementModelTestResponse> {
+    if (input.runtimeId !== 'opencode')
+      throw new Error('Claude model tests require the selected native backend.');
     const requestGroupId = input.requestGroupId?.trim() || null;
     const controller = this.beginModelTestRequest(requestGroupId);
     try {
@@ -2371,7 +2369,6 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
           projectPath
         );
       }
-
       const args = appendProjectPathArgs(
         [
           'runtime',

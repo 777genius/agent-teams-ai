@@ -2,10 +2,11 @@ import {
   buildTaskLinkHref,
   createEncodedTaskReference,
   linkifyTaskIdsInMarkdown,
+  navigateTaskReference,
   parseTaskLinkHref,
   resolveTaskReferenceCandidate,
 } from '@renderer/utils/taskReferenceUtils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { TaskRef } from '@shared/types';
 
@@ -66,15 +67,15 @@ describe('taskReferenceUtils', () => {
     expect(linkifyTaskIdsInMarkdown('[#1 #1](task://1) #1', [first, second, third])).toBe(
       '[#1 #1](task://canonical-a?team=team-a&display=1) [#1](task://canonical-c?team=team-c&display=1)'
     );
-    expect(
-      linkifyTaskIdsInMarkdown(`[${encoded}](https://example.test) #1`, [first, second])
-    ).toBe(`[${encoded}](https://example.test) [#1](task://canonical-b?team=team-b&display=1)`);
+    expect(linkifyTaskIdsInMarkdown(`[${encoded}](https://example.test) #1`, [first, second])).toBe(
+      `[${encoded}](https://example.test) [#1](task://canonical-b?team=team-b&display=1)`
+    );
     expect(linkifyTaskIdsInMarkdown('[\\#1](https://example.test) #1', [first])).toBe(
       '[\\#1](https://example.test) [#1](task://canonical-a?team=team-a&display=1)'
     );
-    expect(
-      linkifyTaskIdsInMarkdown('```\n[#1](task://1)\n```\n[#1](task://1)', [first])
-    ).toBe('```\n[#1](task://1)\n```\n[#1](task://canonical-a?team=team-a&display=1)');
+    expect(linkifyTaskIdsInMarkdown('```\n[#1](task://1)\n```\n[#1](task://1)', [first])).toBe(
+      '```\n[#1](task://1)\n```\n[#1](task://canonical-a?team=team-a&display=1)'
+    );
     expect(
       linkifyTaskIdsInMarkdown('[Task #1](task://canonical-a?team=team-a&display=1)', [first])
     ).toBe('[Task #1](task://canonical-a?team=team-a&display=1)');
@@ -177,6 +178,42 @@ describe('taskReferenceUtils', () => {
     it('parseTaskLinkHref handles task:// without query', () => {
       const r = parseTaskLinkHref('task://tid-1');
       expect(r).toEqual({ taskId: 'tid-1' });
+    });
+  });
+  describe('owner-qualified TaskRef navigation', () => {
+    const selection = 'host-team:TEST-imported-owner';
+    it.each([undefined, selection])(
+      'keeps an internal reference on its destination (%s)',
+      (teamName) => {
+        const local = vi.fn(),
+          global = vi.fn();
+        const parsed = parseTaskLinkHref(
+          teamName
+            ? buildTaskLinkHref({ taskId: 'internal', displayId: '18', teamName })
+            : 'task://internal'
+        )!;
+        navigateTaskReference(parsed, selection, local, global);
+        expect(local).toHaveBeenCalledExactlyOnceWith('internal');
+        expect(global).not.toHaveBeenCalled();
+      }
+    );
+    it.each([
+      'other-owner',
+      `${selection}:source-archive:legacy-archive%3ATEST`,
+      `${selection}:source-gap:legacy-gap%3ATEST`,
+    ])('preserves the explicit owner %s without local scrolling', (teamName) => {
+      const local = vi.fn(),
+        global = vi.fn();
+      const parsed = parseTaskLinkHref(
+        buildTaskLinkHref({
+          taskId: 'same-id',
+          displayId: '99',
+          teamName,
+        })
+      )!;
+      navigateTaskReference(parsed, selection, local, global);
+      expect(global).toHaveBeenCalledExactlyOnceWith(teamName, 'same-id');
+      expect(local).not.toHaveBeenCalled();
     });
   });
 });

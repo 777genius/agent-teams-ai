@@ -187,6 +187,14 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
 
+      - name: Setup captured Host Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+
+      - name: Capture exact Host test runtime
+        run: echo "AGENT_BACKEND_TEST_NODE=$(node -p 'process.execPath')" >> "$GITHUB_ENV"
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
@@ -247,6 +255,9 @@ jobs:
       - name: Build MCP server for root integration tests
         run: pnpm --filter agent-teams-mcp build
 
+      - name: Build captured Host and ledger prerequisites
+        run: pnpm --filter @agent-teams/legacy-agent-host build
+
       - name: Test root shard
         run: pnpm exec vitest run --maxWorkers=2 --shard=${{ matrix.shard }}/4
 
@@ -306,6 +317,9 @@ jobs:
 
       - name: Install dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+
+      - name: Build captured Host and ledger prerequisites
+        run: pnpm --filter @agent-teams/legacy-agent-host build
 
       - name: Restore ESLint cache
         uses: actions/cache@v5
@@ -379,6 +393,10 @@ jobs:
       - name: Install dependencies
         if: steps.windows.outputs.reuse != 'true'
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+
+      - name: Build captured Host and ledger prerequisites
+        if: steps.windows.outputs.reuse != 'true'
+        run: pnpm --filter @agent-teams/legacy-agent-host build
 
       - name: Test crash-safe app lock publication
         if: steps.windows.outputs.reuse != 'true'

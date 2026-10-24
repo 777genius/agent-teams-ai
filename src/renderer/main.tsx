@@ -189,7 +189,19 @@ function stopEnhancedSplashScene(): void {
   window.__claudeTeamsSplashScene?.stop();
 }
 
-function mountApp(): void {
+async function mountApp(): Promise<void> {
+  if (root) return;
+  const closeApi = window.electronAPI?.appCloseCoordination;
+  if (closeApi) {
+    try {
+      if (!(await closeApi.requestUiMount())) return;
+    } catch (error) {
+      // No editors exist yet. An unavailable admission boundary cannot mount
+      // new mutable UI while Main may already be accepting startup close.
+      console.warn('[startup] UI mount admission unavailable', error);
+      return;
+    }
+  }
   if (root) return;
 
   // The main process reports ready only after config and telemetry IPC handlers exist.
@@ -222,7 +234,7 @@ function mountApp(): void {
 async function bootstrapRenderer(): Promise<void> {
   const startupApi = window.electronAPI?.startup;
   if (!startupApi) {
-    mountApp();
+    void mountApp();
     return;
   }
 
@@ -244,7 +256,7 @@ async function bootstrapRenderer(): Promise<void> {
         cleanup();
         stopStaticSplashTimer();
         stopStartupTicker();
-        mountApp();
+        void mountApp();
       } else if (nextStatus.error) {
         finished = true;
         cleanup();
@@ -263,7 +275,7 @@ async function bootstrapRenderer(): Promise<void> {
     cleanup();
     stopStaticSplashTimer();
     stopStartupTicker();
-    mountApp();
+    void mountApp();
   }
 }
 

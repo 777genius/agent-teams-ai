@@ -4063,6 +4063,20 @@ describe('TeamDataService', () => {
     });
   });
 
+  it('routes legacy Disapprove once through its existing trusted controller and leaves generic remove guarded', async () => {
+    const disapproveReview = vi.fn(), clearKanban = vi.fn(() => { throw new Error('approved guard'); });
+    const controllerFactory = vi.fn(() => ({ taskBoard: { disapproveReview, clearKanban } }) as never);
+    const service = new TeamDataService({} as never, {} as never, {} as never, {} as never,
+      {} as never, {} as never, {} as never, {} as never, {} as never, {} as never, controllerFactory);
+    await service.updateKanban('TEST-team', 'TEST-task', { op: 'disapprove' });
+    expect(controllerFactory).toHaveBeenCalledExactlyOnceWith('TEST-team');
+    expect(disapproveReview).toHaveBeenCalledExactlyOnceWith('TEST-task', { from: 'user' });
+    expect(clearKanban).not.toHaveBeenCalled();
+    await expect(service.updateKanban('TEST-team', 'TEST-task', { op: 'remove' })).rejects.toThrow('approved guard');
+    expect(controllerFactory).toHaveBeenLastCalledWith('TEST-team');
+    expect(disapproveReview).toHaveBeenCalledTimes(1);
+  });
+
   it('propagates leadSessionId for kanban-driven review transitions', async () => {
     const requestReviewMock = vi.fn();
     const approveReviewMock = vi.fn();

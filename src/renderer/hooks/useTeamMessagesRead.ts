@@ -24,7 +24,8 @@ export function useTeamMessagesRead(
   markRead: (messageKey: string) => void;
   markAllRead: (messageKeys: string[]) => void;
 } {
-  const storageTeam = storageScope === undefined ? teamName : JSON.stringify(['group', storageScope, teamName]);
+  const storageTeam =
+    storageScope === undefined ? teamName : JSON.stringify(['group', storageScope, teamName]);
   const subscribe = useCallback((onStoreChange: () => void) => {
     return subscribeTeamMessageReadStore(onStoreChange);
   }, []);

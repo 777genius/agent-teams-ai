@@ -30,6 +30,7 @@ export interface TeamProvisioningShutdownCoordinationPorts<TProbeProcess> {
 }
 
 export interface TeamProvisioningShutdownCoordination {
+  hasTrackedRuntimeObligations(): boolean;
   getShutdownTrackedTeamNames(): string[];
   stopTrackedTeamsForShutdown(label: string): Promise<string[]>;
   cancelPendingRuntimeAdapterLaunchesForShutdown(): Promise<void>;
@@ -211,6 +212,9 @@ export function createTeamProvisioningShutdownCoordination<TProbeProcess>(
   ports: TeamProvisioningShutdownCoordinationPorts<TProbeProcess>
 ): TeamProvisioningShutdownCoordination {
   return {
+    hasTrackedRuntimeObligations: () =>
+      state.transientProbeProcesses.size > 0 ||
+      getShutdownTrackedTeamNames(state, ports).length > 0,
     getShutdownTrackedTeamNames: () => getShutdownTrackedTeamNames(state, ports),
     stopTrackedTeamsForShutdown: (label) => stopTrackedTeamsForShutdown(label, state, ports),
     cancelPendingRuntimeAdapterLaunchesForShutdown: () =>

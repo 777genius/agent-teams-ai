@@ -3,8 +3,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { KeyedMutex } from '@features/internal-storage/main';
-import { TeamPermanentDeletionIdentity } from '@main/services/team/permanent-deletion/TeamPermanentDeletionIdentity';
-import { TeamWorkSyncIdentityAccess } from '@main/services/team/permanent-deletion/TeamWorkSyncIdentityAccess';
+import { createTeamPermanentDeletionIdentity } from '@main/services/team/permanent-deletion/TeamPermanentDeletionIdentity';
+import { createTeamWorkSyncIdentityAccess } from '@main/services/team/permanent-deletion/TeamWorkSyncIdentityAccess';
+import type { TeamWorkSyncIdentityAccess } from '@main/services/team/permanent-deletion/TeamWorkSyncIdentityAccess';
 import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -25,11 +26,11 @@ describe('TeamWorkSyncIdentityAccess', () => {
     priorIdentity = false;
     deleting = false;
     fence = new KeyedMutex();
-    const owner = new TeamPermanentDeletionIdentity(() => deleting);
+    const owner = createTeamPermanentDeletionIdentity(() => deleting);
     claim = vi.fn((teamName: string, identityId: string) =>
       owner.claimIdentityMarker(teamName, identityId, true)
     );
-    access = new TeamWorkSyncIdentityAccess({
+    access = createTeamWorkSyncIdentityAccess({
       withFence: (teamName, operation) => fence.run(teamName, operation),
       isFenced: async () => deleting,
       observePriorIdentity: async () => (priorIdentity ? 'known' : 'absent'),

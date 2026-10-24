@@ -13,6 +13,8 @@ import { OpenCodeLocalProviderConnector } from '../infrastructure/OpenCodeLocalP
 import type {
   RuntimeLocalProviderConnectorPort,
   RuntimeProviderManagementPort,
+  RuntimeProviderManagementRequestScope,
+  ScopedRuntimeProviderManagementMethod,
 } from '../../core/application';
 import type { RuntimeProviderCompanionRegistry } from '../infrastructure/cli-companion/types';
 import type {
@@ -55,7 +57,11 @@ import type {
   RuntimeProviderOAuthProgressDto,
 } from '@features/runtime-provider-management/contracts';
 
-export type RuntimeProviderManagementFeatureFacade = RuntimeProviderManagementApi;
+export type RuntimeProviderManagementFeatureFacade = Omit<
+  RuntimeProviderManagementApi,
+  ScopedRuntimeProviderManagementMethod
+> &
+  Pick<RuntimeProviderManagementPort, ScopedRuntimeProviderManagementMethod>;
 
 export function createRuntimeProviderManagementFeature(
   deps: {
@@ -122,23 +128,29 @@ export function createRuntimeProviderManagementFeature(
     ): Promise<RuntimeProviderCompanionStatusDto> => companionCoordinator.runAction(input),
     onCompanionProgress: (): (() => void) => () => {},
     loadView: (
-      input: RuntimeProviderManagementLoadViewInput
-    ): Promise<RuntimeProviderManagementViewResponse> => port.loadView(input),
+      input: RuntimeProviderManagementLoadViewInput,
+      scope?: RuntimeProviderManagementRequestScope
+    ): Promise<RuntimeProviderManagementViewResponse> => port.loadView(input, scope),
     loadProviderDirectory: (
-      input: RuntimeProviderManagementLoadDirectoryInput
-    ): Promise<RuntimeProviderManagementDirectoryResponse> => port.loadProviderDirectory(input),
+      input: RuntimeProviderManagementLoadDirectoryInput,
+      scope?: RuntimeProviderManagementRequestScope
+    ): Promise<RuntimeProviderManagementDirectoryResponse> =>
+      port.loadProviderDirectory(input, scope),
     loadSetupForm: (
-      input: RuntimeProviderManagementLoadSetupFormInput
-    ): Promise<RuntimeProviderManagementSetupFormResponse> => port.loadSetupForm(input),
+      input: RuntimeProviderManagementLoadSetupFormInput,
+      scope?: RuntimeProviderManagementRequestScope
+    ): Promise<RuntimeProviderManagementSetupFormResponse> => port.loadSetupForm(input, scope),
     connectProvider: (
-      input: RuntimeProviderManagementConnectInput
-    ): Promise<RuntimeProviderManagementProviderResponse> => port.connectProvider(input),
+      input: RuntimeProviderManagementConnectInput,
+      scope?: RuntimeProviderManagementRequestScope
+    ): Promise<RuntimeProviderManagementProviderResponse> => port.connectProvider(input, scope),
     connectWithApiKey: (
       input: RuntimeProviderManagementConnectApiKeyInput
     ): Promise<RuntimeProviderManagementProviderResponse> => port.connectWithApiKey(input),
     forgetCredential: (
-      input: RuntimeProviderManagementForgetInput
-    ): Promise<RuntimeProviderManagementProviderResponse> => port.forgetCredential(input),
+      input: RuntimeProviderManagementForgetInput,
+      scope?: RuntimeProviderManagementRequestScope
+    ): Promise<RuntimeProviderManagementProviderResponse> => port.forgetCredential(input, scope),
     loadModels: (
       input: RuntimeProviderManagementLoadModelsInput
     ): Promise<RuntimeProviderManagementModelsResponse> => port.loadModels(input),

@@ -8,7 +8,10 @@ import {
   createOpenCodeBridgeCommandLeaseStore,
   createOpenCodeBridgeCommandLedgerStore,
 } from './OpenCodeBridgeCommandLedgerStore';
-import { createOpenCodeBridgeClientIdentity, OpenCodeBridgeCommandHandshakePort } from './OpenCodeBridgeHandshakeClient';
+import {
+  createOpenCodeBridgeClientIdentity,
+  OpenCodeBridgeCommandHandshakePort,
+} from './OpenCodeBridgeHandshakeClient';
 import { OpenCodeReadinessBridge } from './OpenCodeReadinessBridge';
 import { OpenCodeStateChangingBridgeCommandService } from './OpenCodeStateChangingBridgeCommandService';
 
@@ -32,19 +35,26 @@ export function composeOpenCodeDesktopBridge(deps: {
   const commands = new OpenCodeStateChangingBridgeCommandService({
     expectedClientIdentity: clientIdentity,
     handshakePort: handshake,
-    leaseStore: createOpenCodeBridgeCommandLeaseStore({ filePath: join(deps.controlDirectory, 'command-leases.json') }),
-    ledger: createOpenCodeBridgeCommandLedgerStore({ filePath: join(deps.controlDirectory, 'command-ledger.json') }),
+    leaseStore: createOpenCodeBridgeCommandLeaseStore({
+      filePath: join(deps.controlDirectory, 'command-leases.json'),
+    }),
+    ledger: createOpenCodeBridgeCommandLedgerStore({
+      filePath: join(deps.controlDirectory, 'command-ledger.json'),
+    }),
     bridge: deps.bridge,
     launchAuthorityWriter: new OpenCodeRuntimeLaunchAuthorityWriter(manifestOptions),
     manifestReader: manifest,
   });
   return {
     readiness: new OpenCodeReadinessBridge(deps.bridge, {
-      stateChangingCommands: commands, appVersion: clientIdentity.appVersion,
+      stateChangingCommands: commands,
+      appVersion: clientIdentity.appVersion,
       readOpenCodeRuntimeStatus: deps.readOpenCodeRuntimeStatus,
     }),
     groupRun: createOpenCodeGroupChatRunGetter({
-      clientIdentity, handshake, manifest,
+      clientIdentity,
+      handshake,
+      manifest,
       snapshot: async (teamName) => {
         const memberSpawnStatuses =
           await deps.runtimeSnapshots.getMemberSpawnStatusesReadOnly(teamName);

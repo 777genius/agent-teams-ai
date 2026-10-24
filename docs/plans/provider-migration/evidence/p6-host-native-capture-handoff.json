@@ -1,0 +1,144 @@
+{
+  "status": "read-only-reconciled-scoped-native-pass-with-gaps",
+  "scope": "Actual standalone Host input -> native authenticated MCP task creation -> canonical human task.start -> TaskRecovery notification -> actual native foreground tools -> Host partial ledger; portable reader checked read-only afterward.",
+  "originalNative": {
+    "jobId": "5ae851d87e6f8fff8a9a1b9e7b19a68f",
+    "exitCode": 1,
+    "status": "INCOMPLETE",
+    "receiptSha256": "f6f33a5a63f0d39c7c10266ba526eb126ef8f542b3dd2a60e7f3395192e12372",
+    "failure": "Harness waited for generic receipt.effects.deliveryId; actual TaskRecovery delivery/runtime input differs. Original native effects already complete and both inputs terminal/succeeded.",
+    "rawPreservedUnchanged": true
+  },
+  "readOnlyReconciliation": {
+    "jobId": "738a05ca9c2302673ed62f752d88dc46",
+    "exitCode": 0,
+    "sha256": "221366ffddb1b46416456558ac178e6abb3dda71f425fa7ddccfea050f31f6c9",
+    "noReplayOrNativeAllocation": true,
+    "originalRootAllBytesUnchanged": true
+  },
+  "archive": {
+    "path": "docs/plans/provider-migration/evidence/p6-host-native-capture-v1.tar.gz",
+    "sha256": "8052b249c7b49a5b263b26a5bab8d181c196c9508134ae4096ff22a1f485402e",
+    "bytes": 768388
+  },
+  "pins": {
+    "node": {
+      "path": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node",
+      "sha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+      "version": "v24.21.0"
+    },
+    "providerSha256": "6c57a7bb69a5213b75b9d0393c4d2aec0b75096ae147fc65ccae0fc37d190d1a",
+    "installedArchiveFiles": 187,
+    "installedDistFiles": 184,
+    "sdk": {
+      "path": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/node_modules/.pnpm/@anthropic-ai+claude-agent-sdk@0.3.305_@anthropic-ai+sdk@0.122.0_zod@4.6.7__@modelconte_366d464c13a5fa847c8e90868e93f5a7/node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs",
+      "sha256": "c8d3e6cf794501c9b2dad3199762e4594e7b890e8ce76f957e9d748e02680bb1",
+      "version": "0.3.305"
+    },
+    "native": {
+      "path": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/node_modules/.pnpm/@anthropic-ai+claude-agent-sdk-darwin-arm64@0.3.305/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude",
+      "sha256": "ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f"
+    },
+    "executedHost": {
+      "entry": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/packages/legacy-agent-host/dist/cli.js",
+      "entrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "sourceSha256": "86091f8e814dc6d5b1edf2ab74dc1c02941ff94388274bf38f1bf4a9d4820701",
+      "distSha256": "56407506a4eba855e9363e95267ba57d22f11a1348c110b32d0033075e973886"
+    },
+    "hostSourceProvenance": "Collection-time source matches the retained source tree hash; loaded Host dist is independently pinned and unchanged. Other workers had unbuilt source updates; no claim all collected source generated loaded dist. Four evidence module generated hashes matched the frozen batch handoff."
+  },
+  "causalChain": {
+    "taskId": "76ce3699-9d28-5c16-8b88-fe799a5d4ca6",
+    "taskStartCommandId": "TEST-user-start",
+    "genericReceiptDeliveryId": "9cf9224f-3d5d-5d53-9b28-016b0fcd63a6",
+    "actualTaskRecoveryDeliveryId": "44543850-3aa2-5d2b-95c0-7ff494045929",
+    "actualRuntimeInputId": "44543850-3aa2-5d2b-95c0-7ff494045929",
+    "operationRef": "9f811bf1-07ca-4ba7-b29f-811fd2d8cfb8",
+    "binding": {
+      "backendId": "TEST-owner-TEST-native-host-evidence-cUbfJF",
+      "teamId": "TEST-team",
+      "runId": "TEST-run-TEST-native-host-evidence-cUbfJF",
+      "memberId": "alice-id",
+      "generation": "1"
+    },
+    "hostIncarnation": "95416e75-c5c3-40de-9843-e03a3d1105c7",
+    "sessionRef": "TEST-session-TEST-native-host-evidence-cUbfJF",
+    "terminalBeforeCleanup": true
+  },
+  "checks": {
+    "authoritativeNativeMcpCreate": true,
+    "taskRecoveryObligationsAndPlan": true,
+    "actualNativeInputsSucceeded": 2,
+    "nativeRequests": 9,
+    "failedBashDirtyBeforeAndPartialFinal": true,
+    "successfulEditAndWrite": true,
+    "delayedMappedPostHookBeforeFinal": true,
+    "immutableOriginalOwnerAllFourEvents": true,
+    "unknownExecutionSequence": true,
+    "backgroundAndGroupedIntervalGaps": true,
+    "portableReaderPartial": true,
+    "cleanupClosedReleased": true,
+    "hostExitZero": true,
+    "physical": [
+      {
+        "pid": 96661,
+        "absent": true
+      },
+      {
+        "pid": 96708,
+        "absent": true
+      }
+    ],
+    "physicalGroups": [
+      {
+        "pgid": 96708,
+        "absent": true
+      }
+    ],
+    "originalRootUnchanged": true
+  },
+  "qualifications": [
+    "Initially dirty disk bytes preserved, not Git HEAD/index preimages.",
+    "Actual Bash exits7 with partial effect; failed tool status retained.",
+    "Actual Edit and Write succeed; mapped PostToolUse hook delays604ms and updates secondary file before Host final batch publication.",
+    "All four events retain exact original Task/start/input/operation/session/generation/current owner, reviewableComplete:false, low confidence and executionSeq:0.",
+    "Actual background and grouped overlapping capture intervals emit gaps without attributed final events.",
+    "Actual Host close exits0, persists closed/released custody; captured native PID and detached process group physically absent."
+  ],
+  "unexecutedOriginalActions": [
+    "team.review.getTaskChanges RPC",
+    "explicit runtime.stop RPC; actual Host close performed provider cleanup"
+  ],
+  "remainingGaps": [
+    "Existing Desktop UI for this native capture",
+    "independent PostToolBatch hooks",
+    "background completion qualification",
+    "external writer exclusivity",
+    "physical parallel attribution",
+    "full M13"
+  ],
+  "nativeHarnessCurrentSource": {
+    "files": [
+      {
+        "path": "packages/legacy-agent-host/tests/native-claude-evidence.native.ts",
+        "sha256": "d415a0f25b97dc9a99c03a30db69cfe66db7a4e8361bdf70d2a1ea2101c744d4"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-claude-evidence/model.ts",
+        "sha256": "9e31ea91a4cc2b4eea22c4cfadea2639a63254faa445192333e0737bf9b4198b"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-claude-evidence/post-hook.ts",
+        "sha256": "ec2addfa4926bf98379c7881881031146f584f2e8aee64be50bd40b17b53d235"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-claude-evidence/reconcile.ts",
+        "sha256": "259d443fc03972e7101beaad09ab0193a025288b7df9cfd1f18b878bd66e31eb"
+      }
+    ],
+    "typecheckPassed": true,
+    "oracleFixNativelyRerun": false
+  },
+  "m13": "GAP",
+  "noProductionEditsBuildInstallCommits": true
+}

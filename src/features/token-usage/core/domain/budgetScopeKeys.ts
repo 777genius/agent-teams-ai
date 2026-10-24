@@ -1,4 +1,4 @@
-import { teamIdentityLabel,teamIdForName } from '../../contracts';
+import { teamIdentityLabel, teamIdForName } from '../../contracts';
 
 import type { TokenUsageRunDto } from '../../contracts';
 

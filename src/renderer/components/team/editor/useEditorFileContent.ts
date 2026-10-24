@@ -14,7 +14,10 @@ interface EditorFileContentState {
 }
 
 /** Owns read lifetime; stale tab/project results cannot replace the active document. */
-export function useEditorFileContent(activeTabId: string | null, projectPath: string): EditorFileContentState {
+export function useEditorFileContent(
+  activeTabId: string | null,
+  projectPath: string
+): EditorFileContentState {
   const [loaded, setLoaded] = useState<{ filePath: string; result: ReadFileResult } | null>(null);
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -34,13 +37,15 @@ export function useEditorFileContent(activeTabId: string | null, projectPath: st
     setFileLoading(true);
     setFileError(null);
     try {
-      const result = await deduplicateEditorRead(pending.current, filePath,
-        () => window.electronAPI.editor.readFile(filePath));
+      const result = await deduplicateEditorRead(pending.current, filePath, () =>
+        window.electronAPI.editor.readFile(filePath)
+      );
       if (request !== sequence.current || filePath !== current.current) return;
       setLoaded({ filePath, result });
       // A reread on tab return must not replace the original conflict baseline for dirty text.
       const state = useStore.getState();
-      if (!state.editorModifiedFiles[filePath] && !state.editorSaving[filePath]) state.setFileMtime(filePath, result.mtimeMs);
+      if (!state.editorModifiedFiles[filePath] && !state.editorSaving[filePath])
+        state.setFileMtime(filePath, result.mtimeMs);
     } catch (error) {
       if (request === sequence.current && filePath === current.current) {
         setFileError(error instanceof Error ? error.message : String(error));
@@ -57,11 +62,18 @@ export function useEditorFileContent(activeTabId: string | null, projectPath: st
       setFileError(null);
     }
     const requestSequence = sequence;
-    return () => { requestSequence.current++; };
+    return () => {
+      requestSequence.current++;
+    };
   }, [activeTabId, projectPath, loadFileContent]);
   const setFileContent = useCallback((value: ReadFileResult | null) => {
     setLoaded(value && current.current ? { filePath: current.current, result: value } : null);
   }, []);
-  return { fileContent: loaded && loaded.filePath === activeTabId ? loaded.result : null,
-    fileLoading, fileError, loadFileContent, setFileContent };
+  return {
+    fileContent: loaded && loaded.filePath === activeTabId ? loaded.result : null,
+    fileLoading,
+    fileError,
+    loadFileContent,
+    setFileContent,
+  };
 }

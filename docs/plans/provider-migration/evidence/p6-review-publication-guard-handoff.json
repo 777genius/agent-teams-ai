@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "slice": "P6 review publication authority guard",
+  "status": "focused-verification-passed-ui-proof-pending",
+  "canonicalBuild": {
+    "rootReportedReceipt": "f9b92fbafa7677403f0be807930878e9",
+    "ledgerAndHostBuild": "passed",
+    "bothPackageTestTypes": "passed",
+    "workerBuiltPackages": false
+  },
+  "runtime": {
+    "node": "24.21.0",
+    "executable": "resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node",
+    "platform": "darwin-arm64"
+  },
+  "seam": {
+    "constructor": "new ReviewApplier({ assertCurrent?: () => void })",
+    "owner": "Captured Host callback; Desktop default remains optional",
+    "behavior": "Existing transaction/create algorithms recheck captured authority after awaited staging and before publication, retry and cleanup. Guarded temporary writes retain FD-established inode identity. No new queue, journal or async Team fence."
+  },
+  "verification": {
+    "passed": 92,
+    "failed": 0,
+    "suites": [
+      {
+        "path": "packages/task-change-ledger/tests/review-publication-authority.test.ts",
+        "runner": "node --test",
+        "passed": 6,
+        "executionRef": "exec chunk 409f41",
+        "exitCode": 0,
+        "evidence": [
+          "awaited WAL staging revocation prevents publication",
+          "before-detach revocation preserves bytes",
+          "accepted detach remains partial and original transaction resumes",
+          "atomic replace and create preserve external temp replacements",
+          "finalization preserves raced artifact replacement"
+        ]
+      },
+      {
+        "path": "test/main/services/team/ReviewApplierService.test.ts",
+        "runner": "pnpm exec vitest run --maxWorkers=1",
+        "passed": 50,
+        "executionRef": "exec session 88742; final chunk b5134f",
+        "exitCode": 0
+      },
+      {
+        "path": "test/main/utils/atomicWrite.test.ts",
+        "runner": "pnpm exec vitest run --maxWorkers=1",
+        "passed": 28,
+        "executionRef": "exec session 88742; final chunk b5134f",
+        "exitCode": 0
+      },
+      {
+        "path": "test/main/utils/ReviewFileTransaction.safe-e2e.test.ts",
+        "runner": "pnpm exec vitest run --maxWorkers=1",
+        "passed": 8,
+        "executionRef": "exec chunk 9f9bb7",
+        "exitCode": 0
+      }
+    ],
+    "sourceNoEmitTypecheck": {
+      "result": "passed",
+      "executionRef": "exec chunk 5535e0"
+    },
+    "scopedFastLint": {
+      "result": "passed",
+      "executionRef": "exec session 53058; final chunk c3e104"
+    },
+    "scopedDiffCheck": "passed"
+  },
+  "limitations": [
+    "Local macOS execution only; no live Windows/Linux qualification in this slice. Existing platform/retry mocked oracles passed.",
+    "A synchronous authority check cannot retract an already-issued filesystem syscall. Previously accepted detach/publication stays partial/unknown for existing transaction/WAL reconciliation; it is never claimed rolled back.",
+    "Revoked or identity-ambiguous private staging artifacts are conservatively retained; cleanup never claims ownership of an external replacement.",
+    "These tests do not establish native tool ordering, external writer exclusivity, review completeness/M13, or Desktop UI proof."
+  ],
+  "scope": {
+    "testFixturesOnly": true,
+    "nativeProvidersOrAgents": false,
+    "commitsOrPushes": false,
+    "storageJournalWriterOrHostTeamReviewEdited": false,
+    "productionChangesPausedForUiProof": true
+  },
+  "sourcePins": [
+    {
+      "path": "packages/task-change-ledger/src/review/apply/ReviewApplier.ts",
+      "sha256": "eb5e16fa3829e050d9e9c4139c06e135918db0557d3eb6bd2a565749297e310d",
+      "lines": 51
+    },
+    {
+      "path": "packages/task-change-ledger/src/review/apply/applyContext.ts",
+      "sha256": "9af9e01707fcdd71eab3b39a9cf2ec2c1a72f80d65e33f561a400a3e91b6a312",
+      "lines": 342
+    },
+    {
+      "path": "packages/task-change-ledger/src/review/apply/publicationIO.ts",
+      "sha256": "c07de69bbc0c19e52165990ba95b362d506c783cfa41b33080cc9b1195f9e798",
+      "lines": 32
+    },
+    {
+      "path": "packages/task-change-ledger/src/review/apply/fileMutation.ts",
+      "sha256": "b926733f49577598d095220594d4a11881ccf0c51a53821381d189b80e0cf7db",
+      "lines": 447
+    },
+    {
+      "path": "packages/task-change-ledger/src/review/apply/ledgerRename.ts",
+      "sha256": "bb9344de817b4142777d4bcc836095b3f990995c915ef2cab856d85fb52e1854",
+      "lines": 491
+    },
+    {
+      "path": "packages/task-change-ledger/src/review/apply/decisionApply.ts",
+      "sha256": "f2a6c2ab440bd484082f14460e5544f3f5e38fec8c5af405cecd4ccc091f5a98",
+      "lines": 521
+    },
+    {
+      "path": "packages/task-change-ledger/src/review/io/mutationAuthority.ts",
+      "sha256": "a4ef6d8181ee0d6bdfc4bd78203bff72d542a1cf4dbf4c4198888794d0fe10ec",
+      "lines": 46
+    },
+    {
+      "path": "packages/task-change-ledger/src/review/io/atomicPersistence.ts",
+      "sha256": "0e1c10432147c7d120b29c48927a963522360d11953de5e0321afb9e21c3be16",
+      "lines": 199
+    },
+    {
+      "path": "packages/task-change-ledger/src/review/io/atomicCreate.ts",
+      "sha256": "fc2a9cbafa616292b04bc35850f2cd1406a68fdd093fcbf0cad0293f7332aa34",
+      "lines": 99
+    },
+    {
+      "path": "packages/task-change-ledger/src/review/io/reviewFileTransaction.ts",
+      "sha256": "c272d95619299ea24ddd3bf0ab07a570fced785e2051ee453a0c686dda6e7fef",
+      "lines": 581
+    },
+    {
+      "path": "packages/task-change-ledger/tests/review-publication-authority.test.ts",
+      "sha256": "66c0396f09f3891858c99bb6a20377ffa31a0771bd10b147a187c865611a6f94",
+      "lines": 209
+    }
+  ]
+}

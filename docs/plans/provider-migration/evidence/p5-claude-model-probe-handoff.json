@@ -1,0 +1,34 @@
+{
+  "status": "PASS scoped Claude native model-test leaf; full stage1 P0-P8/M01-M19 and existing Launch/Create/Resume E2E remain INCOMPLETE",
+  "evidence": "docs/plans/provider-migration/evidence/p5-claude-model-probe-v1/manifest.json",
+  "hostSourceSha256": "ad4e492a2b22a009cba528b37534bb86b060f7a13336455cbcc55bcf18599d43",
+  "hostDistSha256": "cb079f1faa4f3f57888eb17961e63800fa2c16f2768dc4713578913295cdafa4",
+  "providerArchive": "vendor/provider-migration/claude-probe-v1/agent-teams-provider-implementations-0.0.0.tgz",
+  "providerArchiveSha256": "8c5efaec88e261de412555e783f968b73b8e16818bdd25c6da3379eb9c362708",
+  "implementation": {
+    "provider": "The existing ./claude facade exports finite probeClaudeModel. It waits for native metadata and rechecks caller authority before releasing one input; success requires matching init/session/model/text/result/usage evidence. Hooks, tools, MCP and persistence are disabled. Cancellation/deadline closes the SDK; failed close cannot publish success. No new Session SPI or runtime authority.",
+    "host": "Captured Claude config delegates execution to the helper. Existing ModelProbeOwner owns durable admission/replay/cancellation. Exact profile/config/namespace identity and physical cleanup are checked before publishing a usable result. A stale close cannot remove another active namespace holder.",
+    "main": "Existing model-test path accepts explicit Claude capture and never OpenCode defaults/limits for Claude. Original request-group cancellation/owner controls are reused. Legacy fork model-test dispatch rejects unsupported runtime before effects.",
+    "ui": "No new UI. This leaf does not yet connect prepareProvisioning or complete existing dialogs. Model-only status is distinct from auth/team-launch authority. Main/native tests do not qualify Electron sender authorization or dialog acceptance."
+  },
+  "native": {
+    "scope": "Actual SDK0.3.305/native Claude, localhost inference, TEST roots; no vendor credentials/user projects/Electron dialog signoff",
+    "node": "v24.21.0",
+    "claudeBinarySha256": "ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f",
+    "directJobId": "04cea0c95f270fb9bfc9adeefb4dddec",
+    "direct": "2 model requests: success and in-flight cancellation. Captured children exited and both process groups were absent before fixture cleanup. Configured SessionStart hook marker absent.",
+    "mainJobId": "3fe5371ce81736a6a56eb6a570e3a316",
+    "main": "Main captured client -> DesktopBackendFeature -> standalone Host -> SDK/CLI.3 requests: success, wrong-model rejection, cancellation. Warm replay and cold Host restart/replay reuse the original command without another request. All records have resourceHeld:false; Host exits confirmed. Provider release is separately covered by the direct proof.",
+    "sourceQualification": "At capture, receipt hashes matched production source, Host source/dist and vendor archive. Exact executed Main harness retained with final import-sorted source; complete executable body equality checked. No repeated model effect for formatting.",
+    "subsequentDelta": "The next existing-preflight-context slice adds the shell selection getter and existing-dialog context routing. Original receipts continue to qualify their captured leaf; they are not a new qualification of the changed shell or full dialog flow. Native probe helper and Host implementation are unchanged by that slice."
+  },
+  "checks": {
+    "producer": "2bdc689ca1919f7a68fd78309ca2e08d: strict types,11 metadata/probe tests, scoped oxlint, FMS active0, build/pack PASS.",
+    "consumer": "15caa82bb808e17f9738ef49eacd086f: isolated packed consumer from package cwd, runtime exports/declarations PASS.",
+    "frontendAndHost": "0476fd4fa5565a47d904a03c99c0da22: root/strict Host/test types,231 Host tests,169 frontend tests, source-size guard PASS.2 opt-in native tests skipped in aggregate and qualified separately above.",
+    "retainedFailures": "Original lint/browser type/import-sort failures remain in their managed logs; corrected proofs are separate results. No full producer aggregate gate success claim."
+  },
+  "openOwningGates": "Preceding producer check:changed has29 Darwin tooling fixture failures. Canonical Node26.11.1, Host/successor standards and full delivery gates remain open; this Node24 consumer proof does not close them.",
+  "next": "Captured prepareProvisioning, authoritative roster/settings, launch/create/progress and selected Resume through existing dialogs. Check management sender/context authorization at integration. Preserve all fields or leave their acceptance open; API-only staging is not dialog E2E.",
+  "delivery": "Stage1 only; stage2 excluded. Isolated worktrees, draft PR with exact-head plan/contracts/matrix links, no main/release merge."
+}

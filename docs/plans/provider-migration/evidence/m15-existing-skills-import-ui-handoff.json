@@ -1,0 +1,28 @@
+{
+  "status": "IMPORT_EFFECT_CONFIRMED_AFTER_INCOMPLETE_UI_ATTEMPT",
+  "date": "2026-10-23",
+  "jobId": "da1b5eeb00fc90e1cb5617b43dc80773",
+  "originalUiStatus": "INCOMPLETE",
+  "rawReceiptSha256": "e2ea613322fb2aed4a59c0b6144d455c912dc36885461385aac696362136732e",
+  "localEvidence": ".artifacts/provider-migration/p6-skills-ui-attempt4",
+  "scope": "Existing Skills Import editor and review; changed-source refusal before journal or target changes; new review and original confirm once",
+  "observed": {
+    "changedSourceRejected": true,
+    "originalImportCommandId": "skills-406b8267be54896cf66b7ccdcf56be973f68187087848d059fb16c0dcd8f5a09",
+    "originalImportJournalPhase": "completed",
+    "originalImportResourceHeld": false,
+    "targetVersion": "test-ui-imported-v2",
+    "targetMarkdownSha256": "bb7c7a741994e48ea9b4a12f7c5708c5490c77237d974e516c40d83cf5d82cd0",
+    "originalActionReplayed": false
+  },
+  "failure": "Read-only harness probed SKILL.md during the atomic directory publication gap and rejected ENOENT before observing successful completion",
+  "supplementaryReadback": "Original journal and exact version2 bytes inspected after the failed attempt; this is not a second Import or a full UI PASS",
+  "screenshots": {
+    "review": "729dc9007bb17e31046de928c24b9feff79273b6ac2da6bcfd32bcf1e2eb3831",
+    "changedSourceRejected": "e28a43ee0f48a109841d1860ea84b91386bbfe0e0546796cf0225df690b87c8f"
+  },
+  "visualInspection": "Existing themed Review skill changes dialog shows source-changed error, binary/hidden-file warnings and original Back To Import/Import Skill controls",
+  "retention": { "files": 2146, "sourceOrBundleMismatches": [], "missing": [] },
+  "cleanup": { "capturedGroup": 80331, "remaining": [], "appSignalCode": "SIGTERM" },
+  "excluded": ["whole Skills workflow", "Create/Edit/Trash", "stale-context confirmation", "full M15", "native provider auth", "natural Quit", "Stage2"]
+}

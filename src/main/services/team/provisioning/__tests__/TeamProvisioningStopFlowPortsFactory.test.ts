@@ -174,6 +174,45 @@ function createDeps(
 }
 
 describe('TeamProvisioningStopFlowPortsFactory', () => {
+  it('retains the exact physically stopped run while release publication is held, then cleans only after confirmation', async () => {
+    const deps = createDeps();
+    deps.runtimeAdapterRunByTeam.clear();
+    const run = makeRun();
+    deps.mutableRuns.set(run.runId, run);
+    deps.provisioningRunByTeam.set(run.teamName, run.runId);
+    const boundary = createTeamProvisioningStopFlowBoundary(deps);
+    const complete = vi.fn(async () => false);
+    await expect(boundary.stopTeam(run.teamName, { complete })).rejects.toThrow(
+      'publication is unconfirmed'
+    );
+    expect(run.processKilled).toBe(true);
+    expect(deps.mutableRuns.get(run.runId)).toBe(run);
+    expect(deps.cleanupRun).not.toHaveBeenCalled();
+    expect(deps.killTeamProcessAndWait).toHaveBeenLastCalledWith(run.child);
+    complete.mockResolvedValue(true);
+    await boundary.stopTeam(run.teamName, { complete });
+    expect(deps.cleanupRun).toHaveBeenCalledExactlyOnceWith(run);
+    expect(deps.mutableRuns.has(run.runId)).toBe(false);
+    expect(deps.killTeamProcessAndWait).toHaveBeenCalledTimes(2);
+  });
+  it('does not publish a release or discard ownership when native termination is unknown', async () => {
+    const deps = createDeps({
+      killTeamProcessAndWait: vi.fn(async () => {
+        throw new Error('TEST-exit-unknown');
+      }),
+    });
+    const run = makeRun();
+    deps.mutableRuns.set(run.runId, run);
+    deps.provisioningRunByTeam.set(run.teamName, run.runId);
+    const complete = vi.fn(async () => true);
+    await expect(
+      createTeamProvisioningStopFlowBoundary(deps).stopTeam(run.teamName, { complete })
+    ).rejects.toThrow('TEST-exit-unknown');
+    expect(complete).not.toHaveBeenCalled();
+    expect(deps.cleanupRun).not.toHaveBeenCalled();
+    expect(deps.mutableRuns.get(run.runId)).toBe(run);
+  });
+
   it('builds stop flow deps from service-shaped dependencies', async () => {
     const deps = createDeps();
     const service = {

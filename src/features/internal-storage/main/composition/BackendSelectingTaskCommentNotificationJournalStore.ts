@@ -1,4 +1,5 @@
 import { getCommentNotificationJournalPath } from '@main/services/team/JsonTaskCommentNotificationJournalStore';
+import { unknownStoppedImportCommentFacts } from '@main/services/team/stopped-import/commentFacts';
 import { sanitizeTaskCommentNotificationJournalEntries } from '@main/services/team/TaskCommentNotificationJournalStore';
 
 import { KeyedMutex } from '../../core/application/KeyedMutex';
@@ -126,6 +127,22 @@ export class BackendSelectingTaskCommentNotificationJournalStore implements Task
       }
       return result;
     });
+  }
+
+  async inspectStoppedImport(teamName: string) {
+    // Normal first-store access may open/migrate the app-owned database. Resolve
+    // that shared decision before reading; never prepare this team's store here
+    // (the ordinary run path imports JSON and hydrates/writes replicas).
+    await this.selector.select('sqlite', 'json-fallback');
+    const info = this.selector.getBackendInfo(),
+      kind = this.selector.getBackendKind();
+    if (kind === 'sqlite' && info?.integrity === 'ok')
+      return (
+        this.sqliteStore.inspectStoppedImport?.(teamName) ?? unknownStoppedImportCommentFacts()
+      );
+    if (kind === 'json-fallback' && (!this.replica || this.jsonHydratedTeams.has(teamName)))
+      return this.jsonStore.inspectStoppedImport?.(teamName) ?? unknownStoppedImportCommentFacts();
+    return unknownStoppedImportCommentFacts();
   }
 
   async exists(teamName: string): Promise<boolean> {

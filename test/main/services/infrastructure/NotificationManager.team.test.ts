@@ -33,13 +33,16 @@ vi.mock('electron', () => ({
 }));
 
 // --- Mock fs/promises to prevent disk I/O ---
-vi.mock('fs/promises', () => ({
-  readFile: vi.fn().mockRejectedValue({ code: 'ENOENT' }),
-  writeFile: vi.fn().mockResolvedValue(undefined),
-  rename: vi.fn().mockResolvedValue(undefined),
-  rm: vi.fn().mockResolvedValue(undefined),
-  mkdir: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock('fs/promises', () => {
+  const mockedFs = {
+    readFile: vi.fn().mockRejectedValue({ code: 'ENOENT' }),
+    writeFile: vi.fn().mockResolvedValue(undefined),
+    rename: vi.fn().mockResolvedValue(undefined),
+    rm: vi.fn().mockResolvedValue(undefined),
+    mkdir: vi.fn().mockResolvedValue(undefined),
+  };
+  return { ...mockedFs, default: mockedFs };
+});
 
 // --- Mock ConfigManager ---
 vi.mock('@main/services/infrastructure/ConfigManager', () => ({

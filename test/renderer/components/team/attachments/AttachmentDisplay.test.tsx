@@ -8,6 +8,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { SourceMessageSnapshot } from '@shared/types';
 
+const apiMock = vi.hoisted(() => ({ getAttachments: vi.fn() }));
+vi.mock('@renderer/api', () => ({ api: { teams: apiMock } }));
+
 const storeMocks = vi.hoisted(() => ({
   revealFileInEditor: vi.fn(),
 }));
@@ -30,6 +33,7 @@ describe('AttachmentDisplay', () => {
     document.body.innerHTML = '';
     vi.unstubAllGlobals();
     storeMocks.revealFileInEditor.mockReset();
+    apiMock.getAttachments.mockReset();
   });
 
   it('keeps a task source reference GIF generic beside a native PNG and preserves legacy thumbnails', async () => {
@@ -41,10 +45,7 @@ describe('AttachmentDisplay', () => {
       { id: 'png', mimeType: 'image/png', data: pngData, filePath: '/saved/native.png' },
       { id: 'gif', mimeType: 'image/gif', data: gifData, filePath: '/saved/reference.gif' },
     ]);
-    Object.defineProperty(window, 'electronAPI', {
-      configurable: true,
-      value: { teams: { getAttachments } },
-    });
+    apiMock.getAttachments.mockImplementation(getAttachments);
     const sourceMessage: SourceMessageSnapshot = {
       text: 'Read both images',
       from: 'user',
@@ -110,9 +111,44 @@ describe('AttachmentDisplay', () => {
     }
   });
 
+  it('keeps unavailable persisted attachments visible without opening a stale path or downloading', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    apiMock.getAttachments.mockResolvedValue([]);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(
+          <TooltipProvider>
+            <AttachmentDisplay
+              teamName="host-team:TEST"
+              messageId="TEST-message"
+              attachments={[
+                {
+                  id: 'TEST-missing',
+                  filename: 'missing.bin',
+                  mimeType: 'application/octet-stream',
+                  size: 1,
+                  filePath: '/TEST-stale/private-path',
+                },
+              ]}
+            />
+          </TooltipProvider>
+        );
+      });
+      expect(host.textContent).toContain('missing.bin');
+      expect(host.querySelector('[aria-disabled="true"]')).not.toBeNull();
+      expect(host.querySelector('button')).toBeNull();
+      expect(storeMocks.revealFileInEditor).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
   it('opens persisted non-image attachments in the built-in editor', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    const getAttachments = vi.fn().mockResolvedValue([
+    apiMock.getAttachments.mockResolvedValue([
       {
         id: 'att-1',
         data: Buffer.from('verification').toString('base64'),
@@ -122,7 +158,13 @@ describe('AttachmentDisplay', () => {
     ]);
     Object.defineProperty(window, 'electronAPI', {
       configurable: true,
-      value: { teams: { getAttachments } },
+      value: {
+        teams: {
+          getAttachments: () => {
+            throw new Error('Ambient legacy IPC bypass');
+          },
+        },
+      },
     });
 
     const host = document.createElement('div');
@@ -163,5 +205,52 @@ describe('AttachmentDisplay', () => {
     expect(storeMocks.revealFileInEditor).toHaveBeenCalledWith(
       '/app/data/attachments/team-a/msg-1/att-1--verification.md'
     );
+    await act(async () => root.unmount());
   });
+});
+
+it('downloads an owner-read source file from verified bytes without a private path or legacy IPC', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  apiMock.getAttachments.mockResolvedValue([
+    { id: 'TEST-file', data: btoa('TEST retained bytes'), mimeType: 'text/plain' },
+  ]);
+  const createURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:TEST-download');
+  const revokeURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+  const clicks: { href: string; download: string }[] = [];
+  const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+    this: HTMLAnchorElement
+  ) {
+    clicks.push({ href: this.href, download: this.download });
+  });
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  await act(async () => {
+    root.render(
+      <TooltipProvider>
+        <AttachmentDisplay
+          teamName="host-team:TEST"
+          messageId={`im1:TEST-task:${'a'.repeat(64)}`}
+          attachments={[
+            { id: 'TEST-file', filename: 'retained.txt', mimeType: 'text/plain', size: 19 },
+          ]}
+        />
+      </TooltipProvider>
+    );
+  });
+  const button = host.querySelector<HTMLButtonElement>(
+    'button[aria-label="Download retained.txt"]'
+  );
+  expect(button).not.toBeNull();
+  await act(async () => {
+    button!.click();
+  });
+  expect(clicks).toEqual([{ href: 'blob:TEST-download', download: 'retained.txt' }]);
+  expect(await (createURL.mock.calls[0]![0] as Blob).text()).toBe('TEST retained bytes');
+  expect(revokeURL).toHaveBeenCalledWith('blob:TEST-download');
+  expect(storeMocks.revealFileInEditor).not.toHaveBeenCalled();
+  await act(async () => root.unmount());
+  createURL.mockRestore();
+  revokeURL.mockRestore();
+  click.mockRestore();
 });

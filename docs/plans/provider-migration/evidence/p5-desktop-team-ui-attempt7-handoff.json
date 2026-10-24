@@ -1,0 +1,7 @@
+{
+  "archive": "docs/plans/provider-migration/evidence/p5-desktop-team-ui-attempt7.tar.gz",
+  "archiveSha256": "d07ce2365e07cd84f5e91292b34dda8a20e0235f54a7dd036d735a4f059b1791",
+  "receiptSha256": "c087154ddcc4a42aac0057e61a1ef4a549c18d8a467a4038b3b381f070654c37",
+  "scope": "Actual Task Create UI and canonical completed receipt passed; post-reload same task visible in sidebar; reopening click failed before Open team; full UI flow INCOMPLETE",
+  "status": "INCOMPLETE"
+}

@@ -31,7 +31,6 @@ import { useTeamMessagesExpanded } from '@renderer/hooks/useTeamMessagesExpanded
 import { useStore } from '@renderer/store';
 import { selectTeamMessages } from '@renderer/store/slices/teamSlice';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
-import { isLeadMember } from '@shared/utils/leadDetection';
 import { CheckCheck, MessageSquare, MoreHorizontal } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -68,7 +67,6 @@ import {
   conversationDraftAddress,
   conversationIdentity as createConversationIdentity,
   localDraftsByConversationScope,
-  memberConversationParticipants,
   outboxViewAddress,
   replyCandidates,
   visibleTeamMessages,
@@ -90,9 +88,11 @@ import { StatusBlock } from './StatusBlock';
 import { calculateBottomSheetGeometry, useBottomSheetLayout } from './useBottomSheetLayout';
 import { useComposerOutboxItems } from './useComposerOutboxItems';
 import { useCrossTeamDraftAddressAvailability } from './useCrossTeamDraftAddressAvailability';
+import { useMessageReplyRouting } from './useMessageReplyRouting';
 import { useMessageRevisionIntent } from './useMessageRevisionIntent';
 import { useMessagesComposerSections } from './useMessagesComposerSections';
 import { useMessagesGroupConversation } from './useMessagesGroupConversation';
+import { useMessagesMemberIdentities } from './useMessagesMemberIdentities';
 import {
   useDirectThreadAutoOlder,
   useResetScrollOnConversationChange,
@@ -102,6 +102,7 @@ import {
 import { useMessagesPanelSend } from './useMessagesPanelSend';
 import { useMessagesReadState } from './useMessagesReadState';
 import { useMessagesTimelineActions } from './useMessagesTimelineActions';
+import { useOpenCodeDeliveryStatusRefresh } from './useOpenCodeDeliveryStatusRefresh';
 
 import type { ConversationViewportHandle } from '../activity/useConversationViewport';
 import type { ComposerDraftDestination } from './composerDraftDestination';
@@ -126,7 +127,6 @@ interface TimeWindow {
 const BOTTOM_SHEET_HEADER_HEIGHT = 40;
 const BOTTOM_SHEET_COLLAPSED_SNAP_INDEX = 1;
 const BOTTOM_SHEET_COMPOSER_SNAP_INDEX = 2;
-const OPENCODE_RUNTIME_DELIVERY_STATUS_REFRESH_DELAYS_MS = [15_000, 45_000, 90_000] as const;
 const MESSAGES_SCROLL_TOP_PERSIST_DELAY_MS = 100;
 const EMPTY_REPLY_CANDIDATE_MESSAGES: InboxMessage[] = [];
 
@@ -626,12 +626,18 @@ export const MessagesPanel = memo(function MessagesPanel({
     scrollElementRef: activeScrollContainerRef ?? threadScrollRef,
   });
 
-  const leadNames = useMemo(
-    () => members.filter((member) => isLeadMember(member)).map((member) => member.name),
-    [members]
-  );
-  const memberNames = useMemo(() => new Set(members.map((member) => member.name)), [members]);
-  const normalizedMemberNames = useMemo(() => memberConversationParticipants(members), [members]);
+  const { leadNames, memberNames, normalizedMemberNames } = useMessagesMemberIdentities(members);
+  const { crossTeamReply, replyAddressRequest, handleReplyToTimelineMessage } =
+    useMessageReplyRouting({
+      contextId: activeContextId,
+      teamName,
+      scope,
+      members,
+      onReply: onReplyToMessage,
+      openTeamFeed: () => openChat(TEAM_FEED_SCOPE),
+      fetchTargets: () => useStore.getState().fetchCrossTeamTargets(),
+      focusComposer: () => composerTextareaRef.current?.focus(),
+    });
   const canonicalMessages = useMemo(
     () =>
       canonicalTeamMessages(
@@ -776,7 +782,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     expandedItemKey,
     setExpandedItemKey,
     onCreateTask: onCreateTaskFromMessage,
-    onReply: onReplyToMessage,
+    onReply: handleReplyToTimelineMessage,
     groupId,
     groupQuote: groupConversation.quote,
     onRevise: (message) => {
@@ -919,33 +925,12 @@ export const MessagesPanel = memo(function MessagesPanel({
     sendMessageRuntimeReplyVisible,
   ]);
 
-  useEffect(() => {
-    const debugDetails = sendMessageDebugDetails;
-    const messageId = debugDetails?.messageId;
-    const shouldPoll =
-      debugDetails?.userVisibleState === 'checking' ||
-      (!debugDetails?.userVisibleState && debugDetails?.responsePending === true);
-    if (!messageId || sendMessageRuntimeReplyVisible || !shouldPoll) {
-      return;
-    }
-    const statusMessageId = debugDetails.statusMessageId || messageId;
-    const timers = OPENCODE_RUNTIME_DELIVERY_STATUS_REFRESH_DELAYS_MS.map((delayMs) =>
-      window.setTimeout(() => {
-        void refreshSendMessageRuntimeDeliveryStatus(teamName, {
-          messageId,
-          statusMessageId,
-        });
-      }, delayMs)
-    );
-    return () => {
-      timers.forEach((timer) => window.clearTimeout(timer));
-    };
-  }, [
-    refreshSendMessageRuntimeDeliveryStatus,
+  useOpenCodeDeliveryStatusRefresh(
+    teamName,
     sendMessageDebugDetails,
     sendMessageRuntimeReplyVisible,
-    teamName,
-  ]);
+    refreshSendMessageRuntimeDeliveryStatus
+  );
 
   const { handleSend, handleCrossTeamSend } = useMessagesPanelSend({
     teamName,
@@ -1064,6 +1049,8 @@ export const MessagesPanel = memo(function MessagesPanel({
     suggestionPlacement: isConversation ? ('above' as const) : undefined,
     lockedRecipient,
     autoFocusKey: threadOpenedAt,
+    draftAddressRequest: replyAddressRequest,
+    crossTeamReply,
     workingDraftSummaries: workingDrafts.summaries,
     onSend: handleSend,
     onCrossTeamSend: handleCrossTeamSend,

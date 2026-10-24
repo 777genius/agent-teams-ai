@@ -1,10 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { create } from 'zustand';
 
+import { refreshHostReviewRecovery } from '../../../src/features/agent-backend/renderer/refreshHostReviewRecovery';
 import { isReviewRejectable } from '../../../src/renderer/components/team/review/reviewContentPreview';
 import { createChangeReviewSlice } from '../../../src/renderer/store/slices/changeReviewSlice';
 import { buildTaskChangePresenceKey } from '../../../src/renderer/utils/taskChangeRequest';
 
+import type {
+  ReviewCommandLookup,
+  ReviewRecoveryRead,
+} from '@agent-teams/task-change-ledger/review-transport';
 import type { ReviewRedoAction } from '@shared/types';
 
 const hoisted = vi.hoisted(() => ({
@@ -25,6 +30,7 @@ const hoisted = vi.hoisted(() => ({
 }));
 
 vi.mock('@renderer/api', () => ({
+  reviewApiForTeam: () => ({ getFileContent: hoisted.getFileContent }),
   api: {
     review: {
       getTaskChanges: hoisted.getTaskChanges,
@@ -3463,5 +3469,75 @@ describe('changeReviewSlice task changes', () => {
       'rename:old->new:1': 'accepted',
     });
     expect(store.getState().fileDecisions).toEqual({});
+  });
+});
+
+describe('existing decision hydration after original receipt discovery', () => {
+  it('keeps readable Task changes and retries the existing gate after original WAL proof settles', async () => {
+    const store = createSliceStore();
+    const origin = { taskId: 'TEST-recovery-task' };
+    let completed = false;
+    const read = vi.fn(
+      async (): Promise<ReviewRecoveryRead> => ({
+        kind: 'review-recovery',
+        origin,
+        commands: [
+          {
+            commandId: 'TEST-original-lost-ack',
+            method: 'executeReviewMutation',
+            phase: completed ? 'completed' : 'held',
+            outcome: completed ? 'completed' : 'unknown',
+            responseAvailable: false,
+            ...(completed
+              ? { references: { walId: 'TEST-original-wal', decisionRevision: 7 } }
+              : {}),
+          },
+        ],
+      })
+    );
+    const lookup = vi.fn(
+      async (commandId: string): Promise<ReviewCommandLookup> => ({
+        kind: 'review-command',
+        commandId,
+        method: 'executeReviewMutation',
+        origin,
+        phase: completed ? 'completed' : 'held',
+        outcome: completed ? 'completed' : 'unknown',
+        responseAvailable: false,
+      })
+    );
+    hoisted.getTaskChanges.mockResolvedValue(makeTaskChangeSet(origin.taskId));
+    hoisted.loadDecisions.mockImplementation(async () => {
+      await refreshHostReviewRecovery({ read, lookup }, true);
+      return {
+        hunkDecisions: {},
+        fileDecisions: {},
+        reviewActionHistory: [],
+        reviewRedoHistory: [],
+        revision: 7,
+      };
+    });
+    await store.getState().fetchTaskChanges('team-a', origin.taskId, {});
+    const shown = store.getState().activeChangeSet;
+    await store
+      .getState()
+      .loadDecisionsFromDisk('team-a', `task-${origin.taskId}`, 'TEST-current-token');
+    expect(store.getState().activeChangeSet).toBe(shown);
+    expect(store.getState().decisionHydrationStatus).toBe('error');
+    expect(store.getState().applyError).toContain('Unable to load saved review decisions');
+    expect(console.error).toHaveBeenCalled();
+    vi.mocked(console.error).mockClear();
+    completed = true;
+    await store
+      .getState()
+      .loadDecisionsFromDisk('team-a', `task-${origin.taskId}`, 'TEST-current-token');
+    expect(store.getState().activeChangeSet).toBe(shown);
+    expect(store.getState().decisionHydrationStatus).toBe('loaded');
+    expect(store.getState().decisionRevision).toBe(7);
+    expect(store.getState().applyError).toBeNull();
+    expect(lookup.mock.calls.map(([commandId]) => commandId)).toEqual([
+      'TEST-original-lost-ack',
+      'TEST-original-lost-ack',
+    ]);
   });
 });

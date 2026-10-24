@@ -1,0 +1,7 @@
+{
+  "archive": "docs/plans/provider-migration/evidence/p5-desktop-team-ui-attempt9.tar.gz",
+  "archiveSha256": "fbc4e11a2d9743a823a33c66e31c6748686fbcf116f26c0d1ef8c69a1b4822b2",
+  "receiptSha256": "4d329353228cbdec7b0dbc12b7350ef8ebc69ee9dd4b8c051a901155db0feff4",
+  "scope": "Actual Task created once and rendered; reload kept2 canonical tasks. Stable geometry mouse click after reload did not open dialog (globalTaskDetail null), so hover alone not root cause. Captured group and Host retired; UI flow INCOMPLETE.",
+  "status": "INCOMPLETE"
+}

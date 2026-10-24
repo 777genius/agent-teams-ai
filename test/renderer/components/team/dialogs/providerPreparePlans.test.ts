@@ -28,6 +28,45 @@ function modelChecksMap(
 }
 
 describe('providerPreparePlans', () => {
+  it('keeps model proof and in-flight request identities on their original Team or create context', () => {
+    const input = {
+      cwd: '/TEST/project',
+      providerIds: ['anthropic' as const],
+      selectedModelChecksByProvider: modelChecksMap([
+        ['anthropic', [{ providerId: 'anthropic', model: 'opus' }]],
+      ]),
+      backendSummaryByProvider: new Map(),
+      limitContext: false,
+      runtimeProviderStatusById: new Map(),
+      cachedModelResultsByCacheKey: new Map(),
+    };
+    const contexts = [
+      undefined,
+      { kind: 'create' as const },
+      { kind: 'team' as const, teamName: 'legacy' },
+      { kind: 'team' as const, teamName: 'host-team:TEST' },
+    ];
+    const plans = contexts.map((context) => buildProviderPreparePlans({ ...input, context })[0]);
+    expect(new Set(plans.map((plan) => plan.cacheKey)).size).toBe(4);
+    expect(new Set(plans.map((plan) => plan.requestSignature)).size).toBe(4);
+    const repeated = buildProviderPreparePlans({
+      ...input,
+      context: { kind: 'team', teamName: 'host-team:TEST' },
+    })[0];
+    expect(repeated.cacheKey).toBe(plans[3].cacheKey);
+    expect(repeated.requestSignature).toBe(plans[3].requestSignature);
+    const proof = { opus: { status: 'ready' as const, line: 'Legacy model response' } };
+    const cachedModelResultsByCacheKey = new Map([[plans[2].cacheKey, proof]]);
+    expect(
+      buildProviderPreparePlans({ ...input, context: contexts[2], cachedModelResultsByCacheKey })[0]
+        .cachedModelResultsById
+    ).toEqual(proof);
+    expect(
+      buildProviderPreparePlans({ ...input, context: contexts[3], cachedModelResultsByCacheKey })[0]
+        .cachedModelResultsById
+    ).toEqual({});
+  });
+
   it('invalidates auth proof without scheduling another paid attempt or changing other providers', () => {
     const providerIds: TeamProviderId[] = ['codex', 'opencode'];
     const selectedModelChecksByProvider = modelChecksMap([

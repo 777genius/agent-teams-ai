@@ -42,4 +42,3 @@ export function annotateSlashCommandResponses(messages: InboxMessage[]): void {
     pendingSlash = null;
   }
 }
-

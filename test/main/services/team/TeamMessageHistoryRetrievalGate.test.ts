@@ -360,6 +360,43 @@ describe('Team message history retrieval prerequisites', () => {
     }
   );
 
+  it('versions captured navigation changes without changing identity or first-winner dedup', async () => {
+    const navigation = {
+      fromTeamName: 'original-source',
+      toTeamName: 'original-target',
+    };
+    const original: InboxMessage = {
+      ...message('sent-original', OLDER_T, 'Unchanged original cross-Team body'),
+      from: 'original-source.alice',
+      to: 'original-target.user',
+      source: 'cross_team_sent',
+      crossTeamNavigation: navigation,
+    };
+    const captured: InboxMessage = {
+      ...original,
+      crossTeamNavigation: { ...navigation, toTeamKey: 'host-team:original-target-handle' },
+    };
+    // This is the normalized typed overlay; raw legacy inbox files cannot grant Host navigation.
+    const sent = [original, captured];
+    await writeInbox('user', [message('head', T, 'Fixed head')]);
+    const service = createFeed(new TeamInboxReader(), sent);
+    const before = await service.getPage(TEAM_NAME, { limit: 50 });
+    expect(before.messages.map((row) => row.messageId)).toEqual(['head', 'sent-original']);
+    expect(before.messages[1]!.crossTeamNavigation?.toTeamKey).toBeUndefined();
+
+    sent.splice(0, 2, captured, original);
+    service.invalidate(TEAM_NAME);
+    const after = await service.getPage(TEAM_NAME, { limit: 50 });
+    expect(after.messages.map((row) => [row.messageId, row.text])).toEqual([
+      ['head', 'Fixed head'],
+      ['sent-original', 'Unchanged original cross-Team body'],
+    ]);
+    expect(after.messages[1]!.crossTeamNavigation?.toTeamKey).toBe(
+      'host-team:original-target-handle'
+    );
+    expect(after.feedRevision).not.toBe(before.feedRevision);
+  });
+
   it('canonicalizes nested object keys but preserves structured reference array order', async () => {
     const row = message('older', OLDER_T, 'Task order matters');
     await writeInbox('user', [

@@ -14,6 +14,9 @@ electron.vite.config.*.mjs
 # Runtime release artifacts are downloaded during dev/release builds.
 # Keep only the placeholder directory in git.
 .runtime-download/
+.legacy-host-download/
+resources/legacy-agent-host/*
+!resources/legacy-agent-host/.gitkeep
 resources/runtime/*
 !resources/runtime/.gitkeep
 .terminal-platform-download/
@@ -80,6 +83,24 @@ remotion/*
 /.remote-agent-runtime-staging/
 /.remote-profile-spike-staging/
 /_remote_profile_spike_stage/
+
+# Provider-migration raw captures stay local; keep compact review handoffs/manifests.
+/docs/plans/provider-migration/evidence/*/*
+!/docs/plans/provider-migration/evidence/*/manifest.json
+!/docs/plans/provider-migration/evidence/*/README.md
+!/docs/plans/provider-migration/evidence/*/FINAL.md
+/docs/plans/provider-migration/evidence/*.tar.gz
+/docs/plans/provider-migration/evidence/*.tgz
+
+# Reproducible local progress measurement scratch; reports and their data remain reviewable.
+/docs/plans/provider-migration/progress/measure-progress.py
+/docs/plans/provider-migration/progress/render-label-revision.py
+/docs/plans/provider-migration/progress/loc-measurement.json
+
+# Keep historical local package captures out of new diffs; retain the selected lockfile input.
+/vendor/provider-migration/*/*.tgz
+!/vendor/provider-migration/finite-claude-custody-v1/agent-teams-provider-session-contracts-0.0.0.tgz
+!/vendor/provider-migration/typed-quality-validation-v2/agent-teams-provider-implementations-0.0.0.tgz
 
 # Deterministic announcement build output (edit landing/content/announcements).
 /landing/public/announcements/

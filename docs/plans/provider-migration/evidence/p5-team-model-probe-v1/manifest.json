@@ -1,0 +1,72 @@
+{
+  "scope": "Working-tree Team model-test milestone only, not final-source/release/UI qualification. Native receipt pins its listed Main surfaces and complete Host source/dist. Full stage1 remains incomplete.",
+  "sourceSha256": "63fbc9aead0157f12177e3677cf88b1971d1fe9bb04048269c952b7a85db9da1",
+  "distSha256": "3e775d64fb7bdb16d02e80ef139b96c5117d54758a17d0a847a09d29ddb09676",
+  "providerArchive": "vendor/provider-migration/claude-probe-v3/agent-teams-provider-implementations-0.0.0.tgz",
+  "providerArchiveSha256": "543cfa030a0d0cda0c5b091c207906c6f175ed6cd9eec28090094ff0b085af59",
+  "localModelRequests": 5,
+  "teamRequests": 2,
+  "globalRequests": 3,
+  "files": [
+    {
+      "path": "receipt.json",
+      "sha256": "fce80dc3ae8f97a31d97afb1e02ab85f7a04664ce361ca437e1b8bc326205a80"
+    },
+    {
+      "path": "attempt.json",
+      "sha256": "86743633d542b991e31df6c65930889d5e99f57557a3554daf2cd6a7bbe11186"
+    },
+    {
+      "path": "executed-native-test.ts",
+      "sha256": "84a6275639f051a7ef75539e83c5c50df64c708fa55fdf04efe373bd78d1aff7"
+    },
+    {
+      "path": "jobs/37f799c8f89fa17dae4d8f7a1b3af2b4/meta.json",
+      "sha256": "557ba8465f01f9db0881fb9224c34933b27443c2561b406e192c543737eaae59"
+    },
+    {
+      "path": "jobs/37f799c8f89fa17dae4d8f7a1b3af2b4/state.json",
+      "sha256": "0cf47db46bd6a9dad8988ad13cf41b4a32762395a6e382b2124ea133785e7a6d"
+    },
+    {
+      "path": "jobs/37f799c8f89fa17dae4d8f7a1b3af2b4/stdout.log",
+      "sha256": "8ef3dce12be3897ac570775304e193aca1b39f8beeff467e6da4615cb8a96a81"
+    },
+    {
+      "path": "jobs/37f799c8f89fa17dae4d8f7a1b3af2b4/stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "jobs/5aa978bf3b2108c1122868f4e855eca2/meta.json",
+      "sha256": "70b090d68d6452258c540613402c6ff9f125469589170a2b326e7e7558a78841"
+    },
+    {
+      "path": "jobs/5aa978bf3b2108c1122868f4e855eca2/state.json",
+      "sha256": "64e62678a75e768f34e3582c41a7aab4f5b80ba2f18b7c918fe4b52b705c925e"
+    },
+    {
+      "path": "jobs/5aa978bf3b2108c1122868f4e855eca2/stdout.log",
+      "sha256": "8fbf796a2df940287027f8c846f6c02aa035d3c0ac7fcad49fba9a6f371a6a7c"
+    },
+    {
+      "path": "jobs/5aa978bf3b2108c1122868f4e855eca2/stderr.log",
+      "sha256": "693c9ed37cfdc1c2c5fa97d566a7bbf030569530bc1e28841414da7a86a2763f"
+    },
+    {
+      "path": "jobs/2519a0b90f8565a8df753653bf834026/meta.json",
+      "sha256": "41cf1ace663d5ee9187de6fd660c1700d55b4dbac84f667ccddaa609364fbd84"
+    },
+    {
+      "path": "jobs/2519a0b90f8565a8df753653bf834026/state.json",
+      "sha256": "bd6b2346de5979130ccfb5d2e8f9d1325b6f7fb0993128cc516174b6c369bbae"
+    },
+    {
+      "path": "jobs/2519a0b90f8565a8df753653bf834026/stdout.log",
+      "sha256": "6e19855962520fc7f3bcb3d47d50ee8c2e8bcfb1877de53987ad5a8686989655"
+    },
+    {
+      "path": "jobs/2519a0b90f8565a8df753653bf834026/stderr.log",
+      "sha256": "693c9ed37cfdc1c2c5fa97d566a7bbf030569530bc1e28841414da7a86a2763f"
+    }
+  ]
+}

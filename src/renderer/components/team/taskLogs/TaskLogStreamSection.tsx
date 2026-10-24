@@ -10,8 +10,11 @@ import { useStore } from '@renderer/store';
 import { selectTaskDetailResourceEntry } from '@renderer/store/slices/taskDetailResourcesSlice';
 import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 
+import { HostTaskActivityStream } from './HostTaskActivityViews';
+
 import type { TaskDetailIdentity } from '@features/team-task-detail/core';
 import type { BoardTaskLogStreamResponse } from '@shared/types';
+import type { HostTaskLogStream } from '@shared/types/teamActivity';
 
 interface TaskLogStreamSectionProps {
   identity: TaskDetailIdentity;
@@ -53,11 +56,15 @@ export const TaskLogStreamSection = ({
     selectResolvedMembersForTeamName(state, identity.teamName)
   );
   const entry = useStore((state) => selectTaskDetailResourceEntry(state, identity, 'log-stream'));
+  const raw = entry?.data as BoardTaskLogStreamResponse | HostTaskLogStream | null | undefined;
+  const hostStream = raw && 'kind' in raw ? raw : null;
   const stream = useMemo(
-    () =>
-      entry?.data ? normalizeExecutionLogStream(entry.data as BoardTaskLogStreamResponse) : null,
-    [entry?.data]
+    () => (raw && !('kind' in raw) ? normalizeExecutionLogStream(raw) : null),
+    [raw]
   );
+
+  if (hostStream?.taskId === identity.taskId && !entry?.error)
+    return <HostTaskActivityStream key={taskDetailKey(identity)} value={hostStream} />;
 
   return (
     <ExecutionLogStreamView

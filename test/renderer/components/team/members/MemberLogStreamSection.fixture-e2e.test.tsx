@@ -68,29 +68,6 @@ function flushMicrotasks(): Promise<void> {
   return Promise.resolve();
 }
 
-function flushAsyncWork(): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, 0);
-  });
-}
-
-async function waitForText(
-  host: HTMLElement,
-  predicate: (text: string) => boolean
-): Promise<string> {
-  let text = '';
-  for (let attempt = 0; attempt < 25; attempt += 1) {
-    await act(async () => {
-      await flushAsyncWork();
-    });
-    text = host.textContent ?? '';
-    if (predicate(text)) {
-      return text;
-    }
-  }
-  return text;
-}
-
 async function loadOpenCodeFixtureTranscript(): Promise<
   NonNullable<OpenCodeRuntimeTranscriptResponse['transcript']>
 > {
@@ -285,16 +262,20 @@ describe('MemberLogStreamSection real fixture e2e', () => {
     const { useCase, getOpenCodeTranscript, findRecentMemberLogFileRefsByMember } =
       await createFixtureUseCase();
     const capturedResponseRef: { current: MemberLogStreamResponse | null } = { current: null };
-    apiState.getMemberLogStream.mockImplementation(async (teamName, memberName, options) => {
-      const response = await useCase.execute({
+    const pendingResponseRef: { current: Promise<MemberLogStreamResponse> | null } = { current: null };
+    apiState.getMemberLogStream.mockImplementation((teamName, memberName, options) => {
+      const pending = useCase.execute({
         teamName,
         memberName,
         limitSegments: options?.limitSegments,
         laneId: options?.laneId,
         forceRefresh: options?.forceRefresh,
+      }).then((response) => {
+        capturedResponseRef.current = response;
+        return response;
       });
-      capturedResponseRef.current = response;
-      return response;
+      pendingResponseRef.current = pending;
+      return pending;
     });
 
     const host = document.createElement('div');
@@ -315,9 +296,14 @@ describe('MemberLogStreamSection real fixture e2e', () => {
       await flushMicrotasks();
     });
 
-    const text = await waitForText(host, (content) =>
-      content.includes('Member-wide Claude transcript final note for Jack.')
-    );
+    // The real JSONL source performs filesystem work. Await this exact request,
+    // then let React commit its response instead of guessing a number of timer turns.
+    expect(pendingResponseRef.current).not.toBeNull();
+    await act(async () => {
+      await pendingResponseRef.current;
+    });
+    const text = host.textContent ?? '';
+    expect(text).toContain('Member-wide Claude transcript final note for Jack.');
 
     expect(text).not.toContain('Member-scoped transcript and runtime logs');
     expect(text).not.toContain('Execution');

@@ -42,6 +42,7 @@ import {
   LeadSessionParseCache,
   type LeadSessionParseCacheKey,
 } from './cache/LeadSessionParseCache';
+import { mapLimitLocal } from './stopped-import/teamReadConcurrency';
 import { atomicWriteAsync } from './atomicWrite';
 import { createDraftTeamConfig } from './createDraftTeamConfig';
 import { assertDraftRenameDestinationAvailable, renameDraftTeamDirectory } from './draftTeamRename';
@@ -305,30 +306,6 @@ interface GlobalTaskTeamInfo {
   deletedAt?: string;
 }
 
-async function mapLimitLocal<T, R>(
-  items: readonly T[],
-  limit: number,
-  mapper: (item: T) => Promise<R>
-): Promise<R[]> {
-  const results = new Array<R>(items.length);
-  let nextIndex = 0;
-  const workerCount = Math.min(Math.max(1, limit), items.length);
-
-  await Promise.all(
-    Array.from({ length: workerCount }, async () => {
-      while (true) {
-        const index = nextIndex++;
-        if (index >= items.length) {
-          return;
-        }
-        results[index] = await mapper(items[index]);
-      }
-    })
-  );
-
-  return results;
-}
-
 function readConfigForUiSnapshot(
   configReader: TeamConfigReader & {
     getConfigSnapshot?: (teamName: string) => Promise<TeamConfig | null>;
@@ -484,6 +461,28 @@ export class TeamDataService {
       getSentMessages: (teamName) => this.sentMessagesStore.readMessages(teamName),
     });
     this.memberActivityMetaService = new MemberActivityMetaService(this.messageFeedService);
+  }
+
+  readStoppedTeamImportNotificationFacts(teamName: string) {
+    return this.taskCommentNotificationJournal.inspectStoppedImport(teamName);
+  }
+
+  readStoppedTeamImportCommandFacts(teamName: string) {
+    return this.taskBoardCommandFacade.readStoppedTeamImportCommandFacts(teamName);
+  }
+
+  /** Pending callbacks are product-owner debt, independent of Runtime liveness. */
+  readStoppedTeamImportBackgroundFacts(teamName: string): Readonly<Record<string, number>> {
+    return {
+      initialization: Number(this.taskCommentNotificationInitialization !== null),
+      process: Number(this.taskCommentNotificationProcessInFlight.has(teamName)),
+      active: Number(this.taskCommentNotificationActiveProcess.has(teamName)),
+      queued: Number(this.taskCommentNotificationQueuedProcess.has(teamName)),
+      notification: [...this.taskCommentNotificationInFlight].filter((key) =>
+        key.startsWith(`${teamName}:`)
+      ).length,
+      context: Number(this.notificationContextInFlight.has(teamName)),
+    };
   }
 
   private readSnapshotConfig(teamName: string): Promise<TeamConfig | null> {
@@ -2277,30 +2276,16 @@ export class TeamDataService {
 
         // Skip inbox notification when lead starts their own task (solo teams)
         if (!this.isLeadOwner(task.owner, leadName)) {
-          const parts = [
-            `**start working on task now** ${this.getTaskLabel(task)} "${task.subject}"`,
-          ];
-          if (task.description?.trim()) {
-            parts.push(`\nDetails:\n${task.description.trim()}`);
-          }
-          parts.push(
-            '',
-            wrapAgentBlock(
-              [
-                `Begin work on this task immediately. Keep it moving until it is completed or clearly blocked. Do not leave it idle.`,
-                `Update task status using the board MCP tools:`,
-                `task_complete { teamName: "${teamName}", taskId: "${task.id}", actor: "${task.owner}" }`,
-              ].join('\n')
+          await this.sendMessage(
+            teamName,
+            agentTeamsControllerModule.protocols.buildTaskStartNotification(
+              teamName,
+              task,
+              this.getTaskLabel(task),
+              'legacy',
+              leadName
             )
           );
-          await this.sendMessage(teamName, {
-            member: task.owner,
-            from: leadName,
-            text: parts.join('\n'),
-            taskRefs: task.descriptionTaskRefs,
-            summary: `Start working on ${this.getTaskLabel(task)}`,
-            source: 'system_notification',
-          });
         }
       } catch {
         // Best-effort notification
@@ -2361,34 +2346,12 @@ export class TeamDataService {
   }
 
   private buildUserTaskStartNotification(teamName: string, task: TeamTask): SendMessageRequest {
-    const parts = [`**start working on task now** ${this.getTaskLabel(task)} "${task.subject}"`];
-    if (task.description?.trim()) {
-      parts.push(`\nDetails:\n${task.description.trim()}`);
-    }
-    if (task.prompt?.trim()) {
-      parts.push(`\nInstructions:\n${task.prompt.trim()}`);
-    }
-    parts.push(
-      '',
-      wrapAgentBlock(
-        [
-          `This start notification can become stale after reassignment or completion. Before modifying anything, fetch the current task and verify that task.owner is your configured teammate name and task.status is pending or in_progress. If the owner changed or the task is completed/deleted, do not start or reopen it, modify files, add a completion comment, or complete it; stop unless the current owner explicitly asks you to collaborate on fresh follow-up work.`,
-          `Begin work on this task immediately. Keep it moving until it is completed or clearly blocked. Do not leave it idle.`,
-          `To fetch the full task context (description, comments, attachments) use:`,
-          `task_get { teamName: "${teamName}", taskId: "${task.id}" }`,
-          `When done, update task status:`,
-          `task_complete { teamName: "${teamName}", taskId: "${task.id}", actor: "${task.owner}" }`,
-        ].join('\n')
-      )
+    return agentTeamsControllerModule.protocols.buildTaskStartNotification(
+      teamName,
+      task,
+      this.getTaskLabel(task),
+      'user'
     );
-    return {
-      member: task.owner!,
-      from: 'user',
-      text: parts.join('\n'),
-      taskRefs: task.descriptionTaskRefs,
-      summary: `Start working on ${this.getTaskLabel(task)}`,
-      source: 'system_notification',
-    };
   }
 
   async updateTaskStatus(
@@ -3909,6 +3872,11 @@ export class TeamDataService {
 
   async updateKanban(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void> {
     const taskBoard = this.getTaskBoard(teamName);
+
+    if (patch.op === 'disapprove') {
+      taskBoard.disapproveReview(taskId, { from: 'user' });
+      return;
+    }
 
     if (patch.op === 'remove') {
       taskBoard.clearKanban(taskId);

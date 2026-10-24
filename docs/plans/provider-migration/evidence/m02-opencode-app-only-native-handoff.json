@@ -1,0 +1,55 @@
+{
+  "status": "scoped-native-pass",
+  "mode": "appOnly",
+  "jobId": "462cb3489104282a19c6e95875bba84a",
+  "runnerExitCode": 0,
+  "nativeOpenCodeSha256": "417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6ebae696b",
+  "providerArchiveSha256": "49448bf6897c008f1692f26730951393d6f9d31c8879ca664cda15f96b2dd46b",
+  "hostSourceSha256": "b634c9e524bc3691673b63a02baa07999e4b7a13b9f078f6d958843acea85a52",
+  "hostDistSha256": "085d98a58996faf26e5f576e2573ee7dedf02a1ee6401a9aa827e7ea3aec709b",
+  "retainedHandoff": ".artifacts/provider-migration/p6-native-mcp-policy-attempt8/handoff.json",
+  "retainedHandoffSha256": "79ad2855318c1a6e7e5c5790c39f0488019e14bbcb761fe1ab79becc4efc2da7",
+  "retainedFiles": 4565,
+  "retainedSymlinks": 7,
+  "rawCensusSha256": "655865175f8a6fa0f2074b127c2f3262b533a96a4daaddff5ced87f191698814",
+  "receiptSha256": "ea750f7c4fccce5d510a178050c5cb788852023b318c90a8e069617c715dfe35",
+  "terminalSha256": "6a48b878e61fb07eeb6c34367e3e175afa2df46ea4cc8fc83133148a798e26d7",
+  "assertions": {
+    "originalInputs": 1,
+    "matchingOriginalSucceededResults": 1,
+    "httpAttemptsToLocalModelEndpoint": 1,
+    "admittedModelRequests": 1,
+    "capturedTeamMcpToolCount": 27,
+    "requestedTeamToolEffects": 0,
+    "selectedMcpInitializeListCall": [
+      0,
+      0,
+      0
+    ],
+    "ambientMcpInitializeListCall": [
+      0,
+      0,
+      0
+    ],
+    "selectedLoopbackOAuthMetadataGets": 0,
+    "ambientLoopbackOAuthMetadataGets": 0,
+    "capturedTeamEndpointRevocation": {
+      "source": "original-Team-MCP-endpoint-revoked",
+      "refused": true,
+      "delivery": "known-not-sent",
+      "originalOutcomeReplayed": false
+    },
+    "httpAttemptsAfterEndpointRevocation": 1,
+    "nativeConfigFileDriftQualified": false,
+    "capturedCleanup": "confirmed",
+    "retryPerformed": false
+  },
+  "trafficScope": "One raw HTTP attempt and one admitted request to the local model endpoint, unchanged after dependency loss. Selected/ambient MCP and OAuth counters are zero; native dependency/package or other HTTP traffic is outside these counters.",
+  "limits": [
+    "AppOnly only; OpenCode inheritLead has not been qualified by this run.",
+    "Revoking the original Team MCP endpoint proves captured authority/dependency loss, not native configuration-file drift.",
+    "The model advertised the captured 27 Team tools and returned original final text; no Team tool effect was requested.",
+    "Local TEST inference only, no real account authorization or complete M02/M15/Stage1 claim. Earlier failed epochs remain unchanged; Stage2 excluded.",
+    "This case used the 49448 provider baseline; later M06 provider candidates are outside this proof."
+  ]
+}

@@ -1,3 +1,5 @@
+import { inferCrossTeamReplyMetadata } from '@agent-teams/legacy-agent-host/cross-team';
+
 import {
   appendProvisioningAssistantText,
   getCurrentLeadSessionId,
@@ -147,15 +149,7 @@ export function createTeamProvisioningLiveLeadMessagePortsBoundary<
     if (!runId) return null;
     const run = deps.getRun(runId);
     const hints = run?.activeCrossTeamReplyHints ?? [];
-    if (hints.length === 0) return null;
-
-    const matches = hints.filter((hint) => hint.toTeam === toTeam);
-    if (matches.length !== 1) return null;
-
-    return {
-      conversationId: matches[0].conversationId,
-      replyToConversationId: matches[0].conversationId,
-    };
+    return inferCrossTeamReplyMetadata(hints, toTeam);
   };
 
   return {

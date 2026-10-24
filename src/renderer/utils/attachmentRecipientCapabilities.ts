@@ -151,7 +151,13 @@ export function validateAttachmentPayloadsForMember(input: {
     }
     if (
       getMessageAttachmentRoute(
-        { providerId: getMemberProviderId(member), isLeadRecipient: isLeadMember(member) },
+        {
+          providerId: getMemberProviderId(member),
+          isLeadRecipient: isLeadMember(member),
+          ...(member.nativeInboxTextAttachmentsSupported !== undefined
+            ? { nativeInboxTextAttachmentsSupported: member.nativeInboxTextAttachmentsSupported }
+            : {}),
+        },
         attachment.mimeType,
         validUtf8
       ) === 'reference'
@@ -248,7 +254,13 @@ export function isReferenceAttachmentForMember(
   }
   return (
     getMessageAttachmentRoute(
-      { providerId: getMemberProviderId(member), isLeadRecipient: isLeadMember(member) },
+      {
+        providerId: getMemberProviderId(member),
+        isLeadRecipient: isLeadMember(member),
+        ...(member.nativeInboxTextAttachmentsSupported !== undefined
+          ? { nativeInboxTextAttachmentsSupported: member.nativeInboxTextAttachmentsSupported }
+          : {}),
+      },
       attachment.mimeType,
       validUtf8
     ) === 'reference'

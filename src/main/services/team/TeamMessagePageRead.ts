@@ -24,7 +24,11 @@ export async function readTeamMessagesPage(
   if (options.groupChatId)
     return readGroupHistoryPage(
       (windowOptions) => ports.inboxReader.getMessagesWindow(teamName, windowOptions),
-      { ...options, groupChatId: options.groupChatId, sourceIdentity: resolveInboxPath(teamName, 'user') }
+      {
+        ...options,
+        groupChatId: options.groupChatId,
+        sourceIdentity: resolveInboxPath(teamName, 'user'),
+      }
     );
   const liveMessages = capMessagesPageLiveOverlay(options.liveMessages);
   const pageOptions =

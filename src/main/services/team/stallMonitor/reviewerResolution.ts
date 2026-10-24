@@ -9,6 +9,7 @@ export function resolveReviewerFromHistory(task: TeamTask): ResolvedReviewer {
 
   for (let i = task.historyEvents.length - 1; i >= 0; i -= 1) {
     const event = task.historyEvents[i];
+    if (event.type === 'review_disapproved') return { reviewer: null, source: 'none' };
     if (event.type === 'review_approved' && event.actor) {
       return { reviewer: event.actor, source: 'history_review_approved_actor' };
     }
