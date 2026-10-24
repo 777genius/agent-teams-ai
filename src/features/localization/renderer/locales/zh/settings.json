@@ -806,9 +806,9 @@
         "noCredentials": "基本 URL 不得包含凭据"
       },
       "status": {
-        "endpointDisabledTokenKept": "端点已禁用。保存的 Token 被保留。",
         "endpointSaved": "端点已保存",
-        "endpointSavedTokenMissing": "端点已保存。未配置认证 Token。"
+        "endpointSavedTokenMissing": "端点已保存。未配置认证 Token。",
+        "notActiveUntilSaved": "尚未激活。保存端点以进行切换；在此之前启动将使用先前的连接方式。"
       }
     },
     "connection": {
@@ -909,10 +909,8 @@
     "runtimeSummary": "运行时：{{runtime}}",
     "status": {
       "configured": "已配置",
-      "enabled": "启用",
       "notConfigured": "未配置",
       "notSet": "未设置",
-      "off": "关闭",
       "unknown": "未知"
     },
     "title": "提供商设置",
@@ -928,8 +926,6 @@
       "apiKeySavedRefreshFailed": "API 密钥已保存，但无法刷新提供商状态。",
       "connectionUpdatedRefreshFailed": "连接已更新，但无法刷新提供商状态。",
       "deleteApiKey": "删除 API 密钥失败",
-      "disableEndpoint": "禁用端点失败",
-      "endpointDisabledRefreshFailed": "端点已禁用，但无法刷新提供商状态。",
       "endpointSavedRefreshFailed": "端点已保存，但无法刷新提供商状态。",
       "refreshCodexAccount": "刷新 Codex 帐户失败",
       "saveApiKey": "无法保存 API 密钥",

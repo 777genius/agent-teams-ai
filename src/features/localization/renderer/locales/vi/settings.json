@@ -806,9 +806,9 @@
         "noCredentials": "URL cơ sở không được chứa thông tin xác thực"
       },
       "status": {
-        "endpointDisabledTokenKept": "Endpoint đã bị tắt. Token đã lưu được giữ lại.",
         "endpointSaved": "Đã lưu endpoint",
-        "endpointSavedTokenMissing": "Đã lưu endpoint. Token xác thực chưa được cấu hình."
+        "endpointSavedTokenMissing": "Đã lưu endpoint. Token xác thực chưa được cấu hình.",
+        "notActiveUntilSaved": "Chưa hoạt động. Hãy lưu điểm cuối để chuyển đổi; cho đến lúc đó, các lần chạy vẫn dùng phương thức kết nối trước."
       }
     },
     "connection": {
@@ -909,10 +909,8 @@
     "runtimeSummary": "Runtime: {{runtime}}",
     "status": {
       "configured": "đã cấu hình",
-      "enabled": "Đã bật",
       "notConfigured": "Chưa cấu hình",
       "notSet": "chưa đặt",
-      "off": "Tắt",
       "unknown": "Không xác định"
     },
     "title": "Cài đặt nhà cung cấp",
@@ -928,8 +926,6 @@
       "apiKeySavedRefreshFailed": "Đã lưu API key, nhưng không thể làm mới trạng thái nhà cung cấp.",
       "connectionUpdatedRefreshFailed": "Đã cập nhật kết nối, nhưng không thể làm mới trạng thái nhà cung cấp.",
       "deleteApiKey": "Không thể xóa API key",
-      "disableEndpoint": "Không thể tắt endpoint",
-      "endpointDisabledRefreshFailed": "Đã tắt endpoint, nhưng không thể làm mới trạng thái nhà cung cấp.",
       "endpointSavedRefreshFailed": "Đã lưu endpoint, nhưng không thể làm mới trạng thái nhà cung cấp.",
       "refreshCodexAccount": "Không thể làm mới tài khoản Codex",
       "saveApiKey": "Không thể lưu API key",

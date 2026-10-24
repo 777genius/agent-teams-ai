@@ -806,9 +806,9 @@
         "noCredentials": "बेस URL मध्ये क्रेडेन्शियल्स समाविष्ट नसावेत"
       },
       "status": {
-        "endpointDisabledTokenKept": "एंडपॉइंट अक्षम केले. जतन केलेले टोकन ठेवले गेले.",
         "endpointSaved": "एंडपॉइंट जतन केले",
-        "endpointSavedTokenMissing": "एंडपॉइंट जतन केले. ऑथ टोकन कॉन्फिगर केलेले नाही."
+        "endpointSavedTokenMissing": "एंडपॉइंट जतन केले. ऑथ टोकन कॉन्फिगर केलेले नाही.",
+        "notActiveUntilSaved": "अजून सक्रिय नाही. स्विच करण्यासाठी एंडपॉइंट जतन करा; तोपर्यंत लाँच मागील कनेक्शन पद्धत वापरतील."
       }
     },
     "connection": {
@@ -909,10 +909,8 @@
     "runtimeSummary": "रनटाइम: {{runtime}}",
     "status": {
       "configured": "कॉन्फिगर केले",
-      "enabled": "सक्षम",
       "notConfigured": "कॉन्फिगर केलेले नाही",
       "notSet": "सेट केलेले नाही",
-      "off": "बंद",
       "unknown": "अज्ञात"
     },
     "title": "प्रोव्हायडर सेटिंग्ज",
@@ -928,8 +926,6 @@
       "apiKeySavedRefreshFailed": "API की जतन केली, पण प्रोव्हायडर स्थिती रिफ्रेश करणे अयशस्वी.",
       "connectionUpdatedRefreshFailed": "कनेक्शन अपडेट केले, पण प्रोव्हायडर स्थिती रिफ्रेश करणे अयशस्वी.",
       "deleteApiKey": "API की हटवणे अयशस्वी",
-      "disableEndpoint": "एंडपॉइंट अक्षम करणे अयशस्वी",
-      "endpointDisabledRefreshFailed": "एंडपॉइंट अक्षम केले, पण प्रोव्हायडर स्थिती रिफ्रेश करणे अयशस्वी.",
       "endpointSavedRefreshFailed": "एंडपॉइंट जतन केले, पण प्रोव्हायडर स्थिती रिफ्रेश करणे अयशस्वी.",
       "refreshCodexAccount": "Codex खाते रिफ्रेश करणे अयशस्वी",
       "saveApiKey": "API की जतन करणे अयशस्वी",

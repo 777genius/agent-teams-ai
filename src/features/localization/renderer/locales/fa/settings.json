@@ -806,9 +806,9 @@
         "noCredentials": "URL پایه نباید شامل اعتبارنامه‌ها باشد"
       },
       "status": {
-        "endpointDisabledTokenKept": "نقطه پایانی غیرفعال شد. توکن ذخیره‌شده نگه داشته شد.",
         "endpointSaved": "نقطه پایانی ذخیره شد",
-        "endpointSavedTokenMissing": "نقطه پایانی ذخیره شد. توکن احراز هویت پیکربندی نشده است."
+        "endpointSavedTokenMissing": "نقطه پایانی ذخیره شد. توکن احراز هویت پیکربندی نشده است.",
+        "notActiveUntilSaved": "هنوز فعال نیست. برای تغییر، نقطه پایانی را ذخیره کنید؛ تا آن زمان اجراها از روش اتصال قبلی استفاده می‌کنند."
       }
     },
     "connection": {
@@ -909,10 +909,8 @@
     "runtimeSummary": "زمان اجرا: {{runtime}}",
     "status": {
       "configured": "پیکربندی‌شده",
-      "enabled": "فعال",
       "notConfigured": "پیکربندی‌نشده",
       "notSet": "تنظیم‌نشده",
-      "off": "خاموش",
       "unknown": "نامشخص"
     },
     "title": "تنظیمات ارائه‌دهنده",
@@ -928,8 +926,6 @@
       "apiKeySavedRefreshFailed": "کلید API ذخیره شد، اما تازه‌سازی وضعیت ارائه‌دهنده ناموفق بود.",
       "connectionUpdatedRefreshFailed": "اتصال به‌روزرسانی شد، اما تازه‌سازی وضعیت ارائه‌دهنده ناموفق بود.",
       "deleteApiKey": "حذف کلید API ناموفق بود",
-      "disableEndpoint": "غیرفعال کردن نقطه پایانی ناموفق بود",
-      "endpointDisabledRefreshFailed": "نقطه پایانی غیرفعال شد، اما تازه‌سازی وضعیت ارائه‌دهنده ناموفق بود.",
       "endpointSavedRefreshFailed": "نقطه پایانی ذخیره شد، اما تازه‌سازی وضعیت ارائه‌دهنده ناموفق بود.",
       "refreshCodexAccount": "تازه‌سازی حساب Codex ناموفق بود",
       "saveApiKey": "ذخیره کلید API ناموفق بود",

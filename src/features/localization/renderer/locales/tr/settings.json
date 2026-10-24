@@ -806,9 +806,9 @@
         "noCredentials": "Temel URL kimlik bilgileri içermemelidir"
       },
       "status": {
-        "endpointDisabledTokenKept": "Uç nokta devre dışı bırakıldı. Kaydedilmiş belirteç korundu.",
         "endpointSaved": "Uç nokta kaydedildi",
-        "endpointSavedTokenMissing": "Uç nokta kaydedildi. Kimlik doğrulama belirteci yapılandırılmadı."
+        "endpointSavedTokenMissing": "Uç nokta kaydedildi. Kimlik doğrulama belirteci yapılandırılmadı.",
+        "notActiveUntilSaved": "Henüz etkin değil. Geçiş yapmak için uç noktayı kaydedin; o zamana kadar başlatmalar önceki bağlantı yöntemini kullanır."
       }
     },
     "connection": {
@@ -909,10 +909,8 @@
     "runtimeSummary": "Çalışma zamanı: {{runtime}}",
     "status": {
       "configured": "yapılandırılmış",
-      "enabled": "Etkin",
       "notConfigured": "Yapılandırılmamış",
       "notSet": "ayarlanmadı",
-      "off": "Kapalı",
       "unknown": "Bilinmiyor"
     },
     "title": "Sağlayıcı Ayarları",
@@ -928,8 +926,6 @@
       "apiKeySavedRefreshFailed": "API anahtarı kaydedildi, ancak sağlayıcı durumu yenilenemedi.",
       "connectionUpdatedRefreshFailed": "Bağlantı güncellendi, ancak sağlayıcı durumu yenilenemedi.",
       "deleteApiKey": "API anahtarı silinemedi",
-      "disableEndpoint": "Uç nokta devre dışı bırakılamadı",
-      "endpointDisabledRefreshFailed": "Uç nokta devre dışı bırakıldı, ancak sağlayıcı durumu yenilenemedi.",
       "endpointSavedRefreshFailed": "Uç nokta kaydedildi, ancak sağlayıcı durumu yenilenemedi.",
       "refreshCodexAccount": "Codex hesabı yenilenemedi",
       "saveApiKey": "API anahtarı kaydedilemedi",

@@ -694,7 +694,7 @@ export function getProviderConnectionModeSummary(
   }
 
   if (provider.providerId === 'anthropic') {
-    if (provider.authenticated) {
+    if (provider.authenticated || provider.connection?.compatibleEndpoint?.enabled) {
       return null;
     }
 

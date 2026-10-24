@@ -843,9 +843,9 @@
         "noCredentials": "Base URL не должен содержать credentials"
       },
       "status": {
-        "endpointDisabledTokenKept": "Endpoint отключён. Сохранённый token оставлен.",
         "endpointSaved": "Endpoint сохранён",
-        "endpointSavedTokenMissing": "Endpoint сохранён. Auth token не настроен."
+        "endpointSavedTokenMissing": "Endpoint сохранён. Auth token не настроен.",
+        "notActiveUntilSaved": "Ещё не активен. Сохраните endpoint, чтобы переключиться; до этого запуски используют прежний способ подключения."
       }
     },
     "connection": {
@@ -946,10 +946,8 @@
     "runtimeSummary": "Runtime: {{runtime}}",
     "status": {
       "configured": "настроен",
-      "enabled": "Включено",
       "notConfigured": "Не настроен",
       "notSet": "не задан",
-      "off": "Выкл.",
       "unknown": "Неизвестно"
     },
     "title": "Настройки провайдера",
@@ -965,8 +963,6 @@
       "apiKeySavedRefreshFailed": "API key сохранён, но не удалось обновить статус провайдера.",
       "connectionUpdatedRefreshFailed": "Подключение обновлено, но не удалось обновить статус провайдера.",
       "deleteApiKey": "Не удалось удалить API key",
-      "disableEndpoint": "Не удалось отключить endpoint",
-      "endpointDisabledRefreshFailed": "Endpoint отключён, но не удалось обновить статус провайдера.",
       "endpointSavedRefreshFailed": "Endpoint сохранён, но не удалось обновить статус провайдера.",
       "refreshCodexAccount": "Не удалось обновить Codex account",
       "saveApiKey": "Не удалось сохранить API key",

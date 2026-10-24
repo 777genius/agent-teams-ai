@@ -806,9 +806,9 @@
         "noCredentials": "بیس URL سند شامل نہیں کی جانی چاہئے"
       },
       "status": {
-        "endpointDisabledTokenKept": "نقطہ معذور ختم. حفاظتی نشان برقرار رکھا گیا ۔",
         "endpointSaved": "اختتامی مقصد بچا لیا",
-        "endpointSavedTokenMissing": "بالآخر پوائنٹ بچ گیا۔ اَے [ یہوواہ ] !"
+        "endpointSavedTokenMissing": "بالآخر پوائنٹ بچ گیا۔ اَے [ یہوواہ ] !",
+        "notActiveUntilSaved": "ابھی فعال نہیں۔ منتقلی کے لیے اینڈ پوائنٹ محفوظ کریں؛ تب تک لانچ پچھلا کنکشن طریقہ استعمال کرتے ہیں۔"
       }
     },
     "connection": {
@@ -909,10 +909,8 @@
     "runtimeSummary": "چلائیں : {{runtime}}",
     "status": {
       "configured": "مصر",
-      "enabled": "فعال کریں",
       "notConfigured": "غیر متصل",
       "notSet": "اور ان میں کمی نہ کی",
-      "off": "بندکرو",
       "unknown": "نامعلوم"
     },
     "title": "فراہم کُنندہ کی ترتیبات",
@@ -928,8 +926,6 @@
       "apiKeySavedRefreshFailed": "API اِس سلسلے میں ایک مثال پر غور کریں ۔",
       "connectionUpdatedRefreshFailed": "اتصال کی تجدید کی گئی لیکن فراہم‌کردہ حالت کو بہتر بنانے میں ناکام رہا ۔",
       "deleteApiKey": "حذف کرنے میں ناکامی API کلید",
-      "disableEndpoint": "مقصد کو ختم کرنے میں ناکامی",
-      "endpointDisabledRefreshFailed": "( ۱ - کرنتھیوں ۱۵ : ۳۳ ) اس سے ظاہر ہوتا ہے کہ اُس نے اپنی زندگی میں تبدیلیاں کیں ۔",
       "endpointSavedRefreshFailed": "آخرکار خاتمہ آ گیا لیکن اُس کی حالت تازہ نہ ہو سکی ۔",
       "refreshCodexAccount": "حساب کو تازہ کرنے میں ناکام",
       "saveApiKey": "محفوظ کرنے میں ناکامی API کلید",

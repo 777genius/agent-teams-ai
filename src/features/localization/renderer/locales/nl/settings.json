@@ -806,9 +806,9 @@
         "noCredentials": "Basis-URL mag geen inloggegevens bevatten"
       },
       "status": {
-        "endpointDisabledTokenKept": "Endpoint uitgeschakeld. Opgeslagen token is behouden.",
         "endpointSaved": "Endpoint opgeslagen",
-        "endpointSavedTokenMissing": "Endpoint opgeslagen. Auth-token is niet geconfigureerd."
+        "endpointSavedTokenMissing": "Endpoint opgeslagen. Auth-token is niet geconfigureerd.",
+        "notActiveUntilSaved": "Nog niet actief. Sla het eindpunt op om over te schakelen; tot die tijd gebruiken starts de vorige verbindingsmethode."
       }
     },
     "connection": {
@@ -909,10 +909,8 @@
     "runtimeSummary": "Runtime: {{runtime}}",
     "status": {
       "configured": "geconfigureerd",
-      "enabled": "Ingeschakeld",
       "notConfigured": "Niet geconfigureerd",
       "notSet": "niet ingesteld",
-      "off": "Uit",
       "unknown": "Onbekend"
     },
     "title": "Providerinstellingen",
@@ -928,8 +926,6 @@
       "apiKeySavedRefreshFailed": "API-sleutel opgeslagen, maar kon providerstatus niet vernieuwen.",
       "connectionUpdatedRefreshFailed": "Verbinding bijgewerkt, maar kon providerstatus niet vernieuwen.",
       "deleteApiKey": "Kon API-sleutel niet verwijderen",
-      "disableEndpoint": "Kon endpoint niet uitschakelen",
-      "endpointDisabledRefreshFailed": "Endpoint uitgeschakeld, maar kon providerstatus niet vernieuwen.",
       "endpointSavedRefreshFailed": "Endpoint opgeslagen, maar kon providerstatus niet vernieuwen.",
       "refreshCodexAccount": "Kon Codex-account niet vernieuwen",
       "saveApiKey": "Kon API-sleutel niet opslaan",

@@ -806,9 +806,9 @@
         "noCredentials": "Basis URL darf keine Anmeldeinformationen enthalten"
       },
       "status": {
-        "endpointDisabledTokenKept": "Endpoint deaktiviert. Gespeichertes Token wurde gehalten.",
         "endpointSaved": "Endpunkt gespeichert",
-        "endpointSavedTokenMissing": "Endpoint gespeichert. Auth-Token ist nicht konfiguriert."
+        "endpointSavedTokenMissing": "Endpoint gespeichert. Auth-Token ist nicht konfiguriert.",
+        "notActiveUntilSaved": "Noch nicht aktiv. Speichern Sie den Endpunkt, um zu wechseln; bis dahin verwenden Starts die bisherige Verbindungsmethode."
       }
     },
     "connection": {
@@ -909,10 +909,8 @@
     "runtimeSummary": "Laufzeit: {{runtime}}",
     "status": {
       "configured": "für",
-      "enabled": "Ermöglicht",
       "notConfigured": "Nicht konfiguriert",
       "notSet": "nicht",
-      "off": "Aus",
       "unknown": "Unbekannt"
     },
     "title": "Einstellungen des Anbieters",
@@ -928,8 +926,6 @@
       "apiKeySavedRefreshFailed": "API Schlüssel gespeichert, aber nicht den Status des Anbieters aktualisieren.",
       "connectionUpdatedRefreshFailed": "Verbindung aktualisiert, aber nicht den Status des Anbieters aktualisieren.",
       "deleteApiKey": "Nicht zu löschen API Schlüssel",
-      "disableEndpoint": "Nicht zu deaktivieren Endpunkt",
-      "endpointDisabledRefreshFailed": "Endpoint deaktiviert, aber nicht den Status des Anbieters aktualisieren.",
       "endpointSavedRefreshFailed": "Endpoint gespeichert, aber nicht den Status des Anbieters aktualisieren.",
       "refreshCodexAccount": "Nicht erfrischen Codex-Konto",
       "saveApiKey": "Nicht zu retten API Schlüssel",

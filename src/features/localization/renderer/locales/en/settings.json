@@ -843,9 +843,9 @@
         "noCredentials": "Base URL must not include credentials"
       },
       "status": {
-        "endpointDisabledTokenKept": "Endpoint disabled. Saved token was kept.",
         "endpointSaved": "Endpoint saved",
-        "endpointSavedTokenMissing": "Endpoint saved. Auth token is not configured."
+        "endpointSavedTokenMissing": "Endpoint saved. Auth token is not configured.",
+        "notActiveUntilSaved": "Not active yet. Save the endpoint to switch; until then launches keep the previous connection method."
       }
     },
     "connection": {
@@ -946,10 +946,8 @@
     "runtimeSummary": "Runtime: {{runtime}}",
     "status": {
       "configured": "configured",
-      "enabled": "Enabled",
       "notConfigured": "Not configured",
       "notSet": "not set",
-      "off": "Off",
       "unknown": "Unknown"
     },
     "title": "Provider Settings",
@@ -965,8 +963,6 @@
       "apiKeySavedRefreshFailed": "API key saved, but failed to refresh provider status.",
       "connectionUpdatedRefreshFailed": "Connection updated, but failed to refresh provider status.",
       "deleteApiKey": "Failed to delete API key",
-      "disableEndpoint": "Failed to disable endpoint",
-      "endpointDisabledRefreshFailed": "Endpoint disabled, but failed to refresh provider status.",
       "endpointSavedRefreshFailed": "Endpoint saved, but failed to refresh provider status.",
       "refreshCodexAccount": "Failed to refresh Codex account",
       "saveApiKey": "Failed to save API key",

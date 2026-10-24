@@ -806,9 +806,9 @@
         "noCredentials": "Hindi dapat maglaman ng credential ang Base URL"
       },
       "status": {
-        "endpointDisabledTokenKept": "Naka-disable ang endpoint. Napanatili ang naka-save na token.",
         "endpointSaved": "Na-save ang endpoint",
-        "endpointSavedTokenMissing": "Na-save ang endpoint. Hindi naka-configure ang auth token."
+        "endpointSavedTokenMissing": "Na-save ang endpoint. Hindi naka-configure ang auth token.",
+        "notActiveUntilSaved": "Hindi pa aktibo. I-save ang endpoint para lumipat; hanggang sa sandaling iyon, ang mga launch ay gumagamit ng nakaraang paraan ng koneksyon."
       }
     },
     "connection": {
@@ -909,10 +909,8 @@
     "runtimeSummary": "Runtime: {{runtime}}",
     "status": {
       "configured": "naka-configure",
-      "enabled": "Pinagana",
       "notConfigured": "Hindi naka-configure",
       "notSet": "hindi nakatakda",
-      "off": "Off",
       "unknown": "Hindi alam"
     },
     "title": "Mga Setting ng Provider",
@@ -928,8 +926,6 @@
       "apiKeySavedRefreshFailed": "Na-save ang API key, ngunit nabigong i-refresh ang status ng provider.",
       "connectionUpdatedRefreshFailed": "Na-update ang koneksyon, ngunit nabigong i-refresh ang status ng provider.",
       "deleteApiKey": "Nabigong tanggalin ang API key",
-      "disableEndpoint": "Nabigong i-disable ang endpoint",
-      "endpointDisabledRefreshFailed": "Naka-disable ang endpoint, ngunit nabigong i-refresh ang status ng provider.",
       "endpointSavedRefreshFailed": "Na-save ang endpoint, ngunit nabigong i-refresh ang status ng provider.",
       "refreshCodexAccount": "Nabigong i-refresh ang Codex account",
       "saveApiKey": "Nabigong i-save ang API key",
