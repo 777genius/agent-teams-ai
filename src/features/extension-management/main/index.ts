@@ -10,3 +10,4 @@ export { createAppExtensionManagement } from './composition/createAppExtensionMa
 export { createDesktopExtensionManagement } from './composition/createDesktopExtensionManagement';
 export { createElectronExtensionManagement } from './composition/createElectronExtensionManagement';
 export { createExtensionManagementFeature } from './composition/createExtensionManagementFeature';
+export { createReadOnlyExtensionManagement } from './composition/createReadOnlyExtensionManagement';

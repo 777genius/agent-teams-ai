@@ -17,6 +17,7 @@ interface ContextRecord {
   public: ExtensionContext;
   connection: Connection;
   plans: Map<string, ManagementPlan>;
+  localRestorePlans: Set<string>;
   admission: EnvironmentAdmission;
   observing: Set<string>;
 }
@@ -29,7 +30,7 @@ interface EnvironmentAdmission {
 }
 
 function terminal(operation: ManagementOperation): boolean {
-  return ['succeeded', 'partial', 'failed', 'cancelled', 'interrupted'].includes(operation.state);
+  return ['succeeded', 'partial', 'failed', 'canceled', 'interrupted'].includes(operation.state);
 }
 
 /** Captures host authority once; navigation only changes which context is displayed. */
@@ -93,6 +94,9 @@ export function createExtensionManagementApplication(
     reconcile(value, await value.connection.client.environment());
 
   return {
+    async hostStatus() {
+      return { available: true };
+    },
     async capture(raw) {
       if (closed) throw new Error('Extension management is closing.');
       const selection = raw;
@@ -124,6 +128,7 @@ export function createExtensionManagementApplication(
           captured,
           connection,
           plans: new Map(),
+          localRestorePlans: new Set(),
           admission,
           observing: new Set(),
           public: { contextId, selection, label: captured.label, session: connection.session },
@@ -169,6 +174,82 @@ export function createExtensionManagementApplication(
         value = record(input.contextId);
       return inspect(value);
     },
+    async localSkillStatus(input) {
+      const value = record(input.contextId);
+      await value.captured.assertCurrent();
+      if (!value.captured.locateLocalSkill)
+        throw new Error('Local Skill authoring is unavailable.');
+      const local = await value.captured.locateLocalSkill(input.skillPath);
+      const environment = await inspect(value);
+      for (const entry of environment.entries) {
+        for (const binding of entry.bindings) {
+          for (const candidate of binding.managedPaths) {
+            if (await local.overlapsManagedPath(candidate)) {
+              return {
+                ownership: 'managed',
+                rootId: local.rootId,
+                skillName: local.skillName,
+                alias: entry.alias,
+              };
+            }
+          }
+        }
+      }
+      // Display information only. Go repeats the ownership check under its mutation lock.
+      return { ownership: 'local', rootId: local.rootId, skillName: local.skillName };
+    },
+    async prepareLocalSkill(input) {
+      const value = record(input.contextId);
+      await value.captured.assertCurrent();
+      const plan = await value.connection.client.skills.local.prepare(input.change);
+      await value.captured.assertInactive(plan);
+      value.plans.set(plan.planId, plan);
+      if (input.change.action === 'restore') value.localRestorePlans.add(plan.planId);
+      return plan;
+    },
+    async skillCopySources(input) {
+      const value = record(input.contextId);
+      await value.captured.assertCurrent();
+      if (!value.captured.skillCopySources) throw new Error('Local Skill copying is unavailable.');
+      const environment = await inspect(value);
+      const entry = environment.entries.find((item) => item.alias === input.alias);
+      const binding = entry?.bindings.find((item) => item.targetId === input.targetId);
+      if (!binding || binding.status === 'outside_context')
+        throw new Error('This installation is outside the captured agent profile.');
+      const candidates = await value.captured.skillCopySources(binding.managedPaths);
+      if (!candidates.length)
+        throw new Error(
+          'This installation has no available materialized Skill directory to copy. Repair it first if its files are missing.'
+        );
+      return candidates;
+    },
+    async previewSkillCopy(input) {
+      const value = record(input.contextId);
+      await value.captured.assertCurrent();
+      if (!value.captured.prepareSkillCopy) throw new Error('Local Skill copying is unavailable.');
+      const environment = await inspect(value);
+      const binding = environment.entries
+        .find((item) => item.alias === input.alias)
+        ?.bindings.find((item) => item.targetId === input.targetId);
+      if (!binding || binding.status === 'outside_context')
+        throw new Error('This installation is outside the captured agent profile.');
+      const prepared = await value.captured.prepareSkillCopy(binding.managedPaths, input);
+      const plan = await value.connection.client.skills.local.prepare(prepared.change);
+      if (!plan.confirmable) {
+        await value.connection.client.plans.discard(plan.planId);
+        throw new Error(
+          plan.conflicts.map((item) => item.message).join('\n') ||
+            'The copy destination is unavailable.'
+        );
+      }
+      await value.captured.assertInactive(plan);
+      value.plans.set(plan.planId, plan);
+      return {
+        ...prepared.preview,
+        planId: plan.planId,
+        warnings: [...prepared.preview.warnings, ...plan.warnings.map((item) => item.message)],
+      };
+    },
     async prepare(raw) {
       const input = raw,
         value = record(input.contextId);
@@ -199,6 +280,7 @@ export function createExtensionManagementApplication(
         );
       await value.connection.client.plans.discard(input.planId);
       value.plans.delete(input.planId);
+      value.localRestorePlans.delete(input.planId);
     },
     async apply(raw) {
       const input = raw,
@@ -224,7 +306,12 @@ export function createExtensionManagementApplication(
       if (!plan)
         return observe(value, await value.connection.client.apply(input.planId, input.requestId));
       await value.captured.assertCurrent();
-      if (value.admission.lease && action !== 'recover' && !uncertainPlan)
+      if (
+        value.admission.lease &&
+        action !== 'recover' &&
+        !value.localRestorePlans.has(input.planId) &&
+        !uncertainPlan
+      )
         throw new Error('Resolve the outstanding extension operation before another change.');
       if (!value.admission.lease)
         value.admission.lease = await gate.reserveMutation(

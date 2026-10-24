@@ -21,7 +21,7 @@ export const ManagementOperationView = ({
     !operation.resolvedBy &&
     (operation.state === 'interrupted' ||
       operation.state === 'partial' ||
-      ((operation.state === 'failed' || operation.state === 'cancelled') &&
+      ((operation.state === 'failed' || operation.state === 'canceled') &&
         operation.result?.mutated === true) ||
       operation.result?.nextActions.some((action) => /recover|repair|inspect/.test(action.kind)));
   return (

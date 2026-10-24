@@ -779,6 +779,10 @@ async function main() {
   });
 
   ensureTerminalPlatformRuntime(uiEnv);
+  runOrExit(process.execPath, [path.join(scriptDir, 'stage-uap-runtime.ts'), '--ensure'], {
+    cwd: uiRepoRoot,
+    env: uiEnv,
+  });
 
   runOrExit(uiPackageManager, ['exec', 'electron-vite', 'dev', ...resolvedElectronViteArgs], {
     cwd: uiRepoRoot,

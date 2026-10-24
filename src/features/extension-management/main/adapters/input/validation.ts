@@ -5,6 +5,8 @@ export const selectionSchema = z
     client: z.enum(['claude', 'codex', 'opencode']),
     scope: z.enum(['user', 'project']),
     projectId: z.string().min(1).max(4096).optional(),
+    authoringProject: z.string().min(1).max(4096).optional(),
+    authoringRootId: z.string().min(1).max(256).optional(),
   })
   .strict();
 const identity = z.string().min(1).max(256);
@@ -21,6 +23,49 @@ export const applySchema = contextSchema.extend({
     .regex(/^[A-Za-z0-9_-]+$/),
 });
 export const operationSchema = contextSchema.extend({ operationId: identity });
+export const localSkillStatusSchema = contextSchema.extend({
+  skillPath: z.string().min(1).max(4096),
+});
+export const skillCopySourcesSchema = contextSchema.extend({ alias: identity, targetId: identity });
+export const previewSkillCopySchema = skillCopySourcesSchema.extend({
+  candidateId: identity,
+  rootKind: z.enum(['claude', 'cursor', 'agents', 'codex']),
+  folderName: identity,
+});
+export const localSkillSchema = contextSchema.extend({
+  change: z
+    .object({
+      action: z.enum(['upsert', 'delete', 'restore']),
+      rootId: identity,
+      skillName: z.string().min(1).max(256),
+      files: z
+        .array(
+          z
+            .object({
+              relativePath: z.string().min(1).max(4096),
+              expectedSHA256: z
+                .string()
+                .regex(/^[a-f0-9]{64}$/)
+                .nullable(),
+              contentBase64: z
+                .string()
+                .max(14 * 1024 * 1024)
+                .nullable(),
+            })
+            .strict()
+        )
+        .max(200)
+        .refine(
+          (files) =>
+            files.reduce((total, file) => total + (file.contentBase64?.length ?? 0), 0) <=
+            14 * 1024 * 1024,
+          'The combined local Skill contents exceed the 10 MiB decoded limit.'
+        )
+        .optional(),
+      restoreOperationId: identity.optional(),
+    })
+    .strict(),
+});
 const httpsSource = z
   .string()
   .max(2048)

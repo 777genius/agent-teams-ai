@@ -35,7 +35,10 @@ export function registerExtensionManagementHttp(
   for (const method of EXTENSION_MANAGEMENT_METHODS) {
     app.post(
       `${EXTENSION_MANAGEMENT_ROUTE}/${method}`,
-      { bodyLimit: 65536, preHandler: admission },
+      {
+        bodyLimit: method === 'prepareLocalSkill' ? 15 * 1024 * 1024 : 65536,
+        preHandler: admission,
+      },
       async (request, reply) => {
         try {
           // Each facade method validates its own input before selecting captured authority.

@@ -5,6 +5,7 @@ import { ExtensionRuntimeGate } from '../../../src/features/extension-management
 import { createExtensionManagementFeature } from '../../../src/features/extension-management/main/composition/createExtensionManagementFeature';
 
 import type {
+  LocalSkillChange,
   ManagementChange,
   ManagementClient,
   ManagementOperation,
@@ -68,8 +69,22 @@ function fixture(pending: ManagementOperation[] = []) {
     apply: vi.fn(async () => operation()),
     operation: vi.fn(async () => operation()),
     wait: vi.fn(() => new Promise(() => {})),
-    cancel: vi.fn(async () => operation('cancelled')),
+    cancel: vi.fn(async () => operation('canceled')),
     plans: { discard: vi.fn(async () => {}) },
+    skills: {
+      local: {
+        prepare: vi.fn(async (change: LocalSkillChange) => ({
+          planId: `plan-${change.action}`,
+          contextId: 'engine-a',
+          action: 'local_skill',
+          expiresAt: '2099-01-01T00:00:00Z',
+          confirmable: true,
+          actions: [],
+          warnings: [],
+          conflicts: [],
+        })),
+      },
+    },
   };
   const assertCurrent = vi.fn(async () => {}),
     assertInactive = vi.fn(async () => {});
@@ -102,6 +117,48 @@ function fixture(pending: ManagementOperation[] = []) {
   };
 }
 describe('captured extension management', () => {
+  it('admits exact local restoration through a pending fence while refusing new local work', async () => {
+    const pending: ManagementOperation = {
+      ...operation('partial'),
+      action: 'local_skill',
+      localSkill: { rootId: 'root-a', skillName: 'demo' },
+    };
+    const f = fixture([pending]);
+    const context = await f.feature.capture({ client: 'claude', scope: 'user' });
+    await f.feature.prepareLocalSkill({
+      contextId: context.contextId,
+      change: { action: 'upsert', rootId: 'root-a', skillName: 'demo', files: [] },
+    });
+    await expect(
+      f.feature.apply({
+        contextId: context.contextId,
+        planId: 'plan-upsert',
+        requestId: 'local-upsert-request',
+      })
+    ).rejects.toThrow('outstanding extension operation');
+    await f.feature.prepareLocalSkill({
+      contextId: context.contextId,
+      change: {
+        action: 'restore',
+        rootId: 'root-a',
+        skillName: 'demo',
+        restoreOperationId: pending.operationId,
+      },
+    });
+    await f.feature.apply({
+      contextId: context.contextId,
+      planId: 'plan-restore',
+      requestId: 'local-restore-request',
+    });
+    expect(f.client.skills.local.prepare).toHaveBeenLastCalledWith({
+      action: 'restore',
+      rootId: 'root-a',
+      skillName: 'demo',
+      restoreOperationId: pending.operationId,
+    });
+    expect(f.client.apply).toHaveBeenCalledTimes(1);
+    await f.feature.close();
+  });
   it('resolves a catalog identity in the trusted host and preserves signed source identity', async () => {
     const f = fixture(),
       context = await f.feature.capture({ client: 'claude', scope: 'user' });

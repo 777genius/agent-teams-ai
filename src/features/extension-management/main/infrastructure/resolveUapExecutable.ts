@@ -17,9 +17,18 @@ const manifestSchema = z
   .strict();
 
 export async function resolveUapExecutable(resourceRoot: string): Promise<string> {
-  const manifest = manifestSchema.parse(
-    JSON.parse(await readFile(path.join(resourceRoot, 'runtime.json'), 'utf8'))
-  );
+  let content: string;
+  try {
+    content = await readFile(path.join(resourceRoot, 'runtime.json'), 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new Error(
+        'The extension manager is missing. Repair the Agent Teams installation; in a development checkout, run pnpm stage-uap-runtime.'
+      );
+    }
+    throw error;
+  }
+  const manifest = manifestSchema.parse(JSON.parse(content));
   if (manifest.platform !== `${process.platform}-${process.arch}`)
     throw new Error('The bundled extension manager does not match this platform.');
   if (manifest.sourceSha !== sdkProvenance.sourceCommit)

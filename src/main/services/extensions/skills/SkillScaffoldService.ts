@@ -1,4 +1,3 @@
-import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import { isPathWithinRoot, validateFileName } from '@main/utils/pathValidation';
@@ -18,7 +17,6 @@ export class SkillScaffoldService {
     existingSkillId?: string
   ): Promise<string> {
     const root = this.resolveWritableRoot(scope, rootKind, projectPath);
-    await fs.mkdir(root.rootPath, { recursive: true });
 
     const folderValidation = validateFileName(folderName);
     if (!folderValidation.valid) {
@@ -40,14 +38,6 @@ export class SkillScaffoldService {
       ...file,
       relativePath: this.normalizeRelativePath(file.relativePath),
     }));
-  }
-
-  async writeTextFiles(targetSkillDir: string, files: SkillDraftFile[]): Promise<void> {
-    for (const file of files) {
-      const absolutePath = path.join(targetSkillDir, file.relativePath);
-      await fs.mkdir(path.dirname(absolutePath), { recursive: true });
-      await fs.writeFile(absolutePath, file.content, 'utf8');
-    }
   }
 
   private resolveWritableRoot(scope: SkillScope, rootKind: SkillRootKind, projectPath?: string) {

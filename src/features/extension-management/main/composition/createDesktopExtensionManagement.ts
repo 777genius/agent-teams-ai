@@ -10,12 +10,21 @@ import { getClaudeBasePath, getHomeDir } from '@main/utils/pathDecoder';
 import { startUap } from '@uap/management-sdk/node';
 
 import { ExtensionRuntimeGate } from '../../core/application/ExtensionRuntimeGate';
+import { createLocalSkillMutationExecutor } from '../adapters/output/createLocalSkillMutationExecutor';
+import {
+  canonicalExtensionPath,
+  captureAuthoringRoots,
+  projectSkillAdmissionResources,
+} from '../infrastructure/captureAuthoringRoots';
+import { prepareSkillCopy } from '../infrastructure/prepareSkillCopy';
+import { resolveSkillCopySources } from '../infrastructure/resolveSkillCopySources';
 import { resolveUapExecutable } from '../infrastructure/resolveUapExecutable';
 
 import { createExtensionManagementFeature } from './createExtensionManagementFeature';
 
 import type { ExtensionClient, ExtensionSelection, ManagementPlan } from '../../contracts';
 import type { CapturedExtensionEnvironment } from '../../core/application/ports';
+import type { KnownAuthoringProject } from '../infrastructure/captureAuthoringRoots';
 import type { TeamCreateRequest, TeamLaunchRequest } from '@shared/types/team';
 
 export interface DesktopExtensionManagementDependencies {
@@ -23,6 +32,7 @@ export interface DesktopExtensionManagementDependencies {
   isLocal(): boolean;
   activeClientIds(): Promise<ReadonlySet<ExtensionClient>>;
   savedRequest(teamName: string): Promise<TeamCreateRequest | null>;
+  knownProjects(): Promise<readonly KnownAuthoringProject[]>;
 }
 const CLIENTS: readonly ExtensionClient[] = ['claude', 'codex', 'opencode'];
 function clientForProvider(value?: string): ExtensionClient | null {
@@ -31,18 +41,6 @@ function clientForProvider(value?: string): ExtensionClient | null {
     : value === 'codex' || value === 'opencode'
       ? value
       : null;
-}
-async function canonical(candidate: string): Promise<string> {
-  if (!path.isAbsolute(candidate))
-    throw new Error('An agent profile must have an absolute configured root.');
-  try {
-    return await realpath(candidate);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    const parent = path.dirname(candidate);
-    if (parent === candidate) throw error;
-    return path.join(await canonical(parent), path.basename(candidate));
-  }
 }
 async function profile(client: ExtensionClient) {
   const executable = await (client === 'claude'
@@ -67,7 +65,7 @@ async function profile(client: ExtensionClient) {
           path.join(env.XDG_CONFIG_HOME || path.join(home, '.config'), 'opencode');
   return {
     client,
-    configRoot: await canonical(root),
+    configRoot: await canonicalExtensionPath(root),
     ...(executable ? { executable: await realpath(executable) } : {}),
   };
 }
@@ -84,8 +82,15 @@ export function createDesktopExtensionManagement(deps: DesktopExtensionManagemen
     if (selection.scope !== 'user')
       throw new Error('Project extension installation is not supported by the pinned engine yet.');
     const profiles = await Promise.all(CLIENTS.map(profile));
+    const authoring = await captureAuthoringRoots(profiles, selection, deps.knownProjects);
     const identity = createHash('sha256')
-      .update(JSON.stringify({ scope: selection.scope, profiles }))
+      .update(
+        JSON.stringify({
+          scope: selection.scope,
+          profiles,
+          authoringRoots: authoring.authoringRoots,
+        })
+      )
       .digest('hex');
     const affectedClients = (plan?: ManagementPlan): readonly string[] => {
       const ids = plan?.actions.map((action) => action.targetId) ?? [];
@@ -97,16 +102,28 @@ export function createDesktopExtensionManagement(deps: DesktopExtensionManagemen
       identity,
       profiles,
       selection,
-      resources: profiles.map((item) => item.configRoot),
-      resourcesForPlan: (plan) =>
-        profiles
+      resources: [
+        ...profiles.map((item) => item.configRoot),
+        ...authoring.authoringRoots.map((root) => root.path),
+      ],
+      resourcesForPlan: (plan) => [
+        ...profiles
           .filter((item) => affectedClients(plan).includes(item.client))
           .map((item) => item.configRoot),
+        ...(plan.action === 'local_skill' ? authoring.authoringRoots.map((root) => root.path) : []),
+      ],
+      locateLocalSkill: authoring.locateLocalSkill,
+      skillCopySources: (paths) => resolveSkillCopySources(paths, authoring.authoringRoots),
+      prepareSkillCopy: (paths, destination) =>
+        prepareSkillCopy(paths, authoring.authoringRoots, destination),
       label: `${selection.client === 'claude' ? 'Claude' : selection.client === 'codex' ? 'Codex' : 'OpenCode'} · User`,
       async assertCurrent() {
         if (
           !deps.isLocal() ||
-          JSON.stringify(await Promise.all(CLIENTS.map(profile))) !== JSON.stringify(profiles)
+          JSON.stringify(await Promise.all(CLIENTS.map(profile))) !== JSON.stringify(profiles) ||
+          JSON.stringify(
+            (await captureAuthoringRoots(profiles, selection, deps.knownProjects)).authoringRoots
+          ) !== JSON.stringify(authoring.authoringRoots)
         ) {
           throw new Error(
             'The selected agent profile changed. Reopen Extensions and review a fresh plan.'
@@ -128,6 +145,7 @@ export function createDesktopExtensionManagement(deps: DesktopExtensionManagemen
             contextId: identity,
             scope: selection.scope,
             targets: profiles.map((item) => ({ id: item.client, ...item })),
+            authoringRoots: authoring.authoringRoots,
           },
         });
       },
@@ -135,7 +153,7 @@ export function createDesktopExtensionManagement(deps: DesktopExtensionManagemen
   };
   const feature = createExtensionManagementFeature({ capture }, gate);
   async function admitLaunch<T>(
-    request: TeamCreateRequest | TeamLaunchRequest,
+    request: TeamCreateRequest | TeamLaunchRequest | Pick<TeamLaunchRequest, 'teamName'>,
     operation: () => Promise<T>,
     additionalProviders: readonly string[] = []
   ): Promise<T> {
@@ -158,11 +176,14 @@ export function createDesktopExtensionManagement(deps: DesktopExtensionManagemen
     const context = await feature.capture(captured.selection);
     await feature.environment({ contextId: context.contextId });
     return gate.launch(
-      captured.profiles
-        .filter((item) => clients.includes(item.client))
-        .map((item) => item.configRoot),
+      [
+        ...captured.profiles
+          .filter((item) => clients.includes(item.client))
+          .map((item) => item.configRoot),
+        ...(await projectSkillAdmissionResources(saved?.cwd)),
+      ],
       operation
     );
   }
-  return { feature, admitLaunch };
+  return { feature, admitLaunch, localSkills: createLocalSkillMutationExecutor(feature) };
 }

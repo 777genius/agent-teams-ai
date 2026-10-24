@@ -58,10 +58,26 @@ An in-flight apply acceptance also holds the fence while an inspection races it.
 An empty inventory cannot resolve an uncertain acceptance: the same request's
 authoritative result is required, and retries preserve that request identity.
 
-The managed Skills/local authoring ownership boundary requires the Go-owned
-bounded mutation operation under UAP's existing mutation lock. A Node inventory
-check followed by a direct filesystem write is not sufficient to protect against
-an external UAP CLI. This seam is a required gate in the implementation plan.
+Local Skill create/edit/import/delete now delegate to retained Go plans under the
+same canonical mutation lock. The old Node apply/trash fallback is removed.
+Editor previews preserve exact old-file digests from the bytes shown in review;
+the engine rechecks those digests and the directory snapshot at apply. Native
+managed projections are read-only in local detail views. Unknown ownership also
+disables editing, and a successful inventory read only informs the UI: Go alone
+authorizes effects under its lock.
+
+Project authoring roots resolve against the existing host project inventory;
+arbitrary absolute renderer paths do not register projects. Project local drafts
+remain separate from unsupported native project plugin activation. Admission keys
+include the actual local Skill roots and the affected native profile roots.
+
+Copy-to-local discovers exact Skill directories inside captured managed inventory,
+skips symlink escapes and bounds traversal. Multi-Skill packages require an exact
+candidate. The shared import dialog accepts feature preview/apply callbacks, so
+desktop HTTP uses the same retained Go plan without exposing the entire legacy
+Skills filesystem API. Source bytes, file limits, binary files and destination
+hashes follow the existing import inspection. An unavailable materialized source
+has an explicit reason; the renderer never invents a native path.
 
 ## Transport
 
@@ -69,15 +85,16 @@ Electron IPC requires the owned window and its main frame. The desktop HTTP
 sidecar uses the same facade and validates actual loopback peer, exact local Host,
 same-origin Origin, JSON Content-Type and bounded request size for every new
 endpoint. It does not inherit authority from the legacy server's permissive CORS
-configuration. A standalone host must provide a real runtime-activity authority
-before it can expose mutations; an empty fabricated activity list is not valid.
+configuration. The existing standalone viewer advertises an unavailable
+management capability with a desktop-app action, and refuses mutation calls.
+It has no runtime owner and is not converted into an agent host by this feature.
 
 ## Review and operations
 
 The Go plan is opaque. The UI displays its affected aliases/targets, version
 changes, warnings, conflicts and expiry, and applies its handle with a retained
 request UUID. A lost reply does not mint a replacement identity. Accepted,
-running, succeeded, partial, failed, cancelled and interrupted states remain
+running, succeeded, partial, failed, canceled and interrupted states remain
 distinct. Cancellation is an explicit engine request, not a polling abort.
 
 Source Skill discovery retains a catalog handle in Go. The preview button reads
@@ -91,7 +108,10 @@ canonical signed Directory source identity reaches Go unchanged.
 the vendored SDK tarball. `resolveUapExecutable` only accepts a staged native
 executable with matching platform and checksum in `resources/uap/runtime.json`.
 Packaging must build native UAP from the same reviewed source commit as the SDK.
-There is no implicit latest lookup, public release or runtime source build.
+The desktop development bootstrap also stages that exact pin when it is missing
+(Git and Go are development prerequisites). Packaged installations use the bundled
+executable; there is no implicit latest lookup, public release or source build in
+the installed app.
 
 ## Verification
 

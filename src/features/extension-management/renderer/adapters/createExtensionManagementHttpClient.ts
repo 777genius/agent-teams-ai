@@ -20,12 +20,17 @@ export function createExtensionManagementHttpClient(baseUrl: string): ExtensionM
     return response.status === 204 ? (undefined as T) : (response.json() as Promise<T>);
   }
   return {
+    previewSkillCopy: (request) => post('previewSkillCopy', request),
+    skillCopySources: (request) => post('skillCopySources', request),
+    hostStatus: () => post('hostStatus', {}),
     capture: (request) => post('capture', request),
     catalog: (request) => post('catalog', request),
     detail: (request) => post('detail', request),
     discoverSkills: (request) => post('discoverSkills', request),
     previewSkill: (request) => post('previewSkill', request),
     environment: (request) => post('environment', request),
+    localSkillStatus: (request) => post('localSkillStatus', request),
+    prepareLocalSkill: (request) => post('prepareLocalSkill', request),
     prepare: (request) => post('prepare', request),
     discardPlan: (request) => post('discardPlan', request),
     apply: (request) => post('apply', request),

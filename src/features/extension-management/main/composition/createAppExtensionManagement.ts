@@ -1,6 +1,7 @@
 import { createDesktopExtensionManagement } from './createDesktopExtensionManagement';
 
 import type { ExtensionClient } from '../../contracts';
+import type { KnownAuthoringProject } from '../infrastructure/captureAuthoringRoots';
 import type {
   TeamMemberLifecycleApi,
   TeamProvisioningStartApi,
@@ -12,12 +13,14 @@ interface AppDependencies {
   isLocal(): boolean;
   aliveTeams(): string[];
   savedRequest(teamName: string): Promise<TeamCreateRequest | null>;
+  knownProjects(): Promise<readonly KnownAuthoringProject[]>;
 }
 export function createAppExtensionManagement(deps: AppDependencies) {
   const runtime = createDesktopExtensionManagement({
     resourceRoot: deps.resourceRoot,
     isLocal: deps.isLocal,
     savedRequest: deps.savedRequest,
+    knownProjects: deps.knownProjects,
     async activeClientIds() {
       const clients = new Set<ExtensionClient>();
       for (const name of deps.aliveTeams()) {

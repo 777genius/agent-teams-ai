@@ -7,15 +7,18 @@ import type {
   ExtensionContext,
   ManagementCatalog,
   ManagementChange,
+  ManagementEntry,
   ManagementEnvironment,
   ManagementOperation,
   ManagementPlan,
   SkillCandidates,
+  SkillCopyCandidate,
   SkillPreview,
 } from '../../contracts';
+import type { SkillImportRequest } from '@shared/types/extensions';
 
 const finished = (operation: ManagementOperation) =>
-  ['succeeded', 'partial', 'failed', 'cancelled', 'interrupted'].includes(operation.state);
+  ['succeeded', 'partial', 'failed', 'canceled', 'interrupted'].includes(operation.state);
 const message = (error: unknown) =>
   error instanceof Error ? error.message : 'Extension request failed.';
 
@@ -33,9 +36,20 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState('');
   const [preview, setPreview] = useState<SkillPreview | null>(null);
+  const [entryDetail, setEntryDetail] = useState<ManagementEntry | null>(null);
+  const [copyCandidates, setCopyCandidates] = useState<SkillCopyCandidate[] | null>(null);
   const generation = useRef(0);
   const acceptance = useRef<{ contextId: string; planId: string; requestId: string } | null>(null);
   const applying = useRef(false);
+  const copyOwner = useRef<{ contextId: string; alias: string; targetId: string } | null>(null);
+  const copyReview = useRef<{
+    contextId: string;
+    planId: string;
+    requestId: string;
+    rootKind: string;
+    folderName: string;
+    attempted: boolean;
+  } | null>(null);
   const operationId = operation?.operationId;
   const isRunning = Boolean(operation && !finished(operation));
 
@@ -62,6 +76,8 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
         } else if (observed.value.uncertainApplications && !applying.current) {
           if (acceptance.current) setPlan(null);
           acceptance.current = null;
+          if (!observed.value.pendingOperations?.length && copyReview.current?.attempted)
+            copyReview.current = null;
         }
       } else setError(message(observed.reason));
       if (available.status === 'fulfilled') setCatalog(available.value);
@@ -72,19 +88,33 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
 
   useEffect(() => {
     const version = ++generation.current;
+    const previousCopy = copyReview.current;
+    if (backend && previousCopy && !previousCopy.attempted)
+      void backend
+        .discardPlan({ contextId: previousCopy.contextId, planId: previousCopy.planId })
+        .catch(() => {});
+    copyReview.current = null;
+    copyOwner.current = null;
     setContext(null);
     setCatalog(null);
     setEnvironment(null);
     setPlan(null);
     setCandidates(null);
     setPreview(null);
+    setEntryDetail(null);
+    setCopyCandidates(null);
     setOperation(null);
     setError(null);
     setBusy(Boolean(backend));
     acceptance.current = null;
     if (!backend) return;
     void backend
-      .capture({ client, scope: 'user' })
+      .hostStatus()
+      .then((status) => {
+        if (!status.available)
+          throw new Error(status.reason || 'Extension management is unavailable in this host.');
+        return backend.capture({ client, scope: 'user' });
+      })
       .then(async (selected) => {
         if (version !== generation.current) return;
         setContext(selected);
@@ -100,6 +130,17 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
       generation.current += 1;
     };
   }, [backend, client, captureRevision, refresh]);
+
+  useEffect(
+    () => () => {
+      const retained = copyReview.current;
+      if (backend && retained && !retained.attempted)
+        void backend
+          .discardPlan({ contextId: retained.contextId, planId: retained.planId })
+          .catch(() => {});
+    },
+    [backend]
+  );
 
   useEffect(() => {
     if (!backend || !context || !plan) return;
@@ -219,6 +260,136 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
       setOperation
     );
   }
+  async function restoreLocal(rootId: string, skillName: string, operationId: string) {
+    if (!backend || !context) return;
+    acceptance.current = null;
+    await request(
+      async () => {
+        const captured = await backend.capture({ client, scope: 'user', authoringRootId: rootId });
+        const reviewed = await backend.prepareLocalSkill({
+          contextId: captured.contextId,
+          change: { action: 'restore', rootId, skillName, restoreOperationId: operationId },
+        });
+        return { captured, reviewed };
+      },
+      ({ captured, reviewed }) => {
+        setContext(captured);
+        setPlan(reviewed);
+      }
+    );
+  }
+  async function recover() {
+    if (!operation) return;
+    if (operation.action === 'local_skill') {
+      if (!operation.localSkill) {
+        setError(
+          'This local operation has no restoration identity. Inspect its details before continuing.'
+        );
+        return;
+      }
+      await restoreLocal(
+        operation.localSkill.rootId,
+        operation.localSkill.skillName,
+        operation.operationId
+      );
+    } else await prepare({ action: 'recover', operationId: operation.operationId });
+  }
+  async function showDetail(id: string) {
+    if (!backend || !context) return;
+    await request(() => backend.detail({ contextId: context.contextId, id }), setEntryDetail);
+  }
+  async function loadCopySources(alias: string) {
+    if (!backend || !context) return;
+    copyOwner.current = { contextId: context.contextId, alias, targetId: client };
+    await request(
+      () => backend.skillCopySources({ contextId: context.contextId, alias, targetId: client }),
+      setCopyCandidates
+    );
+  }
+  async function closeCopyReview() {
+    const retained = copyReview.current;
+    if (!backend || !retained || retained.attempted) return;
+    copyReview.current = null;
+    await backend.discardPlan({ contextId: retained.contextId, planId: retained.planId });
+  }
+  async function previewCopy(candidateId: string, input: SkillImportRequest) {
+    if (!backend || !copyOwner.current || input.scope !== 'user' || !input.folderName)
+      throw new Error('Choose a local copy destination.');
+    if (copyReview.current?.attempted)
+      throw new Error('Inspect the previous copy result before preparing another copy.');
+    await closeCopyReview();
+    const owner = copyOwner.current;
+    const preview = await backend.previewSkillCopy({
+      ...owner,
+      candidateId,
+      rootKind: input.rootKind,
+      folderName: input.folderName,
+    });
+    copyReview.current = {
+      contextId: owner.contextId,
+      planId: preview.planId,
+      requestId: crypto.randomUUID(),
+      rootKind: input.rootKind,
+      folderName: input.folderName,
+      attempted: false,
+    };
+    return preview;
+  }
+  async function applyCopy(input: SkillImportRequest): Promise<null> {
+    const retained = copyReview.current;
+    if (
+      !backend ||
+      !context ||
+      !retained ||
+      retained.planId !== input.reviewPlanId ||
+      retained.rootKind !== input.rootKind ||
+      retained.folderName !== input.folderName
+    )
+      throw new Error('Review this copy destination again before applying it.');
+    retained.attempted = true;
+    const accepted = {
+      contextId: retained.contextId,
+      planId: retained.planId,
+      requestId: retained.requestId,
+    };
+    acceptance.current = accepted;
+    applying.current = true;
+    const version = generation.current;
+    setBusy(true);
+    setError(null);
+    try {
+      let result = await backend.apply(accepted);
+      const deadline = Date.now() + 120_000;
+      while (!finished(result)) {
+        if (version !== generation.current || Date.now() >= deadline)
+          throw new Error(
+            'The copy is still running. Inspect its operation before making another change.'
+          );
+        setOperation(result);
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        result = await backend.operation({
+          contextId: retained.contextId,
+          operationId: result.operationId,
+        });
+      }
+      if (version === generation.current) setOperation(result);
+      if (result.state !== 'succeeded')
+        throw new Error(
+          result.result?.message || `Copy ${result.state}. Inspect recovery before continuing.`
+        );
+      copyReview.current = null;
+      return null;
+    } catch (error) {
+      if (version === generation.current) setError(message(error));
+      throw error;
+    } finally {
+      applying.current = false;
+      if (version === generation.current) {
+        setBusy(false);
+        await refresh(context, version);
+      }
+    }
+  }
   async function reload() {
     if (context)
       await request(
@@ -250,6 +421,17 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
     preview,
     setPreview,
     previewSkill,
+    entryDetail,
+    setEntryDetail,
+    showDetail,
+    copyCandidates,
+    setCopyCandidates,
+    loadCopySources,
+    previewCopy,
+    applyCopy,
+    closeCopyReview,
+    restoreLocal,
+    recover,
     prepare,
     apply,
     discover,

@@ -1,4 +1,5 @@
 import {
+  createReadOnlyExtensionManagement,
   type ExtensionManagementFeature,
   registerExtensionManagementHttp,
 } from '@features/extension-management/main';
@@ -89,8 +90,7 @@ export function registerHttpRoutes(
   sshModeSwitchCallback: (mode: 'local' | 'ssh') => Promise<void>
 ): void {
   services.externalAgentConnection?.registerHttp(app);
-  if (services.extensionManagement)
-    registerExtensionManagementHttp(app, services.extensionManagement);
+  registerExtensionManagementHttp(app, services.extensionManagement ?? createReadOnlyExtensionManagement());
   if (services.teamGroupChatsFeature)
     registerTeamGroupChatsHttp(app, services.teamGroupChatsFeature);
   registerProjectRoutes(app, services);

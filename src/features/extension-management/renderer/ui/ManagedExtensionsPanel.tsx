@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { SearchInput } from '@renderer/components/extensions/common/SearchInput';
+import { SkillImportDialog } from '@renderer/components/extensions/skills/SkillImportDialog';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
@@ -27,7 +28,7 @@ import { Download, Loader2, RefreshCw } from 'lucide-react';
 import { ManagementOperationView } from './ManagementOperationView';
 import { ManagementPlanDialog } from './ManagementPlanDialog';
 
-import type { ExtensionClient } from '../../contracts';
+import type { ExtensionClient, SkillCopyCandidate } from '../../contracts';
 import type { ManagedExtensionsModel } from '../hooks/useManagedExtensions';
 
 interface Props {
@@ -42,13 +43,22 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
   const [alias, setAlias] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
   const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
+  const [copySource, setCopySource] = useState<SkillCopyCandidate | null>(null);
+  const { copyCandidates, setCopyCandidates } = model;
+  useEffect(() => {
+    if (copyCandidates?.length === 1) {
+      setCopySource(copyCandidates[0]);
+      setCopyCandidates(null);
+    }
+  }, [copyCandidates, setCopyCandidates]);
   useEffect(() => {
     setSelected([]);
     setSelectedCandidates([]);
     setSourceOpen(false);
   }, [model.context?.contextId, model.client]);
   if (!model.available) return null;
-  const disabled = model.busy || model.isRunning || !model.context;
+  const pending = Boolean(model.environment?.pendingOperations?.length) || model.reviewUncertain;
+  const disabled = model.busy || model.isRunning || !model.context || pending;
   const capability = (action: string) =>
     model.context?.session.capabilities.find((item) => item.action === action);
   const selectedTarget = model.context?.session.targets.find(
@@ -64,6 +74,15 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
     model.setPreview(null);
     setSelectedCandidates([]);
   };
+  const selectedUpdatable = selected.filter((alias) =>
+    model.installed.some(
+      (entry) =>
+        entry.alias === alias &&
+        entry.declared &&
+        entry.updateStatus !== 'pinned' &&
+        entry.updateStatus !== 'blocked'
+    )
+  );
   return (
     <section
       className="mb-6 space-y-4 rounded-xl border border-border p-4"
@@ -117,11 +136,10 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
           operation={model.operation}
           busy={model.busy}
           onCancel={() => void model.cancel()}
-          onRecover={() =>
-            void model.prepare({ action: 'recover', operationId: model.operation!.operationId })
-          }
+          onRecover={() => void model.recover()}
         />
       )}
+      {pending && <p className="text-xs text-amber-400">{t('uap.pendingChanges')}</p>}
       <div className="flex flex-wrap items-center gap-2">
         <div className="min-w-40 flex-1">
           <SearchInput
@@ -157,20 +175,25 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-medium">{t('uap.installed')}</h3>
           <div className="flex flex-wrap gap-2">
-            {selected.length > 0 && (
+            {selectedUpdatable.length > 0 && (
               <Button
                 variant="outline"
                 size="sm"
                 disabled={actionDisabled('update')}
-                onClick={() => void model.prepare({ action: 'update', aliases: selected })}
+                onClick={() =>
+                  void model.prepare({ action: 'update', aliases: selectedUpdatable })
+                }
               >
-                {t('uap.updateSelected', { count: selected.length })}
+                {t('uap.updateSelected', { count: selectedUpdatable.length })}
               </Button>
             )}
             <Button
               variant="outline"
               size="sm"
-              disabled={actionDisabled('update') || !model.environment?.entries.length}
+              disabled={
+                actionDisabled('update') ||
+                !model.environment?.entries.some((entry) => entry.declared)
+              }
               onClick={() => void model.prepare({ action: 'update', all: true })}
             >
               {t('uap.updateAll')}
@@ -186,6 +209,7 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
           </div>
         </div>
         <p className="text-xs text-text-muted">{t('uap.environmentActions')}</p>
+        <p className="text-xs text-text-muted">{t('uap.updatePolicy')}</p>
         {!model.busy && !model.installed.length && (
           <p className="text-sm text-text-muted">{t('uap.noInstalled')}</p>
         )}
@@ -197,6 +221,12 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
           >
             <Checkbox
               aria-label={t('uap.selectEntry', { name: entry.alias })}
+              disabled={
+                actionDisabled('update') ||
+                !entry.declared ||
+                entry.updateStatus === 'pinned' ||
+                entry.updateStatus === 'blocked'
+              }
               checked={selected.includes(entry.alias)}
               onCheckedChange={(checked) =>
                 setSelected((values) =>
@@ -216,6 +246,9 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
               <p className="text-xs text-text-secondary">
                 {t(`uap.updateStatus.${entry.updateStatus}`)}
               </p>
+              {!entry.declared && (
+                <p className="text-xs text-text-muted">{t('uap.transitiveDependency')}</p>
+              )}
               {entry.bindings.map((binding) => (
                 <div key={binding.targetId} className="text-xs text-text-muted">
                   {binding.client}: {binding.status}
@@ -233,9 +266,22 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
+                variant="ghost"
+                size="sm"
+                disabled={model.busy}
+                onClick={() => void model.loadCopySources(entry.alias)}
+              >
+                {t('uap.copyLocal')}
+              </Button>
+              <Button
                 variant="outline"
                 size="sm"
-                disabled={actionDisabled('update') || entry.updateStatus === 'pinned'}
+                disabled={
+                  actionDisabled('update') ||
+                  !entry.declared ||
+                  entry.updateStatus === 'pinned' ||
+                  entry.updateStatus === 'blocked'
+                }
                 onClick={() => void model.prepare({ action: 'update', aliases: [entry.alias] })}
               >
                 {t('uap.update')}
@@ -243,7 +289,7 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
               <Button
                 variant="ghost"
                 size="sm"
-                disabled={actionDisabled('repair')}
+                disabled={actionDisabled('repair') || !entry.declared}
                 onClick={() => void model.prepare({ action: 'repair', aliases: [entry.alias] })}
               >
                 {t('uap.repair')}
@@ -251,7 +297,7 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
               <Button
                 variant="ghost"
                 size="sm"
-                disabled={actionDisabled('remove')}
+                disabled={actionDisabled('remove') || !entry.declared}
                 onClick={() => void model.prepare({ action: 'remove', aliases: [entry.alias] })}
               >
                 {t('uap.remove')}
@@ -265,6 +311,32 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
           {item.message}
         </p>
       ))}
+      {kind === 'skill' && Boolean(model.environment?.localSkillBackups?.length) && (
+        <details className="rounded-lg border border-border p-3" data-testid="uap-restore-points">
+          <summary className="cursor-pointer text-sm font-medium">{t('uap.restorePoints')}</summary>
+          <p className="my-2 text-xs text-text-muted">{t('uap.restoreRetention')}</p>
+          <div className="max-h-64 space-y-2 overflow-y-auto">
+            {model.environment?.localSkillBackups?.map((backup) => (
+              <div
+                key={backup.operationId}
+                className="flex flex-wrap items-center justify-between gap-2"
+              >
+                <span className="text-sm">{backup.skillName}</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={disabled}
+                  onClick={() =>
+                    void model.restoreLocal(backup.rootId, backup.skillName, backup.operationId)
+                  }
+                >
+                  {t('uap.restoreFiles')}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
       {kind === 'plugin' && (
         <div className="space-y-3">
           <h3 className="text-sm font-medium">{t('uap.catalog')}</h3>
@@ -274,7 +346,14 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {model.items.map((entry) => (
               <article key={entry.id} className="space-y-2 rounded-lg border border-border p-3">
-                <h4 className="text-sm font-medium">{entry.name}</h4>
+                <Button
+                  variant="link"
+                  className="h-auto p-0 text-left font-medium"
+                  disabled={model.busy}
+                  onClick={() => void model.showDetail(entry.id)}
+                >
+                  {entry.name}
+                </Button>
                 <p className="text-xs text-text-secondary">{entry.description}</p>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-xs text-text-muted">{entry.targets.join(', ')}</span>
@@ -385,7 +464,7 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
                 </div>
               ))}
               <Button
-              disabled={actionDisabled('install_skills') || !selectedCandidates.length}
+                disabled={actionDisabled('install_skills') || !selectedCandidates.length}
                 onClick={() => {
                   void model.prepare({
                     action: 'install_skills',
@@ -447,6 +526,70 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
         onClose={() => void model.closeReview()}
         onApply={() => void model.apply()}
       />
+      <Dialog
+        open={Boolean(model.copyCandidates?.length)}
+        onOpenChange={(open) => !open && model.setCopyCandidates(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('uap.copyLocal')}</DialogTitle>
+            <DialogDescription>{t('uap.chooseCopySkill')}</DialogDescription>
+          </DialogHeader>
+          {model.copyCandidates?.map((candidate) => (
+            <Button
+              key={candidate.sourceDir}
+              variant="outline"
+              onClick={() => {
+                setCopySource(candidate);
+                model.setCopyCandidates(null);
+              }}
+            >
+              {candidate.skillName}
+            </Button>
+          ))}
+        </DialogContent>
+      </Dialog>
+      {copySource && (
+        <SkillImportDialog
+          open={true}
+          projectPath={null}
+          projectLabel={null}
+          allowCodexRootKind={model.client === 'codex'}
+          initialSourceDir={copySource.sourceDir}
+          initialFolderName={`${copySource.skillName}-copy`}
+          sourceLocked
+          operations={{
+            previewImport: (request) => model.previewCopy(copySource.id, request),
+            applyImport: async (request) => {
+              setCopySource(null);
+              return model.applyCopy(request);
+            },
+          }}
+          onClose={() => {
+            setCopySource(null);
+            void model.closeCopyReview().catch(() => {});
+          }}
+          onImported={() => {}}
+        />
+      )}
+      <Dialog
+        open={Boolean(model.entryDetail)}
+        onOpenChange={(open) => !open && model.setEntryDetail(null)}
+      >
+        <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{model.entryDetail?.name}</DialogTitle>
+            <DialogDescription>{model.entryDetail?.description}</DialogDescription>
+          </DialogHeader>
+          <p className="text-xs text-text-muted">{model.entryDetail?.targets.join(', ')}</p>
+          {model.entryDetail?.readmeMarkdown && (
+            <MarkdownViewer content={model.entryDetail.readmeMarkdown} bare />
+          )}
+          {model.entryDetail?.reason && (
+            <p className="text-sm text-amber-400">{model.entryDetail.reason}</p>
+          )}
+        </DialogContent>
+      </Dialog>
     </section>
   );
 };

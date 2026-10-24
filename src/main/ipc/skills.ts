@@ -29,6 +29,21 @@ const logger = createLogger('IPC:skills');
 let skillsCatalogService: SkillsCatalogService | null = null;
 let skillsMutationService: SkillsMutationService | null = null;
 let skillsWatcherService: SkillsWatcherService | null = null;
+let admitsMutation: (event: IpcMainInvokeEvent) => boolean = () => false;
+
+/** Local authoring now shares the desktop extension manager's owned-window boundary. */
+export function setSkillsMutationAdmission(
+  check: (event: IpcMainInvokeEvent) => boolean
+): () => void {
+  admitsMutation = check;
+  return () => {
+    if (admitsMutation === check) admitsMutation = () => false;
+  };
+}
+function assertMutationSender(event: IpcMainInvokeEvent): void {
+  if (!admitsMutation(event))
+    throw new Error('Skill mutation request came from an untrusted window.');
+}
 
 export function initializeSkillsHandlers(
   skillsCatalog?: SkillsCatalogService,
@@ -130,51 +145,56 @@ async function handleSkillsGetDetail(
 }
 
 async function handleSkillsPreviewUpsert(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   request?: SkillUpsertRequest
 ): Promise<IpcResult<SkillReviewPreview>> {
   return wrapHandler('skillsPreviewUpsert', () => {
     if (!request) throw new Error('request is required');
+    assertMutationSender(event);
     return getSkillsMutationService().previewUpsert(request);
   });
 }
 
 async function handleSkillsApplyUpsert(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   request?: SkillUpsertRequest
 ): Promise<IpcResult<SkillDetail | null>> {
   return wrapHandler('skillsApplyUpsert', () => {
     if (!request) throw new Error('request is required');
+    assertMutationSender(event);
     return getSkillsMutationService().applyUpsert(request);
   });
 }
 
 async function handleSkillsPreviewImport(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   request?: SkillImportRequest
 ): Promise<IpcResult<SkillReviewPreview>> {
   return wrapHandler('skillsPreviewImport', () => {
     if (!request) throw new Error('request is required');
+    assertMutationSender(event);
     return getSkillsMutationService().previewImport(request);
   });
 }
 
 async function handleSkillsApplyImport(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   request?: SkillImportRequest
 ): Promise<IpcResult<SkillDetail | null>> {
   return wrapHandler('skillsApplyImport', () => {
     if (!request) throw new Error('request is required');
+    assertMutationSender(event);
     return getSkillsMutationService().applyImport(request);
   });
 }
 
 async function handleSkillsDelete(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   request?: SkillDeleteRequest
 ): Promise<IpcResult<void>> {
   return wrapHandler('skillsDelete', () => {
     if (!request) throw new Error('request is required');
+    assertMutationSender(event);
     return getSkillsMutationService().deleteSkill(request);
   });
 }

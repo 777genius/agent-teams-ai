@@ -2003,6 +2003,7 @@ async function initializeServices(): Promise<void> {
     isLocal: () => contextRegistry.getActive().type === 'local',
     aliveTeams: () => teamProvisioningService.getAliveTeams(),
     savedRequest: (name) => teamDataService.getSavedRequest(name),
+    knownProjects: () => contextRegistry.getActive().projectScanner.scan(),
   });
   const teamIpcHandlerApis: TeamIpcHandlerApis = bindTeamIpcHandlerApis(teamProvisioningService);
   extensionManagement.guardRuntimeApis(teamIpcHandlerApis);
@@ -2224,7 +2225,7 @@ async function initializeServices(): Promise<void> {
   const mcpStateService = new McpInstallationStateService(extensionsRuntimeAdapter);
   const mcpHealthDiagnosticsService = new McpHealthDiagnosticsService(extensionsRuntimeAdapter);
   const skillsCatalogService = new SkillsCatalogService();
-  const skillsMutationService = new SkillsMutationService();
+  const skillsMutationService = new SkillsMutationService(extensionManagement.localSkills);
   skillsWatcherService = new SkillsWatcherService();
   const extensionFacadeService = new ExtensionFacadeService(
     pluginCatalogService,
