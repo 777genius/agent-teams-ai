@@ -10,6 +10,9 @@ const MAX_BASELINE = 4_096;
 const MAX_PROC_ENTRIES = 16_384;
 const TRANSIENT_RETRY_WINDOW_MS = 2_000;
 const TRANSIENT_RETRY_PAUSE_MS = 150;
+// Apple's ps right-aligns pid= in a fixed-width column: a pid below 10000 is
+// printed with leading padding in batch and per-process dumps alike.
+const DARWIN_COMMAND_ROW = /^\s*(\d+)\s+(.*)$/;
 const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 const syncPause = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 class CensusDeadlineError extends Error {}
@@ -302,11 +305,10 @@ export function createPackagedSmokeOwnership(
   function darwinExpandedCommand(pid: number, deadline: number) {
     const output = ps(['-E', '-ww', '-p', String(pid), '-o', 'pid=,command='], deadline, true);
     if (output === undefined) return undefined;
-    const line = output.replace(/\n$/, '');
-    const separator = line.indexOf(' ');
-    if (separator < 0 || Number(line.slice(0, separator)) !== pid)
-      throw new Error(`Incomplete packaged smoke environment census: pid=${pid}`);
-    return line.slice(separator + 1);
+    const match = DARWIN_COMMAND_ROW.exec(output.replace(/\n$/, ''));
+    if (!match || Number(match[1]) !== pid)
+      throw new Error(`Malformed packaged smoke environment census: pid=${pid}`);
+    return match[2];
   }
 
   function censusCommand(pid: number, command: string | undefined, deadline: number) {
@@ -346,7 +348,7 @@ export function createPackagedSmokeOwnership(
     // Apple's command formatter applies strvis(VIS_TAB | VIS_NL), so embedded
     // argv/environment tabs and newlines are escaped before ps prints rows.
     for (const line of expanded.split('\n').filter((value) => value.trim())) {
-      const match = /^\s*(\d+)\s+(.*)$/.exec(line);
+      const match = DARWIN_COMMAND_ROW.exec(line);
       if (!match) throw new Error('Malformed packaged smoke environment census');
       commands.set(Number(match[1]), match[2]);
     }

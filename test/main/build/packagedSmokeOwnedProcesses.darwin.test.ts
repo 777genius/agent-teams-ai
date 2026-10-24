@@ -40,8 +40,10 @@ vi.mock('node:child_process', async () => {
     };
     const alive = (proc: ProbeProcess) => proc.exitAt === undefined || Date.now() < proc.exitAt;
     const rows = () => [...world.processes.entries()].filter(([, proc]) => alive(proc));
+    // Apple's ps right-aligns pid= in a five-column field.
+    const column = (pid: number) => String(pid).padStart(5);
     const metadata = (pid: number, proc: ProbeProcess) =>
-      `${pid} ${uid} ${proc.parent} ${proc.group} ${proc.state} ${proc.birth}`;
+      `${column(pid)} ${uid} ${proc.parent} ${proc.group} ${proc.state} ${proc.birth}`;
     const rendered = (pid: number, expanded: boolean) => {
       const proc = world.processes.get(pid)!;
       let environ = proc.environ;
@@ -59,12 +61,11 @@ vi.mock('node:child_process', async () => {
       const lines =
         shape === 'pid=,ruid=,ppid=,pgid=,stat=,lstart='
           ? listing.map(([pid, proc]) => metadata(pid, proc))
-          : listing.map(([pid, proc]) =>
-              `${pid} ${
-                proc.batchCommand === 'comm'
-                  ? '(helper)'
-                  : [proc.argv, ...proc.environ].join(' ')
-              }`
+          : listing.map(
+              ([pid, proc]) =>
+                `${column(pid)} ${
+                  proc.batchCommand === 'comm' ? '(helper)' : [proc.argv, ...proc.environ].join(' ')
+                }`
             );
       return lines.length ? lines.join('\n') + '\n' : '';
     }
@@ -75,13 +76,16 @@ vi.mock('node:child_process', async () => {
     // -E appends the environment to argv; only those dumps carry marker proofs.
     const expandedDump = argv.includes('-E');
     const command = rendered(pid, expandedDump);
-    return (shape === 'pid=,command=' ? `${pid} ${command}` : command) + '\n';
+    return (shape === 'pid=,command=' ? `${column(pid)} ${command}` : command) + '\n';
   };
   return { ...actual, execFileSync };
 });
 
 // Above Linux PID_MAX_LIMIT (2^22) and macOS PID_MAX: never a real process.
 const FAKE_PID = 5_000_000;
+// Apple's ps pads only a pid below 10000. The kill mock intercepts every
+// modeled pid, so this one is never signaled for real either.
+const PADDED_PID = process.pid === 4_242 ? 4_243 : 4_242;
 const BIRTH = 'Mon Oct 24 12:00:00 2026';
 
 function setup() {
@@ -93,15 +97,14 @@ function setup() {
   const signals: [number, string][] = [];
   const realKill = process.kill.bind(process);
   vi.spyOn(process, 'kill').mockImplementation(((pid: number, signal?: string | number) => {
-    if (pid < FAKE_PID) return realKill(pid, signal);
+    if (pid < FAKE_PID && !world.processes.has(pid)) return realKill(pid, signal);
     signals.push([pid, String(signal)]);
     return true;
   }) as typeof process.kill);
   return { ownership, environ, signals };
 }
 
-function spawn(environ: string[]) {
-  const pid = FAKE_PID + world.processes.size + 1;
+function spawn(environ: string[], pid = FAKE_PID + world.processes.size + 1) {
   world.processes.set(pid, {
     parent: process.pid,
     group: pid,
@@ -146,6 +149,29 @@ describe.skipIf(process.platform === 'win32')('packaged smoke Darwin probe races
     expect(signals).toEqual([]);
     expect(await ownership.waitForExit(1_000)).toBe(true);
     expect(ownership.finish()).toMatchObject({ remaining: [] });
+  });
+
+  it('re-verifies a padded low-pid helper whose batch census row recovers from (comm)', () => {
+    const { ownership, environ, signals } = setup();
+    const leader = spawn(environ, PADDED_PID);
+    expect(ownership.begin(leader).map((entry) => entry.pid)).toEqual([leader]);
+    // Only the batch dump degrades; the row re-probe reads the live helper.
+    world.processes.get(leader)!.batchCommand = 'comm';
+    ownership.signal('SIGTERM');
+    expect(signals).toEqual([[leader, 'SIGTERM']]);
+  });
+
+  it('stays loud while a live marked helper keeps an unreadable census row', () => {
+    const { ownership, environ, signals } = setup();
+    const leader = spawn(environ);
+    expect(ownership.begin(leader).map((entry) => entry.pid)).toEqual([leader]);
+    // A marked descendant first seen while every probe of it reads as (comm).
+    const child = spawn(environ);
+    Object.assign(world.processes.get(child)!, { batchCommand: 'comm', perPidCommand: 'comm' });
+    expect(() => ownership.signal('SIGTERM')).toThrow(
+      /Incomplete packaged smoke environment census/
+    );
+    expect(signals).toEqual([]);
   });
 
   it('stays loud while a live owned helper keeps an unreadable environment', () => {
