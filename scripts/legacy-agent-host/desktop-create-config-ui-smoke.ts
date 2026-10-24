@@ -5,6 +5,7 @@ import { performance } from "node:perf_hooks";
 import { createDesktopUiControls } from "./desktop-ui-controls.ts";
 import { fileDigest } from "./desktop-backend-fixture.ts";
 import { runDesktopRosterLifecycleUiSmoke } from "./desktop-roster-lifecycle-ui-smoke.ts";
+import { hostTeamSelectionKey } from "../../src/features/agent-backend/contracts/teamSelection.ts";
 import type { UiCdpPort } from "./desktop-ui-controls.ts";
 import type { prepareDesktopBackendFixture } from "./desktop-backend-fixture.ts";
 
@@ -111,13 +112,17 @@ export async function runDesktopCreateConfigUiSmoke(
   assert.equal(discovery.state, "ready");
   assert.equal((discovery.bindings as unknown[]).length, 2);
   const handleId = record(record(registry[0]!.record).binding).handleId;
+  assert.ok(typeof handleId === "string");
+  const teamSelection = hostTeamSelectionKey(handleId);
+  const lead = (owner.members as unknown[]).map(record).find(row => row.role === "lead")!;
+  const leadLabel = lead.name === "team-lead" ? "lead" : String(lead.name);
   assert.ok(
     (discovery.bindings as unknown[])
       .map(record)
       .some((row) => record(row.handle).handleId === handleId),
   );
   await ui.waitRead(
-    `document.body.innerText.includes('test-created-from-dialog')&&Boolean(document.querySelector('img[alt="team-lead"]'))`,
+    `window.__agentTeamsDevStore?.getState().selectedTeamName===${JSON.stringify(teamSelection)}&&document.body.innerText.includes('test-created-from-dialog')&&[...document.querySelectorAll('[data-section-id="team"] [role="button"] span.font-medium')].filter(e=>e.textContent.trim()===${JSON.stringify(leadLabel)}&&e.getBoundingClientRect().width>0).length===1`,
     "new owner-qualified Team visible in existing view",
   );
   const screenshot = record(

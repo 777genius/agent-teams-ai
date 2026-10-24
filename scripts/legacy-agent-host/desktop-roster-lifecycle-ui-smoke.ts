@@ -28,7 +28,9 @@ export async function runDesktopRosterLifecycleUiSmoke(
     record(record(options.evidence.createConfigDialogProof).creation).record,
   );
   assert.equal(created.teamName, teamName);
-  const teamSelector = `[data-team-name=${JSON.stringify(hostTeamSelectionKey(String(record(created.binding).handleId)))}]`;
+  const teamSelection = hostTeamSelectionKey(String(record(created.binding).handleId));
+  const teamSelector = `[data-team-name=${JSON.stringify(teamSelection)}]`;
+  const memberIdentitySelector = '[data-section-id="team"] [role="button"] span.font-medium';
   const team = join(root, "hoststore/teams", teamName),
     ownerPath = join(team, ".host-owner/state.json");
   const witnessPath = join(
@@ -97,7 +99,7 @@ export async function runDesktopRosterLifecycleUiSmoke(
     await ui.scrollTo(teamSelector, "exact UI-created stopped Team card");
     await ui.click(teamSelector, "open exact UI-created stopped Team");
     await ui.waitRead(
-      `Boolean(document.querySelector('[data-section-id="team"] img[alt="team-lead"]'))`,
+      `window.__agentTeamsDevStore?.getState().selectedTeamName===${JSON.stringify(teamSelection)}&&[...document.querySelectorAll(${JSON.stringify(memberIdentitySelector)})].filter(e=>e.textContent.trim()===${JSON.stringify(originalLead.name === "team-lead" ? "lead" : String(originalLead.name))}&&e.getBoundingClientRect().width>0).length===1`,
       "original solo lead rendered",
     );
   };
@@ -207,8 +209,9 @@ export async function runDesktopRosterLifecycleUiSmoke(
     "Add dialog closed after saved result",
   );
   await ui.click(
-    `[data-section-id="team"] [role="button"]:has(img[alt="${memberName}"])`,
+    memberIdentitySelector,
     "open exact saved teammate detail",
+    memberName,
   );
   await ui.click(
     '[role="dialog"] button',
@@ -245,14 +248,13 @@ export async function runDesktopRosterLifecycleUiSmoke(
     `document.querySelector('[data-section-id="team"]')?.textContent.includes('Solo')`,
     "solo count restored with removed history",
   );
-  await ui.scrollTo(
-    `[data-section-id="team"] [role="button"]:has(img[alt="${memberName}"]) button[aria-label="Restore teammate"]`,
-    "original removed teammate control",
+  const restoreSelector = '[data-section-id="team"] button[aria-label="Restore teammate"]';
+  await ui.waitRead(
+    `(() => {const controls=[...document.querySelectorAll(${JSON.stringify(restoreSelector)})];return controls.length===1&&controls[0].closest('[role="button"]')?.querySelector('span.font-medium')?.textContent.trim()===${JSON.stringify(memberName)};})()`,
+    "Restore belongs to the exact original removed teammate",
   );
-  await ui.click(
-    `[data-section-id="team"] [role="button"]:has(img[alt="${memberName}"]) button[aria-label="Restore teammate"]`,
-    "restore original removed teammate once",
-  );
+  await ui.scrollTo(restoreSelector, "original removed teammate control");
+  await ui.click(restoreSelector, "restore original removed teammate once");
   const restored = await poll(
     owner,
     (value) =>
