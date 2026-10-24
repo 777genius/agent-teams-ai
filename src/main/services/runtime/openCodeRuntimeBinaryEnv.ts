@@ -183,23 +183,25 @@ function hasSameFileContent(left: string, right: string): boolean {
   }
 }
 
-const npmWrapperCopyMatches = new Map<string, string | null>();
+const npmWrapperCopyMatches = new Map<string, string>();
 
 /**
  * `npm i -g @opencode/cli` links `opencode` to the wrapper package's `bin/opencode.exe`,
  * which its postinstall hard-links (or copies) from one platform package. The runtime
  * admits only the platform package delivery, so this returns that package's binary:
- * the same file, or a byte-identical copy. Any other path returns null.
+ * the same file, or the copy source. Any other path returns null.
  */
 export function resolveOpenCodeV2NpmWrapperBinary(
   binaryPath: string,
   platform: NodeJS.Platform = process.platform
 ): string | null {
   if (!path.isAbsolute(binaryPath)) return null;
+  const sameName = (left: string, right: string): boolean =>
+    platform === 'win32' ? left.toLowerCase() === right.toLowerCase() : left === right;
   try {
     const selected = fs.realpathSync(binaryPath);
     const binDirectory = path.dirname(selected);
-    if (path.basename(binDirectory) !== 'bin') return null;
+    if (!sameName(path.basename(binDirectory), 'bin')) return null;
     const wrapperRoot = path.dirname(binDirectory);
     const wrapper = readOpenCodePackageManifest(path.join(wrapperRoot, 'package.json'));
     if (
@@ -207,14 +209,15 @@ export function resolveOpenCodeV2NpmWrapperBinary(
       !OPENCODE_V2_PACKAGE_VERSION.test(wrapper.version)
     )
       return null;
-    const selectedStat = fs.statSync(selected);
+    // bigint: a Windows file ID does not fit a double, so number inodes can collide.
+    const selectedStat = fs.statSync(selected, { bigint: true });
     if (!selectedStat.isFile()) return null;
 
     const packagePrefix = `cli-${platform === 'win32' ? 'windows' : platform}-`;
     const executableName = platform === 'win32' ? 'opencode.exe' : 'opencode';
     const scopeDirectories = [path.join(wrapperRoot, 'node_modules', '@opencode')];
     // npm hoists optional dependencies next to the wrapper when it can.
-    if (path.basename(path.dirname(wrapperRoot)) === '@opencode') {
+    if (sameName(path.basename(path.dirname(wrapperRoot)), '@opencode')) {
       scopeDirectories.push(path.dirname(wrapperRoot));
     }
     const sameSizeCandidates: string[] = [];
@@ -234,27 +237,29 @@ export function resolveOpenCodeV2NpmWrapperBinary(
           continue;
         }
         const candidate = path.join(packageRoot, 'bin', executableName);
-        let candidateStat: fs.Stats;
+        let candidateStat: fs.BigIntStats;
         try {
-          candidateStat = fs.statSync(candidate);
+          candidateStat = fs.statSync(candidate, { bigint: true });
         } catch {
           continue;
         }
-        if (!candidateStat.isFile()) continue;
+        if (!candidateStat.isFile() || candidateStat.size !== selectedStat.size) continue;
         if (candidateStat.dev === selectedStat.dev && candidateStat.ino === selectedStat.ino) {
           return candidate;
         }
-        if (candidateStat.size === selectedStat.size) sameSizeCandidates.push(candidate);
+        sameSizeCandidates.push(candidate);
       }
     }
 
-    // A copied binary (no hard link) is matched by content once per file version.
-    const cacheKey = `${selected}\0${selectedStat.size}\0${selectedStat.mtimeMs}`;
-    if (npmWrapperCopyMatches.has(cacheKey)) return npmWrapperCopyMatches.get(cacheKey) ?? null;
-    const copied =
-      sameSizeCandidates.find((candidate) => hasSameFileContent(candidate, selected)) ?? null;
-    npmWrapperCopyMatches.set(cacheKey, copied);
-    return copied;
+    // A copy (no hard link): one same-size platform binary of the wrapper's version is its
+    // source. Only several same-size candidates need a byte comparison, cached per file version.
+    if (sameSizeCandidates.length <= 1) return sameSizeCandidates[0] ?? null;
+    const cacheKey = [platform, selected, selectedStat.size, selectedStat.mtimeMs].join('\0');
+    const cached = npmWrapperCopyMatches.get(cacheKey);
+    if (cached && sameSizeCandidates.includes(cached)) return cached;
+    const copied = sameSizeCandidates.find((candidate) => hasSameFileContent(candidate, selected));
+    if (copied) npmWrapperCopyMatches.set(cacheKey, copied);
+    return copied ?? null;
   } catch {
     return null;
   }

@@ -342,7 +342,7 @@ const OpenCodeIgnoredOverrideNotice = ({
   );
 };
 
-/** A V2 binary loads catalogs, but a team launch on it fails; say why before the user tries. */
+/** On V2, free Zen models fail at run time; say so before the user picks one. */
 const OpenCodeV2LaunchNotice = ({
   gate,
   runtimeStatus,

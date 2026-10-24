@@ -10,7 +10,7 @@ vi.mock('@shared/utils/logger', async (importOriginal) => {
 });
 
 import { createHash } from 'crypto';
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'fs/promises';
+import { link, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -370,6 +370,41 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       // Managed update metadata cannot change what an override launches.
       expect(status.updateAvailable).toBeUndefined();
       expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('names the platform binary behind an npm wrapper override', async () => {
+      const platformName = process.platform === 'win32' ? 'windows' : process.platform;
+      const scope = path.join(tempRoot!, 'npm', 'node_modules', '@opencode');
+      const platformRoot = path.join(scope, `cli-${platformName}-${process.arch}`);
+      const platformBinary = path.join(
+        platformRoot,
+        'bin',
+        process.platform === 'win32' ? 'opencode.exe' : 'opencode'
+      );
+      const wrapperBinary = path.join(scope, 'cli', 'bin', 'opencode.exe');
+      await mkdir(path.dirname(platformBinary), { recursive: true });
+      await mkdir(path.dirname(wrapperBinary), { recursive: true });
+      await writeFile(
+        path.join(scope, 'cli', 'package.json'),
+        JSON.stringify({ name: '@opencode/cli', version: '2.0.32' })
+      );
+      await writeFile(
+        path.join(platformRoot, 'package.json'),
+        JSON.stringify({ name: `@opencode/cli-${platformName}-${process.arch}`, version: '2.0.32' })
+      );
+      await writeFile(platformBinary, 'TEST platform binary', { mode: 0o755 });
+      await link(platformBinary, wrapperBinary);
+      process.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH = wrapperBinary;
+      execCliMock.mockResolvedValue({ stdout: 'opencode v2.0.32\n', stderr: '' });
+
+      await expect(
+        new OpenCodeRuntimeInstallerService().getReadinessStatus()
+      ).resolves.toMatchObject({
+        installed: true,
+        binaryPath: await realpath(platformBinary),
+        version: '2.0.32',
+        source: 'override',
+      });
     });
 
     it('names an unsupported override and its version next to the fallback binary', async () => {
