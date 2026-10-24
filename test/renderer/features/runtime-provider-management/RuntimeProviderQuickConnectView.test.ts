@@ -13,7 +13,7 @@ import {
 
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({
-    t: (key: string, values?: { percent?: number }) => {
+    t: (key: string, values?: Record<string, unknown>) => {
       const labels: Record<string, string> = {
         'cliStatus.quickConnect.title': 'Optional providers & plans',
         'cliStatus.quickConnect.description': 'Connect any plans you use.',
@@ -26,7 +26,7 @@ vi.mock('@features/localization/renderer', () => ({
         'cliStatus.quickConnect.openCodeChecking':
           'Checking that OpenCode is installed and ready...',
         'cliStatus.quickConnect.openCodeInstalling': 'Installing OpenCode',
-        'cliStatus.quickConnect.openCodeInstallingPercent': `Installing OpenCode ${values?.percent ?? 0}%`,
+        'cliStatus.quickConnect.openCodeInstallingPercent': `Installing OpenCode ${String(values?.percent ?? 0)}%`,
         'cliStatus.quickConnect.openCodeError': 'OpenCode could not start',
         'cliStatus.quickConnect.openCodeErrorTitle': 'OpenCode needs attention',
         'cliStatus.quickConnect.connected': 'Connected',
@@ -51,7 +51,13 @@ vi.mock('@features/localization/renderer', () => ({
         'cliStatus.quickConnect.cursorDescription': 'Use Cursor.',
         'cliStatus.quickConnect.kimiDescription':
           'Use a Kimi Code membership key through OpenCode.',
+        'cliStatus.quickConnect.openCodeOverrideIgnoredTitle':
+          'OpenCode binary override is not used',
       };
+      if (key === 'cliStatus.quickConnect.openCodeOverrideIgnoredPath') {
+        const override = values as { envName?: string; binaryPath?: string; version?: string };
+        return `${override.envName} = ${override.binaryPath} (version ${override.version})`;
+      }
       return labels[key] ?? key;
     },
   }),
@@ -353,6 +359,75 @@ describe('RuntimeProviderQuickConnectView', () => {
     expect(refresh?.textContent?.trim()).toBe('Refresh status');
     act(() => refresh?.click());
     expect(onRefreshOpenCode).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers no managed install when a failing binary override decides what launches', async () => {
+    const onInstallOpenCode = vi.fn();
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderQuickConnectView, {
+          cards: [card('supergrok')],
+          gate: 'error',
+          runtimeStatus: {
+            installed: false,
+            binaryPath: '/TEST/override/opencode',
+            source: 'override',
+            state: 'failed',
+            error: 'Could not verify the explicitly selected OpenCode binary',
+          },
+          directoryError: null,
+          onInstallOpenCode,
+          onRefreshOpenCode: vi.fn(),
+          onRetryDirectory: vi.fn(),
+          onSetupLocalModel: vi.fn(),
+          onBrowseProviders: vi.fn(),
+        })
+      );
+    });
+
+    expect(host.textContent).toContain('Could not verify the explicitly selected OpenCode binary');
+    expect(
+      [...host.querySelectorAll('button')].some((button) =>
+        ['Repair OpenCode', 'Install OpenCode'].includes(button.textContent?.trim() ?? '')
+      )
+    ).toBe(false);
+    expect(host.querySelector('[data-testid="provider-quick-opencode-refresh"]')).not.toBeNull();
+  });
+
+  it('names an ignored binary override next to the fallback runtime', async () => {
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderQuickConnectView, {
+          cards: [card('supergrok')],
+          gate: 'ready',
+          runtimeStatus: {
+            installed: true,
+            binaryPath: '/TEST/managed/opencode',
+            version: '1.19.4',
+            source: 'app-managed',
+            state: 'ready',
+            ignoredOverride: {
+              binaryPath: '/TEST/override/opencode',
+              envName: 'CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH',
+              version: '2.1.4',
+              reason: 'OpenCode 2.1.4 has an unsupported native generation.',
+            },
+          },
+          directoryError: null,
+          onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
+          onRetryDirectory: vi.fn(),
+          onSetupLocalModel: vi.fn(),
+          onBrowseProviders: vi.fn(),
+        })
+      );
+    });
+
+    const notice = host.querySelector('[data-testid="provider-quick-opencode-ignored-override"]');
+    expect(notice?.getAttribute('role')).toBe('alert');
+    expect(notice?.textContent).toContain('/TEST/override/opencode');
+    expect(notice?.textContent).toContain('2.1.4');
+    expect(notice?.textContent).toContain('unsupported native generation');
   });
 
   it('keeps provider setup disabled until OpenCode is installed', async () => {

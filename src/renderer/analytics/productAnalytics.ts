@@ -602,7 +602,12 @@ export function recordCrossTeamMessageSend(input: {
 
 function normalizeRuntimeSource(source: string | null | undefined): string {
   const normalized = typeof source === 'string' ? source.trim().toLowerCase() : '';
-  if (normalized === 'app-managed' || normalized === 'path' || normalized === 'missing') {
+  if (
+    normalized === 'app-managed' ||
+    normalized === 'override' ||
+    normalized === 'path' ||
+    normalized === 'missing'
+  ) {
     return normalized;
   }
   return 'unknown';

@@ -22,6 +22,13 @@ export type RuntimeProviderQuickPlanState =
 
 const MINIMUM_OPENCODE_PROVIDER_OAUTH_VERSION = [1, 15, 7] as const;
 
+/** A managed install or update cannot change the binary that a binary override selects. */
+export function canManagedInstallChangeOpenCodeRuntime(
+  runtimeStatus: OpenCodeRuntimeStatus | null
+): boolean {
+  return runtimeStatus?.source !== 'override';
+}
+
 export function isOpenCodeRuntimeUsable(runtimeStatus: OpenCodeRuntimeStatus | null): boolean {
   return (
     runtimeStatus?.installed === true && isRecognizedOpenCodeRuntimeVersion(runtimeStatus.version)

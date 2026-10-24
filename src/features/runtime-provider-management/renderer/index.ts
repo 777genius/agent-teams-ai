@@ -1,4 +1,5 @@
 export {
+  canManagedInstallChangeOpenCodeRuntime,
   isOpenCodeProviderOAuthBridgeOutdated,
   isOpenCodeRuntimeUsable,
   isPrivateNetworkRuntimeLocalProviderUrl,
