@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v2; independent lifecycle, transport and UX critiques incorporated.
+Status: implementation plan v3; independent lifecycle, transport and UX critiques incorporated.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -266,3 +266,33 @@ Independent review of this written plan is pending.
   readiness axes, and honest project/worktree completion gates from UAP review.
 
 Implementation and final UX reviews remain separate gates.
+
+### v3 final UX review dispositions
+
+F1/F2/F4/F5 were incorporated in v2. The remaining required findings are resolved
+as explicit implementation and qualification requirements:
+
+- F3 ownership is managed/proven-unmanaged/unknown. Engine unavailability never
+  means unowned. Resolve canonical physical destination identity, reject symlink/
+  alias bypass, revalidate at apply, and coordinate app-managed mutations. Inspect
+  current UAP projection/lock invariants before claiming protection from concurrent
+  external CLI install; add only the narrow necessary shared reservation seam.
+  A general remote filesystem-lock service is not the default. Copies use a distinct
+  proven-unmanaged destination and normal import/review validation.
+- F6 add Install from source in Plugins for advertised source forms. In Skills,
+  source URL -> candidate list/preview -> scope/runtime -> install. Preserve local
+  authoring/import. Reuse a small source dialog; explicit unsupported/private-auth
+  limitations come from capability data. No arbitrary process/path/CLI forms.
+- F7 test keyboard-only selection, detail, install/action and dismissal, plus a
+  narrow Electron window with usable actions/scope/errors/recovery. Assert focus
+  and accessible labels and inspect screenshots with existing CDP.
+- F1 effect-boundary guard coordinates launch/mutation ownership so a new run cannot
+  start between two activity checks; no unsupported active-run freezing promise.
+
+Required ownership tests include engine unavailable, canonical alias/symlink,
+same-destination install during edit, import overwrite, direct backend delete, and
+successful explicit copy. Required desktop tests include supported direct-source
+candidate selection, affected active run refusal and unrelated profile success.
+
+Plan direction is ready for implementation. These gates remain mandatory in code
+review and cannot be represented by UI-only disabling or synthetic install results.
