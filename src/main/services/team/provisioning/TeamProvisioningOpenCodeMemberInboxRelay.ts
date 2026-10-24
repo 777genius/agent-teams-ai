@@ -14,11 +14,8 @@ import {
   waitForInboxRelayInFlight,
 } from './TeamProvisioningInboxRelayCandidates';
 import {
-  DEFAULT_INBOX_RELAY_BATCH_SIZE,
-  hasStableInboxMessageId,
   inferOpenCodeInboxMessageTaskRefs,
   type RelayInboxMessage,
-  selectOpenCodeInboxRelayBatch,
 } from './TeamProvisioningInboxRelayPolicy';
 import { type OpenCodeInboxAttachmentPayloadsResult } from './TeamProvisioningOpenCodeAttachmentPayloads';
 import {
@@ -39,6 +36,10 @@ import {
   recoverOpenCodeOwedInboxReadCommit,
   terminalizeOpenCodeMissingInboxRowRecord,
 } from './TeamProvisioningOpenCodeInboxReadCommitRecovery';
+import {
+  armOpenCodeInboxFollowUpWake,
+  selectOpenCodeMemberInboxRelayUnreadMessages,
+} from './TeamProvisioningOpenCodeMemberInboxFollowUpWake';
 import {
   getActiveOpenCodeMemberInboxRelayWork,
   registerOpenCodeMemberInboxRelayWork,
@@ -67,6 +68,7 @@ import type { OpenCodeVisibleReplyProof } from '../opencode/delivery/OpenCodePro
 import type { AgentActionMode, InboxMessage, TaskRef, TeamTask } from '@shared/types';
 
 export { scheduleOpenCodeMemberInboxDeliveryWakeWithPorts } from './TeamProvisioningOpenCodeMemberInboxDeliveryWake';
+export { selectOpenCodeMemberInboxRelayUnreadMessages } from './TeamProvisioningOpenCodeMemberInboxFollowUpWake';
 export type { OpenCodeMemberInboxRelayResult } from './TeamProvisioningOpenCodeMemberInboxRelayResults';
 
 export interface OpenCodeMemberInboxRelayOptions {
@@ -200,17 +202,11 @@ export async function relayOpenCodeMemberInboxMessagesWithPorts(
         // the in-flight walk read its inbox snapshot are invisible to it, so
         // leave the same follow-up wake a walk leaves for its own leftovers.
         if (options.isCurrent?.() !== false) {
-          const hasDeliveryRecord = await readOpenCodeInboxFollowUpHasRecord({
-            teamName,
-            memberName,
-            ports,
-          });
           await armOpenCodeInboxFollowUpWake({
             teamName,
             memberName,
             inboxMessages: await ports.readInboxMessages(teamName, memberName).catch(() => []),
             handledMessageIds: new Set<string>(),
-            hasDeliveryRecord,
             ports,
           });
         }
@@ -883,107 +879,11 @@ async function runOpenCodeMemberInboxRelayWork(
       memberName,
       inboxMessages,
       handledMessageIds,
-      hasDeliveryRecord: async (inboxMessageId) =>
-        Boolean(
-          await promptLedger
-            .getByInboxMessage({
-              teamName,
-              memberName: memberIdentity.canonicalMemberName,
-              laneId: memberIdentity.laneId,
-              inboxMessageId,
-            })
-            .catch(() => null)
-        ),
       ports,
     });
   }
 
   return dedupeOpenCodeMemberInboxRelayDiagnostics(result);
-}
-
-// A walk delivers at most one message and stops; unexamined rows are picked up
-// only when some later inbox write re-fires the watcher. Arm the next pass for
-// the first leftover row so the backlog drains even when no further write comes.
-async function armOpenCodeInboxFollowUpWake(input: {
-  teamName: string;
-  memberName: string;
-  inboxMessages: readonly InboxMessage[];
-  handledMessageIds: ReadonlySet<string>;
-  hasDeliveryRecord: (inboxMessageId: string) => Promise<boolean>;
-  ports: RelayOpenCodeMemberInboxMessagesPorts;
-}): Promise<void> {
-  const candidates = selectOpenCodeMemberInboxRelayUnreadMessages({
-    inboxMessages: input.inboxMessages,
-    maxRelay: input.inboxMessages.length,
-  }).filter((message) => !input.handledMessageIds.has(message.messageId));
-  for (const candidate of candidates) {
-    // A row a delivery record already owns belongs to the retry machinery; only
-    // a row nothing owns yet needs a fresh wake.
-    if (await input.hasDeliveryRecord(candidate.messageId)) {
-      continue;
-    }
-    // Unscoped and generation-free on purpose: the wake belongs to the row, not
-    // to the pass that noticed it, and must outlive that pass's revocation.
-    input.ports.scheduleOpenCodeMemberInboxDeliveryWake({
-      teamName: input.teamName,
-      memberName: input.memberName,
-      messageId: candidate.messageId,
-      delayMs: 500,
-    });
-    return;
-  }
-}
-
-async function readOpenCodeInboxFollowUpHasRecord(input: {
-  teamName: string;
-  memberName: string;
-  ports: RelayOpenCodeMemberInboxMessagesPorts;
-}): Promise<(inboxMessageId: string) => Promise<boolean>> {
-  try {
-    const memberIdentity = await input.ports.resolveOpenCodeMemberDeliveryIdentity(
-      input.teamName,
-      input.memberName
-    );
-    if (!memberIdentity.ok) {
-      throw new Error(memberIdentity.reason);
-    }
-    const { canonicalMemberName, laneId } = memberIdentity;
-    const ledger = input.ports.createOpenCodePromptDeliveryLedger(input.teamName, laneId);
-    return async (inboxMessageId) =>
-      Boolean(
-        await ledger
-          .getByInboxMessage({
-            teamName: input.teamName,
-            memberName: canonicalMemberName,
-            laneId,
-            inboxMessageId,
-          })
-          .catch(() => null)
-      );
-  } catch {
-    // Ownership cannot be proven; every leftover row stays wake-worthy and the
-    // woken pass makes the authoritative decision.
-    return async () => false;
-  }
-}
-
-export function selectOpenCodeMemberInboxRelayUnreadMessages(input: {
-  inboxMessages: readonly InboxMessage[];
-  onlyMessageId?: string;
-  maxRelay?: number;
-}): RelayInboxMessage[] {
-  const onlyMessageId = input.onlyMessageId?.trim();
-  return selectOpenCodeInboxRelayBatch(
-    input.inboxMessages.filter((message): message is RelayInboxMessage => {
-      if (onlyMessageId && message.messageId !== onlyMessageId) return false;
-      if (message.read && (!onlyMessageId || message.messageKind !== 'member_work_sync_nudge')) {
-        return false;
-      }
-      if (typeof message.text !== 'string' || message.text.trim().length === 0) return false;
-      return hasStableInboxMessageId(message);
-    }),
-    input.maxRelay ?? DEFAULT_INBOX_RELAY_BATCH_SIZE
-  );
 }
 
 export function resolveOpenCodeMemberInboxDeliveryDecision(input: {
