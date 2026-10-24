@@ -9,6 +9,7 @@ import type {
   ManagementChange,
   ManagementClient,
   ManagementOperation,
+  ManagementPlan,
   ManagementSession,
 } from '../../../src/features/extension-management/contracts';
 
@@ -90,6 +91,7 @@ function fixture(pending: ManagementOperation[] = []) {
   const assertCurrent = vi.fn(async () => {}),
     assertInactive = vi.fn(async () => {});
   const close = vi.fn(async () => {});
+  const resourcesForPlan = vi.fn((_plan: ManagementPlan) => ['profile-root']);
   const feature = createExtensionManagementFeature(
     {
       capture: async (selection) => ({
@@ -97,7 +99,7 @@ function fixture(pending: ManagementOperation[] = []) {
         label: selection.client,
         selection,
         resources: ['profile-root', 'other-profile'],
-        resourcesForPlan: () => ['profile-root'],
+        resourcesForPlan,
         assertCurrent,
         assertInactive,
         connect: async () => ({ client: client as unknown as ManagementClient, session, close }),
@@ -112,12 +114,56 @@ function fixture(pending: ManagementOperation[] = []) {
     assertCurrent,
     assertInactive,
     close,
+    resourcesForPlan,
     advanceCapture: () => {
       captureVersion += 1;
     },
   };
 }
 describe('captured extension management', () => {
+  it('extends an existing targeted lease before awaiting a broader recovery activity check', async () => {
+    const f = fixture();
+    const context = await f.feature.capture({ client: 'claude', scope: 'user' });
+    await f.feature.prepare({ contextId: context.contextId, change: { action: 'sync' } });
+    await f.feature.apply({
+      contextId: context.contextId,
+      planId: 'plan-a',
+      requestId: 'request-identity-a',
+    });
+    await f.feature.prepare({
+      contextId: context.contextId,
+      change: { action: 'recover', operationId: 'op-a' },
+    });
+    f.resourcesForPlan.mockReturnValue(['profile-root', 'other-profile']);
+    let resume!: () => void;
+    let checking!: () => void;
+    const check = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    const started = new Promise<void>((resolve) => {
+      checking = resolve;
+    });
+    f.assertInactive.mockImplementationOnce(async () => {
+      checking();
+      await check;
+    });
+    f.client.apply.mockResolvedValueOnce({
+      ...operation('succeeded'),
+      requestId: 'recovery-request-a',
+    });
+    const recovery = f.feature.apply({
+      contextId: context.contextId,
+      planId: 'plan-a',
+      requestId: 'recovery-request-a',
+    });
+    await started;
+    await expect(f.gate.launch(['other-profile'], async () => 'started')).rejects.toThrow(
+      'extension change'
+    );
+    resume();
+    await recovery;
+    await f.feature.close();
+  });
   it('releases a discovery through its captured SDK client without discarding a retained review', async () => {
     const f = fixture();
     const context = await f.feature.capture({ client: 'claude', scope: 'user' });

@@ -133,6 +133,8 @@ async function fixture() {
     CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: runtime,
     NODE_BINARY: await realpath(process.execPath),
     AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
+    // Dependencies were frozen-verified before isolation; nested dev launchers inherit this.
+    pnpm_config_verify_deps_before_run: 'false',
     NODE_OPTIONS: '--max-old-space-size=2048',
     GOMAXPROCS: '2',
     GOMEMLIMIT: '256MiB',
@@ -776,6 +778,9 @@ try {
   }
 } catch (error) {
   evidence.failure = String(error);
+  process.stderr.write(
+    `Owned desktop log tail (last 12,000 characters):\n${logs.join('').slice(-12_000)}\n`
+  );
   await cdp?.screenshot(path.join(f.shots, 'failure.png')).catch(() => {});
   throw error;
 } finally {

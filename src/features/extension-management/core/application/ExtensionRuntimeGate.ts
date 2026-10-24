@@ -1,7 +1,7 @@
 export interface MutationLease {
   release(): void;
-  /** Broaden an already accepted operation's fence without an unguarded gap. */
-  extend(resources: readonly string[]): void;
+  /** Broaden without a gap; a new mutation must also reject launches already preparing. */
+  extend(resources: readonly string[], requireIdle?: boolean): void;
 }
 
 /** Mutual admission for native profile mutations and launch preparation. */
@@ -35,7 +35,10 @@ export class ExtensionRuntimeGate {
     const extend = (more: readonly string[], check = false) => {
       if (released) throw new Error('This mutation admission has already been released.');
       const added = [...new Set(more)].filter((key) => !owned.has(key));
-      if (added.some((key) => this.mutations.has(key) || (check && this.launching.has(key))))
+      if (
+        added.some((key) => this.mutations.has(key)) ||
+        (check && more.some((key) => this.launching.has(key)))
+      )
         throw new Error(
           'This agent environment is busy. Wait for the current launch or extension change.'
         );
@@ -46,7 +49,7 @@ export class ExtensionRuntimeGate {
     };
     extend(resources, checkLaunching);
     return {
-      extend: (more) => extend(more),
+      extend: (more, requireIdle = false) => extend(more, requireIdle),
       release: () => {
         if (released) return;
         released = true;

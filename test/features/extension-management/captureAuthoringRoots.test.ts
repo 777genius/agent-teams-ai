@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -13,7 +13,7 @@ afterEach(async () => {
   await Promise.all(paths.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 async function fixture() {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'uap-authoring-capture-'));
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'uap-authoring-capture-')));
   paths.push(root);
   const profiles = [{ client: 'claude', configRoot: path.join(root, 'native') }];
   const projects = [{ id: 'registered', path: path.join(root, 'project') }];

@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v6; independent implementation review and actual desktop findings incorporated.
+Status: implementation plan v7; candidate artifact pin, additional review findings and precise qualification boundaries incorporated.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -143,7 +143,12 @@ state, not a hidden fallback.
 Master scenario IDs S01–S30 are maintained in the UAP plan. Before completion,
 record each as implemented/verified/dependency-blocked with concrete evidence.
 
-## Implementation order
+## Original implementation sequence (historical)
+
+This sequence records the order agreed at v1. Publication and implementation steps
+have since been completed through the checkpoints below. The current remaining
+gates are the exact-artifact desktop run and current-commit qualification, followed
+by review of any new findings; do not restart the v1/v2 publication steps.
 
 1. Publish this v1 plan and draft PR. Independently review master plan and frontend
    decisions; fix findings and immediately publish v2.
@@ -206,6 +211,16 @@ authority. Keep this feature-local; do not start a global authentication rewrite
 
 HTTP parity covers new management endpoints only. Existing legacy native store web
 limitations are not silently added to this task.
+
+The desktop sidecar assumes a trusted personal local machine. Its actual socket
+peer, Host, Origin and JSON checks enforce browser/network admission; they are not
+OS-user or process authentication. A process able to connect locally, including
+another OS account on a shared machine, can forge those headers. This integration
+does not claim hostile-local-process or multiuser isolation. A remote or multiuser
+deployment needs an authenticated deployment adapter before exposing mutations.
+The Go child has its own private bearer capability, which stays in the trusted
+main process and is never returned to the renderer. Do not confuse that credential
+with the sidecar's browser admission checks.
 
 ### Context, lifecycle and readiness
 
@@ -360,7 +375,7 @@ Independent v4 review found no reason to add a daemon, second transport, generic
 file lease, parallel installer or new frontend framework. The mandatory remaining
 UX items are restore-point discoverability and truthful range-update wording.
 
-Current local evidence is limited to the focused app contracts/application/
+Local evidence recorded at the historical v4 checkpoint was limited to the focused app contracts/application/
 IPC/HTTP/preload typecheck, 20 focused behavioral tests and the source-size guard.
 The complete repository TypeScript check exceeded the workspace's memory limit;
 it is not recorded as passed. Renderer/integration typechecks, full lint/build,
@@ -398,7 +413,9 @@ engine workstream; a disabled control is only fallback evidence.
   retention of at least 30 days and shows up to the latest 100 restore points.
   Restoration always revalidates ownership and current files in a fresh plan.
 
-The focused admission/application suite currently has 22 passing tests. Full CI,
+The v5 working-tree admission/application suite reported 22 passing tests, after
+the 20-test v4 checkpoint above. This is historical local evidence, not a result
+for the current head; later checkpoints supersede these counts. Full CI,
 actual Electron UX, local authoring integration, and signed package qualification
 remain required; this revision does not change the project/worktree dependency.
 
@@ -471,3 +488,112 @@ Evidence at this checkpoint:
 Resolve and independently rereview the corrections, publish the refreshed matched
 SDK/native pin, complete Electron clicking and native artifact checks, then run
 current-commit Full qualification and applicable package checks before merge.
+
+### v7 candidate artifact and additional review dispositions
+
+The independently reviewed Go follow-up is published at
+`aff370c0de25598ad8a1eee9436419cb7e35c348`. It applies each already supported
+adapter's own removal predicate with the actual command runner. Grok, Qoder,
+Copilot, Cline, Kiro and Windsurf now participate in the same review policy as
+Codex. This does not expand the management capability set. Shared Copilot runtime
+behavior and the frozen VS Code implementation remain unchanged.
+
+Actual macOS/Windows CI exposed a raw-versus-physical state-root comparison. The
+engine now normalizes both sides with the same helper; a different physical root
+is still refused. All management integration cases and saved Git/portable restore
+passed locally with TMPDIR deliberately reached through a symlink (37.648s).
+Adapter predicate equivalence and Codex profile tests also passed. Corrected
+macOS/Windows CI remains a separate gate.
+
+Signed registry inspection found that an embedded `0.1.0-development` version
+made all 30 entries in verified snapshot 42 ineligible. The native build now uses
+`0.1.91+agentteams.aff370c0de25`, based on the independently verified immutable
+`agentplugins-v0.1.91` tag at
+`4555aa53844ee0078e9036cd82638afd67f77c16`. Build metadata identifies the exact
+source while compatibility uses the verified release baseline. The stager,
+runtime cache, packaged checks and startup all compare this version. No latest
+release lookup or compatibility-policy bypass is introduced.
+
+The current candidate Linux x64 stage uses the published source above and has SHA-256
+`3e65916af4955f3061489a236a3907e178a658e6d5881ce1ab46b7526adef803`.
+The SDK archive has SHA-256
+`31eb798b31be66d1c4d80d1cfa094934fa786cf2b46313360b4c6a8f6bfdd96c`;
+its bytes are unchanged from the preceding SDK because the follow-up changed Go
+behavior only. Provenance still names the common exact source commit. Actual
+SDK/native, second-language and Electron qualification must all use these matched
+inputs; a successful stage alone is not a completed lifecycle test. A subsequent
+behavioral correction must refresh the source pin before final qualification.
+
+Additional GitHub review findings are resolved in the existing implementation:
+
+- Extend an existing mutation lease to all resources of the newly reviewed
+  recovery plan before awaiting the activity check. A launch already preparing on
+  any of those resources rejects the extension atomically; no partial fence is
+  added on refusal.
+- Admission uses the effective launch request's provider and working directory,
+  with per-field fallback to saved metadata. Explicit member providers and project
+  directories remain included. Unknown rosters retain conservative admission.
+- A transient operation-observation failure schedules another observation of the
+  same operation. It never repeats Apply. Successful observation clears only the
+  still-displayed error from that polling failure.
+- Canonicalize the temporary copy-source test root for macOS path aliases without
+  weakening production confinement.
+- Preserve definitive-refusal deletion cleanup. Do not adopt blanket expiry or
+  terminal-error eviction that would discard uncertain accepted request identity.
+- Keep the required staged-engine contract. Engine absence cannot prove that the
+  durable environment has no pending mutation, so it cannot authorize launch.
+
+The independent follow-up reviewer found no P0/P1/P2 in these source changes and
+agreed with the explicit trusted-local HTTP boundary above. The five focused
+regression files passed 31 tests; focused core and harness TypeScript, narrow lint,
+diff validation and the unchanged source-size guard passed before publication.
+Final current-commit CI remains distinct from these local checks and static review.
+
+Actual macOS ad-hoc signing passed on app checkpoint
+`d7ebfb0ebe026d7bf115bdda8323b5b28b7eb629`, in
+[job 121009065668](https://github.com/777genius/agent-teams-ai/actions/runs/40139661115/job/121009065668).
+That checkpoint also passed packaged macOS ARM64, Linux x64 and Windows x64 smoke.
+These are historical package results; the final app head must qualify again.
+No release certificate, notarization or public release is claimed from this test.
+
+The first focused Electron CI run on `1c0857f` built the matched native runtime and
+provisioned real OpenCode and orchestration runtimes, but exited before opening
+Electron: pnpm attempted a second install after the harness changed HOME. The
+harness now uses dependencies already verified by the frozen installation step,
+preserves that setting for child commands and includes a bounded startup-log tail
+on failure. An actual nested pnpm command under a fresh isolated HOME verified
+that no implicit install occurs. Dependency integrity is unchanged. The complete
+actual UI receipt remains required.
+
+Main was merged through a normal three-way merge at
+`b0a700e927a4b85540c7aa4f3e8c8f85ef141326`, incorporating upstream
+`bb6430b78df3698a53f6c97a33dce0e203fc674d`. The final app run must therefore use the
+reviewed runtime 0.0.137 and current OpenCode override/provider-status behavior.
+The two overlapping files merged without conflict; feature edits and upstream
+changes are both retained.
+
+Actual candidate testing has already identified two further qualification issues:
+
+- Real OpenCode discovery, exact Skill/portable-command bytes, pinned update and
+  ordinary repair passed. Repair of an edited owned Skill preserved those bytes
+  and reported partial, but omitted the required typed changed-content diagnostic.
+  The full recovery smoke stopped at that assertion; it is not a passing receipt.
+- The signed official registry now reports 30 entries, 28 eligible, and the reviewed
+  cloudflare-docs version is available for OpenCode. Management preparation still
+  returned a refusal while an actual CLI dry-run on the same candidate succeeded.
+  Catalog compatibility is verified, but registry installation S02 is not yet
+  qualified.
+
+Resolve both concrete findings in Go, independently review the corrections, then
+refresh the matched source pin and repeat the affected actual-artifact scenarios.
+Do not weaken assertions or count successful discovery as successful installation.
+
+Published checkpoint measurements before the final small app follow-up are 5,932
+added handwritten runtime/build-tool lines in UAP and 3,919 in Agent Teams, with
+330 and 180 removed respectively. Generated transport types, tests, localization,
+schemas and documentation are counted separately. The original 3,500–6,500-line
+planning range was low: retained operation/recovery authority and the requirement
+to route reversible local authoring through Go account for the expansion. The
+handwritten TS SDK runtime remains 339 lines. Independent maintainability review
+found no need for a daemon, second installer, framework or unused language SDKs;
+the final evidence report will record final measured counts and scenario status.

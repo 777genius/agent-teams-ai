@@ -204,7 +204,7 @@
     "@tiptap/pm": "3.30.5",
     "@tiptap/react": "3.30.5",
     "@tiptap/starter-kit": "3.30.5",
-    "@uap/management-sdk": "file:vendor/uap/sdk/uap-management-sdk-0.0.0-development-25ad247f812d.tgz",
+    "@uap/management-sdk": "file:vendor/uap/sdk/uap-management-sdk-0.0.0-development-aff370c0de25.tgz",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-web-links": "^0.12.0",
     "@xterm/xterm": "^6.0.0",

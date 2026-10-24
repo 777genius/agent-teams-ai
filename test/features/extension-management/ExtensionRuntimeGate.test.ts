@@ -10,6 +10,27 @@ function deferred() {
   return { promise, release };
 }
 describe('native extension/runtime admission', () => {
+  it('widens a fresh recovery fence before any new profile can launch', () => {
+    const gate = new ExtensionRuntimeGate();
+    const lease = gate.restoreMutation(['profile-a']);
+    lease.extend(['profile-a', 'profile-b'], true);
+    return expect(gate.launch(['profile-b'], async () => 'started')).rejects.toThrow(
+      'extension change'
+    );
+  });
+  it('refuses fresh recovery while a launch is preparing, including an already restored resource', async () => {
+    const gate = new ExtensionRuntimeGate();
+    const launch = deferred();
+    const preparing = gate.launch(['profile-b'], () => launch.promise);
+    const lease = gate.restoreMutation(['profile-a']);
+    expect(() => lease.extend(['profile-a', 'profile-b'], true)).toThrow('busy');
+    lease.extend(['profile-b']); // Observing already accepted work still fences future launches.
+    expect(() => lease.extend(['profile-b'], true)).toThrow('busy');
+    launch.release();
+    await preparing;
+    lease.extend(['profile-a', 'profile-b'], true);
+    lease.release();
+  });
   it('reserves a mutation before checking activity, closing the launch race', async () => {
     const gate = new ExtensionRuntimeGate(),
       check = deferred();

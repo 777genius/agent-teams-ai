@@ -343,14 +343,17 @@ export function createExtensionManagementApplication(
         }
       };
       try {
+        const resources = value.captured.resourcesForPlan
+          ? value.captured.resourcesForPlan(plan)
+          : value.captured.resources;
         if (!value.admission.lease)
-          value.admission.lease = await gate.reserveMutation(
-            value.captured.resourcesForPlan
-              ? value.captured.resourcesForPlan(plan)
-              : value.captured.resources,
-            () => value.captured.assertInactive(plan)
+          value.admission.lease = await gate.reserveMutation(resources, () =>
+            value.captured.assertInactive(plan)
           );
-        else await value.captured.assertInactive(plan);
+        else {
+          value.admission.lease.extend(resources, true);
+          await value.captured.assertInactive(plan);
+        }
         value.admission.uncertainRequests.set(input.requestId, {
           plan,
           contextId: value.public.contextId,

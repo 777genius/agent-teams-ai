@@ -190,11 +190,17 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
     if (!backend || !context || !operationId || !isRunning) return;
     let stopped = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let observationError: string | null = null;
     const version = generation.current;
     const poll = async () => {
       try {
         const observed = await backend.operation({ contextId: context.contextId, operationId });
         if (stopped || version !== generation.current) return;
+        if (observationError) {
+          const recovered = observationError;
+          setError((current) => (current === recovered ? null : current));
+          observationError = null;
+        }
         setOperation(observed);
         if (finished(observed)) await refresh(context, version);
         else
@@ -202,7 +208,13 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
             void poll();
           }, 750);
       } catch (failure) {
-        if (!stopped && version === generation.current) setError(message(failure));
+        if (!stopped && version === generation.current) {
+          observationError = message(failure);
+          setError(observationError);
+          timer = setTimeout(() => {
+            void poll();
+          }, 750);
+        }
       }
     };
     void poll();

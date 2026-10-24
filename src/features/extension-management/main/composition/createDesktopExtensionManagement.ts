@@ -17,6 +17,7 @@ import {
   projectSkillAdmissionResources,
 } from '../infrastructure/captureAuthoringRoots';
 import { prepareSkillCopy } from '../infrastructure/prepareSkillCopy';
+import { resolveExtensionLaunchContext } from '../infrastructure/resolveExtensionLaunchContext';
 import { resolveSkillCopySources } from '../infrastructure/resolveSkillCopySources';
 import { resolveUapExecutable } from '../infrastructure/resolveUapExecutable';
 
@@ -159,13 +160,8 @@ export function createDesktopExtensionManagement(deps: DesktopExtensionManagemen
   ): Promise<T> {
     if (!deps.isLocal()) return operation();
     const saved = 'members' in request ? request : await deps.savedRequest(request.teamName);
-    const providers = saved
-      ? [
-          saved.providerId,
-          ...(saved.members ?? []).map((member) => member.providerId),
-          ...additionalProviders,
-        ]
-      : [];
+    const launch = resolveExtensionLaunchContext(request, saved);
+    const providers = launch.providers.length ? [...launch.providers, ...additionalProviders] : [];
     const clients =
       providers.length && providers.every((provider) => clientForProvider(provider))
         ? [...new Set(providers.map((provider) => clientForProvider(provider)!))]
@@ -180,7 +176,7 @@ export function createDesktopExtensionManagement(deps: DesktopExtensionManagemen
         ...captured.profiles
           .filter((item) => clients.includes(item.client))
           .map((item) => item.configRoot),
-        ...(await projectSkillAdmissionResources(saved?.cwd)),
+        ...(await Promise.all(launch.projectPaths.map(projectSkillAdmissionResources))).flat(),
       ],
       operation
     );
