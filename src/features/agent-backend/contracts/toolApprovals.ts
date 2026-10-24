@@ -50,7 +50,7 @@ export function readBackendToolApprovalSettings(value: unknown): BackendToolAppr
   if (
     Reflect.ownKeys(descriptors).length !== keys.length ||
     Reflect.ownKeys(descriptors).some(
-      (key) => typeof key !== 'string' || !keys.includes(key) || !('value' in descriptors[key]!)
+      (key) => typeof key !== 'string' || !keys.includes(key) || !('value' in descriptors[key])
     )
   )
     throw new Error('Invalid approval settings');

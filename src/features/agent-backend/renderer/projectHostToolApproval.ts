@@ -17,7 +17,7 @@ function data(value: unknown): Record<string, unknown> | undefined {
   const descriptors = Object.getOwnPropertyDescriptors(value);
   if (
     Reflect.ownKeys(descriptors).some(
-      (key) => typeof key !== 'string' || !('value' in descriptors[key]!)
+      (key) => typeof key !== 'string' || !('value' in descriptors[key])
     )
   )
     return undefined;
@@ -81,7 +81,7 @@ export function pendingHostToolInteractions(
         event.data.interactionRef === fact.interactionRef
     );
     if (matching.length !== 1) return [];
-    const event = matching[0]!;
+    const event = matching[0];
     if (event.data.kind !== 'interaction' || event.data.request.kind !== fact.kind) return [];
     const request = event.data.request;
     if (request.kind === 'question' && !renderableQuestions(request.questions)) return [];

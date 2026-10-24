@@ -42,7 +42,7 @@ export function createHostReviewApi(
             origin.memberName = args[1];
           if (
             typeof args[1] === 'string' &&
-            method.toString().match(/Decisions|DraftHistory|DecisionConflict/)
+            /Decisions|DraftHistory|DecisionConflict/.test(method.toString())
           ) {
             if (args[1].startsWith('task-')) origin.taskId = args[1].slice(5);
             else if (args[1].startsWith('agent-')) origin.memberName = args[1].slice(6);

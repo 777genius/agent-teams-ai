@@ -228,7 +228,7 @@ function descriptor(value: unknown): DesktopBackendDescriptor {
               runtimeId: entry.runtimeId as 'opencode' | 'codex' | 'claude',
               owner,
               contextId: id(entry.contextId),
-              projectPath: entry.projectPath as string | null,
+              projectPath: entry.projectPath,
               profileId: id(entry.profileId),
               configRevision: id(entry.configRevision),
               ...(preferences ? { preferences } : {}),

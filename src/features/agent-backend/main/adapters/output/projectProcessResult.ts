@@ -66,6 +66,6 @@ export function projectProcessResult(request: BackendOperationRequest, value: un
   if (observed.result !== undefined)
     result.result = Array.isArray(observed.result)
       ? readBackendProcesses(observed.result)
-      : readBackendProcesses([observed.result])[0]!;
+      : readBackendProcesses([observed.result])[0];
   return result;
 }

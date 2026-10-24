@@ -62,7 +62,7 @@ export function projectResumePreparation(value: unknown): BackendResumePreparati
       )
         throw new Error('Invalid Resume state');
       return {
-        ...choices[index]!,
+        ...choices[index],
         requested: item.requested,
         ...(item.refused === undefined
           ? {}

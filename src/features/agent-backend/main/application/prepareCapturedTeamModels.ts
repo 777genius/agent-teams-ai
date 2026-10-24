@@ -123,13 +123,13 @@ export async function prepareCapturedTeamModels(options: {
       members.length !== view.members.length ||
       !request.cwd ||
       leads.length !== 1 ||
-      !leads[0]!.selected
+      !leads[0].selected
     )
       return unavailable('Captured Team member settings are unavailable.');
     const supplied: TeamProvisioningModelCheckRequest[] =
       request.modelChecks ??
       (request.modelIds ?? []).map((model) => ({
-        providerId: request.providerId ?? providerId(leads[0]!.selected!.provider),
+        providerId: request.providerId ?? providerId(leads[0].selected!.provider),
         model,
       }));
     const choices = request.selectedModelChecks ?? supplied;
@@ -138,20 +138,20 @@ export async function prepareCapturedTeamModels(options: {
     const targeted = choices.some((choice) => choice.targets !== undefined);
     if (
       !targeted &&
-      (resolve(leads[0]!.selected!.workspace) !== resolve(request.cwd) ||
+      (resolve(leads[0].selected.workspace) !== resolve(request.cwd) ||
         (request.providerId !== undefined &&
-          request.providerId !== providerId(leads[0]!.selected!.provider)) ||
+          request.providerId !== providerId(leads[0].selected.provider)) ||
         (!request.modelChecks &&
           request.modelIds?.length &&
           new Set(members.map((member) => member.selected!.provider)).size > 1))
     )
       return unavailable('The edited providers or workspace require explicit member destinations.');
-    type Planned = {
+    interface Planned {
       memberId: string;
       saved: NonNullable<ModelView['members'][number]['selected']> | undefined;
       choice?: TeamProvisioningModelCheckRequest;
       draft?: BackendLaunchModelSelection['draft'];
-    };
+    }
     const planned: Planned[] = [];
     if (targeted) {
       const names = new Set<string>(),
@@ -189,7 +189,7 @@ export async function prepareCapturedTeamModels(options: {
               return unavailable('The selected lead provider does not match its model check.');
           }
           const changedTeamWorkspace =
-            resolve(leads[0]!.selected!.workspace) !== resolve(request.cwd);
+            resolve(leads[0].selected.workspace) !== resolve(request.cwd);
           if (
             target.kind === 'member' &&
             row?.selected &&
@@ -348,7 +348,7 @@ export async function prepareCapturedTeamModels(options: {
       if (request.preparationId && options.intents) {
         const proof =
           result.ok && result.value && 'expiresAt' in result.value && 'model' in result.value
-            ? (result.value as BackendLaunchModelProbe)
+            ? result.value
             : null;
         let invalidatedReleased = false;
         if (
@@ -401,7 +401,7 @@ export async function prepareCapturedTeamModels(options: {
           return unavailable(
             'The original Team model check outcome is unknown. Refresh reads the same check.'
           );
-        const probe = result.value as BackendLaunchModelProbe;
+        const probe = result.value;
         if (probe.phase !== 'running') {
           active.delete(id);
           if (probe.phase !== 'completed' || !probe.ok || probe.expiresAt <= Date.now())

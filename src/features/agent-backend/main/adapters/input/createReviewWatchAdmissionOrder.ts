@@ -11,7 +11,10 @@ export function createReviewWatchAdmissionOrder() {
       const id = key(request),
         token = {};
       let entries = owners.get(owner);
-      if (!entries) owners.set(owner, (entries = new Map()));
+      if (!entries) {
+        entries = new Map();
+        owners.set(owner, entries);
+      }
       entries.set(id, token);
       const current = entries;
       return {

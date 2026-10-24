@@ -81,17 +81,16 @@ export function useOrganizationCreateTeamDialog(): UseOrganizationCreateTeamDial
     ): Promise<string> => {
       const created = await createTeam(request);
       const teamName = created.teamName ?? request.teamName;
-      if (!placement) {
-        return teamName;
-      }
-      try {
-        await api.organizations.assignTeamToUnit({
-          ...placement,
-          teamName,
-          label: request.displayName || request.teamName,
-        });
-      } catch (error) {
-        console.warn('[Organizations] Failed to place created team in organization', error);
+      if (placement) {
+        try {
+          await api.organizations.assignTeamToUnit({
+            ...placement,
+            teamName,
+            label: request.displayName || request.teamName,
+          });
+        } catch (error) {
+          console.warn('[Organizations] Failed to place created team in organization', error);
+        }
       }
       return teamName;
     },

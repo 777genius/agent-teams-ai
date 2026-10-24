@@ -24,11 +24,11 @@ export interface BackendHandle {
 
 export * from './attachments';
 export * from './connections';
-export * from './launch';
+export type * from './launch';
 export * from './operations';
-export * from './review';
+export type * from './review';
 export * from './reviewWatch';
-export * from './roster';
+export type * from './roster';
 export * from './stoppedImport';
 export { hostTeamRunId, isHostTeamRunId, parseHostTeamRunId } from './teamRunSelection';
 export {
@@ -36,4 +36,4 @@ export {
   isHostTeamSelectionKey,
   parseHostTeamSelectionKey,
 } from './teamSelection';
-export * from './teamSnapshot';
+export type * from './teamSnapshot';

@@ -49,7 +49,10 @@ export function buildProviderModelChecksMap(input: {
     const existing = modelsByProvider.get(providerId) ?? [];
     const same = existing.find((entry) => entry.model === trimmed && entry.effort === effort);
     if (same) {
-      if (targeted) (same.targets ??= []).push(target);
+      if (targeted) {
+        same.targets ??= [];
+        same.targets.push(target);
+      }
     } else {
       modelsByProvider.set(providerId, [
         ...existing,

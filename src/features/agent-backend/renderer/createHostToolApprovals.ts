@@ -410,7 +410,7 @@ export function createHostToolApprovals(options: {
     if (connections.state !== 'ready' || matches.length !== 1)
       throw new HostTeamOperationError('forbidden', 'not-dispatched');
     const result = await options.backend.invoke({
-      handle: matches[0]!.handle,
+      handle: matches[0].handle,
       commandId: crypto.randomUUID(),
       operation: 'runtime.approval.settings.update',
       payload: { settings },

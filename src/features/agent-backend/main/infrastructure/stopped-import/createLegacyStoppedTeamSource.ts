@@ -183,9 +183,9 @@ export function createLegacyStoppedTeamSource(
         const leads = config
           ? configMembers.filter((member) => member.agentType === 'team-lead')
           : [{ name: 'team-lead', ...pick(meta, memberSettings) }];
-        if (leads.length !== 1 || typeof leads[0]!.name !== 'string')
+        if (leads.length !== 1 || typeof leads[0].name !== 'string')
           return hold('source-unreadable');
-        const leadName = leads[0]!.name;
+        const leadName = leads[0].name;
         if (config === null && members.some((member) => member.name === leadName))
           return hold('source-unreadable');
         const nonLead = members.filter((member) => member.name !== leadName);
@@ -197,7 +197,7 @@ export function createLegacyStoppedTeamSource(
             ...pick(member, memberSettings),
           })),
         });
-        const lead = members.find((member) => member.name === leadName) ?? leads[0]!;
+        const lead = members.find((member) => member.name === leadName) ?? leads[0];
         const nativeIdentity = classifyLegacySavedTeamNativeRecords(binding.teamName, {
           config,
           meta,

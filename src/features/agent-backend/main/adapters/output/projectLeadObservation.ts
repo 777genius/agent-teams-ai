@@ -62,7 +62,7 @@ export function projectLeadObservation(
     launch: selected,
     usage: {
       promptInputTokens: null,
-      outputTokens: output as number | null,
+      outputTokens: output,
       contextUsedTokens: null,
       contextWindowTokens: null,
       contextUsedPercent: null,

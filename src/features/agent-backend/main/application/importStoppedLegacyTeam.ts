@@ -81,7 +81,7 @@ export async function importStoppedLegacyTeam(options: {
       );
     } else if (!receipt && input.action === 'prepare') {
       if (!source) throw new LegacyStoppedImportHold('source-unreadable');
-      const live = { isCurrent: () => guard.isCurrent() && source!.isCurrent() };
+      const live = { isCurrent: () => guard.isCurrent() && source.isCurrent() };
       const request = await prepareStoppedLegacyImport({
         source,
         owners: options.owners,

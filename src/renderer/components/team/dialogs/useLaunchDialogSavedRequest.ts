@@ -13,7 +13,11 @@ import { isHostSavedRequest } from './launchDialogPrefill';
 import type { TeamCreateRequest } from '@shared/types/team';
 
 const READ_BUDGET_MS = 30_000;
-type Source = { scope: string; request: TeamCreateRequest | null; error?: string };
+interface Source {
+  scope: string;
+  request: TeamCreateRequest | null;
+  error?: string;
+}
 
 /** One existing-dialog source query. Loading/error never means proven absent owner settings. */
 export function useLaunchDialogSavedRequest(open: boolean, launch: boolean, teamName: string) {

@@ -133,7 +133,7 @@ export function captureScope(value: unknown): BackendScope {
     workspaceId: scope.workspaceId as string,
     teamId: scope.teamId as string,
     runId: scope.runId as string,
-    memberId: scope.memberId as string | null,
+    memberId: scope.memberId,
     generation: scope.generation as string | number | null,
   });
 }

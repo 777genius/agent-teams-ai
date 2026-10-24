@@ -99,7 +99,10 @@ export function createCapturedReviewWatch(options: CapturedReviewWatchOptions) {
       watchers: [],
     };
     let owner = subscriptions.get(captured.handle.handleId);
-    if (!owner) subscriptions.set(captured.handle.handleId, (owner = new Map()));
+    if (!owner) {
+      owner = new Map();
+      subscriptions.set(captured.handle.handleId, owner);
+    }
     owner.set(captured.watchId, subscription);
     try {
       const result = await invoke(

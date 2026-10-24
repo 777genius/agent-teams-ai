@@ -41,7 +41,7 @@ export function createHostMemberActions(options: {
     if (!config) throw new HostTeamOperationError('hold', 'not-dispatched');
     const matches = config.members.filter((m) => m.label === memberName);
     if (matches.length !== 1) throw new HostTeamOperationError('conflict', 'not-dispatched');
-    const memberId = matches[0]!.memberId,
+    const memberId = matches[0].memberId,
       member = config.launch.members.find((m) => m.memberId === memberId);
     if (!member) throw new HostTeamOperationError('conflict', 'not-dispatched');
     const read = await options.backend.invoke({

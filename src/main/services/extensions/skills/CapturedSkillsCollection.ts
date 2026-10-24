@@ -39,13 +39,13 @@ export class CapturedSkillsCollection {
       (root) => root.target.scope === request.scope && root.target.rootKind === request.rootKind
     );
     if (selected.length !== 1) throw new Error('Requested captured Skills root is unavailable');
-    return selected[0]!;
+    return selected[0];
   }
   private forSkill(skillId: string): CapturedSkills {
     this.assertCurrent();
     const selected = this.roots.filter((root) => root.target.rootPath === dirname(skillId));
     if (selected.length !== 1) throw new Error('Skill is outside the captured roots');
-    return selected[0]!;
+    return selected[0];
   }
   async list() {
     this.assertCurrent();

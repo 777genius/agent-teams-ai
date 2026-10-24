@@ -43,11 +43,9 @@ export function readBackendAttachmentChunk(
     metadata.id !== input.attachmentId ||
     ['id', 'filename', 'mimeType'].some(
       (key) =>
-        typeof metadata[key] !== 'string' ||
-        !(metadata[key] as string).length ||
-        /[\0\r\n]/.test(metadata[key] as string)
+        typeof metadata[key] !== 'string' || !metadata[key].length || /[\0\r\n]/.test(metadata[key])
     ) ||
-    (metadata.id as string).length > 128 ||
+    metadata.id.length > 128 ||
     (metadata.filename as string).length > 1024 ||
     (metadata.mimeType as string).length > 256 ||
     !Number.isSafeInteger(metadata.size) ||
@@ -78,11 +76,11 @@ export function readBackendAttachmentChunk(
     throw new Error('Invalid attachment read');
   return {
     attachment: {
-      id: metadata.id as string,
+      id: metadata.id,
       filename: metadata.filename as string,
       mimeType: metadata.mimeType as string,
       size,
-      ...(metadata.addedAt === undefined ? {} : { addedAt: metadata.addedAt as string }),
+      ...(metadata.addedAt === undefined ? {} : { addedAt: metadata.addedAt }),
     },
     sha256: row.sha256,
     offset: input.offset,

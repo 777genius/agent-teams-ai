@@ -115,6 +115,18 @@ let active:
     }
   | undefined;
 
+function createCapturedSenderGuard(
+  original: NonNullable<typeof active>,
+  event: IpcMainInvokeEvent,
+  contextId: string,
+  contextSelection: ReturnType<BackendShellOptions['captureActiveSelection']> | undefined
+): () => boolean {
+  return () =>
+    active === original &&
+    original.captureSender(event) === contextId &&
+    contextSelection?.isCurrent() === true;
+}
+
 let stoppedImportOwners:
   | { owners: LegacyStoppedSourceOwners; isCurrent(contextId: string): boolean }
   | undefined;
@@ -237,7 +249,7 @@ export async function captureDesktopHostNotification(event: IpcMainInvokeEvent, 
           !('members' in result.value)
         )
           throw new Error('Original Host notification source unavailable');
-        return result.value as import('@features/agent-backend/contracts').BackendTeamSnapshot;
+        return result.value;
       },
     },
     data
@@ -254,10 +266,7 @@ export async function createDesktopCapturedTeamConfiguration(
     contextId = original?.captureSender(event);
   if (!original?.selected || !contextId)
     throw new Error('Captured Host creation context unavailable.');
-  const isCurrent = () =>
-    active === original &&
-    original.captureSender(event) === contextId &&
-    contextSelection?.isCurrent() === true;
+  const isCurrent = createCapturedSenderGuard(original, event, contextId, contextSelection);
   return createConfiguredHostTeam({
     feature: original.feature,
     contextId,
@@ -273,10 +282,7 @@ function captureCreationScope(event: IpcMainInvokeEvent) {
     contextId = original?.captureSender(event);
   if (!original?.selected || !contextId)
     throw new Error('Captured Host creation context unavailable.');
-  const isCurrent = () =>
-    active === original &&
-    original.captureSender(event) === contextId &&
-    contextSelection?.isCurrent() === true;
+  const isCurrent = createCapturedSenderGuard(original, event, contextId, contextSelection);
   return { feature: original.feature, contextId, guard: { isCurrent } };
 }
 
@@ -326,10 +332,7 @@ export async function prepareDesktopCapturedTeam(
   const contextId = original?.captureSender(event);
   const denied = { ready: false, message: 'Captured Host provisioning context is unavailable.' };
   if (!original?.selected || !contextId) return denied;
-  const current = () =>
-    active === original &&
-    original.captureSender(event) === contextId &&
-    contextSelection?.isCurrent() === true;
+  const current = createCapturedSenderGuard(original, event, contextId, contextSelection);
   try {
     return await original.savedTeamChecks.run(
       JSON.stringify([contextId, selection, capturedRequest]),
