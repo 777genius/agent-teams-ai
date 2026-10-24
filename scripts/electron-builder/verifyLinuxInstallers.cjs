@@ -140,9 +140,10 @@ async function verifyDeb(debPath) {
     }
   }
 
+  // GNU tar and bsdtar both put a space before the entry name in verbose listings.
   let launcherLine;
   await scanDebTarListing(debPath, dataMember, true, (line) => {
-    if (launcherLine === undefined && line.endsWith(DEB_LAUNCHER_ENTRY)) launcherLine = line;
+    if (launcherLine === undefined && line.endsWith(` ${DEB_LAUNCHER_ENTRY}`)) launcherLine = line;
   });
   if (!launcherLine || !launcherLine.startsWith('-rwx')) {
     fail(`/usr/bin/agent-teams-ai is not executable in ${debPath}`);

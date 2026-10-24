@@ -28,6 +28,8 @@ function buildDeb(options: {
   withSandbox?: boolean;
   fillerFirst?: boolean;
   truncateData?: boolean;
+  launcherMode?: number;
+  executableDecoyLauncher?: boolean;
 }): { releaseDir: string; fillerListingBytes: number } {
   const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'verify-linux-installers-'));
   tempRoots.push(workDir);
@@ -36,12 +38,12 @@ function buildDeb(options: {
   const releaseDir = path.join(workDir, 'release');
   fs.mkdirSync(releaseDir);
 
-  writeFile(
-    dataRoot,
-    'usr/bin/agent-teams-ai',
-    '#!/bin/sh\nexec /opt/Agent-Teams-AI/agent-teams-ai "$@"\n',
-    0o755
-  );
+  const launcher = '#!/bin/sh\nexec /opt/Agent-Teams-AI/agent-teams-ai "$@"\n';
+  writeFile(dataRoot, 'usr/bin/agent-teams-ai', launcher, options.launcherMode ?? 0o755);
+  if (options.executableDecoyLauncher) {
+    // Listed before ./usr and ends with the launcher path, but is a different entry.
+    writeFile(dataRoot, 'opt/decoy./usr/bin/agent-teams-ai', launcher, 0o755);
+  }
   writeFile(dataRoot, 'opt/Agent-Teams-AI/agent-teams-ai', 'binary', 0o755);
   if (options.withSandbox ?? true) {
     writeFile(dataRoot, 'opt/Agent-Teams-AI/chrome-sandbox', 'sandbox', 0o755);
@@ -93,7 +95,13 @@ function buildDeb(options: {
 }
 
 function runVerifier(releaseDir: string) {
-  return spawnSync(process.execPath, [verifierPath, releaseDir], { encoding: 'utf8' });
+  // spawnSync blocks the vitest timeout, so the child gets its own deadline.
+  const result = spawnSync(process.execPath, [verifierPath, releaseDir], {
+    encoding: 'utf8',
+    timeout: 120_000,
+  });
+  expect(result.error).toBeUndefined();
+  return result;
 }
 
 afterAll(() => {
@@ -123,6 +131,19 @@ describe.skipIf(process.platform === 'win32')('verifyLinuxInstallers deb checks'
     expect(result.stderr).toContain(
       'agent-teams-ai_0.0.0_amd64.deb does not contain ./opt/Agent-Teams-AI/chrome-sandbox'
     );
+  });
+
+  it('checks the mode of the launcher entry itself, not of a path ending with it', () => {
+    const { releaseDir } = buildDeb({
+      fillerFiles: 0,
+      launcherMode: 0o644,
+      executableDecoyLauncher: true,
+    });
+
+    const result = runVerifier(releaseDir);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('/usr/bin/agent-teams-ai is not executable in');
   });
 
   it('fails on a truncated data archive even after the required entries were listed', () => {
