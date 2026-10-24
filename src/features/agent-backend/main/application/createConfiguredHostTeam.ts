@@ -19,6 +19,7 @@ export function captureConfiguredHostTeamDraft(
   const raw = value as Record<string, unknown>;
   const allowed = new Set([
     'teamName',
+    'runtimeSelectionVersion',
     'members',
     'cwd',
     'displayName',

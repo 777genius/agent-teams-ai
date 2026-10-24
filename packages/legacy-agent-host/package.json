@@ -251,7 +251,7 @@
   "dependencies": {
     "@agent-teams/provider-implementations": "file:../../vendor/provider-migration/typed-quality-validation-v2/agent-teams-provider-implementations-0.0.0.tgz",
     "@agent-teams/provider-session-contracts": "file:../../vendor/provider-migration/finite-claude-custody-v1/agent-teams-provider-session-contracts-0.0.0.tgz",
-    "@modelcontextprotocol/sdk": "1.30.0",
+    "@modelcontextprotocol/sdk": "1.32.0",
     "agent-teams-controller": "workspace:*",
     "zod": "4.6.7",
     "@agent-teams/task-change-ledger": "workspace:*",

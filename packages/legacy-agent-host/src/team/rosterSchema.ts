@@ -55,6 +55,7 @@ const savedText = (max: number, nonempty = false) =>
  * cwd is application data; native admission separately validates access/launch. */
 export const savedTeamSettingsSchema = z
   .object({
+    runtimeSelectionVersion: z.literal(1).optional(),
     cwd: savedText(8192, true),
     displayName: savedText(256).optional(),
     description: savedText(64 * 1024).optional(),

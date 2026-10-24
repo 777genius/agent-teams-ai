@@ -141,7 +141,9 @@ export function rosterSavedSettings(value: unknown, strict: boolean): BackendSav
   ] as const;
   const source = rosterRow(
     value,
-    strict ? [...selections, ...strings.map(([key]) => key), ...booleans] : undefined
+    strict
+      ? ['runtimeSelectionVersion', ...selections, ...strings.map(([key]) => key), ...booleans]
+      : undefined
   );
   const cwd = rosterText(source.cwd, 8192);
   if (!cwd.trim()) throw new Error('Invalid saved workspace');
@@ -154,6 +156,10 @@ export function rosterSavedSettings(value: unknown, strict: boolean): BackendSav
       true
     ),
   };
+  if (source.runtimeSelectionVersion !== undefined) {
+    if (source.runtimeSelectionVersion !== 1) throw new Error('Invalid runtime selection version');
+    result.runtimeSelectionVersion = 1;
+  }
   for (const [key, max] of strings)
     if (source[key] !== undefined) {
       const value = source[key];

@@ -79,6 +79,11 @@ function recipes(
   },
   teamName?: string
 ): RuntimeMemberProfile[] {
+  if (
+    source.savedSettings.runtimeSelectionVersion === 1 &&
+    source.savedSettings.providerId === undefined
+  )
+    refuse('runtime-selection-required');
   const leads = source.members.filter((member) => member.role === 'lead');
   if (leads.length !== 1) refuse('capture-lead');
   const lead = leads[0]!;

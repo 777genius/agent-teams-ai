@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -10,8 +10,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { hostTeamSelectionKey } from '../../../src/features/agent-backend/contracts';
 import {
   CapturedHostClient,
-  DesktopBackendFeature,
   createConfiguredHostTeam,
+  DesktopBackendFeature,
 } from '../../../src/features/agent-backend/main';
 
 import type {
@@ -119,82 +119,91 @@ async function fixture() {
 }
 
 describe('existing Create-config to actual Host registry', () => {
-  it('saves one captured product intent, exposes only its canonical binding and reconstructs it cold', async () => {
-    const f = await fixture(),
-      first = f.feature();
-    const originalRequest = CapturedHostClient.prototype.request;
-    let lost = false;
-    const observed: string[] = [];
-    vi.spyOn(CapturedHostClient.prototype, 'request').mockImplementation(async function (
-      this: CapturedHostClient,
-      method,
-      params,
-      options
-    ) {
-      const result = await originalRequest.call(this, method, params, options);
-      if (method.startsWith('team.registry.')) observed.push(method);
-      if (method === 'team.registry.create' && !lost) {
-        lost = true;
-        throw new Error('TEST lost response after Host commit');
-      }
-      return result;
-    });
-    const saved = await createConfiguredHostTeam({
-      feature: first,
-      contextId: 'local',
-      request: f.request,
-      guard: { isCurrent: () => true },
-    });
-    expect(observed).toEqual(['team.registry.create', 'team.registry.lookup']);
-    const bindings = (await first.discoverBindings('local')).bindings;
-    expect(bindings).toHaveLength(1);
-    const handle = bindings[0]!.handle;
-    expect(saved.teamName).toBe(hostTeamSelectionKey(handle.handleId));
-    expect(first.authorizeHandle('local', handle)).toBe(true);
-    expect(first.authorizeHandle('ssh:foreign', handle)).toBe(false);
-    expect(JSON.stringify(bindings)).not.toContain(f.root);
-    const roster = await first.facade.invoke({
-      handle,
-      commandId: 'TEST-read',
-      operation: 'team.roster.read',
-      payload: {},
-    });
-    expect(roster).toMatchObject({
-      ok: true,
-      value: {
-        savedSettings: { prompt: 'TEST prompt', skipPermissions: false },
-        members: [
-          { name: 'team-lead', role: 'lead' },
-          {
-            name: 'reviewer',
-            role: 'member',
-            settings: { role: 'Reviewer', workflow: 'TEST workflow' },
-          },
-        ],
-      },
-    });
-    expect(
-      await createConfiguredHostTeam({
+  it.each([undefined, 1] as const)(
+    'saves one captured product intent with runtime version %s, exposes only its canonical binding and reconstructs it cold',
+    async (runtimeSelectionVersion) => {
+      const f = await fixture(),
+        first = f.feature();
+      // Match CreateTeamDialog: this key is present even for an unversioned draft.
+      f.request.runtimeSelectionVersion = runtimeSelectionVersion;
+      const originalRequest = CapturedHostClient.prototype.request;
+      let lost = false;
+      const observed: string[] = [];
+      vi.spyOn(CapturedHostClient.prototype, 'request').mockImplementation(async function (
+        this: CapturedHostClient,
+        method,
+        params,
+        options
+      ) {
+        const result = await originalRequest.call(this, method, params, options);
+        if (method.startsWith('team.registry.')) observed.push(method);
+        if (method === 'team.registry.create' && !lost) {
+          lost = true;
+          throw new Error('TEST lost response after Host commit');
+        }
+        return result;
+      });
+      const saved = await createConfiguredHostTeam({
         feature: first,
         contextId: 'local',
         request: f.request,
         guard: { isCurrent: () => true },
-      })
-    ).toEqual(saved);
-    await expect(
-      createConfiguredHostTeam({
-        feature: first,
-        contextId: 'local',
-        request: { ...f.request, prompt: 'changed intent' },
-        guard: { isCurrent: () => true },
-      })
-    ).rejects.toThrow();
-    await first.shutdown();
-    const cold = f.feature();
-    expect((await cold.discoverBindings('local')).bindings).toEqual(bindings);
-    expect(cold.authorizeHandle('local', handle)).toBe(true);
-    expect(await readdir(join(f.root, 'store/teams'))).toEqual(['test-created']);
-  });
+      });
+      expect(observed).toEqual(['team.registry.create', 'team.registry.lookup']);
+      const bindings = (await first.discoverBindings('local')).bindings;
+      expect(bindings).toHaveLength(1);
+      const handle = bindings[0]!.handle;
+      expect(saved.teamName).toBe(hostTeamSelectionKey(handle.handleId));
+      expect(first.authorizeHandle('local', handle)).toBe(true);
+      expect(first.authorizeHandle('ssh:foreign', handle)).toBe(false);
+      expect(JSON.stringify(bindings)).not.toContain(f.root);
+      const roster = await first.facade.invoke({
+        handle,
+        commandId: 'TEST-read',
+        operation: 'team.roster.read',
+        payload: {},
+      });
+      expect(roster).toMatchObject({
+        ok: true,
+        value: {
+          savedSettings: {
+            prompt: 'TEST prompt',
+            skipPermissions: false,
+            ...(runtimeSelectionVersion === undefined ? {} : { runtimeSelectionVersion }),
+          },
+          members: [
+            { name: 'team-lead', role: 'lead' },
+            {
+              name: 'reviewer',
+              role: 'member',
+              settings: { role: 'Reviewer', workflow: 'TEST workflow' },
+            },
+          ],
+        },
+      });
+      expect(
+        await createConfiguredHostTeam({
+          feature: first,
+          contextId: 'local',
+          request: f.request,
+          guard: { isCurrent: () => true },
+        })
+      ).toEqual(saved);
+      await expect(
+        createConfiguredHostTeam({
+          feature: first,
+          contextId: 'local',
+          request: { ...f.request, prompt: 'changed intent' },
+          guard: { isCurrent: () => true },
+        })
+      ).rejects.toThrow();
+      await first.shutdown();
+      const cold = f.feature();
+      expect((await cold.discoverBindings('local')).bindings).toEqual(bindings);
+      expect(cold.authorizeHandle('local', handle)).toBe(true);
+      expect(await readdir(join(f.root, 'store/teams'))).toEqual(['test-created']);
+    }
+  );
 
   it('does not publish a binding after context switches across Host commit; cold discovery recovers only original creation', async () => {
     const f = await fixture(),
@@ -245,6 +254,10 @@ describe('existing Create-config to actual Host registry', () => {
       };
     for (const invalid of [
       { ...request, ownerId: 'foreign' },
+      ...[0, 2, '1', null].map((runtimeSelectionVersion) => ({
+        ...request,
+        runtimeSelectionVersion,
+      })),
       { ...request, command: undefined },
       { ...request, members: [{ name: 'worker', nativeSessionId: 'foreign' }] },
     ])

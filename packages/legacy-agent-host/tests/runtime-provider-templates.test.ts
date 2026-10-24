@@ -274,3 +274,16 @@ test('empty saved argv preserves original recipe and provider-incompatible flags
   f.roster.savedSettings!.extraCliArgs = '--max-turns 5';
   assert.throws(() => f.capture(), error => error instanceof TeamLaunchError && error.code === 'invalid');
 });
+
+
+test('versioned runtime selection stays configured and cannot adopt an existing native provider', () => {
+  const f = fixture();
+  f.roster.savedSettings!.runtimeSelectionVersion = 1;
+  assert.throws(() => f.capture(), refusal('invalid', 'runtime-selection-required'));
+  f.roster.savedSettings!.providerId = 'anthropic';
+  const source = f.capture();
+  assert.equal(source.savedSettings.runtimeSelectionVersion, 1);
+  const selected = compileRuntimeCapture(f.profile, f.team, source).profiles[0]!;
+  assert.equal(selected.provider, 'claude');
+  assert.equal(source.savedSettings.providerId, 'anthropic');
+});

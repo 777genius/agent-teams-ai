@@ -42,6 +42,7 @@ const request: BackendOperationRequest = {
       effort: 'ultra',
     },
     savedSettings: {
+      runtimeSelectionVersion: 1,
       cwd: '/TEST/project',
       displayName: 'TEST team',
       prompt: '  TEST prompt\n',
