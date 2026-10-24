@@ -269,4 +269,62 @@ describe('captured legacy host client over real subprocess stdio', () => {
     expect(unrelated.exitCode).toBeNull();
     expect(unrelated.signalCode).toBeNull();
   });
+  it.each([200, 6000])(
+    'waits for advertised cleanup budget %d before signaling the original Host',
+    async (disposeTimeoutMs) => {
+      const profile = await fixture(
+        `
+      import { createHostServer } from ${JSON.stringify(serverUrl)};
+      import { appendFileSync } from 'node:fs';
+      const server = createHostServer({
+        input: process.stdin, output: process.stdout, buildId: 'TEST-host-v1',
+        limits: { disposeTimeoutMs: ${disposeTimeoutMs} },
+        async onDispose() {
+          await new Promise(resolve => setTimeout(resolve, 80));
+          appendFileSync(process.env.HOME + '/cleanup', 'completed');
+        },
+      });
+      process.on('SIGTERM', () => appendFileSync(process.env.HOME + '/signals', 'SIGTERM'));
+      void server.closed.then(result => process.exit(result.cleanup === 'completed' ? 0 : 1));
+    `,
+        'raw'
+      );
+      const transport = client({ ...profile, shutdownTimeoutMs: 20 });
+      await transport.start();
+      expect((await transport.shutdown()).childExit).toBe('confirmed');
+      expect(await readFile(join(profile.env.HOME!, 'cleanup'), 'utf8')).toBe('completed');
+      await expect(readFile(join(profile.env.HOME!, 'signals'), 'utf8')).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+    }
+  );
+
+  it('keeps finite Host cleanup timeout distinct from confirmed child exit and provider release', async () => {
+    const profile = await fixture(
+      `
+      import { createHostServer } from ${JSON.stringify(serverUrl)};
+      import { writeFileSync } from 'node:fs';
+      const server = createHostServer({
+        input: process.stdin, output: process.stdout, buildId: 'TEST-host-v1',
+        limits: { disposeTimeoutMs: 40 },
+        onDispose: () => new Promise(() => {}),
+      });
+      void server.closed.then(result => {
+        writeFileSync(process.env.HOME + '/close-result', JSON.stringify(result));
+        process.exit(result.cleanup === 'completed' ? 0 : 1);
+      });
+    `,
+      'raw'
+    );
+    const transport = client({ ...profile, shutdownTimeoutMs: 20 });
+    await transport.start();
+    expect(await transport.shutdown()).toEqual({
+      childExit: 'confirmed',
+      providerCustody: 'unresolved',
+    });
+    expect(JSON.parse(await readFile(join(profile.env.HOME!, 'close-result'), 'utf8'))).toEqual({
+      reason: 'input_eof',
+      cleanup: 'timeout',
+    });
+  });
 });

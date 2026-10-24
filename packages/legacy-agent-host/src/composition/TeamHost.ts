@@ -27,6 +27,7 @@ import { TeamRegistry } from '../team-registry/TeamRegistry.js';
 import { teamRegistryScopeSchema } from '../team-registry/contracts.js';
 import { hostedTeamDefinitionSchema } from '../team-registry/definition.js';
 import { createHostServer } from '../index.js';
+import { TEAM_HOST_DISPOSE_TIMEOUT_MS } from '../contracts.js';
 import { TeamOwnerError } from '../team/contracts.js';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
@@ -669,6 +670,8 @@ export function createTeamHost(
 
     const server = createHostServer({
       ...streams,
+      // Runtime/provider drain and final backup must finish before the original lease is released.
+      limits: { disposeTimeoutMs: TEAM_HOST_DISPOSE_TIMEOUT_MS, ...streams.limits },
       ...(profile.reviewTransport ? { reviewTransport: profile.reviewTransport } : {}),
       buildId: profile.owner.buildId,
       capabilities: [

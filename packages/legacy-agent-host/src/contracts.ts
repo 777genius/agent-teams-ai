@@ -41,6 +41,9 @@ export interface HostLimits {
   disposeTimeoutMs: number;
 }
 
+/** Team/Runtime composition has a longer finite cleanup budget than transport-only hosts. */
+export const TEAM_HOST_DISPOSE_TIMEOUT_MS = 60_000;
+
 export const DEFAULT_HOST_LIMITS: Readonly<HostLimits> = Object.freeze({
   maxFrameBytes: 1024 * 1024,
   maxPendingRequests: 32,

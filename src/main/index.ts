@@ -1392,11 +1392,12 @@ function clearInboxNotifyTimers(): void {
 async function runShutdownStep(
   label: string,
   action: () => void | Promise<void>,
-  timeoutMs: number = SHUTDOWN_STEP_TIMEOUT_MS
+  timeoutMs: number | null = SHUTDOWN_STEP_TIMEOUT_MS
 ): Promise<void> {
   let timeout: ReturnType<typeof setTimeout> | null = null;
   logger.diagnostic('Shutdown step wait started', { label });
   try {
+    if (timeoutMs === null) return await action(); // Caller already supplies a finite drain.
     await Promise.race([
       Promise.resolve().then(action),
       new Promise<void>((resolve) => {
@@ -3061,7 +3062,7 @@ async function shutdownServices(): Promise<void> {
     await runShutdownStep('external connection admission drain', () =>
       externalAgentConnection?.closeAdmission()
     );
-    await runShutdownStep('agent backend cleanup', () => backendDrain, 10_000);
+    await runShutdownStep('agent backend cleanup', () => backendDrain, null);
     await runShutdownStep('announcements cleanup', () => announcementsLifecycle.dispose());
 
     clearStartupTimers();

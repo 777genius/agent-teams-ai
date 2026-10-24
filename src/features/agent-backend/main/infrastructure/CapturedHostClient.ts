@@ -4,6 +4,7 @@ import { TextDecoder } from 'node:util';
 
 import {
   DEFAULT_HOST_LIMITS,
+  TEAM_HOST_DISPOSE_TIMEOUT_MS,
   HOST_GAP_METHOD,
   HOST_PROTOCOL_VERSION,
   type HostHandshake,
@@ -174,7 +175,9 @@ export class CapturedHostClient {
       if (this.profile.reviewTransport && !result.capabilities.includes('transport.review-v1'))
         throw new Error('capability');
       for (const [key, cap] of Object.entries(hostProfileLimitCaps(this.profile.reviewTransport))) {
-        if (typeof candidate[key] !== 'number' || candidate[key] > cap) throw new Error('limit');
+        const maximum = key === 'disposeTimeoutMs' ? TEAM_HOST_DISPOSE_TIMEOUT_MS : cap;
+        if (typeof candidate[key] !== 'number' || candidate[key] > maximum)
+          throw new Error('limit');
       }
       this.limits = resolveHostProfileLimits(
         this.profile.reviewTransport,
@@ -384,13 +387,13 @@ export class CapturedHostClient {
     return this.shutdownPromise;
   }
 
-  private async waitForExit(): Promise<boolean> {
+  private async waitForExit(timeoutMs = this.profile.shutdownTimeoutMs): Promise<boolean> {
     if (!this.child || this.exited) return true;
     let timer: ReturnType<typeof setTimeout> | undefined;
     await Promise.race([
       this.exitPromise,
       new Promise<void>((resolve) => {
-        timer = setTimeout(resolve, this.profile.shutdownTimeoutMs);
+        timer = setTimeout(resolve, timeoutMs);
       }),
     ]);
     if (timer) clearTimeout(timer);
@@ -408,7 +411,12 @@ export class CapturedHostClient {
     const child = this.child;
     if (child && !this.exited) {
       child.stdin.end();
-      if (!(await this.waitForExit())) {
+      // Enclose the captured Host's advertised finite disposal budget before escalating.
+      const gracefulTimeoutMs = Math.max(
+        this.profile.shutdownTimeoutMs,
+        this.limits.disposeTimeoutMs + 1000
+      );
+      if (!(await this.waitForExit(gracefulTimeoutMs))) {
         child.kill('SIGTERM');
         if (!(await this.waitForExit())) {
           child.kill('SIGKILL');
