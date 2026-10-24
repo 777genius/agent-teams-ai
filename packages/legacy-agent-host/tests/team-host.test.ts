@@ -165,14 +165,64 @@ test(
       assert.equal(handshake.buildId, owner.buildId);
       assert.ok((handshake.capabilities as string[]).includes('team.task'));
       assert.ok(!(handshake.capabilities as string[]).includes('runtime.session'));
+      assert.deepEqual(
+        await current.rpc('team.launch.read', {
+          commandId: 'TEST-offline-launch-read',
+          binding,
+          payload: {},
+        }),
+        { ok: true, value: null },
+        'product-only Host has no invented runtime presence'
+      );
+      assert.deepEqual(
+        await current.rpc('team.launch.start', {
+          commandId: 'TEST-offline-launch-start',
+          binding,
+          payload: { launchId: scope.runId, rosterRevision: 'TEST-revision' },
+        }),
+        { ok: false, code: 'invalid', outcome: 'rejected', reason: 'runtime-unconfigured' }
+      );
       const create = {
         commandId: 'TEST-create',
         binding,
         payload: { operation: 'task.create', payload: { subject: 'Host-owned task' } },
       };
+      const beforeProduct = await current.rpc('team.snapshot', {
+        commandId: 'TEST-before-create',
+        binding,
+        payload: {},
+      });
+      const beforePosition = (
+        beforeProduct.value as { feed: { cursor: string; streamId: string; sequence: number } }
+      ).feed;
       const first = await current.rpc('team.execute', create);
       assert.equal(first.ok, true);
+      const feedAfterCreate = await current.rpc('team.changes.read', {
+        commandId: 'TEST-after-create',
+        binding,
+        payload: { cursor: beforePosition.cursor },
+      });
+      const sourceEvents = (
+        feedAfterCreate.value as { events: { sequence: number; eventId: string }[] }
+      ).events;
+      assert.deepEqual(
+        sourceEvents.map((event) => event.sequence),
+        [beforePosition.sequence + 1]
+      );
+      assert.equal(
+        sourceEvents[0]!.eventId,
+        beforePosition.streamId + ':' + (beforePosition.sequence + 1)
+      );
       assert.deepEqual(await current.rpc('team.execute', create), first);
+      assert.deepEqual(
+        await current.rpc('team.changes.read', {
+          commandId: 'TEST-same-replay',
+          binding,
+          payload: { cursor: beforePosition.cursor },
+        }),
+        feedAfterCreate,
+        'completed command replay neither repeats product effects nor fabricates a new source event'
+      );
       const conflict = await current.rpc('team.execute', {
         ...create,
         payload: { operation: 'task.create', payload: { subject: 'Different intent' } },
@@ -211,6 +261,78 @@ test(
         payload: null,
       });
       assert.deepEqual(listed, { ok: true, value: [] });
+      const snapshot = await current.rpc('team.snapshot', {
+        commandId: 'TEST-snapshot',
+        binding,
+        payload: {},
+      });
+      assert.equal(snapshot.ok, true);
+      const product = snapshot.value as {
+        teamName: string;
+        members: { name: string }[];
+        tasks: unknown[];
+        revision: string;
+      };
+      const restartedFeed = await current.rpc('team.changes.read', {
+        commandId: 'TEST-old-cursor-after-restart',
+        binding,
+        payload: { cursor: beforePosition.cursor },
+      });
+      assert.equal((restartedFeed.value as { gap: { reason: string } }).gap.reason, 'cursor');
+      assert.notEqual(
+        (restartedFeed.value as { streamId: string }).streamId,
+        beforePosition.streamId
+      );
+      assert.deepEqual((snapshot.value as { feed: unknown }).feed, {
+        cursor: (restartedFeed.value as { cursor: string }).cursor,
+        streamId: (restartedFeed.value as { streamId: string }).streamId,
+        sequence: (restartedFeed.value as { sequence: number }).sequence,
+      });
+      assert.equal(product.teamName, 'test-team');
+      assert.deepEqual(product.members, [{ name: 'alice', role: 'member' }]);
+      assert.deepEqual(product.tasks, []);
+      assert.match(product.revision, /^[a-f0-9]{64}$/);
+      const changes = await current.rpc('team.changes.read', {
+        commandId: 'TEST-product-changes',
+        binding,
+        payload: {},
+      });
+      const cursor = (changes.value as { cursor: string }).cursor;
+      assert.deepEqual((changes.value as { gap: unknown }).gap, { reason: 'initial' });
+      assert.deepEqual(
+        await current.rpc('team.changes.read', {
+          commandId: 'TEST-product-unchanged',
+          binding,
+          payload: { cursor },
+        }),
+        {
+          ok: true,
+          value: {
+            cursor,
+            streamId: (changes.value as { streamId: string }).streamId,
+            sequence: (changes.value as { sequence: number }).sequence,
+            events: [],
+          },
+        }
+      );
+      assert.deepEqual(
+        await current.rpc('team.changes.read', {
+          commandId: 'TEST-forged-feed',
+          binding: { ...binding, scope: { ...scope, runId: 'TEST-wrong' } },
+          payload: { cursor },
+        }),
+        { ok: false, code: 'forbidden', outcome: 'rejected' }
+      );
+
+      assert.deepEqual(
+        await current.rpc('team.snapshot', {
+          commandId: 'TEST-forged-snapshot',
+          binding: { ...binding, scope: { ...scope, runId: 'TEST-wrong' } },
+          payload: {},
+        }),
+        { ok: false, code: 'forbidden', outcome: 'rejected' }
+      );
+
       await current.close();
       current = undefined;
     } finally {

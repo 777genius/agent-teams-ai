@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
@@ -343,7 +344,11 @@ export const ToolApprovalSheet: React.FC = () => {
         <ToolInputPreview
           toolName={current.toolName}
           toolInput={current.toolInput}
-          projectPath={selectedTeamData?.config?.projectPath}
+          projectPath={
+            isHostTeamSelectionKey(current.teamName)
+              ? undefined
+              : selectedTeamData?.config?.projectPath
+          }
           selectedOptions={isAskQuestion ? selectedOptions : undefined}
           onOptionSelect={isAskQuestion ? handleOptionSelect : undefined}
         />
@@ -353,6 +358,11 @@ export const ToolApprovalSheet: React.FC = () => {
           toolName={current.toolName}
           toolInput={current.toolInput}
           requestId={current.requestId}
+          approvalScope={{
+            teamName: current.teamName,
+            runId: current.runId,
+            requestId: current.requestId,
+          }}
           onExpandedChange={setDiffExpanded}
         />
 
@@ -471,7 +481,11 @@ export const ToolApprovalSheet: React.FC = () => {
         <ToolApprovalSettingsContent expanded={settingsExpanded} teamName={current.teamName} />
 
         {/* Timeout progress bar */}
-        <TimeoutProgress receivedAt={current.receivedAt} teamName={current.teamName} />
+        <TimeoutProgress
+          receivedAt={current.receivedAt}
+          teamName={current.teamName}
+          suppressAllow={isAskQuestion && isHostTeamSelectionKey(current.teamName)}
+        />
       </div>
     </>
   );
@@ -637,9 +651,11 @@ const ToolInputPreview = ({
 const TimeoutProgress = ({
   receivedAt,
   teamName,
+  suppressAllow,
 }: {
   receivedAt: string;
   teamName: string;
+  suppressAllow?: boolean;
 }): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
   const settings = useStore(
@@ -653,7 +669,8 @@ const TimeoutProgress = ({
   );
   const elapsed = useElapsed(receivedAt);
 
-  if (settings.timeoutAction === 'wait') return null;
+  if (settings.timeoutAction === 'wait' || (suppressAllow && settings.timeoutAction === 'allow'))
+    return null;
 
   const progress = Math.min(1, elapsed / settings.timeoutSeconds);
   const remaining = Math.max(0, settings.timeoutSeconds - elapsed);

@@ -4,7 +4,7 @@ import {
   recordReviewApplyEnd,
   recordReviewSubmit,
 } from '@renderer/analytics/productAnalytics';
-import { api } from '@renderer/api';
+import { api, reviewApiForTeam } from '@renderer/api';
 import {
   buildReviewDecisionScopeToken,
   getReviewChangeSetIdentityToken,
@@ -1413,12 +1413,10 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       try {
         const snippets = fileEntry?.snippets ?? [];
 
-        const content = await api.review.getFileContent(
+        const content = await reviewApiForTeam(
           teamName,
-          memberName,
-          canonicalFilePath,
-          snippets
-        );
+          state.activeChangeSet ?? { memberName }
+        ).getFileContent(teamName, memberName, canonicalFilePath, snippets);
         const latest = get();
         if (changeSetEpoch !== latest.changeSetEpoch) return;
         if ((latest.fileContentVersionByPath[filePath] ?? 0) !== fileVersion) return;

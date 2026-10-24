@@ -123,13 +123,15 @@ function hasAuthoritativeOpenCodeCatalogFallback(
 export function createLaunchGuard(
   providerIds: readonly TeamProviderId[],
   runtimeProviderStatusById: RuntimeProviderStatusById,
-  openCodeEvidence?: OpenCodeScopedPreparationEvidence
+  openCodeEvidence?: OpenCodeScopedPreparationEvidence,
+  capturedTeam?: { permits(providerId: TeamProviderId, now: number): boolean }
 ): ProviderLaunchGuard {
   const blockers = (enabled: boolean, now: number = Date.now()): ProviderLaunchBlocker[] => {
     if (!enabled) return [];
 
     return providerIds.flatMap((providerId) => {
       const provider = runtimeProviderStatusById.get(providerId) ?? null;
+      if (capturedTeam?.permits(providerId, now)) return [];
       if (
         providerId === 'opencode' &&
         canSettleOpenCodeStatusWithScopedPreparation(provider) &&

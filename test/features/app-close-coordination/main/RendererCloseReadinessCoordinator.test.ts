@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events';
 import {
   APP_CLOSE_READINESS_REQUEST,
   APP_CLOSE_READINESS_RESPONSE,
+  APP_CLOSE_UI_MOUNT_REQUEST,
 } from '@features/app-close-coordination/contracts';
 import { RendererCloseReadinessCoordinator } from '@features/app-close-coordination/main';
 import { describe, expect, it, vi } from 'vitest';
@@ -10,9 +11,16 @@ import { describe, expect, it, vi } from 'vitest';
 import type { BrowserWindow, IpcMain, WebContents } from 'electron';
 
 function createHarness() {
-  const ipcMain = new EventEmitter() as unknown as IpcMain;
+  const handlers = new Map<string, (...args: unknown[]) => unknown>();
+  const ipcMain = Object.assign(new EventEmitter(), {
+    handle: (channel: string, handler: (...args: unknown[]) => unknown) =>
+      handlers.set(channel, handler),
+    removeHandler: (channel: string) => handlers.delete(channel),
+  }) as unknown as IpcMain;
   const sent: Array<{ channel: string; payload: { requestId: string } }> = [];
+  const frame = {};
   const webContents = {
+    mainFrame: frame,
     isDestroyed: () => false,
     send: (channel: string, payload: { requestId: string }) => sent.push({ channel, payload }),
   } as unknown as WebContents;
@@ -20,13 +28,21 @@ function createHarness() {
     isDestroyed: () => false,
     webContents,
   } as unknown as BrowserWindow;
-  return { ipcMain, sent, webContents, window };
+  return {
+    ipcMain,
+    sent,
+    webContents,
+    window,
+    admit: () =>
+      handlers.get(APP_CLOSE_UI_MOUNT_REQUEST)?.({ sender: webContents, senderFrame: frame }),
+  };
 }
 
 describe('RendererCloseReadinessCoordinator', () => {
   it('accepts only the matching renderer response and normalizes blockers', async () => {
-    const { ipcMain, sent, webContents, window } = createHarness();
+    const { ipcMain, sent, webContents, window, admit } = createHarness();
     const coordinator = new RendererCloseReadinessCoordinator(ipcMain);
+    admit();
     const readiness = coordinator.request(window, 'window-close');
     const requestId = sent[0]?.payload.requestId;
 
@@ -49,8 +65,9 @@ describe('RendererCloseReadinessCoordinator', () => {
   it('times out instead of trusting a response from another renderer', async () => {
     vi.useFakeTimers();
     try {
-      const { ipcMain, sent, window } = createHarness();
+      const { ipcMain, sent, window, admit } = createHarness();
       const coordinator = new RendererCloseReadinessCoordinator(ipcMain);
+      admit();
       const readiness = coordinator.request(window, 'app-quit', 100);
       const requestId = sent[0]?.payload.requestId;
       (ipcMain as unknown as EventEmitter).emit(
@@ -72,11 +89,12 @@ describe('RendererCloseReadinessCoordinator', () => {
   });
 
   it('keeps close blocked when sending the readiness request fails', async () => {
-    const { ipcMain, window } = createHarness();
+    const { ipcMain, window, admit } = createHarness();
     vi.spyOn(window.webContents, 'send').mockImplementation(() => {
       throw new Error('renderer unavailable');
     });
     const coordinator = new RendererCloseReadinessCoordinator(ipcMain);
+    admit();
 
     await expect(coordinator.request(window, 'window-close')).resolves.toMatchObject({
       ok: false,
@@ -86,8 +104,9 @@ describe('RendererCloseReadinessCoordinator', () => {
   });
 
   it('resolves pending requests as blocked when coordination is disposed', async () => {
-    const { ipcMain, sent, window } = createHarness();
+    const { ipcMain, sent, window, admit } = createHarness();
     const coordinator = new RendererCloseReadinessCoordinator(ipcMain);
+    admit();
     const readiness = coordinator.request(window, 'app-quit');
 
     coordinator.dispose();
@@ -97,8 +116,8 @@ describe('RendererCloseReadinessCoordinator', () => {
       ok: false,
       blockers: ['App close coordination stopped before Changes finished saving.'],
     });
-    expect(
-      (ipcMain as unknown as EventEmitter).listenerCount(APP_CLOSE_READINESS_RESPONSE)
-    ).toBe(0);
+    expect((ipcMain as unknown as EventEmitter).listenerCount(APP_CLOSE_READINESS_RESPONSE)).toBe(
+      0
+    );
   });
 });

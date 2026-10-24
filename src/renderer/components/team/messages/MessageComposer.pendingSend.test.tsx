@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention -- vi.mock component exports must stay PascalCase. */
 import React, { act } from 'react';
+import { createPortal } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 
 import { createEncodedTaskReference } from '@renderer/utils/taskReferenceUtils';
@@ -211,6 +212,7 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => {
       cornerAction?: React.ReactNode;
       cornerActionLeft?: React.ReactNode;
       footerRight?: React.ReactNode;
+      showHint?: boolean;
       onBlur?: React.FocusEventHandler<HTMLTextAreaElement>;
       onFocus?: React.FocusEventHandler<HTMLTextAreaElement>;
     }
@@ -226,6 +228,7 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => {
         cornerAction,
         cornerActionLeft,
         footerRight,
+        showHint,
         onBlur,
         onFocus,
       },
@@ -251,7 +254,14 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => {
           React.createElement('div', null, cornerActionLeft),
           React.createElement('div', null, cornerAction)
         ),
-        React.createElement('div', { className: footerClassName }, footerRight)
+        React.createElement(
+          'div',
+          { className: footerClassName },
+          showHint
+            ? React.createElement('span', { 'data-composer-focus-hint': true }, 'hint')
+            : null,
+          footerRight
+        )
       )
   );
   MockMentionableTextarea.displayName = 'MockMentionableTextarea';
@@ -1083,6 +1093,83 @@ describe('MessageComposer pending send lifecycle', () => {
       act(() => root.unmount());
     }
   );
+
+  it('does not add a hint footer when pointer focus enters through a Composer control', () => {
+    draftHarness.state.text = '';
+    const { host, root } = renderComposer();
+    const selector = host.querySelector<HTMLButtonElement>(
+      'button[aria-label="Select Team: team-alpha"]'
+    );
+    expect(selector).not.toBeNull();
+    const hint = () => host.querySelector('[data-composer-focus-hint]');
+    expect(hint()).toBeNull();
+    act(() => {
+      selector!.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+      selector!.focus();
+    });
+    expect(document.activeElement).toBe(selector);
+    expect(hint()).toBeNull();
+    act(() => {
+      selector!.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+      selector!.click();
+    });
+    expect(storeHarness.methods.fetchCrossTeamTargets).toHaveBeenCalledTimes(1);
+    act(() => root.unmount());
+  });
+
+  it('keeps the hint footer while focus moves to Composer controls and clears it outside', () => {
+    draftHarness.state.text = '';
+    const { host, root } = renderComposer({
+      cornerActionPrefix: createPortal(
+        React.createElement('button', { id: 'TEST-portal-focus' }, 'portal'),
+        document.body
+      ),
+    });
+    const textarea = getTextarea(host);
+    const selector = host.querySelector<HTMLButtonElement>(
+      'button[aria-label="Select Team: team-alpha"]'
+    );
+    expect(selector).not.toBeNull();
+    const hint = () => host.querySelector('[data-composer-focus-hint]');
+    const footer = () => host.querySelector('.message-composer-flat-footer');
+    expect(hint()).toBeNull();
+
+    act(() => textarea.focus());
+    expect(hint()).not.toBeNull();
+    expect(footer()?.textContent).toContain('Saved');
+
+    // Native pointerdown focuses this toolbar button before pointerup/click.
+    act(() => {
+      selector!.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+      selector!.focus();
+    });
+    expect(document.activeElement).toBe(selector);
+    expect(hint()).not.toBeNull();
+    expect(footer()?.textContent).not.toContain('Saved');
+    act(() => {
+      selector!.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+      selector!.click();
+    });
+    expect(storeHarness.methods.fetchCrossTeamTargets).toHaveBeenCalledTimes(1);
+
+    // React portal events bubble through Composer, but their DOM focus is outside it.
+    const portalButton = document.getElementById('TEST-portal-focus');
+    act(() => portalButton!.focus());
+    expect(document.activeElement).toBe(portalButton);
+    expect(hint()).toBeNull();
+    act(() => textarea.focus());
+    expect(hint()).not.toBeNull();
+
+    const outside = document.createElement('button');
+    document.body.appendChild(outside);
+    act(() => outside.focus());
+    expect(document.activeElement).toBe(outside);
+    expect(hint()).toBeNull();
+    act(() => textarea.focus());
+    expect(hint()).not.toBeNull();
+    act(() => root.unmount());
+    outside.remove();
+  });
 
   it('does not autofocus the textarea until a chat thread is opened', () => {
     const { host, root } = renderComposer();

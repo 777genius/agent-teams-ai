@@ -4,6 +4,9 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const apiMock = vi.hoisted(() => ({ getAttachments: vi.fn() }));
+vi.mock('@renderer/api', () => ({ api: { teams: apiMock } }));
+
 const storeMock = vi.hoisted(() => ({
   getTaskAttachmentData: vi.fn(),
 }));
@@ -180,14 +183,20 @@ describe('KanbanTaskAttachmentMosaic', () => {
   it('adds source-message images after task images and deduplicates matching metadata', async () => {
     const directImage = attachment(1);
     storeMock.getTaskAttachmentData.mockResolvedValue('direct-base64');
-    const getAttachments = vi.fn().mockResolvedValue([
+    const getAttachments = apiMock.getAttachments.mockResolvedValue([
       { id: 'source-duplicate', mimeType: 'image/png', data: 'duplicate-base64' },
       { id: 'source-unique-1', mimeType: 'image/jpeg', data: 'source-base64-1' },
       { id: 'source-unique-2', mimeType: 'image/webp', data: 'source-base64-2' },
     ]);
     Object.defineProperty(window, 'electronAPI', {
       configurable: true,
-      value: { teams: { getAttachments } },
+      value: {
+        teams: {
+          getAttachments: () => {
+            throw new Error('Ambient legacy IPC bypass');
+          },
+        },
+      },
     });
 
     const host = await renderMosaic({

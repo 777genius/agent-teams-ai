@@ -448,9 +448,9 @@ describe('FileContentResolver', () => {
   });
 
   it('uses the same provisional TTL for all content sources in this pass', async () => {
-    const { FileContentResolver } = await import('@main/services/team/FileContentResolver');
+    const { FileContentResolver } = await import('@agent-teams/task-change-ledger/review-content');
 
-    const resolver = new FileContentResolver({ findMemberLogPaths: vi.fn() } as never);
+    const resolver = new FileContentResolver({ mode: 'ledger-only' });
     const getCacheTtlForSource = (
       resolver as unknown as {
         getCacheTtlForSource: (source: string) => number;

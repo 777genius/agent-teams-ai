@@ -1,14 +1,27 @@
+import { normalizeRuntimeDelivery, findRuntimeInput, runtimeAdmission } from './runtimeDelivery.js';
+import { prepareSessionOpen } from './prepareSessionOpen.js';
+import { preparedInputProof, prepareRuntimeInput, recordContextEpoch } from './inputPreparation.js';
 import { randomUUID } from 'node:crypto';
 
+import type { RuntimeProviderActivity } from './providerActivityContracts.js';
 import { RuntimeOwnerError } from './contracts.js';
 import { CheckpointCoordinator } from './CheckpointCoordinator.js';
+import { RuntimeActivityCoordinator } from './RuntimeActivityCoordinator.js';
+import type {
+  RuntimeActivityCursor,
+  RuntimeActivityFeed,
+  RuntimeActivitySnapshot,
+} from './activityContracts.js';
 import {
   activeInput as active,
-  assertGenerationAvailable,
   emptySession,
   normalizeOpenConfig,
 } from './sessionState.js';
-import type { CheckpointReceipt, RestoreSessionRequest } from './checkpointContracts.js';
+import type {
+  CheckpointAvailability,
+  CheckpointReceipt,
+  RestoreSessionRequest,
+} from './checkpointContracts.js';
 import { deliveryFingerprint, normalizeBinding, runtimeDigest } from './identity.js';
 import type {
   RuntimeAdmission,
@@ -32,6 +45,7 @@ export class RuntimeOwner {
   private readonly closes = new Map<string, Promise<RuntimeSessionRecord>>();
   private readonly controls = new Map<string, Set<Promise<unknown>>>();
   private readonly checkpoints: CheckpointCoordinator;
+  private readonly activity: RuntimeActivityCoordinator;
   private readonly maxQueued: number;
   private readonly maxBytes: number;
   private readonly maxInteractions: number;
@@ -50,8 +64,9 @@ export class RuntimeOwner {
       )
     )
       throw new RuntimeOwnerError('invalid');
+    this.activity = new RuntimeActivityCoordinator(options);
     this.checkpoints = new CheckpointCoordinator({
-      store: options.store,
+      store: this.activity,
       profileId: options.profileId,
       hostIncarnation: options.hostIncarnation,
       authorize: options.authorize,
@@ -63,23 +78,42 @@ export class RuntimeOwner {
     });
   }
 
+  readActivitySnapshot(binding: RuntimeBinding): RuntimeActivitySnapshot {
+    return this.activity.snapshot(binding);
+  }
+  readActivityFeed(binding: RuntimeBinding, cursor: RuntimeActivityCursor): RuntimeActivityFeed {
+    return this.activity.feed(binding, cursor);
+  }
+
+  /** Private Host composition input, not exposed by RPC or the provider Session SPI. */
+  observeProviderActivity(binding: RuntimeBinding, sessionRef: string, observation: RuntimeProviderActivity): void {
+    this.activity.observeProviderActivity(normalizeBinding(binding), sessionRef, observation);
+  }
+
   captureCheckpoint(input: {
     binding: RuntimeBinding;
     checkpointId: string;
-  }): Promise<CheckpointReceipt> {
-    return this.checkpoints.capture(input.binding, input.checkpointId);
+  }, assertAuthority?: () => void): Promise<CheckpointReceipt> {
+    return this.checkpoints.capture(input.binding, input.checkpointId, assertAuthority);
   }
   lookupCheckpoint(binding: RuntimeBinding, checkpointId: string): CheckpointReceipt {
     return this.checkpoints.lookup(binding, checkpointId);
+  }
+  readCheckpoints(binding: RuntimeBinding, nextConfig: OpenConfig): CheckpointAvailability {
+    return this.checkpoints.readAvailable(binding, nextConfig);
   }
   /** Private DriverHost callback; never expose opaque checkpoint bytes through RPC. */
   readCheckpoint(reference: string, request: OpenConfig): Promise<unknown> {
     return this.checkpoints.readCheckpoint(reference, request);
   }
-  async restoreSession(request: RestoreSessionRequest): Promise<RuntimeSessionRecord> {
+  validateRestoreSource(request: RestoreSessionRequest): void {
+    this.checkpoints.validateRestoreSource(request);
+  }
+  async restoreSession(request: RestoreSessionRequest, assertAuthority?: () => void): Promise<RuntimeSessionRecord> {
+    assertAuthority?.();
     const prepared = this.checkpoints.prepareRestore(request);
     return prepared.allocate
-      ? this.allocate(prepared.record.binding, prepared.config)
+      ? this.allocate(prepared.record.binding, prepared.config, assertAuthority)
       : prepared.record;
   }
 
@@ -88,51 +122,95 @@ export class RuntimeOwner {
     attached: boolean;
   } {
     binding = normalizeBinding(binding);
-    return this.options.store.fenced(binding, (tx) => {
+    return this.activity.fenced(binding, (tx) => {
       this.authorize(binding, 'read');
       return { record: tx.get(), attached: this.drivers.has(this.key(binding)) };
     });
   }
 
-  fingerprintDelivery(intent: RuntimeDelivery): string {
-    return deliveryFingerprint(this.delivery(intent));
+  /** Trusted composition custody inspection, like stopCapturedSession; never expose over RPC. */
+  readCapturedSession(binding: RuntimeBinding): {
+    record: RuntimeSessionRecord | undefined;
+    attached: boolean;
+  } {
+    binding = normalizeBinding(binding);
+    return this.activity.fenced(binding, (tx) => ({
+      record: tx.get(),
+      attached: this.drivers.has(this.key(binding)),
+    }));
   }
 
-  async openSession(input: {
-    binding: RuntimeBinding;
-    config: OpenConfig;
-  }): Promise<RuntimeSessionRecord> {
+  fingerprintDelivery(intent: RuntimeDelivery): string {
+    return deliveryFingerprint(normalizeRuntimeDelivery(intent, this.maxBytes));
+  }
+
+  async openSession(
+    input: { binding: RuntimeBinding; config: OpenConfig },
+    assertAuthority?: () => void
+  ): Promise<RuntimeSessionRecord> {
+    return this.open(input, assertAuthority);
+  }
+  /** Private explicit fresh intent only. Ordinary open/restore retain unresolved-history guards. */
+  async openFreshMemberSession(
+    input: {
+      sourceBinding: RuntimeBinding;
+      binding: RuntimeBinding;
+      config: OpenConfig;
+    },
+    assertAuthority: () => void
+  ): Promise<RuntimeSessionRecord> {
+    const source = normalizeBinding(input.sourceBinding),
+      target = normalizeBinding(input.binding);
+    if (
+      typeof assertAuthority !== 'function' ||
+      source.generation === target.generation ||
+      ['backendId', 'teamId', 'runId', 'memberId'].some(
+        (k) => source[k as 'memberId'] !== target[k as 'memberId']
+      )
+    )
+      throw new RuntimeOwnerError('invalid');
+    return this.open(input, assertAuthority, source);
+  }
+  private async open(
+    input: { binding: RuntimeBinding; config: OpenConfig },
+    assertAuthority?: () => void,
+    freshSource?: RuntimeBinding
+  ): Promise<RuntimeSessionRecord> {
     const binding = normalizeBinding(input.binding);
     const config = normalizeOpenConfig(input.config);
-    const fingerprint = runtimeDigest({ profileId: this.options.profileId, config });
-    const prepared = this.options.store.fenced(binding, (tx) => {
+    const fingerprint = runtimeDigest({
+      profileId: this.options.profileId,
+      config,
+    });
+    const prepared = this.activity.fenced(binding, (tx) => {
+      assertAuthority?.();
       this.authorize(binding, 'admit');
-      const prior = tx.get();
-      if (prior?.openFingerprint) {
-        if (prior.openFingerprint !== fingerprint) throw new RuntimeOwnerError('conflict');
-        return { record: prior, allocate: false };
-      }
-      if (prior?.sealed) throw new RuntimeOwnerError('hold');
-      assertGenerationAvailable(tx, binding, config);
-      const record = prior ?? this.empty(binding);
-      record.hostIncarnation = this.options.hostIncarnation;
-      record.config = config;
-      record.openFingerprint = fingerprint;
-      record.phase = 'opening';
-      record.custody = 'unknown';
-      tx.put(record, 'growth'); // Opening intent precedes native allocation.
-      return { record, allocate: true };
+      return prepareSessionOpen({
+        tx,
+        binding,
+        config,
+        fingerprint,
+        hostIncarnation: this.options.hostIncarnation,
+        empty: () => this.empty(binding),
+        ...(freshSource ? { freshSource } : {}),
+        hasInFlight: (sibling) =>
+          this.drivers.has(this.key(sibling)) ||
+          !!this.controls.get(this.key(sibling))?.size ||
+          this.closes.has(this.key(sibling)),
+      });
     });
     if (!prepared.allocate) return prepared.record;
-    return this.allocate(binding, config);
+    return this.allocate(binding, config, assertAuthority);
   }
 
   private async allocate(
     binding: RuntimeBinding,
-    config: OpenConfig
+    config: OpenConfig,
+    assertAuthority?: () => void
   ): Promise<RuntimeSessionRecord> {
     try {
-      const opened = await this.options.driverFactory.open(config);
+      assertAuthority?.();
+      const opened = await this.options.driverFactory.open(config, assertAuthority);
       this.drivers.set(this.key(binding), opened.driver);
       if (
         typeof opened.driver.sessionRef !== 'string' ||
@@ -141,7 +219,7 @@ export class RuntimeOwner {
       )
         throw new RuntimeOwnerError('hold');
       let record = this.publish(binding, (current) => {
-        if (!this.options.authorize(binding, 'admit')) current.sealed = true;
+        if (!this.options.authorize(binding, 'admit') || !this.authorityCurrent(assertAuthority)) current.sealed = true;
         current.sessionRef = opened.driver.sessionRef;
         current.custody = 'owned';
         current.phase = current.sealed ? 'closing' : 'allocated';
@@ -171,12 +249,12 @@ export class RuntimeOwner {
   }
 
   async admitDelivery(raw: RuntimeDelivery): Promise<RuntimeAdmission> {
-    const intent = this.delivery(raw);
-    return this.options.store.fenced(intent.binding, (tx) => {
+    const intent = normalizeRuntimeDelivery(raw, this.maxBytes);
+    return this.activity.fenced(intent.binding, (tx) => {
       this.authorize(intent.binding, 'admit', intent);
       const record = tx.get() ?? this.empty(intent.binding);
-      const existing = this.find(record, intent);
-      if (existing) return this.admission(existing);
+      const existing = findRuntimeInput(record, intent);
+      if (existing) return runtimeAdmission(existing);
       if (record.sealed) return { inputId: intent.inputId, outcome: 'not_admitted' };
       if (
         record.inputs.filter((input) => input.phase === 'admitted' || active(input)).length >=
@@ -192,26 +270,26 @@ export class RuntimeOwner {
       };
       record.inputs.push(input);
       tx.put(record, 'growth');
-      return this.admission(input);
+      return runtimeAdmission(input);
     });
   }
 
   async lookupDelivery(raw: RuntimeDelivery): Promise<RuntimeAdmission> {
-    const intent = this.delivery(raw);
-    return this.options.store.fenced(intent.binding, (tx) => {
+    const intent = normalizeRuntimeDelivery(raw, this.maxBytes);
+    return this.activity.fenced(intent.binding, (tx) => {
       this.authorize(intent.binding, 'read', intent);
       const record = tx.get();
-      const input = record && this.find(record, intent);
-      return input ? this.admission(input) : { inputId: intent.inputId, outcome: 'not_admitted' };
+      const input = record && findRuntimeInput(record, intent);
+      return input ? runtimeAdmission(input) : { inputId: intent.inputId, outcome: 'not_admitted' };
     });
   }
 
   async cancelDelivery(raw: RuntimeDelivery): Promise<RuntimeAdmission> {
-    const intent = this.delivery(raw);
-    return this.options.store.fenced(intent.binding, (tx) => {
+    const intent = normalizeRuntimeDelivery(raw, this.maxBytes);
+    return this.activity.fenced(intent.binding, (tx) => {
       this.authorize(intent.binding, 'control', intent);
       const record = tx.get() ?? this.empty(intent.binding);
-      let input = this.find(record, intent);
+      let input = findRuntimeInput(record, intent);
       const unseen = !input;
       if (!input) {
         input = {
@@ -225,13 +303,13 @@ export class RuntimeOwner {
       tx.put(record, unseen ? 'growth' : undefined); // Includes unseen delivery IDs: a late outbox admission cannot resurrect them.
       return active(input)
         ? { inputId: input.intent.inputId, outcome: 'unknown' }
-        : this.admission(input);
+        : runtimeAdmission(input);
     });
   }
 
   async dispatchNext(binding: RuntimeBinding): Promise<RuntimeSessionRecord> {
     binding = normalizeBinding(binding);
-    const claimed = this.options.store.fenced(binding, (tx) => {
+    const claimed = this.activity.fenced(binding, (tx) => {
       const record = this.record(tx);
       const next = record.inputs.find((item) => item.phase === 'admitted');
       if (!this.options.authorize(normalizeBinding(binding), 'dispatch', next?.intent)) {
@@ -259,8 +337,15 @@ export class RuntimeOwner {
       const input = record.inputs.find((item) => item.phase === 'admitted');
       if (!input) return { record, driver, input: undefined };
       if (!this.options.canDispatch?.(binding, input.intent)) throw new RuntimeOwnerError('hold');
+      const selected = this.options.prepareInput?.(binding, {
+        sessionRef: record.sessionRef!, inputId: input.intent.inputId, operationRef: input.operationRef,
+        intentFingerprint: input.fingerprint, originalContentBytes: Buffer.byteLength(input.intent.content), epochs: structuredClone(record.contextEpochs ?? []),
+        priorProofs: record.inputs.flatMap(value => value.preparation ? [preparedInputProof(value.preparation)] : []),
+      });
+      if (selected) input.preparation = prepareRuntimeInput(binding, input, selected, this.maxBytes);
       input.phase = 'claimed';
-      tx.put(record); // The only submit claim; persisted before crossing the provider boundary.
+      tx.put(record); // The only submit claim; exact native supplement is durable before handoff.
+      if (input.preparation) this.options.inputPrepared?.(binding, preparedInputProof(input.preparation));
       return { record, driver, input };
     });
     const input = claimed.input;
@@ -270,7 +355,8 @@ export class RuntimeOwner {
       const reply = await claimed.driver.submit({
         inputId: input.intent.inputId,
         operationRef: input.operationRef,
-        content: input.intent.content,
+        content: (input.preparation?.prefix ?? '') + input.intent.content,
+        ...(input.intent.attachments?.length ? { attachments: input.intent.attachments } : {}),
       });
       if (
         reply.ok &&
@@ -288,9 +374,10 @@ export class RuntimeOwner {
     });
   }
 
-  async interrupt(binding: RuntimeBinding, inputId: string): Promise<RuntimeSessionRecord> {
+  async interrupt(binding: RuntimeBinding, inputId: string, assertAuthority?: () => void): Promise<RuntimeSessionRecord> {
     binding = normalizeBinding(binding);
-    const target = this.options.store.fenced(binding, (tx) => {
+    const target = this.activity.fenced(binding, (tx) => {
+      assertAuthority?.();
       this.authorize(binding, 'control');
       const record = this.record(tx);
       const driver = this.ownedDriver(record);
@@ -308,7 +395,15 @@ export class RuntimeOwner {
       Promise.resolve().then(async () => {
         let requested = false;
         try {
-          requested = (await target.driver.interrupt(operationRef)).ok;
+          const permitted = this.activity.fenced(binding, (tx) => {
+            const record = this.record(tx);
+            return !record.sealed && record.phase === 'allocated' &&
+              record.control?.operationRef === operationRef &&
+              record.control.phase === 'pending' &&
+              record.inputs.some((input) => input.operationRef === operationRef && active(input)) &&
+              this.options.authorize(binding, 'control') && this.authorityCurrent(assertAuthority);
+          });
+          if (permitted) requested = (await target.driver.interrupt(operationRef)).ok;
         } catch {
           /* held */
         }
@@ -325,10 +420,12 @@ export class RuntimeOwner {
     binding: RuntimeBinding,
     inputId: string,
     interactionRef: string,
-    reply: InteractionReply
+    reply: InteractionReply,
+    assertAuthority?: () => void
   ): Promise<RuntimeSessionRecord> {
     binding = normalizeBinding(binding);
-    const target = this.options.store.fenced(binding, (tx) => {
+    const target = this.activity.fenced(binding, (tx) => {
+      assertAuthority?.();
       this.authorize(binding, 'control');
       const record = this.record(tx);
       const driver = this.ownedDriver(record);
@@ -356,9 +453,26 @@ export class RuntimeOwner {
       binding,
       Promise.resolve().then(async () => {
         let accepted = false;
-        const permitted = this.options.store.fenced(binding, (tx) => {
+        const permitted = this.activity.fenced(binding, (tx) => {
           const current = this.record(tx);
-          return !current.sealed && this.options.authorize(binding, 'control');
+          const interaction = current.interactions.find(
+            (item) => item.interactionRef === interactionRef
+          );
+          const input = current.inputs.find((item) => item.intent.inputId === inputId);
+          return (
+            !current.sealed &&
+            current.phase === 'allocated' &&
+            !current.control &&
+            interaction?.phase === 'responding' &&
+            interaction.inputId === inputId &&
+            interaction.kind === reply.kind &&
+            interaction.expiresAt > Date.now() &&
+            input !== undefined &&
+            input.operationRef === interaction.operationRef &&
+            active(input) &&
+            this.options.authorize(binding, 'control') &&
+            this.authorityCurrent(assertAuthority)
+          );
         });
         try {
           if (permitted) accepted = (await target.respondToInteraction(interactionRef, reply)).ok;
@@ -376,8 +490,8 @@ export class RuntimeOwner {
     );
   }
 
-  async stopSession(binding: RuntimeBinding): Promise<RuntimeSessionRecord> {
-    return this.stopOwned(normalizeBinding(binding));
+  async stopSession(binding: RuntimeBinding, assertAuthority?: () => void): Promise<RuntimeSessionRecord> {
+    return this.stopOwned(normalizeBinding(binding), false, assertAuthority);
   }
 
   /** Trusted composition shutdown only; never register as a business RPC or MCP tool. */
@@ -387,35 +501,45 @@ export class RuntimeOwner {
 
   private async stopOwned(
     binding: RuntimeBinding,
-    capturedCleanup = false
+    capturedCleanup = false,
+    assertAuthority?: () => void
   ): Promise<RuntimeSessionRecord> {
-    const target = this.options.store.fenced<{
+    const target = this.activity.fenced<{
       record: RuntimeSessionRecord;
       driver: Session | undefined;
       wait?: Promise<unknown>;
     }>(binding, (tx) => {
+      assertAuthority?.();
       if (!capturedCleanup) this.authorize(binding, 'control');
-      const record = tx.get() ?? (capturedCleanup ? this.empty(binding) : this.record(tx));
+      const saved = tx.get();
+      const record = saved ?? (capturedCleanup ? this.empty(binding) : this.record(tx));
+      const before = saved ? runtimeDigest(saved) : undefined;
+      // Repeated cleanup preserves settled debt bytes without skipping any owned control/close work.
+      const persistStop = () => { if (runtimeDigest(record) !== before) tx.put(record); };
+      if (record.phase === 'closed' && record.sealed && !record.nativeReady &&
+        !record.inputs.some(input => input.phase === 'admitted') &&
+        !record.interactions.some(interaction => interaction.phase === 'pending'))
+        return { record, driver: undefined };
       record.sealed = true;
       record.nativeReady = false;
       for (const input of record.inputs) if (input.phase === 'admitted') input.phase = 'cancelled';
       for (const interaction of record.interactions)
         if (interaction.phase === 'pending') interaction.phase = 'unknown';
       if (record.phase === 'closed') {
-        tx.put(record);
+        persistStop();
         return { record, driver: undefined };
       }
       if (record.phase === 'unopened') {
         record.phase = 'closed';
         record.custody = 'released';
-        tx.put(record);
+        persistStop();
         return { record, driver: undefined };
       }
       if (record.closeClaimed && !this.closes.has(this.key(binding))) {
         // A settled/abandoned close claim cannot become a new close or appear in flight again.
         record.phase = 'held';
         record.custody = 'unknown';
-        tx.put(record);
+        persistStop();
         return { record, driver: undefined };
       }
       record.phase = 'closing';
@@ -429,27 +553,29 @@ export class RuntimeOwner {
       }
       const controls = this.controls.get(this.key(binding));
       if (!record.closeClaimed && controls?.size) {
-        tx.put(record);
+        persistStop();
         return { record, driver: undefined, wait: Promise.allSettled([...controls]) };
       }
       if (record.closeClaimed || record.control?.phase === 'pending') {
-        tx.put(record);
+        persistStop();
         return { record, driver: undefined };
       }
       if (driver) record.closeClaimed = true;
-      tx.put(record);
+      persistStop();
       return { record, driver };
     });
     if (target.wait) {
       await target.wait;
-      return this.stopOwned(binding, true); // Continue this stop intent after its accepted controls settle.
+      return this.stopOwned(binding, true, assertAuthority); // Continue this stop intent after its accepted controls settle.
     }
     if (!target.driver) return this.closes.get(this.key(binding)) ?? target.record;
     const driver = target.driver;
     const closing = (async () => {
       let confirmed = false;
       try {
+        assertAuthority?.();
         this.checkpoints.captureBeforeClose(binding);
+        assertAuthority?.();
         confirmed = (await driver.close()).cleanup === 'confirmed';
       } catch {
         /* custody retained */
@@ -475,7 +601,7 @@ export class RuntimeOwner {
   /** Explicit recovery command. Never adopts a driver or replays a claimed effect. */
   reconcileSession(binding: RuntimeBinding): RuntimeSessionRecord {
     binding = normalizeBinding(binding);
-    return this.options.store.fenced(binding, (tx) => {
+    return this.activity.fenced(binding, (tx) => {
       this.authorize(binding, 'control');
       const record = this.record(tx);
       if (
@@ -504,18 +630,8 @@ export class RuntimeOwner {
     let diagnostic: RuntimeSessionRecord['diagnostic'] = 'observe-ended';
     try {
       for await (const event of driver.observe()) {
-        // This checkpoint persists control/terminal facts, not text/tool projections.
-        if (event.kind !== 'result' && event.kind !== 'interaction') continue;
-        this.options.store.fenced(binding, (tx) => {
-          const record = this.record(tx);
-          if (
-            record.hostIncarnation !== this.options.hostIncarnation ||
-            record.sessionRef !== event.sessionRef
-          )
-            return;
-          const interactionCount = record.interactions.length;
+        this.activity.observe(binding, driver.sessionRef, event, (record) => {
           this.applyEvent(record, event);
-          tx.put(record, record.interactions.length > interactionCount ? 'growth' : undefined);
           this.checkpoints.signal(binding);
         });
       }
@@ -523,7 +639,7 @@ export class RuntimeOwner {
       diagnostic = 'observe-failed';
     }
     try {
-      this.options.store.fenced(binding, (tx) => {
+      this.activity.fenced(binding, (tx) => {
         const record = this.record(tx);
         if (record.hostIncarnation !== this.options.hostIncarnation || record.phase === 'closed')
           return;
@@ -551,6 +667,7 @@ export class RuntimeOwner {
   }
 
   private applyEvent(record: RuntimeSessionRecord, event: Event): void {
+    if (event.kind === 'compaction') { recordContextEpoch(record, event); return; }
     const input = record.inputs.find(
       (item) => item.intent.inputId === event.inputId && item.operationRef === event.operationRef
     );
@@ -588,13 +705,17 @@ export class RuntimeOwner {
     binding: RuntimeBinding,
     mutate: (record: RuntimeSessionRecord) => void
   ): RuntimeSessionRecord {
-    return this.options.store.fenced(binding, (tx) => {
+    return this.activity.fenced(binding, (tx) => {
       const record = this.record(tx);
       mutate(record);
       tx.put(record);
       this.checkpoints.signal(binding);
       return record;
     });
+  }
+  private authorityCurrent(assertAuthority?: () => void): boolean {
+    try { assertAuthority?.(); return true; }
+    catch { return false; }
   }
   private authorize(
     binding: RuntimeBinding,
@@ -621,43 +742,5 @@ export class RuntimeOwner {
   private key(binding: RuntimeBinding): string {
     return runtimeDigest(normalizeBinding(binding));
   }
-  private delivery(raw: RuntimeDelivery): RuntimeDelivery {
-    const intent = {
-      binding: normalizeBinding(raw.binding),
-      deliveryId: raw.deliveryId,
-      inputId: raw.inputId,
-      messageId: raw.messageId,
-      content: raw.content,
-    };
-    if (
-      intent.inputId !== intent.deliveryId ||
-      [intent.inputId, intent.messageId].some(
-        (value) => typeof value !== 'string' || !value || value.length > 256
-      ) ||
-      typeof intent.content !== 'string' ||
-      Buffer.byteLength(intent.content) > this.maxBytes
-    )
-      throw new RuntimeOwnerError('invalid');
-    return intent;
-  }
-  private find(record: RuntimeSessionRecord, intent: RuntimeDelivery): RuntimeInput | undefined {
-    const input = record.inputs.find((item) => item.intent.inputId === intent.inputId);
-    if (input && input.fingerprint !== deliveryFingerprint(intent))
-      throw new RuntimeOwnerError('conflict');
-    return input;
-  }
-  private admission(input: RuntimeInput): RuntimeAdmission {
-    return {
-      inputId: input.intent.inputId,
-      outcome: ['cancelled', 'rejected'].includes(input.phase) ? 'not_admitted' : 'admitted',
-      receipt: {
-        schemaVersion: 1,
-        inputId: input.intent.inputId,
-        binding: { ...input.intent.binding },
-        fingerprint: input.fingerprint,
-        operationRef: input.operationRef,
-        phase: input.phase,
-      },
-    };
-  }
+
 }

@@ -3,10 +3,9 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
+import * as atomicWrite from '@agent-teams/task-change-ledger/review-io';
 import { JsonMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
-import * as persistence from '@features/member-work-sync/main/infrastructure/memberWorkSyncJsonStatusPersistence';
 import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
-import * as atomicWrite from '@main/utils/atomicWrite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { MemberWorkSyncStatus } from '@features/member-work-sync/contracts';
@@ -115,6 +114,7 @@ describe('JSON canonical status CAS', () => {
       const handle = await open(...args);
       if (
         !blocked &&
+        args[1] === 'r+' && // Guarded staging first opens wx; that FD is never synced.
         dirname(String(args[0])) === dirname(path) &&
         String(args[0]).includes('/.tmp.')
       ) {
@@ -129,16 +129,22 @@ describe('JSON canonical status CAS', () => {
       return handle;
     });
     const first = commit(null, 'slow');
-    await enteredSync;
-    const later = Date.now() + 31_000;
-    vi.spyOn(Date, 'now').mockReturnValue(later);
-    const other = new JsonMemberWorkSyncStore(paths);
-    const second = other.compareAndWriteCanonicalStatus({
-      expectedRaw: null,
-      mutationId: 'competitor',
-      nextStatus: status('competitor'),
-    });
+    let second: ReturnType<typeof commit> | undefined;
     try {
+      await Promise.race([
+        enteredSync,
+        first.then(() => {
+          throw new Error('canonical write settled before the fsync barrier');
+        }),
+      ]);
+      const later = Date.now() + 31_000;
+      vi.spyOn(Date, 'now').mockReturnValue(later);
+      const other = new JsonMemberWorkSyncStore(paths);
+      second = other.compareAndWriteCanonicalStatus({
+        expectedRaw: null,
+        mutationId: 'competitor',
+        nextStatus: status('competitor'),
+      });
       await new Promise((resolve) => setTimeout(resolve, 100));
       expect(await store.readCanonicalStatusSnapshot(identity)).toEqual({
         state: 'absent',
@@ -146,17 +152,20 @@ describe('JSON canonical status CAS', () => {
       });
     } finally {
       release();
-      await Promise.all([first, second]);
+      await Promise.allSettled(second ? [first, second] : [first]);
     }
     expect(await first).toMatchObject({ committed: true });
     expect(await second).toMatchObject({ committed: false, reason: 'conflict' });
   });
 
   it('surfaces a failed queued operation once and continues the next write', async () => {
-    const failure = vi
-      .spyOn(persistence, 'compareAndWriteMemberWorkSyncJsonStatus')
-      .mockRejectedValueOnce(new Error('test queue failure'));
+    // Path resolution happens inside the real Host queue callback. Spying on
+    // the frontend re-export cannot fault that extracted callback anymore.
+    const failure = vi.spyOn(paths, 'getMetricsIndexPath').mockImplementationOnce(() => {
+      throw new Error('test queue failure');
+    });
     await expect(commit(null, 'failed')).rejects.toThrow('test queue failure');
+    expect(failure).toHaveBeenCalledTimes(1);
     failure.mockRestore();
     expect(await commit(null, 'next')).toMatchObject({ committed: true });
     await new Promise((resolve) => setTimeout(resolve, 0));

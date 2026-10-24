@@ -13,6 +13,7 @@ import {
   OpenCodePrimaryLaneBootstrapSelfHealTracker,
 } from '../opencode/delivery/OpenCodePrimaryLaneBootstrapSelfHeal';
 import { inspectOpenCodeRuntimeLaneStorage } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { countStoppedImportKeys } from '../stopped-import/ownerFacts';
 
 import { type OpenCodeAttachmentPayloadStore } from './TeamProvisioningOpenCodeAttachmentPayloads';
 import { type TeamProvisioningOpenCodePrimaryLaneSelfHealPorts } from './TeamProvisioningOpenCodeDeliveryComposition';
@@ -123,6 +124,16 @@ export class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<
     null;
 
   private readonly openCodeLeadActiveFallbackTimers = new Map<string, NodeJS.Timeout>();
+
+  readStoppedTeamImportDeliveryFacts(teamName: string): Readonly<Record<string, number>> {
+    return {
+      relay: countStoppedImportKeys(this.openCodeMemberInboxRelayInFlight.keys(), teamName),
+      send: countStoppedImportKeys(this.openCodeMemberSendInFlightByLane.keys(), teamName),
+      leadActivity: Number(this.leadActivityPending.has(teamName)),
+      activityTimer: Number(this.openCodeLeadActiveFallbackTimers.has(teamName)),
+      selfHeal: Number(this.primaryLaneBootstrapSelfHeal.hasPendingForStoppedImport(teamName)),
+    };
+  }
 
   constructor(
     private readonly deps: TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServiceDeps<TRun>
@@ -378,6 +389,12 @@ export abstract class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibility
         getErrorMessage,
       }
     );
+
+  readStoppedTeamImportDeliveryFacts(teamName: string): Readonly<Record<string, number>> {
+    return this.openCodeMemberMessageDeliveryCompatibility.readStoppedTeamImportDeliveryFacts(
+      teamName
+    );
+  }
 
   protected get sendMessageToRunBoundary(): TeamProvisioningSendMessageToRunBoundary<TRun> {
     return this.openCodeMemberMessageDeliveryCompatibility.sendMessageToRunBoundary;

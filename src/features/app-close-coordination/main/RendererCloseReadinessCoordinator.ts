@@ -3,12 +3,20 @@ import { randomUUID } from 'node:crypto';
 import {
   APP_CLOSE_READINESS_REQUEST,
   APP_CLOSE_READINESS_RESPONSE,
+  APP_CLOSE_UI_MOUNT_REQUEST,
   type AppCloseReadinessRequest,
+  type AppCloseReadinessResponse,
   type AppCloseReadinessResult,
   type AppCloseReason,
 } from '../contracts';
 
-import type { BrowserWindow, IpcMain, IpcMainEvent, WebContents } from 'electron';
+import type {
+  BrowserWindow,
+  IpcMain,
+  IpcMainEvent,
+  IpcMainInvokeEvent,
+  WebContents,
+} from 'electron';
 
 interface PendingReadinessRequest {
   sender: WebContents;
@@ -21,8 +29,16 @@ const normalizeResponse = (
   response: unknown
 ): AppCloseReadinessResult | null => {
   if (!response || typeof response !== 'object') return null;
-  const value = response as Partial<AppCloseReadinessResult>;
+  const value = response as Partial<AppCloseReadinessResponse>;
   if (value.requestId !== requestId || typeof value.ok !== 'boolean') return null;
+  if (value.ok && value.uiHandlerObserved !== true) {
+    return {
+      requestId,
+      ok: false,
+      blockers: ['Changes close readiness is not initialized for this renderer.'],
+    };
+  }
+
   const blockers = Array.isArray(value.blockers)
     ? value.blockers
         .filter((item): item is string => typeof item === 'string')
@@ -34,6 +50,18 @@ const normalizeResponse = (
 };
 
 export class RendererCloseReadinessCoordinator {
+  // Monotonic for the lifetime of this WebContents: renderer loss/reload never
+  // converts potentially unsaved editor state back into a safe startup splash.
+  private readonly mounted = new WeakSet<WebContents>();
+  private readonly closedBeforeMount = new WeakSet<WebContents>();
+  private readonly mountListener = (event: IpcMainInvokeEvent, ...payload: unknown[]): boolean => {
+    if (payload.length !== 0) return false;
+    if (event.sender.isDestroyed() || event.senderFrame !== event.sender.mainFrame) return false;
+    if (this.closedBeforeMount.has(event.sender)) return false;
+    this.mounted.add(event.sender);
+    return true;
+  };
+
   private readonly pending = new Map<string, PendingReadinessRequest>();
 
   private readonly responseListener = (event: IpcMainEvent, response: unknown): void => {
@@ -51,6 +79,7 @@ export class RendererCloseReadinessCoordinator {
 
   constructor(private readonly ipcMain: IpcMain) {
     ipcMain.on(APP_CLOSE_READINESS_RESPONSE, this.responseListener);
+    ipcMain.handle(APP_CLOSE_UI_MOUNT_REQUEST, this.mountListener);
   }
 
   request(
@@ -59,6 +88,12 @@ export class RendererCloseReadinessCoordinator {
     timeoutMs = 5_000
   ): Promise<AppCloseReadinessResult> {
     if (window.isDestroyed() || window.webContents.isDestroyed()) {
+      return Promise.resolve({ requestId: '', ok: true, blockers: [] });
+    }
+
+    if (!this.mounted.has(window.webContents)) {
+      // Atomically close future mount admission before accepting this close.
+      this.closedBeforeMount.add(window.webContents);
       return Promise.resolve({ requestId: '', ok: true, blockers: [] });
     }
 
@@ -97,6 +132,7 @@ export class RendererCloseReadinessCoordinator {
 
   dispose(): void {
     this.ipcMain.removeListener(APP_CLOSE_READINESS_RESPONSE, this.responseListener);
+    this.ipcMain.removeHandler(APP_CLOSE_UI_MOUNT_REQUEST);
     for (const [requestId, pending] of this.pending) {
       clearTimeout(pending.timer);
       pending.resolve({

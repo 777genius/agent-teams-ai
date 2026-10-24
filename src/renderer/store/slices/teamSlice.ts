@@ -31,6 +31,7 @@ import { createLogger } from '@shared/utils/logger';
 import { calculateTaskImplementationDuration } from '@shared/utils/taskWorkDuration';
 import { buildTeamGraphDefaultLayoutSeed } from '@shared/utils/teamGraphDefaultLayout';
 
+import { createHostTeamFromDialog } from '../team/createHostTeamFromDialog';
 import {
   createSidebarLogsHeightSlice,
   type SidebarLogsHeightSlice,
@@ -211,6 +212,7 @@ import type {
   TaskComment,
   TeamAgentRuntimeSnapshot,
   TeamCreateRequest,
+  TeamCreateResponse,
   TeamGetDataOptions,
   TeamLaunchDiagnosticItem,
   TeamLaunchRequest,
@@ -1686,7 +1688,7 @@ export interface TeamSlice extends SidebarLogsHeightSlice {
   deleteTeam: (teamName: string) => Promise<void>;
   restoreTeam: (teamName: string) => Promise<void>;
   permanentlyDeleteTeam: (teamName: string) => Promise<void>;
-  createTeam: (request: TeamCreateRequest) => Promise<string>;
+  createTeam: (request: TeamCreateRequest) => Promise<TeamCreateResponse>;
   launchTeam: (request: TeamLaunchRequest) => Promise<string>;
   cancelProvisioning: (runId: string) => Promise<void>;
   getProvisioningStatus: (runId: string) => Promise<TeamProvisioningProgress>;
@@ -3828,7 +3830,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     const requestScope = captureContextRequestScope(get);
     set({ crossTeamTargetsLoading: true });
     try {
-      const targets = await api.crossTeam.listTargets();
+      const sourceTeam = get().selectedTeamName;
+      const targets = await api.crossTeam.listTargets(sourceTeam ?? undefined);
+      if (get().selectedTeamName !== sourceTeam) return false;
       if (!isContextRequestScopeCurrent(get, requestScope)) {
         return false;
       }
@@ -4269,6 +4273,8 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   createTeam: async (request: TeamCreateRequest) => {
+    if (request.createdTeamReadiness)
+      return createHostTeamFromDialog(request, get, pollProvisioningStatus);
     const analyticsStartedAtMs = Date.now();
     const launchAnalyticsContext = buildTeamCreateLaunchAnalyticsContext(
       request,
@@ -4445,7 +4451,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       }
       void pollProvisioningStatus(get, response.runId);
       teamProvisioningAttemptTracker.finish(request.teamName, attemptId);
-      return response.runId;
+      return response;
     } catch (error) {
       const message =
         error instanceof IpcError

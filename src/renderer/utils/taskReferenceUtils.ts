@@ -213,6 +213,19 @@ export function parseTaskLinkHref(href: string): ParsedTaskLinkHref | null {
   }
 }
 
+export function navigateTaskReference(
+  reference: ParsedTaskLinkHref,
+  currentTeamName: string,
+  scrollToTask: (taskId: string) => void,
+  openTask: (teamName: string, taskId: string) => void
+): void {
+  if (reference.teamName && reference.teamName !== currentTeamName) {
+    openTask(reference.teamName, reference.taskId);
+  } else {
+    scrollToTask(reference.taskId);
+  }
+}
+
 function findClosingBacktickRun(text: string, start: number, runLength: number): number {
   const marker = '`'.repeat(runLength);
   return text.indexOf(marker, start + runLength);

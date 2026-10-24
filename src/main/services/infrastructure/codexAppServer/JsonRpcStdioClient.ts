@@ -139,6 +139,9 @@ export class JsonRpcStdioClient {
         pending.delete(id);
       }
     };
+    // write callbacks reject their request, but a broken pipe also emits an
+    // error event. Contain it here so a failed CLI probe cannot crash main.
+    child.stdin?.on('error', (error) => rejectAll(error));
 
     const handleNotification = (message: JsonRpcNotificationMessage): void => {
       if (typeof message.method !== 'string' || message.method.length === 0) {

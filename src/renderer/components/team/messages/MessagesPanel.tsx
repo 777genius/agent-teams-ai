@@ -32,7 +32,6 @@ import { useTeamMessagesRead } from '@renderer/hooks/useTeamMessagesRead';
 import { useStore } from '@renderer/store';
 import { selectTeamMessages } from '@renderer/store/slices/teamSlice';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
-import { isLeadMember } from '@shared/utils/leadDetection';
 import {
   CheckCheck,
   Dock,
@@ -76,7 +75,6 @@ import {
   conversationDraftAddress,
   conversationIdentity as createConversationIdentity,
   localDraftsByConversationScope,
-  memberConversationParticipants,
   outboxViewAddress,
   replyCandidates,
   resolveExpandedTimelineItem,
@@ -88,7 +86,6 @@ import {
   reconcilePendingRepliesByMember,
   trimString,
 } from './messagesPanelLogic';
-import { resolveReplyRecipient } from './messagesPanelReplyRecipient';
 import { selectMessagesPanelTeamMentionMeta } from './messagesPanelTeamMentionMeta';
 import { MessagesSearchBar, MessagesSearchControls } from './MessagesSearchBar';
 import { MessagesSidebarSurface } from './MessagesSidebarSurface';
@@ -101,7 +98,9 @@ import { ThreadAwareMessageComposer } from './ThreadAwareMessageComposer';
 import { calculateBottomSheetGeometry, useBottomSheetLayout } from './useBottomSheetLayout';
 import { useComposerOutboxItems } from './useComposerOutboxItems';
 import { useCrossTeamDraftAddressAvailability } from './useCrossTeamDraftAddressAvailability';
+import { useMessageReplyRouting } from './useMessageReplyRouting';
 import { useMessageRevisionIntent } from './useMessageRevisionIntent';
+import { useMessagesMemberIdentities } from './useMessagesMemberIdentities';
 import {
   useDirectThreadAutoOlder,
   useResetScrollOnConversationChange,
@@ -606,18 +605,18 @@ export const MessagesPanel = memo(function MessagesPanel({
     scrollElementRef: activeScrollContainerRef ?? threadScrollRef,
   });
 
-  const leadNames = useMemo(
-    () => members.filter((member) => isLeadMember(member)).map((member) => member.name),
-    [members]
-  );
-  const memberNames = useMemo(() => new Set(members.map((member) => member.name)), [members]);
-  const normalizedMemberNames = useMemo(() => memberConversationParticipants(members), [members]);
-  const handleReplyToTimelineMessage = useCallback(
-    (message: InboxMessage) => {
-      onReplyToMessage?.(message, resolveReplyRecipient({ message, scope, teamName, members }));
-    },
-    [members, onReplyToMessage, scope, teamName]
-  );
+  const { leadNames, memberNames, normalizedMemberNames } = useMessagesMemberIdentities(members);
+  const { crossTeamReply, replyAddressRequest, handleReplyToTimelineMessage } =
+    useMessageReplyRouting({
+      contextId: activeContextId,
+      teamName,
+      scope,
+      members,
+      onReply: onReplyToMessage,
+      openTeamFeed: () => openChat(TEAM_FEED_SCOPE),
+      fetchTargets: () => useStore.getState().fetchCrossTeamTargets(),
+      focusComposer: () => composerTextareaRef.current?.focus(),
+    });
   const canonicalMessages = useMemo(
     () => canonicalTeamMessages(effectiveMessages, leadNames),
     [effectiveMessages, leadNames]
@@ -1010,6 +1009,8 @@ export const MessagesPanel = memo(function MessagesPanel({
     suggestionPlacement: isConversation ? ('above' as const) : undefined,
     lockedRecipient,
     autoFocusKey: threadOpenedAt,
+    draftAddressRequest: replyAddressRequest,
+    crossTeamReply,
     workingDraftSummaries: workingDrafts.summaries,
     onSend: handleSend,
     onCrossTeamSend: handleCrossTeamSend,

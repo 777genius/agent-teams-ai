@@ -419,7 +419,7 @@ function resolveSenderParticipantAvatarPath(
   const senderLabel = sender.trim();
   if (!senderLabel || senderLabel.toLowerCase() === 'system') return undefined;
 
-  const roster = members && members.length > 0 ? members : readTeamNotificationMembers(teamName);
+  const roster = members ?? readTeamNotificationMembers(teamName);
   const avatarNumber = getParticipantAvatarNumber(senderLabel, roster);
   return resolveParticipantAvatarPath(avatarNumber);
 }
@@ -1152,10 +1152,14 @@ export class NotificationManager extends EventEmitter {
    * Returns null if dedupeKey already exists in storage (storage-level dedupe)
    * or if toolUseId-based dedup skips it.
    */
-  private async storeNotification(error: DetectedError): Promise<StoredNotification | null> {
+  private async storeNotification(
+    error: DetectedError,
+    assertCurrent?: () => void
+  ): Promise<StoredNotification | null> {
     if (this.initPromise) {
       await this.initPromise;
     }
+    assertCurrent?.();
 
     // Storage-level dedupe by dedupeKey (persistent, lives as long as notification is in storage)
     if (error.dedupeKey) {
@@ -1232,9 +1236,13 @@ export class NotificationManager extends EventEmitter {
    * enabled/snoozed, suppressToast flag, and 5s dedupeKey-based throttle.
    * Skips repo/regex filters (not applicable to team events).
    */
-  async addTeamNotification(payload: TeamNotificationPayload): Promise<StoredNotification | null> {
+  async addTeamNotification(
+    payload: TeamNotificationPayload,
+    assertCurrent?: () => void
+  ): Promise<StoredNotification | null> {
     const error = buildDetectedErrorFromTeam(payload);
-    const stored = await this.storeNotification(error);
+    const stored = await this.storeNotification(error, assertCurrent);
+    assertCurrent?.();
     if (!stored) {
       logger.debug(
         `[team-notification] skipped (dedup): type=${payload.teamEventType} key=${payload.dedupeKey}`

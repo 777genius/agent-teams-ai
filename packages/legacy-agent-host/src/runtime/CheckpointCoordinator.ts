@@ -16,6 +16,8 @@ import {
 } from './sessionState.js';
 import type {
   CheckpointAttempt,
+  CheckpointAvailability,
+  CheckpointAvailabilityReason,
   CheckpointCoordinatorOptions,
   CheckpointPayload,
   CheckpointReceipt,
@@ -48,7 +50,98 @@ export class CheckpointCoordinator {
     });
   }
 
-  async capture(binding: RuntimeBinding, checkpointId: string): Promise<CheckpointReceipt> {
+  /** Read existing publications only. No checkpoint, cleanup, allocation or publication occurs. */
+  readAvailable(binding: RuntimeBinding, nextConfig: OpenConfig): CheckpointAvailability {
+    binding = normalizeBinding(binding);
+    const config = normalizeOpenConfig(nextConfig);
+    return this.options.store.fenced(binding, (tx) => {
+      this.authorize(binding, 'read');
+      const unavailable = (reason: CheckpointAvailabilityReason): CheckpointAvailability => ({
+        sourceGeneration: binding.generation,
+        status: 'unavailable',
+        reason,
+        nativeBacking: 'unverified',
+        checkpoints: [],
+      });
+      if (!this.options.storage) return unavailable('unsupported');
+      const source = tx.get();
+      if (!source) return unavailable('source-unavailable');
+      if (source.phase !== 'closed' || source.custody !== 'released')
+        return unavailable('custody-unreleased');
+      if (!idle(source)) return unavailable('history-changed');
+      const published = (source.checkpoints ?? []).filter((row) => row.status === 'published');
+      if (published.length > 128) return unavailable('checkpoint-budget');
+      if (!published.length)
+        return unavailable(
+          source.checkpoints?.some((row) => row.status === 'unsupported')
+            ? 'unsupported'
+            : 'checkpoint-unavailable'
+        );
+      const seen = new Set<string>();
+      for (const row of published) {
+        if (
+          !row.reference ||
+          !/^cp1-[a-f0-9]{64}$/.test(row.reference) ||
+          !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(row.checkpointId) ||
+          seen.has(row.reference)
+        )
+          return unavailable('checkpoint-invalid');
+        seen.add(row.reference);
+      }
+      const checkpoints = published.map((row): CheckpointAvailability['checkpoints'][number] => {
+        const reference = row.reference!;
+        let reason: CheckpointAvailabilityReason = 'native-backing-unverified';
+        try {
+          const payload = this.options.storage!.readCheckpointPayload(reference);
+          const { digest, ...body } = payload;
+          if (
+            checkpointPayloadDigest(body) !== digest ||
+            payload.reference !== reference ||
+            runtimeDigest(payload.sourceBinding) !== runtimeDigest(binding)
+          )
+            reason = 'payload-unavailable';
+          else {
+            reason = this.sourceFailure(tx, payload) ?? 'native-backing-unverified';
+            if (reason === 'native-backing-unverified') {
+              try {
+                this.compatible(payload, config);
+              } catch {
+                reason = 'configuration-changed';
+              }
+            }
+            if (reason === 'native-backing-unverified') {
+              try {
+                assertGenerationAvailable(tx, binding, config);
+              } catch (error) {
+                reason =
+                  error instanceof RuntimeOwnerError && error.code === 'conflict'
+                    ? 'generation-conflict'
+                    : 'sibling-unreleased';
+              }
+            }
+          }
+        } catch {
+          reason = 'payload-unavailable';
+        }
+        return {
+          checkpointId: row.checkpointId,
+          reference,
+          status: reason === 'native-backing-unverified' ? 'owner-eligible' : 'unavailable',
+          reason,
+        };
+      });
+      const eligible = checkpoints.some((row) => row.status === 'owner-eligible');
+      return {
+        sourceGeneration: binding.generation,
+        status: eligible ? 'owner-eligible' : 'unavailable',
+        reason: eligible ? 'native-backing-unverified' : checkpoints[0]!.reason,
+        nativeBacking: 'unverified',
+        checkpoints,
+      };
+    });
+  }
+
+  async capture(binding: RuntimeBinding, checkpointId: string, assertAuthority?: () => void): Promise<CheckpointReceipt> {
     binding = normalizeBinding(binding);
     this.id(checkpointId);
     const deadline = performance.now() + this.timeoutMs;
@@ -57,7 +150,7 @@ export class CheckpointCoordinator {
       const wait = this.wait(binding, Math.max(1, deadline - performance.now()));
       let result: CheckpointReceipt | undefined;
       try {
-        result = this.captureNow(binding, checkpointId, false);
+        result = this.captureNow(binding, checkpointId, false, assertAuthority);
       } catch (error) {
         wait.cancel();
         throw error;
@@ -111,6 +204,25 @@ export class CheckpointCoordinator {
     } catch {
       return { checkpointId, status: 'held' };
     } // Capture failure must not skip physical cleanup.
+  }
+
+  /** Read-only proof before Team publishes a replacement binding. Allocation still revalidates it. */
+  validateRestoreSource(request: RestoreSessionRequest): void {
+    if (!this.options.storage) throw new RuntimeOwnerError('hold');
+    const sourceBinding = normalizeBinding(request.sourceBinding),
+      binding = normalizeBinding(request.binding);
+    this.sameMember(sourceBinding, binding);
+    if (binding.generation === sourceBinding.generation) throw new RuntimeOwnerError('conflict');
+    const config = normalizeOpenConfig(request.config);
+    this.options.store.fenced(sourceBinding, (tx) => {
+      this.authorize(sourceBinding, 'read');
+      const payload = this.options.storage!.readCheckpointPayload(request.reference);
+      if (runtimeDigest(payload.sourceBinding) !== runtimeDigest(sourceBinding))
+        throw new RuntimeOwnerError('conflict');
+      this.source(tx, payload);
+      this.compatible(payload, config);
+      assertGenerationAvailable(tx, binding, config);
+    });
   }
 
   prepareRestore(request: RestoreSessionRequest): {
@@ -187,9 +299,11 @@ export class CheckpointCoordinator {
   private captureNow(
     binding: RuntimeBinding,
     checkpointId: string,
-    stopping: boolean
+    stopping: boolean,
+    assertAuthority?: () => void
   ): CheckpointReceipt | undefined {
     return this.options.store.fenced(binding, (tx) => {
+      assertAuthority?.();
       if (!stopping) this.authorize(binding, 'control');
       if (!this.options.storage) return { checkpointId, status: 'unsupported' };
       const record = tx.get();
@@ -217,6 +331,7 @@ export class CheckpointCoordinator {
       record.checkpoints.push(attempt);
       tx.put(record, 'growth'); // No native checkpoint call without the durable stable intent.
       try {
+        assertAuthority?.();
         const captured = driver.checkpoint();
         if (!captured.ok) {
           attempt.status = captured.code === 'unsupported' ? 'unsupported' : 'held';
@@ -259,26 +374,37 @@ export class CheckpointCoordinator {
   }
 
   private source(tx: RuntimeTransaction, payload: CheckpointPayload): RuntimeSessionRecord {
+    if (this.sourceFailure(tx, payload)) throw new RuntimeOwnerError('hold');
+    return tx
+      .siblings()
+      .find((record) => runtimeDigest(record.binding) === runtimeDigest(payload.sourceBinding))!;
+  }
+
+  private sourceFailure(
+    tx: RuntimeTransaction,
+    payload: CheckpointPayload
+  ): CheckpointAvailabilityReason | undefined {
     const source = tx
       .siblings()
       .find((record) => runtimeDigest(record.binding) === runtimeDigest(payload.sourceBinding));
     const published = source?.checkpoints?.find(
       (item) => item.reference === payload.reference && item.status === 'published'
     );
+    if (!source) return 'source-unavailable';
     if (
-      !source ||
       !published ||
       published.payloadDigest !== payload.digest ||
-      published.fingerprint !== payload.fingerprint ||
-      source.phase !== 'closed' ||
-      source.custody !== 'released' ||
-      !idle(source) ||
-      historyDigest(source) !== payload.historyDigest ||
+      published.fingerprint !== payload.fingerprint
+    )
+      return 'checkpoint-invalid';
+    if (source.phase !== 'closed' || source.custody !== 'released') return 'custody-unreleased';
+    if (!idle(source) || historyDigest(source) !== payload.historyDigest) return 'history-changed';
+    if (
       source.sessionRef !== payload.sourceSessionRef ||
       runtimeDigest(source.config) !== runtimeDigest(payload.sourceConfig)
     )
-      throw new RuntimeOwnerError('hold');
-    return source;
+      return 'configuration-changed';
+    return undefined;
   }
 
   private compatible(payload: CheckpointPayload, config: OpenConfig): void {

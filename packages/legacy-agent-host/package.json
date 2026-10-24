@@ -11,6 +11,10 @@
     "README.md"
   ],
   "exports": {
+    "./lifecycle": {
+      "types": "./dist/lifecycle.d.ts",
+      "import": "./dist/lifecycle.js"
+    },
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
@@ -18,6 +22,10 @@
     "./contracts": {
       "types": "./dist/contracts.d.ts",
       "import": "./dist/contracts.js"
+    },
+    "./management/contracts": {
+      "types": "./dist/management/contracts.d.ts",
+      "import": "./dist/management/contracts.js"
     },
     "./cli": "./dist/cli.js",
     "./team": {
@@ -27,6 +35,10 @@
     "./team/contracts": {
       "types": "./dist/team/contracts.d.ts",
       "import": "./dist/team/contracts.js"
+    },
+    "./team-registry/contracts": {
+      "types": "./dist/team-registry/contracts.d.ts",
+      "import": "./dist/team-registry/contracts.js"
     },
     "./team/filesystem": {
       "types": "./dist/adapters/team/createFilesystemTeamOwner.d.ts",
@@ -59,6 +71,166 @@
     "./runtime/identity": {
       "types": "./dist/runtime/identity.d.ts",
       "import": "./dist/runtime/identity.js"
+    },
+    "./team-registry/create-launch-contracts": {
+      "types": "./dist/team-registry/createLaunchContracts.d.ts",
+      "import": "./dist/team-registry/createLaunchContracts.js"
+    },
+    "./stopped-team-import": {
+      "types": "./dist/stopped-team-import/index.d.ts",
+      "import": "./dist/stopped-team-import/index.js"
+    },
+    "./cross-team": {
+      "types": "./dist/cross-team/index.d.ts",
+      "import": "./dist/cross-team/index.js"
+    },
+    "./cross-team/contracts": {
+      "types": "./dist/cross-team/contracts.d.ts",
+      "import": "./dist/cross-team/contracts.js"
+    },
+    "./lead-identity": {
+      "types": "./dist/cross-team/leadDetection.d.ts",
+      "import": "./dist/cross-team/leadDetection.js"
+    },
+    "./tool-approval-policy": {
+      "types": "./dist/approval/policy.d.ts",
+      "import": "./dist/approval/policy.js"
+    },
+    "./cli-args": {
+      "types": "./dist/team-launch/cliArgs.d.ts",
+      "import": "./dist/team-launch/cliArgs.js"
+    },
+    "./mcp-catalog": {
+      "types": "./dist/mcp-catalog/index.d.ts",
+      "import": "./dist/mcp-catalog/index.js"
+    },
+    "./mcp-catalog/member-policy": {
+      "types": "./dist/mcp-catalog/memberPolicy.d.ts",
+      "import": "./dist/mcp-catalog/memberPolicy.js"
+    },
+    "./task-state": {
+      "types": "./dist/task-workflow/taskState.d.ts",
+      "import": "./dist/task-workflow/taskState.js"
+    },
+    "./work-sync/policy/*": {
+      "types": "./dist/work-sync/policy/*.d.ts",
+      "import": "./dist/work-sync/policy/*.js"
+    },
+    "./work-sync/storage/decodeMemberWorkSyncStoredStatus": {
+      "types": "./dist/work-sync/storage/decodeMemberWorkSyncStoredStatus.d.ts",
+      "import": "./dist/work-sync/storage/decodeMemberWorkSyncStoredStatus.js"
+    },
+    "./work-sync/storage/memberWorkSyncStatusVersion": {
+      "types": "./dist/work-sync/storage/memberWorkSyncStatusVersion.d.ts",
+      "import": "./dist/work-sync/storage/memberWorkSyncStatusVersion.js"
+    },
+    "./work-sync/storage/memberWorkSyncTokenSecret": {
+      "types": "./dist/work-sync/storage/memberWorkSyncTokenSecret.d.ts",
+      "import": "./dist/work-sync/storage/memberWorkSyncTokenSecret.js"
+    },
+    "./work-sync/storage/memberWorkSyncStoreIdentity": {
+      "types": "./dist/work-sync/storage/memberWorkSyncStoreIdentity.d.ts",
+      "import": "./dist/work-sync/storage/memberWorkSyncStoreIdentity.js"
+    },
+    "./work-sync/storage/memberWorkSyncReportJournalOwnership": {
+      "types": "./dist/work-sync/storage/memberWorkSyncReportJournalOwnership.d.ts",
+      "import": "./dist/work-sync/storage/memberWorkSyncReportJournalOwnership.js"
+    },
+    "./work-sync/storage/memberWorkSyncJsonStatusPersistence": {
+      "types": "./dist/work-sync/storage/memberWorkSyncJsonStatusPersistence.d.ts",
+      "import": "./dist/work-sync/storage/memberWorkSyncJsonStatusPersistence.js"
+    },
+    "./work-sync/storage/JsonMemberWorkSyncReportJournal": {
+      "types": "./dist/work-sync/storage/JsonMemberWorkSyncReportJournal.d.ts",
+      "import": "./dist/work-sync/storage/JsonMemberWorkSyncReportJournal.js"
+    },
+    "./work-sync/storage/HmacMemberWorkSyncReportTokenAdapter": {
+      "types": "./dist/work-sync/storage/HmacMemberWorkSyncReportTokenAdapter.d.ts",
+      "import": "./dist/work-sync/storage/HmacMemberWorkSyncReportTokenAdapter.js"
+    },
+    "./work-sync/storage/memberWorkSyncSafetyJson": {
+      "types": "./dist/work-sync/storage/memberWorkSyncSafetyJson.d.ts",
+      "import": "./dist/work-sync/storage/memberWorkSyncSafetyJson.js"
+    },
+    "./work-sync/storage/MemberWorkSyncStatusAuthority": {
+      "types": "./dist/work-sync/storage/MemberWorkSyncStatusAuthority.d.ts",
+      "import": "./dist/work-sync/storage/MemberWorkSyncStatusAuthority.js"
+    },
+    "./work-sync/storage/jsonStorePolicy": {
+      "types": "./dist/work-sync/storage/jsonStorePolicy.d.ts",
+      "import": "./dist/work-sync/storage/jsonStorePolicy.js"
+    },
+    "./work-sync/storage/jsonStoreFiles": {
+      "types": "./dist/work-sync/storage/jsonStoreFiles.d.ts",
+      "import": "./dist/work-sync/storage/jsonStoreFiles.js"
+    },
+    "./work-sync/scheduling/MemberWorkSyncNudgeDispatchScheduler": {
+      "types": "./dist/work-sync/scheduling/MemberWorkSyncNudgeDispatchScheduler.d.ts",
+      "import": "./dist/work-sync/scheduling/MemberWorkSyncNudgeDispatchScheduler.js"
+    },
+    "./work-sync/storage/memberWorkSyncMetricsProjection": {
+      "types": "./dist/work-sync/storage/memberWorkSyncMetricsProjection.d.ts",
+      "import": "./dist/work-sync/storage/memberWorkSyncMetricsProjection.js"
+    },
+    "./work-sync/storage/scanMemberWorkSyncNames": {
+      "types": "./dist/work-sync/storage/scanMemberWorkSyncNames.d.ts",
+      "import": "./dist/work-sync/storage/scanMemberWorkSyncNames.js"
+    },
+    "./team-member-storage": {
+      "types": "./dist/adapters/team/TeamMemberStoragePaths.d.ts",
+      "import": "./dist/adapters/team/TeamMemberStoragePaths.js"
+    },
+    "./work-sync/storage/MemberWorkSyncStorePaths": {
+      "types": "./dist/work-sync/storage/MemberWorkSyncStorePaths.d.ts",
+      "import": "./dist/work-sync/storage/MemberWorkSyncStorePaths.js"
+    },
+    "./work-sync/storage/MemberWorkSyncOutboxOperations": {
+      "types": "./dist/work-sync/storage/MemberWorkSyncOutboxOperations.d.ts",
+      "import": "./dist/work-sync/storage/MemberWorkSyncOutboxOperations.js"
+    },
+    "./work-sync/storage/MemberWorkSyncWriteQueue": {
+      "types": "./dist/work-sync/storage/MemberWorkSyncWriteQueue.d.ts",
+      "import": "./dist/work-sync/storage/MemberWorkSyncWriteQueue.js"
+    },
+    "./work-sync/storage/createMemberWorkSyncJsonBackend": {
+      "types": "./dist/work-sync/storage/createMemberWorkSyncJsonBackend.d.ts",
+      "import": "./dist/work-sync/storage/createMemberWorkSyncJsonBackend.js"
+    },
+    "./extension-management": {
+      "types": "./dist/extensions/extensionProtocol.d.ts",
+      "import": "./dist/extensions/extensionProtocol.js"
+    },
+    "./extension-targets": {
+      "types": "./dist/extensions/mcpTargets.d.ts",
+      "import": "./dist/extensions/mcpTargets.js"
+    },
+    "./skill-management": {
+      "types": "./dist/skills/index.d.ts",
+      "import": "./dist/skills/index.js"
+    },
+    "./attachments/portable": {
+      "types": "./dist/attachments/portable.d.ts",
+      "import": "./dist/attachments/portable.js"
+    },
+    "./attachments/storage": {
+      "types": "./dist/attachments/storage.d.ts",
+      "import": "./dist/attachments/storage.js"
+    },
+    "./attachments/contracts": {
+      "types": "./dist/attachments/uploadContracts.d.ts",
+      "import": "./dist/attachments/uploadContracts.js"
+    },
+    "./attachments/attachmentTypes": {
+      "types": "./dist/attachments/attachmentTypes.d.ts",
+      "import": "./dist/attachments/attachmentTypes.js"
+    },
+    "./attachments/mimeTypes": {
+      "types": "./dist/attachments/mimeTypes.d.ts",
+      "import": "./dist/attachments/mimeTypes.js"
+    },
+    "./attachments/capabilities": {
+      "types": "./dist/attachments/capabilities.d.ts",
+      "import": "./dist/attachments/capabilities.js"
     }
   },
   "bin": {
@@ -68,18 +240,21 @@
     "build": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json",
     "typecheck": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json --noEmit",
     "typecheck:test": "node node_modules/@typescript/native/bin/tsc -p tsconfig.test.json",
-    "test": "pnpm build && pnpm typecheck:test && node --test tests/*.test.ts tests/fixtures/native-claude-team/model.test.ts",
-    "test:native:claude": "node --test tests/native-claude-team.native.ts"
+    "test": "pnpm build && pnpm typecheck:test && node --test tests/*.test.ts tests/fixtures/native-claude-team/model.test.ts tests/fixtures/native-opencode-team/model.test.ts tests/fixtures/native-codex-team/model.test.ts",
+    "test:native:claude": "node --test tests/native-claude-team.native.ts",
+    "prebuild": "pnpm --filter @agent-teams/task-change-ledger build"
   },
   "devDependencies": {
     "@types/node": "^24.12.4",
     "@typescript/native": "npm:typescript@7.0.2"
   },
   "dependencies": {
-    "@agent-teams/provider-implementations": "file:../../vendor/provider-migration/attachments-mcp-v1/agent-teams-provider-implementations-0.0.0.tgz",
-    "@agent-teams/provider-session-contracts": "file:../../vendor/provider-migration/attachments-mcp-v1/agent-teams-provider-session-contracts-0.0.0.tgz",
+    "@agent-teams/provider-implementations": "file:../../vendor/provider-migration/typed-quality-validation-v2/agent-teams-provider-implementations-0.0.0.tgz",
+    "@agent-teams/provider-session-contracts": "file:../../vendor/provider-migration/finite-claude-custody-v1/agent-teams-provider-session-contracts-0.0.0.tgz",
     "@modelcontextprotocol/sdk": "1.30.0",
     "agent-teams-controller": "workspace:*",
-    "zod": "4.6.7"
+    "zod": "4.6.7",
+    "@agent-teams/task-change-ledger": "workspace:*",
+    "jsonc-parser": "3.3.1"
   }
 }

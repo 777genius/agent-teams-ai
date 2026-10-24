@@ -24,7 +24,7 @@ interface UseOrganizationCreateTeamDialogResult {
   createTeam: (
     request: TeamCreateRequest,
     placement?: OrganizationPlacementSelection
-  ) => Promise<void>;
+  ) => Promise<string>;
   openTeam: (teamName: string, projectPath?: string) => void;
 }
 
@@ -78,20 +78,22 @@ export function useOrganizationCreateTeamDialog(): UseOrganizationCreateTeamDial
     async (
       request: TeamCreateRequest,
       placement?: OrganizationPlacementSelection
-    ): Promise<void> => {
-      await createTeam(request);
+    ): Promise<string> => {
+      const created = await createTeam(request);
+      const teamName = created.teamName ?? request.teamName;
       if (!placement) {
-        return;
+        return teamName;
       }
       try {
         await api.organizations.assignTeamToUnit({
           ...placement,
-          teamName: request.teamName,
+          teamName,
           label: request.displayName || request.teamName,
         });
       } catch (error) {
         console.warn('[Organizations] Failed to place created team in organization', error);
       }
+      return teamName;
     },
     [createTeam]
   );

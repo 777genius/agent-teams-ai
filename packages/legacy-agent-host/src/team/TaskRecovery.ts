@@ -1,6 +1,11 @@
+import { settledRuntimeAdmission } from './settledRuntimeAdmission.js';
+import { listProductCommandReceipts } from './commandEntries.js';
 import { TeamOwnerError } from './contracts.js';
+import { isUserTaskStartIntent } from './taskStartIntent.js';
 import { classifyProof, deliveryIdentity } from './DeliveryRecovery.js';
 import { digest, effectId } from './identity.js';
+import { safeSegment } from './identity.js';
+import type { TaskStartCause } from './TaskStartCause.js';
 
 import type { JsonValue } from '../contracts.js';
 import type {
@@ -28,17 +33,6 @@ interface Obligations {
   fingerprint: string;
   deliveries: DeliveryIntent[];
   retractions: Retraction[];
-}
-
-function settledAdmission(proof: DeliveryAdmission): boolean {
-  const receipt = proof.receipt;
-  return (
-    proof.outcome === 'admitted' &&
-    !!receipt &&
-    typeof receipt === 'object' &&
-    !Array.isArray(receipt) &&
-    ['not-sent', 'terminal'].includes(String(receipt.phase))
-  );
 }
 
 /** Continuation of one canonical Task decision; no policy or notification is invoked on replay. */
@@ -157,13 +151,78 @@ export class TaskRecovery {
     );
   }
 
+  /** Called only under Team's fence, using an exact persisted input/outbox identity. */
+  lookupTaskStartCause(intent: DeliveryIntent, receipt: CommandReceipt, mode: 'current' | 'historical' = 'current'): TaskStartCause | null {
+    if (!isUserTaskStartIntent(receipt.command)) return null;
+    const created = receipt.command.operation === 'task.create';
+    if (receipt.phase !== 'completed' || (mode === 'current' && !this.current(receipt))) throw new TeamOwnerError('hold');
+    const obligations = this.obligations(receipt);
+    const plan = this.mutations.load(receipt);
+    const matching = obligations?.deliveries.filter(
+      (entry) =>
+        digest(deliveryIdentity(entry)) === digest(deliveryIdentity(intent)) &&
+        entry.commandId === receipt.commandId &&
+        entry.principalId === receipt.principalId &&
+        entry.authorityRevision === receipt.authorityRevision
+    );
+    if (!plan || !matching || matching.length !== 1 || !Array.isArray(plan.notifications))
+      throw new TeamOwnerError('hold');
+    const recipient = receipt.taskRecipients?.find(
+      (entry) =>
+        entry.delivery &&
+        digest(deliveryIdentity({ ...intent, binding: entry.delivery })) ===
+          digest(deliveryIdentity(intent))
+    );
+    const notifications = plan.notifications.filter(
+      (entry) =>
+        entry.member === recipient?.name &&
+        entry.messageId === intent.messageId &&
+        entry.content === intent.content
+    );
+    const result = plan.result;
+    if (!result || typeof result !== 'object' || Array.isArray(result))
+      throw new TeamOwnerError('hold');
+    const task = created ? result : result.task;
+    if (
+      !task ||
+      typeof task !== 'object' ||
+      Array.isArray(task) ||
+      typeof task.id !== 'string' ||
+      (!created && result.notifiedOwner !== true) ||
+      (created && (task.id !== receipt.effects.taskId || task.status !== 'in_progress')) ||
+      notifications.length !== 1 ||
+      digest(receipt.result) !== digest(plan.result) ||
+      receipt.taskHash !== plan.taskHash ||
+      intent.messageId !== receipt.effects.messageId ||
+      intent.inputId !== intent.deliveryId ||
+      intent.deliveryId !==
+        effectId(
+          'task-notification',
+          receipt.binding.backendId,
+          receipt.binding.teamId,
+          receipt.commandId,
+          intent.messageId
+        )
+    )
+      throw new TeamOwnerError('hold');
+    safeSegment(task.id);
+    return Object.freeze({
+      taskId: task.id,
+      taskStartCommandId: receipt.commandId,
+      messageId: intent.messageId,
+      deliveryId: intent.deliveryId,
+      inputId: intent.inputId,
+      binding: Object.freeze(deliveryIdentity(intent).binding),
+    });
+  }
+
   private provenRetraction(entry: Retraction): boolean {
     if (!entry.proof || !entry.fingerprint || !/^[a-f0-9]{64}$/.test(entry.fingerprint))
       return false;
     const outcome = classifyProof(entry.intent, entry.proof, {
       fingerprintDelivery: () => entry.fingerprint!,
     });
-    return outcome === 'not_admitted' || (outcome === 'admitted' && settledAdmission(entry.proof));
+    return outcome === 'not_admitted' || (outcome === 'admitted' && settledRuntimeAdmission(entry.proof));
   }
 
   retracting(raw: ImmutableDelivery): boolean {
@@ -178,7 +237,7 @@ export class TaskRecovery {
 
   /** Cancellation is authorized by the current deleting Task principal, not a revoked prior sender. */
   authorizeRetraction(raw: ImmutableDelivery): boolean {
-    return this.store.list<CommandReceipt>('commands').some((receipt) => {
+    return listProductCommandReceipts(this.store).some((receipt) => {
       if (['completed', 'rejected'].includes(receipt.phase)) return false;
       let matches = false;
       try {
@@ -209,13 +268,11 @@ export class TaskRecovery {
     runtime?: TeamRuntimeDeliveryPort
   ): Promise<{ commandId: string; outcome: 'completed' | 'held' }[]> {
     const receipts = this.store.fenced(() =>
-      this.store
-        .list<CommandReceipt>('commands')
-        .filter(
-          (receipt) =>
-            receipt.command.operation !== 'message.send' &&
-            !['completed', 'rejected'].includes(receipt.phase)
-        )
+      listProductCommandReceipts(this.store).filter(
+        (receipt) =>
+          receipt.command.operation !== 'message.send' &&
+          !['completed', 'rejected'].includes(receipt.phase)
+      )
     );
     const results: { commandId: string; outcome: 'completed' | 'held' }[] = [];
     for (const receipt of receipts) {
@@ -232,7 +289,7 @@ export class TaskRecovery {
           let response = await runtime.lookupDelivery(structuredClone(retraction.intent));
           let proof = classifyProof(retraction.intent, response, runtime);
           const settled = (): boolean =>
-            proof === 'not_admitted' || (proof === 'admitted' && settledAdmission(response));
+            proof === 'not_admitted' || (proof === 'admitted' && settledRuntimeAdmission(response));
           if (!settled()) {
             if (!runtime.cancelDelivery) throw new TeamOwnerError('hold');
             response = await runtime.cancelDelivery(structuredClone(retraction.intent));

@@ -289,7 +289,16 @@ test('actual CLI speaks NDJSON from an unrelated TEST cwd with no native/provide
   child.stdout.setEncoding('utf8');
   try {
     child.stdin.write(request(1, 'host.handshake', { protocolVersion: 1 }));
-    const [chunk] = (await once(child.stdout, 'data')) as [string];
+    const nextFrame = () =>
+      Promise.race([
+        once(child.stdout, 'data') as Promise<[string]>,
+        exit.then(([code, signal]) => {
+          throw new Error(
+            `CLI exited before its expected frame: code=${String(code)} signal=${String(signal)}`
+          );
+        }),
+      ]);
+    const [chunk] = await nextFrame();
     const response = JSON.parse(chunk.trim()) as {
       id: number;
       result: { protocolVersion: number; limits: unknown };
@@ -298,7 +307,7 @@ test('actual CLI speaks NDJSON from an unrelated TEST cwd with no native/provide
     assert.equal(response.result.protocolVersion, 1);
     assert.deepEqual(response.result.limits, DEFAULT_HOST_LIMITS);
     child.stdin.write(request(2, 'task.create'));
-    const [unknown] = (await once(child.stdout, 'data')) as [string];
+    const [unknown] = await nextFrame();
     assert.deepEqual((JSON.parse(unknown.trim()) as { error: unknown }).error, {
       code: -32601,
       message: 'Method not found',

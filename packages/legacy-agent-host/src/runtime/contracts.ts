@@ -1,9 +1,12 @@
+import type { Input } from '@agent-teams/provider-session-contracts';
 import type {
   DriverFactory,
   InteractionReply,
   OpenConfig,
 } from '@agent-teams/provider-session-contracts';
 import type { JsonValue } from '../contracts.js';
+import type { InputPreparationRequest, PreparedInputProof, RuntimeContextEpoch, RuntimeInputPreparation } from './inputPreparation.js';
+import type { RuntimeEventStorage } from './activityContracts.js';
 import type { CheckpointAttempt, CheckpointStorage } from './checkpointContracts.js';
 
 export interface RuntimeBinding {
@@ -20,6 +23,7 @@ export interface RuntimeDelivery {
   inputId: string;
   messageId: string;
   content: string;
+  attachments?: NonNullable<Input['attachments']>;
 }
 
 export interface RuntimeAdmission {
@@ -42,6 +46,8 @@ export interface RuntimeInput {
     | 'not-sent'
     | 'unknown';
   terminal?: 'succeeded' | 'failed' | 'cancelled';
+  /** Exact native context supplement; original Team intent/fingerprint never changes. */
+  preparation?: RuntimeInputPreparation;
 }
 
 export interface RuntimeInteraction {
@@ -68,6 +74,9 @@ export interface RuntimeSessionRecord {
   control?: { inputId: string; operationRef: string; phase: 'pending' | 'unknown' };
   closeClaimed?: boolean;
   checkpoints?: CheckpointAttempt[];
+  activitySequence?: number;
+  /** Persisted technical context boundaries, independent of derived event retention. */
+  contextEpochs?: RuntimeContextEpoch[];
   restoredFrom?: { reference: string; sourceBinding: RuntimeBinding };
   inputs: RuntimeInput[];
   interactions: RuntimeInteraction[];
@@ -93,7 +102,9 @@ export interface RuntimeStore {
 
 export interface RuntimeOwnerOptions {
   store: RuntimeStore;
-  driverFactory: DriverFactory;
+  driverFactory: {
+    open(config: Parameters<DriverFactory['open']>[0], assertAuthority?: () => void): ReturnType<DriverFactory['open']>;
+  };
   profileId: string;
   hostIncarnation: string;
   /** Trusted synchronous authority check under the member fence, including lookup disclosure. */
@@ -104,11 +115,16 @@ export interface RuntimeOwnerOptions {
   ): boolean;
   /** Current mandatory dependency/bootstrap proof; absence safely holds work dispatch. */
   canDispatch?(binding: RuntimeBinding, intent: RuntimeDelivery): boolean;
+  /** Synchronous private composition callbacks under the existing member fence; never await. */
+  prepareInput?(binding: RuntimeBinding, request: InputPreparationRequest): { prefix: string; epochIds: readonly string[]; teamProof: string } | undefined;
+  inputPrepared?(binding: RuntimeBinding, proof: PreparedInputProof): undefined;
+  contextObserved?(binding: RuntimeBinding, epoch: RuntimeContextEpoch): undefined;
   maxQueuedInputs?: number;
   maxInputBytes?: number;
   maxPendingInteractions?: number;
   interactionTtlMs?: number;
   checkpoints?: CheckpointStorage;
+  events?: RuntimeEventStorage;
   checkpointIdleTimeoutMs?: number;
 }
 

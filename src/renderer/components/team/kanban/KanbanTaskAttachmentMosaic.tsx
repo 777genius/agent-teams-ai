@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { api } from '@renderer/api';
 import { ImageLightbox } from '@renderer/components/team/attachments/ImageLightbox';
 import { useStore } from '@renderer/store';
 import { Loader2, MessageSquare } from 'lucide-react';
@@ -102,7 +103,7 @@ const LoadedKanbanTaskAttachmentMosaic = ({
       if (pending) return pending;
 
       const requestScope = scopeKey;
-      const request = window.electronAPI.teams
+      const request = api.teams
         .getAttachments(teamName, messageId)
         .then((attachments) => {
           const loaded = new Map<string, string>();

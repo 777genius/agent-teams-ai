@@ -1,4 +1,10 @@
 {
   "extends": "../../../tsconfig.json",
-  "include": ["../../../src/features/agent-backend/**/*.ts", "./*.test.ts"]
+  "compilerOptions": { "types": ["node", "vitest/globals", "react"] },
+  "include": [
+    "../../../src/features/agent-backend/**/*.ts",
+    "./*.test.ts",
+    "../../../src/types/pica.d.ts",
+    "../../../src/types/agent-teams-controller.d.ts"
+  ]
 }

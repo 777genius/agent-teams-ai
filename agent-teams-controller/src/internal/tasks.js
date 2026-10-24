@@ -824,6 +824,8 @@ function listTaskInventory(context, filters = {}) {
 }
 
 function buildMemberTaskProtocol(teamName, messagingProtocol = createMemberMessagingProtocol('native')) {
+    const example = (tool, payload, legacy) => messagingProtocol.boundTeamToolExample
+        ? messagingProtocol.boundTeamToolExample(tool, payload) : legacy;
     const notifyLeadExample = messagingProtocol.buildLeadMessageExample({
         teamName,
         leadName: '<lead-name>',
@@ -844,16 +846,16 @@ function buildMemberTaskProtocol(teamName, messagingProtocol = createMemberMessa
    - Human-facing summaries should use the short display label like #abcd1234 for readability.
 1. If you are about to do implementation/fix work on a task yourself, make sure the owner reflects the actual implementer:
    - If the task is unassigned, FIRST claim it for yourself with MCP tool task_set_owner:
-     { teamName: "${teamName}", taskId: "<taskId>", owner: "<your-name>", actor: "<your-name>" }
+     ${example('task_set_owner', { taskId: "<taskId>", owner: "<your-name>" }, `{ teamName: "${teamName}", taskId: "<taskId>", owner: "<your-name>", actor: "<your-name>" }`)}
    - If the task belongs to someone else, do NOT take it yourself. Ask the current owner or team lead to hand it off. The team lead may explicitly reassign it with task_set_owner.
    - Do this only when you are genuinely taking over the work. Collaboration alone does not grant lifecycle ownership.
    - Reviewing, approving, or leaving comments does NOT require changing ownership.
 2. Use MCP tool task_start to mark task started:
-   { teamName: "${teamName}", taskId: "<taskId>", actor: "<your-name>" }
+   ${example('task_start', { taskId: "<taskId>" }, `{ teamName: "${teamName}", taskId: "<taskId>", actor: "<your-name>" }`)}
    - Start the task ONLY when you are actually beginning work on it.
    - Do NOT start multiple tasks at once unless the team lead explicitly directs parallel work.
 3. Use MCP tool task_complete BEFORE sending your final reply:
-   { teamName: "${teamName}", taskId: "<taskId>", actor: "<your-name>" }
+   ${example('task_complete', { taskId: "<taskId>" }, `{ teamName: "${teamName}", taskId: "<taskId>", actor: "<your-name>" }`)}
    - CRITICAL: Before calling task_complete, you MUST post a task comment with your results via task_add_comment. Save the comment.id from the response — you will need it in the next step. The task comment is the primary delivery channel — the user reads results on the task board. A direct message to the lead is NOT a substitute: direct messages are ephemeral and not visible on the board. If you only send a direct message without a task comment, the user will never see your work.
    - If a new task comment means you must do more real work on that same task, FIRST add a short task comment saying what you are going to do, THEN run task_start again before doing the follow-up work.
    - After that follow-up work finishes, add a short task comment with the result, what changed, or what you verified.
@@ -864,25 +866,25 @@ function buildMemberTaskProtocol(teamName, messagingProtocol = createMemberMessa
      Example: ${notifyLeadExample}${runtimeVisibleMessageRule}${runtimeTaskToolHint}
    - After task_complete, call review_request ONLY when review is explicitly expected for THIS task and a concrete reviewer is already known.
      Example:
-     { teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", reviewer: "<reviewer-name>" }
+     ${example('review_request', { taskId: "<taskId>", reviewer: "<reviewer-name>" }, `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", reviewer: "<reviewer-name>" }`)}
      Do NOT infer mandatory review just from free-form teammate roles like "reviewer", "qa", or "tech-lead".
      If review is not explicitly requested yet or the reviewer is still undecided, leave the task completed and wait.
 3b. When you BEGIN reviewing a task, FIRST call review_start to ensure it appears in the REVIEW column:
-   { teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>" }
+   ${example('review_start', { taskId: "<taskId>" }, `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>" }`)}
    This is MANDATORY before review_approve or review_request_changes. Without this step, the kanban board may not show the task in REVIEW during your review.
 4. If you are asked to review and the task is accepted, move it to APPROVED (not DONE) with MCP tool review_approve:
-   { teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", note?: "<optional note>", notifyOwner: true }
+   ${example('review_approve', { taskId: "<taskId>", note: "<optional note>", notifyOwner: true }, `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", note?: "<optional note>", notifyOwner: true }`)}
    CRITICAL: Text comments like "approved" or "LGTM" do NOT change the kanban board. You MUST call review_approve to move a task from REVIEW to APPROVED. Without the tool call the task stays stuck in the REVIEW column.
 5. If review fails and changes are needed, use MCP tool review_request_changes:
-   { teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", comment: "<what to fix>" }
+   ${example('review_request_changes', { taskId: "<taskId>", comment: "<what to fix>" }, `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", comment: "<what to fix>" }`)}
 6. NEVER skip status updates. A task is NOT done until completed status is written.
    - Never "bulk-complete" a batch of tasks at the end. Update status incrementally as you work.
 7. To reply to a comment on a task, use MCP tool task_add_comment:
-   { teamName: "${teamName}", taskId: "<taskId>", text: "<your reply>", from: "<your-name>" }
+   ${example('task_add_comment', { taskId: "<taskId>", text: "<your reply>" }, `{ teamName: "${teamName}", taskId: "<taskId>", text: "<your reply>", from: "<your-name>" }`)}
 8. When discussing a task with a teammate and you have important findings, decisions, blockers, or progress updates — record them as a task comment:
-   { teamName: "${teamName}", taskId: "<taskId>", text: "<summary of your finding or decision>", from: "<your-name>" }
+   ${example('task_add_comment', { taskId: "<taskId>", text: "<summary of your finding or decision>" }, `{ teamName: "${teamName}", taskId: "<taskId>", text: "<summary of your finding or decision>", from: "<your-name>" }`)}
    Do NOT comment on trivial coordination messages. Only comment when the information is valuable context for the task.
-9. When sending a message about a specific task, include its short display label like #<displayId> in your ${messagingProtocol.sendToolName} summary field for traceability.
+9. When sending a message about a specific task, include its short display label like #<displayId> in your ${messagingProtocol.sendToolName} ${messagingProtocol.boundTeamToolExample ? 'text or taskRefs' : 'summary field'} for traceability.
    - If the message is NOT about a real board task, do NOT include any # task label.
    - Never invent placeholder task refs such as #00000000 or #<displayId>, and never copy an id straight out of an example: anything in angle brackets is a placeholder you must replace with the real value, and an example id is not a real board id.
 10. In ALL human-facing or teammate-facing message text, when you mention a task reference, ALWAYS write it with a leading # (for example: #abcd1234, not abcd1234 or "task abcd1234").
@@ -898,14 +900,14 @@ function buildMemberTaskProtocol(teamName, messagingProtocol = createMemberMessa
 12. CLARIFICATION PROTOCOL (CRITICAL — MANDATORY):
    When you are blocked and need information to continue a task, you MUST do ALL steps below — skipping the board update or comment breaks traceability:
    a) STEP 1 — FIRST, set the clarification flag with MCP tool task_set_clarification:
-      { teamName: "${teamName}", taskId: "<taskId>", value: "lead" }
+      ${example('task_set_clarification', { taskId: "<taskId>", value: "lead" }, `{ teamName: "${teamName}", taskId: "<taskId>", value: "lead" }`)}
    b) STEP 2 — THEN, add a task comment describing exactly what you need:
-      { teamName: "${teamName}", taskId: "<taskId>", text: "question / blocker / missing info", from: "<your-name>" }
+      ${example('task_add_comment', { taskId: "<taskId>", text: "question / blocker / missing info" }, `{ teamName: "${teamName}", taskId: "<taskId>", text: "question / blocker / missing info", from: "<your-name>" }`)}
    c) STEP 3 — THEN, send a message to your team lead via ${messagingProtocol.sendLeadPhrase} so they notice it promptly.
    IMPORTANT: Always update the task board BEFORE sending the message. The flag + task comment are what make the request durable and visible on the board.
    d) The clarification flag is durable until it is cleared explicitly.
       When the blocker is truly resolved, clear the flag yourself with:
-      { teamName: "${teamName}", taskId: "<taskId>", value: "clear" }
+      ${example('task_set_clarification', { taskId: "<taskId>", value: "clear" }, `{ teamName: "${teamName}", taskId: "<taskId>", value: "clear" }`)}
    e) Do NOT set clarification to "user" yourself — only the team lead escalates to the user.
 13. DEPENDENCY AWARENESS:
     When your task has blockedBy dependencies, check if they are completed before starting.
@@ -918,7 +920,7 @@ function buildMemberTaskProtocol(teamName, messagingProtocol = createMemberMessa
     - Awareness items are watch-only context. Do NOT start work from Awareness unless the lead reroutes the task or you become the actionOwner first.
     - Finish existing in_progress tasks first.
     - A newly assigned task must NOT remain silently pending/TODO. If you are idle and the task is ready to start, start it now. If it must wait because you are still busy on another task, blocked, or still need more context, immediately add a short task comment on that waiting task with the reason and your best ETA or what you are waiting on.
-    - Keep any task you have not actually started in pending/TODO (use task_set_status with status pending and actor "<your-name>" if it was moved too early).
+    - Keep any task you have not actually started in pending/TODO (use task_set_status with status pending${messagingProtocol.boundTeamToolExample ? ' and a unique commandId' : ' and actor "<your-name>"'} if it was moved too early).
     - If you need more context for an in_progress task, you MAY call task_get, but it is not mandatory when task_briefing already gives enough detail.
     - Before starting a needsFix or pending task, call task_get for that specific task first.
     - If you are the one doing the implementation/fixes and the owner is missing, self-claim with task_set_owner immediately before task_start. If someone else owns it, ask that owner or the lead to hand it off instead of taking it yourself.
@@ -940,6 +942,7 @@ function normalizeMemberName(value) {
 }
 
 async function memberBriefing(context, memberName, options = {}) {
+    const boundTeamToolExample = options.boundTeamToolExample === true || context.boundTaskTools === true;
     const requestedMemberName = String(memberName).trim();
     const requestedMemberKey = normalizeMemberName(requestedMemberName);
     const resolved = runtimeHelpers.resolveTeamMembers(context.paths);
@@ -953,7 +956,7 @@ async function memberBriefing(context, memberName, options = {}) {
     let member =
         resolved.members.find((entry) => normalizeMemberName(entry && entry.name) === requestedMemberKey) ||
         null;
-    if (!member) {
+    if (!member && options.allowRuntimeIdentityFallback !== false && !boundTeamToolExample) {
         const runtimeIdentity = runtimeHelpers.getCurrentRuntimeMemberIdentity();
         const runtimeAgentName = normalizeMemberName(runtimeIdentity && runtimeIdentity.agentName);
         const runtimeAgentId = String((runtimeIdentity && runtimeIdentity.agentId) || '').trim().toLowerCase();
@@ -995,7 +998,7 @@ async function memberBriefing(context, memberName, options = {}) {
     const leadName = runtimeHelpers.inferLeadName(context.paths);
     const effectiveMember = member;
     const messagingProtocol = createMemberMessagingProtocol(
-        options.runtimeProvider || resolveMemberRuntimeProvider(effectiveMember)
+        options.runtimeProvider || resolveMemberRuntimeProvider(effectiveMember), boundTeamToolExample
     );
 
     const role =
@@ -1046,9 +1049,9 @@ async function memberBriefing(context, memberName, options = {}) {
                 messagingProtocol.visibleMessageRule,
                 `${messagingProtocol.runtimeProvider === 'opencode' ? 'OpenCode' : 'Codex Native'} bootstrap silence rule: if this briefing was requested because the desktop app attached or reconnected you, do not send readiness, understood, idle, or no-task acknowledgements to the user, lead, or teammates.`,
                 'This briefing already includes your current Task briefing. If it shows no actionable tasks, stop and wait silently. Do not call task_briefing again in the same bootstrap turn just to check for work.',
-                'Use agent-teams_message_send only for actual app-delivered messages, actionable task coordination, blockers, or task results.',
+                `Use ${messagingProtocol.sendToolName} only for actual app-delivered messages, actionable task coordination, blockers, or task results.`,
                 messagingProtocol.taskToolHint,
-                'For cross-team replies or messages to another team, call agent-teams_cross_team_send with toTeam/fromMember. Do not put "cross_team_send" or a remote team name into message_send.to.',
+                boundTeamToolExample ? 'For cross-team messages, use cross_team_send with commandId, toTeam, text and optional taskRefs. Sender and source Team are bound by the connection.' : 'For cross-team replies or messages to another team, call agent-teams_cross_team_send with toTeam/fromMember. Do not put "cross_team_send" or a remote team name into message_send.to.',
             ]
             : []),
         `CRITICAL: A newly assigned task must NOT remain silently pending/TODO. If you are idle and the task is ready to start, start it now. If it must wait because you are already finishing another task, blocked, or still need more context, leave a short task comment on the waiting task immediately with the reason and your best ETA or what you are waiting on, keep it in pending/TODO, and only move it to in_progress with task_start when you truly begin.`,
@@ -1085,7 +1088,7 @@ async function memberBriefing(context, memberName, options = {}) {
         '',
         buildMemberTaskProtocol(context.teamName, messagingProtocol),
         '',
-        buildMemberProcessProtocol(context.teamName)
+        buildMemberProcessProtocol(context.teamName, messagingProtocol.boundTeamToolExample)
     );
 
     if (activeProcesses.length > 0) {

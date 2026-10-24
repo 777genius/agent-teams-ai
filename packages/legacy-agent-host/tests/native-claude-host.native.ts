@@ -1,119 +1,18 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
-import { createInterface } from 'node:readline';
 import { test } from 'node:test';
 
 import { CONTEXT_MARKER, record, startNativeTeamModel } from './fixtures/native-claude-team/model.ts';
+import { fileHash, tick, treeHash, startHost } from './fixtures/native-host.ts';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 
 const hash = (bytes: Uint8Array | string) => createHash('sha256').update(bytes).digest('hex');
-const fileHash = async (path: string) => hash(await readFile(path));
-const tick = () => new Promise<void>((done) => setTimeout(done, 25));
 
-// Pins the complete compiled/source host, including transitive composition changes.
-// Sorted relative path + NUL + exact file bytes + NUL, recursively for .js/.ts.
-async function treeHash(root: string, suffix: string): Promise<string> {
-  async function paths(directory: string, prefix = ''): Promise<string[]> {
-    const result: string[] = [];
-    for (const entry of await readdir(directory, { withFileTypes: true })) {
-      const relative = prefix + entry.name;
-      if (entry.isDirectory()) result.push(...await paths(join(directory, entry.name), relative + '/'));
-      else if (entry.isFile() && entry.name.endsWith(suffix)) result.push(relative);
-    }
-    return result;
-  }
-  const digest = createHash('sha256');
-  for (const path of (await paths(root)).sort()) digest.update(path).update('\0').update(await readFile(join(root, path))).update('\0');
-  return digest.digest('hex');
-}
-
-function startHost(options: { node: string; entry: string; root: string; profile: string; profileHash: string }) {
-  const child = spawn(options.node, [options.entry], {
-    cwd: options.root,
-    env: {
-      HOME: join(options.root, 'home'), TMPDIR: join(options.root, 'tmp'),
-      PATH: `${dirname(options.node)}:/usr/bin:/bin`,
-      LEGACY_AGENT_HOST_PROFILE_PATH: options.profile,
-      LEGACY_AGENT_HOST_PROFILE_SHA256: options.profileHash,
-    },
-    stdio: ['pipe', 'pipe', 'pipe'],
-  });
-  const lines = createInterface({ input: child.stdout, crlfDelay: Infinity });
-  const pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void; timer: NodeJS.Timeout }>();
-  const frameFacts: { id: number; method: string; ok: boolean }[] = [];
-  let nextId = 0;
-  let stdoutValid = true;
-  let diagnosticBytes = 0;
-  let exited = false;
-  const exit = new Promise<void>((done) => {
-    child.once('exit', () => { exited = true; done(); });
-    child.once('error', () => { exited = true; done(); });
-  });
-  child.stderr.on('data', (chunk: Buffer) => { diagnosticBytes += chunk.length; });
-  lines.on('line', (line) => {
-    try {
-      assert.ok(Buffer.byteLength(line) < 256 * 1024);
-      const frame = record(JSON.parse(line) as unknown);
-      assert.equal(frame.jsonrpc, '2.0');
-      if (frame.id === undefined && typeof frame.method === 'string') return;
-      assert.equal(typeof frame.id, 'number');
-      const waiter = pending.get(Number(frame.id));
-      assert.ok(waiter, 'one answer for a test-owned RPC request');
-      pending.delete(Number(frame.id)); clearTimeout(waiter.timer);
-      if (frame.error) waiter.reject(new Error('Host returned RPC protocol error'));
-      else waiter.resolve(frame.result);
-    } catch {
-      stdoutValid = false;
-      for (const waiter of pending.values()) { clearTimeout(waiter.timer); waiter.reject(new Error('Host stdout protocol violation')); }
-      pending.clear();
-    }
-  });
-  async function waitExit(timeout: number) {
-    const end = Date.now() + timeout;
-    while (!exited && Date.now() < end) await tick();
-    return exited;
-  }
-  return {
-    child,
-    async rpc(method: string, params: unknown): Promise<Record<string, unknown>> {
-      assert.ok(!exited && stdoutValid);
-      const id = ++nextId;
-      const response = new Promise<unknown>((resolve, reject) => {
-        const timer = setTimeout(() => { pending.delete(id); reject(new Error(`Host RPC ${method} exceeded 60 seconds; intent retained`)); }, 60_000);
-        pending.set(id, { resolve, reject, timer });
-      });
-      child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n');
-      const result = record(await response);
-      if (method.startsWith('runtime.') && result.ok === true) {
-        const safe = record(result.value);
-        assert.ok(Object.keys(safe).every((key) => ['memberId', 'phase', 'sealed', 'custody', 'nativeReady', 'attached', 'inputs', 'interactions', 'diagnostic'].includes(key)), 'runtime RPC exposes only its explicit safe projection');
-        assert.ok((safe.inputs as unknown[]).map(record).every((input) => Object.keys(input).every((key) => ['inputId', 'phase', 'terminal'].includes(key))));
-        assert.equal(JSON.stringify(safe).includes('Bearer '), false);
-      }
-      frameFacts.push({ id, method, ok: result.ok !== false });
-      return result;
-    },
-    async close() {
-      child.stdin.end();
-      if (!await waitExit(12_000)) { child.kill('SIGTERM'); assert.ok(await waitExit(12_000), 'captured Host must confirm provider cleanup before exiting'); }
-      await exit;
-      lines.close();
-      for (const waiter of pending.values()) { clearTimeout(waiter.timer); waiter.reject(new Error('Host closed')); }
-      pending.clear();
-      assert.equal(child.exitCode, 0, 'Host exit zero confirms Runtime/provider cleanup completed');
-      assert.equal(child.signalCode, null);
-      assert.equal(stdoutValid, true);
-    },
-    facts: () => ({ pid: child.pid, exitCode: child.exitCode, signalCode: child.signalCode, stdoutValid, diagnosticBytes, frames: frameFacts }),
-  };
-}
-
-test('standalone Host stdio routes two business messages through actual Claude Runtime and recovers receipts', { timeout: 180_000 }, async (t) => {
+test('standalone Host applies selected model/effort to actual native requests and recovers original launch receipts', { timeout: 180_000 }, async (t) => {
   assert.equal(process.env.LEGACY_NATIVE_CLAUDE_HOST_GO, '1', 'separate root GO required');
   const repo = resolve(import.meta.dirname, '../../..');
   const pkg = join(repo, 'packages/legacy-agent-host');
@@ -147,11 +46,12 @@ test('standalone Host stdio routes two business messages through actual Claude R
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-native-claude-host-')));
   t.diagnostic(`TEST receipt: ${join(root, 'receipt.json')}`);
   for (const directory of ['home', 'config', 'tmp', 'workspace', 'store', 'xdg-config', 'xdg-data', 'xdg-cache']) await mkdir(join(root, directory), { mode: 0o700 });
-  const model = await startNativeTeamModel();
+  const model = await startNativeTeamModel({ requireVisibleReply: true });
   let current: ReturnType<typeof startHost> | undefined;
   const hosts: ReturnType<ReturnType<typeof startHost>['facts']>[] = [];
   const receipts: Record<string, unknown>[] = [];
   let finalRuntime: Record<string, unknown> = {};
+  let launchEvidence: Record<string, unknown> = {};
   let passed = false;
   try {
     const namespace = basename(root);
@@ -194,13 +94,35 @@ test('standalone Host stdio routes two business messages through actual Claude R
     const binding = { schemaVersion: 1, handleId: `TEST-handle-${namespace}`, owner, scope };
     const envelope = (commandId: string, payload: unknown) => ({ commandId, binding, payload });
     const start = () => startHost({ node, entry, root, profile: profilePath, profileHash: hash(profileBytes) });
-    const command = (label: string) => envelope(`human-native-${label.toLowerCase()}`, { operation: 'message.send', payload: { to: 'alice', text: `NATIVE_TEAM_${label}` } });
+    const command = (label: string) => {
+      const commandId = `human-native-${label.toLowerCase()}`;
+      return envelope(commandId, { operation: 'message.send', payload: {
+        to: 'alice', text: `NATIVE_TEAM_${label}`, messageId: commandId,
+        summary: `TEST prepared human message ${label}`, actionMode: 'do',
+      } });
+    };
     current = start();
     const handshake = await current.rpc('host.handshake', { protocolVersion: 1 });
     assert.ok((handshake.capabilities as string[]).includes('runtime.member-session'));
-    const opened = await current.rpc('runtime.open', envelope('TEST-open', { memberId: 'alice-id' }));
-    assert.equal(opened.ok, true);
-    assert.equal(record(opened.value).nativeReady, true, 'actual D native mandatory MCP discovery');
+    const before = await current.rpc('team.launch.read', envelope('TEST-launch-read', {}));
+    assert.equal(before.ok, true);
+    const original = record(before.value);
+    const launchPayload = {
+      launchId: original.launchId, rosterRevision: original.rosterRevision,
+      configuration: { members: [{ memberId: 'alice-id', model: 'claude-opus-4-6', effort: 'medium', fastMode: false, permissions: 'bypass', context: 'model-default' }] },
+    };
+    const started = await current.rpc('team.launch.start', envelope('TEST-selected-launch-options', launchPayload));
+    assert.equal(started.ok, true, JSON.stringify(started));
+    let ready = false;
+    const readyDeadline = Date.now() + 45_000;
+    while (!ready && Date.now() < readyDeadline) {
+      const state: Record<string, unknown> = await current.rpc('runtime.read', envelope('TEST-launch-readiness', { memberId: 'alice-id' }));
+      assert.equal(state.ok, true);
+      ready = record(state.value).nativeReady === true;
+      if (!ready) await tick();
+    }
+    assert.equal(ready, true, 'actual D native mandatory MCP discovery with prepared options');
+    launchEvidence = { originalModel: 'claude-sonnet-4-6', selectedModel: 'claude-opus-4-6', selectedEffort: 'medium', startCommandId: 'TEST-selected-launch-options', launch: started.value };
     for (const label of ['ONE', 'TWO']) {
       const receipt = await current.rpc('team.execute', command(label));
       assert.equal(receipt.ok, true); assert.equal(record(receipt.value).phase, 'completed');
@@ -238,6 +160,9 @@ test('standalone Host stdio routes two business messages through actual Claude R
     assert.equal(await readFile(join(root, 'workspace/native-effect.txt'), 'utf8'), 'ONE\nTWO\n');
     assert.equal(model.observations.length, 11); assert.deepEqual(model.failures, []);
     assert.ok(model.observations.every((item) => item.contextEffective));
+    assert.ok(model.observations.every((item) => item.visibleReplyContract));
+    assert.ok(model.observations.every((item) => item.requestedModel === 'claude-opus-4-6'), 'selected model reaches every actual native HTTP request');
+    assert.ok(model.observations.every((item) => item.requestedEffort === 'medium'), 'selected effort reaches every actual native HTTP request');
     assert.ok(model.observations.some((item) => item.toolResultError), 'actual native Bash exit seven returns an error tool result before successful conversation completion');
     assert.ok(model.observations.filter((item) => item.turn === 'NATIVE_TEAM_TWO').every((item) => item.priorTurn));
     const stopped = await current.rpc('runtime.stop', envelope('TEST-stop', { memberId: 'alice-id' }));
@@ -247,6 +172,8 @@ test('standalone Host stdio routes two business messages through actual Claude R
     const requestsBeforeRestart = model.observations.length;
     current = start();
     await current.rpc('host.handshake', { protocolVersion: 1 });
+    const replayed = await current.rpc('team.launch.start', envelope('TEST-selected-launch-options', launchPayload));
+    assert.equal(replayed.ok, true, 'original configured launch replays after Host restart');
     for (const [index, label] of ['ONE', 'TWO'].entries()) {
       assert.deepEqual(await current.rpc('team.lookup', command(label)), receipts[index]);
       assert.deepEqual(await current.rpc('team.execute', command(label)), receipts[index]);
@@ -266,10 +193,10 @@ test('standalone Host stdio routes two business messages through actual Claude R
       await model.close();
       await writeFile(join(root, 'receipt.json'), JSON.stringify({
         status: passed ? 'PASS' : 'INCOMPLETE', root, artifacts, hosts,
-        cleanupConfirmed, businessReceipts: receipts, runtime: finalRuntime,
+        cleanupConfirmed, businessReceipts: receipts, runtime: finalRuntime, launchEvidence,
         modelObservations: model.observations, modelFailures: model.failures,
-        scope: 'Standalone Host stdio + RuntimeTeamCoordinator + public D + actual Claude native/MCP, single member',
-        excluded: ['Desktop UI', 'mixed providers', 'whole P4', 'aggregate team bootstrap', 'real authentication'],
+        scope: 'Explicit model/effort launch configuration through standalone Host stdio + RuntimeTeamCoordinator + public D + actual Claude native HTTP/MCP, two rich inputs and canonical replies, restart/replay without new allocation',
+        excluded: ['Desktop UI', 'mixed providers', 'whole P4', 'multi-member team/bootstrap', 'real authentication'],
       }, null, 2), { mode: 0o600 });
     }
   }

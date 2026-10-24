@@ -1,5 +1,7 @@
 import { isAbsolute } from 'node:path';
 
+import { hostPayloadLimit, type JsonValue } from '@agent-teams/legacy-agent-host/contracts';
+
 export type { BackendHandle } from '../../contracts';
 
 export interface BackendOwnerRef {
@@ -40,13 +42,38 @@ export interface HandleBindingStore {
 }
 
 export class BackendRoutingError extends Error {
-  readonly outcome = 'not-dispatched';
   constructor(
-    readonly code: 'invalid-binding' | 'binding-conflict' | 'unavailable' | 'hold' | 'shutting-down'
+    readonly code:
+      | 'invalid-binding'
+      | 'binding-conflict'
+      | 'unavailable'
+      | 'hold'
+      | 'shutting-down'
+      | 'forbidden',
+    readonly outcome: 'not-dispatched' | 'unknown' = 'not-dispatched'
   ) {
     super(`Backend routing: ${code}`);
     this.name = 'BackendRoutingError';
   }
+}
+
+/** Main-owned captured context predicate; never serialized across a transport. */
+export interface BackendRequestGuard {
+  readonly isCurrent: () => boolean;
+}
+
+export function assertBackendRequestGuard(
+  guard: BackendRequestGuard | undefined,
+  outcome: 'not-dispatched' | 'unknown' = 'not-dispatched'
+): void {
+  if (!guard) return;
+  let current = false;
+  try {
+    current = guard.isCurrent() === true;
+  } catch {
+    /* Fail closed without disclosing shell state. */
+  }
+  if (!current) throw new BackendRoutingError('forbidden', outcome);
 }
 
 export function assertIdentity(value: unknown): asserts value is string {
@@ -56,6 +83,28 @@ export function assertIdentity(value: unknown): asserts value is string {
     value.length > 512 ||
     value.includes('\0')
   ) {
+    throw new BackendRoutingError('invalid-binding');
+  }
+}
+
+/** Capture an immutable, finite wire intent before any asynchronous selection or startup. */
+export function captureBackendPayload(payload: unknown, method?: string): JsonValue {
+  try {
+    const serialized = JSON.stringify(payload, (_key, value: unknown) => {
+      if (
+        (typeof value === 'number' && !Number.isFinite(value)) ||
+        value === undefined ||
+        typeof value === 'bigint' ||
+        typeof value === 'function' ||
+        typeof value === 'symbol'
+      )
+        throw new BackendRoutingError('invalid-binding');
+      return value;
+    });
+    if (Buffer.byteLength(serialized, 'utf8') > hostPayloadLimit(method))
+      throw new BackendRoutingError('invalid-binding');
+    return JSON.parse(serialized) as JsonValue;
+  } catch {
     throw new BackendRoutingError('invalid-binding');
   }
 }

@@ -1,7 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-empty-object-type -- Legacy dialog mocks use broad DTO shapes. */
+import { webcrypto } from 'node:crypto';
+
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { invalidateContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const openDashboard = vi.fn();
@@ -16,7 +19,17 @@ const fetchCliProviderStatus = vi.fn<
 const createSchedule = vi.fn();
 const updateSchedule = vi.fn();
 const teamRosterEditorSectionMock = vi.hoisted(() => ({ lastProps: null as any }));
-const projectPathSelectorMock = vi.hoisted(() => ({ onSelect: (_path: string) => {} }));
+const projectPathSelectorMock = vi.hoisted(() => ({
+  onSelect: (_path: string) => {},
+  lastProps: null as any,
+}));
+const advancedCliMock = vi.hoisted(() => ({ lastProps: null as any }));
+const runtimeSettingsMock = vi.hoisted(() => ({ lastProps: null as any }));
+const draftLoadMock = vi.hoisted(() => ({ complete: (_value: string) => {} }));
+const prepareHelperFixture = vi.hoisted(() => ({
+  real: false,
+  onLayout: null as (() => void) | null,
+}));
 type TestCliStatus = Pick<CliInstallationStatus, 'providers'> &
   Partial<Pick<CliInstallationStatus, 'flavor'>>;
 const createTeamDraftMock = vi.hoisted(() => ({
@@ -66,6 +79,7 @@ const createTeamDraftMock = vi.hoisted(() => ({
 }));
 
 const storeState = {
+  activeContextId: 'TEST-local',
   appConfig: { general: { multimodelEnabled: true } },
   cliStatus: { providers: [] } as TestCliStatus,
   cliStatusLoading: false,
@@ -83,11 +97,16 @@ const storeState = {
   teamByName: {},
   openDashboard,
   openTeamTab,
+  refreshTeamData: vi.fn(async () => {}),
 };
 
 vi.mock('@renderer/api', () => ({
   isElectronMode: () => true,
   api: {
+    agentBackend: {
+      getConnections: vi.fn(async () => ({ state: 'unconfigured', bindings: [] })),
+      invoke: vi.fn(async () => ({ ok: false, code: 'unavailable', outcome: 'not-dispatched' })),
+    },
     workspaceTrust: { getLaunchStatus: vi.fn(), getProjectStatus: vi.fn() },
     getCodexAccountSnapshot: vi.fn(async () => null),
     refreshCodexAccountSnapshot: vi.fn(async () => null),
@@ -183,7 +202,10 @@ vi.mock('@renderer/api', () => ({
 }));
 
 vi.mock('@renderer/store', () => ({
-  useStore: (selector: (state: typeof storeState) => unknown) => selector(storeState),
+  useStore: Object.assign(
+    (selector: (state: typeof storeState) => unknown) => selector(storeState),
+    { getState: () => storeState }
+  ),
 }));
 
 vi.mock('@renderer/store/slices/teamSlice', () => ({
@@ -275,6 +297,9 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
 
 vi.mock('@renderer/components/team/members/TeamRosterEditorSection', () => ({
   TeamRosterEditorSection: (props: any) => {
+    React.useLayoutEffect(() => {
+      prepareHelperFixture.onLayout?.();
+    });
     teamRosterEditorSectionMock.lastProps = props;
     const leadProviderNotice = props.leadProviderNoticeById?.[props.providerId] ?? null;
     return React.createElement(
@@ -295,14 +320,12 @@ vi.mock('@renderer/components/team/members/TeamRosterEditorSection', () => ({
 }));
 
 vi.mock('@renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog', () => ({
-  ProvisioningProviderRuntimeSettingsDialog: ({
-    openProviderId,
-  }: {
-    openProviderId: string | null;
-  }) =>
-    openProviderId
-      ? React.createElement('div', { 'data-testid': 'provider-settings' }, openProviderId)
-      : null,
+  ProvisioningProviderRuntimeSettingsDialog: (props: any) => {
+    runtimeSettingsMock.lastProps = props;
+    return props.openProviderId
+      ? React.createElement('div', { 'data-testid': 'provider-settings' }, props.openProviderId)
+      : null;
+  },
 }));
 
 vi.mock('@renderer/components/team/dialogs/SkipPermissionsCheckbox', () => ({
@@ -310,7 +333,10 @@ vi.mock('@renderer/components/team/dialogs/SkipPermissionsCheckbox', () => ({
 }));
 
 vi.mock('@renderer/components/team/dialogs/AdvancedCliSection', () => ({
-  AdvancedCliSection: () => React.createElement('div', null, 'advanced-cli'),
+  AdvancedCliSection: (props: any) => {
+    advancedCliMock.lastProps = props;
+    return React.createElement('div', null, 'advanced-cli');
+  },
 }));
 
 vi.mock('@renderer/components/team/dialogs/OptionalSettingsSection', () => ({
@@ -322,10 +348,13 @@ vi.mock('@renderer/components/team/dialogs/ProjectPathSelector', () => ({
   ProjectPathSelector: ({
     selectedProjectPath,
     onSelectedProjectPathChange,
+    ...rest
   }: {
     selectedProjectPath: string;
     onSelectedProjectPathChange: (path: string) => void;
+    [key: string]: any;
   }) => {
+    projectPathSelectorMock.lastProps = { selectedProjectPath, ...rest };
     projectPathSelectorMock.onSelect = onSelectedProjectPathChange;
     return React.createElement('div', { 'data-testid': 'project-path' }, selectedProjectPath);
   },
@@ -383,7 +412,27 @@ vi.mock('@renderer/components/ui/checkbox', () => ({
 }));
 
 vi.mock('@renderer/components/ui/combobox', () => ({
-  Combobox: () => React.createElement('div', null, 'combobox'),
+  Combobox: (props: any) =>
+    props.id === 'launch-continuation-mode' || props.id?.startsWith('resume-checkpoint-')
+      ? React.createElement(
+          'select',
+          {
+            id: props.id,
+            value: props.value,
+            disabled: props.disabled,
+            onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
+              props.onValueChange(event.target.value),
+          },
+          React.createElement('option', { value: '' }, props.placeholder ?? 'Select'),
+          props.options.map((option: any) =>
+            React.createElement(
+              'option',
+              { key: option.value, value: option.value, disabled: option.disabled },
+              option.label
+            )
+          )
+        )
+      : React.createElement('div', null, 'combobox'),
 }));
 
 vi.mock('@renderer/components/ui/dialog', () => ({
@@ -469,6 +518,7 @@ vi.mock('@renderer/hooks/useCreateTeamDraft', () => ({
 vi.mock('@renderer/hooks/useDraftPersistence', () => ({
   useDraftPersistence: () => {
     const [value, setValue] = React.useState('');
+    draftLoadMock.complete = setValue;
     return {
       value,
       setValue,
@@ -519,78 +569,101 @@ vi.mock('@renderer/components/team/dialogs/providerPrepareCacheKey', () => ({
   buildProviderPrepareModelCacheKey: () => 'prepare-cache-key',
 }));
 
-vi.mock('@renderer/components/team/dialogs/providerPrepareDiagnostics', () => ({
-  buildReusableProviderPrepareModelResults: () => ({}),
-  getProviderPrepareCachedSnapshot: () => ({ status: 'checking', details: [] }),
-  mergeReusableProviderPrepareModelResults: (
-    existing: Record<string, unknown> | null | undefined,
-    next: Record<string, unknown>
-  ) => ({ ...(existing ?? {}), ...next }),
-  runProviderPrepareDiagnostics: vi.fn(async () => ({
-    status: 'ready',
-    warnings: [],
-    details: [],
-    modelResultsById: {},
-  })),
-}));
+vi.mock('@renderer/components/team/dialogs/providerPrepareDiagnostics', async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import('@renderer/components/team/dialogs/providerPrepareDiagnostics')
+    >();
+  return {
+    buildReusableProviderPrepareModelResults: () => ({}),
+    getProviderPrepareCachedSnapshot: (
+      input: Parameters<typeof actual.getProviderPrepareCachedSnapshot>[0]
+    ) =>
+      prepareHelperFixture.real
+        ? actual.getProviderPrepareCachedSnapshot(input)
+        : { status: 'checking', details: [] },
+    mergeReusableProviderPrepareModelResults: (
+      existing: Record<string, unknown> | null | undefined,
+      next: Record<string, unknown>
+    ) => ({ ...(existing ?? {}), ...next }),
+    runProviderPrepareDiagnostics: vi.fn(async () => ({
+      status: 'ready',
+      warnings: [],
+      details: [],
+      modelResultsById: {},
+    })),
+  };
+});
 
 vi.mock('@renderer/components/team/dialogs/provisioningModelIssues', () => ({
   getProvisioningModelIssue: () => null,
 }));
 
-vi.mock('@renderer/components/team/dialogs/ProvisioningProviderStatusList', () => ({
-  ProvisioningProviderStatusList: ({
-    checks,
-  }: {
-    checks: Array<{ providerId: string; details: string[] }>;
-  }) =>
-    React.createElement(
-      'div',
-      null,
-      'provider-status-list ',
-      checks.flatMap((check) => check.details).join(' ')
-    ),
-  deriveEffectiveProvisioningPrepareState: ({
-    state,
-    message,
-  }: {
-    state: 'idle' | 'loading' | 'ready' | 'failed';
-    message: string | null;
-  }) => ({
-    state,
-    message,
-  }),
-  failIncompleteProviderChecks: (checks: unknown) => checks,
-  getPrimaryProvisioningFailureDetail: () => null,
-  getProvisioningFailureHint: () => 'hint',
-  getProvisioningProviderProgressMessage: () => 'Checking selected providers in parallel...',
-  getProvisioningProviderBackendSummary: () => null,
-  getProvisioningProviderReadyById: () => ({}),
-  shouldHideProvisioningProviderStatusList: () => false,
-  updateProviderCheck: (
-    checks: {
-      providerId: string;
-      status: string;
-      details: string[];
-      backendSummary?: string | null;
-    }[],
-    providerId: string,
-    patch: { status: string; details: string[]; backendSummary?: string | null }
-  ) =>
-    checks.map((check) =>
-      check.providerId === providerId
-        ? {
-            ...check,
-            ...patch,
-          }
-        : check
-    ),
-}));
+vi.mock(
+  '@renderer/components/team/dialogs/ProvisioningProviderStatusList',
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import('@renderer/components/team/dialogs/ProvisioningProviderStatusList')
+      >();
+    return {
+      ProvisioningProviderStatusList: ({
+        checks,
+      }: {
+        checks: Array<{ providerId: string; details: string[] }>;
+      }) =>
+        React.createElement(
+          'div',
+          null,
+          'provider-status-list ',
+          checks.flatMap((check) => check.details).join(' ')
+        ),
+      deriveEffectiveProvisioningPrepareState: (
+        input: Parameters<typeof actual.deriveEffectiveProvisioningPrepareState>[0]
+      ) =>
+        prepareHelperFixture.real
+          ? actual.deriveEffectiveProvisioningPrepareState(input)
+          : { state: input.state, message: input.message },
+      failIncompleteProviderChecks: (checks: unknown) => checks,
+      getPrimaryProvisioningFailureDetail: () => null,
+      getProvisioningFailureHint: () => 'hint',
+      getProvisioningProviderProgressMessage: () => 'Checking selected providers in parallel...',
+      getProvisioningProviderBackendSummary: () => null,
+      getProvisioningProviderReadyById: () => ({}),
+      shouldHideProvisioningProviderStatusList: () => false,
+      updateProviderCheck: (
+        checks: {
+          providerId: string;
+          status: string;
+          details: string[];
+          backendSummary?: string | null;
+        }[],
+        providerId: string,
+        patch: { status: string; details: string[]; backendSummary?: string | null }
+      ) =>
+        prepareHelperFixture.real
+          ? actual.updateProviderCheck(
+              checks as Parameters<typeof actual.updateProviderCheck>[0],
+              providerId as Parameters<typeof actual.updateProviderCheck>[1],
+              patch as Parameters<typeof actual.updateProviderCheck>[2]
+            )
+          : checks.map((check) =>
+              check.providerId === providerId
+                ? {
+                    ...check,
+                    ...patch,
+                  }
+                : check
+            ),
+    };
+  }
+);
 
 vi.mock('@renderer/components/team/dialogs/TeamModelSelector', () => ({
   TeamModelSelector: ({ value }: { value: string }) =>
     React.createElement('div', { 'data-testid': 'team-model-selector' }, `model:${value}`),
-  computeEffectiveTeamModel: (model: string) => model || undefined,
+  computeEffectiveTeamModel: (...args: Parameters<typeof computeRealTeamModel>) =>
+    prepareHelperFixture.real ? computeRealTeamModel(...args) : args[0] || undefined,
   formatTeamModelSummary: (providerId: string, model: string, effort?: string) =>
     [providerId, model, effort].filter(Boolean).join(' '),
   OPENCODE_ONE_SHOT_DISABLED_BADGE_LABEL: 'team only',
@@ -654,6 +727,7 @@ import { api } from '@renderer/api';
 import { CreateTeamDialog } from '@renderer/components/team/dialogs/CreateTeamDialog';
 import { LaunchTeamDialog } from '@renderer/components/team/dialogs/LaunchTeamDialog';
 import { runProviderPrepareDiagnostics } from '@renderer/components/team/dialogs/providerPrepareDiagnostics';
+import { computeEffectiveTeamModel as computeRealTeamModel } from '@renderer/components/team/dialogs/teamModelSummary';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
 import { reconcileCliProviderSnapshot } from '@renderer/store/slices/cliInstallerStatusReconciliation';
 import {
@@ -662,9 +736,15 @@ import {
   isTeamProviderModelVerificationPending,
 } from '@renderer/utils/teamModelAvailability';
 import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
+import { createdTeamSelectionSignature } from '@shared/utils/createdTeamReadiness';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
-import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
+import type {
+  CliInstallationStatus,
+  CliProviderId,
+  CliProviderStatus,
+  TeamCreateRequest,
+} from '@shared/types';
 
 async function flush(): Promise<void> {
   await Promise.resolve();
@@ -747,6 +827,834 @@ function createAuthoritativeProviderStatus(
 }
 
 describe('LaunchTeamDialog', () => {
+  it.each(['unknown', 'edited', 'ready'] as const)(
+    'uses explicit Resume in the existing dialog without fresh fallback (%s)',
+    async (outcome) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.stubGlobal('crypto', webcrypto);
+      const key = 'host-team:TEST-resume-dialog';
+      const reference = `cp1-${'c'.repeat(64)}`;
+      const saved: TeamCreateRequest = {
+        teamName: key,
+        savedSettingsFingerprint: 'a'.repeat(64),
+        cwd: '/tmp/project',
+        providerId: 'anthropic',
+        providerBackendId: 'cli-sdk',
+        model: 'sonnet',
+        fastMode: 'off',
+        skipPermissions: false,
+        members: [],
+      };
+      const launch = {
+        launchId: 'TEST-original-launch',
+        rosterRevision: 'TEST-original-roster',
+        status: 'failed',
+        ready: 0,
+        expected: 1,
+        retryCapability: 'same-binding-no-allocation-only',
+        members: [
+          {
+            memberId: 'TEST-lead',
+            generation: 'TEST-source-generation',
+            attemptId: 'TEST-attempt',
+            status: 'failed',
+            nativeReady: false,
+            usable: false,
+            controlAvailable: false,
+            noAllocation: false,
+            reason: 'TEST stopped',
+          },
+        ],
+      };
+      const ledger: any = {
+        launchId: launch.launchId,
+        rosterRevision: launch.rosterRevision,
+        preparations: [],
+        restorations: [],
+      };
+      vi.mocked(api.teams.getSavedRequest).mockResolvedValue(saved);
+      vi.mocked(api.agentBackend.getConnections).mockResolvedValue({
+        state: 'ready',
+        bindings: [
+          {
+            handle: { handleId: 'TEST-resume-dialog' },
+            label: 'TEST Resume',
+            members: [{ memberId: 'TEST-lead', label: 'TEST lead' }],
+          },
+        ],
+      });
+      vi.mocked(api.agentBackend.invoke).mockImplementation(async (request): Promise<any> => {
+        if (request.operation === 'team.launch.configuration.read')
+          return {
+            ok: true,
+            value: {
+              launch: structuredClone(launch),
+              members: [
+                { memberId: 'TEST-lead', label: 'TEST lead', role: 'lead', selected: null },
+              ],
+            },
+          };
+        if (request.operation === 'team.launch.read')
+          return { ok: true, value: structuredClone(launch) };
+        if (request.operation === 'runtime.checkpoints.read')
+          return {
+            ok: true,
+            value: {
+              memberId: 'TEST-lead',
+              sourceGeneration: 'TEST-source-generation',
+              status: 'owner-eligible',
+              reason: 'native-backing-unverified',
+              nativeBacking: 'unverified',
+              checkpoints: [
+                {
+                  checkpointId: 'TEST-checkpoint',
+                  reference,
+                  status: 'owner-eligible',
+                  reason: 'native-backing-unverified',
+                },
+              ],
+            },
+          };
+        if (request.operation === 'team.launch.restorations.read')
+          return { ok: true, value: structuredClone(ledger) };
+        if (request.operation === 'team.launch.resume.prepare') {
+          const prepared = {
+            resumeId: request.payload.resumeId,
+            rosterRevision: request.payload.rosterRevision,
+            members: request.payload.members.map((member) => ({ ...member, requested: false })),
+          };
+          ledger.preparations.push(prepared);
+          return { ok: true, value: structuredClone(prepared) };
+        }
+        if (request.operation === 'runtime.restore') {
+          ledger.preparations[0].members[0].requested = true;
+          if (outcome !== 'ready')
+            throw new Error('TEST original restore ACK unknown before selection');
+          launch.rosterRevision = 'TEST-live-restored-roster';
+          ledger.rosterRevision = launch.rosterRevision;
+          Object.assign(launch.members[0], {
+            generation: 'TEST-restored-generation',
+            status: 'ready',
+            nativeReady: true,
+            usable: true,
+          });
+          ledger.restorations.push({
+            ...ledger.preparations[0].members[0],
+            selectedGeneration: 'TEST-restored-generation',
+            current: true,
+            phase: 'allocated',
+            custody: 'owned',
+            attached: true,
+          });
+          return {
+            ok: true,
+            value: {
+              memberId: 'TEST-lead',
+              generation: 'TEST-restored-generation',
+              phase: 'allocated',
+              sealed: false,
+              custody: 'owned',
+              nativeReady: true,
+              attached: true,
+              inputs: [],
+              interactions: [],
+            },
+          };
+        }
+        throw new Error(`Unexpected TEST operation ${request.operation}`);
+      });
+      const onLaunch = vi.fn(async () => {});
+      const onClose = vi.fn();
+      const host = document.createElement('div');
+      document.body.append(host);
+      const root = createRoot(host);
+      const render = (open = true) =>
+        root.render(
+          React.createElement(LaunchTeamDialog, {
+            mode: 'launch',
+            open,
+            teamName: key,
+            members: [],
+            defaultProjectPath: '/tmp/project',
+            provisioningError: null,
+            onClose,
+            onLaunch,
+          })
+        );
+      const settle = async () => {
+        for (let i = 0; i < 5; i++)
+          await act(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            await flush();
+          });
+      };
+      const choose = async (id: string, value: string) =>
+        act(async () => {
+          const select = host.querySelector<HTMLSelectElement>(`#${id}`)!;
+          select.value = value;
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+          await flush();
+        });
+      const button = (label: string) =>
+        Array.from(host.querySelectorAll('button')).find((row) => row.textContent === label)!;
+      try {
+        await act(async () => {
+          render();
+          await flush();
+        });
+        await settle();
+        expect(host.querySelector<HTMLSelectElement>('#launch-continuation-mode')?.value).toBe(
+          'fresh'
+        );
+        await choose('launch-continuation-mode', 'resume');
+        await settle();
+        expect(button('Resume selected checkpoints').disabled).toBe(true);
+        expect(host.textContent).toContain('Saved history is checked when resuming');
+        await choose('resume-checkpoint-TEST-lead', reference);
+        await settle();
+        expect(button('Resume selected checkpoints').disabled).toBe(false);
+        if (outcome === 'edited') {
+          await act(async () => {
+            teamRosterEditorSectionMock.lastProps.onProviderChange('codex');
+            await flush();
+          });
+          expect(button('Resume selected checkpoints').disabled).toBe(true);
+          expect(host.textContent).toContain('Settings changed. Use Fresh Launch');
+        } else {
+          await act(async () => {
+            button('Resume selected checkpoints').click();
+            await flush();
+          });
+          await settle();
+          if (outcome === 'ready') {
+            expect(onClose).toHaveBeenCalledTimes(1);
+            expect(openTeamTab).toHaveBeenCalledWith(key, '/tmp/project');
+            expect(ledger.preparations[0].rosterRevision).toBe('TEST-original-roster');
+          } else {
+            expect(button('Check Resume status').disabled).toBe(false);
+            expect(api.agentBackend.invoke).toHaveBeenCalledWith(
+              expect.objectContaining({
+                operation: 'runtime.restore',
+                payload: expect.objectContaining({
+                  resumeId: ledger.preparations[0].resumeId,
+                  reference,
+                  expectedGeneration: 'TEST-source-generation',
+                }),
+              })
+            );
+            const freshChecks = vi.mocked(runProviderPrepareDiagnostics).mock.calls.length;
+            await act(async () => {
+              render(false);
+              await flush();
+            });
+            await act(async () => {
+              render();
+              await flush();
+            });
+            await settle();
+            expect(host.querySelector<HTMLSelectElement>('#launch-continuation-mode')?.value).toBe(
+              'resume'
+            );
+            await act(async () => {
+              button('Check Resume status').click();
+              await flush();
+            });
+            await settle();
+            expect(vi.mocked(runProviderPrepareDiagnostics).mock.calls).toHaveLength(freshChecks);
+            expect(
+              vi
+                .mocked(api.agentBackend.invoke)
+                .mock.calls.filter(([request]) => request.operation === 'runtime.restore')
+            ).toHaveLength(1);
+          }
+        }
+        expect(api.teams.replaceMembers).not.toHaveBeenCalled();
+        expect(onLaunch).not.toHaveBeenCalled();
+        if (outcome !== 'ready') expect(onClose).not.toHaveBeenCalled();
+        expect(
+          vi
+            .mocked(api.agentBackend.invoke)
+            .mock.calls.some(
+              ([request]) =>
+                request.operation === 'team.launch.capture' ||
+                request.operation === 'team.launch.start'
+            )
+        ).toBe(false);
+      } finally {
+        await act(async () => root.unmount());
+        vi.mocked(api.teams.getSavedRequest).mockResolvedValue(null);
+      }
+    }
+  );
+
+  it('retains Host relaunch continuation and the original run across a changed progress render', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const key = 'host-team:TEST-relaunch';
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+      teamName: key,
+      savedSettingsFingerprint: 'b'.repeat(64),
+      cwd: '/tmp/project',
+      providerId: 'anthropic',
+      model: 'sonnet',
+      fastMode: 'off',
+      skipPermissions: false,
+      members: [],
+    });
+    const onRelaunch = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('TEST launch ACK lost'))
+      .mockResolvedValue(undefined);
+    const onClose = vi.fn();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = (runtimeRunId: string) =>
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'relaunch',
+          open: true,
+          teamName: key,
+          runtimeRunId,
+          members: [
+            {
+              name: 'alice',
+              agentType: 'team-lead',
+              providerId: 'anthropic',
+              model: 'sonnet',
+              configuredSettingsFingerprint: (runtimeRunId === 'TEST-original-run'
+                ? 'a'
+                : 'c'
+              ).repeat(64),
+            },
+          ] as any,
+          memberSettingsDraft: {
+            teamName: key,
+            memberName: 'alice',
+            targetKind: 'lead',
+            expectedFingerprint: 'a'.repeat(64),
+            expectedTeamSettingsFingerprint: 'b'.repeat(64),
+            settings: {
+              role: null,
+              workflow: null,
+              isolation: null,
+              providerId: 'anthropic',
+              providerBackendId: null,
+              model: 'sonnet',
+              effort: null,
+              fastMode: null,
+              mcpPolicy: null,
+            },
+          },
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          activeTeams: [],
+          onClose,
+          onRelaunch,
+        })
+      );
+    try {
+      await act(async () => {
+        render('TEST-original-run');
+        await flush();
+        await flush();
+      });
+      await flushCustomFolderProbe();
+      const button = await confirmLaunchPreflight(host, 'Relaunch team');
+      expect(button.disabled).toBe(false);
+      await act(async () => {
+        button.click();
+        await flush();
+        await flush();
+      });
+      expect(onRelaunch).toHaveBeenCalledTimes(1);
+      const metadata = onRelaunch.mock.calls[0][3];
+      expect(metadata.relaunch).toMatchObject({
+        originalRunId: 'TEST-original-run',
+        stopConfirmed: false,
+      });
+      // The existing relaunch use case confirms these steps before an uncertain launch ACK.
+      metadata.relaunch.stopConfirmed = true;
+      metadata.relaunch.replaceAttempted = true;
+      metadata.relaunch.replaceConfirmed = true;
+      await act(async () => {
+        render('TEST-replacement-run');
+        await flush();
+      });
+      const retry = await confirmLaunchPreflight(host, 'Relaunch team');
+      await act(async () => {
+        retry.click();
+        await flush();
+        await flush();
+      });
+      expect(onRelaunch).toHaveBeenCalledTimes(2);
+      expect(onRelaunch.mock.calls[1][3].relaunch).toBe(metadata.relaunch);
+      expect(onRelaunch.mock.calls[1][0]).toEqual(onRelaunch.mock.calls[0][0]);
+      expect(onRelaunch.mock.calls[1][2]).toEqual(onRelaunch.mock.calls[0][2]);
+      expect(onRelaunch.mock.calls[1][2].baseline).toEqual([
+        { memberName: 'alice', expectedFingerprint: 'a'.repeat(64) },
+      ]);
+      expect(metadata.relaunch.originalRunId).toBe('TEST-original-run');
+      expect(api.teams.replaceMembers).not.toHaveBeenCalled();
+      expect(onClose).toHaveBeenCalledTimes(1);
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
+  it.each([false, true])(
+    'submits the original Host configuration and retains its intent after uncertainty (edit=%s)',
+    async (edited) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const key = 'host-team:TEST-submit';
+      vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+        teamName: key,
+        savedSettingsFingerprint: 'b'.repeat(64),
+        cwd: '/tmp/project',
+        providerId: 'anthropic',
+        model: 'sonnet',
+        fastMode: 'off',
+        skipPermissions: false,
+        syncModelsWithLead: false,
+        limitContext: false,
+        displayName: 'TEST configured name',
+        description: 'TEST configured description',
+        members: [],
+      });
+      vi.mocked(api.teams.replaceMembers).mockRejectedValueOnce(new Error('TEST unknown save'));
+      const onLaunch = vi.fn(async () => {});
+      const onClose = vi.fn();
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      try {
+        await act(async () => {
+          root.render(
+            React.createElement(LaunchTeamDialog, {
+              mode: 'launch',
+              open: true,
+              teamName: key,
+              members: [],
+              defaultProjectPath: '/tmp/project',
+              provisioningError: null,
+              clearProvisioningError: vi.fn(),
+              activeTeams: [],
+              onClose,
+              onLaunch,
+            })
+          );
+          await flush();
+          await flush();
+        });
+        await flushCustomFolderProbe();
+        let button = await confirmLaunchPreflight(host);
+        expect(button.disabled).toBe(false);
+        await act(async () => {
+          button.click();
+          await flush();
+          await flush();
+        });
+        expect(api.teams.replaceMembers).toHaveBeenCalledTimes(1);
+        const original = structuredClone(vi.mocked(api.teams.replaceMembers).mock.calls[0][1]);
+        expect(original).toMatchObject({
+          command: {
+            commandId: expect.stringMatching(/^roster:/),
+            idempotencyKey: expect.any(String),
+          },
+          configuration: {
+            expectedRevision: 'b'.repeat(64),
+            savedSettings: {
+              cwd: '/tmp/project',
+              model: 'sonnet',
+              fastMode: 'off',
+              skipPermissions: false,
+              syncModelsWithLead: false,
+              limitContext: false,
+              allowExperimentalLocalModels: false,
+              displayName: 'TEST configured name',
+              description: 'TEST configured description',
+            },
+          },
+          members: [],
+        });
+        expect(original.command!.idempotencyKey).toBe(original.command!.commandId);
+        expect(onLaunch).not.toHaveBeenCalled();
+        expect(onClose).not.toHaveBeenCalled();
+        expect(host.textContent).toContain('TEST unknown save');
+        // The original settings dialog refreshes model preflight; it must not replace the intent.
+        await act(async () => {
+          runtimeSettingsMock.lastProps.onProviderRuntimeChanged('anthropic');
+          if (edited) advancedCliMock.lastProps.onCustomArgsChange('--TEST-changed');
+          await flush();
+        });
+        button = await confirmLaunchPreflight(host);
+        expect(button.disabled).toBe(false);
+        await act(async () => {
+          button.click();
+          await flush();
+          await flush();
+        });
+        if (edited) {
+          expect(api.teams.replaceMembers).toHaveBeenCalledTimes(1);
+          expect(onLaunch).not.toHaveBeenCalled();
+          expect(host.textContent).toContain('previous launch intent changed');
+        } else {
+          expect(api.teams.replaceMembers).toHaveBeenCalledTimes(2);
+          expect(vi.mocked(api.teams.replaceMembers).mock.calls[1]).toEqual([key, original]);
+          expect(onLaunch).toHaveBeenCalledTimes(1);
+          expect(onClose).toHaveBeenCalledTimes(1);
+        }
+      } finally {
+        await act(async () => root.unmount());
+      }
+    }
+  );
+
+  it('holds Host prompt editing until saved settings load and preserves untouched model options through the original launch CAS', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let resolveSaved!: (value: TeamCreateRequest) => void;
+    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSaved = resolve;
+      })
+    );
+    const key = 'host-team:TEST-hydration-race';
+    const provider = createAuthoritativeProviderStatus('anthropic', ['claude-sonnet-4-6']);
+    provider.modelCatalog!.models[0].supportedReasoningEfforts = ['low', 'medium', 'high'];
+    provider.modelCatalog!.models[0].defaultReasoningEffort = 'medium';
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [provider] };
+    vi.mocked(api.agentBackend.getConnections).mockResolvedValue({
+      state: 'ready',
+      bindings: [
+        { handle: { handleId: 'TEST-hydration-race' }, label: 'TEST saved owner', members: [] },
+      ],
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host),
+      onLaunch = vi.fn(async () => {});
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(LaunchTeamDialog, {
+            mode: 'launch',
+            open: true,
+            teamName: key,
+            members: [],
+            defaultProjectPath: '/tmp/project',
+            provisioningError: null,
+            clearProvisioningError: vi.fn(),
+            activeTeams: [],
+            onClose: vi.fn(),
+            onLaunch,
+          })
+        );
+        await flush();
+      });
+      const prompt = host.querySelector<HTMLTextAreaElement>('#dialog-prompt')!;
+      expect(prompt.closest('fieldset')?.disabled).toBe(true);
+      expect(runProviderPrepareDiagnostics).not.toHaveBeenCalled();
+      await act(async () => {
+        resolveSaved({
+          teamName: key,
+          savedSettingsFingerprint: 'b'.repeat(64),
+          cwd: '/tmp/project',
+          providerId: 'anthropic',
+          model: 'claude-sonnet-4-6',
+          effort: 'low',
+          fastMode: 'off',
+          limitContext: true,
+          skipPermissions: true,
+          members: [],
+          prompt: '',
+        });
+        await flush();
+        await flush();
+      });
+      await flushCustomFolderProbe();
+      expect(prompt.closest('fieldset')?.disabled).toBe(false);
+      expect(teamRosterEditorSectionMock.lastProps).toMatchObject({
+        model: 'claude-sonnet-4-6',
+        effort: 'low',
+        limitContext: true,
+      });
+      expect(host.querySelector('[data-testid="fast-mode-selector"]')?.textContent).toContain(
+        'fast:off'
+      );
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(
+          prompt,
+          'TEST bootstrap only'
+        );
+        prompt.dispatchEvent(new Event('input', { bubbles: true }));
+        await flush();
+      });
+      const submit = await confirmLaunchPreflight(host);
+      expect(submit.disabled).toBe(false);
+      await act(async () => {
+        submit.click();
+        await flush();
+        await flush();
+      });
+      expect(api.teams.replaceMembers).toHaveBeenCalledWith(
+        key,
+        expect.objectContaining({
+          configuration: expect.objectContaining({
+            expectedRevision: 'b'.repeat(64),
+            savedSettings: expect.objectContaining({
+              model: 'claude-sonnet-4-6',
+              effort: 'low',
+              fastMode: 'off',
+              limitContext: true,
+              prompt: 'TEST bootstrap only',
+            }),
+          }),
+        })
+      );
+      expect(onLaunch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: 'claude-sonnet-4-6',
+          effort: 'low',
+          fastMode: 'off',
+          limitContext: true,
+          prompt: 'TEST bootstrap only',
+        })
+      );
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
+  });
+
+  it.each(['failed', 'timeout', 'malformed', 'absent'] as const)(
+    'keeps an uncertain Host saved read held and distinguishes proven absence (%s)',
+    async (mode) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.useFakeTimers();
+      const read = vi.mocked(api.teams.getSavedRequest);
+      if (mode === 'failed')
+        read.mockRejectedValueOnce(new Error('TEST-private backend unavailable'));
+      else if (mode === 'timeout') read.mockReturnValueOnce(new Promise(() => {}));
+      else if (mode === 'malformed')
+        read.mockResolvedValueOnce({
+          teamName: 'host-team:TEST-owner',
+          cwd: '/tmp/project',
+          members: [],
+        });
+      else read.mockResolvedValueOnce(null);
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host),
+        onLaunch = vi.fn(async () => {});
+      try {
+        await act(async () => {
+          root.render(
+            React.createElement(LaunchTeamDialog, {
+              mode: 'launch',
+              open: true,
+              teamName: 'host-team:TEST-owner',
+              members: [],
+              defaultProjectPath: '/tmp/project',
+              provisioningError: null,
+              clearProvisioningError: vi.fn(),
+              activeTeams: [],
+              onClose: vi.fn(),
+              onLaunch,
+            })
+          );
+          await flush();
+          await flush();
+        });
+        if (mode === 'timeout')
+          await act(async () => {
+            await vi.advanceTimersByTimeAsync(30_001);
+            await flush();
+          });
+        const prompt = host.querySelector<HTMLTextAreaElement>('#dialog-prompt')!;
+        expect(prompt.closest('fieldset')?.disabled).toBe(mode !== 'absent');
+        if (mode !== 'absent') {
+          expect(host.textContent).toContain('Saved Team configuration unavailable');
+          expect(host.textContent).not.toContain('TEST-private');
+          const submit = [...host.querySelectorAll('button')].find(
+            (button) => button.textContent === 'Launch team'
+          )!;
+          expect(submit.disabled).toBe(true);
+          expect(runProviderPrepareDiagnostics).not.toHaveBeenCalled();
+        }
+        expect(onLaunch).not.toHaveBeenCalled();
+        expect(api.teams.replaceMembers).not.toHaveBeenCalled();
+      } finally {
+        await act(async () => root.unmount());
+        host.remove();
+      }
+    }
+  );
+
+  it.each(['reopen', 'context-aba'] as const)(
+    'ignores obsolete Host saved replies across %s before enabling the existing form',
+    async (transition) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const pending: ((value: TeamCreateRequest) => void)[] = [];
+      vi.mocked(api.teams.getSavedRequest).mockImplementation(
+        () => new Promise((resolve) => pending.push(resolve))
+      );
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host),
+        key = 'host-team:TEST-owner';
+      const render = (open = true) =>
+        root.render(
+          React.createElement(LaunchTeamDialog, {
+            mode: 'launch',
+            open,
+            teamName: key,
+            members: [],
+            defaultProjectPath: '/tmp/project',
+            provisioningError: null,
+            clearProvisioningError: vi.fn(),
+            activeTeams: [],
+            onClose: vi.fn(),
+            onLaunch: vi.fn(async () => {}),
+          })
+        );
+      const source = (prompt: string): TeamCreateRequest => ({
+        teamName: key,
+        cwd: '/tmp/project',
+        savedSettingsFingerprint: 'b'.repeat(64),
+        providerId: 'anthropic',
+        model: 'sonnet',
+        members: [],
+        prompt,
+      });
+      try {
+        await act(async () => {
+          render();
+          await flush();
+        });
+        if (transition === 'reopen') {
+          await act(async () => {
+            render(false);
+            await flush();
+          });
+          await act(async () => {
+            render();
+            await flush();
+          });
+        } else {
+          await act(async () => {
+            storeState.activeContextId = 'TEST-other';
+            invalidateContextScopedRequestEpoch();
+            render();
+            await flush();
+          });
+          await act(async () => {
+            storeState.activeContextId = 'TEST-local';
+            invalidateContextScopedRequestEpoch();
+            render();
+            await flush();
+          });
+        }
+        expect(pending.length).toBeGreaterThan(1);
+        await act(async () => {
+          for (const resolve of pending.slice(0, -1)) resolve(source('TEST stale source'));
+          await flush();
+          await flush();
+        });
+        const prompt = host.querySelector<HTMLTextAreaElement>('#dialog-prompt')!;
+        expect(prompt.closest('fieldset')?.disabled).toBe(true);
+        expect(prompt.value).not.toBe('TEST stale source');
+        await act(async () => {
+          pending.at(-1)!(source('TEST current source'));
+          await flush();
+          await flush();
+        });
+        expect(prompt.closest('fieldset')?.disabled).toBe(false);
+        expect(prompt.value).toBe('TEST current source');
+        expect(api.teams.replaceMembers).not.toHaveBeenCalled();
+      } finally {
+        await act(async () => root.unmount());
+        host.remove();
+      }
+    }
+  );
+
+  it.each([false, true])(
+    'hydrates owner launch fields without overwriting user edits (%s)',
+    async (edited) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      let resolveSaved: (value: any) => void = () => {};
+      vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveSaved = resolve;
+        })
+      );
+      const key = 'host-team:TEST-owner';
+      localStorage.setItem(`team:lastCustomArgs:${key}`, 'WRONG-local-args');
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      try {
+        await act(async () => {
+          root.render(
+            React.createElement(LaunchTeamDialog, {
+              mode: 'launch',
+              open: true,
+              teamName: key,
+              members: [],
+              defaultProjectPath: '/tmp/project',
+              provisioningError: null,
+              clearProvisioningError: vi.fn(),
+              activeTeams: [],
+              onClose: vi.fn(),
+              onLaunch: vi.fn(async () => {}),
+            })
+          );
+          await flush();
+        });
+        await act(async () => {
+          resolveSaved({
+            teamName: key,
+            savedSettingsFingerprint: 'b'.repeat(64),
+            cwd: '/tmp/TEST-owner',
+            prompt: 'Owner prompt',
+            worktree: 'TEST-owner-worktree',
+            extraCliArgs: '--owner-args',
+            allowExperimentalLocalModels: true,
+            providerId: 'anthropic',
+            members: [],
+          });
+          await flush();
+          await flush();
+        });
+        if (edited)
+          await act(async () => {
+            advancedCliMock.lastProps.onCustomArgsChange('--user-args');
+            await flush();
+          });
+        expect(advancedCliMock.lastProps.customArgs).toBe(edited ? '--user-args' : '--owner-args');
+        if (!edited) {
+          expect(advancedCliMock.lastProps.worktreeEnabled).toBe(true);
+          expect(advancedCliMock.lastProps.worktreeName).toBe('TEST-owner-worktree');
+          expect(projectPathSelectorMock.lastProps).toMatchObject({
+            cwdMode: 'custom',
+            customCwd: '/tmp/TEST-owner',
+          });
+          expect((host.querySelector('#dialog-prompt') as HTMLTextAreaElement).value).toBe(
+            'Owner prompt'
+          );
+          await act(async () => {
+            draftLoadMock.complete('WRONG-late-draft');
+            await flush();
+          });
+          expect((host.querySelector('#dialog-prompt') as HTMLTextAreaElement).value).toBe(
+            'Owner prompt'
+          );
+        }
+      } finally {
+        await act(async () => root.unmount());
+      }
+    }
+  );
+
   it('opens provider settings from the relaunch roster model picker', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
@@ -956,6 +1864,7 @@ describe('LaunchTeamDialog', () => {
   ] as const)(
     'projects trust in mounted %s with %s lead, %s member (removed=%s)',
     async (mode, lead, memberProvider, removed, expectedProviders) => {
+      storeState.activeContextId = 'local';
       vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
       vi.useFakeTimers();
       localStorage.setItem('team:lastSelectedProvider', lead);
@@ -1275,6 +2184,26 @@ describe('LaunchTeamDialog', () => {
   );
 
   beforeEach(() => {
+    vi.mocked(api.agentBackend.getConnections)
+      .mockReset()
+      .mockResolvedValue({
+        state: 'ready',
+        bindings: ['TEST-relaunch', 'TEST-submit', 'TEST-owner'].map((handleId) => ({
+          handle: { handleId },
+          label: 'TEST empty owner',
+          members: [],
+        })),
+      });
+    vi.mocked(api.agentBackend.invoke)
+      .mockReset()
+      .mockImplementation(async (request) =>
+        request.operation === 'team.launch.configuration.read'
+          ? { ok: true, value: null }
+          : { ok: false, code: 'unavailable', outcome: 'not-dispatched' }
+      );
+    prepareHelperFixture.real = false;
+    prepareHelperFixture.onLayout = null;
+    storeState.activeContextId = 'TEST-local';
     if (typeof localStorage?.getItem !== 'function' || typeof localStorage?.clear !== 'function') {
       const store = new Map<string, string>();
       vi.stubGlobal('localStorage', {
@@ -1919,6 +2848,24 @@ describe('LaunchTeamDialog', () => {
     expect(teamRosterEditorSectionMock.lastProps.syncModelsWithTeammates).toBe(true);
     expect(runProviderPrepareDiagnostics).toHaveBeenCalledWith(
       expect.objectContaining({ cwd: '/tmp/project' })
+    );
+    const scopedPrepare = vi.mocked(runProviderPrepareDiagnostics).mock.calls.at(-1)![0]
+      .prepareProvisioning;
+    await scopedPrepare('/TEST/context', 'anthropic');
+    expect(api.teams.prepareProvisioning).toHaveBeenLastCalledWith(
+      '/TEST/context',
+      'anthropic',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      expect.objectContaining({
+        kind: 'team',
+        teamName: 'team-alpha',
+        selectedModelChecks: expect.any(Array),
+        preparationId: expect.any(String),
+      })
     );
     expect(api.teams.getSavedRequest).toHaveBeenCalledTimes(1);
     await act(async () => root.unmount());
@@ -2710,6 +3657,29 @@ describe('LaunchTeamDialog', () => {
       ])
     );
 
+    const createPrepare = vi.mocked(runProviderPrepareDiagnostics).mock.calls.at(-1)![0]
+      .prepareProvisioning;
+    await createPrepare('/TEST/context', 'anthropic');
+    expect(api.teams.prepareProvisioning).toHaveBeenLastCalledWith(
+      '/TEST/context',
+      'anthropic',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      expect.objectContaining({
+        kind: 'create',
+        preparationId: expect.any(String),
+        draft: expect.objectContaining({
+          teamName: 'team-alpha',
+          providerId: 'opencode',
+          members: expect.arrayContaining([
+            expect.objectContaining({ name: 'tom', model: 'ollama/qwen2.5-coder:0.5b' }),
+          ]),
+        }),
+      })
+    );
     createTeamDraftMock.state.members[0].model = originalModel;
     await act(async () => {
       root.unmount();
@@ -4921,6 +5891,456 @@ describe('LaunchTeamDialog', () => {
       root.unmount();
       await flush();
     });
+  });
+
+  it('retains exact Create proof when deep completion arrives between ready progress render and passive checks effects', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    prepareHelperFixture.real = true;
+    createTeamDraftMock.state.soloTeam = true;
+    localStorage.setItem('team:lastSelectedProvider', 'anthropic');
+    localStorage.setItem('team:lastSelectedModel:anthropic', 'claude-opus-4-6');
+    const provider = createAuthoritativeProviderStatus('anthropic', ['claude-opus-4-6']);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          ...provider,
+          authenticated: false,
+          capabilities: { ...provider.capabilities, teamLaunch: false },
+        },
+      ],
+    };
+    vi.mocked(isTeamProviderRuntimeStatusLoading).mockImplementation(
+      (_id, status) => status?.modelCatalogRefreshState === 'loading'
+    );
+    const diagnostics = await vi.importActual<
+      typeof import('@renderer/components/team/dialogs/providerPrepareDiagnostics')
+    >('@renderer/components/team/dialogs/providerPrepareDiagnostics');
+    vi.mocked(runProviderPrepareDiagnostics).mockImplementation(
+      diagnostics.runProviderPrepareDiagnostics
+    );
+    const originalPrepare = vi.mocked(api.teams.prepareProvisioning).getMockImplementation()!;
+    const compatibility: (() => void)[] = [];
+    const deep: (() => void)[] = [];
+    let layoutCompletions = 0;
+    vi.mocked(api.teams.prepareProvisioning).mockImplementation((...args) => {
+      const context = args[7];
+      if (context?.kind !== 'create' || !context.draft || !context.preparationId)
+        throw new Error('Expected captured Create context');
+      const result = {
+        ready: true,
+        message: 'TEST current exact Host ready',
+        createdTeamReadiness: {
+          preparationId: context.preparationId,
+          selectionSignature: createdTeamSelectionSignature(context.draft),
+          draftDigest: 'TEST-layout-proof',
+          expiresAt: Date.now() + 60_000,
+        },
+      };
+      return new Promise((resolve) =>
+        (args[5] === 'deep' ? deep : compatibility).push(() => resolve(result))
+      );
+    });
+    const onCreate = vi.fn(async (_request: TeamCreateRequest) => 'host-team:TEST-created');
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = () =>
+      root.render(
+        React.createElement(CreateTeamDialog, {
+          open: true,
+          canCreate: true,
+          provisioningErrorsByTeam: {},
+          existingTeamNames: [],
+          activeTeams: [],
+          defaultProjectPath: '/tmp/project',
+          onClose: vi.fn(),
+          onCreate,
+          onOpenTeam: vi.fn(),
+        })
+      );
+    const turn = () => new Promise<void>((resolve) => setTimeout(resolve, 10));
+    const submit = () => host.querySelector<HTMLButtonElement>('button.min-w-32')!;
+    try {
+      await act(async () => {
+        render();
+        await flush();
+      });
+      for (let attempt = 0; attempt < 20 && compatibility.length === 0; attempt++) await act(turn);
+      expect(compatibility.length).toBeGreaterThan(0);
+      prepareHelperFixture.onLayout = () => {
+        if (deep.length) {
+          layoutCompletions += deep.length;
+          for (const finish of deep.splice(0)) finish();
+        }
+      };
+      // Native replies arrive outside React act. A layout commit resolves the IPC promise
+      // before this ready-progress render's passive effects, matching the desktop race.
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', false);
+      storeState.cliStatus = {
+        ...storeState.cliStatus,
+        providers: [
+          {
+            ...storeState.cliStatus.providers[0],
+            modelCatalogRefreshState: 'loading',
+            modelCatalog: null,
+          },
+        ],
+      };
+      render();
+      await turn();
+      for (const finish of compatibility.splice(0)) finish();
+      for (let attempt = 0; attempt < 40 && layoutCompletions === 0; attempt++) await turn();
+      for (let attempt = 0; attempt < 4; attempt++) await turn();
+      expect(layoutCompletions).toBeGreaterThan(0);
+      expect(submit().disabled, host.textContent ?? '').toBe(false);
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      await act(async () => {
+        submit().click();
+        await flush();
+      });
+      expect(onCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          createdTeamReadiness: expect.objectContaining({ draftDigest: 'TEST-layout-proof' }),
+        }),
+        undefined
+      );
+    } finally {
+      prepareHelperFixture.onLayout = null;
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.mocked(api.teams.prepareProvisioning).mockImplementation(originalPrepare);
+      await act(async () => root.unmount());
+    }
+  });
+
+  it('keeps actual Create draft and scoped proof stable through passive catalog refresh after model, effort and prompt edits', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    prepareHelperFixture.real = true;
+    localStorage.setItem('team:lastSelectedProvider', 'anthropic');
+    localStorage.setItem('team:lastSelectedModel:anthropic', 'sonnet');
+    createTeamDraftMock.state.soloTeam = true;
+    const originalName = createTeamDraftMock.state.teamName;
+    const provider = createAuthoritativeProviderStatus('anthropic', ['sonnet', 'claude-opus-4-6']);
+    provider.modelCatalog!.models.forEach((model) => {
+      model.supportedReasoningEfforts = ['low', 'medium', 'high', 'max'];
+    });
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          ...provider,
+          authenticated: false,
+          capabilities: { ...provider.capabilities, teamLaunch: false },
+        },
+      ],
+    };
+    vi.mocked(isTeamProviderRuntimeStatusLoading).mockImplementation(
+      (_providerId, status) => status?.modelCatalogRefreshState === 'loading'
+    );
+    const diagnostics = await vi.importActual<
+      typeof import('@renderer/components/team/dialogs/providerPrepareDiagnostics')
+    >('@renderer/components/team/dialogs/providerPrepareDiagnostics');
+    vi.mocked(runProviderPrepareDiagnostics).mockImplementation(
+      diagnostics.runProviderPrepareDiagnostics
+    );
+    const originalPrepare = vi.mocked(api.teams.prepareProvisioning).getMockImplementation()!;
+    const drafts: TeamCreateRequest[] = [];
+    vi.mocked(api.teams.prepareProvisioning).mockImplementation(async (...args) => {
+      const context = args[7];
+      if (context?.kind !== 'create' || !context.draft || !context.preparationId)
+        throw new Error('Expected complete Create context');
+      drafts.push(structuredClone(context.draft));
+      return {
+        ready: true,
+        message: 'TEST Host exact draft ready',
+        createdTeamReadiness: {
+          preparationId: context.preparationId,
+          selectionSignature: createdTeamSelectionSignature(context.draft),
+          draftDigest: 'TEST-captured-digest',
+          expiresAt: Date.now() + 60_000,
+        },
+      };
+    });
+    const onCreate = vi.fn(async (_request: TeamCreateRequest) => 'host-team:TEST-created');
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = () =>
+      root.render(
+        React.createElement(CreateTeamDialog, {
+          open: true,
+          canCreate: true,
+          provisioningErrorsByTeam: {},
+          existingTeamNames: [],
+          activeTeams: [],
+          defaultProjectPath: '/tmp/project',
+          onClose: vi.fn(),
+          onCreate,
+          onOpenTeam: vi.fn(),
+        })
+      );
+    const settle = async () => {
+      for (let attempt = 0; attempt < 4; attempt++)
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(100);
+          await flush();
+        });
+    };
+    const submit = () => host.querySelector<HTMLButtonElement>('button.min-w-32')!;
+    try {
+      await act(async () => {
+        render();
+        await flush();
+      });
+      await settle();
+      await act(async () => {
+        createTeamDraftMock.state.teamName = 'TEST-real-helper-flow';
+        createTeamDraftMock.state.cwdMode = 'custom';
+        createTeamDraftMock.state.customCwd = '/tmp/TEST-real-helper-flow';
+        render();
+        await flush();
+      });
+      await settle();
+      await act(async () => {
+        teamRosterEditorSectionMock.lastProps.onModelChange('claude-opus-4-6');
+        teamRosterEditorSectionMock.lastProps.onEffortChange('medium');
+        await flush();
+      });
+      await settle();
+      await act(async () => {
+        const textarea = host.querySelector<HTMLTextAreaElement>('#team-prompt')!;
+        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(
+          textarea,
+          'TEST deliberate prompt'
+        );
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        await flush();
+      });
+      await settle();
+      expect(drafts.at(-1)).toMatchObject({
+        teamName: 'test-real-helper-flow',
+        cwd: '/tmp/TEST-real-helper-flow',
+        model: 'claude-opus-4-6',
+        effort: 'medium',
+        prompt: 'TEST deliberate prompt',
+      });
+      expect(submit().disabled, host.textContent ?? '').toBe(false);
+      const checks = drafts.length;
+      storeState.cliStatus = {
+        ...storeState.cliStatus,
+        providers: [
+          {
+            ...storeState.cliStatus.providers[0],
+            modelCatalogRefreshState: 'loading',
+            modelCatalog: null,
+          },
+        ],
+      };
+      await act(async () => {
+        render();
+        await flush();
+      });
+      await settle();
+      expect(submit().disabled, host.textContent ?? '').toBe(false);
+      expect(drafts).toHaveLength(checks);
+      await act(async () => {
+        submit().click();
+        await flush();
+      });
+      expect(onCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: 'claude-opus-4-6',
+          effort: 'medium',
+          prompt: 'TEST deliberate prompt',
+          createdTeamReadiness: expect.objectContaining({ draftDigest: 'TEST-captured-digest' }),
+        }),
+        undefined
+      );
+    } finally {
+      createTeamDraftMock.state.teamName = originalName;
+      vi.mocked(api.teams.prepareProvisioning).mockImplementation(originalPrepare);
+      await act(async () => root.unmount());
+    }
+  });
+
+  it.each(['expiry', 'draft', 'context'] as const)(
+    'retains Create Host proof through same-attempt catalog refresh and still blocks on %s',
+    async (invalidation) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.useFakeTimers();
+      localStorage.setItem('team:lastSelectedProvider', 'anthropic');
+      localStorage.setItem('team:lastSelectedModel:anthropic', 'sonnet');
+      createTeamDraftMock.state.soloTeam = true;
+      storeState.cliStatus = {
+        flavor: 'agent_teams_orchestrator',
+        providers: [
+          {
+            ...createAuthoritativeProviderStatus('anthropic', ['sonnet']),
+            authenticated: false,
+            capabilities: {
+              teamLaunch: false,
+              oneShot: false,
+              extensions: createDefaultCliExtensionCapabilities(),
+            },
+          },
+        ],
+      };
+      vi.mocked(isTeamProviderRuntimeStatusLoading).mockImplementation(
+        (_providerId, provider) => provider?.modelCatalogRefreshState === 'loading'
+      );
+      const diagnostics = await vi.importActual<
+        typeof import('@renderer/components/team/dialogs/providerPrepareDiagnostics')
+      >('@renderer/components/team/dialogs/providerPrepareDiagnostics');
+      vi.mocked(runProviderPrepareDiagnostics).mockImplementation(
+        diagnostics.runProviderPrepareDiagnostics
+      );
+      const originalPrepare = vi.mocked(api.teams.prepareProvisioning).getMockImplementation()!;
+      const expiresAt = Date.now() + 60_000;
+      vi.mocked(api.teams.prepareProvisioning).mockImplementation(async (...args) => {
+        const context = args[7];
+        if (context?.kind !== 'create' || !context.draft || !context.preparationId)
+          throw new Error('Expected complete Create preparation context');
+        return {
+          ready: true,
+          message: 'TEST captured Host ready',
+          createdTeamReadiness: {
+            preparationId: context.preparationId,
+            selectionSignature: createdTeamSelectionSignature(context.draft),
+            draftDigest: 'TEST-captured-product-digest',
+            expiresAt,
+          },
+        };
+      });
+      const onCreate = vi.fn(async () => 'host-team:TEST-created');
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      const render = () =>
+        root.render(
+          React.createElement(CreateTeamDialog, {
+            open: true,
+            canCreate: true,
+            provisioningErrorsByTeam: {},
+            existingTeamNames: [],
+            provisioningTeamNames: [],
+            activeTeams: [],
+            defaultProjectPath: '/tmp/project',
+            onClose: vi.fn(),
+            onCreate,
+            onOpenTeam: vi.fn(),
+          })
+        );
+      const settle = async () => {
+        for (let attempt = 0; attempt < 4; attempt++)
+          await act(async () => {
+            await vi.advanceTimersByTimeAsync(100);
+            await flush();
+          });
+      };
+      const submit = () => host.querySelector<HTMLButtonElement>('button.min-w-32')!;
+      try {
+        await act(async () => {
+          render();
+          await flush();
+        });
+        await settle();
+        expect(submit().disabled, host.textContent ?? '').toBe(false);
+        const observations = vi.mocked(api.teams.prepareProvisioning).mock.calls.length;
+        const diagnosticRuns = vi.mocked(runProviderPrepareDiagnostics).mock.calls.length;
+        expect(observations).toBeGreaterThan(0);
+        expect(diagnosticRuns).toBe(1);
+        storeState.cliStatus = {
+          ...storeState.cliStatus,
+          providers: storeState.cliStatus.providers.map((provider) => ({
+            ...provider,
+            modelCatalogRefreshState: 'loading',
+            modelCatalog: null,
+          })),
+        };
+        await act(async () => {
+          render();
+          await flush();
+        });
+        await settle();
+        expect(submit().disabled, host.textContent ?? '').toBe(false);
+        expect(api.teams.prepareProvisioning).toHaveBeenCalledTimes(observations);
+        expect(runProviderPrepareDiagnostics).toHaveBeenCalledTimes(diagnosticRuns);
+        await act(async () => {
+          if (invalidation === 'expiry')
+            await vi.advanceTimersByTimeAsync(expiresAt - Date.now() + 1);
+          if (invalidation === 'draft')
+            advancedCliMock.lastProps.onCustomArgsChange('--TEST-changed');
+          if (invalidation === 'context') {
+            storeState.activeContextId = 'TEST-other';
+            render();
+          }
+          await flush();
+        });
+        expect(submit().disabled).toBe(true);
+        expect(onCreate).not.toHaveBeenCalled();
+        expect(api.teams.prepareProvisioning).toHaveBeenCalledTimes(observations);
+      } finally {
+        vi.mocked(api.teams.prepareProvisioning).mockImplementation(originalPrepare);
+        await act(async () => root.unmount());
+      }
+    }
+  );
+
+  it('permits save-only after cancelling a pending create preflight with the same project', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    storeState.cliStatus.providers = storeState.cliStatus.providers?.map((provider) => ({
+      ...provider,
+      authenticated: false,
+    }));
+    vi.mocked(runProviderPrepareDiagnostics).mockReturnValue(new Promise(() => {}));
+    const onCreate = vi.fn(async () => {});
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = () =>
+      root.render(
+        React.createElement(CreateTeamDialog, {
+          open: true,
+          canCreate: true,
+          provisioningErrorsByTeam: {},
+          clearProvisioningError: vi.fn(),
+          existingTeamNames: [],
+          provisioningTeamNames: [],
+          activeTeams: [],
+          defaultProjectPath: '/tmp/project',
+          onClose: vi.fn(),
+          onCreate,
+          onOpenTeam: vi.fn(),
+        })
+      );
+    await act(async () => {
+      render();
+      await flush();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(400);
+      await flush();
+    });
+    expect(runProviderPrepareDiagnostics).toHaveBeenCalled();
+    const submit = () => host.querySelector<HTMLButtonElement>('button.min-w-32')!;
+    expect(submit().disabled).toBe(true);
+    createTeamDraftMock.state.launchTeam = false;
+    await act(async () => {
+      render();
+      await flush();
+    });
+    expect(submit().disabled, host.textContent ?? '').toBe(false);
+    await act(async () => {
+      submit().click();
+      await flush();
+    });
+    expect(api.teams.createConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ cwd: '/tmp/project' })
+    );
+    expect(onCreate).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
   });
 
   it('clears completed create preflight while selection is unresolved but permits create without launch', async () => {

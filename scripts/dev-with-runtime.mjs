@@ -306,7 +306,8 @@ function sleep(ms) {
 }
 
 function parseRemoteDebuggingPortArg(args) {
-  for (let index = 0; index < args.length; index += 1) {
+  // Explicit run arguments override the package script's default port.
+  for (let index = args.length - 1; index >= 0; index -= 1) {
     const arg = args[index];
     if (arg === remoteDebuggingPortArg) {
       const rawPort = args[index + 1];
@@ -364,22 +365,18 @@ async function resolveElectronViteArgs(args) {
   }
 
   const availablePort = await findAvailableTcpPort(remoteDebuggingPort.port);
-  if (availablePort === remoteDebuggingPort.port) {
-    return args;
+  if (availablePort !== remoteDebuggingPort.port) {
+    process.stdout.write(
+      `Remote debugging port ${remoteDebuggingPort.port} is busy; using ${availablePort}.\n`
+    );
   }
-
-  process.stdout.write(
-    `Remote debugging port ${remoteDebuggingPort.port} is busy; using ${availablePort}.\n`
+  // Forward exactly one value: repeated options can become an array in the Vite CLI.
+  const prefix = `${remoteDebuggingPortArg}=`;
+  const nextArgs = args.filter((arg, index) =>
+    arg !== remoteDebuggingPortArg && !arg.startsWith(prefix) &&
+    (index === 0 || args[index - 1] !== remoteDebuggingPortArg)
   );
-
-  const nextArgs = [...args];
-  if (remoteDebuggingPort.style === 'split') {
-    nextArgs[remoteDebuggingPort.valueIndex] = String(availablePort);
-  } else {
-    nextArgs[remoteDebuggingPort.index] = `${remoteDebuggingPortArg}=${availablePort}`;
-  }
-
-  return nextArgs;
+  return [...nextArgs, `${remoteDebuggingPortArg}=${availablePort}`];
 }
 
 function readBinaryVersion(binaryPath) {
@@ -689,31 +686,44 @@ async function resolveRuntimeCli() {
 }
 
 async function main() {
-  augmentRuntimeToolPath();
+  const candidate = process.env.AGENT_TEAMS_HOST_CANDIDATE === '1';
+  if (
+    candidate &&
+    (!process.env.AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH ||
+      !process.env.AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256)
+  ) {
+    throw new Error('Host candidate requires the captured backend descriptor');
+  }
+  if (!candidate) augmentRuntimeToolPath();
 
   if (!shouldPrintRuntimePath && applyOrganizationDemoMode()) {
     return;
   }
 
-  const resolvedRuntime = await resolveRuntimeCli();
+  const resolvedRuntime = candidate ? null : await resolveRuntimeCli();
 
   if (shouldPrintRuntimePath) {
+    if (!resolvedRuntime) throw new Error('Host candidate has no fork executable');
     process.stdout.write(`${resolvedRuntime.binaryPath}\n`);
     return;
   }
 
-  process.stdout.write(`Using runtime from ${resolvedRuntime.sourceLabel}\n`);
-  if ('cacheDir' in resolvedRuntime && resolvedRuntime.cacheDir) {
-    process.stdout.write(`Runtime cache: ${resolvedRuntime.cacheDir}\n`);
+  if (resolvedRuntime) {
+    process.stdout.write(`Using runtime from ${resolvedRuntime.sourceLabel}\n`);
+    if ('cacheDir' in resolvedRuntime && resolvedRuntime.cacheDir) {
+      process.stdout.write(`Runtime cache: ${resolvedRuntime.cacheDir}\n`);
+    }
+    process.stdout.write(
+      `Runtime version: ${formatRuntimeVersionForDisplay(resolvedRuntime.versionText)}\n`
+    );
   }
-  process.stdout.write(
-    `Runtime version: ${formatRuntimeVersionForDisplay(resolvedRuntime.versionText)}\n`
-  );
 
   const uiEnv = {
     ...process.env,
     UV_THREADPOOL_SIZE: process.env.UV_THREADPOOL_SIZE?.trim() || '16',
-    CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: resolvedRuntime.binaryPath,
+    ...(resolvedRuntime
+      ? { CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: resolvedRuntime.binaryPath }
+      : {}),
   };
   ensureMinimumNodeOldSpaceEnv(uiEnv);
   delete uiEnv.CLAUDE_CLI_PATH;
@@ -725,7 +735,10 @@ async function main() {
     env: uiEnv,
   });
 
-  ensureTerminalPlatformRuntime(uiEnv);
+  if (candidate) {
+    delete uiEnv.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH;
+    // Candidate tooling stages generic terminal resources explicitly; startup never downloads.
+  } else ensureTerminalPlatformRuntime(uiEnv);
 
   runOrExit(uiPackageManager, ['exec', 'electron-vite', 'dev', ...resolvedElectronViteArgs], {
     cwd: uiRepoRoot,

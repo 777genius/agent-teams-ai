@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
-import { HOST_PROTOCOL_VERSION, resolveHostLimits } from './contracts.js';
+import {
+  HOST_PROTOCOL_VERSION,
+  hostMethodFrameLimit,
+  resolveHostProfileLimits,
+} from './contracts.js';
 import { BoundedLineDecoder } from './framing.js';
 import { HostOutput } from './output.js';
 
@@ -8,6 +12,7 @@ import type {
   HostCloseReason,
   HostCloseResult,
   HostHandshake,
+  HostReviewTransportProfile,
   HostLimits,
   JsonValue,
   RpcId,
@@ -37,6 +42,7 @@ export interface HostServerOptions {
   buildId: string;
   capabilities?: readonly string[];
   limits?: Partial<HostLimits>;
+  reviewTransport?: HostReviewTransportProfile;
   methods?: Readonly<Record<string, HostMethod>>;
   /** Synchronous work seal, before any abort/cleanup await, including pending allocations. */
   onSeal?(): void;
@@ -72,12 +78,17 @@ function isRequest(value: unknown): value is RpcRequest {
 }
 
 export function createHostServer(options: HostServerOptions): HostServer {
-  const limits = resolveHostLimits(options.limits);
+  const limits = resolveHostProfileLimits(options.reviewTransport, options.limits);
   const handshake: HostHandshake = {
     protocolVersion: HOST_PROTOCOL_VERSION,
     buildId: options.buildId,
     hostIncarnation: randomUUID(),
-    capabilities: ['transport.ndjson', 'transport.gap', ...(options.capabilities ?? [])],
+    capabilities: [
+      'transport.ndjson',
+      'transport.gap',
+      ...(options.reviewTransport ? ['transport.review-v1'] : []),
+      ...(options.capabilities ?? []),
+    ],
     limits,
   };
   const abort = new AbortController();
@@ -113,6 +124,10 @@ export function createHostServer(options: HostServerOptions): HostServer {
       return;
     }
     const request = value;
+    if (Buffer.byteLength(frame) > hostMethodFrameLimit(request.method, options.reviewTransport)) {
+      sendError(request.id, -32602, 'Method frame too large');
+      return;
+    }
     if (pending.has(request.id)) {
       sendError(request.id, -32600, 'Request ID already pending');
       return;
@@ -168,7 +183,11 @@ export function createHostServer(options: HostServerOptions): HostServer {
         requestId: request.id,
         signal: abort.signal,
       });
-      if (!closing) output.sendPriority({ jsonrpc: '2.0', id: request.id, result });
+      if (!closing)
+        output.sendPriority(
+          { jsonrpc: '2.0', id: request.id, result },
+          hostMethodFrameLimit(request.method, options.reviewTransport)
+        );
     } catch (error) {
       // Only transport owns pre-admission rejection codes. A handler can fail
       // after effects and must never manufacture a safe-to-retry busy/mismatch.
@@ -244,8 +263,16 @@ export function createHostServer(options: HostServerOptions): HostServer {
   return {
     handshake,
     closed,
-    notifyData: (method, params) => output.sendData({ jsonrpc: '2.0', method, params }),
-    notifyControl: (method, params) => output.sendPriority({ jsonrpc: '2.0', method, params }),
+    notifyData: (method, params) =>
+      output.sendData(
+        { jsonrpc: '2.0', method, params },
+        hostMethodFrameLimit(method, options.reviewTransport)
+      ),
+    notifyControl: (method, params) =>
+      output.sendPriority(
+        { jsonrpc: '2.0', method, params },
+        hostMethodFrameLimit(method, options.reviewTransport)
+      ),
     dispose,
   };
 }

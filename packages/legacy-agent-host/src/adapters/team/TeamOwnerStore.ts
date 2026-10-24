@@ -1,5 +1,15 @@
 import { createHash } from 'node:crypto';
-import { lstatSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
+import {
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  openSync,
+  closeSync,
+  fstatSync,
+  readSync,
+  constants,
+} from 'node:fs';
 import { isAbsolute, join, parse, resolve } from 'node:path';
 
 import { TeamOwnerError } from '../../team/contracts.js';
@@ -11,6 +21,7 @@ import { withTeamFileFence, writeTeamJson } from './ControllerAdapter.js';
 export class TeamOwnerStore implements TeamStore {
   readonly directory: string;
   private readonly teamName: string;
+  private fenceDepth = 0;
 
   constructor(
     readonly root: string,
@@ -35,9 +46,16 @@ export class TeamOwnerStore implements TeamStore {
 
   fenced<T>(action: () => T): T {
     this.validateNamespace();
+    // Only synchronous calls on this exact store may reuse its still-held outer lock.
+    if (this.fenceDepth) return action();
     return withTeamFileFence(join(this.directory, 'authority'), () => {
       this.validateNamespace();
-      return action();
+      this.fenceDepth++;
+      try {
+        return action();
+      } finally {
+        this.fenceDepth--;
+      }
     });
   }
 
@@ -84,6 +102,69 @@ export class TeamOwnerStore implements TeamStore {
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
       throw new TeamOwnerError('hold');
+    }
+  }
+
+  /** Fixed private artifact namespace, bounded FD reads; called only under Team's authority fence. */
+  readCommandResult(reference: { sha256: string; sizeBytes: number }): unknown {
+    if (
+      !/^[a-f0-9]{64}$/.test(reference.sha256) ||
+      !Number.isSafeInteger(reference.sizeBytes) ||
+      reference.sizeBytes < 1 ||
+      reference.sizeBytes > 32 * 1024 * 1024
+    )
+      throw new TeamOwnerError('hold');
+    const target = join(this.directory, 'command-results', `${reference.sha256}.json`);
+    let descriptor: number | undefined;
+    try {
+      this.validateNamespace();
+      const before = lstatSync(target);
+      if (
+        !before.isFile() ||
+        before.isSymbolicLink() ||
+        before.nlink !== 1 ||
+        before.size !== reference.sizeBytes
+      )
+        throw new TeamOwnerError('hold');
+      descriptor = openSync(target, constants.O_RDONLY | constants.O_NOFOLLOW);
+      const opened = fstatSync(descriptor);
+      if (
+        !opened.isFile() ||
+        opened.dev !== before.dev ||
+        opened.ino !== before.ino ||
+        opened.size !== reference.sizeBytes
+      )
+        throw new TeamOwnerError('hold');
+      const bytes = Buffer.alloc(reference.sizeBytes);
+      let offset = 0;
+      while (offset < bytes.byteLength) {
+        const count = readSync(descriptor, bytes, offset, bytes.byteLength - offset, offset);
+        if (!count) throw new TeamOwnerError('hold');
+        offset += count;
+      }
+      if (readSync(descriptor, Buffer.alloc(1), 0, 1, bytes.byteLength) !== 0)
+        throw new TeamOwnerError('hold');
+      const after = fstatSync(descriptor);
+      const pathAfter = lstatSync(target);
+      if (
+        bytes.byteLength !== reference.sizeBytes ||
+        after.dev !== opened.dev ||
+        after.ino !== opened.ino ||
+        after.size !== opened.size ||
+        after.mtimeMs !== opened.mtimeMs ||
+        after.ctimeMs !== opened.ctimeMs ||
+        pathAfter.isSymbolicLink() ||
+        pathAfter.dev !== opened.dev ||
+        pathAfter.ino !== opened.ino ||
+        createHash('sha256').update(bytes).digest('hex') !== reference.sha256
+      )
+        throw new TeamOwnerError('hold');
+      this.validateNamespace();
+      return JSON.parse(bytes.toString('utf8')) as unknown;
+    } catch {
+      throw new TeamOwnerError('hold');
+    } finally {
+      if (descriptor !== undefined) closeSync(descriptor);
     }
   }
 

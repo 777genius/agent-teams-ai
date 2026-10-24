@@ -24,7 +24,11 @@ import { classifyRuntimeDiagnostic } from './runtime/RuntimeDiagnosticClassifier
 import { TeamMemberLogsFinder } from './TeamMemberLogsFinder';
 import { MemberRuntimeAdvisoryRunScope } from './TeamMemberRuntimeAdvisoryRunScope';
 
-import type { MemberLogSummary, MemberRuntimeAdvisory, ResolvedTeamMember } from '@shared/types';
+import type {
+  LegacyMemberLogSummary,
+  MemberRuntimeAdvisory,
+  ResolvedTeamMember,
+} from '@shared/types';
 
 interface RuntimeAdvisoryLogFileRef {
   memberName: string;
@@ -37,7 +41,7 @@ interface RuntimeAdvisoryLogsFinder {
     teamName: string,
     memberName: string,
     mtimeSinceMs?: number | null
-  ): Promise<Pick<MemberLogSummary, 'filePath'>[]>;
+  ): Promise<Pick<LegacyMemberLogSummary, 'filePath'>[]>;
   findRecentMemberLogFileRefsByMember?(
     teamName: string,
     memberNames: readonly string[],

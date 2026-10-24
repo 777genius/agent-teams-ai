@@ -33,14 +33,10 @@ import type {
 import { RendererCloseReadinessCoordinator } from '@features/app-close-coordination/main';
 import {
   type CodexAccountFeatureFacade,
-  createCodexAccountFeature,
   registerCodexAccountIpc,
   removeCodexAccountIpc,
 } from '@features/codex-account/main';
-import {
-  type CodexModelCatalogFeatureFacade,
-  createCodexModelCatalogFeature,
-} from '@features/codex-model-catalog/main';
+import { type CodexModelCatalogFeatureFacade } from '@features/codex-model-catalog/main';
 import {
   createMemberLogStreamFeature,
   registerMemberLogStreamIpc,
@@ -87,6 +83,7 @@ import {
 import {
   RUNTIME_PROVIDER_COMPANION_PROGRESS,
   RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS,
+  type RuntimeProviderOAuthProgressDto,
 } from '@features/runtime-provider-management/contracts';
 import {
   createTerminalWorkspaceFeature,
@@ -204,7 +201,6 @@ import {
 import {
   DEFAULT_WINDOW_HEIGHT,
   DEFAULT_WINDOW_WIDTH,
-  DEV_SERVER_PORT,
   getTrafficLightPositionForZoom,
   WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL,
 } from '@shared/constants';
@@ -223,8 +219,24 @@ import {
 import { existsSync } from 'fs';
 import { join } from 'path';
 
+import { createDesktopCodexFeatures } from './composition/createDesktopCodexFeatures';
+import {
+  captureDesktopAgentBackendHttpScope,
+  captureDesktopStatusRequest,
+  configureDesktopStoppedImportOwners,
+  getDesktopProviderStatusPort,
+  isDesktopAgentBackendSelected,
+  configureDesktopBackendPersistence,
+} from './ipc/agentBackend';
 import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
-import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
+import {
+  initializeAgentBackendConnection,
+  getDesktopProviderManagementPort,
+  initializeIpcHandlers,
+  removeIpcHandlers,
+  shutdownDesktopAgentBackend,
+} from './ipc/handlers';
+import { getDevRendererLocation, resolveRendererIndexPath } from './utils/rendererLocation';
 import { registerOpenCodeStartupCleanupHandlers } from './ipc/openCodeStartupCleanup';
 import { registerRendererLogHandlers } from './ipc/rendererLogs';
 import { setReviewMainWindow } from './ipc/review';
@@ -262,11 +274,16 @@ import {
   createOpenCodeBridgeClientIdentity,
   OpenCodeBridgeCommandHandshakePort,
 } from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
-import { startPeriodicOpenCodeHostStartupLockPurge } from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
+import {
+  resolveClaudeMultimodelDataDir,
+  startPeriodicOpenCodeHostStartupLockPurge,
+} from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
+import { createLegacyOpenCodeMaintenanceRequirement } from './services/team/opencode/bridge/OpenCodeLegacyMaintenanceCensus';
+import { cleanupLegacyOpenCodeLifecycle } from './services/team/opencode/bridge/OpenCodeLifecycleCleanup';
+import { resolveCursorAgentAttributionDirectory } from './services/team/opencode/bridge/CursorAgentAttributionRecords';
 import {
   buildOpenCodeProcessOwnershipMarkers,
   cleanupOpenCodeHostProcessFallback,
-  runOpenCodeLifecycleCleanupTail,
   runOpenCodeStartupCleanupMaintenance,
   type OpenCodeLifecycleCleanupTailPorts,
 } from './services/team/opencode/bridge/OpenCodeLifecycleCleanupTail';
@@ -299,6 +316,7 @@ import {
 import { TeamSentMessagesStore } from './services/team/TeamSentMessagesStore';
 import { getAppIconPath } from './utils/appIcon';
 import { configureFatalDiagnosticReport } from './utils/fatalDiagnosticReport';
+import { installMainOutputErrorGuards } from './utils/mainOutputErrorGuards';
 import { installPersistentAppLog } from './utils/persistentAppLog';
 import {
   getAutoDetectedClaudeBasePath,
@@ -728,51 +746,23 @@ const openCodeLifecycleCleanupTailPorts: OpenCodeLifecycleCleanupTailPorts = {
   logError: (message) => logger.error(message),
 };
 
+const nativeLegacyMaintenanceRequired = createLegacyOpenCodeMaintenanceRequirement(() => ({
+  teamsBasePath: getTeamsBasePath(),
+  multimodelDataPath: resolveClaudeMultimodelDataDir(),
+  attributionPath: resolveCursorAgentAttributionDirectory(),
+  hasTrackedObligations: () => teamProvisioningService?.hasTrackedRuntimeObligations() ?? false,
+}));
 async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'): Promise<void> {
-  let registryHostPids = new Set<number>();
-  let registryCleanupAvailable = false;
-  if (openCodeLifecycleBridge) {
-    const result = await openCodeLifecycleBridge.cleanupOpenCodeHosts({
-      reason,
-      mode: reason === 'shutdown' ? 'force' : 'stale',
-      staleAgeMs: reason === 'startup' ? 5 * 60_000 : null,
-      leaseStaleAgeMs: reason === 'startup' ? 24 * 60 * 60_000 : null,
-      preflightLeaseStaleAgeMs: reason === 'startup' ? 6 * 60_000 : null,
-    });
-    registryHostPids = new Set(
-      result.hosts
-        .filter((host) => host.action.startsWith('kept_'))
-        .map((host) => host.pid)
-        .filter((pid) => Number.isFinite(pid) && pid > 0)
-    );
-    if (result.cleaned > 0) {
-      logger.info(
-        `[OpenCode] ${reason} host cleanup removed ${result.cleaned} registry host(s), ${result.remaining} remaining`
-      );
-    }
-    for (const diagnostic of result.diagnostics) {
-      logger.warn(`[OpenCode] ${reason} host cleanup: ${diagnostic}`);
-    }
-    registryCleanupAvailable = !result.diagnostics.some((diagnostic) =>
-      diagnostic.startsWith('OpenCode host cleanup bridge failed:')
-    );
-  }
-  // After the command, not before it: the managed host the registry sweep
-  // boots in this process directory is younger than the moment the command was
-  // issued, so an issue-time fence keeps the one host the tail below exists to
-  // reap.
-  const sweepCommandSettledAtMs = Date.now();
-
-  await runOpenCodeLifecycleCleanupTail({
+  await cleanupLegacyOpenCodeLifecycle({
     reason,
-    registryHostPids,
-    registryCleanupAvailable,
+    bridge: openCodeLifecycleBridge,
+    nativeMaintenanceRequired: nativeLegacyMaintenanceRequired,
     appStartedAtMs,
-    sweepCommandSettledAtMs,
     managedHostInstanceId: openCodeManagedHostInstanceId,
     profileScope: buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath()),
     releaseSharedRuntime: releaseLoopbackRuntimesOnAppShutdown,
     ports: openCodeLifecycleCleanupTailPorts,
+    logInfo: (message) => logger.info(message),
   });
 }
 
@@ -995,6 +985,7 @@ async function notifyNewSentMessages(teamName: string): Promise<void> {
   }
 }
 
+installMainOutputErrorGuards(logger.diagnostic.bind(logger));
 process.on('unhandledRejection', (reason) => {
   logger.error('Unhandled promise rejection in main process:', reason);
 });
@@ -1236,7 +1227,6 @@ async function requestWindowCloseReadiness(
   reason: AppCloseReason,
   unsafeActionLabel: string
 ): Promise<boolean> {
-  if (!rendererDidFinishLoad) return true;
   const result = await rendererCloseReadinessCoordinator.request(window, reason);
   if (result.ok) return true;
   return confirmUnsafeAppClose(window, result.blockers, unsafeActionLabel);
@@ -1246,7 +1236,6 @@ async function requestAllWindowsCloseReadiness(
   reason: AppCloseReason,
   unsafeActionLabel: string
 ): Promise<boolean> {
-  if (!rendererDidFinishLoad) return true;
   const windows = BrowserWindow.getAllWindows().filter((window) => !window.isDestroyed());
   if (windows.length === 0) return true;
   const results = await Promise.all(
@@ -1304,8 +1293,9 @@ async function requestGuardedAppQuit(reason: 'app-quit' | 'relaunch'): Promise<b
       } catch (error) {
         logger.error(`Shutdown failed: ${error instanceof Error ? error.message : String(error)}`);
       }
+      logger.diagnostic('App cleanup finished; draining diagnostic log');
       persistentAppLog?.dispose();
-      await persistentAppLog?.flush();
+      await runShutdownStep('diagnostic log flush', () => persistentAppLog?.flush());
       shutdownComplete = true;
       app.quit();
       return true;
@@ -1457,7 +1447,7 @@ async function runShutdownStep(
   timeoutMs: number = SHUTDOWN_STEP_TIMEOUT_MS
 ): Promise<void> {
   let timeout: ReturnType<typeof setTimeout> | null = null;
-
+  logger.diagnostic('Shutdown step wait started', { label });
   try {
     await Promise.race([
       Promise.resolve().then(action),
@@ -1474,6 +1464,7 @@ async function runShutdownStep(
       `Shutdown step failed (${label}): ${error instanceof Error ? error.message : String(error)}`
     );
   } finally {
+    logger.diagnostic('Shutdown step wait finished', { label });
     if (timeout) {
       clearTimeout(timeout);
     }
@@ -1541,18 +1532,6 @@ export async function disposeInternalStorageAfterWriterDrains(
     );
   }
   await internalStorageDispose.catch(() => undefined);
-}
-
-/**
- * Resolve production renderer index path.
- * Main bundle lives in dist-electron/main, while renderer lives in out/renderer.
- */
-function getRendererIndexPath(): string {
-  const candidates = [
-    join(__dirname, '../../out/renderer/index.html'),
-    join(__dirname, '../renderer/index.html'),
-  ];
-  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
 }
 
 function getTeamControlApiBaseUrl(): string | null {
@@ -1880,6 +1859,8 @@ function reconfigureLocalContextForClaudeRoot(): void {
     }
 
     contextRegistry.replaceContext('local', replacementLocal);
+    // prettier-ignore
+    if (teamBackupService) configureDesktopStoppedImportOwners({ backup: teamBackupService, provisioning: teamProvisioningService, data: teamDataService }, (id) => id === replacementLocal.id && contextRegistry.get('local') === replacementLocal && contextRegistry.getActive() === replacementLocal);
 
     if (wasLocalActive) {
       wireFileWatcherEvents(replacementLocal);
@@ -1895,8 +1876,6 @@ function reconfigureLocalContextForClaudeRoot(): void {
 const announcementsLifecycle = new AnnouncementsLifecycle();
 
 async function initializeServices(): Promise<void> {
-  // An inherited endpoint belongs to a previous process, not this Host's server.
-  await clearTeamControlApiState();
   void announcementsLifecycle
     .initialize({
       userDataPath: app.getPath('userData'),
@@ -1933,6 +1912,12 @@ async function initializeServices(): Promise<void> {
   // FileWatcher is deferred to did-finish-load to avoid blocking window creation
   // with fs.watch() setup (especially slow on Windows NTFS with recursive watchers).
   contextRegistry.registerContext(localContext);
+  initializeAgentBackendConnection(contextRegistry, {
+    getMainWindow: () => mainWindow,
+    rendererIndexPath: resolveRendererIndexPath(__dirname),
+  });
+  // An inherited endpoint belongs to a previous process, not this Host's server.
+  await clearTeamControlApiState();
   localContext.startCacheOnly();
   logger.info(`Projects directory: ${localContext.projectScanner.getProjectsDir()}`);
   // Initialize notification manager (singleton, not context-scoped)
@@ -1962,7 +1947,7 @@ async function initializeServices(): Promise<void> {
       shutdownComplete = true;
     }
   });
-  cliInstallerService = new CliInstallerService();
+  cliInstallerService = new CliInstallerService(Date.now, getDesktopProviderStatusPort());
   openCodeRuntimeInstallerService = new OpenCodeRuntimeInstallerService();
   ptyTerminalService = new PtyTerminalService();
   const teamMemberLogsFinder = new TeamMemberLogsFinder();
@@ -2099,6 +2084,7 @@ async function initializeServices(): Promise<void> {
     process.platform === 'win32'
       ? new OpenCodeWindowsStartupCleanup({
           appStartedAtMs,
+          nativeMaintenanceRequired: nativeLegacyMaintenanceRequired,
           profileScope: buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath()),
           ownershipMarkers: buildOpenCodeProcessOwnershipMarkers(openCodeManagedHostInstanceId),
           maintenance: (canAdmitStartupWork) =>
@@ -2156,6 +2142,9 @@ async function initializeServices(): Promise<void> {
   void new TeamMcpConfigBuilder().gcStaleConfigs();
   const workSyncRestoreGate = new MemberWorkSyncTeamOperationGate();
   const initializedBackupOwner = (teamBackupService = new TeamBackupService());
+  configureDesktopBackendPersistence(initializedBackupOwner, applicationCommandRunner);
+  // prettier-ignore
+  configureDesktopStoppedImportOwners({ backup: initializedBackupOwner, provisioning: teamProvisioningService, data: teamDataService }, (id) => id === localContext.id && contextRegistry.get('local') === localContext && contextRegistry.getActive() === localContext);
 
   // Cross-team communication service
   const crossTeamConfigReader = new TeamConfigReader();
@@ -2356,13 +2345,20 @@ async function initializeServices(): Promise<void> {
     crossTeamService,
     logger: createLogger('Feature:Organizations'),
   });
-  runtimeProviderManagementFeature = createRuntimeProviderManagementFeature({
-    openExternal: async (url) => {
+  const runtimeProviderOAuth = {
+    openExternal: async (url: string) => {
       await shell.openExternal(url);
     },
-    emitOAuthProgress: (event) => {
+    emitOAuthProgress: (event: RuntimeProviderOAuthProgressDto) => {
       safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS, event);
     },
+  };
+  runtimeProviderManagementFeature = createRuntimeProviderManagementFeature({
+    ...runtimeProviderOAuth,
+    port: getDesktopProviderManagementPort({
+      openExternal: runtimeProviderOAuth.openExternal,
+      emitProgress: runtimeProviderOAuth.emitOAuthProgress,
+    }),
     emitProgress: (event) => {
       safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_COMPANION_PROGRESS, event);
     },
@@ -2862,15 +2858,10 @@ async function initializeServices(): Promise<void> {
         logger.warn(`[Init] Member work sync startup scan failed: ${String(error)}`)
       );
   }, STARTUP_RECOVERY_DELAY_MS + 2_000);
-  codexAccountFeature = createCodexAccountFeature({
-    logger: createLogger('Feature:CodexAccount'),
-    configManager,
-  });
+  const codexFeatures = createDesktopCodexFeatures(configManager);
+  codexAccountFeature = codexFeatures.accountFeature;
+  codexModelCatalogFeature = codexFeatures.modelCatalogFeature;
   providerConnectionService.setCodexAccountFeature(codexAccountFeature);
-  codexModelCatalogFeature = createCodexModelCatalogFeature({
-    logger: createLogger('Feature:CodexModelCatalog'),
-    codexAccountFeature,
-  });
   providerConnectionService.setCodexModelCatalogFeature(codexModelCatalogFeature);
 
   // startProcessHealthPolling() is deferred to after window creation
@@ -2947,12 +2938,20 @@ async function initializeServices(): Promise<void> {
     launchIoGovernor ?? undefined,
     memberWorkSyncFeature ?? undefined
   );
-  registerCodexAccountIpc(ipcMain, codexAccountFeature);
+  registerCodexAccountIpc(
+    ipcMain,
+    codexAccountFeature,
+    codexFeatures.native ? captureDesktopStatusRequest : undefined
+  );
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
   registerTeamImportIpc(ipcMain, teamImportFeature);
   teamMemberSettings.registerTeamMemberSettingsIpc(ipcMain, teamMemberSettingsFeature);
   registerOrganizationsIpc(ipcMain, organizationsFeature);
-  registerRuntimeProviderManagementIpc(ipcMain, runtimeProviderManagementFeature);
+  registerRuntimeProviderManagementIpc(
+    ipcMain,
+    runtimeProviderManagementFeature,
+    isDesktopAgentBackendSelected() ? captureDesktopStatusRequest : undefined
+  );
   registerTerminalWorkspaceIpc(ipcMain, terminalWorkspaceFeature);
   if (tokenUsageFeature) {
     registerTokenUsageIpc(ipcMain, tokenUsageFeature);
@@ -3013,6 +3012,7 @@ async function startHttpServer(
     }
     const port = await httpServer.start(
       {
+        agentBackend: captureDesktopAgentBackendHttpScope(),
         projectScanner: activeContext.projectScanner,
         sessionParser: activeContext.sessionParser,
         subagentResolver: activeContext.subagentResolver,
@@ -3045,17 +3045,17 @@ async function startHttpServer(
   }
 }
 
-/**
- * Shuts down all services.
- */
 async function shutdownServices(): Promise<void> {
   stopAdmittingOpenCodeStartupCleanup();
+  const legacyMaintenanceAtShutdown = nativeLegacyMaintenanceRequired();
+  const backendDrain = shutdownDesktopAgentBackend();
   if (shutdownPromise) {
     return shutdownPromise;
   }
 
   shutdownPromise = (async () => {
     logger.info('Shutting down services...');
+    await runShutdownStep('agent backend cleanup', () => backendDrain, 10_000);
     await runShutdownStep('announcements cleanup', () => announcementsLifecycle.dispose());
 
     clearStartupTimers();
@@ -3072,10 +3072,12 @@ async function shutdownServices(): Promise<void> {
       teamRuntimeRecoveryFeature = null;
     });
 
-    // Kill all team CLI processes via SIGKILL before anything else.
-    // This must happen before the OS closes stdin pipes on app exit, because
-    // stdin EOF triggers CLI cleanup that can delete team files.
+    // Stop old-owned CLIs before stdin EOF can trigger their file cleanup.
+    logger.diagnostic('Shutdown legacy obligations census wait');
+    await legacyMaintenanceAtShutdown; // Retain legacy inputs before stopAllTeams removes its records.
     if (teamProvisioningService) {
+      if (teamProvisioningService.hasTrackedRuntimeObligations())
+        await nativeLegacyMaintenanceRequired();
       await runShutdownStep('stop all teams', () => teamProvisioningService.stopAllTeams(), 10_000);
     }
     await runShutdownStep(
@@ -3299,7 +3301,8 @@ function runPostRendererStartupTasks(): void {
     void schedulerService?.start();
   }, STARTUP_BACKGROUND_SERVICE_DELAY_MS);
   scheduleStartupTask(() => {
-    void teamProvisioningService.warmup();
+    // Selected Host status is composed separately; legacy warmup invokes the fork CLI.
+    if (!isDesktopAgentBackendSelected()) void teamProvisioningService.warmup();
   }, STARTUP_CLI_WARMUP_DELAY_MS);
 }
 
@@ -3376,12 +3379,8 @@ function createWindow(): void {
   if (isDev) {
     // electron-vite may move the dev server off 5173 if it's already taken.
     // Always prefer the URL it provides via env; fallback to the default port.
-    const envUrl =
-      process.env.ELECTRON_RENDERER_URL ||
-      process.env.VITE_DEV_SERVER_URL ||
-      process.env.ELECTRON_VITE_DEV_SERVER_URL;
-    const devUrl = envUrl?.trim() || `http://localhost:${DEV_SERVER_PORT}`;
-    if (!envUrl) {
+    const { configured, url: devUrl } = getDevRendererLocation(process.env);
+    if (!configured) {
       logger.warn(
         `[dev] renderer dev server URL env not set; falling back to ${devUrl}. ` +
           `If you see "Port 5173 is in use" in the terminal, the UI may appear stuck until this is fixed.`
@@ -3391,7 +3390,7 @@ function createWindow(): void {
     }
     void mainWindow.loadURL(devUrl);
   } else {
-    void mainWindow.loadFile(getRendererIndexPath()).catch((error: unknown) => {
+    void mainWindow.loadFile(resolveRendererIndexPath(__dirname)).catch((error: unknown) => {
       logger.error('Failed to load renderer entry HTML:', error);
       captureMainException(error, 'renderer_load_file');
     });

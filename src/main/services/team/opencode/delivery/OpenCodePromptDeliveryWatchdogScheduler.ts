@@ -224,6 +224,16 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
     return !laneActive;
   }
 
+  readStoppedTeamImportFacts(teamName: string): Readonly<Record<string, number>> {
+    return {
+      timers: [...this.timers.keys()].filter((key) =>
+        key.startsWith(`opencode-delivery:${teamName}:`)
+      ).length,
+      queued: this.queue.filter((job) => job.teamName === teamName).length,
+      inFlight: this.inFlightByTeam.get(teamName) ?? 0,
+    };
+  }
+
   cancelTeam(teamName: string): void {
     for (const key of Array.from(this.timers.keys())) {
       if (key.startsWith(`opencode-delivery:${teamName}:`)) {

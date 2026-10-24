@@ -1,5 +1,6 @@
 import { BackendSelectingMemberWorkSyncReportJournal } from '../infrastructure/BackendSelectingMemberWorkSyncReportJournal';
 import { BackendSelectingMemberWorkSyncStore } from '../infrastructure/BackendSelectingMemberWorkSyncStore';
+import { internalStorageInterruption } from '../infrastructure/internalStorageInterruption';
 import {
   buildPendingReportIntentId,
   JsonMemberWorkSyncStore,
@@ -33,6 +34,7 @@ export function createMemberWorkSyncPersistence(input: {
       store: jsonStore,
       reportJournal: jsonJournal,
       authority: new MemberWorkSyncStatusAuthority({
+        interruption: internalStorageInterruption,
         identity: input.lifecycleIdentity,
         withPreparedBackend: (identity, operation) =>
           operation(createJsonPreparedStatusBackend(identity.teamName, jsonStore)),
@@ -69,6 +71,7 @@ export function createMemberWorkSyncPersistence(input: {
       store
     ),
     authority: new MemberWorkSyncStatusAuthority({
+      interruption: internalStorageInterruption,
       identity: input.lifecycleIdentity,
       withPreparedBackend: (identity, operation) => store.withPreparedBackend(identity, operation),
     }),

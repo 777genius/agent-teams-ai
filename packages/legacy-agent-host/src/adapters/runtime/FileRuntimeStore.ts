@@ -1,3 +1,4 @@
+import { validateContextEpochs } from '../../runtime/inputPreparation.js';
 import { lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { isAbsolute, join, parse, resolve } from 'node:path';
@@ -11,6 +12,12 @@ import type {
 } from '../../runtime/contracts.js';
 import { deliveryFingerprint, normalizeBinding, runtimeDigest } from '../../runtime/identity.js';
 import { FileCheckpointStorage } from './FileCheckpointStorage.js';
+import { FileRuntimeEventStorage } from './FileRuntimeEventStorage.js';
+import type {
+  RuntimeActivityLimits,
+  RuntimeActivityRecord,
+  RuntimeEventStorage,
+} from '../../runtime/activityContracts.js';
 import { checkpointFingerprint } from '../../runtime/checkpointIdentity.js';
 import type { CheckpointPayload, CheckpointStorage } from '../../runtime/checkpointContracts.js';
 
@@ -60,6 +67,7 @@ function validate(record: RuntimeSessionRecord): void {
     )
       invalid();
   }
+  validateContextEpochs(record);
   const inputIds = new Set<string>();
   const operations = new Set<string>();
   for (const input of record.inputs) {
@@ -113,6 +121,11 @@ function validate(record: RuntimeSessionRecord): void {
     (!inputIds.has(record.control.inputId) ||
       !operations.has(record.control.operationRef) ||
       !['pending', 'unknown'].includes(record.control.phase))
+  )
+    invalid();
+  if (
+    record.activitySequence !== undefined &&
+    (!Number.isSafeInteger(record.activitySequence) || record.activitySequence < 0)
   )
     invalid();
   if (record.closeClaimed !== undefined && typeof record.closeClaimed !== 'boolean') invalid();
@@ -170,9 +183,11 @@ function validate(record: RuntimeSessionRecord): void {
 }
 
 /** Existing cross-process lock/atomic IO. No age-based lock takeover or power-loss claim. */
-export class FileRuntimeStore implements RuntimeStore, CheckpointStorage {
+export class FileRuntimeStore implements RuntimeStore, CheckpointStorage, RuntimeEventStorage {
   private readonly directory: string;
   private readonly checkpointStorage: FileCheckpointStorage;
+  private readonly eventStorage: FileRuntimeEventStorage;
+  readonly activityLimits: Readonly<RuntimeActivityLimits>;
   private readonly maxStateBytes: number;
   private readonly growthLimit: number;
 
@@ -182,6 +197,7 @@ export class FileRuntimeStore implements RuntimeStore, CheckpointStorage {
       maxStateBytes?: number;
       settlementReserveBytes?: number;
       maxCheckpointBytes?: number;
+      activity?: Partial<RuntimeActivityLimits>;
     } = {}
   ) {
     this.maxStateBytes = limits.maxStateBytes ?? 16 * 1024 * 1024;
@@ -210,6 +226,8 @@ export class FileRuntimeStore implements RuntimeStore, CheckpointStorage {
     this.directory = join(root, 'runtime-sessions');
     this.ensureDirectory(this.directory);
     this.checkpointStorage = new FileCheckpointStorage(root, limits.maxCheckpointBytes);
+    this.eventStorage = new FileRuntimeEventStorage(root, limits.activity);
+    this.activityLimits = this.eventStorage.activityLimits;
   }
 
   fenced<T>(rawBinding: RuntimeBinding, action: (transaction: RuntimeTransaction) => T): T {
@@ -267,6 +285,13 @@ export class FileRuntimeStore implements RuntimeStore, CheckpointStorage {
         },
       })
     );
+  }
+
+  readActivity(binding: RuntimeBinding): RuntimeActivityRecord | undefined {
+    return this.eventStorage.readActivity(binding);
+  }
+  writeActivity(record: RuntimeActivityRecord): void {
+    this.eventStorage.writeActivity(record);
   }
 
   writeCheckpoint(payload: CheckpointPayload): void {

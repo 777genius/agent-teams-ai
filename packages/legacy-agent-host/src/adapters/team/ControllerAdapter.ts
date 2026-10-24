@@ -1,16 +1,34 @@
+import { createControllerProcessPolicy } from '../../process/ControllerProcessPolicy.js';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { startTaskNotifying } from './TaskStartNotifier.js';
+
 import type { JsonValue } from '../../contracts.js';
-import type { TaskBoardPolicy, TeamPolicyPort } from '../../team/ports.js';
+import type { TaskBoardPolicy, TeamBoardReadPolicy, TeamPolicyPort } from '../../team/ports.js';
 
 const require = createRequire(import.meta.url);
 
 interface Controller {
-  taskBoard: TaskBoardPolicy;
+  context: { paths: Record<string, string> };
+  taskBoard: Omit<TaskBoardPolicy, 'startTaskNotifying'> &
+    TeamBoardReadPolicy & {
+      memberBriefing(
+        member: string,
+        options: {
+          includeActiveProcesses: boolean;
+          boundTeamToolExample: true;
+          allowRuntimeIdentityFallback: false;
+        }
+      ): Promise<string>;
+    };
   messages: {
-    sendMessage(flags: Record<string, unknown>): { messageId: string; message: JsonValue };
+    sendMessage(flags: Record<string, unknown>): {
+      messageId: string;
+      message: JsonValue;
+    };
+    appendSentMessage(flags: Record<string, unknown>): JsonValue;
   };
 }
 
@@ -25,9 +43,15 @@ export function createTeamController(
       claudeDir: string;
       teamName: string;
       allowUserMessageSender: boolean;
+      boundTaskTools: boolean;
     }): Controller;
   };
-  return api.createController({ claudeDir: root, teamName, allowUserMessageSender });
+  return api.createController({
+    claudeDir: root,
+    teamName,
+    allowUserMessageSender,
+    boundTaskTools: true,
+  });
 }
 
 // These existing IO primitives retain the controller's filesystem lock protocol.
@@ -42,19 +66,58 @@ const boardLock = require('agent-teams-controller/src/internal/boardLock.js') as
   withTeamBoardLock<T>(paths: { teamDir: string }, action: () => T): T;
 };
 
+const messageStore = require('agent-teams-controller/src/internal/messageStore.js') as {
+  sendInboxMessage(
+    paths: Record<string, string>,
+    flags: Record<string, unknown>
+  ): { messageId: string; message: JsonValue };
+};
+
 export const withTeamFileFence = lock.withFileLockSync;
 export const writeTeamJson = atomic.writeJsonFileSync;
 
 export function createTeamPolicy(root: string, teamName: string): TeamPolicyPort {
+  // Query policy uses the same captured root and board lock as product reads.
+  const boardRead = <T>(action: (board: Controller['taskBoard']) => T): T =>
+    boardLock.withTeamBoardLock({ teamDir: join(root, 'teams', teamName) }, () =>
+      action(createTeamController(root, teamName).taskBoard)
+    );
   return {
+    reads: {
+      getTaskComment: (taskId, commentId) =>
+        boardRead((board) => board.getTaskComment(taskId, commentId)),
+      listTaskInventory: (filters) => boardRead((board) => board.listTaskInventory(filters)),
+      taskBriefing: (member) => boardRead((board) => board.taskBriefing(member)),
+      leadBriefing: () => boardRead((board) => board.leadBriefing()),
+      memberBriefing: (member, options) =>
+        boardRead((board) =>
+          board.memberBriefing(member, {
+            ...options,
+            boundTeamToolExample: true,
+            allowRuntimeIdentityFallback: false,
+          })
+        ),
+      getKanbanState: (options) => boardRead((board) => board.getKanbanState(options)),
+      listReviewers: () => boardRead((board) => board.listReviewers()),
+    },
+    processes: createControllerProcessPolicy(join(root, 'teams', teamName, 'processes.json')),
     taskBoard: (actor) => {
-      const board = createTeamController(root, teamName, actor === 'user').taskBoard;
+      const controller = createTeamController(root, teamName, actor === 'user');
+      const board = controller.taskBoard;
       // Prepared Task publication bypasses controller write caches; the canonical
       // board lock supplies a fresh scan context for every owner read.
       const read = <T>(action: () => T): T =>
         boardLock.withTeamBoardLock({ teamDir: join(root, 'teams', teamName) }, action);
       return {
         ...board,
+        startTaskNotifying: (input) =>
+          startTaskNotifying({
+            board,
+            send: controller.messages.sendMessage,
+            root,
+            teamName,
+            input,
+          }),
         getTask: (id) => read(() => board.getTask(id)),
         listTasks: () => read(() => board.listTasks()),
         listDeletedTasks: () => read(() => board.listDeletedTasks()),
@@ -62,6 +125,22 @@ export function createTeamPolicy(root: string, teamName: string): TeamPolicyPort
     },
     sendMessage: (actor, flags) =>
       createTeamController(root, teamName, actor === 'user').messages.sendMessage(flags),
+    sendCrossTeamMessage: (flags) =>
+      messageStore.sendInboxMessage(createTeamController(root, teamName).context.paths, flags),
+    appendSentMessage: (flags) =>
+      createTeamController(root, teamName).messages.appendSentMessage(flags),
+    readSentMessages() {
+      try {
+        const value: unknown = JSON.parse(
+          readFileSync(join(root, 'teams', teamName, 'sentMessages.json'), 'utf8')
+        );
+        if (!Array.isArray(value)) throw new Error('Invalid sent messages');
+        return value as JsonValue[];
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+        throw error;
+      }
+    },
     readInbox(member) {
       try {
         const value: unknown = JSON.parse(

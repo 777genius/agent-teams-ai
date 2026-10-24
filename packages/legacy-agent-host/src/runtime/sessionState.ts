@@ -62,7 +62,8 @@ export function normalizeOpenConfig(config: OpenConfig, allowCheckpoint = false)
 export function assertGenerationAvailable(
   tx: RuntimeTransaction,
   binding: RuntimeBinding,
-  config: OpenConfig
+  config: OpenConfig,
+  explicitFresh = false
 ): void {
   for (const sibling of tx.siblings()) {
     if (
@@ -74,8 +75,8 @@ export function assertGenerationAvailable(
       runtimeDigest(sibling.binding) !== runtimeDigest(binding) &&
       (sibling.phase !== 'closed' ||
         sibling.custody !== 'released' ||
-        sibling.control ||
-        sibling.inputs.some(activeInput))
+        ((sibling.control || sibling.inputs.some(activeInput)) &&
+          (!explicitFresh || !sibling.sealed)))
     )
       throw new RuntimeOwnerError('hold');
   }

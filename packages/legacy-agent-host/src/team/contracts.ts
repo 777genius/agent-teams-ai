@@ -1,4 +1,13 @@
+import type { AttachmentReference } from '../attachments/uploadContracts.js';
+import type { CapturedCrossTeamIntent } from '../cross-team/contracts.js';
 import type { JsonValue } from '../contracts.js';
+export type {
+  ReplaceTeamRoster,
+  TeamRosterConfiguration,
+  TeamRosterReceipt,
+  TeamMemberSettings,
+  TeamSavedSettings,
+} from './rosterContracts.js';
 
 export interface TeamBinding {
   backendId: string;
@@ -18,12 +27,13 @@ export interface TeamMember {
   role: 'lead' | 'member';
   /** Supplied by trusted composition, never inferred from a display name. */
   delivery?: DeliveryBinding;
+  settings?: import('./rosterContracts.js').TeamMemberSettings | undefined;
 }
 
 export interface TeamGrant {
   principalId: string;
   memberName: string;
-  permissions: ('read' | 'task.write' | 'message.write' | 'admin')[];
+  permissions: ('read' | 'task.write' | 'message.write' | 'process.write' | 'admin')[];
   revoked?: boolean;
   /** Monotonic for this captured principal; unrelated grants do not invalidate its intents. */
   revision?: number;
@@ -43,6 +53,10 @@ export type TeamCommand = { commandId: string } & (
         description?: string;
         owner?: string;
         blockedBy?: string[];
+        related?: string[];
+        prompt?: string;
+        promptTaskRefs?: TaskRef[];
+        startImmediately?: boolean;
         descriptionTaskRefs?: TaskRef[];
       };
     }
@@ -50,7 +64,37 @@ export type TeamCommand = { commandId: string } & (
       operation: 'task.update';
       payload: { taskId: string; subject?: string; description?: string };
     }
-  | { operation: 'task.assign'; payload: { taskId: string; owner: string } }
+  | {
+      operation: 'task.board.clear';
+      payload: { taskId: string };
+    }
+  | {
+      operation: 'task.board.order';
+      payload: {
+        columnId: 'todo' | 'in_progress' | 'done' | 'review' | 'approved';
+        orderedTaskIds: string[];
+      };
+    }
+  | {
+      operation: 'task.relationship';
+      payload: {
+        taskId: string;
+        targetId: string;
+        type: 'blockedBy' | 'blocks' | 'related';
+        action: 'add' | 'remove';
+      };
+    }
+  | {
+      operation: 'task.clarification';
+      payload: { taskId: string; value: 'lead' | 'user' | null };
+    }
+  | {
+      operation: 'task.attachment.add';
+      payload: { taskId: string; attachment: AttachmentReference };
+    }
+  | { operation: 'task.attachment.remove'; payload: { taskId: string; attachmentId: string } }
+  | { operation: 'task.start'; payload: { taskId: string; notification: 'legacy' | 'user' } }
+  | { operation: 'task.assign'; payload: { taskId: string; owner: string | null } }
   | {
       operation: 'task.lifecycle';
       payload: {
@@ -58,8 +102,42 @@ export type TeamCommand = { commandId: string } & (
         action: 'start' | 'complete' | 'delete' | 'restore' | 'pending';
       };
     }
-  | { operation: 'task.comment'; payload: { taskId: string; text: string; taskRefs?: TaskRef[] } }
-  | { operation: 'message.send'; payload: { to: string; text: string; taskRefs?: TaskRef[] } }
+  | {
+      operation: 'task.review';
+      payload:
+        | { taskId: string; action: 'request'; reviewer?: string }
+        | { taskId: string; action: 'start' }
+        | { taskId: string; action: 'disapprove' }
+        | {
+            taskId: string;
+            action: 'approve';
+            note?: string;
+            notifyOwner?: boolean;
+            suppressTaskComment?: boolean;
+          }
+        | { taskId: string; action: 'request_changes'; comment: string; taskRefs?: TaskRef[] };
+    }
+  | {
+      operation: 'task.comment';
+      payload: {
+        taskId: string;
+        text: string;
+        taskRefs?: TaskRef[];
+        attachments?: AttachmentReference[];
+      };
+    }
+  | {
+      operation: 'message.send';
+      payload: {
+        to: string;
+        text: string;
+        taskRefs?: TaskRef[];
+        messageId?: string;
+        summary?: string;
+        actionMode?: 'do' | 'ask' | 'delegate';
+        attachments?: readonly AttachmentReference[];
+      };
+    }
 );
 
 export interface PreparedEffects {
@@ -70,6 +148,8 @@ export interface PreparedEffects {
 }
 
 export interface CommandReceipt {
+  /** Private Host pair admission; ordinary commands never accept this field. */
+  crossTeam?: CapturedCrossTeamIntent;
   schemaVersion: 1;
   binding: TeamBinding;
   commandId: string;
@@ -83,11 +163,14 @@ export interface CommandReceipt {
   /** Product hash after the canonical use case; a mismatch blocks stale backup restore. */
   taskHash?: string;
   deliveryBinding?: DeliveryBinding;
+  /** Captured for immutable rich native content; renderer cannot select or change this role. */
+  messageRecipientRole?: 'lead' | 'member';
   authorityRevision?: number;
   /** New Task publication never changes product bytes before its durable file plan exists. */
   taskPlanVersion?: 1;
   taskPreimage?: string;
   /** Captured before canonical planning; recovery never resolves old notifications to a new run. */
+  taskStartLeadName?: string;
   taskRecipients?: { name: string; delivery?: DeliveryBinding }[];
 }
 
@@ -99,6 +182,7 @@ export interface ImmutableDelivery {
   inputId: string;
   messageId: string;
   content: string;
+  attachments?: readonly AttachmentReference[];
 }
 
 export interface DeliveryIntent {
@@ -110,6 +194,7 @@ export interface DeliveryIntent {
   deliveryId: string;
   inputId: string;
   content: string;
+  attachments?: readonly AttachmentReference[];
   authorityRevision: number;
   phase: 'pending' | 'admitted' | 'not_admitted';
   runtimeReceipt?: JsonValue;

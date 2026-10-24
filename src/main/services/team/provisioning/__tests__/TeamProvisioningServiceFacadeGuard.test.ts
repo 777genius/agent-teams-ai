@@ -72,6 +72,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'getTeamAgentRuntimeSnapshotReadOnly',
   'hasActiveTeamRuntimes',
   'hasProvisioningRun',
+  'hasTrackedRuntimeObligations',
   'initializeToolApprovalSettingsForLaunch',
   'isOpenCodeRuntimeRecipient',
   'isTeamAlive',
@@ -85,6 +86,11 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'recordOpenCodeRuntimeBootstrapCheckin',
   'recordOpenCodeRuntimeHeartbeat',
   'recordOpenCodeRuntimeTaskEvent',
+  // Existing old-owner import reads/fence and shutdown obligation admission.
+  'readStoppedTeamImportDeliveryFacts',
+  'readStoppedTeamImportLifecycleFacts',
+  'readStoppedTeamImportRuntimeFacts',
+  'readStoppedTeamImportStopFacts',
   'recoverOpenCodeRuntimeDeliveryJournal',
   'registerPendingCrossTeamReplyExpectation',
   'relayInboxFileToLiveRecipient',
@@ -122,6 +128,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'updateToolApprovalSettings',
   'validateAgentTeamsMcpRuntime',
   'warmup',
+  'withStoppedTeamImportFence',
 ] as const;
 const PUBLIC_SURFACE_TYPE_ALIAS_NAME = 'TeamProvisioningServicePublicSurface';
 const PUBLIC_SURFACE_VIRTUAL_FILE_PATH = resolve(

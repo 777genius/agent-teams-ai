@@ -15,6 +15,7 @@ import {
 } from '@shared/utils/boardTaskActivityPresentation';
 import { AlertCircle, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 
+import { HostTaskActivityIndex } from './HostTaskActivityViews';
 import { TaskActivityLinkedToolCard } from './TaskActivityLinkedToolCard';
 
 import type { AIGroupDisplayItem, LinkedToolItem } from '@renderer/types/groups';
@@ -23,6 +24,7 @@ import type {
   BoardTaskActivityEntry,
   BoardTaskActivityTaskRef,
 } from '@shared/types';
+import type { HostTaskActivityView } from '@shared/types/teamActivity';
 
 interface TaskActivitySectionProps {
   teamName: string;
@@ -270,6 +272,7 @@ export const TaskActivitySection = ({
 }: TaskActivitySectionProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [detailStates, setDetailStates] = useState<Record<string, ActivityDetailState>>({});
+  const [hostActivity, setHostActivity] = useState<HostTaskActivityView | null>(null);
   const [entries, setEntries] = useState<BoardTaskActivityEntry[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(enabled);
@@ -288,7 +291,7 @@ export const TaskActivitySection = ({
         setDetailStates((prev) => ({
           ...prev,
           [entry.id]:
-            result.status === 'ok'
+            result.status === 'ok' && !('kind' in result.detail)
               ? { status: 'ok', detail: normalizeDetail(result.detail) }
               : { status: 'missing' },
         }));
@@ -338,6 +341,7 @@ export const TaskActivitySection = ({
     setError(null);
     setLoading(enabled);
     hasLoadedRef.current = false;
+    setHostActivity(null);
   }, [taskId, teamName]);
 
   useEffect(() => {
@@ -364,7 +368,13 @@ export const TaskActivitySection = ({
         }
         const result = await api.teams.getTaskActivity(teamName, taskId);
         if (!cancelled) {
-          setEntries(result);
+          if (Array.isArray(result)) {
+            setHostActivity(null);
+            setEntries(result);
+          } else {
+            setHostActivity(result);
+            setEntries([]);
+          }
           hasLoadedRef.current = true;
         }
       } catch (loadError) {
@@ -418,6 +428,8 @@ export const TaskActivitySection = ({
       );
     }
 
+    if (hostActivity?.taskId === taskId)
+      return <HostTaskActivityIndex teamName={teamName} value={hostActivity} mode="activity" />;
     if (visibleEntries.length === 0) {
       return (
         <p className="text-xs text-[var(--color-text-muted)]">
@@ -447,6 +459,9 @@ export const TaskActivitySection = ({
     hasOnlyLowSignalExecution,
     loading,
     visibleEntries,
+    hostActivity,
+    taskId,
+    teamName,
   ]);
 
   return (

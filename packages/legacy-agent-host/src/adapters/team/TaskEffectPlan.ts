@@ -12,7 +12,7 @@ import { dirname, join } from 'node:path';
 
 import { TeamOwnerError } from '../../team/contracts.js';
 import { digest, safeSegment } from '../../team/identity.js';
-import { createTeamController } from './ControllerAdapter.js';
+import { createTeamPolicy } from './ControllerAdapter.js';
 import { TaskPolicyRejected } from '../../team/ports.js';
 
 import type { CommandReceipt } from '../../team/contracts.js';
@@ -185,7 +185,7 @@ export class TaskEffectPlan implements TaskMutationPort {
         mkdirSync(dirname(join(work, path)), { recursive: true });
         writeFileSync(join(work, path), file.bytes, { flag: 'wx' });
       }
-      const board = createTeamController(work, this.teamName, actor === 'user').taskBoard;
+      const board = createTeamPolicy(work, this.teamName).taskBoard(actor);
       let result: JsonValue;
       try {
         result = apply(board);
@@ -195,10 +195,17 @@ export class TaskEffectPlan implements TaskMutationPort {
       const taskId =
         receipt.command.operation === 'task.create'
           ? receipt.effects.taskId
-          : receipt.command.operation === 'message.send'
+          : receipt.command.operation === 'message.send' ||
+              receipt.command.operation === 'task.board.order'
             ? ''
             : receipt.command.payload.taskId;
-      const taskHash = digest(board.getTask(taskId));
+      // Board ordering has no synthetic Task identity. Its exact board state is
+      // retained alongside the same full file preimage and publication plan.
+      const taskHash = digest(
+        receipt.command.operation === 'task.board.order'
+          ? board.getKanbanState()
+          : board.getTask(taskId)
+      );
       const target = this.scan(work);
       for (const path of Object.keys(source)) if (!target[path]) throw new TeamOwnerError('hold');
       if (digest(this.scan(this.root)) !== digest(source)) throw new TeamOwnerError('hold');

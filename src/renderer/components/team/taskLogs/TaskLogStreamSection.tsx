@@ -10,7 +10,10 @@ import { useStore } from '@renderer/store';
 import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 import { isTaskLogActivityChangeEvent } from '@renderer/utils/teamChangeEvents';
 
+import { HostTaskActivityStream } from './HostTaskActivityViews';
+
 import type { BoardTaskLogStreamResponse } from '@shared/types';
+import type { HostTaskLogStream } from '@shared/types/teamActivity';
 
 interface TaskLogStreamSectionProps {
   teamName: string;
@@ -56,6 +59,7 @@ export const TaskLogStreamSection = ({
   liveEnabled = true,
 }: TaskLogStreamSectionProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const [hostStream, setHostStream] = useState<HostTaskLogStream | null>(null);
   const [stream, setStream] = useState<BoardTaskLogStreamResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,11 +83,16 @@ export const TaskLogStreamSection = ({
       setError((prev) => (background ? prev : null));
 
       try {
-        const response = normalizeExecutionLogStream(
-          await api.teams.getTaskLogStream(teamName, taskId)
-        );
+        const raw = await api.teams.getTaskLogStream(teamName, taskId);
         if (requestSeqRef.current !== requestSeq) return;
-
+        if ('kind' in raw) {
+          setHostStream(raw);
+          setStream(null);
+          setError(null);
+          return;
+        }
+        const response = normalizeExecutionLogStream(raw);
+        setHostStream(null);
         setStream(response);
         setError(null);
       } catch (loadError) {
@@ -105,6 +114,7 @@ export const TaskLogStreamSection = ({
 
   useEffect(() => {
     setStream(null);
+    setHostStream(null);
     streamRef.current = null;
     setError(null);
     requestSeqRef.current += 1;
@@ -179,6 +189,7 @@ export const TaskLogStreamSection = ({
 
   const streamDescription = useMemo(() => describeStreamSource(stream), [stream]);
 
+  if (hostStream?.taskId === taskId && !error) return <HostTaskActivityStream value={hostStream} />;
   return (
     <ExecutionLogStreamView
       title={t('taskLogs.stream.title')}

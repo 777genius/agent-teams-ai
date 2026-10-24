@@ -47,7 +47,12 @@ function buildProcessProtocolText(teamName) {
 If verification in step 3 fails or the process is missing from the list, re-register it.`;
 }
 
-function buildMemberProcessProtocol(teamName) {
+function buildMemberProcessProtocol(teamName, boundTeamToolExample) {
+    if (boundTeamToolExample) return wrapAgentBlock([
+        'BACKGROUND SERVICE PROCESS REGISTRATION — only extra services, never teammate agents.',
+        'After starting a service, register its exact live process: ' + boundTeamToolExample('process_register', { pid: '<PID>', label: '<description>' }),
+        'Verify using process_list {}. Stop your service using its own process control, then mark its metadata stopped with process_stop. Remove metadata with process_unregister. Both tools require commandId and the returned process id or pid; they do not send an OS signal.',
+    ].join('\n'));
     return wrapAgentBlock(buildProcessProtocolText(teamName));
 }
 

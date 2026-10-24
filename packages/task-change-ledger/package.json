@@ -1,0 +1,90 @@
+{
+  "name": "@agent-teams/task-change-ledger",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.21.0 <25"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts.d.ts",
+      "import": "./dist/contracts.js"
+    },
+    "./reviewability": {
+      "types": "./dist/reviewability.d.ts",
+      "import": "./dist/reviewability.js"
+    },
+    "./platform-path": {
+      "types": "./dist/platformPath.d.ts",
+      "import": "./dist/platformPath.js"
+    },
+    "./review-storage": {
+      "types": "./dist/review/storage/index.d.ts",
+      "import": "./dist/review/storage/index.js"
+    },
+    "./review-io": {
+      "types": "./dist/review/io/index.d.ts",
+      "import": "./dist/review/io/index.js"
+    },
+    "./review-phases": {
+      "types": "./dist/review/storage/mutationPhases.d.ts",
+      "import": "./dist/review/storage/mutationPhases.js"
+    },
+    "./review-history-contracts": {
+      "types": "./dist/review/storage/draftContracts.d.ts",
+      "import": "./dist/review/storage/draftContracts.js"
+    },
+    "./review-apply": {
+      "types": "./dist/review/apply/index.d.ts",
+      "import": "./dist/review/apply/index.js"
+    },
+    "./review-text": {
+      "types": "./dist/review/apply/text.d.ts",
+      "import": "./dist/review/apply/text.js"
+    },
+    "./review-writer": {
+      "types": "./dist/review/writer/index.d.ts",
+      "import": "./dist/review/writer/index.js"
+    },
+    "./review-domain": {
+      "types": "./dist/review/writer/domain.d.ts",
+      "import": "./dist/review/writer/domain.js"
+    },
+    "./review-transport": {
+      "types": "./dist/review/transport/index.d.ts",
+      "import": "./dist/review/transport/index.js"
+    },
+    "./review-content": {
+      "types": "./dist/review/content/index.d.ts",
+      "import": "./dist/review/content/index.js"
+    },
+    "./review-git": {
+      "types": "./dist/review/content/git.d.ts",
+      "import": "./dist/review/content/git.js"
+    }
+  },
+  "scripts": {
+    "build": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json",
+    "typecheck": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json --noEmit",
+    "typecheck:test": "node node_modules/@typescript/native/bin/tsc -p tsconfig.test.json",
+    "test": "pnpm build && pnpm typecheck:test && node --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "diff": "8.0.3",
+    "@codemirror/merge": "6.12.0",
+    "@codemirror/state": "6.5.4",
+    "node-diff3": "3.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4",
+    "@typescript/native": "npm:typescript@7.0.2"
+  }
+}

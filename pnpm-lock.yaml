@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@agent-teams/provider-session-contracts': file:vendor/provider-migration/attachments-mcp-v1/agent-teams-provider-session-contracts-0.0.0.tgz
+  '@agent-teams/provider-session-contracts': file:vendor/provider-migration/finite-claude-custody-v1/agent-teams-provider-session-contracts-0.0.0.tgz
   '@terminal-platform/design-tokens': file:vendor/terminal-platform/sdk/terminal-platform-design-tokens-0.1.0.tgz
   '@terminal-platform/foundation': file:vendor/terminal-platform/sdk/terminal-platform-foundation-0.1.0.tgz
   '@terminal-platform/runtime-types': file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz
@@ -102,6 +102,9 @@ importers:
       '@agent-teams/legacy-agent-host':
         specifier: workspace:*
         version: link:packages/legacy-agent-host
+      '@agent-teams/task-change-ledger':
+        specifier: workspace:*
+        version: link:packages/task-change-ledger
       '@claude-teams/agent-graph':
         specifier: workspace:*
         version: link:packages/agent-graph
@@ -620,7 +623,11 @@ importers:
         specifier: ^3.2.5
         version: 3.2.6(@types/debug@4.1.12)(@types/node@24.12.4)(happy-dom@20.9.0)(jiti@1.21.7)(sass@1.98.0)(supports-color@10.2.2)(terser@5.46.0)(tsx@4.21.0)(yaml@2.9.0)
 
-  agent-teams-controller: {}
+  agent-teams-controller:
+    devDependencies:
+      proper-lockfile:
+        specifier: 4.1.2
+        version: 4.1.2
 
   landing:
     dependencies:
@@ -763,17 +770,23 @@ importers:
   packages/legacy-agent-host:
     dependencies:
       '@agent-teams/provider-implementations':
-        specifier: file:../../vendor/provider-migration/attachments-mcp-v1/agent-teams-provider-implementations-0.0.0.tgz
-        version: file:vendor/provider-migration/attachments-mcp-v1/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)
+        specifier: file:../../vendor/provider-migration/typed-quality-validation-v2/agent-teams-provider-implementations-0.0.0.tgz
+        version: file:vendor/provider-migration/typed-quality-validation-v2/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)
       '@agent-teams/provider-session-contracts':
-        specifier: file:../../vendor/provider-migration/attachments-mcp-v1/agent-teams-provider-session-contracts-0.0.0.tgz
-        version: file:vendor/provider-migration/attachments-mcp-v1/agent-teams-provider-session-contracts-0.0.0.tgz
+        specifier: file:../../vendor/provider-migration/finite-claude-custody-v1/agent-teams-provider-session-contracts-0.0.0.tgz
+        version: file:vendor/provider-migration/finite-claude-custody-v1/agent-teams-provider-session-contracts-0.0.0.tgz
+      '@agent-teams/task-change-ledger':
+        specifier: workspace:*
+        version: link:../task-change-ledger
       '@modelcontextprotocol/sdk':
         specifier: 1.30.0
         version: 1.30.0(supports-color@10.2.2)(zod@4.6.7)
       agent-teams-controller:
         specifier: workspace:*
         version: link:../../agent-teams-controller
+      jsonc-parser:
+        specifier: 3.3.1
+        version: 3.3.1
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -785,15 +798,37 @@ importers:
         specifier: npm:typescript@7.0.2
         version: typescript@7.0.2
 
+  packages/task-change-ledger:
+    dependencies:
+      '@codemirror/merge':
+        specifier: 6.12.0
+        version: 6.12.0
+      '@codemirror/state':
+        specifier: 6.5.4
+        version: 6.5.4
+      diff:
+        specifier: 8.0.3
+        version: 8.0.3
+      node-diff3:
+        specifier: 3.2.0
+        version: 3.2.0
+    devDependencies:
+      '@types/node':
+        specifier: ^24.12.4
+        version: 24.12.4
+      '@typescript/native':
+        specifier: npm:typescript@7.0.2
+        version: typescript@7.0.2
+
 packages:
 
-  '@agent-teams/provider-implementations@file:vendor/provider-migration/attachments-mcp-v1/agent-teams-provider-implementations-0.0.0.tgz':
-    resolution: {integrity: sha512-i080Mnqynbr4CySsQzs9etkDVdMLnQxJtOf0A6cr4MKYLKDfvJjdHoDnOpvhWbKXcdDRj46SerkdHMhRAz7NtA==, tarball: file:vendor/provider-migration/attachments-mcp-v1/agent-teams-provider-implementations-0.0.0.tgz}
+  '@agent-teams/provider-implementations@file:vendor/provider-migration/typed-quality-validation-v2/agent-teams-provider-implementations-0.0.0.tgz':
+    resolution: {integrity: sha512-itiVrSr6aSzuUuYMI2odLhulubpRo5xK4KpiPGh1O3ScxS7+YineWX2xqmc5mbaS5jwqjn2EBDtp2OUgL2lrmA==, tarball: file:vendor/provider-migration/typed-quality-validation-v2/agent-teams-provider-implementations-0.0.0.tgz}
     version: 0.0.0
     engines: {node: '>=24.21.0 <25 || >=26.11.1 <27'}
 
-  '@agent-teams/provider-session-contracts@file:vendor/provider-migration/attachments-mcp-v1/agent-teams-provider-session-contracts-0.0.0.tgz':
-    resolution: {integrity: sha512-2e4f0vUCtMSaWtFgIGbI0/GDT5TFIfgWFTAzoITZtvR7iMtAvrUYjQnBccaNlS3vR/hmMqlXE5xH7PdVjkvA3g==, tarball: file:vendor/provider-migration/attachments-mcp-v1/agent-teams-provider-session-contracts-0.0.0.tgz}
+  '@agent-teams/provider-session-contracts@file:vendor/provider-migration/finite-claude-custody-v1/agent-teams-provider-session-contracts-0.0.0.tgz':
+    resolution: {integrity: sha512-cXFxJlcm4kpUnHlgo+Ljfu+xzHvrpVrCz3q89gFjvR53svlze3EnD/HnXX3z9WOVSO+FUgLHN1u7inAxQuHqvQ==, tarball: file:vendor/provider-migration/finite-claude-custody-v1/agent-teams-provider-session-contracts-0.0.0.tgz}
     version: 0.0.0
     engines: {node: '>=24.21.0 <25 || >=26.11.1 <27'}
 
@@ -11887,9 +11922,9 @@ packages:
 
 snapshots:
 
-  '@agent-teams/provider-implementations@file:vendor/provider-migration/attachments-mcp-v1/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)':
+  '@agent-teams/provider-implementations@file:vendor/provider-migration/typed-quality-validation-v2/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)':
     dependencies:
-      '@agent-teams/provider-session-contracts': file:vendor/provider-migration/attachments-mcp-v1/agent-teams-provider-session-contracts-0.0.0.tgz
+      '@agent-teams/provider-session-contracts': file:vendor/provider-migration/finite-claude-custody-v1/agent-teams-provider-session-contracts-0.0.0.tgz
       '@anthropic-ai/claude-agent-sdk': 0.3.305(@anthropic-ai/sdk@0.122.0(zod@4.6.7))(@modelcontextprotocol/sdk@1.30.0(supports-color@10.2.2)(zod@4.6.7))(zod@4.6.7)
       '@anthropic-ai/sdk': 0.122.0(zod@4.6.7)
       '@modelcontextprotocol/sdk': 1.30.0(supports-color@10.2.2)(zod@4.6.7)
@@ -11898,7 +11933,7 @@ snapshots:
       - '@cfworker/json-schema'
       - supports-color
 
-  '@agent-teams/provider-session-contracts@file:vendor/provider-migration/attachments-mcp-v1/agent-teams-provider-session-contracts-0.0.0.tgz': {}
+  '@agent-teams/provider-session-contracts@file:vendor/provider-migration/finite-claude-custody-v1/agent-teams-provider-session-contracts-0.0.0.tgz': {}
 
   '@alloc/quick-lru@5.2.0': {}
 

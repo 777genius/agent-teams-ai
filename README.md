@@ -402,7 +402,7 @@ Electron 40, React 19, TypeScript 5, Tailwind CSS 3, Zustand 4. The desktop app 
 
 <br />
 
-**Prerequisites:** Node.js 24.16.0 LTS, pnpm 10+
+**Prerequisites:** Node.js 24.21.0 LTS, pnpm 10+
 
 On macOS, official Node.js 24 prebuilt binaries require macOS 13.5+.
 

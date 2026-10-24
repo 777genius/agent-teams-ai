@@ -1,3 +1,4 @@
+import type { StoppedImportCommentFacts } from './stopped-import/commentFacts';
 export type TaskCommentNotificationState = 'seeded' | 'pending_send' | 'sent';
 
 export interface TaskCommentNotificationJournalEntry {
@@ -30,6 +31,8 @@ export interface TaskCommentNotificationJournalMutation<T> {
  *   mutual exclusion; the mutator may be async and mutates the array in place.
  */
 export interface TaskCommentNotificationJournalStore {
+  /** Optional strict read; must never initialize/import/archive/repair storage. */
+  inspectStoppedImport?(teamName: string): Promise<StoppedImportCommentFacts>;
   exists(teamName: string): Promise<boolean>;
   ensureInitialized(teamName: string): Promise<void>;
   read(teamName: string): Promise<TaskCommentNotificationJournalEntry[]>;

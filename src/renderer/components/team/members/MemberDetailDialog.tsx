@@ -286,7 +286,10 @@ export const MemberDetailDialog = ({
     error: statsError,
   } = useMemberStats(teamName, member?.name ?? null);
 
-  const totalTokens = memberStats ? memberStats.inputTokens + memberStats.outputTokens : null;
+  const totalTokens =
+    memberStats && memberStats.inputTokens !== null && memberStats.outputTokens !== null
+      ? memberStats.inputTokens + memberStats.outputTokens
+      : null;
 
   if (!member) return null;
 

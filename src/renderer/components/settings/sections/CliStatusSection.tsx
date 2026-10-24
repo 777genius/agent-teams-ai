@@ -14,9 +14,9 @@ import {
 } from '@features/codex-account/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
-import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { isCodexProviderRuntimeMissing } from '@renderer/components/runtime/codexRuntimeInstallAction';
+import { ProviderAuthenticationTerminal } from '@renderer/components/runtime/ProviderAuthenticationTerminal';
 import {
   formatProviderStatusText,
   getProviderConnectionModeSummary,
@@ -38,10 +38,9 @@ import {
 } from '@renderer/components/runtime/ProviderRuntimeBackendSelector';
 import { ProviderRuntimeSettingsDialog } from '@renderer/components/runtime/ProviderRuntimeSettingsDialog';
 import {
-  getProviderTerminalCommand,
-  getProviderTerminalLogoutCommand,
-} from '@renderer/components/runtime/providerTerminalCommands';
-import { TerminalModal } from '@renderer/components/terminal/TerminalModal';
+  type NativeClaudeAuthenticationAction,
+  useProviderAuthenticationActions,
+} from '@renderer/components/runtime/useProviderAuthenticationActions';
 import { useCliInstaller } from '@renderer/hooks/useCliInstaller';
 import { useStore } from '@renderer/store';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
@@ -160,6 +159,8 @@ export const CliStatusSection = (): React.JSX.Element | null => {
     providerId: CliProviderId;
     action: 'login' | 'logout';
   } | null>(null);
+  const [nativeClaudeAuthAction, setNativeClaudeAuthAction] =
+    useState<NativeClaudeAuthenticationAction | null>(null);
   const [manageProviderId, setManageProviderId] = useState<CliProviderId>('gemini');
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const multimodelEnabled = appConfig?.general?.multimodelEnabled ?? true;
@@ -271,33 +272,23 @@ export const CliStatusSection = (): React.JSX.Element | null => {
     [fetchCliProviderStatus, invalidateCliStatus]
   );
 
-  const handleProviderLogout = useCallback(
-    async (providerId: CliProviderId) => {
-      const provider =
-        effectiveCliStatus?.providers.find((entry) => entry.providerId === providerId) ?? null;
-      const disconnectAction = provider ? getProviderDisconnectAction(provider, t) : null;
-      if (!disconnectAction) {
-        return;
-      }
-
-      const confirmed = await confirm({
-        title: disconnectAction.title,
-        message: disconnectAction.message,
-        confirmLabel: disconnectAction.confirmLabel,
-        cancelLabel: t('providerRuntime.actions.cancel'),
-        variant: 'danger',
-      });
-
-      if (!confirmed) {
-        return;
-      }
-
-      setProviderTerminal({
-        providerId,
-        action: 'logout',
-      });
+  const openNativeAuthentication = useCallback(
+    (providerId: CliProviderId, action: NativeClaudeAuthenticationAction) => {
+      setNativeClaudeAuthAction(action);
+      setManageProviderId(providerId);
+      setManageDialogOpen(true);
     },
-    [effectiveCliStatus?.providers, t]
+    []
+  );
+  const requestProviderAction = useProviderAuthenticationActions({
+    providers: effectiveCliStatus?.providers,
+    projectPath: selectedProjectPath,
+    openNative: openNativeAuthentication,
+    openLegacy: setProviderTerminal,
+  });
+  const handleProviderLogout = useCallback(
+    (providerId: CliProviderId) => requestProviderAction(providerId, 'logout'),
+    [requestProviderAction]
   );
 
   const handleProviderManage = useCallback((providerId: CliProviderId) => {
@@ -359,18 +350,6 @@ export const CliStatusSection = (): React.JSX.Element | null => {
           effectiveCliStatus.installedVersion
         ? `${runtimeDisplayName} v${effectiveCliStatus.installedVersion ?? 'unknown'}`
         : runtimeDisplayName;
-
-  const activeTerminalProvider = providerTerminal
-    ? (effectiveCliStatus?.providers.find(
-        (provider) => provider.providerId === providerTerminal.providerId
-      ) ?? null)
-    : null;
-  const providerTerminalCommand =
-    providerTerminal && activeTerminalProvider
-      ? providerTerminal.action === 'login'
-        ? getProviderTerminalCommand(activeTerminalProvider)
-        : getProviderTerminalLogoutCommand(activeTerminalProvider)
-      : null;
 
   return (
     <div className="mb-2">
@@ -607,7 +586,10 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                                   <button
                                     type="button"
                                     onClick={() => handleProviderManage(provider.providerId)}
-                                    disabled={!effectiveCliStatus.binaryPath}
+                                    disabled={
+                                      !effectiveCliStatus.binaryPath &&
+                                      provider.nativeAuthManagement !== 'claude'
+                                    }
                                     className="flex items-center gap-1 rounded-md border px-2 py-[3px] text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
                                     style={{
                                       borderColor: 'var(--color-border)',
@@ -621,7 +603,10 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                                     <button
                                       type="button"
                                       onClick={() => void handleProviderLogout(provider.providerId)}
-                                      disabled={!effectiveCliStatus.binaryPath}
+                                      disabled={
+                                        !effectiveCliStatus.binaryPath &&
+                                        provider.nativeAuthManagement !== 'claude'
+                                      }
                                       className="flex items-center gap-1 rounded-md border px-2 py-[3px] text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
                                       style={{
                                         borderColor: 'var(--color-border)',
@@ -636,12 +621,12 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                                     <button
                                       type="button"
                                       onClick={() =>
-                                        setProviderTerminal({
-                                          providerId: provider.providerId,
-                                          action: 'login',
-                                        })
+                                        requestProviderAction(provider.providerId, 'login')
                                       }
-                                      disabled={!effectiveCliStatus.binaryPath}
+                                      disabled={
+                                        !effectiveCliStatus.binaryPath &&
+                                        provider.nativeAuthManagement !== 'claude'
+                                      }
                                       className="flex items-center gap-1 rounded-md border px-2 py-[3px] text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
                                       style={{
                                         borderColor: 'var(--color-border)',
@@ -674,20 +659,22 @@ export const CliStatusSection = (): React.JSX.Element | null => {
                 )}
                 <ProviderRuntimeSettingsDialog
                   open={manageDialogOpen}
-                  onOpenChange={setManageDialogOpen}
+                  onOpenChange={(nextOpen) => {
+                    setManageDialogOpen(nextOpen);
+                    if (!nextOpen) setNativeClaudeAuthAction(null);
+                  }}
+                  nativeClaudeAuthAction={nativeClaudeAuthAction}
                   providers={effectiveCliStatus.providers}
                   projectPath={selectedProjectPath}
                   initialProviderId={manageProviderId}
                   providerStatusLoading={cliProviderStatusLoading}
-                  disabled={!effectiveCliStatus.binaryPath || isBusy || cliStatusLoading}
+                  disabled={!effectiveCliStatus.installed || isBusy || cliStatusLoading}
                   codexRuntimeStatus={codexRuntimeStatus}
                   codexRuntimeStatusLoading={codexRuntimeStatusLoading}
                   onInstallCodexRuntime={() => installCodexRuntime()}
                   onSelectBackend={handleRuntimeBackendChange}
                   onRefreshProvider={handleProviderRefresh}
-                  onRequestLogin={(providerId) =>
-                    setProviderTerminal({ providerId, action: 'login' })
-                  }
+                  onRequestLogin={(providerId) => requestProviderAction(providerId, 'login')}
                 />
               </div>
             ) : (
@@ -855,31 +842,16 @@ export const CliStatusSection = (): React.JSX.Element | null => {
           </div>
         )}
       </div>
-      {providerTerminal && cliStatus?.binaryPath && (
-        <TerminalModal
-          title={`${getRuntimeDisplayName(cliStatus, multimodelEnabled)} ${
-            providerTerminal.action === 'login'
-              ? t('cliRuntime.providerTerminal.login')
-              : t('cliRuntime.providerTerminal.logout')
-          }: ${getProviderLabel(providerTerminal.providerId)}`}
-          command={cliStatus.binaryPath}
-          args={providerTerminalCommand?.args}
-          env={providerTerminalCommand?.env}
+      {providerTerminal && cliStatus && (
+        <ProviderAuthenticationTerminal
+          status={cliStatus}
+          multimodelEnabled={multimodelEnabled}
+          request={providerTerminal}
+          label={getProviderLabel(providerTerminal.providerId)}
           onClose={() => {
             setProviderTerminal(null);
             recheckStatus();
           }}
-          autoCloseOnSuccessMs={3000}
-          successMessage={
-            providerTerminal.action === 'login'
-              ? t('cliRuntime.providerTerminal.authUpdated')
-              : t('cliRuntime.providerTerminal.loggedOut')
-          }
-          failureMessage={
-            providerTerminal.action === 'login'
-              ? t('cliRuntime.providerTerminal.authFailed')
-              : t('cliRuntime.providerTerminal.logoutFailed')
-          }
         />
       )}
     </div>

@@ -7,10 +7,12 @@ import { stripEncodedTaskReferenceMetadata } from '@renderer/utils/taskReference
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { parseStandaloneSlashCommand } from '@shared/utils/slashCommands';
 
+import type { CapturedCrossTeamReply } from './capturedCrossTeamReply';
 import type { ComposerDraftContent, ComposerPreparedRequest } from '@renderer/types/composerDraft';
 import type {
   AgentActionMode,
   AttachmentPayload,
+  CrossTeamSendRequest,
   ResolvedTeamMember,
   TaskRef,
 } from '@shared/types';
@@ -25,6 +27,7 @@ export function createPendingSendId(): string {
 }
 
 interface BuildPreparedSendRequestOptions {
+  crossTeamReply?: CapturedCrossTeamReply | null;
   attemptId: string;
   teamName: string;
   selectedTeam: string | null;
@@ -44,6 +47,7 @@ export function buildPreparedSendRequest({
   selectedTeam,
   lockedRecipient,
   crossTeamRecipient,
+  crossTeamReply,
   localRecipient,
   text,
   summary,
@@ -58,6 +62,13 @@ export function buildPreparedSendRequest({
         fromTeam: teamName,
         fromMember: 'user',
         toTeam: selectedTeam,
+        ...(crossTeamReply?.toTeam === selectedTeam &&
+        (crossTeamReply.toMember ?? null) === crossTeamRecipient
+          ? {
+              conversationId: crossTeamReply.conversationId,
+              replyToConversationId: crossTeamReply.conversationId,
+            }
+          : {}),
         ...(crossTeamRecipient ? { toMember: crossTeamRecipient } : {}),
         text,
         summary,
@@ -80,6 +91,22 @@ export function buildPreparedSendRequest({
       messageId: attemptId,
     },
   };
+}
+
+/** Forward metadata from the persisted original request, including after UI state is gone. */
+export function preparedCrossTeamReplyArgs(
+  request: CrossTeamSendRequest
+): [] | [Pick<CrossTeamSendRequest, 'conversationId' | 'replyToConversationId'>] {
+  if (request.conversationId === undefined && request.replyToConversationId === undefined)
+    return [];
+  return [
+    {
+      ...(request.conversationId === undefined ? {} : { conversationId: request.conversationId }),
+      ...(request.replyToConversationId === undefined
+        ? {}
+        : { replyToConversationId: request.replyToConversationId }),
+    },
+  ];
 }
 
 export function buildRevisionCorrectionText(originalMessageId: string, text: string): string {

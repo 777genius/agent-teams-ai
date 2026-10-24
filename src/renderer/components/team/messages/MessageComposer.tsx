@@ -16,7 +16,10 @@ import { useTeamStartupCopy } from '@renderer/components/team/useTeamStartupCopy
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
-import { getTaskSuggestionsForTeamNow, useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
+import {
+  getTaskSuggestionsForTeamNow,
+  useTaskSuggestions,
+} from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
@@ -52,29 +55,43 @@ import { Check, ChevronDown, Mic, Paperclip, Search, Send } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { crossTeamDraftMeta, memberDraftPreviews } from './composerDraftPreviews';
-import { buildPreparedSendRequest, buildRevisionCorrectionText, createPendingSendId, isPreparedSendAllowed } from './composerSendUtils';
+import {
+  buildPreparedSendRequest,
+  buildRevisionCorrectionText,
+  createPendingSendId,
+  isPreparedSendAllowed,
+  preparedCrossTeamReplyArgs,
+} from './composerSendUtils';
 import { runComposerSubmission } from './composerSubmission';
 import { MessageComposerRevisionNotice } from './MessageComposerRevisionNotice';
 import { MessageComposerStatusNotice } from './MessageComposerStatusNotice';
 import { MessageComposerTeamSelector } from './MessageComposerTeamSelector';
 import { acquireRevisionOperation, releaseRevisionOperation } from './revisionOperationLease';
 import { useAutoDelegateActionMode } from './useAutoDelegateActionMode';
-import { type ComposerDraftAddressRequest, useComposerDraftAddressRequest } from './useComposerDraftAddressRequest';
+import {
+  type ComposerDraftAddressRequest,
+  useComposerDraftAddressRequest,
+} from './useComposerDraftAddressRequest';
 import { useComposerSubmissionFeedback } from './useComposerSubmissionFeedback';
-import { useComposerTextarea } from './useComposerTextarea';
+import { useComposerFocus, useComposerTextarea } from './useComposerTextarea';
 import { useFloatingComposerWidth } from './useFloatingComposerWidth';
 import { useMessageComposerDraft } from './useMessageComposerDraft';
 import { useMessageComposerRevisionCancel } from './useMessageComposerRevisionCancel';
 
+import type { CapturedCrossTeamReply, ComposerCrossTeamSend } from './capturedCrossTeamReply';
 import type { ActionMode } from '@renderer/components/team/messages/ActionModeSelector';
 import type { ComposerDraftDestination } from '@renderer/components/team/messages/composerDraftDestination';
 import type { MessageRevisionTargetController } from '@renderer/components/team/messages/messageRevisionTarget';
-import type { ComposerDraftAddress, ComposerPreparedRequest, ComposerWorkingSummary, MessageRevisionContext } from '@renderer/types/composerDraft';
+import type {
+  ComposerDraftAddress,
+  ComposerPreparedRequest,
+  ComposerWorkingSummary,
+  MessageRevisionContext,
+} from '@renderer/types/composerDraft';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import type {
   AttachmentPayload,
-  CrossTeamSendResult,
   ResolvedTeamMember,
   SendMessageResult,
   TaskRef,
@@ -102,6 +119,7 @@ interface MessageComposerProps {
   /** Bump this when a chat thread is opened so the composer steals keyboard focus. */
   autoFocusKey?: number;
   draftAddressRequest?: ComposerDraftAddressRequest | null;
+  crossTeamReply?: CapturedCrossTeamReply | null;
   workingDraftSummaries?: readonly ComposerWorkingSummary[];
   onSend: (
     recipient: string,
@@ -112,22 +130,15 @@ interface MessageComposerProps {
     taskRefs?: TaskRef[],
     messageId?: string
   ) => Promise<SendMessageResult>;
-  onCrossTeamSend?: (
-    toTeam: string,
-    text: string,
-    summary?: string,
-    actionMode?: ActionMode,
-    taskRefs?: TaskRef[],
-    toMember?: string,
-    messageId?: string
-  ) => Promise<CrossTeamSendResult | null>;
+  onCrossTeamSend?: ComposerCrossTeamSend;
   onSubmitIntent?: () => void;
   onDraftMutation?: () => void;
   onRecoveryDestinationChange?: (destination: ComposerDraftDestination | null) => void;
-  onRevisionPreparationChange?: (
-    controller: MessageRevisionTargetController | null
-  ) => void;
-  onRevisionCancel?: (revision?: MessageRevisionContext | null, address?: ComposerDraftAddress) => boolean | void | Promise<boolean>;
+  onRevisionPreparationChange?: (controller: MessageRevisionTargetController | null) => void;
+  onRevisionCancel?: (
+    revision?: MessageRevisionContext | null,
+    address?: ComposerDraftAddress
+  ) => boolean | void | Promise<boolean>;
   onRevisionComplete?: (requestId: string, address: ComposerDraftAddress) => void;
 }
 
@@ -161,6 +172,7 @@ export const MessageComposer = ({
   lockedRecipient,
   autoFocusKey,
   draftAddressRequest,
+  crossTeamReply,
   workingDraftSummaries = [],
   onSend,
   onCrossTeamSend,
@@ -184,7 +196,7 @@ export const MessageComposer = ({
   const [recipientSearch, setRecipientSearch] = useState('');
   const recipientSearchRef = useRef<HTMLInputElement>(null);
   const [groupChatSelected, setGroupChatSelected] = useState(() => !lockedRecipient);
-  const [isTextareaFocused, setIsTextareaFocused] = useState(false);
+  const composerFocus = useComposerFocus();
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounterRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -247,7 +259,13 @@ export const MessageComposer = ({
     [aliveTeams, crossTeamTargets]
   );
   const hasCrossTeamOptions = sortedCrossTeamTargets.length > 0;
-  useComposerDraftAddressRequest({ request: draftAddressRequest, lockedRecipient, targets: crossTeamTargets, selectTeam: setSelectedTeam, selectMember: setCrossTeamRecipient });
+  useComposerDraftAddressRequest({
+    request: draftAddressRequest,
+    lockedRecipient,
+    targets: crossTeamTargets,
+    selectTeam: setSelectedTeam,
+    selectMember: setCrossTeamRecipient,
+  });
 
   const isCrossTeam = selectedTeam !== null;
   const selectedTarget = sortedCrossTeamTargets.find((t) => t.teamName === selectedTeam);
@@ -269,10 +287,7 @@ export const MessageComposer = ({
     [t]
   );
   const crossTeamDrafts = useMemo(
-    () =>
-      workingDraftSummaries.filter(
-        (summary) => summary.address.target.kind === 'cross-team'
-      ),
+    () => workingDraftSummaries.filter((summary) => summary.address.target.kind === 'cross-team'),
     [workingDraftSummaries]
   );
   const draftMetaByTeam = useMemo(
@@ -565,12 +580,19 @@ export const MessageComposer = ({
     !slashCommandRestrictionReason &&
     (!isRevisionActive || (!isCrossTeam && revisionRecipientMatches && revisionOriginalValid)) &&
     (!isCrossTeam || onCrossTeamSend !== undefined);
-  const currentSendEligibilityRef = useRef<(content: ReturnType<typeof draft.snapshot>, request: ComposerPreparedRequest, editorContext: typeof draft.editorContext) => boolean>(() => false);
+  const currentSendEligibilityRef = useRef<
+    (
+      content: ReturnType<typeof draft.snapshot>,
+      request: ComposerPreparedRequest,
+      editorContext: typeof draft.editorContext
+    ) => boolean
+  >(() => false);
   currentSendEligibilityRef.current = (content, request, editorContext) =>
     isPreparedSendAllowed(content, request, members, teamName, isTeamAlive) &&
     (editorContext.kind !== 'revision' ||
       ((activeRevision == null || editorContext.requestId === activeRevision.requestId) &&
-        (revisableMessageId === undefined || editorContext.originalMessageId === revisableMessageId)));
+        (revisableMessageId === undefined ||
+          editorContext.originalMessageId === revisableMessageId)));
 
   const handleCycleActionMode = useCallback(() => {
     if (sending) return;
@@ -591,41 +613,53 @@ export const MessageComposer = ({
     const revisionRequestId = activeRevision?.requestId;
     if (revisionRequestId && !acquireRevisionOperation(revisionRequestId, 'send')) return;
     void runComposerSubmission({
-      attemptId, contextId: capturedContextId,
-      prepare: () => draft.beginAttempt(attemptId, (snapshot) => {
-        const { content, editorContext } = snapshot;
-        const syncedRevision = editorContext.kind === 'revision' ? editorContext : null;
-        if (syncedRevision?.requestId !== revisionRequestId) return null;
-        const syncedTrimmed = stripEncodedTaskReferenceMetadata(content.text).trim();
-        if (!syncedTrimmed || syncedTrimmed.length > MAX_TEXT_LENGTH) return null;
-        const serialized = serializeChipsWithText(syncedTrimmed, content.chips);
-        const outboundText = syncedRevision
-          ? buildRevisionCorrectionText(syncedRevision.originalMessageId, serialized)
-          : serialized;
-        const request = buildPreparedSendRequest({
-          attemptId,
-          teamName,
-          selectedTeam,
-          lockedRecipient,
-          crossTeamRecipient,
-          localRecipient: effectiveRecipient,
-          text: outboundText,
-          summary: syncedRevision
-            ? `Correction for MessageId: ${syncedRevision.originalMessageId}`
-            : syncedTrimmed,
-          attachments: content.attachments,
-          actionMode: content.actionMode,
-          taskRefs: extractTaskRefsFromText(content.text, content.text.includes('#') ? getTaskSuggestionsForTeamNow(teamName) : taskSuggestions),
-        });
-        return currentSendEligibilityRef.current(content, request, editorContext) ? request : null;
-      }),
+      attemptId,
+      contextId: capturedContextId,
+      prepare: () =>
+        draft.beginAttempt(attemptId, (snapshot) => {
+          const { content, editorContext } = snapshot;
+          const syncedRevision = editorContext.kind === 'revision' ? editorContext : null;
+          if (syncedRevision?.requestId !== revisionRequestId) return null;
+          const syncedTrimmed = stripEncodedTaskReferenceMetadata(content.text).trim();
+          if (!syncedTrimmed || syncedTrimmed.length > MAX_TEXT_LENGTH) return null;
+          const serialized = serializeChipsWithText(syncedTrimmed, content.chips);
+          const outboundText = syncedRevision
+            ? buildRevisionCorrectionText(syncedRevision.originalMessageId, serialized)
+            : serialized;
+          const request = buildPreparedSendRequest({
+            attemptId,
+            teamName,
+            selectedTeam,
+            lockedRecipient,
+            crossTeamRecipient,
+            crossTeamReply,
+            localRecipient: effectiveRecipient,
+            text: outboundText,
+            summary: syncedRevision
+              ? `Correction for MessageId: ${syncedRevision.originalMessageId}`
+              : syncedTrimmed,
+            attachments: content.attachments,
+            actionMode: content.actionMode,
+            taskRefs: extractTaskRefsFromText(
+              content.text,
+              content.text.includes('#') ? getTaskSuggestionsForTeamNow(teamName) : taskSuggestions
+            ),
+          });
+          return currentSendEligibilityRef.current(content, request, editorContext)
+            ? request
+            : null;
+        }),
       isContextCurrent: (prepared) => {
         const store = useStore.getState();
         return (
           !store.isContextSwitching &&
           store.activeContextId === capturedContextId &&
           isContextScopedRequestEpochCurrent(capturedContextEpoch) &&
-          currentSendEligibilityRef.current(prepared.attempt.snapshot.content, prepared.attempt.preparedRequest, prepared.attempt.snapshot.editorContext)
+          currentSendEligibilityRef.current(
+            prepared.attempt.snapshot.content,
+            prepared.attempt.preparedRequest,
+            prepared.attempt.snapshot.editorContext
+          )
         );
       },
       transport: ({ attempt: { preparedRequest } }) =>
@@ -637,7 +671,8 @@ export const MessageComposer = ({
               preparedRequest.request.actionMode,
               preparedRequest.request.taskRefs,
               preparedRequest.request.toMember,
-              preparedRequest.request.messageId
+              preparedRequest.request.messageId,
+              ...preparedCrossTeamReplyArgs(preparedRequest.request)
             ) ?? Promise.resolve(null))
           : onSend(
               preparedRequest.request.member,
@@ -648,14 +683,16 @@ export const MessageComposer = ({
               preparedRequest.request.taskRefs,
               preparedRequest.request.messageId
             ),
-    }).then((result) => {
-      submissionFeedback.record(submissionAddressKey, result);
-      if (result.kind === 'accepted' && revisionRequestId) {
-        onRevisionComplete?.(revisionRequestId, submissionAddress);
-      }
-    }).finally(() => {
-      if (revisionRequestId) releaseRevisionOperation(revisionRequestId, 'send');
-    });
+    })
+      .then((result) => {
+        submissionFeedback.record(submissionAddressKey, result);
+        if (result.kind === 'accepted' && revisionRequestId) {
+          onRevisionComplete?.(revisionRequestId, submissionAddress);
+        }
+      })
+      .finally(() => {
+        if (revisionRequestId) releaseRevisionOperation(revisionRequestId, 'send');
+      });
     focusComposerTextarea();
   }, [
     canSend,
@@ -663,6 +700,7 @@ export const MessageComposer = ({
     effectiveRecipient,
     onSend,
     onCrossTeamSend,
+    crossTeamReply,
     selectedTeam,
     crossTeamRecipient,
     activeContextId,
@@ -798,9 +836,11 @@ export const MessageComposer = ({
     },
     [canAttach, draftHandlePaste, showFileRestrictionError, validateSelectedAttachmentFiles]
   );
-  const handleTextareaFocus = useCallback(() => setIsTextareaFocused(true), []);
-  const handleTextareaBlur = useCallback(() => setIsTextareaFocused(false), []);
-  const handleRevisionCancel = useMessageComposerRevisionCancel(draft, onRevisionCancel, focusComposerTextarea);
+  const handleRevisionCancel = useMessageComposerRevisionCancel(
+    draft,
+    onRevisionCancel,
+    focusComposerTextarea
+  );
   const remaining = MAX_TEXT_LENGTH - trimmed.length;
   const hasAttachmentPreviewContent =
     draft.attachments.length > 0 || Boolean(draft.attachmentError ?? fileRestrictionError);
@@ -811,15 +851,16 @@ export const MessageComposer = ({
     attachmentCount: draft.attachments.length,
     textareaRef: internalTextareaRef,
   });
-  const revisionNotice = activeRevision || revisionPreparation ? (
-    <MessageComposerRevisionNotice
-      active={activeRevision !== null}
-      originalValid={revisionOriginalValid}
-      preparation={revisionPreparation}
-      onCancel={handleRevisionCancel}
-      onStash={draft.stashWorking}
-    />
-  ) : null;
+  const revisionNotice =
+    activeRevision || revisionPreparation ? (
+      <MessageComposerRevisionNotice
+        active={activeRevision !== null}
+        originalValid={revisionOriginalValid}
+        preparation={revisionPreparation}
+        onCancel={handleRevisionCancel}
+        onStash={draft.stashWorking}
+      />
+    ) : null;
   const hasStatusNotice = Boolean(
     draft.readError ||
     draft.persistenceStatus === 'memory-only' ||
@@ -842,7 +883,7 @@ export const MessageComposer = ({
     />
   ) : null;
   const shouldShowFooterCharCount = remaining < 200;
-  const shouldShowSavedIndicator = isTextareaFocused && draft.isSaved;
+  const shouldShowSavedIndicator = composerFocus.isTextareaFocused && draft.isSaved;
   const nonCompactFooterRight =
     compactFooterNotice || shouldShowFooterCharCount || shouldShowSavedIndicator ? (
       <div className="flex flex-col items-end gap-1">
@@ -872,6 +913,7 @@ export const MessageComposer = ({
       className={cn(!isCompactLayout && 'mb-2')}
       style={floatingAdaptiveStyle}
       role="group"
+      onBlurCapture={composerFocus.onBlurCapture}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -1225,8 +1267,8 @@ export const MessageComposer = ({
           commandSuggestions={slashCommandSuggestions}
           chips={draft.chips}
           onChipRemove={draft.removeChip}
-          onFocus={handleTextareaFocus}
-          onBlur={handleTextareaBlur}
+          onFocus={composerFocus.onTextareaFocus}
+          onBlur={composerFocus.onTextareaBlur}
           projectPath={projectPath}
           onFileChipInsert={draft.addChip}
           onModEnter={handleSend}
@@ -1237,7 +1279,7 @@ export const MessageComposer = ({
           maxRows={6}
           maxLength={MAX_TEXT_LENGTH}
           hintText={crossTeamHintText}
-          showHint={!isCompactLayout && isTextareaFocused}
+          showHint={!isCompactLayout && composerFocus.isComposerFocused}
           cornerActionInset={isCompactLayout ? 'compact' : 'default'}
           cornerActionLeft={
             <ActionModeSelector
@@ -1277,6 +1319,7 @@ export const MessageComposer = ({
                           type="button"
                           className="message-composer-send-button inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-xs font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-45"
                           disabled={!canSend}
+                          onMouseDown={(event) => event.preventDefault()}
                           onClick={handleSend}
                         >
                           <Send size={14} />

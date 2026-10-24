@@ -30,5 +30,6 @@ export function deliveryFingerprint(intent: RuntimeDelivery): string {
     inputId: intent.inputId,
     messageId: intent.messageId,
     content: intent.content,
+    ...(intent.attachments?.length ? { attachments: intent.attachments } : {}),
   });
 }

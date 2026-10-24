@@ -52,6 +52,8 @@ export interface OpenCodeLifecycleCleanupTailInput {
   registryHostPids: ReadonlySet<number>;
   /** False when the registry sweep itself failed, which voids its keep list. */
   registryCleanupAvailable: boolean;
+  /** Proven empty registry inputs: no registry command booted a sweep host. */
+  registryMaintenanceSkipped?: boolean;
   appStartedAtMs: number;
   /** The instant the registry sweep command settled; the fence for the reap. */
   sweepCommandSettledAtMs: number;
@@ -160,15 +162,16 @@ export async function runOpenCodeLifecycleCleanupTail(
     // Never rejects on its own account, and is run through the same guard as
     // the rest so that stays a property of this sequence rather than of one
     // module's internals.
-    await runIndependentStep('startup runtime sweep', ports, () =>
-      runOpenCodeStartupRuntimeSweepTail({
-        sweepCommandSettledAtMs: input.sweepCommandSettledAtMs,
-        ownershipMarkers: buildOpenCodeProcessOwnershipMarkers(input.managedHostInstanceId),
-        logSweepResult: (message) => ports.logSweepResult(`[OpenCode] ${message}`),
-        logWarning: (message) => ports.logWarning(message),
-        logError: (message) => ports.logError(message),
-      })
-    );
+    if (!input.registryMaintenanceSkipped)
+      await runIndependentStep('startup runtime sweep', ports, () =>
+        runOpenCodeStartupRuntimeSweepTail({
+          sweepCommandSettledAtMs: input.sweepCommandSettledAtMs,
+          ownershipMarkers: buildOpenCodeProcessOwnershipMarkers(input.managedHostInstanceId),
+          logSweepResult: (message) => ports.logSweepResult(`[OpenCode] ${message}`),
+          logWarning: (message) => ports.logWarning(message),
+          logError: (message) => ports.logError(message),
+        })
+      );
     await runOpenCodeStartupCleanupMaintenance(input);
   }
 }

@@ -611,3 +611,53 @@ test('crash after Task plan before obligations retains original recipient genera
   )!;
   assert.equal(obligations.deliveries[0]?.binding.generation, '1');
 });
+
+test('partial assigned immediate creation recovers exact task, related backlink, prompt and user-start cause without replay', async (t) => {
+  const f = fixture(t);
+  const base = f.human.execute({
+    commandId: 'TEST-related-base',
+    operation: 'task.create',
+    payload: { subject: 'TEST related base' },
+  });
+  const command: TeamCommand = {
+    commandId: 'TEST-create-rich-start',
+    operation: 'task.create',
+    payload: {
+      subject: 'TEST rich start',
+      owner: 'alice',
+      related: [base.effects.taskId],
+      prompt: 'TEST retained instructions',
+      startImmediately: true,
+      promptTaskRefs: [{ taskId: base.effects.taskId, displayId: '1', teamName: 'test-team' }],
+    },
+  };
+  f.plan.fail = (path) => path.startsWith('tasks/');
+  assert.throws(() => f.human.execute(command), hold);
+  const original = f.human.lookup(command.commandId)!;
+  const prepared = f.store.read<{ notifications: { messageId: string }[] }>(
+    `task-plans/${digest(command.commandId)}.json`
+  )!;
+  assert.deepEqual(
+    prepared.notifications.map((row) => row.messageId),
+    [original.effects.messageId]
+  );
+  const reopened = f.reopen();
+  assert.deepEqual(await reopened.resumeTaskCommands(), [
+    { commandId: command.commandId, outcome: 'completed' },
+  ]);
+  const human = reopened.connect('human');
+  const task = human.getTask(original.effects.taskId);
+  assert.equal(task.status, 'in_progress');
+  assert.equal(task.prompt, 'TEST retained instructions');
+  assert.deepEqual(human.getTask(base.effects.taskId).related, [original.effects.taskId]);
+  const rows = JSON.parse(readFileSync(f.inboxPath('alice'), 'utf8')) as { messageId: string }[];
+  assert.equal(rows.filter((row) => row.messageId === original.effects.messageId).length, 1);
+  const intent = human.pendingDeliveries().find((row) => row.commandId === command.commandId)!;
+  assert.ok(intent);
+  const cause = reopened.lookupTaskStartCause('human', intent)!;
+  assert.equal(cause.taskId, original.effects.taskId);
+  assert.equal(cause.taskStartCommandId, command.commandId);
+  const before = readFileSync(f.inboxPath('alice'), 'utf8');
+  assert.equal(human.execute(command).phase, 'completed');
+  assert.equal(readFileSync(f.inboxPath('alice'), 'utf8'), before);
+});

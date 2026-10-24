@@ -1,7 +1,8 @@
 # Stage 1 provider artifacts
 
 Immutable predecessor packages retained for the original P1 proof.
-The current host selects [Claude capabilities v1](claude-capabilities-v1/README.md).
+The current host selects [Typed quality validation v2](typed-quality-validation-v2/README.md)
+and the unchanged v1 Session SPI archive.
 These install without the current agent-runtime engine, PostgreSQL, custody
 implementation, or Claude fork. Source algorithms remain owned by the provider
 repository; do not edit built files here.

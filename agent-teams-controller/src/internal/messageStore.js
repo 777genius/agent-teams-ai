@@ -60,6 +60,8 @@ function normalizeAttachments(attachments) {
       filename: String(item.filename || '').trim(),
       mimeType: String(item.mimeType || '').trim(),
       size: Number(item.size || 0),
+      ...(typeof item.artifactId === 'string' ? { artifactId: item.artifactId } : {}),
+      ...(typeof item.addedAt === 'string' ? { addedAt: item.addedAt } : {}),
       ...(typeof item.filePath === 'string' && item.filePath.trim()
         ? { filePath: item.filePath.trim() }
         : {}),

@@ -252,7 +252,8 @@
     "yaml": "^2.9.0",
     "yet-another-react-lightbox": "^3.29.1",
     "zustand": "^4.5.0",
-    "@agent-teams/legacy-agent-host": "workspace:*"
+    "@agent-teams/legacy-agent-host": "workspace:*",
+    "@agent-teams/task-change-ledger": "workspace:*"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.4",

@@ -5,6 +5,7 @@ import { access, realpath, stat } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 
 import type { HostClientFailureCode, HostRequestOutcome } from '../../contracts';
+import type { HostReviewTransportProfile } from '@agent-teams/legacy-agent-host/contracts';
 
 export class HostClientError extends Error {
   constructor(
@@ -19,6 +20,7 @@ export class HostClientError extends Error {
 /** Trusted composition input. Never populate this from renderer/tool arguments. */
 export interface SelectedHostProfile {
   readonly profileId: string;
+  readonly reviewTransport?: HostReviewTransportProfile;
   readonly nodeExecutable: string;
   readonly nodeVersion: string;
   readonly nodeSha256: string;
@@ -43,6 +45,7 @@ export function captureHostProfile(profile: SelectedHostProfile): SelectedHostPr
   ];
   if (
     !profile.profileId ||
+    (profile.reviewTransport !== undefined && profile.reviewTransport !== 'review-v1') ||
     !profile.expectedBuildId ||
     !/^v24\.(?:2[1-9]|[3-9]\d|\d{3,})\.\d+$/.test(profile.nodeVersion) ||
     paths.some((path) => !path || !isAbsolute(path)) ||

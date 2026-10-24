@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 import { createHostServer } from './index.js';
-import { createTeamHost } from './composition/TeamHost.js';
-import { readTeamHostProfile } from './composition/readProfile.js';
 
 const major = Number(process.versions.node.split('.')[0]);
 const minor = Number(process.versions.node.split('.')[1]);
@@ -32,6 +30,11 @@ try {
   const digest = process.env.LEGACY_AGENT_HOST_PROFILE_SHA256;
   if (path || digest) {
     if (!path || !digest) throw new Error('Invalid host profile');
+    // Transport-only hosts do not load provider SDKs or Team persistence machinery.
+    const [{ createTeamHost }, { readTeamHostProfile }] = await Promise.all([
+      import('./composition/TeamHost.js'),
+      import('./composition/readProfile.js'),
+    ]);
     server = createTeamHost(readTeamHostProfile(path, digest), streams);
   } else {
     server = createHostServer({ ...streams, buildId: 'legacy-agent-host/0.1.0' });

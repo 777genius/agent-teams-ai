@@ -8,12 +8,16 @@ import {
   HOST_PROTOCOL_VERSION,
   type HostHandshake,
   type HostLimits,
+  hostMethodFrameLimit,
+  hostProfileLimitCaps,
   type JsonValue,
-  resolveHostLimits,
+  resolveHostProfileLimits,
   type RpcNotification,
   type RpcRequest,
 } from '@agent-teams/legacy-agent-host/contracts';
+import { createLogger } from '@shared/utils/logger';
 
+import { decodeClaudeCloseDiagnostics } from './decodeClaudeCloseDiagnostics';
 import {
   captureHostProfile,
   HostClientError,
@@ -21,7 +25,29 @@ import {
   validateHostProfile,
 } from './selectedHostProfile';
 
+let startupProbeCount = 0;
+const startupProbe = (
+  phase:
+    | 'profile-validation-start'
+    | 'profile-validation-complete'
+    | 'child-captured'
+    | 'ready'
+    | 'request-timeout'
+    | 'request-admitted'
+    | 'response-accepted',
+  kind: 'handshake' | 'rpc' = 'handshake'
+): void => {
+  if (process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS !== '1' || startupProbeCount >= 128) return;
+  startupProbeCount++;
+  try {
+    createLogger('TEST:HostStartup').diagnostic('Host startup observation', { phase, kind });
+  } catch {
+    /* Passive diagnostics cannot change transport outcomes. */
+  }
+};
+
 interface PendingRequest {
+  maxFrameBytes: number;
   resolve: (value: JsonValue) => void;
   reject: (error: HostClientError) => void;
   timer: ReturnType<typeof setTimeout>;
@@ -57,6 +83,14 @@ export class CapturedHostClient {
   private writeCount = 0;
   private writeTimers = new Set<ReturnType<typeof setTimeout>>();
   private diagnosticTail = Buffer.alloc(0);
+  private readonly retainCloseDiagnostic = decodeClaudeCloseDiagnostics(
+    (observation) => {
+      createLogger('Host:ClaudeClose').diagnostic('Claude close stage', observation);
+    },
+    (observation) => {
+      createLogger('Host:ClaudeManagement').diagnostic('Claude management stage', observation);
+    }
+  );
 
   constructor(profile: SelectedHostProfile) {
     this.profile = captureHostProfile(profile);
@@ -70,7 +104,9 @@ export class CapturedHostClient {
 
   private async open(): Promise<HostHandshake> {
     try {
+      startupProbe('profile-validation-start');
       await validateHostProfile(this.profile);
+      startupProbe('profile-validation-complete');
       if (this.sealed) throw new HostClientError('shutting-down', 'not-dispatched');
       const child = spawn(this.profile.nodeExecutable, [this.profile.hostEntry], {
         cwd: this.profile.cwd,
@@ -79,6 +115,7 @@ export class CapturedHostClient {
         windowsHide: true,
       });
       this.child = child;
+      startupProbe('child-captured');
       this.exitPromise = new Promise<void>((resolve) => {
         child.once('close', () => {
           this.exited = true;
@@ -97,6 +134,7 @@ export class CapturedHostClient {
       child.stderr.on('data', (chunk: Buffer) => {
         // Kept private, bounded, and deliberately excluded from exceptions/public DTOs.
         this.diagnosticTail = Buffer.concat([this.diagnosticTail, chunk]).subarray(-8192);
+        this.retainCloseDiagnostic(chunk);
       });
       const result = await this.send(
         'host.handshake',
@@ -107,6 +145,7 @@ export class CapturedHostClient {
       const handshake = this.validateHandshake(result);
       if (this.sealed) throw new HostClientError('shutting-down', 'not-dispatched');
       this.ready = true;
+      startupProbe('ready');
       return handshake;
     } catch (error) {
       const safe =
@@ -132,10 +171,15 @@ export class CapturedHostClient {
     }
     try {
       const candidate = result.limits;
-      for (const [key, cap] of Object.entries(DEFAULT_HOST_LIMITS)) {
+      if (this.profile.reviewTransport && !result.capabilities.includes('transport.review-v1'))
+        throw new Error('capability');
+      for (const [key, cap] of Object.entries(hostProfileLimitCaps(this.profile.reviewTransport))) {
         if (typeof candidate[key] !== 'number' || candidate[key] > cap) throw new Error('limit');
       }
-      this.limits = resolveHostLimits(candidate as unknown as HostLimits);
+      this.limits = resolveHostProfileLimits(
+        this.profile.reviewTransport,
+        candidate as unknown as HostLimits
+      );
     } catch {
       throw new HostClientError('protocol-error', 'unknown');
     }
@@ -181,7 +225,14 @@ export class CapturedHostClient {
         ...(params === undefined ? {} : { params }),
       };
       frame = Buffer.from(`${JSON.stringify(request)}\n`);
-      if (frame.length - 1 > this.limits.maxFrameBytes) throw new Error('frame');
+      if (
+        frame.length - 1 >
+        Math.min(
+          this.limits.maxFrameBytes,
+          hostMethodFrameLimit(method, this.profile.reviewTransport)
+        )
+      )
+        throw new Error('frame');
     } catch {
       return Promise.reject(new HostClientError('protocol-error', 'not-dispatched'));
     }
@@ -197,9 +248,19 @@ export class CapturedHostClient {
     return new Promise<JsonValue>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
+        startupProbe('request-timeout', method === 'host.handshake' ? 'handshake' : 'rpc');
         reject(new HostClientError('request-timeout', 'unknown'));
       }, timeoutMs);
-      this.pending.set(id, { resolve, reject, timer });
+      startupProbe('request-admitted', method === 'host.handshake' ? 'handshake' : 'rpc');
+      this.pending.set(id, {
+        resolve: (value) => {
+          startupProbe('response-accepted', method === 'host.handshake' ? 'handshake' : 'rpc');
+          resolve(value);
+        },
+        reject,
+        timer,
+        maxFrameBytes: hostMethodFrameLimit(method, this.profile.reviewTransport),
+      });
       this.writeBytes += frame.length;
       this.writeCount++;
       const writeTimer = setTimeout(
@@ -253,13 +314,14 @@ export class CapturedHostClient {
           throw new Error('error');
         const pending = this.pending.get(message.id);
         if (!pending) return true; // Late response to a timed-out original request cannot create a new intent.
+        if (frame.length > pending.maxFrameBytes) throw new Error('method response frame');
         this.pending.delete(message.id);
         clearTimeout(pending.timer);
         if ('error' in message) {
           // Only transport-owned codes establish rejection before handler admission.
           // A handler exception may follow a partial effect and must remain unknown.
           const code = (message.error as { code: number }).code;
-          const rejected = [-32001, -32002, -32601].includes(code);
+          const rejected = [-32001, -32002, -32601, -32602].includes(code);
           pending.reject(
             new HostClientError(
               rejected ? 'remote-rejected' : 'remote-error',

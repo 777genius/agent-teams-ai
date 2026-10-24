@@ -20,9 +20,12 @@ export class HostOutput {
     private readonly fail: (reason: HostCloseReason) => void
   ) {}
 
-  sendPriority(message: RpcResponse | RpcNotification): boolean {
+  sendPriority(
+    message: RpcResponse | RpcNotification,
+    maxFrameBytes = this.limits.maxFrameBytes
+  ): boolean {
     if (this.stopped) return false;
-    const frame = this.encode(message);
+    const frame = this.encode(message, maxFrameBytes);
     if (
       !frame ||
       this.priority.length >= this.limits.maxPriorityMessages ||
@@ -37,9 +40,9 @@ export class HostOutput {
     return true;
   }
 
-  sendData(message: RpcNotification): boolean {
+  sendData(message: RpcNotification, maxFrameBytes = this.limits.maxFrameBytes): boolean {
     if (this.stopped) return false;
-    const frame = this.encode(message);
+    const frame = this.encode(message, maxFrameBytes);
     if (
       !frame ||
       this.data.length >= this.limits.maxDataNotifications ||
@@ -65,10 +68,14 @@ export class HostOutput {
     this.priorityBytes = this.dataBytes = this.dropped = 0;
   }
 
-  private encode(message: RpcResponse | RpcNotification): Buffer | undefined {
+  private encode(
+    message: RpcResponse | RpcNotification,
+    maxFrameBytes = this.limits.maxFrameBytes
+  ): Buffer | undefined {
     try {
       const text = JSON.stringify(message);
-      if (Buffer.byteLength(text) > this.limits.maxFrameBytes) return undefined;
+      if (Buffer.byteLength(text) > Math.min(maxFrameBytes, this.limits.maxFrameBytes))
+        return undefined;
       return Buffer.from(`${text}\n`);
     } catch {
       return undefined;

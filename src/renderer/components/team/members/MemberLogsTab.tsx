@@ -27,68 +27,13 @@ import {
   MessageSquare,
 } from 'lucide-react';
 
+import { HostMemberActivityLog } from './HostMemberActivityLog';
+import { filterChunksByWorkIntervals, getWorkIntervalWindow } from './memberLogWorkIntervals';
+
+export { filterChunksByWorkIntervals } from './memberLogWorkIntervals';
+
 import type { EnhancedChunk } from '@renderer/types/data';
 import type { MemberLogSummary } from '@shared/types';
-
-// ---------------------------------------------------------------------------
-// Chunk filtering by task work intervals
-// ---------------------------------------------------------------------------
-
-const CHUNK_GRACE_BEFORE_MS = 30_000; // 30s before startedAt
-const CHUNK_GRACE_AFTER_MS = 10_000; // 10s after completedAt
-
-function getWorkIntervalWindow(
-  interval: { startedAt: string; completedAt?: string },
-  options: {
-    graceBeforeMs: number;
-    graceAfterMs: number;
-    nowMs: number;
-  }
-): { startMs: number; endMs: number } | null {
-  const startMs = Date.parse(interval.startedAt);
-  if (!Number.isFinite(startMs)) return null;
-  if (interval.completedAt === undefined) {
-    return {
-      startMs: startMs - options.graceBeforeMs,
-      endMs: options.nowMs + options.graceAfterMs,
-    };
-  }
-  const completedAtMs = Date.parse(interval.completedAt);
-  const endMs = Number.isFinite(completedAtMs) ? Math.max(completedAtMs, startMs) : startMs;
-  return {
-    startMs: startMs - options.graceBeforeMs,
-    endMs: endMs + options.graceAfterMs,
-  };
-}
-
-export function filterChunksByWorkIntervals(
-  chunks: EnhancedChunk[] | null,
-  intervals: { startedAt: string; completedAt?: string }[] | undefined
-): EnhancedChunk[] | null {
-  if (!chunks) return null;
-  if (!intervals || intervals.length === 0) return chunks;
-
-  const nowMs = Date.now();
-  const parsed = intervals
-    .map((interval) =>
-      getWorkIntervalWindow(interval, {
-        graceBeforeMs: CHUNK_GRACE_BEFORE_MS,
-        graceAfterMs: CHUNK_GRACE_AFTER_MS,
-        nowMs,
-      })
-    )
-    .filter((v): v is { startMs: number; endMs: number } => v !== null);
-
-  if (parsed.length === 0) return chunks;
-
-  const filtered = chunks.filter((chunk) => {
-    const cs = chunk.startTime.getTime();
-    const ce = chunk.endTime.getTime();
-    if (!Number.isFinite(cs) || !Number.isFinite(ce)) return true;
-    return parsed.some((i) => cs <= i.endMs && ce >= i.startMs);
-  });
-  return filtered;
-}
 
 interface MemberLogsTabProps {
   teamName: string;
@@ -206,6 +151,7 @@ export const MemberLogsTab = ({
   }, []);
 
   const getRowId = useCallback((log: MemberLogSummary): string => {
+    if (log.kind === 'host_activity') return log.sessionId;
     if (log.kind === 'subagent') {
       return `subagent:${log.sessionId}:${log.subagentId}`;
     }
@@ -218,6 +164,7 @@ export const MemberLogsTab = ({
   const sortedLogs = useMemo(() => {
     const nowMs = Date.now();
     const getLastActivityMs = (log: MemberLogSummary): number => {
+      if (log.kind === 'host_activity') return Number.NaN;
       const startMs = new Date(log.startTime).getTime();
       if (!Number.isFinite(startMs)) return Number.NaN;
       const durationMs = Number.isFinite(log.durationMs) ? Math.max(0, log.durationMs) : 0;
@@ -228,6 +175,7 @@ export const MemberLogsTab = ({
     // When viewing a task with workIntervals, sort by overlap (most relevant first).
     // Fallback to endMs (most recent activity) when no intervals available.
     const getOverlapMs = (log: MemberLogSummary): number => {
+      if (log.kind === 'host_activity') return 0;
       if (!taskWorkIntervals || taskWorkIntervals.length === 0) return 0;
       const logStartMs = new Date(log.startTime).getTime();
       if (!Number.isFinite(logStartMs)) return 0;
@@ -274,7 +222,7 @@ export const MemberLogsTab = ({
     return taskId != null && (showSubagentPreview || showLeadPreview);
   }, [showLeadPreview, showSubagentPreview, taskId]);
 
-  const previewLog = useMemo((): MemberLogSummary | null => {
+  const previewLog = useMemo((): Exclude<MemberLogSummary, { kind: 'host_activity' }> | null => {
     if (!shouldShowPreview) return null;
 
     if (showSubagentPreview) {
@@ -556,6 +504,7 @@ export const MemberLogsTab = ({
       log: MemberLogSummary,
       options?: { bypassCache?: boolean }
     ): Promise<EnhancedChunk[] | null> => {
+      if (log.kind === 'host_activity') return null;
       if (log.kind === 'subagent') {
         const d = await api.getSubagentDetail(
           log.projectId,
@@ -790,12 +739,13 @@ const LogCard = ({
   onToggle,
 }: LogCardProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
-  const createdAgo = formatRelativeTime(log.startTime);
+  const createdAgo = log.kind === 'host_activity' ? '' : formatRelativeTime(log.startTime);
   const lastActivityTime = useMemo(() => {
+    if (log.kind === 'host_activity') return null;
     const startMs = new Date(log.startTime).getTime();
     if (!Number.isFinite(startMs) || log.durationMs <= 0) return null;
     return new Date(startMs + log.durationMs).toISOString();
-  }, [log.startTime, log.durationMs]);
+  }, [log.kind, log.startTime, log.durationMs]);
   const updatedAgo = lastActivityTime ? formatRelativeTime(lastActivityTime) : null;
 
   const memberColorCss = useMemo(() => {
@@ -803,6 +753,9 @@ const LogCard = ({
     const colorName = getMemberColorByName(log.memberName);
     return getTeamColorSet(colorName).text;
   }, [log.memberName]);
+
+  if (log.kind === 'host_activity')
+    return <HostMemberActivityLog log={log} expanded={expanded} onToggle={onToggle} />;
 
   return (
     <div className="min-w-0 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]">

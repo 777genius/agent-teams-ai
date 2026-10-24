@@ -1,5 +1,24 @@
 # Legacy Agent Host
 
+Explicit Claude model tests reuse the captured management profile and existing
+durable ModelProbeOwner. The provider library supplies finite native execution;
+this Host checks selected namespace identity and physical cleanup before returning
+success. A model test grants no global authentication or team-launch authority.
+[Native/Main proof and remaining integration](../../docs/plans/provider-migration/evidence/p5-claude-model-probe-handoff.json)
+cover success, wrong-model rejection, cancellation and original-command replay.
+Existing Launch/Create/Resume dialogs remain the only accepted UI; their complete
+preparation/roster/launch/progress workflow is still in progress.
+
+Finite `team.launch.probe.start/read/cancel` binds model/effort/context checks to
+the selected launch/roster/member. Native configuration is derived from that
+member's captured Runtime profile. The existing ModelProbeOwner shares its
+namespace fence and durable journal with other management intents. Team control,
+member authority and their original grant revisions are rechecked before SDK
+input and result; revoke/regrant cannot revive an old proof. Public results omit
+account paths, native/profile identities and authority digests. This supplies the
+Team-qualified model-test prerequisite; ordinary `prepareProvisioning` and the
+complete dialogs still need integration. [Scoped proof](../../docs/plans/provider-migration/evidence/p5-team-model-probe-handoff.json).
+
 Stage 1 portable Team/Runtime host under implementation. The transport-only CLI
 remains available without a product profile. A captured product profile enables
 canonical Team Task/Message commands and original-command lookup. An optional
@@ -32,19 +51,68 @@ connection, private route/Bearer capability, current binding checks and stable
 mutation IDs. It does not instantiate another controller/writer.
 
 The Runtime RPC surface selects only a captured member ID: open/read/dispatch,
-stop/interrupt/interaction/reconcile and checkpoint. It does not accept executable,
-environment, model, principal, run, generation or native checkpoint bytes. Read
+stop/interrupt/interaction/reconcile, checkpoint and explicit restore. It does not accept executable,
+environment, model, principal, run, native configuration generation or native checkpoint bytes. Read
 projections omit private provider/configuration/operation identities. Team commits
 wake one recovery/dispatch pump; native terminal events allow the next admitted
 input. Startup recovers original obligations without allocating or adopting a
-native session. Aggregate Team bootstrap is not advertised as complete.
+native session. `runtime.restore` accepts an original command ID, member ID,
+published `cp1-…` reference and `expectedGeneration` from the source snapshot.
+It requires released source custody and validates exact selected history before
+publishing a new technical generation in the existing launch record. Team delivery
+reads this selection; old receipts keep their original binding. There is no second
+binding registry. After replacement, mutations require the current expected generation;
+stale controls fail before effects. Concurrent repeats of one restore share its pending
+result, and restart never retries an unknown native allocation. Aggregate Team
+bootstrap and ordinary Desktop resume are not advertised as complete.
+
+An optional private `management` profile list composes owned OpenCode management
+servers through the existing public provider library. `management.catalog` accepts
+only a captured profile ID/config revision and optional provider ID; executable,
+endpoint and credential roots cannot be supplied through RPC. Directory reads
+carry model counts; an explicit provider selection includes bounded model metadata.
+`management.credential` supports API credential set/forget with a stable command ID;
+`management.credential.lookup` reads its original receipt. The private journal stores
+fingerprints and outcomes, never keys/metadata values. Uncertain claims are held
+after restart, rather than repeated. One credential namespace serializes writes;
+unknown writer cleanup holds it. This offers process-crash recovery, not a new
+power-loss durability guarantee. `./management/contracts` exports only safe metadata.
+
+An explicit `claude` management profile also serves `management.claude.metadata`.
+It selects a pinned SDK revision, executable digest, cwd and HOME/config namespace;
+the RPC caller supplies only the captured profile ID/config revision. The public
+provider library initializes SDK model/account-source metadata without input,
+tools, MCP or a persisted conversation. Host checks namespace identity and confirms
+physical cleanup before returning; unresolved custody holds that resource. The
+result contains no email, native session ID or credential and grants no auth/model
+execution readiness. These reads require neither a Team nor the fork executable.
+`management.oauth.start/read/authorization/complete/cancel` own bounded browser/code
+flows with stable IDs and the same namespace writer fence. Public progress never
+contains URLs, instructions or codes; authorization is a private Host→Main reply.
+Cancellation retires the captured native process before releasing its namespace.
+Pending flows after a crash remain held; replay never starts a second login.
+`teams: []` is valid for global management without Team bootstrap.
+
+Explicit provider catalog reads also return allowlisted native auth methods with
+original method indices and supported prompt metadata. Unknown widget/condition
+semantics disable that method rather than dropping required native fields.
+The Desktop port now connects catalog/model metadata, API key set/forget and
+OAuth code/cancel with durable original Main routing. `management.probe.start/read/cancel`
+own explicit, at-most-once no-tool model tests. Auth changes and probes serialize
+within the same captured native namespace. The probe publishes completed only after
+its native process is physically stopped; cancellation wins over late native success,
+and cold pending probes remain held. Responses contain no model text/native IDs.
+Defaults and the complete ordinary UI are still being integrated. Native connected/catalog presence is not
+execution proof. OAuth process E2E uses a TEST OpenCode-shaped server, and does
+not qualify a real vendor login.
 
 Task recovery prepares canonical policy once on a private detached product JSON
 snapshot, then publishes guarded file effects and notification obligations.
 Uncertain or changed evidence holds the original intent instead of running the
 canonical handler again. Checkpoints publish private payloads before safe
-references, and explicit restore keeps the new input queue empty. Actual native
-history restore still needs its provider qualification.
+references, and explicit restore keeps the new input queue empty. Selected native
+history restore has a scoped Claude/Codex/OpenCode proof with localhost scripted
+inference; vendor authentication and the ordinary Desktop Resume workflow remain open.
 
 This checkpoint is incomplete: full catalog/review/backup/restore, mixed-provider
 teams and Desktop cutover remain in the Stage 1 plan. Technical fixtures and individual native feasibility proofs do not
@@ -107,3 +175,91 @@ and dispose all captured resources independently. `closed` distinguishes cleanup
 completion, failure and timeout. App Quit/Relaunch must perform its scoped graceful
 cleanup before transport disposal. Stdio cannot reconnect to a live child;
 replacement/exit/custody/storage-lock policy belongs to Desktop composition.
+
+`team.launch.read/start/retry` is also available through the finite captured Desktop
+facade. With no Runtime profile, an authorized `read` returns null; start/retry refuse
+before allocation. Ordinary Team presence and Stop consume Launch/Runtime state while
+product snapshots remain free of inferred native/process/session provenance. This does
+not qualify ordinary Launch/Resume controls or full Desktop cutover.
+
+Initial `team.launch.start` also accepts finite per-member user configuration.
+Composition maps model/effort/fast/context/permission choices to the selected private
+provider profile; incompatible options refuse before any partial publication. The
+existing launch record publishes the original intent and its opaque options before
+provider creation. A queued unopened input keeps its original delivery. Claimed or
+allocated generations cannot be reconfigured through this initial-selection path.
+Current grants apply to replay, and changed/dropped options conflict. Recovery checks
+the captured base profile and reconstructs the same selected configuration; selected
+restore retains it instead of reverting to descriptor defaults.
+
+Configured start returns private admission correlation for Main to validate the
+original command, source revision and exact options before accepting the new roster
+revision. Public snapshots expose only the admission command/source revision.
+[Native configuration proof](../../docs/plans/provider-migration/evidence/p5-launch-configuration-handoff.json)
+qualifies actual Opus/medium requests through Electron and after mixed native
+checkpoint/restore. Ordinary Launch/Resume dialogs, dynamic roster/config lifecycle
+and full settings/extension parity remain incomplete.
+
+`team.snapshot` and `team.changes.read` now share Team's current-grant read fence.
+The snapshot includes its read-stream position; replay returns later invalidations
+with stable source IDs. The Team-owned volatile journal/cursor registry is bounded
+to 128 entries. Initial/unknown cursors and expired retention return explicit gaps;
+restart creates a new read stream without changing durable command outcomes.
+Snapshot state/metadata fit the existing 512 KiB bound. These technical invalidations
+create no new durable product writer, command log or native allocation.
+
+`team.roster.read/replace/lookup` exposes Team-owned saved application configuration.
+The captured principal supplies one command ID and the expected product revision;
+the owner retains the lead, preserves member IDs and Task/inbox bytes, and stores
+all existing teammate options. Omitted options clear an override in a full replacement.
+Optional `savedSettings` contains the original lead/global launch choices, presentation,
+prompt, worktree/custom args and local-model override. Missing outer settings means
+not captured. A teammate-only command preserves them; a supplied object fully
+replaces them, so omitted inner options clear overrides while explicit false/off
+survive. Trusted profile values initialize an absent owner only, never overwrite
+settings on reopen. Effective native models/accounts are not saved defaults.
+Restoring a removed name retains its product identity without restoring its old grant
+or delivery target. Descriptive roles stay in settings; controller authority uses
+the canonical lead/member role.
+
+The decision and original receipt are one atomic Team state publication.
+`config.json` is a recoverable projection: restart completes that exact projection
+or holds if foreign bytes replaced it. Replay never reruns membership policy. State
+is bounded to1 MiB/1024 roster receipts/1024 removed members; exhaustion refuses
+before publication and does not erase outcomes. Runtime proof is synchronous and
+outside Team's lock. Live, pending or unknown custody refuses an edit; confirmed
+released resources are detached without deleting their launch/Runtime journals.
+Task/delivery recovery debt also holds changed configuration.
+An admitted Team delivery is a completed handoff; its cached admission phase is not
+polled as live input state. Runtime's current input/custody proof owns that check,
+so completed messages followed by confirmed stop do not permanently block edits.
+
+A stale static runtime descriptor cannot allocate from saved settings it did not
+capture. Settings-only changes require the same released-runtime proof and advance
+the product revision. Product snapshots include that configuration revision for
+coherent form hydration. Warm and cold reads of the current Launch selection return
+unconfigured after an edit; historical journals remain preserved on disk.
+Ordinary Desktop `replaceMembers` now reaches this owner with the form's original
+revision and command ID. Member-settings relaunch validates owner-issued version
+tokens for the complete source roster, target identity/kind and explicit model/
+effort choices inside the same CAS transition. It cannot change membership.
+Fresh per-member native capture and ordinary Launch integration are still stage1
+work; these APIs do not claim that Electron existing-dialog E2E is complete.
+
+Dynamic configuration creation is now an explicit Host capability. The private
+profile may enable `creation.contextIds`; it is disabled by default. The finite
+`team.registry.create/lookup/list` methods validate the captured owner/context and
+publish one original creation intent before bootstrapping a Team through the same
+filesystem owner. This registry owns creation outcomes and discovery metadata;
+subsequent roster, Tasks, messages and Runtime state keep their existing owners.
+Replay and cold recovery retain the original identities. A previously published
+Team with a missing ownership marker stays held rather than recreating defaults.
+No provider session is opened by save-only creation.
+
+`runtime.providerTemplates` optionally declares private, unique provider defaults
+for new members or a changed provider. Exact matching per-member recipes retain
+their own account. Templates are never inferred from another member; their full
+digest binds capture/reconstruction, and an existing native OpenCode session cannot
+be used as a fresh template. Executable, account, environment and native identity
+remain Host composition data. These prerequisites do not establish full Create
+launch/preflight, mixed advanced-option or Desktop Resume parity.

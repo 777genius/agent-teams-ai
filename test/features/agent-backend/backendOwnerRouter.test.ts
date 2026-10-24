@@ -138,6 +138,92 @@ async function effects(owner: CapturedBackendOwner): Promise<unknown[]> {
   }
 }
 
+it('captures both original same-owner bindings before a paired dispatch and refuses foreign owners', async () => {
+  const { router, a, b } = await setup();
+  const source = await router.createHandle('TEST-pair-source', scope, a);
+  const target = await router.createHandle(
+    'TEST-pair-target',
+    { ...scope, teamId: 'team-target' },
+    a
+  );
+  const foreign = await router.createHandle(
+    'TEST-pair-foreign',
+    { ...scope, teamId: 'team-foreign' },
+    b
+  );
+  router.setDefault(b);
+  await router.requestPair(source, target, {
+    commandId: 'TEST-pair-command',
+    method: 'test.mutate',
+    payload: { text: 'TEST immutable' },
+  });
+  expect(await effects(a)).toMatchObject([
+    {
+      commandId: 'TEST-pair-command',
+      binding: { handleId: source.handleId },
+      payload: {
+        request: { text: 'TEST immutable' },
+        targetBinding: { handleId: target.handleId, scope: { teamId: 'team-target' } },
+      },
+    },
+  ]);
+  await expect(
+    router.requestPair(source, foreign, {
+      commandId: 'TEST-pair-refused',
+      method: 'test.mutate',
+      payload: { text: 'TEST foreign' },
+    })
+  ).rejects.toMatchObject({ code: 'invalid-binding' });
+  await expect(
+    router.requestPair(source, source, {
+      commandId: 'TEST-pair-self',
+      method: 'test.mutate',
+      payload: {},
+    })
+  ).rejects.toMatchObject({ code: 'invalid-binding' });
+  expect(await effects(a)).toHaveLength(1);
+  expect(await effects(b)).toEqual([]);
+});
+
+it('does not dispatch a paired command after its original context guard is revoked', async () => {
+  const { router, a } = await setup();
+  const source = await router.createHandle('TEST-pair-source', scope, a);
+  const target = await router.createHandle(
+    'TEST-pair-target',
+    { ...scope, teamId: 'team-target' },
+    a
+  );
+  await expect(
+    router.requestPair(source, target, {
+      commandId: 'TEST-pair-revoked',
+      method: 'test.mutate',
+      payload: {},
+      guard: { isCurrent: () => false },
+    })
+  ).rejects.toMatchObject({ code: 'forbidden' });
+  expect(await effects(a)).toEqual([]);
+});
+
+it('refuses an explicit new owner for a retained handle with the same product scope', async () => {
+  const { router, a, b } = await setup();
+  await router.createHandle('TEST-registry-original', scope, a);
+  await expect(router.createHandle('TEST-registry-original', scope, b)).rejects.toMatchObject({
+    code: 'binding-conflict',
+  });
+  router.setDefault(b);
+  expect(await router.createHandle('TEST-registry-original', scope)).toEqual({
+    handleId: 'TEST-registry-original',
+  });
+  expect(
+    await router.request(
+      { handleId: 'TEST-registry-original' },
+      { commandId: 'TEST-original-read', method: 'test.lookup', payload: null, control: true }
+    )
+  ).toBeNull();
+  expect(await effects(a)).toEqual([]);
+  expect(await effects(b)).toEqual([]);
+});
+
 it('routes fresh commands by retained A/B binding across default switch and rollback', async () => {
   const { router, a, b } = await setup();
   const handleA = await router.createHandle('opaque-A', scope);
@@ -316,6 +402,43 @@ it('shutdown seals requests waiting on storage before any awaited cleanup can al
   release();
   await expect(pending).rejects.toMatchObject({ code: 'shutting-down' });
   expect((await closing).every((result) => result.status === 'fulfilled')).toBe(true);
+  expect(await effects(a)).toHaveLength(0);
+  expect(await effects(b)).toHaveLength(0);
+});
+
+it('rechecks captured context after a delayed binding read immediately before any wire effect', async () => {
+  const { router, store, a, b } = await setup();
+  const handle = await router.createHandle('guarded-read', scope);
+  let release!: () => void;
+  let signal!: () => void;
+  const started = new Promise<void>((resolve) => {
+    signal = resolve;
+  });
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const guarded = new BackendOwnerRouter({
+    create: (binding) => store.create(binding),
+    read: async (id) => {
+      signal();
+      await gate;
+      return store.read(id);
+    },
+  });
+  guarded.registerOwner(a);
+  guarded.registerOwner(b);
+  guarded.setDefault(b);
+  let current = true;
+  const pending = guarded.request(handle, {
+    commandId: 'must-not-send',
+    method: 'test.mutate',
+    payload: null,
+    guard: { isCurrent: () => current },
+  });
+  await started;
+  current = false;
+  release();
+  await expect(pending).rejects.toMatchObject({ code: 'forbidden', outcome: 'not-dispatched' });
   expect(await effects(a)).toHaveLength(0);
   expect(await effects(b)).toHaveLength(0);
 });

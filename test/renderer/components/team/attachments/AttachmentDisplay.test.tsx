@@ -4,6 +4,9 @@ import { createRoot } from 'react-dom/client';
 import { AttachmentDisplay } from '@renderer/components/team/attachments/AttachmentDisplay';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const apiMock = vi.hoisted(() => ({ getAttachments: vi.fn() }));
+vi.mock('@renderer/api', () => ({ api: { teams: apiMock } }));
+
 const storeMocks = vi.hoisted(() => ({
   revealFileInEditor: vi.fn(),
 }));
@@ -30,7 +33,7 @@ describe('AttachmentDisplay', () => {
 
   it('opens persisted non-image attachments in the built-in editor', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    const getAttachments = vi.fn().mockResolvedValue([
+    apiMock.getAttachments.mockResolvedValue([
       {
         id: 'att-1',
         data: Buffer.from('verification').toString('base64'),
@@ -40,7 +43,13 @@ describe('AttachmentDisplay', () => {
     ]);
     Object.defineProperty(window, 'electronAPI', {
       configurable: true,
-      value: { teams: { getAttachments } },
+      value: {
+        teams: {
+          getAttachments: () => {
+            throw new Error('Ambient legacy IPC bypass');
+          },
+        },
+      },
     });
 
     const host = document.createElement('div');
@@ -67,7 +76,9 @@ describe('AttachmentDisplay', () => {
       await Promise.resolve();
     });
 
-    const button = host.querySelector<HTMLButtonElement>('button[aria-label="Open verification.md"]');
+    const button = host.querySelector<HTMLButtonElement>(
+      'button[aria-label="Open verification.md"]'
+    );
     expect(button).not.toBeNull();
 
     await act(async () => {
@@ -78,4 +89,48 @@ describe('AttachmentDisplay', () => {
       '/app/data/attachments/team-a/msg-1/att-1--verification.md'
     );
   });
+});
+
+it('downloads an owner-read source file from verified bytes without a private path or legacy IPC', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  apiMock.getAttachments.mockResolvedValue([
+    { id: 'TEST-file', data: btoa('TEST retained bytes'), mimeType: 'text/plain' },
+  ]);
+  const createURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:TEST-download');
+  const revokeURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+  const clicks: { href: string; download: string }[] = [];
+  const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+    this: HTMLAnchorElement
+  ) {
+    clicks.push({ href: this.href, download: this.download });
+  });
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  await act(async () => {
+    root.render(
+      <AttachmentDisplay
+        teamName="host-team:TEST"
+        messageId={`im1:TEST-task:${'a'.repeat(64)}`}
+        attachments={[
+          { id: 'TEST-file', filename: 'retained.txt', mimeType: 'text/plain', size: 19 },
+        ]}
+      />
+    );
+  });
+  const button = host.querySelector<HTMLButtonElement>(
+    'button[aria-label="Download retained.txt"]'
+  );
+  expect(button).not.toBeNull();
+  await act(async () => {
+    button!.click();
+  });
+  expect(clicks).toEqual([{ href: 'blob:TEST-download', download: 'retained.txt' }]);
+  expect(await (createURL.mock.calls[0]![0] as Blob).text()).toBe('TEST retained bytes');
+  expect(revokeURL).toHaveBeenCalledWith('blob:TEST-download');
+  expect(storeMocks.revealFileInEditor).not.toHaveBeenCalled();
+  await act(async () => root.unmount());
+  createURL.mockRestore();
+  revokeURL.mockRestore();
+  click.mockRestore();
 });

@@ -1,7 +1,6 @@
 /**
  * Store index - combines all slices and exports the unified store.
  */
-
 import { api } from '@renderer/api';
 import { cleanupStale as cleanupCommentReadState } from '@renderer/services/commentReadStorage';
 import { syncRendererTelemetry } from '@renderer/telemetry';
@@ -54,6 +53,7 @@ import {
 import { createUISlice } from './slices/uiSlice';
 import { createUpdateSlice } from './slices/updateSlice';
 import { scheduleAllToolApprovalSettingsSync } from './team/teamToolApprovalSettingsSync';
+import { applyToolApprovalEvent } from './team/toolApprovalEvents';
 import { nextTeamAliveFromLeadActivity } from './leadActivityTeamAlive';
 import {
   decideProcessFanoutDryRun,
@@ -84,7 +84,6 @@ import type {
   TeamProvisioningProgress,
   ToolActivityEventPayload,
   ToolApprovalEvent,
-  ToolApprovalRequest,
   UpdaterStatus,
 } from '@shared/types';
 
@@ -2258,32 +2257,7 @@ export function initializeNotificationListeners(): () => void {
   if (api.teams?.onToolApprovalEvent) {
     const cleanup = api.teams.onToolApprovalEvent((_event: unknown, data: unknown) => {
       const event = data as ToolApprovalEvent;
-      if ('autoResolved' in event && event.autoResolved) {
-        // Timeout or auto-allow resolved in main — remove from UI and record result
-        const allowed = event.reason !== 'timeout_deny';
-        useStore.setState((s) => {
-          const next = new Map(s.resolvedApprovals);
-          next.set(event.requestId, allowed);
-          return {
-            pendingApprovals: s.pendingApprovals.filter(
-              (a) => !(a.runId === event.runId && a.requestId === event.requestId)
-            ),
-            resolvedApprovals: next,
-          };
-        });
-      } else if ('dismissed' in event && event.dismissed) {
-        const dismiss = event;
-        useStore.setState((s) => ({
-          pendingApprovals: s.pendingApprovals.filter(
-            (a) => !(a.teamName === dismiss.teamName && a.runId === dismiss.runId)
-          ),
-        }));
-      } else {
-        const request = event as ToolApprovalRequest;
-        useStore.setState((s) => ({
-          pendingApprovals: [...s.pendingApprovals, request],
-        }));
-      }
+      useStore.setState((state) => applyToolApprovalEvent(state, event));
     });
     if (typeof cleanup === 'function') {
       cleanupFns.push(cleanup);

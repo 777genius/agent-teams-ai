@@ -25,6 +25,7 @@ export function deliveryIdentity(intent: ImmutableDelivery): ImmutableDelivery {
     inputId: intent.inputId,
     messageId: intent.messageId,
     content: intent.content,
+    ...(intent.attachments?.length ? { attachments: structuredClone(intent.attachments) } : {}),
   };
 }
 

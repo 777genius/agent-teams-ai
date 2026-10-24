@@ -1,3 +1,9 @@
+import {
+  isPathWithinRoot,
+  isWindowsReservedFileName,
+  matchesSensitivePattern,
+} from '@agent-teams/task-change-ledger/review-writer';
+export { isPathWithinRoot, isWindowsReservedFileName, matchesSensitivePattern };
 /**
  * Path Validation Utilities.
  *
@@ -14,48 +20,6 @@ import * as path from 'path';
 import { getAppDataPath, getClaudeBasePath, getHomeDir } from './pathDecoder';
 
 /**
- * Sensitive file patterns that should never be accessible.
- * These are checked against the normalized absolute path.
- */
-const SENSITIVE_PATTERNS: RegExp[] = [
-  // SSH keys and config
-  /[/\\]\.ssh[/\\]/i,
-  // AWS credentials
-  /[/\\]\.aws[/\\]/i,
-  // GCP credentials
-  /[/\\]\.config[/\\]gcloud[/\\]/i,
-  // Azure credentials
-  /[/\\]\.azure[/\\]/i,
-  // Environment files (anywhere in path)
-  /[/\\]\.env($|\.)/i,
-  // Git credentials
-  /[/\\]\.git-credentials$/i,
-  /[/\\]\.gitconfig$/i,
-  // NPM tokens
-  /[/\\]\.npmrc$/i,
-  // Docker credentials
-  /[/\\]\.docker[/\\]config\.json$/i,
-  // Kubernetes config
-  /[/\\]\.kube[/\\]config$/i,
-  // Password files
-  /[/\\]\.password/i,
-  /[/\\]\.secret/i,
-  // Private keys
-  /[/\\]id_rsa$/i,
-  /[/\\]id_ed25519$/i,
-  /[/\\]id_ecdsa$/i,
-  /[/\\][^/\\]*\.pem$/i,
-  /[/\\][^/\\]*\.key$/i,
-  // System files
-  /^\/etc\/passwd$/,
-  /^\/etc\/shadow$/,
-  // Credentials in filename
-  /credentials\.json$/i,
-  /secrets\.json$/i,
-  /tokens\.json$/i,
-];
-
-/**
  * Result of path validation.
  */
 export interface PathValidationResult {
@@ -69,30 +33,12 @@ function normalizeForCompare(input: string, isWindows: boolean): string {
   return isWindows ? normalized.toLowerCase() : normalized;
 }
 
-export function isPathWithinRoot(targetPath: string, rootPath: string): boolean {
-  const isWindows = process.platform === 'win32';
-  const target = normalizeForCompare(targetPath, isWindows);
-  const root = normalizeForCompare(rootPath, isWindows);
-  const relative = path.relative(root, target);
-  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
-}
-
 function resolveRealPathIfExists(inputPath: string): string | null {
   try {
     return fs.realpathSync.native(inputPath);
   } catch {
     return null;
   }
-}
-
-/**
- * Checks if a path matches any sensitive file patterns.
- *
- * @param normalizedPath - The normalized absolute path to check
- * @returns true if path matches a sensitive pattern
- */
-export function matchesSensitivePattern(normalizedPath: string): boolean {
-  return SENSITIVE_PATTERNS.some((pattern) => pattern.test(normalizedPath));
 }
 
 /**
@@ -327,47 +273,6 @@ const MAX_FILENAME_LENGTH = 255;
 /** Characters forbidden in file/directory names. */
 // eslint-disable-next-line no-control-regex, sonarjs/no-control-regex -- Intentional: validating filenames against control characters
 const INVALID_FILENAME_CHARS = /[\x00-\x1f/\\:*?"<>|]/;
-const WINDOWS_RESERVED_BASENAMES = new Set([
-  'con',
-  'prn',
-  'aux',
-  'nul',
-  'com1',
-  'com2',
-  'com3',
-  'com4',
-  'com5',
-  'com6',
-  'com7',
-  'com8',
-  'com9',
-  'lpt1',
-  'lpt2',
-  'lpt3',
-  'lpt4',
-  'lpt5',
-  'lpt6',
-  'lpt7',
-  'lpt8',
-  'lpt9',
-]);
-
-export function isWindowsReservedFileName(name: string): boolean {
-  if (typeof name !== 'string') {
-    return false;
-  }
-
-  const normalized = name
-    .trim()
-    .replace(/[. ]+$/g, '')
-    .toLowerCase();
-  if (!normalized) {
-    return false;
-  }
-
-  const stem = normalized.split('.')[0] ?? normalized;
-  return WINDOWS_RESERVED_BASENAMES.has(stem);
-}
 
 /**
  * Validates a file or directory name for creation.

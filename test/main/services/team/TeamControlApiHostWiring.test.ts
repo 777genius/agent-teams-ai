@@ -68,6 +68,11 @@ function resolverSource(kind: ResolverKind): string {
 function createHost(publish = writeTeamControlApiState) {
   let running = false;
   let shuttingDown = false;
+  const httpScope = Object.freeze({
+    contextId: 'test-http-context',
+    isCurrent: () => !shuttingDown,
+  });
+  const captureHttpScope = vi.fn(() => httpScope);
   const server = {
     isRunning: () => running,
     getPort: () => 4591,
@@ -94,6 +99,7 @@ function createHost(publish = writeTeamControlApiState) {
   // eslint-disable-next-line sonarjs/code-eval -- trusted local source, no user input
   const host = runInNewContext(`${code}\n({ startHttpServer, provisioning, memberWorkSync })`, {
     httpServer: server,
+    captureDesktopAgentBackendHttpScope: captureHttpScope,
     isShutdownStarted: () => shuttingDown,
     buildTeamControlApiBaseUrl,
     clearTeamControlApiState,
@@ -119,6 +125,8 @@ function createHost(publish = writeTeamControlApiState) {
   };
   return {
     server,
+    httpScope,
+    captureHttpScope,
     start: () => host.startHttpServer(() => Promise.resolve()),
     resolve: (kind: ResolverKind) => host[kind](),
     shutdown: () => {
@@ -141,24 +149,59 @@ describe('existing app Host endpoint wiring', () => {
     await rm(root, { recursive: true, force: true });
   });
 
-  it('revokes inherited endpoint before initializing services or exposing provider handlers', () => {
+  it('clears inherited endpoint at the first await, after captured connection registration and before legacy runtime exposure', () => {
     const init = source.statements.find(
       (node): node is ts.FunctionDeclaration =>
         ts.isFunctionDeclaration(node) && node.name?.text === 'initializeServices'
     );
-    expect(init?.body?.statements[0]?.getText(source)).toBe('await clearTeamControlApiState();');
+    const statements = init!.body!.statements;
+    // The captured backend registers synchronously before legacy initialization
+    // may await. An unrelated startup statement is not an authority boundary.
+    const firstAwait = statements.findIndex((statement) => {
+      let found = false;
+      const visit = (node: ts.Node): void => {
+        if (node !== statement && ts.isFunctionLike(node)) return;
+        if (ts.isAwaitExpression(node)) found = true;
+        ts.forEachChild(node, visit);
+      };
+      visit(statement);
+      return found;
+    });
+    expect(firstAwait).toBeGreaterThanOrEqual(0);
+    expect(statements[firstAwait].getText(source)).toBe('await clearTeamControlApiState();');
+    const registration = statements.findIndex((statement) =>
+      statement.getText(source).startsWith('initializeAgentBackendConnection(')
+    );
+    expect(registration).toBeGreaterThanOrEqual(0);
+    expect(registration).toBeLessThan(firstAwait);
+    for (const boundary of [
+      'localContext.startCacheOnly()',
+      'new TeamProvisioningService()',
+      'createMemberWorkSyncFeature(',
+      'initializeIpcHandlers(',
+    ]) {
+      const index = statements.findIndex((statement) => statement.getText(source).includes(boundary));
+      expect(index, boundary).toBeGreaterThan(firstAwait);
+    }
   });
 
   it('publishes the listening fallback port on cold start and already-running start', async () => {
     const host = createHost();
     await host.start();
-    expect(host.server.start).toHaveBeenCalledWith(expect.any(Object), expect.any(Function), 3456);
+    expect(host.server.start).toHaveBeenCalledWith(
+      expect.objectContaining({ agentBackend: host.httpScope }),
+      expect.any(Function),
+      3456
+    );
+    expect(host.captureHttpScope).toHaveBeenCalledOnce();
     expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBe('http://127.0.0.1:4591');
     expect(
       JSON.parse(await readFile(path.join(root, 'team-control-api.json'), 'utf8')).baseUrl
     ).toBe('http://127.0.0.1:4591');
     await host.start();
     expect(host.server.start).toHaveBeenCalledOnce();
+    // Already-running publication never recaptures authority.
+    expect(host.captureHttpScope).toHaveBeenCalledOnce();
     expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBe('http://127.0.0.1:4591');
   });
 

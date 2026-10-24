@@ -1,3 +1,6 @@
+import { join } from 'node:path';
+
+import { DesktopBackendFeature } from '@features/agent-backend/main';
 /**
  * Standalone (non-Electron) entry point for Agent Teams AI.
  *
@@ -11,11 +14,9 @@
  * - CLAUDE_ROOT: Path to .claude directory (default ~/.claude)
  * - CORS_ORIGIN: CORS origin policy (default '*')
  */
-
 // Note: Sentry is NOT imported here. @sentry/electron/main requires Electron
 // runtime which is unavailable in standalone (pure Node.js) mode. Standalone
 // error tracking can be added later with @sentry/node if needed.
-
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
 import { createWorkspaceTrustFeatures } from '@features/workspace-trust/main';
 import { createLogger } from '@shared/utils/logger';
@@ -92,6 +93,8 @@ const sshConnectionManagerStub = {
 let localContext: ServiceContext;
 let notificationManager: NotificationManager;
 let httpServer: HttpServer;
+let agentBackend: DesktopBackendFeature | undefined;
+let backendCurrent = true;
 
 // =============================================================================
 // Lifecycle
@@ -160,8 +163,23 @@ async function start(): Promise<void> {
     httpServer.broadcast('notification:clicked', data);
   });
 
+  const descriptorPath = process.env.AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH;
+  const descriptorHash = process.env.AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256;
+  agentBackend = new DesktopBackendFeature({
+    descriptor:
+      descriptorPath || descriptorHash
+        ? { path: descriptorPath ?? '', sha256: descriptorHash ?? '' }
+        : null,
+    bindingDirectory: join(getClaudeBasePath(), 'agent-backend', 'http-bindings'),
+  });
+
   // Build services for HTTP routes
   const services: HttpServices = {
+    agentBackend: {
+      feature: agentBackend,
+      contextId: localContext.id,
+      isCurrent: () => backendCurrent,
+    },
     projectScanner: localContext.projectScanner,
     sessionParser: localContext.sessionParser,
     subagentResolver: localContext.subagentResolver,
@@ -188,10 +206,14 @@ async function start(): Promise<void> {
 
 async function shutdown(): Promise<void> {
   logger.info('Shutting down...');
+  backendCurrent = false;
+  const backendDrain = agentBackend?.shutdown();
 
   if (httpServer?.isRunning()) {
     await httpServer.stop();
   }
+
+  await backendDrain;
 
   if (localContext) {
     localContext.dispose();

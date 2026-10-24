@@ -1,4 +1,5 @@
 declare module 'agent-teams-controller' {
+  export function validateKanbanSafetyState(value: unknown, teamName: string): void;
   export interface ControllerContextOptions {
     teamName: string;
     claudeDir?: string;
@@ -140,6 +141,7 @@ declare module 'agent-teams-controller' {
   }
 
   export interface ControllerReviewWriteApi {
+    disapproveReview(taskId: string, flags: { from: 'user' }): unknown;
     requestReview(taskId: string, flags?: Record<string, unknown>): unknown;
     approveReview(taskId: string, flags?: Record<string, unknown>): unknown;
     requestChanges(taskId: string, flags?: Record<string, unknown>): unknown;
@@ -219,6 +221,30 @@ declare module 'agent-teams-controller' {
 
   /** Context-free protocol text builders, shared across lead and member prompts. */
   export interface ProtocolsApi {
+    buildTaskStartNotification(
+      teamName: string,
+      task: {
+        id: string;
+        subject: string;
+        owner?: string;
+        description?: string;
+        prompt?: string;
+        descriptionTaskRefs?: { taskId: string; displayId: string; teamName: string }[];
+      },
+      taskLabel: string,
+      notification: 'legacy' | 'user',
+      leadName?: string,
+      toolProtocol?: 'legacy' | 'captured-team'
+    ): {
+      member: string;
+      from: string;
+      text: string;
+      taskRefs?: { taskId: string; displayId: string; teamName: string }[];
+      summary: string;
+      source: 'system_notification';
+    };
+    buildActionModeProtocol(): string;
+    buildActionModeAgentBlock(mode: 'do' | 'ask' | 'delegate' | undefined): string;
     buildActionModeProtocolText(delegateDescription: string): string;
     MEMBER_DELEGATE_DESCRIPTION: string;
     buildProcessProtocolText(teamName: string): string;

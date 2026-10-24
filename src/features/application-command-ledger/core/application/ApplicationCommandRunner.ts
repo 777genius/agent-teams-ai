@@ -85,6 +85,11 @@ export class ApplicationCommandRunner {
     validatePositiveInteger('startedStaleAfterMs', this.startedStaleAfterMs);
   }
 
+  /** Read only: never reconciles, retries or changes an original command. */
+  readScope(namespace: string, scopeKey: string): Promise<ApplicationCommandLedgerRecord[]> {
+    return this.ledger.listByScope({ namespace, scopeKey });
+  }
+
   async run<TResult extends ApplicationCommandResult, TOperation extends string = string>(
     input: ApplicationCommandRunInput<TOperation, TResult>,
     execute: (record: ApplicationCommandLedgerRecord<TOperation>) => Promise<TResult>

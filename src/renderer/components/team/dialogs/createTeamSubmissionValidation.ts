@@ -24,6 +24,22 @@ export function sanitizeTeamName(name: string): string {
   return result;
 }
 
+export function validateTeamNameInline(
+  name: string,
+  t: ReturnType<typeof useAppTranslation>['t']
+): string | null {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+  const sanitized = sanitizeTeamName(trimmed);
+  if (!sanitized) {
+    return t('create.validation.nameMustContainLetterOrDigit');
+  }
+  if (sanitized.length > 128) {
+    return t('create.validation.nameTooLong');
+  }
+  return null;
+}
+
 export function validateRequest(
   request: TeamCreateRequest,
   t: ReturnType<typeof useAppTranslation>['t'],

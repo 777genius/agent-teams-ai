@@ -1,3 +1,4 @@
+import { selectMcpCatalog } from '@agent-teams/legacy-agent-host/mcp-catalog';
 import { execCli } from '@main/utils/childProcess';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { ensureMinimumNodeOldSpaceOptions } from '@main/utils/nodeOptions';
@@ -9,7 +10,6 @@ import {
 import { collectRuntimePathBinaryCandidates } from '@main/utils/runtimePathBinaryResolver';
 import { resolveInteractiveShellEnv } from '@main/utils/shellEnv';
 import { createLogger } from '@shared/utils/logger';
-import { resolveTeamMemberMcpScopes } from '@shared/utils/teamMemberMcpPolicy';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -26,7 +26,7 @@ import {
   probePackagedElectronNodeRuntime,
 } from './McpNodeRuntimeProbe';
 
-import type { TeamMemberMcpPolicy, TeamMemberMcpScope } from '@shared/types';
+import type { TeamMemberMcpPolicy } from '@shared/types';
 
 export interface McpLaunchSpec {
   command: string;
@@ -64,8 +64,6 @@ const NODE_RUNTIME_PROBE_TIMEOUT_MS = 5_000;
 const MCP_CONFIG_STALE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 type McpServerConfig = Record<string, unknown>;
-
-const MCP_CONFIG_SCOPE_PRECEDENCE: readonly TeamMemberMcpScope[] = ['user', 'project', 'local'];
 
 function isPackagedApp(): boolean {
   try {
@@ -671,41 +669,13 @@ export class TeamMcpConfigBuilder {
     projectPath: string | undefined,
     policy: TeamMemberMcpPolicy
   ): Promise<Record<string, McpServerConfig>> {
-    const allowlist = new Set(
-      (policy.serverNames ?? [])
-        .map((name) => name.trim())
-        .filter(Boolean)
-        .map((name) => name.toLowerCase())
-    );
-    if (allowlist.size === 0) {
-      return {};
-    }
-
-    const scopes = resolveTeamMemberMcpScopes(policy);
     const entries = await new McpConfigStateReader().readConfigured(projectPath);
-    const byScope = new Map<TeamMemberMcpScope, typeof entries>();
-    for (const scope of MCP_CONFIG_SCOPE_PRECEDENCE) {
-      byScope.set(scope, []);
-    }
-    for (const entry of entries) {
-      if (!scopes[entry.scope]) {
-        continue;
-      }
-      byScope.get(entry.scope)?.push(entry);
-    }
-
-    const selected: Record<string, McpServerConfig> = Object.create(null);
-    for (const scope of MCP_CONFIG_SCOPE_PRECEDENCE) {
-      for (const entry of byScope.get(scope) ?? []) {
-        if (entry.name.toLowerCase() === MCP_SERVER_NAME) {
-          continue;
-        }
-        if (allowlist.has(entry.name.toLowerCase())) {
-          selected[entry.name] = normalizeMcpServerNodeOptions(entry.config);
-        }
-      }
-    }
-    return selected;
+    return Object.fromEntries(
+      Object.entries(selectMcpCatalog(entries, policy)).map(([name, config]) => [
+        name,
+        normalizeMcpServerNodeOptions(config),
+      ])
+    );
   }
 
   /** Delete a single MCP config file (best-effort). */

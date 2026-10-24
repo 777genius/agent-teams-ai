@@ -66,6 +66,14 @@ Question Sheet передали два исходных ответа — `accept
 Новые изменения Resume и capture ещё проходят интеграционную проверку; вложения Task имеют отдельный scoped Electron proof. Это scoped M06 proof,
 не vendor auth, не все формы вопросов и не завершение этапа 1.
 
+[M19: существующий ProcessesSection и следующее сообщение](evidence/m19-existing-live-process-ui-handoff.json)
+прошли отдельный Desktop E2E на provider dad39: один Kill исходного сервиса,
+работающий сосед, native acknowledgment и второй успешный input в той же session,
+видимый ответ человеку, затем Team Stop с released custody. Original job и retainer
+завершились с кодом 0; сохранены 7997 файлов и исходные source/bundle pins.
+App закрылась без harness signal, Host отсутствует, writer released. Это normal-live
+proof; crash/cold, native Quit, whole-tree finality и полный M19 не заявляются.
+
 [M19: live ancestry и штатный Stop](evidence/m19-native-live-registration-stop-handoff.json)
 прошли kernel и actual SDK/MCP proof: исходный процесс из другой OS-сессии
 зарегистрирован, Human Stop подтвердил его отсутствие, соседний сервис продолжил

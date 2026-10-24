@@ -4,6 +4,7 @@ import type {
   BackendOperationRequest,
   BackendOperationResult,
 } from '../../../contracts/operations';
+import type { BackendRequestGuard } from '../../application/backendBinding';
 import type { BackendOperationsFacade } from './BackendOperationsFacade';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
@@ -14,7 +15,7 @@ export function registerAgentBackendIpc(
   authorize: (
     event: IpcMainInvokeEvent,
     request: BackendOperationRequest
-  ) => boolean | Promise<boolean>
+  ) => boolean | BackendRequestGuard | Promise<boolean | BackendRequestGuard>
 ): () => void {
   ipc.handle(
     AGENT_BACKEND_INVOKE_CHANNEL,
@@ -25,13 +26,22 @@ export function registerAgentBackendIpc(
       } catch {
         return { ok: false, code: 'invalid', outcome: 'not-dispatched' };
       }
+      let guard: BackendRequestGuard | undefined;
       try {
-        if (!(await authorize(event, request)))
-          return { ok: false, code: 'forbidden', outcome: 'not-dispatched' };
+        const authorized = await authorize(event, request);
+        if (authorized !== true) {
+          if (
+            !authorized ||
+            typeof authorized !== 'object' ||
+            typeof authorized.isCurrent !== 'function'
+          )
+            return { ok: false, code: 'forbidden', outcome: 'not-dispatched' };
+          guard = Object.freeze({ isCurrent: authorized.isCurrent.bind(authorized) });
+        }
       } catch {
         return { ok: false, code: 'forbidden', outcome: 'not-dispatched' };
       }
-      return facade.invoke(request);
+      return facade.invoke(request, guard);
     }
   );
   return () => ipc.removeHandler(AGENT_BACKEND_INVOKE_CHANNEL);

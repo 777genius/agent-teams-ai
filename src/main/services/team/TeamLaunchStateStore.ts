@@ -6,6 +6,8 @@ import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { nativeReleaseDigest } from './provisioning/LegacyNativeStopCensus';
+import { selectLegacyNativeStopReleaseProof } from './provisioning/LegacyNativeStopRelease';
 import { getAdmittedTeamPublicationAuthority } from './provisioning/TeamProvisioningRequestAdmissionContext';
 import { atomicWriteAsync } from './atomicWrite';
 import { getTeamLaunchFreshnessPath, readTeamLaunchFreshness } from './TeamLaunchFreshness';
@@ -18,6 +20,7 @@ import {
   TEAM_LAUNCH_SUMMARY_FILE,
 } from './TeamLaunchSummaryProjection';
 
+import type { LegacyNativeStopRelease } from './provisioning/LegacyNativeStopRelease';
 import type { TeamLaunchFreshness } from './TeamLaunchFreshness';
 import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 
@@ -386,7 +389,11 @@ export class TeamLaunchStateStore {
   }
 
   /** A cleanup tail retains its admission; it cannot stop a successor publication. */
-  async markStopped(teamName: string, authority?: TeamLaunchStopAuthority): Promise<void> {
+  async markStopped(
+    teamName: string,
+    authority?: TeamLaunchStopAuthority,
+    nativeRelease?: LegacyNativeStopRelease
+  ): Promise<void> {
     const stopIntent = authority?.stopIntent ?? (stopIntentByTeam.get(teamName) ?? 0) + 1;
     if (!authority) stopIntentByTeam.set(teamName, stopIntent);
     await enqueuePublication(teamName, async () => {
@@ -398,11 +405,23 @@ export class TeamLaunchStateStore {
         JSON.stringify(previous) !== JSON.stringify(admitted.freshness)
       )
         return;
+      const markerPath = getTeamLaunchStoppedMarkerPath(teamName);
+      const selected = selectLegacyNativeStopReleaseProof({
+        teamDir: path.dirname(markerPath),
+        teamName,
+        freshness: previous,
+        provided: nativeRelease,
+      });
+      const assertCurrent = () => {
+        if (admitted.stopIntent !== stopIntentByTeam.get(teamName))
+          throw new Error('Stop publication authority changed');
+        selected?.assertCurrent();
+      };
+      assertCurrent();
       const revocations = await Promise.allSettled([
         fs.promises.rm(getTeamLaunchStatePath(teamName), { force: true }),
         fs.promises.rm(getTeamLaunchSummaryPath(teamName), { force: true }),
       ]);
-      const markerPath = getTeamLaunchStoppedMarkerPath(teamName);
       const stopId = randomUUID();
       try {
         await atomicWriteAsync(
@@ -413,12 +432,19 @@ export class TeamLaunchStateStore {
             kind: 'stop',
             stopId,
             stoppedRunId: previous?.kind === 'launch' ? previous.runId : previous?.stoppedRunId,
+            ...(selected
+              ? {
+                  nativeReleaseOwnerIncarnation: selected.proof.process.ownerIncarnation,
+                  nativeReleaseDigest: nativeReleaseDigest(selected.proof),
+                }
+              : {}),
           }),
-          { durability: 'strict', syncDirectory: true }
+          { durability: 'strict', syncDirectory: true, assertCurrent }
         );
         await atomicWriteAsync(
           markerPath,
-          `${JSON.stringify({ version: 1, teamName, stopId, stoppedAt: new Date().toISOString() }, null, 2)}\n`
+          `${JSON.stringify({ version: 1, teamName, stopId, stoppedAt: new Date().toISOString(), ...(selected ? { nativeRelease: selected.proof } : {}) }, null, 2)}\n`,
+          { durability: 'strict', syncDirectory: true, assertCurrent }
         );
       } catch (error) {
         if (await isMissingTeamDirectoryWriteRace(markerPath, error)) {

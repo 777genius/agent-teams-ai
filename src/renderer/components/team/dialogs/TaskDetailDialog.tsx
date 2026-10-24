@@ -54,7 +54,11 @@ import {
   buildTaskChangeSignature,
   deriveTaskSince,
 } from '@renderer/utils/taskChangeRequest';
-import { linkifyTaskIdsInMarkdown, parseTaskLinkHref } from '@renderer/utils/taskReferenceUtils';
+import {
+  linkifyTaskIdsInMarkdown,
+  navigateTaskReference,
+  parseTaskLinkHref,
+} from '@renderer/utils/taskReferenceUtils';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { classifyTaskChangeReviewability } from '@shared/utils/taskChangeReviewability';
 import {
@@ -232,6 +236,7 @@ export const TaskDetailDialog = ({
   const { t } = useAppTranslation('team');
   const currentTask = task ? (taskMap.get(task.id) ?? task) : null;
   const updateTaskFields = useStore((s) => s.updateTaskFields);
+  const openGlobalTaskDetail = useStore((s) => s.openGlobalTaskDetail);
   const recordTaskChangePresence = useStore((s) => s.recordTaskChangePresence);
   const setSelectedTeamTaskChangePresence = useStore((s) => s.setSelectedTeamTaskChangePresence);
 
@@ -1196,7 +1201,17 @@ export const TaskDetailDialog = ({
                             e.stopPropagation();
                             const href = link.getAttribute('href');
                             const parsed = href ? parseTaskLinkHref(href) : null;
-                            if (parsed?.taskId) handleDependencyClick(parsed.taskId);
+                            if (parsed?.taskId) {
+                              navigateTaskReference(
+                                parsed,
+                                teamName,
+                                handleDependencyClick,
+                                (owner, id) => {
+                                  handleClose();
+                                  openGlobalTaskDetail(owner, id);
+                                }
+                              );
+                            }
                           }
                         }
                       : undefined

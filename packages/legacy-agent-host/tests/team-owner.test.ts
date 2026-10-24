@@ -119,18 +119,22 @@ test('current authority covers completed replay, lookup, execution and revoke ac
   const command = create('alice-create');
   const receipt = f.alice.execute(command);
   const before = taskBytes(f.root, receipt.effects.taskId);
+  const readPosition = (f.alice.readSnapshot() as { feed: { cursor: string } }).feed;
   createOwner(f.options).connect('human').revoke('alice-session');
   for (const action of [
     () => f.alice.execute(command),
     () => f.alice.lookup(command.commandId),
     () => f.alice.execute(create('alice-new')),
     () => f.alice.listTasks(),
+    () => f.alice.readSnapshot(),
+    () => f.alice.readChanges(readPosition.cursor),
   ])
     assert.throws(action, expectCode('forbidden'));
   assert.equal(taskBytes(f.root, receipt.effects.taskId), before);
   // Bootstrap grants passed on restart cannot silently undo revocation.
   const again = createOwner(f.options).connect('alice-session');
   assert.throws(() => again.lookup(command.commandId), expectCode('forbidden'));
+  assert.throws(() => again.readChanges(readPosition.cursor), expectCode('forbidden'));
   assert.throws(
     () => f.owner.connect('bob-session').lookup(command.commandId),
     expectCode('forbidden')

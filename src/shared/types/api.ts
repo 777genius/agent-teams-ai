@@ -6,7 +6,6 @@
  *
  * Shared between preload and renderer processes.
  */
-
 import type { CliArgsValidationResult } from '../utils/cliArgsParser';
 import type { CliInstallerAPI, OpenCodeRuntimeAPI } from './cliInstaller';
 import type { TelemetryAPI, WindowsElevationStatus } from './desktopShell';
@@ -55,6 +54,7 @@ import type {
   UpdateSchedulePatch,
 } from './schedule';
 import type { SshAPI } from './ssh';
+import type { MemberStatsResult } from './team';
 import type {
   AddMemberRequest,
   AddTaskCommentRequest,
@@ -75,7 +75,6 @@ import type {
   KanbanColumnId,
   LeadActivitySnapshot,
   LeadContextUsageSnapshot,
-  MemberFullStats,
   MemberLogSummary,
   MemberSpawnStatusesSnapshot,
   MessagesPage,
@@ -95,6 +94,7 @@ import type {
   TeamClaudeLogsResponse,
   TeamConfig,
   TeamCreateConfigRequest,
+  TeamCreateConfigResponse,
   TeamCreateRequest,
   TeamCreateResponse,
   TeamForceStopResult,
@@ -106,6 +106,7 @@ import type {
   TeamMessageNotificationData,
   TeamProvisioningModelCheckRequest,
   TeamProvisioningModelVerificationMode,
+  TeamProvisioningPrepareContext,
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamSummary,
@@ -117,12 +118,20 @@ import type {
   TeamWorktreeGitStatus,
   ToolApprovalEvent,
   ToolApprovalFileContent,
+  ToolApprovalReadScope,
   ToolApprovalSettings,
   UpdateKanbanPatch,
 } from './team';
+import type {
+  HostTaskActivityView,
+  HostTaskExactLogs,
+  HostTaskLogDetailResult,
+  HostTaskLogStream,
+} from './teamActivity';
 import type { TerminalAPI } from './terminal';
 import type { TmuxAPI } from './tmux';
 import type { WaterfallData } from './visualization';
+import type { AgentBackendElectronApi } from '@features/agent-backend/contracts';
 import type { AnnouncementsApi } from '@features/announcements/contracts';
 import type { AppCloseCoordinationElectronApi } from '@features/app-close-coordination/contracts';
 import type {
@@ -463,7 +472,8 @@ export interface TeamsAPI extends TeamMemberSettingsApi {
     selectedModels?: string[],
     limitContext?: boolean,
     modelVerificationMode?: TeamProvisioningModelVerificationMode,
-    selectedModelChecks?: TeamProvisioningModelCheckRequest[]
+    selectedModelChecks?: TeamProvisioningModelCheckRequest[],
+    context?: TeamProvisioningPrepareContext
   ) => Promise<TeamProvisioningPrepareResult>;
   getWorktreeGitStatus: (projectPath: string) => Promise<TeamWorktreeGitStatus>;
   initializeGitRepository: (projectPath: string) => Promise<TeamWorktreeGitStatus>;
@@ -518,7 +528,7 @@ export interface TeamsAPI extends TeamMemberSettingsApi {
     memberName: string,
     messageIds: readonly string[]
   ) => Promise<DiscardQueuedUserMessagesResult>;
-  createConfig: (request: TeamCreateConfigRequest) => Promise<void>;
+  createConfig: (request: TeamCreateConfigRequest) => Promise<void | TeamCreateConfigResponse>;
   getMemberLogs: (teamName: string, memberName: string) => Promise<MemberLogSummary[]>;
   getLogsForTask: (
     teamName: string,
@@ -532,25 +542,31 @@ export interface TeamsAPI extends TeamMemberSettingsApi {
       since?: string;
     }
   ) => Promise<MemberLogSummary[]>;
-  getTaskActivity: (teamName: string, taskId: string) => Promise<BoardTaskActivityEntry[]>;
+  getTaskActivity: (
+    teamName: string,
+    taskId: string
+  ) => Promise<BoardTaskActivityEntry[] | HostTaskActivityView>;
   getTaskActivityDetail: (
     teamName: string,
     taskId: string,
     activityId: string
-  ) => Promise<BoardTaskActivityDetailResult>;
+  ) => Promise<BoardTaskActivityDetailResult | HostTaskLogDetailResult>;
   getTaskLogStreamSummary: (teamName: string, taskId: string) => Promise<BoardTaskLogStreamSummary>;
-  getTaskLogStream: (teamName: string, taskId: string) => Promise<BoardTaskLogStreamResponse>;
+  getTaskLogStream: (
+    teamName: string,
+    taskId: string
+  ) => Promise<BoardTaskLogStreamResponse | HostTaskLogStream>;
   getTaskExactLogSummaries: (
     teamName: string,
     taskId: string
-  ) => Promise<BoardTaskExactLogSummariesResponse>;
+  ) => Promise<BoardTaskExactLogSummariesResponse | HostTaskExactLogs>;
   getTaskExactLogDetail: (
     teamName: string,
     taskId: string,
     exactLogId: string,
     expectedSourceGeneration: string
-  ) => Promise<BoardTaskExactLogDetailResult>;
-  getMemberStats: (teamName: string, memberName: string) => Promise<MemberFullStats>;
+  ) => Promise<BoardTaskExactLogDetailResult | HostTaskLogDetailResult>;
+  getMemberStats: (teamName: string, memberName: string) => Promise<MemberStatsResult>;
   launchTeam: (request: TeamLaunchRequest) => Promise<TeamLaunchResponse>;
   getAllTasks: () => Promise<GlobalTask[]>;
   updateConfig: (teamName: string, updates: TeamUpdateConfigRequest) => Promise<TeamConfig>;
@@ -576,7 +592,11 @@ export interface TeamsAPI extends TeamMemberSettingsApi {
   getProjectBranch: (projectPath: string) => Promise<string | null>;
   setProjectBranchTracking: (projectPath: string, enabled: boolean) => Promise<void>;
   getAttachments: (teamName: string, messageId: string) => Promise<AttachmentFileData[]>;
-  killProcess: (teamName: string, pid: number) => Promise<void>;
+  killProcess: (
+    teamName: string,
+    pid: number,
+    captured?: import('./team').CapturedTeamProcessStop
+  ) => Promise<void>;
   getLeadActivity: (teamName: string) => Promise<LeadActivitySnapshot>;
   getLeadContext: (teamName: string) => Promise<LeadContextUsageSnapshot>;
   getMemberSpawnStatuses: (teamName: string) => Promise<MemberSpawnStatusesSnapshot>;
@@ -643,7 +663,10 @@ export interface TeamsAPI extends TeamMemberSettingsApi {
   validateCliArgs: (rawArgs: string) => Promise<CliArgsValidationResult>;
   onToolApprovalEvent: (callback: (event: unknown, data: ToolApprovalEvent) => void) => () => void;
   updateToolApprovalSettings: (teamName: string, settings: ToolApprovalSettings) => Promise<void>;
-  readFileForToolApproval: (filePath: string) => Promise<ToolApprovalFileContent>;
+  readFileForToolApproval: (
+    filePath: string,
+    approval?: ToolApprovalReadScope
+  ) => Promise<ToolApprovalFileContent>;
 }
 
 export interface MemberWorkSyncElectronApi {
@@ -871,6 +894,7 @@ export interface ReviewAPI {
 /** Complete Electron API exposed to the renderer process via preload script. */
 export interface ElectronAPI
   extends
+    AgentBackendElectronApi,
     RecentProjectsElectronApi,
     CodexAccountElectronApi,
     TokenUsageElectronApi,

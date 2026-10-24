@@ -4,6 +4,7 @@ import type {
   BackendOperationRequest,
   BackendOperationResult,
 } from '../../../contracts/operations';
+import type { BackendRequestGuard } from '../../application/backendBinding';
 import type { BackendOperationsFacade } from './BackendOperationsFacade';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
@@ -14,7 +15,7 @@ export function registerAgentBackendHttp(
   authorize: (
     request: FastifyRequest,
     operation: BackendOperationRequest
-  ) => boolean | Promise<boolean>
+  ) => boolean | BackendRequestGuard | Promise<boolean | BackendRequestGuard>
 ): void {
   app.post(
     AGENT_BACKEND_OPERATIONS_ROUTE,
@@ -26,13 +27,22 @@ export function registerAgentBackendHttp(
       } catch {
         return { ok: false, code: 'invalid', outcome: 'not-dispatched' };
       }
+      let guard: BackendRequestGuard | undefined;
       try {
-        if (!(await authorize(request, operation)))
-          return { ok: false, code: 'forbidden', outcome: 'not-dispatched' };
+        const authorized = await authorize(request, operation);
+        if (authorized !== true) {
+          if (
+            !authorized ||
+            typeof authorized !== 'object' ||
+            typeof authorized.isCurrent !== 'function'
+          )
+            return { ok: false, code: 'forbidden', outcome: 'not-dispatched' };
+          guard = Object.freeze({ isCurrent: authorized.isCurrent.bind(authorized) });
+        }
       } catch {
         return { ok: false, code: 'forbidden', outcome: 'not-dispatched' };
       }
-      return facade.invoke(operation);
+      return facade.invoke(operation, guard);
     }
   );
 }

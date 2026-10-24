@@ -9,9 +9,11 @@ export const DEFAULT_AGENT_IMAGE_OPTIMIZATION_BUDGET: ImageOptimizationBudget = 
   jpegQualityAttempts: [0.86, 0.82, 0.78, 0.74, 0.72],
 };
 
-export const MAX_AGENT_ATTACHMENT_SERIALIZED_PAYLOAD_BYTES = 7_500_000;
-export const MAX_AGENT_ATTACHMENT_DELIVERY_BYTES_TOTAL = 8 * 1024 * 1024;
-export const MAX_AGENT_VIDEO_ATTACHMENT_BYTES = 8 * 1024 * 1024;
+export {
+  MAX_AGENT_ATTACHMENT_SERIALIZED_PAYLOAD_BYTES,
+  MAX_AGENT_ATTACHMENT_DELIVERY_BYTES_TOTAL,
+  MAX_AGENT_VIDEO_ATTACHMENT_BYTES,
+} from '@agent-teams/legacy-agent-host/attachments/portable';
 
 const utf8Encoder = new TextEncoder();
 

@@ -167,6 +167,13 @@ export function reconcileCliProviderSnapshot(
       teamLaunchAuthorityRestriction: undefined,
     });
   }
+  if (
+    currentProvider &&
+    currentProvider.catalogScope !== incomingProvider.catalogScope &&
+    (currentProvider.catalogScope || incomingProvider.catalogScope)
+  ) {
+    return revokeProviderLaunchAuthority(incomingProvider);
+  }
   const mergedProvider = currentProvider
     ? mergeProviderCatalogCache(incomingProvider, currentProvider)
     : incomingProvider;

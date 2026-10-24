@@ -18,7 +18,7 @@ import type {
   TeamDataWorkerRequest,
   TeamDataWorkerResponse,
 } from '@main/services/team/teamDataWorkerTypes';
-import type { MemberLogSummary } from '@shared/types';
+import type { LegacyMemberLogSummary } from '@shared/types';
 
 const logger = createLogger('Worker:TeamData');
 
@@ -35,7 +35,7 @@ const logsFinder = new TeamMemberLogsFinder();
 // In-flight dedup: concurrent calls for the same task piggyback on one request
 const logsInFlight = new Map<string, Promise<unknown>>();
 // Result cache with TTL to avoid re-scanning files
-const logsResultCache = new Map<string, { result: MemberLogSummary[]; cachedAt: number }>();
+const logsResultCache = new Map<string, { result: LegacyMemberLogSummary[]; cachedAt: number }>();
 const LOGS_CACHE_TTL_MS = 10_000;
 let heavyReadQueue: Promise<void> = Promise.resolve();
 
@@ -129,7 +129,7 @@ parentPort?.on('message', async (msg: TeamDataWorkerRequest) => {
           }
 
           // Dedup concurrent calls
-          let promise = logsInFlight.get(cacheKey) as Promise<MemberLogSummary[]> | undefined;
+          let promise = logsInFlight.get(cacheKey) as Promise<LegacyMemberLogSummary[]> | undefined;
           if (!promise) {
             promise = logsFinder
               .findLogsForTask(teamName, taskId, options)

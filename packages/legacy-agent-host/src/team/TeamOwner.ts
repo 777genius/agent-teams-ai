@@ -1,24 +1,63 @@
-import { digest, effectId, safeSegment, stableJson } from './identity.js';
+import { validateCommandAttachments } from './validateCommandAttachments.js';
+import { withNativeMemberActionAuthority } from './NativeMemberActionAuthority.js';
+import type { NativeMemberActionRequest } from './NativeMemberActionAuthority.js';
+import { captureNativeMcpAuthority } from './NativeMcpAuthority.js';
+import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
+import { initializeTeamOwner } from './initializeTeamOwner.js';
+import { assertTeamExecutionAllowed } from './teamLifecycleAdmission.js';
+import { createTeamReadQueries } from './createTeamReadQueries.js';
+import { TeamContextReminders } from './TeamContextReminders.js';
+import { projectCrossTeamMessages } from '../cross-team/projectCrossTeamMessages.js';
+import { ordinarySubagentAllowed } from './ordinarySubagentPolicy.js';
+import { lookupRetainedTaskStartCause } from './lookupRetainedTaskStartCause.js';
+import { readCrossTeamReplyHints } from './readCrossTeamReplyHints.js';
+import { createTeamDeliveryAuthority } from './TeamDeliveryAuthority.js';
+import {
+  crossTeamTargetCommand,
+  validateCrossTeamTargetContext,
+} from '../cross-team/crossTeamInbound.js';
+import type { CapturedCrossTeamIntent } from '../cross-team/contracts.js';
+import { lookupEvidenceCause } from './lookupEvidenceCause.js';
+import { json } from './TeamReviewCommands.js';
+import { createTeamCommandAccess } from './createTeamCommandAccess.js';
+import type { TeamProcessRuntimeAccess } from './createTeamCommandAccess.js';
+import {
+  teamCommandPath,
+  readProductCommand,
+  lookupOwnedProductCommand,
+  listProductCommandReceipts,
+} from './commandEntries.js';
+import { applyTeamTask } from './applyTeamTask.js';
+import { isUserTaskStartIntent, requiresHumanTaskActor } from './taskStartIntent.js';
+import { commitTeamMessage } from './commitTeamMessage.js';
+import { digest, effectId, safeSegment } from './identity.js';
 import { TeamOwnerError } from './contracts.js';
-import { DeliveryRecovery, deliveryIdentity, memberBinding } from './DeliveryRecovery.js';
+import { DeliveryRecovery, memberBinding } from './DeliveryRecovery.js';
 import { TaskRecovery } from './TaskRecovery.js';
 import { TaskPolicyRejected } from './ports.js';
+import { TeamProductChanges } from './TeamProductChanges.js';
+import { TeamRuntimeRegistration } from './TeamRuntimeRegistration.js';
+import type { RegisterTeamRuntime } from './runtimeRegistrationContracts.js';
+import { TeamRosterTransitions } from './TeamRosterTransitions.js';
+import { teamRosterRevision } from './rosterSchema.js';
+import { validateTeamCommand, validateTeamText } from './validateTeamCommand.js';
 
 import type {
-  TaskBoardPolicy,
   TaskMutationPort,
   TeamPolicyPort,
   TeamStore,
   TeamTask,
+  TeamRuntimeBindings,
 } from './ports.js';
 import type { JsonValue } from '../contracts.js';
+import type { OwnerState } from './ownerState.js';
+import type { ReplaceTeamRoster, TeamSavedSettings } from './rosterContracts.js';
 import type {
   CommandReceipt,
   DeliveryIntent,
   DeliveryResumeResult,
   ImmutableDelivery,
   RuntimeMemberBinding,
-  TaskRef,
   TeamBinding,
   TeamCommand,
   TeamGrant,
@@ -30,110 +69,15 @@ export interface TeamOwnerOptions {
   binding: TeamBinding;
   /** Bootstrap-only trusted composition values; reopening never resets grants/config. */
   members: TeamMember[];
+  savedSettings?: TeamSavedSettings;
   grants: TeamGrant[];
   store: TeamStore;
   policy: TeamPolicyPort;
   taskMutations: TaskMutationPort;
-}
-
-interface OwnerState {
-  schemaVersion: 1;
-  binding: TeamBinding;
-  members: TeamMember[];
-  grants: TeamGrant[];
-  ready: boolean;
-}
-
-function json(value: unknown): JsonValue {
-  return JSON.parse(JSON.stringify(value)) as JsonValue;
-}
-
-function text(value: unknown, empty = false): asserts value is string {
-  if (typeof value !== 'string' || (!empty && !value.trim()) || value.length > 1_000_000)
-    throw new TeamOwnerError('invalid');
-}
-
-function validateRefs(value: TaskRef[] | undefined): void {
-  if (value === undefined) return;
-  if (!Array.isArray(value) || value.length > 1000) throw new TeamOwnerError('invalid');
-  for (const ref of value) {
-    if (!ref || typeof ref !== 'object') throw new TeamOwnerError('invalid');
-    safeSegment(ref.taskId);
-    safeSegment(ref.teamName);
-    text(ref.displayId);
-    if (
-      ref.displayId.length > 128 ||
-      ref.displayId.trim() !== ref.displayId ||
-      Object.keys(ref).some((key) => !['taskId', 'teamName', 'displayId'].includes(key))
-    )
-      throw new TeamOwnerError('invalid');
-  }
-}
-
-function validateCommand(command: TeamCommand): void {
-  if (!command || typeof command !== 'object') throw new TeamOwnerError('invalid');
-  text(command.commandId);
-  if (command.commandId.length > 256) throw new TeamOwnerError('invalid');
-  const payload = command.payload;
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload))
-    throw new TeamOwnerError('invalid');
-  switch (command.operation) {
-    case 'task.create':
-      validateRefs(command.payload.descriptionTaskRefs);
-      text(command.payload.subject);
-      if (command.payload.description !== undefined) text(command.payload.description, true);
-      if (command.payload.owner !== undefined) text(command.payload.owner);
-      if (command.payload.blockedBy !== undefined) {
-        if (!Array.isArray(command.payload.blockedBy)) throw new TeamOwnerError('invalid');
-        command.payload.blockedBy.forEach((id) => safeSegment(id));
-      }
-      break;
-    case 'task.update':
-      safeSegment(command.payload.taskId);
-      if (command.payload.subject === undefined && command.payload.description === undefined)
-        throw new TeamOwnerError('invalid');
-      if (command.payload.subject !== undefined) text(command.payload.subject);
-      if (command.payload.description !== undefined) text(command.payload.description, true);
-      break;
-    case 'task.assign':
-      safeSegment(command.payload.taskId);
-      text(command.payload.owner);
-      break;
-    case 'task.lifecycle':
-      safeSegment(command.payload.taskId);
-      if (!['start', 'complete', 'delete', 'restore', 'pending'].includes(command.payload.action))
-        throw new TeamOwnerError('invalid');
-      break;
-    case 'task.comment':
-      validateRefs(command.payload.taskRefs);
-      safeSegment(command.payload.taskId);
-      text(command.payload.text);
-      break;
-    case 'message.send':
-      validateRefs(command.payload.taskRefs);
-      safeSegment(command.payload.to);
-      text(command.payload.text);
-      break;
-    default:
-      throw new TeamOwnerError('invalid');
-  }
-  const allowed: Record<TeamCommand['operation'], string[]> = {
-    'task.create': ['subject', 'description', 'owner', 'blockedBy', 'descriptionTaskRefs'],
-    'task.update': ['taskId', 'subject', 'description'],
-    'task.assign': ['taskId', 'owner'],
-    'task.lifecycle': ['taskId', 'action'],
-    'task.comment': ['taskId', 'text', 'taskRefs'],
-    'message.send': ['to', 'text', 'taskRefs'],
-  };
-  if (
-    Object.keys(command).some((key) => !['commandId', 'operation', 'payload'].includes(key)) ||
-    Object.keys(payload).some((key) => !allowed[command.operation].includes(key))
-  )
-    throw new TeamOwnerError('invalid');
-  // Reject non-JSON values, unsupported objects and conflicting identity overrides.
-  stableJson(command);
-  for (const key of ['from', 'actor', 'createdBy', 'id', 'messageId', 'creationCommand'])
-    if (Object.hasOwn(payload, key)) throw new TeamOwnerError('invalid');
+  runtimeBindings?: TeamRuntimeBindings;
+  /** Synchronous Runtime proof; absent composition permits only product-only members. */
+  assertRosterEditable?(members: readonly TeamMember[]): void;
+  crossTeamSourceAuthority?(intent: CapturedCrossTeamIntent): boolean;
 }
 
 /**
@@ -141,61 +85,67 @@ function validateCommand(command: TeamCommand): void {
  * filesystem authority fence. Native delivery is deliberately not dispatched here.
  */
 export class TeamOwner {
+  /** Trusted composition only; never exposed on connect/MCP. */
+  readonly contextReminders: TeamContextReminders;
+  readonly nativeRoster: Pick<TeamRosterTransitions, 'nativeCreation' | 'capturedMemberCurrent'>;
+  private readonly commandAccess: ReturnType<typeof createTeamCommandAccess>;
+  private readonly productChanges = new TeamProductChanges();
   private readonly store: TeamStore;
   private readonly policy: TeamPolicyPort;
   private readonly binding: TeamBinding;
   private readonly deliveryRecovery: DeliveryRecovery;
+  private readonly deliveryAuthority: ReturnType<typeof createTeamDeliveryAuthority>;
   private readonly taskRecovery: TaskRecovery;
+  private readonly runtimeBindings: TeamRuntimeBindings | undefined;
+  private readonly roster: TeamRosterTransitions;
+  private readonly runtimeRegistration: TeamRuntimeRegistration;
 
   constructor(options: TeamOwnerOptions) {
     this.binding = structuredClone(options.binding);
     for (const value of Object.values(this.binding)) safeSegment(value);
     this.store = options.store;
+    this.runtimeBindings = options.runtimeBindings;
     this.policy = options.policy;
-    this.store.fenced(() => {
-      const current = this.store.read<OwnerState>('state.json');
-      if (current) {
-        if (digest(current.binding) !== digest(this.binding)) throw new TeamOwnerError('conflict');
-        if (!current.ready) this.finishBootstrap(current);
-        return;
-      }
-      for (const member of options.members) {
-        safeSegment(member.name);
-        safeSegment(member.memberId);
-        if (
-          member.delivery &&
-          (digest({
-            backendId: member.delivery.backendId,
-            teamId: member.delivery.teamId,
-            teamName: member.delivery.teamName,
-          }) !== digest(this.binding) ||
-            member.delivery.memberId !== member.memberId)
-        )
-          throw new TeamOwnerError('invalid');
-      }
-      if (
-        new Set(options.members.map((member) => member.name.toLowerCase())).size !==
-        options.members.length
-      )
-        throw new TeamOwnerError('invalid');
-      for (const grant of options.grants) {
-        text(grant.principalId);
-        if (
-          grant.memberName !== 'user' &&
-          !options.members.some((member) => member.name === grant.memberName)
-        )
-          throw new TeamOwnerError('invalid');
-      }
-      if (this.store.read('../config.json') !== undefined) throw new TeamOwnerError('conflict');
-      const state: OwnerState = {
-        schemaVersion: 1,
-        binding: this.binding,
-        members: options.members,
-        grants: options.grants.map((grant) => ({ ...grant, revision: grant.revision ?? 1 })),
-        ready: false,
-      };
-      this.store.write('state.json', state);
-      this.finishBootstrap(state);
+    this.contextReminders = new TeamContextReminders({ store: this.store, policy: this.policy, state: () => this.state(),
+      authorize: principalId => this.authorize(principalId, 'read') });
+    this.commandAccess = createTeamCommandAccess({
+      store: this.store,
+      binding: this.binding,
+      policy: this.policy,
+      state: () => this.state(),
+      recoverConfig: (state) => this.roster.recover(state),
+      ownsTaskIntent: (intent, receipt) => this.taskRecovery.owns(intent, receipt),
+      runtimeBindings: this.runtimeBindings,
+      authorize: (principalId, permission) => this.authorize(principalId, permission),
+      invalidate: () => this.productChanges.invalidate(),
+    });
+    initializeTeamOwner({ ...options, binding: this.binding, store: this.store }, (state) => this.finishBootstrap(state));
+    const assertEditable = (members: readonly TeamMember[]): void => {
+      if (options.assertRosterEditable) {
+        const result: unknown = options.assertRosterEditable(members);
+        if (result !== undefined) {
+          void Promise.resolve(result).catch(() => {});
+          throw new TeamOwnerError('hold');
+        }
+      } else if (members.some((member) => member.delivery)) throw new TeamOwnerError('hold');
+    };
+    this.roster = new TeamRosterTransitions({
+      binding: this.binding,
+      store: this.store,
+      state: () => this.state(),
+      authorize: (principalId, permission) => this.authorize(principalId, permission),
+      assertEditable,
+      invalidate: () => this.productChanges.invalidate(),
+    });
+    this.nativeRoster = this.roster;
+    this.runtimeRegistration = new TeamRuntimeRegistration({
+      binding: this.binding,
+      store: this.store,
+      state: () => this.state(),
+      authorize: (principalId, permission) => this.authorize(principalId, permission),
+      assertEditable,
+      hasRuntimeProof: !!options.assertRosterEditable,
+      invalidate: () => this.productChanges.invalidate(),
     });
     this.taskRecovery = new TaskRecovery(
       this.store,
@@ -205,10 +155,83 @@ export class TeamOwner {
         this.execute(receipt.principalId, receipt.command);
       }
     );
+    this.deliveryAuthority = createTeamDeliveryAuthority({
+      binding: this.binding,
+      store: this.store,
+      state: () => this.state(),
+      authorize: (principal, permission) => this.authorize(principal, permission),
+      runtimeBindings: this.runtimeBindings,
+      taskRecovery: this.taskRecovery,
+      authorizeRetainedCancellation: this.commandAccess.authorizeRetainedCancellation,
+      retractingRetainedDelivery: this.commandAccess.retractingRetainedDelivery,
+      taskAuthorityCurrent: (receipt) => this.taskAuthorityCurrent(receipt),
+      crossTeamSourceAuthority: options.crossTeamSourceAuthority,
+    });
     this.deliveryRecovery = new DeliveryRecovery(
       this.store,
-      (intent) => !this.taskRecovery.retracting(intent) && this.deliveryAuthorized(intent)
+      (intent) =>
+        !this.taskRecovery.retracting(intent) && this.deliveryAuthority.deliveryAuthorized(intent)
     );
+    this.commandAccess.lifecycleContinuation.recover();
+  }
+
+  assertExecutionAllowed(principalId: string): void {
+    this.store.fenced(() => { this.authorize(principalId, 'admin'); assertTeamExecutionAllowed(this.state(), this.store); });
+  }
+  recoverQueuedMessages(runtime: TeamRuntimeDeliveryPort) {
+    return this.commandAccess.recoverQueuedMessages(runtime);
+  }
+  queuedMessages(principalId: string, runtime: TeamRuntimeDeliveryPort) {
+    return this.commandAccess.queuedMessages(principalId, runtime);
+  }
+  lifecycleCommands(principalId: string) { return this.commandAccess.lifecycle(principalId); }
+  /** Trusted composition continuation, never exposed through connect/MCP. */
+  lifecycleContinuation() { return this.commandAccess.lifecycleContinuation; }
+  continueLifecycleCleanup(commandId: string, runtime: Pick<RuntimeOwner, 'stopCapturedSession' | 'readCapturedSession'>, delivery: TeamRuntimeDeliveryPort) {
+    return this.commandAccess.continueLifecycleCleanup(commandId, runtime, delivery);
+  }
+  reviewCommands(principalId: string) {
+    return this.commandAccess.review(principalId);
+  }
+  crossTeamCommands(principalId: string) {
+    return this.commandAccess.crossTeam(principalId);
+  }
+  /** Private feature composition; actual native original-input proof is required for every mutation. */
+  workSyncCommands(principalId: string) { return this.commandAccess.workSync(principalId); }
+  processCommands(principalId: string, runtime?: TeamProcessRuntimeAccess) {
+    return this.commandAccess.process(principalId, runtime);
+  }
+
+  /** Trusted composition only; never exposed through connect/MCP. */
+  registerRuntime(principalId: string, input: RegisterTeamRuntime) {
+    return this.runtimeRegistration.register(principalId, input);
+  }
+  /** Trusted composition only; same registration/custody guards, with no publication. */
+  assertRuntimeRegistration(principalId: string, input: RegisterTeamRuntime): string {
+    return this.runtimeRegistration.assertRegistration(principalId, input);
+  }
+  runtimeCapture(principalId: string) {
+    return this.runtimeRegistration.current(principalId);
+  }
+  runtimeCaptures(principalId: string) {
+    return this.runtimeRegistration.all(principalId);
+  }
+  hasRuntimeCapture(principalId: string, binding: RuntimeMemberBinding): boolean {
+    return this.runtimeRegistration.has(principalId, binding);
+  }
+
+  /** Trusted host composition only; this capability is intentionally absent from connect/MCP. */
+  matchesCapturedRoster(
+    members: readonly Pick<TeamMember, 'memberId' | 'name' | 'role' | 'settings'>[],
+    savedSettings?: TeamSavedSettings
+  ): boolean {
+    return this.store.fenced(() => {
+      const state = this.state();
+      return (
+        teamRosterRevision(state.members, state.rosterVersion, state.savedSettings) ===
+        teamRosterRevision(members, 0, savedSettings)
+      );
+    });
   }
 
   /** Trusted host composition only; this capability is intentionally absent from connect/MCP. */
@@ -220,141 +243,119 @@ export class TeamOwner {
   resumeTaskCommands(runtime?: TeamRuntimeDeliveryPort) {
     return this.taskRecovery.resume(runtime);
   }
+  lookupTaskStartCause(principalId: string, raw: ImmutableDelivery) {
+    const cause = this.lookupToolInputCause(principalId, raw);
+    return cause && 'taskId' in cause ? cause : null;
+  }
+
+  /** Private composition lookup: exact persisted Task/message input, never dispatches. */
+  lookupToolInputCause(principalId: string, raw: ImmutableDelivery) {
+    return this.store.fenced(() =>
+      lookupEvidenceCause({
+        store: this.store,
+        recovery: this.taskRecovery,
+        raw,
+        authorize: () => {
+          this.authorize(principalId, 'read');
+        },
+        deliveryAuthorized: (intent) => this.deliveryAuthority.deliveryAuthorized(intent),
+      })
+    );
+  }
+
+  /** Exact input policy for ordinary child delegation; no model field is authority. */
+  allowsOrdinarySubagent(principalId: string, raw: ImmutableDelivery): boolean {
+    return this.store.fenced(() =>
+      ordinarySubagentAllowed({
+        store: this.store,
+        recovery: this.taskRecovery,
+        raw,
+        memberCount: this.state().members.length,
+        authorize: () => {
+          this.authorize(principalId, 'read');
+        },
+        deliveryAuthorized: (intent) => this.deliveryAuthority.deliveryAuthorized(intent),
+      })
+    );
+  }
+  /** Private native feature capability: actual member, original input and current DO policy. */
+  withNativeMemberActionAuthority<T>(input: NativeMemberActionRequest, callback: () => T): T {
+    return this.store.fenced(() =>
+      withNativeMemberActionAuthority(
+        {
+          ...input,
+          state: this.state(),
+          store: this.store,
+          grant: this.authorize(input.proof.principalId, 'read'),
+          runtimeBindings: this.runtimeBindings,
+        },
+        callback
+      )
+    );
+  }
+
+  captureNativeMcpAuthority(principalId: string, source: RuntimeMemberBinding, raw: ImmutableDelivery, requireLead: boolean) {
+    return this.store.fenced(() => captureNativeMcpAuthority({
+      principalId, source, raw, requireLead, store: this.store,
+      members: this.state().members,
+      grant: this.authorize(principalId, 'read'),
+      lookupCause: () => lookupEvidenceCause({
+        store: this.store, recovery: this.taskRecovery, raw,
+        authorize: () => { this.authorize(principalId, 'read'); },
+        deliveryAuthorized: (intent) => this.deliveryAuthority.deliveryAuthorized(intent),
+      }),
+    }));
+  }
+  /** Trusted composition reads the launch-owned current technical selection, never native tokens. */
+  runtimeSelection(principalId: string, memberId: string) {
+    return this.store.fenced(() => {
+      this.authorize(principalId, 'read');
+      const member = this.state().members.find((item) => item.memberId === memberId);
+      if (!member?.delivery) throw new TeamOwnerError('invalid');
+      return this.runtimeBindings?.current(memberBinding(member.delivery));
+    });
+  }
+
+  /** Trusted aggregate lifecycle composition only; no async work is allowed inside this fence. */
+  withLaunchAuthority<T>(
+    principalId: string,
+    action: 'read' | 'control',
+    callback: (authorityRevision: number) => T
+  ): T {
+    return this.store.fenced(() => {
+      const grant = this.authorize(principalId, action === 'read' ? 'read' : 'admin');
+      return callback(grant.revision ?? 1);
+    });
+  }
 
   authorizeRuntimeAccess(
     principalId: string,
     binding: RuntimeMemberBinding,
     action: 'read' | 'control'
   ): boolean {
-    return this.store.fenced(() => {
-      try {
-        const grant = this.authorize(principalId, 'read');
-        const member = this.state().members.find(
-          (candidate) =>
-            candidate.delivery &&
-            digest(memberBinding(candidate.delivery)) === digest(memberBinding(binding))
-        );
-        if (!member) return false;
-        return (
-          action === 'read' ||
-          grant.permissions.includes('admin') ||
-          (member?.name === grant.memberName &&
-            (grant.permissions.includes('task.write') ||
-              grant.permissions.includes('message.write')))
-        );
-      } catch {
-        return false;
-      }
-    });
+    return this.deliveryAuthority.runtimeAccess(principalId, binding, action);
   }
-
-  /** Synchronous Runtime-fence callback; callers separately authenticate user/admin control. */
   authorizeMemberBinding(
     binding: RuntimeMemberBinding,
     action: 'read' | 'admit' | 'dispatch' | 'control'
   ): boolean {
-    return this.store.fenced(() => this.memberAuthorized(binding, action));
+    return this.deliveryAuthority.authorizeMember(binding, action);
   }
-
-  /** Runtime passes the original persisted input identity, never an actor claimed by a tool. */
   authorizeDeliveryIntent(
     raw: ImmutableDelivery,
     action: 'read' | 'admit' | 'dispatch' | 'control' = 'admit'
   ): boolean {
-    return this.store.fenced(() => {
-      try {
-        if (
-          (action === 'control' || action === 'read') &&
-          this.taskRecovery.authorizeRetraction(raw)
-        )
-          return true;
-        if ((action === 'admit' || action === 'dispatch') && this.taskRecovery.retracting(raw))
-          return false;
-        safeSegment(raw.deliveryId);
-        const intent = this.store.read<DeliveryIntent>(`outbox/${raw.deliveryId}.json`);
-        return (
-          !!intent &&
-          digest(deliveryIdentity(raw)) === digest(deliveryIdentity(intent)) &&
-          this.deliveryAuthorized(intent)
-        );
-      } catch {
-        return false;
-      }
-    });
-  }
-
-  private memberAuthorized(
-    binding: RuntimeMemberBinding,
-    action: 'read' | 'admit' | 'dispatch' | 'control'
-  ): boolean {
-    try {
-      const state = this.state();
-      const member = state.members.find(
-        (candidate) =>
-          candidate.delivery &&
-          digest(memberBinding(candidate.delivery)) === digest(memberBinding(binding))
-      );
-      if (!member) return false;
-      return state.grants.some(
-        (grant) =>
-          grant.memberName === member.name &&
-          !grant.revoked &&
-          grant.permissions.includes('read') &&
-          (action === 'read' ||
-            action === 'control' ||
-            grant.permissions.includes('message.write') ||
-            grant.permissions.includes('task.write'))
-      );
-    } catch {
-      return false;
-    }
-  }
-
-  /** Called under the same Team fence as mutations/revoke and outbox publication. */
-  private deliveryAuthorized(intent: DeliveryIntent): boolean {
-    try {
-      if (intent.schemaVersion !== 1 || !this.memberAuthorized(intent.binding, 'admit'))
-        return false;
-      const receipt = this.store.read<CommandReceipt>(this.commandPath(intent.commandId));
-      if (receipt && receipt.command.operation !== 'message.send')
-        return this.taskAuthorityCurrent(receipt) && this.taskRecovery.owns(intent, receipt);
-      const grant = this.authorize(intent.principalId, 'message.write');
-      if ((grant.revision ?? 1) !== intent.authorityRevision) return false;
-      if (
-        !receipt ||
-        receipt.command.operation !== 'message.send' ||
-        receipt.phase === 'rejected' ||
-        receipt.principalId !== intent.principalId ||
-        receipt.effects.messageId !== intent.messageId ||
-        receipt.effects.deliveryId !== intent.deliveryId ||
-        intent.inputId !== intent.deliveryId ||
-        receipt.command.payload.text !== intent.content ||
-        !receipt.deliveryBinding ||
-        digest(receipt.deliveryBinding) !== digest(intent.binding) ||
-        receipt.authorityRevision !== intent.authorityRevision ||
-        receipt.fingerprint !==
-          digest({
-            binding: this.binding,
-            principalId: receipt.principalId,
-            command: receipt.command,
-            deliveryBinding: receipt.deliveryBinding,
-          })
-      )
-        return false;
-      const member = this.state().members.find(
-        (candidate) => candidate.memberId === intent.binding.memberId
-      );
-      return !!member && member.name === receipt.command.payload.to;
-    } catch {
-      return false;
-    }
+    return this.deliveryAuthority.authorizeIntent(raw, action);
   }
 
   private finishBootstrap(state: OwnerState): void {
     const expected = {
       name: this.binding.teamName,
+      ...(state.savedSettings === undefined ? {} : { savedSettings: state.savedSettings }),
       members: state.members.map((member) => ({
+        ...member.settings,
         name: member.name,
+        ...(member.settings === undefined ? {} : { role: member.role }),
         agentType: member.role === 'lead' ? 'team-lead' : 'general-purpose',
       })),
     };
@@ -367,14 +368,29 @@ export class TeamOwner {
 
   /** principalId must come from captured IPC/MCP authentication, not tool arguments. */
   connect(principalId: string) {
-    text(principalId);
+    validateTeamText(principalId);
     return Object.freeze({
       execute: (command: TeamCommand) => this.execute(principalId, command),
-      lookup: (commandId: string) => this.lookup(principalId, commandId),
+      lookup: (commandId: string) =>
+        this.withLaunchAuthority(principalId, 'read', () =>
+          lookupOwnedProductCommand(this.store, principalId, commandId)
+        ),
       getTask: (taskId: string) => this.getTask(principalId, taskId),
       listTasks: () => this.listTasks(principalId),
+      readSnapshot: () => this.readSnapshot(principalId),
+      ...(this.policy.reads ? { readQueries: createTeamReadQueries({
+        reads: this.policy.reads,
+        fenced: (action) => this.store.fenced(action),
+        authority: () => ({ grant: this.authorize(principalId, 'read'), members: this.state().members }),
+        getTeam: () => this.readSnapshot(principalId),
+      }) } : {}),
+      readChanges: (cursor?: string) => this.readChanges(principalId, cursor),
       pendingDeliveries: () => this.pendingDeliveries(principalId),
       revoke: (target: string) => this.revoke(principalId, target),
+      readRoster: () => this.roster.read(principalId),
+      replaceRoster: (input: ReplaceTeamRoster) => this.roster.replace(principalId, input),
+      lookupRoster: (commandId: string, expected?: Omit<ReplaceTeamRoster, 'commandId'>) =>
+        this.roster.lookup(principalId, commandId, expected),
     });
   }
 
@@ -387,28 +403,42 @@ export class TeamOwner {
       digest(state.binding) !== digest(this.binding)
     )
       throw new TeamOwnerError('hold');
-    return state;
+    this.runtimeRegistration?.validate(state);
+    this.roster.recover(state);
+    return {
+      ...state,
+      members: state.members.map((member) => {
+        const selection =
+          member.delivery && this.runtimeBindings?.current(memberBinding(member.delivery));
+        return selection
+          ? {
+              ...member,
+              delivery: { ...member.delivery!, ...selection.binding },
+            }
+          : member;
+      }),
+    };
   }
 
   private authorize(principalId: string, permission: TeamGrant['permissions'][number]): TeamGrant {
-    const grant = this.state().grants.find((entry) => entry.principalId === principalId);
+    const state = this.state();
+    if (permission === 'task.write' || permission === 'message.write') assertTeamExecutionAllowed(state, this.store);
+    const grant = state.grants.find((entry) => entry.principalId === principalId);
     if (!grant || grant.revoked || !grant.permissions.includes(permission))
       throw new TeamOwnerError('forbidden');
     return grant;
-  }
-
-  private commandPath(commandId: string): string {
-    text(commandId);
-    return `commands/${digest(commandId)}.json`;
   }
 
   private taskAuthorityCurrent(receipt: CommandReceipt): boolean {
     try {
       const grant = this.authorize(receipt.principalId, 'task.write');
       this.authorize(receipt.principalId, 'read');
-      const current = this.store.read<CommandReceipt>(this.commandPath(receipt.commandId));
+      const current = readProductCommand(this.store, receipt.commandId);
       return (
         receipt.command.operation !== 'message.send' &&
+        (!requiresHumanTaskActor(receipt.command) || grant.memberName === 'user') &&
+        (!isUserTaskStartIntent(receipt.command) ||
+          receipt.taskStartLeadName === this.state().members.find((member) => member.role === 'lead')?.name) &&
         receipt.phase !== 'rejected' &&
         receipt.authorityRevision === (grant.revision ?? 1) &&
         !!current &&
@@ -420,20 +450,12 @@ export class TeamOwner {
             principalId: receipt.principalId,
             command: receipt.command,
             taskRecipients: receipt.taskRecipients,
+            taskStartLeadName: receipt.taskStartLeadName,
           })
       );
     } catch {
       return false;
     }
-  }
-
-  private lookup(principalId: string, commandId: string): CommandReceipt | undefined {
-    return this.store.fenced(() => {
-      this.authorize(principalId, 'read');
-      const receipt = this.store.read<CommandReceipt>(this.commandPath(commandId));
-      if (receipt && receipt.principalId !== principalId) throw new TeamOwnerError('forbidden');
-      return receipt;
-    });
   }
 
   private revoke(principalId: string, target: string): void {
@@ -446,6 +468,7 @@ export class TeamOwner {
       targetGrant.revoked = true;
       targetGrant.revision = (targetGrant.revision ?? 1) + 1;
       this.store.write('state.json', state);
+      this.productChanges.invalidate();
     });
   }
 
@@ -464,6 +487,61 @@ export class TeamOwner {
     });
   }
 
+  /** Product read under the current actor grant and the same fence as revoke/writes. */
+  private productSnapshot(principalId: string) {
+    const grant = this.authorize(principalId, 'read');
+    const state = this.state();
+    const members = state.members.map(({ name, role }) => ({ name, role }));
+    const recipients = grant.permissions.includes('admin')
+      ? [...members.map(({ name }) => name), 'user']
+      : [grant.memberName];
+    const snapshot = {
+      teamName: this.binding.teamName,
+      lifecycle: this.commandAccess.lifecycle(principalId).view(),
+      configurationRevision: teamRosterRevision(
+        state.members,
+        state.rosterVersion,
+        state.savedSettings
+      ),
+      members,
+      tasks: this.policy.taskBoard().listTasks(),
+      ...(this.policy.processes ? { processes: this.processCommands(principalId).list() } : {}),
+      messages: projectCrossTeamMessages({
+        store: this.store,
+        policy: this.policy,
+        messages: recipients.flatMap((name) => this.policy.readInbox(name)),
+        actor: grant.memberName,
+        readAll: grant.permissions.includes('admin'),
+      }),
+      kanbanState: this.store.read('../kanban-state.json') ?? {
+        teamName: this.binding.teamName,
+        reviewers: [],
+        tasks: {},
+      },
+    };
+    if (Buffer.byteLength(JSON.stringify(snapshot)) > 512 * 1024) throw new TeamOwnerError('hold');
+    return { ...snapshot, revision: digest(snapshot) };
+  }
+
+  private readSnapshot(principalId: string): JsonValue {
+    return this.store.fenced(() => {
+      const snapshot = this.productSnapshot(principalId);
+      const value = json({
+        ...snapshot,
+        feed: this.productChanges.snapshot(principalId, snapshot.revision),
+      });
+      if (Buffer.byteLength(JSON.stringify(value)) > 512 * 1024) throw new TeamOwnerError('hold');
+      return value;
+    });
+  }
+
+  private readChanges(principalId: string, cursor?: string): JsonValue {
+    return this.store.fenced(() => {
+      const snapshot = this.productSnapshot(principalId);
+      return json(this.productChanges.read(principalId, snapshot.revision, cursor));
+    });
+  }
+
   private pendingDeliveries(principalId: string): DeliveryIntent[] {
     return this.store.fenced(() => {
       this.authorize(principalId, 'read');
@@ -473,18 +551,94 @@ export class TeamOwner {
     });
   }
 
-  private execute(principalId: string, rawCommand: TeamCommand): CommandReceipt {
-    validateCommand(rawCommand);
+  readTaskInputCause(principalId: string, raw: ImmutableDelivery) {
+    return this.withLaunchAuthority(principalId, 'read', () =>
+      lookupRetainedTaskStartCause({
+        store: this.store,
+        recovery: this.taskRecovery,
+        raw,
+      })
+    );
+  }
+  readCrossTeamReplyHints(principalId: string, active: readonly ImmutableDelivery[]) {
+    return this.withLaunchAuthority(principalId, 'read', () =>
+      readCrossTeamReplyHints({
+        store: this.store,
+        active,
+        authorizeOriginal: (raw) => this.deliveryAuthority.authorizeIntent(raw, 'read'),
+      })
+    );
+  }
+  /** Private paired authority only; absent from connect/MCP ordinary message dispatch. */
+  receiveCrossTeam(principalId: string, intent: CapturedCrossTeamIntent): CommandReceipt {
+    return this.execute(principalId, crossTeamTargetCommand(intent), structuredClone(intent));
+  }
+  /** New admission captures this grant and roster once. */
+  crossTeamIdentity(principalId: string, write = false) {
+    return this.store.fenced(() => {
+      this.authorize(principalId, 'read');
+      const grant = this.authorize(principalId, write ? 'message.write' : 'read');
+      return structuredClone({
+        actor: grant.memberName,
+        revision: grant.revision ?? 1,
+        members: this.state().members,
+      });
+    });
+  }
+  private execute(
+    principalId: string,
+    rawCommand: TeamCommand,
+    crossTeam?: CapturedCrossTeamIntent
+  ): CommandReceipt {
+    validateTeamCommand(rawCommand);
     const command = structuredClone(rawCommand);
     return this.store.fenced(() => {
       const grant = this.authorize(
         principalId,
         command.operation === 'message.send' ? 'message.write' : 'task.write'
       );
+      if (crossTeam) {
+        validateCrossTeamTargetContext(
+          this.binding,
+          principalId,
+          command,
+          crossTeam,
+          grant.revision ?? 1
+        );
+        if (!this.deliveryAuthority.crossTeamOriginalAuthorized(crossTeam))
+          throw new TeamOwnerError('hold');
+      }
       // Completed replay must pass current authority, not only the original mutation's check.
       this.authorize(principalId, 'read');
-      const location = this.commandPath(command.commandId);
-      let receipt = this.store.read<CommandReceipt>(location);
+      if (requiresHumanTaskActor(command) && grant.memberName !== 'user')
+        throw new TeamOwnerError('forbidden');
+      validateCommandAttachments(command, this.policy.attachments);
+      const location = teamCommandPath(command.commandId);
+      if (
+        this.state().rosterCommands?.some((receipt) => receipt.commandId === command.commandId) ||
+        this.state().runtimeCaptures?.some((receipt) => receipt.commandId === command.commandId)
+      )
+        throw new TeamOwnerError('conflict');
+      let receipt = readProductCommand(this.store, command.commandId);
+      const messageRecipient =
+        command.operation === 'message.send'
+          ? this.state().members.find((member) => member.name === command.payload.to)
+          : undefined;
+      if (
+        command.operation === 'message.send' &&
+        grant.memberName === 'user' &&
+        command.payload.actionMode === 'delegate' &&
+        messageRecipient?.role !== 'lead'
+      )
+        throw new TeamOwnerError('forbidden');
+      const messageRecipientRole = receipt
+        ? receipt.messageRecipientRole
+        : command.operation === 'message.send' &&
+            (command.payload.messageId !== undefined ||
+              command.payload.summary !== undefined ||
+              command.payload.actionMode !== undefined)
+          ? messageRecipient?.role
+          : undefined;
       const deliveryBinding =
         receipt?.deliveryBinding ??
         (command.operation === 'message.send'
@@ -499,14 +653,30 @@ export class TeamOwner {
             }))
           : undefined;
       if (taskRecipients && taskRecipients.length > 256) throw new TeamOwnerError('hold');
+      const currentLead = this.state().members.find((member) => member.role === 'lead')?.name;
+      const taskStartLeadName = receipt
+        ? receipt.taskStartLeadName
+        : isUserTaskStartIntent(command)
+          ? currentLead
+          : undefined;
+      if (isUserTaskStartIntent(command) && taskStartLeadName !== currentLead)
+        throw new TeamOwnerError('hold');
       const fingerprint = digest({
         binding: this.binding,
         principalId,
         command,
         deliveryBinding,
         taskRecipients,
+        messageRecipientRole,
+        taskStartLeadName,
+        ...(crossTeam ? { crossTeam } : {}),
       });
       if (receipt) {
+        if (
+          receipt.messageRecipientRole !== undefined &&
+          receipt.messageRecipientRole !== messageRecipient?.role
+        )
+          throw new TeamOwnerError('hold');
         if (receipt.principalId !== principalId || receipt.fingerprint !== fingerprint)
           throw new TeamOwnerError('conflict');
         if (receipt.phase === 'completed' || receipt.phase === 'rejected') return receipt;
@@ -528,7 +698,7 @@ export class TeamOwner {
           )
             throw new TeamOwnerError('invalid');
         }
-        const pending = this.store.list<CommandReceipt>('commands');
+        const pending = listProductCommandReceipts(this.store);
         if (
           command.operation !== 'message.send' &&
           pending.some(
@@ -546,13 +716,20 @@ export class TeamOwner {
           principalId,
           fingerprint,
           command,
+          ...(crossTeam ? { crossTeam: structuredClone(crossTeam) } : {}),
+          ...(taskStartLeadName ? { taskStartLeadName } : {}),
+          ...(messageRecipientRole ? { messageRecipientRole } : {}),
           effects: {
             taskId: effectId('task', ...seed),
             commentId: effectId('comment', ...seed),
-            messageId: effectId('message', ...seed),
+            messageId: crossTeam
+              ? crossTeam.request.messageId
+              : command.operation === 'message.send' && command.payload.messageId !== undefined
+                ? command.payload.messageId
+                : effectId('message', ...seed),
             deliveryId: effectId('delivery', ...seed),
           },
-          createdAt: new Date().toISOString(),
+          createdAt: crossTeam?.timestamp ?? new Date().toISOString(),
           phase: 'prepared',
           authorityRevision: grant.revision ?? 1,
           ...(command.operation !== 'message.send'
@@ -576,13 +753,20 @@ export class TeamOwner {
       const before = this.store.productFingerprint(this.binding.teamName);
       try {
         if (command.operation === 'message.send')
-          receipt.result = this.commitMessage(receipt, grant.memberName);
+          receipt.result = commitTeamMessage(
+            receipt,
+            grant.memberName,
+            this.state().members,
+            this.store,
+            this.policy,
+            this.policy.attachments
+          );
         else {
           const plan = this.taskRecovery.commit(
             receipt,
             grant.memberName,
             this.state().members,
-            (board) => this.applyTask(receipt, grant.memberName, board)
+            (board) => applyTeamTask(receipt, grant.memberName, board, this.binding.teamName, this.policy.attachments)
           );
           receipt.result = plan.result;
           receipt.taskHash = plan.taskHash;
@@ -606,124 +790,9 @@ export class TeamOwner {
         receipt.phase = 'held';
         this.store.write(location, receipt);
         throw new TeamOwnerError('hold');
+      } finally {
+        this.productChanges.invalidate();
       }
     });
-  }
-
-  private applyTask(receipt: CommandReceipt, actor: string, board: TaskBoardPolicy): JsonValue {
-    const command = receipt.command;
-    switch (command.operation) {
-      case 'task.create':
-        return json(
-          board.createTask({
-            ...command.payload,
-            id: receipt.effects.taskId,
-            from: actor,
-            createdAt: receipt.createdAt,
-            allowLegacyAdoption: false,
-            creationCommand: {
-              namespace: 'legacy-agent-host',
-              scopeKey: this.binding.teamName,
-              operation: command.operation,
-              commandId: receipt.effects.taskId,
-              payloadHash: receipt.fingerprint,
-            },
-          })
-        );
-      case 'task.update': {
-        const { taskId, ...fields } = command.payload;
-        return json(board.updateTaskFields(taskId, fields));
-      }
-      case 'task.assign':
-        return json(board.setTaskOwner(command.payload.taskId, command.payload.owner, actor));
-      case 'task.comment':
-        return json(
-          board.addTaskComment(command.payload.taskId, {
-            text: command.payload.text,
-            taskRefs: command.payload.taskRefs,
-            from: actor,
-            id: receipt.effects.commentId,
-            createdAt: receipt.createdAt,
-          })
-        );
-      case 'task.lifecycle': {
-        const { taskId, action } = command.payload;
-        if (action === 'start') return json(board.startTask(taskId, actor));
-        if (action === 'complete') return json(board.completeTask(taskId, actor));
-        if (action === 'delete') return json(board.softDeleteTask(taskId, actor));
-        if (action === 'restore') return json(board.restoreTask(taskId, actor));
-        return json(board.setTaskStatus(taskId, 'pending', actor));
-      }
-      default:
-        throw new TeamOwnerError('invalid');
-    }
-  }
-
-  private commitMessage(receipt: CommandReceipt, actor: string): JsonValue {
-    if (receipt.command.operation !== 'message.send') throw new TeamOwnerError('invalid');
-    const { to, text: content, taskRefs } = receipt.command.payload;
-    const member = this.state().members.find((candidate) => candidate.name === to);
-    if (to === 'user' ? actor === 'user' : !member?.delivery) throw new TeamOwnerError('invalid');
-    if (
-      to !== 'user' &&
-      (!receipt.deliveryBinding ||
-        receipt.authorityRevision === undefined ||
-        digest(member!.delivery) !== digest(receipt.deliveryBinding))
-    )
-      throw new TeamOwnerError('hold');
-    const row = {
-      from: actor,
-      to,
-      text: content,
-      timestamp: receipt.createdAt,
-      messageId: receipt.effects.messageId,
-      read: false,
-      ...(taskRefs?.length ? { taskRefs } : {}),
-    };
-    // The canonical writer can deduplicate semantically, not just by supplied ID.
-    // Only exact identity/bytes can satisfy this command's effect proof.
-    const inbox = this.policy.readInbox(to);
-    const existing = inbox.find(
-      (entry) =>
-        !!entry &&
-        typeof entry === 'object' &&
-        !Array.isArray(entry) &&
-        entry.messageId === row.messageId
-    );
-    if (existing) {
-      if (digest({ ...(existing as Record<string, JsonValue>), read: false }) !== digest(row))
-        throw new TeamOwnerError('hold');
-    } else {
-      const applied = this.policy.sendMessage(actor, { ...row, member: to });
-      if (applied.messageId !== row.messageId || digest(applied.message) !== digest(row))
-        throw new TeamOwnerError('hold');
-    }
-    if (to === 'user') return json({ messageId: row.messageId, message: row });
-    if (
-      !member?.delivery ||
-      !receipt.deliveryBinding ||
-      receipt.authorityRevision === undefined ||
-      digest(member.delivery) !== digest(receipt.deliveryBinding)
-    )
-      throw new TeamOwnerError('hold');
-    const location = `outbox/${receipt.effects.deliveryId}.json`;
-    const intent: DeliveryIntent = {
-      schemaVersion: 1,
-      binding: receipt.deliveryBinding,
-      commandId: receipt.commandId,
-      principalId: receipt.principalId,
-      messageId: row.messageId,
-      deliveryId: receipt.effects.deliveryId,
-      inputId: receipt.effects.deliveryId,
-      content,
-      authorityRevision: receipt.authorityRevision,
-      phase: 'pending',
-    };
-    const previous = this.store.read<DeliveryIntent>(location);
-    if (previous) {
-      if (digest({ ...previous, phase: 'pending', runtimeReceipt: undefined }) !== digest(intent))
-        throw new TeamOwnerError('hold');
-    } else this.store.write(location, intent);
-    return json({ messageId: row.messageId, deliveryId: intent.deliveryId, message: row });
   }
 }

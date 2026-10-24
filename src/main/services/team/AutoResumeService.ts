@@ -174,6 +174,10 @@ export class AutoResumeService {
     });
   }
 
+  hasPendingForStoppedImport(teamName: string): boolean {
+    return this.pendingTimers.has(teamName);
+  }
+
   cancelPendingAutoResume(teamName: string): void {
     const pending = this.pendingTimers.get(teamName);
     if (!pending) return;

@@ -22,4 +22,18 @@ export interface BackendHandle {
   readonly handleId: string;
 }
 
+export * from './attachments';
+export * from './connections';
+export * from './launch';
 export * from './operations';
+export * from './review';
+export * from './reviewWatch';
+export * from './roster';
+export * from './stoppedImport';
+export { hostTeamRunId, isHostTeamRunId, parseHostTeamRunId } from './teamRunSelection';
+export {
+  hostTeamSelectionKey,
+  isHostTeamSelectionKey,
+  parseHostTeamSelectionKey,
+} from './teamSelection';
+export * from './teamSnapshot';

@@ -10,6 +10,8 @@ const crossTeam = require('./internal/crossTeam.js');
 const runtime = require('./internal/runtime.js');
 const workSync = require('./internal/workSync.js');
 const agentBlocks = require('./internal/agentBlocks.js');
+const taskStartNotification = require('./internal/taskStartNotification.js');
+const actionModeInstructions = require('./internal/actionModeInstructions.js');
 const taskCompletionClaim = require('./internal/taskCompletionClaim.js');
 
 function bindModule(context, moduleApi) {
@@ -46,6 +48,9 @@ module.exports = {
     isTaskCompletionClaimText: taskCompletionClaim.isTaskCompletionClaimText,
   },
   protocols: {
+    buildTaskStartNotification: taskStartNotification.buildTaskStartNotification,
+    buildActionModeProtocol: actionModeInstructions.buildActionModeProtocol,
+    buildActionModeAgentBlock: actionModeInstructions.buildActionModeAgentBlock,
     buildActionModeProtocolText: tasks.buildActionModeProtocolText,
     MEMBER_DELEGATE_DESCRIPTION: tasks.MEMBER_DELEGATE_DESCRIPTION,
     buildProcessProtocolText: tasks.buildProcessProtocolText,

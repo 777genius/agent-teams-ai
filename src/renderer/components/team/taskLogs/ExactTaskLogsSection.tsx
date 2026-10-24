@@ -6,8 +6,10 @@ import { asEnhancedChunkArray } from '@renderer/types/data';
 import { AlertCircle, FileText, Loader2 } from 'lucide-react';
 
 import { ExactTaskLogCard, type ExactTaskLogDetailState } from './ExactTaskLogCard';
+import { HostTaskActivityIndex } from './HostTaskActivityViews';
 
 import type { BoardTaskExactLogSummary } from '@shared/types';
+import type { HostTaskExactLogs } from '@shared/types/teamActivity';
 
 interface ExactTaskLogsSectionProps {
   teamName: string;
@@ -19,6 +21,7 @@ export const ExactTaskLogsSection = ({
   taskId,
 }: ExactTaskLogsSectionProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const [hostExact, setHostExact] = useState<HostTaskExactLogs | null>(null);
   const [summaries, setSummaries] = useState<BoardTaskExactLogSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +31,12 @@ export const ExactTaskLogsSection = ({
 
   const loadSummaries = useCallback(async (): Promise<BoardTaskExactLogSummary[]> => {
     const result = await api.teams.getTaskExactLogSummaries(teamName, taskId);
+    if ('kind' in result) {
+      setHostExact(result);
+      setSummaries([]);
+      return [];
+    }
+    setHostExact(null);
     const nextItems = [...result.items].sort((left, right) => {
       const leftTs = Date.parse(left.timestamp);
       const rightTs = Date.parse(right.timestamp);
@@ -58,6 +67,12 @@ export const ExactTaskLogsSection = ({
         latestRequestSeqById.current = {};
         const nextItems = await api.teams.getTaskExactLogSummaries(teamName, taskId);
         if (cancelled) return;
+        if ('kind' in nextItems) {
+          setHostExact(nextItems);
+          setSummaries([]);
+          return;
+        }
+        setHostExact(null);
         setSummaries(
           [...nextItems.items].sort((left, right) => {
             const leftTs = Date.parse(left.timestamp);
@@ -137,13 +152,14 @@ export const ExactTaskLogsSection = ({
           return;
         }
 
-        if (result.status === 'ok') {
+        if (result.status === 'ok' && !('kind' in result.detail)) {
+          const chunks = asEnhancedChunkArray(result.detail.chunks);
           setDetailStates((prev) => ({
             ...prev,
             [summary.id]: {
               status: 'ok',
               generation: summary.sourceGeneration,
-              chunks: asEnhancedChunkArray(result.detail.chunks),
+              chunks,
             },
           }));
           return;
@@ -194,6 +210,8 @@ export const ExactTaskLogsSection = ({
 
   const visibleSummaries = useMemo(() => summaries, [summaries]);
 
+  if (hostExact?.taskId === taskId && !error)
+    return <HostTaskActivityIndex teamName={teamName} value={hostExact} mode="exact" />;
   if (loading && visibleSummaries.length === 0) {
     return (
       <div className="space-y-2">

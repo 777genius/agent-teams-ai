@@ -21,7 +21,7 @@ import { formatCurrentProcessMemorySnapshot } from '../../utils/startupTelemetry
 import type { TeamDataWorkerRequest, TeamDataWorkerResponse } from './teamDataWorkerTypes';
 import type {
   InboxMessage,
-  MemberLogSummary,
+  LegacyMemberLogSummary,
   MessagesPage,
   TeamGetDataOptions,
   TeamMemberActivityMeta,
@@ -634,11 +634,11 @@ export class TeamDataWorkerClient {
       intervals?: { startedAt: string; completedAt?: string }[];
       since?: string;
     }
-  ): Promise<MemberLogSummary[]> {
+  ): Promise<LegacyMemberLogSummary[]> {
     if (!SAFE_NAME_RE.test(teamName)) throw new Error('Invalid teamName');
     if (!SAFE_ID_RE.test(taskId)) throw new Error('Invalid taskId');
     return this.call('findLogsForTask', { teamName, taskId, options }) as Promise<
-      MemberLogSummary[]
+      LegacyMemberLogSummary[]
     >;
   }
 

@@ -56,11 +56,11 @@ import {
 } from './codexRuntimeInstallAction';
 import { OpenCodeStartupCleanupRecovery } from './OpenCodeStartupCleanupRecovery';
 import { resolveProviderAuthModeUiState } from './providerAuthModeUiState';
+import { ProviderConnectionHeader } from './ProviderConnectionHeader';
 import {
   formatProviderAuthMethodLabelForProvider,
   formatProviderAuthModeLabelForProvider,
   formatProviderStatusText,
-  getProviderConnectLabel,
   getProviderCurrentRuntimeSummary,
   isConnectionManagedRuntimeProvider,
   shouldMaskCodexNegativeBootstrapState,
@@ -73,6 +73,7 @@ import {
 } from './ProviderRuntimeBackendSelector';
 
 import type { ProviderRuntimeBackendSummaryText } from './ProviderRuntimeBackendSelector';
+import type { NativeClaudeAuthenticationAction } from './useProviderAuthenticationActions';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type { AnalyticsProviderCheckReason } from '@renderer/analytics/productAnalytics';
 import type { CliProviderAuthMode, CliProviderId, CliProviderStatus } from '@shared/types';
@@ -113,6 +114,7 @@ interface Props {
     checkReason?: AnalyticsProviderCheckReason
   ) => Promise<boolean | void> | boolean | void;
   readonly onRequestLogin?: (providerId: CliProviderId) => void;
+  readonly nativeClaudeAuthAction?: NativeClaudeAuthenticationAction | null;
 }
 
 const API_KEY_PROVIDER_CONFIG: Record<
@@ -897,6 +899,7 @@ export const ProviderRuntimeSettingsDialog = ({
   onSelectBackend,
   onRefreshProvider,
   onRequestLogin,
+  nativeClaudeAuthAction = null,
 }: Props): React.JSX.Element => {
   const { t } = useAppTranslation('settings');
   const { t: commonT } = useAppTranslation('common');
@@ -2077,40 +2080,17 @@ export const ProviderRuntimeSettingsDialog = ({
               />
             ) : (
               <div className="space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                      {t('providerRuntime.connection.title')}
-                    </div>
-                    <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                      {getConnectionDescription(selectedProvider, t)}
-                    </div>
-                    {connectionProgressMessage ? (
-                      <div
-                        className="mt-2 inline-flex items-center gap-1.5 text-[11px]"
-                        style={{ color: 'var(--color-text-secondary)' }}
-                      >
-                        <Loader2 className="size-3 animate-spin" />
-                        <span>{connectionProgressMessage}</span>
-                      </div>
-                    ) : null}
-                  </div>
-                  {canRequestSubscriptionLogin ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={connectionBusy}
-                      onClick={() => onRequestLogin?.(selectedProvider.providerId)}
-                    >
-                      <Link2 className="mr-1 size-3.5" />
-                      {selectedProvider.authenticated &&
-                      (selectedProvider.authMethod === 'oauth_token' ||
-                        selectedProvider.authMethod === 'claude.ai')
-                        ? t('providerRuntime.actions.reconnectAnthropic')
-                        : getProviderConnectLabel(selectedProvider, t)}
-                    </Button>
-                  ) : null}
-                </div>
+                <ProviderConnectionHeader
+                  open={open}
+                  nativeAuthAction={nativeClaudeAuthAction}
+                  onProviderChanged={() => refreshProviderStatus('anthropic', 'provider_setup')}
+                  provider={selectedProvider}
+                  description={getConnectionDescription(selectedProvider, t)}
+                  progressMessage={connectionProgressMessage}
+                  busy={connectionBusy}
+                  canRequestLogin={canRequestSubscriptionLogin}
+                  onRequestLogin={onRequestLogin}
+                />
 
                 {showConnectionMethodCards ? (
                   <div className="space-y-2">

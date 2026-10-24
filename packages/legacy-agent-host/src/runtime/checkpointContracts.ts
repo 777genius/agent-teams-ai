@@ -19,6 +19,34 @@ export interface CheckpointReceipt {
   reference?: string;
 }
 
+export type CheckpointAvailabilityReason =
+  | 'native-backing-unverified'
+  | 'unsupported'
+  | 'source-unavailable'
+  | 'checkpoint-unavailable'
+  | 'checkpoint-budget'
+  | 'checkpoint-invalid'
+  | 'payload-unavailable'
+  | 'custody-unreleased'
+  | 'history-changed'
+  | 'configuration-changed'
+  | 'generation-conflict'
+  | 'sibling-unreleased';
+
+/** Owner eligibility is not proof of readable native backing; restore validates that separately. */
+export interface CheckpointAvailability {
+  sourceGeneration: string;
+  status: 'owner-eligible' | 'unavailable';
+  reason: CheckpointAvailabilityReason;
+  nativeBacking: 'unverified';
+  checkpoints: {
+    checkpointId: string;
+    reference: string;
+    status: 'owner-eligible' | 'unavailable';
+    reason: CheckpointAvailabilityReason;
+  }[];
+}
+
 export interface CheckpointPayload {
   schemaVersion: 1;
   reference: string;

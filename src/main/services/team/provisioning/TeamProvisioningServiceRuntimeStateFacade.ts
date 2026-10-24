@@ -148,6 +148,44 @@ export abstract class TeamProvisioningServiceRuntimeStateFacade extends TeamProv
     });
   protected readonly anthropicApiKeyHelperCleanupRetryOwner =
     createAnthropicApiKeyHelperCleanupRetryOwner();
+  readStoppedTeamImportRuntimeFacts(teamName: string): Readonly<Record<string, number>> {
+    return {
+      provisioning: Number(this.provisioningRunByTeam.has(teamName)),
+      credentialCleanup: Number(
+        this.anthropicApiKeyHelperCleanupRetryOwner.hasPendingForTeam(teamName)
+      ),
+      alive: Number(this.aliveRunByTeam.has(teamName)),
+      adapter: Number(this.runtimeAdapterRunByTeam.has(teamName)),
+      lanes: this.secondaryRuntimeRunByTeam.get(teamName)?.size ?? 0,
+      stopping: Number(this.stoppingSecondaryRuntimeTeams.has(teamName)),
+      liveRuns: [...this.runs.values()].filter(
+        (run) =>
+          run.teamName === teamName &&
+          (run.child !== null ||
+            run.timeoutHandle !== null ||
+            run.fsMonitorHandle !== null ||
+            run.finalizingByTimeout)
+      ).length,
+      pendingLaunches: [...this.runtimeAdapterProgressByRunId.values()].filter(
+        (progress) =>
+          progress.teamName === teamName &&
+          this.cancellationBoundary.isCancellableRuntimeAdapterProgress(progress)
+      ).length,
+      leadRelay: Number(this.leadInboxRelayFacade.leadInboxRelayInFlight.has(teamName)),
+      memberRelay: [...this.leadInboxRelayFacade.memberInboxRelayInFlight.keys()].filter((key) =>
+        key.startsWith(`${teamName}:`)
+      ).length,
+      crossTeamReplies:
+        this.leadInboxRelayFacade.pendingCrossTeamFirstReplies.get(teamName)?.size ?? 0,
+      watchdog: Object.values(
+        this.openCodePromptDeliveryWatchdogScheduler.readStoppedTeamImportFacts(teamName)
+      ).reduce((sum, count) => sum + count, 0),
+      advisory: Object.values(
+        this.openCodeRuntimeDeliveryAdvisory.readStoppedTeamImportFacts(teamName)
+      ).reduce((sum, count) => sum + count, 0),
+    };
+  }
+
   protected readonly runs = new Map<string, ProvisioningRun>();
   protected readonly provisioningRunByTeam = new Map<string, string>();
   private readonly aliveRunByTeam = new Map<string, string>();

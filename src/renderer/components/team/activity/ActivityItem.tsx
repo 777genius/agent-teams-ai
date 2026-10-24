@@ -94,6 +94,7 @@ import {
 import { ActivitySenderBadge } from './ActivitySenderBadge';
 import { formatActivityTimestamp } from './activityTimestamp';
 import { BootstrapAcknowledgementRow, BootstrapSystemRow } from './BootstrapActivityRows';
+import { crossTeamActivityPresentation } from './crossTeamActivityPresentation';
 import { ReplyQuoteBlock } from './ReplyQuoteBlock';
 import {
   getTimelineCardBorderRadius,
@@ -731,25 +732,23 @@ export const ActivityItem = memo(
     const isCrossTeamSent =
       message.source === CROSS_TEAM_SENT_SOURCE || crossTeamSentTarget !== null;
     const isCrossTeamAny = isCrossTeam || isCrossTeamSent;
-    const crossTeamOrigin = useMemo(() => {
-      if (!isCrossTeam) return null;
-      const fromValue = parsedCrossTeamPrefix?.from ?? message.from;
-      const dot = fromValue.indexOf('.');
-      if (dot <= 0 || dot === fromValue.length - 1) return null;
-      return {
-        teamName: fromValue.substring(0, dot),
-        memberName: fromValue.substring(dot + 1),
-      };
-    }, [isCrossTeam, message.from, parsedCrossTeamPrefix]);
-    const crossTeamTarget = useMemo(() => {
-      if (!isCrossTeamSent) return null;
-      if (crossTeamSentTarget) return crossTeamSentTarget;
-      if (qualifiedRecipient) return qualifiedRecipient.teamName;
-      if (!message.to) return null;
-      const dot = message.to.indexOf('.');
-      if (dot <= 0) return message.to;
-      return message.to.substring(0, dot);
-    }, [crossTeamSentTarget, isCrossTeamSent, message.to, qualifiedRecipient]);
+    const {
+      origin: crossTeamOrigin,
+      target: crossTeamTarget,
+      originTeamClick,
+      targetTeamClick,
+      replyClick,
+    } = crossTeamActivityPresentation({
+      message,
+      teamName,
+      isCrossTeam,
+      isCrossTeamSent,
+      prefixFrom: parsedCrossTeamPrefix?.from,
+      sentTarget: crossTeamSentTarget,
+      qualifiedTeam: qualifiedRecipient?.teamName,
+      onTeamClick,
+      onReply,
+    });
     const senderName = crossTeamOrigin ? crossTeamOrigin.memberName : message.from;
     const senderColor = crossTeamOrigin ? undefined : (memberColor ?? message.color);
     const senderHideAvatar =
@@ -1138,7 +1137,7 @@ export const ActivityItem = memo(
         <>
           <MoveRight size={10} style={{ color: CARD_ICON_MUTED }} className="shrink-0" />
           {crossTeamTarget ? (
-            <CrossTeamTeamBadge teamName={crossTeamTarget} onClick={onTeamClick} />
+            <CrossTeamTeamBadge teamName={crossTeamTarget} onClick={targetTeamClick} />
           ) : null}
           {crossTeamSentMemberName || !crossTeamTarget ? (
             <MemberBadge
@@ -1295,7 +1294,10 @@ export const ActivityItem = memo(
                     />
                   ) : null}
                   {crossTeamOrigin ? (
-                    <CrossTeamTeamBadge teamName={crossTeamOrigin.teamName} onClick={onTeamClick} />
+                    <CrossTeamTeamBadge
+                      teamName={crossTeamOrigin.teamName}
+                      onClick={originTeamClick}
+                    />
                   ) : null}
                   {showWideSender ? senderBadgeForHeader : null}
                   {recipientBadge}
@@ -1365,7 +1367,10 @@ export const ActivityItem = memo(
                   />
                 ) : null}
                 {crossTeamOrigin ? (
-                  <CrossTeamTeamBadge teamName={crossTeamOrigin.teamName} onClick={onTeamClick} />
+                  <CrossTeamTeamBadge
+                    teamName={crossTeamOrigin.teamName}
+                    onClick={originTeamClick}
+                  />
                 ) : null}
                 {showWideSender ? senderBadgeForHeader : null}
                 {recipientBadge}
@@ -1438,7 +1443,7 @@ export const ActivityItem = memo(
                 />
               ) : null}
               {crossTeamOrigin ? (
-                <CrossTeamTeamBadge teamName={crossTeamOrigin.teamName} onClick={onTeamClick} />
+                <CrossTeamTeamBadge teamName={crossTeamOrigin.teamName} onClick={originTeamClick} />
               ) : null}
               {showWideSender ? senderBadgeForHeader : null}
               {recipientBadge}
@@ -1672,7 +1677,7 @@ export const ActivityItem = memo(
         alignToEnd={isWideUser}
         timestamp={isWideOrdinary ? timestamp : undefined}
         onRevise={onRevise ? () => onRevise(message) : undefined}
-        onReply={onReply ? () => onReply(message) : undefined}
+        onReply={replyClick}
         onCreateTask={onCreateTask ? handleCreateTask : undefined}
       >
         {card}

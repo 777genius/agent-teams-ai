@@ -16,6 +16,7 @@ import { test } from 'node:test';
 
 import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
 import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
+import { runtimeDigest } from '../dist/runtime/identity.js';
 import { RuntimeOwnerError } from '../dist/runtime/contracts.js';
 import type {
   RuntimeBinding,
@@ -641,7 +642,7 @@ function heldRuntime(error: unknown): boolean {
 
 test('repeated settled unknown close retains held custody debt without another native close', async (t) => {
   const f = await setup(t);
-  const runtime = f.make('host-1');
+  const runtime = f.make('host-1', { events: f.store });
   await runtime.openSession({ binding: binding(), config: config() });
   const session = f.sessions.get('session-A')!;
   session.cleanup = 'unknown';
@@ -649,13 +650,161 @@ test('repeated settled unknown close retains held custody debt without another n
   assert.equal(first.phase, 'held');
   assert.equal(first.custody, 'unknown');
   assert.equal(first.closeClaimed, true);
-  for (const owner of [runtime, f.make('host-2', { authorize: () => false })]) {
+  await tick();
+  const [namespace] = await readdir(join(f.root, 'runtime-sessions'));
+  assert.ok(namespace);
+  const paths = [join(f.root, 'runtime-sessions', namespace, runtimeDigest(binding()) + '.json'),
+    join(f.root, 'runtime-events', runtimeDigest(binding()) + '.json')];
+  const before = await Promise.all(paths.map(path => readFile(path)));
+  for (const owner of [runtime, f.make('host-2', { authorize: () => false, events: f.store })]) {
     const repeated = await owner.stopCapturedSession(binding());
     assert.equal(repeated.phase, 'held');
     assert.equal(repeated.custody, 'unknown');
     assert.equal(repeated.closeClaimed, true);
     assert.equal(repeated.sealed, true);
+    assert.deepEqual(await Promise.all(paths.map(path => readFile(path))), before,
+      'settled unknown close must not append duplicate held observations');
   }
   assert.equal(session.closeCalls, 1);
   assert.equal(f.opens(), 1);
+});
+
+
+test('driver-less held shutdown publishes sealing once and cold disposal preserves original bytes', async (t) => {
+  const f = await setup(t), runtime = f.make('host-1', {
+    events: f.store,
+    driverFactory: { open: async () => { throw new Error('TEST factory rejected'); } },
+  });
+  await runtime.admitDelivery(delivery('queued-before-factory-rejection'));
+  const failed = await runtime.openSession({ binding: binding(), config: config() });
+  assert.equal(failed.phase, 'held');
+  assert.equal(failed.sealed, false);
+  assert.equal(failed.diagnostic, 'open-unknown');
+  const sequence = f.store.readActivity(binding())!.sequence;
+  const stopped = await runtime.stopCapturedSession(binding());
+  assert.equal(stopped.sealed, true);
+  assert.equal(stopped.custody, 'unknown');
+  assert.equal(stopped.inputs[0]?.phase, 'cancelled');
+  assert.ok(f.store.readActivity(binding())!.sequence > sequence,
+    'actual sealing and admission cancellation must remain observable');
+  const [namespace] = await readdir(join(f.root, 'runtime-sessions'));
+  assert.ok(namespace);
+  const paths = [join(f.root, 'runtime-sessions', namespace, runtimeDigest(binding()) + '.json'),
+    join(f.root, 'runtime-events', runtimeDigest(binding()) + '.json')];
+  const before = await Promise.all(paths.map(path => readFile(path)));
+  const cold = f.make('host-2', { events: f.store, authorize: () => false });
+  await assert.rejects(cold.stopSession(binding()),
+    error => error instanceof RuntimeOwnerError && error.code === 'forbidden');
+  for (const owner of [runtime, cold, cold]) {
+    const repeated = await owner.stopCapturedSession(binding());
+    assert.equal(repeated.phase, 'held');
+    assert.equal(repeated.custody, 'unknown');
+    assert.equal(repeated.diagnostic, 'open-unknown');
+    assert.deepEqual(await Promise.all(paths.map(path => readFile(path))), before,
+      'repeated driver-less shutdown must preserve raw record and activity bytes');
+  }
+  assert.equal(f.opens(), 0);
+  assert.equal(f.sessions.size, 0);
+});
+
+for (const change of ['expiry', 'terminal-input', 'pending-control'] as const) {
+  test(`interaction ${change} between reply claim and driver call cannot issue a grant`, async (t) => {
+    const f = await setup(t);
+    const runtime = f.make('host-1');
+    await runtime.openSession({ binding: binding(), config: config() });
+    await runtime.admitDelivery(delivery('permission-input'));
+    await runtime.dispatchNext(binding());
+    const session = f.sessions.get('session-A')!;
+    const input = session.submits[0]!;
+    session.events.push({
+      sessionRef: session.sessionRef,
+      inputId: input.inputId,
+      operationRef: input.operationRef,
+      kind: 'interaction',
+      interactionRef: 'permission-race',
+      request: { kind: 'permission', tool: 'TEST-tool', input: {} },
+    });
+    await tick();
+    const pending = runtime.respondToInteraction(binding(), input.inputId, 'permission-race', {
+      kind: 'permission',
+      decision: 'allow',
+    });
+    f.store.fenced(binding(), (tx) => {
+      const state = tx.get()!;
+      const interaction = state.interactions.find(
+        (item) => item.interactionRef === 'permission-race'
+      )!;
+      assert.equal(interaction.phase, 'responding');
+      if (change === 'expiry') interaction.expiresAt = 0;
+      else if (change === 'terminal-input') {
+        const original = state.inputs.find((item) => item.intent.inputId === input.inputId)!;
+        original.phase = 'terminal';
+        original.terminal = 'cancelled';
+      } else
+        state.control = {
+          inputId: input.inputId,
+          operationRef: input.operationRef,
+          phase: 'pending',
+        };
+      tx.put(state);
+    });
+    const settled = await pending;
+    assert.equal(
+      session.replies.length,
+      0,
+      'no provider permission after original scope becomes invalid'
+    );
+    assert.equal(
+      settled.interactions.find((item) => item.interactionRef === 'permission-race')?.phase,
+      'unknown'
+    );
+  });
+}
+
+
+test('cold metadata shutdown preserves settled closed Runtime bytes, original unknown input and event sequence', async (t) => {
+  const f = await setup(t), first = f.make('host-1', { events: f.store });
+  await first.openSession({ binding: binding(), config: config() });
+  await first.admitDelivery(delivery('interrupted-original'));
+  await first.dispatchNext(binding());
+  const stopped = await first.stopCapturedSession(binding());
+  await tick();
+  assert.equal(stopped.phase, 'closed');
+  assert.equal(stopped.custody, 'released');
+  assert.equal(stopped.inputs[0]?.phase, 'unknown');
+  const [namespace] = await readdir(join(f.root, 'runtime-sessions'));
+  assert.ok(namespace);
+  const paths = [join(f.root, 'runtime-sessions', namespace, runtimeDigest(binding()) + '.json'),
+    join(f.root, 'runtime-events', runtimeDigest(binding()) + '.json')];
+  const before = await Promise.all(paths.map(path => readFile(path)));
+  const cold = f.make('host-2', { events: f.store });
+  await cold.stopCapturedSession(binding());
+  await cold.stopCapturedSession(binding());
+  assert.deepEqual(await Promise.all(paths.map(path => readFile(path))), before,
+    'cold read-only Host cleanup must not append duplicate closed observations');
+  assert.equal(cold.readSession(binding()).record?.inputs[0]?.phase, 'unknown');
+  assert.equal(f.opens(), 1);
+  assert.equal(f.sessions.get('session-A')?.closeCalls, 1);
+});
+
+test('closed Runtime with unfinished sealing still publishes actual admission cancellation once', async (t) => {
+  const f = await setup(t), runtime = f.make('host-1', { events: f.store });
+  await runtime.admitDelivery(delivery('queued-original'));
+  f.store.fenced(binding(), tx => {
+    const record = tx.get()!;
+    record.phase = 'closed'; record.custody = 'released';
+    record.sealed = false; record.nativeReady = false;
+    tx.put(record);
+  });
+  const before = f.store.readActivity(binding())!.sequence;
+  const closed = await runtime.stopCapturedSession(binding());
+  assert.equal(closed.sealed, true);
+  assert.equal(closed.nativeReady, false);
+  assert.equal(closed.inputs[0]?.phase, 'cancelled');
+  assert.ok(f.store.readActivity(binding())!.sequence > before,
+    'meaningful closure correction must remain observable');
+  const settled = JSON.stringify(f.store.readActivity(binding()));
+  await runtime.stopCapturedSession(binding());
+  assert.equal(JSON.stringify(f.store.readActivity(binding())), settled);
+  assert.equal(f.opens(), 0);
 });

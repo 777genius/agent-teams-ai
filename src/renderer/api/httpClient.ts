@@ -1,3 +1,7 @@
+import {
+  AGENT_BACKEND_REVIEW_EVENTS_ROUTE,
+  AGENT_BACKEND_REVIEW_FILE_CHANGE_CHANNEL,
+} from '@features/agent-backend/contracts';
 /**
  * HTTP-based implementation of ElectronAPI for browser mode.
  *
@@ -5,6 +9,7 @@
  * EventSource (SSE) for real-time events. Allows the renderer
  * to run in a regular browser connected to an HTTP server.
  */
+import { createAgentBackendHttpClient } from '@features/agent-backend/renderer';
 import {
   createEmptyMemberLogPreviewResponse,
   createEmptyMemberLogStreamResponse,
@@ -63,7 +68,7 @@ import type {
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementApi,
-  RuntimeProviderManagementRuntimeId,
+  RuntimeProviderModelTestRuntimeId,
 } from '@features/runtime-provider-management/contracts';
 import type { TeamImportApi } from '@features/team-import/contracts';
 import type { TerminalWorkspaceElectronApi } from '@features/terminal-workspace/contracts';
@@ -198,8 +203,8 @@ function createBrowserCompanionStatus(
   };
 }
 
-function createBrowserRuntimeProviderError(
-  runtimeId: RuntimeProviderManagementRuntimeId,
+function createBrowserRuntimeProviderError<T extends RuntimeProviderModelTestRuntimeId>(
+  runtimeId: T,
   code: 'runtime-unhealthy' | 'unsupported-action'
 ) {
   return {
@@ -214,6 +219,27 @@ function createBrowserRuntimeProviderError(
 }
 
 export class HttpAPIClient implements ElectronAPI {
+  agentBackend = createAgentBackendHttpClient(
+    (route, request) => this.post(route, request),
+    (route) => this.get(route),
+    {
+      post: (route, request) => this.post<void>(route, request),
+      subscribe: (callback, status) => {
+        const stream = new EventSource(`${this.baseUrl}${AGENT_BACKEND_REVIEW_EVENTS_ROUTE}`);
+        let opened = false;
+        stream.onopen = () => {
+          status?.(opened ? 'stream-reconnected' : 'ready');
+          opened = true;
+        };
+        stream.onerror = () => status?.('stream-lost');
+        stream.addEventListener(AGENT_BACKEND_REVIEW_FILE_CHANGE_CHANNEL, (event) =>
+          callback(JSON.parse((event as MessageEvent<string>).data))
+        );
+        return () => stream.close();
+      },
+    },
+    (route, request) => this.post(route, request)
+  );
   announcements: AnnouncementsApi = {
     getSnapshot: async () => this.unavailableAnnouncements(),
     refresh: async () => this.unavailableAnnouncements(),
@@ -320,6 +346,7 @@ export class HttpAPIClient implements ElectronAPI {
 
   private async parseJson<T>(res: Response): Promise<T> {
     const text = await res.text();
+    if (res.ok && res.status === 204) return undefined as T;
     if (!res.ok) {
       const parsed = JSON.parse(text) as { error?: string };
       throw new Error(parsed.error ?? `HTTP ${res.status}`);
