@@ -2936,6 +2936,106 @@ describe('useRuntimeProviderManagement', () => {
     });
   });
 
+  it.each(['late-success', 'timeout'] as const)(
+    'keeps OpenCode API connect pending beyond the old UI deadline: %s',
+    async (outcome) => {
+      vi.useFakeTimers();
+      let resolveConnect!: (value: RuntimeProviderManagementProviderResponse) => void;
+      const connectProvider = vi.fn(
+        () =>
+          new Promise<RuntimeProviderManagementProviderResponse>((resolve) => {
+            resolveConnect = resolve;
+          })
+      );
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        value: {
+          runtimeProviderManagement: {
+            connectProvider,
+            loadProviderDirectory: vi.fn(async () => createEmptyDirectoryResponse()),
+            loadSetupForm: vi.fn(async () => ({
+              schemaVersion: 1,
+              runtimeId: 'opencode',
+              setupForm: {
+                runtimeId: 'opencode',
+                providerId: 'openai',
+                displayName: 'OpenAI',
+                method: 'api',
+                supported: true,
+                title: 'Connect OpenAI',
+                description: null,
+                submitLabel: 'Connect',
+                disabledReason: null,
+                source: 'curated',
+                secret: { key: 'key', label: 'API key', placeholder: null, required: true },
+                prompts: [],
+              },
+            })),
+          },
+        } as unknown as ElectronAPI,
+      });
+      const root = createRoot(host);
+      try {
+        await act(async () => {
+          root.render(React.createElement(Harness));
+        });
+        await act(async () => {
+          actions?.startConnect('openai');
+        });
+        act(() => actions?.setApiKeyValue('test-key'));
+        let pending: ReturnType<RuntimeProviderManagementActions['submitConnect']> | undefined;
+        await act(async () => {
+          pending = actions?.submitConnect('openai');
+        });
+        expect(connectProvider).toHaveBeenCalledTimes(1);
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(250_000);
+        });
+        expect(state?.savingProviderId).toBe('openai');
+        expect(state?.setupSubmitError).toBeNull();
+        if (outcome === 'late-success') {
+          await act(async () => {
+            resolveConnect({
+              schemaVersion: 1,
+              runtimeId: 'opencode',
+              provider: {
+                ...createOpenAiLocalProvider(),
+                authMethods: ['api'],
+              },
+            });
+            await pending;
+          });
+          expect(state?.activeFormProviderId).toBeNull();
+          expect(state?.setupSubmitError).toBeNull();
+        } else {
+          await act(async () => {
+            await vi.advanceTimersByTimeAsync(119_999);
+          });
+          expect(state?.savingProviderId).toBe('openai');
+          await act(async () => {
+            await vi.advanceTimersByTimeAsync(1);
+            await pending;
+          });
+          expect(state?.setupSubmitError).toBe('Provider connect timed out');
+          expect(state?.activeFormProviderId).toBe('openai');
+          await act(async () => {
+            resolveConnect({
+              schemaVersion: 1,
+              runtimeId: 'opencode',
+              provider: createOpenAiLocalProvider(),
+            });
+            await Promise.resolve();
+          });
+          expect(state?.setupSubmitError).toBe('Provider connect timed out');
+        }
+        expect(state?.savingProviderId).toBeNull();
+      } finally {
+        vi.useRealTimers();
+        await act(async () => root.unmount());
+      }
+    }
+  );
+
   it('keeps setup open when the backend does not confirm a connected provider', async () => {
     const loadSetupForm = vi.fn(() =>
       Promise.resolve({

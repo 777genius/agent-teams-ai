@@ -550,7 +550,7 @@ By opening a pull request you agree to the [Contributor License Agreement](.gith
 
 We are open to partnerships and collaboration opportunities. If you see a way to create value together, we are ready to discuss mutually beneficial terms.
 
-Contact: [quantjumppro@gmail.com](mailto:quantjumppro@gmail.com)
+Contact: [iliya@agentteams.live](mailto:iliya@agentteams.live)
 
 ## Security
 

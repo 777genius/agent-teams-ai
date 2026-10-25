@@ -150,7 +150,8 @@ export function projectV2NativeTranscript(value: unknown, expected: {
       const input = typeof command === 'string' && command.length > 32_768 ||
         typeof workdir === 'string' && workdir.length > 32_768 ? null : (() => {
         const shell = ['bash', 'shell', 'exec'].includes(tool);
-        const programMatches = typeof command === 'string' && command.includes(program);
+        const programMatches = typeof command === 'string' &&
+          command.replace(/\\/g, '/').includes(program.replace(/\\/g, '/'));
         const nodeMatches = typeof command === 'string' && /\bnode(?:\.exe)?\b/i.test(command);
         const slash = (value: string) => value.replace(/\\/g, '/');
         const normalizedProgram = slash(program);

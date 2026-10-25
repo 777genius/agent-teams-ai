@@ -317,8 +317,8 @@ function readBoardCompletionEpoch(paths) {
   return lastBoardEventMs > 0 ? { lastBoardEventMs } : null;
 }
 
-/** True when any inbox holds a message from the human user newer than sinceMs. */
-function hasUserMessageSince(paths, sinceMs) {
+/** Visits the time of each private message from the human user; stops when visit returns true. */
+function someUserMessageTime(paths, visit) {
   const inboxDir = path.join(paths.teamDir, 'inboxes');
   let entries;
   try {
@@ -339,16 +339,36 @@ function hasUserMessageSince(paths, sinceMs) {
       const candidate = rows[index];
       if (!candidate || candidate.groupChatId || !isUserParticipant(candidate.from)) continue;
       const ms = parseRowTimeMs(candidate);
-      if (ms !== null && ms > sinceMs) return true;
+      if (ms !== null && visit(ms)) return true;
     }
   }
   return false;
 }
 
-function isReplyToHumanMessage(paths, row) {
-  if (row.groupChatId) return false;
+/** True when any inbox holds a message from the human user newer than sinceMs. */
+function hasUserMessageSince(paths, sinceMs) {
+  return someUserMessageTime(paths, (ms) => ms > sinceMs);
+}
+
+/** Time of the earliest message from the human user newer than sinceMs, or null. */
+function firstUserMessageSince(paths, sinceMs) {
+  let first = null;
+  someUserMessageTime(paths, (ms) => {
+    if (ms > sinceMs && (first === null || ms < first)) first = ms;
+    return false;
+  });
+  return first;
+}
+
+/**
+ * The message a row relays: its relayOfMessageId must resolve to exactly one
+ * private message that is not a system notification, was addressed to the
+ * row's sender, and is not newer than the row. Returns null otherwise.
+ */
+function findRelayedRequest(paths, row) {
+  if (row.groupChatId) return null;
   const relayId = String(row.relayOfMessageId || '').trim();
-  if (!relayId) return false;
+  if (!relayId) return null;
   try {
     const { message, store } = lookupMessage(paths, relayId);
     const sender = normalizeComparableParticipant(row.from);
@@ -360,19 +380,79 @@ function isReplyToHumanMessage(paths, row) {
           (!recipient || recipient === sender);
     const requestTime = parseRowTimeMs(message);
     const replyTime = parseRowTimeMs(row);
-    return (
+    const relayed =
       !message.groupChatId &&
-      isUserParticipant(message.from) &&
       message.source !== 'system_notification' &&
       addressedToSender &&
       requestTime !== null &&
       replyTime !== null &&
-      requestTime <= replyTime
-    );
+      requestTime <= replyTime;
+    return relayed ? message : null;
   } catch {
     // Unknown or ambiguous relay IDs cannot bypass completed-board deduplication.
+    return null;
+  }
+}
+
+function isReplyToHumanMessage(paths, row) {
+  const request = findRelayedRequest(paths, row);
+  return Boolean(request) && isUserParticipant(request.from);
+}
+
+/**
+ * True when the candidate is a teammate's answer to a message the sender wrote
+ * at or after followUpMs, the user's first message since the board completed.
+ * Status reports without a relay, notifications, replies to task notifications,
+ * and replies to messages the sender wrote unprompted are not such answers.
+ */
+function isFollowUpAnswer(paths, senderKey, candidate, followUpMs) {
+  if (
+    !candidate ||
+    candidate.source === 'system_notification' ||
+    isUserParticipant(candidate.from) ||
+    normalizeComparableParticipant(candidate.from) === senderKey ||
+    !(parseRowTimeMs(candidate) >= followUpMs)
+  ) {
     return false;
   }
+  const request = findRelayedRequest(paths, candidate);
+  return (
+    Boolean(request) &&
+    normalizeComparableParticipant(request.from) === senderKey &&
+    parseRowTimeMs(request) >= followUpMs
+  );
+}
+
+/**
+ * True when the row passes such an answer on, which is new information rather
+ * than a restated final. A row that cites the answer is checked exactly and
+ * must not repeat an earlier relay of it. Leads do not always cite what they
+ * relay, so any other row passes when an answer arrived after finalMs.
+ */
+function relaysFollowUpAnswer(paths, list, row, finalMs, boardEventMs) {
+  const followUpMs = firstUserMessageSince(paths, boardEventMs);
+  if (followUpMs === null) return false;
+  const senderKey = normalizeComparableParticipant(row.from);
+  const cited = findRelayedRequest(paths, row);
+  if (cited && isFollowUpAnswer(paths, senderKey, cited, followUpMs)) {
+    return !list.some(
+      (candidate) =>
+        candidate &&
+        normalizeComparableParticipant(candidate.from) === senderKey &&
+        String(candidate.relayOfMessageId || '').trim() === cited.messageId
+    );
+  }
+  let rows;
+  try {
+    rows = readMessageRows(getInboxPath(paths, row.from));
+  } catch {
+    return false;
+  }
+  return rows.some(
+    (candidate) =>
+      parseRowTimeMs(candidate) > finalMs &&
+      isFollowUpAnswer(paths, senderKey, candidate, followUpMs)
+  );
 }
 
 /**
@@ -380,8 +460,8 @@ function isReplyToHumanMessage(paths, row) {
  * last board event, further agent->user messages inside the repeat window are
  * rephrased "ALL DONE" recaps from memoryless turns. Returns the final row they
  * duplicate, or null when the message must be delivered: board not complete,
- * this IS the final message, the board moved again, the user wrote again, or
- * the window expired.
+ * this IS the final message, the board moved again, the user wrote again, it
+ * passes on a teammate's answer to the user's follow-up, or the window expired.
  */
 function getPostCompletionFinalMessage(list, row, resolveBoardCompletion) {
   if (row.groupChatId) return null;
@@ -421,6 +501,12 @@ function getPostCompletionFinalMessage(list, row, resolveBoardCompletion) {
   const finalMs = parseRowTimeMs(finalRow);
   if (rowTime - finalMs > REPEATED_MESSAGE_WINDOW_MS) return null;
   if (typeof board.hasUserMessageSince === 'function' && board.hasUserMessageSince(finalMs)) {
+    return null;
+  }
+  if (
+    typeof board.relaysFollowUpAnswer === 'function' &&
+    board.relaysFollowUpAnswer(list, row, finalMs)
+  ) {
     return null;
   }
   return finalRow;
@@ -514,6 +600,8 @@ function prepareInboxMessage(paths, flags) {
           ? {
               ...epoch,
               hasUserMessageSince: (sinceMs) => hasUserMessageSince(paths, sinceMs),
+              relaysFollowUpAnswer: (list, row, finalMs) =>
+                relaysFollowUpAnswer(paths, list, row, finalMs, epoch.lastBoardEventMs),
               isReplyToHumanMessage: (row) => isReplyToHumanMessage(paths, row),
             }
           : null;

@@ -241,7 +241,7 @@ it('projects bounded exact shell matcher facts before CDP without commands or re
   } finally { port.dispose(); }
 });
 
-it('diagnoses Windows command spelling without accepting equivalent or unbound commands', () => {
+it('canonicalizes Windows path separators while rejecting case changes and unbound commands', () => {
   const program = 'C:\\TEST-project\\bob-verify.cjs';
   const marker = 'COMMAND_EXEC:TEST-private-nonce';
   const match = new Function(`return ${serializedFunction(nativeCommandMatch)};`)() as typeof nativeCommandMatch;
@@ -275,7 +275,9 @@ it('diagnoses Windows command spelling without accepting equivalent or unbound c
   for (const command of ['echo node bob-verify.cjs', 'node bob-verify.cjs && echo done',
     'node ../bob-verify.cjs', 'node bob-verify.cjs.bak'])
     expect(observe(command, 'C:\\TEST-project').commandShape.relativeProgramArgument).toBe(false);
-  for (const result of [slash, caseChanged, relative, unbound, foreign]) {
+  expect(slash.programMatches).toBe(true);
+  expect(slash.nativeMatches).toBe(true);
+  for (const result of [caseChanged, relative, unbound, foreign]) {
     expect(result.programMatches).toBe(false);
     expect(result.nativeMatches).toBe(false);
     expect(result.succeeded).toBe(true);

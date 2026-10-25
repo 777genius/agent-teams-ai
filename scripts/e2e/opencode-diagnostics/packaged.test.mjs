@@ -45,6 +45,7 @@ import {
   observeCatalogBridge,
   bridgeObservationLocation,
   qualifyUIRefresh,
+  compareCatalogSnapshots,
 } from './packaged-verify.mjs';
 
 const exe = 'C:\\test builds\\win-unpacked\\Agent Teams AI.exe';
@@ -1603,4 +1604,31 @@ test('the grid read joined into the catalog refresh counts once; other extra dir
       label
     );
   }
+});
+
+
+test('independent fresh catalog membership drift is explicit without weakening UI completion proof', async () => {
+  const records = [
+    uiDirectory([{ providerId: 'opencode' }]),
+    uiRecord('loadModels', modelPage(['one', 'retired'], null, null, 2)),
+  ];
+  const inventory = await qualifyUIRefresh(records, { state: 'ready', models: ['opencode/one', 'opencode/retired'] });
+  assert.deepEqual(compareCatalogSnapshots(inventory, ['opencode/one', 'opencode/new']), {
+    comparison: 'independent-requests', changed: true, uiModelCount: 2, freshModelCount: 2,
+    removedSinceUI: ['opencode/retired'], addedSinceUI: ['opencode/new'],
+  });
+  await assert.rejects(qualifyUIRefresh(records, { state: 'ready', models: ['opencode/one'] }), /Rendered UI/);
+  const incomplete = [records[0], uiRecord('loadModels', modelPage(['one'], null, 'next', 2))];
+  await assert.rejects(qualifyUIRefresh(incomplete, { state: 'ready', models: ['opencode/one'] }), /Missing UI page/);
+});
+
+test('a populated UI source cannot qualify an unexpectedly empty independent fresh source', () => {
+  const inventory = { sources: ['opencode', 'kiro'], modelIds: ['opencode/one', 'kiro/auto'] };
+  assert.throws(() => compareCatalogSnapshots(inventory, []), /unexpectedly empty/);
+  assert.throws(() => compareCatalogSnapshots(inventory, ['kiro/auto']), /Fresh opencode.*unexpectedly empty/);
+  assert.deepEqual(compareCatalogSnapshots(inventory, ['kiro/auto', 'opencode/one']), {
+    comparison: 'independent-requests', changed: false, uiModelCount: 2, freshModelCount: 2,
+    removedSinceUI: [], addedSinceUI: [],
+  });
+  assert.equal(compareCatalogSnapshots({ sources: [], modelIds: [] }, []).changed, false);
 });
