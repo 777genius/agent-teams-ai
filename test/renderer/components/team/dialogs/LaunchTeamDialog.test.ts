@@ -4,6 +4,9 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const promptChipDraftMock = vi.hoisted(() => ({
+  chips: [] as import('@shared/types/inlineChip').InlineChip[],
+}));
 const openDashboard = vi.fn();
 const openTeamTab = vi.fn();
 const fetchCliStatus = vi.fn();
@@ -471,10 +474,12 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => ({
 
 vi.mock('@renderer/hooks/useChipDraftPersistence', () => ({
   useChipDraftPersistence: () => ({
-    chips: [],
+    chips: promptChipDraftMock.chips,
     removeChip: vi.fn(),
     addChip: vi.fn(),
-    clearChipDraft: vi.fn(),
+    clearChipDraft: vi.fn(() => {
+      promptChipDraftMock.chips = [];
+    }),
   }),
 }));
 
@@ -706,6 +711,7 @@ import { LaunchTeamDialog } from '@renderer/components/team/dialogs/LaunchTeamDi
 import { runProviderPrepareDiagnostics } from '@renderer/components/team/dialogs/providerPrepareDiagnostics';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
 import { reconcileCliProviderSnapshot } from '@renderer/store/slices/cliInstallerStatusReconciliation';
+import { createEncodedTaskReference } from '@renderer/utils/taskReferenceUtils';
 import {
   getTeamModelSelectionError,
   isTeamModelAvailableForUi,
@@ -1330,6 +1336,7 @@ describe('LaunchTeamDialog', () => {
   );
 
   beforeEach(() => {
+    promptChipDraftMock.chips = [];
     if (typeof localStorage?.getItem !== 'function' || typeof localStorage?.clear !== 'function') {
       const store = new Map<string, string>();
       vi.stubGlobal('localStorage', {
@@ -1733,6 +1740,92 @@ describe('LaunchTeamDialog', () => {
         } as any);
       }
     });
+
+    it.each([false, true])(
+      'clears replaced prompt chips and serializes only later insertions (insert: %s)',
+      async (insertAfterApply) => {
+        vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+        const taskRef = createEncodedTaskReference('42', 'canonical-task-id', 'other-team');
+        vi.mocked(api.customTeamTemplates.listTemplates).mockResolvedValue({
+          status: 'ready',
+          templates: [{ ...customTemplateRecord, teamPrompt: `Read 📄index.ts and ${taskRef}` }],
+        } as any);
+        promptChipDraftMock.chips = [
+          {
+            id: 'file-chip',
+            filePath: '/tmp/old-project/private/index.ts',
+            fileName: 'index.ts',
+            displayPath: 'private/index.ts',
+            fromLine: null,
+            toLine: null,
+            codeText: '',
+            language: '',
+          },
+        ];
+        const restoreLaunchTeam = installStatefulLaunchTeamSetter();
+        const host = document.createElement('div');
+        document.body.appendChild(host);
+        const root = createRoot(host);
+        try {
+          const onCreate = await renderCreateDialog(host, root);
+          // Ordinary launch flow keeps its prompt field.
+          expect(host.querySelector('textarea#team-prompt')).not.toBeNull();
+          const customOption = host.querySelector(
+            '[data-testid="create-template-option-custom-tmpl-review-1"]'
+          ) as HTMLButtonElement | null;
+          expect(customOption, host.textContent ?? '').not.toBeNull();
+          await act(async () => {
+            customOption!.click();
+            await flush();
+          });
+          expect(createTeamDraftMock.state.launchTeam).toBe(false);
+          // Regression: applying the template switches to config-only semantics,
+          // but the template prompt must stay visible and editable before submit.
+          const textarea = host.querySelector('textarea#team-prompt') as HTMLTextAreaElement | null;
+          expect(textarea, host.textContent ?? '').not.toBeNull();
+          expect(textarea!.value).toBe(`Read 📄index.ts and ${taskRef}`);
+          // Simulate a file insertion only after the template replaced the prompt.
+          // Reusing its visible basename must not revive the old project's chip.
+          if (insertAfterApply)
+            promptChipDraftMock.chips.push({
+              id: 'new-file-chip',
+              filePath: '/tmp/project/src/api/index.ts',
+              fileName: 'index.ts',
+              displayPath: 'src/api/index.ts',
+              fromLine: null,
+              toLine: null,
+              codeText: '',
+              language: '',
+            });
+          await act(async () => {
+            setPromptTextarea(host, `Read 📄index.ts and ${taskRef}!`);
+            await flush();
+          });
+          const createButton = findCreateButton(host);
+          expect(createButton?.disabled, host.textContent ?? '').toBe(false);
+          await act(async () => {
+            createButton!.click();
+            await flush();
+          });
+          expect(api.teams.createConfig).toHaveBeenCalledTimes(1);
+          const payload = vi.mocked(api.teams.createConfig).mock.calls[0]?.[0] as any;
+          expect(payload.prompt).toBe(
+            insertAfterApply
+              ? `Read **index.ts** (\`src/api/index.ts\`) and ${taskRef}!`
+              : `Read 📄index.ts and ${taskRef}!`
+          );
+          expect(payload.prompt).not.toContain('private/index.ts');
+          expect(onCreate).not.toHaveBeenCalled();
+        } finally {
+          act(() => root.unmount());
+          restoreLaunchTeam();
+          vi.mocked(api.customTeamTemplates.listTemplates).mockReset();
+          vi.mocked(api.customTeamTemplates.listTemplates).mockResolvedValue({
+            status: 'empty',
+          } as any);
+        }
+      }
+    );
 
     it('keeps a built-in template prompt editable the same way', async () => {
       vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);

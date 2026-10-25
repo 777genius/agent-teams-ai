@@ -84,6 +84,7 @@ import {
 } from '@renderer/services/createTeamPreferences';
 import { useStore } from '@renderer/store';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
+import { serializePromptChips } from '@renderer/types/inlineChip';
 import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { resolveUiOwnedProviderBackendId } from '@renderer/utils/providerBackendIdentity';
@@ -1597,9 +1598,8 @@ export const CreateTeamDialog = ({
   const { suggestions: teamMentionSuggestions } = useTeamSuggestions(null, {
     enabled: workflowMentionSuggestionsEnabled,
   });
-
   const description = descriptionDraft.value;
-  const prompt = promptDraft.value;
+  const prompt = serializePromptChips(promptDraft.value, promptChipDraft.chips);
   const memberColorMap = useMemo(() => buildMemberDraftColorMap(members), [members]);
 
   const mentionSuggestions = useMemo(
@@ -2480,6 +2480,7 @@ export const CreateTeamDialog = ({
                 }
                 descriptionDraft.setValue(draft.description ?? '');
                 promptDraft.setValue(draft.prompt ?? '');
+                promptChipDraft.clearChipDraft();
                 setMembers(
                   buildInitialRosterMemberDrafts({
                     copiedMembers: draft.members,

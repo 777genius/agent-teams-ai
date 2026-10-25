@@ -1,12 +1,12 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   CHIP_MARKER,
   chipDisplayLabel,
-  chipToMarkdown,
   chipToken,
+  chipToMarkdown,
   serializeChipsWithText,
 } from '@renderer/types/inlineChip';
+import { createEncodedTaskReference } from '@renderer/utils/taskReferenceUtils';
+import { describe, expect, it } from 'vitest';
 
 import type { InlineChip } from '@renderer/types/inlineChip';
 
@@ -114,6 +114,17 @@ describe('chipToMarkdown', () => {
 });
 
 describe('serializeChipsWithText', () => {
+  it('preserves encoded task references only when the caller opts in', () => {
+    const ref = createEncodedTaskReference('42', 'canonical-id', 'other-team');
+    const chip = makeChip({ fromLine: null, toLine: null, displayPath: 'src/auth.ts' });
+    const text = `Read ${chipToken(chip)} for ${ref}`;
+    expect(serializeChipsWithText(text, [chip])).toBe('Read **auth.ts** (`src/auth.ts`) for #42');
+    expect(serializeChipsWithText(text, [chip], { preserveTaskReferenceMetadata: true })).toBe(
+      `Read **auth.ts** (\`src/auth.ts\`) for ${ref}`
+    );
+    expect(serializeChipsWithText(ref, [], { preserveTaskReferenceMetadata: true })).toBe(ref);
+  });
+
   it('returns text unchanged when no chips', () => {
     expect(serializeChipsWithText('hello world', [])).toBe('hello world');
   });
