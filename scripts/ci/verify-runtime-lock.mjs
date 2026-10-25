@@ -93,7 +93,9 @@ if (
   !opencodeV2 ||
   typeof opencodeV2 !== 'object' ||
   !opencodeV2.range ||
-  !Array.isArray(opencodeV2.qualified)
+  !opencodeV2.qualified ||
+  typeof opencodeV2.qualified !== 'object' ||
+  Array.isArray(opencodeV2.qualified)
 ) {
   fail('opencodeV2 must copy the published runtime manifest contract ({ range, qualified }).');
 }
