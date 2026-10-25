@@ -26,6 +26,7 @@ import { stageNativeTestNode } from './opencode-native-test-node';
 import {
   realTaskPrompt,
   verificationInstruction,
+  windowsVerificationCommand,
 } from './opencode-native-real-task-prompts';
 import { isOpenCodeV2QualifiedVersion } from '../../src/features/opencode-compatibility/core/domain/pinnedOpenCodeV2Contract';
 import { redactLaunchFailureArtifactText } from '../../src/main/services/team/TeamLaunchFailureArtifactPack';
@@ -2257,13 +2258,29 @@ async function main() {
     const base = `Work only inside ${desktop.projectPath}. Never delegate, install packages, detach processes or change host verification scripts. Use team tools for peer messages and task comments. When a peer sends CHALLENGE:<token>, reply to that sender ACK:<token> exactly. Never reply to ACK.`;
     const command = (name: string) => {
       const program = path.join(desktop.projectPath, name);
-      for (const file of [program, testNode.executable]) assert(
-        [...file].every((char) => char.charCodeAt(0) >= 32) && !/["%!^&<>|`$]/.test(file),
-        'Literal Windows TEST command path required'
-      );
-      // JSON string escaping doubles backslashes in cmd/PowerShell arguments.
-      return `"${testNode.executable}" "${program}"`;
+      return windowsVerificationCommand(testNode.executable, program);
     };
+
+    // Prove the literal command dialect before spending a model turn. The same
+    // staged Node and command builder execute a TEST-only marker program.
+    await checkpoint('command_syntax');
+    const syntaxMarker = `HOST_COMMAND_SYNTAX:${randomUUID()}`;
+    await writeFile(path.join(desktop.projectPath, 'host-command-syntax.cjs'),
+      `console.log(${JSON.stringify(syntaxMarker)});`);
+    const syntaxCommand = command('host-command-syntax.cjs');
+    const systemRoot = process.env.SystemRoot ?? process.env.SYSTEMROOT;
+    assert(systemRoot && path.isAbsolute(systemRoot), 'Windows system shell root required');
+    for (const [shell, args] of [
+      [path.join(systemRoot, 'System32/WindowsPowerShell/v1.0/powershell.exe'),
+        ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', syntaxCommand]],
+      [path.join(systemRoot, 'System32/cmd.exe'), ['/d', '/s', '/c', syntaxCommand]],
+    ] as const) {
+      const result = await execute(shell, [...args], {
+        cwd: desktop.projectPath, env: desktop.env, timeout: 20_000, maxBuffer: 16_384,
+      });
+      assert.equal(result.stdout.trim(), syntaxMarker, 'Literal TEST Node command did not execute');
+    }
+    await testNode.verify();
 
     const checkSum = `const a=require('node:assert/strict');a.equal(process.platform,'win32');const sum=require('./sum.cjs');a.equal(sum([]),0);a.equal(sum([2,-5,7]),4);a.equal(sum([1.5,2.5]),4);a.equal(sum([-2,-3]),-5);for(const v of [null,[NaN],[Infinity],['1']])a.throws(()=>sum(v),TypeError);`;
     await writeFile(
@@ -2280,7 +2297,7 @@ async function main() {
     );
     const verificationHashes = Object.fromEntries(
       await Promise.all(
-        ['alice-verify.cjs', 'bob-verify.cjs', 'host-verify.cjs'].map(async (name) => [
+        ['alice-verify.cjs', 'bob-verify.cjs', 'host-verify.cjs', 'host-command-syntax.cjs'].map(async (name) => [
           name,
           await exactFile(desktop.projectPath, name),
         ])

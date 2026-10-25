@@ -1,8 +1,14 @@
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import {
   realTaskPrompt,
   verificationInstruction,
+  windowsVerificationCommand,
 } from '../../scripts/e2e/opencode-native-real-task-prompts';
 
 describe('native real-task prompt contract', () => {
@@ -95,5 +101,51 @@ describe('native verification command contract', () => {
       prompt.indexOf('Completion protocol')
     );
     expect(prompt.indexOf('Completion protocol')).toBeGreaterThan(-1);
+  });
+});
+
+describe('cross-shell Windows verifier invocation', () => {
+  it.skipIf(process.platform !== 'win32')('executes the unchanged verifier in PowerShell and cmd', () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'TEST-command-'));
+    try {
+      const verifier = path.join(directory, 'verify.cjs');
+      writeFileSync(verifier, "console.log('VERIFIER_EXECUTED')");
+      const command = windowsVerificationCommand(process.execPath, verifier);
+      const system = process.env.SystemRoot ?? 'C:\\Windows';
+      for (const [shell, args] of [
+        [path.join(system, 'System32/WindowsPowerShell/v1.0/powershell.exe'),
+          ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', command]],
+        [path.join(system, 'System32/cmd.exe'), ['/d', '/s', '/c', command]],
+      ] as const) {
+        expect(execFileSync(shell, [...args], { encoding: 'utf8', timeout: 20_000 }).trim())
+          .toBe('VERIFIER_EXECUTED');
+      }
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('does not quote the executable as a PowerShell string expression', () => {
+    expect(windowsVerificationCommand('D:\\a\\_temp\\TEST-node\\node.exe',
+      'D:\\a\\_temp\\TEST-project\\alice-verify.cjs')).toBe(
+      'D:/a/_temp/TEST-node/node.exe "D:/a/_temp/TEST-project/alice-verify.cjs"'
+    );
+  });
+
+  it('keeps a verifier argument with spaces quoted and accepts canonical slash input', () => {
+    expect(windowsVerificationCommand('C:/TEST-node/node.exe',
+      'C:/TEST-project with space/alice-verify.cjs')).toBe(
+      'C:/TEST-node/node.exe "C:/TEST-project with space/alice-verify.cjs"'
+    );
+  });
+
+  it.each(['C:/TEST node/node.exe', 'node.exe', 'C:/TEST-$x/node.exe',
+    'C:/TEST;echo/node.exe', 'C:/TEST/../node.exe', 'C:/TEST/node.exe\n'])( 'refuses a nonliteral executable path: %s', executable => {
+    expect(() => windowsVerificationCommand(executable, 'C:/TEST/alice-verify.cjs')).toThrow();
+  });
+
+  it.each(['C:/TEST/$x.cjs', 'C:/TEST/$(echo).cjs', 'C:/TEST/a".cjs',
+    'C:/TEST/%PATH%.cjs', 'C:/TEST/../alice.cjs', './alice.cjs'])( 'refuses shell interpolation or a nonabsolute verifier: %s', program => {
+    expect(() => windowsVerificationCommand('C:/TEST/node.exe', program)).toThrow();
   });
 });
