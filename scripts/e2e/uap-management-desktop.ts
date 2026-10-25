@@ -18,6 +18,12 @@ import { promisify } from 'node:util';
 import { CdpClient } from './comment-notification/cdp.mjs';
 import { postWithReboundHost } from './uap-management-http';
 import { openCodeMcpServer } from './uap-management-native';
+import {
+  actionablePoint,
+  applyAndWaitForOperation,
+  screenshotWhenSettled,
+  type DesktopCdp,
+} from './uap-management-ui';
 
 import type {
   ExtensionContext,
@@ -27,14 +33,6 @@ import type {
   ManagementPlan,
   LocalSkillStatus,
 } from '../../src/features/extension-management/contracts';
-
-interface DesktopCdp {
-  evaluate(expression: string): Promise<unknown>;
-  send(method: string, params?: Record<string, unknown>): Promise<unknown>;
-  screenshot(file: string): Promise<void>;
-  close(): Promise<void>;
-  on(method: string, callback: (params: unknown) => void): void;
-}
 
 const run = promisify(execFile);
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -363,13 +361,15 @@ const button = (label: string, root = 'document') =>
 const panel = 'document.querySelector("[data-testid=uap-skill]")';
 const installedRow = `${panel}?.querySelector('[data-testid=uap-installed-entry]')`;
 async function click(expression: string) {
-  await wait(expression, `click target ${expression}`);
-  const point = await cdp!.evaluate(
-    `(() => { const e = ${expression}; if (!(e instanceof HTMLElement) || ('disabled' in e && e.disabled)) return null; e.scrollIntoView({block:'center'}); const r=e.getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`
-  );
+  const pointExpression = actionablePoint(expression);
+  await wait(pointExpression, `enabled visible click target ${expression}`);
+  const point = await cdp!.evaluate(pointExpression);
   assert(point && typeof point === 'object', `Missing or disabled click target: ${expression}`);
   for (const type of ['mousePressed', 'mouseReleased'])
     await cdp!.send('Input.dispatchMouseEvent', { type, ...point, button: 'left', clickCount: 1 });
+}
+async function screenshot(file: string) {
+  await screenshotWhenSettled(cdp!, wait, file);
 }
 async function key(value: string, code = value, modifiers = 0) {
   for (const type of ['rawKeyDown', 'keyUp'])
@@ -403,12 +403,7 @@ async function reviewAndApply(root = panel) {
     'confirmable Go plan',
     90_000
   );
-  await click(button('Apply changes'));
-  await wait(
-    `!document.querySelector('[role=dialog]') && ${root}?.querySelector('[data-testid=uap-operation]')?.textContent?.includes('Completed')`,
-    'completed operation',
-    120_000
-  );
+  await applyAndWaitForOperation(cdp!, wait, root, () => click(button('Apply changes')));
 }
 
 async function registryPlugin(f: Awaited<ReturnType<typeof fixture>>) {
@@ -444,13 +439,13 @@ async function registryPlugin(f: Awaited<ReturnType<typeof fixture>>) {
     'reviewed signed catalog entry',
     90_000
   );
-  await cdp!.screenshot(path.join(f.shots, '11-registry-plugin.png'));
+  await screenshot(path.join(f.shots, '11-registry-plugin.png'));
   await click(`${card}.querySelector('button')`);
   await wait(`document.querySelector('[role=dialog]')`, 'registry plugin details');
   await key('Escape');
   await click(button('Install', card));
   await wait(button('Apply changes'), 'signed registry installation review');
-  await cdp!.screenshot(path.join(f.shots, '12-registry-install-review.png'));
+  await screenshot(path.join(f.shots, '12-registry-install-review.png'));
   await reviewAndApply(pluginPanel);
   const entry = (await environment()).entries.find((item) => item.kind === 'plugin');
   assert(entry?.declared && entry.version === expected.version);
@@ -466,7 +461,7 @@ async function registryPlugin(f: Awaited<ReturnType<typeof fixture>>) {
     type: 'remote',
     url: 'https://docs.mcp.cloudflare.com/mcp',
   });
-  await cdp!.screenshot(path.join(f.shots, '13-registry-installed.png'));
+  await screenshot(path.join(f.shots, '13-registry-installed.png'));
   await click(
     button('Remove', `${pluginPanel}.querySelector('[data-testid=uap-installed-entry]')`)
   );
@@ -481,7 +476,7 @@ async function registryPlugin(f: Awaited<ReturnType<typeof fixture>>) {
     actualNativeConfiguration: true,
     removed: true,
   };
-  await cdp!.screenshot(path.join(f.shots, '14-registry-removed.png'));
+  await screenshot(path.join(f.shots, '14-registry-removed.png'));
 }
 async function environment(): Promise<ManagementEnvironment> {
   return (await cdp!.evaluate(
@@ -590,7 +585,7 @@ async function localSkillLifecycle(f: Awaited<ReturnType<typeof fixture>>, copie
   await fill('#skill-description', 'Edited through the existing local Skill editor');
   await click(button('Review And Save'));
   await wait(button('Save Skill'), 'local exact-byte edit review');
-  await cdp!.screenshot(path.join(f.shots, '08-local-edit-review.png'));
+  await screenshot(path.join(f.shots, '08-local-edit-review.png'));
   await click(button('Save Skill'));
   await wait(
     `!document.querySelector('#skill-name') && !${button('Save Skill')}`,
@@ -625,7 +620,7 @@ async function localSkillLifecycle(f: Awaited<ReturnType<typeof fixture>>, copie
   const row = `Array.from(${restore}.querySelectorAll('div')).find(e=>e.querySelector('span')?.textContent==='${path.basename(copied)}')`;
   await click(button('Review restoration', row));
   await wait(button('Apply changes'), 'restart-visible local restoration review');
-  await cdp!.screenshot(path.join(f.shots, '09-restart-restore-review.png'));
+  await screenshot(path.join(f.shots, '09-restart-restore-review.png'));
   await reviewAndApply();
   assert.equal(await readFile(path.join(copied, 'SKILL.md'), 'utf8'), edited);
   assert.deepEqual(await readFile(path.join(copied, 'assets/sample.bin')), imageBytes);
@@ -633,7 +628,7 @@ async function localSkillLifecycle(f: Awaited<ReturnType<typeof fixture>>, copie
     !(await environment()).pendingOperations?.length,
     'fully restored local operation must leave no pending fence'
   );
-  await cdp!.screenshot(path.join(f.shots, '10-restored.png'));
+  await screenshot(path.join(f.shots, '10-restored.png'));
   evidence.localAuthoring = {
     edited: true,
     binaryPreserved: true,
@@ -646,7 +641,7 @@ async function localSkillLifecycle(f: Awaited<ReturnType<typeof fixture>>, copie
 
 async function exercise(f: Awaited<ReturnType<typeof fixture>>) {
   await openSkills();
-  await cdp!.screenshot(path.join(f.shots, '01-empty-environment.png'));
+  await screenshot(path.join(f.shots, '01-empty-environment.png'));
   assert.equal(
     (await environment()).entries.length,
     0,
@@ -680,7 +675,7 @@ async function exercise(f: Awaited<ReturnType<typeof fixture>>) {
     1,
     'preview must keep one dialog'
   );
-  await cdp!.screenshot(path.join(f.shots, '02-source-preview.png'));
+  await screenshot(path.join(f.shots, '02-source-preview.png'));
   await key('Escape');
   await wait(
     `document.querySelector('#uap-source-skill') && !${button('Back to discovered Skills')}`,
@@ -689,10 +684,10 @@ async function exercise(f: Awaited<ReturnType<typeof fixture>>) {
   await click(`document.querySelector('[role=checkbox][aria-label="${skillName}"]')`);
   await click(button('Review installation'));
   await wait(button('Apply changes'), 'installation review');
-  await cdp!.screenshot(path.join(f.shots, '03-install-review.png'));
+  await screenshot(path.join(f.shots, '03-install-review.png'));
   await reviewAndApply();
   await wait(installedRow, 'installed row');
-  await cdp!.screenshot(path.join(f.shots, '04-installed.png'));
+  await screenshot(path.join(f.shots, '04-installed.png'));
   await cdp!.send('Emulation.setDeviceMetricsOverride', {
     width: 760,
     height: 900,
@@ -705,7 +700,7 @@ async function exercise(f: Awaited<ReturnType<typeof fixture>>) {
     await cdp!.evaluate(`${panel}.scrollWidth <= ${panel}.clientWidth + 1`),
     'managed panel must fit a narrow window'
   );
-  await cdp!.screenshot(path.join(f.shots, '04-narrow-installed.png'));
+  await screenshot(path.join(f.shots, '04-narrow-installed.png'));
   await cdp!.send('Emulation.clearDeviceMetricsOverride');
   evidence.narrowLayout = { width: 760, horizontalOverflow: false, sourceKeyboardNavigation: true };
   const installed = await environment();
@@ -738,13 +733,16 @@ async function exercise(f: Awaited<ReturnType<typeof fixture>>) {
   await verifyHttp(f);
   await click(button('Make a local copy', installedRow));
   await wait(button('Review And Import'), 'reused import dialog');
-  await cdp!.screenshot(path.join(f.shots, '05-copy-dialog.png'));
+  await screenshot(path.join(f.shots, '05-copy-dialog.png'));
   await click(button('Review And Import'));
   await wait(button('Import Skill'), 'copy file review');
-  await click(button('Import Skill'));
-  await wait(
-    `!document.querySelector('[role=dialog]') && ${panel}?.querySelector('[data-testid=uap-operation]')?.textContent?.includes('Completed')`,
-    'Go local copy'
+  await applyAndWaitForOperation(
+    cdp!,
+    wait,
+    panel,
+    () => click(button('Import Skill')),
+    'Go local copy',
+    60_000
   );
   const copied = path.join(f.home, '.claude', 'skills', `${skillName}-copy`);
   assert.deepEqual(await readFile(path.join(copied, 'assets', 'sample.bin')), imageBytes);
@@ -753,14 +751,14 @@ async function exercise(f: Awaited<ReturnType<typeof fixture>>) {
   await click(button('Update', installedRow));
   await reviewAndApply();
   assert.match(await readFile(path.join(projected, 'SKILL.md'), 'utf8'), /revision 2/);
-  await cdp!.screenshot(path.join(f.shots, '06-updated.png'));
+  await screenshot(path.join(f.shots, '06-updated.png'));
   evidence.targetedUpdate = true;
   await click(button('Remove', installedRow));
   await reviewAndApply();
   assert.equal((await environment()).entries.filter((item) => item.kind === 'skill').length, 0);
   await assert.rejects(readFile(path.join(projected, 'SKILL.md')));
   assert.match(await readFile(path.join(copied, 'SKILL.md'), 'utf8'), /revision 1/);
-  await cdp!.screenshot(path.join(f.shots, '07-removed-copy-preserved.png'));
+  await screenshot(path.join(f.shots, '07-removed-copy-preserved.png'));
   evidence.targetedRemoval = true;
   await localSkillLifecycle(f, copied);
   await registryPlugin(f);
@@ -772,7 +770,7 @@ const f = await fixture();
 process.stdout.write(`Disposable UAP desktop fixture: ${f.root}\n`);
 try {
   await start(f);
-  await cdp!.screenshot(path.join(f.shots, '00-desktop.png'));
+  await screenshot(path.join(f.shots, '00-desktop.png'));
   process.stdout.write(`Actual Electron renderer ready: ${path.join(f.root, 'connection.json')}\n`);
   if (process.env.UAP_E2E_HOLD === '1') {
     await Promise.race([once(process, 'SIGTERM'), once(process, 'SIGINT')]);
