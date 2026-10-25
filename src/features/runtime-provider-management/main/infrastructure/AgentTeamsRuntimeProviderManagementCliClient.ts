@@ -3,6 +3,8 @@ import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { execCli, killProcessTree, spawnCli } from '@main/utils/childProcess';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 
+import { getRuntimeProviderConnectTimeoutMs as connectTimeoutMs } from '../../core/domain';
+
 import { recoverOpenCodeConnectApiKeyVerifyFailure } from './openCodeConnectApiKeyFallback';
 import {
   ensureOpenCodeGlobalDefaultContextPath,
@@ -81,9 +83,7 @@ import type { RuntimeProviderManagementPort } from '@features/runtime-provider-m
 import type { ChildProcessWithoutNullStreams } from 'child_process';
 
 const COMMAND_TIMEOUT_MS = 90_000;
-const OPENCODE_API_KEY_COMMAND_TIMEOUT_MS = 180_000;
-// Outlive the runtime's provider callback window while remaining bounded and
-// cancellable from the UI.
+// Outlive the runtime's provider callback window while bounded and cancellable from the UI.
 const OAUTH_COMMAND_TIMEOUT_MS = 17 * 60_000;
 const OAUTH_CANCEL_FORCE_KILL_DELAY_MS = 2_000;
 const MAX_DIRECTORY_RESPONSE_CACHE_ENTRIES = 32;
@@ -1934,7 +1934,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
           },
         });
       } else {
-        result = await collectSpawnOutput(child, stdinValue);
+        result = await collectSpawnOutput(child, stdinValue, connectTimeoutMs(input.runtimeId));
       }
       const parsed = parseProviderCommandResponse(input.runtimeId, context, result);
       return this.recoverConnectVerifyFailure(input, parsed);
@@ -2109,7 +2109,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       const result = await collectSpawnOutput(
         child,
         input.apiKey,
-        input.runtimeId === 'opencode' ? OPENCODE_API_KEY_COMMAND_TIMEOUT_MS : COMMAND_TIMEOUT_MS
+        connectTimeoutMs(input.runtimeId)
       );
       return this.recoverConnectVerifyFailure(
         input,

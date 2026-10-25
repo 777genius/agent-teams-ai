@@ -18,9 +18,10 @@ export type NativeCommandExpectation = {
 export function nativeCommandMatch(execution: NativeCommandExecution, program: string, marker: string) {
   const command = execution.toolCall.input.command;
   const shell = ['bash', 'shell', 'exec'].includes(execution.toolCall.name);
-  const programMatches = typeof command === 'string' && command.includes(program);
+  const programMatches = typeof command === 'string' &&
+    command.replace(/\\/g, '/').includes(program.replace(/\\/g, '/'));
   const nodeMatches = typeof command === 'string' && /\bnode(?:\.exe)?\b/i.test(command);
-  // Diagnostic presence only. Equivalent spellings never relax acceptance.
+  // Only slash direction is canonicalized; case and absolute program identity stay exact.
   // Keep this closure self-contained because the host serializes it into CDP.
   const slash = (value: string) => value.replace(/\\/g, '/');
   const normalizedProgram = slash(program);
