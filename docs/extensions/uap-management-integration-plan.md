@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v10; source-reference UX, native MCP dispatch proof and current-commit qualification.
+Status: implementation plan v11; noninteractive native input correction and final current-commit qualification.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -13,7 +13,37 @@ commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
 
-## Current checkpoint — v10 (2026-10-25)
+## Current checkpoint — v11 (2026-10-25)
+
+The clean desktop run on app `501916f1532d0c2bd48eb4867a09228116009c5f`,
+synthetic merge `3cbfb0b8237770a62ad40ac68d571f2da1c25584`, completed the existing
+UI journey with no renderer errors: installation, binary copy, update/removal,
+local edit/delete, actual restart, capability revocation, exact restore and signed
+registry install/removal. Artifact `12597537321` retains those assertions and
+screenshots. The new source plugin also installed through the ordinary UI and
+security review, with the expected UAP-owned native MCP configuration.
+
+The new native invocation then timed out before any MCP/provider request. The
+pinned OpenCode 1.18.34 [run command](https://github.com/anomalyco/opencode/blob/v1.18.34/packages/opencode/src/cli/cmd/run.ts)
+reads non-TTY stdin to EOF before creating the session, even when a prompt is
+supplied as an argument. Node's promisified execFile left that pipe open. The
+helper now closes only its owned noninteractive child's stdin before awaiting
+completion, matching the existing successful Go fixture's EOF behavior. The
+90-second deadline and all native protocol assertions remain unchanged. Failure
+logs now retain the error even when native stdout/stderr are empty. This is a
+test-driver correction, with no production/runtime or provider configuration
+change. The previous overall failed receipt remains failed; a new clean complete
+run is required.
+
+All four test shards, all three lint shards and canonical validation passed on
+501916f. Its Windows task smoke and platform package matrix were still unfinished
+at this checkpoint. The next head must satisfy its current gates; the live PR
+records subsequent exact-revision results. UAP executable/SDK source remains
+5224, independently requalified through the unchanged Python client and real
+OpenCode native discovery in 27.03 seconds. Formal CodeQL disposition and the
+separate project/Host prerequisites remain explicit outstanding boundaries.
+
+## Previous checkpoint — v10 (2026-10-25)
 
 This continuation builds on published app
 `ed4d3e3f4c1c5a62bca1184b28b75b06433ba43b` and the same matched UAP source

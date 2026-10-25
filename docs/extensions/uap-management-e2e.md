@@ -93,6 +93,9 @@ and a loopback MCP server. Only its model provider settings are seeded before
 installation; UAP owns every MCP configuration write. The provider returns a
 deterministic OpenAI-compatible tool request, and the actual OpenCode binary must
 dispatch it and return the exact tool result in its next provider request. The
+owned noninteractive native process receives stdin EOF before the harness awaits
+it: pinned OpenCode reads piped input even with a prompt argument. Its timeout is
+unchanged, and failure logs retain an error even when stdout/stderr are empty. The
 receipt records native identity, offered tools, protocol methods, arguments and
 both installed/removed stages; native stdout/stderr are retained as logs. This
 requires no model account and does not qualify live model behavior or OAuth.

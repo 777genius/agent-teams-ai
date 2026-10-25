@@ -217,7 +217,7 @@ export async function createNativeToolProof(root: string, native: string, env: N
         const label = removed ? 'removed' : 'installed';
         evidence.stages[label] = stage;
         try {
-          const output = await run(
+          const execution = run(
             native,
             [
               'run',
@@ -235,6 +235,10 @@ export async function createNativeToolProof(root: string, native: string, env: N
               killSignal: 'SIGKILL',
             }
           );
+          // OpenCode reads non-TTY input even when the prompt is passed in argv.
+          // This owned non-interactive child has no input; deliver EOF before awaiting exit.
+          execution.child.stdin?.end();
+          const output = await execution;
           await writeFile(
             path.join(root, `desktop-native-${label}.log`),
             output.stdout + output.stderr
@@ -264,11 +268,11 @@ export async function createNativeToolProof(root: string, native: string, env: N
           stage.status = 'failed';
           const output = error as { stdout?: string; stderr?: string };
           stage.errors.push(String(error));
-          if (output.stdout || output.stderr)
-            await writeFile(
-              path.join(root, `desktop-native-${label}.log`),
-              (output.stdout ?? '') + (output.stderr ?? '')
-            );
+          await writeFile(
+            path.join(root, `desktop-native-${label}.log`),
+            `\n${String(error)}\n${output.stdout ?? ''}${output.stderr ?? ''}`,
+            { flag: 'a' }
+          );
           throw error;
         }
       },
