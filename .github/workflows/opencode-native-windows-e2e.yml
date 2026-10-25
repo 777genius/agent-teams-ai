@@ -479,6 +479,7 @@ jobs:
         env:
           SDK_REF: ${{ inputs.sdk_ref }}
           CANDIDATE_PLATFORM: win32-x64
+          VERSIONS: ${{ inputs.versions }}
           CANDIDATE_OPENCODE_V2_CONTRACT: ${{ steps.opencode-pins.outputs.contract }}
         run: |
           $ErrorActionPreference = 'Stop'
@@ -499,7 +500,11 @@ jobs:
           $lock.assets.'win32-x64'.sha256 = (Get-FileHash candidate/TEST-runtime-win32-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
           # A runtime pin copies the release's published V2 contract; the candidate does the same,
           # so the packaged app admits exactly the versions this runtime qualifies.
-          if ($env:CANDIDATE_OPENCODE_V2_CONTRACT) { $lock.opencodeV2 = $env:CANDIDATE_OPENCODE_V2_CONTRACT | ConvertFrom-Json }
+          # V1-only runs never read the runtime registry and start no V2 release.
+          if ($env:VERSIONS -ne 'v1') {
+            if (!$env:CANDIDATE_OPENCODE_V2_CONTRACT) { throw 'Candidate OpenCode V2 contract missing' }
+            $lock.opencodeV2 = $env:CANDIDATE_OPENCODE_V2_CONTRACT | ConvertFrom-Json
+          }
           $lock | ConvertTo-Json -Depth 20 | Set-Content ../TEST-native-source/runtime.lock.json -Encoding utf8NoBOM
           New-Item -ItemType Directory -Force ../TEST-native-source/resources | Out-Null
           if (Test-Path ../TEST-native-source/resources/runtime/claude-multimodel.exe) { throw 'Unexpected preexisting runtime' }

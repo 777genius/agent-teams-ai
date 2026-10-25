@@ -17,6 +17,8 @@ import path from 'node:path';
 import { lstat, realpath } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
+import { readOpenCodeV2Contract } from '../../src/features/opencode-compatibility/core/domain/openCodeV2Contract.ts';
+
 const PLATFORM = 'win32-x64';
 const V1_PIN = '1.19.0';
 
@@ -38,6 +40,8 @@ if (versions !== 'v1') {
     'Selected runtime has no OpenCode V2 registry contract'
   );
   const contract: unknown = releaseContract();
+  // The packaged app parses the pinned contract with this exact reader; reject it before packaging.
+  assert(readOpenCodeV2Contract(contract) !== null, 'Selected runtime V2 contract is not a valid app contract');
   const qualified: unknown = (contract as { qualified?: Record<string, unknown> }).qualified?.[PLATFORM];
   assert(
     Array.isArray(qualified) && qualified.every((version) => typeof version === 'string'),

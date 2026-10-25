@@ -25,7 +25,8 @@ async function sdkWith(windows: readonly string[] | null): Promise<string> {
 }
 
 function resolvePins(sdk: string, versions: string) {
-  const child = spawnSync(process.execPath, [script, sdk, versions], { encoding: 'utf8' });
+  // A synchronous child blocks the test timer; bound it explicitly.
+  const child = spawnSync(process.execPath, [script, sdk, versions], { encoding: 'utf8', timeout: 10_000 });
   const outputs = Object.fromEntries(child.stdout.split('\n').filter(Boolean).map((line) => {
     const index = line.indexOf('=');
     return [line.slice(0, index), line.slice(index + 1)];
@@ -68,5 +69,9 @@ describe('native Windows OpenCode pins from the selected runtime registry', () =
     expect(unpinned.status).not.toBe(0);
     expect(unpinned.stderr).toContain('predates the OpenCode V2 registry');
     expect(unpinned.outputs).toEqual({});
+    // The packaged app would reject an unsorted contract; fail before packaging instead.
+    const unsorted = resolvePins(await sdkWith(['2.0.32', '2.0.0']), 'all');
+    expect(unsorted.status).not.toBe(0);
+    expect(unsorted.stderr).toContain('not a valid app contract');
   });
 });
