@@ -119,6 +119,26 @@ describe('local Skill engine adapter', () => {
     await f.executor.apply(preview.planId, f.request);
     expect(f.feature.apply.mock.calls[0]).toEqual(f.feature.apply.mock.calls[1]);
   });
+
+  it('binds scaffold create-only intent to the retained review', async () => {
+    const f = await fixture();
+    const request = {
+      ...f.request,
+      files: [
+        ...f.request.files,
+        { relativePath: 'assets/README.md', content: '# Assets', createOnly: true },
+      ],
+    };
+    const plan = await new SkillPlanService().buildUpsertPlan(f.skill, request.files);
+    const preview = await f.executor.preview(plan, request);
+    await expect(
+      f.executor.apply(preview.planId, {
+        ...request,
+        files: request.files.map((file) => ({ ...file, createOnly: false })),
+      })
+    ).rejects.toThrow('changed after review');
+    expect(f.feature.apply).not.toHaveBeenCalled();
+  });
   it('never falls back to a filesystem write when engine inspection is unavailable', async () => {
     const f = await fixture();
     f.feature.localSkillStatus.mockRejectedValue(new Error('engine unavailable'));

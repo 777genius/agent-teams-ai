@@ -34,10 +34,12 @@ export class SkillScaffoldService {
   }
 
   normalizeDraftFiles(files: SkillDraftFile[]): SkillDraftFile[] {
-    return files.map((file) => ({
-      ...file,
-      relativePath: this.normalizeRelativePath(file.relativePath),
-    }));
+    return files.map((file) => {
+      if (file.createOnly !== undefined && typeof file.createOnly !== 'boolean') {
+        throw new Error('createOnly must be a boolean');
+      }
+      return { ...file, relativePath: this.normalizeRelativePath(file.relativePath) };
+    });
   }
 
   private resolveWritableRoot(scope: SkillScope, rootKind: SkillRootKind, projectPath?: string) {

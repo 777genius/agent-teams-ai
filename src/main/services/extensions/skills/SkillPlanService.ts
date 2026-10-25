@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
+import { isBinaryFile } from 'isbinaryfile';
+
 import { SkillScanner } from './SkillScanner';
 
 import type { ImportedSkillSourceFile } from './SkillImportService';
@@ -13,7 +15,7 @@ import type {
 } from '@shared/types/extensions';
 
 type SkillPlanInputFile =
-  | { relativePath: string; isBinary: false; content: string }
+  | { relativePath: string; isBinary: false; content: string; createOnly?: boolean }
   | { relativePath: string; isBinary: true; sourceAbsolutePath: string };
 
 interface ManagedCurrentFile {
@@ -32,6 +34,9 @@ export interface SkillExecutionPlan {
 }
 
 const MANAGED_SUBDIRECTORIES = ['scripts', 'references', 'assets'] as const;
+const EDITOR_PLACEHOLDER_PATHS = new Set<string>(
+  MANAGED_SUBDIRECTORIES.map((directory) => `${directory}/README.md`)
+);
 export class SkillPlanService {
   constructor(private readonly scanner = new SkillScanner()) {}
 
@@ -43,6 +48,7 @@ export class SkillPlanService {
       relativePath: file.relativePath,
       isBinary: false,
       content: file.content,
+      createOnly: file.createOnly,
     }));
 
     return this.buildPlan(targetSkillDir, desiredFiles, 'upsert');
@@ -75,6 +81,7 @@ export class SkillPlanService {
     mode: 'upsert' | 'import'
   ): Promise<SkillExecutionPlan> {
     const normalizedDesired = this.normalizeDesiredFiles(desiredFiles);
+    const desiredPaths = new Set(normalizedDesired.map((file) => file.relativePath));
     const [currentManagedFiles, allExistingFiles] = await Promise.all([
       this.readCurrentManagedFiles(targetSkillDir),
       this.listAllRelativeFiles(targetSkillDir),
@@ -86,6 +93,7 @@ export class SkillPlanService {
       normalizedDesired.map(async (file) => {
         const absolutePath = path.join(targetSkillDir, file.relativePath);
         const existing = await this.readBytesIfExists(absolutePath);
+        if (!file.isBinary && file.createOnly && existing !== null) return;
         const action = existing === null ? 'create' : 'update';
         changesByRelativePath.set(file.relativePath, {
           relativePath: file.relativePath,
@@ -102,20 +110,28 @@ export class SkillPlanService {
     );
 
     for (const currentFile of currentManagedFiles.values()) {
-      if (changesByRelativePath.has(currentFile.relativePath)) {
+      if (desiredPaths.has(currentFile.relativePath)) {
         continue;
       }
 
+      // The editor represents the Skill document and optional starter READMEs, not the full tree.
+      const representedByEditor =
+        !currentFile.relativePath.includes('/') ||
+        EDITOR_PLACEHOLDER_PATHS.has(currentFile.relativePath);
+      if (mode === 'upsert' && !representedByEditor) continue;
+
       const existing = await this.readBytesIfExists(currentFile.absolutePath);
+      const binary = existing !== null && (await isBinaryFile(existing));
+      if (mode === 'upsert' && binary) continue;
       changesByRelativePath.set(currentFile.relativePath, {
         relativePath: currentFile.relativePath,
         absolutePath: currentFile.absolutePath,
         action: 'delete',
-        oldContent: existing?.toString('utf8') ?? null,
+        oldContent: binary ? null : (existing?.toString('utf8') ?? null),
         expectedSHA256:
           existing === null ? null : createHash('sha256').update(existing).digest('hex'),
         newContent: null,
-        isBinary: false,
+        isBinary: binary,
       });
     }
 
@@ -126,7 +142,7 @@ export class SkillPlanService {
       changes,
       currentManagedFiles,
       allExistingFiles,
-      desiredFiles: new Set(normalizedDesired.map((file) => file.relativePath)),
+      desiredFiles: desiredPaths,
       mode,
     });
 
@@ -232,7 +248,9 @@ export class SkillPlanService {
     const warnings: string[] = [];
     const deleteCount = changes.filter((change) => change.action === 'delete').length;
     const updateCount = changes.filter((change) => change.action === 'update').length;
-    const binaryCount = changes.filter((change) => change.isBinary).length;
+    const binaryCount = changes.filter(
+      (change) => change.isBinary && change.action !== 'delete'
+    ).length;
 
     if (deleteCount > 0) {
       warnings.push(

@@ -48,6 +48,13 @@ prints its disposable fixture directory. `UAP_E2E_HOLD=1` opens the actual app a
 retains the CDP connection details for manual inspection until SIGTERM or SIGINT.
 It does not mark the scenario complete in this mode.
 
+Set `TMPDIR` (and `TMP`/`TEMP` where relevant) to an isolated local temporary
+directory outside synchronized workspaces before starting the run. Background
+synchronization must not restore, remove or alter the native files whose ownership
+and exact bytes the scenario is checking. Keep live logs there as well; copy the
+completed evidence only after the owned processes exit. This isolates the test
+environment without changing native publication or recovery assertions.
+
 Every run uses a new HOME, native configuration directories, UAP state store,
 Electron user-data directory and runtime caches. No provider authentication is
 required. Only the fixture's own dev process group and detached MCP helper
@@ -79,6 +86,29 @@ authentication. The harness refuses a different catalog version until the new
 fixture has been reviewed. It does not send private inputs or claim model/OAuth
 qualification.
 
+## Reliable real input and result observation
+
+The harness sends real CDP pointer/key events and `Input.insertText`. It checks
+that a target is enabled, visible, stable and hit-testable, and that each filled
+field has the exact requested value. Tab navigation additionally observes
+`aria-selected` and its controlled visible panel. Only this idempotent navigation
+may retry, at most three times inside its existing deadline; after selection is
+observed, a later reset is a failure. Review/Apply submission is not repeated.
+
+Before Apply or Import, the harness records the displayed operation ID. Completion
+requires a different nonempty ID and the primary Completed status; a previous
+installation's Completed text cannot satisfy the next operation. Native file and
+binary-byte assertions then verify the actual effects.
+
+Successful screenshots wait for finite animations to finish. Infinite activity
+indicators remain active, and animations are neither disabled nor advanced.
+Failure screenshots are immediate. The local edit assertion checks the requested
+metadata in `SKILL.md` and the exact `assets/sample.bin` bytes. After an actual app
+restart, restoration must reproduce that edited `SKILL.md` and the same binary
+bytes. Focused planner tests separately cover omitted reference documents, nested
+scripts, and existing custom text/binary README files. A preview that deletes
+unrepresented files is a product failure, not a reason to relax assertions.
+
 ## Evidence and limitations
 
 The disposable fixture contains `evidence.json`, screenshots and desktop logs.
@@ -93,10 +123,17 @@ The standalone HTTP viewer has no runtime owner and deliberately refuses mutatio
 the HTTP scenario above exercises the desktop sidecar with its real owner.
 Native project/worktree installation, the unmerged Host migration, other native
 client platforms and authenticated model execution retain their separate
-qualification gates. Local project Skill authoring has a separate exact-artifact
-SDK/engine proof; it is not evidence for native project activation.
+qualification gates. Local project Skill authoring does not establish native
+project activation; the master scenario matrix records their evidence separately.
+
+The current desktop journey does not exercise moving-range multi-selection,
+real cancellation, an in-flight multi-project context switch, or a live
+authenticated team run. Their separate engine/renderer/admission evidence must
+be reported at its actual layer; passing this journey does not turn those cases
+into desktop E2E results.
 
 Unit regressions cover delayed observations during acceptance, active-profile
 admission, lost-reply request identity, stale/local delete retries, native removal
 attestation and catalog disposal. They complement the desktop lane and do not
 replace native execution or UI evidence.
+

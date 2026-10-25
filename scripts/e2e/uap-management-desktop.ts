@@ -21,7 +21,9 @@ import { openCodeMcpServer } from './uap-management-native';
 import {
   actionablePoint,
   applyAndWaitForOperation,
+  dispatchKey,
   screenshotWhenSettled,
+  selectTab,
   type DesktopCdp,
 } from './uap-management-ui';
 
@@ -372,20 +374,21 @@ async function screenshot(file: string) {
   await screenshotWhenSettled(cdp!, wait, file);
 }
 async function key(value: string, code = value, modifiers = 0) {
-  for (const type of ['rawKeyDown', 'keyUp'])
-    await cdp!.send('Input.dispatchKeyEvent', { type, key: value, code, modifiers });
+  await dispatchKey(cdp!, value, code, modifiers);
 }
 async function fill(selector: string, text: string) {
   await click(`document.querySelector(${JSON.stringify(selector)})`);
   await key('a', 'KeyA', process.platform === 'darwin' ? 4 : 2);
   await cdp!.send('Input.insertText', { text });
+  assert.equal(
+    await cdp!.evaluate(`document.querySelector(${JSON.stringify(selector)})?.value`),
+    text
+  );
 }
 async function openSkills() {
   await click(button('More actions'));
   await click(button('Extensions'));
-  await click(
-    `Array.from(document.querySelectorAll('[role=tab]')).find(e=>e.textContent?.trim()==='Skills')`
-  );
+  await selectTab(cdp!, wait, 'Skills');
   await wait(`${panel} && !${button('Agent runtime', panel)}?.disabled`, 'managed Skill context');
   await click(button('Agent runtime', panel));
   await click(
@@ -408,9 +411,7 @@ async function reviewAndApply(root = panel) {
 
 async function registryPlugin(f: Awaited<ReturnType<typeof fixture>>) {
   const pluginPanel = 'document.querySelector("[data-testid=uap-plugin]")';
-  await click(
-    `Array.from(document.querySelectorAll('[role=tab]')).find(e=>e.textContent?.trim()==='Plugins')`
-  );
+  await selectTab(cdp!, wait, 'Plugins');
   await wait(
     `${pluginPanel} && !${button('Agent runtime', pluginPanel)}?.disabled`,
     'universal Plugins entry point'

@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v7; candidate artifact pin, additional review findings and precise qualification boundaries incorporated.
+Status: implementation plan v8; reviewed implementation, exact artifact evidence, and remaining qualification gates.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -11,6 +11,202 @@ Owner authorization on 2026-10-24 covers research, plan revisions, implementatio
 real Electron end-to-end verification, early draft PRs, immediate push of every
 commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
+
+
+## Current checkpoint — v8 (2026-10-25)
+
+The implementation is published in [PR #989](https://github.com/777genius/agent-teams-ai/pull/989),
+with the Go contract and TypeScript SDK in [UAP PR #500](https://github.com/777genius/universal-agent-plugins/pull/500).
+Historical v4–v7 sections retain their original evidence. Named test results are
+tied to the revisions below; project/worktree prerequisites remain separate.
+The preservation correction and this v8 plan are published together. Qualification
+of that published revision is recorded in its current PR check runs and final
+handoff; earlier results below do not replace those gates.
+
+| Artifact | Reviewed identity |
+| --- | --- |
+| UAP runtime source | `bbc7e98da96dd7d77db42f65da7afae84a86f799` |
+| Native version | `0.1.91+agentteams.bbc7e98da96d`, based on verified `agentplugins-v0.1.91` |
+| Linux x64 native SHA-256 | `fcddfe935e8bfbdbe45b2131aa934240c0e2e2e236fb8c3c84c624a95b9c1b76` |
+| Vendored SDK SHA-256 | `31eb798b31be66d1c4d80d1cfa094934fa786cf2b46313360b4c6a8f6bfdd96c`; rebuilt and packed from the same source |
+| Actual native consumer | OpenCode `1.18.34`, executable SHA-256 `9ca0b9953d49997601655e54f846a3efa464f237e47c6f1b04716d0f2e64c4c2` |
+| Orchestration runtime | `0.0.138`, provisioned by the ordinary locked bootstrap |
+| App production checkpoint before the local-file correction | `e1798241e114fe6b530541e398491a8d14d1323d` |
+| Correlated-operation desktop harness | `b1c5d7a8a8993c460395354d5ddcd7d253acc5df` |
+
+### Reviewed behavior and integration corrections
+
+- The browser HTTP client has a deliberately browser-safe public feature entrypoint.
+  It cannot transitively import the managed panel, reused Skill dialogs or app store.
+  Desktop composition loads after profile migration/bootstrap. The main/preload/
+  renderer split and existing Team Provisioning authority are retained.
+- Target capture obtains roots from the existing passive provider environment.
+  Canonical-root errors still refuse capture. An unavailable native executable is
+  recorded for that target without preventing an unrelated Claude/Codex launch.
+  A failed explicit OpenCode probe does not silently select a different executable.
+  Missing/corrupt UAP or durable pending work still prevents a conflicting launch.
+- Terminal cancellation refreshes authoritative inventory. Old asynchronous polls
+  and context A responses cannot overwrite a later capture B; observation retries
+  observe the same operation without another Apply.
+- Managed cards/reviews show alias, action, relevant version changes and labels from
+  the captured session. Shared-graph actions identify every affected captured
+  target. Raw identifiers, paths and ordinary readiness details are collapsible;
+  warnings, unknown/abnormal states, conflicts and required confirmations stay visible.
+  Installation success preserves exact public native follow-up instructions and
+  never claims authentication or a restart that has not occurred.
+- Local copy reuses the existing import/file-review dialog. Its explicitly supplied
+  destination name survives initialization instead of being erased by the default
+  name-suggestion effect. A regression reproduced the actual empty-destination
+  failure before the two-line correction; all nine import-dialog cases then passed.
+  The actual e179 desktop run copied text/binary bytes through Go successfully.
+- The desktop HTTP route explicitly overrides the earlier broad CORS handler.
+  Foreign origins receive the feature's refusal instead of an unrelated 500.
+  The hostile-Host proof uses Node's real HTTP transport: Node 24 fetch rewrites
+  that header and cannot establish a forged-Host request.
+- Native SDK/protocol changes remain in Go: reserved future registry IDs do not
+  borrow installed-release authority; physical aliases/mode drift are checked;
+  Skills-only OpenCode actions do not fence unrelated MCP config selection; edited
+  native content stays preserved; unaccepted expiry does not consume request IDs.
+
+### Local editor preservation correction
+
+Actual Electron verification exposed a pre-existing mismatch between the limited
+editor draft and the planner's complete managed-directory replacement semantics.
+An ordinary metadata edit submitted deletion of unrepresented reference files
+and binary assets. The Go patch executor correctly carried out those explicit
+deletions; the correction belongs in the app planner.
+
+The planner now preserves supporting files outside the editor's represented
+controls, including nested text and binary assets. The three generated starter
+README drafts use validated `createOnly` intent: an existing custom text or binary
+README stays unchanged, while a missing starter file can still be created.
+Those skipped paths remain in the desired set and cannot accidentally become
+omission deletions. Explicit text replacements/removals and import replacement
+semantics are retained. This is an app draft field, not a new Go SDK/wire option.
+Go still receives exact reviewed patches, observes the complete existing tree,
+and owns mutation, expected-hash checks, backups and recovery.
+
+Binary import deletions retain their expected SHA, are labeled binary, and are
+not decoded as UTF-8 or described as a copy. The existing review UI and controls
+are reused.
+
+Red-before regressions reproduced omitted-file loss, scaffold overwrite and the
+misleading binary-delete card. The final focused batch passed **38 tests in seven
+files**, including the actual draft builder, request-marker validation/identity,
+explicit replacement and rendered review distinctions. Focused production and
+E2E TypeScript 7 checks passed using their canonical configurations. The size guard
+and diff check passed. Fast lint reported zero errors and one unchanged
+`DialogFooter` warning. A local typed-lint process exhausted its bounded 1.5 GiB
+heap; it is not counted as a pass, and the current CI lint lanes remain required.
+
+The harness now supplies the actual virtual key codes for Ctrl+A/Tab/Escape and
+asserts the field's exact value after text input. Its Skills/Plugins navigation
+checks `aria-selected` and the visible controlled panel, with at most three real
+pointer attempts inside the existing 60-second navigation budget. Once selection
+is observed it never re-clicks to hide a later state regression. This retry is
+limited to idempotent tab navigation; Apply and native mutations are not retried.
+Failure diagnostics retain requested/selected tab state, bounds and hit testing.
+
+### Evidence and outstanding gates
+
+[UAP Required 40176921783](https://github.com/777genius/universal-agent-plugins/actions/runs/40176921783)
+and [Terminal UI 40176921781](https://github.com/777genius/universal-agent-plugins/actions/runs/40176921781)
+passed on BBC7. All three local exact-artifact groups passed: signed official
+registry install/remove; the unchanged packed SDK lifecycle; and the independent
+unchanged Python protocol client. The SDK run actually observed `interrupted`
+after a lost accepted reply and owned-process SIGKILL, then fresh recovery restored
+exact native bytes without a duplicate dependency. Local create/edit/delete and
+restart-visible undo passed. Python retained a prepared Skill through two catalog
+discards before Apply and verified actual OpenCode discovery/bytes.
+
+The verified signed feed contained 30 entries, 28 eligible. The reviewed
+`cloudflare-docs 0.4.13-uap.1` lifecycle checked the exact native JSONC MCP object
+and its removal. It did not invoke a hosted MCP tool or authenticate a model.
+These receipts qualify BBC7, not unexecuted frontend paths.
+
+[App CI 40180747963](https://github.com/777genius/agent-teams-ai/actions/runs/40180747963)
+passed on source `e1798241e114fe6b530541e398491a8d14d1323d`:
+[Full qualification](https://github.com/777genius/agent-teams-ai/actions/runs/40180747963/job/121132486698),
+[canonical TS7/workspace validation](https://github.com/777genius/agent-teams-ai/actions/runs/40180747963/job/121131296750),
+all four test shards, all three source lint lanes and the Windows ledger smoke.
+The earlier 299 focused assertions belong to ede65; nine import-dialog cases
+qualify e179's seeded-copy correction. An intentionally stopped local full
+compiler is not counted as a pass. Subsequent changes require their applicable
+current-head CI and separate Electron package qualification.
+
+The clean b1c5 actual Electron run verified source preview/install, native Skill
+visibility and exact files, keyboard preview navigation, 760px managed-panel
+layout, same-state HTTP observation, foreign-Origin/rebound-Host refusals, real
+HTTP create/delete/deduplication, exact binary local-copy preservation, targeted
+update, and managed removal while the local copy remained. It then found a real
+edit-plan defect: saving metadata removed existing files absent from the editor's
+limited draft. The retained review screenshot showed the unintended deletions;
+the binary was additionally mislabeled as text. This failed receipt remains
+preserved as `app-b1c5d7a8-desktop/evidence.json`, not a completed S29 result.
+
+The separate b1c5 [remote run 40182000578](https://github.com/777genius/agent-teams-ai/actions/runs/40182000578)
+failed earlier, before the Skills panel mounted, with Plugins still selected.
+Its retained artifact and screenshot do not reproduce the later local edit loss.
+Layout movement between pointer sampling and dispatch remains a hypothesis; the
+bounded tab postconditions above strengthen input verification without changing
+production state or native assertions.
+
+Pre-publication exploratory runs against a dirty checkout remain labeled as such.
+They cannot qualify the subsequent published commit. Current-head Full
+qualification, a clean completed desktop receipt, applicable package/signing
+checks and formal security disposition remain required.
+
+The harness correction at b1c5 captures the displayed operation ID before an
+actual click and requires a different ID with a Completed status, so a previous
+install cannot qualify a later copy/update/remove. It also waits for enabled,
+visible, stable hit targets and finite dialog animations. It changes no native
+assertion, result state, timeout, or production UI.
+
+All 18 annotations at the named BBC7/ede65 checkpoints received independent
+source/dataflow review (15 UAP, three App), with no demonstrated exploitable vulnerability under the
+documented local-desktop authority model. The
+[security disposition](https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-security-review.md)
+records each guard and limitation. Analysis jobs succeeded, but the aggregate
+checks still report failure; source review does not itself clear that status.
+No scanner rule, cache authority, security setting or branch protection was
+weakened. At b1c5, the aggregate App check reports two annotations (the controlled wait
+expression and the unchanged workflow pin). The historical three-finding audit
+is retained; a new result is not silently treated as the old count. Formal
+repository disposition remains a separate gate.
+
+### Scope and measured maintenance cost
+
+Native project/worktree S25/S26 remain blocked by open draft UAP #472/#475/#480
+and Agent Teams Host #982. The latest inspected Host head was
+`3b351f32474111bb9bd7943d1e6b5a06a3da5e84`. No draft adapter code was imported.
+Project local Skill authoring does not prove native project activation.
+The standalone HTTP viewer remains unavailable for managed mutations; desktop
+sidecar parity is the qualified host boundary. Captures are bounded to 16 per host
+lifetime with explicit restart guidance; no safe context eviction is claimed.
+
+At the named published checkpoints, BBC7 against UAP main `a6beceba` adds 6,027
+handwritten runtime/build lines and removes 331; app e179 against main
+`eb67de95877d96567c79ea90b93b6db780b849b2` adds 4,072 and removes 182, for 10,099
+combined added lines. The frozen correction reviewed for v8 adds 37 and removes
+11 relative to e179. Its app diff against the same main is 57 handwritten
+runtime/build files, 4,109 added lines and 193 removed. Combined with unchanged
+BBC7, the frozen v8 review therefore measures 10,136 added, 524 removed and 9,612
+net added lines.
+
+These measurements exclude generated transport types, tests/E2E, localization,
+schemas/config and documentation. The original 3,500–6,500 estimate was low:
+durable acceptance/recovery authority, Go-only reversible local authoring and
+shared runtime admission account for the expansion. The handwritten TypeScript
+client/Node helper/export surface is 339 lines. No daemon, second installer,
+database, custom RPC framework, new frontend framework or unused language SDK
+was added.
+
+Hot mutable qualification state belongs outside synchronized working folders.
+Unchanged BBC7 runs in synced scratch encountered externally reappearing files;
+filesystem tracing preserved that failure evidence. The same SDK and Python
+scenarios passed with isolated temporary state, without changing native ownership,
+publication or recovery assertions. Follow the desktop procedure for isolated
+HOME/profile/state paths and retain completed receipts separately.
 
 ## Product outcome
 
@@ -93,9 +289,9 @@ remain explicit. Put paths/digests/receipts in optional diagnostics.
 
 ## Managed Skills ownership
 
-Current SkillsMutationService writes/imports/trashes files. It must consult
-authoritative UAP ownership on the backend before editing, import overwrite, or
-delete. Hiding UI controls alone is not protection.
+SkillsMutationService routes local edit, import-overwrite and delete requests
+through authoritative backend ownership checks and retained Go mutations.
+Hiding UI controls alone is not protection.
 
 Managed update/remove/repair goes through UAP. Offer explicit editable copy into a
 new unowned local destination. Preserve local Skills editing/import/delete for
@@ -140,15 +336,18 @@ state, not a hidden fallback.
 | Package | Exact SDK/UAP artifact identity; no dev-only path or implicit latest |
 | Electron UX | Actual clicks/screenshots, no renderer errors, compact normal install flow |
 
-Master scenario IDs S01–S30 are maintained in the UAP plan. Before completion,
+The UAP v6 master owns the complete S01–S30 acceptance and evidence matrix.
+This app plan records host implementation and checkpoint evidence for that matrix;
+it does not redefine scope or mark every scenario complete. Before completion,
 record each as implemented/verified/dependency-blocked with concrete evidence.
 
 ## Original implementation sequence (historical)
 
-This sequence records the order agreed at v1. Publication and implementation steps
-have since been completed through the checkpoints below. The current remaining
-gates are the exact-artifact desktop run and current-commit qualification, followed
-by review of any new findings; do not restart the v1/v2 publication steps.
+This sequence records the order agreed at v1. The foundation implementation steps
+have been completed through the checkpoints below. Step 6 remains dependency-blocked
+for S25/S26. Current-artifact desktop verification, applicable current-head
+qualification and final review remain delivery gates; do not restart the historical
+v1/v2 publication steps.
 
 1. Publish this v1 plan and draft PR. Independently review master plan and frontend
    decisions; fix findings and immediately publish v2.
@@ -489,7 +688,11 @@ Resolve and independently rereview the corrections, publish the refreshed matche
 SDK/native pin, complete Electron clicking and native artifact checks, then run
 current-commit Full qualification and applicable package checks before merge.
 
-### v7 candidate artifact and additional review dispositions
+### v7 candidate artifact and additional review dispositions (historical)
+
+This is the recorded v7 checkpoint, including its then-current artifact and failed
+qualification attempts. The v8 checkpoint above supersedes those pins and current
+status; historical evidence is not silently relabeled as a later pass.
 
 The independently reviewed Go follow-up is published at
 `aff370c0de25598ad8a1eee9436419cb7e35c348`. It applies each already supported
@@ -597,3 +800,4 @@ to route reversible local authoring through Go account for the expansion. The
 handwritten TS SDK runtime remains 339 lines. Independent maintainability review
 found no need for a daemon, second installer, framework or unused language SDKs;
 the final evidence report will record final measured counts and scenario status.
+
