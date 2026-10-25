@@ -1,7 +1,7 @@
 import { RuntimeProviderCompanionCoordinator } from '../application/RuntimeProviderCompanionCoordinator';
 import {
   AgentTeamsRuntimeProviderManagementCliClient,
-  type RuntimeProviderOAuthClientDependencies,
+  type RuntimeProviderCliClientDependencies,
 } from '../infrastructure/AgentTeamsRuntimeProviderManagementCliClient';
 import { createRuntimeProviderCompanionRegistry } from '../infrastructure/cli-companion/createRuntimeProviderCompanionRegistry';
 import {
@@ -64,7 +64,7 @@ export function createRuntimeProviderManagementFeature(
     companionRegistry?: RuntimeProviderCompanionRegistry;
     /** @deprecated Use companionRegistry. Kept for focused tests and packaged integrations. */
     companionService?: KiroCliCompanionService;
-  } & RuntimeProviderOAuthClientDependencies &
+  } & RuntimeProviderCliClientDependencies &
     Pick<KiroCliCompanionServiceDependencies, 'emitProgress'> = {}
 ): RuntimeProviderManagementFeatureFacade {
   const port = deps.port ?? new AgentTeamsRuntimeProviderManagementCliClient(deps);

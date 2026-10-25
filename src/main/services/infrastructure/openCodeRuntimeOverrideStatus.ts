@@ -3,6 +3,7 @@ import { resolveExistingOpenCodeRuntimeBinaryEnvPath } from '@main/services/runt
 import {
   type OpenCodeBinaryOverride,
   readOpenCodeBinaryOverride,
+  resolveOpenCodeV2NpmWrapperBinary,
 } from '@main/services/runtime/openCodeRuntimeBinaryEnv';
 import { getUnsupportedAgentTeamsOpenCodeVersionMessage } from '@shared/utils/version';
 
@@ -64,7 +65,8 @@ export async function resolveOpenCodeOverrideStatus(
       kind: 'selected',
       status: {
         installed: true,
-        binaryPath,
+        // Launch selects the platform binary behind an npm wrapper, so status names it.
+        binaryPath: resolveOpenCodeV2NpmWrapperBinary(binaryPath) ?? binaryPath,
         version: classification.version,
         source: 'override',
         state: 'ready',

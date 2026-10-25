@@ -13,6 +13,11 @@ interface UseRuntimeProviderQuickConnectOptions {
   enabled: boolean;
   projectPath?: string | null;
   refreshKey?: number;
+  /**
+   * Settled identity of the OpenCode runtime, or null while it is unknown or
+   * changing. See `resolveOpenCodeQuickConnectRuntimeRevision`.
+   */
+  runtimeRevision: string | null;
 }
 
 export interface RuntimeProviderQuickConnectDirectoryState {
@@ -31,12 +36,13 @@ export function useRuntimeProviderQuickConnect({
   enabled,
   projectPath = null,
   refreshKey = 0,
+  runtimeRevision,
 }: UseRuntimeProviderQuickConnectOptions): RuntimeProviderQuickConnectDirectoryState {
   const currentProjectScope = projectPath?.trim() ?? '';
   const initialDirectoryCache = getRuntimeProviderDirectoryCacheSnapshot(projectPath);
   const requestSequence = useRef(0);
   const previousRefreshKey = useRef(refreshKey);
-  const previousManualRefreshSequence = useRef(0);
+  const previousRefreshRequestSequence = useRef(0);
   const previousProjectScope = useRef(projectPath?.trim() ?? '');
   const hasStartedLoad = useRef(false);
   const [entries, setEntries] = useState<readonly RuntimeProviderDirectoryEntryDto[]>(
@@ -49,11 +55,23 @@ export function useRuntimeProviderQuickConnect({
   );
   const [authoritativePending, setAuthoritativePending] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [manualRefreshSequence, setManualRefreshSequence] = useState(0);
+  const [refreshRequestSequence, setRefreshRequestSequence] = useState(0);
+  const [settledRuntimeRevision, setSettledRuntimeRevision] = useState(runtimeRevision);
   const [directoryProjectScope, setDirectoryProjectScope] = useState(currentProjectScope);
 
+  // Adjusted during render so the load effect sees the runtime change and the
+  // refresh request in one commit, instead of first starting a cached read.
+  if (runtimeRevision !== null && runtimeRevision !== settledRuntimeRevision) {
+    setSettledRuntimeRevision(runtimeRevision);
+    // The first settled identity is only a baseline. A later change means the
+    // runtime was installed, removed or replaced, so cached reads are obsolete.
+    if (settledRuntimeRevision !== null) {
+      setRefreshRequestSequence((current) => current + 1);
+    }
+  }
+
   const refresh = useCallback(() => {
-    setManualRefreshSequence((current) => current + 1);
+    setRefreshRequestSequence((current) => current + 1);
   }, []);
 
   useEffect(() => {
@@ -65,10 +83,8 @@ export function useRuntimeProviderQuickConnect({
     const requestId = requestSequence.current + 1;
     requestSequence.current = requestId;
     const refreshRequested =
-      manualRefreshSequence !== previousManualRefreshSequence.current ||
+      refreshRequestSequence !== previousRefreshRequestSequence.current ||
       refreshKey !== previousRefreshKey.current;
-    previousRefreshKey.current = refreshKey;
-    previousManualRefreshSequence.current = manualRefreshSequence;
     let cancelled = false;
     const projectScope = projectPath?.trim() ?? '';
     const projectScopeChanged = previousProjectScope.current !== projectScope;
@@ -134,6 +150,11 @@ export function useRuntimeProviderQuickConnect({
     const loadDelay = hasStartedLoad.current ? 0 : INITIAL_LOAD_DELAY_MS;
     const timeout = window.setTimeout(() => {
       hasStartedLoad.current = true;
+      // Consume refresh requests only when the read really starts: if the grid
+      // is disabled before the timer fires, the next enabled read still bypasses
+      // the cache.
+      previousRefreshKey.current = refreshKey;
+      previousRefreshRequestSequence.current = refreshRequestSequence;
       void loadDirectory().then(() => {
         if (!cancelled && requestSequence.current === requestId) {
           setAuthoritativePending(false);
@@ -145,7 +166,7 @@ export function useRuntimeProviderQuickConnect({
       cancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [enabled, manualRefreshSequence, projectPath, refreshKey]);
+  }, [enabled, projectPath, refreshKey, refreshRequestSequence]);
 
   // Passive effects run after React commits. Gate the returned snapshot during
   // that short transition so a project-only provider can never flash in the
