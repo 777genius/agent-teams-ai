@@ -30,3 +30,8 @@ export function isOpenCodeV2QualifiedVersion(version: string): boolean {
     )
   );
 }
+
+/** Highest exact release qualified for this concrete native platform. */
+export function getLatestQualifiedOpenCodeV2Version(platform: string, arch: string): string | null {
+  return pinnedOpenCodeV2Contract?.qualified[`${platform}-${arch}`]?.at(-1) ?? null;
+}

@@ -202,6 +202,9 @@
       "reinstall": "Reinstall {{runtime}}"
     },
     "runtimeInstall": {
+      "overrideSelection": "An explicit OpenCode binary override is active. Remove it to use an app-managed installation.",
+      "v2Unavailable": "Compatible V2 is not available for this platform. V1 remains available.",
+
       "checking": "Checking",
       "codexTitle": "Install Codex CLI into app data",
       "downloading": "Downloading",

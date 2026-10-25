@@ -1,3 +1,4 @@
+import { getLatestQualifiedOpenCodeV2Version } from '@features/opencode-compatibility';
 vi.mock('@shared/utils/logger', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@shared/utils/logger')>();
   return {
@@ -1431,7 +1432,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       'runtimes',
       'opencode',
       'versions',
-      '1.0.0',
+      '1.18.3',
       platformPackage,
       executableName
     );
@@ -1446,7 +1447,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       manifestPath,
       `${JSON.stringify({
         schemaVersion: 1,
-        version: '1.0.0',
+        version: '1.18.3',
         platformPackage,
         binaryPath,
         integrity,
@@ -1460,14 +1461,14 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         const url = String(input);
         if (url.endsWith('/opencode-ai/latest')) {
           return Response.json({
-            version: '1.0.0',
+            version: '1.18.3',
             dist: { tarball: 'https://example.test/root.tgz', integrity },
-            optionalDependencies: { [platformPackage]: '1.0.0' },
+            optionalDependencies: { [platformPackage]: '1.18.3' },
           });
         }
-        if (url.includes(`/${platformPackage}/1.0.0`)) {
+        if (url.includes(`/${platformPackage}/1.18.3`)) {
           return Response.json({
-            version: '1.0.0',
+            version: '1.18.3',
             dist: { tarball: 'https://example.test/platform.tgz', integrity },
           });
         }
@@ -1480,7 +1481,9 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       })
     );
 
-    await expect(new OpenCodeRuntimeInstallerService().install()).resolves.toMatchObject({
+    await expect(
+      new OpenCodeRuntimeInstallerService().install({ generation: 'v1' })
+    ).resolves.toMatchObject({
       installed: true,
       source: 'app-managed',
       state: 'ready',
@@ -1505,14 +1508,14 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       const url = String(input);
       if (url.endsWith('/opencode-ai/latest')) {
         return Response.json({
-          version: '1.0.0',
+          version: '1.18.3',
           dist: { tarball: 'https://example.test/root.tgz', integrity },
-          optionalDependencies: { [platformPackage]: '1.0.0' },
+          optionalDependencies: { [platformPackage]: '1.18.3' },
         });
       }
-      if (url.includes(`/${platformPackage}/1.0.0`)) {
+      if (url.includes(`/${platformPackage}/1.18.3`)) {
         return Response.json({
-          version: '1.0.0',
+          version: '1.18.3',
           dist: { tarball: 'https://example.test/platform.tgz', integrity },
         });
       }
@@ -1526,7 +1529,9 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     vi.stubGlobal('fetch', fetchMock);
     execCliMock.mockRejectedValueOnce(new Error('binary verification failed'));
 
-    await expect(new OpenCodeRuntimeInstallerService().install()).resolves.toMatchObject({
+    await expect(
+      new OpenCodeRuntimeInstallerService().install({ generation: 'v1' })
+    ).resolves.toMatchObject({
       installed: false,
       state: 'failed',
       error: 'binary verification failed',
@@ -1540,6 +1545,158 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       'Failed to install OpenCode runtime:',
       'binary verification failed'
     );
+  });
+
+  it('coalesces identical install requests but rejects a racing generation choice before effects', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const download = deferred<Response>();
+    const fetchMock = vi.fn(() => download.promise);
+    vi.stubGlobal('fetch', fetchMock);
+    const service = new OpenCodeRuntimeInstallerService();
+    const first = service.install({ generation: 'v1' });
+    const same = service.install({ generation: 'v1' });
+    await expect(service.install({ generation: 'v2' })).rejects.toThrow(
+      'different OpenCode generation'
+    );
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    download.resolve(new Response('TEST unavailable', { status: 503 }));
+    const result = await first;
+    expect(await same).toBe(result);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await expect(service.install({ generation: 'v2' })).resolves.toMatchObject({ state: 'failed' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  async function mockV2Download(
+    overrides: { metadataVersion?: string; binaryVersion?: string; integrity?: string } = {}
+  ): Promise<{ packageName: string; version: string }> {
+    const version = getLatestQualifiedOpenCodeV2Version(process.platform, process.arch)!;
+    const packageName = getOpenCodeRuntimePlatformCandidates()[0]!.packageName.replace(
+      /^opencode-/,
+      '@opencode/cli-'
+    );
+    const executableName = process.platform === 'win32' ? 'opencode.exe' : 'opencode';
+    const magic =
+      process.platform === 'linux'
+        ? '\x7fELF'
+        : process.platform === 'win32'
+          ? 'MZ00'
+          : Buffer.from('cffaedfe', 'hex').toString('latin1');
+    const tarball = createTarball([
+      {
+        name: 'package/package.json',
+        data: JSON.stringify({ name: packageName, version: overrides.metadataVersion ?? version }),
+      },
+      { name: `package/bin/${executableName}`, data: magic + 'TEST native binary' },
+    ]);
+    // Mach-O headers are bytes, not UTF-8 text.
+    const nativeTarball =
+      process.platform === 'darwin'
+        ? gzipSync(
+            Buffer.concat([
+              createTarEntry(
+                'package/package.json',
+                Buffer.from(
+                  JSON.stringify({
+                    name: packageName,
+                    version: overrides.metadataVersion ?? version,
+                  })
+                )
+              ),
+              createTarEntry(
+                `package/bin/${executableName}`,
+                Buffer.concat([Buffer.from('cffaedfe', 'hex'), Buffer.from('TEST native binary')])
+              ),
+              Buffer.alloc(1024),
+            ])
+          )
+        : tarball;
+    const integrity =
+      overrides.integrity ??
+      `sha512-${createHash('sha512').update(nativeTarball).digest('base64')}`;
+    execCliMock.mockResolvedValue({
+      stdout: `opencode v${overrides.binaryVersion ?? version}\n`,
+      stderr: '',
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string | URL | Request): Promise<Response> => {
+        const url = String(input);
+        if (url.includes(encodeURIComponent('@opencode/cli') + '/'))
+          return Response.json({
+            name: '@opencode/cli',
+            version,
+            optionalDependencies: { [packageName]: version },
+            dist: { tarball: 'https://example.test/root.tgz', integrity },
+          });
+        if (url.includes(encodeURIComponent(packageName) + '/'))
+          return Response.json({
+            name: packageName,
+            version,
+            dist: { tarball: 'https://example.test/native.tgz', integrity },
+          });
+        if (url === 'https://example.test/native.tgz')
+          return new Response(new Uint8Array(nativeTarball));
+        throw new Error(`Unexpected fetch: ${url}`);
+      })
+    );
+    return { packageName, version };
+  }
+
+  it('installs qualified V2 with native package identity and activates it ahead of PATH', async () => {
+    const { packageName, version } = await mockV2Download();
+    const pathBinary = path.join(tempRoot!, 'TEST-path', 'opencode');
+    await mkdir(path.dirname(pathBinary), { recursive: true });
+    await writeFile(pathBinary, 'existing user binary');
+    buildMergedCliPathMock.mockReturnValue(path.dirname(pathBinary));
+    const status = await new OpenCodeRuntimeInstallerService().install({ generation: 'v2' });
+    expect(status).toMatchObject({
+      installed: true,
+      state: 'ready',
+      source: 'app-managed',
+      version,
+    });
+    const binaryPath = status.binaryPath!;
+    expect(path.basename(path.dirname(binaryPath))).toBe('bin');
+    expect(
+      JSON.parse(
+        await readFile(path.join(path.dirname(path.dirname(binaryPath)), 'package.json'), 'utf8')
+      )
+    ).toMatchObject({ name: packageName, version });
+    await expect(
+      resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })
+    ).resolves.toBe(binaryPath);
+    await expect(readFile(pathBinary, 'utf8')).resolves.toBe('existing user binary');
+    const refreshed = await new OpenCodeRuntimeInstallerService().getStatus();
+    expect(refreshed).toMatchObject({ version, latestVersion: version, updateAvailable: false });
+    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes('/opencode-ai/'))).toBe(
+      false
+    );
+  });
+
+  it.each([
+    { metadataVersion: '2.0.999', error: 'metadata identity mismatch' },
+    { binaryVersion: '2.0.999', error: 'binary version does not match' },
+    { integrity: 'sha512-tampered', error: 'integrity check failed' },
+  ])('does not activate a mismatched or tampered V2 download: $error', async (options) => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await mockV2Download(options);
+    const status = await new OpenCodeRuntimeInstallerService().install({ generation: 'v2' });
+    expect(status.state).toBe('failed');
+    expect(status.error).toContain(options.error);
+    expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).toBeNull();
+  });
+
+  it('preserves explicit override selection after installing V2 and explains activation', async () => {
+    const override = path.join(tempRoot!, 'TEST-override');
+    await writeFile(override, 'user override');
+    vi.stubEnv('CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH', override);
+    const { version } = await mockV2Download();
+    const status = await new OpenCodeRuntimeInstallerService().install({ generation: 'v2' });
+    expect(status).toMatchObject({ source: 'override', binaryPath: override, version });
+    expect(status.progress?.detail).toContain('explicit OpenCode binary override');
+    expect(resolveAppManagedOpenCodeRuntimeBinaryPath()).not.toBe(override);
+    vi.unstubAllEnvs();
   });
 });
 
@@ -1581,6 +1738,17 @@ describe('OpenCodeRuntimeInstallerService package safety helpers', () => {
 
     expect(() => verifyOpenCodeRuntimePackageIntegrity(payload, `sha512-${wrongHash}`)).toThrow(
       'integrity check failed'
+    );
+  });
+
+  it('rejects unsafe entries after the executable instead of accepting an archive prefix', () => {
+    const executableName = process.platform === 'win32' ? 'opencode.exe' : 'opencode';
+    const tarball = createTarball([
+      { name: `package/bin/${executableName}`, data: 'binary' },
+      { name: 'package/../../escape', data: 'unsafe' },
+    ]);
+    expect(() => extractOpenCodeRuntimeBinaryFromTarball(tarball)).toThrow(
+      'Unsafe OpenCode package tar entry'
     );
   });
 

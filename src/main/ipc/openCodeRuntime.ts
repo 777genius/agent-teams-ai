@@ -1,3 +1,4 @@
+import { parseOpenCodeInstallOptions } from '@features/opencode-runtime-installer';
 import {
   OPENCODE_RUNTIME_GET_STATUS,
   OPENCODE_RUNTIME_INSTALL,
@@ -55,10 +56,14 @@ async function handleGetStatus(
 }
 
 async function handleInstall(
-  _event: IpcMainInvokeEvent
+  _event: IpcMainInvokeEvent,
+  options?: unknown
 ): Promise<IpcResult<OpenCodeRuntimeStatus>> {
   try {
-    return { success: true, data: await requireService().install() };
+    return {
+      success: true,
+      data: await requireService().install(parseOpenCodeInstallOptions(options)),
+    };
   } catch (error) {
     const message = getErrorMessage(error);
     logger.error('Error in openCodeRuntime:install:', message);
