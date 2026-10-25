@@ -560,7 +560,7 @@ it.each([
   const declarations = [
     ...helperDeclarations,
     ...ast.statements.filter(ts.isFunctionDeclaration)
-      .filter(node => functionName === 'snapshotStartupFailure' || node.name?.text === functionName)
+      .filter(node => node.name?.text === functionName)
       .map(node => node.getText(ast)),
   ].join('\n');
   const compiled = ts.transpileModule(declarations, { compilerOptions }).outputText;
@@ -583,9 +583,7 @@ it.each([
       schemaVersion: 1, phase: 'execution-host-startup', category: 'run_control_foreign',
       catalog: { phase: 'location', client: { reason: 'UnexpectedStatus', status: 503, ...raw }, wireCode: 'http_failure', wireStatus: 500, serverFailure: { ...serverFailure, realpath: { ...realpathFact, ...raw }, ...raw }, ...raw },
     }));
-    const packet = functionName === 'snapshotStartupFailure'
-      ? await snapshot({ directory, binding }, 'TEST-session', {}, '/TEST-sdk', [])
-      : await snapshot(root, dataRoot, binding.teamId, binding.runId);
+    const packet = await snapshot(root, dataRoot, binding.teamId, binding.runId);
     expect(packet.diagnostics).toHaveLength(1);
     expect(packet.diagnostics[0]!.catalog).toEqual({ phase: 'location', client: { reason: 'UnexpectedStatus', status: 503 }, wireCode: 'http_failure', wireStatus: 500, serverFailure: { ...serverFailure, realpath: realpathFact } });
     expect(JSON.stringify(packet)).not.toContain('PRIVATE_');
@@ -817,14 +815,11 @@ it.each(['current-pass', 'current-fail', 'floor'] as const)(
     const compiled = ts.transpileModule(declaration.getText(ast), {
       compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
     }).outputText;
-    // Model filesystem custody only in this unit: production DLL assertions run unchanged.
+    // Model only the cold V2 namespace check of this unit.
     const fakeFs = `export async function lstat(path) {
       if (path.endsWith('/opencode/v2')) throw Object.assign(new Error('TEST absent'),{code:'ENOENT'});
-      return {isDirectory:()=>!path.endsWith('.dll'),isFile:()=>path.endsWith('.dll'),isSymbolicLink:()=>false,nlink:1,dev:1,ino:1};
-    }
-    export async function readdir(){return ['native-realpath-11111111-1111-1111-1111-111111111111'];}
-    export async function open(){throw Object.assign(new Error('TEST locked'),{code:'EPERM'});}
-    export async function rename(){throw Object.assign(new Error('TEST locked'),{code:'EPERM'});}`;
+      return {isDirectory:()=>true,isFile:()=>false,isSymbolicLink:()=>false,nlink:1,dev:1,ino:1};
+    }`;
     const fsModule = await import('data:text/javascript,' + encodeURIComponent(fakeFs));
     const injected = compiled.replace("import('node:fs/promises')", 'Promise.resolve(fakeFs)');
     const verify = compileFunction(`${injected}\nreturn verifyProbePreparation;`, ['process', 'fakeFs'], {

@@ -41,11 +41,6 @@ function safeSourceGateFailure(error: unknown, nativeFailures?: WeakMap<object, 
     'TEST probe readiness budget exhausted': 'probe_readiness_budget_exhausted',
     'TEST probe member not ready': 'probe_member_not_ready',
     'TEST probe physical stop unconfirmed': 'probe_physical_stop_unconfirmed',
-    'TEST private DLL profile invalid': 'private_dll_profile_invalid',
-    'TEST private DLL leaf invalid': 'private_dll_leaf_invalid',
-    'TEST private DLL custody invalid': 'private_dll_custody_invalid',
-    'TEST private DLL mutation admitted': 'private_dll_mutation_admitted',
-    'TEST private DLL custody changed': 'private_dll_custody_changed',
   };
   // Only bounded machine tokens or fixed local labels cross the diagnostic boundary.
   const reason =
@@ -433,8 +428,8 @@ async function verifyProbePreparation(
         const readinessDeadline = Math.min(Date.now() + control.OPEN_CODE_V2_RUN_INITIALIZATION_MS, current.deadline - 30_000);
         if (readinessDeadline <= Date.now()) throw new Error('TEST probe readiness budget exhausted');
         let readinessFailure: unknown, readinessFailed = false;
-        // One retained native broker serves this cohort. Avoid duplicate status
-        // exchanges queued behind each other with already-running RPC deadlines.
+        // Read members one at a time so status exchanges never queue behind each
+        // other with already-running deadlines.
         for (const member of members) {
         try {
         const readinessMs = Math.floor(readinessDeadline - Date.now());

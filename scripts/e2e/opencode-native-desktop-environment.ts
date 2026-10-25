@@ -50,7 +50,7 @@ export async function prepareNativeDesktopEnvironment() {
     )
   );
   // The plain V2 process has no private-ownership custody, so the TEST roots keep
-  // the ordinary inherited ACL a user's own directories have.
+  // the ACL they inherit from their temporary parent.
   await mkdir(projectPath, { mode: 0o700 });
   await writeFile(path.join(projectPath, '.opencode-e2e-test-project'), teamName + '\n', {
     mode: 0o600,
