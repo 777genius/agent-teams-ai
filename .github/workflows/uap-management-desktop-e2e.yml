@@ -1,7 +1,6 @@
 name: UAP management desktop E2E
 
 on:
-  workflow_dispatch:
   pull_request:
     paths:
       - '.github/workflows/uap-management-desktop-e2e.yml'
@@ -33,7 +32,13 @@ jobs:
   desktop:
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
     timeout-minutes: 35
+    # The pinned cross-repository source executes only in the PR trust context.
+    # Scoped cache tokens must not grant it cache restore or save authority.
+    cache-mode: none
     steps:
+      - name: Verify cache authority is disabled before executing checked-out code
+        shell: bash
+        run: test "${ACTIONS_CACHE_MODE:-}" = none
       - uses: actions/checkout@v6
         with:
           persist-credentials: false

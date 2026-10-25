@@ -6,6 +6,13 @@ the vendored TypeScript SDK and the staged native Go executable. It uses the
 existing `dev:mcp` entry point and raw CDP harness. It does not replace the
 renderer, engine, runtime or installed inventory with fixtures.
 
+The workflow runs in the pull-request trust context. It has no privileged
+manual-dispatch entry point; existing runs can be rerun through GitHub. Its job
+sets `cache-mode: none` and verifies the runner's effective `ACTIONS_CACHE_MODE`
+before any checkout or action executes. This is required because the exact
+cross-repository source pin still executes code. Read-only repository permission
+and a disabled dependency-cache configuration alone do not revoke cache tokens.
+
 ## Artifact inputs
 
 `vendor/uap/sdk/provenance.json` identifies the reviewed UAP source commit and
@@ -102,6 +109,14 @@ requires no model account and does not qualify live model behavior or OAuth.
 
 ## Reliable real input and result observation
 
+All renderer observations use one fixed checked-in CDP function. Selectors,
+labels, operation IDs and timestamps travel as `Runtime.callFunctionOn`
+argument values. The only evaluated expression is the literal `globalThis`,
+used to acquire the owned renderer handle; runtime data is never concatenated
+into JavaScript source. Polling callbacks and comparisons run in Node. Remote
+handles are released on success and failure without replacing a primary error
+with a secondary cleanup failure.
+
 The harness sends real CDP pointer/key events and `Input.insertText`. It checks
 that a target is enabled, visible, stable and hit-testable, and that each filled
 field has the exact requested value. It waits out finite animations on the target
@@ -170,4 +185,34 @@ Unit regressions cover delayed observations during acceptance, active-profile
 admission, lost-reply request identity, stale/local delete retries, native removal
 attestation and catalog disposal. They complement the desktop lane and do not
 replace native execution or UI evidence.
+
+## Agent selection and lifecycle coverage
+
+The current panel offers Claude Code, Codex and OpenCode in a single-select
+view/context control, initially Claude Code. Installation, removal and local
+copy currently bind to that selected context. It does not preselect all three
+installation destinations and does not discover additional native agents.
+The separate signed UAP Directory supplies Universal plugins; global runtime
+catalog badges do not determine UAP availability.
+
+The owner proposed default selection of the three supported agents. Go already
+accepts multiple captured target IDs. A minimal future UI change needs a
+separate installation-destination checkbox group, preserving the current view,
+removal and copy context. Only available captured targets should be selected;
+unavailable ones should retain their reason. The explicit selection must be
+frozen into the reviewed plan and preserved during attestation/reprepare.
+Adding other detected agents also needs trusted host discovery, profile capture
+and activity admission; adding labels alone would not establish that support.
+These selection changes are not part of the CodeQL correction.
+
+| Client | Existing desktop journey | Separate native UAP CLI matrix |
+| --- | --- | --- |
+| Claude Code | Local Skill copy, edit, delete and restart-visible restore under the captured Claude root; no native Claude plugin lifecycle. | Actual pinned client install/update/remove qualification on macOS arm64 and Windows x64. |
+| Codex | Native plugin install/update/remove is not exercised by this desktop journey. | Actual pinned client install/update/remove qualification on macOS arm64 and Windows x64. |
+| OpenCode | Plugin install and removal with actual MCP invocation/absence; standalone Skill install, changed-content update and removal. Plugin update is not exercised through the desktop. | Actual pinned client install/update/remove qualification on macOS arm64 and Windows x64. |
+
+The CLI matrix and desktop journey cross different boundaries. Each receipt
+must name its actual source and completed assertions; neither is evidence for
+the missing desktop cases. Native fixtures use a scripted local provider,
+without live-model or OAuth qualification. New source pins require fresh runs.
 

@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v13; reviewed shared admission ownership, runtime capability copy and bounded desktop navigation.
+Status: implementation plan v14; reviewed CodeQL remediation, fixed CDP data boundary and matched source qualification.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -13,7 +13,78 @@ commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
 
-## Current checkpoint — v13 (2026-10-25)
+## Current checkpoint — v14 (2026-10-25)
+
+This checkpoint addresses the owner's exact list of seventeen CodeQL findings,
+including App alerts 580 and 581. The complete input/guard/sink ledger and the
+correction to the earlier blanket false-positive review are recorded in
+[UAP's remediation record](https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-codeql-remediation-20261025.md).
+
+App alert 580 follows tracked UAP source provenance into cross-repository code
+execution in the desktop workflow. The privileged `workflow_dispatch` trigger
+has been removed; ordinary pull-request qualification remains. The job declares
+`cache-mode: none` and its first step verifies `ACTIONS_CACHE_MODE` before any
+checkout or action. This denies actual cache restore/save authority, rather than
+assuming read-only repository permission or disabled configured caches is enough.
+Existing workflow reruns remain available. No query or protection is disabled.
+
+App alert 581 groups fourteen dynamic-code flows. The desktop helper now has one
+fixed checked-in renderer dispatcher and passes selectors, labels, operation IDs
+and timestamps through CDP `CallArgument.value`. The only `Runtime.evaluate`
+expression is the literal `globalThis`. No runtime value becomes JavaScript
+source. Node-side observation callbacks preserve fresh operation IDs, exact
+restore-point metadata, bounded menu/tab acknowledgement and single Apply.
+Real pointer/key input, native MCP invocation and post-removal absence, HTTP
+authority, actual restart, exact file bytes and all twenty screenshots remain
+part of the actual Electron journey. Remote objects are released without
+masking a primary failure.
+
+Twelve focused helper tests pass, including hostile data, DOM selection,
+hidden warning matches, stale completion and cleanup errors. Desktop TypeScript,
+scoped lint and formatting pass. Two workflow metadata tests pass. The actual
+Bash guard test cannot spawn Bash in the local sandbox (`EPERM`); it remains
+enabled for CI and is not recorded as locally passing. Independent source
+review found no P1/P2 in the five-file security slice. The new candidate must
+still pass a real Electron run and both CodeQL analyses and findings aggregate.
+
+The matched UAP source is `1bdc7bb4c111da19c93d2839b7403e4a7d57df57`, with engine version
+`0.1.91+agentteams.1bdc7bb4c111`. It corrects component-order package-link
+validation, confines journal reads with `os.OpenInRoot` and removes an
+unnecessary local archive metadata probe from Management admission. Regression
+tests reproduced the defects before the fix. The Windows native-link test
+explicitly preserves the existing rejection of backslash targets; production
+package policy and digest framing are unchanged. The SDK is rebuilt and packed
+from the final committed source. Its archive is byte-identical because the
+TypeScript contract did not change; its SHA-256 remains
+`02d921a6466a7eca86c8161e8d6de0a4ac9b7ee0ed1135de3f27d12bdfcbea0e`.
+Manifest, lockfile, archive name and provenance identify the same source. A local
+offline lockfile refresh lacked cached `@babel/core` supply-chain metadata; the
+exact identical-archive filename substitution was parsed and verified without
+disabling that policy. A normal frozen dependency installation remains required
+in CI.
+
+The candidate also incorporates reviewed main
+`3cf1397d8375d33f7e2005752b4f8feed3c2a2dc`. Its earlier macOS signing budget,
+Mach-O scan and narrow Apple-network retry changes merge cleanly with the
+existing UAP packaging hooks. The subsequent renderer diagnostic update keeps
+telemetry opt-out, collects only closed types and bounded counts, and does not
+change management authority or UI actions. No direct-main push, gate bypass or
+public release is part of this checkpoint.
+
+For historical evidence, published App head
+`7667b158c368b07655fb1d0c288b8e88efd21587` passed
+[Full 40193962521](https://github.com/777genius/agent-teams-ai/actions/runs/40193962521),
+[desktop 40193962417](https://github.com/777genius/agent-teams-ai/actions/runs/40193962417),
+all four bootstrap targets and the original seven-job package qualification.
+The desktop [receipt with twenty screenshots](https://github.com/777genius/agent-teams-ai/pull/989#issuecomment-6397851225)
+and [package receipt](https://github.com/777genius/agent-teams-ai/pull/989#issuecomment-6398717407)
+belong to that head and its named merge checkout, with UAP 8645. They do not
+qualify the new engine, changed CDP helper or updated base. CodeQL was still
+failing there with App's two findings; UAP's first ae51 correction scan reduces
+its count from fifteen to thirteen, still failing. Source review and a successful
+analyzer run do not replace formal alert disposition.
+
+## Previous checkpoint — v13 (2026-10-25)
 
 App head `c91077de653ff1f52c84f14689e13c34366ef3cf` passed substantive
 [Full qualification 40191123430](https://github.com/777genius/agent-teams-ai/actions/runs/40191123430),

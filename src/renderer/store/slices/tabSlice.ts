@@ -272,7 +272,7 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
     const targetPane = findPaneByTabId(paneLayout, tabId);
     const targetTab = targetPane?.tabs.find((t) => t.id === tabId);
     if (prevTab?.id !== tabId) {
-      addNavigationBreadcrumb(prevTab?.label ?? 'none', targetTab?.label ?? tabId);
+      addNavigationBreadcrumb(prevTab?.type ?? null, targetTab?.type ?? null);
     }
     // Find which pane contains this tab
     const pane = findPaneByTabId(paneLayout, tabId);

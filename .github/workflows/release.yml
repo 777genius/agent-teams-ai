@@ -576,7 +576,11 @@ jobs:
     if: ${{ github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && github.ref == 'refs/heads/release/macos-signing' }}
     environment: macos-signing
     needs: [build, prepare-runtime, prepare-terminal-platform-runtime, verify-public-runtime]
-    timeout-minutes: 90
+    # On the 4-vCPU Intel runner the per-file phases of the ~95k-file bundle run
+    # about six times slower than on the ARM runner (an estimated ~70 minutes
+    # before any retry). Its budget also covers one full packaging retry (up to
+    # ~50 minutes) with room for slow notarization.
+    timeout-minutes: ${{ matrix.timeout_minutes }}
     strategy:
       fail-fast: false
       matrix:
@@ -585,10 +589,12 @@ jobs:
             runner: ${{ vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15' }}
             dist_command: pnpm pack:mac:arm64
             bundle: release/mac-arm64/Agent Teams AI.app
+            timeout_minutes: 90
           - arch: x64
             runner: macos-15-intel
             dist_command: pnpm pack:mac:x64
             bundle: release/mac/Agent Teams AI.app
+            timeout_minutes: 180
     runs-on: ${{ matrix.runner }}
 
     steps:

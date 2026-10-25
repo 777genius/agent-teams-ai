@@ -22,10 +22,13 @@ import { createNativeToolProof, toolArchivePath, toolPluginName } from './uap-ma
 import {
   actionablePoint,
   applyAndWaitForOperation,
+  callUi,
   dispatchKey,
+  inspectElement,
   screenshotWhenSettled,
   selectTab,
   type DesktopCdp,
+  type UiLocator,
 } from './uap-management-ui';
 
 import type {
@@ -274,10 +277,7 @@ async function start(f: Awaited<ReturnType<typeof fixture>>) {
           cdp!.on('Runtime.exceptionThrown', (error) => errors.push(error));
           await cdp!.send('Runtime.enable');
           await cdp!.send('Page.enable');
-          await wait(
-            'window.electronAPI?.extensionManagement && document.querySelector("button")',
-            'desktop renderer'
-          );
+          await wait(() => callUi(cdp!, 'ready'), 'desktop renderer');
           await save(path.join(f.root, 'connection.json'), {
             root: f.root,
             shots: f.shots,
@@ -342,15 +342,15 @@ async function stop(root: string) {
   }
 }
 
-async function wait(expression: string, label: string, timeoutMs = 60_000) {
-  await waitForValue(`Boolean(await (${expression}))`, label, timeoutMs);
-}
-
-async function waitForValue(expression: string, label: string, timeoutMs = 60_000) {
+async function wait<T>(
+  observe: () => Promise<T>,
+  label: string,
+  timeoutMs = 60_000
+): Promise<NonNullable<T>> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
-      const value = await cdp!.evaluate(`(async () => await (${expression}))()`);
+      const value = await observe();
       if (value) return value;
     } catch (error) {
       if (
@@ -362,26 +362,31 @@ async function waitForValue(expression: string, label: string, timeoutMs = 60_00
     }
     await pause(100);
   }
-  const alerts = await cdp!.evaluate(
-    'Array.from(document.querySelectorAll("[role=alert]")).map(e=>e.textContent)'
-  );
+  const alerts = await callUi(cdp!, 'alerts');
   throw new Error(`Timed out waiting for ${label}; alerts: ${JSON.stringify(alerts)}`);
 }
 
-const button = (label: string, root = 'document') =>
-  `Array.from((${root})?.querySelectorAll('button') ?? []).find(e => e.textContent?.trim() === ${JSON.stringify(label)} || e.getAttribute('aria-label') === ${JSON.stringify(label)})`;
-const panel = 'document.querySelector("[data-testid=uap-skill]")';
-const installedRow = `${panel}?.querySelector('[data-testid=uap-installed-entry]')`;
-async function click(expression: string, timeoutMs = 60_000) {
-  const pointExpression = actionablePoint(expression);
+const button = (name: string, within?: UiLocator): UiLocator => ({
+  selector: 'button',
+  name,
+  within,
+});
+const panel: UiLocator = { selector: '[data-testid=uap-skill]' };
+const installedRow: UiLocator = { selector: '[data-testid=uap-installed-entry]', within: panel };
+const inspect = (locator: UiLocator) => inspectElement(cdp!, locator);
+const present = (locator: UiLocator) => () => inspect(locator);
+const enabled = (locator: UiLocator) => async () => {
+  const element = await inspect(locator);
+  return element && !element.disabled;
+};
+async function click(locator: UiLocator, timeoutMs = 60_000) {
   // Use the successful observation itself; a second readiness evaluation can
   // transiently fail during a dialog transition after the first has succeeded.
-  const point = await waitForValue(
-    pointExpression,
-    `enabled visible click target ${expression}`,
+  const point = await wait(
+    () => actionablePoint(cdp!, locator),
+    `enabled visible click target ${JSON.stringify(locator)}`,
     timeoutMs
   );
-  assert(point && typeof point === 'object', `Missing or disabled click target: ${expression}`);
   for (const type of ['mousePressed', 'mouseReleased'])
     await cdp!.send('Input.dispatchMouseEvent', { type, ...point, button: 'left', clickCount: 1 });
 }
@@ -392,30 +397,22 @@ async function key(value: string, code = value, modifiers = 0) {
   await dispatchKey(cdp!, value, code, modifiers);
 }
 async function fill(selector: string, text: string) {
-  await click(`document.querySelector(${JSON.stringify(selector)})`);
+  const locator = { selector };
+  await click(locator);
   await key('a', 'KeyA', process.platform === 'darwin' ? 4 : 2);
   await cdp!.send('Input.insertText', { text });
-  assert.equal(
-    await cdp!.evaluate(`document.querySelector(${JSON.stringify(selector)})?.value`),
-    text
-  );
+  assert.equal((await inspect(locator))?.value, text);
 }
-async function selectAgent(root: string, label: string) {
+async function selectAgent(root: UiLocator, label: string) {
   const trigger = button('Agent runtime', root);
-  const selected = `(${trigger})?.textContent?.trim() === ${JSON.stringify(label)}`;
-  const opened = `(${trigger})?.getAttribute('aria-expanded') === 'true'`;
-  const option = `(() => {
-    const id = (${trigger})?.getAttribute('aria-controls');
-    const menu = id ? document.getElementById(id) : null;
-    if (menu?.getAttribute('role') !== 'listbox') return null;
-    return Array.from(menu?.querySelectorAll('[role=option]') ?? [])
-      .find(element => element.textContent?.trim() === ${JSON.stringify(label)});
-  })()`;
+  const selected = async () => (await inspect(trigger))?.text === label;
+  const opened = async () => (await inspect(trigger))?.expanded === 'true';
+  const option: UiLocator = { selector: '[role=option]', controlledBy: trigger, name: label };
   const deadline = Date.now() + 60_000;
   const remaining = () => Math.max(0, deadline - Date.now());
   for (let attempt = 1; attempt <= 3 && remaining() > 0; attempt++) {
-    if (await cdp!.evaluate(selected)) return;
-    if (!(await cdp!.evaluate(opened))) {
+    if (await selected()) return;
+    if (!(await opened())) {
       await click(trigger, remaining());
       const openingLabel = `${label} agent menu opening`;
       try {
@@ -435,11 +432,7 @@ async function selectAgent(root: string, label: string) {
     await wait(selected, `${label} agent selection`, remaining());
     return;
   }
-  const observed = await cdp!.evaluate(`(() => {
-    const trigger = ${trigger};
-    return {value: trigger?.textContent?.trim(), expanded: trigger?.getAttribute('aria-expanded'),
-      disabled: trigger?.disabled, controls: trigger?.getAttribute('aria-controls')};
-  })()`);
+  const observed = await inspect(trigger);
   throw new Error(
     `Agent menu did not open within three pointer attempts: ${JSON.stringify(observed)}`
   );
@@ -448,34 +441,21 @@ async function openSkills() {
   await click(button('More actions'));
   await click(button('Extensions'));
   await selectTab(cdp!, wait, 'Skills');
-  await wait(`${panel} && !${button('Agent runtime', panel)}?.disabled`, 'managed Skill context');
+  await wait(enabled(button('Agent runtime', panel)), 'managed Skill context');
   await selectAgent(panel, 'OpenCode');
-  await wait(
-    `${button('Install from source', panel)} && !${button('Install from source', panel)}.disabled`,
-    'native OpenCode capability',
-    90_000
-  );
+  await wait(enabled(button('Install from source', panel)), 'native OpenCode capability', 90_000);
 }
 async function reviewAndApply(root = panel) {
-  await wait(
-    `${button('Apply changes')} && !${button('Apply changes')}.disabled`,
-    'confirmable Go plan',
-    90_000
-  );
+  await wait(enabled(button('Apply changes')), 'confirmable Go plan', 90_000);
   await applyAndWaitForOperation(cdp!, wait, root, () => click(button('Apply changes')));
 }
 
 async function registryPlugin(f: Awaited<ReturnType<typeof fixture>>) {
-  const pluginPanel = 'document.querySelector("[data-testid=uap-plugin]")';
+  const pluginPanel: UiLocator = { selector: '[data-testid=uap-plugin]' };
   await selectTab(cdp!, wait, 'Plugins');
-  await wait(
-    `${pluginPanel} && !${button('Agent runtime', pluginPanel)}?.disabled`,
-    'universal Plugins entry point'
-  );
+  await wait(enabled(button('Agent runtime', pluginPanel)), 'universal Plugins entry point');
   await selectAgent(pluginPanel, 'OpenCode');
-  const registry = (await cdp!.evaluate(
-    `(async()=>{const api=window.electronAPI.extensionManagement; const context=await api.capture({client:'opencode',scope:'user'}); return api.catalog({contextId:context.contextId});})()`
-  )) as ManagementCatalog;
+  const registry = await callUi<ManagementCatalog>(cdp!, 'catalog');
   assert.equal(registry.freshness, 'current', 'official signed catalog must be current');
   const expected = registry.items.find((entry) => entry.id === 'cloudflare-docs');
   assert(
@@ -487,18 +467,14 @@ async function registryPlugin(f: Awaited<ReturnType<typeof fixture>>) {
     '0.4.13-uap.1',
     'review a changed registry fixture before changing this inert native-config proof'
   );
-  const card = `${pluginPanel}?.querySelector('[data-catalog-id="cloudflare-docs"]')`;
-  await wait(
-    `${button('Install', card)} && !${button('Install', card)}.disabled`,
-    'reviewed signed catalog entry',
-    90_000
-  );
+  const card: UiLocator = { selector: '[data-catalog-id="cloudflare-docs"]', within: pluginPanel };
+  await wait(enabled(button('Install', card)), 'reviewed signed catalog entry', 90_000);
   await screenshot(path.join(f.shots, '11-registry-plugin.png'));
-  await click(`${card}.querySelector('button')`);
-  await wait(`document.querySelector('[role=dialog]')`, 'registry plugin details');
+  await click({ selector: 'button', within: card });
+  await wait(present({ selector: '[role=dialog]' }), 'registry plugin details');
   await key('Escape');
   await click(button('Install', card));
-  await wait(button('Apply changes'), 'signed registry installation review');
+  await wait(present(button('Apply changes')), 'signed registry installation review');
   await screenshot(path.join(f.shots, '12-registry-install-review.png'));
   await reviewAndApply(pluginPanel);
   const entry = (await environment()).entries.find((item) => item.kind === 'plugin');
@@ -517,7 +493,7 @@ async function registryPlugin(f: Awaited<ReturnType<typeof fixture>>) {
   });
   await screenshot(path.join(f.shots, '13-registry-installed.png'));
   await click(
-    button('Remove', `${pluginPanel}.querySelector('[data-testid=uap-installed-entry]')`)
+    button('Remove', { selector: '[data-testid=uap-installed-entry]', within: pluginPanel })
   );
   await reviewAndApply(pluginPanel);
   assert(!(await environment()).entries.some((item) => item.alias === entry.alias));
@@ -535,25 +511,30 @@ async function registryPlugin(f: Awaited<ReturnType<typeof fixture>>) {
 
 async function nativeToolUse(f: Awaited<ReturnType<typeof fixture>>) {
   assert(toolProof);
-  const pluginPanel = 'document.querySelector("[data-testid=uap-plugin]")';
+  const pluginPanel: UiLocator = { selector: '[data-testid=uap-plugin]' };
   const source = `${new URL(f.source).origin}${toolArchivePath}#sha256=${toolProof.sha256}`;
   assert.equal(await openCodeMcpServer(toolProof.config, toolProof.serverName), undefined);
   await click(button('Install from source', pluginPanel));
   await fill('#uap-source-plugin', source);
   await fill('#uap-alias', toolPluginName);
-  assert.equal(await cdp!.evaluate("document.querySelector('#uap-ref-plugin')"), null);
+  assert.equal(await inspect({ selector: '#uap-ref-plugin' }), null);
   await click(button('Review installation'));
   await wait(
-    button('Apply changes'),
+    present(button('Apply changes')),
     'source plugin review with ordinary security assessment',
     120_000
   );
   const warningReason = 'configuration contains an insecure http:// endpoint';
   await wait(
-    `Array.from(document.querySelector('[role=dialog]')?.querySelectorAll('p') ?? []).some(element =>
-      element.checkVisibility({checkOpacity: true, checkVisibilityCSS: true}) &&
-      element.textContent?.includes('SEC302') &&
-      element.textContent?.includes(${JSON.stringify(warningReason)}))`,
+    async () =>
+      (
+        await inspect({
+          selector: 'p',
+          within: { selector: '[role=dialog]' },
+          textIncludes: ['SEC302', warningReason],
+          visible: true,
+        })
+      )?.visible,
     'specific security warning reason before source installation'
   );
   evidence.sourceSecurityWarning = { code: 'SEC302', reason: warningReason };
@@ -568,7 +549,11 @@ async function nativeToolUse(f: Awaited<ReturnType<typeof fixture>>) {
   });
   await toolProof.probe(false);
   await screenshot(path.join(f.shots, '16-native-tool-called.png'));
-  const row = `Array.from(${pluginPanel}.querySelectorAll('[data-testid=uap-installed-entry]')).find(e=>e.textContent?.includes('${toolPluginName}'))`;
+  const row: UiLocator = {
+    selector: '[data-testid=uap-installed-entry]',
+    within: pluginPanel,
+    textIncludes: [toolPluginName],
+  };
   await click(button('Remove', row));
   await reviewAndApply(pluginPanel);
   assert(!(await environment()).entries.some((item) => item.alias === toolPluginName));
@@ -583,15 +568,13 @@ async function nativeToolUse(f: Awaited<ReturnType<typeof fixture>>) {
   await screenshot(path.join(f.shots, '17-native-tool-removed.png'));
 }
 async function environment(): Promise<ManagementEnvironment> {
-  return (await cdp!.evaluate(
-    `(async()=>{ const api=window.electronAPI.extensionManagement; const context=await api.capture({client:'opencode',scope:'user'}); return api.environment({contextId:context.contextId}); })()`
-  )) as ManagementEnvironment;
+  return callUi(cdp!, 'environment');
 }
 
 async function verifyHttp(f: Awaited<ReturnType<typeof fixture>>) {
   const origin = `http://127.0.0.1:${f.httpPort}`;
   const route = `${origin}/api/extension-management`;
-  const accessUrl = await cdp!.evaluate('window.electronAPI.extensionManagement.browserAccess()');
+  const accessUrl = await callUi(cdp!, 'browser-access');
   assert.equal(typeof accessUrl, 'string');
   const grant = new URL(accessUrl as string);
   assert.equal(grant.origin, origin);
@@ -703,36 +686,32 @@ async function verifyHttp(f: Awaited<ReturnType<typeof fixture>>) {
 }
 
 async function localSkillLifecycle(f: Awaited<ReturnType<typeof fixture>>, copied: string) {
-  const card = `Array.from(document.querySelectorAll('.skills-grid button')).find(e => e.querySelector('h3')?.textContent?.trim() === '${skillName}')`;
+  const card: UiLocator = { selector: '.skills-grid button', textSelector: 'h3', name: skillName };
   await click(card);
-  await wait(
-    `${button('Edit Skill')} && !${button('Edit Skill')}.disabled`,
-    'authoritative local ownership'
-  );
+  await wait(enabled(button('Edit Skill')), 'authoritative local ownership');
   await click(button('Edit Skill'));
   await fill('#skill-name', 'uap-ui-demo-local');
   await fill('#skill-description', 'Edited through the existing local Skill editor');
   await click(button('Review And Save'));
-  await wait(button('Save Skill'), 'local exact-byte edit review');
+  await wait(present(button('Save Skill')), 'local exact-byte edit review');
   await screenshot(path.join(f.shots, '08-local-edit-review.png'));
   await click(button('Save Skill'));
   await wait(
-    `!document.querySelector('#skill-name') && !${button('Save Skill')}`,
+    async () =>
+      !(await inspect({ selector: '#skill-name' })) && !(await inspect(button('Save Skill'))),
     'local editor completion'
   );
   const edited = await readFile(path.join(copied, 'SKILL.md'), 'utf8');
   assert(edited.includes('Edited through the existing local Skill editor'));
   assert.deepEqual(await readFile(path.join(copied, 'assets/sample.bin')), imageBytes);
   // The detail remains open after saving. Closing with Escape exercises keyboard navigation.
-  if (await cdp!.evaluate(`Boolean(document.querySelector('[role=dialog]'))`)) await key('Escape');
-  await click(
-    `Array.from(document.querySelectorAll('.skills-grid button')).find(e => e.querySelector('h3')?.textContent?.trim() === 'uap-ui-demo-local')`
-  );
-  await wait(`${button('Delete')} && !${button('Delete')}.disabled`, 'local deletion admission');
+  if (await inspect({ selector: '[role=dialog]' })) await key('Escape');
+  await click({ selector: '.skills-grid button', textSelector: 'h3', name: 'uap-ui-demo-local' });
+  await wait(enabled(button('Delete')), 'local deletion admission');
   await click(button('Delete'));
   await click(button('Delete Skill'));
   await wait(
-    `!document.querySelector('[role=dialog]') && !document.querySelector('[role=alertdialog]')`,
+    async () => !(await inspect({ selector: '[role=dialog], [role=alertdialog]' })),
     'local deletion completion'
   );
   await assert.rejects(readFile(path.join(copied, 'SKILL.md')));
@@ -758,37 +737,55 @@ async function localSkillLifecycle(f: Awaited<ReturnType<typeof fixture>>, copie
   assert.equal(stale.status, 401, 'The previous sidecar capability must expire on restart');
   evidence.httpCapabilityRevokedOnRestart = true;
   await openSkills();
-  const restore = `${panel}.querySelector('[data-testid=uap-restore-points]')`;
-  await click(`${restore}?.querySelector('summary')`);
-  const savedRow = `Array.from(${restore}.querySelectorAll('[data-testid=uap-restore-point]')).find(element =>
-    element.dataset.originalAction === 'upsert' &&
-    element.dataset.restoreOperationId === ${JSON.stringify(beforeSavePoint.operationId)})`;
-  await wait(
-    `${savedRow}?.checkVisibility({checkOpacity: true, checkVisibilityCSS: true}) &&
-      ${savedRow}?.textContent?.includes('Before save') &&
-      ${savedRow}?.querySelector('time')?.dateTime === ${JSON.stringify(beforeSavePoint.recordedAt)}`,
-    'durable before-save restore point remains visibly distinct'
-  );
-  const row = `Array.from(${restore}.querySelectorAll('[data-testid=uap-restore-point]')).find(element =>
-    element.dataset.originalAction === 'delete' &&
-    element.dataset.restoreOperationId === ${JSON.stringify(selectedRestorePoint.operationId)})`;
-  await wait(
-    `${row}?.checkVisibility({checkOpacity: true, checkVisibilityCSS: true}) &&
-      ${row}?.textContent?.includes('Before deletion') &&
-      ${row}?.querySelector('time')?.dateTime === ${JSON.stringify(selectedRestorePoint.recordedAt)}`,
-    'durable before-deletion restore point'
-  );
+  const restore: UiLocator = { selector: '[data-testid=uap-restore-points]', within: panel };
+  await click({ selector: 'summary', within: restore });
+  const savedRow: UiLocator = {
+    selector: '[data-testid=uap-restore-point]',
+    within: restore,
+    attributes: {
+      'data-original-action': 'upsert',
+      'data-restore-operation-id': beforeSavePoint.operationId,
+    },
+  };
+  await wait(async () => {
+    const row = await inspect(savedRow);
+    return (
+      row?.visible &&
+      row.text.includes('Before save') &&
+      row.dateTime === beforeSavePoint.recordedAt
+    );
+  }, 'durable before-save restore point remains visibly distinct');
+  const row: UiLocator = {
+    selector: '[data-testid=uap-restore-point]',
+    within: restore,
+    attributes: {
+      'data-original-action': 'delete',
+      'data-restore-operation-id': selectedRestorePoint.operationId,
+    },
+  };
+  await wait(async () => {
+    const current = await inspect(row);
+    return (
+      current?.visible &&
+      current.text.includes('Before deletion') &&
+      current.dateTime === selectedRestorePoint.recordedAt
+    );
+  }, 'durable before-deletion restore point');
   evidence.restorePoints = [beforeSavePoint, selectedRestorePoint];
   await screenshot(path.join(f.shots, '09-restore-points.png'));
   await click(button('Review restoration', row));
-  await wait(button('Apply changes'), 'restart-visible local restoration review');
-  const reviewed = `document.querySelector('[data-testid=uap-selected-restore-point]')`;
-  await wait(
-    `${reviewed}?.dataset.restoreOperationId === ${JSON.stringify(selectedRestorePoint.operationId)} &&
-      ${reviewed}?.textContent?.includes('Before deletion') &&
-      ${reviewed}?.querySelector('time')?.dateTime === ${JSON.stringify(selectedRestorePoint.recordedAt)}`,
-    'the same authoritative restore point in confirmation'
-  );
+  await wait(present(button('Apply changes')), 'restart-visible local restoration review');
+  const reviewed: UiLocator = {
+    selector: '[data-testid=uap-selected-restore-point]',
+    attributes: { 'data-restore-operation-id': selectedRestorePoint.operationId },
+  };
+  await wait(async () => {
+    const current = await inspect(reviewed);
+    return (
+      current?.text.includes('Before deletion') &&
+      current.dateTime === selectedRestorePoint.recordedAt
+    );
+  }, 'the same authoritative restore point in confirmation');
   evidence.selectedRestorePoint = selectedRestorePoint;
   await screenshot(path.join(f.shots, '09-restart-restore-review.png'));
   await reviewAndApply();
@@ -821,42 +818,45 @@ async function exercise(f: Awaited<ReturnType<typeof fixture>>) {
   await fill('#uap-source-skill', f.source);
   await key('Tab');
   assert.equal(
-    await cdp!.evaluate('document.activeElement?.id'),
+    await callUi(cdp!, 'active-id'),
     'uap-ref-skill',
     'source fields must support keyboard navigation'
   );
   await click(button('Find skills'));
-  await wait(
-    `document.querySelector('[role=checkbox][aria-label="${skillName}"]')`,
-    'real web source discovery'
-  );
+  const discoveredSkill: UiLocator = {
+    selector: '[role=checkbox]',
+    attributes: { 'aria-label': skillName },
+  };
+  await wait(present(discoveredSkill), 'real web source discovery');
   assert.equal(
-    await cdp!.evaluate(`document.querySelectorAll('[role=dialog][data-state=open]').length`),
+    await callUi(cdp!, 'count', [{ selector: '[role=dialog][data-state=open]' }]),
     1,
     'preview must use one dialog'
   );
   await click(button('Preview SKILL.md'));
   await wait(
-    `Array.from(document.querySelectorAll('[role=dialog]')).some(e=>e.textContent?.includes('Desktop fixture revision 1.'))`,
+    present({ selector: '[role=dialog]', textIncludes: ['Desktop fixture revision 1.'] }),
     'acquired SKILL.md preview'
   );
   assert.equal(
-    await cdp!.evaluate(`document.querySelectorAll('[role=dialog][data-state=open]').length`),
+    await callUi(cdp!, 'count', [{ selector: '[role=dialog][data-state=open]' }]),
     1,
     'preview must keep one dialog'
   );
   await screenshot(path.join(f.shots, '02-source-preview.png'));
   await key('Escape');
   await wait(
-    `document.querySelector('#uap-source-skill') && !${button('Back to discovered Skills')}`,
+    async () =>
+      (await inspect({ selector: '#uap-source-skill' })) &&
+      !(await inspect(button('Back to discovered Skills'))),
     'return from preview without closing discovery'
   );
-  await click(`document.querySelector('[role=checkbox][aria-label="${skillName}"]')`);
+  await click(discoveredSkill);
   await click(button('Review installation'));
-  await wait(button('Apply changes'), 'installation review');
+  await wait(present(button('Apply changes')), 'installation review');
   await screenshot(path.join(f.shots, '03-install-review.png'));
   await reviewAndApply();
-  await wait(installedRow, 'installed row');
+  await wait(present(installedRow), 'installed row');
   await screenshot(path.join(f.shots, '04-installed.png'));
   await cdp!.send('Emulation.setDeviceMetricsOverride', {
     width: 760,
@@ -864,10 +864,11 @@ async function exercise(f: Awaited<ReturnType<typeof fixture>>) {
     deviceScaleFactor: 1,
     mobile: false,
   });
-  await cdp!.evaluate(`${panel}.scrollIntoView({block:'start'})`);
+  await callUi(cdp!, 'scroll', [panel]);
   await pause(250);
+  const narrowPanel = await inspect(panel);
   assert(
-    await cdp!.evaluate(`${panel}.scrollWidth <= ${panel}.clientWidth + 1`),
+    narrowPanel && narrowPanel.scrollWidth <= narrowPanel.clientWidth + 1,
     'managed panel must fit a narrow window'
   );
   await screenshot(path.join(f.shots, '04-narrow-installed.png'));
@@ -902,10 +903,10 @@ async function exercise(f: Awaited<ReturnType<typeof fixture>>) {
   };
   await verifyHttp(f);
   await click(button('Make a local copy', installedRow));
-  await wait(button('Review And Import'), 'reused import dialog');
+  await wait(present(button('Review And Import')), 'reused import dialog');
   await screenshot(path.join(f.shots, '05-copy-dialog.png'));
   await click(button('Review And Import'));
-  await wait(button('Import Skill'), 'copy file review');
+  await wait(present(button('Import Skill')), 'copy file review');
   await applyAndWaitForOperation(
     cdp!,
     wait,
