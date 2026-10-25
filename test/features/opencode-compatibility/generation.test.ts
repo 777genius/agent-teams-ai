@@ -123,8 +123,10 @@ describe('pinned OpenCode V2 contract', () => {
         else ineligible++;
       }
     });
-    // Both outcomes are exercised by the pinned data itself.
-    expect(eligible).toBeGreaterThan(0);
+    // Eligibility exists exactly when the pinned runtime qualifies a version (none without V2).
+    expect(eligible > 0).toBe(
+      Object.values(pinnedQualified).some((versions) => versions.length > 0)
+    );
     expect(ineligible).toBeGreaterThan(0);
   });
 

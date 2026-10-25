@@ -44,7 +44,13 @@ const checkCommand = (value: unknown) =>
   hasV2CommandInvocationWithOuterMarker(read(value), command);
 
 describe('V2 composite team evidence', () => {
-  it.each([...new Set(Object.values(runtimeLock.opencodeV2.qualified).flat())])(
+  // Generation evidence follows the pinned range; a runtime without V2 qualifies no version.
+  it.each([
+    ...new Set([
+      runtimeLock.opencodeV2.range.minimum,
+      ...Object.values(runtimeLock.opencodeV2.qualified).flat(),
+    ]),
+  ])(
     'accepts the actual canonical producer shape for %s without inventing child results',
     (version) => {
       const value = fixture();

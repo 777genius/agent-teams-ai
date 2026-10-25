@@ -15,6 +15,9 @@ import { runMixedTeamSmoke } from '../../scripts/prove-opencode-mixed-team.mjs';
 const pinnedRecords = Object.entries(JSON.parse(fs.readFileSync(new URL('../../runtime.lock.json', import.meta.url), 'utf8')).opencodeV2.qualified)
   .filter(([key]) => /^(linux|darwin)-/.test(key));
 const pinnedQualified = pinnedRecords.flatMap(([key, versions]) => versions.map(version => [...key.split('-'), version]));
+// A runtime released without V2 qualifies nothing; then a version in the pinned range stands in.
+const pinnedV2 = JSON.parse(fs.readFileSync(new URL('../../runtime.lock.json', import.meta.url), 'utf8')).opencodeV2;
+const [samplePlatform, sampleArch, sampleVersion] = pinnedQualified[0] ?? ['darwin', 'arm64', pinnedV2.range.minimum];
 // A version qualified on one FULL platform but not on another, when the pinned data has one.
 const pinnedElsewhere = pinnedRecords.flatMap(([key, versions]) => pinnedQualified
   .filter(([platform, arch, version]) => `${platform}-${arch}` !== key && !versions.includes(version))
@@ -112,7 +115,6 @@ async function withOwnedPreflight(check) {
 
 test('FULL V2 preflight uses exact version and passive selected-provider inventory on Linux/macOS', async () => {
   await withOwnedPreflight(async input => {
-    assert.ok(pinnedQualified.length > 0);
     for (const [platform, arch, version] of pinnedQualified) {
       const calls = [];
       const result = await preflightOpenCodeFullTeamEnvironment(input, { platform, arch,
@@ -145,12 +147,12 @@ test('FULL V2 preflight uses exact version and passive selected-provider invento
 
 test('FULL V2 preflight fails closed on unsupported versions and malformed or missing inventory', async () => {
   await withOwnedPreflight(async input => {
-    const [qualifiedPlatform, qualifiedArch, qualified] = pinnedQualified[0];
+    const qualified = sampleVersion;
     // An in-range release without a qualification record is refused like an out-of-range one.
     for (const version of ['2.999.0\n', '3.0.0\n', `${qualified}-rc.1\n`, `${qualified}\n\n`, ` ${qualified}\n`,
       `${qualified} extra`, `0${qualified}\n`]) {
       let calls = 0;
-      const result = await preflightOpenCodeFullTeamEnvironment(input, { platform: qualifiedPlatform, arch: qualifiedArch,
+      const result = await preflightOpenCodeFullTeamEnvironment(input, { platform: samplePlatform, arch: sampleArch,
         legacyPreflight: () => assert.fail('unsupported version cannot fall back'),
         spawn: () => { calls++; return { status: 0, stdout: version, stderr: 'synthetic-secret' }; },
       });
@@ -159,9 +161,10 @@ test('FULL V2 preflight fails closed on unsupported versions and malformed or mi
     }
     // Qualification binds to the platform: a version qualified elsewhere is refused here,
     // as is any qualified version on a platform FULL does not run on or has no record for.
-    const [, , anyQualified] = pinnedQualified[0];
-    for (const [platform, arch, version] of [...pinnedElsewhere, ['win32', 'x64', anyQualified],
-      ['linux', 'ia32', anyQualified]]) {
+    // Without any qualified version, every FULL platform refuses V2.
+    const unqualifiedHere = pinnedQualified.length ? [] : [['darwin', 'arm64', sampleVersion], ['linux', 'x64', sampleVersion]];
+    for (const [platform, arch, version] of [...pinnedElsewhere, ...unqualifiedHere, ['win32', 'x64', sampleVersion],
+      ['linux', 'ia32', sampleVersion]]) {
       let calls = 0;
       const result = await preflightOpenCodeFullTeamEnvironment(input, { platform, arch,
         legacyPreflight: () => assert.fail('unqualified version cannot fall back'),
@@ -169,7 +172,8 @@ test('FULL V2 preflight fails closed on unsupported versions and malformed or mi
       });
       assert.deepEqual([result.ok, result.stage, calls], [false, 'generation-policy', 1]);
     }
-    for (const catalog of [
+    // Inventory checks need a version the pinned runtime qualifies.
+    for (const catalog of pinnedQualified.length === 0 ? [] : [
       { status: 1, stderr: 'synthetic-secret' }, { status: null, signal: 'SIGTERM' },
       { status: 0, error: new Error('synthetic-secret') }, { status: 0, stdout: 'synthetic-secret' },
       { status: 0, stdout: 'null' }, { status: 0, stdout: '{"models":[]}' },
