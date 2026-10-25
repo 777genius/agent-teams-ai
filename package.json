@@ -304,7 +304,7 @@
     "eslint-plugin-tailwindcss": "^3.18.2",
     "fake-indexeddb": "6.2.5",
     "globals": "^17.2.0",
-    "happy-dom": "^20.9.0",
+    "happy-dom": "^21.0.4",
     "husky": "^9.1.7",
     "i18next-cli": "1.58.0",
     "knip": "^5.82.1",
