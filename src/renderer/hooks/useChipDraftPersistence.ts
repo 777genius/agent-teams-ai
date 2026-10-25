@@ -48,6 +48,7 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRef = useRef<{ key: string; value: InlineChip[] } | null>(null);
   const keyRef = useRef(key);
+  const editRevisionRef = useRef(0);
 
   useEffect(() => {
     keyRef.current = key;
@@ -90,9 +91,10 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
     setChipsState([]);
 
     setIsSaved(false);
+    const loadRevision = editRevisionRef.current;
     void (async () => {
       const raw = await draftStorage.loadDraft(key);
-      if (cancelled || raw == null) return;
+      if (cancelled || raw == null || editRevisionRef.current !== loadRevision) return;
       try {
         const parsed: unknown = JSON.parse(raw);
         if (isValidChipArray(parsed)) {
@@ -117,6 +119,7 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
   }, [flushPending]);
 
   const setChips = useCallback((nextChips: InlineChip[]) => {
+    editRevisionRef.current++;
     chipsRef.current = nextChips;
     setChipsState(nextChips);
     setIsSaved(false);
@@ -157,6 +160,7 @@ export function useChipDraftPersistence(key: string): UseChipDraftResult {
   );
 
   const clearChipDraft = useCallback(() => {
+    editRevisionRef.current++;
     if (timerRef.current != null) {
       clearTimeout(timerRef.current);
       timerRef.current = null;

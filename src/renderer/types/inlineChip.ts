@@ -73,12 +73,24 @@ export function chipToMarkdown(chip: InlineChip): string {
   return `**${chip.fileName}** (${lineRef}):\n\`\`\`${lang}\n${chip.codeText}\n\`\`\``;
 }
 
+/** Team prompt contracts retain task identities in their text instead of separate taskRefs. */
+export function serializePromptChips(text: string, chips: InlineChip[]): string {
+  return serializeChipsWithText(text, chips, { preserveTaskReferenceMetadata: true });
+}
+
 /**
  * Serializes text with chip tokens back to markdown code fences for sending.
  * Replaces each chip token in the text with its markdown representation.
  */
-export function serializeChipsWithText(text: string, chips: InlineChip[]): string {
-  const strippedText = stripEncodedTaskReferenceMetadata(text);
+export function serializeChipsWithText(
+  text: string,
+  chips: InlineChip[],
+  options: { preserveTaskReferenceMetadata?: boolean } = {}
+): string {
+  // Prompt-only contracts carry task identity in text rather than separate taskRefs.
+  const strippedText = options.preserveTaskReferenceMetadata
+    ? text
+    : stripEncodedTaskReferenceMetadata(text);
   if (chips.length === 0) return strippedText;
 
   let result = strippedText;

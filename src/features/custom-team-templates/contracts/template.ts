@@ -55,4 +55,10 @@ export interface CustomTeamTemplateV1 extends CustomTeamTemplateContentV1 {
   description?: string;
   /** Creation timestamp for the saved record, when the store supports one. */
   createdAt?: string;
+  /**
+   * Optimistic-concurrency revision for the saved record, when the store
+   * stamps one. Absent means `1`; the create-team-from-template draft mapping
+   * surfaces it as read-only metadata and never carries it into a new team.
+   */
+  revision?: number;
 }

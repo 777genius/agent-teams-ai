@@ -190,3 +190,14 @@ export type ListCustomTeamTemplatesResult =
       unreadableRecords: readonly CustomTeamTemplateUnreadableRecord[];
     }
   | { status: 'storageUnavailable' };
+
+/** Built-in template ids stay a closed union (never widened to strings). */
+export type BuiltinTeamTemplateId =
+  | 'software-product'
+  | 'marketing'
+  | 'content'
+  | 'research'
+  | 'sales'
+  | 'customer-support'
+  | 'operations'
+  | 'learning';

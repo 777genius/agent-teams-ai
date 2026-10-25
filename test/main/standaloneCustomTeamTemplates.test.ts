@@ -19,6 +19,7 @@
 import {
   type CreateCustomTeamTemplateRecordResult,
   CUSTOM_TEAM_TEMPLATE_ROUTES,
+  type CustomTeamTemplateV1,
   type ListCustomTeamTemplateRecordsResult,
   type ReadCustomTeamTemplateRecordResult,
 } from '@features/custom-team-templates/contracts';
@@ -27,7 +28,13 @@ import {
   createCustomTeamTemplatesFeature,
   type CustomTeamTemplatesFeature,
 } from '@features/custom-team-templates/main/composition/createCustomTeamTemplatesFeature';
+import { applyCustomTeamTemplate } from '@features/custom-team-templates/renderer/templateDraft';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
+import { TeamDataService } from '@main/services/team/TeamDataService';
+import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
+import { getClaudeBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { buildInitialRosterMemberDrafts } from '@renderer/components/team/dialogs/createTeamInitialRoster';
+import { buildMembersFromDrafts } from '@renderer/components/team/members/membersEditorUtils';
 import Database from 'better-sqlite3-node';
 import Fastify from 'fastify';
 import * as fs from 'fs/promises';
@@ -295,6 +302,125 @@ describe('standalone custom-team-templates HTTP integration', () => {
       url: CUSTOM_TEAM_TEMPLATE_ROUTES.listTemplates,
     });
     expect(listedAgain.json().templates).toHaveLength(2);
+  });
+
+  // Fails if creation reuses source/runtime identity, shares mutable state, or changes the template.
+  it('creates independent config-only teams from a saved template', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-saved-template-creation-'));
+    const previousClaudeRoot = getClaudeBasePath();
+    const claudeRoot = path.join(tmpDir, 'claude');
+    const project = path.join(tmpDir, 'TEST-project');
+    await fs.mkdir(project, { recursive: true });
+    setClaudeBasePathOverride(claudeRoot);
+    try {
+      const service = new TeamDataService();
+      await service.createTeamConfig({
+        teamName: TEAM,
+        cwd: project,
+        prompt: 'Deliver the feature.',
+        members: [{ name: 'alice', role: 'Engineer', workflow: 'Build the feature.' }],
+      });
+      const sourceDirectory = path.join(claudeRoot, 'teams', TEAM);
+      const sourceMembersPath = path.join(sourceDirectory, 'members.meta.json');
+      const membersStore = new TeamMembersMetaStore();
+      const sourceRoster = await membersStore.getMembers(TEAM);
+      await membersStore.writeMembers(
+        TEAM,
+        sourceRoster.map((member) => ({ ...member, agentId: `alice@${TEAM}` }))
+      );
+      const sourceMembersBefore = await fs.readFile(sourceMembersPath, 'utf8');
+      await fs.writeFile(
+        path.join(claudeRoot, 'tasks', TEAM, 'source-task.json'),
+        JSON.stringify({ id: 'source-task', subject: 'Source-only task', status: 'pending' })
+      );
+      await fs.writeFile(
+        path.join(sourceDirectory, 'inboxes', 'alice.json'),
+        JSON.stringify([{ from: 'team-lead', text: 'Source-only history' }])
+      );
+      await fs.writeFile(
+        path.join(sourceDirectory, 'launch-state.json'),
+        JSON.stringify({ runId: 'source-only-run', leadSessionId: 'source-only-session' })
+      );
+
+      const core = trackCore(path.join(tmpDir, 'storage', 'app.db'));
+      // Use the real saved-file snapshot reader, not this file's deterministic reader fixture.
+      const feature = createCustomTeamTemplatesFeature({
+        backend: { gateway: sqliteGateway(core) },
+      });
+      const app = serve(feature);
+      const { templateId } = await prepareAndSave(app, 'Reusable engineering');
+      const list = await app.inject({
+        method: 'GET',
+        url: CUSTOM_TEAM_TEMPLATE_ROUTES.listTemplates,
+      });
+      const { templates } = list.json<{ templates: CustomTeamTemplateV1[] }>();
+      expect(templates).toHaveLength(1);
+      const template = templates[0];
+      expect(template).toMatchObject({
+        templateId,
+        teamPrompt: 'Deliver the feature.',
+        members: [{ name: 'alice', role: 'Engineer', workflow: 'Build the feature.' }],
+      });
+      expect(Object.keys(template.members[0]).sort()).toEqual(['name', 'role', 'workflow']);
+
+      const teamNames = ['template-draft-a', 'template-draft-b'];
+      const uiMemberIds = new Set<string>();
+      for (const teamName of teamNames) {
+        const draft = applyCustomTeamTemplate(template);
+        const roster = buildInitialRosterMemberDrafts({
+          copiedMembers: draft.members,
+          multimodelEnabled: true,
+        });
+        expect(uiMemberIds.has(roster[0].id)).toBe(false);
+        uiMemberIds.add(roster[0].id);
+        await service.createTeamConfig({
+          ...draft,
+          teamName,
+          cwd: project,
+          members: buildMembersFromDrafts(roster, { inheritedProviderId: undefined }),
+        });
+        expect(await service.getSavedRequest(teamName)).toMatchObject({
+          teamName,
+          cwd: project,
+          prompt: 'Deliver the feature.',
+          runtimeSelectionVersion: 1,
+          members: [{ name: 'alice', role: 'Engineer', workflow: 'Build the feature.' }],
+        });
+        const directory = path.join(claudeRoot, 'teams', teamName);
+        // A draft has no CLI config, session, launch state or copied inbox/task payload.
+        expect((await fs.readdir(directory)).sort()).toEqual([
+          'inboxes',
+          'members.meta.json',
+          'team.meta.json',
+        ]);
+        expect(await fs.readdir(path.join(directory, 'inboxes'))).toEqual([]);
+        expect(await fs.readdir(path.join(claudeRoot, 'tasks', teamName))).toEqual([]);
+        const members = await membersStore.getMembers(teamName);
+        expect(members).toHaveLength(1);
+        expect(members[0].agentId).toBeUndefined();
+        const metadata = JSON.parse(
+          await fs.readFile(path.join(directory, 'team.meta.json'), 'utf8')
+        );
+        expect(metadata).not.toHaveProperty('launchIdentity');
+        expect(metadata).not.toHaveProperty('leadSessionId');
+        expect(metadata).not.toHaveProperty('templateId');
+      }
+
+      await service.updateMemberRole(teamNames[0], 'alice', 'Independent editor');
+      expect((await service.getSavedRequest(teamNames[0]))?.members[0].role).toBe(
+        'Independent editor'
+      );
+      expect((await service.getSavedRequest(teamNames[1]))?.members[0].role).toBe('Engineer');
+      expect(await fs.readFile(sourceMembersPath, 'utf8')).toBe(sourceMembersBefore);
+      const after = await app.inject({
+        method: 'GET',
+        url: CUSTOM_TEAM_TEMPLATE_ROUTES.listTemplates,
+      });
+      expect(after.json()).toMatchObject({ status: 'ready', templates });
+      expect(after.json().templates).toEqual(templates);
+    } finally {
+      setClaudeBasePathOverride(previousClaudeRoot);
+    }
   });
 
   it('reports unavailable storage instead of false success when the backend is missing', async () => {

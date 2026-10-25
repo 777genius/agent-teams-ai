@@ -1,3 +1,6 @@
+import React, { act } from 'react';
+import { createRoot } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock idb-keyval before importing draftStorage
@@ -17,6 +20,7 @@ vi.mock('idb-keyval', async (importOriginal) => ({
   keys: vi.fn(() => Promise.resolve([...store.keys()])),
 }));
 
+import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { draftStorage } from '@renderer/services/draftStorage';
 
 import type { InlineChip } from '@renderer/types/inlineChip';
@@ -94,4 +98,52 @@ describe('chip draft persistence via draftStorage', () => {
     const parsed = JSON.parse(raw!);
     expect(parsed).toEqual([]);
   });
+});
+
+describe('useChipDraftPersistence hydration', () => {
+  it.each(['clear', 'edit', 'unchanged'] as const)(
+    'keeps %s state when an older initial load resolves',
+    async (action) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      let resolveLoad!: (value: string | null) => void;
+      vi.spyOn(draftStorage, 'loadDraft').mockReturnValueOnce(
+        new Promise<string | null>((resolve) => {
+          resolveLoad = resolve;
+        })
+      );
+      const oldChip = makeChip({ filePath: '/old-project/private/index.ts', fileName: 'index.ts' });
+      const freshChip = makeChip({
+        id: 'fresh',
+        filePath: '/new-project/index.ts',
+        fileName: 'index.ts',
+      });
+      let latest!: ReturnType<typeof useChipDraftPersistence>;
+      function Probe(): null {
+        latest = useChipDraftPersistence('createTeam:prompt:chips');
+        return null;
+      }
+      const host = document.createElement('div');
+      const root = createRoot(host);
+      try {
+        await act(async () => {
+          root.render(React.createElement(Probe));
+        });
+        act(() => {
+          if (action === 'clear') latest.clearChipDraft();
+          if (action === 'edit') latest.addChip(freshChip);
+        });
+        await act(async () => {
+          resolveLoad(JSON.stringify([oldChip]));
+        });
+        expect(latest.chips).toEqual(
+          action === 'clear' ? [] : action === 'edit' ? [freshChip] : [oldChip]
+        );
+        expect(latest.isSaved).toBe(action === 'unchanged');
+      } finally {
+        act(() => root.unmount());
+        vi.restoreAllMocks();
+        vi.unstubAllGlobals();
+      }
+    }
+  );
 });

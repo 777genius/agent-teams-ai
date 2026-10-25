@@ -4,6 +4,9 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const promptChipDraftMock = vi.hoisted(() => ({
+  chips: [] as import('@shared/types/inlineChip').InlineChip[],
+}));
 const openDashboard = vi.fn();
 const openTeamTab = vi.fn();
 const fetchCliStatus = vi.fn();
@@ -81,7 +84,7 @@ const storeState = {
   updateSchedule,
   repositoryGroups: [],
   branchByPath: { '/tmp/project': 'main', '/tmp/project/.worktrees/jack': 'feature/current-work' },
-  fetchBranches: vi.fn(async () => {}),
+  fetchBranches: vi.fn(() => Promise.resolve()),
   selectedTeamName: 'team-alpha',
   launchParamsByTeam: {},
   teamByName: {},
@@ -117,9 +120,9 @@ vi.mock('@renderer/api', () => ({
       ),
     },
     teams: {
-      createConfig: vi.fn(async () => {}),
+      createConfig: vi.fn(() => Promise.resolve()),
       getSavedRequest: vi.fn(async () => null),
-      replaceMembers: vi.fn(async () => {}),
+      replaceMembers: vi.fn(() => Promise.resolve()),
       prepareProvisioning: vi.fn(async () => ({})),
       getWorktreeGitStatus: vi.fn(async (projectPath: string) => ({
         projectPath,
@@ -140,6 +143,9 @@ vi.mock('@renderer/api', () => ({
         hasHead: true,
         canUseWorktrees: true,
       })),
+    },
+    customTeamTemplates: {
+      listTemplates: vi.fn(() => Promise.resolve({ status: 'empty' as const })),
     },
     projectFolder: {
       getState: vi.fn(async () => ({ state: 'exists' as const })),
@@ -343,6 +349,8 @@ vi.mock('@renderer/components/ui/button', () => ({
     disabled,
     className,
     'aria-describedby': ariaDescribedBy,
+    'data-testid': dataTestId,
+    'aria-pressed': ariaPressed,
   }: {
     children: React.ReactNode;
     onClick?: () => void;
@@ -350,6 +358,8 @@ vi.mock('@renderer/components/ui/button', () => ({
     disabled?: boolean;
     className?: string;
     'aria-describedby'?: string;
+    'data-testid'?: string;
+    'aria-pressed'?: boolean;
   }) =>
     React.createElement(
       'button',
@@ -359,6 +369,8 @@ vi.mock('@renderer/components/ui/button', () => ({
         disabled,
         className,
         'aria-describedby': ariaDescribedBy,
+        'data-testid': dataTestId,
+        'aria-pressed': ariaPressed,
       },
       children
     ),
@@ -445,24 +457,29 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => ({
     value,
     onValueChange,
     id,
+    onFocus,
   }: {
     value: string;
     onValueChange: (value: string) => void;
     id?: string;
+    onFocus?: () => void;
   }) =>
     React.createElement('textarea', {
       id,
       value,
       onChange: (event: Event) => onValueChange((event.target as HTMLTextAreaElement).value),
+      onFocus,
     }),
 }));
 
 vi.mock('@renderer/hooks/useChipDraftPersistence', () => ({
   useChipDraftPersistence: () => ({
-    chips: [],
+    chips: promptChipDraftMock.chips,
     removeChip: vi.fn(),
     addChip: vi.fn(),
-    clearChipDraft: vi.fn(),
+    clearChipDraft: vi.fn(() => {
+      promptChipDraftMock.chips = [];
+    }),
   }),
 }));
 
@@ -470,14 +487,35 @@ vi.mock('@renderer/hooks/useCreateTeamDraft', () => ({
   useCreateTeamDraft: () => createTeamDraftMock.state,
 }));
 
+const draftPersistenceMock = vi.hoisted(() => ({
+  /** Saved draft values keyed by draft key; restored asynchronously like the real hook. */
+  savedDrafts: new Map<string, string>(),
+}));
+
 vi.mock('@renderer/hooks/useDraftPersistence', () => ({
-  useDraftPersistence: () => {
+  useDraftPersistence: ({ key }: { key: string }) => {
     const [value, setValue] = React.useState('');
+    const [isLoaded, setIsLoaded] = React.useState(false);
+    React.useEffect(() => {
+      // Mirrors the real hook: the draft lands only after the first render,
+      // so consumers must tolerate selection/prompt values arriving late.
+      let cancelled = false;
+      void Promise.resolve().then(() => {
+        if (cancelled) return;
+        const saved = draftPersistenceMock.savedDrafts.get(key);
+        if (saved !== undefined) setValue(saved);
+        setIsLoaded(true);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, [key]);
     return {
       value,
       setValue,
       isSaved: false,
       clearDraft: vi.fn(),
+      isLoaded,
     };
   },
 }));
@@ -486,12 +524,23 @@ vi.mock('@renderer/hooks/useFileListCacheWarmer', () => ({
   useFileListCacheWarmer: () => undefined,
 }));
 
+const suggestionHookState = vi.hoisted(() => ({
+  taskEnabled: [] as boolean[],
+  teamEnabled: [] as boolean[],
+}));
+
 vi.mock('@renderer/hooks/useTaskSuggestions', () => ({
-  useTaskSuggestions: () => ({ suggestions: [] }),
+  useTaskSuggestions: (_currentTeamName?: string | null, options?: { enabled?: boolean }) => {
+    suggestionHookState.taskEnabled.push(options?.enabled ?? true);
+    return { suggestions: [] };
+  },
 }));
 
 vi.mock('@renderer/hooks/useTeamSuggestions', () => ({
-  useTeamSuggestions: () => ({ suggestions: [] }),
+  useTeamSuggestions: (_currentTeamName?: string | null, options?: { enabled?: boolean }) => {
+    suggestionHookState.teamEnabled.push(options?.enabled ?? true);
+    return { suggestions: [] };
+  },
 }));
 
 vi.mock('@renderer/hooks/useTheme', () => ({
@@ -653,13 +702,16 @@ vi.mock('@renderer/components/team/dialogs/CodexFastModeSelector', () => ({
     ),
 }));
 
+import { TEAM_TEMPLATES } from '@features/team-templates';
 import { sanitizeProviderStatusAuthority } from '@main/services/runtime/providerStatusCheckContract';
 import { api } from '@renderer/api';
 import { CreateTeamDialog } from '@renderer/components/team/dialogs/CreateTeamDialog';
+import { buildInitialRosterMemberDrafts } from '@renderer/components/team/dialogs/createTeamInitialRoster';
 import { LaunchTeamDialog } from '@renderer/components/team/dialogs/LaunchTeamDialog';
 import { runProviderPrepareDiagnostics } from '@renderer/components/team/dialogs/providerPrepareDiagnostics';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
 import { reconcileCliProviderSnapshot } from '@renderer/store/slices/cliInstallerStatusReconciliation';
+import { createEncodedTaskReference } from '@renderer/utils/taskReferenceUtils';
 import {
   getTeamModelSelectionError,
   isTeamModelAvailableForUi,
@@ -774,7 +826,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onRelaunch: vi.fn(async () => {}),
+          onRelaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -789,7 +841,7 @@ describe('LaunchTeamDialog', () => {
       'opencode'
     );
 
-    await act(async () => root.unmount());
+    act(() => root.unmount());
   });
 
   it.each([
@@ -859,7 +911,7 @@ describe('LaunchTeamDialog', () => {
           modelVerificationState: 'idle',
           modelCatalogRefreshState: 'loading',
         });
-      const submit = vi.fn(async () => {});
+      const submit = vi.fn(() => Promise.resolve());
       const host = document.createElement('div');
       document.body.appendChild(host);
       const root = createRoot(host);
@@ -949,7 +1001,7 @@ describe('LaunchTeamDialog', () => {
         await flush();
       });
       expect(submit).toHaveBeenCalledOnce();
-      await act(async () => root.unmount());
+      act(() => root.unmount());
     }
   );
 
@@ -1008,7 +1060,7 @@ describe('LaunchTeamDialog', () => {
                 activeTeams: [],
                 defaultProjectPath: '/tmp/project',
                 onClose: vi.fn(),
-                onCreate: vi.fn(async () => {}),
+                onCreate: vi.fn(() => Promise.resolve()),
                 onOpenTeam: vi.fn(),
               })
             : React.createElement(LaunchTeamDialog, {
@@ -1021,7 +1073,7 @@ describe('LaunchTeamDialog', () => {
                 clearProvisioningError: vi.fn(),
                 activeTeams: [],
                 onClose: vi.fn(),
-                onLaunch: vi.fn(async () => {}),
+                onLaunch: vi.fn(() => Promise.resolve()),
               })
         );
         await flush();
@@ -1081,7 +1133,7 @@ describe('LaunchTeamDialog', () => {
           vi.mocked(runProviderPrepareDiagnostics).mock.calls.map(([input]) => input.providerId)
         )
       ).toEqual(new Set(expectedProviders));
-      await act(async () => root.unmount());
+      act(() => root.unmount());
     }
   );
 
@@ -1105,7 +1157,7 @@ describe('LaunchTeamDialog', () => {
                 activeTeams: [],
                 defaultProjectPath: '/tmp/project',
                 onClose: vi.fn(),
-                onCreate: vi.fn(async () => {}),
+                onCreate: vi.fn(() => Promise.resolve()),
                 onOpenTeam: vi.fn(),
               })
             : mode === 'schedule'
@@ -1124,7 +1176,7 @@ describe('LaunchTeamDialog', () => {
                   clearProvisioningError: vi.fn(),
                   activeTeams: [],
                   onClose: vi.fn(),
-                  onLaunch: vi.fn(async () => {}),
+                  onLaunch: vi.fn(() => Promise.resolve()),
                 })
         );
         await flush();
@@ -1133,7 +1185,7 @@ describe('LaunchTeamDialog', () => {
         await vi.advanceTimersByTimeAsync(2_500);
       });
       expect(api.workspaceTrust!.getLaunchStatus).not.toHaveBeenCalled();
-      await act(async () => root.unmount());
+      act(() => root.unmount());
     }
   );
 
@@ -1279,11 +1331,12 @@ describe('LaunchTeamDialog', () => {
         ).disabled
       ).toBe(false);
       expect(submit).toHaveBeenCalledTimes(1);
-      await act(async () => root.unmount());
+      act(() => root.unmount());
     }
   );
 
   beforeEach(() => {
+    promptChipDraftMock.chips = [];
     if (typeof localStorage?.getItem !== 'function' || typeof localStorage?.clear !== 'function') {
       const store = new Map<string, string>();
       vi.stubGlobal('localStorage', {
@@ -1463,7 +1516,7 @@ describe('LaunchTeamDialog', () => {
     const launchHost = document.createElement('div');
     document.body.appendChild(launchHost);
     const launchDialogRoot = createRoot(launchHost);
-    const onLaunch = vi.fn(async () => {});
+    const onLaunch = vi.fn(() => Promise.resolve());
     await act(async () => {
       launchDialogRoot.render(
         React.createElement(LaunchTeamDialog, {
@@ -1511,7 +1564,7 @@ describe('LaunchTeamDialog', () => {
     const createHost = document.createElement('div');
     document.body.appendChild(createHost);
     const createDialogRoot = createRoot(createHost);
-    const onCreate = vi.fn(async () => {});
+    const onCreate = vi.fn(() => Promise.resolve());
     await act(async () => {
       createDialogRoot.render(
         React.createElement(CreateTeamDialog, {
@@ -1532,8 +1585,10 @@ describe('LaunchTeamDialog', () => {
       await vi.advanceTimersByTimeAsync(0);
       await flush();
     });
-    const createButton = Array.from(createHost.querySelectorAll('button')).find((button) =>
-      button.textContent?.toLowerCase().includes('create')
+    const createButton = Array.from(createHost.querySelectorAll('button')).find(
+      (button) =>
+        button.textContent?.toLowerCase().includes('create') &&
+        !button.closest('[data-testid="create-team-template-picker"]')
     );
     expect(createButton?.disabled).toBe(false);
 
@@ -1546,6 +1601,575 @@ describe('LaunchTeamDialog', () => {
     await act(async () => vi.runOnlyPendingTimersAsync());
     expect(createButton?.disabled).toBe(true);
     await act(async () => createDialogRoot.unmount());
+  });
+
+  describe('CreateTeamDialog template prompt editing', () => {
+    const customTemplateRecord = {
+      templateId: 'tmpl-review-1',
+      name: 'Review Template',
+      description: 'Saved review template',
+      schemaVersion: 1,
+      teamPrompt: 'Template lead prompt',
+      members: [{ name: 'backend-dev', role: 'Backend Developer', workflow: 'Build APIs' }],
+      revision: 2,
+      createdAt: '2026-09-10T10:00:00.000Z',
+    };
+
+    /**
+     * The shared useCreateTeamDraft mock exposes plain vi.fn() setters, so
+     * applying a template would never actually flip launchTeam in the mocked
+     * draft state. This swaps setLaunchTeam for a state-mutating stand-in to
+     * mirror the real hook, and returns a restore callback.
+     */
+    function installStatefulLaunchTeamSetter(): () => void {
+      const original = createTeamDraftMock.state.setLaunchTeam;
+      createTeamDraftMock.state.setLaunchTeam = ((value: boolean) => {
+        createTeamDraftMock.state.launchTeam = value;
+      }) as typeof createTeamDraftMock.state.setLaunchTeam;
+      return () => {
+        createTeamDraftMock.state.setLaunchTeam = original;
+      };
+    }
+
+    async function renderCreateDialog(
+      host: HTMLElement,
+      root: ReturnType<typeof createRoot>
+    ): Promise<ReturnType<typeof vi.fn>> {
+      const onCreate = vi.fn(() => Promise.resolve());
+      await act(async () => {
+        root.render(
+          React.createElement(CreateTeamDialog, {
+            open: true,
+            canCreate: true,
+            provisioningErrorsByTeam: {},
+            existingTeamNames: [],
+            activeTeams: [],
+            defaultProjectPath: '/tmp/project',
+            onClose: vi.fn(),
+            onCreate,
+            onOpenTeam: vi.fn(),
+          })
+        );
+        await flush();
+      });
+      // Let the custom-template library load so picker options are rendered.
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        if (host.querySelector('[data-testid="create-template-option-none"]')) break;
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          await flush();
+        });
+      }
+      return onCreate;
+    }
+
+    function setPromptTextarea(host: HTMLElement, value: string): HTMLTextAreaElement {
+      const textarea = host.querySelector('textarea#team-prompt') as HTMLTextAreaElement | null;
+      if (!textarea) throw new Error('Expected the team prompt field to be rendered.');
+      // Bypass React's value tracker so the controlled textarea registers the edit.
+      const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!;
+      setter.call(textarea, value);
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      return textarea;
+    }
+
+    function optionState(host: HTMLElement, option: string): string | null {
+      return (
+        host
+          .querySelector(`[data-testid="create-template-option-${option}"]`)
+          ?.getAttribute('aria-pressed') ?? null
+      );
+    }
+
+    function findCreateButton(host: HTMLElement): HTMLButtonElement | undefined {
+      return Array.from(host.querySelectorAll('button')).find(
+        (button) =>
+          button.textContent?.trim() === 'Create' &&
+          !button.closest('[data-testid="create-team-template-picker"]')
+      ) as HTMLButtonElement | undefined;
+    }
+
+    it('keeps a saved template prompt editable and submits the edited prompt config-only', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.mocked(api.customTeamTemplates.listTemplates).mockResolvedValue({
+        status: 'ready',
+        templates: [customTemplateRecord],
+      } as any);
+      const restoreLaunchTeam = installStatefulLaunchTeamSetter();
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      try {
+        const onCreate = await renderCreateDialog(host, root);
+        // Ordinary launch flow keeps its prompt field.
+        expect(host.querySelector('textarea#team-prompt')).not.toBeNull();
+        const customOption = host.querySelector(
+          '[data-testid="create-template-option-custom-tmpl-review-1"]'
+        ) as HTMLButtonElement | null;
+        expect(customOption, host.textContent ?? '').not.toBeNull();
+        await act(async () => {
+          customOption!.click();
+          await flush();
+        });
+        expect(createTeamDraftMock.state.launchTeam).toBe(false);
+        // Regression: applying the template switches to config-only semantics,
+        // but the template prompt must stay visible and editable before submit.
+        const textarea = host.querySelector('textarea#team-prompt') as HTMLTextAreaElement | null;
+        expect(textarea, host.textContent ?? '').not.toBeNull();
+        expect(textarea!.value).toBe('Template lead prompt');
+        await act(async () => {
+          setPromptTextarea(host, 'Edited template lead prompt');
+          await flush();
+        });
+        const createButton = findCreateButton(host);
+        expect(createButton?.disabled, host.textContent ?? '').toBe(false);
+        await act(async () => {
+          createButton!.click();
+          await flush();
+        });
+        expect(api.teams.createConfig).toHaveBeenCalledTimes(1);
+        const payload = vi.mocked(api.teams.createConfig).mock.calls[0]?.[0] as any;
+        expect(payload.prompt).toBe('Edited template lead prompt');
+        expect(onCreate).not.toHaveBeenCalled();
+      } finally {
+        act(() => root.unmount());
+        restoreLaunchTeam();
+        vi.mocked(api.customTeamTemplates.listTemplates).mockReset();
+        vi.mocked(api.customTeamTemplates.listTemplates).mockResolvedValue({
+          status: 'empty',
+        } as any);
+      }
+    });
+
+    it.each([false, true])(
+      'clears replaced prompt chips and serializes only later insertions (insert: %s)',
+      async (insertAfterApply) => {
+        vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+        const taskRef = createEncodedTaskReference('42', 'canonical-task-id', 'other-team');
+        vi.mocked(api.customTeamTemplates.listTemplates).mockResolvedValue({
+          status: 'ready',
+          templates: [{ ...customTemplateRecord, teamPrompt: `Read 📄index.ts and ${taskRef}` }],
+        } as any);
+        promptChipDraftMock.chips = [
+          {
+            id: 'file-chip',
+            filePath: '/tmp/old-project/private/index.ts',
+            fileName: 'index.ts',
+            displayPath: 'private/index.ts',
+            fromLine: null,
+            toLine: null,
+            codeText: '',
+            language: '',
+          },
+        ];
+        const restoreLaunchTeam = installStatefulLaunchTeamSetter();
+        const host = document.createElement('div');
+        document.body.appendChild(host);
+        const root = createRoot(host);
+        try {
+          const onCreate = await renderCreateDialog(host, root);
+          // Ordinary launch flow keeps its prompt field.
+          expect(host.querySelector('textarea#team-prompt')).not.toBeNull();
+          const customOption = host.querySelector(
+            '[data-testid="create-template-option-custom-tmpl-review-1"]'
+          ) as HTMLButtonElement | null;
+          expect(customOption, host.textContent ?? '').not.toBeNull();
+          await act(async () => {
+            customOption!.click();
+            await flush();
+          });
+          expect(createTeamDraftMock.state.launchTeam).toBe(false);
+          // Regression: applying the template switches to config-only semantics,
+          // but the template prompt must stay visible and editable before submit.
+          const textarea = host.querySelector('textarea#team-prompt') as HTMLTextAreaElement | null;
+          expect(textarea, host.textContent ?? '').not.toBeNull();
+          expect(textarea!.value).toBe(`Read 📄index.ts and ${taskRef}`);
+          // Simulate a file insertion only after the template replaced the prompt.
+          // Reusing its visible basename must not revive the old project's chip.
+          if (insertAfterApply)
+            promptChipDraftMock.chips.push({
+              id: 'new-file-chip',
+              filePath: '/tmp/project/src/api/index.ts',
+              fileName: 'index.ts',
+              displayPath: 'src/api/index.ts',
+              fromLine: null,
+              toLine: null,
+              codeText: '',
+              language: '',
+            });
+          await act(async () => {
+            setPromptTextarea(host, `Read 📄index.ts and ${taskRef}!`);
+            await flush();
+          });
+          const createButton = findCreateButton(host);
+          expect(createButton?.disabled, host.textContent ?? '').toBe(false);
+          await act(async () => {
+            createButton!.click();
+            await flush();
+          });
+          expect(api.teams.createConfig).toHaveBeenCalledTimes(1);
+          const payload = vi.mocked(api.teams.createConfig).mock.calls[0]?.[0] as any;
+          expect(payload.prompt).toBe(
+            insertAfterApply
+              ? `Read **index.ts** (\`src/api/index.ts\`) and ${taskRef}!`
+              : `Read 📄index.ts and ${taskRef}!`
+          );
+          expect(payload.prompt).not.toContain('private/index.ts');
+          expect(onCreate).not.toHaveBeenCalled();
+        } finally {
+          act(() => root.unmount());
+          restoreLaunchTeam();
+          vi.mocked(api.customTeamTemplates.listTemplates).mockReset();
+          vi.mocked(api.customTeamTemplates.listTemplates).mockResolvedValue({
+            status: 'empty',
+          } as any);
+        }
+      }
+    );
+
+    it('keeps a built-in template prompt editable the same way', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const restoreLaunchTeam = installStatefulLaunchTeamSetter();
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      const builtin = TEAM_TEMPLATES.find((entry) => entry.id === 'marketing');
+      try {
+        await renderCreateDialog(host, root);
+        const builtinOption = host.querySelector(
+          '[data-testid="create-template-option-builtin-marketing"]'
+        ) as HTMLButtonElement | null;
+        expect(builtinOption, host.textContent ?? '').not.toBeNull();
+        await act(async () => {
+          builtinOption!.click();
+          await flush();
+        });
+        expect(createTeamDraftMock.state.launchTeam).toBe(false);
+        const textarea = host.querySelector('textarea#team-prompt') as HTMLTextAreaElement | null;
+        expect(textarea, host.textContent ?? '').not.toBeNull();
+        expect(textarea!.value).toBe(builtin?.teamPrompt);
+        await act(async () => {
+          setPromptTextarea(host, 'Edited builtin lead prompt');
+          await flush();
+        });
+        const createButton = findCreateButton(host);
+        expect(createButton?.disabled, host.textContent ?? '').toBe(false);
+        await act(async () => {
+          createButton!.click();
+          await flush();
+        });
+        expect(api.teams.createConfig).toHaveBeenCalledTimes(1);
+        const payload = vi.mocked(api.teams.createConfig).mock.calls[0]?.[0] as any;
+        expect(payload.prompt).toBe('Edited builtin lead prompt');
+      } finally {
+        act(() => root.unmount());
+        restoreLaunchTeam();
+      }
+    });
+
+    it('enables workflow suggestions lazily when the template prompt is focused in config-only mode', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      suggestionHookState.taskEnabled.length = 0;
+      suggestionHookState.teamEnabled.length = 0;
+      const restoreLaunchTeam = installStatefulLaunchTeamSetter();
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      try {
+        await renderCreateDialog(host, root);
+        // Ordinary launch flow: nothing has focused the prompt, so the lazy
+        // suggestion sources must not have been initialized yet.
+        expect(suggestionHookState.taskEnabled.length).toBeGreaterThan(0);
+        expect(suggestionHookState.taskEnabled.every((value) => value === false)).toBe(true);
+        expect(suggestionHookState.teamEnabled.every((value) => value === false)).toBe(true);
+
+        // Apply a built-in template: the dialog switches to config-only mode.
+        const builtinOption = host.querySelector<HTMLButtonElement>(
+          '[data-testid="create-template-option-builtin-marketing"]'
+        );
+        expect(builtinOption, host.textContent ?? '').not.toBeNull();
+        await act(async () => {
+          builtinOption!.click();
+          await flush();
+        });
+        expect(createTeamDraftMock.state.launchTeam).toBe(false);
+
+        // Config-only: the prompt stays visible and editable while the
+        // launch-settings optional section (the old suggestion trigger) is not rendered.
+        const textarea = host.querySelector<HTMLTextAreaElement>('textarea#team-prompt');
+        expect(textarea, host.textContent ?? '').not.toBeNull();
+        expect(host.textContent).not.toContain('create.optional.launchSettingsTitle');
+        expect(host.querySelector('#create-skip-permissions')).toBeNull();
+        await act(async () => {
+          setPromptTextarea(host, 'Focused template lead prompt');
+          await flush();
+        });
+        expect(textarea!.value).toBe('Focused template lead prompt');
+        // Applying the template alone must not initialize the suggestion sources.
+        expect(suggestionHookState.taskEnabled.every((value) => value === false)).toBe(true);
+        expect(suggestionHookState.teamEnabled.every((value) => value === false)).toBe(true);
+
+        // Focusing the prompt is what lazily enables team/task suggestions.
+        await act(async () => {
+          textarea!.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+          await flush();
+        });
+        expect(suggestionHookState.taskEnabled.at(-1)).toBe(true);
+        expect(suggestionHookState.teamEnabled.at(-1)).toBe(true);
+        // Repeated focuses must not toggle the sources back off or re-initialize.
+        await act(async () => {
+          textarea!.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+          await flush();
+        });
+        expect(suggestionHookState.taskEnabled.at(-1)).toBe(true);
+        expect(suggestionHookState.teamEnabled.at(-1)).toBe(true);
+        expect(suggestionHookState.taskEnabled.some((value) => value === true)).toBe(true);
+      } finally {
+        act(() => root.unmount());
+        restoreLaunchTeam();
+      }
+    });
+
+    it('synchronizes the picker with the asynchronously restored selection without re-applying the template', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      // The saved prompt was edited after the template was applied, so any
+      // re-application during restore would clobber the user's own text.
+      draftPersistenceMock.savedDrafts.set('createTeam:prompt', 'Saved edited lead prompt');
+      draftPersistenceMock.savedDrafts.set(
+        'createTeam:templateSelection',
+        JSON.stringify({ source: 'custom', value: 'custom:tmpl-review-1' })
+      );
+      const originalMembers = createTeamDraftMock.state.members;
+      const originalLaunchTeam = createTeamDraftMock.state.launchTeam;
+      // The saved draft belongs to a config-only session: the template was
+      // applied earlier (launchTeam=false) and the dialog is reopened now.
+      createTeamDraftMock.state.launchTeam = false;
+      // Restored roster shaped exactly like a template-applied roster.
+      createTeamDraftMock.state.members = buildInitialRosterMemberDrafts({
+        copiedMembers: [{ name: 'backend-dev', role: 'Backend Developer', workflow: 'Build APIs' }],
+        multimodelEnabled: true,
+      }) as typeof createTeamDraftMock.state.members;
+      const restoreLaunchTeam = installStatefulLaunchTeamSetter();
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      try {
+        vi.mocked(api.customTeamTemplates.listTemplates).mockResolvedValue({
+          status: 'ready',
+          templates: [customTemplateRecord],
+        } as any);
+        await renderCreateDialog(host, root);
+
+        // The empty-then-restored transition itself is covered by the picker
+        // component tests; here the dialog must converge end-to-end.
+        for (let attempt = 0; attempt < 12; attempt += 1) {
+          await act(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            await flush();
+          });
+          if (
+            host
+              .querySelector('[data-testid="create-template-option-custom-tmpl-review-1"]')
+              ?.getAttribute('aria-pressed') === 'true'
+          ) {
+            break;
+          }
+        }
+
+        // Restored picker selection matches the restored template source…
+        expect(
+          host
+            .querySelector('[data-testid="create-template-option-custom-tmpl-review-1"]')
+            ?.getAttribute('aria-pressed')
+        ).toBe('true');
+        expect(optionState(host, 'none')).toBe('false');
+        // …while the restored prompt and members stay exactly as the user
+        // saved them — restoration must not re-apply the template content.
+        const textarea = host.querySelector<HTMLTextAreaElement>('textarea#team-prompt');
+        expect(textarea, host.textContent ?? '').not.toBeNull();
+        expect(textarea!.value).toBe('Saved edited lead prompt');
+        expect(host.textContent).toContain('backend-dev');
+
+        // The consistent restored state submits as-is.
+        const createButton = findCreateButton(host);
+        expect(createButton?.disabled, host.textContent ?? '').toBe(false);
+        await act(async () => {
+          createButton!.click();
+          await flush();
+        });
+        expect(api.teams.createConfig).toHaveBeenCalledTimes(1);
+        const payload = vi.mocked(api.teams.createConfig).mock.calls[0]?.[0] as any;
+        expect(payload.prompt).toBe('Saved edited lead prompt');
+      } finally {
+        act(() => root.unmount());
+        draftPersistenceMock.savedDrafts.clear();
+        createTeamDraftMock.state.members = originalMembers;
+        createTeamDraftMock.state.launchTeam = originalLaunchTeam;
+        restoreLaunchTeam();
+        vi.mocked(api.customTeamTemplates.listTemplates).mockReset();
+        vi.mocked(api.customTeamTemplates.listTemplates).mockResolvedValue({
+          status: 'empty',
+        } as any);
+      }
+    });
+
+    // Production-owner note: TeamListView conditionally renders CreateTeamDialog
+    // and mocks it as a stub in TeamListViewCustomTemplates.test.tsx, so exercising
+    // the real dialog through the owner would require unmocking the entire
+    // CreateTeamDialog dependency graph (useCreateTeamDraft, draft persistence,
+    // provider hooks, etc.) that those tests deliberately avoid. That is a
+    // concrete harness limitation. This test is the closest possible proof: it
+    // drives the real CreateTeamDialog (the component TeamListView renders),
+    // unmounts it (simulating close without submit), remounts a new instance
+    // (simulating reopen), and verifies the same persisted draft is read and the
+    // restored user edits are preserved without reapplying the template.
+    it('restores edited prompt and members after a real dialog unmount and remount', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.mocked(api.customTeamTemplates.listTemplates).mockResolvedValue({
+        status: 'ready',
+        templates: [customTemplateRecord],
+      } as any);
+      const originalMembers = createTeamDraftMock.state.members;
+      const originalLaunchTeam = createTeamDraftMock.state.launchTeam;
+      const restoreLaunchTeam = installStatefulLaunchTeamSetter();
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      try {
+        const onCreate = await renderCreateDialog(host, root);
+        const customOption = host.querySelector(
+          '[data-testid="create-template-option-custom-tmpl-review-1"]'
+        ) as HTMLButtonElement | null;
+        expect(customOption, host.textContent ?? '').not.toBeNull();
+        await act(async () => {
+          customOption!.click();
+          await flush();
+        });
+        expect(createTeamDraftMock.state.launchTeam).toBe(false);
+
+        const textarea = host.querySelector('textarea#team-prompt') as HTMLTextAreaElement | null;
+        expect(textarea, host.textContent ?? '').not.toBeNull();
+        await act(async () => {
+          setPromptTextarea(host, 'Edited unmount prompt');
+          await flush();
+        });
+        // Representative member edit: mutate the roster the dialog owns so the
+        // restored instance must carry it back instead of reapplying the template.
+        const editedMembers = [
+          { name: 'backend-dev', role: 'Backend Developer', workflow: 'Edited workflow' },
+        ];
+        createTeamDraftMock.state.members =
+          editedMembers as unknown as typeof createTeamDraftMock.state.members;
+
+        // Mirror the persistence that the real (debounced) draft hooks perform
+        // on unmount, since this harness mocks them as in-memory state.
+        draftPersistenceMock.savedDrafts.set('createTeam:prompt', 'Edited unmount prompt');
+        draftPersistenceMock.savedDrafts.set(
+          'createTeam:templateSelection',
+          JSON.stringify({ source: 'custom', value: 'custom:tmpl-review-1' })
+        );
+
+        // Prove the dialog is actually unmounted (not merely hidden).
+        const dialogBefore = host.querySelector('[data-testid="create-team-template-picker"]');
+        expect(dialogBefore).not.toBeNull();
+        act(() => root.unmount());
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        });
+        expect(host.querySelector('[data-testid="create-team-template-picker"]')).toBeNull();
+
+        // Reopen through a brand-new instance on the same host.
+        createTeamDraftMock.state.setMembers.mockClear();
+        const reopenedRoot = createRoot(host);
+        await act(async () => {
+          reopenedRoot.render(
+            React.createElement(CreateTeamDialog, {
+              open: true,
+              canCreate: true,
+              provisioningErrorsByTeam: {},
+              existingTeamNames: [],
+              activeTeams: [],
+              defaultProjectPath: '/tmp/project',
+              onClose: vi.fn(),
+              onCreate,
+              onOpenTeam: vi.fn(),
+            })
+          );
+          await flush();
+        });
+        for (let attempt = 0; attempt < 12; attempt += 1) {
+          if (
+            host
+              .querySelector('[data-testid="create-template-option-custom-tmpl-review-1"]')
+              ?.getAttribute('aria-pressed') === 'true'
+          ) {
+            break;
+          }
+          await act(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            await flush();
+          });
+        }
+
+        // Saved template stays selected.
+        expect(
+          host
+            .querySelector('[data-testid="create-template-option-custom-tmpl-review-1"]')
+            ?.getAttribute('aria-pressed')
+        ).toBe('true');
+        // Edited prompt is restored, not the template's original prompt.
+        const reopenedTextarea = host.querySelector<HTMLTextAreaElement>('textarea#team-prompt');
+        expect(reopenedTextarea, host.textContent ?? '').not.toBeNull();
+        expect(reopenedTextarea!.value).toBe('Edited unmount prompt');
+        expect(reopenedTextarea!.value).not.toBe('Template lead prompt');
+        // Member edit survived the round trip.
+        expect(host.textContent).toContain('backend-dev');
+        // Template was not reapplied over the restored user edits (prompt stays edited).
+        expect(host.textContent).toContain('Edited unmount prompt');
+        // The template roster (with its original Build APIs workflow) must not have
+        // been reapplied over the restored, user-edited roster.
+        expect(createTeamDraftMock.state.setMembers).not.toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({ name: 'backend-dev', workflow: 'Build APIs' }),
+          ])
+        );
+
+        act(() => reopenedRoot.unmount());
+      } finally {
+        act(() => root.unmount());
+        draftPersistenceMock.savedDrafts.clear();
+        createTeamDraftMock.state.members = originalMembers;
+        createTeamDraftMock.state.launchTeam = originalLaunchTeam;
+        restoreLaunchTeam();
+        vi.mocked(api.customTeamTemplates.listTemplates).mockReset();
+        vi.mocked(api.customTeamTemplates.listTemplates).mockResolvedValue({
+          status: 'empty',
+        } as any);
+      }
+    });
+
+    it('hides the prompt field for ordinary config-only creation without a template', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      createTeamDraftMock.state.launchTeam = false;
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      try {
+        await renderCreateDialog(host, root);
+        expect(host.querySelector('textarea#team-prompt')).toBeNull();
+        const createButton = findCreateButton(host);
+        expect(createButton?.disabled, host.textContent ?? '').toBe(false);
+        await act(async () => {
+          createButton!.click();
+          await flush();
+        });
+        expect(api.teams.createConfig).toHaveBeenCalledTimes(1);
+        const payload = vi.mocked(api.teams.createConfig).mock.calls[0]?.[0] as any;
+        expect(payload.prompt).toBeUndefined();
+      } finally {
+        act(() => root.unmount());
+      }
+    });
   });
 
   it('shows the Codex account/runtime launch mismatch when Create is disabled', async () => {
@@ -1589,7 +2213,7 @@ describe('LaunchTeamDialog', () => {
           activeTeams: [],
           defaultProjectPath: '/tmp/project',
           onClose: vi.fn(),
-          onCreate: vi.fn(async () => {}),
+          onCreate: vi.fn(() => Promise.resolve()),
           onOpenTeam: vi.fn(),
         })
       );
@@ -1617,7 +2241,7 @@ describe('LaunchTeamDialog', () => {
     expect(host.textContent).not.toContain('All selected providers are ready.');
     expect(host.textContent).not.toContain('CODEX_API_KEY');
 
-    await act(async () => root.unmount());
+    act(() => root.unmount());
   });
 
   it('renders relaunch-specific title, warning and submit label', async () => {
@@ -1639,7 +2263,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onRelaunch: vi.fn(async () => {}),
+          onRelaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -1685,7 +2309,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -1795,7 +2419,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -1838,7 +2462,7 @@ describe('LaunchTeamDialog', () => {
   it('invalidates ready checks and blocks launch while project selection is unresolved', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();
-    const onLaunch = vi.fn(async () => {});
+    const onLaunch = vi.fn(() => Promise.resolve());
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -1887,7 +2511,7 @@ describe('LaunchTeamDialog', () => {
       await vi.advanceTimersByTimeAsync(250);
     });
     expect(submit().disabled).toBe(false);
-    await act(async () => root.unmount());
+    act(() => root.unmount());
   });
 
   it('starts preflight with user choices when a roster refresh cancels pending hydration', async () => {
@@ -1909,7 +2533,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
     await act(async () => {
@@ -1935,7 +2559,7 @@ describe('LaunchTeamDialog', () => {
       expect.objectContaining({ cwd: '/tmp/project' })
     );
     expect(api.teams.getSavedRequest).toHaveBeenCalledTimes(1);
-    await act(async () => root.unmount());
+    act(() => root.unmount());
   });
 
   it('keeps a programmatic effort reset from cancelling saved-request hydration', async () => {
@@ -1965,7 +2589,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2043,7 +2667,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2107,7 +2731,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2173,7 +2797,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2245,7 +2869,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2306,7 +2930,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2357,7 +2981,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2397,7 +3021,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2460,7 +3084,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2520,7 +3144,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2589,7 +3213,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -2700,7 +3324,7 @@ describe('LaunchTeamDialog', () => {
           activeTeams: [],
           defaultProjectPath: '/tmp/project',
           onClose: vi.fn(),
-          onCreate: vi.fn(async () => {}),
+          onCreate: vi.fn(() => Promise.resolve()),
           onOpenTeam: vi.fn(),
         })
       );
@@ -2819,7 +3443,7 @@ describe('LaunchTeamDialog', () => {
           activeTeams: [],
           defaultProjectPath: '/tmp/project',
           onClose: vi.fn(),
-          onCreate: vi.fn(async () => {}),
+          onCreate: vi.fn(() => Promise.resolve()),
           onOpenTeam: vi.fn(),
         })
       );
@@ -2844,7 +3468,7 @@ describe('LaunchTeamDialog', () => {
       selectedModelChecks: expect.arrayContaining([expect.objectContaining({ model: localModel })]),
     });
 
-    await act(async () => root.unmount());
+    act(() => root.unmount());
   });
 
   it('opens a brand-new team with the lead only and no pre-stuffed teammates', async () => {
@@ -2869,7 +3493,7 @@ describe('LaunchTeamDialog', () => {
             activeTeams: [],
             defaultProjectPath: '/tmp/project',
             onClose: vi.fn(),
-            onCreate: vi.fn(async () => {}),
+            onCreate: vi.fn(() => Promise.resolve()),
             onOpenTeam: vi.fn(),
           })
         );
@@ -2912,7 +3536,7 @@ describe('LaunchTeamDialog', () => {
       const host = document.createElement('div');
       document.body.appendChild(host);
       const root = createRoot(host);
-      const onCreate = vi.fn(async () => {});
+      const onCreate = vi.fn(() => Promise.resolve());
       try {
         await act(async () => {
           root.render(
@@ -2958,7 +3582,7 @@ describe('LaunchTeamDialog', () => {
         );
         expect(onCreate).not.toHaveBeenCalled();
       } finally {
-        await act(async () => root.unmount());
+        act(() => root.unmount());
       }
     }
   );
@@ -2991,7 +3615,7 @@ describe('LaunchTeamDialog', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
-    const onCreate = vi.fn(async () => {});
+    const onCreate = vi.fn(() => Promise.resolve());
     try {
       await act(async () => {
         root.render(
@@ -3046,7 +3670,7 @@ describe('LaunchTeamDialog', () => {
       expect(request?.members[1]?.model).toBeUndefined();
       expect(onCreate).not.toHaveBeenCalled();
     } finally {
-      await act(async () => root.unmount());
+      act(() => root.unmount());
       createTeamDraftMock.state.members = savedMembers;
     }
   });
@@ -3068,7 +3692,7 @@ describe('LaunchTeamDialog', () => {
       defaultProjectPath: '/tmp/project',
       forceDefaultProjectSelection: true,
       onClose: vi.fn(),
-      onCreate: vi.fn(async () => {}),
+      onCreate: vi.fn(() => Promise.resolve()),
       onOpenTeam: vi.fn(),
     };
 
@@ -3138,7 +3762,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -3174,7 +3798,7 @@ describe('LaunchTeamDialog', () => {
         },
       ],
     } as any);
-    const onLaunch = vi.fn(async () => {});
+    const onLaunch = vi.fn(() => Promise.resolve());
 
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -3401,7 +4025,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -3492,7 +4116,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -3517,7 +4141,7 @@ describe('LaunchTeamDialog', () => {
     'carries a %s model draft into relaunch and discards it on cancel',
     async (targetKind) => {
       vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-      const onRelaunch = vi.fn(async () => {});
+      const onRelaunch = vi.fn(() => Promise.resolve());
       const onClose = vi.fn();
       const host = document.createElement('div');
       document.body.appendChild(host);
@@ -3610,7 +4234,7 @@ describe('LaunchTeamDialog', () => {
       await render(false);
       expect(host.textContent).not.toContain('glm-5.3-flash');
       expect(target.configuredRuntimeSettings.model).toBe('glm-5.3');
-      await act(async () => root.unmount());
+      act(() => root.unmount());
     }
   );
 
@@ -3625,7 +4249,7 @@ describe('LaunchTeamDialog', () => {
       syncModelsWithLead: true,
       members: [],
     });
-    const onRelaunch = vi.fn(async () => {});
+    const onRelaunch = vi.fn(() => Promise.resolve());
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -3886,7 +4510,7 @@ describe('LaunchTeamDialog', () => {
       syncModelsWithLead: false,
       members: [{ name: 'bob', role: 'Reviewer', model: vanishedRoute }],
     } as any);
-    const onLaunch = vi.fn(async () => {});
+    const onLaunch = vi.fn(() => Promise.resolve());
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -3966,7 +4590,7 @@ describe('LaunchTeamDialog', () => {
       model: '',
       members: [{ name: 'alice', role: 'Reviewer', providerId: 'opencode' }],
     } as any);
-    const onLaunch = vi.fn(async () => {});
+    const onLaunch = vi.fn(() => Promise.resolve());
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -4036,7 +4660,7 @@ describe('LaunchTeamDialog', () => {
       model: 'opencode/minimax-m2.5-free',
       members: [],
     } as any);
-    const onLaunch = vi.fn(async () => {});
+    const onLaunch = vi.fn(() => Promise.resolve());
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -4133,7 +4757,7 @@ describe('LaunchTeamDialog', () => {
       model: 'opencode/minimax-m2.5-free',
       members: [{ name: 'alice', role: 'Reviewer', providerId: 'codex', model: 'gpt-5.4' }],
     } as any);
-    const onLaunch = vi.fn(async () => {});
+    const onLaunch = vi.fn(() => Promise.resolve());
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -4648,7 +5272,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -4800,7 +5424,7 @@ describe('LaunchTeamDialog', () => {
           clearProvisioningError: vi.fn(),
           activeTeams: [],
           onClose: vi.fn(),
-          onLaunch: vi.fn(async () => {}),
+          onLaunch: vi.fn(() => Promise.resolve()),
         })
       );
       await flush();
@@ -4995,7 +5619,7 @@ describe('LaunchTeamDialog', () => {
             modelResultsById: {},
           } as any)
     );
-    const onLaunch = vi.fn(async () => {});
+    const onLaunch = vi.fn(() => Promise.resolve());
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -5114,7 +5738,7 @@ describe('LaunchTeamDialog', () => {
           activeTeams: [],
           defaultProjectPath: '/tmp/project',
           onClose: vi.fn(),
-          onCreate: vi.fn(async () => {}),
+          onCreate: vi.fn(() => Promise.resolve()),
           onOpenTeam: vi.fn(),
         })
       );
@@ -5142,7 +5766,7 @@ describe('LaunchTeamDialog', () => {
     expect(host.textContent).not.toContain('All selected providers are ready.');
     expect(host.querySelector<HTMLButtonElement>('button.min-w-32')?.disabled).toBe(true);
 
-    await act(async () => root.unmount());
+    act(() => root.unmount());
   });
 
   it('permits saving a draft after opting out of a pending launch preflight and ignores its late failure', async () => {
@@ -5157,7 +5781,7 @@ describe('LaunchTeamDialog', () => {
       }
     );
     vi.mocked(runProviderPrepareDiagnostics).mockReturnValue(pendingPreflight);
-    const onCreate = vi.fn(async () => {});
+    const onCreate = vi.fn(() => Promise.resolve());
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -5221,14 +5845,14 @@ describe('LaunchTeamDialog', () => {
       );
       expect(onCreate).not.toHaveBeenCalled();
     } finally {
-      await act(async () => root.unmount());
+      act(() => root.unmount());
     }
   });
 
   it('clears completed create preflight while selection is unresolved but permits create without launch', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();
-    const onCreate = vi.fn(async () => {});
+    const onCreate = vi.fn(() => Promise.resolve());
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -5299,7 +5923,7 @@ describe('LaunchTeamDialog', () => {
       expect.objectContaining({ cwd: undefined })
     );
     expect(onCreate).not.toHaveBeenCalled();
-    await act(async () => root.unmount());
+    act(() => root.unmount());
   });
 
   it.each(['project', 'custom'] as const)(
@@ -5380,7 +6004,7 @@ describe('LaunchTeamDialog', () => {
             defaultProjectPath: '/tmp/project',
             forceDefaultProjectSelection: true,
             onClose: vi.fn(),
-            onCreate: vi.fn(async () => {}),
+            onCreate: vi.fn(() => Promise.resolve()),
             onOpenTeam: vi.fn(),
           })
         );
@@ -5547,7 +6171,7 @@ describe('LaunchTeamDialog', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
-    const onRelaunch = vi.fn(async () => {});
+    const onRelaunch = vi.fn(() => Promise.resolve());
     await act(async () => {
       root.render(
         React.createElement(LaunchTeamDialog, {
@@ -5605,7 +6229,7 @@ describe('LaunchTeamDialog', () => {
         expectedTeamSettingsFingerprint: 'editor-defaults',
       })
     );
-    await act(async () => root.unmount());
+    act(() => root.unmount());
   });
 
   it.each([true, false])(
@@ -5623,7 +6247,7 @@ describe('LaunchTeamDialog', () => {
       const host = document.createElement('div');
       document.body.appendChild(host);
       const root = createRoot(host);
-      const onRelaunch = vi.fn(async () => {});
+      const onRelaunch = vi.fn(() => Promise.resolve());
       try {
         await act(async () => {
           root.render(
@@ -5666,7 +6290,7 @@ describe('LaunchTeamDialog', () => {
           undefined
         );
       } finally {
-        await act(async () => root.unmount());
+        act(() => root.unmount());
         host.remove();
       }
     }
