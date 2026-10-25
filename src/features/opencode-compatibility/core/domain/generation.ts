@@ -85,7 +85,6 @@ export function isRecognizedOpenCodeRuntimeVersion(raw: string | null | undefine
   return Boolean(raw && classifyNativeVersion(raw).kind === 'recognized');
 }
 
-/** Stable V1, or a V2 release the pinned runtime qualified for team launch on this platform. */
 /**
  * Whether the pinned runtime can serve this native version at all: any recognized V1, or a
  * recognized V2 when the runtime ships OpenCode V2. A runtime released without V2 cannot read
@@ -100,6 +99,7 @@ export function isOpenCodeVersionServedByRuntime(raw: string | null | undefined)
   );
 }
 
+/** Stable V1, or a V2 release the pinned runtime qualified for team launch on this platform. */
 export function isOpenCodeVersionProductionEligible(raw: string | null | undefined): boolean {
   if (!raw) return false;
   const classification = classifyNativeVersion(raw);
