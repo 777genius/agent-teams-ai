@@ -157,8 +157,11 @@ test('FULL V2 preflight fails closed on unsupported versions and malformed or mi
       assert.equal(result.ok, false); assert.equal(calls, 1);
       assert.equal(JSON.stringify(result).includes('synthetic-secret'), false);
     }
-    // Qualification binds to the platform: a version qualified elsewhere is refused here.
-    for (const [platform, arch, version] of pinnedElsewhere) {
+    // Qualification binds to the platform: a version qualified elsewhere is refused here,
+    // as is any qualified version on a platform FULL does not run on or has no record for.
+    const [, , anyQualified] = pinnedQualified[0];
+    for (const [platform, arch, version] of [...pinnedElsewhere, ['win32', 'x64', anyQualified],
+      ['linux', 'ia32', anyQualified]]) {
       let calls = 0;
       const result = await preflightOpenCodeFullTeamEnvironment(input, { platform, arch,
         legacyPreflight: () => assert.fail('unqualified version cannot fall back'),

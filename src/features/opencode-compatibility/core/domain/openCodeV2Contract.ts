@@ -5,7 +5,7 @@
  * never lists V2 versions itself.
  *
  * This module is the only policy over that contract. It has no imports so that
- * Node-run proof scripts can load it directly; `pinnedOpenCodeV2Contract.ts`
+ * Node-run proof and CI scripts can load it directly; `pinnedOpenCodeV2Contract.ts`
  * binds it to the lock file and the current platform.
  */
 export interface OpenCodeV2Contract {
