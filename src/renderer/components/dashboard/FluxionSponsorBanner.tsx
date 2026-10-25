@@ -18,7 +18,7 @@ import type { JSX } from 'react';
 
 const FLUXION_SPONSOR_URL =
   'https://fluxionai.world/register?source=github&campaign=github-agent-teams&promo=AGENTTEAMS';
-const SPONSOR_EMAIL = 'quantjumppro@gmail.com';
+const SPONSOR_EMAIL = 'iliya@agentteams.live';
 
 const FluxionBrand = (): JSX.Element => (
   <div className="flex shrink-0 items-center gap-2">
