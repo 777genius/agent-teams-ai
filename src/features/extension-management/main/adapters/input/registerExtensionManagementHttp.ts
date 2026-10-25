@@ -36,6 +36,8 @@ export function registerExtensionManagementHttp(
     app.post(
       `${EXTENSION_MANAGEMENT_ROUTE}/${method}`,
       {
+        // Same-origin only; keep admission and refusal local to this feature.
+        config: { cors: { origin: false } },
         bodyLimit: method === 'prepareLocalSkill' ? 15 * 1024 * 1024 : 65536,
         preHandler: admission,
       },
