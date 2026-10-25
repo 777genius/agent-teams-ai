@@ -78,6 +78,7 @@ let runtimeProviderOnboardingDialogProps: {
   mode?: 'provider' | 'wizard';
   providerId?: string | null;
   onAdvancedSettings?: () => void;
+  onProviderChanged?: () => void;
 } | null = null;
 let terminalModalProps: {
   onClose?: () => void;
@@ -170,6 +171,7 @@ vi.mock('@features/runtime-provider-management/renderer', async (importOriginal)
       mode?: 'provider' | 'wizard';
       providerId?: string | null;
       onAdvancedSettings?: () => void;
+      onProviderChanged?: () => void;
     }) => {
       runtimeProviderOnboardingDialogProps = props;
       return React.createElement('div', {
@@ -568,6 +570,67 @@ describe('CLI status visibility during completed install state', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('refreshes the provider grid and the catalog once after onboarding connects a provider', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      source: 'app-managed',
+      state: 'ready',
+      version: '1.17.18',
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'Multimodel runtime',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: true,
+      providers: [
+        {
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          supported: true,
+          authenticated: true,
+          authMethod: 'managed',
+          verificationState: 'verified',
+          statusMessage: null,
+          models: ['xai/grok-4.3'],
+          canLoginFromUi: false,
+          capabilities: { teamLaunch: true, oneShot: true },
+        },
+      ],
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(React.createElement(CliStatusBanner));
+        await Promise.resolve();
+      });
+      await act(async () => {
+        host.querySelector<HTMLButtonElement>('[data-testid="quick-connect-supergrok"]')?.click();
+        await Promise.resolve();
+      });
+      const gridKey = quickConnectRefreshKeys.at(-1) ?? 0;
+      const catalogRevision = openCodeCatalogHookInputs.at(-1)?.refreshRevision ?? 0;
+      storeState.fetchCliProviderStatus.mockClear();
+      await act(async () => {
+        runtimeProviderOnboardingDialogProps?.onProviderChanged?.();
+        await Promise.resolve();
+      });
+      expect(storeState.fetchCliProviderStatus).toHaveBeenCalledExactlyOnceWith('opencode', {
+        checkReason: 'manual_refresh',
+      });
+      // One bump drives both readers; the main process joins their identical reads.
+      expect(quickConnectRefreshKeys.at(-1)).toBe(gridKey + 1);
+      expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBe(catalogRevision + 1);
+    } finally {
+      await act(async () => root.unmount());
+    }
   });
 
   it('opens connected OpenCode providers in settings without restarting onboarding', async () => {
