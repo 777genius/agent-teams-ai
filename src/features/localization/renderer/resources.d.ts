@@ -1175,6 +1175,8 @@ export default interface Resources {
         "openCodeOverrideUnknownVersion": "unknown",
         "openCodeRequired": "Install OpenCode to connect and use these providers with Agent Teams.",
         "openCodeTitle": "Preparing OpenCode",
+        "openCodeV2LaunchDetail": "OpenCode Zen refuses its free models, such as big-pickle, for V2 runs until an Agent Teams runtime update. On V2, launch teams with a paid provider such as Kimi Code, or use OpenCode V1 for free models.",
+        "openCodeV2LaunchTitle": "OpenCode V2 {{version}} is selected",
         "openKiroGuide": "Open official guide",
         "pasteBaseUrl": "Paste Dedicated Base URL",
         "planConnected": "Plan connected",
