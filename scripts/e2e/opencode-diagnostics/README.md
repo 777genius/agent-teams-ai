@@ -247,6 +247,12 @@ The UI must expose the normal English OpenCode re-check button. Qualification
 requires its loading-to-ready transition **and the actual measured UI promise
 completion payloads**, with fresh model pages, correct sources and complete
 pagination. Later independent fresh API models cannot qualify unknown UI freshness.
+The re-check also refreshes the Providers & plans grid, which reads the first
+directory page beside the connected-model catalog; main joins that identical,
+concurrent read into the catalog's runtime call, so both get the same response.
+The page walk sets exactly that one joined read aside (identical input, overlapping
+in time, identical response including `fetchedAt`, first page only) and the live run
+requires it. Any other extra directory read still fails as an extra page.
 
 The dashboard's public DOM retains model badges during warm refreshes and its
 aggregate props discard per-page freshness. A narrow test-only preload observer

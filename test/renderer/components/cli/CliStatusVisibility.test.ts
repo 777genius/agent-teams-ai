@@ -628,6 +628,8 @@ describe('CLI status visibility during completed install state', () => {
       // One bump drives both readers; the main process joins their identical reads.
       expect(quickConnectRefreshKeys.at(-1)).toBe(gridKey + 1);
       expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBe(catalogRevision + 1);
+      // No separate catalog refresh on top of the revision bump.
+      expect(refreshOpenCodeCatalog).not.toHaveBeenCalled();
     } finally {
       await act(async () => root.unmount());
     }
