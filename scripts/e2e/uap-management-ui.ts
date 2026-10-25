@@ -58,6 +58,13 @@ export function actionablePoint(expression: string): string {
   return `(async () => {
     const element = (${expression});
     if (!(element instanceof HTMLElement)) return null;
+    for (let ancestor = element; ancestor; ancestor = ancestor.parentElement) {
+      if (ancestor.getAnimations().some(animation => {
+        const endTime = animation.effect?.getComputedTiming().endTime;
+        return (animation.pending || animation.playState === 'running') &&
+          typeof endTime === 'number' && Number.isFinite(endTime);
+      })) return null;
+    }
     element.scrollIntoView({block: 'center', behavior: 'instant'});
     const previous = element.getBoundingClientRect();
     await new Promise(requestAnimationFrame);

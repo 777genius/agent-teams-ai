@@ -1,5 +1,4 @@
 export { ExtensionRuntimeGate } from '../core/application/ExtensionRuntimeGate';
-export { ManagementHttpCapability } from './infrastructure/ManagementHttpCapability';
 export type {
   CapturedExtensionEnvironment,
   ExtensionContextResolver,
@@ -12,3 +11,4 @@ export { createDesktopExtensionManagement } from './composition/createDesktopExt
 export { createElectronExtensionManagement } from './composition/createElectronExtensionManagement';
 export { createExtensionManagementFeature } from './composition/createExtensionManagementFeature';
 export { createReadOnlyExtensionManagement } from './composition/createReadOnlyExtensionManagement';
+export { ManagementHttpCapability } from './infrastructure/ManagementHttpCapability';

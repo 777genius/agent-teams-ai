@@ -2248,6 +2248,7 @@ export default interface Resources {
         "succeeded": "Completed"
       },
       "pendingChanges": "Inspect or recover the outstanding operation before making another change.",
+      "pluginSourceHelp": "Enter a repository or supported source URL. For a GitHub branch, tag or full commit SHA, use owner/repository@revision.",
       "pluginsTitle": "Universal plugins",
       "preview": "Preview SKILL.md",
       "projectPending": "Project installation is not available in this bundled engine. User changes apply to this agent profile.",

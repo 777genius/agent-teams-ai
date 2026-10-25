@@ -390,25 +390,35 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
             <>
               <DialogHeader>
                 <DialogTitle>{t('uap.fromSource')}</DialogTitle>
-                <DialogDescription>{t('uap.sourceHelp')}</DialogDescription>
+                <DialogDescription>
+                  {t(kind === 'plugin' ? 'uap.pluginSourceHelp' : 'uap.sourceHelp')}
+                </DialogDescription>
               </DialogHeader>
               <Label htmlFor={`uap-source-${kind}`}>{t('uap.source')}</Label>
               <Input
                 id={`uap-source-${kind}`}
                 value={source}
                 onChange={(event) => changeSource(event.target.value)}
-                placeholder="https://github.com/owner/repository"
+                placeholder={
+                  kind === 'plugin'
+                    ? 'owner/repository@v1.2.3'
+                    : 'https://github.com/owner/repository'
+                }
               />
-              <Label htmlFor={`uap-ref-${kind}`}>{t('uap.revision')}</Label>
-              <Input
-                id={`uap-ref-${kind}`}
-                value={revision}
-                onChange={(event) => {
-                  setRevision(event.target.value);
-                  void model.closeDiscovery();
-                  setSelectedCandidates([]);
-                }}
-              />
+              {kind === 'skill' && (
+                <>
+                  <Label htmlFor="uap-ref-skill">{t('uap.revision')}</Label>
+                  <Input
+                    id="uap-ref-skill"
+                    value={revision}
+                    onChange={(event) => {
+                      setRevision(event.target.value);
+                      void model.closeDiscovery();
+                      setSelectedCandidates([]);
+                    }}
+                  />
+                </>
+              )}
               {kind === 'plugin' && (
                 <>
                   <Label htmlFor="uap-alias">{t('uap.alias')}</Label>
@@ -503,7 +513,6 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
                     const reviewed = await model.prepare({
                       action: 'install',
                       source: source.trim(),
-                      ...(revision.trim() ? { ref: revision.trim() } : {}),
                       ...(alias.trim() ? { alias: alias.trim() } : {}),
                     });
                     if (reviewed) setSourceOpen(false);

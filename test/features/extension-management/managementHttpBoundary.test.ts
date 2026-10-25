@@ -11,8 +11,8 @@ import type { ExtensionManagementFeature } from '../../../src/features/extension
 
 it('returns feature-local refusals through the real CORS middleware without invoking management', async () => {
   const app = Fastify();
-  const hostStatus = vi.fn(async () => ({ available: true }));
-  const capture = vi.fn(async () => ({ contextId: 'trusted' }));
+  const hostStatus = vi.fn(() => Promise.resolve({ available: true }));
+  const capture = vi.fn(() => Promise.resolve({ contextId: 'trusted' }));
   const capability = new ManagementHttpCapability();
   capability.rotate();
   const token = new URL(capability.browserUrl(4141)).hash.split('=')[1];
@@ -35,10 +35,13 @@ it('returns feature-local refusals through the real CORS middleware without invo
     const address = app.server.address();
     if (!address || typeof address === 'string') throw new Error('Expected a bound TCP listener');
     const host = `127.0.0.1:${address.port}`;
-    const headers = {
+    const viewerHeaders = {
       host,
       origin: `http://${host}`,
       'content-type': 'application/json',
+    };
+    const headers = {
+      ...viewerHeaders,
       authorization: `Bearer ${token}`,
     };
     for (const refused of [
@@ -72,7 +75,7 @@ it('returns feature-local refusals through the real CORS middleware without invo
       const refused = await app.inject({
         method: 'POST',
         url: '/api/extension-management/capture',
-        headers: { ...headers, authorization },
+        headers: authorization === undefined ? viewerHeaders : { ...viewerHeaders, authorization },
         payload: { client: 'opencode', scope: 'user' },
       });
       expect(refused.statusCode).toBe(401);
@@ -83,7 +86,7 @@ it('returns feature-local refusals through the real CORS middleware without invo
       const refused = await app.inject({
         method: 'POST',
         url: `/api/extension-management/${method}`,
-        headers: { ...headers, authorization: undefined },
+        headers: viewerHeaders,
         payload: {},
       });
       expect(refused.statusCode).toBe(401);
@@ -91,7 +94,7 @@ it('returns feature-local refusals through the real CORS middleware without invo
     const viewer = await app.inject({
       method: 'POST',
       url: '/api/extension-management/hostStatus',
-      headers: { ...headers, authorization: undefined },
+      headers: viewerHeaders,
       payload: {},
     });
     expect(viewer.json()).toMatchObject({ available: false });

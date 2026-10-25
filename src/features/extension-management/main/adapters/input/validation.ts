@@ -85,10 +85,21 @@ export const skillSourceSchema = z
   })
   .strict();
 export const discoverSchema = contextSchema.extend({ source: skillSourceSchema });
+// The engine owns plugin source grammar. Keep transport limits and an obvious-path refusal here.
+const pluginSource = z
+  .string()
+  .max(2048)
+  .trim()
+  .min(1)
+  .refine((value) => !/\p{Cc}/u.test(value), 'Source references cannot contain control characters.')
+  .refine(
+    (value) => !/^(?:[/\\]|\.{1,2}[/\\]|[a-z]:[/\\]|file:)/i.test(value),
+    'Use a remote source reference; local plugin paths are not supported.'
+  );
 export const changeSchema = z
   .object({
     action: z.enum(['install', 'install_skills', 'update', 'sync', 'repair', 'remove', 'recover']),
-    source: httpsSource.optional(),
+    source: pluginSource.optional(),
     ref: z.string().max(256).optional(),
     alias: identity.optional(),
     aliases: z.array(identity).max(256).optional(),

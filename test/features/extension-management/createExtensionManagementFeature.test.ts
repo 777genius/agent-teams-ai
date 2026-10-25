@@ -57,6 +57,7 @@ function fixture(pending: ManagementOperation[] = []) {
       source: 'reviewed-plugin',
       available: true,
     })),
+    discoverSkills: vi.fn(),
     prepare: vi.fn(async (change: ManagementChange) => ({
       planId: 'plan-a',
       contextId: 'engine-a',
@@ -121,6 +122,64 @@ function fixture(pending: ManagementOperation[] = []) {
   };
 }
 describe('captured extension management', () => {
+  it.each([
+    'owner/repository@feature/plugins',
+    'owner/repository@v1.2.3',
+    `owner/repository@${'a'.repeat(40)}`,
+    'git+https://example.com/owner/repository.git#main',
+    'ssh://git@example.com/owner/repository.git#main',
+    'https://example.com/plugin.tar.gz',
+  ])('passes the plugin source reference %s through the real input boundary', async (source) => {
+    const f = fixture();
+    try {
+      const context = await f.feature.capture({ client: 'claude', scope: 'user' });
+      await f.feature.prepare({
+        contextId: context.contextId,
+        change: { action: 'install', source: ` ${source} ` },
+      });
+      expect(f.client.prepare).toHaveBeenCalledExactlyOnceWith({ action: 'install', source });
+    } finally {
+      await f.feature.close();
+    }
+  });
+  it('rejects empty, oversized and control-containing plugin sources before invoking the engine', async () => {
+    const f = fixture();
+    try {
+      const context = await f.feature.capture({ client: 'claude', scope: 'user' });
+      for (const source of [
+        '',
+        '   ',
+        'a'.repeat(2049),
+        'owner/repository@one\ntwo',
+        'bad\u0000source',
+      ]) {
+        await expect(
+          f.feature.prepare({ contextId: context.contextId, change: { action: 'install', source } })
+        ).rejects.toThrow();
+      }
+      expect(f.client.prepare).not.toHaveBeenCalled();
+    } finally {
+      await f.feature.close();
+    }
+  });
+  it('keeps Skill discovery restricted to HTTP(S) sources without credentials', async () => {
+    const f = fixture();
+    try {
+      const context = await f.feature.capture({ client: 'claude', scope: 'user' });
+      for (const source of [
+        'owner/repository@main',
+        'ssh://git@example.com/owner/repository.git',
+        'https://user:secret@example.com/owner/repository',
+      ]) {
+        await expect(
+          f.feature.discoverSkills({ contextId: context.contextId, source: { source } })
+        ).rejects.toThrow();
+      }
+      expect(f.client.discoverSkills).not.toHaveBeenCalled();
+    } finally {
+      await f.feature.close();
+    }
+  });
   it('extends an existing targeted lease before awaiting a broader recovery activity check', async () => {
     const f = fixture();
     const context = await f.feature.capture({ client: 'claude', scope: 'user' });
@@ -419,12 +478,20 @@ describe('captured extension management', () => {
   it('refuses arbitrary local paths from the renderer', async () => {
     const f = fixture(),
       context = await f.feature.capture({ client: 'claude', scope: 'user' });
-    await expect(
-      f.feature.prepare({
-        contextId: context.contextId,
-        change: { action: 'install', source: '/private/source' },
-      })
-    ).rejects.toThrow();
+    for (const source of [
+      '/private/source',
+      './source',
+      '../source',
+      'C:\\source',
+      'file:///source',
+    ]) {
+      await expect(
+        f.feature.prepare({
+          contextId: context.contextId,
+          change: { action: 'install', source },
+        })
+      ).rejects.toThrow();
+    }
     expect(f.client.prepare).not.toHaveBeenCalled();
     await f.feature.close();
   });

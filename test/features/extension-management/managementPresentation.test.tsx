@@ -1,4 +1,5 @@
-import { createElement } from 'react';
+import { act, createElement } from 'react';
+import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import { describe, expect, it, vi } from 'vitest';
@@ -181,6 +182,52 @@ describe('management recovery and availability UI', () => {
     const root = renderPanel(true);
     expect(button(root, 'uap.fromSource').disabled).toBe(false);
     expect(button(root, 'uap.install').disabled).toBe(false);
+  });
+  it('keeps a separate Skill revision without forwarding it into plugin installation', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+    const value = model(true);
+    value.discover = vi.fn(async () => {});
+    value.prepare = vi.fn(async () => true);
+    const enter = (selector: string, text: string) => {
+      const input = document.querySelector<HTMLInputElement>(selector)!;
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, text);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    try {
+      await act(async () => {
+        root.render(createElement(ManagedExtensionsPanel, { kind: 'skill', model: value }));
+      });
+      await act(async () => button(container, 'uap.fromSource').click());
+      await act(async () => enter('#uap-source-skill', 'https://github.com/owner/repository'));
+      await act(async () => enter('#uap-ref-skill', 'feature/skills'));
+      await act(async () => button(document.body, 'uap.findSkills').click());
+      expect(value.discover).toHaveBeenCalledWith(
+        'https://github.com/owner/repository',
+        'feature/skills'
+      );
+
+      await act(async () => {
+        root.render(createElement(ManagedExtensionsPanel, { kind: 'plugin', model: value }));
+      });
+      expect(document.querySelector('#uap-ref-plugin')).toBeNull();
+      expect(document.querySelector('[role="dialog"]')!.textContent).toContain(
+        'uap.pluginSourceHelp'
+      );
+      expect(document.querySelector<HTMLInputElement>('#uap-source-plugin')!.placeholder).toBe(
+        'owner/repository@v1.2.3'
+      );
+      const source = `owner/repository@${'a'.repeat(40)}`;
+      await act(async () => enter('#uap-source-plugin', source));
+      await act(async () => button(document.body, 'uap.reviewInstall').click());
+      expect(value.prepare).toHaveBeenCalledExactlyOnceWith({ action: 'install', source });
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+      vi.unstubAllGlobals();
+    }
   });
   it('keeps transitive dependencies visible but disables independent lifecycle actions', () => {
     const value = model(true);

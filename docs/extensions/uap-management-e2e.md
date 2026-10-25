@@ -78,6 +78,8 @@ paths are stopped during cleanup. Evidence remains available after cleanup.
 | Delete and restart      | Delete the local copy, verify a durable private backup, stop the app and start it again using the same isolated state.                                               |
 | Restart-visible restore | Find the existing restore point, review restoration, restore exact bytes and verify no pending operation remains.                                                    |
 | Signed registry plugin  | Browse the current signed catalog, inspect the reviewed `cloudflare-docs` entry, install it for OpenCode and verify actual MCP configuration; then remove it.        |
+| Actual native tool call | Install a SHA-256-pinned source plugin through the ordinary UI, run real OpenCode with a controlled provider, and verify MCP initialization, discovery, one exact tool call and its returned nonce. |
+| Native tool removal     | Remove that plugin through the UI, start a fresh OpenCode session, and verify no advertised tool and no MCP connection. |
 
 The reviewed registry fixture is `cloudflare-docs` version `0.4.13-uap.1`, from the
 active `777genius/cloudflare-docs-bridge` distribution. It contains a remote public
@@ -86,11 +88,22 @@ authentication. The harness refuses a different catalog version until the new
 fixture has been reviewed. It does not send private inputs or claim model/OAuth
 qualification.
 
+The separate native-tool fixture uses the existing disposable HTTPS publisher
+and a loopback MCP server. Only its model provider settings are seeded before
+installation; UAP owns every MCP configuration write. The provider returns a
+deterministic OpenAI-compatible tool request, and the actual OpenCode binary must
+dispatch it and return the exact tool result in its next provider request. The
+receipt records native identity, offered tools, protocol methods, arguments and
+both installed/removed stages; native stdout/stderr are retained as logs. This
+requires no model account and does not qualify live model behavior or OAuth.
+
 ## Reliable real input and result observation
 
 The harness sends real CDP pointer/key events and `Input.insertText`. It checks
 that a target is enabled, visible, stable and hit-testable, and that each filled
-field has the exact requested value. Tab navigation additionally observes
+field has the exact requested value. It waits out finite animations on the target
+and its ancestors and dispatches using the successful readiness observation,
+without a second readiness read that could race a dialog transition. Tab navigation additionally observes
 `aria-selected` and its controlled visible panel. Only this idempotent navigation
 may retry, at most three times inside its existing deadline; after selection is
 observed, a later reset is a failure. Review/Apply submission is not repeated.

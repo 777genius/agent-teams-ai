@@ -18,6 +18,7 @@ import { promisify } from 'node:util';
 import { CdpClient } from './comment-notification/cdp.mjs';
 import { postWithReboundHost } from './uap-management-http';
 import { openCodeMcpServer } from './uap-management-native';
+import { createNativeToolProof, toolArchivePath, toolPluginName } from './uap-management-tool-use';
 import {
   actionablePoint,
   applyAndWaitForOperation,
@@ -45,6 +46,7 @@ const evidence: Record<string, unknown> = {};
 let app: ChildProcess | undefined;
 let cdp: DesktopCdp | undefined;
 let publisher: https.Server | undefined;
+let toolProof: Awaited<ReturnType<typeof createNativeToolProof>> | undefined;
 let version = 1;
 let previousHttpAuthorization: string | undefined;
 const skillName = 'uap-ui-demo';
@@ -192,7 +194,9 @@ async function fixture() {
       requests.push(url);
       const prefix = '/publisher/.well-known/agent-skills/';
       response.setHeader('Content-Type', 'application/octet-stream');
-      if (url === `${prefix}index.json`) {
+      if (url === toolArchivePath && toolProof) {
+        response.end(toolProof.archive);
+      } else if (url === `${prefix}index.json`) {
         response.setHeader('Content-Type', 'application/json');
         response.end(
           JSON.stringify({
@@ -339,10 +343,15 @@ async function stop(root: string) {
 }
 
 async function wait(expression: string, label: string, timeoutMs = 60_000) {
+  await waitForValue(`Boolean(await (${expression}))`, label, timeoutMs);
+}
+
+async function waitForValue(expression: string, label: string, timeoutMs = 60_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
-      if (await cdp!.evaluate(`(async () => Boolean(await (${expression})))()`)) return;
+      const value = await cdp!.evaluate(`(async () => await (${expression}))()`);
+      if (value) return value;
     } catch (error) {
       if (
         !/execution context was destroyed|cannot find .*execution context|cannot find context/i.test(
@@ -365,8 +374,9 @@ const panel = 'document.querySelector("[data-testid=uap-skill]")';
 const installedRow = `${panel}?.querySelector('[data-testid=uap-installed-entry]')`;
 async function click(expression: string) {
   const pointExpression = actionablePoint(expression);
-  await wait(pointExpression, `enabled visible click target ${expression}`);
-  const point = await cdp!.evaluate(pointExpression);
+  // Use the successful observation itself; a second readiness evaluation can
+  // transiently fail during a dialog transition after the first has succeeded.
+  const point = await waitForValue(pointExpression, `enabled visible click target ${expression}`);
   assert(point && typeof point === 'object', `Missing or disabled click target: ${expression}`);
   for (const type of ['mousePressed', 'mouseReleased'])
     await cdp!.send('Input.dispatchMouseEvent', { type, ...point, button: 'left', clickCount: 1 });
@@ -479,6 +489,47 @@ async function registryPlugin(f: Awaited<ReturnType<typeof fixture>>) {
     removed: true,
   };
   await screenshot(path.join(f.shots, '14-registry-removed.png'));
+}
+
+async function nativeToolUse(f: Awaited<ReturnType<typeof fixture>>) {
+  assert(toolProof);
+  const pluginPanel = 'document.querySelector("[data-testid=uap-plugin]")';
+  const source = `${new URL(f.source).origin}${toolArchivePath}#sha256=${toolProof.sha256}`;
+  assert.equal(await openCodeMcpServer(toolProof.config, toolProof.serverName), undefined);
+  await click(button('Install from source', pluginPanel));
+  await fill('#uap-source-plugin', source);
+  await fill('#uap-alias', toolPluginName);
+  assert.equal(await cdp!.evaluate("document.querySelector('#uap-ref-plugin')"), null);
+  await click(button('Review installation'));
+  await wait(
+    button('Apply changes'),
+    'source plugin review with ordinary security assessment',
+    120_000
+  );
+  await screenshot(path.join(f.shots, '15-source-plugin-review.png'));
+  await reviewAndApply(pluginPanel);
+  const entry = (await environment()).entries.find((item) => item.alias === toolPluginName);
+  assert(entry?.declared && entry.version === '1.0.0');
+  assert(entry.bindings.some((binding) => binding.managedPaths.includes(toolProof!.config)));
+  assert.deepEqual(await openCodeMcpServer(toolProof.config, toolProof.serverName), {
+    type: 'remote',
+    url: toolProof.mcpURL,
+  });
+  await toolProof.probe(false);
+  await screenshot(path.join(f.shots, '16-native-tool-called.png'));
+  const row = `Array.from(${pluginPanel}.querySelectorAll('[data-testid=uap-installed-entry]')).find(e=>e.textContent?.includes('${toolPluginName}'))`;
+  await click(button('Remove', row));
+  await reviewAndApply(pluginPanel);
+  assert(!(await environment()).entries.some((item) => item.alias === toolPluginName));
+  assert.equal(await openCodeMcpServer(toolProof.config, toolProof.serverName), undefined);
+  await toolProof.probe(true);
+  evidence.nativeToolSource = {
+    source,
+    sha256: toolProof.sha256,
+    installedThroughUI: true,
+    removedThroughUI: true,
+  };
+  await screenshot(path.join(f.shots, '17-native-tool-removed.png'));
 }
 async function environment(): Promise<ManagementEnvironment> {
   return (await cdp!.evaluate(
@@ -800,6 +851,7 @@ async function exercise(f: Awaited<ReturnType<typeof fixture>>) {
   evidence.targetedRemoval = true;
   await localSkillLifecycle(f, copied);
   await registryPlugin(f);
+  await nativeToolUse(f);
   assert.equal(errors.length, 0, `Unexpected renderer exceptions: ${JSON.stringify(errors)}`);
   evidence.requests = f.requests;
 }
@@ -807,6 +859,8 @@ async function exercise(f: Awaited<ReturnType<typeof fixture>>) {
 const f = await fixture();
 process.stdout.write(`Disposable UAP desktop fixture: ${f.root}\n`);
 try {
+  toolProof = await createNativeToolProof(f.root, f.native, f.env);
+  evidence.nativeToolUse = toolProof.evidence;
   await start(f);
   await screenshot(path.join(f.shots, '00-desktop.png'));
   process.stdout.write(`Actual Electron renderer ready: ${path.join(f.root, 'connection.json')}\n`);
@@ -828,5 +882,6 @@ try {
   await stop(f.root);
   await save(path.join(f.root, 'evidence.json'), { ...evidence, rendererErrors: errors });
   await new Promise<void>((resolve) => publisher?.close(() => resolve()));
+  await toolProof?.close();
   process.stdout.write(`Evidence retained at ${f.root}\n`);
 }

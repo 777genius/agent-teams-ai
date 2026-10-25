@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v9; authenticated sidecar, retained-plan capacity fix and current-commit qualification.
+Status: implementation plan v10; source-reference UX, native MCP dispatch proof and current-commit qualification.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -13,7 +13,55 @@ commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
 
-## Current checkpoint — v9 (2026-10-25)
+## Current checkpoint — v10 (2026-10-25)
+
+This continuation builds on published app
+`ed4d3e3f4c1c5a62bca1184b28b75b06433ba43b` and the same matched UAP source
+`5224ebd5f66bbdfab0bef906dba0b089062f6073`. The engine and SDK pins are unchanged.
+
+Independent review identified a source-entry mismatch: plugin revisions belong
+inside the engine's source reference, but the form displayed a separate revision
+field which Go did not consume. Plugins now show one source input, an optional
+alias, and the supported `owner/repository@revision` syntax. Skills keep their
+existing discovery revision field. The input boundary accepts bounded remote
+references without duplicating Go's source parser; it still rejects obvious local
+paths. Go remains authoritative for acquisition, supported syntax and refusal.
+All 29 locale namespaces and generated types include the helper text. Thirty-five
+focused tests passed, including regression cases that failed before correction;
+two independent reviewers found no remaining substantial issue in this slice.
+
+The desktop lane now adds an actual native MCP dispatch after the existing signed
+registry journey. A disposable HTTPS archive contains a standard plugin manifest
+and MCP definition. The ordinary UI review/apply flow installs it; UAP alone writes
+the native MCP configuration. Real pinned OpenCode then runs against a scripted
+loopback model transport. Assertions require initialize, tools/list, tools/call,
+the exact nonce-bearing arguments and the returned tool result in the subsequent
+provider request. UI removal is followed by a fresh native session that must
+advertise no tool and make no MCP connection. This proves the actual native tool
+transport, not model intelligence, provider authentication or OAuth. The small
+fixture follows the already exercised UAP native protocol test and introduces no
+production framework. Independent review and canonical desktop TypeScript passed;
+the clean current-commit runtime receipt remains required.
+
+The previous clean desktop run
+[40187287946](https://github.com/777genius/agent-teams-ai/actions/runs/40187287946)
+passed install, HTTP capability/refusal/deduplication, copy, update and removal,
+then failed before local edit. Its screenshot shows the enabled editor, and the
+stack identifies a harness race: the successful readiness observation was
+discarded, then a second observation failed during the dialog transition. The
+click helper now uses the successful point directly and waits for finite target
+and ancestor animations. Pointer events, hit testing, exact-value assertions,
+timeouts and single Apply submission remain intact. This correction was
+independently reviewed; the failed receipt is not relabeled as a pass.
+
+The same prior CI passed canonical validation and the test shard containing the
+packaged MCP cleanup regression. Two export-order errors and a boundary-test
+fixture which supplied an undefined HTTP header are corrected here. The missing
+credential case now omits the header, allowing the actual server refusal to run.
+Final Full qualification, actual Electron/native-tool evidence, applicable
+packaging and formal CodeQL disposition remain required before merge.
+
+## Previous checkpoint — v9 (2026-10-25)
 
 Continuation starts from published app `52fcacc3cc69c6df8882ecbb7310abfb9c4b2c19`.
 The new matched UAP source is `5224ebd5f66bbdfab0bef906dba0b089062f6073`, version

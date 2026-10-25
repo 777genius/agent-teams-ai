@@ -711,6 +711,7 @@
     "catalogUnavailable": "Catalog freshness is unavailable. Installed items remain available.",
     "install": "Install",
     "sourceHelp": "Enter an HTTP(S) repository or supported source URL. Skills are discovered and reviewed before installation.",
+    "pluginSourceHelp": "Enter a repository or supported source URL. For a GitHub branch, tag or full commit SHA, use owner/repository@revision.",
     "source": "Source URL",
     "revision": "Revision (optional)",
     "alias": "Name in this environment (optional)",
