@@ -243,43 +243,45 @@ export function createHostTeamsApi(
     const check = captureScope();
     const [oldTeams, bindings] = await Promise.all([legacy.list(), connections(check)]);
     const observed: (() => void)[] = [];
-    const hostTeams = await Promise.all(
-      bindings.map(async (binding) => {
-        const read = await snapshot(binding, check);
-        const data = remapSnapshot(
-          read.data,
-          hostTeamSelectionKey(binding.handle.handleId),
-          bindings
-        );
-        read.assertCurrent();
-        let description = '';
-        try {
-          const configuration = await readHostRosterConfiguration(backend, binding.handle);
-          assertMatchingConfiguration(data, configuration);
-          description = configuration.savedSettings?.description ?? '';
-        } catch {
-          // Unavailable saved settings leave ordinary product records readable.
-        }
-        observed.push(read.assertCurrent);
-        return {
-          teamName: data.teamName,
-          ...(data.lifecycle?.deletedAt ? { deletedAt: data.lifecycle.deletedAt } : {}),
-          displayName: binding.label,
-          description,
-          memberCount: data.members.filter((member) => member.role === 'member').length,
-          members: data.members,
-          ...(data.members.find((member) => member.role === 'lead')
-            ? { leadName: data.members.find((member) => member.role === 'lead')!.name }
-            : {}),
-          taskCount: data.tasks.filter((task) => task.status !== 'deleted').length,
-          lastActivity: data.messages.reduce<string | null>(
-            (latest, message) =>
-              latest === null || message.timestamp > latest ? message.timestamp : latest,
-            null
-          ),
-        };
-      })
-    );
+    const hostTeams = [];
+    // Read one captured Team at a time to leave the finite Host control lane available.
+    for (const binding of bindings) {
+      const read = await snapshot(binding, check);
+      const data = remapSnapshot(
+        read.data,
+        hostTeamSelectionKey(binding.handle.handleId),
+        bindings
+      );
+      read.assertCurrent();
+      let description = '';
+      try {
+        const configuration = await readHostRosterConfiguration(backend, binding.handle);
+        assertMatchingConfiguration(data, configuration);
+        description = configuration.savedSettings?.description ?? '';
+      } catch {
+        // Unavailable saved settings leave ordinary product records readable.
+      }
+      observed.push(read.assertCurrent);
+      hostTeams.push({
+        teamName: data.teamName,
+        ...(data.lifecycle?.deletedAt ? { deletedAt: data.lifecycle.deletedAt } : {}),
+        displayName: binding.label,
+        description,
+        memberCount: data.members.filter((member) => member.role === 'member').length,
+        members: data.members,
+        ...(data.members.find((member) => member.role === 'lead')
+          ? {
+              leadName: data.members.find((member) => member.role === 'lead')!.name,
+            }
+          : {}),
+        taskCount: data.tasks.filter((task) => task.status !== 'deleted').length,
+        lastActivity: data.messages.reduce<string | null>(
+          (latest, message) =>
+            latest === null || message.timestamp > latest ? message.timestamp : latest,
+          null
+        ),
+      });
+    }
     current(check);
     for (const assertCurrent of observed) assertCurrent();
     // Reserved keys cannot be treated as real legacy filesystem team names.
@@ -289,22 +291,23 @@ export function createHostTeamsApi(
     const check = captureScope();
     const [oldTasks, bindings] = await Promise.all([legacy.getAllTasks(), connections(check)]);
     const observed: (() => void)[] = [];
-    const hostTasks = await Promise.all(
-      bindings.map(async (binding) => {
-        const read = await snapshot(binding, check);
-        const data = remapSnapshot(
-          read.data,
-          hostTeamSelectionKey(binding.handle.handleId),
-          bindings
-        );
-        observed.push(read.assertCurrent);
-        return data.tasks.map((task) => ({
+    const hostTasks = [];
+    for (const binding of bindings) {
+      const read = await snapshot(binding, check);
+      const data = remapSnapshot(
+        read.data,
+        hostTeamSelectionKey(binding.handle.handleId),
+        bindings
+      );
+      observed.push(read.assertCurrent);
+      hostTasks.push(
+        data.tasks.map((task) => ({
           ...task,
           teamName: data.teamName,
           teamDisplayName: binding.label,
-        }));
-      })
-    );
+        }))
+      );
+    }
     current(check);
     for (const assertCurrent of observed) assertCurrent();
     return [
@@ -708,14 +711,13 @@ export function createHostTeamsApi(
               legacy.aliveList(),
               connections(check),
             ]);
-            const state = await Promise.all(
-              bindings.map(async (connection) => {
-                readOrder.capture(check);
-                const assertCurrent = readOrder.readFence(connection.handle.handleId);
-                const state = await lifecycle.read(connection, check);
-                return { connection, state, assertCurrent };
-              })
-            );
+            const state = [];
+            for (const connection of bindings) {
+              readOrder.capture(check);
+              const assertCurrent = readOrder.readFence(connection.handle.handleId);
+              const runtimeState = await lifecycle.read(connection, check);
+              state.push({ connection, state: runtimeState, assertCurrent });
+            }
             current(check);
             for (const entry of state) entry.assertCurrent();
             if (state.some((entry) => entry.state && entry.state.alive === undefined))
