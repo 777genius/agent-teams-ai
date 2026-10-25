@@ -40,6 +40,8 @@ jobs:
           cat /etc/os-release | head -4; uname -r; echo "ImageVersion=$ImageVersion"
           sysctl kernel.apparmor_restrict_unprivileged_userns || true
           dpkg-query -W bubblewrap apparmor 2>/dev/null || true
+          echo "AppArmor profiles that mention bwrap or userns:"; sudo grep -l -E 'bwrap|userns' /etc/apparmor.d/* 2>/dev/null || true
+          ls /usr/share/apparmor/extra-profiles 2>/dev/null | grep -i -E 'bwrap|userns' || true
       - name: Install upstream bubblewrap at /usr/bin/bwrap
         run: |
           sudo apt-get update -qq
@@ -51,9 +53,21 @@ jobs:
           (cd "$d" && meson setup build --buildtype=release -Dtests=false >/dev/null && ninja -C build bwrap >/dev/null)
           sudo install -m 0755 -o root -g root "$d/build/bwrap" /usr/bin/bwrap
           /usr/bin/bwrap --version; stat -c '%A %U:%G %n' /usr/bin/bwrap
-      - name: Restore the stock AppArmor user-namespace restriction
+      - name: Keep the stock AppArmor user-namespace restriction
         run: |
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=1
+      - name: Sandbox check before the bwrap AppArmor profile
+        run: bash .github/test-linux-v2-e2e/bwrap-check.sh || true
+      - name: Allow user namespaces for /usr/bin/bwrap only (AppArmor profile, restriction stays on)
+        run: |
+          printf '%s\n' 'abi <abi/4.0>,' 'include <tunables/global>' \
+            'profile TEST-opencode-v2-bwrap /usr/bin/bwrap flags=(unconfined) {' '  userns,' '}' \
+            | sudo tee /etc/apparmor.d/TEST-opencode-v2-bwrap >/dev/null
+          sudo apparmor_parser -r /etc/apparmor.d/TEST-opencode-v2-bwrap
+          sudo aa-status 2>/dev/null | grep -F TEST-opencode-v2-bwrap
+          sysctl kernel.apparmor_restrict_unprivileged_userns
+      - name: Sandbox check after the bwrap AppArmor profile
+        run: bash .github/test-linux-v2-e2e/bwrap-check.sh
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: '1.4.2'
