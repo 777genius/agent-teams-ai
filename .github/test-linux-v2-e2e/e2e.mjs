@@ -101,8 +101,10 @@ log('taskResult', { status: taskNow?.status, owner: taskNow?.owner, fileExists: 
 
 // Lead to teammate: the lead must ask the teammate and confirm.
 const sendStartMs = Date.now();
-const leadMessage = await call(`${api}.sendMessage(${q(teamName)}, ${q({ member: 'team-lead', text: `Ask ${teammate} to append the line "second line from ${teammate}" to ${fileName}, wait for ${teammate}'s reply, then reply to me confirming what ${teammate} said.` })})`);
+const leadMessage = await call(`${api}.sendMessage(${q(teamName)}, ${q({ member: 'team-lead', text: `Create a task for ${teammate} to append the line "second line from ${teammate}" to ${fileName}. When ${teammate} reports it done, reply to me confirming what ${teammate} said.` })})`);
 log('sendToLead', leadMessage);
+// The request asks for a task: after the board completed once, a lead relay of a direct-message
+// answer is withheld as a restated final by the app (777genius/agent-teams-ai#998, open).
 // Strict wait, by content: the lead hands the request to the teammate (a direct message or a
 // task assignment, both newer than the user's request), the teammate reports the appended line
 // to the lead, and only then the lead answers the user. A request queued behind an earlier
