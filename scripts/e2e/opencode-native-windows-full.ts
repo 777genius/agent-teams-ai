@@ -23,9 +23,11 @@ import { promisify } from 'node:util';
 import { parseSingleBridgeJsonResult, validateBridgeResultEnvelope } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import { projectV2NativeTranscript } from './opencode-native-v2-transcript';
 import { stageNativeTestNode } from './opencode-native-test-node';
+import { verifyWindowsCommandSyntax, type WindowsCommandSyntaxFact } from './opencode-native-windows-command';
 import {
   realTaskPrompt,
   verificationInstruction,
+  windowsVerificationCommand,
 } from './opencode-native-real-task-prompts';
 import { isOpenCodeV2QualifiedVersion } from '../../src/features/opencode-compatibility/core/domain/pinnedOpenCodeV2Contract';
 import { redactLaunchFailureArtifactText } from '../../src/main/services/team/TeamLaunchFailureArtifactPack';
@@ -864,6 +866,47 @@ const same = (a: Identity | null, b: Identity) =>
     a.executable === b.executable &&
     a.command === b.command
   );
+
+/** Closed inbox facts for a failed scenario: never message text, attachments or paths. */
+async function inboxFacts(claudeRoot: string, teamName: string, member: string) {
+  const token = (value: unknown) =>
+    typeof value !== 'string' ? null : /^[A-Za-z0-9_.:@-]{1,64}$/.test(value) ? value : 'redacted';
+  try {
+    const file = path.join(claudeRoot, 'teams', teamName, 'inboxes', `${member}.json`);
+    const info = await lstat(file);
+    if (!info.isFile() || info.size > 4 * 1024 * 1024) return { member, observation: 'unavailable' as const };
+    const messages: unknown = JSON.parse(await readFile(file, 'utf8'));
+    if (!Array.isArray(messages)) return { member, observation: 'invalid' as const };
+    return {
+      member,
+      observation: 'read' as const,
+      count: messages.length,
+      messages: messages.slice(-20).map((raw) => {
+        const message = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+        const id = typeof message.messageId === 'string' ? message.messageId : null;
+        const prefix = id?.slice(0, 40) ?? null;
+        return {
+          from: token(message.from),
+          to: token(message.to),
+          at:
+            typeof message.timestamp === 'string' &&
+            /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(message.timestamp)
+              ? message.timestamp
+              : null,
+          read: message.read === true,
+          source: token(message.source),
+          messageKind: token(message.messageKind),
+          workSyncIntent: token(message.workSyncIntent),
+          idLength: id?.length ?? null,
+          idPrefix: prefix === null ? null : /^[A-Za-z0-9_.:-]+$/.test(prefix) ? prefix : 'redacted',
+        };
+      }),
+    };
+  } catch (error: unknown) {
+    const code = error && typeof error === 'object' && 'code' in error ? error.code : undefined;
+    return { member, observation: code === 'ENOENT' ? ('missing' as const) : ('unavailable' as const) };
+  }
+}
 
 async function seedSelectedAuth(file: string, provider: string, directory: string) {
   // Read only the explicitly supplied local file; never emit its content/errors.
@@ -2095,8 +2138,6 @@ async function main() {
   assert(/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_./:~-]+$/.test(model));
   preproofStage = 'desktop_prepare';
   const desktop = await prepareNativeDesktop();
-  preproofStage = 'desktop_private_acl';
-  await protectWindowsTestDirectory(desktop.root);
   preproofStage = 'selected_paths';
   if (sdk !== 'bundled') desktop.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = await realpath(sdk);
   desktop.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH = await realpath(binary);
@@ -2142,6 +2183,8 @@ async function main() {
     sdkSelection: sdk === 'bundled' ? 'bundled without override' : 'explicit SDK override',
     ...bundled,
     nativeNodeDependency: null as null | { sha256: string; bytes: number },
+    commandSyntax: [] as WindowsCommandSyntaxFact[],
+    inboxObservations: [] as Awaited<ReturnType<typeof inboxFacts>>[],
     taskFailureSnapshot: null as null | {
       unavailable: boolean;
       failure?: ProofFailure;
@@ -2257,13 +2300,17 @@ async function main() {
     const base = `Work only inside ${desktop.projectPath}. Never delegate, install packages, detach processes or change host verification scripts. Use team tools for peer messages and task comments. When a peer sends CHALLENGE:<token>, reply to that sender ACK:<token> exactly. Never reply to ACK.`;
     const command = (name: string) => {
       const program = path.join(desktop.projectPath, name);
-      for (const file of [program, testNode.executable]) assert(
-        [...file].every((char) => char.charCodeAt(0) >= 32) && !/["%!^&<>|`$]/.test(file),
-        'Literal Windows TEST command path required'
-      );
-      // JSON string escaping doubles backslashes in cmd/PowerShell arguments.
-      return `"${testNode.executable}" "${program}"`;
+      return windowsVerificationCommand(testNode.executable, program);
     };
+
+    // Prove the literal command dialect before spending a model turn. The same
+    // staged Node and command builder execute a TEST-only marker program.
+    await checkpoint('command_syntax');
+    await verifyWindowsCommandSyntax(testNode.executable, desktop.projectPath, desktop.env, async fact => {
+      proof.commandSyntax.push(fact);
+      await checkpoint('command_syntax');
+    });
+    await testNode.verify();
 
     const checkSum = `const a=require('node:assert/strict');a.equal(process.platform,'win32');const sum=require('./sum.cjs');a.equal(sum([]),0);a.equal(sum([2,-5,7]),4);a.equal(sum([1.5,2.5]),4);a.equal(sum([-2,-3]),-5);for(const v of [null,[NaN],[Infinity],['1']])a.throws(()=>sum(v),TypeError);`;
     await writeFile(
@@ -2280,7 +2327,7 @@ async function main() {
     );
     const verificationHashes = Object.fromEntries(
       await Promise.all(
-        ['alice-verify.cjs', 'bob-verify.cjs', 'host-verify.cjs'].map(async (name) => [
+        ['alice-verify.cjs', 'bob-verify.cjs', 'host-verify.cjs', 'host-command-syntax.cjs'].map(async (name) => [
           name,
           await exactFile(desktop.projectPath, name),
         ])
@@ -3063,6 +3110,12 @@ async function main() {
           }),
         ]);
         proof.taskFailureSnapshot = { unavailable: false, tasks };
+        // The lead and each failed task owner: who delivered what, and whether it was read.
+        proof.inboxObservations = await Promise.all(
+          [...new Set(['team-lead', ...latestTasks.map(({ owner }) => owner)])].map((member) =>
+            inboxFacts(desktop.env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT!, desktop.teamName, member)
+          )
+        );
       } catch (error: unknown) {
         proof.taskFailureSnapshot = {
           unavailable: true,

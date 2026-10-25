@@ -126,7 +126,15 @@ describe('processStartTime', () => {
 
     expect(startedAt).toBe(Date.parse('2025-08-27T08:12:33.123Z'));
     expect(probes[0].command).toBe('powershell.exe');
-    expect(probes[0].args.at(-1)).toContain('Get-Process -Id 4321');
+    expect(probes[0].args.slice(0, -1)).toEqual([
+      '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand',
+    ]);
+    const encoded = probes[0].args.at(-1)!;
+    expect(encoded).toMatch(/^[A-Za-z0-9+/]+=*$/);
+    expect(Buffer.from(encoded, 'base64').toString('utf16le')).toBe(
+      '$ErrorActionPreference = "Stop"; $process = Get-Process -Id 4321 -ErrorAction Stop; ' +
+      '$process.StartTime.ToUniversalTime().ToString("o")'
+    );
     expect(probes[0].options.env?.LC_ALL).toBe('C');
   });
 

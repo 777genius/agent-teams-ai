@@ -1,9 +1,14 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import {
   realTaskPrompt,
   verificationInstruction,
+  windowsVerificationCommand,
 } from '../../scripts/e2e/opencode-native-real-task-prompts';
+import { verifyWindowsCommandSyntax, type WindowsCommandSyntaxFact, windowsCommandSyntaxProjectParent } from '../../scripts/e2e/opencode-native-windows-command';
 
 describe('native real-task prompt contract', () => {
   const commentToken = 'TASK_COMMENT:11111111-2222-3333-4444-555555555555';
@@ -95,5 +100,63 @@ describe('native verification command contract', () => {
       prompt.indexOf('Completion protocol')
     );
     expect(prompt.indexOf('Completion protocol')).toBeGreaterThan(-1);
+  });
+});
+
+describe('cross-shell Windows verifier invocation', () => {
+  it('anchors a standalone probe to the staged Node workspace, independently of Windows TEMP', () => {
+    const executable = ['D:', 'a', 'agent-teams-ai', 'agent-teams-ai', 'TEST-native-source',
+      'TEST-controller-node', 'node.exe'].join(String.fromCharCode(92));
+    const parent = windowsCommandSyntaxProjectParent(executable);
+    expect(parent).toBe(path.win32.dirname(executable));
+    expect(windowsVerificationCommand(executable,
+      path.win32.join(parent, 'TEST-command-syntax-fixture', 'host-command-syntax.cjs')))
+      .toBe('D:/a/agent-teams-ai/agent-teams-ai/TEST-native-source/TEST-controller-node/node.exe ' +
+        'D:/a/agent-teams-ai/agent-teams-ai/TEST-native-source/TEST-controller-node/TEST-command-syntax-fixture/host-command-syntax.cjs');
+    expect(() => windowsVerificationCommand(executable,
+      'C:/Users/RUNNER~1/AppData/Local/Temp/TEST-command/host-command-syntax.cjs')).toThrow();
+  });
+
+  it('does not turn an arbitrary toolchain or unsafe staging parent into a TEST root', () => {
+    expect(() => windowsCommandSyntaxProjectParent('D:/toolchain/node.exe')).toThrow();
+    expect(() => windowsCommandSyntaxProjectParent('D:/TEST-node with space/node.exe')).toThrow();
+  });
+
+  it.skipIf(process.platform !== 'win32')('executes the unchanged verifier in PowerShell and cmd', async () => {
+    const directory = mkdtempSync(path.join(process.cwd(), 'TEST-command-'));
+    try {
+      const facts: WindowsCommandSyntaxFact[] = [];
+      await verifyWindowsCommandSyntax(process.env.OPENCODE_NATIVE_TEST_NODE_PATH ?? process.execPath,
+        directory, process.env, async fact => { facts.push(fact); });
+      expect(facts).toEqual(['powershell', 'cmd'].map(shell => ({
+        shell, markerMatches: true, exitCode: 0, nativeCode: null, signal: null,
+      })));
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('does not quote the executable as a PowerShell string expression', () => {
+    expect(windowsVerificationCommand('D:\\a\\_temp\\TEST-node\\node.exe',
+      'D:\\a\\_temp\\TEST-project\\alice-verify.cjs')).toBe(
+      'D:/a/_temp/TEST-node/node.exe D:/a/_temp/TEST-project/alice-verify.cjs'
+    );
+  });
+
+  it('accepts canonical slash paths without cmd-incompatible nested quotes', () => {
+    expect(windowsVerificationCommand('C:/TEST-node/node.exe',
+      'C:/TEST-project/alice-verify.cjs')).toBe(
+      'C:/TEST-node/node.exe C:/TEST-project/alice-verify.cjs'
+    );
+  });
+
+  it.each(['C:/TEST node/node.exe', 'node.exe', 'C:/TEST-$x/node.exe',
+    'C:/TEST;echo/node.exe', 'C:/TEST/../node.exe', 'C:/TEST/node.exe\n'])( 'refuses a nonliteral executable path: %s', executable => {
+    expect(() => windowsVerificationCommand(executable, 'C:/TEST/alice-verify.cjs')).toThrow();
+  });
+
+  it.each(['C:/TEST project/alice.cjs', 'C:/TEST/$x.cjs', 'C:/TEST/$(echo).cjs', 'C:/TEST/a".cjs',
+    'C:/TEST/%PATH%.cjs', 'C:/TEST/../alice.cjs', './alice.cjs'])( 'refuses shell interpolation or a nonabsolute verifier: %s', program => {
+    expect(() => windowsVerificationCommand('C:/TEST/node.exe', program)).toThrow();
   });
 });
