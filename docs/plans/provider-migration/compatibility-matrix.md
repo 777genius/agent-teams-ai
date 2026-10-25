@@ -261,3 +261,16 @@ localhost-модели выполнены настоящими закреплё�
 SIGTERM после закрытия Host: естественный Quit этим результатом не заявляется.
 Это часть M05/M07/M18 для двух Claude actors; mixed-provider группы, остальные
 провайдеры и полный этап 1 остаются отдельными незавершёнными требованиями.
+
+### Scoped Extensions UI, 25 октября
+
+[Plugin и custom MCP](evidence/m15-existing-native-extensions-ui-handoff.json) прошли
+через прежние Settings/Extensions и диалоги: Plugin Install/Uninstall, Add Custom
+MCP → Check Status → native inventory → Uninstall → reload. Четыре разные
+исходные Host-команды completed, соседняя TEST-конфигурация не изменена; app exit0,
+Host отсутствует, writer released, TEST process group пуста.
+
+Для existing MCP detail использована явно отмеченная TEST catalog metadata row:
+она не подменяет native inventory, диагностику, конфигурацию или результаты
+операций. Доступность внешнего каталога, реальная авторизация и весь M15/этап 1
+этим scoped PASS не заявляются.
