@@ -6,9 +6,9 @@
       "refreshCatalog": "Refresh Katalog"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "Plugins: {{status}}",
-      "skills": "Fähigkeiten: {{status}}"
+      "mcp": "Laufzeit-MCP: {{status}}",
+      "plugins": "Laufzeit-Plugins: {{status}}",
+      "skills": "Laufzeit-Skills: {{status}}"
     },
     "desktopOnly": "Nur in der Desktop-App verfügbar.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "Verfügbarkeit der Prüferweiterungen",
       "failedToStartDescription": "Erweiterungen sind deaktiviert, bis die Laufzeit seinen Start-Gesundheitscheck übergeht. Öffnen Sie das Dashboard, um es zu reparieren oder neu zu installieren.",
       "failedToStartTitle": "Die konfigurierte Laufzeit wurde gefunden, konnte aber nicht starten",
-      "multimodelCapabilitiesDescription": "Provider-Unterstützung kann sich nach Abschnitt unterscheiden. Plugins werden nur angezeigt, wenn die Laufzeit ausdrücklich Unterstützung erklärt.",
-      "multimodelCapabilitiesTitle": "Multimodel Laufzeitfunktionen",
+      "multimodelCapabilitiesDescription": "Diese Kennzeichnungen beschreiben die eigenen Kataloge und MCP-Steuerfunktionen der Laufzeit. Die Verfügbarkeit von Universal plugins und Managed skills wird separat in den jeweiligen Bereichen angezeigt.",
+      "multimodelCapabilitiesTitle": "Von der Laufzeit verwaltete Erweiterungen",
       "needsSignInDescription": "{{runtime}} wurde gefunden{{version}}, aber Plugin-Installationen sind deaktiviert, bis Sie sich aus dem Dashboard anmelden.",
       "needsSignInTitle": "{{runtime}} Einschreiben",
       "notAvailableDescription": "Erweiterungen werden solange deaktiviert, bis die Laufzeit installiert ist. Öffnen Sie das Dashboard, um es zu installieren und wiederherzustellen.",
@@ -45,7 +45,7 @@
         "label": "MCP Server"
       },
       "plugins": {
-        "description": "Kleine Add-ons für die Laufzeit. Im Multimodel-Modus gelten sie derzeit für Anthropic Sessions, wenn sie unterstützt werden. Broader Provider-Unterstützung ist in der Entwicklung.",
+        "description": "Erweitern Sie Ihren Agenten mit Universal plugins, die von UAP verwaltet werden, oder mit Plugins aus dem Laufzeitkatalog.",
         "label": "Plugins"
       },
       "skills": {

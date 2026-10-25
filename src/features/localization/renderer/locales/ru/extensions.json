@@ -6,9 +6,9 @@
       "refreshCatalog": "Обновить каталог"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "Plugins: {{status}}",
-      "skills": "Skills: {{status}}"
+      "mcp": "MCP runtime: {{status}}",
+      "plugins": "Плагины runtime: {{status}}",
+      "skills": "Скилы runtime: {{status}}"
     },
     "desktopOnly": "Доступно только в desktop app.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "Проверка доступности runtime для extensions",
       "failedToStartDescription": "Extensions отключены, пока runtime не пройдёт startup health check. Откройте Dashboard, чтобы исправить или переустановить его.",
       "failedToStartTitle": "Настроенный runtime найден, но не запустился",
-      "multimodelCapabilitiesDescription": "Поддержка providers может отличаться по секциям. Plugins показываются только там, где runtime явно сообщает поддержку.",
-      "multimodelCapabilitiesTitle": "Возможности multimodel runtime",
+      "multimodelCapabilitiesDescription": "Эти метки относятся к собственным каталогам runtime и управлению MCP. Доступность функций UAP указана отдельно в разделах «Универсальные плагины» и «Управляемые скилы».",
+      "multimodelCapabilitiesTitle": "Расширения под управлением runtime",
       "needsSignInDescription": "{{runtime}} найден{{version}}, но установка plugins отключена, пока вы не войдёте через Dashboard.",
       "needsSignInTitle": "{{runtime}} требует вход",
       "notAvailableDescription": "Extensions отключены, пока runtime не установлен. Откройте Dashboard, установите его и повторите попытку.",
@@ -45,7 +45,7 @@
         "label": "MCP Servers"
       },
       "plugins": {
-        "description": "Небольшие add-ons для runtime. В multimodel mode сейчас применяются к Anthropic sessions, когда поддерживаются. Более широкая поддержка providers в разработке.",
+        "description": "Расширяйте возможности агента универсальными плагинами под управлением UAP или плагинами из каталога runtime.",
         "label": "Plugins"
       },
       "skills": {

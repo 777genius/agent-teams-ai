@@ -6,9 +6,9 @@
       "refreshCatalog": "Aggiorna catalogo"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "Plugin: {{status}}",
-      "skills": "Skill: {{status}}"
+      "mcp": "MCP del runtime: {{status}}",
+      "plugins": "Plugin del runtime: {{status}}",
+      "skills": "Skill del runtime: {{status}}"
     },
     "desktopOnly": "Disponibile solo nell'app desktop.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "Verifica della disponibilità del runtime delle estensioni",
       "failedToStartDescription": "Le estensioni sono disabilitate finché il runtime non supera il controllo di integrità all'avvio. Apri la dashboard per ripararlo o reinstallarlo.",
       "failedToStartTitle": "Il runtime configurato è stato trovato ma non si è avviato",
-      "multimodelCapabilitiesDescription": "Il supporto dei provider può variare per sezione. I plugin vengono mostrati solo dove il runtime dichiara esplicitamente il supporto.",
-      "multimodelCapabilitiesTitle": "Funzionalità del runtime multimodello",
+      "multimodelCapabilitiesDescription": "Queste etichette descrivono i cataloghi e i controlli MCP propri del runtime. La disponibilità di Universal plugins e Managed skills è indicata separatamente nelle rispettive sezioni.",
+      "multimodelCapabilitiesTitle": "Estensioni gestite dal runtime",
       "needsSignInDescription": "{{runtime}} è stato trovato{{version}}, ma le installazioni dei plugin sono disabilitate finché non accedi dalla dashboard.",
       "needsSignInTitle": "{{runtime}} richiede l'accesso",
       "notAvailableDescription": "Le estensioni sono disabilitate finché il runtime non viene installato. Apri la dashboard per installarlo e riprova.",
@@ -45,7 +45,7 @@
         "label": "Server MCP"
       },
       "plugins": {
-        "description": "Piccoli componenti aggiuntivi per il runtime. In modalità multimodello si applicano attualmente alle sessioni Anthropic quando supportati. Un supporto più ampio dei provider è in fase di sviluppo.",
+        "description": "Estendi il tuo agente con Universal plugins gestiti da UAP o con plugin del catalogo del runtime.",
         "label": "Plugin"
       },
       "skills": {

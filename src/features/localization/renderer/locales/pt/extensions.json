@@ -6,9 +6,9 @@
       "refreshCatalog": "Atualizar catálogo"
     },
     "capabilities": {
-      "mcp": "MCP:{{status}}",
-      "plugins": "Plug-ins:{{status}}",
-      "skills": "Habilidades: {{status}}"
+      "mcp": "MCP do runtime: {{status}}",
+      "plugins": "Plugins do runtime: {{status}}",
+      "skills": "Skills do runtime: {{status}}"
     },
     "desktopOnly": "Disponível apenas no aplicativo desktop.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "Verificando a disponibilidade das extensões em tempo de execução",
       "failedToStartDescription": "Extensões são desabilitadas até que o tempo de execução passe sua verificação de saúde inicial. Abra o Painel para repará-lo ou reinstalá-lo.",
       "failedToStartTitle": "O tempo de execução configurado foi encontrado, mas não foi possível iniciar",
-      "multimodelCapabilitiesDescription": "O suporte do provedor pode diferir por seção. Os 'plugins' são mostrados apenas onde o 'runtime' declara explicitamente o suporte.",
-      "multimodelCapabilitiesTitle": "Capacidades de execução multimodelo",
+      "multimodelCapabilitiesDescription": "Estes indicadores descrevem os catálogos e controles MCP próprios do runtime. A disponibilidade de Universal plugins e Managed skills é mostrada separadamente nas respectivas seções.",
+      "multimodelCapabilitiesTitle": "Extensões gerenciadas pelo runtime",
       "needsSignInDescription": "{{runtime}} foi encontrado{{version}}, mas as instalações do plugin estão desativadas até você iniciar sessão do Dashboard.",
       "needsSignInTitle": "{{runtime}} precisa de entrar",
       "notAvailableDescription": "As extensões estão desabilitadas até que o tempo de execução seja instalado. Abra o Dashboard para instalá-lo e tentar novamente.",
@@ -45,7 +45,7 @@
         "label": "MCP Servidores"
       },
       "plugins": {
-        "description": "Pequenos extras para o tempo de execução. No modo multimodelo eles atualmente se aplicam às sessões antrópicas quando suportadas. O suporte ao provedor mais amplo está em desenvolvimento.",
+        "description": "Amplie seu agente com Universal plugins gerenciados pelo UAP ou plugins do catálogo do runtime.",
         "label": "Plugins"
       },
       "skills": {

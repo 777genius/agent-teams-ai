@@ -372,11 +372,15 @@ const button = (label: string, root = 'document') =>
   `Array.from((${root})?.querySelectorAll('button') ?? []).find(e => e.textContent?.trim() === ${JSON.stringify(label)} || e.getAttribute('aria-label') === ${JSON.stringify(label)})`;
 const panel = 'document.querySelector("[data-testid=uap-skill]")';
 const installedRow = `${panel}?.querySelector('[data-testid=uap-installed-entry]')`;
-async function click(expression: string) {
+async function click(expression: string, timeoutMs = 60_000) {
   const pointExpression = actionablePoint(expression);
   // Use the successful observation itself; a second readiness evaluation can
   // transiently fail during a dialog transition after the first has succeeded.
-  const point = await waitForValue(pointExpression, `enabled visible click target ${expression}`);
+  const point = await waitForValue(
+    pointExpression,
+    `enabled visible click target ${expression}`,
+    timeoutMs
+  );
   assert(point && typeof point === 'object', `Missing or disabled click target: ${expression}`);
   for (const type of ['mousePressed', 'mouseReleased'])
     await cdp!.send('Input.dispatchMouseEvent', { type, ...point, button: 'left', clickCount: 1 });
@@ -396,15 +400,56 @@ async function fill(selector: string, text: string) {
     text
   );
 }
+async function selectAgent(root: string, label: string) {
+  const trigger = button('Agent runtime', root);
+  const selected = `(${trigger})?.textContent?.trim() === ${JSON.stringify(label)}`;
+  const opened = `(${trigger})?.getAttribute('aria-expanded') === 'true'`;
+  const option = `(() => {
+    const id = (${trigger})?.getAttribute('aria-controls');
+    const menu = id ? document.getElementById(id) : null;
+    if (menu?.getAttribute('role') !== 'listbox') return null;
+    return Array.from(menu?.querySelectorAll('[role=option]') ?? [])
+      .find(element => element.textContent?.trim() === ${JSON.stringify(label)});
+  })()`;
+  const deadline = Date.now() + 60_000;
+  const remaining = () => Math.max(0, deadline - Date.now());
+  for (let attempt = 1; attempt <= 3 && remaining() > 0; attempt++) {
+    if (await cdp!.evaluate(selected)) return;
+    if (!(await cdp!.evaluate(opened))) {
+      await click(trigger, remaining());
+      const openingLabel = `${label} agent menu opening`;
+      try {
+        await wait(opened, openingLabel, Math.min(3000, remaining()));
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message.startsWith(`Timed out waiting for ${openingLabel};`)
+        )
+          continue;
+        throw error;
+      }
+    }
+    // Opening was observed. A disappearing menu or failed selection must fail,
+    // rather than replaying input after a state transition has been acknowledged.
+    await click(option, remaining());
+    await wait(selected, `${label} agent selection`, remaining());
+    return;
+  }
+  const observed = await cdp!.evaluate(`(() => {
+    const trigger = ${trigger};
+    return {value: trigger?.textContent?.trim(), expanded: trigger?.getAttribute('aria-expanded'),
+      disabled: trigger?.disabled, controls: trigger?.getAttribute('aria-controls')};
+  })()`);
+  throw new Error(
+    `Agent menu did not open within three pointer attempts: ${JSON.stringify(observed)}`
+  );
+}
 async function openSkills() {
   await click(button('More actions'));
   await click(button('Extensions'));
   await selectTab(cdp!, wait, 'Skills');
   await wait(`${panel} && !${button('Agent runtime', panel)}?.disabled`, 'managed Skill context');
-  await click(button('Agent runtime', panel));
-  await click(
-    `Array.from(document.querySelectorAll('[role=option]')).find(e=>e.textContent?.trim()==='OpenCode')`
-  );
+  await selectAgent(panel, 'OpenCode');
   await wait(
     `${button('Install from source', panel)} && !${button('Install from source', panel)}.disabled`,
     'native OpenCode capability',
@@ -427,10 +472,7 @@ async function registryPlugin(f: Awaited<ReturnType<typeof fixture>>) {
     `${pluginPanel} && !${button('Agent runtime', pluginPanel)}?.disabled`,
     'universal Plugins entry point'
   );
-  await click(button('Agent runtime', pluginPanel));
-  await click(
-    `Array.from(document.querySelectorAll('[role=option]')).find(e=>e.textContent?.trim()==='OpenCode')`
-  );
+  await selectAgent(pluginPanel, 'OpenCode');
   const registry = (await cdp!.evaluate(
     `(async()=>{const api=window.electronAPI.extensionManagement; const context=await api.capture({client:'opencode',scope:'user'}); return api.catalog({contextId:context.contextId});})()`
   )) as ManagementCatalog;

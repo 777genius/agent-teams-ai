@@ -6,9 +6,9 @@
       "refreshCatalog": "catalog ஐ புதுப்பி"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "Plugins: {{status}}",
-      "skills": "Skills: {{status}}"
+      "mcp": "இயக்கநேர MCP: {{status}}",
+      "plugins": "இயக்கநேரச் செருகுநிரல்கள்: {{status}}",
+      "skills": "இயக்கநேரத் திறன்கள்: {{status}}"
     },
     "desktopOnly": "desktop பயன்பாட்டில் மட்டுமே கிடைக்கிறது.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "நீட்டிப்புகள் runtime கிடைக்கும்தன்மையைச் சரிபார்க்கிறது",
       "failedToStartDescription": "runtime அதன் startup health check இல் தேர்ச்சி பெறும் வரை நீட்டிப்புகள் முடக்கப்படும். அதைப் பழுதுபார்க்க அல்லது மீண்டும் நிறுவ Dashboard ஐத் திறக்கவும்.",
       "failedToStartTitle": "கட்டமைக்கப்பட்ட runtime கண்டறியப்பட்டது ஆனால் தொடங்க முடியவில்லை",
-      "multimodelCapabilitiesDescription": "வழங்குநர் ஆதரவு பிரிவு வாரியாக வேறுபடலாம். runtime வெளிப்படையாக ஆதரவை அறிவிக்கும் இடத்தில் மட்டுமே plugins காட்டப்படுகின்றன.",
-      "multimodelCapabilitiesTitle": "Multimodel runtime திறன்கள்",
+      "multimodelCapabilitiesDescription": "இந்தக் குறியீடுகள் இயக்கநேரத்தின் சொந்தப் பட்டியல்களையும் MCP கட்டுப்பாடுகளையும் குறிக்கின்றன. Universal plugins மற்றும் Managed skills கிடைக்குமா என்பது அவற்றின் தனிப்பட்ட பகுதிகளில் காட்டப்படுகிறது.",
+      "multimodelCapabilitiesTitle": "இயக்கநேரத்தால் நிர்வகிக்கப்படும் நீட்டிப்புகள்",
       "needsSignInDescription": "{{runtime}} கண்டறியப்பட்டது{{version}}, ஆனால் நீங்கள் Dashboard இலிருந்து sign in செய்யும் வரை plugin நிறுவல்கள் முடக்கப்படும்.",
       "needsSignInTitle": "{{runtime}} க்கு sign-in தேவை",
       "notAvailableDescription": "runtime நிறுவப்படும் வரை நீட்டிப்புகள் முடக்கப்படும். அதை நிறுவ Dashboard ஐத் திறந்து மீண்டும் முயற்சிக்கவும்.",
@@ -45,7 +45,7 @@
         "label": "MCP Servers"
       },
       "plugins": {
-        "description": "runtime க்கான சிறிய add-ons. multimodel பயன்முறையில் அவை தற்போது ஆதரிக்கப்படும்போது Anthropic sessions க்குப் பொருந்தும். பரந்த வழங்குநர் ஆதரவு உருவாக்கத்தில் உள்ளது.",
+        "description": "UAP நிர்வகிக்கும் Universal plugins அல்லது இயக்கநேரப் பட்டியலில் உள்ள செருகுநிரல்கள் மூலம் உங்கள் ஏஜென்டின் திறன்களை விரிவுபடுத்துங்கள்.",
         "label": "Plugins"
       },
       "skills": {

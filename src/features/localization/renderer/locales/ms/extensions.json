@@ -6,9 +6,9 @@
       "refreshCatalog": "Segar semula katalog"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "Plugin: {{status}}",
-      "skills": "Kemahiran: {{status}}"
+      "mcp": "MCP runtime: {{status}}",
+      "plugins": "Plugin runtime: {{status}}",
+      "skills": "Skill runtime: {{status}}"
     },
     "desktopOnly": "Tersedia dalam aplikasi desktop sahaja.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "Menyemak ketersediaan runtime sambungan",
       "failedToStartDescription": "Sambungan dilumpuhkan sehingga runtime lulus semakan kesihatan permulaannya. Buka Papan Pemuka untuk membaikinya atau memasangnya semula.",
       "failedToStartTitle": "Runtime yang dikonfigurasi ditemui tetapi gagal dimulakan",
-      "multimodelCapabilitiesDescription": "Sokongan pembekal boleh berbeza mengikut bahagian. Plugin dipaparkan hanya di mana runtime secara eksplisit mengisytiharkan sokongan.",
-      "multimodelCapabilitiesTitle": "Keupayaan runtime multimodel",
+      "multimodelCapabilitiesDescription": "Lencana ini menerangkan katalog dan kawalan MCP milik runtime. Ketersediaan Universal plugins dan Managed skills dipaparkan secara berasingan dalam bahagian masing-masing.",
+      "multimodelCapabilitiesTitle": "Sambungan yang diurus oleh runtime",
       "needsSignInDescription": "{{runtime}} ditemui{{version}}, tetapi pemasangan plugin dilumpuhkan sehingga anda log masuk daripada Papan Pemuka.",
       "needsSignInTitle": "{{runtime}} perlu log masuk",
       "notAvailableDescription": "Sambungan dilumpuhkan sehingga runtime dipasang. Buka Papan Pemuka untuk memasangnya dan cuba lagi.",
@@ -45,7 +45,7 @@
         "label": "Pelayan MCP"
       },
       "plugins": {
-        "description": "Tambahan kecil untuk runtime. Dalam mod multimodel ia kini terpakai kepada sesi Anthropic apabila disokong. Sokongan pembekal yang lebih luas dalam pembangunan.",
+        "description": "Luaskan keupayaan ejen anda dengan Universal plugins yang diurus oleh UAP atau plugin daripada katalog runtime.",
         "label": "Plugin"
       },
       "skills": {

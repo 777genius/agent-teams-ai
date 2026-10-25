@@ -6,9 +6,9 @@
       "refreshCatalog": "カタログ更新"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}の特長",
-      "plugins": "プラグイン: {{status}}",
-      "skills": "スキル: {{status}}"
+      "mcp": "ランタイムの MCP: {{status}}",
+      "plugins": "ランタイムのプラグイン: {{status}}",
+      "skills": "ランタイムのスキル: {{status}}"
     },
     "desktopOnly": "デスクトップアプリのみでご利用いただけます。",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "延長ランタイムの可用性を確認する",
       "failedToStartDescription": "実行時間が起動健康チェックを通過するまで延長は無効です。 ダッシュボードを開き、修復または再インストールします。",
       "failedToStartTitle": "設定されたランタイムが見つかりませんでしたが、起動できませんでした",
-      "multimodelCapabilitiesDescription": "プロバイダーのサポートは、セクションによって異なる場合があります。 プラグインは、ランタイムが明示的にサポートを宣言する唯一の場所を示しています。",
-      "multimodelCapabilitiesTitle": "マルチモデルのランタイム機能",
+      "multimodelCapabilitiesDescription": "これらのバッジは、ランタイム独自のカタログと MCP の管理機能を示します。Universal plugins と Managed skills の利用可否は、それぞれのセクションに個別に表示されます。",
+      "multimodelCapabilitiesTitle": "ランタイムが管理する拡張機能",
       "needsSignInDescription": "{{runtime}} が発見されました{{version}}, しかし、プラグインのインストールは、ダッシュボードからサインインするまで無効になっています.",
       "needsSignInTitle": "{{runtime}}はサインインを必要とします",
       "notAvailableDescription": "実行時間がインストールされるまで延長は無効です。 Dashboard を開き、インストールして再試行します。",
@@ -45,7 +45,7 @@
         "label": "MCPの特長 サーバー"
       },
       "plugins": {
-        "description": "実行時間の小さなアドオン。 マルチモデルモードでは、現在Anthropicセッションにサポートしているときに適用されます。 ブロードワープロバイダーのサポートは開発中です。",
+        "description": "UAP が管理する Universal plugins またはランタイムのカタログにあるプラグインで、エージェントの機能を拡張できます。",
         "label": "プラグイン"
       },
       "skills": {

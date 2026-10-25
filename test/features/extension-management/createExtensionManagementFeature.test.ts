@@ -40,6 +40,15 @@ function operation(state: ManagementOperation['state'] = 'queued'): ManagementOp
     updatedAt: '2026-10-24T00:00:00Z',
   };
 }
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<T>((accept, refuse) => {
+    resolve = accept;
+    reject = refuse;
+  });
+  return { promise, resolve, reject };
+}
 function fixture(pending: ManagementOperation[] = []) {
   const gate = new ExtensionRuntimeGate();
   let captureVersion = 0;
@@ -58,17 +67,21 @@ function fixture(pending: ManagementOperation[] = []) {
       available: true,
     })),
     discoverSkills: vi.fn(),
-    prepare: vi.fn(async (change: ManagementChange) => ({
-      planId: 'plan-a',
-      contextId: 'engine-a',
-      action: change.action,
-      expiresAt: '2099-01-01T00:00:00Z',
-      confirmable: true,
-      actions: [],
-      warnings: [],
-      conflicts: [],
-    })),
-    apply: vi.fn(async () => operation()),
+    prepare: vi.fn(
+      async (change: ManagementChange): Promise<ManagementPlan> => ({
+        planId: 'plan-a',
+        contextId: 'engine-a',
+        action: change.action,
+        expiresAt: '2099-01-01T00:00:00Z',
+        confirmable: true,
+        actions: [],
+        warnings: [],
+        conflicts: [],
+      })
+    ),
+    apply: vi.fn<(planId: string, requestId: string) => Promise<ManagementOperation>>(async () =>
+      operation()
+    ),
     operation: vi.fn(async () => operation()),
     wait: vi.fn(() => new Promise(() => {})),
     cancel: vi.fn(async () => operation('canceled')),
@@ -563,5 +576,196 @@ describe('captured extension management', () => {
       'extension change'
     );
     await f.feature.close();
+  });
+  it('does not lose a lease when different provider applies overlap in one environment', async () => {
+    const f = fixture();
+    const first = await f.feature.capture({ client: 'claude', scope: 'user' });
+    const second = await f.feature.capture({ client: 'opencode', scope: 'user' });
+    const plan = await f.feature.prepare({
+      contextId: first.contextId,
+      change: { action: 'sync' },
+    });
+    f.client.prepare.mockResolvedValueOnce({ ...plan, planId: 'plan-b' });
+    await f.feature.prepare({ contextId: second.contextId, change: { action: 'sync' } });
+    f.resourcesForPlan.mockImplementation((review) =>
+      review.planId === 'plan-a' ? ['profile-root'] : ['other-profile']
+    );
+    f.client.apply.mockImplementation((planId, requestId) =>
+      Promise.resolve({ ...operation('succeeded'), operationId: `op-${planId}`, planId, requestId })
+    );
+    const activity = deferred<void>(),
+      started = deferred<void>();
+    f.assertInactive.mockImplementationOnce(() => {
+      started.resolve();
+      return activity.promise;
+    });
+    const applying = f.feature.apply({
+      contextId: first.contextId,
+      planId: 'plan-a',
+      requestId: 'first-request-identity',
+    });
+    const request = {
+      contextId: second.contextId,
+      planId: 'plan-b',
+      requestId: 'second-request-identity',
+    };
+    try {
+      await started.promise;
+      const refusal = await f.feature.apply(request).then(
+        () => undefined,
+        (error: unknown) => error
+      );
+      activity.resolve();
+      await applying;
+      await f.feature.environment({ contextId: first.contextId });
+      await expect(
+        f.gate.launch(['profile-root', 'other-profile'], () => Promise.resolve('started'))
+      ).resolves.toBe('started');
+      expect(refusal).toBeInstanceOf(Error);
+      expect((refusal as Error).message).toContain('outstanding extension operation');
+      await f.feature.apply(request);
+      expect(f.client.apply).toHaveBeenCalledTimes(2);
+      await expect(
+        f.gate.launch(['profile-root', 'other-profile'], () => Promise.resolve('started'))
+      ).resolves.toBe('started');
+    } finally {
+      activity.resolve();
+      await applying.catch(() => null);
+      await f.feature.close();
+    }
+  });
+  it('releases a refused initial reservation after fresh empty inspection', async () => {
+    const f = fixture();
+    const context = await f.feature.capture({ client: 'claude', scope: 'user' });
+    await f.feature.prepare({ contextId: context.contextId, change: { action: 'sync' } });
+    f.assertInactive.mockRejectedValueOnce(new Error('profile became active'));
+    await expect(
+      f.feature.apply({
+        contextId: context.contextId,
+        planId: 'plan-a',
+        requestId: 'refused-request-identity',
+      })
+    ).rejects.toThrow('profile became active');
+    expect(f.client.apply).not.toHaveBeenCalled();
+    await expect(f.gate.launch(['profile-root'], () => Promise.resolve('started'))).resolves.toBe(
+      'started'
+    );
+    await f.feature.close();
+  });
+  it('shares an initial reservation with durable reconciliation before an activity refusal', async () => {
+    const f = fixture();
+    const context = await f.feature.capture({ client: 'claude', scope: 'user' });
+    await f.feature.prepare({ contextId: context.contextId, change: { action: 'sync' } });
+    const activity = deferred<void>(),
+      started = deferred<void>();
+    f.assertInactive.mockImplementationOnce(() => {
+      started.resolve();
+      return activity.promise;
+    });
+    const applying = f.feature.apply({
+      contextId: context.contextId,
+      planId: 'plan-a',
+      requestId: 'refused-request-identity',
+    });
+    const refusal = expect(applying).rejects.toThrow('profile became active');
+    try {
+      await started.promise;
+      f.client.environment.mockResolvedValue({
+        contextId: 'engine-a',
+        entries: [],
+        diagnostics: [],
+        pendingOperations: [operation('interrupted')],
+      });
+      await f.feature.environment({ contextId: context.contextId });
+      activity.reject(new Error('profile became active'));
+      await refusal;
+      expect(f.client.apply).not.toHaveBeenCalled();
+      await expect(
+        f.gate.launch(['other-profile'], () => Promise.resolve('started'))
+      ).rejects.toThrow('extension change');
+      f.client.environment.mockResolvedValue({
+        contextId: 'engine-a',
+        entries: [],
+        diagnostics: [],
+        pendingOperations: [],
+      });
+      await f.feature.environment({ contextId: context.contextId });
+      await expect(
+        f.gate.launch(['profile-root', 'other-profile'], () => Promise.resolve('started'))
+      ).resolves.toBe('started');
+    } finally {
+      activity.reject(new Error('profile became active'));
+      await refusal;
+      await f.feature.close();
+    }
+  });
+  it.each(['authority', 'activity'] as const)(
+    'closes without a late mutation while %s validation is pending',
+    async (phase) => {
+      const f = fixture();
+      const context = await f.feature.capture({ client: 'claude', scope: 'user' });
+      await f.feature.prepare({ contextId: context.contextId, change: { action: 'sync' } });
+      const validation = deferred<void>(),
+        started = deferred<void>();
+      (phase === 'authority' ? f.assertCurrent : f.assertInactive).mockImplementationOnce(() => {
+        started.resolve();
+        return validation.promise;
+      });
+      const applying = f.feature.apply({
+        contextId: context.contextId,
+        planId: 'plan-a',
+        requestId: 'closing-request-identity',
+      });
+      const outcome = applying.then(
+        () => undefined,
+        (error: unknown) => error
+      );
+      try {
+        await started.promise;
+        await f.feature.close();
+        await expect(
+          f.gate.launch(['profile-root'], () => Promise.resolve('started'))
+        ).resolves.toBe('started');
+        validation.resolve();
+        const refusal = await outcome;
+        expect(refusal).toBeInstanceOf(Error);
+        expect((refusal as Error).message).toContain('closing');
+        expect(f.client.apply).not.toHaveBeenCalled();
+        await expect(
+          f.gate.launch(['profile-root'], () => Promise.resolve('started'))
+        ).resolves.toBe('started');
+      } finally {
+        validation.resolve();
+        await outcome;
+        await f.feature.close();
+      }
+    }
+  );
+  it('does not recreate a fence when durable inspection returns after close', async () => {
+    const f = fixture();
+    const context = await f.feature.capture({ client: 'claude', scope: 'user' });
+    const inspection = deferred<Awaited<ReturnType<typeof f.client.environment>>>(),
+      started = deferred<void>();
+    f.client.environment.mockImplementationOnce(() => {
+      started.resolve();
+      return inspection.promise;
+    });
+    const pending = f.feature.environment({ contextId: context.contextId });
+    const outcome = pending.then(
+      () => undefined,
+      (error: unknown) => error
+    );
+    await started.promise;
+    await f.feature.close();
+    inspection.resolve({
+      contextId: 'engine-a',
+      entries: [],
+      diagnostics: [],
+      pendingOperations: [operation('interrupted')],
+    });
+    expect(await outcome).toBeInstanceOf(Error);
+    await expect(
+      f.gate.launch(['profile-root', 'other-profile'], () => Promise.resolve('started'))
+    ).resolves.toBe('started');
   });
 });

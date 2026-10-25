@@ -6,9 +6,9 @@
       "refreshCatalog": "Làm mới danh mục"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "Plugin: {{status}}",
-      "skills": "Kỹ năng: {{status}}"
+      "mcp": "MCP của runtime: {{status}}",
+      "plugins": "Plugin của runtime: {{status}}",
+      "skills": "Kỹ năng của runtime: {{status}}"
     },
     "desktopOnly": "Chỉ khả dụng trong ứng dụng máy tính.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "Đang kiểm tra khả dụng của runtime tiện ích mở rộng",
       "failedToStartDescription": "Tiện ích mở rộng bị tắt cho đến khi runtime vượt qua kiểm tra tình trạng khi khởi động. Mở Bảng điều khiển để sửa chữa hoặc cài đặt lại.",
       "failedToStartTitle": "Đã tìm thấy runtime đã cấu hình nhưng không khởi động được",
-      "multimodelCapabilitiesDescription": "Hỗ trợ nhà cung cấp có thể khác nhau theo từng mục. Plugin chỉ hiển thị ở những nơi runtime công khai khai báo hỗ trợ.",
-      "multimodelCapabilitiesTitle": "Khả năng runtime đa mô hình",
+      "multimodelCapabilitiesDescription": "Các nhãn này mô tả danh mục và chức năng điều khiển MCP riêng của runtime. Khả năng sử dụng Universal plugins và Managed skills được hiển thị riêng trong từng mục tương ứng.",
+      "multimodelCapabilitiesTitle": "Tiện ích mở rộng do runtime quản lý",
       "needsSignInDescription": "Đã tìm thấy {{runtime}}{{version}}, nhưng việc cài đặt plugin bị tắt cho đến khi bạn đăng nhập từ Bảng điều khiển.",
       "needsSignInTitle": "{{runtime}} cần đăng nhập",
       "notAvailableDescription": "Tiện ích mở rộng bị tắt cho đến khi runtime được cài đặt. Mở Bảng điều khiển để cài đặt và thử lại.",
@@ -45,7 +45,7 @@
         "label": "Máy chủ MCP"
       },
       "plugins": {
-        "description": "Các tiện ích bổ trợ nhỏ cho runtime. Trong chế độ đa mô hình, hiện chúng áp dụng cho các phiên Anthropic khi được hỗ trợ. Hỗ trợ nhà cung cấp rộng hơn đang được phát triển.",
+        "description": "Mở rộng khả năng của tác tử bằng Universal plugins do UAP quản lý hoặc plugin từ danh mục của runtime.",
         "label": "Plugin"
       },
       "skills": {

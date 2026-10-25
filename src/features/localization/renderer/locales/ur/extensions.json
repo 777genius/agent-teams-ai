@@ -6,9 +6,9 @@
       "refreshCatalog": "قابلِ‌اعتماد دستاویز"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "حساب: {{status}}",
-      "skills": "سکیل: {{status}}"
+      "mcp": "رن ٹائم MCP: {{status}}",
+      "plugins": "رن ٹائم پلگ انز: {{status}}",
+      "skills": "رن ٹائم اسکلز: {{status}}"
     },
     "desktopOnly": "صرف ڈیسک ٹاپ میں دستیاب.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "وسیع وسائل کی جانچ کرنا",
       "failedToStartDescription": "فضائیہ اس وقت تک معذور رہتی ہے جب تک کہ رن اپ ہیلتھ چیک نہ گزر جائے۔ اس کی مرمت یا دوبارہ شروع کرنے کے لیے ڈاک بورڈ کھولیں",
       "failedToStartTitle": "ایبٹ آباد رن ٹائم دریافت ہوا لیکن شروع کرنے میں ناکام رہا۔",
-      "multimodelCapabilitiesDescription": "فراہم کِیا گیا ہے ۔ صرف اُسی جگہ دکھایا جاتا ہے جہاں عارضی حمایت کا اعلان کِیا جاتا ہے ۔",
-      "multimodelCapabilitiesTitle": "مُتناسق عالمی وقتی صلاحیتوں",
+      "multimodelCapabilitiesDescription": "یہ بیجز رن ٹائم کے اپنے کیٹلاگ اور MCP کنٹرولز کو ظاہر کرتے ہیں۔ Universal plugins اور Managed skills کی دستیابی ان کے متعلقہ حصوں میں الگ دکھائی جاتی ہے۔",
+      "multimodelCapabilitiesTitle": "رن ٹائم کے زیرِ انتظام ایکسٹینشنز",
       "needsSignInDescription": "{{runtime}} مل گیا{{version}}... لیکن پلگ ان تنصیبات معذور ہیں جب تک کہ آپ ڈاک بورڈ سے دستخط نہیں کر سکتے۔",
       "needsSignInTitle": "{{runtime}} نشان کی ضرورت ہے",
       "notAvailableDescription": "توسیعی اداروں کو اس وقت تک معذور رہتے ہیں جب تک رن بیک نصب نہ ہو جائے۔ اسے نصب کر نے کے ليے داش بورڈ کھول ئيں",
@@ -45,7 +45,7 @@
         "label": "MCP سرور"
       },
       "plugins": {
-        "description": "رن وے کے لیے چھوٹا اضافہ۔ اُس وقت وہ انتھک تقریبات پر عمل کرتے ہیں ۔ براڈ بینڈ فراہم کُنندہ ترقی میں ہے ۔",
+        "description": "UAP کے زیرِ انتظام Universal plugins یا رن ٹائم کیٹلاگ کے پلگ انز سے اپنے ایجنٹ کی صلاحیتیں بڑھائیں۔",
         "label": "حساب"
       },
       "skills": {

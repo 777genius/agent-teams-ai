@@ -6,9 +6,9 @@
       "refreshCatalog": "Refresh catálogo"
     },
     "capabilities": {
-      "mcp": "MCP:{{status}}",
-      "plugins": "Plugins:{{status}}",
-      "skills": "Habilidades: {{status}}"
+      "mcp": "MCP del runtime: {{status}}",
+      "plugins": "Plugins del runtime: {{status}}",
+      "skills": "Skills del runtime: {{status}}"
     },
     "desktopOnly": "Disponible sólo en la aplicación de escritorio.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "Verificación de extensiones disponibilidad de tiempo de ejecución",
       "failedToStartDescription": "Las extensiones están desactivadas hasta que el tiempo de ejecución pase su cheque de salud de inicio. Abra el Dashboard para reparar o reinstalarlo.",
       "failedToStartTitle": "El tiempo de ejecución configurado fue encontrado pero no comenzó",
-      "multimodelCapabilitiesDescription": "El soporte del proveedor puede diferir por sección. Los plugins se muestran sólo cuando el tiempo de ejecución declara explícitamente apoyo.",
-      "multimodelCapabilitiesTitle": "Capacidades de funcionamiento multimodel",
+      "multimodelCapabilitiesDescription": "Estas etiquetas describen los catálogos y controles MCP propios del runtime. La disponibilidad de Universal plugins y Managed skills se muestra por separado en sus respectivas secciones.",
+      "multimodelCapabilitiesTitle": "Extensiones gestionadas por el runtime",
       "needsSignInDescription": "{{runtime}}fue encontrado{{version}}, pero las instalaciones de plugin están deshabilitadas hasta que se inscriba desde el Dashboard.",
       "needsSignInTitle": "{{runtime}} necesita registro",
       "notAvailableDescription": "Las extensiones están desactivadas hasta que se instale el tiempo de ejecución. Abra el Dashboard para instalarlo y reiniciar.",
@@ -45,7 +45,7 @@
         "label": "MCP Servidores"
       },
       "plugins": {
-        "description": "Pequeños complementos para el tiempo de ejecución. En modo multimodelo se aplican actualmente a sesiones antropópicas cuando se admiten. El apoyo de proveedores más amplios está en desarrollo.",
+        "description": "Amplía tu agente con Universal plugins gestionados por UAP o con plugins del catálogo del runtime.",
         "label": "Plugins"
       },
       "skills": {

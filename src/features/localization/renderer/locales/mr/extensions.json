@@ -6,9 +6,9 @@
       "refreshCatalog": "कॅटलॉग रिफ्रेश करा"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "Plugins: {{status}}",
-      "skills": "Skills: {{status}}"
+      "mcp": "रनटाइम MCP: {{status}}",
+      "plugins": "रनटाइम प्लगइन: {{status}}",
+      "skills": "रनटाइम स्किल: {{status}}"
     },
     "desktopOnly": "फक्त डेस्कटॉप अॅपमध्ये उपलब्ध.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "एक्सटेन्शन्स रनटाइम उपलब्धता तपासत आहे",
       "failedToStartDescription": "रनटाइम त्याची स्टार्टअप हेल्थ चेक उत्तीर्ण होईपर्यंत एक्सटेन्शन्स अक्षम आहेत. ते दुरुस्त किंवा पुन्हा इन्स्टॉल करण्यासाठी डॅशबोर्ड उघडा.",
       "failedToStartTitle": "कॉन्फिगर केलेला रनटाइम सापडला पण सुरू होण्यात अयशस्वी",
-      "multimodelCapabilitiesDescription": "प्रोव्हायडर समर्थन विभागानुसार भिन्न असू शकते. रनटाइम स्पष्टपणे समर्थन घोषित करतो तेथेच प्लगइन्स दाखवले जातात.",
-      "multimodelCapabilitiesTitle": "मल्टीमॉडेल रनटाइम क्षमता",
+      "multimodelCapabilitiesDescription": "हे बॅज रनटाइमचे स्वतःचे कॅटलॉग आणि MCP नियंत्रणे दर्शवतात. Universal plugins आणि Managed skills यांची उपलब्धता त्यांच्या संबंधित विभागांमध्ये स्वतंत्रपणे दाखवली जाते.",
+      "multimodelCapabilitiesTitle": "रनटाइमद्वारे व्यवस्थापित विस्तार",
       "needsSignInDescription": "{{runtime}} सापडले{{version}}, पण तुम्ही डॅशबोर्डवरून साइन इन करेपर्यंत प्लगइन इन्स्टॉल्स अक्षम आहेत.",
       "needsSignInTitle": "{{runtime}} ला साइन-इनची गरज आहे",
       "notAvailableDescription": "रनटाइम इन्स्टॉल होईपर्यंत एक्सटेन्शन्स अक्षम आहेत. ते इन्स्टॉल करण्यासाठी डॅशबोर्ड उघडा आणि पुन्हा प्रयत्न करा.",
@@ -45,7 +45,7 @@
         "label": "MCP सर्व्हर्स"
       },
       "plugins": {
-        "description": "रनटाइमसाठी लहान अॅड-ऑन्स. मल्टीमॉडेल मोडमध्ये ते सध्या समर्थित असताना Anthropic सत्रांना लागू होतात. व्यापक प्रोव्हायडर समर्थन विकासात आहे.",
+        "description": "UAP द्वारे व्यवस्थापित Universal plugins किंवा रनटाइम कॅटलॉगमधील प्लगइन वापरून तुमच्या एजंटच्या क्षमता वाढवा.",
         "label": "Plugins"
       },
       "skills": {

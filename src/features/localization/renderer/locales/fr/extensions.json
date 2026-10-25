@@ -6,9 +6,9 @@
       "refreshCatalog": "Actualiser le catalogue"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "Greffons : {{status}}",
-      "skills": "Compétences : {{status}}"
+      "mcp": "MCP du runtime: {{status}}",
+      "plugins": "Plugins du runtime: {{status}}",
+      "skills": "Skills du runtime: {{status}}"
     },
     "desktopOnly": "Disponible dans l'application de bureau seulement.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "Vérifier la disponibilité des extensions",
       "failedToStartDescription": "Les extensions sont désactivées jusqu'à ce que l'exécution passe son contrôle de santé de démarrage. Ouvrez le tableau de bord pour le réparer ou le réinstaller.",
       "failedToStartTitle": "L'exécution configurée a été trouvée mais a échoué à démarrer",
-      "multimodelCapabilitiesDescription": "Le soutien du fournisseur peut différer par section. Les greffons ne sont affichés que lorsque l'exécution déclare explicitement le support.",
-      "multimodelCapabilitiesTitle": "Capacités d'exécution multimodèle",
+      "multimodelCapabilitiesDescription": "Ces badges décrivent les catalogues et les commandes MCP propres au runtime. La disponibilité des Universal plugins et des Managed skills est indiquée séparément dans leurs sections respectives.",
+      "multimodelCapabilitiesTitle": "Extensions gérées par le runtime",
       "needsSignInDescription": "{{runtime}} a été trouvé{{version}}, mais les plugins sont désactivés jusqu'à ce que vous vous connectiez du tableau de bord.",
       "needsSignInTitle": "{{runtime}} doit être connecté",
       "notAvailableDescription": "Les extensions sont désactivées jusqu'à ce que l'exécution soit installée. Ouvrez le tableau de bord pour l'installer et réessayer.",
@@ -45,7 +45,7 @@
         "label": "MCP Serveur"
       },
       "plugins": {
-        "description": "Petits add-ons pour l'exécution. En mode multimodèle, ils s'appliquent actuellement aux sessions anthropiques lorsqu'elles sont prises en charge. Un soutien plus large des fournisseurs est en cours de développement.",
+        "description": "Étendez votre agent avec des Universal plugins gérés par UAP ou des plugins du catalogue du runtime.",
         "label": "Greffons"
       },
       "skills": {

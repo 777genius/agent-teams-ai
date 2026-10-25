@@ -6,9 +6,9 @@
       "refreshCatalog": "ক্যাটালগ পুনরায় লোড করা হবে"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "প্লাগইন: {{status}}",
-      "skills": "দক্ষতা: {{status}}"
+      "mcp": "রানটাইম MCP: {{status}}",
+      "plugins": "রানটাইম প্লাগইন: {{status}}",
+      "skills": "রানটাইম স্কিল: {{status}}"
     },
     "desktopOnly": "শুধুমাত্র ডেস্কটপের মধ্যে উপলব্ধ রয়েছে।",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "অতিরিক্ত সামগ্রীর উপস্থিতি পরীক্ষা করা হচ্ছে",
       "failedToStartDescription": "নিয়মিত ব্যায়াম না করা পর্যন্ত নিয়মিত ব্যবস্থা নিষ্ক্রিয় থাকে। ড্যাশবোর্ড খুলে দাও অথবা নতুন করে ঠিক করতে হবে.",
       "failedToStartTitle": "কনফিগার করা ফিড পাওয়া যায়নি কিন্তু আরম্ভ করতে ব্যর্থ",
-      "multimodelCapabilitiesDescription": "Provider support can differ by section. Plugins are shown only where the runtime explicitly declares support.",
-      "multimodelCapabilitiesTitle": "মাল্টি- কাস্টোমাইজের ক্ষমতা",
+      "multimodelCapabilitiesDescription": "এই ব্যাজগুলো রানটাইমের নিজস্ব ক্যাটালগ ও MCP নিয়ন্ত্রণ বোঝায়। Universal plugins ও Managed skills-এর উপলব্ধতা তাদের নিজস্ব বিভাগে আলাদাভাবে দেখানো হয়।",
+      "multimodelCapabilitiesTitle": "রানটাইম পরিচালিত এক্সটেনশন",
       "needsSignInDescription": "{{runtime}} পাওয়া গিয়েছে{{version}}...কিন্ত boardboardboardB থেকে সাইন না করা পর্যন্ত প্লাগ-ইন নিষ্ক্রিয়।",
       "needsSignInTitle": "{{runtime}} সাইন-ইন প্রয়োজন",
       "notAvailableDescription": "সন্নিবেশ না হওয়া অবধি এক্সটেনশন নিষ্ক্রিয় করা হয়েছে। ড্যাশবোর্ড খুলে পুনরায় চালু করতে হবে।",
@@ -45,7 +45,7 @@
         "label": "MCP সার্ভার"
       },
       "plugins": {
-        "description": "স্লিপিং এর জন্য ছোট ছোট ছোট দল। multiques মোডের মধ্যে বর্তমানে সমর্থিত হলে, পরিবর্তনশীল অবস্থায় রয়েছে। ব্রডনার পরিসেবা এগিয়ে চলছে।",
+        "description": "UAP পরিচালিত Universal plugins বা রানটাইম ক্যাটালগের প্লাগইন দিয়ে আপনার এজেন্টের ক্ষমতা বাড়ান।",
         "label": "প্লাগ-ইন"
       },
       "skills": {

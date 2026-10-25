@@ -6,9 +6,9 @@
       "refreshCatalog": "카탈로그"
     },
     "capabilities": {
-      "mcp": "MCP:{{status}}",
-      "plugins": "플러그인: {{status}}",
-      "skills": "기술: {{status}}"
+      "mcp": "런타임 MCP: {{status}}",
+      "plugins": "런타임 플러그인: {{status}}",
+      "skills": "런타임 스킬: {{status}}"
     },
     "desktopOnly": "데스크톱 앱에서만 사용할 수 있습니다.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "extensions runtime 가용성 확인",
       "failedToStartDescription": "런타임이 시작된 건강 체크를 전달할 때까지 연장이 비활성화됩니다. Dashboard를 열고 수리하거나 재설치하십시오.",
       "failedToStartTitle": "설정된 실행 시간이 발견되었지만 시작 실패",
-      "multimodelCapabilitiesDescription": "공급자 지원은 단면도에 따라 다를 수 있습니다. 플러그인은 runtime이 명시적으로 지원을 선언하는 유일한 것으로 표시됩니다.",
-      "multimodelCapabilitiesTitle": "Multimodel 런타임 기능",
+      "multimodelCapabilitiesDescription": "이 배지는 런타임 자체 카탈로그와 MCP 관리 기능을 나타냅니다. Universal plugins와 Managed skills의 사용 가능 여부는 각 섹션에 별도로 표시됩니다.",
+      "multimodelCapabilitiesTitle": "런타임에서 관리하는 확장 기능",
       "needsSignInDescription": "{{runtime}}는 Found{{version}}이었지만 플러그인 설치는 대시보드에서 로그인할 때까지 비활성화됩니다.",
       "needsSignInTitle": "{{runtime}}는 로그인이 필요합니다.",
       "notAvailableDescription": "런타임이 설치될 때까지 연장이 비활성화됩니다. Dashboard를 열고 리트리를 설치합니다.",
@@ -45,7 +45,7 @@
         "label": "사이트맵 서버"
       },
       "plugins": {
-        "description": "런타임을 위한 작은 add-ons. 멀티모델 모드에서는 현재 지원할 때 Anthropic 세션에 적용됩니다. Broader 공급자 지원은 발달에서 입니다.",
+        "description": "UAP에서 관리하는 Universal plugins 또는 런타임 카탈로그의 플러그인으로 에이전트의 기능을 확장하세요.",
         "label": "플러그인"
       },
       "skills": {

@@ -100,8 +100,10 @@ export function createExtensionManagementApplication(
     return { ...environment, uncertainApplications };
   };
   const inspect = async (value: ContextRecord) => {
+    if (closed) throw new Error('Extension management is closing.');
     const revision = value.admission.revision;
     const environment = await value.connection.client.environment();
+    if (closed) throw new Error('Extension management is closing.');
     if (revision !== value.admission.revision)
       throw new Error('Extension work changed during inspection. Refresh and try again.');
     return reconcile(value, environment);
@@ -324,6 +326,7 @@ export function createExtensionManagementApplication(
       if (!plan)
         return observe(value, await value.connection.client.apply(input.planId, input.requestId));
       await value.captured.assertCurrent();
+      if (closed) throw new Error('Extension management is closing.');
       if (
         value.admission.lease &&
         action !== 'recover' &&
@@ -346,14 +349,12 @@ export function createExtensionManagementApplication(
         const resources = value.captured.resourcesForPlan
           ? value.captured.resourcesForPlan(plan)
           : value.captured.resources;
-        if (!value.admission.lease)
-          value.admission.lease = await gate.reserveMutation(resources, () =>
-            value.captured.assertInactive(plan)
-          );
-        else {
-          value.admission.lease.extend(resources, true);
-          await value.captured.assertInactive(plan);
-        }
+        // Concurrent contexts, reconciliation and close must see the same lease
+        // throughout asynchronous activity validation.
+        if (!value.admission.lease) value.admission.lease = gate.reserveMutation(resources);
+        else value.admission.lease.extend(resources, true);
+        await value.captured.assertInactive(plan);
+        if (closed) throw new Error('Extension management is closing.');
         value.admission.uncertainRequests.set(input.requestId, {
           plan,
           contextId: value.public.contextId,

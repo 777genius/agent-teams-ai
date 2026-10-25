@@ -6,9 +6,9 @@
       "refreshCatalog": "Odśwież katalog"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "Wtyczki: {{status}}",
-      "skills": "Umiejętności: {{status}}"
+      "mcp": "MCP runtime: {{status}}",
+      "plugins": "Pluginy runtime: {{status}}",
+      "skills": "Skille runtime: {{status}}"
     },
     "desktopOnly": "Dostępne tylko w aplikacji desktopowej.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "Sprawdzanie dostępności środowiska uruchomieniowego rozszerzeń",
       "failedToStartDescription": "Rozszerzenia są wyłączone, dopóki środowisko uruchomieniowe nie przejdzie kontroli kondycji przy starcie. Otwórz panel, aby je naprawić lub zainstalować ponownie.",
       "failedToStartTitle": "Skonfigurowane środowisko uruchomieniowe zostało znalezione, ale nie udało się go uruchomić",
-      "multimodelCapabilitiesDescription": "Obsługa dostawców może różnić się w zależności od sekcji. Wtyczki są pokazywane tylko tam, gdzie środowisko uruchomieniowe wyraźnie deklaruje obsługę.",
-      "multimodelCapabilitiesTitle": "Możliwości środowiska wielomodelowego",
+      "multimodelCapabilitiesDescription": "Te etykiety opisują własne katalogi i funkcje sterowania MCP środowiska runtime. Dostępność Universal plugins i Managed skills jest pokazana osobno w odpowiednich sekcjach.",
+      "multimodelCapabilitiesTitle": "Rozszerzenia zarządzane przez runtime",
       "needsSignInDescription": "Znaleziono {{runtime}}{{version}}, ale instalacja wtyczek jest wyłączona, dopóki nie zalogujesz się z panelu.",
       "needsSignInTitle": "{{runtime}} wymaga zalogowania",
       "notAvailableDescription": "Rozszerzenia są wyłączone, dopóki środowisko uruchomieniowe nie zostanie zainstalowane. Otwórz panel, aby je zainstalować i ponów próbę.",
@@ -45,7 +45,7 @@
         "label": "Serwery MCP"
       },
       "plugins": {
-        "description": "Małe dodatki do środowiska uruchomieniowego. W trybie wielomodelowym obecnie obowiązują dla sesji Anthropic, gdy są obsługiwane. Szersze wsparcie dostawców jest w trakcie rozwoju.",
+        "description": "Rozszerz możliwości agenta za pomocą Universal plugins zarządzanych przez UAP lub wtyczek z katalogu runtime.",
         "label": "Wtyczki"
       },
       "skills": {

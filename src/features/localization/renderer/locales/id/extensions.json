@@ -6,9 +6,9 @@
       "refreshCatalog": "Segarkan katalog"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "Pengaya: {{status}}",
-      "skills": "Keterampilan: {{status}}"
+      "mcp": "MCP runtime: {{status}}",
+      "plugins": "Plugin runtime: {{status}}",
+      "skills": "Skill runtime: {{status}}"
     },
     "desktopOnly": "Tersedia di aplikasi desktop saja.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "Memeriksa ketersediaan waktu-jalan ekstensi",
       "failedToStartDescription": "Ekstensi dinonaktifkan sampai runtime melewati pemeriksaan kesehatan startup. Buka Dashboard untuk memperbaiki atau memasangnya kembali.",
       "failedToStartTitle": "Waktu berjalan yang dikonfigurasi ditemukan tapi gagal untuk memulai",
-      "multimodelCapabilitiesDescription": "Dukungan penyedia dapat berbeda dengan daerah. Pengaya hanya ditampilkan dimana waktu-jalan secara eksplisit mendeklarasikan dukungan.",
-      "multimodelCapabilitiesTitle": "Kemampuan multimodel waktu jalan",
+      "multimodelCapabilitiesDescription": "Lencana ini menjelaskan katalog dan kontrol MCP milik runtime. Ketersediaan Universal plugins dan Managed skills ditampilkan secara terpisah di bagian masing-masing.",
+      "multimodelCapabilitiesTitle": "Ekstensi yang dikelola runtime",
       "needsSignInDescription": "{{runtime}} ditemukan{{version}}, tetapi plugin instalasi dinonaktifkan sampai Anda masuk dari Dashboard.",
       "needsSignInTitle": "{{runtime}} perlu sinyal-in",
       "notAvailableDescription": "Ekstensi dinonaktifkan sampai waktu jalan dipasang. Buka Dashboard untuk memasangnya dan coba lagi.",
@@ -45,7 +45,7 @@
         "label": "MCP Server"
       },
       "plugins": {
-        "description": "Sedikit tambahan untuk waktu berjalan. Dalam mode multimodel mereka saat ini berlaku untuk sesi Anthropic ketika didukung. Dukungan penyedia broader dalam pengembangan.",
+        "description": "Tingkatkan kemampuan agen Anda dengan Universal plugins yang dikelola UAP atau plugin dari katalog runtime.",
         "label": "Pengaya"
       },
       "skills": {

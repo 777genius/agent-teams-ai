@@ -6,9 +6,9 @@
       "refreshCatalog": "Kataloğu yenile"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "Eklentiler: {{status}}",
-      "skills": "Beceriler: {{status}}"
+      "mcp": "Çalışma zamanı MCP: {{status}}",
+      "plugins": "Çalışma zamanı eklentileri: {{status}}",
+      "skills": "Çalışma zamanı becerileri: {{status}}"
     },
     "desktopOnly": "Yalnızca masaüstü uygulamasında kullanılabilir.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "Eklenti çalışma zamanı kullanılabilirliği kontrol ediliyor",
       "failedToStartDescription": "Çalışma zamanı başlangıç sağlık kontrolünü geçene kadar eklentiler devre dışıdır. Onarmak veya yeniden kurmak için Panoyu açın.",
       "failedToStartTitle": "Yapılandırılmış çalışma zamanı bulundu ancak başlatılamadı",
-      "multimodelCapabilitiesDescription": "Sağlayıcı desteği bölüme göre değişebilir. Eklentiler yalnızca çalışma zamanının açıkça destek beyan ettiği yerlerde gösterilir.",
-      "multimodelCapabilitiesTitle": "Çoklu model çalışma zamanı yetenekleri",
+      "multimodelCapabilitiesDescription": "Bu rozetler çalışma zamanının kendi kataloglarını ve MCP kontrollerini gösterir. Universal plugins ve Managed skills kullanılabilirliği kendi bölümlerinde ayrı olarak gösterilir.",
+      "multimodelCapabilitiesTitle": "Çalışma zamanı tarafından yönetilen uzantılar",
       "needsSignInDescription": "{{runtime}} bulundu{{version}}, ancak Panodan giriş yapana kadar eklenti kurulumları devre dışıdır.",
       "needsSignInTitle": "{{runtime}} giriş gerektiriyor",
       "notAvailableDescription": "Çalışma zamanı kurulana kadar eklentiler devre dışıdır. Kurmak ve tekrar denemek için Panoyu açın.",
@@ -45,7 +45,7 @@
         "label": "MCP Sunucuları"
       },
       "plugins": {
-        "description": "Çalışma zamanı için küçük eklentiler. Çoklu model modunda şu anda desteklendiğinde Anthropic oturumlarına uygulanır. Daha geniş sağlayıcı desteği geliştirme aşamasındadır.",
+        "description": "UAP tarafından yönetilen Universal plugins veya çalışma zamanı kataloğundaki eklentilerle ajanınızın yeteneklerini genişletin.",
         "label": "Eklentiler"
       },
       "skills": {

@@ -6,9 +6,9 @@
       "refreshCatalog": "Refresh catalog"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "Plugins: {{status}}",
-      "skills": "Skills: {{status}}"
+      "mcp": "Runtime MCP: {{status}}",
+      "plugins": "Runtime plugins: {{status}}",
+      "skills": "Runtime skills: {{status}}"
     },
     "desktopOnly": "Available in the desktop app only.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "Checking extensions runtime availability",
       "failedToStartDescription": "Extensions are disabled until the runtime passes its startup health check. Open the Dashboard to repair or reinstall it.",
       "failedToStartTitle": "The configured runtime was found but failed to start",
-      "multimodelCapabilitiesDescription": "Provider support can differ by section. Plugins are shown only where the runtime explicitly declares support.",
-      "multimodelCapabilitiesTitle": "Multimodel runtime capabilities",
+      "multimodelCapabilitiesDescription": "These badges describe the runtime's own catalogs and MCP controls. Availability for Universal plugins and Managed skills is shown separately in their sections.",
+      "multimodelCapabilitiesTitle": "Runtime-managed extensions",
       "needsSignInDescription": "{{runtime}} was found{{version}}, but plugin installs are disabled until you sign in from the Dashboard.",
       "needsSignInTitle": "{{runtime}} needs sign-in",
       "notAvailableDescription": "Extensions are disabled until the runtime is installed. Open the Dashboard to install it and retry.",
@@ -45,7 +45,7 @@
         "label": "MCP Servers"
       },
       "plugins": {
-        "description": "Small add-ons for the runtime. In multimodel mode they currently apply to Anthropic sessions when supported. Broader provider support is in development.",
+        "description": "Extend your agent with Universal plugins managed by UAP or plugins from the runtime catalog.",
         "label": "Plugins"
       },
       "skills": {

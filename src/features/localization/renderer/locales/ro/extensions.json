@@ -6,9 +6,9 @@
       "refreshCatalog": "Reîmprospătează catalogul"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "Pluginuri: {{status}}",
-      "skills": "Abilități: {{status}}"
+      "mcp": "MCP runtime: {{status}}",
+      "plugins": "Pluginuri runtime: {{status}}",
+      "skills": "Abilități runtime: {{status}}"
     },
     "desktopOnly": "Disponibil doar în aplicația desktop.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "Se verifică disponibilitatea runtime-ului pentru extensii",
       "failedToStartDescription": "Extensiile sunt dezactivate până când runtime-ul trece verificarea de stare la pornire. Deschide panoul pentru a-l repara sau reinstala.",
       "failedToStartTitle": "Runtime-ul configurat a fost găsit, dar pornirea a eșuat",
-      "multimodelCapabilitiesDescription": "Suportul furnizorilor poate diferi în funcție de secțiune. Pluginurile sunt afișate doar acolo unde runtime-ul declară explicit suport.",
-      "multimodelCapabilitiesTitle": "Capabilități ale runtime-ului multimodel",
+      "multimodelCapabilitiesDescription": "Aceste etichete descriu cataloagele și comenzile MCP proprii runtime-ului. Disponibilitatea Universal plugins și Managed skills este afișată separat în secțiunile respective.",
+      "multimodelCapabilitiesTitle": "Extensii gestionate de runtime",
       "needsSignInDescription": "{{runtime}} a fost găsit{{version}}, dar instalările de pluginuri sunt dezactivate până când te autentifici din panou.",
       "needsSignInTitle": "{{runtime}} necesită autentificare",
       "notAvailableDescription": "Extensiile sunt dezactivate până când runtime-ul este instalat. Deschide panoul pentru a-l instala și reîncearcă.",
@@ -45,7 +45,7 @@
         "label": "Servere MCP"
       },
       "plugins": {
-        "description": "Suplimente mici pentru runtime. În modul multimodel se aplică în prezent sesiunilor Anthropic când sunt acceptate. Suportul mai larg al furnizorilor este în dezvoltare.",
+        "description": "Extinde funcțiile agentului cu Universal plugins gestionate de UAP sau cu pluginuri din catalogul runtime.",
         "label": "Pluginuri"
       },
       "skills": {

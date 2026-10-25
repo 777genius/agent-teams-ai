@@ -6,9 +6,9 @@
       "refreshCatalog": "Onyesha upya katalogi"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "Programu-jalizi: {{status}}",
-      "skills": "Ujuzi: {{status}}"
+      "mcp": "MCP ya runtime: {{status}}",
+      "plugins": "Programu-jalizi za runtime: {{status}}",
+      "skills": "Ujuzi wa runtime: {{status}}"
     },
     "desktopOnly": "Inapatikana katika programu ya eneo-kazi pekee.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "Inakagua upatikanaji wa runtime ya viendelezi",
       "failedToStartDescription": "Viendelezi vimezimwa hadi runtime ipite ukaguzi wake wa afya wa uanzishaji. Fungua Dashibodi ili kuirekebisha au kuisakinisha upya.",
       "failedToStartTitle": "Runtime iliyosanidiwa ilipatikana lakini imeshindwa kuanza",
-      "multimodelCapabilitiesDescription": "Usaidizi wa mtoa huduma unaweza kutofautiana kwa sehemu. Programu-jalizi zinaonyeshwa tu pale runtime inapotangaza usaidizi kwa uwazi.",
-      "multimodelCapabilitiesTitle": "Uwezo wa runtime ya modeli nyingi",
+      "multimodelCapabilitiesDescription": "Beji hizi zinaeleza katalogi na vidhibiti vya MCP vya runtime yenyewe. Upatikanaji wa Universal plugins na Managed skills unaonyeshwa kando katika sehemu zao.",
+      "multimodelCapabilitiesTitle": "Viendelezi vinavyosimamiwa na runtime",
       "needsSignInDescription": "{{runtime}} ilipatikana{{version}}, lakini usakinishaji wa programu-jalizi umezimwa hadi uingie kutoka Dashibodi.",
       "needsSignInTitle": "{{runtime}} inahitaji kuingia",
       "notAvailableDescription": "Viendelezi vimezimwa hadi runtime isakinishwe. Fungua Dashibodi ili kuisakinisha na ujaribu tena.",
@@ -45,7 +45,7 @@
         "label": "Seva za MCP"
       },
       "plugins": {
-        "description": "Viongezi vidogo vya runtime. Katika hali ya modeli nyingi kwa sasa vinatumika kwa vipindi vya Anthropic vinapoungwa mkono. Usaidizi mpana wa watoa huduma uko katika maendeleo.",
+        "description": "Panua uwezo wa wakala wako kwa Universal plugins zinazosimamiwa na UAP au programu-jalizi kutoka kwenye katalogi ya runtime.",
         "label": "Programu-jalizi"
       },
       "skills": {

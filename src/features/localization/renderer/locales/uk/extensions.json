@@ -6,9 +6,9 @@
       "refreshCatalog": "Оновити каталог"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "Плагіни: {{status}}",
-      "skills": "Навички: {{status}}"
+      "mcp": "MCP runtime: {{status}}",
+      "plugins": "Плагіни runtime: {{status}}",
+      "skills": "Скіли runtime: {{status}}"
     },
     "desktopOnly": "Доступно лише в десктопному застосунку.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "Перевірка доступності середовища розширень",
       "failedToStartDescription": "Розширення вимкнено, доки середовище не пройде перевірку працездатності під час запуску. Відкрийте панель, щоб відремонтувати або перевстановити його.",
       "failedToStartTitle": "Налаштоване середовище знайдено, але не вдалося запустити",
-      "multimodelCapabilitiesDescription": "Підтримка провайдерів може відрізнятися за розділами. Плагіни показано лише там, де середовище явно оголошує підтримку.",
-      "multimodelCapabilitiesTitle": "Можливості мультимодельного середовища",
+      "multimodelCapabilitiesDescription": "Ці позначки описують власні каталоги та керування MCP у runtime. Доступність Universal plugins і Managed skills показана окремо у відповідних розділах.",
+      "multimodelCapabilitiesTitle": "Розширення під керуванням runtime",
       "needsSignInDescription": "{{runtime}} знайдено{{version}}, але встановлення плагінів вимкнено, доки ви не ввійдете з панелі.",
       "needsSignInTitle": "{{runtime}} потребує входу",
       "notAvailableDescription": "Розширення вимкнено, доки середовище не встановлено. Відкрийте панель, щоб встановити його та повторити.",
@@ -45,7 +45,7 @@
         "label": "Сервери MCP"
       },
       "plugins": {
-        "description": "Невеликі доповнення для середовища. У мультимодельному режимі вони наразі застосовуються до сесій Anthropic, де це підтримується. Ширша підтримка провайдерів у розробці.",
+        "description": "Розширюйте можливості агента за допомогою Universal plugins під керуванням UAP або плагінів із каталогу runtime.",
         "label": "Плагіни"
       },
       "skills": {

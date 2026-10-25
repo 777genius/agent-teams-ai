@@ -6,9 +6,9 @@
       "refreshCatalog": "Catalogus vernieuwen"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "Plugins: {{status}}",
-      "skills": "Skills: {{status}}"
+      "mcp": "Runtime-MCP: {{status}}",
+      "plugins": "Runtime-plug-ins: {{status}}",
+      "skills": "Runtime-skills: {{status}}"
     },
     "desktopOnly": "Alleen beschikbaar in de desktop-app.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "Beschikbaarheid van extensie-runtime controleren",
       "failedToStartDescription": "Extensies zijn uitgeschakeld totdat de runtime de opstartcontrole doorstaat. Open het Dashboard om het te herstellen of opnieuw te installeren.",
       "failedToStartTitle": "De geconfigureerde runtime is gevonden maar kon niet starten",
-      "multimodelCapabilitiesDescription": "Providerondersteuning kan per sectie verschillen. Plugins worden alleen getoond waar de runtime expliciet ondersteuning aangeeft.",
-      "multimodelCapabilitiesTitle": "Multimodel-runtimemogelijkheden",
+      "multimodelCapabilitiesDescription": "Deze badges beschrijven de eigen catalogi en MCP-bediening van de runtime. De beschikbaarheid van Universal plugins en Managed skills wordt afzonderlijk weergegeven in de bijbehorende secties.",
+      "multimodelCapabilitiesTitle": "Door de runtime beheerde extensies",
       "needsSignInDescription": "{{runtime}} is gevonden{{version}}, maar plugin-installaties zijn uitgeschakeld totdat je inlogt vanuit het Dashboard.",
       "needsSignInTitle": "{{runtime}} vereist inloggen",
       "notAvailableDescription": "Extensies zijn uitgeschakeld totdat de runtime is geïnstalleerd. Open het Dashboard om het te installeren en probeer het opnieuw.",
@@ -45,7 +45,7 @@
         "label": "MCP-servers"
       },
       "plugins": {
-        "description": "Kleine add-ons voor de runtime. In multimodel-modus zijn ze momenteel van toepassing op Anthropic-sessies indien ondersteund. Bredere providerondersteuning is in ontwikkeling.",
+        "description": "Breid je agent uit met Universal plugins die door UAP worden beheerd of met plug-ins uit de runtimecatalogus.",
         "label": "Plugins"
       },
       "skills": {

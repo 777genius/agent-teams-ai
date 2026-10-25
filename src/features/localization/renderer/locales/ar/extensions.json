@@ -6,9 +6,9 @@
       "refreshCatalog": "كتالوج التجديد"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "البلوجين: {{status}}",
-      "skills": "المهارات: {{status}}"
+      "mcp": "MCP وقت التشغيل: {{status}}",
+      "plugins": "إضافات وقت التشغيل: {{status}}",
+      "skills": "مهارات وقت التشغيل: {{status}}"
     },
     "desktopOnly": "متاح في تطبيق الحاسوب المكتبي فقط",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "التدقيق في مدى توافر الوقت",
       "failedToStartDescription": "وتُعَوَّل عمليات التمديد إلى أن يُمرّر الوقت الذي يبدأ فيه الفحص الصحي. افتحوا لوحة الداش ليصلحها أو يعيدوا تركيبها",
       "failedToStartTitle": "وُجِدَ الوقت المُحدَّد لكن لم يبدأ",
-      "multimodelCapabilitiesDescription": "ويمكن أن يختلف دعم مقدمي الخدمات حسب الفرع. ولا تظهر البلوغينات إلا عندما يعلن الجاهز صراحة تأييده.",
-      "multimodelCapabilitiesTitle": "قدرات التشغيل المتعددة النماذج",
+      "multimodelCapabilitiesDescription": "تصف هذه الشارات كتالوجات وقت التشغيل وعناصر التحكم الخاصة به في MCP. يُعرض توفر Universal plugins وManaged skills بشكل منفصل في القسم الخاص بكل منهما.",
+      "multimodelCapabilitiesTitle": "إضافات يديرها وقت التشغيل",
       "needsSignInDescription": "{{runtime}} تم العثور عليه{{version}}لكن تركيبات البلوجين معطلة حتى توقع من لوحة الداش",
       "needsSignInTitle": "{{runtime}} الاحتياجات",
       "notAvailableDescription": "وتُعَوَّل عمليات التمديد إلى أن يتم تركيبها. افتحي لوحة الداش لتثبيتها و ارجعيها",
@@ -45,7 +45,7 @@
         "label": "MCP خادمات"
       },
       "plugins": {
-        "description": "إضافات صغيرة للزمن In multimodel mode they currently apply to Anthropic sessions when supported. ويجري حاليا تطوير دعم أوسع نطاقا من مقدمي الخدمات.",
+        "description": "وسّع قدرات وكيلك باستخدام Universal plugins التي يديرها UAP أو إضافات من كتالوج وقت التشغيل.",
         "label": "Plugins"
       },
       "skills": {

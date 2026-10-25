@@ -9,18 +9,9 @@ export class ExtensionRuntimeGate {
   private readonly launching = new Map<string, number>();
   private readonly mutations = new Set<string>();
 
-  async reserveMutation(
-    resources: readonly string[],
-    assertInactive: () => Promise<void>
-  ): Promise<MutationLease> {
-    const lease = this.hold(resources, true);
-    try {
-      await assertInactive();
-      return lease;
-    } catch (error) {
-      lease.release();
-      throw error;
-    }
+  /** The owner must publish this lease before awaiting activity validation. */
+  reserveMutation(resources: readonly string[]): MutationLease {
+    return this.hold(resources, true);
   }
 
   restoreMutation(resources: readonly string[]): MutationLease {

@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v12; reviewed restore selection, useful warning reasons and matched SDK/native source qualification.
+Status: implementation plan v13; reviewed shared admission ownership, runtime capability copy and bounded desktop navigation.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -13,7 +13,88 @@ commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
 
-## Current checkpoint — v12 (2026-10-25)
+## Current checkpoint — v13 (2026-10-25)
+
+App head `c91077de653ff1f52c84f14689e13c34366ef3cf` passed substantive
+[Full qualification 40191123430](https://github.com/777genius/agent-teams-ai/actions/runs/40191123430),
+including all four test shards, three lint shards, canonical validation and the
+Windows task smoke. Its actual checked-out synthetic merge was
+`a38a7153b83cb25c05c161d5c3306e82cfbaa294`; this receipt is not reassigned to a
+subsequent merge ref or candidate.
+
+Its [desktop run 40191123485](https://github.com/777genius/agent-teams-ai/actions/runs/40191123485)
+passed installation, capability refusals and deduplication, native discovery,
+copy/update/removal and the actual restart with grant revocation. It then timed
+out waiting for the OpenCode menu option. The failure screenshot shows the
+enabled, closed Claude selector and no renderer exceptions. The run did not
+reach the new restore-choice or specific-warning assertions, nor its later native
+MCP stage. Those assertions still need a successful complete current run.
+
+The minimal reviewed follow-up has three parts:
+
+- A confirmed external review finding showed that two provider contexts sharing
+  one environment could overlap while activity validation awaited. An unpublished
+  first lease could be overwritten, leaving an orphan launch fence. The gate now
+  returns its lease synchronously; its owner publishes or extends that same lease
+  before awaiting activity validation. Existing acceptance, uncertainty and fresh
+  inspection rules still decide release. Closed-state checks after awaited
+  authority/activity validation and inspection prevent late Apply or a recreated
+  fence after shutdown. No mutex, queue, extra admission state or framework is
+  introduced. Five new regressions failed before correction: overlapping applies,
+  reconciliation during validation, shutdown during each of the two validations,
+  and inspection returning after shutdown. All 37 application/gate tests pass
+  after correction, including the refused-initial-reservation cleanup invariant.
+- The desktop helper now acknowledges the runtime menu opening before looking
+  for an option. It permits at most three opening attempts inside the original
+  60-second deadline, retrying only the opening acknowledgement. Options are
+  scoped to the trigger's controlled listbox and selection requires its exact
+  displayed value. After an observed opening, a missing option, lost menu or
+  failed selection is a failure. Apply and other mutations are never repeated.
+  This strengthens the driver's observation contract without claiming a proven
+  product root cause for the earlier closed-menu screenshot.
+- Six existing strings across all 29 locales now identify the global badges as
+  runtime-managed capabilities. They explain that Universal plugins and Managed
+  skills expose availability in their own sections. The Plugins description
+  includes both UAP and the runtime catalog. Existing capability logic, layout
+  and roles remain unchanged; the confusing Anthropic-only/global-unsupported
+  implication is removed.
+
+Independent admission, navigation and localization reviews found no remaining
+P1/P2 in these slices. The complete focused application/gate suites, scoped fast
+lint, formatting and desktop TypeScript check passed. The source-size command
+could not complete locally because Node's child-process invocation was denied;
+it is not claimed as a pass. The local full-project typecheck reports the known
+missing `fastmcp` dependency and its consequences, while canonical validation on
+c910 passed in CI. New-head canonical qualification remains required.
+
+Before publication, merge current main
+`d79aa4159ecea311187c126dbceea153a0c7de26` into this candidate. Its seven-file
+Windows OpenCode preflight/pin update has no runtime, SDK, admission or UI
+overlap. The clean merge preserves both independently added desktop TypeScript
+entries. The next candidate must qualify this combined tree, not the older base.
+
+The UAP and SDK pins remain `8645eb5e71321f9321b8e742b8eda74408b55f13`.
+[UAP Required 40190510820](https://github.com/777genius/universal-agent-plugins/actions/runs/40190510820)
+passed all six jobs, including the main test lane, generated drift and the actual
+packed SDK consumer. An independently built native binary has SHA-256
+`6ad7f4732f6cd38e1ec90cb8292522c49b00dd3dae390a2044c85562cbf0fdb8`,
+matching the desktop receipt. The unchanged standalone Python client installed
+and verified exact Skill bytes and actual OpenCode discovery in 30.05 seconds;
+the [exact-source receipt](https://github.com/777genius/universal-agent-plugins/pull/500#issuecomment-6397373865)
+records source, executable, client and fixture identities. These app-only fixes
+do not rebuild or repin that SDK or engine.
+
+The c910 bootstrap matrix passed three targets, but Windows x64 exceeded its
+480-second guard during work-directory cleanup after publication and receipt
+validation had passed. The same runtime had passed the earlier matrix; no digest
+or validation failure was reported. Keep this run failed and require the new
+candidate's normal platform matrix. Do not increase its deadline or add retries
+to turn this observation into a pass. Current desktop, Full qualification and
+applicable packaging results are still required after publication. Formal
+CodeQL disposition and the separately documented live-model/OAuth and S25/S26
+project/Host prerequisites retain their existing boundaries.
+
+## Previous checkpoint — v12 (2026-10-25)
 
 The completed [desktop run 40189232897](https://github.com/777genius/agent-teams-ai/actions/runs/40189232897)
 passed on head `42c412648cd513f4ca2d9656aaf5ceff71e2e323`, synthetic merge

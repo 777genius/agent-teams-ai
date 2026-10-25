@@ -106,10 +106,16 @@ The harness sends real CDP pointer/key events and `Input.insertText`. It checks
 that a target is enabled, visible, stable and hit-testable, and that each filled
 field has the exact requested value. It waits out finite animations on the target
 and its ancestors and dispatches using the successful readiness observation,
-without a second readiness read that could race a dialog transition. Tab navigation additionally observes
-`aria-selected` and its controlled visible panel. Only this idempotent navigation
-may retry, at most three times inside its existing deadline; after selection is
-observed, a later reset is a failure. Review/Apply submission is not repeated.
+without a second readiness read that could race a dialog transition. Tab
+navigation additionally observes `aria-selected` and its controlled visible
+panel. Runtime selection acknowledges `aria-expanded` on the exact trigger,
+finds an option only in that trigger's `aria-controls` listbox, and requires the
+exact selected value. These idempotent navigation helpers allow at most three
+attempts inside their original 60-second deadline. Runtime selection retries
+only a missing opening acknowledgement, waiting at most three seconds for each
+acknowledgement; after opening is observed, a missing option or failed selection
+fails the run. An observed tab selection followed by a reset also fails the run.
+Review/Apply and other mutation submissions are not repeated.
 
 Before Apply or Import, the harness records the displayed operation ID. Completion
 requires a different nonempty ID and the primary Completed status; a previous

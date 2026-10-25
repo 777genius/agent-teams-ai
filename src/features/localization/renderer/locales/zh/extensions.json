@@ -6,9 +6,9 @@
       "refreshCatalog": "刷新目录"
     },
     "capabilities": {
-      "mcp": "MCP：{{status}}",
-      "plugins": "插件：{{status}}",
-      "skills": "技能：{{status}}"
+      "mcp": "运行时 MCP: {{status}}",
+      "plugins": "运行时插件: {{status}}",
+      "skills": "运行时技能: {{status}}"
     },
     "desktopOnly": "仅在桌面应用中可用。",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "检查扩展运行时可用性",
       "failedToStartDescription": "在运行时通过其启动运行状况检查之前，扩展将被禁用。打开控制台进行修复或重新安装。",
       "failedToStartTitle": "已找到配置的运行时但启动失败",
-      "multimodelCapabilitiesDescription": "不同功能的提供商支持可能不同。仅当运行时明确声明支持时才会显示插件。",
-      "multimodelCapabilitiesTitle": "多模型运行时功能",
+      "multimodelCapabilitiesDescription": "这些标记表示运行时自身的目录和 MCP 管理功能。Universal plugins 和 Managed skills 的可用性分别显示在各自的区域中。",
+      "multimodelCapabilitiesTitle": "由运行时管理的扩展",
       "needsSignInDescription": "找到了 {{runtime}}{{version}}，但在您从控制台登录之前，插件安装将被禁用。",
       "needsSignInTitle": "{{runtime}} 需要登录",
       "notAvailableDescription": "在安装运行时之前，扩展将被禁用。打开控制台进行安装并重试。",
@@ -45,7 +45,7 @@
         "label": "MCP 服务器"
       },
       "plugins": {
-        "description": "运行时的小附加组件。在多模型模式下，它们当前适用于受支持的 Anthropic 会话。更广泛的提供商支持正在开发中。",
+        "description": "通过 UAP 管理的 Universal plugins 或运行时目录中的插件扩展智能体的功能。",
         "label": "插件"
       },
       "skills": {

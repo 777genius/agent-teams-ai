@@ -6,9 +6,9 @@
       "refreshCatalog": "I-refresh ang catalog"
     },
     "capabilities": {
-      "mcp": "MCP: {{status}}",
-      "plugins": "Plugins: {{status}}",
-      "skills": "Skills: {{status}}"
+      "mcp": "Runtime MCP: {{status}}",
+      "plugins": "Mga runtime plugin: {{status}}",
+      "skills": "Mga runtime skill: {{status}}"
     },
     "desktopOnly": "Available sa desktop app lang.",
     "provider": {
@@ -24,8 +24,8 @@
       "checkingAvailabilityTitle": "Sinusuri ang availability ng extensions runtime",
       "failedToStartDescription": "Naka-disable ang Extensions hanggang sa pumasa ang runtime sa startup health check nito. Buksan ang Dashboard para ayusin o i-reinstall ito.",
       "failedToStartTitle": "Nakita ang na-configure na runtime ngunit nabigong magsimula",
-      "multimodelCapabilitiesDescription": "Maaaring magkaiba ang suporta ng provider ayon sa seksyon. Ipinapakita ang mga plugin kung saan lang tahasang idineklara ng runtime ang suporta.",
-      "multimodelCapabilitiesTitle": "Mga kakayahan ng multimodel runtime",
+      "multimodelCapabilitiesDescription": "Ang mga badge na ito ay tumutukoy sa sariling mga catalog at kontrol sa MCP ng runtime. Hiwalay na ipinapakita ang availability ng Universal plugins at Managed skills sa kani-kanilang seksyon.",
+      "multimodelCapabilitiesTitle": "Mga extension na pinamamahalaan ng runtime",
       "needsSignInDescription": "Nakita ang {{runtime}}{{version}}, ngunit naka-disable ang mga pag-install ng plugin hanggang sa mag-sign in ka mula sa Dashboard.",
       "needsSignInTitle": "Kailangang mag-sign in ang {{runtime}}",
       "notAvailableDescription": "Naka-disable ang Extensions hanggang sa ma-install ang runtime. Buksan ang Dashboard para i-install ito at subukang muli.",
@@ -45,7 +45,7 @@
         "label": "MCP Servers"
       },
       "plugins": {
-        "description": "Mga maliit na add-on para sa runtime. Sa multimodel mode, kasalukuyang nalalapat ang mga ito sa mga Anthropic session kapag sinusuportahan. Nasa development pa ang mas malawak na suporta ng provider.",
+        "description": "Palawakin ang kakayahan ng iyong agent gamit ang Universal plugins na pinamamahalaan ng UAP o mga plugin mula sa catalog ng runtime.",
         "label": "Plugins"
       },
       "skills": {
