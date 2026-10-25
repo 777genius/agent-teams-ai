@@ -9,7 +9,9 @@ renderer, engine, runtime or installed inventory with fixtures.
 The workflow runs in the pull-request trust context. It has no privileged
 manual-dispatch entry point; existing runs can be rerun through GitHub. Its job
 sets `cache-mode: none` and verifies the runner's effective `ACTIONS_CACHE_MODE`
-before any checkout or action executes. This is required because the exact
+in the first, full-SHA-pinned official JavaScript action, before either project
+checkout. The runner injects this variable into action handlers rather than
+ordinary shell steps. This is required because the exact
 cross-repository source pin still executes code. Read-only repository permission
 and a disabled dependency-cache configuration alone do not revoke cache tokens.
 

@@ -1,6 +1,6 @@
 // @vitest-environment node
-import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { Script } from 'node:vm';
 
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
@@ -12,7 +12,13 @@ interface Workflow {
     {
       'cache-mode'?: string;
       env?: Record<string, string>;
-      steps: { name?: string; run?: string; uses?: string; env?: Record<string, string> }[];
+      steps: {
+        name?: string;
+        run?: string;
+        uses?: string;
+        with?: { script?: string };
+        env?: Record<string, string>;
+      }[];
     }
   >;
   env?: Record<string, string>;
@@ -37,8 +43,9 @@ describe('UAP desktop workflow trust context', () => {
     );
     expect(file.jobs.desktop['cache-mode']).toBe('none');
     const first = file.jobs.desktop.steps[0];
-    expect(first.uses).toBeUndefined();
-    expect(first.run).toBeTruthy();
+    expect(first.uses).toBe('actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd');
+    expect(first.run).toBeUndefined();
+    expect(first.with?.script).toBeTruthy();
     expect(file.env?.ACTIONS_CACHE_MODE).toBeUndefined();
     expect(file.jobs.desktop.env?.ACTIONS_CACHE_MODE).toBeUndefined();
     expect(file.jobs.desktop.steps.every((step) => !step.env?.ACTIONS_CACHE_MODE)).toBe(true);
@@ -46,13 +53,17 @@ describe('UAP desktop workflow trust context', () => {
 
   it('fails closed before checkout unless the runner reports cache mode none', () => {
     const first = workflow('uap-management-desktop-e2e').jobs.desktop.steps[0];
+    // Execute the checked-in literal guard; each service-provided mode is data in its own realm.
+    // eslint-disable-next-line sonarjs/code-eval
+    const guard = new Script(first.with!.script!);
     for (const mode of [undefined, '', 'read', 'write', 'write-only', 'none']) {
-      const result = spawnSync('bash', ['-eu', '-c', first.run!], {
-        env: mode === undefined ? {} : { ACTIONS_CACHE_MODE: mode },
-        encoding: 'utf8',
-      });
-      expect(result.error).toBeUndefined();
-      expect(result.status === 0, `cache authority ${String(mode)}`).toBe(mode === 'none');
+      const execute = () =>
+        guard.runInNewContext(
+          { process: { env: mode === undefined ? {} : { ACTIONS_CACHE_MODE: mode } } },
+          { timeout: 1000 }
+        );
+      if (mode === 'none') expect(execute).not.toThrow();
+      else expect(execute).toThrow('The runner must grant cache-mode none');
     }
   });
 

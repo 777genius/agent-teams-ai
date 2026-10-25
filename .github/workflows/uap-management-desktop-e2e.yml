@@ -37,8 +37,13 @@ jobs:
     cache-mode: none
     steps:
       - name: Verify cache authority is disabled before executing checked-out code
-        shell: bash
-        run: test "${ACTIONS_CACHE_MODE:-}" = none
+        # The runner exposes this service-provided value to JavaScript actions, not shell steps.
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            if (process.env.ACTIONS_CACHE_MODE !== 'none') {
+              throw new Error('The runner must grant cache-mode none before executing project code.');
+            }
       - uses: actions/checkout@v6
         with:
           persist-credentials: false

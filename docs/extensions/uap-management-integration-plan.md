@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v14; reviewed CodeQL remediation, fixed CDP data boundary and matched source qualification.
+Status: implementation plan v15; reviewed CodeQL remediation, action-scoped cache verification and matched source qualification.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -13,7 +13,43 @@ commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
 
-## Current checkpoint — v14 (2026-10-25)
+## Current checkpoint — v15 (2026-10-25)
+
+Published security head `601464170db4de441c6544f026e6e94b5bb36d71` pins the
+rebuilt SDK and engine to UAP `1bdc7bb4c111da19c93d2839b7403e4a7d57df57`.
+The new exact-source Go/Python/native Skill qualification passed in one attempt;
+the [receipt](https://github.com/777genius/universal-agent-plugins/pull/500#issuecomment-6399607073)
+records engine SHA-256
+`7084ef196eaceb555acda97414d40cee02ed2dfe7a31ef20aa86275506857d83`, exact fixture
+bytes, retained-plan/replay behavior and actual OpenCode 1.18.34 discovery.
+
+Its first [desktop attempt 40207474794](https://github.com/777genius/agent-teams-ai/actions/runs/40207474794)
+stopped at the initial cache guard before checkout. Job `121211397210` reports
+**Cache mode: none**, but the shell did not receive `ACTIONS_CACHE_MODE`. The
+exact runner 2.338.0 implementation injects this variable into
+[NodeScriptActionHandler](https://github.com/actions/runner/blob/v2.338.0/src/Runner.Worker/Handlers/NodeScriptActionHandler.cs)
+and container actions, not ordinary ScriptHandler shell steps. Changing runner
+providers would not correct that observation boundary.
+
+The minimal follow-up moves the literal fail-closed guard into the official
+`actions/github-script` action, pinned to reviewed v8 commit
+`ed597411d8f924073f98dfc5c65a23a2325f34cd`. It remains the first step and must
+complete before either project checkout or any checked-out code executes.
+It reads the action's real environment; no workflow, job or step fabricates the
+mode. PR-only execution, scoped cache denial, read-only contents and the current
+runner choice are preserved. The regression executes this exact checked-in
+guard in an isolated JS context for missing, empty, read, write, write-only and
+none modes, replacing the inappropriate shell child test.
+
+The first desktop attempt remains failed and does not establish any new GUI
+result. The CDP data-boundary correction, source pin and application behavior
+are unchanged. The follow-up also incorporates reviewed main
+`c3d300419a7957152be77e72dce569d302cbe045`, whose two-file message-relay change
+has no management or workflow overlap. New current-head Full, Electron,
+packaging and complete CodeQL results remain required; earlier qualification
+is not reassigned to this combined tree.
+
+## Previous checkpoint — v14 (2026-10-25)
 
 This checkpoint addresses the owner's exact list of seventeen CodeQL findings,
 including App alerts 580 and 581. The complete input/guard/sink ledger and the
