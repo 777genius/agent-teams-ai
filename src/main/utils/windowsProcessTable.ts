@@ -24,13 +24,14 @@ const PROCESS_TABLE_SCRIPT = [
   'Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,CommandLine | ConvertTo-Json -Compress',
 ].join('; ');
 
+// Preserve the script bytes across Windows argv quoting in both Node and Bun.
 const PROCESS_TABLE_ARGS = [
   '-NoProfile',
   '-NonInteractive',
   '-ExecutionPolicy',
   'Bypass',
-  '-Command',
-  PROCESS_TABLE_SCRIPT,
+  '-EncodedCommand',
+  Buffer.from(PROCESS_TABLE_SCRIPT, 'utf16le').toString('base64'),
 ];
 const PROCESS_TABLE_CACHE_TTL_MS = 1_500;
 

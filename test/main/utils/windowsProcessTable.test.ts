@@ -31,6 +31,26 @@ describe('windowsProcessTable', () => {
     windowsProcessTable = await import('../../../src/main/utils/windowsProcessTable');
   });
 
+  it('passes the identical process-table script as quote-free UTF-16LE for sync and async probes', async () => {
+    const callbacks = captureExecFileCallbacks();
+    const request = windowsProcessTable.listWindowsProcessTable(4_000, { bypassCache: true });
+    callbacks[0](null, makeProcessTableJson(123), '');
+    await request;
+    childProcessMock.execFileSync.mockReturnValue(makeProcessTableJson(123));
+    windowsProcessTable.listWindowsProcessTableSync();
+    const asyncArgs = childProcessMock.execFile.mock.calls[0][1] as string[];
+    const syncArgs = childProcessMock.execFileSync.mock.calls[0][1] as string[];
+    expect(syncArgs).toEqual(asyncArgs);
+    expect(asyncArgs.slice(0, -1)).toEqual([
+      '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand',
+    ]);
+    expect(asyncArgs.at(-1)).toMatch(/^[A-Za-z0-9+/]+=*$/);
+    expect(Buffer.from(asyncArgs.at(-1)!, 'base64').toString('utf16le')).toBe(
+      '$ErrorActionPreference = "Stop"; Get-CimInstance Win32_Process | ' +
+      'Select-Object ProcessId,ParentProcessId,CommandLine | ConvertTo-Json -Compress'
+    );
+  });
+
   it.each([
     [{ code: 7, signal: 'SIGTERM', killed: true, errno: -1 }, 'unknown'],
     [{ code: 'ETIMEDOUT', signal: 'SIGTERM', killed: true }, 'true'],
