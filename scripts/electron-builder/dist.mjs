@@ -11,7 +11,7 @@ const {
   buildNativeRebuildPlan,
   buildNativeRestorePlan,
   runElectronBuilderOnce,
-  runWithDmgDetachRetry,
+  runWithPackagingRetry,
   runWithNativeDependencyRestore,
 } = require('./dist-invocations.cjs');
 
@@ -19,7 +19,7 @@ export {
   buildElectronBuilderInvocations,
   buildNativeRebuildPlan,
   buildNativeRestorePlan,
-  runWithDmgDetachRetry,
+  runWithPackagingRetry,
   runWithNativeDependencyRestore,
 };
 
@@ -83,7 +83,7 @@ async function runRendererBundleGuard() {
 
 async function runElectronBuilder(args) {
   const cliPath = require.resolve('electron-builder/cli.js');
-  await runWithDmgDetachRetry(() => runElectronBuilderOnce(cliPath, args));
+  await runWithPackagingRetry(() => runElectronBuilderOnce(cliPath, args));
 }
 
 export async function main(argv, {

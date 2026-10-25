@@ -7,6 +7,12 @@
  * When `VITE_SENTRY_DSN` is not set (dev / self-builds), everything is a no-op.
  */
 
+import {
+  isMaximumUpdateDepthEvent,
+  sanitizeRendererReactContext,
+  sanitizeRendererUiContext,
+  sanitizeSentryTabType,
+} from '@renderer/utils/sentryDiagnostics';
 import * as SentryElectron from '@sentry/electron/renderer';
 import { browserTracingIntegration as reactBrowserTracing, init as reactInit } from '@sentry/react';
 import { sentryArtifactGuardIntegration } from '@shared/utils/sentryArtifactPolicy';
@@ -34,6 +40,7 @@ let telemetryIdentitySyncToken = 0;
 const TELEMETRY_IDENTITY_RETRY_DELAYS_MS = [250, 1_000, 2_500] as const;
 let telemetryIdentityRetryTimer: ReturnType<typeof setTimeout> | null = null;
 let telemetryIdentityRetryAttempt = 0;
+let rendererErrorContextGetter: (() => unknown) | null = null;
 
 function getElectronApi(): ElectronAPI | undefined {
   return (window as Window & { electronAPI?: ElectronAPI }).electronAPI;
@@ -114,18 +121,9 @@ async function syncRendererTelemetryIdentity(): Promise<void> {
   }
 }
 
-function getSafeRendererErrorContext(
-  context?: Record<string, unknown>
-): Record<string, unknown> | null {
-  if (!context) {
-    return null;
-  }
-
-  return {
-    activeTabType: typeof context.activeTabType === 'string' ? context.activeTabType : null,
-    hasComponentStack:
-      typeof context.componentStack === 'string' && context.componentStack.length > 0,
-  };
+/** The composition root supplies a read-only snapshot, avoiding a Sentry -> store import cycle. */
+export function setRendererErrorContextGetter(getter: (() => unknown) | null): void {
+  rendererErrorContextGetter = getter;
 }
 
 /**
@@ -162,8 +160,19 @@ export function initSentryRenderer(): void {
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cross-version @sentry/core type mismatch
-  const beforeSend = (event: any): any =>
-    telemetryAllowed ? redactSentryEvent(event, artifactPolicy) : null;
+  const beforeSend = (event: any): any => {
+    if (!telemetryAllowed) return null;
+    let enriched = event;
+    try {
+      if (rendererErrorContextGetter && isMaximumUpdateDepthEvent(event)) {
+        const context = sanitizeRendererUiContext(rendererErrorContextGetter());
+        if (context) enriched = { ...event, contexts: { ...event.contexts, renderer_ui: context } };
+      }
+    } catch {
+      // Diagnostics must never suppress or replace the original exception.
+    }
+    return redactSentryEvent(enriched, artifactPolicy);
+  };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cross-version @sentry/core type mismatch
   const beforeSendTransaction = (event: any): any =>
     telemetryAllowed ? redactSentryEvent(event, artifactPolicy) : null;
@@ -208,12 +217,13 @@ export function isSentryRendererActive(): boolean {
 // ---------------------------------------------------------------------------
 
 /** Record a navigation breadcrumb (tab switches). */
-export function addNavigationBreadcrumb(_from: string, _to: string): void {
-  if (!initialized) return;
+export function addNavigationBreadcrumb(from: string | null, to: string | null): void {
+  if (!initialized || !telemetryAllowed) return;
   SentryElectron.addBreadcrumb({
     category: 'navigation',
     message: 'tab-change',
     level: 'info',
+    data: { fromTabType: sanitizeSentryTabType(from), toTabType: sanitizeSentryTabType(to) },
   });
 }
 
@@ -223,15 +233,15 @@ export function addRendererBreadcrumb(
   message: string,
   _data?: Record<string, unknown>
 ): void {
-  if (!initialized) return;
+  if (!initialized || !telemetryAllowed) return;
   SentryElectron.addBreadcrumb({ category, message, level: 'info' });
 }
 
 /** Capture an exception with optional extra context. */
 export function captureRendererException(error: Error, context?: Record<string, unknown>): void {
-  if (!initialized) return;
+  if (!initialized || !telemetryAllowed) return;
   SentryElectron.withScope((scope) => {
-    const safeContext = getSafeRendererErrorContext(context);
+    const safeContext = sanitizeRendererReactContext(context);
     if (safeContext) scope.setContext('react', safeContext);
     SentryElectron.captureException(error);
   });
