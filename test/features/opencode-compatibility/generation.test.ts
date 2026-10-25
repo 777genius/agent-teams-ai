@@ -19,7 +19,11 @@ import type { OpenCodeApiCapabilities } from '@main/services/team/opencode/capab
 
 // Eligibility is data: the pinned runtime's qualification records, never a literal here.
 const qualified = (version: string) =>
-  runtimeLock.opencodeV2.qualified.includes(version.replace(/^opencode v/, ''));
+  (
+    (runtimeLock.opencodeV2.qualified as Record<string, string[]>)[
+      `${process.platform}-${process.arch}`
+    ] ?? []
+  ).includes(version.replace(/^opencode v/, ''));
 
 describe('pinned OpenCode V2 contract', () => {
   it('pins a valid range and qualification list from the runtime release manifest', () => {
@@ -28,12 +32,35 @@ describe('pinned OpenCode V2 contract', () => {
 
   it.each([
     ['missing', undefined],
-    ['inverted range', { range: { minimum: '3.0.0', below: '2.0.0' }, qualified: [] }],
-    ['prerelease bound', { range: { minimum: '2.0.0-rc.1', below: '3.0.0' }, qualified: [] }],
-    ['out-of-range record', { range: { minimum: '2.0.0', below: '3.0.0' }, qualified: ['3.0.0'] }],
-    ['unsorted records', { range: { minimum: '2.0.0', below: '3.0.0' }, qualified: ['2.1.4', '2.0.32'] }],
-    ['duplicate records', { range: { minimum: '2.0.0', below: '3.0.0' }, qualified: ['2.1.4', '2.1.4'] }],
-    ['prerelease record', { range: { minimum: '2.0.0', below: '3.0.0' }, qualified: ['2.1.4-rc.1'] }],
+    ['inverted range', { range: { minimum: '3.0.0', below: '2.0.0' }, qualified: {} }],
+    ['prerelease bound', { range: { minimum: '2.0.0-rc.1', below: '3.0.0' }, qualified: {} }],
+    [
+      'out-of-range record',
+      { range: { minimum: '2.0.0', below: '3.0.0' }, qualified: { 'darwin-arm64': ['3.0.0'] } },
+    ],
+    [
+      'unsorted records',
+      {
+        range: { minimum: '2.0.0', below: '3.0.0' },
+        qualified: { 'linux-x64': ['2.1.4', '2.0.32'] },
+      },
+    ],
+    [
+      'duplicate records',
+      {
+        range: { minimum: '2.0.0', below: '3.0.0' },
+        qualified: { 'win32-x64': ['2.1.4', '2.1.4'] },
+      },
+    ],
+    [
+      'prerelease record',
+      { range: { minimum: '2.0.0', below: '3.0.0' }, qualified: { 'darwin-x64': ['2.1.4-rc.1'] } },
+    ],
+    ['flat list', { range: { minimum: '2.0.0', below: '3.0.0' }, qualified: ['2.1.4'] }],
+    [
+      'unknown platform',
+      { range: { minimum: '2.0.0', below: '3.0.0' }, qualified: { 'freebsd-x64': ['2.1.4'] } },
+    ],
   ])('refuses a malformed contract (%s)', (_name, contract) => {
     expect(readOpenCodeV2Contract(contract)).toBeNull();
   });
@@ -205,30 +232,38 @@ describe('current public OpenCode policy consumers', () => {
   );
 
   // Actual independently measured native --version stdout, not normalized DTO versions.
-  it.each(['2.0.0', '2.0.32'])('recognizes native CLI output for %s without launching V2', (version) => {
-    const stdout = `opencode v${version}\n`;
-    expect(classifyNativeVersion(stdout)).toEqual({
-      kind: 'recognized',
-      generation: 'v2',
-      apiDialect: `v2-${version}`,
-      version,
-      productionEligible: qualified(version),
-    });
-    let reads = 0;
-    const decision = evaluateOpenCodeSupport({
-      version: stdout,
-      get capabilities(): OpenCodeApiCapabilities {
-        reads++;
-        throw new Error('V1 evidence cannot qualify native V2');
-      },
-    });
-    expect(decision.supported).toBe(false);
-    expect(decision.supportLevel).toBe('supported_capabilities_pending');
-    expect(decision.semver).toEqual({ major: 2, minor: 0, patch: Number(version.split('.')[2]), prerelease: [] });
-    expect(reads).toBe(0);
-    expect(isAgentTeamsOpenCodeVersionSupported(stdout)).toBe(qualified(version));
-    expect(negotiateOpenCodeProtocol({ version: stdout }).kind).toBe('blocked');
-  });
+  it.each(['2.0.0', '2.0.32'])(
+    'recognizes native CLI output for %s without launching V2',
+    (version) => {
+      const stdout = `opencode v${version}\n`;
+      expect(classifyNativeVersion(stdout)).toEqual({
+        kind: 'recognized',
+        generation: 'v2',
+        apiDialect: `v2-${version}`,
+        version,
+        productionEligible: qualified(version),
+      });
+      let reads = 0;
+      const decision = evaluateOpenCodeSupport({
+        version: stdout,
+        get capabilities(): OpenCodeApiCapabilities {
+          reads++;
+          throw new Error('V1 evidence cannot qualify native V2');
+        },
+      });
+      expect(decision.supported).toBe(false);
+      expect(decision.supportLevel).toBe('supported_capabilities_pending');
+      expect(decision.semver).toEqual({
+        major: 2,
+        minor: 0,
+        patch: Number(version.split('.')[2]),
+        prerelease: [],
+      });
+      expect(reads).toBe(0);
+      expect(isAgentTeamsOpenCodeVersionSupported(stdout)).toBe(qualified(version));
+      expect(negotiateOpenCodeProtocol({ version: stdout }).kind).toBe('blocked');
+    }
+  );
 
   it.each([
     'opencode v1.18.34',
