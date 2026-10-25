@@ -49,7 +49,7 @@ KIMI_TEST_API_KEY="$KEY" node "$HERE/cdp.mjs" connect "$PROJECT" >"$OUT/connect.
 CONNECT=$?
 cat "$OUT/connect.json"
 unset KEY
-if [ "$CONNECT" -ne 0 ]; then echo "provider connect failed"; fi
+if [ "$CONNECT" -ne 0 ]; then echo "provider connect failed"; exit 1; fi
 
 TEAM="v2-linux-${VERSION//./}"
 node "$HERE/e2e.mjs" "$TEAM" "$PROJECT" "$MODEL" "$W/claude-root" "$OUT" 9222

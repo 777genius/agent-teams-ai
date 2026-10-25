@@ -30,9 +30,10 @@ if (mode === 'wait') {
   while (Date.now() < deadline) {
     try {
       const { ws, evaluate } = await openPage();
-      const res = await evaluate('typeof window.electronAPI?.teams?.createTeam === "function" && typeof window.electronAPI?.runtimeProviderManagement?.connectProvider === "function"');
+      // The preload exists before main registers its IPC handlers; wait for a real round trip.
+      const res = await evaluate('window.electronAPI.openCodeRuntime.getStatus().then((s) => Boolean(s && s.state))');
       ws.close();
-      if (res.result?.result?.value === 'true') { console.log('renderer ready'); process.exit(0); }
+      if (res.result?.result?.value === 'true') { console.log('main IPC ready'); process.exit(0); }
       last = JSON.stringify(res.result ?? res).slice(0, 300);
     } catch (error) { last = String(error).slice(0, 300); }
     await sleep(3000);
@@ -50,7 +51,11 @@ if (mode === 'wait') {
   const startedAt = new Date().toISOString();
   const res = await evaluate(`window.electronAPI.runtimeProviderManagement.connectProvider(${JSON.stringify(input)})`);
   ws.close();
-  const value = res.result?.result?.value ?? JSON.stringify(res.result?.exceptionDetails ?? res);
+  if (res.result?.exceptionDetails) {
+    console.log(redact(JSON.stringify({ startedAt, error: res.result.exceptionDetails.exception?.description ?? res.result.exceptionDetails.text })));
+    process.exit(1);
+  }
+  const value = res.result?.result?.value ?? JSON.stringify(res);
   let parsed; try { parsed = JSON.parse(value); } catch { parsed = value; }
   console.log(redact(JSON.stringify({ startedAt, finishedAt: new Date().toISOString(), result: parsed }, null, 2)));
   const connected = parsed && typeof parsed === 'object' && !parsed.error && /"state":"connected"/.test(value);
