@@ -45,8 +45,10 @@ if (mode === 'wait') {
   delete process.env.KIMI_TEST_API_KEY;
   if (!key.trim()) { console.log(JSON.stringify({ error: 'KIMI_TEST_API_KEY is empty' })); process.exit(1); }
   const redact = (text) => text.split(key).join('[REDACTED]');
+  // An empty KIMI_AUTH_OPTION_ID sends no selector (V1 then connects its first key option).
+  const authOptionId = process.env.KIMI_AUTH_OPTION_ID ?? 'api:native';
   const input = { runtimeId: 'opencode', providerId: process.env.KIMI_PROVIDER_ID || 'kimi-code-plan-cn', method: 'api',
-    apiKey: key, metadata: {}, authOptionId: 'api:native', projectPath: arg };
+    apiKey: key, metadata: {}, ...(authOptionId ? { authOptionId } : {}), projectPath: arg };
   const { ws, evaluate } = await openPage();
   const startedAt = new Date().toISOString();
   const res = await evaluate(`window.electronAPI.runtimeProviderManagement.connectProvider(${JSON.stringify(input)})`);

@@ -1,8 +1,8 @@
-name: TEST Linux OpenCode V2 e2e
+name: TEST Linux OpenCode e2e (plain V2 and V1)
 
 on:
   push:
-    branches: [test/linux-v2-e2e-20261025]
+    branches: [test/linux-v2-e2e-plain-20261025]
 
 permissions:
   contents: read
@@ -12,13 +12,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        opencode: ['2.1.4', '2.0.32']
+        # The model's provider prefix is the provider run.sh connects.
+        include:
+          - opencode: '2.1.4'
+            model: kimi-code-plan-cn/kimi-for-coding
+          # V1: the npm opencode-ai latest the app installer picks today; same Kimi Code endpoint and key.
+          - opencode: '1.19.4'
+            model: kimi-for-coding/kimi-for-coding
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     env:
       RUNTIME_REF_FILE: .github/test-linux-v2-e2e/runtime-ref
-      BWRAP_VERSION: '0.13.1'
-      MODEL: kimi-code-plan-cn/kimi-for-coding
     steps:
       - uses: actions/checkout@v6
         with:
@@ -35,39 +39,18 @@ jobs:
           ref: ${{ steps.ref.outputs.sha }}
           path: TEST-runtime
           persist-credentials: false
-      - name: Runner facts
+      - name: Runner facts (stock image, no sandbox setup)
         run: |
           cat /etc/os-release | head -4; uname -r; echo "ImageVersion=$ImageVersion"
           sysctl kernel.apparmor_restrict_unprivileged_userns || true
           dpkg-query -W bubblewrap apparmor 2>/dev/null || true
+          command -v bwrap || echo "bwrap: not on PATH"
           echo "AppArmor profiles that mention bwrap or userns:"; sudo grep -l -E 'bwrap|userns' /etc/apparmor.d/* 2>/dev/null || true
-          ls /usr/share/apparmor/extra-profiles 2>/dev/null | grep -i -E 'bwrap|userns' || true
-      - name: Install upstream bubblewrap at /usr/bin/bwrap
+          find /usr/share/apparmor/extra-profiles -maxdepth 1 \( -iname '*bwrap*' -o -iname '*userns*' \) 2>/dev/null || true
+      - name: Install xvfb
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq meson ninja-build libcap-dev pkg-config xvfb >/dev/null
-          d="$RUNNER_TEMP/TEST-bwrap-src"; mkdir -p "$d"
-          curl -fsSL -o "$d.tar.xz" "https://github.com/containers/bubblewrap/releases/download/v$BWRAP_VERSION/bubblewrap-$BWRAP_VERSION.tar.xz"
-          echo "tarball sha256 $(sha256sum "$d.tar.xz" | cut -d' ' -f1)"
-          tar -xf "$d.tar.xz" -C "$d" --strip-components=1
-          (cd "$d" && meson setup build --buildtype=release -Dtests=false >/dev/null && ninja -C build bwrap >/dev/null)
-          sudo install -m 0755 -o root -g root "$d/build/bwrap" /usr/bin/bwrap
-          /usr/bin/bwrap --version; stat -c '%A %U:%G %n' /usr/bin/bwrap
-      - name: Keep the stock AppArmor user-namespace restriction
-        run: |
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=1
-      - name: Sandbox check before the bwrap AppArmor profile
-        run: bash .github/test-linux-v2-e2e/bwrap-check.sh || true
-      - name: Allow user namespaces for /usr/bin/bwrap only (AppArmor profile, restriction stays on)
-        run: |
-          printf '%s\n' 'abi <abi/4.0>,' 'include <tunables/global>' \
-            'profile TEST-opencode-v2-bwrap /usr/bin/bwrap flags=(unconfined) {' '  userns,' '}' \
-            | sudo tee /etc/apparmor.d/TEST-opencode-v2-bwrap >/dev/null
-          sudo apparmor_parser -r /etc/apparmor.d/TEST-opencode-v2-bwrap
-          sudo aa-status 2>/dev/null | grep -F TEST-opencode-v2-bwrap
-          sysctl kernel.apparmor_restrict_unprivileged_userns
-      - name: Sandbox check after the bwrap AppArmor profile
-        run: bash .github/test-linux-v2-e2e/bwrap-check.sh
+          sudo apt-get install -y -qq xvfb >/dev/null
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: '1.4.2'
@@ -91,25 +74,27 @@ jobs:
           cache: pnpm
       - name: Install the desktop app
         run: node ./scripts/ci/install-dependencies-with-retry.mjs >/dev/null
-      - name: V2 team e2e (lead and teammate)
+      - name: OpenCode ${{ matrix.opencode }} team e2e (lead and teammate)
         env:
           KIMI_TEST_API_KEY: ${{ secrets.KIMI_TEST_API_KEY }}
-        run: bash .github/test-linux-v2-e2e/run.sh "${{ matrix.opencode }}" "$MODEL"
+          OPENCODE_VERSION: ${{ matrix.opencode }}
+          MODEL: ${{ matrix.model }}
+        run: bash .github/test-linux-v2-e2e/run.sh "$OPENCODE_VERSION" "$MODEL"
       - name: Remove any file that contains the key before upload
         if: always()
         env:
           KIMI_TEST_API_KEY: ${{ secrets.KIMI_TEST_API_KEY }}
         run: |
-          out="$RUNNER_TEMP/TEST-v2-out"
+          out="$RUNNER_TEMP/TEST-e2e-out"
           [ -d "$out" ] || exit 0
           if [ -n "$KIMI_TEST_API_KEY" ]; then
-            grep -rlF -- "$KIMI_TEST_API_KEY" "$out" | while read -r f; do echo "removed (contained key): ${f#$out/}"; rm -f "$f"; done
+            grep -rlF -- "$KIMI_TEST_API_KEY" "$out" | while read -r f; do echo "removed (contained key): ${f#"$out"/}"; rm -f "$f"; done
           fi
       - name: Keep e2e evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: linux-v2-e2e-${{ matrix.opencode }}
+          name: linux-e2e-${{ matrix.opencode }}
           retention-days: 14
           if-no-files-found: warn
-          path: ${{ runner.temp }}/TEST-v2-out
+          path: ${{ runner.temp }}/TEST-e2e-out

@@ -1,18 +1,26 @@
 #!/usr/bin/env bash
-# TEST-only: one pure OpenCode V2 team run (lead + teammate) through the dev app on Linux.
-# Usage: run.sh <opencode version> <model>
+# TEST-only: one pure OpenCode team run (lead + teammate) through the dev app on Linux, V1 or V2.
+# Usage: run.sh <opencode version> <provider/model>
 # Needs: CANDIDATE_CLI (packaged runtime front door), KIMI_TEST_API_KEY in the environment.
 set -uo pipefail
 VERSION=${1:?version}
 MODEL=${2:?model}
+case "$VERSION" in
+  # V1: the Linux x64 glibc binary of npm opencode-ai, as the app installer selects it.
+  # Its plain key connect takes no selector: V1 uses its first key option, as the app's form does.
+  1.*) GEN=v1 PKG=opencode-linux-x64 AUTH_OPTION= ;;
+  # V2 admits a key connect only through its native option.
+  2.*) GEN=v2 PKG=@opencode/cli-linux-x64 AUTH_OPTION=api:native ;;
+  *) echo "unsupported OpenCode version $VERSION"; exit 2 ;;
+esac
 HERE=$(cd "$(dirname "$0")" && pwd)
 APP=${GITHUB_WORKSPACE:?}
-W="$RUNNER_TEMP/TEST-v2-$VERSION"
-OUT="$RUNNER_TEMP/TEST-v2-out/$VERSION"
+W="$RUNNER_TEMP/TEST-$GEN-$VERSION"
+OUT="$RUNNER_TEMP/TEST-e2e-out/$VERSION"
 mkdir -p "$W" "$OUT"
 
-npm i --prefix "$W/oc" --ignore-scripts --no-audit --no-fund "@opencode/cli-linux-x64@$VERSION" >"$OUT/npm.log" 2>&1
-OC="$W/oc/node_modules/@opencode/cli-linux-x64/bin/opencode"
+npm i --prefix "$W/oc" --ignore-scripts --no-audit --no-fund "$PKG@$VERSION" >"$OUT/npm.log" 2>&1
+OC="$W/oc/node_modules/$PKG/bin/opencode"
 echo "opencode $("$OC" --version 2>&1 | tail -1) sha256 $(sha256sum "$OC" | cut -d' ' -f1)" | tee "$OUT/opencode.txt"
 
 PROJECT="$W/project"
@@ -52,13 +60,14 @@ trap cleanup EXIT
 node "$HERE/cdp.mjs" wait 9222 || { echo "app did not become ready"; tail -60 "$OUT/dev.log"; exit 1; }
 node "$HERE/cdp.mjs" eval 'window.electronAPI.openCodeRuntime.getStatus()' >"$OUT/status.json" 2>&1; cat "$OUT/status.json"
 
-KIMI_TEST_API_KEY="$KEY" node "$HERE/cdp.mjs" connect "$PROJECT" >"$OUT/connect.json" 2>&1
+KIMI_TEST_API_KEY="$KEY" KIMI_PROVIDER_ID="${MODEL%%/*}" KIMI_AUTH_OPTION_ID="$AUTH_OPTION" \
+  node "$HERE/cdp.mjs" connect "$PROJECT" >"$OUT/connect.json" 2>&1
 CONNECT=$?
 cat "$OUT/connect.json"
 unset KEY
 if [ "$CONNECT" -ne 0 ]; then echo "provider connect failed"; collect; cat "$OUT"/diagnostics/*.json 2>/dev/null; exit 1; fi
 
-TEAM="v2-linux-${VERSION//./}"
+TEAM="$GEN-linux-${VERSION//./}"
 node "$HERE/e2e.mjs" "$TEAM" "$PROJECT" "$MODEL" "$W/claude-root" "$OUT" 9222
 RESULT=$?
 echo "e2e exit=$RESULT (connect exit=$CONNECT)"
