@@ -427,22 +427,19 @@ function isFollowUpAnswer(paths, senderKey, candidate, followUpMs) {
  * True when the row passes such an answer on, which is new information rather
  * than a restated final. A row that cites the answer is checked exactly and
  * must not repeat an earlier relay of it. Leads do not always cite what they
- * relay, so an uncited row passes when an answer arrived after finalMs.
+ * relay, so any other row passes when an answer arrived after finalMs.
  */
 function relaysFollowUpAnswer(paths, list, row, finalMs, boardEventMs) {
   const followUpMs = firstUserMessageSince(paths, boardEventMs);
   if (followUpMs === null) return false;
   const senderKey = normalizeComparableParticipant(row.from);
   const cited = findRelayedRequest(paths, row);
-  if (cited) {
-    return (
-      isFollowUpAnswer(paths, senderKey, cited, followUpMs) &&
-      !list.some(
-        (candidate) =>
-          candidate &&
-          normalizeComparableParticipant(candidate.from) === senderKey &&
-          String(candidate.relayOfMessageId || '').trim() === cited.messageId
-      )
+  if (cited && isFollowUpAnswer(paths, senderKey, cited, followUpMs)) {
+    return !list.some(
+      (candidate) =>
+        candidate &&
+        normalizeComparableParticipant(candidate.from) === senderKey &&
+        String(candidate.relayOfMessageId || '').trim() === cited.messageId
     );
   }
   let rows;

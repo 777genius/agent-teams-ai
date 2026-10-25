@@ -290,10 +290,12 @@ describe('board completion is one question with one answer', () => {
     return { send, task, early, final };
   }
 
-  // Then the user asks for one more thing, and the lead passes it to bob by
-  // direct message rather than as a task.
+  // Then the lead thanks bob unprompted, the user asks for one more thing, and
+  // the lead passes it to bob by direct message rather than as a task.
   function askBobAfterCompletion(controller, advance) {
     const board = completeBoard(controller, advance);
+    advance(1);
+    const unprompted = directMessage(controller, 'alice', 'bob', 'Thanks bob, that is all.');
     advance(1);
     const followUp = directMessage(
       controller,
@@ -315,23 +317,23 @@ describe('board completion is one question with one answer', () => {
       text: 'I asked bob to append the line and will pass on exactly what he reports.',
     });
     expect(interim.deduplicated).toBeUndefined();
-    return { ...board, question, interim };
+    return { ...board, unprompted, question, interim };
   }
 
-  it.each([true, false])(
-    'delivers the relay of a teammate answer to the user follow-up (cites it: %s)',
-    (citesAnswer) => {
+  it.each(['the answer', 'nothing', 'a status report'])(
+    'delivers the relay of a teammate answer to the user follow-up (cites %s)',
+    (cites) => {
       const claudeDir = makeClaudeDir();
       const controller = createController({ teamName: 'my-team', claudeDir });
       withClock((advance) => {
         const { send, question } = askBobAfterCompletion(controller, advance);
+        const status = directMessage(controller, 'carol', 'alice', 'Carol is idle.');
         advance(1);
         const answer = answerAlice(controller, 'bob', question, 'Appended; the file has 3 lines.');
         advance(1);
+        const cited = { 'the answer': answer, nothing: null, 'a status report': status }[cites];
         const relay = send({
-          ...(citesAnswer
-            ? { source: 'runtime_delivery', relayOfMessageId: answer.messageId }
-            : {}),
+          ...(cited ? { source: 'runtime_delivery', relayOfMessageId: cited.messageId } : {}),
           text: 'Bob appended the third line; the file holds three lines now.',
         });
         expect(relay.deduplicated).toBeUndefined();
@@ -415,12 +417,16 @@ describe('board completion is one question with one answer', () => {
     'system notification',
     'reply to a task notification',
     'reply to a pre-completion message',
+    'reply to a message sent before the follow-up',
     "reply to another member's message",
   ])('still holds back a restated final after a teammate %s', (kind) => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
     withClock((advance) => {
-      const { send, early, question, interim } = askBobAfterCompletion(controller, advance);
+      const { send, early, unprompted, question, interim } = askBobAfterCompletion(
+        controller,
+        advance
+      );
       const assignment = readInbox(claudeDir, 'bob').find(
         (row) => row.source === 'system_notification'
       );
@@ -431,20 +437,27 @@ describe('board completion is one question with one answer', () => {
         'system notification': question.messageId,
         'reply to a task notification': assignment.messageId,
         'reply to a pre-completion message': early.messageId,
+        'reply to a message sent before the follow-up': unprompted.messageId,
         "reply to another member's message": fromCarol.messageId,
       }[kind];
       advance(1);
-      controller.messages.sendMessage({
+      const reply = controller.messages.sendMessage({
         to: 'alice',
         from: 'bob',
         source: kind === 'system notification' ? 'system_notification' : 'runtime_delivery',
         ...(relayOfMessageId ? { relayOfMessageId } : {}),
         text: 'The file is written and my task is complete.',
       });
-      advance(1);
-      const recap = send({ text: 'ALL DONE - the file is written and nothing is pending.' });
-      expect(recap.deduplicated).toBe(true);
-      expect(recap.duplicateOfMessageId).toBe(interim.messageId);
+      // Citing that reply does not make it an answer to the follow-up either.
+      for (const cited of [undefined, reply.messageId]) {
+        advance(1);
+        const recap = send({
+          ...(cited ? { relayOfMessageId: cited } : {}),
+          text: 'ALL DONE - the file is written and nothing is pending.',
+        });
+        expect(recap.deduplicated).toBe(true);
+        expect(recap.duplicateOfMessageId).toBe(interim.messageId);
+      }
     });
   });
 
