@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 
 import {
+  getRuntimeProviderOnboardingCredentialUrls,
   isRuntimeProviderOnboardingPlanRoutable,
   rankRecommendedRuntimeProviderModels,
 } from '../../core/domain';
@@ -57,6 +58,37 @@ const STEP_LABELS: Readonly<Record<Exclude<RuntimeProviderOnboardingStage, 'erro
   verifying: 'Verify',
   'choose-model': 'Choose model',
   ready: 'Ready',
+};
+
+function credentialPageHost(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
+/** One button per key page; with several, each names its domain so the user can pick. */
+const CredentialPageButtons = ({
+  urls,
+  onOpen,
+}: {
+  urls: readonly string[];
+  onOpen: (url: string) => void;
+}): JSX.Element | null => {
+  if (urls.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {urls.map((url) => (
+        <Button key={url} type="button" variant="outline" size="sm" onClick={() => onOpen(url)}>
+          <ExternalLink className="mr-1.5 size-3.5" />
+          {urls.length > 1
+            ? `Open subscription key page (${credentialPageHost(url)})`
+            : 'Open subscription key page'}
+        </Button>
+      ))}
+    </div>
+  );
 };
 
 function stageOrder(stage: RuntimeProviderOnboardingStage): number {
@@ -469,20 +501,40 @@ const ActivePlanFlow = ({
               </div>
             </div>
           ) : null}
-          {!alreadyConnected &&
-          plan.credentialUrl &&
-          !plan.providerId.startsWith('xiaomi-token-plan-') ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => void actions.openCredentialPage()}
-            >
-              <ExternalLink className="mr-1.5 size-3.5" />
-              Open subscription key page
-            </Button>
+          {plan.routeChoices || plan.route ? (
+            <div data-testid="runtime-provider-onboarding-route-choice" className="space-y-2">
+              <div className="text-xs text-[var(--color-text-muted)]">
+                Where does your account live? OpenCode V2 connects each domain through its own
+                integration.
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(plan.routes ?? []).map((route) => {
+                  const selected = plan.route?.v2ProviderId === route.v2ProviderId;
+                  return (
+                    <Button
+                      key={route.v2ProviderId}
+                      type="button"
+                      size="sm"
+                      variant={selected ? 'default' : 'outline'}
+                      aria-pressed={selected}
+                      data-testid={`runtime-provider-onboarding-route-${route.host}`}
+                      onClick={() => actions.chooseRoute(route.v2ProviderId)}
+                    >
+                      {route.host}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
           ) : null}
-          {!alreadyConnected || state.management.activeFormProviderId === plan.providerId ? (
+          {!alreadyConnected && !plan.providerId.startsWith('xiaomi-token-plan-') ? (
+            <CredentialPageButtons
+              urls={getRuntimeProviderOnboardingCredentialUrls(plan)}
+              onOpen={(url) => void actions.openCredentialPage(url)}
+            />
+          ) : null}
+          {!plan.routeChoices &&
+          (!alreadyConnected || state.management.activeFormProviderId === plan.providerId) ? (
             <ProviderSetupFormPanel
               provider={provider}
               state={state.management}
