@@ -20,6 +20,7 @@ import { CodexRuntimeUpdateDialog } from '@features/codex-runtime-installer/rend
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   canManagedInstallChangeOpenCodeRuntime,
+  getOpenCodeGeneration,
   isOpenCodeProviderOAuthBridgeOutdated,
   isOpenCodeRuntimeUsable,
   OpenCodeCatalogErrorAlert,
@@ -2112,6 +2113,7 @@ export const CliStatusBanner = ({
             providerId={providerOnboardingRequest.providerId}
             projectPath={selectedProjectPath}
             runtimeGate={openCodeQuickConnectGate}
+            openCodeGeneration={getOpenCodeGeneration(openCodeRuntimeStatus?.version)}
             runtimeUpdateRequired={
               isOpenCodeProviderOAuthBridgeOutdated(openCodeRuntimeStatus) &&
               (providerOnboardingRequest.mode === 'wizard' ||

@@ -26,12 +26,14 @@ describe('readOpenCodeEffectiveRuntimeStatus', () => {
   it.each([
     ['2.0.0', true],
     ['opencode v2.0.32', true],
-    ['2.0.21', false],
-    ['opencode v2.0.21', false],
-    ['opencode v2.0.26', false],
+    ['2.0.21', true],
+    ['opencode v2.0.21', true],
+    ['opencode v2.0.26', true],
+    ['2.1.4', true],
+    ['3.0.0', false],
     ['2.0.32-beta.1', false],
     ['2.0.32+build.7', false],
-  ])('reports only recognized effective native runtime overrides (%s)', async (version, supported) => {
+  ])('reports effective native runtime overrides recognized by the pinned range (%s)', async (version, supported) => {
     const binaryPath = await writeBinary('TEST-v2-opencode');
     const defaultStatus = { installed: true, version: '1.18.35' };
     const readDefaultStatus = vi.fn(() => Promise.resolve(defaultStatus));

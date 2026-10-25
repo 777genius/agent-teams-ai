@@ -42,7 +42,7 @@
     "src/main/services/infrastructure/ConfigManager.ts": 1401,
     "src/main/services/infrastructure/FileWatcher.ts": 1504,
     "src/main/services/infrastructure/NotificationManager.ts": 1526,
-    "src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts": 1045,
+    "src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts": 1042,
     "src/main/services/runtime/ClaudeMultimodelBridgeService.ts": 2010,
     "src/main/services/runtime/ProviderConnectionService.ts": 1762,
     "src/main/services/schedule/SchedulerService.ts": 850,

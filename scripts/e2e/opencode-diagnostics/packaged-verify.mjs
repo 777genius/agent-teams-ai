@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { isDeepStrictEqual } from 'node:util';
 import { clickControl, correlateReport } from './catalog.mjs';
 import {
   runtimeProvenance,
@@ -374,6 +375,31 @@ export async function waitForSettledDirectory(load, timeoutMs = 120000) {
   throw new Error('Provider directory did not settle within bootstrap budget');
 }
 
+/**
+ * The Providers & plans grid refreshes its first directory page beside the connected-model
+ * catalog on an OpenCode re-check (#991). The main process joins that identical, concurrent
+ * refresh into the catalog's runtime call, so both receive the same response. Count that
+ * one joined read once: an identical request, overlapping in time, with an identical
+ * response (including fetchedAt). Any other extra directory read, including a second
+ * joined one or a separate runtime call, still fails the page walk.
+ */
+export function separateJoinedDirectoryRead(directory) {
+  const joined = directory.filter((record, index) =>
+    directory
+      .slice(0, index)
+      .some(
+        (earlier) =>
+          (record.input.cursor ?? null) === null &&
+          isDeepStrictEqual(earlier.input, record.input) &&
+          record.startedAt <= earlier.completedAt &&
+          earlier.startedAt <= record.completedAt &&
+          isDeepStrictEqual(earlier.response, record.response)
+      )
+  );
+  if (joined.length !== 1) return { walk: directory, sharedReads: 0 };
+  return { walk: directory.filter((record) => record !== joined[0]), sharedReads: 1 };
+}
+
 export async function qualifyUIRefresh(records, completed) {
   assert.equal(completed?.state, 'ready');
   assert(!completed.diagnostics?.message);
@@ -417,7 +443,8 @@ export async function qualifyUIRefresh(records, completed) {
       'Missing UI directory completeness metadata'
     );
   }
-  const entries = await pages(directory, 'directory');
+  const { walk, sharedReads } = separateJoinedDirectoryRead(directory);
+  const entries = await pages(walk, 'directory');
   const sources = [
     ...new Set(
       entries
@@ -469,7 +496,7 @@ export async function qualifyUIRefresh(records, completed) {
     modelIds,
     'Rendered UI differs from measured completions'
   );
-  return { sources, modelIds };
+  return { sources, modelIds, sharedDirectoryReads: sharedReads };
 }
 
 export function settingsRefreshSettled(observation, now, quietMs = 500) {
@@ -832,6 +859,12 @@ export async function verifyPackaged({
       assert(completed?.state === 'ready', 'UI did not complete a successful catalog refresh');
       assert(!completed.diagnostics?.message, 'UI catalog diagnostics fail qualification');
       evidence.ui.inventory = await qualifyUIRefresh(observation.records, completed);
+      // The re-check must refresh the Providers & plans grid too, through the shared read.
+      assert.equal(
+        evidence.ui.inventory.sharedDirectoryReads,
+        1,
+        'Providers & plans grid did not refresh with the catalog'
+      );
       evidence.qualification = evidence.ui.inventory.modelIds.length
         ? 'provider-inventory'
         : 'transport-only';

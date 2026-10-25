@@ -1,5 +1,7 @@
 import { types } from 'node:util';
 
+import { isOpenCodeV2RangeVersion } from '../../../../src/features/opencode-compatibility/core/domain/pinnedOpenCodeV2Contract';
+
 type Row = Record<string, unknown>;
 export interface V2TeamEvidenceBinding {
   teamName: string;
@@ -103,7 +105,8 @@ export function classifyTeamTranscriptGeneration(transcript: unknown): 'v1' | 'v
     );
     return 'v1';
   }
-  required(version === '2.0.0' || version === '2.0.32');
+  // The pinned runtime's V2 range; FULL itself runs only versions qualified on its platform.
+  required(typeof version === 'string' && isOpenCodeV2RangeVersion(version));
   return 'v2';
 }
 

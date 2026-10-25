@@ -126,9 +126,6 @@ jobs:
       - name: Guard Team Provisioning architecture
         run: node ./scripts/ci/check-team-provisioning-architecture.mjs
 
-      - name: Verify runtime lock
-        run: node ./scripts/ci/verify-runtime-lock.mjs
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
 
@@ -137,6 +134,10 @@ jobs:
         with:
           node-version-file: .node-version
           cache: pnpm
+
+      # Loads the TypeScript contract parser, so it needs the pinned Node.
+      - name: Verify runtime lock
+        run: node ./scripts/ci/verify-runtime-lock.mjs
 
       - name: Restore pnpm node-gyp executable bit
         run: |
