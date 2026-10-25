@@ -1,0 +1,89 @@
+{
+  "status": "PASS",
+  "scope": "Actual unsigned macOS arm64 packed Electron Launch/SDK native input/Stop/settings reload/automatic app.relaunch and observer-only successor public Quit",
+  "productionSourceHead": "3b351f32474111bb9bd7943d1e6b5a06a3da5e84",
+  "harnessSourceEpoch": "Retained exact current source pins include file-document readiness regression fix, M19 readback and notification verification; product packaged bytes unchanged from3b351.",
+  "originalJobId": "fa0946d2084fee8c072bcb20baac7c82",
+  "retentionJobId": "380fb27a2a023054ed3794ed52b1a26c",
+  "retentionSha256": "119d789b223085fbe57e853ef81e92e893b2bef045ee1625eaf799c08b655d8c",
+  "retainedRoot": "/Volumes/Transcend/dev/TEST-packed-p7-retainer-uucddGMi/retained-packed-p7-fa0946d2084fee8c072bcb20baac7c82",
+  "retainedFiles": 1356,
+  "candidate": {
+    "schemaVersion": 1,
+    "bundleRoot": "/Volumes/Transcend/dev/TEST-p7-recovered-candidate-pxu3m9x2/packed/mac-arm64/Agent Teams AI.app",
+    "executableName": "Agent Teams AI",
+    "executableSha256": "113960c9bbaeb4c45e9d7080b2f94135a4b3c2cc285de312fb337fb834e3c34c",
+    "appAsarSha256": "6b1237b16d44e14af4b8abb95c39f2b3897482467b2e85aa703dc5562ab0870d",
+    "candidateManifestSha256": "eb1139df18e2a555338c93af5bd44bb7480d3cfe2233c68f6b5b8502c7e446ff"
+  },
+  "capturePath": "/Volumes/Transcend/dev/TEST-p7-recovered-candidate-pxu3m9x2/packed-electron-capture.json",
+  "captureSha256": "cdb9e7476b45a90257d5ad02b78b62b9f2c7dedcc7a84aae247793bdb6e03145",
+  "ui": [
+    "Existing LaunchTeamDialog selects Opus4.6/Medium/prompt",
+    "One native SDK/CLI input through localhost model and authoritative MCP task/message/Bash",
+    "Existing Stop closes/releases original native session before Quit",
+    "Original Launch settings survive renderer reload",
+    "One public app.relaunch; original held app exits0 without signal",
+    "Distinct successor writer lease; verified TEST successor receives one public Quit"
+  ],
+  "nativeInputObservations": {
+    "before": 8,
+    "after": 8
+  },
+  "originalAppExit": {
+    "exitCode": 0,
+    "signalCode": null,
+    "HostExitCode": "unavailable",
+    "HostSignalCode": "unavailable"
+  },
+  "writerOrdering": {
+    "originalHostAbsent": true,
+    "originalLease": {
+      "pid": 5722,
+      "token": "6fadc31d-1793-49e9-8ee2-6a01e36fb4c8",
+      "dev": 16777244,
+      "ino": 58269220
+    },
+    "newExclusiveLease": {
+      "pid": 9825,
+      "token": "633bc060-f0d8-4655-9b51-c78f1b92d6d1",
+      "dev": 16777244,
+      "ino": 58288022
+    },
+    "rule": "Existing no-replace PID/token publication forbids overlap; original release versus dead-owner recovery is not inferred from a missed absence sample"
+  },
+  "successorAbsence": {
+    "listenerAbsent": true,
+    "observedPidAbsent": true,
+    "HostPidAbsent": true,
+    "writerLockAbsent": true,
+    "exitCode": "unavailable",
+    "signalCode": "unavailable",
+    "naturalExitQualified": false
+  },
+  "cleanup": {
+    "processGroup": 5485,
+    "remaining": [],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "capturedHostObserved": true,
+    "capturedHostAbsent": true,
+    "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+  },
+  "candidateVerifiedAfterCleanup": true,
+  "earlierFailure": {
+    "jobId": "fe27ff1be8e7e7ac28a454952271692d",
+    "retentionJobId": "b804bf297964430c17cbba656333f2d1",
+    "reason": "Readiness harness compared Electron file location.origin against WHATWG URL.origin; stopped before UI input. Original remains INCOMPLETE and raw retained.",
+    "retentionRoot": "/Volumes/Transcend/dev/TEST-packed-p7-retainer-uucddGMi/retained-packed-p7-fe27ff1be8e7e7ac28a454952271692d"
+  },
+  "excluded": [
+    "Successor native custody or natural-exit qualification",
+    "SDK-root cleanup after owner crash",
+    "Vendor authentication/inference",
+    "Other supported OS tuples",
+    "Release/signing/install/publish/merge",
+    "Full Stage1 or whole M17/M18",
+    "Later production changes not present in this candidate"
+  ]
+}

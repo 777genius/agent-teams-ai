@@ -1,3 +1,5 @@
+import { desktopReadbackArtifactName } from './desktop-readback-fixture.ts';
+import { nativeProcessReadbackAction, verifyNativeProcessReadbackSource, readNativeProcessReadbackSnapshot } from './desktop-native-process-readback.ts';
 import { groupMembers, command } from './desktop-backend-observations.ts';
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import assert from 'node:assert/strict';
@@ -32,11 +34,17 @@ export async function qualifyColdProcessUi(
     evidence: Record<string, unknown>;
     assertOwnedRenderer(): void;
     group: number;
+    processReadbackMode?: boolean;
+    processReadbackSource?: Awaited<ReturnType<typeof verifyNativeProcessReadbackSource>>;
   }
 ) {
   assert.equal(process.env.LEGACY_M19_PROVIDER_UI_GO, '1');
   const { fixture } = options;
-  assertProcessFixture(fixture);
+  if (!options.processReadbackMode) assertProcessFixture(fixture);
+  assert.ok(fixture.uiSeed);
+  const continuationAction = options.processReadbackMode ? nativeProcessReadbackAction() : undefined;
+  const source = options.processReadbackSource;
+  assert.equal(Boolean(source), Boolean(options.processReadbackMode), 'original pre-app snapshot supplied only for cold readback');
   const before = row(
     JSON.parse(await readFile(join(fixture.root, 'native-process-before-crash.json'), 'utf8'))
   );
@@ -62,6 +70,12 @@ export async function qualifyColdProcessUi(
       'automatic uncertain stop retry',
     ],
   };
+  if (source) {
+    proof.originalContinuationSource = source;
+    proof.scope = continuationAction === 'observe'
+      ? 'Separate cold original-row read-only scope; original pre-app SDK-root failure remains INCOMPLETE/HOLD; zero Stop/input/launch/restart'
+      : 'Separate cold original-row scope with at most one existing original-ref Stop; SDK-root custody remains HOLD';
+  }
   options.evidence.nativeProcessUi = proof;
   const ui = createDesktopUiControls(cdp, {
     assertOwnedRenderer: options.assertOwnedRenderer,
@@ -138,7 +152,7 @@ export async function qualifyColdProcessUi(
         fromSurface: true,
       })
     );
-    const path = join(fixture.root, name);
+    const path = join(fixture.root, options.processReadbackMode ? desktopReadbackArtifactName(name) : name);
     await writeFile(path, Buffer.from(String(value.data), 'base64'), {
       mode: 0o600,
       flag: 'wx',
@@ -172,6 +186,34 @@ export async function qualifyColdProcessUi(
   })()`, 'rendered original process label/PID with visible geometry'));
   proof.originalRenderedRow = originalRenderedRow;
   proof.beforeScreenshot = await screenshot('ui-original-native-process-before-stop.png');
+  if (source) {
+    // Existing public read validates detachment; persisted phase/custody are not rewritten by this proof.
+    const runtimeResult = row(await cdp.evaluate(`window.electronAPI.agentBackend.invoke(${desktopJsLiteral({
+      handle: { handleId: fixture.handleId }, commandId: randomUUID(), operation: 'runtime.read',
+      payload: { memberId: 'alice-id', expectedGeneration: '1' },
+    })})`));
+    assert.equal(runtimeResult.ok, true, JSON.stringify(runtimeResult));
+    const runtime = row(runtimeResult.value);
+    assert.equal(runtime.memberId, 'alice-id'); assert.equal(runtime.generation, '1');
+    assert.equal(runtime.attached, false); assert.equal(runtime.nativeReady, false);
+    assert.equal(runtime.attachmentCapabilities, undefined);
+    proof.coldRuntimeRead = runtime;
+    assert.equal(await fileDigest(String(row(before.registry).path)), row(before.registry).sha256, 'read-only UI retains original registration bytes');
+    assert.deepEqual(await readNativeProcessReadbackSnapshot(fixture.root), source.snapshot,
+      'read-only phase creates no new Runtime input, session, command or Stop');
+    const childRows = groupMembers(options.group).filter(p => p.ppid === hostPid);
+    assert.deepEqual(childRows, [], 'cold Host has no allocated native provider child');
+    proof.nativeRuntimeAllocation = { observedHostChildren: childRows, inputReplay: false };
+    if (continuationAction === 'observe') {
+      assert.deepEqual(await stopReceipts(fixture.root), []);
+      assert.equal(originalRenderedRow.killCount, processRow.observation === 'same-live' ? 1 : 0);
+      proof.qualificationScope = 'cold-original-row-read-only-hold';
+      proof.coldReconciliation = 'ORIGINAL_CAPTURE_OBSERVED_WITHOUT_STOP';
+      proof.stopQualification = 'NOT_ATTEMPTED_READ_ONLY_SCOPE';
+      proof.nativeCleanupClaim = false; proof.runtimeCustody = 'HOLD'; proof.status = 'PASS';
+      return hostPid;
+    }
+  }
   if (processRow.observation === 'absent') {
     assert.equal(originalRenderedRow.killCount, 0, 'absent original row has no native Stop action');
     assert.deepEqual(await stopReceipts(fixture.root), []);
@@ -198,7 +240,7 @@ export async function qualifyColdProcessUi(
   );
   assert.equal(stopPoint, true);
   await writeFile(
-    join(fixture.root, 'ui-original-process-stop-attempted.json'),
+    join(fixture.root, options.processReadbackMode ? desktopReadbackArtifactName('ui-original-process-stop-attempted.json') : 'ui-original-process-stop-attempted.json'),
     JSON.stringify({
       processRef,
       id,

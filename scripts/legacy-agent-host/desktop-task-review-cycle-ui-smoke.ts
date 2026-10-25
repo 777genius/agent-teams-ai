@@ -5,6 +5,7 @@ import { basename, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { digest } from '../../packages/legacy-agent-host/dist/team/identity.js';
 import { fileDigest } from './desktop-backend-fixture.ts';
+import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import type { TeamCommand } from '@agent-teams/legacy-agent-host/team/contracts';
@@ -611,7 +612,25 @@ export async function runDesktopTaskNotificationUiSmoke(
     await hoverNotification();
   }
   await notificationAction('View in session');
-  await ui.waitRead(`Boolean(document.querySelector('[role="dialog"] #task-comment-${taskId}'))`, 'notification opens original Task detail');
+  const selectedOwner = hostTeamSelectionKey(options.handleId);
+  const navigationIdentity = record(await ui.waitRead(
+    `(() => {
+      const node=document.querySelector('[role="dialog"]');
+      if(!node||!node.getClientRects().length||!node.querySelector('#task-comment-${taskId}'))return null;
+      const key=Object.keys(node).find(key=>key.startsWith('__reactFiber$'));
+      for(let fiber=key?node[key]:null,depth=0;fiber&&depth<128;fiber=fiber.return,depth++){
+        const p=fiber.memoizedProps;
+        if(p?.open===true&&p.teamName===${desktopJsLiteral(selectedOwner)}&&p.task?.id===${desktopJsLiteral(taskId)}&&
+          p.sessionController?.identity?.teamName===${desktopJsLiteral(selectedOwner)}&&
+          p.sessionController.identity.taskId===${desktopJsLiteral(taskId)})
+          return {teamName:p.teamName,taskId:p.task.id,identity:p.sessionController.identity};
+      }
+      return null;
+    })()`, 'notification opens original Task detail at its exact captured owner'
+  ));
+  assert.equal(navigationIdentity.teamName, selectedOwner);
+  assert.equal(navigationIdentity.taskId, taskId);
+  proof.navigationIdentity = navigationIdentity;
   await ui.click('[role="dialog"] button', 'close notification original Task detail', 'Close');
   await hoverNotification();
   const beforeDelete = await notifications();
@@ -622,6 +641,11 @@ export async function runDesktopTaskNotificationUiSmoke(
   assert.equal(await readFile(taskPath, 'utf8'), frozenTask);
   assert.equal(await readFile(join(directory, 'kanban-state.json'), 'utf8'), frozenBoard);
   assert.deepEqual(await commands(), frozenCommands, 'notification actions never recreate or mutate the Task');
-  Object.assign(proof, { status: 'PASS', notificationId, target: notification.target, navigate: 'PASS', delete: 'PASS', markRead });
+  const runtimeSessions = await readDesktopNativeStopSessions(options.root).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === 'ENOENT' && error.path === join(options.root, 'hoststore/runtime-sessions')) return [];
+    throw error;
+  });
+  assert.deepEqual(runtimeSessions, [], 'notification controls never allocate native Runtime sessions');
+  Object.assign(proof, { status: 'PASS', notificationId, target: notification.target, navigate: 'PASS', delete: 'PASS', markRead, runtimeSessions });
 
 }

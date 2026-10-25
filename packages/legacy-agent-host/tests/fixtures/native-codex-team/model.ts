@@ -1,3 +1,4 @@
+import { readMixedGroupTurn, mixedGroupActions, assertMixedGroupReceipt, type MixedGroupTurn } from '../native-mixed-groups.ts';
 // Responses SSE shapes are reused from the archived actual Codex 0.162 proof.
 // This fixture scripts only inference; native app-server executes all tools.
 import assert from 'node:assert/strict';
@@ -55,7 +56,7 @@ export interface CaptureFileUpdateScenario {
   phase?(): 'assignment' | 'task-start';
 }
 export async function startCodexModel(
-  options: { peerMessaging?: boolean; captureFileUpdate?: CaptureFileUpdateScenario; allowModelProbes?: boolean; principalId?: () => string } = {}
+  options: { mixedGroups?: boolean; peerMessaging?: boolean; captureFileUpdate?: CaptureFileUpdateScenario; allowModelProbes?: boolean; principalId?: () => string } = {}
 ) {
   assert.ok(!(options.peerMessaging && options.captureFileUpdate), 'one bounded fixture scenario');
   if (options.captureFileUpdate)
@@ -113,25 +114,30 @@ export async function startCodexModel(
         return;
       }
       let turn = '';
+      let mixedGroup: MixedGroupTurn | undefined;
       for (const message of input.toReversed()) {
         if (message.role !== 'user') continue;
+        const group = options.mixedGroups ? readMixedGroupTurn(message.content, 'bob') : undefined;
         const capture =
           options.captureFileUpdate && JSON.stringify(message.content).includes(CAPTURE_TURN);
         const match = /CODEX_TEAM_(ONE|TWO)/.exec(JSON.stringify(message.content));
         const peer = options.peerMessaging
           ? nativePeerTurn(JSON.stringify(message.content), 'bob')
           : undefined;
-        if (capture || peer || match) {
-          turn = capture
+        if (group || capture || peer || match) {
+          mixedGroup = group;
+          turn = group?.turn ?? (capture
             ? options.captureFileUpdate?.phase?.() === 'assignment'
               ? CAPTURE_ASSIGNMENT
               : CAPTURE_TURN
-            : (peer ?? match![0]);
+            : (peer ?? match![0]));
           break;
         }
       }
       assert.ok(turn, 'actual native request retains deliberate TEST input');
       const step = counts.get(turn) ?? 0;
+      const groupActions = mixedGroup ? mixedGroupActions(mixedGroup) : undefined;
+      if (groupActions) assert.ok(step <= groupActions.length, 'finite mixed group turn');
       const peerActions = options.peerMessaging ? nativePeerActions(turn, 'bob') : undefined;
       const capture = options.captureFileUpdate;
       if (capture && turn === CAPTURE_ASSIGNMENT)
@@ -174,6 +180,10 @@ export async function startCodexModel(
         'actual native request contains fixed role/team/workspace instructions'
       );
       const tools = flattenTools(body.tools);
+      if (mixedGroup && step > 0) {
+        const last = input.filter(item => item.type === 'function_call_output').at(-1);
+        assertMixedGroupReceipt(mixedGroup, step, codexToolReceipt(last?.output));
+      }
       if (
         (turn === 'CODEX_TEAM_ONE' && [1, 2, 3, 5, 6, 7].includes(step)) ||
         (turn === 'CODEX_TEAM_TWO' && step === 2) ||
@@ -275,7 +285,7 @@ export async function startCodexModel(
               },
             ]
         : undefined;
-      const action = (captureActions ?? peerActions ?? (turn === 'CODEX_TEAM_ONE' ? one : two))[
+      const action = (groupActions ?? captureActions ?? peerActions ?? (turn === 'CODEX_TEAM_ONE' ? one : two))[
         step
       ];
       let output: RecordValue;

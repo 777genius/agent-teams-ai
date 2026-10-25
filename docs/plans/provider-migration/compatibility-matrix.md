@@ -34,6 +34,16 @@ M19 добавлена после проверки существующего pr
 
 ## Как закрывать строки
 
+[P7: actual packed Launch и автоматический app.relaunch](evidence/p7-packed-existing-launch-relaunch-ui-handoff.json):
+unsigned macOS arm64 `.app` прошёл прежний LaunchTeamDialog → native SDK/CLI input
+с localhost API/MCP → Stop/closed/released → settings reload → один public Relaunch.
+Исходный app завершился0 без сигнала; новый writer получил отдельный token, successor
+наблюдён через TEST renderer и закрыт одним public Quit. Candidate-owned Node/Host/SDK,
+ASAR и полный runtime census проверены; source epoch и 1356 файлов сохранены.
+Это scoped M17/M18 для packaged bytes из `3b351f324`; другие OS, vendor auth,
+successor native custody/natural exit и последующие production changes не квалифицированы.
+Первый pre-input отказ file-origin проверки harness сохранён отдельно; regression исправлена.
+
 [M16: stopped-Team fresh relaunch](evidence/m16-existing-fresh-relaunch-ui-handoff.json)
 подтвердил два отдельных native input через прежний Launch-диалог, новые технические
 identities, сохранение задачи и обоих ответов в чате, второй Stop/release до cleanup.

@@ -17,6 +17,7 @@ export async function prepareDesktopProofFixture(
   options: {
     candidateRuntime?: CandidateRuntimePaths;
     processUiMode?: boolean;
+    processReadbackMode?: boolean;
     approvalUiMode?: boolean;
     nativeReviewMode?: boolean;
     nativeReviewReadbackMode?: boolean;
@@ -46,6 +47,10 @@ export async function prepareDesktopProofFixture(
   }
   if (options.processUiMode) {
     assert.equal(mode, 'native-process-ui');
+    if (options.processReadbackMode) return readSavedDesktopFixture(
+      process.env.LEGACY_DESKTOP_READBACK_ROOT!,
+      process.env.LEGACY_DESKTOP_READBACK_RECEIPT_SHA256!, { nativeProcess: true }
+    );
     assert.ok(options.modelUrl, 'one original finite localhost process model');
     return prepareProcessFixture(repo, {
       pnpmEntry: pnpm,

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { runInNewContext } from 'node:vm';
 import { setImmediate } from 'node:timers/promises';
 
 import { readRendererBackendConnections } from './desktop-backend-observations.ts';
@@ -67,4 +68,64 @@ test('the original remaining startup deadline rejects a pending snapshot without
   await f.acknowledgments[0]!.promise; assert.equal(f.discovery(), 0);
   await rejected; assert.equal(f.discovery(), 0);
   held.resolve(ready); await setImmediate(); assert.equal(f.discovery(), 0);
+});
+
+
+function readinessRuntime(expression: string, href: string, origin: string): Promise<Record<string, unknown>> {
+  return Promise.resolve(runInNewContext(expression, {
+    URL,
+    location: { href, origin },
+    window: { __claudeTeamsUiDidInit: true,
+      electronAPI: { startup: { getStatus: async () => ({ ready: true, phase: 'ready' }) } } },
+    document: { getElementById: () => ({ childElementCount: 1 }) },
+  }) as Promise<Record<string, unknown>>);
+}
+async function observedReadinessExpression(rendererUrl: string, runtimeOrigin: string): Promise<string> {
+  const listeners = new Map<string, (value: unknown) => void>();
+  let evaluated = '';
+  const cdp = {
+    on(method: string, listener: (value: unknown) => void) { listeners.set(method, listener); },
+    async send(method: string) {
+      if (method === 'Runtime.enable') listeners.get('Runtime.executionContextCreated')?.({
+        context: { id: 7, auxData: { isDefault: true, frameId: 'TEST-packed-frame' } },
+      });
+      if (method === 'Page.getFrameTree') return { frameTree: { frame: { id: 'TEST-packed-frame', url: rendererUrl } } };
+      if (method === 'Runtime.evaluate') return { result: { value: { url: rendererUrl, readyState: 'complete' } } };
+      return {};
+    },
+    async evaluate(expression: string) {
+      evaluated = expression;
+      return readinessRuntime(expression, rendererUrl, runtimeOrigin);
+    },
+  };
+  const evidence: Record<string, unknown> = {};
+  await attachRendererDiagnostics(cdp, rendererUrl, evidence, { remainingMs: 1000, assertOwnedRenderer() {} });
+  const diagnostics = evidence.rendererDiagnostics as { startup: { appReadiness: { status: string } } };
+  assert.equal(diagnostics.startup.appReadiness.status, 'READY');
+  assert.ok(evaluated);
+  return evaluated;
+}
+
+test('packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin', { timeout: 5000 }, async () => {
+  const expected = 'file:///Volumes/TEST%20candidate/Agent.app/Contents/Resources/app.asar/out/renderer/index.html';
+  assert.equal(new URL(expected).origin, 'null');
+  const expression = await observedReadinessExpression(expected, 'file://');
+  for (const href of [expected, expected + '#same-document-route'])
+    assert.equal((await readinessRuntime(expression, href, 'file://')).originMatches, true, href);
+  for (const href of [
+    expected.replace('index.html', 'other.html'),
+    expected.replace('/TEST%20candidate/', '/OTHER/'),
+    expected.replace('file:///', 'file://foreign/'),
+    expected + '?different-document-input',
+    'https://foreign.example/index.html', 'not a URL',
+  ]) assert.equal((await readinessRuntime(expression, href, 'file://')).originMatches, false, href);
+});
+
+test('HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted', { timeout: 5000 }, async () => {
+  const expected = 'http://localhost:5173/index.html';
+  const expression = await observedReadinessExpression(expected, 'http://localhost:5173');
+  assert.equal((await readinessRuntime(expression, expected + '#same-document-route', 'http://localhost:5173')).originMatches, true);
+  for (const href of ['http://localhost:5173/other.html', 'http://localhost:5174/index.html',
+    'https://localhost:5173/index.html', 'http://foreign.example:5173/index.html'])
+    assert.equal((await readinessRuntime(expression, href, 'http://localhost:5173')).originMatches, false, href);
 });

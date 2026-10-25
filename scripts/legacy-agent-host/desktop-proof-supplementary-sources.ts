@@ -1,5 +1,7 @@
 /** Finite additions from the accepted horizontal/auth/harness handoffs; no filesystem discovery. */
 export const desktopProofSupplementarySources = [
+  'src/renderer/components/notifications/NotificationRow.tsx',
+  'src/renderer/components/team/dialogs/TaskDetailDialog.tsx',
   'scripts/legacy-agent-host/desktop-proof-sources.ts',
   'scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts',
   // Horizontal runtime/catalog/worktree production closure.
@@ -90,6 +92,7 @@ export const desktopProofSupplementarySources = [
   'scripts/legacy-agent-host/desktop-native-process-host.ts',
   'scripts/legacy-agent-host/desktop-native-process-model.ts',
   'scripts/legacy-agent-host/desktop-native-process-ui.ts',
+  'scripts/legacy-agent-host/desktop-native-process-readback.ts',
   'scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-native-review-model.ts',
   'scripts/legacy-agent-host/desktop-proof-bounds.ts',

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { verifyNativeProcessReadbackSource } from './desktop-native-process-readback.ts';
 import { verifyDesktopNativeQuitReadbackSource } from './desktop-native-quit-ui-smoke.ts';
 import { readNativeReviewRuntimeRecords } from './desktop-native-review-runtime.ts';
 import {
@@ -76,7 +77,7 @@ export function desktopReadbackArtifacts(
 export async function readSavedDesktopFixture(
   root: string,
   receiptSha256: string,
-  options: { nativeQuit?: boolean; review?: boolean; nativeReview?: boolean; nativeReviewContinuation?: boolean } = {}
+  options: { nativeQuit?: boolean; review?: boolean; nativeReview?: boolean; nativeReviewContinuation?: boolean; nativeProcess?: boolean } = {}
 ): Promise<Fixture> {
   assert.equal(await realpath(root), root);
   assert.match(basename(root), /^TEST-desktop-backend-[A-Za-z0-9]+$/);
@@ -112,10 +113,14 @@ export async function readSavedDesktopFixture(
   const handleId = String(record(descriptor.handles[0]).handleId);
   const seed = record(JSON.parse(await readFile(join(root, 'ui-seed-receipt.json'), 'utf8')));
   const taskId = String(record(seed.effects).taskId);
-  const subject = 'TEST persisted Host sidebar seed';
+  const subject = options.nativeProcess ? 'TEST native process cold-owner sidebar seed' : 'TEST persisted Host sidebar seed';
   const tasks = await readdir(join(root, 'hoststore/tasks/test-desktop-backend'));
   assert.ok(tasks.includes(taskId + '.json'));
-  if (options.nativeQuit) {
+  if (options.nativeProcess) {
+    await verifyNativeProcessReadbackSource(root, saved);
+    const task = record(JSON.parse(await readFile(join(root, 'hoststore/tasks/test-desktop-backend', taskId + '.json'), 'utf8')));
+    assert.equal(task.subject, subject);
+  } else if (options.nativeQuit) {
     await verifyDesktopNativeQuitReadbackSource(root, saved);
   } else if (options.nativeReviewContinuation) {
     await readNativeReviewContinuationSource(root, saved, nativeReviewContinuationStage());
@@ -151,7 +156,7 @@ export async function readSavedDesktopFixture(
     handleId,
     pins,
     sentinelLog: join(root, 'sentinel-invocations.ndjson'),
-    uiSeed: { taskId, subject, commandId: 'TEST-ui-offline-seed' },
+    uiSeed: { taskId, subject, commandId: options.nativeProcess ? 'TEST-process-ui-seed' : 'TEST-ui-offline-seed' },
     packageManager: saved.packageManager as Fixture['packageManager'],
     appEnvironment: desktopBackendEnvironment(root, node, descriptorPath, pins.descriptorSha256),
   };

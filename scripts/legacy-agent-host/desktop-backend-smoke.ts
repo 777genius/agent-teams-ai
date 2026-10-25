@@ -1,3 +1,4 @@
+import { verifyNativeProcessReadbackSource } from './desktop-native-process-readback.ts';
 import { checkpoint } from './desktop-resume-records.ts';
 import { connectCapturedDesktopApp, observePackedAppRelaunch, verifyCapturedDesktopBinding } from './desktop-captured-app.ts';
 import type { DesktopCdpPort as CdpPort, DesktopCdpLibrary as CdpLibrary } from './desktop-captured-app.ts';
@@ -108,7 +109,7 @@ async function main(): Promise<void> {
   const permittedSentinelObservation = (row: Record<string, unknown>) => (mode === 'skills-ui' && isSkillsMetadataRefusal(row)) || (!packed ? row.allowed === true : row.executable === 'shell-env' ? row.allowed === true : row.allowed === false && row.argc === 1 && Array.isArray(row.flags) && row.flags.length === 1 && row.flags[0] === '--version');
   if (packed) assert.equal(mode, 'native-launch-ui', 'one bounded packed workflow reuses the original native Launch proof');
   if (packedRelaunchMode) assert.ok(packed, 'automatic app relaunch is an explicit captured packed scope');
-  const { mixedMode, mixedModels: selectedMixedModels, processUiMode, processModel, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewUiMode, reviewReadbackMode, legacyImportMode, conversationMode, taskBoardUiMode, approvalUiMode, nativeStopMode, uiMode, launchDialogMode, createConfigMode, model } =
+  const { mixedMode, mixedModels: selectedMixedModels, processUiMode, processReadbackMode, processModel, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewUiMode, reviewReadbackMode, legacyImportMode, conversationMode, taskBoardUiMode, approvalUiMode, nativeStopMode, uiMode, launchDialogMode, createConfigMode, model } =
     await prepareDesktopProofMode(questionUiMode || startupDiagnosticMode ? 'team-ui' : mode, () => fixture.root, () => processFixtureBashCommand(fixture));
   conversationModel = model; mixedModels = selectedMixedModels;
   const pnpm = await realpath(process.env.LEGACY_DESKTOP_PNPM_PATH ?? '/opt/homebrew/bin/pnpm');
@@ -116,9 +117,10 @@ async function main(): Promise<void> {
     seedUiTask: true, pnpmEntry: pnpm, nativeClaude: { path: process.env.LEGACY_DESKTOP_CLAUDE_PATH!,
       sha256: 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f', modelUrl: questionModel!.url },
   }) : await prepareDesktopProofFixture(repo, mode, pnpm, {
-    processUiMode, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewReadbackMode, reviewUiMode, legacyImportMode, uiMode,
+    processUiMode, processReadbackMode, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewReadbackMode, reviewUiMode, legacyImportMode, uiMode,
     launchDialogMode, createConfigMode, nativeStopMode, approvalUiMode, ...(packed ? { candidateRuntime: packed.runtime } : {}), modelUrl: conversationModel?.url ?? mixedModels?.claude.url,
   });
+  const processReadbackSource = processReadbackMode ? await verifyNativeProcessReadbackSource(baseFixture.root, object(JSON.parse(await readFile(join(baseFixture.root, 'desktop-backend-receipt.json'), 'utf8')))) : undefined;
   if (mixedModels) await mixedModels.retainEvidenceAt(baseFixture.root);
   const fixture = questionUiMode ? await prepareDesktopCodexQuestionFixture(baseFixture, { executable: process.env.LEGACY_DESKTOP_CODEX_PATH!, model: questionModel! }) : mixedMode ? await prepareDesktopMixedNativeFixture(baseFixture, {
     models: selectedMixedModels!, codexPath: process.env.LEGACY_DESKTOP_CODEX_PATH!, openCodePath: process.env.LEGACY_DESKTOP_OPENCODE_PATH!,
@@ -180,6 +182,10 @@ async function main(): Promise<void> {
     object(evidence.pins).providerArchiveSha256 = packed.runtime.providerArtifacts.find(row => row.name === '@agent-teams/provider-implementations')!.sha256;
   }
   if (packedRelaunchMode) evidence.requestedProofMode = 'packed-app-relaunch-ui';
+  if (processReadbackSource) {
+    evidence.nativeProcessReadbackSource = processReadbackSource;
+    evidence.scope = 'Separate original M19 cold UI continuation only: no model server, native allocation, input, launch or crash replay; original pre-app INCOMPLETE/HOLD retained';
+  }
   const frozenSources = desktopProofSources;
   const selectedSourceHashes = await Promise.all(
     frozenSources.map(async (path) => ({ path, sha256: await fileDigest(join(repo, path)) }))
@@ -189,7 +195,7 @@ async function main(): Promise<void> {
   const receiptPath = join(fixture.root, artifacts.receipt);
   await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600, flag: 'wx' });
   console.log(JSON.stringify({ phase: 'prepared', receipt: receiptPath }));
-  await qualifyPreparedProcessRegistration({ enabled: processUiMode, fixture, model: processModel, evidence, receiptPath,
+  await qualifyPreparedProcessRegistration({ enabled: processUiMode && !processReadbackMode, fixture, model: processModel, evidence, receiptPath,
     verifySourceFreeze: () => verifyDesktopSourceFreeze(repo, frozenSources, selectedSourceHashes, evidence) });
   const log = createWriteStream(
     join(fixture.root, artifacts.appLog),
@@ -305,7 +311,7 @@ async function main(): Promise<void> {
     } else if (activitySource) {
       await runDesktopActivityUiSmoke(cdp, {root:fixture.root, source:activitySource, teamName:activitySource.teamName, memberName:activitySource.memberName, memberId:activitySource.memberId, handleId:fixture.handleId, evidence, assertOwnedRenderer:()=>assertOwnedCdpListener(group), assertNoNativeChildren:phase=>assertNoNativeHostChildren(group,fixture,phase)});
     } else if (processUiMode) {
-      hostPid = await qualifyColdProcessUi(cdp, { fixture, evidence, group, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
+      hostPid = await qualifyColdProcessUi(cdp, { fixture, evidence, group, processReadbackMode, processReadbackSource, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
     } else if (await runDesktopNativeQuitMode(cdp, {mode, root: fixture.root, seed: fixture.uiSeed, evidence, model: conversationModel, assertOwnedRenderer: () => assertOwnedCdpListener(group)})) {
       // Exact Quit/readback witnesses are finalized below before fallback cleanup.
     } else if (nativeReviewMode) {

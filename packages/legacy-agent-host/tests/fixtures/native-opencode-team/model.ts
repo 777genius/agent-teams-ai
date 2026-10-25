@@ -1,3 +1,4 @@
+import { readMixedGroupTurn, mixedGroupActions, assertMixedGroupReceipt, type MixedGroupTurn } from '../native-mixed-groups.ts';
 // Finite Chat Completions inference oracle. Actual OpenCode must execute the
 // offered MCP/Bash tools; this server never writes product or workspace files.
 import assert from 'node:assert/strict';
@@ -26,7 +27,7 @@ export interface CaptureFileUpdateScenario {
   phase(): 'assignment' | 'task-start';
 }
 export async function startOpenCodeModel(
-  options: { peerMessaging?: boolean; captureFileUpdate?: CaptureFileUpdateScenario; allowModelProbes?: boolean; principalId?: () => string } = {}
+  options: { mixedGroups?: boolean; peerMessaging?: boolean; captureFileUpdate?: CaptureFileUpdateScenario; allowModelProbes?: boolean; principalId?: () => string } = {}
 ) {
   assert.ok(!(options.peerMessaging && options.captureFileUpdate));
   if (options.captureFileUpdate)
@@ -82,25 +83,30 @@ export async function startOpenCodeModel(
         response.write(`data: ${JSON.stringify(event({}, 'stop'))}\n\n`); response.end('data: [DONE]\n\n'); return;
       }
       let turn = '';
+      let mixedGroup: MixedGroupTurn | undefined;
       for (const message of messages.toReversed()) {
         if (message.role !== 'user') continue;
+        const group = options.mixedGroups ? readMixedGroupTurn(message.content, 'carol') : undefined;
         const capture =
           options.captureFileUpdate && JSON.stringify(message.content).includes(CAPTURE_TURN);
         const match = /OPENCODE_TEAM_(ONE|TWO)/.exec(JSON.stringify(message.content));
         const peer = options.peerMessaging
           ? nativePeerTurn(JSON.stringify(message.content), 'carol')
           : undefined;
-        if (capture || peer || match) {
-          turn = capture
+        if (group || capture || peer || match) {
+          mixedGroup = group;
+          turn = group?.turn ?? (capture
             ? options.captureFileUpdate!.phase() === 'assignment'
               ? CAPTURE_ASSIGNMENT
               : CAPTURE_TURN
-            : (peer ?? match![0]);
+            : (peer ?? match![0]));
           break;
         }
       }
       assert.ok(turn, 'native request retains deliberate TEST business input');
       const step = counts.get(turn) ?? 0;
+      const groupActions = mixedGroup ? mixedGroupActions(mixedGroup) : undefined;
+      if (groupActions) assert.ok(step <= groupActions.length, 'finite mixed group turn');
       const peerActions = options.peerMessaging ? nativePeerActions(turn, 'carol') : undefined;
       const capture = options.captureFileUpdate;
       if (capture && turn === CAPTURE_ASSIGNMENT)
@@ -132,6 +138,10 @@ export async function startOpenCodeModel(
       const tools = (Array.isArray(body.tools) ? body.tools : [])
         .map(record)
         .map((tool) => String(record(tool.function).name));
+      if (mixedGroup && step > 0) {
+        const last = messages.filter(item => item.role === 'tool').at(-1);
+        assertMixedGroupReceipt(mixedGroup, step, nativeToolReceipt(last?.content));
+      }
       if (
         (turn === 'OPENCODE_TEAM_ONE' && [1, 2, 3, 5, 6, 7].includes(step)) ||
         (turn === 'OPENCODE_TEAM_TWO' && step === 2) ||
@@ -220,7 +230,7 @@ export async function startOpenCodeModel(
               },
             ]
         : undefined;
-      const action = (captureActions ??
+      const action = (groupActions ?? captureActions ??
         peerActions ??
         (turn === 'OPENCODE_TEAM_ONE' ? first : second))[step];
       let delta: Record<string, unknown>;

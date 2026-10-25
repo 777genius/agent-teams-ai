@@ -76,6 +76,7 @@ export async function startDesktopMixedModels(root: () => string) {
   assert.equal(process.env.LEGACY_DESKTOP_BACKEND_GO, '1');
   const claude = await startNativeTeamModel({
     allowModelProbes: true,
+    mixedGroups: true,
     uiGeneratedMessageIds: true,
     memberName: 'team-lead',
     principalId: () => readMixedCapturedPrincipal(root(), 'claude'),
@@ -85,10 +86,12 @@ export async function startDesktopMixedModels(root: () => string) {
   try {
     codex = await startCodexModel({
       allowModelProbes: true,
+    mixedGroups: true,
       principalId: () => readMixedCapturedPrincipal(root(), 'codex'),
     });
     opencode = await startOpenCodeModel({
       allowModelProbes: true,
+    mixedGroups: true,
       principalId: () => readMixedCapturedPrincipal(root(), 'opencode'),
     });
     const selected = { claude, codex, opencode };

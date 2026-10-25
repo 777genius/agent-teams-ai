@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { nativeProcessReadbackAction } from './desktop-native-process-readback.ts';
 import { startProcessModel } from './desktop-native-process-model.ts';
 import { readProcessServices } from './desktop-native-process-fixture.ts';
 import { startDesktopMixedModels } from './desktop-mixed-native-fixture.ts';
@@ -54,19 +55,21 @@ export async function prepareDesktopProofMode(
   );
   const mixedMode = mode === 'native-mixed-create-launch-ui';
   const processUiMode = mode === 'native-process-ui';
+  const processReadbackMode = processUiMode && process.env.LEGACY_DESKTOP_READBACK_ROOT !== undefined;
+  if (processReadbackMode) nativeProcessReadbackAction();
   if (processUiMode) {
     assert.equal(
       process.env.LEGACY_M19_PROVIDER_UI_GO,
       '1',
       'explicit native process registration/UI Stop GO'
     );
-    assert.equal(
+    if (!processReadbackMode) assert.equal(
       process.env.LEGACY_M19_ORIGINAL_HOST_CRASH_GO,
       '1',
       'explicit original held Host ChildProcess SIGKILL GO'
     );
   }
-  const processModel = processUiMode
+  const processModel = processUiMode && !processReadbackMode
     ? await startProcessModel({
         bashCommand: () => {
           assert.ok(processBashCommand, 'original prepared process fixture command');
@@ -104,7 +107,7 @@ export async function prepareDesktopProofMode(
     nativeReviewContinuationMode;
   const nativeReviewReadbackMode =
     mode === 'native-review-readback-ui' || nativeReviewContinuationMode;
-  const readbackMode =
+  const readbackMode = processReadbackMode ||
     mode === 'native-readback-ui' ||
     mode === 'native-quit-readback-ui' ||
     mode === 'native-activity-readback-ui';
@@ -279,6 +282,7 @@ export async function prepareDesktopProofMode(
     mixedMode,
     mixedModels,
     processUiMode,
+    processReadbackMode,
     processModel,
     nativeReviewMode,
     nativeReviewReadbackMode,

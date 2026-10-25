@@ -217,6 +217,16 @@ export async function runDesktopTeamUiSmoke(
   };
 }
 
+/** Document identity uses parsed href because Electron file location.origin is implementation-defined. */
+function rendererDocumentMatches(value: unknown, rendererUrl: string): boolean {
+  try {
+    const actual = new URL(String(value)), expected = new URL(rendererUrl);
+    return actual.origin === expected.origin && actual.protocol === expected.protocol &&
+      actual.host === expected.host && actual.pathname === expected.pathname &&
+      (expected.protocol !== 'file:' || actual.search === expected.search);
+  } catch { return false; }
+}
+
 /** Captures only finite module/load diagnostics, never request headers or bodies. */
 export async function attachRendererDiagnostics(
   cdp: UiCdpPort & {
@@ -239,11 +249,7 @@ export async function attachRendererDiagnostics(
   const noteContext = (event: Record<string, unknown>): void => {
     if (contextEvents.length < 96) contextEvents.push({ monotonicMs: Math.round(performance.now()), ...event });
   };
-  const expected = new URL(rendererUrl);
-  const sameDocument = (value: unknown): boolean => {
-    try { const u = new URL(String(value)); return u.origin === origin && u.pathname === expected.pathname; }
-    catch { return false; }
-  };
+  const sameDocument = (value: unknown): boolean => rendererDocumentMatches(value, rendererUrl);
   const send = async (method: string, params?: Record<string, unknown>): Promise<unknown> => {
     startup.assertOwnedRenderer();
     const command = { method, sentMs: Math.round(performance.now()) } as Record<string, unknown>;
@@ -369,7 +375,7 @@ export async function attachRendererDiagnostics(
     try {
       value = record(await bounded(cdp.evaluate(`(async () => {
         const status = window.electronAPI?.startup?.getStatus ? await window.electronAPI.startup.getStatus() : null;
-        return {originMatches:location.origin===${JSON.stringify(origin)},mainReady:status?.ready===true,
+        return {originMatches:(${rendererDocumentMatches.toString()})(location.href,${JSON.stringify(rendererUrl)}),mainReady:status?.ready===true,
           errorPresent:Boolean(status?.error),phase:typeof status?.phase==='string'?status.phase.slice(0,80):'bridge-pending',
           uiDidInit:window.__claudeTeamsUiDidInit===true,storePresent:Boolean(window.__agentTeamsDevStore),
           rootChildCount:document.getElementById('root')?.childElementCount??0};

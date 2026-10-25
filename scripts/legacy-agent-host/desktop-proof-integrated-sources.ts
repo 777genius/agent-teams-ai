@@ -1,6 +1,9 @@
 /** Finite source closure of the integrated lifecycle, WorkSync and member-action checkpoint. */
 export const desktopProofIntegratedSources = [
   'scripts/legacy-agent-host/desktop-proof-integrated-sources.ts',
+  'scripts/legacy-agent-host/desktop-mixed-group-ui-smoke.ts',
+  'scripts/legacy-agent-host/desktop-mixed-member-restart-ui-smoke.ts',
+  'packages/legacy-agent-host/tests/fixtures/native-mixed-groups.ts',
   'agent-teams-controller/src/index.js',
   'agent-teams-controller/src/internal/kanban.js',
   'agent-teams-controller/src/internal/kanbanStore.js',

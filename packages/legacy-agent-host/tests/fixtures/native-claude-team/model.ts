@@ -1,3 +1,4 @@
+import { readMixedGroupTurn, mixedGroupActions, assertMixedGroupReceipt, type MixedGroupTurn } from '../native-mixed-groups.ts';
 import { nativeGroupChatScript } from './group-chat.ts';
 import { assertNativeChatAttachments } from './chat-attachments.ts';
 import { contextCompactionScript } from '../native-claude-compaction/model.ts';
@@ -124,6 +125,7 @@ export async function startNativeTeamModel(
   options: {
     chatAttachments?: boolean;
     groupChats?: boolean;
+    mixedGroups?: boolean;
     ordinarySubagents?: { workspace: string; parentStopRequested?: () => boolean };
     contextCompaction?: CompactionScenario;
     requireVisibleReply?: boolean;
@@ -306,6 +308,7 @@ export async function startNativeTeamModel(
         'finite native model request budget'
       );
       let turn = '';
+      let mixedGroup: MixedGroupTurn | undefined;
       let turnText = '';
       for (const message of messages.toReversed()) {
         if (message.role !== 'user') continue;
@@ -317,16 +320,20 @@ export async function startNativeTeamModel(
                 .filter((block) => block.type === 'text')
                 .map((block) => block.text)
                 .join('\n');
+        const group = options.mixedGroups ? readMixedGroupTurn(text, 'team-lead') : undefined;
         const match = /NATIVE_TEAM_(ONE|TWO)/.exec(text);
         const peer = options.peerMessaging ? nativePeerTurn(text, 'alice') : undefined;
-        if (peer || match) {
-          turn = peer ?? match![0];
+        if (group || peer || match) {
+          mixedGroup = group;
+          turn = group?.turn ?? peer ?? match![0];
           turnText = text;
           break;
         }
       }
       assert.ok(turn, 'request is tied to a deliberate TEST input');
       const step = counters.get(turn) ?? 0;
+      const groupActions = mixedGroup ? mixedGroupActions(mixedGroup) : undefined;
+      if (groupActions) assert.ok(step <= groupActions.length, 'finite mixed group turn');
       if (options.chatAttachments && turn === 'NATIVE_TEAM_TWO' && step === 0)
         assertNativeChatAttachments(messages);
       const peerActions = options.peerMessaging ? nativePeerActions(turn, 'alice') : undefined;
@@ -352,6 +359,10 @@ export async function startNativeTeamModel(
           : []
       );
       const last = results.at(-1);
+      if (mixedGroup && step > 0) {
+        assert.notEqual(last?.is_error, true);
+        assertMixedGroupReceipt(mixedGroup, step, nativeToolReceipt(last?.content));
+      }
       if (
         (turn === 'NATIVE_TEAM_ONE' && [1, 2, 3, 5, 6, 7].includes(step)) ||
         (turn === 'NATIVE_TEAM_TWO' && step === 2) ||
@@ -478,7 +489,7 @@ export async function startNativeTeamModel(
           input: { commandId: 'native-reply-two', to: 'user', text: 'REPLY_NATIVE_TWO' },
         },
       ];
-      const action = (peerActions ?? (turn === 'NATIVE_TEAM_ONE' ? one : two))[step];
+      const action = (groupActions ?? peerActions ?? (turn === 'NATIVE_TEAM_ONE' ? one : two))[step];
       if (!action) {
         counters.set(turn, step + 1);
         emitResponse(
