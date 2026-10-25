@@ -76,9 +76,9 @@ paths are stopped during cleanup. Evidence remains available after cleanup.
 | Targeted removal        | Remove the managed Skill while preserving the independent local copy.                                                                                                |
 | Local editing           | Use the existing editor and file review; verify saved metadata and unchanged binary assets.                                                                          |
 | Delete and restart      | Delete the local copy, verify a durable private backup, stop the app and start it again using the same isolated state.                                               |
-| Restart-visible restore | Find the existing restore point, review restoration, restore exact bytes and verify no pending operation remains.                                                    |
+| Restart-visible restore | Distinguish both same-name save/delete points by visible action and recorded time after restart, select the exact deletion operation, confirm the same Go-selected point and restore exact bytes. |
 | Signed registry plugin  | Browse the current signed catalog, inspect the reviewed `cloudflare-docs` entry, install it for OpenCode and verify actual MCP configuration; then remove it.        |
-| Actual native tool call | Install a SHA-256-pinned source plugin through the ordinary UI, run real OpenCode with a controlled provider, and verify MCP initialization, discovery, one exact tool call and its returned nonce. |
+| Actual native tool call | Review the specific safe SEC302 warning reason, install a SHA-256-pinned source plugin through the ordinary UI, run real OpenCode with a controlled provider, and verify MCP initialization, discovery, one exact tool call and its returned nonce. |
 | Native tool removal     | Remove that plugin through the UI, start a fresh OpenCode session, and verify no advertised tool and no MCP connection. |
 
 The reviewed registry fixture is `cloudflare-docs` version `0.4.13-uap.1`, from the
@@ -124,6 +124,14 @@ restart, restoration must reproduce that edited `SKILL.md` and the same binary
 bytes. Focused planner tests separately cover omitted reference documents, nested
 scripts, and existing custom text/binary README files. A preview that deletes
 unrepresented files is a product failure, not a reason to relax assertions.
+
+Restore selection uses the exact operation IDs and recorded timestamps returned
+by Go, with both Before save and Before deletion labels visibly checked after
+restart. Confirmation must contain the same selected point from the retained
+plan; list position is not identity. The receipt preserves both points and the
+selection, and screenshots retain the expanded list and confirmation. The source
+plugin review must display the trusted SEC302 insecure-HTTP reason before Apply;
+scanner-controlled raw messages or paths are not needed for this assertion.
 
 ## Evidence and limitations
 

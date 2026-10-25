@@ -29,6 +29,7 @@ import { ManagedInstallationState } from './ManagedInstallationState';
 import { ManagedSkillSourcePreview } from './ManagedSkillSourcePreview';
 import { ManagementOperationView } from './ManagementOperationView';
 import { ManagementPlanDialog } from './ManagementPlanDialog';
+import { ManagementRestorePoint } from './ManagementRestorePoint';
 
 import type { ExtensionClient, SkillCopyCandidate } from '../../contracts';
 import type { ManagedExtensionsModel } from '../hooks/useManagedExtensions';
@@ -303,8 +304,11 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
               <div
                 key={backup.operationId}
                 className="flex flex-wrap items-center justify-between gap-2"
+                data-testid="uap-restore-point"
+                data-restore-operation-id={backup.operationId}
+                data-original-action={backup.originalAction}
               >
-                <span className="text-sm">{backup.skillName}</span>
+                <ManagementRestorePoint backup={backup} />
                 <Button
                   size="sm"
                   variant="outline"

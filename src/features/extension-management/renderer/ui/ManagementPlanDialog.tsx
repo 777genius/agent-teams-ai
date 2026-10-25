@@ -11,6 +11,8 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 
+import { ManagementRestorePoint } from './ManagementRestorePoint';
+
 import type { ManagementPlan, ManagementSession } from '../../contracts';
 
 export const ManagementPlanDialog = ({
@@ -83,6 +85,16 @@ export const ManagementPlanDialog = ({
         </DialogHeader>
         {(plan?.action === 'update' || plan?.action === 'sync') && (
           <p className="text-xs text-text-muted">{t('uap.updatePolicy')}</p>
+        )}
+        {plan?.restorePoint && (
+          <div
+            className="space-y-2 rounded-md border border-border p-3"
+            data-testid="uap-selected-restore-point"
+            data-restore-operation-id={plan.restorePoint.operationId}
+          >
+            <p className="text-sm font-medium">{t('uap.restoreSelectedPoint')}</p>
+            <ManagementRestorePoint backup={plan.restorePoint} />
+          </div>
         )}
         {plan?.actions.map((action, index) => (
           <div

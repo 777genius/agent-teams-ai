@@ -760,6 +760,13 @@
     "backToSource": "Back to discovered Skills",
     "installationDetails": "Installation details",
     "restoreFilesAction": "Restore files",
-    "keep": "Keep unchanged"
+    "keep": "Keep unchanged",
+    "restoreBeforeSave": "Before save",
+    "restoreBeforeDelete": "Before deletion",
+    "restoreBeforeRestore": "Before restoration",
+    "restoreEarlierCopy": "Earlier saved copy",
+    "restoreTimeUnknown": "Time not recorded",
+    "restorePointId": "Restore point ID",
+    "restoreSelectedPoint": "Selected restore point"
   }
 }

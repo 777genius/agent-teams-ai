@@ -506,6 +506,15 @@ async function nativeToolUse(f: Awaited<ReturnType<typeof fixture>>) {
     'source plugin review with ordinary security assessment',
     120_000
   );
+  const warningReason = 'configuration contains an insecure http:// endpoint';
+  await wait(
+    `Array.from(document.querySelector('[role=dialog]')?.querySelectorAll('p') ?? []).some(element =>
+      element.checkVisibility({checkOpacity: true, checkVisibilityCSS: true}) &&
+      element.textContent?.includes('SEC302') &&
+      element.textContent?.includes(${JSON.stringify(warningReason)}))`,
+    'specific security warning reason before source installation'
+  );
+  evidence.sourceSecurityWarning = { code: 'SEC302', reason: warningReason };
   await screenshot(path.join(f.shots, '15-source-plugin-review.png'));
   await reviewAndApply(pluginPanel);
   const entry = (await environment()).entries.find((item) => item.alias === toolPluginName);
@@ -686,9 +695,12 @@ async function localSkillLifecycle(f: Awaited<ReturnType<typeof fixture>>, copie
   );
   await assert.rejects(readFile(path.join(copied, 'SKILL.md')));
   const backups = (await environment()).localSkillBackups ?? [];
+  const skillBackups = backups.filter((backup) => backup.skillName === path.basename(copied));
+  const beforeSavePoint = skillBackups.find((backup) => backup.originalAction === 'upsert');
+  const selectedRestorePoint = skillBackups.find((backup) => backup.originalAction === 'delete');
   assert(
-    backups.some((backup) => backup.skillName === path.basename(copied)),
-    'delete must publish a durable restore point'
+    skillBackups.length >= 2 && beforeSavePoint?.recordedAt && selectedRestorePoint?.recordedAt,
+    'edit and delete must publish distinguishable durable restore points'
   );
   await stop(f.root);
   await start(f);
@@ -706,9 +718,36 @@ async function localSkillLifecycle(f: Awaited<ReturnType<typeof fixture>>, copie
   await openSkills();
   const restore = `${panel}.querySelector('[data-testid=uap-restore-points]')`;
   await click(`${restore}?.querySelector('summary')`);
-  const row = `Array.from(${restore}.querySelectorAll('div')).find(e=>e.querySelector('span')?.textContent==='${path.basename(copied)}')`;
+  const savedRow = `Array.from(${restore}.querySelectorAll('[data-testid=uap-restore-point]')).find(element =>
+    element.dataset.originalAction === 'upsert' &&
+    element.dataset.restoreOperationId === ${JSON.stringify(beforeSavePoint.operationId)})`;
+  await wait(
+    `${savedRow}?.checkVisibility({checkOpacity: true, checkVisibilityCSS: true}) &&
+      ${savedRow}?.textContent?.includes('Before save') &&
+      ${savedRow}?.querySelector('time')?.dateTime === ${JSON.stringify(beforeSavePoint.recordedAt)}`,
+    'durable before-save restore point remains visibly distinct'
+  );
+  const row = `Array.from(${restore}.querySelectorAll('[data-testid=uap-restore-point]')).find(element =>
+    element.dataset.originalAction === 'delete' &&
+    element.dataset.restoreOperationId === ${JSON.stringify(selectedRestorePoint.operationId)})`;
+  await wait(
+    `${row}?.checkVisibility({checkOpacity: true, checkVisibilityCSS: true}) &&
+      ${row}?.textContent?.includes('Before deletion') &&
+      ${row}?.querySelector('time')?.dateTime === ${JSON.stringify(selectedRestorePoint.recordedAt)}`,
+    'durable before-deletion restore point'
+  );
+  evidence.restorePoints = [beforeSavePoint, selectedRestorePoint];
+  await screenshot(path.join(f.shots, '09-restore-points.png'));
   await click(button('Review restoration', row));
   await wait(button('Apply changes'), 'restart-visible local restoration review');
+  const reviewed = `document.querySelector('[data-testid=uap-selected-restore-point]')`;
+  await wait(
+    `${reviewed}?.dataset.restoreOperationId === ${JSON.stringify(selectedRestorePoint.operationId)} &&
+      ${reviewed}?.textContent?.includes('Before deletion') &&
+      ${reviewed}?.querySelector('time')?.dateTime === ${JSON.stringify(selectedRestorePoint.recordedAt)}`,
+    'the same authoritative restore point in confirmation'
+  );
+  evidence.selectedRestorePoint = selectedRestorePoint;
   await screenshot(path.join(f.shots, '09-restart-restore-review.png'));
   await reviewAndApply();
   assert.equal(await readFile(path.join(copied, 'SKILL.md'), 'utf8'), edited);

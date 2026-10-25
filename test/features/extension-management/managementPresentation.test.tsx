@@ -12,6 +12,7 @@ import type { ManagedExtensionsModel } from '../../../src/features/extension-man
 
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
+  useLocaleFormatters: () => ({ dateTime: (value: string) => value }),
 }));
 vi.mock('@renderer/components/chat/viewers/MarkdownViewer', () => ({ MarkdownViewer: () => null }));
 vi.mock('@renderer/components/extensions/skills/SkillImportDialog', () => ({
@@ -182,6 +183,100 @@ describe('management recovery and availability UI', () => {
     const root = renderPanel(true);
     expect(button(root, 'uap.fromSource').disabled).toBe(false);
     expect(button(root, 'uap.install').disabled).toBe(false);
+  });
+  it('distinguishes same-name restore points and confirms the exact point returned by the engine', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+    const value = model(true);
+    const beforeSave = {
+      operationId: 'before-save',
+      rootId: 'local-root',
+      skillName: 'same-name',
+      path: '/fixture/backups/before-save',
+      recordedAt: '2026-10-25T10:00:00Z',
+      originalAction: 'upsert' as const,
+    };
+    const beforeDelete = {
+      ...beforeSave,
+      operationId: 'before-delete',
+      path: '/fixture/backups/before-delete',
+      recordedAt: '2026-10-25T11:00:00Z',
+      originalAction: 'delete' as const,
+    };
+    value.environment!.localSkillBackups = [beforeSave, beforeDelete];
+    value.restoreLocal = vi.fn(() => Promise.resolve());
+    try {
+      await act(async () => {
+        root.render(createElement(ManagedExtensionsPanel, { kind: 'skill', model: value }));
+      });
+      const first = container.querySelector<HTMLElement>(
+        '[data-restore-operation-id="before-save"]'
+      )!;
+      const second = container.querySelector<HTMLElement>(
+        '[data-restore-operation-id="before-delete"]'
+      )!;
+      expect(first.textContent).toContain('uap.restoreBeforeSave');
+      expect(second.textContent).toContain('uap.restoreBeforeDelete');
+      expect(first.querySelector('time')!.dateTime).toBe(beforeSave.recordedAt);
+      expect(second.querySelector('time')!.dateTime).toBe(beforeDelete.recordedAt);
+      await act(async () => button(second, 'uap.restoreFiles').click());
+      expect(value.restoreLocal).toHaveBeenCalledExactlyOnceWith(
+        'local-root',
+        'same-name',
+        'before-delete'
+      );
+      // A later list refresh must not replace the engine's selected, reviewed restore point.
+      value.environment!.localSkillBackups = [beforeSave];
+      value.plan = {
+        planId: 'restore-plan',
+        contextId: 'engine-a',
+        action: 'local_skill',
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        confirmable: true,
+        actions: [],
+        warnings: [],
+        conflicts: [],
+        restorePoint: beforeDelete,
+      };
+      await act(async () => {
+        root.render(createElement(ManagedExtensionsPanel, { kind: 'skill', model: value }));
+      });
+      const reviewed = document.querySelector<HTMLElement>(
+        '[data-testid="uap-selected-restore-point"]'
+      )!;
+      expect(reviewed.dataset.restoreOperationId).toBe(beforeDelete.operationId);
+      expect(reviewed.textContent).toContain('uap.restoreBeforeDelete');
+      expect(reviewed.querySelector('time')!.dateTime).toBe(beforeDelete.recordedAt);
+      expect(reviewed.textContent).not.toContain('before-save');
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+      vi.unstubAllGlobals();
+    }
+  });
+  it('keeps legacy restore points identifiable without inventing missing metadata', () => {
+    const value = model(true);
+    value.environment!.localSkillBackups = [
+      {
+        operationId: 'legacy-point-12345678',
+        rootId: 'local-root',
+        skillName: 'same-name',
+        path: '/fixture/backups/legacy',
+      },
+    ];
+    const root = document.createElement('div');
+    root.innerHTML = renderToStaticMarkup(
+      createElement(ManagedExtensionsPanel, { kind: 'skill', model: value })
+    );
+    const point = root.querySelector<HTMLElement>('[data-testid="uap-restore-point"]')!;
+    expect(point.textContent).toContain('uap.restoreEarlierCopy');
+    expect(point.textContent).toContain('uap.restoreTimeUnknown');
+    expect(point.textContent).toContain('12345678');
+    expect(point.querySelector('time')).toBeNull();
+    expect(point.querySelector('details')!.open).toBe(false);
+    expect(point.querySelector('details')!.textContent).toContain('legacy-point-12345678');
   });
   it('keeps a separate Skill revision without forwarding it into plugin installation', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);

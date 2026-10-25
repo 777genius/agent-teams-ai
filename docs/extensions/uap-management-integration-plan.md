@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v11; noninteractive native input correction and final current-commit qualification.
+Status: implementation plan v12; reviewed restore selection, useful warning reasons and matched SDK/native source qualification.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -13,7 +13,64 @@ commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
 
-## Current checkpoint — v11 (2026-10-25)
+## Current checkpoint — v12 (2026-10-25)
+
+The completed [desktop run 40189232897](https://github.com/777genius/agent-teams-ai/actions/runs/40189232897)
+passed on head `42c412648cd513f4ca2d9656aaf5ceff71e2e323`, synthetic merge
+`7349c4ded9d9662ae87015efbe72fedf6a63c241`, with UAP source 5224. The
+[full receipt](https://github.com/777genius/agent-teams-ai/pull/989#issuecomment-6397195988)
+contains 19 screenshots, zero renderer errors and actual OpenCode MCP
+initialize/list/call with the exact nonce returned to the scripted provider.
+After UI removal a fresh native process made zero MCP requests and offered no
+tool. The previously failing stdin-EOF scenario is therefore now qualified for
+those bytes. The same head passed all four test shards, all three lint shards,
+canonical validate and the complete bootstrap platform matrix. Its Windows task
+smoke and remaining package jobs were still pending at this checkpoint; it is
+not presented as a completed Full qualification.
+
+The independent screenshot review identified two P2 usability issues. The
+following minimal changes resolve them using the existing panel and review flow:
+
+- Same-name restore points now show the original action and a localized recorded
+  time. Both the list and confirmation use a small shared renderer. Confirmation
+  takes the selected point from Go's prepared plan, so refreshing the list cannot
+  substitute another point. Existing old records show honest missing-data labels;
+  full IDs and paths stay in Details. All 29 locale namespaces and generated types
+include the labels. No new history subsystem or selection workflow is added.
+- The updated Go engine projects specific, bounded security warning reasons into
+  the existing warning area. Arbitrary scanner messages/paths are not exposed;
+  unknown or unpublished details are identified explicitly. The actual source
+  fixture must display `SEC302: configuration contains an insecure http:// endpoint`
+  before Apply. Blocking security policy is unchanged.
+
+The new matched source is
+`8645eb5e71321f9321b8e742b8eda74408b55f13`, version
+`0.1.91+agentteams.8645eb5e7132`. The SDK was rebuilt and packed from that clean
+committed checkout; SHA-256
+`02d921a6466a7eca86c8161e8d6de0a4ac9b7ee0ed1135de3f27d12bdfcbea0e`.
+The package reference, lockfile and provenance name the same archive. The existing
+staging path builds the native executable from the identical reviewed source.
+
+Independent backend and frontend critics found no remaining P1/P2 in these
+changes. Seventeen focused presentation tests, scoped production lint, formatting
+and the changed extensions namespace checks passed. The newly packed SDK passes
+the desktop E2E TypeScript check and all 26 existing facade tests. The local full
+typecheck stopped at the already observed missing `fastmcp` dependency in the MCP
+package; that incomplete local installation is not a passing canonical check.
+Current UAP Required has already passed generated
+contract drift, SDK protocol/lifecycle, actual packed-consumer and all four lint
+jobs; its main test lane remains in progress. Final current-app canonical CI,
+desktop and package receipts remain required after publication.
+
+The strengthened real desktop journey now checks that both same-name save/delete
+rows are visibly distinguishable after restart, selects by exact operation ID,
+checks the same point/time in confirmation and restores exact bytes. It retains
+both points and the selected point in its receipt. Prior 5224 receipts are not
+reassigned to the new engine. Formal CodeQL disposition, live-model/OAuth
+qualification and the separate S25/S26 project/Host prerequisites remain explicit
+boundaries; no protection or scanner rule is bypassed.
+
+## Previous checkpoint — v11 (2026-10-25)
 
 The clean desktop run on app `501916f1532d0c2bd48eb4867a09228116009c5f`,
 synthetic merge `3cbfb0b8237770a62ad40ac68d571f2da1c25584`, completed the existing

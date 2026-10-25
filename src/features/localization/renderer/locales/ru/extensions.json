@@ -760,6 +760,13 @@
     "backToSource": "Вернуться к найденным навыкам",
     "installationDetails": "Подробности установки",
     "restoreFilesAction": "Восстановить файлы",
-    "keep": "Оставить без изменений"
+    "keep": "Оставить без изменений",
+    "restoreBeforeSave": "До сохранения",
+    "restoreBeforeDelete": "До удаления",
+    "restoreBeforeRestore": "До восстановления",
+    "restoreEarlierCopy": "Предыдущая сохранённая копия",
+    "restoreTimeUnknown": "Время не записано",
+    "restorePointId": "Идентификатор точки",
+    "restoreSelectedPoint": "Выбранная точка восстановления"
   }
 }
