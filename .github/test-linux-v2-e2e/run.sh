@@ -39,7 +39,14 @@ unset KIMI_TEST_API_KEY
 
 (cd "$APP" && exec setsid xvfb-run -a -s "-screen 0 1440x900x24" pnpm dev:mcp --noSandbox) >"$OUT/dev.log" 2>&1 &
 DEV=$!
-cleanup() { kill -TERM -- "-$DEV" 2>/dev/null || kill -TERM "$DEV" 2>/dev/null; sleep 5; kill -KILL -- "-$DEV" 2>/dev/null || true; }
+collect() {
+  # Sanitized diagnostics only: fixed categories and phases, no credentials.
+  find "$W" -path '*diagnostics*' -name '*.json' -not -path '*/node_modules/*' -size -64k 2>/dev/null | while read -r f; do
+    mkdir -p "$OUT/diagnostics"; cp "$f" "$OUT/diagnostics/$(echo "$f" | sha256sum | cut -c1-12)-$(basename "$f")"
+  done
+  find "$W" -path '*diagnostics*' -name '*.json' -not -path '*/node_modules/*' 2>/dev/null | sed "s|$W/||" > "$OUT/diagnostics-index.txt" || true
+}
+cleanup() { collect; kill -TERM -- "-$DEV" 2>/dev/null || kill -TERM "$DEV" 2>/dev/null; sleep 5; kill -KILL -- "-$DEV" 2>/dev/null || true; }
 trap cleanup EXIT
 
 node "$HERE/cdp.mjs" wait 9222 || { echo "app did not become ready"; tail -60 "$OUT/dev.log"; exit 1; }
@@ -49,15 +56,11 @@ KIMI_TEST_API_KEY="$KEY" node "$HERE/cdp.mjs" connect "$PROJECT" >"$OUT/connect.
 CONNECT=$?
 cat "$OUT/connect.json"
 unset KEY
-if [ "$CONNECT" -ne 0 ]; then echo "provider connect failed"; exit 1; fi
+if [ "$CONNECT" -ne 0 ]; then echo "provider connect failed"; collect; cat "$OUT"/diagnostics/*.json 2>/dev/null; exit 1; fi
 
 TEAM="v2-linux-${VERSION//./}"
 node "$HERE/e2e.mjs" "$TEAM" "$PROJECT" "$MODEL" "$W/claude-root" "$OUT" 9222
 RESULT=$?
 echo "e2e exit=$RESULT (connect exit=$CONNECT)"
 git -C "$PROJECT" status --short >"$OUT/project-status.txt" 2>&1 || true
-# Sanitized diagnostics only: categories/phases, no credentials.
-find "$HOME" "$W/userdata" -path '*diagnostics*' -name '*.json' -size -64k 2>/dev/null | while read -r f; do
-  mkdir -p "$OUT/diagnostics"; cp "$f" "$OUT/diagnostics/$(echo "$f" | sha256sum | cut -c1-12)-$(basename "$f")"
-done
 exit "$RESULT"
