@@ -27,6 +27,7 @@ import {
   realTaskPrompt,
   verificationInstruction,
 } from './opencode-native-real-task-prompts';
+import { isOpenCodeV2QualifiedVersion } from '../../src/features/opencode-compatibility/core/domain/pinnedOpenCodeV2Contract';
 import { redactLaunchFailureArtifactText } from '../../src/main/services/team/TeamLaunchFailureArtifactPack';
 import {
   NativeDesktopIpcError,
@@ -2115,7 +2116,8 @@ async function main() {
   preproofStage = 'version_validate';
   const version = /^(?:opencode\s*v?\s*)?(\d+\.\d+\.\d+)$/.exec(measured.stdout.trim())?.[1];
   assert(
-    version && (/^1\./.test(version) || ['2.0.0', '2.0.32'].includes(version)),
+    // V2: only a version the pinned runtime qualified for team launch on this platform.
+    version && (/^1\./.test(version) || isOpenCodeV2QualifiedVersion(version)),
     'Approved OpenCode version required'
   );
   const bundled =

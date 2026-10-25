@@ -7,6 +7,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
+import { openCodeV2ContractQualifies, readOpenCodeV2Contract } from '../src/features/opencode-compatibility/core/domain/openCodeV2Contract.ts';
 import { resolveLiveSmokeOrchestratorCliPath } from './lib/live-smoke-runtime.mjs';
 import { preflightOpenCodeLiveEnvironment } from './lib/opencode-live-preflight.mjs';
 
@@ -31,18 +32,12 @@ export const ISOLATED_PATH_KEYS = [
 const OWNERSHIP_FILE = '.opencode-proof-owned.json';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-// V2 versions follow the pinned runtime's published range (runtime.lock.json opencodeV2);
-// the runtime itself refuses unqualified versions at launch.
-function inPinnedOpenCodeV2Range(version) {
-  const range = JSON.parse(fs.readFileSync(path.join(repoRoot, 'runtime.lock.json'), 'utf8')).opencodeV2?.range;
-  const parse = (value) => typeof value === 'string' && /^\d+\.\d+\.\d+$/.test(value) ? value.split('.').map(Number) : null;
-  const [release, minimum, below] = [parse(version), parse(range?.minimum), parse(range?.below)];
-  if (!release || !minimum || !below) return false;
-  const compare = (left, right) => {
-    const index = left.findIndex((part, position) => part !== right[position]);
-    return index === -1 ? 0 : left[index] - right[index];
-  };
-  return compare(release, minimum) >= 0 && compare(release, below) < 0;
+// V2 versions follow the pinned runtime's contract (runtime.lock.json opencodeV2): FULL runs
+// only a version the runtime qualified for team launch on this platform.
+function qualifiedPinnedOpenCodeV2Version(version, platformKey) {
+  const contract = readOpenCodeV2Contract(
+    JSON.parse(fs.readFileSync(path.join(repoRoot, 'runtime.lock.json'), 'utf8')).opencodeV2);
+  return contract !== null && openCodeV2ContractQualifies(contract, [platformKey], version);
 }
 
 /** Passive generation/model qualification. FULL still proves actual readiness,
@@ -51,6 +46,7 @@ export async function preflightOpenCodeFullTeamEnvironment(input, {
   spawn = spawnSync,
   legacyPreflight = preflightOpenCodeLiveEnvironment,
   platform = process.platform,
+  arch = process.arch,
 } = {}) {
   assertOwnedSmokeEnvironment(input.env, 'FULL');
   if (input.projectPath !== input.env.OPENCODE_E2E_PROJECT_PATH)
@@ -64,7 +60,7 @@ export async function preflightOpenCodeFullTeamEnvironment(input, {
   const version = /^(?:opencode v)?((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*))(?:\r?\n)?$/.exec(measured.stdout);
   if (!version || version[0] !== measured.stdout) return unavailable('version-output');
   if (version[1].startsWith('1.')) return legacyPreflight(input);
-  if (!inPinnedOpenCodeV2Range(version[1]) || !['linux', 'darwin'].includes(platform))
+  if (!['linux', 'darwin'].includes(platform) || !qualifiedPinnedOpenCodeV2Version(version[1], `${platform}-${arch}`))
     return unavailable('generation-policy');
   if (!Array.isArray(input.requiredModels) || input.requiredModels.length !== 1 ||
       input.requiredModels[0] !== input.env.OPENCODE_E2E_MODEL ||

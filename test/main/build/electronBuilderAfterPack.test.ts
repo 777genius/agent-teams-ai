@@ -107,12 +107,11 @@ function writePortableBunPtyFixtures(
     ['win32', 'arm64', 'rust_pty_arm64.dll', createPortableExecutableBuffer('arm64')],
   ] as const;
   const retained: { path: string; bytes: Buffer }[] = [];
-  for (const prefix of ['', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/', '@opencode/server-v2.1.4/node_modules/@opencode/core/node_modules/']) {
-    for (const [p, a, name, bytes] of libraries) {
-      const file = path.join(graph, prefix, 'bun-pty/rust-pty/target/release', name);
-      writeFile(file, bytes);
-      if (p === platform && (a === arch || arch === 'universal')) retained.push({ path: file, bytes });
-    }
+  // The runtime hoists its single pinned bun-pty for every staged graph.
+  for (const [p, a, name, bytes] of libraries) {
+    const file = path.join(graph, 'bun-pty/rust-pty/target/release', name);
+    writeFile(file, bytes);
+    if (p === platform && (a === arch || arch === 'universal')) retained.push({ path: file, bytes });
   }
   return retained;
 }
@@ -518,8 +517,8 @@ describe('electron-builder afterPack', () => {
     const mixedDirectoryFile = path.join(graph, '@opencode/core/node_modules/tree-sitter-bash/prebuilds', platform === 'linux' ? 'darwin-arm64' : 'linux-arm64', 'compatible-extra.node');
     writeFile(mixedDirectoryFile, targetBytes);
     await afterPackModule({appOutDir: tempDir, electronPlatformName: platform, arch: archCode});
-    // One tree-sitter target and one or two bun-pty targets in each of the three graph positions.
-    expect(retained).toHaveLength(platform === 'linux' ? 9 : 6);
+    // One tree-sitter target in each of the three graph positions and one or two hoisted bun-pty targets.
+    expect(retained).toHaveLength(platform === 'linux' ? 5 : 4);
     for (const file of retained) expect(fs.readFileSync(file.path)).toEqual(file.bytes);
     expect(fs.readFileSync(mixedDirectoryFile)).toEqual(targetBytes);
     expect(fs.existsSync(documentation)).toBe(true);
@@ -536,20 +535,18 @@ describe('electron-builder afterPack', () => {
     const graph = path.join(tempDir, resources, 'runtime/local-cli/node_modules');
     const retained = writePortableBunPtyFixtures(graph, platform, arch);
     await afterPackModule({ appOutDir: tempDir, electronPlatformName: platform, arch: archCode });
-    expect(retained).toHaveLength(6); // Both Linux libc variants, or both Darwin architectures, in each package.
+    expect(retained).toHaveLength(2); // Both Linux libc variants, or both Darwin architectures.
     for (const file of retained) expect(fs.readFileSync(file.path)).toEqual(file.bytes);
     await expect(validateNativeBinaries(tempDir, platform, arch)).resolves.toEqual([]);
   });
 
   it.each([
-    ['missing sibling', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release/librust_pty_musl.so', null],
-    ['malformed sibling', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release/librust_pty_musl.so', Buffer.from('invalid')],
-    ['wrong sibling format', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release/librust_pty_musl.so', createElfBuffer('x64')],
-    ['wrong sibling architecture', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release/librust_pty_musl.so', createPortableExecutableBuffer('arm64')],
+    // A nested copy is not the runtime's layout, even beside a compatible sibling.
+    ['nested graph copy with a compatible sibling', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release/librust_pty_musl.so', createPortableExecutableBuffer('x64')],
+    ['nested graph copy without a sibling', '@opencode/server-v2.1.4/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release/librust_pty.so', null],
     ['unknown filename', 'bun-pty/rust-pty/target/release/unknown.so', createPortableExecutableBuffer('x64')],
     ['unknown package path', 'other/node_modules/bun-pty/rust-pty/target/release/librust_pty.so', createPortableExecutableBuffer('x64')],
     ['unknown nested path', 'bun-pty/rust-pty/target/release/nested/librust_pty.so', createPortableExecutableBuffer('x64')],
-    ['floor without its own sibling', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release/librust_pty.so', null],
   ] as const)('keeps bun-pty pruning fail-closed for %s', async (_label, relative, siblingBytes) => {
     const tempDir = createTempDir();
     tempDirs.push(tempDir);
@@ -568,63 +565,12 @@ describe('electron-builder afterPack', () => {
     if (siblingBytes) expect(fs.readFileSync(sibling)).toEqual(siblingBytes);
   });
 
-  it('preserves Windows arm64 packaging for only the verified frozen floor PTY', async () => {
-    const tempDir = createTempDir();
-    tempDirs.push(tempDir);
-    const graph = path.join(tempDir, 'resources/runtime/local-cli/node_modules');
-    writeFile(path.join(graph, 'bun-pty/rust-pty/target/release/rust_pty_arm64.dll'), createPortableExecutableBuffer('arm64'));
-    const floor = path.join(graph, '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty/rust-pty/target/release');
-    const oldLibraries = [
-      ['librust_pty.so', createElfBuffer('x64')],
-      ['librust_pty_arm64.so', createElfBuffer('arm64')],
-      ['librust_pty.dylib', createMachOBuffer('x64')],
-      ['librust_pty_arm64.dylib', createMachOBuffer('arm64')],
-      ['rust_pty.dll', createPortableExecutableBuffer('x64')],
-    ] as const;
-    const manifest = path.join(floor, '../../..', 'package.json');
-    const manifestBytes = Buffer.from(JSON.stringify({ name: 'bun-pty', version: '0.4.8' }));
-    writeFile(manifest, manifestBytes);
-    for (const [name, bytes] of oldLibraries) writeFile(path.join(floor, name), bytes);
-    // The outer compatibility check must retain compatible bytes even under an old foreign filename.
-    const compatible = path.join(floor, 'librust_pty_arm64.so');
-    const compatibleBytes = createPortableExecutableBuffer('arm64');
-    writeFile(compatible, compatibleBytes);
-    await afterPackModule({ appOutDir: tempDir, electronPlatformName: 'win32', arch: 3 });
-    for (const [name] of oldLibraries) {
-      if (name === 'librust_pty_arm64.so') expect(fs.readFileSync(compatible)).toEqual(compatibleBytes);
-      else expect(fs.existsSync(path.join(floor, name))).toBe(false);
-    }
-    expect(fs.readFileSync(manifest)).toEqual(manifestBytes);
-    await expect(validateNativeBinaries(tempDir, 'win32', 'arm64')).resolves.toEqual([]);
-  });
-
-  it.each([
-    ['wrong version', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty', 'librust_pty.so', { name: 'bun-pty', version: '0.4.11' }],
-    ['wrong package name', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty', 'librust_pty.so', { name: 'other', version: '0.4.8' }],
-    ['missing manifest', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty', 'librust_pty.so', null],
-    ['other nested path', 'other/node_modules/bun-pty', 'librust_pty.so', { name: 'bun-pty', version: '0.4.8' }],
-    ['unknown filename', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty', 'unknown.so', { name: 'bun-pty', version: '0.4.8' }],
-    ['new library filename', '@opencode/server-v2.0.0/node_modules/@opencode/core/node_modules/bun-pty', 'librust_pty_musl.so', { name: 'bun-pty', version: '0.4.8' }],
-  ] as const)('keeps the frozen Windows arm64 PTY exception closed for %s', async (_label, relative, filename, manifest) => {
-    const tempDir = createTempDir();
-    tempDirs.push(tempDir);
-    const root = path.join(tempDir, 'resources/runtime/local-cli/node_modules', relative);
-    const file = path.join(root, 'rust-pty/target/release', filename);
-    const bytes = createElfBuffer('x64');
-    writeFile(file, bytes);
-    if (manifest) writeFile(path.join(root, 'package.json'), Buffer.from(JSON.stringify(manifest)));
-    await expect(afterPackModule({ appOutDir: tempDir, electronPlatformName: 'win32', arch: 3 }))
-      .rejects.toThrow('Found incompatible native binaries in win32-arm64 bundle after pruning');
-    expect(fs.readFileSync(file)).toEqual(bytes);
-  });
-
-  it('prunes current-graph foreign bun-pty libraries regardless of a frozen-floor manifest', async () => {
+  it('prunes foreign hoisted bun-pty libraries for win32-arm64', async () => {
     const tempDir = createTempDir();
     tempDirs.push(tempDir);
     const root = path.join(tempDir, 'resources/runtime/local-cli/node_modules/bun-pty');
     const file = path.join(root, 'rust-pty/target/release/librust_pty.so');
     writeFile(file, createElfBuffer('x64'));
-    writeFile(path.join(root, 'package.json'), Buffer.from(JSON.stringify({ name: 'bun-pty', version: '0.4.8' })));
     await afterPackModule({ appOutDir: tempDir, electronPlatformName: 'win32', arch: 3 });
     expect(fs.existsSync(file)).toBe(false);
     await expect(validateNativeBinaries(tempDir, 'win32', 'arm64')).resolves.toEqual([]);

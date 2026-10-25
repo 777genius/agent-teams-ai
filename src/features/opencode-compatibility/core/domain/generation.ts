@@ -1,4 +1,4 @@
-import { isOpenCodeV2QualifiedVersion, isOpenCodeV2RangeVersion } from './openCodeV2Contract';
+import { isOpenCodeV2QualifiedVersion, isOpenCodeV2RangeVersion } from './pinnedOpenCodeV2Contract';
 
 import type { NativeKey } from '../../contracts';
 
@@ -81,7 +81,8 @@ export function isRecognizedOpenCodeRuntimeVersion(raw: string | null | undefine
   return Boolean(raw && classifyNativeVersion(raw).kind === 'recognized');
 }
 
-export function isLegacyOpenCodeVersionSupported(raw: string | null | undefined): boolean {
+/** Stable V1, or a V2 release the pinned runtime qualified for team launch on this platform. */
+export function isOpenCodeVersionProductionEligible(raw: string | null | undefined): boolean {
   if (!raw) return false;
   const classification = classifyNativeVersion(raw);
   return classification.kind === 'recognized' && classification.productionEligible;

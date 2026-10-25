@@ -20,9 +20,10 @@ const missingPortableBunPtyTargets = new Set();
 // Each staged OpenCode V2 graph other than the hoisted one nests its packages under
 // its version-derived server alias (see runtime local-cli/opencode-v2-graphs.json).
 const NESTED_RUNTIME_GRAPH = '@opencode/server-v\\d+\\.\\d+\\.\\d+/node_modules/';
-const BUN_PTY_RELEASE = new RegExp(
-  `^((?:${NESTED_RUNTIME_GRAPH}@opencode/core/node_modules/)?)bun-pty/rust-pty/target/release/([^/]+)$`
-);
+// The runtime pins one bun-pty for every staged graph (its `bun-pty` override), hoisted at
+// the graph root. A nested copy is an unexpected layout and fails validation rather than
+// being pruned.
+const BUN_PTY_RELEASE = /^bun-pty\/rust-pty\/target\/release\/([^/]+)$/;
 const TREE_SITTER_PREBUILDS = new RegExp(
   `^((?:${NESTED_RUNTIME_GRAPH})?@opencode/core/node_modules/tree-sitter-bash/prebuilds)/`
 );
@@ -285,10 +286,8 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
     ) {
       return filePath;
     }
-    // The hoisted graph and nested graphs ship multi-platform bun-pty libraries.
-    // Require a compatible sibling except for a frozen, unused nested Windows ARM64 PTY below.
-    const bunPtyRelease = portableRuntimeGraph[1].match(BUN_PTY_RELEASE);
-    const nestedBunPty = Boolean(bunPtyRelease?.[1]);
+    // The hoisted bun-pty ships libraries for every platform.
+    const bunPtyLibrary = portableRuntimeGraph[1].match(BUN_PTY_RELEASE)?.[1];
     const libraryTargets = {
       'librust_pty.so': ['linux', 'x64'],
       'librust_pty_musl.so': ['linux', 'x64'],
@@ -299,67 +298,27 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
       'rust_pty.dll': ['win32', 'x64'],
       'rust_pty_arm64.dll': ['win32', 'arm64'],
     };
-    const library = path.basename(filePath);
     const matchesTarget = ([platform, arch]) =>
       platform === targetPlatform &&
       (arch === targetArch || (targetPlatform === 'darwin' && targetArch === 'universal'));
-    if (
-      Object.hasOwn(libraryTargets, library) &&
-      bunPtyRelease?.[2] === library
-    ) {
-      // The frozen floor's PTY is not used by bounded Windows transports. Retain
-      // its preexisting ARM64 packaging exception without enabling ARM64 execution.
-      if (
-        targetPlatform === 'win32' && targetArch === 'arm64' &&
-        nestedBunPty &&
-        ['librust_pty.so', 'librust_pty_arm64.so', 'librust_pty.dylib', 'librust_pty_arm64.dylib', 'rust_pty.dll'].includes(library)
-      ) {
-        try {
-          const manifestPath = path.join(path.dirname(filePath), '../../..', 'package.json');
-          const manifestStat = await fs.promises.lstat(manifestPath);
-          if (manifestStat.isFile() && !manifestStat.isSymbolicLink() && manifestStat.size <= 65536) {
-            const manifest = JSON.parse(await fs.promises.readFile(manifestPath, 'utf8'));
-            if (manifest?.name === 'bun-pty' && manifest.version === '0.4.8') return filePath;
-          }
-        } catch {
-          // An absent or invalid frozen-package manifest cannot authorize this exception.
-        }
-      }
+    if (bunPtyLibrary !== undefined && Object.hasOwn(libraryTargets, bunPtyLibrary)) {
       // A malformed target-named file must fail validation rather than disappear.
-      if (matchesTarget(libraryTargets[library])) return null;
-      // Nested graphs keep their sibling-gated retention below.
-      if (!nestedBunPty) {
-        // The loader's per-platform filename map is exhaustive, so a foreign-named
-        // library can never load on the target; the win32-arm64 runtime also omits
-        // rust_pty_arm64.dll entirely. Prune current-graph foreigns outright, but
-        // surface the absent target binding so the degradation is not silent.
-        const targetFilenames = Object.entries(libraryTargets)
-          .filter(([, target]) => matchesTarget(target))
-          .map(([filename]) => filename);
-        if (targetFilenames.length > 0) {
-          const siblings = await Promise.all(
-            targetFilenames.map((filename) => fileExists(path.join(path.dirname(filePath), filename)))
-          );
-          if (!siblings.some(Boolean)) {
-            missingPortableBunPtyTargets.add(path.join(path.dirname(filePath), targetFilenames[0]));
-          }
-        }
-        return filePath;
-      }
-      for (const [filename, target] of Object.entries(libraryTargets)) {
-        if (!matchesTarget(target)) continue;
-        const sibling = path.join(path.dirname(filePath), filename);
-        if (!(await fileExists(sibling))) continue;
-        try {
-          const metadata = await detectBinaryMetadata(sibling);
-          if (metadata && isBinaryCompatible(metadata.format, metadata.archs, targetPlatform, targetArch)) {
-            return filePath;
-          }
-        } catch {
-          // Missing or unreadable target bytes cannot authorize pruning.
+      if (matchesTarget(libraryTargets[bunPtyLibrary])) return null;
+      // The loader's per-platform filename map is exhaustive, so a foreign-named
+      // library can never load on the target. Prune foreigns outright, but surface
+      // an absent target binding so the degradation is not silent.
+      const targetFilenames = Object.entries(libraryTargets)
+        .filter(([, target]) => matchesTarget(target))
+        .map(([filename]) => filename);
+      if (targetFilenames.length > 0) {
+        const siblings = await Promise.all(
+          targetFilenames.map((filename) => fileExists(path.join(path.dirname(filePath), filename)))
+        );
+        if (!siblings.some(Boolean)) {
+          missingPortableBunPtyTargets.add(path.join(path.dirname(filePath), targetFilenames[0]));
         }
       }
-      return null;
+      return filePath;
     }
   }
 

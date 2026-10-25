@@ -1,10 +1,12 @@
-import runtimeLock from '../../../../../runtime.lock.json';
-
 /**
  * OpenCode V2 version contract of the pinned runtime. The runtime registry owns
  * the supported range and the qualified versions; its release manifest publishes
  * them and `runtime.lock.json` pins that exact contract (`opencodeV2`). This app
  * never lists V2 versions itself.
+ *
+ * This module is the only policy over that contract. It has no imports so that
+ * Node-run proof scripts can load it directly; `pinnedOpenCodeV2Contract.ts`
+ * binds it to the lock file and the current platform.
  */
 export interface OpenCodeV2Contract {
   range: Readonly<{ minimum: string; below: string }>;
@@ -15,6 +17,9 @@ export interface OpenCodeV2Contract {
 type Release = readonly [number, number, number];
 const PLATFORM = /^(darwin|linux|win32)-(arm64|x64)$/;
 const RELEASE = /^(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})\.(0|[1-9]\d{0,8})$/;
+/** The contract describes the V2 generation only: its range stays within 2.x. */
+const V2_FLOOR: Release = [2, 0, 0];
+const V3_FLOOR: Release = [3, 0, 0];
 
 export function parseOpenCodeV2Release(value: unknown): Release | null {
   const match = typeof value === 'string' ? RELEASE.exec(value) : null;
@@ -44,7 +49,14 @@ export function readOpenCodeV2Contract(value: unknown): OpenCodeV2Contract | nul
   const { minimum, below } = range as { minimum?: unknown; below?: unknown };
   const low = parseOpenCodeV2Release(minimum);
   const high = parseOpenCodeV2Release(below);
-  if (!low || !high || compareOpenCodeV2Release(low, high) >= 0) return null;
+  if (
+    !low ||
+    !high ||
+    compareOpenCodeV2Release(low, V2_FLOOR) < 0 ||
+    compareOpenCodeV2Release(high, V3_FLOOR) > 0 ||
+    compareOpenCodeV2Release(low, high) >= 0
+  )
+    return null;
   const byPlatform: Record<string, readonly string[]> = {};
   for (const [platform, versions] of Object.entries(qualified as Record<string, unknown>)) {
     if (!PLATFORM.test(platform) || !Array.isArray(versions)) return null;
@@ -67,42 +79,44 @@ export function readOpenCodeV2Contract(value: unknown): OpenCodeV2Contract | nul
   });
 }
 
-const pinned = readOpenCodeV2Contract((runtimeLock as { opencodeV2?: unknown }).opencodeV2);
-
-/** Fail closed: without a valid pinned contract no V2 version is recognized. */
-export function isOpenCodeV2RangeVersion(version: string): boolean {
+/** An exact stable release inside the contract's range. */
+export function openCodeV2ContractCovers(contract: OpenCodeV2Contract, version: string): boolean {
   const release = parseOpenCodeV2Release(version);
-  if (!pinned || !release) return false;
   return (
-    compareOpenCodeV2Release(release, parseOpenCodeV2Release(pinned.range.minimum)!) >= 0 &&
-    compareOpenCodeV2Release(release, parseOpenCodeV2Release(pinned.range.below)!) < 0
+    release !== null &&
+    compareOpenCodeV2Release(release, parseOpenCodeV2Release(contract.range.minimum)!) >= 0 &&
+    compareOpenCodeV2Release(release, parseOpenCodeV2Release(contract.range.below)!) < 0
   );
+}
+
+/** Qualified for team launch on any of the given `<platform>-<arch>` keys. */
+export function openCodeV2ContractQualifies(
+  contract: OpenCodeV2Contract,
+  platformKeys: readonly string[],
+  version: string
+): boolean {
+  return platformKeys.some((key) => contract.qualified[key]?.includes(version) === true);
 }
 
 /**
- * Platform keys of this app. The main process knows its exact platform; a
- * sandboxed renderer only knows the OS family and accepts any of its arches.
+ * Platform keys of a JavaScript environment. A Node process knows its exact
+ * platform; a sandboxed renderer only knows the OS family and accepts any of its
+ * arches.
  */
-function currentPlatformKeys(): readonly string[] {
-  const runtime = (globalThis as { process?: { platform?: unknown; arch?: unknown } }).process;
+export function openCodeV2PlatformKeys(environment: {
+  process?: { platform?: unknown; arch?: unknown };
+  navigator?: { userAgent?: unknown };
+}): readonly string[] {
+  const { process: runtime, navigator: browser } = environment;
   if (typeof runtime?.platform === 'string' && typeof runtime.arch === 'string')
     return [`${runtime.platform}-${runtime.arch}`];
-  const agent = (globalThis as { navigator?: { userAgent?: unknown } }).navigator?.userAgent;
-  const text = typeof agent === 'string' ? agent : '';
-  const family = /Mac/.test(text)
+  const agent = typeof browser?.userAgent === 'string' ? browser.userAgent : '';
+  const family = agent.includes('Mac')
     ? 'darwin'
-    : /Windows/.test(text)
+    : agent.includes('Windows')
       ? 'win32'
-      : /Linux/.test(text)
+      : agent.includes('Linux')
         ? 'linux'
         : null;
   return family ? [`${family}-arm64`, `${family}-x64`] : [];
-}
-
-/** Qualified for team launch on this platform by the pinned runtime's records. */
-export function isOpenCodeV2QualifiedVersion(version: string): boolean {
-  const qualified = pinned?.qualified;
-  return Boolean(
-    qualified && currentPlatformKeys().some((key) => qualified[key]?.includes(version))
-  );
 }
