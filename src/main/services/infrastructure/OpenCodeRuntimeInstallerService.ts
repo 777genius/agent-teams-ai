@@ -300,11 +300,7 @@ async function probeOpenCodeBinaryVersionCached(
 interface OpenCodeBinaryCandidateSearch {
   seen: Set<string>;
   firstFailure: OpenCodeBinaryCandidateFailure | null;
-  /**
-   * The first recognized binary the pinned runtime does not qualify for team launch on
-   * this platform. A qualified binary later on PATH wins over it, as an unrecognized one
-   * never shadowed it; it is selected only when PATH has no qualified binary.
-   */
+  /** First recognized binary not qualified on this platform; any qualified one on PATH wins. */
   firstUnqualified: { binaryPath: string; version: string | null } | null;
 }
 
