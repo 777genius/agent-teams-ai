@@ -19,8 +19,44 @@ interface RawWindowsProcessRow {
   CommandLine?: string | null;
 }
 
+export interface WindowsProcessTableFailureFacts {
+  reason: 'probe_failed' | 'stderr_received';
+  exitCode: number | null;
+  nativeCode: string | null;
+  signal: 'SIGTERM' | 'SIGKILL' | null;
+  stderrFormat: 'empty' | 'clixml' | 'text';
+  stderrStreams: string[];
+}
+
+/** Closed observation facts; never retains process stdout or raw native errors. */
+export class WindowsProcessTableProbeError extends Error {
+  constructor(message: string, readonly failureFacts: WindowsProcessTableFailureFacts) {
+    super(message);
+    this.name = 'WindowsProcessTableProbeError';
+  }
+}
+
+function failureFacts(error: unknown, stderr: string): WindowsProcessTableFailureFacts {
+  const outcome = error && typeof error === 'object' ? error as { code?: unknown; signal?: unknown } : {};
+  const trimmed = stderr.trim();
+  const clixml = trimmed.startsWith('#< CLIXML');
+  const knownStreams = new Set(['progress', 'error', 'warning', 'verbose', 'debug', 'information', 'output']);
+  return {
+    reason: error ? 'probe_failed' : 'stderr_received',
+    exitCode: typeof outcome.code === 'number' && Number.isInteger(outcome.code) ? outcome.code : null,
+    nativeCode: typeof outcome.code === 'string' && /^[A-Z][A-Z0-9_]{0,63}$/.test(outcome.code) ? outcome.code : null,
+    signal: outcome.signal === 'SIGTERM' || outcome.signal === 'SIGKILL' ? outcome.signal : null,
+    stderrFormat: !trimmed ? 'empty' : clixml ? 'clixml' : 'text',
+    stderrStreams: clixml ? [...new Set([...trimmed.matchAll(/\bS=["']([A-Za-z]+)["']/g)]
+      .map(match => match[1].toLowerCase())
+      .map(stream => knownStreams.has(stream) ? stream : 'unknown'))].sort() : [],
+  };
+}
+
 const PROCESS_TABLE_SCRIPT = [
   '$ErrorActionPreference = "Stop"',
+  // Module-loading progress is not probe data; every remaining stderr still fails closed.
+  '$ProgressPreference = "SilentlyContinue"',
   'Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,CommandLine | ConvertTo-Json -Compress',
 ].join('; ');
 
@@ -92,7 +128,7 @@ function readWindowsProcessTableUncached(timeoutMs: number): Promise<WindowsProc
       (error, stdout, stderr) => {
         if (error || stderr?.trim()) {
           reject(
-            new Error(
+            new WindowsProcessTableProbeError(
               processProbeDiagnostic(
                 'windows_process_enumeration',
                 startedAt,
@@ -100,7 +136,8 @@ function readWindowsProcessTableUncached(timeoutMs: number): Promise<WindowsProc
                 error ? 'probe failed' : 'stderr received',
                 error,
                 stderr
-              )
+              ),
+              failureFacts(error, stderr ?? '')
             )
           );
           return;

@@ -46,9 +46,33 @@ describe('windowsProcessTable', () => {
     ]);
     expect(asyncArgs.at(-1)).toMatch(/^[A-Za-z0-9+/]+=*$/);
     expect(Buffer.from(asyncArgs.at(-1)!, 'base64').toString('utf16le')).toBe(
-      '$ErrorActionPreference = "Stop"; Get-CimInstance Win32_Process | ' +
+      '$ErrorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"; Get-CimInstance Win32_Process | ' +
       'Select-Object ProcessId,ParentProcessId,CommandLine | ConvertTo-Json -Compress'
     );
+  });
+
+  it('retains only finite CLIXML stream facts and still rejects progress, errors and mixed stderr', async () => {
+    for (const streams of [['progress'], ['error'], ['progress', 'error']] as const) {
+      const callbacks = captureExecFileCallbacks();
+      const request = windowsProcessTable.listWindowsProcessTable(4_000, { bypassCache: true });
+      const stderr = '#< CLIXML\r\n<Objs>' + streams.map(stream =>
+        `<Obj S="${stream}"><S>PRIVATE process argv --token secret</S></Obj>`).join('') + '</Objs>';
+      callbacks[0](null, makeProcessTableJson(123), stderr);
+      const error = await request.catch(error => error);
+      expect(error).toBeInstanceOf(windowsProcessTable.WindowsProcessTableProbeError);
+      expect(error.failureFacts).toEqual({ reason: 'stderr_received', exitCode: null, nativeCode: null,
+        signal: null, stderrFormat: 'clixml', stderrStreams: [...streams].sort() });
+      expect(JSON.stringify(error.failureFacts)).not.toMatch(/PRIVATE|argv|secret/);
+    }
+  });
+
+  it('distinguishes native failures from stderr-only refusals without retaining native messages', async () => {
+    const callbacks = captureExecFileCallbacks();
+    const request = windowsProcessTable.listWindowsProcessTable(4_000, { bypassCache: true });
+    callbacks[0](Object.assign(new Error('PRIVATE argv'), { code: 1 }), '', 'PRIVATE failure');
+    const error = await request.catch(error => error);
+    expect(error.failureFacts).toEqual({ reason: 'probe_failed', exitCode: 1, nativeCode: null,
+      signal: null, stderrFormat: 'text', stderrStreams: [] });
   });
 
   it.each([
