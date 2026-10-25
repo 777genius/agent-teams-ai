@@ -44,6 +44,7 @@ import {
 } from './openCodeRuntimeLatestVersion';
 import {
   getUnverifiedOpenCodeOverrideMessage,
+  matchesOpenCodeRuntimeGeneration,
   resolveOpenCodeStatusWithOverride,
 } from './openCodeRuntimeOverrideStatus';
 import { fetchOpenCodePackageMetadata } from './openCodeRuntimePackageMetadata';
@@ -152,7 +153,10 @@ export async function resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath(): Prom
   return version.ok && isRecognizedOpenCodeRuntimeVersion(version.version) ? binaryPath : null;
 }
 
-export async function isSupportedOpenCodeRuntimeBinaryPath(binaryPath: string): Promise<boolean> {
+export async function isSupportedOpenCodeRuntimeBinaryPath(
+  binaryPath: string,
+  generation?: 'v1' | 'v2'
+): Promise<boolean> {
   if (!isAbsoluteExistingFile(binaryPath)) {
     return false;
   }
@@ -162,7 +166,7 @@ export async function isSupportedOpenCodeRuntimeBinaryPath(binaryPath: string): 
     // Preserve explicit selection so a transient timeout cannot launch another binary.
     throw new Error(getUnverifiedOpenCodeOverrideMessage(binaryPath));
   }
-  return isRecognizedOpenCodeRuntimeVersion(version.version);
+  return matchesOpenCodeRuntimeGeneration(binaryPath, version.version, generation);
 }
 
 function getExecutableName(): string {

@@ -1825,6 +1825,8 @@ const electronAPI: ElectronAPI = {
 
   // ===== OpenCode Runtime Installer API =====
   openCodeRuntime: {
+    platform: process.platform,
+    arch: process.arch,
     getStatus: async (): Promise<OpenCodeRuntimeStatus> => {
       return invokeIpcWithResult<OpenCodeRuntimeStatus>(OPENCODE_RUNTIME_GET_STATUS);
     },

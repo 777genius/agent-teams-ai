@@ -32,9 +32,16 @@ export function readOpenCodeBinaryOverride(
 }
 
 export function isOpenCodeConsoleWrapperBinaryPath(binaryPath: string): boolean {
-  return normalizePathEntryForCompare(binaryPath).endsWith(
-    path.sep + OPENCODE_CONSOLE_WRAPPER_RELATIVE_PATH.join(path.sep)
-  );
+  const matches = (candidate: string): boolean =>
+    normalizePathEntryForCompare(candidate).endsWith(
+      path.sep + OPENCODE_CONSOLE_WRAPPER_RELATIVE_PATH.join(path.sep)
+    );
+  if (matches(binaryPath)) return true;
+  try {
+    return matches(fs.realpathSync(binaryPath));
+  } catch {
+    return false;
+  }
 }
 
 export interface OpenCodeConsoleWrapperOptions {
@@ -42,6 +49,8 @@ export interface OpenCodeConsoleWrapperOptions {
   resourcesPath?: string | null;
   platform?: NodeJS.Platform;
   env?: NodeJS.ProcessEnv;
+  /** Main-only hint bound to the exact candidate measured by the cached version probe. */
+  verifiedNativeV2BinaryPath?: string;
 }
 
 /**
@@ -309,12 +318,15 @@ export function applyOpenCodeRuntimeBinaryEnv(
   const nextBinaryPath = npmWrapperTarget ?? configuredBinaryPath;
 
   if ((wrapperOptions.platform ?? process.platform) === 'win32') {
-    // Only an already-selected wrapper may resolve through its explicit target.
-    // Never let an unrelated stale target replace a different explicit binary.
-    const target = isOpenCodeConsoleWrapperBinaryPath(nextBinaryPath)
-      ? env[OPENCODE_CONSOLE_WRAPPER_TARGET_ENV]?.trim()
-      : nextBinaryPath;
-    const nativeV2 = target ? selectedWindowsV2PackageBinary(target) : null;
+    // A selected console wrapper cannot establish a native identity from a stale target.
+    const verifiedV2 = wrapperOptions.verifiedNativeV2BinaryPath;
+    const nativeV2 =
+      !isOpenCodeConsoleWrapperBinaryPath(nextBinaryPath) && path.isAbsolute(nextBinaryPath)
+        ? verifiedV2 &&
+          normalizePathEntryForCompare(verifiedV2) === normalizePathEntryForCompare(nextBinaryPath)
+          ? nextBinaryPath
+          : selectedWindowsV2PackageBinary(nextBinaryPath)
+        : null;
     if (nativeV2) {
       env[OPENCODE_RUNTIME_BINARY_PATH_ENV] = nativeV2;
       env[OPENCODE_LEGACY_BINARY_PATH_ENV] = nativeV2;

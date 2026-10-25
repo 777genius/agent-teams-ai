@@ -494,6 +494,9 @@ export interface OpenCodeRuntimeStatus {
 }
 
 export interface OpenCodeRuntimeAPI {
+  /** Native target supplied by preload; optional only for older API/test adapters. */
+  readonly platform?: string;
+  readonly arch?: string;
   getStatus: () => Promise<OpenCodeRuntimeStatus>;
   install: (options?: OpenCodeRuntimeInstallOptions) => Promise<OpenCodeRuntimeStatus>;
   invalidateStatus: () => Promise<void>;

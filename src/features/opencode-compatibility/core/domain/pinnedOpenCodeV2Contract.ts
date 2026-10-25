@@ -1,6 +1,7 @@
 import runtimeLock from '../../../../../runtime.lock.json';
 
 import {
+  engineForNativeVersion,
   openCodeV2ContractCovers,
   openCodeV2ContractQualifies,
   openCodeV2PlatformKeys,
@@ -19,7 +20,7 @@ export function isOpenCodeV2RangeVersion(version: string): boolean {
   );
 }
 
-/** Qualified for team launch on this platform by the pinned runtime's records. */
+/** Exact engine qualification; retained for qualification harness callers. */
 export function isOpenCodeV2QualifiedVersion(version: string): boolean {
   return (
     pinnedOpenCodeV2Contract !== null &&
@@ -29,6 +30,17 @@ export function isOpenCodeV2QualifiedVersion(version: string): boolean {
       version
     )
   );
+}
+
+/** Qualified engine for this native identity; old contracts remain exact-version strict. */
+export function getOpenCodeV2EngineVersion(version: string): string | null {
+  return pinnedOpenCodeV2Contract === null
+    ? null
+    : engineForNativeVersion(
+        pinnedOpenCodeV2Contract,
+        openCodeV2PlatformKeys(globalThis as Parameters<typeof openCodeV2PlatformKeys>[0]),
+        version
+      );
 }
 
 /** Highest exact release qualified for this concrete native platform. */

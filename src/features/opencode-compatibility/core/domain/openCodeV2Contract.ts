@@ -9,6 +9,8 @@
  * binds it to the lock file and the current platform.
  */
 export interface OpenCodeV2Contract {
+  /** New runtimes may serve stable native V2 through a separately qualified engine. */
+  cliVersionPolicy?: 'stable-v2-qualified-engine';
   range: Readonly<{ minimum: string; below: string }>;
   /** Versions qualified for team launch, per `<platform>-<arch>` key of the release assets. */
   qualified: Readonly<Record<string, readonly string[]>>;
@@ -36,7 +38,13 @@ export function compareOpenCodeV2Release(left: Release, right: Release): number 
 /** Exact validation; a malformed contract is refused rather than partially trusted. */
 export function readOpenCodeV2Contract(value: unknown): OpenCodeV2Contract | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-  const { range, qualified } = value as { range?: unknown; qualified?: unknown };
+  const { range, qualified, cliVersionPolicy } = value as {
+    range?: unknown;
+    qualified?: unknown;
+    cliVersionPolicy?: unknown;
+  };
+  if (cliVersionPolicy !== undefined && cliVersionPolicy !== 'stable-v2-qualified-engine')
+    return null;
   if (
     !range ||
     typeof range !== 'object' ||
@@ -74,6 +82,7 @@ export function readOpenCodeV2Contract(value: unknown): OpenCodeV2Contract | nul
     byPlatform[platform] = Object.freeze([...(versions as string[])]);
   }
   return Object.freeze({
+    ...(cliVersionPolicy ? { cliVersionPolicy } : {}),
     range: Object.freeze({ minimum: minimum as string, below: below as string }),
     qualified: Object.freeze(byPlatform),
   });
@@ -98,16 +107,41 @@ export function openCodeV2ContractQualifies(
   return platformKeys.some((key) => contract.qualified[key]?.includes(version) === true);
 }
 
+/** Native version is identity; only recorded engine versions authorize execution. */
+export function engineForNativeVersion(
+  contract: OpenCodeV2Contract,
+  platformKeys: readonly string[],
+  version: string
+): string | null {
+  if (!openCodeV2ContractCovers(contract, version)) return null;
+  if (contract.cliVersionPolicy === 'stable-v2-qualified-engine' && platformKeys.length !== 1)
+    return null;
+  if (openCodeV2ContractQualifies(contract, platformKeys, version)) return version;
+  if (contract.cliVersionPolicy !== 'stable-v2-qualified-engine') return null;
+  const engines = platformKeys.flatMap((key) => contract.qualified[key] ?? []);
+  return (
+    engines
+      .toSorted((left, right) =>
+        compareOpenCodeV2Release(parseOpenCodeV2Release(left)!, parseOpenCodeV2Release(right)!)
+      )
+      .at(-1) ?? null
+  );
+}
+
 /**
  * Platform keys of a JavaScript environment. A Node process knows its exact
- * platform; a sandboxed renderer only knows the OS family and accepts any of its
- * arches.
+ * platform; preload gives sandboxed renderers that same native target. UA-only
+ * callers retain legacy OS-family hints, which never select a flexible engine.
  */
 export function openCodeV2PlatformKeys(environment: {
   process?: { platform?: unknown; arch?: unknown };
+  electronAPI?: { openCodeRuntime?: { readonly platform?: unknown; readonly arch?: unknown } };
   navigator?: { userAgent?: unknown };
 }): readonly string[] {
   const { process: runtime, navigator: browser } = environment;
+  const target = environment.electronAPI?.openCodeRuntime;
+  if (typeof target?.platform === 'string' && typeof target.arch === 'string')
+    return [`${target.platform}-${target.arch}`];
   if (typeof runtime?.platform === 'string' && typeof runtime.arch === 'string')
     return [`${runtime.platform}-${runtime.arch}`];
   const agent = typeof browser?.userAgent === 'string' ? browser.userAgent : '';

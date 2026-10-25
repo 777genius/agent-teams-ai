@@ -1547,6 +1547,20 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     );
   });
 
+  it('filters cached verified generation and never marks the app console wrapper as native V2', async () => {
+    const native = path.join(tempRoot!, 'user-selected.exe');
+    const wrapper = path.join(tempRoot!, 'runtime', 'opencode-console', 'opencode.exe');
+    await mkdir(path.dirname(wrapper), { recursive: true });
+    await writeFile(native, 'TEST native');
+    await writeFile(wrapper, 'TEST wrapper');
+    execCliMock.mockResolvedValue({ stdout: 'opencode v2.37.105', stderr: '' });
+    await expect(isSupportedOpenCodeRuntimeBinaryPath(native, 'v2')).resolves.toBe(true);
+    await expect(isSupportedOpenCodeRuntimeBinaryPath(native, 'v1')).resolves.toBe(false);
+    expect(execCliMock).toHaveBeenCalledTimes(1);
+    await expect(isSupportedOpenCodeRuntimeBinaryPath(wrapper, 'v2')).resolves.toBe(false);
+    await expect(isSupportedOpenCodeRuntimeBinaryPath(wrapper)).resolves.toBe(true);
+  });
+
   it('coalesces identical install requests but rejects a racing generation choice before effects', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const download = deferred<Response>();
