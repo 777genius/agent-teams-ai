@@ -83,8 +83,8 @@ export function sanitizeRendererUiContext(input: unknown): Record<string, unknow
   const context: Record<string, unknown> = {
     schemaVersion: 1,
     activeTabType: sanitizeSentryTabType(value.activeTabType),
-    hasReview: value.hasReview === true,
-    hasTaskDetail: value.hasTaskDetail === true,
+    hasPendingReviewRequest: value.hasPendingReviewRequest === true,
+    hasGlobalTaskDetail: value.hasGlobalTaskDetail === true,
   };
   for (const key of COUNT_FIELDS) {
     const count = value[key];

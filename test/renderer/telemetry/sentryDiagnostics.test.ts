@@ -128,8 +128,8 @@ describe('renderer update-depth diagnostics privacy', () => {
         listboxCount: '4',
         textareaCount: 2,
         codeMirrorCount: 5,
-        hasReview: 'private',
-        hasTaskDetail: true,
+        hasPendingReviewRequest: 'private',
+        hasGlobalTaskDetail: true,
         teamName: 'secret',
         label: 'secret',
         componentStack: 'secret',
@@ -145,8 +145,8 @@ describe('renderer update-depth diagnostics privacy', () => {
       listboxCount: null,
       textareaCount: 2,
       codeMirrorCount: 5,
-      hasReview: false,
-      hasTaskDetail: true,
+      hasPendingReviewRequest: false,
+      hasGlobalTaskDetail: true,
     });
     const context = sanitizeRendererReactContext({
       activeTabType: 'SecretProject',
