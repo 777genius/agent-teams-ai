@@ -1,5 +1,4 @@
 import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -9,7 +8,7 @@ import {
   verificationInstruction,
   windowsVerificationCommand,
 } from '../../scripts/e2e/opencode-native-real-task-prompts';
-import { verifyWindowsCommandSyntax, type WindowsCommandSyntaxFact } from '../../scripts/e2e/opencode-native-windows-command';
+import { verifyWindowsCommandSyntax, type WindowsCommandSyntaxFact, windowsCommandSyntaxProjectParent } from '../../scripts/e2e/opencode-native-windows-command';
 
 describe('native real-task prompt contract', () => {
   const commentToken = 'TASK_COMMENT:11111111-2222-3333-4444-555555555555';
@@ -105,8 +104,26 @@ describe('native verification command contract', () => {
 });
 
 describe('cross-shell Windows verifier invocation', () => {
+  it('anchors a standalone probe to the staged Node workspace, independently of Windows TEMP', () => {
+    const executable = ['D:', 'a', 'agent-teams-ai', 'agent-teams-ai', 'TEST-native-source',
+      'TEST-controller-node', 'node.exe'].join(String.fromCharCode(92));
+    const parent = windowsCommandSyntaxProjectParent(executable);
+    expect(parent).toBe(path.win32.dirname(executable));
+    expect(windowsVerificationCommand(executable,
+      path.win32.join(parent, 'TEST-command-syntax-fixture', 'host-command-syntax.cjs')))
+      .toBe('D:/a/agent-teams-ai/agent-teams-ai/TEST-native-source/TEST-controller-node/node.exe ' +
+        'D:/a/agent-teams-ai/agent-teams-ai/TEST-native-source/TEST-controller-node/TEST-command-syntax-fixture/host-command-syntax.cjs');
+    expect(() => windowsVerificationCommand(executable,
+      'C:/Users/RUNNER~1/AppData/Local/Temp/TEST-command/host-command-syntax.cjs')).toThrow();
+  });
+
+  it('does not turn an arbitrary toolchain or unsafe staging parent into a TEST root', () => {
+    expect(() => windowsCommandSyntaxProjectParent('D:/toolchain/node.exe')).toThrow();
+    expect(() => windowsCommandSyntaxProjectParent('D:/TEST-node with space/node.exe')).toThrow();
+  });
+
   it.skipIf(process.platform !== 'win32')('executes the unchanged verifier in PowerShell and cmd', async () => {
-    const directory = mkdtempSync(path.join(tmpdir(), 'TEST-command-'));
+    const directory = mkdtempSync(path.join(process.cwd(), 'TEST-command-'));
     try {
       const facts: WindowsCommandSyntaxFact[] = [];
       await verifyWindowsCommandSyntax(process.env.OPENCODE_NATIVE_TEST_NODE_PATH ?? process.execPath,

@@ -2,8 +2,7 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import os from 'node:os';
+import { lstat, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
@@ -15,6 +14,16 @@ export type WindowsCommandSyntaxFact = {
   shell: 'powershell' | 'cmd'; markerMatches: boolean; exitCode: number | null;
   nativeCode: string | null; signal: 'SIGTERM' | 'SIGKILL' | null;
 };
+
+/** Keep standalone probes under the already staged TEST workspace, never a
+ * Windows TEMP alias such as RUNNER~1 that the literal-command guard refuses.
+ */
+export function windowsCommandSyntaxProjectParent(executable: string): string {
+  const parent = path.win32.dirname(executable);
+  assert(/^TEST-[A-Za-z0-9_.-]+$/.test(path.win32.basename(parent)), 'Staged TEST Node parent required');
+  windowsVerificationCommand(executable, path.win32.join(parent, 'TEST-command-syntax', 'host-command-syntax.cjs'));
+  return parent;
+}
 
 export async function verifyWindowsCommandSyntax(
   executable: string,
@@ -58,7 +67,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const executable = process.env.OPENCODE_NATIVE_TEST_NODE_PATH;
     assert(executable && path.basename(executable) === 'node.exe' && executable.includes('TEST-'),
       'Explicit staged TEST Node required');
-    const project = await mkdtemp(path.join(os.tmpdir(), 'TEST-command-syntax-'));
+    const parent = windowsCommandSyntaxProjectParent(executable);
+    const parentInfo = await lstat(parent);
+    assert(parentInfo.isDirectory() && !parentInfo.isSymbolicLink() &&
+      await realpath(parent) === path.normalize(parent), 'Staged TEST Node parent identity invalid');
+    const project = await mkdtemp(path.join(parent, 'TEST-command-syntax-'));
     try {
       await verifyWindowsCommandSyntax(executable, project, process.env, async fact => {
         console.log(JSON.stringify({ phase: 'command_syntax', ...fact }));
@@ -72,6 +85,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const guard = message.startsWith('Cross-shell TEST') || message === 'Canonical TEST command paths required'
       ? 'unsafe_test_path'
       : message === 'Explicit staged TEST Node required' ? 'test_node_required'
+        : message.startsWith('Staged TEST Node parent') ? 'test_node_parent_invalid'
         : message === 'Windows system shell root required' ? 'system_shell_root_required'
           : message.startsWith('TEST powershell') ? 'powershell_failure'
             : message.startsWith('TEST cmd') ? 'cmd_failure' : 'host_setup_failure';
