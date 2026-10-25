@@ -29,9 +29,9 @@ Before publishing:
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
-## v2.18.1 (Prepared draft)
+## v2.18.2 (Prepared draft)
 
-Target branch: `main`. The existing `v2.18.0` tag is reserved and must remain unchanged.
+Target branch: `main`. The existing `v2.18.0` and `v2.18.1` tags are reserved and must remain unchanged. The unpublished `v2.18.1` draft is superseded after a macOS manual check found overlapping OpenCode group-chat probes; `v2.18.2` includes the fix.
 
 Runtime gate:
 
@@ -42,7 +42,7 @@ Runtime gate:
 
 Release body source for GitHub release:
 
-<!-- RELEASE_BODY_START v2.18.1 -->
+<!-- RELEASE_BODY_START v2.18.2 -->
 
 OpenCode setup now includes a separate V2 installer, while group chats and task folders make larger teams easier to organize.
 
@@ -68,34 +68,34 @@ OpenCode setup now includes a separate V2 installer, while group chats and task 
 - Deliver queued tasks and replies after OpenCode teammates relaunch.
 - Stop no longer reports failure after the team's agents have exited.
 - Use your configured Anthropic models with compatible endpoints.
-- Restore the saved team draft and Launch button after canceling a launch.
+- Prevent excessive CPU and memory use while viewing teams with OpenCode participants.
 - Update Electron and other dependencies with security fixes.
 
 ### macOS installation
 
-macOS 2.18.1 requires macOS 13 or later. macOS 12 users can keep using the existing signed 2.17.1 builds.
+macOS 2.18.2 requires macOS 13 or later. macOS 12 users can keep using the existing signed 2.17.1 builds.
 
-If you have signed macOS 2.17.1 installed, quit the app and install the appropriate 2.18.1 DMG over your existing app once. Your local settings, teams and projects stay in place. Automatic updates cannot perform this one-time migration.
+If you have signed macOS 2.17.1 installed, quit the app and install the appropriate 2.18.2 DMG over your existing app once. Your local settings, teams and projects stay in place. Automatic updates cannot perform this one-time migration.
 
 ### Downloads
 
 <table>
 <tr>
 <td align="center">
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.1/Agent.Teams.AI-2.18.1-arm64.dmg">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.2/Agent.Teams.AI-2.18.2-arm64.dmg">
     <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
   </a>
   <br />
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.1/Agent.Teams.AI-2.18.1-x64.dmg">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.2/Agent.Teams.AI-2.18.2-x64.dmg">
     <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
   </a>
 </td>
 <td align="center">
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.1/Agent.Teams.AI.Setup.2.18.1.exe">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.2/Agent.Teams.AI.Setup.2.18.2.exe">
     <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
   </a>
   <br />
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.1/Agent.Teams.AI.Setup.2.18.1-arm64.exe">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.2/Agent.Teams.AI.Setup.2.18.2-arm64.exe">
     <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
   </a>
   <br />
@@ -104,24 +104,24 @@ If you have signed macOS 2.17.1 installed, quit the app and install the appropri
   <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
 </td>
 <td align="center">
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.1/Agent.Teams.AI-2.18.1.AppImage">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.2/Agent.Teams.AI-2.18.2.AppImage">
     <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
   </a>
   <br />
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.1/agent-teams-ai_2.18.1_amd64.deb">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.2/agent-teams-ai_2.18.2_amd64.deb">
     <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt=".deb" />
   </a>&nbsp;
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.1/agent-teams-ai-2.18.1.x86_64.rpm">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.2/agent-teams-ai-2.18.2.x86_64.rpm">
     <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat&logoColor=white" alt=".rpm" />
   </a>&nbsp;
-  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.1/agent-teams-ai-2.18.1.pacman">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.2/agent-teams-ai-2.18.2.pacman">
     <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt=".pacman" />
   </a>
 </td>
 </tr>
 </table>
 
-<!-- RELEASE_BODY_END v2.18.1 -->
+<!-- RELEASE_BODY_END v2.18.2 -->
 
 ## v2.18.0 (Prepared draft)
 
