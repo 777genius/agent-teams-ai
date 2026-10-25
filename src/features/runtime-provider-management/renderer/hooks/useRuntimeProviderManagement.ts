@@ -32,6 +32,7 @@ import {
   shouldKeepVisibleDirectoryRows,
 } from './runtimeProviderDirectoryCatalogPolicy';
 import {
+  buildSetupAuthSelector,
   createOAuthOperationId,
   isProviderConnectCancellation,
   mergeModelPages,
@@ -1290,10 +1291,7 @@ export function useRuntimeProviderManagement(
             method,
             apiKey: apiKey || null,
             metadata: setupMetadata,
-            ...(authOption?.methodIndex !== undefined && authOption.methodIndex !== null
-              ? { authMethodIndex: authOption.methodIndex }
-              : {}),
-            ...(authOption?.id ? { authOptionId: authOption.id } : {}),
+            ...buildSetupAuthSelector(authOption),
             ...(oauthOperationId ? { oauthOperationId } : {}),
             projectPath: projectContext.path,
           }),
