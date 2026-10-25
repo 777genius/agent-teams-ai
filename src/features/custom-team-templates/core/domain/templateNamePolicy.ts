@@ -18,15 +18,16 @@ export function areTemplateNamesEquivalent(left: string, right: string): boolean
   return normalizeTemplateNameKey(left) === normalizeTemplateNameKey(right);
 }
 
-/** Rejects C0 control characters and DEL, including embedded line breaks. */
+/**
+ * Unicode control characters (Cc: C0 controls, DEL and the C1 block including
+ * U+0085 NEL) plus the line separator U+2028 (Zl) and paragraph separator
+ * U+2029 (Zp). Ordinary spaces are unaffected: they are Zs, not covered here.
+ */
+const CONTROL_OR_SEPARATOR_PATTERN = /[\p{Cc}\p{Zl}\p{Zp}]/u;
+
+/** Rejects Unicode control characters and line/paragraph separators. */
 function hasControlCharacter(value: string): boolean {
-  for (const character of value) {
-    const codePoint = character.codePointAt(0) ?? 0;
-    if (codePoint < 0x20 || codePoint === 0x7f) {
-      return true;
-    }
-  }
-  return false;
+  return CONTROL_OR_SEPARATOR_PATTERN.test(value);
 }
 
 export type TemplateNameValidation =
@@ -43,15 +44,16 @@ export function validateTemplateName(rawName: unknown): TemplateNameValidation {
   if (typeof rawName !== 'string') {
     return { valid: false, issues: [{ code: 'templateNameRequired', field: 'name' }] };
   }
-  const value = rawName.normalize('NFC').trim();
+  const normalized = rawName.normalize('NFC');
+  if (hasControlCharacter(normalized)) {
+    return { valid: false, issues: [{ code: 'templateNameInvalidCharacters', field: 'name' }] };
+  }
+  const value = normalized.trim();
   if (!value) {
     return { valid: false, issues: [{ code: 'templateNameRequired', field: 'name' }] };
   }
   if (value.length > TEMPLATE_NAME_MAX_LENGTH) {
     return { valid: false, issues: [{ code: 'templateNameTooLong', field: 'name' }] };
-  }
-  if (hasControlCharacter(value)) {
-    return { valid: false, issues: [{ code: 'templateNameInvalidCharacters', field: 'name' }] };
   }
   return { valid: true, value, normalizedKey: normalizeTemplateNameKey(value) };
 }

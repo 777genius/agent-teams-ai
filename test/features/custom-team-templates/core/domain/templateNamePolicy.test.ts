@@ -59,6 +59,39 @@ describe('templateNamePolicy', () => {
     });
   });
 
+  it('rejects Unicode control characters and line/paragraph separators', () => {
+    // U+0085 (NEL, Cc), U+2028 (LINE SEPARATOR, Zl), U+2029 (PARAGRAPH SEPARATOR, Zp).
+    for (const embedded of ['Bad\u0085Name', 'Bad\u2028Name', 'Bad\u2029Name']) {
+      expect(validateTemplateName(embedded)).toEqual({
+        valid: false,
+        issues: [{ code: 'templateNameInvalidCharacters', field: 'name' }],
+      });
+    }
+    // Ordinary spaces (Zs) stay allowed.
+    expect(validateTemplateName('Bad Name').valid).toBe(true);
+  });
+
+  it('rejects control characters at the start or end before trimming', () => {
+    for (const char of ['\n', '\r', '\t', '\u2028', '\u2029', '\u0085']) {
+      expect(validateTemplateName(`${char}Name`)).toEqual({
+        valid: false,
+        issues: [{ code: 'templateNameInvalidCharacters', field: 'name' }],
+      });
+      expect(validateTemplateName(`Name${char}`)).toEqual({
+        valid: false,
+        issues: [{ code: 'templateNameInvalidCharacters', field: 'name' }],
+      });
+    }
+  });
+
+  it('trims ordinary leading and trailing spaces from valid names', () => {
+    const result = validateTemplateName('  Product Team  ');
+    expect(result).toEqual({
+      valid: true,
+      value: 'Product Team',
+      normalizedKey: 'product team',
+    });
+  });
   it('finds the existing template whose name normalizes to the same key', () => {
     const existing = [
       { templateId: 'template-1', name: 'Product Team' },
