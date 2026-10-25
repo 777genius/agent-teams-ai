@@ -7,7 +7,7 @@ on:
         required: true
         type: string
       model:
-        description: Explicit selected model required for native and source-only startup; unused for provider-only
+        description: Explicit selected model required for native and source-only startup; all/v2 also need it in the V2 floor catalog; unused for provider-only
         required: false
         type: string
         default: ''
@@ -193,7 +193,8 @@ jobs:
           VERSIONS: ${{ inputs.versions }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $resolved = @(bun scripts/e2e/opencode-native-windows-pins.ts ../TEST-native-sdk $env:VERSIONS)
+          # Neither tree is installed yet: a bare import must fail instead of auto-installing.
+          $resolved = @(bun --no-install scripts/e2e/opencode-native-windows-pins.ts ../TEST-native-sdk $env:VERSIONS)
           if ($LASTEXITCODE -ne 0) { throw 'OpenCode pin resolution from the selected runtime failed' }
           $resolved | Write-Output
           $resolved | Out-File $env:GITHUB_OUTPUT -Append -Encoding utf8
@@ -478,6 +479,7 @@ jobs:
         env:
           SDK_REF: ${{ inputs.sdk_ref }}
           CANDIDATE_PLATFORM: win32-x64
+          CANDIDATE_OPENCODE_V2_CONTRACT: ${{ steps.opencode-pins.outputs.contract }}
         run: |
           $ErrorActionPreference = 'Stop'
           bun scripts/package-runtime.ts --platform win32-x64
@@ -495,6 +497,9 @@ jobs:
           $lock.releaseTag = "TEST-native-candidate-$($env:SDK_REF)"
           $lock.assets.'win32-x64'.file = 'TEST-runtime-win32-x64.zip'
           $lock.assets.'win32-x64'.sha256 = (Get-FileHash candidate/TEST-runtime-win32-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          # A runtime pin copies the release's published V2 contract; the candidate does the same,
+          # so the packaged app admits exactly the versions this runtime qualifies.
+          if ($env:CANDIDATE_OPENCODE_V2_CONTRACT) { $lock.opencodeV2 = $env:CANDIDATE_OPENCODE_V2_CONTRACT | ConvertFrom-Json }
           $lock | ConvertTo-Json -Depth 20 | Set-Content ../TEST-native-source/runtime.lock.json -Encoding utf8NoBOM
           New-Item -ItemType Directory -Force ../TEST-native-source/resources | Out-Null
           if (Test-Path ../TEST-native-source/resources/runtime/claude-multimodel.exe) { throw 'Unexpected preexisting runtime' }

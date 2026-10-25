@@ -6,6 +6,9 @@
  * floor-wire release and the newest qualified release. V1 has no runtime
  * registry; its exact TEST pin lives only here.
  *
+ * The runtime's published release contract is printed too, so a staged
+ * candidate pins it in runtime.lock.json the same way a real runtime pin does.
+ *
  * Usage: bun scripts/e2e/opencode-native-windows-pins.ts <sdk-root> <all|v1|v2|current>
  * Prints `key=value` lines for GITHUB_OUTPUT.
  */
@@ -26,27 +29,33 @@ if (versions !== 'v1') {
   const registryPath = path.join(sdk, 'src/services/opencode/compatibility/OpenCodeV2Registry.ts');
   const present = await lstat(registryPath).then((stat) => stat.isFile(), () => false);
   assert(present, 'Selected runtime predates the OpenCode V2 registry; dispatch from a matching app ref');
-  const registry =(await import(pathToFileURL(registryPath).href)) as Record<string, unknown>;
+  const registry = (await import(pathToFileURL(registryPath).href)) as Record<string, unknown>;
   const floor = registry.OPENCODE_V2_FLOOR_WIRE_VERSION;
-  const contract = registry.openCodeV2ReleaseContract;
+  const releaseContract = registry.openCodeV2ReleaseContract;
   const wire = registry.openCodeV2Wire;
   assert(
-    typeof floor === 'string' && typeof contract === 'function' && typeof wire === 'function',
+    typeof floor === 'string' && typeof releaseContract === 'function' && typeof wire === 'function',
     'Selected runtime has no OpenCode V2 registry contract'
   );
-  const qualified: unknown = (contract() as { qualified?: Record<string, unknown> }).qualified?.[PLATFORM];
+  const contract: unknown = releaseContract();
+  const qualified: unknown = (contract as { qualified?: Record<string, unknown> }).qualified?.[PLATFORM];
   assert(
     Array.isArray(qualified) && qualified.every((version) => typeof version === 'string'),
     `Selected runtime publishes no ${PLATFORM} V2 qualification list`
   );
   // The registry sorts qualified releases ascending; the newest is the current target.
   const current: unknown = qualified.at(-1);
-  assert(qualified.includes(floor), `Selected runtime does not qualify the V2 floor ${floor} on ${PLATFORM}`);
+  // Current-only runs never install or start the floor release.
+  assert(
+    versions === 'current' || qualified.includes(floor),
+    `Selected runtime does not qualify the V2 floor ${floor} on ${PLATFORM}`
+  );
   assert(
     typeof current === 'string' && wire(current) === 'current',
     `Selected runtime qualifies no current-wire V2 release on ${PLATFORM}`
   );
-  lines.push(`floor=${floor}`, `current=${current}`);
+  lines.push(`floor=${floor}`, `current=${current}`, `contract=${JSON.stringify(contract)}`);
 }
-for (const line of lines) assert(/^(?:v1|floor|current)=\d+\.\d+\.\d+$/.test(line), 'Resolved pin invalid');
+for (const line of lines)
+  assert(/^(?:(?:v1|floor|current)=\d+\.\d+\.\d+|contract=\{[^\n]*\})$/.test(line), 'Resolved pin invalid');
 console.log(lines.join('\n'));
