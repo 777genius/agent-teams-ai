@@ -2,3 +2,4 @@
 patches/node-forge@1.4.0.patch text eol=lf
 patches/braces@3.0.3.patch text eol=lf
 patches/http-cache-semantics@4.2.0.patch text eol=lf
+patches/zod@3.25.76.patch text eol=lf
