@@ -413,8 +413,8 @@ describe('Kimi Code route guard', () => {
   const plan = getRuntimeProviderOnboardingPlan('kimi-code-membership');
   const routes = [{ providerId: 'kimi-for-coding' }, { providerId: 'Kimi-Code-Plan-Global' }];
 
-  it('keeps routes off while the pinned runtime does not serve them', () => {
-    expect(OPENCODE_V2_ROUTE_INTEGRATIONS_SERVED).toBe(false);
+  it('serves routes with the pinned runtime and keeps them off for a runtime that does not', () => {
+    expect(OPENCODE_V2_ROUTE_INTEGRATIONS_SERVED).toBe(true);
     expect(resolveRuntimeProviderOnboardingRouteGeneration(plan, 'v2', routes, false)).toBe('v1');
   });
 
