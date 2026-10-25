@@ -2095,8 +2095,6 @@ async function main() {
   assert(/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_./:~-]+$/.test(model));
   preproofStage = 'desktop_prepare';
   const desktop = await prepareNativeDesktop();
-  preproofStage = 'desktop_private_acl';
-  await protectWindowsTestDirectory(desktop.root);
   preproofStage = 'selected_paths';
   if (sdk !== 'bundled') desktop.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = await realpath(sdk);
   desktop.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH = await realpath(binary);
