@@ -9,6 +9,7 @@ import {
 import { api } from '@renderer/api';
 
 import {
+  getRuntimeProviderConnectTimeoutMs as connectTimeoutMs,
   getRuntimeProviderCredentialUrl,
   selectInitialProviderId,
   selectRuntimeProviderSetupAuthOptionId,
@@ -105,7 +106,7 @@ export type RuntimeProviderChangeKind =
 
 const MODEL_PAGE_SIZE = 250;
 const MODEL_SEARCH_DEBOUNCE_MS = 300;
-const OAUTH_CONNECT_UI_TIMEOUT_MS = 18 * 60_000;
+const OAUTH_UI_TIMEOUT_MS = 18 * 60_000;
 const CLEAR_PROJECT_DEFAULT_UI_TIMEOUT_MS = 100_000;
 
 interface ProjectContextSnapshot {
@@ -1296,7 +1297,7 @@ export function useRuntimeProviderManagement(
             projectPath: projectContext.path,
           }),
           'Provider connect timed out',
-          method === 'oauth' ? OAUTH_CONNECT_UI_TIMEOUT_MS : 100_000
+          method === 'oauth' ? OAUTH_UI_TIMEOUT_MS : connectTimeoutMs(options.runtimeId) + 10_000
         );
         if (response.error) {
           const cancelled = recordUnsuccessfulConnection(response.error);

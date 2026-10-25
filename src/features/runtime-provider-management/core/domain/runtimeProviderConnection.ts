@@ -1,10 +1,19 @@
 import type {
   RuntimeProviderAuthMethodDto,
+  RuntimeProviderManagementRuntimeId,
   RuntimeProviderSetupAuthOptionDto,
   RuntimeProviderSetupFormDto,
 } from '../../contracts';
 
 export type RuntimeProviderConnectionIntent = 'connect' | 'reconnect';
+
+export function getRuntimeProviderConnectTimeoutMs(
+  runtimeId: RuntimeProviderManagementRuntimeId
+): number {
+  // OpenCode V2 prepares its profile before catalog loading and model verification.
+  // Allow that work to finish, while keeping the app's connect command bounded.
+  return runtimeId === 'opencode' ? 360_000 : 90_000;
+}
 
 export interface RuntimeProviderSetupPresentation {
   readonly kind: 'default' | 'replace-api-credential' | 'reauthorize-oauth';
