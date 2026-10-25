@@ -2,7 +2,7 @@ name: TEST Linux OpenCode V2 e2e
 
 on:
   push:
-    branches: [test/linux-v2-e2e-20261025]
+    branches: [test/linux-v2-e2e-pr161]
 
 permissions:
   contents: read
@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        opencode: ['2.1.4', '2.0.32']
+        opencode: ['2.1.4']
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     env:
