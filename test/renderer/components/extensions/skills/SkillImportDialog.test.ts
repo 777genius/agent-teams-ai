@@ -152,6 +152,58 @@ describe('SkillImportDialog', () => {
     });
   });
 
+  it('keeps the suggested managed-copy destination through file review', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const previewImport = vi.fn().mockResolvedValue({
+      planId: 'managed-copy-plan',
+      targetSkillDir: '/tmp/local-skills/fixture-copy',
+      changes: [],
+      warnings: [],
+      summary: { created: 0, updated: 0, deleted: 0, binary: 0 },
+    });
+
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(SkillImportDialog, {
+            open: true,
+            projectPath: null,
+            projectLabel: null,
+            allowCodexRootKind: false,
+            initialSourceDir: '/tmp/managed-skills/fixture',
+            initialFolderName: 'fixture-copy',
+            sourceLocked: true,
+            operations: { previewImport, applyImport: vi.fn() },
+            onClose: vi.fn(),
+            onImported: vi.fn(),
+          })
+        );
+      });
+
+      const folder = host.querySelector<HTMLInputElement>('#skill-import-folder');
+      expect(folder?.value).toBe('fixture-copy');
+      const review = Array.from(host.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes('Review And Import')
+      );
+      expect(review).toBeDefined();
+      await act(async () => review!.click());
+
+      expect(previewImport).toHaveBeenCalledWith({
+        sourceDir: '/tmp/managed-skills/fixture',
+        folderName: 'fixture-copy',
+        scope: 'user',
+        rootKind: 'claude',
+        projectPath: undefined,
+      });
+      expect(host.querySelector('[data-testid="skill-review-dialog"]')).not.toBeNull();
+      expect(storeState.previewSkillImport).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
   it('keeps destination folder name synced with the chosen source until edited manually', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);

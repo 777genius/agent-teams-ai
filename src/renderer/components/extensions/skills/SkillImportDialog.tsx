@@ -125,11 +125,11 @@ export const SkillImportDialog = ({
   }, [open]);
 
   useEffect(() => {
-    if (!open || folderNameEdited) {
+    if (!open || folderNameEdited || initialFolderName) {
       return;
     }
     setFolderName(sourceDir.trim() ? getSuggestedSkillFolderNameFromPath(sourceDir) : '');
-  }, [folderNameEdited, open, sourceDir]);
+  }, [folderNameEdited, initialFolderName, open, sourceDir]);
 
   useEffect(() => {
     if (open && scope === 'project' && !projectPath) {
