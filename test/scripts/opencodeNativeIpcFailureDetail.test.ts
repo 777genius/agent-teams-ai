@@ -1035,3 +1035,35 @@ it('retains only exact existing V2 cleanup and member Stop codes from the same-r
     expect(JSON.stringify(snapshot)).not.toMatch(/PRIVATE_|123|456/);
   }
 });
+
+it('preflight failure receipt keeps closed provider diagnostics and drops paths', async () => {
+  const source = await readFile('scripts/e2e/opencode-native-windows-preflight.ts', 'utf8');
+  const ast = ts.createSourceFile('preflight.ts', source, ts.ScriptTarget.Latest, true);
+  const declaration = ast.statements.filter(ts.isFunctionDeclaration)
+    .find((node) => node.name?.text === 'providerDiagnostics')!;
+  const compiled = ts.transpileModule(declaration.getText(ast), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+  }).outputText;
+  const read = compileFunction(`${compiled}\nreturn providerDiagnostics;`, [], {
+    importModuleDynamically: constants.USE_MAIN_CONTEXT_DEFAULT_LOADER,
+  })() as (dataRoot: string | undefined) => Promise<unknown[]>;
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'TEST-preflight-diagnostics-')));
+  try {
+    expect(await read(undefined)).toEqual([]);
+    expect(await read(root)).toEqual([]);
+    const directory = path.join(root, 'opencode', 'v2', 'provider-diagnostics');
+    await mkdir(directory, { recursive: true });
+    await writeFile(path.join(directory, '1.json'), JSON.stringify({
+      phase: 'execution-host-startup', category: 'run_process_unknown', native: { stage: 'spawn', nativeCode: 2 },
+      root: 'C:\\Users\\PRIVATE\\data', 'bad key': 'x', history: [{ phase: 'prepared', elapsedMs: 12 }],
+    }));
+    await writeFile(path.join(directory, '2.json'), 'not json');
+    expect(await read(root)).toEqual([
+      { phase: 'execution-host-startup', category: 'run_process_unknown', native: { stage: 'spawn', nativeCode: 2 },
+        root: 'redacted', history: [{ phase: 'prepared', elapsedMs: 12 }] },
+      { unreadable: true },
+    ]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

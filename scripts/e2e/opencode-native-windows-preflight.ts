@@ -191,6 +191,42 @@ function safeSourceGateFailure(error: unknown, nativeFailures?: WeakMap<object, 
     primaryNativeOperation: error && typeof error === 'object' ? nativeFailures?.get(error) ?? 'unknown' : 'unknown', causal: { failures, truncated } };
 }
 
+// The runtime writes only closed diagnostic fields; keep identifier keys and path-free tokens.
+async function providerDiagnostics(dataRoot: string | undefined): Promise<unknown[]> {
+  if (!dataRoot) return [];
+  const { readdir, readFile } = await import('node:fs/promises');
+  const { join } = await import('node:path');
+  const directory = join(dataRoot, 'opencode', 'v2', 'provider-diagnostics');
+  let names: string[];
+  try {
+    names = (await readdir(directory)).filter((name) => /^[A-Za-z0-9._-]{1,128}\.json$/.test(name)).sort().slice(-6);
+  } catch { return []; }
+  const project = (value: unknown, depth: number): unknown => {
+    if (Array.isArray(value)) return depth > 4 ? undefined : value.slice(0, 16).map((item) => project(item, depth + 1));
+    if (value && typeof value === 'object') {
+      if (depth > 4) return undefined;
+      const out: Record<string, unknown> = {};
+      for (const [key, item] of Object.entries(value).slice(0, 48)) {
+        if (!/^[A-Za-z][A-Za-z0-9]{0,63}$/.test(key)) continue;
+        const projected = project(item, depth + 1);
+        if (projected !== undefined) out[key] = projected;
+      }
+      return out;
+    }
+    if (typeof value === 'string') return /^[A-Za-z0-9_.:-]{0,96}$/.test(value) ? value : 'redacted';
+    if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+    return typeof value === 'boolean' || value === null ? value : undefined;
+  };
+  const rows: unknown[] = [];
+  for (const name of names) {
+    try {
+      const bytes = await readFile(join(directory, name), 'utf8');
+      rows.push(bytes.length <= 65_536 ? project(JSON.parse(bytes), 0) : { oversized: true });
+    } catch { rows.push({ unreadable: true }); }
+  }
+  return rows;
+}
+
 // Serialized after TypeScript transpilation; no ambient closure or credentials.
 async function verifyModelFreeReadiness(
   execute: ReadinessExecutor,
@@ -662,7 +698,8 @@ try {
  console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:true,stage,preparation,startupFacts,version:${JSON.stringify(pin?.version ?? null)}}));
 } catch (error) {
  const missing = /^readiness_file_missing:(owner_discovery|source_availability|execution_probe)$/.exec(error?.message ?? '');
- console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:false,stage,freshHandshakeFailure,startupFacts,
+ const diagnostics = await (${providerDiagnostics.toString()})(process.env.CLAUDE_MULTIMODEL_DATA_HOME).catch(() => []);
+ console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:false,stage,freshHandshakeFailure,startupFacts,diagnostics,
    code:missing||(stage==='probe-controller-state'&&error?.code==='ENOENT')?'readiness_file_missing':'source_gate_unknown',role:missing?.[1]??'unknown',
    publicStopFailure:publicStopFailure===null?null:(${safeSourceGateFailure.toString()})(publicStopFailure),
    ...(${safeSourceGateFailure.toString()})(error)}));
@@ -688,7 +725,7 @@ process.exit(exitCode);`;
         AGENT_TEAMS_MCP_CLAUDE_DIR: desktop.env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT,
       },
       timeout: binary ? 330_000 : 45_000,
-      maxBuffer: 65_536,
+      maxBuffer: 1_048_576,
     }));
   } catch (error: unknown) {
     code = 1;
