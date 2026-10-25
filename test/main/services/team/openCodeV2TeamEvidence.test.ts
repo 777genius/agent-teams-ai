@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import runtimeLock from '../../../../runtime.lock.json';
+
 import { successfulTools } from './openCodeMixedTeamEvidence';
 import {
   classifyTeamTranscriptGeneration,
@@ -42,7 +44,7 @@ const checkCommand = (value: unknown) =>
   hasV2CommandInvocationWithOuterMarker(read(value), command);
 
 describe('V2 composite team evidence', () => {
-  it.each(['2.0.0', '2.0.32'])(
+  it.each([...new Set(Object.values(runtimeLock.opencodeV2.qualified).flat())])(
     'accepts the actual canonical producer shape for %s without inventing child results',
     (version) => {
       const value = fixture();
@@ -71,7 +73,17 @@ describe('V2 composite team evidence', () => {
     expect(classifyTeamTranscriptGeneration({ ok: true, runtime: { version: '1.2.34' } })).toBe(
       'v1'
     );
-    for (const version of [null, '', '2.0.21', '2.0.33', '2', '3.0.0', 2, {}, ['1.2.3']]) {
+    for (const version of [
+      null,
+      '',
+      '2',
+      '2.0.32-rc.1',
+      'opencode v2.0.32',
+      '3.0.0',
+      2,
+      {},
+      ['1.2.3'],
+    ]) {
       expect(() => classifyTeamTranscriptGeneration({ ok: true, runtime: { version } })).toThrow(
         'V2 original team evidence unavailable'
       );

@@ -1,6 +1,6 @@
 import {
   classifyNativeVersion,
-  isLegacyOpenCodeVersionSupported,
+  isOpenCodeVersionProductionEligible,
   MINIMUM_AGENT_TEAMS_OPENCODE_VERSION,
 } from '@features/opencode-compatibility';
 
@@ -52,10 +52,10 @@ export function isOpenCodeFreeTierVersionOutdated(version: string | null | undef
 }
 
 export function isAgentTeamsOpenCodeVersionSupported(version: string | null | undefined): boolean {
-  return isLegacyOpenCodeVersionSupported(version);
+  return isOpenCodeVersionProductionEligible(version);
 }
 
-/** A recognized native V2 delivery: usable for reads, not qualified for team launch. */
+/** A native V2 delivery in the pinned runtime's range; team launch also needs its qualification. */
 export function isRecognizedOpenCodeV2Version(version: string | null | undefined): boolean {
   if (!version) return false;
   const classification = classifyNativeVersion(version);

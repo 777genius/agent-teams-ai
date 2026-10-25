@@ -114,13 +114,13 @@ function handshake(version = '2.0.0'): Protocol2Handshake {
         generationIdentity: {
           version: 1,
           fingerprint: sha,
-          availability: 'qualified',
+          availability: 'qualified' as const,
           qualificationDigest: sha,
         },
         permissionAnswer: {
           version: 1,
           fingerprint: sha,
-          availability: 'qualified',
+          availability: 'qualified' as const,
           qualificationDigest: sha,
         },
       },
@@ -165,21 +165,28 @@ describe('bounded protocol2 public contracts', () => {
     expect(decodeProtocol2Offer(mismatched).ok).toBe(false);
   });
 
-  it('refuses the retired current pin and dialect even with claimed ready authority', () => {
-    const oldNative = { ...native('2.0.32'), version: '2.0.21', apiDialect: 'v2-2.0.21' };
-    expect(decodeProtocol2Offer({ ...offer('2.0.32'), selected: oldNative }).ok).toBe(false);
+  it('refuses out-of-range and inconsistent dialects even with claimed ready authority', () => {
+    const outOfRange = { ...native('2.0.32'), version: '3.0.0', apiDialect: 'v2-3.0.0' };
+    expect(decodeProtocol2Offer({ ...offer('2.0.32'), selected: outOfRange }).ok).toBe(false);
+    // An in-range version still needs its own exact dialect.
     expect(decodeProtocol2Offer({ ...offer('2.0.32'), selected: {
       ...native('2.0.32'), apiDialect: 'v2-2.0.21',
     } }).ok).toBe(false);
-    expect(decodeProtocol2Handshake({ ...handshake('2.0.32'), selectedNative: oldNative,
-      selectedAuthority: { ...endpoint('2.0.32'), native: oldNative } }).ok).toBe(false);
-    expect(decodeProtocol2CommandContext({ ...context('2.0.32'), native: oldNative }).ok).toBe(false);
+    expect(decodeProtocol2Handshake({ ...handshake('2.0.32'), selectedNative: outOfRange,
+      selectedAuthority: { ...endpoint('2.0.32'), native: outOfRange } }).ok).toBe(false);
+    expect(decodeProtocol2CommandContext({ ...context('2.0.32'), native: outOfRange }).ok).toBe(false);
     const current = handshake('2.0.32');
-    expect(decodeProtocol2Handshake({ ...current, dialects: {
-      'v2-2.0.21': current.dialects['v2-2.0.32'],
-    } }).ok).toBe(false);
-    expect(negotiateOpenCodeProtocol({ version: '2.0.21' })).toEqual({
+    for (const key of ['v2-3.0.0', 'v2-2.0.32-rc.1', 'v2-next']) {
+      expect(decodeProtocol2Handshake({ ...current, dialects: {
+        [key]: current.dialects['v2-2.0.32'],
+      } }).ok).toBe(false);
+    }
+    expect(negotiateOpenCodeProtocol({ version: '3.0.0' })).toEqual({
       kind: 'blocked', reason: 'Unsupported native generation',
+    });
+    // Recognized in-range V2 still never negotiates without an upgraded qualified owner.
+    expect(negotiateOpenCodeProtocol({ version: '2.0.21' })).toEqual({
+      kind: 'blocked', reason: 'V2 requires an upgraded qualified owner',
     });
   });
 

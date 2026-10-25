@@ -1,3 +1,5 @@
+import { isOpenCodeV2QualifiedVersion, isOpenCodeV2RangeVersion } from './pinnedOpenCodeV2Contract';
+
 import type { NativeKey } from '../../contracts';
 
 export const MINIMUM_AGENT_TEAMS_OPENCODE_VERSION = '1.16.0';
@@ -60,17 +62,15 @@ export function classifyNativeVersion(raw: string): NativeVersionClassification 
       productionEligible: true,
     };
   }
-  // V2 build metadata cannot establish an exact qualified dialect.
-  if (
-    normalizeOpenCodeVersionText(raw) === version &&
-    (version === '2.0.0' || version === '2.0.32')
-  ) {
+  // V2 is recognized by the pinned runtime's range rule; build metadata cannot
+  // establish an exact dialect. Eligibility follows the runtime's qualification data.
+  if (normalizeOpenCodeVersionText(raw) === version && isOpenCodeV2RangeVersion(version)) {
     return {
       kind: 'recognized',
       generation: 'v2',
       apiDialect: `v2-${version}`,
       version,
-      productionEligible: false,
+      productionEligible: isOpenCodeV2QualifiedVersion(version),
     };
   }
   return { kind: 'blocked', reason: parsed.major === 0 ? 'too_old' : 'unknown_generation' };
@@ -81,7 +81,8 @@ export function isRecognizedOpenCodeRuntimeVersion(raw: string | null | undefine
   return Boolean(raw && classifyNativeVersion(raw).kind === 'recognized');
 }
 
-export function isLegacyOpenCodeVersionSupported(raw: string | null | undefined): boolean {
+/** Stable V1, or a V2 release the pinned runtime qualified for team launch on this platform. */
+export function isOpenCodeVersionProductionEligible(raw: string | null | undefined): boolean {
   if (!raw) return false;
   const classification = classifyNativeVersion(raw);
   return classification.kind === 'recognized' && classification.productionEligible;

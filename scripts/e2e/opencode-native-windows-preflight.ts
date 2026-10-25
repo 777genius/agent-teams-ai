@@ -1060,8 +1060,8 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
             if (!errorKinds.includes(kind) && errorKinds.length < 9) errorKinds.push(kind);
             if (kind === 'module_resolution') {
               const target = /Cannot find module ["'`]([^"'`]+)["'`]/.exec(message)?.[1];
-              moduleTargetRole = target === '@opencode/client' ? '@opencode/client' :
-                target === '@opencode/client-v2-floor' ? '@opencode/client-v2-floor' :
+              // Official clients are root or version-derived graph aliases (@opencode/client-v<version>).
+              moduleTargetRole = target && /^@opencode\/client(?:-v\d+\.\d+\.\d+)?$/.test(target) ? target :
                 target === '@modelcontextprotocol/sdk' || target?.startsWith('@modelcontextprotocol/sdk/') ? 'mcp_sdk' :
                 target === 'effect' || target?.startsWith('effect/') ? 'effect' : 'other';
               if (target && paths.win32.isAbsolute(target)) {

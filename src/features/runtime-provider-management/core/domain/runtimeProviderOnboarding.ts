@@ -398,10 +398,9 @@ export function resolveRuntimeProviderOnboardingPlan(
 
 /**
  * Whether the pinned runtime serves V2 route integrations: lists them in its provider
- * directory and returns their key setup form. Runtime 0.0.137 does neither. Set to true in
- * the PR that bumps runtime.lock.json to a runtime that does.
+ * directory and returns their key setup form. Runtime 0.0.138 (runtime.lock.json) does.
  */
-export const OPENCODE_V2_ROUTE_INTEGRATIONS_SERVED = false;
+export const OPENCODE_V2_ROUTE_INTEGRATIONS_SERVED = true;
 
 /**
  * Guard: route integrations are used only on V2 when the runtime serves them and its directory
