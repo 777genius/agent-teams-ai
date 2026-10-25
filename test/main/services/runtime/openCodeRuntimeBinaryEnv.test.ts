@@ -173,7 +173,7 @@ describe('applyOpenCodeRuntimeBinaryEnv console wrapper', () => {
     expect(env.OPENCODE_CONSOLE_WRAPPER_TARGET).toBe(binary);
   });
 
-  it('unwraps only the already-selected V2 target and removes stale wrapper routing', () => {
+  it('does not infer native identity from a selected console wrapper and its stale target', () => {
     const { resourcesPath, wrapperPath } = makeResourcesWithWrapper();
     const binary = nativeV2(resourcesPath);
     const env: NodeJS.ProcessEnv = {
@@ -186,11 +186,28 @@ describe('applyOpenCodeRuntimeBinaryEnv console wrapper', () => {
       resourcesPath,
       platform: 'win32',
       env: {},
+      verifiedNativeV2BinaryPath: binary,
+    });
+    expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(wrapperPath);
+    expect(env.OPENCODE_BIN_PATH).toBe(wrapperPath);
+    expect(env.OPENCODE_CONSOLE_WRAPPER_TARGET).toBe(binary);
+  });
+
+  it('routes a probe-verified standalone V2 directly without wrapper or sidecar mutations', () => {
+    const { resourcesPath, wrapperPath } = makeResourcesWithWrapper();
+    const binary = path.join(resourcesPath, 'user-selected.exe');
+    fs.writeFileSync(binary, 'TEST standalone native');
+    const env: NodeJS.ProcessEnv = { PATH: '', OPENCODE_CONSOLE_WRAPPER_TARGET: '/TEST/stale' };
+    applyOpenCodeRuntimeBinaryEnv(env, binary, {
+      resourcesPath,
+      platform: 'win32',
+      env: {},
+      verifiedNativeV2BinaryPath: binary,
     });
     expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(binary);
     expect(env.OPENCODE_BIN_PATH).toBe(binary);
     expect(env.OPENCODE_CONSOLE_WRAPPER_TARGET).toBeUndefined();
-    expect(env.PATH?.split(path.delimiter)[0]).toBe(path.dirname(binary));
+    expect(fs.existsSync(path.join(path.dirname(wrapperPath), 'opencode.real.path'))).toBe(false);
   });
 
   it('never selects a stale V2 wrapper target over an explicit different V1 binary', () => {
@@ -201,7 +218,12 @@ describe('applyOpenCodeRuntimeBinaryEnv console wrapper', () => {
       CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: realBinaryPath,
       OPENCODE_CONSOLE_WRAPPER_TARGET: binary,
     };
-    applyOpenCodeRuntimeBinaryEnv(env, binary, { resourcesPath, platform: 'win32', env: {} });
+    applyOpenCodeRuntimeBinaryEnv(env, binary, {
+      resourcesPath,
+      platform: 'win32',
+      env: {},
+      verifiedNativeV2BinaryPath: binary,
+    });
     expect(env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(wrapperPath);
     expect(env.OPENCODE_CONSOLE_WRAPPER_TARGET).toBe(realBinaryPath);
   });

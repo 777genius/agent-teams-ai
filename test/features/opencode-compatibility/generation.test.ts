@@ -14,6 +14,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import runtimeLock from '../../../runtime.lock.json';
 import {
+  engineForNativeVersion,
   openCodeV2ContractCovers,
   openCodeV2ContractQualifies,
   openCodeV2PlatformKeys,
@@ -27,14 +28,32 @@ const pinnedQualified = runtimeLock.opencodeV2.qualified as Record<string, strin
 const pinnedPlatforms = Object.keys(pinnedQualified);
 
 /** Runs a check as the main process of each pinned release platform. */
-function forEachPinnedPlatform(check: (qualified: (version: string) => boolean) => void): void {
+function forEachPinnedPlatform(
+  check: (
+    eligible: (version: string) => boolean,
+    engine: (version: string) => string | null
+  ) => void
+): void {
   const original = { platform: process.platform, arch: process.arch };
   try {
     for (const key of pinnedPlatforms) {
       const [platform, arch] = key.split('-');
       Object.defineProperty(process, 'platform', { value: platform, configurable: true });
       Object.defineProperty(process, 'arch', { value: arch, configurable: true });
-      check((version) => pinnedQualified[key].includes(version.replace(/^opencode v/, '').trim()));
+      const flexible =
+        (runtimeLock.opencodeV2 as { cliVersionPolicy?: string }).cliVersionPolicy ===
+        'stable-v2-qualified-engine';
+      const contract = readOpenCodeV2Contract(runtimeLock.opencodeV2)!;
+      const engine = (raw: string): string | null => {
+        const version = raw.replace(/^opencode v/, '').trim();
+        if (!openCodeV2ContractCovers(contract, version)) return null;
+        return pinnedQualified[key].includes(version)
+          ? version
+          : flexible
+            ? (pinnedQualified[key].at(-1) ?? null)
+            : null;
+      };
+      check((version) => engine(version) !== null, engine);
     }
   } finally {
     Object.defineProperty(process, 'platform', { value: original.platform, configurable: true });
@@ -63,6 +82,91 @@ describe('pinned OpenCode V2 contract', () => {
     expect(openCodeV2ContractQualifies(fixture, ['darwin-arm64'], '2.37.105')).toBe(false);
     for (const version of ['1.99.0', '3.0.0', '2.1.4-rc.1', 'opencode v2.1.4', ' 2.1.4'])
       expect(openCodeV2ContractCovers(fixture, version)).toBe(false);
+  });
+
+  it('keeps old contracts strict and maps flexible native identities only to qualified platform engines', () => {
+    const flexible = readOpenCodeV2Contract({
+      ...fixture,
+      cliVersionPolicy: 'stable-v2-qualified-engine',
+    })!;
+    expect(engineForNativeVersion(fixture, ['darwin-arm64'], '2.37.105')).toBeNull();
+    expect(engineForNativeVersion(flexible, ['darwin-arm64'], '2.37.105')).toBe('2.1.4');
+    expect(engineForNativeVersion(flexible, ['darwin-arm64'], '2.0.0')).toBe('2.0.0');
+    expect(engineForNativeVersion(flexible, ['linux-x64'], '2.37.105')).toBe('2.0.0');
+    expect(engineForNativeVersion(flexible, ['win32-arm64'], '2.37.105')).toBeNull();
+    expect(engineForNativeVersion(flexible, [], '2.37.105')).toBeNull();
+    expect(openCodeV2ContractQualifies(flexible, ['darwin-arm64'], '2.37.105')).toBe(false);
+    for (const version of ['2.1.4-rc.1', '2.1.4+build.1', '3.0.0', '1.18.3'])
+      expect(engineForNativeVersion(flexible, ['darwin-arm64'], version)).toBeNull();
+  });
+
+  it('uses the preload target for each Mac architecture and refuses ambiguous flexible selection', () => {
+    const contract = readOpenCodeV2Contract({
+      range: { minimum: '2.0.0', below: '3.0.0' },
+      cliVersionPolicy: 'stable-v2-qualified-engine',
+      qualified: { 'darwin-arm64': ['2.0.32', '2.1.4'], 'darwin-x64': ['2.0.32'] },
+    })!;
+    const navigator = { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)' };
+    for (const [arch, expected] of [
+      ['arm64', '2.1.4'],
+      ['x64', '2.0.32'],
+    ] as const) {
+      const keys = openCodeV2PlatformKeys({
+        electronAPI: { openCodeRuntime: { platform: 'darwin', arch } },
+        navigator,
+      });
+      expect(keys).toEqual([`darwin-${arch}`]);
+      expect(engineForNativeVersion(contract, keys, '2.37.105')).toBe(expected);
+    }
+    expect(
+      openCodeV2PlatformKeys({
+        electronAPI: { openCodeRuntime: { platform: 'darwin', arch: 'x64' } },
+        process: { platform: 'darwin', arch: 'arm64' },
+        navigator,
+      })
+    ).toEqual(['darwin-x64']);
+    const ambiguous = openCodeV2PlatformKeys({ navigator });
+    expect(engineForNativeVersion(contract, ambiguous, '2.37.105')).toBeNull();
+    expect(engineForNativeVersion(contract, ambiguous, '2.0.32')).toBeNull();
+    const legacy = readOpenCodeV2Contract({
+      range: contract.range,
+      qualified: contract.qualified,
+    })!;
+    expect(engineForNativeVersion(legacy, ambiguous, '2.0.32')).toBe('2.0.32');
+  });
+
+  it('preserves actual native versions while classifying the advertised qualified engine dialect', async () => {
+    vi.resetModules();
+    vi.doMock('../../../runtime.lock.json', () => ({
+      default: {
+        opencodeV2: {
+          range: { minimum: '2.0.0', below: '3.0.0' },
+          cliVersionPolicy: 'stable-v2-qualified-engine',
+          qualified: { [`${process.platform}-${process.arch}`]: ['2.0.32', '2.1.4'] },
+        },
+      },
+    }));
+    try {
+      const generation =
+        await import('../../../src/features/opencode-compatibility/core/domain/generation');
+      expect(generation.classifyNativeVersion('opencode v2.37.105')).toEqual({
+        kind: 'recognized',
+        generation: 'v2',
+        version: '2.37.105',
+        apiDialect: 'v2-2.1.4',
+        productionEligible: true,
+      });
+      expect(generation.classifyNativeVersion('2.0.32')).toMatchObject({
+        version: '2.0.32',
+        apiDialect: 'v2-2.0.32',
+        productionEligible: true,
+      });
+      for (const version of ['2.37.105-beta.1', '2.37.105+build.1', '3.0.0'])
+        expect(generation.classifyNativeVersion(version).kind).toBe('blocked');
+    } finally {
+      vi.doUnmock('../../../runtime.lock.json');
+      vi.resetModules();
+    }
   });
 
   it.each([
@@ -130,6 +234,8 @@ describe('pinned OpenCode V2 contract', () => {
 
   it.each([
     ['missing', undefined],
+    ['unknown CLI version policy', { ...fixture, cliVersionPolicy: 'all-2x' }],
+    ['null CLI version policy', { ...fixture, cliVersionPolicy: null }],
     ['inverted range', { range: { minimum: '3.0.0', below: '2.0.0' }, qualified: {} }],
     ['range below V2', { range: { minimum: '1.16.0', below: '3.0.0' }, qualified: {} }],
     ['range beyond V2', { range: { minimum: '2.0.0', below: '4.0.0' }, qualified: {} }],
@@ -305,11 +411,11 @@ describe('current public OpenCode policy consumers', () => {
   it.each(['2.0.0', '2.0.32', '2.0.21', '2.1.4', '2.37.105'])(
     'recognizes in-range %s with eligibility from qualification data, without legacy negotiation',
     (version) => {
-      forEachPinnedPlatform((qualified) =>
+      forEachPinnedPlatform((qualified, engine) =>
         expect(classifyNativeVersion(version)).toEqual({
           kind: 'recognized',
           generation: 'v2',
-          apiDialect: `v2-${version}`,
+          apiDialect: `v2-${engine(version) ?? version}`,
           version,
           productionEligible: qualified(version),
         })
@@ -342,11 +448,11 @@ describe('current public OpenCode policy consumers', () => {
     'recognizes native CLI output for %s without launching V2',
     (version) => {
       const stdout = `opencode v${version}\n`;
-      forEachPinnedPlatform((qualified) =>
+      forEachPinnedPlatform((qualified, engine) =>
         expect(classifyNativeVersion(stdout)).toEqual({
           kind: 'recognized',
           generation: 'v2',
-          apiDialect: `v2-${version}`,
+          apiDialect: `v2-${engine(version) ?? version}`,
           version,
           productionEligible: qualified(version),
         })

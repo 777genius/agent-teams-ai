@@ -402,6 +402,29 @@ describe('OpenCode runtime rejection state', () => {
     }
   });
 
+  it('forwards an explicit V2 install choice through the bridge', async () => {
+    const install = vi
+      .fn()
+      .mockResolvedValue({
+        installed: false,
+        source: 'missing',
+        state: 'failed',
+        error: 'TEST expected failure',
+      });
+    const restoreApi = installElectronApi({
+      getStatus: async () => ({ installed: false, source: 'missing', state: 'idle' }),
+      install,
+      invalidateStatus: async () => undefined,
+      onProgress: () => () => undefined,
+    });
+    try {
+      await createCliInstallerStore().getState().installOpenCodeRuntime({ generation: 'v2' });
+      expect(install).toHaveBeenCalledWith({ generation: 'v2' });
+    } finally {
+      restoreApi();
+    }
+  });
+
   it('replaces the temporary checking state with failed when installation rejects', async () => {
     const restoreApi = installElectronApi({
       getStatus: async () => {

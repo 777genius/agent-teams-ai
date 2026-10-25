@@ -1,6 +1,9 @@
+import { classifyNativeVersion, getLatestQualifiedOpenCodeV2Version } from '@features/opencode-compatibility';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import { isVersionOlder } from '@shared/utils/version';
+
+import { fetchOpenCodePackageMetadata } from './openCodeRuntimePackageMetadata';
 
 import type { OpenCodeRuntimeStatus } from '@shared/types';
 
@@ -34,4 +37,21 @@ export function preserveKnownOpenCodeUpdate(
     latestVersion: knownLatestVersion,
     updateAvailable: Boolean(status.version && isVersionOlder(status.version, knownLatestVersion)),
   };
+}
+
+export async function resolveLatestOpenCodeVersion(installedVersion?: string): Promise<string> {
+  if (installedVersion?.startsWith('2.')) {
+    const qualified = getLatestQualifiedOpenCodeV2Version(process.platform, process.arch);
+    if (!qualified) throw new Error('No compatible OpenCode V2 is qualified for this platform');
+    return qualified;
+  }
+  const metadata = await fetchOpenCodePackageMetadata(
+    'opencode-ai',
+    'latest',
+    3_000
+  );
+  const classification = classifyNativeVersion(metadata.version!);
+  if (classification.kind !== 'recognized' || classification.generation !== 'v1')
+    throw new Error('No compatible stable OpenCode V1 update is available');
+  return metadata.version!;
 }

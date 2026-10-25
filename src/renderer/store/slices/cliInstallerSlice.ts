@@ -1,7 +1,6 @@
 /**
  * CLI Installer slice — manages CLI installation status and install/update progress.
  */
-
 import {
   type AnalyticsErrorClass,
   type AnalyticsProviderCheckReason,
@@ -34,6 +33,7 @@ import type {
   CliProviderId,
   CliProviderStatus,
   CliProviderStatusCheckErrorCode,
+  OpenCodeRuntimeInstallOptions,
   OpenCodeRuntimeStatus,
 } from '@shared/types';
 import type { StateCreator } from 'zustand';
@@ -868,7 +868,7 @@ export interface CliInstallerSlice {
   invalidateCliStatus: () => Promise<void>;
   installCli: () => void;
   fetchOpenCodeRuntimeStatus: () => Promise<void>;
-  installOpenCodeRuntime: () => Promise<void>;
+  installOpenCodeRuntime: (options?: OpenCodeRuntimeInstallOptions) => Promise<void>;
   invalidateOpenCodeRuntimeStatus: () => Promise<void>;
   fetchCodexRuntimeStatus: () => Promise<void>;
   installCodexRuntime: () => Promise<void>;
@@ -1625,7 +1625,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     return openCodeRuntimeStatusInFlight;
   },
 
-  installOpenCodeRuntime: async () => {
+  installOpenCodeRuntime: async (options) => {
     if (!api.openCodeRuntime) return;
     const installStartedAtMs = Date.now();
     const previousStatus = get().openCodeRuntimeStatus;
@@ -1646,7 +1646,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       },
     });
     try {
-      const status = await api.openCodeRuntime.install();
+      const status = await api.openCodeRuntime.install(options);
       const installSucceeded = status.installed && status.state === 'ready';
       set({ openCodeRuntimeStatus: status, openCodeRuntimeError: status.error ?? null });
       recordRuntimeInstallEnd({
