@@ -9,6 +9,7 @@ export {
   classifyNativeVersion,
   evaluateLegacyOpenCodeSupport,
   isOpenCodeVersionProductionEligible,
+  isOpenCodeVersionServedByRuntime,
   isRecognizedOpenCodeRuntimeVersion,
   MINIMUM_AGENT_TEAMS_OPENCODE_VERSION,
   parseOpenCodeSemver,

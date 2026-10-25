@@ -1,4 +1,8 @@
-import { isOpenCodeV2QualifiedVersion, isOpenCodeV2RangeVersion } from './pinnedOpenCodeV2Contract';
+import {
+  isOpenCodeV2QualifiedVersion,
+  isOpenCodeV2RangeVersion,
+  pinnedRuntimeShipsOpenCodeV2,
+} from './pinnedOpenCodeV2Contract';
 
 import type { NativeKey } from '../../contracts';
 
@@ -82,6 +86,20 @@ export function isRecognizedOpenCodeRuntimeVersion(raw: string | null | undefine
 }
 
 /** Stable V1, or a V2 release the pinned runtime qualified for team launch on this platform. */
+/**
+ * Whether the pinned runtime can serve this native version at all: any recognized V1, or a
+ * recognized V2 when the runtime ships OpenCode V2. A runtime released without V2 cannot read
+ * or launch V2, so the app treats such a binary like an unsupported one.
+ */
+export function isOpenCodeVersionServedByRuntime(raw: string | null | undefined): boolean {
+  if (!raw) return false;
+  const classification = classifyNativeVersion(raw);
+  return (
+    classification.kind === 'recognized' &&
+    (classification.generation === 'v1' || pinnedRuntimeShipsOpenCodeV2())
+  );
+}
+
 export function isOpenCodeVersionProductionEligible(raw: string | null | undefined): boolean {
   if (!raw) return false;
   const classification = classifyNativeVersion(raw);

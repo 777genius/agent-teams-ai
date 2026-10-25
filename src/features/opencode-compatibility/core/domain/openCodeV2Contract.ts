@@ -89,6 +89,11 @@ export function openCodeV2ContractCovers(contract: OpenCodeV2Contract, version: 
   );
 }
 
+/** A runtime released without OpenCode V2 qualifies no version on any platform. */
+export function openCodeV2ContractShipsV2(contract: OpenCodeV2Contract): boolean {
+  return Object.values(contract.qualified).some((versions) => versions.length > 0);
+}
+
 /** Qualified for team launch on any of the given `<platform>-<arch>` keys. */
 export function openCodeV2ContractQualifies(
   contract: OpenCodeV2Contract,
