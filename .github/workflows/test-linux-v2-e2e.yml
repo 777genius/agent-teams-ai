@@ -1,4 +1,4 @@
-name: TEST Linux OpenCode e2e (plain V2 and V1)
+name: TEST OpenCode team e2e on Linux and macOS (plain V2 and V1)
 
 on:
   push:
@@ -9,20 +9,24 @@ permissions:
 
 jobs:
   e2e:
+    name: ${{ matrix.platform }} OpenCode ${{ matrix.opencode }}
     strategy:
       fail-fast: false
+      # All runs share one Kimi key; two at a time, as in the proven V2 pair.
+      max-parallel: 2
       matrix:
         # The model's provider prefix is the provider run.sh connects.
+        # V1: the npm opencode-ai latest the app installer picks today; same Kimi Code endpoint and key.
         include:
-          - opencode: '2.1.4'
-            model: kimi-code-plan-cn/kimi-for-coding
-          # V1: the npm opencode-ai latest the app installer picks today; same Kimi Code endpoint and key.
-          - opencode: '1.19.4'
-            model: kimi-for-coding/kimi-for-coding
-    runs-on: ubuntu-24.04
+          - { platform: darwin-arm64, runner: macos-15, opencode: '2.1.4', model: kimi-code-plan-cn/kimi-for-coding }
+          - { platform: darwin-arm64, runner: macos-15, opencode: '1.19.4', model: kimi-for-coding/kimi-for-coding }
+          - { platform: linux-x64, runner: ubuntu-24.04, opencode: '2.1.4', model: kimi-code-plan-cn/kimi-for-coding }
+          - { platform: linux-x64, runner: ubuntu-24.04, opencode: '1.19.4', model: kimi-for-coding/kimi-for-coding }
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 75
     env:
       RUNTIME_REF_FILE: .github/test-linux-v2-e2e/runtime-ref
+      PLATFORM: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -41,24 +45,27 @@ jobs:
           persist-credentials: false
       - name: Runner facts (stock image, no sandbox setup)
         run: |
-          cat /etc/os-release | head -4; uname -r; echo "ImageVersion=$ImageVersion"
+          uname -srm; echo "ImageVersion=$ImageVersion"
+          if [ "$RUNNER_OS" = macOS ]; then sw_vers; exit 0; fi
+          head -4 /etc/os-release
           sysctl kernel.apparmor_restrict_unprivileged_userns || true
           dpkg-query -W bubblewrap apparmor 2>/dev/null || true
           command -v bwrap || echo "bwrap: not on PATH"
           echo "AppArmor profiles that mention bwrap or userns:"; sudo grep -l -E 'bwrap|userns' /etc/apparmor.d/* 2>/dev/null || true
           find /usr/share/apparmor/extra-profiles -maxdepth 1 \( -iname '*bwrap*' -o -iname '*userns*' \) 2>/dev/null || true
       - name: Install xvfb
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq xvfb >/dev/null
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: '1.4.2'
-      - name: Build the runtime candidate (linux-x64)
+      - name: Build the runtime candidate (${{ matrix.platform }})
         working-directory: TEST-runtime
         run: |
           bun install --frozen-lockfile --linker hoisted >/dev/null
-          bun run ./scripts/package-runtime.ts --platform linux-x64
+          bun run ./scripts/package-runtime.ts --platform "$PLATFORM"
           c="$RUNNER_TEMP/TEST-candidate/runtime"; mkdir -p "$c"
           cp dist/cli "$c/claude-multimodel"; chmod +x "$c/claude-multimodel"
           cp dist/opencode-delivery.json "$c/opencode-delivery.json"
@@ -94,7 +101,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: linux-e2e-${{ matrix.opencode }}
+          name: e2e-${{ matrix.platform }}-${{ matrix.opencode }}
           retention-days: 14
           if-no-files-found: warn
           path: ${{ runner.temp }}/TEST-e2e-out

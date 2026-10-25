@@ -1,18 +1,25 @@
 #!/usr/bin/env bash
-# TEST-only: one pure OpenCode team run (lead + teammate) through the dev app on Linux, V1 or V2.
+# TEST-only: one pure OpenCode team run (lead + teammate) through the dev app, V1 or V2,
+# on Linux x64 (under Xvfb) or macOS arm64 (the runner's GUI session).
 # Usage: run.sh <opencode version> <provider/model>
-# Needs: CANDIDATE_CLI (packaged runtime front door), KIMI_TEST_API_KEY in the environment.
+# Needs: PLATFORM (linux-x64 or darwin-arm64), CANDIDATE_CLI (packaged runtime front door),
+# KIMI_TEST_API_KEY in the environment.
 set -uo pipefail
 VERSION=${1:?version}
 MODEL=${2:?model}
+case "${PLATFORM:?}" in
+  linux-x64 | darwin-arm64) ;;
+  *) echo "unsupported platform $PLATFORM"; exit 2 ;;
+esac
 case "$VERSION" in
-  # V1: the Linux x64 glibc binary of npm opencode-ai, as the app installer selects it.
+  # V1: the platform binary of npm opencode-ai (glibc on Linux), as the app installer selects it.
   # Its plain key connect takes no selector: V1 uses its first key option, as the app's form does.
-  1.*) GEN=v1 PKG=opencode-linux-x64 AUTH_OPTION= ;;
+  1.*) GEN=v1 PKG=opencode-$PLATFORM AUTH_OPTION= ;;
   # V2 admits a key connect only through its native option.
-  2.*) GEN=v2 PKG=@opencode/cli-linux-x64 AUTH_OPTION=api:native ;;
+  2.*) GEN=v2 PKG=@opencode/cli-$PLATFORM AUTH_OPTION=api:native ;;
   *) echo "unsupported OpenCode version $VERSION"; exit 2 ;;
 esac
+sha256() { if command -v sha256sum >/dev/null; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
 HERE=$(cd "$(dirname "$0")" && pwd)
 APP=${GITHUB_WORKSPACE:?}
 W="$RUNNER_TEMP/TEST-$GEN-$VERSION"
@@ -21,7 +28,7 @@ mkdir -p "$W" "$OUT"
 
 npm i --prefix "$W/oc" --ignore-scripts --no-audit --no-fund "$PKG@$VERSION" >"$OUT/npm.log" 2>&1
 OC="$W/oc/node_modules/$PKG/bin/opencode"
-echo "opencode $("$OC" --version 2>&1 | tail -1) sha256 $(sha256sum "$OC" | cut -d' ' -f1)" | tee "$OUT/opencode.txt"
+echo "opencode $("$OC" --version 2>&1 | tail -1) sha256 $(sha256 "$OC" | cut -d' ' -f1)" | tee "$OUT/opencode.txt"
 
 PROJECT="$W/project"
 mkdir -p "$PROJECT"
@@ -31,10 +38,18 @@ git -C "$PROJECT" config --local user.email iliyazelenkog@gmail.com
 printf '# TEST V2 %s\n' "$VERSION" >"$PROJECT/README.md"
 git -C "$PROJECT" add README.md && git -C "$PROJECT" commit -q -m "TEST e2e fixture"
 
-export HOME="$W/home"
-export XDG_CACHE_HOME="$HOME/.cache" XDG_CONFIG_HOME="$HOME/.config"
-export XDG_DATA_HOME="$HOME/.local/share" XDG_STATE_HOME="$HOME/.local/state"
-mkdir -p "$HOME" "$W/userdata" "$W/claude-root/projects"
+ISOLATED_HOME="$W/home"
+DIAGNOSTIC_ROOTS=("$W")
+if [ "$PLATFORM" = darwin-arm64 ]; then
+  # macOS keeps the runner's home: the login keychain is found through HOME, and without a
+  # default keychain Chromium can block on a modal prompt. The runtime keeps its data there.
+  DIAGNOSTIC_ROOTS+=("$HOME/Library/Application Support/claude-multimodel-nodejs" "$HOME/Library/Logs/claude-multimodel-nodejs")
+else
+  export HOME="$ISOLATED_HOME"
+fi
+export XDG_CACHE_HOME="$ISOLATED_HOME/.cache" XDG_CONFIG_HOME="$ISOLATED_HOME/.config"
+export XDG_DATA_HOME="$ISOLATED_HOME/.local/share" XDG_STATE_HOME="$ISOLATED_HOME/.local/state"
+mkdir -p "$ISOLATED_HOME" "$W/userdata" "$W/claude-root/projects"
 export CLAUDE_DEV_RUNTIME_DISABLE_GH=1
 export CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH="${CANDIDATE_CLI:?}"
 export CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH="$OC"
@@ -45,14 +60,20 @@ export AGENT_TEAMS_ELECTRON_CLAUDE_ROOT="$W/claude-root"
 KEY="${KIMI_TEST_API_KEY:-}"
 unset KIMI_TEST_API_KEY
 
-(cd "$APP" && exec setsid xvfb-run -a -s "-screen 0 1440x900x24" pnpm dev:mcp --noSandbox) >"$OUT/dev.log" 2>&1 &
+# The app gets its own process group, so cleanup stops the whole dev tree.
+if [ "$PLATFORM" = darwin-arm64 ]; then
+  LAUNCH=(perl -MPOSIX -e 'POSIX::setsid() or die "setsid: $!"; exec @ARGV or die "exec: $!"' pnpm dev:mcp)
+else
+  LAUNCH=(setsid xvfb-run -a -s "-screen 0 1440x900x24" pnpm dev:mcp --noSandbox)
+fi
+(cd "$APP" && exec "${LAUNCH[@]}") >"$OUT/dev.log" 2>&1 &
 DEV=$!
 collect() {
   # Sanitized diagnostics only: fixed categories and phases, no credentials.
-  find "$W" -path '*diagnostics*' -name '*.json' -not -path '*/node_modules/*' -size -64k 2>/dev/null | while read -r f; do
-    mkdir -p "$OUT/diagnostics"; cp "$f" "$OUT/diagnostics/$(echo "$f" | sha256sum | cut -c1-12)-$(basename "$f")"
+  find "${DIAGNOSTIC_ROOTS[@]}" -path '*diagnostics*' -name '*.json' -not -path '*/node_modules/*' -size -64k 2>/dev/null | while read -r f; do
+    mkdir -p "$OUT/diagnostics"; cp "$f" "$OUT/diagnostics/$(echo "$f" | sha256 | cut -c1-12)-$(basename "$f")"
   done
-  find "$W" -path '*diagnostics*' -name '*.json' -not -path '*/node_modules/*' 2>/dev/null | sed "s|$W/||" > "$OUT/diagnostics-index.txt" || true
+  find "${DIAGNOSTIC_ROOTS[@]}" -path '*diagnostics*' -name '*.json' -not -path '*/node_modules/*' 2>/dev/null | sed "s|$W/||" > "$OUT/diagnostics-index.txt" || true
 }
 cleanup() { collect; kill -TERM -- "-$DEV" 2>/dev/null || kill -TERM "$DEV" 2>/dev/null; sleep 5; kill -KILL -- "-$DEV" 2>/dev/null || true; }
 trap cleanup EXIT
@@ -67,7 +88,7 @@ cat "$OUT/connect.json"
 unset KEY
 if [ "$CONNECT" -ne 0 ]; then echo "provider connect failed"; collect; cat "$OUT"/diagnostics/*.json 2>/dev/null; exit 1; fi
 
-TEAM="$GEN-linux-${VERSION//./}"
+TEAM="$GEN-${PLATFORM%%-*}-${VERSION//./}"
 node "$HERE/e2e.mjs" "$TEAM" "$PROJECT" "$MODEL" "$W/claude-root" "$OUT" 9222
 RESULT=$?
 echo "e2e exit=$RESULT (connect exit=$CONNECT)"
