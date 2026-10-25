@@ -2556,6 +2556,17 @@ credentials are not used. CI writes the API key to a mode-600 temporary file;
 the packaged app and transported ZIP/DMG app must pass signature and notarization
 checks before upload.
 
+Notarization, stapling and the final ticket and Gatekeeper checks retry only
+Apple transport errors: timed out, host not found, cannot connect, connection
+lost and offline. A rejected submission, a missing ticket or a Gatekeeper
+rejection still fails at once. A packaging retry signs the app again and sends
+a fresh submission. The Intel macOS job has a 180-minute budget: on the
+4-vCPU `macos-15-intel` runner the per-file phases of the ~95k-file bundle run
+about six times slower, and packaging as a whole about 2.5 times slower. The
+Release workflow keeps 90 minutes for the configured ARM runner. The
+qualification workflow uses 180 minutes for ARM when `use_github_runner=true`
+and 90 minutes otherwise.
+
 Signing secrets are available only on `release/macos-signing`, whose updates
 are restricted to the repository administrator. There are no required environment
 reviewers and no per-build approval. Repository-level copies of these signing

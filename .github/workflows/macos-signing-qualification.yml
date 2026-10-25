@@ -39,7 +39,9 @@ jobs:
     needs: signing-custody
     if: ${{ github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && github.ref == 'refs/heads/release/macos-signing' }}
     environment: macos-signing
-    timeout-minutes: 90
+    # Same budgets as the Release workflow. The GitHub-hosted ARM fallback gets
+    # the longer budget too because it is slower than the configured ARM runner.
+    timeout-minutes: ${{ matrix.timeout_minutes }}
     strategy:
       fail-fast: false
       matrix:
@@ -48,10 +50,12 @@ jobs:
             runner: ${{ inputs.use_github_runner && 'macos-15' || vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15' }}
             dist_command: pnpm pack:mac:arm64
             bundle: release/mac-arm64/Agent Teams AI.app
+            timeout_minutes: ${{ inputs.use_github_runner && 180 || 90 }}
           - arch: x64
             runner: macos-15-intel
             dist_command: pnpm pack:mac:x64
             bundle: release/mac/Agent Teams AI.app
+            timeout_minutes: 180
     runs-on: ${{ matrix.runner }}
 
     steps:
