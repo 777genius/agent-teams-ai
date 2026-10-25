@@ -264,6 +264,110 @@ describe('board completion is one question with one answer', () => {
     });
   });
 
+  // The board is complete and the final is out, then the user asks for one more
+  // thing that the lead passes to a teammate by direct message, not as a task.
+  function askTeammateAfterCompletion(controller, advance) {
+    const send = (flags) =>
+      controller.messages.sendMessage({ to: 'user', from: 'alice', ...flags });
+    const task = controller.tasks.createTask({ subject: 'Write the file', owner: 'bob' });
+    const early = controller.messages.sendMessage({
+      to: 'bob',
+      from: 'alice',
+      text: 'Tell me when the file is written.',
+    });
+    advance(1);
+    controller.tasks.completeTask(task.id, 'bob');
+    advance(1);
+    const final = send({ text: 'The file is written and the board is complete.' });
+    expect(final.deduplicated).toBeUndefined();
+    advance(1);
+    const followUp = controller.messages.sendMessage({
+      to: 'alice',
+      from: 'user',
+      text: 'Ask bob to append a third line, then tell me what the file holds.',
+    });
+    const question = controller.messages.sendMessage({
+      to: 'bob',
+      from: 'alice',
+      text: 'Please append a third line and tell me what the file holds now.',
+    });
+    const interim = send({
+      source: 'runtime_delivery',
+      relayOfMessageId: followUp.messageId,
+      text: 'I asked bob to append the line and will pass on exactly what he reports.',
+    });
+    expect(interim.deduplicated).toBeUndefined();
+    return { send, early, question, interim };
+  }
+
+  it.each([true, false])(
+    'delivers the relay of a teammate answer asked for after completion (cites it: %s)',
+    (citesAnswer) => {
+      const claudeDir = makeClaudeDir();
+      const controller = createController({ teamName: 'my-team', claudeDir });
+      withClock((advance) => {
+        const { send, question } = askTeammateAfterCompletion(controller, advance);
+        advance(1);
+        const answer = controller.messages.sendMessage({
+          to: 'alice',
+          from: 'bob',
+          source: 'runtime_delivery',
+          relayOfMessageId: question.messageId,
+          text: 'Appended the third line; the file holds three lines now.',
+        });
+        advance(1);
+        const relay = send({
+          ...(citesAnswer
+            ? { source: 'runtime_delivery', relayOfMessageId: answer.messageId }
+            : {}),
+          text: 'Bob appended the third line; the file holds three lines now.',
+        });
+        expect(relay.deduplicated).toBeUndefined();
+
+        // The answer is passed on once: a later recap restates it again.
+        advance(1);
+        const recap = send({ text: 'ALL DONE - the file holds three lines, nothing is pending.' });
+        expect(recap.duplicateOfMessageId).toBe(relay.messageId);
+        expect(readInbox(claudeDir, 'user')).toHaveLength(3);
+      });
+    }
+  );
+
+  it.each([
+    'status report without a relay',
+    'system notification',
+    'reply to a task notification',
+    'reply to a pre-completion message',
+  ])('still holds back a restated final after a teammate %s', (kind) => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    withClock((advance) => {
+      const { send, early, question, interim } = askTeammateAfterCompletion(controller, advance);
+      const assignment = readInbox(claudeDir, 'bob').find(
+        (row) => row.source === 'system_notification'
+      );
+      expect(assignment).toMatchObject({ from: 'alice', to: 'bob' });
+      const relayOfMessageId = {
+        'status report without a relay': undefined,
+        'system notification': question.messageId,
+        'reply to a task notification': assignment.messageId,
+        'reply to a pre-completion message': early.messageId,
+      }[kind];
+      advance(1);
+      controller.messages.sendMessage({
+        to: 'alice',
+        from: 'bob',
+        source: kind === 'system notification' ? 'system_notification' : 'runtime_delivery',
+        ...(relayOfMessageId ? { relayOfMessageId } : {}),
+        text: 'The file is written and my task is complete.',
+      });
+      advance(1);
+      const recap = send({ text: 'ALL DONE - the file is written and nothing is pending.' });
+      expect(recap.deduplicated).toBe(true);
+      expect(recap.duplicateOfMessageId).toBe(interim.messageId);
+    });
+  });
+
   it('routes both sites through the shared predicate instead of restating the rule', () => {
     const internalDir = path.join(__dirname, '..', 'src', 'internal');
     const messageStoreSource = fs.readFileSync(path.join(internalDir, 'messageStore.js'), 'utf8');

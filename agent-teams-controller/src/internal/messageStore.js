@@ -345,10 +345,15 @@ function hasUserMessageSince(paths, sinceMs) {
   return false;
 }
 
-function isReplyToHumanMessage(paths, row) {
-  if (row.groupChatId) return false;
+/**
+ * The message a row relays: its relayOfMessageId must resolve to exactly one
+ * private message that is not a system notification, was addressed to the
+ * row's sender, and is not newer than the row. Returns null otherwise.
+ */
+function findRelayedRequest(paths, row) {
+  if (row.groupChatId) return null;
   const relayId = String(row.relayOfMessageId || '').trim();
-  if (!relayId) return false;
+  if (!relayId) return null;
   try {
     const { message, store } = lookupMessage(paths, relayId);
     const sender = normalizeComparableParticipant(row.from);
@@ -360,19 +365,60 @@ function isReplyToHumanMessage(paths, row) {
           (!recipient || recipient === sender);
     const requestTime = parseRowTimeMs(message);
     const replyTime = parseRowTimeMs(row);
-    return (
+    const relayed =
       !message.groupChatId &&
-      isUserParticipant(message.from) &&
       message.source !== 'system_notification' &&
       addressedToSender &&
       requestTime !== null &&
       replyTime !== null &&
-      requestTime <= replyTime
-    );
+      requestTime <= replyTime;
+    return relayed ? message : null;
   } catch {
     // Unknown or ambiguous relay IDs cannot bypass completed-board deduplication.
+    return null;
+  }
+}
+
+function isReplyToHumanMessage(paths, row) {
+  const request = findRelayedRequest(paths, row);
+  return Boolean(request) && isUserParticipant(request.from);
+}
+
+/**
+ * True when the sender's inbox holds a teammate reply newer than sinceMs to a
+ * message the sender wrote at or after boardEventMs. That reply is an answer
+ * the sender asked for once the board was complete, so passing it on to the
+ * user is new information, not a restated final. Status reports without a
+ * relay, notifications, and replies to task notifications or to messages sent
+ * before the board completed do not count.
+ */
+function hasTeammateReplySince(paths, sender, sinceMs, boardEventMs) {
+  const senderKey = normalizeComparableParticipant(sender);
+  let rows;
+  try {
+    rows = readMessageRows(getInboxPath(paths, sender));
+  } catch {
     return false;
   }
+  if (!Array.isArray(rows)) return false;
+  return rows.some((candidate) => {
+    if (
+      !candidate ||
+      candidate.source === 'system_notification' ||
+      isUserParticipant(candidate.from) ||
+      normalizeComparableParticipant(candidate.from) === senderKey
+    ) {
+      return false;
+    }
+    const replyTime = parseRowTimeMs(candidate);
+    if (replyTime === null || replyTime <= sinceMs) return false;
+    const request = findRelayedRequest(paths, candidate);
+    return (
+      Boolean(request) &&
+      normalizeComparableParticipant(request.from) === senderKey &&
+      parseRowTimeMs(request) >= boardEventMs
+    );
+  });
 }
 
 /**
@@ -380,8 +426,9 @@ function isReplyToHumanMessage(paths, row) {
  * last board event, further agent->user messages inside the repeat window are
  * rephrased "ALL DONE" recaps from memoryless turns. Returns the final row they
  * duplicate, or null when the message must be delivered: board not complete,
- * this IS the final message, the board moved again, the user wrote again, or
- * the window expired.
+ * this IS the final message, the board moved again, the user wrote again, a
+ * teammate answered what this sender asked after completion, or the window
+ * expired.
  */
 function getPostCompletionFinalMessage(list, row, resolveBoardCompletion) {
   if (row.groupChatId) return null;
@@ -421,6 +468,12 @@ function getPostCompletionFinalMessage(list, row, resolveBoardCompletion) {
   const finalMs = parseRowTimeMs(finalRow);
   if (rowTime - finalMs > REPEATED_MESSAGE_WINDOW_MS) return null;
   if (typeof board.hasUserMessageSince === 'function' && board.hasUserMessageSince(finalMs)) {
+    return null;
+  }
+  if (
+    typeof board.hasTeammateReplySince === 'function' &&
+    board.hasTeammateReplySince(row.from, finalMs)
+  ) {
     return null;
   }
   return finalRow;
@@ -514,6 +567,8 @@ function prepareInboxMessage(paths, flags) {
           ? {
               ...epoch,
               hasUserMessageSince: (sinceMs) => hasUserMessageSince(paths, sinceMs),
+              hasTeammateReplySince: (sender, sinceMs) =>
+                hasTeammateReplySince(paths, sender, sinceMs, epoch.lastBoardEventMs),
               isReplyToHumanMessage: (row) => isReplyToHumanMessage(paths, row),
             }
           : null;
