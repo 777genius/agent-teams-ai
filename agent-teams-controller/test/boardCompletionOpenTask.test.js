@@ -31,6 +31,7 @@ describe('board completion is one question with one answer', () => {
           members: [
             { name: 'alice', role: 'team-lead' },
             { name: 'bob', role: 'developer' },
+            { name: 'carol', role: 'developer' },
           ],
         },
         null,
@@ -264,57 +265,68 @@ describe('board completion is one question with one answer', () => {
     });
   });
 
-  // The board is complete and the final is out, then the user asks for one more
-  // thing that the lead passes to a teammate by direct message, not as a task.
-  function askTeammateAfterCompletion(controller, advance) {
+  const directMessage = (controller, from, to, text) =>
+    controller.messages.sendMessage({ from, to, text });
+  const answerAlice = (controller, from, request, text) =>
+    controller.messages.sendMessage({
+      from,
+      to: 'alice',
+      source: 'runtime_delivery',
+      relayOfMessageId: request.messageId,
+      text,
+    });
+
+  // A finished board whose final is already out; send() is the lead to the user.
+  function completeBoard(controller, advance) {
     const send = (flags) =>
       controller.messages.sendMessage({ to: 'user', from: 'alice', ...flags });
     const task = controller.tasks.createTask({ subject: 'Write the file', owner: 'bob' });
-    const early = controller.messages.sendMessage({
-      to: 'bob',
-      from: 'alice',
-      text: 'Tell me when the file is written.',
-    });
+    const early = directMessage(controller, 'alice', 'bob', 'Tell me when the file is written.');
     advance(1);
     controller.tasks.completeTask(task.id, 'bob');
     advance(1);
     const final = send({ text: 'The file is written and the board is complete.' });
     expect(final.deduplicated).toBeUndefined();
+    return { send, task, early, final };
+  }
+
+  // Then the user asks for one more thing, and the lead passes it to bob by
+  // direct message rather than as a task.
+  function askBobAfterCompletion(controller, advance) {
+    const board = completeBoard(controller, advance);
     advance(1);
-    const followUp = controller.messages.sendMessage({
-      to: 'alice',
-      from: 'user',
-      text: 'Ask bob to append a third line, then tell me what the file holds.',
-    });
-    const question = controller.messages.sendMessage({
-      to: 'bob',
-      from: 'alice',
-      text: 'Please append a third line and tell me what the file holds now.',
-    });
-    const interim = send({
+    const followUp = directMessage(
+      controller,
+      'user',
+      'alice',
+      'Ask bob to append a third line, then tell me what the file holds.'
+    );
+    advance(1);
+    const question = directMessage(
+      controller,
+      'alice',
+      'bob',
+      'Please append a third line and tell me what the file holds now.'
+    );
+    advance(1);
+    const interim = board.send({
       source: 'runtime_delivery',
       relayOfMessageId: followUp.messageId,
       text: 'I asked bob to append the line and will pass on exactly what he reports.',
     });
     expect(interim.deduplicated).toBeUndefined();
-    return { send, early, question, interim };
+    return { ...board, question, interim };
   }
 
   it.each([true, false])(
-    'delivers the relay of a teammate answer asked for after completion (cites it: %s)',
+    'delivers the relay of a teammate answer to the user follow-up (cites it: %s)',
     (citesAnswer) => {
       const claudeDir = makeClaudeDir();
       const controller = createController({ teamName: 'my-team', claudeDir });
       withClock((advance) => {
-        const { send, question } = askTeammateAfterCompletion(controller, advance);
+        const { send, question } = askBobAfterCompletion(controller, advance);
         advance(1);
-        const answer = controller.messages.sendMessage({
-          to: 'alice',
-          from: 'bob',
-          source: 'runtime_delivery',
-          relayOfMessageId: question.messageId,
-          text: 'Appended the third line; the file holds three lines now.',
-        });
+        const answer = answerAlice(controller, 'bob', question, 'Appended; the file has 3 lines.');
         advance(1);
         const relay = send({
           ...(citesAnswer
@@ -333,25 +345,93 @@ describe('board completion is one question with one answer', () => {
     }
   );
 
+  it('delivers each cited answer when several teammates answer the follow-up', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    withClock((advance) => {
+      const { send, task } = completeBoard(controller, advance);
+      advance(1);
+      const followUp = directMessage(controller, 'user', 'alice', 'Ask bob and carol for a line.');
+      advance(1);
+      const toBob = directMessage(controller, 'alice', 'bob', 'Bob, append a line, then tell me.');
+      const toCarol = directMessage(controller, 'alice', 'carol', 'Carol, append one too.');
+      advance(1);
+      const fromBob = answerAlice(controller, 'bob', toBob, 'Bob appended his line.');
+      advance(1);
+      // Bob already answered before this interim went out.
+      const interim = send({
+        source: 'runtime_delivery',
+        relayOfMessageId: followUp.messageId,
+        text: 'I asked bob and carol and will pass on both answers.',
+      });
+      expect(interim.deduplicated).toBeUndefined();
+      advance(1);
+      const fromCarol = answerAlice(controller, 'carol', toCarol, 'Carol appended her line.');
+      advance(1);
+      const relays = [fromBob, fromCarol].map((reply) =>
+        send({
+          source: 'runtime_delivery',
+          relayOfMessageId: reply.messageId,
+          text: `Passing on: ${reply.message.text}`,
+        })
+      );
+      expect(relays.map((relay) => relay.deduplicated)).toEqual([undefined, undefined]);
+
+      // Citing an answer that was already passed on is a restatement, even with
+      // task refs that the relay-scoped guard would treat as new context.
+      advance(1);
+      const repeat = send({
+        relayOfMessageId: fromBob.messageId,
+        taskRefs: [{ taskId: task.id, displayId: task.displayId, teamName: 'my-team' }],
+        text: 'To recap: bob appended his line and the task is done.',
+      });
+      expect(repeat.duplicateOfMessageId).toBe(relays[1].messageId);
+    });
+  });
+
+  it.each([true, false])(
+    'holds back a recap after a teammate answers what the lead sent unprompted (cites it: %s)',
+    (citesAnswer) => {
+      const claudeDir = makeClaudeDir();
+      const controller = createController({ teamName: 'my-team', claudeDir });
+      withClock((advance) => {
+        const { send, final } = completeBoard(controller, advance);
+        advance(1);
+        const thanks = directMessage(controller, 'alice', 'bob', 'Thanks bob, that is all.');
+        advance(1);
+        const reply = answerAlice(controller, 'bob', thanks, 'Glad it worked, nothing else here.');
+        advance(1);
+        const recap = send({
+          ...(citesAnswer ? { relayOfMessageId: reply.messageId } : {}),
+          text: 'ALL DONE - the file is written and nothing is pending.',
+        });
+        expect(recap.duplicateOfMessageId).toBe(final.messageId);
+      });
+    }
+  );
+
   it.each([
     'status report without a relay',
     'system notification',
     'reply to a task notification',
     'reply to a pre-completion message',
+    "reply to another member's message",
   ])('still holds back a restated final after a teammate %s', (kind) => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
     withClock((advance) => {
-      const { send, early, question, interim } = askTeammateAfterCompletion(controller, advance);
+      const { send, early, question, interim } = askBobAfterCompletion(controller, advance);
       const assignment = readInbox(claudeDir, 'bob').find(
         (row) => row.source === 'system_notification'
       );
       expect(assignment).toMatchObject({ from: 'alice', to: 'bob' });
+      const fromCarol = directMessage(controller, 'carol', 'bob', 'Bob, what does it hold?');
       const relayOfMessageId = {
         'status report without a relay': undefined,
         'system notification': question.messageId,
         'reply to a task notification': assignment.messageId,
         'reply to a pre-completion message': early.messageId,
+        "reply to another member's message": fromCarol.messageId,
       }[kind];
       advance(1);
       controller.messages.sendMessage({

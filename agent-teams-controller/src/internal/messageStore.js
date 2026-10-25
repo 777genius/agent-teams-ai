@@ -317,8 +317,8 @@ function readBoardCompletionEpoch(paths) {
   return lastBoardEventMs > 0 ? { lastBoardEventMs } : null;
 }
 
-/** True when any inbox holds a message from the human user newer than sinceMs. */
-function hasUserMessageSince(paths, sinceMs) {
+/** Visits the time of each private message from the human user; stops when visit returns true. */
+function someUserMessageTime(paths, visit) {
   const inboxDir = path.join(paths.teamDir, 'inboxes');
   let entries;
   try {
@@ -339,10 +339,25 @@ function hasUserMessageSince(paths, sinceMs) {
       const candidate = rows[index];
       if (!candidate || candidate.groupChatId || !isUserParticipant(candidate.from)) continue;
       const ms = parseRowTimeMs(candidate);
-      if (ms !== null && ms > sinceMs) return true;
+      if (ms !== null && visit(ms)) return true;
     }
   }
   return false;
+}
+
+/** True when any inbox holds a message from the human user newer than sinceMs. */
+function hasUserMessageSince(paths, sinceMs) {
+  return someUserMessageTime(paths, (ms) => ms > sinceMs);
+}
+
+/** Time of the earliest message from the human user newer than sinceMs, or null. */
+function firstUserMessageSince(paths, sinceMs) {
+  let first = null;
+  someUserMessageTime(paths, (ms) => {
+    if (ms > sinceMs && (first === null || ms < first)) first = ms;
+    return false;
+  });
+  return first;
 }
 
 /**
@@ -385,40 +400,62 @@ function isReplyToHumanMessage(paths, row) {
 }
 
 /**
- * True when the sender's inbox holds a teammate reply newer than sinceMs to a
- * message the sender wrote at or after boardEventMs. That reply is an answer
- * the sender asked for once the board was complete, so passing it on to the
- * user is new information, not a restated final. Status reports without a
- * relay, notifications, and replies to task notifications or to messages sent
- * before the board completed do not count.
+ * True when the candidate is a teammate's answer to a message the sender wrote
+ * at or after followUpMs, the user's first message since the board completed.
+ * Status reports without a relay, notifications, replies to task notifications,
+ * and replies to messages the sender wrote unprompted are not such answers.
  */
-function hasTeammateReplySince(paths, sender, sinceMs, boardEventMs) {
-  const senderKey = normalizeComparableParticipant(sender);
+function isFollowUpAnswer(paths, senderKey, candidate, followUpMs) {
+  if (
+    !candidate ||
+    candidate.source === 'system_notification' ||
+    isUserParticipant(candidate.from) ||
+    normalizeComparableParticipant(candidate.from) === senderKey ||
+    !(parseRowTimeMs(candidate) >= followUpMs)
+  ) {
+    return false;
+  }
+  const request = findRelayedRequest(paths, candidate);
+  return (
+    Boolean(request) &&
+    normalizeComparableParticipant(request.from) === senderKey &&
+    parseRowTimeMs(request) >= followUpMs
+  );
+}
+
+/**
+ * True when the row passes such an answer on, which is new information rather
+ * than a restated final. A row that cites the answer is checked exactly and
+ * must not repeat an earlier relay of it. Leads do not always cite what they
+ * relay, so an uncited row passes when an answer arrived after finalMs.
+ */
+function relaysFollowUpAnswer(paths, list, row, finalMs, boardEventMs) {
+  const followUpMs = firstUserMessageSince(paths, boardEventMs);
+  if (followUpMs === null) return false;
+  const senderKey = normalizeComparableParticipant(row.from);
+  const cited = findRelayedRequest(paths, row);
+  if (cited) {
+    return (
+      isFollowUpAnswer(paths, senderKey, cited, followUpMs) &&
+      !list.some(
+        (candidate) =>
+          candidate &&
+          normalizeComparableParticipant(candidate.from) === senderKey &&
+          String(candidate.relayOfMessageId || '').trim() === cited.messageId
+      )
+    );
+  }
   let rows;
   try {
-    rows = readMessageRows(getInboxPath(paths, sender));
+    rows = readMessageRows(getInboxPath(paths, row.from));
   } catch {
     return false;
   }
-  if (!Array.isArray(rows)) return false;
-  return rows.some((candidate) => {
-    if (
-      !candidate ||
-      candidate.source === 'system_notification' ||
-      isUserParticipant(candidate.from) ||
-      normalizeComparableParticipant(candidate.from) === senderKey
-    ) {
-      return false;
-    }
-    const replyTime = parseRowTimeMs(candidate);
-    if (replyTime === null || replyTime <= sinceMs) return false;
-    const request = findRelayedRequest(paths, candidate);
-    return (
-      Boolean(request) &&
-      normalizeComparableParticipant(request.from) === senderKey &&
-      parseRowTimeMs(request) >= boardEventMs
-    );
-  });
+  return rows.some(
+    (candidate) =>
+      parseRowTimeMs(candidate) > finalMs &&
+      isFollowUpAnswer(paths, senderKey, candidate, followUpMs)
+  );
 }
 
 /**
@@ -426,9 +463,8 @@ function hasTeammateReplySince(paths, sender, sinceMs, boardEventMs) {
  * last board event, further agent->user messages inside the repeat window are
  * rephrased "ALL DONE" recaps from memoryless turns. Returns the final row they
  * duplicate, or null when the message must be delivered: board not complete,
- * this IS the final message, the board moved again, the user wrote again, a
- * teammate answered what this sender asked after completion, or the window
- * expired.
+ * this IS the final message, the board moved again, the user wrote again, it
+ * passes on a teammate's answer to the user's follow-up, or the window expired.
  */
 function getPostCompletionFinalMessage(list, row, resolveBoardCompletion) {
   if (row.groupChatId) return null;
@@ -471,8 +507,8 @@ function getPostCompletionFinalMessage(list, row, resolveBoardCompletion) {
     return null;
   }
   if (
-    typeof board.hasTeammateReplySince === 'function' &&
-    board.hasTeammateReplySince(row.from, finalMs)
+    typeof board.relaysFollowUpAnswer === 'function' &&
+    board.relaysFollowUpAnswer(list, row, finalMs)
   ) {
     return null;
   }
@@ -567,8 +603,8 @@ function prepareInboxMessage(paths, flags) {
           ? {
               ...epoch,
               hasUserMessageSince: (sinceMs) => hasUserMessageSince(paths, sinceMs),
-              hasTeammateReplySince: (sender, sinceMs) =>
-                hasTeammateReplySince(paths, sender, sinceMs, epoch.lastBoardEventMs),
+              relaysFollowUpAnswer: (list, row, finalMs) =>
+                relaysFollowUpAnswer(paths, list, row, finalMs, epoch.lastBoardEventMs),
               isReplyToHumanMessage: (row) => isReplyToHumanMessage(paths, row),
             }
           : null;
