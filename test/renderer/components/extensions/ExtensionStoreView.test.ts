@@ -67,6 +67,10 @@ vi.mock('@renderer/api', () => ({
   isElectronMode: () => true,
 }));
 
+vi.mock('@features/extension-management/renderer', () => ({
+  ManagedExtensions: () => null,
+}));
+
 vi.mock('@features/codex-account/renderer', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@features/codex-account/renderer')>();
   return {

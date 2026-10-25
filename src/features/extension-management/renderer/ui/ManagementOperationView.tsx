@@ -51,7 +51,14 @@ export const ManagementOperationView = ({
       )}
       {operation.result?.message && <p className="text-sm">{operation.result.message}</p>}
       {operation.result?.nextActions.map((action, index) => (
-        <p key={index} className="text-sm text-amber-400">
+        <p
+          key={index}
+          className={
+            operation.state === 'succeeded' && !recovery
+              ? 'text-sm text-text-secondary'
+              : 'text-sm text-amber-400'
+          }
+        >
           {action.reason}
         </p>
       ))}

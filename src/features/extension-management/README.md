@@ -10,10 +10,11 @@ active agent runs.
 
 | Entrypoint  | Consumers                                                 |
 | ----------- | --------------------------------------------------------- |
+| root        | Browser-safe HTTP client, independent of UI and app store |
 | `contracts` | Browser-safe SDK-derived DTOs and the app API fragment    |
 | `main`      | Electron composition, shared facade and HTTP registration |
 | `preload`   | IPC bridge; no engine token or base URL leaves main       |
-| `renderer`  | Managed Plugins/Skills panel and the HTTP client          |
+| `renderer`  | Managed Plugins/Skills panel and local ownership hook     |
 
 The feature keeps its own state; the legacy Extensions Zustand slice and native
 Claude marketplace identity are unchanged. Both plugin packages and standalone

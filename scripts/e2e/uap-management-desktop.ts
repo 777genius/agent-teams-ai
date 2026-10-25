@@ -16,6 +16,7 @@ import { promisify } from 'node:util';
 // Existing raw CDP transport; no browser-mode substitute or native folder picker.
 // @ts-expect-error Existing JavaScript harness has no declaration file.
 import { CdpClient } from './comment-notification/cdp.mjs';
+import { postWithReboundHost } from './uap-management-http';
 import { openCodeMcpServer } from './uap-management-native';
 
 import type {
@@ -507,10 +508,9 @@ async function verifyHttp(f: Awaited<ReturnType<typeof fixture>>) {
   const result = (await observed.json()) as ManagementEnvironment;
   assert(result.entries.some((entry) => entry.kind === 'skill'));
   assert.equal((await post('hostStatus', {}, { Origin: 'https://attacker.invalid' })).status, 403);
-  assert.equal(
-    (await post('hostStatus', {}, { Host: `rebound.invalid:${f.httpPort}` })).status,
-    403
-  );
+  const rebound = await postWithReboundHost(origin);
+  assert.equal(rebound.status, 403);
+  assert.equal(rebound.allowedOrigin, undefined);
   evidence.http = {
     host: 'desktop sidecar',
     sameEnvironment: result.entries.map((entry) => entry.alias),

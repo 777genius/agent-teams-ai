@@ -101,6 +101,7 @@ function createHost(publish = writeTeamControlApiState) {
   const host = runInNewContext(`${code}\n({ startHttpServer, provisioning, memberWorkSync })`, {
     httpServer: server,
     externalAgentConnection: null,
+    extensionManagement: { feature: {} },
     isShutdownStarted,
     assertStartupActive,
     startupStage: createStartupStage(isShutdownStarted),

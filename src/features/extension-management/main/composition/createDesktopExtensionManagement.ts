@@ -3,8 +3,12 @@ import { realpath } from 'node:fs/promises';
 import path from 'node:path';
 
 import { CodexBinaryResolver } from '@main/services/infrastructure/codexAppServer';
-import { resolveVerifiedOpenCodeRuntimeBinaryPath } from '@main/services/infrastructure/OpenCodeRuntimeInstallerService';
-import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCliEnv';
+import {
+  isSupportedOpenCodeRuntimeBinaryPath,
+  resolveVerifiedOpenCodeRuntimeBinaryPath,
+} from '@main/services/infrastructure/OpenCodeRuntimeInstallerService';
+import { readOpenCodeBinaryOverride } from '@main/services/runtime/openCodeRuntimeBinaryEnv';
+import { buildPassiveProviderStatusCliEnv } from '@main/services/runtime/providerAwareCliEnv';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { getClaudeBasePath, getHomeDir } from '@main/utils/pathDecoder';
 import { startUap } from '@uap/management-sdk/node';
@@ -43,18 +47,17 @@ function clientForProvider(value?: string): ExtensionClient | null {
       ? value
       : null;
 }
+async function nativeExecutable(client: ExtensionClient): Promise<string | null> {
+  if (client === 'claude') return ClaudeBinaryResolver.resolveNative();
+  if (client === 'codex') return CodexBinaryResolver.resolve();
+  const explicit = readOpenCodeBinaryOverride(process.env);
+  if (explicit && (await isSupportedOpenCodeRuntimeBinaryPath(explicit.binaryPath)))
+    return explicit.binaryPath;
+  return resolveVerifiedOpenCodeRuntimeBinaryPath();
+}
 async function profile(client: ExtensionClient) {
-  const executable = await (client === 'claude'
-    ? ClaudeBinaryResolver.resolveNative()
-    : client === 'codex'
-      ? CodexBinaryResolver.resolve()
-      : resolveVerifiedOpenCodeRuntimeBinaryPath());
-  const { env } = await buildProviderAwareCliEnv({
-    binaryPath: executable,
+  const { env } = buildPassiveProviderStatusCliEnv({
     providerId: client === 'claude' ? 'anthropic' : client,
-    connectionMode: 'runtime-only',
-    allowStoredApiKeyDecryption: false,
-    allowClaudeUserSettingsAuthEnv: false,
   });
   const home = env.HOME || env.USERPROFILE || getHomeDir();
   const root =
@@ -64,11 +67,16 @@ async function profile(client: ExtensionClient) {
         ? env.CODEX_HOME || path.join(home, '.codex')
         : env.OPENCODE_CONFIG_DIR ||
           path.join(env.XDG_CONFIG_HOME || path.join(home, '.config'), 'opencode');
-  return {
-    client,
-    configRoot: await canonicalExtensionPath(root),
-    ...(executable ? { executable: await realpath(executable) } : {}),
-  };
+  // Retain every profile's authority even when its executable is unavailable.
+  // Root failures remain fatal; native discovery must not prepare unrelated launches.
+  const captured = { client, configRoot: await canonicalExtensionPath(root) };
+  try {
+    const executable = await nativeExecutable(client);
+    return { ...captured, ...(executable ? { executable: await realpath(executable) } : {}) };
+  } catch {
+    // Go exposes the unavailable target. Durable inspection still runs before launch.
+    return captured;
+  }
 }
 
 export function createDesktopExtensionManagement(deps: DesktopExtensionManagementDependencies) {

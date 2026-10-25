@@ -25,6 +25,7 @@ import {
 } from '@renderer/components/ui/select';
 import { Download, Loader2, RefreshCw } from 'lucide-react';
 
+import { ManagedInstallationState } from './ManagedInstallationState';
 import { ManagedSkillSourcePreview } from './ManagedSkillSourcePreview';
 import { ManagementOperationView } from './ManagementOperationView';
 import { ManagementPlanDialog } from './ManagementPlanDialog';
@@ -241,27 +242,10 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
                 <Badge variant="outline">UAP</Badge>
                 {entry.version && <span className="text-xs text-text-muted">{entry.version}</span>}
               </div>
-              <p className="break-all text-xs text-text-muted">{entry.source}</p>
-              <p className="text-xs text-text-secondary">
-                {t(`uap.updateStatus.${entry.updateStatus}`)}
-              </p>
+              <ManagedInstallationState entry={entry} targets={model.context?.session.targets} />
               {!entry.declared && (
                 <p className="text-xs text-text-muted">{t('uap.transitiveDependency')}</p>
               )}
-              {entry.bindings.map((binding) => (
-                <div key={binding.targetId} className="text-xs text-text-muted">
-                  {binding.client}: {binding.status}
-                  {binding.readiness && (
-                    <span>
-                      {' '}
-                      ·{' '}
-                      {Object.entries(binding.readiness)
-                        .map(([name, value]) => `${name}: ${value}`)
-                        .join(' · ')}
-                    </span>
-                  )}
-                </div>
-              ))}
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -387,11 +371,12 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
       <Dialog
         open={sourceOpen}
         onOpenChange={(open) => {
-          if (!open && model.preview) model.setPreview(null);
-          else {
-            setSourceOpen(open);
-            if (!open) void model.closeDiscovery();
+          if (!open && model.preview) {
+            model.setPreview(null);
+            return;
           }
+          setSourceOpen(open);
+          if (!open) void model.closeDiscovery();
         }}
       >
         <DialogContent className="max-h-[85vh] overflow-y-auto">
@@ -533,6 +518,7 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
       </Dialog>
       <ManagementPlanDialog
         plan={model.plan}
+        targets={model.context?.session.targets}
         busy={model.busy}
         error={model.error}
         uncertain={model.reviewUncertain}

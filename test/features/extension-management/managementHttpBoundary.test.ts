@@ -2,6 +2,7 @@ import cors from '@fastify/cors';
 import Fastify from 'fastify';
 import { expect, it, vi } from 'vitest';
 
+import { postWithReboundHost } from '../../../scripts/e2e/uap-management-http';
 import { registerExtensionManagementHttp } from '../../../src/features/extension-management/main/adapters/input/registerExtensionManagementHttp';
 
 import type { ExtensionManagementFeature } from '../../../src/features/extension-management/core/application/ports';
@@ -43,6 +44,8 @@ it('returns feature-local refusals through the real CORS middleware without invo
       });
       expect(response.headers['access-control-allow-origin']).toBeUndefined();
     }
+    const rebound = await postWithReboundHost(`http://${host}`);
+    expect(rebound).toEqual({ status: 403, allowedOrigin: undefined });
     expect(hostStatus).not.toHaveBeenCalled();
     const accepted = await app.inject({
       method: 'POST',

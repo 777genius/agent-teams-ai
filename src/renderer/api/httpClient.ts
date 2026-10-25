@@ -1,4 +1,4 @@
-import { createExtensionManagementHttpClient } from '@features/extension-management/renderer';
+import { createExtensionManagementHttpClient } from '@features/extension-management';
 /**
  * HTTP-based implementation of ElectronAPI for browser mode.
  *

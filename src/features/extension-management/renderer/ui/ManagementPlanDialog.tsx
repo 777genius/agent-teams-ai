@@ -11,10 +11,11 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 
-import type { ManagementPlan } from '../../contracts';
+import type { ManagementPlan, ManagementSession } from '../../contracts';
 
 export const ManagementPlanDialog = ({
   plan,
+  targets,
   busy,
   error,
   uncertain,
@@ -23,6 +24,7 @@ export const ManagementPlanDialog = ({
   onAttestExternalUninstall,
 }: {
   plan: ManagementPlan | null;
+  targets?: ManagementSession['targets'];
   busy: boolean;
   error: string | null;
   uncertain: boolean;
@@ -31,6 +33,7 @@ export const ManagementPlanDialog = ({
   onAttestExternalUninstall?: () => void;
 }) => {
   const { t } = useAppTranslation('extensions');
+  const { t: common } = useAppTranslation('common');
   const [now, setNow] = useState(Date.now());
   const [externalUninstalled, setExternalUninstalled] = useState(false);
   useEffect(() => setExternalUninstalled(false), [plan?.planId]);
@@ -43,6 +46,29 @@ export const ManagementPlanDialog = ({
     return () => clearTimeout(timer);
   }, [plan]);
   const expired = Boolean(plan && Date.parse(plan.expiresAt) <= now);
+  const actionLabel = (action: string) => {
+    switch (action) {
+      case 'install':
+        return t('uap.install');
+      case 'update':
+        return t('uap.update');
+      case 'repair':
+        return t('uap.repair');
+      case 'remove':
+      case 'delete':
+        return t('uap.remove');
+      case 'recover':
+        return t('uap.recover');
+      case 'upsert':
+        return common('actions.save');
+      case 'restore':
+        return t('uap.restoreFilesAction');
+      case 'unchanged':
+        return t('uap.keep');
+      default:
+        return action.replaceAll('_', ' ');
+    }
+  };
   return (
     <Dialog
       open={Boolean(plan)}
@@ -64,13 +90,22 @@ export const ManagementPlanDialog = ({
             className="rounded-md border border-border p-3 text-sm"
           >
             <p className="font-medium">
-              {action.alias} · {action.targetId}
+              {actionLabel(action.action)} {action.alias}
             </p>
-            <p>{action.description}</p>
+            <p className="text-xs text-text-muted">
+              {targets?.find((target) => target.id === action.targetId)?.label || action.targetId}
+            </p>
             {(action.fromVersion || action.toVersion) && (
               <p className="text-xs text-text-muted">
                 {action.fromVersion || '—'} → {action.toVersion || '—'}
               </p>
+            )}
+            {(action.description || action.destinationPath) && (
+              <details className="mt-2 text-xs text-text-muted">
+                <summary className="cursor-pointer">{t('uap.details')}</summary>
+                {action.description && <p className="mt-2">{action.description}</p>}
+                {action.destinationPath && <p className="break-all">{action.destinationPath}</p>}
+              </details>
             )}
           </div>
         ))}

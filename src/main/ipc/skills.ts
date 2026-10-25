@@ -29,7 +29,7 @@ const logger = createLogger('IPC:skills');
 let skillsCatalogService: SkillsCatalogService | null = null;
 let skillsMutationService: SkillsMutationService | null = null;
 let skillsWatcherService: SkillsWatcherService | null = null;
-let admitsMutation: (event: IpcMainInvokeEvent) => boolean = () => false;
+let admitsMutation: ((event: IpcMainInvokeEvent) => boolean) | undefined;
 
 /** Local authoring now shares the desktop extension manager's owned-window boundary. */
 export function setSkillsMutationAdmission(
@@ -37,11 +37,11 @@ export function setSkillsMutationAdmission(
 ): () => void {
   admitsMutation = check;
   return () => {
-    if (admitsMutation === check) admitsMutation = () => false;
+    if (admitsMutation === check) admitsMutation = undefined;
   };
 }
 function assertMutationSender(event: IpcMainInvokeEvent): void {
-  if (!admitsMutation(event))
+  if (!admitsMutation?.(event))
     throw new Error('Skill mutation request came from an untrusted window.');
 }
 

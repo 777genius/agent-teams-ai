@@ -355,9 +355,13 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
   }
   async function cancel() {
     if (!backend || !context || !operation) return;
+    const version = generation.current;
     await request(
       () => backend.cancel({ contextId: context.contextId, operationId: operation.operationId }),
-      setOperation
+      (result) => {
+        setOperation(result);
+        if (finished(result)) void refresh(context, version);
+      }
     );
   }
   async function restoreLocal(rootId: string, skillName: string, operationId: string) {

@@ -756,6 +756,9 @@
     "transitiveDependency": "Managed as a dependency. Update or remove it through the plugin or Skill that added it.",
     "externalUninstallConfirmation": "I removed these plugins in the native client, or they were never activated.",
     "reviewExternalUninstall": "Review confirmed removal",
-    "backToSource": "Back to discovered Skills"
+    "backToSource": "Back to discovered Skills",
+    "installationDetails": "Installation details",
+    "restoreFilesAction": "Restore files",
+    "keep": "Keep unchanged"
   }
 }
