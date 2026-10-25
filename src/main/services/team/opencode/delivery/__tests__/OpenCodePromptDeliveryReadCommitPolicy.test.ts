@@ -274,6 +274,53 @@ describe('OpenCode prompt delivery read commit policy', () => {
     ).toBe('non_visible_tool_without_task_progress');
   });
 
+  it('consumes a completed silent direct peer turn only with exact accepted delivery proof', async () => {
+    const peer = record({
+      replyRecipient: 'bob',
+      runtimePromptMessageId: 'accepted-peer-prompt',
+      lastRuntimePromptMessageId: 'accepted-peer-prompt',
+      deliveredUserMessageId: 'accepted-peer-prompt',
+      observedAssistantMessageId: 'silent-peer-child',
+      responseState: 'empty_assistant_turn',
+      lastReason: 'assistant_child_completed_without_visible_or_meaningful_response',
+    });
+    const allowed = (ledgerRecord = peer, responseState = ledgerRecord.responseState) =>
+      isOpenCodeDeliveryResponseReadCommitAllowed({
+        teamName: 'team',
+        memberName: 'alice',
+        ledgerRecord,
+        responseState,
+        hasAcceptedMemberWorkSyncReport: async () => false,
+        taskRefsIncludeAll,
+      });
+    await expect(allowed()).resolves.toBe(true);
+    for (const overrides of [
+      { replyRecipient: 'user' },
+      { replyRecipient: 'team-lead' },
+      { replyRecipient: 'system' },
+      { teamName: 'other-team' },
+      { memberName: 'other-member' },
+      { runtimeSessionId: null },
+      { acceptedAt: null },
+      { acceptanceUnknown: true },
+      { deliveredUserMessageId: null },
+      { deliveredUserMessageId: 'another-session-prompt' },
+      { lastRuntimePromptMessageId: 'newer-prompt' },
+      { observedAssistantMessageId: null },
+      { observedAssistantPreview: 'text' },
+      { observedToolCallNames: ['message_send'] },
+      { messageKind: 'member_work_sync_nudge' as const },
+      { lastReason: 'assistant_child_has_no_visible_or_meaningful_response' },
+      { lastReason: 'no_assistant_child_for_delivered_prompt' },
+      { responseState: 'pending' as const },
+      { responseState: 'session_stale' as const },
+      { responseState: 'tool_error' as const },
+      { cancelledAt: ISO },
+    ])
+      await expect(allowed({ ...peer, ...overrides })).resolves.toBe(false);
+    await expect(allowed(peer, 'reconcile_failed')).resolves.toBe(false);
+  });
+
   it('settles only an exact completed silent group peer, preserving human and unknown delivery proof', async () => {
     const peer = record({
       groupChatId: 'group-1',

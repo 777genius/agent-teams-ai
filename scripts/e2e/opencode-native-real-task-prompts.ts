@@ -1,3 +1,5 @@
+import assert from 'node:assert/strict';
+
 // Real-task prompt contract for the native packaged E2E. The gates check exact
 // tool arguments, a byte-exact comment token and call ordering mechanically, so
 // the prompt must present them as a copyable contract instead of prose.
@@ -50,4 +52,22 @@ export function verificationInstruction(command: string): string {
     'If it exits non-zero because a file you wrote is wrong, fix only your file and execute this identical command again until it exits zero. Its arguments are already correct: never alter, wrap, cd around or re-spell the command.',
     'Anything you print yourself never counts as the marker.',
   ].join(' ');
+}
+
+/** A bare drive-qualified executable works in PowerShell, cmd and Git Bash.
+ * Quoting the executable without PowerShell's & operator turns it into a string.
+ * Both paths are bare literals: cmd /c does not understand libuv quote escaping.
+ * TEST staging must fail closed instead of guessing when a path needs escaping.
+ */
+export function windowsVerificationCommand(executable: string, program: string): string {
+  const slash = (value: string) => value.replace(/\\/g, '/');
+  const node = slash(executable);
+  const verifier = slash(program);
+  assert(/^[A-Za-z]:\/[A-Za-z0-9_./-]+\/node\.exe$/i.test(node),
+    'Cross-shell TEST Node path must be absolute and contain only literal characters');
+  assert(/^[A-Za-z]:\/[A-Za-z0-9_./-]+\.cjs$/i.test(verifier),
+    'Cross-shell TEST verifier path must be absolute and contain only literal characters');
+  assert(![node, verifier].some(value => value.split('/').some(part => part === '.' || part === '..')),
+    'Canonical TEST command paths required');
+  return `${node} ${verifier}`;
 }

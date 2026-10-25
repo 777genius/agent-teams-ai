@@ -499,6 +499,31 @@ export async function qualifyUIRefresh(records, completed) {
   return { sources, modelIds, sharedDirectoryReads: sharedReads };
 }
 
+// These are separate network reads, not two views of one refresh response.
+// UI correctness is established by qualifyUIRefresh against its own completions.
+export function compareCatalogSnapshots(uiInventory, freshModelIds) {
+  const ui = new Set(uiInventory.modelIds);
+  const fresh = new Set(freshModelIds);
+  for (const source of uiInventory.sources) {
+    const prefix = `${source}/`;
+    assert(
+      ![...ui].some((id) => id.startsWith(prefix)) ||
+        [...fresh].some((id) => id.startsWith(prefix)),
+      `Fresh ${source} model inventory unexpectedly empty after a populated UI snapshot`
+    );
+  }
+  const removedSinceUI = [...ui].filter((id) => !fresh.has(id)).sort();
+  const addedSinceUI = [...fresh].filter((id) => !ui.has(id)).sort();
+  return {
+    comparison: 'independent-requests',
+    changed: removedSinceUI.length > 0 || addedSinceUI.length > 0,
+    uiModelCount: ui.size,
+    freshModelCount: fresh.size,
+    removedSinceUI,
+    addedSinceUI,
+  };
+}
+
 export function settingsRefreshSettled(observation, now, quietMs = 500) {
   const records = observation.records;
   return (
@@ -939,10 +964,9 @@ export async function verifyPackaged({
         );
       }
     }
-    assert.deepEqual(
-      evidence.ui.inventory.modelIds,
-      [...new Set(freshModelIds)].sort(),
-      'Completed UI model inventory differs from the fresh main API snapshot'
+    evidence.catalogSnapshotComparison = compareCatalogSnapshots(
+      evidence.ui.inventory,
+      freshModelIds
     );
     assert.equal(
       await evaluate(

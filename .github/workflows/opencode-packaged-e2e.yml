@@ -8,13 +8,13 @@ on:
         type: string
         default: ''
       native_model:
-        description: 'Explicit openrouter/provider-model required for native tasks and source-only startup; all/v2 also need it in the V2 floor catalog; unused for provider-only'
+        description: 'Explicit openrouter/provider-model required for native tasks and source-only startup; it must be in the newest V2 catalog; unused for provider-only'
         type: string
         default: ''
       native_versions:
-        description: 'Run current V2 only, all versions, V1 only, or both V2 pins; reuse compatible completed proofs'
+        description: 'Run the newest V2 only, V1 and the newest V2, or V1 only; reuse compatible completed proofs'
         type: choice
-        options: [current, all, v1, v2]
+        options: [current, all, v1]
         default: current
       native_provider_only:
         description: Compare verified published V1 provider commands only; no native startup or packaging
@@ -72,7 +72,7 @@ jobs:
           VERSIONS: ${{ inputs.native_versions }}
         run: |
           case "$VERSIONS" in
-            all|v1|v2|current) ;;
+            all|v1|current) ;;
             *) echo '::error::Unknown Windows version selection'; exit 1 ;;
           esac
           if [[ ! "$SDK_REF" =~ ^[a-f0-9]{40}$ ]]; then

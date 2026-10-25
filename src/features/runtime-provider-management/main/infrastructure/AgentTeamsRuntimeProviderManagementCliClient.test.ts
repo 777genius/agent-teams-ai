@@ -548,7 +548,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient API-key command deadline'
     projectPath: '/test/project',
   };
 
-  it('allows a native key connection to finish after the old 90-second boundary', async () => {
+  it('allows a native key connection to finish after the old 180-second boundary', async () => {
     const child = childProcess();
     let stdin = '';
     child.stdin.on('data', (chunk: Buffer) => {
@@ -559,17 +559,17 @@ describe('AgentTeamsRuntimeProviderManagementCliClient API-key command deadline'
     expect(spawnCliMock).toHaveBeenCalledTimes(1);
     expect(spawnCliMock.mock.calls[0]?.[1]).not.toContain(input.apiKey);
     expect(stdin).toBe(input.apiKey);
-    await vi.advanceTimersByTimeAsync(120_000);
+    await vi.advanceTimersByTimeAsync(250_000);
     expect(killProcessTreeMock).not.toHaveBeenCalled();
     succeed(child);
     await expect(pending).resolves.toMatchObject({ provider: { providerId: 'groq' } });
   });
 
-  it('keeps the absolute 180-second key deadline and refuses late output', async () => {
+  it('keeps the absolute 360-second key deadline and refuses late output', async () => {
     const child = childProcess();
     const pending = new AgentTeamsRuntimeProviderManagementCliClient().connectWithApiKey(input);
     await vi.advanceTimersByTimeAsync(0);
-    await vi.advanceTimersByTimeAsync(179_999);
+    await vi.advanceTimersByTimeAsync(359_999);
     expect(killProcessTreeMock).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     const result = await pending;
@@ -581,14 +581,14 @@ describe('AgentTeamsRuntimeProviderManagementCliClient API-key command deadline'
     expect(result.provider).toBeUndefined();
   });
 
-  it('keeps the default 90-second budget for the generic connect command', async () => {
+  it('keeps the 360-second OpenCode budget for the generic connect command', async () => {
     const child = childProcess();
     const pending = new AgentTeamsRuntimeProviderManagementCliClient().connectProvider({
       ...input,
       method: 'api',
     });
     await vi.advanceTimersByTimeAsync(0);
-    await vi.advanceTimersByTimeAsync(89_999);
+    await vi.advanceTimersByTimeAsync(359_999);
     expect(killProcessTreeMock).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     expect(killProcessTreeMock).toHaveBeenCalledExactlyOnceWith(child, 'SIGKILL');
@@ -601,7 +601,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient API-key command deadline'
     await vi.advanceTimersByTimeAsync(0);
     succeed(child);
     await expect(pending).resolves.toMatchObject({ provider: { providerId: 'groq' } });
-    await vi.advanceTimersByTimeAsync(180_000);
+    await vi.advanceTimersByTimeAsync(360_001);
     expect(killProcessTreeMock).not.toHaveBeenCalled();
   });
 });
