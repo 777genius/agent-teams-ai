@@ -8,7 +8,7 @@ on:
         type: string
         default: ''
       native_model:
-        description: 'Explicit openrouter/provider-model required for native tasks and source-only startup; unused for provider-only'
+        description: 'Explicit openrouter/provider-model required for native tasks and source-only startup; all/v2 also need it in the V2 floor catalog; unused for provider-only'
         type: string
         default: ''
       native_versions:

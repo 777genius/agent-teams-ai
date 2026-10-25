@@ -7,7 +7,7 @@ on:
         required: true
         type: string
       model:
-        description: Explicit selected model required for native and source-only startup; unused for provider-only
+        description: Explicit selected model required for native and source-only startup; all/v2 also need it in the V2 floor catalog; unused for provider-only
         required: false
         type: string
         default: ''
@@ -38,7 +38,7 @@ on:
         required: true
         type: string
       model:
-        description: Explicit openrouter/ model required for native and source-only startup; unused for provider-only
+        description: Explicit openrouter/ model required for native and source-only startup; all/v2 also need it in the V2 floor catalog; unused for provider-only
         required: false
         type: string
         default: ''
@@ -185,6 +185,19 @@ jobs:
         if: ${{ !inputs.provider_only }}
         with:
           bun-version: '1.4.3'
+      - name: Resolve exact OpenCode CLI pins from the selected runtime registry
+        id: opencode-pins
+        if: ${{ !inputs.provider_only }}
+        shell: pwsh
+        env:
+          VERSIONS: ${{ inputs.versions }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # Neither tree is installed yet: a bare import must fail instead of auto-installing.
+          $resolved = @(bun --no-install scripts/e2e/opencode-native-windows-pins.ts ../TEST-native-sdk $env:VERSIONS)
+          if ($LASTEXITCODE -ne 0) { throw 'OpenCode pin resolution from the selected runtime failed' }
+          $resolved | Write-Output
+          $resolved | Out-File $env:GITHUB_OUTPUT -Append -Encoding utf8
       - name: Observe three shared tool roots before native compilation
         if: ${{ !inputs.provider_only }}
         shell: pwsh
@@ -401,13 +414,17 @@ jobs:
         shell: pwsh
         env:
           VERSIONS: ${{ inputs.versions }}
+          V1_PIN: ${{ steps.opencode-pins.outputs.v1 }}
+          FLOOR_PIN: ${{ steps.opencode-pins.outputs.floor }}
+          CURRENT_PIN: ${{ steps.opencode-pins.outputs.current }}
         run: |
           $ErrorActionPreference = 'Stop'
-          foreach ($pin in @(@('v1', 'opencode-windows-x64@1.19.0'), @('floor', '@opencode/cli-windows-x64@2.0.0'), @('current', '@opencode/cli-windows-x64@2.0.32'))) {
+          foreach ($pin in @(@('v1', 'opencode-windows-x64', $env:V1_PIN), @('floor', '@opencode/cli-windows-x64', $env:FLOOR_PIN), @('current', '@opencode/cli-windows-x64', $env:CURRENT_PIN))) {
             if ($env:VERSIONS -eq 'v1' -and $pin[0] -ne 'v1') { continue }
             if ($env:VERSIONS -eq 'v2' -and $pin[0] -eq 'v1') { continue }
             if ($env:VERSIONS -eq 'current' -and $pin[0] -ne 'current') { continue }
-            npm install --prefix "TEST-pins/$($pin[0])" --ignore-scripts --no-audit --no-fund $pin[1]
+            if (!$pin[2]) { throw "Resolved $($pin[0]) CLI pin missing" }
+            npm install --prefix "TEST-pins/$($pin[0])" --ignore-scripts --no-audit --no-fund "$($pin[1])@$($pin[2])"
             if ($LASTEXITCODE -ne 0) { throw 'Pinned CLI install failed' }
           }
       - name: Stage the real desktop console wrapper before binary projection
@@ -440,13 +457,15 @@ jobs:
         env:
           SELECTED_MODEL: ${{ inputs.model }}
           VERSIONS: ${{ inputs.versions }}
+          FLOOR_PIN: ${{ steps.opencode-pins.outputs.floor }}
+          CURRENT_PIN: ${{ steps.opencode-pins.outputs.current }}
         run: |
           $current = (Resolve-Path "TEST-pins/current/node_modules/@opencode/cli-windows-x64/bin/opencode.exe").Path
           # Current-only runs do not install or resolve the floor pin.
           $floor = $current
           if ($env:VERSIONS -ne 'current') { $floor = (Resolve-Path "TEST-pins/floor/node_modules/@opencode/cli-windows-x64/bin/opencode.exe").Path }
           $node = $env:OPENCODE_NATIVE_TEST_NODE_PATH
-          bun scripts/e2e/opencode-native-windows-preflight.ts ../TEST-native-sdk $floor $current $env:SELECTED_MODEL $node $env:VERSIONS
+          bun scripts/e2e/opencode-native-windows-preflight.ts ../TEST-native-sdk $floor $current $env:SELECTED_MODEL $node $env:VERSIONS $env:FLOOR_PIN $env:CURRENT_PIN
           if ($LASTEXITCODE -ne 0) { throw 'Source gate failed before packaging; no model tasks submitted' }
       - name: Select Windows release compiler Bun
         if: ${{ !inputs.source_only && !inputs.provider_only }}
@@ -460,6 +479,8 @@ jobs:
         env:
           SDK_REF: ${{ inputs.sdk_ref }}
           CANDIDATE_PLATFORM: win32-x64
+          VERSIONS: ${{ inputs.versions }}
+          CANDIDATE_OPENCODE_V2_CONTRACT: ${{ steps.opencode-pins.outputs.contract }}
         run: |
           $ErrorActionPreference = 'Stop'
           bun scripts/package-runtime.ts --platform win32-x64
@@ -477,6 +498,13 @@ jobs:
           $lock.releaseTag = "TEST-native-candidate-$($env:SDK_REF)"
           $lock.assets.'win32-x64'.file = 'TEST-runtime-win32-x64.zip'
           $lock.assets.'win32-x64'.sha256 = (Get-FileHash candidate/TEST-runtime-win32-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          # A runtime pin copies the release's published V2 contract; the candidate does the same,
+          # so the packaged app admits exactly the versions this runtime qualifies.
+          # V1-only runs never read the runtime registry and start no V2 release.
+          if ($env:VERSIONS -ne 'v1') {
+            if (!$env:CANDIDATE_OPENCODE_V2_CONTRACT) { throw 'Candidate OpenCode V2 contract missing' }
+            $lock.opencodeV2 = $env:CANDIDATE_OPENCODE_V2_CONTRACT | ConvertFrom-Json
+          }
           $lock | ConvertTo-Json -Depth 20 | Set-Content ../TEST-native-source/runtime.lock.json -Encoding utf8NoBOM
           New-Item -ItemType Directory -Force ../TEST-native-source/resources | Out-Null
           if (Test-Path ../TEST-native-source/resources/runtime/claude-multimodel.exe) { throw 'Unexpected preexisting runtime' }
@@ -539,6 +567,9 @@ jobs:
         env:
           SELECTED_MODEL: ${{ inputs.model }}
           VERSIONS: ${{ inputs.versions }}
+          V1_PIN: ${{ steps.opencode-pins.outputs.v1 }}
+          FLOOR_PIN: ${{ steps.opencode-pins.outputs.floor }}
+          CURRENT_PIN: ${{ steps.opencode-pins.outputs.current }}
           OPENCODE_NATIVE_DIAGNOSTIC_SDK_ROOT: ${{ github.workspace }}/TEST-native-sdk
         run: |
           $ErrorActionPreference = 'Stop'
@@ -547,10 +578,11 @@ jobs:
           $env:TMPDIR = $env:RUNNER_TEMP
           $app = (Resolve-Path 'release/win-unpacked/AgentTeamsAI.exe').Path
           $failedPins = @()
-          foreach ($pin in @(@('v1', 'opencode-windows-x64', '1.19.0'), @('floor', '@opencode/cli-windows-x64', '2.0.0'), @('current', '@opencode/cli-windows-x64', '2.0.32'))) {
+          foreach ($pin in @(@('v1', 'opencode-windows-x64', $env:V1_PIN), @('floor', '@opencode/cli-windows-x64', $env:FLOOR_PIN), @('current', '@opencode/cli-windows-x64', $env:CURRENT_PIN))) {
             if ($env:VERSIONS -eq 'v1' -and $pin[0] -ne 'v1') { continue }
             if ($env:VERSIONS -eq 'v2' -and $pin[0] -eq 'v1') { continue }
             if ($env:VERSIONS -eq 'current' -and $pin[0] -ne 'current') { continue }
+            if (!$pin[2]) { throw "Resolved $($pin[0]) CLI pin missing" }
             $binary = (Resolve-Path "TEST-pins/$($pin[0])/node_modules/$($pin[1])/bin/opencode.exe").Path
             $versionOutput = (& $binary --version).Trim()
             $versionExit = $LASTEXITCODE
