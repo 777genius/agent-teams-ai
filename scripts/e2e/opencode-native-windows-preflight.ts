@@ -192,9 +192,11 @@ function safeSourceGateFailure(error: unknown, nativeFailures?: WeakMap<object, 
 }
 
 // The runtime writes only closed diagnostic fields; keep identifier keys and path-free tokens.
+// This is a shape filter, not a secret filter: use it only for TEST roots that hold no real
+// credential (this preflight seeds TEST-noncredential), never in the packaged FULL run.
 async function providerDiagnostics(dataRoot: string | undefined): Promise<unknown[]> {
   if (!dataRoot) return [];
-  const { readdir, readFile } = await import('node:fs/promises');
+  const { readdir, readFile, stat } = await import('node:fs/promises');
   const { join } = await import('node:path');
   const directory = join(dataRoot, 'opencode', 'v2', 'provider-diagnostics');
   let names: string[];
@@ -218,10 +220,15 @@ async function providerDiagnostics(dataRoot: string | undefined): Promise<unknow
     return typeof value === 'boolean' || value === null ? value : undefined;
   };
   const rows: unknown[] = [];
+  let budget = 262_144; // Keeps the whole receipt far below the child's output buffer.
   for (const name of names) {
     try {
-      const bytes = await readFile(join(directory, name), 'utf8');
-      rows.push(bytes.length <= 65_536 ? project(JSON.parse(bytes), 0) : { oversized: true });
+      const file = join(directory, name);
+      if ((await stat(file)).size > 65_536) { rows.push({ oversized: true }); continue; }
+      const row = project(JSON.parse(await readFile(file, 'utf8')), 0);
+      const size = JSON.stringify(row)?.length ?? 0;
+      if (size > budget) { rows.push({ oversized: true }); continue; }
+      budget -= size; rows.push(row);
     } catch { rows.push({ unreadable: true }); }
   }
   return rows;
