@@ -12,16 +12,16 @@ jobs:
     name: ${{ matrix.platform }} OpenCode ${{ matrix.opencode }}
     strategy:
       fail-fast: false
-      # All runs share one Kimi key; two at a time, as in the proven V2 pair.
-      max-parallel: 2
+      # All runs share one Kimi key with other qualification runs: one at a time, V2 first.
+      max-parallel: 1
       matrix:
         # The model's provider prefix is the provider run.sh connects.
         # V1: the npm opencode-ai latest the app installer picks today; same Kimi Code endpoint and key.
         include:
-          - { platform: darwin-arm64, runner: macos-15, opencode: '2.1.4', model: kimi-code-plan-cn/kimi-for-coding }
-          - { platform: darwin-arm64, runner: macos-15, opencode: '1.19.4', model: kimi-for-coding/kimi-for-coding }
           - { platform: linux-x64, runner: ubuntu-24.04, opencode: '2.1.4', model: kimi-code-plan-cn/kimi-for-coding }
+          - { platform: darwin-arm64, runner: macos-15, opencode: '2.1.4', model: kimi-code-plan-cn/kimi-for-coding }
           - { platform: linux-x64, runner: ubuntu-24.04, opencode: '1.19.4', model: kimi-for-coding/kimi-for-coding }
+          - { platform: darwin-arm64, runner: macos-15, opencode: '1.19.4', model: kimi-for-coding/kimi-for-coding }
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 75
     env:
