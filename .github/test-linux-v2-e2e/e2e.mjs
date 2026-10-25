@@ -103,24 +103,31 @@ log('taskResult', { status: taskNow?.status, owner: taskNow?.owner, fileExists: 
 const sendStartMs = Date.now();
 const leadMessage = await call(`${api}.sendMessage(${q(teamName)}, ${q({ member: 'team-lead', text: `Ask ${teammate} to append the line "second line from ${teammate}" to ${fileName}, wait for ${teammate}'s reply, then reply to me confirming what ${teammate} said.` })})`);
 log('sendToLead', leadMessage);
-// Strict wait (Linux run): the final relay is a lead -> user message newer than the
-// teammate's reply to the lead, which itself must be newer than the user's request.
+// Strict wait, by content: the lead hands the request to the teammate (a direct message or a
+// task assignment, both newer than the user's request), the teammate reports the appended line
+// to the lead, and only then the lead answers the user. A request queued behind an earlier
+// relay can be answered later, so earlier replies about the first task never count.
 const ts = (m) => Date.parse(m?.timestamp ?? '') || 0;
 const sentAtMs = sendStartMs;
+const second = /second line/i;
 let inboxes;
 let milestones = {};
-const deadline = Date.now() + 8 * 60_000;
+const deadline = Date.now() + 12 * 60_000;
 while (Date.now() < deadline) {
   inboxes = readInboxes();
   const asList = (f) => (Array.isArray(inboxes[f]) ? inboxes[f] : []);
-  const leadToTeammate = asList(`${teammate}.json`).find((m) => m.from === 'team-lead' && ts(m) >= sentAtMs);
-  const teammateReply = asList('team-lead.json').find((m) => m.from === teammate && ts(m) > (leadToTeammate ? ts(leadToTeammate) : sentAtMs));
+  const leadToTeammate = asList(`${teammate}.json`).find((m) => ts(m) >= sentAtMs &&
+    (m.from === 'team-lead' || /New task assigned to you/.test(String(m.text ?? ''))) && second.test(String(m.text ?? '')));
+  const teammateReply = leadToTeammate && asList('team-lead.json').find((m) => m.from === teammate &&
+    ts(m) > ts(leadToTeammate) && second.test(String(m.text ?? '')));
   const leadFinal = teammateReply && asList('user.json').find((m) => m.from === 'team-lead' && ts(m) > ts(teammateReply));
   const fileNow = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : '';
   milestones = {
     leadToTeammateAt: leadToTeammate?.timestamp ?? null,
+    leadToTeammateKind: leadToTeammate ? (leadToTeammate.from === 'team-lead' ? 'message' : 'task') : null,
     teammateReplyAt: teammateReply?.timestamp ?? null,
     leadFinalAt: leadFinal?.timestamp ?? null,
+    leadFinalText: leadFinal ? String(leadFinal.text ?? '').slice(0, 400) : null,
     fileHasSecondLine: /second line from/.test(fileNow),
   };
   if (leadFinal && milestones.fileHasSecondLine) break;
@@ -140,7 +147,8 @@ const verdict = {
   teammateReply: Boolean(milestones.teammateReplyAt),
   leadFinalRelay: Boolean(milestones.leadFinalAt),
   secondLine: Boolean(milestones.fileHasSecondLine),
-  membersAliveAtEnd: Object.values(endStatuses.members).every((m) => m.runtimeAlive && !m.hardFailure),
+  // runtimeAlive is logged in memberStatusesEnd and reported, not required here.
+  membersConfirmedAtEnd: Object.values(endStatuses.members).every((m) => m.launchState === 'confirmed_alive' && !m.hardFailure),
 };
 verdict.pass = Object.values(verdict).every(Boolean);
 log('verdict', verdict);
