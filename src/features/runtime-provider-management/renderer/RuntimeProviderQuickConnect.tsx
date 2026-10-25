@@ -9,9 +9,9 @@ import {
 import { useStore } from '@renderer/store';
 
 import {
+  findRuntimeProviderOnboardingPlanEntry,
   getOpenCodeGeneration,
   getRuntimeProviderOnboardingPlan,
-  getRuntimeProviderOnboardingPlanProviderIds,
   getXiaomiMiMoTokenPlanResolutionByProviderId,
   isOpenCodeProviderOAuthBridgeOutdated,
   isRuntimeProviderOnboardingPlanRoutable,
@@ -219,7 +219,7 @@ export const RuntimeProviderQuickConnect = ({
   );
   const [localProviderProjects, setLocalProviderProjects] = useState<ProjectPathProject[]>([]);
   const oauthBridgeOutdated = isOpenCodeProviderOAuthBridgeOutdated(openCodeRuntimeStatus);
-  const openCodeGeneration = getOpenCodeGeneration(openCodeRuntimeStatus?.version);
+  const generation = getOpenCodeGeneration(openCodeRuntimeStatus?.version);
   useEffect(() => {
     if (!localProviderSetupOpen) return;
     setLocalProviderProjectPath(projectPath?.trim() || null);
@@ -538,13 +538,7 @@ export const RuntimeProviderQuickConnect = ({
         };
       }
 
-      // On V2 a plan with routes is connected through one of its route integrations.
-      const routeEntries = getRuntimeProviderOnboardingPlanProviderIds(
-        getRuntimeProviderOnboardingPlan(plan.id),
-        openCodeGeneration
-      ).flatMap((providerId) => findDirectoryEntry(directory.entries, providerId) ?? []);
-      const entry =
-        routeEntries.find((item) => item.state === 'connected') ?? routeEntries[0] ?? null;
+      const entry = findRuntimeProviderOnboardingPlanEntry(plan.id, generation, directory.entries);
       if (!entry && directory.authoritativePending) {
         return {
           id: plan.id,
@@ -693,7 +687,7 @@ export const RuntimeProviderQuickConnect = ({
     handleCompanionCardAction,
     oauthBridgeOutdated,
     onInstallOpenCode,
-    openCodeGeneration,
+    generation,
     onOpenCodeProviderAction,
     runCompanionOperation,
     t,

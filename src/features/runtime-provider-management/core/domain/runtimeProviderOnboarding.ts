@@ -425,6 +425,20 @@ export function getRuntimeProviderOnboardingPlanProviderIds(
     : [plan.providerId];
 }
 
+/** The directory entry of a plan: a connected route integration first, then any listed one. */
+export function findRuntimeProviderOnboardingPlanEntry(
+  planId: RuntimeProviderOnboardingPlanId,
+  generation: OpenCodeGeneration,
+  entries: readonly RuntimeProviderDirectoryEntryDto[]
+): RuntimeProviderDirectoryEntryDto | null {
+  const plan = getRuntimeProviderOnboardingPlan(planId);
+  const planEntries = getRuntimeProviderOnboardingPlanProviderIds(plan, generation).flatMap(
+    (providerId) =>
+      entries.find((entry) => entry.providerId.trim().toLowerCase() === providerId) ?? []
+  );
+  return planEntries.find((entry) => entry.state === 'connected') ?? planEntries[0] ?? null;
+}
+
 /** The plan's key pages, primary first: one per route, else the single credential page. */
 export function getRuntimeProviderOnboardingCredentialUrls(
   plan: Pick<RuntimeProviderOnboardingPlan, 'credentialUrl' | 'routes' | 'routeChoices' | 'route'>
