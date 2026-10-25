@@ -32,7 +32,7 @@ import { applyCustomTeamTemplate } from '@features/custom-team-templates/rendere
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { TeamDataService } from '@main/services/team/TeamDataService';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
-import { getClaudeBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { buildInitialRosterMemberDrafts } from '@renderer/components/team/dialogs/createTeamInitialRoster';
 import { buildMembersFromDrafts } from '@renderer/components/team/members/membersEditorUtils';
 import Database from 'better-sqlite3-node';
@@ -307,7 +307,6 @@ describe('standalone custom-team-templates HTTP integration', () => {
   // Fails if creation reuses source/runtime identity, shares mutable state, or changes the template.
   it('creates independent config-only teams from a saved template', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-saved-template-creation-'));
-    const previousClaudeRoot = getClaudeBasePath();
     const claudeRoot = path.join(tmpDir, 'claude');
     const project = path.join(tmpDir, 'TEST-project');
     await fs.mkdir(project, { recursive: true });
@@ -419,7 +418,7 @@ describe('standalone custom-team-templates HTTP integration', () => {
       expect(after.json()).toMatchObject({ status: 'ready', templates });
       expect(after.json().templates).toEqual(templates);
     } finally {
-      setClaudeBasePathOverride(previousClaudeRoot);
+      setClaudeBasePathOverride(null);
     }
   });
 
