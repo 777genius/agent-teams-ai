@@ -21,8 +21,8 @@ const missingPortableBunPtyTargets = new Set();
 // its version-derived server alias (see runtime local-cli/opencode-v2-graphs.json).
 const NESTED_RUNTIME_GRAPH = '@opencode/server-v\\d+\\.\\d+\\.\\d+/node_modules/';
 // The runtime pins one bun-pty for every staged graph (its `bun-pty` override), hoisted at
-// the graph root. A nested copy is an unexpected layout and fails validation rather than
-// being pruned.
+// the graph root. A nested copy is an unexpected layout: none of its libraries is pruned,
+// so its foreign ones fail validation.
 const BUN_PTY_RELEASE = /^bun-pty\/rust-pty\/target\/release\/([^/]+)$/;
 const TREE_SITTER_PREBUILDS = new RegExp(
   `^((?:${NESTED_RUNTIME_GRAPH})?@opencode/core/node_modules/tree-sitter-bash/prebuilds)/`

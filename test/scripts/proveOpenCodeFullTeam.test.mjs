@@ -12,9 +12,13 @@ import { allocateSmokeOwnedRoot, assertOwnedSmokeEnvironment, preflightOpenCodeF
 import { runMixedTeamSmoke } from '../../scripts/prove-opencode-mixed-team.mjs';
 
 // FULL V2 cases come from the pinned runtime's qualification records, never literals here.
-const pinnedQualified = Object.entries(JSON.parse(fs.readFileSync(new URL('../../runtime.lock.json', import.meta.url), 'utf8')).opencodeV2.qualified)
-  .filter(([key]) => /^(linux|darwin)-/.test(key))
-  .flatMap(([key, versions]) => versions.map(version => [...key.split('-'), version]));
+const pinnedRecords = Object.entries(JSON.parse(fs.readFileSync(new URL('../../runtime.lock.json', import.meta.url), 'utf8')).opencodeV2.qualified)
+  .filter(([key]) => /^(linux|darwin)-/.test(key));
+const pinnedQualified = pinnedRecords.flatMap(([key, versions]) => versions.map(version => [...key.split('-'), version]));
+// A version qualified on one FULL platform but not on another, when the pinned data has one.
+const pinnedElsewhere = pinnedRecords.flatMap(([key, versions]) => pinnedQualified
+  .filter(([platform, arch, version]) => `${platform}-${arch}` !== key && !versions.includes(version))
+  .map(([, , version]) => [...key.split('-'), version]));
 
 for (const prefix of ['opencode-full-team-', 'opencode-mixed-team-']) {
   test(`${prefix} allocates private canonical Darwin roots with room for tsx sockets`, { skip: process.platform === 'win32' }, () => {
@@ -141,17 +145,26 @@ test('FULL V2 preflight uses exact version and passive selected-provider invento
 
 test('FULL V2 preflight fails closed on unsupported versions and malformed or missing inventory', async () => {
   await withOwnedPreflight(async input => {
-    const [, , qualified] = pinnedQualified[0];
+    const [qualifiedPlatform, qualifiedArch, qualified] = pinnedQualified[0];
     // An in-range release without a qualification record is refused like an out-of-range one.
     for (const version of ['2.999.0\n', '3.0.0\n', `${qualified}-rc.1\n`, `${qualified}\n\n`, ` ${qualified}\n`,
       `${qualified} extra`, `0${qualified}\n`]) {
       let calls = 0;
-      const result = await preflightOpenCodeFullTeamEnvironment(input, { platform: 'darwin', arch: 'arm64',
+      const result = await preflightOpenCodeFullTeamEnvironment(input, { platform: qualifiedPlatform, arch: qualifiedArch,
         legacyPreflight: () => assert.fail('unsupported version cannot fall back'),
         spawn: () => { calls++; return { status: 0, stdout: version, stderr: 'synthetic-secret' }; },
       });
       assert.equal(result.ok, false); assert.equal(calls, 1);
       assert.equal(JSON.stringify(result).includes('synthetic-secret'), false);
+    }
+    // Qualification binds to the platform: a version qualified elsewhere is refused here.
+    for (const [platform, arch, version] of pinnedElsewhere) {
+      let calls = 0;
+      const result = await preflightOpenCodeFullTeamEnvironment(input, { platform, arch,
+        legacyPreflight: () => assert.fail('unqualified version cannot fall back'),
+        spawn: () => { calls++; return { status: 0, stdout: `${version}\n` }; },
+      });
+      assert.deepEqual([result.ok, result.stage, calls], [false, 'generation-policy', 1]);
     }
     for (const catalog of [
       { status: 1, stderr: 'synthetic-secret' }, { status: null, signal: 'SIGTERM' },

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { readOpenCodeV2Contract } from '../../src/features/opencode-compatibility/core/domain/openCodeV2Contract.ts';
 import { getExpectedRuntimeCliVersion } from '../lib/runtime-cli-version.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
@@ -86,17 +87,8 @@ for (const [platform, asset] of Object.entries(lock.assets ?? {})) {
 }
 
 // The runtime release manifest publishes its OpenCode V2 contract (supported range and
-// qualified versions); the lock pins it verbatim. Its exact shape is checked by the
-// opencode-compatibility unit tests through the same parser the app uses.
-const opencodeV2 = lock.opencodeV2;
-if (
-  !opencodeV2 ||
-  typeof opencodeV2 !== 'object' ||
-  !opencodeV2.range ||
-  !opencodeV2.qualified ||
-  typeof opencodeV2.qualified !== 'object' ||
-  Array.isArray(opencodeV2.qualified)
-) {
+// qualified versions); the lock pins it verbatim. The app's own parser validates it.
+if (!readOpenCodeV2Contract(lock.opencodeV2)) {
   fail('opencodeV2 must copy the published runtime manifest contract ({ range, qualified }).');
 }
 

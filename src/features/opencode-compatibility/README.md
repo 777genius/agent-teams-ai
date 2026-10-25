@@ -11,11 +11,12 @@ V2 follows the pinned runtime's contract (`runtime.lock.json` `opencodeV2`, copi
 from the runtime release manifest): any exact stable release in its range is
 recognized with dialect `v2-<version>`, and `productionEligible` is true only for
 versions listed in its qualification records for this platform. `openCodeV2Contract.ts`
-is the only policy over that contract (import-free, so Node-run proof scripts load it
-too); `pinnedOpenCodeV2Contract.ts` binds it to the lock file and the current
-platform. Nothing here lists V2 versions, and a
-peer's readiness claim never qualifies a version. Recognition feeds native
-discovery and provider setup; it does not grant launch capabilities.
+is the only policy over that contract (import-free, so Node-run proof and CI scripts
+load it too); `pinnedOpenCodeV2Contract.ts` binds it to the lock file and the current
+platform. Nothing here lists V2 versions, and a peer's readiness claim never
+qualifies a version. Recognition feeds native
+discovery (which prefers a qualified binary on PATH) and provider setup; it does not
+grant launch capabilities.
 No SDK, runtime, permission writer, native CAS, or transport
 is implemented here.
 
