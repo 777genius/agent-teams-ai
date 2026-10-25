@@ -12,7 +12,7 @@ on:
       - 'src/main/index.ts'
       - 'src/main/httpServer.ts'
       - 'src/shared/utils/skillFrontmatter.ts'
-      - 'scripts/e2e/uap-management-desktop.ts'
+      - 'scripts/e2e/uap-management-*.ts'
       - 'scripts/stage-uap-runtime.ts'
       - 'scripts/dev-with-runtime.mjs'
       - 'scripts/tsconfig/tsconfig.desktop-e2e.json'
@@ -40,7 +40,6 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
-          cache: pnpm
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
         with:
           go-version: '1.26.10'
@@ -49,6 +48,14 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y xvfb openssl
       - name: Install frozen application dependencies
         run: node scripts/ci/install-dependencies-with-retry.mjs
+      - name: Configure the installed Electron sandbox helper
+        shell: bash
+        run: |
+          sandbox_path="$(node -e "const path = require('node:path'); process.stdout.write(path.join(path.dirname(require('electron')), 'chrome-sandbox'));")"
+          test -f "$sandbox_path"
+          test ! -L "$sandbox_path"
+          sudo chown root:root "$sandbox_path"
+          sudo chmod 4755 "$sandbox_path"
       - name: Read the reviewed UAP source identity
         id: uap
         run: node -e "const fs=require('node:fs'); const p=JSON.parse(fs.readFileSync('vendor/uap/sdk/provenance.json','utf8')); if(!/^[a-f0-9]{40}$/.test(p.sourceCommit)) throw Error('Invalid source pin'); fs.appendFileSync(process.env.GITHUB_OUTPUT,'commit='+p.sourceCommit+'\n');"

@@ -16,6 +16,7 @@ import { promisify } from 'node:util';
 // Existing raw CDP transport; no browser-mode substitute or native folder picker.
 // @ts-expect-error Existing JavaScript harness has no declaration file.
 import { CdpClient } from './comment-notification/cdp.mjs';
+import { openCodeMcpServer } from './uap-management-native';
 
 import type {
   ExtensionContext,
@@ -452,22 +453,25 @@ async function registryPlugin(f: Awaited<ReturnType<typeof fixture>>) {
   await reviewAndApply(pluginPanel);
   const entry = (await environment()).entries.find((item) => item.kind === 'plugin');
   assert(entry?.declared && entry.version === expected.version);
-  const config = path.join(f.env.OPENCODE_CONFIG_DIR!, 'opencode.json');
-  assert.match(await readFile(config, 'utf8'), /https:\/\/docs\.mcp\.cloudflare\.com\/mcp/);
+  const config = entry.bindings
+    .flatMap((binding) => binding.managedPaths)
+    .find((file) =>
+      ['opencode.json', 'opencode.jsonc'].some(
+        (name) => file === path.join(f.env.OPENCODE_CONFIG_DIR!, name)
+      )
+    );
+  assert(config, 'Installed plugin must identify its actual owned native config');
+  assert.deepEqual(await openCodeMcpServer(config, 'cloudflare-docs'), {
+    type: 'remote',
+    url: 'https://docs.mcp.cloudflare.com/mcp',
+  });
   await cdp!.screenshot(path.join(f.shots, '13-registry-installed.png'));
   await click(
     button('Remove', `${pluginPanel}.querySelector('[data-testid=uap-installed-entry]')`)
   );
   await reviewAndApply(pluginPanel);
   assert(!(await environment()).entries.some((item) => item.alias === entry.alias));
-  assert(
-    !(
-      await readFile(config, 'utf8').catch((error: NodeJS.ErrnoException) => {
-        if (error.code === 'ENOENT') return '';
-        throw error;
-      })
-    ).includes('https://docs.mcp.cloudflare.com/mcp')
-  );
+  assert.equal(await openCodeMcpServer(config, 'cloudflare-docs'), undefined);
   evidence.registryPlugin = {
     product: expected.id,
     distributionId: expected.distributionId,

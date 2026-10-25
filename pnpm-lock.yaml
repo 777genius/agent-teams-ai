@@ -340,8 +340,8 @@ importers:
         specifier: 3.30.5
         version: 3.30.5
       '@uap/management-sdk':
-        specifier: file:vendor/uap/sdk/uap-management-sdk-0.0.0-development-aff370c0de25.tgz
-        version: file:vendor/uap/sdk/uap-management-sdk-0.0.0-development-aff370c0de25.tgz
+        specifier: file:vendor/uap/sdk/uap-management-sdk-0.0.0-development-7989f36f9f62.tgz
+        version: file:vendor/uap/sdk/uap-management-sdk-0.0.0-development-7989f36f9f62.tgz
       '@xterm/addon-fit':
         specifier: ^0.11.0
         version: 0.11.0
@@ -5494,8 +5494,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@uap/management-sdk@file:vendor/uap/sdk/uap-management-sdk-0.0.0-development-aff370c0de25.tgz':
-    resolution: {integrity: sha512-aRx2GmwEHSMfzaaEYyvsfHpsrmIGfjaCn1Us+MRNIikmrUivQo9S26J26NvaXmahjkEzQeQc7AlAqWFG5SFxsg==, tarball: file:vendor/uap/sdk/uap-management-sdk-0.0.0-development-aff370c0de25.tgz}
+  '@uap/management-sdk@file:vendor/uap/sdk/uap-management-sdk-0.0.0-development-7989f36f9f62.tgz':
+    resolution: {integrity: sha512-aRx2GmwEHSMfzaaEYyvsfHpsrmIGfjaCn1Us+MRNIikmrUivQo9S26J26NvaXmahjkEzQeQc7AlAqWFG5SFxsg==, tarball: file:vendor/uap/sdk/uap-management-sdk-0.0.0-development-7989f36f9f62.tgz}
     version: 0.0.0-development
     engines: {node: '>=22.18'}
 
@@ -17781,7 +17781,7 @@ snapshots:
   '@typescript/typescript-win32-x64@7.0.2':
     optional: true
 
-  '@uap/management-sdk@file:vendor/uap/sdk/uap-management-sdk-0.0.0-development-aff370c0de25.tgz':
+  '@uap/management-sdk@file:vendor/uap/sdk/uap-management-sdk-0.0.0-development-7989f36f9f62.tgz':
     dependencies:
       openapi-fetch: 0.17.0
 
