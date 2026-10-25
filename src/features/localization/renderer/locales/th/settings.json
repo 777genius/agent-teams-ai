@@ -806,9 +806,9 @@
         "noCredentials": "Base URL ต้องไม่มีข้อมูลรับรอง"
       },
       "status": {
-        "endpointDisabledTokenKept": "ปิดใช้งาน endpoint แล้ว เก็บ token ที่บันทึกไว้",
         "endpointSaved": "บันทึก endpoint แล้ว",
-        "endpointSavedTokenMissing": "บันทึก endpoint แล้ว ยังไม่ได้ตั้งค่า auth token"
+        "endpointSavedTokenMissing": "บันทึก endpoint แล้ว ยังไม่ได้ตั้งค่า auth token",
+        "notActiveUntilSaved": "ยังไม่เปิดใช้งาน บันทึก endpoint เพื่อสลับ จนกว่าจะถึงตอนนั้น การเปิดตัวจะใช้วิธีการเชื่อมต่อก่อนหน้า"
       }
     },
     "connection": {
@@ -909,10 +909,8 @@
     "runtimeSummary": "รันไทม์: {{runtime}}",
     "status": {
       "configured": "ตั้งค่าแล้ว",
-      "enabled": "เปิดใช้งาน",
       "notConfigured": "ยังไม่ได้ตั้งค่า",
       "notSet": "ยังไม่ได้ตั้งค่า",
-      "off": "ปิด",
       "unknown": "ไม่ทราบ"
     },
     "title": "การตั้งค่าผู้ให้บริการ",
@@ -928,8 +926,6 @@
       "apiKeySavedRefreshFailed": "บันทึก API key แล้ว แต่รีเฟรชสถานะผู้ให้บริการไม่สำเร็จ",
       "connectionUpdatedRefreshFailed": "อัปเดตการเชื่อมต่อแล้ว แต่รีเฟรชสถานะผู้ให้บริการไม่สำเร็จ",
       "deleteApiKey": "ลบ API key ไม่สำเร็จ",
-      "disableEndpoint": "ปิดใช้งาน endpoint ไม่สำเร็จ",
-      "endpointDisabledRefreshFailed": "ปิดใช้งาน endpoint แล้ว แต่รีเฟรชสถานะผู้ให้บริการไม่สำเร็จ",
       "endpointSavedRefreshFailed": "บันทึก endpoint แล้ว แต่รีเฟรชสถานะผู้ให้บริการไม่สำเร็จ",
       "refreshCodexAccount": "รีเฟรชบัญชี Codex ไม่สำเร็จ",
       "saveApiKey": "บันทึก API key ไม่สำเร็จ",

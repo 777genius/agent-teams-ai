@@ -29,6 +29,98 @@ Before publishing:
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
+## v2.18.0 (Prepared draft)
+
+Target branch: `main`.
+
+Runtime gate:
+
+- Agent Teams runtime: `v0.0.136`, including the OpenCode stop, relaunch, and message delivery fixes.
+- Terminal Platform runtime: `v0.3.3`.
+- Published runtime archives and manifest verified before dispatch; the actual CLI reports `2.777.777`.
+
+Release body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.18.0 -->
+
+Agent Teams 2.18.0 adds named group chats and task folders for organizing team work, and fixes OpenCode tasks and messages getting stuck during relaunch.
+
+### What's New
+
+- Create named group chats where agents route messages, link tasks, and create new chats when you ask.
+- Organize tasks in nested folders with drag-and-drop.
+- Send images, documents, and other files to your teammates.
+- See charts, tables, and Mermaid diagrams from teammates rendered directly in chat.
+- Pick one Anthropic connection method and always see which is active: Auto, Subscription, API key, or compatible endpoint.
+- Assign gateway providers per teammate and see usage attributed to each one.
+
+### Improvements
+
+- Queue chat messages with Cmd or Ctrl+Enter, then edit, send, or remove them manually.
+- OpenCode teammates accept images and videos when their model supports them.
+- Team create and launch forms default Fast mode to Off when no earlier choice is saved.
+
+### Fixes
+
+- Deliver tasks and messages to OpenCode teammates, including during relaunch, instead of leaving them stuck unread.
+- Relaunching an OpenCode teammate no longer shows the whole mixed team as disconnected.
+- Stop no longer reports a failure after the team's agents have already exited.
+- Use your configured Anthropic model and team default with compatible endpoints instead of a hard-coded model.
+- After canceling a team launch, show its saved draft and Launch button instead of loading forever.
+- Update Electron and other dependencies with security fixes.
+
+### macOS installation
+
+macOS 2.18.0 requires macOS 13 or later. macOS 12 users can keep using the existing signed 2.17.1 builds.
+
+If you have signed macOS 2.17.1 installed, quit the app and install the appropriate 2.18.0 DMG over your existing app once. Your local settings, teams and projects stay in place. Automatic updates cannot perform this one-time migration.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.0/Agent.Teams.AI-2.18.0-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.0/Agent.Teams.AI-2.18.0-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.0/Agent.Teams.AI.Setup.2.18.0.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.0/Agent.Teams.AI.Setup.2.18.0-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.0/Agent.Teams.AI-2.18.0.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.0/agent-teams-ai_2.18.0_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.0/agent-teams-ai-2.18.0.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat&logoColor=white" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.0/agent-teams-ai-2.18.0.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+
+<!-- RELEASE_BODY_END v2.18.0 -->
+
 ## v2.17.10 (Prepared draft)
 
 Source base: `main` at `f934272fd7ef6ab27bbfc83ff47d7d8da6cea542`.
@@ -103,13 +195,13 @@ Cost figures are estimates, not provider invoices.
 
 ### Downloads
 
-| Platform | Version | Download |
-| --- | --- | --- |
-| Windows x64 | 2.17.9 | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI.Setup.2.17.9.exe) |
-| Windows ARM64 | 2.17.9 | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI.Setup.2.17.9-arm64.exe) |
-| Linux x64 | 2.17.9 | [AppImage](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI-2.17.9.AppImage), [DEB](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/agent-teams-ai_2.17.9_amd64.deb), [RPM](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/agent-teams-ai-2.17.9.x86_64.rpm), [Arch Linux](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/agent-teams-ai-2.17.9.pacman) |
-| macOS Apple Silicon | 2.17.9 | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI-2.17.9-arm64.dmg) |
-| macOS Intel | 2.17.9 | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI-2.17.9-x64.dmg) |
+| Platform            | Version | Download                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Windows x64         | 2.17.9  | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI.Setup.2.17.9.exe)                                                                                                                                                                                                                                                                                                                                              |
+| Windows ARM64       | 2.17.9  | [Installer](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI.Setup.2.17.9-arm64.exe)                                                                                                                                                                                                                                                                                                                                        |
+| Linux x64           | 2.17.9  | [AppImage](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI-2.17.9.AppImage), [DEB](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/agent-teams-ai_2.17.9_amd64.deb), [RPM](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/agent-teams-ai-2.17.9.x86_64.rpm), [Arch Linux](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/agent-teams-ai-2.17.9.pacman) |
+| macOS Apple Silicon | 2.17.9  | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI-2.17.9-arm64.dmg)                                                                                                                                                                                                                                                                                                                                                    |
+| macOS Intel         | 2.17.9  | [DMG](https://github.com/777genius/agent-teams-ai/releases/download/v2.17.9/Agent.Teams.AI-2.17.9-x64.dmg)                                                                                                                                                                                                                                                                                                                                                      |
 
 ### macOS installation
 
@@ -1992,6 +2084,9 @@ After publication succeeds, update this repo's `runtime.lock.json`:
   `777genius/agent_teams_orchestrator_binaries`
 - `releaseTag`: the namespaced public runtime release tag, for example `runtime-v0.0.52`
 - each `assets.*.file`: replace the old runtime version suffix with the new one
+- `opencodeV2`: copy verbatim from the published manifest's `opencodeV2` (the runtime's
+  supported OpenCode V2 range and qualified versions). The app derives V2 recognition
+  and eligibility only from it.
 
 Then verify the lock points at real uploaded assets:
 
@@ -2260,13 +2355,57 @@ Before opening the app:
   `/Applications/Agent Teams AI.app` copy recoverable, install the verified app
   bundle into `/Applications`, and launch it with `open` without `-n`.
 - Do not set an alternate `--user-data-dir`, temporary profile, sandbox profile,
-  or release-test environment overrides. Confirm the launched process runs from
+  or release-test environment overrides, except the remote debugging port in the
+  CDP check below. Confirm the launched process runs from
   `/Applications/Agent Teams AI.app` and uses the standard
   `~/Library/Application Support/agent-teams-ai` profile.
 - Eject the DMG after the installed app starts successfully.
 
 Never report that the requested build was launched based only on its filename.
 The GitHub digest and bundle version must both match.
+
+#### CDP check of a requested build
+
+Use this only when the user asks to test the downloaded build through the Chrome
+DevTools Protocol (CDP). Otherwise the standard launch above applies.
+
+- Complete the download, digest, bundle version, signature, and notarization
+  checks above first.
+- Quit the app fully (Cmd+Q). `open` ignores `--args` for an app that is already
+  running, so confirm that this command prints nothing:
+
+  ```bash
+  pgrep -fl "Agent Teams AI"
+  ```
+
+- Confirm the debugging port is free before launch. This command must print
+  nothing:
+
+  ```bash
+  lsof -nP -iTCP:9222 -sTCP:LISTEN
+  ```
+
+- Launch the installed app with the remote debugging port and no other override:
+
+  ```bash
+  open -a "/Applications/Agent Teams AI.app" --args --remote-debugging-port=9222
+  ```
+
+- Do not add `--user-data-dir`, a temporary profile, or any other override. The
+  app must use the standard `~/Library/Application Support/agent-teams-ai` profile.
+- Confirm the port listens only on loopback. Electron binds the debugging port to
+  `127.0.0.1` by default. Run `lsof -nP -iTCP:9222 -sTCP:LISTEN` after launch. If it
+  prints nothing, quit the app and stop the check. Do not retry with `open -n` or
+  the executable. If it shows any other address, quit the app and stop the check.
+- Confirm the process runs from `/Applications/Agent Teams AI.app`, then connect
+  over CDP to `http://127.0.0.1:9222`.
+- Record each test item you create, such as a test team or message. Do not change
+  existing teams or settings.
+- When the check ends, remove the test data it created, quit the app, run the
+  `lsof` command above again and confirm it prints nothing, then relaunch the app
+  without the debugging port.
+- A CDP check does not replace the digest, signature, or notarization checks, and
+  it does not authorize publication.
 
 ## Release Notes Template
 
@@ -2405,14 +2544,14 @@ The `Claude-Agent-Teams-UI-*` aliases are kept only for backward compatibility w
 
 macOS builds are signed and notarized via the `macos-signing` environment secrets:
 
-| Secret | Description |
-| --- | --- |
-| `CSC_LINK` | Base64-encoded Developer ID Application .p12 certificate |
-| `CSC_KEY_PASSWORD` | Certificate password |
-| `APPLE_TEAM_ID` | Must equal `86399583GS` |
-| `APPLE_API_KEY_BASE64` | Base64-encoded team App Store Connect API .p8 key |
-| `APPLE_API_KEY_ID` | API key ID |
-| `APPLE_API_ISSUER` | Team API issuer UUID |
+| Secret                 | Description                                              |
+| ---------------------- | -------------------------------------------------------- |
+| `CSC_LINK`             | Base64-encoded Developer ID Application .p12 certificate |
+| `CSC_KEY_PASSWORD`     | Certificate password                                     |
+| `APPLE_TEAM_ID`        | Must equal `86399583GS`                                  |
+| `APPLE_API_KEY_BASE64` | Base64-encoded team App Store Connect API .p8 key        |
+| `APPLE_API_KEY_ID`     | API key ID                                               |
+| `APPLE_API_ISSUER`     | Team API issuer UUID                                     |
 
 macOS packaging fails when required credentials are missing or the publisher
 is wrong. It does not produce an unsigned release fallback. Apple ID/password
@@ -2510,7 +2649,6 @@ git push origin :refs/tags/v1.0.0
 # Check workflow status
 gh run list --repo 777genius/agent-teams-ai --workflow release.yml --limit 3
 ```
-
 
 ### Managed GitHub Actions runners
 

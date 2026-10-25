@@ -22,6 +22,13 @@ export type RuntimeProviderQuickPlanState =
 
 const MINIMUM_OPENCODE_PROVIDER_OAUTH_VERSION = [1, 15, 7] as const;
 
+/** A managed install or update cannot change the binary that a binary override selects. */
+export function canManagedInstallChangeOpenCodeRuntime(
+  runtimeStatus: OpenCodeRuntimeStatus | null
+): boolean {
+  return runtimeStatus?.source !== 'override';
+}
+
 export function isOpenCodeRuntimeUsable(runtimeStatus: OpenCodeRuntimeStatus | null): boolean {
   return (
     runtimeStatus?.installed === true && isRecognizedOpenCodeRuntimeVersion(runtimeStatus.version)
@@ -95,6 +102,29 @@ export function resolveOpenCodeQuickConnectGate(input: {
     return 'ready';
   }
   return 'missing';
+}
+
+/**
+ * Identifies the OpenCode runtime a provider directory read belongs to.
+ *
+ * Returns null while the runtime is unknown, checking or installing, so callers
+ * keep the last settled identity instead of treating every progress event as a
+ * change. A different settled identity (missing -> ready after an install, a new
+ * version or binary after an update) means earlier directory reads describe
+ * another runtime and must not be reused.
+ */
+export function resolveOpenCodeQuickConnectRuntimeRevision(input: {
+  gate: RuntimeProviderQuickConnectGate;
+  runtimeStatus: OpenCodeRuntimeStatus | null;
+}): string | null {
+  const { gate, runtimeStatus } = input;
+  if (!runtimeStatus || gate === 'checking' || gate === 'installing') {
+    return null;
+  }
+  if (gate !== 'ready') {
+    return 'unavailable';
+  }
+  return JSON.stringify(['ready', runtimeStatus.version ?? null, runtimeStatus.binaryPath ?? null]);
 }
 
 export function isOAuthCredentialHint(authHint: string | null | undefined): boolean {

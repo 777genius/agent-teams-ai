@@ -939,6 +939,8 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
           cleanupNativePhase: ['kernel-retirement', 'force-kill'].some(phase => phase === row(data.cleanup).phase)
             ? one(row(data.cleanup).nativePhase, ['retire_job', 'retire_wait', 'retire_io_join', 'retire_main_exit', 'retire_owned_pair', 'retire_commands', 'retire_receipt', 'retire_grants', 'retire_grants_dll', 'retire_grants_roots', 'retire_grants_metadata']) : 'unclassified',
           cleanupElapsedMs: Number.isSafeInteger(row(data.cleanup).elapsedMs) && Number(row(data.cleanup).elapsedMs) >= 0 && Number(row(data.cleanup).elapsedMs) <= 86400000 ? Number(row(data.cleanup).elapsedMs) : null,
+          cleanupExit: one(row(data.cleanup).exit, ['exit_zero', 'exit_one', 'job_terminated']),
+          cleanupClosedFrame: one(row(data.cleanup).closedFrame, ['accepted', 'rejected', 'absent']),
           startupStderrKind: one(startup.nativeStderrKind, ['empty', 'entry_resolution', 'module_resolution', 'child_identity', 'child_pipe', 'access_denied', 'pipe_refused', 'pipe_missing', 'bun_error', 'unclassified', 'unavailable']),
           startupExitCode: Number.isSafeInteger(startup.nativeExitCode) && Number(startup.nativeExitCode) >= 0 && Number(startup.nativeExitCode) <= 0xffffffff ? startup.nativeExitCode : null,
           initializationPhase: initialization?.phase ?? null, initializationElapsedMs: initialization?.elapsedMs ?? null,
@@ -1058,8 +1060,8 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
             if (!errorKinds.includes(kind) && errorKinds.length < 9) errorKinds.push(kind);
             if (kind === 'module_resolution') {
               const target = /Cannot find module ["'`]([^"'`]+)["'`]/.exec(message)?.[1];
-              moduleTargetRole = target === '@opencode/client' ? '@opencode/client' :
-                target === '@opencode/client-v2-floor' ? '@opencode/client-v2-floor' :
+              // Official clients are root or version-derived graph aliases (@opencode/client-v<version>).
+              moduleTargetRole = target && /^@opencode\/client(?:-v\d+\.\d+\.\d+)?$/.test(target) ? target :
                 target === '@modelcontextprotocol/sdk' || target?.startsWith('@modelcontextprotocol/sdk/') ? 'mcp_sdk' :
                 target === 'effect' || target?.startsWith('effect/') ? 'effect' : 'other';
               if (target && paths.win32.isAbsolute(target)) {

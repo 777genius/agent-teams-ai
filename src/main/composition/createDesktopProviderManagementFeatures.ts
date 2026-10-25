@@ -6,6 +6,7 @@ import {
 } from '@features/runtime-provider-management/contracts';
 import { createRuntimeProviderManagementFeature } from '@features/runtime-provider-management/main';
 import { composeGatewayProviderRuntime } from '@main/services/gateway/composeGatewayProviderRuntime';
+import { getOpenCodeRuntimeResolverCacheGeneration } from '@main/services/infrastructure/openCodeRuntimeResolverCache';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { type BrowserWindow, shell } from 'electron';
 
@@ -29,6 +30,7 @@ export function createDesktopProviderManagementFeatures(
   };
   const runtimeProviderManagementFeature = createRuntimeProviderManagementFeature({
     ...oauth,
+    getOpenCodeRuntimeGeneration: getOpenCodeRuntimeResolverCacheGeneration,
     localProviderConnector: gatewayProviderConnector,
     port: getDesktopProviderManagementPort({
       openExternal: oauth.openExternal,

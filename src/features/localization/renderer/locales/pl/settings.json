@@ -806,9 +806,9 @@
         "noCredentials": "Bazowy URL nie może zawierać poświadczeń"
       },
       "status": {
-        "endpointDisabledTokenKept": "Punkt końcowy wyłączony. Zapisany token został zachowany.",
         "endpointSaved": "Punkt końcowy zapisany",
-        "endpointSavedTokenMissing": "Punkt końcowy zapisany. Token uwierzytelniający nie jest skonfigurowany."
+        "endpointSavedTokenMissing": "Punkt końcowy zapisany. Token uwierzytelniający nie jest skonfigurowany.",
+        "notActiveUntilSaved": "Jeszcze nie aktywne. Zapisz punkt końcowy, aby przełączyć; do tego czasu uruchomienia używają poprzedniej metody połączenia."
       }
     },
     "connection": {
@@ -909,10 +909,8 @@
     "runtimeSummary": "Środowisko uruchomieniowe: {{runtime}}",
     "status": {
       "configured": "skonfigurowane",
-      "enabled": "Włączone",
       "notConfigured": "Nie skonfigurowane",
       "notSet": "nie ustawione",
-      "off": "Wył.",
       "unknown": "Nieznane"
     },
     "title": "Ustawienia dostawcy",
@@ -928,8 +926,6 @@
       "apiKeySavedRefreshFailed": "Klucz API zapisany, ale nie udało się odświeżyć statusu dostawcy.",
       "connectionUpdatedRefreshFailed": "Połączenie zaktualizowane, ale nie udało się odświeżyć statusu dostawcy.",
       "deleteApiKey": "Nie udało się usunąć klucza API",
-      "disableEndpoint": "Nie udało się wyłączyć punktu końcowego",
-      "endpointDisabledRefreshFailed": "Punkt końcowy wyłączony, ale nie udało się odświeżyć statusu dostawcy.",
       "endpointSavedRefreshFailed": "Punkt końcowy zapisany, ale nie udało się odświeżyć statusu dostawcy.",
       "refreshCodexAccount": "Nie udało się odświeżyć konta Codex",
       "saveApiKey": "Nie udało się zapisać klucza API",

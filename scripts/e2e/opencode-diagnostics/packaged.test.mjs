@@ -935,6 +935,7 @@ test('empty successful inventory is transport evidence; freshness and source che
   assert.deepEqual(await qualifyUIRefresh([uiDirectory([])], completed), {
     sources: [],
     modelIds: [],
+    sharedDirectoryReads: 0,
   });
   const records = [
     uiDirectory([{ providerId: 'opencode' }]),
@@ -1557,5 +1558,49 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
   } finally {
     if (sandbox) await rm(sandbox, { recursive: true, force: true });
     await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('the grid read joined into the catalog refresh counts once; other extra directory reads fail', async () => {
+  const completed = { state: 'ready', models: ['opencode/one'] };
+  const models = uiRecord('loadModels', modelPage(['one'], null, null, 1));
+  const catalogRead = uiDirectory([{ providerId: 'opencode' }]);
+  catalogRead.response.directory.fetchedAt = '2026-10-25T03:23:57.105Z';
+  // The grid's identical request, in its own key order, served by the same runtime call.
+  const gridRead = {
+    ...catalogRead,
+    input: {
+      summary: true,
+      filter: 'all',
+      cursor: null,
+      refresh: true,
+      projectPath: null,
+      runtimeId: 'opencode',
+    },
+    response: structuredClone(catalogRead.response),
+  };
+  const joined = await qualifyUIRefresh([catalogRead, gridRead, models], completed);
+  assert.deepEqual(joined, {
+    sources: ['opencode'],
+    modelIds: ['opencode/one'],
+    sharedDirectoryReads: 1,
+  });
+
+  const separateCall = { ...gridRead, response: structuredClone(gridRead.response) };
+  separateCall.response.directory.fetchedAt = '2026-10-25T03:23:57.406Z';
+  for (const [label, extra] of [
+    ['a separate runtime call', [separateCall]],
+    ['a later sequential refresh', [{ ...gridRead, startedAt: 3, completedAt: 4 }]],
+    ['a second joined read', [gridRead, { ...gridRead }]],
+    [
+      'a joined read of a later page',
+      [{ ...gridRead, input: { ...gridRead.input, cursor: 'next' } }],
+    ],
+  ]) {
+    await assert.rejects(
+      qualifyUIRefresh([catalogRead, ...extra, models], completed),
+      /Extra UI pages\/overlapping refreshes|UI request cursor mismatch/,
+      label
+    );
   }
 });

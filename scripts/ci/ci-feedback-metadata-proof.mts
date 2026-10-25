@@ -48,10 +48,12 @@ function sameLinkedRepository(value: unknown, expected: unknown): boolean {
     linked.url === `https://api.github.com/repos/${repo.full_name}` &&
     (linked.full_name === undefined || linked.full_name === repo.full_name);
 }
+// Title and body are deliberately excluded: they never change the tested code, and
+// comparing them let a second quick edit invalidate the first edit's proof.
 function prIdentity(pr: JsonObject): string {
   const head = object(pr.head);
   const base = object(pr.base);
-  return JSON.stringify([pr.id, pr.number, pr.state, pr.draft, pr.title, pr.body,
+  return JSON.stringify([pr.id, pr.number, pr.state, pr.draft,
     head.sha, head.ref, repoIdentity(head.repo), base.sha, base.ref, repoIdentity(base.repo)]);
 }
 function runIdentity(run: JsonObject): string {
@@ -117,6 +119,10 @@ function proveCompleted(jobs: JsonObject[], run: JsonObject, pr: JsonObject, sha
   requireProof(jobs.every((job) => job.run_id === run.id && job.run_attempt === run.run_attempt &&
     job.head_sha === run.head_sha && job.status === 'completed'), 'Job attempt mismatch');
   const plan = sourceProof(jobs, run, pr);
+  // Only a metadata run whose gate re-authenticated a full producer is crossed. A
+  // failed metadata gate is not crossed even though its heavy jobs were skipped
+  // without steps: it fails the canonical checks below, so the next edit classifies
+  // its diff again and a code PR runs full CI on the same head and base.
   const metadata = jobs.find((job) => job.name === 'Metadata CI result' ||
     (['Full qualification', 'Metadata qualification'].includes(String(job.name)) && successfulStep(job, 'Verify completed current-code qualification after metadata edits')));
   if (metadata) {

@@ -99,8 +99,13 @@ test('catalog fixture subprocess returns four sources, failures, partial models 
       .trim()
       .split('\n')
       .map(JSON.parse);
-    for (const event of events.filter((e) => e.event === 'response')) {
-      const start = events.find((e) => e.event === 'start' && e.pid === event.pid);
+    // Windows reuses PIDs across these sequential runs: a response belongs to the latest
+    // start of its PID, never to an earlier process that had the same PID.
+    const latestStart = new Map();
+    for (const event of events) {
+      if (event.event === 'start') latestStart.set(event.pid, event);
+      if (event.event !== 'response') continue;
+      const start = latestStart.get(event.pid);
       assert(start && start.at <= event.at && start.scenario === event.scenario);
     }
   } finally {

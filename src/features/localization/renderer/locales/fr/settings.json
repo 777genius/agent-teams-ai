@@ -806,9 +806,9 @@
         "noCredentials": "Base URL ne doit pas inclure les pouvoirs"
       },
       "status": {
-        "endpointDisabledTokenKept": "Point d'extrémité désactivé. Le jeton sauvé a été conservé.",
         "endpointSaved": "Point d'arrivée enregistré",
-        "endpointSavedTokenMissing": "Point d'arrivée enregistré. Le jeton Auth n'est pas configuré."
+        "endpointSavedTokenMissing": "Point d'arrivée enregistré. Le jeton Auth n'est pas configuré.",
+        "notActiveUntilSaved": "Pas encore actif. Enregistrez le point d'extrémité pour basculer ; d'ici là, les lancements conservent la méthode de connexion précédente."
       }
     },
     "connection": {
@@ -909,10 +909,8 @@
     "runtimeSummary": "Durée d'exécution : {{runtime}}",
     "status": {
       "configured": "configuré",
-      "enabled": "Activé",
       "notConfigured": "Non configuré",
       "notSet": "non réglé",
-      "off": "Arrêt",
       "unknown": "Inconnu"
     },
     "title": "Paramètres du fournisseur",
@@ -928,8 +926,6 @@
       "apiKeySavedRefreshFailed": "API clé enregistrée, mais n'a pas réussi à rafraîchir le statut du fournisseur.",
       "connectionUpdatedRefreshFailed": "Connexion mise à jour, mais n'a pas réussi à actualiser le statut du fournisseur.",
       "deleteApiKey": "Impossible de supprimer API clé",
-      "disableEndpoint": "Impossible de désactiver le paramètre",
-      "endpointDisabledRefreshFailed": "Endpoint désactivé, mais n'a pas réussi à rafraîchir le statut de fournisseur.",
       "endpointSavedRefreshFailed": "Endpoint sauvegardé, mais n'a pas réussi à rafraîchir le statut du fournisseur.",
       "refreshCodexAccount": "Impossible de rafraîchir le compte Codex",
       "saveApiKey": "Échec de l'enregistrement API clé",

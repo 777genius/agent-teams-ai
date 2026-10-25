@@ -13,6 +13,23 @@ export type ChangeClassification = {
 const SHA = /^[a-f0-9]{40}$/;
 const REPOSITORY = '777genius/agent-teams-ai';
 const image = /\.(png|jpe?g|webp|gif|ico|icns)$/i;
+// Markdown that no build, test, package or workflow reads. Root agent guides and
+// the PR template already pass the focused formatting check. Legal texts and issue
+// templates are not listed: editing them must not force reformatting their wording.
+const documentation =
+  /^(docs\/.*|README|CHANGELOG|CONTRIBUTING|AGENTS|AGENT_CRITICAL_GUARDRAILS|CLAUDE|\.github\/pull_request_template)\.md$/;
+// Events whose PR head and base come from the payload and are verified below.
+// Label and title/body edits keep the commits, so the same diff decides the scope.
+const SCOPED_ACTIONS = [
+  'opened',
+  'synchronize',
+  'reopened',
+  'ready_for_review',
+  'converted_to_draft',
+  'edited',
+  'labeled',
+  'unlabeled',
+];
 const displayFields = new Set([
   'background',
   'backgroundColor',
@@ -139,7 +156,7 @@ export function classifyChanges(
     )
       return { scope: 'full', reason: 'Unsafe diff entry' };
     let current: ChangeScope;
-    if (/^(docs\/.*\.md|README\.md|CHANGELOG\.md|CONTRIBUTING\.md)$/.test(path)) current = 'docs';
+    if (documentation.test(path)) current = 'docs';
     else if (
       (path.startsWith('docs/') || path.startsWith('landing/assets/')) &&
       /\.(png|jpe?g|webp|gif)$/i.test(path) &&
@@ -197,11 +214,15 @@ export function collectChangeScope(
       !Number.isSafeInteger(pr.number) ||
       Number(pr.number) <= 0 ||
       event.number !== pr.number ||
-      !['opened', 'synchronize', 'reopened', 'ready_for_review', 'converted_to_draft'].includes(
-        String(event.action)
-      )
+      !SCOPED_ACTIONS.includes(String(event.action))
     )
       return fallback;
+    if (event.action === 'edited') {
+      // A base change or an unknown edit is not proven to keep the diff.
+      const fields = Object.keys(record(event.changes));
+      if (fields.length === 0 || fields.some((field) => field !== 'title' && field !== 'body'))
+        return fallback;
+    }
     if (
       typeof base.sha !== 'string' ||
       typeof head.sha !== 'string' ||

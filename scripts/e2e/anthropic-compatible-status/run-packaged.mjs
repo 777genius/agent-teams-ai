@@ -353,6 +353,7 @@ try {
     'Anthropic Manage button'
   );
   await cdp.click('[data-testid=runtime-manage-anthropic]');
+  await cdp.click('[data-testid=connection-method-compatible]');
   await cdp.fill('#anthropic-compatible-base-url', baseUrl);
   await cdp.fill('#anthropic-compatible-auth-token', token);
   record('settings-fields-entered');
@@ -365,6 +366,23 @@ try {
     'endpoint persisted'
   );
   evidence.savedEndpoint = { enabled: true, baseUrl };
+  evidence.connectionMethodCards = await cdp.probe(
+    'connectionMethodCards',
+    `(() => {
+      const cards = [...document.querySelectorAll('[data-testid^="connection-method-"]')];
+      return {
+        total: cards.length,
+        checked: cards.filter((el) => el.getAttribute('aria-checked') === 'true').map((el) => el.getAttribute('data-testid')),
+      };
+    })()`
+  );
+  assert.equal(evidence.connectionMethodCards.total, 4, 'Expected four connection method cards');
+  assert.deepEqual(
+    evidence.connectionMethodCards.checked,
+    ['connection-method-compatible'],
+    'Exactly one connection method card must be selected: the endpoint card'
+  );
+  record('connection-method-radio-invariant');
   await cdp.wait(
     'document.querySelector("#anthropic-compatible-auth-token")?.value === ""',
     'saved token input cleared'

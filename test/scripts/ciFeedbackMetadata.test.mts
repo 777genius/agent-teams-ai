@@ -914,6 +914,46 @@ void test('completed real metadata qualification preserves continuity to its com
   assert.equal((await plan(input, {}, data)).full, true);
 });
 
+void test('a Full qualification metadata run is crossed only when its gate re-authenticated the producer', async () => {
+  const input = event();
+  const withMetadataRun = (gate: 'success' | 'failure'): Map<string, unknown> => {
+    const data = fixture(input, 'completed');
+    const prior = { ...source(data), id: 150, conclusion: gate, display_title: runTitle(input, 'edited') };
+    const base = { run_id: 150, run_attempt: 1, head_sha: headSha, status: 'completed' };
+    const feedbackSkip =
+      "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata fast feedback' || 'Fast feedback'";
+    const previousJobs = [
+      { ...base, id: 1, name: 'Metadata CI plan', conclusion: 'success', steps: [
+        completedStep(`CI source proof: PR=12 | base=${baseSha} | head=${headSha}`),
+        completedStep('Plan feedback and verify reusable evidence')] },
+      { ...base, id: 2, name: 'Full qualification', conclusion: gate, steps: [
+        completedStep('Verify completed current-code qualification after metadata edits', gate),
+        completedStep('Require complete current-code qualification', 'skipped')] },
+      ...[...heavySkips, feedbackSkip].map((name, index) =>
+        ({ ...base, id: index + 3, name, conclusion: 'skipped', steps: [] })),
+    ];
+    data.set(`${prefix}/actions/runs/150`, prior);
+    data.set(`${prefix}/actions/runs/150/attempts/1/jobs?per_page=100`, { total_count: 7, jobs: previousJobs });
+    const listing = data.get(listEndpoint) as JsonObject;
+    listing.total_count = 3;
+    (listing.workflow_runs as JsonObject[]).splice(1, 0, prior);
+    return data;
+  };
+  const passed = withMetadataRun('success');
+  assert.equal((await plan(input, {}, passed)).metadata, true);
+  // A newer title/body edit keeps head and base, so it does not invalidate the proof.
+  passed.set(`${prefix}/pulls/12`, {
+    ...structuredClone(input.pull_request as JsonObject), title: 'docs: edited again', body: 'Edited again',
+  });
+  assert.equal((await plan(input, {}, passed)).metadata, true);
+  const read = (endpoint: string) => Promise.resolve(structuredClone(passed.get(endpoint)));
+  assert.equal(await qualifyMetadata(env, input, read), true);
+  // Skipped heavy jobs alone never make a failed metadata gate crossable.
+  const failed = await plan(input, {}, withMetadataRun('failure'));
+  assert.equal(failed.metadata, false);
+  assert.equal(failed.full, true);
+});
+
 void test('metadata gate reauthenticates completed full evidence and rejects pending, missing-attempt and changed-source claims', async () => {
   const input = event();
   const data = fixture(input, 'completed');

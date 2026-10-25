@@ -10,6 +10,7 @@ import { cn } from '@renderer/lib/utils';
 import {
   getUnsupportedAgentTeamsOpenCodeVersionMessage,
   isAgentTeamsOpenCodeVersionSupported,
+  isRecognizedOpenCodeV2Version,
 } from '@shared/utils/version';
 import {
   AlertTriangle,
@@ -22,6 +23,8 @@ import {
   RefreshCw,
   Settings2,
 } from 'lucide-react';
+
+import { canManagedInstallChangeOpenCodeRuntime } from '../../core/domain';
 
 import { ProviderBrandIcon } from './providerBrandIcons';
 
@@ -215,6 +218,8 @@ const OpenCodePrerequisite = ({
   }
 
   const isError = gate === 'error';
+  // An override decides what launches; installing the managed runtime would not change it.
+  const canInstall = canManagedInstallChangeOpenCodeRuntime(runtimeStatus);
   const isOutdated =
     Boolean(runtimeStatus?.version) &&
     !isAgentTeamsOpenCodeVersionSupported(runtimeStatus?.version);
@@ -260,15 +265,17 @@ const OpenCodePrerequisite = ({
         </div>
       </div>
       <div className="flex items-center gap-1.5">
-        <Button type="button" variant="outline" size="sm" className="h-7" onClick={onInstall}>
-          <Download className="mr-1.5 size-3.5" />
-          {isOutdated
-            ? t('cliStatus.quickConnect.updateOpenCode')
-            : isError
-              ? t('cliStatus.quickConnect.retryOpenCode')
-              : t('cliStatus.quickConnect.installOpenCode')}
-        </Button>
-        {isError ? (
+        {canInstall ? (
+          <Button type="button" variant="outline" size="sm" className="h-7" onClick={onInstall}>
+            <Download className="mr-1.5 size-3.5" />
+            {isOutdated
+              ? t('cliStatus.quickConnect.updateOpenCode')
+              : isError
+                ? t('cliStatus.quickConnect.retryOpenCode')
+                : t('cliStatus.quickConnect.installOpenCode')}
+          </Button>
+        ) : null}
+        {isError || !canInstall ? (
           <Button
             type="button"
             data-testid="provider-quick-opencode-refresh"
@@ -281,6 +288,98 @@ const OpenCodePrerequisite = ({
             {t('cliStatus.quickConnect.refreshOpenCode')}
           </Button>
         ) : null}
+      </div>
+    </div>
+  );
+};
+
+/** The fallback binary is in use; the user must see which override was skipped and why. */
+const OpenCodeIgnoredOverrideNotice = ({
+  runtimeStatus,
+}: {
+  runtimeStatus: OpenCodeRuntimeStatus | null;
+}): JSX.Element | null => {
+  const { t } = useAppTranslation('dashboard');
+  const ignoredOverride = runtimeStatus?.ignoredOverride;
+  if (!ignoredOverride) {
+    return null;
+  }
+
+  return (
+    <div
+      data-testid="provider-quick-opencode-ignored-override"
+      role="alert"
+      className="mb-3 flex min-w-0 items-start gap-2.5 rounded-lg border px-3 py-2.5"
+      style={{
+        borderColor: 'rgba(251, 191, 36, 0.32)',
+        backgroundColor: 'rgba(251, 191, 36, 0.06)',
+      }}
+    >
+      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-300" />
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold" style={{ color: 'var(--color-text)' }}>
+          {t('cliStatus.quickConnect.openCodeOverrideIgnoredTitle')}
+        </p>
+        <p
+          className="break-all font-mono text-[10.5px] leading-4"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
+          {t('cliStatus.quickConnect.openCodeOverrideIgnoredPath', {
+            envName: ignoredOverride.envName,
+            binaryPath: ignoredOverride.binaryPath,
+            version:
+              ignoredOverride.version ?? t('cliStatus.quickConnect.openCodeOverrideUnknownVersion'),
+          })}
+        </p>
+        <p
+          className="text-pretty text-[10.5px] leading-4"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
+          {ignoredOverride.reason}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+/** On V2, free Zen models fail at run time; say so before the user picks one. */
+const OpenCodeV2LaunchNotice = ({
+  gate,
+  runtimeStatus,
+}: {
+  gate: RuntimeProviderQuickConnectGate;
+  runtimeStatus: OpenCodeRuntimeStatus | null;
+}): JSX.Element | null => {
+  const { t } = useAppTranslation('dashboard');
+  if (
+    gate !== 'ready' ||
+    !runtimeStatus?.installed ||
+    !isRecognizedOpenCodeV2Version(runtimeStatus.version)
+  ) {
+    return null;
+  }
+
+  return (
+    <div
+      data-testid="provider-quick-opencode-v2-launch"
+      role="status"
+      className="mb-3 flex min-w-0 items-start gap-2.5 rounded-lg border px-3 py-2.5"
+      style={{
+        borderColor: 'rgba(251, 191, 36, 0.32)',
+        backgroundColor: 'rgba(251, 191, 36, 0.06)',
+      }}
+    >
+      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-300" />
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold" style={{ color: 'var(--color-text)' }}>
+          {t('cliStatus.quickConnect.openCodeV2LaunchTitle', { version: runtimeStatus.version })}
+        </p>
+        <p
+          className="text-pretty text-[10.5px] leading-4"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
+          {t('cliStatus.quickConnect.openCodeV2LaunchDetail')}
+        </p>
       </div>
     </div>
   );
@@ -361,6 +460,10 @@ export const RuntimeProviderQuickConnectView = ({
           </Button>
         </div>
       </div>
+
+      <OpenCodeIgnoredOverrideNotice runtimeStatus={runtimeStatus} />
+
+      <OpenCodeV2LaunchNotice gate={gate} runtimeStatus={runtimeStatus} />
 
       <OpenCodePrerequisite
         gate={gate}

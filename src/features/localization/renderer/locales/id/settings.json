@@ -806,9 +806,9 @@
         "noCredentials": "Dasar URL tidak boleh termasuk kredensial"
       },
       "status": {
-        "endpointDisabledTokenKept": "Endpoint dinonaktifkan. Uang simpanan disimpan.",
         "endpointSaved": "Endpoint disimpan",
-        "endpointSavedTokenMissing": "Endpoint disimpan. Auth token tidak dikonfigurasi."
+        "endpointSavedTokenMissing": "Endpoint disimpan. Auth token tidak dikonfigurasi.",
+        "notActiveUntilSaved": "Belum aktif. Simpan endpoint untuk beralih; sampai saat itu, peluncuran tetap memakai metode koneksi sebelumnya."
       }
     },
     "connection": {
@@ -909,10 +909,8 @@
     "runtimeSummary": "Runtime: {{runtime}}",
     "status": {
       "configured": "dikonfigurasi",
-      "enabled": "Diaktifkan",
       "notConfigured": "Tidak dikonfigurasi",
       "notSet": "tidak diset",
-      "off": "Mati",
       "unknown": "Tak dikenal"
     },
     "title": "Pengaturan Penyedia",
@@ -928,8 +926,6 @@
       "apiKeySavedRefreshFailed": "API kunci disimpan, tapi gagal untuk menyegarkan status penyedia.",
       "connectionUpdatedRefreshFailed": "Koneksi dimutakhirkan, tapi gagal menyegarkan status penyedia.",
       "deleteApiKey": "Gagal menghapus API kunci",
-      "disableEndpoint": "Gagal mematikan titik akhir",
-      "endpointDisabledRefreshFailed": "Endpoint dinonaktifkan, tapi gagal untuk menyegarkan status penyedia.",
       "endpointSavedRefreshFailed": "Endpoint disimpan, tapi gagal untuk menyegarkan status penyedia.",
       "refreshCodexAccount": "Gagal menyegarkan akun Codex",
       "saveApiKey": "Gagal menyimpan API kunci",

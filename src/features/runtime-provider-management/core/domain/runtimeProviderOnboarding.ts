@@ -1,4 +1,5 @@
 import { isCurrentMiniMaxCatalogModel } from '@shared/utils/providerModelVisibility';
+import { isRecognizedOpenCodeV2Version } from '@shared/utils/version';
 
 import { qualifyModelId } from './openCodeModelIdentity';
 import { isOAuthCredentialHint } from './runtimeProviderQuickConnect';
@@ -50,6 +51,19 @@ export type RuntimeProviderConnectionStrategy =
     }
   | { readonly kind: 'provider-selector'; readonly selectorId: 'xiaomi-mimo-base-url' };
 
+export type OpenCodeGeneration = 'v1' | 'v2';
+
+export function getOpenCodeGeneration(version: string | null | undefined): OpenCodeGeneration {
+  return isRecognizedOpenCodeV2Version(version) ? 'v2' : 'v1';
+}
+
+/** A console domain and the OpenCode V2 integration that serves accounts from it. */
+export interface RuntimeProviderOnboardingRoute {
+  readonly host: string;
+  readonly credentialUrl: string;
+  readonly v2ProviderId: string;
+}
+
 export interface RuntimeProviderOnboardingPlan {
   readonly id: RuntimeProviderOnboardingPlanId;
   readonly providerId: string;
@@ -57,10 +71,32 @@ export interface RuntimeProviderOnboardingPlan {
   readonly description: string;
   readonly credentialKind: 'oauth' | 'subscription-key';
   readonly credentialUrl: string | null;
+  /**
+   * Console domains of one plan. V1 serves them all through providerId; V2 serves each
+   * through its own integration, so a V2 plan needs one route before it can connect.
+   */
+  readonly routes?: readonly RuntimeProviderOnboardingRoute[];
+  /** Set on a V2 plan whose route is not chosen yet: the user picks one of these. */
+  readonly routeChoices?: readonly RuntimeProviderOnboardingRoute[];
+  /** The chosen V2 route; providerId is its integration. */
+  readonly route?: RuntimeProviderOnboardingRoute;
   readonly preferredModelFragments: readonly string[];
   readonly requireOAuthCredentialHint: boolean;
   readonly connectionStrategy: RuntimeProviderConnectionStrategy;
 }
+
+const KIMI_CODE_ROUTES = [
+  {
+    host: 'kimi.com',
+    credentialUrl: 'https://www.kimi.com/code/console',
+    v2ProviderId: 'kimi-code-plan-cn',
+  },
+  {
+    host: 'kimi.ai',
+    credentialUrl: 'https://www.kimi.ai/code/console',
+    v2ProviderId: 'kimi-code-plan-global',
+  },
+] as const satisfies readonly RuntimeProviderOnboardingRoute[];
 
 export interface RuntimeProviderOnboardingProgress {
   readonly schemaVersion: 1;
@@ -133,7 +169,8 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
     displayName: 'Kimi Code Membership',
     description: 'Use an API key from Kimi Code Console with your membership quota.',
     credentialKind: 'subscription-key',
-    credentialUrl: 'https://www.kimi.com/code/console',
+    credentialUrl: KIMI_CODE_ROUTES[0].credentialUrl,
+    routes: KIMI_CODE_ROUTES,
     preferredModelFragments: [
       'kimi-for-coding/kimi-for-coding',
       'kimi-for-coding/k3',
@@ -322,11 +359,109 @@ export function findRuntimeProviderOnboardingPlanByProviderId(
   if (xiaomiPlan) {
     return xiaomiPlan;
   }
-  return (
-    RUNTIME_PROVIDER_ONBOARDING_PLANS.find(
-      (plan) => plan.providerId.toLowerCase() === normalizedProviderId
-    ) ?? null
+  for (const plan of RUNTIME_PROVIDER_ONBOARDING_PLANS) {
+    if (plan.providerId.toLowerCase() === normalizedProviderId) return plan;
+    // A V2 integration id names one route of its plan.
+    const route = plan.routes?.find((item) => item.v2ProviderId === normalizedProviderId);
+    if (route) return resolveRuntimeProviderOnboardingPlan(plan, 'v2', route.v2ProviderId);
+  }
+  return null;
+}
+
+/**
+ * The plan as the selected OpenCode generation serves it. V1, and plans without routes, stay
+ * as they are. On V2, a chosen route sets the provider id, key page and model hints; without
+ * one, routeChoices lists the routes for the user to pick.
+ */
+export function resolveRuntimeProviderOnboardingPlan(
+  plan: RuntimeProviderOnboardingPlan,
+  generation: OpenCodeGeneration,
+  routeProviderId: string | null
+): RuntimeProviderOnboardingPlan {
+  if (generation === 'v1' || !plan.routes?.length) return plan;
+  if (plan.route) return plan;
+  const route = plan.routes.find((item) => item.v2ProviderId === routeProviderId);
+  if (!route) return { ...plan, routeChoices: plan.routes };
+  const modelPrefix = `${plan.providerId}/`;
+  return {
+    ...plan,
+    providerId: route.v2ProviderId,
+    credentialUrl: route.credentialUrl,
+    route,
+    preferredModelFragments: plan.preferredModelFragments.map((fragment) =>
+      fragment.startsWith(modelPrefix)
+        ? `${route.v2ProviderId}/${fragment.slice(modelPrefix.length)}`
+        : fragment
+    ),
+  };
+}
+
+/**
+ * Whether the pinned runtime serves V2 route integrations: lists them in its provider
+ * directory and returns their key setup form. Runtime 0.0.138 (runtime.lock.json) does.
+ */
+export const OPENCODE_V2_ROUTE_INTEGRATIONS_SERVED = true;
+
+/**
+ * Guard: route integrations are used only on V2 when the runtime serves them and its directory
+ * lists one of the plan's routes. Otherwise a V2 plan connects through its own provider id,
+ * the same path as V1.
+ */
+export function resolveRuntimeProviderOnboardingRouteGeneration(
+  plan: RuntimeProviderOnboardingPlan,
+  generation: OpenCodeGeneration,
+  directoryEntries: readonly Pick<RuntimeProviderDirectoryEntryDto, 'providerId'>[],
+  routesServed: boolean
+): OpenCodeGeneration {
+  const listed = new Set(directoryEntries.map((entry) => entry.providerId.toLowerCase()));
+  return routesServed &&
+    generation === 'v2' &&
+    plan.routes?.some((route) => listed.has(route.v2ProviderId))
+    ? 'v2'
+    : 'v1';
+}
+
+/**
+ * Directory ids for the plan under the selected generation, most specific first. On V2 the
+ * route integrations come before the plan id, which the runtime may still list as curated.
+ */
+export function getRuntimeProviderOnboardingPlanProviderIds(
+  plan: RuntimeProviderOnboardingPlan,
+  generation: OpenCodeGeneration
+): readonly string[] {
+  return generation === 'v2' && plan.routes?.length
+    ? [...plan.routes.map((route) => route.v2ProviderId), plan.providerId]
+    : [plan.providerId];
+}
+
+/** The directory entry of a plan: a connected route integration first, then any listed one. */
+export function findRuntimeProviderOnboardingPlanEntry(
+  planId: RuntimeProviderOnboardingPlanId,
+  generation: OpenCodeGeneration,
+  entries: readonly RuntimeProviderDirectoryEntryDto[]
+): RuntimeProviderDirectoryEntryDto | null {
+  const plan = getRuntimeProviderOnboardingPlan(planId);
+  const routeGeneration = resolveRuntimeProviderOnboardingRouteGeneration(
+    plan,
+    generation,
+    entries,
+    OPENCODE_V2_ROUTE_INTEGRATIONS_SERVED
   );
+  const planEntries = getRuntimeProviderOnboardingPlanProviderIds(plan, routeGeneration).flatMap(
+    (providerId) =>
+      entries.find((entry) => entry.providerId.trim().toLowerCase() === providerId) ?? []
+  );
+  return planEntries.find((entry) => entry.state === 'connected') ?? planEntries[0] ?? null;
+}
+
+/** The plan's key pages, primary first: one per route, else the single credential page. */
+export function getRuntimeProviderOnboardingCredentialUrls(
+  plan: Pick<RuntimeProviderOnboardingPlan, 'credentialUrl' | 'routes' | 'routeChoices' | 'route'>
+): readonly string[] {
+  if (plan.route) return [plan.route.credentialUrl];
+  const routes = plan.routeChoices ?? plan.routes;
+  if (routes?.length) return routes.map((route) => route.credentialUrl);
+  return plan.credentialUrl ? [plan.credentialUrl] : [];
 }
 
 export function getRuntimeProviderCredentialUrl(providerId: string): string | null {

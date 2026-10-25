@@ -164,12 +164,48 @@ function packageAt(entry: string, name: string, runtime: string) {
   throw new Error(`Missing package identity: ${name}`);
 }
 
-export function serverIdentity(entry: string, alias: string, runtime: string) {
-  const version = { '@opencode/server-v2-floor': '2.0.0', '@opencode/server': '2.0.32' }[alias];
-  assert(version, 'Unknown OpenCode server graph');
+export interface StagedOpenCodeV2Graph {
+  version: string;
+  server: string;
+}
+
+/** The runtime's own staging manifest lists every graph it ships; nothing is repeated here. */
+export function stagedOpenCodeV2Graphs(runtime: string): {
+  graphs: StagedOpenCodeV2Graph[];
+  pty: string;
+} {
+  const manifest = JSON.parse(
+    fs.readFileSync(
+      containedFile(runtime, path.join(runtime, 'local-cli/opencode-v2-graphs.json')).path,
+      'utf8'
+    )
+  ) as { schema?: unknown; graphs?: unknown; pty?: unknown };
+  assert.equal(manifest.schema, 2, 'Unsupported OpenCode V2 graph manifest');
+  assert(
+    Array.isArray(manifest.graphs) && manifest.graphs.length > 0,
+    'No staged OpenCode V2 graph'
+  );
+  assert(
+    typeof manifest.pty === 'string' && /^\d+\.\d+\.\d+$/.test(manifest.pty),
+    'Invalid staged PTY pin'
+  );
+  const graphs = manifest.graphs.map((value: unknown) => {
+    const graph = value as Partial<StagedOpenCodeV2Graph>;
+    assert(
+      typeof graph.version === 'string' &&
+        /^\d+\.\d+\.\d+$/.test(graph.version) &&
+        graph.server === `@opencode/server-v${graph.version}`,
+      'Invalid staged OpenCode V2 graph'
+    );
+    return { version: graph.version, server: graph.server };
+  });
+  return { graphs, pty: manifest.pty };
+}
+
+export function serverIdentity(entry: string, graph: StagedOpenCodeV2Graph, runtime: string) {
   // npm aliases keep the original package name in their physical package.json.
   const identity = packageAt(entry, '@opencode/server', runtime);
-  assert.equal(identity.version, version, 'Wrong server graph version');
+  assert.equal(identity.version, graph.version, 'Wrong server graph version');
   return identity;
 }
 
@@ -342,14 +378,13 @@ async function probe(runtime: string, staged: string, project: string, expectedB
   const target = nativeTargets[`${process.platform}-${process.arch}`];
   assert(target, 'Unsupported runtime smoke platform');
   const graphs = [];
-  for (const [server, version] of [
-    ['@opencode/server-v2-floor', '2.0.0'],
-    ['@opencode/server', '2.0.32'],
-  ]) {
+  const stagedGraphs = stagedOpenCodeV2Graphs(runtime);
+  for (const graph of stagedGraphs.graphs) {
+    const { server, version } = graph;
     const serverEntry = fs.realpathSync(
       bun.resolveSync(`${server}/process`, path.join(runtime, 'local-cli'))
     );
-    const serverPackage = serverIdentity(serverEntry, server, runtime);
+    const serverPackage = serverIdentity(serverEntry, graph, runtime);
     const coreEntry = fs.realpathSync(
       bun.resolveSync('@opencode/core/bus', path.dirname(serverEntry))
     );
@@ -363,7 +398,7 @@ async function probe(runtime: string, staged: string, project: string, expectedB
     );
     const ptyEntry = fs.realpathSync(bun.resolveSync('bun-pty', path.dirname(adapterEntry)));
     const pty = packageAt(ptyEntry, 'bun-pty', runtime);
-    assert.equal(pty.version, '0.4.11');
+    assert.equal(pty.version, stagedGraphs.pty);
     const graphFiles = [
       serverEntry,
       serverPackage.manifest.path,

@@ -1,4 +1,7 @@
-import { resolveSetupAuthOption } from './runtimeProviderManagementInternals';
+import {
+  buildSetupAuthSelector,
+  resolveSetupAuthOption,
+} from './runtimeProviderManagementInternals';
 
 import type {
   RuntimeProviderDirectoryEntryDto,
@@ -20,10 +23,7 @@ export function runtimeProviderConnectInput(
   return {
     ...request,
     ...(input.metadata ? { metadata: { ...input.metadata } } : {}),
-    ...(authOption?.methodIndex !== undefined && authOption.methodIndex !== null
-      ? { authMethodIndex: authOption.methodIndex }
-      : {}),
-    ...(authOption?.id ? { authOptionId: authOption.id } : {}),
+    ...buildSetupAuthSelector(authOption ?? null),
   };
 }
 

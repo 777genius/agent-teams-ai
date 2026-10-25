@@ -8,7 +8,7 @@ export type {
 export {
   classifyNativeVersion,
   evaluateLegacyOpenCodeSupport,
-  isLegacyOpenCodeVersionSupported,
+  isOpenCodeVersionProductionEligible,
   isRecognizedOpenCodeRuntimeVersion,
   MINIMUM_AGENT_TEAMS_OPENCODE_VERSION,
   parseOpenCodeSemver,

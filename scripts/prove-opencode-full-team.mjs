@@ -7,6 +7,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
+import { openCodeV2ContractQualifies, readOpenCodeV2Contract } from '../src/features/opencode-compatibility/core/domain/openCodeV2Contract.ts';
 import { resolveLiveSmokeOrchestratorCliPath } from './lib/live-smoke-runtime.mjs';
 import { preflightOpenCodeLiveEnvironment } from './lib/opencode-live-preflight.mjs';
 
@@ -31,12 +32,21 @@ export const ISOLATED_PATH_KEYS = [
 const OWNERSHIP_FILE = '.opencode-proof-owned.json';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+// V2 versions follow the pinned runtime's contract (runtime.lock.json opencodeV2): FULL runs
+// only a version the runtime qualified for team launch on this platform.
+function qualifiedPinnedOpenCodeV2Version(version, platformKey) {
+  const contract = readOpenCodeV2Contract(
+    JSON.parse(fs.readFileSync(path.join(repoRoot, 'runtime.lock.json'), 'utf8')).opencodeV2);
+  return contract !== null && openCodeV2ContractQualifies(contract, [platformKey], version);
+}
+
 /** Passive generation/model qualification. FULL still proves actual readiness,
  * work and original-run stop through the production bridge below. */
 export async function preflightOpenCodeFullTeamEnvironment(input, {
   spawn = spawnSync,
   legacyPreflight = preflightOpenCodeLiveEnvironment,
   platform = process.platform,
+  arch = process.arch,
 } = {}) {
   assertOwnedSmokeEnvironment(input.env, 'FULL');
   if (input.projectPath !== input.env.OPENCODE_E2E_PROJECT_PATH)
@@ -50,7 +60,7 @@ export async function preflightOpenCodeFullTeamEnvironment(input, {
   const version = /^(?:opencode v)?((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*))(?:\r?\n)?$/.exec(measured.stdout);
   if (!version || version[0] !== measured.stdout) return unavailable('version-output');
   if (version[1].startsWith('1.')) return legacyPreflight(input);
-  if (!['2.0.0', '2.0.32'].includes(version[1]) || !['linux', 'darwin'].includes(platform))
+  if (!['linux', 'darwin'].includes(platform) || !qualifiedPinnedOpenCodeV2Version(version[1], `${platform}-${arch}`))
     return unavailable('generation-policy');
   if (!Array.isArray(input.requiredModels) || input.requiredModels.length !== 1 ||
       input.requiredModels[0] !== input.env.OPENCODE_E2E_MODEL ||

@@ -19,6 +19,8 @@ import {
 import { CodexRuntimeUpdateDialog } from '@features/codex-runtime-installer/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
+  canManagedInstallChangeOpenCodeRuntime,
+  getOpenCodeGeneration,
   isOpenCodeProviderOAuthBridgeOutdated,
   isOpenCodeRuntimeUsable,
   OpenCodeCatalogErrorAlert,
@@ -651,6 +653,7 @@ function shouldShowOpenCodeInstallAction(
   return (
     provider.providerId === 'opencode' &&
     !showSkeleton &&
+    canManagedInstallChangeOpenCodeRuntime(openCodeRuntimeStatus) &&
     (openCodeRuntimeStatus?.updateAvailable === true ||
       isOpenCodeFreeTierVersionOutdated(openCodeRuntimeStatus?.version) ||
       (!isOpenCodeProviderEffectivelyReady(provider) &&
@@ -1000,6 +1003,7 @@ const InstalledBanner = ({
               {(providersCollapsed ||
                 !visibleProviders.some((provider) => provider.providerId === 'opencode')) &&
               openCodeRuntimeStatus?.installed &&
+              canManagedInstallChangeOpenCodeRuntime(openCodeRuntimeStatus) &&
               (openCodeRuntimeStatus.updateAvailable ||
                 isOpenCodeFreeTierVersionOutdated(openCodeRuntimeStatus.version)) ? (
                 <OpenCodeFreeTierUpdateAction
@@ -1014,6 +1018,16 @@ const InstalledBanner = ({
                   onUpdate={onOpenCodeInstall}
                   disabled={openCodeRuntimeInstalling}
                 />
+              ) : null}
+              {providersCollapsed && openCodeRuntimeStatus?.ignoredOverride ? (
+                <span
+                  data-testid="opencode-ignored-override-compact"
+                  className="flex items-center gap-1 text-xs text-amber-300"
+                  title={`${openCodeRuntimeStatus.ignoredOverride.binaryPath}: ${openCodeRuntimeStatus.ignoredOverride.reason}`}
+                >
+                  <AlertTriangle className="size-3 shrink-0" />
+                  {t('cliStatus.quickConnect.openCodeOverrideIgnoredTitle')}
+                </span>
               ) : null}
               {runtimeAuthSummary && (
                 <span
@@ -1835,8 +1849,15 @@ export const CliStatusBanner = ({
     refreshOpenCodeDashboardCatalog,
   ]);
 
+  // An explicit OpenCode re-check must bypass the provider directory cache for
+  // every dashboard reader: the key drives both the connected-model catalog
+  // (refreshRevision) and the Providers & plans grid (refreshKey).
+  const refreshOpenCodeProviderDirectory = useCallback(() => {
+    setProviderQuickConnectRefreshKey((current) => current + 1);
+  }, []);
+
   const handleOpenCodeRefresh = useCallback(() => {
-    refreshOpenCodeDashboardCatalog();
+    refreshOpenCodeProviderDirectory();
     void (async () => {
       await invalidateOpenCodeRuntimeStatus();
       await fetchOpenCodeRuntimeStatus();
@@ -1844,7 +1865,7 @@ export const CliStatusBanner = ({
   }, [
     fetchOpenCodeRuntimeStatus,
     invalidateOpenCodeRuntimeStatus,
-    refreshOpenCodeDashboardCatalog,
+    refreshOpenCodeProviderDirectory,
   ]);
 
   const handleToggleProvidersCollapsed = useCallback(() => {
@@ -1985,14 +2006,21 @@ export const CliStatusBanner = ({
       providerId: CliProviderId,
       checkReason: AnalyticsProviderCheckReason = 'manual_refresh'
     ) => {
-      if (providerId === 'opencode') refreshOpenCodeDashboardCatalog();
-      const refreshed = await fetchCliProviderStatus(providerId, { checkReason });
+      let refreshed: boolean;
+      try {
+        refreshed = await fetchCliProviderStatus(providerId, { checkReason });
+      } finally {
+        // After the status check, so the grid and the connected-model catalog
+        // (which waits for status checks) start their refresh reads together
+        // and the main process can serve both with one runtime call.
+        if (providerId === 'opencode') refreshOpenCodeProviderDirectory();
+      }
       if (refreshed && providerId === 'anthropic') {
         setAnthropicRateLimitsRefreshVersion((current) => current + 1);
       }
       return refreshed;
     },
-    [fetchCliProviderStatus, refreshOpenCodeDashboardCatalog]
+    [fetchCliProviderStatus, refreshOpenCodeProviderDirectory]
   );
 
   const handleProviderBackendChange = useCallback(
@@ -2085,6 +2113,7 @@ export const CliStatusBanner = ({
             providerId={providerOnboardingRequest.providerId}
             projectPath={selectedProjectPath}
             runtimeGate={openCodeQuickConnectGate}
+            openCodeGeneration={getOpenCodeGeneration(openCodeRuntimeStatus?.version)}
             runtimeUpdateRequired={
               isOpenCodeProviderOAuthBridgeOutdated(openCodeRuntimeStatus) &&
               (providerOnboardingRequest.mode === 'wizard' ||
@@ -2094,8 +2123,7 @@ export const CliStatusBanner = ({
             disabled={isBusy || cliStatusLoading}
             onInstallOrUpdateRuntime={() => installOpenCodeRuntime()}
             onProviderChanged={() => {
-              setProviderQuickConnectRefreshKey((current) => current + 1);
-              handleProviderRefresh('opencode');
+              void handleProviderRefresh('opencode');
             }}
             onAdvancedSettings={handleOnboardingAdvancedSettings}
           />

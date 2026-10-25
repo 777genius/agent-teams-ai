@@ -806,9 +806,9 @@
         "noCredentials": "القاعدة URL يجب ألا تشمل وثائق التفويض"
       },
       "status": {
-        "endpointDisabledTokenKept": "نقطة النهاية معوقة تم إنقاذ (توكن)",
         "endpointSaved": "نقطة النهاية",
-        "endpointSavedTokenMissing": "تم إنقاذ نقطة النهاية (أوث توكن) ليس مُحدّداً."
+        "endpointSavedTokenMissing": "تم إنقاذ نقطة النهاية (أوث توكن) ليس مُحدّداً.",
+        "notActiveUntilSaved": "غير نشط حتى الآن. احفظ نقطة النهاية للتبديل؛ وحتى ذلك الحين تستخدم عمليات الإطلاق طريقة الاتصال السابقة."
       }
     },
     "connection": {
@@ -909,10 +909,8 @@
     "runtimeSummary": "وقت العمل: {{runtime}}",
     "status": {
       "configured": "تم تشكيلها",
-      "enabled": "Enabled",
       "notConfigured": "لا تم تشكيلها",
       "notSet": "غير محددة",
-      "off": "قبالة",
       "unknown": "غير معروف"
     },
     "title": "مؤسسات الادخار",
@@ -928,8 +926,6 @@
       "apiKeySavedRefreshFailed": "API تم إنقاذ المفتاح، ولكن فشل في تجديد مركز مقدمي الخدمات.",
       "connectionUpdatedRefreshFailed": "وقد استكملت عملية الاتصال، ولكنها لم تُنعش حالة مقدمي الخدمات.",
       "deleteApiKey": "لم تحذف API المفتاح",
-      "disableEndpoint": "تقاعس عن اختلال نقطة النهاية",
-      "endpointDisabledRefreshFailed": "معوقين، ولكنهم فشلوا في إعادة تأهيل مركز مقدمي الخدمات.",
       "endpointSavedRefreshFailed": "تم إنقاذ نقطة النهاية، ولكن فشلت في إعادة تجديد مركز مقدمي الخدمات.",
       "refreshCodexAccount": "فشل في إعادة فتح حساب الشفرة",
       "saveApiKey": "فشل في الإنقاذ API المفتاح",

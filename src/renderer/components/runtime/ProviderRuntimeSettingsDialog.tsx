@@ -47,15 +47,20 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
 import { useStore } from '@renderer/store';
 import { isAnthropicCompatibleCatalogChecking } from '@renderer/utils/anthropicCompatibleCatalogChecking';
-import { ANTHROPIC_EXTERNAL_BACKEND_IDS } from '@shared/constants/anthropicConnectionMode';
 import { AlertTriangle, Download, Key, Link2, Loader2, Save, Trash2 } from 'lucide-react';
 
 import {
   isCodexProviderRuntimeMissing,
   shouldOfferCodexRuntimeInstall,
 } from './codexRuntimeInstallAction';
+import { ConnectionMethodCards } from './ConnectionMethodCards';
 import { OpenCodeStartupCleanupRecovery } from './OpenCodeStartupCleanupRecovery';
 import { resolveProviderAuthModeUiState } from './providerAuthModeUiState';
+import {
+  getConnectionMethodCardOptions,
+  getConnectionMethodCardsHint,
+  validateAnthropicCompatibleBaseUrl,
+} from './providerConnectionCards';
 import { ProviderConnectionHeader } from './ProviderConnectionHeader';
 import {
   formatProviderAuthMethodLabelForProvider,
@@ -72,7 +77,6 @@ import {
   ProviderRuntimeBackendSelector,
 } from './ProviderRuntimeBackendSelector';
 
-import type { ProviderRuntimeBackendSummaryText } from './ProviderRuntimeBackendSelector';
 import type { NativeClaudeAuthenticationAction } from './useProviderAuthenticationActions';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type { AnalyticsProviderCheckReason } from '@renderer/analytics/productAnalytics';
@@ -88,12 +92,6 @@ type PendingConnectionAction =
   | 'compatible'
   | 'codex-custom-provider'
   | null;
-
-interface ConnectionMethodCardOption {
-  readonly authMode: CliProviderAuthMode;
-  readonly title: string;
-  readonly description: string;
-}
 
 interface Props {
   readonly open: boolean;
@@ -185,7 +183,6 @@ const API_KEY_PROVIDER_TRANSLATION_KEYS = {
 const ANTHROPIC_COMPATIBLE_AUTH_TOKEN_ENV_VAR = 'ANTHROPIC_AUTH_TOKEN';
 const ANTHROPIC_COMPATIBLE_AUTH_TOKEN_NAME = 'Anthropic-compatible Auth Token';
 const CODEX_CUSTOM_PROVIDER_MODEL_MAX_LENGTH = 200;
-const FIRST_PARTY_ANTHROPIC_HOSTS = new Set(['api.anthropic.com', 'api-staging.anthropic.com']);
 
 function isApiKeyProviderId(providerId: CliProviderId): providerId is ApiKeyProviderId {
   return providerId === 'anthropic' || providerId === 'codex' || providerId === 'gemini';
@@ -235,33 +232,6 @@ function getCodexRuntimeInstallLabel(
 function findPreferredApiKeyEntry(apiKeys: ApiKeyEntry[], envVarName: string): ApiKeyEntry | null {
   const matches = apiKeys.filter((entry) => entry.envVarName === envVarName);
   return matches.find((entry) => entry.scope === 'user') ?? null;
-}
-
-function validateAnthropicCompatibleBaseUrl(
-  value: string,
-  t: ReturnType<typeof useAppTranslation>['t']
-): string | null {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return t('providerRuntime.compatibleEndpoint.validation.baseUrlRequired');
-  }
-
-  try {
-    const url = new URL(trimmed);
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-      return t('providerRuntime.compatibleEndpoint.validation.httpRequired');
-    }
-    if (url.username || url.password) {
-      return t('providerRuntime.compatibleEndpoint.validation.noCredentials');
-    }
-    if (FIRST_PARTY_ANTHROPIC_HOSTS.has(url.hostname)) {
-      return t('providerRuntime.compatibleEndpoint.validation.firstPartyAnthropic');
-    }
-  } catch {
-    return t('providerRuntime.compatibleEndpoint.validation.invalidUrl');
-  }
-
-  return null;
 }
 
 function validateCodexCustomProviderBaseUrl(value: string): string | null {
@@ -721,168 +691,6 @@ const CodexRateLimitWindowCard = ({
   );
 };
 
-function getConnectionMethodCardOptions(
-  provider: CliProviderStatus,
-  t: ReturnType<typeof useAppTranslation>['t'],
-  runtimeBackendSummaryText: ProviderRuntimeBackendSummaryText
-): ConnectionMethodCardOption[] | null {
-  switch (provider.providerId) {
-    case 'anthropic': {
-      const resolvedBackendId = provider.resolvedBackendId?.trim() ?? '';
-      const resolvedExternalBackendLabel =
-        provider.connection?.compatibleEndpoint?.enabled !== true &&
-        ANTHROPIC_EXTERNAL_BACKEND_IDS.some((backendId) => backendId === resolvedBackendId)
-          ? provider.backend?.label.trim() || resolvedBackendId
-          : null;
-      const bedrockEndpointLabelCandidate =
-        resolvedBackendId === 'bedrock' && resolvedExternalBackendLabel
-          ? provider.backend?.endpointLabel?.trim() || null
-          : null;
-      const bedrockEndpointLabel =
-        bedrockEndpointLabelCandidate === resolvedExternalBackendLabel
-          ? null
-          : bedrockEndpointLabelCandidate;
-      const autoTitle = resolvedExternalBackendLabel
-        ? provider.connection?.configuredAuthMode === 'auto'
-          ? runtimeBackendSummaryText.autoCurrently(resolvedExternalBackendLabel)
-          : `${t('providerRuntime.connectionCards.auto.title')} (${resolvedExternalBackendLabel})`
-        : t('providerRuntime.connectionCards.auto.title');
-      const autoDescription = [
-        t('providerRuntime.connectionCards.anthropic.autoDescription'),
-        bedrockEndpointLabel,
-      ]
-        .filter((part): part is string => Boolean(part))
-        .join(' ');
-
-      return [
-        {
-          authMode: 'auto',
-          title: autoTitle,
-          description: autoDescription,
-        },
-        {
-          authMode: 'oauth',
-          title: t('providerRuntime.connectionCards.anthropic.subscriptionTitle'),
-          description: t('providerRuntime.connectionCards.anthropic.subscriptionDescription'),
-        },
-        {
-          authMode: 'api_key',
-          title: t('providerRuntime.connectionCards.apiKey.title'),
-          description: t('providerRuntime.connectionCards.anthropic.apiKeyDescription'),
-        },
-      ];
-    }
-    case 'codex':
-      return [
-        {
-          authMode: 'auto',
-          title: t('providerRuntime.connectionCards.auto.title'),
-          description: t('providerRuntime.connectionCards.codex.autoDescription'),
-        },
-        {
-          authMode: 'chatgpt',
-          title: t('providerRuntime.connectionCards.codex.chatgptTitle'),
-          description: t('providerRuntime.connectionCards.codex.chatgptDescription'),
-        },
-        {
-          authMode: 'api_key',
-          title: t('providerRuntime.connectionCards.apiKey.title'),
-          description: t('providerRuntime.connectionCards.codex.apiKeyDescription'),
-        },
-      ];
-    default:
-      return null;
-  }
-}
-
-function getConnectionMethodCardsHint(
-  provider: CliProviderStatus,
-  t: ReturnType<typeof useAppTranslation>['t']
-): string | null {
-  if (provider.providerId === 'codex') {
-    return t('providerRuntime.connectionCards.codex.hint');
-  }
-
-  if (provider.providerId === 'anthropic') {
-    return t('providerRuntime.connectionCards.anthropic.hint');
-  }
-
-  return null;
-}
-
-const ConnectionMethodCards = ({
-  options,
-  selectedAuthMode,
-  disabled,
-  connectionSaving,
-  pendingConnectionAction,
-  onSelect,
-}: Readonly<{
-  options: ConnectionMethodCardOption[];
-  selectedAuthMode?: CliProviderAuthMode;
-  disabled: boolean;
-  connectionSaving: boolean;
-  pendingConnectionAction: PendingConnectionAction;
-  onSelect: (authMode: CliProviderAuthMode) => void;
-}>): React.JSX.Element => {
-  const { t } = useAppTranslation('settings');
-  const gridClassName =
-    options.length === 3 ? 'grid gap-2 md:grid-cols-3' : 'grid gap-2 sm:grid-cols-2';
-
-  return (
-    <div className={gridClassName}>
-      {options.map((option) => {
-        const selected = selectedAuthMode === option.authMode;
-        return (
-          <button
-            key={option.authMode}
-            type="button"
-            onClick={() => onSelect(option.authMode)}
-            disabled={disabled}
-            className="rounded-md border p-3 text-left transition-colors disabled:opacity-60"
-            style={{
-              borderColor: selected ? 'rgba(74, 222, 128, 0.32)' : 'var(--color-border-subtle)',
-              backgroundColor: selected ? 'rgba(74, 222, 128, 0.08)' : 'rgba(255, 255, 255, 0.02)',
-            }}
-          >
-            <div
-              className="flex items-center justify-between gap-2 text-sm font-medium"
-              style={{ color: 'var(--color-text)' }}
-            >
-              <span>{option.title}</span>
-              {connectionSaving && pendingConnectionAction === option.authMode ? (
-                <span
-                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px]"
-                  style={{
-                    color: 'var(--color-text-secondary)',
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                  }}
-                >
-                  <Loader2 className="size-3 animate-spin" />
-                  {t('providerRuntime.connection.switching')}
-                </span>
-              ) : selected ? (
-                <span
-                  className="rounded-full px-2 py-0.5 text-[11px]"
-                  style={{
-                    color: 'var(--color-positive-subtle-text)',
-                    backgroundColor: 'rgba(74, 222, 128, 0.14)',
-                  }}
-                >
-                  {t('providerRuntime.connection.selected')}
-                </span>
-              ) : null}
-            </div>
-            <div className="mt-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              {option.description}
-            </div>
-          </button>
-        );
-      })}
-    </div>
-  );
-};
-
 export const ProviderRuntimeSettingsDialog = ({
   open,
   onOpenChange,
@@ -923,6 +731,7 @@ export const ProviderRuntimeSettingsDialog = ({
     useState<PendingConnectionAction>(null);
   const [compatibleBaseUrl, setCompatibleBaseUrl] = useState('');
   const [compatibleTokenValue, setCompatibleTokenValue] = useState('');
+  const [compatibleEndpointDraft, setCompatibleEndpointDraft] = useState(false);
   const [compatibleEndpointError, setCompatibleEndpointError] = useState<string | null>(null);
   const [compatibleEndpointStatus, setCompatibleEndpointStatus] = useState<string | null>(null);
   const [codexCustomProviderEnabled, setCodexCustomProviderEnabled] = useState(false);
@@ -988,6 +797,7 @@ export const ProviderRuntimeSettingsDialog = ({
     setPendingConnectionAction(null);
     setCompatibleBaseUrl('');
     setCompatibleTokenValue('');
+    setCompatibleEndpointDraft(false);
     setCompatibleEndpointError(null);
     setCompatibleEndpointStatus(null);
     setCodexCustomProviderEnabled(false);
@@ -1000,6 +810,7 @@ export const ProviderRuntimeSettingsDialog = ({
   useEffect(() => {
     setConnectionError(null);
     setRuntimeError(null);
+    setCompatibleEndpointDraft(false);
     setCompatibleEndpointError(null);
     setCompatibleEndpointStatus(null);
     setCodexCustomProviderError(null);
@@ -1208,7 +1019,12 @@ export const ProviderRuntimeSettingsDialog = ({
       anthropicCompatibleConfig.enabled
     );
   const connectionMethodCardOptions = selectedProvider
-    ? getConnectionMethodCardOptions(selectedProvider, t, runtimeBackendSummaryText)
+    ? getConnectionMethodCardOptions(
+        selectedProvider,
+        t,
+        runtimeBackendSummaryText,
+        anthropicCompatibleConfig.baseUrl
+      )
     : null;
   const showConnectionMethodCards =
     connectionMethodCardOptions !== null && typeof configuredAuthMode !== 'undefined';
@@ -1531,6 +1347,7 @@ export const ProviderRuntimeSettingsDialog = ({
   };
 
   const handleAuthModeChange = async (authMode: string): Promise<void> => {
+    setCompatibleEndpointDraft(false);
     if (selectedProvider?.providerId !== 'anthropic' && selectedProvider?.providerId !== 'codex') {
       return;
     }
@@ -1589,12 +1406,16 @@ export const ProviderRuntimeSettingsDialog = ({
     }
   };
 
-  const handleSaveAnthropicCompatibleEndpoint = async (): Promise<void> => {
+  const persistAnthropicCompatibleEndpoint = async (input: {
+    readonly baseUrl: string;
+    readonly token: string;
+    readonly announceSaved: boolean;
+  }): Promise<void> => {
     if (selectedProvider?.providerId !== 'anthropic') {
       return;
     }
 
-    const baseUrl = compatibleBaseUrl.trim();
+    const baseUrl = input.baseUrl.trim();
     const validationError = validateAnthropicCompatibleBaseUrl(baseUrl, t);
     if (validationError) {
       setCompatibleEndpointError(validationError);
@@ -1610,12 +1431,12 @@ export const ProviderRuntimeSettingsDialog = ({
     let updateSucceeded = false;
 
     try {
-      if (compatibleTokenValue.trim()) {
+      if (input.token.trim()) {
         await saveApiKey({
           id: selectedCompatibleToken?.id,
           name: ANTHROPIC_COMPATIBLE_AUTH_TOKEN_NAME,
           envVarName: ANTHROPIC_COMPATIBLE_AUTH_TOKEN_ENV_VAR,
-          value: compatibleTokenValue.trim(),
+          value: input.token.trim(),
           scope: 'user',
         });
       }
@@ -1629,16 +1450,22 @@ export const ProviderRuntimeSettingsDialog = ({
         },
       });
       updateSucceeded = true;
+      setCompatibleEndpointDraft(false);
       setCompatibleTokenValue('');
-      setCompatibleEndpointStatus(
-        compatibleTokenValue.trim() || anthropicCompatibleTokenConfigured
-          ? t('providerRuntime.compatibleEndpoint.status.endpointSaved')
-          : t('providerRuntime.compatibleEndpoint.status.endpointSavedTokenMissing')
-      );
+      if (input.announceSaved) {
+        setCompatibleEndpointStatus(
+          input.token.trim() || anthropicCompatibleTokenConfigured
+            ? t('providerRuntime.compatibleEndpoint.status.endpointSaved')
+            : t('providerRuntime.compatibleEndpoint.status.endpointSavedTokenMissing')
+        );
+      }
     } catch (error) {
-      setCompatibleEndpointError(
-        error instanceof Error ? error.message : t('providerRuntime.errors.saveEndpoint')
-      );
+      const message =
+        error instanceof Error ? error.message : t('providerRuntime.errors.saveEndpoint');
+      setCompatibleEndpointError(message);
+      if (!input.announceSaved) {
+        setCompatibleEndpointDraft(true);
+      }
     } finally {
       if (updateSucceeded) {
         try {
@@ -1653,48 +1480,34 @@ export const ProviderRuntimeSettingsDialog = ({
     }
   };
 
-  const handleDisableAnthropicCompatibleEndpoint = async (): Promise<void> => {
-    if (selectedProvider?.providerId !== 'anthropic') {
+  const handleSaveAnthropicCompatibleEndpoint = async (): Promise<void> => {
+    await persistAnthropicCompatibleEndpoint({
+      baseUrl: compatibleBaseUrl,
+      token: compatibleTokenValue,
+      announceSaved: true,
+    });
+  };
+
+  const handleSelectCompatibleEndpoint = async (): Promise<void> => {
+    if (selectedProvider?.providerId !== 'anthropic' || anthropicCompatibleEndpointEnabled) {
       return;
     }
 
-    setConnectionSaving(true);
-    setPendingConnectionAction('compatible');
-    setConnectionError(null);
     setCompatibleEndpointError(null);
     setCompatibleEndpointStatus(null);
-    let updateSucceeded = false;
-
-    try {
-      await updateConfig('providerConnections', {
-        anthropic: {
-          compatibleEndpoint: {
-            enabled: false,
-            baseUrl: compatibleBaseUrl.trim(),
-          },
-        },
-      });
-      updateSucceeded = true;
-      setCompatibleTokenValue('');
-      setCompatibleEndpointStatus(
-        t('providerRuntime.compatibleEndpoint.status.endpointDisabledTokenKept')
-      );
-    } catch (error) {
-      setCompatibleEndpointError(
-        error instanceof Error ? error.message : t('providerRuntime.errors.disableEndpoint')
-      );
-    } finally {
-      if (updateSucceeded) {
-        try {
-          await refreshProviderStatus('anthropic', 'provider_change');
-        } catch {
-          setConnectionError(t('providerRuntime.errors.endpointDisabledRefreshFailed'));
-        }
-      }
-
-      setConnectionSaving(false);
-      setPendingConnectionAction(null);
+    setCompatibleTokenValue('');
+    const savedBaseUrl = anthropicCompatibleConfig.baseUrl.trim();
+    setCompatibleBaseUrl(savedBaseUrl);
+    if (validateAnthropicCompatibleBaseUrl(savedBaseUrl, t)) {
+      setCompatibleEndpointDraft(true);
+      return;
     }
+
+    await persistAnthropicCompatibleEndpoint({
+      baseUrl: savedBaseUrl,
+      token: '',
+      announceSaved: false,
+    });
   };
 
   const handleSaveCodexCustomProvider = async (): Promise<void> => {
@@ -2097,13 +1910,21 @@ export const ProviderRuntimeSettingsDialog = ({
                     <Label className="text-xs">{t('providerRuntime.connection.method')}</Label>
                     <ConnectionMethodCards
                       options={connectionMethodCardOptions}
-                      selectedAuthMode={
-                        anthropicCompatibleEndpointEnabled ? undefined : configuredAuthMode
+                      selectedId={
+                        anthropicCompatibleEndpointEnabled ||
+                        (compatibleEndpointDraft && selectedProvider.providerId === 'anthropic')
+                          ? 'compatible'
+                          : configuredAuthMode
                       }
+                      selectedIsDraft={compatibleEndpointDraft}
                       disabled={connectionBusy}
                       connectionSaving={connectionSaving}
                       pendingConnectionAction={pendingConnectionAction}
-                      onSelect={(authMode) => void handleAuthModeChange(authMode)}
+                      onSelect={(id) =>
+                        id === 'compatible'
+                          ? void handleSelectCompatibleEndpoint()
+                          : void handleAuthModeChange(id)
+                      }
                     />
                     {connectionMethodCardsHint ? (
                       <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
@@ -2144,37 +1965,12 @@ export const ProviderRuntimeSettingsDialog = ({
                   </div>
                 ) : null}
 
-                {selectedProvider.providerId === 'anthropic' ? (
+                {selectedProvider.providerId === 'anthropic' &&
+                (anthropicCompatibleEndpointEnabled || compatibleEndpointDraft) ? (
                   <div
                     className="space-y-3 rounded-md border p-3"
                     style={{ borderColor: 'var(--color-border-subtle)' }}
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                          {t('providerRuntime.compatibleEndpoint.title')}
-                        </div>
-                        <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                          {t('providerRuntime.compatibleEndpoint.description')}
-                        </div>
-                      </div>
-                      <span
-                        className="rounded-full px-2 py-0.5 text-[11px]"
-                        style={{
-                          color: anthropicCompatibleEndpointEnabled
-                            ? 'var(--color-positive-subtle-text)'
-                            : 'var(--color-text-muted)',
-                          backgroundColor: anthropicCompatibleEndpointEnabled
-                            ? 'rgba(74, 222, 128, 0.14)'
-                            : 'rgba(255, 255, 255, 0.05)',
-                        }}
-                      >
-                        {anthropicCompatibleEndpointEnabled
-                          ? t('providerRuntime.status.enabled')
-                          : t('providerRuntime.status.off')}
-                      </span>
-                    </div>
-
                     <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                       <div className="space-y-1.5">
                         <Label htmlFor="anthropic-compatible-base-url" className="text-xs">
@@ -2191,6 +1987,7 @@ export const ProviderRuntimeSettingsDialog = ({
                           placeholder={t('runtimeProvider.compatibleEndpoint.baseUrlPlaceholder')}
                           className="h-9 text-sm"
                           disabled={connectionBusy}
+                          autoFocus={compatibleEndpointDraft}
                         />
                       </div>
 
@@ -2217,6 +2014,22 @@ export const ProviderRuntimeSettingsDialog = ({
                         />
                       </div>
                     </div>
+
+                    {compatibleEndpointDraft && !anthropicCompatibleEndpointEnabled ? (
+                      <div
+                        className="flex items-start gap-2 rounded-md border px-3 py-2 text-xs"
+                        style={{
+                          borderColor: 'rgba(245, 158, 11, 0.25)',
+                          backgroundColor: 'rgba(245, 158, 11, 0.06)',
+                          color: '#fbbf24',
+                        }}
+                      >
+                        <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                        <span>
+                          {t('providerRuntime.compatibleEndpoint.status.notActiveUntilSaved')}
+                        </span>
+                      </div>
+                    ) : null}
 
                     <div className="flex flex-wrap items-center gap-2 text-xs">
                       <span
@@ -2287,17 +2100,6 @@ export const ProviderRuntimeSettingsDialog = ({
                     ) : null}
 
                     <div className="flex justify-end gap-2">
-                      {anthropicCompatibleEndpointEnabled ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          disabled={connectionBusy}
-                          onClick={() => void handleDisableAnthropicCompatibleEndpoint()}
-                        >
-                          {t('providerRuntime.actions.disable')}
-                        </Button>
-                      ) : null}
                       <Button
                         type="button"
                         size="sm"
