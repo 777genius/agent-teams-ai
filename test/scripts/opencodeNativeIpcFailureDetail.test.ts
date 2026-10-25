@@ -262,7 +262,7 @@ describe('serialized native IPC failure details', () => {
       await mkdir(stdioRoot, { recursive: true });
       await writeFile(path.join(stdioRoot, 'main.stderr'), [
         'error: Cannot read file "C:\\TEST-sdk\\": EPERM',
-        'error: Cannot find module "@opencode/client-v2-floor" from "C:\\TEST-private\\entry.ts"',
+        'error: Cannot find module "@opencode/client-v2.0.0" from "C:\\TEST-private\\entry.ts"',
         JSON.stringify({ event: 'opencode-v2-startup', stage: 'runtime-import',
           cause: 'execution_graph_dependency_missing', reason: 'failed', errno: 'ENOENT',
           operation: 'open', errorName: 'Error', elapsedMs: 123 }),
@@ -274,7 +274,7 @@ describe('serialized native IPC failure details', () => {
         readTargetKind?: string; childStartup: { stage: string; cause: string };
       } };
       expect(stdioPacket.stdio).toMatchObject({ kind: 'module_resolution',
-        errorKinds: ['access_denied', 'module_resolution'], moduleTargetRole: '@opencode/client-v2-floor',
+        errorKinds: ['access_denied', 'module_resolution'], moduleTargetRole: '@opencode/client-v2.0.0',
         childStartup: { stage: 'runtime-import', cause: 'execution_graph_dependency_missing' } });
       expect(stdioPacket.stdio.readTargetKind).toBeUndefined();
       expect(stdioPacket.stdio.errorLine).toContain('Cannot find module');
@@ -697,9 +697,11 @@ it('actual bundled verifier hashes every file with at most eight readers and dra
 });
 
 it.each([
-  { version: '2.0.0', members: ['team-lead', 'alice'] },
-  { version: '2.0.32', members: ['team-lead', 'alice', 'bob'] },
-])('expired $version readiness still issues one original public Stop and retains its exact rejection', async ({ version, members }) => {
+  { pin: { version: '2.0.0', wire: 'floor' }, members: ['team-lead', 'alice'] },
+  { pin: { version: '2.0.32', wire: 'current' }, members: ['team-lead', 'alice', 'bob'] },
+  // A newly qualified current release keeps the current roster without a script change.
+  { pin: { version: '2.1.4', wire: 'current' }, members: ['team-lead', 'alice', 'bob'] },
+])('expired $pin.version readiness still issues one original public Stop and retains its exact rejection', async ({ pin, members }) => {
   const source = await readFile('scripts/e2e/opencode-native-windows-preflight.ts', 'utf8');
   const ast = ts.createSourceFile('preflight.ts', source, ts.ScriptTarget.Latest, true);
   const declaration = ast.statements.filter(ts.isFunctionDeclaration)
@@ -745,7 +747,7 @@ it.each([
     const buildPlan = () => Promise.resolve({ binding, deadline: now + 290_000,
       members: members.map((memberId) => ({ memberId, originalSessionId: `ses_${memberId}` })) });
     await expect(verify(() => Promise.resolve({}), resolveProbe, buildPlan, owner, control, spyOn, root,
-      'openrouter/TEST-model', version, (_phase: string, facts: Record<string, unknown>) => { reported.push(facts); },
+      'openrouter/TEST-model', pin, (_phase: string, facts: Record<string, unknown>) => { reported.push(facts); },
       () => Promise.resolve(), (error: unknown) => { retained.push(error); })).rejects.toBe(primary);
     const readinessDeadline = returned.deadline - 30_000;
     expect(readiness).toEqual([readinessDeadline - 1_000_000]);
@@ -817,34 +819,44 @@ it('current-only preflight never resolves or starts the floor pin and rejects un
   const source = await readFile('scripts/e2e/opencode-native-windows-preflight.ts', 'utf8');
   const ast = ts.createSourceFile('preflight.ts', source, ts.ScriptTarget.Latest, true);
   const selection = ast.statements.filter((node) =>
-    (ts.isVariableStatement(node) && node.declarationList.declarations.some((value) => value.name.getText(ast) === 'versionSelection')) ||
-    (ts.isExpressionStatement(node) && node.getText(ast).includes('Unknown Windows preflight version selection')));
+    (ts.isVariableStatement(node) && node.declarationList.declarations.some((value) =>
+      ['versionSelection', '[floorPin, currentPin]'].includes(value.name.getText(ast)))) ||
+    (ts.isExpressionStatement(node) && ['Unknown Windows preflight version selection', 'Resolved Windows V2 pins invalid']
+      .some((message) => node.getText(ast).includes(message))));
   const start = ast.statements.findIndex((node) => node.getText(ast) === 'await preflight();');
-  expect(selection).toHaveLength(2);
+  expect(selection).toHaveLength(4);
   expect(start).toBeGreaterThan(0);
   const compiled = ts.transpileModule([...selection, ...ast.statements.slice(start)]
     .map((node) => node.getText(ast)).join('\n'), {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
   }).outputText;
-  for (const mode of [undefined, 'all', 'v2', 'current', 'v1', 'unknown']) {
+  // The workflow passes the selected runtime registry's floor and newest Windows pins.
+  for (const [mode, floorPin, currentPin] of [
+    ['all', '2.0.0', '2.0.32'], ['v2', '2.0.0', '2.0.32'], ['current', '2.0.0', '2.0.32'], ['all', '2.0.0', '2.1.4'],
+    ['v1', '2.0.0', '2.0.32'], ['unknown', '2.0.0', '2.0.32'], ['all', '2.0.0', '2.0.0'], ['current', '2.0.0', '3.0.0'],
+  ] as const) {
     const calls: unknown[][] = [], resolved: string[] = [];
-    const argv = ['bun', 'preflight.ts', '/TEST-sdk', '/TEST-floor', '/TEST-current', 'openrouter/TEST-model', '/TEST-node'];
-    if (mode !== undefined) argv.push(mode);
+    const argv = ['bun', 'preflight.ts', '/TEST-sdk', '/TEST-floor', '/TEST-current', 'openrouter/TEST-model', '/TEST-node',
+      mode, floorPin, currentPin];
     const run = compileFunction(`return (async () => { ${compiled} })();`, ['process', 'assert', 'path', 'realpath', 'preflight']);
     const result = run({ argv }, assert, path.posix, async (file: string) => {
       if (mode === 'current') assert.notEqual(file, '/TEST-floor');
       resolved.push(file);
       return file;
     }, async (...args: unknown[]) => { calls.push(args); });
+    const floor = ['/TEST-floor', { version: floorPin, wire: 'floor' }];
+    const current = ['/TEST-current', { version: currentPin, wire: 'current' }];
     if (mode === 'v1' || mode === 'unknown') {
       await expect(result).rejects.toThrow('Unknown Windows preflight version selection');
       expect(calls).toEqual([]);
       expect(resolved).toEqual([]);
+    } else if (floorPin === currentPin || !currentPin.startsWith('2.')) {
+      await expect(result).rejects.toThrow('Resolved Windows V2 pins invalid');
+      expect(calls).toEqual([]);
+      expect(resolved).toEqual([]);
     } else {
       await result;
-      expect(calls).toEqual(mode === 'current'
-        ? [[], ['/TEST-current', '2.0.32']]
-        : [[], ['/TEST-floor', '2.0.0'], ['/TEST-current', '2.0.32']]);
+      expect(calls).toEqual(mode === 'current' ? [[], current] : [[], floor, current]);
       expect(resolved).toEqual(mode === 'current' ? ['/TEST-current'] : ['/TEST-floor', '/TEST-current']);
     }
   }
@@ -1289,7 +1301,8 @@ it.each(['current-pass', 'current-fail', 'floor'] as const)(
     });
     const promise = verify(async () => ({}), () => owner.launchExplicitOpenCodeV2Run({ members: [{}],
       executionProbe: { memberId: 'probe', prepared: {} }, binding: { teamId }, deadline: returned.deadline }),
-    buildPlan, owner, control, spyOn, '/TEST-project', 'openrouter/TEST-model', scenario === 'floor' ? '2.0.0' : '2.0.32',
+    buildPlan, owner, control, spyOn, '/TEST-project', 'openrouter/TEST-model',
+    scenario === 'floor' ? { version: '2.0.0', wire: 'floor' } : { version: '2.0.32', wire: 'current' },
     (_phase: string, facts: Record<string, unknown>) => reports.push(facts), async () => undefined, () => undefined, fresh);
     if (scenario === 'current-fail') await expect(promise).rejects.toBe(primary);
     else await expect(promise).resolves.toMatchObject({ physicalStopConfirmed: true, modelSubmissionAttempted: false,

@@ -16,6 +16,7 @@ import {
   provePty,
   runtimeEnvironment,
   serverIdentity,
+  stagedOpenCodeV2Graphs,
   stagedFile,
 } from '../../../scripts/electron-builder/smokePackagedRuntime.ts';
 
@@ -137,28 +138,48 @@ describe('bundled runtime smoke contract', () => {
       }
     }));
 
-  it('uses the original package name for the floor alias and rejects graph substitution', () =>
+  it('uses the original package name for a graph alias and rejects graph substitution', () =>
     fixture((root) => {
-      const floor = path.join(root, 'node_modules/@opencode/server-v2-floor');
+      const floor = path.join(root, 'node_modules/@opencode/server-v2.0.0');
       fs.mkdirSync(floor, { recursive: true });
       fs.writeFileSync(path.join(floor, 'process.js'), '// fixture entry');
       fs.writeFileSync(
         path.join(floor, 'package.json'),
         JSON.stringify({ name: '@opencode/server', version: '2.0.0' })
       );
-      expect(
-        serverIdentity(path.join(floor, 'process.js'), '@opencode/server-v2-floor', root).version
-      ).toBe('2.0.0');
+      const graph = { version: '2.0.0', server: '@opencode/server-v2.0.0' };
+      expect(serverIdentity(path.join(floor, 'process.js'), graph, root).version).toBe('2.0.0');
       expect(() =>
-        serverIdentity(path.join(floor, 'process.js'), '@opencode/server', root)
+        serverIdentity(path.join(floor, 'process.js'), { version: '2.1.4', server: '@opencode/server-v2.1.4' }, root)
       ).toThrow('Wrong server graph version');
       fs.writeFileSync(
         path.join(floor, 'package.json'),
-        JSON.stringify({ name: '@opencode/server-v2-floor', version: '2.0.0' })
+        JSON.stringify({ name: '@opencode/server-v2.0.0', version: '2.0.0' })
       );
-      expect(() =>
-        serverIdentity(path.join(floor, 'process.js'), '@opencode/server-v2-floor', root)
-      ).toThrow('Unexpected package context');
+      expect(() => serverIdentity(path.join(floor, 'process.js'), graph, root)).toThrow(
+        'Unexpected package context'
+      );
+    }));
+
+  it('reads every staged graph from the runtime manifest and refuses a malformed one', () =>
+    fixture((root) => {
+      const manifest = path.join(root, 'local-cli/opencode-v2-graphs.json');
+      fs.mkdirSync(path.dirname(manifest), { recursive: true });
+      const graphs = ['2.0.0', '2.0.32', '2.1.4'].map((version) => ({
+        version,
+        server: `@opencode/server-v${version}`,
+      }));
+      fs.writeFileSync(manifest, JSON.stringify({ schema: 2, graphs, pty: '0.4.11' }));
+      expect(stagedOpenCodeV2Graphs(root)).toEqual({ graphs, pty: '0.4.11' });
+      for (const invalid of [
+        { schema: 1, pins: ['2.0.0'] },
+        { schema: 2, graphs: [], pty: '0.4.11' },
+        { schema: 2, graphs: [{ version: '2.1.4', server: '@opencode/server' }], pty: '0.4.11' },
+        { schema: 2, graphs, pty: 'latest' },
+      ]) {
+        fs.writeFileSync(manifest, JSON.stringify(invalid));
+        expect(() => stagedOpenCodeV2Graphs(root)).toThrow();
+      }
     }));
 
   it('matches declared platform, architecture, pinned Bun and both physical digests', () => {

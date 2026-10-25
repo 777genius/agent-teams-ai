@@ -2084,6 +2084,9 @@ After publication succeeds, update this repo's `runtime.lock.json`:
   `777genius/agent_teams_orchestrator_binaries`
 - `releaseTag`: the namespaced public runtime release tag, for example `runtime-v0.0.52`
 - each `assets.*.file`: replace the old runtime version suffix with the new one
+- `opencodeV2`: copy verbatim from the published manifest's `opencodeV2` (the runtime's
+  supported OpenCode V2 range and qualified versions). The app derives V2 recognition
+  and eligibility only from it.
 
 Then verify the lock points at real uploaded assets:
 

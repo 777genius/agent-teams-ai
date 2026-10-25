@@ -10,6 +10,7 @@ import { cn } from '@renderer/lib/utils';
 import {
   getUnsupportedAgentTeamsOpenCodeVersionMessage,
   isAgentTeamsOpenCodeVersionSupported,
+  isRecognizedOpenCodeV2Version,
 } from '@shared/utils/version';
 import {
   AlertTriangle,
@@ -341,6 +342,49 @@ const OpenCodeIgnoredOverrideNotice = ({
   );
 };
 
+/** On V2, free Zen models fail at run time; say so before the user picks one. */
+const OpenCodeV2LaunchNotice = ({
+  gate,
+  runtimeStatus,
+}: {
+  gate: RuntimeProviderQuickConnectGate;
+  runtimeStatus: OpenCodeRuntimeStatus | null;
+}): JSX.Element | null => {
+  const { t } = useAppTranslation('dashboard');
+  if (
+    gate !== 'ready' ||
+    !runtimeStatus?.installed ||
+    !isRecognizedOpenCodeV2Version(runtimeStatus.version)
+  ) {
+    return null;
+  }
+
+  return (
+    <div
+      data-testid="provider-quick-opencode-v2-launch"
+      role="status"
+      className="mb-3 flex min-w-0 items-start gap-2.5 rounded-lg border px-3 py-2.5"
+      style={{
+        borderColor: 'rgba(251, 191, 36, 0.32)',
+        backgroundColor: 'rgba(251, 191, 36, 0.06)',
+      }}
+    >
+      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-300" />
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold" style={{ color: 'var(--color-text)' }}>
+          {t('cliStatus.quickConnect.openCodeV2LaunchTitle', { version: runtimeStatus.version })}
+        </p>
+        <p
+          className="text-pretty text-[10.5px] leading-4"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
+          {t('cliStatus.quickConnect.openCodeV2LaunchDetail')}
+        </p>
+      </div>
+    </div>
+  );
+};
+
 const InlineNotice = ({ children }: { children: ReactNode }): JSX.Element => {
   return (
     <div
@@ -418,6 +462,8 @@ export const RuntimeProviderQuickConnectView = ({
       </div>
 
       <OpenCodeIgnoredOverrideNotice runtimeStatus={runtimeStatus} />
+
+      <OpenCodeV2LaunchNotice gate={gate} runtimeStatus={runtimeStatus} />
 
       <OpenCodePrerequisite
         gate={gate}

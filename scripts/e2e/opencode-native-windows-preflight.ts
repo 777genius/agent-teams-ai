@@ -1060,8 +1060,8 @@ async function snapshotStartupFailure(value: unknown, session: string, plan: unk
             if (!errorKinds.includes(kind) && errorKinds.length < 9) errorKinds.push(kind);
             if (kind === 'module_resolution') {
               const target = /Cannot find module ["'`]([^"'`]+)["'`]/.exec(message)?.[1];
-              moduleTargetRole = target === '@opencode/client' ? '@opencode/client' :
-                target === '@opencode/client-v2-floor' ? '@opencode/client-v2-floor' :
+              // Official clients are root or version-derived graph aliases (@opencode/client-v<version>).
+              moduleTargetRole = target && /^@opencode\/client(?:-v\d+\.\d+\.\d+)?$/.test(target) ? target :
                 target === '@modelcontextprotocol/sdk' || target?.startsWith('@modelcontextprotocol/sdk/') ? 'mcp_sdk' :
                 target === 'effect' || target?.startsWith('effect/') ? 'effect' : 'other';
               if (target && paths.win32.isAbsolute(target)) {
@@ -1201,7 +1201,7 @@ async function verifyProbePreparation(
     mockImplementation(fn: (plan: unknown) => Promise<never>): void;
     mockRestore(): void;
   },
-  projectPath: string, selectedModel: string, expectedVersion: string,
+  projectPath: string, selectedModel: string, pin: { version: string; wire: 'floor' | 'current' },
   report: (phase: 'owner_launch' | 'member_readiness' | 'fresh_original_owner' | 'physical_stop', facts: {
     launchCalls: number; ownerReturned: boolean; memberReady: boolean; memberCount: number; readyMemberCount: number;
     stopConfirmed: boolean; cleanupUnknown: boolean; freshOriginalOwnerBoundary: string;
@@ -1220,7 +1220,7 @@ async function verifyProbePreparation(
   };
   const selection = await inspect(envelope);
   const { randomUUID } = await import('node:crypto');
-  const roster = expectedVersion === '2.0.0' ? ['team-lead', 'alice'] : expectedVersion === '2.0.32' ? ['team-lead', 'alice', 'bob'] : [];
+  const roster = pin.wire === 'floor' ? ['team-lead', 'alice'] : pin.wire === 'current' ? ['team-lead', 'alice', 'bob'] : [];
   if (!roster.length) throw new Error('TEST probe preparation plan invalid');
   const { lstat, readdir, open, rename } = await import('node:fs/promises');
   const { join, isAbsolute } = await import('node:path');
@@ -1295,7 +1295,7 @@ async function verifyProbePreparation(
         if (readinessMs <= 0) throw new Error('TEST probe readiness budget exhausted');
         const ready = await control.awaitOpenCodeV2RunMemberReadiness(returnedOwner, {
           memberId: String(member.memberId), originalSessionId: String(member.originalSessionId),
-          selectedModel, selectedVariant: 'default', pin: expectedVersion,
+          selectedModel, selectedVariant: 'default', pin: pin.version,
         }, readinessMs);
         if (!ready) throw new Error('TEST probe member not ready');
         const memberStatus = record(ready);
@@ -1338,7 +1338,7 @@ async function verifyProbePreparation(
         }
         if (readinessFailed) throw readinessFailure;
         facts.memberReady = readyPids.size === members.length; update();
-        if (expectedVersion === '2.0.32') {
+        if (pin.wire === 'current') {
           phase = 'fresh_original_owner'; update();
           // Charge both the CLI watchdog/drain margin and original public Stop inside this deadline.
           const freshMs = Math.min(120_000, Math.floor(current.deadline - Date.now() - 30_000 - 25_000));
@@ -1442,9 +1442,16 @@ async function verifySelectedControllerRoot(
 
 assert.equal(process.platform, 'win32');
 assert.equal(process.versions.bun, '1.4.3');
-assert(process.argv.length === 7 || process.argv.length === 8);
-const versionSelection = process.argv[7] ?? 'all';
+// <sdk> <floor-binary> <current-binary> <model> <controller-node> <versions> <floor-pin> <current-pin>;
+// the pins come from the selected runtime registry (scripts/e2e/opencode-native-windows-pins.ts).
+assert(process.argv.length === 10, 'Windows preflight arguments invalid');
+const versionSelection = process.argv[7]!;
 assert(['all', 'v2', 'current'].includes(versionSelection), 'Unknown Windows preflight version selection');
+const [floorPin, currentPin] = [process.argv[8]!, process.argv[9]!];
+assert(
+  [floorPin, currentPin].every((pin) => /^2\.\d+\.\d+$/.test(pin)) && floorPin !== currentPin,
+  'Resolved Windows V2 pins invalid'
+);
 const selectedModel = process.argv[5]!;
 assert(/^openrouter\/[a-zA-Z0-9_./:~-]+$/.test(selectedModel), 'Explicit TEST selected model required for native startup, including source-only; no model prompts are submitted');
 const mcpNode = await realpath(path.resolve(process.argv[6]!));
@@ -1453,7 +1460,7 @@ const sdk = await realpath(path.resolve(process.argv[2]!));
 const resourcesPath = await realpath(path.resolve('resources'));
 // The desktop's real wrapper must be present so this gate exercises its binary projection.
 await realpath(path.join(resourcesPath, 'runtime', 'opencode-console', 'opencode.exe'));
-async function preflight(binary?: string, expectedVersion?: '2.0.0' | '2.0.32') {
+async function preflight(binary?: string, pin?: { version: string; wire: 'floor' | 'current' }) {
   const desktop = await prepareNativeDesktopEnvironment();
   if (binary) {
     desktop.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH = binary;
@@ -1545,7 +1552,7 @@ try {
  const freshCausal = await import(${JSON.stringify(pathToFileURL(path.resolve('src/main/services/team/opencode/bridge/OpenCodeStateChangingCausalFailure.ts')).href)});
  preparation = await (${verifyProbePreparation.toString()})(inspectOpenCodeV2SourceAvailability,
    resolveOpenCodeV2ExecutionProbe, buildOpenCodeV2InternalRunPlan, runOwner, control, spyOn, ${JSON.stringify(desktop.projectPath)},
-   ${JSON.stringify(selectedModel)}, ${JSON.stringify(expectedVersion)},
+   ${JSON.stringify(selectedModel)}, ${JSON.stringify(pin)},
    (phase, facts) => { stage=phase; startupFacts=facts; },
    async (record, session, plan, timing) => {
      if (timing === 'before_stop') {
@@ -1570,10 +1577,10 @@ try {
  // False readiness also opens the store: run it only AFTER the cold preparation.
  stage='readiness';
  await (${verifyModelFreeReadiness.toString()})(executeSelectedOpenCodeBridgeCommandEnvelope,
-   executeOpenCodeBridgeCommandEnvelope,${JSON.stringify(desktop.projectPath)},${JSON.stringify(expectedVersion)},${JSON.stringify(selectedModel)});`
+   executeOpenCodeBridgeCommandEnvelope,${JSON.stringify(desktop.projectPath)},${JSON.stringify(pin?.version)},${JSON.stringify(selectedModel)});`
      : ''
  }
- console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:true,stage,preparation,startupFacts,version:${JSON.stringify(expectedVersion ?? null)}}));
+ console.log('TEST_SOURCE_GATE=' + JSON.stringify({ok:true,stage,preparation,startupFacts,version:${JSON.stringify(pin?.version ?? null)}}));
 } catch (error) {
  const missing = /^readiness_file_missing:(owner_discovery|source_availability|execution_probe)$/.exec(error?.message ?? '');
  const match = /^execution_owner_not_private:(private_acl_owner(?:_run_(?:data_root|opencode|v2|runs|leaf))?):[0-9]{1,10}(?::private_dir_([0-9]{1,2}))?$/.exec(error?.message ?? '');
@@ -1627,10 +1634,9 @@ process.exit(exitCode);`;
   assert.equal(code, 0, 'Source discovery gate failed; do not package or submit model tasks');
 }
 await preflight();
-const pins = versionSelection === 'current'
-  ? [[process.argv[4]!, '2.0.32']] as const
-  : [[process.argv[3]!, '2.0.0'], [process.argv[4]!, '2.0.32']] as const;
-for (const [binary, version] of pins) {
+const floor = { binary: process.argv[3]!, pin: { version: floorPin, wire: 'floor' as const } };
+const current = { binary: process.argv[4]!, pin: { version: currentPin, wire: 'current' as const } };
+for (const { binary, pin } of versionSelection === 'current' ? [current] : [floor, current]) {
   assert(path.isAbsolute(binary));
-  await preflight(await realpath(binary), version);
+  await preflight(await realpath(binary), pin);
 }

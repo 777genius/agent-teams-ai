@@ -430,6 +430,43 @@ describe('RuntimeProviderQuickConnectView', () => {
     expect(notice?.textContent).toContain('unsupported native generation');
   });
 
+  it.each([
+    { name: 'a ready V2 runtime', version: '2.0.32', gate: 'ready' as const, shown: true },
+    { name: 'a V1 runtime', version: '1.19.4', gate: 'ready' as const, shown: false },
+    {
+      name: 'a V2 runtime that is not ready',
+      version: '2.0.32',
+      gate: 'error' as const,
+      shown: false,
+    },
+  ])('shows the V2 launch notice only for $name', async ({ version, gate, shown }) => {
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderQuickConnectView, {
+          cards: [card('supergrok')],
+          gate,
+          runtimeStatus: {
+            installed: true,
+            binaryPath: '/TEST/override/opencode',
+            version,
+            source: 'override',
+            state: 'ready',
+          },
+          directoryError: null,
+          onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
+          onRetryDirectory: vi.fn(),
+          onSetupLocalModel: vi.fn(),
+          onBrowseProviders: vi.fn(),
+        })
+      );
+    });
+
+    expect(host.querySelector('[data-testid="provider-quick-opencode-v2-launch"]') !== null).toBe(
+      shown
+    );
+  });
+
   it('keeps provider setup disabled until OpenCode is installed', async () => {
     const onOpenCodeProviderAction = vi.fn();
     await act(async () => {

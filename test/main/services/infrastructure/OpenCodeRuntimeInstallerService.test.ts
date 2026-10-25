@@ -10,7 +10,7 @@ vi.mock('@shared/utils/logger', async (importOriginal) => {
 });
 
 import { createHash } from 'crypto';
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'fs/promises';
+import { link, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -187,13 +187,15 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
   it.each([
     ['2.0.0', true],
     ['opencode v2.0.32', true],
-    ['2.0.21', false],
-    ['opencode v2.0.21', false],
-    ['opencode v2.0.26', false],
+    ['2.0.21', true],
+    ['opencode v2.0.21', true],
+    ['opencode v2.0.26', true],
+    ['2.1.4', true],
+    ['3.0.0', false],
     ['2.0.32-beta.1', false],
     ['2.0.32+build.7', false],
   ])(
-    'discovers only recognized native runtime versions on PATH (%s)',
+    'discovers native runtime versions recognized by the pinned range on PATH (%s)',
     async (version, supported) => {
       const binDir = path.join(tempRoot!, 'TEST-bin');
       await mkdir(binDir, { recursive: true });
@@ -207,16 +209,42 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     }
   );
 
+  it('prefers a qualified binary later on PATH over an unqualified V2 release', async () => {
+    // In the pinned range but qualified on no platform.
+    const unqualified = path.join(tempRoot!, 'TEST-bin-v2');
+    const qualified = path.join(tempRoot!, 'TEST-bin-v1');
+    for (const binDir of [unqualified, qualified]) {
+      await mkdir(binDir, { recursive: true });
+      await writeFile(path.join(binDir, 'opencode'), 'TEST native version probe', { mode: 0o755 });
+    }
+    execCliMock.mockImplementation(async (command: string) => ({
+      stdout: command.startsWith(unqualified) ? '2.999.0\n' : '1.18.3\n',
+      stderr: '',
+    }));
+    process.env.PATH = [unqualified, qualified].join(path.delimiter);
+    expect(await resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })).toBe(
+      path.join(qualified, 'opencode')
+    );
+    // Alone on PATH it is still discovered; launch refuses it with its qualification status.
+    clearOpenCodeRuntimeBinaryResolverCache();
+    process.env.PATH = unqualified;
+    expect(await resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })).toBe(
+      path.join(unqualified, 'opencode')
+    );
+  });
+
   it.each([
     ['2.0.0', true],
     ['opencode v2.0.32', true],
-    ['2.0.21', false],
-    ['opencode v2.0.21', false],
-    ['opencode v2.0.26', false],
+    ['2.0.21', true],
+    ['opencode v2.0.21', true],
+    ['opencode v2.0.26', true],
+    ['2.1.4', true],
+    ['3.0.0', false],
     ['2.0.32-beta.1', false],
     ['2.0.32+build.7', false],
   ])(
-    'discovers only recognized managed native runtime versions (%s)',
+    'discovers managed native runtime versions recognized by the pinned range (%s)',
     async (version, supported) => {
       const binaryPath = path.join(tempRoot!, 'TEST-managed-opencode');
       await writeFile(binaryPath, 'TEST native version probe', { mode: 0o755 });
@@ -249,10 +277,10 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     ['1.18.3', true],
     ['2.0.0', true],
     ['opencode v2.0.32', true],
-    ['2.0.21', false],
-    ['opencode v2.0.21', false],
+    ['2.0.21', true],
+    ['opencode v2.0.21', true],
     ['1.15.9', false],
-    ['2.0.22', false],
+    ['2.1.4', true],
     ['2.0.32-beta.1', false],
     ['2.0.32+unqualified', false],
     ['3.0.0', false],
@@ -372,8 +400,43 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       expect(fetch).not.toHaveBeenCalled();
     });
 
+    it('names the platform binary behind an npm wrapper override', async () => {
+      const platformName = process.platform === 'win32' ? 'windows' : process.platform;
+      const scope = path.join(tempRoot!, 'npm', 'node_modules', '@opencode');
+      const platformRoot = path.join(scope, `cli-${platformName}-${process.arch}`);
+      const platformBinary = path.join(
+        platformRoot,
+        'bin',
+        process.platform === 'win32' ? 'opencode.exe' : 'opencode'
+      );
+      const wrapperBinary = path.join(scope, 'cli', 'bin', 'opencode.exe');
+      await mkdir(path.dirname(platformBinary), { recursive: true });
+      await mkdir(path.dirname(wrapperBinary), { recursive: true });
+      await writeFile(
+        path.join(scope, 'cli', 'package.json'),
+        JSON.stringify({ name: '@opencode/cli', version: '2.0.32' })
+      );
+      await writeFile(
+        path.join(platformRoot, 'package.json'),
+        JSON.stringify({ name: `@opencode/cli-${platformName}-${process.arch}`, version: '2.0.32' })
+      );
+      await writeFile(platformBinary, 'TEST platform binary', { mode: 0o755 });
+      await link(platformBinary, wrapperBinary);
+      process.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH = wrapperBinary;
+      execCliMock.mockResolvedValue({ stdout: 'opencode v2.0.32\n', stderr: '' });
+
+      await expect(
+        new OpenCodeRuntimeInstallerService().getReadinessStatus()
+      ).resolves.toMatchObject({
+        installed: true,
+        binaryPath: await realpath(platformBinary),
+        version: '2.0.32',
+        source: 'override',
+      });
+    });
+
     it('names an unsupported override and its version next to the fallback binary', async () => {
-      mockOverrideVersion('opencode v2.1.4');
+      mockOverrideVersion('opencode v3.0.0');
 
       const status = await new OpenCodeRuntimeInstallerService().getReadinessStatus();
 
@@ -386,7 +449,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         ignoredOverride: {
           binaryPath: overridePath,
           envName: 'CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH',
-          version: '2.1.4',
+          version: '3.0.0',
         },
       });
       expect(status.ignoredOverride?.reason).toContain('unsupported native generation');
