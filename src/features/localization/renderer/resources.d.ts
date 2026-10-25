@@ -1228,8 +1228,10 @@ export default interface Resources {
         "install": "Install",
         "installing": "Installing",
         "openCodeTitle": "Install OpenCode runtime into app data",
+        "overrideSelection": "An explicit OpenCode binary override is active. Remove it to use an app-managed installation.",
         "retryInstall": "Retry install",
-        "update": "Update"
+        "update": "Update",
+        "v2Unavailable": "Compatible V2 is not available for this platform. V1 remains available."
       },
       "sponsorship": {
         "description": "Partner with or sponsor Agent Teams",

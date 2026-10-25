@@ -27,6 +27,38 @@ describe('ensureOpenCodeBridgeRuntimeBinaryEnv', () => {
     return binaryPath;
   }
 
+  it('does not rewrap a verified standalone V2 while refreshing owned bridge environments', async () => {
+    const native = await writeExecutable('standalone.exe');
+    await writeExecutable('runtime/opencode-console/opencode.exe');
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+    const originalResources = Object.getOwnPropertyDescriptor(process, 'resourcesPath');
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    Object.defineProperty(process, 'resourcesPath', { value: tempDir, configurable: true });
+    const targetEnv: NodeJS.ProcessEnv = { OPENCODE_CONSOLE_WRAPPER_TARGET: '/TEST/stale' };
+    const bridgeEnv: NodeJS.ProcessEnv = {};
+    const verify = vi.fn(
+      async (candidate: string, generation?: 'v1' | 'v2') =>
+        candidate === native && generation === 'v2'
+    );
+    try {
+      await ensureOpenCodeBridgeRuntimeBinaryEnv({
+        targetEnv,
+        bridgeEnv,
+        refreshAutoResolvedBinary: true,
+        resolveVerifiedOpenCodeRuntimeBinaryPath: async () => native,
+        isSupportedOpenCodeRuntimeBinaryPath: verify,
+      });
+      expect(targetEnv.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(native);
+      expect(bridgeEnv.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(native);
+      expect(targetEnv.OPENCODE_CONSOLE_WRAPPER_TARGET).toBeUndefined();
+      expect(verify).toHaveBeenCalledWith(native, 'v2');
+    } finally {
+      Object.defineProperty(process, 'platform', originalPlatform);
+      if (originalResources) Object.defineProperty(process, 'resourcesPath', originalResources);
+      else Reflect.deleteProperty(process, 'resourcesPath');
+    }
+  });
+
   it('makes an app-managed OpenCode binary visible to PATH-based bridge inventory', async () => {
     const binaryPath = path.join(process.cwd(), 'managed opencode', 'bin', 'opencode');
     const env: NodeJS.ProcessEnv = {

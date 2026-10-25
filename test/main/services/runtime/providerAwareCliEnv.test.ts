@@ -1269,6 +1269,42 @@ describe('buildProviderAwareCliEnv', () => {
     ).toHaveLength(1);
   });
 
+  it('passes a probe-verified Windows standalone V2 directly to owned launches', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'TEST-standalone-V2-env-'));
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+    const originalResources = Object.getOwnPropertyDescriptor(process, 'resourcesPath');
+    const wrapper = path.join(root, 'runtime', 'opencode-console', 'opencode.exe');
+    const native = path.join(root, 'user-selected.exe');
+    fs.mkdirSync(path.dirname(wrapper), { recursive: true });
+    fs.writeFileSync(wrapper, 'TEST console wrapper');
+    fs.writeFileSync(native, 'TEST standalone native');
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    Object.defineProperty(process, 'resourcesPath', { value: root, configurable: true });
+    isSupportedOpenCodeRuntimeBinaryPathMock.mockImplementation(
+      async (candidate, generation) =>
+        candidate === native && (generation === undefined || generation === 'v2')
+    );
+    try {
+      const { buildProviderAwareCliEnv } =
+        await import('@main/services/runtime/providerAwareCliEnv');
+      const result = await buildProviderAwareCliEnv({
+        providerId: 'opencode',
+        connectionMode: 'runtime-only',
+        env: { OPENCODE_BIN_PATH: native, OPENCODE_CONSOLE_WRAPPER_TARGET: '/TEST/stale' },
+      });
+      expect(isSupportedOpenCodeRuntimeBinaryPathMock).toHaveBeenCalledWith(native, 'v2');
+      expect(result.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(native);
+      expect(result.env.OPENCODE_BIN_PATH).toBe(native);
+      expect(result.env.OPENCODE_CONSOLE_WRAPPER_TARGET).toBeUndefined();
+      expect(fs.existsSync(path.join(path.dirname(wrapper), 'opencode.real.path'))).toBe(false);
+    } finally {
+      Object.defineProperty(process, 'platform', originalPlatform);
+      if (originalResources) Object.defineProperty(process, 'resourcesPath', originalResources);
+      else Reflect.deleteProperty(process, 'resourcesPath');
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('exposes an explicit OpenCode binary override on PATH when the app-managed resolver is cold', async () => {
     const explicitBinaryPath = path.join(process.cwd(), 'custom opencode', 'opencode');
 

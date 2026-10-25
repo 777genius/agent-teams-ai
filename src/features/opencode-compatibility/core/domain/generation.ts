@@ -1,5 +1,5 @@
 import {
-  isOpenCodeV2QualifiedVersion,
+  getOpenCodeV2EngineVersion,
   isOpenCodeV2RangeVersion,
   pinnedRuntimeShipsOpenCodeV2,
 } from './pinnedOpenCodeV2Contract';
@@ -69,12 +69,13 @@ export function classifyNativeVersion(raw: string): NativeVersionClassification 
   // V2 is recognized by the pinned runtime's range rule; build metadata cannot
   // establish an exact dialect. Eligibility follows the runtime's qualification data.
   if (normalizeOpenCodeVersionText(raw) === version && isOpenCodeV2RangeVersion(version)) {
+    const engine = getOpenCodeV2EngineVersion(version);
     return {
       kind: 'recognized',
       generation: 'v2',
-      apiDialect: `v2-${version}`,
+      apiDialect: `v2-${engine ?? version}`,
       version,
-      productionEligible: isOpenCodeV2QualifiedVersion(version),
+      productionEligible: engine !== null,
     };
   }
   return { kind: 'blocked', reason: parsed.major === 0 ? 'too_old' : 'unknown_generation' };

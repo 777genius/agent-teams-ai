@@ -4,7 +4,6 @@
  * Centralizes all store selectors and computed state for CLI installation.
  * Used by both CliStatusBanner (Dashboard) and CliStatusSection (Settings).
  */
-
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -14,6 +13,7 @@ import type {
   CliInstallationStatus,
   CliInstallerProviderStatusMode,
   CliProviderId,
+  OpenCodeRuntimeInstallOptions,
   OpenCodeRuntimeStatus,
 } from '@shared/types';
 
@@ -55,7 +55,7 @@ export function useCliInstaller(): {
   invalidateCliStatus: () => Promise<void>;
   installCli: () => void;
   fetchOpenCodeRuntimeStatus: () => Promise<void>;
-  installOpenCodeRuntime: () => Promise<void>;
+  installOpenCodeRuntime: (options?: OpenCodeRuntimeInstallOptions) => Promise<void>;
   invalidateOpenCodeRuntimeStatus: () => Promise<void>;
   fetchCodexRuntimeStatus: () => Promise<void>;
   installCodexRuntime: () => Promise<void>;
