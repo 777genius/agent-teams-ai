@@ -35,8 +35,8 @@ Target branch: `main`. The existing `v2.18.0` tag is reserved and must remain un
 
 Runtime gate:
 
-- Agent Teams runtime: `v0.0.139` with OpenCode V2 enabled. Publication and the verified manifest pin are pending.
-- Keep the existing `runtime.lock.json` until the published manifest, asset list, and `SHA256SUMS` have been verified.
+- Agent Teams runtime: `v0.0.139` with OpenCode V2 enabled, published from the reviewed immutable source tag.
+- `runtime.lock.json` matches the verified published manifest. All seven assets passed checksum/source-identity and anonymous-download checks.
 - Terminal Platform runtime: `v0.3.3`.
 - Confirm the final release target, installer asset names, signing, and updater metadata before publication.
 
@@ -2155,23 +2155,34 @@ Watch the returned run until it succeeds:
 gh run watch <RUN_ID> --repo 777genius/agent_teams_orchestrator
 ```
 
-After the draft build succeeds and the owner authorizes publication, run the
-supported publication mode on the same immutable source tag:
+After the draft build succeeds, follow the runtime repository's
+`docs/release-flow.md`: verify the exact seven draft assets, manifest source,
+archive checksums, and payload `VERSION`/`COMMIT_SHA`. Retain the verified draft
+release ID and asset identities. With owner authorization covering this release,
+promote that exact draft without rebuilding:
 
 ```bash
+# Use only the exact draft ID retained by artifact verification.
+gh api --method PATCH \
+  "repos/777genius/agent_teams_orchestrator_binaries/releases/$VERIFIED_DRAFT_ID" \
+  -F draft=false -F prerelease=false -f make_latest=false
+
 gh workflow run release-runtime.yml \
   --repo 777genius/agent_teams_orchestrator \
   --ref "v$RUNTIME_VERSION" \
   -f source_ref="v$RUNTIME_VERSION" \
   -f runtime_version="$RUNTIME_VERSION" \
-  -f publish_release=true \
+  -f publish_release=false \
   -f target_release_repo=777genius/agent_teams_orchestrator_binaries \
   -f target_release_tag="runtime-v$RUNTIME_VERSION"
 ```
 
-The current publication workflow rebuilds the platform archives and verifies
-public downloads. Wait for it to succeed before pinning checksums: the published
-manifest, rather than the earlier draft, is authoritative.
+The second workflow detects the public release, skips rebuilding, and verifies
+anonymous downloads. Wait for that gate before pinning the published manifest.
+Do not redispatch with `publish_release=true` to promote a verified draft: that
+path rebuilds archives and replaces the draft, invalidating retained evidence.
+This exact-ID promotion applies only to runtime assets; publish the app through
+its updater-aware workflow in step 5.
 
 After publication succeeds, update this repo's `runtime.lock.json`:
 
