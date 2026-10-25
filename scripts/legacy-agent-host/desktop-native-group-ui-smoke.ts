@@ -396,7 +396,7 @@ export async function runDesktopNativeGroupUiSmoke(
     });
     const key = String(
       await ui.waitRead(
-        `(() => {const rows=[...document.querySelectorAll('[data-timeline-row-key]')].filter(e=>[...e.querySelectorAll('p')].some(p=>p.textContent.trim()===${desktopJsLiteral(GROUP_REPLY)}));return rows.length===1&&rows[0].getAttribute('data-timeline-row-key');})()`,
+        `(() => {const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);const keys=new Set();let node;while(node=walker.nextNode()){if(node.textContent.trim()!==${desktopJsLiteral(GROUP_REPLY)})continue;const e=node.parentElement,row=e?.closest('[data-timeline-row-key]'),r=e?.getBoundingClientRect();if(row&&r?.width>0&&r.height>0)keys.add(row.getAttribute('data-timeline-row-key'));}return keys.size===1?[...keys][0]:null;})()`,
         'exact original reply row key'
       )
     );
