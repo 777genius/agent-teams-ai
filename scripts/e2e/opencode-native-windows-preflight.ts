@@ -515,8 +515,12 @@ async function verifyProbePreparation(
                 const stoppedMember = retired.find(value => value.memberId === member.memberId);
                 if (!stoppedMember || stoppedMember.cleanup === null || stoppedMember.cleanup === undefined) return false;
                 const cleanup = record(stoppedMember.cleanup);
+                // Windows retires descendants best effort (tree snapshot, taskkill /T, birth-matched
+                // survivors) and reports false honestly; only POSIX proves an empty process group.
+                const descendants = process.platform === 'win32'
+                  ? typeof cleanup.descendantsRetired === 'boolean' : cleanup.descendantsRetired === true;
                 return Array.isArray(stoppedMember.errors) && stoppedMember.errors.length === 0 &&
-                  cleanup.scopeClosed === true && cleanup.processRetired === true && cleanup.descendantsRetired === true &&
+                  cleanup.scopeClosed === true && cleanup.processRetired === true && descendants &&
                   (!readyPids.has(member.memberId) || cleanup.pid === readyPids.get(member.memberId));
               });
             if (stopped.kind !== 'stop' || stopped.state !== 'stopped' || stopped.ownerRetired !== true || !complete) {

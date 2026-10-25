@@ -807,7 +807,7 @@ it('drops a message family that is not a closed token even behind a widening cas
   );
 });
 
-it.each(['current-pass', 'current-fail', 'floor'] as const)(
+it.each(['current-pass', 'current-fail', 'floor', 'windows-best-effort', 'posix-unproven-descendants'] as const)(
   '%s preserves original Stop after readiness and the one fresh-owner observation', async (scenario) => {
     const source = await readFile('scripts/e2e/opencode-native-windows-preflight.ts', 'utf8');
     const ast = ts.createSourceFile('preflight.ts', source, ts.ScriptTarget.Latest, true);
@@ -824,7 +824,10 @@ it.each(['current-pass', 'current-fail', 'floor'] as const)(
     const injected = compiled.replace("import('node:fs/promises')", 'Promise.resolve(fakeFs)');
     const verify = compileFunction(`${injected}\nreturn verifyProbePreparation;`, ['process', 'fakeFs'], {
       importModuleDynamically: constants.USE_MAIN_CONTEXT_DEFAULT_LOADER,
-    })({ env: { CLAUDE_MULTIMODEL_DATA_HOME: '/TEST-data' } }, fsModule) as (...args: unknown[]) => Promise<unknown>;
+    })({ platform: scenario === 'windows-best-effort' ? 'win32' : 'linux', env: { CLAUDE_MULTIMODEL_DATA_HOME: '/TEST-data' } },
+      fsModule) as (...args: unknown[]) => Promise<unknown>;
+    // Windows reports best-effort descendant retirement as false; POSIX must prove it.
+    const descendantsRetired = scenario !== 'windows-best-effort' && scenario !== 'posix-unproven-descendants';
     const roster = scenario === 'floor' ? ['team-lead', 'alice'] : ['team-lead', 'alice', 'bob'];
     const teamId = 'TEST-execution-probe-' + 'a'.repeat(32);
     const binding = { teamId, runId: 'TEST-run', controllerInstanceId: 'TEST-controller', ownerId: 'TEST-owner' };
@@ -841,7 +844,7 @@ it.each(['current-pass', 'current-fail', 'floor'] as const)(
       requestOpenCodeV2Run: async (record: unknown, request: unknown, timeout: number) => {
         stops.push({ record, request, timeout }); events.push('stop');
         return { kind: 'stop', state: 'stopped', ownerRetired: true, members: roster.map((memberId, index) => ({
-          memberId, errors: [], cleanup: { scopeClosed: true, processRetired: true, descendantsRetired: true, pid: 100 + index } })) };
+          memberId, errors: [], cleanup: { scopeClosed: true, processRetired: true, descendantsRetired, pid: 100 + index } })) };
       } };
     const spyOn = (target: typeof owner, key: 'launchExplicitOpenCodeV2Run') => {
       const original = target[key]; return { mockImplementation: (fn: typeof original) => { target[key] = fn; },
@@ -859,12 +862,14 @@ it.each(['current-pass', 'current-fail', 'floor'] as const)(
     scenario === 'floor' ? { version: '2.0.0', wire: 'floor' } : { version: '2.0.32', wire: 'current' },
     (_phase: string, facts: Record<string, unknown>) => reports.push(facts), async () => undefined, () => undefined, fresh);
     if (scenario === 'current-fail') await expect(promise).rejects.toBe(primary);
+    else if (scenario === 'posix-unproven-descendants') await expect(promise).rejects.toThrow('TEST probe physical stop unconfirmed');
     else await expect(promise).resolves.toMatchObject({ physicalStopConfirmed: true, modelSubmissionAttempted: false,
       freshOriginalOwnerBoundary: scenario === 'floor' ? 'not_checked' : 'qualification_guard_reached' });
     expect(events).toEqual([...roster, ...(scenario === 'floor' ? [] : ['fresh']), 'stop']);
     expect(fresh).toHaveBeenCalledTimes(scenario === 'floor' ? 0 : 1);
     expect(stops).toEqual([{ record: returned, request: { operation: 'stop' }, timeout: 30_000 }]);
-    expect(reports.at(-1)).toMatchObject({ stopConfirmed: true, cleanupUnknown: false });
+    expect(reports.at(-1)).toMatchObject(scenario === 'posix-unproven-descendants'
+      ? { stopConfirmed: false, cleanupUnknown: true } : { stopConfirmed: true, cleanupUnknown: false });
   }
 );
 
