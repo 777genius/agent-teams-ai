@@ -833,6 +833,7 @@ it('current-only preflight never resolves or starts the floor pin and rejects un
   // The workflow passes the selected runtime registry's floor and newest Windows pins.
   for (const [mode, floorPin, currentPin] of [
     ['all', '2.0.0', '2.0.32'], ['v2', '2.0.0', '2.0.32'], ['current', '2.0.0', '2.0.32'], ['all', '2.0.0', '2.1.4'],
+    ['floor', '2.0.0', '2.1.4'],
     ['v1', '2.0.0', '2.0.32'], ['unknown', '2.0.0', '2.0.32'], ['all', '2.0.0', '2.0.0'], ['current', '2.0.0', '3.0.0'],
   ] as const) {
     const calls: unknown[][] = [], resolved: string[] = [];
@@ -841,6 +842,7 @@ it('current-only preflight never resolves or starts the floor pin and rejects un
     const run = compileFunction(`return (async () => { ${compiled} })();`, ['process', 'assert', 'path', 'realpath', 'preflight']);
     const result = run({ argv }, assert, path.posix, async (file: string) => {
       if (mode === 'current') assert.notEqual(file, '/TEST-floor');
+      if (mode === 'floor') assert.notEqual(file, '/TEST-current');
       resolved.push(file);
       return file;
     }, async (...args: unknown[]) => { calls.push(args); });
@@ -856,8 +858,9 @@ it('current-only preflight never resolves or starts the floor pin and rejects un
       expect(resolved).toEqual([]);
     } else {
       await result;
-      expect(calls).toEqual(mode === 'current' ? [[], current] : [[], floor, current]);
-      expect(resolved).toEqual(mode === 'current' ? ['/TEST-current'] : ['/TEST-floor', '/TEST-current']);
+      expect(calls).toEqual(mode === 'current' ? [[], current] : mode === 'floor' ? [[], floor] : [[], floor, current]);
+      expect(resolved).toEqual(mode === 'current' ? ['/TEST-current'] : mode === 'floor' ? ['/TEST-floor']
+        : ['/TEST-floor', '/TEST-current']);
     }
   }
 });

@@ -1446,7 +1446,7 @@ assert.equal(process.versions.bun, '1.4.3');
 // the pins come from the selected runtime registry (scripts/e2e/opencode-native-windows-pins.ts).
 assert(process.argv.length === 10, 'Windows preflight arguments invalid');
 const versionSelection = process.argv[7]!;
-assert(['all', 'v2', 'current'].includes(versionSelection), 'Unknown Windows preflight version selection');
+assert(['all', 'v2', 'current', 'floor'].includes(versionSelection), 'Unknown Windows preflight version selection');
 const [floorPin, currentPin] = [process.argv[8]!, process.argv[9]!];
 assert(
   [floorPin, currentPin].every((pin) => /^2\.\d+\.\d+$/.test(pin)) && floorPin !== currentPin,
@@ -1636,7 +1636,9 @@ process.exit(exitCode);`;
 await preflight();
 const floor = { binary: process.argv[3]!, pin: { version: floorPin, wire: 'floor' as const } };
 const current = { binary: process.argv[4]!, pin: { version: currentPin, wire: 'current' as const } };
-for (const { binary, pin } of versionSelection === 'current' ? [current] : [floor, current]) {
+// The workflow gates packaging on 'current' alone and runs 'floor' as a separate compatibility check.
+const selected = versionSelection === 'current' ? [current] : versionSelection === 'floor' ? [floor] : [floor, current];
+for (const { binary, pin } of selected) {
   assert(path.isAbsolute(binary));
   await preflight(await realpath(binary), pin);
 }
