@@ -135,7 +135,7 @@ test('FULL V2 preflight uses exact version and passive selected-provider invento
 
 test('FULL V2 preflight fails closed on unsupported versions and malformed or missing inventory', async () => {
   await withOwnedPreflight(async input => {
-    for (const version of ['2.0.21\n', '2.0.33\n', '2.0.32\n\n', ' 2.0.32\n', '2.0.32 extra', '02.0.32\n']) {
+    for (const version of ['3.0.0\n', '2.0.32-rc.1\n', '2.0.32\n\n', ' 2.0.32\n', '2.0.32 extra', '02.0.32\n']) {
       let calls = 0;
       const result = await preflightOpenCodeFullTeamEnvironment(input, { platform: 'darwin',
         legacyPreflight: () => assert.fail('unsupported version cannot fall back'),
