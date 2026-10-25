@@ -16,7 +16,8 @@ export function createOpenCodeGroupChatRunGetter(deps: {
   manifest: RuntimeStoreManifestReader;
   snapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot>;
 }) {
-  return async (teamName: string, memberName: string): Promise<GroupChatRun | null> => {
+  const pending = new Map<string, Promise<GroupChatRun | null>>();
+  async function probe(teamName: string, memberName: string): Promise<GroupChatRun | null> {
     try {
       const snapshot = await deps.snapshot(teamName);
       const member = snapshot.members[memberName];
@@ -112,5 +113,17 @@ export function createOpenCodeGroupChatRunGetter(deps: {
     } catch {
       return null;
     }
+  }
+  return (teamName: string, memberName: string): Promise<GroupChatRun | null> => {
+    const key = JSON.stringify([teamName, memberName]);
+    const existing = pending.get(key);
+    if (existing) return existing;
+    // Catalog polls, inbox events and multiple groups share only the active
+    // probe. Settled proofs are never cached; send/commit retain local fences.
+    const request = probe(teamName, memberName).finally(() => {
+      if (pending.get(key) === request) pending.delete(key);
+    });
+    pending.set(key, request);
+    return request;
   };
 }

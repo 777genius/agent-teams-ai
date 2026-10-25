@@ -1303,6 +1303,8 @@ describe('OpenCode group current-run admission', () => {
       let handshakes = 0;
       let writes = 0;
       let protocol: 1 | undefined = 1;
+      let releaseHandshake!: () => void;
+      const handshakeGate = new Promise<void>((resolve) => { releaseHandshake = resolve; });
       const proof = { teamName: 'sandbox', memberName: 'alice', runId: 'run-1', runKey: 'run-1',
         laneId: 'primary', runtimeSessionId: 'session-1', runtimePid: process.pid, processorReady: true };
       const getter = createOpenCodeGroupChatRunGetter({
@@ -1315,6 +1317,7 @@ describe('OpenCode group current-run admission', () => {
         handshake: { handshake: async () => {
           expect(writes, 'full handshake must stay outside the physical inbox write').toBe(0);
           handshakes++;
+          await handshakeGate;
           const handshake: OpenCodeBridgeHandshake = { schemaVersion: 1, requestId: 'test-handshake',
             client: clientIdentity, server: { ...clientIdentity, peer: 'agent_teams_orchestrator',
               bridgeProtocol: { ...clientIdentity.bridgeProtocol, groupChatProtocolVersion: protocol },
@@ -1326,7 +1329,15 @@ describe('OpenCode group current-run admission', () => {
           return handshake;
         } },
       });
-      const admitted = await getter('sandbox', 'alice');
+      const concurrent = Array.from({ length: 30 }, () => getter('sandbox', 'alice'));
+      await vi.waitFor(() => expect(handshakes).toBe(1));
+      releaseHandshake();
+      const admissions = await Promise.all(concurrent);
+      const admitted = admissions[0];
+      expect(admissions.every((value) => value === admitted)).toBe(true);
+      expect(handshakes).toBe(1);
+      await getter('sandbox', 'alice');
+      expect(handshakes).toBe(2); // Settled proofs must never be cached.
       expect(admitted).toMatchObject({ runKey: 'run-1', protocolVersion: 1, provider: 'opencode' });
       const writer = new TeamInboxWriter();
       const feature = createTeamGroupChatsFeature({
