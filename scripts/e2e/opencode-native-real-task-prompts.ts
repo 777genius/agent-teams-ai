@@ -56,6 +56,7 @@ export function verificationInstruction(command: string): string {
 
 /** A bare drive-qualified executable works in PowerShell, cmd and Git Bash.
  * Quoting the executable without PowerShell's & operator turns it into a string.
+ * Both paths are bare literals: cmd /c does not understand libuv quote escaping.
  * TEST staging must fail closed instead of guessing when a path needs escaping.
  */
 export function windowsVerificationCommand(executable: string, program: string): string {
@@ -64,9 +65,9 @@ export function windowsVerificationCommand(executable: string, program: string):
   const verifier = slash(program);
   assert(/^[A-Za-z]:\/[A-Za-z0-9_./-]+\/node\.exe$/i.test(node),
     'Cross-shell TEST Node path must be absolute and contain only literal characters');
-  assert(/^[A-Za-z]:\/[A-Za-z0-9_./ -]+\.cjs$/i.test(verifier),
+  assert(/^[A-Za-z]:\/[A-Za-z0-9_./-]+\.cjs$/i.test(verifier),
     'Cross-shell TEST verifier path must be absolute and contain only literal characters');
   assert(![node, verifier].some(value => value.split('/').some(part => part === '.' || part === '..')),
     'Canonical TEST command paths required');
-  return `${node} "${verifier}"`;
+  return `${node} ${verifier}`;
 }

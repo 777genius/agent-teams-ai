@@ -135,6 +135,12 @@ jobs:
           [IO.File]::Copy($source, $target, $false)
           if ((Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash -cne $expected -or (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -cne $expected) { throw 'TEST controller Node bytes changed' }
           "OPENCODE_NATIVE_TEST_NODE_PATH=$target" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Verify literal TEST commands in real Windows shells before SDK installation
+        if: ${{ !inputs.source_only && !inputs.provider_only }}
+        shell: pwsh
+        run: |
+          node scripts/e2e/opencode-native-windows-command.ts
+          if ($LASTEXITCODE -ne 0) { throw 'TEST verifier command syntax failed before SDK installation; no model task submitted' }
       - uses: actions/setup-python@v6
         if: ${{ !inputs.provider_only }}
         with:

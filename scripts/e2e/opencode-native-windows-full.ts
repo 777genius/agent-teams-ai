@@ -23,6 +23,7 @@ import { promisify } from 'node:util';
 import { parseSingleBridgeJsonResult, validateBridgeResultEnvelope } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import { projectV2NativeTranscript } from './opencode-native-v2-transcript';
 import { stageNativeTestNode } from './opencode-native-test-node';
+import { verifyWindowsCommandSyntax, type WindowsCommandSyntaxFact } from './opencode-native-windows-command';
 import {
   realTaskPrompt,
   verificationInstruction,
@@ -2182,6 +2183,7 @@ async function main() {
     sdkSelection: sdk === 'bundled' ? 'bundled without override' : 'explicit SDK override',
     ...bundled,
     nativeNodeDependency: null as null | { sha256: string; bytes: number },
+    commandSyntax: [] as WindowsCommandSyntaxFact[],
     inboxObservations: [] as Awaited<ReturnType<typeof inboxFacts>>[],
     taskFailureSnapshot: null as null | {
       unavailable: boolean;
@@ -2304,22 +2306,10 @@ async function main() {
     // Prove the literal command dialect before spending a model turn. The same
     // staged Node and command builder execute a TEST-only marker program.
     await checkpoint('command_syntax');
-    const syntaxMarker = `HOST_COMMAND_SYNTAX:${randomUUID()}`;
-    await writeFile(path.join(desktop.projectPath, 'host-command-syntax.cjs'),
-      `console.log(${JSON.stringify(syntaxMarker)});`);
-    const syntaxCommand = command('host-command-syntax.cjs');
-    const systemRoot = process.env.SystemRoot ?? process.env.SYSTEMROOT;
-    assert(systemRoot && path.isAbsolute(systemRoot), 'Windows system shell root required');
-    for (const [shell, args] of [
-      [path.join(systemRoot, 'System32/WindowsPowerShell/v1.0/powershell.exe'),
-        ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', syntaxCommand]],
-      [path.join(systemRoot, 'System32/cmd.exe'), ['/d', '/s', '/c', syntaxCommand]],
-    ] as const) {
-      const result = await execute(shell, [...args], {
-        cwd: desktop.projectPath, env: desktop.env, timeout: 20_000, maxBuffer: 16_384,
-      });
-      assert.equal(result.stdout.trim(), syntaxMarker, 'Literal TEST Node command did not execute');
-    }
+    await verifyWindowsCommandSyntax(testNode.executable, desktop.projectPath, desktop.env, async fact => {
+      proof.commandSyntax.push(fact);
+      await checkpoint('command_syntax');
+    });
     await testNode.verify();
 
     const checkSum = `const a=require('node:assert/strict');a.equal(process.platform,'win32');const sum=require('./sum.cjs');a.equal(sum([]),0);a.equal(sum([2,-5,7]),4);a.equal(sum([1.5,2.5]),4);a.equal(sum([-2,-3]),-5);for(const v of [null,[NaN],[Infinity],['1']])a.throws(()=>sum(v),TypeError);`;
