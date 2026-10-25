@@ -4,6 +4,7 @@ import {
   engineForNativeVersion,
   openCodeV2ContractCovers,
   openCodeV2ContractQualifies,
+  openCodeV2ContractShipsV2,
   openCodeV2PlatformKeys,
   readOpenCodeV2Contract,
 } from './openCodeV2Contract';
@@ -18,6 +19,11 @@ export function isOpenCodeV2RangeVersion(version: string): boolean {
   return (
     pinnedOpenCodeV2Contract !== null && openCodeV2ContractCovers(pinnedOpenCodeV2Contract, version)
   );
+}
+
+/** False for a pinned runtime released without OpenCode V2 (or a malformed contract). */
+export function pinnedRuntimeShipsOpenCodeV2(): boolean {
+  return pinnedOpenCodeV2Contract !== null && openCodeV2ContractShipsV2(pinnedOpenCodeV2Contract);
 }
 
 /** Exact engine qualification; retained for qualification harness callers. */

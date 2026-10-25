@@ -29,6 +29,100 @@ Before publishing:
 - Confirm the GitHub release title is exactly the tag (`v2.15.0`), not `Agent Teams v2.15.0`.
 - Keep the body in this document identical to the GitHub release body.
 
+## v2.18.1 (Prepared draft)
+
+Target branch: `main`. The existing `v2.18.0` tag is reserved and must remain unchanged.
+
+Runtime gate:
+
+- Agent Teams runtime: `v0.0.139` with OpenCode V2 enabled, published from the reviewed immutable source tag.
+- `runtime.lock.json` matches the verified published manifest. All seven assets passed checksum/source-identity and anonymous-download checks.
+- Terminal Platform runtime: `v0.3.3`.
+- Confirm the final release target, installer asset names, signing, and updater metadata before publication.
+
+Release body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.18.1 -->
+
+OpenCode setup now includes a separate V2 installer, while group chats and task folders make larger teams easier to organize.
+
+### What's New
+
+- Install OpenCode V2 from the app while keeping your existing V1 installation available.
+- Create named group chats where agents share tasks and route messages.
+- Organize tasks in nested folders with drag-and-drop.
+- Send files and view charts, tables, and Mermaid diagrams directly in teammate chats.
+- Choose your active Anthropic connection: subscription, API key, or compatible endpoint.
+- Assign gateway providers per teammate and track their usage.
+
+### Improvements
+
+- Use installed stable OpenCode 2.x versions with the bundled compatible engine.
+- Queue messages with Cmd or Ctrl+Enter, then edit, send, or remove them manually.
+- Send images and videos to OpenCode teammates when their models support them.
+- Team launch defaults Fast mode to Off unless you saved another preference.
+
+### Bug Fixes
+
+- Allow slow OpenCode provider connections to finish during first-time setup.
+- Deliver queued tasks and replies after OpenCode teammates relaunch.
+- Stop no longer reports failure after the team's agents have exited.
+- Use your configured Anthropic models with compatible endpoints.
+- Restore the saved team draft and Launch button after canceling a launch.
+- Update Electron and other dependencies with security fixes.
+
+### macOS installation
+
+macOS 2.18.1 requires macOS 13 or later. macOS 12 users can keep using the existing signed 2.17.1 builds.
+
+If you have signed macOS 2.17.1 installed, quit the app and install the appropriate 2.18.1 DMG over your existing app once. Your local settings, teams and projects stay in place. Automatic updates cannot perform this one-time migration.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.1/Agent.Teams.AI-2.18.1-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.1/Agent.Teams.AI-2.18.1-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.1/Agent.Teams.AI.Setup.2.18.1.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.1/Agent.Teams.AI.Setup.2.18.1-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.1/Agent.Teams.AI-2.18.1.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.1/agent-teams-ai_2.18.1_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.1/agent-teams-ai-2.18.1.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat&logoColor=white" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.18.1/agent-teams-ai-2.18.1.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+
+<!-- RELEASE_BODY_END v2.18.1 -->
+
 ## v2.18.0 (Prepared draft)
 
 Target branch: `main`.
@@ -1971,6 +2065,12 @@ The app suppresses update notifications for releases with those flags or markers
 
 ### 1. Prepare
 
+Follow [Git delivery policy](GIT_DELIVERY_POLICY.md). For a release explicitly
+covered by the owner's scoped exception, complete focused review and checks,
+then proceed without waiting for duplicate full PR CI. This exception is not a
+permanent bypass and does not change branch protection. Release builds, artifact
+verification, signing/notarization, and updater validation still run normally.
+
 ```bash
 # Make sure branch is clean and pushed
 git status
@@ -2055,23 +2155,34 @@ Watch the returned run until it succeeds:
 gh run watch <RUN_ID> --repo 777genius/agent_teams_orchestrator
 ```
 
-After the draft build succeeds and the owner authorizes publication, run the
-supported publication mode on the same immutable source tag:
+After the draft build succeeds, follow the runtime repository's
+`docs/release-flow.md`: verify the exact seven draft assets, manifest source,
+archive checksums, and payload `VERSION`/`COMMIT_SHA`. Retain the verified draft
+release ID and asset identities. With owner authorization covering this release,
+promote that exact draft without rebuilding:
 
 ```bash
+# Use only the exact draft ID retained by artifact verification.
+gh api --method PATCH \
+  "repos/777genius/agent_teams_orchestrator_binaries/releases/$VERIFIED_DRAFT_ID" \
+  -F draft=false -F prerelease=false -f make_latest=false
+
 gh workflow run release-runtime.yml \
   --repo 777genius/agent_teams_orchestrator \
   --ref "v$RUNTIME_VERSION" \
   -f source_ref="v$RUNTIME_VERSION" \
   -f runtime_version="$RUNTIME_VERSION" \
-  -f publish_release=true \
+  -f publish_release=false \
   -f target_release_repo=777genius/agent_teams_orchestrator_binaries \
   -f target_release_tag="runtime-v$RUNTIME_VERSION"
 ```
 
-The current publication workflow rebuilds the platform archives and verifies
-public downloads. Wait for it to succeed before pinning checksums: the published
-manifest, rather than the earlier draft, is authoritative.
+The second workflow detects the public release, skips rebuilding, and verifies
+anonymous downloads. Wait for that gate before pinning the published manifest.
+Do not redispatch with `publish_release=true` to promote a verified draft: that
+path rebuilds archives and replaces the draft, invalidating retained evidence.
+This exact-ID promotion applies only to runtime assets; publish the app through
+its updater-aware workflow in step 5.
 
 After publication succeeds, update this repo's `runtime.lock.json`:
 

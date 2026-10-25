@@ -22,7 +22,10 @@ strict, and unknown policy values are rejected. `openCodeV2Contract.ts`
 is the only policy over that contract (import-free, so Node-run proof and CI scripts
 load it too); `pinnedOpenCodeV2Contract.ts` binds it to the lock file and the current
 platform. Nothing here lists V2 versions, and a peer's readiness claim never
-qualifies a version. Recognition feeds native
+qualifies a version. A pinned runtime released without OpenCode V2 qualifies no
+version on any platform; then a V2 binary is still recognized (so its status can
+say why) but not served (`isOpenCodeVersionServedByRuntime`), and the provider
+quick connect treats it like an unsupported runtime. Recognition feeds native
 discovery (which prefers a qualified binary on PATH) and provider setup; it does not
 grant launch capabilities.
 No SDK, runtime, permission writer, native CAS, or transport

@@ -42,4 +42,4 @@ export const OpenCodeV2InstallAction = ({
       {t('cliStatus.runtimeInstall.install')} V2 {status.compatibleV2Version}
     </Button>
   );
-}
+};

@@ -1,4 +1,4 @@
-import { isRecognizedOpenCodeRuntimeVersion } from '@features/opencode-compatibility';
+import { isOpenCodeVersionServedByRuntime } from '@features/opencode-compatibility';
 import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
 
 import type { RuntimeProviderDirectoryEntryDto } from '../../contracts';
@@ -31,7 +31,7 @@ export function canManagedInstallChangeOpenCodeRuntime(
 
 export function isOpenCodeRuntimeUsable(runtimeStatus: OpenCodeRuntimeStatus | null): boolean {
   return (
-    runtimeStatus?.installed === true && isRecognizedOpenCodeRuntimeVersion(runtimeStatus.version)
+    runtimeStatus?.installed === true && isOpenCodeVersionServedByRuntime(runtimeStatus.version)
   );
 }
 

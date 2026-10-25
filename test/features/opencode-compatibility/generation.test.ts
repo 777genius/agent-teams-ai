@@ -17,6 +17,7 @@ import {
   engineForNativeVersion,
   openCodeV2ContractCovers,
   openCodeV2ContractQualifies,
+  openCodeV2ContractShipsV2,
   openCodeV2PlatformKeys,
   readOpenCodeV2Contract,
 } from '../../../src/features/opencode-compatibility/core/domain/openCodeV2Contract';
@@ -212,6 +213,50 @@ describe('pinned OpenCode V2 contract', () => {
     }
   });
 
+  it('treats a V2 binary as unserved when the pinned runtime ships without V2', async () => {
+    expect(openCodeV2ContractShipsV2(fixture)).toBe(true);
+    const withoutV2 = readOpenCodeV2Contract({
+      range: { minimum: '2.0.0', below: '3.0.0' },
+      qualified: { 'darwin-arm64': [], 'linux-x64': [], 'win32-x64': [] },
+    })!;
+    expect(openCodeV2ContractShipsV2(withoutV2)).toBe(false);
+    vi.resetModules();
+    vi.doMock('../../../runtime.lock.json', () => ({ default: { opencodeV2: withoutV2 } }));
+    try {
+      const generation =
+        await import('../../../src/features/opencode-compatibility/core/domain/generation');
+      const quickConnect =
+        await import('../../../src/features/runtime-provider-management/core/domain/runtimeProviderQuickConnect');
+      // Still recognized as V2 (so the status says why), but not served and not eligible.
+      expect(generation.classifyNativeVersion('2.0.32')).toMatchObject({
+        kind: 'recognized',
+        generation: 'v2',
+        productionEligible: false,
+      });
+      expect(generation.isOpenCodeVersionServedByRuntime('2.0.32')).toBe(false);
+      expect(generation.isOpenCodeVersionServedByRuntime('1.19.4')).toBe(true);
+      expect(
+        quickConnect.isOpenCodeRuntimeUsable({
+          installed: true,
+          version: '2.0.32',
+          source: 'path',
+          state: 'ready',
+        })
+      ).toBe(false);
+      expect(
+        quickConnect.isOpenCodeRuntimeUsable({
+          installed: true,
+          version: '1.19.4',
+          source: 'path',
+          state: 'ready',
+        })
+      ).toBe(true);
+    } finally {
+      vi.doUnmock('../../../runtime.lock.json');
+      vi.resetModules();
+    }
+  });
+
   it('classifies eligibility from the pinned records on every release platform', () => {
     const recognized = [...new Set(Object.values(pinnedQualified).flat()), '2.999.0'];
     let eligible = 0;
@@ -227,8 +272,10 @@ describe('pinned OpenCode V2 contract', () => {
         else ineligible++;
       }
     });
-    // Both outcomes are exercised by the pinned data itself.
-    expect(eligible).toBeGreaterThan(0);
+    // Eligibility exists exactly when the pinned runtime qualifies a version (none without V2).
+    expect(eligible > 0).toBe(
+      Object.values(pinnedQualified).some((versions) => versions.length > 0)
+    );
     expect(ineligible).toBeGreaterThan(0);
   });
 
