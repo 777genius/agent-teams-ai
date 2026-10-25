@@ -1072,3 +1072,39 @@ it('preflight failure receipt keeps closed provider diagnostics and drops paths'
     await rm(root, { recursive: true, force: true });
   }
 });
+
+it('FULL failure proof keeps closed inbox facts without message text or paths', async () => {
+  const source = await readFile('scripts/e2e/opencode-native-windows-full.ts', 'utf8');
+  const ast = ts.createSourceFile('full.ts', source, ts.ScriptTarget.Latest, true);
+  const declaration = ast.statements.filter(ts.isFunctionDeclaration)
+    .find((node) => node.name?.text === 'inboxFacts')!;
+  const compiled = ts.transpileModule(declaration.getText(ast), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+  }).outputText;
+  const facts = compileFunction(`${compiled}\nreturn inboxFacts;`, ['path', 'lstat', 'readFile'])(
+    path, lstat, readFile) as (root: string, team: string, member: string) => Promise<Record<string, unknown>>;
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'TEST-inbox-facts-')));
+  try {
+    const inboxes = path.join(root, 'teams', 'TEST-team', 'inboxes');
+    await mkdir(inboxes, { recursive: true });
+    const longId = 'work-sync-still-stuck-' + 'a'.repeat(220);
+    await writeFile(path.join(inboxes, 'alice.json'), JSON.stringify([
+      { from: 'team-lead', to: 'alice', text: 'PRIVATE task text C:\\Users\\PRIVATE', timestamp: '2026-10-25T15:49:00.123Z',
+        read: true, messageId: longId, source: 'runtime_delivery', workSyncIntent: 'agenda_sync' },
+      { from: 'user /PRIVATE', text: 'PRIVATE', timestamp: 'yesterday', read: false, messageId: 'id with space' },
+    ]));
+    const result = await facts(root, 'TEST-team', 'alice');
+    expect(result).toEqual({ member: 'alice', observation: 'read', count: 2, messages: [
+      { from: 'team-lead', to: 'alice', at: '2026-10-25T15:49:00.123Z', read: true, source: 'runtime_delivery',
+        messageKind: null, workSyncIntent: 'agenda_sync', idLength: longId.length, idPrefix: longId.slice(0, 40) },
+      { from: 'redacted', to: null, at: null, read: false, source: null, messageKind: null, workSyncIntent: null,
+        idLength: 13, idPrefix: 'redacted' },
+    ] });
+    expect(JSON.stringify(result)).not.toContain('PRIVATE');
+    expect(await facts(root, 'TEST-team', 'bob')).toEqual({ member: 'bob', observation: 'missing' });
+    await writeFile(path.join(inboxes, 'carol.json'), '{"not":"an array"}');
+    expect(await facts(root, 'TEST-team', 'carol')).toEqual({ member: 'carol', observation: 'invalid' });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
