@@ -244,3 +244,20 @@ native PID/group отсутствуют. Сохранены оба исходн�
 попытка. Это один existing UTF8/LF update; create/delete/rename, multifile,
 CRLF, failed/background attribution и Codex Desktop Changes UI не заявлены.
 **M13 и весь этап 1 остаются открытыми.**
+
+### Scoped group UI, 25 октября
+
+[Фактический групповой сценарий](evidence/m05-existing-group-native-ui-handoff.json)
+прошёл через существующие controls: Create с фиксированными Alice/Bob → направленное
+сообщение Alice → native MCP Create из исходного сообщения, ACK и reply Bob →
+Bob ACK → реакция пользователя → archive/read-only → renderer reload → restore →
+удаление только человеческой реакции → обычный Stop обоих участников.
+Проверены точные logical/physical IDs, current generation/run keys, inbox/outbox,
+исходные receipts и по одному успешному native input на участника; семь запросов
+localhost-модели выполнены настоящими закреплёнными Claude SDK/CLI.
+
+Исходный runner PASS/exit0; retained 2574 файла, Host отсутствует, writer lock
+освобождён, оба native-сеанса closed/released до Quit. Dev-обёртка завершена scoped
+SIGTERM после закрытия Host: естественный Quit этим результатом не заявляется.
+Это часть M05/M07/M18 для двух Claude actors; mixed-provider группы, остальные
+провайдеры и полный этап 1 остаются отдельными незавершёнными требованиями.

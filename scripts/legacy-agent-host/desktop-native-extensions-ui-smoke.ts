@@ -286,10 +286,10 @@ export async function runDesktopNativeExtensionsUiSmoke(
   await click(
     "button",
     "run original MCP diagnostic control",
-    "Check status",
+    "Check Status",
   );
   await ui.waitRead(
-    `(() => {const s=window.__agentTeamsDevStore?.getState(),b=[...document.querySelectorAll('button')].find(e=>e.textContent.trim()==='Check status');return b&&!b.disabled&&!s.mcpDiagnosticsError&&Object.values(s.mcpDiagnosticsErrorByProjectPath??{}).every(value=>!value)&&document.querySelector('.mcp-diagnostics-list')?.textContent.includes(${desktopJsLiteral(extensionMcpName)})})()`,
+    `(() => {const s=window.__agentTeamsDevStore?.getState(),b=[...document.querySelectorAll('button')].find(e=>e.textContent.trim()==='Check Status');return b&&!b.disabled&&!s.mcpDiagnosticsError&&Object.values(s.mcpDiagnosticsErrorByProjectPath??{}).every(value=>!value)&&document.querySelector('.mcp-diagnostics-list')?.textContent.includes(${desktopJsLiteral(extensionMcpName)})})()`,
     "original native CLI diagnostics expose configured TEST server",
     60_000,
   );
