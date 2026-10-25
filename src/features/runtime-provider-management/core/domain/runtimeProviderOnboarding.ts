@@ -397,17 +397,27 @@ export function resolveRuntimeProviderOnboardingPlan(
 }
 
 /**
- * Guard: route integrations are used only when the runtime lists one of them in its provider
- * directory, because only then does it serve their setup form and connection state. Until
- * then a V2 plan connects through its own provider id, the same path as V1.
+ * Whether the pinned runtime serves V2 route integrations: lists them in its provider
+ * directory and returns their key setup form. Runtime 0.0.137 does neither. Set to true in
+ * the PR that bumps runtime.lock.json to a runtime that does.
+ */
+export const OPENCODE_V2_ROUTE_INTEGRATIONS_SERVED = false;
+
+/**
+ * Guard: route integrations are used only on V2 when the runtime serves them and its directory
+ * lists one of the plan's routes. Otherwise a V2 plan connects through its own provider id,
+ * the same path as V1.
  */
 export function resolveRuntimeProviderOnboardingRouteGeneration(
   plan: RuntimeProviderOnboardingPlan,
   generation: OpenCodeGeneration,
-  directoryEntries: readonly Pick<RuntimeProviderDirectoryEntryDto, 'providerId'>[]
+  directoryEntries: readonly Pick<RuntimeProviderDirectoryEntryDto, 'providerId'>[],
+  routesServed: boolean
 ): OpenCodeGeneration {
   const listed = new Set(directoryEntries.map((entry) => entry.providerId.toLowerCase()));
-  return generation === 'v2' && plan.routes?.some((route) => listed.has(route.v2ProviderId))
+  return routesServed &&
+    generation === 'v2' &&
+    plan.routes?.some((route) => listed.has(route.v2ProviderId))
     ? 'v2'
     : 'v1';
 }
@@ -432,7 +442,13 @@ export function findRuntimeProviderOnboardingPlanEntry(
   entries: readonly RuntimeProviderDirectoryEntryDto[]
 ): RuntimeProviderDirectoryEntryDto | null {
   const plan = getRuntimeProviderOnboardingPlan(planId);
-  const planEntries = getRuntimeProviderOnboardingPlanProviderIds(plan, generation).flatMap(
+  const routeGeneration = resolveRuntimeProviderOnboardingRouteGeneration(
+    plan,
+    generation,
+    entries,
+    OPENCODE_V2_ROUTE_INTEGRATIONS_SERVED
+  );
+  const planEntries = getRuntimeProviderOnboardingPlanProviderIds(plan, routeGeneration).flatMap(
     (providerId) =>
       entries.find((entry) => entry.providerId.trim().toLowerCase() === providerId) ?? []
   );

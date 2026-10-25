@@ -11,6 +11,17 @@ vi.mock('@renderer/posthog', () => ({
   capturePostHogEvent: posthogMocks.capturePostHogEvent,
 }));
 
+// Route tests describe a runtime that serves V2 route integrations; the directory still decides.
+vi.mock(
+  '../../../../src/features/runtime-provider-management/core/domain',
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import('../../../../src/features/runtime-provider-management/core/domain')
+    >()),
+    OPENCODE_V2_ROUTE_INTEGRATIONS_SERVED: true,
+  })
+);
+
 import {
   completeRuntimeProviderOnboardingPlan,
   createRuntimeProviderOnboardingProgress,

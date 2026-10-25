@@ -1,5 +1,6 @@
 import {
   getRuntimeProviderOnboardingPlanProviderIds,
+  OPENCODE_V2_ROUTE_INTEGRATIONS_SERVED,
   resolveRuntimeProviderOnboardingRouteGeneration,
 } from '../../core/domain';
 
@@ -62,7 +63,8 @@ export function getOnboardingRouteState(
   const routeGeneration = resolveRuntimeProviderOnboardingRouteGeneration(
     plan,
     generation,
-    state.directoryEntries
+    state.directoryEntries,
+    OPENCODE_V2_ROUTE_INTEGRATIONS_SERVED
   );
   const connectedRouteProviderId =
     getRuntimeProviderOnboardingPlanProviderIds(plan, routeGeneration).find(

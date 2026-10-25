@@ -14,6 +14,7 @@ import {
   normalizeRuntimeProviderOnboardingProgress,
   rankRecommendedRuntimeProviderModels,
   resolveRuntimeProviderOnboardingPlan,
+  OPENCODE_V2_ROUTE_INTEGRATIONS_SERVED,
   resolveRuntimeProviderOnboardingRouteGeneration,
   resolveXiaomiMiMoTokenPlanProvider,
   selectRecommendedRuntimeProviderModel,
@@ -410,23 +411,23 @@ describe('Kimi Code routes by OpenCode generation', () => {
 
 describe('Kimi Code route guard', () => {
   const plan = getRuntimeProviderOnboardingPlan('kimi-code-membership');
+  const routes = [{ providerId: 'kimi-for-coding' }, { providerId: 'Kimi-Code-Plan-Global' }];
 
-  it('uses routes on V2 only when the runtime lists a route integration', () => {
+  it('keeps routes off while the pinned runtime does not serve them', () => {
+    expect(OPENCODE_V2_ROUTE_INTEGRATIONS_SERVED).toBe(false);
+    expect(resolveRuntimeProviderOnboardingRouteGeneration(plan, 'v2', routes, false)).toBe('v1');
+  });
+
+  it('uses routes on V2 only when the runtime serves and lists a route integration', () => {
     expect(
-      resolveRuntimeProviderOnboardingRouteGeneration(plan, 'v2', [
-        { providerId: 'kimi-for-coding' },
-      ])
+      resolveRuntimeProviderOnboardingRouteGeneration(
+        plan,
+        'v2',
+        [{ providerId: 'kimi-for-coding' }],
+        true
+      )
     ).toBe('v1');
-    expect(
-      resolveRuntimeProviderOnboardingRouteGeneration(plan, 'v2', [
-        { providerId: 'kimi-for-coding' },
-        { providerId: 'Kimi-Code-Plan-Global' },
-      ])
-    ).toBe('v2');
-    expect(
-      resolveRuntimeProviderOnboardingRouteGeneration(plan, 'v1', [
-        { providerId: 'kimi-code-plan-global' },
-      ])
-    ).toBe('v1');
+    expect(resolveRuntimeProviderOnboardingRouteGeneration(plan, 'v2', routes, true)).toBe('v2');
+    expect(resolveRuntimeProviderOnboardingRouteGeneration(plan, 'v1', routes, true)).toBe('v1');
   });
 });
