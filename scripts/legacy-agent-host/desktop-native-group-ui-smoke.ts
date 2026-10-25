@@ -166,7 +166,7 @@ export async function runDesktopNativeGroupUiSmoke(
     await ui.scrollTo(selector, label);
     await ui.click(selector, label);
     await ui.waitRead(
-      `(() => {const header=document.querySelector(${desktopJsLiteral(back)})?.parentElement;const titles=[...(header?.querySelectorAll(':scope > span.text-sm')??[])].filter(e=>e.textContent.trim()===${desktopJsLiteral(group.name)}&&e.getBoundingClientRect().width>0);return titles.length===1&&Boolean(document.querySelector(${desktopJsLiteral(composer)}))&&!document.querySelector('[data-testid="group-chat-list"]');})()`,
+      `(() => {const header=document.querySelector(${desktopJsLiteral(back)})?.parentElement;const titles=[...(header?.querySelectorAll(':scope > span.text-sm')??[])].filter(e=>e.textContent.trim()===${desktopJsLiteral(group.name)}&&e.getBoundingClientRect().width>0);const list=document.querySelector('[data-testid="group-chat-list"]')?.getBoundingClientRect();return titles.length===1&&Boolean(document.querySelector(${desktopJsLiteral(composer)}))&&(!list||list.width===0||list.height===0);})()`,
       label + ' exact group header and Composer'
     );
   };
