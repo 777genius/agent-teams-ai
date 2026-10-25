@@ -21,7 +21,8 @@ export function admitsManagementHttp(
 
 export function registerExtensionManagementHttp(
   app: FastifyInstance,
-  feature: ExtensionManagementFeature
+  feature: ExtensionManagementFeature,
+  authorize: (authorization?: string) => boolean = () => false
 ): void {
   const admission = async (request: FastifyRequest, reply: FastifyReply) => {
     const address = app.server.address();
@@ -42,6 +43,13 @@ export function registerExtensionManagementHttp(
         preHandler: admission,
       },
       async (request, reply) => {
+        if (!authorize(request.headers.authorization)) {
+          const reason =
+            'Open this page using the browser link in the Agent Teams desktop app to manage extensions.';
+          return method === 'hostStatus'
+            ? { available: false, reason }
+            : reply.code(401).send({ code: 'MANAGEMENT_AUTH_REQUIRED', error: reason });
+        }
         try {
           // Each facade method validates its own input before selecting captured authority.
           const call = feature[method] as (input: unknown) => Promise<unknown>;

@@ -33,6 +33,11 @@ dependencies.
    Startup/profile drift and runtime mutation admission are host responsibilities.
 6. Vendor an exact SDK tarball and build native UAP from the same reviewed source
    commit during packaging. No public package release is implied by integration.
+7. Authenticate managed HTTP with an ephemeral sidecar capability, issued only
+   through owned-window IPC and the existing browser-link action. Keep it separate
+   from the private Go credential; revoke it with the sidecar and scope browser
+   possession to its tab and exact origin. Host/Origin checks remain additional
+   admission checks, not a replacement for this authority.
 
 ## Consequences and limits
 

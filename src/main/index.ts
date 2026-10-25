@@ -2001,6 +2001,7 @@ async function initializeServices(): Promise<void> {
   teamDataService.setTaskGroupChatCatalog((teamName) => teamGroupChatsFeature.list({ teamName }));
   extensionManagement = createElectronExtensionManagement({
     getMainWindow: () => mainWindow,
+    getManagementBrowserUrl: () => httpServer.getManagementBrowserUrl(),
     isLocal: () => contextRegistry.getActive().type === 'local',
     aliveTeams: () => teamProvisioningService.getAliveTeams(),
     savedRequest: (name) => teamDataService.getSavedRequest(name),

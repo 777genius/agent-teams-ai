@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 
+import { MANAGEMENT_ACCESS_CHANGED } from '../../contracts';
+
 import type {
   ExtensionClient,
   ExtensionContext,
@@ -26,6 +28,11 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
   const backend = useMemo(() => api.extensionManagement, []);
   const [client, setClient] = useState<ExtensionClient>('claude');
   const [captureRevision, setCaptureRevision] = useState(0);
+  useEffect(() => {
+    const reacquire = () => setCaptureRevision((revision) => revision + 1);
+    window.addEventListener(MANAGEMENT_ACCESS_CHANGED, reacquire);
+    return () => window.removeEventListener(MANAGEMENT_ACCESS_CHANGED, reacquire);
+  }, []);
   const [context, setContext] = useState<ExtensionContext | null>(null);
   const [catalog, setCatalog] = useState<ManagementCatalog | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(false);

@@ -1,4 +1,5 @@
 export { ExtensionRuntimeGate } from '../core/application/ExtensionRuntimeGate';
+export { ManagementHttpCapability } from './infrastructure/ManagementHttpCapability';
 export type {
   CapturedExtensionEnvironment,
   ExtensionContextResolver,

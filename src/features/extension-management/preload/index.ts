@@ -7,6 +7,7 @@ export function createExtensionManagementBridge(
   ipc: Pick<IpcRenderer, 'invoke'>
 ): ExtensionManagementAPI {
   return {
+    browserAccess: () => ipc.invoke(extensionManagementChannel('browserAccess')),
     previewSkillCopy: (request) =>
       ipc.invoke(extensionManagementChannel('previewSkillCopy'), request),
     skillCopySources: (request) =>

@@ -233,7 +233,7 @@ function gatewayUnavailable(): never {
 
 export class HttpAPIClient implements ElectronAPI {
   get extensionManagement() {
-    return createExtensionManagementHttpClient(this.baseUrl);
+    return createExtensionManagementHttpClient(this.baseUrl, this.managementCapability);
   }
   gatewayProvider: GatewayProviderApi = {
     listGatewayProfiles: async () => [],
@@ -298,8 +298,10 @@ export class HttpAPIClient implements ElectronAPI {
     },
   };
 
-  constructor(baseUrl: string) {
+  private readonly managementCapability?: () => string | undefined;
+  constructor(baseUrl: string, managementCapability?: () => string | undefined) {
     this.baseUrl = baseUrl;
+    this.managementCapability = managementCapability;
     this.initEventSource();
   }
 

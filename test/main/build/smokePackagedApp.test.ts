@@ -623,7 +623,7 @@ describe.skipIf(process.platform === 'win32')('packaged smoke child isolation', 
         });
         expect(result.error).toBeUndefined();
         expect(result.stdout + result.stderr).not.toContain('TEST isolation failure');
-        expect(result.status).toBe(contract === 'valid' ? 0 : 1);
+        expect(result.status, result.stdout + result.stderr).toBe(contract === 'valid' ? 0 : 1);
         expect(result.stdout.includes(`[smokePackaged${kind}] OK`)).toBe(contract === 'valid');
         if (contract === 'invalid') {
           expect(result.stderr).toContain(

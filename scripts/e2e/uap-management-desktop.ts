@@ -46,6 +46,7 @@ let app: ChildProcess | undefined;
 let cdp: DesktopCdp | undefined;
 let publisher: https.Server | undefined;
 let version = 1;
+let previousHttpAuthorization: string | undefined;
 const skillName = 'uap-ui-demo';
 const imageBytes = Buffer.from([0, 255, 128, 0, 22, 44]);
 
@@ -488,12 +489,35 @@ async function environment(): Promise<ManagementEnvironment> {
 async function verifyHttp(f: Awaited<ReturnType<typeof fixture>>) {
   const origin = `http://127.0.0.1:${f.httpPort}`;
   const route = `${origin}/api/extension-management`;
+  const accessUrl = await cdp!.evaluate('window.electronAPI.extensionManagement.browserAccess()');
+  assert.equal(typeof accessUrl, 'string');
+  const grant = new URL(accessUrl as string);
+  assert.equal(grant.origin, origin);
+  const token = new URLSearchParams(grant.hash.slice(1)).get('management-access');
+  assert(token && /^[a-f0-9]{64}$/.test(token), 'Owned IPC must issue a sidecar capability');
+  const authorization = `Bearer ${token}`;
+  previousHttpAuthorization = authorization;
   const post = (method: string, input: unknown, extra: Record<string, string> = {}) =>
     fetch(`${route}/${method}`, {
       method: 'POST',
-      headers: { Origin: origin, 'Content-Type': 'application/json', ...extra },
+      headers: {
+        Origin: origin,
+        'Content-Type': 'application/json',
+        Authorization: authorization,
+        ...extra,
+      },
       body: JSON.stringify(input),
     });
+  for (const missing of ['', 'Bearer invalid', `Bearer ${'0'.repeat(64)}`]) {
+    const refused = await post(
+      'capture',
+      { client: 'opencode', scope: 'user' },
+      { Authorization: missing }
+    );
+    assert.equal(refused.status, 401, 'Forged local headers must not grant management authority');
+  }
+  const viewer = await post('hostStatus', {}, { Authorization: '' });
+  assert.equal(((await viewer.json()) as { available: boolean }).available, false);
   const status = await post('hostStatus', {});
   assert.equal(status.status, 200, await status.text());
   const capture = await post('capture', { client: 'opencode', scope: 'user' });
@@ -512,6 +536,8 @@ async function verifyHttp(f: Awaited<ReturnType<typeof fixture>>) {
     sameEnvironment: result.entries.map((entry) => entry.alias),
     rejectedOrigin: true,
     rejectedHost: true,
+    ownedIpcCapability: true,
+    rejectedMissingAndForgedCapability: true,
   };
   async function call<T>(method: string, input: unknown): Promise<T> {
     const response = await post(method, input);
@@ -615,6 +641,17 @@ async function localSkillLifecycle(f: Awaited<ReturnType<typeof fixture>>, copie
   );
   await stop(f.root);
   await start(f);
+  const stale = await fetch(`http://127.0.0.1:${f.httpPort}/api/extension-management/capture`, {
+    method: 'POST',
+    headers: {
+      Origin: `http://127.0.0.1:${f.httpPort}`,
+      'Content-Type': 'application/json',
+      Authorization: previousHttpAuthorization ?? '',
+    },
+    body: JSON.stringify({ client: 'opencode', scope: 'user' }),
+  });
+  assert.equal(stale.status, 401, 'The previous sidecar capability must expire on restart');
+  evidence.httpCapabilityRevokedOnRestart = true;
   await openSkills();
   const restore = `${panel}.querySelector('[data-testid=uap-restore-points]')`;
   await click(`${restore}?.querySelector('summary')`);

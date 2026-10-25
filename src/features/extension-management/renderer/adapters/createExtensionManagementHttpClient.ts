@@ -2,11 +2,18 @@ import { EXTENSION_MANAGEMENT_ROUTE } from '../../contracts';
 
 import type { ExtensionManagementAPI } from '../../contracts';
 
-export function createExtensionManagementHttpClient(baseUrl: string): ExtensionManagementAPI {
+export function createExtensionManagementHttpClient(
+  baseUrl: string,
+  capability?: string | (() => string | undefined)
+): ExtensionManagementAPI {
   async function post<T>(method: keyof ExtensionManagementAPI, request: unknown): Promise<T> {
+    const token = typeof capability === 'function' ? capability() : capability;
     const response = await fetch(`${baseUrl}${EXTENSION_MANAGEMENT_ROUTE}/${method}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify(request),
     });
     if (!response.ok) {

@@ -54,6 +54,8 @@ export interface ExtensionContextRequest {
   contextId: string;
 }
 export interface ExtensionManagementAPI {
+  /** Owned desktop IPC only; deliberately excluded from the HTTP method list. */
+  browserAccess?(): Promise<string>;
   hostStatus(): Promise<{ available: boolean; reason?: string }>;
   capture(selection: ExtensionSelection): Promise<ExtensionContext>;
   catalog(request: ExtensionContextRequest & { query?: string }): Promise<ManagementCatalog>;
@@ -91,6 +93,8 @@ export interface ExtensionManagementAPI {
   cancel(request: ExtensionContextRequest & { operationId: string }): Promise<ManagementOperation>;
 }
 export const EXTENSION_MANAGEMENT_ROUTE = '/api/extension-management';
+export const MANAGEMENT_ACCESS_FRAGMENT = 'management-access';
+export const MANAGEMENT_ACCESS_CHANGED = 'extension-management-access-changed';
 export const EXTENSION_MANAGEMENT_METHODS = [
   'hostStatus',
   'capture',

@@ -121,6 +121,10 @@ The local isolated state validates the shared-state behavior within that fixture
 Default external-CLI ownership interoperability is a separate actual CLI test.
 The standalone HTTP viewer has no runtime owner and deliberately refuses mutation;
 the HTTP scenario above exercises the desktop sidecar with its real owner.
+The harness obtains a separate sidecar capability through the owned Electron IPC,
+refuses missing/forged credentials even with valid local headers, and proves that
+the old capability is rejected after the actual application restart. It never
+records the grant or the private Go credential in receipts or screenshots.
 Native project/worktree installation, the unmerged Host migration, other native
 client platforms and authenticated model execution retain their separate
 qualification gates. Local project Skill authoring does not establish native

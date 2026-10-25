@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v8; reviewed implementation, exact artifact evidence, and remaining qualification gates.
+Status: implementation plan v9; authenticated sidecar, retained-plan capacity fix and current-commit qualification.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -13,7 +13,62 @@ commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
 
-## Current checkpoint — v8 (2026-10-25)
+## Current checkpoint — v9 (2026-10-25)
+
+Continuation starts from published app `52fcacc3cc69c6df8882ecbb7310abfb9c4b2c19`.
+The new matched UAP source is `5224ebd5f66bbdfab0bef906dba0b089062f6073`, version
+`0.1.91+agentteams.5224ebd5f66b`. The TypeScript SDK was rebuilt and packed from
+that committed checkout. Its archive is byte-identical to the prior pack:
+SHA-256 `31eb798b31be66d1c4d80d1cfa094934fa786cf2b46313360b4c6a8f6bfdd96c`.
+The changed Go engine allows applying a retained plan when all 16 review slots
+are occupied; both preparation paths retain their limit and all mutation gates.
+Its red-before real-HTTP regression and complete transport package passed, and
+independent review found no remaining substantial issue in that correction.
+
+### HTTP authority correction
+
+Every managed HTTP operation now requires a random sidecar capability in addition
+to the existing peer, Host, Origin, JSON and body-size checks. Unauthenticated
+`hostStatus` returns only a helpful unavailable response without invoking the
+facade. The sidecar capability is distinct from the private Go credential.
+
+Only the owned Electron main frame can request an authorized browser link through
+a separate IPC operation; there is no HTTP grant endpoint. The existing Settings
+Copy URL action supplies that link. The browser immediately removes its fragment,
+keeps authority per tab and exact origin, and never sends it to another port or
+host. Sidecar stop, restart and startup failure revoke the old capability.
+
+Independent review found and corrected two additional cases: a fresh grant pasted
+into an existing tab must refresh its cached client and unavailable panel; bug
+reports must omit URL fragments even before API initialization. Six focused test
+files passed 16 assertions, focused fast lint passed, and independent final review
+reported no remaining P1/P2. Real HTTP and the extended Electron journey remain
+current-commit CI gates. Local socket binding was sandbox-denied; the full local
+typecheck also encountered missing `fastmcp` dependency types. Neither is counted
+as a successful full qualification.
+
+### Packaged process cleanup and inherited evidence
+
+The packaged MCP smoke now keeps stdin open until ownership-verified shutdown has
+settled, avoiding an EOF-triggered exit racing the process census. Its existing
+actual-child regression now includes stdout/stderr on an exit-code mismatch.
+The historic CI failure did not print that diagnostic, so its exact cause remains
+unproved until the corrected current-commit test completes. Local syntax/diff
+checks passed; the spawned test was blocked by the execution environment.
+
+The clean [desktop CI run 40183926081](https://github.com/777genius/agent-teams-ai/actions/runs/40183926081)
+completed the full journey with no renderer errors on synthetic merge
+`1b00532a5db7be78a38824373d984c2ee23d7ded` (head `52fcacc3`, base `eb67de95`) and
+BBC7. Artifact `12595184310` contains its receipt and 16 screenshots. Actual macOS
+signing succeeded on both architectures in [package run 40183926123](https://github.com/777genius/agent-teams-ai/actions/runs/40183926123),
+including jobs `121141121953` and `121141121920`. These named results preserve the
+previous evidence; they do not qualify the new source pin or HTTP correction.
+
+Current substantive Full qualification, clean Electron E2E, applicable packaging
+and formal CodeQL disposition remain merge gates. Native project/worktree and
+Host prerequisites remain separate. No public release is included.
+
+## Previous checkpoint — v8 (2026-10-25)
 
 The implementation is published in [PR #989](https://github.com/777genius/agent-teams-ai/pull/989),
 with the Go contract and TypeScript SDK in [UAP PR #500](https://github.com/777genius/universal-agent-plugins/pull/500).
@@ -411,15 +466,16 @@ authority. Keep this feature-local; do not start a global authentication rewrite
 HTTP parity covers new management endpoints only. Existing legacy native store web
 limitations are not silently added to this task.
 
-The desktop sidecar assumes a trusted personal local machine. Its actual socket
-peer, Host, Origin and JSON checks enforce browser/network admission; they are not
-OS-user or process authentication. A process able to connect locally, including
-another OS account on a shared machine, can forge those headers. This integration
-does not claim hostile-local-process or multiuser isolation. A remote or multiuser
-deployment needs an authenticated deployment adapter before exposing mutations.
-The Go child has its own private bearer capability, which stays in the trusted
-main process and is never returned to the renderer. Do not confuse that credential
-with the sidecar's browser admission checks.
+The desktop sidecar additionally requires its own ephemeral bearer capability.
+It is issued through owned-window IPC and the existing Copy URL action, never an
+HTTP endpoint or public status response. The browser consumes and removes the
+grant fragment, retains it per tab and exact origin, and sends it only to managed
+routes. Restart revokes earlier grants. A bare browser URL remains a viewer with
+an explicit management-access explanation. Forged local headers alone grant no
+authority. This does not isolate a compromised owned renderer or stolen bearer;
+remote/multiuser deployment still requires its own authenticated deployment model.
+The Go child's separate private credential stays in trusted main composition and
+is never returned to the renderer or browser.
 
 ### Context, lifecycle and readiness
 

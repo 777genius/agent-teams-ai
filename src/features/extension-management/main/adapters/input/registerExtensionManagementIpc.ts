@@ -6,7 +6,8 @@ import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 export function registerExtensionManagementIpc(
   ipc: IpcMain,
   feature: ExtensionManagementFeature,
-  trusted: (event: IpcMainInvokeEvent) => boolean
+  trusted: (event: IpcMainInvokeEvent) => boolean,
+  browserAccess?: () => string
 ): () => void {
   for (const method of EXTENSION_MANAGEMENT_METHODS) {
     ipc.handle(extensionManagementChannel(method), async (event, request: unknown) => {
@@ -16,8 +17,15 @@ export function registerExtensionManagementIpc(
       return call(request);
     });
   }
-  return () =>
+  ipc.handle(extensionManagementChannel('browserAccess'), (event) => {
+    if (!trusted(event) || !browserAccess)
+      throw new Error('Browser access requires the owned desktop window.');
+    return browserAccess();
+  });
+  return () => {
     EXTENSION_MANAGEMENT_METHODS.forEach((method) =>
       ipc.removeHandler(extensionManagementChannel(method))
     );
+    ipc.removeHandler(extensionManagementChannel('browserAccess'));
+  };
 }

@@ -11,6 +11,7 @@ import type { BrowserWindow, IpcMainInvokeEvent } from 'electron';
 
 type Dependencies = Omit<Parameters<typeof createAppExtensionManagement>[0], 'resourceRoot'> & {
   getMainWindow(): BrowserWindow | null;
+  getManagementBrowserUrl(): string;
 };
 
 export function createElectronExtensionManagement(deps: Dependencies) {
@@ -29,7 +30,12 @@ export function createElectronExtensionManagement(deps: Dependencies) {
       event.senderFrame === window.webContents.mainFrame
     );
   };
-  const unregister = registerExtensionManagementIpc(ipcMain, runtime.feature, admits);
+  const unregister = registerExtensionManagementIpc(
+    ipcMain,
+    runtime.feature,
+    admits,
+    deps.getManagementBrowserUrl
+  );
   const releaseSkills = setSkillsMutationAdmission(admits);
   const close = runtime.feature.close;
   runtime.feature.close = async () => {

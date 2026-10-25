@@ -9,6 +9,7 @@
 
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
+import { ManagementHttpCapability } from '@features/extension-management/main';
 import { type HttpServices, registerHttpRoutes } from '@main/http';
 import { broadcastEvent } from '@main/http/events';
 import { createLogger } from '@shared/utils/logger';
@@ -53,6 +54,7 @@ export class HttpServer {
   private port: number = 3456;
   private running: boolean = false;
   private startingPromise: Promise<number> | null = null;
+  private readonly managementCapability = new ManagementHttpCapability();
 
   /**
    * Start the HTTP server.
@@ -76,6 +78,9 @@ export class HttpServer {
     this.startingPromise = this.doStart(services, sshModeSwitchCallback, preferredPort, host);
     try {
       return await this.startingPromise;
+    } catch (error) {
+      this.managementCapability.revoke();
+      throw error;
     } finally {
       this.startingPromise = null;
     }
@@ -87,6 +92,13 @@ export class HttpServer {
     preferredPort: number,
     host: string
   ): Promise<number> {
+    this.managementCapability.revoke();
+    if (services.extensionManagement) this.managementCapability.rotate();
+    const authorizedServices = {
+      ...services,
+      authorizeExtensionManagement: (authorization?: string) =>
+        this.managementCapability.accepts(authorization),
+    };
     this.app = Fastify({ logger: false });
 
     // Register CORS
@@ -134,7 +146,7 @@ export class HttpServer {
       });
 
       // Register all API routes BEFORE the not-found handler
-      registerHttpRoutes(this.app, services, sshModeSwitchCallback);
+      registerHttpRoutes(this.app, authorizedServices, sshModeSwitchCallback);
 
       // SPA fallback: serve index.html for all non-API routes
       this.app.setNotFoundHandler(async (request, reply) => {
@@ -145,7 +157,7 @@ export class HttpServer {
       });
     } else {
       logger.warn('Renderer output directory not found (run `pnpm build` first), serving API only');
-      registerHttpRoutes(this.app, services, sshModeSwitchCallback);
+      registerHttpRoutes(this.app, authorizedServices, sshModeSwitchCallback);
     }
 
     // Try ports starting from preferredPort
@@ -174,12 +186,18 @@ export class HttpServer {
    * Stop the HTTP server gracefully.
    */
   async stop(): Promise<void> {
+    this.managementCapability.revoke();
     if (this.app && this.running) {
       await this.app.close();
       this.running = false;
       this.app = null;
       logger.info('HTTP server stopped');
     }
+  }
+
+  getManagementBrowserUrl(): string {
+    if (!this.running) throw new Error('Start browser access before copying its link.');
+    return this.managementCapability.browserUrl(this.port);
   }
 
   /**

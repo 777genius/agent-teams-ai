@@ -3,13 +3,19 @@ import Fastify from 'fastify';
 import { expect, it, vi } from 'vitest';
 
 import { postWithReboundHost } from '../../../scripts/e2e/uap-management-http';
+import { EXTENSION_MANAGEMENT_METHODS } from '../../../src/features/extension-management/contracts';
 import { registerExtensionManagementHttp } from '../../../src/features/extension-management/main/adapters/input/registerExtensionManagementHttp';
+import { ManagementHttpCapability } from '../../../src/features/extension-management/main/infrastructure/ManagementHttpCapability';
 
 import type { ExtensionManagementFeature } from '../../../src/features/extension-management/core/application/ports';
 
 it('returns feature-local refusals through the real CORS middleware without invoking management', async () => {
   const app = Fastify();
   const hostStatus = vi.fn(async () => ({ available: true }));
+  const capture = vi.fn(async () => ({ contextId: 'trusted' }));
+  const capability = new ManagementHttpCapability();
+  capability.rotate();
+  const token = new URL(capability.browserUrl(4141)).hash.split('=')[1];
   // The desktop sidecar rejects foreign origins in the earlier onRequest hook.
   await app.register(cors, {
     origin: (origin, callback) => {
@@ -19,13 +25,22 @@ it('returns feature-local refusals through the real CORS middleware without invo
     },
     credentials: true,
   });
-  registerExtensionManagementHttp(app, { hostStatus } as unknown as ExtensionManagementFeature);
+  registerExtensionManagementHttp(
+    app,
+    { hostStatus, capture } as unknown as ExtensionManagementFeature,
+    (authorization) => capability.accepts(authorization)
+  );
   try {
     await app.listen({ host: '127.0.0.1', port: 0 });
     const address = app.server.address();
     if (!address || typeof address === 'string') throw new Error('Expected a bound TCP listener');
     const host = `127.0.0.1:${address.port}`;
-    const headers = { host, origin: `http://${host}`, 'content-type': 'application/json' };
+    const headers = {
+      host,
+      origin: `http://${host}`,
+      'content-type': 'application/json',
+      authorization: `Bearer ${token}`,
+    };
     for (const refused of [
       { headers: { ...headers, origin: 'https://attacker.invalid' } },
       { headers: { ...headers, origin: 'http://127.0.0.1:1' } },
@@ -47,6 +62,41 @@ it('returns feature-local refusals through the real CORS middleware without invo
     const rebound = await postWithReboundHost(`http://${host}`);
     expect(rebound).toEqual({ status: 403, allowedOrigin: undefined });
     expect(hostStatus).not.toHaveBeenCalled();
+    for (const authorization of [
+      undefined,
+      '',
+      'Bearer invalid',
+      `Bearer ${'0'.repeat(64)}`,
+      `Basic ${token}`,
+    ]) {
+      const refused = await app.inject({
+        method: 'POST',
+        url: '/api/extension-management/capture',
+        headers: { ...headers, authorization },
+        payload: { client: 'opencode', scope: 'user' },
+      });
+      expect(refused.statusCode).toBe(401);
+      expect(refused.json().code).toBe('MANAGEMENT_AUTH_REQUIRED');
+    }
+    expect(capture).not.toHaveBeenCalled();
+    for (const method of EXTENSION_MANAGEMENT_METHODS.filter((method) => method !== 'hostStatus')) {
+      const refused = await app.inject({
+        method: 'POST',
+        url: `/api/extension-management/${method}`,
+        headers: { ...headers, authorization: undefined },
+        payload: {},
+      });
+      expect(refused.statusCode).toBe(401);
+    }
+    const viewer = await app.inject({
+      method: 'POST',
+      url: '/api/extension-management/hostStatus',
+      headers: { ...headers, authorization: undefined },
+      payload: {},
+    });
+    expect(viewer.json()).toMatchObject({ available: false });
+    expect(viewer.body).not.toContain(token);
+    expect(hostStatus).not.toHaveBeenCalled();
     const accepted = await app.inject({
       method: 'POST',
       url: '/api/extension-management/hostStatus',
@@ -56,6 +106,35 @@ it('returns feature-local refusals through the real CORS middleware without invo
     expect(accepted.statusCode).toBe(200);
     expect(accepted.json()).toEqual({ available: true });
     expect(hostStatus).toHaveBeenCalledOnce();
+    const captured = await app.inject({
+      method: 'POST',
+      url: '/api/extension-management/capture',
+      headers,
+      payload: {},
+    });
+    expect(captured.statusCode).toBe(200);
+    expect(capture).toHaveBeenCalledOnce();
+    expect(
+      (
+        await app.inject({
+          method: 'POST',
+          url: '/api/extension-management/browserAccess',
+          headers,
+          payload: {},
+        })
+      ).statusCode
+    ).toBe(404);
+    capability.revoke();
+    expect(capability.accepts(headers.authorization)).toBe(false);
+    capability.rotate();
+    const stale = await app.inject({
+      method: 'POST',
+      url: '/api/extension-management/capture',
+      headers,
+      payload: {},
+    });
+    expect(stale.statusCode).toBe(401);
+    expect(capture).toHaveBeenCalledOnce();
   } finally {
     await app.close();
   }
