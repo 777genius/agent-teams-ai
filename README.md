@@ -374,6 +374,25 @@ Yes. Run multiple teams in one project or across different projects, even simult
 Some RDP (Remote Desktop Protocol) sessions expose virtual GPU drivers that can break Electron rendering. Launch with `AGENT_TEAMS_DISABLE_GPU=1` to disable Electron hardware acceleration for that run, for example `AGENT_TEAMS_DISABLE_GPU=1 pnpm dev` from source or `AGENT_TEAMS_DISABLE_GPU=1 ./Agent.Teams.AI.AppImage` for AppImage builds.
 </details>
 
+<details>
+<summary><strong>Why does OpenCode V2 on Linux say bubblewrap could not create the sandbox?</strong></summary>
+<br />
+OpenCode V2 runs its agents inside the system bubblewrap sandbox at `/usr/bin/bwrap`. It needs bubblewrap 0.12.0 or later (earlier releases are affected by CVE-2026-87766) and unprivileged user namespaces for `/usr/bin/bwrap`. Stock Ubuntu 24.04 meets neither: it ships bubblewrap 0.9.0 and restricts user namespaces with AppArmor. OpenCode V1 does not use this sandbox.
+
+An administrator can put bubblewrap 0.12.0 or later at `/usr/bin/bwrap` (a distribution package or the upstream release) and allow user namespaces for that one binary while the restriction stays on for everything else, with an AppArmor profile in `/etc/apparmor.d/bwrap`:
+
+```text
+abi <abi/4.0>,
+include <tunables/global>
+
+profile bwrap /usr/bin/bwrap flags=(unconfined) {
+  userns,
+}
+```
+
+Load it with `sudo apparmor_parser -r /etc/apparmor.d/bwrap`. The profile lets any local process create a user namespace through `/usr/bin/bwrap`, so this is the administrator's call. The app names the exact cause in the OpenCode status and when you connect a provider. Details: [OpenCode V2 on Linux](https://github.com/777genius/agent_teams_orchestrator/blob/main/docs/opencode-v2-qualification/linux-sandbox.md).
+</details>
+
 ---
 
 ## Roadmap (new)

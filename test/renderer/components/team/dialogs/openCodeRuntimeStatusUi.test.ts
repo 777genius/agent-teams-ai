@@ -6,6 +6,7 @@ import {
   getOpenCodeReadinessMessage,
   getOpenCodeReadinessSummary,
   getOpenCodeRetryPanelPresentation,
+  getOpenCodeV2RetryCause,
   getOpenCodeRuntimeStatusUiState,
   getOpenCodeSourceTabCountState,
   hasFreeOpenCodeModelRoute,
@@ -422,6 +423,83 @@ describe('OpenCode project folder missing status', () => {
     expect(getOpenCodeReadinessSummary(unavailable, t, 'retry')).toBe(
       'modelSelector.openCodeStatus.summary.temporarilyUnavailable'
     );
+  });
+});
+
+describe('OpenCode V2 retry cause', () => {
+  const t = ((key: string) => key) as unknown as Parameters<typeof getOpenCodeReadinessSummary>[1];
+  const v2Runtime = {
+    source: 'override',
+    installed: true,
+    state: 'ready',
+    version: '2.0.32',
+  } as OpenCodeRuntimeStatus;
+  const v1Runtime = {
+    source: 'path',
+    installed: true,
+    state: 'ready',
+    version: '1.18.3',
+  } as OpenCodeRuntimeStatus;
+  const denied =
+    'bubblewrap (/usr/bin/bwrap) could not create the OpenCode V2 sandbox. OpenCode V2 on Linux needs bubblewrap 0.12.0 or later at /usr/bin/bwrap and unprivileged user namespaces.';
+  const failedRead = {
+    ...status('transient_error', true),
+    detailMessage: denied,
+  } as CliProviderStatus;
+
+  it('shows the cause the runtime names for a failed V2 catalog read instead of the generic text', () => {
+    expect(getOpenCodeV2RetryCause(failedRead, v2Runtime)).toBe(denied);
+    const panel = getOpenCodeRetryPanelPresentation({
+      providerStatus: failedRead,
+      runtimeStatus: v2Runtime,
+      runtimeError: null,
+      projectPath: '/tmp/project',
+      t,
+    });
+    expect(panel.message).toBe(denied);
+    expect(panel.summary).toBe('modelSelector.openCodeStatus.summary.temporarilyUnavailable');
+    expect(panel.actionLabel).toBe('modelSelector.openCodeStatus.badges.retry');
+  });
+
+  it('keeps the generic text when the detail is not a V2 failure cause', () => {
+    const generic = 'modelSelector.openCodeStatus.messages.temporarilyUnavailable';
+    const present = (providerStatus: CliProviderStatus, runtime: OpenCodeRuntimeStatus) =>
+      getOpenCodeRetryPanelPresentation({
+        providerStatus,
+        runtimeStatus: runtime,
+        runtimeError: null,
+        projectPath: '/tmp/project',
+        t,
+      }).message;
+    // A V1 detail is a summary such as "version 1.18.3".
+    expect(
+      present({ ...failedRead, detailMessage: 'version 1.18.3' } as CliProviderStatus, v1Runtime)
+    ).toBe(generic);
+    // Without a full read (selection or passive) the V2 detail is the read-scope note.
+    const note = {
+      ...failedRead,
+      supported: false,
+      detailMessage:
+        'Authentication, team launch and one-shot execution remain unqualified. Only an existing verified V2 native selection is supported for reads.',
+    } as CliProviderStatus;
+    expect(present(note, v2Runtime)).toBe(generic);
+    // Older runtimes put the same note on a failed full read.
+    expect(present({ ...note, supported: true } as CliProviderStatus, v2Runtime)).toBe(generic);
+    expect(present({ ...failedRead, detailMessage: '  ' } as CliProviderStatus, v2Runtime)).toBe(
+      generic
+    );
+    expect(
+      getOpenCodeV2RetryCause(
+        { ...failedRead, statusCheckOutcome: 'model_only' } as CliProviderStatus,
+        v2Runtime
+      )
+    ).toBeNull();
+    expect(
+      getOpenCodeV2RetryCause(failedRead, {
+        ...v2Runtime,
+        version: undefined,
+      } as OpenCodeRuntimeStatus)
+    ).toBeNull();
   });
 });
 

@@ -3,6 +3,7 @@ import {
   isKnownOpenCodeAccessFreeModelId,
   isOpenCodeRouteAccessFreeWithoutKey,
 } from '@shared/utils/opencodeModelRoute';
+import { isRecognizedOpenCodeV2Version } from '@shared/utils/version';
 
 import type { TranslationNamespace } from '@features/localization';
 import type { CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
@@ -324,6 +325,31 @@ export function isOpenCodeProjectFolderMissing(
   return providerStatus?.statusCheckErrorCode === 'project_missing';
 }
 
+// The runtime's V2 read-scope note, not a failure cause.
+const OPENCODE_V2_QUALIFICATION_NOTE =
+  'Authentication, team launch and one-shot execution remain unqualified.';
+
+/**
+ * The cause the runtime names for a failed V2 catalog read, such as an unavailable Linux
+ * sandbox. Only a V2 status that attempted its full read (`supported` and transient) carries
+ * one in `detailMessage`; a V1 detail is a summary and stays out of the retry panel.
+ */
+export function getOpenCodeV2RetryCause(
+  providerStatus: CliProviderStatus | null | undefined,
+  runtimeStatus: OpenCodeRuntimeStatus | null
+): string | null {
+  const detail = providerStatus?.detailMessage?.trim();
+  if (
+    !detail ||
+    providerStatus?.statusCheckOutcome !== 'transient_error' ||
+    providerStatus.supported !== true ||
+    !isRecognizedOpenCodeV2Version(runtimeStatus?.version)
+  ) {
+    return null;
+  }
+  return detail.startsWith(OPENCODE_V2_QUALIFICATION_NOTE) ? null : detail;
+}
+
 export function getOpenCodeRetryPanelPresentation(input: {
   providerStatus: CliProviderStatus | null | undefined;
   runtimeStatus: OpenCodeRuntimeStatus | null;
@@ -346,7 +372,8 @@ export function getOpenCodeRetryPanelPresentation(input: {
     summary: getOpenCodeReadinessSummary(providerStatus, t, 'retry'),
     message: projectFolderMissing
       ? t('modelSelector.openCodeStatus.messages.projectFolderMissing', { path: projectPath })
-      : getOpenCodeReadinessMessage(providerStatus, t, 'retry', runtimeStatus),
+      : (getOpenCodeV2RetryCause(providerStatus, runtimeStatus) ??
+        getOpenCodeReadinessMessage(providerStatus, t, 'retry', runtimeStatus)),
     reason: runtimeError ?? runtimeStatus?.error ?? null,
     actionLabel: t('modelSelector.openCodeStatus.badges.retry'),
   };
