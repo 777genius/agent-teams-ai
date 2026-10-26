@@ -93,14 +93,7 @@ export function resolveOpenCodeQuickConnectGate(input: {
   if (isOpenCodeRuntimeUsable(runtimeStatus)) {
     return 'ready';
   }
-  if (
-    runtimeStatus === null &&
-    input.provider?.supported === true &&
-    input.provider.authenticated &&
-    input.provider.capabilities.teamLaunch
-  ) {
-    return 'ready';
-  }
+  // Credentials/provider availability cannot prove that a supported local binary exists.
   return 'missing';
 }
 
