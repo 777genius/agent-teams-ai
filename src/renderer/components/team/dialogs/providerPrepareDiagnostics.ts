@@ -11,6 +11,7 @@ import { hasExperimentalLocalModelOverride } from './providerPrepareDiagnosticsM
 import {
   getModelScopedEntries,
   getResultReason,
+  hasPendingDeepVerification,
   isModelScopedEntryForAnyModel,
   looksLikeSingleModelBatchFailure,
   normalizeModelReason,
@@ -553,9 +554,7 @@ function resolveModelResultFromBatch(
     };
   }
 
-  const hasCompatibilityLine = modelScopedEntries.some((entry) =>
-    /selected model .* is compatible\. deep verification pending\./i.test(entry)
-  );
+  const hasCompatibilityLine = hasPendingDeepVerification(providerId, modelScopedEntries);
   if (hasCompatibilityLine) {
     if (providerId !== 'opencode') {
       return {
@@ -680,9 +679,7 @@ function resolveModelResultFromCompatibilityBatch(
     };
   }
 
-  const hasCompatibilityLine = modelScopedEntries.some((entry) =>
-    /selected model .* is compatible\. deep verification pending\./i.test(entry)
-  );
+  const hasCompatibilityLine = hasPendingDeepVerification(providerId, modelScopedEntries);
   if (hasCompatibilityLine || (result.ready && modelScopedEntries.length === 0)) {
     return { kind: 'compatible' };
   }

@@ -213,6 +213,79 @@ describe('human group non-response recovery', () => {
     expect(isOpenCodeHumanGroupNonResponse(accepted)).toBe(false); // old child cannot certify new prompt
   });
 
+  it('releases only a runtime-confirmed unsubmitted corrective handoff for a bounded retry', async () => {
+    const { ledger, record, reload } = await fixture();
+    await markOpenCodeGroupHandoff(ledger, record, ISO);
+    const failed = await ledger.applyDeliveryResult({
+      id: record.id,
+      accepted: false,
+      attempted: true,
+      promptNotSubmitted: true,
+      reason: 'host acquisition timeout',
+      now: ISO,
+    });
+    expect(failed.acceptanceUnknown).toBe(false);
+    expect(failed.groupRepairHandoffPending).toBe(false);
+    await ledger.markNextAttemptScheduled({
+      id: record.id,
+      status: 'retry_scheduled',
+      nextAttemptAt: ISO,
+      scheduledAt: ISO,
+      reason: 'pre_submission_retry',
+    });
+    const persisted = await reload().getByInboxMessage(record);
+    expect(unknownGroupHandoffSnapshot(persisted!, record.laneId)).toBeNull();
+    expect(persisted?.attempts).toBe(record.attempts + 1);
+  });
+
+  it.each([false, true])(
+    'settles corrective handoff once, with prior result counted=%s',
+    async (counted) => {
+      const { ledger, record } = await fixture();
+      await markOpenCodeGroupHandoff(ledger, record, ISO);
+      if (counted)
+        await ledger.applyDeliveryResult({
+          id: record.id,
+          accepted: false,
+          attempted: true,
+          reason: 'transport timeout',
+          now: ISO,
+        });
+      const observation = (id: string) => ({
+        state: 'responded_plain_text' as const,
+        deliveredUserMessageId: id,
+        assistantMessageId: 'assistant',
+        toolCallNames: [],
+        visibleMessageToolCallId: null,
+        visibleReplyMessageId: null,
+        visibleReplyCorrelation: null,
+        latestAssistantPreview: marker,
+        reason: null,
+      });
+      const old = await ledger.applyObservation({
+        id: record.id,
+        responseObservation: observation('prompt-1'),
+        observedAt: ISO,
+      });
+      expect(old.groupRepairHandoffPending).toBe(true);
+      const fresh = await ledger.applyObservation({
+        id: record.id,
+        responseObservation: observation('prompt-2'),
+        observedAt: ISO,
+      });
+      expect(fresh.groupRepairHandoffPending).toBe(false);
+      expect(fresh.attempts).toBe(record.attempts + 1);
+      const repeated = await ledger.applyObservation({
+        id: record.id,
+        responseObservation: observation('prompt-2'),
+        observedAt: ISO,
+      });
+      expect(repeated.attempts).toBe(fresh.attempts);
+      expect(isOpenCodeHumanGroupNonResponse(fresh)).toBe(true);
+      expect(unknownGroupHandoffSnapshot(fresh, record.laneId)).toBeNull();
+    }
+  );
+
   it('clears the old marker atomically before correction and materializes only the fresh child', async () => {
     const { ledger, record, reload } = await fixture();
     expect(
