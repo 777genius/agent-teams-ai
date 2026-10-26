@@ -89,6 +89,44 @@ interface MatrixOptions extends MatrixNativeContext {
   environment(): Promise<ManagementEnvironment>;
 }
 
+export async function assertPluginMatrixReview(
+  f: Pick<MatrixOptions, 'cdp' | 'wait'>,
+  action: string,
+  targets: readonly ExtensionClient[],
+  unchangedTargets: readonly ExtensionClient[] = []
+) {
+  await f.wait(
+    async () => (await inspectElement(f.cdp, button('Apply changes')))?.visible,
+    `${action} plugin matrix review`,
+    120_000
+  );
+  // Go reviews retain unchanged bindings for the same declared plugin. Require
+  // those exact siblings as well as the mutation; no other row is permitted.
+  const expected = [
+    ...targets.map((targetId) => ({ targetId, action })),
+    ...unchangedTargets.map((targetId) => ({ targetId, action: 'unchanged' })),
+  ];
+  assert.equal(new Set(expected.map(({ targetId }) => targetId)).size, expected.length);
+  for (const { targetId, action: expectedAction } of expected) {
+    assert.equal(
+      await callUi<number>(f.cdp, 'count', [
+        {
+          selector: '[data-testid=uap-plan-action]',
+          attributes: { 'data-target-id': targetId, 'data-action': expectedAction },
+          textIncludes: [matrixPluginName],
+        },
+      ]),
+      1,
+      `The matrix review must contain exactly one ${expectedAction} for ${targetId}`
+    );
+  }
+  assert.equal(
+    await callUi<number>(f.cdp, 'count', [{ selector: '[data-testid=uap-plan-action]' }]),
+    expected.length,
+    'A matrix review must contain exactly the requested mutations and unchanged siblings'
+  );
+}
+
 export async function exercisePluginMatrix(f: MatrixOptions) {
   const evidence = {
     status: 'running',
@@ -101,30 +139,6 @@ export async function exercisePluginMatrix(f: MatrixOptions) {
     removals: {} as Record<string, unknown>,
   };
   f.evidence.pluginClientMatrix = evidence;
-  const assertReview = async (action: string, targets: readonly ExtensionClient[]) => {
-    await f.wait(
-      async () => (await inspectElement(f.cdp, button('Apply changes')))?.visible,
-      `${action} plugin matrix review`,
-      120_000
-    );
-    for (const targetId of targets) {
-      assert.equal(
-        await callUi<number>(f.cdp, 'count', [
-          {
-            selector: '[data-testid=uap-plan-action]',
-            attributes: { 'data-target-id': targetId, 'data-action': action },
-          },
-        ]),
-        1,
-        'Every reviewed action must use the selected captured target'
-      );
-    }
-    assert.equal(
-      await callUi<number>(f.cdp, 'count', [{ selector: '[data-testid=uap-plan-action]' }]),
-      targets.length,
-      'A matrix review must contain exactly the requested target set'
-    );
-  };
   const rememberOperation = async (stage: string) => {
     const operation = await callUi<{ id: string | null; status: string | null }>(
       f.cdp,
@@ -145,7 +159,7 @@ export async function exercisePluginMatrix(f: MatrixOptions) {
   await f.fill('#uap-source-plugin', evidence.source);
   await f.fill('#uap-alias', matrixPluginName);
   await f.click(button('Review installation'));
-  await assertReview('install', clients);
+  await assertPluginMatrixReview(f, 'install', clients);
   await f.screenshot(path.join(f.shots, '22-plugin-matrix-install-review.png'));
   await f.reviewAndApply(panel);
   await rememberOperation('install');
@@ -175,7 +189,7 @@ export async function exercisePluginMatrix(f: MatrixOptions) {
   await f.screenshot(path.join(f.shots, '23-plugin-matrix-installed.png'));
   f.fixture.advance();
   await f.click(button('Update', row));
-  await assertReview('update', clients);
+  await assertPluginMatrixReview(f, 'update', clients);
   await f.screenshot(path.join(f.shots, '24-plugin-matrix-update-review.png'));
   await f.reviewAndApply(panel);
   await rememberOperation('update');
@@ -221,7 +235,12 @@ export async function exercisePluginMatrix(f: MatrixOptions) {
       await f.click({ selector: '[role=checkbox]', within: dialog });
       await f.click(button('Review confirmed removal', dialog));
     }
-    await assertReview('remove', [client]);
+    await assertPluginMatrixReview(
+      f,
+      'remove',
+      [client],
+      [...remaining].filter((id) => id !== client)
+    );
     await f.reviewAndApply(panel);
     await rememberOperation(`remove-${client}`);
     remaining.delete(client);
@@ -236,6 +255,15 @@ export async function exercisePluginMatrix(f: MatrixOptions) {
         2,
         evidence.update[target]
       );
+      if (remaining.has(target)) {
+        for (const field of ['nativeIdentity', 'nativeMarketplace', 'nativeSource', 'files'] as const) {
+          assert.deepEqual(
+            observations[target][field],
+            evidence.update[target][field],
+            `${target}: targeted removal must preserve sibling ${field}`
+          );
+        }
+      }
     }
     evidence.removals[client] = {
       removedThroughUI: true,

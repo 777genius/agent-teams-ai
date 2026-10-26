@@ -83,6 +83,16 @@ An in-flight apply acceptance also holds the fence while an inspection races it.
 An empty inventory cannot resolve an uncertain acceptance: the same request's
 authoritative result is required, and retries preserve that request identity.
 
+If the SDK confirms that its owned engine process has exited, the facade reconnects
+once using the original captured authority. The logical context and shared mutation
+fence survive. A replacement must match the captured session and pass a fresh
+durable-environment inspection before it becomes usable. Failed inspection remains
+fenced and retries on that same live child; an ordinary HTTP failure never causes a
+live engine to restart. Old connection callbacks cannot publish into the replacement
+generation. Unaccepted process-local reviews expire, while accepted/uncertain
+request identities remain available for exact observation or retry. A sibling
+context cannot release the shared fence while reconnection is still uninspected.
+
 Local Skill create/edit/import/delete now delegate to retained Go plans under the
 same canonical mutation lock. The old Node apply/trash fallback is removed.
 Editor previews preserve exact old-file digests from the bytes shown in review;

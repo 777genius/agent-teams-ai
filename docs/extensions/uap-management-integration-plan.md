@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v26; passive target discovery and initial selection now have real Electron evidence. Current main is reconciled with a verified MCP custom-output correction, and late unaccepted preparation results are released through their original host context. The complete fresh Electron S27 and three-client plugin install/update/removal receipt remains required; actual-team Skill use and the proposed profile/worktree architecture remain separate, unapproved work.
+Status: implementation plan v27; real Electron verifies S27 and three-client plugin installation/update. Targeted removal review now distinguishes the selected mutation from exact unchanged siblings. Owned-engine reconnection preserves captured authority and outstanding-operation fencing. The complete fresh removal matrix and current-source canonical/platform/security gates remain required; actual-team Skill use and the proposed profile/worktree architecture remain separate, unapproved work.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -12,7 +12,126 @@ real Electron end-to-end verification, early draft PRs, immediate push of every
 commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
-## Current checkpoint — v26 (2026-10-26)
+## Current checkpoint — v27 (2026-10-26)
+
+[Electron run 40383086576](https://github.com/777genius/agent-teams-ai/actions/runs/40383086576)
+tests app `75ec93b425a7bda84083bfeb883aa1fc548481e5` through synthetic merge
+`371b02dea7d7c7c5599142c9cf3c8bdac81fb738`. The actual parents are main
+`9ff9f85acd94b2b466ac6c7889dcb042f130493a` and that app head; merge and head
+share tree `94297f5f01bb19e6808350d90b799393d1ce11ec` and runtime 0.0.140.
+[Artifact 12679319631](https://github.com/777genius/agent-teams-ai/actions/runs/40383086576/artifacts/12679319631)
+has ZIP SHA-256 `1d7062f60ca902fda1a6941028b3c9567fb528451d96f14b6cfad8ecd0a206a5`;
+its evidence JSON has SHA-256
+`a9e7526a995adb82df0376aaab1c8c2c93523f4e8f7fe987576369602761b155`.
+
+The receipt completes S27: actual inherited worker and lead remain alive while
+all five retained mutation requests refuse without acceptance; fresh preparation
+and UI attempts also refuse, and native/state observations remain unchanged.
+The unrelated OpenCode lifecycle succeeds. Both exact owned processes stop,
+then Claude update succeeds as operation
+`84900f7396c15e58228114c18c7defee43954ef2dc02b98002d6833c99c69af2`.
+Passive discovery/initial selection and both nonexecution witness checks pass.
+The installed native OpenCode plugin offers and calls its MCP tool through the
+scripted provider; after removal, the tool and MCP requests are absent. Renderer
+errors are empty. This does not establish Skill-body or plugin-MCP use by every
+app-launched team member.
+
+The three-client plugin matrix completes installation
+`94141f09ace92236fd084582d1f9b323710f3248905c6f228a44bf47e120d106` and update
+`6489425792af967577ae90a94c95b4dc8e52372418709175f875ce6e6aab7659`.
+Actual Claude, Codex and OpenCode observations verify version-1 then version-2
+bytes and stable native identities/source locations. The run then fails before
+the first removal Apply: the harness expected one review row, but Go correctly
+reviews one Claude removal and unchanged Codex/OpenCode sibling bindings.
+The screenshot, saved receipt and exact Go plan/coordinator source agree.
+There is no completed removal operation in this failed receipt.
+
+The review assertion now requires the exact selected mutation and every expected
+unchanged sibling, with total row cardinality still strict. Missing/duplicate
+targets, extra mutations, changed siblings, an unrequested target or a different
+plugin are rejected. After each removal, surviving native identities, marketplace,
+source paths and all file digests must equal the version-2 baseline. Existing
+selected-target absence and Codex explicit external-uninstall prerequisites stay
+mandatory. The original assertion fails both intermediate removal controls; the
+corrected fixed-CDP/DOM controls pass all 12 cases, and 24 combined UI-boundary
+cases pass. Scoped native TypeScript, lint and independent reviews pass. The
+entire actual matrix must still run on the new source.
+
+### Confirmed owned-engine exit and reconnection
+
+A current-head review exposed cached contexts surviving their owned engine's
+exit, leaving refresh and launch admission attached to a dead HTTP client.
+[UAP 86d4d0d](https://github.com/777genius/universal-agent-plugins/commit/86d4d0d4bfc68ea454f9df8840f23461eb043177)
+exposes the read-only Node-host `hasExited` property from the actual child's exit
+code or signal. Generic process errors and HTTP failures do not prove exit; the
+SDK never restarts the engine automatically. Two actual-child controls fail
+against the previous SDK and pass after correction. All 43 SDK tests,
+build/typecheck and clean packed-consumer checks pass locally; the fresh hosted
+SDK lane also passes 43 tests and the packed consumer.
+
+The app replaces only a confirmed exited connection, coalesces concurrent
+reconnection, and preserves its logical context plus shared admission identity.
+The new session must match the original captured authority and pass fresh
+durable inspection. Failed inspection retains the fence and retries on the same
+live child. A shared recovering-context set prevents an unrelated empty read
+from releasing that fence. Connection generations guard late old reads,
+preparation, Apply and operation followers. Unaccepted old review handles expire;
+accepted operation IDs and uncertain original plan/request pairs remain intact.
+Exact uncertain replay uses Go's durable-request lookup and existing definitive
+refusal handling; it never recreates an old prepared plan or selects a new request
+identity. Shutdown waits for and closes any in-flight replacement.
+
+Fifteen new deterministic lifecycle cases and 36 existing application cases pass.
+Scoped native TypeScript, lint, formatting, the source-size guard and independent
+review pass. A separate real-process application control reproduces
+`ECONNREFUSED` on old app 75ec after killing only its exact owned UAP PID. The
+corrected application creates a new owned PID, retains app/Go context and
+environment identities, reads the durable environment, then admits launch.
+Both controls verify that all owned processes exit. This does not change the
+separate profile-selection/worktree policy under discussion.
+
+The matched engine is `0.1.91+agentteams.86d4d0d4bfc6`. Its SDK archive is
+25,338 bytes, SHA-256
+`570d947dd47766ea52613432dc4615b32df1ea390936f22e94b71bed6bcc79c5`;
+exact committed-source Linux staging has SHA-256
+`7088d9241fa8394627952ed84630873a4cdfcd41d1c1ef7839edb4103618908e`.
+Frozen dependency installation and all 2,522 supply-chain entries pass. Fresh
+[UAP Required 40384418585](https://github.com/777genius/universal-agent-plugins/actions/runs/40384418585)
+and [CodeQL 40384418509](https://github.com/777genius/universal-agent-plugins/actions/runs/40384418509)
+must finish on this source. Earlier UAP 0311 passed Required and both analyses,
+but its separate findings gate failed with 12 alerts: 2 Critical and 10 High.
+No formal security disposition or merge is claimed by these implementation proofs.
+
+### Current-main test contract alignment
+
+The fresh Full shard found three inherited failures in two OpenCode suites whose
+production source is identical to main `9ff9f85` / PR #1024. That PR deliberately
+permits read-only reconciliation of an uncertain group handoff, while forbidding
+another send. It also requires either a live tracked owner or committed session
+evidence plus native confirmation before reusing a persisted active lane.
+The older fixtures still prohibited observation and omitted mandatory recovery
+ports through a cast. Production policy is preserved; only those two fixtures
+are corrected to test the current contract.
+
+The group tests now use the actual file ledger and handoff transition, verify
+original message/group/run/session/prompt/attempt identities, and require no
+ordinary or serialized resend, unchanged attempt count and observation backoff.
+The bootstrap fixture retains actual `canDeliver=false` and
+`canAttemptCommittedRecovery=true`; the real recovery factory calls a typed
+native `reconcile`, while prepare/launch/stop and missing-host recovery remain
+forbidden. Exact committed lane/run proof is required. Absent native evidence
+and a Stop before the scheduled recovery both prevent relay. A mocked relay
+does not establish guarantees about Stop during an already in-flight observation.
+The original three failures reproduce; both corrected suites pass 43 cases in
+two independent runs, with scoped native TypeScript, lint and review passing.
+
+The full local canonical typecheck is killed with exit 137 without diagnostics,
+including a retry that limits compiler memory/parallelism without changing any
+compiler option. No complete local canonical pass is claimed. The new published
+head still requires fresh hosted Full, complete Electron removals, packaged and
+security qualification; preceding-source checks cannot substitute for them.
+
+## Previous checkpoint — v26 (2026-10-26)
 
 [Electron run 40376857048](https://github.com/777genius/agent-teams-ai/actions/runs/40376857048)
 tests app `876b9890a7730631be12294a9922347bf6350b67` through merge

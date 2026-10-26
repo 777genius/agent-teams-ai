@@ -34,6 +34,7 @@ export interface CapturedExtensionEnvironment {
   connect(): Promise<{
     client: ManagementClient;
     session: ManagementSession;
+    readonly hasExited: boolean;
     close(): Promise<void>;
   }>;
 }

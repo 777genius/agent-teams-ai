@@ -124,7 +124,12 @@ function fixture(
         prepareSkillCopy,
         assertCurrent,
         assertInactive,
-        connect: async () => ({ client: client as unknown as ManagementClient, session, close }),
+        connect: async () => ({
+          client: client as unknown as ManagementClient,
+          session,
+          hasExited: false,
+          close,
+        }),
       }),
     },
     gate

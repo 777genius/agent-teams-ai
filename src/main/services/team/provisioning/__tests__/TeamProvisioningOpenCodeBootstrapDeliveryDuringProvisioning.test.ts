@@ -4,9 +4,11 @@ import { createOpenCodePromptDeliveryWatchdogCoordinator } from '../../opencode/
 import { createDefaultOpenCodeRuntimeBootstrapEvidencePorts } from '../TeamProvisioningOpenCodeBootstrapEvidence';
 import { createOpenCodeBootstrapWakePorts } from '../TeamProvisioningOpenCodeDeliveryComposition';
 import { createOpenCodePromptDeliveryWatchdogSchedulerFromService } from '../TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerFactory';
+import { createTeamProvisioningOpenCodeRuntimeRecoveryBoundary } from '../TeamProvisioningOpenCodeRuntimeRecoveryBoundaryFactory';
 import { tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery } from '../TeamProvisioningOpenCodeRuntimeRecoveryFlow';
 import { TeamProvisioningRunTrackingDeliveryHelper } from '../TeamProvisioningRunTrackingDelivery';
 
+import type { TeamLaunchRuntimeAdapter } from '../../runtime';
 import type { OpenCodeRetainedSecondaryDelivery } from '../OpenCodeRetainedSecondaryOwnership';
 import type { OpenCodeRuntimeLaneRecoveryPorts } from '../TeamProvisioningOpenCodeRuntimeRecoveryFlow';
 import type { SecondaryRuntimeRunEntry } from '../TeamProvisioningSecondaryRuntimeRuns';
@@ -62,44 +64,7 @@ function createHarness() {
     liveRuntimeSnapshotCacheTtlMs: 2000,
     persistedRuntimeSnapshotCacheTtlMs: 10000,
   });
-  const runtimeProbe = vi.fn(async () => {
-    throw new Error('No runtime probe/host start is permitted');
-  });
-  const recoveryPorts = {
-    readOpenCodeMemberDirectory: vi.fn(async () => ({ config: null, metaMembers: [] })),
-    resolveOpenCodeMemberIdentityFromDirectory: () => ({ ok: true, laneId: input.laneId }),
-    readOpenCodeRuntimeLaneIndex: vi.fn(async () => ({
-      lanes: { [input.laneId]: { state: 'active' } },
-    })),
-    tryRecoverActiveOpenCodeSecondaryLaneFromRuntime: runtimeProbe,
-    tryRecoverMissingOpenCodeSecondaryLaneFromRuntime: runtimeProbe,
-    readLaunchState: runtimeProbe,
-  } as unknown as OpenCodeRuntimeLaneRecoveryPorts;
-  const recover = vi.fn((member: { teamName: string; memberName: string }) =>
-    tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery(member, recoveryPorts)
-  );
-  const relay = vi.fn(async () => ({
-    attempted: 1,
-    delivered: 1,
-    relayed: 1,
-    failed: 0,
-    skipped: 0,
-  }));
   const logger = { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), diagnostic: vi.fn() };
-  const scheduler = createOpenCodePromptDeliveryWatchdogSchedulerFromService(
-    {
-      canDeliverToOpenCodeRuntimeForTeam: (teamName) =>
-        runTracking.canDeliverToOpenCodeRuntimeForTeam(teamName),
-      tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: recover,
-      relayOpenCodeMemberInboxMessages: relay,
-      inboxReader: { getMessagesFor: async () => [unread] },
-      openCodeRuntimeRecoveryIdentity: {
-        resolveOpenCodeMemberDeliveryIdentity: async () => ({ ok: true, laneId: input.laneId }),
-        isOpenCodeRuntimeLaneIndexActive: async () => true,
-      },
-    },
-    { logger, getErrorMessage: String }
-  );
   const evidencePorts = createDefaultOpenCodeRuntimeBootstrapEvidencePorts({
     teamsBasePath: '/unused-test-only',
   });
@@ -117,6 +82,123 @@ function createHarness() {
       },
     ],
   }));
+  const projectPath = '/TEST/bootstrap-recovery';
+  const member = { name: input.memberName, providerId: 'opencode' as const, cwd: projectPath };
+  const runtimeProbe = vi.fn<TeamLaunchRuntimeAdapter['reconcile']>(async (request) => ({
+    runId: request.runId,
+    teamName: request.teamName,
+    launchPhase: 'active',
+    teamLaunchState: 'clean_success',
+    members: {
+      [input.memberName]: {
+        memberName: input.memberName,
+        providerId: 'opencode',
+        launchState: 'confirmed_alive',
+        agentToolAccepted: true,
+        runtimeAlive: true,
+        bootstrapConfirmed: true,
+        hardFailure: false,
+        diagnostics: [],
+      },
+    },
+    snapshot: null,
+    warnings: [],
+    diagnostics: [],
+  }));
+  const startHost = vi.fn(async () => {
+    throw new Error('Native launch/preparation is forbidden during observation');
+  });
+  const missingHostRecovery = vi.fn(async () => {
+    throw new Error('Missing-host recovery is forbidden for this active lane');
+  });
+  const adapter: TeamLaunchRuntimeAdapter = {
+    providerId: 'opencode',
+    prepare: startHost,
+    launch: startHost,
+    reconcile: runtimeProbe,
+    stop: vi.fn(async () => {
+      throw new Error('Recovery cannot stop an existing host');
+    }),
+  };
+  const recoveryBoundary = createTeamProvisioningOpenCodeRuntimeRecoveryBoundary({
+    teamsBasePath: evidencePorts.teamsBasePath,
+    logger,
+    getOpenCodeRuntimeAdapter: () => adapter,
+    createRunId: () => 'read-only-reconciliation',
+  });
+  const recoveryPorts: OpenCodeRuntimeLaneRecoveryPorts = {
+    teamsBasePath: evidencePorts.teamsBasePath,
+    logger,
+    canDeliverToOpenCodeRuntimeForTeam: (teamName) =>
+      runTracking.canDeliverToOpenCodeRuntimeForTeam(teamName),
+    canAttemptCommittedOpenCodeSessionRecovery: (teamName) =>
+      runTracking.canAttemptCommittedOpenCodeSessionRecovery(teamName),
+    cleanupStoppedTeamOpenCodeRuntimeLanesInBackground: vi.fn(),
+    readOpenCodeMemberDirectory: vi.fn(async () => ({
+      config: null,
+      teamMeta: null,
+      metaMembers: [member],
+    })),
+    resolveOpenCodeMemberIdentityFromDirectory: () => ({
+      ok: true,
+      canonicalMemberName: input.memberName,
+      laneId: input.laneId,
+      metaMember: member,
+      memberRuntimeCwd: projectPath,
+      laneIdentity: {
+        laneId: input.laneId,
+        laneKind: 'secondary',
+        laneOwnerProviderId: 'opencode',
+      },
+    }),
+    readOpenCodeRuntimeLaneIndex: vi.fn<
+      NonNullable<OpenCodeRuntimeLaneRecoveryPorts['readOpenCodeRuntimeLaneIndex']>
+    >(async () => ({
+      version: 1,
+      updatedAt: unread.timestamp,
+      lanes: {
+        [input.laneId]: { laneId: input.laneId, state: 'active', updatedAt: unread.timestamp },
+      },
+    })),
+    readCommittedOpenCodeBootstrapSessionEvidence: vi.fn((request) =>
+      evidencePorts.readCommittedBootstrapSessionEvidence(request)
+    ),
+    tryRecoverActiveOpenCodeSecondaryLaneFromRuntime: (request) =>
+      recoveryBoundary.tryRecoverActiveOpenCodeSecondaryLaneFromRuntime(request),
+    tryRecoverMissingOpenCodeSecondaryLaneFromRuntime: missingHostRecovery,
+    readLaunchState: vi.fn(async () => null),
+    readConfigForObservation: async () => null,
+    readTeamMeta: async () => null,
+    readMetaMembers: async () => [member],
+    readPersistedTeamProjectPath: () => projectPath,
+    isOpenCodeRuntimeLaneIndexActive: async () => true,
+    upsertOpenCodeRuntimeLaneIndexEntry: vi.fn(async () => undefined),
+    setOpenCodeRuntimeActiveRunManifest: vi.fn(async () => undefined),
+  };
+  const recover = vi.fn((member: { teamName: string; memberName: string }) =>
+    tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery(member, recoveryPorts)
+  );
+  const relay = vi.fn(async () => ({
+    attempted: 1,
+    delivered: 1,
+    relayed: 1,
+    failed: 0,
+    skipped: 0,
+  }));
+  const scheduler = createOpenCodePromptDeliveryWatchdogSchedulerFromService(
+    {
+      canDeliverToOpenCodeRuntimeForTeam: (teamName) =>
+        runTracking.canDeliverToOpenCodeRuntimeForTeam(teamName),
+      tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: recover,
+      relayOpenCodeMemberInboxMessages: relay,
+      inboxReader: { getMessagesFor: async () => [unread] },
+      openCodeRuntimeRecoveryIdentity: {
+        resolveOpenCodeMemberDeliveryIdentity: async () => ({ ok: true, laneId: input.laneId }),
+        isOpenCodeRuntimeLaneIndexActive: async () => true,
+      },
+    },
+    { logger, getErrorMessage: String }
+  );
   const getInboxMessages = vi.fn(async () => [unread]);
   const coordinator = createOpenCodePromptDeliveryWatchdogCoordinator({
     ...createOpenCodeBootstrapWakePorts({ runTracking, runs }, () => evidencePorts),
@@ -156,6 +238,10 @@ function createHarness() {
     relay,
     recover,
     runtimeProbe,
+    startHost,
+    missingHostRecovery,
+    recoveryPorts,
+    adapter,
     evidencePorts,
     getInboxMessages,
   };
@@ -164,10 +250,12 @@ function createHarness() {
 afterEach(() => vi.useRealTimers());
 
 describe('OpenCode bootstrap delivery while the lead is finalizing', () => {
-  it('uses actual tracked-run admission and existing active-lane recovery without starting a host', async () => {
+  it('confirms the committed active lane through native reconciliation while the lead is finalizing', async () => {
     vi.useFakeTimers();
     const h = createHarness();
     expect(h.runTracking.canDeliverToOpenCodeRuntimeForTeam(input.teamName)).toBe(false);
+    expect(h.runTracking.canAttemptCommittedOpenCodeSessionRecovery(input.teamName)).toBe(true);
+    expect(h.secondaryRuns.size).toBe(0);
     expect(h.runTracking.resolveDeliverableTrackedRuntimeRunId(input.teamName)).toBe('root-run-1');
     await expect(h.coordinator.wakeAfterBootstrapCommit(input)).resolves.toBe(1);
     expect(h.relay).not.toHaveBeenCalled();
@@ -180,8 +268,76 @@ describe('OpenCode bootstrap delivery while the lead is finalizing', () => {
       onlyMessageId: unread.messageId,
       source: 'watchdog',
     });
-    expect(h.runtimeProbe).not.toHaveBeenCalled();
+    expect(h.runtimeProbe).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        teamName: input.teamName,
+        laneId: input.laneId,
+        runId: 'read-only-reconciliation',
+        reason: 'startup_recovery',
+        expectedMembers: [
+          expect.objectContaining({ name: input.memberName, cwd: '/TEST/bootstrap-recovery' }),
+        ],
+      })
+    );
+    expect(
+      h.recoveryPorts.readCommittedOpenCodeBootstrapSessionEvidence
+    ).toHaveBeenCalledExactlyOnceWith({
+      teamsBasePath: h.evidencePorts.teamsBasePath,
+      teamName: input.teamName,
+      laneId: input.laneId,
+    });
+    expect(h.recoveryPorts.setOpenCodeRuntimeActiveRunManifest).toHaveBeenCalledExactlyOnceWith({
+      teamsBasePath: h.evidencePorts.teamsBasePath,
+      teamName: input.teamName,
+      laneId: input.laneId,
+      runId: input.runId,
+    });
+    expect(h.startHost).not.toHaveBeenCalled();
+    expect(h.missingHostRecovery).not.toHaveBeenCalled();
+    expect(h.adapter.stop).not.toHaveBeenCalled();
     expect(h.runTracking.canDeliverToOpenCodeRuntimeForTeam(input.teamName)).toBe(false);
+  });
+
+  it('keeps the inbox pending when native reconciliation has no recoverable member evidence', async () => {
+    vi.useFakeTimers();
+    const h = createHarness();
+    h.runtimeProbe.mockResolvedValue({
+      runId: 'read-only-reconciliation',
+      teamName: input.teamName,
+      launchPhase: 'reconciled',
+      teamLaunchState: 'partial_pending',
+      members: {},
+      snapshot: null,
+      warnings: [],
+      diagnostics: [],
+    });
+    await expect(h.coordinator.wakeAfterBootstrapCommit(input)).resolves.toBe(1);
+    await vi.advanceTimersByTimeAsync(500);
+    expect(h.runtimeProbe).toHaveBeenCalledTimes(1);
+    expect(h.relay).not.toHaveBeenCalled();
+    expect(h.recoveryPorts.setOpenCodeRuntimeActiveRunManifest).not.toHaveBeenCalled();
+    expect(h.startHost).not.toHaveBeenCalled();
+    expect(h.missingHostRecovery).not.toHaveBeenCalled();
+    expect(unread.read).toBe(false);
+  });
+
+  it('rejects a scheduled recovery after its tracked owner is stopped', async () => {
+    vi.useFakeTimers();
+    const h = createHarness();
+    await expect(h.coordinator.wakeAfterBootstrapCommit(input)).resolves.toBe(1);
+    h.run.cancelRequested = true;
+    h.stop();
+    expect(h.runTracking.canAttemptCommittedOpenCodeSessionRecovery(input.teamName)).toBe(false);
+    // Leave the timer present to exercise the real recovery gate, not timer cancellation.
+    await vi.advanceTimersByTimeAsync(500);
+    expect(h.recover).toHaveBeenCalledTimes(1);
+    expect(
+      h.recoveryPorts.cleanupStoppedTeamOpenCodeRuntimeLanesInBackground
+    ).toHaveBeenCalledExactlyOnceWith(input.teamName);
+    expect(h.runtimeProbe).not.toHaveBeenCalled();
+    expect(h.relay).not.toHaveBeenCalled();
+    expect(h.startHost).not.toHaveBeenCalled();
+    expect(h.missingHostRecovery).not.toHaveBeenCalled();
   });
 
   it.each([

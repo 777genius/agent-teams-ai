@@ -1,8 +1,19 @@
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import { createOpenCodeBridgeHandshakeFailure } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+import { markOpenCodeGroupHandoff } from '../../../../src/main/services/team/opencode/delivery/OpenCodeDeliverySnapshots';
 import { OpenCodeMemberMessageDeliveryService } from '../../../../src/main/services/team/opencode/delivery/OpenCodeMemberMessageDeliveryService';
+import {
+  buildOpenCodePromptDeliveryAttemptId,
+  createOpenCodePromptDeliveryLedgerStore,
+  hashOpenCodePromptDeliveryPayload,
+} from '../../../../src/main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
 import { OPENCODE_STALE_PENDING_POLICY_CONFIG } from '../../../../src/main/services/team/opencode/delivery/OpenCodePromptDeliveryStalePendingPolicy';
+import { OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS } from '../../../../src/main/services/team/opencode/delivery/OpenCodePromptDeliveryWatchdog';
 import { OpenCodeVisibleReplyProofService } from '../../../../src/main/services/team/opencode/delivery/OpenCodeVisibleReplyProofService';
 
 import type {
@@ -362,66 +373,151 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
   );
 
   it.each([false, true])(
-    'keeps a durable group prebridge marker unknown and never dispatches it again (correction=%s)',
+    'observes a durable group prebridge marker without redispatch and preserves backoff (correction=%s)',
     async (correction) => {
-      const record = makeLedgerRecord({
-        groupChatId: 'group-a',
-        status: 'accepted',
-        acceptanceUnknown: true,
-        lastReason: 'group_handoff_started_acceptance_unknown',
-        ...(correction
-          ? {
-              groupRepairHandoffPending: true,
-              acceptanceUnknown: false,
-              acceptedAt: '2026-05-09T12:00:00.000Z',
-              runtimePromptMessageId: 'original-accepted-prompt',
-            }
-          : {}),
-      });
-      const send = vi.fn();
-      const observe = vi.fn();
-      const ledger = {
-        getActiveForMember: vi.fn(async () => record),
-        ensurePending: vi.fn(async () => record),
-        getByInboxMessage: vi.fn(async () => record),
-      };
-      const deps = makeDeps({
-        getOpenCodeRuntimeMessageAdapter: () => ({
-          ...makeAdapter(send),
-          observeMessageDelivery: observe,
-        }),
-        createOpenCodePromptDeliveryLedger: vi.fn(() => ledger as never),
-        openCodePromptDeliveryWatchdogScheduler: { isEnabled: vi.fn(() => true) },
-        openCodeVisibleReplyProofService: {
-          applyDestinationProof: vi.fn(async () => ({ ledgerRecord: record, visibleReply: null })),
-          materializePlainTextReplyIfNeeded: vi.fn(async () => ({
-            ledgerRecord: record,
-            visibleReply: null,
-          })),
-          findByRelayOfMessageId: vi.fn(async () => null),
-        },
-        isOpenCodeDeliveryResponseReadCommitAllowed: vi.fn(async () => false),
-      });
-      const service = new OpenCodeMemberMessageDeliveryService(deps);
-      const input = {
-        memberName: 'alice',
-        messageId: 'msg-1',
-        text: 'hello group',
-        groupChatId: 'group-a',
-        groupMessageId: 'canonical-a',
-        groupChatProtocolVersion: 1 as const,
-        groupRunKey: 'run-1',
-      };
-      for (let retry = 0; retry < 2; retry++)
-        expect(await service.deliver('team-a', input)).toMatchObject({
-          delivered: false,
-          accepted: false,
-          acceptanceUnknown: true,
-          reason: 'group_handoff_acceptance_unknown',
+      const root = await mkdtemp(join(tmpdir(), 'opencode-prebridge-contract-'));
+      try {
+        const ledger = createOpenCodePromptDeliveryLedgerStore({
+          filePath: join(root, 'ledger.json'),
         });
-      expect(send).not.toHaveBeenCalled();
-      expect(observe).not.toHaveBeenCalled();
-      expect(deps.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded).not.toHaveBeenCalled();
+        const input = {
+          memberName: 'alice',
+          messageId: 'msg-1',
+          text: 'hello group',
+          groupChatId: 'group-a',
+          groupMessageId: 'canonical-a',
+          groupChatProtocolVersion: 1 as const,
+          groupRunKey: 'run-1',
+        };
+        const now = new Date().toISOString();
+        let record = await ledger.ensurePending({
+          teamName: 'team-a',
+          memberName: input.memberName,
+          laneId: 'primary',
+          runId: input.groupRunKey,
+          inboxMessageId: input.messageId,
+          groupChatId: input.groupChatId,
+          inboxTimestamp: now,
+          source: 'manual',
+          replyRecipient: 'user',
+          payloadHash: hashOpenCodePromptDeliveryPayload({ ...input, replyRecipient: 'user' }),
+          now,
+        });
+        if (correction) {
+          record = await ledger.applyDeliveryResult({
+            id: record.id,
+            accepted: true,
+            sessionId: 'original-session',
+            runtimePromptMessageId: 'original-accepted-prompt',
+            deliveryAttemptId: buildOpenCodePromptDeliveryAttemptId(record),
+            responseObservation: {
+              state: 'responded_plain_text',
+              deliveredUserMessageId: 'original-accepted-prompt',
+              assistantMessageId: 'original-non-reply',
+              toolCallNames: [],
+              visibleMessageToolCallId: null,
+              visibleReplyMessageId: null,
+              visibleReplyCorrelation: null,
+              latestAssistantPreview: '[[AGENT_TEAMS_NO_REPLY]]',
+              reason: null,
+            },
+            now,
+          });
+        }
+        const handoff = await markOpenCodeGroupHandoff(ledger, record, now);
+        const send = vi.fn();
+        const observe = vi
+          .fn<NonNullable<OpenCodeRuntimeMessageAdapter['observeMessageDelivery']>>()
+          .mockResolvedValue({
+            ok: true,
+            providerId: 'opencode',
+            memberName: input.memberName,
+            diagnostics: [],
+            responseObservation: {
+              state: 'not_observed',
+              deliveredUserMessageId: null,
+              assistantMessageId: null,
+              toolCallNames: [],
+              visibleMessageToolCallId: null,
+              visibleReplyMessageId: null,
+              visibleReplyCorrelation: null,
+              latestAssistantPreview: null,
+              reason: null,
+            },
+          });
+        const unchangedProof = async ({
+          ledgerRecord,
+        }: {
+          ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
+        }) => ({ ledgerRecord, visibleReply: null });
+        const schedule = vi.fn();
+        const deps = makeDeps({
+          getOpenCodeRuntimeMessageAdapter: () => ({
+            ...makeAdapter(send),
+            observeMessageDelivery: observe,
+          }),
+          createOpenCodePromptDeliveryLedger: () => ledger,
+          openCodePromptDeliveryWatchdogScheduler: { isEnabled: () => true },
+          openCodeVisibleReplyProofService: {
+            applyDestinationProof: unchangedProof,
+            materializePlainTextReplyIfNeeded: unchangedProof,
+            findByRelayOfMessageId: async () => null,
+          },
+          isOpenCodeDeliveryResponseReadCommitAllowed: async () => false,
+          scheduleOpenCodePromptDeliveryWatchdog: schedule,
+        });
+        const service = new OpenCodeMemberMessageDeliveryService(deps);
+        for (let retry = 0; retry < 2; retry++) {
+          expect(await service.deliver('team-a', input)).toMatchObject({
+            delivered: false,
+            accepted: false,
+            acceptanceUnknown: true,
+            ledgerRecordId: handoff.id,
+            reason: 'group_handoff_acceptance_unknown',
+          });
+        }
+        expect(observe).toHaveBeenCalledExactlyOnceWith(
+          expect.objectContaining({
+            ...input,
+            teamName: 'team-a',
+            laneId: 'primary',
+            runId: 'run-1',
+            sessionId: correction ? 'original-session' : undefined,
+            runtimePromptMessageId: correction ? 'original-accepted-prompt' : undefined,
+            ...(correction ? { deliveryAttemptId: handoff.handoffDeliveryAttemptId } : {}),
+          })
+        );
+        const [persisted] = await ledger.list();
+        expect(persisted).toMatchObject({
+          id: handoff.id,
+          inboxMessageId: input.messageId,
+          groupChatId: input.groupChatId,
+          runId: input.groupRunKey,
+          payloadHash: handoff.payloadHash,
+          handoffDeliveryAttemptId: handoff.handoffDeliveryAttemptId,
+          runtimePromptMessageId: handoff.runtimePromptMessageId,
+          runtimeSessionId: handoff.runtimeSessionId,
+          acceptedAt: handoff.acceptedAt,
+          acceptanceUnknown: handoff.acceptanceUnknown,
+          attempts: handoff.attempts,
+          status: 'accepted',
+          responseState: 'not_observed',
+          inboxReadCommittedAt: null,
+        });
+        expect(Boolean(persisted.groupRepairHandoffPending)).toBe(correction);
+        expect(Date.parse(persisted.nextAttemptAt!)).toBeGreaterThan(Date.now());
+        expect(schedule).toHaveBeenNthCalledWith(1, {
+          teamName: 'team-a',
+          memberName: input.memberName,
+          messageId: input.messageId,
+          delayMs: OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
+        });
+        expect(send).not.toHaveBeenCalled();
+        expect(deps.sendOpenCodeMemberMessageToRuntimeSerialized).not.toHaveBeenCalled();
+        expect(deps.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded).not.toHaveBeenCalled();
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
     }
   );
 
