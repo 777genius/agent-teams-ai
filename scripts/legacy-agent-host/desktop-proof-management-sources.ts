@@ -136,6 +136,7 @@ export const desktopProofManagementSources = [
   'src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts',
   'src/features/runtime-provider-management/main/index.ts',
   'src/main/index.ts',
+  'src/main/utils/shutdownStep.ts',
   'src/main/ipc/agentBackend.ts',
   'src/main/ipc/extensions.ts',
   'src/main/ipc/handlers.ts',

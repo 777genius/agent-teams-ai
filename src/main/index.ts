@@ -189,6 +189,7 @@ import { createBudgetNotificationSink } from '@features/token-usage/main';
 import { RendererRecoveryController } from '@main/utils/RendererRecoveryController';
 import { resolveRendererEntry } from '@main/utils/rendererEntry';
 import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
+import { runShutdownStep, SHUTDOWN_STEP_TIMEOUT_MS } from '@main/utils/shutdownStep';
 import {
   APP_GET_WINDOWS_ELEVATION_STATUS,
   APP_STARTUP_GET_STATUS,
@@ -1004,7 +1005,6 @@ const fileWatcherStartupCoordinator = new FileWatcherStartupCoordinator({
   platform: process.platform,
 });
 
-const SHUTDOWN_STEP_TIMEOUT_MS = 5_000;
 const STARTUP_RECOVERY_DELAY_MS = 10_000;
 const STARTUP_CLI_WARMUP_DELAY_MS = 90_000;
 const STARTUP_BACKGROUND_SERVICE_DELAY_MS = 5_000;
@@ -1387,37 +1387,6 @@ function clearInboxNotifyTimers(): void {
     clearTimeout(timer);
   }
   inboxNotifyTimers.clear();
-}
-
-async function runShutdownStep(
-  label: string,
-  action: () => void | Promise<void>,
-  timeoutMs: number | null = SHUTDOWN_STEP_TIMEOUT_MS
-): Promise<void> {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-  logger.diagnostic('Shutdown step wait started', { label });
-  try {
-    if (timeoutMs === null) return void (await action()); // Caller already supplies a finite drain.
-    await Promise.race([
-      Promise.resolve().then(action),
-      new Promise<void>((resolve) => {
-        timeout = setTimeout(() => {
-          logger.warn(`Shutdown step timed out after ${timeoutMs}ms: ${label}`);
-          resolve();
-        }, timeoutMs);
-        timeout.unref?.();
-      }),
-    ]);
-  } catch (error) {
-    logger.warn(
-      `Shutdown step failed (${label}): ${error instanceof Error ? error.message : String(error)}`
-    );
-  } finally {
-    logger.diagnostic('Shutdown step wait finished', { label });
-    if (timeout) {
-      clearTimeout(timeout);
-    }
-  }
 }
 
 export interface InternalStorageShutdownServices {
