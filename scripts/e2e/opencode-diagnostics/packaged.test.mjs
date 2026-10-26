@@ -31,7 +31,8 @@ import {
   waitForPackagedPreload,
   matchesPackagedPreload,
   refreshSettled,
-  waitForSettledDirectory,
+  collectReadyCatalog,
+  assertSummaryDirectoryPage,
   qualifySummary,
   qualifyProjectStatus,
   qualifySettings,
@@ -471,6 +472,7 @@ test('catalog qualification refuses error evidence, stale/unknown/empty/incomple
       runtimeId: 'opencode',
       providerId: 'opencode',
       catalogState: 'fresh',
+      diagnostics: [],
       models: [{ providerId: 'opencode', modelId: 'actual' }],
       totalCount: 1,
     },
@@ -688,6 +690,7 @@ const modelPage = (ids, cursor, nextCursor, totalCount = 2) => ({
     runtimeId: 'opencode',
     providerId: 'opencode',
     catalogState: 'fresh',
+    diagnostics: [],
     models: ids.map((modelId) => ({ providerId: 'opencode', modelId })),
     cursor,
     nextCursor,
@@ -847,37 +850,92 @@ const uiDirectory = (entries) =>
     },
   });
 
-test('pending directory never qualifies a ready measured UI refresh with fresh models', async () => {
+test('pending summary metadata qualifies only with complete fresh measured provider catalogs', async () => {
   const directory = uiDirectory([{ providerId: 'opencode' }]);
   directory.response.directory.diagnostics = ['capabilities_pending'];
-  const records = [directory, uiRecord('loadModels', modelPage(['one'], null, null, 1))];
+  const records = [
+    directory,
+    uiRecord('loadModels', modelPage(['one'], null, 'next')),
+    uiRecord('loadModels', modelPage(['two'], 'next', null), { cursor: 'next' }),
+  ];
+  const completed = { state: 'ready', models: ['opencode/one', 'opencode/two'] };
+  assert.deepEqual((await qualifyUIRefresh(records, completed)).modelIds, completed.models);
+  // Metadata must never replace provider proof, completeness or rendered correlation.
+  for (const patch of [
+    { error: { message: 'failed' } },
+    { runtimeId: 'foreign' },
+    { models: { ...records[2].response.models, runtimeId: 'foreign' } },
+    { models: { ...records[2].response.models, providerId: 'foreign' } },
+    { models: { ...records[2].response.models, catalogState: 'stale' } },
+    { models: { ...records[2].response.models, catalogState: undefined } },
+    { models: { ...records[2].response.models, diagnostics: ['capabilities_pending'] } },
+    { models: { ...records[2].response.models, diagnostics: undefined } },
+    { models: { ...records[2].response.models, totalCount: 3 } },
+    {
+      models: {
+        ...records[2].response.models,
+        models: [{ providerId: 'foreign', modelId: 'two' }],
+      },
+    },
+  ]) {
+    const bad = { ...records[2], response: { ...records[2].response, ...patch } };
+    await assert.rejects(qualifyUIRefresh([...records.slice(0, 2), bad], completed));
+  }
+  await assert.rejects(qualifyUIRefresh(records.slice(0, 2), completed), /Missing UI page/);
   await assert.rejects(
-    qualifyUIRefresh(records, { state: 'ready', models: ['opencode/one'] }),
-    /Pending\/degraded provider directory/
+    qualifyUIRefresh(records, { ...completed, models: ['opencode/one'] }),
+    /Rendered UI/
   );
+  for (const diagnostics of [undefined, ['unavailable'], ['capabilities_pending', 'timeout']]) {
+    const bad = structuredClone(directory);
+    bad.response.directory.diagnostics = diagnostics;
+    await assert.rejects(
+      qualifyUIRefresh([bad, ...records.slice(1)], completed),
+      /Unexpected provider summary diagnostics/
+    );
+  }
+  assertSummaryDirectoryPage(directory.response.directory);
 });
 
-test('directory readiness waits for authoritative capabilities and preserves a finite budget', async () => {
-  const pending = uiDirectory([{ providerId: 'opencode' }]).response;
-  pending.directory.diagnostics = ['capabilities_pending'];
-  const ready = uiDirectory([{ providerId: 'opencode' }, { providerId: 'kiro' }]).response;
-  const attempts = [];
-  assert.equal(
-    await waitForSettledDirectory(async (remaining, attempt) => {
+test('catalog readiness requires all fresh provider pages within the existing bounded budget', async () => {
+  const calls = [];
+  const models = await collectReadyCatalog(
+    async (cursor, page, remaining) => {
       assert(remaining > 0 && remaining <= 2000);
-      attempts.push(attempt);
-      return attempt === 0 ? pending : ready;
-    }, 2000),
-    ready
+      calls.push(cursor);
+      return page === 0 ? modelPage(['one'], null, 'next') : modelPage(['two'], 'next', null);
+    },
+    'opencode',
+    2000
   );
-  assert.deepEqual(attempts, [0, 1]);
+  assert.deepEqual(calls, [null, 'next']);
+  assert.deepEqual(
+    models.map((model) => model.modelId),
+    ['one', 'two']
+  );
+  const large = Array.from({ length: 201 }, (_, index) => `model-${index}`);
+  assert.equal(
+    (await collectReadyCatalog(async () => modelPage(large, null, null, 201), 'opencode')).length,
+    201
+  );
   await assert.rejects(
-    waitForSettledDirectory(async () => pending, 1),
+    collectReadyCatalog(async () => modelPage(large.slice(0, 200), null, null, 201), 'opencode'),
+    /Incomplete inventory/
+  );
+  await assert.rejects(
+    collectReadyCatalog(
+      async () => {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        return modelPage(['one'], null, null, 1);
+      },
+      'opencode',
+      1
+    ),
     /bootstrap budget/
   );
   await assert.rejects(
-    waitForSettledDirectory(async () => ({ ...ready, error: { message: 'failed' } })),
-    /readiness failed/
+    collectReadyCatalog(async () => modelPage([], null, null, 0), 'opencode', 0),
+    /bootstrap budget/
   );
 });
 
@@ -1606,29 +1664,48 @@ test('the grid read joined into the catalog refresh counts once; other extra dir
   }
 });
 
-
 test('independent fresh catalog membership drift is explicit without weakening UI completion proof', async () => {
   const records = [
     uiDirectory([{ providerId: 'opencode' }]),
     uiRecord('loadModels', modelPage(['one', 'retired'], null, null, 2)),
   ];
-  const inventory = await qualifyUIRefresh(records, { state: 'ready', models: ['opencode/one', 'opencode/retired'] });
-  assert.deepEqual(compareCatalogSnapshots(inventory, ['opencode/one', 'opencode/new']), {
-    comparison: 'independent-requests', changed: true, uiModelCount: 2, freshModelCount: 2,
-    removedSinceUI: ['opencode/retired'], addedSinceUI: ['opencode/new'],
+  const inventory = await qualifyUIRefresh(records, {
+    state: 'ready',
+    models: ['opencode/one', 'opencode/retired'],
   });
-  await assert.rejects(qualifyUIRefresh(records, { state: 'ready', models: ['opencode/one'] }), /Rendered UI/);
+  assert.deepEqual(compareCatalogSnapshots(inventory, ['opencode/one', 'opencode/new']), {
+    comparison: 'independent-requests',
+    changed: true,
+    uiModelCount: 2,
+    freshModelCount: 2,
+    removedSinceUI: ['opencode/retired'],
+    addedSinceUI: ['opencode/new'],
+  });
+  await assert.rejects(
+    qualifyUIRefresh(records, { state: 'ready', models: ['opencode/one'] }),
+    /Rendered UI/
+  );
   const incomplete = [records[0], uiRecord('loadModels', modelPage(['one'], null, 'next', 2))];
-  await assert.rejects(qualifyUIRefresh(incomplete, { state: 'ready', models: ['opencode/one'] }), /Missing UI page/);
+  await assert.rejects(
+    qualifyUIRefresh(incomplete, { state: 'ready', models: ['opencode/one'] }),
+    /Missing UI page/
+  );
 });
 
 test('a populated UI source cannot qualify an unexpectedly empty independent fresh source', () => {
   const inventory = { sources: ['opencode', 'kiro'], modelIds: ['opencode/one', 'kiro/auto'] };
   assert.throws(() => compareCatalogSnapshots(inventory, []), /unexpectedly empty/);
-  assert.throws(() => compareCatalogSnapshots(inventory, ['kiro/auto']), /Fresh opencode.*unexpectedly empty/);
+  assert.throws(
+    () => compareCatalogSnapshots(inventory, ['kiro/auto']),
+    /Fresh opencode.*unexpectedly empty/
+  );
   assert.deepEqual(compareCatalogSnapshots(inventory, ['kiro/auto', 'opencode/one']), {
-    comparison: 'independent-requests', changed: false, uiModelCount: 2, freshModelCount: 2,
-    removedSinceUI: [], addedSinceUI: [],
+    comparison: 'independent-requests',
+    changed: false,
+    uiModelCount: 2,
+    freshModelCount: 2,
+    removedSinceUI: [],
+    addedSinceUI: [],
   });
   assert.equal(compareCatalogSnapshots({ sources: [], modelIds: [] }, []).changed, false);
 });

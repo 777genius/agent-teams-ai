@@ -217,6 +217,10 @@ export function qualifyModels(response, source) {
     'fresh',
     'Cached/stale/unknown models do not qualify'
   );
+  assert(
+    Array.isArray(response.models.diagnostics) && response.models.diagnostics.length === 0,
+    'Model catalog diagnostics do not qualify'
+  );
   const models = response.models.models;
   assert(Array.isArray(models), `Invalid models for ${source}`);
   assert(
@@ -340,39 +344,29 @@ export function refreshSettled(observation, current) {
   );
 }
 
-export function assertSettledDirectoryPage(payload) {
+// Summary directory warnings describe capability metadata, never catalog/auth/launch proof.
+export function assertSummaryDirectoryPage(payload) {
   assert(
-    Array.isArray(payload?.diagnostics) && payload.diagnostics.length === 0,
-    'Pending/degraded provider directory does not qualify'
+    Array.isArray(payload?.diagnostics) &&
+      payload.diagnostics.every((item) => item === 'capabilities_pending'),
+    'Unexpected provider summary diagnostics'
   );
 }
 
-// Readiness is a separate main API precondition, never measured UI evidence.
-export async function waitForSettledDirectory(load, timeoutMs = 120000) {
+// Readiness is fresh selected-provider catalog evidence, never measured UI or launch evidence.
+export async function collectReadyCatalog(load, source, timeoutMs = 120000) {
   const deadline = Date.now() + timeoutMs;
-  let attempt = 0;
-  for (;;) {
-    const remaining = deadline - Date.now();
-    if (remaining <= 0) break;
-    const response = await load(remaining, attempt++);
-    assert.equal(response?.schemaVersion, 1);
-    assert.equal(response.runtimeId, 'opencode');
-    assert(!response.error, 'Provider directory readiness failed');
-    assert.equal(response.directory?.runtimeId, 'opencode');
-    const diagnostics = response.directory.diagnostics;
-    assert(Array.isArray(diagnostics), 'Missing directory readiness diagnostics');
-    if (!diagnostics.length) {
-      assertSettledDirectoryPage(response.directory);
-      assert(Date.now() < deadline, 'Provider directory did not settle within bootstrap budget');
+  return collectPages(
+    async (cursor, page) => {
+      const remaining = deadline - Date.now();
+      assert(remaining > 0, 'Provider catalog exceeded bootstrap budget');
+      const response = await load(cursor, page, remaining);
+      assert(Date.now() < deadline, 'Provider catalog exceeded bootstrap budget');
       return response;
-    }
-    assert(
-      diagnostics.every((item) => item === 'capabilities_pending'),
-      'Provider directory readiness failed'
-    );
-    await pause(Math.min(250, Math.max(0, deadline - Date.now())));
-  }
-  throw new Error('Provider directory did not settle within bootstrap budget');
+    },
+    'models',
+    source
+  );
 }
 
 /**
@@ -437,7 +431,7 @@ export async function qualifyUIRefresh(records, completed) {
   assert(directory.every((r) => r.input.summary === true && r.input.filter === 'all'));
   for (const record of directory) {
     const payload = record.response.directory;
-    assertSettledDirectoryPage(payload);
+    assertSummaryDirectoryPage(payload);
     assert(
       Number.isInteger(payload?.totalCount) && Number.isInteger(payload?.returnedCount),
       'Missing UI directory completeness metadata'
@@ -833,18 +827,30 @@ export async function verifyPackaged({
     );
     evidence.summaryQualification = qualifySummary(provider);
 
-    // The UI can be ready while its source directory still reports capabilities_pending.
-    // Share the existing bootstrap-settle budget with an independent readiness read.
-    const bootstrapDeadline = Date.now() + 120000;
-    await waitForSettledDirectory(
-      (remaining, attempt) =>
+    // Summary capabilities_pending is permanent metadata for V2, not a readiness timer.
+    // Use the supported selected-provider catalog read within the existing bootstrap budget.
+    const readyModels = await collectReadyCatalog(
+      (cursor, page, remaining) =>
         probe(
-          `directoryReady:${attempt}`,
-          'window.electronAPI.runtimeProviderManagement.loadProviderDirectory({runtimeId:"opencode",projectPath:null,summary:true,filter:"all",limit:100,cursor:null,refresh:true})',
+          `catalogReady:opencode:${page}`,
+          `window.electronAPI.runtimeProviderManagement.loadModels(${JSON.stringify({
+            runtimeId: 'opencode',
+            providerId: 'opencode',
+            projectPath: null,
+            refresh: true,
+            limit: null,
+            cursor,
+          })})`,
           remaining
         ),
-      bootstrapDeadline - Date.now()
+      'opencode'
     );
+    evidence.catalogReadiness = {
+      providerId: 'opencode',
+      modelCount: readyModels.length,
+      authenticationProven: false,
+      launchReadinessProven: false,
+    };
     // The preparation gate subsumes the warm-start catalog/refresh-control polling:
     // it rejects disabled/hidden/zero-size/disconnected controls and loading/empty
     // catalogs with a bounded budget and a recorded reason.
@@ -914,7 +920,7 @@ export async function verifyPackaged({
         `directory:${page}`,
         `window.electronAPI.runtimeProviderManagement.loadProviderDirectory(${JSON.stringify(input)})`
       );
-      assertSettledDirectoryPage(response.directory);
+      assertSummaryDirectoryPage(response.directory);
       return response;
     }, 'directory');
     const sources = entries
