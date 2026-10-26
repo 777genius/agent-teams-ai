@@ -12,7 +12,6 @@ real Electron end-to-end verification, early draft PRs, immediate push of every
 commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
-
 ## Current checkpoint — v16 (2026-10-26)
 
 The published `c39c7201d11448028c2844b9a6ef486a3607e8e3` candidate has now
@@ -31,11 +30,28 @@ completed all of the qualification runs that v15 left pending:
   passed all four targets; [packaged matrix 40207898722](https://github.com/777genius/agent-teams-ai/actions/runs/40207898722)
   passed Linux x64, macOS x64/arm64 and Windows x64/arm64, including its full gate.
 
-These results qualify synthetic merge `2918a0d81e93bee167fd8f5873fafdf4b00dec6a`
+The Electron receipt qualifies synthetic merge `2918a0d81e93bee167fd8f5873fafdf4b00dec6a`
 against main `c3d300419a7957152be77e72dce569d302cbe045`, with UAP `1bdc7bb4`.
+The other runs remain tied to that candidate and their recorded checkout.
 The continuation incorporates main `363417fba21c026515c9a8058e60513e18ec5769`;
 the resulting candidate still needs fresh qualification. Prior passes are not
 reassigned to the new source tree or a new engine pin.
+
+The matched SDK/runtime pin now identifies committed UAP source
+`e84b4da218f4445986daa9ed15f40acd828ae06f` after its current-main merge and bounded
+local-Skill receipt hardening. The reviewed compatibility baseline remains
+`agentplugins-v0.1.91`; the build version is `0.1.91+agentteams.e84b4da218f4`.
+The SDK was rebuilt and packed from that clean source. Its archive is
+byte-identical to the prior SDK because the TypeScript package did not change;
+manifest, lockfile, archive name and provenance all identify the new source.
+This pin update does not claim a public release or new native launch coverage.
+Normal frozen installation passed the existing supply-chain and security-patch
+checks. Canonical typecheck passed all eight projects; the impacted extension,
+runtime-integrity and workflow suites passed 128 tests, with the existing
+macOS-only signature test skipped on Linux. Exact committed-source staging built
+the Linux x64 helper and measured version `0.1.91+agentteams.e84b4da218f4`, with
+SHA-256 `92956d1a510ad5c0433314ca2a666e8c0436e2df25cc17dc5c6874d025ece586`.
+These local checks do not replace fresh Full, Electron or platform packaging CI.
 
 The main sync exposed two source-size violations: the upstream work-sync worker
 had reached 849 lines and the combined main entrypoint exceeded its frozen cap by
@@ -53,6 +69,11 @@ preparation. The captured desktop adapter still refuses native project scope,
 and Host #982 remains a separate draft. S25/S26 therefore remain incomplete.
 No draft Host code is imported. The proposed multi-target installation selection
 and additional detected-agent UI remain proposals, not completed acceptance.
+
+[Actual-team launch research and options](team-extension-launch-readiness-options.md)
+record the conditional Codex profile discrepancy, native discovery boundaries
+and remaining per-member Skill/MCP evidence. Launch architecture changes remain
+at the owner's research-and-discussion checkpoint.
 
 ## Previous checkpoint — v15 (2026-10-25)
 
