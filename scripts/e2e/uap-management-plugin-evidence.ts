@@ -183,6 +183,14 @@ export async function observeMatrixNative(
   } else {
     assert.equal(row.installed, true);
     assert.equal(row.enabled, true);
+    assert.equal(typeof row.version, 'string');
+    const version = row.version as string;
+    assert.equal(
+      version,
+      matrixVersion(revision),
+      'Codex must report the reviewed installed version'
+    );
+    assert(/^[a-zA-Z0-9._-]+$/.test(version));
     assert.equal(typeof row.marketplaceName, 'string');
     const marketplace = row.marketplaceName as string;
     assert(/^[a-zA-Z0-9._-]+$/.test(marketplace));
@@ -193,13 +201,14 @@ export async function observeMatrixNative(
       binding.managedPaths.includes(source as string),
       'Codex CLI must report the exact managed source'
     );
+    // Codex keys the cache by manifest version; "local" is only an unversioned fallback.
     const cache = path.join(
       f.env.CODEX_HOME!,
       'plugins',
       'cache',
       marketplace,
       matrixPluginName,
-      'local'
+      version
     );
     skillPath = path.join(cache, 'skills', matrixSkillName, 'SKILL.md');
     manifestPath = path.join(cache, '.codex-plugin', 'plugin.json');

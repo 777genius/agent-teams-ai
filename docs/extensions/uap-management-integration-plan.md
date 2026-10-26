@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v23; multi-target installation, native plugin lifecycle coverage and the explicit Claude trust-profile correction are published. Abandoned local Skill reviews now release their unattempted engine plans. Fresh full and Electron qualification remains required.
+Status: implementation plan v24; S27 completes in real Electron on bc8a3959, including active-profile refusals, unaffected OpenCode, exact process stop and post-stop update. The downstream plugin matrix exposes a versioned Codex cache-path error in its evidence collector; the narrow correction retains all native-byte and removal assertions. A complete fresh Electron receipt remains required.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -12,7 +12,57 @@ real Electron end-to-end verification, early draft PRs, immediate push of every
 commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
-## Current checkpoint — v23 (2026-10-26)
+## Current checkpoint — v24 (2026-10-26)
+
+[Electron run 40365381127](https://github.com/777genius/agent-teams-ai/actions/runs/40365381127)
+on app `bc8a3959c8ae74d1629017fb26bc810d05874172` reaches and completes S27.
+The artifact records `completed: true`: the inherited Claude worker and lead
+are alive, all five retained mutation Apply requests refuse without acceptance,
+fresh Prepare and UI attempts refuse, desired/native state stays unchanged,
+the unrelated OpenCode UI/MCP lifecycle succeeds, both exact owned processes
+stop, and the subsequent Claude update succeeds. Its successful post-stop
+operation is `e54c267f12334981beef530d57e2ffcf086cc3a05d11c2be000ea965f9a290e0`.
+This establishes admission and stop/update behavior, not per-member managed
+Skill-body or plugin MCP use.
+
+The same run then completes the new plugin's three-target UI installation.
+Claude native identity and exact delivered bytes pass. Codex's actual native
+listing reports an installed/enabled plugin, its exact managed local source and
+version `1.0.0`. The evidence collector incorrectly looked in the `local` cache
+slot. In pinned Codex `rust-v0.153.4`, the cache slot is the plugin version;
+`local` is a fallback for an absent manifest version, not a synonym for a local
+source. The corrected collector requires the native listing's version to match
+the reviewed revision and reads that exact versioned cache. It does not search
+for an arbitrary matching file or weaken source/cache bytes, manifests, native
+identity or pre/post-removal absence checks.
+
+A separate disposable-profile control uses the exact CI Codex binary
+(`0.153.4`, SHA-256 `56ef98ab4032d317ab26e9b5e5a175650717351edb16ed9cde0cb6d1734d62da`).
+The original observer reproduces the missing `local` path; the corrected
+observer passes actual source/cache bytes and manifests at `1.0.0` and `2.0.0`,
+refuses the stale expected revision and observes real plugin/marketplace removal.
+Temporary source cleanup in that control is explicitly separate from UAP
+removal. Scoped native desktop TypeScript, fast lint, formatting and independent
+review pass. The control qualifies the corrected native observation contract;
+it does not replace the complete Electron matrix.
+
+The full workflow remains failed at that observation, before update/removal.
+[Artifact 12670297846](https://github.com/777genius/agent-teams-ai/actions/runs/40365381127/artifacts/12670297846)
+has ZIP SHA-256 `994e640b9e7ddc5934aaa46f2c83d33e897e71ac53ac71b6e034086a64234fd8`.
+The current-commit full plugin matrix must run again after this correction.
+
+Hosted validation on the same tested merge completes the canonical workspace
+typechecks, workspace build and MCP E2E, all four test shards and all three lint
+shards. App CodeQL's separate findings aggregate reports no new alerts. This
+supplies actual hosted qualification where the local compiler was killed; the
+remaining Windows/package/bootstrap aggregate gates are tracked separately.
+The tested merge `a2b3222b43e453ce85cfcd1b97944fefc64e0593` has parents
+`d1a0832c89a7e250389755ae83bcb5424ebd12e9` and `bc8a3959`. Its newer main base
+pins orchestration runtime `0.0.140`; the PR head's `0.0.139` lock is not the
+runtime used in this receipt. Exact commit parents and checkout evidence are
+used instead of the stale normalized PR base field.
+
+## Previous checkpoint — v23 (2026-10-26)
 
 [App 4177cd41a](https://github.com/777genius/agent-teams-ai/commit/4177cd41a2b3126463b94e23d0d23c405000ae25)
 publishes the multi-target controls, three-client plugin lifecycle exercise and
