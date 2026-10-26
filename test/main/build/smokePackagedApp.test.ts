@@ -606,9 +606,9 @@ describe.skipIf(process.platform === 'win32')('packaged smoke child isolation', 
         const env: NodeJS.ProcessEnv = {
           ...process.env,
           TMPDIR: sandbox,
-          PACKAGED_SMOKE_TIMEOUT_MS: '2000',
+          PACKAGED_SMOKE_TIMEOUT_MS: '5000',
           PACKAGED_SMOKE_STABLE_MS: '0',
-          PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS: '2000',
+          PACKAGED_SMOKE_SHUTDOWN_TIMEOUT_MS: '5000',
         };
         delete env.NODE_OPTIONS;
         const script = path.resolve(
@@ -619,7 +619,7 @@ describe.skipIf(process.platform === 'win32')('packaged smoke child isolation', 
           cwd: sandbox,
           env,
           encoding: 'utf8',
-          timeout: 8_000,
+          timeout: 20_000,
         });
         expect(result.error).toBeUndefined();
         expect(result.stdout + result.stderr).not.toContain('TEST isolation failure');

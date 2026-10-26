@@ -126,7 +126,7 @@ const userMessage: OpenCodeMemberMessageDeliveryInput = {
 async function seedAcceptedPendingRecord(
   ledger: OpenCodePromptDeliveryLedgerStore,
   input: OpenCodeMemberMessageDeliveryInput,
-  options: { ageMinutes: number; assistantMessageId?: string | null }
+  options: { ageMinutes: number; assistantMessageId?: string | null; toolCallNames?: string[] }
 ): Promise<OpenCodePromptDeliveryLedgerRecord> {
   const at = minutesAgoIso(options.ageMinutes);
   const created = await ledger.ensurePending({
@@ -159,6 +159,7 @@ async function seedAcceptedPendingRecord(
     responseObservation: pendingObservation({
       assistantMessageId:
         options.assistantMessageId === undefined ? 'msg_assistant' : options.assistantMessageId,
+      toolCallNames: options.toolCallNames ?? ['glob'],
     }),
     sessionId: 'ses_1',
     runtimePromptMessageId: 'msg_prompt',
@@ -316,6 +317,91 @@ describe('OpenCodeMemberMessageDeliveryService stale-pending guard', () => {
 
   afterEach(async () => {
     await rm(ledgerDir, { recursive: true, force: true });
+  });
+
+  it('releases a queued peer challenge after the preceding ACK has an exact completed silent child', async () => {
+    const ack = {
+      memberName: LEAD,
+      text: 'ACK:alice-nonce',
+      messageId: 'peer-ack',
+      replyRecipient: 'bob',
+      source: 'watcher' as const,
+    };
+    const challenge = { ...ack, text: 'CHALLENGE:bob-nonce', messageId: 'peer-challenge' };
+    const harness = createHarness({
+      ledgerDir,
+      observe: async () =>
+        observedResult({
+          diagnostics: [],
+          observation: pendingObservation({
+            state: 'empty_assistant_turn',
+            toolCallNames: [],
+            reason: 'assistant_child_completed_without_visible_or_meaningful_response',
+          }),
+        }),
+      send: async () => acceptedSendResult(),
+    });
+    const accepted = await seedAcceptedPendingRecord(harness.ledger, ack, {
+      ageMinutes: 1,
+      assistantMessageId: null,
+      toolCallNames: [],
+    });
+    const queued = await harness.service.deliver(TEAM, challenge);
+    expect(queued.queuedBehindMessageId).toBe(ack.messageId);
+    expect(
+      await harness.ledger.getByInboxMessage({
+        teamName: TEAM,
+        memberName: LEAD,
+        laneId: PRIMARY_LANE.laneId,
+        inboxMessageId: challenge.messageId,
+      })
+    ).toBeNull();
+    expect(harness.send).not.toHaveBeenCalled();
+
+    const consumed = await harness.service.deliver(TEAM, ack);
+    expect(
+      await harness.ledger.getByInboxMessage({
+        teamName: TEAM,
+        memberName: LEAD,
+        laneId: PRIMARY_LANE.laneId,
+        inboxMessageId: ack.messageId,
+      })
+    ).toMatchObject({
+      responseState: 'empty_assistant_turn',
+      lastReason: 'assistant_child_completed_without_visible_or_meaningful_response',
+      deliveredUserMessageId: 'msg_prompt',
+      observedAssistantMessageId: 'msg_assistant',
+      observedToolCallNames: [],
+    });
+    expect(consumed).toMatchObject({ accepted: true, responsePending: false });
+    await harness.ledger.markInboxReadCommitted({
+      id: accepted.id,
+      committedAt: new Date().toISOString(),
+    });
+    // A later watchdog pass may revisit the consumed record. Its durable proof
+    // must settle it without submitting another prompt or observing the model.
+    expect(await harness.service.deliver(TEAM, ack)).toMatchObject({
+      accepted: true,
+      responsePending: false,
+    });
+    expect(harness.observe).toHaveBeenCalledTimes(1);
+    expect(harness.send).not.toHaveBeenCalled();
+    const next = await harness.service.deliver(TEAM, challenge);
+    expect(next.queuedBehindMessageId).toBeUndefined();
+    expect(next).toMatchObject({ accepted: true, responsePending: true });
+    expect(harness.send).toHaveBeenCalledTimes(1);
+    expect(harness.observe).toHaveBeenCalledTimes(1);
+    expect(
+      await harness.ledger.getByInboxMessage({
+        teamName: TEAM,
+        memberName: LEAD,
+        laneId: PRIMARY_LANE.laneId,
+        inboxMessageId: challenge.messageId,
+      })
+    ).toMatchObject({
+      inboxMessageId: challenge.messageId,
+      runtimePromptMessageId: 'msg_prompt_new',
+    });
   });
 
   it('settles a lead non-user delivery as a plain-text turn end when the bridge keeps answering pending but idle', async () => {

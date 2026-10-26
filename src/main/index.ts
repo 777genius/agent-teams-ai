@@ -3057,11 +3057,6 @@ async function shutdownServices(): Promise<void> {
     logger.info('Shutting down services...');
     removeExternalAgentConnectionIpc(ipcMain);
     openCodeLifecycleBridge?.prepareShutdownCleanup();
-    await runShutdownStep('external connection admission drain', () =>
-      externalAgentConnection?.closeAdmission()
-    );
-    await runShutdownStep('announcements cleanup', () => announcementsLifecycle.dispose());
-
     clearStartupTimers();
     clearInboxNotifyTimers();
     // Ahead of the first awaited step: runShutdownStep stops waiting on a step
@@ -3069,6 +3064,16 @@ async function shutdownServices(): Promise<void> {
     // the background lock purge is still running.
     stopPeriodicOpenCodeHostStartupLockPurge?.();
     stopPeriodicOpenCodeHostStartupLockPurge = null;
+    // Fence and abort catalog requests before any tracked CLI or host cleanup snapshot.
+    await runShutdownStep(
+      'provider model catalog drain',
+      () => runtimeProviderManagementFeature?.shutdown(),
+      10_000
+    );
+    await runShutdownStep('external connection admission drain', () =>
+      externalAgentConnection?.closeAdmission()
+    );
+    await runShutdownStep('announcements cleanup', () => announcementsLifecycle.dispose());
 
     await runShutdownStep('team runtime recovery scheduler cleanup', async () => {
       teamProvisioningService?.setRuntimeRecoveryFailureObserver(null);

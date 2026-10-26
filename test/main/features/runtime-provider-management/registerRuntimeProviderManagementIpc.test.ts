@@ -38,6 +38,7 @@ import type { IpcMain } from 'electron';
 
 function createCompanionFeatureStubs(): Pick<
   RuntimeProviderManagementFeatureFacade,
+  | 'shutdown'
   | 'scanLocalProviders'
   | 'listLocalProviders'
   | 'probeLocalProvider'
@@ -49,6 +50,7 @@ function createCompanionFeatureStubs(): Pick<
   | 'onCompanionProgress'
 > {
   return {
+    shutdown: vi.fn(async () => {}),
     listLocalProviders: vi.fn(() => Promise.reject(new Error('Not used by this test'))),
     scanLocalProviders: vi.fn(() => Promise.reject(new Error('Not used by this test'))),
     probeLocalProvider: vi.fn(() => Promise.reject(new Error('Not used by this test'))),

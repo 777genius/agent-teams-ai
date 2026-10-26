@@ -1,8 +1,12 @@
-import { isOpenCodeReplyOptionalDeliveryContract } from './OpenCodeDeliveryReplyContract';
+import {
+  classifyOpenCodeDeliveryReplyContract,
+  isOpenCodeReplyOptionalDeliveryContract,
+} from './OpenCodeDeliveryReplyContract';
 import {
   hasOpenCodeGroupAcknowledgement,
   type OpenCodeGroupAcknowledgementReader,
 } from './OpenCodeGroupAcknowledgement';
+import { isOpenCodeCompletedGroupNonResponse } from './OpenCodeGroupNonResponse';
 import {
   isOpenCodePromptDeliveryCancelled,
   isOpenCodePromptResponseStateResponded,
@@ -155,6 +159,27 @@ export async function isOpenCodeMemberWorkSyncReadCommitAllowed(input: {
   return input.hasAcceptedMemberWorkSyncReport({ teamName, memberName });
 }
 
+function hasExactCompletedSilentChild(input: {
+  responseState?: OpenCodeDeliveryResponseObservation['state'];
+  ledgerRecord?: OpenCodePromptDeliveryLedgerRecord | null;
+}): boolean {
+  const record = input.ledgerRecord;
+  const promptId = record?.lastRuntimePromptMessageId ?? record?.runtimePromptMessageId;
+  return Boolean(
+    record &&
+    input.responseState === 'empty_assistant_turn' &&
+    record.responseState === 'empty_assistant_turn' &&
+    record.lastReason === 'assistant_child_completed_without_visible_or_meaningful_response' &&
+    record.acceptedAt &&
+    !record.acceptanceUnknown &&
+    promptId &&
+    record.deliveredUserMessageId === promptId &&
+    record.observedAssistantMessageId?.trim() &&
+    !record.observedAssistantPreview?.trim() &&
+    record.observedToolCallNames.length === 0
+  );
+}
+
 export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
   hasAcknowledgedInbound?: OpenCodeGroupAcknowledgementReader;
   teamName?: string;
@@ -176,26 +201,16 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
   if (input.ledgerRecord && isOpenCodePromptDeliveryCancelled(input.ledgerRecord)) return false;
   if (input.ledgerRecord?.groupChatId) {
     const record = input.ledgerRecord;
+    if (
+      input.responseState === 'responded_plain_text' &&
+      isOpenCodeCompletedGroupNonResponse(record)
+    )
+      return true;
     if (await hasOpenCodeGroupAcknowledgement(input)) return true;
     const sender = record.replyRecipient.trim().toLowerCase();
-    const promptId = record.lastRuntimePromptMessageId ?? record.runtimePromptMessageId;
     // Group peers may finish silently. The runtime's explicit completed-child
     // proof is required; a human group request still needs its canonical reply.
-    if (
-      sender &&
-      sender !== 'user' &&
-      sender !== 'system' &&
-      input.responseState === 'empty_assistant_turn' &&
-      record.responseState === 'empty_assistant_turn' &&
-      record.lastReason === 'assistant_child_completed_without_visible_or_meaningful_response' &&
-      record.acceptedAt &&
-      !record.acceptanceUnknown &&
-      promptId &&
-      record.deliveredUserMessageId === promptId &&
-      record.observedAssistantMessageId?.trim() &&
-      !record.observedAssistantPreview?.trim() &&
-      record.observedToolCallNames.length === 0
-    ) {
+    if (sender && sender !== 'user' && sender !== 'system' && hasExactCompletedSilentChild(input)) {
       return true;
     }
     const message = input.visibleReply?.message;
@@ -207,6 +222,19 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
       message.source === 'runtime_delivery'
     );
   }
+  const record = input.ledgerRecord;
+  // A direct peer ACK may intentionally end silently. Consume only a completed
+  // child of this accepted prompt, never a merely idle or unanswered session.
+  if (
+    record &&
+    classifyOpenCodeDeliveryReplyContract(record.replyRecipient) === 'teammate_report' &&
+    record.messageKind !== 'member_work_sync_nudge' &&
+    record.runtimeSessionId?.trim() &&
+    input.teamName === record.teamName &&
+    input.memberName === record.memberName &&
+    hasExactCompletedSilentChild(input)
+  )
+    return true;
   const state = input.responseState;
   if (!state || !isOpenCodePromptResponseStateResponded(state)) {
     return false;

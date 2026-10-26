@@ -1,4 +1,8 @@
-import { isOpenCodeV2QualifiedVersion, isOpenCodeV2RangeVersion } from './pinnedOpenCodeV2Contract';
+import {
+  getOpenCodeV2EngineVersion,
+  isOpenCodeV2RangeVersion,
+  pinnedRuntimeShipsOpenCodeV2,
+} from './pinnedOpenCodeV2Contract';
 
 import type { NativeKey } from '../../contracts';
 
@@ -65,12 +69,13 @@ export function classifyNativeVersion(raw: string): NativeVersionClassification 
   // V2 is recognized by the pinned runtime's range rule; build metadata cannot
   // establish an exact dialect. Eligibility follows the runtime's qualification data.
   if (normalizeOpenCodeVersionText(raw) === version && isOpenCodeV2RangeVersion(version)) {
+    const engine = getOpenCodeV2EngineVersion(version);
     return {
       kind: 'recognized',
       generation: 'v2',
-      apiDialect: `v2-${version}`,
+      apiDialect: `v2-${engine ?? version}`,
       version,
-      productionEligible: isOpenCodeV2QualifiedVersion(version),
+      productionEligible: engine !== null,
     };
   }
   return { kind: 'blocked', reason: parsed.major === 0 ? 'too_old' : 'unknown_generation' };
@@ -79,6 +84,20 @@ export function classifyNativeVersion(raw: string): NativeVersionClassification 
 /** Native discovery recognizes reviewed dialects; launch eligibility still requires runtime evidence. */
 export function isRecognizedOpenCodeRuntimeVersion(raw: string | null | undefined): boolean {
   return Boolean(raw && classifyNativeVersion(raw).kind === 'recognized');
+}
+
+/**
+ * Whether the pinned runtime can serve this native version at all: any recognized V1, or a
+ * recognized V2 when the runtime ships OpenCode V2. A runtime released without V2 cannot read
+ * or launch V2, so the app treats such a binary like an unsupported one.
+ */
+export function isOpenCodeVersionServedByRuntime(raw: string | null | undefined): boolean {
+  if (!raw) return false;
+  const classification = classifyNativeVersion(raw);
+  return (
+    classification.kind === 'recognized' &&
+    (classification.generation === 'v1' || pinnedRuntimeShipsOpenCodeV2())
+  );
 }
 
 /** Stable V1, or a V2 release the pinned runtime qualified for team launch on this platform. */

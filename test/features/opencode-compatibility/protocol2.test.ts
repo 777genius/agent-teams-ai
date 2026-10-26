@@ -13,7 +13,7 @@ import {
   validateBridgeResultEnvelope,
 } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import { createOpenCodeBridgeClientIdentity } from '@main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type {
   EndpointAuthority,
@@ -386,5 +386,97 @@ describe('bounded protocol2 public contracts', () => {
       expectedBehaviorFingerprintSchemaVersion: 2,
     });
     expect(identity).not.toHaveProperty('protocol2');
+  });
+});
+
+describe('native identity and qualified engine dialect pairing', () => {
+  it('refuses a different native/dialect pair without the new runtime capability', async () => {
+    vi.resetModules();
+    vi.doMock('../../../runtime.lock.json', () => ({
+      default: {
+        opencodeV2: {
+          range: { minimum: '2.0.0', below: '3.0.0' },
+          qualified: { [`${process.platform}-${process.arch}`]: ['2.0.32'] },
+        },
+      },
+    }));
+    try {
+      const protocol =
+        await import('../../../src/features/opencode-compatibility/core/domain/protocol2');
+      expect(protocol.decodeProtocol2Offer(offer('2.37.105')).ok).toBe(false);
+    } finally {
+      vi.doUnmock('../../../runtime.lock.json');
+      vi.resetModules();
+    }
+  });
+
+  it('requires a qualified engine dialect in flexible mode even without selected native authority', async () => {
+    for (const flexible of [false, true]) {
+      vi.resetModules();
+      vi.doMock('../../../runtime.lock.json', () => ({
+        default: {
+          opencodeV2: {
+            range: { minimum: '2.0.0', below: '3.0.0' },
+            ...(flexible ? { cliVersionPolicy: 'stable-v2-qualified-engine' } : {}),
+            qualified: { [`${process.platform}-${process.arch}`]: [] },
+          },
+        },
+      }));
+      try {
+        const protocol =
+          await import('../../../src/features/opencode-compatibility/core/domain/protocol2');
+        const noAuthority = {
+          ...handshake(),
+          selectedNative: null,
+          selectionEpoch: null,
+          selectedAuthority: null,
+          support: 'unqualified_version',
+          dialects: { 'v2-2.37.105': handshake().dialects['v2-2.0.0'] },
+        };
+        expect(protocol.decodeProtocol2Handshake(noAuthority).ok).toBe(!flexible);
+      } finally {
+        vi.doUnmock('../../../runtime.lock.json');
+        vi.resetModules();
+      }
+    }
+  });
+
+  it('decodes actual stable V2 identity with its selected engine dialect and rejects mismatches', async () => {
+    vi.resetModules();
+    vi.doMock('../../../runtime.lock.json', () => ({
+      default: {
+        opencodeV2: {
+          range: { minimum: '2.0.0', below: '3.0.0' },
+          cliVersionPolicy: 'stable-v2-qualified-engine',
+          qualified: { [`${process.platform}-${process.arch}`]: ['2.0.0', '2.0.32'] },
+        },
+      },
+    }));
+    try {
+      const protocol =
+        await import('../../../src/features/opencode-compatibility/core/domain/protocol2');
+      expect(protocol.decodeProtocol2Offer(offer('2.37.105')).ok).toBe(true);
+      expect(protocol.decodeProtocol2Handshake(handshake('2.37.105')).ok).toBe(true);
+      expect(protocol.decodeProtocol2CommandContext(context('2.37.105')).ok).toBe(true);
+      for (const dialect of ['v2-2.0.0', 'v2-2.37.105'] as const) {
+        const mismatched = offer('2.37.105');
+        mismatched.selected = { ...mismatched.selected, generation: 'v2', apiDialect: dialect };
+        expect(protocol.decodeProtocol2Offer(mismatched).ok).toBe(false);
+      }
+      const wrongIdentity = context('2.37.105');
+      wrongIdentity.native = { ...wrongIdentity.native, version: '2.37.106' };
+      expect(protocol.decodeProtocol2CommandContext(wrongIdentity).ok).toBe(false);
+      // Parsing this pair does not upgrade the deliberately blocked A0 negotiation.
+      expect(
+        protocol.negotiateOpenCodeProtocol({
+          version: '2.37.105',
+          offer: offer('2.37.105'),
+          handshake: handshake('2.37.105'),
+        }).kind
+      ).toBe('blocked');
+    } finally {
+      vi.doUnmock('../../../runtime.lock.json');
+      vi.resetModules();
+    }
   });
 });

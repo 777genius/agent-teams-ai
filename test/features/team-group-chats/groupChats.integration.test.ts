@@ -104,6 +104,61 @@ describe('group chat main authority and durable identity', () => {
     name: ' Release ',
     selectedMemberNames: ['alice', 'bob'],
   };
+  it('keeps catalog polls local and releases the registry while a fresh send admission waits', async () => {
+    let current = true;
+    let pause = false;
+    let entered = false;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const getRun = vi.fn(async (_team: string, name: string) => {
+      if (name === 'alice') {
+        if (pause) {
+          entered = true;
+          await gate;
+        }
+        return current
+          ? {
+              runKey: 'opencode-alice',
+              protocolVersion: 1 as const,
+              provider: 'opencode' as const,
+              isCurrent: async () => current,
+            }
+          : null;
+      }
+      return { runKey: `native:${name}`, protocolVersion: 1 as const, provider: 'native' as const };
+    });
+    feature = createTeamGroupChatsFeature({
+      roster: async () => roster,
+      getRun,
+      configurationOperation: (_team, operation) => operation(),
+      deliver: (...args) => deliver(...args),
+    });
+    const group = await create();
+    const aliceCalls = () => getRun.mock.calls.filter(([, name]) => name === 'alice').length;
+    expect(aliceCalls()).toBe(1);
+    await Promise.all(Array.from({ length: 30 }, () => feature.list({ teamName: 'sandbox' })));
+    expect(aliceCalls()).toBe(1); // Display polls use only the local currency fence.
+    current = false;
+    expect((await feature.list({ teamName: 'sandbox' }))[0].canSend).toBe(false);
+    expect(aliceCalls()).toBe(2); // A stopped/replaced owner invalidates display reuse.
+    current = true;
+    await feature.list({ teamName: 'sandbox' });
+    pause = true;
+    const sending = send();
+    const outcome = expect(sending).rejects.toMatchObject({ code: 'archived' });
+    try {
+      await vi.waitFor(() => expect(entered).toBe(true));
+      // This shares the real registry lock. It must finish before the provider probe.
+      await feature.setArchived({ teamName: 'sandbox', groupChatId: group.id, archived: true });
+    } finally {
+      release();
+    }
+    await outcome;
+    expect(deliveries).toHaveLength(0);
+    await expect(readFile(join(state.root, 'sandbox', 'inboxes', 'user.json'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+  });
   const original = (patch: Record<string, unknown> = {}) => ({
     messageId: creationRequest.sourceMessageId,
     from: 'user',
@@ -1256,6 +1311,8 @@ it('admits native groups only against a bound listener and an exact current live
   let available = true;
   let replacement = false;
   let reads = 0;
+  let providerId: 'anthropic' | 'opencode' = 'anthropic';
+  const bridge = vi.fn();
   const revoke = configureDesktopMcpEnvironment(() => ({}), () => available);
   try {
     const dir = join(root, 'sandbox', 'members', encodeTeamMemberStorageKey('lead'), '.member-work-sync', 'runtime-admission');
@@ -1265,13 +1322,18 @@ it('admits native groups only against a bound listener and an exact current live
       groupRunKey: `actual-test-run:${process.pid}` };
     const file = join(dir, 'capability.json');
     await writeFile(file, JSON.stringify(proof));
-    const { getRun } = createGroupChatRuntimePorts({ teamsBasePath: root,
+    const { getRun } = createGroupChatRuntimePorts({ teamsBasePath: root, getOpenCodeGroupChatRun: bridge,
       getTeamAgentRuntimeSnapshot: async () => ({ teamName: 'sandbox', runId: 'actual-test-run',
         updatedAt: new Date().toISOString(), members: { lead: { memberName: 'lead',
           alive: !(replacement && ++reads === 2), restartable: true, backendType: 'lead',
-          providerId: 'anthropic', pid: process.pid, updatedAt: new Date().toISOString() } } }),
+          providerId, pid: process.pid, updatedAt: new Date().toISOString() } } }),
     });
-    expect(await getRun('sandbox', 'lead')).toEqual({ runKey: proof.groupRunKey, protocolVersion: 1, provider: 'lead' });
+    const admitted = await getRun('sandbox', 'lead');
+    expect(admitted).toMatchObject({ runKey: proof.groupRunKey, protocolVersion: 1, provider: 'lead' });
+    providerId = 'opencode';
+    expect(await admitted!.isCurrent!()).toBe(false);
+    expect(bridge).not.toHaveBeenCalled();
+    providerId = 'anthropic';
     available = false;
     expect(await getRun('sandbox', 'lead')).toBeNull();
     available = true;
@@ -1303,6 +1365,9 @@ describe('OpenCode group current-run admission', () => {
       let handshakes = 0;
       let writes = 0;
       let protocol: 1 | undefined = 1;
+      let releaseHandshake!: () => void;
+      const handshakeGate = new Promise<void>((resolve) => { releaseHandshake = resolve; });
+      let extraGate: Promise<void> | undefined;
       const proof = { teamName: 'sandbox', memberName: 'alice', runId: 'run-1', runKey: 'run-1',
         laneId: 'primary', runtimeSessionId: 'session-1', runtimePid: process.pid, processorReady: true };
       const getter = createOpenCodeGroupChatRunGetter({
@@ -1315,6 +1380,8 @@ describe('OpenCode group current-run admission', () => {
         handshake: { handshake: async () => {
           expect(writes, 'full handshake must stay outside the physical inbox write').toBe(0);
           handshakes++;
+          await handshakeGate;
+          await extraGate;
           const handshake: OpenCodeBridgeHandshake = { schemaVersion: 1, requestId: 'test-handshake',
             client: clientIdentity, server: { ...clientIdentity, peer: 'agent_teams_orchestrator',
               bridgeProtocol: { ...clientIdentity.bridgeProtocol, groupChatProtocolVersion: protocol },
@@ -1326,7 +1393,15 @@ describe('OpenCode group current-run admission', () => {
           return handshake;
         } },
       });
-      const admitted = await getter('sandbox', 'alice');
+      const concurrent = Array.from({ length: 30 }, () => getter('sandbox', 'alice'));
+      await vi.waitFor(() => expect(handshakes).toBe(1));
+      releaseHandshake();
+      const admissions = await Promise.all(concurrent);
+      const admitted = admissions[0];
+      expect(admissions.every((value) => value === admitted)).toBe(true);
+      expect(handshakes).toBe(1);
+      await getter('sandbox', 'alice');
+      expect(handshakes).toBe(2); // Settled proofs must never be cached.
       expect(admitted).toMatchObject({ runKey: 'run-1', protocolVersion: 1, provider: 'opencode' });
       const writer = new TeamInboxWriter();
       const feature = createTeamGroupChatsFeature({
@@ -1371,6 +1446,15 @@ describe('OpenCode group current-run admission', () => {
       sessionId = 'session-1';
       protocol = undefined;
       expect(await getter('sandbox', 'alice')).toBeNull();
+      protocol = 1;
+      let releaseExtra!: () => void;
+      extraGate = new Promise<void>((resolve) => { releaseExtra = resolve; });
+      const beforeColdCatalog = handshakes;
+      const coldCatalog = Array.from({ length: 8 }, (_, index) => getter(`sandbox-${index}`, 'alice'));
+      await vi.waitFor(() => expect(handshakes).toBe(beforeColdCatalog + 4));
+      releaseExtra();
+      expect((await Promise.all(coldCatalog)).every(value => value === null)).toBe(true);
+      expect(handshakes).toBe(beforeColdCatalog + 8); // Distinct owners are capped at four probes.
     } finally { revoke(); state.root = previousRoot; await rm(root, { recursive: true, force: true }); }
   });
 });

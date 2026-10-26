@@ -112,6 +112,15 @@ describe('finite canonical command observation', () => {
     expect(packet.tuples[1]).not.toHaveProperty('succeeded');
   });
 
+  it('matches the exact absolute Windows verifier across slash direction only', () => {
+    const canonical = call({ input: { command: 'D:/TEST-node/node.exe "C:/TEST-project/verify.cjs"' } });
+    expect(inspect([row(expected.runtimePromptMessageId, [], 'user'), row('msg_CALL', [canonical])])
+      .tuples[0].input).toMatchObject({ programMatches: true, nodeMatches: true });
+    const foreign = call({ input: { command: 'D:/TEST-node/node.exe "C:/OTHER/verify.cjs"' } });
+    expect(inspect([row(expected.runtimePromptMessageId, [], 'user'), row('msg_CALL', [foreign])])
+      .tuples[0].input).toMatchObject({ programMatches: false });
+  });
+
   it('keeps unknown original input relation unknown and caps retained tuples independently of totals', () => {
     const rows = [row('msg_ONLY', Array.from({ length: 10 }, (_, index) => call({ toolName: index === 0 ? 'read' : 'bash', ...(index === 0 ? { input: { path: 'PRIVATE_PATH' } } : {}) })))];
     const packet = inspect(rows, null);

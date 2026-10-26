@@ -6,7 +6,6 @@
  * Shows live detail text for every phase and a mini log panel during installation.
  * Only rendered in Electron mode.
  */
-
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -18,6 +17,7 @@ import {
 } from '@features/codex-account/renderer';
 import { CodexRuntimeUpdateDialog } from '@features/codex-runtime-installer/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
+import { OpenCodeV2InstallAction } from '@features/opencode-runtime-installer/renderer';
 import {
   canManagedInstallChangeOpenCodeRuntime,
   getOpenCodeGeneration,
@@ -123,6 +123,7 @@ import { useDashboardStatusRefresh } from './useDashboardStatusRefresh';
 
 import type { DashboardRateLimitItem } from './providerDashboardRateLimits';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
+import type { OpenCodeRuntimeInstallOptions } from '@features/opencode-runtime-installer/contracts';
 import type { AnalyticsProviderCheckReason } from '@renderer/analytics/productAnalytics';
 import type {
   CliProviderAuthMode,
@@ -130,13 +131,10 @@ import type {
   CliProviderStatus,
   OpenCodeRuntimeStatus,
 } from '@shared/types';
-
 // =============================================================================
 // Border color by state
 // =============================================================================
-
 type BannerVariant = 'loading' | 'error' | 'success' | 'info' | 'warning';
-
 const VARIANT_STYLES: Record<BannerVariant, { border: string; bg: string }> = {
   loading: { border: 'var(--color-border)', bg: 'transparent' },
   error: { border: '#ef4444', bg: 'rgba(239, 68, 68, 0.06)' },
@@ -465,7 +463,7 @@ interface InstalledBannerProps {
   codexRuntimeStatusLoading: boolean;
   isBusy: boolean;
   onInstall: () => void;
-  onOpenCodeInstall: () => void;
+  onOpenCodeInstall: (options?: OpenCodeRuntimeInstallOptions) => void;
   onOpenCodeRefresh: () => void;
   onCodexInstall: () => void;
   onRefresh: () => void;
@@ -1383,6 +1381,13 @@ const InstalledBanner = ({
                         {getRuntimeInstallLabel(codexRuntimeStatus, t)}
                       </button>
                     ) : null}
+                    {provider.providerId === 'opencode' && !showSkeleton ? (
+                      <OpenCodeV2InstallAction
+                        status={openCodeRuntimeStatus}
+                        busy={openCodeRuntimeInstalling}
+                        onInstall={onOpenCodeInstall}
+                      />
+                    ) : null}
                     {shouldShowOpenCodeInstallAction(
                       provider,
                       showSkeleton,
@@ -1390,7 +1395,7 @@ const InstalledBanner = ({
                     ) ? (
                       <button
                         type="button"
-                        onClick={onOpenCodeInstall}
+                        onClick={() => onOpenCodeInstall()}
                         disabled={openCodeRuntimeInstalling}
                         className="flex items-center gap-1 rounded-md border px-2 py-[3px] text-[10px] font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
                         style={{
@@ -2273,7 +2278,7 @@ export const CliStatusBanner = ({
           codexRuntimeStatusLoading={codexRuntimeStatusLoading}
           isBusy={isBusy}
           onInstall={handleInstall}
-          onOpenCodeInstall={() => void installOpenCodeRuntime()}
+          onOpenCodeInstall={(options) => void installOpenCodeRuntime(options)}
           onOpenCodeRefresh={handleOpenCodeRefresh}
           onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
           onRefresh={handleRefresh}
@@ -2533,7 +2538,7 @@ export const CliStatusBanner = ({
             codexRuntimeStatusLoading={codexRuntimeStatusLoading}
             isBusy={isBusy}
             onInstall={handleInstall}
-            onOpenCodeInstall={() => void installOpenCodeRuntime()}
+            onOpenCodeInstall={(options) => void installOpenCodeRuntime(options)}
             onOpenCodeRefresh={handleOpenCodeRefresh}
             onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
             onRefresh={handleRefresh}
@@ -2616,7 +2621,7 @@ export const CliStatusBanner = ({
           codexRuntimeStatusLoading={codexRuntimeStatusLoading}
           isBusy={isBusy}
           onInstall={handleInstall}
-          onOpenCodeInstall={() => void installOpenCodeRuntime()}
+          onOpenCodeInstall={(options) => void installOpenCodeRuntime(options)}
           onOpenCodeRefresh={handleOpenCodeRefresh}
           onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
           onRefresh={handleRefresh}
@@ -2819,7 +2824,7 @@ export const CliStatusBanner = ({
         codexRuntimeStatusLoading={codexRuntimeStatusLoading}
         isBusy={isBusy}
         onInstall={handleInstall}
-        onOpenCodeInstall={() => void installOpenCodeRuntime()}
+        onOpenCodeInstall={(options) => void installOpenCodeRuntime(options)}
         onOpenCodeRefresh={handleOpenCodeRefresh}
         onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
         onRefresh={handleRefresh}

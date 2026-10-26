@@ -1,4 +1,5 @@
 import { classifyNativeVersion } from './generation';
+import { getOpenCodeV2EngineVersion, pinnedOpenCodeV2Contract } from './pinnedOpenCodeV2Contract';
 
 import type {
   EndpointAuthority,
@@ -44,11 +45,16 @@ const operations: readonly Operation[] = [
   'taskLedgerEvidence',
   'expectedBehaviorFingerprint',
 ];
-/** Known dialect ids: v1, or the exact dialect of a version the pinned V2 range recognizes. */
+/** Dialects name qualified engines in flexible mode; native identities retain actual CLI versions. */
 const knownDialect: Check = (v) => {
   if (v === 'v1') return true;
   if (typeof v !== 'string' || !v.startsWith('v2-')) return false;
   const classified = classifyNativeVersion(v.slice(3));
+  if (
+    pinnedOpenCodeV2Contract?.cliVersionPolicy === 'stable-v2-qualified-engine' &&
+    getOpenCodeV2EngineVersion(v.slice(3)) !== v.slice(3)
+  )
+    return false;
   return (
     classified.kind === 'recognized' &&
     classified.generation === 'v2' &&
