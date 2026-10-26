@@ -23,9 +23,10 @@ existing tabs. Local Skill authoring retains its separate review/editor workflow
 
 ## Captured authority
 
-The renderer sends a supported client and scope, opaque context/plan/operation
+The renderer sends a bounded client ID and scope, opaque context/plan/operation
 IDs, and bounded source requests. Main resolves native executables and captures
-profile roots from a passive environment. Agreement with the eventual member
+profile roots from a passive environment; the selected client must belong to that
+captured inventory. Agreement with the eventual member
 launch environment remains a qualification goal: Codex launch can refresh its
 selected account/runtime context and use a different root or binary. The
 [launch-readiness proposal](../../../docs/extensions/team-extension-launch-readiness-options.md)
@@ -40,10 +41,29 @@ application; operation inspection remains available for the captured context.
 Production omits UAP's state/dependency root overrides. Go resolves the canonical
 CLI home (`AGENTPLUGINS_HOME` or the platform user configuration directory), so
 the app shares the CLI's ownership state and mutation lock. All supported native
-profiles are captured once; the UI's selected runtime narrows installation and
-removal targets. Updating the environment covers the shared manifest and can
+profiles are captured once per context. Installation has a separate multiselect:
+available Claude Code, Codex and OpenCode targets start checked; additional
+detected clients start unchecked. The selected view narrows inventory and
+targeted removal. Updating the environment covers the shared manifest and can
 affect multiple runtimes. The initial project control is disabled until the
 separate UAP project/worktree workstream is qualified.
+
+Additional targets come from the pinned Node SDK's `discoverTargets` operation,
+which runs the Go engine's bounded `manage discover` command. Go owns the native
+detection rules, user-scope support policy and private profile locators. The SDK
+passes only permitted environment locators and bounds output, time and process
+cleanup; it does not execute discovered clients or refresh authentication. Main
+retains the established capture for the three team runtimes, canonicalizes
+qualified additional profiles and passes them to Management startup. A display
+label or reason without a qualified profile never grants installation authority.
+Detected unsupported clients remain disabled with an explanation.
+
+A safely inspectable profile remains captured when its client is no longer
+detected. Go refuses new installation to that profile, while existing bindings
+remain inspectable and removable. Empty undetected extra targets are hidden from
+the selector; installed bindings and the current view remain visible. Changes to
+detection or profile identity require a fresh context and review. Discovery adds
+installation targets only: it does not add team runtimes or local authoring roots.
 
 ## Mutation and runtime admission
 
@@ -148,3 +168,12 @@ verified and dependency-blocked scenarios are in
 [`docs/extensions/uap-management-integration-plan.md`](../../../docs/extensions/uap-management-integration-plan.md).
 Real Electron tests must use actual SDK, Go, native files and isolated profiles;
 these unit tests do not substitute for that qualification.
+
+The Electron harness also exposes one controlled Cursor executable to passive
+detection. Before changing installation selections, it checks the real
+Go/SDK/host session and UI: the three available team clients are checked and the
+extra detected target is unchecked. The executable writes a persistent witness
+if run; the harness checks its absence and unchanged executable bytes after the
+initial UI observation and again after owned desktop shutdown, including failed
+runs. This qualifies the detection/selection boundary only, not Cursor native
+execution, installation or Skill use.

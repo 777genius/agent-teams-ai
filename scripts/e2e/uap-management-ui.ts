@@ -43,6 +43,7 @@ type UiOperation =
   | 'settled'
   | 'scroll'
   | 'catalog'
+  | 'session'
   | 'environment'
   | 'browser-access';
 
@@ -163,9 +164,10 @@ const RENDERER = `async function(operation, data) {
     return true;
   }
   if (operation === 'browser-access') return window.electronAPI.extensionManagement.browserAccess();
-  if (operation === 'catalog' || operation === 'environment') {
+  if (operation === 'catalog' || operation === 'session' || operation === 'environment') {
     const api = window.electronAPI.extensionManagement;
     const context = await api.capture({client: 'opencode', scope: 'user'});
+    if (operation === 'session') return context.session;
     return operation === 'catalog' ? api.catalog({contextId: context.contextId})
       : api.environment({contextId: context.contextId});
   }

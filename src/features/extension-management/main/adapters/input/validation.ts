@@ -2,7 +2,11 @@ import { z } from 'zod';
 
 export const selectionSchema = z
   .object({
-    client: z.enum(['claude', 'codex', 'opencode']),
+    client: z
+      .string()
+      .min(1)
+      .max(128)
+      .regex(/^[a-z0-9][a-z0-9_-]*$/),
     scope: z.enum(['user', 'project']),
     projectId: z.string().min(1).max(4096).optional(),
     authoringProject: z.string().min(1).max(4096).optional(),

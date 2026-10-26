@@ -5,7 +5,6 @@ import { api } from '@renderer/api';
 import { MANAGEMENT_ACCESS_CHANGED } from '../../contracts';
 
 import type {
-  ExtensionClient,
   ExtensionContext,
   ManagementCatalog,
   ManagementChange,
@@ -26,7 +25,7 @@ const message = (error: unknown) =>
 
 export function useManagedExtensions(kind: 'plugin' | 'skill') {
   const backend = useMemo(() => api.extensionManagement, []);
-  const [client, setClient] = useState<ExtensionClient>('claude');
+  const [client, setClient] = useState('claude');
   const [installationChoices, setInstallationChoices] = useState<Record<string, boolean>>({});
   const [captureRevision, setCaptureRevision] = useState(0);
   useEffect(() => {
@@ -78,7 +77,17 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
   } | null>(null);
   const operationId = operation?.operationId;
   const isRunning = Boolean(operation && !finished(operation));
-  const installationTargets = (context?.session?.targets ?? []).map((target) => ({
+  const boundClients = new Set(
+    (environment?.entries ?? []).flatMap((entry) => entry.bindings.map((binding) => binding.client))
+  );
+  const viewTargets = (context?.session?.targets ?? []).filter(
+    (target) =>
+      ['claude', 'codex', 'opencode'].includes(target.client) ||
+      target.detectionStatus !== 'not_detected' ||
+      boundClients.has(target.client) ||
+      target.client === client
+  );
+  const installationTargets = viewTargets.map((target) => ({
     ...target,
     selected:
       target.available &&
@@ -570,6 +579,8 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
     available: Boolean(backend),
     client,
     setClient,
+    viewTargets,
+    unavailableTargets: context?.unavailableTargets ?? [],
     installationTargets,
     installationTargetIds,
     selectInstallationTarget,

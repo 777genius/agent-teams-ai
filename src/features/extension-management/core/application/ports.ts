@@ -8,6 +8,7 @@ import type {
   SkillCopyCandidate,
   SkillCopyDestination,
   SkillCopyReview,
+  UnavailableExtensionTarget,
 } from '../../contracts';
 
 /** Paths and executables stay on this trusted side of the renderer boundary. */
@@ -16,6 +17,7 @@ export interface CapturedExtensionEnvironment {
   label: string;
   selection: ExtensionSelection;
   resources: readonly string[];
+  unavailableTargets?: readonly UnavailableExtensionTarget[];
   resourcesForPlan?(plan: ManagementPlan): readonly string[];
   locateLocalSkill?(skillPath: string): Promise<{
     rootId: string;

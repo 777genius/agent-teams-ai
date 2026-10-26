@@ -5,11 +5,17 @@ import type { ManagedExtensionsModel } from '../hooks/useManagedExtensions';
 
 interface Props {
   targets: ManagedExtensionsModel['installationTargets'];
+  unavailableTargets: ManagedExtensionsModel['unavailableTargets'];
   disabled: boolean;
   onSelect: (targetId: string, selected: boolean) => void;
 }
 
-export const ManagementInstallationTargets = ({ targets, disabled, onSelect }: Props) => {
+export const ManagementInstallationTargets = ({
+  targets,
+  unavailableTargets,
+  disabled,
+  onSelect,
+}: Props) => {
   const { t } = useAppTranslation('extensions');
   return (
     <fieldset className="space-y-2 rounded-lg border border-border p-3" disabled={disabled}>
@@ -36,6 +42,24 @@ export const ManagementInstallationTargets = ({ targets, disabled, onSelect }: P
               )}
             </span>
           </label>
+        ))}
+        {unavailableTargets.map((target) => (
+          <div
+            key={`unavailable-${target.client}`}
+            className="flex min-w-0 items-start gap-2 text-sm"
+          >
+            <Checkbox
+              className="mt-0.5"
+              aria-label={t('uap.installForAgent', { name: target.label })}
+              data-testid="uap-unavailable-target"
+              checked={false}
+              disabled
+            />
+            <span className="min-w-0">
+              <span className="block break-words">{target.label}</span>
+              <span className="block text-xs text-amber-400">{target.reason}</span>
+            </span>
+          </div>
         ))}
       </div>
       {!targets.some((target) => target.selected) && (

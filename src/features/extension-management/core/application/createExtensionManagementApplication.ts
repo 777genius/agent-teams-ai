@@ -162,7 +162,15 @@ export function createExtensionManagementApplication(
           localRestorePlans: new Set(),
           admission,
           observing: new Set(),
-          public: { contextId, selection, label: captured.label, session: connection.session },
+          public: {
+            contextId,
+            selection,
+            label: captured.label,
+            session: connection.session,
+            ...(captured.unavailableTargets?.length
+              ? { unavailableTargets: captured.unavailableTargets }
+              : {}),
+          },
         };
         try {
           await inspect(value);

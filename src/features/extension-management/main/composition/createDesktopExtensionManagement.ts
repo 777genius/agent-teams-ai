@@ -15,6 +15,7 @@ import { startUap } from '@uap/management-sdk/node';
 
 import { ExtensionRuntimeGate } from '../../core/application/ExtensionRuntimeGate';
 import { createLocalSkillMutationExecutor } from '../adapters/output/createLocalSkillMutationExecutor';
+import { captureAdditionalExtensionTargets } from '../infrastructure/captureAdditionalExtensionTargets';
 import {
   canonicalExtensionPath,
   captureAuthoringRoots,
@@ -29,6 +30,7 @@ import { createExtensionManagementFeature } from './createExtensionManagementFea
 
 import type { ExtensionClient, ExtensionSelection, ManagementPlan } from '../../contracts';
 import type { CapturedExtensionEnvironment } from '../../core/application/ports';
+import type { CapturedExtensionTarget } from '../infrastructure/captureAdditionalExtensionTargets';
 import type { KnownAuthoringProject } from '../infrastructure/captureAuthoringRoots';
 import type { TeamCreateRequest, TeamLaunchRequest } from '@shared/types/team';
 
@@ -81,57 +83,77 @@ async function profile(client: ExtensionClient) {
 
 export function createDesktopExtensionManagement(deps: DesktopExtensionManagementDependencies) {
   const gate = new ExtensionRuntimeGate();
+  const captureProfiles = async () => {
+    const primary = await Promise.all(CLIENTS.map(profile));
+    const additional = await captureAdditionalExtensionTargets(deps.resourceRoot, CLIENTS);
+    return {
+      primary,
+      profiles: [
+        ...primary.map((item) => ({ id: item.client, ...item })),
+        ...additional.profiles,
+      ] as CapturedExtensionTarget[],
+      unavailableTargets: additional.unavailableTargets,
+      labels: additional.labels,
+    };
+  };
   const capture = async (
     selection: ExtensionSelection
-  ): Promise<
-    CapturedExtensionEnvironment & { profiles: Awaited<ReturnType<typeof profile>>[] }
-  > => {
+  ): Promise<CapturedExtensionEnvironment & { profiles: CapturedExtensionTarget[] }> => {
     if (!deps.isLocal())
       throw new Error('Universal extensions are available for local agent environments.');
     if (selection.scope !== 'user')
       throw new Error('Project extension installation is not supported by the pinned engine yet.');
-    const profiles = await Promise.all(CLIENTS.map(profile));
-    const authoring = await captureAuthoringRoots(profiles, selection, deps.knownProjects);
+    const snapshot = await captureProfiles();
+    const { profiles, unavailableTargets } = snapshot;
+    if (!profiles.some((item) => item.client === selection.client))
+      throw new Error('Choose an agent from the captured native installation targets.');
+    const authoring = await captureAuthoringRoots(snapshot.primary, selection, deps.knownProjects);
     const identity = createHash('sha256')
       .update(
         JSON.stringify({
           scope: selection.scope,
           profiles,
+          unavailableTargets,
           authoringRoots: authoring.authoringRoots,
         })
       )
       .digest('hex');
-    const affectedClients = (plan?: ManagementPlan): readonly string[] => {
+    const affectedProfiles = (plan?: ManagementPlan): readonly CapturedExtensionTarget[] => {
       const ids = plan?.actions.map((action) => action.targetId) ?? [];
-      return ids.length && ids.every((id) => CLIENTS.some((client) => client === id))
-        ? ids
-        : CLIENTS;
+      return ids.length && ids.every((id) => profiles.some((item) => item.id === id))
+        ? profiles.filter((item) => ids.includes(item.id))
+        : profiles;
     };
     return {
       identity,
       profiles,
       selection,
+      unavailableTargets,
       resources: [
         ...profiles.map((item) => item.configRoot),
         ...authoring.authoringRoots.map((root) => root.path),
       ],
       resourcesForPlan: (plan) => [
-        ...profiles
-          .filter((item) => affectedClients(plan).includes(item.client))
-          .map((item) => item.configRoot),
+        ...affectedProfiles(plan).map((item) => item.configRoot),
         ...(plan.action === 'local_skill' ? authoring.authoringRoots.map((root) => root.path) : []),
       ],
       locateLocalSkill: authoring.locateLocalSkill,
       skillCopySources: (paths) => resolveSkillCopySources(paths, authoring.authoringRoots),
       prepareSkillCopy: (paths, destination) =>
         prepareSkillCopy(paths, authoring.authoringRoots, destination),
-      label: `${selection.client === 'claude' ? 'Claude' : selection.client === 'codex' ? 'Codex' : 'OpenCode'} · User`,
+      label: `${selection.client === 'claude' ? 'Claude Code' : selection.client === 'codex' ? 'Codex' : selection.client === 'opencode' ? 'OpenCode' : snapshot.labels[selection.client]} · User`,
       async assertCurrent() {
+        if (!deps.isLocal())
+          throw new Error(
+            'The selected agent profile changed. Reopen Extensions and review a fresh plan.'
+          );
+        const current = await captureProfiles();
         if (
-          !deps.isLocal() ||
-          JSON.stringify(await Promise.all(CLIENTS.map(profile))) !== JSON.stringify(profiles) ||
+          JSON.stringify(current.profiles) !== JSON.stringify(profiles) ||
+          JSON.stringify(current.unavailableTargets) !== JSON.stringify(unavailableTargets) ||
           JSON.stringify(
-            (await captureAuthoringRoots(profiles, selection, deps.knownProjects)).authoringRoots
+            (await captureAuthoringRoots(current.primary, selection, deps.knownProjects))
+              .authoringRoots
           ) !== JSON.stringify(authoring.authoringRoots)
         ) {
           throw new Error(
@@ -141,7 +163,7 @@ export function createDesktopExtensionManagement(deps: DesktopExtensionManagemen
       },
       async assertInactive(plan) {
         const active = await deps.activeClientIds();
-        if (affectedClients(plan).some((client) => active.has(client as ExtensionClient)))
+        if (affectedProfiles(plan).some((item) => active.has(item.client as ExtensionClient)))
           throw new Error(
             'Stop the active run using this agent profile before changing its extensions.'
           );
@@ -153,7 +175,7 @@ export function createDesktopExtensionManagement(deps: DesktopExtensionManagemen
           config: {
             contextId: identity,
             scope: selection.scope,
-            targets: profiles.map((item) => ({ id: item.client, ...item })),
+            targets: profiles,
             authoringRoots: authoring.authoringRoots,
           },
         });
@@ -182,7 +204,7 @@ export function createDesktopExtensionManagement(deps: DesktopExtensionManagemen
     return gate.launch(
       [
         ...captured.profiles
-          .filter((item) => clients.includes(item.client))
+          .filter((item) => clients.includes(item.client as ExtensionClient))
           .map((item) => item.configRoot),
         ...(await Promise.all(launch.projectPaths.map(projectSkillAdmissionResources))).flat(),
       ],

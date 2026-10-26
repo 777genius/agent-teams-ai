@@ -7,8 +7,12 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { createDesktopExtensionManagement } from '../../../src/features/extension-management/main/composition/createDesktopExtensionManagement';
 
-import type { ManagementOperation } from '../../../src/features/extension-management/contracts';
-import type { startUap } from '@uap/management-sdk/node';
+import type {
+  ExtensionClient,
+  ManagementClient,
+  ManagementOperation,
+} from '../../../src/features/extension-management/contracts';
+import type { discoverTargets, startUap } from '@uap/management-sdk/node';
 
 const f = vi.hoisted(() => ({
   home: '',
@@ -22,6 +26,10 @@ const f = vi.hoisted(() => ({
   activeEnvironment: vi.fn(),
   environment: vi.fn(),
   start: vi.fn<(options: Parameters<typeof startUap>[0]) => Promise<unknown>>(),
+  discover: vi.fn<typeof discoverTargets>(),
+  activeClients: vi.fn<() => Promise<ReadonlySet<ExtensionClient>>>(),
+  prepare: vi.fn<ManagementClient['prepare']>(),
+  discard: vi.fn(async () => {}),
 }));
 
 vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
@@ -46,7 +54,7 @@ vi.mock('@main/utils/pathDecoder', () => ({
   getHomeDir: () => f.home,
   getClaudeBasePath: () => f.claudeRoot,
 }));
-vi.mock('@uap/management-sdk/node', () => ({ startUap: f.start }));
+vi.mock('@uap/management-sdk/node', () => ({ startUap: f.start, discoverTargets: f.discover }));
 vi.mock(
   '../../../src/features/extension-management/main/infrastructure/resolveUapExecutable',
   () => ({
@@ -71,8 +79,10 @@ beforeEach(async () => {
     throw new Error('Profile capture must not prepare unrelated runtime launches');
   });
   f.environment.mockResolvedValue({ entries: [], diagnostics: [], pendingOperations: [] });
+  f.discover.mockResolvedValue({ apiVersion: 1, engineVersion: 'test', targets: [] });
+  f.activeClients.mockResolvedValue(new Set());
   f.start.mockResolvedValue({
-    client: { environment: f.environment },
+    client: { environment: f.environment, prepare: f.prepare, plans: { discard: f.discard } },
     session: {
       apiVersion: 1,
       engineVersion: 'test',
@@ -87,7 +97,7 @@ beforeEach(async () => {
   runtime = createDesktopExtensionManagement({
     resourceRoot: f.home,
     isLocal: () => true,
-    activeClientIds: async () => new Set(),
+    activeClientIds: f.activeClients,
     savedRequest: async () => null,
     knownProjects: async () => [],
   });
@@ -178,4 +188,140 @@ it('keeps failed engine startup closed even if another native client is unavaila
   const operation = vi.fn(async () => 'launched');
   await expect(launch(operation)).rejects.toThrow('Staged UAP unavailable');
   expect(operation).not.toHaveBeenCalled();
+});
+
+it('captures Go-qualified extra targets without replacing primary profiles or adding authoring roots', async () => {
+  const cursorRoot = path.join(f.home, 'custom-cursor-profile');
+  const geminiRoot = path.join(f.home, 'retained-gemini-profile');
+  f.discover.mockResolvedValue({
+    apiVersion: 1,
+    engineVersion: 'test',
+    targets: [
+      {
+        client: 'codex',
+        label: 'Codex',
+        detectionStatus: 'detected',
+        available: true,
+        profile: { id: 'codex', client: 'codex', configRoot: path.join(f.home, 'other-codex') },
+      },
+      {
+        client: 'cursor',
+        label: 'Cursor',
+        detectionStatus: 'detected',
+        available: true,
+        profile: { id: 'cursor', client: 'cursor', configRoot: cursorRoot },
+      },
+      {
+        client: 'gemini',
+        label: 'Gemini',
+        detectionStatus: 'not_detected',
+        available: false,
+        profile: { id: 'gemini', client: 'gemini', configRoot: geminiRoot },
+      },
+      {
+        client: 'vscode',
+        label: 'VS Code',
+        detectionStatus: 'detected',
+        available: false,
+        reason: 'Managed dependencies are deferred for this client.',
+      },
+    ],
+  });
+  const context = await runtime.feature.capture({ client: 'cursor', scope: 'user' });
+  const config = f.start.mock.calls[0][0].config;
+  expect(config.targets.find((target) => target.client === 'codex')?.configRoot).toBe(f.codexRoot);
+  expect(config.targets.filter((target) => ['cursor', 'gemini'].includes(target.client))).toEqual([
+    { id: 'cursor', client: 'cursor', configRoot: cursorRoot, detectionStatus: 'detected' },
+    { id: 'gemini', client: 'gemini', configRoot: geminiRoot, detectionStatus: 'not_detected' },
+  ]);
+  expect(config.targets.some((target) => target.client === 'vscode')).toBe(false);
+  expect(
+    config.authoringRoots?.some(
+      (root) => root.path.startsWith(cursorRoot) || root.path.startsWith(geminiRoot)
+    )
+  ).toBe(false);
+  expect(context.unavailableTargets).toEqual([
+    {
+      client: 'vscode',
+      label: 'VS Code',
+      reason: 'Managed dependencies are deferred for this client.',
+    },
+  ]);
+  expect(f.activeEnvironment).not.toHaveBeenCalled();
+});
+
+it('rejects a well-formed client key that the host has not captured', async () => {
+  await expect(runtime.feature.capture({ client: 'forged-client', scope: 'user' })).rejects.toThrow(
+    'captured native installation targets'
+  );
+  expect(f.start).not.toHaveBeenCalled();
+});
+
+it('refuses unsafe extra roots before opening a management session', async () => {
+  f.discover.mockResolvedValue({
+    apiVersion: 1,
+    engineVersion: 'test',
+    targets: [
+      {
+        client: 'cursor',
+        label: 'Cursor',
+        detectionStatus: 'detected',
+        available: true,
+        profile: { id: 'cursor', client: 'cursor', configRoot: 'relative/cursor-profile' },
+      },
+    ],
+  });
+  await expect(runtime.feature.capture({ client: 'claude', scope: 'user' })).rejects.toThrow(
+    'absolute path'
+  );
+  expect(f.start).not.toHaveBeenCalled();
+});
+
+it('admits an extra-only plan beside an active primary but retains conservative admission for unknown targets', async () => {
+  f.discover.mockResolvedValue({
+    apiVersion: 1,
+    engineVersion: 'test',
+    targets: [
+      {
+        client: 'cursor',
+        label: 'Cursor',
+        detectionStatus: 'detected',
+        available: true,
+        profile: { id: 'cursor', client: 'cursor', configRoot: path.join(f.home, 'custom-cursor') },
+      },
+    ],
+  });
+  f.activeClients.mockResolvedValue(new Set(['claude']));
+  const plan = {
+    planId: 'extra-review',
+    contextId: 'captured-profiles',
+    action: 'install',
+    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    confirmable: true,
+    actions: [
+      {
+        action: 'install',
+        alias: 'example',
+        targetId: 'cursor',
+        description: 'Install for Cursor.',
+      },
+    ],
+    warnings: [],
+    conflicts: [],
+  };
+  f.prepare.mockResolvedValue(plan);
+  const context = await runtime.feature.capture({ client: 'cursor', scope: 'user' });
+  const request = {
+    contextId: context.contextId,
+    change: { action: 'install' as const, source: 'publisher/example', targetIds: ['cursor'] },
+  };
+  await expect(runtime.feature.prepare(request)).resolves.toMatchObject({ planId: 'extra-review' });
+  expect(f.discard).not.toHaveBeenCalled();
+  f.prepare.mockResolvedValue({
+    ...plan,
+    planId: 'unknown-review',
+    actions: [{ ...plan.actions[0], targetId: 'unknown-target' }],
+  });
+  await expect(runtime.feature.prepare(request)).rejects.toThrow('Stop the active run');
+  expect(f.discard).toHaveBeenCalledWith('unknown-review');
 });

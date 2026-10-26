@@ -32,7 +32,7 @@ import { ManagementOperationView } from './ManagementOperationView';
 import { ManagementPlanDialog } from './ManagementPlanDialog';
 import { ManagementRestorePoint } from './ManagementRestorePoint';
 
-import type { ExtensionClient, SkillCopyCandidate } from '../../contracts';
+import type { SkillCopyCandidate } from '../../contracts';
 import type { ManagedExtensionsModel } from '../hooks/useManagedExtensions';
 
 interface Props {
@@ -72,6 +72,7 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
   const installationTargets = (
     <ManagementInstallationTargets
       targets={model.installationTargets}
+      unavailableTargets={model.unavailableTargets}
       disabled={disabled || Boolean(model.plan)}
       onSelect={model.selectInstallationTarget}
     />
@@ -106,15 +107,23 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
           <Select
             value={model.client}
             disabled={model.busy || model.reviewUncertain}
-            onValueChange={(value) => model.setClient(value as ExtensionClient)}
+            onValueChange={model.setClient}
           >
             <SelectTrigger className="w-36" aria-label={t('uap.agent')}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="claude">Claude Code</SelectItem>
-              <SelectItem value="codex">Codex</SelectItem>
-              <SelectItem value="opencode">OpenCode</SelectItem>
+              {model.viewTargets.map((target) => (
+                <SelectItem key={target.id} value={target.client}>
+                  {target.client === 'claude'
+                    ? 'Claude Code'
+                    : target.client === 'codex'
+                      ? 'Codex'
+                      : target.client === 'opencode'
+                        ? 'OpenCode'
+                        : target.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Badge variant="outline">{t('uap.userScope')}</Badge>

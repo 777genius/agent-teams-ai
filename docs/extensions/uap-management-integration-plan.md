@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v24; S27 completes in real Electron on bc8a3959, including active-profile refusals, unaffected OpenCode, exact process stop and post-stop update. The downstream plugin matrix exposes a versioned Codex cache-path error in its evidence collector; the narrow correction retains all native-byte and removal assertions. A complete fresh Electron receipt remains required.
+Status: implementation plan v25; S27 and three-client native plugin installation complete in real Electron on e740e39. The subsequent update exposed a missing prepared OpenCode sibling host, now corrected in the matched UAP pin. Passive discovery now supplies additional installation targets, initially unchecked. The complete fresh Electron install/update/removal receipt remains required; actual-team Skill use and the proposed profile/worktree architecture remain separate, unapproved work.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -12,7 +12,89 @@ real Electron end-to-end verification, early draft PRs, immediate push of every
 commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
-## Current checkpoint — v24 (2026-10-26)
+## Current checkpoint — v25 (2026-10-26)
+
+[Electron run 40368582518](https://github.com/777genius/agent-teams-ai/actions/runs/40368582518)
+tests app `e740e39cc0a57c2d790d0e6118a957baafd73d08` through merge
+`021cbc64849975335972afa88cd8901d5bf3763b`, whose parents are main
+`d1a0832c89a7e250389755ae83bcb5424ebd12e9` and that exact app head.
+S27 again records `completed: true`, including the actual post-stop Claude
+update `c1070a2811d31dc405e725b8442bd18b6ddcd09527b7089362d912e70d925292`.
+The downstream matrix completes three-target UI installation
+`769b5bbd4d046b8b5f5651acf07a5640538654def327d6ba81c1582e36bfaede`.
+After the versioned Codex cache correction, all three native identity and exact
+version-1 file observations pass. Update preparation then refuses with the
+bounded public `OPERATION_REFUSED` response; no update or removal completion is
+claimed. [Artifact 12672271513](https://github.com/777genius/agent-teams-ai/actions/runs/40368582518/artifacts/12672271513)
+has ZIP SHA-256 `ab3a273d72533e841bb29fee0712211db7828162e785c2261e4227aed7691f83`.
+
+A real Management HTTPS-archive regression reproduces that refusal with all
+three installed targets while the Claude/Codex control passes. Claude update
+compatibility checks include the installed OpenCode sibling, but its immutable
+host facts were not prepared. The corrected installer prepares only verified
+installed siblings belonging to the selected installation, validates binding
+identity before probing, and freezes a separate host snapshot. Root, executable
+and version remain checked before Apply. Unrelated OpenCode installations do not
+create a new prerequisite. Six sibling regressions, 27 existing host protection
+cases and both real archive lifecycle variants pass; independent review finds
+no remaining P1/P2 in this correction.
+
+The matched source is [UAP 0311d9b](https://github.com/777genius/universal-agent-plugins/commit/0311d9b373725a80d6be529717b726a3e1910f97),
+with engine version `0.1.91+agentteams.0311d9b37372`. The SDK archive has SHA-256
+`3f7b3984149099d2e9beecf13a0f89aaba10c47a3059c387998de9345f4730f3`.
+Its production SDK build/typecheck and 41 SDK tests pass. The first combined CI
+also found two executable fixtures sharing one Go package; a separately reviewed,
+byte-preserving move isolates the new fixture in its own directory. The fixture's
+PID marker now uses a root-confined write with an explicit Go 1.25 file minimum;
+the actual pinned Go 1.26.10 includes and checks that file. Focused Go vet,
+golangci-lint 2.13.2 and all 14 discovery tests pass after those corrections.
+The packed SDK bytes are identical across the two fixture-only follow-ups.
+Fresh hosted gates must qualify this final source rather than the superseded
+first commit.
+
+The combined app changes pass 36 cases across the five profile/admission/target
+and presentation suites, scoped lint, the source-size guard and the native
+desktop-E2E TypeScript configuration. One complete local canonical typecheck is
+killed with exit 137 without TypeScript diagnostics. No complete local pass is
+claimed; fresh hosted canonical validation remains required.
+
+The same pin completes the previously missing passive target-capture boundary.
+Go's existing detector and explicit client registry own native paths, executable
+facts and support policy. `manage discover` returns a bounded, versioned private
+response; the Node SDK uses fixed arguments, filters the environment and owns
+deadline/abort cleanup. It does not execute discovered native clients. A safely
+inspectable profile remains captured when its client becomes undetected, so
+existing bindings can still be inspected and removed; new installation is
+refused before acquisition. Unsupported detected clients are display-only
+observations and never acquire installation authority.
+
+The desktop keeps its primary Claude Code/Codex/OpenCode profile capture and
+adds only the qualified Go profiles. Available primary clients start checked;
+other detected targets start unchecked. Unknown renderer selections are refused
+against the captured inventory. Extra targets neither expand local authoring
+roots nor become team runtimes. A bounded Electron fixture now observes the
+actual session and initial controls, using an inert Cursor executable whose
+persistent execution witness and exact bytes are checked before and after the
+owned desktop stops. This qualifies detection and selection only, not Cursor
+installation, runtime behavior or Skill-body use. Cleanup failures remain
+separate from the original scenario failure and cannot turn the run green.
+
+The previous app source completes canonical hosted workspace typechecks/build,
+MCP E2E, all four test shards and three lint shards; its separate CodeQL findings
+check reports no new alerts. Those results do not qualify these new app changes.
+On the previous UAP `2647dcc` source, both analyses pass but the separate findings
+gate still reports 12 alerts (2 Critical / 10 High). Fresh source checks and
+formal disposition remain required; no alert suppression or protection bypass
+has been performed.
+
+The [launch readiness options](team-extension-launch-readiness-options.md)
+retain A then B as proposals for owner discussion: align the final native
+profile identity, then prepare the exact lock and CWD-dependent configuration in
+the runtime's actual worktree before spawn. Neither is implemented or approved
+by this installation-target work. Installed files, native discovery, Skill-body
+use and per-member plugin MCP calls remain distinct evidence levels.
+
+## Previous checkpoint — v24 (2026-10-26)
 
 [Electron run 40365381127](https://github.com/777genius/agent-teams-ai/actions/runs/40365381127)
 on app `bc8a3959c8ae74d1629017fb26bc810d05874172` reaches and completes S27.

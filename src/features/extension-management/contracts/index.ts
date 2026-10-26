@@ -4,7 +4,8 @@ import type { createClient } from '@uap/management-sdk';
 export type ExtensionClient = 'claude' | 'codex' | 'opencode';
 export type ExtensionScope = 'user' | 'project';
 export interface ExtensionSelection {
-  client: ExtensionClient;
+  /** A client from the host's captured target inventory; team runtimes remain ExtensionClient. */
+  client: string;
   scope: ExtensionScope;
   projectId?: string;
   /** Lookup key for an existing host-known project; native target scope stays user. */
@@ -44,11 +45,18 @@ export interface SkillCopyDestination {
   folderName: string;
 }
 export type SkillCopyReview = SkillReviewPreview;
+export interface UnavailableExtensionTarget {
+  client: string;
+  label: string;
+  reason: string;
+}
 export interface ExtensionContext {
   contextId: string;
   selection: ExtensionSelection;
   label: string;
   session: ManagementSession;
+  /** Display-only native observations. These grant no installation authority. */
+  unavailableTargets?: readonly UnavailableExtensionTarget[];
 }
 export interface ExtensionContextRequest {
   contextId: string;

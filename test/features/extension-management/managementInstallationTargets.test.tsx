@@ -15,7 +15,7 @@ import type { ManagedExtensionsModel } from '../../../src/features/extension-man
 const backend = vi.hoisted(() => ({
   hostStatus: vi.fn(async () => ({ available: true })),
   capture: vi.fn<ExtensionManagementAPI['capture']>(),
-  environment: vi.fn(async () => ({ contextId: 'engine-a', entries: [], diagnostics: [] })),
+  environment: vi.fn<ExtensionManagementAPI['environment']>(),
   catalog: vi.fn<ExtensionManagementAPI['catalog']>(),
   prepare: vi.fn<ExtensionManagementAPI['prepare']>(),
   apply: vi.fn<ExtensionManagementAPI['apply']>(),
@@ -37,7 +37,7 @@ vi.mock('@renderer/components/extensions/skills/SkillImportDialog', () => ({
 
 const targets: ManagementSession['targets'] = [
   ['claude', 'Claude Code'],
-  ['codex', 'Codex'],
+  ['codex', 'OpenAI Codex'],
   ['opencode', 'OpenCode'],
   ['cursor', 'Cursor'],
   ['grok', 'Grok'],
@@ -54,6 +54,7 @@ const targets: ManagementSession['targets'] = [
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  backend.environment.mockResolvedValue({ contextId: 'engine-a', entries: [], diagnostics: [] });
   backend.capture.mockImplementation(async (selection) => ({
     contextId: `host-${selection.client}`,
     selection,
@@ -134,7 +135,7 @@ const targetCheckbox = (host: ParentNode, client: string) =>
   )!;
 
 describe('installation targets', () => {
-  it('names the Claude view option consistently with its captured native target', async () => {
+  it('shows every captured native target in the management view selector', async () => {
     const scrollIntoView = HTMLElement.prototype.scrollIntoView;
     HTMLElement.prototype.scrollIntoView = vi.fn();
     const view = await mount(true);
@@ -145,10 +146,124 @@ describe('installation targets', () => {
       });
       expect(
         [...document.querySelectorAll('[role="option"]')].map((option) => option.textContent)
-      ).toEqual(['Claude Code', 'Codex', 'OpenCode']);
+      ).toEqual(['Claude Code', 'Codex', 'OpenCode', 'Cursor', 'Grok']);
     } finally {
       await view.close();
       HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    }
+  });
+
+  it('keeps an extra-only installation visible and removes only its captured target', async () => {
+    backend.environment.mockResolvedValue({
+      contextId: 'engine-a',
+      diagnostics: [],
+      entries: [
+        {
+          alias: 'extra-only',
+          kind: 'plugin',
+          source: 'publisher/extra-only',
+          declared: true,
+          updateStatus: 'current',
+          bindings: [
+            {
+              client: 'cursor',
+              targetId: 'profile-cursor',
+              scope: 'user',
+              status: 'installed',
+              managedPaths: [],
+            },
+          ],
+        },
+      ],
+    });
+    const view = await mount();
+    try {
+      expect(view.model().installed).toEqual([]);
+      await act(async () => view.model().setClient('cursor'));
+      expect(view.model().installed.map((entry) => entry.alias)).toEqual(['extra-only']);
+      await act(async () => {
+        await view.model().prepare({ action: 'remove', aliases: ['extra-only'] });
+      });
+      expect(backend.prepare.mock.calls[0][0]).toMatchObject({
+        contextId: 'host-cursor',
+        change: { action: 'remove', aliases: ['extra-only'], targetIds: ['profile-cursor'] },
+      });
+      expect(view.model().installationTargetIds).toEqual([
+        'profile-claude',
+        'profile-codex',
+        'profile-opencode',
+      ]);
+    } finally {
+      await view.close();
+    }
+  });
+
+  it('hides undetected empty candidates but retains unavailable targets with saved bindings', async () => {
+    const originalCapture = backend.capture.getMockImplementation()!;
+    backend.capture.mockImplementation(async (selection) => {
+      const context = await originalCapture(selection);
+      return {
+        ...context,
+        session: {
+          ...context.session,
+          targets: targets.map((target) =>
+            ['cursor', 'grok'].includes(target.client)
+              ? { ...target, detectionStatus: 'not_detected' as const, available: false }
+              : target
+          ),
+        },
+        unavailableTargets: [
+          {
+            client: 'vscode',
+            label: 'VS Code',
+            reason: 'Managed dependencies are deferred for this client.',
+          },
+        ],
+      };
+    });
+    backend.environment.mockResolvedValue({
+      contextId: 'engine-a',
+      diagnostics: [],
+      entries: [
+        {
+          alias: 'retained-extra',
+          kind: 'plugin',
+          source: 'publisher/extra',
+          declared: true,
+          updateStatus: 'blocked',
+          bindings: [
+            {
+              client: 'cursor',
+              targetId: 'profile-cursor',
+              scope: 'user',
+              status: 'missing',
+              managedPaths: [],
+            },
+          ],
+        },
+      ],
+    });
+    const view = await mount(true);
+    try {
+      expect(view.model().viewTargets.map((target) => target.client)).toEqual([
+        'claude',
+        'codex',
+        'opencode',
+        'cursor',
+      ]);
+      expect(targetCheckbox(view.host, 'cursor').disabled).toBe(true);
+      expect(targetCheckbox(view.host, 'cursor').getAttribute('aria-checked')).toBe('false');
+      expect(targetCheckbox(view.host, 'grok')).toBeNull();
+      const observation = view.host.querySelector<HTMLButtonElement>(
+        '[data-testid="uap-unavailable-target"]'
+      )!;
+      expect(observation.disabled).toBe(true);
+      expect(observation.getAttribute('aria-checked')).toBe('false');
+      expect(view.host.textContent).toContain('Managed dependencies are deferred for this client.');
+      expect(view.model().viewTargets.some((target) => target.client === 'vscode')).toBe(false);
+      expect(view.model().installationTargetIds).not.toContain('profile-cursor');
+    } finally {
+      await view.close();
     }
   });
 
@@ -258,7 +373,9 @@ describe('installation targets', () => {
     const view = await mount(true);
     try {
       expect(button(view.host, 'uap.install').disabled).toBe(true);
-      expect(view.host.textContent).toContain('uap.incompatibleInstallTargets Codex, OpenCode');
+      expect(view.host.textContent).toContain(
+        'uap.incompatibleInstallTargets OpenAI Codex, OpenCode'
+      );
       for (const client of ['codex', 'opencode']) {
         await act(async () => targetCheckbox(view.host, client).click());
       }

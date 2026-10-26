@@ -56,6 +56,17 @@ function model(available: boolean): ManagedExtensionsModel {
     available: true,
     client: 'claude',
     setClient: noChange,
+    viewTargets: [
+      {
+        id: 'claude',
+        client: 'claude',
+        scope: 'user',
+        label: 'Claude',
+        displayPath: '/fixture/profile',
+        available,
+      },
+    ],
+    unavailableTargets: [],
     installationTargets: [
       {
         id: 'claude',

@@ -3,10 +3,16 @@
 Research checkpoint: 2026-10-26. Initial app source review was at
 `837e428d7bc513068ee041db6de7c4c407a17fdd`; two independent reviews informed this
 follow-up. App boundaries were rechecked at
-`705bd0855ba8dd6438bfcd24d0babbb759b29923`, alongside the pinned orchestrator
-`v0.0.139` and UAP
-`e84b4da218f4445986daa9ed15f40acd828ae06f`. Source links retain the inspected
-revisions. An SDK/source pin refresh does not itself qualify agent launches.
+`705bd0855ba8dd6438bfcd24d0babbb759b29923`. PR head
+`e740e39cc0a57c2d790d0e6118a957baafd73d08` retains orchestrator `v0.0.139`;
+the tested merge with main,
+`021cbc64849975335972afa88cd8901d5bf3763b`, pins `v0.0.140` in its
+[runtime lock][runtime-lock]. Both critical worktree boundaries were rechecked
+against exact `v0.0.140` source. Historical evidence used UAP
+`e84b4da218f4445986daa9ed15f40acd828ae06f`; the current packaged source identity
+is recorded in [SDK provenance][sdk-provenance]. Historical source links retain
+their inspected revisions. An SDK/source pin refresh does not itself qualify
+agent launches.
 
 ## Owner direction and current conclusion
 
@@ -86,8 +92,11 @@ The deterministic [Claude/Codex bootstrap specification][bootstrap] currently
 passes the request's CWD plus `isolation: 'worktree'`; its own comment states
 that the runtime owns per-member isolation. A top-level `--worktree` is also
 passed downstream by [launch argument construction][launch-args]. The pinned
-orchestrator's [`normalizeMember`][runtime-member-normalization] explicitly
-omits `member.cwd` when `isolation` is `worktree`. Passing a prepared CWD in that
+orchestrator's [`normalizeMember` at `v0.0.140`][runtime-member-normalization]
+explicitly omits `member.cwd` when `isolation` is `worktree`. Its
+[`handleSpawn`][runtime-worktree-spawn] also rejects an incoming CWD together
+with worktree isolation, then allocates the worktree and supplies that actual
+path to the downstream spawn. Passing a prepared CWD in the
 bootstrap spec therefore cannot bind the isolated member to it. Disabling
 isolation to retain CWD would change worktree ownership and lifecycle behavior.
 
@@ -187,7 +196,7 @@ The ordinary same-root control passed.
 
 Current [desktop native MCP proof][tool-proof] requires OpenCode `1.18.34` and
 uses a real native client with a scripted loopback provider. The app's
-[runtime lock][runtime-lock] pins orchestrator `v0.0.139` and includes qualified
+[tested merge runtime lock][runtime-lock] pins orchestrator `v0.0.140` and includes qualified
 OpenCode v2 versions, including `2.1.4` on several platforms. UAP also has v2
 adapter coverage; this is a qualification gap, not a demonstrated
 incompatibility. A standalone 1.x proof cannot qualify an actual v2 team lane.
@@ -293,22 +302,38 @@ the exact app-launched member evidence supports the full claim.
 
 ## Additional detected installation targets
 
-The requested selector starts with Claude, Codex and OpenCode checked and shows
-additional detected clients unchecked. This is a separate installation-target
-task; showing a client does not qualify it as a team runtime. Management can
-authorize only targets captured by the trusted host at startup.
+The selector starts with available Claude Code, Codex and OpenCode checked and
+shows additional detected clients unchecked. This is an installation-target
+contract; showing a client does not qualify it as a team runtime. Management
+authorizes only profiles captured by the trusted host at startup.
 
-UAP already owns reusable read-only native detection:
-[`clientdetect.Detector.Detect`][uap-detector] returns configuration roots and
-executable paths without executing discovered binaries. There is currently no
-supported external wire API exposing both facts for trusted host capture.
-[`doctor --format json`][uap-doctor] deliberately omits paths; the
-[Skill Picker target projection][uap-picker-targets] has no executable and its
-`displayPath` can be a projection destination. Management Session returns the
-explicit startup targets rather than discovering more clients. Completing host
-capture needs a separately reviewed Go contract using that existing detector;
-duplicating client path rules in TypeScript or treating display paths as
-authority would create inconsistent ownership.
+The reviewed implementation now exposes a private, bounded `manage discover`
+command through the pinned Node SDK's `discoverTargets` operation. It reuses
+Go's [`clientdetect.Detector.Detect`][uap-detector] and registered user-scope
+support policy. Go returns a qualified canonical profile separately from
+display-only observations, without executing discovered binaries, probing
+versions, refreshing authentication or creating profile/UAP state. The SDK
+filters environment locators, validates the response and enforces output,
+timeout and process-cleanup bounds. Main keeps the existing capture for the
+three team runtimes and adds qualified extra profiles to Management startup.
+It does not derive authority from a `displayPath` or duplicate native root rules
+in TypeScript. Additional clients do not expand local authoring roots.
+
+Safely inspectable but undetected profiles retain existing-binding inspection
+and targeted removal; Go refuses new installation before acquisition.
+Detected unsupported or unsafe observations remain disabled with a reason and
+receive no startup authority. A changed detection/profile snapshot invalidates
+new work and requires fresh capture and review. The separate installation
+multiselect defaults extras to unchecked; the inventory view retains installed
+bindings even after client detection disappears.
+
+The [Electron detection fixture][additional-target-proof] puts an inert Cursor
+executable on the disposable PATH and checks actual Go → SDK → host → UI target
+discovery before the harness changes selections. A persistent execution witness
+and executable digest are checked after that observation and after owned
+desktop shutdown, including failure paths. It is explicitly detection-only;
+the full exact-head workflow result belongs in the integration plan, and this
+fixture does not qualify Cursor installation, team execution or Skill body use.
 
 [plan-boundary]: uap-management-integration-plan.md#projectworktree-boundary
 [capture]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/src/features/extension-management/main/composition/createDesktopExtensionManagement.ts#L58
@@ -317,7 +342,8 @@ authority would create inconsistent ownership.
 [team-mcp]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/src/main/services/team/TeamMcpConfigBuilder.ts#L565
 [member-mcp]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/src/main/services/team/provisioning/TeamProvisioningMemberMcpLaunchConfig.ts#L83
 [member-mcp-current]: https://github.com/777genius/agent-teams-ai/blob/705bd0855ba8dd6438bfcd24d0babbb759b29923/src/main/services/team/provisioning/TeamProvisioningMemberMcpLaunchConfig.ts#L75
-[runtime-member-normalization]: https://github.com/777genius/agent_teams_orchestrator/blob/v0.0.139/src/services/teamBootstrap/teamBootstrapSpec.ts#L275
+[runtime-member-normalization]: https://github.com/777genius/agent_teams_orchestrator/blob/v0.0.140/src/services/teamBootstrap/teamBootstrapSpec.ts#L270
+[runtime-worktree-spawn]: https://github.com/777genius/agent_teams_orchestrator/blob/v0.0.140/src/tools/shared/spawnMultiAgent.ts#L3528
 [bootstrap]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/src/main/services/team/provisioning/TeamProvisioningBootstrapSpec.ts#L35
 [launch-args]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/src/main/services/team/provisioning/TeamProvisioningLaunchTeamFlow.ts#L508
 [bridge-dispatch]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/src/main/services/team/opencode/bridge/OpenCodeBridgeCommandClient.ts#L394
@@ -330,14 +356,14 @@ authority would create inconsistent ownership.
 [profile-tests]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/test/features/extension-management/nativeProfileAdmission.test.ts
 [connection-tests]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/test/main/services/runtime/ProviderConnectionService.test.ts
 [tool-proof]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/scripts/e2e/uap-management-tool-use.ts#L18
-[runtime-lock]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/runtime.lock.json
+[runtime-lock]: https://github.com/777genius/agent-teams-ai/blob/021cbc64849975335972afa88cd8901d5bf3763b/runtime.lock.json
+[sdk-provenance]: ../../vendor/uap/sdk/provenance.json
+[additional-target-proof]: ../../scripts/e2e/uap-management-additional-target.ts
 [gate]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/src/features/extension-management/core/application/ExtensionRuntimeGate.ts
 [uap-context]: https://github.com/777genius/universal-agent-plugins/blob/e84b4da218f4445986daa9ed15f40acd828ae06f/cli/internal/agentpluginscli/management_context.go#L22
 [uap-claude-project]: https://github.com/777genius/universal-agent-plugins/blob/e84b4da218f4445986daa9ed15f40acd828ae06f/docs/CLAUDE_PROJECT_INSTALLATION.md
 [uap-opencode-project]: https://github.com/777genius/universal-agent-plugins/blob/e84b4da218f4445986daa9ed15f40acd828ae06f/docs/OPENCODE_PROJECT_SCOPE.md
 [uap-detector]: https://github.com/777genius/universal-agent-plugins/blob/e84b4da218f4445986daa9ed15f40acd828ae06f/install/integrationctl/agentplugins/adapters/clientdetect/detector.go#L81
-[uap-doctor]: https://github.com/777genius/universal-agent-plugins/blob/e84b4da218f4445986daa9ed15f40acd828ae06f/cli/internal/agentpluginscli/read.go#L68
-[uap-picker-targets]: https://github.com/777genius/universal-agent-plugins/blob/e84b4da218f4445986daa9ed15f40acd828ae06f/cli/internal/agentpluginscli/skills_picker.go#L203
 [claude-skills]: https://code.claude.com/docs/en/agent-sdk/skills
 [claude-settings]: https://code.claude.com/docs/en/settings
 [codex-roots]: https://github.com/openai/codex/blob/rust-v0.153.4/codex-rs/ext/skills/src/host_roots.rs#L87

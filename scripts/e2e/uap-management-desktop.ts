@@ -18,6 +18,7 @@ import { promisify } from 'node:util';
 import { CdpClient } from './comment-notification/cdp.mjs';
 import { startGroupChatModelServer } from './group-chat-model-server';
 import { startActiveRunProof } from './uap-management-active-run';
+import { createAdditionalTargetProof } from './uap-management-additional-target';
 import { captureFreshProfileCliControl } from './uap-management-failure-cli';
 import { captureOwnedUapProcessMetadata } from './uap-management-failure-process';
 import { postWithReboundHost } from './uap-management-http';
@@ -346,8 +347,9 @@ async function start(f: Awaited<ReturnType<typeof fixture>>) {
 async function stop(root: string) {
   await cdp?.close().catch(() => {});
   cdp = undefined;
-  if (app?.pid && app.exitCode === null) {
+  if (app?.pid && app.exitCode === null && app.signalCode === null) {
     const child = app;
+    const running = () => child.exitCode === null && child.signalCode === null;
     try {
       if (process.platform === 'win32') child.kill('SIGTERM');
       else process.kill(-child.pid!, 'SIGTERM');
@@ -355,13 +357,15 @@ async function stop(root: string) {
       /* already exited */
     }
     await Promise.race([once(child, 'exit'), pause(10_000)]);
-    if (child.exitCode === null) {
+    if (running()) {
       try {
         if (process.platform === 'win32') child.kill('SIGKILL');
         else process.kill(-child.pid!, 'SIGKILL');
       } catch {
         /* already exited */
       }
+      if (running()) await Promise.race([once(child, 'exit'), pause(10_000)]);
+      assert(!running(), 'The owned desktop launcher did not exit after forced shutdown');
     }
   }
   app = undefined;
@@ -484,11 +488,12 @@ async function selectAgent(root: UiLocator, label: string) {
     `Agent menu did not open within three pointer attempts: ${JSON.stringify(observed)}`
   );
 }
-async function openSkills() {
+async function openSkills(beforeSelection?: () => Promise<void>) {
   await click(button('More actions'));
   await click(button('Extensions'));
   await selectTab(cdp!, wait, 'Skills');
   await wait(enabled(button('Agent runtime', panel)), 'managed Skill context');
+  await beforeSelection?.();
   await selectAgent(panel, 'OpenCode');
   await selectInstallationTargets(cdp!, wait, click, panel, ['opencode']);
   await wait(enabled(button('Install from source', panel)), 'native OpenCode capability', 90_000);
@@ -856,7 +861,10 @@ async function localSkillLifecycle(f: Awaited<ReturnType<typeof fixture>>, copie
 }
 
 async function exercise(f: Awaited<ReturnType<typeof fixture>>) {
-  await openSkills();
+  await openSkills(async () => {
+    await additionalTarget.observeInitialUi(cdp!, wait, panel);
+    await screenshot(path.join(f.shots, '00-additional-targets.png'));
+  });
   await screenshot(path.join(f.shots, '01-empty-environment.png'));
   assert.equal(
     (await environment()).entries.length,
@@ -1044,6 +1052,9 @@ async function exercise(f: Awaited<ReturnType<typeof fixture>>) {
 }
 
 const f = await fixture();
+const additionalTarget = await createAdditionalTargetProof(f.root);
+f.env.PATH = [additionalTarget.binDirectory, f.env.PATH ?? ''].join(path.delimiter);
+evidence.additionalTargetDiscovery = additionalTarget.evidence;
 process.stdout.write(`Disposable UAP desktop fixture: ${f.root}\n`);
 try {
   pluginMatrix = await createPluginMatrixFixture(f.root);
@@ -1070,7 +1081,30 @@ try {
   await activeRun?.close().catch((error) => {
     evidence.activeRunCleanupFailure = String(error);
   });
-  await stop(f.root);
+  let ownedDesktopStopped = false;
+  await stop(f.root)
+    .then(() => {
+      ownedDesktopStopped = true;
+    })
+    .catch((error) => {
+      evidence.ownedDesktopStopFailure = String(error);
+      if (!Object.hasOwn(evidence, 'failure')) evidence.failure = String(error);
+      evidence.completed = false;
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      const stage = ownedDesktopStopped
+        ? 'after-owned-desktop-stop'
+        : 'after-owned-desktop-stop-failure';
+      await additionalTarget.assertUnexecuted(stage).catch((error) => {
+        // Preserve a matrix/S27 failure as primary while still failing an otherwise
+        // successful run and retaining the independent detection witness failure.
+        evidence.additionalTargetVerificationFailure = String(error);
+        if (!Object.hasOwn(evidence, 'failure')) evidence.failure = String(error);
+        evidence.completed = false;
+        process.exitCode = 1;
+      });
+    });
   await save(path.join(f.root, 'evidence.json'), { ...evidence, rendererErrors: errors });
   await new Promise<void>((resolve) => publisher?.close(() => resolve()));
   await toolProof?.close();
