@@ -361,9 +361,14 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
     }
   );
 
-  it.each([false, true])(
-    'reconciles a durable group prebridge marker without dispatching it again (correction=%s)',
-    async (correction) => {
+  it.each([
+    { correction: false, canObserve: false },
+    { correction: true, canObserve: false },
+    { correction: false, canObserve: true },
+    { correction: true, canObserve: true },
+  ])(
+    'keeps a durable group prebridge marker unknown without redispatch (correction=$correction, observe=$canObserve)',
+    async ({ correction, canObserve }) => {
       const record = makeLedgerRecord({
         groupChatId: 'group-a',
         status: 'accepted',
@@ -380,9 +385,9 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
       });
       const send = vi.fn();
       const observe = vi.fn(async () => ({
-        ok: true,
         providerId: 'opencode' as const,
         memberName: 'alice',
+        ok: true,
         diagnostics: [],
       }));
       const ledger = {
@@ -390,15 +395,12 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
         ensurePending: vi.fn(async () => record),
         getByInboxMessage: vi.fn(async () => record),
         applyObservation: vi.fn(async () => record),
-        markNextAttemptDeferred: vi.fn(async ({ nextAttemptAt }: { nextAttemptAt: string }) => {
-          record.nextAttemptAt = nextAttemptAt;
-          return record;
-        }),
+        markNextAttemptDeferred: vi.fn(async () => record),
       };
       const deps = makeDeps({
         getOpenCodeRuntimeMessageAdapter: () => ({
           ...makeAdapter(send),
-          observeMessageDelivery: observe,
+          ...(canObserve ? { observeMessageDelivery: observe } : {}),
         }),
         createOpenCodePromptDeliveryLedger: vi.fn(() => ledger as never),
         openCodePromptDeliveryWatchdogScheduler: { isEnabled: vi.fn(() => true) },
@@ -431,10 +433,10 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
           reason: 'group_handoff_acceptance_unknown',
         });
       expect(send).not.toHaveBeenCalled();
-      expect(observe).toHaveBeenCalledTimes(1);
-      expect(ledger.applyObservation).toHaveBeenCalledTimes(1);
-      expect(ledger.markNextAttemptDeferred).toHaveBeenCalledTimes(1);
-      expect(record.nextAttemptAt && Date.parse(record.nextAttemptAt)).toBeGreaterThan(Date.now());
+      expect(observe).toHaveBeenCalledTimes(canObserve ? 2 : 0);
+      expect(ledger.applyObservation).toHaveBeenCalledTimes(canObserve ? 2 : 0);
+      expect(ledger.markNextAttemptDeferred).toHaveBeenCalledTimes(canObserve ? 2 : 0);
+      expect(record).toMatchObject({ attempts: 0, status: 'accepted' });
       expect(deps.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded).not.toHaveBeenCalled();
     }
   );
