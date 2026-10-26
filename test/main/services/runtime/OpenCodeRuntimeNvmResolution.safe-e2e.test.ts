@@ -178,7 +178,7 @@ describeWindows('OpenCode nvm-windows runtime resolution safe e2e', () => {
     }
   });
 
-  // Allow the 15s fixture compiler, 30s version probe, and remaining status/launch checks.
+  // Allow a cold .NET compiler on Windows CI, the 30s version probe, and status/launch checks.
   it('selects the native OpenCode executable behind an nvm cmd shim', async () => {
     const versionDir = path.join(process.env.NVM_HOME!, 'v20.20.0');
     const shimPath = path.join(versionDir, 'opencode.cmd');
@@ -223,7 +223,7 @@ describeWindows('OpenCode nvm-windows runtime resolution safe e2e', () => {
       compilerPath,
       ['/nologo', '/target:exe', `/out:${nativeBinaryPath}`, sourcePath],
       {
-        timeout: 15_000,
+        timeout: 60_000,
         windowsHide: true,
       }
     );
@@ -256,7 +256,7 @@ describeWindows('OpenCode nvm-windows runtime resolution safe e2e', () => {
       windowsHide: true,
     });
     expect(version.stdout.trim()).toBe('1.18.3');
-  }, 60_000);
+  }, 120_000);
 });
 
 function restoreEnvValue(name: string, value: string | undefined): void {
