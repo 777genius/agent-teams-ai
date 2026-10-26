@@ -11,6 +11,7 @@ import type {
   ExtensionClient,
   ManagementClient,
   ManagementOperation,
+  ManagementPlan,
 } from '../../../src/features/extension-management/contracts';
 import type { discoverTargets, startUap } from '@uap/management-sdk/node';
 
@@ -292,7 +293,7 @@ it('admits an extra-only plan beside an active primary but retains conservative 
     ],
   });
   f.activeClients.mockResolvedValue(new Set(['claude']));
-  const plan = {
+  const plan: ManagementPlan = {
     planId: 'extra-review',
     contextId: 'captured-profiles',
     action: 'install',
