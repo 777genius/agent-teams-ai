@@ -57,6 +57,11 @@ on:
 permissions:
   contents: read
 
+# Supersede automatic checks; keep each manual operation independent.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.event_name == 'push' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   validate-native-inputs:
     if: github.event_name == 'workflow_dispatch' && (inputs.native_sdk_ref != '' || inputs.native_source_only || inputs.native_provider_only)

@@ -49,10 +49,10 @@ on:
 permissions:
   contents: read
 
-# Cancel obsolete PR checks without sharing custody with push or manual runs.
+# Supersede PR/push checks without sharing custody with manual runs.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.event_name == 'push' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
 
 jobs:
   bootstrap:

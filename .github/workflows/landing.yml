@@ -31,9 +31,10 @@ on:
 permissions:
   contents: read
 
+# Preserve each Pages deployment and manual operation; supersede PR checks only.
 concurrency:
-  group: landing-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: landing-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
