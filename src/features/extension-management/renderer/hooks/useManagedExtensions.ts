@@ -27,6 +27,7 @@ const message = (error: unknown) =>
 export function useManagedExtensions(kind: 'plugin' | 'skill') {
   const backend = useMemo(() => api.extensionManagement, []);
   const [client, setClient] = useState<ExtensionClient>('claude');
+  const [installationChoices, setInstallationChoices] = useState<Record<string, boolean>>({});
   const [captureRevision, setCaptureRevision] = useState(0);
   useEffect(() => {
     const reacquire = () => setCaptureRevision((revision) => revision + 1);
@@ -75,6 +76,20 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
   } | null>(null);
   const operationId = operation?.operationId;
   const isRunning = Boolean(operation && !finished(operation));
+  const installationTargets = (context?.session?.targets ?? []).map((target) => ({
+    ...target,
+    selected:
+      target.available &&
+      (installationChoices[target.id] ?? ['claude', 'codex', 'opencode'].includes(target.client)),
+  }));
+  const installationTargetIds = installationTargets
+    .filter((target) => target.selected)
+    .map((target) => target.id);
+  const selectedTargetId =
+    context?.session?.targets.find((target) => target.client === client)?.id ?? client;
+  function selectInstallationTarget(targetId: string, selected: boolean) {
+    setInstallationChoices((choices) => ({ ...choices, [targetId]: selected }));
+  }
 
   const refresh = useCallback(
     async (selected: ExtensionContext, version: number) => {
@@ -250,9 +265,16 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
   async function prepare(change: ManagementChange, catalogEntryId?: string) {
     if (!backend || !context) return false;
     acceptance.current = null;
-    const scopedChange = ['install', 'install_skills', 'remove'].includes(change.action)
-      ? { ...change, targetIds: [client] }
-      : change;
+    const installing = change.action === 'install' || change.action === 'install_skills';
+    const scopedChange = installing
+      ? { ...change, targetIds: change.targetIds ?? installationTargetIds }
+      : change.action === 'remove'
+        ? { ...change, targetIds: change.targetIds ?? [selectedTargetId] }
+        : change;
+    if (installing && !scopedChange.targetIds?.length) {
+      setError('Select at least one available agent for installation.');
+      return false;
+    }
     return request(
       () => backend.prepare({ contextId: context.contextId, change: scopedChange, catalogEntryId }),
       (reviewed) => {
@@ -412,9 +434,14 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
   }
   async function loadCopySources(alias: string) {
     if (!backend || !context) return;
-    copyOwner.current = { contextId: context.contextId, alias, targetId: client };
+    copyOwner.current = { contextId: context.contextId, alias, targetId: selectedTargetId };
     await request(
-      () => backend.skillCopySources({ contextId: context.contextId, alias, targetId: client }),
+      () =>
+        backend.skillCopySources({
+          contextId: context.contextId,
+          alias,
+          targetId: selectedTargetId,
+        }),
       setCopyCandidates
     );
   }
@@ -515,6 +542,9 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
     available: Boolean(backend),
     client,
     setClient,
+    installationTargets,
+    installationTargetIds,
+    selectInstallationTarget,
     context,
     catalog,
     catalogLoading,

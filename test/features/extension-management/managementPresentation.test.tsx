@@ -56,6 +56,20 @@ function model(available: boolean): ManagedExtensionsModel {
     available: true,
     client: 'claude',
     setClient: noChange,
+    installationTargets: [
+      {
+        id: 'claude',
+        client: 'claude',
+        scope: 'user',
+        label: 'Claude',
+        displayPath: '/fixture/profile',
+        available,
+        selected: available,
+        reason: 'Install the native Claude client.',
+      },
+    ],
+    installationTargetIds: available ? ['claude'] : [],
+    selectInstallationTarget: noChange,
     context: {
       contextId: 'host-a',
       selection: { client: 'claude', scope: 'user' },

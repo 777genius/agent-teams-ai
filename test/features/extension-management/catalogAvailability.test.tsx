@@ -12,6 +12,7 @@ const backend = vi.hoisted(() => ({
   capture: vi.fn(async () => ({
     contextId: 'host-a',
     selection: { client: 'claude', scope: 'user' },
+    session: { targets: [{ id: 'claude', client: 'claude', available: true }] },
   })),
   environment: vi.fn(async () => ({
     contextId: 'engine-a',

@@ -1,5 +1,5 @@
 #!/usr/bin/env -S pnpm exec tsx
-// Real Electron + bundled UAP + native OpenCode. All writable state is disposable.
+// Real Electron + bundled UAP + native Claude/Codex/OpenCode. All writable state is disposable.
 import assert from 'node:assert/strict';
 import { execFile, spawn, type ChildProcess } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
@@ -22,6 +22,8 @@ import { captureFreshProfileCliControl } from './uap-management-failure-cli';
 import { captureOwnedUapProcessMetadata } from './uap-management-failure-process';
 import { postWithReboundHost } from './uap-management-http';
 import { openCodeMcpServer } from './uap-management-native';
+import { createPluginMatrixFixture, matrixArchivePath } from './uap-management-plugin-fixture';
+import { exercisePluginMatrix, selectInstallationTargets } from './uap-management-plugin-matrix';
 import { createNativeToolProof, toolArchivePath, toolPluginName } from './uap-management-tool-use';
 import {
   actionablePoint,
@@ -54,6 +56,7 @@ let app: ChildProcess | undefined;
 let cdp: DesktopCdp | undefined;
 let publisher: https.Server | undefined;
 let toolProof: Awaited<ReturnType<typeof createNativeToolProof>> | undefined;
+let pluginMatrix: Awaited<ReturnType<typeof createPluginMatrixFixture>> | undefined;
 let model: Awaited<ReturnType<typeof startGroupChatModelServer>> | undefined;
 let activeRun: Awaited<ReturnType<typeof startActiveRunProof>> | undefined;
 let version = 1;
@@ -84,12 +87,13 @@ async function fixture() {
   const shots = path.join(root, 'screenshots');
   const native = process.env.UAP_E2E_OPENCODE;
   const claude = process.env.UAP_E2E_CLAUDE;
+  const codex = process.env.UAP_E2E_CODEX;
   const runtime = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH;
   assert(
-    native && claude && runtime,
-    'Set UAP_E2E_OPENCODE, UAP_E2E_CLAUDE and the real CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH.'
+    native && claude && codex && runtime,
+    'Set UAP_E2E_OPENCODE, UAP_E2E_CLAUDE, UAP_E2E_CODEX and the real CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH.'
   );
-  await Promise.all([native, claude, runtime].map((file) => access(file, constants.X_OK)));
+  await Promise.all([native, claude, codex, runtime].map((file) => access(file, constants.X_OK)));
   const commit = (await run('git', ['rev-parse', 'HEAD'], { cwd: repo })).stdout.trim();
   const trackedDirty = Boolean(
     (
@@ -124,7 +128,12 @@ async function fixture() {
   }
   evidence.artifacts = { appCommit: commit, trackedDirty, sdk, engine };
   const env: NodeJS.ProcessEnv = {
-    PATH: [path.dirname(native), path.dirname(claude), process.env.PATH ?? ''].join(path.delimiter),
+    PATH: [
+      path.dirname(native),
+      path.dirname(claude),
+      path.dirname(codex),
+      process.env.PATH ?? '',
+    ].join(path.delimiter),
     DISPLAY: process.env.DISPLAY,
     XAUTHORITY: process.env.XAUTHORITY,
     LANG: 'en_US.UTF-8',
@@ -148,6 +157,7 @@ async function fixture() {
     AGENTPLUGINS_HOME: path.join(root, 'uap-state'),
     CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: runtime,
     CLAUDE_CLI_PATH: claude,
+    CODEX_CLI_PATH: codex,
     NODE_BINARY: await realpath(process.execPath),
     AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
     // Dependencies were frozen-verified before isolation; nested dev launchers inherit this.
@@ -179,6 +189,14 @@ async function fixture() {
     version: claudeVersion,
     sha256: createHash('sha256')
       .update(await readFile(claude))
+      .digest('hex'),
+  };
+  const codexVersion = (await run(codex, ['--version'], { env, timeout: 30_000 })).stdout.trim();
+  assert.equal(codexVersion, 'codex-cli 0.153.4');
+  evidence.codexNative = {
+    version: codexVersion,
+    sha256: createHash('sha256')
+      .update(await readFile(codex))
       .digest('hex'),
   };
   model = await startGroupChatModelServer(path.join(root, 'active-profile-model.ndjson'));
@@ -221,7 +239,9 @@ async function fixture() {
       requests.push(url);
       const prefix = '/publisher/.well-known/agent-skills/';
       response.setHeader('Content-Type', 'application/octet-stream');
-      if (url === toolArchivePath && toolProof) {
+      if (url === matrixArchivePath && pluginMatrix) {
+        response.end(pluginMatrix.archive);
+      } else if (url === toolArchivePath && toolProof) {
         response.end(toolProof.archive);
       } else if (url === `${prefix}index.json`) {
         response.setHeader('Content-Type', 'application/json');
@@ -261,6 +281,7 @@ async function fixture() {
     env,
     native,
     claude,
+    codex,
     engineExecutable,
     httpPort,
     source: `https://127.0.0.1:${address.port}/publisher`,
@@ -469,6 +490,7 @@ async function openSkills() {
   await selectTab(cdp!, wait, 'Skills');
   await wait(enabled(button('Agent runtime', panel)), 'managed Skill context');
   await selectAgent(panel, 'OpenCode');
+  await selectInstallationTargets(cdp!, wait, click, panel, ['opencode']);
   await wait(enabled(button('Install from source', panel)), 'native OpenCode capability', 90_000);
 }
 async function reviewAndApply(root = panel) {
@@ -481,6 +503,7 @@ async function registryPlugin(f: Awaited<ReturnType<typeof fixture>>) {
   await selectTab(cdp!, wait, 'Plugins');
   await wait(enabled(button('Agent runtime', pluginPanel)), 'universal Plugins entry point');
   await selectAgent(pluginPanel, 'OpenCode');
+  await selectInstallationTargets(cdp!, wait, click, pluginPanel, ['opencode']);
   const registry = await callUi<ManagementCatalog>(cdp!, 'catalog');
   assert.equal(registry.freshness, 'current', 'official signed catalog must be current');
   const expected = registry.items.find((entry) => entry.id === 'cloudflare-docs');
@@ -1001,6 +1024,21 @@ async function exercise(f: Awaited<ReturnType<typeof fixture>>) {
   assert(model!.receipts.length > 0, 'Real team runtime must reach the scripted model boundary');
   evidence.activeModel = { requests: model!.receipts.length, errors: model!.errors };
   await screenshot(path.join(f.shots, '21-after-active-team-stop.png'));
+  assert(pluginMatrix);
+  await exercisePluginMatrix({
+    ...f,
+    cdp: cdp!,
+    wait,
+    evidence,
+    fixture: pluginMatrix,
+    binaries: { claude: f.claude, codex: f.codex, opencode: f.native },
+    click,
+    fill,
+    selectAgent,
+    reviewAndApply,
+    screenshot,
+    environment,
+  });
   assert.equal(errors.length, 0, `Unexpected renderer exceptions: ${JSON.stringify(errors)}`);
   evidence.requests = f.requests;
 }
@@ -1008,6 +1046,7 @@ async function exercise(f: Awaited<ReturnType<typeof fixture>>) {
 const f = await fixture();
 process.stdout.write(`Disposable UAP desktop fixture: ${f.root}\n`);
 try {
+  pluginMatrix = await createPluginMatrixFixture(f.root);
   toolProof = await createNativeToolProof(f.root, f.native, f.env);
   evidence.nativeToolUse = toolProof.evidence;
   await start(f);

@@ -27,6 +27,7 @@ import { Download, Loader2, RefreshCw } from 'lucide-react';
 
 import { ManagedInstallationState } from './ManagedInstallationState';
 import { ManagedSkillSourcePreview } from './ManagedSkillSourcePreview';
+import { ManagementInstallationTargets } from './ManagementInstallationTargets';
 import { ManagementOperationView } from './ManagementOperationView';
 import { ManagementPlanDialog } from './ManagementPlanDialog';
 import { ManagementRestorePoint } from './ManagementRestorePoint';
@@ -64,13 +65,17 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
   const disabled = model.busy || model.isRunning || !model.context || pending;
   const capability = (action: string) =>
     model.context?.session.capabilities.find((item) => item.action === action);
-  const selectedTarget = model.context?.session.targets.find(
-    (target) => target.client === model.client
-  );
   const actionDisabled = (action: string) =>
     disabled ||
     capability(action)?.supported !== true ||
-    ((action === 'install' || action === 'install_skills') && selectedTarget?.available !== true);
+    ((action === 'install' || action === 'install_skills') && !model.installationTargetIds.length);
+  const installationTargets = (
+    <ManagementInstallationTargets
+      targets={model.installationTargets}
+      disabled={disabled || Boolean(model.plan)}
+      onSelect={model.selectInstallationTarget}
+    />
+  );
   const changeSource = (value: string) => {
     setSource(value);
     void model.closeDiscovery();
@@ -107,7 +112,7 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="claude">Claude</SelectItem>
+              <SelectItem value="claude">Claude Code</SelectItem>
               <SelectItem value="codex">Codex</SelectItem>
               <SelectItem value="opencode">OpenCode</SelectItem>
             </SelectContent>
@@ -142,6 +147,7 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
         />
       )}
       {pending && <p className="text-xs text-amber-400">{t('uap.pendingChanges')}</p>}
+      {installationTargets}
       <div className="flex flex-wrap items-center gap-2">
         <div className="min-w-40 flex-1">
           <SearchInput
@@ -160,13 +166,6 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
           {t('uap.fromSource')}
         </Button>
       </div>
-      {model.context?.session.targets
-        .filter((target) => target.client === model.client && !target.available)
-        .map((target) => (
-          <p key={target.id} className="text-xs text-amber-400">
-            {target.reason || t('uap.runtimeUnavailable')}
-          </p>
-        ))}
       {model.busy && (
         <p className="flex items-center gap-2 text-sm text-text-muted" role="status">
           <Loader2 className="size-4 animate-spin" />
@@ -359,7 +358,9 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
                     disabled={
                       actionDisabled('install') ||
                       !entry.available ||
-                      !entry.targets.includes(model.client)
+                      model.installationTargets.some(
+                        (target) => target.selected && !entry.targets.includes(target.client)
+                      )
                     }
                     onClick={() => void model.prepare({ action: 'install' }, entry.id)}
                   >
@@ -367,6 +368,21 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
                   </Button>
                 </div>
                 {!entry.available && <p className="text-xs text-amber-400">{entry.reason}</p>}
+                {entry.available &&
+                  model.installationTargets.some(
+                    (target) => target.selected && !entry.targets.includes(target.client)
+                  ) && (
+                    <p className="text-xs text-amber-400">
+                      {t('uap.incompatibleInstallTargets', {
+                        names: model.installationTargets
+                          .filter(
+                            (target) => target.selected && !entry.targets.includes(target.client)
+                          )
+                          .map((target) => target.label)
+                          .join(', '),
+                      })}
+                    </p>
+                  )}
               </article>
             ))}
           </div>
@@ -398,6 +414,7 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
                   {t(kind === 'plugin' ? 'uap.pluginSourceHelp' : 'uap.sourceHelp')}
                 </DialogDescription>
               </DialogHeader>
+              {installationTargets}
               <Label htmlFor={`uap-source-${kind}`}>{t('uap.source')}</Label>
               <Input
                 id={`uap-source-${kind}`}

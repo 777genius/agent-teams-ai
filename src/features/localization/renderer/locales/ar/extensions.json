@@ -692,7 +692,7 @@
     "agent": "Agent runtime",
     "userScope": "User environment",
     "refresh": "Refresh extensions",
-    "projectPending": "Project installation is not available in this bundled engine. User changes apply to this agent profile.",
+    "projectPending": "Project installation is not available in this bundled engine. Changes apply to the selected user profiles.",
     "search": "Search extensions",
     "fromSource": "Install from source",
     "runtimeUnavailable": "This agent runtime needs setup before installation.",
@@ -767,6 +767,11 @@
     "restoreEarlierCopy": "Earlier saved copy",
     "restoreTimeUnknown": "Time not recorded",
     "restorePointId": "Restore point ID",
-    "restoreSelectedPoint": "Selected restore point"
+    "restoreSelectedPoint": "Selected restore point",
+    "installTargets": "Install for",
+    "installTargetsHelp": "Choose the agents that will receive new plugins and skills.",
+    "installForAgent": "Install for {{name}}",
+    "selectInstallTarget": "Select at least one available agent.",
+    "incompatibleInstallTargets": "This extension does not support the selected agents: {{names}}."
   }
 }

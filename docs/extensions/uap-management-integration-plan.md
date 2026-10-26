@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v21; the retained-installation identity defect that reproduces the S27 prerequisite failure is fixed in UAP 2647dcc. The matching SDK/native pin and inherited-provider admission correction require fresh hosted Electron qualification.
+Status: implementation plan v22; the retained-installation fix passes the original Claude prerequisite in hosted Electron. The next workspace-trust profile mismatch is corrected with a reproduced regression. Multi-target installation controls and a three-client plugin lifecycle exercise are implemented and await hosted qualification.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -12,7 +12,64 @@ real Electron end-to-end verification, early draft PRs, immediate push of every
 commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
-## Current checkpoint — v21 (2026-10-26)
+## Current checkpoint — v22 (2026-10-26)
+
+Installation now has a separate multi-select control. Available captured Claude
+Code, Codex and OpenCode targets start checked; any additional captured targets
+start unchecked. The renderer sends their actual captured IDs in one Prepare,
+retains the reviewed selection through acknowledgment, and refuses an empty or
+catalog-incompatible selection. The existing runtime selector still chooses the
+view and the target for removal/copy. The current desktop host captures the three
+supported runtimes only; generic renderer support does not claim that additional
+clients are already detected by the host.
+
+The desktop exercise explicitly selects OpenCode for the original Skill and
+plugin journeys, preserving their state history and assertions. After S27 stops
+the real team, a new plugin exercise uses the UI to review/install one inert
+HTTPS archive for all three clients, advance the publisher to different version
+2 bytes, review/update all three, and remove each target separately. Each step
+must have a new completed operation and exactly the reviewed target set.
+Native CLI listings, receipt paths, manifests and exact Skill bytes establish
+installation/discovery. Codex's documented external-removal prerequisite removes
+its observed plugin and marketplace before the UI acknowledgment. Previously
+recorded native files must be absent both before and after the next native
+listing. This exercise explicitly records model Skill use as `not_evaluated`.
+
+The UI target/admission regressions pass 28 cases in five files. Canonical
+typecheck and scoped lint also pass for the independently reviewed matrix. These
+are local checks, not a completed Electron receipt for the new exercise.
+
+[Electron run 40361663014](https://github.com/777genius/agent-teams-ai/actions/runs/40361663014)
+on app `2e21c38640168d2a0e81834d647d0dde4c6f5716` and UAP `2647dcc`
+passed the original retained-state Claude Skill installation. Its artifact records
+the delivered native files and then real team creation with an inherited Claude
+worker. The worker fails with `Workspace trust required`, although the app's
+preflight reports a persisted trusted project key. The observed orchestration
+artifact is `0.0.140`; the earlier source review of `0.0.139` does not qualify it.
+[Artifact 12669700691](https://github.com/777genius/agent-teams-ai/actions/runs/40361663014/artifacts/12669700691)
+has ZIP SHA-256 `89e25c116e6820982113cac0bb07315965a66d79a2473886f4b22467a11daffb`.
+The narrow trust correction makes the shared probe/persister honor an explicit
+process `CLAUDE_CONFIG_DIR`, including a value equal to the default directory;
+the app's custom profile keeps its existing priority. Previously the app wrote
+`HOME/.claude.json` while that native launch read
+`CLAUDE_CONFIG_DIR/.claude.json`. Four new regression cases fail before the fix;
+all 35 focused composition/status/persister/probe cases pass afterward, followed
+by independent review. No trust value, persistable-root guard, approval strategy
+or launch environment changes. Shell-only environment overrides and broader
+profile alignment are not qualified by this correction. S27 and the downstream
+plugin matrix still require a new complete hosted receipt.
+
+Two independent architecture reviews recommend effective native profile identity
+before final-worktree preparation. The
+[launch-readiness options](team-extension-launch-readiness-options.md) record the
+Codex account refresh race, runtime-owned final CWD, CWD-dependent MCP/settings
+resolution and additional-target detection boundary. These are proposals for
+owner discussion; neither profile migration nor a worktree preparation protocol
+is implemented here. The newly reported local Skill review-abandonment defect is
+being handled separately. Current-head Full/Electron qualification and UAP's
+formal CodeQL disposition remain merge requirements.
+
+## Previous checkpoint — v21 (2026-10-26)
 
 The original desktop sequence exposed a real retained-state defect in UAP:
 OpenCode Skill install → update → last-target removal → Claude installation of

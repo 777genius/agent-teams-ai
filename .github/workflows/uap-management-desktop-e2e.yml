@@ -89,7 +89,7 @@ jobs:
           matrix = importlib.util.module_from_spec(spec)
           sys.modules[spec.name] = matrix
           spec.loader.exec_module(matrix)
-          for name in ('opencode', 'claude'):
+          for name in ('opencode', 'claude', 'codex'):
               destination = pathlib.Path(os.environ['RUNNER_TEMP']) / ('uap-native-' + name)
               destination.mkdir()
               executable, evidence = matrix.provision(matrix.PINS['linux-amd64'][name], destination, name)
@@ -125,3 +125,4 @@ jobs:
             ${{ runner.temp }}/uap-management-desktop-*/desktop*.log
             ${{ runner.temp }}/uap-native-opencode/provenance.json
             ${{ runner.temp }}/uap-native-claude/provenance.json
+            ${{ runner.temp }}/uap-native-codex/provenance.json

@@ -100,6 +100,9 @@ export const ManagementPlanDialog = ({
           <div
             key={`${action.targetId}-${index}`}
             className="rounded-md border border-border p-3 text-sm"
+            data-testid="uap-plan-action"
+            data-target-id={action.targetId}
+            data-action={action.action}
           >
             <p className="font-medium">
               {actionLabel(action.action)} {action.alias}

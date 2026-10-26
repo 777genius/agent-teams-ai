@@ -12,10 +12,11 @@ export function createWorkspaceTrustFeatures(input: {
 }) {
   const globalConfigFilePath = (): string => {
     const claudeConfigDir = input.getClaudeConfigDir();
+    // An explicit default directory still changes the CLI's state-file location.
     return path.join(
       claudeConfigDir !== input.getAutoDetectedClaudeConfigDir()
         ? claudeConfigDir
-        : input.getHomeDir(),
+        : (input.env ?? process.env).CLAUDE_CONFIG_DIR || input.getHomeDir(),
       '.claude.json'
     );
   };

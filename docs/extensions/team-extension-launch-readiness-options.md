@@ -1,9 +1,12 @@
 # Team extension launch readiness: evidence and options
 
-Research checkpoint: 2026-10-26. App source inspected at
-`837e428d7bc513068ee041db6de7c4c407a17fdd`; UAP source inspected at
-`e84b4da218f4445986daa9ed15f40acd828ae06f`. The SDK pin refresh being prepared
-alongside this note does not itself qualify agent launches.
+Research checkpoint: 2026-10-26. Initial app source review was at
+`837e428d7bc513068ee041db6de7c4c407a17fdd`; two independent reviews informed this
+follow-up. App boundaries were rechecked at
+`705bd0855ba8dd6438bfcd24d0babbb759b29923`, alongside the pinned orchestrator
+`v0.0.139` and UAP
+`e84b4da218f4445986daa9ed15f40acd828ae06f`. Source links retain the inspected
+revisions. An SDK/source pin refresh does not itself qualify agent launches.
 
 ## Owner direction and current conclusion
 
@@ -82,11 +85,27 @@ OpenCode.
 The deterministic [Claude/Codex bootstrap specification][bootstrap] currently
 passes the request's CWD plus `isolation: 'worktree'`; its own comment states
 that the runtime owns per-member isolation. A top-level `--worktree` is also
-passed downstream by [launch argument construction][launch-args]. Consequently,
-an app hook at the OpenCode seam cannot prove preparation of every Claude/Codex
-member's final directory. Those lanes need a qualified final-CWD handshake, or
-a verified existing contract for preparing and using an explicit directory.
-This review did not inspect the pinned orchestrator's complete spawning code.
+passed downstream by [launch argument construction][launch-args]. The pinned
+orchestrator's [`normalizeMember`][runtime-member-normalization] explicitly
+omits `member.cwd` when `isolation` is `worktree`. Passing a prepared CWD in that
+bootstrap spec therefore cannot bind the isolated member to it. Disabling
+isolation to retain CWD would change worktree ownership and lifecycle behavior.
+
+An app hook at the OpenCode seam cannot qualify every Claude/Codex member's
+final directory. The required seam is after the existing runtime has allocated
+the actual member worktree and before the native session starts. The runtime
+must expose that final CWD through a qualified preparation handshake; a source
+checkout path or a guessed future worktree path is insufficient.
+
+There is also a CWD-dependent MCP boundary: the app's
+[`buildRuntimeBootstrapMemberMcpLaunchConfigs`][member-mcp-current] builds member
+configuration from `member.cwd || input.cwd` before the downstream runtime has
+resolved those isolated directories. With strict MCP configuration, restoring
+files into the final worktree alone would not prove that the generated config
+contains its project MCP entries. Final-CWD preparation must bind both UAP
+projection and CWD-derived MCP/settings resolution to the same member directory,
+while preserving that member's existing allowlist, strictness and setting
+sources. This is a source-level risk to qualify, not a reproduced plugin failure.
 
 Copying a source checkout's `.uap` state into a worktree is not the accepted
 solution. The plan requires restoring the exact locked dependency selection into
@@ -104,6 +123,14 @@ they do not automatically extend the Management API or app launch boundary.
 native app-server's initialize response via [account snapshot creation][account-context];
 it should not be described as necessarily being a separate directory for each
 account.
+
+The existing [passive account-context projector][passive-context] can reuse a
+cached snapshot without refreshing it. Ordinary launch instead calls
+[`getCodexLaunchSnapshot`][codex-launch-refresh] with
+`refreshRuntimeMissing` and `refreshBlockedLaunch`, and can re-resolve the native
+binary/context. A shared cached projection is a useful input to A, but does not
+close this refresh race by itself. The final launch environment must still agree
+with the captured non-secret identity, or require a fresh review before spawn.
 
 A temporary diagnostic exercised the real desktop composition, provider
 environment builder and `ProviderConnectionService`. Only external environment,
@@ -197,34 +224,91 @@ the user's policy.
 
 ## Alternatives for discussion
 
-These size ranges are initial engineering estimates, not measured diffs or
-delivery promises. The final runtime seam still needs inspection.
+These are proposals for owner discussion, not implementation approval. The
+independent reviews agree on A before B and on deferring C. The pinned runtime
+normalization is now verified; the required preparation handshake still needs
+design and qualification, so the scope descriptions are not delivery estimates.
 
-| Option                                                             | Change and benefit                                                                                                                                                                                                                                                                         | Scope/risk and approximate size                                                                                                                                                                                                                                                                 |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **A. Shared profile identity and actual user-scope qualification** | Reuse or extract the non-secret cached context projection already present in [passive provider status][passive-context]. Capture effective HOME, native root, binary and member/backend identity; freeze/recheck the relevant selection at launch. Add actual-team discovery/use evidence. | Lowest production risk. Roughly 100–300 production LOC plus 500–1,000 harness/test LOC. Must handle gateway/runtime-only branches and stale/missing snapshots explicitly. Does not complete S25/S26.                                                                                            |
-| **B. Focused project/worktree preparation**                        | Extend qualified UAP Management project scope and restore exact locked dependencies after the final CWD is known, before the native session starts. Use a narrow provisioning/runtime contract.                                                                                            | Completes the original target when all required lanes pass. Roughly 800–2,000 production LOC across affected owners plus 1,000–2,500 test/harness LOC; runtime contract uncertainty may change this. Scope, recovery identity and policy require qualification, not just removal of a UI guard. |
-| **C. Per-run isolated native profiles/overlays**                   | Give each run an explicit extension/config snapshot with stronger isolation.                                                                                                                                                                                                               | New architecture beyond the current plan; no credible small LOC estimate yet. `CODEX_HOME` alone still shares HOME Skill roots, while changing HOME affects authentication and trust. Separate native precedence and lifecycle design is required. Defer.                                       |
+| Option                                                             | Change and benefit                                                                                                                                                                                                   | Scope and remaining risk                                                                                                                                                                                                  |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A. Shared profile identity and actual user-scope qualification** | Reuse the non-secret context projection for effective HOME, native root, binary and member/backend identity. Compare it with the final launch environment after any refresh; add actual-team discovery/use evidence. | Smallest production boundary. Must handle missing/stale snapshots and gateway/runtime-only branches explicitly. Root agreement still needs native loading/use proof. Does not complete S25/S26.                           |
+| **B. Focused project/worktree preparation**                        | Qualify UAP Management project scope and restore exact locked dependencies in the runtime's final member CWD before native spawn, with MCP/settings resolved for that same CWD.                                      | Requires an explicit runtime/provisioning handshake for Claude/Codex; the pinned bootstrap CWD field cannot provide it under worktree isolation. Scope, admission, recovery and member policy remain qualification gates. |
+| **C. Per-run isolated native profiles/overlays**                   | Give each run an explicit extension/config snapshot with stronger isolation.                                                                                                                                         | Adds profile lifecycle, precedence, authentication and trust ownership. `CODEX_HOME` alone still shares HOME Skill roots; changing HOME also affects credentials and trust. Defer until a separate design is justified.   |
+
+### A: shared identity without profile migration
 
 For A, calling the active launch environment builder from passive Extensions
 capture would introduce unrelated runtime/auth work. The existing
 `applyPassiveProviderStatusConnectionEnv` explicitly avoids credential
 decryption, account refresh, runtime installation and login commands; a focused
-identity projection can preserve that contract. Do not assume every gateway
-member should inherit the global selected account.
+identity projection can preserve that contract. Capture canonical HOME, native
+configuration root, actual executable and the effective provider/backend/member
+route. HOME is independently relevant because compatible Skill roots may sit
+outside the native config root. Recheck the identity against the actual launch
+environment after account/runtime refresh; a stale or missing snapshot cannot
+silently establish agreement. Gateway members using `runtime-only` must retain
+their own routing instead of inheriting the global selected account.
 
-For B, admission needs an explicit ordered preparation-to-launch handoff.
+If the selected profile changes from A to B, existing files remain in A. The
+proposed behavior is a fresh context and explicit review for B, with no copying
+of Skills, plugins, credentials, native configuration or trust decisions between
+profiles. An already running member may still use A: preserve the current
+conservative provider-level admission until captured active-run identities can
+prove a narrower lock is safe. Merely changing the selected account must not
+unlock an older run's profile.
+
+### B: prepare at the actual runtime boundary
+
+Keep the existing ownership split: the runtime allocates and owns worktrees;
+UAP owns locked dependency restore and native projection; the app's launch
+coordinator owns admission and member policy. A focused preparation port should
+connect those owners without adding a plugin manager, copying `.uap` ownership
+state or creating a second worktree scheduler. The required order is:
+
+1. Obtain the runtime's final canonical member CWD and effective profile identity
+   after allocation, including the executing lead where applicable.
+2. Prepare/apply the exact reviewed dependency lock for that directory through
+   qualified UAP project scope, retaining operation identity for recovery and
+   retry. Launch preparation must not silently resolve newer dependencies.
+3. Resolve CWD-dependent MCP/settings configuration for the same directory,
+   preserving the member's allowlist, setting sources, strictness and native
+   trust requirements. A denied source or tool remains denied.
+4. Recheck identity and hand off admission to native spawn. Failure, cancellation,
+   timeout or mismatched identity prevents the affected launch. Cleanup is
+   limited to resources owned by that preparation/run.
+
 [ExtensionRuntimeGate][gate] currently rejects a mutation when overlapping
 resources are already marked as launching. Calling public UAP Apply inside the
 existing `admitLaunch` operation would self-refuse on overlapping resources.
-The narrow port must coordinate mutation/recovery admission and recheck identity
-at spawn without an unguarded interval; it should not bypass those guards.
+The narrow port therefore needs an ordered preparation-to-launch admission
+handoff with no unguarded interval. A bypass flag would discard the protection
+this integration already qualifies.
 
 The recommended next decision is A as a small reviewed correction and
 qualification milestone, followed by B in separately reviewable engine and
-runtime/provisioning slices, after discussing these options with the owner.
+runtime/provisioning slices, after discussing the profile-change behavior and
+final-CWD contract with the owner. Neither proposal is accepted by this note.
 Keep installation, discovery, body use and plugin MCP results separate until
 the exact app-launched member evidence supports the full claim.
+
+## Additional detected installation targets
+
+The requested selector starts with Claude, Codex and OpenCode checked and shows
+additional detected clients unchecked. This is a separate installation-target
+task; showing a client does not qualify it as a team runtime. Management can
+authorize only targets captured by the trusted host at startup.
+
+UAP already owns reusable read-only native detection:
+[`clientdetect.Detector.Detect`][uap-detector] returns configuration roots and
+executable paths without executing discovered binaries. There is currently no
+supported external wire API exposing both facts for trusted host capture.
+[`doctor --format json`][uap-doctor] deliberately omits paths; the
+[Skill Picker target projection][uap-picker-targets] has no executable and its
+`displayPath` can be a projection destination. Management Session returns the
+explicit startup targets rather than discovering more clients. Completing host
+capture needs a separately reviewed Go contract using that existing detector;
+duplicating client path rules in TypeScript or treating display paths as
+authority would create inconsistent ownership.
 
 [plan-boundary]: uap-management-integration-plan.md#projectworktree-boundary
 [capture]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/src/features/extension-management/main/composition/createDesktopExtensionManagement.ts#L58
@@ -232,6 +316,8 @@ the exact app-launched member evidence supports the full claim.
 [provisioning-env]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts#L305
 [team-mcp]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/src/main/services/team/TeamMcpConfigBuilder.ts#L565
 [member-mcp]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/src/main/services/team/provisioning/TeamProvisioningMemberMcpLaunchConfig.ts#L83
+[member-mcp-current]: https://github.com/777genius/agent-teams-ai/blob/705bd0855ba8dd6438bfcd24d0babbb759b29923/src/main/services/team/provisioning/TeamProvisioningMemberMcpLaunchConfig.ts#L75
+[runtime-member-normalization]: https://github.com/777genius/agent_teams_orchestrator/blob/v0.0.139/src/services/teamBootstrap/teamBootstrapSpec.ts#L275
 [bootstrap]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/src/main/services/team/provisioning/TeamProvisioningBootstrapSpec.ts#L35
 [launch-args]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/src/main/services/team/provisioning/TeamProvisioningLaunchTeamFlow.ts#L508
 [bridge-dispatch]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/src/main/services/team/opencode/bridge/OpenCodeBridgeCommandClient.ts#L394
@@ -240,6 +326,7 @@ the exact app-launched member evidence supports the full claim.
 [codex-runtime-context]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/src/main/services/runtime/ProviderConnectionService.ts#L314
 [account-context]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/src/features/codex-account/main/composition/createCodexAccountFeature.ts#L614
 [passive-context]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/src/main/services/runtime/ProviderConnectionService.ts#L785
+[codex-launch-refresh]: https://github.com/777genius/agent-teams-ai/blob/705bd0855ba8dd6438bfcd24d0babbb759b29923/src/main/services/runtime/ProviderConnectionService.ts#L1601
 [profile-tests]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/test/features/extension-management/nativeProfileAdmission.test.ts
 [connection-tests]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/test/main/services/runtime/ProviderConnectionService.test.ts
 [tool-proof]: https://github.com/777genius/agent-teams-ai/blob/837e428d7bc513068ee041db6de7c4c407a17fdd/scripts/e2e/uap-management-tool-use.ts#L18
@@ -248,6 +335,9 @@ the exact app-launched member evidence supports the full claim.
 [uap-context]: https://github.com/777genius/universal-agent-plugins/blob/e84b4da218f4445986daa9ed15f40acd828ae06f/cli/internal/agentpluginscli/management_context.go#L22
 [uap-claude-project]: https://github.com/777genius/universal-agent-plugins/blob/e84b4da218f4445986daa9ed15f40acd828ae06f/docs/CLAUDE_PROJECT_INSTALLATION.md
 [uap-opencode-project]: https://github.com/777genius/universal-agent-plugins/blob/e84b4da218f4445986daa9ed15f40acd828ae06f/docs/OPENCODE_PROJECT_SCOPE.md
+[uap-detector]: https://github.com/777genius/universal-agent-plugins/blob/e84b4da218f4445986daa9ed15f40acd828ae06f/install/integrationctl/agentplugins/adapters/clientdetect/detector.go#L81
+[uap-doctor]: https://github.com/777genius/universal-agent-plugins/blob/e84b4da218f4445986daa9ed15f40acd828ae06f/cli/internal/agentpluginscli/read.go#L68
+[uap-picker-targets]: https://github.com/777genius/universal-agent-plugins/blob/e84b4da218f4445986daa9ed15f40acd828ae06f/cli/internal/agentpluginscli/skills_picker.go#L203
 [claude-skills]: https://code.claude.com/docs/en/agent-sdk/skills
 [claude-settings]: https://code.claude.com/docs/en/settings
 [codex-roots]: https://github.com/openai/codex/blob/rust-v0.153.4/codex-rs/ext/skills/src/host_roots.rs#L87

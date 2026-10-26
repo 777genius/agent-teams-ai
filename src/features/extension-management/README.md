@@ -24,9 +24,13 @@ existing tabs. Local Skill authoring retains its separate review/editor workflow
 ## Captured authority
 
 The renderer sends a supported client and scope, opaque context/plan/operation
-IDs, and bounded source requests. Main resolves the native executable and current
-profile from the same resolvers and account environment as agent launch. It does
-not substitute the Claude orchestration executable for native Claude Code.
+IDs, and bounded source requests. Main resolves native executables and captures
+profile roots from a passive environment. Agreement with the eventual member
+launch environment remains a qualification goal: Codex launch can refresh its
+selected account/runtime context and use a different root or binary. The
+[launch-readiness proposal](../../../docs/extensions/team-extension-launch-readiness-options.md)
+records this conditional gap and the options for discussion. Main does not
+substitute the Claude orchestration executable for native Claude Code.
 
 Each app context has an independent UUID. The UAP session's context ID is derived
 by Go from validated roots and is preserved in all engine results. Navigation
