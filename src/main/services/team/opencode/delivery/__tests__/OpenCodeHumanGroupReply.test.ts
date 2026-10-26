@@ -89,7 +89,7 @@ const readAllowed = (
 
 describe('human group non-response recovery', () => {
   it('keeps the real ledger unread, repairs only control text, and accepts a canonical reaction', async () => {
-    const { ledger, record } = await fixture();
+    const { ledger, record, reload } = await fixture();
     const send = vi.fn();
     const proof = await materializeOpenCodeGroupReply({
       ledger,
@@ -180,7 +180,8 @@ describe('human group non-response recovery', () => {
       inboxMessageId: 'physical-inbound',
       runId: 'lane-run',
     });
-    expect(record.inboxReadCommittedAt).toBeNull();
+    expect(proof.ledgerRecord.inboxReadCommittedAt).toBeNull();
+    expect((await reload().getByInboxMessage(record))?.inboxReadCommittedAt).toBeNull();
   });
 
   it('persists a separate corrective handoff fence despite original accepted prompt proof', async () => {
