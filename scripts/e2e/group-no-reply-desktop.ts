@@ -29,7 +29,12 @@ const { root, projectPath, teamName, env } = fixture;
 console.log(JSON.stringify({ root, teamName }));
 const json = (file: string, value: unknown) =>
   writeFile(file, JSON.stringify(value, null, 2) + '\n');
-const literal = JSON.stringify;
+// CDP evaluates JavaScript source. Keep data literals safe even if that source is
+// later embedded in HTML by another transport.
+const literal = (value: unknown): string =>
+  JSON.stringify(value).replace(/[<>\u2028\u2029]/g, (character) =>
+    '\\u' + character.charCodeAt(0).toString(16).padStart(4, '0')
+  );
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 async function wait<T>(
   label: string,
