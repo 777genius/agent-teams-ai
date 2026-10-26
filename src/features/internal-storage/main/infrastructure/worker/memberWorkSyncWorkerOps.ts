@@ -94,8 +94,17 @@ function chunked<T>(values: T[]): T[][] {
   return chunks;
 }
 
-function rowsForTeam<T extends { teamName: string }>(rows: T[], teamName: string): T[] {
-  return rows.filter((row) => isSameMemberWorkSyncTeam(row.teamName, teamName));
+function readRowsForTeam<T>(
+  teamName: string,
+  listNames: () => { teamName: string }[],
+  readMatching: (aliases: string[]) => T[]
+): T[] {
+  // Legacy rows may differ in case or whitespace, including Unicode. Resolve
+  // only distinct indexed names in JS; never materialize other teams' payloads.
+  const aliases = listNames()
+    .filter((row) => isSameMemberWorkSyncTeam(row.teamName, teamName))
+    .map((row) => row.teamName);
+  return aliases.length > 0 ? readMatching(aliases) : [];
 }
 
 /** Routes 'mws.*' worker requests to the ops instance. */
@@ -682,22 +691,65 @@ export class MemberWorkSyncWorkerOps {
   listTeamSnapshot(teamName: string): MemberWorkSyncTeamSnapshotRecords {
     const orm = this.getOrm();
     return {
-      statuses: rowsForTeam(orm.select().from(memberWorkSyncStatus).all(), teamName).sort(
-        (left, right) => left.memberKey.localeCompare(right.memberKey)
-      ),
-      reportIntents: rowsForTeam(
-        orm.select().from(memberWorkSyncReportIntents).all(),
-        teamName
+      statuses: readRowsForTeam(
+        teamName,
+        () =>
+          orm
+            .selectDistinct({ teamName: memberWorkSyncStatus.teamName })
+            .from(memberWorkSyncStatus)
+            .all(),
+        (aliases) =>
+          orm
+            .select()
+            .from(memberWorkSyncStatus)
+            .where(inArray(memberWorkSyncStatus.teamName, aliases))
+            .all()
+      ).sort((left, right) => left.memberKey.localeCompare(right.memberKey)),
+      reportIntents: readRowsForTeam(
+        teamName,
+        () =>
+          orm
+            .selectDistinct({ teamName: memberWorkSyncReportIntents.teamName })
+            .from(memberWorkSyncReportIntents)
+            .all(),
+        (aliases) =>
+          orm
+            .select()
+            .from(memberWorkSyncReportIntents)
+            .where(inArray(memberWorkSyncReportIntents.teamName, aliases))
+            .all()
       ).sort((left, right) => left.id.localeCompare(right.id)),
-      outboxItems: rowsForTeam(orm.select().from(memberWorkSyncOutbox).all(), teamName).sort(
-        (left, right) => left.id.localeCompare(right.id)
-      ),
-      metricEvents: rowsForTeam(orm.select().from(memberWorkSyncMetricEvents).all(), teamName).sort(
-        (left, right) => {
-          const byTime = left.recordedAt.localeCompare(right.recordedAt);
-          return byTime === 0 ? left.id.localeCompare(right.id) : byTime;
-        }
-      ),
+      outboxItems: readRowsForTeam(
+        teamName,
+        () =>
+          orm
+            .selectDistinct({ teamName: memberWorkSyncOutbox.teamName })
+            .from(memberWorkSyncOutbox)
+            .all(),
+        (aliases) =>
+          orm
+            .select()
+            .from(memberWorkSyncOutbox)
+            .where(inArray(memberWorkSyncOutbox.teamName, aliases))
+            .all()
+      ).sort((left, right) => left.id.localeCompare(right.id)),
+      metricEvents: readRowsForTeam(
+        teamName,
+        () =>
+          orm
+            .selectDistinct({ teamName: memberWorkSyncMetricEvents.teamName })
+            .from(memberWorkSyncMetricEvents)
+            .all(),
+        (aliases) =>
+          orm
+            .select()
+            .from(memberWorkSyncMetricEvents)
+            .where(inArray(memberWorkSyncMetricEvents.teamName, aliases))
+            .all()
+      ).sort((left, right) => {
+        const byTime = left.recordedAt.localeCompare(right.recordedAt);
+        return byTime === 0 ? left.id.localeCompare(right.id) : byTime;
+      }),
     };
   }
 
