@@ -70,12 +70,11 @@ vi.mock('../../../../src/main/utils/pathDecoder', () => ({
   getTeamsBasePath: () => '/mock/teams',
 }));
 
+import { readGroupHistoryPage } from '../../../../src/features/team-message-history/main';
 import {
   MAX_INBOX_FILE_BYTES,
   TeamInboxReader,
 } from '../../../../src/main/services/team/TeamInboxReader';
-
-import { readGroupHistoryPage } from '../../../../src/features/team-message-history/main';
 
 describe('TeamInboxReader', () => {
   let reader: TeamInboxReader;
@@ -184,6 +183,20 @@ describe('TeamInboxReader', () => {
     expect(outgoing?.to).toBe('max');
   });
 
+  it('treats a not-yet-created inbox directory as empty history', async () => {
+    const window = await reader.getMessagesWindow('my-team', { limit: 10 });
+    expect(window.messages).toEqual([]);
+    expect(window.sourceMessageCount).toBe(0);
+    expect(window.truncated).toBe(false);
+  });
+
+  it('keeps permission failures visible instead of presenting empty history', async () => {
+    hoisted.readdir.mockRejectedValueOnce(Object.assign(new Error('denied'), { code: 'EACCES' }));
+    await expect(reader.getMessagesWindow('my-team', { limit: 10 })).rejects.toThrow(
+      'TEAM_HISTORY_UNAVAILABLE:listing_failed'
+    );
+  });
+
   it('getMessagesWindow also keeps unaddressed lead thoughts without an implied recipient', async () => {
     hoisted.dirs.set(inboxDir, ['user.json']);
     hoisted.files.set(
@@ -242,7 +255,11 @@ describe('TeamInboxReader', () => {
     hoisted.sizes.set(`${inboxDir}/alice.json`, MAX_INBOX_FILE_BYTES + 1);
     const read = (options: Parameters<TeamInboxReader['getMessagesWindow']>[1]) =>
       reader.getMessagesWindow('my-team', options);
-    const first = await readGroupHistoryPage(read, { groupChatId: 'group-a', limit: 1, sourceIdentity: inboxDir });
+    const first = await readGroupHistoryPage(read, {
+      groupChatId: 'group-a',
+      limit: 1,
+      sourceIdentity: inboxDir,
+    });
     expect(first.messages[0].messageId).toBe('logical-new');
     expect(first.hasMore).toBe(true);
     const second = await readGroupHistoryPage(read, {
@@ -253,12 +270,21 @@ describe('TeamInboxReader', () => {
     });
     expect(second.messages[0].messageId).toBe('logical-old');
     expect(second.hasMore).toBe(false);
-    await expect(readGroupHistoryPage(read, {
-      groupChatId: 'group-a', sourceIdentity: '/other-root/teams/my-team/inboxes/user.json',
-      limit: 1, cursor: first.nextCursor,
-    })).rejects.toThrow('invalid_cursor');
     await expect(
-      readGroupHistoryPage(read, { groupChatId: 'other-group', sourceIdentity: inboxDir, limit: 1, cursor: first.nextCursor })
+      readGroupHistoryPage(read, {
+        groupChatId: 'group-a',
+        sourceIdentity: '/other-root/teams/my-team/inboxes/user.json',
+        limit: 1,
+        cursor: first.nextCursor,
+      })
+    ).rejects.toThrow('invalid_cursor');
+    await expect(
+      readGroupHistoryPage(read, {
+        groupChatId: 'other-group',
+        sourceIdentity: inboxDir,
+        limit: 1,
+        cursor: first.nextCursor,
+      })
     ).rejects.toThrow('invalid_cursor');
   });
 
