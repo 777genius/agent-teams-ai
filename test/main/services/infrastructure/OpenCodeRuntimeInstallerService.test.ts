@@ -623,10 +623,14 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     );
 
     await expect(resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()).resolves.toBe(binaryPath);
-    expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
-      timeout: 30_000,
-      windowsHide: true,
-    });
+    expect(execCliMock).toHaveBeenCalledWith(
+      binaryPath,
+      ['--version'],
+      expect.objectContaining({
+        timeout: 30_000,
+        windowsHide: true,
+      })
+    );
 
     clearOpenCodeRuntimeBinaryResolverCache();
     execCliMock.mockRejectedValueOnce(new Error('broken binary'));
@@ -731,10 +735,14 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         fallbackEnv: process.env,
       })
     );
-    expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
-      timeout: 30_000,
-      windowsHide: true,
-    });
+    expect(execCliMock).toHaveBeenCalledWith(
+      binaryPath,
+      ['--version'],
+      expect.objectContaining({
+        timeout: 30_000,
+        windowsHide: true,
+      })
+    );
   });
 
   it('coalesces concurrent verified OpenCode PATH probes and reuses the warm result', async () => {
@@ -934,10 +942,14 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         fallbackEnv: process.env,
       })
     );
-    expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
-      timeout: 30_000,
-      windowsHide: true,
-    });
+    expect(execCliMock).toHaveBeenCalledWith(
+      binaryPath,
+      ['--version'],
+      expect.objectContaining({
+        timeout: 30_000,
+        windowsHide: true,
+      })
+    );
   });
 
   it('resolves from fast fallback PATH without spawning shell env when shell env is disabled', async () => {
@@ -950,10 +962,14 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })
     ).resolves.toBe(binaryPath);
     expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
-    expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
-      timeout: 30_000,
-      windowsHide: true,
-    });
+    expect(execCliMock).toHaveBeenCalledWith(
+      binaryPath,
+      ['--version'],
+      expect.objectContaining({
+        timeout: 30_000,
+        windowsHide: true,
+      })
+    );
   });
 
   it('does not spawn shell env for shell-only PATH installs when shell env is disabled', async () => {
@@ -984,10 +1000,14 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       binaryPath
     );
     expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
-    expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
-      timeout: 30_000,
-      windowsHide: true,
-    });
+    expect(execCliMock).toHaveBeenCalledWith(
+      binaryPath,
+      ['--version'],
+      expect.objectContaining({
+        timeout: 30_000,
+        windowsHide: true,
+      })
+    );
   });
 
   it('returns the native executable behind an nvm-windows cmd shim when desktop PATH misses npm globals', async () => {
@@ -1025,10 +1045,14 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
         resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })
       ).resolves.toBe(binaryPath);
       expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
-      expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
-        timeout: 30_000,
-        windowsHide: true,
-      });
+      expect(execCliMock).toHaveBeenCalledWith(
+        binaryPath,
+        ['--version'],
+        expect.objectContaining({
+          timeout: 30_000,
+          windowsHide: true,
+        })
+      );
       expect(execCliMock).not.toHaveBeenCalledWith(shimPath, expect.anything(), expect.anything());
     } finally {
       Object.defineProperty(process, 'platform', {
@@ -1150,10 +1174,14 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       await expect(
         resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })
       ).resolves.toBe(activeNativePath);
-      expect(execCliMock).toHaveBeenCalledWith(activeNativePath, ['--version'], {
-        timeout: 30_000,
-        windowsHide: true,
-      });
+      expect(execCliMock).toHaveBeenCalledWith(
+        activeNativePath,
+        ['--version'],
+        expect.objectContaining({
+          timeout: 30_000,
+          windowsHide: true,
+        })
+      );
       expect(execCliMock).not.toHaveBeenCalledWith(
         staleNvmNativePath,
         expect.anything(),

@@ -22,6 +22,31 @@ vi.mock('@main/utils/childProcess', () => ({ execCli }));
 import { probeOpenCodeBinaryVersion } from '../../../../src/features/runtime-provider-management/main/infrastructure/openCodeVersionDiagnostics';
 
 describe('OpenCode diagnostic transport', () => {
+  it('does not leak the app development mode into the installed CLI version check', async () => {
+    const previousMode = process.env.NODE_ENV;
+    const previousSentinel = process.env.TEST_OPENCODE_VERSION_KEEP;
+    process.env.NODE_ENV = 'development';
+    process.env.TEST_OPENCODE_VERSION_KEEP = 'test-only-value';
+    try {
+      execCli.mockResolvedValueOnce({ stdout: '2.1.4\n', stderr: '' });
+      await expect(probeOpenCodeBinaryVersion('/TEST/opencode')).resolves.toEqual({
+        ok: true,
+        version: '2.1.4',
+      });
+      const options = execCli.mock.lastCall?.[2];
+      const effectiveEnv = options?.env ?? process.env;
+      expect(Object.hasOwn(effectiveEnv, 'NODE_ENV')).toBe(false);
+      expect(effectiveEnv.TEST_OPENCODE_VERSION_KEEP).toBe('test-only-value');
+      expect(options.timeout).toBe(30_000);
+      expect(process.env.NODE_ENV).toBe('development');
+    } finally {
+      if (previousMode === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = previousMode;
+      if (previousSentinel === undefined) delete process.env.TEST_OPENCODE_VERSION_KEEP;
+      else process.env.TEST_OPENCODE_VERSION_KEEP = previousSentinel;
+    }
+  });
+
   it('preserves useful platform paths and correlation IDs in opt-in support reports', () => {
     for (const value of [
       '/Users/alice/bin/opencode',
