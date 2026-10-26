@@ -201,6 +201,7 @@ import { extractNotificationContent } from '@main/utils/inboxNotificationContent
 import { createBudgetNotificationSink } from '@features/token-usage/main';
 import { RendererRecoveryController } from '@main/utils/RendererRecoveryController';
 import { resolveRendererEntry } from '@main/utils/rendererEntry';
+import { createShutdownStepRunner, SHUTDOWN_STEP_TIMEOUT_MS } from '@main/utils/runShutdownStep';
 import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
 import {
   APP_GET_WINDOWS_ELEVATION_STATUS,
@@ -384,6 +385,7 @@ import type {
   TeamChangeEvent,
 } from '@shared/types';
 const logger = createLogger('App');
+const runShutdownStep = createShutdownStepRunner(logger);
 let persistentAppLog: ReturnType<typeof installPersistentAppLog> | null = null;
 const appStartedAtMs = Date.now();
 const openCodeManagedHostInstanceId = `${process.pid}-${appStartedAtMs}`;
@@ -1000,7 +1002,6 @@ const fileWatcherStartupCoordinator = new FileWatcherStartupCoordinator({
   platform: process.platform,
 });
 
-const SHUTDOWN_STEP_TIMEOUT_MS = 5_000;
 const STARTUP_RECOVERY_DELAY_MS = 10_000;
 const STARTUP_CLI_WARMUP_DELAY_MS = 90_000;
 const STARTUP_BACKGROUND_SERVICE_DELAY_MS = 5_000;
@@ -1384,35 +1385,6 @@ function clearInboxNotifyTimers(): void {
     clearTimeout(timer);
   }
   inboxNotifyTimers.clear();
-}
-
-async function runShutdownStep(
-  label: string,
-  action: () => void | Promise<void>,
-  timeoutMs: number = SHUTDOWN_STEP_TIMEOUT_MS
-): Promise<void> {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-
-  try {
-    await Promise.race([
-      Promise.resolve().then(action),
-      new Promise<void>((resolve) => {
-        timeout = setTimeout(() => {
-          logger.warn(`Shutdown step timed out after ${timeoutMs}ms: ${label}`);
-          resolve();
-        }, timeoutMs);
-        timeout.unref?.();
-      }),
-    ]);
-  } catch (error) {
-    logger.warn(
-      `Shutdown step failed (${label}): ${error instanceof Error ? error.message : String(error)}`
-    );
-  } finally {
-    if (timeout) {
-      clearTimeout(timeout);
-    }
-  }
 }
 
 export interface InternalStorageShutdownServices {

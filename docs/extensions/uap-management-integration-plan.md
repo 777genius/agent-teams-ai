@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v15; reviewed CodeQL remediation, action-scoped cache verification and matched source qualification.
+Status: implementation plan v16; prior candidate qualification verified, current-main integration and remaining scope recorded.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -13,7 +13,48 @@ commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
 
-## Current checkpoint — v15 (2026-10-25)
+## Current checkpoint — v16 (2026-10-26)
+
+The published `c39c7201d11448028c2844b9a6ef486a3607e8e3` candidate has now
+completed all of the qualification runs that v15 left pending:
+
+- [Full qualification 40207898589](https://github.com/777genius/agent-teams-ai/actions/runs/40207898589):
+  canonical validation, four test shards, three lint shards and Windows smoke passed.
+- [Actual Electron 40207898641](https://github.com/777genius/agent-teams-ai/actions/runs/40207898641):
+  the complete existing desktop/HTTP journey passed; its
+  [artifact 12604612872](https://github.com/777genius/agent-teams-ai/actions/runs/40207898641/artifacts/12604612872)
+  retains screenshots and operation evidence.
+- [CodeQL 40207898674](https://github.com/777genius/agent-teams-ai/actions/runs/40207898674):
+  both analyses passed and findings aggregate `121213689149` reported no new
+  alerts in changed code.
+- [Bootstrap 40207898575](https://github.com/777genius/agent-teams-ai/actions/runs/40207898575)
+  passed all four targets; [packaged matrix 40207898722](https://github.com/777genius/agent-teams-ai/actions/runs/40207898722)
+  passed Linux x64, macOS x64/arm64 and Windows x64/arm64, including its full gate.
+
+These results qualify synthetic merge `2918a0d81e93bee167fd8f5873fafdf4b00dec6a`
+against main `c3d300419a7957152be77e72dce569d302cbe045`, with UAP `1bdc7bb4`.
+The continuation incorporates main `363417fba21c026515c9a8058e60513e18ec5769`;
+the resulting candidate still needs fresh qualification. Prior passes are not
+reassigned to the new source tree or a new engine pin.
+
+The main sync exposed two source-size violations: the upstream work-sync worker
+had reached 849 lines and the combined main entrypoint exceeded its frozen cap by
+four lines. Snapshot reads now live in a focused worker helper, preserving the
+same indexed alias lookup, SQL payload scope and ordering. The existing shutdown
+runner body moved to a utility receiving the same logger, with unchanged timeout,
+error and drain behavior. The worker is 773 lines; the main entrypoint is 3,679
+lines and its cap is lowered accordingly. Both source/architecture guards and
+the seven existing snapshot/shutdown tests pass. No exception was added.
+
+Upstream CLI project support has since landed through UAP #472/#499; the earlier
+#475/#480 drafts were consolidated and closed. That removes the old CLI-source
+dependency, but does not implement Management project scope or actual-worktree
+preparation. The captured desktop adapter still refuses native project scope,
+and Host #982 remains a separate draft. S25/S26 therefore remain incomplete.
+No draft Host code is imported. The proposed multi-target installation selection
+and additional detected-agent UI remain proposals, not completed acceptance.
+
+## Previous checkpoint — v15 (2026-10-25)
 
 Published security head `601464170db4de441c6544f026e6e94b5bb36d71` pins the
 rebuilt SDK and engine to UAP `1bdc7bb4c111da19c93d2839b7403e4a7d57df57`.
@@ -554,9 +595,9 @@ repository disposition remains a separate gate.
 
 ### Scope and measured maintenance cost
 
-Native project/worktree S25/S26 remain blocked by open draft UAP #472/#475/#480
-and Agent Teams Host #982. The latest inspected Host head was
-`3b351f32474111bb9bd7943d1e6b5a06a3da5e84`. No draft adapter code was imported.
+At v8, native project/worktree S25/S26 were blocked by draft UAP #472/#475/#480
+and Agent Teams Host #982. CLI project support has since landed; v16 records
+the still-missing Management/provisioning boundary. No draft adapter code is imported.
 Project local Skill authoring does not prove native project activation.
 The standalone HTTP viewer remains unavailable for managed mutations; desktop
 sidecar parity is the qualified host boundary. Captures are bounded to 16 per host
@@ -677,7 +718,8 @@ unowned files. Test both successful local edits and rejected backend bypasses.
 
 ## Project/worktree boundary
 
-Project installation is a separate active UAP workstream (#472/#475/#480).
+CLI project installation has landed through UAP #472/#499. The Management API and
+desktop provisioning integration still require their own project qualification.
 Advertise only capabilities actually implemented by the pinned qualified engine.
 Never silently map local/project to user.
 

@@ -32,7 +32,7 @@
     "src/features/token-usage/core/domain/snapshotProjection.ts": 918,
     "src/features/token-usage/renderer/view-models/tokenUsageViewModel.ts": 1231,
     "src/features/token-usage/renderer/ui/TokenUsageDashboard.tsx": 1376,
-    "src/main/index.ts": 3703,
+    "src/main/index.ts": 3679,
     "src/main/ipc/config.ts": 1230,
     "src/main/ipc/configValidation.ts": 1050,
     "src/main/ipc/review.ts": 4498,
