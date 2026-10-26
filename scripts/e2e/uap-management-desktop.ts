@@ -299,7 +299,7 @@ async function start(f: Awaited<ReturnType<typeof fixture>>) {
     env: f.env,
   });
   const liveLog = createWriteStream(path.join(f.root, 'desktop-live.log'), { flags: 'a' });
-  app.once('exit', () => liveLog.end());
+  app.once('close', () => liveLog.end());
   for (const stream of [app.stdout, app.stderr])
     stream?.on('data', (chunk: Buffer) => {
       liveLog.write(chunk);
