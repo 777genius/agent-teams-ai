@@ -31,10 +31,10 @@ on:
 permissions:
   contents: read
 
-# Preserve each Pages deployment and manual operation; supersede PR checks only.
+# Keep the existing latest Pages push policy; manual operations have independent groups.
 concurrency:
-  group: landing-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: landing-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.ref || github.run_id) }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 
 jobs:
   build:
