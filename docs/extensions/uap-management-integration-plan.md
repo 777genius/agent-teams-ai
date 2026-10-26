@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v28; the exact app 9d2/UAP 86d source completes real Electron verification, including all three native-client plugin lifecycles, S27 and 30 screenshots. This follow-up corrects the one typed-lint error and four outdated admission-fixture failures found by Full on 9d2. The narrow corrections are locally verified; fresh hosted qualification remains required. Security disposition and actual-team Skill use remain separate; the proposed profile/worktree architecture is still unapproved.
+Status: implementation plan v29; the preceding app 0f967c5/UAP 86d source completes real Electron verification, including all three native-client plugin lifecycles, S27 and 30 screenshots. Current main's additional OpenCode fixture coverage is incorporated and independently verified. This follow-up pins the test-only UAP 1d2769d correction; fresh hosted qualification belongs to this exact new pair. Security disposition and per-member Skill use remain separate; the proposed profile/worktree architecture is still unapproved.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -12,7 +12,66 @@ real Electron end-to-end verification, early draft PRs, immediate push of every
 commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
-## Current checkpoint — v28 (2026-10-26)
+## Current checkpoint — v29 (2026-10-26)
+
+The published app merge `0bdbb0225292d93d16aeceea53b89cdf1e0d55a3`
+incorporates main `dc66ae9e3dbe8ad50221c6f0857762c105660b1f`.
+Only two overlapping test fixtures required reconciliation. The upstream
+observation/no-observation matrix is retained alongside the real-ledger,
+backoff/no-resend and native-recovery cases. All 47 focused tests and scoped
+lint pass locally; the actual merge `817f7859df344f13b78be29023158829122d5a07`
+also passes those 47 cases in
+[Full shard 3](https://github.com/777genius/agent-teams-ai/actions/runs/40398095960/job/121839038176).
+Its types/build/lint and separate no-new-alert CodeQL findings gate pass.
+These are receipts for that pre-pin source.
+
+This follow-up pins UAP `1d2769d99f5f2408c1801b1c6be9c7c1225aa09f`,
+engine `0.1.91+agentteams.1d2769d99f5f`. The sole UAP change after source 86
+canonicalizes the existing temporary executable parent in the archive lifecycle
+test. The preceding Windows broad CLI test failed its strict executable
+comparison; the same failure reproduces on an actual symlinked temporary root.
+The unchanged two-target control passes. Both cases pass after the correction
+on physical and aliased roots, preserving exact executable equality,
+zero-unselected-probe, update identity and delivered-byte assertions.
+Production and SDK source are unchanged; fresh Windows qualification is required.
+
+The clean committed-source SDK archive remains 25,338 bytes with SHA-256
+`570d947dd47766ea52613432dc4615b32df1ea390936f22e94b71bed6bcc79c5`.
+Its packed consumer, frozen App install and all 2,522 supply-chain policy
+entries pass. The ordinary native stager and existing packaged artifact guards
+pass for source 1d, with Linux binary SHA-256
+`7c72068fa6b62aecffc963c89e9c5273efd8bff189c59b25404e71a81afd3a78`.
+[Fresh UAP Required](https://github.com/777genius/universal-agent-plugins/actions/runs/40398586980)
+passes SDK 43/43, clean consumer and all four module lints at this checkpoint;
+the complete test lane and platform qualification remain in progress.
+
+The latest completed actual desktop receipt is
+[Electron 40392234241](https://github.com/777genius/agent-teams-ai/actions/runs/40392234241)
+for app `0f967c52822de8612e9dc1124bb756400ad0621d`, tested merge
+`58507d045ff768b8d53161d885797c1cc3548b51`, with UAP 86.
+[Artifact 12686472315](https://github.com/777genius/agent-teams-ai/actions/runs/40392234241/artifacts/12686472315)
+contains 30 screenshots and the completed receipt: ZIP SHA-256
+`5c4acb4f00ac04d2c2772219b7c00f1f2e664091928ca0cc2752b4375ca01b00`;
+receipt SHA-256
+`a83f2666d1233b8894cc486f8e2d84a5b42f51a5a9def341d858f2b2728f879e`.
+Independent review passes 103 receipt checks and all 15 native CLI digests.
+Installation, update and all three targeted removals preserve surviving native
+identities/bytes; S27 proves active-run refusals and actual post-stop update.
+Local recovery, HTTP authority and installed/removed plugin MCP also pass.
+Exact S27 identities and owned desktop shutdown are verified; no global
+post-cleanup process census is claimed. Per-member Skill-body use is not evaluated.
+
+Current-source Full, Electron, bootstrap, packaging and security gates must
+qualify this new App/UAP pair. Previous passing receipts are not transferred.
+[Current UAP CodeQL](https://github.com/777genius/universal-agent-plugins/actions/runs/40398587317)
+still awaits its language analyses and findings verdict. The historical 0311
+aggregate of 12 alerts is not a source 1d result. Formal security disposition
+remains outstanding. The reviewed
+[launch-readiness proposal](./team-extension-launch-readiness-options.md)
+now also explains the Gemini model-provider/native-profile distinction;
+A/B implementation still requires the owner's joint decision.
+
+## Previous checkpoint — v28 (2026-10-26)
 
 [Electron run 40387443598](https://github.com/777genius/agent-teams-ai/actions/runs/40387443598)
 completes successfully for app `9d2e3c29022ea8691d2bdbc65d6b0bd905045cab`

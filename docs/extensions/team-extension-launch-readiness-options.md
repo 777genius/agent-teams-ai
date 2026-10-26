@@ -81,6 +81,36 @@ not a test result for every pinned native version. The Codex source above was
 also inspected from the pinned tag; the retrieved file blob was
 `ac2bf3e9cdf8ccf0c396f011f3dbb8f515db39c7`.
 
+### Gemini's model provider and native extension target are different
+
+Two independent reviews rechecked the Gemini report against app `0f967c5`,
+orchestrator `v0.0.140` (commit `8656348985e94936581ca0394adacfcda2efe1b1`),
+and its pinned `@google/gemini-cli-core@0.36.0` dependency. The app's Gemini
+provider still launches the common orchestration process. Its
+[generic Skill loader](https://github.com/777genius/agent_teams_orchestrator/blob/8656348985e94936581ca0394adacfcda2efe1b1/src/skills/loadSkillsDir.ts#L639-L646)
+uses Claude configuration roots; the
+[provider overlay](https://github.com/777genius/agent_teams_orchestrator/blob/8656348985e94936581ca0394adacfcda2efe1b1/src/skills/providerSkillRootsCore.ts#L9-L33)
+adds roots only for Codex.
+[User/global MCP loading](https://github.com/777genius/agent_teams_orchestrator/blob/8656348985e94936581ca0394adacfcda2efe1b1/src/services/mcp/config.ts#L1115-L1147)
+likewise uses Claude's configuration namespace. The named Gemini
+[CLI backend](https://github.com/777genius/agent_teams_orchestrator/blob/8656348985e94936581ca0394adacfcda2efe1b1/src/services/gemini/backends/cliBackend.ts#L74-L143)
+uses OAuth/CodeAssist transport and forwards already supplied tools; it does
+not start the native Gemini CLI agent or load its native extension registry.
+
+Consequently, installing into UAP's native Gemini target does not establish
+that an App teammate using a Gemini model can consume those Skills or MCP
+entries. The current conservative admission fallback retains the Claude-profile
+fence used by this execution path. The
+[source review](https://github.com/777genius/agent-teams-ai/pull/989#discussion_r4382187434)
+therefore made no provider-to-native-client mapping change. This conclusion
+covers the pinned automatic loading path, not arbitrary explicit path overrides.
+
+Option A must capture the actual native execution backend and effective profile,
+then qualify per-member consumption. A model-provider label alone cannot choose
+the installation target or mutation lease. Adding native Gemini runtime support
+or changing its projection remains a separate owner decision; this clarification
+does not approve either change.
+
 ### The final working directory has different owners
 
 [OpenCode workspace preparation][opencode-workspaces] explicitly filters
