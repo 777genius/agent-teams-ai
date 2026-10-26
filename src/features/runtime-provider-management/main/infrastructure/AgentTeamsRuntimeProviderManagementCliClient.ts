@@ -41,7 +41,10 @@ import {
   getRuntimeProviderDirectoryCacheTtlMs,
   normalizeRuntimeProviderDirectoryResponse,
 } from './runtimeProviderDirectoryResponse';
-import { sanitizeRuntimeProviderDiagnostics } from './runtimeProviderErrorBoundary';
+import {
+  buildOpenCodeProfileNodeModulesLinkDiagnostics,
+  sanitizeRuntimeProviderDiagnostics,
+} from './runtimeProviderErrorBoundary';
 import { RuntimeProviderModelRequestTracker } from './runtimeProviderModelRequestTracker';
 import {
   RUNTIME_PROVIDER_MODEL_PROBE_COMMAND_TIMEOUT_MS,
@@ -265,39 +268,6 @@ function sanitizeRuntimeProviderOutputValue(value: unknown): unknown {
 
 function sanitizeNullableRuntimeProviderText(value: unknown): string | null {
   return typeof value === 'string' ? sanitizeRuntimeProviderText(value) : null;
-}
-
-function buildOpenCodeProfileNodeModulesLinkDiagnostics(
-  message: string
-): RuntimeProviderManagementErrorDto['diagnostics'] {
-  const normalized = message.toLowerCase();
-  const isAccessDeniedLinkFailure =
-    (normalized.includes('eperm') || normalized.includes('eacces')) &&
-    normalized.includes('symlink') &&
-    normalized.includes('opencode') &&
-    normalized.includes('node_modules');
-  if (!isAccessDeniedLinkFailure) {
-    return null;
-  }
-
-  const summary = 'OpenCode managed profile node_modules link was blocked.';
-  const likelyCause =
-    'Windows denied creating the managed OpenCode profile node_modules link. The app attempted automatic junction recovery when possible, but the link is still unavailable.';
-  return {
-    summary,
-    likelyCause,
-    binaryPath: null,
-    command: null,
-    projectPath: null,
-    exitCode: null,
-    stderrPreview: message,
-    stdoutPreview: null,
-    hints: [
-      'The app attempts automatic junction fallback for this Windows link failure before showing this error.',
-      'As a temporary workaround, enable Windows Developer Mode or run Agent Teams AI as Administrator.',
-      'After enabling Developer Mode, refresh the OpenCode provider catalog.',
-    ],
-  };
 }
 
 function extractJsonObject<T>(raw: string): T {
@@ -1291,6 +1261,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   >();
   private directoryResponseCacheGeneration = 0;
   private readonly modelResponseCache = new Map<string, ModelResponseCacheEntry>();
+  private modelAdmissionClosed = false;
   private readonly modelRequests = new RuntimeProviderModelRequestTracker();
   private readonly activeModelTestRequestGroups = new Map<string, AbortController>();
   private modelResponseCacheGeneration = 0;
@@ -1309,6 +1280,12 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     this.openCodeRuntimeGeneration = new OpenCodeRuntimeGenerationGuard(
       deps.getOpenCodeRuntimeGeneration ?? (() => 0)
     );
+  }
+
+  async shutdown(): Promise<void> {
+    // Close admission synchronously before the first await, including requests still resolving env.
+    this.modelAdmissionClosed = true;
+    await this.modelRequests.abortAndDrain();
   }
 
   private dropCachesFromPreviousOpenCodeRuntime(): void {
@@ -2204,6 +2181,9 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   async loadModels(
     input: RuntimeProviderManagementLoadModelsInput
   ): Promise<RuntimeProviderManagementModelsResponse> {
+    if (this.modelAdmissionClosed) {
+      return errorResponse(input.runtimeId, 'Provider catalog is shutting down');
+    }
     this.dropCachesFromPreviousOpenCodeRuntime();
     const projectPath = normalizeProjectPath(input.projectPath);
     const cacheKey = this.getModelResponseCacheKey(input, projectPath);
@@ -2314,6 +2294,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     }
     const cacheTtlMs = this.getModelResponseCacheTtlMs(input);
     try {
+      signal.throwIfAborted();
       const { stdout, stderr } = await attempt.exec(binaryPath, args, {
         ...runtimeProviderCommandOptions({ env }, projectPath),
         timeout: COMMAND_TIMEOUT_MS,

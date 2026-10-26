@@ -44,3 +44,36 @@ export function sanitizeRuntimeProviderDiagnostics(
       : [],
   };
 }
+
+export function buildOpenCodeProfileNodeModulesLinkDiagnostics(
+  message: string
+): RuntimeProviderManagementErrorDto['diagnostics'] {
+  const normalized = message.toLowerCase();
+  const isAccessDeniedLinkFailure =
+    (normalized.includes('eperm') || normalized.includes('eacces')) &&
+    normalized.includes('symlink') &&
+    normalized.includes('opencode') &&
+    normalized.includes('node_modules');
+  if (!isAccessDeniedLinkFailure) {
+    return null;
+  }
+
+  const summary = 'OpenCode managed profile node_modules link was blocked.';
+  const likelyCause =
+    'Windows denied creating the managed OpenCode profile node_modules link. The app attempted automatic junction recovery when possible, but the link is still unavailable.';
+  return {
+    summary,
+    likelyCause,
+    binaryPath: null,
+    command: null,
+    projectPath: null,
+    exitCode: null,
+    stderrPreview: message,
+    stdoutPreview: null,
+    hints: [
+      'The app attempts automatic junction fallback for this Windows link failure before showing this error.',
+      'As a temporary workaround, enable Windows Developer Mode or run Agent Teams AI as Administrator.',
+      'After enabling Developer Mode, refresh the OpenCode provider catalog.',
+    ],
+  };
+}
