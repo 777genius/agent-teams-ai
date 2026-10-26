@@ -14,6 +14,7 @@ import type { ResolvedSkillRoot } from '@main/services/extensions/skills/SkillRo
 function createExecutor() {
   return {
     preview: vi.fn<LocalSkillMutationExecutor['preview']>(async (plan) => plan.preview),
+    discardReview: vi.fn<LocalSkillMutationExecutor['discardReview']>(async () => {}),
     apply: vi.fn<LocalSkillMutationExecutor['apply']>(async () => {}),
     deleteSkill: vi.fn<LocalSkillMutationExecutor['deleteSkill']>(async () => {}),
   };

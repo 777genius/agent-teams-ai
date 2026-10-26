@@ -17,6 +17,7 @@ interface RetainedLocalReview {
   requestId: string;
   requestDigest: string;
   attempted: boolean;
+  discarding?: Promise<void>;
 }
 const digest = (value: string | Uint8Array) => createHash('sha256').update(value).digest('hex');
 function requestDigest(request: LocalSkillReviewRequest): string {
@@ -78,35 +79,42 @@ export function createLocalSkillMutationExecutor(
     }
     return { contextId: context.contextId, status };
   }
-  function retain(
+  async function retain(
     contextId: string,
     plan: ManagementPlan,
     inputDigest: string
-  ): RetainedLocalReview {
-    if (!plan.confirmable)
-      throw new Error(
-        plan.conflicts.map((item) => item.message).join('\n') ||
-          'The local Skill change cannot be applied.'
-      );
-    for (const [id, entry] of reviews) {
-      if (!entry.attempted && Date.parse(entry.plan.expiresAt) <= Date.now()) {
-        reviews.delete(id);
-        void feature.discardPlan({ contextId: entry.contextId, planId: id }).catch(() => {});
+  ): Promise<RetainedLocalReview> {
+    try {
+      if (!plan.confirmable)
+        throw new Error(
+          plan.conflicts.map((item) => item.message).join('\n') ||
+            'The local Skill change cannot be applied.'
+        );
+      for (const [id, entry] of reviews) {
+        if (!entry.attempted && Date.parse(entry.plan.expiresAt) <= Date.now()) {
+          reviews.delete(id);
+          void feature.discardPlan({ contextId: entry.contextId, planId: id }).catch(() => {});
+        }
       }
+      if (reviews.size >= 128)
+        throw new Error('Finish or close existing Skill reviews before preparing more changes.');
+      const retained = {
+        contextId,
+        plan,
+        requestId: randomUUID(),
+        requestDigest: inputDigest,
+        attempted: false,
+      };
+      reviews.set(plan.planId, retained);
+      return retained;
+    } catch (error) {
+      await feature.discardPlan({ contextId, planId: plan.planId }).catch(() => {});
+      throw error;
     }
-    if (reviews.size >= 128)
-      throw new Error('Finish or close existing Skill reviews before preparing more changes.');
-    const retained = {
-      contextId,
-      plan,
-      requestId: randomUUID(),
-      requestDigest: inputDigest,
-      attempted: false,
-    };
-    reviews.set(plan.planId, retained);
-    return retained;
   }
   async function apply(retained: RetainedLocalReview): Promise<void> {
+    if (retained.discarding)
+      throw new Error('This Skill review is closing. Review the changes again.');
     retained.attempted = true;
     let operation: ManagementOperation;
     try {
@@ -158,12 +166,26 @@ export function createLocalSkillMutationExecutor(
           files: await exactChanges(plan),
         },
       });
-      retain(contextId, prepared, requestDigest(request));
+      await retain(contextId, prepared, requestDigest(request));
       return {
         ...plan.preview,
         planId: prepared.planId,
         warnings: [...plan.preview.warnings, ...prepared.warnings.map((item) => item.message)],
       };
+    },
+    async discardReview(reviewPlanId) {
+      const retained = reviews.get(reviewPlanId);
+      if (!retained || retained.attempted) return;
+      retained.discarding ??= feature
+        .discardPlan({ contextId: retained.contextId, planId: reviewPlanId })
+        .then(() => {
+          if (reviews.get(reviewPlanId) === retained) reviews.delete(reviewPlanId);
+        })
+        .catch((error: unknown) => {
+          retained.discarding = undefined;
+          throw error;
+        });
+      await retained.discarding;
     },
     async apply(reviewPlanId, request) {
       const retained = reviews.get(reviewPlanId);
@@ -182,7 +204,7 @@ export function createLocalSkillMutationExecutor(
           contextId,
           change: { action: 'delete', rootId: status.rootId, skillName: status.skillName },
         });
-        retained = retain(contextId, plan, skillDir);
+        retained = await retain(contextId, plan, skillDir);
         deletions.set(skillDir, retained);
       }
       try {

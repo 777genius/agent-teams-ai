@@ -41,7 +41,7 @@ async function fixture() {
     })),
     apply: vi.fn(async () => ({ operationId: 'op-a', state: 'succeeded' })),
     operation: vi.fn(),
-    discardPlan: vi.fn(async () => {}),
+    discardPlan: vi.fn(async (_request: { contextId: string; planId: string }) => {}),
   };
   const executor = createLocalSkillMutationExecutor(
     feature as unknown as ExtensionManagementFeature
@@ -56,6 +56,37 @@ async function fixture() {
   return { feature, executor, request, plan, skill };
 }
 describe('local Skill engine adapter', () => {
+  it('releases abandoned reviews before the engine reaches its sixteen-plan capacity', async () => {
+    const f = await fixture();
+    const live = new Set<string>();
+    let sequence = 0;
+    f.feature.prepareLocalSkill.mockImplementation(async () => {
+      if (live.size >= 16) throw new Error('Engine review capacity reached');
+      const planId = `plan-${++sequence}`;
+      live.add(planId);
+      return {
+        planId,
+        contextId: 'engine-a',
+        action: 'local_skill',
+        confirmable: true,
+        expiresAt: '2099-01-01T00:00:00Z',
+        actions: [],
+        warnings: [],
+        conflicts: [],
+      };
+    });
+    f.feature.discardPlan.mockImplementation(async (request: { planId: string }) => {
+      live.delete(request.planId);
+    });
+    for (let index = 0; index < 20; index += 1) {
+      const preview = await f.executor.preview(f.plan, f.request);
+      await f.executor.discardReview(preview.planId);
+    }
+    expect(live.size).toBe(0);
+    expect(f.feature.discardPlan).toHaveBeenCalledTimes(20);
+    expect(f.feature.apply).not.toHaveBeenCalled();
+  });
+
   it('retains exact bytes and delegates effects without writing from Node', async () => {
     const f = await fixture();
     const preview = await f.executor.preview(f.plan, f.request);
@@ -76,10 +107,41 @@ describe('local Skill engine adapter', () => {
       },
     });
     await f.executor.apply(preview.planId, { ...f.request, reviewPlanId: preview.planId });
+    await f.executor.discardReview(preview.planId);
+    expect(f.feature.discardPlan).not.toHaveBeenCalled();
     expect(f.feature.apply).toHaveBeenCalledWith(
       expect.objectContaining({ contextId: 'host-a', planId: 'plan-a' })
     );
     expect(await readFile(path.join(f.skill, 'SKILL.md'), 'utf8')).toBe('original\n');
+  });
+  it('discards a prepared review that cannot be returned to the editor', async () => {
+    const f = await fixture();
+    const plan = await f.feature.prepareLocalSkill();
+    f.feature.prepareLocalSkill.mockResolvedValue({ ...plan, confirmable: false });
+    await expect(f.executor.preview(f.plan, f.request)).rejects.toThrow('cannot be applied');
+    expect(f.feature.discardPlan).toHaveBeenCalledExactlyOnceWith({
+      contextId: 'host-a',
+      planId: 'plan-a',
+    });
+  });
+
+  it('blocks Apply while the same unattempted review is being discarded', async () => {
+    const f = await fixture();
+    const preview = await f.executor.preview(f.plan, f.request);
+    let complete!: () => void;
+    f.feature.discardPlan.mockReturnValue(
+      new Promise<void>((resolve) => {
+        complete = resolve;
+      })
+    );
+    const closing = f.executor.discardReview(preview.planId);
+    await expect(f.executor.apply(preview.planId, f.request)).rejects.toThrow('closing');
+    expect(f.feature.apply).not.toHaveBeenCalled();
+    complete();
+    await closing;
+    await expect(f.executor.apply(preview.planId, f.request)).rejects.toThrow(
+      'changed after review'
+    );
   });
   it('never replaces the digest of reviewed old bytes with a later filesystem read', async () => {
     const f = await fixture();
@@ -113,6 +175,8 @@ describe('local Skill engine adapter', () => {
     const preview = await f.executor.preview(f.plan, f.request);
     f.feature.apply.mockRejectedValueOnce(new Error('reply lost'));
     await expect(f.executor.apply(preview.planId, f.request)).rejects.toThrow('reply lost');
+    await f.executor.discardReview(preview.planId);
+    expect(f.feature.discardPlan).not.toHaveBeenCalled();
     await expect(
       f.executor.apply(preview.planId, { ...f.request, folderName: 'other' })
     ).rejects.toThrow('changed after review');

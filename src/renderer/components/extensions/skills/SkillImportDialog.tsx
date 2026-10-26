@@ -27,6 +27,7 @@ import { getSuggestedSkillFolderNameFromPath } from './skillFolderNameUtils';
 import { resolveSkillProjectPath } from './skillProjectUtils';
 import { SkillReviewDialog } from './SkillReviewDialog';
 import { validateSkillFolderName, validateSkillImportSourceDir } from './skillValidationUtils';
+import { useSkillReviewLifecycle } from './useSkillReviewLifecycle';
 
 import type { SkillReviewPreview, SkillRootKind, SkillsCatalogAPI } from '@shared/types/extensions';
 
@@ -63,7 +64,7 @@ interface SkillImportDialogProps {
   initialSourceDir?: string;
   initialFolderName?: string;
   sourceLocked?: boolean;
-  operations?: Pick<SkillsCatalogAPI, 'previewImport' | 'applyImport'>;
+  operations?: Pick<SkillsCatalogAPI, 'previewImport' | 'applyImport' | 'discardReview'>;
   onClose: () => void;
   onImported: (skillId: string | null) => void;
 }
@@ -86,6 +87,7 @@ export const SkillImportDialog = ({
   const defaultApply = useStore((s) => s.applySkillImport);
   const previewSkillImport = operations?.previewImport ?? defaultPreview;
   const applySkillImport = operations?.applyImport ?? defaultApply;
+  const { prepare, abandon } = useSkillReviewLifecycle(open, operations?.discardReview);
 
   const [sourceDir, setSourceDir] = useState('');
   const [folderName, setFolderName] = useState('');
@@ -100,6 +102,7 @@ export const SkillImportDialog = ({
 
   useEffect(() => {
     if (!open) return;
+    void abandon().catch(() => {});
     setSourceDir(initialSourceDir);
     setFolderName(initialFolderName);
     setFolderNameEdited(Boolean(initialFolderName));
@@ -110,7 +113,7 @@ export const SkillImportDialog = ({
     setReviewLoading(false);
     setImportLoading(false);
     setMutationError(null);
-  }, [open, projectPath, initialSourceDir, initialFolderName]);
+  }, [abandon, open, projectPath, initialSourceDir, initialFolderName]);
 
   useEffect(() => {
     if (open) {
@@ -176,13 +179,16 @@ export const SkillImportDialog = ({
     setReviewLoading(true);
     setMutationError(null);
     try {
-      const nextPreview = await previewSkillImport({
-        sourceDir: normalizedSourceDir,
-        folderName: normalizedFolderName || undefined,
-        scope,
-        rootKind,
-        projectPath: resolveSkillProjectPath(scope, projectPath),
-      });
+      const nextPreview = await prepare(() =>
+        previewSkillImport({
+          sourceDir: normalizedSourceDir,
+          folderName: normalizedFolderName || undefined,
+          scope,
+          rootKind,
+          projectPath: resolveSkillProjectPath(scope, projectPath),
+        })
+      );
+      if (!nextPreview) return;
       setPreview(nextPreview);
       setReviewOpen(true);
     } catch (error) {
@@ -373,7 +379,10 @@ export const SkillImportDialog = ({
         preview={preview}
         loading={importLoading}
         error={mutationError}
-        onClose={() => setReviewOpen(false)}
+        onClose={() => {
+          setReviewOpen(false);
+          void abandon().catch((error: unknown) => setMutationError(String(error)));
+        }}
         onConfirm={() => void handleConfirmImport()}
         confirmLabel={t('skillImport.actions.importSkill')}
         reviewLabel={t('skillImport.reviewLabel')}

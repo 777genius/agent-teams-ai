@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v22; the retained-installation fix passes the original Claude prerequisite in hosted Electron. The next workspace-trust profile mismatch is corrected with a reproduced regression. Multi-target installation controls and a three-client plugin lifecycle exercise are implemented and await hosted qualification.
+Status: implementation plan v23; multi-target installation, native plugin lifecycle coverage and the explicit Claude trust-profile correction are published. Abandoned local Skill reviews now release their unattempted engine plans. Fresh full and Electron qualification remains required.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -12,7 +12,41 @@ real Electron end-to-end verification, early draft PRs, immediate push of every
 commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
-## Current checkpoint — v22 (2026-10-26)
+## Current checkpoint — v23 (2026-10-26)
+
+[App 4177cd41a](https://github.com/777genius/agent-teams-ai/commit/4177cd41a2b3126463b94e23d0d23c405000ae25)
+publishes the multi-target controls, three-client plugin lifecycle exercise and
+the independently reviewed Claude trust-file correction described below. Its
+new Electron run is
+[40364514381](https://github.com/777genius/agent-teams-ai/actions/runs/40364514381).
+The exact combined snapshot passes 28 UI/workflow/helper/trust tests. Local
+combined compiler processes were killed with exit 137 without TypeScript
+diagnostics; no complete typecheck pass is claimed for those attempts. The
+previous matrix-only canonical pass does not replace the fresh full gate.
+
+A newly reported local Skill defect exhausted the engine's sixteen-review limit
+after repeated preview/back or close. The existing local Skills facade now has
+an owned-window discard operation. Editor/import lifecycle cleanup releases only
+its own unattempted plan on back, close, replacement or unmount, including a
+preview that returns late. Attempted or uncertain Apply retains the original
+plan/request identity. The existing Electron-only local Skills API remains
+Electron-only; no partial HTTP mutation facade was added.
+
+Independent review also reproduced two managed-copy races: a late preview could
+overwrite the newer review owner, and a failed discard could clear its owner
+before retry. Captured owner/context/generation checks now prevent the first;
+retaining one discard promise until success closes the second. Apply cannot
+race an in-flight discard. Four concrete regressions fail before correction,
+and the final seven focused suites pass 40 tests after correction. Scoped lint
+and source-size checks pass; the legacy editor stays below its frozen size cap.
+Independent review reports no remaining P1/P2 in this correction.
+
+This checkpoint does not claim S27, the new three-client Electron exercise,
+live-model/OAuth use or project/worktree preparation has passed. Current-source
+hosted qualification, the separate UAP findings aggregate and the owner's
+profile/worktree architecture discussion remain required.
+
+## Previous checkpoint — v22 (2026-10-26)
 
 Installation now has a separate multi-select control. Available captured Claude
 Code, Codex and OpenCode targets start checked; any additional captured targets

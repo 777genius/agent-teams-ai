@@ -84,6 +84,10 @@ export class SkillsMutationService {
     return this.catalogService.getDetail(targetSkillDir, request.projectPath);
   }
 
+  async discardReview(reviewPlanId: string): Promise<void> {
+    await this.executor.discardReview(reviewPlanId);
+  }
+
   async deleteSkill(request: SkillDeleteRequest): Promise<void> {
     const skillDir = this.resolveExistingSkill(request.skillId, request.projectPath);
     await this.executor.deleteSkill(skillDir, request.projectPath);

@@ -592,6 +592,7 @@ export const ManagedExtensionsPanel = ({ kind, model }: Props) => {
           sourceLocked
           operations={{
             previewImport: (request) => model.previewCopy(copySource.id, request),
+            discardReview: model.closeCopyReview,
             applyImport: async (request) => {
               setCopySource(null);
               return model.applyCopy(request);

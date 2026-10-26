@@ -11,6 +11,9 @@ interface StoreState {
 }
 
 const storeState = {} as StoreState;
+const discardReview = vi.hoisted(() => vi.fn(async () => {}));
+
+vi.mock('@renderer/api', () => ({ api: { skills: { discardReview } } }));
 
 vi.mock('@renderer/store', () => ({
   useStore: (selector: (state: StoreState) => unknown) => selector(storeState),
@@ -204,6 +207,7 @@ describe('SkillEditorDialog', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.previewSkillUpsert = vi.fn();
     storeState.applySkillUpsert = vi.fn();
+    discardReview.mockClear();
   });
 
   afterEach(() => {
@@ -328,6 +332,7 @@ This file uses a freeform layout without generated sections.
     });
 
     expect(host.querySelector('[data-testid="skill-review-dialog"]')).toBeNull();
+    expect(discardReview).toHaveBeenCalledExactlyOnceWith('plan-1');
 
     await act(async () => {
       root.unmount();

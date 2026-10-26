@@ -2,6 +2,7 @@ import {
   SKILLS_APPLY_IMPORT,
   SKILLS_APPLY_UPSERT,
   SKILLS_DELETE,
+  SKILLS_DISCARD_REVIEW,
   SKILLS_GET_DETAIL,
   SKILLS_LIST,
   SKILLS_PREVIEW_IMPORT,
@@ -62,6 +63,7 @@ export function registerSkillsHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(SKILLS_APPLY_UPSERT, handleSkillsApplyUpsert);
   ipcMain.handle(SKILLS_PREVIEW_IMPORT, handleSkillsPreviewImport);
   ipcMain.handle(SKILLS_APPLY_IMPORT, handleSkillsApplyImport);
+  ipcMain.handle(SKILLS_DISCARD_REVIEW, handleSkillsDiscardReview);
   ipcMain.handle(SKILLS_DELETE, handleSkillsDelete);
   ipcMain.handle(SKILLS_START_WATCHING, handleSkillsStartWatching);
   ipcMain.handle(SKILLS_STOP_WATCHING, handleSkillsStopWatching);
@@ -74,6 +76,7 @@ export function removeSkillsHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(SKILLS_APPLY_UPSERT);
   ipcMain.removeHandler(SKILLS_PREVIEW_IMPORT);
   ipcMain.removeHandler(SKILLS_APPLY_IMPORT);
+  ipcMain.removeHandler(SKILLS_DISCARD_REVIEW);
   ipcMain.removeHandler(SKILLS_DELETE);
   ipcMain.removeHandler(SKILLS_START_WATCHING);
   ipcMain.removeHandler(SKILLS_STOP_WATCHING);
@@ -196,6 +199,18 @@ async function handleSkillsDelete(
     if (!request) throw new Error('request is required');
     assertMutationSender(event);
     return getSkillsMutationService().deleteSkill(request);
+  });
+}
+
+async function handleSkillsDiscardReview(
+  event: IpcMainInvokeEvent,
+  reviewPlanId?: string
+): Promise<IpcResult<void>> {
+  return wrapHandler('skillsDiscardReview', () => {
+    assertMutationSender(event);
+    if (typeof reviewPlanId !== 'string' || !reviewPlanId || reviewPlanId.length > 200)
+      throw new Error('A valid reviewPlanId is required');
+    return getSkillsMutationService().discardReview(reviewPlanId);
   });
 }
 

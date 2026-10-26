@@ -136,6 +136,7 @@ import {
   SKILLS_APPLY_UPSERT,
   SKILLS_CHANGED,
   SKILLS_DELETE,
+  SKILLS_DISCARD_REVIEW,
   SKILLS_GET_DETAIL,
   SKILLS_LIST,
   SKILLS_PREVIEW_IMPORT,
@@ -2019,6 +2020,8 @@ const electronAPI: ElectronAPI = {
       invokeIpcWithResult<SkillReviewPreview>(SKILLS_PREVIEW_IMPORT, request),
     applyImport: (request: SkillImportRequest) =>
       invokeIpcWithResult<SkillDetail | null>(SKILLS_APPLY_IMPORT, request),
+    discardReview: (reviewPlanId: string) =>
+      invokeIpcWithResult<void>(SKILLS_DISCARD_REVIEW, reviewPlanId),
     deleteSkill: (request: SkillDeleteRequest) => invokeIpcWithResult<void>(SKILLS_DELETE, request),
     startWatching: (projectPath?: string) =>
       invokeIpcWithResult<string>(SKILLS_START_WATCHING, projectPath),

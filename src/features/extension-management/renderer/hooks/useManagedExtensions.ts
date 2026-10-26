@@ -66,6 +66,7 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
     catalogEntryId?: string;
   } | null>(null);
   const copyOwner = useRef<{ contextId: string; alias: string; targetId: string } | null>(null);
+  const copyGeneration = useRef(0);
   const copyReview = useRef<{
     contextId: string;
     planId: string;
@@ -73,6 +74,7 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
     rootKind: string;
     folderName: string;
     attempted: boolean;
+    discarding?: Promise<void>;
   } | null>(null);
   const operationId = operation?.operationId;
   const isRunning = Boolean(operation && !finished(operation));
@@ -445,25 +447,50 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
       setCopyCandidates
     );
   }
-  async function closeCopyReview() {
+  async function releaseCopyReview() {
     const retained = copyReview.current;
     if (!backend || !retained || retained.attempted) return;
-    copyReview.current = null;
-    await backend.discardPlan({ contextId: retained.contextId, planId: retained.planId });
+    retained.discarding ??= backend
+      .discardPlan({ contextId: retained.contextId, planId: retained.planId })
+      .then(() => {
+        if (copyReview.current === retained) copyReview.current = null;
+      })
+      .catch((error: unknown) => {
+        retained.discarding = undefined;
+        throw error;
+      });
+    await retained.discarding;
+  }
+  async function closeCopyReview(planId?: string) {
+    const retained = copyReview.current;
+    if (retained?.attempted || (planId && planId !== retained?.planId)) return;
+    copyGeneration.current += 1;
+    await releaseCopyReview();
   }
   async function previewCopy(candidateId: string, input: SkillImportRequest) {
     if (!backend || !copyOwner.current || input.scope !== 'user' || !input.folderName)
       throw new Error('Choose a local copy destination.');
     if (copyReview.current?.attempted)
       throw new Error('Inspect the previous copy result before preparing another copy.');
-    await closeCopyReview();
     const owner = copyOwner.current;
+    const version = generation.current;
+    const attempt = ++copyGeneration.current;
+    const current = () =>
+      owner === copyOwner.current &&
+      version === generation.current &&
+      attempt === copyGeneration.current;
+    await releaseCopyReview();
+    if (!current()) throw new Error('The copy review was closed or replaced.');
     const preview = await backend.previewSkillCopy({
       ...owner,
       candidateId,
       rootKind: input.rootKind,
       folderName: input.folderName,
     });
+    if (!current()) {
+      await backend.discardPlan({ contextId: owner.contextId, planId: preview.planId });
+      throw new Error('The copy review was closed or replaced.');
+    }
     copyReview.current = {
       contextId: owner.contextId,
       planId: preview.planId,
@@ -480,6 +507,7 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
       !backend ||
       !context ||
       !retained ||
+      retained.discarding ||
       retained.planId !== input.reviewPlanId ||
       retained.rootKind !== input.rootKind ||
       retained.folderName !== input.folderName
