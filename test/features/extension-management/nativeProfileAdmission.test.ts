@@ -25,7 +25,7 @@ const f = vi.hoisted(() => ({
   openCode: vi.fn<() => Promise<string | null>>(),
   supportedOverride: vi.fn<() => Promise<boolean>>(),
   activeEnvironment: vi.fn(),
-  environment: vi.fn(),
+  environment: vi.fn<ManagementClient['environment']>(),
   start: vi.fn<(options: Parameters<typeof startUap>[0]) => Promise<unknown>>(),
   discover: vi.fn<typeof discoverTargets>(),
   activeClients: vi.fn<() => Promise<ReadonlySet<ExtensionClient>>>(),
@@ -79,7 +79,12 @@ beforeEach(async () => {
   f.activeEnvironment.mockImplementation(() => {
     throw new Error('Profile capture must not prepare unrelated runtime launches');
   });
-  f.environment.mockResolvedValue({ entries: [], diagnostics: [], pendingOperations: [] });
+  f.environment.mockResolvedValue({
+    contextId: 'captured-profiles',
+    entries: [],
+    diagnostics: [],
+    pendingOperations: [],
+  });
   f.discover.mockResolvedValue({ apiVersion: 1, engineVersion: 'test', targets: [] });
   f.activeClients.mockResolvedValue(new Set());
   f.start.mockResolvedValue({
@@ -93,6 +98,7 @@ beforeEach(async () => {
       targets: [],
       capabilities: [],
     },
+    hasExited: false,
     close: async () => {},
   });
   runtime = createDesktopExtensionManagement({
@@ -176,9 +182,16 @@ it('still refuses launch when the shared durable environment has interrupted wor
     createdAt: '2026-10-25T00:00:00Z',
     updatedAt: '2026-10-25T00:00:00Z',
   };
-  f.environment.mockResolvedValue({ entries: [], diagnostics: [], pendingOperations: [pending] });
+  f.environment.mockResolvedValue({
+    contextId: 'captured-profiles',
+    entries: [],
+    diagnostics: [],
+    pendingOperations: [pending],
+  });
   const operation = vi.fn(async () => 'launched');
-  await expect(launch(operation)).rejects.toThrow();
+  await expect(launch(operation)).rejects.toThrow(
+    'An extension change is running or needs recovery. Resolve it before launching this agent.'
+  );
   expect(f.environment).toHaveBeenCalled();
   expect(operation).not.toHaveBeenCalled();
 });

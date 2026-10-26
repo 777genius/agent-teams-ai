@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v27; real Electron verifies S27 and three-client plugin installation/update. Targeted removal review now distinguishes the selected mutation from exact unchanged siblings. Owned-engine reconnection preserves captured authority and outstanding-operation fencing. The complete fresh removal matrix and current-source canonical/platform/security gates remain required; actual-team Skill use and the proposed profile/worktree architecture remain separate, unapproved work.
+Status: implementation plan v28; the exact app 9d2/UAP 86d source completes real Electron verification, including all three native-client plugin lifecycles, S27 and 30 screenshots. This follow-up corrects the one typed-lint error and four outdated admission-fixture failures found by Full on 9d2. The narrow corrections are locally verified; fresh hosted qualification remains required. Security disposition and actual-team Skill use remain separate; the proposed profile/worktree architecture is still unapproved.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -12,7 +12,87 @@ real Electron end-to-end verification, early draft PRs, immediate push of every
 commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
-## Current checkpoint — v27 (2026-10-26)
+## Current checkpoint — v28 (2026-10-26)
+
+[Electron run 40387443598](https://github.com/777genius/agent-teams-ai/actions/runs/40387443598)
+completes successfully for app `9d2e3c29022ea8691d2bdbc65d6b0bd905045cab`
+through synthetic merge `32131509bd97e441b97115b36260424dd9e5059a`.
+The verified parents are main `9ff9f85acd94b2b466ac6c7889dcb042f130493a` and
+that exact app head; both head and merge have tree
+`8ac12c4c20f8a531185f98c202babf468923ba2d`. The matched UAP source is
+`86d4d0d4bfc68ea454f9df8840f23461eb043177`, engine
+`0.1.91+agentteams.86d4d0d4bfc6`, with app runtime 0.0.140.
+[Artifact 12680649876](https://github.com/777genius/agent-teams-ai/actions/runs/40387443598/artifacts/12680649876)
+contains the complete receipt and 30 screenshots. ZIP SHA-256 is
+`b3646f3a6d192f30930d73b8c7bbf5791b684208150ab9c2b7d79b90561c1c74`;
+evidence JSON SHA-256 is
+`eb697fdeebdd85f20cd9f210d218b1973c2202626a32e57e094b6140b37498c6`.
+The receipt verifies SDK SHA-256
+`570d947dd47766ea52613432dc4615b32df1ea390936f22e94b71bed6bcc79c5`
+and Linux engine SHA-256
+`7088d9241fa8394627952ed84630873a4cdfcd41d1c1ef7839edb4103618908e`.
+
+The full receipt and discovery/removal screenshots were independently reviewed.
+`completed=true`, `trackedDirty=false`, and `rendererErrors=[]`. Claude, Codex and OpenCode complete
+version-1 installation, version-2 update and all three targeted removals through
+the actual Electron UI and Go/SDK/host path. Each review requires the exact
+selected mutation plus every unchanged sibling. After each removal, remaining
+native identities, marketplaces, source paths and file digests equal the
+version-2 baseline; removed files are absent. The final installed set is empty.
+Codex's explicit native plugin/marketplace uninstall prerequisite is verified.
+Local edit/delete, host restart and visible Undo restore exact original bytes;
+the existing HTTP authority and idempotent-mutation checks also pass.
+
+S27 completes with an actual runtime lead and inherited worker. All five retained
+Apply requests (install/update/repair/sync/remove), fresh Prepare and UI attempts
+refuse before acceptance while the same owned PID/start identities remain alive
+and protected state stays unchanged. The unrelated OpenCode lifecycle succeeds.
+Ordinary Stop is followed by confirmation that both exact owned process identities
+are gone, then Claude update succeeds. Initial discovery marks all three primary
+clients available and selected, with Cursor available and unselected; the Cursor
+executable stays byte-identical and its permanent execution witness remains
+absent after UI inspection and owned desktop shutdown.
+
+Native OpenCode 1.18.34 offers and calls the installed plugin MCP tool through the
+scripted loopback provider; after removal, tool offers, calls and MCP requests
+are absent. Cursor coverage proves passive discovery only. The three-client
+matrix proves native visibility and delivered bytes; `modelSkillUse` remains
+`not_evaluated`. It does not prove Skill-body or plugin-MCP use by every
+app-launched team member. Profile/worktree proposals A and B remain unapproved
+and unchanged.
+
+### Exact-source CI and narrow follow-ups
+
+[Full source run 40387443494](https://github.com/777genius/agent-teams-ai/actions/runs/40387443494)
+uses the same app 9d2 / merge 3213. Canonical typecheck, build and all 24 MCP tests
+pass, as do test shards 2, 3 and 4. Full is not qualified: features lint reports
+one optional-promise `Promise.allSettled` error, and shard 1 has four
+`nativeProfileAdmission` fixture failures (5,623 other tests pass) because mocked
+environment replies omit the required `contextId`.
+
+The bounded production correction changes shutdown's `map` to `flatMap` so
+`allSettled` receives only existing replacement promises. Exact typed lint has
+zero errors, all 15 lifecycle cases pass, and independent review passes. The
+separate test-only correction supplies typed environment replies, `contextId`
+and `hasExited`, and asserts the precise interrupted-operation fence. Its four
+original failures reproduce; the corrected focused suite passes 9/9 and the
+combined application suites pass 60/60, with independent review passing. The
+corrected fixture also passes scoped native TypeScript with unchanged root
+compiler options and the standard test-file fast lint. Captured-authority and
+durable-pending production guards remain unchanged. The completed 9d2 receipts
+belong to that exact source; this follow-up requires fresh hosted Full and
+applicable platform/security gates.
+
+[UAP Required 40384418585](https://github.com/777genius/universal-agent-plugins/actions/runs/40384418585)
+passes all six jobs on exact 86d source, including 43 SDK tests; conformance
+passes 133 cases with zero failures.
+[UAP CodeQL 40384418509](https://github.com/777genius/universal-agent-plugins/actions/runs/40384418509)
+has not completed at this checkpoint. The latest completed findings inspection
+remains historical source 0311: 12 alerts, comprising 2 Critical and 10 High.
+All nine reviewed security sink/guard files are unchanged from e84 to 86d;
+that comparison is not a formal disposition or a current-source security pass.
+
+## Previous checkpoint — v27 (2026-10-26)
 
 [Electron run 40383086576](https://github.com/777genius/agent-teams-ai/actions/runs/40383086576)
 tests app `75ec93b425a7bda84083bfeb883aa1fc548481e5` through synthetic merge

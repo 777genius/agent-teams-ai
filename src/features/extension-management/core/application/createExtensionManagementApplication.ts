@@ -607,7 +607,9 @@ export function createExtensionManagementApplication(
     async close() {
       closed = true;
       await Promise.allSettled([...opening.values()]);
-      await Promise.allSettled([...contexts.values()].map((value) => value.reconnecting));
+      await Promise.allSettled(
+        [...contexts.values()].flatMap((value) => (value.reconnecting ? [value.reconnecting] : []))
+      );
       await Promise.allSettled([...contexts.values()].map((value) => value.connection.close()));
       contexts.clear();
       for (const admission of environments.values()) admission.lease?.release();
