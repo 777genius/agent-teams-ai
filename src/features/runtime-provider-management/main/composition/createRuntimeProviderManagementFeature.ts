@@ -55,7 +55,9 @@ import type {
   RuntimeProviderOAuthProgressDto,
 } from '@features/runtime-provider-management/contracts';
 
-export type RuntimeProviderManagementFeatureFacade = RuntimeProviderManagementApi;
+export type RuntimeProviderManagementFeatureFacade = RuntimeProviderManagementApi & {
+  shutdown(): Promise<void>;
+};
 
 export function createRuntimeProviderManagementFeature(
   deps: {
@@ -86,6 +88,7 @@ export function createRuntimeProviderManagementFeature(
   const companionCoordinator = new RuntimeProviderCompanionCoordinator(port, companionRegistry);
 
   return {
+    shutdown: () => port.shutdown?.() ?? Promise.resolve(),
     listLocalProviders: (
       input: RuntimeLocalProviderListInput
     ): Promise<RuntimeLocalProviderListResponse> =>

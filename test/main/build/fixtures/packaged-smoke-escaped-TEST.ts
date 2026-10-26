@@ -437,7 +437,8 @@ async function driver(): Promise<void> {
         }) as typeof process.kill;
       }
       try {
-        await terminateChild(leader, Promise.resolve(), process.platform, 250, ownership);
+        // Keep the forced-kill path, but allow real process inventories to finish on loaded hosts.
+        await terminateChild(leader, Promise.resolve(), process.platform, 1_500, ownership);
       } finally {
         console.log = originalLog;
         process.kill = originalKill;

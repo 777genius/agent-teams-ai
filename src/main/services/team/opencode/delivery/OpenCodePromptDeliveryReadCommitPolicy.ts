@@ -6,6 +6,7 @@ import {
   hasOpenCodeGroupAcknowledgement,
   type OpenCodeGroupAcknowledgementReader,
 } from './OpenCodeGroupAcknowledgement';
+import { isOpenCodeCompletedGroupNonResponse } from './OpenCodeGroupNonResponse';
 import {
   isOpenCodePromptDeliveryCancelled,
   isOpenCodePromptResponseStateResponded,
@@ -200,6 +201,11 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
   if (input.ledgerRecord && isOpenCodePromptDeliveryCancelled(input.ledgerRecord)) return false;
   if (input.ledgerRecord?.groupChatId) {
     const record = input.ledgerRecord;
+    if (
+      input.responseState === 'responded_plain_text' &&
+      isOpenCodeCompletedGroupNonResponse(record)
+    )
+      return true;
     if (await hasOpenCodeGroupAcknowledgement(input)) return true;
     const sender = record.replyRecipient.trim().toLowerCase();
     // Group peers may finish silently. The runtime's explicit completed-child

@@ -474,6 +474,7 @@ describe('shutdown MCP transport authority', () => {
     const stopStartupAdmission = vi.fn();
     const disposeTokenUsage = vi.fn();
     const prepareShutdownCleanup = vi.fn();
+    const drainCatalog = vi.fn(async () => {});
     const closeAdmission = vi.fn(() => {
       expect(prepareShutdownCleanup).toHaveBeenCalledExactlyOnceWith();
     });
@@ -490,6 +491,7 @@ describe('shutdown MCP transport authority', () => {
       shutdownPromise: null,
       stopAdmittingOpenCodeStartupCleanup: stopStartupAdmission,
       openCodeLifecycleBridge: { prepareShutdownCleanup },
+      runtimeProviderManagementFeature: { shutdown: drainCatalog },
       externalAgentConnection: {
         closeAdmission,
         shutdown: async () => {
@@ -535,6 +537,10 @@ describe('shutdown MCP transport authority', () => {
       await expect(shutdown()).rejects.toBe(finished);
       expect(stopStartupAdmission).toHaveBeenCalledExactlyOnceWith();
       expect(closeAdmission).toHaveBeenCalledExactlyOnceWith();
+      expect(drainCatalog).toHaveBeenCalledExactlyOnceWith();
+      expect(drainCatalog.mock.invocationCallOrder[0]).toBeLessThan(
+        closeAdmission.mock.invocationCallOrder[0]
+      );
       expect(prepareShutdownCleanup.mock.invocationCallOrder[0]).toBeLessThan(
         closeAdmission.mock.invocationCallOrder[0]
       );
