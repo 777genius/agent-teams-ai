@@ -149,6 +149,50 @@ describe('OpenCodeVisibleReplyProofService', () => {
     expect(privateProof?.message.messageId).toBe('private');
   });
 
+  it('does not publish a certified completed peer non-response, but preserves human fallback', async () => {
+    const record = {
+      id: 'no-response',
+      groupChatId: 'origin',
+      inboxMessageId: 'physical',
+      replyRecipient: 'codex-tester',
+      acceptedAt: ISO,
+      acceptanceUnknown: false,
+      runtimePromptMessageId: 'prompt',
+      deliveredUserMessageId: 'prompt',
+      observedAssistantMessageId: 'child',
+      observedAssistantPreview: '[[AGENT_TEAMS_NO_REPLY]]',
+      observedToolCallNames: [],
+      responseState: 'responded_plain_text',
+      lastReason: 'assistant_child_completed_with_non_response_text',
+    } as unknown as OpenCodePromptDeliveryLedgerRecord;
+    const send = vi.fn(async () => ({
+      saved: true as const,
+      groupChatId: 'origin',
+      messageId: 'reply',
+      statusPersisted: true,
+    }));
+    const ledger = {
+      applyDestinationProof: vi.fn(async () => record),
+    } as unknown as OpenCodePromptDeliveryLedgerStore;
+    const input = {
+      teamName: 'team-a',
+      memberName: 'bob',
+      ledger,
+      ledgerRecord: record,
+      send,
+      checkpoint: async () => {},
+      messageId: 'reply',
+      nowIso: () => ISO,
+    };
+    expect((await materializeOpenCodeGroupReply(input)).visibleReply).toBeNull();
+    expect(send).not.toHaveBeenCalled();
+    await materializeOpenCodeGroupReply({
+      ...input,
+      ledgerRecord: { ...record, replyRecipient: 'user' },
+    });
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
   it('materializes group plaintext through the facade and settles blocked replies without private fallback', async () => {
     const record = {
       id: 'ledger',

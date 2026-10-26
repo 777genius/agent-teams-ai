@@ -4,6 +4,7 @@ import {
   hasOpenCodeGroupAcknowledgement,
   type OpenCodeGroupAcknowledgementReader,
 } from './OpenCodeGroupAcknowledgement';
+import { isOpenCodeCompletedGroupNonResponse } from './OpenCodeGroupNonResponse';
 
 import type {
   OpenCodePromptDeliveryLedgerRecord,
@@ -53,6 +54,10 @@ export async function materializeOpenCodeGroupReply(input: {
 }> {
   const record = input.ledgerRecord;
   const text = record.observedAssistantPreview?.trim();
+  if (isOpenCodeCompletedGroupNonResponse(record)) {
+    await input.checkpoint();
+    return { ledgerRecord: record, visibleReply: null };
+  }
   if (record.groupChatId && record.responseState === 'tool_error') {
     await input.checkpoint();
     const ledgerRecord = await input.ledger.markFailedTerminal({

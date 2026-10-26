@@ -455,6 +455,13 @@ async function runOpenCodeMemberInboxRelayWork(
   // user message (see findNextUnreadUserMessageIndex) instead of breaking.
   const handledMessageIds = new Set<string>();
   let cursor = 0;
+  let groupRunLookup: Promise<string | null> | null = null;
+  const resolveGroupRun = (): Promise<string | null> => {
+    groupRunLookup ??= ports
+      .resolveCurrentOpenCodeRuntimeRunId(teamName, memberIdentity.laneId)
+      .catch(() => null);
+    return groupRunLookup;
+  };
   while (cursor < unread.length) {
     const index = cursor;
     cursor += 1;
@@ -478,10 +485,12 @@ async function runOpenCodeMemberInboxRelayWork(
       return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
     }
     if (existingRecord) {
-      const currentRunId = await ports.resolveCurrentOpenCodeRuntimeRunId(
-        teamName,
-        memberIdentity.laneId
-      );
+      const currentRunId = message.groupChatId
+        ? await resolveGroupRun()
+        : await ports.resolveCurrentOpenCodeRuntimeRunId(teamName, memberIdentity.laneId);
+      if (!isCurrentGeneration()) {
+        return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+      }
       if (isOpenCodeDeliveryFromOtherRun(existingRecord, currentRunId)) {
         // Persist the fence so due scans cannot repeatedly select this historical row.
         await promptLedger.ensurePending({
@@ -576,6 +585,15 @@ async function runOpenCodeMemberInboxRelayWork(
       // 'responded' without recoverable proof: fall through to the normal
       // delivery path below - its observe pass, and the plain-text
       // materialization, are what produce the missing proof.
+    }
+    if (message.groupChatId) {
+      const currentRunId = await resolveGroupRun();
+      if (!isCurrentGeneration()) {
+        return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+      }
+      // Historical group envelopes remain owned by their original run. Do not
+      // retry them through the bridge or let one block newer deliveries.
+      if (!currentRunId || message.groupRunKey !== currentRunId) continue;
     }
     const existingTaskRefs = existingRecord?.taskRefs?.length ? existingRecord.taskRefs : undefined;
     const metadataTaskRefs = options.deliveryMetadata?.taskRefs?.length
