@@ -81,6 +81,8 @@ export const desktopProofSupplementarySources = [
   // Integrated Desktop runtime helper closure.
   'src/renderer/components/team/messages/useComposerTextarea.ts',
   'packages/legacy-agent-host/tests/fixtures/native-host.ts',
+  'packages/legacy-agent-host/tests/fixtures/native-message-image.ts',
+  'packages/legacy-agent-host/tests/fixtures/native-message-pdf.ts',
   'scripts/legacy-agent-host/desktop-activity-readback-fixture.ts',
   'scripts/legacy-agent-host/desktop-activity-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-approval-model.ts',

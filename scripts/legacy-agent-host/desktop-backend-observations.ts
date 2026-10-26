@@ -146,15 +146,22 @@ export async function getTargets(): Promise<Record<string, unknown>[]> {
 
 /** Only initial discovery is repeatable across navigation; product commands never use this retry seam. */
 export async function readRendererBackendConnections(cdp: {
-  evaluate(expression: string): Promise<unknown>;
-}): Promise<
+  evaluate(expression: string, timeoutMs?: number): Promise<unknown>;
+}, timeoutMs?: number): Promise<
   | { kind: 'pending'; reason: 'bridge-not-ready' | 'context-replaced' | 'handler-not-ready' }
   | { kind: 'read'; value: unknown }
 > {
+  const deadline = timeoutMs === undefined ? undefined : performance.now() + timeoutMs;
+  const remaining = () => {
+    if (deadline === undefined) return undefined;
+    const value = Math.floor(deadline - performance.now());
+    assert.ok(value > 0, 'initial backend discovery observation deadline');
+    return value;
+  };
   try {
-    if (!await cdp.evaluate('Boolean(window.electronAPI?.agentBackend?.getConnections)'))
+    if (!await cdp.evaluate('Boolean(window.electronAPI?.agentBackend?.getConnections)', remaining()))
       return { kind: 'pending', reason: 'bridge-not-ready' };
-    return { kind: 'read', value: await cdp.evaluate('window.electronAPI.agentBackend.getConnections()') };
+    return { kind: 'read', value: await cdp.evaluate('window.electronAPI.agentBackend.getConnections()', remaining()) };
   } catch (error) {
     if (/execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(String(error)))
       return { kind: 'pending', reason: 'context-replaced' };

@@ -1,12 +1,10 @@
 # Этап 1: совместимый legacy-host поверх provider-implementations
 
-**Физическое отделение провайдеров (24 октября):** исходники `provider-implementations`
-и независимого Session SPI теперь находятся в [old-provider-implementations](https://github.com/agent-teams-ai/old-provider-implementations).
-Перенос подготовлен в [draft PR #1](https://github.com/agent-teams-ai/old-provider-implementations/pull/1), CI Node 24/26 прошёл;
-merge не выполнялся. Зависимости от движка старого `agent-runtime` у этих пакетов нет.
-Host/Team/Runtime owner и адаптеры Desktop остаются во frontend. Выбранные архивы
-не меняются: все 206 provider и 10 SPI emitted-файлов совпадают с отдельным репозиторием.
-Этап 2 по-прежнему не входит в работу.
+**Провайдеры физически отделены:** исходники `provider-implementations` и Session SPI
+находятся в [old-provider-implementations](https://github.com/agent-teams-ai/old-provider-implementations),
+без зависимости от движка старого `agent-runtime`. Host/Team/Runtime owner и адаптеры
+Desktop остаются во frontend. Актуальные выбранные архивы, CI и границы приёмки
+зафиксированы в [сводке программы](README.md); PR остаются Draft, этап 2 исключён.
 
 
 **Обязательное правило UI (прямое указание владельца, 22 октября): использовать
@@ -24,6 +22,12 @@ Host/Team/Runtime owner и адаптеры Desktop остаются во fronte
 Это весь текущий implementation scope: P0–P8 / M01–M19. Этап 2 с будущими
 Orchestrator и agent-runtime сейчас не выполняется и не нужен для завершения
 этого плана; см. [зафиксированное решение](README.md).
+
+**OpenCode — только V1.** По прямому указанию владельца от 25 октября интеграция
+V2 не входит в P0–P8, M01–M19, критерии готовности, оставшиеся оценки или отдельные
+E2E. Используется `createOpenCodeV1DriverFactory` и выбранный native V1 profile;
+V2 driver/fallback не подключается. Сохранившиеся V2 exports и историческая опись
+исходников не являются TODO. Исправление/интеграция V2 требуют отдельного поручения.
 
 Статус: P0–P6 и dev E2E из P8 реализуются в изолированных lanes;
 сохранённые scoped proofs перечислены в матрице совместимости. Packed candidate
@@ -570,9 +574,15 @@ system Node пользователя не используется молча в
 3. Каждый из трёх providers получает Task, делает meaningful TEST effect, task update/comment и
    completion проходят owner policy. Wrong task/member/role/revoked session
    отвергаются handler, а не только mock permission callback.
-4. Для выбранных Claude/Codex/OpenCode profiles подтвердить config/readiness и native
-   permissions/questions. Недостающая возможность provider library реализуется
-   один раз в D; private host adapter не дублирует её transport algorithm.
+4. Для выбранных profiles подтвердить config/readiness и сохраняемые interactions:
+   Claude — native permissions/questions; Codex — approval/userInput;
+   OpenCode V1 — native permissions. Native OpenCode questions остаются
+   unsupported/unqualified: в P0 `opencode-driver.useCases` выбран permission path,
+   рабочего question → прежний UI → answer/reject consumer в frozen donor не найдено.
+   Generic Host MCP ask-user замены нет. Это уточняет неоднозначное прежнее
+   «permissions/questions», не исключая работавший UI; см. §1 и
+   [границу M06](compatibility-matrix.md). Недостающая возможность выбранного пути
+   реализуется один раз в D; private host adapter не дублирует transport algorithm.
 5. Проверить context/compaction/restart и shared OpenCode isolation на фактических
    профилях. Unsupported сохраняет безопасный отказ, но строку parity не закрывает.
    Actual compact→roster change→next input проходит один reminder owner. Native

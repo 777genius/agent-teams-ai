@@ -156,6 +156,11 @@ export function assertMixedSavedSettings(state: Record<string, unknown>, workspa
     color: 'blue',
   }))
     assert.equal(settings[name], value, 'saved ' + name);
+  assert.ok(
+    settings.allowExperimentalLocalModels === undefined ||
+      settings.allowExperimentalLocalModels === false,
+    'experimental local-model override remains disabled'
+  );
   assert.equal(settings.worktree, undefined, 'lead worktree remains unselected');
   assert.ok(
     settings.extraCliArgs === undefined || settings.extraCliArgs === '',
@@ -182,6 +187,13 @@ export function assertMixedSavedSettings(state: Record<string, unknown>, workspa
 
 /** Read original Launch controls and its original JSON editor; never inject renderer state. */
 export async function assertMixedLaunchHydration(cdp: UiCdpPort, ui: Controls) {
+  // The original Launch form unmounts these controls while its optional section is closed.
+  // Open it before inspecting the roster/lead on every first/reopened/stopped readback.
+  await expand(cdp, ui, 'Optional launch settings');
+  await ui.waitRead(
+    `(() => {const rows=[...document.querySelectorAll('[role="dialog"] [data-role="member-row"] input[aria-label^="Member "]')];return rows.length===2&&rows[0].value==='bob'&&rows[1].value==='carol';})()`,
+    'both original saved provider rows hydrate after expanding their section'
+  );
   const lead = '[role="dialog"] button[aria-label*=" provider,"][aria-label*="Opus 4.6"]';
   await ui.waitRead(
     `Boolean(document.querySelector(${desktopJsLiteral(lead)}))`,
@@ -232,6 +244,7 @@ export async function assertMixedLaunchHydration(cdp: UiCdpPort, ui: Controls) {
     for (const [key, value] of Object.entries(expected))
       assert.deepEqual(actual[key], value, expected.name + ' hydrated ' + key);
   }
+  await ui.scrollTo('[role="dialog"] button', 'original roster JSON close control', 'Hide JSON');
   await ui.click('[role="dialog"] button', 'close original roster JSON', 'Hide JSON');
   return { prompt: 'NATIVE_TEAM_ONE', members: rows };
 }

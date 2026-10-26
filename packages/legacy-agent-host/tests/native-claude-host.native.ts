@@ -1,3 +1,4 @@
+import { uploadNativeMessagePdf, readNativeMessagePdf } from './fixtures/native-message-pdf.ts';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, realpath, writeFile } from 'node:fs/promises';
@@ -26,6 +27,13 @@ test('standalone Host applies selected model/effort to actual native requests an
     provider: { path: await realpath(resolve(repo, artifact)), sha256: '' },
     host: { entry, entrySha256: await fileHash(entry), sourceSha256: await treeHash(join(pkg, 'src'), '.ts'), distSha256: await treeHash(join(pkg, 'dist'), '.js') },
     native: { path: '', sha256: '' },
+    sdk: { path: '', sha256: '', version: '' },
+    fixtureSources: {
+      test: await fileHash(import.meta.filename),
+      model: await fileHash(join(import.meta.dirname, 'fixtures/native-claude-team/model.ts')),
+      pdf: await fileHash(join(import.meta.dirname, 'fixtures/native-message-pdf.ts')),
+      helper: await fileHash(join(import.meta.dirname, 'fixtures/native-host.ts')),
+    },
   };
   artifacts.provider.sha256 = await fileHash(artifacts.provider.path);
   assert.match(process.env.LEGACY_NATIVE_PROVIDER_SHA256 ?? '', /^[a-f0-9]{64}$/);
@@ -37,6 +45,10 @@ test('standalone Host applies selected model/effort to actual native requests an
   // Resolve exactly as pinned SDK query does; never select a PATH executable.
   const providerRequire = createRequire(import.meta.resolve('@agent-teams/provider-implementations/claude'));
   const sdk = providerRequire.resolve('@anthropic-ai/claude-agent-sdk');
+  artifacts.sdk.path = await realpath(sdk);
+  artifacts.sdk.sha256 = await fileHash(artifacts.sdk.path);
+  artifacts.sdk.version = String(record(JSON.parse(await readFile(join(dirname(sdk), 'package.json'), 'utf8')) as unknown).version);
+  assert.equal(artifacts.sdk.version, '0.3.305');
   const sdkRequire = createRequire(sdk);
   artifacts.native.path = await realpath(sdkRequire.resolve('@anthropic-ai/claude-agent-sdk-darwin-arm64/claude'));
   artifacts.native.sha256 = await fileHash(artifacts.native.path);
@@ -46,12 +58,14 @@ test('standalone Host applies selected model/effort to actual native requests an
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-native-claude-host-')));
   t.diagnostic(`TEST receipt: ${join(root, 'receipt.json')}`);
   for (const directory of ['home', 'config', 'tmp', 'workspace', 'store', 'xdg-config', 'xdg-data', 'xdg-cache']) await mkdir(join(root, directory), { mode: 0o700 });
-  const model = await startNativeTeamModel({ requireVisibleReply: true });
+  const model = await startNativeTeamModel({ requireVisibleReply: true, pdfAttachment: true });
   let current: ReturnType<typeof startHost> | undefined;
   const hosts: ReturnType<ReturnType<typeof startHost>['facts']>[] = [];
   const receipts: Record<string, unknown>[] = [];
   let finalRuntime: Record<string, unknown> = {};
   let launchEvidence: Record<string, unknown> = {};
+  let pdfReference: Awaited<ReturnType<typeof uploadNativeMessagePdf>> | undefined;
+  let pdfProof: Awaited<ReturnType<typeof readNativeMessagePdf>> | undefined;
   let passed = false;
   try {
     const namespace = basename(root);
@@ -99,6 +113,7 @@ test('standalone Host applies selected model/effort to actual native requests an
       return envelope(commandId, { operation: 'message.send', payload: {
         to: 'alice', text: `NATIVE_TEAM_${label}`, messageId: commandId,
         summary: `TEST prepared human message ${label}`, actionMode: 'do',
+        ...(label === 'TWO' ? { attachments: [pdfReference!] } : {}),
       } });
     };
     current = start();
@@ -123,8 +138,9 @@ test('standalone Host applies selected model/effort to actual native requests an
     }
     assert.equal(ready, true, 'actual D native mandatory MCP discovery with prepared options');
     launchEvidence = { originalModel: 'claude-sonnet-4-6', selectedModel: 'claude-opus-4-6', selectedEffort: 'medium', startCommandId: 'TEST-selected-launch-options', launch: started.value };
+    pdfReference = await uploadNativeMessagePdf(current, envelope);
     for (const label of ['ONE', 'TWO']) {
-      const receipt = await current.rpc('team.execute', command(label));
+      const receipt: Record<string, unknown> = await current.rpc('team.execute', command(label));
       assert.equal(receipt.ok, true); assert.equal(record(receipt.value).phase, 'completed');
       receipts.push(receipt);
       const inputId = record(record(receipt.value).effects).deliveryId;
@@ -144,6 +160,12 @@ test('standalone Host applies selected model/effort to actual native requests an
       assert.deepEqual(await current.rpc('team.execute', command(label)), receipt);
       assert.equal((await current.rpc('runtime.dispatch', envelope('TEST-resume', { memberId: 'alice-id' }))).ok, true);
     }
+    pdfProof = await readNativeMessagePdf(current, envelope, receipts[1]!);
+    const pdfObservations = model.observations.filter(item => item.nativePdf !== undefined);
+    assert.equal(pdfObservations.length, 1, 'actual native second-DM PDF request observed');
+    assert.equal(pdfObservations[0]!.nativePdf!.title, pdfReference.artifactId);
+    assert.equal(pdfObservations[0]!.nativePdf!.sha256, pdfProof.sha256);
+    assert.equal(pdfObservations[0]!.nativePdf!.byteLength, pdfProof.byteLength);
     const listed = await current.rpc('team.tasks.list', envelope('TEST-list', null));
     assert.equal(listed.ok, true);
     const tasks = listed.value as unknown[];
@@ -181,6 +203,7 @@ test('standalone Host applies selected model/effort to actual native requests an
     const recovered = await current.rpc('runtime.read', envelope('TEST-recovered', { memberId: 'alice-id' }));
     assert.equal(recovered.ok, true); assert.equal(record(recovered.value).attached, false);
     assert.equal((record(recovered.value).inputs as unknown[]).length, 2);
+    assert.deepEqual(await readNativeMessagePdf(current, envelope, receipts[1]!), pdfProof);
     assert.equal((await current.rpc('runtime.dispatch', envelope('TEST-recover-outbox', { memberId: 'alice-id' }))).ok, true);
     await current.close(); hosts.push(current.facts()); current = undefined;
     assert.equal(model.observations.length, requestsBeforeRestart, 'recovered receipts/outbox never launch or resubmit native inputs');
@@ -193,7 +216,7 @@ test('standalone Host applies selected model/effort to actual native requests an
       await model.close();
       await writeFile(join(root, 'receipt.json'), JSON.stringify({
         status: passed ? 'PASS' : 'INCOMPLETE', root, artifacts, hosts,
-        cleanupConfirmed, businessReceipts: receipts, runtime: finalRuntime, launchEvidence,
+        cleanupConfirmed, businessReceipts: receipts, runtime: finalRuntime, launchEvidence, pdfProof,
         modelObservations: model.observations, modelFailures: model.failures,
         scope: 'Explicit model/effort launch configuration through standalone Host stdio + RuntimeTeamCoordinator + public D + actual Claude native HTTP/MCP, two rich inputs and canonical replies, restart/replay without new allocation',
         excluded: ['Desktop UI', 'mixed providers', 'whole P4', 'multi-member team/bootstrap', 'real authentication'],

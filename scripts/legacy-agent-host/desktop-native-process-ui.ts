@@ -136,7 +136,7 @@ export async function qualifyColdProcessUi(
   // Actual unified renderer read, never a monkeypatch or alternate mutation path.
   const data = row(
     await cdp.evaluate(
-      `(async()=>{const {api}=await import('/src/renderer/api/index.ts');return await api.teams.getData(${desktopJsLiteral(selection)});})()`
+      `(async()=>{const {api}=await import('/api/index.ts');return await api.teams.getData(${desktopJsLiteral(selection)});})()`
     )
   );
   const inventory = (data.processes as unknown[]).map(row);

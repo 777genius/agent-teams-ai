@@ -1,7 +1,8 @@
 import { assertBackendRequestGuard, BackendRoutingError } from '../application/backendBinding';
 
+import { type CapturedHostClient, observeCapturedHostStartup } from './CapturedHostClient';
+
 import type { BackendOwnerBinding, BackendRequestGuard } from '../application/backendBinding';
-import type { CapturedHostClient } from './CapturedHostClient';
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 
 /** Display filtering only; original immutable handles remain bound for exact deletion receipt lookup. */
@@ -20,8 +21,11 @@ export async function readCapturedTeamRetirements(options: {
     if (!available()) throw new BackendRoutingError('unavailable');
   };
   current();
+  observeCapturedHostStartup('owner-start', 'retirement-read');
   await start();
+  observeCapturedHostStartup('owner-started', 'retirement-read');
   current();
+  observeCapturedHostStartup('read-start', 'retirement-read');
   const result = await client.request(
     'team.lifecycle.retired.read',
     {
@@ -31,6 +35,7 @@ export async function readCapturedTeamRetirements(options: {
     { control: true }
   );
   current();
+  observeCapturedHostStartup('read-complete', 'retirement-read');
   if (
     !result ||
     typeof result !== 'object' ||

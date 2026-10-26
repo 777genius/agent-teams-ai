@@ -1,3 +1,7 @@
+import {
+  selectOpenCodeFailedTool,
+  retainFailedToolObservations,
+} from './NativeFailedToolObservation.js';
 import { lstatSync, realpathSync } from 'node:fs';
 import { digest } from '../team/identity.js';
 import { bindRuntimeInputEvidence } from './bindRuntimeInputEvidence.js';
@@ -130,6 +134,11 @@ export function createOpenCodeInputEvidenceCapture(
       gap(request, key, window, request.gapReason ?? 'unqualified-input-outcome');
       return;
     }
+    const nativeFailure = selectOpenCodeFailedTool(request, options.captured.workspace.path);
+    if (nativeFailure.kind === 'gap') {
+      gap(request, key, window, nativeFailure.reason);
+      return;
+    }
     const final = await snapshotWorkspace({
       workspace: options.captured.workspace,
       toolName: 'opencode.fileChange',
@@ -145,6 +154,25 @@ export function createOpenCodeInputEvidenceCapture(
         ...window.before.warnings,
         ...final.warnings,
       ]);
+      return;
+    }
+    if (nativeFailure.kind === 'failed') {
+      options.withWriteFence(() => {
+        guard(request, key, window);
+        retainFailedToolObservations({
+          selected: nativeFailure,
+          binding: rebound,
+          before: window.before!,
+          after: final,
+          warnings: [...window.warnings],
+          journal,
+          guard: () => {
+            guard(request, key, window);
+          },
+        });
+      });
+      state = { phase: 'gap', baseline: 'ready', reason: 'observed-native-tool-failure-partial' };
+      release(key, window);
       return;
     }
     const qualified = qualifyOpenCodeFileChange(

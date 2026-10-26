@@ -1,12 +1,10 @@
 # Этап 1: протоколы реализации и восстановления
 
-**Физическое отделение провайдеров (24 октября):** исходники `provider-implementations`
-и независимого Session SPI теперь находятся в [old-provider-implementations](https://github.com/agent-teams-ai/old-provider-implementations).
-Перенос подготовлен в [draft PR #1](https://github.com/agent-teams-ai/old-provider-implementations/pull/1), CI Node 24/26 прошёл;
-merge не выполнялся. Зависимости от движка старого `agent-runtime` у этих пакетов нет.
-Host/Team/Runtime owner и адаптеры Desktop остаются во frontend. Выбранные архивы
-не меняются: все 206 provider и 10 SPI emitted-файлов совпадают с отдельным репозиторием.
-Этап 2 по-прежнему не входит в работу.
+**Провайдеры физически отделены:** исходники `provider-implementations` и Session SPI
+находятся в [old-provider-implementations](https://github.com/agent-teams-ai/old-provider-implementations),
+без зависимости от движка старого `agent-runtime`. Host/Team/Runtime owner и адаптеры
+Desktop остаются во frontend. Актуальные выбранные архивы, CI и границы приёмки
+зафиксированы в [сводке программы](README.md); PR остаются Draft, этап 2 исключён.
 
 
 **Обязательное правило UI (прямое указание владельца, 22 октября): использовать
@@ -29,6 +27,14 @@ Host/Team/Runtime owner и адаптеры Desktop остаются во fronte
 runtime framework. P1 закрепляет точные TypeScript shapes и profile limits;
 ниже фиксируется необходимая семантика. Имена полей рабочие. Готовые DTO, locks,
 atomic-write helpers и stores переиспользуются, если выполняют этот контракт.
+
+**Граница OpenCode (указание владельца, 25 октября): только V1.** Все требования
+ниже к OpenCode, его lifecycle, capture, restore и UI относятся к выбранному V1
+profile (`createOpenCodeV1DriverFactory`, текущая CLI 1.19.4). Интеграция и ремонт
+V2, отдельная V2-приёмка и автоматический V2 fallback исключены из текущей работы
+и оценки готовности. V2-код/exports в библиотеке и ссылки в frozen source inventory
+сохраняют статус описи, а не обязательств реализации. Форматы сохранённых данных
+с обозначениями v1/v2 этим решением не отменяются.
 
 ## 1. Identity, привязка и полномочия
 

@@ -269,7 +269,7 @@
     "@typescript/native": "npm:typescript@7.0.2"
   },
   "dependencies": {
-    "@agent-teams/provider-implementations": "file:../../vendor/provider-migration/typed-quality-validation-v2/agent-teams-provider-implementations-0.0.0.tgz",
+    "@agent-teams/provider-implementations": "file:../../vendor/provider-migration/readonly-probe-metadata-v1/agent-teams-provider-implementations-0.0.0.tgz",
     "@agent-teams/provider-session-contracts": "file:../../vendor/provider-migration/finite-claude-custody-v1/agent-teams-provider-session-contracts-0.0.0.tgz",
     "@modelcontextprotocol/sdk": "1.32.0",
     "agent-teams-controller": "workspace:*",

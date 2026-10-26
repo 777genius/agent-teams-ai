@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "status": "SCOPED_NATIVE_TWO_DM_IMAGE_PASS_RETAINED",
+  "scope": "M03/M06 scoped actual OpenCode1.19.4 V1 standalone Host original two-DM PNG serialization and two exact current-input permissions; no Desktop UI",
+  "actualRun": {
+    "jobId": "df4d3d7a6873dacb04273c1495c0a198",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 96148,
+    "originalRoot": "/Volumes/Transcend/dev/TEST-opencode-readiness-ordinary-2dm-5bba4prv/future-run/tmp/TEST-native-opencode-host-MYxhez",
+    "hostSourceSha256": "5684e52ddb682709f668609be23fa6c5f9d664b2b9a994932ee66b59ec30990a",
+    "hostDistSha256": "22fb90ea37fe75075af12d4a198003bbd7b2df844348bad642dc0b03a4e2acea",
+    "providerArchive": "vendor/provider-migration/readiness-recovery-v1/agent-teams-provider-implementations-0.0.0.tgz",
+    "providerArchiveSha256": "4c7f6edb54c64d0798f3045fa029ae1dcf672b1307601c50ba19f04269a75f70",
+    "spiArchiveSha256": "2a6e0e2cc61d7513b6de352d5cc7e2dba6ade8749e76fb4558520b1ea99bbf2e",
+    "nativeVersion": "1.19.4",
+    "nativeSha256": "417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6ebae696b",
+    "nodeVersion": "24.21.0",
+    "nodeSha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+    "observerEnabled": false
+  },
+  "effects": {
+    "originalBusinessInputs": 2,
+    "originalInputTerminals": [
+      "succeeded",
+      "succeeded"
+    ],
+    "originalInputs": [
+      {
+        "inputId": "d176e160-10c2-58cc-9e88-7560a2233de1",
+        "messageId": "e41bc8a6-ac3b-5848-8e7f-7cd705241001",
+        "commandId": "human-native-one"
+      },
+      {
+        "inputId": "b7897d01-6b7a-5987-ae17-359a04428cc2",
+        "messageId": "c304dd38-4c34-50c9-b730-e816e0e5fbc5",
+        "commandId": "human-native-two"
+      }
+    ],
+    "modelObservations": 11,
+    "modelFailures": [],
+    "image": {
+      "messageId": "c304dd38-4c34-50c9-b730-e816e0e5fbc5",
+      "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6",
+      "byteLength": 71,
+      "nativeByteLength": 71,
+      "nativeSha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6",
+      "exactCanonicalBytes": true,
+      "nativeImageObservations": 3,
+      "knownFixturePixels": "2x1 opaque red/green RGBA",
+      "encoding": "image/png;base64"
+    },
+    "canonicalAttachmentBlobVerifiedByOriginalFixture": true,
+    "warmAndColdPublicAttachmentReads": 2,
+    "permissions": {
+      "resolvedCount": 2,
+      "uniqueInteractionRefs": 2,
+      "runtimeInteractionFrames": 2,
+      "bindings": [
+        {
+          "inputId": "d176e160-10c2-58cc-9e88-7560a2233de1",
+          "interactionRef": "msg_17477a86d0001974f51cb51d30:per_17477be84001aIbxlvIWF2ZPF4",
+          "phase": "resolved",
+          "kind": "permission"
+        },
+        {
+          "inputId": "b7897d01-6b7a-5987-ae17-359a04428cc2",
+          "interactionRef": "msg_174781fee000bb9f0d1647bba8:per_174782035001LJDOMBtm2i6PrD",
+          "phase": "resolved",
+          "kind": "permission"
+        }
+      ],
+      "originalCurrentInputIdentityAsserted": true,
+      "decision": "allow",
+      "nativeWireRoute": "POST /permission/{requestID}/reply",
+      "nativeWireReply": "once",
+      "noGrantReplay": true
+    },
+    "coldHost": {
+      "newActualHost": true,
+      "runtimeOpenFrames": 0,
+      "publicReadForSameOriginalMessage": true,
+      "pinnedOriginalFixtureAssertsExactWarmColdBytesAndNoModelResubmission": true,
+      "activityGapReason": "incarnation"
+    },
+    "originalStop": {
+      "successfulFrames": 1,
+      "phase": "closed",
+      "custody": "released"
+    },
+    "originalHostExitCodes": [
+      0,
+      0
+    ],
+    "originalHostSignals": [
+      null,
+      null
+    ],
+    "cleanupConfirmed": true,
+    "cleanupLimit": "Original Runtime/Host receipts only; no independent whole-tree native process absence claim"
+  },
+  "verificationScope": {
+    "testCloseHelper": "TEST helper closeNativeHostInput uses existing TEAM_HOST_DISPOSE_TIMEOUT_MS60000 before termination fallback; both original Host receipts report exit0/signalnull. This is not independent proof of absence of all native descendants.",
+    "productionTimersChanged": false,
+    "providerProfileTimeoutMs": 45000,
+    "permissionEndpointTimeoutMs": 2500,
+    "fixtureSources": {
+      "test": "6c62ba7d88135d35743564ea72b9349d07e8eb5a65af26af9497b23ed35f4f2c",
+      "model": "e56f2b16a5fc5ffd0be2bd39a6a326f3d7d298b593f791cb6cecb60506400aaa",
+      "image": "db0260ab11af63d5e056a045b895ebc51396296c507b6643df2596db8771007f",
+      "png": "e56cc0a2636239c45184e8b889c78aab38b40f9e8f7c8f8736180af9b591cd73"
+    },
+    "harness": {
+      "sha256": "6c62ba7d88135d35743564ea72b9349d07e8eb5a65af26af9497b23ed35f4f2c",
+      "modelSha256": "e56f2b16a5fc5ffd0be2bd39a6a326f3d7d298b593f791cb6cecb60506400aaa",
+      "helperSha256": "a39f9c112530ec8e4d6b3f78fedf3634d10d6d35f23502243f1cb54217f09297"
+    }
+  },
+  "retention": {
+    "collectorJobId": "e401ad95491692f99a0f182ee22faa2e",
+    "collectorExitCode": 0,
+    "files": 2330,
+    "bytes": 128544172,
+    "collectionErrors": [],
+    "qualificationErrors": [],
+    "retainedRoot": "/Volumes/Transcend/dev/TEST-opencode-ordinary-retention-argv-successor-qj427n05/retained-native-image-opencode-df4d3d7a6873dacb04273c1495c0a198",
+    "manifestSha256": "12c351dadb036b26da6fb2ff7059de5069353496abbc2e2c627f53b0ec8e515b",
+    "originalRawReceiptSha256": "63fc74e6a286665e351cd8f9e7f6dd61555ef49b8463c8260f68cc8eb1a89bc1",
+    "originalJobStateSha256": "dbf8a0a9d88b5be59b325f9247b496acd47ed457ddfb1d488d59a6c66487e53b",
+    "collectorSha256": "ba60e8808518330c6fbfc145d091fb0eab98e8f27d43ff1b63b6cb183e9aa0fe",
+    "fixtureImageOracleSha256": "db0260ab11af63d5e056a045b895ebc51396296c507b6643df2596db8771007f",
+    "verification": "Qualified collector0; manifest file count/byte sum and critical retained receipt/job/issuance/collector file pins verified read-only; original native workflow was not repeated."
+  },
+  "firstRetentionOracleFailurePreserved": {
+    "collectorJobId": "eef2c18906eefedae6c0e81b1d99b170",
+    "status": "RAW_RETAINED_UNQUALIFIED",
+    "collectionErrors": [],
+    "manifestSha256": "186e1e30976d3ce2dea5223bc74742c2851cc6286d6a6b494321fd1e79f19cfe",
+    "cause": "Collector accepted only exact legacy prefix selector; actual issued selector was narrower full anchored first-test title. Successor accepts only either exact known string; no native replay or other oracle change."
+  },
+  "priorOriginalFailuresNotUpgraded": [
+    {
+      "jobId": "2be1c5ab8fb3050d215f59a59b856fd9",
+      "scope": "Old uncertain permission grant/input before canonical reply route correction stays UNKNOWN."
+    },
+    {
+      "jobId": "cd6de218aa74ff0238390e6710c82ebd",
+      "scope": "Old first-input readiness refusal remains not-sent/INCOMPLETE."
+    },
+    {
+      "jobId": "4ffef063347d7cc513000bbf6659f377",
+      "scope": "Old diagnostic original input remains UNKNOWN; metadata/read cause not retroactively established."
+    },
+    {
+      "jobId": "68e0f5be6c251c00a9037c8484ef387b",
+      "scope": "Earlier diagnostic first input succeeded/resolved; second not-sent and original Host exit unconfirmed remain separate raw facts."
+    }
+  ],
+  "notClaimed": [
+    "Desktop UI or native file picker",
+    "vendor authentication/inference",
+    "all OS/profiles or OpenCode V2",
+    "independent whole-tree cleanup or original M19 SDK release/HOLD clearance",
+    "whole M03/M06/M13 or final Stage1 gates",
+    "final frontend CI/current packed acceptance",
+    "Stage2",
+    "merge/release"
+  ]
+}

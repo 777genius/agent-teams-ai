@@ -96,7 +96,8 @@ export class FileStoppedTeamImport {
     this.directory = join(options.root, '.host-team-registry', 'imports');
   }
   private authorize(contextId: string, retained = false): void {
-    if (retained && this.options.assertLifecycleWriter) this.options.assertLifecycleWriter(); else this.options.assertWriter();
+    if (retained && this.options.assertLifecycleWriter) this.options.assertLifecycleWriter();
+    else this.options.assertWriter();
     if (!this.options.contextIds.includes(contextId)) throw new TeamOwnerError('forbidden');
   }
   private ensure(directory: string): void {
@@ -501,6 +502,8 @@ export class FileStoppedTeamImport {
       members: definition.members,
       grants: definition.grants.map((grant) => ({ ...grant, revision: 1 })),
       ready: true,
+      // This destination is a new product-only owner, never the imported source Runtime.
+      runtimeNeverLaunched: true,
       savedSettings: definition.savedSettings,
     };
     if (digest(state) !== digest(expectedState)) hold();
@@ -621,19 +624,38 @@ export class FileStoppedTeamImport {
   }
   /** Trusted lifecycle composition only; caller supplies the original exact Team owner fence. */
   publication(teamId: string, withTeamFence: <T>(operation: () => T) => T) {
-    const found = this.readAll(true).filter(intent => intent.record.teamId === teamId);
+    const found = this.readAll(true).filter((intent) => intent.record.teamId === teamId);
     if (!found.length) return undefined;
     if (found.length !== 1 || found[0]!.phase !== 'published') return hold();
     const intent = found[0]!;
-    return createImportPublication({ root: this.options.root, binding: intent.definition.binding,
-      commandId: intent.commandId, sourceId: intent.request.sourceId, snapshotDigest: intent.request.snapshotDigest,
-      files: intent.files, withTeamFence, assertCurrent: () => {
-        if (this.options.assertLifecycleWriter) this.options.assertLifecycleWriter(); else this.options.assertWriter();
+    return createImportPublication({
+      root: this.options.root,
+      binding: intent.definition.binding,
+      commandId: intent.commandId,
+      sourceId: intent.request.sourceId,
+      snapshotDigest: intent.request.snapshotDigest,
+      files: intent.files,
+      withTeamFence,
+      assertCurrent: () => {
+        if (this.options.assertLifecycleWriter) this.options.assertLifecycleWriter();
+        else this.options.assertWriter();
         const retained = this.read(intent.commandId, true);
-        if (!retained || retained.phase !== 'published' || retained.fingerprint !== intent.fingerprint) hold();
-        const state = JSON.parse(readImportBytes(join(this.options.root, 'teams', intent.record.teamName, '.host-owner/state.json'), 1024 * 1024).toString('utf8')) as { ready?: unknown; binding?: unknown };
-        if (state.ready !== true || digest(state.binding) !== digest(intent.definition.binding)) hold();
-      } });
+        if (
+          !retained ||
+          retained.phase !== 'published' ||
+          retained.fingerprint !== intent.fingerprint
+        )
+          hold();
+        const state = JSON.parse(
+          readImportBytes(
+            join(this.options.root, 'teams', intent.record.teamName, '.host-owner/state.json'),
+            1024 * 1024
+          ).toString('utf8')
+        ) as { ready?: unknown; binding?: unknown };
+        if (state.ready !== true || digest(state.binding) !== digest(intent.definition.binding))
+          hold();
+      },
+    });
   }
   readTaskAttachment(teamId: string, currentTask: unknown, payload: unknown) {
     const found = this.readAll().filter((intent) => intent.record.teamId === teamId);
@@ -680,7 +702,8 @@ export class FileStoppedTeamImport {
     };
   }
   private readAll(retained = false): ImportIntent[] {
-    if (retained && this.options.assertLifecycleWriter) this.options.assertLifecycleWriter(); else this.options.assertWriter();
+    if (retained && this.options.assertLifecycleWriter) this.options.assertLifecycleWriter();
+    else this.options.assertWriter();
     plainImportAncestors(this.options.root);
     let names: string[];
     try {

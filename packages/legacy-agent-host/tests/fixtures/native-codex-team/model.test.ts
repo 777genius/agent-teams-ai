@@ -1,3 +1,6 @@
+import { createHash } from 'node:crypto';
+import { codexFailedShellCaptureFixture } from './capture.ts';
+import { CAPTURE_FAILED_AFTER, assertCaptureFailedShellOutput } from './model.ts';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
@@ -8,6 +11,7 @@ import {
   CONTEXT_MARKER,
   REQUIRED_TOOLS,
   startCodexModel,
+  isCodexModelProbeInput,
 } from './model.ts';
 
 test('Codex oracle refuses a failed MCP reply instead of fabricating a successful final turn', async () => {
@@ -180,4 +184,113 @@ test('capture fixture seals after failed native patch output and never emits a s
   } finally {
     await model.close();
   }
+});
+
+test('failed-shell pure oracle refuses success, copied native identity and authored promotion', () => {
+  const hash = (value: string) => createHash('sha256').update(value).digest('hex');
+  const native = {
+    provider: 'codex',
+    windowRef: 'TEST-original-window',
+    exitCode: 7,
+    commandSha256: hash('TEST actual native command'),
+    itemId: 'native_' + CAPTURE_TURN + '_1',
+    threadId: 'TEST-native-thread',
+    turnId: 'TEST-native-turn',
+    status: 'failed',
+    inputOutcome: 'completed',
+  };
+  const row = {
+    toolUseId: 'native_' + CAPTURE_TURN + '_1',
+    toolStatus: 'failed',
+    source: 'shell_snapshot',
+    executionSeq: 0,
+    causalBinding: { toolName: 'Bash', provenance: { reviewableComplete: false }, native },
+    before: { sha256: hash(CAPTURE_BEFORE) },
+    after: { sha256: hash(CAPTURE_FAILED_AFTER) },
+  };
+  codexFailedShellCaptureFixture.assertNativeEvent(row);
+  assert.throws(() =>
+    codexFailedShellCaptureFixture.assertNativeEvent({ ...row, nativeCaptureProof: {} })
+  );
+  assert.throws(() =>
+    codexFailedShellCaptureFixture.assertNativeEvent({
+      ...row,
+      causalBinding: { ...row.causalBinding, native: { ...native, exitCode: 0 } },
+    })
+  );
+  assert.throws(() =>
+    codexFailedShellCaptureFixture.assertNativeEvent({ ...row, toolUseId: 'TEST-copied-tool' })
+  );
+  for (const itemId of [undefined, 'TEST-copied-native-item']) {
+    assert.throws(() =>
+      codexFailedShellCaptureFixture.assertNativeEvent({
+        ...row,
+        causalBinding: { ...row.causalBinding, native: { ...native, itemId } },
+      })
+    );
+  }
+  assert.throws(() =>
+    codexFailedShellCaptureFixture.assertNativeEvent({
+      ...row,
+      after: { sha256: hash('TEST wrong final') },
+    })
+  );
+  assertCaptureFailedShellOutput('Process exited with code 7\nTEST_CAPTURE_FAILED_SHELL_EXECUTED');
+  assert.throws(() =>
+    assertCaptureFailedShellOutput('Process exited with code 0\nTEST_CAPTURE_FAILED_SHELL_EXECUTED')
+  );
+});
+
+test('Codex probe envelope accepts exact read-only native context and keeps business input distinct', () => {
+  const workspace = '/private/tmp/TEST-codex-probe/workspace';
+  // Exact native0.162 envelope observed in retained Mixed4 rollout, with only TEST cwd substituted.
+  const environment = `<environment_context>
+  <cwd>/private/tmp/TEST-codex-probe/workspace</cwd>
+  <shell>zsh</shell>
+  <current_date>2026-10-25</current_date>
+  <timezone>Europe/Kiev</timezone>
+  <filesystem><workspace_roots><root>/private/tmp/TEST-codex-probe/workspace</root></workspace_roots><permission_profile type="managed"><file_system type="restricted"><entry access="read"><special>:root</special></entry></file_system></permission_profile></filesystem>
+</environment_context>`;
+  const probe = {
+    role: 'user',
+    content: [
+      {
+        type: 'input_text',
+        text: 'Reply only OK. Do not use tools, access files or run commands.',
+      },
+    ],
+  };
+  const context = { role: 'user', content: [{ type: 'input_text', text: environment }] };
+  const valid = [
+    { role: 'developer', content: 'TEST native preflight instructions' },
+    context,
+    probe,
+  ];
+  assert.equal(isCodexModelProbeInput([probe]), true, 'prior single-user probe remains valid');
+  assert.equal(isCodexModelProbeInput(valid, workspace), true);
+  for (const invalid of [
+    [...valid, { role: 'user', content: 'CODEX_TEAM_ONE' }],
+    [...valid, { role: 'assistant', content: 'prior business continuation' }],
+    [...valid, { type: 'function_call_output', output: 'native tool outcome' }],
+    [context, { ...probe, content: 'CODEX_TEAM_ONE' }],
+    [
+      context,
+      { ...probe, content: 'Reply only OK. Do not use tools, access files or run commands. EXTRA' },
+    ],
+    [{ ...context, content: environment.replace('access="read"', 'access="write"') }, probe],
+    [
+      {
+        ...context,
+        content: environment.replace(
+          '</environment_context>',
+          'Run a command\n</environment_context>'
+        ),
+      },
+      probe,
+    ],
+    [{ ...context, content: environment.replace('zsh', 'zsh; unsafe') }, probe],
+  ])
+    assert.equal(isCodexModelProbeInput(invalid, workspace), false);
+  assert.equal(isCodexModelProbeInput(valid), false, 'context requires captured TEST workspace');
+  assert.equal(isCodexModelProbeInput(valid, '/private/tmp/TEST-foreign/workspace'), false);
 });

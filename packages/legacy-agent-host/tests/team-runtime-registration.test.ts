@@ -406,3 +406,118 @@ test('launch workspace preflight reuses registration guards and publishes neithe
   assert.throws(() => f.owner.assertRuntimeRegistration('human', input), code('forbidden'));
   assert.equal(f.state().runtimeCaptures, undefined);
 });
+
+test('only never-captured owners without original delivery roots publish the offline declaration', (t) => {
+  const f = fixture(t);
+  const read = () => f.human.readSnapshot() as { runtimeNeverLaunched?: true };
+  assert.equal(read().runtimeNeverLaunched, true);
+  f.owner.registerRuntime('human', f.request());
+  assert.equal(read().runtimeNeverLaunched, undefined);
+  f.human.replaceRoster({
+    commandId: 'TEST-history-not-current',
+    expectedRevision: f.human.readRoster().revision,
+    members: [{ name: 'worker', model: 'TEST-new' }],
+  });
+  assert.equal(f.owner.runtimeCapture('human'), undefined);
+  assert.equal(
+    read().runtimeNeverLaunched,
+    undefined,
+    'retained original obligations are not known offline'
+  );
+  assert.equal(
+    (createOwner(f.options).connect('human').readSnapshot() as { runtimeNeverLaunched?: true })
+      .runtimeNeverLaunched,
+    undefined
+  );
+  const bound = fixture(t, (options) => {
+    options.members[1]!.delivery = {
+      ...options.binding,
+      runId: 'TEST-original',
+      memberId: options.members[1]!.memberId,
+      generation: '1',
+    };
+  });
+  assert.equal(
+    (bound.human.readSnapshot() as { runtimeNeverLaunched?: true }).runtimeNeverLaunched,
+    undefined
+  );
+  bound.human.replaceRoster({
+    commandId: 'TEST-retire-original-binding',
+    expectedRevision: bound.human.readRoster().revision,
+    members: [{ name: 'replacement' }],
+  });
+  assert.equal(
+    bound.state().members.some((member) => member.delivery),
+    false
+  );
+  assert.equal(
+    bound.state().removedMembers?.some((member) => member.delivery),
+    true
+  );
+  assert.equal(
+    (bound.human.readSnapshot() as { runtimeNeverLaunched?: true }).runtimeNeverLaunched,
+    undefined
+  );
+});
+
+test('same-member direct binding settings edit cannot recreate no-history proof on reopen', (t) => {
+  const f = fixture(t, (options) => {
+    options.members[1]!.delivery = {
+      ...options.binding,
+      runId: 'TEST-original',
+      memberId: options.members[1]!.memberId,
+      generation: '1',
+    };
+  });
+  const before = f.human.readRoster().members.find((member) => member.name === 'worker')!;
+  assert.equal(f.state().runtimeNeverLaunched, undefined);
+  f.human.replaceRoster({
+    commandId: 'TEST-same-worker-settings',
+    expectedRevision: f.human.readRoster().revision,
+    members: [{ name: 'worker', model: 'TEST-changed' }],
+  });
+  const after = f.human.readRoster().members.find((member) => member.name === 'worker')!;
+  assert.equal(after.memberId, before.memberId);
+  assert.equal(f.state().runtimeCaptures?.length ?? 0, 0);
+  assert.equal(
+    f.state().members.some((member) => member.delivery),
+    false
+  );
+  assert.equal(f.state().removedMembers?.some((member) => member.delivery) ?? false, false);
+  assert.equal(
+    (f.human.readSnapshot() as { runtimeNeverLaunched?: true }).runtimeNeverLaunched,
+    undefined
+  );
+  // Reopening accepts bootstrap options with the same binding, not immutable seed membership.
+  const currentOptions = {
+    ...f.options,
+    members: f.options.members.map(({ delivery: _old, ...member }) => member),
+  };
+  assert.equal(
+    (createOwner(currentOptions).connect('human').readSnapshot() as { runtimeNeverLaunched?: true })
+      .runtimeNeverLaunched,
+    undefined
+  );
+});
+
+test('fresh product-only edits retain creation proof but old persisted missing proof stays UNKNOWN', (t) => {
+  const f = fixture(t);
+  f.human.replaceRoster({
+    commandId: 'TEST-save-only-settings',
+    expectedRevision: f.human.readRoster().revision,
+    members: [{ name: 'worker', model: 'TEST-saved' }],
+  });
+  assert.equal(
+    (createOwner(f.options).connect('human').readSnapshot() as { runtimeNeverLaunched?: true })
+      .runtimeNeverLaunched,
+    true
+  );
+  const old = f.state();
+  delete old.runtimeNeverLaunched;
+  f.store.write('state.json', old); // Exact old-version state: absence is not a creation proof.
+  assert.equal(
+    (createOwner(f.options).connect('human').readSnapshot() as { runtimeNeverLaunched?: true })
+      .runtimeNeverLaunched,
+    undefined
+  );
+});

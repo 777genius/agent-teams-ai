@@ -749,6 +749,8 @@ import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProvider
 import { createdTeamSelectionSignature } from '@shared/utils/createdTeamReadiness';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
+import { ForegroundModelChecks } from '../../../../../src/features/agent-backend/main/application/ForegroundModelChecks';
+
 import type {
   CliInstallationStatus,
   CliProviderId,
@@ -838,6 +840,233 @@ function createAuthoritativeProviderStatus(
 }
 
 describe('LaunchTeamDialog', () => {
+  it.each([
+    'all-ready',
+    'close',
+    'staggered',
+    'new-draft',
+    'unmount-reopen',
+    'close-unmount-reopen',
+  ] as const)(
+    'serializes captured Host checks across effect batches and supersedes only a new draft (%s)',
+    async (mode) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.stubGlobal('crypto', webcrypto);
+      const key = 'host-team:TEST-owner';
+      vi.mocked(api.teams.getSavedRequest).mockResolvedValue({
+        teamName: key,
+        savedSettingsFingerprint: 'b'.repeat(64),
+        cwd: '/tmp/project',
+        providerId: 'anthropic',
+        model: 'opus',
+        syncModelsWithLead: false,
+        members: [
+          { name: 'bob', providerId: 'codex', model: 'gpt-5.4' },
+          {
+            name: 'carol',
+            providerId: 'opencode',
+            model: 'opencode/big-pickle',
+          },
+        ],
+      });
+      if (mode === 'staggered') {
+        // Keep the independent account lookup settled; stagger only provider-loading observations.
+        vi.mocked(api.getCodexAccountSnapshot).mockResolvedValueOnce({
+          preferredAuthMode: 'api_key',
+          effectiveAuthMode: 'api_key',
+          launchAllowed: true,
+          launchIssueMessage: null,
+          launchReadinessState: 'ready_api_key',
+          appServerState: 'healthy',
+          appServerStatusMessage: null,
+          managedAccount: null,
+          apiKey: {
+            available: true,
+            source: 'environment',
+            sourceLabel: 'TEST account fixture',
+          },
+          requiresOpenaiAuth: false,
+          login: { status: 'idle', error: null, startedAt: null },
+          rateLimits: null,
+          updatedAt: new Date().toISOString(),
+        });
+        vi.mocked(isTeamProviderRuntimeStatusLoading).mockImplementation(
+          (_provider, _status, loading) => loading === true
+        );
+        storeState.cliProviderStatusLoading = { codex: true, opencode: true };
+      }
+      // Main includes preparationId, so a fresh dialog has a distinct check identity.
+      let dialogLifetime = 0;
+      const foreground = new ForegroundModelChecks();
+      const pending: (() => void)[] = [],
+        effects: string[] = [];
+      vi.mocked(runProviderPrepareDiagnostics).mockImplementation(async (input) => {
+        const result = await foreground.run(
+          JSON.stringify([
+            dialogLifetime,
+            key,
+            input.providerId,
+            input.selectedModelIds,
+            input.selectedModelChecks,
+          ]),
+          async (current) => {
+            effects.push('start:' + input.providerId);
+            await new Promise<void>((resolve) => pending.push(resolve));
+            const ready = current();
+            effects.push((ready ? 'finish:' : 'superseded:') + input.providerId);
+            return { ready, message: 'TEST exact member check' };
+          }
+        );
+        return {
+          status: result.ready ? 'ready' : 'failed',
+          warnings: [],
+          details: [result.message ?? ''],
+          modelResultsById: {},
+        };
+      });
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      const render = (open = true) =>
+        root.render(
+          React.createElement(LaunchTeamDialog, {
+            mode: 'launch',
+            open,
+            teamName: key,
+            members: [],
+            defaultProjectPath: '/tmp/project',
+            provisioningError: null,
+            clearProvisioningError: vi.fn(),
+            activeTeams: [],
+            onClose: () => {
+              root.render(null);
+            },
+            onLaunch: vi.fn(async () => {}),
+          })
+        );
+      const settle = async () => {
+        for (let i = 0; i < 4; i++)
+          await act(async () => {
+            await flush();
+          });
+      };
+      const finish = async () => {
+        expect(pending).toHaveLength(1);
+        await act(async () => {
+          pending.shift()!();
+          await flush();
+        });
+        await settle();
+      };
+      try {
+        await act(async () => {
+          render();
+          await flush();
+        });
+        await settle();
+        expect(vi.mocked(runProviderPrepareDiagnostics).mock.calls).toHaveLength(1);
+        expect(effects).toEqual(['start:anthropic']);
+        if (mode === 'staggered') {
+          for (const loading of [{ opencode: true }, {}]) {
+            await act(async () => {
+              storeState.cliProviderStatusLoading = loading;
+              render();
+              await flush();
+            });
+            await settle();
+            expect(vi.mocked(runProviderPrepareDiagnostics).mock.calls).toHaveLength(1);
+            expect(effects).toEqual(['start:anthropic']);
+          }
+        }
+        if (mode === 'close')
+          await act(async () => {
+            render(false);
+            await flush();
+          });
+        if (mode === 'unmount-reopen' || mode === 'close-unmount-reopen') {
+          await act(async () => {
+            if (mode === 'close-unmount-reopen')
+              host.querySelector<HTMLButtonElement>('[data-testid="dismiss-dialog"]')!.click();
+            else root.render(null);
+            await flush();
+          });
+          dialogLifetime += 1;
+          await act(async () => {
+            render();
+            await flush();
+          });
+          await settle();
+          expect(vi.mocked(runProviderPrepareDiagnostics).mock.calls).toHaveLength(2);
+          expect(effects).toEqual(['start:anthropic']);
+          await finish();
+          expect(effects).toEqual(['start:anthropic', 'superseded:anthropic', 'start:anthropic']);
+        }
+        if (mode === 'new-draft') {
+          await act(async () => {
+            teamRosterEditorSectionMock.lastProps.onModelChange('sonnet');
+            await flush();
+          });
+          await settle();
+          expect(vi.mocked(runProviderPrepareDiagnostics).mock.calls).toHaveLength(2);
+          expect(effects).toEqual(['start:anthropic']); // New admission awaits original Main cleanup.
+          await finish();
+          expect(effects).toEqual(['start:anthropic', 'superseded:anthropic', 'start:anthropic']);
+          expect(
+            vi.mocked(runProviderPrepareDiagnostics).mock.calls.at(-1)![0].selectedModelIds
+          ).toContain('sonnet');
+        }
+        for (const provider of mode === 'close'
+          ? ['anthropic']
+          : ['anthropic', 'codex', 'opencode']) {
+          await finish();
+          expect(
+            effects,
+            JSON.stringify({
+              effects,
+              dispatched: vi
+                .mocked(runProviderPrepareDiagnostics)
+                .mock.calls.map(([input]) => input.providerId),
+            })
+          ).toContain('finish:' + provider);
+        }
+        const current = [
+          'start:anthropic',
+          'finish:anthropic',
+          'start:codex',
+          'finish:codex',
+          'start:opencode',
+          'finish:opencode',
+        ];
+        expect(effects).toEqual(
+          mode === 'close'
+            ? current.slice(0, 2)
+            : mode === 'new-draft' || mode === 'unmount-reopen' || mode === 'close-unmount-reopen'
+              ? ['start:anthropic', 'superseded:anthropic', ...current]
+              : current
+        );
+        expect(vi.mocked(runProviderPrepareDiagnostics).mock.calls).toHaveLength(
+          mode === 'close'
+            ? 1
+            : mode === 'new-draft' || mode === 'unmount-reopen' || mode === 'close-unmount-reopen'
+              ? 4
+              : 3
+        );
+        if (mode !== 'close')
+          expect(host.textContent).toContain('All selected providers are ready.');
+      } finally {
+        await act(async () => {
+          root.unmount();
+          await flush();
+        });
+        for (let i = 0; i < 4; i++)
+          await act(async () => {
+            for (const done of pending.splice(0)) done();
+            await flush();
+          });
+        host.remove();
+      }
+    }
+  );
   it.each(['unknown', 'edited', 'ready'] as const)(
     'uses explicit Resume in the existing dialog without fresh fallback (%s)',
     async (outcome) => {

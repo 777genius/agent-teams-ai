@@ -897,6 +897,7 @@ function fetchTeamDataFresh(
     (token) => {
       if (!isCurrent()) return Promise.reject(new Error('team data read scope superseded'));
       recordSnapshotEligibility(toTaskDetailScope(teamName, requestScope), token);
+      teamDataReadWork.retireRead(teamName, getTeamDataSnapshotMode(options), requestScope);
       return fetchTeamDataPhysical(teamName, options);
     },
     { forceNew: true }
@@ -3356,7 +3357,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         get().invalidateTaskChangePresence(invalidationState.cacheKeys);
       }
       if (invalidationState.taskIds.length > 0) {
-        await api.review.invalidateTaskChangeSummaries(teamName, invalidationState.taskIds);
+        void api.review
+          .invalidateTaskChangeSummaries(teamName, invalidationState.taskIds)
+          .catch(() => undefined);
       }
     } catch (error) {
       if (!isTeamRequestScopeCurrent(get, teamName, requestScope)) {

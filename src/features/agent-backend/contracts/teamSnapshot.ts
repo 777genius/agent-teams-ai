@@ -9,6 +9,8 @@ export interface BackendTeamSnapshot {
   teamName: string;
   revision: string;
   lifecycle?: BackendTeamLifecycle;
+  /** Selected owner has no current/retained native capture, original binding or pending cleanup. */
+  runtimeNeverLaunched?: true;
   /** Product configuration read together with this snapshot, for coherent dialog hydration. */
   configurationRevision?: string;
   feed: BackendTeamPosition;

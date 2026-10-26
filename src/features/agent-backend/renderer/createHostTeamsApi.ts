@@ -344,7 +344,9 @@ export function createHostTeamsApi(
       const result = view(
         { ...snapshot, processes: readBackendProcesses(processes.value) },
         connection,
-        state?.alive
+        state === null && snapshot.runtimeNeverLaunched && !snapshot.lifecycle?.cleanupPending
+          ? false
+          : state?.alive
       );
       try {
         const configuration = await readHostRosterConfiguration(backend, connection.handle);
@@ -443,6 +445,13 @@ export function createHostTeamsApi(
       const readFence = readOrder.readFence(connection.handle.handleId);
       const state = await lifecycle.read(connection, check);
       readFence();
+      if (!state) {
+        const observed = await snapshot(connection, check);
+        observed.assertCurrent();
+        readFence();
+        if (observed.data.runtimeNeverLaunched && !observed.data.lifecycle?.cleanupPending)
+          return false;
+      }
       if (!state || state.alive === undefined)
         throw new Error('Host team runtime state unavailable');
       return state.alive;

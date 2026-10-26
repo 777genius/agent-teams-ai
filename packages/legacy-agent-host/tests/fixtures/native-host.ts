@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { createInterface } from 'node:readline';
+import { TEAM_HOST_DISPOSE_TIMEOUT_MS } from '../../src/contracts.ts';
 
 export const fileHash = async (path: string) =>
   createHash('sha256')
@@ -73,6 +74,38 @@ export async function treeHash(root: string, suffix: string): Promise<string> {
   return digest.digest('hex');
 }
 
+const isCapturedDisposalBudget = (value: unknown): value is number =>
+  typeof value === 'number' &&
+  Number.isSafeInteger(value) &&
+  value > 0 &&
+  value <= TEAM_HOST_DISPOSE_TIMEOUT_MS;
+
+/** Observe the original child through its captured Host disposal window; this is not a production timer. */
+export async function closeNativeHostInput(
+  original: {
+    endInput(): void;
+    waitExit(timeoutMs: number): Promise<boolean>;
+    terminate(): void;
+  },
+  capturedDisposeTimeoutMs: number | undefined
+): Promise<void> {
+  assert.ok(
+    capturedDisposeTimeoutMs === undefined || isCapturedDisposalBudget(capturedDisposeTimeoutMs),
+    'Host disposal budget must remain within the captured TeamHost contract'
+  );
+  original.endInput();
+  // Before a handshake there is no advertised contract; retain the existing startup-failure bound.
+  const eofObservationMs =
+    capturedDisposeTimeoutMs === undefined ? 12_000 : capturedDisposeTimeoutMs + 2_000;
+  if (!(await original.waitExit(eofObservationMs))) {
+    original.terminate();
+    assert.ok(
+      await original.waitExit(12_000),
+      'captured Host must confirm provider cleanup before exiting'
+    );
+  }
+}
+
 export function startHost(options: {
   node: string;
   entry: string;
@@ -80,19 +113,30 @@ export function startHost(options: {
   profile: string;
   profileHash: string;
   onDiagnostic?(chunk: Buffer): void;
+  testImports?: readonly string[];
+  gitBinDirectory?: string;
   onNotification?(method: string, params: unknown): void;
 }) {
-  const child = spawn(options.node, [options.entry], {
-    cwd: options.root,
-    env: {
-      HOME: join(options.root, 'home'),
-      TMPDIR: join(options.root, 'tmp'),
-      PATH: `${dirname(options.node)}:/usr/bin:/bin`,
-      LEGACY_AGENT_HOST_PROFILE_PATH: options.profile,
-      LEGACY_AGENT_HOST_PROFILE_SHA256: options.profileHash,
-    },
-    stdio: ['pipe', 'pipe', 'pipe'],
-  });
+  const child = spawn(
+    options.node,
+    [...(options.testImports ?? []).flatMap((path) => ['--import', path]), options.entry],
+    {
+      cwd: options.root,
+      env: {
+        HOME: join(options.root, 'home'),
+        TMPDIR: join(options.root, 'tmp'),
+        PATH: [
+          dirname(options.node),
+          ...(options.gitBinDirectory ? [options.gitBinDirectory] : []),
+          '/usr/bin',
+          '/bin',
+        ].join(':'),
+        LEGACY_AGENT_HOST_PROFILE_PATH: options.profile,
+        LEGACY_AGENT_HOST_PROFILE_SHA256: options.profileHash,
+      },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }
+  );
   const lines = createInterface({ input: child.stdout, crlfDelay: Infinity });
   const pending = new Map<
     number,
@@ -103,6 +147,7 @@ export function startHost(options: {
   let stdoutValid = true;
   let diagnosticBytes = 0;
   let exited = false;
+  let capturedDisposeTimeoutMs: number | undefined;
   const rejectPending = (message: string) => {
     for (const waiter of pending.values()) {
       clearTimeout(waiter.timer);
@@ -171,6 +216,14 @@ export function startHost(options: {
       });
       child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n');
       const result = record(await response);
+      if (method === 'host.handshake') {
+        const advertised = record(result.limits).disposeTimeoutMs;
+        assert.ok(
+          isCapturedDisposalBudget(advertised),
+          'Host advertised an invalid disposal budget'
+        );
+        capturedDisposeTimeoutMs = advertised;
+      }
       if (method.startsWith('runtime.activity.') && result.ok === true) {
         const safe = record(result.value);
         assert.ok(
@@ -206,14 +259,18 @@ export function startHost(options: {
       return result;
     },
     async close() {
-      child.stdin.end();
-      if (!(await waitExit(12_000))) {
-        child.kill('SIGTERM');
-        assert.ok(
-          await waitExit(12_000),
-          'captured Host must confirm provider cleanup before exiting'
-        );
-      }
+      await closeNativeHostInput(
+        {
+          endInput: () => {
+            child.stdin.end();
+          },
+          waitExit,
+          terminate: () => {
+            child.kill('SIGTERM');
+          },
+        },
+        capturedDisposeTimeoutMs
+      );
       await exit;
       lines.close();
       for (const waiter of pending.values()) {

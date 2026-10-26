@@ -7,30 +7,34 @@ import {
   CAPTURE_ASSIGNMENT,
   CAPTURE_BEFORE,
   CAPTURE_AFTER,
+  CAPTURE_FAILED_AFTER,
   CONTEXT_MARKER,
   startOpenCodeModel,
 } from './model.ts';
-import type { NativeCaptureFixture } from '../native-input-capture.ts';
+import { assertFailedToolCapture, type NativeCaptureFixture } from '../native-input-capture.ts';
 
 /** Native 1.19.4 profile from the retained real read/edit metadata probe. */
-export const opencodeCaptureFixture: NativeCaptureFixture = {
+const createCaptureFixture = (failedShell = false): NativeCaptureFixture => ({
+  failedShell,
   provider: 'opencode',
   memberName: 'carol',
-  goFlag: 'LEGACY_NATIVE_OPENCODE_CAPTURE_GO',
+  goFlag: failedShell
+    ? 'LEGACY_NATIVE_OPENCODE_FAILED_CAPTURE_GO'
+    : 'LEGACY_NATIVE_OPENCODE_CAPTURE_GO',
   binaryEnv: 'LEGACY_NATIVE_OPENCODE_PATH',
   binarySha256: '417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6ebae696b',
   turn: CAPTURE_TURN,
   assignmentTurn: CAPTURE_ASSIGNMENT,
   before: CAPTURE_BEFORE,
-  after: CAPTURE_AFTER,
-  steps: 3,
+  after: failedShell ? CAPTURE_FAILED_AFTER : CAPTURE_AFTER,
+  steps: failedShell ? 2 : 3,
   taskStatus: 'in_progress',
   sources: [
     'tests/native-opencode-capture.native.ts',
     'tests/fixtures/native-opencode-team/model.ts',
     'tests/fixtures/native-opencode-team/capture.ts',
   ],
-  startModel: (options) => startOpenCodeModel({ captureFileUpdate: options }),
+  startModel: (options) => startOpenCodeModel({ captureFileUpdate: { ...options, failedShell } }),
   async memberProfile({
     root,
     workspace,
@@ -48,7 +52,12 @@ export const opencodeCaptureFixture: NativeCaptureFixture = {
       enabled_providers: ['TEST-local'],
       model: 'TEST-local/TEST-model',
       small_model: 'TEST-local/TEST-model',
-      permission: { '*': 'deny', read: 'allow', edit: 'allow' },
+      permission: {
+        '*': 'deny',
+        read: 'allow',
+        edit: 'allow',
+        ...(failedShell ? { bash: 'allow' } : {}),
+      },
       agent: {
         title: { disable: true },
         summary: { disable: true },
@@ -114,6 +123,28 @@ export const opencodeCaptureFixture: NativeCaptureFixture = {
     };
   },
   assertNativeEvent(event) {
+    if (failedShell) {
+      const cause = assertFailedToolCapture(
+        event,
+        'opencode',
+        CAPTURE_BEFORE,
+        CAPTURE_FAILED_AFTER
+      );
+      assert.equal(cause.inputOutcome, 'succeeded');
+      assert.equal(event.toolUseId, 'TEST_' + CAPTURE_TURN + '_0');
+      assert.match(String(cause.nativeSessionId), /^ses_.+/);
+      assert.match(String(cause.nativeInputId), /^msg_.+/);
+      assert.match(String(cause.messageId), /^msg_.+/);
+      assert.match(String(cause.partId), /^prt_.+/);
+      assert.equal(cause.callId, event.toolUseId);
+      assert.notEqual(cause.messageId, cause.nativeInputId);
+      assert.ok(['completed', 'errored'].includes(String(cause.status)));
+      assert.ok(Number.isSafeInteger(cause.startedAt) && Number.isSafeInteger(cause.completedAt));
+      assert.ok(
+        Number(cause.startedAt) >= 0 && Number(cause.completedAt) >= Number(cause.startedAt)
+      );
+      return;
+    }
     const binding = record(event.causalBinding),
       cause = record(binding.native),
       proof = record(event.nativeCaptureProof);
@@ -137,4 +168,7 @@ export const opencodeCaptureFixture: NativeCaptureFixture = {
     assert.equal(tool.callId, `TEST_${CAPTURE_TURN}_1`);
     assert.equal(event.toolUseId, tool.callId);
   },
-};
+});
+
+export const opencodeCaptureFixture = createCaptureFixture();
+export const opencodeFailedShellCaptureFixture = createCaptureFixture(true);

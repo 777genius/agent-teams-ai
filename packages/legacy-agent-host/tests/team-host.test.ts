@@ -18,6 +18,9 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
+import type { AttachmentReference } from '../dist/attachments/uploadContracts.js';
+
+const nodeExecutable = realpathSync(process.env.AGENT_BACKEND_TEST_NODE ?? process.execPath);
 
 const sha = (value: Buffer | string): string => createHash('sha256').update(value).digest('hex');
 
@@ -32,13 +35,13 @@ test(
       JSON.stringify({ schemaVersion: 1, secretMarker: 'TEST-private-marker' })
     );
     const child = spawn(
-      process.execPath,
+      nodeExecutable,
       [fileURLToPath(new URL('../dist/cli.js', import.meta.url))],
       {
         cwd: root,
         env: {
           HOME: root,
-          PATH: dirname(process.execPath),
+          PATH: dirname(nodeExecutable),
           LEGACY_AGENT_HOST_PROFILE_PATH: profile,
           LEGACY_AGENT_HOST_PROFILE_SHA256: '0'.repeat(64),
         },
@@ -83,7 +86,7 @@ test(
       profileId: 'TEST-profile',
       protocolVersion: 1 as const,
       buildId: 'TEST-product-host',
-      nodeSha256: sha(readFileSync(process.execPath)),
+      nodeSha256: sha(readFileSync(nodeExecutable)),
       hostEntrySha256: sha(readFileSync(hostEntry)),
     };
     const scope = {
@@ -119,11 +122,11 @@ test(
     const binding = { schemaVersion: 1, handleId: 'TEST-handle', owner, scope };
     let counter = 0;
     const start = () => {
-      const child = spawn(process.execPath, [hostEntry], {
+      const child = spawn(nodeExecutable, [hostEntry], {
         cwd: root,
         env: {
           HOME: root,
-          PATH: dirname(process.execPath),
+          PATH: dirname(nodeExecutable),
           LEGACY_AGENT_HOST_PROFILE_PATH: profilePath,
           LEGACY_AGENT_HOST_PROFILE_SHA256: sha(bytes),
         },
@@ -331,6 +334,157 @@ test(
           payload: {},
         }),
         { ok: false, code: 'forbidden', outcome: 'rejected' }
+      );
+
+      // M03: existing real CLI boundary, without SDK/model or a Runtime profile.
+      const record = (value: unknown): Record<string, unknown> => {
+        assert.ok(value && typeof value === 'object' && !Array.isArray(value));
+        return value as Record<string, unknown>;
+      };
+      const accepted = (reply: Record<string, unknown>): Record<string, unknown> => {
+        assert.equal(reply.ok, true, JSON.stringify(reply));
+        return record(reply.value);
+      };
+      assert.equal(profile.runtime, undefined);
+      const blobTask = accepted(
+        await current.rpc('team.execute', {
+          commandId: 'TEST-cold-blob-task',
+          binding,
+          payload: {
+            operation: 'task.create',
+            payload: { subject: 'TEST persisted Task/comment blobs' },
+          },
+        })
+      );
+      const blobTaskId = String(record(blobTask.effects).taskId);
+      const cases = [
+        { id: 'TEST-task-blob', bytes: Buffer.from('TEST Task blob survives replacement Host\n') },
+        {
+          id: 'TEST-comment-blob',
+          bytes: Buffer.from('TEST comment blob survives replacement Host\n'),
+        },
+      ];
+      const refs: AttachmentReference[] = [];
+      for (const item of cases) {
+        const uploaded = accepted(
+          await current.rpc('team.attachment.upload', {
+            commandId: 'TEST-upload-' + item.id,
+            binding,
+            payload: {
+              uploadId: 'TEST-upload-' + item.id,
+              purpose: { kind: 'task', taskId: blobTaskId },
+              attachment: {
+                id: item.id,
+                filename: item.id + '.txt',
+                mimeType: 'text/plain',
+                size: item.bytes.length,
+              },
+              digest: sha(item.bytes),
+              offset: 0,
+              base64: item.bytes.toString('base64'),
+            },
+          })
+        );
+        assert.equal(uploaded.nextOffset, null);
+        const ref = record(uploaded.reference);
+        assert.equal(ref.digest, sha(item.bytes));
+        assert.equal(ref.byteLength, item.bytes.length);
+        assert.ok(
+          typeof ref.artifactId === 'string' &&
+            typeof ref.mimeType === 'string' &&
+            typeof ref.byteLength === 'number' &&
+            typeof ref.digest === 'string'
+        );
+        refs.push({
+          artifactId: ref.artifactId,
+          mimeType: ref.mimeType,
+          byteLength: ref.byteLength,
+          digest: ref.digest,
+        });
+      }
+      accepted(
+        await current.rpc('team.execute', {
+          commandId: 'TEST-publish-task-blob',
+          binding,
+          payload: {
+            operation: 'task.attachment.add',
+            payload: { taskId: blobTaskId, attachment: refs[0]! },
+          },
+        })
+      );
+      accepted(
+        await current.rpc('team.execute', {
+          commandId: 'TEST-publish-comment-blob',
+          binding,
+          payload: {
+            operation: 'task.comment',
+            payload: { taskId: blobTaskId, text: 'TEST original comment', attachments: [refs[1]!] },
+          },
+        })
+      );
+      const warmTask = accepted(
+        await current.rpc('team.task.get', {
+          commandId: 'TEST-warm-blob-task',
+          binding,
+          payload: { taskId: blobTaskId },
+        })
+      );
+      assert.equal((warmTask.attachments as unknown[]).length, 1);
+      const warmComments = warmTask.comments as Record<string, unknown>[];
+      assert.equal(warmComments.length, 1);
+      assert.equal((warmComments[0]!.attachments as unknown[]).length, 1);
+      const originalBlobHost = current.child;
+      await current.close(); // Held original ChildProcess observes exit0 before replacement.
+      current = start();
+      assert.notEqual(
+        current.child,
+        originalBlobHost,
+        'a new actual Host child, not an owner-object reopen'
+      );
+      const coldHandshake = await current.rpc('host.handshake', { protocolVersion: 1 });
+      assert.equal(
+        (coldHandshake.capabilities as string[]).includes('runtime.member-session'),
+        false
+      );
+      assert.deepEqual(
+        await current.rpc('team.launch.read', {
+          commandId: 'TEST-cold-blob-no-runtime',
+          binding,
+          payload: {},
+        }),
+        { ok: true, value: null }
+      );
+      const coldTask = accepted(
+        await current.rpc('team.task.get', {
+          commandId: 'TEST-cold-blob-task-read',
+          binding,
+          payload: { taskId: blobTaskId },
+        })
+      );
+      assert.deepEqual(
+        coldTask,
+        warmTask,
+        'original Task/comment identities and attachment metadata survive actual Host replacement'
+      );
+      for (const item of cases) {
+        const chunk = accepted(
+          await current.rpc('team.task.attachment.read', {
+            commandId: 'TEST-cold-read-' + item.id,
+            binding,
+            payload: { taskId: blobTaskId, attachmentId: item.id, offset: 0 },
+          })
+        );
+        assert.equal(record(chunk.attachment).id, item.id);
+        assert.equal(record(chunk.attachment).size, item.bytes.length);
+        assert.equal(chunk.offset, 0);
+        assert.equal(chunk.nextOffset, null);
+        assert.equal(chunk.sha256, sha(item.bytes));
+        assert.deepEqual(Buffer.from(String(chunk.base64), 'base64'), item.bytes);
+      }
+      assert.equal(
+        readdirSync(store).includes('runtime-sessions'),
+        false,
+        'product-only profile creates no Runtime generation/input store'
       );
 
       await current.close();

@@ -44,7 +44,7 @@ import { randomUUID } from 'node:crypto';
 import { FileRuntimeStore } from '../adapters/runtime/FileRuntimeStore.js';
 import { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
-import { deliveryFingerprint, runtimeDigest } from '../runtime/identity.js';
+import { deliveryFingerprint, normalizeBinding, runtimeDigest } from '../runtime/identity.js';
 
 import type {
   MemberProviderContext,
@@ -716,7 +716,7 @@ export class RuntimeTeamCoordinator {
     };
   }
   private key(binding: RuntimeBinding): string {
-    return runtimeDigest(binding);
+    return runtimeDigest(normalizeBinding(binding));
   }
   private isCurrent(entry: MemberEntry): boolean {
     try {

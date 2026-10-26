@@ -11,6 +11,8 @@ import { fileURLToPath } from 'node:url';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { CommandReceipt, TeamCommand } from '../dist/team/contracts.js';
 
+const nodeExecutable = realpathSync(process.env.AGENT_BACKEND_TEST_NODE ?? process.execPath);
+
 const sha = (value: Buffer | string) => createHash('sha256').update(value).digest('hex');
 
 test(
@@ -28,7 +30,7 @@ test(
       profileId: 'TEST-task-profile',
       protocolVersion: 1 as const,
       buildId: 'TEST-task-ui-host',
-      nodeSha256: sha(readFileSync(process.execPath)),
+      nodeSha256: sha(readFileSync(nodeExecutable)),
       hostEntrySha256: sha(readFileSync(hostEntry)),
     };
     const scope = {
@@ -67,10 +69,10 @@ test(
     const binding = { schemaVersion: 1, handleId: 'TEST-handle', owner, scope };
     let counter = 0;
     const start = () => {
-      const child = spawn(process.execPath, [hostEntry], {
+      const child = spawn(nodeExecutable, [hostEntry], {
         cwd: root,
         env: {
-          PATH: dirname(process.execPath),
+          PATH: dirname(nodeExecutable),
           LEGACY_AGENT_HOST_PROFILE_PATH: profilePath,
           LEGACY_AGENT_HOST_PROFILE_SHA256: sha(bytes),
         },

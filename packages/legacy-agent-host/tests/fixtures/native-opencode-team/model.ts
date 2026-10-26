@@ -1,4 +1,10 @@
-import { readMixedGroupTurn, mixedGroupActions, assertMixedGroupReceipt, type MixedGroupTurn } from '../native-mixed-groups.ts';
+import { assertNativeMessageImage } from '../native-message-image.ts';
+import {
+  readMixedGroupTurn,
+  mixedGroupActions,
+  assertMixedGroupReceipt,
+  type MixedGroupTurn,
+} from '../native-mixed-groups.ts';
 // Finite Chat Completions inference oracle. Actual OpenCode must execute the
 // offered MCP/Bash tools; this server never writes product or workspace files.
 import assert from 'node:assert/strict';
@@ -21,15 +27,34 @@ export const CAPTURE_TURN = 'OPENCODE_CAPTURE_TASK_START_V1';
 export const CAPTURE_ASSIGNMENT = CAPTURE_TURN + '_ASSIGNMENT';
 export const CAPTURE_BEFORE = 'TEST clean anchor\nTEST dirty preimage\nTEST tail\n';
 export const CAPTURE_AFTER = 'TEST clean anchor\nTEST native foreground patched\nTEST tail\n';
+export const CAPTURE_FAILED_AFTER = 'TEST clean anchor\nTEST native failed shell\nTEST tail\n';
+export const CAPTURE_FAILED_COMMAND =
+  "printf 'TEST clean anchor\\nTEST native failed shell\\nTEST tail\\n' > dirty.txt; printf 'TEST_CAPTURE_FAILED_SHELL_EXECUTED\\n'; exit 7";
 export interface CaptureFileUpdateScenario {
+  failedShell?: boolean;
   workspace: string;
   taskId(): string;
   phase(): 'assignment' | 'task-start';
 }
 export async function startOpenCodeModel(
-  options: { mixedGroups?: boolean; peerMessaging?: boolean; captureFileUpdate?: CaptureFileUpdateScenario; allowModelProbes?: boolean; principalId?: () => string } = {}
+  options: {
+    sharedSessionProbe?: boolean;
+    nativeMessageImage?: boolean;
+    mixedGroups?: boolean;
+    peerMessaging?: boolean;
+    captureFileUpdate?: CaptureFileUpdateScenario;
+    allowModelProbes?: boolean;
+    principalId?: () => string;
+  } = {}
 ) {
   assert.ok(!(options.peerMessaging && options.captureFileUpdate));
+  if (options.sharedSessionProbe)
+    assert.ok(
+      !options.mixedGroups &&
+        !options.peerMessaging &&
+        !options.captureFileUpdate &&
+        !options.allowModelProbes
+    );
   if (options.captureFileUpdate)
     assert.match(
       options.captureFileUpdate.workspace,
@@ -38,6 +63,8 @@ export async function startOpenCodeModel(
 
   const probes: { requestedModel?: string; requestedEffort?: string }[] = [];
   const observations: {
+    nativeImage?: ReturnType<typeof assertNativeMessageImage>;
+    failedShellToolOutput?: ReturnType<typeof assertCaptureFailedShellOutput>;
     turn: string;
     step: number;
     contextEffective: boolean;
@@ -66,27 +93,100 @@ export async function startOpenCodeModel(
       }
       const body = record(JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown);
       const messages = (Array.isArray(body.messages) ? body.messages : []).map(record);
-      const user = messages.filter(item => item.role === 'user');
-      const probeText = user.length === 1 && messages.every(item => item.role === 'user' || item.role === 'system')
-        ? typeof user[0]?.content === 'string' ? user[0].content
-          : Array.isArray(user[0]?.content) && user[0].content.every(raw => record(raw).type === 'text' && typeof record(raw).text === 'string')
-            ? user[0].content.map(raw => String(record(raw).text)).join('\n') : undefined
-        : undefined;
-      if (options.allowModelProbes && probeText === 'Reply only OK. Do not use tools, access files or run commands.' && (!Array.isArray(body.tools) || body.tools.length === 0)) {
+      const user = messages.filter((item) => item.role === 'user');
+      const probeText =
+        user.length === 1 &&
+        messages.every((item) => item.role === 'user' || item.role === 'system')
+          ? typeof user[0]?.content === 'string'
+            ? user[0].content
+            : Array.isArray(user[0]?.content) &&
+                user[0].content.every(
+                  (raw) => record(raw).type === 'text' && typeof record(raw).text === 'string'
+                )
+              ? user[0].content.map((raw) => String(record(raw).text)).join('\n')
+              : undefined
+          : undefined;
+      if (
+        options.allowModelProbes &&
+        probeText === 'Reply only OK. Do not use tools, access files or run commands.' &&
+        (!Array.isArray(body.tools) || body.tools.length === 0)
+      ) {
         assert.ok(probes.length < 8, 'bounded original-dialog model probes');
-        probes.push({ ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
-          ...(typeof body.reasoning_effort === 'string' ? { requestedEffort: body.reasoning_effort } : {}) });
-        const event = (delta: Record<string, unknown>, finish: string | null) => ({ id: `TEST-opencode-probe-${probes.length}`, object: 'chat.completion.chunk', created: 1700000000,
-          model: typeof body.model === 'string' ? body.model : 'TEST-model', choices: [{ index: 0, delta, finish_reason: finish }] });
+        probes.push({
+          ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
+          ...(typeof body.reasoning_effort === 'string'
+            ? { requestedEffort: body.reasoning_effort }
+            : {}),
+        });
+        const event = (delta: Record<string, unknown>, finish: string | null) => ({
+          id: `TEST-opencode-probe-${probes.length}`,
+          object: 'chat.completion.chunk',
+          created: 1700000000,
+          model: typeof body.model === 'string' ? body.model : 'TEST-model',
+          choices: [{ index: 0, delta, finish_reason: finish }],
+        });
         response.writeHead(200, { 'content-type': 'text/event-stream' });
-        response.write(`data: ${JSON.stringify(event({ role: 'assistant', content: 'OK' }, null))}\n\n`);
-        response.write(`data: ${JSON.stringify(event({}, 'stop'))}\n\n`); response.end('data: [DONE]\n\n'); return;
+        response.write(
+          `data: ${JSON.stringify(event({ role: 'assistant', content: 'OK' }, null))}\n\n`
+        );
+        response.write(`data: ${JSON.stringify(event({}, 'stop'))}\n\n`);
+        response.end('data: [DONE]\n\n');
+        return;
+      }
+      if (options.sharedSessionProbe) {
+        const text = JSON.stringify(user.at(-1)?.content),
+          turn = /TEST_SHARED_OPENCODE_(A1|B1|B2)/.exec(text)?.[0];
+        assert.ok(turn, 'one exact shared-session native input');
+        assert.equal(counts.get(turn) ?? 0, 0, 'no repeated native turn');
+        const history = JSON.stringify(messages),
+          contextEffective = history.includes(CONTEXT_MARKER);
+        assert.equal(contextEffective, true);
+        assert.equal(
+          messages.some((item) => item.role === 'tool'),
+          false
+        );
+        if (turn.endsWith('B2'))
+          assert.ok(
+            history.includes('TEST_SHARED_OPENCODE_B1') &&
+              history.includes('REPLY_TEST_SHARED_OPENCODE_B1')
+          );
+        if (!turn.endsWith('A1'))
+          assert.equal(
+            history.includes('TEST_SHARED_OPENCODE_A1'),
+            false,
+            'B never consumes A history'
+          );
+        assert.equal(body.model, 'TEST-model');
+        counts.set(turn, 1);
+        observations.push({
+          turn,
+          step: 0,
+          contextEffective,
+          priorTurn: turn.endsWith('B2'),
+          tools: [],
+        });
+        const event = (delta: Record<string, unknown>, finish: string | null) => ({
+          id: 'TEST-shared-' + turn,
+          object: 'chat.completion.chunk',
+          created: 1700000000,
+          model: 'TEST-model',
+          choices: [{ index: 0, delta, finish_reason: finish }],
+        });
+        response.writeHead(200, { 'content-type': 'text/event-stream' });
+        response.write(
+          `data: ${JSON.stringify(event({ role: 'assistant', content: 'REPLY_' + turn }, null))}\n\n`
+        );
+        response.write(`data: ${JSON.stringify(event({}, 'stop'))}\n\n`);
+        response.end('data: [DONE]\n\n');
+        return;
       }
       let turn = '';
       let mixedGroup: MixedGroupTurn | undefined;
       for (const message of messages.toReversed()) {
         if (message.role !== 'user') continue;
-        const group = options.mixedGroups ? readMixedGroupTurn(message.content, 'carol') : undefined;
+        const group = options.mixedGroups
+          ? readMixedGroupTurn(message.content, 'carol')
+          : undefined;
         const capture =
           options.captureFileUpdate && JSON.stringify(message.content).includes(CAPTURE_TURN);
         const match = /OPENCODE_TEAM_(ONE|TWO)/.exec(JSON.stringify(message.content));
@@ -95,30 +195,42 @@ export async function startOpenCodeModel(
           : undefined;
         if (group || capture || peer || match) {
           mixedGroup = group;
-          turn = group?.turn ?? (capture
-            ? options.captureFileUpdate!.phase() === 'assignment'
-              ? CAPTURE_ASSIGNMENT
-              : CAPTURE_TURN
-            : (peer ?? match![0]));
+          turn =
+            group?.turn ??
+            (capture
+              ? options.captureFileUpdate!.phase() === 'assignment'
+                ? CAPTURE_ASSIGNMENT
+                : CAPTURE_TURN
+              : (peer ?? match![0]));
           break;
         }
       }
       assert.ok(turn, 'native request retains deliberate TEST business input');
       const step = counts.get(turn) ?? 0;
+      const nativeImage =
+        options.nativeMessageImage && turn === 'OPENCODE_TEAM_TWO'
+          ? assertNativeMessageImage(messages, 'opencode')
+          : undefined;
       const groupActions = mixedGroup ? mixedGroupActions(mixedGroup) : undefined;
       if (groupActions) assert.ok(step <= groupActions.length, 'finite mixed group turn');
       const peerActions = options.peerMessaging ? nativePeerActions(turn, 'carol') : undefined;
       const capture = options.captureFileUpdate;
+      let failedShellToolOutput: ReturnType<typeof assertCaptureFailedShellOutput> | undefined;
       if (capture && turn === CAPTURE_ASSIGNMENT)
         assert.equal(step, 0, 'one assignment terminal, no tools/effects');
       if (capture && turn === CAPTURE_TURN) {
-        assert.ok(step <= 2, 'one native read/edit/final input; no replay');
+        assert.ok(
+          step <= (capture.failedShell ? 1 : 2),
+          'one bounded original native input; no replay'
+        );
         assert.ok(capture.taskId(), 'original Host canonical task captured before TaskStart');
         if (step > 0) {
           const last = messages.filter((item) => item.role === 'tool').at(-1);
           assert.ok(last);
           const output = JSON.stringify(last.content);
-          if (step === 1)
+          if (capture.failedShell)
+            failedShellToolOutput = assertCaptureFailedShellOutput(last.content);
+          else if (step === 1)
             assert.ok(
               output.includes('TEST dirty preimage') &&
                 !output.includes('TEST native foreground patched'),
@@ -139,7 +251,7 @@ export async function startOpenCodeModel(
         .map(record)
         .map((tool) => String(record(tool.function).name));
       if (mixedGroup && step > 0) {
-        const last = messages.filter(item => item.role === 'tool').at(-1);
+        const last = messages.filter((item) => item.role === 'tool').at(-1);
         assertMixedGroupReceipt(mixedGroup, step, nativeToolReceipt(last?.content));
       }
       if (
@@ -165,6 +277,8 @@ export async function startOpenCodeModel(
         assert.ok(taskId && taskId !== 'undefined');
       }
       observations.push({
+        ...(nativeImage ? { nativeImage } : {}),
+        ...(failedShellToolOutput ? { failedShellToolOutput } : {}),
         turn,
         step,
         contextEffective,
@@ -218,19 +332,31 @@ export async function startOpenCodeModel(
       const captureActions = capture
         ? turn === CAPTURE_ASSIGNMENT
           ? []
-          : [
-              { name: 'read', input: { filePath: capture.workspace + '/dirty.txt' } },
-              {
-                name: 'edit',
-                input: {
-                  filePath: capture.workspace + '/dirty.txt',
-                  oldString: 'TEST dirty preimage',
-                  newString: 'TEST native foreground patched',
+          : capture.failedShell
+            ? [
+                {
+                  name: 'bash',
+                  input: {
+                    command: CAPTURE_FAILED_COMMAND,
+                    workdir: capture.workspace,
+                    description: 'TEST dirty write and native exit 7',
+                  },
                 },
-              },
-            ]
+              ]
+            : [
+                { name: 'read', input: { filePath: capture.workspace + '/dirty.txt' } },
+                {
+                  name: 'edit',
+                  input: {
+                    filePath: capture.workspace + '/dirty.txt',
+                    oldString: 'TEST dirty preimage',
+                    newString: 'TEST native foreground patched',
+                  },
+                },
+              ]
         : undefined;
-      const action = (groupActions ?? captureActions ??
+      const action = (groupActions ??
+        captureActions ??
         peerActions ??
         (turn === 'OPENCODE_TEAM_ONE' ? first : second))[step];
       let delta: Record<string, unknown>;
@@ -286,4 +412,15 @@ export async function startOpenCodeModel(
         server.close(() => resolve());
       }),
   };
+}
+
+/** Continuation shape only; opaque output proves nothing about execution or failure.
+ * The later original native exit7, causal binding and dirty-byte assertions remain necessary. */
+export function assertCaptureFailedShellOutput(
+  output: unknown
+): 'marker-text' | 'opaque-no-output' {
+  if (output === '(no output)') return 'opaque-no-output';
+  assert.equal(typeof output, 'string');
+  assert.equal((output as string).trim(), 'TEST_CAPTURE_FAILED_SHELL_EXECUTED');
+  return 'marker-text';
 }

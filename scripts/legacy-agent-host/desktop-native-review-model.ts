@@ -62,8 +62,15 @@ function userText(message: Row): string {
     : '';
 }
 function resultText(content: unknown): string {
-  return typeof content === 'string' ? content : Array.isArray(content)
-    ? content.map(record).filter(block => block.type === 'text').map(block => String(block.text)).join('\n') : '';
+  return typeof content === 'string'
+    ? content
+    : Array.isArray(content)
+      ? content
+          .map(record)
+          .filter((block) => block.type === 'text')
+          .map((block) => String(block.text))
+          .join('\n')
+      : '';
 }
 function completion(text: string, taskId: string): boolean {
   const blocks = [...text.matchAll(/<task-notification>([\s\S]*?)<\/task-notification>/g)];
@@ -73,8 +80,11 @@ function completion(text: string, taskId: string): boolean {
     const values = [...block.matchAll(new RegExp(`<${name}>([^<]*)</${name}>`, 'g'))];
     return values.length === 1 ? values[0]![1]!.trim() : '';
   };
-  return field('task-id') === taskId && field('tool-use-id') === backgroundToolId &&
-    field('status') === 'completed';
+  return (
+    field('task-id') === taskId &&
+    field('tool-use-id') === backgroundToolId &&
+    field('status') === 'completed'
+  );
 }
 function probe(messages: Row[], tools: string[]): boolean {
   const user = messages.filter((message) => message.role === 'user');
@@ -100,13 +110,15 @@ function probe(messages: Row[], tools: string[]): boolean {
 export async function startNativeReviewModel(options: {
   workspace(): string;
   principalId(): string;
-}): Promise<Model & { taskId(): string }> {
+}): Promise<Model & { taskId(): string; backgroundTaskId(): string }> {
   const observations: Model['observations'] = [],
     probes: Model['probes'] = [],
     failures: string[] = [];
   const unexpectedNoToolsRequests: Model['unexpectedNoToolsRequests'] = [];
   const counts = new Map<string, number>();
-  let taskId = '', backgroundTaskId = '', backgroundAcknowledged = false,
+  let taskId = '',
+    backgroundTaskId = '',
+    backgroundAcknowledged = false,
     sequence = 0;
   const server = createServer((request, response) => {
     void (async () => {
@@ -145,25 +157,51 @@ export async function startNativeReviewModel(options: {
         return;
       }
       assert.ok(JSON.stringify(body.system).includes(CONTEXT_MARKER));
-      const latestUser = messages.findLast(message => message.role === 'user');
+      const latestUser = messages.findLast((message) => message.role === 'user');
       const latestText = latestUser ? userText(latestUser) : '';
       if (latestText.includes('<task-notification>')) {
-        assert.equal(counts.get('work'), REVIEW_WORK_TERMINAL_STEP + 1, 'notification ACK only after normal terminal');
+        assert.equal(
+          counts.get('work'),
+          REVIEW_WORK_TERMINAL_STEP + 1,
+          'notification ACK only after normal terminal'
+        );
         assert.equal(backgroundAcknowledged, false, 'one exact background completion ACK');
-        assert.ok(latestUser && (typeof latestUser.content === 'string' ||
-          (Array.isArray(latestUser.content) && latestUser.content.every(block => record(block).type === 'text'))),
-          'standalone native notification only');
-        assert.ok(latestText.includes('[SYSTEM NOTIFICATION - NOT USER INPUT]') &&
-          completion(latestText, backgroundTaskId), 'exact original background task/tool completion');
+        assert.ok(
+          latestUser &&
+            (typeof latestUser.content === 'string' ||
+              (Array.isArray(latestUser.content) &&
+                latestUser.content.every((block) => record(block).type === 'text'))),
+          'standalone native notification only'
+        );
+        assert.ok(
+          latestText.includes('[SYSTEM NOTIFICATION - NOT USER INPUT]') &&
+            completion(latestText, backgroundTaskId),
+          'exact original background task/tool completion'
+        );
         backgroundAcknowledged = true;
-        observations.push({ requestedModel, ...(requestedEffort ? { requestedEffort } : {}),
-          turn: 'background-notification', step: 0, contextEffective: true, priorTurn: true,
-          tools, toolResultError: false, visibleReplyContract: false });
-        emit(response, ++sequence, { type: 'text', text: 'ACK_NATIVE_REVIEW_BACKGROUND' }, requestedModel);
+        observations.push({
+          requestedModel,
+          ...(requestedEffort ? { requestedEffort } : {}),
+          turn: 'background-notification',
+          step: 0,
+          contextEffective: true,
+          priorTurn: true,
+          tools,
+          toolResultError: false,
+          visibleReplyContract: false,
+        });
+        emit(
+          response,
+          ++sequence,
+          { type: 'text', text: 'ACK_NATIVE_REVIEW_BACKGROUND' },
+          requestedModel
+        );
         return;
       }
-      assert.ok(observations.filter(row => row.turn !== 'background-notification').length < 10,
-        'finite native review conversation budget');
+      assert.ok(
+        observations.filter((row) => row.turn !== 'background-notification').length < 10,
+        'finite native review conversation budget'
+      );
       let turn = '';
       for (const message of messages.toReversed()) {
         if (message.role !== 'user') continue;
@@ -197,10 +235,16 @@ export async function startNativeReviewModel(options: {
         assert.ok(taskId, 'native MCP must create the real Task before original Start');
         if (step === 4) assert.equal(last?.is_error, true, 'actual failed Bash result');
         else if (step > 0)
-          assert.notEqual(last?.is_error, true, 'native Read/Edit/Write/background/MCP action must succeed');
+          assert.notEqual(
+            last?.is_error,
+            true,
+            'native Read/Edit/Write/background/MCP action must succeed'
+          );
         if (step === 6) {
           assert.equal(last?.tool_use_id, backgroundToolId, 'original background tool receipt');
-          const match = /^Command running in background with ID: ([A-Za-z0-9_-]{1,128})\./.exec(resultText(last?.content));
+          const match = /^Command running in background with ID: ([A-Za-z0-9_-]{1,128})\./.exec(
+            resultText(last?.content)
+          );
           assert.ok(match, 'native background task registration');
           backgroundTaskId = match[1]!;
         }
@@ -253,9 +297,28 @@ export async function startNativeReviewModel(options: {
             replace_all: false,
           },
         },
-        { name: 'Bash', input: { command: "printf 'FAILED\\n' >> native-review-failed.txt; exit 7", description: 'TEST failed foreground dirty write' } },
-        { name: 'Write', input: { file_path: join(options.workspace(), 'native-review-write.txt'), content: 'WRITE\n' } },
-        { name: 'Bash', input: { command: "sleep 0.4; printf 'BACKGROUND\\n' >> native-review-background.txt", run_in_background: true, description: 'TEST finite background dirty write' } },
+        {
+          name: 'Bash',
+          input: {
+            command: "printf 'FAILED\\n' >> native-review-failed.txt; exit 7",
+            description: 'TEST failed foreground dirty write',
+          },
+        },
+        {
+          name: 'Write',
+          input: {
+            file_path: join(options.workspace(), 'native-review-write.txt'),
+            content: 'WRITE\n',
+          },
+        },
+        {
+          name: 'Bash',
+          input: {
+            command: "sleep 0.4; printf 'BACKGROUND\\n' >> native-review-background.txt",
+            run_in_background: true,
+            description: 'TEST finite background dirty write',
+          },
+        },
         {
           name: 'mcp__team__message_send',
           input: {
@@ -303,7 +366,9 @@ export async function startNativeReviewModel(options: {
   const address = server.address();
   assert.ok(address && typeof address !== 'string');
   return {
-    compactionRequests: [], compactionTokenRequests: 0,
+    crossTeamRequests: [],
+    compactionRequests: [],
+    compactionTokenRequests: 0,
     url: `http://127.0.0.1:${address.port}`,
     ordinaryRequests: [], // This review oracle never admits ordinary subagent inference.
     observations,
@@ -311,6 +376,7 @@ export async function startNativeReviewModel(options: {
     failures,
     unexpectedNoToolsRequests,
     taskId: () => taskId,
+    backgroundTaskId: () => backgroundTaskId,
     close: () =>
       new Promise<void>((done) => {
         server.closeAllConnections();

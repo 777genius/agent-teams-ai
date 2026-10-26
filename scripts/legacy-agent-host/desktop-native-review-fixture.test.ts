@@ -7,6 +7,7 @@ import { buildReviewChunks } from '@agent-teams/task-change-ledger/review-text';
 import {
   prepareNativeReviewWorkspace,
   readNativeReviewSeed,
+  assertNativeReviewBackgroundCompletion,
 } from './desktop-native-review-fixture.ts';
 import {
   startNativeReviewModel,
@@ -161,6 +162,10 @@ test('model scripts generic Task creation then one foreground tool per Task Star
   const settings = JSON.parse(await readFile(join(root, 'workspace/.claude/settings.json'), 'utf8'));
   assert.equal(settings.hooks.PostToolUse[0].matcher, 'Write');
   assert.equal(settings.hooks.PostToolUse[0].hooks[0].timeout, 10);
+  assert.equal(settings.hooks.PostToolUseFailure[0].matcher, 'Bash');
+  assert.deepEqual(settings.hooks.PostToolUseFailure[0].hooks, settings.hooks.PostToolUse[0].hooks);
+  assert.equal(seed.partialCoverage!.failedAfter, 'FAILED_BEFORE\nFAILED\nFAILED_HOOK\n');
+  assert.equal(await readFile(seed.partialCoverage!.failureHookPath!, 'utf8'), seed.partialCoverage!.failureHookBefore);
   assert.deepEqual(model.failures, []);
   const ack = await ask(notification('TEST-background', 'native_review_work_5'));
   assert.deepEqual(ack, { type: 'text', text: 'ACK_NATIVE_REVIEW_BACKGROUND' });
@@ -222,4 +227,28 @@ test('native review cold mode opens no model server and never uses the synthetic
   assert.equal(mode.launchDialogMode, false);
   assert.equal(mode.model, undefined);
   assert.equal(mode.uiMode, true);
+});
+
+test('positive native review background oracle rejects a gap, wrong execution and duplicate completion', () => {
+  const expected = { toolUseId: 'native_review_work_5', nativeTaskRef: 'TEST-background', taskId: 'TEST-product-task',
+    taskStartCommandId: 'TEST-start', inputId: 'TEST-input', operationRef: 'TEST-operation', sessionRef: 'TEST-session',
+    binding: { backendId: 'TEST-owner', teamId: 'TEST-team', runId: 'TEST-run', memberId: 'alice-id', generation: '1' } };
+  const cause = { ...expected, provenance: { reviewableComplete: false } };
+  const event = { toolUseId: expected.toolUseId, causalBinding: cause, toolStatus: 'succeeded' };
+  const registration = { toolUseId: expected.toolUseId, causalBinding: cause, nativeTaskRef: expected.nativeTaskRef,
+    nativeRunRef: 'TEST-native-run', captureBoundary: 'native-background-registration' };
+  const terminal = { ...registration, captureBoundary: 'native-task-notification', outcome: 'succeeded' };
+  assert.deepEqual(assertNativeReviewBackgroundCompletion([event], [registration, terminal], expected),
+    { event, registration, terminal });
+  assert.throws(() => assertNativeReviewBackgroundCompletion([], [{ ...registration, message: 'Native capture gap: background' }], expected));
+  assert.throws(() => assertNativeReviewBackgroundCompletion([event], [registration], expected));
+  assert.throws(() => assertNativeReviewBackgroundCompletion([event, event], [registration, terminal], expected));
+  assert.throws(() => assertNativeReviewBackgroundCompletion([event], [registration, terminal, terminal], expected));
+  for (const patch of [ { nativeTaskRef: 'TEST-other-task' }, { nativeRunRef: 'TEST-other-run' }, { outcome: 'failed' } ])
+    assert.throws(() => assertNativeReviewBackgroundCompletion([event], [registration, { ...terminal, ...patch }], expected));
+  for (const field of ['taskId', 'taskStartCommandId', 'inputId', 'operationRef', 'sessionRef', 'toolUseId'])
+    assert.throws(() => assertNativeReviewBackgroundCompletion([event], [registration, { ...terminal,
+      causalBinding: { ...cause, [field]: 'TEST-foreign' } }], expected));
+  assert.throws(() => assertNativeReviewBackgroundCompletion([event], [registration, { ...terminal,
+    causalBinding: { ...cause, binding: { ...expected.binding, generation: '2' } } }], expected));
 });

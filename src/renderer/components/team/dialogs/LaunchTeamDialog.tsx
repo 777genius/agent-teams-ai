@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import {
   reconcileAnthropicRuntimeSelections,
   resolveAnthropicFastMode,
@@ -369,6 +370,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const [providerSettingsProviderId, setProviderSettingsProviderId] =
     useState<TeamProviderId | null>(null);
   const prepareRequestSeqRef = useRef(0);
+  const prepareQueueRef = useRef({ key: '', tail: Promise.resolve() });
   const appliedDefaultProjectPathRef = useRef<string | null>(null);
   const preserveHydratedLocalOverride = useRef(false);
   const [localOverrideHydration, setLocalOverrideHydration] = useState(0);
@@ -575,11 +577,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     invalidatePrepareProvider,
   });
   useEffect(() => {
-    if (!open) {
+    return () => {
+      prepareRequestSeqRef.current += 1;
       lastPrepareProviderSignatureByIdRef.current.clear();
       prepareProviderRequestSeqByIdRef.current.clear();
       prepareWarningsByProviderIdRef.current.clear();
-    }
+    };
   }, [open]);
   const runtimeProviderLoadingById = useMemo(
     () =>
@@ -753,7 +756,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   }, []);
 
   const resetFormState = (): void => {
-    submissionFence.refreshPreparation();
+    submissionFence.refreshPreparation(prepareRequestSeqRef);
     savedLaunchSource.reset();
     hydrationRef.current = { key: null, dirty: false, rosterDirty: false };
     setLocalError(null);
@@ -1572,10 +1575,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       selectedMemberProviders.length,
       t
     );
-    const getSelectedWarnings = (): string[] =>
-      selectedMemberProviders.flatMap(
-        (providerId) => prepareWarningsByProviderIdRef.current.get(providerId) ?? []
-      );
     const commitChecks = (nextChecks: ProvisioningProviderCheck[]): void => {
       prepareChecksRef.current = nextChecks;
       setPrepareChecks(nextChecks);
@@ -1584,7 +1583,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       nextChecks: ProvisioningProviderCheck[],
       pendingMessage: string | null
     ): void => {
-      const selectedWarnings = getSelectedWarnings();
+      const selectedWarnings = selectedMemberProviders.flatMap(
+        (providerId) => prepareWarningsByProviderIdRef.current.get(providerId) ?? []
+      );
       setPrepareWarnings(selectedWarnings);
 
       if (nextChecks.some((check) => check.status === 'pending' || check.status === 'checking')) {
@@ -1655,17 +1656,30 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       const requestSeq = (prepareProviderRequestSeqByIdRef.current.get(plan.providerId) ?? 0) + 1;
       prepareProviderRequestSeqByIdRef.current.set(plan.providerId, requestSeq);
       lastPrepareProviderSignatureByIdRef.current.set(plan.providerId, plan.requestSignature);
-      return { ...plan, requestSeq };
+      return { ...plan, requestSeq, preparationId: submissionFence.preparationId };
     });
     const isPlanCurrent = (plan: ProviderPreparePlan & { requestSeq: number }): boolean =>
       prepareRequestSeqRef.current === generation &&
       lastPrepareProviderSignatureByIdRef.current.get(plan.providerId) === plan.requestSignature &&
       prepareProviderRequestSeqByIdRef.current.get(plan.providerId) === plan.requestSeq;
 
+    if (prepareQueueRef.current.key !== readinessSignature)
+      prepareQueueRef.current = { key: readinessSignature, tail: Promise.resolve() };
+    const capturedQueue = prepareQueueRef.current;
     void (async () => {
       await Promise.all(
         runningPlans.map(async (plan) => {
+          let finishCapturedCheck: (() => void) | undefined;
+          if (isHostTeamSelectionKey(effectiveTeamName)) {
+            // Main's foreground check owns cleanup before the next provider admission.
+            const previous = capturedQueue.tail;
+            capturedQueue.tail = new Promise<void>((resolve) => {
+              finishCapturedCheck = resolve;
+            });
+            await previous;
+          }
           try {
+            if (!isPlanCurrent(plan)) return;
             const prepResult = await runPreflight(plan, {
               cwd: effectiveCwd,
               providerId: plan.providerId,
@@ -1675,7 +1689,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 kind: 'team',
                 teamName: effectiveTeamName,
                 selectedModelChecks: plan.selectedModelChecks,
-                preparationId: submissionFence.preparationId,
+                preparationId: plan.preparationId,
               }),
               limitContext: effectiveAnthropicRuntimeLimitContext,
               cachedModelResultsById: plan.cachedModelResultsById,
@@ -1740,6 +1754,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             prepareWarningsByProviderIdRef.current.delete(plan.providerId);
             commitChecks(nextChecks);
             applyPrepareOutcome(nextChecks, failureMessage);
+          } finally {
+            finishCapturedCheck?.();
           }
         })
       );

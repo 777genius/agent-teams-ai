@@ -125,8 +125,9 @@ async function main(): Promise<void> {
   const fixture = questionUiMode ? await prepareDesktopCodexQuestionFixture(baseFixture, { executable: process.env.LEGACY_DESKTOP_CODEX_PATH!, model: questionModel! }) : mixedMode ? await prepareDesktopMixedNativeFixture(baseFixture, {
     models: selectedMixedModels!, codexPath: process.env.LEGACY_DESKTOP_CODEX_PATH!, openCodePath: process.env.LEGACY_DESKTOP_OPENCODE_PATH!,
     openCodeEndpoint: await reserveMixedOpenCodeEndpoint(),
+    openCodeManagementEndpoint: await reserveMixedOpenCodeEndpoint(),
   }) : baseFixture;
-  if (startupDiagnosticMode) Object.assign(fixture.appEnvironment, { LEGACY_DESKTOP_STARTUP_DIAGNOSTICS: '1' });
+  if (startupDiagnosticMode || mixedMode) Object.assign(fixture.appEnvironment, { LEGACY_DESKTOP_STARTUP_DIAGNOSTICS: '1' });
   const activitySource = baseFixture.activitySource;
   const require = createRequire(import.meta.url);
   if (!packed && (questionUiMode || processUiMode || nativeReviewMode || nativeStopMode || readbackMode || launchDialogMode || createConfigMode || legacyImportMode))
@@ -252,7 +253,8 @@ async function main(): Promise<void> {
       await waitDesktopCodexQuestionRenderer(cdp, { url: String(target.url),
         remainingStartupMs: startupBudgetMs - (performance.now() - startupStarted),
         assertOwnedRenderer: () => assertOwnedCdpListener(group), evidence });
-    await verifyCapturedDesktopBinding({ cdp, group, mode, fixture, evidence, repo, packed });
+    await verifyCapturedDesktopBinding({ cdp, group, mode, fixture, evidence, repo, packed,
+      remainingStartupMs: startupBudgetMs - (performance.now() - startupStarted) });
     if (['codex-account-read', 'codex-account-auth'].includes(mode)) {
       const readyUntil = Date.now() + 60000;
       let initial: Record<string, unknown> | undefined;

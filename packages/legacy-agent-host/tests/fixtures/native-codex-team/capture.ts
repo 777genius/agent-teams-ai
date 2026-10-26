@@ -6,30 +6,32 @@ import {
   CAPTURE_ASSIGNMENT,
   CAPTURE_BEFORE,
   CAPTURE_AFTER,
+  CAPTURE_FAILED_AFTER,
   CONTEXT_MARKER,
   record,
   startCodexModel,
 } from './model.ts';
-import type { NativeCaptureFixture } from '../native-input-capture.ts';
+import { assertFailedToolCapture, type NativeCaptureFixture } from '../native-input-capture.ts';
 
-export const codexCaptureFixture: NativeCaptureFixture = {
+const createCaptureFixture = (failedShell = false): NativeCaptureFixture => ({
+  failedShell,
   provider: 'codex',
   memberName: 'bob',
-  goFlag: 'LEGACY_NATIVE_CODEX_CAPTURE_GO',
+  goFlag: failedShell ? 'LEGACY_NATIVE_CODEX_FAILED_CAPTURE_GO' : 'LEGACY_NATIVE_CODEX_CAPTURE_GO',
   binaryEnv: 'LEGACY_NATIVE_CODEX_PATH',
   binarySha256: '8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57',
   turn: CAPTURE_TURN,
   assignmentTurn: CAPTURE_ASSIGNMENT,
   before: CAPTURE_BEFORE,
-  after: CAPTURE_AFTER,
-  steps: 5,
+  after: failedShell ? CAPTURE_FAILED_AFTER : CAPTURE_AFTER,
+  steps: failedShell ? 4 : 5,
   taskStatus: 'completed',
   sources: [
     'tests/native-codex-capture.native.ts',
     'tests/fixtures/native-codex-team/model.ts',
     'tests/fixtures/native-codex-team/capture.ts',
   ],
-  startModel: (options) => startCodexModel({ captureFileUpdate: options }),
+  startModel: (options) => startCodexModel({ captureFileUpdate: { ...options, failedShell } }),
   async memberProfile({
     root,
     workspace,
@@ -114,11 +116,21 @@ stream_max_retries = 0
         outputBytes: 1_000_000,
         outputEvents: 1500,
         pendingInteractions: 4,
-        timeoutMs: 45_000,
+        timeoutMs: failedShell ? 180_000 : 45_000,
       },
     };
   },
   assertNativeEvent(event) {
+    if (failedShell) {
+      const cause = assertFailedToolCapture(event, 'codex', CAPTURE_BEFORE, CAPTURE_FAILED_AFTER);
+      assert.equal(cause.inputOutcome, 'completed');
+      assert.equal(event.toolUseId, 'native_' + CAPTURE_TURN + '_1');
+      assert.equal(cause.itemId, event.toolUseId);
+      for (const key of ['threadId', 'turnId', 'windowRef'])
+        assert.ok(typeof cause[key] === 'string' && cause[key]);
+      assert.equal(cause.status, 'failed');
+      return;
+    }
     const cause = record(record(event.causalBinding).native),
       proof = record(event.nativeCaptureProof);
     assert.equal(cause.provider, 'codex');
@@ -132,4 +144,7 @@ stream_max_retries = 0
     assert.deepEqual(cause.itemIds, proof.itemIds);
     assert.equal(event.toolUseId, (proof.itemIds as string[]).at(-1));
   },
-};
+});
+
+export const codexCaptureFixture = createCaptureFixture();
+export const codexFailedShellCaptureFixture = createCaptureFixture(true);

@@ -32,6 +32,13 @@ and driver implementations install from pinned local artifacts; the current
 agent-runtime engine, PostgreSQL and fork executable are not dependencies.
 Canonical Task policy and filesystem locks reuse `agent-teams-controller`.
 Build/test with `pnpm --filter @agent-teams/legacy-agent-host test`.
+Use Node 24.21+ (below 25) for this standalone package. When the root workspace
+runs under Node 26, select an existing Node 24 executable for the actual CLI
+subprocess fixtures with `AGENT_BACKEND_TEST_NODE`; the fixture profile digest
+and child PATH use that same executable. Root captured-Host tests already honor
+this variable, and CI captures it before switching to the frontend Node version.
+For example, `AGENT_BACKEND_TEST_NODE=/absolute/path/to/node24 pnpm check:ci`
+keeps the frontend test runner on its selected Node while testing the CLI on 24.
 The `./contracts` export is browser-safe; the root server factory is Node-only.
 `./cli` and `legacy-agent-host` launch the standalone transport executable.
 

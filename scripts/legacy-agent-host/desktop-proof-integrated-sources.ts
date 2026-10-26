@@ -1,6 +1,10 @@
 /** Finite source closure of the integrated lifecycle, WorkSync and member-action checkpoint. */
 export const desktopProofIntegratedSources = [
+  'packages/legacy-agent-host/src/evidence/NativeFailedToolObservation.ts',
+  'packages/legacy-agent-host/tests/fixtures/native-cross-team-script.ts',
   'scripts/legacy-agent-host/desktop-proof-integrated-sources.ts',
+  'scripts/legacy-agent-host/desktop-task-comment-input-target.ts',
+  'scripts/legacy-agent-host/desktop-task-review-card-readiness.ts',
   'scripts/legacy-agent-host/desktop-mixed-group-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-mixed-member-restart-ui-smoke.ts',
   'packages/legacy-agent-host/tests/fixtures/native-mixed-groups.ts',

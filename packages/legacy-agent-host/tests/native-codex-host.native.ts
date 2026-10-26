@@ -1,3 +1,7 @@
+import {
+  uploadNativeMessageImage,
+  readNativeMessageImage,
+} from './fixtures/native-message-image.ts';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, realpath, writeFile } from 'node:fs/promises';
@@ -35,6 +39,14 @@ test(
         distSha256: await treeHash(join(pkg, 'dist'), '.js'),
       },
       native: { path: '', sha256: '' },
+      fixtureSources: {
+        test: await fileHash(import.meta.filename),
+        model: await fileHash(join(import.meta.dirname, 'fixtures/native-codex-team/model.ts')),
+        image: await fileHash(join(import.meta.dirname, 'fixtures/native-message-image.ts')),
+        png: await fileHash(
+          join(import.meta.dirname, 'fixtures/native-claude-team/chat-attachments.ts')
+        ),
+      },
     };
     artifacts.provider.sha256 = await fileHash(artifacts.provider.path);
     assert.match(process.env.LEGACY_NATIVE_PROVIDER_SHA256 ?? '', /^[a-f0-9]{64}$/);
@@ -68,7 +80,7 @@ test(
       'xdg-cache',
     ])
       await mkdir(join(root, directory), { mode: 0o700 });
-    const model = await startCodexModel();
+    const model = await startCodexModel({ nativeMessageImage: true });
     t.after(() => model.close());
     // Only the fresh TEST namespace is written. Production supplies Team MCP through captured CLI flags.
     await writeFile(
@@ -116,6 +128,7 @@ stream_max_retries = 0
     let finalRuntime: Record<string, unknown> = {};
     let activity: Record<string, unknown> = {};
     let activityAfterRestart: Record<string, unknown> = {};
+    let imageProof: Awaited<ReturnType<typeof readNativeMessageImage>> | undefined;
     let passed = false;
     try {
       const namespace = basename(root);
@@ -217,10 +230,15 @@ stream_max_retries = 0
       const envelope = (commandId: string, payload: unknown) => ({ commandId, binding, payload });
       const start = () =>
         startHost({ node, entry, root, profile: profilePath, profileHash: hash(profileBytes) });
+      let imageReference: Awaited<ReturnType<typeof uploadNativeMessageImage>> | undefined;
       const command = (label: string) =>
         envelope(`human-native-${label.toLowerCase()}`, {
           operation: 'message.send',
-          payload: { to: 'bob', text: `CODEX_TEAM_${label}` },
+          payload: {
+            to: 'bob',
+            text: `CODEX_TEAM_${label}`,
+            ...(label === 'TWO' ? { attachments: [imageReference!] } : {}),
+          },
         });
       current = start();
       const handshake = await current.rpc('host.handshake', { protocolVersion: 1 });
@@ -235,6 +253,7 @@ stream_max_retries = 0
         true,
         'actual D native mandatory MCP discovery'
       );
+      imageReference = await uploadNativeMessageImage(current, envelope, 'bob');
       for (const label of ['ONE', 'TWO']) {
         const receipt = await current.rpc('team.execute', command(label));
         assert.equal(receipt.ok, true);
@@ -270,6 +289,8 @@ stream_max_retries = 0
           true
         );
       }
+      imageProof = await readNativeMessageImage(current, envelope, receipts[1]!);
+      assert.equal(model.observations.filter((row) => row.nativeImage).length, 3);
       const listed = await current.rpc('team.tasks.list', envelope('TEST-list', null));
       assert.equal(listed.ok, true);
       const tasks = listed.value as unknown[];
@@ -356,6 +377,7 @@ stream_max_retries = 0
       );
       assert.equal(recovered.ok, true);
       assert.equal(record(recovered.value).attached, false);
+      assert.deepEqual(await readNativeMessageImage(current, envelope, receipts[1]!), imageProof);
       assert.equal((record(recovered.value).inputs as unknown[]).length, 2);
       const replayedActivity = await current.rpc(
         'runtime.activity.feed',
@@ -407,6 +429,7 @@ stream_max_retries = 0
               hosts,
               cleanupConfirmed,
               businessReceipts: receipts,
+              imageProof,
               runtime: finalRuntime,
               activity,
               activityAfterRestart,

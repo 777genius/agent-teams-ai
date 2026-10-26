@@ -8,7 +8,7 @@ import { digest } from '../../packages/legacy-agent-host/dist/team/identity.js';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { command, processTable } from './desktop-backend-observations.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
-import { readNativeReviewSeed } from './desktop-native-review-fixture.ts';
+import { readNativeReviewSeed, assertNativeReviewBackgroundCompletion } from './desktop-native-review-fixture.ts';
 import {
   REVIEW_BOOTSTRAP,
   REVIEW_REPLY,
@@ -73,6 +73,8 @@ export async function runDesktopNativeReviewUiSmoke(
   assert.ok(fixture.uiSeed);
   const seed = await readNativeReviewSeed(fixture.root);
   const partial = seed.partialCoverage; assert.ok(partial, 'fresh extended native review seed');
+  const { failureHookPath, failureHookBefore, failureHookAfter } = partial;
+  assert.ok(failureHookPath && failureHookBefore && failureHookAfter, 'fresh positive failure-hook tuple');
   const steps: Row[] = [],
     step = (value: Row) => {
       steps.push({ monotonicMs: Math.round(performance.now()), ...value });
@@ -83,7 +85,7 @@ export async function runDesktopNativeReviewUiSmoke(
     scope:
       'Original Launch, native MCP Task creation, original user Task Start, actual sequential foreground Edit capture, Stop, original Changes Keep/Reject/Undo/Redo/history and renderer reload',
     qualification:
-      'Two exact foreground Edit transforms; failed/relevant-hook/background bytes and outcomes stay partial or explicit gaps, never qualified authorship',
+      'Two exact foreground Edit transforms; positive same-failed-Bash hook and same-execution background observations retain partial bytes/outcomes without qualified authorship',
     excluded: [
       'all tools/profiles',
       'failed/background/post-hook file authorship or global interval completeness',
@@ -251,7 +253,8 @@ export async function runDesktopNativeReviewUiSmoke(
   await poll(
     async () => model.observations,
     (values) => values.some((value) => value.turn === 'work' && value.step === REVIEW_WORK_TERMINAL_STEP),
-    'actual native Task work terminal response'
+    'actual native Task work terminal response',
+    180_000
   );
   const startReceipts = (await files(join(team, '.host-owner/commands'))).filter((row) => {
     const request = record(row.command);
@@ -298,8 +301,8 @@ export async function runDesktopNativeReviewUiSmoke(
   const notices = await poll(async () => ({ rows: await rows(noticePath),
     backgroundBytes: await readFile(partial.backgroundPath, 'utf8') }), value =>
     value.backgroundBytes === partial.backgroundAfter && value.rows.some(row => row.toolUseId === backgroundId &&
-      (row.captureBoundary === 'native-task-notification' || String(row.message).startsWith('Native capture gap:'))),
-    'original finite background bytes plus native completion observation or explicit unsupported gap');
+      row.captureBoundary === 'native-task-notification'),
+    'positive original finite background bytes and exact native completion, never a gap substitute');
   const events = await rows(eventPath);
   const qualifiedHunks = events.filter(row => row.filePath === seed.filePath);
   assert.equal(
@@ -369,28 +372,38 @@ export async function runDesktopNativeReviewUiSmoke(
     assert.equal(await readFile(path, 'utf8'), after); return event;
   };
   const failed = await checkPartial(partial.failedPath, 'native_review_work_3', 'failed', partial.failedBefore, partial.failedAfter);
+  const failedHook = await checkPartial(failureHookPath, 'native_review_work_3', 'failed', failureHookBefore, failureHookAfter);
   const write = await checkPartial(partial.writePath, 'native_review_work_4', 'succeeded', null, 'WRITE\nHOOK_LATE\n');
   const hook = await checkPartial(partial.hookSidePath, 'native_review_work_4', 'succeeded', partial.hookBefore, partial.hookAfter);
   const hookFacts = await rows(partial.hookLog);
-  assert.deepEqual(hookFacts.map(row => [row.phase, row.toolUseId]), [['started', 'native_review_work_4'], ['finished', 'native_review_work_4']]);
+  assert.deepEqual(hookFacts.map(row => [row.phase, row.toolUseId, row.hookEvent]), [
+    ['started', 'native_review_work_3', 'PostToolUseFailure'], ['finished', 'native_review_work_3', 'PostToolUseFailure'],
+    ['started', 'native_review_work_4', 'PostToolUse'], ['finished', 'native_review_work_4', 'PostToolUse'],
+  ]);
   const backgroundRows = events.filter(row => row.toolUseId === backgroundId);
-  assert.ok(backgroundRows.length <= 1, 'background completion never invents duplicate capture');
-  if (backgroundRows.length) await checkPartial(partial.backgroundPath, backgroundId, 'succeeded', partial.backgroundBefore, partial.backgroundAfter);
-  else assert.ok(notices.rows.some(row => row.toolUseId === backgroundId && String(row.message).startsWith('Native capture gap:')));
-  const allowed = new Set([seed.filePath, partial.failedPath, partial.writePath, partial.hookSidePath, partial.backgroundPath]);
+  assert.ok('backgroundTaskId' in model && typeof model.backgroundTaskId === 'function');
+  const nativeTaskRef: unknown = model.backgroundTaskId(); assert.equal(typeof nativeTaskRef, 'string');
+  proof.nativeBackgroundTaskRef = nativeTaskRef;
+  const backgroundCompletion = assertNativeReviewBackgroundCompletion(events, notices.rows, {
+    toolUseId: backgroundId, nativeTaskRef: String(nativeTaskRef), taskId, taskStartCommandId: String(start.commandId),
+    inputId: String(outbox.inputId), operationRef: String(input.operationRef), sessionRef: String(runtime.sessionRef),
+    binding: record(runtime.binding),
+  });
+  await checkPartial(partial.backgroundPath, backgroundId, 'succeeded', partial.backgroundBefore, partial.backgroundAfter);
+  const allowed = new Set([seed.filePath, partial.failedPath, failureHookPath, partial.writePath, partial.hookSidePath, partial.backgroundPath]);
   assert.ok(events.every(row => allowed.has(String(row.filePath))), 'no unplanned native file effects');
   const changes = await new TaskChangeLedgerReader().readTaskChanges({ teamName: 'test-desktop-backend', taskId,
     projectDir: join(team, '.host-evidence'), projectPath: join(fixture.root, 'workspace'), includeDetails: true });
   assert.ok(changes && changes.warnings.length > 0);
-  for (const event of [failed, write, hook, ...backgroundRows]) {
+  for (const event of [failed, failedHook, write, hook, ...backgroundRows]) {
     const file = changes.files.find(row => row.filePath === event.filePath); assert.ok(file);
     assert.ok(file.snippets.length > 0 && file.snippets.every(snippet => snippet.ledger?.nativeCapture === 'unqualified' &&
       snippet.ledger.originalFullContent === null && snippet.ledger.modifiedFullContent === null && !snippet.oldString && !snippet.newString),
       'portable Changes projection cannot promote partial rows to writable native content');
   }
-  proof.partialCapture = { status: 'PARTIAL_OR_GAP', failed, write, hook, hookFacts, backgroundRows,
+  proof.partialCapture = { status: 'PARTIAL_OR_GAP', requiredTuple: 'positive-failed-post-hook-and-background', failed, failedHook, write, hook, hookFacts, backgroundRows, backgroundCompletion,
     backgroundNotices: notices.rows.filter(row => row.toolUseId === backgroundId),
-    eventualOutcome: backgroundRows.length ? 'observed-native-completion' : 'unsupported-or-unconfirmed',
+    eventualOutcome: 'observed-native-completion',
     backgroundFinalSha256: await fileDigest(partial.backgroundPath), warnings: changes.warnings,
     unsafePromotion: false, fullM13: false };
   assert.equal(await readFile(seed.filePath, 'utf8'), seed.after);

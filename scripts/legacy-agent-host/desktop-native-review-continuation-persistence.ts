@@ -42,8 +42,26 @@ export function assertNativeReviewPersistence(
     oldState,
     'decisions/history IDs/redo/blobs/scope/authority fields remain exact'
   );
-  assert.deepEqual(Object.keys(record(oldCache)), [key]);
-  assert.deepEqual(Object.keys(record(newCache)), [key]);
+  const previousFiles = record(oldCache),
+    currentFiles = record(newCache);
+  assert.ok(Object.hasOwn(previousFiles, key), 'original qualified native file is required');
+  assert.deepEqual(
+    Object.keys(currentFiles).sort(),
+    Object.keys(previousFiles).sort(),
+    'exact original logical file keys'
+  );
+  for (const other of Object.keys(previousFiles).filter((path) => path !== key)) {
+    assert.deepEqual(
+      previousFiles[other],
+      {},
+      'original partial files have no writable hunk hashes'
+    );
+    assert.deepEqual(
+      currentFiles[other],
+      previousFiles[other],
+      'partial files never acquire context enrichment'
+    );
+  }
   const oldHashes = record(record(oldCache)[key]),
     newHashes = record(record(newCache)[key]);
   for (const [index, hash] of Object.entries(oldHashes)) {

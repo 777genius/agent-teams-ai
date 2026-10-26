@@ -561,6 +561,14 @@ export class TeamOwner {
         state.rosterVersion,
         state.savedSettings
       ),
+      // Retained captures and original bindings survive roster changes and Host restart.
+      // Only their complete absence proves this owner has no native launch obligations.
+      ...(state.runtimeNeverLaunched === true &&
+      !state.runtimeCaptures?.length &&
+      ![...state.members, ...(state.removedMembers ?? [])].some((member) => member.delivery) &&
+      !state.lifecycle?.cleanupPending
+        ? { runtimeNeverLaunched: true }
+        : {}),
       members,
       tasks: this.policy.taskBoard().listTasks(),
       ...(this.policy.processes ? { processes: this.processCommands(principalId).list() } : {}),

@@ -223,8 +223,11 @@ export function createProviderSubmissionFence() {
       return preparationId;
     },
     /** A new explicit dialog/settings action; renders and submitted work retain the original. */
-    refreshPreparation(): void {
-      if (!busy) preparationId = crypto.randomUUID();
+    refreshPreparation(generation?: { current: number }): void {
+      if (!busy) {
+        if (generation) generation.current += 1;
+        preparationId = crypto.randomUUID();
+      }
     },
     get busy() {
       return busy;

@@ -1,4 +1,10 @@
-import { readMixedGroupTurn, mixedGroupActions, assertMixedGroupReceipt, type MixedGroupTurn } from '../native-mixed-groups.ts';
+import { assertNativeMessageImage } from '../native-message-image.ts';
+import {
+  readMixedGroupTurn,
+  mixedGroupActions,
+  assertMixedGroupReceipt,
+  type MixedGroupTurn,
+} from '../native-mixed-groups.ts';
 // Responses SSE shapes are reused from the archived actual Codex 0.162 proof.
 // This fixture scripts only inference; native app-server executes all tools.
 import assert from 'node:assert/strict';
@@ -44,19 +50,63 @@ export function flattenTools(value: unknown): Tool[] {
     return [{ name: String(tool.name) }];
   });
 }
+const MODEL_PROBE_TEXT = 'Reply only OK. Do not use tools, access files or run commands.';
+function messageText(message: RecordValue): string | undefined {
+  if (typeof message.content === 'string') return message.content;
+  return Array.isArray(message.content) &&
+    message.content.every(
+      (value) => record(value).type === 'input_text' && typeof record(value).text === 'string'
+    )
+    ? message.content.map((value) => String(record(value).text)).join('\n')
+    : undefined;
+}
+/** Native Codex may prepend one environment user message; never accept another business input. */
+export function isCodexModelProbeInput(input: readonly RecordValue[], workspace?: string): boolean {
+  if (!input.every((item) => ['user', 'developer', 'system'].includes(String(item.role))))
+    return false;
+  const users = input.filter((item) => item.role === 'user');
+  if (users.length === 1) return messageText(users[0]!) === MODEL_PROBE_TEXT;
+  if (users.length !== 2 || !workspace || messageText(users[1]!) !== MODEL_PROBE_TEXT) return false;
+  const context = messageText(users[0]!);
+  if (!context) return false;
+  const lines = context.split('\n');
+  return (
+    lines.length === 7 &&
+    lines[0] === '<environment_context>' &&
+    lines[1] === `  <cwd>${workspace}</cwd>` &&
+    /^  <shell>[A-Za-z0-9_/.+-]+<\/shell>$/.test(lines[2]!) &&
+    /^  <current_date>\d{4}-\d{2}-\d{2}<\/current_date>$/.test(lines[3]!) &&
+    /^  <timezone>[A-Za-z0-9_/+-]+<\/timezone>$/.test(lines[4]!) &&
+    lines[5] ===
+      `  <filesystem><workspace_roots><root>${workspace}</root></workspace_roots><permission_profile type="managed"><file_system type="restricted"><entry access="read"><special>:root</special></entry></file_system></permission_profile></filesystem>` &&
+    lines[6] === '</environment_context>'
+  );
+}
 export const CAPTURE_TURN = 'CODEX_CAPTURE_TASK_START_V1';
 export const CAPTURE_ASSIGNMENT = CAPTURE_TURN + '_ASSIGNMENT';
 export const CAPTURE_BEFORE = 'TEST clean anchor\nTEST dirty preimage\nTEST tail\n';
 export const CAPTURE_AFTER = 'TEST clean anchor\nTEST native foreground patched\nTEST tail\n';
+export const CAPTURE_FAILED_AFTER = 'TEST clean anchor\nTEST native failed shell\nTEST tail\n';
+export const CAPTURE_FAILED_COMMAND =
+  "printf 'TEST clean anchor\\nTEST native failed shell\\nTEST tail\\n' > dirty.txt; printf 'TEST_CAPTURE_FAILED_SHELL_EXECUTED\\n'; exit 7";
 export const CAPTURE_PATCH =
   '*** Begin Patch\n*** Update File: dirty.txt\n@@\n-TEST dirty preimage\n+TEST native foreground patched\n*** End Patch\n';
 export interface CaptureFileUpdateScenario {
+  failedShell?: boolean;
   workspace: string;
   taskId(): string;
   phase?(): 'assignment' | 'task-start';
 }
 export async function startCodexModel(
-  options: { mixedGroups?: boolean; peerMessaging?: boolean; captureFileUpdate?: CaptureFileUpdateScenario; allowModelProbes?: boolean; principalId?: () => string } = {}
+  options: {
+    nativeMessageImage?: boolean;
+    mixedGroups?: boolean;
+    peerMessaging?: boolean;
+    captureFileUpdate?: CaptureFileUpdateScenario;
+    allowModelProbes?: boolean;
+    modelProbeWorkspace?: () => string;
+    principalId?: () => string;
+  } = {}
 ) {
   assert.ok(!(options.peerMessaging && options.captureFileUpdate), 'one bounded fixture scenario');
   if (options.captureFileUpdate)
@@ -65,8 +115,14 @@ export async function startCodexModel(
       /\/TEST-native-codex-capture-[^/]+\/workspace$/
     );
 
-  const probes: { requestedModel?: string; requestedEffort?: string; serviceTier?: string; advertisedToolCount: number }[] = [];
+  const probes: {
+    requestedModel?: string;
+    requestedEffort?: string;
+    serviceTier?: string;
+    advertisedToolCount: number;
+  }[] = [];
   const observations: {
+    nativeImage?: ReturnType<typeof assertNativeMessageImage>;
     turn: string;
     step: number;
     contextEffective: boolean;
@@ -92,25 +148,51 @@ export async function startCodexModel(
       }
       const body = record(JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown);
       const input = (Array.isArray(body.input) ? body.input : []).map(record);
-      const user = input.filter(item => item.role === 'user');
-      const probeText = user.length === 1 && input.every(item => ['user', 'developer', 'system'].includes(String(item.role)))
-        ? typeof user[0]?.content === 'string' ? user[0].content
-          : Array.isArray(user[0]?.content) && user[0].content.every(raw => record(raw).type === 'input_text' && typeof record(raw).text === 'string')
-            ? user[0].content.map(raw => String(record(raw).text)).join('\n') : undefined
-        : undefined;
-      if (options.allowModelProbes && probeText === 'Reply only OK. Do not use tools, access files or run commands.') {
+      if (
+        options.allowModelProbes &&
+        isCodexModelProbeInput(input, options.modelProbeWorkspace?.())
+      ) {
         assert.ok(probes.length < 8, 'bounded original-dialog model probes');
         // Native Codex may advertise built-in read-only tools; the scripted
         // preflight emits text only and never invents a tool outcome.
-        probes.push({ ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
-          ...(typeof record(body.reasoning).effort === 'string' ? { requestedEffort: String(record(body.reasoning).effort) } : {}),
-          ...(typeof body.service_tier === 'string' ? { serviceTier: body.service_tier } : {}), advertisedToolCount: flattenTools(body.tools).length });
+        probes.push({
+          ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
+          ...(typeof record(body.reasoning).effort === 'string'
+            ? { requestedEffort: String(record(body.reasoning).effort) }
+            : {}),
+          ...(typeof body.service_tier === 'string' ? { serviceTier: body.service_tier } : {}),
+          advertisedToolCount: flattenTools(body.tools).length,
+        });
         const id = `TEST-codex-probe-${probes.length}`;
-        const events = [{ type: 'response.created', response: { id } }, { type: 'response.output_item.done', item: {
-          type: 'message', role: 'assistant', id: `${id}-answer`, content: [{ type: 'output_text', text: 'OK' }] } },
-          { type: 'response.completed', response: { id, usage: { input_tokens: 10, input_tokens_details: null, output_tokens: 1, output_tokens_details: null, total_tokens: 11 } } }];
+        const events = [
+          { type: 'response.created', response: { id } },
+          {
+            type: 'response.output_item.done',
+            item: {
+              type: 'message',
+              role: 'assistant',
+              id: `${id}-answer`,
+              content: [{ type: 'output_text', text: 'OK' }],
+            },
+          },
+          {
+            type: 'response.completed',
+            response: {
+              id,
+              usage: {
+                input_tokens: 10,
+                input_tokens_details: null,
+                output_tokens: 1,
+                output_tokens_details: null,
+                total_tokens: 11,
+              },
+            },
+          },
+        ];
         response.writeHead(200, { 'content-type': 'text/event-stream' });
-        response.end(events.map(event => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`).join(''));
+        response.end(
+          events.map((event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`).join('')
+        );
         return;
       }
       let turn = '';
@@ -126,16 +208,22 @@ export async function startCodexModel(
           : undefined;
         if (group || capture || peer || match) {
           mixedGroup = group;
-          turn = group?.turn ?? (capture
-            ? options.captureFileUpdate?.phase?.() === 'assignment'
-              ? CAPTURE_ASSIGNMENT
-              : CAPTURE_TURN
-            : (peer ?? match![0]));
+          turn =
+            group?.turn ??
+            (capture
+              ? options.captureFileUpdate?.phase?.() === 'assignment'
+                ? CAPTURE_ASSIGNMENT
+                : CAPTURE_TURN
+              : (peer ?? match![0]));
           break;
         }
       }
       assert.ok(turn, 'actual native request retains deliberate TEST input');
       const step = counts.get(turn) ?? 0;
+      const nativeImage =
+        options.nativeMessageImage && turn === 'CODEX_TEAM_TWO'
+          ? assertNativeMessageImage(input, 'codex')
+          : undefined;
       const groupActions = mixedGroup ? mixedGroupActions(mixedGroup) : undefined;
       if (groupActions) assert.ok(step <= groupActions.length, 'finite mixed group turn');
       const peerActions = options.peerMessaging ? nativePeerActions(turn, 'bob') : undefined;
@@ -143,7 +231,10 @@ export async function startCodexModel(
       if (capture && turn === CAPTURE_ASSIGNMENT)
         assert.equal(step, 0, 'one terminal-only assignment observation; no effects');
       if (capture && turn === CAPTURE_TURN) {
-        assert.ok(step <= 4, 'one original read/update/task-complete sequence, no replay');
+        assert.ok(
+          step <= (capture.failedShell ? 3 : 4),
+          'one bounded original native sequence, no replay'
+        );
         const task = capture.taskId();
         assert.ok(
           task && task !== 'undefined',
@@ -157,6 +248,12 @@ export async function startCodexModel(
             assert.equal(result.id, task);
             assert.equal(result.status, 'in_progress');
             assert.equal(result.owner, 'bob');
+          } else if (capture.failedShell && step === 2) {
+            assertCaptureFailedShellOutput(last.output);
+          } else if (capture.failedShell) {
+            const result = codexToolReceipt(last.output);
+            assert.equal(result.phase, 'completed');
+            assert.equal(result.principalId, options.principalId?.() ?? 'bob-session');
           } else if (step === 2) {
             assert.ok(
               JSON.stringify(last.output).includes(CAPTURE_BEFORE.trim().replaceAll('\n', '\\n')),
@@ -181,7 +278,7 @@ export async function startCodexModel(
       );
       const tools = flattenTools(body.tools);
       if (mixedGroup && step > 0) {
-        const last = input.filter(item => item.type === 'function_call_output').at(-1);
+        const last = input.filter((item) => item.type === 'function_call_output').at(-1);
         assertMixedGroupReceipt(mixedGroup, step, codexToolReceipt(last?.output));
       }
       if (
@@ -207,6 +304,7 @@ export async function startCodexModel(
         assert.ok(taskId && taskId !== 'undefined');
       }
       observations.push({
+        ...(nativeImage ? { nativeImage } : {}),
         turn,
         step,
         contextEffective,
@@ -259,35 +357,53 @@ export async function startCodexModel(
       const captureActions = capture
         ? turn === CAPTURE_ASSIGNMENT
           ? []
-          : [
-              { name: 'task_get', input: { taskId: capture.taskId() } },
-              {
-                name: 'exec_command',
-                input: {
-                  cmd: 'cat -- dirty.txt',
-                  workdir: capture.workspace,
-                  yield_time_ms: 1000,
-                  max_output_tokens: 1000,
+          : capture.failedShell
+            ? [
+                { name: 'task_get', input: { taskId: capture.taskId() } },
+                {
+                  name: 'exec_command',
+                  input: {
+                    cmd: CAPTURE_FAILED_COMMAND,
+                    workdir: capture.workspace,
+                    yield_time_ms: 1000,
+                    max_output_tokens: 1000,
+                  },
                 },
-              },
-              {
-                name: 'exec_command',
-                input: {
-                  cmd: "apply_patch <<'PATCH'\n" + CAPTURE_PATCH + 'PATCH',
-                  workdir: capture.workspace,
-                  yield_time_ms: 1000,
-                  max_output_tokens: 1000,
+                {
+                  name: 'task_complete',
+                  input: { commandId: 'codex-capture-complete', taskId: capture.taskId() },
                 },
-              },
-              {
-                name: 'task_complete',
-                input: { commandId: 'codex-capture-complete', taskId: capture.taskId() },
-              },
-            ]
+              ]
+            : [
+                { name: 'task_get', input: { taskId: capture.taskId() } },
+                {
+                  name: 'exec_command',
+                  input: {
+                    cmd: 'cat -- dirty.txt',
+                    workdir: capture.workspace,
+                    yield_time_ms: 1000,
+                    max_output_tokens: 1000,
+                  },
+                },
+                {
+                  name: 'exec_command',
+                  input: {
+                    cmd: "apply_patch <<'PATCH'\n" + CAPTURE_PATCH + 'PATCH',
+                    workdir: capture.workspace,
+                    yield_time_ms: 1000,
+                    max_output_tokens: 1000,
+                  },
+                },
+                {
+                  name: 'task_complete',
+                  input: { commandId: 'codex-capture-complete', taskId: capture.taskId() },
+                },
+              ]
         : undefined;
-      const action = (groupActions ?? captureActions ?? peerActions ?? (turn === 'CODEX_TEAM_ONE' ? one : two))[
-        step
-      ];
+      const action = (groupActions ??
+        captureActions ??
+        peerActions ??
+        (turn === 'CODEX_TEAM_ONE' ? one : two))[step];
       let output: RecordValue;
       if (action) {
         const chosen = tools.find((tool) =>
@@ -355,4 +471,11 @@ export async function startCodexModel(
         server.close(() => resolve());
       }),
   };
+}
+
+/** Pinned native command output must report failure before the model recovers. */
+export function assertCaptureFailedShellOutput(output: unknown): void {
+  assert.equal(typeof output, 'string');
+  assert.match(String(output), /Process exited with code 7/);
+  assert.match(String(output), /TEST_CAPTURE_FAILED_SHELL_EXECUTED/);
 }

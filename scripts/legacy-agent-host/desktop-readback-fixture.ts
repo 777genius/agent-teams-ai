@@ -40,7 +40,8 @@ export function desktopReadbackArtifacts(
   stage = process.env.LEGACY_DESKTOP_REVIEW_CONTINUATION_STAGE,
   attemptId = process.env.LEGACY_DESKTOP_READBACK_ATTEMPT_ID
 ): { receipt: string; appLog: string; failureScreenshot: string } {
-  const suffixAllowed = mode.readbackMode || mode.nativeReviewContinuationMode;
+  const suffixAllowed =
+    mode.readbackMode || mode.nativeReviewReadbackMode || mode.nativeReviewContinuationMode;
   if (attemptId !== undefined)
     assert.ok(
       suffixAllowed,
@@ -68,7 +69,9 @@ export function desktopReadbackArtifacts(
       attemptId
     ),
     failureScreenshot: desktopReadbackArtifactName(
-      suffixAllowed ? 'ui-readback-failure.png' : 'ui-failure.png',
+      mode.readbackMode || mode.nativeReviewContinuationMode
+        ? 'ui-readback-failure.png'
+        : 'ui-failure.png',
       attemptId
     ),
   };
@@ -77,7 +80,13 @@ export function desktopReadbackArtifacts(
 export async function readSavedDesktopFixture(
   root: string,
   receiptSha256: string,
-  options: { nativeQuit?: boolean; review?: boolean; nativeReview?: boolean; nativeReviewContinuation?: boolean; nativeProcess?: boolean } = {}
+  options: {
+    nativeQuit?: boolean;
+    review?: boolean;
+    nativeReview?: boolean;
+    nativeReviewContinuation?: boolean;
+    nativeProcess?: boolean;
+  } = {}
 ): Promise<Fixture> {
   assert.equal(await realpath(root), root);
   assert.match(basename(root), /^TEST-desktop-backend-[A-Za-z0-9]+$/);
@@ -113,12 +122,18 @@ export async function readSavedDesktopFixture(
   const handleId = String(record(descriptor.handles[0]).handleId);
   const seed = record(JSON.parse(await readFile(join(root, 'ui-seed-receipt.json'), 'utf8')));
   const taskId = String(record(seed.effects).taskId);
-  const subject = options.nativeProcess ? 'TEST native process cold-owner sidebar seed' : 'TEST persisted Host sidebar seed';
+  const subject = options.nativeProcess
+    ? 'TEST native process cold-owner sidebar seed'
+    : 'TEST persisted Host sidebar seed';
   const tasks = await readdir(join(root, 'hoststore/tasks/test-desktop-backend'));
   assert.ok(tasks.includes(taskId + '.json'));
   if (options.nativeProcess) {
     await verifyNativeProcessReadbackSource(root, saved);
-    const task = record(JSON.parse(await readFile(join(root, 'hoststore/tasks/test-desktop-backend', taskId + '.json'), 'utf8')));
+    const task = record(
+      JSON.parse(
+        await readFile(join(root, 'hoststore/tasks/test-desktop-backend', taskId + '.json'), 'utf8')
+      )
+    );
     assert.equal(task.subject, subject);
   } else if (options.nativeQuit) {
     await verifyDesktopNativeQuitReadbackSource(root, saved);
@@ -156,7 +171,11 @@ export async function readSavedDesktopFixture(
     handleId,
     pins,
     sentinelLog: join(root, 'sentinel-invocations.ndjson'),
-    uiSeed: { taskId, subject, commandId: options.nativeProcess ? 'TEST-process-ui-seed' : 'TEST-ui-offline-seed' },
+    uiSeed: {
+      taskId,
+      subject,
+      commandId: options.nativeProcess ? 'TEST-process-ui-seed' : 'TEST-ui-offline-seed',
+    },
     packageManager: saved.packageManager as Fixture['packageManager'],
     appEnvironment: desktopBackendEnvironment(root, node, descriptorPath, pins.descriptorSha256),
   };

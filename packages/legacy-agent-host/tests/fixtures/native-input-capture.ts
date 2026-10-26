@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, realpath, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import type { TestContext } from 'node:test';
@@ -12,7 +12,7 @@ import { record } from './native-claude-team/model.ts';
 import { fileHash, tick, treeHash, startHost } from './native-host.ts';
 import { FileRuntimeStore } from '../../dist/adapters/runtime/FileRuntimeStore.js';
 import { evidenceProjectDir } from '../../dist/evidence/evidenceProjectDir.js';
-import { deliveryFingerprint } from '../../dist/runtime/identity.js';
+import { deliveryFingerprint, normalizeBinding } from '../../dist/runtime/identity.js';
 import { effectId } from '../../dist/team/identity.js';
 import type { TeamHostProfile } from '../../dist/composition/TeamHost.js';
 import type { RuntimeMemberProfile } from '../../dist/composition/runtimeProfile.js';
@@ -33,6 +33,7 @@ const requireId = (value: unknown): string => {
 
 export interface NativeCaptureFixture {
   provider: 'codex' | 'opencode';
+  failedShell?: boolean;
   memberName: 'bob' | 'carol';
   goFlag: string;
   binaryEnv: string;
@@ -90,6 +91,21 @@ export async function runNativeInputCapture(
     join(repo, 'resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node')
   );
   assert.equal(await realpath(process.execPath), node);
+  const gitPath = '/Library/Developer/CommandLineTools/usr/bin/git';
+  assert.equal(await realpath(gitPath), gitPath);
+  const gitPin = { path: gitPath, sha256: await fileHash(gitPath) };
+  assert.equal(gitPin.sha256, '4c5ca299b5311572b4f948d11efd7c66dcadf30950fbf260688ee32f4a63f6a4');
+  const observerPath = process.env.LEGACY_NATIVE_FETCH_OBSERVER_PATH;
+  const observerSha256 = process.env.LEGACY_NATIVE_FETCH_OBSERVER_SHA256;
+  let diagnosticObserver: { path: string; sha256: string } | undefined;
+  if (observerPath !== undefined || observerSha256 !== undefined) {
+    assert.equal(provider, 'opencode', 'Root-selected diagnostic preload is OpenCode-only');
+    assert.ok(observerPath);
+    assert.match(observerSha256 ?? '', /^[a-f0-9]{64}$/);
+    assert.equal(await realpath(observerPath), observerPath);
+    assert.equal(await fileHash(observerPath), observerSha256);
+    diagnosticObserver = { path: observerPath, sha256: observerSha256! };
+  }
   const binary = process.env[selected.binaryEnv];
   assert.ok(binary);
   const native = { path: await realpath(binary), sha256: await fileHash(binary) };
@@ -98,6 +114,8 @@ export async function runNativeInputCapture(
   assert.ok(artifact);
   const entry = join(pkg, 'dist/cli.js');
   const artifacts = {
+    git: gitPin,
+    ...(diagnosticObserver ? { diagnosticObserver } : {}),
     node: { path: node, sha256: await fileHash(node) },
     native,
     provider: {
@@ -152,13 +170,13 @@ export async function runNativeInputCapture(
   const safeEnvironment = {
     HOME: join(root, 'home'),
     TMPDIR: join(root, 'tmp'),
-    PATH: `${dirname(node)}:/usr/bin:/bin`,
+    PATH: `${dirname(node)}:${dirname(gitPath)}:/usr/bin:/bin`,
     SHELL: '/bin/sh',
     GIT_CONFIG_GLOBAL: '/dev/null',
     GIT_CONFIG_NOSYSTEM: '1',
   };
   const git = (args: string[]) =>
-    execFileSync('/usr/bin/git', ['-c', 'core.fsmonitor=false', ...args], {
+    execFileSync(gitPath, ['-c', 'core.fsmonitor=false', ...args], {
       cwd: workspace,
       env: safeEnvironment,
       stdio: 'pipe',
@@ -173,16 +191,19 @@ export async function runNativeInputCapture(
   const receiptPath = join(root, 'receipt.json');
   const receipt: Record<string, unknown> = {
     status: 'ISSUED',
+    ...(diagnosticObserver ? { diagnosticOnly: true, ordinaryHostQualified: false } : {}),
     root,
     artifacts,
     nativeIssuances: 1,
+    scenario: selected.failedShell ? 'failed-shell-partial' : 'qualified-authored-update',
     initial: {
       targetSha256: sha(CAPTURE_BEFORE),
       indexSha256: sha(indexText),
       unrelatedSha256: sha(unrelatedDirty),
     },
-    scope:
-      'Actual Host/Runtime/D/native provider/local scripted inference with original Host user task.start notified input and one existing LF file update; no vendor, auth, Desktop, create/delete/rename, background tool or whole M13 claim.',
+    scope: selected.failedShell
+      ? 'Actual Host/Runtime/D/native recovered exit7 with original TaskStart input, exact dirty before/final observations and native failure metadata; PARTIAL/nonreviewable, no authorship, hook/background or whole M13 claim.'
+      : 'Actual Host/Runtime/D/native provider/local scripted inference with original Host user task.start notified input and one existing LF file update; no vendor, auth, Desktop, create/delete/rename, background tool or whole M13 claim.',
   };
   await writeFile(receiptPath, JSON.stringify(receipt, null, 2) + '\n', {
     flag: 'wx',
@@ -270,11 +291,22 @@ export async function runNativeInputCapture(
   const profilePath = join(root, 'profile.json'),
     profileBytes = JSON.stringify(profile);
   await writeFile(profilePath, profileBytes, { mode: 0o600 });
-  const binding = { schemaVersion: 1, handleId: `TEST-handle-${namespace}`, owner, scope };
-  const envelope = (commandId: string, payload: unknown) => ({ commandId, binding, payload });
+  const binding = {
+    schemaVersion: 1,
+    handleId: `TEST-handle-${namespace}`,
+    owner,
+    scope,
+  };
+  const envelope = (commandId: string, payload: unknown) => ({
+    commandId,
+    binding,
+    payload,
+  });
   const command = (commandId: string, operation: string, payload: unknown) =>
     envelope(commandId, { operation, payload });
   const startId = 'human-capture-task-start';
+  const diagnosticLog = join(root, 'fetch-diagnostic.jsonl');
+  if (diagnosticObserver) await writeFile(diagnosticLog, '', { flag: 'wx', mode: 0o600 });
   let current: ReturnType<typeof startHost> | undefined;
   const hosts: ReturnType<ReturnType<typeof startHost>['facts']>[] = [];
   let nativeChild: ProcessFact | undefined;
@@ -300,6 +332,12 @@ export async function runNativeInputCapture(
       root,
       profile: profilePath,
       profileHash: sha(profileBytes),
+      gitBinDirectory: dirname(gitPath),
+      ...(diagnosticObserver
+        ? {
+            testImports: [diagnosticObserver.path],
+          }
+        : {}),
     });
     await current.rpc('host.handshake', { protocolVersion: 1 });
     const opened = await current.rpc(
@@ -406,7 +444,7 @@ export async function runNativeInputCapture(
       startId,
       startMessageId
     );
-    const deadline = Date.now() + 60_000;
+    const deadline = Date.now() + (selected.failedShell ? 180_000 : 60_000);
     let terminal = false;
     while (Date.now() < deadline) {
       assert.deepEqual(model.failures, []);
@@ -429,6 +467,12 @@ export async function runNativeInputCapture(
           break;
         }
       }
+      const diagnostic = record(read.value).diagnostic;
+      assert.ok(
+        !['not-sent', 'rejected'].includes(String(startedInput?.phase)),
+        `original TaskStart refused: ${String(startedInput?.phase)} / ${String(diagnostic)}`
+      );
+      assert.notEqual(diagnostic, 'observe-ended', 'original TaskStart observation ended');
       await tick();
     }
     assert.equal(terminal, true, 'bounded original native input terminal');
@@ -534,9 +578,17 @@ export async function runNativeInputCapture(
     assert.equal(causal.operationRef, input.operationRef);
     assert.equal(causal.sessionRef, persisted.sessionRef);
     assert.equal(causal.hostIncarnation, persisted.hostIncarnation);
+    assert.deepEqual(causal.binding, normalizeBinding(persisted.binding));
+    assert.equal(record(causal.workspace).path, workspace);
     selected.assertNativeEvent(row);
-    assert.equal(proof.beforeSha256, sha(CAPTURE_BEFORE));
-    assert.equal(proof.afterSha256, sha(CAPTURE_AFTER));
+    if (!selected.failedShell) {
+      assert.equal(proof.beforeSha256, sha(CAPTURE_BEFORE));
+      assert.equal(proof.afterSha256, sha(CAPTURE_AFTER));
+    }
+    assert.equal(record(row.before).sha256, sha(CAPTURE_BEFORE));
+    assert.equal(record(row.after).sha256, sha(CAPTURE_AFTER));
+    assert.equal(record(row.before).blobRef, sha(CAPTURE_BEFORE) + '.txt');
+    assert.equal(record(row.after).blobRef, sha(CAPTURE_AFTER) + '.txt');
     assert.equal(
       await readFile(
         join(projectDir, '.board-task-changes/blobs', sha(CAPTURE_BEFORE) + '.txt'),
@@ -553,7 +605,19 @@ export async function runNativeInputCapture(
     );
     const notices = jsonLines(await readFile(noticesPath, 'utf8'));
     assert.ok(notices.length > 0);
-    assert.ok(notices.every((notice) => notice.toolUseId === undefined));
+    if (selected.failedShell) {
+      const native = record(causal.native);
+      const baseline = notices.find((notice) => notice.capturePhase === 'input-before');
+      assert.ok(baseline);
+      assert.equal(baseline.captureWindowRef, native.windowRef);
+      if (provider === 'codex') assert.equal(baseline.nativeThreadId, native.threadId);
+      else assert.equal(baseline.nativeSessionId, native.nativeSessionId);
+      const failures = notices.filter((notice) => notice.capturePhase === 'input-failed-tool');
+      assert.equal(failures.length, 1);
+      assert.equal(failures[0]!.toolUseId, row.toolUseId);
+      assert.equal(failures[0]!.reviewableComplete, false);
+      assert.deepEqual(failures[0]!.nativeToolOutcome, native);
+    } else assert.ok(notices.every((notice) => notice.toolUseId === undefined));
     const changes = await new TaskChangeLedgerReader().readTaskChanges({
       teamName: teamBinding.teamName,
       taskId,
@@ -564,25 +628,48 @@ export async function runNativeInputCapture(
     assert.ok(changes);
     assert.equal(changes.files.length, 1);
     assert.equal(changes.files[0]!.filePath, file);
-    assert.equal(changes.files[0]!.snippets[0]!.ledger!.nativeCapture, 'qualified');
+    if (selected.failedShell) {
+      assert.ok(changes.files[0]!.snippets.length > 0);
+      assert.ok(
+        changes.files[0]!.snippets.every(
+          (snippet) =>
+            snippet.ledger?.nativeCapture === 'unqualified' &&
+            snippet.ledger.originalFullContent === null &&
+            snippet.ledger.modifiedFullContent === null &&
+            !snippet.oldString &&
+            !snippet.newString
+        )
+      );
+    } else assert.equal(changes.files[0]!.snippets[0]!.ledger!.nativeCapture, 'qualified');
     const content = await new FileContentResolver({ mode: 'ledger-only' }).getFileContent(
       teamBinding.teamName,
       member,
       file,
       changes.files[0]!.snippets
     );
-    assert.equal(content.originalFullContent, CAPTURE_BEFORE);
-    assert.equal(content.modifiedFullContent, CAPTURE_AFTER);
-    const review = await new ReviewApplier().applyReviewDecisions(
-      {
-        teamName: teamBinding.teamName,
-        taskId,
-        decisions: [{ filePath: file, fileDecision: 'rejected', hunkDecisions: {} }],
-      },
-      new Map([[file, content]])
+    if (selected.failedShell) {
+      assert.equal(content.contentSource, 'unavailable');
+      assert.equal(content.originalFullContent, null);
+      assert.equal(content.modifiedFullContent, null);
+    } else {
+      assert.equal(content.originalFullContent, CAPTURE_BEFORE);
+      assert.equal(content.modifiedFullContent, CAPTURE_AFTER);
+    }
+    const review = selected.failedShell
+      ? { applied: 0, skipped: 'unqualified-native-failure' }
+      : await new ReviewApplier().applyReviewDecisions(
+          {
+            teamName: teamBinding.teamName,
+            taskId,
+            decisions: [{ filePath: file, fileDecision: 'rejected', hunkDecisions: {} }],
+          },
+          new Map([[file, content]])
+        );
+    assert.equal(review.applied, selected.failedShell ? 0 : 1);
+    assert.equal(
+      await readFile(file, 'utf8'),
+      selected.failedShell ? CAPTURE_AFTER : CAPTURE_BEFORE
     );
-    assert.equal(review.applied, 1);
-    assert.equal(await readFile(file, 'utf8'), CAPTURE_BEFORE);
     assert.equal(await readFile(unrelated, 'utf8'), unrelatedDirty);
     assert.equal(
       model.observations.length,
@@ -649,6 +736,18 @@ export async function runNativeInputCapture(
         );
         const finalPins = {
           fixtureSources,
+          git: {
+            path: await realpath(gitPath),
+            sha256: await fileHash(gitPath),
+          },
+          ...(diagnosticObserver
+            ? {
+                diagnosticObserver: {
+                  path: await realpath(diagnosticObserver.path),
+                  sha256: await fileHash(diagnosticObserver.path),
+                },
+              }
+            : {}),
           host: {
             entrySha256: await fileHash(entry),
             sourceSha256: await treeHash(join(pkg, 'src'), '.ts'),
@@ -659,6 +758,19 @@ export async function runNativeInputCapture(
           nodeSha256: await fileHash(node),
         };
         receipt.finalPins = finalPins;
+        assert.deepEqual(finalPins.git, artifacts.git, 'verified direct Git unchanged');
+        if (diagnosticObserver) {
+          assert.deepEqual(
+            finalPins.diagnosticObserver,
+            diagnosticObserver,
+            'TEST observer bytes unchanged'
+          );
+          receipt.diagnostics = {
+            path: diagnosticLog,
+            sha256: await fileHash(diagnosticLog),
+            sizeBytes: (await stat(diagnosticLog)).size,
+          };
+        }
         assert.deepEqual(
           finalPins.fixtureSources,
           artifacts.fixtureSources,
@@ -743,4 +855,28 @@ export function processFacts(): ProcessFact[] {
       command: match[5]!.trim(),
     };
   });
+}
+
+/** Pure oracle shared by the selected provider fixtures; no native work or file effects. */
+export function assertFailedToolCapture(
+  row: Record<string, unknown>,
+  provider: 'codex' | 'opencode',
+  before: string,
+  after: string
+): Record<string, unknown> {
+  const causal = record(row.causalBinding),
+    native = record(causal.native);
+  assert.equal(row.toolStatus, 'failed');
+  assert.equal(row.source, 'shell_snapshot');
+  assert.equal(row.executionSeq, 0);
+  assert.equal(row.nativeCaptureProof, undefined);
+  assert.equal(causal.toolName, 'Bash');
+  assert.equal(record(causal.provenance).reviewableComplete, false);
+  assert.equal(native.provider, provider);
+  assert.equal(native.exitCode, 7);
+  assert.ok(typeof native.windowRef === 'string' && native.windowRef);
+  assert.match(String(native.commandSha256), /^[a-f0-9]{64}$/);
+  assert.equal(record(row.before).sha256, sha(before));
+  assert.equal(record(row.after).sha256, sha(after));
+  return native;
 }

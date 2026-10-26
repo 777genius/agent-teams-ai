@@ -92,6 +92,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   const workspace = join(fixture.root, 'workspace');
   await openOriginalCreateForm(cdp, ui, workspace, mixedDesktopTeamName);
   await configureMixedCreateSettings(cdp, ui);
+  await ui.scrollTo('[role="dialog"] #launch-team', 'original Create save-only checkbox');
   if (
     await cdp.evaluate(
       `document.querySelector('[role="dialog"] #launch-team')?.getAttribute('data-state')==='checked'`
@@ -121,7 +122,11 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   );
   await ui.scrollTo('[role="dialog"] button', 'existing member JSON editor', 'Edit as JSON');
   await ui.click('[role="dialog"] button', 'open existing member JSON editor', 'Edit as JSON');
-  await ui.click('[role="dialog"] .cm-editor .cm-content', 'focus original member JSON input');
+  await ui.scrollTo('[role="dialog"] .cm-editor', 'original member JSON input');
+  await ui.click(
+    '[role="dialog"] .cm-editor .cm-content .cm-line:first-child',
+    'focus original member JSON input'
+  );
   await cdp.send('Input.dispatchKeyEvent', {
     type: 'keyDown',
     key: 'a',
@@ -209,15 +214,12 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     `Boolean(document.querySelector('[role="dialog"]'))`,
     'original mixed Launch form'
   );
-  await ui.waitRead(
-    `document.querySelectorAll('[role="dialog"] [data-role="member-row"]').length===2`,
-    'both saved provider rows hydrate'
-  );
   proof.firstLaunchHydration = await assertMixedLaunchHydration(cdp, ui);
+  await ui.scrollTo('[role="dialog"] > button', 'original hydrated Launch Close control', 'Close');
   await ui.click(
-    '[role="dialog"] button',
+    '[role="dialog"] > button',
     'close original hydrated Launch without submitting',
-    'Cancel'
+    'Close'
   );
   await ui.waitRead(
     `!document.querySelector('[role="dialog"]')`,
@@ -226,10 +228,6 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   assert.deepEqual(assertMixedSavedSettings(await ownerState(), workspace), configuredBeforeLaunch);
   assert.equal(((await ownerState()).runtimeCaptures as unknown[] | undefined)?.length ?? 0, 0);
   await ui.click('button', 'reopen original mixed Launch before Submit', 'Launch');
-  await ui.waitRead(
-    `document.querySelectorAll('[role="dialog"] [data-role="member-row"]').length===2`,
-    'both saved member rows rehydrate'
-  );
   proof.reopenedLaunchHydration = await assertMixedLaunchHydration(cdp, ui);
   await poll(
     async () => modelRows.map((model) => model.probes.length),
@@ -261,15 +259,27 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   const capture = record((state.runtimeCaptures as unknown[])[0]);
   assert.ok(Array.isArray(capture.members) && capture.members.length === 3);
   proof.capture = capture;
+  assert.equal(record(state.savedSettings).allowExperimentalLocalModels, false);
+  const configuredAfterLaunch = assertMixedSavedSettings(state, workspace);
   assert.deepEqual(
-    assertMixedSavedSettings(state, workspace),
-    configuredBeforeLaunch,
-    'Launch retains configured settings rather than replacing them with effective defaults'
+    configuredAfterLaunch,
+    {
+      ...configuredBeforeLaunch,
+      savedSettings: {
+        ...configuredBeforeLaunch.savedSettings,
+        allowExperimentalLocalModels: false,
+      },
+    },
+    'Launch retains configured settings and persists the explicitly disabled opt-in'
   );
-  let selectedBindings: string[] | undefined;
+  let selectedBindings: string[] | undefined = undefined;
   const sessions = () =>
     readDesktopNativeStopSessions(fixture.root).then((rows) =>
-      rows.filter((row) => record(row.binding).runId === capture.launchId && (!selectedBindings || selectedBindings.includes(runtimeDigest(row.binding))))
+      rows.filter(
+        (row) =>
+          record(row.binding).runId === capture.launchId &&
+          (!selectedBindings || selectedBindings.includes(runtimeDigest(row.binding)))
+      )
     );
   await poll(
     sessions,
@@ -355,15 +365,25 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   );
   proof.nativeTerminalInputs = terminalSessions;
   proof.mixedGroup = await runDesktopMixedGroupUiSmoke(cdp, {
-    root: fixture.root, teamName: mixedDesktopTeamName, models, launchId: capture.launchId,
-    assertOwnedRenderer: assertCurrent, step: value => steps.push(value),
+    root: fixture.root,
+    teamName: mixedDesktopTeamName,
+    models,
+    launchId: capture.launchId,
+    assertOwnedRenderer: assertCurrent,
+    step: (value) => steps.push(value),
   });
   const restarted = await runDesktopMixedMemberRestartUiSmoke(cdp, {
-    root: fixture.root, launchId: capture.launchId, models, appGroup: options.appGroup, node: fixture.node, hostEntry: fixture.hostEntry,
-    assertOwnedRenderer: assertCurrent, step: value => steps.push(value),
+    root: fixture.root,
+    launchId: capture.launchId,
+    models,
+    appGroup: options.appGroup,
+    node: fixture.node,
+    hostEntry: fixture.hostEntry,
+    assertOwnedRenderer: assertCurrent,
+    step: (value) => steps.push(value),
   });
   proof.isolatedMemberRestart = restarted;
-  selectedBindings = restarted.currentBindings.map(binding => runtimeDigest(binding));
+  selectedBindings = restarted.currentBindings.map((binding) => runtimeDigest(binding));
   const expectedObservations = [13, 15, 13];
   proof.progressDomObservations = await finishMixedProgressObservation(cdp);
   assert.ok(
@@ -376,7 +396,10 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     ),
     'actual aggregate readiness was visible in original progress UI'
   );
-  assert.equal(await readFile(join(workspace, 'native-effect.txt'), 'utf8'), 'ONE\nONE\nONE\nTWO\nTWO\nTWO\n');
+  assert.equal(
+    await readFile(join(workspace, 'native-effect.txt'), 'utf8'),
+    'ONE\nONE\nONE\nTWO\nTWO\nTWO\n'
+  );
   const tasks = await Promise.all(
     (await readdir(join(fixture.root, 'hoststore/tasks', mixedDesktopTeamName)))
       .filter((name) => /^[A-Za-z0-9_-]+\.json$/.test(name))
@@ -434,18 +457,22 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     1,
     'reload never captures/replays a run'
   );
-  assert.deepEqual(modelRows.map(model => model.observations.length), expectedObservations);
-  const configuredAfterStop = assertMixedSavedSettings(after, workspace);
-  assert.deepEqual(configuredAfterStop, configuredBeforeLaunch);
-  await ui.click('button', 'reopen original mixed Launch after Stop/reload', 'Launch');
-  await ui.waitRead(
-    `document.querySelectorAll('[role="dialog"] [data-role="member-row"]').length===2`,
-    'original stopped roster rehydrates'
+  assert.deepEqual(
+    modelRows.map((model) => model.observations.length),
+    expectedObservations
   );
+  assert.equal(record(after.savedSettings).allowExperimentalLocalModels, false);
+  const configuredAfterStop = assertMixedSavedSettings(after, workspace);
+  assert.deepEqual(configuredAfterStop, configuredAfterLaunch);
+  await ui.click('button', 'reopen original mixed Launch after Stop/reload', 'Launch');
   proof.stoppedReloadLaunchHydration = await assertMixedLaunchHydration(cdp, ui);
   assert.deepEqual(assertMixedSavedSettings(await ownerState(), workspace), configuredAfterStop);
   assert.equal(((await ownerState()).runtimeCaptures as unknown[]).length, 1);
-  assert.deepEqual(modelRows.map(model => model.observations.length), expectedObservations, 'reopening never sends a business input');
+  assert.deepEqual(
+    modelRows.map((model) => model.observations.length),
+    expectedObservations,
+    'reopening never sends a business input'
+  );
   const screenshot = record(
     await cdp.send('Page.captureScreenshot', {
       format: 'png',
@@ -457,7 +484,8 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     mode: 0o600,
   });
   proof.screenshot = { path, sha256: await fileDigest(path) };
-  await ui.click('[role="dialog"] button', 'close original stopped readback Launch', 'Cancel');
+  await ui.scrollTo('[role="dialog"] > button', 'original stopped readback Close control', 'Close');
+  await ui.click('[role="dialog"] > button', 'close original stopped readback Launch', 'Close');
   await ui.waitRead(
     `!document.querySelector('[role="dialog"]')`,
     'readback dialog closed without launch'
@@ -473,9 +501,13 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   assert.equal(sessionsAfterStop.length, 3);
   assert.ok(sessionsAfterStop.every((row) => row.phase === 'closed' && row.custody === 'released'));
   proof.sessionsAfterStop = sessionsAfterStop;
-  const allSessionsAfterStop = (await readDesktopNativeStopSessions(fixture.root)).filter(value => record(value.binding).runId === capture.launchId);
+  const allSessionsAfterStop = (await readDesktopNativeStopSessions(fixture.root)).filter(
+    (value) => record(value.binding).runId === capture.launchId
+  );
   assert.equal(allSessionsAfterStop.length, 4);
-  assert.ok(allSessionsAfterStop.every(value => value.phase === 'closed' && value.custody === 'released'));
+  assert.ok(
+    allSessionsAfterStop.every((value) => value.phase === 'closed' && value.custody === 'released')
+  );
   proof.allSessionsAfterStop = allSessionsAfterStop;
   proof.stop = { children, releasedBeforeQuit: true };
   proof.status = 'PASS';

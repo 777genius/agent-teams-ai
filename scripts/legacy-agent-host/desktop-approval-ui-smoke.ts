@@ -106,10 +106,18 @@ export async function runDesktopApprovalUiSmoke(
         'exact original technical Sheet'
       )
     );
-  // Prefix selectors only select existing visible original controls. Actions remain CDP mouse events.
-  const clickPrefix = async (prefix: string) => {
+  // Read only existing visible controls; question labels exclude the leading radio glyph.
+  // Actions remain one CDP mouse press/release after the same geometry and hit checks.
+  const clickPrefix = async (
+    prefix: string,
+    match: 'button-prefix' | 'question-option-label' = 'button-prefix'
+  ) => {
     const selector = `${sheet} button`;
-    const expression = `(() => { const rows=[...document.querySelectorAll(${desktopJsLiteral(selector)})].filter(e=>e.textContent.trim().startsWith(${desktopJsLiteral(prefix)}));if(rows.length!==1)return null;const e=rows[0],r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return r.width>0&&r.height>0&&!e.disabled&&hit&&(e===hit||e.contains(hit))?{x,y,text:e.textContent.trim()}:null; })()`;
+    const matches =
+      match === 'question-option-label'
+        ? `e.querySelector(':scope > div > span')?.textContent?.trim()===${desktopJsLiteral(prefix)}`
+        : `e.textContent.trim().startsWith(${desktopJsLiteral(prefix)})`;
+    const expression = `(() => { const rows=[...document.querySelectorAll(${desktopJsLiteral(selector)})].filter(e=>${matches});if(rows.length!==1)return null;const e=rows[0],r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return r.width>0&&r.height>0&&!e.disabled&&hit&&(e===hit||e.contains(hit))?{x,y,text:e.textContent.trim()}:null; })()`;
     await cdp.send('Page.bringToFront');
     let point = object(await ui.waitRead(expression, prefix));
     await cdp.send('Input.dispatchMouseEvent', {
@@ -185,7 +193,7 @@ export async function runDesktopApprovalUiSmoke(
         if (turn === 'M06_DENY_QUESTION')
           await ui.click(`${sheet} button`, 'Deny original question once', 'Deny');
         else {
-          await clickPrefix(APPROVAL_ANSWER);
+          await clickPrefix(APPROVAL_ANSWER, 'question-option-label');
           await ui.click(
             `${sheet} button`,
             'Submit selected original question answer once',

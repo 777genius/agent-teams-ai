@@ -260,7 +260,9 @@ export async function startDesktopApprovalModel(options: {
   const address = server.address();
   assert.ok(address && typeof address !== 'string');
   return {
-    compactionRequests: [], compactionTokenRequests: 0,
+    crossTeamRequests: [],
+    compactionRequests: [],
+    compactionTokenRequests: 0,
     url: `http://127.0.0.1:${address.port}`,
     observations,
     probes,

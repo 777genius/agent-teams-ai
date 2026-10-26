@@ -1,3 +1,4 @@
+import { selectCodexFailedTool } from '../dist/evidence/NativeFailedToolObservation.js';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import {
@@ -21,7 +22,7 @@ import { createCodexInputEvidenceCapture } from '../dist/evidence/CodexInputEvid
 import { evidenceProjectDir } from '../dist/evidence/evidenceProjectDir.js';
 import { ToolEvidenceWindows } from '../dist/evidence/ToolEvidenceWindows.js';
 import { digest } from '../dist/team/identity.js';
-import { deliveryFingerprint, runtimeDigest } from '../dist/runtime/identity.js';
+import { deliveryFingerprint, normalizeBinding, runtimeDigest } from '../dist/runtime/identity.js';
 import type {
   CodexCaptureRequest,
   CodexAfterRequest,
@@ -389,7 +390,11 @@ test('snapshot census cap refuses baseline before native changes', async (t) => 
   assert.equal(f.capture.readStatus().reason, 'incomplete-workspace-census');
   const notice = JSON.parse(readFileSync(f.notices, 'utf8').trim().split('\n').at(-1)!);
   assert.ok(notice.captureWarningCodes.includes('git-path-cap'));
-  assert.ok(notice.captureWarningCodes.every((code: string) => code === 'git-path-cap' || code === 'path-cap'));
+  assert.ok(
+    notice.captureWarningCodes.every(
+      (code: string) => code === 'git-path-cap' || code === 'path-cap'
+    )
+  );
   assert.ok(notice.captureWarningCodes.length <= 16);
   assert.match(notice.message, /Snapshot warning codes: git-path-cap/);
   assert.equal(f.capture.readStatus().baseline, 'missed');
@@ -415,13 +420,154 @@ test('already-aborted original before callback records a missed GAP without arti
   assert.equal(existsSync(f.events), false);
 });
 
-test('unsupported baseline preserves exact bounded census warning without qualifying an effect', async t => {
- const f=fixture(t);writeFileSync(f.file,Buffer.alloc(1024*1024+1,65));
- await f.capture.observe(f.request);
- assert.equal(f.capture.readStatus().reason,'incomplete-workspace-census');
- const notice=JSON.parse(readFileSync(f.notices,'utf8').trim().split('\n').at(-1)!);
- assert.deepEqual(notice.captureWarningCodes,['unsupported-file']);
- assert.match(notice.message,/Snapshot warning codes: unsupported-file/);
- assert.equal(existsSync(f.events),false);
- assert.equal(notice.captureWarningCodes.length<=16,true);
+test('unsupported baseline preserves exact bounded census warning without qualifying an effect', async (t) => {
+  const f = fixture(t);
+  writeFileSync(f.file, Buffer.alloc(1024 * 1024 + 1, 65));
+  await f.capture.observe(f.request);
+  assert.equal(f.capture.readStatus().reason, 'incomplete-workspace-census');
+  const notice = JSON.parse(readFileSync(f.notices, 'utf8').trim().split('\n').at(-1)!);
+  assert.deepEqual(notice.captureWarningCodes, ['unsupported-file']);
+  assert.match(notice.message, /Snapshot warning codes: unsupported-file/);
+  assert.equal(existsSync(f.events), false);
+  assert.equal(notice.captureWarningCodes.length <= 16, true);
+});
+
+test('recovered native exit7 retains exact partial bytes and failed tool outcome without authored content', async (t) => {
+  const f = fixture(t);
+  await f.capture.observe(f.request);
+  writeFileSync(f.file, 'TEST failed shell final\n');
+  const nativeCommand = {
+    command: 'TEST native shell; exit 7',
+    cwd: f.workspace,
+    exitCode: null as number | null,
+    isError: false,
+  };
+  const observed = {
+    ...terminal(f),
+    items: [
+      {
+        itemId: 'TEST-native-shell',
+        phase: 'started' as const,
+        status: 'inProgress',
+        changes: null,
+        nativeCommand,
+      },
+      {
+        itemId: 'TEST-native-shell',
+        phase: 'completed' as const,
+        status: 'failed',
+        changes: null,
+        nativeCommand: { ...nativeCommand, exitCode: 7, isError: true },
+      },
+    ],
+  };
+  assert.equal(selectCodexFailedTool({ ...observed, turnId: '' }, f.workspace).kind, 'gap');
+  assert.equal(
+    selectCodexFailedTool(
+      { ...observed, items: [...observed.items, ...terminal(f).items] },
+      f.workspace
+    ).kind,
+    'gap'
+  );
+  await f.capture.observe(observed);
+  const event = JSON.parse(readFileSync(f.events, 'utf8').trim());
+  assert.equal(event.toolUseId, 'TEST-native-shell');
+  assert.equal(event.toolStatus, 'failed');
+  assert.equal(event.nativeCaptureProof, undefined);
+  assert.equal(event.executionSeq, 0);
+  assert.equal(event.causalBinding.provenance.reviewableComplete, false);
+  assert.equal(event.causalBinding.taskId, f.taskId);
+  assert.equal(event.causalBinding.inputId, f.request.inputId);
+  assert.equal(event.causalBinding.operationRef, f.request.operationRef);
+  assert.equal(event.causalBinding.sessionRef, f.request.sessionRef);
+  assert.deepEqual(event.causalBinding.binding, normalizeBinding(f.captured.binding));
+  assert.equal(event.causalBinding.native.exitCode, 7);
+  assert.equal(
+    readFileSync(join(f.projectDir, '.board-task-changes/blobs', event.before.blobRef), 'utf8'),
+    'TEST initially dirty\n'
+  );
+  assert.equal(
+    readFileSync(join(f.projectDir, '.board-task-changes/blobs', event.after.blobRef), 'utf8'),
+    'TEST failed shell final\n'
+  );
+  const changes = (await f.read())!;
+  const snippets = changes.files[0]!.snippets;
+  assert.ok(
+    snippets.length > 0 &&
+      snippets.every(
+        (snippet) =>
+          snippet.ledger?.nativeCapture === 'unqualified' &&
+          snippet.ledger.originalFullContent === null &&
+          snippet.ledger.modifiedFullContent === null &&
+          !snippet.oldString &&
+          !snippet.newString
+      )
+  );
+  const content = await new FileContentResolver({ mode: 'ledger-only' }).getFileContent(
+    'test-writer',
+    'worker',
+    f.file,
+    snippets
+  );
+  assert.equal(content.contentSource, 'unavailable');
+  const bytes = readFileSync(f.events);
+  await f.capture.observe(observed);
+  assert.deepEqual(readFileSync(f.events), bytes);
+});
+
+test('successful native subdirectory command preserves the existing qualified fileChange and content path', async (t) => {
+  const f = fixture(t);
+  const cwd = join(f.workspace, 'src');
+  mkdirSync(cwd);
+  await f.capture.observe(f.request);
+  writeFileSync(f.file, 'TEST final observed\n');
+  const nativeCommand = { command: 'pwd', cwd, exitCode: null as number | null, isError: false };
+  const observed = {
+    ...terminal(f),
+    items: [
+      {
+        itemId: 'TEST-successful-shell',
+        phase: 'started' as const,
+        status: 'inProgress',
+        changes: null,
+        nativeCommand,
+      },
+      {
+        itemId: 'TEST-successful-shell',
+        phase: 'completed' as const,
+        status: 'completed',
+        changes: null,
+        nativeCommand: { ...nativeCommand, exitCode: 0 },
+      },
+      ...terminal(f).items,
+    ],
+  };
+  const unknownTerminal = {
+    ...observed,
+    items: [
+      observed.items[0]!,
+      {
+        ...observed.items[1]!,
+        status: 'unknown',
+        nativeCommand: { ...nativeCommand, exitCode: null },
+      },
+    ],
+  };
+  assert.equal(selectCodexFailedTool(unknownTerminal, f.workspace).kind, 'gap');
+  await f.capture.observe(observed);
+  const row = JSON.parse(readFileSync(f.events, 'utf8').trim());
+  assert.equal(row.toolStatus, 'succeeded');
+  assert.equal(row.nativeCaptureProof.kind, 'codex-update-patch-v1');
+  assert.deepEqual(row.nativeCaptureProof.itemIds, ['TEST-native-0']);
+  assert.equal(row.toolUseId, 'TEST-native-0');
+  const changes = (await f.read())!;
+  assert.equal(changes.files[0]!.snippets[0]!.ledger!.nativeCapture, 'qualified');
+  const content = await new FileContentResolver({ mode: 'ledger-only' }).getFileContent(
+    'test-writer',
+    'worker',
+    f.file,
+    changes.files[0]!.snippets
+  );
+  assert.equal(content.originalFullContent, 'TEST initially dirty\n');
+  assert.equal(content.modifiedFullContent, 'TEST final observed\n');
 });

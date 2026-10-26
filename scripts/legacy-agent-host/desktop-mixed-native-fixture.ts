@@ -86,12 +86,13 @@ export async function startDesktopMixedModels(root: () => string) {
   try {
     codex = await startCodexModel({
       allowModelProbes: true,
-    mixedGroups: true,
+      modelProbeWorkspace: () => join(root(), 'workspace'),
+      mixedGroups: true,
       principalId: () => readMixedCapturedPrincipal(root(), 'codex'),
     });
     opencode = await startOpenCodeModel({
       allowModelProbes: true,
-    mixedGroups: true,
+      mixedGroups: true,
       principalId: () => readMixedCapturedPrincipal(root(), 'opencode'),
     });
     const selected = { claude, codex, opencode };
@@ -106,13 +107,33 @@ export async function startDesktopMixedModels(root: () => string) {
       },
       close: async () => {
         try {
-          if (evidenceRoot) await writeFile(join(evidenceRoot, 'mixed-models.json'), JSON.stringify({
-            schemaVersion: 1, phase: 'before-model-close', root: evidenceRoot,
-            providers: Object.fromEntries(Object.entries(selected).map(([provider, model]) => [provider, {
-              observations: model.observations, probes: model.probes, failures: model.failures,
-              ...('unexpectedNoToolsRequests' in model ? { unexpectedNoToolsRequests: model.unexpectedNoToolsRequests } : {}),
-            }])),
-          }, null, 2), { mode: 0o600, flag: 'wx' });
+          if (evidenceRoot)
+            await writeFile(
+              join(evidenceRoot, 'mixed-models.json'),
+              JSON.stringify(
+                {
+                  schemaVersion: 1,
+                  phase: 'before-model-close',
+                  root: evidenceRoot,
+                  providers: Object.fromEntries(
+                    Object.entries(selected).map(([provider, model]) => [
+                      provider,
+                      {
+                        observations: model.observations,
+                        probes: model.probes,
+                        failures: model.failures,
+                        ...('unexpectedNoToolsRequests' in model
+                          ? { unexpectedNoToolsRequests: model.unexpectedNoToolsRequests }
+                          : {}),
+                      },
+                    ])
+                  ),
+                },
+                null,
+                2
+              ),
+              { mode: 0o600, flag: 'wx' }
+            );
         } finally {
           await Promise.all(Object.values(selected).map((model) => model.close()));
         }
@@ -132,6 +153,7 @@ export async function prepareDesktopMixedNativeFixture(
     codexPath: string;
     openCodePath: string;
     openCodeEndpoint: string;
+    openCodeManagementEndpoint: string;
     models: DesktopMixedModels;
   }
 ) {
@@ -145,11 +167,14 @@ export async function prepareDesktopMixedNativeFixture(
   assert.ok(claude?.provider === 'claude');
   assert.equal(profile.runtime!.providerTemplates!.length, 1);
   claude.nativeOptions = { ...claude.nativeOptions, settingSources: [] };
-  const endpoint = new URL(options.openCodeEndpoint);
-  assert.equal(endpoint.protocol, 'http:');
-  assert.equal(endpoint.hostname, '127.0.0.1');
-  assert.equal(endpoint.origin, options.openCodeEndpoint);
-  assert.ok(endpoint.port);
+  assert.notEqual(options.openCodeManagementEndpoint, options.openCodeEndpoint);
+  for (const value of [options.openCodeEndpoint, options.openCodeManagementEndpoint]) {
+    const endpoint = new URL(value);
+    assert.equal(endpoint.protocol, 'http:');
+    assert.equal(endpoint.hostname, '127.0.0.1');
+    assert.equal(endpoint.origin, value);
+    assert.ok(endpoint.port);
+  }
   for (const [path, sha] of [
     [options.codexPath, codeXHash],
     [options.openCodePath, openCodeHash],
@@ -315,7 +340,7 @@ stream_max_retries = 0
       cwd: opencode.cwd,
       environment: opencode.environment,
       executable: opencode.executable,
-      endpoint: opencode.endpoint,
+      endpoint: options.openCodeManagementEndpoint,
       timeoutMs: 15000,
       modelProbeTimeoutMs: 30000,
     },

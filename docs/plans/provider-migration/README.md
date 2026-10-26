@@ -1,18 +1,29 @@
 # Provider migration: двухэтапная программа
 
-**Физическое отделение провайдеров (24 октября):** исходники `provider-implementations`
+**Физическое отделение провайдеров (25 октября):** исходники `provider-implementations`
 и независимого Session SPI теперь находятся в [old-provider-implementations](https://github.com/agent-teams-ai/old-provider-implementations).
 Перенос подготовлен в [draft PR #1](https://github.com/agent-teams-ai/old-provider-implementations/pull/1), CI Node 24/26 прошёл;
 merge не выполнялся. Зависимости от движка старого `agent-runtime` у этих пакетов нет.
-Host/Team/Runtime owner и адаптеры Desktop остаются во frontend. Выбранные архивы
-не меняются: все 206 provider и 10 SPI emitted-файлов совпадают с отдельным репозиторием.
+Host/Team/Runtime owner и адаптеры Desktop остаются во frontend. Текущий provider-архив
+`readonly-probe-metadata-v1` (`2aa5d730…`) собран из отдельного репозитория на
+[`8a5759e`](https://github.com/agent-teams-ai/old-provider-implementations/commit/8a5759ec1d33edb29109a2193bc98ee24d7bd064).
+От прежнего `readiness-recovery-v1` отличается только private Codex
+`model-probe.js`: распознавание readonly metadata/previews в model probe.
+OpenCode, public exports, metadata/dependencies и Session SPI сохранены;
+состав из 209 файлов не меняется. Прежние локальные архивы остаются неизменны.
+Локальный `pnpm check` прошёл: 350 source tests и оба packed consumers.
+[CI этого commit](https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/40231251996)
+прошёл на Node 24.21.0 и 26.11.1. Отдельный public-D readonly model probe с
+actual Codex CLI 0.162.0 и localhost inference вернул true: один captured child,
+один запрос, подтверждённая остановка, без Team/Runtime/business input.
+PR #1 остаётся Draft; новый runtime/native/UI PASS из локального check не следует.
 Этап 2 по-прежнему не входит в работу.
 
 
-Обновлено: 24 октября 2026, Europe/Kiev.
+Обновлено: 25 октября 2026, Europe/Kiev.
 
-**Направление согласовано владельцем. Реализация этапа 1 начата в изолированных lanes.**
-Это не утверждение, что legacy-host уже реализован или полностью прошёл E2E.
+**Направление согласовано владельцем. Этап 1 реализуется и проверяется в изолированных lanes.**
+Есть работающий legacy-host и принятые scoped E2E; полная приёмка этапа 1 ещё не завершена.
 Планирование и дальнейшая разработка ведутся изолированно от release-работы.
 Merge, публикация и включение нового пути остаются отдельным решением после
 проверок и ревью; прежнее общее разрешение автономного merge здесь не применяется.
@@ -31,14 +42,140 @@ Merge, публикация и включение нового пути оста
 не входят в текущую задачу, оценку процентов, оставшийся LOC и Definition of done.
 Сейчас сохраняем только необходимые границы замены; будущее ядро не проектируем.
 
+**OpenCode: только интеграция V1 (прямое указание владельца, 25 октября).**
+Desktop/legacy-host использует `createOpenCodeV1DriverFactory`; текущий native
+profile — OpenCode 1.19.4. Интеграция V2 исключена из реализации, отдельных
+проверок, критериев приёмки, оставшегося LOC и оценки готовности этой программы.
+V2 не подключаем как дополнительный driver или fallback и не исправляем в рамках
+этой задачи: владелец считает текущую реализацию неверной. Наличие V2-кода/exports
+в выделенной библиотеке и ссылок в исторической source inventory не создаёт
+обязательства его интегрировать. Существующие общие CI-тесты не означают поддержку
+V2 в новом Host; отдельно заниматься V2 можно только по новому поручению владельца.
+
+**M06, выбранные interactions:** Claude permissions/questions, Codex approval/userInput,
+OpenCode V1 permissions. Native OpenCode questions — unsupported/unqualified;
+Host MCP не предоставляет generic ask-user замену. P0 `opencode-driver.useCases`
+и frozen donor выбирают permission path без прежнего рабочего question/UI/answer
+consumer. [P4.4](stage-1-legacy-host.md#p4-полноценные-несколько-участников-и-три-provider-пути)
+уточняет прежнюю неоднозначную общую формулировку, сохраняя все Claude/Codex Question
+workflows, pending/revoke/control guards и product approvals. Это не заявление о
+поддержке native questions всеми тремя providers и не удаление прежнего UI.
+
+## Текущая сводка приёмки
+
+Ниже перечислены принятые границы доказательств, а не полностью закрытые строки
+M01–M19. Полный сохраняемый функционал задан в [матрице](compatibility-matrix.md);
+точные jobs, source/bundle pins, raw failures и ограничения — в соответствующих handoffs.
+Последующие изменения не получают прежний PASS автоматически.
+
+| Область | Уже принято | Граница результата |
+| --- | --- | --- |
+| [M01: состав и удаление](evidence/m01-existing-roster-trash-purge-ui-handoff.json) | Прежние Create save-only, Add/Remove/Restore, Trash/Restore/reload и identity-fenced Delete forever; соседняя команда сохранена | Stopped TEST Team, native allocations 0; UNKNOWN/native-stop случаи отдельно |
+| [M03: blobs после Host replacement](evidence/m03-actual-host-replacement-blobs-handoff.json) | Task/comment metadata и точные bytes/size/SHA читаются public RPC из нового настоящего Host с тем же profile/root | Дополняет [прежний attachment UI](evidence/m03-existing-task-attachments-ui-handoff.json); Runtime не запускался, весь M03/M04 не закрыт |
+| [M03 / §9: Claude native PDF](evidence/m03-claude-native-pdf-handoff.json) | PDF 589 bytes в original second DM; actual SDK/CLI document/base64 и public canonical bytes до/после cold Host | Host/native, 2170 files/errors 0; PDF UI/picker, vendor auth и полные M03/Stage1 не заявлены |
+| [Прежние Task/review/notification/cross-Team controls](evidence/existing-task-workflow-ui-handoff.json) | Task11: Create/assign/dependencies/drag, attachments/comments/reload, Request Changes/Approve/Disapprove, notification View/read/delete и cross-Team Send/Reply прошли через прежний UI | Canonical offline owner, Runtime sessions 0; 2665 retained files, qualification issues 0. SIGTERM dev wrapper; natural app exit, native authorship/delivery и полный M13 здесь не заявлены |
+| [M05: native cross-Team](evidence/m05-native-cross-team-roundtrip-handoff.json) | Mixed Claude/Codex/OpenCode + вторая Claude-команда; exact recipients/replyTo, 12 успешных inputs, 3 задачи и cold readback без replay | Native/Host proof; полная mixed UI приёмка отдельно. [Прежний group UI](evidence/m05-existing-group-native-ui-handoff.json) имеет свой двух-Claude scope |
+| [M06: Claude approvals](evidence/m06-existing-approval-ui-handoff.json) | Прежние Composer/Sheet: Bash Deny, Write Preview/Allow, Allow all и следующий auto Write, Question Deny/TEST_BLUE; 6 inputs, 21 model requests, 15 tool results, затем Stop/released | Host-lifetime policy; Bash Allow, pending-permission cancel, cold policy, natural Quit и vendor auth не заявлены. [Codex Question UI](evidence/m06-existing-codex-question-ui-handoff.json) принят отдельно |
+| [M03/M06: OpenCode native PNG/permissions](evidence/m03-m06-opencode-native-image-permission-handoff.json) | Два original DM, PNG 71 bytes и точные warm/cold canonical bytes; 2 current-input permission resolved один раз, оба Host exit0 | Host/native V1 1.19.4 на macOS arm64; 2330 files, errors 0. Desktop UI/vendor auth/whole-tree cleanup и полные строки M03/M06 не заявлены |
+| [M07: shared OpenCode](evidence/m07-opencode-shared-native-isolation-handoff.json) | Один actual 1.19.4 server, две native public-D sessions; A.close сохраняет UNKNOWN, B2 продолжает свою history/reply, исходный CapturedProcess owner завершает server | Проверка Driver; production Host остаётся dedicated, shared Host pool/reference manager не заявляется |
+| [M13: native Codex failed-tool](evidence/m13-codex-native-failed-tool-handoff.json) | Исходный TaskStart → настоящий shell exit7 → успешный содержащий input; exact dirty before/final blobs читаются после Stop без новой allocation | PARTIAL/nonreviewable, executionSeq0, без nativeCaptureProof и writable content; index/посторонние bytes сохранены, 2247 files/184 directories, issues 0. Это не Bash authorship, OpenCode, Desktop Changes или полный M13 |
+| [M13: native OpenCode V1 failed-tool](evidence/m13-opencode-native-failed-tool-handoff.json) | Исходный TaskStart → actual 1.19.4 Bash exit7 → успешный содержащий input; exact before/final blobs читаются после Stop без новой allocation | PARTIAL/nonreviewable, executionSeq0, без nativeCaptureProof/writable content; index/посторонние bytes сохранены, 2201 files/174 directories, issues 0. Tool text не служит доказательством exit7; M13/Stage1 остаются открытыми |
+| [M13: Claude warm/cold review](evidence/m13-existing-native-review-warm-cold-ui-handoff.json) | Прежние Changes Keep/Reject/Undo/Redo, History/reload и отдельный cold Host/app readback; 2 qualified Edit + 5 partial failed/hook/Write/background rows | 2614/5242 retained files, errors 0; cold allocations/inputs 0. Writable context только native-review.ts; partial rows не повышены до authorship, SDK cleanup/vendor auth/полные M13 и Stage1 не заявлены |
+| [M19: cold original row](evidence/m19-existing-cold-original-row-ui-handoff.json) | Прежний ProcessesSection и unified API читают исходный processRef после Host crash; target absent/Kill 0, original gen 1 detached/held/unknown; новых inputs/Stop/allocation/replay нет | Только read-only scope. Original 911 остаётся INCOMPLETE/SDK HOLD; это не живой cold Stop или SDK-root cleanup. [Live UI Kill + следующее сообщение](evidence/m19-existing-live-process-ui-handoff.json) принят отдельно |
+
+Также уже приняты scoped [pristine Claude Launch](evidence/m02-existing-pristine-claude-launch-ui-handoff.json),
+[холодный Resume](evidence/m16-existing-cold-resume-ui-handoff.json),
+[fresh relaunch](evidence/m16-existing-fresh-relaunch-ui-handoff.json),
+[Skills](evidence/m15-existing-skills-ui-handoff.json) и
+[Quit/cold-start](evidence/m18-existing-quit-ui-handoff.json). Их отдельные provider,
+OS, inference и cleanup ограничения сохраняются; они не заменяют оставшуюся матрицу.
+
+[M03: вложения native chat через прежний UI](evidence/m03-existing-native-chat-attachments-ui-handoff.json):
+два исходных Claude input и 11 localhost model observations прошли Composer/Send,
+раскрытие исходного сообщения по canonical messageId, PNG preview и точное скачивание
+TXT 40 bytes. Исходный PNG 71 bytes сохранён; штатный canvas подготовил PNG 90 bytes,
+одинаковый в preview/canonical blobs/native request. Исправлены три строки проекции
+публичных metadata; UI прежний. Original Stop подтвердил captured native PID absent
+и Runtime closed/released до Quit; app exit0, Host отсутствует, writer released,
+сохранён 2591 файл. Raw Chat2/3/4 и отказ collector 39 сохранены; успешный Chat5
+квалифицирован новым collector без повторного запуска workflow. Это scoped
+Claude/macOS arm64 дополнение: vendor auth/inference, native picker, размерные/OS
+границы, global Quit и полные M03/Stage1 не квалифицированы; этап 2 исключён.
+
+[M03 / §9: native PDF Claude](evidence/m03-claude-native-pdf-handoff.json):
+actual SDK 0.3.305 / CLI передали один PDF 589 bytes во втором из двух исходных DM
+как `document/source.type:base64/media_type:application/pdf`; native bytes и
+canonical blob имеют один SHA `b68de0…`. Public attachment read до и после cold
+Host вернул те же bytes; 11 model observations, failures 0, без новых native inputs
+после restart. Исходный Stop — closed/released, оба Host exit0/null; 2170 files,
+errors 0, manifest `54ab03c…`. Это отдельное доказательство PDF serialization §9,
+дополняющее прежний Chat5 PNG/TXT: PDF UI/picker, vendor auth, все MIME/provider/OS,
+независимая whole-tree cleanup и полная Stage1 им не квалифицированы.
+
+[M03: native PNG Codex](evidence/m03-codex-native-message-image-handoff.json): standalone Host + actual Codex 0.162.0 передали два
+исходных DM; второй содержит PNG 71 bytes с точными opaque red/green pixels и
+native base64/data part. Public canonical attachment bytes совпали до и после
+cold Host; всего 11 model observations, новых native inputs после restart нет.
+Исходный Stop дал closed/released, оба Host exit0 без сигнала; 2235 files, issues 0,
+manifest `76b9882…`. Прежний `03c097…` сохранён INCOMPLETE: TEST oracle не учитывал
+native `</image>` delimiter; исправлен только точный допустимый wrapper. Это
+Host/native proof без UI, vendor auth/inference, native picker или независимой
+whole-tree cleanup; полная Stage1 остаётся открытой.
+
+[M03/M06: native PNG и permissions OpenCode V1](evidence/m03-m06-opencode-native-image-permission-handoff.json):
+два исходных DM завершились успешно; второй передал PNG 71 bytes с точными
+2×1 red/green pixels и canonical bytes до/после cold Host. Два разных pending
+permission разрешены ровно по одному разу для своего original input; 11 model
+observations, failures 0, оба Host exit0, Stop closed/released. Квалифицированы
+2330 retained files, errors 0, manifest `12c351d…`. Это Host/native proof на
+macOS arm64 без Desktop UI, vendor auth и независимой whole-tree cleanup.
+Прежние UNKNOWN/INCOMPLETE, включая unconfirmed Host exit `68e0f5…`, и M19 SDK HOLD
+сохранены; полные M03/M06/M13 и итоговые Stage1 gates этим proof не закрыты.
+
+Текущая оставшаяся приёмка: mixed UI, итоговый frontend CI и packed проверка
+нынешнего набора изменений. Task11 принят в своём
+offline scope; [обычные Claude warm/cold review](evidence/m13-existing-native-review-warm-cold-ui-handoff.json)
+`57c477…` / `4bd123…` (RO0002) приняты в указанной границе. Retention manifests:
+`723c190…` / `eb0a10…`, collection/qualification errors 0.
+Прежний cold `6b1577…` остаётся INCOMPLETE: singleton TEST cache oracle и его raw
+failure сохранены; новый RO0002 сохраняет все шесть warm keys и старые файлы без
+повтора native work.
+Остальная перечисленная приёмка ещё не объявляется PASS. Исторический
+[packed Launch/app.relaunch](evidence/p7-packed-existing-launch-relaunch-ui-handoff.json)
+относится только к его зафиксированным bytes, а не к нынешним исправлениям.
+**M13: поведенческие proofs выбранных поддерживаемых путей приняты; итоговые
+gates текущего candidate ещё не завершены.** Совокупность qualified native Edit
+Claude/Codex/OpenCode, failed-tool tuples всех трёх profiles, Claude same-file
+post-hook и correlated background completion, прежних Changes/mixed-hunk review
+и warm/cold readback покрывает эти acceptance paths. Недоказанное авторство
+произвольных Bash/Write/background effects и external/overlapping writers остаётся
+gap/nonreviewable по [§10 контракта](stage-1-contracts.md#10-task-lifecycle-и-evidencereview),
+без unsafe Apply и без требования универсального capture engine. Это не закрывает
+итоговые M13/Stage1 review, CI или P7. Исторические GAP/`fullM13: false` ниже и в
+handoffs сохраняют границы своих отдельных snapshots; они не являются новым списком
+обязательных tool classes. UNKNOWN/HOLD и raw INCOMPLETE сохраняются, original
+M19 SDK HOLD не снят.
+Актуальные итоговые gates текущего набора изменений ещё впереди; старые тестовые
+счётчики ниже относятся к соответствующим историческим snapshots, не к final CI.
+Доставка остаётся **draft-only**: без merge в main/release, публикации или
+включения нового пути пользователям; этап 2 сейчас не выполняется.
+
+## История отдельных проверок
+
+Следующие записи сохраняют исходный scope каждого proof и состояние **на момент
+его capture**. Фразы «ещё не проверено/подключено» и старые test counts внутри
+этой истории не являются текущим списком работ. Текущий список и более новые
+принятые handoffs находятся выше и в [матрице](compatibility-matrix.md).
+
 [Доска задач и вложения через существующий UI](evidence/m03-existing-task-attachments-ui-handoff.json)
 прошли свежий Electron E2E: создание, зависимости, назначение, сортировка мышью,
 blocked/unblocked Start, загрузка и preview изображения Task, файл комментария,
 renderer reload, точное скачивание и удаление изображения с сохранением комментария.
 Байты сверены с canonical artifacts; исходные add/comment/remove завершены.
 App exit0, Host отсутствует, группа пуста, writer освобождён; сохранены 2655 файлов.
-Это offline Team owner и прежние controls: native/chat delivery, cold restart,
-размерные границы и полные M03/M04 остаются открытыми. Прежние отказы сохранены.
+Это offline Team owner и прежние controls: native/chat delivery, cold UI restart,
+размерные границы и полные M03/M04 этим proof не закрыты. Public blobs после actual
+Host replacement приняты отдельно в текущей сводке. Прежние отказы сохранены.
 
 [Pristine Claude Launch UI](evidence/m02-existing-pristine-claude-launch-ui-handoff.json)
 прошёл с обычным Host и выбранной provider library: существующий диалог изменяет
@@ -71,8 +208,9 @@ Question Sheet передали два исходных ответа — `accept
 освобождена, Desktop/Host завершились без сигналов, writer lock отсутствует.
 Первый отказ объяснён TEST policy `never`; исправлены только две policy фикстуры
 на `on-request`, sandbox сохранён. Raw/source/bundle evidence сохранены отдельно.
-Текущий полный Host gate: **734/734 PASS**, 97 файлов, без пропусков.
-Новые изменения Resume и capture ещё проходят интеграционную проверку; вложения Task имеют отдельный scoped Electron proof. Это scoped M06 proof,
+Исторический Host gate этого snapshot: **734/734 PASS**, 97 файлов, без пропусков.
+Вложения Task, cold Resume и новые Claude approvals имеют отдельные принятые
+handoffs в текущей сводке. Сам Codex Question результат — scoped M06 proof,
 не vendor auth, не все формы вопросов и не завершение этапа 1.
 
 [M19: существующий ProcessesSection и следующее сообщение](evidence/m19-existing-live-process-ui-handoff.json)
@@ -87,8 +225,8 @@ proof; crash/cold, native Quit, whole-tree finality и полный M19 не з�
 прошли kernel и actual SDK/MCP proof: исходный процесс из другой OS-сессии
 зарегистрирован, Human Stop подтвердил его отсутствие, соседний сервис продолжил
 отвечать, owner cleanup завершён. TEST-модель учитывает точное native completion
-notification; ошибок нет. Прежний отказ сохранён отдельно; cold/crash и Desktop
-Stop ещё не проверены.
+notification; ошибок нет. Прежний отказ сохранён отдельно. Этот normal Stop proof не квалифицирует cold/crash
+или Desktop: более новые live UI и cold read-only handoffs перечислены в сводке.
 
 [Scoped cross-Team UI proof](evidence/m05-existing-cross-team-ui-handoff.json)
 подтвердил отправку, ответ и reload через существующие Messages/Composer с canonical
@@ -944,11 +1082,12 @@ flowchart TB
 ядро» не является текущей последовательностью. Уже сделанные B/C/D/E не удаляются,
 не переписываются под новую историю и не объявляются доказательством legacy-host.
 
-### Что выбрать при старте реализации
+### Как уточнять реализацию
 
-P0/P1 можно начинать по этой спецификации. Таблица ниже показывает оставшиеся
-локальные решения исполнителя; их границы и acceptance заданы в фазах, а не требуют
-новой архитектурной программы. Все перечисленные результаты пока planned.
+Таблица задаёт владельцев решений P0/P1 и последующих фаз. Она сохраняет границы
+спецификации; это не утверждение, что уже реализованные contracts, package selection
+и receipts пока planned. Текущий статус определяется scoped evidence и exit criteria.
+Дополнительная архитектурная программа для этих локальных решений не требуется.
 
 | Решение                                                        | Кто и когда                                              | Конкретный результат                                                                                                                                                                       |
 | -------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -969,24 +1108,21 @@ P0/P1 можно начинать по этой спецификации. Таб
 
 | Часть                | Размещение и scope                                                                                                                                           |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Provider library     | Существующий `packages/platform/provider-implementations` в репозитории `agent-runtime`; независимые build/test/packed entrypoints, один источник алгоритмов |
+| Provider library     | Отдельный `agent-teams-ai/old-provider-implementations`, draft PR #1; независимые build/test/packed entrypoints и выбранный exact artifact во frontend |
 | Legacy-host          | Новый portable package `packages/legacy-agent-host` в изолированном frontend worktree; два внутренних модуля `team` и `runtime`, explicit composition        |
 | Desktop connection   | Feature `src/features/agent-backend` с process-specific entrypoints по стандарту frontend; это host client/owner routing/projection, не второй Team store    |
-| Provider Session SPI | Curated Session SPI выделяется в минимальный contracts artifact того же workspace; старый entrypoint остаётся совместимым re-export, без копии типов         |
+| Provider Session SPI | Независимый `provider-session-contracts` в том же отдельном provider repository; выбранный contracts artifact, без зависимости от runtime engine |
 | Будущие ядра         | Их собственные репозитории и worktrees; этап 1 не меняет их accepted ADR или implementation scope                                                            |
 
 Имена новых package/feature — выбранные рабочие имена спецификации, не заявление
 об уже существующем npm-пакете. Если в выбранном baseline есть пригодная public
 feature, P0 фиксирует её reuse вместо второго одинакового gateway.
 
-Путь provider package внутри runtime repo не означает dependency на нынешний
-runtime engine. Перед его rewrite package сохраняется отдельным ownership scope,
-exact artifact и контрактным entrypoint. Нынешний packed test устанавливает весь
-`agent-execution` с implementation dependencies: type-only import сам по себе
-не обеспечивает независимый install/build. Поэтому P1 выделяет **тот же** SPI
-в один минимальный contracts package по правилам owning repo; прежний
-`agent-execution/interactive-contracts` re-export сохраняет совместимость.
-Вторую редактируемую копию SPI или отдельный contracts-репозиторий не заводим.
+Provider library и Session SPI физически отделены от старого `agent-runtime`.
+Frontend потребляет выбранные exact artifacts; SDK/protocol остаются внутри provider
+library, Team/Runtime policy — в legacy-host. Draft PR #1 не merged. Будущий rewrite
+agent-runtime не требует переносить обратно текущее командное ядро. Совместимые
+re-exports не создают второй редактируемый источник контрактов.
 
 ## 4. Разделение ответственности
 
@@ -1042,6 +1178,9 @@ Scope: указать покрытые P/M-пункты, проверки и о�
    reviewed → candidate. `candidate` не означает merged/activated/released.
 
 ## 6. Оценка объёма
+
+Ниже сохранена исходная оценка программы до реализации; это **не текущий
+remaining LOC**. Остаток нельзя получить вычитанием diff из этого диапазона.
 
 Единица `k` — тысяча физических строк рукописного production-кода, которые нужно
 создать или содержательно изменить **от текущего состояния**. Уже реализованную

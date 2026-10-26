@@ -224,6 +224,16 @@ export async function prepareDesktopBackendFixture(
         throw new Error('Only a captured local TEST model server is permitted');
     }
     const team = profile.teams[0]!;
+    if (options.nativeChatAttachments) {
+      // Ordinary Launch saves this intent; this TEST uses explicit prelaunch setup instead.
+      // Match that setup's selected Claude model/effort before any SDK allocation.
+      team.savedSettings = {
+        cwd: join(root, 'workspace'),
+        providerId: 'anthropic',
+        model: 'claude-opus-4-6',
+        effort: 'medium',
+      };
+    }
     if (options.launchDialog) {
       team.members[0]!.role = 'lead';
       team.savedSettings = {

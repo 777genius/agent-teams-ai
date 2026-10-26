@@ -214,6 +214,7 @@ export class TeamNativeMemberCreation {
       const member = next.members.find((item) => item.memberId === delivery.memberId);
       if (!member || member.delivery || digest(member) !== digest(row.nativeCreation.member))
         throw new TeamOwnerError('conflict');
+      delete next.runtimeNeverLaunched;
       member.delivery = structuredClone(delivery);
       next.grants.push({
         principalId: selection.principalId,

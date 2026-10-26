@@ -153,8 +153,12 @@ export async function runDesktopComposerUiSmoke(
         'same original message receipt retains both canonical references'
       );
       assert.deepEqual(outbox.attachments, refs);
-      const expected = record(options.evidence.nativeChatAttachments).files;
-      assert.ok(Array.isArray(expected) && expected.length === 2);
+      const attachmentsProof = record(options.evidence.nativeChatAttachments);
+      const sources = attachmentsProof.files;
+      assert.ok(Array.isArray(sources) && sources.length === 2);
+      const prepared = record(attachmentsProof.preparedImage);
+      assert.equal(prepared.originalFilename, record(sources[0]).filename);
+      const expected = [prepared, sources[1]];
       refs.forEach((value, index) => {
         const ref = record(value),
           file = record(expected[index]);
@@ -165,7 +169,7 @@ export async function runDesktopComposerUiSmoke(
         assert.equal(ref.filePath, undefined);
         assert.equal(ref.base64Data, undefined);
       });
-      await verifyAttachments();
+      await verifyAttachments(id);
     }
     const inbox = await json(join(team, 'inboxes/user.json'));
     assert.ok(Array.isArray(inbox));

@@ -8,6 +8,7 @@ import {
 } from '../../../src/features/agent-backend/renderer/createHostTeamsApi';
 import { translateHostTaskReferences } from '../../../src/features/agent-backend/renderer/translateHostTaskReferences';
 import { selectResolvedMembersForTeamName } from '../../../src/renderer/store/team/teamResolvedMembers';
+import { buildMemberLaunchPresentation } from '../../../src/renderer/utils/memberHelpers';
 import {
   buildTaskLinkHref,
   createEncodedTaskReference,
@@ -83,6 +84,7 @@ function fixture() {
     getTask: vi.fn(),
     getMessagesPage: vi.fn(),
     stop: vi.fn(),
+    processAlive: vi.fn(),
     getAllTasks: vi.fn().mockResolvedValue([]),
   } as unknown as TeamsAPI;
   const backend: AgentBackendApi = {
@@ -582,9 +584,34 @@ describe('ordinary Host team read selection', () => {
       nativeSessionId: 'SECRET',
       tasks: [{ ...f.snapshot.tasks[0], projectPath: '/SECRET' }],
     };
-    raw.messages[0] = { ...raw.messages[0], summary: 'Read-only', actionMode: 'ask' };
+    raw.messages[0] = {
+      ...raw.messages[0],
+      summary: 'Read-only',
+      actionMode: 'ask',
+      attachments: [
+        {
+          id: 'TEST-image',
+          filename: 'TEST-native-chat.png',
+          mimeType: 'image/png',
+          size: 90,
+          filePath: '/SECRET/image',
+        },
+        {
+          id: 'TEST-text',
+          filename: 'TEST-native-chat.txt',
+          mimeType: 'text/plain',
+          size: 40,
+          filePath: '/SECRET/text',
+        },
+      ],
+    };
     const projected = projectTeamSnapshot(raw);
     expect(projected.messages[0]).toMatchObject({ summary: 'Read-only', actionMode: 'ask' });
+    expect(projected.messages[0]!.attachments).toEqual([
+      { id: 'TEST-image', filename: 'TEST-native-chat.png', mimeType: 'image/png', size: 90 },
+      { id: 'TEST-text', filename: 'TEST-native-chat.txt', mimeType: 'text/plain', size: 40 },
+    ]);
+    expect(projected.messages[1]!.attachments).toBeUndefined();
     expect(JSON.stringify(projected)).not.toContain('SECRET');
     const request = vi.fn().mockResolvedValue({ ok: true, value: raw });
     const facade = new BackendOperationsFacade({ request, lookup: vi.fn() });
@@ -607,5 +634,81 @@ describe('ordinary Host team read selection', () => {
         payload: { root: '/SECRET' },
       })
     ).toMatchObject({ ok: false, code: 'invalid' });
+  });
+});
+
+describe('authoritative never-launched Host teams', () => {
+  it('shows saved-only mixed members offline without inventing stale Codex runtime', async () => {
+    const f = fixture();
+    f.snapshot.runtimeNeverLaunched = true;
+    f.snapshot.members.push({ name: 'bob', role: 'member' });
+    const configuration = savedDescription(f);
+    configuration.members[1].settings = { providerId: 'codex', model: 'TEST-saved-model' };
+    const teams = createHostTeamsApi(f.legacy, f.backend);
+    const data = await teams.getData(f.key);
+    expect(data.isAlive).toBe(false);
+    expect(await teams.processAlive(f.key)).toBe(false);
+    const members = selectResolvedMembersForTeamName(
+      {
+        selectedTeamName: f.key,
+        selectedTeamData: data,
+        teamDataCacheByName: { [f.key]: data },
+        memberActivityMetaByTeam: {},
+      },
+      f.key
+    );
+    const bob = members.find((member) => member.name === 'bob')!;
+    expect(
+      buildMemberLaunchPresentation({
+        member: bob,
+        spawnStatus: undefined,
+        spawnLaunchState: undefined,
+        spawnLivenessSource: undefined,
+        spawnRuntimeAlive: undefined,
+        runtimeAdvisory: undefined,
+        isTeamAlive: data.isAlive,
+      }).launchVisualState
+    ).toBeNull();
+    expect(f.legacy.getData).not.toHaveBeenCalled();
+  });
+
+  it('retains UNKNOWN for absent current capture without exact no-history proof', async () => {
+    const f = fixture();
+    const teams = createHostTeamsApi(f.legacy, f.backend);
+    expect((await teams.getData(f.key)).isAlive).toBeUndefined();
+    await expect(teams.processAlive(f.key)).rejects.toThrow('runtime state unavailable');
+  });
+
+  it('does not override attached or uncertain current capture, or pending cleanup', async () => {
+    const f = fixture();
+    f.snapshot.runtimeNeverLaunched = true;
+    const captured = attachmentRuntime(f);
+    const teams = createHostTeamsApi(f.legacy, f.backend);
+    expect((await teams.getData(f.key)).isAlive).toBe(true);
+    captured.setUnknown();
+    expect((await teams.getData(f.key)).isAlive).toBeUndefined();
+    await expect(teams.processAlive(f.key)).rejects.toThrow('runtime state unavailable');
+    const fresh = fixture();
+    fresh.snapshot.runtimeNeverLaunched = true;
+    fresh.snapshot.lifecycle = {
+      kind: 'team_lifecycle',
+      revision: 'e'.repeat(64),
+      deletedAt: null,
+      cleanupPending: true,
+    };
+    const held = createHostTeamsApi(fresh.legacy, fresh.backend);
+    expect((await held.getData(fresh.key)).isAlive).toBeUndefined();
+    await expect(held.processAlive(fresh.key)).rejects.toThrow('runtime state unavailable');
+  });
+
+  it('strictly projects only the literal selected-owner no-history declaration', () => {
+    const f = fixture();
+    expect(
+      projectTeamSnapshot({ ...f.snapshot, runtimeNeverLaunched: true }).runtimeNeverLaunched
+    ).toBe(true);
+    for (const runtimeNeverLaunched of [false, 'true', 0, {}])
+      expect(() => projectTeamSnapshot({ ...f.snapshot, runtimeNeverLaunched })).toThrow(
+        'runtime history'
+      );
   });
 });

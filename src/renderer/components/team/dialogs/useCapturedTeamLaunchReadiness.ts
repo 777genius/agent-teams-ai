@@ -52,6 +52,12 @@ export function useCapturedTeamLaunchReadiness(input: {
   const scope = { ...input, selectionSignature, draftSignature };
   const latest = useRef(draftSignature);
   latest.current = draftSignature;
+  useEffect(() => {
+    latest.current = draftSignature;
+    return () => {
+      latest.current = '';
+    };
+  }, [draftSignature]);
   const expiry = Math.min(
     ...input.checks.flatMap((check) =>
       check.capturedTeamDraftSignature === draftSignature && check.capturedTeamReadiness
@@ -78,7 +84,20 @@ export function useCapturedTeamLaunchReadiness(input: {
   const runPreflight = useCallback(
     async (...args: Parameters<typeof fence.runPreflight>) => {
       const captured = draftSignature;
-      const result = await fence.runPreflight(...args);
+      const current = () => {
+        if (captured && latest.current !== captured)
+          throw new Error('Captured Team draft changed.');
+      };
+      const [identity, request] = args;
+      const result = await fence.runPreflight(identity, {
+        ...request,
+        prepareProvisioning: async (...values) => {
+          current();
+          const result = await request.prepareProvisioning(...values);
+          current();
+          return result;
+        },
+      });
       return {
         ...result,
         capturedTeamReadiness:

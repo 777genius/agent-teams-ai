@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
+import { realpathSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -12,6 +13,8 @@ import { createHostServer, HostRpcError } from '../dist/index.js';
 import { DEFAULT_HOST_LIMITS, HOST_PROTOCOL_VERSION } from '../dist/contracts.js';
 
 import type { HostServerOptions, JsonValue } from '../dist/index.js';
+
+const nodeExecutable = realpathSync(process.env.AGENT_BACKEND_TEST_NODE ?? process.execPath);
 
 const tick = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 const request = (id: number, method: string, params?: JsonValue): string =>
@@ -272,15 +275,11 @@ test('priority queue exhaustion fails closed rather than dropping control or ret
 
 test('actual CLI speaks NDJSON from an unrelated TEST cwd with no native/provider operations', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'TEST-legacy-host-'));
-  const child = spawn(
-    process.execPath,
-    [fileURLToPath(new URL('../dist/cli.js', import.meta.url))],
-    {
-      cwd: directory,
-      env: { PATH: '' },
-      stdio: ['pipe', 'pipe', 'pipe'],
-    }
-  );
+  const child = spawn(nodeExecutable, [fileURLToPath(new URL('../dist/cli.js', import.meta.url))], {
+    cwd: directory,
+    env: { PATH: '' },
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
   const exit = once(child, 'exit');
   let stderr = '';
   child.stderr.setEncoding('utf8').on('data', (chunk: string) => {
@@ -322,14 +321,10 @@ test('actual CLI speaks NDJSON from an unrelated TEST cwd with no native/provide
 });
 
 test('actual CLI exits on frame limit+1 without parsing or sending a fake outcome', async () => {
-  const child = spawn(
-    process.execPath,
-    [fileURLToPath(new URL('../dist/cli.js', import.meta.url))],
-    {
-      env: { PATH: '' },
-      stdio: ['pipe', 'pipe', 'pipe'],
-    }
-  );
+  const child = spawn(nodeExecutable, [fileURLToPath(new URL('../dist/cli.js', import.meta.url))], {
+    env: { PATH: '' },
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
   const exit = once(child, 'exit');
   let outputBytes = 0;
   child.stdout.on('data', (chunk: Buffer) => {

@@ -143,6 +143,9 @@ function message(value: unknown): BackendTeamSnapshot['messages'][number] {
       'replyToConversationId',
     ]),
     ...(source.taskRefs === undefined ? {} : { taskRefs: refs(source.taskRefs) }),
+    ...(source.attachments === undefined
+      ? {}
+      : { attachments: projectAttachmentMetadata(source.attachments) }),
   };
 }
 function kanban(value: unknown, teamName: string): KanbanState {
@@ -183,10 +186,13 @@ export function projectTeamSnapshot(value: unknown): BackendTeamSnapshot {
     (typeof configurationRevision !== 'string' || !/^[a-f0-9]{64}$/.test(configurationRevision))
   )
     throw new Error('Invalid configuration revision');
+  if (source.runtimeNeverLaunched !== undefined && source.runtimeNeverLaunched !== true)
+    throw new Error('Invalid runtime history');
   const kanbanState = kanban(source.kanbanState, teamName);
   return {
     teamName,
     revision,
+    ...(source.runtimeNeverLaunched === true ? { runtimeNeverLaunched: true as const } : {}),
     ...(source.lifecycle === undefined
       ? {}
       : { lifecycle: projectTeamLifecycleSnapshot(source.lifecycle) }),

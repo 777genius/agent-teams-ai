@@ -12,6 +12,8 @@ export interface OwnerState {
   members: TeamMember[];
   grants: TeamGrant[];
   ready: boolean;
+  /** Creation-only proof, removed before any native binding publication; absent old states stay UNKNOWN. */
+  runtimeNeverLaunched?: true;
   lifecycle?: TeamLifecycleState;
   contextEpochs?: TeamContextEpoch[];
   savedSettings?: TeamSavedSettings;

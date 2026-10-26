@@ -1,3 +1,8 @@
+import {
+  addNativeCrossTeamTarget,
+  captureNativeCrossTeamSources,
+  runNativeCrossTeamProof,
+} from './fixtures/native-cross-team-proof.ts';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -31,6 +36,7 @@ const digest = (bytes: string) => createHash('sha256').update(bytes).digest('hex
 
 // This scripts inference only. All tools, MCP, sessions and workspace effects run
 // through three actual pinned agents and one production Host/Team/Runtime composition.
+const exerciseCrossTeam = process.env.LEGACY_NATIVE_MIXED_CROSS_TEAM_GO === '1';
 const exerciseRestore = process.env.LEGACY_NATIVE_MIXED_RESTORE_GO === '1';
 const exercisePeers = process.env.LEGACY_NATIVE_MIXED_PEERS_GO === '1';
 test(
@@ -42,6 +48,10 @@ test(
   { timeout: 240_000 },
   async (t) => {
     assert.equal(process.env.LEGACY_NATIVE_MIXED_HOST_GO, '1');
+    assert.ok(
+      !exerciseCrossTeam || (!exerciseRestore && !exercisePeers),
+      'one fresh baseline3 + target1 cross-Team composition; no redundant restore/peer replay'
+    );
     const repo = resolve(import.meta.dirname, '../../..');
     const pkg = join(repo, 'packages/legacy-agent-host');
     const node = await realpath(
@@ -99,7 +109,9 @@ test(
     );
     assert.equal(
       executables.opencode.sha256,
-      '8c3c351b138cfe35905ab11846a1373f1beea590aee7eda412fb765b72c79d82'
+      exerciseCrossTeam
+        ? '417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6ebae696b'
+        : '8c3c351b138cfe35905ab11846a1373f1beea590aee7eda412fb765b72c79d82'
     );
     const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-native-mixed-host-')));
     t.diagnostic(`TEST receipt: ${join(root, 'receipt.json')}`);
@@ -118,13 +130,27 @@ test(
       ]),
     ])
       await mkdir(join(root, directory), { mode: 0o700 });
-    const claudeModel = await startNativeTeamModel({ peerMessaging: exercisePeers });
+    const crossSourcePinsBefore = exerciseCrossTeam
+      ? await captureNativeCrossTeamSources(root)
+      : [];
+    const claudeModel = await startNativeTeamModel({
+      peerMessaging: exercisePeers,
+      ...(exerciseCrossTeam
+        ? { crossTeam: { actor: 'source' as const, contextMarker: claudeContext } }
+        : {}),
+    });
     t.after(() => claudeModel.close());
     const codexModel = await startCodexModel({ peerMessaging: exercisePeers });
     t.after(() => codexModel.close());
     const openCodeModel = await startOpenCodeModel({ peerMessaging: exercisePeers });
     t.after(() => openCodeModel.close());
     const modelRows = [claudeModel, codexModel, openCodeModel];
+    const crossModel = exerciseCrossTeam
+      ? await startNativeTeamModel({
+          crossTeam: { actor: 'target', contextMarker: 'TEST_NATIVE_CROSS_TARGET_CONTEXT' },
+        })
+      : undefined;
+    if (crossModel) t.after(() => crossModel.close());
     const reservation = createServer();
     await new Promise<void>((done) => reservation.listen(0, '127.0.0.1', done));
     const address = reservation.address();
@@ -351,6 +377,7 @@ stream_max_retries = 0
         ],
       },
     };
+    if (crossModel) await addNativeCrossTeamTarget(profile, root, crossModel.url);
     const profilePath = join(root, 'profile.json');
     const profileBytes = JSON.stringify(profile);
     await writeFile(profilePath, profileBytes, { mode: 0o600 });
@@ -384,6 +411,7 @@ stream_max_retries = 0
       assert.ok(String(value).length > 0);
       return digest(String(value));
     };
+    let crossProof: Awaited<ReturnType<typeof runNativeCrossTeamProof>> | undefined;
     let launch: Record<string, unknown> = {},
       passed = false,
       cleanupConfirmed = true;
@@ -400,8 +428,16 @@ stream_max_retries = 0
           launchId: initial.launchId,
           rosterRevision: initial.rosterRevision,
           configuration: {
-            members: [{ memberId: 'alice-id', model: 'claude-opus-4-6', effort: 'medium',
-              fastMode: false, permissions: 'bypass', context: 'model-default' }],
+            members: [
+              {
+                memberId: 'alice-id',
+                model: 'claude-opus-4-6',
+                effort: 'medium',
+                fastMode: false,
+                permissions: 'bypass',
+                context: 'model-default',
+              },
+            ],
           },
         })
       );
@@ -772,10 +808,27 @@ stream_max_retries = 0
         .filter((row) => typeof row.text === 'string' && row.text.startsWith('REPLY_'));
       assert.equal(replies.length, 6);
       assert.ok(claudeModel.observations.length > 0);
-      assert.ok(claudeModel.observations.every((row) => row.requestedModel === 'claude-opus-4-6'), 'selected model survives actual native checkpoint/restore');
-      assert.ok(claudeModel.observations.every((row) => row.requestedEffort === 'medium'), 'selected effort survives actual native checkpoint/restore');
+      assert.ok(
+        claudeModel.observations.every((row) => row.requestedModel === 'claude-opus-4-6'),
+        'selected model survives actual native checkpoint/restore'
+      );
+      assert.ok(
+        claudeModel.observations.every((row) => row.requestedEffort === 'medium'),
+        'selected effort survives actual native checkpoint/restore'
+      );
       for (const name of names) assert.equal(replies.filter((row) => row.from === name).length, 2);
       assert.equal(new Set(replies.map((row) => row.messageId)).size, 6);
+      if (crossModel) {
+        crossProof = await runNativeCrossTeamProof({
+          host: current,
+          profile,
+          root,
+          sourceModel: claudeModel,
+          targetModel: crossModel,
+          sourcePinsBefore: crossSourcePinsBefore,
+        });
+        runtime.set('alice-id', crossProof.sourceRuntime);
+      }
       for (const name of names) {
         if (exerciseRestore) {
           const cp = await current.rpc(
@@ -819,6 +872,7 @@ stream_max_retries = 0
       current = start();
       cleanupConfirmed = false;
       await current.rpc('host.handshake', { protocolVersion: 1 });
+      if (crossProof) await crossProof.verifyAfterRestart(current);
       for (const row of receipts) {
         assert.deepEqual(await current.rpc('team.lookup', row.command), row.receipt);
         assert.deepEqual(await current.rpc('team.execute', row.command), row.receipt);
@@ -851,13 +905,16 @@ stream_max_retries = 0
         counts,
         names.map(
           (name) =>
-            11 +
+            11 -
+            (exerciseCrossTeam && name === 'alice' ? 2 : 0) +
             (exercisePeers ? 5 : 0) +
             (runtime.get(name + '-id')!.inputs as unknown[]).length +
             ((sourceRuntime.get(name + '-id')?.inputs as unknown[] | undefined)?.length ?? 0) -
             2
         )
       );
+      if (exerciseCrossTeam)
+        assert.deepEqual(await captureNativeCrossTeamSources(), crossSourcePinsBefore);
       passed = true;
     } finally {
       try {
@@ -887,6 +944,10 @@ stream_max_retries = 0
               cleanupConfirmed,
               exerciseRestore,
               exercisePeers,
+              exerciseCrossTeam,
+              crossSourcePinsBefore,
+              crossSourcePinsAfter: exerciseCrossTeam ? await captureNativeCrossTeamSources() : [],
+              crossTeam: crossProof?.evidence,
               restoreSelections,
               sourceRuntime: Object.fromEntries(sourceRuntime),
               businessReceipts: receipts,
@@ -894,10 +955,13 @@ stream_max_retries = 0
               modelObservations: modelRows.map((model) => model.observations),
               modelFailures: modelRows.map((model) => model.failures),
               scope:
-                'One mixed native Claude/Codex/OpenCode Team; aggregate bootstrap, concurrent two-turn work, canonical Task/MCP/message/activity and restart replay',
+                'One mixed native Claude/Codex/OpenCode Team; aggregate bootstrap, concurrent two-turn work, canonical Task/MCP/message/activity and restart replay' +
+                (exerciseCrossTeam
+                  ? '; second host-owned Team1 native cross-Team roundtrip and cold no-replay'
+                  : ''),
               excluded: [
                 'Desktop controls',
-                'second Team/cross-Team/group',
+                ...(exerciseCrossTeam ? ['group'] : ['second Team/cross-Team/group']),
                 ...(exerciseRestore ? [] : ['native history restore']),
                 'shared OpenCode host',
                 'vendor authentication',

@@ -1,3 +1,5 @@
+import { revealDesktopTaskReviewCard } from './desktop-task-review-card-readiness.ts';
+import { desktopTaskCommentInputExpression } from './desktop-task-comment-input-target.ts';
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
 import assert from 'node:assert/strict';
 import { readFile, readdir, realpath, writeFile } from 'node:fs/promises';
@@ -295,29 +297,23 @@ export async function runDesktopTaskReviewCycleUiSmoke(
     return matches[0]!;
   };
   async function revealCard() {
-    for (let attempt = 0; attempt < 12; attempt++) {
-      const geometry = record(
-        await ui.waitRead(
-          `(() => {const e=document.querySelector(${desktopJsLiteral(card)});if(!e)return null;const r=e.getBoundingClientRect();let p=e.parentElement;while(p&&!(p.scrollWidth>p.clientWidth&&/auto|scroll/.test(getComputedStyle(p).overflowX)))p=p.parentElement;if(!p)return {visible:true};const b=p.getBoundingClientRect(),left=Math.max(0,b.left),right=Math.min(innerWidth,b.right),top=Math.max(0,b.top),bottom=Math.min(innerHeight,b.bottom);if(right<=left||bottom<=top)return null;return {visible:r.left>=left&&r.right<=right,x:(left+right)/2,y:(top+bottom)/2,deltaX:Math.max(-600,Math.min(600,r.x+r.width/2-(left+right)/2))};})()`,
-          'original board horizontal viewport'
-        )
-      );
-      if (geometry.visible === true) {
-        await ui.scrollTo(card, 'original Task card viewport');
-        return;
-      }
-      options.assertOwnedRenderer();
-      step({ action: 'mouseWheel', label: 'reveal original Task column', ...geometry });
-      await cdp.send('Input.dispatchMouseEvent', {
-        type: 'mouseWheel',
-        x: geometry.x,
-        y: geometry.y,
-        deltaX: geometry.deltaX,
-        deltaY: 0,
-      });
-      await new Promise<void>((done) => setTimeout(done, 100));
-    }
-    throw new Error('Original Task column cannot be revealed by bounded user scroll');
+    const entry = record((await board()).tasks)[taskId];
+    await revealDesktopTaskReviewCard({
+      cdp,
+      ui,
+      card,
+      assertOwnedRenderer: options.assertOwnedRenderer,
+      step,
+      expected: {
+        contextId: 'local',
+        teamName: hostTeamSelectionKey(options.handleId),
+        taskId,
+        subject: original.subject,
+        status: previous.status,
+        reviewState: previous.reviewState ?? null,
+        boardColumn: entry === undefined ? null : (record(entry).column ?? null),
+      },
+    });
   }
   const openToolbar =
     '.kanban-task-card-toolbar[data-state="open"] [data-kanban-task-toolbar="true"]';
@@ -346,10 +342,35 @@ export async function runDesktopTaskReviewCycleUiSmoke(
       ...point,
     });
     await verifyHoveredCard();
-    await ui.click(
-      `${openToolbar} button[aria-label="${label}"]`,
-      'original ' + label + ' once'
+    // This original portaled hover toolbar is already open; do not re-enter it via generic click hover.
+    const selector = `${openToolbar} button[aria-label="${label}"]`;
+    const target = record(
+      await ui.waitRead(
+        `(() => {const card=document.querySelector(${desktopJsLiteral(card)}),open=[...document.querySelectorAll('.kanban-task-card[data-state="open"]')];if(!card||open.length!==1||open[0]!==card||card.querySelector('h5')?.textContent.trim()!==${desktopJsLiteral(original.subject)})return null;const buttons=[...document.querySelectorAll(${desktopJsLiteral(selector)})].filter(e=>e.getClientRects().length);if(buttons.length!==1)return null;const e=buttons[0],r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return r.width>0&&r.height>0&&!e.disabled&&hit&&(hit===e||e.contains(hit))?{x,y,ariaLabel:e.getAttribute('aria-label')}:null;})()`,
+        'exact original ' + label + ' toolbar button before one click'
+      )
     );
+    assert.equal(typeof target.x, 'number');
+    assert.equal(typeof target.y, 'number');
+    assert.equal(target.ariaLabel, label);
+    options.assertOwnedRenderer();
+    step({
+      action: 'mouseClick',
+      label: 'original ' + label + ' once',
+      selector,
+      target,
+      state: 'attempted',
+    });
+    for (const type of ['mousePressed', 'mouseReleased']) {
+      options.assertOwnedRenderer();
+      await cdp.send('Input.dispatchMouseEvent', {
+        type,
+        x: target.x,
+        y: target.y,
+        button: 'left',
+        clickCount: 1,
+      });
+    }
     return newReceipt(before, operation, action);
   }
   await ui.observeInput();
@@ -388,9 +409,17 @@ export async function runDesktopTaskReviewCycleUiSmoke(
   );
   await snapshotStage(await toolbar('Start', 'task.start'), 'in_progress');
   const commentBefore = new Set((await commands()).map((row) => row.commandId));
+  await revealCard();
   await ui.click(card + ' h5', 'open original Task detail for correction comment');
-  await ui.scrollTo(`[role="dialog"] #task-comment-${taskId}`, 'existing Task comment composer');
-  await ui.click(`[role="dialog"] #task-comment-${taskId}`, 'focus existing correction comment');
+  const commentTarget = record(
+    await ui.waitRead(
+      desktopTaskCommentInputExpression(options.handleId, taskId),
+      'exact current correction Task/owner/surface'
+    )
+  );
+  assert.equal(typeof commentTarget.selector, 'string');
+  await ui.scrollTo(String(commentTarget.selector), 'existing Task comment composer');
+  await ui.click(String(commentTarget.selector), 'focus existing correction comment');
   await cdp.send('Input.insertText', { text: commentText });
   await ui.click(
     '[role="dialog"] button.message-composer-send-button',
@@ -483,17 +512,41 @@ export async function runDesktopTaskReviewCycleUiSmoke(
   const disapprove = await toolbar('Disapprove', 'task.review', 'disapprove');
   await snapshotStage(disapprove, 'completed', 'none');
   const disapprovedHistory = history(previous);
-  assert.deepEqual(disapprovedHistory.slice(0, -1), history(JSON.parse(frozenTask) as Record<string, unknown>));
-  assert.equal(disapprovedHistory.length, history(JSON.parse(frozenTask) as Record<string, unknown>).length + 1);
+  assert.deepEqual(
+    disapprovedHistory.slice(0, -1),
+    history(JSON.parse(frozenTask) as Record<string, unknown>)
+  );
+  assert.equal(
+    disapprovedHistory.length,
+    history(JSON.parse(frozenTask) as Record<string, unknown>).length + 1
+  );
   assert.equal(disapprovedHistory.at(-1)!.type, 'review_disapproved');
   assert.equal(disapprovedHistory.at(-1)!.actor, 'user');
-  assert.equal((await commands()).length - frozenCommands.length, 1, 'one original Disapprove command, no second lifecycle intent');
+  assert.equal(
+    (await commands()).length - frozenCommands.length,
+    1,
+    'one original Disapprove command, no second lifecycle intent'
+  );
   await revealCard();
-  const donePoint = record(await ui.waitRead(`(() => {const e=document.querySelector(${desktopJsLiteral(card)});if(!e)return null;const r=e.getBoundingClientRect();return r.width&&r.height?{x:r.x+r.width/2,y:r.y+r.height/2}:null;})()`, 'original Disapproved Task card'));
+  const donePoint = record(
+    await ui.waitRead(
+      `(() => {const e=document.querySelector(${desktopJsLiteral(card)});if(!e)return null;const r=e.getBoundingClientRect();return r.width&&r.height?{x:r.x+r.width/2,y:r.y+r.height/2}:null;})()`,
+      'original Disapproved Task card'
+    )
+  );
   await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...donePoint });
   await verifyHoveredCard();
-  await ui.waitRead(`Boolean(document.querySelector(${desktopJsLiteral(openToolbar + ' button[aria-label="Request review"]')}))&&!document.querySelector(${desktopJsLiteral(openToolbar + ' button[aria-label="Disapprove"]')})`, 'same Task now exposes Done controls');
-  proof.approvedToDone = { status: 'PASS', commandId: disapprove.commandId, statusAfter: 'completed', reviewStateAfter: 'none', doneControlsVisible: true };
+  await ui.waitRead(
+    `Boolean(document.querySelector(${desktopJsLiteral(openToolbar + ' button[aria-label="Request review"]')}))&&!document.querySelector(${desktopJsLiteral(openToolbar + ' button[aria-label="Disapprove"]')})`,
+    'same Task now exposes Done controls'
+  );
+  proof.approvedToDone = {
+    status: 'PASS',
+    commandId: disapprove.commandId,
+    statusAfter: 'completed',
+    reviewStateAfter: 'none',
+    doneControlsVisible: true,
+  };
   proof.removedNotificationIds = [...removedNotifications];
   proof.status = 'PASS';
   proof.receiptIds = receiptIds;
@@ -521,21 +574,42 @@ export async function runDesktopTaskNotificationUiSmoke(
   const directory = join(options.root, 'hoststore/teams', teamName);
   const commandDirectory = join(directory, '.host-owner/commands');
   const commands = async () => {
-    const names = (await readdir(commandDirectory)).filter((name) => /^[A-Za-z0-9_-]+\.json$/.test(name)).sort();
+    const names = (await readdir(commandDirectory))
+      .filter((name) => /^[A-Za-z0-9_-]+\.json$/.test(name))
+      .sort();
     assert.ok(names.length <= 128);
     return Promise.all(names.map(async (name) => record(await json(join(commandDirectory, name)))));
   };
   const frozenTask = await readFile(taskPath, 'utf8'),
     frozenBoard = await readFile(join(directory, 'kanban-state.json'), 'utf8'),
     frozenCommands = await commands();
-  const steps: Record<string, unknown>[] = [], proof: Record<string, unknown> = {
-    status: 'INCOMPLETE', taskId, steps, sourceSha256: await fileDigest(import.meta.filename),
-    scope: 'Existing original Task-created notification hover View in session/Delete; conditional unread Mark as read',
-    excluded: ['native OS notifications', 'review approve/request-changes from notification', 'native agents', 'Stage2'],
-  };
+  const steps: Record<string, unknown>[] = [],
+    proof: Record<string, unknown> = {
+      status: 'INCOMPLETE',
+      taskId,
+      steps,
+      sourceSha256: await fileDigest(import.meta.filename),
+      scope:
+        'Existing original Task-created notification hover View in session/Delete; conditional unread Mark as read',
+      excluded: [
+        'native OS notifications',
+        'review approve/request-changes from notification',
+        'native agents',
+        'Stage2',
+      ],
+    };
   options.evidence.taskNotificationUiProof = proof;
-  const ui = createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer, step: (row) => { steps.push(row); } });
-  const waitProduct = async <T>(read: () => Promise<T>, matches: (value: T) => boolean, label: string): Promise<T> => {
+  const ui = createDesktopUiControls(cdp, {
+    assertOwnedRenderer: options.assertOwnedRenderer,
+    step: (row) => {
+      steps.push(row);
+    },
+  });
+  const waitProduct = async <T>(
+    read: () => Promise<T>,
+    matches: (value: T) => boolean,
+    label: string
+  ): Promise<T> => {
     const deadline = Date.now() + 20_000;
     while (Date.now() < deadline) {
       options.assertOwnedRenderer();
@@ -548,25 +622,44 @@ export async function runDesktopTaskNotificationUiSmoke(
   // Read-only public lookup binds the existing UI row; effects remain trusted mouse input.
   const notifications = async () => {
     options.assertOwnedRenderer();
-    const result = record(await cdp.evaluate('window.electronAPI.notifications.get({limit:100,offset:0})'));
+    const result = record(
+      await cdp.evaluate('window.electronAPI.notifications.get({limit:100,offset:0})')
+    );
     assert.equal(result.hasMore, false, 'bounded fresh TEST notification history');
     assert.ok(Array.isArray(result.notifications) && result.notifications.length <= 100);
     return result.notifications.map(record);
   };
-  const rows = await waitProduct(notifications, (rows) => rows.some((row) => {
-    const target = row.target === undefined ? undefined : record(row.target);
-    return row.teamEventType === 'task_created' && target &&
-      target.kind === 'task' && target.teamName === hostTeamSelectionKey(options.handleId) && target.taskId === taskId;
-  }), 'original UI-created Task notification');
+  const rows = await waitProduct(
+    notifications,
+    (rows) =>
+      rows.some((row) => {
+        const target = row.target === undefined ? undefined : record(row.target);
+        return (
+          row.teamEventType === 'task_created' &&
+          target &&
+          target.kind === 'task' &&
+          target.teamName === hostTeamSelectionKey(options.handleId) &&
+          target.taskId === taskId
+        );
+      }),
+    'original UI-created Task notification'
+  );
   const matches = rows.filter((row) => {
     const target = row.target === undefined ? undefined : record(row.target);
-    return row.teamEventType === 'task_created' && target &&
-      target.kind === 'task' && target.teamName === hostTeamSelectionKey(options.handleId) && target.taskId === taskId;
+    return (
+      row.teamEventType === 'task_created' &&
+      target &&
+      target.kind === 'task' &&
+      target.teamName === hostTeamSelectionKey(options.handleId) &&
+      target.taskId === taskId
+    );
   });
   assert.equal(matches.length, 1);
-  const notification = matches[0]!, notificationId = String(notification.id);
+  const notification = matches[0]!,
+    notificationId = String(notification.id);
   assert.match(notificationId, /^[a-f0-9-]{36}$/);
-  const message = String(notification.message), preview = message.length > 100 ? message.slice(0, 100) + '...' : message;
+  const message = String(notification.message),
+    preview = message.length > 100 ? message.slice(0, 100) + '...' : message;
   const rowExpression = `[...document.querySelectorAll('[role="button"]')].filter(e=>e.querySelector('p')?.textContent===${desktopJsLiteral(preview)})`;
   const hoverNotification = async () => {
     await ui.click('button[aria-label="Notifications"]', 'existing Notifications tab');
@@ -584,50 +677,65 @@ export async function runDesktopTaskNotificationUiSmoke(
     // The list is virtualized. Only bounded wheel input; never DOM/store mutations.
     for (let page = 0; page < 12; page++) {
       const viewport = record(await ui.waitRead(viewportExpression, 'Notifications list viewport'));
-      const point = await cdp.evaluate(`(() => {const rows=${rowExpression};if(rows.length>1)throw Error('ambiguous notification row');if(!rows.length)return null;const r=rows[0].getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight?{x:r.x+r.width/2,y:r.y+r.height/2}:null;})()`);
+      const point = await cdp.evaluate(
+        `(() => {const rows=${rowExpression};if(rows.length>1)throw Error('ambiguous notification row');if(!rows.length)return null;const r=rows[0].getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight?{x:r.x+r.width/2,y:r.y+r.height/2}:null;})()`
+      );
       if (point) {
         await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...record(point) });
         return;
       }
-      await cdp.send('Input.dispatchMouseEvent', { type: 'mouseWheel', ...viewport, deltaX: 0, deltaY: 400 });
+      await cdp.send('Input.dispatchMouseEvent', {
+        type: 'mouseWheel',
+        ...viewport,
+        deltaX: 0,
+        deltaY: 400,
+      });
       await new Promise<void>((done) => setTimeout(done, 100));
     }
     throw new Error('Original notification row unavailable; no action replay');
   };
   const notificationAction = async (title: string) => {
-    const path = String(await ui.waitRead(`(() => {const rows=${rowExpression};if(rows.length!==1)return null;let e=rows[0].querySelector('button[title='+JSON.stringify(${desktopJsLiteral(title)})+']');if(!e)return null;const parts=[];while(e&&e!==document.documentElement){const p=e.parentElement;if(!p)return null;parts.unshift(e.tagName.toLowerCase()+':nth-child('+([...p.children].indexOf(e)+1)+')');e=p;}return 'html>'+parts.join('>');})()`, 'exact original notification action path'));
+    const path = String(
+      await ui.waitRead(
+        `(() => {const rows=${rowExpression};if(rows.length!==1)return null;let e=rows[0].querySelector('button[title='+JSON.stringify(${desktopJsLiteral(title)})+']');if(!e)return null;const parts=[];while(e&&e!==document.documentElement){const p=e.parentElement;if(!p)return null;parts.unshift(e.tagName.toLowerCase()+':nth-child('+([...p.children].indexOf(e)+1)+')');e=p;}return 'html>'+parts.join('>');})()`,
+        'exact original notification action path'
+      )
+    );
     await ui.click(path, 'original notification ' + title + ' once');
   };
   await hoverNotification();
-  await ui.waitRead(`(() => {const rows=${rowExpression};return rows.length===1&&Boolean(rows[0].querySelector('button[title="View in session"]'));})()`, 'original notification hover menu rendered');
-  const screenshot = record(await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true }));
+  await ui.waitRead(
+    `(() => {const rows=${rowExpression};return rows.length===1&&Boolean(rows[0].querySelector('button[title="View in session"]'));})()`,
+    'original notification hover menu rendered'
+  );
+  const screenshot = record(
+    await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true })
+  );
   const screenshotPath = join(options.root, 'ui-task-notification-quick-actions.png');
-  await writeFile(screenshotPath, Buffer.from(String(screenshot.data), 'base64'), { mode: 0o600, flag: 'wx' });
+  await writeFile(screenshotPath, Buffer.from(String(screenshot.data), 'base64'), {
+    mode: 0o600,
+    flag: 'wx',
+  });
   proof.screenshot = { path: screenshotPath, sha256: await fileDigest(screenshotPath) };
   let markRead: string = 'unavailable: original viewed Team notification already read';
   if (notification.isRead === false) {
     await notificationAction('Mark as read');
-    await waitProduct(notifications, (rows) => rows.find((row) => row.id === notificationId)?.isRead === true, 'original notification read');
+    await waitProduct(
+      notifications,
+      (rows) => rows.find((row) => row.id === notificationId)?.isRead === true,
+      'original notification read'
+    );
     markRead = 'PASS';
     await hoverNotification();
   }
   await notificationAction('View in session');
   const selectedOwner = hostTeamSelectionKey(options.handleId);
-  const navigationIdentity = record(await ui.waitRead(
-    `(() => {
-      const node=document.querySelector('[role="dialog"]');
-      if(!node||!node.getClientRects().length||!node.querySelector('#task-comment-${taskId}'))return null;
-      const key=Object.keys(node).find(key=>key.startsWith('__reactFiber$'));
-      for(let fiber=key?node[key]:null,depth=0;fiber&&depth<128;fiber=fiber.return,depth++){
-        const p=fiber.memoizedProps;
-        if(p?.open===true&&p.teamName===${desktopJsLiteral(selectedOwner)}&&p.task?.id===${desktopJsLiteral(taskId)}&&
-          p.sessionController?.identity?.teamName===${desktopJsLiteral(selectedOwner)}&&
-          p.sessionController.identity.taskId===${desktopJsLiteral(taskId)})
-          return {teamName:p.teamName,taskId:p.task.id,identity:p.sessionController.identity};
-      }
-      return null;
-    })()`, 'notification opens original Task detail at its exact captured owner'
-  ));
+  const navigationIdentity = record(
+    await ui.waitRead(
+      desktopTaskCommentInputExpression(options.handleId, taskId),
+      'notification opens original Task detail at its exact captured owner'
+    )
+  );
   assert.equal(navigationIdentity.teamName, selectedOwner);
   assert.equal(navigationIdentity.taskId, taskId);
   proof.navigationIdentity = navigationIdentity;
@@ -635,17 +743,46 @@ export async function runDesktopTaskNotificationUiSmoke(
   await hoverNotification();
   const beforeDelete = await notifications();
   await notificationAction('Delete');
-  const afterDelete = await waitProduct(notifications, (rows) => !rows.some((row) => row.id === notificationId), 'exact original notification deleted');
+  const afterDelete = await waitProduct(
+    notifications,
+    (rows) => !rows.some((row) => row.id === notificationId),
+    'exact original notification deleted'
+  );
   for (const neighbor of beforeDelete.filter((row) => row.id !== notificationId))
-    assert.deepEqual(afterDelete.find((row) => row.id === neighbor.id), neighbor, 'other original notifications remain');
+    assert.deepEqual(
+      afterDelete.find((row) => row.id === neighbor.id),
+      neighbor,
+      'other original notifications remain'
+    );
   assert.equal(await readFile(taskPath, 'utf8'), frozenTask);
   assert.equal(await readFile(join(directory, 'kanban-state.json'), 'utf8'), frozenBoard);
-  assert.deepEqual(await commands(), frozenCommands, 'notification actions never recreate or mutate the Task');
-  const runtimeSessions = await readDesktopNativeStopSessions(options.root).catch((error: NodeJS.ErrnoException) => {
-    if (error.code === 'ENOENT' && error.path === join(options.root, 'hoststore/runtime-sessions')) return [];
-    throw error;
+  assert.deepEqual(
+    await commands(),
+    frozenCommands,
+    'notification actions never recreate or mutate the Task'
+  );
+  const runtimeSessions = await readDesktopNativeStopSessions(options.root).catch(
+    (error: NodeJS.ErrnoException) => {
+      if (
+        error.code === 'ENOENT' &&
+        error.path === join(options.root, 'hoststore/runtime-sessions')
+      )
+        return [];
+      throw error;
+    }
+  );
+  assert.deepEqual(
+    runtimeSessions,
+    [],
+    'notification controls never allocate native Runtime sessions'
+  );
+  Object.assign(proof, {
+    status: 'PASS',
+    notificationId,
+    target: notification.target,
+    navigate: 'PASS',
+    delete: 'PASS',
+    markRead,
+    runtimeSessions,
   });
-  assert.deepEqual(runtimeSessions, [], 'notification controls never allocate native Runtime sessions');
-  Object.assign(proof, { status: 'PASS', notificationId, target: notification.target, navigate: 'PASS', delete: 'PASS', markRead, runtimeSessions });
-
 }

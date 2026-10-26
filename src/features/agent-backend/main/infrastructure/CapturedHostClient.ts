@@ -27,7 +27,7 @@ import {
 } from './selectedHostProfile';
 
 let startupProbeCount = 0;
-const startupProbe = (
+export const observeCapturedHostStartup = (
   phase:
     | 'profile-validation-start'
     | 'profile-validation-complete'
@@ -35,13 +35,22 @@ const startupProbe = (
     | 'ready'
     | 'request-timeout'
     | 'request-admitted'
-    | 'response-accepted',
-  kind: 'handshake' | 'rpc' = 'handshake'
+    | 'response-accepted'
+    | 'owner-start'
+    | 'owner-started'
+    | 'read-start'
+    | 'read-complete',
+  kind: 'handshake' | 'rpc' | 'registry-list' | 'retirement-read' = 'handshake'
 ): void => {
   if (process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS !== '1' || startupProbeCount >= 128) return;
   startupProbeCount++;
   try {
-    createLogger('TEST:HostStartup').diagnostic('Host startup observation', { phase, kind });
+    createLogger('TEST:HostStartup').diagnostic('Host startup observation', {
+      phase,
+      kind,
+      observation: startupProbeCount,
+      elapsedMs: Math.round(performance.now()),
+    });
   } catch {
     /* Passive diagnostics cannot change transport outcomes. */
   }
@@ -105,9 +114,9 @@ export class CapturedHostClient {
 
   private async open(): Promise<HostHandshake> {
     try {
-      startupProbe('profile-validation-start');
+      observeCapturedHostStartup('profile-validation-start');
       await validateHostProfile(this.profile);
-      startupProbe('profile-validation-complete');
+      observeCapturedHostStartup('profile-validation-complete');
       if (this.sealed) throw new HostClientError('shutting-down', 'not-dispatched');
       const child = spawn(this.profile.nodeExecutable, [this.profile.hostEntry], {
         cwd: this.profile.cwd,
@@ -116,7 +125,7 @@ export class CapturedHostClient {
         windowsHide: true,
       });
       this.child = child;
-      startupProbe('child-captured');
+      observeCapturedHostStartup('child-captured');
       this.exitPromise = new Promise<void>((resolve) => {
         child.once('close', () => {
           this.exited = true;
@@ -146,7 +155,7 @@ export class CapturedHostClient {
       const handshake = this.validateHandshake(result);
       if (this.sealed) throw new HostClientError('shutting-down', 'not-dispatched');
       this.ready = true;
-      startupProbe('ready');
+      observeCapturedHostStartup('ready');
       return handshake;
     } catch (error) {
       const safe =
@@ -251,13 +260,22 @@ export class CapturedHostClient {
     return new Promise<JsonValue>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
-        startupProbe('request-timeout', method === 'host.handshake' ? 'handshake' : 'rpc');
+        observeCapturedHostStartup(
+          'request-timeout',
+          method === 'host.handshake' ? 'handshake' : 'rpc'
+        );
         reject(new HostClientError('request-timeout', 'unknown'));
       }, timeoutMs);
-      startupProbe('request-admitted', method === 'host.handshake' ? 'handshake' : 'rpc');
+      observeCapturedHostStartup(
+        'request-admitted',
+        method === 'host.handshake' ? 'handshake' : 'rpc'
+      );
       this.pending.set(id, {
         resolve: (value) => {
-          startupProbe('response-accepted', method === 'host.handshake' ? 'handshake' : 'rpc');
+          observeCapturedHostStartup(
+            'response-accepted',
+            method === 'host.handshake' ? 'handshake' : 'rpc'
+          );
           resolve(value);
         },
         reject,

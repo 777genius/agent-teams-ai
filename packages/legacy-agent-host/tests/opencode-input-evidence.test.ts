@@ -1,3 +1,4 @@
+import { selectOpenCodeFailedTool } from '../dist/evidence/NativeFailedToolObservation.js';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import {
@@ -21,7 +22,7 @@ import { createOpenCodeInputEvidenceCapture } from '../dist/evidence/OpenCodeInp
 import { evidenceProjectDir } from '../dist/evidence/evidenceProjectDir.js';
 import { ToolEvidenceWindows } from '../dist/evidence/ToolEvidenceWindows.js';
 import { digest } from '../dist/team/identity.js';
-import { deliveryFingerprint, runtimeDigest } from '../dist/runtime/identity.js';
+import { deliveryFingerprint, normalizeBinding, runtimeDigest } from '../dist/runtime/identity.js';
 import type {
   OpenCodeCaptureRequest,
   OpenCodeAfterRequest,
@@ -200,14 +201,37 @@ function fixture(t: TestContext) {
 }
 
 const patch = (old: string, next: string) => `@@ -1 +1 @@\n-${old}\n+${next}\n`;
-function terminal(f: ReturnType<typeof fixture>, diffs = [patch('TEST initially dirty', 'TEST final observed')]): OpenCodeAfterRequest {
+function terminal(
+  f: ReturnType<typeof fixture>,
+  diffs = [patch('TEST initially dirty', 'TEST final observed')]
+): OpenCodeAfterRequest {
   return {
-    ...f.request, phase: 'after', nativeInputId: 'msg_INPUT', beforeObserved: true, outcome: 'succeeded',
+    ...f.request,
+    phase: 'after',
+    nativeInputId: 'msg_INPUT',
+    beforeObserved: true,
+    outcome: 'succeeded',
     items: diffs.map((diff, index) => {
       const patch = `Index: ${f.file}\n===================================================================\n--- ${f.file}\n+++ ${f.file}\n${diff}`;
-      const [old, next] = diff.split('\n').filter(line => /^[+-]/.test(line)).map(line => line.slice(1));
-      return { messageId: `msg_ASSISTANT${index}`, partId: `prt_EDIT${index}`, callId: `TEST-native-${index}`, tool: 'edit', status: 'completed',
-        input: { filePath: f.file, oldString: old, newString: next }, metadata: { truncated: false, diff: patch, filediff: { file: f.file, patch, additions: 1, deletions: 1 } }, startedAt: index * 3, completedAt: index * 3 + 1 };
+      const [old, next] = diff
+        .split('\n')
+        .filter((line) => /^[+-]/.test(line))
+        .map((line) => line.slice(1));
+      return {
+        messageId: `msg_ASSISTANT${index}`,
+        partId: `prt_EDIT${index}`,
+        callId: `TEST-native-${index}`,
+        tool: 'edit',
+        status: 'completed',
+        input: { filePath: f.file, oldString: old, newString: next },
+        metadata: {
+          truncated: false,
+          diff: patch,
+          filediff: { file: f.file, patch, additions: 1, deletions: 1 },
+        },
+        startedAt: index * 3,
+        completedAt: index * 3 + 1,
+      };
     }),
   };
 }
@@ -227,12 +251,15 @@ test('original claimed input captures dirty bytes and actual OpenCode update pro
   const row = JSON.parse(readFileSync(f.events, 'utf8').trim()) as {
     taskId: string;
     toolUseId: string;
-    nativeCaptureProof: { kind: string; tools: {callId: string}[] };
+    nativeCaptureProof: { kind: string; tools: { callId: string }[] };
   };
   assert.equal(row.taskId, f.taskId);
   assert.equal(row.toolUseId, 'TEST-native-0');
   assert.equal(row.nativeCaptureProof.kind, 'opencode-update-patch-v1');
-  assert.deepEqual(row.nativeCaptureProof.tools.map(tool => tool.callId), ['TEST-native-0']);
+  assert.deepEqual(
+    row.nativeCaptureProof.tools.map((tool) => tool.callId),
+    ['TEST-native-0']
+  );
   f.capture.seal();
   const changes = await f.read();
   assert.ok(changes);
@@ -271,10 +298,13 @@ test('ordered same-path native patch chain records one actual endpoint event wit
     ])
   );
   const row = JSON.parse(readFileSync(f.events, 'utf8').trim()) as {
-    nativeCaptureProof: { tools: {callId: string}[] };
+    nativeCaptureProof: { tools: { callId: string }[] };
     toolUseId: string;
   };
-  assert.deepEqual(row.nativeCaptureProof.tools.map(tool => tool.callId), ['TEST-native-0', 'TEST-native-1']);
+  assert.deepEqual(
+    row.nativeCaptureProof.tools.map((tool) => tool.callId),
+    ['TEST-native-0', 'TEST-native-1']
+  );
   assert.equal(row.toolUseId, 'TEST-native-1');
   assert.equal(readFileSync(f.events, 'utf8').trim().split('\n').length, 1);
 });
@@ -307,7 +337,8 @@ for (const mode of [
     if (mode === 'patch')
       after = terminal(f, [patch('TEST wrong preimage', 'TEST final observed')]);
     if (mode === 'bytes') writeFileSync(f.file, 'TEST independent newer bytes\n');
-    if (mode === 'unsupported') after = { ...after, items: after.items.map(item => ({ ...item, tool: 'bash' })) };
+    if (mode === 'unsupported')
+      after = { ...after, items: after.items.map((item) => ({ ...item, tool: 'bash' })) };
     if (mode === 'duplicate') after = { ...after, items: [...after.items, ...after.items] };
     if (mode === 'overlap') await f.make().observe({ ...f.request, windowRef: 'TEST-overlap' });
     if (mode === 'extra-file')
@@ -358,7 +389,11 @@ test('snapshot census cap refuses baseline before native changes', async (t) => 
   assert.equal(f.capture.readStatus().reason, 'incomplete-workspace-census');
   const notice = JSON.parse(readFileSync(f.notices, 'utf8').trim().split('\n').at(-1)!);
   assert.ok(notice.captureWarningCodes.includes('git-path-cap'));
-  assert.ok(notice.captureWarningCodes.every((code: string) => code === 'git-path-cap' || code === 'path-cap'));
+  assert.ok(
+    notice.captureWarningCodes.every(
+      (code: string) => code === 'git-path-cap' || code === 'path-cap'
+    )
+  );
   assert.ok(notice.captureWarningCodes.length <= 16);
   assert.match(notice.message, /Snapshot warning codes: git-path-cap/);
   assert.equal(f.capture.readStatus().baseline, 'missed');
@@ -384,72 +419,264 @@ test('already-aborted original before callback records a missed GAP without arti
   assert.equal(existsSync(f.events), false);
 });
 
-test('completed native read permits the exact edit profile without supplying authored event identity', async t => {
-  const f = fixture(t); await f.capture.observe(f.request);
+test('completed native read permits the exact edit profile without supplying authored event identity', async (t) => {
+  const f = fixture(t);
+  await f.capture.observe(f.request);
   const after = terminal(f);
-  const read = { messageId: 'msg_READ', partId: 'prt_READ', callId: 'TEST-read', tool: 'read', status: 'completed', input: {filePath: f.file}, metadata: null, startedAt: null, completedAt: null };
+  const read = {
+    messageId: 'msg_READ',
+    partId: 'prt_READ',
+    callId: 'TEST-read',
+    tool: 'read',
+    status: 'completed',
+    input: { filePath: f.file },
+    metadata: null,
+    startedAt: null,
+    completedAt: null,
+  };
   writeFileSync(f.file, 'TEST final observed\n');
-  await f.capture.observe({...after, items: [read, ...after.items]});
-  const changes = await f.read(); assert.equal(changes?.files[0]?.snippets[0]?.ledger?.nativeCapture, 'qualified');
-  const row = JSON.parse(readFileSync(f.events,'utf8')); assert.equal(row.toolUseId,'TEST-native-0');
-  assert.deepEqual(row.nativeCaptureProof.tools, [{ messageId:'msg_ASSISTANT0', partId:'prt_EDIT0',callId:'TEST-native-0'}]);
+  await f.capture.observe({ ...after, items: [read, ...after.items] });
+  const changes = await f.read();
+  assert.equal(changes?.files[0]?.snippets[0]?.ledger?.nativeCapture, 'qualified');
+  const row = JSON.parse(readFileSync(f.events, 'utf8'));
+  assert.equal(row.toolUseId, 'TEST-native-0');
+  assert.deepEqual(row.nativeCaptureProof.tools, [
+    { messageId: 'msg_ASSISTANT0', partId: 'prt_EDIT0', callId: 'TEST-native-0' },
+  ]);
 });
-test('unique native patch chain is independent of transcript and timestamp order', async t => {
-  const f=fixture(t); await f.capture.observe(f.request); writeFileSync(f.file,'TEST final observed\n');
-  const after=terminal(f,[patch('TEST initially dirty','TEST middle'),patch('TEST middle','TEST final observed')]);
-  await f.capture.observe({...after,items:[...after.items].reverse()});
-  const row=JSON.parse(readFileSync(f.events,'utf8')); assert.deepEqual(row.nativeCaptureProof.tools.map((x:{callId:string})=>x.callId),['TEST-native-0','TEST-native-1']);
+test('unique native patch chain is independent of transcript and timestamp order', async (t) => {
+  const f = fixture(t);
+  await f.capture.observe(f.request);
+  writeFileSync(f.file, 'TEST final observed\n');
+  const after = terminal(f, [
+    patch('TEST initially dirty', 'TEST middle'),
+    patch('TEST middle', 'TEST final observed'),
+  ]);
+  await f.capture.observe({ ...after, items: [...after.items].reverse() });
+  const row = JSON.parse(readFileSync(f.events, 'utf8'));
+  assert.deepEqual(
+    row.nativeCaptureProof.tools.map((x: { callId: string }) => x.callId),
+    ['TEST-native-0', 'TEST-native-1']
+  );
 });
-for(const reason of ['tool-overlap','truncated','foreign-header','native-anchor','input-disagrees','counts'] as const) test(`OpenCode ${reason} remains unqualified despite matching final bytes`,async t=>{
-  const f=fixture(t); await f.capture.observe(f.request); writeFileSync(f.file,'TEST final observed\n');
-  let after=terminal(f);
-  if(reason==='tool-overlap') { const chain=terminal(f,[patch('TEST initially dirty','TEST middle'),patch('TEST middle','TEST final observed')]); after={...chain,items:chain.items.map(x=>({...x,startedAt:0,completedAt:2}))}; }
-  else after={...after,items:after.items.map(x=>{
-    const metadata=x.metadata as {truncated:boolean;diff:string;filediff:{file:string;patch:string;additions:number;deletions:number}};
-    if(reason==='truncated') return {...x,metadata:{...metadata,truncated:true}};
-    if(reason==='native-anchor')return {...x,messageId:after.nativeInputId};
-    if(reason==='input-disagrees')return {...x,input:{filePath:f.file,oldString:'TEST initially dirty',newString:'TEST fabricated'}};
-    if(reason==='counts')return {...x,metadata:{...metadata,filediff:{...metadata.filediff,additions:2}}};
-    const patch=metadata.diff.replaceAll(f.file,join(f.workspace,'foreign.txt'));return {...x,metadata:{...metadata,diff:patch,filediff:{...metadata.filediff,patch}}};
-  })};
-  await f.capture.observe(after); assert.equal(existsSync(f.events),false); assert.equal(f.capture.readStatus().phase,'gap');
-});
-test('missing terminal and seal never qualify or resurrect the original window',async t=>{
- const f=fixture(t); await f.capture.observe(f.request); assert.equal(existsSync(f.events),false); f.capture.seal(); writeFileSync(f.file,'TEST final observed\n'); await f.capture.observe(terminal(f)); assert.equal(existsSync(f.events),false); assert.equal(f.capture.readStatus().phase,'sealed');
+for (const reason of [
+  'tool-overlap',
+  'truncated',
+  'foreign-header',
+  'native-anchor',
+  'input-disagrees',
+  'counts',
+] as const)
+  test(`OpenCode ${reason} remains unqualified despite matching final bytes`, async (t) => {
+    const f = fixture(t);
+    await f.capture.observe(f.request);
+    writeFileSync(f.file, 'TEST final observed\n');
+    let after = terminal(f);
+    if (reason === 'tool-overlap') {
+      const chain = terminal(f, [
+        patch('TEST initially dirty', 'TEST middle'),
+        patch('TEST middle', 'TEST final observed'),
+      ]);
+      after = { ...chain, items: chain.items.map((x) => ({ ...x, startedAt: 0, completedAt: 2 })) };
+    } else
+      after = {
+        ...after,
+        items: after.items.map((x) => {
+          const metadata = x.metadata as {
+            truncated: boolean;
+            diff: string;
+            filediff: { file: string; patch: string; additions: number; deletions: number };
+          };
+          if (reason === 'truncated') return { ...x, metadata: { ...metadata, truncated: true } };
+          if (reason === 'native-anchor') return { ...x, messageId: after.nativeInputId };
+          if (reason === 'input-disagrees')
+            return {
+              ...x,
+              input: {
+                filePath: f.file,
+                oldString: 'TEST initially dirty',
+                newString: 'TEST fabricated',
+              },
+            };
+          if (reason === 'counts')
+            return {
+              ...x,
+              metadata: { ...metadata, filediff: { ...metadata.filediff, additions: 2 } },
+            };
+          const patch = metadata.diff.replaceAll(f.file, join(f.workspace, 'foreign.txt'));
+          return {
+            ...x,
+            metadata: { ...metadata, diff: patch, filediff: { ...metadata.filediff, patch } },
+          };
+        }),
+      };
+    await f.capture.observe(after);
+    assert.equal(existsSync(f.events), false);
+    assert.equal(f.capture.readStatus().phase, 'gap');
+  });
+test('missing terminal and seal never qualify or resurrect the original window', async (t) => {
+  const f = fixture(t);
+  await f.capture.observe(f.request);
+  assert.equal(existsSync(f.events), false);
+  f.capture.seal();
+  writeFileSync(f.file, 'TEST final observed\n');
+  await f.capture.observe(terminal(f));
+  assert.equal(existsSync(f.events), false);
+  assert.equal(f.capture.readStatus().phase, 'sealed');
 });
 
-test('generic DM keeps original agent cause without a fabricated Task',async t=>{
- const f=fixture(t); f.human.execute({commandId:'TEST-dm',operation:'message.send',payload:{to:'worker',text:'TEST generic edit'}});
- const intent=f.human.pendingDeliveries().find(x=>x.commandId==='TEST-dm')!; assert.ok(intent);
- f.record.inputs=[{intent,fingerprint:deliveryFingerprint(intent),operationRef:'TEST-dm-operation',phase:'claimed'}];
- const before={...f.request,inputId:intent.inputId,operationRef:'TEST-dm-operation'};
- await f.capture.observe(before);writeFileSync(f.file,'TEST final observed\n');
- await f.capture.observe({...terminal(f),inputId:intent.inputId,operationRef:'TEST-dm-operation'});
- const changes=await new AgentChangeLedgerReader().readAgentChanges({teamName:'test-writer',memberName:'worker',actorId:'worker-id',projectDir:f.projectDir,projectPath:f.workspace});
- const snippet=changes.files[0]!.snippets[0]!; assert.equal(snippet.ledger!.nativeCapture,'qualified');assert.equal(snippet.ledger!.taskId,undefined);assert.equal(snippet.ledger!.inputId,intent.inputId);assert.equal(snippet.ledger!.modifiedFullContent,'TEST final observed\n');
- assert.equal(existsSync(f.events),false,'generic input must not append into unrelated Task journal');
+test('generic DM keeps original agent cause without a fabricated Task', async (t) => {
+  const f = fixture(t);
+  f.human.execute({
+    commandId: 'TEST-dm',
+    operation: 'message.send',
+    payload: { to: 'worker', text: 'TEST generic edit' },
+  });
+  const intent = f.human.pendingDeliveries().find((x) => x.commandId === 'TEST-dm')!;
+  assert.ok(intent);
+  f.record.inputs = [
+    {
+      intent,
+      fingerprint: deliveryFingerprint(intent),
+      operationRef: 'TEST-dm-operation',
+      phase: 'claimed',
+    },
+  ];
+  const before = { ...f.request, inputId: intent.inputId, operationRef: 'TEST-dm-operation' };
+  await f.capture.observe(before);
+  writeFileSync(f.file, 'TEST final observed\n');
+  await f.capture.observe({
+    ...terminal(f),
+    inputId: intent.inputId,
+    operationRef: 'TEST-dm-operation',
+  });
+  const changes = await new AgentChangeLedgerReader().readAgentChanges({
+    teamName: 'test-writer',
+    memberName: 'worker',
+    actorId: 'worker-id',
+    projectDir: f.projectDir,
+    projectPath: f.workspace,
+  });
+  const snippet = changes.files[0]!.snippets[0]!;
+  assert.equal(snippet.ledger!.nativeCapture, 'qualified');
+  assert.equal(snippet.ledger!.taskId, undefined);
+  assert.equal(snippet.ledger!.inputId, intent.inputId);
+  assert.equal(snippet.ledger!.modifiedFullContent, 'TEST final observed\n');
+  assert.equal(
+    existsSync(f.events),
+    false,
+    'generic input must not append into unrelated Task journal'
+  );
 });
 
-for(const field of ['nativeInputId','nativeSessionId','tool-anchor','last-call'] as const) test(`portable OpenCode proof refuses copied ${field}`,async t=>{
- const f=fixture(t);await f.capture.observe(f.request);writeFileSync(f.file,'TEST final observed\n');await f.capture.observe(terminal(f));
- const row=JSON.parse(readFileSync(f.events,'utf8'));
- if(field==='nativeInputId')row.nativeCaptureProof.nativeInputId='msg_FOREIGN';
- if(field==='nativeSessionId')row.nativeCaptureProof.nativeSessionId='ses_FOREIGN';
- if(field==='tool-anchor')row.nativeCaptureProof.tools[0].partId='prt_FOREIGN';
- if(field==='last-call')row.toolUseId='TEST-foreign-call';
- writeFileSync(f.events,JSON.stringify(row)+'\n');
- const changes=await f.read();assert.equal(changes?.files[0]?.snippets[0]?.ledger?.nativeCapture,'unqualified');
- const content=await new FileContentResolver({mode:'ledger-only'}).getFileContent('test-writer','worker',f.file,changes!.files[0]!.snippets);
- assert.equal(content.modifiedFullContent,null);
+for (const field of ['nativeInputId', 'nativeSessionId', 'tool-anchor', 'last-call'] as const)
+  test(`portable OpenCode proof refuses copied ${field}`, async (t) => {
+    const f = fixture(t);
+    await f.capture.observe(f.request);
+    writeFileSync(f.file, 'TEST final observed\n');
+    await f.capture.observe(terminal(f));
+    const row = JSON.parse(readFileSync(f.events, 'utf8'));
+    if (field === 'nativeInputId') row.nativeCaptureProof.nativeInputId = 'msg_FOREIGN';
+    if (field === 'nativeSessionId') row.nativeCaptureProof.nativeSessionId = 'ses_FOREIGN';
+    if (field === 'tool-anchor') row.nativeCaptureProof.tools[0].partId = 'prt_FOREIGN';
+    if (field === 'last-call') row.toolUseId = 'TEST-foreign-call';
+    writeFileSync(f.events, JSON.stringify(row) + '\n');
+    const changes = await f.read();
+    assert.equal(changes?.files[0]?.snippets[0]?.ledger?.nativeCapture, 'unqualified');
+    const content = await new FileContentResolver({ mode: 'ledger-only' }).getFileContent(
+      'test-writer',
+      'worker',
+      f.file,
+      changes!.files[0]!.snippets
+    );
+    assert.equal(content.modifiedFullContent, null);
+  });
+
+test('unsupported baseline preserves exact bounded census warning without qualifying an effect', async (t) => {
+  const f = fixture(t);
+  writeFileSync(f.file, Buffer.alloc(1024 * 1024 + 1, 65));
+  await f.capture.observe(f.request);
+  assert.equal(f.capture.readStatus().reason, 'incomplete-workspace-census');
+  const notice = JSON.parse(readFileSync(f.notices, 'utf8').trim().split('\n').at(-1)!);
+  assert.deepEqual(notice.captureWarningCodes, ['unsupported-file']);
+  assert.match(notice.message, /Snapshot warning codes: unsupported-file/);
+  assert.equal(existsSync(f.events), false);
+  assert.equal(notice.captureWarningCodes.length <= 16, true);
 });
 
-test('unsupported baseline preserves exact bounded census warning without qualifying an effect', async t => {
- const f=fixture(t);writeFileSync(f.file,Buffer.alloc(1024*1024+1,65));
- await f.capture.observe(f.request);
- assert.equal(f.capture.readStatus().reason,'incomplete-workspace-census');
- const notice=JSON.parse(readFileSync(f.notices,'utf8').trim().split('\n').at(-1)!);
- assert.deepEqual(notice.captureWarningCodes,['unsupported-file']);
- assert.match(notice.message,/Snapshot warning codes: unsupported-file/);
- assert.equal(existsSync(f.events),false);
- assert.equal(notice.captureWarningCodes.length<=16,true);
+test('recovered native exit7 retains exact partial bytes and failed tool outcome without authored content', async (t) => {
+  const f = fixture(t);
+  await f.capture.observe(f.request);
+  writeFileSync(f.file, 'TEST failed shell final\n');
+  const observed = {
+    ...terminal(f),
+    items: [
+      {
+        messageId: 'msg_NATIVE',
+        partId: 'prt_NATIVE',
+        callId: 'TEST-native-shell',
+        tool: 'bash',
+        status: 'completed',
+        input: { command: 'TEST native shell; exit 7' },
+        metadata: { exit: 7, truncated: false },
+        startedAt: 100,
+        completedAt: 110,
+      },
+    ],
+  };
+  assert.equal(
+    selectOpenCodeFailedTool({ ...observed, nativeSessionId: 'copied-session' }, f.workspace).kind,
+    'gap'
+  );
+  assert.equal(
+    selectOpenCodeFailedTool(
+      { ...observed, items: [...observed.items, ...terminal(f).items] },
+      f.workspace
+    ).kind,
+    'gap'
+  );
+  await f.capture.observe(observed);
+  const event = JSON.parse(readFileSync(f.events, 'utf8').trim());
+  assert.equal(event.toolUseId, 'TEST-native-shell');
+  assert.equal(event.toolStatus, 'failed');
+  assert.equal(event.nativeCaptureProof, undefined);
+  assert.equal(event.executionSeq, 0);
+  assert.equal(event.causalBinding.provenance.reviewableComplete, false);
+  assert.equal(event.causalBinding.taskId, f.taskId);
+  assert.equal(event.causalBinding.inputId, f.request.inputId);
+  assert.equal(event.causalBinding.operationRef, f.request.operationRef);
+  assert.equal(event.causalBinding.sessionRef, f.request.sessionRef);
+  assert.deepEqual(event.causalBinding.binding, normalizeBinding(f.captured.binding));
+  assert.equal(event.causalBinding.native.exitCode, 7);
+  assert.equal(
+    readFileSync(join(f.projectDir, '.board-task-changes/blobs', event.before.blobRef), 'utf8'),
+    'TEST initially dirty\n'
+  );
+  assert.equal(
+    readFileSync(join(f.projectDir, '.board-task-changes/blobs', event.after.blobRef), 'utf8'),
+    'TEST failed shell final\n'
+  );
+  const changes = (await f.read())!;
+  const snippets = changes.files[0]!.snippets;
+  assert.ok(
+    snippets.length > 0 &&
+      snippets.every(
+        (snippet) =>
+          snippet.ledger?.nativeCapture === 'unqualified' &&
+          snippet.ledger.originalFullContent === null &&
+          snippet.ledger.modifiedFullContent === null &&
+          !snippet.oldString &&
+          !snippet.newString
+      )
+  );
+  const content = await new FileContentResolver({ mode: 'ledger-only' }).getFileContent(
+    'test-writer',
+    'worker',
+    f.file,
+    snippets
+  );
+  assert.equal(content.contentSource, 'unavailable');
+  const bytes = readFileSync(f.events);
+  await f.capture.observe(observed);
+  assert.deepEqual(readFileSync(f.events), bytes);
 });

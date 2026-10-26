@@ -3,6 +3,7 @@ import { TaskChangeLedgerReader } from '@agent-teams/task-change-ledger';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileDigest } from './desktop-backend-fixture.ts';
+import { desktopReadbackArtifactName } from './desktop-readback-fixture.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { assertNativeReviewPersistence } from './desktop-native-review-continuation-persistence.ts';
 import { readNativeReviewRuntimeRecords } from './desktop-native-review-runtime.ts';
@@ -81,39 +82,109 @@ export async function runDesktopNativeReviewReadback(
   await review.openChanges();
   options.assertNoNativeChildren();
   if (seed.partialCoverage) {
-    const partial = seed.partialCoverage, saved = record(original.partialCapture);
-    assert.equal(saved.status, 'PARTIAL_OR_GAP'); assert.equal(saved.fullM13, false);
-    for (const [path, expected] of [[partial.failedPath, partial.failedAfter],
-      [partial.writePath, 'WRITE\nHOOK_LATE\n'], [partial.hookSidePath, partial.hookAfter],
-      [partial.backgroundPath, partial.backgroundAfter]] as const) {
+    const partial = seed.partialCoverage,
+      saved = record(original.partialCapture);
+    assert.equal(saved.status, 'PARTIAL_OR_GAP');
+    assert.equal(saved.fullM13, false);
+    if (partial.failureHookPath) {
+      assert.equal(saved.requiredTuple, 'positive-failed-post-hook-and-background');
+      assert.equal(saved.eventualOutcome, 'observed-native-completion');
+      assert.ok(Array.isArray(saved.backgroundRows) && saved.backgroundRows.length === 1);
+      assert.equal(await readFile(partial.failureHookPath, 'utf8'), partial.failureHookAfter);
+      partialFilePins.push({
+        path: partial.failureHookPath,
+        sha256: await fileDigest(partial.failureHookPath),
+      });
+    }
+    for (const [path, expected] of [
+      [partial.failedPath, partial.failedAfter],
+      [partial.writePath, 'WRITE\nHOOK_LATE\n'],
+      [partial.hookSidePath, partial.hookAfter],
+      [partial.backgroundPath, partial.backgroundAfter],
+    ] as const) {
       assert.equal(await readFile(path, 'utf8'), expected, 'cold original partial file bytes');
       partialFilePins.push({ path, sha256: await fileDigest(path) });
     }
     assert.equal(await fileDigest(partial.backgroundPath), saved.backgroundFinalSha256);
-    const hookFacts = (await readFile(partial.hookLog, 'utf8')).trim().split('\n').map(line => record(JSON.parse(line)));
+    const hookFacts = (await readFile(partial.hookLog, 'utf8'))
+      .trim()
+      .split('\n')
+      .map((line) => record(JSON.parse(line)));
     assert.deepEqual(hookFacts, saved.hookFacts);
-    assert.deepEqual(hookFacts.map(row => [row.phase, row.toolUseId]),
-      [['started', 'native_review_work_4'], ['finished', 'native_review_work_4']]);
+    if (partial.failureHookPath)
+      assert.deepEqual(
+        hookFacts.map((row) => [row.phase, row.toolUseId, row.hookEvent]),
+        [
+          ['started', 'native_review_work_3', 'PostToolUseFailure'],
+          ['finished', 'native_review_work_3', 'PostToolUseFailure'],
+          ['started', 'native_review_work_4', 'PostToolUse'],
+          ['finished', 'native_review_work_4', 'PostToolUse'],
+        ]
+      );
+    else
+      assert.deepEqual(
+        hookFacts.map((row) => [row.phase, row.toolUseId]),
+        [
+          ['started', 'native_review_work_4'],
+          ['finished', 'native_review_work_4'],
+        ]
+      );
     partialFilePins.push({ path: partial.hookLog, sha256: await fileDigest(partial.hookLog) });
-    const changes = await new TaskChangeLedgerReader().readTaskChanges({ teamName: 'test-desktop-backend', taskId,
-      projectDir: join(team, '.host-evidence'), projectPath: join(options.root, 'workspace'), includeDetails: true });
+    const changes = await new TaskChangeLedgerReader().readTaskChanges({
+      teamName: 'test-desktop-backend',
+      taskId,
+      projectDir: join(team, '.host-evidence'),
+      projectPath: join(options.root, 'workspace'),
+      includeDetails: true,
+    });
     assert.ok(changes && changes.warnings.length > 0);
-    assert.ok(Array.isArray(saved.warnings) && saved.warnings.every(warning =>
-      typeof warning === 'string' && changes.warnings.includes(warning)), 'original partial warnings preserved');
+    assert.ok(
+      Array.isArray(saved.warnings) &&
+        saved.warnings.every(
+          (warning) => typeof warning === 'string' && changes.warnings.includes(warning)
+        ),
+      'original partial warnings preserved'
+    );
     assert.ok(Array.isArray(saved.backgroundRows));
-    const events = [saved.failed, saved.write, saved.hook, ...saved.backgroundRows].map(record);
+    const events = [
+      saved.failed,
+      ...(partial.failureHookPath ? [saved.failedHook] : []),
+      saved.write,
+      saved.hook,
+      ...saved.backgroundRows,
+    ].map(record);
     for (const event of events) {
-      const file = changes.files.find(row => row.filePath === event.filePath); assert.ok(file);
-      assert.ok(file.snippets.length > 0 && file.snippets.every(snippet => snippet.ledger?.nativeCapture === 'unqualified' &&
-        snippet.ledger.originalFullContent === null && snippet.ledger.modifiedFullContent === null &&
-        !snippet.oldString && !snippet.newString), 'cold partial capture never becomes writable native content');
+      const file = changes.files.find((row) => row.filePath === event.filePath);
+      assert.ok(file);
+      assert.ok(
+        file.snippets.length > 0 &&
+          file.snippets.every(
+            (snippet) =>
+              snippet.ledger?.nativeCapture === 'unqualified' &&
+              snippet.ledger.originalFullContent === null &&
+              snippet.ledger.modifiedFullContent === null &&
+              !snippet.oldString &&
+              !snippet.newString
+          ),
+        'cold partial capture never becomes writable native content'
+      );
     }
     await review.ui.click('button', 'expand saved partial capture warning details', 'Read more');
-    const warning = await review.ui.waitRead(`document.body.innerText.includes('Native capture interval is partial')`,
-      'cold Changes preserves original partial capture warning');
-    proof.partialCapture = { status: 'PARTIAL_OR_GAP', filePins: partialFilePins, hookFacts,
-      warnings: changes.warnings, warningVisible: warning, unsafePromotion: false, fullM13: false,
-      eventualOutcome: saved.eventualOutcome };
+    const warning = await review.ui.waitRead(
+      `document.body.innerText.includes('Native capture interval is partial')`,
+      'cold Changes preserves original partial capture warning'
+    );
+    proof.partialCapture = {
+      status: 'PARTIAL_OR_GAP',
+      ...(partial.failureHookPath ? { requiredTuple: saved.requiredTuple } : {}),
+      filePins: partialFilePins,
+      hookFacts,
+      warnings: changes.warnings,
+      warningVisible: warning,
+      unsafePromotion: false,
+      fullM13: false,
+      eventualOutcome: saved.eventualOutcome,
+    };
   }
   await review.waitHistory(2, 0);
   assert.equal(await readFile(seed.filePath, 'utf8'), seed.mixed);
@@ -129,7 +200,10 @@ export async function runDesktopNativeReviewReadback(
       fromSurface: true,
     })
   );
-  const screenshot = join(options.root, 'ui-native-review-host-restarted.png');
+  const screenshot = join(
+    options.root,
+    desktopReadbackArtifactName('ui-native-review-host-restarted.png')
+  );
   await writeFile(screenshot, Buffer.from(String(image.data), 'base64'), {
     mode: 0o600,
     flag: 'wx',
@@ -159,7 +233,12 @@ export async function runDesktopNativeReviewReadback(
     await readFile(join(options.root, 'workspace/pre-existing-untracked.txt'), 'utf8'),
     'TEST unrelated dirty file\n'
   );
-  for (const pin of partialFilePins) assert.equal(await fileDigest(pin.path), pin.sha256, 'cold readback leaves partial files unchanged');
+  for (const pin of partialFilePins)
+    assert.equal(
+      await fileDigest(pin.path),
+      pin.sha256,
+      'cold readback leaves partial files unchanged'
+    );
   options.assertNoNativeChildren();
   Object.assign(proof, {
     status: 'PASS',

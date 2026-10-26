@@ -413,6 +413,7 @@ export async function startProcessModel(options: {
   const address = server.address();
   assert.ok(address && typeof address !== 'string');
   return {
+    crossTeamRequests: [],
     compactionRequests: [],
     compactionTokenRequests: 0,
     url: `http://127.0.0.1:${address.port}`,

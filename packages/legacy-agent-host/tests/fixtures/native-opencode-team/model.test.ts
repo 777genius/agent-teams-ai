@@ -1,7 +1,11 @@
+import { createHash } from 'node:crypto';
+import { opencodeFailedShellCaptureFixture } from './capture.ts';
+import { CAPTURE_FAILED_AFTER, assertCaptureFailedShellOutput } from './model.ts';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
+  CAPTURE_BEFORE,
   CAPTURE_TURN,
   CAPTURE_ASSIGNMENT,
   CONTEXT_MARKER,
@@ -200,4 +204,76 @@ test('native capture oracle refuses stale read bytes before offering any edit', 
   } finally {
     await model.close();
   }
+});
+
+test('failed-shell pure oracle refuses success, copied native identity and authored promotion', () => {
+  const hash = (value: string) => createHash('sha256').update(value).digest('hex');
+  const native = {
+    provider: 'opencode',
+    windowRef: 'TEST-original-window',
+    exitCode: 7,
+    commandSha256: hash('TEST actual native command'),
+    nativeSessionId: 'ses_TEST',
+    nativeInputId: 'msg_INPUT',
+    messageId: 'msg_TOOL',
+    partId: 'prt_TOOL',
+    callId: 'TEST_' + CAPTURE_TURN + '_0',
+    status: 'completed',
+    inputOutcome: 'succeeded',
+    startedAt: 10,
+    completedAt: 20,
+  };
+  const row = {
+    toolUseId: 'TEST_' + CAPTURE_TURN + '_0',
+    toolStatus: 'failed',
+    source: 'shell_snapshot',
+    executionSeq: 0,
+    causalBinding: { toolName: 'Bash', provenance: { reviewableComplete: false }, native },
+    before: { sha256: hash(CAPTURE_BEFORE) },
+    after: { sha256: hash(CAPTURE_FAILED_AFTER) },
+  };
+  opencodeFailedShellCaptureFixture.assertNativeEvent(row);
+  assert.throws(() =>
+    opencodeFailedShellCaptureFixture.assertNativeEvent({ ...row, nativeCaptureProof: {} })
+  );
+  assert.throws(() =>
+    opencodeFailedShellCaptureFixture.assertNativeEvent({
+      ...row,
+      causalBinding: { ...row.causalBinding, native: { ...native, exitCode: 0 } },
+    })
+  );
+  assert.throws(() =>
+    opencodeFailedShellCaptureFixture.assertNativeEvent({ ...row, toolUseId: 'TEST-copied-tool' })
+  );
+  assert.throws(() =>
+    opencodeFailedShellCaptureFixture.assertNativeEvent({
+      ...row,
+      causalBinding: { ...row.causalBinding, native: { ...native, status: 'unknown' } },
+    })
+  );
+  assert.throws(() =>
+    opencodeFailedShellCaptureFixture.assertNativeEvent({
+      ...row,
+      after: { sha256: hash('TEST wrong final') },
+    })
+  );
+  assert.equal(assertCaptureFailedShellOutput('(no output)'), 'opaque-no-output');
+  assert.equal(
+    assertCaptureFailedShellOutput('TEST_CAPTURE_FAILED_SHELL_EXECUTED\n'),
+    'marker-text'
+  );
+  assert.throws(() => assertCaptureFailedShellOutput('TEST denied tool before execution'));
+});
+
+test('failed-shell continuation accepts only observed shapes and rejects contradictory tool output', () => {
+  for (const output of [
+    'TEST_CAPTURE_FAILED_SHELL_EXECUTED but command denied',
+    'TEST_CAPTURE_FAILED_SHELL_EXECUTED exit 0',
+    '(no output) exit 0',
+    '',
+    null,
+    { output: 'TEST_CAPTURE_FAILED_SHELL_EXECUTED', exit: 0 },
+    { output: '(no output)', exit: 7 },
+  ])
+    assert.throws(() => assertCaptureFailedShellOutput(output));
 });

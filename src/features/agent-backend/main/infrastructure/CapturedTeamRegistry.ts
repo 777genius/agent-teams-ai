@@ -16,8 +16,9 @@ import {
   captureBackendPayload,
 } from '../application/backendBinding';
 
+import { type CapturedHostClient, observeCapturedHostStartup } from './CapturedHostClient';
+
 import type { BackendOwnerBinding, BackendRequestGuard } from '../application/backendBinding';
-import type { CapturedHostClient } from './CapturedHostClient';
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 import type {
   CreateTeamRegistryPayload,
@@ -51,8 +52,12 @@ export class CapturedTeamRegistry {
   ) {
     const captured = captureBackendPayload(payload);
     this.current(guard);
+    if (method === 'team.registry.list') observeCapturedHostStartup('owner-start', 'registry-list');
     await this.options.start();
+    if (method === 'team.registry.list')
+      observeCapturedHostStartup('owner-started', 'registry-list');
     this.current(guard);
+    if (method === 'team.registry.list') observeCapturedHostStartup('read-start', 'registry-list');
     const result = await this.options.client.request(
       method,
       {
@@ -68,6 +73,8 @@ export class CapturedTeamRegistry {
         ].includes(method),
       }
     );
+    if (method === 'team.registry.list')
+      observeCapturedHostStartup('read-complete', 'registry-list');
     this.current(guard, 'unknown');
     if (!result || typeof result !== 'object' || Array.isArray(result) || result.ok !== true)
       throw new BackendRoutingError(

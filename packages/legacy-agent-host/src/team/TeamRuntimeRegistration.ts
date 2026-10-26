@@ -148,6 +148,7 @@ export class TeamRuntimeRegistration {
         fingerprint,
       };
       next.runtimeCaptures = [...(state.runtimeCaptures ?? []), decided];
+      delete next.runtimeNeverLaunched;
       this.validate(next);
       this.options.store.write('state.json', next);
       this.options.invalidate();

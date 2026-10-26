@@ -157,3 +157,48 @@ it('original mixed-provider launch guard requires each provider plan proof for i
   f.render();
   expect(guard().blockers(true)).toHaveLength(3);
 });
+
+
+it.each(['unmount', 'changed-draft'])(
+  'does not issue a later active preflight stage after %s',
+  async (reason) => {
+    const f = mount();
+    let entered!: () => void, release!: () => void;
+    const firstRead = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const continuation = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const prepare = vi.fn().mockResolvedValue({ ready: true, message: 'TEST selected model' });
+    f.run.mockImplementation(async (_identity, request) => {
+      await request.prepareProvisioning('/TEST');
+      entered();
+      await continuation;
+      await request.prepareProvisioning('/TEST');
+      return { status: 'ready', details: [], warnings: [], modelResultsById: {} };
+    });
+    const pending = f.output().runPreflight(
+      { cacheKey: 'TEST', requestSignature: 'TEST' },
+      {
+        cwd: '/TEST',
+        providerId: 'anthropic',
+        selectedModelIds: ['opus'],
+        prepareProvisioning: prepare,
+      }
+    );
+    const refusal = expect(pending).rejects.toThrow('Captured Team draft changed.');
+    await firstRead;
+    expect(prepare).toHaveBeenCalledTimes(1);
+    if (reason === 'unmount') {
+      dispose();
+      dispose = () => {};
+    } else {
+      f.input.draft = { prompt: 'NEW' };
+      f.render();
+    }
+    release();
+    await refusal;
+    expect(prepare).toHaveBeenCalledTimes(1);
+  }
+);

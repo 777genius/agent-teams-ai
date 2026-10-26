@@ -108,8 +108,19 @@ export async function runDesktopTaskBoardUiSmoke(
     return { path, sha256: await fileDigest(path) };
   };
   // Expressions below only inspect current DOM. Input events remain the only UI actions.
-  const measuredClick = async (expression: string, label: string) => {
-    const point = record(await ui.waitRead(expression, label));
+  const measuredClick = async (expression: string, label: string, moveBeforePress = false) => {
+    let point = record(await ui.waitRead(expression, label));
+    if (point.dismissed === true) return false;
+    if (moveBeforePress) {
+      step({ action: 'mouseMoved', label, target: point });
+      await input('Input.dispatchMouseEvent', {
+        type: 'mouseMoved',
+        x: point.x,
+        y: point.y,
+      });
+      point = record(await ui.waitRead(expression, label + ' current target after pointer move'));
+      if (point.dismissed === true) return false;
+    }
     assert.equal(typeof point.x, 'number');
     assert.equal(typeof point.y, 'number');
     options.assertOwnedRenderer();
@@ -128,9 +139,28 @@ export async function runDesktopTaskBoardUiSmoke(
       button: 'left',
       clickCount: 1,
     });
+    return true;
+  };
+  const selectOriginalAssignee = async (triggerExpression: string, optionExpression: string) => {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      await measuredClick(triggerExpression, 'open original assignee picker ' + attempt, true);
+      if (
+        await measuredClick(optionExpression, 'assign alice through original member option', true)
+      )
+        return;
+      step({
+        observation: 'owned assignee popup dismissed before any option press',
+        attempt,
+        navigation:
+          attempt === 1 ? 'one known nonmutating reopen permitted' : 'stop before assignment',
+      });
+    }
+    throw new Error(
+      'Owned assignee popup dismissed twice before any option press; no assignment replay'
+    );
   };
   const pointOf = (body: string) =>
-    `(() => { const e=(()=>{${body}})();if(!e)return null;const r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return r.width>0&&r.height>0&&hit&&(e===hit||e.contains(hit))&&!e.disabled?{x,y}:null; })()`;
+    `(() => { const e=(()=>{${body}})();if(e?.dismissed===true)return e;if(!e)return null;const r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return r.width>0&&r.height>0&&hit&&(e===hit||e.contains(hit))&&!e.disabled?{x,y}:null; })()`;
   const card = (id: string) => `.kanban-task-card[data-task-id="${id}"]`;
   const receiptFor = async (
     operation: string,
@@ -232,13 +262,20 @@ export async function runDesktopTaskBoardUiSmoke(
   assert.equal(created[0]!.status, 'pending');
   assert.deepEqual(created[0]!.blockedBy, [options.seed.taskId]);
   assert.deepEqual((await task(options.seed.taskId)).blocks, [taskId]);
-  const creates = (await commands()).filter(
-    (row) =>
-      record(row.command).operation === 'task.create' &&
-      record(record(row.command).payload).subject === subject
+  const creates = await waitProduct(
+    async () =>
+      (await commands()).filter(
+        (row) =>
+          record(row.command).operation === 'task.create' &&
+          record(record(row.command).payload).subject === subject
+      ),
+    (matches) => matches.length === 1 && matches[0]!.phase === 'completed',
+    'one original UI-created Task receipt completed'
   );
   assert.equal(creates.length, 1);
   assert.equal(creates[0]!.phase, 'completed');
+  assert.equal(creates[0]!.principalId, 'TEST-human');
+  assert.equal(record(creates[0]!.effects).taskId, taskId);
   proof.createReceipt = creates[0];
 
   // No current UI sets clarification. This is explicit TEST setup, never a signoff action.
@@ -261,8 +298,32 @@ export async function runDesktopTaskBoardUiSmoke(
     `document.querySelector('[role="dialog"]')?.textContent.includes('Awaiting clarification from you')`,
     'existing clarification banner'
   );
-  await ui.click('[role="dialog"] button[role="combobox"]', 'open original assignee picker');
-  await ui.click('[cmdk-item][data-value="alice"]', 'assign alice through original member option');
+  const assigneeDialog = `
+    const dialogs=[...document.querySelectorAll('[role="dialog"]')].filter(d=>d.getClientRects().length&&d.querySelector('button[role="combobox"]'));
+    if(dialogs.length!==1||!dialogs[0].textContent.includes(${desktopJsLiteral('#' + String(created[0]!.displayId))})||
+      ![...dialogs[0].querySelectorAll('button')].some(e=>e.textContent.trim()===${desktopJsLiteral(subject)}))return null;
+    const triggers=dialogs[0].querySelectorAll('button[role="combobox"]');if(triggers.length!==1||triggers[0].disabled)return null;
+    const trigger=triggers[0];`;
+  await selectOriginalAssignee(
+    pointOf(
+      assigneeDialog +
+        `if(trigger.getAttribute('aria-expanded')!=='false')return null;return trigger;`
+    ),
+    pointOf(
+      assigneeDialog +
+        `
+    if(trigger.getAttribute('aria-expanded')==='false')return {dismissed:true};
+    const focused=document.activeElement;
+    const list=focused?.matches('[cmdk-input]')?document.getElementById(focused.getAttribute('aria-controls')):null;
+    const popup=list?.closest('[role="dialog"][data-state="open"]');
+    const popups=[...document.querySelectorAll('[role="dialog"][data-state="open"]')].filter(e=>e.getClientRects().length&&e.querySelector('[cmdk-input]'));
+    if(!list?.matches('[cmdk-list]')||!popup||popups.length!==1||popups[0]!==popup||!popup.contains(focused)||
+      popup.getAnimations().some(a=>a.playState==='running'))return null;
+    const options=[...list.querySelectorAll('[cmdk-item][data-value="alice"]')].filter(e=>e.getClientRects().length&&e.getAttribute('aria-disabled')!=='true');
+    return options.length===1?options[0]:null;
+  `
+    )
+  );
   await waitProduct(
     () => task(taskId),
     (row) => row.owner === 'alice',
@@ -444,7 +505,9 @@ export async function runDesktopTaskBoardUiSmoke(
     // Move to a non-tooltip control, then dismiss the focused HoverCard with Escape.
     const outside = record(
       await ui.waitRead(
-        pointOf(`return document.querySelector('input[placeholder="Search tasks... (#id or text)"]');`),
+        pointOf(
+          `return document.querySelector('input[placeholder="Search tasks... (#id or text)"]');`
+        ),
         'original board control outside Task hover cards'
       )
     );
@@ -487,23 +550,28 @@ export async function runDesktopTaskBoardUiSmoke(
     '.kanban-task-card-toolbar[data-state="open"] [data-kanban-task-toolbar="true"]';
   const dependentBytes = await readFile(join(taskDirectory, `${taskId}.json`), 'utf8');
   await hoverCard(taskId);
-  await ui.click(
-    `${openToolbar} button[aria-label="Start"]`,
-    'ordinary blocked Start once'
-  );
+  await ui.click(`${openToolbar} button[aria-label="Start"]`, 'ordinary blocked Start once');
   proof.blockedStartReceipt = await receiptFor('task.start', taskId);
   assert.equal(record(proof.blockedStartReceipt).phase, 'rejected');
   assert.equal(await readFile(join(taskDirectory, `${taskId}.json`), 'utf8'), dependentBytes);
   proof.blockedStartScreenshot = await screenshot('ui-task-board-blocked-start.png');
   await hoverCard(options.seed.taskId);
-  await ui.click(
-    `${openToolbar} button[aria-label="Complete"]`,
-    'complete original blocker once'
-  );
+  await ui.click(`${openToolbar} button[aria-label="Complete"]`, 'complete original blocker once');
   await waitProduct(
     () => task(options.seed.taskId),
     (row) => row.status === 'completed',
     'blocker completed through UI'
+  );
+  assert.equal(
+    (
+      await receiptFor(
+        'task.lifecycle',
+        options.seed.taskId,
+        (payload) => payload.action === 'complete'
+      )
+    ).phase,
+    'completed',
+    'original blocker receipt completed before dependency publication checks'
   );
   const comments = (await task(taskId)).comments;
   assert.ok(Array.isArray(comments));
@@ -522,12 +590,24 @@ export async function runDesktopTaskBoardUiSmoke(
     (row) => row.status === 'in_progress',
     'same Task now starts'
   );
-  const starts = (await commands()).filter(
-    (row) =>
-      record(row.command).operation === 'task.start' &&
-      record(record(row.command).payload).taskId === taskId
+  const starts = await waitProduct(
+    async () =>
+      (await commands()).filter(
+        (row) =>
+          record(row.command).operation === 'task.start' &&
+          record(record(row.command).payload).taskId === taskId
+      ),
+    (matches) =>
+      matches.length === 2 &&
+      matches.every((row) => ['completed', 'rejected'].includes(String(row.phase))),
+    'both original Start receipts terminal after resolved dependency'
   );
   assert.equal(starts.length, 2);
+  assert.equal(
+    starts.find((row) => row.commandId === record(proof.blockedStartReceipt).commandId)?.phase,
+    'rejected'
+  );
+  assert.ok(starts.every((row) => row.principalId === 'TEST-human'));
   assert.deepEqual(starts.map((row) => row.phase).sort(), ['completed', 'rejected']);
   const stableTasks = await rows(taskDirectory),
     stableCommands = await commands();
@@ -551,8 +631,18 @@ export async function runDesktopTaskBoardUiSmoke(
   assert.equal(await readFile(join(teamDirectory, 'kanban-state.json'), 'utf8'), stableBoard);
   proof.reloadedScreenshot = await screenshot('ui-task-board-reloaded.png');
   await runDesktopTaskBoardAttachmentsUi(cdp, {
-    root: options.root, taskId, subject, handleId: options.handleId, proof,
-    assertOwnedRenderer: options.assertOwnedRenderer, step, task, commands, receiptFor, waitProduct, screenshot,
+    root: options.root,
+    taskId,
+    subject,
+    handleId: options.handleId,
+    proof,
+    assertOwnedRenderer: options.assertOwnedRenderer,
+    step,
+    task,
+    commands,
+    receiptFor,
+    waitProduct,
+    screenshot,
   });
   proof.tasks = await rows(taskDirectory);
   proof.receipts = await commands();

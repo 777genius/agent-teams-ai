@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -288,7 +289,6 @@ test('saved-draft layout rejects config presence, symlink config, or missing req
   await assert.rejects(exportStoppedTeam(f.source), /hold/);
 });
 
-
 test('complete detached snapshot preserves policy/content/blob/archive census without native credential bytes', async (t) => {
   const f = fixture(t),
     before = readFileSync(f.path('tasks', 'TEST-a.json'));
@@ -312,6 +312,19 @@ test('complete detached snapshot preserves policy/content/blob/archive census wi
   };
   const result = f.importer.import('TEST-original-import', request, snapshot);
   assert.equal(result.phase, 'published');
+  const initialized = JSON.parse(
+    readFileSync(join(f.destination, 'teams/TEST-imported/.host-owner/state.json'), 'utf8')
+  ) as Record<string, unknown>;
+  assert.equal(
+    initialized.runtimeNeverLaunched,
+    true,
+    'proof belongs to the new product-only destination'
+  );
+  assert.equal(
+    initialized.runtimeCaptures,
+    undefined,
+    'no source Runtime allocation or grants are adopted'
+  );
   assert.equal(f.attached.length, 1);
   const task = JSON.parse(
     readFileSync(join(f.destination, 'tasks/TEST-imported/TEST-a.json'), 'utf8')
@@ -607,4 +620,52 @@ test('staging refuses symlink custody and altered detached map before a product 
     code: 'ENOENT',
   });
   assert.equal(readdirSync(f.sourceRoot).includes('snapshots'), false);
+});
+
+test('import publication requires the exact new-owner bootstrap proof and never repairs missing proof on retry', async (t) => {
+  const f = fixture(t),
+    snapshot = await exportStoppedTeam(f.source);
+  const teamName = 'TEST-bootstrap-proof';
+  const marker = join(f.destination, 'teams', teamName, '.host-owner/state.json');
+  let corrupted = false,
+    attached = false;
+  const importer = new FileStoppedTeamImport({
+    ...f.options,
+    assertWriter() {
+      if (corrupted || !existsSync(marker)) return;
+      const state = JSON.parse(readFileSync(marker, 'utf8')) as Record<string, unknown>;
+      if (state.ready !== true) return;
+      assert.equal(
+        state.runtimeNeverLaunched,
+        true,
+        'the newly initialized owner carries its own creation proof'
+      );
+      delete state.runtimeNeverLaunched;
+      writeFileSync(marker, JSON.stringify(state));
+      corrupted = true;
+    },
+    attach() {
+      attached = true;
+    },
+  });
+  const receipt = importer.import(
+    'TEST-bootstrap-proof-command',
+    {
+      contextId: 'TEST-context',
+      sourceId: snapshot.header.sourceId,
+      snapshotDigest: snapshot.digest,
+      teamName,
+    },
+    snapshot
+  );
+  assert.equal(corrupted, true, 'fault lands after owner initialization and before publication');
+  assert.equal(receipt.phase, 'held');
+  assert.equal(attached, false, 'missing creation proof never publishes or attaches');
+  const originalState = readFileSync(marker, 'utf8');
+  assert.deepEqual(importer.retry('TEST-bootstrap-proof-command', 'TEST-context'), receipt);
+  assert.equal(
+    readFileSync(marker, 'utf8'),
+    originalState,
+    'retry never manufactures the missing proof or resets grants'
+  );
 });

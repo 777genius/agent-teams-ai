@@ -14,8 +14,8 @@ import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts'
 import type { readCapturedCandidateElectron } from './candidate-electron.ts';
 export interface DesktopCdpPort {
   on(method: string, listener: (value: unknown) => void): void;
-  send(method: string, params?: Record<string, unknown>): Promise<unknown>;
-  evaluate(expression: string): Promise<unknown>;
+  send(method: string, params?: Record<string, unknown>, timeoutMs?: number): Promise<unknown>;
+  evaluate(expression: string, timeoutMs?: number): Promise<unknown>;
   close(): Promise<void>;
 }
 export interface DesktopCdpLibrary { CdpClient: { connect(url: string): Promise<DesktopCdpPort> } }
@@ -119,16 +119,18 @@ export async function connectCapturedDesktopApp(options: {
 /** Existing descriptor, compiled bytes and safe HOME checks; no product mutation. */
 export async function verifyCapturedDesktopBinding(options: {
   cdp: DesktopCdpPort; mode: string; fixture: Fixture; evidence: Evidence; repo: string; packed: Packed;
+  remainingStartupMs?: number;
 } & ({ group: number; assertOwnedRenderer?: never } | { group?: never; assertOwnedRenderer(): void })): Promise<void> {
   const { cdp, group, mode, fixture, evidence, repo, packed } = options;
   const assertCurrent = options.assertOwnedRenderer ?? (() => { assert.ok(group !== undefined); assertOwnedCdpListener(group); });
-  const bridgeDeadline = Date.now() + 60_000;
+  const bridgeDeadline = performance.now() + Math.min(60_000, options.remainingStartupMs ?? 60_000);
   let connections: Record<string, unknown> | undefined;
   let discoveryAttempts = 0;
   const transientDiscovery: string[] = [];
-  while (Date.now() < bridgeDeadline) {
+  while (performance.now() < bridgeDeadline) {
     assertCurrent();
-    const discovery = await readRendererBackendConnections(cdp);
+    const discovery = await readRendererBackendConnections(cdp, options.remainingStartupMs === undefined
+      ? undefined : Math.floor(bridgeDeadline - performance.now()));
     if (discovery.kind === 'read') {
       discoveryAttempts++;
       connections = object(discovery.value);

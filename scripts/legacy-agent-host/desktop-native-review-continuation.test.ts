@@ -230,6 +230,49 @@ test('persistence comparison permits only exact native-derived context enrichmen
   rejects({ hunkDecisions: {} });
   assert.throws(() => assertNativeReviewPersistence(after, before, native));
   assert.throws(() => assertNativeReviewPersistence(before, [], native));
+  const partialKeys = [
+    'native-review-failed.txt',
+    'native-review-failure-hook-side.txt',
+    'native-review-hook-side.txt',
+    'native-review-write.txt',
+    'native-review-background.txt',
+  ].map((name) => `path:/TEST/${name}`);
+  const cache = { [key]: hashes, ...Object.fromEntries(partialKeys.map((path) => [path, {}])) };
+  const recorded = [
+    { ...after[0]!, value: { ...after[0]!.value, hunkContextHashesByFile: cache } },
+  ];
+  assert.deepEqual(assertNativeReviewPersistence(recorded, recorded, native), {
+    contextEnriched: false,
+  });
+  const cacheRejects = (next: Record<string, unknown>) =>
+    assert.throws(() =>
+      assertNativeReviewPersistence(
+        recorded,
+        [{ ...recorded[0]!, value: { ...recorded[0]!.value, hunkContextHashesByFile: next } }],
+        native
+      )
+    );
+  cacheRejects({ ...cache, 'path:/TEST/unknown.txt': {} });
+  const missingPartial = { ...cache };
+  delete missingPartial[partialKeys[0]!];
+  cacheRejects(missingPartial);
+  cacheRejects({ ...cache, [partialKeys[0]!]: { 0: 'unsafe-derived-hash' } });
+  const missingNative = { ...cache };
+  delete missingNative[key];
+  const missing = [
+    { ...recorded[0]!, value: { ...recorded[0]!.value, hunkContextHashesByFile: missingNative } },
+  ];
+  assert.throws(() => assertNativeReviewPersistence(missing, missing, native));
+  const promoted = [
+    {
+      ...recorded[0]!,
+      value: {
+        ...recorded[0]!.value,
+        hunkContextHashesByFile: { ...cache, [partialKeys[0]!]: { 0: 'unsafe-existing-hash' } },
+      },
+    },
+  ];
+  assert.throws(() => assertNativeReviewPersistence(promoted, promoted, native));
 });
 
 test('pre-review continuation is separately admitted only for the hydrated native navigation failure', async () => {
@@ -594,6 +637,14 @@ test('actual continuation mode reaches suffixed artifact branches without becomi
     desktopReadbackArtifacts(ordinary, undefined, 'TEST01').receipt,
     'desktop-readback-receipt-TEST01.json'
   );
+  const nativeReview = await prepareDesktopProofMode('native-review-readback-ui', noFixture);
+  assert.equal(nativeReview.model, undefined);
+  assert.equal(nativeReview.nativeReviewContinuationMode, false);
+  assert.deepEqual(desktopReadbackArtifacts(nativeReview, undefined, 'RO0002'), {
+    receipt: 'desktop-native-review-readback-receipt-RO0002.json',
+    appLog: 'desktop-native-review-readback-app-RO0002.log',
+    failureScreenshot: 'ui-failure-RO0002.png',
+  });
   const bridge = await prepareDesktopProofMode('bridge-diagnostics', noFixture);
   assert.throws(() => desktopReadbackArtifacts(bridge, undefined, 'HIST02'));
   assert.throws(() => desktopReadbackArtifacts(continuation, 'unknown', 'HIST02'));

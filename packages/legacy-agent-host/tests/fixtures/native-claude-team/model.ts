@@ -1,6 +1,16 @@
-import { readMixedGroupTurn, mixedGroupActions, assertMixedGroupReceipt, type MixedGroupTurn } from '../native-mixed-groups.ts';
+import {
+  nativeCrossTeamScript,
+  type NativeCrossTeamScenario,
+} from '../native-cross-team-script.ts';
+import {
+  readMixedGroupTurn,
+  mixedGroupActions,
+  assertMixedGroupReceipt,
+  type MixedGroupTurn,
+} from '../native-mixed-groups.ts';
 import { nativeGroupChatScript } from './group-chat.ts';
 import { assertNativeChatAttachments } from './chat-attachments.ts';
+import { assertNativeMessagePdf } from '../native-message-pdf.ts';
 import { contextCompactionScript } from '../native-claude-compaction/model.ts';
 import type { CompactionScenario } from '../native-claude-compaction/model.ts';
 import { ordinarySubagentScript } from '../native-claude-subagent/model.ts';
@@ -67,6 +77,8 @@ export function nativeToolReceipt(content: unknown): RecordValue {
 }
 
 interface Observation {
+  nativePdf?: ReturnType<typeof assertNativeMessagePdf>;
+  nativeAttachments?: ReturnType<typeof assertNativeChatAttachments>;
   requestedModel?: string;
   requestedEffort?: string;
   turn: string;
@@ -124,8 +136,10 @@ function emitResponse(
 export async function startNativeTeamModel(
   options: {
     chatAttachments?: boolean;
+    pdfAttachment?: boolean;
     groupChats?: boolean;
     mixedGroups?: boolean;
+    crossTeam?: NativeCrossTeamScenario;
     ordinarySubagents?: { workspace: string; parentStopRequested?: () => boolean };
     contextCompaction?: CompactionScenario;
     requireVisibleReply?: boolean;
@@ -140,6 +154,7 @@ export async function startNativeTeamModel(
     memberName?: 'alice' | 'team-lead';
   } = {}
 ) {
+  const crossTeam = options.crossTeam ? nativeCrossTeamScript(options.crossTeam) : undefined;
   const groupChats = options.groupChats ? nativeGroupChatScript(nativeToolReceipt) : undefined;
   const compaction = options.contextCompaction
     ? contextCompactionScript(options.contextCompaction)
@@ -187,6 +202,16 @@ export async function startNativeTeamModel(
       const tools = (Array.isArray(body.tools) ? body.tools.map(record) : []).map((tool) =>
         String(tool.name)
       );
+      const crossBlock = crossTeam?.respond(body, tools);
+      if (crossBlock) {
+        emitResponse(
+          response,
+          ++sequence,
+          crossBlock,
+          typeof body.model === 'string' ? body.model : undefined
+        );
+        return;
+      }
       if (groupChats) {
         emitResponse(
           response,
@@ -334,8 +359,12 @@ export async function startNativeTeamModel(
       const step = counters.get(turn) ?? 0;
       const groupActions = mixedGroup ? mixedGroupActions(mixedGroup) : undefined;
       if (groupActions) assert.ok(step <= groupActions.length, 'finite mixed group turn');
-      if (options.chatAttachments && turn === 'NATIVE_TEAM_TWO' && step === 0)
-        assertNativeChatAttachments(messages);
+      const nativeAttachments =
+        options.chatAttachments && turn === 'NATIVE_TEAM_TWO' && step === 0
+          ? assertNativeChatAttachments(messages)
+          : undefined;
+      const nativePdf = options.pdfAttachment && turn === 'NATIVE_TEAM_TWO' && step === 0
+        ? assertNativeMessagePdf(messages) : undefined;
       const peerActions = options.peerMessaging ? nativePeerActions(turn, 'alice') : undefined;
       const incomingMessageId = /"messageId":"([^"\n]+)"/.exec(turnText)?.[1];
       const expectedMessageId = options.uiGeneratedMessageIds
@@ -384,6 +413,8 @@ export async function startNativeTeamModel(
         assert.ok(taskId && taskId !== 'undefined');
       }
       observations.push({
+        ...(nativePdf ? { nativePdf } : {}),
+        ...(nativeAttachments ? { nativeAttachments } : {}),
         ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
         ...(typeof record(body.output_config).effort === 'string'
           ? { requestedEffort: String(record(body.output_config).effort) }
@@ -489,7 +520,9 @@ export async function startNativeTeamModel(
           input: { commandId: 'native-reply-two', to: 'user', text: 'REPLY_NATIVE_TWO' },
         },
       ];
-      const action = (groupActions ?? peerActions ?? (turn === 'NATIVE_TEAM_ONE' ? one : two))[step];
+      const action = (groupActions ?? peerActions ?? (turn === 'NATIVE_TEAM_ONE' ? one : two))[
+        step
+      ];
       if (!action) {
         counters.set(turn, step + 1);
         emitResponse(
@@ -526,6 +559,7 @@ export async function startNativeTeamModel(
   assert.ok(address && typeof address !== 'string');
   return {
     url: `http://127.0.0.1:${address.port}`,
+    crossTeamRequests: crossTeam?.requests ?? [],
     ordinaryRequests: ordinary?.requests ?? [],
     compactionRequests: compaction?.requests ?? [],
     get compactionTokenRequests() {
