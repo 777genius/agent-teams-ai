@@ -92,3 +92,25 @@ describe('RuntimeProviderModelRequestTracker', () => {
     expect(replacementEntry.controller.signal.aborted).toBe(true);
   });
 });
+
+it('shutdown aborts and joins detached ungrouped catalog work until its original promise settles', async () => {
+  const tracker = new RuntimeProviderModelRequestTracker();
+  let settle!: () => void;
+  const entry = createEntry();
+  entry.promise = new Promise((resolve) => {
+    settle = () => resolve({ schemaVersion: 1, runtimeId: 'opencode' });
+  });
+  tracker.set('TEST-detached', entry);
+  tracker.register(entry, 'TEST-detached', null);
+  tracker.clear(false);
+  let drained = false;
+  const shutdown = tracker.abortAndDrain().then(() => {
+    drained = true;
+  });
+  expect(entry.controller.signal.aborted).toBe(true);
+  await Promise.resolve();
+  expect(drained).toBe(false);
+  settle();
+  await shutdown;
+  expect(drained).toBe(true);
+});

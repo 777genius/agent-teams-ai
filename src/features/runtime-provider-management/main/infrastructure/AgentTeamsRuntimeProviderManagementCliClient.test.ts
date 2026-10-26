@@ -28,6 +28,8 @@ vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
   buildProviderAwareCliEnv: vi.fn(async () => ({ env: {} })),
 }));
 
+import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
+
 import { AgentTeamsRuntimeProviderManagementCliClient } from './AgentTeamsRuntimeProviderManagementCliClient';
 
 import type { RuntimeProviderManagementDirectoryResponse } from '../../contracts';
@@ -603,5 +605,80 @@ describe('AgentTeamsRuntimeProviderManagementCliClient API-key command deadline'
     await expect(pending).resolves.toMatchObject({ provider: { providerId: 'groq' } });
     await vi.advanceTimersByTimeAsync(360_001);
     expect(killProcessTreeMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('model catalog shutdown ownership', () => {
+  it('fences new requests and joins a pre-spawn model load without starting a late CLI', async () => {
+    const gate = deferred<string>();
+    vi.mocked(ClaudeBinaryResolver.resolve).mockImplementationOnce(() => gate.promise);
+    execCliMock.mockClear();
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const input = {
+      runtimeId: 'opencode' as const,
+      providerId: 'openrouter',
+      projectPath: '/TEST/catalog',
+    };
+    const pending = client.loadModels(input);
+    let drained = false;
+    const shutdown = client.shutdown().then(() => {
+      drained = true;
+    });
+    await Promise.resolve();
+    expect(drained).toBe(false);
+    expect((await client.loadModels(input)).error?.message).toContain('shutting down');
+    gate.resolve('/test/agent-teams-cli');
+    await Promise.all([pending, shutdown]);
+    expect(drained).toBe(true);
+    expect(execCliMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('provider directory shutdown ownership', () => {
+  it('fences directory loads awaiting env and rejects new directory admission', async () => {
+    const gate = deferred<string>();
+    vi.mocked(ClaudeBinaryResolver.resolve).mockImplementationOnce(() => gate.promise);
+    execCliMock.mockClear();
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const input = { runtimeId: 'opencode' as const, projectPath: '/TEST/directory-shutdown' };
+    const pending = client.loadProviderDirectory(input);
+    let drained = false;
+    const shutdown = client.shutdown().then(() => {
+      drained = true;
+    });
+    await Promise.resolve();
+    expect(drained).toBe(false);
+    expect((await client.loadProviderDirectory(input)).error?.message).toContain('shutting down');
+    gate.resolve('/test/agent-teams-cli');
+    await Promise.all([pending, shutdown]);
+    expect(drained).toBe(true);
+    expect(execCliMock).not.toHaveBeenCalled();
+  });
+
+  it('aborts and joins directory generations detached by refresh invalidation', async () => {
+    const old = deferred<{ stdout: string; stderr: string }>();
+    const fresh = deferred<{ stdout: string; stderr: string }>();
+    execCliMock.mockReset();
+    execCliMock.mockReturnValueOnce(old.promise).mockReturnValueOnce(fresh.promise);
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const input = { runtimeId: 'opencode' as const, projectPath: '/TEST/directory-generations' };
+    const oldLoad = client.loadProviderDirectory(input);
+    await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
+    const newLoad = client.loadProviderDirectory({ ...input, refresh: true });
+    await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(2));
+    const signals = execCliMock.mock.calls.map((call) => call[2].signal as AbortSignal);
+    let drained = false;
+    const shutdown = client.shutdown().then(() => {
+      drained = true;
+    });
+    expect(signals.every((signal) => signal.aborted)).toBe(true);
+    fresh.resolve(directoryOutput(directoryResponse()));
+    expect((await newLoad).error).toBeDefined();
+    expect(drained).toBe(false);
+    old.resolve(directoryOutput(directoryResponse()));
+    const [oldResponse] = await Promise.all([oldLoad, shutdown]);
+    expect(oldResponse.error).toBeDefined();
+    expect(drained).toBe(true);
+    expect(execCliMock).toHaveBeenCalledTimes(2);
   });
 });

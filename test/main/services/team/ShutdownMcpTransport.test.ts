@@ -475,6 +475,7 @@ describe('shutdown MCP transport authority', () => {
     const legacyMaintenance = vi.fn().mockResolvedValue(true);
     const disposeTokenUsage = vi.fn();
     const prepareShutdownCleanup = vi.fn();
+    const drainCatalog = vi.fn(async () => {});
     const closeAdmission = vi.fn(() => {
       expect(prepareShutdownCleanup).toHaveBeenCalledExactlyOnceWith();
     });
@@ -493,6 +494,7 @@ describe('shutdown MCP transport authority', () => {
       nativeLegacyMaintenanceRequired: legacyMaintenance,
       shutdownDesktopAgentBackend: vi.fn().mockResolvedValue(undefined),
       openCodeLifecycleBridge: { prepareShutdownCleanup },
+      runtimeProviderManagementFeature: { shutdown: drainCatalog },
       externalAgentConnection: {
         closeAdmission,
         shutdown: async () => {
@@ -546,6 +548,10 @@ describe('shutdown MCP transport authority', () => {
       await expect(shutdown()).rejects.toBe(finished);
       expect(stopStartupAdmission).toHaveBeenCalledExactlyOnceWith();
       expect(closeAdmission).toHaveBeenCalledExactlyOnceWith();
+      expect(drainCatalog).toHaveBeenCalledExactlyOnceWith();
+      expect(drainCatalog.mock.invocationCallOrder[0]).toBeLessThan(
+        closeAdmission.mock.invocationCallOrder[0]
+      );
       expect(prepareShutdownCleanup.mock.invocationCallOrder[0]).toBeLessThan(
         closeAdmission.mock.invocationCallOrder[0]
       );
@@ -597,11 +603,23 @@ describe('shutdown MCP transport authority', () => {
       removeExternalAgentConnectionIpc: vi.fn(),
       ipcMain: {},
       openCodeLifecycleBridge: null,
+      clearStartupTimers: () => order.push('startup-timers-cleared'),
+      clearInboxNotifyTimers: () => order.push('inbox-timers-cleared'),
+      stopPeriodicOpenCodeHostStartupLockPurge: () => order.push('purge-stopped'),
+      runtimeProviderManagementFeature: {
+        shutdown: async () => {
+          order.push('catalog-sealed');
+        },
+      },
       externalAgentConnection: { closeAdmission: vi.fn() },
       logger: { info: vi.fn() },
       runShutdownStep: async (name: string, step: () => unknown) => {
         order.push(name);
-        if (name !== 'agent backend cleanup' && name !== 'external connection admission drain')
+        if (
+          name !== 'provider model catalog drain' &&
+          name !== 'agent backend cleanup' &&
+          name !== 'external connection admission drain'
+        )
           throw finished;
         await step();
       },
@@ -612,7 +630,11 @@ describe('shutdown MCP transport authority', () => {
       'legacy-admission-sealed',
       'legacy-census-captured',
       'backend-sealed',
-      'external connection admission drain',
+      'startup-timers-cleared',
+      'inbox-timers-cleared',
+      'purge-stopped',
+      'provider model catalog drain',
+      'catalog-sealed',
     ]);
     const repeated = shutdown();
     const rejectedRepeated = expect(repeated).rejects.toBe(finished);
@@ -620,6 +642,12 @@ describe('shutdown MCP transport authority', () => {
     await vi.waitFor(() => {
       expect(order.filter((entry) => entry === 'agent backend cleanup')).toHaveLength(1);
     });
+    expect(order.indexOf('provider model catalog drain')).toBeLessThan(
+      order.indexOf('external connection admission drain')
+    );
+    expect(order.indexOf('external connection admission drain')).toBeLessThan(
+      order.indexOf('agent backend cleanup')
+    );
     release();
     await rejectedFirst;
     await rejectedRepeated;

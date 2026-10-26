@@ -61,7 +61,9 @@ export type RuntimeProviderManagementFeatureFacade = Omit<
   RuntimeProviderManagementApi,
   ScopedRuntimeProviderManagementMethod
 > &
-  Pick<RuntimeProviderManagementPort, ScopedRuntimeProviderManagementMethod>;
+  Pick<RuntimeProviderManagementPort, ScopedRuntimeProviderManagementMethod> & {
+    shutdown(): Promise<void>;
+  };
 
 export function createRuntimeProviderManagementFeature(
   deps: {
@@ -92,6 +94,7 @@ export function createRuntimeProviderManagementFeature(
   const companionCoordinator = new RuntimeProviderCompanionCoordinator(port, companionRegistry);
 
   return {
+    shutdown: () => port.shutdown?.() ?? Promise.resolve(),
     listLocalProviders: (
       input: RuntimeLocalProviderListInput
     ): Promise<RuntimeLocalProviderListResponse> =>

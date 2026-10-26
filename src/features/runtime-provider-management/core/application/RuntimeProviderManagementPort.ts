@@ -11,7 +11,9 @@ type BaseRuntimeProviderManagementPort = Omit<
   | 'scanLocalProviders'
   | 'probeLocalProvider'
   | 'configureLocalProvider'
->;
+> & {
+  shutdown?(): Promise<void>;
+};
 
 export type RuntimeLocalProviderConnectorPort = Pick<
   RuntimeProviderManagementApi,

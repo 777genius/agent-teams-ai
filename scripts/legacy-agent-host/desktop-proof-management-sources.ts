@@ -1,5 +1,7 @@
 /** Finite source closure for captured management, lifecycle, WorkSync and native roster. */
 export const desktopProofManagementSources = [
+  'src/features/runtime-provider-management/main/infrastructure/runtimeProviderErrorBoundary.ts',
+  'src/features/runtime-provider-management/main/infrastructure/runtimeProviderModelRequestTracker.ts',
   'scripts/legacy-agent-host/desktop-skills-fixture.ts',
   'scripts/legacy-agent-host/desktop-skills-ui-smoke.ts',
   'src/renderer/components/extensions/skills/SkillCodeEditor.tsx',

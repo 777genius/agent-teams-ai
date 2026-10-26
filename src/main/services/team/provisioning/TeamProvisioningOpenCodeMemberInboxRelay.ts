@@ -5,7 +5,6 @@ import {
   type OpenCodePromptDeliveryLedgerRecord,
   type OpenCodePromptDeliveryLedgerStore,
 } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
-import { isOpenCodeDeliveryFromOtherRun } from '../opencode/delivery/OpenCodePromptDeliveryRunEligibility';
 import { OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS } from '../opencode/delivery/OpenCodePromptDeliveryWatchdog';
 import { isOpenCodeAttachmentDeliveryFailureReason } from '../opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 
@@ -56,6 +55,7 @@ import {
   dedupeOpenCodeMemberInboxRelayDiagnostics,
   type OpenCodeMemberInboxRelayResult,
 } from './TeamProvisioningOpenCodeMemberInboxRelayResults';
+import { createOpenCodeMemberInboxRunFence } from './TeamProvisioningOpenCodeMemberInboxRunFence';
 import { settleOpenCodePostCompletionNotices } from './TeamProvisioningOpenCodePostCompletionSettlement';
 
 import type {
@@ -455,6 +455,13 @@ async function runOpenCodeMemberInboxRelayWork(
   // user message (see findNextUnreadUserMessageIndex) instead of breaking.
   const handledMessageIds = new Set<string>();
   let cursor = 0;
+  const runFence = createOpenCodeMemberInboxRunFence({
+    resolveCurrentRunId: () =>
+      ports.resolveCurrentOpenCodeRuntimeRunId(teamName, memberIdentity.laneId),
+    isCurrent: isCurrentGeneration,
+    ledger: promptLedger,
+    nowIso: () => ports.nowIso(),
+  });
   while (cursor < unread.length) {
     const index = cursor;
     cursor += 1;
@@ -477,24 +484,13 @@ async function runOpenCodeMemberInboxRelayWork(
     if (!isCurrentGeneration()) {
       return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
     }
-    if (existingRecord) {
-      const currentRunId = await ports.resolveCurrentOpenCodeRuntimeRunId(
-        teamName,
-        memberIdentity.laneId
-      );
-      if (isOpenCodeDeliveryFromOtherRun(existingRecord, currentRunId)) {
-        // Persist the fence so due scans cannot repeatedly select this historical row.
-        await promptLedger.ensurePending({
-          ...existingRecord,
-          runId: currentRunId,
-          now: ports.nowIso(),
-        });
-        continue;
-      }
-    }
-    if (!isCurrentGeneration()) {
+    const existingRunFence = existingRecord
+      ? await runFence.fenceExistingDelivery(message, existingRecord)
+      : 'current';
+    if (existingRunFence === 'superseded' || !isCurrentGeneration()) {
       return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
     }
+    if (existingRunFence === 'stale') continue;
     if (!message.groupChatId && existingRecord?.status === 'failed_terminal') {
       const requeuedRecord = await ports.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded({
         ledger: promptLedger,
@@ -576,6 +572,13 @@ async function runOpenCodeMemberInboxRelayWork(
       // 'responded' without recoverable proof: fall through to the normal
       // delivery path below - its observe pass, and the plain-text
       // materialization, are what produce the missing proof.
+    }
+    if (message.groupChatId) {
+      const outcome = await runFence.checkGroupDelivery(message);
+      if (outcome === 'superseded' || !isCurrentGeneration()) {
+        return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+      }
+      if (outcome === 'stale') continue;
     }
     const existingTaskRefs = existingRecord?.taskRefs?.length ? existingRecord.taskRefs : undefined;
     const metadataTaskRefs = options.deliveryMetadata?.taskRefs?.length

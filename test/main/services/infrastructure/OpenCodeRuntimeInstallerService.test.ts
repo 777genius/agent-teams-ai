@@ -242,6 +242,35 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     }
   });
 
+  it.skipIf(!getLatestQualifiedOpenCodeV2Version(process.platform, process.arch))(
+    'preserves PATH order for a stable V2 release served by a qualified engine',
+    async () => {
+      // Not an exact qualified native release, but served by the pinned flexible engine policy.
+      const nativeV2 = path.join(tempRoot!, 'TEST-bin-v2');
+      const legacyV1 = path.join(tempRoot!, 'TEST-bin-v1');
+      for (const binDir of [nativeV2, legacyV1]) {
+        await mkdir(binDir, { recursive: true });
+        await writeFile(path.join(binDir, 'opencode'), 'TEST native version probe', {
+          mode: 0o755,
+        });
+      }
+      execCliMock.mockImplementation(async (command: string) => ({
+        stdout: command.startsWith(nativeV2) ? '2.999.0\n' : '1.18.3\n',
+        stderr: '',
+      }));
+      process.env.PATH = [nativeV2, legacyV1].join(path.delimiter);
+      expect(await resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })).toBe(
+        path.join(nativeV2, 'opencode')
+      );
+      // The same stable native release remains discoverable when it is alone on PATH.
+      clearOpenCodeRuntimeBinaryResolverCache();
+      process.env.PATH = nativeV2;
+      expect(await resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })).toBe(
+        path.join(nativeV2, 'opencode')
+      );
+    }
+  );
+
   it.each([
     ['2.0.0', true],
     ['opencode v2.0.32', true],
