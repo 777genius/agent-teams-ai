@@ -108,6 +108,21 @@ export async function configureMixedCreateSettings(cdp: UiCdpPort, ui: Controls)
   await ui.scrollTo('[role="dialog"] button', 'original Medium effort', 'Medium');
   await ui.click('[role="dialog"] button', 'select original Medium effort', 'Medium');
   await checked(cdp, ui, '[role="dialog"] #lead-limit-context', true);
+  const leadSelector = '[role="dialog"] button[aria-label*=" provider,"]';
+  const leadIdentity = `(()=>{const rows=[...document.querySelectorAll(${desktopJsLiteral(leadSelector)})];return rows.length===1&&/^Anthropic provider, Opus 4\\.6$/i.test(rows[0].getAttribute('aria-label')??'')})()`;
+  assert.equal(await cdp.evaluate(leadIdentity), true, 'original explicit Anthropic Opus4.6 retained');
+  assert.equal(
+    await cdp.evaluate(`document.querySelector('[role="dialog"] #lead-effort')?.textContent.trim()`),
+    'Medium',
+    'original explicit Medium effort retained'
+  );
+  await ui.scrollTo(leadSelector, 'original configured lead model toggle');
+  await ui.click(leadSelector, 'collapse original configured lead model');
+  await ui.waitRead(
+    `!document.querySelector('[role="dialog"] #lead-effort')`,
+    'original lead model accordion closed'
+  );
+  assert.equal(await cdp.evaluate(leadIdentity), true, 'collapsed original lead binding retained');
   await expand(cdp, ui, 'Optional launch settings');
   // Explicit Off preserves a known supported setting, rather than assuming the TEST default.
   await ui.scrollTo(
@@ -119,6 +134,12 @@ export async function configureMixedCreateSettings(cdp: UiCdpPort, ui: Controls)
     '[role="dialog"] div:has(> #create-fast-mode) > button',
     'original Fast mode Off',
     'Off'
+  );
+  assert.equal(await cdp.evaluate(leadIdentity), true, 'original lead binding before permissions');
+  assert.equal(
+    await cdp.evaluate(`(()=>{const rows=[...document.querySelectorAll('[role="dialog"] button[aria-controls]')].filter(e=>e.textContent.includes('Optional launch settings'));return rows.length===1&&rows[0].getAttribute('aria-expanded')==='true'})()`),
+    true,
+    'original launch settings remain expanded before permissions'
   );
   await checked(cdp, ui, '[role="dialog"] #create-skip-permissions', true);
   await replace(

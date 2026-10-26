@@ -991,7 +991,7 @@ export class OpenCodeRuntimeInstallerService {
       }
       const manifest: OpenCodeRuntimeManifest = {
         schemaVersion: CURRENT_MANIFEST_SCHEMA_VERSION,
-        version: platformMetadata.version!,
+        version: platformMetadata.version,
         platformPackage: selected.packageName,
         binaryPath,
         integrity: platformMetadata.dist!.integrity!,

@@ -55,7 +55,8 @@ afterEach(async () => {
 });
 async function capturedReviewClient(
   optIn = true,
-  rawOversize: 'review' | 'ordinary' | undefined = undefined
+  rawOversize: 'review' | 'ordinary' | undefined = undefined,
+  fragmented = false
 ) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-review-host-capacity-')));
   roots.push(root);
@@ -65,7 +66,22 @@ async function capturedReviewClient(
     : 'return params;';
   const body = `import { createHostServer } from ${JSON.stringify(serverUrl)};
     import { appendFileSync } from 'node:fs';
-    const server = createHostServer({ input: process.stdin, output: process.stdout, buildId:'TEST-review-capacity', reviewTransport:'review-v1', methods:{
+    import { Writable } from 'node:stream';
+    const output = ${
+      fragmented
+        ? `new Writable({write(frame, _encoding, done) {
+      let offset = 0;
+      function next() {
+        if (offset === frame.length) { done(); return; }
+        const part = frame.subarray(offset, offset + (frame.length < 128 ? 1 : 64 * 1024));
+        offset += part.length;
+        process.stdout.write(part, error => error ? done(error) : setImmediate(next));
+      }
+      next();
+    }})`
+        : 'process.stdout'
+    };
+    const server = createHostServer({ input: process.stdin, output, buildId:'TEST-review-capacity', reviewTransport:'review-v1', methods:{
       'team.review.invoke':{lane:'work',handle(params,context){ ${rawOversize === 'ordinary' ? 'return params;' : raw} }},
       ordinary:{lane:'work',handle(params,context){ ${rawOversize === 'ordinary' ? raw : 'return params;'} }},
       'team.review.getChangeStats':{lane:'control',handle(){ for(let i=0;i<200;i++)server.notifyData('event',{i}); return 'control'; }}
@@ -108,6 +124,54 @@ it('captured opt-in negotiates finite review capacity, retains ordinary cap, and
   expect(client.takeNotifications().gap).toBe(true);
   expect((await client.shutdown()).childExit).toBe('confirmed');
 });
+
+it('fragmented near-cap review response preserves exact UTF-8 content with linear copy cost', async () => {
+  const { client } = await capturedReviewClient(true, undefined, true);
+  await client.start();
+  const prefix = 'TEST-review-start:"\\😀';
+  const suffix = '😀\\"TEST-review-end';
+  const payload =
+    prefix +
+    'x'.repeat(REVIEW_HOST_PAYLOAD_BYTES - Buffer.byteLength(JSON.stringify(prefix + suffix))) +
+    suffix;
+  expect(Buffer.byteLength(JSON.stringify(payload))).toBe(REVIEW_HOST_PAYLOAD_BYTES);
+  const concat = Buffer.concat;
+  const copy = Buffer.prototype.copy;
+  let copiedBytes = 0;
+  let response: unknown;
+  let responseError: unknown;
+  // Count actual Main-process copies without retaining every intermediate Buffer in a spy.
+  Buffer.concat = (parts, totalLength) => {
+    copiedBytes += totalLength ?? parts.reduce((bytes, part) => bytes + part.byteLength, 0);
+    return concat(parts, totalLength);
+  };
+  Buffer.prototype.copy = function (this: Buffer, ...args: Parameters<typeof copy>) {
+    const copied = copy.apply(this, args);
+    copiedBytes += copied;
+    return copied;
+  };
+  try {
+    response = await client.request('team.review.invoke', payload);
+  } catch (error) {
+    responseError = error;
+  } finally {
+    Buffer.concat = concat;
+    Buffer.prototype.copy = copy;
+  }
+  // Incoming bytes and geometric prefix growth have a linear byte budget, independent of elapsed time.
+  expect(copiedBytes, 'response assembly copy budget').toBeLessThanOrEqual(
+    4 * REVIEW_HOST_PAYLOAD_BYTES
+  );
+  expect(responseError).toBeUndefined();
+  expect(response).toBe(payload);
+  // Small replies arrive one byte at a time, including split UTF-8 and the NDJSON delimiter.
+  const splitUnicode = '😀"\\\n\rTEST-frame-reset';
+  expect(await client.request('team.review.invoke', splitUnicode)).toBe(splitUnicode);
+  expect(await client.request('team.review.getChangeStats', null, { control: true })).toBe(
+    'control'
+  );
+});
+
 it('default captured profile refuses a larger unselected handshake before application requests', async () => {
   const { client } = await capturedReviewClient(false);
   await expect(client.start()).rejects.toMatchObject({ code: 'protocol-error' });

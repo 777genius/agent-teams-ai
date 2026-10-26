@@ -1,4 +1,5 @@
 import { getLatestQualifiedOpenCodeV2Version } from '@features/opencode-compatibility';
+import * as openCodeVersion from '@shared/utils/version';
 vi.mock('@shared/utils/logger', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@shared/utils/logger')>();
   return {
@@ -210,28 +211,35 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     }
   );
 
-  it('prefers a qualified binary later on PATH over an unqualified V2 release', async () => {
-    // In the pinned range but qualified on no platform.
-    const unqualified = path.join(tempRoot!, 'TEST-bin-v2');
-    const qualified = path.join(tempRoot!, 'TEST-bin-v1');
-    for (const binDir of [unqualified, qualified]) {
-      await mkdir(binDir, { recursive: true });
-      await writeFile(path.join(binDir, 'opencode'), 'TEST native version probe', { mode: 0o755 });
+  it('prefers a qualified binary later on PATH over a recognized unqualified candidate', async () => {
+    // This resolver invariant does not depend on the pinned runtime qualification catalog.
+    const qualification = vi
+      .spyOn(openCodeVersion, 'isAgentTeamsOpenCodeVersionSupported')
+      .mockImplementation((version) => version === '1.18.3');
+    try {
+      const unqualified = path.join(tempRoot!, 'TEST-bin-v2');
+      const qualified = path.join(tempRoot!, 'TEST-bin-v1');
+      for (const binDir of [unqualified, qualified]) {
+        await mkdir(binDir, { recursive: true });
+        await writeFile(path.join(binDir, 'opencode'), 'TEST native version probe', { mode: 0o755 });
+      }
+      execCliMock.mockImplementation(async (command: string) => ({
+        stdout: command.startsWith(unqualified) ? '2.999.0\n' : '1.18.3\n',
+        stderr: '',
+      }));
+      process.env.PATH = [unqualified, qualified].join(path.delimiter);
+      expect(await resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })).toBe(
+        path.join(qualified, 'opencode')
+      );
+      // Alone on PATH it is still discovered; launch refuses it with its qualification status.
+      clearOpenCodeRuntimeBinaryResolverCache();
+      process.env.PATH = unqualified;
+      expect(await resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })).toBe(
+        path.join(unqualified, 'opencode')
+      );
+    } finally {
+      qualification.mockRestore();
     }
-    execCliMock.mockImplementation(async (command: string) => ({
-      stdout: command.startsWith(unqualified) ? '2.999.0\n' : '1.18.3\n',
-      stderr: '',
-    }));
-    process.env.PATH = [unqualified, qualified].join(path.delimiter);
-    expect(await resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })).toBe(
-      path.join(qualified, 'opencode')
-    );
-    // Alone on PATH it is still discovered; launch refuses it with its qualification status.
-    clearOpenCodeRuntimeBinaryResolverCache();
-    process.env.PATH = unqualified;
-    expect(await resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })).toBe(
-      path.join(unqualified, 'opencode')
-    );
   });
 
   it.each([

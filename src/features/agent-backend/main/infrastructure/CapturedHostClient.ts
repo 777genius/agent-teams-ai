@@ -86,6 +86,7 @@ export class CapturedHostClient {
   private limits: HostLimits = { ...DEFAULT_HOST_LIMITS };
   private pending = new Map<string, PendingRequest>();
   private frame = Buffer.alloc(0);
+  private frameBytes = 0;
   private notifications: RpcNotification[] = [];
   private notificationBytes = 0;
   private notificationGap = false;
@@ -306,14 +307,26 @@ export class CapturedHostClient {
       const newline = chunk.indexOf(10, offset);
       const end = newline < 0 ? chunk.length : newline;
       const part = chunk.subarray(offset, end);
-      if (this.frame.length + part.length > this.limits.maxFrameBytes) {
+      const required = this.frameBytes + part.length;
+      if (required > this.limits.maxFrameBytes) {
         this.fail(new HostClientError('protocol-error', 'unknown'));
         return;
       }
-      this.frame = Buffer.concat([this.frame, part]);
+      if (required > this.frame.length) {
+        const capacity = Math.min(
+          this.limits.maxFrameBytes,
+          Math.max(required, this.frame.length * 2)
+        );
+        const grown = Buffer.allocUnsafe(capacity);
+        this.frame.copy(grown, 0, 0, this.frameBytes);
+        this.frame = grown;
+      }
+      part.copy(this.frame, this.frameBytes);
+      this.frameBytes = required;
       if (newline < 0) return;
-      const frame = this.frame;
+      const frame = this.frame.subarray(0, this.frameBytes);
       this.frame = Buffer.alloc(0);
+      this.frameBytes = 0;
       if (!this.receive(frame)) return;
       offset = end + 1;
     }
@@ -386,6 +399,7 @@ export class CapturedHostClient {
     this.sealed = true;
     this.ready = false;
     this.frame = Buffer.alloc(0);
+    this.frameBytes = 0;
     for (const pending of this.pending.values()) {
       clearTimeout(pending.timer);
       pending.reject(error);
