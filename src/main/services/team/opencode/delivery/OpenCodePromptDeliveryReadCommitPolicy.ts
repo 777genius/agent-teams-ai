@@ -8,6 +8,10 @@ import {
 } from './OpenCodeGroupAcknowledgement';
 import { isOpenCodeCompletedGroupNonResponse } from './OpenCodeGroupNonResponse';
 import {
+  HUMAN_GROUP_REPLY_REQUIRED,
+  isOpenCodeHumanGroupNonResponse,
+} from './OpenCodeHumanGroupReply';
+import {
   isOpenCodePromptDeliveryCancelled,
   isOpenCodePromptResponseStateResponded,
   type OpenCodePromptDeliveryLedgerRecord,
@@ -327,6 +331,7 @@ export function getOpenCodeDeliveryPendingReason(input: {
 }): string {
   const record = input.ledgerRecord;
   const state = input.responseState ?? record?.responseState;
+  if (record && isOpenCodeHumanGroupNonResponse(record)) return HUMAN_GROUP_REPLY_REQUIRED;
   if (record?.messageKind === 'member_work_sync_nudge') {
     if (state === 'responded_plain_text' || state === 'responded_visible_message') {
       return 'member_work_sync_report_required';
@@ -515,6 +520,7 @@ export function isOpenCodeDeliveryRetryablePendingResponse(input: {
   visibleReply?: OpenCodeVisibleReplyProof | null;
   readAllowed: boolean;
 }): boolean {
+  if (!input.readAllowed && isOpenCodeHumanGroupNonResponse(input.ledgerRecord)) return true;
   if (input.readAllowed || input.ledgerRecord.groupChatId) {
     return false;
   }
