@@ -154,7 +154,17 @@ describe('member work sync team activity', () => {
 
   it('keeps alive between-turn on-demand lanes active despite degraded liveness kinds', () => {
     for (const livenessKind of ['registered_only', 'stale_metadata'] as const) {
-      expect(isRuntimeEntryActiveForWorkSync(createRuntimeEntry({ livenessKind }))).toBe(true);
+      expect(
+        isRuntimeEntryActiveForWorkSync(
+          createRuntimeEntry({
+            livenessKind,
+            providerId: 'opencode',
+            laneId: 'secondary:opencode:alice',
+            runtimeSessionId: 'session-alice',
+            historicalBootstrapConfirmed: true,
+          })
+        )
+      ).toBe(true);
       // Negative control: the alive check still runs first, so a dead entry
       // with the same degraded kind stays inactive.
       expect(
@@ -162,6 +172,43 @@ describe('member work sync team activity', () => {
       ).toBe(false);
     }
   });
+
+  it.each(['registered_only', 'stale_metadata'] as const)(
+    'does not activate historical teams from %s registration alone',
+    (livenessKind) => {
+      const snapshot = createRuntimeSnapshot(
+        Object.fromEntries(
+          (['anthropic', 'codex', 'opencode'] as const).map((providerId) => [
+            providerId,
+            createRuntimeEntry({
+              memberName: providerId,
+              providerId,
+              pid: undefined,
+              livenessKind,
+            }),
+          ])
+        )
+      );
+      expect(hasWorkSyncActiveRuntime(snapshot)).toBe(false);
+      expect(hasWorkSyncReachableRuntime(snapshot)).toBe(false);
+    }
+  );
+
+  it.each(['laneId', 'runtimeSessionId', 'historicalBootstrapConfirmed'] as const)(
+    'requires %s for a degraded on-demand OpenCode lane',
+    (field) => {
+      const entry = createRuntimeEntry({
+        providerId: 'opencode',
+        livenessKind: 'registered_only',
+        pid: undefined,
+        laneId: 'secondary:opencode:alice',
+        runtimeSessionId: 'session-alice',
+        historicalBootstrapConfirmed: true,
+        [field]: undefined,
+      });
+      expect(isRuntimeEntryActiveForWorkSync(entry)).toBe(false);
+    }
+  );
 
   it('does not treat a runtime candidate as active until it is alive', () => {
     expect(
