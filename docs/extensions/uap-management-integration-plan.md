@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v19; current-source Full/bootstrap/security checks pass, while the initial managed Claude installation needs retained failure diagnostics before S27 can run.
+Status: implementation plan v20; Full passes at 26e2169, while the initial managed Claude installation still fails before S27. The hosted prerequisite receipt does not reproduce the earlier environment/proc-interface hypotheses; an isolated ordinary CLI control is needed to expose the underlying refusal.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -12,7 +12,51 @@ real Electron end-to-end verification, early draft PRs, immediate push of every
 commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
-## Current checkpoint — v19 (2026-10-26)
+## Current checkpoint — v20 (2026-10-26)
+
+App `26e2169768e9e7dd540bbfd35653f34a8b318301` completed
+[Full qualification 40339355196](https://github.com/777genius/agent-teams-ai/actions/runs/40339355196),
+including all four test shards, three lint shards, validation and the Windows
+task-ledger smoke. Its
+[Electron retry 40339355009](https://github.com/777genius/agent-teams-ai/actions/runs/40339355009)
+failed at the same initial Claude `install_skills` operation, before team creation.
+The [artifact 12657809847](https://github.com/777genius/agent-teams-ai/actions/runs/40339355009/artifacts/12657809847)
+records clean synthetic merge `184462971947501b4942f0d185849e18c314243f`, the
+matched UAP e84 source, no renderer exceptions and ZIP SHA-256
+`fb213566bdbe1f13f3fb449608b7fffd3d9e665e23e3383e1dc42e8639f4a1e4`.
+
+The failure-only receipt observed an owned pinned Go process with PATH 1,014
+bytes, 1,187 allowed environment bytes, no duplicate allowed names and matching
+HOME/state roots. All thirteen observed task `children` interfaces were readable.
+This snapshot does not reproduce the earlier local missing-interface condition
+or an oversized environment. It is not the Go command's own exact preflight
+receipt. Ordinary environment inspection retains the declared Skill and partial
+operation with no recorded binding. The independently supplied native Claude
+listing succeeds with `[]`. These observations do not identify the underlying
+installer error or prove native materialization.
+
+The accepted Management record retains the bounded public outcome, not the raw
+installer reason. Existing installer journals do not preserve that missing error
+either. A failure-only control therefore invokes the unchanged pinned Go CLI's
+ordinary `skills add` path exactly once in a separately owned disposable profile,
+against the same live fixture publisher and verified Claude binary. It records
+bounded public CLI stderr, which preserves the underlying Apply error. Normal
+scanner acquisition and policy remain active. The control never retries the
+original Management request, mutates its profile or replaces its failing assertion;
+a successful control would qualify only its own fresh-profile CLI path.
+
+The original Electron run and several unrelated workflows were cancelled before
+the test; one addressed Electron job rerun produced the failed receipt above.
+The available API did not identify the cancellation cause. Bootstrap/packages
+therefore have no completed current-head result. App CodeQL JavaScript/TypeScript
+analysis passed, while Actions analysis failed after its last logged stage,
+result upload, without a recorded cause; the findings aggregate is neutral with
+the Actions category missing.
+These checks remain open. No cancellation or upload failure is treated as a
+source finding or a successful qualification. The new test-only control requires
+its own completed hosted receipt; S27 remains unqualified.
+
+## Previous checkpoint — v19 (2026-10-26)
 
 App `81ef6678748e134150dd76fcd3cf3806ba858132` incorporates main
 `5a111a4aca356469b8e86d0950c4033227b2951a`. Its

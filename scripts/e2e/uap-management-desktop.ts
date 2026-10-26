@@ -18,6 +18,7 @@ import { promisify } from 'node:util';
 import { CdpClient } from './comment-notification/cdp.mjs';
 import { startGroupChatModelServer } from './group-chat-model-server';
 import { startActiveRunProof } from './uap-management-active-run';
+import { captureFreshProfileCliControl } from './uap-management-failure-cli';
 import { captureOwnedUapProcessMetadata } from './uap-management-failure-process';
 import { postWithReboundHost } from './uap-management-http';
 import { openCodeMcpServer } from './uap-management-native';
@@ -973,6 +974,7 @@ async function exercise(f: Awaited<ReturnType<typeof fixture>>) {
         expectedStateRoot: f.env.AGENTPLUGINS_HOME!,
       });
     },
+    captureCliControl: () => captureFreshProfileCliControl({ ...f, publisherRevision: version }),
     advancePublisher: () => {
       version = 3;
     },

@@ -132,6 +132,7 @@ interface Fixture {
   cdp: DesktopCdp;
   wait: UiWait;
   captureProcessMetadata(): Promise<Record<string, unknown>>;
+  captureCliControl(): Promise<Record<string, unknown>>;
   advancePublisher(): void;
   assertUiRefusal(): Promise<void>;
   evidence: Record<string, unknown>;
@@ -241,6 +242,14 @@ export async function startActiveRunProof(f: Fixture) {
       native.killed = failure.killed;
       native.stdout = boundedDiagnosticString(failure.stdout, 32_768);
       native.stderr = boundedDiagnosticString(failure.stderr, 32_768);
+    }
+    try {
+      diagnostic.freshProfileCliControl = await f.captureCliControl();
+    } catch {
+      diagnostic.freshProfileCliControl = {
+        status: 'unavailable',
+        code: 'FRESH_PROFILE_CLI_CONTROL_FAILED',
+      };
     }
   };
   const apply = async (plan: ManagementPlan) => {

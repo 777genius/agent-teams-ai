@@ -206,6 +206,17 @@ interface availability. Process ancestry and identity are checked around each
 inspection; environment values and command arguments are not retained. Unavailable
 or timed-out diagnostics leave the original failure intact.
 
+When that bounded evidence cannot expose the underlying refusal, a separate
+failure-only control invokes the unchanged pinned Go CLI's ordinary `skills add`
+command once in a fresh owned HOME, native configuration and UAP state root.
+It uses the same live fixture publisher and verified Claude artifact, reconstructs
+only the known synthetic model settings, and keeps ordinary verified scanner
+acquisition and security policy. Bounded CLI stderr retains the public Apply
+error that the Management response intentionally omits. This is an independent
+fresh-profile reproduction: it does not reuse or recover the failed Management
+request, modify its files, or turn the original failing assertion into success.
+If the control succeeds, that result establishes only its separate CLI path.
+
 The local isolated state validates the shared-state behavior within that fixture.
 Default external-CLI ownership interoperability is a separate actual CLI test.
 The standalone HTTP viewer has no runtime owner and deliberately refuses mutation;
