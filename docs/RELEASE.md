@@ -62,12 +62,13 @@ OpenCode setup now includes a separate V2 installer, while group chats and task 
 - Send images and videos to OpenCode teammates when their models support them.
 - Team launch defaults Fast mode to Off unless you saved another preference.
 
+- Allow slow OpenCode provider connections to finish during first-time setup.
+- Use your configured Anthropic models with compatible endpoints.
+
 ### Bug Fixes
 
-- Allow slow OpenCode provider connections to finish during first-time setup.
 - Deliver queued tasks and replies after OpenCode teammates relaunch.
 - Stop no longer reports failure after the team's agents have exited.
-- Use your configured Anthropic models with compatible endpoints.
 - Stop repeated background checks of inactive teammates and unnecessary team-history reads.
 - Prevent group reply loops and background OpenCode processes after quitting.
 - Show new group messages at the bottom and reactions over message corners.
