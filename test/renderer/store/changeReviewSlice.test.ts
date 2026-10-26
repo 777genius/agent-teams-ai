@@ -3096,6 +3096,65 @@ describe('changeReviewSlice task changes', () => {
     ]);
   });
 
+  it('does not write again when closing an already saved review', async () => {
+    const store = createSliceStore();
+    store.setState({
+      activeChangeSet: makeAgentChangeSet(),
+      fileDecisions: { '/repo/file.ts': 'accepted' },
+    });
+    store.getState().persistDecisions('team-a', 'agent-alice', 'close-saved-scope');
+    await expect(
+      store.getState().flushDecisionsToDisk('team-a', 'agent-alice', 'close-saved-scope')
+    ).resolves.toBe(true);
+    store.getState().persistDecisions('team-a', 'agent-alice', 'close-saved-scope');
+    await expect(
+      store.getState().flushDecisionsToDisk('team-a', 'agent-alice', 'close-saved-scope')
+    ).resolves.toBe(true);
+    expect(hoisted.saveDecisions).toHaveBeenCalledTimes(1);
+    store.setState({ fileDecisions: { '/repo/file.ts': 'rejected' } });
+    store.getState().persistDecisions('team-a', 'agent-alice', 'close-saved-scope');
+    await store.getState().flushDecisionsToDisk('team-a', 'agent-alice', 'close-saved-scope');
+    expect(hoisted.saveDecisions).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not clear an empty hydrated review just to close it', async () => {
+    const store = createSliceStore();
+    hoisted.loadDecisions.mockResolvedValueOnce(null);
+    await store.getState().loadDecisionsFromDisk('team-a', 'agent-alice', 'close-empty-scope');
+    await expect(
+      store.getState().clearDecisionsFromDisk('team-a', 'agent-alice', 'close-empty-scope')
+    ).resolves.toBe(true);
+    expect(hoisted.clearDecisions).not.toHaveBeenCalled();
+    // Explicit recovery discard must still reach storage even when the cache is empty.
+    await store
+      .getState()
+      .clearDecisionsFromDisk('team-a', 'agent-alice', 'close-empty-scope', true);
+    expect(hoisted.clearDecisions).toHaveBeenCalledTimes(1);
+  });
+
+  it('rechecks durability after a failed write even when returning to a formerly saved snapshot', async () => {
+    const store = createSliceStore();
+    store.setState({
+      activeChangeSet: makeAgentChangeSet(),
+      fileDecisions: { '/repo/file.ts': 'accepted' },
+    });
+    store.getState().persistDecisions('team-a', 'agent-alice', 'uncertain-close-scope');
+    await store.getState().flushDecisionsToDisk('team-a', 'agent-alice', 'uncertain-close-scope');
+    hoisted.saveDecisions.mockRejectedValueOnce(new Error('acknowledgement lost'));
+    store.setState({ fileDecisions: { '/repo/file.ts': 'rejected' } });
+    store.getState().persistDecisions('team-a', 'agent-alice', 'uncertain-close-scope');
+    await expect(
+      store.getState().flushDecisionsToDisk('team-a', 'agent-alice', 'uncertain-close-scope')
+    ).resolves.toBe(false);
+    store.setState({ fileDecisions: { '/repo/file.ts': 'accepted' } });
+    store.getState().persistDecisions('team-a', 'agent-alice', 'uncertain-close-scope');
+    await expect(
+      store.getState().flushDecisionsToDisk('team-a', 'agent-alice', 'uncertain-close-scope')
+    ).resolves.toBe(true);
+    expect(hoisted.saveDecisions).toHaveBeenCalledTimes(3);
+    vi.mocked(console.error).mockClear();
+  });
+
   it('reports a failed decision flush so the dialog can remain open', async () => {
     const store = createSliceStore();
     hoisted.saveDecisions.mockRejectedValueOnce(new Error('disk full'));
