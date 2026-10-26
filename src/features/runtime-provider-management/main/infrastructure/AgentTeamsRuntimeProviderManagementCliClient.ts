@@ -43,7 +43,10 @@ import {
 } from './runtimeProviderDirectoryResponse';
 import {
   buildOpenCodeProfileNodeModulesLinkDiagnostics,
+  sanitizeNullableRuntimeProviderText,
   sanitizeRuntimeProviderDiagnostics,
+  sanitizeRuntimeProviderOutputValue,
+  withRuntimeProviderErrorCode,
 } from './runtimeProviderErrorBoundary';
 import { RuntimeProviderModelRequestTracker } from './runtimeProviderModelRequestTracker';
 import {
@@ -242,32 +245,6 @@ function sanitizeRuntimeProviderError(error: unknown): RuntimeProviderManagement
       diagnostics ?? buildOpenCodeProfileNodeModulesLinkDiagnostics(message)
     ),
   };
-}
-
-function withRuntimeProviderErrorCode(
-  errorCode: RuntimeProviderManagementErrorDto['code'],
-  diagnostics: RuntimeProviderManagementErrorDto['diagnostics']
-): RuntimeProviderManagementErrorDto['diagnostics'] {
-  return diagnostics ? { ...diagnostics, errorCode } : null;
-}
-
-function sanitizeRuntimeProviderOutputValue(value: unknown): unknown {
-  if (typeof value === 'string') {
-    return sanitizeRuntimeProviderText(value);
-  }
-  if (Array.isArray(value)) {
-    return value.map(sanitizeRuntimeProviderOutputValue);
-  }
-  if (!value || typeof value !== 'object') {
-    return value;
-  }
-  return Object.fromEntries(
-    Object.entries(value).map(([key, entry]) => [key, sanitizeRuntimeProviderOutputValue(entry)])
-  );
-}
-
-function sanitizeNullableRuntimeProviderText(value: unknown): string | null {
-  return typeof value === 'string' ? sanitizeRuntimeProviderText(value) : null;
 }
 
 function extractJsonObject<T>(raw: string): T {
@@ -1259,9 +1236,13 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     string,
     Promise<RuntimeProviderManagementDirectoryResponse>
   >();
+  private readonly directoryLifecycleEntries = new Set<{
+    controller: AbortController;
+    promise: Promise<RuntimeProviderManagementDirectoryResponse>;
+  }>();
   private directoryResponseCacheGeneration = 0;
   private readonly modelResponseCache = new Map<string, ModelResponseCacheEntry>();
-  private modelAdmissionClosed = false;
+  private catalogAdmissionClosed = false;
   private readonly modelRequests = new RuntimeProviderModelRequestTracker();
   private readonly activeModelTestRequestGroups = new Map<string, AbortController>();
   private modelResponseCacheGeneration = 0;
@@ -1284,8 +1265,13 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
 
   async shutdown(): Promise<void> {
     // Close admission synchronously before the first await, including requests still resolving env.
-    this.modelAdmissionClosed = true;
-    await this.modelRequests.abortAndDrain();
+    this.catalogAdmissionClosed = true;
+    const directories = [...this.directoryLifecycleEntries];
+    for (const entry of directories) entry.controller.abort();
+    await Promise.allSettled([
+      this.modelRequests.abortAndDrain(),
+      ...directories.map((entry) => entry.promise),
+    ]);
   }
 
   private dropCachesFromPreviousOpenCodeRuntime(): void {
@@ -1548,6 +1534,9 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   async loadProviderDirectory(
     input: RuntimeProviderManagementLoadDirectoryInput
   ): Promise<RuntimeProviderManagementDirectoryResponse> {
+    if (this.catalogAdmissionClosed) {
+      return errorResponse(input.runtimeId, 'Provider catalog is shutting down');
+    }
     this.dropCachesFromPreviousOpenCodeRuntime();
     const projectPath = normalizeProjectPath(input.projectPath);
     const cacheKey = getRuntimeProviderDirectoryCacheKey(input, projectPath);
@@ -1580,24 +1569,33 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       return existingRequest;
     }
 
+    const controller = new AbortController();
     const attempt = new RuntimeProviderCatalogDiagnostics('provider_directory', projectPath);
     const generation = this.directoryResponseCacheGeneration;
     const normalize = (response: RuntimeProviderManagementDirectoryResponse) =>
       normalizeRuntimeProviderDirectoryResponse(response, input.summary === true, previous);
-    const request = this.loadProviderDirectoryUncached(input, projectPath, attempt, (response) =>
-      this.writeDirectoryResponseCache(
-        cacheKey,
-        normalize(response),
-        getRuntimeProviderDirectoryCacheTtlMs(input),
-        generation
-      )
+    const request = this.loadProviderDirectoryUncached(
+      input,
+      projectPath,
+      controller.signal,
+      attempt,
+      (response) =>
+        this.writeDirectoryResponseCache(
+          cacheKey,
+          normalize(response),
+          getRuntimeProviderDirectoryCacheTtlMs(input),
+          generation
+        )
     )
       .then(normalize)
-      .then((response) => attempt.finish(response));
+      .then((response) => (controller.signal.aborted ? response : attempt.finish(response)));
+    const lifecycleEntry = { controller, promise: request };
+    this.directoryLifecycleEntries.add(lifecycleEntry);
     this.directoryResponseInFlight.set(inFlightKey, request);
     try {
       return await request;
     } finally {
+      this.directoryLifecycleEntries.delete(lifecycleEntry);
       if (this.directoryResponseInFlight.get(inFlightKey) === request) {
         this.directoryResponseInFlight.delete(inFlightKey);
       }
@@ -1607,6 +1605,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   private async loadProviderDirectoryUncached(
     input: RuntimeProviderManagementLoadDirectoryInput,
     projectPath: string | null,
+    signal: AbortSignal,
     attempt: RuntimeProviderCatalogDiagnostics,
     onSuccess: (
       response: RuntimeProviderManagementDirectoryResponse
@@ -1642,11 +1641,13 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     }
 
     try {
+      signal.throwIfAborted();
       const { stdout, stderr } = await attempt.exec(
         binaryPath,
         args,
-        runtimeProviderCommandOptions({ env, timeout: COMMAND_TIMEOUT_MS }, projectPath)
+        runtimeProviderCommandOptions({ env, timeout: COMMAND_TIMEOUT_MS, signal }, projectPath)
       );
+      signal.throwIfAborted();
       return onSuccess(
         extractJsonObjectWithContext<RuntimeProviderManagementDirectoryResponse>(
           stdout,
@@ -1657,7 +1658,11 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     } catch (error) {
       const failure = normalizeCommandFailure(error, context);
 
-      if (process.platform === 'win32' && isOpenCodeNodeModulesSymlinkError(failure.message)) {
+      if (
+        !signal.aborted &&
+        process.platform === 'win32' &&
+        isOpenCodeNodeModulesSymlinkError(failure.message)
+      ) {
         const profileId = extractProfileIdFromSymlinkError(failure.message);
         if (profileId) {
           const junctionReady = ensureOpenCodeProfileNodeModulesJunction(
@@ -1666,11 +1671,16 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
           );
           if (junctionReady) {
             try {
+              signal.throwIfAborted();
               const retryResult = await attempt.exec(
                 binaryPath,
                 args,
-                runtimeProviderCommandOptions({ env, timeout: COMMAND_TIMEOUT_MS }, projectPath)
+                runtimeProviderCommandOptions(
+                  { env, timeout: COMMAND_TIMEOUT_MS, signal },
+                  projectPath
+                )
               );
+              signal.throwIfAborted();
               return onSuccess(
                 extractJsonObjectWithContext<RuntimeProviderManagementDirectoryResponse>(
                   retryResult.stdout,
@@ -2181,7 +2191,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   async loadModels(
     input: RuntimeProviderManagementLoadModelsInput
   ): Promise<RuntimeProviderManagementModelsResponse> {
-    if (this.modelAdmissionClosed) {
+    if (this.catalogAdmissionClosed) {
       return errorResponse(input.runtimeId, 'Provider catalog is shutting down');
     }
     this.dropCachesFromPreviousOpenCodeRuntime();

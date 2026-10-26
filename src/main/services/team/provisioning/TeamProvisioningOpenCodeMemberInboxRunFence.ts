@@ -16,7 +16,7 @@ export function createOpenCodeMemberInboxRunFence(input: {
   nowIso(): string;
 }): {
   fenceExistingDelivery(
-    message: Pick<InboxMessage, 'groupChatId'>,
+    message: Pick<InboxMessage, 'groupChatId' | 'groupRunKey'>,
     record: OpenCodePromptDeliveryLedgerRecord
   ): Promise<RunFenceOutcome>;
   checkGroupDelivery(
@@ -35,10 +35,14 @@ export function createOpenCodeMemberInboxRunFence(input: {
         ? await resolveGroupRun()
         : await input.resolveCurrentRunId();
       if (!input.isCurrent()) return 'superseded';
-      if (!isOpenCodeDeliveryFromOtherRun(record, currentRunId)) return 'current';
-      // Persist the fence so due scans cannot repeatedly select this historical row.
-      await input.ledger.ensurePending({ ...record, runId: currentRunId, now: input.nowIso() });
-      return 'stale';
+      if (isOpenCodeDeliveryFromOtherRun(record, currentRunId)) {
+        // Persist the fence so due scans cannot repeatedly select this historical row.
+        await input.ledger.ensurePending({ ...record, runId: currentRunId, now: input.nowIso() });
+        return 'stale';
+      }
+      if (message.groupChatId && (!currentRunId || message.groupRunKey !== currentRunId))
+        return 'stale';
+      return 'current';
     },
     async checkGroupDelivery(message) {
       if (!message.groupChatId) return 'current';

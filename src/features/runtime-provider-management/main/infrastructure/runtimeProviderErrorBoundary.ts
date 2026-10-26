@@ -77,3 +77,29 @@ export function buildOpenCodeProfileNodeModulesLinkDiagnostics(
     ],
   };
 }
+
+export function withRuntimeProviderErrorCode(
+  errorCode: RuntimeProviderManagementErrorDto['code'],
+  diagnostics: RuntimeProviderManagementErrorDto['diagnostics']
+): RuntimeProviderManagementErrorDto['diagnostics'] {
+  return diagnostics ? { ...diagnostics, errorCode } : null;
+}
+
+export function sanitizeNullableRuntimeProviderText(value: unknown): string | null {
+  return typeof value === 'string' ? sanitizeRuntimeProviderText(value) : null;
+}
+
+export function sanitizeRuntimeProviderOutputValue(value: unknown): unknown {
+  if (typeof value === 'string') {
+    return sanitizeRuntimeProviderText(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map(sanitizeRuntimeProviderOutputValue);
+  }
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => [key, sanitizeRuntimeProviderOutputValue(entry)])
+  );
+}

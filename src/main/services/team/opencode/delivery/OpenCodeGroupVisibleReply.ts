@@ -85,6 +85,17 @@ export async function materializeOpenCodeGroupReply(input: {
     return { ledgerRecord: record, visibleReply: null };
   }
   await input.checkpoint();
+  // Older runtimes cannot certify this internal token as a completed silent turn.
+  // Never publish it or turn a preview into completion proof; fail closed instead.
+  if (text === '[[AGENT_TEAMS_NO_REPLY]]') {
+    const ledgerRecord = await input.ledger.markFailedTerminal({
+      id: record.id,
+      reason: 'group_non_response_runtime_unsupported',
+      diagnostics: record.diagnostics,
+      failedAt: input.nowIso(),
+    });
+    return { ledgerRecord, visibleReply: null };
+  }
   try {
     const saved = await input.send({
       teamName: input.teamName,

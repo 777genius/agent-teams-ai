@@ -156,18 +156,16 @@ function createRelayPorts(
 describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
   it('skips unledgered old group runs without blocking the fresh group', async () => {
     const ports = createRelayPorts({
-      readInboxMessages: vi
-        .fn()
-        .mockResolvedValue([
-          message({ messageId: 'old', groupChatId: 'group', groupRunKey: 'old-run' }),
-          message({
-            messageId: 'fresh-group',
-            groupChatId: 'group',
-            groupRunKey: 'run-1',
-            timestamp: '2026-01-01T00:01:00.000Z',
-          }),
-          message({ messageId: 'fresh-dm', timestamp: '2026-01-01T00:02:00.000Z' }),
-        ]),
+      readInboxMessages: vi.fn().mockResolvedValue([
+        message({ messageId: 'old', groupChatId: 'group', groupRunKey: 'old-run' }),
+        message({
+          messageId: 'fresh-group',
+          groupChatId: 'group',
+          groupRunKey: 'run-1',
+          timestamp: '2026-01-01T00:01:00.000Z',
+        }),
+        message({ messageId: 'fresh-dm', timestamp: '2026-01-01T00:02:00.000Z' }),
+      ]),
     });
     await relayOpenCodeMemberInboxMessagesWithPorts(
       { teamName: 'team', memberName: 'worker', relayKey: 'stale-group-run' },
@@ -185,6 +183,55 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
     expect(ports.resolveCurrentOpenCodeRuntimeRunId).toHaveBeenCalledTimes(1);
     expect(ports.logWarning).not.toHaveBeenCalled();
   });
+
+  it.each([null, 'run-1'])(
+    'skips stale group envelopes before owed read recovery with ledger run %s',
+    async (runId) => {
+      const old = ledgerRecord({
+        inboxMessageId: 'old',
+        groupChatId: 'group',
+        runId,
+        status: 'responded',
+        responseState: 'responded_visible_message',
+        inboxReadCommittedAt: null,
+      });
+      const markInboxReadCommitted = vi.fn().mockResolvedValue(old);
+      const ensurePending = vi.fn();
+      const ports = createRelayPorts({
+        readInboxMessages: vi.fn().mockResolvedValue([
+          message({ messageId: 'old', groupChatId: 'group', groupRunKey: 'old-run' }),
+          message({
+            messageId: 'fresh-group',
+            groupChatId: 'group',
+            groupRunKey: 'run-1',
+            timestamp: '2026-01-01T00:01:00.000Z',
+          }),
+        ]),
+        createOpenCodePromptDeliveryLedger: vi.fn(() => ({
+          getByInboxMessage: vi.fn(async ({ inboxMessageId }) =>
+            inboxMessageId === 'old' ? old : null
+          ),
+          applyDestinationProof: vi.fn(),
+          markInboxReadCommitted,
+          ensurePending,
+        })) as unknown as RelayOpenCodeMemberInboxMessagesPorts['createOpenCodePromptDeliveryLedger'],
+        applyDestinationProof: vi.fn().mockResolvedValue({ ledgerRecord: old, visibleReply: null }),
+        isOpenCodeDeliveryResponseReadCommitAllowed: vi.fn().mockResolvedValue(true),
+      });
+      await relayOpenCodeMemberInboxMessagesWithPorts(
+        { teamName: 'team', memberName: 'worker', relayKey: 'stale-group-owed-read' },
+        ports
+      );
+      expect(ports.applyDestinationProof).not.toHaveBeenCalled();
+      expect(markInboxReadCommitted).not.toHaveBeenCalled();
+      expect(ensurePending).not.toHaveBeenCalled();
+      expect(ports.deliverOpenCodeMemberMessage).toHaveBeenCalledTimes(1);
+      expect(ports.deliverOpenCodeMemberMessage).toHaveBeenCalledWith(
+        'team',
+        expect.objectContaining({ messageId: 'fresh-group' })
+      );
+    }
+  );
 
   it.each(['missing', 'error'])(
     'skips group delivery with %s run truth while still serving DM',
