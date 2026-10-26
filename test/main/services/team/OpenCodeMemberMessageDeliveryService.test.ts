@@ -361,9 +361,14 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
     }
   );
 
-  it.each([false, true])(
-    'keeps a durable group prebridge marker unknown and never dispatches it again (correction=%s)',
-    async (correction) => {
+  it.each([
+    { correction: false, canObserve: false },
+    { correction: true, canObserve: false },
+    { correction: false, canObserve: true },
+    { correction: true, canObserve: true },
+  ])(
+    'keeps a durable group prebridge marker unknown without redispatch (correction=$correction, observe=$canObserve)',
+    async ({ correction, canObserve }) => {
       const record = makeLedgerRecord({
         groupChatId: 'group-a',
         status: 'accepted',
@@ -379,16 +384,23 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
           : {}),
       });
       const send = vi.fn();
-      const observe = vi.fn();
+      const observe = vi.fn(async () => ({
+        providerId: 'opencode' as const,
+        memberName: 'alice',
+        ok: true,
+        diagnostics: [],
+      }));
       const ledger = {
         getActiveForMember: vi.fn(async () => record),
         ensurePending: vi.fn(async () => record),
         getByInboxMessage: vi.fn(async () => record),
+        applyObservation: vi.fn(async () => record),
+        markNextAttemptDeferred: vi.fn(async () => record),
       };
       const deps = makeDeps({
         getOpenCodeRuntimeMessageAdapter: () => ({
           ...makeAdapter(send),
-          observeMessageDelivery: observe,
+          ...(canObserve ? { observeMessageDelivery: observe } : {}),
         }),
         createOpenCodePromptDeliveryLedger: vi.fn(() => ledger as never),
         openCodePromptDeliveryWatchdogScheduler: { isEnabled: vi.fn(() => true) },
@@ -401,6 +413,7 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
           findByRelayOfMessageId: vi.fn(async () => null),
         },
         isOpenCodeDeliveryResponseReadCommitAllowed: vi.fn(async () => false),
+        scheduleOpenCodePromptDeliveryWatchdog: vi.fn(),
       });
       const service = new OpenCodeMemberMessageDeliveryService(deps);
       const input = {
@@ -420,7 +433,10 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
           reason: 'group_handoff_acceptance_unknown',
         });
       expect(send).not.toHaveBeenCalled();
-      expect(observe).not.toHaveBeenCalled();
+      expect(observe).toHaveBeenCalledTimes(canObserve ? 2 : 0);
+      expect(ledger.applyObservation).toHaveBeenCalledTimes(canObserve ? 2 : 0);
+      expect(ledger.markNextAttemptDeferred).toHaveBeenCalledTimes(canObserve ? 2 : 0);
+      expect(record).toMatchObject({ attempts: 0, status: 'accepted' });
       expect(deps.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded).not.toHaveBeenCalled();
     }
   );
