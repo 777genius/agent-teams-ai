@@ -5,6 +5,7 @@ import {
   type OpenCodeGroupAcknowledgementReader,
 } from './OpenCodeGroupAcknowledgement';
 import { isOpenCodeCompletedGroupNonResponse } from './OpenCodeGroupNonResponse';
+import { isOpenCodeHumanGroupNonResponse } from './OpenCodeHumanGroupReply';
 
 import type {
   OpenCodePromptDeliveryLedgerRecord,
@@ -88,6 +89,9 @@ export async function materializeOpenCodeGroupReply(input: {
   // Older runtimes cannot certify this internal token as a completed silent turn.
   // Never publish it or turn a preview into completion proof; fail closed instead.
   if (text === '[[AGENT_TEAMS_NO_REPLY]]') {
+    if (isOpenCodeHumanGroupNonResponse(record) || record.groupRepairHandoffPending) {
+      return { ledgerRecord: record, visibleReply: null };
+    }
     const ledgerRecord = await input.ledger.markFailedTerminal({
       id: record.id,
       reason: 'group_non_response_runtime_unsupported',

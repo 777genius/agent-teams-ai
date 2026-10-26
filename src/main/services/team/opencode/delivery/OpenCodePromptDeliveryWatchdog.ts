@@ -1,3 +1,5 @@
+import { isOpenCodeHumanGroupNonResponse } from './OpenCodeHumanGroupReply';
+
 import type { OpenCodeDeliveryResponseState } from '../bridge/OpenCodeBridgeCommandContract';
 import type {
   OpenCodePromptDeliveryLedgerRecord,
@@ -227,8 +229,9 @@ export function isOpenCodePromptDeliveryRetryAttemptDue(input: {
     status: OpenCodePromptDeliveryStatus;
     responseState: OpenCodeDeliveryResponseState;
     groupChatId?: string;
-  };
+  } & Partial<OpenCodePromptDeliveryLedgerRecord>;
 }): boolean {
+  if (input.attemptDue && isOpenCodeHumanGroupNonResponse(input.ledgerRecord)) return true;
   if (!input.attemptDue || input.ledgerRecord.groupChatId) {
     return false;
   }

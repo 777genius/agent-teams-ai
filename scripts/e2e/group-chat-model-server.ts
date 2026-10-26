@@ -11,7 +11,7 @@ export interface ModelReceipt {
   request: Json;
   decision: Decision;
 }
-interface Decision { text?: string; name?: string; input?: Json; id: string }
+export interface Decision { text?: string; name?: string; input?: Json; id: string }
 export interface Directive {
   kind: 'reply' | 'proactive' | 'private';
   teamName: string;
@@ -53,7 +53,7 @@ function requestedTool(names: string[], suffix: string) {
   assert.equal(matches.length, 1, `Expected one real requested ${suffix} tool; got ${matches}`);
   return matches[0]!;
 }
-export async function startGroupChatModelServer(receiptPath: string) {
+export async function startGroupChatModelServer(receiptPath: string, override?: (body: Json) => Decision | undefined) {
   const receipts: ModelReceipt[] = [];
   const stages = new Map<string, { stage: number; last: Decision }>();
   const errors: string[] = [];
@@ -200,7 +200,7 @@ export async function startGroupChatModelServer(receiptPath: string) {
       }
       const body = JSON.parse(Buffer.concat(chunks).toString()) as Json;
       failedRequest = JSON.parse(JSON.stringify(body).replaceAll('synthetic-owned-key', '[synthetic-key-redacted]')) as Json;
-      const decision = decide(body);
+      const decision = override?.(body) ?? decide(body);
       // No headers, keys or sessions are read. Payload belongs to this synthetic HOME only.
       const redacted = JSON.parse(JSON.stringify(body).replaceAll('synthetic-owned-key', '[synthetic-key-redacted]')) as Json;
       const receipt = { at: new Date().toISOString(), route: request.url!, request: redacted, decision };
