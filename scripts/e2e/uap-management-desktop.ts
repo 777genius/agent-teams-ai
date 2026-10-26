@@ -18,6 +18,7 @@ import { promisify } from 'node:util';
 import { CdpClient } from './comment-notification/cdp.mjs';
 import { startGroupChatModelServer } from './group-chat-model-server';
 import { startActiveRunProof } from './uap-management-active-run';
+import { captureOwnedUapProcessMetadata } from './uap-management-failure-process';
 import { postWithReboundHost } from './uap-management-http';
 import { openCodeMcpServer } from './uap-management-native';
 import { createNativeToolProof, toolArchivePath, toolPluginName } from './uap-management-tool-use';
@@ -108,9 +109,10 @@ async function fixture() {
     'SDK and native engine must have the same reviewed source pin'
   );
   assert.equal(engine.engineVersion, sdk.engineVersion);
+  const engineExecutable = await realpath(path.join(repo, 'resources/uap', engine.executable));
   for (const [file, digest] of [
     [path.join(repo, 'vendor/uap/sdk', sdk.file), sdk.sha256],
-    [path.join(repo, 'resources/uap', engine.executable), engine.sha256],
+    [engineExecutable, engine.sha256],
   ]) {
     assert.equal(
       createHash('sha256')
@@ -257,6 +259,8 @@ async function fixture() {
     shots,
     env,
     native,
+    claude,
+    engineExecutable,
     httpPort,
     source: `https://127.0.0.1:${address.port}/publisher`,
     requests,
@@ -959,6 +963,16 @@ async function exercise(f: Awaited<ReturnType<typeof fixture>>) {
     wait,
     evidence,
     pluginSource: `${new URL(f.source).origin}${toolArchivePath}#sha256=${toolProof!.sha256}`,
+    async captureProcessMetadata() {
+      if (!app?.pid || app.exitCode !== null)
+        return { status: 'unavailable', code: 'OWNED_LAUNCHER_NOT_RUNNING' };
+      return captureOwnedUapProcessMetadata({
+        ownedLauncherPid: app.pid,
+        expectedEngineExecutable: f.engineExecutable,
+        expectedHome: f.home,
+        expectedStateRoot: f.env.AGENTPLUGINS_HOME!,
+      });
+    },
     advancePublisher: () => {
       version = 3;
     },

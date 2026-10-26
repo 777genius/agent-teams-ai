@@ -193,6 +193,19 @@ receipt requires all assertions and no unexpected renderer exceptions. An early
 failure preserves its screenshot and error; an exploratory screenshot alone is
 not a completed end-to-end result.
 
+If an active-profile fixture Apply reaches a non-success terminal state, its
+receipt also retains the ordinary environment/readiness response and a bounded
+read-only listing from the supplied Claude artifact. A failed diagnostic cannot
+replace the original assertion. The operation's `mutated` bit can include only
+desired manifest/lock publication, and its destination can be a planned path;
+those fields alone are not native delivery evidence. The independent supplied
+CLI listing is labeled separately from Management's selected executable.
+The same failure record may include bounded metadata from proven-owned processes
+running the pinned Go executable: environment byte lengths/counts and kernel task
+interface availability. Process ancestry and identity are checked around each
+inspection; environment values and command arguments are not retained. Unavailable
+or timed-out diagnostics leave the original failure intact.
+
 The local isolated state validates the shared-state behavior within that fixture.
 Default external-CLI ownership interoperability is a separate actual CLI test.
 The standalone HTTP viewer has no runtime owner and deliberately refuses mutation;

@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v18; active-run fixture discovery corrected and Claude managed-copy regression fixed, awaiting fresh desktop qualification.
+Status: implementation plan v19; current-source Full/bootstrap/security checks pass, while the initial managed Claude installation needs retained failure diagnostics before S27 can run.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -12,7 +12,57 @@ real Electron end-to-end verification, early draft PRs, immediate push of every
 commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
-## Current checkpoint — v18 (2026-10-26)
+## Current checkpoint — v19 (2026-10-26)
+
+App `81ef6678748e134150dd76fcd3cf3806ba858132` incorporates main
+`5a111a4aca356469b8e86d0950c4033227b2951a`. Its
+[Full qualification 40334877379](https://github.com/777genius/agent-teams-ai/actions/runs/40334877379),
+[four-platform bootstrap 40334877323](https://github.com/777genius/agent-teams-ai/actions/runs/40334877323)
+and [App CodeQL 40334877168](https://github.com/777genius/agent-teams-ai/actions/runs/40334877168)
+passed; the findings aggregate reports no new alerts. The package matrix was
+still running without a reported failure at this checkpoint.
+
+The [Electron attempt 40334877180](https://github.com/777genius/agent-teams-ai/actions/runs/40334877180)
+advanced beyond native-client availability but stopped at the initial managed
+Claude Skill operation: `partial` / `incomplete`. It did not create a team.
+The [failed artifact 12657117191](https://github.com/777genius/agent-teams-ai/actions/runs/40334877180/artifacts/12657117191)
+records clean synthetic source `6c908644c6fd6a65b6611c66bbbe4a8cad6165a1` and the
+matched UAP e84 pin; ZIP SHA-256 is
+`c994b21e9e79596fed00487e78a1d8d58aff1c9d8ea8ead680b55809262cb28f`.
+
+The result's `mutated: true` includes publication of desired manifest/lock state;
+its destination is a retained planned path. Neither proves native materialization
+or activation. That artifact retained only the bounded public operation error,
+so it cannot identify the underlying native phase or cause.
+
+The harness now retains ordinary environment/readiness inspection on a failed
+terminal Apply, plus a bounded read-only `plugin list --json` from the supplied
+verified Claude artifact in the isolated fixture profile. This probe is explicitly
+not evidence of Management's selected executable. Secondary inspection failures
+are retained without replacing the strict `succeeded` assertion; no operation is
+retried and no production policy is changed.
+
+Failure-only process metadata additionally requires a live descendant of this
+harness's launcher with the exact pinned Go executable. Stable process/ancestor
+identities are checked before and after bounded reads. The receipt contains only
+allowlisted environment byte lengths/counts, profile-equality booleans and task
+`children` interface availability; it contains no environment values. These facts
+can test actual hosted prerequisites without bypassing the native-command guard.
+The helper was exercised with the real pinned Go server under a disposable owned
+launcher: an oversized synthetic PATH was measured, private marker names/values
+were absent, and wrong-executable/non-owned-launcher controls refused inspection.
+The desktop E2E compiler project, scoped lint/format and independent source/security
+review passed for these test-only diagnostics.
+
+An independent local native-layout control passed with the pinned Claude binary.
+The exact Go binary's ordinary native-command path encountered this local host's
+known missing `/proc/.../children` prerequisite. That separate host limitation is
+not assigned as the hosted CI cause, and its containment guard is unchanged.
+The next hosted receipt must establish the actual failure boundary before any
+product correction is chosen. S27 and complete current-source desktop qualification
+remain pending.
+
+## Previous checkpoint — v18 (2026-10-26)
 
 This continuation reconciles current main
 `5a111a4aca356469b8e86d0950c4033227b2951a`. Upstream independently included the

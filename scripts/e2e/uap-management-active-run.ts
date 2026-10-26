@@ -1,8 +1,12 @@
 // Actual app team/admission proof. Only the model HTTP boundary is scripted.
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { lstat, mkdir, readFile, readdir, readlink, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { promisify } from 'node:util';
+
+import { boundedDiagnosticString } from '../../src/shared/utils/diagnosticsRedaction';
 
 import type {
   ExtensionContext,
@@ -23,6 +27,7 @@ import type { DesktopCdp, UiWait } from './uap-management-ui';
 
 const refusal = 'Stop the active run using this agent profile before changing its extensions.';
 const sha = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
+const run = promisify(execFile);
 
 // Fixed source and protocol argument values, including every request and identifier.
 const RENDERER = `async function(operation, data) {
@@ -123,8 +128,10 @@ interface Fixture {
   env: NodeJS.ProcessEnv;
   source: string;
   pluginSource: string;
+  claude: string;
   cdp: DesktopCdp;
   wait: UiWait;
+  captureProcessMetadata(): Promise<Record<string, unknown>>;
   advancePublisher(): void;
   assertUiRefusal(): Promise<void>;
   evidence: Record<string, unknown>;
@@ -151,6 +158,91 @@ export async function startActiveRunProof(f: Fixture) {
   const prepare = (change: ManagementChange) =>
     managed<ManagementPlan>(cdp, 'prepare', { contextId, change });
   const environment = () => managed<ManagementEnvironment>(cdp, 'environment', { contextId });
+  const captureApplyFailure = async (operation: ManagementOperation) => {
+    const diagnostic: Record<string, unknown> = { operation };
+    f.evidence.activeProfileFailureDiagnostics = diagnostic;
+    let processTimer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      diagnostic.ownedEngineProcesses = await Promise.race([
+        f.captureProcessMetadata(),
+        new Promise<Record<string, unknown>>((resolve) => {
+          processTimer = setTimeout(
+            () => resolve({ status: 'unavailable', code: 'PROCESS_METADATA_TIMEOUT' }),
+            15_000
+          );
+        }),
+      ]);
+    } catch {
+      diagnostic.ownedEngineProcesses = {
+        status: 'unavailable',
+        code: 'PROCESS_METADATA_CAPTURE_FAILED',
+      };
+    } finally {
+      if (processTimer) clearTimeout(processTimer);
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      diagnostic.environment = await Promise.race([
+        environment(),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error('Public environment inspection timed out')),
+            15_000
+          );
+        }),
+      ]);
+    } catch (error) {
+      diagnostic.environmentError = boundedDiagnosticString(String(error), 2048);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+    const probeFlags = {
+      DISABLE_AUTOUPDATER: '1',
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
+    };
+    const native: Record<string, unknown> = {
+      identity: 'SUPPLIED_ARTIFACT_NOT_MANAGEMENT_SELECTED_EXECUTABLE',
+      suppliedExecutable: f.claude,
+      args: ['plugin', 'list', '--json'],
+      cwd: f.env.HOME,
+      home: f.env.HOME,
+      claudeConfigDir: f.env.CLAUDE_CONFIG_DIR,
+      envFlags: probeFlags,
+      timeoutMs: 15_000,
+      maxBufferBytes: 128 * 1024,
+    };
+    diagnostic.nativeListing = native;
+    try {
+      assert(
+        f.env.HOME && path.resolve(f.env.HOME) === path.join(f.root, 'home'),
+        'Native diagnostic cwd must be the owned fixture HOME'
+      );
+      const result = await run(f.claude, ['plugin', 'list', '--json'], {
+        cwd: f.env.HOME,
+        env: { ...f.env, ...probeFlags },
+        timeout: 15_000,
+        killSignal: 'SIGKILL',
+        maxBuffer: 128 * 1024,
+        encoding: 'utf8',
+      });
+      native.exitCode = 0;
+      native.stdout = boundedDiagnosticString(result.stdout, 32_768);
+      native.stderr = boundedDiagnosticString(result.stderr, 32_768);
+    } catch (error) {
+      const failure = error as NodeJS.ErrnoException & {
+        stdout?: string;
+        stderr?: string;
+        signal?: string;
+        killed?: boolean;
+      };
+      native.error = boundedDiagnosticString(String(error), 2048);
+      native.code = failure.code;
+      native.signal = failure.signal;
+      native.killed = failure.killed;
+      native.stdout = boundedDiagnosticString(failure.stdout, 32_768);
+      native.stderr = boundedDiagnosticString(failure.stderr, 32_768);
+    }
+  };
   const apply = async (plan: ManagementPlan) => {
     assert(plan.confirmable && plan.actions.length, JSON.stringify(plan));
     let operation = await managed<ManagementOperation>(cdp, 'apply', {
@@ -169,6 +261,7 @@ export async function startActiveRunProof(f: Fixture) {
       `active-profile fixture ${plan.action}`,
       120_000
     );
+    if (operation.state !== 'succeeded') await captureApplyFailure(operation);
     assert.equal(operation.state, 'succeeded', JSON.stringify(operation));
     assert.equal(operation.result?.mutated, true, 'Positive control must have actual effects');
     return operation;
