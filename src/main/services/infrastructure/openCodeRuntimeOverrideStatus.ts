@@ -1,6 +1,7 @@
 import { classifyNativeVersion } from '@features/opencode-compatibility';
 import { resolveExistingOpenCodeRuntimeBinaryEnvPath } from '@main/services/runtime/openCodeBridgeRuntimeEnv';
 import {
+  isOpenCodeConsoleWrapperBinaryPath,
   type OpenCodeBinaryOverride,
   readOpenCodeBinaryOverride,
   resolveOpenCodeV2NpmWrapperBinary,
@@ -97,4 +98,18 @@ export async function resolveOpenCodeStatusWithOverride(
   const overrideStatus = await resolveOpenCodeOverrideStatus(override, env, probeVersion);
   if (overrideStatus.kind === 'selected') return overrideStatus.status;
   return { ...(await readDefaultStatus()), ignoredOverride: overrideStatus.ignoredOverride };
+}
+
+/** A generation hint must describe the verified candidate, never our console wrapper. */
+export function matchesOpenCodeRuntimeGeneration(
+  binaryPath: string,
+  version: string | null,
+  generation?: 'v1' | 'v2'
+): boolean {
+  const classified = version ? classifyNativeVersion(version) : null;
+  return (
+    classified?.kind === 'recognized' &&
+    (!generation || classified.generation === generation) &&
+    (generation !== 'v2' || !isOpenCodeConsoleWrapperBinaryPath(binaryPath))
+  );
 }

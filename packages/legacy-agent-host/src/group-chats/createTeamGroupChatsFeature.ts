@@ -33,7 +33,7 @@ export interface GroupChatRun {
   protocolVersion: 1;
   groupReactionProtocolVersion?: 1;
   provider: 'native' | 'lead' | 'opencode' | 'host';
-  /** Request-scoped currency check for an admitted live bridge owner. */
+  /** Local-only currency check for an admitted live owner; never launches a provider. */
   isCurrent?: () => Promise<boolean>;
 }
 
@@ -103,10 +103,51 @@ function findGroup(groups: GroupChat[], id: string): GroupChat {
   return group;
 }
 
+function resolveSendGroup(groups: GroupChat[], groupChatId: string, from: string) {
+  const existing = groups.find((group) => group.id === groupChatId);
+  const isDefault = groupChatId === DEFAULT_TEAM_GROUP_CHAT_ID;
+  if (
+    isDefault &&
+    existing &&
+    (existing.name !== DEFAULT_TEAM_GROUP_CHAT_NAME ||
+      existing.archivedAt !== null ||
+      existing.membership.kind !== 'auto' ||
+      existing.membership.excludedMemberNames.length)
+  )
+    throw new GroupChatError('reserved-group', 'Invalid standard group destination');
+  const group =
+    !existing && isDefault && from === 'user'
+      ? {
+          id: DEFAULT_TEAM_GROUP_CHAT_ID,
+          name: DEFAULT_TEAM_GROUP_CHAT_NAME,
+          createdAt: new Date().toISOString(),
+          archivedAt: null,
+          membership: { kind: 'auto' as const, excludedMemberNames: [] },
+        }
+      : findGroup(groups, groupChatId);
+  return { existing, group };
+}
+
 export function createTeamGroupChatsFeature(
   ports: TeamGroupChatsPorts,
   storage: GroupChatStorage
 ): TeamGroupChatsFeature {
+  const catalogCurrency = new Map<string, () => Promise<boolean>>();
+  async function catalogAvailable(teamName: string, memberName: string): Promise<boolean> {
+    const key = JSON.stringify([teamName, memberName]);
+    const check = catalogCurrency.get(key);
+    if (check && (await check().catch(() => false))) return true;
+    catalogCurrency.delete(key);
+    const run = await ports.getRun(teamName, memberName);
+    if (run?.protocolVersion !== 1) return false;
+    // Display-only reuse: fresh send admission below never reads this map.
+    // isCurrent checks the live owner/session/lane/manifest without a CLI process.
+    if (run.provider === 'opencode' && run.isCurrent) {
+      if (catalogCurrency.size >= 256) catalogCurrency.delete(catalogCurrency.keys().next().value!);
+      catalogCurrency.set(key, run.isCurrent);
+    }
+    return true;
+  }
   async function project(
     teamName: string,
     group: GroupChat,
@@ -124,14 +165,15 @@ export function createTeamGroupChatsFeature(
     let availableRecipientNames: string[] = [];
     if (!reason) {
       const runs = await Promise.all(
-        memberNames.map(async (name) => ({ name, run: await ports.getRun(teamName, name) }))
+        memberNames.map(async (name) => ({
+          name,
+          available: await catalogAvailable(teamName, name),
+        }))
       );
       availableRecipientNames = runs
-        .filter(({ name, run }) => name !== from && run?.protocolVersion === 1)
+        .filter(({ name, available }) => name !== from && available)
         .map(({ name }) => name);
-      const unavailable = runs
-        .filter(({ run }) => !run || run.protocolVersion !== 1)
-        .map(({ name }) => name);
+      const unavailable = runs.filter(({ available }) => !available).map(({ name }) => name);
       if (unavailable.length) reason = `recipient-unavailable: ${unavailable.join(', ')}`;
     }
     return {
@@ -232,30 +274,53 @@ export function createTeamGroupChatsFeature(
               );
             return result(prior);
           }
+          const preparedGroup = await storage.withRegistry(request.teamName, async (groups) =>
+            structuredClone(resolveSendGroup(groups, request.groupChatId, from).group)
+          );
+          const preparedMembers = effectiveGroupMembers(
+            preparedGroup,
+            await ports.roster(request.teamName)
+          );
+          if (preparedGroup.archivedAt) throw new GroupChatError('archived', 'Chat is archived');
+          if (preparedMembers.length < 2)
+            throw new GroupChatError('minimum-members', 'Chat requires two current agents');
+          if (from !== 'user' && !preparedMembers.includes(from))
+            throw new GroupChatError('not-member', 'Sender is not a chat member');
+          const preparedRecipients = groupSendRecipients(
+            preparedMembers,
+            from,
+            request.recipientName
+          );
+          const requiredRuns = from === 'user' ? preparedRecipients : preparedMembers;
           const runs = new Map<string, GroupChatRun>();
+          // Never hold configuration/registry locks while waiting for a provider.
+          // Bound probes even for a large group; concurrent catalog calls share the pending handshake.
+          let nextRun = 0;
+          let admissionFailed = false;
+          const admissions = await Promise.allSettled(
+            Array.from({ length: Math.min(4, requiredRuns.length) }, async () => {
+              while (!admissionFailed && nextRun < requiredRuns.length) {
+                const memberName = requiredRuns[nextRun++]!;
+                try {
+                  const run = await ports.getRun(request.teamName, memberName);
+                  if (!run || run.protocolVersion !== 1)
+                    throw new GroupChatError(
+                      'recipient-unavailable',
+                      `Start a compatible runtime for ${memberName}`
+                    );
+                  runs.set(memberName, run);
+                } catch (error) {
+                  admissionFailed = true;
+                  throw error;
+                }
+              }
+            })
+          );
+          const failure = admissions.find((admission) => admission.status === 'rejected');
+          if (failure?.status === 'rejected') throw failure.reason;
           const canonical = await ports.configurationOperation(request.teamName, () =>
             storage.withRegistry(request.teamName, async (groups, save) => {
-              const existing = groups.find((group) => group.id === request.groupChatId);
-              const isDefault = request.groupChatId === DEFAULT_TEAM_GROUP_CHAT_ID;
-              if (
-                isDefault &&
-                existing &&
-                (existing.name !== DEFAULT_TEAM_GROUP_CHAT_NAME ||
-                  existing.archivedAt !== null ||
-                  existing.membership.kind !== 'auto' ||
-                  existing.membership.excludedMemberNames.length)
-              )
-                throw new GroupChatError('reserved-group', 'Invalid standard group destination');
-              const group =
-                !existing && isDefault && from === 'user'
-                  ? {
-                      id: DEFAULT_TEAM_GROUP_CHAT_ID,
-                      name: DEFAULT_TEAM_GROUP_CHAT_NAME,
-                      createdAt: new Date().toISOString(),
-                      archivedAt: null,
-                      membership: { kind: 'auto' as const, excludedMemberNames: [] },
-                    }
-                  : findGroup(groups, request.groupChatId);
+              const { existing, group } = resolveSendGroup(groups, request.groupChatId, from);
               const roster = await ports.roster(request.teamName);
               const members = effectiveGroupMembers(group, roster);
               if (group.archivedAt) throw new GroupChatError('archived', 'Chat is archived');
@@ -264,16 +329,27 @@ export function createTeamGroupChatsFeature(
               if (from !== 'user' && !members.includes(from))
                 throw new GroupChatError('not-member', 'Sender is not a chat member');
               const recipients = groupSendRecipients(members, from, request.recipientName);
-              // A directed post must not probe or wake unrelated group members.
-              const requiredRuns = from === 'user' ? recipients : members;
+              if (
+                !isDeepStrictEqual(members, preparedMembers) ||
+                !isDeepStrictEqual(recipients, preparedRecipients) ||
+                !isDeepStrictEqual(group.membership, preparedGroup.membership)
+              )
+                throw new GroupChatError(
+                  'recipient-unavailable',
+                  'Group membership changed during admission; retry the same message'
+                );
               for (const memberName of requiredRuns) {
-                const run = await ports.getRun(request.teamName, memberName);
-                if (!run || run.protocolVersion !== 1)
+                const run = runs.get(memberName)!;
+                const current = run.isCurrent
+                  ? await run.isCurrent()
+                  : run.provider === 'opencode' || run.provider === 'host'
+                    ? false
+                    : (await ports.getRun(request.teamName, memberName))?.runKey === run.runKey;
+                if (!current)
                   throw new GroupChatError(
                     'recipient-unavailable',
-                    `Start a compatible runtime for ${memberName}`
+                    `Runtime changed for ${memberName}`
                   );
-                runs.set(memberName, run);
               }
               if (request.relayOfMessageId) {
                 if (from === 'user')
@@ -331,9 +407,11 @@ export function createTeamGroupChatsFeature(
               const run = runs.get(memberName)!;
               const shouldStillWrite = async () =>
                 (await ports.roster(request.teamName)).includes(memberName) &&
-                (run.provider === 'opencode' || run.provider === 'host'
-                  ? (await run.isCurrent?.()) === true
-                  : (await ports.getRun(request.teamName, memberName))?.runKey === run.runKey);
+                (run.isCurrent
+                  ? await run.isCurrent()
+                  : run.provider === 'opencode' || run.provider === 'host'
+                    ? false
+                    : (await ports.getRun(request.teamName, memberName))?.runKey === run.runKey);
               try {
                 if (!(await shouldStillWrite()))
                   return {
@@ -348,12 +426,7 @@ export function createTeamGroupChatsFeature(
                   to: memberName,
                   groupRunKey: run.runKey,
                 };
-                const status = await ports.deliver(
-                  request.teamName,
-                  physical,
-                  run,
-                  shouldStillWrite
-                );
+                const status = await ports.deliver(request.teamName, physical, run, shouldStillWrite);
                 return { memberName, physicalMessageId, status };
               } catch (error) {
                 return {

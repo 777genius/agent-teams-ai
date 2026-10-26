@@ -129,24 +129,30 @@ export function createGroupReactions(ports: TeamGroupChatsPorts, storage: GroupC
           'invalid-input',
           'Agent reaction requires a physical inbound and configured sender'
         );
+      await withGroup(request.teamName, request.groupChatId, async (group) => {
+        if (
+          !effectiveGroupMembers(group, await ports.roster(request.teamName)).includes(request.from)
+        )
+          throw new GroupChatError('not-member', 'Sender is not a current chat member');
+      });
+      // Admission probes stay outside every inbox lock and concern only this actor.
+      const run = await ports.getRun(request.teamName, request.from);
+      if (
+        !run ||
+        run.protocolVersion !== 1 ||
+        run.groupReactionProtocolVersion !== 1 ||
+        !run.runKey ||
+        run.runKey.length > 500
+      )
+        throw new GroupChatError(
+          'reaction-unsupported',
+          'Current runtime does not support group acknowledgements'
+        );
       let visibleChange = false;
       const result = await withGroup(request.teamName, request.groupChatId, async (group) => {
         const members = effectiveGroupMembers(group, await ports.roster(request.teamName));
         if (!members.includes(request.from))
           throw new GroupChatError('not-member', 'Sender is not a current chat member');
-        // Admission probes stay outside every inbox lock and concern only this actor.
-        const run = await ports.getRun(request.teamName, request.from);
-        if (
-          !run ||
-          run.protocolVersion !== 1 ||
-          run.groupReactionProtocolVersion !== 1 ||
-          !run.runKey ||
-          run.runKey.length > 500
-        )
-          throw new GroupChatError(
-            'reaction-unsupported',
-            'Current runtime does not support group acknowledgements'
-          );
         const physicals = await storage.withInbox(request.teamName, request.from, async (rows) =>
           rows.filter(
             (row) =>
@@ -171,14 +177,15 @@ export function createGroupReactions(ports: TeamGroupChatsPorts, storage: GroupC
         };
         await canonical(target);
         const currentRun =
-          run.provider === 'opencode' || run.provider === 'host'
+          run.isCurrent || run.provider === 'opencode' || run.provider === 'host'
             ? run
             : await ports.getRun(request.teamName, request.from);
         const current =
           currentRun?.runKey === run.runKey &&
           currentRun.groupReactionProtocolVersion === 1 &&
-          ((run.provider !== 'opencode' && run.provider !== 'host') ||
-            (await run.isCurrent?.()) === true);
+          (run.isCurrent
+            ? await run.isCurrent()
+            : run.provider !== 'opencode' && run.provider !== 'host');
         if (!current) throw new GroupChatError('reaction-unsupported', 'Reaction runtime changed');
         return storage.withReactions(request.teamName, async (entries, save) => {
           let entry = entries.find(

@@ -1108,3 +1108,23 @@ it('FULL failure proof keeps closed inbox facts without message text or paths', 
     await rm(root, { recursive: true, force: true });
   }
 });
+
+it('held TEST command identity accepts slash direction only, preserving case and absolute path', async () => {
+  const source = await readFile('scripts/e2e/opencode-native-windows-full.ts', 'utf8');
+  const ast = ts.createSourceFile('full.ts', source, ts.ScriptTarget.Latest, true);
+  const declaration = ast.statements.filter(ts.isFunctionDeclaration)
+    .find(node => node.name?.text === 'heldProgramInCommand')!;
+  const compiled = ts.transpileModule(declaration.getText(ast), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+  }).outputText;
+  const matches = compileFunction(`${compiled}\nreturn heldProgramInCommand;`, [])() as
+    (command: string, program: string) => boolean;
+  const program = ['D:', 'TEST-project', 'held-initial.cjs'].join(String.fromCharCode(92));
+  expect(matches('D:/TEST-project/TEST-node-runtime/node.exe D:/TEST-project/held-initial.cjs', program)).toBe(true);
+  expect(matches('D:/TEST-project/TEST-node-runtime/node.exe "D:/TEST-project/held-initial.cjs"', program)).toBe(true);
+  expect(matches(`node.exe "${program}"`, 'D:/TEST-project/held-initial.cjs')).toBe(true);
+  expect(matches('node.exe D:/TEST-project/Held-initial.cjs', program)).toBe(false);
+  expect(matches('node.exe d:/test-project/held-initial.cjs', program)).toBe(false);
+  expect(matches('node.exe D:/OTHER-project/held-initial.cjs', program)).toBe(false);
+  expect(matches('node.exe held-initial.cjs', program)).toBe(false);
+});

@@ -10,11 +10,22 @@ Only stable V1 >=1.16.0 and <2 can enter the existing capability evaluation.
 V2 follows the pinned runtime's contract (`runtime.lock.json` `opencodeV2`, copied
 from the runtime release manifest): any exact stable release in its range is
 recognized with dialect `v2-<version>`, and `productionEligible` is true only for
-versions listed in its qualification records for this platform. `openCodeV2Contract.ts`
+versions listed in its qualification records for this platform. A runtime that
+explicitly advertises `cliVersionPolicy: stable-v2-qualified-engine` may instead
+serve any stable in-range native V2 through a platform-qualified engine. Exact
+qualified native versions retain their engine; other stable V2 versions use the
+highest qualified engine. Native `version` remains actual CLI identity while
+`apiDialect` names that engine. Flexible engine selection requires the exact native
+platform/architecture, provided to sandboxed renderers by preload; UA-family hints
+alone cannot select an engine. Contracts without the flag stay exact-version
+strict, and unknown policy values are rejected. `openCodeV2Contract.ts`
 is the only policy over that contract (import-free, so Node-run proof and CI scripts
 load it too); `pinnedOpenCodeV2Contract.ts` binds it to the lock file and the current
 platform. Nothing here lists V2 versions, and a peer's readiness claim never
-qualifies a version. Recognition feeds native
+qualifies a version. A pinned runtime released without OpenCode V2 qualifies no
+version on any platform; then a V2 binary is still recognized (so its status can
+say why) but not served (`isOpenCodeVersionServedByRuntime`), and the provider
+quick connect treats it like an unsupported runtime. Recognition feeds native
 discovery (which prefers a qualified binary on PATH) and provider setup; it does not
 grant launch capabilities.
 No SDK, runtime, permission writer, native CAS, or transport

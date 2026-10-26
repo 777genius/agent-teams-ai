@@ -12,11 +12,16 @@ concurrency:
   group: macos-signing-${{ github.ref }}
   cancel-in-progress: false
 
+defaults:
+  run:
+    shell: bash
+
 permissions:
   contents: read
 
 env:
   IS_RELEASE_BUILD: 'false'
+  CI_TIMEOUT_BUFFER_MINUTES: 15
 
 jobs:
   signing-custody:
@@ -39,9 +44,7 @@ jobs:
     needs: signing-custody
     if: ${{ github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && github.ref == 'refs/heads/release/macos-signing' }}
     environment: macos-signing
-    # Same budgets as the Release workflow. The GitHub-hosted ARM fallback gets
-    # the longer budget too because it is slower than the configured ARM runner.
-    timeout-minutes: ${{ matrix.timeout_minutes }}
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -50,12 +53,10 @@ jobs:
             runner: ${{ inputs.use_github_runner && 'macos-15' || vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15' }}
             dist_command: pnpm pack:mac:arm64
             bundle: release/mac-arm64/Agent Teams AI.app
-            timeout_minutes: ${{ inputs.use_github_runner && 180 || 90 }}
           - arch: x64
             runner: macos-15-intel
             dist_command: pnpm pack:mac:x64
             bundle: release/mac/Agent Teams AI.app
-            timeout_minutes: 180
     runs-on: ${{ matrix.runner }}
 
     steps:
@@ -89,6 +90,7 @@ jobs:
           done
 
       - name: Install dependencies
+        timeout-minutes: 15
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
 
       - name: Verify active signing preflight
@@ -129,6 +131,7 @@ jobs:
         run: node ./scripts/ci/verify-posthog-release.cjs prebuild
 
       - name: Build app (macOS ${{ matrix.arch }})
+        timeout-minutes: 30
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
           SENTRY_DSN: ${{ github.event_name == 'workflow_dispatch' && secrets.SENTRY_DSN || '' }}
@@ -199,22 +202,26 @@ jobs:
           PYTHON
 
       - name: Package (macOS ${{ matrix.arch }})
+        timeout-minutes: 45
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: ${{ matrix.dist_command }} --publish never
 
       - name: Verify signed and notarized bundle (macOS ${{ matrix.arch }})
+        timeout-minutes: 10
         run: bash scripts/ci/verify-macos-signing.sh "${{ matrix.bundle }}" --notarized
 
       - name: Validate packaged bundle (macOS ${{ matrix.arch }})
+        timeout-minutes: 10
         run: node ./scripts/electron-builder/verifyBundle.cjs "${{ matrix.bundle }}" darwin ${{ matrix.arch }}
 
       - name: Smoke packaged app (macOS ${{ matrix.arch }})
+        timeout-minutes: 5
         run: node ./scripts/electron-builder/smokePackagedApp.cjs "${{ matrix.bundle }}" darwin
 
       - name: Verify transported macOS apps

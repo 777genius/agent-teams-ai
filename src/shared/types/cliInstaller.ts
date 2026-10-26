@@ -1,3 +1,5 @@
+import type { OpenCodeRuntimeInstallOptions } from '@features/opencode-runtime-installer/contracts';
+export type { OpenCodeRuntimeInstallOptions } from '@features/opencode-runtime-installer/contracts';
 /**
  * CLI Installer types — shared between main, preload, and renderer processes.
  *
@@ -480,6 +482,8 @@ export interface OpenCodeRuntimeInstallProgress {
 }
 
 export interface OpenCodeRuntimeStatus {
+  /** Exact newest V2 qualified by the pinned runtime for this native platform. */
+  compatibleV2Version?: string | null;
   installed: boolean;
   binaryPath?: string;
   version?: string;
@@ -495,8 +499,11 @@ export interface OpenCodeRuntimeStatus {
 }
 
 export interface OpenCodeRuntimeAPI {
+  /** Native target supplied by preload; optional only for older API/test adapters. */
+  readonly platform?: string;
+  readonly arch?: string;
   getStatus: () => Promise<OpenCodeRuntimeStatus>;
-  install: () => Promise<OpenCodeRuntimeStatus>;
+  install: (options?: OpenCodeRuntimeInstallOptions) => Promise<OpenCodeRuntimeStatus>;
   invalidateStatus: () => Promise<void>;
   onProgress: (cb: (event: unknown, data: OpenCodeRuntimeStatus) => void) => () => void;
 }

@@ -164,7 +164,14 @@ export async function buildProviderAwareCliEnv(
       delete env[OPENCODE_RUNTIME_BINARY_PATH_ENV];
       delete env[OPENCODE_LEGACY_BINARY_PATH_ENV];
     }
-    applyOpenCodeRuntimeBinaryEnv(env, openCodeBinary);
+    const verifiedNativeV2BinaryPath =
+      process.platform === 'win32' &&
+      resolvedProviderId === 'opencode' &&
+      openCodeBinary &&
+      (await isSupportedOpenCodeRuntimeBinaryPath(openCodeBinary, 'v2'))
+        ? openCodeBinary
+        : undefined;
+    applyOpenCodeRuntimeBinaryEnv(env, openCodeBinary, { verifiedNativeV2BinaryPath });
   }
   const appManagedCodexBinary = await resolveVerifiedAppManagedCodexRuntimeBinaryPath();
   if (

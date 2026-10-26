@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
@@ -611,6 +611,55 @@ export async function runProbe(
   }
 }
 
+/**
+ * A runtime released without OpenCode V2 ships only its compiled front door, which answers
+ * every command itself; its pinned contract must then qualify no V2 version.
+ */
+export function smokeRuntimeWithoutOpenCodeV2(input: {
+  runtime: string;
+  frontdoor: { path: string; sha256: string };
+  cliVersion: string;
+  opencodeV2: { qualified?: Record<string, unknown> } | undefined;
+}) {
+  const qualified = Object.values(input.opencodeV2?.qualified ?? {});
+  assert(
+    qualified.length > 0 &&
+      qualified.every((versions) => Array.isArray(versions) && versions.length === 0),
+    'A runtime without OpenCode V2 delivery must not be pinned with qualified V2 versions'
+  );
+  for (const relative of ['local-cli', 'bun'])
+    assert(
+      !fs.existsSync(path.join(input.runtime, relative)),
+      `Unexpected V2 delivery: ${relative}`
+    );
+  const project = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-runtime-TEST-')));
+  try {
+    const env = runtimeEnvironment(process.env, project);
+    const run = (args: string[]) =>
+      spawnSync(input.frontdoor.path, args, {
+        cwd: project,
+        env,
+        encoding: 'utf8',
+        timeout: 60_000,
+        maxBuffer: 4_194_304,
+        windowsHide: true,
+      });
+    const version = run(['--version']);
+    assert.equal(version.status, 0, `Front door --version failed: ${version.stderr}`);
+    assert.equal(version.stdout.trim().split(/\s+/)[0], input.cliVersion);
+    const status = run(['runtime', 'status', '--provider', 'opencode', '--json']);
+    assert.equal(status.status, 0, `Front door runtime status failed: ${status.stderr}`);
+    const payload = JSON.parse(status.stdout) as { schemaVersion?: unknown; providers?: object };
+    assert(
+      payload.schemaVersion === 2 && payload.providers && 'opencode' in payload.providers,
+      'Front door did not answer runtime status'
+    );
+    return { cliVersion: input.cliVersion, runtimeStatus: 'served by the front door' };
+  } finally {
+    fs.rmSync(project, { recursive: true, force: true });
+  }
+}
+
 export async function smokePackagedRuntime(bundle: string, platform: string) {
   assert.equal(platform, process.platform, 'Packaged runtime smoke must use the actual target OS');
   const runtime = containedDirectory(
@@ -624,7 +673,9 @@ export async function smokePackagedRuntime(bundle: string, platform: string) {
   const staged = containedDirectory(repoRoot, path.join(repoRoot, 'resources/runtime'));
   const lock = JSON.parse(fs.readFileSync(path.join(repoRoot, 'runtime.lock.json'), 'utf8')) as {
     version: string;
+    cliVersion: string;
     assets: Record<string, { sha256: string; binaryName: string }>;
+    opencodeV2?: { qualified?: Record<string, unknown> };
   };
   const asset = lock.assets[`${process.platform}-${process.arch}`];
   assert(asset && /^[a-f0-9]{64}$/.test(asset.sha256), 'Missing immutable runtime archive pin');
@@ -637,6 +688,18 @@ export async function smokePackagedRuntime(bundle: string, platform: string) {
     .trim();
   assert.match(sourceCommit, /^[a-f0-9]{40}$/);
   const frontdoor = stagedFile(runtime, staged, asset.binaryName);
+  if (!fs.existsSync(path.join(runtime, 'opencode-delivery.json'))) {
+    const evidence = smokeRuntimeWithoutOpenCodeV2({
+      runtime,
+      frontdoor,
+      cliVersion: lock.cliVersion,
+      opencodeV2: lock.opencodeV2,
+    });
+    console.log(
+      `[smokePackagedRuntime] OK ${platform}: ${JSON.stringify({ runtimeVersion: lock.version, archiveSha256: asset.sha256, sourceCommit, frontdoor, openCodeV2: 'not shipped', evidence })}`
+    );
+    return;
+  }
   const executable = stagedFile(
     runtime,
     staged,

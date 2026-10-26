@@ -909,6 +909,12 @@ async function inboxFacts(claudeRoot: string, teamName: string, member: string) 
   }
 }
 
+// The supplied Windows command uses forward slashes. Normalize only separator
+// direction here; case, absolute path, nonce, executable and birth checks stay exact.
+function heldProgramInCommand(observedCommand: string, program: string): boolean {
+  return observedCommand.replaceAll('\\', '/').includes(program.replaceAll('\\', '/'));
+}
+
 async function seedSelectedAuth(file: string, provider: string, directory: string) {
   // Read only the explicitly supplied local file; never emit its content/errors.
   preproofStage = 'auth_directory';
@@ -2232,6 +2238,7 @@ async function main() {
       processFound: boolean;
       nodeImage: boolean;
       programLiteralInCommand: boolean;
+      programSlashInCommand: boolean;
       programCaseSlashInCommand: boolean;
       programNameInCommand: boolean;
     }[],
@@ -2667,6 +2674,7 @@ async function main() {
         processFound: original !== null,
         nodeImage: original !== null && path.basename(original.executable).toLowerCase() === 'node.exe',
         programLiteralInCommand: observedCommand.includes(program),
+        programSlashInCommand: heldProgramInCommand(observedCommand, program),
         programCaseSlashInCommand: diagnosticPathForm(observedCommand).includes(
           diagnosticPathForm(program)
         ),
@@ -2676,7 +2684,7 @@ async function main() {
       assert(
         original &&
           path.basename(original.executable).toLowerCase() === 'node.exe' &&
-          original.command.includes(program),
+          heldProgramInCommand(original.command, program),
         'Held process must be our exact TEST Node program'
       );
       heldProcesses.push(original);
