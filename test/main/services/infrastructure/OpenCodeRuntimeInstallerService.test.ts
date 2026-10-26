@@ -210,27 +210,27 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     }
   );
 
-  it('prefers a qualified binary later on PATH over an unqualified V2 release', async () => {
-    // In the pinned range but qualified on no platform.
-    const unqualified = path.join(tempRoot!, 'TEST-bin-v2');
-    const qualified = path.join(tempRoot!, 'TEST-bin-v1');
-    for (const binDir of [unqualified, qualified]) {
+  it('accepts a future stable V2 on PATH before a later V1 binary', async () => {
+    // User CLI compatibility is independent of the pinned embedded V2 engine.
+    const futureV2 = path.join(tempRoot!, 'TEST-bin-v2');
+    const supportedV1 = path.join(tempRoot!, 'TEST-bin-v1');
+    for (const binDir of [futureV2, supportedV1]) {
       await mkdir(binDir, { recursive: true });
       await writeFile(path.join(binDir, 'opencode'), 'TEST native version probe', { mode: 0o755 });
     }
     execCliMock.mockImplementation(async (command: string) => ({
-      stdout: command.startsWith(unqualified) ? '2.999.0\n' : '1.18.3\n',
+      stdout: command.startsWith(futureV2) ? '2.999.0\n' : '1.18.3\n',
       stderr: '',
     }));
-    process.env.PATH = [unqualified, qualified].join(path.delimiter);
+    process.env.PATH = [futureV2, supportedV1].join(path.delimiter);
     expect(await resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })).toBe(
-      path.join(qualified, 'opencode')
+      path.join(futureV2, 'opencode')
     );
-    // Alone on PATH it is still discovered; launch refuses it with its qualification status.
+    // The same compatible V2 is also discovered when it is the only PATH entry.
     clearOpenCodeRuntimeBinaryResolverCache();
-    process.env.PATH = unqualified;
+    process.env.PATH = futureV2;
     expect(await resolveVerifiedOpenCodeRuntimeBinaryPath({ includeShellEnv: false })).toBe(
-      path.join(unqualified, 'opencode')
+      path.join(futureV2, 'opencode')
     );
   });
 
