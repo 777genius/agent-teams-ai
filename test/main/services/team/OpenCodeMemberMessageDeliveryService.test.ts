@@ -362,7 +362,7 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
   );
 
   it.each([false, true])(
-    'keeps a durable group prebridge marker unknown and never dispatches it again (correction=%s)',
+    'reconciles a durable group prebridge marker without dispatching it again (correction=%s)',
     async (correction) => {
       const record = makeLedgerRecord({
         groupChatId: 'group-a',
@@ -379,11 +379,21 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
           : {}),
       });
       const send = vi.fn();
-      const observe = vi.fn();
+      const observe = vi.fn(async () => ({
+        ok: true,
+        providerId: 'opencode' as const,
+        memberName: 'alice',
+        diagnostics: [],
+      }));
       const ledger = {
         getActiveForMember: vi.fn(async () => record),
         ensurePending: vi.fn(async () => record),
         getByInboxMessage: vi.fn(async () => record),
+        applyObservation: vi.fn(async () => record),
+        markNextAttemptDeferred: vi.fn(async ({ nextAttemptAt }: { nextAttemptAt: string }) => {
+          record.nextAttemptAt = nextAttemptAt;
+          return record;
+        }),
       };
       const deps = makeDeps({
         getOpenCodeRuntimeMessageAdapter: () => ({
@@ -401,6 +411,7 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
           findByRelayOfMessageId: vi.fn(async () => null),
         },
         isOpenCodeDeliveryResponseReadCommitAllowed: vi.fn(async () => false),
+        scheduleOpenCodePromptDeliveryWatchdog: vi.fn(),
       });
       const service = new OpenCodeMemberMessageDeliveryService(deps);
       const input = {
@@ -420,7 +431,10 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
           reason: 'group_handoff_acceptance_unknown',
         });
       expect(send).not.toHaveBeenCalled();
-      expect(observe).not.toHaveBeenCalled();
+      expect(observe).toHaveBeenCalledTimes(1);
+      expect(ledger.applyObservation).toHaveBeenCalledTimes(1);
+      expect(ledger.markNextAttemptDeferred).toHaveBeenCalledTimes(1);
+      expect(record.nextAttemptAt && Date.parse(record.nextAttemptAt)).toBeGreaterThan(Date.now());
       expect(deps.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded).not.toHaveBeenCalled();
     }
   );

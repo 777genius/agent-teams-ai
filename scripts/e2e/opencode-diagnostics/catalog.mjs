@@ -93,7 +93,11 @@ export async function verifyCatalog({ root, scenario, evaluate, send }) {
       } else if (
         !expectedFailures &&
         !visible &&
-        calls.filter((c) => c.event === 'response' && c.operation === 'models').length >= 4 &&
+        new Set(
+          calls
+            .filter((c) => c.event === 'response' && c.operation === 'models' && !c.failed)
+            .map((c) => c.source)
+        ).size >= 4 &&
         /fixture-model|Fixture .* model/.test(text)
       )
         break;
