@@ -69,6 +69,15 @@ export function rememberOpenCodeStateChangingFailurePhase(error: unknown, phase:
   if (error && typeof error === 'object' && !causalFailures.has(error))
     causalFailures.set(error, { phase });
 }
+
+/** Identity-owned phases before dispatch; ledger/recovery errors remain uncertain. */
+export function didOpenCodeCommandFailBeforeDispatch(error: unknown): boolean {
+  const facts = error && typeof error === 'object' ? causalFailures.get(error) : undefined;
+  return (
+    facts != null &&
+    ['binding', 'handshake', 'handshake_validation', 'lease_acquire'].includes(facts.phase)
+  );
+}
 /** A failed cleanup only adds its closed errno to the primary failure's facts. */
 export function rememberOpenCodeStateChangingCleanupFailure(
   primary: unknown,

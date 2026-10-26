@@ -136,6 +136,8 @@ function isOpenCodePromptDeliveryLedgerRecord(
     isOptionalNonNegativeInteger(record.maxSessionRefreshAttempts) &&
     isOptionalNullableString(record.lastSessionRefreshReason) &&
     typeof record.acceptanceUnknown === 'boolean' &&
+    isOptionalNullableString(record.handoffDeliveryAttemptId) &&
+    (record.promptNotSubmitted === undefined || typeof record.promptNotSubmitted === 'boolean') &&
     (record.groupRepairHandoffPending === undefined ||
       typeof record.groupRepairHandoffPending === 'boolean') &&
     isOptionalNullableString(record.nextAttemptAt) &&

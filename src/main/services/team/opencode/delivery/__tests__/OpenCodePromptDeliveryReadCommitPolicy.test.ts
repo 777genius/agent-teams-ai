@@ -76,6 +76,52 @@ function record(
   };
 }
 
+describe('runtime-confirmed unsubmitted group retry', () => {
+  const unsubmitted = (overrides: Partial<OpenCodePromptDeliveryLedgerRecord> = {}) =>
+    record({
+      groupChatId: 'owned-test-group',
+      status: 'retry_scheduled',
+      acceptedAt: null,
+      responseState: 'not_observed',
+      promptNotSubmitted: true,
+      ...overrides,
+    });
+
+  it('keeps a confirmed unsubmitted prompt retryable after a read-only observation', () => {
+    expect(
+      isOpenCodeDeliveryRetryablePendingResponse({
+        ledgerRecord: unsubmitted(),
+        readAllowed: false,
+      })
+    ).toBe(true);
+  });
+
+  it.each([
+    { promptNotSubmitted: undefined },
+    { promptNotSubmitted: false },
+    { acceptanceUnknown: true },
+    { groupRepairHandoffPending: true },
+    { attempts: 3 },
+    { attempts: 4 },
+    { status: 'failed_terminal' as const },
+    { status: 'accepted' as const },
+    { cancelledAt: ISO },
+  ])('preserves the retry fence for %j', (overrides) => {
+    expect(
+      isOpenCodeDeliveryRetryablePendingResponse({
+        ledgerRecord: unsubmitted(overrides),
+        readAllowed: false,
+      })
+    ).toBe(false);
+  });
+
+  it('does not retry a delivery whose visible response is already readable', () => {
+    expect(
+      isOpenCodeDeliveryRetryablePendingResponse({ ledgerRecord: unsubmitted(), readAllowed: true })
+    ).toBe(false);
+  });
+});
+
 function visibleReply(taskRefs: TaskRef[] = []): OpenCodeVisibleReplyProof {
   return {
     inboxName: 'user',

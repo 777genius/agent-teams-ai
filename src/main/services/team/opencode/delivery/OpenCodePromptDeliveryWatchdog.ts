@@ -232,6 +232,14 @@ export function isOpenCodePromptDeliveryRetryAttemptDue(input: {
   } & Partial<OpenCodePromptDeliveryLedgerRecord>;
 }): boolean {
   if (input.attemptDue && isOpenCodeHumanGroupNonResponse(input.ledgerRecord)) return true;
+  if (
+    input.attemptDue &&
+    input.ledgerRecord.promptNotSubmitted === true &&
+    !input.ledgerRecord.acceptanceUnknown &&
+    !input.ledgerRecord.groupRepairHandoffPending &&
+    input.ledgerRecord.status === 'retry_scheduled'
+  )
+    return true;
   if (!input.attemptDue || input.ledgerRecord.groupChatId) {
     return false;
   }

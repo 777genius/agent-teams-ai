@@ -142,6 +142,7 @@ export interface OpenCodeTeamRuntimeMessageInput {
 
 export interface OpenCodeTeamRuntimeMessageResult {
   ok: boolean;
+  promptNotSubmitted?: true;
   providerId: 'opencode';
   memberName: string;
   sessionId?: string;
@@ -722,6 +723,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
 
     return {
       ok: data.accepted,
+      ...(data.promptNotSubmitted ? { promptNotSubmitted: true as const } : {}),
       providerId: this.providerId,
       memberName: input.memberName,
       sessionId: data.sessionId,
@@ -793,6 +795,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       sessionId: input.sessionId,
       runtimePromptMessageId: input.runtimePromptMessageId,
       prePromptCursor: input.prePromptCursor ?? null,
+      ...(input.deliveryAttemptId ? { deliveryAttemptId: input.deliveryAttemptId } : {}),
     });
 
     return {

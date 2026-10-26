@@ -7,7 +7,9 @@ import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
+import { createOpenCodeUnobservedDeliveryResponse } from '../bridge/OpenCodeDeliveryObservation';
 import {
+  didOpenCodeCommandFailBeforeDispatch,
   formatOpenCodeStopCausalSuffix,
   ownedOpenCodeHandshakeFailure,
 } from '../bridge/OpenCodeStateChangingCausalFailure';
@@ -40,6 +42,7 @@ import {
   createOpenCodePreSubmissionAssertion,
   OpenCodePromptDeliveryCancelledError,
 } from './OpenCodePromptDeliveryCancellationGuard';
+import { deferOpenCodePromptDeliveryAttempt } from './OpenCodePromptDeliveryDeferral';
 import {
   healUndeliverableOpenCodePrimaryLaneBootstrap,
   isOpenCodeSessionRefreshRetryRecord,
@@ -696,7 +699,9 @@ export class OpenCodeMemberMessageDeliveryService {
         return observedOpenCodeDelivery(ledgerRecord, laneIdentity.laneId);
       }
       const unknownHandoff = unknownGroupHandoffSnapshot(ledgerRecord, laneIdentity.laneId);
-      if (unknownHandoff) return unknownHandoff;
+      // An uncertain handoff forbids another send, not read-only reconciliation.
+      // Returning here forever used to strand every later message in this lane.
+      if (unknownHandoff && !adapter.observeMessageDelivery) return unknownHandoff;
       if (!ledgerRecord.groupChatId) {
         ledgerRecord = await this.deps.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded({
           ledger,
@@ -744,6 +749,7 @@ export class OpenCodeMemberMessageDeliveryService {
             ? Math.max(500, nextAttemptMs - Date.now())
             : OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
         });
+        if (unknownHandoff) return unknownHandoff;
         return {
           delivered: true,
           accepted: true,
@@ -801,6 +807,9 @@ export class OpenCodeMemberMessageDeliveryService {
         await checkpoint();
         const observed = await adapter.observeMessageDelivery({
           ...payload(input.text),
+          ...(ledgerRecord.groupRepairHandoffPending && ledgerRecord.handoffDeliveryAttemptId
+            ? { deliveryAttemptId: ledgerRecord.handoffDeliveryAttemptId }
+            : {}),
           prePromptCursor: ledgerRecord.prePromptCursor,
           sessionId: ledgerRecord.runtimeSessionId ?? undefined,
           runtimePromptMessageId:
@@ -851,17 +860,12 @@ export class OpenCodeMemberMessageDeliveryService {
         });
         ledgerRecord = await ledger.applyObservation({
           id: ledgerRecord.id,
-          responseObservation: responseObservation ?? {
-            state: observed.ok ? 'not_observed' : 'reconcile_failed',
-            deliveredUserMessageId: null,
-            assistantMessageId: null,
-            toolCallNames: [],
-            visibleMessageToolCallId: null,
-            visibleReplyMessageId: null,
-            visibleReplyCorrelation: null,
-            latestAssistantPreview: null,
-            reason: observed.diagnostics[0] ?? null,
-          },
+          responseObservation:
+            responseObservation ??
+            createOpenCodeUnobservedDeliveryResponse(
+              observed.ok ? 'not_observed' : 'reconcile_failed',
+              observed.diagnostics[0] ?? null
+            ),
           sessionId: observed.sessionId,
           runtimePromptMessageId: observed.runtimePromptMessageId,
           diagnostics: observed.diagnostics,
@@ -906,18 +910,24 @@ export class OpenCodeMemberMessageDeliveryService {
             { visibleReplySemanticallySufficient: true }
           );
           notifyActivity('idle');
-          return {
-            delivered: true,
-            accepted: true,
-            responsePending: false,
-            responseState: ledgerRecord.responseState,
-            ledgerStatus: ledgerRecord.status,
-            ledgerRecordId: ledgerRecord.id,
-            laneId: laneIdentity.laneId,
-            visibleReplyMessageId: ledgerRecord.visibleReplyMessageId ?? undefined,
-            visibleReplyCorrelation: ledgerRecord.visibleReplyCorrelation ?? undefined,
-            diagnostics: ledgerRecord.diagnostics,
-          };
+          return observedOpenCodeDelivery(ledgerRecord, laneIdentity.laneId);
+        }
+        const stillUnknownHandoff = unknownGroupHandoffSnapshot(ledgerRecord, laneIdentity.laneId);
+        if (stillUnknownHandoff) {
+          ledgerRecord = await deferOpenCodePromptDeliveryAttempt({
+            ledger,
+            ledgerRecord,
+            delayMs: OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
+          });
+          await checkpoint();
+          this.deps.scheduleOpenCodePromptDeliveryWatchdog({
+            ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
+            teamName,
+            memberName: canonicalMemberName,
+            messageId,
+            delayMs: OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
+          });
+          return stillUnknownHandoff;
         }
         // Turn activity is decided before the stale-pending guard: both read the
         // same observation, and the guard must see the richer signal.
@@ -990,21 +1000,13 @@ export class OpenCodeMemberMessageDeliveryService {
           if (settledReadAllowed || ledgerRecord.status === 'failed_terminal') {
             notifyActivity('idle');
             return {
+              ...observedOpenCodeDelivery(ledgerRecord, laneIdentity.laneId),
               delivered: settledReadAllowed,
-              accepted: true,
-              responsePending: false,
-              responseState: ledgerRecord.responseState,
-              ledgerStatus: ledgerRecord.status,
-              ledgerRecordId: ledgerRecord.id,
-              laneId: laneIdentity.laneId,
-              visibleReplyMessageId: ledgerRecord.visibleReplyMessageId ?? undefined,
-              visibleReplyCorrelation: ledgerRecord.visibleReplyCorrelation ?? undefined,
               ...(settledReadAllowed
                 ? {}
                 : {
                     reason: ledgerRecord.lastReason ?? 'opencode_prompt_delivery_failed_terminal',
                   }),
-              diagnostics: ledgerRecord.diagnostics,
             };
           }
         }
@@ -1064,15 +1066,8 @@ export class OpenCodeMemberMessageDeliveryService {
           if (ledgerRecord.status === 'failed_terminal') {
             notifyActivity('idle');
             return {
+              ...observedOpenCodeDelivery(ledgerRecord, laneIdentity.laneId),
               delivered: false,
-              accepted: true,
-              responsePending: false,
-              responseState: ledgerRecord.responseState,
-              ledgerStatus: ledgerRecord.status,
-              ledgerRecordId: ledgerRecord.id,
-              laneId: laneIdentity.laneId,
-              visibleReplyMessageId: ledgerRecord.visibleReplyMessageId ?? undefined,
-              visibleReplyCorrelation: ledgerRecord.visibleReplyCorrelation ?? undefined,
               reason: ledgerRecord.lastReason ?? 'opencode_prompt_delivery_failed_terminal',
               diagnostics: ledgerRecord.diagnostics.length
                 ? ledgerRecord.diagnostics
@@ -1106,15 +1101,8 @@ export class OpenCodeMemberMessageDeliveryService {
           if (ledgerRecord.status === 'failed_terminal') {
             notifyActivity('idle');
             return {
+              ...observedOpenCodeDelivery(ledgerRecord, laneIdentity.laneId),
               delivered: false,
-              accepted: true,
-              responsePending: false,
-              responseState: ledgerRecord.responseState,
-              ledgerStatus: ledgerRecord.status,
-              ledgerRecordId: ledgerRecord.id,
-              laneId: laneIdentity.laneId,
-              visibleReplyMessageId: ledgerRecord.visibleReplyMessageId ?? undefined,
-              visibleReplyCorrelation: ledgerRecord.visibleReplyCorrelation ?? undefined,
               reason: ledgerRecord.lastReason ?? 'opencode_prompt_delivery_failed_terminal',
               diagnostics: ledgerRecord.diagnostics.length
                 ? ledgerRecord.diagnostics
@@ -1205,18 +1193,14 @@ export class OpenCodeMemberMessageDeliveryService {
         ledgerRecord = await ledger.applyDeliveryResult({
           id: ledgerRecord.id,
           accepted: false,
+          ...(didOpenCodeCommandFailBeforeDispatch(error)
+            ? { promptNotSubmitted: true as const }
+            : {}),
           attempted: true,
-          responseObservation: {
-            state: 'reconcile_failed',
-            deliveredUserMessageId: null,
-            assistantMessageId: null,
-            toolCallNames: [],
-            visibleMessageToolCallId: null,
-            visibleReplyMessageId: null,
-            visibleReplyCorrelation: null,
-            latestAssistantPreview: null,
-            reason: diagnostic,
-          },
+          responseObservation: createOpenCodeUnobservedDeliveryResponse(
+            'reconcile_failed',
+            diagnostic
+          ),
           deliveryAttemptId,
           prePromptCursor: ledgerRecord.prePromptCursor,
           diagnostics: [diagnostic],
@@ -1228,6 +1212,16 @@ export class OpenCodeMemberMessageDeliveryService {
           ledgerRecord,
           'opencode-prompt-delivery-send-exception'
         );
+        if (
+          ledgerRecord.lastDeliveryAttemptIdWithAcceptedPrompt === deliveryAttemptId &&
+          hasOpenCodeAcceptedRuntimePrompt(ledgerRecord)
+        ) {
+          notifyActivity('active');
+          return {
+            ...observedOpenCodeDelivery(ledgerRecord, laneIdentity.laneId),
+            responsePending: true,
+          };
+        }
         ledgerRecord = await this.deps.openCodePromptDeliveryFollowUpPolicy.schedule({
           ...(input.isCurrent ? { isCurrent: input.isCurrent } : {}),
           ledger,
@@ -1307,7 +1301,7 @@ export class OpenCodeMemberMessageDeliveryService {
       result.ok && result.runtimePromptMessageId?.trim()
     );
     const promptAcceptedByObservation = isOpenCodePromptAcceptedByObservation(responseObservation);
-    const promptAccepted = promptAcceptedByRuntimeIdentity || promptAcceptedByObservation;
+    let promptAccepted = promptAcceptedByRuntimeIdentity || promptAcceptedByObservation;
     // Read-commit riders only when this accepted attempt carried them.
     // Missing-proof control redelivery drops input.text and its coalesced riders.
     const coalescedNoticesDispatched =
@@ -1323,6 +1317,7 @@ export class OpenCodeMemberMessageDeliveryService {
       ledgerRecord = await ledger.applyDeliveryResult({
         id: ledgerRecord.id,
         accepted: promptAccepted,
+        ...(result.promptNotSubmitted ? { promptNotSubmitted: true as const } : {}),
         attempted: true,
         responseObservation,
         sessionId: result.sessionId,
@@ -1333,6 +1328,9 @@ export class OpenCodeMemberMessageDeliveryService {
         reason: promptAccepted ? responseObservation?.reason : deliveryDiagnostics[0],
         now: nowIso(),
       });
+      promptAccepted ||=
+        ledgerRecord.lastDeliveryAttemptIdWithAcceptedPrompt === deliveryAttemptId &&
+        hasOpenCodeAcceptedRuntimePrompt(ledgerRecord);
       await checkpoint();
       this.deps.emitOpenCodePromptDeliveryTaskLogChange(
         ledgerRecord,
@@ -1466,7 +1464,8 @@ export class OpenCodeMemberMessageDeliveryService {
     if (ledgerRecord && !promptAccepted) {
       const reason = promptAcceptanceMissingRuntimePromptId
         ? 'opencode_prompt_acceptance_unknown_missing_runtime_prompt_id'
-        : isOpenCodePromptAcceptanceUnknownFailure(deliveryDiagnostics)
+        : !result.promptNotSubmitted &&
+            isOpenCodePromptAcceptanceUnknownFailure(deliveryDiagnostics)
           ? 'opencode_prompt_acceptance_unknown_after_bridge_timeout'
           : (deliveryDiagnostics[0] ?? 'opencode_message_delivery_failed');
       if (

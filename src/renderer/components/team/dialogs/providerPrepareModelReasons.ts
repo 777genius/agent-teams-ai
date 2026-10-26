@@ -2,6 +2,18 @@ import { getOpenCodeQualifiedModelSourceLabel } from '@shared/utils/opencodeMode
 
 import type { TeamProvisioningPrepareResult } from '@shared/types';
 
+export function hasPendingDeepVerification(
+  providerId: string,
+  entries: readonly string[]
+): boolean {
+  return entries.some(
+    (entry) =>
+      /selected model .* is compatible\. deep verification pending\./i.test(entry) ||
+      (providerId === 'opencode' &&
+        /selected model .* requires strict deep verification\./i.test(entry))
+  );
+}
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

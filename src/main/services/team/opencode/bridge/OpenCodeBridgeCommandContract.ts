@@ -6,7 +6,10 @@ import {
 } from './OpenCodeBridgeCommandNames';
 
 import type { OpenCodeExecutionProof } from '../readiness/OpenCodeExecutionProof';
-import type { OpenCodeGroupChatRunProof, OpenCodeGroupDeliveryEnvelope } from './OpenCodeGroupChatProtocol';
+import type {
+  OpenCodeGroupChatRunProof,
+  OpenCodeGroupDeliveryEnvelope,
+} from './OpenCodeGroupChatProtocol';
 import type { NativeAgentAttachmentMimeType } from '@features/agent-attachments/contracts';
 import type {
   EffortLevel,
@@ -187,7 +190,6 @@ export interface OpenCodeCleanupHostsCommandData {
   diagnostics: string[];
 }
 
-
 export interface OpenCodeSendMessageCommandBody extends OpenCodeGroupDeliveryEnvelope {
   runId?: string;
   laneId: string;
@@ -259,6 +261,8 @@ export interface OpenCodeDeliveryResponseObservation {
 
 export interface OpenCodeSendMessageCommandData {
   accepted: boolean;
+  /** Runtime confirmed failure before the prompt operation began. */
+  promptNotSubmitted?: true;
   runId?: string;
   sessionId?: string;
   memberName: string;
@@ -312,6 +316,7 @@ export interface OpenCodeCommandStatusCommandData {
 }
 
 export interface OpenCodeObserveMessageDeliveryCommandBody extends OpenCodeGroupDeliveryEnvelope {
+  deliveryAttemptId?: string;
   runId?: string;
   laneId: string;
   teamId: string;
