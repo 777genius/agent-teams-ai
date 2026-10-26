@@ -26,7 +26,10 @@ export function createAppExtensionManagement(deps: AppDependencies) {
       for (const name of deps.aliveTeams()) {
         const request = await deps.savedRequest(name);
         const providers = request
-          ? [request.providerId, ...(request.members ?? []).map((member) => member.providerId)]
+          ? [
+              request.providerId,
+              ...(request.members ?? []).map((member) => member.providerId ?? request.providerId),
+            ]
           : [undefined];
         for (const provider of providers) {
           if (provider === 'anthropic') clients.add('claude');
