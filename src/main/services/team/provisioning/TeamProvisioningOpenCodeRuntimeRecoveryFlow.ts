@@ -276,7 +276,10 @@ export async function tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDel
     () => null
   );
   const currentEntry = currentLaneIndex?.lanes[input.laneId];
-  if (currentEntry?.state === 'active') {
+  if (
+    currentEntry?.state === 'active' &&
+    ports.canDeliverToOpenCodeRuntimeForTeam(input.teamName)
+  ) {
     return true;
   }
   if (currentEntry?.state === 'degraded' || currentEntry?.state === 'stopped') {
@@ -364,7 +367,10 @@ export async function tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDeli
   const readLaneIndex = ports.readOpenCodeRuntimeLaneIndex ?? readOpenCodeRuntimeLaneIndex;
   const laneIndex = await readLaneIndex(ports.teamsBasePath, input.teamName).catch(() => null);
   const currentEntry = laneIndex?.lanes[identity.laneId];
-  if (currentEntry?.state === 'active') {
+  if (
+    currentEntry?.state === 'active' &&
+    ports.canDeliverToOpenCodeRuntimeForTeam(input.teamName)
+  ) {
     return true;
   }
   if (currentEntry?.state === 'degraded' || currentEntry?.state === 'stopped') {

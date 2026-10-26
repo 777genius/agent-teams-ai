@@ -111,6 +111,23 @@ function verifyBundledTerminalPlatformRuntime(bundlePath, platform) {
   }
 }
 
+function verifyBundledMcpServer(bundlePath, platform) {
+  const directory = path.join(resolveResourcesDir(bundlePath, platform), 'mcp-server');
+  const manifest = JSON.parse(fs.readFileSync(path.join(directory, 'package.json'), 'utf8'));
+  // The server is bundled without node_modules. Development workspace references
+  // cannot qualify as part of the installed OpenCode V2 controller graph.
+  if (
+    manifest.type !== 'module' ||
+    manifest.main !== 'index.js' ||
+    !fs.existsSync(path.join(directory, manifest.main)) ||
+    ['dependencies', 'optionalDependencies'].some(
+      (field) => Object.keys(manifest[field] ?? {}).length > 0
+    )
+  ) {
+    throw new Error('Packaged MCP server requires a self-contained deployment manifest');
+  }
+}
+
 async function main() {
   const [bundlePathArg, platform, arch] = process.argv.slice(2);
 
@@ -123,6 +140,7 @@ async function main() {
 
   const bundlePath = resolveBundlePath(path.resolve(bundlePathArg), platform);
   verifyBundledTerminalPlatformRuntime(bundlePath, platform);
+  verifyBundledMcpServer(bundlePath, platform);
   const mismatches = await validateNativeBinaries(bundlePath, platform, arch);
   const blockingMismatches = mismatches.filter(
     (mismatch) => !isAllowedPostPackMismatch(mismatch, platform, arch)
@@ -155,5 +173,6 @@ if (require.main === module) {
 module.exports = {
   _internal: {
     isAllowedPostPackMismatch,
+    verifyBundledMcpServer,
   },
 };

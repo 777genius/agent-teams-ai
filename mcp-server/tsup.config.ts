@@ -1,6 +1,11 @@
+import { readFile, writeFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+
 import { defineConfig } from 'tsup';
 
-export default defineConfig({
+import { createMcpDeploymentManifest } from './deploymentManifest';
+
+export default defineConfig((cliOptions) => ({
   entry: ['src/index.ts'],
   format: ['esm'],
   target: 'node24',
@@ -13,6 +18,13 @@ export default defineConfig({
   // Electron app can run the MCP server without a node_modules tree.
   noExternal: [/.*/],
   splitting: false,
+  async onSuccess() {
+    const source = JSON.parse(await readFile(new URL('./package.json', import.meta.url), 'utf8'));
+    await writeFile(
+      resolve(cliOptions.outDir ?? 'dist', 'package.json'),
+      `${JSON.stringify(createMcpDeploymentManifest(source), null, 2)}\n`
+    );
+  },
   // Provide a real `require` function for CJS dependencies (e.g. undici)
   // that use require() for Node built-in modules.
   banner: {
@@ -28,4 +40,4 @@ export default defineConfig({
       'effect',
     ];
   },
-});
+}));

@@ -9,6 +9,7 @@ import {
   planOpenCodeDeliveryWatchdogRuntimeRecovery,
   resolveOpenCodeRuntimeLaneId,
   selectCommittedOpenCodeRecoverySession,
+  tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery,
   tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery,
 } from '../TeamProvisioningOpenCodeRuntimeRecoveryFlow';
 
@@ -108,6 +109,75 @@ function createPorts(
 }
 
 describe('TeamProvisioningOpenCodeRuntimeRecoveryFlow', () => {
+  it.each(['committed', 'configured'] as const)(
+    'revalidates a persisted active lane without a tracked live owner (%s)',
+    async (entryPoint) => {
+      const laneId = 'secondary:opencode:bob';
+      const probe = vi.fn(async () => null);
+      const ports = createPorts({
+        canDeliverToOpenCodeRuntimeForTeam: () => false,
+        tryRecoverActiveOpenCodeSecondaryLaneFromRuntime: probe,
+        readOpenCodeRuntimeLaneIndex: async () =>
+          createLaneIndex({
+            [laneId]: { laneId, state: 'active', updatedAt: '2026-07-02T00:00:00.000Z' },
+          }),
+        resolveOpenCodeMemberIdentityFromDirectory: () => ({
+          ok: true,
+          canonicalMemberName: 'Bob',
+          laneId,
+          configMember: { name: 'Bob', providerId: 'opencode' },
+          laneIdentity: { laneId, laneKind: 'secondary' },
+        }),
+      });
+      const result =
+        entryPoint === 'committed'
+          ? await tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery(
+              {
+                teamName: 'team-a',
+                laneId,
+                member: { name: 'Bob', providerId: 'opencode' },
+                projectPath: '/TEST-project',
+              },
+              ports
+            )
+          : await tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery(
+              {
+                teamName: 'team-a',
+                memberName: 'Bob',
+              },
+              ports
+            );
+      expect(result).toBe(false);
+      expect(probe).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it('recovers a persisted active lane when native runtime proof confirms its committed session', async () => {
+    const laneId = 'secondary:opencode:bob';
+    const ports = createPorts({
+      canDeliverToOpenCodeRuntimeForTeam: () => false,
+      readOpenCodeRuntimeLaneIndex: async () =>
+        createLaneIndex({
+          [laneId]: { laneId, state: 'active', updatedAt: '2026-07-02T00:00:00.000Z' },
+        }),
+    });
+    await expect(
+      tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery(
+        {
+          teamName: 'team-a',
+          laneId,
+          member: { name: 'Bob', providerId: 'opencode' },
+          projectPath: '/TEST-project',
+        },
+        ports
+      )
+    ).resolves.toBe(true);
+    expect(ports.tryRecoverActiveOpenCodeSecondaryLaneFromRuntime).toHaveBeenCalledTimes(1);
+    expect(ports.setOpenCodeRuntimeActiveRunManifest).toHaveBeenCalledWith(
+      expect.objectContaining({ teamName: 'team-a', laneId, runId: 'run-active' })
+    );
+  });
+
   it('builds OpenCode recovery members with meta values before config and persisted fallbacks', () => {
     const configMember: TeamMember = {
       name: 'bob',

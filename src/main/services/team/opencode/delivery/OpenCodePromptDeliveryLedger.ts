@@ -64,6 +64,9 @@ export interface OpenCodePromptDeliveryLedgerRecord extends OpenCodeTurnProgress
   maxSessionRefreshAttempts?: number;
   lastSessionRefreshReason?: string | null;
   acceptanceUnknown: boolean;
+  /** Exact last attempt was confirmed to have failed before prompt submission. */
+  promptNotSubmitted?: boolean;
+  handoffDeliveryAttemptId?: string | null;
   /** A corrective control turn was handed off; old accepted prompt proof cannot authorize replay. */
   groupRepairHandoffPending?: boolean;
   nextAttemptAt: string | null;
@@ -114,6 +117,7 @@ export interface EnsureOpenCodePromptDeliveryInput {
 export interface ApplyOpenCodePromptDeliveryResultInput {
   id: string;
   accepted: boolean;
+  promptNotSubmitted?: true;
   attempted?: boolean;
   responseObservation?: OpenCodeDeliveryResponseObservation;
   sessionId?: string | null;
@@ -326,10 +330,10 @@ export class OpenCodePromptDeliveryLedgerStore {
           : previousRuntimePromptMessageIds;
       const acceptedDeliveryAttemptId = input.deliveryAttemptId?.trim() || null;
       const acceptedAttemptAlreadyRecorded = Boolean(
-        input.accepted &&
         acceptedDeliveryAttemptId &&
         record.lastDeliveryAttemptIdWithAcceptedPrompt === acceptedDeliveryAttemptId
       );
+      if (!input.accepted && acceptedAttemptAlreadyRecorded) return record;
       const acceptedPromptAlreadyRecorded = Boolean(
         input.accepted &&
         acceptedRuntimePromptMessageId &&
@@ -356,6 +360,7 @@ export class OpenCodePromptDeliveryLedgerStore {
               : 'accepted'
           : 'failed_retryable',
         responseState,
+        promptNotSubmitted: input.promptNotSubmitted === true && !input.accepted,
         attempts: shouldIncrementAttempts ? record.attempts + 1 : record.attempts,
         runtimeSessionId: input.sessionId ?? record.runtimeSessionId,
         runtimePromptMessageId: lastRuntimePromptMessageId,
@@ -365,8 +370,10 @@ export class OpenCodePromptDeliveryLedgerStore {
           input.accepted && acceptedDeliveryAttemptId
             ? acceptedDeliveryAttemptId
             : (record.lastDeliveryAttemptIdWithAcceptedPrompt ?? null),
-        acceptanceUnknown: input.accepted ? false : record.acceptanceUnknown,
-        groupRepairHandoffPending: input.accepted ? false : record.groupRepairHandoffPending,
+        acceptanceUnknown:
+          input.accepted || input.promptNotSubmitted ? false : record.acceptanceUnknown,
+        groupRepairHandoffPending:
+          input.accepted || input.promptNotSubmitted ? false : record.groupRepairHandoffPending,
         lastAttemptAt: input.now,
         lastObservedAt: observation ? input.now : record.lastObservedAt,
         acceptedAt: input.accepted ? (record.acceptedAt ?? input.now) : record.acceptedAt,
@@ -430,6 +437,12 @@ export class OpenCodePromptDeliveryLedgerStore {
           ? [...previousRuntimePromptMessageIds, observedRuntimePromptMessageId]
           : previousRuntimePromptMessageIds;
       const promptAcceptedByObservation = Boolean(deliveredRuntimePromptMessageId);
+      const freshPrompt =
+        promptAcceptedByObservation &&
+        !previousRuntimePromptMessageIds.includes(deliveredRuntimePromptMessageId!);
+      const recoveredUncountedHandoff =
+        freshPrompt &&
+        record.handoffDeliveryAttemptId === buildOpenCodePromptDeliveryAttemptId(record);
       const lastRuntimePromptMessageId =
         observedRuntimePromptMessageId ??
         record.lastRuntimePromptMessageId ??
@@ -446,11 +459,18 @@ export class OpenCodePromptDeliveryLedgerStore {
               ? 'accepted'
               : record.status,
         responseState: input.responseObservation.state,
+        attempts: record.attempts + (recoveredUncountedHandoff ? 1 : 0),
+        lastDeliveryAttemptIdWithAcceptedPrompt:
+          freshPrompt && record.handoffDeliveryAttemptId
+            ? record.handoffDeliveryAttemptId
+            : record.lastDeliveryAttemptIdWithAcceptedPrompt,
         runtimeSessionId: input.sessionId ?? record.runtimeSessionId,
         runtimePromptMessageId: lastRuntimePromptMessageId,
         runtimePromptMessageIds,
         lastRuntimePromptMessageId,
         acceptanceUnknown: promptAcceptedByObservation ? false : record.acceptanceUnknown,
+        promptNotSubmitted: promptAcceptedByObservation ? false : record.promptNotSubmitted,
+        groupRepairHandoffPending: record.groupRepairHandoffPending && !freshPrompt,
         lastObservedAt: input.observedAt,
         acceptedAt: promptAcceptedByObservation
           ? (record.acceptedAt ?? input.observedAt)
@@ -553,10 +573,18 @@ export class OpenCodePromptDeliveryLedgerStore {
     scheduledAt: string;
     /** Only the write-ahead dispatch transition may start a corrective handoff. */
     startGroupRepairHandoff?: true;
+    handoffDeliveryAttemptId?: string;
   }): Promise<OpenCodePromptDeliveryLedgerRecord> {
     return await this.updateExisting(input.id, (record) => ({
       ...record,
       status: input.status,
+      ...(input.handoffDeliveryAttemptId
+        ? { handoffDeliveryAttemptId: input.handoffDeliveryAttemptId }
+        : {}),
+      promptNotSubmitted:
+        input.reason === 'group_handoff_started_acceptance_unknown' || input.startGroupRepairHandoff
+          ? false
+          : record.promptNotSubmitted,
       ...(input.startGroupRepairHandoff === true ? clearedOpenCodeHumanGroupObservation() : {}),
       groupRepairHandoffPending:
         input.startGroupRepairHandoff === true || record.groupRepairHandoffPending,

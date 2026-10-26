@@ -174,9 +174,22 @@ export function isOpenCodeBridgeUnknownOutcomeFailure(
 ): boolean {
   return (
     !result.ok &&
+    !isOpenCodePromptNotSubmittedFailure(result) &&
     (result.error.kind === 'timeout' ||
       result.error.kind === 'transport_watchdog_timeout' ||
       isOpenCodeBridgeEmptyOutputFailure(result))
+  );
+}
+
+/** Only a runtime-issued pre-submission fact permits retry; a phase name does not. */
+export function isOpenCodePromptNotSubmittedFailure(
+  result: OpenCodeBridgeResult<unknown>
+): boolean {
+  return (
+    !result.ok &&
+    result.command === 'opencode.sendMessage' &&
+    result.error.kind === 'timeout' &&
+    result.error.details?.promptSubmission === 'not_started'
   );
 }
 

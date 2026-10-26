@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v25; S27 and three-client native plugin installation complete in real Electron on e740e39. The subsequent update exposed a missing prepared OpenCode sibling host, now corrected in the matched UAP pin. Passive discovery now supplies additional installation targets, initially unchecked. The complete fresh Electron install/update/removal receipt remains required; actual-team Skill use and the proposed profile/worktree architecture remain separate, unapproved work.
+Status: implementation plan v26; passive target discovery and initial selection now have real Electron evidence. Current main is reconciled with a verified MCP custom-output correction, and late unaccepted preparation results are released through their original host context. The complete fresh Electron S27 and three-client plugin install/update/removal receipt remains required; actual-team Skill use and the proposed profile/worktree architecture remain separate, unapproved work.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -12,7 +12,62 @@ real Electron end-to-end verification, early draft PRs, immediate push of every
 commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
-## Current checkpoint — v25 (2026-10-26)
+## Current checkpoint — v26 (2026-10-26)
+
+[Electron run 40376857048](https://github.com/777genius/agent-teams-ai/actions/runs/40376857048)
+tests app `876b9890a7730631be12294a9922347bf6350b67` through merge
+`34e9901b3e85ce244a59671d91b795a57ecd4497` with actual main
+`9ff9f85acd94b2b466ac6c7889dcb042f130493a`. Its saved receipt verifies the exact
+UAP `0311d9b` SDK and engine, initial primary selections with Cursor unchecked,
+actual available/detected session targets, unchanged fixture executable bytes
+and no execution witness both after the UI observation and after owned shutdown.
+This completes the passive discovery/selection boundary. It also preserves the
+earlier source Skill lifecycle, native OpenCode discovery, HTTP capability and
+idempotency checks, binary copy, update/removal, and local edit/delete/restart/
+exact-restore observations. Renderer errors are empty.
+
+The overall run fails when S27 attempts actual team launch. Main's new MCP build
+hook writes its deployment manifest to `mcp-server/dist/package.json` even when
+the application passes a private generation directory through `--out-dir`.
+On a clean runner, that shared `dist` directory does not exist, so the build
+refuses with `ENOENT` before the members are alive. The current-main integration
+now honors the actual tsup CLI output directory while preserving the normal
+deployment manifest. No shared-directory creation or workflow prebuild masks the
+wrong destination. A real tsup regression fails on the original custom-output
+case and passes both default/custom cases after correction. The complete merged
+MCP source builds in both modes with identical index SHA-256
+`69d1d51bf61f1e18ea418605fce60e32aeddd46078963b4141c7333a07c5754b`;
+custom-first execution leaves the shared default directory absent. Manifest,
+Node syntax and package-resolution checks pass, followed by independent review.
+
+[Artifact 12677310754](https://github.com/777genius/agent-teams-ai/actions/runs/40376857048/artifacts/12677310754)
+has ZIP SHA-256 `584a0b8fa810645844ca3efb088f095ca479c5a320893822dbd1ad9b0afdeb0d`.
+Its primary error and complete evidence file survive cleanup. An earlier
+cancelled run exposed premature live-log closure on child `exit`; the harness
+now waits for `close`, after stdout/stderr close. A real child-process control
+loses late output with the original event and preserves it with the corrected
+event. That cancellation chronology is not presented as a functional UI failure.
+
+A new review finding exposes late unaccepted plans being dropped by the hook's
+generation check before the plan cleanup effect can own them. The request helper
+now accepts an optional stale-result release callback, supplied only by ordinary
+Prepare and local restore preparation. Cleanup uses the original host context,
+including a separately captured authoring context. Apply and operation results
+do not acquire that callback. Five regressions fail against the previous hook;
+seven final cases and the existing lifecycle controls pass (20 cases in seven
+files). They cover context/tab/unmount transitions, separate restore authority,
+cleanup rejection beside a newer uncertain Apply, and exact retry identity.
+Scoped native TypeScript, lint, formatting, source-size guard and independent
+review pass without production-policy or assertion weakening.
+
+The preceding hosted canonical check also found an overly wide action type in
+the new admission test fixture. An explicit `ManagementPlan` annotation corrects
+the fixture without changing production behavior. Fresh canonical and Electron
+qualification of the current-main integration remains required. This checkpoint
+does not claim S27 completion or plugin-matrix completion for the failed 876 run,
+nor does it approve the profile/worktree proposals below.
+
+## Previous checkpoint — v25 (2026-10-26)
 
 [Electron run 40368582518](https://github.com/777genius/agent-teams-ai/actions/runs/40368582518)
 tests app `e740e39cc0a57c2d790d0e6118a957baafd73d08` through merge

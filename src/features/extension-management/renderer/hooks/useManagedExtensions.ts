@@ -257,13 +257,20 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
     };
   }, [backend, context, operationId, isRunning, refresh]);
 
-  async function request<T>(action: () => Promise<T>, apply: (value: T) => void): Promise<boolean> {
+  async function request<T>(
+    action: () => Promise<T>,
+    apply: (value: T) => void,
+    releaseStale?: (value: T) => Promise<void>
+  ): Promise<boolean> {
     const version = generation.current;
     setBusy(true);
     setError(null);
     try {
       const result = await action();
-      if (version !== generation.current) return false;
+      if (version !== generation.current) {
+        await releaseStale?.(result);
+        return false;
+      }
       apply(result);
       return true;
     } catch (failure) {
@@ -275,6 +282,7 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
   }
   async function prepare(change: ManagementChange, catalogEntryId?: string) {
     if (!backend || !context) return false;
+    const contextId = context.contextId;
     acceptance.current = null;
     const installing = change.action === 'install' || change.action === 'install_skills';
     const scopedChange = installing
@@ -287,16 +295,17 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
       return false;
     }
     return request(
-      () => backend.prepare({ contextId: context.contextId, change: scopedChange, catalogEntryId }),
+      () => backend.prepare({ contextId, change: scopedChange, catalogEntryId }),
       (reviewed) => {
         reviewIntent.current = {
-          contextId: context.contextId,
+          contextId,
           planId: reviewed.planId,
           change: scopedChange,
           ...(catalogEntryId ? { catalogEntryId } : {}),
         };
         setPlan(reviewed);
-      }
+      },
+      (reviewed) => backend.discardPlan({ contextId, planId: reviewed.planId })
     );
   }
   async function attestExternalUninstall() {
@@ -420,7 +429,9 @@ export function useManagedExtensions(kind: 'plugin' | 'skill') {
       ({ captured, reviewed }) => {
         setContext(captured);
         setPlan(reviewed);
-      }
+      },
+      ({ captured, reviewed }) =>
+        backend.discardPlan({ contextId: captured.contextId, planId: reviewed.planId })
     );
   }
   async function recover() {

@@ -521,6 +521,17 @@ export function isOpenCodeDeliveryRetryablePendingResponse(input: {
   readAllowed: boolean;
 }): boolean {
   if (!input.readAllowed && isOpenCodeHumanGroupNonResponse(input.ledgerRecord)) return true;
+  if (input.ledgerRecord.groupChatId && input.ledgerRecord.promptNotSubmitted === true) {
+    const record = input.ledgerRecord;
+    return (
+      !input.readAllowed &&
+      !record.acceptanceUnknown &&
+      !record.groupRepairHandoffPending &&
+      !record.cancelledAt &&
+      record.status === 'retry_scheduled' &&
+      record.attempts < record.maxAttempts
+    );
+  }
   if (input.readAllowed || input.ledgerRecord.groupChatId) {
     return false;
   }

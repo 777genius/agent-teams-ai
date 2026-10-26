@@ -1,4 +1,5 @@
 import { isOpenCodeHumanGroupNonResponse } from './OpenCodeHumanGroupReply';
+import { buildOpenCodePromptDeliveryAttemptId } from './OpenCodePromptDeliveryLedger';
 import { hasOpenCodeAcceptedRuntimePrompt } from './OpenCodePromptDeliveryReadCommitPolicy';
 
 import type { OpenCodeMemberInboxDelivery } from './OpenCodeMemberMessageDeliveryPorts';
@@ -16,6 +17,7 @@ export function markOpenCodeGroupHandoff(
   return ledger.markNextAttemptScheduled({
     id: record.id,
     status: 'accepted',
+    handoffDeliveryAttemptId: buildOpenCodePromptDeliveryAttemptId(record),
     nextAttemptAt: now,
     reason: isOpenCodeHumanGroupNonResponse(record)
       ? 'group_repair_handoff_acceptance_unknown'
@@ -50,6 +52,11 @@ export function unknownGroupHandoffSnapshot(
 ): OpenCodeMemberInboxDelivery | null {
   if (
     !record.groupChatId ||
+    record.status === 'failed_terminal' ||
+    (record.status === 'retry_scheduled' &&
+      record.promptNotSubmitted === true &&
+      !record.acceptanceUnknown &&
+      !record.groupRepairHandoffPending) ||
     (!record.groupRepairHandoffPending &&
       (record.status === 'pending' || hasOpenCodeAcceptedRuntimePrompt(record)))
   )

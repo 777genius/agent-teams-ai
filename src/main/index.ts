@@ -1903,6 +1903,7 @@ async function initializeServices(): Promise<void> {
       appDataPath: getAppDataPath(),
     });
   runtimeProviderManagementFeature = createRuntimeProviderManagementFeature({
+    readOpenCodeDiagnosticStatus: () => openCodeRuntimeInstallerService.getStatus(),
     localProviderConnector: gatewayProviderConnector,
     getOpenCodeRuntimeGeneration: getOpenCodeRuntimeResolverCacheGeneration,
     openExternal: async (url) => {
