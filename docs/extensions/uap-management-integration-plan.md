@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v20; Full passes at 26e2169, while the initial managed Claude installation still fails before S27. The hosted prerequisite receipt does not reproduce the earlier environment/proc-interface hypotheses; an isolated ordinary CLI control is needed to expose the underlying refusal.
+Status: implementation plan v21; the retained-installation identity defect that reproduces the S27 prerequisite failure is fixed in UAP 2647dcc. The matching SDK/native pin and inherited-provider admission correction require fresh hosted Electron qualification.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -12,7 +12,53 @@ real Electron end-to-end verification, early draft PRs, immediate push of every
 commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
-## Current checkpoint — v20 (2026-10-26)
+## Current checkpoint — v21 (2026-10-26)
+
+The original desktop sequence exposed a real retained-state defect in UAP:
+OpenCode Skill install → update → last-target removal → Claude installation of
+the same source. Last-target removal preserves the installation and `PLUGIN_DATA`
+but removes its live environment receipt. A subsequent Management preparation
+reserved a new installation ID, and the state validator correctly refused the
+duplicate source-binding ID. The clean-profile CLI control did not contain that
+retained state and therefore succeeded.
+
+[UAP 2647dcc](https://github.com/777genius/universal-agent-plugins/commit/2647dccb510a69e8915e528e49feda51c34a3182)
+reuses only the uniquely inspected empty installation for the exact source.
+Ambiguous identity and a changed reviewed reservation still fail closed. Native,
+scanner, source and state validation remain unchanged. An empty retained registry
+identity does not borrow the eligibility exception for a live installed release.
+The retained lifecycle regression fails with the original production code for
+both same-client and cross-client reinstall, and passes with the fix. It also
+checks retained data bytes/ownership, read-only preparation, matching reviewed
+paths and negative identity cases. Independent source review found no P1/P2.
+Local Git-source suites remain limited by this execution host's missing Linux
+process-observation interface; they are not reported as passing native tests.
+
+The app pairs its SDK and native engine to that exact UAP source, with engine
+version `0.1.91+agentteams.2647dccb510a`. The SDK was rebuilt and typechecked from
+a clean committed checkout; its unchanged contract produces the same 22,404-byte
+archive and SHA-256 `02d921a6466a7eca86c8161e8d6de0a4ac9b7ee0ed1135de3f27d12bdfcbea0e`.
+The source-qualified archive name, manifest, all lockfile references and native
+stager now identify the corrected source.
+
+[App 705bd0855](https://github.com/777genius/agent-teams-ai/commit/705bd0855ba8dd6438bfcd24d0babbb759b29923)
+resolves inherited member providers before marking native clients active. An
+entirely Claude team no longer blocks unrelated Codex/OpenCode mutations merely
+because a member omits its provider. Unknown provider information remains
+conservative. The three regression cases failed before the correction; all 15
+focused composition/profile/context tests, canonical typecheck and scoped lint
+passed afterward, followed by independent review. S27 now uses a naturally
+inherited worker provider and verifies its effective saved selection.
+
+The original S27 Apply assertion and its preceding stateful desktop journey are
+preserved. No fresh diagnostic success can replace them. A new hosted run must
+prove the original Claude install, active-team refusals, unaffected OpenCode
+lifecycle and actual post-stop update before S27 is qualified. The earlier
+7f09d0d Full, CodeQL, bootstrap and package results remain historical receipts;
+they do not qualify this new SDK/native source. The twelve UAP CodeQL findings
+also retain their separate formal-disposition gate.
+
+## Previous checkpoint — v20 (2026-10-26)
 
 App `26e2169768e9e7dd540bbfd35653f34a8b318301` completed
 [Full qualification 40339355196](https://github.com/777genius/agent-teams-ai/actions/runs/40339355196),

@@ -362,7 +362,6 @@ export async function startActiveRunProof(f: Fixture) {
     members: [
       {
         name: 'worker',
-        providerId: 'anthropic',
         model: 'claude-sonnet-4-6',
         role: 'Idle qualification worker',
       },
@@ -435,7 +434,7 @@ export async function startActiveRunProof(f: Fixture) {
     const saved = await invoke<TeamCreateRequest>(cdp, 'saved', teamName);
     assert.equal(saved.providerId, 'anthropic');
     assert(
-      saved.members.every((member) => member.providerId === 'anthropic'),
+      saved.members.every((member) => (member.providerId ?? saved.providerId) === 'anthropic'),
       'Unknown provider must not mask unaffected-profile assertion'
     );
     receipt.savedRequest = saved;
