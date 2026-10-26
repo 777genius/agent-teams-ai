@@ -16,7 +16,7 @@ function render(status: OpenCodeRuntimeStatus): string {
 }
 
 describe('V2 installation choice', () => {
-  it('offers the pinned V2 to a V1 user but preserves every existing V2', () => {
+  it('preserves supported V1 and V2 runtimes without offering a major-version migration', () => {
     expect(
       render({
         installed: true,
@@ -25,7 +25,7 @@ describe('V2 installation choice', () => {
         version: '1.18.3',
         compatibleV2Version: '2.1.4',
       })
-    ).toContain('V2 2.1.4');
+    ).toBe('');
     expect(
       render({
         installed: true,
@@ -41,7 +41,6 @@ describe('V2 installation choice', () => {
       installed: true,
       source: 'override',
       state: 'ready',
-      version: '1.18.3',
       compatibleV2Version: '2.1.4',
     });
     expect(override).toContain('overrideSelection');

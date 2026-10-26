@@ -28,8 +28,8 @@ dirty checkout.
 The CI lane checks out the exact UAP source pin, builds its engine, and imports
 the existing `provision` helper from UAP's `scripts/run-native-client-matrix.py`.
 That helper downloads the pinned real OpenCode binary and verifies the archive
-digest without running npm scripts. The current reviewed native fixture is
-OpenCode 1.18.34 on Linux x64. The app's existing runtime bootstrap provisions the
+digest without running npm scripts. The current reviewed native fixtures are
+OpenCode 1.18.34 and Claude 2.1.263 on Linux x64. The app's existing runtime bootstrap provisions the
 real orchestration runtime from `runtime.lock.json`; the existing terminal
 bootstrap provisions the terminal runtime. Go is a build prerequisite, not a
 requirement for installed app users.
@@ -44,7 +44,7 @@ source pin:
 node scripts/stage-uap-runtime.ts --source /absolute/path/to/pinned-uap-checkout
 ```
 
-Set `UAP_E2E_OPENCODE` to the verified native OpenCode executable and
+Set `UAP_E2E_OPENCODE` and `UAP_E2E_CLAUDE` to the verified native executables and
 `CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH` to the real runtime executable returned
 by `node scripts/dev-with-runtime.mjs --print-runtime-path`. Then run:
 
@@ -89,6 +89,9 @@ paths are stopped during cleanup. Evidence remains available after cleanup.
 | Signed registry plugin  | Browse the current signed catalog, inspect the reviewed `cloudflare-docs` entry, install it for OpenCode and verify actual MCP configuration; then remove it.        |
 | Actual native tool call | Review the specific safe SEC302 warning reason, install a SHA-256-pinned source plugin through the ordinary UI, run real OpenCode with a controlled provider, and verify MCP initialization, discovery, one exact tool call and its returned nonce. |
 | Native tool removal     | Remove that plugin through the UI, start a fresh OpenCode session, and verify no advertised tool and no MCP connection. |
+| Active profile admission | Create a real idle Anthropic lead/worker team through the ordinary app API; verify current run, live member PIDs, owned CWD and exact runtime executable. Reject five retained Apply requests, fresh Prepare and a real UI action for its Claude extension profile. |
+| Unaffected client       | Keep that team alive through the OpenCode plugin installation, actual MCP invocation and removal sequence above; verify its native member identities are still live afterward. |
+| Stop and mutate         | Stop through the ordinary team API, wait for the observed OS process identities to exit, then perform a fresh Claude update and verify changed Skill bytes and preserved binary content. |
 
 The reviewed registry fixture is `cloudflare-docs` version `0.4.13-uap.1`, from the
 active `777genius/cloudflare-docs-bridge` distribution. It contains a remote public
@@ -96,6 +99,22 @@ documentation MCP endpoint, no local command or scripts, and requires no provide
 authentication. The harness refuses a different catalog version until the new
 fixture has been reviewed. It does not send private inputs or claim model/OAuth
 qualification.
+
+The active-profile scenario imports only the existing model HTTP fixture; it does
+not replace provisioning, liveness, native processes or extension admission.
+Five unexpired reviews are prepared before launch so Apply must recheck activity.
+The fixture records the actions and target identities: install, update, repair,
+locked sync and removal all concern Claude. Healthy locked sync has an
+`unchanged` action and qualifies request refusal, not a restore write. The
+test compares actual manifest, lock, installer state and native inventories,
+and checks absence of each refused request in the real accepted ledger. An
+actual accepted installation provides the positive control for that ledger path.
+A visible UI error must explain that the active run needs to stop.
+
+The loopback model returns idle responses; no model/OAuth account is used.
+This qualifies the application's active-profile mutation boundary with real
+team processes. It does not demonstrate that every member discovered or loaded
+an installed Skill body, or that a plugin MCP call occurred in those team members.
 
 The separate native-tool fixture uses the existing disposable HTTPS publisher
 and a loopback MCP server. Only its model provider settings are seeded before
@@ -158,7 +177,8 @@ scanner-controlled raw messages or paths are not needed for this assertion.
 
 ## Evidence and limitations
 
-The disposable fixture contains `evidence.json`, screenshots and desktop logs.
+The disposable fixture contains `evidence.json`, screenshots and desktop logs,
+plus `active-profile-evidence.json` and the isolated model-request log.
 The CI lane uploads those files plus native-client provenance. A completed
 receipt requires all assertions and no unexpected renderer exceptions. An early
 failure preserves its screenshot and error; an exploratory screenshot alone is

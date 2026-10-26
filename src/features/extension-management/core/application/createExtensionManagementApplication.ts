@@ -34,6 +34,20 @@ function terminal(operation: ManagementOperation): boolean {
   return ['succeeded', 'partial', 'failed', 'canceled', 'interrupted'].includes(operation.state);
 }
 
+async function retainPreparedPlan(value: ContextRecord, plan: ManagementPlan): Promise<void> {
+  try {
+    await value.captured.assertInactive(plan);
+  } catch (error) {
+    try {
+      await value.connection.client.plans.discard(plan.planId);
+    } catch {
+      // Preserve the admission refusal if cleanup of this unaccepted review fails.
+    }
+    throw error;
+  }
+  value.plans.set(plan.planId, plan);
+}
+
 /** Captures host authority once; navigation only changes which context is displayed. */
 export function createExtensionManagementApplication(
   resolver: ExtensionContextResolver,
@@ -222,8 +236,7 @@ export function createExtensionManagementApplication(
       const value = record(input.contextId);
       await value.captured.assertCurrent();
       const plan = await value.connection.client.skills.local.prepare(input.change);
-      await value.captured.assertInactive(plan);
-      value.plans.set(plan.planId, plan);
+      await retainPreparedPlan(value, plan);
       if (input.change.action === 'restore') value.localRestorePlans.add(plan.planId);
       return plan;
     },
@@ -262,8 +275,7 @@ export function createExtensionManagementApplication(
             'The copy destination is unavailable.'
         );
       }
-      await value.captured.assertInactive(plan);
-      value.plans.set(plan.planId, plan);
+      await retainPreparedPlan(value, plan);
       return {
         ...prepared.preview,
         planId: plan.planId,
@@ -284,8 +296,7 @@ export function createExtensionManagementApplication(
         change = { ...change, source: entry.source };
       }
       const plan = await value.connection.client.prepare(change);
-      await value.captured.assertInactive(plan);
-      value.plans.set(plan.planId, plan);
+      await retainPreparedPlan(value, plan);
       return plan;
     },
     async discardPlan(input) {

@@ -196,16 +196,19 @@ describe('OpenCode runtime adapter team flow', () => {
       const inboxReader = new TeamInboxReader();
       const request = createRequest({ teamName: 'TEST-opencode-create', cwd: claudeRoot });
       const writeTeamMeta = vi.fn(async (teamName: string) => {
-        const history = inboxReader.getMessagesWindow(teamName, { limit: 20 });
+        const inboxDirectory = path.join(claudeRoot, 'teams', teamName, 'inboxes');
         if (existing) {
-          await expect(history).rejects.toMatchObject({ reason: 'listing_failed' });
+          await expect(fs.stat(inboxDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
         } else {
-          await expect(history).resolves.toMatchObject({
+          expect((await fs.stat(inboxDirectory)).isDirectory()).toBe(true);
+        }
+        await expect(inboxReader.getMessagesWindow(teamName, { limit: 20 })).resolves.toMatchObject(
+          {
             messages: [],
             truncated: false,
             sourceMessageCount: 0,
-          });
-        }
+          }
+        );
       });
 
       try {

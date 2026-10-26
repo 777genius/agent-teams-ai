@@ -8,10 +8,12 @@ import type {
   LocalSkillChange,
   ManagementChange,
   ManagementClient,
+  ManagementEnvironment,
   ManagementOperation,
   ManagementPlan,
   ManagementSession,
 } from '../../../src/features/extension-management/contracts';
+import type { CapturedExtensionEnvironment } from '../../../src/features/extension-management/core/application/ports';
 
 const session: ManagementSession = {
   apiVersion: 1,
@@ -49,17 +51,22 @@ function deferred<T>() {
   });
   return { promise, resolve, reject };
 }
-function fixture(pending: ManagementOperation[] = []) {
+function fixture(
+  pending: ManagementOperation[] = [],
+  prepareSkillCopy?: CapturedExtensionEnvironment['prepareSkillCopy']
+) {
   const gate = new ExtensionRuntimeGate();
   let captureVersion = 0;
   const client = {
     session: vi.fn(async () => session),
-    environment: vi.fn(async () => ({
-      contextId: 'engine-a',
-      entries: [],
-      diagnostics: [],
-      pendingOperations: pending,
-    })),
+    environment: vi.fn(
+      async (): Promise<ManagementEnvironment> => ({
+        contextId: 'engine-a',
+        entries: [],
+        diagnostics: [],
+        pendingOperations: pending,
+      })
+    ),
     catalog: vi.fn(async () => ({ items: [], freshness: 'current', diagnostics: [] })),
     catalogEntry: vi.fn(async () => ({
       id: 'reviewed-plugin',
@@ -85,7 +92,7 @@ function fixture(pending: ManagementOperation[] = []) {
     operation: vi.fn(async () => operation()),
     wait: vi.fn(() => new Promise(() => {})),
     cancel: vi.fn(async () => operation('canceled')),
-    plans: { discard: vi.fn(async () => {}) },
+    plans: { discard: vi.fn<(planId: string) => Promise<void>>(async () => {}) },
     skills: {
       discard: vi.fn(async () => {}),
       local: {
@@ -114,6 +121,7 @@ function fixture(pending: ManagementOperation[] = []) {
         selection,
         resources: ['profile-root', 'other-profile'],
         resourcesForPlan,
+        prepareSkillCopy,
         assertCurrent,
         assertInactive,
         connect: async () => ({ client: client as unknown as ManagementClient, session, close }),
@@ -134,7 +142,127 @@ function fixture(pending: ManagementOperation[] = []) {
     },
   };
 }
+async function preparationFixture(kind: 'ordinary' | 'local' | 'copy') {
+  const change: LocalSkillChange = {
+    action: 'upsert',
+    rootId: 'root-a',
+    skillName: 'local-copy',
+    files: [],
+  };
+  const f = fixture([], async () => ({
+    change,
+    preview: {
+      planId: 'copy-preview',
+      targetSkillDir: '/profile/skills/local-copy',
+      changes: [],
+      warnings: [],
+      summary: { created: 1, updated: 0, deleted: 0, binary: 0 },
+    },
+  }));
+  f.client.environment.mockResolvedValue({
+    ...(await f.client.environment()),
+    entries: [
+      {
+        alias: 'managed-skill',
+        kind: 'skill',
+        source: 'https://example.com/skills',
+        updateStatus: 'current',
+        declared: true,
+        bindings: [
+          {
+            targetId: 'claude',
+            client: 'claude',
+            scope: 'user',
+            status: 'installed',
+            managedPaths: ['/profile/skills/managed-skill'],
+          },
+        ],
+      },
+    ],
+  });
+  const context = await f.feature.capture({ client: 'claude', scope: 'user' });
+  const prepare = () =>
+    kind === 'ordinary'
+      ? f.feature.prepare({ contextId: context.contextId, change: { action: 'sync' } })
+      : kind === 'local'
+        ? f.feature.prepareLocalSkill({ contextId: context.contextId, change })
+        : f.feature.previewSkillCopy({
+            contextId: context.contextId,
+            alias: 'managed-skill',
+            targetId: 'claude',
+            candidateId: 'copy-source',
+            rootKind: 'claude',
+            folderName: 'local-copy',
+          });
+  return { ...f, context, prepare, planId: kind === 'ordinary' ? 'plan-a' : 'plan-upsert' };
+}
 describe('captured extension management', () => {
+  it.each(['ordinary', 'local', 'copy'] as const)(
+    'discards a newly prepared %s review refused by activity without masking that refusal',
+    async (kind) => {
+      const f = await preparationFixture(kind);
+      const refusal = new Error('Stop the active run using this agent profile.');
+      try {
+        f.assertInactive.mockRejectedValue(refusal);
+        await expect(f.prepare()).rejects.toBe(refusal);
+        expect(f.client.plans.discard).toHaveBeenCalledExactlyOnceWith(f.planId);
+        f.client.plans.discard.mockRejectedValueOnce(new Error('discard transport failed'));
+        await expect(f.prepare()).rejects.toBe(refusal);
+        expect(f.client.plans.discard).toHaveBeenCalledTimes(2);
+        expect(f.client.plans.discard).toHaveBeenLastCalledWith(f.planId);
+        expect(f.client.apply).not.toHaveBeenCalled();
+
+        f.assertInactive.mockResolvedValue(undefined);
+        const prepared = await f.prepare();
+        expect(prepared.planId).toBe(f.planId);
+        expect(f.client.plans.discard).toHaveBeenCalledTimes(2);
+        await f.feature.apply({
+          contextId: f.context.contextId,
+          planId: prepared.planId,
+          requestId: 'admitted-review-request',
+        });
+        expect(f.client.apply).toHaveBeenCalledExactlyOnceWith(
+          prepared.planId,
+          'admitted-review-request'
+        );
+      } finally {
+        await f.feature.close();
+      }
+    }
+  );
+  it('keeps review capacity available after repeated activity refusals without discarding an issued plan', async () => {
+    const f = fixture();
+    const retained = new Set<string>();
+    const prepare = f.client.prepare.getMockImplementation()!;
+    let nextPlan = 0;
+    // Model the engine's public 16-unaccepted-review limit, without changing it.
+    f.client.prepare.mockImplementation(async (change) => {
+      if (retained.size >= 16)
+        throw new ManagementError('REVIEW_LIMIT', 'Wait for old reviews to expire', 409);
+      const plan = { ...(await prepare(change)), planId: `review-${++nextPlan}` };
+      retained.add(plan.planId);
+      return plan;
+    });
+    f.client.plans.discard.mockImplementation(async (planId) => {
+      retained.delete(planId);
+    });
+    try {
+      const context = await f.feature.capture({ client: 'claude', scope: 'user' });
+      const request = { contextId: context.contextId, change: { action: 'sync' as const } };
+      const issued = await f.feature.prepare(request);
+      const refusal = new Error('Stop the active run using this agent profile.');
+      f.assertInactive.mockRejectedValue(refusal);
+      for (let attempt = 0; attempt < 17; attempt++)
+        await expect(f.feature.prepare(request)).rejects.toBe(refusal);
+      expect(retained).toEqual(new Set([issued.planId]));
+      expect(f.client.plans.discard).toHaveBeenCalledTimes(17);
+      expect(f.client.plans.discard).not.toHaveBeenCalledWith(issued.planId);
+      f.assertInactive.mockResolvedValue(undefined);
+      await expect(f.feature.prepare(request)).resolves.toMatchObject({ planId: 'review-19' });
+    } finally {
+      await f.feature.close();
+    }
+  });
   it.each([
     'owner/repository@feature/plugins',
     'owner/repository@v1.2.3',
@@ -647,9 +775,16 @@ describe('captured extension management', () => {
       })
     ).rejects.toThrow('profile became active');
     expect(f.client.apply).not.toHaveBeenCalled();
+    expect(f.client.plans.discard).not.toHaveBeenCalled();
     await expect(f.gate.launch(['profile-root'], () => Promise.resolve('started'))).resolves.toBe(
       'started'
     );
+    await f.feature.apply({
+      contextId: context.contextId,
+      planId: 'plan-a',
+      requestId: 'refused-request-identity',
+    });
+    expect(f.client.apply).toHaveBeenCalledExactlyOnceWith('plan-a', 'refused-request-identity');
     await f.feature.close();
   });
   it('shares an initial reservation with durable reconciliation before an activity refusal', async () => {

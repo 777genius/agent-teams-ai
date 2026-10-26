@@ -16,6 +16,8 @@ import { promisify } from 'node:util';
 // Existing raw CDP transport; no browser-mode substitute or native folder picker.
 // @ts-expect-error Existing JavaScript harness has no declaration file.
 import { CdpClient } from './comment-notification/cdp.mjs';
+import { startGroupChatModelServer } from './group-chat-model-server';
+import { startActiveRunProof } from './uap-management-active-run';
 import { postWithReboundHost } from './uap-management-http';
 import { openCodeMcpServer } from './uap-management-native';
 import { createNativeToolProof, toolArchivePath, toolPluginName } from './uap-management-tool-use';
@@ -50,6 +52,8 @@ let app: ChildProcess | undefined;
 let cdp: DesktopCdp | undefined;
 let publisher: https.Server | undefined;
 let toolProof: Awaited<ReturnType<typeof createNativeToolProof>> | undefined;
+let model: Awaited<ReturnType<typeof startGroupChatModelServer>> | undefined;
+let activeRun: Awaited<ReturnType<typeof startActiveRunProof>> | undefined;
 let version = 1;
 let previousHttpAuthorization: string | undefined;
 const skillName = 'uap-ui-demo';
@@ -77,12 +81,13 @@ async function fixture() {
   const home = path.join(root, 'home');
   const shots = path.join(root, 'screenshots');
   const native = process.env.UAP_E2E_OPENCODE;
+  const claude = process.env.UAP_E2E_CLAUDE;
   const runtime = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH;
   assert(
-    native && runtime,
-    'Set UAP_E2E_OPENCODE and the real CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH.'
+    native && claude && runtime,
+    'Set UAP_E2E_OPENCODE, UAP_E2E_CLAUDE and the real CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH.'
   );
-  await Promise.all([native, runtime].map((file) => access(file, constants.X_OK)));
+  await Promise.all([native, claude, runtime].map((file) => access(file, constants.X_OK)));
   const commit = (await run('git', ['rev-parse', 'HEAD'], { cwd: repo })).stdout.trim();
   const trackedDirty = Boolean(
     (
@@ -139,6 +144,7 @@ async function fixture() {
     XDG_RUNTIME_DIR: path.join(root, 'xdg-runtime'),
     AGENTPLUGINS_HOME: path.join(root, 'uap-state'),
     CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: runtime,
+    CLAUDE_CLI_PATH: claude,
     NODE_BINARY: await realpath(process.execPath),
     AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
     // Dependencies were frozen-verified before isolation; nested dev launchers inherit this.
@@ -164,6 +170,21 @@ async function fixture() {
       .filter(Boolean),
   ];
   await Promise.all(directories.map((dir) => mkdir(dir, { recursive: true })));
+  const claudeVersion = (await run(claude, ['--version'], { env, timeout: 30_000 })).stdout.trim();
+  assert.equal(claudeVersion, '2.1.263 (Claude Code)');
+  evidence.claudeNative = {
+    version: claudeVersion,
+    sha256: createHash('sha256')
+      .update(await readFile(claude))
+      .digest('hex'),
+  };
+  model = await startGroupChatModelServer(path.join(root, 'active-profile-model.ndjson'));
+  env.ANTHROPIC_BASE_URL = model.baseUrl;
+  env.ANTHROPIC_API_KEY = 'synthetic-owned-key';
+  env.ANTHROPIC_AUTH_TOKEN = '';
+  await save(path.join(env.CLAUDE_CONFIG_DIR!, 'settings.json'), {
+    env: { ANTHROPIC_BASE_URL: model.baseUrl, ANTHROPIC_API_KEY: 'synthetic-owned-key' },
+  });
   const httpPort = await freePort();
   await save(path.join(home, '.claude', 'agent-teams-config.json'), {
     general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark', defaultTab: 'teams' },
@@ -932,8 +953,38 @@ async function exercise(f: Awaited<ReturnType<typeof fixture>>) {
   await screenshot(path.join(f.shots, '07-removed-copy-preserved.png'));
   evidence.targetedRemoval = true;
   await localSkillLifecycle(f, copied);
+  activeRun = await startActiveRunProof({
+    ...f,
+    cdp: cdp!,
+    wait,
+    evidence,
+    pluginSource: `${new URL(f.source).origin}${toolArchivePath}#sha256=${toolProof!.sha256}`,
+    advancePublisher: () => {
+      version = 3;
+    },
+    async assertUiRefusal() {
+      await selectTab(cdp!, wait, 'Skills');
+      await selectAgent(panel, 'Claude Code');
+      const row: UiLocator = { ...installedRow, textIncludes: [skillName] };
+      await wait(present(row), 'active-profile installed Claude Skill');
+      await click(button('Repair', row));
+      await wait(
+        async () =>
+          (await callUi<string[]>(cdp!, 'alerts')).some((text) =>
+            text.includes('Stop the active run using this agent profile')
+          ),
+        'actionable active-profile UI refusal'
+      );
+      await screenshot(path.join(f.shots, '20-active-profile-refusal.png'));
+    },
+  });
   await registryPlugin(f);
   await nativeToolUse(f);
+  await activeRun.finish();
+  assert.equal(model!.errors.length, 0, JSON.stringify(model!.errors));
+  assert(model!.receipts.length > 0, 'Real team runtime must reach the scripted model boundary');
+  evidence.activeModel = { requests: model!.receipts.length, errors: model!.errors };
+  await screenshot(path.join(f.shots, '21-after-active-team-stop.png'));
   assert.equal(errors.length, 0, `Unexpected renderer exceptions: ${JSON.stringify(errors)}`);
   evidence.requests = f.requests;
 }
@@ -961,9 +1012,13 @@ try {
   throw error;
 } finally {
   await writeFile(path.join(f.root, 'desktop.log'), logs.join(''));
+  await activeRun?.close().catch((error) => {
+    evidence.activeRunCleanupFailure = String(error);
+  });
   await stop(f.root);
   await save(path.join(f.root, 'evidence.json'), { ...evidence, rendererErrors: errors });
   await new Promise<void>((resolve) => publisher?.close(() => resolve()));
   await toolProof?.close();
+  await model?.close();
   process.stdout.write(`Evidence retained at ${f.root}\n`);
 }

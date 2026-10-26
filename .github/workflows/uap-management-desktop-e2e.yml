@@ -13,6 +13,7 @@ on:
       - 'src/main/services/infrastructure/HttpServer.ts'
       - 'src/shared/utils/skillFrontmatter.ts'
       - 'scripts/e2e/uap-management-*.ts'
+      - 'scripts/e2e/group-chat-model-server.ts'
       - 'scripts/stage-uap-runtime.ts'
       - 'scripts/dev-with-runtime.mjs'
       - 'scripts/tsconfig/tsconfig.desktop-e2e.json'
@@ -78,7 +79,7 @@ jobs:
           persist-credentials: false
       - name: Stage the engine from the same reviewed source as the SDK
         run: node scripts/stage-uap-runtime.ts --source .tmp-uap-source
-      - name: Provision the pinned real native client with UAP's existing qualification helper
+      - name: Provision the pinned real native clients with UAP's existing qualification helper
         shell: bash
         run: |
           python3 - <<'PY'
@@ -88,12 +89,13 @@ jobs:
           matrix = importlib.util.module_from_spec(spec)
           sys.modules[spec.name] = matrix
           spec.loader.exec_module(matrix)
-          destination = pathlib.Path(os.environ['RUNNER_TEMP']) / 'uap-native-opencode'
-          destination.mkdir()
-          executable, evidence = matrix.provision(matrix.PINS['linux-amd64']['opencode'], destination, 'opencode')
-          (destination / 'provenance.json').write_text(json.dumps(evidence, indent=2) + '\n')
-          with open(os.environ['GITHUB_ENV'], 'a') as output:
-              output.write('UAP_E2E_OPENCODE=' + str(executable) + '\n')
+          for name in ('opencode', 'claude'):
+              destination = pathlib.Path(os.environ['RUNNER_TEMP']) / ('uap-native-' + name)
+              destination.mkdir()
+              executable, evidence = matrix.provision(matrix.PINS['linux-amd64'][name], destination, name)
+              (destination / 'provenance.json').write_text(json.dumps(evidence, indent=2) + '\n')
+              with open(os.environ['GITHUB_ENV'], 'a') as output:
+                  output.write('UAP_E2E_' + name.upper() + '=' + str(executable) + '\n')
           PY
       - name: Provision the real orchestration and terminal runtimes
         env:
@@ -118,5 +120,8 @@ jobs:
           path: |
             ${{ runner.temp }}/uap-management-desktop-*/screenshots/*.png
             ${{ runner.temp }}/uap-management-desktop-*/evidence.json
+            ${{ runner.temp }}/uap-management-desktop-*/active-profile-evidence.json
+            ${{ runner.temp }}/uap-management-desktop-*/active-profile-model.ndjson
             ${{ runner.temp }}/uap-management-desktop-*/desktop*.log
             ${{ runner.temp }}/uap-native-opencode/provenance.json
+            ${{ runner.temp }}/uap-native-claude/provenance.json

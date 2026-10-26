@@ -454,13 +454,25 @@ describe('Team message history retrieval prerequisites', () => {
     });
   });
 
+  it('treats a not-yet-created inbox directory as empty history', async () => {
+    const service = createFeed(new TeamInboxReader());
+    const directory = join(sandboxRoot(), TEAM_NAME, 'inboxes');
+    await rm(directory, { recursive: true });
+    const page = await service.getPage(TEAM_NAME, { limit: 50 });
+    expect(page.messages).toEqual([]);
+    expect(page.hasMore).toBe(false);
+    expect(page.nextCursor).toBeNull();
+  });
+
   it('rejects failed listing, non-file and over-guard sources explicitly', async () => {
     const service = createFeed(new TeamInboxReader());
     const directory = join(sandboxRoot(), TEAM_NAME, 'inboxes');
     await rm(directory, { recursive: true });
+    await writeFile(directory, 'This path is a file, so listing must fail with ENOTDIR.');
     await expect(service.getPage(TEAM_NAME, { limit: 50 })).rejects.toThrow(
       'TEAM_HISTORY_UNAVAILABLE:listing_failed'
     );
+    await rm(directory);
     await mkdir(directory);
     await mkdir(inboxPath('alice'));
     await expect(service.getPage(TEAM_NAME, { limit: 50 })).rejects.toThrow(

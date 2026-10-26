@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v16; prior candidate qualification verified, current-main integration and remaining scope recorded.
+Status: implementation plan v17; current-source desktop evidence retained, active-run qualification added and awaiting its fresh receipt.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -12,7 +12,64 @@ real Electron end-to-end verification, early draft PRs, immediate push of every
 commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
-## Current checkpoint — v16 (2026-10-26)
+## Current checkpoint — v17 (2026-10-26)
+
+App `af9807b263d86b8d0728c967ab7a0566f24a2a99`, UAP
+`e84b4da218f4445986daa9ed15f40acd828ae06f`, completed the existing
+[Electron journey 40328623401](https://github.com/777genius/agent-teams-ai/actions/runs/40328623401).
+Its [artifact 12655235205](https://github.com/777genius/agent-teams-ai/actions/runs/40328623401/artifacts/12655235205)
+records clean synthetic merge `b68a626eafc37656ed01833af2a5be6d67ba9a54`, twenty
+screenshots, no renderer exceptions, actual OpenCode 1.18.34 plugin MCP invocation
+and post-removal absence, native Skill discovery, HTTP authority and exact
+restart-visible restoration. ZIP SHA-256:
+`a764713060a94c8671717f5fd84a28376063fc48ec2c760d41056ca679885e4e`.
+This receipt does not include the active-team scenario added below.
+
+The explicit S27 desktop requirement remained unqualified by that journey.
+The added test uses the ordinary app `teams.createTeam` entrypoint, the real
+pinned orchestrator, an idle Anthropic lead and worker, and the existing scripted
+loopback model server. Native Claude 2.1.263 is separately provisioned and verified
+through UAP's pinned download helper for Management's Claude target; the
+orchestrator is never substituted for that CLI.
+
+The test retains five valid reviews before launch, then proves active-profile
+refusal for install, update, repair, locked sync and removal at Apply. It also
+checks fresh Prepare and a visible UI refusal, unchanged manifest/lock/installer
+state/native inventory and absence from the accepted-request ledger. Healthy
+locked sync is explicitly an `unchanged` request-admission control, not a claim
+that files were restored. While both owned native member processes remain alive,
+the existing OpenCode plugin UI/MCP lifecycle supplies the unaffected-client
+control. A normal team Stop must end both observed OS process identities before
+a fresh Claude update changes actual installed bytes. No native readiness,
+process or installer receipt is synthesized. The new scenario requires its own
+fresh completed CI receipt; this checkpoint does not claim it passed.
+
+Review of that boundary found an existing capacity bug: a newly prepared Go
+review was abandoned when the post-prepare activity check refused it. Ordinary,
+local-Skill and copy preparation now best-effort discard only that unaccepted,
+unreturned review, preserving the original refusal. Already-issued reviews and
+accepted-operation recovery are unaffected. Four regressions failed before the
+fix; 57 focused tests pass afterward, including repeated refusals beyond the
+16-review limit and later successful acceptance. Independent source review found
+no P1/P2 in this correction.
+
+The af9807b Full run also exposed five stale assertions in four inherited tests.
+The current inbox reader treats a not-yet-created directory as empty history;
+real `ENOTDIR` fixtures retain unavailable-history checks, and direct filesystem
+assertions preserve fresh-only inbox initialization. The runtime installation
+test now preserves existing supported OpenCode V1/V2 instead of expecting an
+unoffered major migration. Production policies remain unchanged. The four fixes
+and existing reader controls pass 69 focused tests and independent review.
+
+UAP e84 completed all sixteen workflows. Its separate CodeQL findings aggregate
+still reports twelve findings (two Critical, ten High); the PR records individual
+review proposals and the available connector's formal-disposition limitation.
+Fresh App Full, Electron, bootstrap/package and security checks remain required
+for the new source. Per-member Skill-body use, other native desktop lanes and
+S25/S26 retain their explicitly separate scope/evidence boundaries; risky launch
+architecture work remains at the owner's discussion checkpoint.
+
+## Previous checkpoint — v16 (2026-10-26)
 
 The published `c39c7201d11448028c2844b9a6ef486a3607e8e3` candidate has now
 completed all of the qualification runs that v15 left pending:

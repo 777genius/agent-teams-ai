@@ -1,4 +1,4 @@
-import { rm } from 'node:fs/promises';
+import { rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { afterEach, expect, it, vi } from 'vitest';
@@ -30,7 +30,9 @@ it('distinguishes a proven empty inbox from unavailable inbox history in preview
     { code: 'opencode_runtime_unavailable', message: 'OpenCode runtime bridge is unavailable.' },
   ]);
 
-  await rm(join(root, 'teams', 'alpha-team', 'inboxes'), { recursive: true });
+  const inboxDirectory = join(root, 'teams', 'alpha-team', 'inboxes');
+  await rm(inboxDirectory, { recursive: true });
+  await writeFile(inboxDirectory, 'This path is a file, so listing must fail with ENOTDIR.');
   const unavailable = await source.loadPreview({ ...input, forceRefresh: true });
   expect(unavailable.status).toBe('skipped');
   expect(unavailable.warnings).toContainEqual({
