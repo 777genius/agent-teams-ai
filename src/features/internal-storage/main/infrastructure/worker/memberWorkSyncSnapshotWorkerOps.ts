@@ -25,6 +25,7 @@ function readRowsForTeam<T>(
   return aliases.length > 0 ? readMatching(aliases) : [];
 }
 
+/** Read only the requested team's rows, including legacy case/whitespace aliases. */
 export function readMemberWorkSyncTeamSnapshot(
   orm: BetterSQLite3Database,
   teamName: string

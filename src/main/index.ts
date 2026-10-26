@@ -32,16 +32,16 @@ import {
   createStartupStage,
   StartupCancelledError,
 } from './utils/startupCancellation';
-import type {
-  AppCloseReadinessResult,
-  AppCloseReason,
-} from '@features/app-close-coordination/contracts';
+import type { AppCloseReason } from '@features/app-close-coordination/contracts';
 import {
   prepareNativeRendererCdp,
   registerExternalAgentConnectionIpc,
   removeExternalAgentConnectionIpc,
 } from '@features/external-agent-connection/main';
-import { RendererCloseReadinessCoordinator } from '@features/app-close-coordination/main';
+import {
+  RendererCloseReadinessCoordinator,
+  requestCloseReadiness,
+} from '@features/app-close-coordination/main';
 import {
   type CodexAccountFeatureFacade,
   createCodexAccountFeature,
@@ -1138,44 +1138,19 @@ function hasActiveTeamRuntimesForWindowClose(): boolean {
   }
 }
 
-function formatCloseReadinessBlockers(results: readonly AppCloseReadinessResult[]): string[] {
-  return results.flatMap((result) => result.blockers).slice(0, 10);
-}
-
-async function confirmUnsafeAppClose(
-  window: BrowserWindow,
-  blockers: readonly string[],
-  unsafeActionLabel: string
-): Promise<boolean> {
-  if (window.isDestroyed()) return false;
-  window.show();
-  window.focus();
-  const detail =
-    blockers.length > 0
-      ? blockers.map((blocker) => `- ${blocker}`).join('\n')
-      : 'Changes did not confirm that its latest state was saved.';
-  const choice = await dialog.showMessageBox(window, {
-    type: 'warning',
-    title: 'Changes is not ready to close',
-    message: 'Some Changes state may not be saved yet.',
-    detail,
-    buttons: ['Keep Open', unsafeActionLabel],
-    defaultId: 0,
-    cancelId: 0,
-    noLink: true,
-  });
-  return choice.response === 1;
-}
-
 async function requestWindowCloseReadiness(
   window: BrowserWindow,
   reason: AppCloseReason,
   unsafeActionLabel: string
 ): Promise<boolean> {
   if (!rendererDidFinishLoad) return true;
-  const result = await rendererCloseReadinessCoordinator.request(window, reason);
-  if (result.ok) return true;
-  return confirmUnsafeAppClose(window, result.blockers, unsafeActionLabel);
+  return requestCloseReadiness(
+    rendererCloseReadinessCoordinator,
+    [window],
+    reason,
+    unsafeActionLabel,
+    dialog
+  );
 }
 
 async function requestAllWindowsCloseReadiness(
@@ -1183,17 +1158,12 @@ async function requestAllWindowsCloseReadiness(
   unsafeActionLabel: string
 ): Promise<boolean> {
   if (!rendererDidFinishLoad) return true;
-  const windows = BrowserWindow.getAllWindows().filter((window) => !window.isDestroyed());
-  if (windows.length === 0) return true;
-  const results = await Promise.all(
-    windows.map((window) => rendererCloseReadinessCoordinator.request(window, reason))
-  );
-  const failedResults = results.filter((result) => !result.ok);
-  if (failedResults.length === 0) return true;
-  return confirmUnsafeAppClose(
-    windows[0],
-    formatCloseReadinessBlockers(failedResults),
-    unsafeActionLabel
+  return requestCloseReadiness(
+    rendererCloseReadinessCoordinator,
+    BrowserWindow.getAllWindows().filter((window) => !window.isDestroyed()),
+    reason,
+    unsafeActionLabel,
+    dialog
   );
 }
 

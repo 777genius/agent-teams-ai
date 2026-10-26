@@ -121,7 +121,7 @@ async function fixture() {
   }
   evidence.artifacts = { appCommit: commit, trackedDirty, sdk, engine };
   const env: NodeJS.ProcessEnv = {
-    PATH: `${path.dirname(native)}${path.delimiter}${process.env.PATH ?? ''}`,
+    PATH: [path.dirname(native), path.dirname(claude), process.env.PATH ?? ''].join(path.delimiter),
     DISPLAY: process.env.DISPLAY,
     XAUTHORITY: process.env.XAUTHORITY,
     LANG: 'en_US.UTF-8',

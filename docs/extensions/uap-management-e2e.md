@@ -52,6 +52,10 @@ by `node scripts/dev-with-runtime.mjs --print-runtime-path`. Then run:
 UAP_E2E_REQUIRE_CLEAN=1 xvfb-run -a pnpm exec tsx scripts/e2e/uap-management-desktop.ts
 ```
 
+The fixture adds both verified native binary directories to its isolated PATH.
+This keeps ordinary native discovery available after the dev launcher removes
+the ambient `CLAUDE_CLI_PATH` override.
+
 An existing display may be used with `DISPLAY` instead of `xvfb-run`. The harness
 prints its disposable fixture directory. `UAP_E2E_HOLD=1` opens the actual app and
 retains the CDP connection details for manual inspection until SIGTERM or SIGINT.
@@ -81,6 +85,7 @@ paths are stopped during cleanup. Evidence remains available after cleanup.
 | Narrow layout           | Render the managed panel at 760px and reject horizontal overflow; retain a screenshot.                                                                               |
 | Desktop HTTP            | Observe the same installed environment; reject a foreign Origin and rebound Host; create/delete actual local files and deduplicate an accepted request through HTTP. |
 | Copy to local           | Use the existing import dialog and file review, then the Go local mutation path; preserve binary content.                                                            |
+| Claude copy source      | Install a real Claude managed Skill and query the ordinary preload source selector; require the exact inventoried `.agentplugins-runtime/skills` candidate.          |
 | Targeted update         | Change the fixture publisher content, review the targeted update, and verify changed native bytes.                                                                   |
 | Targeted removal        | Remove the managed Skill while preserving the independent local copy.                                                                                                |
 | Local editing           | Use the existing editor and file review; verify saved metadata and unchanged binary assets.                                                                          |
@@ -115,6 +120,10 @@ The loopback model returns idle responses; no model/OAuth account is used.
 This qualifies the application's active-profile mutation boundary with real
 team processes. It does not demonstrate that every member discovered or loaded
 an installed Skill body, or that a plugin MCP call occurred in those team members.
+The `claudeNative` record identifies the independently verified supplied native
+artifact; Management's public target inventory does not expose its selected
+executable. The separately recorded live team executable is the pinned
+orchestration runtime, verified through the actual member OS processes.
 
 The separate native-tool fixture uses the existing disposable HTTPS publisher
 and a loopback MCP server. Only its model provider settings are seeded before

@@ -16,7 +16,11 @@ export async function resolveSkillCopySources(
   const scanner = new SkillScanner();
   const found = new Map<string, SkillCopyCandidate>();
   const visited = new Set<string>();
-  async function visit(candidate: string, depth: number): Promise<void> {
+  async function visit(
+    candidate: string,
+    depth: number,
+    projectedSkillsOnly = false
+  ): Promise<void> {
     if (depth > 8 || visited.size >= 200)
       throw new Error('The installed Skill tree is too large to inspect for a local copy.');
     let stat;
@@ -32,6 +36,10 @@ export async function resolveSkillCopySources(
     if (physical !== path.resolve(candidate)) return;
     if (visited.has(physical)) return;
     visited.add(physical);
+    if (projectedSkillsOnly) {
+      await visit(path.join(physical, 'skills'), depth + 1);
+      return;
+    }
     if (await scanner.detectSkillFile(physical)) {
       found.set(physical, {
         id: createHash('sha256').update(physical).digest('hex'),
@@ -42,8 +50,15 @@ export async function resolveSkillCopySources(
     }
     const entries = await readdir(physical, { withFileTypes: true });
     for (const entry of entries) {
-      if (entry.isDirectory() && !entry.isSymbolicLink() && !entry.name.startsWith('.'))
-        await visit(path.join(physical, entry.name), depth + 1);
+      // Claude's installed Skills live in this engine-owned container directly
+      // below the inventoried package root; only its skills subtree is exposed.
+      const claudeProjection = depth === 0 && entry.name === '.agentplugins-runtime';
+      if (
+        entry.isDirectory() &&
+        !entry.isSymbolicLink() &&
+        (!entry.name.startsWith('.') || claudeProjection)
+      )
+        await visit(path.join(physical, entry.name), depth + 1, claudeProjection);
     }
   }
   for (const candidate of managedPaths) await visit(candidate, 0);

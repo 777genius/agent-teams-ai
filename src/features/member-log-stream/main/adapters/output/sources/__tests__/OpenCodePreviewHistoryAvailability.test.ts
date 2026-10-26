@@ -30,9 +30,12 @@ it('distinguishes a proven empty inbox from unavailable inbox history in preview
     { code: 'opencode_runtime_unavailable', message: 'OpenCode runtime bridge is unavailable.' },
   ]);
 
-  const inboxDirectory = join(root, 'teams', 'alpha-team', 'inboxes');
-  await rm(inboxDirectory, { recursive: true });
-  await writeFile(inboxDirectory, 'This path is a file, so listing must fail with ENOTDIR.');
+  await rm(join(root, 'teams', 'alpha-team', 'inboxes'), { recursive: true });
+  const fresh = await source.loadPreview({ ...input, forceRefresh: true });
+  expect(fresh.warnings).toEqual(empty.warnings);
+
+  // A missing directory is valid for a new team; a non-directory source is not.
+  await writeFile(join(root, 'teams', 'alpha-team', 'inboxes'), 'invalid inbox source');
   const unavailable = await source.loadPreview({ ...input, forceRefresh: true });
   expect(unavailable.status).toBe('skipped');
   expect(unavailable.warnings).toContainEqual({

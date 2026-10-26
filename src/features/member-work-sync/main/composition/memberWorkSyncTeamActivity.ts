@@ -12,9 +12,8 @@ type RuntimeLivenessKind = NonNullable<TeamAgentRuntimeEntry['livenessKind']>;
 
 const WORK_SYNC_RESERVED_MEMBER_NAMES = new Set(['team-lead', 'user']);
 
-// registered_only / stale_metadata are NOT listed: an on-demand OpenCode lane
-// degrades to those kinds between turns while staying deliverable (alive:true).
-// Entries that are genuinely dead still fail the alive check first.
+// Weak registration is handled separately: only an identified, previously
+// confirmed OpenCode lane may stay reachable between turns without a process.
 const WORK_SYNC_INACTIVE_LIVENESS_KINDS = new Set<RuntimeLivenessKind>([
   'permission_blocked',
   'runtime_process_candidate',
@@ -91,11 +90,31 @@ function isWorkSyncLeadLikeMemberName(memberName: string): boolean {
 }
 
 function hasActiveWorkSyncProcessEvidence(
-  entry: Pick<TeamAgentRuntimeEntry, 'alive' | 'livenessKind' | 'pidSource'> | null | undefined,
+  entry:
+    | Pick<
+        TeamAgentRuntimeEntry,
+        | 'alive'
+        | 'livenessKind'
+        | 'pidSource'
+        | 'providerId'
+        | 'laneId'
+        | 'runtimeSessionId'
+        | 'historicalBootstrapConfirmed'
+      >
+    | null
+    | undefined,
   confirmedBootstrapActivePidSources: ReadonlySet<TeamAgentRuntimePidSource>
 ): boolean {
   if (entry?.alive !== true) {
     return false;
+  }
+  if (entry.livenessKind === 'registered_only' || entry.livenessKind === 'stale_metadata') {
+    return (
+      entry.providerId === 'opencode' &&
+      entry.historicalBootstrapConfirmed === true &&
+      Boolean(entry.laneId?.trim()) &&
+      Boolean(entry.runtimeSessionId?.trim())
+    );
   }
   if (
     entry.livenessKind === 'confirmed_bootstrap' &&
@@ -115,7 +134,15 @@ export function isRuntimeEntryActiveForWorkSync(
   entry:
     | Pick<
         TeamAgentRuntimeEntry,
-        'alive' | 'backendType' | 'livenessKind' | 'memberName' | 'pidSource'
+        | 'alive'
+        | 'backendType'
+        | 'livenessKind'
+        | 'memberName'
+        | 'pidSource'
+        | 'providerId'
+        | 'laneId'
+        | 'runtimeSessionId'
+        | 'historicalBootstrapConfirmed'
       >
     | null
     | undefined,
@@ -149,7 +176,15 @@ function isRuntimeLeadEntryActiveForWorkSync(
   entry:
     | Pick<
         TeamAgentRuntimeEntry,
-        'alive' | 'backendType' | 'livenessKind' | 'memberName' | 'pidSource'
+        | 'alive'
+        | 'backendType'
+        | 'livenessKind'
+        | 'memberName'
+        | 'pidSource'
+        | 'providerId'
+        | 'laneId'
+        | 'runtimeSessionId'
+        | 'historicalBootstrapConfirmed'
       >
     | null
     | undefined

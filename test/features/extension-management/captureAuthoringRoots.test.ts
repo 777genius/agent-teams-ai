@@ -81,6 +81,89 @@ describe('trusted local Skill roots', () => {
       true
     );
   });
+  it('copies a Claude projected Skill from its inventoried package without exposing hidden internals', async () => {
+    const f = await fixture();
+    const bundle = path.join(f.profiles[0].configRoot, 'skills', 'fixture-package');
+    // UAP e84b4da: installer/target_facts.go inventories the package root;
+    // clients/claude/project.go locates Skills in .agentplugins-runtime/skills.
+    const source = path.join(bundle, '.agentplugins-runtime', 'skills', 'projection-guide');
+    await mkdir(path.join(source, 'assets'), { recursive: true });
+    await mkdir(path.join(bundle, '.claude-plugin'));
+    await writeFile(
+      path.join(bundle, '.claude-plugin', 'plugin.json'),
+      JSON.stringify({ name: 'fixture-package', skills: './.agentplugins-runtime/skills/' })
+    );
+    const content =
+      '---\nname: projection-guide\ndescription: Inert Claude projection\n---\nExact installed bytes.\n';
+    const binary = Buffer.from([0, 255, 42, 128]);
+    await writeFile(path.join(source, 'SKILL.md'), content);
+    await writeFile(path.join(source, 'assets', 'fixture.bin'), binary);
+    await writeFile(
+      path.join(bundle, '.agentplugins-runtime', 'SKILL.md'),
+      '# Package metadata is not an installed Skill'
+    );
+    for (const relative of [
+      '.agentplugins-runtime/examples/decoy',
+      '.git/hidden-guide',
+      '.agentplugins-runtime-source/skills/staged-guide',
+      '.agentplugins-runtime-extra/skills/lookalike-guide',
+      '.agentplugins-runtime/.git/nested-hidden-guide',
+      '.agentplugins-runtime/assets/.agentplugins-runtime/skills/nested-container-guide',
+    ]) {
+      const hidden = path.join(bundle, relative);
+      await mkdir(hidden, { recursive: true });
+      await writeFile(path.join(hidden, 'SKILL.md'), '# Not a native Skill copy source');
+    }
+    const captured = await captureAuthoringRoots(
+      f.profiles,
+      { client: 'claude', scope: 'user' },
+      async () => f.projects
+    );
+    const candidates = await resolveSkillCopySources([bundle], captured.authoringRoots);
+    expect(candidates).toEqual([
+      expect.objectContaining({ sourceDir: source, skillName: 'projection-guide' }),
+    ]);
+    const result = await prepareSkillCopy([bundle], captured.authoringRoots, {
+      candidateId: candidates[0].id,
+      rootKind: 'agents',
+      folderName: 'projection-guide-copy',
+    });
+    expect(result.change.action).toBe('upsert');
+    expect(result.change.files).toEqual(
+      expect.arrayContaining([
+        {
+          relativePath: 'SKILL.md',
+          expectedSHA256: null,
+          contentBase64: Buffer.from(content).toString('base64'),
+        },
+        {
+          relativePath: 'assets/fixture.bin',
+          expectedSHA256: null,
+          contentBase64: binary.toString('base64'),
+        },
+      ])
+    );
+    expect(result.preview.summary.created).toBe(2);
+  });
+  it.each(['container', 'skills-root', 'skill'] as const)(
+    'does not follow a symlinked Claude projection %s',
+    async (linkKind) => {
+      const f = await fixture();
+      const bundle = path.join(f.profiles[0].configRoot, 'skills', 'fixture-package');
+      const outside = path.join(f.root, 'outside');
+      await mkdir(outside);
+      await writeFile(path.join(outside, 'SKILL.md'), '# Not inventoried');
+      const link =
+        linkKind === 'container'
+          ? path.join(bundle, '.agentplugins-runtime')
+          : linkKind === 'skills-root'
+            ? path.join(bundle, '.agentplugins-runtime', 'skills')
+            : path.join(bundle, '.agentplugins-runtime', 'skills', 'escape');
+      await mkdir(path.dirname(link), { recursive: true });
+      await symlink(outside, link, 'dir');
+      expect(await resolveSkillCopySources([bundle], [])).toEqual([]);
+    }
+  );
   it('refuses an arbitrary project path and resolves a known project selector', async () => {
     const f = await fixture();
     await expect(

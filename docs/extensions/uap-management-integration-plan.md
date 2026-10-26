@@ -1,6 +1,6 @@
 # UAP management integration in Agent Teams
 
-Status: implementation plan v17; current-source desktop evidence retained, active-run qualification added and awaiting its fresh receipt.
+Status: implementation plan v18; active-run fixture discovery corrected and Claude managed-copy regression fixed, awaiting fresh desktop qualification.
 
 Master contract/lifecycle/scenario plan:
 https://github.com/777genius/universal-agent-plugins/blob/feat/management-sdk-20261024/docs/plans/management-sdk-and-agent-teams.md
@@ -12,7 +12,53 @@ real Electron end-to-end verification, early draft PRs, immediate push of every
 commit, independent final review, and merge after required checks and resolved
 findings. It does not authorize bypassing Full qualification or public release.
 
-## Current checkpoint — v17 (2026-10-26)
+## Current checkpoint — v18 (2026-10-26)
+
+This continuation reconciles current main
+`5a111a4aca356469b8e86d0950c4033227b2951a`. Upstream independently included the
+snapshot-worker extraction and four test-contract corrections; the merge keeps
+the added positive controls, real filesystem-error fixtures and both desktop
+E2E entrypoints. It does not import the deferred project/Host architecture.
+
+App `9e39edc476682e0ddcb62950daac338e6d045fec` completed
+[Full qualification 40331654999](https://github.com/777genius/agent-teams-ai/actions/runs/40331654999),
+including canonical validation and all test/lint shards. Its
+[Electron attempt 40331654911](https://github.com/777genius/agent-teams-ai/actions/runs/40331654911)
+stopped before team creation: the dev launcher intentionally removes
+`CLAUDE_CLI_PATH`, while the isolated fixture PATH included only OpenCode.
+The verified native Claude binary therefore remained unavailable to the ordinary
+Management discovery boundary. The fixture now prepends both verified native
+binary directories to PATH; production launch behavior and assertions are unchanged.
+The [failed artifact 12655570705](https://github.com/777genius/agent-teams-ai/actions/runs/40331654911/artifacts/12655570705)
+records clean synthetic merge `acbc6dad3a0f5e85d233f4392390aa1818bca313`, no renderer
+exceptions and no active-team receipt. Its ZIP SHA-256 is
+`ee8041d65ce852c497185bc057fedc074bfa9d427b3474ada82c4c793b029048`.
+
+Inspecting the real Claude projection exposed a separate managed-copy defect:
+the installed source selector skipped `.agentplugins-runtime/skills` because
+its package container is hidden. A real-filesystem regression failed before the
+fix. Traversal now enters the checked `.agentplugins-runtime` child of an
+inventoried root only to inspect its checked `skills` directory, preserving
+containment, no-symlink checks and traversal bounds. Independent review caught
+the need to exclude container-root and example `SKILL.md` decoys from that native
+surface. Other hidden directories, private source containers and nested lookalikes
+remain excluded. Focused tests cover exact text/binary copy preparation and
+symlink refusals. The desktop scenario also checks the ordinary preload
+source selector against its actual Go-installed Claude package before team launch.
+
+The final copy regression suite passes all eight tests. After reconciliation,
+108 impacted tests across twelve files pass, including inbox/provisioning,
+runtime installation, worker snapshots, close/shutdown coordination, the upstream
+group-reply policy and existing UAP UI/workflow checks. The desktop E2E compiler
+project, scoped lint/format and unchanged source-size guards also pass.
+Independent review found no remaining P1/P2 in the copy correction or six merge
+resolutions. These focused checks do not substitute for fresh hosted Full CI.
+
+These changes require a fresh completed Electron receipt and applicable CI for
+their own source. They do not qualify per-member Skill-body use or change the
+owner's discussion checkpoint for launch/profile/worktree architecture.
+
+## Previous checkpoint — v17 (2026-10-26)
 
 App `af9807b263d86b8d0728c967ab7a0566f24a2a99`, UAP
 `e84b4da218f4445986daa9ed15f40acd828ae06f`, completed the existing

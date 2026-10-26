@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events';
 import {
   APP_CLOSE_READINESS_REQUEST,
   APP_CLOSE_READINESS_RESPONSE,
+  APP_CLOSE_READINESS_STARTED,
 } from '@features/app-close-coordination/contracts';
 import { RendererCloseReadinessCoordinator } from '@features/app-close-coordination/main';
 import { describe, expect, it, vi } from 'vitest';
@@ -63,7 +64,8 @@ describe('RendererCloseReadinessCoordinator', () => {
       await expect(readiness).resolves.toMatchObject({
         requestId,
         ok: false,
-        blockers: [expect.stringContaining('timeout')],
+        failure: 'unresponsive',
+        blockers: [expect.stringContaining('did not respond')],
       });
       coordinator.dispose();
     } finally {
@@ -97,8 +99,62 @@ describe('RendererCloseReadinessCoordinator', () => {
       ok: false,
       blockers: ['App close coordination stopped before Changes finished saving.'],
     });
-    expect(
-      (ipcMain as unknown as EventEmitter).listenerCount(APP_CLOSE_READINESS_RESPONSE)
-    ).toBe(0);
+    expect((ipcMain as unknown as EventEmitter).listenerCount(APP_CLOSE_READINESS_RESPONSE)).toBe(
+      0
+    );
+  });
+  it('allows acknowledged saves to finish beyond the interface response timeout', async () => {
+    vi.useFakeTimers();
+    try {
+      const { ipcMain, sent, window, webContents } = createHarness();
+      const coordinator = new RendererCloseReadinessCoordinator(ipcMain);
+      const settled = vi.fn();
+      const readiness = coordinator.request(window, 'app-quit', 100, undefined, 500).then(settled);
+      const requestId = sent[0]!.payload.requestId;
+      (ipcMain as unknown as EventEmitter).emit(
+        APP_CLOSE_READINESS_STARTED,
+        { sender: webContents },
+        { requestId }
+      );
+      await vi.advanceTimersByTimeAsync(200);
+      expect(settled).not.toHaveBeenCalled();
+      (ipcMain as unknown as EventEmitter).emit(
+        APP_CLOSE_READINESS_RESPONSE,
+        { sender: webContents },
+        { requestId, ok: true, blockers: [] }
+      );
+      await readiness;
+      expect(settled).toHaveBeenCalledWith({ requestId, ok: true, blockers: [] });
+      coordinator.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('bounds saving time and reports a late result until its warning is released', async () => {
+    vi.useFakeTimers();
+    try {
+      const { ipcMain, sent, window, webContents } = createHarness();
+      const coordinator = new RendererCloseReadinessCoordinator(ipcMain);
+      const late = vi.fn();
+      const readiness = coordinator.request(window, 'app-quit', 100, late, 500);
+      const requestId = sent[0]!.payload.requestId;
+      const emitter = ipcMain as unknown as EventEmitter;
+      emitter.emit(APP_CLOSE_READINESS_STARTED, { sender: webContents }, { requestId });
+      await vi.advanceTimersByTimeAsync(500);
+      await expect(readiness).resolves.toMatchObject({ ok: false, failure: 'save-timeout' });
+      emitter.emit(APP_CLOSE_READINESS_RESPONSE, { sender: {} }, { requestId, ok: true });
+      expect(late).not.toHaveBeenCalled();
+      emitter.emit(
+        APP_CLOSE_READINESS_RESPONSE,
+        { sender: webContents },
+        { requestId, ok: true, blockers: [] }
+      );
+      expect(late).toHaveBeenCalledWith({ requestId, ok: true, blockers: [] });
+      coordinator.release(requestId);
+      coordinator.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

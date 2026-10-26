@@ -10,6 +10,7 @@ export interface AppCloseReadinessResult {
   requestId: string;
   ok: boolean;
   blockers: string[];
+  failure?: 'unresponsive' | 'save-timeout';
 }
 
 export type AppCloseReadinessHandler = (

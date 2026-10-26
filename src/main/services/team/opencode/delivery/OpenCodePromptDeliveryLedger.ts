@@ -1,6 +1,10 @@
 import { stableHash } from '../bridge/OpenCodeBridgeCommandContract';
 import { VersionedJsonStore, VersionedJsonStoreError } from '../store/VersionedJsonStore';
 
+import {
+  clearedOpenCodeHumanGroupObservation,
+  recoverOpenCodeHumanGroupNonResponse,
+} from './OpenCodeHumanGroupReply';
 import { validateOpenCodePromptDeliveryLedgerRecords } from './OpenCodePromptDeliveryLedgerRecordSchema';
 import {
   cancelOpenCodeDeliveryFromOtherRun,
@@ -60,6 +64,8 @@ export interface OpenCodePromptDeliveryLedgerRecord extends OpenCodeTurnProgress
   maxSessionRefreshAttempts?: number;
   lastSessionRefreshReason?: string | null;
   acceptanceUnknown: boolean;
+  /** A corrective control turn was handed off; old accepted prompt proof cannot authorize replay. */
+  groupRepairHandoffPending?: boolean;
   nextAttemptAt: string | null;
   lastAttemptAt: string | null;
   lastObservedAt: string | null;
@@ -165,6 +171,11 @@ export class OpenCodePromptDeliveryLedgerStore {
           };
           result = updated;
           return records.map((record) => (record.id === existing.id ? updated : record));
+        }
+        const recovered = recoverOpenCodeHumanGroupNonResponse(existing, input.now);
+        if (recovered) {
+          result = recovered;
+          return records.map((record) => (record.id === id ? recovered : record));
         }
         if (existing.messageKind == null && input.messageKind) {
           const updated: OpenCodePromptDeliveryLedgerRecord = {
@@ -355,6 +366,7 @@ export class OpenCodePromptDeliveryLedgerStore {
             ? acceptedDeliveryAttemptId
             : (record.lastDeliveryAttemptIdWithAcceptedPrompt ?? null),
         acceptanceUnknown: input.accepted ? false : record.acceptanceUnknown,
+        groupRepairHandoffPending: input.accepted ? false : record.groupRepairHandoffPending,
         lastAttemptAt: input.now,
         lastObservedAt: observation ? input.now : record.lastObservedAt,
         acceptedAt: input.accepted ? (record.acceptedAt ?? input.now) : record.acceptedAt,
@@ -539,10 +551,15 @@ export class OpenCodePromptDeliveryLedgerStore {
     nextAttemptAt: string;
     reason: string;
     scheduledAt: string;
+    /** Only the write-ahead dispatch transition may start a corrective handoff. */
+    startGroupRepairHandoff?: true;
   }): Promise<OpenCodePromptDeliveryLedgerRecord> {
     return await this.updateExisting(input.id, (record) => ({
       ...record,
       status: input.status,
+      ...(input.startGroupRepairHandoff === true ? clearedOpenCodeHumanGroupObservation() : {}),
+      groupRepairHandoffPending:
+        input.startGroupRepairHandoff === true || record.groupRepairHandoffPending,
       // A write-ahead group marker records uncertainty, never acceptance.
       acceptanceUnknown:
         input.reason === 'group_handoff_started_acceptance_unknown' || record.acceptanceUnknown,

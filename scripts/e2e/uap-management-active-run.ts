@@ -11,6 +11,7 @@ import type {
   ManagementOperation,
   ManagementPlan,
   SkillCandidates,
+  SkillCopyCandidate,
 } from '../../src/features/extension-management/contracts';
 import type {
   TeamAgentRuntimeSnapshot,
@@ -27,7 +28,7 @@ const sha = (value: string | Buffer) => createHash('sha256').update(value).diges
 const RENDERER = `async function(operation, data) {
   const api = window.electronAPI;
   if (operation === 'management') {
-    const allowed = ['capture','environment','discoverSkills','prepare','apply','operation','discardPlan'];
+    const allowed = ['capture','environment','discoverSkills','skillCopySources','prepare','apply','operation','discardPlan'];
     if (!allowed.includes(data[0])) throw new Error('Unknown management fixture method');
     try { return {ok:true, value:await api.extensionManagement[data[0]](data[1])}; }
     catch (error) { return {ok:false, error:String(error)}; }
@@ -213,6 +214,16 @@ export async function startActiveRunProof(f: Fixture) {
   const projected = path.join(packageRoot, '.agentplugins-runtime', 'skills', 'uap-ui-demo');
   const original = await readFile(path.join(projected, 'SKILL.md'));
   const binary = await readFile(path.join(projected, 'assets', 'sample.bin'));
+  const copySources = await managed<SkillCopyCandidate[]>(cdp, 'skillCopySources', {
+    contextId,
+    alias: entry.alias,
+    targetId: 'claude',
+  });
+  assert.equal(copySources.length, 1, 'The installed single-Skill Claude package has one source');
+  const copySource = copySources[0];
+  assert(copySource?.id.trim(), 'The ordinary preload API must return a candidate identity');
+  assert.equal(copySource.sourceDir, await realpath(projected));
+  assert.equal(copySource.skillName, 'uap-ui-demo');
   f.advancePublisher();
   const changes: ManagementChange[] = [
     {
@@ -259,6 +270,12 @@ export async function startActiveRunProof(f: Fixture) {
     boundary: 'actual_app_team_and_native_runtime_scripted_model',
     request,
     plans,
+    installedClaudeCopySource: {
+      origin: copySource.sourceDir,
+      candidates: copySources,
+      skillSHA256: sha(original),
+      binarySHA256: sha(binary),
+    },
     syncBoundary: 'valid_locked_restore_request_admission; healthy_binding_is_unchanged',
   };
   f.evidence.activeProfile = receipt;
