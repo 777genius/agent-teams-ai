@@ -8,8 +8,12 @@ import {
   createOpenCodeBridgeCommandLeaseStore,
   createOpenCodeBridgeCommandLedgerStore,
 } from './OpenCodeBridgeCommandLedgerStore';
-import { createOpenCodeBridgeClientIdentity, OpenCodeBridgeCommandHandshakePort } from './OpenCodeBridgeHandshakeClient';
+import {
+  createOpenCodeBridgeClientIdentity,
+  OpenCodeBridgeCommandHandshakePort,
+} from './OpenCodeBridgeHandshakeClient';
 import { OpenCodeReadinessBridge } from './OpenCodeReadinessBridge';
+import { OpenCodeReadinessHandshake } from './OpenCodeReadinessHandshake';
 import { OpenCodeStateChangingBridgeCommandService } from './OpenCodeStateChangingBridgeCommandService';
 
 import type { TeamHttpMemberDiagnosticsApi } from '../../contracts/TeamProvisioningApis';
@@ -26,25 +30,38 @@ export function composeOpenCodeDesktopBridge(deps: {
   runtimeSnapshots: TeamHttpMemberDiagnosticsApi;
 }) {
   const clientIdentity = createOpenCodeBridgeClientIdentity(deps.identity);
-  const handshake = new OpenCodeBridgeCommandHandshakePort({ bridge: deps.bridge, clientIdentity });
+  const readinessHandshake = new OpenCodeReadinessHandshake(clientIdentity);
+  const handshake = new OpenCodeBridgeCommandHandshakePort({
+    bridge: deps.bridge,
+    clientIdentity,
+    readinessHandshake,
+  });
   const manifestOptions = { teamsBasePath: deps.teamsBasePath };
   const manifest = new OpenCodeRuntimeManifestEvidenceReader(manifestOptions);
   const commands = new OpenCodeStateChangingBridgeCommandService({
     expectedClientIdentity: clientIdentity,
     handshakePort: handshake,
-    leaseStore: createOpenCodeBridgeCommandLeaseStore({ filePath: join(deps.controlDirectory, 'command-leases.json') }),
-    ledger: createOpenCodeBridgeCommandLedgerStore({ filePath: join(deps.controlDirectory, 'command-ledger.json') }),
+    leaseStore: createOpenCodeBridgeCommandLeaseStore({
+      filePath: join(deps.controlDirectory, 'command-leases.json'),
+    }),
+    ledger: createOpenCodeBridgeCommandLedgerStore({
+      filePath: join(deps.controlDirectory, 'command-ledger.json'),
+    }),
     bridge: deps.bridge,
     launchAuthorityWriter: new OpenCodeRuntimeLaunchAuthorityWriter(manifestOptions),
     manifestReader: manifest,
   });
   return {
     readiness: new OpenCodeReadinessBridge(deps.bridge, {
-      stateChangingCommands: commands, appVersion: clientIdentity.appVersion,
+      readinessHandshake,
+      stateChangingCommands: commands,
+      appVersion: clientIdentity.appVersion,
       readOpenCodeRuntimeStatus: deps.readOpenCodeRuntimeStatus,
     }),
     groupRun: createOpenCodeGroupChatRunGetter({
-      clientIdentity, handshake, manifest,
+      clientIdentity,
+      handshake,
+      manifest,
       snapshot: async (teamName) => {
         const memberSpawnStatuses =
           await deps.runtimeSnapshots.getMemberSpawnStatusesReadOnly(teamName);

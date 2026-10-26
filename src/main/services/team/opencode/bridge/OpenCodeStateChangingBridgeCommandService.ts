@@ -80,6 +80,9 @@ export interface OpenCodeBridgeHandshakePort {
     cwd?: string;
     allowEmptyLaneStop?: boolean;
     selectedModel?: string | null;
+    effort?: string;
+    expectedBehaviorFingerprint?: string | null;
+    executionProofIdentity?: string;
     toolApprovalMode?: 'auto' | 'manual';
     teamId?: string;
     teamName?: string;
@@ -290,6 +293,9 @@ export class OpenCodeStateChangingBridgeCommandService {
         ? {
             selectedModel:
               typeof commandBody.selectedModel === 'string' ? commandBody.selectedModel : null,
+            effort: typeof commandBody.effort === 'string' ? commandBody.effort : undefined,
+            expectedBehaviorFingerprint: behaviorFingerprint,
+            executionProofIdentity: stableHash(commandBody.executionProof ?? null),
             toolApprovalMode:
               commandBody.skipPermissions === false ? ('manual' as const) : ('auto' as const),
           }

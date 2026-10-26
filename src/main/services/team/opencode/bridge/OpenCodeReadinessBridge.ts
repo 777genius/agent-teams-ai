@@ -64,6 +64,7 @@ import type {
   OpenCodeStopTeamCommandBody,
   OpenCodeStopTeamCommandData,
 } from './OpenCodeBridgeCommandContract';
+import type { OpenCodeReadinessHandshake } from './OpenCodeReadinessHandshake';
 import type { OpenCodeReadinessBridgeTimeoutOptions } from './OpenCodeReadinessTimeoutPolicy';
 import type { RuntimeStopObservation } from './OpenCodeRuntimeStopProtocol';
 import type { OpenCodeStartupCleanupData } from './OpenCodeStartupCleanupBridge';
@@ -97,12 +98,15 @@ export interface OpenCodeReadinessBridgeCommandExecutor {
 }
 
 export interface OpenCodeReadinessBridgeOptions extends OpenCodeReadinessBridgeTimeoutOptions {
+  readinessHandshake?: OpenCodeReadinessHandshake;
   appVersion?: string;
   stateChangingCommands?: Pick<OpenCodeStateChangingBridgeCommandService, 'execute'>;
   readOpenCodeRuntimeStatus?: () => Promise<{ installed: boolean; version?: string }>;
 }
 
 export interface OpenCodeReadinessBridgeCommandBody {
+  effort?: string;
+  freshExecutionProofRequestId?: string;
   projectPath: string;
   selectedModel: string | null;
   requireExecutionProbe: boolean;
@@ -171,12 +175,22 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     const result = await this.bridge.execute<
       OpenCodeReadinessBridgeCommandBody,
       OpenCodeTeamLaunchReadiness
-    >('opencode.readiness', input, {
-      cwd: input.projectPath,
-      timeoutMs: resolveOpenCodeReadinessTimeoutMs(input.selectedModel, this.options.timeoutMs),
-    });
+    >(
+      'opencode.readiness',
+      {
+        ...input,
+        ...(this.options.readinessHandshake
+          ? { client: this.options.readinessHandshake.clientIdentity() }
+          : {}),
+      },
+      {
+        cwd: input.projectPath,
+        timeoutMs: resolveOpenCodeReadinessTimeoutMs(input.selectedModel, this.options.timeoutMs),
+      }
+    );
 
     if (result.ok) {
+      this.options.readinessHandshake?.remember(input, result);
       const versionFailure = !result.data.launchAllowed
         ? findOpenCodeFreeTierVersionFailure(
             [...result.data.missing, ...result.data.diagnostics],
@@ -232,6 +246,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
   }
 
   private clearRuntimeSnapshots(input: OpenCodeReadinessBridgeCommandBody): void {
+    this.options.readinessHandshake?.clear(input);
     this.lastRuntimeSnapshotsByProjectPath.delete(
       normalizeOpenCodeProjectIdentity(input.projectPath)
     );
@@ -242,7 +257,8 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     projectPath: string,
     selectedModel?: string | null,
     requireExecutionProbe?: boolean,
-    skipPermissions?: boolean
+    skipPermissions?: boolean,
+    identity?: Pick<OpenCodeReadinessBridgeCommandBody, 'effort' | 'freshExecutionProofRequestId'>
   ): OpenCodeBridgeRuntimeSnapshot | null {
     if (requireExecutionProbe !== undefined) {
       return (
@@ -252,6 +268,8 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
             selectedModel: selectedModel ?? null,
             requireExecutionProbe,
             skipPermissions,
+            effort: identity?.effort,
+            freshExecutionProofRequestId: identity?.freshExecutionProofRequestId,
           })
         ) ?? null
       );
