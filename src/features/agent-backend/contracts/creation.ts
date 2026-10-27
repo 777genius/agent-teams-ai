@@ -7,12 +7,14 @@ export interface TeamCreationFailure {
 }
 
 export class TeamCreationRefusal extends Error {
-  constructor(
-    readonly code: TeamCreationRefusalCode,
-    readonly outcome: TeamCreationFailure['outcome']
-  ) {
+  readonly code: TeamCreationRefusalCode;
+  readonly outcome: TeamCreationFailure['outcome'];
+
+  constructor(code: TeamCreationRefusalCode, outcome: TeamCreationFailure['outcome']) {
     super(`Captured Host creation refused (${code}). Correct the form and try again.`);
     this.name = 'TeamCreationRefusal';
+    this.code = code;
+    this.outcome = outcome;
   }
 }
 

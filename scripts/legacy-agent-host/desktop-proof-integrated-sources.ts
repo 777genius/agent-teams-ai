@@ -403,6 +403,15 @@ export const desktopProofIntegratedSources = [
   'src/features/team-group-chats/main/infrastructure/GroupChatStorage.ts',
   'test/features/agent-backend/hostGroupChats.test.ts',
   'test/features/agent-backend/hostTeamMutations.test.ts',
+  // Captured Host presentation and current main environment/provider refresh boundary.
+  'src/renderer/components/team/members/MemberList.tsx',
+  'src/renderer/utils/memberRuntimeVisualState.ts',
+  'src/main/utils/shellEnv.ts',
+  'src/renderer/store/slices/cliInstallerSlice.ts',
+  'src/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.tsx',
+  'src/renderer/utils/__tests__/memberHelpers.test.ts',
+  'test/renderer/components/team/members/MemberList.test.ts',
+  'test/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.test.ts',
   // Original Create refusal transport and safe form correction.
   'src/features/agent-backend/contracts/creation.ts',
   'src/features/agent-backend/renderer/readTeamCreationResult.ts',

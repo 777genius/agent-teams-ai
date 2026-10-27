@@ -283,3 +283,34 @@ An initial external RAM exhaustion failed before collection; after capacity was
 restored, unchanged assertions passed. Two independent integration reviews
 accepted the presentation boundary. Actual native mixed/UI acceptance remains
 open until a new coherent exact-head run.
+
+
+## Frozen final baseline and canonical syntax repair
+
+Main advanced by one reviewed commit while the integration was being checked.
+After the presentation checkpoint, exact `7eb878f88af355334547ab526034ca1c2bf961ab`
+(Auto environment fallback and stale provisioning status retirement) was merged
+without conflicts. Two independent compatibility reviews approved these three
+production changes; later unrelated main commits are not chased for this run.
+The six affected main suites passed **249 tests**, and the actual nonce-framed
+TEST shell fixture passed **5 tests**.
+
+Automatic CI `40551607609` exposed a real compiler gate failure in the new
+Create refusal class: constructor parameter properties are forbidden in the
+canonical erasable-syntax script closure. Explicit readonly fields and ordinary
+constructor assignments preserve its behavior. Both actual canonical updater-e2e
+and sentry-e2e typechecks now pass, with **17 Create refusal/readiness tests**
+also passing after the repair. Applying that flag to the unrelated full M12 test
+closure was not a valid qualification command and produced baseline syntax
+errors; no unrelated classes were changed. Whole-project CI remains required.
+
+The finite native source list now also pins the presentation predicate/memo
+consumer and the current main environment/runtime refresh paths. Fast lint of
+the syntax repair and three incoming production files, source-size/provisioning
+guards and whitespace checks passed before the merge checkpoint.
+
+The available macOS runner advertises macOS 15 and has demonstrated build
+`24G624`; no configured build `24G90` runner is advertised. This does not transfer
+the historical packed custody qualification to the current tuple. Packed/
+installed M17 and the original M19 custody HOLD remain explicit unresolved
+qualification obligations. PR remains Draft; no merge, release or activation.
