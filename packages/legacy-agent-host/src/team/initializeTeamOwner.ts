@@ -7,7 +7,10 @@ import type { TeamOwnerOptions } from './TeamOwner.js';
 
 /** Existing synchronous bootstrap policy; reopened state is never rebuilt from caller options. */
 export function initializeTeamOwner(
-  options: Pick<TeamOwnerOptions, 'store' | 'binding' | 'members' | 'grants' | 'savedSettings'>,
+  options: Pick<
+    TeamOwnerOptions,
+    'store' | 'binding' | 'members' | 'removedMembers' | 'grants' | 'savedSettings'
+  >,
   finishBootstrap: (state: OwnerState) => void
 ): void {
   options.store.fenced(() => {
@@ -38,6 +41,28 @@ export function initializeTeamOwner(
       options.members.length
     )
       throw new TeamOwnerError('invalid');
+    const removed = options.removedMembers;
+    if (removed !== undefined) {
+      if (!Array.isArray(removed) || removed.length > 1024) throw new TeamOwnerError('invalid');
+      const all = [...options.members, ...removed];
+      if (
+        new Set(all.map((member) => member.memberId)).size !== all.length ||
+        new Set(all.map((member) => member.name.toLowerCase())).size !== all.length
+      )
+        throw new TeamOwnerError('invalid');
+      for (const member of removed) {
+        safeSegment(member.name);
+        safeSegment(member.memberId);
+        if (
+          member.role !== 'member' ||
+          member.delivery !== undefined ||
+          !memberSettingsSchema.safeParse(member.settings ?? {}).success ||
+          typeof member.removedAt !== 'string' ||
+          !Number.isFinite(Date.parse(member.removedAt))
+        )
+          throw new TeamOwnerError('invalid');
+      }
+    }
     for (const grant of options.grants) {
       validateTeamText(grant.principalId);
       if (
@@ -56,6 +81,7 @@ export function initializeTeamOwner(
       schemaVersion: 1,
       binding: options.binding,
       members: options.members,
+      ...(removed === undefined ? {} : { removedMembers: structuredClone(removed) }),
       grants: options.grants.map((grant) => ({ ...grant, revision: grant.revision ?? 1 })),
       ready: false,
       ...(!options.members.some((member) => member.delivery)

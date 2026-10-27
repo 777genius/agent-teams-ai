@@ -35,6 +35,7 @@ export function createFilesystemTeamOwner(options: FilesystemTeamOwnerOptions): 
   return new TeamOwner({
     binding: options.binding,
     members: options.members,
+    ...(options.removedMembers === undefined ? {} : { removedMembers: options.removedMembers }),
     ...(options.savedSettings === undefined ? {} : { savedSettings: options.savedSettings }),
     grants: options.grants,
     store,

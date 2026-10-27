@@ -66,6 +66,8 @@ export interface TeamOwnerOptions {
   binding: TeamBinding;
   /** Bootstrap-only trusted composition values; reopening never resets grants/config. */
   members: TeamMember[];
+  /** Trusted creation-only inactive metadata; never grants delivery or runtime authority. */
+  removedMembers?: OwnerState['removedMembers'];
   savedSettings?: TeamSavedSettings;
   grants: TeamGrant[];
   store: TeamStore;

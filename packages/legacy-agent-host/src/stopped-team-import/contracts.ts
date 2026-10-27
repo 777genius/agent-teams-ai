@@ -40,6 +40,21 @@ export const snapshotHeaderSchema = z
       )
       .min(1)
       .max(256),
+    /** Inactive product identities only; no source delivery binding or grant is imported. */
+    removedMembers: z
+      .array(
+        z
+          .object({
+            memberId: segment,
+            name: segment,
+            role: z.literal('member'),
+            settings: memberSettingsSchema,
+            removedAt: z.string().datetime(),
+          })
+          .strict()
+      )
+      .max(1024)
+      .optional(),
     obligations: z
       .object({
         launch: z.literal('released'),
@@ -69,6 +84,12 @@ export const snapshotHeaderSchema = z
   .superRefine((header, context) => {
     if (Buffer.byteLength(JSON.stringify(header)) > 512 * 1024)
       context.addIssue({ code: 'custom', message: 'Source header too large' });
+    const roster = [...header.members, ...(header.removedMembers ?? [])];
+    if (
+      new Set(roster.map((member) => member.memberId)).size !== roster.length ||
+      new Set(roster.map((member) => member.name.toLowerCase())).size !== roster.length
+    )
+      context.addIssue({ code: 'custom', message: 'Source roster identity conflict' });
   });
 export type SnapshotHeader = z.infer<typeof snapshotHeaderSchema>;
 export interface SnapshotFile {

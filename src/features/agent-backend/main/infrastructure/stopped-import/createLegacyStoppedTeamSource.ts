@@ -177,7 +177,8 @@ export function createLegacyStoppedTeamSource(
           (config !== null && !Array.isArray(config.members))
         )
           return hold('source-unreadable');
-        const members = roster.members.map(row).filter((member) => !member.removedAt);
+        const rosterMembers = roster.members.map(row);
+        const members = rosterMembers.filter((member) => member.removedAt === undefined);
         // Actual save-only output has metadata/roster, but no CLI config or native lead.
         const configMembers = config ? (config.members as unknown[]).map(row) : [];
         const leads = config
@@ -186,6 +187,24 @@ export function createLegacyStoppedTeamSource(
         if (leads.length !== 1 || typeof leads[0].name !== 'string')
           return hold('source-unreadable');
         const leadName = leads[0].name;
+        const removedMembers = rosterMembers
+          .filter((member) => member.removedAt !== undefined)
+          .map((member) => {
+            if (
+              member.name === leadName ||
+              typeof member.removedAt !== 'number' ||
+              !Number.isFinite(member.removedAt) ||
+              member.removedAt < 0
+            )
+              return hold('source-unreadable');
+            return {
+              memberId: member.name as string,
+              name: member.name as string,
+              role: 'member' as const,
+              settings: rosterSettings(pick(member, memberSettings), false),
+              removedAt: new Date(member.removedAt).toISOString(),
+            };
+          });
         if (config === null && members.some((member) => member.name === leadName))
           return hold('source-unreadable');
         const nonLead = members.filter((member) => member.name !== leadName);
@@ -300,6 +319,7 @@ export function createLegacyStoppedTeamSource(
               settings: member.memberSettings,
             })),
           ],
+          ...(removedMembers.length ? { removedMembers } : {}),
           obligations: {
             launch: released,
             bootstrap: released,

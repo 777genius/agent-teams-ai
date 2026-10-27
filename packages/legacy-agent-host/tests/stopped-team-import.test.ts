@@ -275,6 +275,29 @@ test('actual saved-draft layout exports and detached-validates without manufactu
   await assert.rejects(exportStoppedTeam(f.source), /hold/);
 });
 
+test('removed import rows reject active identity conflicts and source native authority', async (t) => {
+  const f = fixture(t);
+  const removed = {
+    memberId: 'TEST-retired',
+    name: 'retired-worker',
+    role: 'member' as const,
+    settings: { model: 'TEST-retired-model' },
+    removedAt: '2026-10-25T00:00:00.000Z',
+  };
+  for (const invalid of [
+    { ...removed, memberId: f.header.members[0]!.memberId },
+    { ...removed, name: f.header.members[0]!.name.toUpperCase() },
+    { ...removed, role: 'lead' },
+    { ...removed, delivery: { generation: 'TEST-old' } },
+    { ...removed, principalId: 'TEST-old-principal' },
+    { ...removed, removedAt: 'TEST-not-a-date' },
+  ]) {
+    f.header.removedMembers = [invalid as typeof removed];
+    await assert.rejects(exportStoppedTeam(f.source), /hold/);
+    assert.deepEqual(readdirSync(f.destination), []);
+  }
+});
+
 test('saved-draft layout rejects config presence, symlink config, or missing required metadata', async (t) => {
   const f = fixture(t);
   f.header.sourceKind = 'saved-draft';

@@ -14,8 +14,10 @@ import { join } from 'node:path';
 
 import {
   exportStoppedTeam,
+  FileStoppedTeamImport,
   validateStoppedSnapshot,
 } from '@agent-teams/legacy-agent-host/stopped-team-import';
+import { createFilesystemTeamOwner } from '@agent-teams/legacy-agent-host/team/filesystem';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { captureLegacyStoppedSource } from '../../../src/features/agent-backend/main/infrastructure/stopped-import/captureLegacyStoppedSource';
@@ -162,6 +164,103 @@ function fixture() {
 }
 
 describe('actual legacy source owners and existing fences', () => {
+  it.each([0, 1_761_000_000_000])(
+    'preserves removed teammate identity/settings at %s through import, cold read and the existing roster restore',
+    async (removedAt) => {
+      const f = fixture();
+      const retired = {
+        name: 'retired-worker',
+        role: 'TEST reviewer',
+        workflow: 'Retain TEST workflow',
+        model: 'TEST-retired-model',
+        fastMode: 'off' as const,
+        removedAt,
+      };
+      writeFileSync(
+        join(f.team, 'members.meta.json'),
+        JSON.stringify({
+          version: 1,
+          members: [{ name: 'team-lead', agentType: 'team-lead' }, retired],
+        })
+      );
+      const snapshot = await exportStoppedTeam(f.source);
+      expect(snapshot.header.removedMembers).toEqual([
+        {
+          memberId: retired.name,
+          name: retired.name,
+          role: 'member',
+          settings: {
+            role: retired.role,
+            workflow: retired.workflow,
+            model: retired.model,
+            fastMode: 'off',
+          },
+          removedAt: new Date(retired.removedAt).toISOString(),
+        },
+      ]);
+      const destination = join(f.root, 'TEST-destination');
+      mkdirSync(destination);
+      const importer = new FileStoppedTeamImport({
+        root: destination,
+        ownerId: 'TEST-host',
+        profileId: 'TEST-profile',
+        principalId: 'TEST-human',
+        contextIds: ['TEST-context'],
+        assertWriter() {},
+        existingRecords: () => [],
+        bindOrigin() {},
+        validateConfiguration() {},
+        attach() {},
+      });
+      const receipt = importer.import(
+        'TEST-import-original',
+        {
+          contextId: 'TEST-context',
+          sourceId: 'TEST-source-identity',
+          snapshotDigest: snapshot.digest,
+          teamName: 'TEST-imported',
+        },
+        snapshot
+      );
+      expect(receipt.phase).toBe('published');
+      const connection = () =>
+        createFilesystemTeamOwner({
+          root: destination,
+          binding: {
+            backendId: 'TEST-host',
+            teamId: receipt.record.teamId,
+            teamName: receipt.record.teamName,
+          },
+          members: [],
+          grants: [],
+        }).connect('TEST-human');
+      const before = connection().readRoster();
+      expect(before.members.map((member) => member.name)).toEqual(['team-lead']);
+      expect(before.removedMembers).toEqual(
+        snapshot.header.removedMembers!.map(({ role: _role, ...member }) => member)
+      );
+      const statePath = join(destination, 'teams/TEST-imported/.host-owner/state.json');
+      expect(JSON.parse(readFileSync(statePath, 'utf8')).grants).toHaveLength(1);
+      connection().replaceRoster({
+        commandId: 'TEST-restore-original',
+        expectedRevision: before.revision,
+        members: before.removedMembers.map((member) => ({ ...member.settings, name: member.name })),
+      });
+      const restored = connection().readRoster();
+      expect(restored.removedMembers).toEqual([]);
+      expect(restored.members.find((member) => member.name === retired.name)).toMatchObject({
+        memberId: retired.name,
+        role: 'member',
+        settings: before.removedMembers[0]!.settings,
+      });
+      const state = JSON.parse(readFileSync(statePath, 'utf8'));
+      expect(state.grants).toHaveLength(1);
+      expect(
+        state.members.every((member: { delivery?: unknown }) => member.delivery === undefined)
+      ).toBe(true);
+      expect(state.runtimeCaptures).toBeUndefined();
+    }
+  );
   it('exports retained native IDs only after the original private process release is durably bound by the actual stopped store', async () => {
     const f = fixture();
     const write = (file: string, value: unknown) =>
@@ -369,6 +468,7 @@ describe('actual legacy source owners and existing fences', () => {
     const f = fixture(),
       before = readFileSync(join(f.team, 'team.meta.json'));
     const snapshot = await exportStoppedTeam(f.source);
+    expect(snapshot.header.removedMembers).toBeUndefined();
     expect(snapshot.header.savedSettings).toMatchObject({
       providerId: 'codex',
       skipPermissions: false,

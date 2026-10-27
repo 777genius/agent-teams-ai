@@ -164,3 +164,25 @@ same-owner settings/roster/receipt checks, renderer reload, and reopening/cancel
 the same Edit dialog. It then continues the existing native mixed launch/group/
 member-restart workflow. Strict script typechecking, whitespace and independent
 review passed; actual Edit UI acceptance awaits the next exact-head run.
+
+## Confirmed inactive-roster import defect
+
+Final backend review reproduced a stopped import losing the functional removed
+roster: the original metadata archive retained a removed teammate, but the new
+owner's `removedMembers` was empty, so the existing Restore action had no target.
+The source snapshot and existing owner bootstrap now carry only validated inactive
+identity/settings/removal-time metadata. No source grants, delivery selectors or
+runtime authority are imported. Restore uses the existing roster CAS and retains
+the member identity and configured choices.
+
+The optional header field is omitted when there are no removed rows, preserving
+the prior normal header shape. Defined numeric epoch zero is a removal timestamp;
+invalid shapes, duplicate identities, lead rows and native authority are refused.
+Old snapshots with no new field retain their prior import/state shape.
+
+Focused verification passed: source/export/import/cold-read/Restore **13 tests**,
+portable stopped import **14 tests**, Host build and test typechecking, fast lint
+of the eight changed files, source size and provisioning architecture guards.
+An independent implementation review requested the empty-header/epoch-zero
+compatibility checks, which passed before commit. Native/UI acceptance and final
+exact-head CI remain separate from this product-data regression proof.

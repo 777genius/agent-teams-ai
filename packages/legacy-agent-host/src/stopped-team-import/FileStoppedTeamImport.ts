@@ -19,7 +19,7 @@ import { admitRegistryTeamNamespace } from '../adapters/team-registry/admitRegis
 import { hostedTeamDefinitionSchema } from '../team-registry/definition.js';
 import { teamRegistryRecordSchema } from '../team-registry/contracts.js';
 import { importedReferenceTeam, qualifyImportReferences } from './references.js';
-import { importRequestSchema } from './contracts.js';
+import { importRequestSchema, snapshotHeaderSchema } from './contracts.js';
 import {
   readImportedTaskAttachment,
   readImportedMessageAttachment,
@@ -418,7 +418,17 @@ export class FileStoppedTeamImport {
   private install(intent: ImportIntent): void {
     if (this.options.isRetired?.(intent.definition)) hold();
     const root = this.options.root,
-      definition = intent.definition;
+      definition = intent.definition,
+      removedMembers =
+        intent.snapshot.header.removedMembers === undefined
+          ? undefined
+          : snapshotHeaderSchema.shape.removedMembers.parse(
+              qualifyImportReferences(
+                intent.snapshot.header.removedMembers,
+                intent.snapshot,
+                intent.record.teamName
+              )
+            );
     const marker = join(root, 'teams', definition.binding.teamName, '.host-owner/state.json');
     if (intent.phase === 'published') {
       this.verifyPublished(intent);
@@ -437,6 +447,7 @@ export class FileStoppedTeamImport {
         ...(settings === undefined ? {} : { settings }),
       })),
       savedSettings: definition.savedSettings!,
+      ...(removedMembers === undefined ? {} : { removedMembers }),
       grants: definition.grants.map(({ principalId, memberName, permissions }) => ({
         principalId,
         memberName,
@@ -500,6 +511,7 @@ export class FileStoppedTeamImport {
       schemaVersion: 1,
       binding: definition.binding,
       members: definition.members,
+      ...(removedMembers === undefined ? {} : { removedMembers }),
       grants: definition.grants.map((grant) => ({ ...grant, revision: 1 })),
       ready: true,
       // This destination is a new product-only owner, never the imported source Runtime.
