@@ -205,12 +205,19 @@ describe.skipIf(process.platform === 'win32')('Anthropic Auto GUI shell safe e2e
       programPath,
       `const fs = require('node:fs');
 const args = process.argv.slice(2);
-if (JSON.stringify(args) !== JSON.stringify(['-lic', 'env -0'])) {
+if (args.length !== 2 || args[0] !== '-lic' || !args[1].includes(' && env -0 && ')) {
   throw new Error('TEST shell requires a real login-shell probe');
 }
 fs.appendFileSync(${JSON.stringify(path.join(sandbox, 'shell-calls.jsonl'))}, JSON.stringify({ pid: process.pid, args }) + '\\n');
 const env = { ...process.env, ...${JSON.stringify(env)} };
-setTimeout(() => process.stdout.write(Object.entries(env).map(([key, value]) => key + '=' + value).join('\\0') + '\\0'), ${delayMs});
+setTimeout(() => {
+  const result = require('node:child_process').spawnSync('/bin/sh', ['-c', args[1]], {
+    env,
+    stdio: 'inherit',
+  });
+  if (result.error) throw result.error;
+  process.exitCode = result.status ?? 1;
+}, ${delayMs});
 `
     );
     await writeFile(
@@ -508,8 +515,8 @@ process.exitCode = 42;
     }
 
     expect(await readCalls('shell-calls.jsonl')).toEqual([
-      { args: ['-lic', 'env -0'] },
-      { args: ['-ic', 'env -0'] },
+      { args: ['-lic', expect.stringContaining(' && env -0 && ')] },
+      { args: ['-ic', expect.stringContaining(' && env -0 && ')] },
     ]);
     expect(shellEnv.getCachedShellEnv()).toBeNull();
     expect(requests).toEqual([]);

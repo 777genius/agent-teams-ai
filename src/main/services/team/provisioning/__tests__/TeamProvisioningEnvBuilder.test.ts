@@ -102,7 +102,11 @@ describe('TeamProvisioningEnvBuilder', () => {
           `#!/usr/bin/env node\nconst fs = require('node:fs');\n` +
             `fs.appendFileSync(${JSON.stringify(invocationsPath)}, 'probe\\n');\n` +
             `const env = ${JSON.stringify({ ...anthropicEnv, HOME: tempDir, PATH: '/usr/bin' })};\n` +
-            `setTimeout(() => process.stdout.write(Object.entries(env).map(([key, value]) => key + '=' + value).join('\\0') + '\\0'), ${shellDelayMs});\n`,
+            `setTimeout(() => {\n` +
+            `  const result = require('node:child_process').spawnSync('/bin/sh', ['-c', process.argv[3]], { env, stdio: 'inherit' });\n` +
+            `  if (result.error) throw result.error;\n` +
+            `  process.exitCode = result.status ?? 1;\n` +
+            `}, ${shellDelayMs});\n`,
           { mode: 0o700 }
         );
         process.env.SHELL = shellPath;
