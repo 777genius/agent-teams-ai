@@ -255,3 +255,12 @@ mapper readback, Task/comment/prepared Composer/group refs, different-owner
 refusal, purge/recreate isolation and unchanged self routing. A bounded strict
 compiler closure, precise fast lint, source-size and provisioning guards passed.
 Whole-project and actual Desktop exact-head qualification remain remote gates.
+
+
+The existing renderer failure snapshot now retains a bounded passive mixed
+progress timeline and the selected/visible TEST Teams' original current run,
+progress, diagnostic and ignored/floor/error state before normal Quit. Existing
+hidden owner records are retained by the artifact step. Strict script
+typechecking, embedded expression parsing, independent review and whitespace
+checks passed. This supplies missing evidence for the mixed aggregate failure;
+no readiness wait, display predicate or native effect is changed by this probe.

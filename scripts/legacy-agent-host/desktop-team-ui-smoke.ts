@@ -410,11 +410,21 @@ export async function readRendererFailureSnapshot(cdp: UiCdpPort): Promise<unkno
     }
     return {readyState:document.readyState,uiDidInit:window.__claudeTeamsUiDidInit===true,
       documentFocused:document.hasFocus(),visibility:document.visibilityState,inputEvents:window.__TEST_desktopInputEvents??[],
+      mixedProgress:Array.isArray(window.__TEST_mixedProgress)?window.__TEST_mixedProgress.slice(-80).map(row=>({monotonicMs:row.monotonicMs,text:String(row.text??'').slice(0,6000)})):[],
       store:(()=>{const s=window.__agentTeamsDevStore?.getState();return s?{
         teamsLoading:s.teamsLoading,teamsError:s.teamsError?.slice(0,300),
         globalTasksLoading:s.globalTasksLoading,globalTasksInitialized:s.globalTasksInitialized,
         globalTasksError:s.globalTasksError?.slice(0,300),globalTaskCount:s.globalTasks.length,
-        selectedTeamError:s.selectedTeamError?.slice(0,300),
+        selectedTeamName:s.selectedTeamName,selectedTeamError:s.selectedTeamError?.slice(0,300),
+        provisioning:[...new Set([s.selectedTeamName,...s.paneLayout.panes.flatMap(p=>p.tabs.filter(t=>t.type==='team').map(t=>t.teamName))].filter(team=>typeof team==='string'))].slice(0,8).map(team=>{
+          const runId=s.currentProvisioningRunIdByTeam?.[team],progress=runId?s.provisioningRuns?.[runId]:null;
+          return {teamName:team,currentProvisioningRunId:runId??null,currentRuntimeRunId:s.currentRuntimeRunIdByTeam?.[team]??null,
+            startedAtFloor:s.provisioningStartedAtFloorByTeam?.[team]??null,error:s.provisioningErrorByTeam?.[team]?.slice(0,500)??null,
+            ignoredProvisioning:runId?s.ignoredProvisioningRunIds?.[runId]===team:false,ignoredRuntime:runId?s.ignoredRuntimeRunIds?.[runId]===team:false,
+            progress:progress?{runId:progress.runId,teamName:progress.teamName,state:progress.state,message:progress.message?.slice(0,1000),
+              messageSeverity:progress.messageSeverity,error:progress.error?.slice(0,500),startedAt:progress.startedAt,updatedAt:progress.updatedAt,configReady:progress.configReady,
+              launchDiagnostics:(progress.launchDiagnostics??[]).slice(0,32).map(row=>({id:row.id?.slice(0,256),memberName:row.memberName?.slice(0,128),code:row.code,label:row.label?.slice(0,500),severity:row.severity,observedAt:row.observedAt}))}:null};
+        }),
         globalTaskDetail:s.globalTaskDetail?{teamName:s.globalTaskDetail.teamName,taskId:s.globalTaskDetail.taskId}:null,
         paneTabs:s.paneLayout.panes.flatMap(p=>p.tabs.map(t=>({type:t.type,teamName:t.teamName}))).slice(0,24)
       }:null})(),
