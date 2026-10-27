@@ -3,6 +3,8 @@ import {
   configureDesktopMcpEnvironment,
   getDesktopMcpChildEnvironment,
 } from '@features/external-agent-connection/main';
+import { OpenCodeBridgeDiagnosticsStore } from '@main/services/team/opencode/bridge/OpenCodeBridgeDiagnosticsStore';
+import { classifyOpenCodeBridgeTermination } from '@main/services/team/opencode/bridge/OpenCodeBridgeWatchdogDiagnostics';
 import { OpenCodeReadinessBridge } from '@main/services/team/opencode/bridge/OpenCodeReadinessBridge';
 import { OpenCodeBackfillRetry } from '@main/services/team/opencode/OpenCodeBackfillRetry';
 import { promises as fs } from 'fs';
@@ -716,6 +718,52 @@ describe('OpenCodeBridgeCommandClient', () => {
     });
     expect(runner.calls[0]?.timeoutMs).toBe(35_000);
     expect(JSON.parse(await runner.readInputEnvelope(0))).toMatchObject({ timeoutMs: 10_000 });
+  });
+
+  it('persists finite termination cause and budgets while omitting secret stderr', async () => {
+    const storePath = path.join(tempDir, 'diagnostics');
+    const cause =
+      'Failed to verify termination of Unix process tree 123; still observable: 123, 124';
+    runner.nextResult = {
+      stdout: '',
+      stderr: 'Authorization: Bearer secret-live-key',
+      exitCode: null,
+      timedOut: true,
+      outcomeUnknownReason: 'termination_failed',
+      terminationReason: classifyOpenCodeBridgeTermination(cause),
+    };
+    const result = await createClient({
+      diagnostics: new OpenCodeBridgeDiagnosticsStore({ directory: storePath }),
+    }).execute('opencode.readiness', {}, { cwd: tempDir, timeoutMs: 300_000 });
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        kind: 'transport_watchdog_timeout',
+        retryable: true,
+        details: {
+          outcomeUnknownReason: 'termination_failed',
+          terminationReason: 'exit_wait_expired',
+          runtimeTimeoutMs: 300_000,
+          transportWatchdogTimeoutMs: 325_000,
+        },
+      },
+    });
+    expect(result.ok ? '' : result.error.message).toBe(
+      'OpenCode bridge process could not be terminated; process outcome is unknown'
+    );
+    const stored = await fs.readFile(path.join(storePath, 'latest.json'), 'utf8');
+    expect(JSON.parse(stored)).toMatchObject({
+      data: {
+        stderr: '[omitted]',
+        terminationReason: 'exit_wait_expired',
+        runtimeTimeoutMs: 300_000,
+        transportWatchdogTimeoutMs: 325_000,
+      },
+    });
+    for (const value of [JSON.stringify(result), stored])
+      expect(value).not.toContain('secret-live-key');
+    expect(stored).not.toContain(cause);
+    expect(classifyOpenCodeBridgeTermination('arbitrary secret-live-key')).toBe('unknown');
   });
 
   it('classifies bridge output overflow as an unknown outcome instead of a provider error', async () => {
