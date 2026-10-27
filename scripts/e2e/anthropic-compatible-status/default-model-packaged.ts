@@ -431,6 +431,12 @@ try {
     'fresh-diagnostic'
   );
   const label = `Default - ${configuredDefault}`;
+  // The option renders Default and its model in separate spans; its accessible name is stable.
+  const inheritedDefaultOption = `[...document.querySelectorAll('[data-testid=team-model-selector-model-option]')].find(e => {
+    const label = ${JSON.stringify(label)};
+    const name = e.getAttribute('aria-label');
+    return name === label || name?.startsWith(label + '. ');
+  })`;
   const selections = [];
   for (const limitContext of [false, true]) {
     const before = await scopedPreflightCount();
@@ -451,16 +457,13 @@ try {
       `document.querySelector('#lead-limit-context')?.getAttribute('aria-checked') === '${limitContext}'`,
       'context state'
     );
-    await cdp.wait(
-      `Boolean([...document.querySelectorAll('[data-testid=team-model-selector-model-option]')].find(e => e.textContent.trim() === ${JSON.stringify(label)}))`,
-      'exact inherited Default option'
-    );
+    await cdp.wait(`Boolean(${inheritedDefaultOption})`, 'exact inherited Default option');
     const option: { text: string; aria: string; pressed: string } = await cdp.evaluate(
-      `(() => { const e=[...document.querySelectorAll('[data-testid=team-model-selector-model-option]')].find(e => e.textContent.trim() === ${JSON.stringify(label)}); return {text:e.textContent.trim(),aria:e.getAttribute('aria-label'),pressed:e.getAttribute('aria-pressed')}; })()`
+      `(() => { const e=${inheritedDefaultOption}; return {text:e.textContent.trim(),aria:e.getAttribute('aria-label'),pressed:e.getAttribute('aria-pressed')}; })()`
     );
-    assert.equal(option.text, label);
+    assert.equal(option.text.replace(/\s+/g, ''), `Default${configuredDefault}`);
     assert.equal(option.pressed, 'true', 'Inherited Default must remain the selected value');
-    assert(option.aria.includes(label));
+    assert(option.aria === label || option.aria.startsWith(`${label}. `));
     await cdp.clickElement(leadTrigger);
     await cdp.wait(
       '!document.querySelector("#lead-limit-context")',
