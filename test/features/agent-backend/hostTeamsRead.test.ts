@@ -8,7 +8,10 @@ import {
 } from '../../../src/features/agent-backend/renderer/createHostTeamsApi';
 import { translateHostTaskReferences } from '../../../src/features/agent-backend/renderer/translateHostTaskReferences';
 import { selectResolvedMembersForTeamName } from '../../../src/renderer/store/team/teamResolvedMembers';
-import { buildMemberLaunchPresentation } from '../../../src/renderer/utils/memberHelpers';
+import {
+  buildMemberLaunchPresentation,
+  shouldDisplayMemberCurrentTask,
+} from '../../../src/renderer/utils/memberHelpers';
 import {
   buildTaskLinkHref,
   createEncodedTaskReference,
@@ -186,6 +189,73 @@ function attachmentRuntime(f: ReturnType<typeof fixture>) {
 }
 
 describe('ordinary Host team read selection', () => {
+  it('qualifies Host Codex presentation without borrowing legacy process evidence or changing configured choices', async () => {
+    const f = fixture();
+    const captured = attachmentRuntime(f);
+    captured.member.settings = { providerId: 'codex', model: 'TEST-original-model' };
+    f.snapshot.tasks[0].owner = captured.member.name;
+    const teams = createHostTeamsApi(f.legacy, f.backend);
+    const resolve = (data: Awaited<ReturnType<TeamsAPI['getData']>>) =>
+      selectResolvedMembersForTeamName(
+        {
+          selectedTeamName: f.key,
+          selectedTeamData: data,
+          teamDataCacheByName: { [f.key]: data },
+          memberActivityMetaByTeam: {},
+        },
+        f.key
+      ).find((row) => row.name === captured.member.name)!;
+    const data = await teams.getData(f.key);
+    expect(data.isAlive).toBe(true);
+    const member = resolve(data);
+    expect(member).toMatchObject({
+      runtimeOwner: 'captured-host',
+      providerId: 'codex',
+      model: 'TEST-original-model',
+      currentTaskId: '1',
+    });
+    expect(member.providerBackendId).toBeUndefined();
+    expect(member.configuredRuntimeSettings?.providerBackendId).toBeUndefined();
+    const presentation = buildMemberLaunchPresentation({
+      member,
+      isTeamAlive: data.isAlive,
+      isTeamProvisioning: false,
+      spawnStatus: undefined,
+      spawnLaunchState: undefined,
+      spawnLivenessSource: undefined,
+      spawnRuntimeAlive: undefined,
+      runtimeAdvisory: undefined,
+    });
+    expect(presentation.launchVisualState).toBeNull();
+    expect(shouldDisplayMemberCurrentTask({ member, isTeamAlive: data.isAlive })).toBe(true);
+    expect((member as unknown as Record<string, unknown>).alive).toBeUndefined();
+    expect((member as unknown as Record<string, unknown>).pid).toBeUndefined();
+    captured.runtime.attached = false;
+    captured.runtime.phase = 'closed';
+    captured.runtime.custody = 'released';
+    const stopped = await teams.getData(f.key);
+    expect(stopped.isAlive).toBe(false);
+    expect(
+      shouldDisplayMemberCurrentTask({ member: resolve(stopped), isTeamAlive: stopped.isAlive })
+    ).toBe(false);
+    expect(f.legacy.getData).not.toHaveBeenCalled();
+  });
+
+  it('retains Host presentation provenance when optional saved settings cannot be read', async () => {
+    const f = fixture();
+    f.snapshot.members.push({ name: 'bob', role: 'member' });
+    const original = vi.mocked(f.backend.invoke).getMockImplementation()!;
+    vi.mocked(f.backend.invoke).mockImplementation(async (request) =>
+      request.operation === 'team.roster.read'
+        ? { ok: false, code: 'unavailable', outcome: 'not-dispatched' }
+        : original(request)
+    );
+    const data = await createHostTeamsApi(f.legacy, f.backend).getData(f.key);
+    expect(data.members.every((member) => member.runtimeOwner === 'captured-host')).toBe(true);
+    expect(data.isAlive).toBeUndefined();
+    expect(data.warnings).toContain('Saved launch settings are unavailable.');
+  });
+
   it.each([
     ['anthropic', true],
     ['codex', false],
@@ -309,6 +379,7 @@ describe('ordinary Host team read selection', () => {
     const removed = await teams.getData(f.key);
     expect(removed.members.find((member) => member.name === 'TEST-retired')).toMatchObject({
       name: 'TEST-retired',
+      runtimeOwner: 'captured-host',
       removedAt: Date.parse(removedAt),
       agentType: 'general-purpose',
       role: 'Developer',

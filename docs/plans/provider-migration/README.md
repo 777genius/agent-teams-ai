@@ -61,6 +61,16 @@ consumer. [P4.4](stage-1-legacy-host.md#p4-полноценные-несколь
 workflows, pending/revoke/control guards и product approvals. Это не заявление о
 поддержке native questions всеми тремя providers и не удаление прежнего UI.
 
+## Текущий checkpoint интеграции — 27 октября
+
+[Checkpoint от 27 октября](progress/checkpoint-2026-10-27.md) фиксирует merge с
+main, подтверждённые исправления Create/Edit/ссылок на Task/неактивного roster и
+презентации Host members, новые scoped проверки и фактические результаты CI.
+Frozen dashboard/данные от 23 октября остаются историческим снимком. Последующие
+изменения не наследуют прежний native/UI PASS; финальная exact-head приёмка,
+packed/installed и исходный M19 custody HOLD остаются отдельными обязательствами.
+Этап 1 пока не объявлен завершённым, PR остаётся Draft.
+
 ## Текущая сводка приёмки
 
 Ниже перечислены принятые границы доказательств, а не полностью закрытые строки

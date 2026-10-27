@@ -741,6 +741,8 @@ export type UpdateKanbanPatch =
   | { op: 'request_changes'; comment?: string; taskRefs?: TaskRef[] };
 export interface ResolvedTeamMember extends Pick<TeamMember, 'joinedAt'>, NativeMemberCapability {
   name: string;
+  /** Presentation provenance only; does not assert native liveness or grant control. */
+  runtimeOwner?: 'captured-host';
   /** Opaque configured-state token from an application owner, never native identity. */
   configuredSettingsFingerprint?: string;
   agentId?: string;
@@ -820,6 +822,8 @@ export interface TeamProcess {
 }
 export interface TeamMemberSnapshot extends Pick<TeamMember, 'joinedAt'>, NativeMemberCapability {
   name: string;
+  /** Presentation provenance only; does not assert native liveness or grant control. */
+  runtimeOwner?: 'captured-host';
   /** Opaque configured-state token from an application owner, never native identity. */
   configuredSettingsFingerprint?: string;
   agentId?: string;

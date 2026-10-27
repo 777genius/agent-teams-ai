@@ -264,3 +264,22 @@ hidden owner records are retained by the artifact step. Strict script
 typechecking, embedded expression parsing, independent review and whitespace
 checks passed. This supplies missing evidence for the mixed aggregate failure;
 no readiness wait, display predicate or native effect is changed by this probe.
+
+
+## Captured Host member presentation
+
+Independent UI/backend review confirmed that the legacy native Codex process
+heuristic marked a captured Host Codex member stale despite the original Host
+runtime being ready. The Host view now supplies a presentation-only provenance
+marker for its active and removed snapshots. It excludes only that view from the
+legacy process heuristic; no PID, runtime liveness, selected backend or provider
+setting is invented. Explicit offline/error/skipped/removed states and the closed
+Team guard retain their behavior. The member memo comparator includes provenance
+so an otherwise unchanged row refreshes correctly.
+
+The author passed **99 tests in three affected suites**, precise seven-file fast
+lint, bounded strict typechecking and the source guard (Host adapter 795/800).
+An initial external RAM exhaustion failed before collection; after capacity was
+restored, unchanged assertions passed. Two independent integration reviews
+accepted the presentation boundary. Actual native mixed/UI acceptance remains
+open until a new coherent exact-head run.

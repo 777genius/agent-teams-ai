@@ -143,6 +143,7 @@ function view(
     tasks: snapshot.tasks,
     members: snapshot.members.map((member) => ({
       ...member,
+      runtimeOwner: 'captured-host',
       agentType: member.role === 'lead' ? 'team-lead' : 'general-purpose',
       taskCount: snapshot.tasks.filter(
         (task) => task.owner === member.name && task.status !== 'deleted'
@@ -416,6 +417,7 @@ export function createHostTeamsApi(
           ...result.members,
           ...configuration.removedMembers.map((member) => ({
             name: member.name,
+            runtimeOwner: 'captured-host' as const,
             role: 'member',
             agentType: 'general-purpose',
             removedAt: Date.parse(member.removedAt),

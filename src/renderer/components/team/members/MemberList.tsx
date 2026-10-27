@@ -84,6 +84,7 @@ function areResolvedMembersEquivalent(
     const rightMember = right[index];
     if (
       leftMember.name !== rightMember.name ||
+      leftMember.runtimeOwner !== rightMember.runtimeOwner ||
       leftMember.agentId !== rightMember.agentId ||
       leftMember.joinedAt !== rightMember.joinedAt ||
       leftMember.status !== rightMember.status ||
