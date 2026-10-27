@@ -3084,7 +3084,8 @@
       "builtinNotFound": "Built-in template not found.",
       "notFound": "Template not found.",
       "sourceNotFound": "Source template not found.",
-      "sourceUnreadable": "Source template could not be read."
+      "sourceUnreadable": "Source template could not be read.",
+      "unreadableRecord": "This stored template could not be read. Reload the library before editing it again."
     },
     "library": {
       "builtInDescription": "Ready-made team setups with roles and responsibilities.",
@@ -3139,6 +3140,8 @@
       "saving": "Saving…",
       "stalePreview": "The saved team configuration changed since this preview. Review the refreshed preview, then save again.",
       "unresolvedBody": "The save could not be confirmed, so nothing was retried automatically. Re-check the original save before trying again.",
+      "unresolvedDeleteBody": "The deletion could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the template may already be gone.",
+      "unresolvedMutationBody": "The change could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the change may already have been applied.",
       "unresolvedTitle": "Outcome not confirmed"
     },
     "warnings": {

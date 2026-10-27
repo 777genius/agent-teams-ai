@@ -72,7 +72,9 @@ export function useTemplateManagement({
 
         return result;
       } catch {
-        return { status: 'storageUnavailable' };
+        // A transport failure happens after the request may already have been
+        // dispatched, so it can never prove the delete did not commit.
+        return { status: 'unresolvedWriteOutcome', templateId: target.templateId };
       } finally {
         if (requestId === requestIdRef.current) {
           setBusy(false);
@@ -105,7 +107,10 @@ export function useTemplateManagement({
 
         return result;
       } catch {
-        return { status: 'storageUnavailable' };
+        // The new id is assigned by the main process, so an interrupted
+        // duplicate leaves the renderer without an id to reconcile against.
+        // The outcome stays unknown instead of claiming nothing was written.
+        return { status: 'unresolvedWriteOutcome', templateId: '' };
       } finally {
         if (requestId === requestIdRef.current) {
           setBusy(false);
@@ -141,7 +146,9 @@ export function useTemplateManagement({
 
         return result;
       } catch {
-        return { status: 'storageUnavailable' };
+        // Same as duplicate: the new id belongs to the main process, so a
+        // failed response cannot prove the copy was not stored.
+        return { status: 'unresolvedWriteOutcome', templateId: '' };
       } finally {
         if (requestId === requestIdRef.current) {
           setBusy(false);

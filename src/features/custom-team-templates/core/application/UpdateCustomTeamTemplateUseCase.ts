@@ -1,6 +1,9 @@
 import { CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION } from '@features/custom-team-templates/contracts';
 
-import { serializeCanonicalTemplateContent } from '../domain/canonicalTemplateSerialization';
+import {
+  normalizeTemplateMember,
+  serializeCanonicalTemplateContent,
+} from '../domain/canonicalTemplateSerialization';
 import { validateTemplateContent } from '../domain/templateContentPolicy';
 import { validateTemplateName } from '../domain/templateNamePolicy';
 import { validateTemplateDescription } from '../domain/templatePreviewPolicy';
@@ -87,11 +90,17 @@ function toAllowlistedMembers(value: unknown): CustomTeamTemplateMemberV1[] | nu
     if (candidate.workflow !== undefined && typeof candidate.workflow !== 'string') {
       return null;
     }
-    members.push({
-      name: candidate.name,
-      ...(candidate.role === undefined ? {} : { role: candidate.role }),
-      ...(candidate.workflow === undefined ? {} : { workflow: candidate.workflow }),
-    });
+    // Normalize here, before hashing and before the write payload is built, so
+    // an empty-string optional never reaches the canonical digest: persistence
+    // drops falsy optionals, and a digest over a shape the store never writes
+    // could not be reconciled against its own committed row.
+    members.push(
+      normalizeTemplateMember({
+        name: candidate.name,
+        ...(typeof candidate.role === 'string' ? { role: candidate.role } : {}),
+        ...(typeof candidate.workflow === 'string' ? { workflow: candidate.workflow } : {}),
+      })
+    );
   }
   return members;
 }

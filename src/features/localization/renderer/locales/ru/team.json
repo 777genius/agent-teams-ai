@@ -3342,7 +3342,8 @@
       "builtinNotFound": "Built-in template not found.",
       "notFound": "Template not found.",
       "sourceNotFound": "Source template not found.",
-      "sourceUnreadable": "Source template could not be read."
+      "sourceUnreadable": "Source template could not be read.",
+      "unreadableRecord": "This stored template could not be read. Reload the library before editing it again."
     },
     "library": {
       "builtInDescription": "Готовые настройки команд с ролями и обязанностями.",
@@ -3397,6 +3398,8 @@
       "saving": "Сохранение…",
       "stalePreview": "Сохранённая конфигурация команды изменилась с момента предпросмотра. Изучите обновлённый предпросмотр и сохраните ещё раз.",
       "unresolvedBody": "Не удалось подтвердить сохранение, поэтому автоматический повтор не выполнялся. Проверьте исходное сохранение, прежде чем пробовать снова.",
+      "unresolvedDeleteBody": "The deletion could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the template may already be gone.",
+      "unresolvedMutationBody": "The change could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the change may already have been applied.",
       "unresolvedTitle": "Результат не подтверждён"
     },
     "warnings": {

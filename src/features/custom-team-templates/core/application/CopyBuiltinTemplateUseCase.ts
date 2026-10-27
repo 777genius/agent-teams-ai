@@ -112,15 +112,14 @@ export class CopyBuiltinTemplateUseCase {
             return { status: 'storageUnavailable' };
           }
           hadUnknownExecution = true;
-          const check = await checkStoredTemplate(
-            gateway,
-            {
-              templateId,
-              name: nameValidation.value,
-              contentHash,
-            } as CustomTeamTemplateWriteIdentity,
-            this.deps.hasher
-          );
+          // A built-in copy carries no description, so the identity records it
+          // as absent rather than as an empty string.
+          const identity: CustomTeamTemplateWriteIdentity = {
+            templateId,
+            name: nameValidation.value,
+            contentHash,
+          };
+          const check = await checkStoredTemplate(gateway, identity, this.deps.hasher);
           if (check.status === 'saved') {
             const saved: CustomTeamTemplateV1 = {
               ...check.template,

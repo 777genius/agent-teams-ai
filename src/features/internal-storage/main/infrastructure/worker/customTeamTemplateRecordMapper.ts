@@ -1,3 +1,4 @@
+import { normalizeTemplateMember } from '@features/custom-team-templates';
 import { CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION } from '@features/custom-team-templates/contracts';
 
 import type { customTeamTemplates } from './internalStorageSchema';
@@ -24,6 +25,9 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
  * Used in both directions: to validate the create payload after the worker
  * hop, and to reconstruct a stored row. Each member is rebuilt field by field,
  * so unknown keys can never enter or leave the persisted representation.
+ * Empty optional metadata is normalized away through the same shared rule the
+ * canonical serializer uses, so the persisted row always hashes to the digest
+ * its write recorded.
  * Returns null when any entry is structurally invalid, which is what makes a
  * stored row unreadable instead of silently trimmed.
  */
@@ -46,11 +50,13 @@ export function parseTemplateMembers(value: unknown): CustomTeamTemplateMemberV1
     if (workflow !== undefined && typeof workflow !== 'string') {
       return null;
     }
-    members.push({
-      name,
-      ...(role ? { role } : {}),
-      ...(workflow ? { workflow } : {}),
-    });
+    members.push(
+      normalizeTemplateMember({
+        name,
+        ...(typeof role === 'string' ? { role } : {}),
+        ...(typeof workflow === 'string' ? { workflow } : {}),
+      })
+    );
   }
   return members;
 }

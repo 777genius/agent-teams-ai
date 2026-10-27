@@ -45,7 +45,12 @@ export const DuplicateCustomTemplateDialog = ({
   const [name, setName] = useState(defaultProposedName);
   const [nameConflict, setNameConflict] = useState(false);
   const [errorState, setErrorState] = useState<
-    'sourceNotFound' | 'sourceUnreadable' | 'storageUnavailable' | 'requestFailed' | null
+    | 'sourceNotFound'
+    | 'sourceUnreadable'
+    | 'storageUnavailable'
+    | 'unresolvedWriteOutcome'
+    | 'requestFailed'
+    | null
   >(null);
   const [issues, setIssues] = useState<readonly CustomTeamTemplateValidationIssue[]>([]);
 
@@ -89,6 +94,11 @@ export const DuplicateCustomTemplateDialog = ({
         case 'templateIdConflict':
         case 'storageUnavailable':
           setErrorState('storageUnavailable');
+          return;
+        case 'unresolvedWriteOutcome':
+          // Distinct from a known name conflict: the copy may exist. Keep the
+          // entered name so the user can check My Templates before retrying.
+          setErrorState('unresolvedWriteOutcome');
           return;
       }
     } catch {
@@ -146,6 +156,20 @@ export const DuplicateCustomTemplateDialog = ({
             >
               <AlertTriangle className="mt-0.5 size-4 shrink-0" />
               <p>{t('customTemplates.errors.nameConflict')}</p>
+            </div>
+          ) : null}
+
+          {errorState === 'unresolvedWriteOutcome' ? (
+            <div
+              role="alert"
+              data-testid="duplicate-template-unresolved"
+              className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200"
+            >
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <div>
+                <p className="font-medium">{t('customTemplates.states.unresolvedTitle')}</p>
+                <p>{t('customTemplates.states.unresolvedMutationBody')}</p>
+              </div>
             </div>
           ) : null}
 

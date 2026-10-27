@@ -40,7 +40,12 @@ export const DeleteCustomTemplateDialog = ({
   );
   const [revisionConflict, setRevisionConflict] = useState<CustomTeamTemplateV1 | null>(null);
   const [errorState, setErrorState] = useState<
-    'notFound' | 'unreadableRecord' | 'storageUnavailable' | 'requestFailed' | null
+    | 'notFound'
+    | 'unreadableRecord'
+    | 'storageUnavailable'
+    | 'unresolvedWriteOutcome'
+    | 'requestFailed'
+    | null
   >(null);
 
   useEffect(() => {
@@ -78,6 +83,11 @@ export const DeleteCustomTemplateDialog = ({
         case 'unreadableRecord':
         case 'storageUnavailable':
           setErrorState('storageUnavailable');
+          return;
+        case 'unresolvedWriteOutcome':
+          // The row may already be gone. Stay in an explicit unknown state
+          // instead of closing as a confirmed delete or offering a blind retry.
+          setErrorState('unresolvedWriteOutcome');
           return;
       }
     } catch {
@@ -122,6 +132,20 @@ export const DeleteCustomTemplateDialog = ({
               <div>
                 <p className="font-medium">{t('customTemplates.delete.conflictTitle')}</p>
                 <p>{t('customTemplates.delete.conflictBody')}</p>
+              </div>
+            </div>
+          ) : null}
+
+          {errorState === 'unresolvedWriteOutcome' ? (
+            <div
+              role="alert"
+              data-testid="delete-template-unresolved"
+              className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200"
+            >
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <div>
+                <p className="font-medium">{t('customTemplates.states.unresolvedTitle')}</p>
+                <p>{t('customTemplates.states.unresolvedDeleteBody')}</p>
               </div>
             </div>
           ) : null}

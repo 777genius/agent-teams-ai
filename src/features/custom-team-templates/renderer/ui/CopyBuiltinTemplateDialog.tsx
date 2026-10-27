@@ -42,9 +42,15 @@ export const CopyBuiltinTemplateDialog = ({
 
   const [selectedId, setSelectedId] = useState<BuiltinTeamTemplateId>('software-product');
   const [name, setName] = useState('');
+  /**
+   * True once the user typed their own name. It stops the seeded name from
+   * being replaced by a rerender or a locale change; selecting another
+   * built-in still resets the name, which is the established behaviour.
+   */
+  const [nameEdited, setNameEdited] = useState(false);
   const [nameConflict, setNameConflict] = useState(false);
   const [errorState, setErrorState] = useState<
-    'builtinNotFound' | 'storageUnavailable' | 'requestFailed' | null
+    'builtinNotFound' | 'storageUnavailable' | 'unresolvedWriteOutcome' | 'requestFailed' | null
   >(null);
   const [issues, setIssues] = useState<readonly CustomTeamTemplateValidationIssue[]>([]);
 
@@ -52,22 +58,26 @@ export const CopyBuiltinTemplateDialog = ({
 
   useEffect(() => {
     if (open) {
-      const initialId = initialBuiltinId ?? 'software-product';
-      setSelectedId(initialId);
-      const initial = TEAM_TEMPLATES.find((tpl) => tpl.id === initialId) ?? TEAM_TEMPLATES[0];
-      setName(initial ? initial.name : '');
+      setSelectedId(initialBuiltinId ?? 'software-product');
+      setNameEdited(false);
       setNameConflict(false);
       setErrorState(null);
       setIssues([]);
     }
   }, [open, initialBuiltinId]);
 
+  // Seed the editable name from the same localized label the built-in
+  // catalogue renders. This deliberately follows a locale change only while
+  // the name is untouched, so an explicit user edit is never overwritten.
+  useEffect(() => {
+    if (!open || nameEdited) return;
+    setName(t(`templates.names.${selectedId}`));
+  }, [open, selectedId, nameEdited, t]);
+
   const handleSelectTemplate = (id: BuiltinTeamTemplateId) => {
     setSelectedId(id);
-    const target = TEAM_TEMPLATES.find((tpl) => tpl.id === id);
-    if (target) {
-      setName(target.name);
-    }
+    setNameEdited(false);
+    setName(t(`templates.names.${id}`));
     setNameConflict(false);
     setErrorState(null);
     setIssues([]);
@@ -99,6 +109,11 @@ export const CopyBuiltinTemplateDialog = ({
         case 'templateIdConflict':
         case 'storageUnavailable':
           setErrorState('storageUnavailable');
+          return;
+        case 'unresolvedWriteOutcome':
+          // The copy may already have been stored. Keep the selection and the
+          // name available and never retry automatically.
+          setErrorState('unresolvedWriteOutcome');
           return;
       }
     } catch {
@@ -179,6 +194,20 @@ export const CopyBuiltinTemplateDialog = ({
             </div>
           ) : null}
 
+          {errorState === 'unresolvedWriteOutcome' ? (
+            <div
+              role="alert"
+              data-testid="copy-builtin-unresolved"
+              className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200"
+            >
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <div>
+                <p className="font-medium">{t('customTemplates.states.unresolvedTitle')}</p>
+                <p>{t('customTemplates.states.unresolvedMutationBody')}</p>
+              </div>
+            </div>
+          ) : null}
+
           {errorState === 'requestFailed' ? (
             <div
               role="alert"
@@ -215,7 +244,7 @@ export const CopyBuiltinTemplateDialog = ({
                   >
                     <div className="flex items-start justify-between gap-2">
                       <span className="text-sm font-semibold text-[var(--color-text)]">
-                        {tpl.name}
+                        {t(`templates.names.${tpl.id}`)}
                       </span>
                       <ShieldCheck className="size-4 shrink-0 text-sky-400" />
                     </div>
@@ -246,6 +275,7 @@ export const CopyBuiltinTemplateDialog = ({
               aria-describedby={nameIssues.length > 0 ? 'copy-builtin-name-error' : undefined}
               onChange={(e) => {
                 setName(e.target.value);
+                setNameEdited(true);
                 setNameConflict(false);
                 setIssues([]);
               }}
@@ -265,7 +295,7 @@ export const CopyBuiltinTemplateDialog = ({
             >
               <div className="flex items-center justify-between text-[var(--color-text-muted)]">
                 <span className="font-medium text-[var(--color-text)]">
-                  {selectedTemplate.name}
+                  {t(`templates.names.${selectedTemplate.id}`)}
                 </span>
                 <span className="text-[11px] text-sky-400">
                   {t('customTemplates.copyBuiltin.readOnlySource')}

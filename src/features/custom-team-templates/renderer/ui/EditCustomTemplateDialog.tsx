@@ -225,6 +225,31 @@ export const EditCustomTemplateDialog = ({
             </div>
           ) : null}
 
+          {status === 'unreadableRecord' ? (
+            <div
+              role="alert"
+              data-testid="edit-template-unreadable"
+              className="flex items-start gap-2 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
+            >
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <p>{t('customTemplates.errors.unreadableRecord')}</p>
+            </div>
+          ) : null}
+
+          {status === 'unresolvedWriteOutcome' ? (
+            <div
+              role="alert"
+              data-testid="edit-template-unresolved"
+              className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200"
+            >
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <div>
+                <p className="font-medium">{t('customTemplates.states.unresolvedTitle')}</p>
+                <p>{t('customTemplates.states.unresolvedMutationBody')}</p>
+              </div>
+            </div>
+          ) : null}
+
           {status === 'requestFailed' ? (
             <div
               role="alert"

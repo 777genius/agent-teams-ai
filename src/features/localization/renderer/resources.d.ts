@@ -4045,7 +4045,8 @@ export default interface Resources {
         "storageUnavailable": "The template library is unavailable. Nothing was saved.",
         "storageUnavailableRecheck": "The template library is unavailable, so the outcome could not be checked.",
         "storageUnavailableSave": "The template library refused the write. Nothing was saved — you can try again.",
-        "templateIdConflict": "A different stored template already owns this identity. Nothing was overwritten."
+        "templateIdConflict": "A different stored template already owns this identity. Nothing was overwritten.",
+        "unreadableRecord": "This stored template could not be read. Reload the library before editing it again."
       },
       "library": {
         "builtInDescription": "Ready-made team setups with roles and responsibilities.",
@@ -4100,6 +4101,8 @@ export default interface Resources {
         "saving": "Saving…",
         "stalePreview": "The saved team configuration changed since this preview. Review the refreshed preview, then save again.",
         "unresolvedBody": "The save could not be confirmed, so nothing was retried automatically. Re-check the original save before trying again.",
+        "unresolvedDeleteBody": "The deletion could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the template may already be gone.",
+        "unresolvedMutationBody": "The change could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the change may already have been applied.",
         "unresolvedTitle": "Outcome not confirmed"
       },
       "warnings": {
