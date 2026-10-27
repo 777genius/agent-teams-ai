@@ -542,10 +542,28 @@ jobs:
             variant: stopped-import-native-launch
             label: stopped legacy import and native Launch
             import_launch: '1'
+          - mode: native-quit-ui
+            variant: native-quit-active-readback
+            label: active input Quit and cold readback
+            readback: native-quit-readback-ui
+          - mode: native-quit-ui
+            variant: native-quit-pending-open-readback
+            label: pending open Quit and cold readback
+            quit_scenario: pending-open
+            readback: native-quit-readback-ui
+          - mode: native-resume-ui
+            label: cold selected Resume
+          - mode: native-review-ui
+            label: native review and cold readback
+            readback: native-review-readback-ui
+          - mode: task-board-cross-team-ui
+            label: existing Task board and cross-Team controls
     env:
       TMPDIR: /private/tmp
       STAGE1_MODE: ${{ matrix.mode }}
       STAGE1_VARIANT: ${{ matrix.variant || matrix.mode }}
+      STAGE1_READBACK_MODE: ${{ matrix.readback || '' }}
+      STAGE1_QUIT_SCENARIO: ${{ matrix.quit_scenario || '' }}
       LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH: ${{ matrix.import_launch || '' }}
     steps:
       - uses: actions/checkout@v6
@@ -649,7 +667,39 @@ jobs:
           set -euo pipefail
           selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
           "$selected_node" --test scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
+          if [ -n "$STAGE1_QUIT_SCENARIO" ]; then
+            export LEGACY_DESKTOP_QUIT_SCENARIO="$STAGE1_QUIT_SCENARIO"
+          fi
           "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-desktop-$STAGE1_VARIANT.log"
+      - name: Capture original successful lifecycle receipt for cold readback
+        if: ${{ matrix.readback }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, readFileSync, realpathSync } from 'node:fs';
+          import { dirname, join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, `stage1-desktop-${process.env.STAGE1_VARIANT}.log`), 'utf8');
+          const prepared = log.split('\n').flatMap(line => {
+            try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; }
+            catch { return []; }
+          });
+          assert.equal(prepared.length, 1, 'exactly one original lifecycle attempt');
+          const path = realpathSync(prepared[0].receipt);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-backend-receipt\.json$/u);
+          const bytes = readFileSync(path), receipt = JSON.parse(bytes.toString('utf8'));
+          assert.equal(receipt.mode, process.env.STAGE1_MODE);
+          assert.equal(receipt.status, 'PASS');
+          assert.equal(realpathSync(receipt.root), dirname(path));
+          appendFileSync(process.env.GITHUB_ENV, `LEGACY_DESKTOP_READBACK_ROOT=${receipt.root}\n`);
+          appendFileSync(process.env.GITHUB_ENV, `LEGACY_DESKTOP_READBACK_RECEIPT_SHA256=${createHash('sha256').update(bytes).digest('hex')}\n`);
+          NODE
+      - name: Reopen the same owner through the existing cold readback controls
+        if: ${{ matrix.readback }}
+        run: |
+          set -euo pipefail
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          LEGACY_DESKTOP_PROOF_MODE="$STAGE1_READBACK_MODE" "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-readback-$STAGE1_VARIANT.log"
       - name: Require the original retained receipt to report PASS
         if: always()
         run: |
@@ -658,18 +708,19 @@ jobs:
           import { createHash } from 'node:crypto';
           import { readFileSync, realpathSync } from 'node:fs';
           import { dirname, join } from 'node:path';
-          const log = readFileSync(join(process.env.RUNNER_TEMP, `stage1-desktop-${process.env.STAGE1_VARIANT}.log`), 'utf8');
+          function verify(phase, expectedMode) {
+          const log = readFileSync(join(process.env.RUNNER_TEMP, `stage1-${phase}-${process.env.STAGE1_VARIANT}.log`), 'utf8');
           const prepared = log.split('\n').flatMap(line => {
             try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; }
             catch { return []; }
           });
           assert.equal(prepared.length, 1, 'one original prepared Desktop proof, no automatic retry');
           const path = realpathSync(prepared[0].receipt);
-          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-backend-receipt\.json$/u);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-(?:backend|readback|native-review-readback)-receipt\.json$/u);
           const receipt = JSON.parse(readFileSync(path, 'utf8'));
-          assert.equal(receipt.mode, process.env.STAGE1_MODE);
+          assert.equal(receipt.mode, expectedMode);
           assert.equal(receipt.status, 'PASS', 'INCOMPLETE remains an acceptance failure');
-          if (process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1') {
+          if (phase === 'desktop' && process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1') {
             const imported = receipt.stoppedImportUiProof;
             assert.equal(imported?.status, 'PASS');
             assert.equal(imported.noLaunchSubmit, false, 'import-only is not native Launch acceptance');
@@ -682,6 +733,9 @@ jobs:
           }
           console.log(JSON.stringify({ status: receipt.status, mode: receipt.mode,
             variant: process.env.STAGE1_VARIANT, receipt: path }));
+          }
+          verify('desktop', process.env.STAGE1_MODE);
+          if (process.env.STAGE1_READBACK_MODE) verify('readback', process.env.STAGE1_READBACK_MODE);
           NODE
       - name: Preserve original source Desktop diagnostics
         if: always()
@@ -692,6 +746,7 @@ jobs:
           if-no-files-found: warn
           path: |
             ${{ runner.temp }}/stage1-desktop-${{ matrix.variant || matrix.mode }}.log
+            ${{ runner.temp }}/stage1-readback-${{ matrix.variant || matrix.mode }}.log
             ${{ runner.temp }}/stage1-setup-${{ matrix.variant || matrix.mode }}.log
             /private/tmp/TEST-stage1-inputs-*/input-pins.json
             /private/tmp/TEST-desktop-backend-*/*.json

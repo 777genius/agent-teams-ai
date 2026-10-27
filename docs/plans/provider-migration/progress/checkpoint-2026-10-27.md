@@ -142,3 +142,18 @@ Those two tests now use an explicit synthetic, self-contained V1 payload fixture
 for exact dirty-preimage application and rejection of externally appended bytes.
 Both tests and Host test typechecking passed. Historical native evidence is
 unchanged, and this unit conformance result is not new native qualification.
+
+## Affected lifecycle/readback qualification
+
+The optional source CI route also selects existing active-input Quit and
+pending-open Quit scenarios, each followed in the same job by the existing cold
+Quit readback. The original PASS receipt's exact root and SHA-256 are passed to
+the readback; the source phase is never retried. Existing cold selected Resume,
+native review followed by its original cold readback, and offline Task board /
+cross-Team controls cover the corresponding changed ownership/shutdown/review
+paths. Both source and readback receipts must report PASS.
+
+The nine variants have distinct artifact identities. YAML, all eight shell run
+steps, embedded JavaScript syntax and whitespace checks passed; an independent
+review found no blocking workflow issue. These are selected existing acceptance
+routes, not new native results or a replacement for the unchanged M01–M19 matrix.
