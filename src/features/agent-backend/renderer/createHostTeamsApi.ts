@@ -5,6 +5,7 @@ import { isHostTeamRunId } from '../contracts/teamRunSelection';
 import { createHostLeadApi } from './createHostLeadApi';
 import { createHostLogStatsApi } from './createHostLogStatsApi';
 import { createHostMemberActions } from './createHostMemberActions';
+import { createHostMemberSpawnStatuses } from './createHostMemberSpawnStatuses';
 import { createHostMessageAttachmentRead } from './createHostMessageAttachmentRead';
 import { createHostProcessControls } from './createHostProcessControls';
 import { createHostProductLifecycleApi } from './createHostProductLifecycleApi';
@@ -177,6 +178,7 @@ export function createHostTeamsApi(
   const lifecycle = createHostTeamLifecycle(backend);
   const approvals = createHostToolApprovals({ backend, captureScope, readOrder });
   const provisioning = createHostTeamProvisioning(backend, captureScope, readOrder);
+  const getMemberSpawnStatuses = createHostMemberSpawnStatuses(backend, captureScope, readOrder);
   const changes = createHostTeamChanges({
     backend,
     captureScope,
@@ -625,6 +627,7 @@ export function createHostTeamsApi(
     invalidateReads: (handleId) => readOrder.invalidateReads(handleId),
   });
   const supported = {
+    getMemberSpawnStatuses,
     ...memberActions,
     async showMessageNotification(raw: Parameters<TeamsAPI['showMessageNotification']>[0]) {
       const data = captureHostNotification(raw),

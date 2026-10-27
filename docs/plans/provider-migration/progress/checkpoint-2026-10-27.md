@@ -422,8 +422,10 @@ fixture/compiler/review results; actual native-add acceptance is still pending.
 ## Exact 7415702 source run: native addition and remaining failures
 
 [CI run 40559325843](https://github.com/777genius/agent-teams-ai/actions/runs/40559325843)
-is running the full source gates and ten separately gated Desktop variants on
-exact `7415702c69513dd709f301fc51299ddca3859867`. Canonical validate, all three
+completed with **FAILURE** on the full source gates and ten separately gated
+Desktop variants at exact `7415702c69513dd709f301fc51299ddca3859867`: eight
+Desktop variants passed; mixed launch and stopped-source/native Launch failed.
+Canonical validate, all three
 lint shards, all four test shards and the Windows ledger smoke passed. The
 `Full qualification` aggregation also passed, but it does not include the
 optional native jobs and therefore is not complete Stage 1/native acceptance.
@@ -518,3 +520,80 @@ result in this local recovered tooling; only task-owned verification processes
 were stopped, and no package-suite PASS is claimed. Scoped production fast lint
 and diff checks passed. Fresh CI with the normal build remains required for the
 full package/MCP and actual stopped-source acceptance.
+
+## Additional exact 7415702 Desktop receipts
+
+The same source run `40559325843` also passed the following existing UI gates.
+These results belong to `7415702c69513dd709f301fc51299ddca3859867`, not to the
+later group-read, Create-retention or pending import/status fixes.
+
+| Original gate | Artifact | Original receipt SHA-256 |
+| --- | --- | --- |
+| Active-input Quit | `12760174307` | `e21f91aae22b93784fa41798a5ac88cecc7b25177411e9cd9d2fda6915bbd017` |
+| Active-input cold readback | same artifact | `873133f7a11dab494d029d965ce30c34276c7961f0f1d820db27f8d219a4ce9d` |
+| Pending-open Quit | `12761984327` | `31c1d020b92ae0881c1712a31c131d868f701d7fd21421e50b1ca77811f9c83a` |
+| Pending-open cold readback | same artifact | `0b784e374ddd8ab7956275155bf5fe6807287332eeca9128040c17db3e16e818` |
+| Native review | `12762545090` | `2f307f4c11793fec690adf6d639ea7717bc71c52a7f7987c1cbdd79ddb36e65c` |
+| Native-review cold readback | same artifact | `b75e916ef5fa65c64bef7d2258c4d61d55acbb1865867645216a3e45e407a75d` |
+| Existing Task board and cross-Team controls | `12761524109` | `38f8ce794c28fdc3a36e6d6afa6f10e262b8ee669a8d9a765dfaf6f0938312f9` |
+| Cold selected Resume | `12762004657` | `36307ecf5ff5b4b7babff299023d6e62ed6a026dae2070049a363ecaad94fe19` |
+| Original Create with native launch | `12761828746` | `e33b25507ef985ee5f2b216357726918378ebf276a929d79c2ccd8c50650180b` |
+| Saved legacy import only | `12761034984` | `af4bb267887decc87f06067cc141d6ca6c73388061d7cbe52e47ff4ee1ce2aa9` |
+
+The Task board gate used the original dependency picker, assignee/resolve and
+blocked Start/Complete controls, actual sortable-card drag, attachment operations,
+review/correction/approval history, notification navigation/delete and original
+cross-Team Send/Reply. Its Mark-as-read control was unavailable because the
+original viewed notification was already read; that action is not newly claimed.
+Root visually inspected the retained reordered-board and approved-task screenshots.
+This is a canonical offline UI proof with no configured provider sessions. The
+receipt records remaining dev processes and harness SIGTERM, so natural app exit
+or native custody is not inferred from this UI PASS.
+
+The Resume gate retained the original selected checkpoint/history through guarded
+Quit and same-profile cold startup, then used the original Resume and Composer
+controls and a second Stop. Both captured app epochs exited with code 0, no signal,
+empty owned process groups and absent Host; the first epoch released its writer
+lock. Root also inspected its original resumed native UI screenshot. Active-input
+Quit and native-review source/cold receipts separately report PASS, natural exit0,
+no signal and empty groups before cleanup; cold readback did not start a new native
+session.
+
+Original Create confirmed scoped preflight, one created Team/native session,
+actual SDK/MCP/Bash/reply, Stop and settings after renderer reload. Saved import
+used a **never-launched draft**, retained original import identity through reload
+and closed the existing Launch dialog without Submit. It does not qualify the
+separate previously-launched stopped-source/native-Launch failure. Both of these
+receipts record harness SIGTERM and remaining dev processes before cleanup; their
+scoped workflow results do not establish natural app exit. None of the inspected
+receipts had refused or post-Quit/cleanup sentinel invocations. Vendor model
+qualification, full P4/P8, packed M17 and the original M19 custody HOLD remain open.
+The pending-open Quit and its exact linked cold readback also passed: both
+original receipts report exit code 0, no signal, empty process groups and absent
+Host. Cold readback started no new provider, and refused/post-Quit sentinel
+counts remained zero. Root downloaded and read those original receipts.
+
+
+## Captured Host member spawn read checkpoint
+
+The existing Host Teams API now implements the existing per-member spawn-status
+read from the captured `launch.configuration.read` projection. It retains the
+original connection/context and launch read fence, uses the same qualified run
+identity as aggregate progress and excludes the configured lead from teammate
+milestones. A member is presented online only for authoritative ready, usable and
+native-ready observations. Pending, permission, unknown, failed and skipped
+states retain distinct existing presentation states; no process ID, heartbeat,
+control grant or native readiness is fabricated. This addresses the confirmed
+mixed UI case where aggregate progress was ready but absent per-member reads
+kept the original banner at `Finishing launch`.
+
+The author reports **80/80** focused tests passed (25 new projection/fence tests,
+40 existing Host reads and 15 provisioning tests), including actual Main
+projection through the shared presentation helper. Bounded strict TypeScript 7,
+scoped fast lint, formatting and diff checks passed. The lead additionally
+removed one confirmed unnecessary non-null assertion and reran its exact typed
+lint rule and the affected 25 tests. An independent critic
+reviewed the completed helper and exact three-line API wiring and accepted them.
+Both new helper and regression are explicitly source-pinned. Actual mixed
+Desktop acceptance and canonical project qualification on this changed source
+remain pending; the earlier failed native receipt is unchanged.
