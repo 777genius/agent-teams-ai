@@ -14,22 +14,22 @@ import type {
 } from './OpenCodeBridgeCommandContract';
 import type { OpenCodeBridgeHandshakePort } from './OpenCodeStateChangingBridgeCommandService';
 
-type ReadinessInput = {
+interface ReadinessInput {
   projectPath: string;
   selectedModel: string | null;
   requireExecutionProbe: boolean;
   skipPermissions?: boolean;
   effort?: string;
   freshExecutionProofRequestId?: string;
-};
+}
 type InlineHandshake = OpenCodeBridgeHandshake & { expectedBehaviorFingerprint?: unknown };
-type Entry = {
+interface Entry {
   input: ReadinessInput;
   readiness: OpenCodeTeamLaunchReadiness;
   handshake: InlineHandshake;
   capability: string;
   behavior: string;
-};
+}
 
 /** This private composition-owned port only admits a validated readiness response,
  * never a renderer/caller-provided handshake. One launch consumes one admission. */
