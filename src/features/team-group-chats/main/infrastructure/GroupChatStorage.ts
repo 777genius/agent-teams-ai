@@ -143,6 +143,11 @@ export class GroupChatStorage {
     });
   }
 
+  async readRegistry(teamName: string): Promise<GroupChat[]> {
+    const file = await safeGroupTeamPath(teamName, 'group-chats.json');
+    return parseGroupRegistry(await readBounded(file));
+  }
+
   async withRegistry<T>(
     teamName: string,
     action: (groups: GroupChat[], save: () => Promise<void>) => Promise<T>

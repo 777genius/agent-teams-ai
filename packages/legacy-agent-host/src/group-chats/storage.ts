@@ -15,6 +15,8 @@ export interface GroupChatStorage {
     teamName: string,
     action: (entries: GroupMessageReactions[], save: () => Promise<void>) => Promise<T>
   ): Promise<T>;
+  /** A registry snapshot read that does not acquire or publish writer-lock state. */
+  readRegistry?(teamName: string): Promise<GroupChat[]>;
   withRegistry<T>(
     teamName: string,
     action: (groups: GroupChat[], save: () => Promise<void>) => Promise<T>

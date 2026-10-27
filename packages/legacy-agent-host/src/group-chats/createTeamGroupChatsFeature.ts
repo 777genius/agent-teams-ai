@@ -195,10 +195,11 @@ export function createTeamGroupChatsFeature(
       validText(teamName, 'team name', 200);
       await storage.teamRoot(teamName);
       const roster = await ports.roster(teamName);
-      // Runtime projection may await provider handshakes; keep it outside the registry lock.
-      const groups = await storage.withRegistry(teamName, async (snapshot) =>
-        structuredClone(snapshot)
-      );
+      // Prefer a read-only snapshot; older ports retain their existing registry discipline.
+      // Runtime projection may await provider handshakes and never runs under a writer lock.
+      const groups = storage.readRegistry
+        ? await storage.readRegistry(teamName)
+        : await storage.withRegistry(teamName, async (snapshot) => structuredClone(snapshot));
       return Promise.all(groups.map((group) => project(teamName, group, roster, from)));
     },
     async setArchived({ teamName, groupChatId, archived }) {

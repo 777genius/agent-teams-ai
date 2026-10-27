@@ -494,3 +494,27 @@ repair remain pending; no durable renderer-reload guarantee is claimed.
 The original M19 custody HOLD, unavailable packed M17 build `24G90`, broader
 historical import formats and the remaining current native variants stay open.
 PR remains Draft; there has been no merge, release, publication or activation.
+
+
+## Pure group catalog read checkpoint
+
+The existing Main group storage now supplies an optional pure registry snapshot
+read. The portable group list uses it when available, while older storage ports
+keep their original `withRegistry` fallback. Missing and malformed records retain
+the existing results/errors; group mutation and admission paths are unchanged.
+This removes the transient writer-lock publication observed by the stopped-source
+census without relaxing that census or hiding any source file.
+
+The new real-filesystem regression preserves missing/valid/malformed storage
+bytes and directory entries and explicitly asserts that listing never enters the
+existing writer port. An isolated copy of the prior list implementation failed
+that assertion with exactly three writer entries; the current implementation
+passed. The full existing integration file executed **35 passing assertions**;
+its remaining MCP transport case timed out because local `mcp-server/dist/index.js`
+is absent, so the complete file is **not qualified as passing** here. A direct
+actual portable-feature check confirmed the old storage-port fallback is invoked
+exactly once. The complete portable group test runner stalled before its first
+result in this local recovered tooling; only task-owned verification processes
+were stopped, and no package-suite PASS is claimed. Scoped production fast lint
+and diff checks passed. Fresh CI with the normal build remains required for the
+full package/MCP and actual stopped-source acceptance.

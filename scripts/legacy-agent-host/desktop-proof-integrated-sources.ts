@@ -1,5 +1,6 @@
 /** Finite source closure of the integrated lifecycle, WorkSync and member-action checkpoint. */
 export const desktopProofIntegratedSources = [
+  'test/features/team-group-chats/groupChats.integration.test.ts',
   'src/renderer/components/team/dialogs/retainedCreateSubmission.ts',
   'test/renderer/components/team/dialogs/createdTeamLaunchReadiness.test.tsx',
   'packages/legacy-agent-host/src/evidence/NativeFailedToolObservation.ts',
