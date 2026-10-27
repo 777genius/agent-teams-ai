@@ -151,7 +151,7 @@ test('mixed principal callback requires exact canonical capture delivery and liv
   const directory = join(root, 'hoststore/teams', mixedDesktopTeamName, '.host-owner');
   await mkdir(directory, { recursive: true });
   const members = [
-    { memberId: 'TEST-actual-lead', name: 'team-lead', role: 'lead', settings: {} },
+    { memberId: 'TEST-actual-lead', name: 'team-lead', role: 'lead' },
     {
       memberId: 'TEST-actual-codex',
       name: 'bob',
@@ -187,7 +187,26 @@ test('mixed principal callback requires exact canonical capture delivery and liv
   };
   const save = () => writeFile(join(directory, 'state.json'), JSON.stringify(state));
   await save();
-  assert.equal(readMixedCapturedPrincipal(root, 'codex'), 'agent:TEST-registered-1');
+  for (const [provider, principal] of [
+    ['claude', 'agent:TEST-registered-0'],
+    ['codex', 'agent:TEST-registered-1'],
+    ['opencode', 'agent:TEST-registered-2'],
+  ] as const)
+    assert.equal(readMixedCapturedPrincipal(root, provider), principal);
+  await writeFile(
+    join(directory, 'state.json'),
+    JSON.stringify({
+      ...state,
+      members: members.map((member) =>
+        member.name === 'bob' ? { ...member, settings: undefined } : member
+      ),
+    })
+  );
+  assert.throws(
+    () => readMixedCapturedPrincipal(root, 'codex'),
+    'missing peer settings remain invalid'
+  );
+  await save();
   assert.notEqual(readMixedCapturedPrincipal(root, 'codex'), 'bob-session');
   grants[1]!.revoked = true;
   await save();

@@ -47,7 +47,7 @@ export function readMixedCapturedPrincipal(
     .filter((member) =>
       provider === 'claude'
         ? member.role === 'lead' && record(state.savedSettings).providerId === 'anthropic'
-        : record(member.settings).providerId === provider
+        : member.role === 'member' && record(member.settings).providerId === provider
     );
   assert.equal(members.length, 1, 'one canonical member for this TEST provider');
   const capture = record(state.runtimeCaptures[0]);
