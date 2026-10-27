@@ -35,19 +35,24 @@ it('initializes the built ESM MCP and supplies its embedded visualization protoc
     };
     expect(initialized.error).toBeUndefined();
     expect(initialized.result?.protocolVersion).toBeTruthy();
-    const response = (await client.callTool('member_briefing', {
-      claudeDir: sandbox,
-      teamName,
-      memberName: 'alice',
-      includeActiveProcesses: false,
-    })) as { result?: { content?: { text?: string }[]; isError?: boolean }; error?: unknown };
-    expect(response.error).toBeUndefined();
-    expect(response.result?.isError).not.toBe(true);
-    const briefing = response.result?.content?.[0]?.text ?? '';
-    expect(briefing).toContain('CHAT VISUALIZATION PROTOCOL v1');
-    expect(briefing).toContain('openui-lang');
-    expect(briefing).toContain('Stack(children: Card[])');
-    expect(briefing.match(/CHAT VISUALIZATION PROTOCOL v1/g)).toHaveLength(1);
+    for (const tool of ['lead_briefing', 'member_briefing']) {
+      const response = (await client.callTool(tool, {
+        claudeDir: sandbox,
+        teamName,
+        ...(tool === 'member_briefing'
+          ? { memberName: 'alice', includeActiveProcesses: false }
+          : {}),
+      })) as { result?: { content?: { text?: string }[]; isError?: boolean }; error?: unknown };
+      expect(response.error).toBeUndefined();
+      expect(response.result?.isError).not.toBe(true);
+      const briefing = response.result?.content?.[0]?.text ?? '';
+      expect(briefing).toContain('CHAT VISUALIZATION PROTOCOL v1');
+      expect(briefing).toContain('openui-lang');
+      expect(briefing).toContain('Stack(children: Card[])');
+      expect(briefing).toContain('built-in OpenUI rendering');
+      expect(briefing).toContain('No separate OpenUI tool, connector, or service is required');
+      expect(briefing.match(/CHAT VISUALIZATION PROTOCOL v1/g)).toHaveLength(1);
+    }
   } finally {
     await client.close();
     await rm(sandbox, { recursive: true, force: true });

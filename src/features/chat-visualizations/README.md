@@ -5,6 +5,12 @@ imports `renderer/index.ts`; shared preview/search callers import `contracts/ind
 The Node-safe `renderer/protocol.ts` exports the exact display library and instructions
 used by the protocol generator, without UI or stylesheet imports.
 
+OpenUI is a built-in chat output format, not a separate agent tool or connector.
+Agents send `openui-lang` fences through the conversation's existing message
+delivery path. The generated protocol declares this capability in startup context
+and lead/member briefings; compact startup context tells agents to refresh the
+full protocol before emitting a visualization.
+
 `VisualizationBlock` owns a stable streaming preflight parser, bounded display
 validation, the responsive shell, scoped application theme, and shared Radix dialog.
 The application supplies its existing Mermaid renderer through

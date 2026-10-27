@@ -34,6 +34,13 @@ describe('generated visualization briefing protocol', () => {
       expect(text.endsWith(protocol)).toBe(true);
       expect(text.match(/CHAT VISUALIZATION PROTOCOL v1/g)).toHaveLength(1);
       expect(text).toContain('openui-lang');
+      expect(text).toContain(
+        'built-in OpenUI rendering in the main chat, group chats, and direct messages'
+      );
+      expect(text).toContain('No separate OpenUI tool, connector, or service is required');
+      expect(text).toContain("this conversation's existing message-delivery path");
+      expect(text).toContain("A headless teammate's stdout alone does not deliver a chat message");
+      expect(text).toContain('Honor explicit requests for a separate file');
     }
     const native = await controller.taskBoard.memberBriefing('chart-specialist', {
       includeChatVisualizationProtocol: false,

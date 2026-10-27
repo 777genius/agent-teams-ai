@@ -1,4 +1,5 @@
 import { wrapAgentBlock } from '@shared/constants/agentBlocks';
+import { protocols } from 'agent-teams-controller';
 
 import { buildActionModeAgentBlock } from './actionModeInstructions';
 
@@ -26,6 +27,9 @@ export function buildMessageDeliveryText(
   }
 ): string {
   const hiddenBlocks: string[] = [];
+  if (!opts.replyRecipient || opts.replyRecipient.trim().toLowerCase() === 'user') {
+    hiddenBlocks.push(wrapAgentBlock(protocols.buildChatVisualizationRefreshInstruction()));
+  }
   if (opts.messageId && (!opts.replyRecipient || opts.replyRecipient.toLowerCase() === 'user')) {
     hiddenBlocks.push(buildOriginalUserRequestBlock(opts.messageId));
   }
