@@ -130,7 +130,6 @@ async function main() {
     }
     toolCount = tools.result.tools.length;
   } finally {
-    child.stdin.destroy();
     try {
       await terminateChild(child, closePromise, platform, 2_000, ownership);
     } catch (error) {
@@ -138,6 +137,8 @@ async function main() {
         `[smokePackagedMcp] Preserved TEST sandbox after cleanup failure: ${testProject}`
       );
       throw error;
+    } finally {
+      child.stdin.destroy();
     }
     fs.rmSync(testProject, { recursive: true, force: true });
   }
