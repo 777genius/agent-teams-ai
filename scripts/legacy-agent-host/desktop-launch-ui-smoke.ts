@@ -57,12 +57,26 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
           const named=node=>{const type=field(node,'type');return typeof type==='function'&&field(type,'name')==='LaunchTeamDialog';};
           const matches=node=>{const props=field(node,'memoizedProps');
             return named(node)&&field(props,'open')===true&&field(props,'teamName')===teamName;};
+          const storedName=value=>{const name=typeof value==='string'?value:field(value,'name');return typeof name==='string'?name.slice(0,100):null;};
+          const ancestorTrace=[];
           let fiber=key?field(prompt,key):null,root=null,originalComponent=false;
-          for(let depth=0;fiber&&depth<64;depth++,fiber=field(fiber,'return')){
+          if(!fiber)return {...result,unavailable:'original-prompt-fiber-missing'};
+          for(let depth=0;fiber&&depth<256;depth++,fiber=field(fiber,'return')){
+            const props=field(fiber,'memoizedProps'),open=field(props,'open'),tag=field(fiber,'tag');
+            ancestorTrace.push({depth,tag:typeof tag==='number'?tag:null,
+              typeName:storedName(field(fiber,'type')),elementTypeName:storedName(field(fiber,'elementType')),
+              open:typeof open==='boolean'?open:null,originalTeam:field(props,'teamName')===teamName});
             if(named(fiber))originalComponent=true;root=fiber;
           }
-          if(fiber||!originalComponent||field(root,'tag')!==3)return {...result,unavailable:'matching-original-component-unavailable'};
-          const currentRoot=field(field(root,'stateNode'),'current'),pending=currentRoot?[currentRoot]:[],components=[],seen=new Set();
+          const rootTag=field(root,'tag');
+          Object.assign(result,{ancestorTrace,ancestorCount:ancestorTrace.length,
+            ancestorLimitHit:Boolean(fiber),namedAncestorFound:originalComponent,rootTag:typeof rootTag==='number'?rootTag:null});
+          if(fiber)return {...result,unavailable:'ancestor-traversal-limit'};
+          if(!originalComponent)return {...result,unavailable:'launch-component-name-not-found'};
+          if(rootTag!==3)return {...result,unavailable:'host-root-tag-mismatch'};
+          const currentRoot=field(field(root,'stateNode'),'current');
+          if(!currentRoot)return {...result,unavailable:'current-root-missing'};
+          const pending=[currentRoot],components=[],seen=new Set();
           let visited=0;
           for(;pending.length&&visited<4096;visited++){
             const node=pending.pop();if(seen.has(node))continue;seen.add(node);
@@ -70,7 +84,9 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
             const sibling=field(node,'sibling'),child=field(node,'child');
             if(sibling)pending.push(sibling);if(child)pending.push(child);
           }
-          if(pending.length||components.length!==1)return {...result,currentTreeNodesVisited:visited,unavailable:'current-original-component-unconfirmed'};
+          if(pending.length)return {...result,currentTreeNodesVisited:visited,unavailable:'current-tree-traversal-limit'};
+          if(components.length!==1)return {...result,currentTreeNodesVisited:visited,currentComponentMatches:components.length,
+            unavailable:components.length===0?'current-launch-component-missing':'current-launch-component-ambiguous'};
           const component=components[0];result.currentTreeNodesVisited=visited;
           const projectChecks=(value,index,origin)=>{
             if(!Array.isArray(value)||!value.length||value.length>8||!value.every(check=>
