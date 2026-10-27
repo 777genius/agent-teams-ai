@@ -273,6 +273,18 @@ An orchestration layer for AI agent teams across Codex/Claude/OpenCode/Cursor/Gr
 
 </details>
 
+## Why not just use Claude Code with pre-configured agents?
+
+We're seeing an interesting trend. First, AI agents started communicating with each other (something Claude and Codex didn't support before). Then we started seeing messenger-style AI assistants like Grok Bot, Meta Muse and OpenAI Dots, where you can create a team (or even multiple teams, as in Grok) and communicate with agents just like in a regular messenger. This is a much more natural and familiar way for people to interact with AI (like with humans).
+
+For the general audience, that might be enough. But people often need to build large, complex projects, and that's where bigger teams of agents become necessary, each with their own roles and responsibilities.
+
+And when you have a lot of teammates, you need a good way to organize and manage them. That's exactly where Agent Teams comes in. You can see everything clearly in a visual interface, understand what's happening across your teams, and easily interact with individual agents.
+
+Sure, you can set up something similar with regular Claude, but keeping track of everything without a proper frontend is difficult, and we are targeting precisely this multi-agent use case.
+
+For us, it's not just about running multi-agent systems. It's about having full visibility into who's doing what, keeping everything organized, and making it easy to interact with your agents.
+
 ## Comparison
 
 | Feature                             | Agent Teams                                                                                             | Gas Town                                                             | Paperclip                                                              | Cursor                                                         | Claude Code CLI                                              | OpenRig |
