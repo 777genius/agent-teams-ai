@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
-import { AlertTriangle, Pencil, Copy, Trash2, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Copy, Pencil, RefreshCw, Trash2 } from 'lucide-react';
 
 import { useCustomTemplateLibrary } from '../hooks/useCustomTemplateLibrary';
 import { useTemplateManagement } from '../hooks/useTemplateManagement';
@@ -56,7 +56,7 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
 
   const failed = state.status === 'storageUnavailable' || state.status === 'requestFailed';
 
-  const handleEditSaved = (updated: CustomTeamTemplateV1) => {
+  const handleEditSaved = (_updated: CustomTeamTemplateV1) => {
     setEditingTemplate(null);
     void reload();
   };
