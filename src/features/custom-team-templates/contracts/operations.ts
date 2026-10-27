@@ -162,7 +162,8 @@ export type RecheckCustomTeamTemplateSaveResult =
   | { status: 'notSaved'; templateId: string }
   | { status: 'unresolved'; templateId: string }
   | { status: 'validationFailed'; issues: readonly CustomTeamTemplateValidationIssue[] }
-  | { status: 'storageUnavailable' };
+  | { status: 'storageUnavailable' }
+  | { status: 'unresolvedWriteOutcome'; templateId: string };
 
 /** Listing takes no parameters. */
 export type ListCustomTeamTemplatesRequest = Record<string, never>;
@@ -222,7 +223,8 @@ export type UpdateCustomTeamTemplateResult =
   | { status: 'nameConflict'; existingTemplateId: string }
   | { status: 'validationFailed'; issues: readonly CustomTeamTemplateValidationIssue[] }
   | { status: 'unreadableRecord'; templateId: string }
-  | { status: 'storageUnavailable' };
+  | { status: 'storageUnavailable' }
+  | { status: 'unresolvedWriteOutcome'; templateId: string };
 
 export interface DeleteCustomTeamTemplateRequest {
   templateId: string;
@@ -234,7 +236,8 @@ export type DeleteCustomTeamTemplateResult =
   | { status: 'revisionConflict'; current: CustomTeamTemplateV1 }
   | { status: 'notFound'; templateId: string }
   | { status: 'unreadableRecord'; templateId: string }
-  | { status: 'storageUnavailable' };
+  | { status: 'storageUnavailable' }
+  | { status: 'unresolvedWriteOutcome'; templateId: string };
 
 export interface DuplicateCustomTeamTemplateRequest {
   sourceTemplateId: string;
@@ -248,7 +251,8 @@ export type DuplicateCustomTeamTemplateResult =
   | { status: 'nameConflict'; existingTemplateId: string }
   | { status: 'templateIdConflict'; templateId: string }
   | { status: 'validationFailed'; issues: readonly CustomTeamTemplateValidationIssue[] }
-  | { status: 'storageUnavailable' };
+  | { status: 'storageUnavailable' }
+  | { status: 'unresolvedWriteOutcome'; templateId: string };
 
 export interface CopyBuiltinTemplateRequest {
   builtinTemplateId: BuiltinTeamTemplateId;
@@ -261,4 +265,5 @@ export type CopyBuiltinTemplateResult =
   | { status: 'nameConflict'; existingTemplateId: string }
   | { status: 'templateIdConflict'; templateId: string }
   | { status: 'validationFailed'; issues: readonly CustomTeamTemplateValidationIssue[] }
-  | { status: 'storageUnavailable' };
+  | { status: 'storageUnavailable' }
+  | { status: 'unresolvedWriteOutcome'; templateId: string };

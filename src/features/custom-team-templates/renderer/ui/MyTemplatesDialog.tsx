@@ -237,7 +237,10 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
                 variant="outline"
                 size="sm"
                 data-testid="copy-builtin-open"
-                onClick={() => setCopyBuiltinOpen(true)}
+                onClick={() => {
+                  setCopyBuiltinId(null);
+                  setCopyBuiltinOpen(true);
+                }}
               >
                 <Copy className="size-3.5" />
                 {t('customTemplates.actions.copyToMyTemplates')}

@@ -1,8 +1,12 @@
 import { CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION } from '@features/custom-team-templates/contracts';
+
 import { serializeCanonicalTemplateContent } from '../domain/canonicalTemplateSerialization';
 import { validateTemplateContent } from '../domain/templateContentPolicy';
 import { validateTemplateName } from '../domain/templateNamePolicy';
 import { validateTemplateDescription } from '../domain/templatePreviewPolicy';
+
+import { CustomTeamTemplateStorageInterruptedError } from './CustomTeamTemplateStorageInterruptedError';
+import { waitForStorageSettlement } from './waitForStorageSettlement';
 
 import type { CustomTeamTemplateHasher, CustomTeamTemplateStorageGateway } from './ports';
 import type {
@@ -113,12 +117,10 @@ export class UpdateCustomTeamTemplateUseCase {
     }
 
     const nameValidation = validateTemplateName(request.name);
-    const description =
-      request.description === undefined
-        ? undefined
-        : typeof request.description === 'string'
-          ? request.description
-          : undefined;
+    if (request.description !== undefined && typeof request.description !== 'string') {
+      return validationFailed([{ code: 'templateDescriptionTooLong', field: 'description' }]);
+    }
+    const description = request.description === undefined ? undefined : request.description;
     const descriptionIssues = validateTemplateDescription(description);
     const teamPrompt = typeof request.teamPrompt === 'string' ? request.teamPrompt : null;
     const members = toAllowlistedMembers(request.members);
@@ -156,39 +158,90 @@ export class UpdateCustomTeamTemplateUseCase {
       })
     );
 
-    let result;
-    try {
-      result = await gateway.customTeamTemplateUpdate({
-        templateId: request.templateId,
-        expectedRevision: request.expectedRevision,
-        template: {
+    let hadUnknownExecution = false;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      let result;
+      try {
+        result = await gateway.customTeamTemplateUpdate({
           templateId: request.templateId,
-          name: nameValidation.value,
-          ...(trimmedDescription ? { description: trimmedDescription } : {}),
-          schemaVersion: CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION,
-          teamPrompt,
-          members,
-        },
-        contentHash,
-      });
-    } catch {
-      return { status: 'storageUnavailable' };
-    }
-
-    switch (result.status) {
-      case 'updated':
-        return { status: 'updated', template: result.template };
-      case 'revisionConflict':
-        return { status: 'revisionConflict', current: result.current };
-      case 'notFound':
-        return { status: 'notFound', templateId: result.templateId };
-      case 'unreadable':
-        return { status: 'unreadableRecord', templateId: result.templateId };
-      case 'conflict':
-        return { status: 'nameConflict', existingTemplateId: result.existingTemplateId };
-      case 'retryable':
+          expectedRevision: request.expectedRevision,
+          template: {
+            templateId: request.templateId,
+            name: nameValidation.value,
+            ...(trimmedDescription ? { description: trimmedDescription } : {}),
+            schemaVersion: CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION,
+            teamPrompt,
+            members,
+          },
+          contentHash,
+        });
+      } catch (error) {
+        if (error instanceof CustomTeamTemplateStorageInterruptedError) {
+          const settlement = await waitForStorageSettlement(error.settled);
+          if (error.execution === 'not_started') {
+            if (settlement === 'settled') {
+              continue;
+            }
+            if (hadUnknownExecution) {
+              return { status: 'unresolvedWriteOutcome', templateId: request.templateId };
+            }
+            return { status: 'storageUnavailable' };
+          }
+          hadUnknownExecution = true;
+          // reconcile
+          try {
+            const read = await gateway.customTeamTemplateGetById({
+              templateId: request.templateId,
+            });
+            if (read.status === 'found') {
+              const stored = read.template;
+              if (
+                stored.revision !== request.expectedRevision &&
+                stored.name === nameValidation.value &&
+                (stored.description ?? null) === (trimmedDescription ?? null)
+              ) {
+                return { status: 'updated', template: stored };
+              }
+            }
+            if (read.status === 'unreadable') {
+              return { status: 'unresolvedWriteOutcome', templateId: request.templateId };
+            }
+          } catch {
+            // fall through
+          }
+          return { status: 'unresolvedWriteOutcome', templateId: request.templateId };
+        }
+        if (hadUnknownExecution) {
+          return { status: 'unresolvedWriteOutcome', templateId: request.templateId };
+        }
         return { status: 'storageUnavailable' };
+      }
+
+      switch (result.status) {
+        case 'updated':
+          return { status: 'updated', template: result.template };
+        case 'revisionConflict':
+          return { status: 'revisionConflict', current: result.current };
+        case 'notFound':
+          return { status: 'notFound', templateId: result.templateId };
+        case 'unreadable':
+          return { status: 'unreadableRecord', templateId: result.templateId };
+        case 'conflict':
+          return { status: 'nameConflict', existingTemplateId: result.existingTemplateId };
+        case 'retryable':
+          if (attempt + 1 < 2) {
+            continue;
+          }
+          if (hadUnknownExecution) {
+            return { status: 'unresolvedWriteOutcome', templateId: request.templateId };
+          }
+          return { status: 'storageUnavailable' };
+      }
     }
+    if (hadUnknownExecution) {
+      return { status: 'unresolvedWriteOutcome', templateId: request.templateId };
+    }
+    return { status: 'storageUnavailable' };
   }
 }
 

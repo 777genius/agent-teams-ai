@@ -1,9 +1,13 @@
 import { CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION } from '@features/custom-team-templates/contracts';
+
 import { serializeCanonicalTemplateContent } from '../domain/canonicalTemplateSerialization';
 import { validateTemplateContent } from '../domain/templateContentPolicy';
 import { validateTemplateName } from '../domain/templateNamePolicy';
 
 import type { CustomTeamTemplateHasher, CustomTeamTemplateStorageGateway } from './ports';
+import { checkStoredTemplate } from './reconcileCustomTeamTemplateWrite';
+import { CustomTeamTemplateStorageInterruptedError } from './CustomTeamTemplateStorageInterruptedError';
+import { waitForStorageSettlement } from './waitForStorageSettlement';
 import type {
   CopyBuiltinTemplateRequest,
   CopyBuiltinTemplateResult,
@@ -76,8 +80,9 @@ export class CopyBuiltinTemplateUseCase {
     });
     const contentHash = this.deps.hasher.hashCanonicalContent(canonical);
 
+    const templateId = this.deps.createTemplateId();
+    let hadUnknownExecution = false;
     for (let attempt = 0; attempt < MAX_CREATE_ATTEMPTS; attempt += 1) {
-      const templateId = this.deps.createTemplateId();
       let result;
       try {
         result = await gateway.customTeamTemplateCreate({
@@ -90,7 +95,46 @@ export class CopyBuiltinTemplateUseCase {
           },
           contentHash,
         });
-      } catch {
+      } catch (error) {
+        if (error instanceof CustomTeamTemplateStorageInterruptedError) {
+          const settlement = await waitForStorageSettlement(error.settled);
+          if (error.execution === 'not_started') {
+            if (settlement === 'settled') {
+              continue;
+            }
+            if (hadUnknownExecution) {
+              return { status: 'unresolvedWriteOutcome', templateId };
+            }
+            return { status: 'storageUnavailable' };
+          }
+          hadUnknownExecution = true;
+          const check = await checkStoredTemplate(
+            gateway,
+            {
+              templateId,
+              name: nameValidation.value,
+              description: undefined,
+              contentHash,
+            } as any,
+            this.deps.hasher
+          );
+          if (check.status === 'saved') {
+            const saved: CustomTeamTemplateV1 = {
+              ...check.template,
+              revision: check.template.revision ?? 1,
+            };
+            return { status: 'copied', template: saved };
+          }
+          if (check.status === 'absent') {
+            if (attempt + 1 < MAX_CREATE_ATTEMPTS) {
+              continue;
+            }
+          }
+          return { status: 'unresolvedWriteOutcome', templateId };
+        }
+        if (hadUnknownExecution) {
+          return { status: 'unresolvedWriteOutcome', templateId };
+        }
         return { status: 'storageUnavailable' };
       }
       switch (result.status) {
@@ -117,13 +161,19 @@ export class CopyBuiltinTemplateUseCase {
           }
           return { status: 'templateIdConflict', templateId: result.existingTemplateId };
         case 'existingRecordUnreadable':
-          return { status: 'storageUnavailable' };
+          return { status: 'unresolvedWriteOutcome', templateId };
         case 'retryable':
           if (attempt + 1 < MAX_CREATE_ATTEMPTS) {
             break;
           }
+          if (hadUnknownExecution) {
+            return { status: 'unresolvedWriteOutcome', templateId };
+          }
           return { status: 'storageUnavailable' };
       }
+    }
+    if (hadUnknownExecution) {
+      return { status: 'unresolvedWriteOutcome', templateId };
     }
     return { status: 'storageUnavailable' };
   }

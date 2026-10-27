@@ -20,6 +20,7 @@ import type {
   CustomTeamTemplateSnapshotReader,
 } from '../../core/application/ports';
 import type { InternalStorageCustomTeamTemplatesBackend } from '@features/internal-storage/main';
+import type { TeamTemplateV1 } from '@features/team-templates/contracts';
 
 export interface CustomTeamTemplatesFeatureDeps {
   /**
@@ -139,14 +140,14 @@ function resolveBuiltinTemplateContent(id: string): {
   teamPrompt: string;
   members: readonly { name: string; role?: string; workflow?: string }[];
 } | null {
-  const found = TEAM_TEMPLATES.find((entry: any) => entry.id === id);
+  const found = TEAM_TEMPLATES.find((entry: TeamTemplateV1) => entry.id === id);
   if (!found) {
     return null;
   }
   return {
     schemaVersion: 1,
     teamPrompt: found.teamPrompt,
-    members: found.members.map((member: any) => ({
+    members: found.members.map((member: TeamTemplateV1['members'][number]) => ({
       name: member.name,
       role: member.role,
       workflow: member.workflow,

@@ -56,7 +56,6 @@ export const DuplicateCustomTemplateDialog = ({
       setErrorState(null);
       setIssues([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, template]);
 
   if (!template) return null;

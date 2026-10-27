@@ -17,6 +17,7 @@ export type EditTemplateStatus =
   | 'notFound'
   | 'unreadableRecord'
   | 'storageUnavailable'
+  | 'unresolvedWriteOutcome'
   | 'requestFailed';
 
 export interface UseEditTemplateInput {
@@ -229,7 +230,8 @@ export function useEditTemplate({
         }
         case 'notFound':
         case 'unreadableRecord':
-        case 'storageUnavailable': {
+        case 'storageUnavailable':
+        case 'unresolvedWriteOutcome': {
           setStatus(result.status);
           return false;
         }

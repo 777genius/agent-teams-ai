@@ -207,11 +207,15 @@ describe('createCustomTeamTemplatesFeature', () => {
     // The preview-token class is the port-level interruption signal, and no
     // renderer-facing surface is registered by composition.
     expect(Object.keys(feature).sort((left, right) => left.localeCompare(right))).toEqual([
+      'copyBuiltinTemplate',
+      'deleteTemplate',
       'dispose',
+      'duplicateTemplate',
       'listTemplates',
       'preparePreview',
       'recheckSave',
       'saveTemplate',
+      'updateTemplate',
     ]);
   });
 });

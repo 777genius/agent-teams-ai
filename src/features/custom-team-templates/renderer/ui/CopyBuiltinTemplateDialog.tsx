@@ -204,6 +204,7 @@ export const CopyBuiltinTemplateDialog = ({
                     key={tpl.id}
                     type="button"
                     disabled={busy}
+                    aria-pressed={isSelected}
                     data-testid={`builtin-template-${tpl.id}`}
                     className={`rounded-md border p-3 text-left transition-colors ${
                       isSelected

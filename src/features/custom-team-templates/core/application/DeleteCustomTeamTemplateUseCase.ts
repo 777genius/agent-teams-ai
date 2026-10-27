@@ -4,6 +4,9 @@ import type {
   DeleteCustomTeamTemplateResult,
 } from '@features/custom-team-templates/contracts';
 
+import { CustomTeamTemplateStorageInterruptedError } from './CustomTeamTemplateStorageInterruptedError';
+import { waitForStorageSettlement } from './waitForStorageSettlement';
+
 export interface DeleteCustomTeamTemplateUseCaseDeps {
   /** Null when the SQLite worker bundle is unavailable in this environment. */
   gateway: CustomTeamTemplateStorageGateway | null;
@@ -42,28 +45,71 @@ export class DeleteCustomTeamTemplateUseCase {
       return { status: 'storageUnavailable' };
     }
 
-    let result;
-    try {
-      result = await gateway.customTeamTemplateDelete({
-        templateId: candidate.templateId,
-        expectedRevision: candidate.expectedRevision,
-      });
-    } catch {
-      return { status: 'storageUnavailable' };
-    }
-
-    switch (result.status) {
-      case 'deleted':
-        return { status: 'deleted', templateId: result.templateId };
-      case 'revisionConflict':
-        return { status: 'revisionConflict', current: result.current };
-      case 'notFound':
-        return { status: 'notFound', templateId: result.templateId };
-      case 'unreadable':
-        return { status: 'unreadableRecord', templateId: result.templateId };
-      case 'retryable':
+    let hadUnknownExecution = false;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      let result;
+      try {
+        result = await gateway.customTeamTemplateDelete({
+          templateId: candidate.templateId,
+          expectedRevision: candidate.expectedRevision,
+        });
+      } catch (error) {
+        if (error instanceof CustomTeamTemplateStorageInterruptedError) {
+          const settlement = await waitForStorageSettlement(error.settled);
+          if (error.execution === 'not_started') {
+            if (settlement === 'settled') {
+              continue;
+            }
+            if (hadUnknownExecution) {
+              return { status: 'unresolvedWriteOutcome', templateId: candidate.templateId };
+            }
+            return { status: 'storageUnavailable' };
+          }
+          hadUnknownExecution = true;
+          try {
+            const read = await gateway.customTeamTemplateGetById({
+              templateId: candidate.templateId,
+            });
+            if (read.status === 'notFound') {
+              return { status: 'deleted', templateId: candidate.templateId };
+            }
+            if (read.status === 'unreadable') {
+              return { status: 'unresolvedWriteOutcome', templateId: candidate.templateId };
+            }
+          } catch {
+            // fall through
+          }
+          return { status: 'unresolvedWriteOutcome', templateId: candidate.templateId };
+        }
+        if (hadUnknownExecution) {
+          return { status: 'unresolvedWriteOutcome', templateId: candidate.templateId };
+        }
         return { status: 'storageUnavailable' };
+      }
+
+      switch (result.status) {
+        case 'deleted':
+          return { status: 'deleted', templateId: result.templateId };
+        case 'revisionConflict':
+          return { status: 'revisionConflict', current: result.current };
+        case 'notFound':
+          return { status: 'notFound', templateId: result.templateId };
+        case 'unreadable':
+          return { status: 'unreadableRecord', templateId: result.templateId };
+        case 'retryable':
+          if (attempt + 1 < 2) {
+            continue;
+          }
+          if (hadUnknownExecution) {
+            return { status: 'unresolvedWriteOutcome', templateId: candidate.templateId };
+          }
+          return { status: 'storageUnavailable' };
+      }
     }
+    if (hadUnknownExecution) {
+      return { status: 'unresolvedWriteOutcome', templateId: candidate.templateId };
+    }
+    return { status: 'storageUnavailable' };
   }
 }
 

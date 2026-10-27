@@ -137,7 +137,7 @@ function deterministicFeature(): CustomTeamTemplatesFeature {
 }
 
 describe('custom-team-templates transports', () => {
-  it('registers exactly the four IPC channels and the four HTTP routes', () => {
+  it('registers exactly the eight IPC channels and the eight HTTP routes', () => {
     const ipc = fakeIpcMain();
     const http = fakeFastify();
     registerCustomTeamTemplatesIpc(ipc as unknown as IpcMain, deterministicFeature());
@@ -151,6 +151,10 @@ describe('custom-team-templates transports', () => {
         `POST ${CUSTOM_TEAM_TEMPLATE_ROUTES.saveTemplate}`,
         `POST ${CUSTOM_TEAM_TEMPLATE_ROUTES.recheckSave}`,
         `GET ${CUSTOM_TEAM_TEMPLATE_ROUTES.listTemplates}`,
+        `POST ${CUSTOM_TEAM_TEMPLATE_ROUTES.updateTemplate}`,
+        `POST ${CUSTOM_TEAM_TEMPLATE_ROUTES.deleteTemplate}`,
+        `POST ${CUSTOM_TEAM_TEMPLATE_ROUTES.duplicateTemplate}`,
+        `POST ${CUSTOM_TEAM_TEMPLATE_ROUTES.copyBuiltinTemplate}`,
       ].sort(byName)
     );
     // No transport is registered by composition itself.
@@ -166,11 +170,19 @@ describe('custom-team-templates transports', () => {
     const save = { execute: vi.fn().mockResolvedValue({ status: 'storageUnavailable' }) };
     const recheck = { execute: vi.fn().mockResolvedValue({ status: 'storageUnavailable' }) };
     const list = { execute: vi.fn().mockResolvedValue({ status: 'empty' }) };
+    const update = { execute: vi.fn().mockResolvedValue({ status: 'storageUnavailable' }) };
+    const remove = { execute: vi.fn().mockResolvedValue({ status: 'storageUnavailable' }) };
+    const duplicate = { execute: vi.fn().mockResolvedValue({ status: 'storageUnavailable' }) };
+    const copyBuiltin = { execute: vi.fn().mockResolvedValue({ status: 'storageUnavailable' }) };
     const feature = {
       preparePreview: prepare,
       saveTemplate: save,
       recheckSave: recheck,
       listTemplates: list,
+      updateTemplate: update,
+      deleteTemplate: remove,
+      duplicateTemplate: duplicate,
+      copyBuiltinTemplate: copyBuiltin,
       dispose: vi.fn(),
     } as unknown as CustomTeamTemplatesFeature;
     registerCustomTeamTemplatesIpc(ipc as unknown as IpcMain, feature);
@@ -262,7 +274,7 @@ describe('custom-team-templates transports', () => {
   it('removes exactly the registered IPC channels on shutdown', () => {
     const ipc = fakeIpcMain();
     registerCustomTeamTemplatesIpc(ipc as unknown as IpcMain, deterministicFeature());
-    expect(ipc.channels()).toHaveLength(4);
+    expect(ipc.channels()).toHaveLength(8);
 
     removeCustomTeamTemplatesIpc(ipc as unknown as IpcMain);
     expect(ipc.channels()).toEqual([]);

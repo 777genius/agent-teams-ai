@@ -1,13 +1,18 @@
 import { CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION } from '@features/custom-team-templates/contracts';
+
 import { serializeCanonicalTemplateContent } from '../domain/canonicalTemplateSerialization';
 import { validateTemplateName } from '../domain/templateNamePolicy';
 
+import { CustomTeamTemplateStorageInterruptedError } from './CustomTeamTemplateStorageInterruptedError';
+import { checkStoredTemplate } from './reconcileCustomTeamTemplateWrite';
+import { waitForStorageSettlement } from './waitForStorageSettlement';
+
 import type { CustomTeamTemplateHasher, CustomTeamTemplateStorageGateway } from './ports';
 import type {
+  CustomTeamTemplateV1,
   CustomTeamTemplateValidationIssue,
   DuplicateCustomTeamTemplateRequest,
   DuplicateCustomTeamTemplateResult,
-  CustomTeamTemplateV1,
 } from '@features/custom-team-templates/contracts';
 
 export interface DuplicateCustomTeamTemplateUseCaseDeps {
@@ -75,8 +80,9 @@ export class DuplicateCustomTeamTemplateUseCase {
     });
     const contentHash = this.deps.hasher.hashCanonicalContent(canonical);
 
+    const templateId = this.deps.createTemplateId();
+    let hadUnknownExecution = false;
     for (let attempt = 0; attempt < MAX_CREATE_ATTEMPTS; attempt += 1) {
-      const templateId = this.deps.createTemplateId();
       let result;
       try {
         result = await gateway.customTeamTemplateCreate({
@@ -90,15 +96,50 @@ export class DuplicateCustomTeamTemplateUseCase {
           },
           contentHash,
         });
-      } catch {
+      } catch (error) {
+        if (error instanceof CustomTeamTemplateStorageInterruptedError) {
+          const settlement = await waitForStorageSettlement(error.settled);
+          if (error.execution === 'not_started') {
+            if (settlement === 'settled') {
+              continue;
+            }
+            if (hadUnknownExecution) {
+              return { status: 'unresolvedWriteOutcome', templateId };
+            }
+            return { status: 'storageUnavailable' };
+          }
+          hadUnknownExecution = true;
+          // reconcile
+          const identity = {
+            templateId,
+            name: nameValidation.value,
+            description: source.description,
+            contentHash,
+          };
+          const check = await checkStoredTemplate(gateway, identity as any, this.deps.hasher);
+          if (check.status === 'saved') {
+            return {
+              status: 'duplicated',
+              template: { ...check.template, revision: check.template.revision ?? 1 },
+            };
+          }
+          if (check.status === 'conflict') {
+            return { status: 'templateIdConflict', templateId: check.templateId };
+          }
+          if (check.status === 'absent') {
+            if (attempt + 1 < MAX_CREATE_ATTEMPTS) {
+              continue;
+            }
+          }
+          return { status: 'unresolvedWriteOutcome', templateId };
+        }
+        if (hadUnknownExecution) {
+          return { status: 'unresolvedWriteOutcome', templateId };
+        }
         return { status: 'storageUnavailable' };
       }
       switch (result.status) {
         case 'created':
-          return {
-            status: 'duplicated',
-            template: { ...result.template, revision: result.template.revision ?? 1 },
-          };
         case 'alreadySaved':
           return {
             status: 'duplicated',
@@ -113,13 +154,19 @@ export class DuplicateCustomTeamTemplateUseCase {
           }
           return { status: 'templateIdConflict', templateId: result.existingTemplateId };
         case 'existingRecordUnreadable':
-          return { status: 'storageUnavailable' };
+          return { status: 'unresolvedWriteOutcome', templateId };
         case 'retryable':
           if (attempt + 1 < MAX_CREATE_ATTEMPTS) {
             break;
           }
+          if (hadUnknownExecution) {
+            return { status: 'unresolvedWriteOutcome', templateId };
+          }
           return { status: 'storageUnavailable' };
       }
+    }
+    if (hadUnknownExecution) {
+      return { status: 'unresolvedWriteOutcome', templateId };
     }
     return { status: 'storageUnavailable' };
   }
