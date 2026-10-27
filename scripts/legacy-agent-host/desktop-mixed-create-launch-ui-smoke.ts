@@ -321,8 +321,9 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     ['opencode', 'carol', 'OPENCODE_TEAM_ONE', 'REPLY_OPENCODE_ONE'],
   ] as const) {
     const principalId = readMixedCapturedPrincipal(fixture.root, provider);
+    const displayName = name === 'team-lead' ? 'lead' : name;
     await ui.click(
-      `button[aria-label^=${JSON.stringify(name + ',')}]`,
+      `button[aria-label^=${JSON.stringify(displayName + ',')}]`,
       `original ${provider} direct chat`
     );
     if (provider !== 'claude') {

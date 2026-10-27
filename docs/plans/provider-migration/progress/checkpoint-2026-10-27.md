@@ -1159,3 +1159,86 @@ The earlier exact c5 run has again reported failed mixed Create/Launch and
 previously-stopped-source import/native Launch gates. Their new original evidence
 is being retrieved and triaged; no cause is asserted here and no historical PASS
 is transferred to those failures or this changed combined head.
+
+
+## Completed c5 run: original failures and remaining receipts
+
+Workflow [40577183939](https://github.com/777genius/agent-teams-ai/actions/runs/40577183939)
+finished on `c5ded9a14df74b30c5567f4511c3aa960b9b1fea` with **7/10 source Desktop
+jobs passing**. Its canonical validation and shards 1/4 and 4/4 also failed;
+their previously documented code/test corrections are committed separately and
+have not yet received full current-head qualification. All three lint jobs,
+shards 2/4 and 3/4 and the Windows Task ledger smoke passed on c5. Renderer source
+validation was skipped. The whole run is **FAILURE**, not a Stage 1 acceptance.
+
+Root retrieved the original failed Desktop artifacts without rewriting receipts:
+
+| Existing flow | Artifact ID | Original receipt SHA-256 | Exact failure boundary |
+| --- | --- | --- | --- |
+| Previously stopped source import and native Launch | `12769943539` | `f8b41bc02533b70ca06f79463dad5e8481e3b94c4bdd003db356e3db0a8b503d` | The source immutability census passed; the original Launch reached a fresh capture, then strict target-settings comparison rejected the explicitly saved `allowExperimentalLocalModels: false`. Later native effect/Stop/reload checks were not reached. |
+| Mixed Create and Launch | `12769778896` | `a3949b03b484e9eef12d6fd844b639e9f1d70b17f7c3068d85729fc530d2c59e` | Original UI showed all two teammates joined and the first native lead reply. The helper then searched the canonical lead name in an aria label that uses its existing display name. No subsequent Composer mutation was dispatched. |
+| Cold selected Resume | `12771010095` | `94e83214bc54048ed71058a13445fae51ecf9492a90cbc8c437266c4e43c0431` | The initial Launch button remained disabled by the provider catalog/readiness guard after selecting Opus 4.6/Medium. No initial Launch or Resume business input occurred; cause remains under investigation. |
+
+Independent critics traced the first two failures to exact TEST oracle gaps.
+Ordinary Launch explicitly materializes the disabled local-model opt-in while
+preserving the imported settings. The proposed expectation retains the complete
+object comparison and requires `false`; no production default or source fixture
+is changed. The existing direct-chat presentation maps canonical `team-lead` to
+`lead`; only the TEST aria label selection should use that display name, while
+canonical recipient/provider/capture and reply assertions remain intact. Both
+initial mixed input and post-member-restart selectors need the same correction.
+These diagnoses do not turn the failed runs into PASS.
+
+For import, the original live receipt's before/after source census agrees for
+all ten paths. The independent critic also rechecked all seven source JSON files
+retained in the downloaded artifact, with exact bytes/hash/size and no new paths.
+The artifact omits three attachment blobs, so a second physical-byte verification
+of those three is not claimed. Original receipt evidence remains unchanged.
+
+Additional original passing c5 receipts were inspected:
+
+| Existing flow | Artifact ID | Original receipt SHA-256 | Observation and limit |
+| --- | --- | --- | --- |
+| Active input Quit | `12770830150` | `7458541bcef0d02deef0216385bbe4f90aea96255200e4f120bca9401bb3bb0d` | Two original Composer submissions, first actual input held and second queued; shutdown ended closed/released without debt, with one model observation, absent captured native children, empty owned group and released writer lock. |
+| Same active-input profile cold readback | `12770830150` | `3f82b3eb50961ce997951045dbf3a8b74d3d265f84fb98fb5ac0a22dbb39b3c6` | Original product/runtime unchanged, no new allocation/input. Both app epochs exited 0 without a signal and the captured Host was absent. |
+| Native review source run | `12770441800` | `dc39b026feab5fa2d0008f820f5d3ab7fa3d05fcfd0d026f1c4c8df07c5dd60d` | Two exact foreground native Edit transformations and original Start/Changes Keep/Reject/Undo/Redo/history/Stop/reload passed. Partial background/failed-Bash authorship stays unqualified. Source app cleanup used SIGTERM. |
+| Same native-review profile cold readback | `12770441800` | `0ef3926a16c83990c6f0f022774c0210ea8f21a489c7c6374cd2303e96b0571e` | Original events/runtime/review decisions/file unchanged with zero allocations/inputs; original receipt SHA correlated. Cold app exit 0 without signal, empty owned group and captured Host absent. |
+
+The review source and cold cleanup modes are deliberately distinguished; neither
+receipt closes all M13. All four have empty forbidden/post-Quit invocation lists.
+No new run clears the historical M19 custody HOLD or supplies the missing M17
+packed/installed macOS tuple.
+
+The independently reviewed routing/test-isolation correction was immediately
+pushed as `f2e8383af37b1e2157fac3dc6ce102bf17bae1df`; the bounded original-UI F08
+continuation followed as `25c61a451eb56c407391e4964ae7b6fe006a5766`, also immediately
+pushed. Neither inherits a Desktop PASS from c5. Holistic static backend/Main/
+Runtime review found no additional confirmed production blocker in the current
+integration; current-head canonical/native qualification remains pending.
+
+
+## Exact Launch settings and direct-chat TEST oracles
+
+The two c5 artifact diagnoses above are corrected in the existing smoke flows.
+Imported Launch still compares the entire saved-settings object against the
+captured pre-Launch settings, with the original prompt/permission choices and
+an explicit `allowExperimentalLocalModels: false`. The ordinary Launch roster
+submission materializes that value; the TEST now requires it explicitly without
+changing the source fixture, product default or source-byte census.
+
+Both the initial mixed direct-chat selector and its post-Bob-Restart continuation
+now use `lead` for the existing UI display of canonical `team-lead`. The canonical
+member/provider tuples, captured principals, original inputs, recipients and
+native reply assertions are unchanged. Existing `memberHelpers.ts` and the actual
+direct-chat `ChatListRow.tsx` presentation sources are explicitly added to the
+finite Desktop proof source closure. No renderer dependency is imported into the
+Node smoke scripts.
+
+The independent cross-layer critic accepted the actual selector/pin delta; the
+backend artifact diagnosis independently established the complete settings
+expectation. The existing strict `tsconfig.legacy-agent-host-scripts.json` check,
+scoped Prettier check of all four changed script/closure files and `git diff
+--check` pass. These are static corrections only: a new original Desktop run is
+required for import/native Launch and the complete mixed flow. The separate cold
+Resume readiness failure remains under investigation; no guard, timing budget,
+mutation count or failed original receipt is changed here.

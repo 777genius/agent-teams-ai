@@ -1,5 +1,7 @@
 /** Finite source closure of the integrated lifecycle, WorkSync and member-action checkpoint. */
 export const desktopProofIntegratedSources = [
+  'src/renderer/utils/memberHelpers.ts',
+  'src/features/team-direct-chats/renderer/ui/ChatListRow.tsx',
   'test/features/agent-backend/hostTeamRouting.test.ts',
   'test/renderer/components/team/dialogs/LaunchTeamDialog.test.ts',
   'src/renderer/components/team/kanban/KanbanFilterPopover.tsx',

@@ -133,7 +133,13 @@ export async function runStoppedImportLaunchUi(
   assert.equal(members[0]!.memberId, 'team-lead');
   assert.notEqual(members[0]!.principalId, source.sourceSessionId);
   const saved = record(state.savedSettings);
-  assert.deepEqual(saved, { ...savedBefore, prompt: 'NATIVE_TEAM_ONE', skipPermissions: true });
+  assert.deepEqual(saved, {
+    ...savedBefore,
+    prompt: 'NATIVE_TEAM_ONE',
+    skipPermissions: true,
+    allowExperimentalLocalModels: false,
+  });
+  assert.equal(saved.allowExperimentalLocalModels, false);
   const sessions = () =>
     readDesktopNativeStopSessions(fixture.root).then((rows) =>
       rows.filter((row) => record(row.binding).runId === capture.launchId)

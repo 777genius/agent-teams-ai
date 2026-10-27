@@ -231,8 +231,9 @@ export async function runDesktopMixedMemberRestartUiSmoke(
     ['bob', 'codex', 'CODEX_TEAM_TWO', 'REPLY_CODEX_TWO'],
     ['carol', 'opencode', 'OPENCODE_TEAM_TWO', 'REPLY_OPENCODE_TWO'],
   ] as const) {
+    const displayName = name === 'team-lead' ? 'lead' : name;
     await ui.click(
-      `button[aria-label^=${desktopJsLiteral(name + ',')}]`,
+      `button[aria-label^=${desktopJsLiteral(displayName + ',')}]`,
       `original ${provider} direct chat after Bob Restart`
     );
     await ui.click(
