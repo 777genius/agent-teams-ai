@@ -97,7 +97,7 @@ export function desktopF08ReadFaultExpression(handleId: string, selection: strin
     const selected=()=>{const s=state();return {team:s.selectedTeamName,dataTeam:s.selectedTeamData?.teamName??null,
       loading:s.selectedTeamLoading,nonce:s.selectedTeamLoadNonce,contextId:s.activeContextId};};
     const f={records:[],ignored:[],events:[],observerReads:[],observerErrors:[],transitions:[],pendingObserverReads:0,
-      holdArmed:false,lossArmed:false,gapArmed:false,recoveryPending:false,releases:[],original,backend,selected,
+      holdArmed:false,staleArmed:false,newerSnapshotArmed:false,stalePending:false,lossArmed:false,gapArmed:false,recoveryPending:false,observerInstalledAfterMutation:false,releases:[],original,backend,selected,
       selection:${desktopJsLiteral(selection)},handleId:${desktopJsLiteral(handleId)},priorNonce:null,watchTarget:null,violations:[]};
     window.__TEST_f08=f;
     const stopStore=window.__agentTeamsDevStore.subscribe(()=>{
@@ -113,8 +113,13 @@ export function desktopF08ReadFaultExpression(handleId: string, selection: strin
         if(provenance){kind='selected-snapshot-hold';f.holdArmed=false;}
         else if(f.ignored.length<8)f.ignored.push({request:structuredClone(request),stack,selected:before});
       }
+      if(!kind&&same&&request.operation==='team.snapshot'&&f.newerSnapshotArmed&&/getData/.test(stack)&&before.team===f.selection&&!before.loading){
+        kind='same-A-newer-snapshot';f.newerSnapshotArmed=false;
+      }
       if(same&&request.operation==='team.changes.read'&&shared){
-        if(f.lossArmed){kind='shared-feed-response-loss';f.lossArmed=false;}
+        if(f.staleArmed){kind='same-A-stale-feed';f.staleArmed=false;}
+        else if(f.stalePending){kind='same-A-after-stale';f.stalePending=false;}
+        else if(f.lossArmed){kind='shared-feed-response-loss';f.lossArmed=false;}
         else if(f.gapArmed){kind='shared-feed-cursor-loss';f.gapArmed=false;}
         else if(f.recoveryPending){kind='shared-feed-after-loss';f.recoveryPending=false;}
       }
@@ -133,12 +138,13 @@ export function desktopF08ReadFaultExpression(handleId: string, selection: strin
       const result=await Reflect.apply(original,backend,[sent]);
       if(!record)return result;
       record.result=result;record.resultJson=JSON.stringify(result);record.status='received';
-      if(kind==='selected-snapshot-hold'||kind==='shared-feed-response-loss'){
+      if(kind==='selected-snapshot-hold'||kind==='same-A-stale-feed'||kind==='shared-feed-response-loss'){
         record.status='held';await new Promise(resolve=>{record.release=resolve;f.releases.push(resolve);});
         if(record.result!==result||record.resultJson!==JSON.stringify(result))throw Error('F08 original read result changed');
         if(kind==='shared-feed-response-loss'){
           f.recoveryPending=true;record.status='lost';throw Error('TEST F08 discards one original read response');
         }
+        if(kind==='same-A-stale-feed')f.stalePending=true;
         record.status='released';
       }
       return result;
@@ -215,10 +221,10 @@ export async function runDesktopF08ReadTimingProof(
   const proof: Record<string, unknown> = {
     status: 'INCOMPLETE',
     scope:
-      'Same actual Electron shared adapter: one original Task comment with real read response loss, actual Host cursor gap and late public observer resync; separate original selected-Team read held across original target navigation',
+      'Same actual Electron shared adapter: one original Task comment, same-A old feed delivered unchanged after newer real snapshot acceptance, real read response loss, actual Host cursor gap and late public observer resync; separate original selected-Team read held across original target navigation',
     excluded: [
       'first global snapshot-subscription race',
-      'same-Team revision rollback across an in-flight mutation',
+      'stale same-Team product snapshot across an in-flight mutation',
       'transport reconnect or Host restart',
       'live default-owner switch',
       'unavailable A physical fault',
@@ -252,12 +258,6 @@ export async function runDesktopF08ReadTimingProof(
     proof.beforeMutationSnapshot = await cdp.evaluate(
       `(async()=>{const {api}=await import('/api/index.ts');return api.teams.getData(${desktopJsLiteral(selection)});})()`
     );
-    await cdp.evaluate('window.__TEST_f08.lossArmed=true;true');
-    await ui.waitRead(
-      fault('shared-feed-response-loss', 'held'),
-      'one original shared feed response held before loss'
-    );
-
     // The sidebar opens the existing Task detail without its separate Open team action.
     const sidebarText = await ui.waitRead(
       `(() => {const rows=[...document.querySelectorAll('#sidebar-tasks-panel .sidebar-task-item')].filter(e=>[...e.querySelectorAll('span')].some(s=>s.textContent.trim()===${desktopJsLiteral(options.seed.subject)}));return rows.length===1?rows[0].textContent.trim():null;})()`,
@@ -274,6 +274,18 @@ export async function runDesktopF08ReadTimingProof(
         'actual original Task comment owner/surface'
       )
     );
+    // Keep this original mounted surface through stale delivery: no observer epoch change.
+    await cdp.evaluate('window.__TEST_f08.staleArmed=true;true');
+    const stale = row(
+      await ui.waitRead(
+        fault('same-A-stale-feed', 'held'),
+        'one original same-A shared feed held before the comment'
+      )
+    );
+    assert.equal(stale.physicalCalls, 1);
+    assert.equal(row(stale.result).ok, true);
+    assert.equal(row(stale.request).operation, 'team.changes.read');
+    const stalePosition = row(row(stale.result).value);
     await ui.scrollTo(String(input.selector), 'original source Task comment');
     await ui.click(String(input.selector), 'focus original source Task comment');
     await cdp.send('Input.insertText', { text });
@@ -299,8 +311,129 @@ export async function runDesktopF08ReadTimingProof(
     assert.equal(comments(changedTask).length, comments(originalTask).length + 1);
     proof.commentOwner = input;
     proof.changedTask = changedTask;
-    await ui.click('[role="dialog"] button', 'close original source Task detail', 'Close');
+    const sameSurface = `(() => {const input=${desktopTaskCommentInputExpression(options.handleId, options.seed.taskId)};
+      return input?.surfaceId===${desktopJsLiteral(input.surfaceId)}&&input.submitPending===false?input:null;})()`;
+    const settledInput = row(
+      await ui.waitRead(
+        sameSurface,
+        'the one original comment settles on the same mounted Task surface'
+      )
+    );
+    assert.equal(settledInput.commentText, '');
     await ui.waitRead(state(selection), 'original source remains selected after its Task comment');
+    await ui.waitRead(
+      `(async()=>{const {isTeamDataRefreshPending}=await import('/store/slices/teamSlice.ts');
+      return !isTeamDataRefreshPending(${desktopJsLiteral(selection)},window.__agentTeamsDevStore.getState);})()`,
+      'original comment refresh settles before the readonly newer snapshot'
+    );
+    const newerData = row(
+      await cdp.evaluate(`(async()=>{const {api}=await import('/api/index.ts');
+      const f=window.__TEST_f08;if(f.stopObserver||f.observerInstalledAfterMutation)throw Error('F08 observer epoch changed before stale delivery');
+      f.newerSnapshotArmed=true;return api.teams.getData(${desktopJsLiteral(selection)});})()`)
+    );
+    const newer = row(
+      await ui.waitRead(
+        fault('same-A-newer-snapshot', 'received'),
+        'actual readonly getData accepts a newer same-A snapshot'
+      )
+    );
+    assert.equal(row(newer.result).ok, true);
+    const newerPosition = row(row(row(newer.result).value).feed);
+    assert.equal(
+      newerPosition.streamId,
+      stalePosition.streamId,
+      'same original Host stream, no restart'
+    );
+    assert.equal(typeof stalePosition.sequence, 'number');
+    assert.equal(typeof newerPosition.sequence, 'number');
+    assert.ok(
+      Number(newerPosition.sequence) > Number(stalePosition.sequence),
+      'real comment advances the accepted A position beyond the original held feed'
+    );
+    const newerTask = (newerData.tasks as unknown[])
+      .map(row)
+      .find((task) => task.id === options.seed.taskId);
+    assert.ok(newerTask);
+    assert.equal(comments(newerTask).filter((comment) => comment.text === text).length, 1);
+    const sourceView = `(() => {const s=window.__agentTeamsDevStore.getState();return {selected:s.selectedTeamName,
+      data:s.selectedTeamData,cache:s.teamDataCacheByName[${desktopJsLiteral(selection)}]};})()`;
+    const beforeStale = row(await cdp.evaluate(sourceView));
+    assert.equal(beforeStale.selected, selection);
+    for (const snapshot of [row(beforeStale.data), row(beforeStale.cache)]) {
+      assert.equal(snapshot.teamName, selection);
+      const task = (snapshot.tasks as unknown[])
+        .map(row)
+        .find((entry) => entry.id === options.seed.taskId);
+      assert.ok(task);
+      assert.equal(comments(task).filter((comment) => comment.text === text).length, 1);
+    }
+    const epochBeforeRelease = row(
+      await cdp.evaluate(`(() => {const f=window.__TEST_f08;
+      const observed={diagnosticObserverInstalled:f.observerInstalledAfterMutation,hasObserver:Boolean(f.stopObserver)};
+      if(observed.diagnosticObserverInstalled||observed.hasObserver)throw Error('F08 observer epoch changed before stale delivery');
+      f.records.find(record=>record.kind==='same-A-stale-feed').release();return observed;})()`)
+    );
+    await ui.waitRead(
+      fault('same-A-stale-feed', 'released'),
+      'old original same-A feed returned unchanged'
+    );
+    const afterStaleRead = row(
+      await ui.waitRead(
+        fault('same-A-after-stale', 'received'),
+        'next real shared poll proves the stale response consumer has settled'
+      )
+    );
+    assert.equal(row(afterStaleRead.result).ok, true);
+    await cdp.evaluate(
+      'new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))'
+    );
+    const afterStale = await cdp.evaluate(sourceView);
+    assert.deepEqual(
+      afterStale,
+      beforeStale,
+      'old same-A feed cannot roll back selected A or its newer cache'
+    );
+    const surfaceAfterStale = row(
+      await ui.waitRead(
+        sameSurface,
+        'same original Task surface remains mounted through stale delivery'
+      )
+    );
+    assert.equal(surfaceAfterStale.surfaceId, input.surfaceId);
+    const sameACommands = await commands();
+    const sameAAdded = sameACommands.filter((receipt) => !originalIds.has(receipt.commandId));
+    assert.equal(
+      sameAAdded.length,
+      1,
+      'same-A read timing preserves exactly the one original comment command'
+    );
+    assert.equal(sameAAdded[0]!.phase, 'completed');
+    assert.equal(row(sameAAdded[0]!.command).operation, 'task.comment');
+    assert.equal(row(row(sameAAdded[0]!.command).payload).text, text);
+    assert.deepEqual(comments(await json(taskPath)), comments(changedTask));
+    proof.sameAStaleFeed = {
+      stalePosition,
+      newerPosition,
+      newerData,
+      beforeStale,
+      afterStale,
+      epochBeforeRelease,
+      surfaceId: input.surfaceId,
+      commentCommandId: sameAAdded[0]!.commandId,
+      scope:
+        'Original same-A shared feed after newer real snapshot acceptance; no stale product snapshot or first-global-subscription qualification',
+    };
+    await ui.click(
+      '[role="dialog"] button',
+      'close original source Task detail after stale delivery',
+      'Close'
+    );
+    // The existing loss/resync phase uses later reads, with no second business mutation.
+    await cdp.evaluate('window.__TEST_f08.lossArmed=true;true');
+    await ui.waitRead(
+      fault('shared-feed-response-loss', 'held'),
+      'one later original shared feed response held before loss'
+    );
     await cdp.evaluate(`(async () => {
       const {api}=await import('/api/index.ts'),f=window.__TEST_f08;
       f.observerInstalledAfterMutation=true;

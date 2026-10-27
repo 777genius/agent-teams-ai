@@ -1346,3 +1346,29 @@ unchanged UI-library declarations, so full current-head validation remains remot
 Scoped fast lint has zero errors and one unchanged existing TeamDetailView hook
 warning; scoped format/diff checks pass. The final script/source-size checks pass
 with TeamDetailView at 3743/3750 and Host API at 798/800. No cap is raised.
+
+
+## Bounded same-A stale feed continuation in the existing F08 UI proof
+
+The existing cross-Team Taskboard continuation now also retains one original
+same-A shared feed response, completes the same single original UI Comment,
+awaits a newer A product read and then returns the unchanged stale feed response
+before the observer epoch changes. It requires a greater sequence in the same
+stream, the retained original Task surface/receipt, exact newer A cache and no
+extra mutation. The earlier real response-loss, gap, late-observer and A-to-B
+selection phases continue afterwards with the same original Comment intent.
+
+The raw `newerSnapshotArmed` record is the first matching same-A `getData`, not
+uniquely correlated to the explicit call. Separately, the awaited explicit
+`getData` returns only after its existing snapshot acceptance/current checks and
+contains the new Comment; this establishes newer acceptance before stale release.
+The proof does not claim stronger per-call raw correlation.
+
+Independent actual-code and root reviews accepted frozen source SHA-256
+`79c74968cedbef82542b7178e0eb5d58f1752df0f19e0c982a761bbd8ed2bd3f`.
+Combined strict scripts TypeScript, scoped format/diff checks and the author's
+bounded VM fault mechanics passed. Actual original Desktop execution remains
+pending. This qualifies no full F08/M18 row: the first global snapshot race,
+stale product snapshot across a same-A in-flight mutation, live owner/default
+switch, unavailable owner, transport reconnect/Host restart and cross-owner
+routing remain excluded. Original receipts and historical acceptance are intact.
