@@ -183,8 +183,9 @@ async function readShellEnv(shellPath: string, mode: '-lic' | '-ic'): Promise<No
   const endMarker = `\0${nonce}_END\0`;
   // Only a successful env command prints the matching end marker. Startup and
   // logout output outside the frame cannot masquerade as exported variables.
+  // `command` bypasses printf aliases/functions from the user's startup files.
   // Quoted printable constants and && work in sh, bash, zsh and modern fish.
-  const command = `printf '\\0%s\\0' '${nonce}_START' && env -0 && printf '\\0%s\\0' '${nonce}_END'`;
+  const command = `command printf '\\0%s\\0' '${nonce}_START' && env -0 && command printf '\\0%s\\0' '${nonce}_END'`;
   const envDump = await new Promise<string>((resolve, reject) => {
     const child = spawn(shellPath, [mode, command], {
       env: process.env,

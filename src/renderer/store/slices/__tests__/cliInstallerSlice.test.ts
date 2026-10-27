@@ -838,6 +838,97 @@ describe('Codex catalog retry after main invalidation', () => {
     }
   });
 
+  it.each(['pending', 'rejected'] as const)(
+    'does not let an old Codex success restore retries while main invalidation is %s',
+    async (invalidationState) => {
+      const fixture = installLoadingCodex();
+      let resolveOldStatus!: (value: unknown) => void;
+      const oldStatus = new Promise((resolve) => {
+        resolveOldStatus = resolve;
+      });
+      let acknowledge!: () => void;
+      let rejectAcknowledgement!: (error: Error) => void;
+      const acknowledgement = new Promise<void>((resolve, reject) => {
+        acknowledge = resolve;
+        rejectAcknowledgement = reject;
+      });
+      try {
+        await fixture.store.getState().fetchCliProviderStatus('codex');
+        const retainedProvider = fixture.store
+          .getState()
+          .cliStatus!.providers.find((provider) => provider.providerId === 'codex')!;
+        fixture.getProviderStatus.mockReturnValueOnce(oldStatus as never);
+        const oldRefresh = fixture.store.getState().fetchCliProviderStatus('codex');
+        fixture.invalidateStatus.mockReturnValueOnce(acknowledgement);
+        const invalidation = fixture.store.getState().invalidateCliStatus();
+        const settledInvalidation = invalidation.catch(() => undefined);
+        if (invalidationState === 'rejected') {
+          rejectAcknowledgement(new Error('Main invalidation failed'));
+          await settledInvalidation;
+        }
+
+        resolveOldStatus(retainedProvider);
+        await expect(oldRefresh).resolves.toBe(false);
+        await vi.advanceTimersByTimeAsync(5_000);
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(2);
+        expect(vi.getTimerCount()).toBe(0);
+
+        acknowledge();
+        await settledInvalidation;
+      } finally {
+        acknowledge();
+        await fixture.cleanup();
+      }
+    }
+  );
+
+  it.each(['pending', 'rejected'] as const)(
+    'does not let old bootstrap metadata restore retries while main invalidation is %s',
+    async (invalidationState) => {
+      const fixture = installLoadingCodex();
+      let resolveOldMetadata!: (value: unknown) => void;
+      const oldMetadata = new Promise((resolve) => {
+        resolveOldMetadata = resolve;
+      });
+      let acknowledge!: () => void;
+      let rejectAcknowledgement!: (error: Error) => void;
+      const acknowledgement = new Promise<void>((resolve, reject) => {
+        acknowledge = resolve;
+        rejectAcknowledgement = reject;
+      });
+      try {
+        await fixture.store.getState().fetchCliProviderStatus('codex');
+        const retainedMetadata = fixture.store.getState().cliStatus!;
+        Object.assign(window.electronAPI!.cliInstaller, {
+          getStatus: vi.fn().mockReturnValueOnce(oldMetadata),
+        });
+        const oldBootstrap = fixture.store.getState().bootstrapCliStatus({
+          multimodelEnabled: true,
+          providerStatusMode: 'defer',
+        });
+        fixture.invalidateStatus.mockReturnValueOnce(acknowledgement);
+        const invalidation = fixture.store.getState().invalidateCliStatus();
+        const settledInvalidation = invalidation.catch(() => undefined);
+        if (invalidationState === 'rejected') {
+          rejectAcknowledgement(new Error('Main invalidation failed'));
+          await settledInvalidation;
+        }
+
+        resolveOldMetadata(retainedMetadata);
+        await oldBootstrap;
+        await vi.advanceTimersByTimeAsync(5_000);
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(1);
+        expect(vi.getTimerCount()).toBe(0);
+
+        acknowledge();
+        await settledInvalidation;
+      } finally {
+        acknowledge();
+        await fixture.cleanup();
+      }
+    }
+  );
+
   it('does not restore retries while a newer main invalidation is pending', async () => {
     const fixture = installLoadingCodex();
     let acknowledgeOld!: () => void;

@@ -1,0 +1,81 @@
+name: Anthropic environment portability
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/anthropic-env-portability.yml
+      - src/main/utils/shellEnv.ts
+      - src/main/utils/cliEnv.ts
+      - src/main/utils/cliPathMerge.ts
+      - src/main/utils/cliProcessDefaults.ts
+      - src/main/utils/childProcess.ts
+      - src/main/utils/pathDecoder.ts
+      - src/main/services/infrastructure/ConfigManager.ts
+      - src/main/services/runtime/agentChildProcessPreflight.ts
+      - src/main/services/runtime/buildRuntimeBaseEnv.ts
+      - src/main/services/runtime/providerAwareCliEnv.ts
+      - src/main/services/runtime/providerRuntimeEnv.ts
+      - src/main/services/runtime/ProviderConnectionService.ts
+      - src/main/services/team/provisioning/TeamProvisioningEnvBuilder.ts
+      - src/main/services/team/provisioning/__tests__/TeamProvisioningEnvBuilder.test.ts
+      - src/renderer/store/slices/cliInstallerSlice.ts
+      - src/renderer/store/slices/__tests__/cliInstallerSlice.test.ts
+      - src/renderer/components/runtime/ProviderRuntimeSettingsDialog.tsx
+      - src/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.tsx
+      - test/main/utils/shellEnv*.test.ts
+      - test/main/services/runtime/AnthropicEnvPortability.integration.test.ts
+      - test/main/services/runtime/providerRuntimeEnv.test.ts
+      - src/main/services/runtime/providerRuntimeEnv.test.ts
+      - test/renderer/components/runtime/ProviderRuntimeSettingsDialog.test.ts
+      - test/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.test.ts
+      - vitest.config.ts
+      - test/setup.ts
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - .node-version
+
+permissions:
+  contents: read
+
+concurrency:
+  group: anthropic-env-portability-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  environment:
+    name: Anthropic env (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Prove environment inheritance, real shells, and status invalidation
+        run: >-
+          pnpm exec vitest run --maxWorkers=1
+          test/main/utils/shellEnv.test.ts
+          test/main/utils/shellEnv.integration.test.ts
+          test/main/utils/shellEnv.real-shell.integration.test.ts
+          test/main/services/runtime/AnthropicEnvPortability.integration.test.ts
+          test/main/services/runtime/providerRuntimeEnv.test.ts
+          src/main/services/runtime/providerRuntimeEnv.test.ts
+          src/main/services/team/provisioning/__tests__/TeamProvisioningEnvBuilder.test.ts
+          src/renderer/store/slices/__tests__/cliInstallerSlice.test.ts
+          test/renderer/components/runtime/ProviderRuntimeSettingsDialog.test.ts
+          test/renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDialog.test.ts
