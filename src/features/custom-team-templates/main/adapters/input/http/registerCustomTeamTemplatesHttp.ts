@@ -12,8 +12,8 @@ import type { FastifyInstance } from 'fastify';
  * returned as data (`storageUnavailable`, `unresolved`, …) rather than as an
  * HTTP error, so a browser client sees precisely what an Electron client sees.
  *
- * The library read is a GET because it is read-only; the three write-capable or
- * write-adjacent operations are POSTs.
+ * The library read is a GET because it is read-only; the other seven
+ * operations are POSTs.
  */
 export function registerCustomTeamTemplatesHttp(
   app: FastifyInstance,
@@ -29,4 +29,16 @@ export function registerCustomTeamTemplatesHttp(
     feature.recheckSave.execute(request.body)
   );
   app.get(CUSTOM_TEAM_TEMPLATE_ROUTES.listTemplates, async () => feature.listTemplates.execute());
+  app.post(CUSTOM_TEAM_TEMPLATE_ROUTES.updateTemplate, async (request) =>
+    feature.updateTemplate.execute(request.body)
+  );
+  app.post(CUSTOM_TEAM_TEMPLATE_ROUTES.deleteTemplate, async (request) =>
+    feature.deleteTemplate.execute(request.body)
+  );
+  app.post(CUSTOM_TEAM_TEMPLATE_ROUTES.duplicateTemplate, async (request) =>
+    feature.duplicateTemplate.execute(request.body)
+  );
+  app.post(CUSTOM_TEAM_TEMPLATE_ROUTES.copyBuiltinTemplate, async (request) =>
+    feature.copyBuiltinTemplate.execute(request.body)
+  );
 }

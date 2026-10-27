@@ -21,6 +21,8 @@ function suppliedGateway(): CustomTeamTemplateStorageGateway {
       .fn()
       .mockResolvedValue({ templates: [stored], unreadableRecords: [] }),
     customTeamTemplateGetById: vi.fn().mockResolvedValue({ status: 'found', template: stored }),
+    customTeamTemplateUpdate: vi.fn(),
+    customTeamTemplateDelete: vi.fn(),
   };
 }
 

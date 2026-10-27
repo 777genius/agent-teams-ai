@@ -40,5 +40,13 @@ export function createHttpCustomTeamTemplatesApi(baseUrl: string): CustomTeamTem
     saveTemplate: (payload) => request(CUSTOM_TEAM_TEMPLATE_ROUTES.saveTemplate, 'POST', payload),
     recheckSave: (payload) => request(CUSTOM_TEAM_TEMPLATE_ROUTES.recheckSave, 'POST', payload),
     listTemplates: () => request(CUSTOM_TEAM_TEMPLATE_ROUTES.listTemplates, 'GET'),
+    updateTemplate: (payload) =>
+      request(CUSTOM_TEAM_TEMPLATE_ROUTES.updateTemplate, 'POST', payload),
+    deleteTemplate: (payload) =>
+      request(CUSTOM_TEAM_TEMPLATE_ROUTES.deleteTemplate, 'POST', payload),
+    duplicateTemplate: (payload) =>
+      request(CUSTOM_TEAM_TEMPLATE_ROUTES.duplicateTemplate, 'POST', payload),
+    copyBuiltinTemplate: (payload) =>
+      request(CUSTOM_TEAM_TEMPLATE_ROUTES.copyBuiltinTemplate, 'POST', payload),
   };
 }

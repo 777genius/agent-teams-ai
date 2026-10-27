@@ -1,10 +1,16 @@
 import { randomUUID } from 'node:crypto';
 
+import { TEAM_TEMPLATES } from '@features/team-templates/core';
+
+import { CopyBuiltinTemplateUseCase } from '../../core/application/CopyBuiltinTemplateUseCase';
+import { DeleteCustomTeamTemplateUseCase } from '../../core/application/DeleteCustomTeamTemplateUseCase';
+import { DuplicateCustomTeamTemplateUseCase } from '../../core/application/DuplicateCustomTeamTemplateUseCase';
 import { InMemoryCustomTeamTemplatePreviewStore } from '../../core/application/InMemoryCustomTeamTemplatePreviewStore';
 import { ListCustomTeamTemplatesUseCase } from '../../core/application/ListCustomTeamTemplatesUseCase';
 import { PrepareCustomTemplatePreviewUseCase } from '../../core/application/PrepareCustomTemplatePreviewUseCase';
 import { RecheckCustomTeamTemplateSaveUseCase } from '../../core/application/RecheckCustomTeamTemplateSaveUseCase';
 import { SaveCustomTeamTemplateUseCase } from '../../core/application/SaveCustomTeamTemplateUseCase';
+import { UpdateCustomTeamTemplateUseCase } from '../../core/application/UpdateCustomTeamTemplateUseCase';
 import { InterruptionClassifyingCustomTeamTemplateStorageGateway } from '../adapters/output/InterruptionClassifyingCustomTeamTemplateStorageGateway';
 import { NodeCustomTeamTemplateHasher } from '../adapters/output/NodeCustomTeamTemplateHasher';
 import { SavedTeamConfigurationSnapshotAdapter } from '../adapters/output/SavedTeamConfigurationSnapshotAdapter';
@@ -30,6 +36,17 @@ export interface CustomTeamTemplatesFeatureDeps {
   createPreviewToken?: () => string;
   previewTokenTtlMs?: number;
   previewStoreCapacity?: number;
+  /**
+   * Resolves one built-in template's allowlisted content for the copy-built-in
+   * flow, or null when the id is unknown. Defaults to the static catalogue.
+   */
+  resolveBuiltinTemplate?: (id: string) => {
+    schemaVersion: 1;
+    teamPrompt: string;
+    members: readonly { name: string; role?: string; workflow?: string }[];
+  } | null;
+  /** Fresh stable id for duplicate/copy-built-in records. Defaults to randomUUID. */
+  createTemplateId?: () => string;
 }
 
 /**
@@ -45,6 +62,10 @@ export interface CustomTeamTemplatesFeature {
   saveTemplate: SaveCustomTeamTemplateUseCase;
   recheckSave: RecheckCustomTeamTemplateSaveUseCase;
   listTemplates: ListCustomTeamTemplatesUseCase;
+  updateTemplate: UpdateCustomTeamTemplateUseCase;
+  deleteTemplate: DeleteCustomTeamTemplateUseCase;
+  duplicateTemplate: DuplicateCustomTeamTemplateUseCase;
+  copyBuiltinTemplate: CopyBuiltinTemplateUseCase;
   /**
    * Drops every retained preview and confirmed operation.
    *
@@ -93,6 +114,42 @@ export function createCustomTeamTemplatesFeature(
     saveTemplate: new SaveCustomTeamTemplateUseCase({ gateway, reader, hasher, previewStore }),
     recheckSave: new RecheckCustomTeamTemplateSaveUseCase({ gateway, hasher, previewStore }),
     listTemplates: new ListCustomTeamTemplatesUseCase({ gateway }),
+    updateTemplate: new UpdateCustomTeamTemplateUseCase({ gateway, hasher }),
+    deleteTemplate: new DeleteCustomTeamTemplateUseCase({ gateway }),
+    duplicateTemplate: new DuplicateCustomTeamTemplateUseCase({
+      gateway,
+      hasher,
+      createTemplateId: deps.createTemplateId ?? (() => `tmpl-${randomUUID()}`),
+    }),
+    copyBuiltinTemplate: new CopyBuiltinTemplateUseCase({
+      gateway,
+      hasher,
+      resolveBuiltin: deps.resolveBuiltinTemplate ?? resolveBuiltinTemplateContent,
+      createTemplateId: deps.createTemplateId ?? (() => `tmpl-${randomUUID()}`),
+    }),
     dispose: () => previewStore.clear(),
+  };
+}
+
+/**
+ * Default built-in resolver over the static catalogue.
+ */
+function resolveBuiltinTemplateContent(id: string): {
+  schemaVersion: 1;
+  teamPrompt: string;
+  members: readonly { name: string; role?: string; workflow?: string }[];
+} | null {
+  const found = TEAM_TEMPLATES.find((entry: any) => entry.id === id);
+  if (!found) {
+    return null;
+  }
+  return {
+    schemaVersion: 1,
+    teamPrompt: found.teamPrompt,
+    members: found.members.map((member: any) => ({
+      name: member.name,
+      role: member.role,
+      workflow: member.workflow,
+    })),
   };
 }

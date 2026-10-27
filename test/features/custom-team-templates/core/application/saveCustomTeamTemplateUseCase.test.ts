@@ -120,6 +120,8 @@ function gatewayFixture(options: {
       customTeamTemplateCreate: create,
       customTeamTemplateList: vi.fn().mockResolvedValue({ templates: [], unreadableRecords: [] }),
       customTeamTemplateGetById: getById,
+      customTeamTemplateUpdate: vi.fn(),
+      customTeamTemplateDelete: vi.fn(),
     },
     create,
     getById,

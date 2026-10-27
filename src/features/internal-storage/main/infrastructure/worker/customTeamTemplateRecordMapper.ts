@@ -78,6 +78,7 @@ export function toStoredTemplateRow(input: {
     membersJson: JSON.stringify(template.members),
     contentHash,
     createdAt: input.createdAt,
+    revision: 1,
   };
 }
 
@@ -102,6 +103,8 @@ export function readStoredTemplate(row: StoredCustomTeamTemplateRow): StoredCust
   if (!members) {
     return { status: 'unreadable', templateId: row.id };
   }
+  const revision =
+    typeof row.revision === 'number' && Number.isInteger(row.revision) ? row.revision : 1;
   return {
     status: 'readable',
     template: {
@@ -112,6 +115,7 @@ export function readStoredTemplate(row: StoredCustomTeamTemplateRow): StoredCust
       teamPrompt: row.teamPrompt,
       members,
       createdAt: row.createdAt,
+      revision,
     },
   };
 }

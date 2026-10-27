@@ -47,6 +47,8 @@ function gateway(templates: readonly CustomTeamTemplateV1[] = []) {
     customTeamTemplateCreate: create,
     customTeamTemplateList: vi.fn().mockResolvedValue({ templates, unreadableRecords: [] }),
     customTeamTemplateGetById: vi.fn().mockResolvedValue({ status: 'notFound' }),
+    customTeamTemplateUpdate: vi.fn(),
+    customTeamTemplateDelete: vi.fn(),
   };
   return { value, create };
 }
@@ -247,6 +249,8 @@ describe('PrepareCustomTemplatePreviewUseCase', () => {
       customTeamTemplateCreate: vi.fn(),
       customTeamTemplateList: vi.fn().mockRejectedValue(new Error('worker unavailable')),
       customTeamTemplateGetById: vi.fn(),
+      customTeamTemplateUpdate: vi.fn(),
+      customTeamTemplateDelete: vi.fn(),
     };
     await expect(
       build({ reader: readerFixture.reader, gateway: failing }).useCase.execute({

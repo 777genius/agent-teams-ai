@@ -5,9 +5,13 @@ import { CustomTeamTemplateStorageInterruptedError } from '../../../core/applica
 import type {
   CreateCustomTeamTemplateRecordRequest,
   CreateCustomTeamTemplateRecordResult,
+  DeleteCustomTeamTemplateRecordRequest,
+  DeleteCustomTeamTemplateRecordResult,
   ListCustomTeamTemplateRecordsResult,
   ReadCustomTeamTemplateRecordRequest,
   ReadCustomTeamTemplateRecordResult,
+  UpdateCustomTeamTemplateRecordRequest,
+  UpdateCustomTeamTemplateRecordResult,
 } from '../../../contracts';
 import type { CustomTeamTemplateStorageGateway } from '../../../core/application/ports';
 
@@ -39,6 +43,18 @@ export class InterruptionClassifyingCustomTeamTemplateStorageGateway implements 
     request: ReadCustomTeamTemplateRecordRequest
   ): Promise<ReadCustomTeamTemplateRecordResult> {
     return this.classify(() => this.inner.customTeamTemplateGetById(request));
+  }
+
+  customTeamTemplateUpdate(
+    request: UpdateCustomTeamTemplateRecordRequest
+  ): Promise<UpdateCustomTeamTemplateRecordResult> {
+    return this.classify(() => this.inner.customTeamTemplateUpdate(request));
+  }
+
+  customTeamTemplateDelete(
+    request: DeleteCustomTeamTemplateRecordRequest
+  ): Promise<DeleteCustomTeamTemplateRecordResult> {
+    return this.classify(() => this.inner.customTeamTemplateDelete(request));
   }
 
   private async classify<T>(call: () => Promise<T>): Promise<T> {

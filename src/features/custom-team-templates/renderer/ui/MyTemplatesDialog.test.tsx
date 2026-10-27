@@ -161,11 +161,9 @@ describe('MyTemplatesDialog', () => {
     const labels = Array.from(host.querySelectorAll('button')).map(
       (candidate) => candidate.textContent?.trim() ?? ''
     );
-    // Read-only in A1: close (and retry on failures) are the only actions.
+    // A3: management actions are now available on each saved template card.
     expect(labels).toContain('actions.close');
-    expect(labels.some((label) => /edit|delete|duplicate|export|import|create/i.test(label))).toBe(
-      false
-    );
+    expect(labels.some((label) => /edit|delete|duplicate/i.test(label))).toBe(true);
   });
 
   it('uses the unified Templates dialog title without the technical description', async () => {

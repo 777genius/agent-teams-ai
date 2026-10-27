@@ -48,7 +48,15 @@ const TEMPLATE_ICONS = {
  * directly from `TEAM_TEMPLATES`. It never touches SQLite or the custom
  * template API, so it stays usable while custom templates load or fail.
  */
-export const BuiltInTemplateCatalogue = (): React.JSX.Element => {
+export interface BuiltInTemplateCatalogueProps {
+  onCopyBuiltin?: (
+    id: import('@features/custom-team-templates/contracts').BuiltinTeamTemplateId
+  ) => void;
+}
+
+export const BuiltInTemplateCatalogue = ({
+  onCopyBuiltin,
+}: BuiltInTemplateCatalogueProps = {}): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
 
@@ -132,6 +140,24 @@ export const BuiltInTemplateCatalogue = (): React.JSX.Element => {
                   </RosterParticipantFrame>
                 </Collapsible>
               ))}
+              {onCopyBuiltin ? (
+                <div className="px-3 pb-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    data-testid={`copy-builtin-${template.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCopyBuiltin(
+                        template.id as import('@features/custom-team-templates/contracts').BuiltinTeamTemplateId
+                      );
+                    }}
+                  >
+                    {t('customTemplates.actions.copyToMyTemplates')}
+                  </Button>
+                </div>
+              ) : null}
             </CollapsibleContent>
           </Collapsible>
         );

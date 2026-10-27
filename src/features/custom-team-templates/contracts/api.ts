@@ -1,11 +1,19 @@
 import type {
   ConfirmCustomTeamTemplateSaveRequest,
   ConfirmCustomTeamTemplateSaveResult,
+  CopyBuiltinTemplateRequest,
+  CopyBuiltinTemplateResult,
+  DeleteCustomTeamTemplateRequest,
+  DeleteCustomTeamTemplateResult,
+  DuplicateCustomTeamTemplateRequest,
+  DuplicateCustomTeamTemplateResult,
   ListCustomTeamTemplatesResult,
   PrepareCustomTeamTemplatePreviewRequest,
   PrepareCustomTeamTemplatePreviewResult,
   RecheckCustomTeamTemplateSaveRequest,
   RecheckCustomTeamTemplateSaveResult,
+  UpdateCustomTeamTemplateRequest,
+  UpdateCustomTeamTemplateResult,
 } from './operations';
 
 /**
@@ -32,4 +40,10 @@ export interface CustomTeamTemplatesApi {
     request: RecheckCustomTeamTemplateSaveRequest
   ): Promise<RecheckCustomTeamTemplateSaveResult>;
   listTemplates(): Promise<ListCustomTeamTemplatesResult>;
+  updateTemplate(request: UpdateCustomTeamTemplateRequest): Promise<UpdateCustomTeamTemplateResult>;
+  deleteTemplate(request: DeleteCustomTeamTemplateRequest): Promise<DeleteCustomTeamTemplateResult>;
+  duplicateTemplate(
+    request: DuplicateCustomTeamTemplateRequest
+  ): Promise<DuplicateCustomTeamTemplateResult>;
+  copyBuiltinTemplate(request: CopyBuiltinTemplateRequest): Promise<CopyBuiltinTemplateResult>;
 }

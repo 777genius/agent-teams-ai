@@ -210,7 +210,7 @@ describe('custom team templates worker ops', () => {
     }
   });
 
-  it('adds the template table in an append-only v5 to v6 migration without losing earlier rows', async () => {
+  it('adds the template table in append-only v5 to v7 migrations without losing earlier rows', async () => {
     const dbPath = await makeTmpDbPath();
     const seed = track(makeCore(dbPath));
     seed.handle('ping', {});
@@ -254,7 +254,7 @@ describe('custom team templates worker ops', () => {
       );
     raw.close();
 
-    expect(INTERNAL_STORAGE_SCHEMA_VERSION).toBe(6);
+    expect(INTERNAL_STORAGE_SCHEMA_VERSION).toBe(7);
     const upgraded = track(makeCore(dbPath));
     const info = upgraded.handle('ping', {}) as InternalStorageBackendInfo;
     expect(info.schemaVersion).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
@@ -287,6 +287,7 @@ describe('custom team templates worker ops', () => {
       teamPrompt: 'Ship the release.',
       members: [{ name: 'alice', role: 'reviewer', workflow: 'review' }],
       createdAt: FIXED_NOW.toISOString(),
+      revision: 1,
     });
 
     const listed = core.handle('customTemplate.list', {}) as ListCustomTeamTemplateRecordsResult;
@@ -323,6 +324,7 @@ describe('custom team templates worker ops', () => {
       'createdAt',
       'members',
       'name',
+      'revision',
       'schemaVersion',
       'teamPrompt',
       'templateId',

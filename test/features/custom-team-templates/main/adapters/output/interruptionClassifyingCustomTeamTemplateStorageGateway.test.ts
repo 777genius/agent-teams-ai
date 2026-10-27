@@ -12,6 +12,8 @@ function gatewayWithCreate(
     customTeamTemplateCreate: create,
     customTeamTemplateList: vi.fn().mockResolvedValue({ templates: [], unreadableRecords: [] }),
     customTeamTemplateGetById: vi.fn().mockResolvedValue({ status: 'notFound' }),
+    customTeamTemplateUpdate: vi.fn(),
+    customTeamTemplateDelete: vi.fn(),
   };
 }
 

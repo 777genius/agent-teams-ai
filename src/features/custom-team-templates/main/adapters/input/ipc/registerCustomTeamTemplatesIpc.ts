@@ -28,6 +28,18 @@ export function registerCustomTeamTemplatesIpc(
   ipcMain.handle(CUSTOM_TEAM_TEMPLATE_CHANNELS.listTemplates, () =>
     feature.listTemplates.execute()
   );
+  ipcMain.handle(CUSTOM_TEAM_TEMPLATE_CHANNELS.updateTemplate, (_event, request: unknown) =>
+    feature.updateTemplate.execute(request)
+  );
+  ipcMain.handle(CUSTOM_TEAM_TEMPLATE_CHANNELS.deleteTemplate, (_event, request: unknown) =>
+    feature.deleteTemplate.execute(request)
+  );
+  ipcMain.handle(CUSTOM_TEAM_TEMPLATE_CHANNELS.duplicateTemplate, (_event, request: unknown) =>
+    feature.duplicateTemplate.execute(request)
+  );
+  ipcMain.handle(CUSTOM_TEAM_TEMPLATE_CHANNELS.copyBuiltinTemplate, (_event, request: unknown) =>
+    feature.copyBuiltinTemplate.execute(request)
+  );
 }
 
 /** Removes every custom-team-templates IPC handler on shutdown. */

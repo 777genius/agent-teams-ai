@@ -3290,7 +3290,13 @@
       "retry": "Повторить",
       "save": "Сохранить шаблон",
       "saveAsTemplate": "Сохранить как шаблон",
-      "templates": "Шаблоны"
+      "templates": "Шаблоны",
+      "addMember": "customTemplates.actions.addMember",
+      "removeMember": "customTemplates.actions.removeMember",
+      "duplicate": "Duplicate",
+      "edit": "Edit",
+      "delete": "Delete",
+      "copyToMyTemplates": "Copy to My Templates"
     },
     "createFromTemplate": {
       "builtinGroup": "Встроенные шаблоны",
@@ -3315,7 +3321,14 @@
         "templateDescriptionTooLong": "Описание слишком длинное.",
         "templateNameInvalidCharacters": "Название шаблона содержит недопустимые символы.",
         "templateNameRequired": "Укажите название шаблона.",
-        "templateNameTooLong": "Название шаблона слишком длинное."
+        "templateNameTooLong": "Название шаблона слишком длинное.",
+        "duplicateMemberName": "customTemplates.errors.issues.duplicateMemberName",
+        "memberNameInvalid": "customTemplates.errors.issues.memberNameInvalid",
+        "memberNameRequired": "customTemplates.errors.issues.memberNameRequired",
+        "memberRoleTooLong": "customTemplates.errors.issues.memberRoleTooLong",
+        "memberWorkflowTooLong": "customTemplates.errors.issues.memberWorkflowTooLong",
+        "teamPromptTooLong": "customTemplates.errors.issues.teamPromptTooLong",
+        "tooManyMembers": "customTemplates.errors.issues.tooManyMembers"
       },
       "nameConflict": "Шаблон с таким названием уже существует. Измените название — существующие шаблоны никогда не перезаписываются.",
       "requestFailed": "Запрос не выполнен. Попробуйте ещё раз.",
@@ -3325,7 +3338,11 @@
       "storageUnavailable": "Хранилище шаблонов недоступно. Ничего не сохранено.",
       "storageUnavailableRecheck": "Хранилище шаблонов недоступно, поэтому результат проверить не удалось.",
       "storageUnavailableSave": "Хранилище шаблонов не приняло запись. Ничего не сохранено — можно попробовать снова.",
-      "templateIdConflict": "Другой сохранённый шаблон уже занимает этот идентификатор. Ничего не перезаписано."
+      "templateIdConflict": "Другой сохранённый шаблон уже занимает этот идентификатор. Ничего не перезаписано.",
+      "builtinNotFound": "customTemplates.errors.builtinNotFound",
+      "notFound": "customTemplates.errors.notFound",
+      "sourceNotFound": "customTemplates.errors.sourceNotFound",
+      "sourceUnreadable": "customTemplates.errors.sourceUnreadable"
     },
     "library": {
       "builtInDescription": "Готовые настройки команд с ролями и обязанностями.",
@@ -3392,6 +3409,58 @@
       "removedMembersExcluded_many": "Исключено {{count}} удалённых участников.",
       "removedMembersExcluded_one": "Исключён {{count}} удалённый участник.",
       "removedMembersExcluded_other": "Исключено {{count}} удалённых участников."
+    },
+    "copyBuiltin": {
+      "action": "customTemplates.copyBuiltin.action",
+      "copying": "customTemplates.copyBuiltin.copying",
+      "description": "customTemplates.copyBuiltin.description",
+      "membersCount_one": "customTemplates.copyBuiltin.membersCount",
+      "membersCount_other": "customTemplates.copyBuiltin.membersCount",
+      "nameFieldLabel": "customTemplates.copyBuiltin.nameFieldLabel",
+      "readOnlySource": "customTemplates.copyBuiltin.readOnlySource",
+      "selectTemplate": "customTemplates.copyBuiltin.selectTemplate",
+      "title": "customTemplates.copyBuiltin.title"
+    },
+    "delete": {
+      "confirm": "customTemplates.delete.confirm",
+      "conflictBody": "customTemplates.delete.conflictBody",
+      "conflictTitle": "customTemplates.delete.conflictTitle",
+      "deleting": "customTemplates.delete.deleting",
+      "description": "customTemplates.delete.description",
+      "title": "customTemplates.delete.title"
+    },
+    "duplicate": {
+      "action": "customTemplates.duplicate.action",
+      "defaultName": "customTemplates.duplicate.defaultName",
+      "description": "customTemplates.duplicate.description",
+      "duplicating": "customTemplates.duplicate.duplicating",
+      "nameFieldLabel": "customTemplates.duplicate.nameFieldLabel",
+      "title": "customTemplates.duplicate.title"
+    },
+    "edit": {
+      "conflictBody": "customTemplates.edit.conflictBody",
+      "conflictOverwrite": "customTemplates.edit.conflictOverwrite",
+      "conflictReload": "customTemplates.edit.conflictReload",
+      "conflictTitle": "customTemplates.edit.conflictTitle",
+      "description": "customTemplates.edit.description",
+      "descriptionLabel": "customTemplates.edit.descriptionLabel",
+      "memberHeader": "customTemplates.edit.memberHeader",
+      "memberNameLabel": "customTemplates.edit.memberNameLabel",
+      "memberNamePlaceholder": "customTemplates.edit.memberNamePlaceholder",
+      "memberRoleLabel": "customTemplates.edit.memberRoleLabel",
+      "memberRolePlaceholder": "customTemplates.edit.memberRolePlaceholder",
+      "membersEmpty": "customTemplates.edit.membersEmpty",
+      "membersLabel": "customTemplates.edit.membersLabel",
+      "memberWorkflowLabel": "customTemplates.edit.memberWorkflowLabel",
+      "memberWorkflowPlaceholder": "customTemplates.edit.memberWorkflowPlaceholder",
+      "nameFieldLabel": "customTemplates.edit.nameFieldLabel",
+      "promptLabel": "customTemplates.edit.promptLabel",
+      "promptPlaceholder": "customTemplates.edit.promptPlaceholder",
+      "save": "customTemplates.edit.save",
+      "saved": "customTemplates.edit.saved",
+      "savedBody": "customTemplates.edit.savedBody",
+      "saving": "customTemplates.edit.saving",
+      "title": "customTemplates.edit.title"
     }
   }
 }
