@@ -93,17 +93,37 @@ export function assertOwnedCdpListener(group: number): number {
   assert.ok(owned.length > 0, 'captured TEST app group still exists');
   let output: string;
   try {
-    output = execFileSync('/usr/sbin/lsof', [
-      '-nP', '-a', '-p', owned.map((row) => row.pid).join(','),
-      `-iTCP:${selectedCdpPort}`, '-sTCP:LISTEN', '-t',
-    ], { encoding: 'utf8', timeout: 10_000 });
+    output = execFileSync(
+      '/usr/sbin/lsof',
+      [
+        '-nP',
+        '-a',
+        '-p',
+        owned.map((row) => row.pid).join(','),
+        `-iTCP:${selectedCdpPort}`,
+        '-sTCP:LISTEN',
+        '-t',
+      ],
+      { encoding: 'utf8', timeout: 10_000 }
+    );
   } catch (error) {
-    const result = error as { status?: number; signal?: string | null; stdout?: unknown; stderr?: unknown };
+    const result = error as {
+      status?: number;
+      signal?: string | null;
+      stdout?: unknown;
+      stderr?: unknown;
+    };
     // lsof returns1 when any selected short-lived child is already gone,
     // even while stdout contains the matching live listener. Accept only
     // that positive observation; timeout, diagnostics and no match still fail.
-    if (result.status !== 1 || result.signal || typeof result.stdout !== 'string' ||
-        !/^\d+(?:\n\d+)*\n?$/.test(result.stdout) || String(result.stderr ?? '').trim()) throw error;
+    if (
+      result.status !== 1 ||
+      result.signal ||
+      typeof result.stdout !== 'string' ||
+      !/^\d+(?:\n\d+)*\n?$/.test(result.stdout) ||
+      String(result.stderr ?? '').trim()
+    )
+      throw error;
     output = result.stdout;
   }
   const listeners = output.trim().split('\n').map(Number);
@@ -145,9 +165,12 @@ export async function getTargets(): Promise<Record<string, unknown>[]> {
 }
 
 /** Only initial discovery is repeatable across navigation; product commands never use this retry seam. */
-export async function readRendererBackendConnections(cdp: {
-  evaluate(expression: string, timeoutMs?: number): Promise<unknown>;
-}, timeoutMs?: number): Promise<
+export async function readRendererBackendConnections(
+  cdp: {
+    evaluate(expression: string, timeoutMs?: number): Promise<unknown>;
+  },
+  timeoutMs?: number
+): Promise<
   | { kind: 'pending'; reason: 'bridge-not-ready' | 'context-replaced' | 'handler-not-ready' }
   | { kind: 'read'; value: unknown }
 > {
@@ -159,11 +182,23 @@ export async function readRendererBackendConnections(cdp: {
     return value;
   };
   try {
-    if (!await cdp.evaluate('Boolean(window.electronAPI?.agentBackend?.getConnections)', remaining()))
+    if (
+      !(await cdp.evaluate(
+        'Boolean(window.electronAPI?.agentBackend?.getConnections)',
+        remaining()
+      ))
+    )
       return { kind: 'pending', reason: 'bridge-not-ready' };
-    return { kind: 'read', value: await cdp.evaluate('window.electronAPI.agentBackend.getConnections()', remaining()) };
+    return {
+      kind: 'read',
+      value: await cdp.evaluate('window.electronAPI.agentBackend.getConnections()', remaining()),
+    };
   } catch (error) {
-    if (/execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(String(error)))
+    if (
+      /execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(
+        String(error)
+      )
+    )
       return { kind: 'pending', reason: 'context-replaced' };
     if (/No handler registered for ['"]?agentBackend:connections/.test(String(error)))
       return { kind: 'pending', reason: 'handler-not-ready' };
@@ -172,9 +207,11 @@ export async function readRendererBackendConnections(cdp: {
 }
 
 /** A just-exited child may be visible as a zombie until Node processes its exit event. */
-export async function settledGroupMembers(group: number): Promise<ProcessIdentity[]> {
+export async function settledGroupMembers(
+  group: number,
+  until = Date.now() + 3000
+): Promise<ProcessIdentity[]> {
   let members = groupMembers(group);
-  const until = Date.now() + 3000;
   while (members.some((row) => row.pid === group) && Date.now() < until) {
     let state: string;
     try {
@@ -191,4 +228,89 @@ export async function settledGroupMembers(group: number): Promise<ProcessIdentit
     members = groupMembers(group);
   }
   return members;
+}
+
+interface OriginalAppReapInput {
+  child: { pid?: number; exitCode: number | null; signalCode: NodeJS.Signals | null };
+  group: number;
+  hostPid: number;
+  initialMembers: readonly ProcessIdentity[];
+  expectedIdentity: string;
+  observedIdentity: string;
+  /** The same deadline captured before the initial settledGroupMembers call. */
+  deadline: number;
+}
+
+/** Observations only after a refused signal guard; this function has no signal capability. */
+export async function observeOriginalAppReap(
+  input: OriginalAppReapInput,
+  readTable: () => ProcessIdentity[] = processTable
+) {
+  const initial = {
+    members: input.initialMembers.map((member) => ({ ...member })),
+    expectedIdentity: input.expectedIdentity,
+    observedIdentity: input.observedIdentity,
+    appExitCode: input.child.exitCode,
+    appSignalCode: input.child.signalCode,
+  };
+  let remaining: ProcessIdentity[] | null = null;
+  let capturedHostAbsent: boolean | null = null;
+  const result = (settled: boolean, reason: string) => ({
+    settled,
+    reason,
+    initial,
+    remaining,
+    capturedHostAbsent,
+    appExitCode: input.child.exitCode,
+    appSignalCode: input.child.signalCode,
+  });
+  const identity = /^([A-Za-z]{3} [A-Za-z]{3} [ \d]\d \d{2}:\d{2}:\d{2} \d{4})\s+(.+)$/;
+  const expected = identity.exec(input.expectedIdentity);
+  const observed = identity.exec(input.observedIdentity);
+  if (
+    !Number.isSafeInteger(input.group) ||
+    input.group <= 0 ||
+    input.child.pid !== input.group ||
+    !Number.isSafeInteger(input.hostPid) ||
+    input.hostPid <= 0 ||
+    input.hostPid === input.group ||
+    !Number.isFinite(input.deadline) ||
+    !expected ||
+    !observed ||
+    expected[1] !== observed[1] ||
+    expected[2] === '<defunct>' ||
+    observed[2] !== '<defunct>' ||
+    initial.members.length !== 1 ||
+    initial.members[0]!.pid !== input.group ||
+    initial.members[0]!.pgid !== input.group
+  )
+    return result(false, 'ineligible-original-defunct-observation');
+
+  while (Date.now() < input.deadline) {
+    if (
+      input.child.signalCode !== null ||
+      (input.child.exitCode !== null && input.child.exitCode !== 0)
+    )
+      return result(false, 'original-child-exit-not-natural-zero');
+    let table: ProcessIdentity[];
+    try {
+      table = readTable();
+    } catch {
+      return result(false, 'process-table-unavailable');
+    }
+    remaining = table.filter((member) => member.pgid === input.group);
+    capturedHostAbsent = !table.some((member) => member.pid === input.hostPid);
+    if (Date.now() >= input.deadline) break;
+    if (remaining.some((member) => member.pid !== input.group) || !capturedHostAbsent)
+      return result(false, 'captured-processes-remain');
+    if (input.child.exitCode === 0 && input.child.signalCode === null) {
+      if (remaining.length) return result(false, 'captured-processes-remain');
+      return result(true, 'original-natural-exit-and-fresh-absence');
+    }
+    // A vanished numeric PID alone never substitutes for this ChildProcess's exit observation.
+    await new Promise<void>((resolve) =>
+      setTimeout(resolve, Math.min(100, Math.max(0, input.deadline - Date.now())))
+    );
+  }
+  return result(false, 'original-observation-deadline');
 }
