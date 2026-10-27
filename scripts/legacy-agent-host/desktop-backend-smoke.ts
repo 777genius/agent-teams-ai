@@ -1,3 +1,5 @@
+import { runDesktopOwnerRoutingContinuation } from './desktop-owner-routing-ui-smoke.ts';
+import type { DesktopOwnerRoutingContinuation } from './desktop-owner-routing-ui-smoke.ts';
 import { verifyNativeProcessReadbackSource } from './desktop-native-process-readback.ts';
 import { checkpoint } from './desktop-resume-records.ts';
 import { connectCapturedDesktopApp, observePackedAppRelaunch, verifyCapturedDesktopBinding } from './desktop-captured-app.ts';
@@ -59,6 +61,7 @@ import {
   portOccupied,
   processTable,
   settledGroupMembers,
+  observeOriginalAppReap,
   selectedCdpPort,
 } from './desktop-backend-observations.ts';
 import type { ProcessIdentity } from './desktop-backend-observations.ts';
@@ -85,7 +88,7 @@ function assertNoNativeHostChildren(group: number, fixture: {node: string; hostE
   else assert.equal(hosts.length,1,'one original captured Host after canonical Team read');
   for (const host of hosts) assert.equal(table.filter(row=>row.ppid===host.pid).length,0,'readback never allocates a native child');
 }
-async function main(): Promise<void> {
+async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   assert.equal(
     process.env.LEGACY_DESKTOP_BACKEND_GO,
     '1',
@@ -647,7 +650,8 @@ async function main(): Promise<void> {
     try {
       // Yield for ChildProcess exit/reaping before inspecting a just-closed dev wrapper.
       await tick();
-      remaining = group > 0 ? await settledGroupMembers(group) : [];
+      const observationDeadline = Date.now() + 3000;
+      remaining = group > 0 ? await settledGroupMembers(group, observationDeadline) : [];
       evidence.beforeHarnessCleanup = remaining;
       if (hostPid === undefined) {
         const hosts = remaining.filter(
@@ -669,21 +673,26 @@ async function main(): Promise<void> {
           appIdentity && remaining.some((row) => row.pid === group),
           'captured leader absent; retain cleanup debt without signaling'
         );
-        assert.equal(
-          execFileSync('/bin/ps', ['-p', String(group), '-o', 'lstart=,command='], {
-            encoding: 'utf8',
-            timeout: 3000,
-          }).trim(),
-          appIdentity,
-          'captured invocation identity remains current'
-        );
-        try {
-          process.kill(-group, 'SIGTERM');
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+        const observedIdentity = execFileSync('/bin/ps', ['-p', String(group), '-o', 'lstart=,command='], {
+          encoding: 'utf8', timeout: 3000,
+        }).trim();
+        if (observedIdentity !== appIdentity && hostPid !== undefined) {
+          const reaped = await observeOriginalAppReap({ child: app, group, hostPid,
+            initialMembers: remaining, expectedIdentity: appIdentity, observedIdentity,
+            deadline: observationDeadline });
+          evidence.originalAppReap = reaped;
+          if (reaped.settled) remaining = reaped.remaining!;
         }
-        const deadline = Date.now() + 30_000;
-        while (Date.now() < deadline && (remaining = groupMembers(group)).length) await tick();
+        if (remaining.length) {
+          assert.equal(observedIdentity, appIdentity, 'captured invocation identity remains current');
+          try {
+            process.kill(-group, 'SIGTERM');
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+          }
+          const deadline = Date.now() + 30_000;
+          while (Date.now() < deadline && (remaining = groupMembers(group)).length) await tick();
+        }
       }
       capturedHostAbsent =
         hostPid === undefined ? null : !processTable().some((row) => row.pid === hostPid);
@@ -768,10 +777,15 @@ async function main(): Promise<void> {
       'captured group cleanup unconfirmed; receipt retains debt and no further signal is authorized'
     );
   }
+  if (mode === 'task-board-cross-team-ui') {
+    assert.equal(evidence.status, 'PASS', 'original Taskboard proof and cleanup must finish before owner continuation');
+    return { fixture, repo, invocation, cdpLibrary, evidence, receiptPath, frozenSources, selectedSourceHashes };
+  }
 }
 
 try {
-  await main();
+  const ownerContinuation = await main();
+  if (ownerContinuation) await runDesktopOwnerRoutingContinuation(ownerContinuation);
 } finally {
   await questionModel?.close();
   await conversationModel?.close();

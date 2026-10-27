@@ -1,3 +1,4 @@
+import { prepareDesktopOwnerRoutingSource } from './desktop-owner-routing-fixture.ts';
 import { prepareDesktopNativeExtensionsFixture } from './desktop-native-extensions-fixture.ts';
 import { prepareDesktopSkillsFixture } from './desktop-skills-fixture.ts';
 import type { CandidateRuntimePaths } from './candidate-runtime-paths.ts';
@@ -131,5 +132,5 @@ export async function prepareDesktopProofFixture(
     Object.assign(fixture.pins, overlay.pins);
   }
   if (mode === 'native-extensions-ui') return prepareDesktopNativeExtensionsFixture(fixture);
-  return fixture;
+  return mode === 'task-board-cross-team-ui' ? prepareDesktopOwnerRoutingSource(fixture) : fixture;
 }
