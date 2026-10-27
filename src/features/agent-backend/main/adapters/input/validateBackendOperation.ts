@@ -5,6 +5,7 @@ import {
   messageAttachmentReferencesSchema,
 } from '@agent-teams/legacy-agent-host/attachments/contracts';
 import { parseGroupPayload } from '@agent-teams/legacy-agent-host/group-chats/operations';
+import { isGroupUuid } from '@agent-teams/legacy-agent-host/group-chats/policy';
 import { taskAttachmentReadSchema } from '@agent-teams/legacy-agent-host/stopped-team-import';
 import { parseStandaloneSlashCommand } from '@shared/utils/slashCommands';
 
@@ -108,6 +109,7 @@ function payload(
     case 'task.create': {
       const p = object(value, [
         'subject',
+        'groupChatId',
         'description',
         'owner',
         'blockedBy',
@@ -117,10 +119,13 @@ function payload(
         'startImmediately',
         'descriptionTaskRefs',
       ]);
+      if (p.groupChatId !== undefined && !isGroupUuid(p.groupChatId))
+        throw new InvalidBackendOperation();
       if (p.startImmediately !== undefined && typeof p.startImmediately !== 'boolean')
         throw new InvalidBackendOperation();
       return {
         subject: text(p.subject, 20_000),
+        ...(p.groupChatId === undefined ? {} : { groupChatId: p.groupChatId }),
         ...(p.related === undefined ? {} : { related: stringArray(p.related) }),
         ...(p.prompt === undefined ? {} : { prompt: description(p.prompt) }),
         ...(p.promptTaskRefs === undefined ? {} : { promptTaskRefs: refs(p.promptTaskRefs) }),

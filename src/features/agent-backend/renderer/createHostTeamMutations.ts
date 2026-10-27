@@ -1,7 +1,10 @@
 import { parseStandaloneSlashCommand } from '@shared/utils/slashCommands';
 
+import { HostTeamOperationError } from '../contracts/taskSubmission';
+
+import { projectHostTaskReceipt } from './projectHostTaskReceipt';
+import { runRetainedHostTaskSubmission } from './retainedTaskSubmissions';
 import {
-  qualifyHostTaskReferenceTeam,
   storeHostTaskReferenceTeam,
   translateHostTaskReferences,
 } from './translateHostTaskReferences';
@@ -15,6 +18,7 @@ import type {
   BackendOperationRequest,
   BackendTask,
 } from '../contracts/operations';
+import type { HostTaskSubmissionAttempt } from './retainedTaskSubmissions';
 import type { AttachmentUpload } from '@agent-teams/legacy-agent-host/attachments/contracts';
 import type { NormalizedAttachmentPayload } from '@agent-teams/legacy-agent-host/attachments/portable';
 import type { AttachmentPayload, CommentAttachmentPayload } from '@shared/types/team';
@@ -30,16 +34,7 @@ import type {
   UpdateKanbanPatch,
 } from '@shared/types/team';
 
-/** Safe correlation for explicit lookup after an uncertain result; no automatic replay. */
-export class HostTeamOperationError extends Error {
-  constructor(
-    readonly code: string,
-    readonly outcome: string,
-    readonly commandId?: string
-  ) {
-    super(`Host team operation ${code} (${outcome})`);
-  }
-}
+export { HostTeamOperationError } from '../contracts/taskSubmission';
 function unsupported(): never {
   throw new HostTeamOperationError('unsupported', 'not-dispatched');
 }
@@ -49,6 +44,18 @@ function object(value: unknown, keys: readonly string[]): Record<string, unknown
   if (Object.keys(row).some((key) => row[key] !== undefined && !keys.includes(key)))
     return unsupported();
   return row;
+}
+function submissionCommandId(identity: CreateTaskRequest['command']): string {
+  if (identity === undefined) return crypto.randomUUID();
+  object(identity, ['commandId', 'idempotencyKey']);
+  if (
+    typeof identity.commandId !== 'string' ||
+    !identity.commandId ||
+    identity.commandId.length > 4096 ||
+    identity.commandId !== identity.idempotencyKey
+  )
+    return unsupported();
+  return identity.commandId;
 }
 function attachments(
   source: readonly (AttachmentPayload | CommentAttachmentPayload)[] | undefined,
@@ -123,10 +130,11 @@ export function createHostTeamMutations(options: {
     upload?: {
       purpose: AttachmentUpload['purpose'];
       source?: readonly NormalizedAttachmentPayload[];
-    }
+    },
+    attempt?: HostTaskSubmissionAttempt
   ) {
     // Convert UI selection references only after resolving the original captured target.
-    const current = options.captureScope();
+    const current = attempt?.current ?? options.captureScope();
     const payload = { ...command.payload } as Record<string, unknown>;
     const referenceTeams = new Set<string>();
     const collect = (team?: string) => {
@@ -161,7 +169,9 @@ export function createHostTeamMutations(options: {
     }
     if (!current())
       throw new HostTeamOperationError('context-changed', 'not-dispatched', command.commandId);
+    attempt?.capture(target.handle, { key, ...target });
     if (upload?.source?.length) {
+      attempt?.effectStarted();
       try {
         const uploaded = await uploadHostAttachments({
           backend: options.backend,
@@ -177,65 +187,27 @@ export function createHostTeamMutations(options: {
         throw new HostTeamOperationError('attachment-upload', 'unknown', command.commandId);
       }
     }
+    const canonical = { ...command, payload } as Omit<BackendOperationRequest, 'handle'>;
+    attempt?.command(canonical);
     // Avoid a second owner lookup: this immutable handle remains the original authority through send.
-    const receipt = await mutateResolved(target.handle, current, { ...command, payload } as Omit<
-      BackendOperationRequest,
-      'handle'
-    >);
-    const qualify = (source: TaskRef[] | undefined) =>
-      source?.map((ref) => ({
-        ...ref,
-        teamName: qualifyHostTaskReferenceTeam(
-          ref.teamName,
-          target.teamName,
-          key,
-          target.referenceBindings
-        ),
-      }));
-    if (receipt.task) {
-      const task = { ...receipt.task };
-      const toSelection = (team?: string) =>
-        qualifyHostTaskReferenceTeam(team, target.teamName, key, target.referenceBindings);
-      if (task.description !== undefined)
-        task.description = translateHostTaskReferences(task.description, toSelection);
-      if (task.descriptionTaskRefs) task.descriptionTaskRefs = qualify(task.descriptionTaskRefs);
-      if (task.prompt !== undefined)
-        task.prompt = translateHostTaskReferences(task.prompt, toSelection);
-      if (task.promptTaskRefs) task.promptTaskRefs = qualify(task.promptTaskRefs);
-      if (task.comments)
-        task.comments = task.comments.map((comment) => {
-          return {
-            ...comment,
-            ...(comment.text === undefined
-              ? {}
-              : { text: translateHostTaskReferences(comment.text, toSelection) }),
-            ...(comment.taskRefs ? { taskRefs: qualify(comment.taskRefs) } : {}),
-          };
-        });
-      receipt.task = task;
-    }
-    if (receipt.comment) {
-      const comment = { ...receipt.comment };
-      if (comment.taskRefs) comment.taskRefs = qualify(comment.taskRefs);
-      if (comment.text !== undefined)
-        comment.text = translateHostTaskReferences(comment.text, (team) =>
-          qualifyHostTaskReferenceTeam(team, target.teamName, key, target.referenceBindings)
-        );
-      receipt.comment = comment;
-    }
-    return receipt;
+    const receipt = await mutateResolved(target.handle, current, canonical, attempt);
+    return projectHostTaskReceipt(receipt, { key, ...target });
   }
   async function mutateResolved(
     handle: BackendHandle,
     current: () => boolean,
-    command: Omit<BackendOperationRequest, 'handle'>
+    command: Omit<BackendOperationRequest, 'handle'>,
+    attempt?: HostTaskSubmissionAttempt
   ) {
     if (!current())
       throw new HostTeamOperationError('context-changed', 'not-dispatched', command.commandId);
     let result;
     options.invalidateReads?.(handle);
     try {
-      result = await options.backend.invoke({ ...command, handle } as BackendOperationRequest);
+      attempt?.effectStarted();
+      result = await options.backend.invoke(
+        structuredClone({ ...command, handle }) as BackendOperationRequest
+      );
     } catch {
       throw new HostTeamOperationError('transport-unavailable', 'unknown', command.commandId);
     } finally {
@@ -243,8 +215,10 @@ export function createHostTeamMutations(options: {
     }
     if (!current())
       throw new HostTeamOperationError('context-changed', 'unknown', command.commandId);
-    if (!result.ok)
+    if (!result.ok) {
+      await attempt?.refused(result);
       throw new HostTeamOperationError(result.code, result.outcome, command.commandId);
+    }
     if (
       !result.value ||
       !('commandId' in result.value) ||
@@ -254,6 +228,7 @@ export function createHostTeamMutations(options: {
     const receipt = structuredClone(result.value) as BackendCommandReceipt;
     if (receipt.operation !== command.operation)
       throw new HostTeamOperationError('invalid-result', 'unknown', command.commandId);
+    attempt?.received(receipt);
     if (receipt.phase !== 'completed')
       throw new HostTeamOperationError(
         receipt.phase,
@@ -342,45 +317,65 @@ export function createHostTeamMutations(options: {
     startTaskByUser: (key: string, taskId: string) => start(key, taskId, 'user'),
     async createTask(key: string, input: CreateTaskRequest) {
       const request = structuredClone(input);
-      object(request, [
-        'command',
-        'subject',
-        'description',
-        'owner',
-        'blockedBy',
-        'descriptionTaskRefs',
-        'related',
-        'prompt',
-        'promptTaskRefs',
-        'startImmediately',
-      ]);
-      if (request.startImmediately !== undefined && typeof request.startImmediately !== 'boolean')
-        return unsupported();
-      // Canonical Desktop semantics only start assigned tasks. The running-team
-      // dialog also sends true for an unowned task, which has no start target.
-      if (request.command !== undefined) {
-        object(request.command, ['commandId', 'idempotencyKey']);
-        if (request.command.commandId !== request.command.idempotencyKey) return unsupported();
-      }
-      const commandId = request.command?.commandId ?? crypto.randomUUID();
-      const descriptionTaskRefs = refs(request.descriptionTaskRefs);
-      const promptTaskRefs = refs(request.promptTaskRefs);
-      const receipt = await execute(key, {
-        commandId,
-        operation: 'task.create',
-        payload: {
-          subject: request.subject,
-          ...(request.related?.length ? { related: request.related } : {}),
-          ...(request.prompt?.trim() ? { prompt: request.prompt } : {}),
-          ...(promptTaskRefs?.length ? { promptTaskRefs } : {}),
-          ...(request.owner && request.startImmediately === true ? { startImmediately: true } : {}),
-          ...(request.description === undefined ? {} : { description: request.description }),
-          ...(request.owner === undefined ? {} : { owner: request.owner }),
-          ...(request.blockedBy === undefined ? {} : { blockedBy: request.blockedBy }),
-          ...(descriptionTaskRefs === undefined ? {} : { descriptionTaskRefs }),
+      const commandId = submissionCommandId(request.command);
+      return runRetainedHostTaskSubmission(
+        {
+          key,
+          commandId,
+          input: request,
+          backend: options.backend,
+          current: options.captureScope(),
         },
-      });
-      return uiTask(receipt.task, receipt.commandId);
+        async (attempt) => {
+          object(request, [
+            'command',
+            'subject',
+            'description',
+            'owner',
+            'groupChatId',
+            'blockedBy',
+            'descriptionTaskRefs',
+            'related',
+            'prompt',
+            'promptTaskRefs',
+            'startImmediately',
+          ]);
+          if (
+            request.startImmediately !== undefined &&
+            typeof request.startImmediately !== 'boolean'
+          )
+            return unsupported();
+          // Canonical Desktop semantics only start assigned tasks. The running-team
+          // dialog also sends true for an unowned task, which has no start target.
+          const descriptionTaskRefs = refs(request.descriptionTaskRefs);
+          const promptTaskRefs = refs(request.promptTaskRefs);
+          const receipt = await execute(
+            key,
+            {
+              commandId,
+              operation: 'task.create',
+              payload: {
+                subject: request.subject,
+                ...(request.related?.length ? { related: request.related } : {}),
+                ...(request.prompt?.trim() ? { prompt: request.prompt } : {}),
+                ...(promptTaskRefs?.length ? { promptTaskRefs } : {}),
+                ...(request.owner && request.startImmediately === true
+                  ? { startImmediately: true }
+                  : {}),
+                ...(request.description === undefined ? {} : { description: request.description }),
+                ...(request.owner === undefined ? {} : { owner: request.owner }),
+                ...(request.groupChatId === undefined ? {} : { groupChatId: request.groupChatId }),
+                ...(request.blockedBy === undefined ? {} : { blockedBy: request.blockedBy }),
+                ...(descriptionTaskRefs === undefined ? {} : { descriptionTaskRefs }),
+              },
+            },
+            undefined,
+            attempt
+          );
+          return uiTask(receipt.task, receipt.commandId);
+        },
+        (receipt) => uiTask(receipt.task, receipt.commandId)
+      );
     },
     async updateTaskFields(
       key: string,
@@ -479,21 +474,45 @@ export function createHostTeamMutations(options: {
     },
     async addTaskComment(key: string, taskId: string, input: AddTaskCommentRequest) {
       const request = structuredClone(input);
-      object(request, ['text', 'taskRefs', 'attachments']);
-      const files = attachments(request.attachments, 'task');
-      const taskRefs = refs(request.taskRefs);
-      const receipt = await execute(
-        key,
+      const commandId = submissionCommandId(request.command);
+      const result = (receipt: BackendCommandReceipt) => {
+        if (!receipt.comment)
+          throw new HostTeamOperationError('invalid-result', 'unknown', commandId);
+        return uiComment(receipt.comment, commandId);
+      };
+      return runRetainedHostTaskSubmission(
         {
-          commandId: crypto.randomUUID(),
-          operation: 'task.comment',
-          payload: { taskId, text: request.text, ...(taskRefs === undefined ? {} : { taskRefs }) },
+          key,
+          commandId,
+          input: { taskId, request },
+          backend: options.backend,
+          current: options.captureScope(),
         },
-        { purpose: { kind: 'task', taskId }, ...(files.length ? { source: files } : {}) }
+        async (attempt) => {
+          object(request, ['command', 'text', 'taskRefs', 'attachments']);
+          const files = attachments(request.attachments, 'task');
+          const taskRefs = refs(request.taskRefs);
+          attempt.attachments(
+            files.map(({ id, filename, mimeType, size }) => ({ id, filename, mimeType, size }))
+          );
+          const receipt = await execute(
+            key,
+            {
+              commandId,
+              operation: 'task.comment',
+              payload: {
+                taskId,
+                text: request.text,
+                ...(taskRefs === undefined ? {} : { taskRefs }),
+              },
+            },
+            { purpose: { kind: 'task', taskId }, ...(files.length ? { source: files } : {}) },
+            attempt
+          );
+          return result(receipt);
+        },
+        result
       );
-      if (!receipt.comment)
-        throw new HostTeamOperationError('invalid-result', 'unknown', receipt.commandId);
-      return uiComment(receipt.comment, receipt.commandId);
     },
     async sendMessage(key: string, input: SendMessageRequest) {
       const request = structuredClone(input);

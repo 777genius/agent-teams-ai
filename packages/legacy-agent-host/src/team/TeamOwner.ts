@@ -224,7 +224,7 @@ export class TeamOwner {
     );
   }
   groupCommands(principalId: string, runtime: GroupRuntimeAccess) {
-    return this.commandAccess.groups(principalId, runtime);
+    return this.commandAccess.groups.commands(principalId, runtime);
   }
   crossTeamCommands(principalId: string) {
     return this.commandAccess.crossTeam(principalId);
@@ -665,6 +665,8 @@ export class TeamOwner {
         store: this.store,
         policy: this.policy,
         taskRecovery: this.taskRecovery,
+        assertTaskGroupAssociation: (principal, groupChatId) =>
+          this.commandAccess.groups.assertTaskAssociation(principal, groupChatId),
         state: () => this.state(),
         authorize: (principal, permission) => this.authorize(principal, permission),
         crossTeamOriginalAuthorized: (intent) =>

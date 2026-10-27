@@ -1,4 +1,5 @@
 import { hasGroupChatEnvelopeMarker } from '@agent-teams/legacy-agent-host/group-chats/contracts';
+import { isGroupUuid } from '@agent-teams/legacy-agent-host/group-chats/policy';
 
 import { readBackendProcesses } from '../../../contracts/processes';
 
@@ -78,6 +79,10 @@ function task(value: unknown, teamName: string): TeamTaskWithKanban {
   };
   for (const key of ['blocks', 'blockedBy', 'related'] as const)
     if (source[key] !== undefined) result[key] = array(source[key], text);
+  if (source.groupChatId !== undefined) {
+    if (!isGroupUuid(source.groupChatId)) throw new Error('Invalid task group');
+    result.groupChatId = source.groupChatId;
+  }
   if (source.descriptionTaskRefs !== undefined)
     result.descriptionTaskRefs = refs(source.descriptionTaskRefs);
   if (source.promptTaskRefs !== undefined) result.promptTaskRefs = refs(source.promptTaskRefs);

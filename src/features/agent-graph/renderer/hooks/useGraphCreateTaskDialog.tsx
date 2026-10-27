@@ -77,8 +77,6 @@ export function useGraphCreateTaskDialog(teamName: string): UseGraphCreateTaskDi
         }
 
         closeCreateTaskDialog();
-      } catch {
-        // store already exposes the error
       } finally {
         setSubmitting(false);
       }

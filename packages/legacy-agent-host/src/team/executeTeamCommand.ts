@@ -26,6 +26,7 @@ interface TeamCommandExecution {
   store: TeamStore;
   policy: TeamPolicyPort;
   taskRecovery: Pick<TaskRecovery, 'hasPlan' | 'commit'>;
+  assertTaskGroupAssociation(principalId: string, groupChatId: string): void;
   state(): OwnerState;
   authorize(principalId: string, permission: TeamGrant['permissions'][number]): TeamGrant;
   crossTeamOriginalAuthorized(intent: CapturedCrossTeamIntent): boolean;
@@ -138,6 +139,8 @@ export function executeTeamCommand(
         )
       )
         throw new TeamOwnerError('hold');
+      if (command.operation === 'task.create' && command.payload.groupChatId !== undefined)
+        options.assertTaskGroupAssociation(principalId, command.payload.groupChatId);
       const seed = [options.binding.backendId, options.binding.teamId, command.commandId];
       receipt = {
         schemaVersion: 1,

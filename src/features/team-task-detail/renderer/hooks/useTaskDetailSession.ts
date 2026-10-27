@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import {
+  HostTaskSubmissionRefusal,
+  isHostTeamSelectionKey,
+} from '@features/agent-backend/contracts';
+import { acknowledgeHostTaskSubmission } from '@features/agent-backend/renderer';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useStore } from '@renderer/store';
 import {
@@ -13,6 +18,7 @@ import {
   extractTaskRefsFromText,
   stripEncodedTaskReferenceMetadata,
 } from '@renderer/utils/taskReferenceUtils';
+import { IpcError } from '@renderer/utils/unwrapIpc';
 import { MAX_TEXT_LENGTH } from '@shared/constants';
 import { categorizeFile, getEffectiveMimeType } from '@shared/constants/attachments';
 import { useShallow } from 'zustand/react/shallow';
@@ -31,7 +37,11 @@ import type {
   TaskDetailSavePart,
   TaskDetailSession,
 } from '../../contracts';
-import type { CommentAttachmentPayload, TeamTaskWithKanban } from '@shared/types';
+import type {
+  AddTaskCommentRequest,
+  CommentAttachmentPayload,
+  TeamTaskWithKanban,
+} from '@shared/types';
 import type { InlineChip } from '@shared/types/inlineChip';
 
 const MAX_ATTACHMENTS = 5;
@@ -375,41 +385,54 @@ export function useTaskDetailSession({
     if (!requireOwner()) return;
     const state = useStore.getState();
     const current = state.taskDetailSessionById[identityKey];
-    if (!current || current.submitPending || current.pendingAttachmentPreparationIds.length > 0)
-      return;
-    const trimmed = stripEncodedTaskReferenceMetadata(current.commentText).trim();
-    if (
-      (trimmed.length === 0 && current.pendingAttachments.length === 0) ||
-      trimmed.length > MAX_TEXT_LENGTH
-    ) {
-      return;
-    }
-    const serialized = serializeChipsWithText(trimmed, current.commentChips);
-    const text = current.reply
-      ? buildReplyBlock(current.reply.author, current.reply.text, serialized || '(image)')
-      : serialized || '(image)';
-    const taskRefs = extractTaskRefsFromText(current.commentText, taskSuggestions);
-    const attachments: CommentAttachmentPayload[] | undefined =
-      current.pendingAttachments.length > 0
-        ? current.pendingAttachments.map((attachment) => ({
-            id: attachment.id,
-            filename: attachment.filename,
-            mimeType: attachment.mimeType,
-            base64Data: attachment.base64Data,
-          }))
-        : undefined;
-    const revision = state.beginTaskDetailSubmitSession(identity);
-    try {
-      await state.addTaskComment(identity.teamName, identity.taskId, {
+    if (!current || current.submitPending) return;
+    let request: AddTaskCommentRequest;
+    if (current.commentIntent) {
+      // Resolve the original obligation even if the user has since edited/cleared the draft.
+      request = structuredClone(current.commentIntent.request);
+    } else {
+      if (current.pendingAttachmentPreparationIds.length > 0) return;
+      const trimmed = stripEncodedTaskReferenceMetadata(current.commentText).trim();
+      if (
+        (trimmed.length === 0 && current.pendingAttachments.length === 0) ||
+        trimmed.length > MAX_TEXT_LENGTH
+      )
+        return;
+      const serialized = serializeChipsWithText(trimmed, current.commentChips);
+      const text = current.reply
+        ? buildReplyBlock(current.reply.author, current.reply.text, serialized || '(image)')
+        : serialized || '(image)';
+      const taskRefs = extractTaskRefsFromText(current.commentText, taskSuggestions);
+      const attachments: CommentAttachmentPayload[] | undefined =
+        current.pendingAttachments.length > 0
+          ? current.pendingAttachments.map((attachment) => ({
+              id: attachment.id,
+              filename: attachment.filename,
+              mimeType: attachment.mimeType,
+              base64Data: attachment.base64Data,
+            }))
+          : undefined;
+      const commandId = isHostTeamSelectionKey(identity.teamName) ? crypto.randomUUID() : null;
+      request = {
         text,
         attachments,
         taskRefs,
-      });
+        ...(commandId ? { command: { commandId, idempotencyKey: commandId } } : {}),
+      };
+    }
+    const revision = state.beginTaskDetailSubmitSession(
+      identity,
+      request.command ? request : undefined
+    );
+    try {
+      await state.addTaskComment(identity.teamName, identity.taskId, request);
       if (!isOriginCurrent()) return;
       const before = useStore.getState().taskDetailSessionById[identityKey];
       if (!before?.submitPending || before.submitRevision !== revision) return;
       useStore.getState().completeTaskDetailSubmitSession(identity, revision);
       const after = useStore.getState().taskDetailSessionById[identityKey] ?? before;
+      if (request.command && !after.commentIntent)
+        acknowledgeHostTaskSubmission(identity.teamName, request.command.commandId);
       if (after) {
         if (after.commentText === '' && after.commentChips.length === 0) {
           void taskDraftStorage.clear(identity);
@@ -419,12 +442,17 @@ export function useTaskDetailSession({
       }
     } catch (error) {
       if (!isOriginCurrent()) return;
+      const refusal = error instanceof IpcError ? error.causeError : error;
+      const provenNoEffect =
+        refusal instanceof HostTaskSubmissionRefusal &&
+        refusal.commandId === request.command?.commandId;
       useStore
         .getState()
         .failTaskDetailSubmitSession(
           identity,
           revision,
-          error instanceof Error ? error.message : 'Failed to add comment'
+          error instanceof Error ? error.message : 'Failed to add comment',
+          provenNoEffect
         );
     }
   }, [identity, identityKey, isOriginCurrent, persistDraft, requireOwner, taskSuggestions]);
@@ -526,7 +554,9 @@ export function useTaskDetailSession({
       canEditNow: requireOwner,
       isOriginCurrent,
       canSubmit:
-        isOwner && !session.submitPending && session.pendingAttachmentPreparationIds.length === 0,
+        isOwner &&
+        !session.submitPending &&
+        (Boolean(session.commentIntent) || session.pendingAttachmentPreparationIds.length === 0),
       isDraftSaved,
       attachmentError,
       setCommentText,

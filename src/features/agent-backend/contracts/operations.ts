@@ -102,6 +102,7 @@ export interface BackendOperationPayloads
   'message.attachments.read': BackendMessageAttachmentsRead;
   'task.create': {
     subject: string;
+    groupChatId?: string;
     description?: string;
     owner?: string;
     blockedBy?: string[];
@@ -239,6 +240,7 @@ export interface BackendComment {
 }
 
 export interface BackendTask {
+  groupChatId?: string;
   historyEvents?: import('@shared/types/team').TaskHistoryEvent[];
   id: string;
   status: string;
@@ -258,7 +260,19 @@ export interface BackendTask {
   attachments?: BackendAttachmentMetadata[];
 }
 
+export type BackendTaskSubmissionCommand = {
+  [K in 'task.create' | 'task.comment']: {
+    commandId: string;
+    operation: K;
+    payload: BackendOperationPayloads[K];
+  };
+}['task.create' | 'task.comment'];
+
 export interface BackendCommandReceipt {
+  /** Strict projection of the actual original command; never a renderer-invented proof. */
+  taskSubmission?: BackendTaskSubmissionCommand;
+  /** Main verified the exact original policy marker, emitted only without product effects. */
+  taskSubmissionNoEffect?: true;
   commandId: string;
   phase: 'prepared' | 'applying' | 'completed' | 'rejected' | 'held';
   operation:

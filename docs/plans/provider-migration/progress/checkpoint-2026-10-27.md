@@ -964,3 +964,72 @@ delta; no production port was weakened or cast to bypass validation. Existing
 formatting outside the changed lines was preserved. These are local corrections
 to the confirmed c5 canonical CI findings; full qualification of the new commit
 remains pending, and no new native result is inferred.
+
+
+### CI correction pushed; Task detail integration gap closed
+
+The confirmed publication-callback/fixture/forwarding correction was committed
+and immediately pushed as `b3f33a9978c0b459fab9d16d7aca0b9a2508a885`. The reviewed
+staged set contained its four exact source/test paths, two finite regression pins
+and the progress checkpoint. Other dirty units were excluded.
+
+After recovering the exact direct CodeMirror dependencies, the carried real-store
+Task detail suite ran. Its new intentional lost-ACK case first hit the repository's
+expected-console gate; all functional assertions passed. The test now explicitly
+checks and clears that one expected diagnostic, following the existing failure
+case in the same suite. The unchanged original suite then passed **12/12**,
+including actual Host retirement/unmount/reopen, original submission identity and
+preservation of later draft edits. This closes the previously reported local
+collection gap and brings the F01 author bundle to **122 PASS**. Production F01
+is unchanged from its independent ACCEPT; final committed-head gates remain.
+
+
+### Two original c5 Desktop artifacts inspected
+
+Root downloaded and inspected original artifacts from workflow `40577183939` on
+`c5ded9a14df74b30c5567f4511c3aa960b9b1fea`, including their actual screenshots:
+
+| Existing source Desktop flow | Artifact ID | Original receipt SHA-256 | Observed boundary |
+| --- | --- | --- | --- |
+| Ordinary Create and native Launch | `12769086131` | `f7227610e5c9479f7fe85b034bca1feefa6e5fd89d8c77373bfba9bdc1e505e7` | PASS: original Create/Launch, actual SDK MCP/Bash/reply and completed Task, original Stop release and settings after reload. Harness cleanup used SIGTERM; natural app exit is not claimed. |
+| Task board and cross-Team controls | `12766199926` | `37e05a3746903e3bf7ec0e5d643841381903660d7574fc3346f5f1b6919e065b` | PASS: original dependency/assignment/drag, attachment/comment, review/change/fix/approve, notification and cross-Team Send/Reply/reload controls. This run had an empty process group before cleanup, app exit 0 with no signal and captured Host absent. |
+
+Both receipts retain empty forbidden and post-Quit/cleanup sentinel invocation
+lists. Notification Mark as read was unavailable because the original viewed
+notification was already read; it is not reported as exercised. The Task board
+artifact excludes provider sessions and has no not-yet-committed group/F01/F08
+extension. The native Create artifact uses localhost scripted inference and does
+not establish vendor authentication, installed/packed qualification or full
+P4/P8. These exact c5 results are not promoted to `b3f33a997` or a later head.
+
+
+## Task/group/F01 coherent integration checkpoint
+
+The accepted group association and F01 changes are integrated as the finite union
+of their author manifests: **37 paths**, with three shared adapter/contract files.
+Task Create and comment submission retain their original command, captured owner
+and product payload through uncertain replies and component unmounts. Original
+receipt lookup, current authority and finite no-effect proof control recovery;
+missing or unavailable lookup remains HOLD. The original Create Task, graph
+callback and comment Send controls now preserve that outcome rather than
+reporting a swallowed failure or clearing a replacement form/newer draft. These
+are bounded application-lifetime obligations, with no renderer-reload durability
+claim or new history/attachment journal.
+
+The same Team store fence validates an active, readable, same-Team group before
+a new Task's first receipt. Existing admitted/replayed receipts keep their
+original semantics and current authority checks. The group ID survives the
+original Host mutation, canonical Task and Main snapshot projection. No group
+message, provider allocation or new membership/admin authority is introduced.
+
+Author execution and independent actual-code acceptance are recorded above:
+F01 now has **122 local passing cases**, including the complete existing
+real-store TaskDetail suite (12/12). The group author separately passed eight new
+association and 18 existing owner/board cases; the original full group suite
+passed 10/10 with its full 256-recipient case intact. These overlapping buckets
+are not added into a new unique total. Integration rechecked the exact manifest
+and both source-size and provisioning architecture guards successfully. All 19
+additional affected helper/regression/necessary existing paths were explicitly
+source-pinned, without deriving a closure from other dirty work. Canonical full
+project and exact-head Desktop qualification remain pending. The accepted
+three-file group UI E2E and separate routing/F08 work remain separate units.

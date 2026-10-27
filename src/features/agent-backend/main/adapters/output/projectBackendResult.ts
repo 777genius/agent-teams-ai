@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from 'node:util';
 
 import { attachmentReferenceSchema } from '@agent-teams/legacy-agent-host/attachments/contracts';
+import { isGroupUuid } from '@agent-teams/legacy-agent-host/group-chats/policy';
 import {
   readGroupCommand,
   readGroupList,
@@ -30,6 +31,7 @@ import { projectProcessResult } from './projectProcessResult';
 import { projectReviewResult } from './projectReviewResult';
 import { projectRosterConfiguration, projectRosterReceipt } from './projectRoster';
 import { projectTaskHistory } from './projectTaskHistory';
+import { projectTaskSubmission } from './projectTaskSubmission';
 import { projectTeamActivityLogs, projectTeamActivityStats } from './projectTeamActivity';
 import { projectTeamChanges } from './projectTeamChanges';
 import { projectTeamLifecycle } from './projectTeamLifecycle';
@@ -132,6 +134,10 @@ function task(value: unknown): BackendTask {
     ] as const);
   if (source.needsClarification !== undefined)
     result.needsClarification = oneOf(source.needsClarification, ['lead', 'user'] as const);
+  if (source.groupChatId !== undefined) {
+    if (!isGroupUuid(source.groupChatId)) throw new Error('Invalid task group');
+    result.groupChatId = source.groupChatId;
+  }
   if (source.descriptionTaskRefs !== undefined)
     result.descriptionTaskRefs = refs(source.descriptionTaskRefs);
   if (source.promptTaskRefs !== undefined) result.promptTaskRefs = refs(source.promptTaskRefs);
@@ -168,6 +174,9 @@ function receipt(value: unknown, request: BackendOperationRequest): BackendComma
     operation,
     phase: oneOf(source.phase, ['prepared', 'applying', 'completed', 'rejected', 'held'] as const),
   };
+  if (operation === 'task.create' || operation === 'task.comment')
+    Object.assign(result, projectTaskSubmission(source, request));
+  if (result.taskSubmissionNoEffect) return result;
   if (source.result !== undefined) {
     const applied = row(source.result);
     if (operation === 'task.board.order') {

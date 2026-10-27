@@ -51,6 +51,7 @@ export type TeamCommand = { commandId: string } & (
       operation: 'task.create';
       payload: {
         subject: string;
+        groupChatId?: string;
         description?: string;
         owner?: string;
         blockedBy?: string[];

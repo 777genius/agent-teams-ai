@@ -17,6 +17,8 @@ export interface GroupChatStorage {
   ): Promise<T>;
   /** A registry snapshot read that does not acquire or publish writer-lock state. */
   readRegistry?(teamName: string): Promise<GroupChat[]>;
+  /** Task admission reads the same registry while its existing Team fence remains held. */
+  readRegistrySync?(teamName: string): GroupChat[];
   withRegistry<T>(
     teamName: string,
     action: (groups: GroupChat[], save: () => Promise<void>) => Promise<T>

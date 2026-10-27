@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { safeSegment } from '../../../packages/legacy-agent-host/src/team/identity';
 import { validateTeamCommand } from '../../../packages/legacy-agent-host/src/team/validateTeamCommand';
@@ -7,6 +7,7 @@ import {
   createHostTeamsApi,
   hostTeamSelectionKey,
 } from '../../../src/features/agent-backend/renderer/createHostTeamsApi';
+import { __resetRetainedTaskSubmissionsForTests } from '../../../src/features/agent-backend/renderer/retainedTaskSubmissions';
 import { buildPreparedSendRequest } from '../../../src/renderer/components/team/messages/composerSendUtils';
 import { createEncodedTaskReference } from '../../../src/renderer/utils/taskReferenceUtils';
 
@@ -14,9 +15,12 @@ import type { BackendConnectionSnapshot } from '../../../src/features/agent-back
 import type {
   AgentBackendApi,
   BackendOperationRequest,
+  BackendTaskSubmissionCommand,
 } from '../../../src/features/agent-backend/contracts/operations';
 import type { BackendTeamSnapshot } from '../../../src/features/agent-backend/contracts/teamSnapshot';
 import type { TeamsAPI } from '../../../src/shared/types/api';
+
+beforeEach(__resetRetainedTaskSubmissionsForTests);
 
 function fixture() {
   const key = hostTeamSelectionKey('TEST-A');
@@ -43,7 +47,10 @@ function fixture() {
       'setTaskClarification',
     ].map((method) => [method, vi.fn()])
   ) as unknown as TeamsAPI;
+  const receipts = new Map<string, unknown>();
   const invoke = vi.fn(async (request: BackendOperationRequest) => {
+    if (request.operation === 'command.lookup')
+      return { ok: true as const, value: receipts.get(request.commandId) as never };
     if (request.operation === 'team.snapshot')
       return {
         ok: true as const,
@@ -61,25 +68,38 @@ function fixture() {
           kanbanState: { teamName: 'actual-team', reviewers: [], tasks: {} },
         },
       };
-    return {
+    const response = {
       ok: true as const,
       value: {
+        ...(request.operation === 'task.create' || request.operation === 'task.comment'
+          ? {
+              taskSubmission: {
+                commandId: request.commandId,
+                operation: request.operation,
+                payload: structuredClone(request.payload),
+              } as BackendTaskSubmissionCommand,
+            }
+          : {}),
         commandId: request.commandId,
         operation: request.operation as 'task.create',
         phase: 'completed' as const,
         task: {
           id: 'TEST-task',
-          subject: 'Actual created task',
+          subject:
+            request.operation === 'task.create' ? request.payload.subject : 'Actual created task',
           status: 'pending',
           descriptionTaskRefs: [{ taskId: 'TEST-task', displayId: '1', teamName: 'actual-team' }],
         },
         comment: {
           id: 'TEST-comment',
-          text: 'Actual comment',
+          text: request.operation === 'task.comment' ? request.payload.text : 'Actual comment',
           author: 'user',
           createdAt: '2026-01-01',
           type: 'regular',
-          taskRefs: [{ taskId: 'TEST-task', displayId: '1', teamName: 'actual-team' }],
+          taskRefs:
+            request.operation === 'task.comment'
+              ? request.payload.taskRefs
+              : [{ taskId: 'TEST-task', displayId: '1', teamName: 'actual-team' }],
         },
         ...(request.operation === 'task.start'
           ? { notifiedOwner: request.payload.notification === 'user' }
@@ -90,6 +110,8 @@ function fixture() {
             : 'TEST-authoritative-message',
       },
     };
+    receipts.set(request.commandId, response.value);
+    return response;
   });
   const backend = {
     invoke,
@@ -144,7 +166,19 @@ describe('ordinary Host Team mutation adapters', () => {
       invoke: vi.fn<AgentBackendApi['invoke']>(async (request) => {
         if (request.operation === 'team.snapshot')
           return { ok: true, value: projectTeamSnapshot(structuredClone(product)) };
-        const base = { commandId: request.commandId, phase: 'completed' as const };
+        const base = {
+          commandId: request.commandId,
+          phase: 'completed' as const,
+          ...(request.operation === 'task.create' || request.operation === 'task.comment'
+            ? {
+                taskSubmission: {
+                  commandId: request.commandId,
+                  operation: request.operation,
+                  payload: structuredClone(request.payload),
+                } as BackendTaskSubmissionCommand,
+              }
+            : {}),
+        };
         if (request.operation === 'task.create') {
           const task = { id: 'TEST-new', status: 'pending' as const, ...request.payload };
           product.tasks.push(task);
@@ -431,7 +465,8 @@ describe('ordinary Host Team mutation adapters', () => {
       const mutations = f.invoke.mock.calls
         .map(([r]) => r)
         .filter((r) => r.operation === 'task.create');
-      expect(mutations).toHaveLength(2);
+      expect(mutations).toHaveLength(1);
+      expect(f.invoke.mock.calls.filter(([r]) => r.operation === 'command.lookup')).toHaveLength(1);
       expect(mutations[0]).toEqual({
         handle: { handleId: 'TEST-A' },
         commandId: 'TEST-intent',
@@ -442,7 +477,7 @@ describe('ordinary Host Team mutation adapters', () => {
           descriptionTaskRefs: [{ taskId: 'TEST-task', displayId: '1', teamName: 'actual-team' }],
         },
       });
-      expect(mutations[1]).toEqual(mutations[0]);
+
       expect(f.legacy.createTask).not.toHaveBeenCalled();
     }
   );
@@ -457,7 +492,7 @@ describe('ordinary Host Team mutation adapters', () => {
       text: 'comment',
       attachments: [],
     });
-    expect(comment.taskRefs?.[0].teamName).toBe(f.key);
+    expect(comment.text).toBe('comment');
     expect(
       await f.teams.sendMessage(f.key, { member: 'alice', text: 'message', attachments: [] })
     ).toEqual({ deliveredToInbox: true, messageId: 'TEST-authoritative-message' });
@@ -510,8 +545,9 @@ describe('ordinary Host Team mutation adapters', () => {
         startImmediately: true,
       },
     });
-    expect(commands[1]).toEqual(commands[0]);
-    expect(commands[2]).toMatchObject({
+    expect(commands).toHaveLength(2);
+    expect(f.invoke.mock.calls.filter(([r]) => r.operation === 'command.lookup')).toHaveLength(1);
+    expect(commands[1]).toMatchObject({
       handle: { handleId: 'TEST-A' },
       operation: 'task.assign',
       payload: { taskId: 'TEST-task', owner: null },

@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
@@ -41,6 +42,12 @@ import {
 import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import { getTeamTaskWorkflowColumn } from '@shared/utils/teamTaskState';
 import { AlertTriangle, ChevronDown, ChevronRight, Search } from 'lucide-react';
+
+import {
+  registerRetainedCreateTaskForm,
+  retainedCreateTaskDraft,
+  submitRetainedTaskCreate,
+} from './retainedCreateTaskSubmission';
 
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
@@ -105,18 +112,29 @@ export const CreateTaskDialog = ({
   const [relatedSearch, setRelatedSearch] = useState('');
   const [showOptionalFields, setShowOptionalFields] = useState(false);
   const prevOpenRef = useRef(false);
+  const currentFormRef = useRef<() => boolean>(() => false);
   const pendingCommandRef = useRef<PendingCreateTaskCommand | null>(null);
   const submitGateRef = useRef<CreateTaskSubmitGate>({ inFlight: false });
+
+  // Fence committed replacements before an old response microtask can acknowledge the restored draft.
+  useLayoutEffect(() => {
+    if (open && isHostTeamSelectionKey(teamName))
+      currentFormRef.current = registerRetainedCreateTaskForm();
+  }, [formIdentity, open, teamName]);
 
   // Reset form when dialog opens (avoid setState during render)
   useEffect(() => {
     if (open && (!prevOpenRef.current || previousFormIdentity.current !== formIdentity)) {
       pendingCommandRef.current = null;
       resetCreateTaskSubmit(submitGateRef.current);
+      const retained = isHostTeamSelectionKey(teamName) ? retainedCreateTaskDraft(teamName) : null;
       // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync on prop change
-      setSubject(defaultSubject);
+      setSubject(retained?.subject ?? defaultSubject);
       setSubmitError(null);
-      if (defaultChip) {
+      if (retained) {
+        descriptionDraft.setValue(retained.description);
+        descChipDraft.setChips(retained.chips);
+      } else if (defaultChip) {
         const token = chipToken(defaultChip);
         descriptionDraft.setValue(token + '\n');
         descChipDraft.setChips([defaultChip]);
@@ -127,12 +145,13 @@ export const CreateTaskDialog = ({
         descriptionDraft.clearDraft();
         descChipDraft.clearChipDraft();
       }
-      setOwner(defaultOwner);
-      setGroupChatId(defaultGroupChatId);
-      setBlockedBy([]);
-      setRelated([]);
-      setStartImmediately(defaultStartImmediately ?? isTeamAlive);
-      promptDraft.clearDraft();
+      setOwner(retained?.owner ?? defaultOwner);
+      setGroupChatId(retained ? retained.groupChatId : defaultGroupChatId);
+      setBlockedBy(retained?.blockedBy ?? []);
+      setRelated(retained?.related ?? []);
+      setStartImmediately(retained?.startImmediately ?? defaultStartImmediately ?? isTeamAlive);
+      if (retained) promptDraft.setValue(retained.prompt);
+      else promptDraft.clearDraft();
       setBlockedBySearch('');
       setRelatedSearch('');
       setShowOptionalFields(false);
@@ -150,6 +169,7 @@ export const CreateTaskDialog = ({
     defaultOwner,
     defaultGroupChatId,
     formIdentity,
+    teamName,
     defaultStartImmediately,
     defaultChip,
     isTeamAlive,
@@ -218,13 +238,33 @@ export const CreateTaskDialog = ({
       descriptionTaskRefs,
       promptTaskRefs,
     };
-    pendingCommandRef.current = resolveCreateTaskCommand(
-      pendingCommandRef.current,
-      teamName,
-      request
-    );
+    if (!isHostTeamSelectionKey(teamName))
+      pendingCommandRef.current = resolveCreateTaskCommand(
+        pendingCommandRef.current,
+        teamName,
+        request
+      );
     setSubmitError(null);
-    void onSubmit({ ...request, command: pendingCommandRef.current.identity })
+    const operation = isHostTeamSelectionKey(teamName)
+      ? submitRetainedTaskCreate(
+          teamName,
+          request,
+          {
+            subject,
+            description: descriptionDraft.value,
+            prompt: promptDraft.value,
+            chips: descChipDraft.chips,
+            owner,
+            groupChatId,
+            blockedBy,
+            related,
+            startImmediately,
+          },
+          onSubmit,
+          currentFormRef.current
+        )
+      : onSubmit({ ...request, command: pendingCommandRef.current!.identity });
+    void operation
       .catch((error: unknown) => {
         setSubmitError(error instanceof Error ? error.message : String(error));
       })

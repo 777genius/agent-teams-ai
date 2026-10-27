@@ -695,6 +695,8 @@ export interface DiscardQueuedUserMessagesResult {
 }
 
 export interface AddTaskCommentRequest {
+  /** One immutable comment intent across uncertain acknowledgement and explicit lookup. */
+  command?: ApplicationCommandRequestIdentity;
   text: string;
   attachments?: CommentAttachmentPayload[];
   taskRefs?: TaskRef[];

@@ -74,10 +74,10 @@ export const TaskCommentInput = ({
 
   const trimmed = stripEncodedTaskReferenceMetadata(session.commentText).trim();
   const remaining = MAX_TEXT_LENGTH - trimmed.length;
+  const hasSubmission = Boolean(session.commentIntent);
+  const showSubmit = hasSubmission || trimmed.length > 0 || pendingAttachments.length > 0;
   const canSubmit =
-    (trimmed.length > 0 || pendingAttachments.length > 0) &&
-    trimmed.length <= MAX_TEXT_LENGTH &&
-    controller.canSubmit;
+    controller.canSubmit && (hasSubmission || (showSubmit && trimmed.length <= MAX_TEXT_LENGTH));
   const replyTo = session.reply;
   const replyConnectedToComposer =
     Boolean(replyTo) && !controller.attachmentError && pendingAttachments.length === 0;
@@ -318,11 +318,9 @@ export const TaskCommentInput = ({
               </Tooltip>
               <span
                 className="message-composer-send-slot"
-                data-visible={
-                  trimmed.length > 0 || pendingAttachments.length > 0 ? 'true' : 'false'
-                }
+                data-visible={showSubmit ? 'true' : 'false'}
               >
-                {trimmed.length > 0 || pendingAttachments.length > 0 ? (
+                {showSubmit ? (
                   <button
                     type="button"
                     className="message-composer-send-button inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-xs font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-45"

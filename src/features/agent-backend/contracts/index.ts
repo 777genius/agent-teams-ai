@@ -31,6 +31,7 @@ export type * from './review';
 export * from './reviewWatch';
 export type * from './roster';
 export * from './stoppedImport';
+export { HostTaskSubmissionRefusal, HostTeamOperationError } from './taskSubmission';
 export { hostTeamRunId, isHostTeamRunId, parseHostTeamRunId } from './teamRunSelection';
 export {
   hostTeamSelectionKey,

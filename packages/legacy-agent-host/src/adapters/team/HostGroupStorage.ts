@@ -86,6 +86,11 @@ export class HostGroupStorage implements GroupChatStorage {
       });
     });
   }
+  readRegistrySync(teamName: string): GroupChat[] {
+    return this.fenced(teamName, () =>
+      parseGroupRegistry(readGroupFile(join(this.directory, 'group-chats.json')))
+    );
+  }
   withRegistry<T>(
     teamName: string,
     action: (groups: GroupChat[], save: () => Promise<void>) => Promise<T>

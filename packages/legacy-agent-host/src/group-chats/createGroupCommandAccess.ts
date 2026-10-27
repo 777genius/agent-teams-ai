@@ -1,6 +1,7 @@
 import type { GroupRequestGuard } from './GroupCommands.js';
 import { createGroupCommands } from './GroupCommands.js';
-import { GroupChatError } from './model.js';
+import { GroupChatError, isGroupUuid } from './model.js';
+import type { GroupChat } from './model.js';
 import { digest } from '../team/identity.js';
 import { listProductCommandReceipts, listTeamCommandEntries } from '../team/commandEntries.js';
 import { TeamOwnerError } from '../team/contracts.js';
@@ -27,7 +28,7 @@ export function createGroupCommandAccess(options: {
   reserved(id: string): boolean;
   invalidate(): void;
 }) {
-  return (principalId: string, runtime: GroupRuntimeAccess) => {
+  function commands(principalId: string, runtime: GroupRuntimeAccess) {
     const authorize = (write: boolean) =>
       options.authorize(principalId, write ? 'message.write' : 'read');
     function original(row: Record<string, unknown>) {
@@ -133,5 +134,28 @@ export function createGroupCommandAccess(options: {
         reactionChanged: options.invalidate,
       }),
     });
+  }
+  return {
+    commands,
+    assertTaskAssociation(principalId: string, groupChatId: string): void {
+      options.store.fenced(() => {
+        options.authorize(principalId, 'read');
+        if (!isGroupUuid(groupChatId)) throw new TeamOwnerError('invalid');
+        let groups: GroupChat[];
+        try {
+          if (!options.storage) throw new TeamOwnerError('hold');
+          // Already authorized inside the same synchronous Team fence; no message admission runs.
+          const storage = options.storage({ before() {}, inside() {} }, () => {
+            throw new TeamOwnerError('hold');
+          });
+          if (!storage.readRegistrySync) throw new TeamOwnerError('hold');
+          groups = storage.readRegistrySync(options.binding.teamName);
+        } catch {
+          throw new TeamOwnerError('hold');
+        }
+        const group = groups.find((candidate) => candidate.id === groupChatId);
+        if (!group || group.archivedAt) throw new TeamOwnerError('invalid');
+      });
+    },
   };
 }

@@ -13,7 +13,6 @@ import {
   registerAgentBackendHttp,
   registerAgentBackendIpc,
 } from '../../../src/features/agent-backend/main';
-
 import { parseBackendOperation } from '../../../src/features/agent-backend/main/adapters/input/validateBackendOperation';
 
 import type {
@@ -30,12 +29,12 @@ const task = {
   projectPath: '/private/project',
   nativeSessionId: 'private-native',
 };
-const create: BackendOperationRequest = {
+const create = {
   handle: { handleId: 'opaque-A' },
   commandId: 'stable-create',
   operation: 'task.create',
   payload: { subject: 'A task' },
-};
+} satisfies BackendOperationRequest;
 
 function setup() {
   const router = {
@@ -45,7 +44,8 @@ function setup() {
   const receipt = {
     commandId: create.commandId,
     phase: 'completed',
-    command: { operation: create.operation },
+    command: { commandId: create.commandId, operation: create.operation, payload: create.payload },
+    effects: { taskId: task.id },
     result: task,
     principalId: 'private-principal',
     binding: { storageRoot: '/private/store' },
@@ -103,7 +103,8 @@ describe('finite captured backend transport facade', () => {
       value: {
         commandId: create.commandId,
         phase: 'completed',
-        command: { operation: 'task.create' },
+        command: { commandId: create.commandId, operation: 'task.create', payload },
+        effects: { taskId: task.id },
         result: { ...task, ...payload, status: 'in_progress' },
       },
     });
@@ -113,6 +114,7 @@ describe('finite captured backend transport facade', () => {
         commandId: create.commandId,
         phase: 'completed',
         operation: 'task.create',
+        taskSubmission: { commandId: create.commandId, operation: 'task.create', payload },
         task: {
           id: task.id,
           subject: payload.subject,
@@ -468,6 +470,11 @@ describe('finite captured backend transport facade', () => {
         commandId: 'stable-create',
         phase: 'completed',
         operation: 'task.create',
+        taskSubmission: {
+          commandId: create.commandId,
+          operation: create.operation,
+          payload: create.payload,
+        },
         task: { id: 'task-1', status: 'pending', subject: 'A task' },
       },
     });

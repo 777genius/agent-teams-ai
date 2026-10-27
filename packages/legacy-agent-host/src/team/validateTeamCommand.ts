@@ -3,6 +3,7 @@ import {
   attachmentReferenceSchema,
   messageAttachmentReferencesSchema,
 } from '../attachments/uploadContracts.js';
+import { isGroupUuid } from '../group-chats/model.js';
 import { TeamOwnerError } from './contracts.js';
 import { safeSegment, stableJson } from './identity.js';
 import type { TeamCommand, TaskRef } from './contracts.js';
@@ -41,6 +42,8 @@ export function validateTeamCommand(command: TeamCommand): void {
     throw new TeamOwnerError('invalid');
   switch (command.operation) {
     case 'task.create':
+      if (command.payload.groupChatId !== undefined && !isGroupUuid(command.payload.groupChatId))
+        throw new TeamOwnerError('invalid');
       validateRefs(command.payload.descriptionTaskRefs);
       validateRefs(command.payload.promptTaskRefs);
       if (command.payload.prompt !== undefined) validateTeamText(command.payload.prompt, true);
@@ -186,6 +189,7 @@ export function validateTeamCommand(command: TeamCommand): void {
   const allowed: Record<TeamCommand['operation'], string[]> = {
     'task.create': [
       'subject',
+      'groupChatId',
       'description',
       'owner',
       'blockedBy',

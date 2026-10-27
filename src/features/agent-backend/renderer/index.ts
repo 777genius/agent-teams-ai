@@ -19,3 +19,4 @@ export {
   isHostTeamSelectionKey,
 } from './createHostTeamsApi';
 export { HostReviewOperationError } from './HostReviewOperationError';
+export { acknowledgeHostTaskSubmission } from './retainedTaskSubmissions';
