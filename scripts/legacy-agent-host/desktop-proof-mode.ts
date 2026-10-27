@@ -4,6 +4,7 @@ import { startProcessModel } from './desktop-native-process-model.ts';
 import { readProcessServices } from './desktop-native-process-fixture.ts';
 import { startDesktopMixedModels } from './desktop-mixed-native-fixture.ts';
 import { startDesktopApprovalModel } from './desktop-approval-model.ts';
+import { LEGACY_IMPORT_TEAM } from './desktop-stopped-import-fixture.ts';
 import { startNativeReviewModel } from './desktop-native-review-model.ts';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -198,7 +199,41 @@ export async function prepareDesktopProofMode(
               },
             })
           : legacyImportMode
-            ? await startNativeTeamModel({ allowModelProbes: true })
+            ? await startNativeTeamModel({
+                allowModelProbes: true,
+                ...(process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1'
+                  ? {
+                      memberName: 'team-lead' as const,
+                      principalId: () => {
+                        const state = record(
+                          JSON.parse(
+                            readFileSync(
+                              join(
+                                fixtureRoot(),
+                                'hoststore/teams',
+                                LEGACY_IMPORT_TEAM,
+                                '.host-owner/state.json'
+                              ),
+                              'utf8'
+                            )
+                          )
+                        );
+                        assert.ok(
+                          Array.isArray(state.runtimeCaptures) && state.runtimeCaptures.length === 1
+                        );
+                        const capture = record(state.runtimeCaptures[0]);
+                        assert.ok(Array.isArray(capture.members) && capture.members.length === 1);
+                        const member = record(capture.members[0]);
+                        assert.equal(member.memberId, 'team-lead');
+                        assert.ok(
+                          typeof member.principalId === 'string' &&
+                            member.principalId.startsWith('agent:')
+                        );
+                        return member.principalId;
+                      },
+                    }
+                  : {}),
+              })
             : conversationMode
               ? await startNativeTeamModel({
                   requireVisibleReply: true,

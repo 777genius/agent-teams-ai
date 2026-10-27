@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
@@ -7,12 +8,38 @@ import { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
 import { assertStoppedImportModelChecks } from './desktop-stopped-import-ui-smoke.ts';
 import {
   readDesktopStoppedImportSeed,
+  prepareDesktopStoppedImport,
   stoppedImportSourceBytes,
 } from './desktop-stopped-import-fixture.ts';
 
 const pnpmEntry = '/opt/homebrew/Cellar/node@24/24.18.0/lib/node_modules/corepack/dist/pnpm.js';
 const repo = resolve(import.meta.dirname, '../..');
 const json = async (path: string) => JSON.parse(await readFile(path, 'utf8'));
+test(
+  'prior-run source fixture publishes the actual captured child release without claiming old inference',
+  { skip: process.platform === 'win32' },
+  async (t) => {
+    const root = await mkdtemp(join(tmpdir(), 'TEST-desktop-backend-'));
+    t.after(() => rm(root, { recursive: true, force: true }));
+    for (const directory of ['home', 'tmp', 'workspace']) await mkdir(join(root, directory));
+    await prepareDesktopStoppedImport(root, { priorRun: true, node: process.execPath });
+    const seed = await readDesktopStoppedImportSeed(root);
+    assert.equal(seed.sourceKind, 'captured-stopped-solo');
+    assert.ok(seed.priorRun);
+    const preparation = await json(seed.priorRun.path);
+    assert.equal(preparation.sourceNativeInputs, 0);
+    assert.match(preparation.scope, /Synthetic.+actual source-owned TEST Node child/);
+    const stopped = await json(join(seed.roots[0]!, 'launch-stopped.json'));
+    assert.deepEqual(stopped.nativeRelease, preparation.proof);
+    assert.equal(preparation.proof.target.runId, preparation.sourceRunId);
+    assert.equal(preparation.proof.process.rootPid, preparation.proof.target.rootPid);
+    assert.ok(preparation.proof.process.rootStartIdentity);
+    assert.ok(preparation.proof.process.ownerIncarnation);
+    assert.equal(preparation.childExit.signalCode, 'SIGTERM');
+    assert.deepEqual(await stoppedImportSourceBytes(root, seed.roots), seed.before);
+    assert.deepEqual((await json(join(seed.roots[0]!, 'members.meta.json'))).members, []);
+  }
+);
 test('stopped import UI fixture stages only never-launched legacy product data with exact opt-in principal', async (t) => {
   const fixture = await prepareDesktopBackendFixture(repo, {
     seedUiTask: true,

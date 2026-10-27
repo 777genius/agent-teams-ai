@@ -14,6 +14,7 @@ import {
   runDesktopStoppedImportAttachmentUi,
 } from './desktop-stopped-import-attachments-ui.ts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
+import { runStoppedImportLaunchUi } from './desktop-stopped-import-launch-ui.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
@@ -75,19 +76,27 @@ export async function runDesktopStoppedImportUiSmoke(
 ): Promise<void> {
   const { fixture, model } = options;
   const seed = await readDesktopStoppedImportSeed(fixture.root);
+  const launchContinuation = process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1';
+  assert.equal(launchContinuation, seed.sourceKind === 'captured-stopped-solo');
   const steps: Record<string, unknown>[] = [];
   const step = (value: Record<string, unknown>) => {
     steps.push({ monotonicMs: Math.round(performance.now()), ...value });
   };
   const proof: Record<string, unknown> = {
     status: 'INCOMPLETE',
+    sourceKind: seed.sourceKind ?? 'never-launched-draft',
     steps,
-    scope:
-      'Original never-launched legacy Team Detail Launch → Main import → canonical Host dialog target; saved data, close without Submit, renderer reload and original import lookup',
+    scope: launchContinuation
+      ? 'Original captured-stopped solo legacy Team import/readback followed by original native Launch/Stop/reload; source records synthetic, actual source process Stop and target SDK/CLI'
+      : 'Original never-launched legacy Team Detail Launch → Main import → canonical Host dialog target; saved data, close without Submit, renderer reload and original import lookup',
     excluded: [
-      'Previously launched/cold Claude or OpenCode import (HOLD; M16 remains open)',
-      'Team Launch Submit',
-      'native agent input',
+      ...(launchContinuation
+        ? ['old provider inference/history qualification', 'multi-member/OpenCode prior-run import']
+        : [
+            'Previously launched/cold Claude or OpenCode import (HOLD; M16 remains open)',
+            'Team Launch Submit',
+            'native agent input',
+          ]),
       'native session adoption',
       'real vendor inference/credentials',
       'full Stage1',
@@ -160,7 +169,9 @@ export async function runDesktopStoppedImportUiSmoke(
       clickCount: 1,
     });
     await ui.waitRead(
-      `document.body.innerText.includes('This is a draft team -')`,
+      launchContinuation
+        ? `Boolean(document.querySelector('button[aria-label="Edit team"]'))`
+        : `document.body.innerText.includes('This is a draft team -')`,
       'original saved metadata-only draft Detail'
     );
   };
@@ -198,10 +209,11 @@ export async function runDesktopStoppedImportUiSmoke(
         `[...document.querySelectorAll('[role="dialog"] button[aria-label*=" provider,"]')].some(e=>e.textContent.trim()==='Sonnet 4.6')`,
         'saved Sonnet model hydrates'
       );
-      await ui.waitRead(
-        `[...document.querySelectorAll('[role="dialog"] input[aria-label]')].some(e=>e.value==='alice')`,
-        'saved teammate input value hydrates'
-      );
+      if (!launchContinuation)
+        await ui.waitRead(
+          `[...document.querySelectorAll('[role="dialog"] input[aria-label]')].some(e=>e.value==='alice')`,
+          'saved teammate input value hydrates'
+        );
       await ui.waitRead(
         `(() => {const node=document.querySelector('[role="dialog"]');return node&&
           node.innerText.includes('All selected providers are ready')&&
@@ -258,7 +270,7 @@ export async function runDesktopStoppedImportUiSmoke(
   );
   assert.equal(target.mode, 'launch');
   assert.equal(target.cwd, seed.savedSettings.cwd);
-  assert.deepEqual(target.members, ['team-lead', 'alice']);
+  assert.deepEqual(target.members, launchContinuation ? ['team-lead'] : ['team-lead', 'alice']);
   proof.dialogTarget = target;
   const importsPath = join(fixture.root, 'hoststore/.host-team-registry/imports');
   const imported = await records(importsPath);
@@ -274,7 +286,9 @@ export async function runDesktopStoppedImportUiSmoke(
     payload: {},
   };
   const snapshotResult = record(
-    await cdp.evaluate(`window.electronAPI.agentBackend.invoke(${desktopJsLiteral(snapshotRequest)})`)
+    await cdp.evaluate(
+      `window.electronAPI.agentBackend.invoke(${desktopJsLiteral(snapshotRequest)})`
+    )
   );
   assert.equal(snapshotResult.ok, true);
   const snapshot = record(snapshotResult.value);
@@ -471,10 +485,35 @@ export async function runDesktopStoppedImportUiSmoke(
   );
   assert.deepEqual(sessions, [], 'no Runtime session or outbox input allocation');
   proof.modelPreflightReceipts = probeReceipts;
-  proof.runtimeSessions = sessions;
+  if (launchContinuation) proof.runtimeSessionsBeforeLaunch = sessions;
+  else proof.runtimeSessions = sessions;
   proof.sourceAfter = after;
   proof.noLaunchSubmit = true;
   proof.sameOriginalImportAfterReload = true;
   proof.probes = model.probes;
+  if (launchContinuation) {
+    await runStoppedImportLaunchUi(cdp, {
+      fixture,
+      seed,
+      selection: String(lookup.selection),
+      handleId: String(handle.handleId),
+      model,
+      evidence: proof,
+      importedTask: productTask,
+      openTeams,
+      openSourceDialog: async () => {
+        await navigateOriginalTeam();
+        await openDialog();
+      },
+      assertOwnedRenderer: options.assertOwnedRenderer,
+      step,
+    });
+    assert.deepEqual(
+      await records(importsPath),
+      imported,
+      'native Launch and reload retain the original single import publication'
+    );
+    proof.noLaunchSubmit = false;
+  }
   proof.status = 'PASS';
 }

@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
+import { createRequire } from 'node:module';
 
 export const LEGACY_IMPORT_TEAM = 'test-stopped-legacy';
 export const LEGACY_IMPORT_LABEL = 'TEST never-launched legacy saved Team';
 export interface StoppedImportUiSeed {
+  sourceKind?: 'captured-stopped-solo';
+  priorRun?: { path: string; sha256: string };
   teamName: string;
   displayName: string;
   sourceCardLabel: string;
@@ -76,8 +80,11 @@ export async function stoppedImportSourceBytes(root: string, roots: readonly str
   return files.sort((a, b) => a.path.localeCompare(b.path));
 }
 
-/** Never-launched configured legacy files only. Actual Main owners decide import eligibility. */
-export async function prepareDesktopStoppedImport(root: string): Promise<void> {
+/** Synthetic saved legacy records; optional prior-run setup uses actual captured TEST child Stop. */
+export async function prepareDesktopStoppedImport(
+  root: string,
+  options: { priorRun?: boolean; node?: string } = {}
+): Promise<void> {
   assert.equal(await realpath(root), root);
   assert.match(basename(root), /^TEST-desktop-backend-[A-Za-z0-9]+$/);
   const team = join(root, 'claude/teams', LEGACY_IMPORT_TEAM);
@@ -92,7 +99,9 @@ export async function prepareDesktopStoppedImport(root: string): Promise<void> {
     model: 'claude-sonnet-4-6',
     effort: 'low',
     fastMode: 'off',
-    prompt: 'TEST imported saved prompt; never submit this prompt',
+    prompt: options.priorRun
+      ? 'TEST prior-run saved prompt'
+      : 'TEST imported saved prompt; never submit this prompt',
     skipPermissions: false,
     syncModelsWithLead: false,
     limitContext: true,
@@ -101,7 +110,7 @@ export async function prepareDesktopStoppedImport(root: string): Promise<void> {
   await json(join(team, 'team.meta.json'), {
     version: 1,
     ...savedSettings,
-    displayName: LEGACY_IMPORT_LABEL,
+    displayName: options.priorRun ? 'TEST captured-stopped solo legacy Team' : LEGACY_IMPORT_LABEL,
     description: 'TEST configured data without native launch history',
     createdAt: 1792713600000,
   });
@@ -236,11 +245,40 @@ export async function prepareDesktopStoppedImport(root: string): Promise<void> {
     attachments: [],
     historyEvents: [],
   });
+  if (options.priorRun) {
+    assert.ok(options.node, 'explicit captured TEST Node for source preparation');
+    const loader = createRequire(import.meta.url).resolve('tsx');
+    execFileSync(
+      options.node,
+      ['--import', loader, join(import.meta.dirname, 'desktop-stopped-import-prior-run.ts'), root],
+      {
+        cwd: join(import.meta.dirname, '../..'),
+        timeout: 20_000,
+        maxBuffer: 128 * 1024,
+        env: {
+          HOME: join(root, 'home'),
+          CLAUDE_ROOT: join(root, 'claude'),
+          AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: join(root, 'claude'),
+          PATH: '/usr/bin:/bin',
+          TMPDIR: join(root, 'tmp'),
+        },
+      }
+    );
+  }
   const roots = [team, tasks, attachments, taskAttachments];
   const seed: StoppedImportUiSeed = {
     teamName: LEGACY_IMPORT_TEAM,
-    displayName: LEGACY_IMPORT_LABEL,
-    sourceCardLabel: LEGACY_IMPORT_LABEL,
+    displayName: options.priorRun ? 'TEST captured-stopped solo legacy Team' : LEGACY_IMPORT_LABEL,
+    sourceCardLabel: options.priorRun ? LEGACY_IMPORT_TEAM : LEGACY_IMPORT_LABEL,
+    ...(options.priorRun
+      ? {
+          sourceKind: 'captured-stopped-solo' as const,
+          priorRun: {
+            path: join(root, 'stopped-import-prior-run.json'),
+            sha256: digest(await readFile(join(root, 'stopped-import-prior-run.json'))),
+          },
+        }
+      : {}),
     taskId,
     linkedTaskId,
     externalTaskId: external.taskId,
@@ -259,7 +297,10 @@ export async function readDesktopStoppedImportSeed(root: string): Promise<Stoppe
     await readFile(join(root, 'stopped-import-ui-seed.json'), 'utf8')
   ) as StoppedImportUiSeed;
   assert.equal(seed.teamName, LEGACY_IMPORT_TEAM);
-  assert.equal(seed.sourceCardLabel, seed.displayName);
+  assert.equal(
+    seed.sourceCardLabel,
+    seed.sourceKind === 'captured-stopped-solo' ? LEGACY_IMPORT_TEAM : seed.displayName
+  );
   assert.equal(seed.savedSettings.cwd, join(root, 'workspace'));
   assert.deepEqual(seed.roots, [
     join(root, 'claude/teams', LEGACY_IMPORT_TEAM),

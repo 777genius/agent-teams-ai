@@ -100,3 +100,45 @@ Actual stopped import → existing Launch Submit, final mixed Desktop acceptance
 packed/installed workflow, complete M01–M19 qualification and the original M19
 custody HOLD remain separate obligations. No timeout, readiness, authority or
 process-custody guard is relaxed to clear them.
+
+## Stopped import → native Launch preparation
+
+The existing stopped-import smoke now has an explicit
+`LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH=1` continuation. Its original import-only
+variant is retained. The continuation stages synthetic stopped solo product/run
+records and uses an actual source-owned TEST Node child with the existing
+`spawnCli` / captured stop / `markStopped` owners. It does not claim source
+provider inference or historical native session adoption.
+
+The existing Launch dialog then edits the saved prompt and permission choice,
+submits its ordinary button once, observes the actual SDK/CLI Task/Bash/reply
+oracle, stops through the ordinary control and reloads the same saved settings.
+The exact source files, single import publication and retained imported Task must
+remain unchanged. A fourth variant in the existing optional CI job requires the
+original native continuation receipt to be PASS; import-only cannot satisfy it.
+
+Local preparation verification: the actual captured-source child stop test passed
+with no skips; strict `typecheck:legacy-host-scripts` passed. The combined fixture
+run passed nine cases and failed three pre-existing macOS fixture preparations
+because this Linux checkout has no staged darwin-arm64 Node artifact. This does
+not qualify the actual Launch continuation; that remains the remote macOS job.
+
+The first source CI attempt on `bbf176ae1` stopped before native allocation at an
+ESM-only package resolution mistake in the new workflow. `990f8da76` fixes that
+bootstrap. The next attempt passed bootstrap on the actual tuple macOS 15.7.5 /
+build `24G624`, then exposed the fixture assertion about macOS-injected
+`__CF_USER_TEXT_ENCODING`. The fixture now checks exact nonce framing and its
+owned TEST value while narrowly accepting the demonstrated Core Foundation field.
+No production environment probing or qualification tuple was weakened. Existing
+packed custody qualification for build `24G90` does not qualify build `24G624`.
+
+## Reproducible Host unit gate
+
+Adding the existing Host package suite to full CI exposed two tests depending on
+untracked `native-events.jsonl`, `before.txt` and `final.txt` from the historical
+OpenCode probe. The tracked manifest retains their digests and sizes; the raw
+31,446-byte native log is not available in the checkout or reviewed archives.
+Those two tests now use an explicit synthetic, self-contained V1 payload fixture
+for exact dirty-preimage application and rejection of externally appended bytes.
+Both tests and Host test typechecking passed. Historical native evidence is
+unchanged, and this unit conformance result is not new native qualification.

@@ -62,7 +62,9 @@ export async function desktopProofEvidence(options: {
                         : mode === 'native-review-ui' || mode === 'native-review-readback-ui'
                           ? 'Actual foreground Read/Edit after original Task Start, canonical native capture proof, original Changes hunk decisions, Stop, renderer reload and separate Host restart; narrow qualified file effects, no global M13 claim'
                           : mode === 'stopped-import-ui'
-                            ? 'Original never-launched configured legacy Team Launch action → Main/Host detached import → canonical saved Launch dialog, close without Submit and renderer reload; optional local SDK model probe only, no native Team input'
+                            ? process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1'
+                              ? 'Synthetic stopped legacy solo records with real captured source-owned TEST child Stop publication; original Main/Host import and fresh actual SDK/CLI Launch/task/Bash/reply/Stop/reload, no old provider inference'
+                              : 'Original never-launched configured legacy Team Launch action → Main/Host detached import → canonical saved Launch dialog, close without Submit and renderer reload; optional local SDK model probe only, no native Team input'
                             : mode === 'review-ui' || mode === 'review-readback-ui'
                               ? 'Original Task Changes UI through captured Main/Host review transport with synthetic canonical ledger, real dirty filesystem, history and saved-state readback; no native M13 capture qualification'
                               : mode === 'native-create-ui'
@@ -106,6 +108,8 @@ export async function desktopProofEvidence(options: {
         : [
             ...(uiMode ? [] : ['user control signoff']),
             ...(conversationMode ||
+            (mode === 'stopped-import-ui' &&
+              process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1') ||
             [
               'native-launch-ui',
               'native-relaunch-ui',
@@ -129,7 +133,9 @@ export async function desktopProofEvidence(options: {
                   'Stage2',
                 ]
               : []),
-            ...([
+            ...((mode === 'stopped-import-ui' &&
+              process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1') ||
+            [
               'native-launch-ui',
               'native-relaunch-ui',
               'native-resume-ui',

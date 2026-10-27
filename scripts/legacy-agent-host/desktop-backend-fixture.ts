@@ -30,7 +30,9 @@ export function desktopNodeScriptHeader(node: string): string {
 
 /** Emits only the two known environment probes; never evaluates shell input. */
 export function desktopShellEnvironmentProbeSource(node: string, sentinelLog: string): string {
-  return desktopNodeScriptHeader(node) + String.raw`import {appendFileSync} from 'node:fs';
+  return (
+    desktopNodeScriptHeader(node) +
+    String.raw`import {appendFileSync} from 'node:fs';
 const args=process.argv.slice(2);
 const frame=/^printf '\\0%s\\0' '(AGENT_TEAMS_SHELL_ENV_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})_START' && env -0 && printf '\\0%s\\0' '\1_END'$/u.exec(args[1]??'');
 const allowed=args.length===2&&['-lic','-ic'].includes(args[0])&&(args[1]==='env -0'||frame!==null);
@@ -38,7 +40,8 @@ appendFileSync(${JSON.stringify(sentinelLog)},JSON.stringify({executable:'shell-
 if(!allowed){process.stderr.write('TEST shell refuses execution\n');process.exit(78)}
 const dump=Object.entries(process.env).map(([k,v])=>k+'='+v).join('\0')+'\0';
 process.stdout.write(frame?'\0'+frame[1]+'_START\0'+dump+'\0'+frame[1]+'_END\0':dump);
-`;
+`
+  );
 }
 
 /** Creates only private TEST files. It neither launches the Host nor opens a provider. */
@@ -484,7 +487,11 @@ export async function prepareDesktopBackendFixture(
     await prepareDesktopReviewLedger(root, uiSeed.taskId);
   }
   if (options.nativeReviewUi) await prepareNativeReviewWorkspace(root);
-  if (options.stoppedImportUi) await prepareDesktopStoppedImport(root);
+  if (options.stoppedImportUi)
+    await prepareDesktopStoppedImport(root, {
+      priorRun: process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1',
+      node,
+    });
   const profilePath = join(root, 'host-profile.json');
   const profileBytes = JSON.stringify(profile);
   await writeFile(profilePath, profileBytes, { mode: 0o600 });

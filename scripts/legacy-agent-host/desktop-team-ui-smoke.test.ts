@@ -144,12 +144,31 @@ test('isolated shell fixture emits the actual framed environment and refuses she
   const nonce = 'AGENT_TEAMS_SHELL_ENV_12345678-1234-1234-1234-123456789abc';
   const command = `printf '\\0%s\\0' '${nonce}_START' && env -0 && printf '\\0%s\\0' '${nonce}_END'`;
   const env = { TEST_ONLY_VALUE: 'exact fixture value' };
+  const assertDump = (dump: string) => {
+    assert.ok(dump.endsWith('\0'), 'the actual environment dump remains NUL terminated');
+    const entries = dump.split('\0').filter(Boolean).map(entry => {
+      const separator = entry.indexOf('=');
+      assert.ok(separator > 0);
+      return [entry.slice(0, separator), entry.slice(separator + 1)] as const;
+    });
+    assert.equal(new Set(entries.map(([key]) => key)).size, entries.length);
+    const observed = Object.fromEntries(entries);
+    assert.equal(observed.TEST_ONLY_VALUE, env.TEST_ONLY_VALUE);
+    const extra = entries.filter(([key]) => key !== 'TEST_ONLY_VALUE');
+    // macOS may insert this Core Foundation value before the Node script starts.
+    if (process.platform === 'darwin' && extra.length === 1) {
+      assert.equal(extra[0]![0], '__CF_USER_TEXT_ENCODING');
+      assert.match(extra[0]![1], /^0x[0-9a-f]+:0x[0-9a-f]+:0x[0-9a-f]+$/iu);
+    } else assert.deepEqual(extra, []);
+  };
   for (const mode of ['-lic', '-ic']) {
     const actual = execFileSync(process.execPath, [script, mode, command], { env }).toString();
-    assert.equal(actual, `\0${nonce}_START\0TEST_ONLY_VALUE=exact fixture value\0\0${nonce}_END\0`);
+    const start = `\0${nonce}_START\0`, end = `\0${nonce}_END\0`;
+    assert.ok(actual.startsWith(start), 'exact original start marker');
+    assert.ok(actual.endsWith(end), 'exact original end marker');
+    assertDump(actual.slice(start.length, -end.length));
   }
-  assert.equal(execFileSync(process.execPath, [script, '-ic', 'env -0'], { env }).toString(),
-    'TEST_ONLY_VALUE=exact fixture value\0');
+  assertDump(execFileSync(process.execPath, [script, '-ic', 'env -0'], { env }).toString());
   for (const refused of [command + '; touch arbitrary', command.replace('_END', '_OTHER'), 'env -0 && arbitrary']) {
     assert.throws(() => execFileSync(process.execPath, [script, '-lic', refused], { env, stdio: 'pipe' }),
       (error: unknown) => Boolean(error && typeof error === 'object' && 'status' in error && error.status === 78));

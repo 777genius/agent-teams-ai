@@ -538,9 +538,15 @@ jobs:
             label: Create with native launch
           - mode: stopped-import-ui
             label: saved legacy import only
+          - mode: stopped-import-ui
+            variant: stopped-import-native-launch
+            label: stopped legacy import and native Launch
+            import_launch: '1'
     env:
       TMPDIR: /private/tmp
       STAGE1_MODE: ${{ matrix.mode }}
+      STAGE1_VARIANT: ${{ matrix.variant || matrix.mode }}
+      LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH: ${{ matrix.import_launch || '' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -573,7 +579,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          exec > >(tee "$RUNNER_TEMP/stage1-setup-$STAGE1_MODE.log") 2>&1
+          exec > >(tee "$RUNNER_TEMP/stage1-setup-$STAGE1_VARIANT.log") 2>&1
           selected_inputs="$(mktemp -d /private/tmp/TEST-stage1-inputs-XXXXXX)"
           printf 'STAGE1_INPUTS=%s\n' "$selected_inputs" >> "$GITHUB_ENV"
           mkdir "$selected_inputs/corepack" "$selected_inputs/codex" "$selected_inputs/opencode"
@@ -643,15 +649,16 @@ jobs:
           set -euo pipefail
           selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
           "$selected_node" --test scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
-          "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-desktop-$STAGE1_MODE.log"
+          "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-desktop-$STAGE1_VARIANT.log"
       - name: Require the original retained receipt to report PASS
         if: always()
         run: |
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
           import { readFileSync, realpathSync } from 'node:fs';
-          import { join } from 'node:path';
-          const log = readFileSync(join(process.env.RUNNER_TEMP, `stage1-desktop-${process.env.STAGE1_MODE}.log`), 'utf8');
+          import { dirname, join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, `stage1-desktop-${process.env.STAGE1_VARIANT}.log`), 'utf8');
           const prepared = log.split('\n').flatMap(line => {
             try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; }
             catch { return []; }
@@ -662,18 +669,30 @@ jobs:
           const receipt = JSON.parse(readFileSync(path, 'utf8'));
           assert.equal(receipt.mode, process.env.STAGE1_MODE);
           assert.equal(receipt.status, 'PASS', 'INCOMPLETE remains an acceptance failure');
-          console.log(JSON.stringify({ status: receipt.status, mode: receipt.mode, receipt: path }));
+          if (process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1') {
+            const imported = receipt.stoppedImportUiProof;
+            assert.equal(imported?.status, 'PASS');
+            assert.equal(imported.noLaunchSubmit, false, 'import-only is not native Launch acceptance');
+            assert.equal(imported.nativeLaunch?.status, 'PASS');
+            assert.equal(imported.nativeLaunch.sourcePreparation?.sourceNativeInputs, 0,
+              'source preparation never claims old provider inference');
+            const seedBytes = readFileSync(join(dirname(path), 'stopped-import-ui-seed.json'));
+            assert.equal(createHash('sha256').update(seedBytes).digest('hex'), imported.seedSha256);
+            assert.equal(JSON.parse(seedBytes.toString('utf8')).sourceKind, 'captured-stopped-solo');
+          }
+          console.log(JSON.stringify({ status: receipt.status, mode: receipt.mode,
+            variant: process.env.STAGE1_VARIANT, receipt: path }));
           NODE
       - name: Preserve original source Desktop diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: stage1-source-desktop-${{ matrix.mode }}-${{ github.sha }}
+          name: stage1-source-desktop-${{ matrix.variant || matrix.mode }}-${{ github.sha }}
           retention-days: 14
           if-no-files-found: warn
           path: |
-            ${{ runner.temp }}/stage1-desktop-${{ matrix.mode }}.log
-            ${{ runner.temp }}/stage1-setup-${{ matrix.mode }}.log
+            ${{ runner.temp }}/stage1-desktop-${{ matrix.variant || matrix.mode }}.log
+            ${{ runner.temp }}/stage1-setup-${{ matrix.variant || matrix.mode }}.log
             /private/tmp/TEST-stage1-inputs-*/input-pins.json
             /private/tmp/TEST-desktop-backend-*/*.json
             /private/tmp/TEST-desktop-backend-*/*.png
