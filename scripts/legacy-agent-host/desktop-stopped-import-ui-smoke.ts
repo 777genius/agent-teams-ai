@@ -420,6 +420,12 @@ export async function runDesktopStoppedImportUiSmoke(
     step,
     assertOwnedRenderer: options.assertOwnedRenderer,
   });
+  options.assertOwnedRenderer();
+  const referenceContextId = await cdp.evaluate(
+    'window.__agentTeamsDevStore?.getState().activeContextId'
+  );
+  assert.equal(typeof referenceContextId, 'string');
+  assert.ok(referenceContextId);
   const navigation: Record<string, unknown>[] = [];
   proof.taskReferenceNavigation = navigation;
   for (const [kind, id] of [
@@ -465,21 +471,59 @@ export async function runDesktopStoppedImportUiSmoke(
     } else {
       const owner = record(
         await ui.waitRead(
-          `(() => {const node=document.querySelector('[role="dialog"]');if(!node||!node.getClientRects().length||!node.querySelector('[role="alert"],[role="status"]'))return null;const key=Object.keys(node).find(key=>key.startsWith('__reactFiber$'));let fiber=key?node[key]:null;let phase=null;for(let depth=0;fiber&&depth<128;depth++,fiber=fiber.return){const p=fiber.memoizedProps;if(p?.open===true&&(p.phase==='unavailable'||p.phase==='missing'))phase=p.phase;if(p?.open===true&&p.teamName===${desktopJsLiteral(expectedOwner)}&&p.sessionController?.identity?.taskId===${desktopJsLiteral(id)}&&p.sessionController.identity.teamName===${desktopJsLiteral(expectedOwner)}&&'task' in p&&'taskMap' in p&&!p.loading&&p.task===null&&(phase==='unavailable'||phase==='missing'))return {teamName:p.teamName,taskId:null};}return null;})()`,
+          `(() => {
+    if(document.querySelector('[role="dialog"]'))return null;
+    const state=window.__agentTeamsDevStore?.getState(),pane=state?.paneLayout.panes.find(p=>p.id===state.paneLayout.focusedPaneId);
+    const tab=pane?.tabs.find(t=>t.id===pane.activeTabId);
+    if(tab?.type!=='team'||tab.teamName!==${desktopJsLiteral(expectedOwner)}||tab.taskDetail?.taskId!==${desktopJsLiteral(id)}||tab.taskDetail.contextId!==${desktopJsLiteral(referenceContextId)}||state.activeContextId!==${desktopJsLiteral(referenceContextId)})return null;
+    const identity={contextId:tab.taskDetail.contextId,teamName:tab.teamName,taskId:tab.taskDetail.taskId};
+    const identityKey=JSON.stringify([identity.contextId,identity.teamName,identity.taskId]);
+    const entry=state.taskDetailById[identityKey],session=state.taskDetailSessionById[identityKey];
+    if(state.paneLayout.panes.length!==1)return null;
+    const selectedTabs=[...document.querySelectorAll('[role="tab"][aria-selected="true"]')].filter(e=>e.getClientRects().length);
+    if(selectedTabs.length!==1)return null;
+    const selectedTab=selectedTabs[0],close=selectedTab.querySelector('button[aria-label="Close tab"]');
+    if(!close?.getClientRects().length)return null;
+    const tabKey=Object.keys(selectedTab).find(key=>key.startsWith('__reactFiber$'));
+    let tabFiber=tabKey?selectedTab[tabKey]:null,capturedTab=false;
+    for(let depth=0;tabFiber&&depth<128;depth++,tabFiber=tabFiber.return){const p=tabFiber.memoizedProps;if(p?.tab?.id===tab.id&&p.isActive===true&&p.paneId===pane.id){capturedTab=true;break;}}
+    if(!capturedTab)return null;
+    if(!entry||entry.loading!==false||entry.full!==null||!['unavailable','missing'].includes(entry.phase)||JSON.stringify([entry.identity?.contextId,entry.identity?.teamName,entry.identity?.taskId])!==identityKey||session?.ownerSurfaceId!==tab.id)return null;
+    const nodes=[...document.querySelectorAll('main')].filter(e=>e.getClientRects().length&&e.querySelector('[role="alert"],[role="status"]'));
+    if(nodes.length!==1)return null;
+    const node=nodes[0],key=Object.keys(node).find(key=>key.startsWith('__reactFiber$'));
+    let fiber=key?node[key]:null,visiblePhase=null;
+    for(let depth=0;fiber&&depth<128;depth++,fiber=fiber.return){
+      const p=fiber.memoizedProps;
+      if(p?.phase===entry.phase&&typeof p.heading==='string')visiblePhase=p.phase;
+      if(p?.isActive===true&&p.surfaceId===tab.id&&JSON.stringify([p.identity?.contextId,p.identity?.teamName,p.identity?.taskId])===identityKey&&visiblePhase===entry.phase)
+        return {teamName:identity.teamName,taskId:null,identity,tabId:tab.id,ownerSurfaceId:session.ownerSurfaceId,phase:entry.phase};
+    }return null;
+  })()`,
           'original captured source owner remains unavailable without local fallback'
         )
       );
-      assert.deepEqual(owner, { teamName: expectedOwner, taskId: null });
+      assert.equal(owner.teamName, expectedOwner);
+      assert.equal(owner.taskId, null);
+      assert.deepEqual(owner.identity, {
+        contextId: referenceContextId,
+        teamName: expectedOwner,
+        taskId: id,
+      });
+      assert.equal(owner.ownerSurfaceId, owner.tabId);
       navigation.push({
         kind,
         requestedTaskId: id,
         ...owner,
         outcome: 'unavailable at captured source owner',
       });
-      await ui.click('[role="dialog"] > button', 'close source-owner Task result', 'Close');
+      await ui.click(
+        '[role="tab"][aria-selected="true"] button[aria-label="Close tab"]',
+        'close captured source-owner Task tab'
+      );
       await ui.waitRead(
-        `!document.querySelector('[role="dialog"]')`,
-        'source-owner Task result closed'
+        `(() => {const state=window.__agentTeamsDevStore?.getState();return state?.activeContextId===${desktopJsLiteral(referenceContextId)}&&state.paneLayout.panes.length===1&&!state.paneLayout.panes.some(p=>p.tabs.some(t=>t.id===${desktopJsLiteral(owner.tabId)}));})()`,
+        'captured source-owner Task tab removed'
       );
     }
   }
