@@ -1,5 +1,7 @@
 import { parseTeamCreationFailure, TeamCreationRefusal } from '../contracts/creation';
 
+import { hasHostTeamDestination } from './hostTeamRouting';
+
 import type { TeamsAPI } from '@shared/types/api';
 import type { IpcResult } from '@shared/types/ipc';
 import type { TeamCreateConfigResponse, TeamCreateResponse } from '@shared/types/team';
@@ -38,13 +40,19 @@ export function createTeamCreationResultApi(
   legacy: TeamsAPI
 ): Pick<TeamsAPI, 'createTeam' | 'createConfig'> {
   return {
-    createTeam: async (request) =>
-      legacy.createTeamResult
+    createTeam: async (request) => {
+      if (hasHostTeamDestination('createTeam', request))
+        throw new Error('This operation is not supported for Host teams');
+      return legacy.createTeamResult
         ? readTeamCreationResult(await legacy.createTeamResult.call(legacy, request))
-        : legacy.createTeam.call(legacy, request),
-    createConfig: async (request) =>
-      legacy.createConfigResult
+        : legacy.createTeam.call(legacy, request);
+    },
+    createConfig: async (request) => {
+      if (hasHostTeamDestination('createConfig', request))
+        throw new Error('This operation is not supported for Host teams');
+      return legacy.createConfigResult
         ? readTeamCreationConfigResult(await legacy.createConfigResult.call(legacy, request))
-        : legacy.createConfig.call(legacy, request),
+        : legacy.createConfig.call(legacy, request);
+    },
   };
 }

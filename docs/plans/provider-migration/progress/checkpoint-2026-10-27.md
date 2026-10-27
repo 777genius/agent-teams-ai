@@ -1061,3 +1061,65 @@ TypeScript, scoped formatting and diff checks passed. Both existing Group filter
 and task projection sources are explicitly pinned and included in the proof's
 source hashes. Actual Desktop execution on the changed head remains pending;
 prior Task board PASS receipts do not qualify this new group-association phase.
+
+
+### Integrated Task/group and existing board proof commits
+
+The reviewed F01/group union was committed and immediately pushed as
+`0ddaa8ac04d1f21e104fa1fc3a64abb7690731b0`. The existing board extension followed
+as `3b4cc0938517621f401ca97896bca8298580c516`, also pushed immediately. Its group
+seed is mandatory at the board helper entrypoint, and the same offline peer is
+represented in both persisted roster and captured descriptor metadata. Neither
+commit receives an inherited Desktop PASS from the c5 run.
+
+
+### Additional original c5 Desktop receipts and custody limits
+
+Root downloaded and inspected three further original artifacts from workflow
+`40577183939` on `c5ded9a14df74b30c5567f4511c3aa960b9b1fea`:
+
+| Existing flow | Artifact ID | Original receipt SHA-256 | Observation |
+| --- | --- | --- | --- |
+| Saved legacy import only | `12768847459` | `202a48f240913418dfa1e0f41481de684d56376ddba0e6c3330c2667c456b5b9` | PASS for the original never-launched draft import, saved dialog/data, close without Submit, reload and original import lookup. No native Team input; harness SIGTERM, no natural-exit claim. |
+| Pending native open then Quit | `12768937700` | `b31703246066b599e9db6dd6ffac5b7a7f2749a2bb710dd3aecfbc247f867492` | PASS for safe shutdown with zero inputs, retained `held-unknown` outcome/debt, absent native children, original writer lock released and empty process group before cleanup. |
+| Same pending-open profile cold readback | `12768937700` | `0b7e4a7c71ad3b27dacc3ab13c9adfa71c5e6d76da57e9eb48aae168e0d89e1f` | PASS: original session/product unchanged through startup and second Quit, no new allocation. Both app epochs exited 0 without a signal; automatic app.relaunch remains unqualified. |
+| Solo Create and native persistent teammate | `12770150475` | `16915144dffdb19a21821c5c9df7a5dff8ab78dffeb2f159eaf54ae767480cfb` | PASS for one original lead input creating the persistent peer, original lookup, addressed peer work/reply, current-roster reminder once, Stop and reload. Harness SIGTERM, no natural app-exit claim. |
+
+The pending-open absence observations do not prove provider custody release: the
+original UNKNOWN obligation is deliberately retained. This does not clear the
+historical M19 HOLD. The never-launched draft receipt does not qualify the broader
+previously launched/historical-source import cases.
+
+The native teammate artifact now contains its original raw
+`model.nativeMemberObservations`: **11 observations**, nine from the lead and two
+from the created peer, covering original creation, addressed peer work, next-input
+roster and no-repeat roster checks. This closes the earlier collector omission
+for this new c5 run only; the older receipt is not rewritten. All captured probes
+were permitted, but this artifact recorded **three post-Quit/cleanup version-only
+probes** (OpenCode, Codex, OpenCode). No native execution or full fork-free/P5
+qualification is inferred from them. The other two newly inspected artifacts
+have empty forbidden and post-Quit/cleanup invocation lists. Root also inspected
+the original import dialog and pending-open cold-readback screenshots.
+
+
+## Captured Create routing and fresh-app test isolation
+
+The existing Create result decorator now applies the same captured-destination
+refusal before either raw-result or ordinary legacy Create bridge. A Host key,
+including a malformed reserved Host prefix, cannot fall through to a legacy
+writer; the regression asserts that neither bridge nor any backend request is
+called. Ordinary new-Team creation keeps its existing transport and receiver.
+
+The separate Launch suite failure was reproduced in the full file while isolated
+cases passed: an intentional UNKNOWN in one mock application retained its proper
+application-lifetime intent into later test cases that constructed a new mock
+application. The existing reset helper now runs only in that fresh-app
+`beforeEach`; no within-case/unmount reset or production retention change was
+made. Independent actual-diff review accepted both corrections.
+
+The author passed **162/162** across the full Launch file (127), retained Create
+flow (16), routing (6) and refusal transport (13), plus scoped three-file lint,
+format/diff and bounded strict decoder typechecking with erasable syntax enabled.
+These are local CI corrections; exact committed-head canonical and Desktop
+qualification remain pending. Both affected existing regressions are explicitly
+source-pinned. The unfinished two-file F08 harness is excluded from this commit.

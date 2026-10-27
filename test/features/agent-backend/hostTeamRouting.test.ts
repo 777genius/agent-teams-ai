@@ -38,12 +38,37 @@ describe('request-shaped Host Team authority', () => {
     expect(f.backend.invoke).not.toHaveBeenCalled();
   });
 
+  it('guards request-shaped captured destinations before either raw Create result bridge', async () => {
+    const f = fixture();
+    const createTeamResult = vi.fn(),
+      createConfigResult = vi.fn();
+    const legacy = Object.freeze({ ...f.legacy, createTeamResult, createConfigResult });
+    const teams = createHostTeamsApi(legacy, f.backend);
+    for (const method of ['createTeam', 'createConfig'] as const)
+      for (const teamName of [hostTeamSelectionKey('TEST-original'), 'host-team:%'])
+        await expect(Reflect.apply(teams[method], teams, [{ teamName }])).rejects.toThrow(
+          'not supported for Host teams'
+        );
+    expect(createTeamResult).not.toHaveBeenCalled();
+    expect(createConfigResult).not.toHaveBeenCalled();
+    expect(f.legacy.createTeam).not.toHaveBeenCalled();
+    expect(f.legacy.createConfig).not.toHaveBeenCalled();
+    expect(f.backend.getConnections).not.toHaveBeenCalled();
+    expect(f.backend.invoke).not.toHaveBeenCalled();
+  });
+
   it('requires an original saved-roster launch intent before any Host or legacy dispatch', async () => {
     const f = fixture();
-    await expect(Reflect.apply(f.teams.launchTeam, f.teams, [{
-      teamName: hostTeamSelectionKey('TEST-missing-owner'),
-    }])).rejects.toMatchObject({ code: 'launch-source-required', outcome: 'not-dispatched' });
-    await expect(Reflect.apply(f.teams.launchTeam, f.teams, [{ teamName: 'host-team:%' }])).rejects.toThrow(URIError);
+    await expect(
+      Reflect.apply(f.teams.launchTeam, f.teams, [
+        {
+          teamName: hostTeamSelectionKey('TEST-missing-owner'),
+        },
+      ])
+    ).rejects.toMatchObject({ code: 'launch-source-required', outcome: 'not-dispatched' });
+    await expect(
+      Reflect.apply(f.teams.launchTeam, f.teams, [{ teamName: 'host-team:%' }])
+    ).rejects.toThrow(URIError);
     expect(f.legacy.launchTeam).not.toHaveBeenCalled();
     expect(f.backend.getConnections).not.toHaveBeenCalled();
     expect(f.backend.invoke).not.toHaveBeenCalled();
@@ -57,7 +82,9 @@ describe('request-shaped Host Team authority', () => {
     // This shared bridge is the Desktop notification transport; Main validates
     // the captured Host destination rather than treating a Team name as a path.
     expect(f.legacy.showMessageNotification).toHaveBeenCalledExactlyOnceWith({
-      ...request, teamName: target.teamName, target: { ...target },
+      ...request,
+      teamName: target.teamName,
+      target: { ...target },
     });
     const captured = vi.mocked(f.legacy.showMessageNotification).mock.calls[0][0];
     expect(captured).not.toBe(request);
@@ -65,24 +92,43 @@ describe('request-shaped Host Team authority', () => {
     expect(vi.mocked(f.legacy.showMessageNotification).mock.contexts[0]).toBe(f.legacy);
     expect(f.backend.getConnections).not.toHaveBeenCalled();
     expect(f.backend.invoke).not.toHaveBeenCalled();
-    for (const method of ['launchTeam', 'createTeam', 'createConfig', 'updateMemberSettings'] as const)
+    for (const method of [
+      'launchTeam',
+      'createTeam',
+      'createConfig',
+      'updateMemberSettings',
+    ] as const)
       expect(f.legacy[method]).not.toHaveBeenCalled();
   });
 
   it('refuses conflicting or malformed Host notification destinations before Desktop transport', async () => {
     const f = fixture();
     for (const teamName of ['same-display-legacy', hostTeamSelectionKey('TEST-another-owner')]) {
-      await expect(f.teams.showMessageNotification({
-        teamName, teamDisplayName: 'Team', from: 'alice', body: 'Message',
-        target: { kind: 'team', teamName: hostTeamSelectionKey('TEST-original') },
-      })).rejects.toThrow('Invalid captured Host notification');
+      await expect(
+        f.teams.showMessageNotification({
+          teamName,
+          teamDisplayName: 'Team',
+          from: 'alice',
+          body: 'Message',
+          target: { kind: 'team', teamName: hostTeamSelectionKey('TEST-original') },
+        })
+      ).rejects.toThrow('Invalid captured Host notification');
     }
-    await expect(f.teams.showMessageNotification({
-      teamName: 'host-team:%', teamDisplayName: 'Team', from: 'alice', body: 'Message',
-    })).rejects.toThrow(URIError);
-    await expect(Reflect.apply(f.teams.showMessageNotification, f.teams, [{
-      teamName: hostTeamSelectionKey('TEST-original'),
-    }])).rejects.toThrow('Invalid captured Host notification');
+    await expect(
+      f.teams.showMessageNotification({
+        teamName: 'host-team:%',
+        teamDisplayName: 'Team',
+        from: 'alice',
+        body: 'Message',
+      })
+    ).rejects.toThrow(URIError);
+    await expect(
+      Reflect.apply(f.teams.showMessageNotification, f.teams, [
+        {
+          teamName: hostTeamSelectionKey('TEST-original'),
+        },
+      ])
+    ).rejects.toThrow('Invalid captured Host notification');
     expect(f.legacy.showMessageNotification).not.toHaveBeenCalled();
     expect(f.backend.getConnections).not.toHaveBeenCalled();
     expect(f.backend.invoke).not.toHaveBeenCalled();

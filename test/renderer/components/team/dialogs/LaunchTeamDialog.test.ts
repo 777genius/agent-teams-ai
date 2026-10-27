@@ -4,6 +4,7 @@ import { webcrypto } from 'node:crypto';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { __resetRetainedCreateSubmissionForTests } from '@renderer/components/team/dialogs/retainedCreateSubmission';
 import { invalidateContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -2800,6 +2801,8 @@ describe('LaunchTeamDialog', () => {
   );
 
   beforeEach(() => {
+    // Each case creates a fresh mock application; actual dialog unmounts within a case retain intent.
+    __resetRetainedCreateSubmissionForTests();
     vi.mocked(api.agentBackend.getConnections)
       .mockReset()
       .mockResolvedValue({
