@@ -1407,3 +1407,141 @@ The helper and newly relied existing Task identity/Trash/themed-confirmation
 sources are explicitly pinned. Original backend glue retains its existing style;
 no broad reformat is applied. This is static preparation only: original Desktop
 execution/receipt/visual review on the final combined head remains required.
+
+
+## Final combined source qualification started
+
+The clean local and pushed candidate is
+`3d08bc7f120d0405d442a2c99e48212b996b773f`, with the frozen incorporated main
+`7eb878f88af355334547ab526034ca1c2bf961ab`. GitHub confirms the PR remains Draft
+and mergeable. Each preceding implementation/test commit was pushed immediately.
+
+Root dispatched exactly one [full workflow and ten existing source Desktop
+variants](https://github.com/777genius/agent-teams-ai/actions/runs/40592072465)
+at **27 October 2026, 22:05:31 UTC**, with `stage1_desktop=true`, after confirming
+that local HEAD and the remote PR head match and the working tree is clean.
+This run is initially pending; no new canonical or native/UI PASS is inferred
+from its dispatch. Original receipts will be evaluated at this exact candidate.
+
+The final integrated static review combines the independent holistic backend,
+renderer and cross-layer reviews with actual-code reviews of the later Task
+Trash read, captured-lead notification, passive readiness diagnostic and original
+F08/Trash UI continuations. The small alias-free test adaptation and mechanical
+Trash-helper split were separately accepted; the accepted function body was
+retained exactly, and the preceding board helper was restored byte-for-byte.
+No new source-size exception, native count waiver, readiness bypass or retry
+was introduced. Static ACCEPT does not replace the running qualification.
+
+The remaining F08 literal variants are evidence gaps with unresolved harness
+ordering/routing, distinct from the unavailable recorded M17 packed tuple and
+the original M19 custody obligation. Current M13 selected supported behavioral
+proofs remain accepted in combination as specified by the matrix; individual
+historical partial receipts do not introduce a new universal tool-attribution
+requirement. The final candidate still needs its current-head gates and review.
+
+
+## Combined qualification: observed failures and bounded follow-up
+
+On exact source candidate `3d08bc7f120d0405d442a2c99e48212b996b773f`, run
+[40592072465](https://github.com/777genius/agent-teams-ai/actions/runs/40592072465)
+passed full validation, all three lint shards and root test shards 1 and 4.
+Root shard 2 reports 6063 passed, 31 skipped and two failures; shard 3 reports
+5772 passed, 17 skipped and one failure. Shard 1 reports 5806 passed/26 skipped;
+shard 4 reports 6217 passed/18 skipped. Workspace and CI-script checks run in
+shard 1 also passed. These are exact run outcomes, not a green aggregate.
+
+Two failures are stale TEST receipts in the Desktop subprocess and HTTP route
+fixtures. They omit the original command fields and canonical `effects.taskId`
+required by the F01 projection. Both independent critics and root confirmed the
+production hold/unknown response is correct. The two fixtures now retain the
+incoming original command and matching effect identity; all existing assertions
+are unchanged. One bounded run of both suites passes **17/17**. No production
+receipt validation, routing, retry or timeout is weakened.
+
+The third failure is the packaged MCP invalid-contract fixture's cleanup:
+`OwnershipDebtError` in the strict signal census supersedes the tools/list error.
+The harness closes stdin before beginning the same immediate owned termination.
+Independent critics accepted moving that existing close into cleanup's finally,
+preserving strict ownership, deadlines, debt reporting and sandbox retention.
+The retained log does not prove PID 8860's kernel transition; EOF retirement is
+an inferred mechanism, not an observed ownership release. No keepalive fixture,
+blind PID signal or acceptance waiver is introduced.
+
+The Desktop Resume variant still fails before its initial Launch: the original
+button remains disabled and no business input is submitted. Its raw receipt is
+`c443dd688622030207edb440dfea764303f7370fefcce0c8234f962897f5f1a0`
+(artifact `12775061479`). Both original probe IDs/fingerprints agree with the
+captured source; Opus/medium is completed and still has approximately 58 seconds
+of TTL at the failed snapshot. Sonnet/low is cancelled. The passive inspector
+could not find the component, so its empty arrays prove no component state.
+Commit `a4d5e5a6a82c97d773d3aac655b0671908d4589e` adds bounded ancestor evidence
+and distinct unavailable reasons while retaining unique current-root selection.
+Independent actual review, strict scripts TypeScript and embedded-expression
+syntax checks pass. No readiness guard, catalog fallback or Launch budget changes.
+
+The new Taskboard receipt
+`52af657df3a5265605bc5f6cfd247e8acced4c7d7c05c4be4fb28ab16f37b203`
+(artifact `12775436361`) reports PASS for the original board/group association,
+review cycle, notifications, cross-Team controls and bounded F08 continuation.
+The same-A feed has sequence 20 and the newer snapshot 21 in the same stream.
+The overall receipt remains **INCOMPLETE**: the appended Trash continuation
+scrolls the original completed Task into view, then tries the now-offscreen
+search field. The retained screenshot and last wheel event confirm this ordering
+problem before Delete. The narrow TEST correction scrolls the existing search
+into view before focus/Escape, then returns to and re-verifies the same original
+card. Independent actual review accepts the change; no mutation is retried and
+all identity, receipt-count and peer-preservation oracles remain intact.
+
+Other completed receipts on this candidate are independently scoped:
+
+| Existing flow | Artifact | Original receipt SHA-256 | Observed outcome |
+| --- | --- | --- | --- |
+| Native Create | 12774952700 | `5dfd4515a1ab855fbc84b6037218535d90c48c327a1e13826aea4d1583627741` | PASS; native tools/Task/Stop/reload; final app cleanup uses SIGTERM. |
+| Native persistent teammate | 12774542352 | `076f9ec4cb62734add41adbe612d20b4f95c940dd4a12201ecfb7cc693a3c66a` | PASS; original creation/lookup, addressed peer work and roster reminder once, Stop/reload; final app cleanup uses SIGTERM. |
+| Saved legacy import only | 12773744543 | `7ed2e7854bee6b6c8061e5fd214491c3e73e35f17926a5199d658f88aa4eabcb` | PASS for never-launched draft, original import/readback, attachments/ref navigation, no Launch Submit or native input; broader historical imports excluded. |
+| Active input Quit | 12775505336 | `123f336dc362051c6de7e6ac76dddb662c24401d9f30a3c332cb696e1197e831` | PASS; two original Composer submissions, one native observation, closed-released/no debt, children absent, writer released, empty original group and natural app exit 0. |
+| Same-owner cold readback | 12775505336 | `9e8b50c64c1da318a4df59d521e3337c942a36811e396ffa6c67975909c7583c` | PASS; session/product unchanged through second Quit, no new provider allocation, natural app exit 0. |
+
+The active-Quit and cold-readback receipts retain no post-Quit sentinel invocation
+or refused invocation. They do not discharge original M19 custody. Remaining
+Desktop and Windows jobs were still running when this checkpoint was appended;
+no new current-head or full Stage 1 qualification is asserted.
+
+
+### Independent inspection of the new Taskboard records
+
+A separate critic verified the original Taskboard receipt hash, the identical
+embedded/separate F08 proof, canonical Group receipt/registry and the retained
+Create effect. The original Group filter, one UI Create and renderer reload
+retain the same group ID and exact Task identities. All eight F08 read records
+have one physical call and matching result JSON/SHA-256. The source census adds
+exactly one completed original Comment receipt (23 receipts versus 22 before).
+Same-A data/cache remain equal after the stale feed; the late public observer
+finishes four reads with the Comment and no error/pending read. All interceptors
+are restored. These bounded subproofs are accepted despite the later Trash failure.
+
+The A-to-B record is a real A `getData` with a stack through
+`taskDetailReadAuthority`; it does not uniquely establish a selected-store refresh
+invocation. The before/after B data/cache are equal and no rollback is observed.
+Likewise, the first matching newer A snapshot is not uniquely correlated to the
+explicit read. Peer preservation is JSON object equality, not independently
+retained pre/post raw-byte equality. No stronger selected-store, first-global-race
+or whole-F08 claim follows. This evidence review does not provide visual signoff.
+
+The accepted Trash scroll correction is pushed as
+`141c5fa1b3eab4b90ee3b6b65b0357fcb29befc9`; the exact TEST receipt corrections
+are pushed as `2dc1bcfd192c7fa47bdfb599a25391edec3a29e6`.
+The packaged MCP ordering correction has now passed the unchanged existing
+**37/37** smoke tests, including strict ownership debt and escaped-child cases,
+and independent actual-code review. It introduces no fake keepalive.
+
+The same original CI run additionally passed Windows ledger smoke and the
+captured-stopped-solo import/native Launch flow. Its artifact `12774658683`
+contains original receipt SHA-256
+`b3c6103842e97c15bdac4ec03dbfc8686684919219c1b63d633ba7693625eea3`.
+This proves the synthetic legacy product/run source plus actual captured source
+child Stop, original import, fresh target SDK/CLI task/Bash/reply and Stop/reload.
+It retains the full saved settings, including explicit local-model opt-out.
+It does not qualify arbitrary historical legacy sources; final app cleanup is
+SIGTERM, not a natural-exit proof. The generic outer cleanup note about provider
+configuration is not used to override this flow's actual native-session evidence.
