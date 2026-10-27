@@ -1,7 +1,7 @@
 import { WorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
 import { isMissingDirectory } from '@main/utils/directoryPresence';
 import { execCliWithOpenCodeRecovery as execCli } from '@main/utils/openCodeNodeModulesJunction';
-import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
+import { resolveInteractiveShellEnvBestEffort, waitForPendingShellEnv } from '@main/utils/shellEnv';
 import { createLogger } from '@shared/utils/logger';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import { mkdtemp, readFile, rm } from 'fs/promises';
@@ -19,6 +19,7 @@ import {
   markProviderCatalogRefreshFailed,
 } from './providerCatalogAuthority';
 import { providerConnectionService } from './ProviderConnectionService';
+import { shouldResolveAnthropicShellEnv } from './providerRuntimeEnv';
 import {
   applyProviderStatusCheck,
   createDefaultProviderStatus,
@@ -1268,6 +1269,15 @@ export class ClaudeMultimodelBridgeService {
     if (existing) return existing;
 
     const request = (async () => {
+      if (shouldResolveAnthropicShellEnv(providerId)) {
+        await resolveInteractiveShellEnvBestEffort({
+          source: 'provider-status:anthropic',
+          timeoutMs: 1_500,
+          fallbackEnv: process.env,
+        });
+        // Catalog hydration can finish discovery in the background after the bounded summary.
+        if (options.summary !== true) await waitForPendingShellEnv();
+      }
       const { env: passiveEnv, connectionIssues } = buildPassiveProviderStatusCliEnv({
         binaryPath,
         providerId,
@@ -1878,12 +1888,6 @@ export class ClaudeMultimodelBridgeService {
     binaryPath: string,
     onUpdate?: ProviderStatusesObserver
   ): Promise<CliProviderStatus[]> {
-    await resolveInteractiveShellEnvBestEffort({
-      timeoutMs: 1_500,
-      fallbackEnv: process.env,
-      background: false,
-    });
-
     const generation = this.beginProviderStatusHydration(binaryPath, DEFAULT_PROVIDER_STATUS_IDS);
     let catalogHydrationOwnsGenerationCleanup = false;
     try {

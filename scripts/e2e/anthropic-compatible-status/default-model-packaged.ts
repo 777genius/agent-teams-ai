@@ -274,6 +274,12 @@ try {
     CLAUDE_CONFIG_DIR: path.join(data.home, '.claude'),
   });
   await mkdir(env.CLAUDE_CONFIG_DIR!, { recursive: true });
+  // English UI assertions must be independent of the runner's system locale.
+  await writeFile(
+    path.join(env.CLAUDE_CONFIG_DIR!, 'agent-teams-config.json'),
+    JSON.stringify({ general: { appLocale: 'en' } }),
+    { flag: 'wx' }
+  );
   assert.deepEqual(
     Object.keys(env)
       .filter((key) => key.startsWith('ANTHROPIC_'))
@@ -379,6 +385,12 @@ try {
     'native services'
   );
   assert(startup.ready && !startup.error, redact(startup.error));
+  assert.equal(
+    await cdp.evaluate<string>('window.electronAPI.config.get().then(c => c.general.appLocale)'),
+    'en',
+    'The isolated app must load its explicit English UI locale'
+  );
+  await cdp.wait('document.documentElement.lang === "en"', 'English renderer locale');
   const discovery = await cdp.evaluate<{ installed: boolean; launchError?: string }>(
     'window.electronAPI.cliInstaller.getStatus({providerStatusMode:"defer"})'
   );
@@ -431,6 +443,16 @@ try {
     'fresh-diagnostic'
   );
   const label = `Default - ${configuredDefault}`;
+  const labelLiteral = JSON.stringify(label).replace(
+    /[<>&\u2028\u2029]/g,
+    (character) => '\\u' + character.charCodeAt(0).toString(16).padStart(4, '0')
+  );
+  // The option renders Default and its model in separate spans; its accessible name is stable.
+  const inheritedDefaultOption = `[...document.querySelectorAll('[data-testid=team-model-selector-model-option]')].find(e => {
+    const label = ${labelLiteral};
+    const name = e.getAttribute('aria-label');
+    return name === label || name?.startsWith(label + '. ');
+  })`;
   const selections = [];
   for (const limitContext of [false, true]) {
     const before = await scopedPreflightCount();
@@ -451,23 +473,20 @@ try {
       `document.querySelector('#lead-limit-context')?.getAttribute('aria-checked') === '${limitContext}'`,
       'context state'
     );
-    await cdp.wait(
-      `Boolean([...document.querySelectorAll('[data-testid=team-model-selector-model-option]')].find(e => e.textContent.trim() === ${JSON.stringify(label)}))`,
-      'exact inherited Default option'
-    );
+    await cdp.wait(`Boolean(${inheritedDefaultOption})`, 'exact inherited Default option');
     const option: { text: string; aria: string; pressed: string } = await cdp.evaluate(
-      `(() => { const e=[...document.querySelectorAll('[data-testid=team-model-selector-model-option]')].find(e => e.textContent.trim() === ${JSON.stringify(label)}); return {text:e.textContent.trim(),aria:e.getAttribute('aria-label'),pressed:e.getAttribute('aria-pressed')}; })()`
+      `(() => { const e=${inheritedDefaultOption}; return {text:e.textContent.trim(),aria:e.getAttribute('aria-label'),pressed:e.getAttribute('aria-pressed')}; })()`
     );
-    assert.equal(option.text, label);
+    assert.equal(option.text.replace(/\s+/g, ''), `Default${configuredDefault}`);
     assert.equal(option.pressed, 'true', 'Inherited Default must remain the selected value');
-    assert(option.aria.includes(label));
+    assert(option.aria === label || option.aria.startsWith(`${label}. `));
     await cdp.clickElement(leadTrigger);
     await cdp.wait(
       '!document.querySelector("#lead-limit-context")',
       'collapsed lead model controls'
     );
     await cdp.wait(
-      `${leadTrigger}?.getAttribute('aria-label')?.includes(${JSON.stringify(label)})`,
+      `${leadTrigger}?.getAttribute('aria-label')?.includes(${labelLiteral})`,
       'collapsed inherited accessible name'
     );
     const trigger: { text: string; aria: string } = await cdp.evaluate(
