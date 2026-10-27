@@ -1545,3 +1545,58 @@ It retains the full saved settings, including explicit local-model opt-out.
 It does not qualify arbitrary historical legacy sources; final app cleanup is
 SIGTERM, not a natural-exit proof. The generic outer cleanup note about provider
 configuration is not used to override this flow's actual native-session evidence.
+
+
+## Exact source run completed: 7 of 10 Desktop variants passed
+
+Run [40592072465](https://github.com/777genius/agent-teams-ai/actions/runs/40592072465)
+has now completed on `3d08bc7f120d0405d442a2c99e48212b996b773f`: overall
+**FAILURE**, with seven Desktop variants passing and three failing. The three
+root-test failures and Task Trash ordering correction described above are fixed
+in subsequent pushed commits; this does not rewrite the failed run. The packaged
+MCP correction is pushed as `f680b27aee4b06826d85b458462c845ea777d63e` and the
+reviewed interim evidence as `a0aafd3fbb3817370c38286467ac23535586e732`.
+At that checkpoint the working tree was clean and GitHub confirmed Draft,
+MERGEABLE and unchanged incorporated base `7eb878f88af355334547ab526034ca1c2bf961ab`.
+
+The mixed Create/Launch artifact `12776140371` retains original receipt SHA-256
+`d7002a2ed91da6de70135e125a39c9fed41b2549021f2044c2f19c659ad0d106`.
+Original save-only Create, Edit/Save/reload, Launch hydration/reopen and one
+three-member capture succeeded. The all-three-owned allocation oracle correctly
+fails: Claude and Codex reached owned/ready, but Carol's original OpenCode attempt
+remains held/unknown (`open-unknown`), never allocated/ready in its retained events.
+The original lead input produced its reply; the subsequent two Composer inputs,
+group/restart and Stop/readback workflow were not reached. The failure screenshot
+shows Carol still starting. No retry, substitute capture, longer timeout or
+ownership waiver is used. Root and independent critics are investigating the
+original failed OpenCode open; the source run is not full mixed acceptance.
+
+The last successful native-review artifact is `12775917002`. Source receipt
+`21ff2851032e1c630cab97cb7c877864dbe9adb13e32ee2646e59045dc93ebd6` retains the
+original Task Start and native input, two exact foreground Edit transforms,
+original Changes Keep/Reject/Undo/Redo/history, Stop and renderer reload. Its
+failed-hook/background tuple remains explicitly partial, with no unsafe promotion;
+this single receipt does not replace the matrix's selected combined M13 evidence.
+The cold receipt
+`96015b2614d85dc91e7b6957af61ef9c363b9714c3703c2201b8bfbdf9b2c750`
+references that exact source hash, replays zero native inputs, allocates zero
+native sessions and preserves runtime, events, decisions and exact mixed file
+bytes. Source final app cleanup is SIGTERM; cold readback exits naturally with 0.
+
+Pending-open Quit/cold artifact `12774679064` also passed, with source receipt
+`bf3223ba55f6c7771d980bfefd15faab011e87c9c1cf3c22a97cf81cac223ffe` and cold
+receipt `0212a4f4a8d187e29054258a99ff6ad3960584c1a525ff9511dc3501eddfb1d1`.
+It submits zero native inputs, retains held/unknown custody and debt despite
+physical child/group absence and released writer lock, and preserves the same
+session/product through cold readback and second Quit. Both apps exit naturally
+with 0. The source epoch records two allowed late sentinel invocations (shell-env
+and OpenCode version); the cold epoch records none. No refused invocation is
+recorded, and no fork-free or original M19 release claim follows.
+
+Root additionally inspected the original Taskboard reload, approved-Task and
+cross-Team reply screenshots. They visibly retain the expected Team/Task labels,
+assigned/review states and two cross-Team messages. The cross-Team capture still
+shows a loading Task card; this is visual corroboration of those visible controls,
+not a settled-board or broader visual qualification. The earlier Trash failure
+image shows the original card below the offscreen search header, matching the
+accepted scroll-order correction.
