@@ -97,7 +97,7 @@ export function desktopF08ReadFaultExpression(handleId: string, selection: strin
     const selected=()=>{const s=state();return {team:s.selectedTeamName,dataTeam:s.selectedTeamData?.teamName??null,
       loading:s.selectedTeamLoading,nonce:s.selectedTeamLoadNonce,contextId:s.activeContextId};};
     const f={records:[],ignored:[],events:[],observerReads:[],observerErrors:[],transitions:[],pendingObserverReads:0,
-      holdArmed:false,staleArmed:false,newerSnapshotArmed:false,stalePending:false,lossArmed:false,gapArmed:false,recoveryPending:false,observerInstalledAfterMutation:false,releases:[],original,backend,selected,
+      holdArmed:false,staleArmed:false,staleProductArmed:false,stalePending:false,lossArmed:false,gapArmed:false,recoveryPending:false,observerInstalledAfterMutation:false,releases:[],original,backend,selected,
       selection:${desktopJsLiteral(selection)},handleId:${desktopJsLiteral(handleId)},priorNonce:null,watchTarget:null,violations:[]};
     window.__TEST_f08=f;
     const stopStore=window.__agentTeamsDevStore.subscribe(()=>{
@@ -113,8 +113,14 @@ export function desktopF08ReadFaultExpression(handleId: string, selection: strin
         if(provenance){kind='selected-snapshot-hold';f.holdArmed=false;}
         else if(f.ignored.length<8)f.ignored.push({request:structuredClone(request),stack,selected:before});
       }
-      if(!kind&&same&&request.operation==='team.snapshot'&&f.newerSnapshotArmed&&/getData/.test(stack)&&before.team===f.selection&&!before.loading){
-        kind='same-A-newer-snapshot';f.newerSnapshotArmed=false;
+      const callers=['TEST_F08_originalStaleProductRead','TEST_F08_originalNewerProductRead'];
+      const caller=callers.find(name=>stack.includes('at async '+name+' (')||stack.includes('at '+name+' ('));
+      if(!kind&&same&&request.operation==='team.snapshot'&&caller){
+        if(before.team!==f.selection||before.loading||typeof request.commandId!=='string')throw Error('F08 explicit read scope changed');
+        kind=caller===callers[0]?'same-A-stale-product-snapshot':'same-A-newer-snapshot';
+        if(kind==='same-A-stale-product-snapshot'&&!f.staleProductArmed)throw Error('F08 stale product read not armed');
+        if(f.records.some(record=>record.kind===kind||record.request.commandId===request.commandId))throw Error('F08 duplicate explicit product read');
+        f.staleProductArmed=false;
       }
       if(same&&request.operation==='team.changes.read'&&shared){
         if(f.staleArmed){kind='same-A-stale-feed';f.staleArmed=false;}
@@ -132,13 +138,13 @@ export function desktopF08ReadFaultExpression(handleId: string, selection: strin
         if(typeof request.payload?.cursor!=='string')throw Error('F08 expected the actual retained cursor');
         sent={...request,payload:{...request.payload}};delete sent.payload.cursor;
       }
-      const record=kind?{kind,request:structuredClone(request),sent:structuredClone(sent),stack,selected:before,priorNonce:f.priorNonce,physicalCalls:0,status:'dispatched'}:null;
+      const record=kind?{kind,caller:caller??null,request:structuredClone(request),sent:structuredClone(sent),stack,selected:before,priorNonce:f.priorNonce,physicalCalls:0,status:'dispatched'}:null;
       if(record)f.records.push(record);
       if(record)record.physicalCalls++;
       const result=await Reflect.apply(original,backend,[sent]);
       if(!record)return result;
       record.result=result;record.resultJson=JSON.stringify(result);record.status='received';
-      if(kind==='selected-snapshot-hold'||kind==='same-A-stale-feed'||kind==='shared-feed-response-loss'){
+      if(kind==='selected-snapshot-hold'||kind==='same-A-stale-feed'||kind==='same-A-stale-product-snapshot'||kind==='shared-feed-response-loss'){
         record.status='held';await new Promise(resolve=>{record.release=resolve;f.releases.push(resolve);});
         if(record.result!==result||record.resultJson!==JSON.stringify(result))throw Error('F08 original read result changed');
         if(kind==='shared-feed-response-loss'){
@@ -221,10 +227,10 @@ export async function runDesktopF08ReadTimingProof(
   const proof: Record<string, unknown> = {
     status: 'INCOMPLETE',
     scope:
-      'Same actual Electron shared adapter: one original Task comment, same-A old feed delivered unchanged after newer real snapshot acceptance, real read response loss, actual Host cursor gap and late public observer resync; separate original selected-Team read held across original target navigation',
+      'Same actual Electron shared adapter: one original Task comment, uniquely named public getData product snapshot refused across its mutation boundary, same-A old feed delivered unchanged after newer real snapshot acceptance, real read response loss, actual Host cursor gap and late public observer resync; separate original selected-Team read held across original target navigation',
     excluded: [
       'first global snapshot-subscription race',
-      'stale same-Team product snapshot across an in-flight mutation',
+      'stale original teamSlice refresh response across an in-flight mutation',
       'transport reconnect or Host restart',
       'live default-owner switch',
       'unavailable A physical fault',
@@ -274,7 +280,32 @@ export async function runDesktopF08ReadTimingProof(
         'actual original Task comment owner/surface'
       )
     );
-    // Keep this original mounted surface through stale delivery: no observer epoch change.
+    // A direct original API read owns no TeamDataReadWork slot: the UI refresh cannot join it.
+    await cdp.evaluate(`(async()=>{const {api}=await import('/api/index.ts'),f=window.__TEST_f08;
+      f.staleProductArmed=true;
+      f.staleProductPromise=(async function TEST_F08_originalStaleProductRead(){
+        return await api.teams.getData(f.selection);
+      })().then(value=>{f.staleProductOutcome={status:'unexpected-success',value};},error=>{
+        f.staleProductOutcome={status:'rejected',message:error instanceof Error?error.message:String(error)};
+      });return true;})()`);
+    const staleProduct = row(
+      await ui.waitRead(
+        fault('same-A-stale-product-snapshot', 'held'),
+        'uniquely named original API product snapshot held before the one Comment'
+      )
+    );
+    assert.equal(staleProduct.physicalCalls, 1);
+    assert.equal(staleProduct.caller, 'TEST_F08_originalStaleProductRead');
+    assert.deepEqual(row(staleProduct.request).handle, { handleId: options.handleId });
+    assert.equal(row(staleProduct.request).operation, 'team.snapshot');
+    assert.equal(row(staleProduct.result).ok, true);
+    const staleProductData = row(row(staleProduct.result).value);
+    const staleProductTask = (staleProductData.tasks as unknown[])
+      .map(row)
+      .find((task) => task.id === options.seed.taskId);
+    assert.ok(staleProductTask);
+    assert.deepEqual(comments(staleProductTask), comments(originalTask));
+    // Keep this original mounted surface through both stale deliveries: no observer epoch change.
     await cdp.evaluate('window.__TEST_f08.staleArmed=true;true');
     const stale = row(
       await ui.waitRead(
@@ -326,10 +357,23 @@ export async function runDesktopF08ReadTimingProof(
       return !isTeamDataRefreshPending(${desktopJsLiteral(selection)},window.__agentTeamsDevStore.getState);})()`,
       'original comment refresh settles before the readonly newer snapshot'
     );
+    const sourceView = `(() => {const s=window.__agentTeamsDevStore.getState();return {selected:s.selectedTeamName,
+      data:s.selectedTeamData,cache:s.teamDataCacheByName[${desktopJsLiteral(selection)}]};})()`;
+    const publishedAfterComment = row(await cdp.evaluate(sourceView));
+    assert.equal(publishedAfterComment.selected, selection);
+    for (const snapshot of [row(publishedAfterComment.data), row(publishedAfterComment.cache)]) {
+      assert.equal(snapshot.teamName, selection);
+      const task = (snapshot.tasks as unknown[])
+        .map(row)
+        .find((entry) => entry.id === options.seed.taskId);
+      assert.ok(task);
+      assert.equal(comments(task).filter((comment) => comment.text === text).length, 1);
+    }
+    proof.publishedByOriginalCommentRefresh = publishedAfterComment;
     const newerData = row(
       await cdp.evaluate(`(async()=>{const {api}=await import('/api/index.ts');
       const f=window.__TEST_f08;if(f.stopObserver||f.observerInstalledAfterMutation)throw Error('F08 observer epoch changed before stale delivery');
-      f.newerSnapshotArmed=true;return api.teams.getData(${desktopJsLiteral(selection)});})()`)
+      return await (async function TEST_F08_originalNewerProductRead(){return await api.teams.getData(f.selection);})();})()`)
     );
     const newer = row(
       await ui.waitRead(
@@ -338,6 +382,10 @@ export async function runDesktopF08ReadTimingProof(
       )
     );
     assert.equal(row(newer.result).ok, true);
+    assert.equal(newer.caller, 'TEST_F08_originalNewerProductRead');
+    assert.equal(newer.physicalCalls, 1);
+    assert.deepEqual(row(newer.request).handle, { handleId: options.handleId });
+    assert.notEqual(row(newer.request).commandId, row(staleProduct.request).commandId);
     const newerPosition = row(row(row(newer.result).value).feed);
     assert.equal(
       newerPosition.streamId,
@@ -355,8 +403,6 @@ export async function runDesktopF08ReadTimingProof(
       .find((task) => task.id === options.seed.taskId);
     assert.ok(newerTask);
     assert.equal(comments(newerTask).filter((comment) => comment.text === text).length, 1);
-    const sourceView = `(() => {const s=window.__agentTeamsDevStore.getState();return {selected:s.selectedTeamName,
-      data:s.selectedTeamData,cache:s.teamDataCacheByName[${desktopJsLiteral(selection)}]};})()`;
     const beforeStale = row(await cdp.evaluate(sourceView));
     assert.equal(beforeStale.selected, selection);
     for (const snapshot of [row(beforeStale.data), row(beforeStale.cache)]) {
@@ -367,6 +413,40 @@ export async function runDesktopF08ReadTimingProof(
       assert.ok(task);
       assert.equal(comments(task).filter((comment) => comment.text === text).length, 1);
     }
+    const staleProductPosition = row(staleProductData.feed);
+    assert.equal(staleProductPosition.streamId, newerPosition.streamId);
+    assert.ok(Number(newerPosition.sequence) > Number(staleProductPosition.sequence));
+    await cdp.evaluate(
+      `window.__TEST_f08.records.find(record=>record.kind==='same-A-stale-product-snapshot').release();true`
+    );
+    const staleProductOutcome = await ui.waitRead(
+      `window.__TEST_f08.staleProductOutcome`,
+      'original stale public getData settles after returning its unchanged physical snapshot'
+    );
+    assert.deepEqual(staleProductOutcome, {
+      status: 'rejected',
+      message: 'Host read crossed a mutation boundary',
+    });
+    assert.deepEqual(
+      await cdp.evaluate(sourceView),
+      beforeStale,
+      'stale product read rejection cannot roll back original UI refresh publication'
+    );
+    const surfaceAfterProduct = row(
+      await ui.waitRead(sameSurface, 'same original Task surface survives stale product rejection')
+    );
+    assert.equal(surfaceAfterProduct.surfaceId, input.surfaceId);
+    proof.sameAStaleProductSnapshot = {
+      stalePosition: staleProductPosition,
+      newerPosition,
+      staleCommandId: row(staleProduct.request).commandId,
+      newerCommandId: row(newer.request).commandId,
+      outcome: staleProductOutcome,
+      publishedAfterComment,
+      afterRejection: beforeStale,
+      scope:
+        'Direct original public getData crossing the original UI Comment; not a teamSlice deduplicated read response',
+    };
     const epochBeforeRelease = row(
       await cdp.evaluate(`(() => {const f=window.__TEST_f08;
       const observed={diagnosticObserverInstalled:f.observerInstalledAfterMutation,hasObserver:Boolean(f.stopObserver)};
@@ -421,7 +501,7 @@ export async function runDesktopF08ReadTimingProof(
       surfaceId: input.surfaceId,
       commentCommandId: sameAAdded[0]!.commandId,
       scope:
-        'Original same-A shared feed after newer real snapshot acceptance; no stale product snapshot or first-global-subscription qualification',
+        'Original same-A shared feed after newer real snapshot acceptance; separate direct public stale-product refusal, no first-global-subscription qualification',
     };
     await ui.click(
       '[role="dialog"] button',
@@ -617,7 +697,7 @@ export async function runDesktopF08ReadTimingProof(
   } finally {
     if (installed) {
       const retained = row(
-        await cdp.evaluate(`(() => {const f=window.__TEST_f08;f.restore();return {restored:f.restored,
+        await cdp.evaluate(`(async () => {const f=window.__TEST_f08;f.restore();if(f.staleProductPromise)await f.staleProductPromise;return {restored:f.restored,staleProductOutcome:f.staleProductOutcome,
         records:f.records.map(({release,...record})=>record),ignored:f.ignored,events:f.events,observerReads:f.observerReads,
         observerErrors:f.observerErrors,transitions:f.transitions,violations:f.violations,pendingObserverReads:f.pendingObserverReads};})()`)
       );
