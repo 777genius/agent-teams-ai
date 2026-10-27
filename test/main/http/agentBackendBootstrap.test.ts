@@ -78,7 +78,11 @@ function setup(originalScope?: HttpAgentBackendScope) {
         value: {
           commandId: request.commandId,
           phase: 'completed',
-          command: { operation: 'task.create' },
+          command: {
+            commandId: request.commandId,
+            ...(request.payload as { operation: string; payload: JsonValue }),
+          },
+          effects: { taskId: 'TEST-created' },
           result: { id: 'TEST-created', status: 'pending', subject: 'TEST create' },
         },
       };

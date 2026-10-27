@@ -89,7 +89,7 @@ async function fixture(blockStartup = false): Promise<{
       const server = createHostServer({ input: process.stdin, output: process.stdout, buildId:'TEST-desktop-v1', methods: {
         'team.execute': { lane:'work', handle: (request) => {
           appendFileSync(${JSON.stringify(join(storageRoot, 'effects'))}, request.commandId+'\\n');
-          return {ok:true,value:{commandId:request.commandId,phase:'completed',command:{operation:request.payload.operation},result:{id:'task-1',status:'pending',subject:${JSON.stringify(ownerId)}}}};
+          return {ok:true,value:{commandId:request.commandId,phase:'completed',command:{commandId:request.commandId,...request.payload},effects:{taskId:'task-1'},result:{id:'task-1',status:'pending',subject:${JSON.stringify(ownerId)}}}};
         }},
         'team.crossTeam.send': { lane:'work', handle: (request) => {
           appendFileSync(${JSON.stringify(join(storageRoot, 'pair-effects'))}, JSON.stringify(request)+'\\n');
