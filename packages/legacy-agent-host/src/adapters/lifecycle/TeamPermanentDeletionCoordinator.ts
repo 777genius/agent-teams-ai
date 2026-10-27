@@ -23,6 +23,7 @@ import {
   assertSafeTeamName,
   BackupPublicationFencedError,
   isExactDurablePathIdentity,
+  isValidPermanentDeletionConfig,
   PERMANENT_DELETION_TARGETS,
   type PermanentDeletionTarget,
   type PermanentDeletionTargetRemovalProof,
@@ -37,15 +38,6 @@ export type { TeamPermanentDeletionCoordinatorPorts } from './permanentDeletionP
 
 function isEnoent(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === 'ENOENT';
-}
-
-function isValidConfig(content: string): boolean {
-  try {
-    const parsed = JSON.parse(content) as Record<string, unknown>;
-    return typeof parsed.name === 'string' && parsed.name.trim() !== '';
-  } catch {
-    return false;
-  }
 }
 
 function nowIso(): string {
@@ -68,6 +60,7 @@ export class TeamPermanentDeletionCoordinator {
     isRestoreReady: (name) => isTeamWorkSyncRestoreReady(name, this.ports, this.roots.backups),
     observePriorIdentity: (name) => observeTeamWorkSyncPriorIdentity(name, this.ports, this.roots.backups),
     claimMarker: (name, id) => this.identity.claimIdentityMarker(name, id, true),
+    sourceWriteAdmissionPolicy: () => ports.sourceWriteAdmissionPolicy?.(),
   }, this.roots.teams);
   }
 
@@ -369,7 +362,7 @@ export class TeamPermanentDeletionCoordinator {
     const configPath = path.join(this.roots.teams, teamName, 'config.json');
     try {
       const raw = await fs.promises.readFile(configPath, 'utf8');
-      if (!isValidConfig(raw)) {
+      if (!isValidPermanentDeletionConfig(raw)) {
         throw new Error(`Team config is not valid: ${teamName}`);
       }
       if (draft) {
@@ -781,10 +774,13 @@ export class TeamPermanentDeletionCoordinator {
   // ── Internal: backup ─────────────────────────────────────────────────
 
   ensureIdentityMarker(teamName: string, identityId: string): Promise<IdentityMarkerOwnership> {
-    return this.identity.claimIdentityMarker(teamName, identityId, false);
+    const admission = this.ports.sourceWriteAdmissionPolicy?.()?.current(teamName);
+    const publish = () => this.identity.claimIdentityMarker(teamName, identityId, false);
+    return admission ? admission.publish(publish) : publish();
   }
 
   claimIdentityMarkerSync(teamName: string, identityId: string): IdentityMarkerOwnership {
+    this.ports.sourceWriteAdmissionPolicy?.()?.current(teamName).assertCurrent();
     return this.identity.claimIdentityMarkerSync(teamName, identityId);
   }
 

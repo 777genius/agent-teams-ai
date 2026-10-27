@@ -159,14 +159,17 @@ function fixture() {
 
 it('preserves original catalog resolution through the existing installer and uses only its captured native target', async () => {
   const f = fixture();
-  configureDesktopBackendPersistence({ configureSelectedHostBackup: vi.fn() }, f.runner());
-  const native = await CapturedNativeExtensions.capture(
-    f.owner,
+  configureDesktopBackendPersistence(
     {
-      panel: 'plugins',
-      scope: 'user',
-    }
+      configureSelectedHostBackup: vi.fn(),
+      withTeamIdentityFence: (_team, operation) => operation(),
+    },
+    f.runner()
   );
+  const native = await CapturedNativeExtensions.capture(f.owner, {
+    panel: 'plugins',
+    scope: 'user',
+  });
   const resolvePlugin = vi.fn(async () => ({
     qualifiedName: 'test@verified-market',
   }));

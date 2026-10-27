@@ -629,3 +629,224 @@ on this changed source remain pending. The finite source list explicitly covers
 the two additionally affected existing regression files; no closure was generated
 from unfinished stopped-source admission work. A whole-working-tree source-size
 PASS is not claimed while that separate work is still in progress.
+
+
+## Holistic review of 7e3ea01: Task intent and group association follow-ups
+
+An additional independent Sol 6.1 xhigh critic reviewed the committed
+`7e3ea01aa2bcb8ad085ba57ae9ecc41da2178bf7` tree separately from the unfinished
+source-admission patch. The review found two concrete existing-workflow gaps:
+
+- Task detail retains a failed comment draft but the Host adapter allocates a
+  new command UUID on every `addTaskComment` call. After a committed response is
+  lost, an unchanged retry can create a second comment and notification. The
+  exact committed adapter reproduced two mutations with two IDs for one unchanged
+  request after UNKNOWN. This is a focused adapter reproduction, not native proof.
+- Original Create Task carries `groupChatId` from a selected group/message, but
+  Host input allowlists, Team task contract and read/result projections omit it.
+  The existing group-origin action is rejected before dispatch. Dropping that
+  field would lose existing product semantics and is not an acceptable fix.
+
+The same review identified `CreateTaskDialog` clearing its pending command ref
+on close/open; root confirmed the source path. Its existing unchanged-submit
+identity works only while that component state survives. The follow-up retains
+original Task create/comment intent through actual unmount and session retirement,
+with original-handle lookup for UNKNOWN and revision-safe preservation of newer
+comment edits. A lookup rejection or missing receipt is not proof that the old
+effect never happened. Existing text/chip draft storage has TTL and memory fallback;
+no renderer-reload durability guarantee or new generic command journal is assumed.
+
+Group association is a separate bounded correction. It must preserve the actual
+legacy semantics: a new association requires a valid UUID and an existing active
+group in the same Team's persisted catalog; missing/foreign/archived groups and
+an absent default group are rejected. A completed original create remains
+replayable after later archive. Contract/projection changes alone do not close
+this gap; existing group-owner admission and original UI qualification are required.
+
+The source-admission unit is still under review. Additional concrete checks cover
+multi-Team queue context, delayed backup/comment continuations, explicit deletion
+compatibility, runtime-turn-settled producers and local inbox publication. An
+independent test author ran **8/8** actual queue/audit consumer regressions with
+real timers, filesystem, JsonStore and FileAudit. Only canonical-release recognition
+was controlled by a mock; these checks are not real Stop/import acceptance. The
+actual canonical-source consumer regression and final integrated/native gates
+remain pending. No import, Task intent or group-association PASS is inferred from
+unfinished code or from the earlier source run.
+
+
+## Stopped-source admission implementation handoff
+
+The source-admission author completed the bounded production unit and handed it
+to an independent backend critic. A positive canonical stopped-source release
+now prevents the observed backup identity, WorkSync store/materialization/replica,
+audit and comment-journal maintenance writes. The existing census and release
+predicate are unchanged. An admitted continuation retains the original selected
+owner/root and physical Team directory; a replacement at the same name does not
+receive that admission. Local publication uses the existing identity fence then
+launch-publication queue, retaining both until the actual physical operation
+settles, including interrupted worker responses and nested publications.
+
+Actual producer paths preserve this restriction before their first delayed work:
+per-item WorkSync queue execution (including coalescing and retry), both startup
+scan facades, runtime target resolution, debounced backup and the whole comment
+notification drain. Only local inbox publication is fenced; provider/network work
+is not moved under these locks. Runtime execution closures are not persisted in
+events or DTOs. Explicit permanent deletion keeps its original authority; the
+maintenance guard is not installed in the shared identity claimant. Existing
+`assertSafeTeamName` preserves Unicode and space compatibility.
+
+The final local qualification is deliberately reported by suite and scope:
+
+| Check | Observed result |
+| --- | --- |
+| Backup suite, including genuine captured-source consumers | 64/64 PASS |
+| Additional actual public startup facade with two ordinary Teams | 1/1 PASS |
+| Source admission core, including physical settlement and name compatibility | 11/11 PASS |
+| Independent actual queue, JsonStore and FileAudit regressions | 8/8 PASS |
+| Runtime admission plus existing resolver/ingestor | 30/30 PASS |
+| Existing WorkSync event queue | 26/26 PASS |
+| Existing TDS comment notification cases selected by name | 5/5 selected cases PASS; other cases skipped by the filter |
+| Host package build on the current worktree | PASS |
+| Scoped fast lint, new/helper/test formatting, size and architecture guards | PASS |
+
+The genuine source test created and stopped a captured TEST child, read the real
+canonical release, then invoked actual backup startup/periodic/shutdown, comment
+initialization and WorkSync startup/events/read/fence consumers. Source bytes and
+the original canonical release remained exact. Controlled storage/backend ports
+are identified in the test; this is not an actual SDK or Desktop import proof.
+Separate cases exercised an already-captured delayed backup after replacement,
+coalesced comment replacement and explicit deletion. Ordinary runtime audit
+entries still capture before their own first await and file chain; an inherited
+retired scope cannot be replaced with a fresh admission.
+
+The adapted native-extension suite did not collect because this local recovered
+tooling lacks `better-sqlite3-node`; no PASS is claimed for that suite. Full
+project typechecking and the actual stopped-source to imported-target native
+Launch remain pending on committed source. Final production caps are 800 lines
+for the WorkSync composition, 795 for its backend-selecting store, 784 for its
+queue and 794 for the deletion coordinator; no baseline exception was raised.
+The independent final review is still pending at this handoff. General historical
+sources with identity metadata already present before Stop and the original M19
+custody HOLD remain separate open qualifications.
+
+## Draft feedback status at 7e3ea01
+
+The PR is still Draft and MERGEABLE against unchanged base
+`7eb878f88af355334547ab526034ca1c2bf961ab`. Automatic Draft CI run
+`40567157944` passed Fast feedback but its Full qualification gate explicitly
+failed with `Draft feedback does not qualify for merge`: canonical validate,
+lint, test and Windows ledger jobs were skipped, and no qualified prior run was
+reused. This is not a current-code full PASS and is not evidence of a failing
+production assertion. An explicit workflow dispatch on the reviewed committed
+candidate is required for the full gates and optional Desktop matrix.
+
+
+### Independent source review: restore and purge blockers
+
+The final backend critic withheld acceptance after tracing two actual existing
+privileged paths through the newly guarded stores. Startup WorkSync restore uses
+the configured real restore participant, whose preflight enters the guarded
+backend store without a maintenance admission. Actual feature permanent-deletion
+purge likewise reaches the guarded JsonStore/replica without that scope. Both
+can throw `Missing original legacy source admission` on ordinary operations.
+The earlier explicit-deletion regression covered `backup.beginPermanentDeletion`
+and did not qualify the later feature purge; the distinction is now explicit.
+
+The source commit remains blocked while these two entrypoints are corrected
+under their existing owner, identity, generation and quiesce fences. Ordinary
+store operations must keep requiring their original admission, with no permissive
+fallback or fresh capture of a replacement directory. Actual configured restore
+participant and actual feature purge regressions are required before re-review.
+The critic accepted the inspected runtime, queue, inbox, debounce, startup and
+read-fence seams without additional findings; this does not override the two
+remaining compatibility blockers or qualify native import.
+
+
+## Group-origin Task association review and local regression closure
+
+The bounded group association unit received independent actual-code ACCEPT. The
+existing group command access supplies a synchronous catalog assertion under the
+same Team store fence as the first Task receipt write. It runs only for a new
+Task command after authority, namespace/conflict and pending-command checks.
+Existing completed, prepared and held receipts retain their original admission;
+current authority is still checked. UUID/missing/foreign/archived and absent
+persisted default groups are refused. Missing synchronous storage capability or
+malformed/unreadable storage retains HOLD. No new message, runtime, membership or
+admin requirement is added to Task association.
+
+The package author ran 8/8 new association cases and 18 existing Team owner/board
+cases successfully, plus Host build and test typechecking. The independent critic
+read those actual filesystem, restart, replay, revoke and continuation tests and
+the original-facade/Main/board regression. Frontend integration execution remains
+a separate gate while its exact UI dependency closure is recovered.
+
+Root resolved the earlier local group-suite interruption without editing product
+code or reducing its test scope. Nine ordinary cases passed in a selected run;
+the separate full-roster case successfully completed its real 256-recipient
+canonical fanout in 68.1 seconds. A subsequent **single original full-file run**
+passed **10/10**, zero skips, in **81.3 seconds** (80.3 seconds in the full-roster
+case), using pinned Node 24.22.1 and the task-owned RAM temporary directory.
+The earlier overlay-backed bounded attempts remain interrupted/unqualified;
+this later run is their successful actual group regression replacement. It is
+worktree/package qualification, not an exact committed-head native/UI proof.
+
+The existing Task board E2E is being extended with one saved offline TEST peer,
+only in its two existing board modes, so the fixture satisfies the real minimum
+of two agents for canonical group creation. The same original seed Task carries
+the group association. Original Group filter and Create Task controls, exact
+receipt/readback and the existing reload are the planned acceptance path. No
+provider/runtime session, extra business Task or alternative harness is added;
+these E2E edits are not yet claimed as tested or accepted.
+
+
+### Restore and purge correction: actual red/green handoff
+
+The source author reproduced all four reported failures with actual configured
+restore and feature purge consumers, then corrected the existing privileged
+entrypoints. Restore preparation still captures ordinary source admission before
+candidate/preflight reads and refuses a positive read-only source. Only the
+existing post-publication `importAndVerify` and permanent-deletion purge receive
+a private, exact-Team, physically scoped lifecycle storage context. Original
+Host and physical teams-root restrictions remain active; the normal storage path
+still requires `policy.current`. The existing restore identity/config checks and
+purge generation/quiesce fences remain decisive. Purge captures its restriction
+in the existing generation state before waiting for other operations to drain.
+No public bypass, registry, extra receipt framework or new production file was
+introduced for this correction.
+
+The finite actual regression set passed 8/8: missing and pending restore, complete
+JSON and backend-selecting JSON purge, root/owner replacement during the existing
+coordinator drain, and genuine canonical stopped source with the actual bound
+participant and pending manifest both false and true. Cross-Team access and late
+use of an expired private context are refused. The canonical stopped source
+retains exact original bytes and release in both pending cases.
+
+The final author bundle passed **237/237** across nine suites: Backup 72,
+feature 85, deletion coordinator 5, admission core 11, independent queue/audit 8,
+runtime admission 4, existing resolver/ingestor 26, existing event queue 26.
+Scoped fast lint, source-size (4619 files), provisioning architecture and diff
+checks passed. The feature composition is now 791 lines, persistence 183 and its
+deletion coordinator 356. This is a completed local author handoff; independent
+final actual-code review and exact committed-head CI/native acceptance still
+remain required. The earlier review blockers are not marked closed merely by
+the design verdict or these reported test counts.
+
+
+### Independent final source-code acceptance
+
+The same independent backend critic re-read the completed actual diff and issued
+**ACCEPT**, closing the two restore/purge compatibility blockers. The reviewed
+private storage context preserves exact Team, original owner/root and active
+physical lifetime; ordinary `policy.current` has no permissive fallback. The
+purge restriction is captured before generation drain. Interrupted errors retain
+their original identity: restore keeps its identity/mutex/quiesce owners until
+settlement, while failed purge stays quiesced and its existing retry waits for
+worker retirement. The critic also rechecked the previously accepted runtime,
+local inbox and positive stopped-source gates and found no new blocker.
+
+The sole integrator subsequently ran the normal Host build/declarations refresh
+successfully after the final restriction-only port change. Neither this review
+nor the local 237-case bundle substitutes for full committed-head qualification
+or the actual source-import/native-launch Desktop gate. The source unit is now
+ready for its coherent commit and immediate push; unrelated Task UI and E2E
+work remains separately owned and reviewed.

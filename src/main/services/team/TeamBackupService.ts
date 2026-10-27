@@ -37,7 +37,6 @@ import {
 } from './TeamBackupFileCollection';
 import {
   type BackupManifest,
-  getBackupManifestPath,
   readBackupManifest,
   readBackupManifestStrict,
   readBackupManifestStrictSync,
@@ -54,6 +53,7 @@ import type { PermanentDeletionLock } from './permanent-deletion/TeamPermanentDe
 import type { BackupRegistry, BackupRegistryEntry } from './TeamBackupStartupRegistry';
 import type { TeamDataService } from './TeamDataService';
 import type { TeamWorkSyncRestoreAttemptPorts } from './TeamWorkSyncRestoreAttemptOwner';
+import type { LegacySourceWriteAdmissionPolicy } from '@agent-teams/legacy-agent-host/lifecycle';
 import type { MemberWorkSyncRestoreParticipant } from '@features/member-work-sync/main';
 
 export type {
@@ -82,6 +82,7 @@ function nowIso(): string {
 // ---------------------------------------------------------------------------
 
 export interface SelectedHostTeamBackup {
+  sourceWriteAdmission?: LegacySourceWriteAdmissionPolicy;
   startup(): Promise<void>;
   tick(): Promise<void>;
 }
@@ -92,6 +93,7 @@ export class TeamBackupService {
     if (this.initializationPromise || this.initialized)
       throw new Error('Backup backend already captured');
     this.selectedHostBackup = backup;
+    this.configuration?.setLegacySourceWriteAdmission?.(backup.sourceWriteAdmission);
   }
 
   private registry: BackupRegistry = { version: 1, teams: {} };
@@ -104,6 +106,7 @@ export class TeamBackupService {
   private backupGeneration = 0;
   private periodicBackupActive = false;
   private readonly permanentDeletion = createTeamPermanentDeletionCoordinator({
+    sourceWriteAdmissionPolicy: () => this.sourceWriteAdmission,
     awaitInitialization: () => this.awaitInitialization(),
     isInitialized: () => this.initialized,
     isShuttingDown: () => this.isShuttingDown,
@@ -136,7 +139,10 @@ export class TeamBackupService {
     restoreGenericHoles: (name) => this.restoreService.restoreMissingGenericFromManifest(name),
   });
 
-  constructor(configuration?: Pick<TeamDataService, 'setConfigurationIdentityFence'>) {
+  constructor(
+    private readonly configuration?: Pick<TeamDataService, 'setConfigurationIdentityFence'> &
+      Partial<Pick<TeamDataService, 'setLegacySourceWriteAdmission'>>
+  ) {
     configuration?.setConfigurationIdentityFence((name, operation) =>
       this.withTeamIdentityFence(name, operation)
     );
@@ -193,7 +199,21 @@ export class TeamBackupService {
     this.periodicTimer.unref();
   }
 
-  async backupTeam(teamName: string): Promise<void> {
+  get sourceWriteAdmission(): LegacySourceWriteAdmissionPolicy | undefined {
+    return this.selectedHostBackup?.sourceWriteAdmission;
+  }
+
+  private runLegacyBackupWrite(teamName: string, operation: () => Promise<void>): Promise<void> {
+    const admission = this.sourceWriteAdmission?.capture(teamName);
+    if (admission?.kind === 'read-only') return Promise.resolve();
+    return admission ? admission.run(operation) : operation();
+  }
+
+  backupTeam(teamName: string): Promise<void> {
+    return this.runLegacyBackupWrite(teamName, () => this.backupTeamWithinAdmission(teamName));
+  }
+
+  private async backupTeamWithinAdmission(teamName: string): Promise<void> {
     await this.awaitInitialization();
     if (this.isShuttingDown) return;
     await this.workSyncRestore.runWhileQuiesced(teamName, () =>
@@ -205,12 +225,19 @@ export class TeamBackupService {
 
   scheduleTaskBackup(teamName: string, taskFile: string): void {
     if (this.isShuttingDown || !this.initialized) return;
+    const admission = this.sourceWriteAdmission?.capture(teamName);
+    if (admission?.kind === 'read-only') return;
+    const execution = admission?.run(() => this.sourceWriteAdmission!.bindExecution(teamName));
     const key = `${teamName}/${taskFile}`;
     const existing = this.taskDebounceTimers.get(key);
     if (existing) clearTimeout(existing);
     const timer = setTimeout(() => {
-      this.taskDebounceTimers.delete(key);
-      void this.backupTeam(teamName).catch(() => undefined);
+      if (this.taskDebounceTimers.get(key) === timer) this.taskDebounceTimers.delete(key);
+      if (execution)
+        void Promise.resolve()
+          .then(() => execution.run(() => this.backupTeam(teamName)))
+          .catch(() => undefined);
+      else void this.backupTeam(teamName).catch(() => undefined);
     }, TASK_DEBOUNCE_MS);
     this.taskDebounceTimers.set(key, timer);
   }
@@ -230,7 +257,10 @@ export class TeamBackupService {
       if (this.permanentDeletion.isPermanentDeletionFencedSync(teamName, entry.identityId))
         continue;
       try {
-        this.doBackupTeamSync(teamName);
+        const admission = this.sourceWriteAdmission?.capture(teamName);
+        if (admission?.kind === 'read-only') continue;
+        if (admission) admission.run(() => this.doBackupTeamSync(teamName));
+        else this.doBackupTeamSync(teamName);
       } catch (err: unknown) {
         logger.warn(`[Backup] shutdown backup failed for ${teamName}: ${String(err)}`);
       }
@@ -359,13 +389,15 @@ export class TeamBackupService {
       const teamNames = await this.discoverActiveTeams();
       for (const teamName of teamNames) {
         if (this.isShuttingDown) return;
-        if (await this.isRestoreSourceProtected(teamName)) continue;
-        if (this.workSyncRestore.isRestoreActive(teamName)) continue;
-        await this.workSyncRestore.runWhileQuiesced(teamName, () =>
-          this.withTeamIdentityFence(teamName, () =>
-            this.withTeamMutex(teamName, () => this.doBackupTeam(teamName))
-          )
-        );
+        await this.runLegacyBackupWrite(teamName, async () => {
+          if (await this.isRestoreSourceProtected(teamName)) return;
+          if (this.workSyncRestore.isRestoreActive(teamName)) return;
+          await this.workSyncRestore.runWhileQuiesced(teamName, () =>
+            this.withTeamIdentityFence(teamName, () =>
+              this.withTeamMutex(teamName, () => this.doBackupTeam(teamName))
+            )
+          );
+        });
       }
       await this.selectedHostBackup?.tick();
     } finally {

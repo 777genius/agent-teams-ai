@@ -1712,6 +1712,7 @@ const configureStoppedImportContext = createDesktopStoppedImportContext(() => [
   teamProvisioningService,
   teamDataService,
   contextRegistry,
+  memberWorkSyncFeature,
 ]);
 
 /** Rebuilds local context and retires root-bound team reads after a Claude root change. */
@@ -2080,7 +2081,6 @@ async function initializeServices(): Promise<void> {
   const workSyncRestoreGate = new MemberWorkSyncTeamOperationGate();
   const initializedBackupOwner = (teamBackupService = new TeamBackupService(teamDataService));
   configureDesktopBackendPersistence(initializedBackupOwner, applicationCommandRunner);
-  configureStoppedImportContext(localContext);
 
   // Cross-team communication service
   const crossTeamConfigReader = new TeamConfigReader();
@@ -2548,6 +2548,7 @@ async function initializeServices(): Promise<void> {
     return activeTeamNames;
   };
   const preparedMemberWorkSyncFeature = createMemberWorkSyncFeature({
+    sourceWriteAdmission: initializedBackupOwner.sourceWriteAdmission,
     lifecycleIdentity: initializedBackupOwner.workSyncIdentity,
     operationGate: workSyncRestoreGate,
     startBackground: false,
@@ -2772,6 +2773,7 @@ async function initializeServices(): Promise<void> {
     },
   });
   assertStartupActive(isShutdownStarted);
+  configureStoppedImportContext(localContext);
   void teamDataService
     .getAllTasks()
     .catch((error: unknown) => logger.warn(`[Init] task list prefetch failed: ${String(error)}`));

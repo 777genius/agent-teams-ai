@@ -4,6 +4,7 @@ import { MemberWorkSyncOutboxOperations } from '@agent-teams/legacy-agent-host/w
 import { MemberWorkSyncWriteQueue } from '@agent-teams/legacy-agent-host/work-sync/storage/MemberWorkSyncWriteQueue';
 import { scanMemberWorkSyncNames } from '@agent-teams/legacy-agent-host/work-sync/storage/scanMemberWorkSyncNames';
 
+import type { MemberWorkSyncSourcePublication } from './memberWorkSyncStoragePublication';
 import type { PendingReportsIndexFile } from '@agent-teams/legacy-agent-host/work-sync/storage/jsonStorePolicy';
 export type {
   MetricsIndexFile,
@@ -276,6 +277,7 @@ interface LegacyOutboxFile {
 }
 
 export interface JsonMemberWorkSyncStoreDeps {
+  sourceWriteAdmission?: MemberWorkSyncSourcePublication;
   /** Backup readers reject broken indexes without quarantining source files. */
   strictIndexReads?: boolean;
   auditJournal?: MemberWorkSyncAuditJournalPort;
@@ -1090,10 +1092,14 @@ export class JsonMemberWorkSyncStore
   }
 
   private async writeMemberStatusFile(status: MemberWorkSyncStatus): Promise<void> {
-    await writeJsonFile(this.paths.getMemberStatusPath(status.teamName, status.memberName), {
-      schemaVersion: 2,
-      status,
-    } satisfies MemberStatusFile);
+    await writeJsonFile(
+      this.paths.getMemberStatusPath(status.teamName, status.memberName),
+      {
+        schemaVersion: 2,
+        status,
+      } satisfies MemberStatusFile,
+      this.sourceWriteOptions(status.teamName)
+    );
   }
 
   private async readMetricsIndexFile(teamName: string): Promise<MetricsIndexFile> {
@@ -1109,7 +1115,11 @@ export class JsonMemberWorkSyncStore
   }
 
   private async writeMetricsIndexFile(teamName: string, file: MetricsIndexFile): Promise<void> {
-    await writeJsonFile(this.paths.getMetricsIndexPath(teamName), file);
+    await writeJsonFile(
+      this.paths.getMetricsIndexPath(teamName),
+      file,
+      this.sourceWriteOptions(teamName)
+    );
   }
 
   private async readLegacyPendingFile(teamName: string): Promise<LegacyPendingReportFile> {
@@ -1137,7 +1147,11 @@ export class JsonMemberWorkSyncStore
     file: MemberReportsFile
   ): Promise<void> {
     await this.paths.ensureMemberWorkSyncDir(teamName, memberName);
-    await writeJsonFile(this.paths.getMemberReportsPath(teamName, memberName), file);
+    await writeJsonFile(
+      this.paths.getMemberReportsPath(teamName, memberName),
+      file,
+      this.sourceWriteOptions(teamName)
+    );
   }
 
   private async readPendingReportsIndexFile(teamName: string): Promise<PendingReportsIndexFile> {
@@ -1153,7 +1167,11 @@ export class JsonMemberWorkSyncStore
     teamName: string,
     file: PendingReportsIndexFile
   ): Promise<void> {
-    await writeJsonFile(this.paths.getPendingReportsIndexPath(teamName), file);
+    await writeJsonFile(
+      this.paths.getPendingReportsIndexPath(teamName),
+      file,
+      this.sourceWriteOptions(teamName)
+    );
   }
 
   private async readLegacyOutboxFile(teamName: string): Promise<LegacyOutboxFile> {
@@ -1181,7 +1199,11 @@ export class JsonMemberWorkSyncStore
     file: MemberOutboxFile
   ): Promise<void> {
     await this.paths.ensureMemberWorkSyncDir(teamName, memberName);
-    await writeJsonFile(this.paths.getMemberOutboxPath(teamName, memberName), file);
+    await writeJsonFile(
+      this.paths.getMemberOutboxPath(teamName, memberName),
+      file,
+      this.sourceWriteOptions(teamName)
+    );
   }
 
   private async readOutboxIndexFile(teamName: string): Promise<OutboxIndexFile> {
@@ -1194,7 +1216,11 @@ export class JsonMemberWorkSyncStore
   }
 
   private async writeOutboxIndexFile(teamName: string, file: OutboxIndexFile): Promise<void> {
-    await writeJsonFile(this.paths.getOutboxIndexPath(teamName), file);
+    await writeJsonFile(
+      this.paths.getOutboxIndexPath(teamName),
+      file,
+      this.sourceWriteOptions(teamName)
+    );
   }
 
   private async upsertOutboxIndexItem(
@@ -1524,8 +1550,15 @@ export class JsonMemberWorkSyncStore
     }
   }
 
+  private sourceWriteOptions(teamName: string) {
+    const admission = this.deps.sourceWriteAdmission?.current(teamName);
+    return admission ? { assertCurrent: admission.assertCurrent } : {};
+  }
+
   private enqueue(teamName: string, operation: () => Promise<void>): Promise<void> {
-    return this.writeQueue.enqueue(teamName, operation);
+    const admission = this.deps.sourceWriteAdmission?.current(teamName);
+    const write = () => this.writeQueue.enqueue(teamName, operation);
+    return admission ? admission.publish(write) : write();
   }
 }
 

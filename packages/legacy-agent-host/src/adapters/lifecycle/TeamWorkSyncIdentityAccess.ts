@@ -1,3 +1,4 @@
+import type { LegacySourceWriteAdmissionPolicy } from './permanentDeletionPorts.js';
 import { randomUUID } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -14,6 +15,7 @@ export type TeamWorkSyncIdentityObservation =
   | { status: 'unidentified'; reason: 'invalid_config' | 'missing_marker' | 'identity_lost' };
 
 export interface TeamWorkSyncIdentityAccessPorts {
+  sourceWriteAdmissionPolicy?(): LegacySourceWriteAdmissionPolicy | undefined;
   withFence<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
   isFenced(teamName: string): Promise<boolean>;
   isRestoreReady?(teamName: string): Promise<boolean>;
@@ -32,7 +34,9 @@ export class TeamWorkSyncIdentityAccess {
 
   adoptLegacy(teamName: string): Promise<TeamWorkSyncIdentityObservation> {
     assertSafeTeamName(teamName);
-    return this.ports.withFence(teamName, async () => {
+    return this.ports.withFence(teamName, () => {
+      const admission = this.ports.sourceWriteAdmissionPolicy?.()?.current(teamName);
+      const publish = async (): Promise<TeamWorkSyncIdentityObservation> => {
       const observed = await this.readWithinFence(teamName);
       if (observed.status !== 'unidentified' || observed.reason !== 'missing_marker') {
         return observed;
@@ -51,24 +55,32 @@ export class TeamWorkSyncIdentityAccess {
       } catch {
         return { status: 'unavailable' };
       }
+      };
+      return admission ? admission.publish(publish) : publish();
     });
   }
 
-  /** Keep this callback short: only an authority commit, never provider/network I/O. */
-  withCurrent<T>(
+  /** Keep callbacks local: identity fence precedes the source publication queue. */
+  withCurrent<T>(teamName: string, identityId: string, operation: () => Promise<T>) {
+    return this.withCurrentPublication(teamName, identityId, () => operation());
+  }
+
+  withCurrentPublication<T>(
     teamName: string,
     identityId: string,
-    operation: () => Promise<T>
-  ): Promise<
-    { current: true; value: T } | { current: false; identity: TeamWorkSyncIdentityObservation }
-  > {
+    operation: (assertCurrent?: () => void) => Promise<T>
+  ): Promise<{ current: true; value: T } | { current: false; identity: TeamWorkSyncIdentityObservation }> {
     assertSafeTeamName(teamName);
     return this.ports.withFence(teamName, async () => {
-      const identity = await this.readWithinFence(teamName);
-      if (identity.status !== 'identified' || identity.identityId !== identityId) {
-        return { current: false, identity };
-      }
-      return { current: true, value: await operation() };
+      const admission = this.ports.sourceWriteAdmissionPolicy?.()?.current(teamName);
+      const publish = async () => {
+        const identity = await this.readWithinFence(teamName);
+        if (identity.status !== 'identified' || identity.identityId !== identityId)
+          return { current: false as const, identity };
+        admission?.assertCurrent();
+        return { current: true as const, value: await operation(admission?.assertCurrent) };
+      };
+      return admission ? admission.publish(publish) : publish();
     });
   }
 

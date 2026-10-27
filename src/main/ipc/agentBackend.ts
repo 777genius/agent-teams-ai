@@ -22,6 +22,7 @@ import {
   registerBackendConnectionsIpc,
   registerCapturedReviewWatchIpc,
 } from '@features/agent-backend/main';
+import { InternalStorageOperationInterruptedError } from '@features/internal-storage/main';
 import { FileCodexAuthIntentStore } from '@features/runtime-provider-management/main';
 import { createCapturedCodexFeatures } from '@features/runtime-provider-management/main';
 import {
@@ -33,15 +34,18 @@ import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
 import { createLogger } from '@shared/utils/logger';
 import { shell } from 'electron';
 
+import { createLegacySourceWriteAdmissionPolicy } from '../composition/legacySourceWriteAdmission';
 import { configureCapturedExtensionCommandRunner } from '../services/extensions/runtime/CapturedExtensionCommandLedger';
 import { CapturedNativeExtensions } from '../services/extensions/runtime/CapturedNativeExtensions';
 import { CapturedSkills } from '../services/extensions/skills/CapturedSkills';
 import { CapturedSkillsCache } from '../services/extensions/skills/CapturedSkillsCache';
 import { CapturedSkillsCollection } from '../services/extensions/skills/CapturedSkillsCollection';
+import { getTeamsBasePath } from '../utils/pathDecoder';
 import { getDevRendererLocation } from '../utils/rendererLocation';
 
 import type { NativeExtensionCapture } from '../services/extensions/runtime/CapturedNativeExtensions';
 import type { CapturedSkillsCapture } from '../services/extensions/skills/CapturedSkillsCollection';
+import type { LegacySourceWriteAdmissionPolicy } from '@agent-teams/legacy-agent-host/lifecycle';
 import type { StoppedTeamImportResult } from '@features/agent-backend/contracts';
 import type {
   CapturedReviewWatch,
@@ -196,12 +200,30 @@ export async function runDesktopHostBackup(mode: 'snapshot' | 'reconcile'): Prom
 
 /** The existing Main backup owner keeps its timer; selection supplies only its captured Host callbacks. */
 export function configureDesktopHostBackup(owner: {
-  configureSelectedHostBackup(backup: { startup(): Promise<void>; tick(): Promise<void> }): void;
+  withTeamIdentityFence<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
+  configureSelectedHostBackup(backup: {
+    startup(): Promise<void>;
+    tick(): Promise<void>;
+    sourceWriteAdmission?: LegacySourceWriteAdmissionPolicy;
+  }): void;
 }): void {
-  if (isDesktopAgentBackendSelected())
+  const original = active;
+  const teamsRoot = getTeamsBasePath();
+  if (original?.selected)
     owner.configureSelectedHostBackup({
       startup: () => runDesktopHostBackup('reconcile'),
       tick: () => runDesktopHostBackup('snapshot'),
+      sourceWriteAdmission: createLegacySourceWriteAdmissionPolicy({
+        teamsRoot,
+        selectedHost: true,
+        isCurrentOwner: () => active === original && getTeamsBasePath() === teamsRoot,
+        withIdentityFence: (teamName, operation) =>
+          owner.withTeamIdentityFence(teamName, operation),
+        settleInterrupted: async (error) => {
+          if (error instanceof InternalStorageOperationInterruptedError)
+            await Promise.allSettled([error.settled]);
+        },
+      }),
     });
 }
 

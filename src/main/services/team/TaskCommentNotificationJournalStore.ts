@@ -1,4 +1,5 @@
 import type { StoppedImportCommentFacts } from './stopped-import/commentFacts';
+import type { LegacySourceWriteAdmissionPolicy } from '@agent-teams/legacy-agent-host/lifecycle';
 export type TaskCommentNotificationState = 'seeded' | 'pending_send' | 'sent';
 
 export interface TaskCommentNotificationJournalEntry {
@@ -31,6 +32,7 @@ export interface TaskCommentNotificationJournalMutation<T> {
  *   mutual exclusion; the mutator may be async and mutates the array in place.
  */
 export interface TaskCommentNotificationJournalStore {
+  setLegacySourceWriteAdmission?(policy: LegacySourceWriteAdmissionPolicy | undefined): void;
   /** Optional strict read; must never initialize/import/archive/repair storage. */
   inspectStoppedImport?(teamName: string): Promise<StoppedImportCommentFacts>;
   exists(teamName: string): Promise<boolean>;

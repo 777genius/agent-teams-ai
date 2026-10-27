@@ -6,6 +6,7 @@ import { KeyedMutex } from '../../core/application/KeyedMutex';
 import { InternalStorageJsonReplica } from '../infrastructure/InternalStorageJsonReplica';
 
 import type { InternalStorageBackendSelector } from './InternalStorageBackendSelector';
+import type { LegacySourceWriteAdmissionPolicy } from '@agent-teams/legacy-agent-host/lifecycle';
 import type {
   TaskCommentNotificationJournalEntry,
   TaskCommentNotificationJournalMutation,
@@ -23,6 +24,10 @@ export class BackendSelectingTaskCommentNotificationJournalStore implements Task
     initialized: boolean;
     entries: TaskCommentNotificationJournalEntry[];
   }> | null;
+  private sourceWriteAdmission?: LegacySourceWriteAdmissionPolicy;
+  setLegacySourceWriteAdmission(policy: LegacySourceWriteAdmissionPolicy | undefined): void {
+    this.sourceWriteAdmission = policy;
+  }
   private readonly mutex = new KeyedMutex();
   private readonly sqlitePreparedTeams = new Set<string>();
   private readonly jsonHydratedTeams = new Set<string>();
@@ -52,7 +57,8 @@ export class BackendSelectingTaskCommentNotificationJournalStore implements Task
               sanitizeTaskCommentNotificationJournalEntries(
                 (value as { entries: unknown[] }).entries
               ).length === (value as { entries: unknown[] }).entries.length
-            )
+            ),
+          (teamName) => this.sourceWriteAdmission?.current(teamName)
         )
       : null;
   }

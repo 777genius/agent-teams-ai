@@ -94,6 +94,10 @@ import type { TaskChangePresenceRepository } from './cache/TaskChangePresenceRep
 import type { TaskCommentNotificationJournalStore } from './TaskCommentNotificationJournalStore';
 import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
 import type { TeamMetaFile } from './TeamMetaStore';
+import type {
+  AdmittedLegacySourceWrite,
+  LegacySourceWriteAdmissionPolicy,
+} from '@agent-teams/legacy-agent-host/lifecycle';
 import type { AgentActionMode } from '@shared/types';
 import type {
   AddMemberRequest,
@@ -404,7 +408,10 @@ export class TeamDataService {
   /** Tracks notified task-start transitions to avoid duplicate lead notifications. */
   private notifiedTaskStarts = new Set<string>();
   private taskCommentNotificationInitialization: Promise<void> | null = null;
-  private taskCommentNotificationProcessInFlight = new Map<string, Promise<void>>();
+  private taskCommentNotificationProcessInFlight = new Map<
+    string,
+    { promise: Promise<void>; sourceAdmission?: AdmittedLegacySourceWrite }
+  >();
   private taskCommentNotificationActiveProcess = new Map<string, string | undefined>();
   private taskCommentNotificationQueuedProcess = new Map<
     string,
@@ -1257,6 +1264,12 @@ export class TeamDataService {
     teamName: string,
     operation: () => Promise<void>
   ) => Promise<void> = (_name, operation) => operation();
+
+  private legacySourceWriteAdmission?: LegacySourceWriteAdmissionPolicy;
+  setLegacySourceWriteAdmission(policy: LegacySourceWriteAdmissionPolicy | undefined): void {
+    this.legacySourceWriteAdmission = policy;
+    this.taskCommentNotificationJournal.setLegacySourceWriteAdmission(policy);
+  }
 
   setConfigurationIdentityFence(
     fence: (teamName: string, operation: () => Promise<void>) => Promise<void>
@@ -2409,11 +2422,17 @@ export class TeamDataService {
 
   async notifyLeadOnTeammateTaskComment(teamName: string, taskId: string): Promise<void> {
     try {
-      await this.waitForTaskCommentNotificationInitialization();
-      await this.runTaskCommentNotificationsCoalesced(teamName, taskId, {
-        seedHistoricalIfJournalMissing: true,
-        recoverPending: true,
-      });
+      const admission = this.legacySourceWriteAdmission?.capture(teamName);
+      if (admission?.kind === 'read-only') return;
+      const notify = async () => {
+        await this.waitForTaskCommentNotificationInitialization();
+        await this.runTaskCommentNotificationsCoalesced(teamName, taskId, {
+          seedHistoricalIfJournalMissing: true,
+          recoverPending: true,
+        });
+      };
+      if (admission) await admission.run(notify);
+      else await notify();
     } catch (error) {
       logger.warn(`[TeamDataService] notifyLeadOnTeammateTaskComment failed: ${String(error)}`);
     }
@@ -2765,21 +2784,25 @@ export class TeamDataService {
       teamContext?: TaskCommentNotificationTeamContext;
     }
   ): Promise<void> {
+    const admission = this.legacySourceWriteAdmission?.capture(teamName);
+    if (admission?.kind === 'read-only') return Promise.resolve();
     const key = this.buildTaskCommentNotificationProcessKey(teamName);
     const existing = this.taskCommentNotificationProcessInFlight.get(key);
     if (existing) {
-      const normalizedTaskId = taskId?.trim() || undefined;
-      this.queueTaskCommentNotificationProcess(teamName, normalizedTaskId);
-      return existing;
+      existing.sourceAdmission?.assertCurrent();
+      this.queueTaskCommentNotificationProcess(teamName, taskId?.trim() || undefined);
+      return existing.promise;
     }
-
-    const promise = this.drainTaskCommentNotifications(teamName, taskId, options).finally(() => {
-      if (this.taskCommentNotificationProcessInFlight.get(key) === promise) {
+    const drain = () => this.drainTaskCommentNotifications(teamName, taskId, options);
+    const work = admission ? admission.run(drain) : drain();
+    const promise = work.finally(() => {
+      if (this.taskCommentNotificationProcessInFlight.get(key)?.promise === promise) {
         this.taskCommentNotificationProcessInFlight.delete(key);
+        this.taskCommentNotificationQueuedProcess.delete(key);
+        this.taskCommentNotificationActiveProcess.delete(key);
       }
-      this.taskCommentNotificationActiveProcess.delete(key);
     });
-    this.taskCommentNotificationProcessInFlight.set(key, promise);
+    this.taskCommentNotificationProcessInFlight.set(key, { promise, sourceAdmission: admission });
     return promise;
   }
 
@@ -3048,6 +3071,7 @@ export class TeamDataService {
       teamContext?: TaskCommentNotificationTeamContext;
     }
   ): Promise<void> {
+    const sourceAdmission = this.legacySourceWriteAdmission?.current(teamName);
     const seedHistoricalIfJournalMissing = options?.seedHistoricalIfJournalMissing === true;
     const recoverPending = options?.recoverPending === true;
     const teamContext = options?.teamContext;
@@ -3179,18 +3203,30 @@ export class TeamDataService {
       for (const notification of pending) {
         const claimKey = this.buildTaskCommentNotificationClaimKey(teamName, notification.key);
         try {
-          await this.inboxWriter.sendMessage(teamName, {
-            member: notification.leadName,
-            from: notification.comment.author,
-            text: notification.text,
-            summary: notification.summary,
-            commentId: notification.comment.id,
-            source: TASK_COMMENT_NOTIFICATION_SOURCE,
-            messageKind: 'task_comment_notification',
-            leadSessionId: notification.leadSessionId,
-            taskRefs: [notification.taskRef],
-            messageId: notification.messageId,
-          });
+          const send = () =>
+            this.inboxWriter.sendMessage(
+              teamName,
+              {
+                member: notification.leadName,
+                from: notification.comment.author,
+                text: notification.text,
+                summary: notification.summary,
+                commentId: notification.comment.id,
+                source: TASK_COMMENT_NOTIFICATION_SOURCE,
+                messageKind: 'task_comment_notification',
+                leadSessionId: notification.leadSessionId,
+                taskRefs: [notification.taskRef],
+                messageId: notification.messageId,
+              },
+              {
+                shouldStillWrite: () => {
+                  sourceAdmission?.assertCurrent();
+                  return true;
+                },
+              }
+            );
+          if (sourceAdmission) await sourceAdmission.publish(send);
+          else await send();
           leadInboxMessageIds.add(notification.messageId);
           logger.info(
             `[TeamDataService] Forwarded task comment notification to lead for ${teamName}#${notification.taskRef.displayId}:${notification.comment.id}`

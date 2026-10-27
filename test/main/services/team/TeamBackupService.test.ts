@@ -1,3 +1,17 @@
+import { createLegacySourceWriteAdmissionPolicy } from '../../../../src/main/composition/legacySourceWriteAdmission';
+import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
+import { TeamTaskCommentNotificationJournal } from '../../../../src/main/services/team/TeamTaskCommentNotificationJournal';
+import { JsonTaskCommentNotificationJournalStore } from '../../../../src/main/services/team/JsonTaskCommentNotificationJournalStore';
+import { BackendSelectingTaskCommentNotificationJournalStore } from '../../../../src/features/internal-storage/main/composition/BackendSelectingTaskCommentNotificationJournalStore';
+import { createMemberWorkSyncFeature } from '@features/member-work-sync/main';
+import { readLegacyNativeStopRelease } from '../../../../src/main/services/team/provisioning/LegacyNativeStopRelease';
+import {
+  prepareDesktopStoppedImport,
+  readDesktopStoppedImportSeed,
+  stoppedImportSourceBytes,
+  LEGACY_IMPORT_TEAM,
+} from '../../../../scripts/legacy-agent-host/desktop-stopped-import-fixture';
+import type { TaskCommentNotificationJournalStore } from '../../../../src/main/services/team/TaskCommentNotificationJournalStore';
 import { spawn } from 'node:child_process';
 import * as crypto from 'node:crypto';
 import * as nativeFs from 'node:fs';
@@ -20,7 +34,9 @@ const hoisted = vi.hoisted(() => ({
   tasksBase: '',
 }));
 
-vi.mock('../../../../src/main/utils/pathDecoder', () => ({
+vi.mock('../../../../src/main/utils/pathDecoder', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../src/main/utils/pathDecoder')>()),
+  getClaudeBasePath: () => path.dirname(hoisted.teamsBase),
   getTeamsBasePath: () => hoisted.teamsBase,
   getBackupsBasePath: () => hoisted.backupsBase,
   getAppDataPath: () => hoisted.appDataPath,
@@ -110,6 +126,344 @@ function getReleasePermanentDeletionLock(
 
 describe('TeamBackupService', () => {
   let tempDir = '';
+
+  it.each([false, true])(
+    'keeps the genuine captured stopped legacy source byte-for-byte unchanged across actual maintenance consumers, pending backup=%s',
+    async (pendingBackup) => {
+      const root = await fs.realpath(await fs.mkdtemp(path.join(tempDir, 'TEST-desktop-backend-')));
+      for (const directory of ['home', 'tmp', 'workspace'])
+        await fs.mkdir(path.join(root, directory));
+      hoisted.teamsBase = path.join(root, 'claude/teams');
+      hoisted.tasksBase = path.join(root, 'claude/tasks');
+      hoisted.appDataPath = path.join(root, 'userData/data');
+      hoisted.backupsBase = path.join(root, 'backups');
+      if (pendingBackup) {
+        const originalDir = path.join(hoisted.teamsBase, LEGACY_IMPORT_TEAM);
+        await fs.mkdir(originalDir, { recursive: true });
+        await fs.writeFile(
+          path.join(originalDir, 'config.json'),
+          JSON.stringify({ name: LEGACY_IMPORT_TEAM, members: [] })
+        );
+        const previousOwner = new TeamBackupService();
+        try {
+          await previousOwner.initialize();
+          await previousOwner.backupTeam(LEGACY_IMPORT_TEAM);
+        } finally {
+          previousOwner.dispose();
+        }
+        const manifestPath = path.join(
+          hoisted.backupsBase,
+          'teams',
+          LEGACY_IMPORT_TEAM,
+          'manifest.json'
+        );
+        const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+        manifest.workSyncRestorePending = {
+          identityId: manifest.identityId,
+          generation: 'TEST-retained-pending-source',
+        };
+        await fs.writeFile(manifestPath, JSON.stringify(manifest));
+        await fs.rm(originalDir, { recursive: true });
+      }
+      await prepareDesktopStoppedImport(root, { priorRun: true, node: process.execPath });
+      const seed = await readDesktopStoppedImportSeed(root);
+      const proof = readLegacyNativeStopRelease(seed.roots[0]!, LEGACY_IMPORT_TEAM);
+      expect(proof).not.toBeNull();
+      let initialized = false;
+      const sqlite: TaskCommentNotificationJournalStore = {
+        exists: vi.fn(async () => initialized),
+        ensureInitialized: vi.fn(async () => {
+          initialized = true;
+        }),
+        read: vi.fn(async () => []),
+        withEntries: async (_team, mutate) => (await mutate([])).result,
+      };
+      const selector = {
+        select: async (first: unknown) => first,
+        getBackendInfo: () => ({ integrity: 'ok' }),
+        getBackendKind: () => 'sqlite',
+      };
+      const journal = new TeamTaskCommentNotificationJournal(
+        new BackendSelectingTaskCommentNotificationJournalStore(
+          selector as never,
+          sqlite,
+          new JsonTaskCommentNotificationJournalStore(),
+          { fallbackRequiresReplica: false }
+        )
+      );
+      const config = JSON.parse(
+        await fs.readFile(path.join(seed.roots[0]!, 'config.json'), 'utf8')
+      );
+      const configReader = {
+        listTeams: async () => [
+          {
+            teamName: LEGACY_IMPORT_TEAM,
+            leadName: 'team-lead',
+            leadSessionId: config.leadSessionId,
+          },
+        ],
+        getConfig: async () => config,
+      };
+      const args: ConstructorParameters<typeof TeamDataService> = [];
+      args[0] = configReader as never;
+      args[11] = journal;
+      const data = new TeamDataService(...args);
+      const backup = new TeamBackupService(data);
+      const capturedRoot = hoisted.teamsBase;
+      const policy = createLegacySourceWriteAdmissionPolicy({
+        teamsRoot: capturedRoot,
+        selectedHost: true,
+        isCurrentOwner: () => hoisted.teamsBase === capturedRoot,
+        withIdentityFence: (team, operation) => backup.withTeamIdentityFence(team, operation),
+      });
+      const hostStartup = vi.fn(async () => undefined),
+        hostTick = vi.fn(async () => undefined);
+      backup.configureSelectedHostBackup({
+        startup: hostStartup,
+        tick: hostTick,
+        sourceWriteAdmission: policy,
+      });
+      const gate = new MemberWorkSyncTeamOperationGate();
+      const feature = createMemberWorkSyncFeature({
+        operationGate: gate,
+        bindRestoreParticipant: (participant) => backup.configureWorkSyncRestore(gate, participant),
+        teamsBasePath: capturedRoot,
+        sourceWriteAdmission: policy,
+        lifecycleIdentity: backup.workSyncIdentity,
+        configReader: configReader as never,
+        taskReader: { getTasks: async () => [] } as never,
+        kanbanManager: { getState: async () => null } as never,
+        membersMetaStore: { getMembers: async () => [] } as never,
+        isTeamActive: () => false,
+        startBackground: false,
+      });
+      try {
+        await backup.initialize();
+        if (pendingBackup) {
+          expect(vi.mocked(console.warn).mock.calls.flat().join(' ')).toContain(
+            'Work-sync restore source config identity mismatch'
+          );
+          vi.mocked(console.warn).mockClear();
+        }
+        await data.initializeTaskCommentNotificationState();
+        feature.noteTeamChange({
+          type: 'config',
+          teamName: LEGACY_IMPORT_TEAM,
+          detail: 'config.json',
+        });
+        feature.noteTeamChange({ type: 'task', teamName: LEGACY_IMPORT_TEAM, detail: seed.taskId });
+        await feature.enqueueStartupScan([LEGACY_IMPORT_TEAM]);
+        await expect(
+          feature.getStatus({ teamName: LEGACY_IMPORT_TEAM, memberName: 'team-lead' })
+        ).rejects.toMatchObject({ name: 'MemberWorkSyncTeamQuiescedError' });
+        await feature.withStoppedImportFence(LEGACY_IMPORT_TEAM, async () => undefined);
+        await backup.backupTeam(LEGACY_IMPORT_TEAM);
+        await (backup as unknown as { runPeriodicBackup(): Promise<void> }).runPeriodicBackup();
+        backup.scheduleTaskBackup(LEGACY_IMPORT_TEAM, seed.taskId + '.json');
+        backup.runShutdownBackupSync();
+        expect(sqlite.exists).not.toHaveBeenCalled();
+        expect(hostStartup).toHaveBeenCalledOnce();
+        expect(hostTick).toHaveBeenCalledOnce();
+        expect(await stoppedImportSourceBytes(root, seed.roots)).toEqual(seed.before);
+        expect(readLegacyNativeStopRelease(seed.roots[0]!, LEGACY_IMPORT_TEAM)).toEqual(proof);
+        expect(feature.getQueueDiagnostics()).toMatchObject({ queued: 0, running: 0 });
+      } finally {
+        await feature.dispose();
+        backup.dispose();
+      }
+    }
+  );
+
+  it.each(['unchanged', 'replaced'] as const)(
+    'retains a debounced task backup source before the timer: %s',
+    async (scenario) => {
+      const team = 'test-delayed-backup';
+      const backup = new TeamBackupService();
+      const root = hoisted.teamsBase;
+      const policy = createLegacySourceWriteAdmissionPolicy({
+        teamsRoot: root,
+        selectedHost: true,
+        isCurrentOwner: () => true,
+        withIdentityFence: (name, operation) => backup.withTeamIdentityFence(name, operation),
+      });
+      backup.configureSelectedHostBackup({
+        startup: async () => undefined,
+        tick: async () => undefined,
+        sourceWriteAdmission: policy,
+      });
+      await backup.initialize();
+      const config = JSON.stringify({ name: team, members: [] });
+      await fs.mkdir(path.join(root, team));
+      await fs.writeFile(path.join(root, team, 'config.json'), config);
+      const observed = vi.spyOn(backup, 'backupTeam');
+      vi.useFakeTimers();
+      try {
+        backup.scheduleTaskBackup(team, 'test-task.json');
+        if (scenario === 'replaced') {
+          await fs.rename(path.join(root, team), path.join(root, 'retired-backup-source'));
+          await fs.mkdir(path.join(root, team));
+          await fs.writeFile(path.join(root, team, 'config.json'), config);
+        }
+        await vi.advanceTimersByTimeAsync(500);
+        expect(observed).toHaveBeenCalledOnce();
+        if (scenario === 'unchanged') {
+          await observed.mock.results[0]!.value;
+          expect(
+            JSON.parse(await fs.readFile(path.join(root, team, 'config.json'), 'utf8'))
+              ._backupIdentityId
+          ).toEqual(expect.any(String));
+        } else {
+          expect(observed.mock.results[0]).toMatchObject({
+            type: 'throw',
+            value: expect.objectContaining({
+              message: expect.stringContaining('directory changed'),
+            }),
+          });
+          expect(await fs.readFile(path.join(root, team, 'config.json'), 'utf8')).toBe(config);
+          expect(await fs.readdir(path.join(root, team))).toEqual(['config.json']);
+        }
+      } finally {
+        vi.useRealTimers();
+        backup.dispose();
+      }
+    }
+  );
+
+  it('routes the actual public startup scan through separate original admissions for two ordinary Teams', async () => {
+    const backup = new TeamBackupService();
+    const policy = createLegacySourceWriteAdmissionPolicy({
+      teamsRoot: hoisted.teamsBase,
+      selectedHost: true,
+      isCurrentOwner: () => true,
+      withIdentityFence: (team, operation) => backup.withTeamIdentityFence(team, operation),
+    });
+    backup.configureSelectedHostBackup({
+      startup: async () => undefined,
+      tick: async () => undefined,
+      sourceWriteAdmission: policy,
+    });
+    await backup.initialize();
+    const teams = ['test-startup-first', 'test-startup-second'];
+    for (const name of teams) {
+      await fs.mkdir(path.join(hoisted.teamsBase, name));
+      await fs.writeFile(
+        path.join(hoisted.teamsBase, name, 'config.json'),
+        JSON.stringify({ name, members: [{ name: 'alice' }] })
+      );
+    }
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath: hoisted.teamsBase,
+      sourceWriteAdmission: policy,
+      lifecycleIdentity: backup.workSyncIdentity,
+      startBackground: false,
+      configReader: {
+        getConfig: async (name: string) => ({ name, members: [{ name: 'alice' }] }),
+        listTeams: async () => [],
+      } as never,
+      taskReader: { getTasks: async () => [] } as never,
+      kanbanManager: { getState: async () => null } as never,
+      membersMetaStore: { getMembers: async () => [] } as never,
+    });
+    try {
+      await feature.enqueueStartupScan(teams);
+      for (const name of teams)
+        expect(await fs.readdir(path.join(hoisted.teamsBase, name, 'members/alice'))).toContain(
+          'member.meta.json'
+        );
+      expect(feature.getQueueDiagnostics()).toMatchObject({ queued: 2, enqueued: 2 });
+    } finally {
+      await feature.dispose();
+      backup.dispose();
+    }
+  });
+
+  it('keeps explicit permanent deletion authority outside maintenance source scope', async () => {
+    const backup = new TeamBackupService();
+    const policy = createLegacySourceWriteAdmissionPolicy({
+      teamsRoot: hoisted.teamsBase,
+      selectedHost: true,
+      isCurrentOwner: () => true,
+      withIdentityFence: (team, operation) => backup.withTeamIdentityFence(team, operation),
+    });
+    backup.configureSelectedHostBackup({
+      startup: async () => undefined,
+      tick: async () => undefined,
+      sourceWriteAdmission: policy,
+    });
+    await backup.initialize();
+    const team = 'test-explicit-deletion';
+    await fs.mkdir(path.join(hoisted.teamsBase, team));
+    await fs.writeFile(
+      path.join(hoisted.teamsBase, team, 'config.json'),
+      JSON.stringify({ name: team, members: [] })
+    );
+    try {
+      const intent = await backup.beginPermanentDeletion(team);
+      expect(intent).toMatchObject({
+        teamName: team,
+        identityId: expect.any(String),
+        phase: 'prepared',
+      });
+    } finally {
+      backup.dispose();
+    }
+  });
+
+  it('does not transfer a coalesced comment follow-up to a same-name replacement', async () => {
+    const team = 'test-comment-original';
+    const root = hoisted.teamsBase,
+      teamDir = path.join(root, team);
+    await fs.mkdir(teamDir);
+    const config = { name: team, members: [{ name: 'team-lead', role: 'Lead' }] };
+    await fs.writeFile(path.join(teamDir, 'config.json'), JSON.stringify(config));
+    let started!: () => void, finish!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const barrier = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const getTasks = vi.fn(async () => {
+      started();
+      await barrier;
+      return [];
+    });
+    const args: ConstructorParameters<typeof TeamDataService> = [];
+    args[0] = { getConfig: async () => config } as never;
+    args[1] = { getTasks } as never;
+    args[2] = { getMessagesFor: async () => [] } as never;
+    const data = new TeamDataService(...args);
+    data.setLegacySourceWriteAdmission(
+      createLegacySourceWriteAdmissionPolicy({
+        teamsRoot: root,
+        selectedHost: true,
+        isCurrentOwner: () => true,
+        withIdentityFence: (_team, operation) => operation(),
+      })
+    );
+    const first = data.notifyLeadOnTeammateTaskComment(team, 'first-task');
+    await entered;
+    const second = data.notifyLeadOnTeammateTaskComment(team, 'second-task');
+    await Promise.resolve();
+    await Promise.resolve();
+    await fs.rename(teamDir, path.join(root, 'retired-comment-source'));
+    await fs.mkdir(teamDir);
+    await fs.writeFile(path.join(teamDir, 'config.json'), JSON.stringify(config));
+    finish();
+    await Promise.all([first, second]);
+    expect(getTasks).toHaveBeenCalledOnce();
+    expect(await fs.readdir(teamDir)).toEqual(['config.json']);
+    expect(vi.mocked(console.warn).mock.calls).toHaveLength(2);
+    expect(
+      vi
+        .mocked(console.warn)
+        .mock.calls.every((args) => args.join(' ').includes('Legacy source directory changed'))
+    ).toBe(true);
+    vi.mocked(console.warn).mockClear();
+    // A separately received new event can enter the replacement after old owned cleanup.
+    await data.notifyLeadOnTeammateTaskComment(team, 'new-event');
+    expect(getTasks).toHaveBeenCalledTimes(2);
+  });
 
   it('coalesces periodic backup while an interrupted restore retains its physical tail', async () => {
     const held = 'sandbox-held-a';
@@ -231,6 +585,255 @@ describe('TeamBackupService', () => {
       owner.dispose();
     }
   });
+
+  it.each(['missing', 'pending'] as const)(
+    'restores with the actual feature participant under selected source policy: %s',
+    async (mode) => {
+      const team = 'test-selected-restore',
+        teamDir = path.join(hoisted.teamsBase, team);
+      await fs.mkdir(teamDir);
+      await fs.writeFile(
+        path.join(teamDir, 'config.json'),
+        JSON.stringify({ name: team, members: [] })
+      );
+      const seed = new TeamBackupService();
+      await seed.initialize();
+      await seed.backupTeam(team);
+      seed.dispose();
+      const backupTeams = path.join(hoisted.backupsBase, 'teams');
+      const manifestPath = path.join(backupTeams, team, 'manifest.json');
+      const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+      const status = {
+        teamName: team,
+        memberName: 'alice',
+        state: 'caught_up' as const,
+        evaluatedAt: '2026-09-10T00:00:00Z',
+        diagnostics: [],
+        agenda: {
+          teamName: team,
+          memberName: 'alice',
+          generatedAt: '2026-09-10T00:00:00Z',
+          fingerprint: 'restore-f',
+          items: [],
+          diagnostics: [],
+        },
+        statusRevision: {
+          incarnation: manifest.identityId,
+          lineageId: 'restore-lineage',
+          sequence: 1,
+          nonce: 'restore-nonce',
+        },
+      };
+      await new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(backupTeams)).write(status);
+      if (mode === 'missing') await fs.rm(teamDir, { recursive: true });
+      else {
+        manifest.workSyncRestorePending = {
+          identityId: manifest.identityId,
+          generation: 'TEST-selected-restore',
+        };
+        await fs.writeFile(manifestPath, JSON.stringify(manifest));
+      }
+      const owner = new TeamBackupService(),
+        gate = new MemberWorkSyncTeamOperationGate();
+      const policy = createLegacySourceWriteAdmissionPolicy({
+        teamsRoot: hoisted.teamsBase,
+        selectedHost: true,
+        isCurrentOwner: () => true,
+        withIdentityFence: (name, operation) => owner.withTeamIdentityFence(name, operation),
+      });
+      owner.configureSelectedHostBackup({
+        startup: async () => undefined,
+        tick: async () => undefined,
+        sourceWriteAdmission: policy,
+      });
+      const feature = createMemberWorkSyncFeature({
+        teamsBasePath: hoisted.teamsBase,
+        lifecycleIdentity: owner.workSyncIdentity,
+        sourceWriteAdmission: policy,
+        operationGate: gate,
+        startBackground: false,
+        bindRestoreParticipant: (participant) => owner.configureWorkSyncRestore(gate, participant),
+        configReader: { getConfig: async () => null } as never,
+        taskReader: { getTasks: async () => [] } as never,
+        kanbanManager: { getState: async () => null } as never,
+        membersMetaStore: { getMembers: async () => [] } as never,
+      });
+      try {
+        await owner.initialize();
+        const warnings = vi.mocked(console.warn).mock.calls.map((args) => args.join(' '));
+        vi.mocked(console.warn).mockClear();
+        expect(warnings).toEqual([]);
+        const live = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(hoisted.teamsBase));
+        expect(await live.read({ teamName: team, memberName: 'alice' })).toMatchObject({
+          statusRevision: status.statusRevision,
+        });
+        expect(
+          JSON.parse(await fs.readFile(manifestPath, 'utf8')).workSyncRestorePending
+        ).toBeUndefined();
+        await expect(gate.run(team, async () => true)).resolves.toBe(true);
+      } finally {
+        await feature.dispose();
+        owner.dispose();
+      }
+    }
+  );
+
+  it.each(['json', 'selecting-json'] as const)(
+    'purges actual feature state under its existing deletion owner with source policy: %s',
+    async (backend) => {
+      const team = 'test-selected-purge',
+        teamDir = path.join(hoisted.teamsBase, team);
+      await fs.mkdir(teamDir);
+      await fs.writeFile(
+        path.join(teamDir, 'config.json'),
+        JSON.stringify({ name: team, members: [] })
+      );
+      const owner = new TeamBackupService();
+      await owner.initialize();
+      await owner.backupTeam(team);
+      const configRaw = await fs.readFile(path.join(teamDir, 'config.json'), 'utf8');
+      const identity = JSON.parse(configRaw)._backupIdentityId;
+      const paths = new MemberWorkSyncStorePaths(hoisted.teamsBase);
+      const statusPath = paths.getMemberStatusPath(team, 'alice');
+      await fs.mkdir(path.dirname(statusPath), { recursive: true });
+      await fs.writeFile(statusPath, 'TEST purge state');
+      const policy = createLegacySourceWriteAdmissionPolicy({
+        teamsRoot: hoisted.teamsBase,
+        selectedHost: true,
+        isCurrentOwner: () => true,
+        withIdentityFence: (name, operation) => owner.withTeamIdentityFence(name, operation),
+      });
+      const feature = createMemberWorkSyncFeature({
+        teamsBasePath: hoisted.teamsBase,
+        lifecycleIdentity: owner.workSyncIdentity,
+        sourceWriteAdmission: policy,
+        startBackground: false,
+        configReader: { getConfig: async () => null } as never,
+        taskReader: { getTasks: async () => [] } as never,
+        kanbanManager: { getState: async () => null } as never,
+        membersMetaStore: { getMembers: async () => [] } as never,
+        ...(backend === 'selecting-json'
+          ? {
+              internalStorageBackend: {
+                selector: {
+                  select: async (_sqlite: unknown, json: unknown) => json,
+                  getBackendInfo: () => null,
+                },
+                gateway: {},
+              } as never,
+            }
+          : {}),
+      });
+      const actualPurge = JsonMemberWorkSyncStore.prototype.purgeActiveState;
+      let finishLate!: () => void;
+      const lateGate = new Promise<void>((resolve) => {
+        finishLate = resolve;
+      });
+      let lateRead: Promise<unknown> | undefined;
+      const observedPurge = vi
+        .spyOn(JsonMemberWorkSyncStore.prototype, 'purgeActiveState')
+        .mockImplementation(async function (this: JsonMemberWorkSyncStore, name, lifecycle) {
+          await expect(this.readSnapshotForImport('test-cross-team')).rejects.toThrow(
+            'Lifecycle storage owner expired or differs'
+          );
+          lateRead = lateGate.then(() => this.readSnapshotForImport(name));
+          return actualPurge.call(this, name, lifecycle);
+        });
+      try {
+        await feature.prepareTeamDeletion(team, identity);
+        expect(observedPurge).toHaveBeenCalledOnce();
+        expect(lateRead).toBeDefined();
+        finishLate();
+        await expect(lateRead).rejects.toThrow('Lifecycle storage owner expired or differs');
+        await expect(fs.stat(statusPath)).rejects.toMatchObject({ code: 'ENOENT' });
+        expect(await fs.readFile(path.join(teamDir, 'config.json'), 'utf8')).toBe(configRaw);
+        await expect(
+          feature.getStatus({ teamName: team, memberName: 'alice' })
+        ).rejects.toMatchObject({ name: 'MemberWorkSyncTeamQuiescedError' });
+        feature.completeTeamDeletion(team);
+      } finally {
+        finishLate();
+        await lateRead?.catch(() => undefined);
+        observedPurge.mockRestore();
+        await feature.dispose();
+        owner.dispose();
+      }
+    }
+  );
+
+  it.each(['root', 'owner'] as const)(
+    'retains the actual deletion generation restriction across drain when original %s changes',
+    async (changed) => {
+      const team = 'test-captured-purge-owner',
+        teamDir = path.join(hoisted.teamsBase, team);
+      await fs.mkdir(teamDir);
+      await fs.writeFile(
+        path.join(teamDir, 'config.json'),
+        JSON.stringify({ name: team, members: [] })
+      );
+      const owner = new TeamBackupService();
+      await owner.initialize();
+      await owner.backupTeam(team);
+      const configRaw = await fs.readFile(path.join(teamDir, 'config.json'), 'utf8');
+      const identity = JSON.parse(configRaw)._backupIdentityId;
+      const gate = new MemberWorkSyncTeamOperationGate();
+      let current = true,
+        entered!: () => void,
+        finish!: () => void;
+      const running = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const barrier = new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+      const policy = createLegacySourceWriteAdmissionPolicy({
+        teamsRoot: hoisted.teamsBase,
+        selectedHost: true,
+        isCurrentOwner: () => current,
+        withIdentityFence: (name, operation) => owner.withTeamIdentityFence(name, operation),
+      });
+      const feature = createMemberWorkSyncFeature({
+        teamsBasePath: hoisted.teamsBase,
+        lifecycleIdentity: owner.workSyncIdentity,
+        sourceWriteAdmission: policy,
+        operationGate: gate,
+        startBackground: false,
+        configReader: { getConfig: async () => null } as never,
+        taskReader: { getTasks: async () => [] } as never,
+        kanbanManager: { getState: async () => null } as never,
+        membersMetaStore: { getMembers: async () => [] } as never,
+      });
+      const admitted = gate.run(team, async () => {
+        entered();
+        await barrier;
+      });
+      await running;
+      const deleting = feature.prepareTeamDeletion(team, identity);
+      const rejected = expect(deleting).rejects.toThrow(
+        changed === 'root' ? 'root changed' : 'owner changed'
+      );
+      try {
+        if (changed === 'root') {
+          await fs.rename(hoisted.teamsBase, path.join(tempDir, 'retired-teams-root'));
+          await fs.mkdir(teamDir, { recursive: true });
+          await fs.writeFile(path.join(teamDir, 'config.json'), configRaw);
+        } else current = false;
+        const paths = new MemberWorkSyncStorePaths(hoisted.teamsBase);
+        const statusPath = paths.getMemberStatusPath(team, 'alice');
+        await fs.mkdir(path.dirname(statusPath), { recursive: true });
+        await fs.writeFile(statusPath, 'TEST replacement state remains');
+        finish();
+        await admitted;
+        await rejected;
+        expect(await fs.readFile(statusPath, 'utf8')).toBe('TEST replacement state remains');
+      } finally {
+        finish();
+        await admitted;
+        await feature.dispose();
+        owner.dispose();
+      }
+    }
+  );
 
   it.each(['initial', 'retry', 'restart'] as const)(
     'restores work-sync through configured production backup owner: %s',

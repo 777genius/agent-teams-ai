@@ -47,8 +47,19 @@ export interface RuntimeTurnSettledPayloadNormalizerPort {
   }): RuntimeTurnSettledPayloadNormalization;
 }
 
+/** In-memory restriction from the original target read; never persisted with the event. */
+export interface RuntimeTurnSettledSourceExecution {
+  assertCurrent(): void;
+  run<T>(operation: () => T): T;
+}
+
 export type RuntimeTurnSettledTargetResolution =
-  | { ok: true; teamName: string; memberName: string }
+  | {
+      ok: true;
+      teamName: string;
+      memberName: string;
+      sourceExecution?: RuntimeTurnSettledSourceExecution;
+    }
   | { ok: false; reason: string };
 
 export interface RuntimeTurnSettledTargetResolverPort {

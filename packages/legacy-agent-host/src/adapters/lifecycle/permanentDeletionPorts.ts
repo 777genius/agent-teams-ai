@@ -1,3 +1,26 @@
+/** An injected source restriction; existing lifecycle/Team authority remains required. */
+export interface AdmittedLegacySourceWrite {
+  readonly kind: 'admitted';
+  readonly sourceKey: string;
+  assertOwnerCurrent(): void;
+  assertCurrent(): void;
+  run<T>(operation: () => T): T;
+  /** Local filesystem/SQLite publication only, with every physical tail awaited. */
+  publish<T>(operation: () => Promise<T>): Promise<T>;
+}
+export type LegacySourceWriteAdmission =
+  | { readonly kind: 'read-only'; readonly sourceKey: string; assertOwnerCurrent(): void }
+  | AdmittedLegacySourceWrite;
+export interface LegacySourceExecutionScope {
+  assertCurrent(): void;
+  run<T>(operation: () => T): T;
+}
+export interface LegacySourceWriteAdmissionPolicy {
+  capture(teamName: string): LegacySourceWriteAdmission;
+  current(teamName: string): AdmittedLegacySourceWrite;
+  bindExecution(teamName: string): LegacySourceExecutionScope;
+}
+
 export interface BackupManifestPort {
   teamName: string;
   identityId: string;
@@ -19,6 +42,7 @@ export interface BackupRegistryEntryPort {
 }
 
 export interface TeamPermanentDeletionCoordinatorPorts {
+  sourceWriteAdmissionPolicy?(): LegacySourceWriteAdmissionPolicy | undefined;
   invalidateTeamConfig?(teamName: string): void;
   awaitInitialization(): Promise<void>;
   isInitialized(): boolean;

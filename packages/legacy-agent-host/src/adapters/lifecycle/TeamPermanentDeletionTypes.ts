@@ -123,3 +123,13 @@ export function isPermanentDeletionTargetRemovalProof(
       : proof.removedAt === undefined)
   );
 }
+
+/** Existing config prerequisite for resolving an explicit deletion identity. */
+export function isValidPermanentDeletionConfig(content: string): boolean {
+  try {
+    const parsed = JSON.parse(content) as Record<string, unknown>;
+    return typeof parsed.name === 'string' && parsed.name.trim() !== '';
+  } catch {
+    return false;
+  }
+}
