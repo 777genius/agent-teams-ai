@@ -899,7 +899,7 @@ describe('Codex catalog retry after main invalidation', () => {
       try {
         await fixture.store.getState().fetchCliProviderStatus('codex');
         const retainedMetadata = fixture.store.getState().cliStatus!;
-        Object.assign(window.electronAPI!.cliInstaller, {
+        Object.assign(window.electronAPI.cliInstaller, {
           getStatus: vi.fn().mockReturnValueOnce(oldMetadata),
         });
         const oldBootstrap = fixture.store.getState().bootstrapCliStatus({

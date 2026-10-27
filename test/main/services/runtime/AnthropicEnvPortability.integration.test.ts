@@ -5,7 +5,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const fixture = vi.hoisted(() => ({ lookupPreferred: vi.fn(async () => null) }));
+const fixture = vi.hoisted(() => ({ lookupPreferred: vi.fn(() => Promise.resolve(null)) }));
 
 vi.mock('@main/services/infrastructure/ConfigManager', () => {
   const configManager = {
@@ -32,7 +32,7 @@ vi.mock('@main/services/extensions/apikeys/ApiKeyService', () => ({
 }));
 vi.mock('@features/codex-runtime-installer/main', () => ({
   resolveAppManagedCodexRuntimeBinaryPath: () => null,
-  resolveVerifiedAppManagedCodexRuntimeBinaryPath: async () => null,
+  resolveVerifiedAppManagedCodexRuntimeBinaryPath: () => Promise.resolve(null),
 }));
 
 import {
@@ -170,8 +170,8 @@ describe('Anthropic inherited environment portability with a native Node child',
           providerId: 'anthropic',
           ports: {
             providerConnectionService,
-            buildRuntimeTurnSettledEnvironment: async () => ({}),
-            resolveControlApiBaseUrl: async () => null,
+            buildRuntimeTurnSettledEnvironment: () => Promise.resolve({}),
+            resolveControlApiBaseUrl: () => Promise.resolve(null),
             getHomeDir: () => sandbox,
             logger: { warn: vi.fn(), error: vi.fn() },
           },

@@ -66,6 +66,12 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Lint the integration tests with type information
+        if: runner.os == 'Linux'
+        run: >-
+          pnpm lint:ci:files --
+          test/main/utils/shellEnv.real-shell.integration.test.ts
+          test/main/services/runtime/AnthropicEnvPortability.integration.test.ts
       - name: Prove environment inheritance, real shells, and status invalidation
         run: >-
           pnpm exec vitest run --maxWorkers=1
