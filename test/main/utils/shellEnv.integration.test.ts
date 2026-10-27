@@ -5,7 +5,8 @@ import {
   resolveInteractiveShellEnv,
   resolveInteractiveShellEnvBestEffort,
 } from '@main/utils/shellEnv';
-import { chmod, mkdtemp, readFile, rm, writeFile } from 'fs/promises';
+import { existsSync } from 'fs';
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -35,10 +36,16 @@ async function createFakeShell(tempDir: string, name: string, source: string): P
   return shellPath;
 }
 
-function envWriterSource(envExpression: string): string {
+function envWriterSource(envExpression: string, shellPath = '/bin/sh'): string {
   return `
 function writeEnv(env) {
-  process.stdout.write(Object.entries(env).map(([key, value]) => key + '=' + value).join('\\0') + '\\0');
+  // Execute the actual probe command; the fixture never manufactures its markers.
+  const result = require('node:child_process').spawnSync(${JSON.stringify(shellPath)}, ['-c', process.argv[3]], {
+    env: { PATH: '/usr/bin:/bin', HOME: process.env.HOME, USERPROFILE: process.env.USERPROFILE, ...env },
+    stdio: 'inherit',
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) process.exitCode = result.status || 1;
 }
 ${envExpression}
 `;
@@ -208,6 +215,8 @@ writeEnv({
   it.each([
     ['banner', 'TEST shell plugin failed\n'],
     ['banner with equals', 'PLUGIN_INIT=failed\n'],
+    ['equals banner before complete-looking env', 'PLUGIN_INIT=failed\nPATH=/login/bin\0'],
+    ['complete-looking partial env', 'PATH=/login/bin\0'],
   ])(
     'recovers the four Anthropic variables after a failed login shell prints a %s',
     async (_name, banner) => {
@@ -237,8 +246,9 @@ if (process.argv[2] === '-lic') {
 
       await expect(
         resolveInteractiveShellEnvBestEffort({ timeoutMs: 2_000, fallbackEnv: {} })
-      ).resolves.toEqual(expectedEnv);
-      expect(getCachedShellEnv()).toEqual(expectedEnv);
+      ).resolves.toMatchObject(expectedEnv);
+      expect(getCachedShellEnv()).toMatchObject(expectedEnv);
+      expect(getCachedShellEnv()).not.toHaveProperty('PLUGIN_INIT');
       await expect(readFile(invocationFile, 'utf8')).resolves.toBe('-lic\n-ic\n');
       expect(console.warn).not.toHaveBeenCalled();
     }
@@ -275,30 +285,77 @@ process.exitCode = 42;`
     vi.mocked(console.warn).mockClear();
   });
 
-  it('retains a real complete env dump even when the shell exits nonzero afterwards', async () => {
-    const invocationFile = path.join(tempDir, 'logout-failure-invocations.log');
+  it.skipIf(!existsSync('/bin/bash'))(
+    'retains a real complete env dump despite startup noise and a failing logout hook',
+    async () => {
+      const invocationFile = path.join(tempDir, 'logout-failure-invocations.log');
+      process.env.FAKE_SHELL_INVOCATIONS = invocationFile;
+      const expectedEnv = {
+        HOME: tempDir,
+        EMPTY: '',
+        NOTE: 'first=value\nsecond=value',
+        'BASH_FUNC_module%%': '() {\n printf "%s\\n" "a=b";\n}',
+        ANTHROPIC_AUTH_TOKEN: 'TEST-complete-token',
+      };
+      process.env.SHELL = await createFakeShell(
+        tempDir,
+        'logout-failure-shell.js',
+        envWriterSource(
+          `
+const fs = require('fs');
+fs.appendFileSync(process.env.FAKE_SHELL_INVOCATIONS, process.argv[2] + '\\n');
+process.stdout.write('PLUGIN_INIT=ready\\nPATH=/wrong/bin\\0');
+writeEnv(${JSON.stringify(expectedEnv)});
+process.stdout.write('LOGOUT=failed\\n');
+process.exitCode = 42;
+`,
+          '/bin/bash'
+        )
+      );
+
+      const env = await resolveInteractiveShellEnv();
+      // Bash may normalize whitespace when importing/exporting a function.
+      expect(env).toMatchObject({
+        ...expectedEnv,
+        'BASH_FUNC_module%%': expect.stringContaining('a=b'),
+      });
+      expect(getCachedShellEnv()).toBe(env);
+      expect(env).not.toHaveProperty('PLUGIN_INIT');
+      expect(env).not.toHaveProperty('LOGOUT');
+      await expect(readFile(invocationFile, 'utf8')).resolves.toBe('-lic\n');
+      expect(console.warn).not.toHaveBeenCalled();
+    }
+  );
+
+  it('requires the end marker after env itself prints a partial dump and fails', async () => {
+    const invocationFile = path.join(tempDir, 'partial-env-invocations.log');
     process.env.FAKE_SHELL_INVOCATIONS = invocationFile;
+    const binDir = path.join(tempDir, 'partial-env-bin');
+    await mkdir(binDir);
+    const envPath = path.join(binDir, 'env');
+    await writeFile(envPath, "#!/bin/sh\nprintf 'ANTHROPIC_MODEL=TEST-partial\\0'\nexit 42\n");
+    await chmod(envPath, 0o755);
     const expectedEnv = {
       HOME: tempDir,
-      EMPTY: '',
-      NOTE: 'first=value\nsecond=value',
-      'BASH_FUNC_module%%': '() {\n printf "%s\\n" "a=b";\n}',
+      ANTHROPIC_BASE_URL: 'http://127.0.0.1:15721',
       ANTHROPIC_AUTH_TOKEN: 'TEST-complete-token',
+      ANTHROPIC_MODEL: 'TEST-complete-model',
+      ANTHROPIC_SMALL_FAST_MODEL: 'TEST-complete-fast',
     };
     process.env.SHELL = await createFakeShell(
       tempDir,
-      'logout-failure-shell.js',
+      'partial-env-shell.js',
       envWriterSource(`
-const fs = require('fs');
-fs.appendFileSync(process.env.FAKE_SHELL_INVOCATIONS, process.argv[2] + '\\n');
-writeEnv(${JSON.stringify(expectedEnv)});
-process.exitCode = 42;
+require('fs').appendFileSync(process.env.FAKE_SHELL_INVOCATIONS, process.argv[2] + '\\n');
+writeEnv(process.argv[2] === '-lic'
+  ? { HOME: ${JSON.stringify(tempDir)}, PATH: ${JSON.stringify(`${binDir}:/usr/bin:/bin`)} }
+  : ${JSON.stringify(expectedEnv)});
 `)
     );
 
-    await expect(resolveInteractiveShellEnv()).resolves.toEqual(expectedEnv);
-    expect(getCachedShellEnv()).toEqual(expectedEnv);
-    await expect(readFile(invocationFile, 'utf8')).resolves.toBe('-lic\n');
+    await expect(resolveInteractiveShellEnv()).resolves.toMatchObject(expectedEnv);
+    expect(getCachedShellEnv()).toMatchObject(expectedEnv);
+    await expect(readFile(invocationFile, 'utf8')).resolves.toBe('-lic\n-ic\n');
     expect(console.warn).not.toHaveBeenCalled();
   });
 

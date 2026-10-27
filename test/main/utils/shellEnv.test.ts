@@ -48,18 +48,32 @@ function createChild(): MockChildProcess {
   return new MockChildProcess();
 }
 
+function shellFrame(child: MockChildProcess): { start: string; end: string } {
+  const callIndex = hoisted.spawn.mock.results.findIndex((result) => result.value === child);
+  const args = hoisted.spawn.mock.calls[callIndex][1] as string[];
+  const command = args[1];
+  expect(command).not.toContain('\0');
+  const markers = [...command.matchAll(/'(AGENT_TEAMS_SHELL_ENV_[0-9a-f-]+_(?:START|END))'/g)];
+  expect(markers).toHaveLength(2);
+  return { start: `\0${markers[0][1]}\0`, end: `\0${markers[1][1]}\0` };
+}
+
 function emitEnv(child: MockChildProcess, env: Record<string, string>): void {
   const dump = `${Object.entries(env)
     .map(([key, value]) => `${key}=${value}`)
     .join('\0')}\0`;
-  child.stdout.emit('data', Buffer.from(dump));
+  const frame = shellFrame(child);
+  child.stdout.emit('data', Buffer.from(frame.start + dump + frame.end));
   child.emit('close', 0);
 }
 
 function emitEnvChunks(child: MockChildProcess, chunks: string[]): void {
+  const frame = shellFrame(child);
+  child.stdout.emit('data', Buffer.from(frame.start));
   for (const chunk of chunks) {
     child.stdout.emit('data', Buffer.from(chunk));
   }
+  child.stdout.emit('data', Buffer.from(frame.end));
   child.emit('close', 0);
 }
 
@@ -137,13 +151,13 @@ describe('shellEnv', () => {
     expect(hoisted.spawn).toHaveBeenNthCalledWith(
       1,
       '/bin/zsh',
-      ['-lic', 'env -0'],
+      ['-lic', expect.stringContaining(' && env -0 && ')],
       expect.objectContaining({ windowsHide: true })
     );
     expect(hoisted.spawn).toHaveBeenNthCalledWith(
       2,
       '/bin/zsh',
-      ['-ic', 'env -0'],
+      ['-ic', expect.stringContaining(' && env -0 && ')],
       expect.objectContaining({ windowsHide: true })
     );
   });
@@ -400,6 +414,8 @@ describe('shellEnv', () => {
   it.each([
     ['startup banner', 'Shell plugin failed to initialize\n'],
     ['startup banner containing equals', 'PLUGIN_INIT=failed\n'],
+    ['equals banner before complete-looking env', 'PLUGIN_INIT=failed\nPATH=/login/bin\0'],
+    ['complete-looking partial env', 'PATH=/login/bin\0'],
     ['unterminated last record', 'PATH=/login/bin\0ANTHROPIC_AUTH_TOKEN=truncated'],
     ['malformed complete record', 'PATH=/login/bin\0not-an-env-record\0'],
     ['banner-prefixed key', 'Shell plugin failed\nPATH=/login/bin\0'],
@@ -430,8 +446,8 @@ describe('shellEnv', () => {
 
       await expect(shellEnv.resolveInteractiveShellEnv()).resolves.toEqual(interactiveEnv);
       expect(hoisted.spawn.mock.calls.map((call) => call[1])).toEqual([
-        ['-lic', 'env -0'],
-        ['-ic', 'env -0'],
+        ['-lic', expect.stringContaining(' && env -0 && ')],
+        ['-ic', expect.stringContaining(' && env -0 && ')],
       ]);
       expect(shellEnv.getCachedShellEnv()).toEqual(interactiveEnv);
       expect(hoisted.loggerWarn).not.toHaveBeenCalled();
@@ -455,14 +471,68 @@ describe('shellEnv', () => {
     const shellEnv = await importShellEnv();
     const result = shellEnv.resolveInteractiveShellEnv();
 
-    child.stdout.emit('data', Buffer.from(dump.slice(0, 17)));
-    child.stdout.emit('data', Buffer.from(dump.slice(17)));
+    const frame = shellFrame(child);
+    const output = `PLUGIN_INIT=ready\n${frame.start}${dump}${frame.end}LOGOUT=failed\n`;
+    child.stdout.emit('data', Buffer.from(output.slice(0, 31)));
+    child.stdout.emit('data', Buffer.from(output.slice(31)));
     emitClose(child, 42, null);
 
     await expect(result).resolves.toEqual(env);
     expect(shellEnv.getCachedShellEnv()).toEqual(env);
     expect(hoisted.spawn).toHaveBeenCalledTimes(1);
     expect(hoisted.loggerWarn).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'missing-start',
+    'missing-end',
+    'clipped-end',
+    'wrong-end',
+    'incomplete-record',
+  ] as const)('rejects %s even when the shell exits successfully', async (scenario) => {
+    const interactiveEnv = { PATH: '/complete/bin', ANTHROPIC_AUTH_TOKEN: 'TEST-complete-token' };
+    hoisted.spawn.mockImplementation((_shellPath: string, args: string[]) => {
+      const child = createChild();
+      queueMicrotask(() => {
+        if (args[0] === '-ic') {
+          emitEnv(child, interactiveEnv);
+          return;
+        }
+        const frame = shellFrame(child);
+        const outputs = {
+          'missing-start': `PATH=/partial/bin\0${frame.end}`,
+          'missing-end': `${frame.start}PATH=/partial/bin\0`,
+          'clipped-end': `${frame.start}PATH=/partial/bin\0${frame.end.slice(0, -1)}`,
+          'wrong-end': `${frame.start}PATH=/partial/bin\0\0AGENT_TEAMS_SHELL_ENV_other_END\0`,
+          'incomplete-record': `${frame.start}PATH=/partial/bin${frame.end}`,
+        };
+        child.stdout.emit('data', Buffer.from(outputs[scenario]));
+        emitClose(child, 0, null);
+      });
+      return child;
+    });
+    const shellEnv = await importShellEnv();
+
+    await expect(shellEnv.resolveInteractiveShellEnv()).resolves.toEqual(interactiveEnv);
+    expect(shellEnv.getCachedShellEnv()).toEqual(interactiveEnv);
+    expect(hoisted.spawn).toHaveBeenCalledTimes(2);
+    expect(hoisted.spawn.mock.calls[0][1][1]).not.toBe(hoisted.spawn.mock.calls[1][1][1]);
+    expect(hoisted.loggerWarn).not.toHaveBeenCalled();
+  });
+
+  it('accepts a completed frame containing an empty environment', async () => {
+    const child = createChild();
+    hoisted.spawn.mockReturnValueOnce(child);
+    const shellEnv = await importShellEnv();
+    const result = shellEnv.resolveInteractiveShellEnv();
+    const frame = shellFrame(child);
+
+    child.stdout.emit('data', Buffer.from(frame.start + frame.end));
+    emitClose(child, 42, null);
+
+    await expect(result).resolves.toEqual({});
+    expect(shellEnv.getCachedShellEnv()).toEqual({});
+    expect(hoisted.spawn).toHaveBeenCalledTimes(1);
   });
 
   it('leaves noisy failures uncached and reuses the failure cooldown', async () => {
@@ -807,7 +877,7 @@ describe('shellEnv', () => {
       expect(hoisted.spawn).toHaveBeenNthCalledWith(
         1,
         '/bin/bash',
-        ['-lic', 'env -0'],
+        ['-lic', expect.stringContaining(' && env -0 && ')],
         expect.objectContaining({ windowsHide: true })
       );
       expect(hoisted.loggerWarn).not.toHaveBeenCalled();
@@ -833,7 +903,7 @@ describe('shellEnv', () => {
       expect(hoisted.spawn).toHaveBeenNthCalledWith(
         1,
         '/bin/sh',
-        ['-lic', 'env -0'],
+        ['-lic', expect.stringContaining(' && env -0 && ')],
         expect.objectContaining({ windowsHide: true })
       );
       expect(hoisted.loggerWarn).not.toHaveBeenCalled();
@@ -855,7 +925,7 @@ describe('shellEnv', () => {
       expect(hoisted.spawn).toHaveBeenNthCalledWith(
         1,
         '/opt/homebrew/bin/fish',
-        ['-lic', 'env -0'],
+        ['-lic', expect.stringContaining(' && env -0 && ')],
         expect.objectContaining({ windowsHide: true })
       );
       expect(hoisted.loggerWarn).not.toHaveBeenCalled();
@@ -886,7 +956,7 @@ describe('shellEnv', () => {
       expect(hoisted.spawn).toHaveBeenNthCalledWith(
         1,
         '/usr/bin/bash',
-        ['-lic', 'env -0'],
+        ['-lic', expect.stringContaining(' && env -0 && ')],
         expect.objectContaining({ windowsHide: true })
       );
       expect(hoisted.loggerWarn).not.toHaveBeenCalled();
@@ -915,7 +985,7 @@ describe('shellEnv', () => {
       expect(hoisted.spawn).toHaveBeenNthCalledWith(
         1,
         '/bin/zsh',
-        ['-lic', 'env -0'],
+        ['-lic', expect.stringContaining(' && env -0 && ')],
         expect.objectContaining({ windowsHide: true })
       );
     });
@@ -944,7 +1014,7 @@ describe('shellEnv', () => {
       expect(hoisted.spawn).toHaveBeenNthCalledWith(
         1,
         '/bin/bash',
-        ['-lic', 'env -0'],
+        ['-lic', expect.stringContaining(' && env -0 && ')],
         expect.objectContaining({ windowsHide: true })
       );
     });
@@ -975,7 +1045,7 @@ describe('shellEnv', () => {
       expect(hoisted.spawn).toHaveBeenNthCalledWith(
         1,
         '/bin/sh',
-        ['-lic', 'env -0'],
+        ['-lic', expect.stringContaining(' && env -0 && ')],
         expect.objectContaining({ windowsHide: true })
       );
     });

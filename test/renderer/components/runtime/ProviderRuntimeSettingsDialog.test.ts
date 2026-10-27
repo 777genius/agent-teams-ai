@@ -706,6 +706,7 @@ describe('ProviderRuntimeSettingsDialog', () => {
             onRefreshProvider,
           })
         );
+        await Promise.resolve();
       });
 
       expect(storeState.updateConfig).not.toHaveBeenCalled();
@@ -715,6 +716,7 @@ describe('ProviderRuntimeSettingsDialog', () => {
 
       await act(async () => {
         findButtonByText(host, 'Default Off').click();
+        await Promise.resolve();
       });
 
       expect(storeState.updateConfig).toHaveBeenCalledExactlyOnceWith('providerConnections', {
@@ -725,7 +727,10 @@ describe('ProviderRuntimeSettingsDialog', () => {
       if (!supported) {
         expect(host.textContent).not.toContain('Prefer Fast');
       }
-      await act(async () => root.unmount());
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
     }
   );
 
@@ -757,24 +762,33 @@ describe('ProviderRuntimeSettingsDialog', () => {
           onRefreshProvider,
         })
       );
+      await Promise.resolve();
     });
     await act(async () => {
       findButtonByText(host, 'Default Off').click();
+      await Promise.resolve();
     });
 
     expect(findButtonByText(host, 'Default Off').disabled).toBe(true);
     expect(findButtonByText(host, 'Prefer Fast').disabled).toBe(true);
     await act(async () => {
       findButtonByText(host, 'Prefer Fast').click();
+      await Promise.resolve();
     });
     expect(storeState.updateConfig).toHaveBeenCalledExactlyOnceWith('providerConnections', {
       anthropic: { fastModeDefault: false },
     });
 
-    await act(async () => finishRefresh());
+    await act(async () => {
+      finishRefresh();
+      await refresh;
+    });
     expect(findButtonByText(host, 'Default Off').disabled).toBe(false);
     expect(findButtonByText(host, 'Prefer Fast').disabled).toBe(false);
-    await act(async () => root.unmount());
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
   });
 
   it('keeps Anthropic Fast off through capability hydration until explicitly enabled', async () => {
@@ -798,6 +812,7 @@ describe('ProviderRuntimeSettingsDialog', () => {
 
     await act(async () => {
       root.render(React.createElement(ProviderRuntimeSettingsDialog, props));
+      await Promise.resolve();
     });
     expect(host.textContent).not.toContain('Default Off');
     expect(host.textContent).not.toContain('Prefer Fast');
@@ -816,6 +831,7 @@ describe('ProviderRuntimeSettingsDialog', () => {
           ],
         })
       );
+      await Promise.resolve();
     });
 
     expect(storeState.updateConfig).not.toHaveBeenCalled();
@@ -824,11 +840,15 @@ describe('ProviderRuntimeSettingsDialog', () => {
     expect(findButtonByText(host, 'Prefer Fast').disabled).toBe(false);
     await act(async () => {
       findButtonByText(host, 'Prefer Fast').click();
+      await Promise.resolve();
     });
     expect(storeState.updateConfig).toHaveBeenCalledExactlyOnceWith('providerConnections', {
       anthropic: { fastModeDefault: true },
     });
-    await act(async () => root.unmount());
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
   });
 
   it('renders anthropic connection cards and can switch to API key mode', async () => {
