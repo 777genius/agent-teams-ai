@@ -137,6 +137,7 @@ describe('TeamBackupService', () => {
       hoisted.tasksBase = path.join(root, 'claude/tasks');
       hoisted.appDataPath = path.join(root, 'userData/data');
       hoisted.backupsBase = path.join(root, 'backups');
+      let pendingIdentity: unknown;
       if (pendingBackup) {
         const originalDir = path.join(hoisted.teamsBase, LEGACY_IMPORT_TEAM);
         await fs.mkdir(originalDir, { recursive: true });
@@ -158,6 +159,7 @@ describe('TeamBackupService', () => {
           'manifest.json'
         );
         const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+        pendingIdentity = manifest.identityId;
         manifest.workSyncRestorePending = {
           identityId: manifest.identityId,
           generation: 'TEST-retained-pending-source',
@@ -241,9 +243,22 @@ describe('TeamBackupService', () => {
         await backup.initialize();
         if (pendingBackup) {
           expect(vi.mocked(console.warn).mock.calls.flat().join(' ')).toContain(
-            'Work-sync restore source config identity mismatch'
+            'Stale backup has protected work-sync restore pending'
           );
           vi.mocked(console.warn).mockClear();
+          expect(pendingIdentity).toEqual(expect.any(String));
+          expect(config._backupIdentityId).toEqual(expect.any(String));
+          expect(config._backupIdentityId).not.toBe(pendingIdentity);
+          const retainedManifest = JSON.parse(
+            await fs.readFile(
+              path.join(hoisted.backupsBase, 'teams', LEGACY_IMPORT_TEAM, 'manifest.json'),
+              'utf8'
+            )
+          );
+          expect(retainedManifest.workSyncRestorePending).toEqual({
+            identityId: pendingIdentity,
+            generation: 'TEST-retained-pending-source',
+          });
         }
         await data.initializeTaskCommentNotificationState();
         feature.noteTeamChange({
