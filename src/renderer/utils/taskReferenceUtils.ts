@@ -321,10 +321,28 @@ export function linkifyTaskIdsInMarkdown(text: string, taskRefs?: TaskRef[]): st
   if (!text) return text;
 
   const orderedTaskRefs = taskRefs ?? [];
+  const rawOccurrences = orderedTaskRefs.length ? findTaskReferenceOccurrences(text) : [];
+  // Composer messages can retain identities for literal code occurrences. Use
+  // source positions only when the stored array covers the complete raw text;
+  // legacy/API arrays containing prose references alone keep their original order.
+  const refsByOffset =
+    orderedTaskRefs.length > 0 &&
+    orderedTaskRefs.length === rawOccurrences.length &&
+    rawOccurrences.every(({ ref, encodedMetadata }, index) => {
+      const stored = orderedTaskRefs[index];
+      return (
+        stored.displayId.toLowerCase() === ref.toLowerCase() &&
+        (!encodedMetadata ||
+          (encodedMetadata.taskId === stored.taskId &&
+            encodedMetadata.teamName === stored.teamName))
+      );
+    })
+      ? new Map(rawOccurrences.map(({ start }, index) => [start, orderedTaskRefs[index]]))
+      : undefined;
   let taskRefIndex = 0;
 
-  const consumeStructuredTaskRef = (): TaskRef | undefined => {
-    return orderedTaskRefs[taskRefIndex++];
+  const consumeStructuredTaskRef = (sourceOffset: number): TaskRef | undefined => {
+    return refsByOffset ? refsByOffset.get(sourceOffset) : orderedTaskRefs[taskRefIndex++];
   };
 
   const matchingStructuredTaskRef = (
@@ -334,21 +352,26 @@ export function linkifyTaskIdsInMarkdown(text: string, taskRefs?: TaskRef[]): st
     return pairedTaskRef?.displayId.toLowerCase() === ref.toLowerCase() ? pairedTaskRef : undefined;
   };
 
-  const buildLink = (raw: string, ref: string, encodedTaskRef?: EncodedTaskMetadata): string => {
-    const pairedTaskRef = consumeStructuredTaskRef();
+  const buildLink = (
+    raw: string,
+    ref: string,
+    sourceOffset: number,
+    encodedTaskRef?: EncodedTaskMetadata
+  ): string => {
+    const pairedTaskRef = consumeStructuredTaskRef(sourceOffset);
     const structuredTaskRef = encodedTaskRef ?? matchingStructuredTaskRef(pairedTaskRef, ref);
     const href = structuredTaskRef ? buildTaskLinkHref(structuredTaskRef) : `task://${ref}`;
     return `[${raw}](${href})`;
   };
 
-  const linkifyPlainText = (value: string): string => {
+  const linkifyPlainText = (value: string, sourceOffset: number): string => {
     let result = '';
     let cursor = 0;
 
     for (const occurrence of findTaskReferenceOccurrences(value)) {
       const { raw, ref, start, end, encodedMetadata } = occurrence;
       result += value.slice(cursor, start);
-      result += buildLink(raw, ref, encodedMetadata ?? undefined);
+      result += buildLink(raw, ref, sourceOffset + start, encodedMetadata ?? undefined);
       cursor = end;
     }
 
@@ -358,7 +381,7 @@ export function linkifyTaskIdsInMarkdown(text: string, taskRefs?: TaskRef[]): st
 
   return mapMarkdownOutsideCode(
     text,
-    (prose) => {
+    (prose, sourceOffset) => {
       let result = '';
       let cursor = 0;
 
@@ -371,7 +394,9 @@ export function linkifyTaskIdsInMarkdown(text: string, taskRefs?: TaskRef[]): st
             const closeBracket = prose.indexOf(']', cursor + 1);
             const label = prose.slice(cursor + 1, closeBracket);
             const labelOccurrences = findTaskReferenceOccurrences(label).map((occurrence) => {
-              const pairedTaskRef = consumeStructuredTaskRef();
+              const pairedTaskRef = consumeStructuredTaskRef(
+                sourceOffset + cursor + 1 + occurrence.start
+              );
               return {
                 ...occurrence,
                 pairedTaskRef: matchingStructuredTaskRef(pairedTaskRef, occurrence.ref),
@@ -424,7 +449,11 @@ export function linkifyTaskIdsInMarkdown(text: string, taskRefs?: TaskRef[]): st
             const code = prose.slice(cursor + run.length, codeEnd);
             const codeMatch = EXACT_TASK_REF_REGEX.exec(code.trim());
             if (codeMatch) {
-              result += buildLink(code.trim(), codeMatch[1]);
+              result += buildLink(
+                code.trim(),
+                codeMatch[1],
+                sourceOffset + cursor + run.length + code.length - code.trimStart().length
+              );
             } else {
               result += prose.slice(cursor, codeEnd + run.length);
             }
@@ -439,7 +468,7 @@ export function linkifyTaskIdsInMarkdown(text: string, taskRefs?: TaskRef[]): st
         if (nextLink !== -1) nextSpecial = Math.min(nextSpecial, nextLink);
         if (nextCode !== -1) nextSpecial = Math.min(nextSpecial, nextCode);
 
-        result += linkifyPlainText(prose.slice(cursor, nextSpecial));
+        result += linkifyPlainText(prose.slice(cursor, nextSpecial), sourceOffset + cursor);
         cursor = nextSpecial;
       }
 

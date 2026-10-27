@@ -1,3 +1,4 @@
+import { checkChatVisualizationBudget } from './programBudget';
 import { guardChatVisualizationProgram } from './programGuards';
 
 import type { FenceState } from '../contracts';
@@ -16,6 +17,8 @@ export function evaluateChatVisualization(
 ): VisualizationEvaluation {
   if (source.length > 32_000) return { status: 'limit', canRender: false };
   try {
+    const budget = checkChatVisualizationBudget(source);
+    if (budget !== 'within') return { status: budget, canRender: false };
     const parsed = parser.set(source);
     const checked = guardChatVisualizationProgram(parsed, state);
     if (checked.status === 'rejected') {

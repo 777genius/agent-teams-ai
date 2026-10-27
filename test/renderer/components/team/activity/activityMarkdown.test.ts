@@ -2,6 +2,8 @@ import { parseChatVisualization } from '@features/chat-visualizations/renderer/p
 import { guardChatVisualizationProgram } from '@features/chat-visualizations/renderer/programGuards';
 import { buildThoughtDisplayContent } from '@renderer/components/team/activity/activityMarkdown';
 import { getStrippedActivityTextCached } from '@renderer/components/team/activity/activityMessagePresentation';
+import { stripAgentBlocksForMarkdown } from '@renderer/utils/markdownCodeRanges';
+import { wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { describe, expect, it } from 'vitest';
 
 describe('literal visualization data in message presentation', () => {
@@ -37,5 +39,47 @@ describe('literal visualization data in message presentation', () => {
         isCrossTeamAny: false,
       })
     ).toBe('Before\n\tready ' + code);
+  });
+
+  it('preserves repeated blank lines in visualization values while cleaning thought prose', () => {
+    const source = 'root = Stack([Card([TextContent("First\n\n\n\nFifth")])]);';
+    const block = `\`\`\`openui\n${source}\n\`\`\``;
+    const shown = buildThoughtDisplayContent(
+      {
+        text:
+          'Before\n\n\n' +
+          '<teammate-message teammate_id="alice">hidden protocol</teammate-message>' +
+          `\n\n\n${block}\n\n\nAfter`,
+      },
+      undefined,
+      [],
+      { preserveLineBreaks: false }
+    );
+    expect(shown).toBe(`Before\n\n${block}\n\nAfter`);
+    const shownSource = shown.slice(shown.indexOf('openui\n') + 7, shown.lastIndexOf('```'));
+    expect(parseChatVisualization(shownSource).root).toEqual(parseChatVisualization(source).root);
+  });
+
+  it('removes reserved agent blocks without collapsing visualization data on rich-text paths', () => {
+    const source = 'root = Stack([Card([TextContent("First\n\n\n\nFifth")])]);';
+    const block = `\`\`\`openui\n${source}\n\`\`\``;
+    const text = `${wrapAgentBlock('hidden protocol')}\n\nBefore\n\n\n${block}\n\n\nAfter`;
+    const expected = `Before\n\n${block}\n\nAfter`;
+    expect(stripAgentBlocksForMarkdown(text)).toBe(expected);
+    expect(
+      buildThoughtDisplayContent({ text }, undefined, [], {
+        preserveLineBreaks: false,
+        stripAgentOnlyBlocks: true,
+      })
+    ).toBe(expected);
+    const shown = getStrippedActivityTextCached({
+      message: { from: 'alice', text, timestamp: '2026-10-27T00:00:00Z', read: true },
+      structured: null,
+      hasBootstrapDisplay: false,
+      isCrossTeamAny: false,
+    });
+    expect(shown).toBe(expected);
+    const shownSource = shown!.slice(shown!.indexOf('openui\n') + 7, shown!.lastIndexOf('```'));
+    expect(parseChatVisualization(shownSource).root).toEqual(parseChatVisualization(source).root);
   });
 });

@@ -1,3 +1,4 @@
+import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import remarkParse from 'remark-parse';
 import { unified } from 'unified';
 
@@ -8,10 +9,10 @@ const markdownParser = unified().use(remarkParse);
 /** Preserve original code bytes while applying legacy prose transformations. */
 export function mapMarkdownOutsideCode(
   text: string,
-  transform: (prose: string) => string,
+  transform: (prose: string, sourceOffset: number) => string,
   options: { handleInlineTaskReferences?: boolean } = {}
 ): string {
-  if (!/[`~\t]| {4}/.test(text)) return transform(text);
+  if (!/[`~\t]| {4}/.test(text)) return transform(text, 0);
 
   const ranges: { start: number; end: number }[] = [];
   function visit(node: Root | RootContent): void {
@@ -31,8 +32,14 @@ export function mapMarkdownOutsideCode(
   let result = '';
   let offset = 0;
   for (const { start, end } of ranges) {
-    result += transform(text.slice(offset, start)) + text.slice(start, end);
+    result += transform(text.slice(offset, start), offset) + text.slice(start, end);
     offset = end;
   }
-  return result + transform(text.slice(offset));
+  return result + transform(text.slice(offset), offset);
+}
+
+/** Remove reserved blocks globally, then normalize only visible Markdown prose. */
+export function stripAgentBlocksForMarkdown(text: string): string {
+  const stripped = stripAgentBlocks(text, { normalizeWhitespace: false });
+  return mapMarkdownOutsideCode(stripped, (prose) => prose.replace(/\n{3,}/g, '\n\n')).trim();
 }

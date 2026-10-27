@@ -41,6 +41,15 @@ describe('generated visualization briefing protocol', () => {
       expect(text).toContain("this conversation's existing message-delivery path");
       expect(text).toContain("A headless teammate's stdout alone does not deliver a chat message");
       expect(text).toContain('Honor explicit requests for a separate file');
+      expect(text).toContain(
+        "each openui-lang block's source at or below 32,000 UTF-16 code units (JavaScript string.length)"
+      );
+      expect(text).toContain(
+        'the complete enclosing message, including prose and fences, at or below 60,000 in the same units'
+      );
+      expect(text).toContain(
+        'Longer blocks are rejected; longer messages use a raw preview instead of rendering Markdown'
+      );
     }
     const native = await controller.taskBoard.memberBriefing('chart-specialist', {
       includeChatVisualizationProtocol: false,

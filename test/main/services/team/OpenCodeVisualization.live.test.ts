@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import { readOpenUIReply } from '../../../../scripts/lib/openui-chat-reply';
 import { parseChatVisualization } from '../../../../src/features/chat-visualizations/renderer/parseChatVisualization';
+import { checkChatVisualizationBudget } from '../../../../src/features/chat-visualizations/renderer/programBudget';
 import { guardChatVisualizationProgram } from '../../../../src/features/chat-visualizations/renderer/programGuards';
 import { TeamInboxWriter } from '../../../../src/main/services/team/TeamInboxWriter';
 import {
@@ -79,6 +80,7 @@ async function save(tempDir: string, name: string, data: unknown): Promise<void>
 function parseReply(sources: string[]) {
   const programs = sources.map((source) => {
     expect(source.length).toBeLessThanOrEqual(32_000);
+    expect(checkChatVisualizationBudget(source)).toBe('within');
     const parsed = parseChatVisualization(source);
     expect(parsed.meta.errors).toEqual([]);
     expect(parsed.meta.incomplete).toBe(false);
@@ -278,7 +280,7 @@ liveDescribe('OpenCode chat visualization live e2e', () => {
     const projectPath = path.join(tempDir, 'project');
     const claudeRoot = path.join(tempDir, 'claude-state');
     const teamName = `openui-live-${Date.now()}`;
-    const selectedModel = process.env.OPENCODE_E2E_MODEL?.trim() ?? 'opencode/big-pickle';
+    const selectedModel = process.env.OPENCODE_E2E_MODEL?.trim() || 'opencode/big-pickle';
     const progress: unknown[] = [];
     let harness: Harness | undefined;
     let passed = false;

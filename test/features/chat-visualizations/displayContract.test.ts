@@ -115,6 +115,28 @@ describe('real OpenUI display contract', () => {
       },
     });
   });
+  it('advertises the inclusive source/message caps and enforces the source cap in JavaScript string units', () => {
+    expect(chatVisualizationInstructions).toContain(
+      "each openui-lang block's source at or below 32,000 UTF-16 code units (JavaScript string.length)"
+    );
+    expect(chatVisualizationInstructions).toContain(
+      'the complete enclosing message, including prose and fences, at or below 60,000 in the same units'
+    );
+    const prefix = 'root = Stack([Card([Table([Col("Rows", ["';
+    const suffix = '"], "string")])])]);';
+    const source = prefix + 'x'.repeat(32_000 - prefix.length - suffix.length - 2) + '😀' + suffix;
+    expect(source.length).toBe(32_000);
+    expect(guardChatVisualizationProgram(parseChatVisualization(source), 'closed')).toEqual({
+      status: 'ready',
+    });
+    expect(evaluateChatVisualization(createChatVisualizationParser(), source, 'closed')).toEqual({
+      status: 'content',
+      canRender: true,
+    });
+    expect(
+      evaluateChatVisualization(createChatVisualizationParser(), source + '\n', 'closed')
+    ).toEqual({ status: 'limit', canRender: false });
+  });
   it('resolves forward references progressively on one parser', () => {
     const parser = createChatVisualizationParser();
     const start = 'root = Stack([summary]);';

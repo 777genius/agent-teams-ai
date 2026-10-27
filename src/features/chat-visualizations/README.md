@@ -29,8 +29,13 @@ content. Table cells and chart data are static, and TextContent escapes Markdown
 
 A fence is capped at 32,000 JavaScript characters before parsing. Tables/charts
 permit at most 500 rows/points; runtime adapters enforce bounds independently of
-the protocol schemas. The enclosing Markdown viewer retains its whole-message
-raw-preview limit. No new message transport, tool provider, actions, or persistence.
+the protocol schemas. A preflight over the SDK's unexpanded AST also limits repeated
+references before the SDK allocates their data. Its 50,000-unit budget counts each
+expanded scalar/container, displayed string length, and component overhead. It
+conservatively includes all definitions and the largest duplicate definition so
+streaming replacements cannot bypass the bound. The enclosing Markdown viewer
+retains its 60,000-character whole-message raw-preview limit. No new message
+transport, tool provider, actions, or persistence.
 
 Focused tests live in `test/features/chat-visualizations/` and exercise the actual
 pinned parser/library, progressive reference resolution, display guards, plain-text

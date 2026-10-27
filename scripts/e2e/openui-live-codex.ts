@@ -12,6 +12,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createParser } from '@openuidev/lang-core';
 import { readOpenUIReply } from '../lib/openui-chat-reply';
+import { checkChatVisualizationBudget } from '../../src/features/chat-visualizations/renderer/programBudget';
 import type { TeamCreateRequest } from '../../src/shared/types/team';
 // Existing raw CDP client; all interaction stays in the owned dev:mcp renderer.
 // @ts-expect-error Existing JavaScript harness has no declaration file.
@@ -211,6 +212,7 @@ async function parseGeneratedVisualization(text: string) {
     source && source.length <= 32_000,
     'Actual Codex visualization needs a bounded closed fence'
   );
+  assert.equal(checkChatVisualizationBudget(source), 'within', 'Actual visualization budget');
   const parsed = createParser(protocol.spec.schema, protocol.spec.root).parse(source);
   assert.equal(parsed.meta.errors.length, 0, 'Actual visualization parser errors');
   assert.equal(parsed.meta.incomplete, false, 'Actual visualization must be complete');
@@ -662,7 +664,7 @@ async function main() {
       milestones,
       rendererErrors,
       transport:
-        'Actual app IPC sends; real Codex native agent MCP message_send/group_chat_send replies; durable inbox watcher; no synthetic reply injection.',
+        'Actual app IPC sends; real Codex native runtime-delivered replies; durable inbox watcher; no synthetic reply injection.',
     });
     console.log(JSON.stringify({ ok: true, evidence: f.shots, teamName: f.teamName }));
   } catch (error) {
