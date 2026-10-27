@@ -192,12 +192,10 @@ export async function runDesktopTaskTrashRestoreUiSmoke(
     `(() => {const s=window.__agentTeamsDevStore?.getState();return s?.selectedTeamName===${desktopJsLiteral(selection)}&&s.selectedTeamData?.teamName===${desktopJsLiteral(selection)}&&!s.selectedTeamLoading;})()`,
     'original Task source selected for Trash'
   );
-  await ui.scrollTo(card, 'original seeded Task card before Delete');
-  await ui.waitRead(expectedCard, 'exact original Task subject and display ID before Delete');
-  await ui.click(
-    '[data-section-id="kanban"] input[placeholder="Search tasks... (#id or text)"]',
-    'focus original board outside the Task hover toolbar'
-  );
+  const boardSearch =
+    '[data-section-id="kanban"] input[placeholder="Search tasks... (#id or text)"]';
+  await ui.scrollTo(boardSearch, 'original board search before closing Task hover toolbars');
+  await ui.click(boardSearch, 'focus original board outside the Task hover toolbar');
   options.assertOwnedRenderer();
   await cdp.send('Input.dispatchKeyEvent', {
     type: 'keyDown',
@@ -215,6 +213,8 @@ export async function runDesktopTaskTrashRestoreUiSmoke(
     `!document.querySelector('.kanban-task-card[data-state="open"]')`,
     'original Task hover cards closed before the seeded target'
   );
+  await ui.scrollTo(card, 'original seeded Task card before Delete');
+  await ui.waitRead(expectedCard, 'exact original Task subject and display ID before Delete');
   const point = record(
     await ui.waitRead(
       `(() => {const e=document.querySelector(${desktopJsLiteral(card)});if(!e)return null;const r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);return r.width&&r.height&&hit&&(hit===e||e.contains(hit))?{x,y}:null;})()`,
