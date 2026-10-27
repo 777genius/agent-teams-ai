@@ -1,8 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { execFileSync } from 'node:child_process';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import { setImmediate } from 'node:timers/promises';
 
+import { desktopShellEnvironmentProbeSource } from './desktop-backend-fixture.ts';
 import { readRendererBackendConnections } from './desktop-backend-observations.ts';
 import { attachRendererDiagnostics } from './desktop-team-ui-smoke.ts';
 
@@ -128,4 +133,27 @@ test('HTTP readiness keeps exact origin and document path guards when the runtim
   for (const href of ['http://localhost:5173/other.html', 'http://localhost:5174/index.html',
     'https://localhost:5173/index.html', 'http://foreign.example:5173/index.html'])
     assert.equal((await readinessRuntime(expression, href, 'http://localhost:5173')).originMatches, false, href);
+});
+
+
+test('isolated shell fixture emits the actual framed environment and refuses shell effects', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'TEST-desktop-shell-probe-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const script = join(root, 'shell-probe.mjs'), log = join(root, 'sentinel.ndjson');
+  await writeFile(script, desktopShellEnvironmentProbeSource(process.execPath, log));
+  const nonce = 'AGENT_TEAMS_SHELL_ENV_12345678-1234-1234-1234-123456789abc';
+  const command = `printf '\\0%s\\0' '${nonce}_START' && env -0 && printf '\\0%s\\0' '${nonce}_END'`;
+  const env = { TEST_ONLY_VALUE: 'exact fixture value' };
+  for (const mode of ['-lic', '-ic']) {
+    const actual = execFileSync(process.execPath, [script, mode, command], { env }).toString();
+    assert.equal(actual, `\0${nonce}_START\0TEST_ONLY_VALUE=exact fixture value\0\0${nonce}_END\0`);
+  }
+  assert.equal(execFileSync(process.execPath, [script, '-ic', 'env -0'], { env }).toString(),
+    'TEST_ONLY_VALUE=exact fixture value\0');
+  for (const refused of [command + '; touch arbitrary', command.replace('_END', '_OTHER'), 'env -0 && arbitrary']) {
+    assert.throws(() => execFileSync(process.execPath, [script, '-lic', refused], { env, stdio: 'pipe' }),
+      (error: unknown) => Boolean(error && typeof error === 'object' && 'status' in error && error.status === 78));
+  }
+  const calls = (await readFile(log, 'utf8')).trim().split('\n').map(line => JSON.parse(line) as { allowed: boolean });
+  assert.deepEqual(calls.map(call => call.allowed), [true, true, true, false, false, false]);
 });

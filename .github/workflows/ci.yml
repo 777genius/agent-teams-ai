@@ -26,6 +26,11 @@ on:
       ]
   merge_group:
   workflow_dispatch:
+    inputs:
+      stage1_desktop:
+        description: Run existing Stage 1 source Desktop controls with isolated localhost fixtures
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -245,7 +250,12 @@ jobs:
 
       - name: Test workspace packages
         if: matrix.shard == 1
-        run: pnpm --filter agent-teams-controller test && pnpm --filter agent-teams-mcp test
+        run: |
+          set -euo pipefail
+          pnpm --filter agent-teams-controller test
+          pnpm --filter agent-teams-mcp test
+          # The portable Host test script requires Node 24; reuse the runtime captured above.
+          PATH="$(dirname "$AGENT_BACKEND_TEST_NODE"):$PATH" pnpm --filter @agent-teams/legacy-agent-host test
 
       - name: Test CI scripts and OpenCode proof runner safety
         if: matrix.shard == 1
@@ -512,6 +522,161 @@ jobs:
         run: node scripts/ci/install-dependencies-with-retry.mjs
       - name: Build and mount DMG fixture
         run: node scripts/ci/verify-dmg-artwork.mts
+
+  stage1-desktop:
+    name: Stage 1 source Desktop (${{ matrix.label }})
+    if: github.event_name == 'workflow_dispatch' && inputs.stage1_desktop
+    runs-on: ${{ vars.CI_MACOS_ARM_RUNNER || 'macos-15' }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mode: native-mixed-create-launch-ui
+            label: mixed Create and Launch
+          - mode: native-create-ui
+            label: Create with native launch
+          - mode: stopped-import-ui
+            label: saved legacy import only
+    env:
+      TMPDIR: /private/tmp
+      STAGE1_MODE: ${{ matrix.mode }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Record actual macOS tuple before native qualification
+        run: |
+          set -euo pipefail
+          sw_vers
+          uname -m
+          test "$(uname -m)" = arm64
+          printf 'Actual build: '
+          sw_vers -buildVersion
+          git rev-parse HEAD
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - name: Install Desktop dependencies including Electron
+        run: node scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build existing Host, controller and MCP prerequisites
+        run: |
+          set -euo pipefail
+          pnpm --filter @agent-teams/legacy-agent-host build
+          pnpm --filter agent-teams-controller build
+          pnpm --filter agent-teams-mcp build
+          pnpm stage:legacy-host-node --platform darwin-arm64
+      - name: Prepare exact TEST package manager and reviewed native binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          selected_inputs="$(mktemp -d /private/tmp/TEST-stage1-inputs-XXXXXX)"
+          printf 'STAGE1_INPUTS=%s\n' "$selected_inputs" >> "$GITHUB_ENV"
+          mkdir "$selected_inputs/corepack" "$selected_inputs/codex" "$selected_inputs/opencode"
+          printf '{"private":true}\n' > "$selected_inputs/corepack/package.json"
+          pnpm --dir "$selected_inputs/corepack" add --ignore-scripts --save-exact corepack@0.36.0
+          gh release download rust-v0.162.0 --repo openai/codex --pattern codex-aarch64-apple-darwin.tar.gz --dir "$selected_inputs"
+          gh release download v1.19.4 --repo anomalyco/opencode --pattern opencode-darwin-arm64.zip --dir "$selected_inputs"
+          printf '%s  %s\n' 98e9413a1bd167ae573723939ff178e6d44f1bb21d5cda960dbeb2fa65f49104 "$selected_inputs/codex-aarch64-apple-darwin.tar.gz" | shasum -a 256 -c -
+          printf '%s  %s\n' c400a2f8c8ab7e99478a7f4dd1a466b57bf33888e520d85c55780a5464c4b689 "$selected_inputs/opencode-darwin-arm64.zip" | shasum -a 256 -c -
+          tar -xzf "$selected_inputs/codex-aarch64-apple-darwin.tar.gz" -C "$selected_inputs/codex" codex-aarch64-apple-darwin
+          unzip -q "$selected_inputs/opencode-darwin-arm64.zip" -d "$selected_inputs/opencode"
+          STAGE1_SELECTED_INPUTS="$selected_inputs" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { createRequire } from 'node:module';
+          import { dirname, join, resolve } from 'node:path';
+          import { pathToFileURL } from 'node:url';
+          const digest = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+          const selected = process.env.STAGE1_SELECTED_INPUTS;
+          const repoRequire = createRequire(pathToFileURL(resolve('packages/legacy-agent-host/package.json')));
+          const provider = repoRequire.resolve('@agent-teams/provider-implementations');
+          const sdk = createRequire(provider).resolve('@anthropic-ai/claude-agent-sdk');
+          const claude = realpathSync(resolve(dirname(sdk), '../claude-agent-sdk-darwin-arm64/claude'));
+          const codex = realpathSync(join(selected, 'codex/codex-aarch64-apple-darwin'));
+          const opencode = realpathSync(join(selected, 'opencode/opencode'));
+          for (const [path, expected] of [
+            [claude, 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f'],
+            [codex, '8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57'],
+            [opencode, '417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6ebae696b'],
+          ]) assert.equal(digest(path), expected, 'exact reviewed native executable');
+          const node = realpathSync('resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node');
+          const host = realpathSync('packages/legacy-agent-host/dist/cli.js');
+          const corepack = realpathSync(join(selected, 'corepack/node_modules/corepack'));
+          const pnpm = join(corepack, 'dist/pnpm.js');
+          const values = {
+            LEGACY_DESKTOP_BACKEND_GO: '1',
+            LEGACY_DESKTOP_PROOF_MODE: process.env.STAGE1_MODE,
+            LEGACY_DESKTOP_CLAUDE_PATH: claude,
+            ...(process.env.STAGE1_MODE === 'native-mixed-create-launch-ui' ? {
+              LEGACY_DESKTOP_CODEX_PATH: codex, LEGACY_DESKTOP_OPENCODE_PATH: opencode,
+            } : {}),
+            LEGACY_DESKTOP_NODE_SHA256: digest(node),
+            LEGACY_DESKTOP_HOST_ENTRY_SHA256: digest(host),
+            LEGACY_DESKTOP_PNPM_PATH: pnpm,
+            LEGACY_DESKTOP_PNPM_SHA256: digest(pnpm),
+            LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256: digest(join(corepack, 'package.json')),
+            LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256: digest(join(corepack, 'dist/lib/corepack.cjs')),
+          };
+          for (const [key, value] of Object.entries(values)) {
+            assert.equal(typeof value, 'string');
+            assert.ok(!/[\r\n]/u.test(value));
+            appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);
+          }
+          writeFileSync(join(selected, 'input-pins.json'), JSON.stringify({
+            mode: process.env.STAGE1_MODE, node: { path: node, sha256: digest(node) },
+            host: { path: host, sha256: digest(host) },
+            native: [claude, codex, opencode].map(path => ({ path, sha256: digest(path) })),
+            corepackVersion: JSON.parse(readFileSync(join(corepack, 'package.json'), 'utf8')).version,
+            qualification: 'Source Desktop and localhost inference only; no installed/packed or vendor-auth claim',
+          }, null, 2));
+          NODE
+      - name: Check existing UI fixtures and run original Desktop controls once
+        run: |
+          set -euo pipefail
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          "$selected_node" --test scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
+          "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-desktop-$STAGE1_MODE.log"
+      - name: Require the original retained receipt to report PASS
+        if: always()
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync, realpathSync } from 'node:fs';
+          import { join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, `stage1-desktop-${process.env.STAGE1_MODE}.log`), 'utf8');
+          const prepared = log.split('\n').flatMap(line => {
+            try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; }
+            catch { return []; }
+          });
+          assert.equal(prepared.length, 1, 'one original prepared Desktop proof, no automatic retry');
+          const path = realpathSync(prepared[0].receipt);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-backend-receipt\.json$/u);
+          const receipt = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(receipt.mode, process.env.STAGE1_MODE);
+          assert.equal(receipt.status, 'PASS', 'INCOMPLETE remains an acceptance failure');
+          console.log(JSON.stringify({ status: receipt.status, mode: receipt.mode, receipt: path }));
+          NODE
+      - name: Preserve original source Desktop diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage1-source-desktop-${{ matrix.mode }}-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/stage1-desktop-${{ matrix.mode }}.log
+            /private/tmp/TEST-stage1-inputs-*/input-pins.json
+            /private/tmp/TEST-desktop-backend-*/*.json
+            /private/tmp/TEST-desktop-backend-*/*.png
+            /private/tmp/TEST-desktop-backend-*/*.log
+            /private/tmp/TEST-desktop-backend-*/*.ndjson
+            /private/tmp/TEST-desktop-backend-*/hoststore/**
+            /private/tmp/TEST-desktop-backend-*/workspace/**
 
   # Required by branch protection. Keep the name static for every event: on
   # PR #985 an edited-event run that reported another name left the required
