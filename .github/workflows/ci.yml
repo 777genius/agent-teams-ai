@@ -573,6 +573,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          exec > >(tee "$RUNNER_TEMP/stage1-setup-$STAGE1_MODE.log") 2>&1
           selected_inputs="$(mktemp -d /private/tmp/TEST-stage1-inputs-XXXXXX)"
           printf 'STAGE1_INPUTS=%s\n' "$selected_inputs" >> "$GITHUB_ENV"
           mkdir "$selected_inputs/corepack" "$selected_inputs/codex" "$selected_inputs/opencode"
@@ -588,15 +589,17 @@ jobs:
           import assert from 'node:assert/strict';
           import { createHash } from 'node:crypto';
           import { appendFileSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
-          import { createRequire } from 'node:module';
-          import { dirname, join, resolve } from 'node:path';
-          import { pathToFileURL } from 'node:url';
+          import { join, resolve } from 'node:path';
           const digest = path => createHash('sha256').update(readFileSync(path)).digest('hex');
           const selected = process.env.STAGE1_SELECTED_INPUTS;
-          const repoRequire = createRequire(pathToFileURL(resolve('packages/legacy-agent-host/package.json')));
-          const provider = repoRequire.resolve('@agent-teams/provider-implementations');
-          const sdk = createRequire(provider).resolve('@anthropic-ai/claude-agent-sdk');
-          const claude = realpathSync(resolve(dirname(sdk), '../claude-agent-sdk-darwin-arm64/claude'));
+          // These ESM-only packages intentionally expose no require-condition entrypoint.
+          // Frozen pnpm installs each dependency beside its requesting scoped package.
+          const providerRoot = realpathSync('packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations');
+          const sdkRoot = realpathSync(resolve(providerRoot, '../../@anthropic-ai/claude-agent-sdk'));
+          const sdkPackage = JSON.parse(readFileSync(join(sdkRoot, 'package.json'), 'utf8'));
+          assert.equal(sdkPackage.name, '@anthropic-ai/claude-agent-sdk');
+          assert.equal(sdkPackage.version, '0.3.305');
+          const claude = realpathSync(resolve(sdkRoot, '../claude-agent-sdk-darwin-arm64/claude'));
           const codex = realpathSync(join(selected, 'codex/codex-aarch64-apple-darwin'));
           const opencode = realpathSync(join(selected, 'opencode/opencode'));
           for (const [path, expected] of [
@@ -670,6 +673,7 @@ jobs:
           if-no-files-found: warn
           path: |
             ${{ runner.temp }}/stage1-desktop-${{ matrix.mode }}.log
+            ${{ runner.temp }}/stage1-setup-${{ matrix.mode }}.log
             /private/tmp/TEST-stage1-inputs-*/input-pins.json
             /private/tmp/TEST-desktop-backend-*/*.json
             /private/tmp/TEST-desktop-backend-*/*.png
