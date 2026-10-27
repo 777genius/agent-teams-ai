@@ -1600,3 +1600,334 @@ shows a loading Task card; this is visual corroboration of those visible control
 not a settled-board or broader visual qualification. The earlier Trash failure
 image shows the original card below the offscreen search header, matching the
 accepted scroll-order correction.
+
+
+## Next combined qualification dispatched on the clean pushed candidate
+
+After confirming clean local/remote equality, Draft/MERGEABLE state and unchanged
+base `7eb878f88af355334547ab526034ca1c2bf961ab`, root dispatched one existing
+full CI plus ten source Desktop variants on
+`a044dc08cbff7c781d404d6a28f67ef52eb2e367` at **22:37 UTC**:
+[40596233742](https://github.com/777genius/agent-teams-ai/actions/runs/40596233742).
+The previous run is complete; no overlapping or duplicate native dispatch is used.
+
+The bounded renderer hypothesis test for Resume passed one target case, using
+real diagnostics/foreground coordination and the exact Main proof shape with
+passive global catalog authority. It rejects that particular prompt-edit race
+hypothesis; it is not a Main/SDK/native qualification and triggers no production
+change. The next original Desktop attempt uses the repaired passive inspector.
+
+Independent OpenCode recipe/factory inspection found no evidenced incompatibility.
+A useful native-stage trace would require a new provider/Host diagnostic channel,
+not an existing hook. That expansion is deferred. The original mixed `d700…`
+attempt remains held/UNKNOWN with an unestablished cause. A fresh independent TEST
+fixture can provide only its own evidence; it cannot release that original debt
+or the historical M19 obligation. No provider revision, recipe, deadline, retry,
+readiness or custody criterion is changed for this run.
+
+
+## a044 canonical qualification and new original Desktop evidence
+
+The Full qualification job of
+[40596233742](https://github.com/777genius/agent-teams-ai/actions/runs/40596233742)
+has passed on exact `a044dc08cbff7c781d404d6a28f67ef52eb2e367`: validation,
+all three lint shards, all four root test shards and Windows ledger smoke.
+The four root shards report respectively 5806/6065/5773/6217 passed and
+26/31/17/18 skipped: **23,861 passed, 92 skipped, zero failures**. Separate
+workspace suites in shard 1 report 421 and 74 passed. The workflow's Desktop
+variants are evaluated separately; the full gate does not include them and does
+not qualify Stage 1 by itself. At this append, remaining Desktop jobs are still
+running and the new mixed variant has failed as described below.
+
+| Original a044 receipt | Artifact | SHA-256 | Bounded outcome |
+| --- | --- | --- | --- |
+| Cold selected Resume | 12776721248 | `6b04f72296f4d93dfb9a65eaf3518303c75f1e3298f1c0bf34859306da5a69ff` | PASS; original Launch, first Stop, cold same-profile app/Host, selected checkpoint Resume, one Composer Send and second Stop. |
+| Pending-open Quit | 12776247362 | `3c07917d58b682b829194dacbe59415361a62da34821936f6cb8d9bca3d81b4f` | PASS; one original open attempt, zero inputs, held/unknown debt preserved after Quit. |
+| Pending-open cold readback | 12776247362 | `0df040c2f91889571200fb867c16a48329937f0ae485e738ad2bbaa84b67cc3b` | PASS; same session/product through second Quit, no new native allocation. |
+| Captured-stopped source import and Launch | 12777377267 | `74dd729264fc34e24d0247104cf7d255b42a44fa1c1e426432a5f6dd9e2706fb` | PASS for the original synthetic solo source plus actual captured source child Stop and target SDK/CLI; source bytes unchanged. |
+| Native Create | 12776174395 | `a69b4ccd0d8e638fd6ae81fdc20afcc1385bd2ca6ffb9b4d1cf9f70c91913285` | PASS; original Create, native tools/reply, Stop/reload; final app cleanup SIGTERM. |
+| Native review | 12776623555 | `49d19e81ea643c3d95ee4b1aa198b33f43ca1a6ac90201f78be68fa505f635c0` | PASS within original Task Start/Edit/Changes scope; final app cleanup SIGTERM. |
+| Native review cold readback | 12776623555 | `a1b9f62911002c2de75b3580bd9cd24164f25491bcaa57053fd01e6b1ff342e0` | PASS for the separate cold readback; natural app exit 0. |
+
+Independent inspection of the Resume ZIP verifies both checkpoint payload hashes
+and the launch journal. Both app epochs exit naturally with 0/no signal, original
+groups empty and Hosts absent; both final sentinel censuses have no post-Quit or
+refused invocation. The cold app has no fresh prompt (observations remain 8), and
+one original post-Resume Send produces three resumed observations, total 11, with
+the original native history marker. Product binding and sessionRef are retained;
+only the technical generation changes. The native JSONL history itself is not
+included in the ZIP: history equality/prefix retention is original live-oracle
+evidence, not an independent offline byte recheck. Root inspected both retained
+Launch/Resume screenshots: the original reply and Task remain visible alongside
+the second reply and the expected Opus/medium lead.
+
+The repaired passive Resume inspector reaches HostRoot at ancestor depth 75 and
+visits 2378 current-tree nodes. Its hook traversal ends explicitly at 512 with
+`hook-traversal-truncated`; empty signature arrays are not authoritative absence.
+The existing button wait succeeds without a readiness or deadline change. This
+fresh PASS does not establish the cause of the earlier `c443...` failure.
+
+The pending-open source/cold ZIP independently retains one original attempt and
+raw opening-to-held/unknown events, plus exact before/after product digests for
+captures, commands, outbox, tasks and inboxes. Both apps exit naturally with 0,
+writer lock released, no remaining captured child/group and no post-Quit/refused
+sentinel invocation. These physical observations do not release provider custody
+or the original M19 debt. The captured-stopped import app also exits naturally
+in this run; its actual source child was stopped with SIGTERM before publication.
+The native Create run records one allowed late Codex version sentinel; it does
+not establish a fork-free cleanup claim.
+
+The new mixed receipt (artifact `12776478757`) remains **INCOMPLETE**, SHA-256
+`ef00e9ff224f70b834b1e45b5b44c73a688974eb9cc86f9fe5f10853cb07b721`.
+Unlike the previous OpenCode failure, all three original members reach owned,
+ready/context-applied/usable on their one initial attempts. The lead input
+succeeds; Bob/Carol have zero business inputs. The following TEST principal lookup
+throws because its Codex/OpenCode filter reads `settings` on the canonical lead,
+whose settings are correctly stored in `state.savedSettings`. Root and an
+independent critic confirmed the raw value is undefined and accepted a narrow
+role guard before reading peer settings. Unique member/capture/live-grant and
+malformed-peer checks remain required. This new open outcome neither diagnoses
+nor releases the original `d700...` held/unknown attempt.
+
+
+## Finite follow-up after the final plan audit
+
+Two independent holistic reviewers accepted the integrated production code at
+`a044dc08...` without a new confirmed defect. The explicit plan audit then found
+additional concrete qualification work; static acceptance does not close it.
+
+The same-A product-read addition is pushed as `d4783d105bb62e4babacf433b0eebeb4e9e1be0a` after actual
+root/backend review. In the same existing F08 helper, uniquely named original
+public `getData` calls carry exact handle and transport command provenance. One
+unchanged physical snapshot is held across the existing single UI Comment; the
+ordinary Comment callback/refresh must first publish the new selected/cache data.
+The original stale read must then reject at its mutation fence without rollback
+or an extra command. This is not a held teamSlice deduplicated read. Scripts
+TypeScript, scoped lint/format/diff and a bounded five-expression VM verification
+pass; the VM uses the real read-order implementation but is not Electron proof.
+Actual qualification of this new helper remains pending.
+
+The owner/default requirement does not prescribe an in-process live setter.
+Earlier exclusions used that extra qualifier too broadly. A bounded continuation
+using the existing cold app composition may qualify default A-to-B, original A
+handle routing, new unbound B creation, an unavailable original A and rollback.
+Positive actions still require existing controls; the unavailable-A negative
+probe must use its original captured public handle and prove no B effect. No new
+product switch or substituted API response is warranted by this TEST work.
+
+A legitimate preexisting `_backupIdentityId` is currently rejected by the finite
+legacy native config census. The canonical marker is an opaque nonempty trimmed
+string, not a UUID-only value. Root and both critics selected a narrow correction:
+validate only this exact field, pin original presence/value before Stop and compare
+it on the same final config read; include a present marker in the durable digest.
+An absent marker retains the original digest shape. Whole native-inventory
+immutability is deliberately not added. The existing captured-source fixture will
+place the marker before original Stop, with replacement/refusal regressions;
+no broader historical metadata acceptance is inferred before those checks pass.
+
+P7's remaining boundary is specific: unsigned candidate construction is possible,
+but the existing packed fixture requires a process-custody artifact whose manifest
+and runtime build check are pinned to macOS `24G90`. The available source runner
+has demonstrated `24G624`. Rebuilding an artifact whose builder still writes the
+old build literal does not qualify the new tuple. No tuple substitution, custody
+omission or allowlist relaxation is performed. Current packed native qualification
+therefore remains gated by an actually qualified tuple; this is not a claim that
+all packaging work is impossible. Original M19 custody and unexplained historical
+attempts remain separate obligations.
+
+
+## a044 completed outcome and retained evidence
+
+Run [40596233742](https://github.com/777genius/agent-teams-ai/actions/runs/40596233742)
+is now complete: **8 of 10 source Desktop jobs passed; the workflow is failed**.
+The already reported canonical Full qualification remains PASS. The two failed
+Desktop jobs are the mixed TEST lookup and saved-import final cleanup; neither
+failure is relabeled by a later code correction.
+
+| Remaining original a044 receipt | Artifact | SHA-256 | Bounded outcome |
+| --- | --- | --- | --- |
+| Existing Task board and cross-Team controls | 12779000684 | `9bac2b4905119ceaf7219162c8d2e80a57aa213b8e9ea448c14b4a5b4041ca4f` | PASS, including original Trash/Restore; runs the previous bounded F08 helper, not the new `d4783d105` product-read continuation. |
+| Solo Create and persistent native teammate | 12778640543 | `f93c3cfdab905d7f4d3ac90e10a46dbdd1e0f8f4ba2d4014c240a4e0134ae966` | PASS for original controls, addressed teammate reply, Stop and reload; final app cleanup SIGTERM. |
+| Active-input Quit | 12777656607 | `b5fad6059048806e97bf7525205d9e31afccbff69fe1893b70f159eb0bd44404` | PASS; natural app exit 0/no signal. |
+| Active-input cold readback | 12777656607 | `294798c528f7d75ac35ee9fb966550bf8e5c9a8c1376c6d32770dd20479bb746` | PASS; separate cold app exits naturally with 0/no signal. |
+| Saved legacy import only | 12776459930 | `61bec211be112f7100f8bbfb6c500348d6ba7e79daddd3c831fb6e05d919edf4` | INCOMPLETE: original import UI proof passes with zero runtime allocation and unchanged source bytes, but cleanup identity observation fails. |
+
+Root independently recomputed all 23 retained preexisting Taskboard command
+receipt hashes and all twelve peer-category byte censuses (Alpha/Beta tasks,
+commands, inboxes, config, board absence and owner). The original Task
+`31f7e7de-3d2f-5166-a7f9-4ea4413b78b9` retains its identity, comments,
+description and group through original Delete and Restore controls. It changes
+from completed/review-none to deleted, then pending/review-none without a
+`deletedAt` property. The raw restored Task hash is
+`d83fded733aecef0879cb55fa4fd11a18b72607a7d342a0bbc62626e98011d0e`.
+Two new completed lifecycle commands have the original Task in their payload;
+existing receipts and the two peer products remain unchanged. Root also inspected
+the retained Trash screenshot showing the exact original subject/display ID and
+Restore control. This is bounded visual corroboration, not whole-product visual
+qualification. The offline runtime census is zero; final app cleanup uses SIGTERM.
+
+Independent warm/cold review inspection additionally cross-checked twenty raw
+relationships, including the exact original receipt hash, executed source pins,
+seed/events, original Task Start receipt/outbox and input causal binding, native
+runtime records, decisions and final mixed file bytes. Runtime equivalence is
+parsed-record equality rather than an independently retained before/after raw
+byte baseline. The final mixed file SHA-256 is
+`e468e9675096badd808ec43a94667e12254939bba2ebaef49dbff257f1da3dc6`.
+The cold app allocates no native session and submits no native input. Partial
+hook/background rows remain `PARTIAL_OR_GAP`, with `fullM13: false` and no unsafe
+promotion; the plan's selected combined M13 evidence remains the relevant scope.
+
+The saved-import-only cleanup retained one original leader (PID/PGID 4096).
+Its start time remains identical while the command changes from the captured
+Node/pnpm command to exactly `<defunct>` between process observations. The original
+ChildProcess still has no observed exit code or signal. The strict identity guard
+correctly refuses SIGTERM. This old artifact has no later original-child reap or
+fresh complete absence proof; its cleanup therefore remains INCOMPLETE. Seven
+source files are byte-identical before/after the original import, but that product
+proof does not replace process cleanup evidence.
+
+
+## Reviewed corrections pushed after a044
+
+`6cb347a4467f24118620d920cec2640041fcd085` corrects only the mixed TEST
+principal predicate: the lead uses its canonical saved settings, and peer settings
+are read only after the member-role guard. The canonical lead-without-settings
+regression first reproduced the original failure. All five existing fixture tests
+then passed, retaining positive checks for all three providers and malformed-peer,
+revocation and foreign-delivery refusals. Scripts TypeScript, scoped lint/format
+and diff checks passed. Root and an independent backend critic accepted the actual
+diff. A new original Desktop attempt is still required.
+
+`c671fbe81a32efef0814493c5904c1a4e5270a1e` implements the narrowly reviewed
+`_backupIdentityId` correction. Original presence/value is captured before Stop
+and compared on the same parsed config used by each native census. Only the exact
+canonical field and a nonempty trimmed opaque string are accepted. A present
+marker contributes to the durable digest; absent-marker digest bytes remain
+unchanged. No whole-inventory immutability rule or general metadata exception is
+added. The existing captured-source fixture writes its marker before the original
+captured TEST child is stopped and retains byte equality after publication.
+
+The marker change passed **28 release/census tests** plus **one original
+captured-child Stop fixture test**, covering original absence, opaque non-UUID
+values, malformed values, presence/replacement/removal races and the initial
+capture-to-census boundary. The original absent-marker golden digest remains
+`3a92d6b165366406f7999a902f33f6469825c3ac2797a532f078d08c69c58865`.
+Scoped lint/format/diff and the bounded NodeNext script closure with
+`erasableSyntaxOnly` passed. Root/backend actual reviews accepted it. An optional
+extra Main-only typecheck was unavailable because the recovered compiler rejects
+an inherited removed `baseUrl` option; no compiler configuration was changed and
+no Main typecheck PASS is inferred. Canonical current-head validation remains due.
+
+`40da81f21` adds a TEST observation-only cleanup helper and its tests. It permits
+only the original sole app leader, same retained original `ps` start time and
+exact `<defunct>` transition, followed by the same original ChildProcess's natural exit 0/no signal
+and fresh complete group/Host absence within the original shared deadline. It
+has no signal or spawn capability. Changed identity, descendants, crash/signal,
+missing exit observation, unavailable process table or expiry retain cleanup debt.
+All **14 existing observation tests** pass, including seven deterministic new
+cases; scoped lint/format/diff and bounded two-root NodeNext typecheck pass. Root
+and the independent integration lead accepted the actual helper. This commit does
+not activate its caller; the minimal main integration is being reviewed with the
+owner/default TEST continuation. It is not a native PASS for the old cleanup run.
+
+
+Independent Active-Quit inspection confirms one originally allocated runtime with
+one consumed active input and one admitted queued input. After guarded Quit the
+active input remains UNKNOWN, the queued input is CANCELLED, and the exact
+original intent/fingerprint/operation references remain retained; the runtime is
+closed/released. One held inference request was actually observed. All five raw
+product digest categories independently match across the boundary (three commands,
+two outboxes, one Task and one inbox). The cold record preserves that exact final
+session/product and allocates no new native child. Both apps exit naturally with
+0/no signal, with no late/refused sentinel invocation. Runtime release does not
+turn the active UNKNOWN input into a proven outcome or release historical M19 debt.
+
+Independent persistent-member inspection confirms the original lead, grants,
+settings and captures, one exact completed native creation plus same-input lookup,
+and one addressed peer input/reply. Four lead inputs and one peer input all finish
+successfully. One prepared roster reminder is represented for one epoch. Both
+active native sessions are released by original Stop; the subsequent UI reload
+retains member identities, settings and creation outcome without a new launch.
+The raw store also contains an unused zero-input base record; it is not evidence
+of a third active allocation. Final dev-wrapper cleanup uses SIGTERM.
+
+
+## Literal scope corrections from the final contract review
+
+The final independent contract review corrected two overly broad labels in earlier
+appends. Section 6 and F08 require mutation between snapshot and subscription;
+they do not prescribe a **first global subscription** as a separate acceptance
+gate. The existing original Electron snapshot/Comment/late public subscription
+sequence exercises the real shared adapter's epoch invalidation and initial
+resync, then reads the one canonical comment. This is meaningful late-subscriber
+state recovery. Its specific limitation is that the shared cursor may already
+have advanced: it does not uniquely demonstrate replay from that particular
+pre-Comment snapshot cursor. Exact cursor/replay/retention behavior has its own
+existing Host tests. No new first-global harness is required solely by that extra
+label. Actual response loss, actual gap and cold owner/app replacement retain
+their respective scopes; none is relabeled as a surviving-client transport rebind.
+
+After the reviewed canonical `_backupIdentityId` correction, the critic found no
+other evidenced legitimate selected-source metadata field rejected by the census.
+The contract requires a validated selected stopped snapshot, not acceptance of
+arbitrary historical metadata. The precise source boundary is synthetic saved
+product/run records plus an actual captured TEST child, original Stop and import
+publication; original vendor/provider-source inference is not exercised. The
+marker-enriched native Desktop attempt remains pending. A further metadata
+blocker is not inferred without a concrete selected case.
+
+
+The transport review likewise found no requirement for automatic reattachment in
+a surviving Desktop process. Section 1 explicitly forbids reattaching live-child
+stdio and requires bounded disposal, original exit and writer-lock release before
+recovery. The captured client intentionally seals its one original transport.
+Actual response loss/gap and clean app/real-Host replacement can therefore qualify
+the selected supported read-recovery behavior together, without a new auto-rebind
+feature. A distinct fatal-stdio-failure-to-cold-recovery chain is not demonstrated
+by clean Quit alone; its coupling remains a trace limitation, while the existing
+failure/lock/no-replay checks retain their own evidence. Absence of automatic
+surviving-client reconnection is not itself a new blanket F08 blocker. Original
+M19 custody HOLD remains independent.
+
+
+## Cold owner/default continuation committed for the combined run
+
+`fcb7b8bd18d0cf4e247c8b16b5d411180c5059c9` adds the reviewed finite
+continuation to the existing Taskboard workflow. The original workflow finishes
+its unchanged exactly-one-Host oracle and cleanup first. Three additional cold
+app epochs then select both default and explicit creation owner B, make original
+A unavailable, and restore the original A selection. B has its own sibling
+physical root and no Runtime or provider configuration.
+
+Under B selection, one original Task Create still targets A, while the original
+save-only Create form publishes a new Team at B. The negative unavailable-A
+probe uses its exact previously returned handle through the original public
+preload API, without a retry or a B effect. Rollback reuses both original A and
+actually published B handles through the ordinary Task controls. Raw original
+binding bytes, earlier command receipts and the other owner's product bytes are
+compared throughout. Descriptor/profile generations, both owners' raw product
+censuses and binding files are retained by two additional CI artifact paths.
+
+Independent reviews removed an unrelated natural dev-wrapper exit requirement:
+the existing guarded close and strict original-identity equality before a single
+SIGTERM remain the supported cleanup path. The observation-only defunct helper
+is now called only on mismatch, within the original shared three-second budget;
+it never authorizes a signal. Before another configuration epoch, the entire
+original group, every captured Host, both writer leases and the CDP port must be
+absent. An early process-identity read failure is inside the existing cleanup
+boundary and retains the captured PID/invocation with no signal authority.
+
+The whole receipt becomes INCOMPLETE before continuation preparation and is PASS
+only after all three epochs and final source checks succeed. Its nonrenewable
+12-minute continuation bound fits within the existing unchanged 45-minute job;
+existing startup/action bounds are unchanged. No alternative user interface,
+production owner switch, native allocation or automatic action retry is added.
+
+Root, backend critic and integration lead accepted the actual final unit.
+The existing strict scripts project typecheck passed after two explicit raw
+`owner.revision` inference corrections. Scoped ESLint passed with two
+`no-unsafe-finally` warnings (existing main cleanup and deliberate source-freeze
+failure propagation); all three new files passed formatting, and the production
+source guard passed for 4,625 files with the unchanged 800-line cap. Syntax and
+diff checks passed. This is prepared TEST coverage, not a new Desktop/native PASS;
+the next clean combined source run must execute the original scenarios.
