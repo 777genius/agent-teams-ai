@@ -1,4 +1,7 @@
-import { serializeCanonicalTemplateContent } from '@features/custom-team-templates/core/domain/canonicalTemplateSerialization';
+import {
+  normalizeTemplateMember,
+  serializeCanonicalTemplateContent,
+} from '@features/custom-team-templates/core/domain/canonicalTemplateSerialization';
 import { describe, expect, it } from 'vitest';
 
 describe('serializeCanonicalTemplateContent', () => {
@@ -34,6 +37,37 @@ describe('serializeCanonicalTemplateContent', () => {
         members: [{ name: 'a', role: undefined }],
       })
     ).toBe('{"schemaVersion":1,"teamPrompt":"p","members":[{"name":"a"}]}');
+  });
+
+  it('treats empty-string optional member fields exactly like absent ones', () => {
+    expect(
+      serializeCanonicalTemplateContent({
+        schemaVersion: 1,
+        teamPrompt: 'p',
+        members: [{ name: 'a', role: '', workflow: '' }],
+      })
+    ).toBe('{"schemaVersion":1,"teamPrompt":"p","members":[{"name":"a"}]}');
+  });
+
+  it('keeps non-empty optional member fields in canonical order', () => {
+    expect(
+      serializeCanonicalTemplateContent({
+        schemaVersion: 1,
+        teamPrompt: 'p',
+        members: [{ workflow: 'Build.', name: 'a', role: 'Engineer' }],
+      })
+    ).toBe(
+      '{"schemaVersion":1,"teamPrompt":"p","members":[{"name":"a","role":"Engineer","workflow":"Build."}]}'
+    );
+  });
+
+  it('normalizes one member without inventing optional fields', () => {
+    expect(normalizeTemplateMember({ name: 'a', role: '', workflow: '' })).toEqual({ name: 'a' });
+    expect(normalizeTemplateMember({ name: 'a', role: 'R', workflow: '' })).toEqual({
+      name: 'a',
+      role: 'R',
+    });
+    expect(normalizeTemplateMember({ name: 'a' })).toEqual({ name: 'a' });
   });
 
   it('treats member order as significant', () => {

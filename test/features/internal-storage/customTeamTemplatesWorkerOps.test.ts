@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 
 import { CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION } from '@features/custom-team-templates/contracts';
+import { serializeCanonicalTemplateContent } from '@features/custom-team-templates/core/domain/canonicalTemplateSerialization';
 import { CustomTeamTemplateWorkerOps } from '@features/internal-storage/main/infrastructure/worker/customTeamTemplatesWorkerOps';
 import { INTERNAL_STORAGE_SCHEMA_VERSION } from '@features/internal-storage/main/infrastructure/worker/internalStorageMigrations';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
@@ -302,6 +303,62 @@ describe('custom team templates worker ops', () => {
     expect(core.handle('customTemplate.getById', { templateId: 'missing' })).toEqual({
       status: 'notFound',
     });
+  });
+
+  it('drops empty optional member metadata so the persisted row matches the hashed content', async () => {
+    const dbPath = await makeTmpDbPath();
+    const core = track(makeCore(dbPath));
+
+    const created = core.handle(
+      'customTemplate.create',
+      createPayload({
+        templateId: 'template-empty',
+        members: [{ name: 'alice', role: '', workflow: '' }],
+      })
+    ) as CreateCustomTeamTemplateRecordResult;
+    if (created.status !== 'created') {
+      throw new Error(`expected a created template, received ${created.status}`);
+    }
+    expect(created.template.members).toEqual([{ name: 'alice' }]);
+    expect(Object.keys(created.template.members[0])).toEqual(['name']);
+
+    const updated = core.handle('customTemplate.update', {
+      templateId: 'template-empty',
+      expectedRevision: 1,
+      template: {
+        templateId: 'template-empty',
+        name: 'Release pipeline',
+        schemaVersion: CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION,
+        teamPrompt: 'Ship the release.',
+        members: [{ name: 'alice', role: '', workflow: '' }],
+      },
+      contentHash: 'hash-normalized',
+    }) as { status: string; template?: { members: CustomTeamTemplateMemberV1[] } };
+
+    expect(updated.status).toBe('updated');
+    const reread = core.handle('customTemplate.getById', {
+      templateId: 'template-empty',
+    }) as ReadCustomTeamTemplateRecordResult;
+    if (reread.status !== 'found') {
+      throw new Error(`expected a readable template, received ${reread.status}`);
+    }
+    expect(reread.template.members).toEqual([{ name: 'alice' }]);
+
+    // The readable persisted row must hash to the same canonical content the
+    // update recorded, which is what reconciliation compares against.
+    expect(
+      serializeCanonicalTemplateContent({
+        schemaVersion: reread.template.schemaVersion,
+        teamPrompt: reread.template.teamPrompt,
+        members: reread.template.members,
+      })
+    ).toBe(
+      serializeCanonicalTemplateContent({
+        schemaVersion: CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION,
+        teamPrompt: 'Ship the release.',
+        members: [{ name: 'alice' }],
+      })
+    );
   });
 
   it('ignores caller-supplied createdAt and unknown template fields', async () => {
