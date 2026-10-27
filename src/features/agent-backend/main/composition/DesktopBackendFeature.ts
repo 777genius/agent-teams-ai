@@ -19,6 +19,7 @@ import { prepareCreatedHostTeam } from '../application/createdHostTeam';
 import { ForegroundModelChecks } from '../application/ForegroundModelChecks';
 import { CapturedHostClient } from '../infrastructure/CapturedHostClient';
 import { captureProviderManagement } from '../infrastructure/CapturedProviderManagement';
+import { CapturedRosterCommands } from '../infrastructure/CapturedRosterCommands';
 import { CapturedTeamRegistry } from '../infrastructure/CapturedTeamRegistry';
 import { FileHandleBindingStore } from '../infrastructure/FileHandleBindingStore';
 import { loadDesktopBackendDescriptor } from '../infrastructure/loadDesktopBackendDescriptor';
@@ -43,6 +44,7 @@ import type {
   TeamRegistryRecord,
 } from '@agent-teams/legacy-agent-host/team-registry/contracts';
 import type { CreateTeamLaunchPreparationInput } from '@agent-teams/legacy-agent-host/team-registry/create-launch-contracts';
+import type { ApplicationCommandRunner } from '@features/application-command-ledger';
 import type { TeamCreateRequest } from '@shared/types/team';
 
 type InitializationPhase =
@@ -63,6 +65,8 @@ export interface DesktopBackendFeatureOptions {
   ) => void;
   /** Existing durable storage port, useful for composing the app's chosen persistence. */
   bindings?: HandleBindingStore;
+  /** Existing durable Main ledger is supplied before renderer work admission. */
+  commandRunner?: () => ApplicationCommandRunner | null;
 }
 
 export class DesktopBackendFeature {
@@ -104,21 +108,24 @@ export class DesktopBackendFeature {
       assertBackendRequestGuard(guard);
       return this.router;
     };
-    this.facade = new BackendOperationsFacade({
-      request: async (handle, command) =>
-        (await target(handle, command.guard)).request(handle, command),
-      requestPair: async (source, destination, command) => {
-        const router = await target(source, command.guard);
-        const original = this.handleDefinitions().find(
-          (entry) => entry.handleId === source.handleId
-        );
-        if (!original || !this.authorizeHandle(original.contextId, destination))
-          throw new BackendRoutingError('forbidden');
-        return router.requestPair(source, destination, command);
+    this.facade = new BackendOperationsFacade(
+      {
+        request: async (handle, command) =>
+          (await target(handle, command.guard)).request(handle, command),
+        requestPair: async (source, destination, command) => {
+          const router = await target(source, command.guard);
+          const original = this.handleDefinitions().find(
+            (entry) => entry.handleId === source.handleId
+          );
+          if (!original || !this.authorizeHandle(original.contextId, destination))
+            throw new BackendRoutingError('forbidden');
+          return router.requestPair(source, destination, command);
+        },
+        lookup: async (handle, commandId, method, guard) =>
+          (await target(handle, guard)).lookup(handle, commandId, method, guard),
       },
-      lookup: async (handle, commandId, method, guard) =>
-        (await target(handle, guard)).lookup(handle, commandId, method, guard),
-    });
+      options.commandRunner ? new CapturedRosterCommands(options.commandRunner) : undefined
+    );
   }
 
   initialize(): Promise<void> {

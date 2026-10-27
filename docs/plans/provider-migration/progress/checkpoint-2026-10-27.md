@@ -31,7 +31,7 @@ Verification for this exact merge checkpoint:
   invocation under local resource pressure. No typecheck PASS is claimed.
 - Exact-head full CI was dispatched as
   [run 40539001594](https://github.com/777genius/agent-teams-ai/actions/runs/40539001594).
-  Its result was pending when this checkpoint was written.
+  All eleven required jobs subsequently passed, including `Full qualification`.
 
 The local test command used `pnpm exec vitest run --maxWorkers=1` with:
 
@@ -67,11 +67,34 @@ The frozen 23 October progress report is preserved as a historical snapshot.
 
 ## Active confirmed gaps
 
-The existing Edit Team dialog calls the legacy config writer and submits roster
-changes without the Host's original CAS revision/command. A focused correction is
-being prepared through the existing roster replacement use case, together with
-durable original-intent protection across dialog reopen/renderer reload. It is not
-qualified by the merge checkpoint above.
+The confirmed Edit Team defect is corrected through the existing dialog and one
+Host roster replacement. The original saved revision, saved settings, edited
+presentation and complete roster are committed together. The old `updateConfig`
+writer is not called for a Host handle; authoritative saved presentation also
+feeds Team and global Task reads.
+
+The existing Main application command ledger retains the exact roster intent
+before dispatch. Renderer reload or dialog reopen cannot introduce a new command
+while the previous outcome is unknown. Roster hydration reconciles only the
+original command/payload at its captured Host; missing receipts retain HOLD.
+Completed Main replay still requires a current authorized Host lookup. Standalone
+HTTP composes the same existing storage/ledger features; missing durable storage
+refuses roster mutations while preserving ordinary reads. No second journal or
+new Team mutation is introduced.
+
+For this focused correction, **108 tests in seven existing/new focused files
+passed**, including seven SQLite reconstruction/error/authority cases, facade and
+roster contracts, selected Desktop composition, existing Edit Team and Host reads.
+The new guard and transport composition received an independent review; the
+standalone omission it found was fixed before commit. The finite native source
+closure includes the new dialog helper, guard and reused ledger dependencies.
+Canonical typecheck with bounded compiler parallelism also ended with exit 137
+under local resource pressure; no new native/UI or final exact-head full-CI PASS
+is inferred from these focused tests.
+Typed definitive pre-admission refusals remain terminal rather than unresolved
+debt; a rejected stale save can reopen and submit a new intent. The existing
+dialog also permits correction after a known refusal while retaining UNKNOWN
+payload/identity protection. No error-message text is used to infer the outcome.
 
 Actual stopped import → existing Launch Submit, final mixed Desktop acceptance,
 packed/installed workflow, complete M01–M19 qualification and the original M19

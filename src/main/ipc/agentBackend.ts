@@ -130,6 +130,7 @@ function createCapturedSenderGuard(
 let stoppedImportOwners:
   | { owners: LegacyStoppedSourceOwners; isCurrent(contextId: string): boolean }
   | undefined;
+let desktopCommandRunner: ApplicationCommandRunner | null = null;
 /** Composition supplies actual legacy owners; replacements revoke every prior source capture. */
 export function configureDesktopStoppedImportOwners(
   owners: Omit<LegacyStoppedSourceOwners, 'launch'>,
@@ -208,6 +209,7 @@ export function configureDesktopBackendPersistence(
   backupOwner: Parameters<typeof configureDesktopHostBackup>[0],
   commandRunner: ApplicationCommandRunner | null
 ): void {
+  desktopCommandRunner = commandRunner;
   configureCapturedExtensionCommandRunner(commandRunner);
   configureDesktopHostBackup(backupOwner);
 }
@@ -574,6 +576,7 @@ export function registerDesktopAgentBackend(options: BackendShellOptions): void 
     // Partial/invalid configuration must fail closed, not select another backend.
     descriptor: path || sha256 ? { path: path ?? '', sha256: sha256 ?? '' } : null,
     bindingDirectory: join(options.userDataPath, 'agent-backend', 'bindings'),
+    commandRunner: () => desktopCommandRunner,
     onInitializationFailure: (phase, code) =>
       createLogger('IPC:AgentBackend').warn('Captured backend initialization held', {
         phase,
@@ -741,4 +744,5 @@ export function removeDesktopAgentBackendHandlers(): void {
   active?.removeHandlers();
   active = undefined;
   stoppedImportOwners = undefined;
+  desktopCommandRunner = null;
 }

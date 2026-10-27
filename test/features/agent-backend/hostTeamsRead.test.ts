@@ -414,6 +414,28 @@ describe('ordinary Host team read selection', () => {
       );
     }
   );
+  it('reopens edited Host presentation from saved owner settings in both list and Detail', async () => {
+    const f = fixture();
+    const configuration = savedDescription(f);
+    Object.assign(configuration.savedSettings!, {
+      displayName: 'TEST edited team',
+      color: 'purple',
+    });
+    const teams = createHostTeamsApi(f.legacy, f.backend);
+    expect((await teams.list()).find((team) => team.teamName === f.key)).toMatchObject({
+      displayName: 'TEST edited team',
+      color: 'purple',
+    });
+    expect((await teams.getData(f.key)).config).toMatchObject({
+      name: 'TEST edited team',
+      color: 'purple',
+      description: configuration.savedSettings!.description,
+    });
+    expect(
+      (await teams.getAllTasks()).find((task) => task.teamName === f.key)?.teamDisplayName
+    ).toBe('TEST edited team');
+    expect(f.legacy.getData).not.toHaveBeenCalled();
+  });
   it.each(['revision', 'roster', 'unavailable'] as const)(
     'keeps product rows readable without stale description when settings are %s',
     async (gap) => {

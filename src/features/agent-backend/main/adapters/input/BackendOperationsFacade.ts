@@ -15,13 +15,15 @@ import type {
 } from '../../../contracts/operations';
 import type { BackendRequestGuard } from '../../application/backendBinding';
 import type { BackendOwnerRouter } from '../../application/BackendOwnerRouter';
+import type { CapturedRosterCommands } from '../../infrastructure/CapturedRosterCommands';
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 
 /** Finite app conversation; wire method names and captured binding stay main-owned. */
 export class BackendOperationsFacade {
   constructor(
     private readonly router: Pick<BackendOwnerRouter, 'request' | 'lookup'> &
-      Partial<Pick<BackendOwnerRouter, 'requestPair'>>
+      Partial<Pick<BackendOwnerRouter, 'requestPair'>>,
+    private readonly rosterCommands?: CapturedRosterCommands
   ) {}
 
   validate(value: unknown): BackendOperationRequest {
@@ -35,6 +37,25 @@ export class BackendOperationsFacade {
     } catch {
       return { ok: false, code: 'invalid', outcome: 'not-dispatched' };
     }
+    try {
+      assertBackendRequestGuard(guard);
+      if (
+        this.rosterCommands &&
+        (request.operation === 'team.roster.replace' || request.operation === 'team.roster.read')
+      )
+        return await this.rosterCommands.invoke(request, guard, (original) =>
+          this.dispatch(original, guard)
+        );
+      return await this.dispatch(request, guard);
+    } catch (error) {
+      return this.failure(error);
+    }
+  }
+
+  private async dispatch(
+    request: BackendOperationRequest,
+    guard?: BackendRequestGuard
+  ): Promise<BackendOperationResult> {
     try {
       assertBackendRequestGuard(guard);
       let raw: JsonValue;
@@ -144,32 +165,36 @@ export class BackendOperationsFacade {
       assertBackendRequestGuard(guard, 'unknown');
       return projectBackendResult(request, raw);
     } catch (error) {
-      if (error instanceof BackendRoutingError)
-        return {
-          ok: false,
-          code:
-            error.code === 'unavailable' ||
-            error.code === 'shutting-down' ||
-            error.code === 'forbidden'
-              ? error.code
-              : error.code === 'binding-conflict'
-                ? 'conflict'
-                : 'hold',
-          outcome: error.outcome,
-        };
-      if (error instanceof HostClientError)
-        return {
-          ok: false,
-          code:
-            error.code === 'capacity-exceeded'
-              ? 'busy'
-              : error.code === 'shutting-down' || error.code === 'transport-closed'
-                ? 'unavailable'
-                : 'hold',
-          outcome: error.outcome,
-        };
-      // Includes malformed host projection after a potential mutation: never claim rejection.
-      return { ok: false, code: 'hold', outcome: 'unknown' };
+      return this.failure(error);
     }
+  }
+
+  private failure(error: unknown): Extract<BackendOperationResult, { ok: false }> {
+    if (error instanceof BackendRoutingError)
+      return {
+        ok: false,
+        code:
+          error.code === 'unavailable' ||
+          error.code === 'shutting-down' ||
+          error.code === 'forbidden'
+            ? error.code
+            : error.code === 'binding-conflict'
+              ? 'conflict'
+              : 'hold',
+        outcome: error.outcome,
+      };
+    if (error instanceof HostClientError)
+      return {
+        ok: false,
+        code:
+          error.code === 'capacity-exceeded'
+            ? 'busy'
+            : error.code === 'shutting-down' || error.code === 'transport-closed'
+              ? 'unavailable'
+              : 'hold',
+        outcome: error.outcome,
+      };
+    // Includes malformed host projection after a potential mutation: never claim rejection.
+    return { ok: false, code: 'hold', outcome: 'unknown' };
   }
 }

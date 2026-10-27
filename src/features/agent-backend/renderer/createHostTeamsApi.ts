@@ -253,11 +253,15 @@ export function createHostTeamsApi(
         bindings
       );
       read.assertCurrent();
-      let description = '';
+      let description = '',
+        displayName = binding.label,
+        color: string | undefined;
       try {
         const configuration = await readHostRosterConfiguration(backend, binding.handle);
         assertMatchingConfiguration(data, configuration);
         description = configuration.savedSettings?.description ?? '';
+        displayName = configuration.savedSettings?.displayName ?? binding.label;
+        color = configuration.savedSettings?.color;
       } catch {
         // Unavailable saved settings leave ordinary product records readable.
       }
@@ -265,8 +269,9 @@ export function createHostTeamsApi(
       hostTeams.push({
         teamName: data.teamName,
         ...(data.lifecycle?.deletedAt ? { deletedAt: data.lifecycle.deletedAt } : {}),
-        displayName: binding.label,
+        displayName,
         description,
+        ...(color === undefined ? {} : { color }),
         memberCount: data.members.filter((member) => member.role === 'member').length,
         members: data.members,
         ...(data.members.find((member) => member.role === 'lead')
@@ -300,11 +305,19 @@ export function createHostTeamsApi(
         bindings
       );
       observed.push(read.assertCurrent);
+      let displayName = binding.label;
+      try {
+        const configuration = await readHostRosterConfiguration(backend, binding.handle);
+        assertMatchingConfiguration(data, configuration);
+        displayName = configuration.savedSettings?.displayName ?? binding.label;
+      } catch {
+        // Product tasks remain readable while their saved presentation is unavailable.
+      }
       hostTasks.push(
         data.tasks.map((task) => ({
           ...task,
           teamName: data.teamName,
-          teamDisplayName: binding.label,
+          teamDisplayName: displayName,
         }))
       );
     }
@@ -419,7 +432,7 @@ export function createHostTeamsApi(
           result.config = {
             ...result.config,
             projectPath: saved.cwd,
-            ...(saved.displayName === undefined ? {} : { displayName: saved.displayName }),
+            ...(saved.displayName === undefined ? {} : { name: saved.displayName }),
             ...(saved.description === undefined ? {} : { description: saved.description }),
             ...(saved.color === undefined ? {} : { color: saved.color }),
           };

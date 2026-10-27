@@ -1,6 +1,8 @@
 import { join } from 'node:path';
 
 import { DesktopBackendFeature } from '@features/agent-backend/main';
+import { createApplicationCommandLedgerFeature } from '@features/application-command-ledger/main';
+import { createInternalStorageFeature } from '@features/internal-storage/main';
 /**
  * Standalone (non-Electron) entry point for Agent Teams AI.
  *
@@ -37,6 +39,7 @@ import type { NotificationManager } from './services/infrastructure/Notification
 import type { ServiceContext } from './services/infrastructure/ServiceContext';
 import type { SshConnectionManager } from './services/infrastructure/SshConnectionManager';
 import type { UpdaterService } from './services/infrastructure/UpdaterService';
+import type { InternalStorageFeature } from '@features/internal-storage/main';
 
 const logger = createLogger('Standalone');
 
@@ -94,6 +97,7 @@ let localContext: ServiceContext;
 let notificationManager: NotificationManager;
 let httpServer: HttpServer;
 let agentBackend: DesktopBackendFeature | undefined;
+let backendStorage: InternalStorageFeature | undefined;
 let backendCurrent = true;
 
 // =============================================================================
@@ -165,12 +169,23 @@ async function start(): Promise<void> {
 
   const descriptorPath = process.env.AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH;
   const descriptorHash = process.env.AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256;
+  backendStorage =
+    descriptorPath || descriptorHash
+      ? createInternalStorageFeature({
+          userDataPath: join(getClaudeBasePath(), 'agent-backend', 'http-state'),
+        })
+      : undefined;
+  const ledgerBackend = backendStorage?.applicationCommandLedgerBackend;
+  const commandRunner = ledgerBackend
+    ? createApplicationCommandLedgerFeature({ storageGateway: ledgerBackend.gateway }).runner
+    : null;
   agentBackend = new DesktopBackendFeature({
     descriptor:
       descriptorPath || descriptorHash
         ? { path: descriptorPath ?? '', sha256: descriptorHash ?? '' }
         : null,
     bindingDirectory: join(getClaudeBasePath(), 'agent-backend', 'http-bindings'),
+    commandRunner: () => commandRunner,
   });
 
   // Build services for HTTP routes
@@ -214,6 +229,7 @@ async function shutdown(): Promise<void> {
   }
 
   await backendDrain;
+  await backendStorage?.dispose();
 
   if (localContext) {
     localContext.dispose();

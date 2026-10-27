@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { useGatewayMemberBindings } from '@features/gateway-provider/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
@@ -36,6 +37,7 @@ import {
 import { parseNumericSuffixName } from '@shared/utils/teamMemberName';
 import { Loader2 } from 'lucide-react';
 
+import { createEditTeamHostSubmission } from './editTeamHostSubmission';
 import {
   buildEditTeamMemberRosterSnapshot,
   buildEditTeamSourceSnapshot,
@@ -182,6 +184,14 @@ export const EditTeamDialog = ({
   const initializedTeamNameRef = useRef<string | null>(null);
   const baselineSourceSnapshotRef = useRef<string | null>(null);
   const pendingCommittedSourceSnapshotRef = useRef<string | null>(null);
+  const hostSubmissionRef = useRef<ReturnType<typeof createEditTeamHostSubmission> | null>(null);
+  const dialogActiveRef = useRef(false);
+  useEffect(() => {
+    dialogActiveRef.current = true;
+    return () => {
+      dialogActiveRef.current = false;
+    };
+  }, []);
 
   useFileListCacheWarmer(projectPath ?? null);
   useOpenCodePassiveStatusPrefetch({
@@ -213,6 +223,22 @@ export const EditTeamDialog = ({
     if (open) {
       const shouldInitialize = !wasOpen || initializedTeamNameRef.current !== teamName;
       if (shouldInitialize) {
+        const submission: ReturnType<typeof createEditTeamHostSubmission> | null =
+          isHostTeamSelectionKey(teamName)
+            ? createEditTeamHostSubmission({
+                teams: api.teams,
+                teamName,
+                baseline: {
+                  name: currentName,
+                  description: currentDescription,
+                  color: currentColor,
+                  members: currentMembers,
+                },
+                isCurrent: () =>
+                  dialogActiveRef.current && hostSubmissionRef.current === submission,
+              })
+            : null;
+        hostSubmissionRef.current = submission;
         setName(currentName);
         setDescription(currentDescription);
         setColor(currentColor);
@@ -241,6 +267,7 @@ export const EditTeamDialog = ({
         }
       }
     } else if (wasOpen) {
+      hostSubmissionRef.current = null;
       initializedTeamNameRef.current = null;
       baselineSourceSnapshotRef.current = null;
       pendingCommittedSourceSnapshotRef.current = null;
@@ -435,6 +462,18 @@ export const EditTeamDialog = ({
       let refreshAfterSaveAttempted = false;
       let committedMembersForSnapshot: ResolvedTeamMember[] = currentMembers;
       try {
+        if (isHostTeamSelectionKey(teamName)) {
+          const submission = hostSubmissionRef.current;
+          if (!submission) throw new Error('Saved team configuration unavailable.');
+          await submission.submit({ name, description, color, members: builtMembers });
+          configSaved = true;
+          membersSaved = true;
+          gatewayBindings.markSaved(builtMembers.map((member) => member.name));
+          refreshAfterSaveAttempted = true;
+          await Promise.resolve(onSaved());
+          onClose();
+          return;
+        }
         await api.teams.updateConfig(teamName, {
           name: name.trim(),
           description: description.trim(),
