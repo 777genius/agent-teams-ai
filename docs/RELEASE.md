@@ -44,34 +44,32 @@ Release body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.18.4 -->
 
-OpenCode setup now includes a separate V2 installer, while group chats and task folders make larger teams easier to organize.
+This release adds group chats, OpenUI in chats, better attachment support across agents, and support for OpenCode 2.x alongside 1.x.
 
 ### What's New
 
-- Install OpenCode V2 when OpenCode is missing; keep existing V1 installations unchanged.
-- Create named group chats where agents share tasks and route messages.
-- Organize tasks in nested folders with drag-and-drop.
-- Send files and view charts, tables, and Mermaid diagrams directly in teammate chats.
-- Choose your active Anthropic connection: subscription, API key, or compatible endpoint.
-- Assign gateway providers per teammate and track their usage.
+- Create group chats with selected teammates.
+- View OpenUI charts and tables, plus Mermaid diagrams, directly in chats.
+- Use OpenCode 2.x or keep using your existing OpenCode 1.x installation.
+- Organize tasks in folders with drag-and-drop.
+- Choose an Anthropic subscription, API key, or compatible endpoint.
+- Choose gateway providers for individual teammates and see their usage.
 
 ### Improvements
 
-- Use installed stable OpenCode 2.x versions with the bundled compatible engine.
-- Queue messages with Cmd or Ctrl+Enter, then edit, send, or remove them manually.
-- Send images and videos to OpenCode teammates when their models support them.
-- Team launch defaults Fast mode to Off unless you saved another preference.
-- Allow slow OpenCode provider connections to finish during first-time setup.
-- Use your configured Anthropic models with compatible endpoints.
+- Queue messages with Cmd or Ctrl+Enter, then edit, send, or remove them.
+- Install OpenCode V2 from the app when OpenCode is missing.
+- Give slow OpenCode connections more time to finish setup.
+- Use your configured Anthropic model when no model is selected.
 
-### Bug Fixes
+### Fixes
 
-- Recover OpenCode task delivery and replies after relaunches or temporary connection timeouts.
-- Stop no longer reports failure after the team's agents have exited.
-- Stop repeated background checks of inactive teammates and unnecessary team-history reads.
-- Prevent group reply loops and background OpenCode processes after quitting.
-- Show new group messages at the bottom and reactions over message corners.
-- Update Electron and other dependencies with security fixes.
+- Fix attachment handling in chats with different agents, including supported images and videos.
+- Restore OpenCode task delivery and replies after relaunches or temporary connection failures.
+- Reduce background CPU usage and stop leftover OpenCode processes when quitting.
+- Prevent repeated group replies and incorrect errors when stopping teams.
+- Show new group messages at the bottom and reactions in message corners.
+- Include security updates for Electron and dependencies.
 
 ### macOS installation
 
