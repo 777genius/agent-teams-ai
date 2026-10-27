@@ -1420,6 +1420,10 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
   const evidence = 'C:\\test\\runtime-candidate-evidence.json';
   const desktop = new URL('../opencode-diagnostics-desktop.mjs', import.meta.url);
   const helper = new URL('./packaged.mjs?handoff-actual', import.meta.url);
+  const platformHelper = new URL('./platform.mjs?handoff-actual', import.meta.url);
+  const launcherBirth = '2026-10-27T20:49:53.4491000Z';
+  const appBirth = '2026-10-27T20:52:41.6914690Z';
+  const replacementBirth = '2026-10-27T20:52:54.2959050Z';
   const loader = path.join(root, 'loader.mjs');
   const preload = path.join(root, 'preload.mjs');
   const mock = path.join(root, 'packaged-mock.mjs');
@@ -1429,11 +1433,23 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
     preload,
     `
     import assert from 'node:assert/strict';
+    import { writeFileSync } from 'node:fs';
+    import path from 'node:path';
     Object.defineProperty(process, 'platform', {value:'win32'});
-    if (process.argv[2] === 'stop') process.kill = (pid) => {
-      assert.equal(pid, 101, 'App was signalled before its graceful shutdown completed');
-      return true;
-    };
+    if (process.argv[2] === 'stop') {
+      const calls = [];
+      const receipt = path.join(process.argv[3], 'test-kill-calls.json');
+      writeFileSync(receipt, JSON.stringify(calls));
+      process.kill = (pid, signal) => {
+        calls.push({pid, signal});
+        writeFileSync(receipt, JSON.stringify(calls));
+        assert(
+          pid === 101 || (pid === 102 && process.env.TEST_PACKAGED_STOP_CASE === 'same-identity'),
+          'Retired, replaced or unknown process was signalled'
+        );
+        return true;
+      };
+    }
   `
   );
   await writeFile(
@@ -1457,14 +1473,25 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
   await writeFile(
     platform,
     `
+    export { sameIdentity, ownedTree } from ${JSON.stringify(platformHelper.href)};
     export const assertPortAvailable = () => { throw new Error('TEST_HANDOFF_VERIFIED_BEFORE_LAUNCH'); };
-    export const processes = () => process.argv[2] !== 'stop' ? [] : [
-      {pid:101,birth:'launcher',executable:'node'},
-      ...(!globalThis.packagedCloseAt || Date.now() - globalThis.packagedCloseAt < 1000
-        ? [{pid:102,parent:101,birth:'app',executable:${JSON.stringify(exe)}}] : [])
-    ];
-    export const sameIdentity = () => {};
-    export const ownedTree = (snapshot) => snapshot;
+    export const processes = () => {
+      if (process.argv[2] !== 'stop') return [];
+      const launcher = {pid:101,parent:1,birth:${JSON.stringify(launcherBirth)},executable:'node'};
+      const app = {pid:102,parent:101,birth:${JSON.stringify(appBirth)},executable:${JSON.stringify(exe)}};
+      if (!globalThis.packagedCloseAt) return [launcher, app];
+      const scenario = process.env.TEST_PACKAGED_STOP_CASE;
+      if (scenario === 'census-failure') throw new Error('TEST_CENSUS_FAILED');
+      if (scenario === 'same-identity') return [launcher, app];
+      if (['reused-pid', 'missing-birth', 'invalid-birth'].includes(scenario)) {
+        return [launcher, {
+          pid:app.pid, parent:999, executable:'powershell.exe',
+          birth:scenario === 'reused-pid' ? ${JSON.stringify(replacementBirth)}
+            : scenario === 'invalid-birth' ? 'not-a-birth' : undefined,
+        }];
+      }
+      return Date.now() - globalThis.packagedCloseAt < 1000 ? [launcher, app] : [launcher];
+    };
     export const listeners = () => [];
     export const assertListenerOwnership = () => {};
     export const fixtureShim = () => {};
@@ -1499,7 +1526,7 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
     }
   `
   );
-  const invoke = (args) =>
+  const invoke = (args, stopCase = 'graceful') =>
     new Promise((resolve) => {
       execFile(
         process.execPath,
@@ -1511,7 +1538,10 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
           fileURLToPath(desktop),
           ...args,
         ],
-        { timeout: 10000, env: { ...process.env, TEMP: root, TMP: root } },
+        {
+          timeout: 10000,
+          env: { ...process.env, TEMP: root, TMP: root, TEST_PACKAGED_STOP_CASE: stopCase },
+        },
         (error, stdout, stderr) => resolve({ error, stdout, stderr })
       );
     });
@@ -1535,7 +1565,7 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
     await t.test(
       'a CDP timeout still waits for the owned app to retire before fallback',
       async () => {
-        manifest.launcher = { pid: 101, birth: 'launcher', executable: 'node' };
+        manifest.launcher = { pid: 101, parent: 1, birth: launcherBirth, executable: 'node' };
         await writeFile(path.join(sandbox, 'manifest.json'), JSON.stringify(manifest));
         const stopped = await invoke(['stop', sandbox]);
         assert.ifError(stopped.error);
@@ -1554,8 +1584,56 @@ test('explicit candidate evidence survives real seed-to-start manifest handoff',
           signals.find((entry) => entry.expected.pid === 101).outcome,
           'signal-returned'
         );
+        assert.deepEqual(
+          JSON.parse(await readFile(path.join(sandbox, 'test-kill-calls.json'), 'utf8')),
+          [{ pid: 101, signal: 'SIGTERM' }]
+        );
       }
     );
+    for (const scenario of [
+      'reused-pid',
+      'same-identity',
+      'missing-birth',
+      'invalid-birth',
+      'census-failure',
+    ]) {
+      await t.test(`cleanup identity handling: ${scenario}`, async () => {
+        await writeFile(path.join(sandbox, 'manifest.json'), JSON.stringify(manifest));
+        await rm(path.join(sandbox, 'cleanup-signals.json'), { force: true });
+        const stopped = await invoke(['stop', sandbox], scenario);
+        const calls = JSON.parse(
+          await readFile(path.join(sandbox, 'test-kill-calls.json'), 'utf8')
+        );
+        if (['missing-birth', 'invalid-birth', 'census-failure'].includes(scenario)) {
+          assert(stopped.error, 'Unknown identity must refuse cleanup');
+          assert.match(
+            stopped.stderr,
+            scenario === 'census-failure' ? /TEST_CENSUS_FAILED/ : /Invalid process birth identity/
+          );
+          assert.deepEqual(calls, [], 'Unknown identity must never authorize a signal');
+          return;
+        }
+        assert.ifError(stopped.error);
+        const signals = JSON.parse(
+          await readFile(path.join(sandbox, 'cleanup-signals.json'), 'utf8')
+        );
+        const app = signals.find((entry) => entry.expected.pid === 102);
+        assert.equal(app.expected.birth, appBirth);
+        assert.equal(app.current.birth, scenario === 'reused-pid' ? replacementBirth : appBirth);
+        assert.equal(
+          app.outcome,
+          scenario === 'reused-pid' ? 'pid-reused-original-retired' : 'signal-returned'
+        );
+        assert.equal(
+          signals.find((entry) => entry.expected.pid === 101).outcome,
+          'signal-returned'
+        );
+        assert.deepEqual(
+          calls,
+          (scenario === 'reused-pid' ? [101] : [102, 101]).map((pid) => ({ pid, signal: 'SIGTERM' }))
+        );
+      });
+    }
   } finally {
     if (sandbox) await rm(sandbox, { recursive: true, force: true });
     await rm(root, { recursive: true, force: true });

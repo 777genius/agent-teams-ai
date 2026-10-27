@@ -5,6 +5,15 @@ import { copyFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { readPendingArtifact } from './catalog.mjs';
+import {
+  assertSettledDirectoryPage,
+  qualifyCatalogReadExpectation,
+  qualifySettings,
+  qualifyUIRefresh,
+  settingsRefreshFailure,
+  settingsRefreshSettled,
+  waitForSettledDirectory,
+} from './packaged-verify.mjs';
 
 test('catalog fixture subprocess returns four sources, failures, partial models and recovery; refuses mutations', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'opencode-diagnostics-e2e-catalog-test-'));
@@ -158,5 +167,204 @@ test('pending artifacts tolerate absence, preserve content and surface other rea
     await assert.rejects(readPendingArtifact(root), { code: 'EISDIR' });
   } finally {
     await rm(root, { recursive: true, force: true });
+  }
+});
+
+const v2Disclaimer =
+  'capabilities_pending: V2 catalog reads do not qualify authentication, team launch or one-shot execution.';
+const nativePath = 'C:\\TEST-packaged\\user-data\\runtimes\\opencode\\bin\\opencode.exe';
+const knownModels = ['opencode/known-one', 'opencode/known-two'];
+
+function v2ReadEvidence() {
+  const status = {
+    providerId: 'opencode', supported: true, statusCheckOutcome: 'model_only',
+    verificationState: 'unknown', authenticated: false,
+    capabilities: { teamLaunch: false, oneShot: false },
+    statusMessage: 'OpenCode V2 catalog available; capabilities_pending',
+    models: [...knownModels],
+    externalRuntimeDiagnostics: [{ id: 'cli-bin', detected: true, detailMessage: nativePath }],
+    modelCatalog: {
+      schemaVersion: 1, providerId: 'opencode', source: 'app-server', status: 'stale',
+      models: knownModels.map((id) => ({ id })),
+      diagnostics: { configReadState: 'ready', appServerState: 'healthy',
+        code: 'capabilities_pending', message: 'capabilities_pending' },
+    },
+  };
+  return [
+    { installed: true, state: 'ready', source: 'app-managed', version: '2.1.4', binaryPath: nativePath },
+    { source: 'app-managed', version: '2.1.4', path: nativePath, sha256: 'a'.repeat(64) },
+    { schemaVersion: 1, version: '2.1.4', binaryPath: nativePath,
+      platformPackage: '@opencode/cli-windows-x64', integrity: 'sha512-VEVTVA==' },
+    [structuredClone(status), structuredClone(status)],
+  ];
+}
+
+function v2Directory(summary = true) {
+  return {
+    schemaVersion: 1, runtimeId: 'opencode',
+    directory: {
+      runtimeId: 'opencode', diagnostics: [summary ? 'capabilities_pending' : v2Disclaimer],
+      entries: [{ providerId: 'opencode', state: 'available',
+        modelCount: summary ? null : 2, sources: ['seed', 'inventory'],
+        metadata: { hasKnownModels: !summary } }],
+      cursor: null, nextCursor: null, totalCount: 1, returnedCount: 1,
+    },
+  };
+}
+
+function catalogRecord(method, response, input = {}) {
+  return {
+    method, response, startedAt: 1, completedAt: 2,
+    input: { runtimeId: 'opencode', projectPath: null, refresh: true, cursor: null,
+      ...(method === 'loadProviderDirectory' ? { summary: true, filter: 'all' }
+        : { providerId: 'opencode', requestGroupId: 'dashboard-connected-catalog:1:opencode' }),
+      ...input },
+  };
+}
+
+test('V2 catalog disclaimers require managed identity and both successful native read-only statuses', () => {
+  const evidence = v2ReadEvidence();
+  const expectation = qualifyCatalogReadExpectation(...evidence);
+  assert.equal(expectation.kind, 'v2-catalog-only');
+  assert.equal(expectation.nativeVersion, '2.1.4');
+  assert.deepEqual(expectation.modelIds, knownModels);
+  assert.equal(expectation.authenticationProven, false);
+  assert.equal(expectation.launchReadinessProven, false);
+  // A stale project-status projection is not a fresh-model qualification.
+  assert.equal(evidence[3][0].modelCatalog.status, 'stale');
+  for (const invalidate of [
+    (e) => { e[0].source = 'path'; },
+    (e) => { e[1].sha256 = 'not-a-digest'; },
+    (e) => { e[2].binaryPath = 'C:\\foreign\\opencode.exe'; },
+    (e) => { e[2].version = '2.1.3'; },
+    (e) => { e[3].pop(); },
+    (e) => { e[3][0].modelCatalog.diagnostics.appServerState = 'degraded'; },
+    (e) => { e[3][1].modelCatalog.diagnostics.configReadState = 'failed'; },
+    (e) => { e[3][1].statusCheckOutcome = 'transient_error'; },
+    (e) => { e[3][1].capabilities.teamLaunch = true; },
+    (e) => { e[3][1].externalRuntimeDiagnostics[0].detailMessage = 'C:\\foreign\\opencode.exe'; },
+    (e) => { e[3][1].models = []; e[3][1].modelCatalog.models = []; },
+    (e) => { e[3][1].modelCatalog.models.pop(); },
+  ]) {
+    const invalid = structuredClone(evidence);
+    invalidate(invalid);
+    assert.throws(() => qualifyCatalogReadExpectation(...invalid));
+  }
+  for (const version of ['1.19.4', '2.1.4-beta.1', '3.0.0']) {
+    const unqualified = structuredClone(evidence);
+    unqualified[0].version = version;
+    assert.equal(qualifyCatalogReadExpectation(...unqualified), undefined);
+  }
+});
+
+test('verified V2 summary settles immediately but V1, missing proof and additional diagnostics stay strict', async () => {
+  const expectation = qualifyCatalogReadExpectation(...v2ReadEvidence());
+  const summary = v2Directory();
+  let calls = 0;
+  assert.equal(await waitForSettledDirectory(async () => { calls++; return summary; }, 1000,
+    expectation), summary);
+  assert.equal(calls, 1);
+  assert.throws(() => assertSettledDirectoryPage(summary.directory), /Pending\/degraded/);
+  for (const diagnostics of [[], ['capabilities_pending', 'capabilities_pending'],
+    ['capabilities_pending', 'OpenCode inventory probe timed out after 60000ms'], [v2Disclaimer]]) {
+    const response = structuredClone(summary);
+    response.directory.diagnostics = diagnostics;
+    await assert.rejects(waitForSettledDirectory(async () => response, 1000, expectation),
+      /readiness failed/);
+  }
+  await assert.rejects(waitForSettledDirectory(async () => ({ ...summary, error: { message: 'failed' } }),
+    1000, expectation), /readiness failed/);
+});
+
+test('V2 measured UI still requires its own fresh complete model pages and exact rendered inventory', async () => {
+  const expectation = qualifyCatalogReadExpectation(...v2ReadEvidence());
+  const modelPage = (modelId, cursor, nextCursor) => ({
+    schemaVersion: 1, runtimeId: 'opencode', models: {
+      runtimeId: 'opencode', providerId: 'opencode', catalogState: 'fresh',
+      cursor, nextCursor, totalCount: 2, returnedCount: 1,
+      models: [{ providerId: 'opencode', modelId }],
+    },
+  });
+  const records = [
+    catalogRecord('loadProviderDirectory', v2Directory()),
+    catalogRecord('loadModels', modelPage(knownModels[0], null, 'next')),
+    catalogRecord('loadModels', modelPage(knownModels[1], 'next', null), { cursor: 'next' }),
+  ];
+  const completed = { state: 'ready', models: [...knownModels] };
+  assert.deepEqual((await qualifyUIRefresh(records, completed, expectation)).modelIds, knownModels);
+  await assert.rejects(qualifyUIRefresh(records, completed), /Pending\/degraded/);
+  for (const invalidate of [
+    (r) => { r[1].response.models.catalogState = 'stale'; },
+    (r) => { delete r[1].response.models.catalogState; },
+    (r) => { r.pop(); },
+    (r) => { r[2].input.cursor = 'foreign'; },
+    (r) => { r[1].input.providerId = 'foreign'; },
+    (r) => { r[1].error = 'transport failed'; },
+    (r) => { r[0].response.directory.diagnostics.push('native failure'); },
+  ]) {
+    const invalid = structuredClone(records);
+    invalidate(invalid);
+    await assert.rejects(qualifyUIRefresh(invalid, completed, expectation));
+  }
+  await assert.rejects(qualifyUIRefresh(records, { ...completed, models: [knownModels[0]] },
+    expectation), /Rendered UI/);
+  await assert.rejects(qualifyUIRefresh(records, { ...completed, state: 'error' }, expectation));
+});
+
+test('V2 full directory disclaimer never qualifies seed-only or failed inventory', () => {
+  const expectation = qualifyCatalogReadExpectation(...v2ReadEvidence());
+  const full = v2Directory(false);
+  const observation = { overflow: false, records: [catalogRecord('loadProviderDirectory', full,
+    { summary: false })] };
+  assert.doesNotThrow(() => assertSettledDirectoryPage(full.directory, expectation, false));
+  assert.throws(() => assertSettledDirectoryPage(full.directory), /Pending\/degraded/);
+  assert.equal(settingsRefreshSettled(observation, 1000, 500, expectation), true);
+  assert.equal(settingsRefreshFailure(observation, expectation), null);
+  for (const invalidate of [
+    (d) => { d.entries = []; d.returnedCount = 0; d.totalCount = 0; },
+    (d) => { d.entries[0].modelCount = null; d.entries[0].metadata.hasKnownModels = false; },
+    (d) => { d.entries[0].sources = ['seed']; },
+    (d) => { d.entries[0].sources = 'not-inventory'; },
+    (d) => { d.entries[0].providerId = 'foreign'; },
+    (d) => { d.diagnostics.push('V2 read status unavailable'); },
+    (d) => { d.diagnostics = ['capabilities_pending']; },
+  ]) {
+    const invalid = structuredClone(observation);
+    invalidate(invalid.records[0].response.directory);
+    assert.throws(() => assertSettledDirectoryPage(invalid.records[0].response.directory,
+      expectation, false), /Pending\/degraded/);
+    assert.equal(settingsRefreshSettled(invalid, 1000, 500, expectation), false);
+    assert.equal(settingsRefreshFailure(invalid, expectation)?.category, 'native-diagnostics');
+  }
+  const failed = structuredClone(observation);
+  failed.records[0].response.error = { message: 'native error' };
+  assert.equal(settingsRefreshSettled(failed, 1000, 500, expectation), false);
+  assert.equal(settingsRefreshFailure(failed, expectation)?.category, 'runtime-error');
+});
+
+test('V2 settings requires the same native identity and an actually observed configured model', () => {
+  const expectation = qualifyCatalogReadExpectation(...v2ReadEvidence());
+  const response = {
+    schemaVersion: 1, runtimeId: 'opencode', view: {
+      runtimeId: 'opencode', runtime: { state: 'ready', version: '2.1.4', cliPath: nativePath },
+      providers: [{ providerId: 'opencode' }],
+      configuredModels: [{ providerId: 'opencode', modelId: knownModels[0] }],
+      diagnostics: [v2Disclaimer],
+    },
+  };
+  assert.deepEqual(qualifySettings(response, expectation), { state: 'ready', providers: 1, models: 1 });
+  assert.throws(() => qualifySettings(response), /Settings diagnostics/);
+  for (const invalidate of [
+    (r) => { r.view.runtime.state = 'degraded'; },
+    (r) => { r.view.runtime.version = '2.1.3'; },
+    (r) => { r.view.runtime.cliPath = 'C:\\foreign\\opencode.exe'; },
+    (r) => { r.view.configuredModels = []; },
+    (r) => { r.view.configuredModels[0].modelId = 'opencode/unobserved'; },
+    (r) => { r.view.diagnostics.push('V2 read status unavailable'); },
+    (r) => { r.error = { message: 'native failure' }; },
+  ]) {
+    const invalid = structuredClone(response);
+    invalidate(invalid);
+    assert.throws(() => qualifySettings(invalid, expectation));
   }
 });

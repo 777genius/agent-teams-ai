@@ -331,6 +331,84 @@ export function qualifyProjectStatus(provider) {
   };
 }
 
+const V2_CATALOG_DISCLAIMER =
+  'capabilities_pending: V2 catalog reads do not qualify authentication, team launch or one-shot execution.';
+const sameWindowsPath = (left, right) =>
+  typeof left === 'string' &&
+  typeof right === 'string' &&
+  path.win32.normalize(left).toLowerCase() === path.win32.normalize(right).toLowerCase();
+
+// This expectation concerns read-only catalog disclaimers, never authentication,
+// launch authority or model freshness. Provenance has already hashed the managed file.
+export function qualifyCatalogReadExpectation(version, provenance, managed, projectStatuses) {
+  if (!/^2\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/.test(version?.version ?? '')) return undefined;
+  assert(
+    version.installed && version.state === 'ready' && !version.error &&
+      version.source === 'app-managed' && provenance?.source === 'app-managed' &&
+      provenance.version === version.version && /^[a-f0-9]{64}$/.test(provenance.sha256) &&
+      sameWindowsPath(version.binaryPath, provenance.path) &&
+      managed?.schemaVersion === 1 && managed.version === version.version &&
+      sameWindowsPath(managed.binaryPath, provenance.path) &&
+      /^@opencode\/cli-windows-(?:x64|arm64)$/.test(managed.platformPackage) &&
+      /^sha512-[A-Za-z0-9+/]+={0,2}$/.test(managed.integrity),
+    'V2 catalog expectation requires verified managed native identity'
+  );
+  assert(Array.isArray(projectStatuses) && projectStatuses.length === 2,
+    'V2 catalog expectation requires two full project status reads');
+  let modelIds;
+  for (const provider of projectStatuses) {
+    qualifyProjectStatus(provider);
+    const catalog = provider.modelCatalog;
+    assert(
+      provider.statusCheckOutcome === 'model_only' && provider.verificationState === 'unknown' &&
+        provider.authenticated === false && provider.capabilities?.teamLaunch === false &&
+        provider.capabilities?.oneShot === false &&
+        provider.statusMessage === 'OpenCode V2 catalog available; capabilities_pending' &&
+        catalog?.schemaVersion === 1 && catalog.providerId === 'opencode' &&
+        catalog.source === 'app-server' && ['ready', 'stale'].includes(catalog.status) &&
+        catalog.diagnostics?.configReadState === 'ready' &&
+        catalog.diagnostics?.appServerState === 'healthy' &&
+        catalog.diagnostics?.code === 'capabilities_pending' &&
+        catalog.diagnostics?.message === 'capabilities_pending' &&
+        provider.externalRuntimeDiagnostics?.some((entry) =>
+          entry.id === 'cli-bin' && entry.detected === true &&
+          sameWindowsPath(entry.detailMessage, provenance.path)),
+      'V2 catalog expectation requires successful read-only native project status'
+    );
+    assert(Array.isArray(provider.models) && provider.models.length > 0 &&
+      provider.models.every((id) => typeof id === 'string' && /^[^\s/]+\/[^\s]+$/.test(id)) &&
+      new Set(provider.models).size === provider.models.length && Array.isArray(catalog.models),
+    'V2 catalog expectation requires real known model identities');
+    assert.deepEqual(catalog.models.map((model) => model.id).sort(), [...provider.models].sort(),
+      'V2 project status model inventory disagrees');
+    modelIds = [...provider.models].sort();
+  }
+  return Object.freeze({
+    kind: 'v2-catalog-only', nativeVersion: version.version, nativePath: provenance.path,
+    nativeSha256: provenance.sha256, modelIds: Object.freeze(modelIds),
+    modelSources: Object.freeze([...new Set(modelIds.map((id) => id.slice(0, id.indexOf('/'))))]),
+    authenticationProven: false, launchReadinessProven: false,
+  });
+}
+
+function expectedCatalogDiagnostics(diagnostics, expectation, summary) {
+  return Array.isArray(diagnostics) && (expectation?.kind === 'v2-catalog-only'
+    ? isDeepStrictEqual(diagnostics, [summary ? 'capabilities_pending' : V2_CATALOG_DISCLAIMER])
+    : diagnostics.length === 0);
+}
+
+function settledDirectoryPage(payload, expectation, summary) {
+  if (!expectedCatalogDiagnostics(payload?.diagnostics, expectation, summary)) return false;
+  // A failed V2 full read retains the disclaimer but drops its models. Seed-only
+  // rows cannot qualify that read using an earlier successful status response.
+  return summary || expectation?.kind !== 'v2-catalog-only' ||
+    Array.isArray(payload.entries) && payload.entries.some((entry) =>
+      expectation.modelSources.includes(entry.providerId) &&
+      Number.isSafeInteger(entry.modelCount) && entry.modelCount > 0 &&
+      entry.metadata?.hasKnownModels === true &&
+      Array.isArray(entry.sources) && entry.sources.includes('inventory'));
+}
+
 export function refreshSettled(observation, current) {
   return (
     !observation.overflow &&
@@ -340,15 +418,15 @@ export function refreshSettled(observation, current) {
   );
 }
 
-export function assertSettledDirectoryPage(payload) {
+export function assertSettledDirectoryPage(payload, expectation, summary = true) {
   assert(
-    Array.isArray(payload?.diagnostics) && payload.diagnostics.length === 0,
+    settledDirectoryPage(payload, expectation, summary),
     'Pending/degraded provider directory does not qualify'
   );
 }
 
 // Readiness is a separate main API precondition, never measured UI evidence.
-export async function waitForSettledDirectory(load, timeoutMs = 120000) {
+export async function waitForSettledDirectory(load, timeoutMs = 120000, expectation) {
   const deadline = Date.now() + timeoutMs;
   let attempt = 0;
   for (;;) {
@@ -361,13 +439,14 @@ export async function waitForSettledDirectory(load, timeoutMs = 120000) {
     assert.equal(response.directory?.runtimeId, 'opencode');
     const diagnostics = response.directory.diagnostics;
     assert(Array.isArray(diagnostics), 'Missing directory readiness diagnostics');
-    if (!diagnostics.length) {
-      assertSettledDirectoryPage(response.directory);
+    if (settledDirectoryPage(response.directory, expectation, true)) {
+      assertSettledDirectoryPage(response.directory, expectation);
       assert(Date.now() < deadline, 'Provider directory did not settle within bootstrap budget');
       return response;
     }
     assert(
-      diagnostics.every((item) => item === 'capabilities_pending'),
+      !expectation && diagnostics.length > 0 &&
+        diagnostics.every((item) => item === 'capabilities_pending'),
       'Provider directory readiness failed'
     );
     await pause(Math.min(250, Math.max(0, deadline - Date.now())));
@@ -400,7 +479,7 @@ export function separateJoinedDirectoryRead(directory) {
   return { walk: directory.filter((record) => record !== joined[0]), sharedReads: 1 };
 }
 
-export async function qualifyUIRefresh(records, completed) {
+export async function qualifyUIRefresh(records, completed, expectation) {
   assert.equal(completed?.state, 'ready');
   assert(!completed.diagnostics?.message);
   assert(records.length, 'Missing measured UI completions');
@@ -437,7 +516,7 @@ export async function qualifyUIRefresh(records, completed) {
   assert(directory.every((r) => r.input.summary === true && r.input.filter === 'all'));
   for (const record of directory) {
     const payload = record.response.directory;
-    assertSettledDirectoryPage(payload);
+    assertSettledDirectoryPage(payload, expectation);
     assert(
       Number.isInteger(payload?.totalCount) && Number.isInteger(payload?.returnedCount),
       'Missing UI directory completeness metadata'
@@ -524,7 +603,7 @@ export function compareCatalogSnapshots(uiInventory, freshModelIds) {
   };
 }
 
-export function settingsRefreshSettled(observation, now, quietMs = 500) {
+export function settingsRefreshSettled(observation, now, quietMs = 500, expectation) {
   const records = observation.records;
   return (
     !observation.overflow &&
@@ -550,8 +629,7 @@ export function settingsRefreshSettled(observation, now, quietMs = 500) {
             record.response.directory.returnedCount === record.response.directory.entries.length &&
             Number.isInteger(record.response.directory.totalCount) &&
             record.response.directory.totalCount >= record.response.directory.returnedCount &&
-            Array.isArray(record.response.directory.diagnostics) &&
-            record.response.directory.diagnostics.length === 0
+            settledDirectoryPage(record.response.directory, expectation, record.input.summary === true)
           : record.method === 'loadModels' &&
             record.response.models?.catalogState === 'fresh' &&
             record.response.models?.runtimeId === 'opencode' &&
@@ -560,7 +638,7 @@ export function settingsRefreshSettled(observation, now, quietMs = 500) {
   );
 }
 
-export function settingsRefreshFailure(observation) {
+export function settingsRefreshFailure(observation, expectation) {
   for (const [recordIndex, record] of observation.records.entries()) {
     // The observer is cleared immediately before the real settings click. Only
     // that explicit OpenCode directory refresh can establish this failure.
@@ -580,7 +658,7 @@ export function settingsRefreshFailure(observation) {
       record.response?.runtimeId === 'opencode' &&
       record.response.directory?.runtimeId === 'opencode' &&
       Array.isArray(diagnostics) &&
-      diagnostics.length
+      !settledDirectoryPage(record.response.directory, expectation, false)
     ) {
       category = 'native-diagnostics';
       // Classify bounded text locally. Never put native messages, paths,
@@ -625,7 +703,7 @@ export function settingsRefreshFailureSummary(failure) {
   return { phase: 'settings-refresh', category: failure.category, cause: failure.cause };
 }
 
-export function qualifySettings(response) {
+export function qualifySettings(response, expectation) {
   assert.equal(response?.schemaVersion, 1);
   assert.equal(response.runtimeId, 'opencode');
   assert(!response.error, 'Provider settings returned a runtime error');
@@ -634,9 +712,17 @@ export function qualifySettings(response) {
   assert(['ready', 'needs-auth'].includes(view.runtime?.state), 'Provider settings is incomplete');
   assert(Array.isArray(view.providers) && Array.isArray(view.configuredModels));
   assert(
-    Array.isArray(view.diagnostics) && view.diagnostics.length === 0,
+    expectedCatalogDiagnostics(view.diagnostics, expectation, false),
     'Settings diagnostics present'
   );
+  if (expectation?.kind === 'v2-catalog-only') {
+    assert(view.runtime.version === expectation.nativeVersion &&
+      sameWindowsPath(view.runtime.cliPath, expectation.nativePath) &&
+      view.configuredModels.some((model) => expectation.modelSources.includes(model.providerId) &&
+        typeof model.modelId === 'string' && expectation.modelIds.includes(
+          model.modelId.startsWith(`${model.providerId}/`) ? model.modelId : `${model.providerId}/${model.modelId}`)),
+    'V2 settings requires the selected native runtime and real known models');
+  }
   return {
     state: view.runtime.state,
     providers: view.providers.length,
@@ -806,6 +892,7 @@ export async function verifyPackaged({
       'Existing project sentinel changed before status'
     );
     evidence.projectStatus = { path: data.project, sentinel: data.projectSentinel, attempts: [] };
+    const projectStatuses = [];
     for (let attempt = 0; attempt < 2; attempt++) {
       const response = await probe(
         `projectStatus-${attempt + 1}`,
@@ -813,12 +900,17 @@ export async function verifyPackaged({
         125000
       );
       evidence.projectStatus.attempts.push(qualifyProjectStatus(response));
+      projectStatuses.push(response);
       assert.equal(
         await readFile(data.projectSentinel, 'utf8'),
         'preserve-existing-project\n',
         'Existing project sentinel changed during status'
       );
     }
+    const catalogExpectation = qualifyCatalogReadExpectation(
+      version, evidence.opencode, evidence.managedRuntime, projectStatuses
+    );
+    evidence.catalogExpectation = catalogExpectation ?? { kind: 'strict' };
     await probe('invalidateSummary', 'window.electronAPI.cliInstaller.invalidateStatus()');
     const statusSnapshot = await probe(
       'statusSnapshot',
@@ -843,7 +935,8 @@ export async function verifyPackaged({
           'window.electronAPI.runtimeProviderManagement.loadProviderDirectory({runtimeId:"opencode",projectPath:null,summary:true,filter:"all",limit:100,cursor:null,refresh:true})',
           remaining
         ),
-      bootstrapDeadline - Date.now()
+      bootstrapDeadline - Date.now(),
+      catalogExpectation
     );
     // The preparation gate subsumes the warm-start catalog/refresh-control polling:
     // it rejects disabled/hidden/zero-size/disconnected controls and loading/empty
@@ -883,7 +976,7 @@ export async function verifyPackaged({
       assert(!observation.overflow, 'UI completion observation overflow/failure');
       assert(completed?.state === 'ready', 'UI did not complete a successful catalog refresh');
       assert(!completed.diagnostics?.message, 'UI catalog diagnostics fail qualification');
-      evidence.ui.inventory = await qualifyUIRefresh(observation.records, completed);
+      evidence.ui.inventory = await qualifyUIRefresh(observation.records, completed, catalogExpectation);
       // The re-check must refresh the Providers & plans grid too, through the shared read.
       assert.equal(
         evidence.ui.inventory.sharedDirectoryReads,
@@ -914,7 +1007,7 @@ export async function verifyPackaged({
         `directory:${page}`,
         `window.electronAPI.runtimeProviderManagement.loadProviderDirectory(${JSON.stringify(input)})`
       );
-      assertSettledDirectoryPage(response.directory);
+      assertSettledDirectoryPage(response.directory, catalogExpectation);
       return response;
     }, 'directory');
     const sources = entries
@@ -984,7 +1077,7 @@ export async function verifyPackaged({
         'window.electronAPI.runtimeProviderManagement.loadView({runtimeId:"opencode",projectPath:null})',
         95000
       );
-      evidence.settings.push(qualifySettings(response));
+      evidence.settings.push(qualifySettings(response, catalogExpectation));
     }
     await observe(
       'globalThis.__packagedCatalogObservation.records = []; globalThis.__packagedCatalogObservation.active = true'
@@ -1045,7 +1138,7 @@ export async function verifyPackaged({
       const requests = await observe('globalThis.__packagedCatalogObservation');
       evidence.settingsRefresh = requests.records;
       const now = await observe('Date.now()');
-      const settled = settingsRefreshSettled(requests, now);
+      const settled = settingsRefreshSettled(requests, now, 500, catalogExpectation);
       evidence.settingsRefreshObservation = {
         attempt,
         at: now,
@@ -1059,7 +1152,7 @@ export async function verifyPackaged({
         && Boolean(document.querySelector('[role="dialog"] [data-testid="runtime-provider-refresh-catalog"]:not(:disabled)'))
         && !document.querySelector('[role="dialog"] [data-testid="runtime-provider-loading-skeleton"]')`);
       evidence.settingsRefreshObservation.ready = ready;
-      const failure = settingsRefreshFailure(requests);
+      const failure = settingsRefreshFailure(requests, catalogExpectation);
       if (failure) {
         evidence.settingsRefreshFailure = failure;
         throw new Error(`Settings refresh completed with ${failure.category}: ${failure.cause}`);
