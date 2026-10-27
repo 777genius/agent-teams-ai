@@ -231,6 +231,16 @@ export async function runDesktopMixedMemberRestartUiSmoke(
     ['bob', 'codex', 'CODEX_TEAM_TWO', 'REPLY_CODEX_TWO'],
     ['carol', 'opencode', 'OPENCODE_TEAM_TWO', 'REPLY_OPENCODE_TWO'],
   ] as const) {
+    if (provider !== 'claude') {
+      await ui.scrollTo(
+        'button[aria-label="Back to chats"]',
+        `original mixed Back to chats before continuation ${provider}`
+      );
+      await ui.click(
+        'button[aria-label="Back to chats"]',
+        `original mixed Back to chats before continuation ${provider}`
+      );
+    }
     const displayName = name === 'team-lead' ? 'lead' : name;
     await ui.click(
       `button[aria-label^=${desktopJsLiteral(displayName + ',')}]`,

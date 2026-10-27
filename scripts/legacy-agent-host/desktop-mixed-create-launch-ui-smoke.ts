@@ -320,6 +320,16 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     ['codex', 'bob', 'CODEX_TEAM_ONE', 'REPLY_CODEX_ONE'],
     ['opencode', 'carol', 'OPENCODE_TEAM_ONE', 'REPLY_OPENCODE_ONE'],
   ] as const) {
+    if (provider !== 'claude') {
+      await ui.scrollTo(
+        'button[aria-label="Back to chats"]',
+        `original mixed Back to chats before ${provider}`
+      );
+      await ui.click(
+        'button[aria-label="Back to chats"]',
+        `original mixed Back to chats before ${provider}`
+      );
+    }
     const principalId = readMixedCapturedPrincipal(fixture.root, provider);
     const displayName = name === 'team-lead' ? 'lead' : name;
     await ui.click(
