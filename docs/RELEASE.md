@@ -35,8 +35,8 @@ Target branch: `main`. Existing `v2.18.0`, `v2.18.1`, `v2.18.2`, and `v2.18.3` t
 
 Runtime gate:
 
-- Agent Teams runtime: `v0.0.144` with OpenCode V2 enabled, published from the reviewed immutable source tag.
-- Before tagging, `runtime.lock.json` must match the verified published `0.0.144` manifest; all seven assets require checksum/source-identity and anonymous-download checks.
+- Agent Teams runtime: `v0.0.145` with OpenCode V2 enabled, published from the reviewed immutable source tag.
+- Before tagging, `runtime.lock.json` must match the verified published `0.0.145` manifest; all seven assets require checksum/source-identity and anonymous-download checks.
 - Terminal Platform runtime: `v0.3.3`.
 - Confirm the final release target, installer asset names, signing, and updater metadata before publication.
 
@@ -61,6 +61,7 @@ This release adds group chats, OpenUI in chats, better attachment support across
 - Install OpenCode V2 from the app when OpenCode is missing.
 - Give slow OpenCode connections more time to finish setup.
 - Use your configured Anthropic model when no model is selected.
+- Keep Codex conversation history across messages and agent restarts.
 
 ### Fixes
 
