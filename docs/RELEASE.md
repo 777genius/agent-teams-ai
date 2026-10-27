@@ -61,7 +61,7 @@ This release adds group chats, OpenUI in chats, better attachment support across
 - Install OpenCode V2 from the app when OpenCode is missing.
 - Give slow OpenCode connections more time to finish setup.
 - Use your configured Anthropic model when no model is selected.
-- Keep Codex conversation history across messages and agent restarts.
+- Keep new Codex messages in context across replies and agent restarts.
 
 ### Fixes
 
