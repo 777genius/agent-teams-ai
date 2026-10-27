@@ -1051,6 +1051,15 @@ describe('ipc teams handlers', () => {
             channel === TEAM_CREATE
               ? 'Captured Host creation unavailable. Refresh teams or retry the unchanged form.'
               : 'Captured Host configuration unavailable. Refresh teams or retry the unchanged form.',
+          ...(channel === TEAM_CREATE
+            ? {
+                failure: {
+                  kind: 'captured-team-create-refusal',
+                  code: 'unavailable',
+                  outcome: 'not-dispatched',
+                },
+              }
+            : {}),
         });
       }
       expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
