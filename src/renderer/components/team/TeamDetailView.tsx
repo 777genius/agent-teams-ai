@@ -12,6 +12,7 @@ import {
   useState,
 } from 'react';
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   assertMemberSettingsRelaunchRoster,
@@ -2477,7 +2478,7 @@ export const TeamDetailView = memo(function TeamDetailView({
           if (data?.isAlive) {
             const task = taskMapRef.current.get(taskId);
             try {
-              if (result.notifiedOwner && task?.owner) {
+              if (result.notifiedOwner && task?.owner && !isHostTeamSelectionKey(teamName)) {
                 await api.teams.processSend(
                   teamName,
                   `Task ${formatTaskDisplayLabel(task)} "${task.subject}" has started. Please begin working on it.`
@@ -2536,8 +2537,8 @@ export const TeamDetailView = memo(function TeamDetailView({
             }
           }
 
-          // Also notify team lead so they can reassign/coordinate
-          if (data?.isAlive) {
+          // Legacy stdin coordination is separate from the canonical Host owner message.
+          if (data?.isAlive && !isHostTeamSelectionKey(teamName)) {
             try {
               const ownerSuffix = task?.owner ? ` ${task.owner} has been notified to stop.` : '';
               await api.teams.processSend(
@@ -2628,7 +2629,14 @@ export const TeamDetailView = memo(function TeamDetailView({
     try {
       await createTeamTask(teamName, request);
 
-      if (prompt && owner && data?.isAlive && !isTeamProvisioning && startImmediately !== false) {
+      if (
+        prompt &&
+        owner &&
+        data?.isAlive &&
+        !isTeamProvisioning &&
+        startImmediately !== false &&
+        !isHostTeamSelectionKey(teamName)
+      ) {
         const msg = `New task assigned to ${owner}: "${subject}". Instructions:\n${prompt}`;
         try {
           await api.teams.processSend(teamName, msg);

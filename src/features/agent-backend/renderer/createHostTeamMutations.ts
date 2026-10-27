@@ -113,6 +113,7 @@ export function createHostTeamMutations(options: {
     handle: BackendHandle;
     teamName: string;
     referenceBindings?: BackendConnectionSnapshot['bindings'];
+    members?: readonly { name: string; role: 'lead' | 'member' }[];
   }>;
   captureScope(): () => boolean;
   invalidateReads?(handle: BackendHandle): void;
@@ -131,7 +132,8 @@ export function createHostTeamMutations(options: {
       purpose: AttachmentUpload['purpose'];
       source?: readonly NormalizedAttachmentPayload[];
     },
-    attempt?: HostTaskSubmissionAttempt
+    attempt?: HostTaskSubmissionAttempt,
+    destination?: 'captured-lead'
   ) {
     // Convert UI selection references only after resolving the original captured target.
     const current = attempt?.current ?? options.captureScope();
@@ -149,6 +151,12 @@ export function createHostTeamMutations(options: {
       source?.forEach((ref) => collect(ref.teamName));
     }
     const target = await options.resolve(key, current, [...referenceTeams]);
+    if (destination === 'captured-lead') {
+      const leads = target.members?.filter((member) => member.role === 'lead') ?? [];
+      const lead = leads[0];
+      if (!lead || leads.length !== 1) return unsupported();
+      payload.to = lead.name;
+    }
     const toCanonical = (team?: string) => {
       const stored = storeHostTaskReferenceTeam(
         team,
@@ -513,6 +521,19 @@ export function createHostTeamMutations(options: {
         },
         result
       );
+    },
+    async processSend(key: string, text: string) {
+      if (typeof text !== 'string' || parseStandaloneSlashCommand(text)) return unsupported();
+      const commandId = crypto.randomUUID();
+      const receipt = await execute(
+        key,
+        { commandId, operation: 'message.send', payload: { to: '', text } },
+        undefined,
+        undefined,
+        'captured-lead'
+      );
+      if (!receipt.messageId)
+        throw new HostTeamOperationError('invalid-result', 'unknown', receipt.commandId);
     },
     async sendMessage(key: string, input: SendMessageRequest) {
       const request = structuredClone(input);

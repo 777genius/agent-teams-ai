@@ -1312,3 +1312,37 @@ The existing strict scripts TypeScript check and embedded-expression VM syntax
 check passed. Prettier reports the same preexisting whole-file drift on the
 unchanged HEAD baseline; no broad formatting is applied. Diff check passed.
 This is diagnosis only, not a readiness waiver, Resume PASS or workflow acceptance.
+
+
+## Captured lead coordination without duplicate Host TaskStart inputs
+
+Holistic review confirmed that ordinary `processSend` was unsupported for Host
+Teams, losing unassigned TaskStart lead coordination. The existing compatibility
+surface now makes one original `message.send` intent to the unique lead from the
+same captured snapshot that resolves its handle/canonical Team/TaskRef bindings.
+UUID, text and current scope are captured before awaiting; no second resolve,
+default fallback, legacy writer, slash dispatch or automatic retry is introduced.
+A completed receipt with the authoritative message ID is required; uncertain
+responses retain their original command identity in the error.
+
+Blindly enabling the old stdin surface would duplicate assigned-lead work.
+Both ordinary Task and graph Start callers now preserve Host coordination only
+when the canonical `notifiedOwner` result is false. A true result retains the
+original canonical owner notification without a second lead input. Host prompted
+Create and Cancel keep their canonical work/direct-owner messages; their extra
+legacy stdin echoes remain legacy-only. Existing legacy behavior, TaskStartCause,
+notification proof and native input-count oracles are unchanged.
+
+Independent actual-code backend and root reviews accepted the five production
+paths. **28/28** focused cases passed: eight actual graph callback/real canonical
+owner cases, 19 ordinary adapter cases including the one-owner/lead/TaskRef proxy
+regression, and the existing graph lost-ACK retention case. Fixture delivery
+bindings are captured product metadata; these tests allocate no native process
+and do not claim SDK or Desktop acceptance. The new proxy fixture's `never[]`
+typing was corrected and its bounded strict TypeScript closure passes with the
+repository's real ambient declarations. The changed adapter/API closure also
+passes; the broader graph/test type closure is locally blocked by missing
+unchanged UI-library declarations, so full current-head validation remains remote.
+Scoped fast lint has zero errors and one unchanged existing TeamDetailView hook
+warning; scoped format/diff checks pass. The final script/source-size checks pass
+with TeamDetailView at 3743/3750 and Host API at 798/800. No cap is raised.

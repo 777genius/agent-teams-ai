@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { api } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { ReviewDialog } from '@renderer/components/team/dialogs/ReviewDialog';
@@ -62,7 +63,7 @@ export function useGraphTaskActions(teamName: string): UseGraphTaskActionsResult
 
           const task = teamData.tasks.find((candidate) => candidate.id === taskId);
           try {
-            if (result.notifiedOwner && task?.owner) {
+            if (result.notifiedOwner && task?.owner && !isHostTeamSelectionKey(teamName)) {
               await api.teams.processSend(
                 teamName,
                 `Task ${formatTaskDisplayLabel(task)} "${task.subject}" has started. Please begin working on it.`
@@ -136,7 +137,7 @@ export function useGraphTaskActions(teamName: string): UseGraphTaskActionsResult
             }
           }
 
-          if (teamData?.isAlive) {
+          if (teamData?.isAlive && !isHostTeamSelectionKey(teamName)) {
             try {
               const ownerSuffix = task?.owner ? ` ${task.owner} has been notified to stop.` : '';
               await api.teams.processSend(

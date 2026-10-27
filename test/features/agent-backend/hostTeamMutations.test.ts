@@ -35,6 +35,7 @@ function fixture() {
       'restoreTask',
       'addTaskComment',
       'sendMessage',
+      'processSend',
       'startTask',
       'getTask',
       'getMessagesPage',
@@ -62,7 +63,7 @@ function fixture() {
             sequence: 0,
             cursor: '11111111-1111-4111-8111-111111111111',
           },
-          members: [],
+          members: [] as BackendTeamSnapshot['members'],
           tasks: [],
           messages: [],
           kanbanState: { teamName: 'actual-team', reviewers: [], tasks: {} },
@@ -124,6 +125,33 @@ function fixture() {
 }
 
 describe('ordinary Host Team mutation adapters', () => {
+  it('routes original processSend once to the exact lead from its captured snapshot and translates canonical TaskRefs', async () => {
+    const f = fixture();
+    const invoke = f.invoke.getMockImplementation()!;
+    f.invoke.mockImplementation(async (request) => {
+      const result = await invoke(request);
+      return request.operation === 'team.snapshot' && 'revision' in result.value
+        ? {
+            ...result,
+            value: { ...result.value, members: [{ name: 'captured-lead', role: 'lead' as const }] },
+          }
+        : result;
+    });
+    const original = createEncodedTaskReference('1', 'TEST-task', f.key);
+    await f.teams.processSend(f.key, original);
+    expect(f.backend.getConnections).toHaveBeenCalledTimes(1);
+    expect(f.invoke.mock.calls.map(([request]) => request.operation)).toEqual([
+      'team.snapshot',
+      'message.send',
+    ]);
+    const sent = f.invoke.mock.calls[1]![0];
+    expect(sent.handle).toEqual({ handleId: 'TEST-A' });
+    expect(sent.payload).toEqual({
+      to: 'captured-lead',
+      text: createEncodedTaskReference('1', 'TEST-task', 'actual-team'),
+    });
+    expect(f.legacy.processSend).not.toHaveBeenCalled();
+  });
   it('round trips same-owner Task, comment and prepared Composer refs by exact immutable resource identity', async () => {
     const f = fixture(),
       target = hostTeamSelectionKey('TEST-B');

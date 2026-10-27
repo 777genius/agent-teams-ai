@@ -546,6 +546,7 @@ export function createHostTeamsApi(
       return {
         handle: { ...connection.handle },
         teamName: read.data.teamName,
+        members: read.data.members,
         referenceBindings: bindings,
       };
     },
