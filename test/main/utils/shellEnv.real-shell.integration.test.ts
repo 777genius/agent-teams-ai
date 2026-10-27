@@ -105,8 +105,8 @@ describe.skipIf(process.platform === 'win32')('shellEnv actual installed shells'
           // credentials in assertion diffs if a regression mutates the parent.
           expect(process.env === parentIdentity).toBe(true);
           expect(
-            JSON.stringify(Object.keys(process.env).sort()) ===
-              JSON.stringify(Object.keys(parentBefore).sort()) &&
+            JSON.stringify(Object.keys(process.env).sort((a, b) => a.localeCompare(b))) ===
+              JSON.stringify(Object.keys(parentBefore).sort((a, b) => a.localeCompare(b))) &&
               Object.keys(parentBefore).every((key) => process.env[key] === parentBefore[key])
           ).toBe(true);
           expect(Object.fromEntries(Object.keys(expected).map((key) => [key, env[key]]))).toEqual(

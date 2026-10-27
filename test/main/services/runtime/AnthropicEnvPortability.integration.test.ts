@@ -207,7 +207,12 @@ describe('Anthropic inherited environment portability with a native Node child',
       // failure diffs while checking every original key/value and object identity.
       expect(process.env === parentEnvIdentity).toBe(true);
       expect(
-        Object.keys(process.env).sort().join('\0') === Object.keys(parentEnv).sort().join('\0')
+        Object.keys(process.env)
+          .sort((a, b) => a.localeCompare(b))
+          .join('\0') ===
+          Object.keys(parentEnv)
+            .sort((a, b) => a.localeCompare(b))
+            .join('\0')
       ).toBe(true);
       expect(Object.keys(parentEnv).every((key) => process.env[key] === parentEnv[key])).toBe(true);
     }
