@@ -75,7 +75,7 @@ export function qualifyHostTaskReferenceTeam(
             row.ownerResourceRef === source.ownerResourceRef && row.teamResourceRef === resource
         )
       : [];
-    if (targets.length === 1) return hostTeamSelectionKey(targets[0]!.handle.handleId);
+    if (targets.length === 1) return hostTeamSelectionKey(targets[0].handle.handleId);
     // The exact retired reference never resolves by a replacement's equal display/canonical name.
     return `${selection}:unbound:${encodeURIComponent(team)}`;
   }
