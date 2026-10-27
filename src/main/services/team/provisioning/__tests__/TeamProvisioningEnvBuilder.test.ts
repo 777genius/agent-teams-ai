@@ -142,6 +142,69 @@ describe('TeamProvisioningEnvBuilder', () => {
     }
   );
 
+  it.skipIf(process.platform === 'win32')(
+    'retains inherited HOME when pending Anthropic Auto discovery fails after the soft timeout',
+    async () => {
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'anthropic-auto-fallback-'));
+      const shellPath = path.join(tempDir, 'failing-shell.cjs');
+      const inheritedHome = path.join(tempDir, 'inherited-home');
+      const previousShell = process.env.SHELL;
+      const processEnv = { HOME: inheritedHome, PATH: '/fallback/bin', REVIEW_EMPTY: '' };
+      const configured = configManager.getConfig();
+      const configSpy = vi.spyOn(configManager, 'getConfig').mockReturnValue({
+        ...configured,
+        providerConnections: {
+          ...configured.providerConnections,
+          anthropic: {
+            ...configured.providerConnections.anthropic,
+            authMode: 'auto',
+            compatibleEndpoint: { enabled: false, baseUrl: '' },
+          },
+        },
+      });
+      const warnSpy = vi.spyOn(console, 'warn');
+      clearShellEnvCache();
+      try {
+        fs.writeFileSync(
+          shellPath,
+          `#!/usr/bin/env node\n` +
+            `setTimeout(() => {\n` +
+            `  process.stdout.write('PLUGIN_INIT=failed\\n');\n` +
+            `  process.exit(42);\n` +
+            `}, process.argv[2] === '-lic' ? 1_700 : 0);\n`,
+          { mode: 0o700 }
+        );
+        process.env.SHELL = shellPath;
+        const processEnvBefore = { ...process.env };
+        const result = await buildProvisioningEnv({
+          providerId: 'anthropic',
+          ports: createPorts({
+            processEnv,
+            resolveInteractiveShellEnvBestEffort,
+            waitForPendingShellEnv,
+          }),
+        });
+
+        expect(result.env).toMatchObject({ ...processEnv, USERPROFILE: inheritedHome });
+        expect(result.authSource).toBe('none');
+        expect(process.env).toEqual(processEnvBefore);
+        expect(await waitForPendingShellEnv()).toBeNull();
+        expect(warnSpy).toHaveBeenCalledWith(
+          '[Utils:shellEnv]',
+          expect.stringContaining('Failed to resolve shell env after login and interactive probes')
+        );
+      } finally {
+        await waitForPendingShellEnv();
+        warnSpy.mockClear();
+        configSpy.mockRestore();
+        clearShellEnvCache();
+        if (previousShell === undefined) delete process.env.SHELL;
+        else process.env.SHELL = previousShell;
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    }
+  );
+
   it.each([
     ['subscription', 'anthropic', 'oauth', false, false],
     ['API key', 'anthropic', 'api_key', false, false],
