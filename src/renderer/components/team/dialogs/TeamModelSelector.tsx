@@ -2878,7 +2878,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           )}
         >
           <OverflowModelName
-            text={opt.label}
+            text={opt.value === '' ? t('modelSelector.defaultModel') : opt.label}
             className={cn(
               'max-w-full break-words leading-tight',
               isFlatOpenCodeCell &&
@@ -2886,6 +2886,12 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               opt.value === 'gpt-5.5' && 'font-bold'
             )}
           />
+          {opt.value === '' && defaultLabelModel ? (
+            <OverflowModelName
+              text={defaultLabelModel}
+              className="max-w-full break-words text-xs font-normal leading-tight text-[var(--color-text-muted)]"
+            />
+          ) : null}
           {localModelPresentation && localModelDescriptor ? (
             <OpenCodeLocalModelStatus
               presentation={localModelPresentation}

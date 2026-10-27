@@ -16,6 +16,9 @@ import { getDesktopProviderManagementPort } from '../ipc/agentBackend';
 export function createDesktopProviderManagementFeatures(
   deps: Parameters<typeof composeGatewayProviderRuntime>[0] & {
     getMainWindow(): BrowserWindow | null;
+    readOpenCodeDiagnosticStatus?: NonNullable<
+      Parameters<typeof createRuntimeProviderManagementFeature>[0]
+    >['readOpenCodeDiagnosticStatus'];
   }
 ) {
   const { gatewayProviderRuntime, gatewayProviderConnector, gatewayLaunchRuntime } =
@@ -30,6 +33,7 @@ export function createDesktopProviderManagementFeatures(
   };
   const runtimeProviderManagementFeature = createRuntimeProviderManagementFeature({
     ...oauth,
+    readOpenCodeDiagnosticStatus: deps.readOpenCodeDiagnosticStatus,
     getOpenCodeRuntimeGeneration: getOpenCodeRuntimeResolverCacheGeneration,
     localProviderConnector: gatewayProviderConnector,
     port: getDesktopProviderManagementPort({

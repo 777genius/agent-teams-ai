@@ -1097,7 +1097,7 @@ export const ProviderRuntimeSettingsDialog = ({
   const anthropicFastModeEnabled =
     appConfig?.providerConnections?.anthropic.fastModeDefault === true;
   const anthropicFastModeSupported = anthropicFastModeCapability?.supported === true;
-  const anthropicFastModeAvailable = anthropicFastModeCapability?.available === true;
+  const canUseFast = anthropicFastModeSupported && anthropicFastModeCapability?.available === true;
   const anthropicFastModeDisabledReason =
     anthropicFastModeCapability?.reason ??
     (anthropicFastModeSupported
@@ -2417,7 +2417,7 @@ export const ProviderRuntimeSettingsDialog = ({
                     <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                       {t('providerRuntime.fastMode.description')}
                     </div>
-                    {anthropicFastModeSupported ? (
+                    {anthropicFastModeSupported || anthropicFastModeEnabled ? (
                       <div className="inline-flex rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-0.5">
                         {[
                           { enabled: false, label: t('providerRuntime.fastMode.defaultOff') },
@@ -2431,7 +2431,7 @@ export const ProviderRuntimeSettingsDialog = ({
                                 ? 'bg-[var(--color-surface-raised)] text-[var(--color-text)] shadow-sm'
                                 : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
                             }`}
-                            disabled={connectionBusy || !anthropicFastModeAvailable}
+                            disabled={connectionBusy || (option.enabled && !canUseFast)}
                             onClick={() =>
                               void handleAnthropicFastModeDefaultChange(option.enabled)
                             }
@@ -2442,7 +2442,7 @@ export const ProviderRuntimeSettingsDialog = ({
                       </div>
                     ) : null}
                     <div className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-                      {anthropicFastModeSupported && anthropicFastModeAvailable
+                      {canUseFast
                         ? anthropicFastModeEnabled
                           ? t('providerRuntime.fastMode.enabledHint')
                           : t('providerRuntime.fastMode.disabledHint')

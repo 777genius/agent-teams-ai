@@ -261,6 +261,8 @@ export interface OpenCodeDeliveryResponseObservation {
 
 export interface OpenCodeSendMessageCommandData {
   accepted: boolean;
+  /** Runtime confirmed failure before the prompt operation began. */
+  promptNotSubmitted?: true;
   runId?: string;
   sessionId?: string;
   memberName: string;
@@ -314,6 +316,7 @@ export interface OpenCodeCommandStatusCommandData {
 }
 
 export interface OpenCodeObserveMessageDeliveryCommandBody extends OpenCodeGroupDeliveryEnvelope {
+  deliveryAttemptId?: string;
   runId?: string;
   laneId: string;
   teamId: string;

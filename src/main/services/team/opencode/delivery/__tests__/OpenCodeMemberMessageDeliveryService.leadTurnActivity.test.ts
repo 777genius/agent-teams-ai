@@ -268,6 +268,135 @@ describe('OpenCodeMemberMessageDeliveryService lead turn activity', () => {
     });
   });
 
+  it.each([true, false])(
+    'observes an uncertain group handoff without sending it twice (proof=%s)',
+    async (found) => {
+      const send = vi.fn(async () => ({
+        ok: false,
+        providerId: 'opencode' as const,
+        memberName: 'team-lead',
+        diagnostics: ['OpenCode readiness phase host_start timed out after 24536ms'],
+      }));
+      const deps = createDeps({
+        ledgerDir,
+        laneIdentity: PRIMARY_LANE,
+        memberName: 'team-lead',
+        send,
+        readAllowed: (record) => record?.responseState === 'responded_visible_message',
+        notify: vi.fn(),
+      });
+      const observe = vi.fn(async () => ({
+        ok: true,
+        providerId: 'opencode' as const,
+        memberName: 'team-lead',
+        diagnostics: [],
+        responseObservation: {
+          state: found ? ('responded_visible_message' as const) : ('not_observed' as const),
+          deliveredUserMessageId: found ? 'accepted-prompt' : null,
+          assistantMessageId: null,
+          toolCallNames: [],
+          visibleMessageToolCallId: null,
+          visibleReplyMessageId: null,
+          visibleReplyCorrelation: null,
+          latestAssistantPreview: null,
+          reason: null,
+        },
+      }));
+      deps.getOpenCodeRuntimeMessageAdapter = () =>
+        ({ sendMessageToMember: send, observeMessageDelivery: observe }) as never;
+      const service = new OpenCodeMemberMessageDeliveryService(deps);
+      const message = { ...leadMessage, groupChatId: 'test-group', groupRunKey: 'run-1' };
+      await service.deliver('team-a', message);
+      const ledger = deps.createOpenCodePromptDeliveryLedger('team-a', PRIMARY_LANE.laneId);
+      const [record] = await ledger.list();
+      await ledger.markAcceptanceUnknown({
+        id: record.id,
+        reason: 'bridge_timeout',
+        nextAttemptAt: new Date(0).toISOString(),
+        diagnostics: [],
+        markedAt: new Date().toISOString(),
+      });
+      const result = await service.deliver('team-a', message);
+      expect(observe).toHaveBeenCalledTimes(1);
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(result.responsePending).toBe(!found);
+      if (!found) {
+        expect(result.acceptanceUnknown).toBe(true);
+        const [deferred] = await ledger.list();
+        expect(Date.parse(deferred.nextAttemptAt!)).toBeGreaterThan(Date.now());
+        expect((await service.deliver('team-a', message)).acceptanceUnknown).toBe(true);
+        expect(observe).toHaveBeenCalledTimes(1);
+        expect(send).toHaveBeenCalledTimes(1);
+      }
+    }
+  );
+
+  it('retries a group send only after the runtime confirms it never submitted the prompt', async () => {
+    const send = vi
+      .fn<() => Promise<OpenCodeTeamRuntimeMessageResult>>()
+      .mockResolvedValueOnce({
+        ok: false,
+        providerId: 'opencode',
+        memberName: 'team-lead',
+        promptNotSubmitted: true,
+        diagnostics: ['host acquisition timed out'],
+      })
+      .mockResolvedValueOnce(acceptedResult('team-lead'));
+    const deps = createDeps({
+      ledgerDir,
+      laneIdentity: PRIMARY_LANE,
+      memberName: 'team-lead',
+      send,
+      readAllowed: (record) => Boolean(record?.runtimePromptMessageId),
+      notify: vi.fn(),
+    });
+    deps.openCodePromptDeliveryFollowUpPolicy = new OpenCodePromptDeliveryFollowUpPolicy({
+      scheduleWatchdog: vi.fn(),
+      logEvent: vi.fn(),
+      markFailedTerminal: async (input) => input.ledger.markFailedTerminal(input),
+    });
+    const observe = vi.fn(async () => ({
+      ok: true,
+      providerId: 'opencode' as const,
+      memberName: 'team-lead',
+      diagnostics: [],
+      responseObservation: {
+        state: 'not_observed' as const,
+        deliveredUserMessageId: null,
+        assistantMessageId: null,
+        toolCallNames: [],
+        visibleMessageToolCallId: null,
+        visibleReplyMessageId: null,
+        visibleReplyCorrelation: null,
+        latestAssistantPreview: null,
+        reason: null,
+      },
+    }));
+    deps.getOpenCodeRuntimeMessageAdapter = () =>
+      ({ sendMessageToMember: send, observeMessageDelivery: observe }) as never;
+    const service = new OpenCodeMemberMessageDeliveryService(deps);
+    const message = { ...leadMessage, groupChatId: 'test-group', groupRunKey: 'run-1' };
+    await service.deliver('team-a', message);
+    const ledger = deps.createOpenCodePromptDeliveryLedger('team-a', PRIMARY_LANE.laneId);
+    const [failed] = await ledger.list();
+    expect(failed).toMatchObject({
+      status: 'retry_scheduled',
+      acceptanceUnknown: false,
+      attempts: 1,
+    });
+    await ledger.markNextAttemptScheduled({
+      id: failed.id,
+      status: 'retry_scheduled',
+      nextAttemptAt: new Date(0).toISOString(),
+      reason: failed.lastReason!,
+      scheduledAt: new Date().toISOString(),
+    });
+    const recovered = await service.deliver('team-a', message);
+    expect(recovered).toMatchObject({ accepted: true, responsePending: false });
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(observe).toHaveBeenCalledTimes(1);
+  });
+
   it('never reports lead activity for a same-model primary teammate', async () => {
     const notify = vi.fn();
     const service = new OpenCodeMemberMessageDeliveryService(
@@ -291,6 +420,60 @@ describe('OpenCodeMemberMessageDeliveryService lead turn activity', () => {
       state: 'idle',
     });
   });
+
+  it.each([false, true])(
+    'does not downgrade recovered acceptance after late send failure (throw=%s)',
+    async (throws) => {
+      const deps = createDeps({
+        ledgerDir,
+        laneIdentity: PRIMARY_LANE,
+        memberName: 'team-lead',
+        readAllowed: () => false,
+        notify: vi.fn(),
+        send: async () => {
+          const ledger = deps.createOpenCodePromptDeliveryLedger('team-a', PRIMARY_LANE.laneId);
+          const [row] = await ledger.list();
+          await ledger.applyObservation({
+            id: row.id,
+            observedAt: new Date().toISOString(),
+            responseObservation: {
+              state: 'pending',
+              deliveredUserMessageId: 'fresh-prompt',
+              assistantMessageId: null,
+              toolCallNames: [],
+              visibleMessageToolCallId: null,
+              visibleReplyMessageId: null,
+              visibleReplyCorrelation: null,
+              latestAssistantPreview: null,
+              reason: null,
+            },
+          });
+          if (throws) throw new Error('late transport timeout');
+          return {
+            ok: false,
+            providerId: 'opencode',
+            memberName: 'team-lead',
+            diagnostics: ['late transport timed out'],
+          };
+        },
+      });
+      const result = await new OpenCodeMemberMessageDeliveryService(deps).deliver('team-a', {
+        ...leadMessage,
+        groupChatId: 'test-group',
+        groupRunKey: 'run-1',
+      });
+      expect(result).toMatchObject({ accepted: true, responsePending: true });
+      const [record] = await deps
+        .createOpenCodePromptDeliveryLedger('team-a', PRIMARY_LANE.laneId)
+        .list();
+      expect(record).toMatchObject({
+        acceptanceUnknown: false,
+        attempts: 1,
+        responseState: 'pending',
+        runtimePromptMessageId: 'fresh-prompt',
+      });
+    }
+  );
 
   it('swallows notification failures without affecting the delivery result', async () => {
     const notify = vi.fn(() => {

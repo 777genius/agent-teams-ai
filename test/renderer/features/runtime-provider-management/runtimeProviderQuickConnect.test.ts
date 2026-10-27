@@ -743,6 +743,34 @@ describe('runtimeProviderQuickConnect domain policy', () => {
         provider: openCodeProvider,
         cliStatusLoading: false,
       })
+    ).toBe('missing');
+  });
+
+  it('requires an installer status even when generic provider authentication is available', () => {
+    for (const status of [
+      null,
+      runtimeStatus({ installed: false, state: 'idle', source: 'missing' }),
+    ]) {
+      expect(
+        resolveOpenCodeQuickConnectGate({
+          runtimeStatus: status,
+          runtimeStatusLoading: false,
+          provider: openCodeProvider,
+          cliStatusLoading: false,
+        })
+      ).toBe('missing');
+    }
+    expect(
+      resolveOpenCodeQuickConnectGate({
+        runtimeStatus: runtimeStatus({
+          installed: true,
+          source: 'app-managed',
+          version: '1.18.29',
+        }),
+        runtimeStatusLoading: false,
+        provider: openCodeProvider,
+        cliStatusLoading: false,
+      })
     ).toBe('ready');
   });
 

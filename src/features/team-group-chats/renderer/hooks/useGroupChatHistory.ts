@@ -47,7 +47,11 @@ export function useGroupChatHistory(teamName: string, contextId: string, groupCh
             groups: {
               ...groups,
               [groupChatId]: [...unique.values()].sort(
-                (a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp)
+                // The conversation window consumes newest-first history and reverses
+                // its visible rows to place the latest message at the bottom.
+                (a, b) =>
+                  Date.parse(b.timestamp) - Date.parse(a.timestamp) ||
+                  (a.messageId ?? '').localeCompare(b.messageId ?? '')
               ),
             },
           };

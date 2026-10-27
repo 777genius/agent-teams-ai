@@ -80,12 +80,15 @@ export interface OpenCodeTeamRuntimeBridgePort {
     selectedModel: string | null;
     requireExecutionProbe: boolean;
     skipPermissions?: boolean;
+    effort?: string;
+    freshExecutionProofRequestId?: string;
   }): Promise<OpenCodeTeamLaunchReadiness>;
   getLastOpenCodeRuntimeSnapshot?(
     projectPath: string,
     selectedModel?: string | null,
     requireExecutionProbe?: boolean,
-    skipPermissions?: boolean
+    skipPermissions?: boolean,
+    identity?: { effort?: string; freshExecutionProofRequestId?: string }
   ): OpenCodeBridgeRuntimeSnapshot | null;
   launchOpenCodeTeam?(input: OpenCodeLaunchTeamCommandBody): Promise<OpenCodeLaunchTeamCommandData>;
   reconcileOpenCodeTeam?(
@@ -142,6 +145,7 @@ export interface OpenCodeTeamRuntimeMessageInput {
 
 export interface OpenCodeTeamRuntimeMessageResult {
   ok: boolean;
+  promptNotSubmitted?: true;
   providerId: 'opencode';
   memberName: string;
   sessionId?: string;
@@ -211,6 +215,10 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         selectedModel: input.model ?? null,
         requireExecutionProbe: !runtimeOnly,
         skipPermissions: input.skipPermissions,
+        ...(input.effort === undefined ? {} : { effort: input.effort }),
+        ...(forceReadinessRefresh && !runtimeOnly
+          ? { freshExecutionProofRequestId: input.runId }
+          : {}),
       },
       forceReadinessRefresh
     );
@@ -409,6 +417,8 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       selectedModel: input.model ?? null,
       requireExecutionProbe: true,
       skipPermissions: input.skipPermissions,
+      effort: input.effort,
+      freshExecutionProofRequestId: input.runId,
     };
     let runtimeSnapshot = skipReadinessPreflight
       ? null
@@ -416,7 +426,8 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
           input.cwd,
           readinessInput.selectedModel,
           readinessInput.requireExecutionProbe,
-          readinessInput.skipPermissions
+          readinessInput.skipPermissions,
+          readinessInput
         ) ?? null);
     let proofBinding: ReturnType<typeof freshOpenCodeExecutionProof>;
     try {
@@ -526,7 +537,8 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
           input.cwd,
           readinessInput.selectedModel,
           readinessInput.requireExecutionProbe,
-          readinessInput.skipPermissions
+          readinessInput.skipPermissions,
+          readinessInput
         ) ?? null;
       if (refreshedSnapshot?.capabilitySnapshotId) {
         runtimeSnapshot = refreshedSnapshot;
@@ -722,6 +734,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
 
     return {
       ok: data.accepted,
+      ...(data.promptNotSubmitted ? { promptNotSubmitted: true as const } : {}),
       providerId: this.providerId,
       memberName: input.memberName,
       sessionId: data.sessionId,
@@ -793,6 +806,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       sessionId: input.sessionId,
       runtimePromptMessageId: input.runtimePromptMessageId,
       prePromptCursor: input.prePromptCursor ?? null,
+      ...(input.deliveryAttemptId ? { deliveryAttemptId: input.deliveryAttemptId } : {}),
     });
 
     return {

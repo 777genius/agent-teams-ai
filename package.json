@@ -386,7 +386,7 @@
         "to": "mcp-server/index.js"
       },
       {
-        "from": "mcp-server/package.json",
+        "from": "mcp-server/dist/package.json",
         "to": "mcp-server/package.json"
       },
       {

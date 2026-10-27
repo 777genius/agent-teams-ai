@@ -75,6 +75,49 @@ describe('MemberWorkSyncWorkerOps.outboxMarkFailed', () => {
     return item;
   }
 
+  it('reads only matching team payloads while preserving Unicode and whitespace aliases', () => {
+    const insert = database.prepare(
+      'INSERT INTO member_work_sync_metric_events (team_name,id,member_key,member_name,kind,recorded_at,event_json) VALUES (?,?,?,?,?,?,?)'
+    );
+    for (const [teamName, id] of [
+      ['Команда-А', 'a'],
+      ['  команда-а\u00a0', 'b'],
+      ['other-team', 'unrelated'],
+    ]) {
+      insert.run(teamName, id, 'bob', 'bob', 'status_evaluated', CREATED_AT, '{}');
+    }
+    const queries: { sql: string; params: unknown[] }[] = [];
+    const monitored = new MemberWorkSyncWorkerOps(() =>
+      drizzle(database, {
+        logger: {
+          logQuery: (sql, params) => {
+            queries.push({ sql, params });
+          },
+        },
+      })
+    );
+    expect(monitored.listTeamSnapshot('КОМАНДА-А').metricEvents.map((event) => event.id)).toEqual([
+      'a',
+      'b',
+    ]);
+    const payloadQueries = queries.filter(({ sql }) => sql.includes('"event_json"'));
+    expect(payloadQueries).toHaveLength(1);
+    expect(payloadQueries[0].sql).toContain(' where ');
+    expect(payloadQueries[0].params).toEqual(
+      expect.arrayContaining(['Команда-А', '  команда-а\u00a0'])
+    );
+    expect(payloadQueries[0].params).not.toContain('other-team');
+
+    queries.length = 0;
+    expect(monitored.listTeamSnapshot('missing-team')).toEqual({
+      statuses: [],
+      reportIntents: [],
+      outboxItems: [],
+      metricEvents: [],
+    });
+    expect(queries.every(({ sql }) => sql.startsWith('select distinct "team_name"'))).toBe(true);
+  });
+
   it('requires the current claim generation before marking an attempt failed', () => {
     const claimed = createAndClaim();
 

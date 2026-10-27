@@ -18,6 +18,7 @@ import {
   mapBridgeFailureToReadinessState,
 } from './OpenCodeBridgeReadinessResult';
 import { buildOpenCodeBridgeSupportDiagnostic } from './OpenCodeBridgeSupportDiagnostics';
+import { createOpenCodeUnobservedDeliveryResponse } from './OpenCodeDeliveryObservation';
 import {
   blockedLaunchData,
   isAmbiguousOpenCodeLaunchFailure,
@@ -29,8 +30,10 @@ import {
   resolveOpenCodeLaunchTimeoutMs,
   resolveOpenCodeReadinessTimeoutMs,
 } from './OpenCodeReadinessTimeoutPolicy';
+import { recoverOpenCodeSendMessageOutcome } from './OpenCodeSendMessageOutcomeRecovery';
 import { executeOpenCodeStartupCleanup } from './OpenCodeStartupCleanupBridge';
 import { type OpenCodeStateChangingBridgeCommandService } from './OpenCodeStateChangingBridgeCommandService';
+import { isOpenCodePromptNotSubmittedFailure } from './OpenCodeStateChangingBridgePreconditions';
 import {
   ownedOpenCodeStateChangingFailure,
   projectOpenCodeStateChangingFailure,
@@ -48,8 +51,6 @@ import type {
   OpenCodeBridgeRuntimeSnapshot,
   OpenCodeCleanupHostsCommandBody,
   OpenCodeCleanupHostsCommandData,
-  OpenCodeCommandStatusCommandBody,
-  OpenCodeCommandStatusCommandData,
   OpenCodeLaunchTeamCommandBody,
   OpenCodeLaunchTeamCommandData,
   OpenCodeListRuntimePermissionsCommandBody,
@@ -63,6 +64,7 @@ import type {
   OpenCodeStopTeamCommandBody,
   OpenCodeStopTeamCommandData,
 } from './OpenCodeBridgeCommandContract';
+import type { OpenCodeReadinessHandshake } from './OpenCodeReadinessHandshake';
 import type { OpenCodeReadinessBridgeTimeoutOptions } from './OpenCodeReadinessTimeoutPolicy';
 import type { RuntimeStopObservation } from './OpenCodeRuntimeStopProtocol';
 import type { OpenCodeStartupCleanupData } from './OpenCodeStartupCleanupBridge';
@@ -96,12 +98,15 @@ export interface OpenCodeReadinessBridgeCommandExecutor {
 }
 
 export interface OpenCodeReadinessBridgeOptions extends OpenCodeReadinessBridgeTimeoutOptions {
+  readinessHandshake?: OpenCodeReadinessHandshake;
   appVersion?: string;
   stateChangingCommands?: Pick<OpenCodeStateChangingBridgeCommandService, 'execute'>;
   readOpenCodeRuntimeStatus?: () => Promise<{ installed: boolean; version?: string }>;
 }
 
 export interface OpenCodeReadinessBridgeCommandBody {
+  effort?: string;
+  freshExecutionProofRequestId?: string;
   projectPath: string;
   selectedModel: string | null;
   requireExecutionProbe: boolean;
@@ -170,12 +175,22 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     const result = await this.bridge.execute<
       OpenCodeReadinessBridgeCommandBody,
       OpenCodeTeamLaunchReadiness
-    >('opencode.readiness', input, {
-      cwd: input.projectPath,
-      timeoutMs: resolveOpenCodeReadinessTimeoutMs(input.selectedModel, this.options.timeoutMs),
-    });
+    >(
+      'opencode.readiness',
+      {
+        ...input,
+        ...(this.options.readinessHandshake
+          ? { client: this.options.readinessHandshake.clientIdentity() }
+          : {}),
+      },
+      {
+        cwd: input.projectPath,
+        timeoutMs: resolveOpenCodeReadinessTimeoutMs(input.selectedModel, this.options.timeoutMs),
+      }
+    );
 
     if (result.ok) {
+      this.options.readinessHandshake?.remember(input, result);
       const versionFailure = !result.data.launchAllowed
         ? findOpenCodeFreeTierVersionFailure(
             [...result.data.missing, ...result.data.diagnostics],
@@ -231,6 +246,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
   }
 
   private clearRuntimeSnapshots(input: OpenCodeReadinessBridgeCommandBody): void {
+    this.options.readinessHandshake?.clear(input);
     this.lastRuntimeSnapshotsByProjectPath.delete(
       normalizeOpenCodeProjectIdentity(input.projectPath)
     );
@@ -241,7 +257,8 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     projectPath: string,
     selectedModel?: string | null,
     requireExecutionProbe?: boolean,
-    skipPermissions?: boolean
+    skipPermissions?: boolean,
+    identity?: Pick<OpenCodeReadinessBridgeCommandBody, 'effort' | 'freshExecutionProofRequestId'>
   ): OpenCodeBridgeRuntimeSnapshot | null {
     if (requireExecutionProbe !== undefined) {
       return (
@@ -251,6 +268,8 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
             selectedModel: selectedModel ?? null,
             requireExecutionProbe,
             skipPermissions,
+            effort: identity?.effort,
+            freshExecutionProofRequestId: identity?.freshExecutionProofRequestId,
           })
         ) ?? null
       );
@@ -481,7 +500,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       activeRequestId = executed.requestId;
     } catch (error) {
       if (body.settlementMode === 'acceptance' && isOpenCodeCompletedCommandRecoveryError(error)) {
-        const recovered = await this.recoverSendMessageOutcome({
+        const recovered = await recoverOpenCodeSendMessageOutcome(this.bridge, {
           originalRequestId: null,
           body: activeBody,
           diagnosticCode: 'opencode_send_recovered_after_duplicate_completed_command',
@@ -536,12 +555,13 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
         : result.data;
     }
     if (
-      result.error.kind === 'timeout' ||
-      result.error.kind === 'transport_watchdog_timeout' ||
-      isOpenCodeBridgeEmptyOutputFailure(result)
+      !isOpenCodePromptNotSubmittedFailure(result) &&
+      (result.error.kind === 'timeout' ||
+        result.error.kind === 'transport_watchdog_timeout' ||
+        isOpenCodeBridgeEmptyOutputFailure(result))
     ) {
       const recoveredAfterEmptyOutput = isOpenCodeBridgeEmptyOutputFailure(result);
-      const recovered = await this.recoverSendMessageOutcome({
+      const recovered = await recoverOpenCodeSendMessageOutcome(this.bridge, {
         originalRequestId: activeRequestId,
         body: activeBody,
         diagnosticCode: recoveredAfterEmptyOutput
@@ -557,6 +577,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     }
     return {
       accepted: false,
+      ...(isOpenCodePromptNotSubmittedFailure(result) ? { promptNotSubmitted: true as const } : {}),
       memberName: activeBody.memberName,
       diagnostics: [
         {
@@ -573,88 +594,36 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
     };
   }
 
-  private async recoverSendMessageOutcome(input: {
-    originalRequestId?: string | null;
-    body: OpenCodeSendMessageCommandBody;
-    diagnosticCode: string;
-    diagnosticMessage: string;
-  }): Promise<OpenCodeSendMessageCommandData | null> {
-    if (!input.originalRequestId && !input.body.deliveryAttemptId) {
-      return null;
-    }
-    const statusBody: OpenCodeCommandStatusCommandBody = {
-      originalCommand: 'opencode.sendMessage',
-      deliveryAttemptId: input.body.deliveryAttemptId,
-      teamId: input.body.teamId,
-      teamName: input.body.teamName,
-      laneId: input.body.laneId,
-      memberName: input.body.memberName,
-      messageId: input.body.messageId,
-      payloadHash: input.body.payloadHash,
-      projectPath: input.body.projectPath,
-      runId: input.body.runId,
-      ...(input.originalRequestId ? { originalRequestId: input.originalRequestId } : {}),
-    };
-    const statusResult = await this.bridge.execute<
-      OpenCodeCommandStatusCommandBody,
-      OpenCodeCommandStatusCommandData
-    >('opencode.commandStatus', statusBody, {
-      cwd: input.body.projectPath,
-      timeoutMs: OPEN_CODE_BRIDGE_TIMEOUTS_MS.commandStatus,
-    });
-    if (!statusResult.ok) {
-      return null;
-    }
-    const status = statusResult.data;
-    if (
-      input.originalRequestId &&
-      status.originalRequestId &&
-      status.originalRequestId !== input.originalRequestId
-    ) {
-      return null;
-    }
-    if (
-      input.body.deliveryAttemptId &&
-      status.deliveryAttemptId &&
-      status.deliveryAttemptId !== input.body.deliveryAttemptId
-    ) {
-      return null;
-    }
-    if (status.status === 'precondition_mismatch' || status.accepted !== true) {
-      return null;
-    }
-    const diagnostics = [
-      {
-        code: input.diagnosticCode,
-        severity: 'warning' as const,
-        message: input.diagnosticMessage,
-      },
-      ...status.diagnostics.map((message) => ({
-        code: 'opencode_command_status',
-        severity: 'info' as const,
-        message,
-      })),
-    ];
-    if (status.sendMessageData?.accepted === true) {
-      return {
-        ...status.sendMessageData,
-        diagnostics: [...diagnostics, ...status.sendMessageData.diagnostics],
-      };
-    }
-    return {
-      accepted: true,
-      memberName: input.body.memberName,
-      sessionId: status.sessionId,
-      runtimePid: status.runtimePid,
-      runtimePromptMessageId: status.runtimePromptMessageId,
-      prePromptCursor: status.prePromptCursor,
-      diagnostics,
-    };
-  }
-
   async observeOpenCodeTeamMessageDelivery(
     input: OpenCodeObserveMessageDeliveryCommandBody
   ): Promise<OpenCodeObserveMessageDeliveryCommandData> {
+    let correctivePromptId: string | undefined;
+    if (input.deliveryAttemptId) {
+      const recovered = await recoverOpenCodeSendMessageOutcome(this.bridge, {
+        body: input,
+        requireExactDeliveryAttempt: true,
+        diagnosticCode: 'opencode_corrective_handoff_recovered',
+        diagnosticMessage: 'Recovered the exact corrective prompt acceptance.',
+      });
+      if (!recovered?.runtimePromptMessageId)
+        return {
+          observed: false,
+          responseObservation: createOpenCodeUnobservedDeliveryResponse(
+            'not_observed',
+            'corrective_handoff_unknown'
+          ),
+          memberName: input.memberName,
+          diagnostics: [
+            {
+              code: 'opencode_corrective_handoff_unknown',
+              severity: 'warning',
+              message: 'The corrective prompt acceptance is still unknown.',
+            },
+          ],
+        };
+      input = { ...input, runtimePromptMessageId: recovered.runtimePromptMessageId };
+      correctivePromptId = recovered.runtimePromptMessageId;
+    }
     const result = await this.bridge.execute<
       OpenCodeObserveMessageDeliveryCommandBody,
       OpenCodeObserveMessageDeliveryCommandData
@@ -663,6 +632,25 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       timeoutMs: this.options.observeTimeoutMs ?? OPEN_CODE_BRIDGE_TIMEOUTS_MS.observe,
     });
     if (result.ok) {
+      if (
+        correctivePromptId &&
+        result.data.responseObservation?.deliveredUserMessageId !== correctivePromptId
+      )
+        return {
+          observed: false,
+          responseObservation: createOpenCodeUnobservedDeliveryResponse(
+            'not_observed',
+            'corrective_handoff_unknown'
+          ),
+          memberName: input.memberName,
+          diagnostics: [
+            {
+              code: 'opencode_corrective_prompt_not_observed',
+              severity: 'warning',
+              message: 'The exact corrective prompt is not indexed in the observation yet.',
+            },
+          ],
+        };
       return result.data;
     }
     return {

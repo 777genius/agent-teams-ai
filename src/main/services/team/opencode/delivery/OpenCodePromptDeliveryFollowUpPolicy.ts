@@ -1,3 +1,4 @@
+import { isOpenCodeHumanGroupNonResponse } from './OpenCodeHumanGroupReply';
 import {
   describePrimaryLaneBootstrapSelfHeal,
   OPENCODE_PRIMARY_LANE_BOOTSTRAP_MISSING_REASON,
@@ -75,6 +76,9 @@ export function getOpenCodeDeliveryNextDelayMs(input: {
     hasOpenCodeObservedMessageSendToolCall(input.ledgerRecord)
   ) {
     return OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS;
+  }
+  if (input.retry && input.ledgerRecord && isOpenCodeHumanGroupNonResponse(input.ledgerRecord)) {
+    return OPENCODE_PROMPT_DELIVERY_RETRY_DELAY_MS;
   }
   // A retry after an observed answer is a re-prompt, not a first delivery: give
   // the turn that produced the answer room to finish before asking again.

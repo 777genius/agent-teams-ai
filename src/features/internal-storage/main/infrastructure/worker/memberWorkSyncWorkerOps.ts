@@ -1,9 +1,6 @@
 import { and, asc, eq, gt, gte, inArray, isNull } from 'drizzle-orm';
 
-import {
-  isSameMemberWorkSyncTeam,
-  normalizeMemberWorkSyncSnapshotTeamIdentity,
-} from '../../../contracts/memberWorkSyncTeamIdentity';
+import { normalizeMemberWorkSyncSnapshotTeamIdentity } from '../../../contracts/memberWorkSyncTeamIdentity';
 
 import {
   memberWorkSyncMetricEvents,
@@ -15,6 +12,7 @@ import {
   mutateMemberWorkSyncReportJournal,
   readMemberWorkSyncReportJournal,
 } from './memberWorkSyncReportJournalWorkerOps';
+import { readMemberWorkSyncTeamSnapshot } from './memberWorkSyncSnapshotWorkerOps';
 import {
   compareAndWriteMemberWorkSyncStatus,
   writeMemberWorkSyncStatus,
@@ -92,10 +90,6 @@ function chunked<T>(values: T[]): T[][] {
     chunks.push(values.slice(start, start + INSERT_CHUNK_SIZE));
   }
   return chunks;
-}
-
-function rowsForTeam<T extends { teamName: string }>(rows: T[], teamName: string): T[] {
-  return rows.filter((row) => isSameMemberWorkSyncTeam(row.teamName, teamName));
 }
 
 /** Routes 'mws.*' worker requests to the ops instance. */
@@ -680,25 +674,7 @@ export class MemberWorkSyncWorkerOps {
   }
 
   listTeamSnapshot(teamName: string): MemberWorkSyncTeamSnapshotRecords {
-    const orm = this.getOrm();
-    return {
-      statuses: rowsForTeam(orm.select().from(memberWorkSyncStatus).all(), teamName).sort(
-        (left, right) => left.memberKey.localeCompare(right.memberKey)
-      ),
-      reportIntents: rowsForTeam(
-        orm.select().from(memberWorkSyncReportIntents).all(),
-        teamName
-      ).sort((left, right) => left.id.localeCompare(right.id)),
-      outboxItems: rowsForTeam(orm.select().from(memberWorkSyncOutbox).all(), teamName).sort(
-        (left, right) => left.id.localeCompare(right.id)
-      ),
-      metricEvents: rowsForTeam(orm.select().from(memberWorkSyncMetricEvents).all(), teamName).sort(
-        (left, right) => {
-          const byTime = left.recordedAt.localeCompare(right.recordedAt);
-          return byTime === 0 ? left.id.localeCompare(right.id) : byTime;
-        }
-      ),
-    };
+    return readMemberWorkSyncTeamSnapshot(this.getOrm(), teamName);
   }
 
   /** One-transaction import: folds every case alias into the routing argument. */

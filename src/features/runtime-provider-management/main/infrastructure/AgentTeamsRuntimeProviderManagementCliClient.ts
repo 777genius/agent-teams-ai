@@ -16,6 +16,7 @@ import {
   extractProfileIdFromSymlinkError,
   isOpenCodeNodeModulesSymlinkError,
 } from './openCodeWindowsNodeModulesJunction';
+import { withProviderCommandDiagnostics } from './providerCommandDiagnostics';
 import { RuntimeProviderCatalogDiagnostics } from './runtimeProviderCatalogDiagnostics';
 import {
   appendBoundedSpawnOutput,
@@ -710,10 +711,12 @@ function rejectWrongRuntimeBinary<T extends RuntimeProviderManagementErrorRespon
 function extractJsonObjectWithContext<T extends RuntimeProviderManagementErrorResponse>(
   raw: string,
   context: RuntimeProviderCommandContext,
-  stderr: string | null = null
+  stderr: string | null = null,
+  exitCode: number | null = 0
 ): T {
   try {
-    return sanitizeRuntimeProviderResponse(extractJsonObject<T>(raw));
+    const response = sanitizeRuntimeProviderResponse(extractJsonObject<T>(raw));
+    return withProviderCommandDiagnostics(response, context, stderr, exitCode);
   } catch {
     throw new RuntimeProviderCommandOutputError(
       formatNonJsonCliOutputError({ context, stdout: raw, stderr })
@@ -936,9 +939,7 @@ function parseProviderCommandResponse(
     );
   }
   try {
-    return sanitizeRuntimeProviderResponse(
-      extractJsonObject<RuntimeProviderManagementProviderResponse>(result.stdout)
-    );
+    return extractJsonObjectWithContext(result.stdout, context, stderr, result.code);
   } catch {
     return commandFailureResponse<RuntimeProviderManagementProviderResponse>(
       runtimeId,

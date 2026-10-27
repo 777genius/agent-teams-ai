@@ -182,9 +182,10 @@ describePosix('OpenCode packaged-runtime preflight integration', () => {
     process.env.FAKE_OPENCODE_BIN_DIR = binDir;
     await writeFile(
       shellPath,
-      ['#!/bin/sh', 'printf "%s\\0" "PATH=$FAKE_OPENCODE_BIN_DIR" "HOME=$HOME" "SHELL=$0"'].join(
-        '\n'
-      ),
+      [
+        '#!/bin/sh',
+        'exec /usr/bin/env -i PATH="$FAKE_OPENCODE_BIN_DIR:/usr/bin:/bin" HOME="$HOME" SHELL="$0" /bin/sh -c "$2"',
+      ].join('\n'),
       'utf8'
     );
     await chmod(shellPath, 0o755);

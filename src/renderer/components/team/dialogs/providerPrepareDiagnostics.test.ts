@@ -6,45 +6,77 @@ import { runProviderPrepareDiagnostics } from './providerPrepareDiagnostics';
 import type { TeamProvisioningPrepareResult } from '@shared/types';
 
 describe('runProviderPrepareDiagnostics', () => {
-  it('requires a custom OpenCode route to pass compatibility and deep verification', async () => {
-    const modelId = 'local-lab/team-model';
-    type PrepareProvisioning = Parameters<
-      typeof runProviderPrepareDiagnostics
-    >[0]['prepareProvisioning'];
-    const prepareProvisioning = vi.fn<PrepareProvisioning>(
-      async (
-        _cwd,
-        _providerId,
-        _providerIds,
-        modelIds,
-        _limitContext,
-        verificationMode
-      ): Promise<TeamProvisioningPrepareResult> => ({
-        ready: true,
+  it.each(['compatible', 'deferred'] as const)(
+    'requires OpenCode %s status to pass deep verification',
+    async (status) => {
+      const modelId =
+        status === 'deferred' ? 'kimi-code-plan-global/kimi-for-coding' : 'local-lab/team-model';
+      type PrepareProvisioning = Parameters<
+        typeof runProviderPrepareDiagnostics
+      >[0]['prepareProvisioning'];
+      const prepareProvisioning = vi.fn<PrepareProvisioning>(
+        async (
+          _cwd,
+          _providerId,
+          _providerIds,
+          modelIds,
+          _limitContext,
+          verificationMode
+        ): Promise<TeamProvisioningPrepareResult> => ({
+          ready: true,
+          message: '',
+          details: [
+            verificationMode === 'compatibility'
+              ? status === 'deferred'
+                ? `Selected model ${modelId} requires strict deep verification.`
+                : `Selected model ${modelId} is compatible. Deep verification pending.`
+              : `Selected model ${modelId} verified for launch with Agent Teams tool coordination.`,
+          ],
+        })
+      );
+
+      const result = await runProviderPrepareDiagnostics({
+        cwd: '/workspace/test-project',
+        providerId: 'opencode',
+        selectedModelIds: [modelId],
+        prepareProvisioning,
+      });
+
+      expect(prepareProvisioning).toHaveBeenCalledTimes(2);
+      expect(prepareProvisioning.mock.calls.map((call) => call[5])).toEqual([
+        'compatibility',
+        'deep',
+      ]);
+      expect(prepareProvisioning.mock.calls[1]?.[3]).toEqual([modelId]);
+      expect(result.status).toBe('ready');
+      expect(result.modelResultsById[modelId]?.status).toBe('ready');
+    }
+  );
+
+  it('never treats deferred passive status as launch proof when deep verification fails', async () => {
+    const modelId = 'kimi-code-plan-global/kimi-for-coding';
+    const prepareProvisioning = vi.fn(
+      async (_cwd, _providerId, _providers, _models, _limit, mode) => ({
+        ready: mode === 'compatibility',
         message: '',
         details: [
-          verificationMode === 'compatibility'
-            ? `Selected model ${modelId} is compatible. Deep verification pending.`
-            : `Selected model ${modelId} verified for launch with Agent Teams tool coordination.`,
+          mode === 'compatibility'
+            ? `Selected model ${modelId} requires strict deep verification.`
+            : `Selected model ${modelId} is unavailable. Authentication is required.`,
         ],
       })
     );
-
     const result = await runProviderPrepareDiagnostics({
-      cwd: '/workspace/test-project',
+      cwd: '/workspace/TEST-project',
       providerId: 'opencode',
       selectedModelIds: [modelId],
       prepareProvisioning,
     });
-
-    expect(prepareProvisioning).toHaveBeenCalledTimes(2);
     expect(prepareProvisioning.mock.calls.map((call) => call[5])).toEqual([
       'compatibility',
       'deep',
     ]);
-    expect(prepareProvisioning.mock.calls[1]?.[3]).toEqual([modelId]);
-    expect(result.status).toBe('ready');
-    expect(result.modelResultsById[modelId]?.status).toBe('ready');
+    expect(result.status).toBe('failed');
   });
 
   it('normalizes OpenCode access-denied provider failures', async () => {

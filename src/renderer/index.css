@@ -1125,7 +1125,8 @@ a[href],
 .member-launch-diagnostics-pulse {
   position: relative;
   overflow: visible;
-  animation: member-diagnostics-attention-fill 1.7s ease-in-out infinite;
+  /* Draw attention briefly, then keep the warning tint without repainting forever. */
+  animation: member-diagnostics-attention-fill 1.7s ease-in-out 3 forwards;
 }
 
 .member-launch-diagnostics-pulse::after {
@@ -1135,7 +1136,7 @@ a[href],
   border: 1px solid rgba(248, 113, 113, 0.55);
   border-radius: inherit;
   pointer-events: none;
-  animation: member-diagnostics-attention-ring 1.7s ease-out infinite;
+  animation: member-diagnostics-attention-ring 1.7s ease-out 3 forwards;
 }
 
 /* Skeleton-style shimmer for waiting members: a translucent light sweep */

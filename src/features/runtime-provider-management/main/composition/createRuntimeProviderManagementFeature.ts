@@ -9,6 +9,10 @@ import {
   type KiroCliCompanionServiceDependencies,
 } from '../infrastructure/KiroCliCompanionService';
 import { OpenCodeLocalProviderConnector } from '../infrastructure/OpenCodeLocalProviderConnector';
+import {
+  type ReadOpenCodeDiagnosticStatus,
+  withProviderSetupDiagnostics,
+} from '../infrastructure/providerSetupDiagnostics';
 
 import type {
   RuntimeLocalProviderConnectorPort,
@@ -68,6 +72,7 @@ export type RuntimeProviderManagementFeatureFacade = Omit<
 export function createRuntimeProviderManagementFeature(
   deps: {
     port?: RuntimeProviderManagementPort;
+    readOpenCodeDiagnosticStatus?: ReadOpenCodeDiagnosticStatus;
     localProviderConnector?: RuntimeLocalProviderConnectorPort;
     companionRegistry?: RuntimeProviderCompanionRegistry;
     /** @deprecated Use companionRegistry. Kept for focused tests and packaged integrations. */
@@ -142,14 +147,41 @@ export function createRuntimeProviderManagementFeature(
     loadSetupForm: (
       input: RuntimeProviderManagementLoadSetupFormInput,
       scope?: RuntimeProviderManagementRequestScope
-    ): Promise<RuntimeProviderManagementSetupFormResponse> => port.loadSetupForm(input, scope),
+    ): Promise<RuntimeProviderManagementSetupFormResponse> =>
+      port
+        .loadSetupForm(input, scope)
+        .then((response) =>
+          withProviderSetupDiagnostics(
+            response,
+            { ...input, operation: 'setup-form' },
+            deps.readOpenCodeDiagnosticStatus
+          )
+        ),
     connectProvider: (
       input: RuntimeProviderManagementConnectInput,
       scope?: RuntimeProviderManagementRequestScope
-    ): Promise<RuntimeProviderManagementProviderResponse> => port.connectProvider(input, scope),
+    ): Promise<RuntimeProviderManagementProviderResponse> =>
+      port
+        .connectProvider(input, scope)
+        .then((response) =>
+          withProviderSetupDiagnostics(
+            response,
+            { ...input, operation: 'connect' },
+            deps.readOpenCodeDiagnosticStatus
+          )
+        ),
     connectWithApiKey: (
       input: RuntimeProviderManagementConnectApiKeyInput
-    ): Promise<RuntimeProviderManagementProviderResponse> => port.connectWithApiKey(input),
+    ): Promise<RuntimeProviderManagementProviderResponse> =>
+      port
+        .connectWithApiKey(input)
+        .then((response) =>
+          withProviderSetupDiagnostics(
+            response,
+            { ...input, operation: 'connect-api-key' },
+            deps.readOpenCodeDiagnosticStatus
+          )
+        ),
     forgetCredential: (
       input: RuntimeProviderManagementForgetInput,
       scope?: RuntimeProviderManagementRequestScope

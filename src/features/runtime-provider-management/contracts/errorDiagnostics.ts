@@ -15,6 +15,13 @@ export interface RuntimeErrorDetails {
   upstreamReportId?: string;
   timestamp?: string;
   appVersion?: string;
+  openCodeVersion?: string;
+  openCodeBinaryPath?: string;
+  openCodeSource?: string;
+  openCodeState?: string;
+  openCodeInstalled?: boolean;
+  operation?: string;
+  providerId?: string;
   platform?: string;
   arch?: string;
   stage?: (typeof RUNTIME_ERROR_STAGES)[number];
@@ -107,6 +114,12 @@ export function normalizeRuntimeErrorDetails(value: unknown): RuntimeErrorDetail
     'upstreamReportId',
     'timestamp',
     'appVersion',
+    'openCodeVersion',
+    'openCodeBinaryPath',
+    'openCodeSource',
+    'openCodeState',
+    'operation',
+    'providerId',
     'platform',
     'arch',
     'signal',
@@ -132,6 +145,8 @@ export function normalizeRuntimeErrorDetails(value: unknown): RuntimeErrorDetail
       output[key] = Math.round(input[key]);
   }
   if (typeof input.timedOut === 'boolean') output.timedOut = input.timedOut;
+  if (typeof input.openCodeInstalled === 'boolean')
+    output.openCodeInstalled = input.openCodeInstalled;
   if (
     Number.isInteger(input.httpStatus) &&
     Number(input.httpStatus) >= 100 &&

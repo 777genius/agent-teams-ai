@@ -102,7 +102,8 @@ describe('existing close coordinator with real preload bridge and pre-mount admi
       await vi.advanceTimersByTimeAsync(20);
       await expect(quit).resolves.toMatchObject({
         ok: false,
-        blockers: [expect.stringContaining('timeout')],
+        failure: 'unresponsive',
+        blockers: [expect.stringContaining('did not respond')],
       });
       h.coordinator.dispose();
     } finally {

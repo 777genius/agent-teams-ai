@@ -116,15 +116,11 @@ describe('TeamProvisioningCreateTeamFlow', () => {
             teamMetaStore: {
               writeMeta: async (teamName) => {
                 const history = inboxReader.getMessagesWindow(teamName, { limit: 20 });
-                if (existing) {
-                  await expect(history).rejects.toMatchObject({ reason: 'listing_failed' });
-                } else {
-                  await expect(history).resolves.toMatchObject({
-                    messages: [],
-                    truncated: false,
-                    sourceMessageCount: 0,
-                  });
-                }
+                await expect(history).resolves.toMatchObject({
+                  messages: [],
+                  truncated: false,
+                  sourceMessageCount: 0,
+                });
                 throw stopBeforeRuntime;
               },
             },

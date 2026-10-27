@@ -398,7 +398,7 @@ describe('TeamModelSelector disabled Codex models', () => {
         render('/tmp/project-b');
         await Promise.resolve();
       });
-      expect(host.textContent).toContain('Default - project-b/model');
+      expect(host.textContent).toContain('Defaultproject-b/model');
       expect(host.textContent).not.toContain('project-a/model');
       expect(onValueChange).not.toHaveBeenCalled();
       await act(async () => root.unmount());
@@ -449,7 +449,12 @@ describe('TeamModelSelector disabled Codex models', () => {
         const defaultOption = host.querySelector<HTMLButtonElement>(
           '[data-testid="team-model-selector-model-option"][aria-pressed="true"]'
         );
-        expect(defaultOption?.textContent).toContain(label);
+        expect(defaultOption?.textContent).toContain(label.replace(' - ', ''));
+        expect(
+          Array.from(
+            defaultOption?.querySelectorAll('[data-testid="team-model-selector-model-name"]') ?? []
+          ).map((element) => element.textContent)
+        ).toEqual(label.split(' - '));
         expect(defaultOption?.getAttribute('aria-label')).toContain(label);
         expect(onValueChange).not.toHaveBeenCalled();
         await act(async () => defaultOption?.click());
@@ -5876,7 +5881,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
 
     expect(host.textContent).toContain('big-pickle');
-    expect(host.textContent).toContain('Default - big-pickle');
+    expect(host.textContent).toContain('Defaultbig-pickle');
     expect(host.textContent).toContain('GPT-5.4');
     expect(host.textContent).not.toContain('Loading models');
 
@@ -7885,7 +7890,7 @@ describe('TeamModelSelector disabled Codex models', () => {
       materializesDefault: true,
     });
 
-    expect(defaultCard?.textContent).toContain('Default - big-pickle (OpenCode Zen)');
+    expect(defaultCard?.textContent).toContain('Defaultbig-pickle (OpenCode Zen)');
     expect(defaultCard?.getAttribute('aria-disabled')).toBe('false');
     expect(defaultCard?.getAttribute('aria-label')).toContain('opencode/big-pickle');
 
@@ -7916,7 +7921,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(host.textContent).not.toContain('kimi-k2');
     expect(host.textContent).toContain('space-bunny-free');
     expect(findOpenCodeDefaultCard(host)?.textContent).toContain(
-      'Default - big-pickle (OpenCode Zen)'
+      'Defaultbig-pickle (OpenCode Zen)'
     );
 
     await unmount();

@@ -13,6 +13,7 @@ import {
   OpenCodeBridgeCommandHandshakePort,
 } from './OpenCodeBridgeHandshakeClient';
 import { OpenCodeReadinessBridge } from './OpenCodeReadinessBridge';
+import { OpenCodeReadinessHandshake } from './OpenCodeReadinessHandshake';
 import { OpenCodeStateChangingBridgeCommandService } from './OpenCodeStateChangingBridgeCommandService';
 
 import type { TeamHttpMemberDiagnosticsApi } from '../../contracts/TeamProvisioningApis';
@@ -29,7 +30,12 @@ export function composeOpenCodeDesktopBridge(deps: {
   runtimeSnapshots: TeamHttpMemberDiagnosticsApi;
 }) {
   const clientIdentity = createOpenCodeBridgeClientIdentity(deps.identity);
-  const handshake = new OpenCodeBridgeCommandHandshakePort({ bridge: deps.bridge, clientIdentity });
+  const readinessHandshake = new OpenCodeReadinessHandshake(clientIdentity);
+  const handshake = new OpenCodeBridgeCommandHandshakePort({
+    bridge: deps.bridge,
+    clientIdentity,
+    readinessHandshake,
+  });
   const manifestOptions = { teamsBasePath: deps.teamsBasePath };
   const manifest = new OpenCodeRuntimeManifestEvidenceReader(manifestOptions);
   const commands = new OpenCodeStateChangingBridgeCommandService({
@@ -47,6 +53,7 @@ export function composeOpenCodeDesktopBridge(deps: {
   });
   return {
     readiness: new OpenCodeReadinessBridge(deps.bridge, {
+      readinessHandshake,
       stateChangingCommands: commands,
       appVersion: clientIdentity.appVersion,
       readOpenCodeRuntimeStatus: deps.readOpenCodeRuntimeStatus,

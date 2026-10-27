@@ -197,11 +197,13 @@ export function getLaunchModelArg(
   model: string | undefined,
   launchIdentity?: ProviderModelLaunchIdentity | null
 ): string | undefined {
+  const explicitModel = getExplicitLaunchModelSelection(model);
+  // Default belongs to Claude Code; catalog/probe facts must not become --model.
+  if (providerId === 'anthropic' && !explicitModel) return undefined;
   if (providerId === 'anthropic' && launchIdentity?.resolvedLaunchModel) {
     return launchIdentity.resolvedLaunchModel;
   }
 
-  const explicitModel = getExplicitLaunchModelSelection(model);
   if (explicitModel) {
     return explicitModel;
   }
