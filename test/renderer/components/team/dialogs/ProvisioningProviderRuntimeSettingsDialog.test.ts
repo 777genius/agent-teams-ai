@@ -64,7 +64,7 @@ describe('ProvisioningProviderRuntimeSettingsDialog connection refresh', () => {
     host = document.createElement('div');
     document.body.appendChild(host);
     root = createRoot(host);
-    globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   });
 
   afterEach(async () => {

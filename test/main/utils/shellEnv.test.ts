@@ -782,7 +782,7 @@ describe('shellEnv', () => {
     const pending = shellEnv.waitForPendingShellEnv();
     const frame = shellFrame(child);
     child.stdout.emit('data', Buffer.from(frame.start + frame.end));
-    emitClose(child, 0);
+    emitClose(child, 0, null);
 
     const resolved = await strict;
     expect(resolved).toEqual({});
