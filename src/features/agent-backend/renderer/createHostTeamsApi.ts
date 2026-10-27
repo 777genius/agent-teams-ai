@@ -12,6 +12,7 @@ import { createHostProductLifecycleApi } from './createHostProductLifecycleApi';
 import { createHostSavedMemberMutations } from './createHostSavedMemberMutations';
 import { createHostTaskActivityApi } from './createHostTaskActivityApi';
 import { createHostTaskAttachmentRead } from './createHostTaskAttachmentRead';
+import { createHostTaskReads } from './createHostTaskReads';
 import { createHostTeamChanges } from './createHostTeamChanges';
 import { createHostTeamLaunchSubmission } from './createHostTeamLaunchSubmission';
 import { createHostTeamLifecycle } from './createHostTeamLifecycle';
@@ -241,6 +242,9 @@ export function createHostTeamsApi(
     return {
       connection,
       snapshot: remapSnapshot(observed.data, key, bindings),
+      canonicalTeamName: observed.data.teamName,
+      remapTasks: (tasks: TeamTaskWithKanban[]) =>
+        remapSnapshot({ ...observed.data, tasks }, key, bindings).tasks,
       assertCurrent: observed.assertCurrent,
     };
   }
@@ -334,6 +338,7 @@ export function createHostTeamsApi(
     ];
   }
   const reads = {
+    ...createHostTaskReads(backend, (key) => selected(key, captureScope())),
     async getSavedRequest(key: string) {
       const check = captureScope();
       const connection = await resolveConnection(key, check);
@@ -485,11 +490,6 @@ export function createHostTeamsApi(
       } finally {
         if (check()) readOrder.invalidateReads(connection.handle.handleId);
       }
-    },
-    async getTask(key: string, taskId: string): Promise<TeamTaskWithKanban | null> {
-      const { snapshot, assertCurrent } = await selected(key, captureScope());
-      assertCurrent();
-      return snapshot.tasks.find((task) => task.id === taskId) ?? null;
     },
     async getMessagesPage(
       key: string,

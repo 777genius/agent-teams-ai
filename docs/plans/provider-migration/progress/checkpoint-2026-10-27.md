@@ -1242,3 +1242,51 @@ scoped Prettier check of all four changed script/closure files and `git diff
 required for import/native Launch and the complete mixed flow. The separate cold
 Resume readiness failure remains under investigation; no guard, timing budget,
 mutation count or failed original receipt is changed here.
+
+
+## Captured Host Task Trash read and existing Restore route
+
+A holistic renderer review confirmed that `getDeletedTasks` was absent from the
+Host compatibility API: the generic Host guard rejected it, so the original
+selected-Team and global Trash feeds displayed no Host deleted Tasks despite the
+existing canonical delete/restore mutations. Ordinary snapshots deliberately
+exclude deleted Tasks and remain unchanged.
+
+The existing `tasks.list` read now accepts only the additional literal
+`deleted: true` query. Its ordinary `{}` array response and the original Host
+wire `null` query retain their active-only behavior. The deleted-only response
+contains the captured canonical Team identity and existing portable controller
+`listDeletedTasks()` records, under the original read grant and owner fence.
+It has its own 512 KiB bound; retained Trash does not enlarge or change the
+revision of ordinary active snapshots. Main reuses the existing complete Task
+allowlist, validates every returned status as deleted and strips private fields.
+The renderer checks the captured canonical name/current scope/product read fence
+after awaiting the response and reuses the original TaskRef remapping. Missing,
+old-shape, foreign-owner and unavailable results refuse explicitly without legacy
+fallback. The existing canonical Restore mutation and active/global board policy
+are unchanged.
+
+Independent actual-code review accepted this finite read after catching and
+correcting the draft `null`-query compatibility regression. Verification:
+
+- **56/56** focused tests passed: 13 new real-owner/Main/renderer/global Trash and
+  Restore/refusal tests, 40 existing Host reads and three existing global Trash
+  feed tests. The final new 13-test file rerun also passed after typed fixture
+  corrections; it is not counted twice.
+- **1/1** existing actual Host CLI/RPC lifecycle case passed, including its old
+  `null` active-list assertion and new deleted-only read after canonical delete.
+- Host source build/declarations and Host test TypeScript checks passed. The
+  changed production TypeScript 7 closure passed. Including the real global-store
+  test in that bounded check is blocked only by two absent unchanged local
+  transitive packages, `@floating-ui/dom` and `better-sqlite3`; no dependency
+  installation, stub or skip is used to claim qualification.
+- All 11 changed source/test paths passed scoped fast lint; all 12 including the
+  explicit source-closure additions passed Prettier. Source-size guard passed
+  for 4621 production files, and `git diff --check` passed.
+
+The canonical test asserts exact Task bytes across reads, deleted timestamp,
+retained comments/qualified refs, original owner/handle, real global-feed output,
+restoration and active-board exclusion. Canonical delete's expected queued-alert
+retraction diagnostic is asserted exactly and consumed, not broadly suppressed.
+Original Trash/Restore Desktop controls still need the next explicit UI proof;
+unit/Host RPC results are not promoted to Desktop acceptance or full Stage 1.

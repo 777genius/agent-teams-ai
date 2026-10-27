@@ -55,10 +55,14 @@ function payload(
     case 'process.pending.read':
     case 'crossTeam.lookup':
     case 'crossTeam.outbox.read':
-    case 'tasks.list':
     case 'command.lookup':
       object(value, []);
       return {};
+    case 'tasks.list': {
+      const p = object(value, ['deleted']);
+      if (p.deleted !== undefined && p.deleted !== true) throw new InvalidBackendOperation();
+      return p.deleted === true ? { deleted: true } : {};
+    }
     case 'process.lookup': {
       const p = object(value, ['originalCommandId']);
       return { originalCommandId: text(p.originalCommandId) };

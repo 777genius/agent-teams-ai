@@ -58,7 +58,7 @@ function comment(value: unknown): TaskComment {
       : { attachments: projectAttachmentMetadata(source.attachments) }),
   };
 }
-function task(value: unknown, teamName: string): TeamTaskWithKanban {
+export function projectTeamTask(value: unknown, teamName: string): TeamTaskWithKanban {
   const source = row(value);
   const result: TeamTaskWithKanban = {
     ...projectTaskSourceMessage(source, teamName),
@@ -210,7 +210,7 @@ export function projectTeamSnapshot(value: unknown): BackendTeamSnapshot {
       const member = row(value);
       return { name: text(member.name), role: choice(member.role, ['lead', 'member']) };
     }),
-    tasks: array(source.tasks, (value) => task(value, teamName)).map((task) => ({
+    tasks: array(source.tasks, (value) => projectTeamTask(value, teamName)).map((task) => ({
       ...task,
       ...(kanbanState.tasks[task.id]
         ? {

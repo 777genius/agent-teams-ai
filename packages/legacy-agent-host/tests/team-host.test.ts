@@ -264,6 +264,23 @@ test(
         payload: null,
       });
       assert.deepEqual(listed, { ok: true, value: [] });
+      const trash = await current.rpc('team.tasks.list', {
+        commandId: 'TEST-list-deleted',
+        binding,
+        payload: { deleted: true },
+      });
+      assert.equal(trash.ok, true);
+      const deleted = trash.value as {
+        kind: string;
+        teamName: string;
+        tasks: { id: string; status: string; deletedAt: string }[];
+      };
+      assert.equal(deleted.kind, 'deleted-tasks');
+      assert.equal(deleted.teamName, 'test-team');
+      assert.equal(deleted.tasks.length, 1);
+      assert.equal(deleted.tasks[0]!.id, receipt.effects.taskId);
+      assert.equal(deleted.tasks[0]!.status, 'deleted');
+      assert.ok(deleted.tasks[0]!.deletedAt);
       const snapshot = await current.rpc('team.snapshot', {
         commandId: 'TEST-snapshot',
         binding,

@@ -1,5 +1,9 @@
 /** Finite source closure of the integrated lifecycle, WorkSync and member-action checkpoint. */
 export const desktopProofIntegratedSources = [
+  'src/features/agent-backend/main/adapters/output/projectDeletedTasks.ts',
+  'src/features/agent-backend/renderer/createHostTaskReads.ts',
+  'test/features/agent-backend/hostDeletedTasks.test.ts',
+  'packages/legacy-agent-host/tests/team-host.test.ts',
   'src/renderer/utils/memberHelpers.ts',
   'src/features/team-direct-chats/renderer/ui/ChatListRow.tsx',
   'test/features/agent-backend/hostTeamRouting.test.ts',

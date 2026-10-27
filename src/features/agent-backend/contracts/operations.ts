@@ -67,6 +67,7 @@ import type {
   AttachmentUpload,
   AttachmentUploadResult,
 } from '@agent-teams/legacy-agent-host/attachments/contracts';
+import type { TeamTaskWithKanban } from '@shared/types/team';
 import type { HostSubagentActivity } from '@shared/types/teamActivity';
 export type { BackendCheckpointAvailabilityReason, BackendMemberCheckpoints } from './checkpoints';
 export type {
@@ -163,7 +164,7 @@ export interface BackendOperationPayloads
   'team.lead.activity.read': Record<string, never>;
   'team.lead.context.read': Record<string, never>;
   'task.get': { taskId: string };
-  'tasks.list': Record<string, never>;
+  'tasks.list': { deleted?: true };
   'team.snapshot': Record<string, never>;
   'team.changes.read': { cursor?: string };
   'team.roster.read': Record<string, never>;
@@ -237,6 +238,12 @@ export interface BackendComment {
   type?: string;
   taskRefs?: BackendTaskRef[];
   attachments?: BackendAttachmentMetadata[];
+}
+
+export interface BackendDeletedTasks {
+  kind: 'deleted-tasks';
+  teamName: string;
+  tasks: TeamTaskWithKanban[];
 }
 
 export interface BackendTask {
@@ -445,6 +452,7 @@ export type BackendOperationResult =
         | BackendLaunchModelProbe
         | BackendTask
         | BackendTask[]
+        | BackendDeletedTasks
         | BackendCommandReceipt
         | BackendRuntimeSnapshot
         | BackendCheckpoint

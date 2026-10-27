@@ -17,6 +17,7 @@ import { projectResumePreparation, resumeChoices } from '../resumeValues';
 
 import { projectAttachmentMetadata } from './projectAttachmentMetadata';
 import { projectCrossTeamResult } from './projectCrossTeamResult';
+import { projectDeletedTasks } from './projectDeletedTasks';
 import {
   projectLaunchConfiguration,
   projectLaunchModelConfiguration,
@@ -755,7 +756,13 @@ export function projectBackendResult(
   if (request.operation === 'team.snapshot')
     return { ok: true, value: projectTeamSnapshot(source.value) };
   if (request.operation === 'task.get') return { ok: true, value: task(source.value) };
-  if (request.operation === 'tasks.list') return { ok: true, value: array(source.value, task) };
+  if (request.operation === 'tasks.list')
+    return {
+      ok: true,
+      value: request.payload.deleted
+        ? projectDeletedTasks(source.value)
+        : array(source.value, task),
+    };
   if (request.operation === 'command.lookup' && source.value === null)
     return { ok: true, value: null };
   if (request.operation === 'runtime.checkpoint')

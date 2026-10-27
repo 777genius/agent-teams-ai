@@ -422,7 +422,16 @@ export function createTeamHost(
             const receipt = connection.lookup(input.commandId);
             return { ok: true, value: receipt ? json(receipt) : null };
           }
-          if (operation === 'listTasks') return { ok: true, value: json(connection.listTasks()) };
+          if (operation === 'listTasks') {
+            const query = z
+              .object({ deleted: z.literal(true).optional() })
+              .strict()
+              .parse(input.payload ?? {});
+            return {
+              ok: true,
+              value: query.deleted ? connection.readDeletedTasks() : json(connection.listTasks()),
+            };
+          }
           if (operation === 'getTask') {
             const payload = z.object({ taskId: segment }).strict().parse(input.payload);
             return { ok: true, value: json(connection.getTask(payload.taskId)) };

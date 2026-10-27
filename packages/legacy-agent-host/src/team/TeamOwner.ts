@@ -429,6 +429,7 @@ export class TeamOwner {
       getTask: (taskId: string) => this.getTask(principalId, taskId),
       listTasks: () => this.listTasks(principalId),
       readSnapshot: () => this.readSnapshot(principalId),
+      readDeletedTasks: () => this.readDeletedTasks(principalId),
       ...(this.policy.reads
         ? {
             readQueries: createTeamReadQueries({
@@ -544,6 +545,19 @@ export class TeamOwner {
     return this.store.fenced(() => {
       this.authorize(principalId, 'read');
       return this.policy.taskBoard().listTasks();
+    });
+  }
+
+  private readDeletedTasks(principalId: string): JsonValue {
+    return this.store.fenced(() => {
+      this.authorize(principalId, 'read');
+      const value = json({
+        kind: 'deleted-tasks',
+        teamName: this.binding.teamName,
+        tasks: this.policy.taskBoard().listDeletedTasks(),
+      });
+      if (Buffer.byteLength(JSON.stringify(value)) > 512 * 1024) throw new TeamOwnerError('hold');
+      return value;
     });
   }
 
