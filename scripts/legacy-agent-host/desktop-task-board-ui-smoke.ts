@@ -361,7 +361,8 @@ export async function runDesktopTaskBoardUiSmoke(
     ),
     'choose original Manual sorting'
   );
-  await ui.click('button[aria-label="Sort tasks"]', 'close sort popover');
+  // Manual sorting enables DndContext and remounts the board with its popover closed.
+  await ui.waitRead(`!document.querySelector('[role="dialog"]')`, 'original sort popover closed');
   const orderBefore = await ui.waitRead(
     `(() => {const cards=[...document.querySelectorAll('.kanban-task-card[data-task-id]')];if(cards.length!==2||cards.some(e=>!e.parentElement.hasAttribute('aria-roledescription')))return null;return cards.map(e=>e.dataset.taskId);})()`,
     'two original sortable cards'
@@ -369,13 +370,16 @@ export async function runDesktopTaskBoardUiSmoke(
   assert.ok(Array.isArray(orderBefore) && orderBefore.length === 2);
   const dragged = String(orderBefore[1]),
     target = String(orderBefore[0]);
+  await ui.scrollTo(card(dragged), 'reveal original sortable source');
   const geometry = record(
     await ui.waitRead(
       `(() => {
     const a=document.querySelector(${desktopJsLiteral(card(dragged))}),b=document.querySelector(${desktopJsLiteral(card(target))});if(!a||!b)return null;
     const p=a.getBoundingClientRect(),q=b.getBoundingClientRect();
     if(!p.width||!q.width||p.top<0||q.top<0||p.bottom>innerHeight||q.bottom>innerHeight)return null;
-    return {x:p.x+Math.min(100,p.width/2),y:p.y+20,toX:q.x+Math.min(100,q.width/2),toY:q.y+20};
+    const point={x:p.x+Math.min(100,p.width/2),y:p.y+20,toX:q.x+Math.min(100,q.width/2),toY:q.y+20};
+    if(!a.contains(document.elementFromPoint(point.x,point.y))||!b.contains(document.elementFromPoint(point.toX,point.toY)))return null;
+    return point;
   })()`,
       'visible sortable source and destination'
     )
