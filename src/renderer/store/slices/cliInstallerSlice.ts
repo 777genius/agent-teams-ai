@@ -1104,7 +1104,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         };
       });
 
-      scheduleCodexCatalogLoadingRefreshes(get);
+      if (epoch === cliStatusEpoch) scheduleCodexCatalogLoadingRefreshes(get);
 
       if (!metadata.installed) {
         if (epoch === cliStatusEpoch) {
@@ -1407,7 +1407,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
             cliProviderStatusLoading: nextLoading,
           };
         });
-        scheduleCodexCatalogLoadingRefresh(get, providerId);
+        if (requestIsCurrent) scheduleCodexCatalogLoadingRefresh(get, providerId);
         const settledProviderStatus = projectPath
           ? get().cliProviderStatusByScope[scopeKey]
           : providerStatus;
