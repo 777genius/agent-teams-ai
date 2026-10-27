@@ -718,10 +718,8 @@ export function qualifySettings(response, expectation) {
   if (expectation?.kind === 'v2-catalog-only') {
     assert(view.runtime.version === expectation.nativeVersion &&
       sameWindowsPath(view.runtime.cliPath, expectation.nativePath) &&
-      view.configuredModels.some((model) => expectation.modelSources.includes(model.providerId) &&
-        typeof model.modelId === 'string' && expectation.modelIds.includes(
-          model.modelId.startsWith(`${model.providerId}/`) ? model.modelId : `${model.providerId}/${model.modelId}`)),
-    'V2 settings requires the selected native runtime and real known models');
+      typeof view.fallbackModel === 'string' && expectation.modelIds.includes(view.fallbackModel),
+    'V2 settings requires the selected native runtime and a known catalog fallback model');
   }
   return {
     state: view.runtime.state,

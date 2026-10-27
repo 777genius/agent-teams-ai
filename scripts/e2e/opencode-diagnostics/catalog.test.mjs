@@ -342,24 +342,32 @@ test('V2 full directory disclaimer never qualifies seed-only or failed inventory
   assert.equal(settingsRefreshFailure(failed, expectation)?.category, 'runtime-error');
 });
 
-test('V2 settings requires the same native identity and an actually observed configured model', () => {
+test('V2 settings requires the same native identity and an actually observed fallback model', () => {
   const expectation = qualifyCatalogReadExpectation(...v2ReadEvidence());
   const response = {
     schemaVersion: 1, runtimeId: 'opencode', view: {
-      runtimeId: 'opencode', runtime: { state: 'ready', version: '2.1.4', cliPath: nativePath },
+      runtimeId: 'opencode', runtime: { state: 'needs-auth', version: '2.1.4', cliPath: nativePath },
       providers: [{ providerId: 'opencode' }],
-      configuredModels: [{ providerId: 'opencode', modelId: knownModels[0] }],
+      configuredModels: [],
+      fallbackModel: knownModels[0],
       diagnostics: [v2Disclaimer],
     },
   };
-  assert.deepEqual(qualifySettings(response, expectation), { state: 'ready', providers: 1, models: 1 });
+  assert.deepEqual(qualifySettings(response, expectation), { state: 'needs-auth', providers: 1, models: 0 });
   assert.throws(() => qualifySettings(response), /Settings diagnostics/);
   for (const invalidate of [
     (r) => { r.view.runtime.state = 'degraded'; },
     (r) => { r.view.runtime.version = '2.1.3'; },
     (r) => { r.view.runtime.cliPath = 'C:\\foreign\\opencode.exe'; },
-    (r) => { r.view.configuredModels = []; },
-    (r) => { r.view.configuredModels[0].modelId = 'opencode/unobserved'; },
+    (r) => { delete r.view.fallbackModel; },
+    (r) => { r.view.fallbackModel = null; },
+    (r) => { r.view.fallbackModel = 'opencode/unobserved'; },
+    (r) => {
+      delete r.view.fallbackModel;
+      r.view.configuredModels = [{ providerId: 'opencode', modelId: knownModels[0] }];
+    },
+    (r) => { r.view.providers = null; },
+    (r) => { r.view.configuredModels = null; },
     (r) => { r.view.diagnostics.push('V2 read status unavailable'); },
     (r) => { r.error = { message: 'native failure' }; },
   ]) {
