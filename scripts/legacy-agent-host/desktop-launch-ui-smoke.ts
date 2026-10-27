@@ -35,6 +35,79 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
     excluded: [evidence.mode === 'native-resume-ui' ? 'Create controls' : 'Create/Resume controls', 'real vendor authentication/inference', 'all advanced settings', 'full Stage1'],
   };
   evidence.launchDialogProof = proof;
+  // Private React-layout-dependent TEST diagnosis only; never a workflow qualification.
+  const captureReadiness = async (phase: 'before-original-submit' | 'original-submit-failed') => {
+    const diagnostics = (proof.readinessDiagnostics ??= []) as unknown[];
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      options.assertOwnedRenderer();
+      const snapshot = await Promise.race([
+        cdp.evaluate(`(() => {
+          const teamName=${JSON.stringify('host-team:' + encodeURIComponent(fixture.handleId))};
+          const prompt=document.querySelector('[role="dialog"] #dialog-prompt'),dialog=prompt?.closest('[role="dialog"]');
+          if(!prompt||!dialog)return {unavailable:'original-launch-dialog-unavailable',now:Date.now()};
+          const field=(value,key)=>value&&(typeof value==='object'||typeof value==='function')
+            ?Object.getOwnPropertyDescriptor(value,key)?.value:undefined;
+          const submit=[...dialog.querySelectorAll('button')].filter(button=>button.textContent.trim()==='Launch team');
+          const result={now:Date.now(),teamName,form:{prompt:prompt.value,
+            model:dialog.querySelector('button[aria-label*=" provider,"]')?.getAttribute('aria-label')??null,
+            effort:dialog.querySelector('#lead-effort')?.textContent.trim()??null,
+            submit:submit.map(button=>({disabled:button.disabled,text:button.textContent.trim()}))},checks:[],currentDraftSignatures:[]};
+          const key=Object.keys(prompt).find(key=>key.startsWith('__reactFiber$'));
+          const named=node=>{const type=field(node,'type');return typeof type==='function'&&field(type,'name')==='LaunchTeamDialog';};
+          const matches=node=>{const props=field(node,'memoizedProps');
+            return named(node)&&field(props,'open')===true&&field(props,'teamName')===teamName;};
+          let fiber=key?field(prompt,key):null,root=null,originalComponent=false;
+          for(let depth=0;fiber&&depth<64;depth++,fiber=field(fiber,'return')){
+            if(named(fiber))originalComponent=true;root=fiber;
+          }
+          if(fiber||!originalComponent||field(root,'tag')!==3)return {...result,unavailable:'matching-original-component-unavailable'};
+          const currentRoot=field(field(root,'stateNode'),'current'),pending=currentRoot?[currentRoot]:[],components=[],seen=new Set();
+          let visited=0;
+          for(;pending.length&&visited<4096;visited++){
+            const node=pending.pop();if(seen.has(node))continue;seen.add(node);
+            if(matches(node))components.push(node);
+            const sibling=field(node,'sibling'),child=field(node,'child');
+            if(sibling)pending.push(sibling);if(child)pending.push(child);
+          }
+          if(pending.length||components.length!==1)return {...result,currentTreeNodesVisited:visited,unavailable:'current-original-component-unconfirmed'};
+          const component=components[0];result.currentTreeNodesVisited=visited;
+          const projectChecks=(value,index,origin)=>{
+            if(!Array.isArray(value)||!value.length||value.length>8||!value.every(check=>
+              ['anthropic','codex','opencode','gemini'].includes(field(check,'providerId'))&&
+              ['pending','checking','ready','notes','failed'].includes(field(check,'status'))&&Array.isArray(field(check,'details'))))return;
+            result.checks.push({hookIndex:index,origin,checks:value.map(check=>{
+              const proof=field(check,'capturedTeamReadiness');
+              return {providerId:field(check,'providerId'),status:field(check,'status'),
+                details:field(check,'details').slice(0,16).filter(value=>typeof value==='string').map(value=>value.slice(0,2000)),
+                capturedTeamDraftSignature:typeof field(check,'capturedTeamDraftSignature')==='string'?field(check,'capturedTeamDraftSignature').slice(0,65536):null,
+                capturedTeamReadiness:proof?Object.fromEntries(['handleId','preparationId','launchId','rosterRevision','selectionSignature','expiresAt'].map(key=>[key,field(proof,key)])):null};
+            })});
+          };
+          let hook=field(component,'memoizedState'),count=0;
+          for(;hook&&count<512;hook=field(hook,'next'),count++){
+            const value=field(hook,'memoizedState'),current=field(value,'current');
+            projectChecks(value,count,'state');projectChecks(current,count,'ref');
+            if(typeof current!=='string'||current.length>65536)continue;
+            try{const scope=JSON.parse(current);
+              if(Array.isArray(scope)&&scope.length===7&&scope[0]===true&&scope[1]===teamName&&
+                typeof scope[2]==='string'&&typeof scope[3]==='string'&&typeof scope[5]==='string'&&Array.isArray(scope[6])&&scope[6].length===12)
+                result.currentDraftSignatures.push({hookIndex:count,signature:current});
+            }catch{}
+          }
+          return {...result,hookCount:count,...(hook?{unavailable:'hook-traversal-truncated'}:{})};
+        })()`),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('Readiness diagnostic timed out')), 3000);
+        }),
+      ]);
+      diagnostics.push({ phase, snapshot });
+    } catch {
+      diagnostics.push({ phase, unavailable: 'readiness-diagnostic-read-failed' });
+    } finally {
+      clearTimeout(timer);
+    }
+  };
   const step = (value: Record<string, unknown>) => steps.push({ monotonicMs: Math.round(performance.now()), ...value });
   let ui = createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer, step });
   const teamRoot = join(fixture.root, 'hoststore/teams/test-desktop-backend');
@@ -97,7 +170,13 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   assert.equal(await cdp.evaluate(`document.querySelector('[role="dialog"] #dialog-skip-permissions')?.getAttribute('data-state')`), 'checked');
   // Do not click the optional preflight bypass: readiness must settle first.
   await ui.scrollTo('[role="dialog"] button', 'visible original Launch team control', 'Launch team');
-  await ui.click('[role="dialog"] button', 'submit original Launch team once', 'Launch team');
+  await captureReadiness('before-original-submit');
+  try {
+    await ui.click('[role="dialog"] button', 'submit original Launch team once', 'Launch team');
+  } catch (error) {
+    await captureReadiness('original-submit-failed');
+    throw error;
+  }
   await ui.waitRead(`!document.querySelector('[role="dialog"] #dialog-prompt')`, 'original launch dialog closes', 60000);
   const state = await poll(ownerState, value => Array.isArray(value.runtimeCaptures) && value.runtimeCaptures.length === 1, 'one fresh Team capture');
   const captures = state.runtimeCaptures as unknown[];

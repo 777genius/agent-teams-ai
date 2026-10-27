@@ -1290,3 +1290,25 @@ restoration and active-board exclusion. Canonical delete's expected queued-alert
 retraction diagnostic is asserted exactly and consumed, not broadly suppressed.
 Original Trash/Restore Desktop controls still need the next explicit UI proof;
 unit/Host RPC results are not promoted to Desktop acceptance or full Stage 1.
+
+
+## Passive original Launch readiness diagnosis for cold Resume
+
+The c5 cold-Resume failure remains unresolved: its original Launch was disabled
+by the provider-readiness/catalog guard. The existing Launch UI smoke now captures
+bounded passive diagnostics immediately before that original attempt and again
+only if the attempt fails. It reads the exact original Team's currently mounted
+Launch component/check array and captured draft signatures through a bounded
+current React root walk, with explicit DOM values and timestamps. The ownership
+check precedes CDP; inaccessible/truncated diagnostics are recorded without
+masking or replacing the original failure.
+
+Root independently accepted the actual frozen delta at source SHA-256
+`e9a74e0e9b4ecc06bea74907eb3c521cd2e8b0fbd24da044c19bf1f4015cf2a4`.
+The bounded ancestor/tree/hook limits are 64/4096/512; the read has a three-second
+budget. No product/backend call, probe, refresh, bypass, default change or mutation
+retry is added. The original click/error and later proof gates remain intact.
+The existing strict scripts TypeScript check and embedded-expression VM syntax
+check passed. Prettier reports the same preexisting whole-file drift on the
+unchanged HEAD baseline; no broad formatting is applied. Diff check passed.
+This is diagnosis only, not a readiness waiver, Resume PASS or workflow acceptance.
