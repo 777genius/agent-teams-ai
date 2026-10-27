@@ -23,7 +23,7 @@ import { desktopReadbackArtifacts, runDesktopNativeReadback } from './desktop-re
 import { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
 import { verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
-import { runDesktopHostRoutingProof } from './desktop-host-routing-proof.ts';
+import { runDesktopF08ReadTimingProof, runDesktopHostRoutingProof } from './desktop-host-routing-proof.ts';
 import { startDesktopCodexQuestionModel } from './desktop-codex-question-model.ts';
 import { prepareDesktopCodexQuestionFixture, prepareDesktopCodexQuestionLaunch, waitDesktopCodexQuestionRenderer } from './desktop-codex-question-fixture.ts';
 import { runDesktopCodexQuestionUiSmoke } from './desktop-codex-question-ui-smoke.ts';
@@ -345,6 +345,9 @@ async function main(): Promise<void> {
       assert.ok(fixture.uiSeed);
       await runDesktopOfflineTaskBoardUiSmoke(cdp, { root: fixture.root, repo, handleId: fixture.handleId,
         seed: fixture.uiSeed, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) }, mode);
+      if (mode === 'task-board-cross-team-ui')
+        await runDesktopF08ReadTimingProof(cdp, { root: fixture.root, handleId: fixture.handleId,
+          seed: fixture.uiSeed, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
     } else if (reviewUiMode) {
       assert.ok(fixture.uiSeed);
       await runDesktopReviewUiSmoke(cdp, {

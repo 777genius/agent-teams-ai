@@ -1123,3 +1123,39 @@ format/diff and bounded strict decoder typechecking with erasable syntax enabled
 These are local CI corrections; exact committed-head canonical and Desktop
 qualification remain pending. Both affected existing regressions are explicitly
 source-pinned. The unfinished two-file F08 harness is excluded from this commit.
+
+
+## Bounded F08 original Electron read-timing harness
+
+The independently accepted two-file continuation extends only the existing
+`task-board-cross-team-ui` workflow, after its original command censuses. On the
+same offline captured Host it uses one original Task Comment control and one
+canonical comment/receipt, then exercises original shared-feed response loss,
+a real Host cursor-gap read and a late public observer's resync. A separate
+original selected-Team read is held across original navigation to the existing
+peer and released only after the peer is loaded. Recorded original getData
+provenance, selected loading/nonce and its terminal roster-read observation
+qualify that hold; arbitrary background polling is not relabelled as selection.
+
+Each tracked read performs the real original backend call exactly once and
+retains its returned result/hash. Cursor loss changes only the read cursor sent
+to the actual Host; no synthetic successful result or replacement mutation is
+injected. The one comment/receipt and original receipts are checked, the peer
+product stays unchanged, and the shared invocation/observer hooks are restored
+in `finally`. The same already-pinned helper/glue paths contain the complete
+change; no endpoint, backend, fixture, provider, default setter or new harness was
+introduced.
+
+Direct existing script TypeScript, scoped helper formatting and focused VM
+fault-mechanics checks passed. Independent actual-code review accepted the
+completed provenance, bounded polling, settlement, product and cleanup checks.
+Actual Desktop execution of this changed continuation remains **pending**.
+This does **not** qualify full F08/M18: the first global snapshot-subscription
+race, same-A revision rollback across an in-flight mutation, transport
+reconnect/Host restart, live default-owner switch, unavailable-A physical fault
+and cross-owner routing remain explicitly excluded/open.
+
+The earlier exact c5 run has again reported failed mixed Create/Launch and
+previously-stopped-source import/native Launch gates. Their new original evidence
+is being retrieved and triaged; no cause is asserted here and no historical PASS
+is transferred to those failures or this changed combined head.
