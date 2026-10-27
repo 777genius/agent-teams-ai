@@ -850,3 +850,117 @@ nor the local 237-case bundle substitutes for full committed-head qualification
 or the actual source-import/native-launch Desktop gate. The source unit is now
 ready for its coherent commit and immediate push; unrelated Task UI and E2E
 work remains separately owned and reviewed.
+
+
+## Committed source checkpoint and canonical CI feedback
+
+The reviewed source-admission unit was committed and immediately pushed as
+`c5ded9a14df74b30c5567f4511c3aa960b9b1fea`. Its explicit path set contained the
+34 agreed source/test paths, the finite source-closure update and this progress
+log; unrelated Task/group/F01 and Desktop extension work was excluded.
+[Workflow 40577183939](https://github.com/777genius/agent-teams-ai/actions/runs/40577183939)
+was explicitly dispatched on this exact head with all ten source Desktop cases.
+It must not inherit results from the earlier `7415702c` run.
+
+The canonical validation job found a real contract mismatch:
+`TeamWorkSyncIdentityAccess.withCurrentPublication` could supply an undefined
+assertion callback while `MemberWorkSyncTokenIdentity` requires a callable one.
+The actual native persistence consumer also calls that callback, so a cast or a
+weakened port would not be a valid correction. The IPC test facade additionally
+lacked the new `withStoppedImportFence` member. Both are being corrected under
+independent review; the source checkpoint is not a full typecheck PASS.
+
+All three lint jobs and test shards 2 and 3 passed. Shard 1 failed two existing
+TeamDataService comment-forwarding expectations because the physical inbox write
+now carries its original `shouldStillWrite` guard as a third argument. Shard 4
+failed thirteen existing LaunchTeamDialog Create/save-only cases and one
+request-shaped Host routing case. These failures are being diagnosed rather
+than skipped or reclassified. The original Task board Desktop job passed on
+`c5ded9a14`; its not-yet-committed group extension was not part of that run. The
+remaining Desktop jobs were still running or queued at this checkpoint.
+
+
+## F01 Task/comment unit: final local author and independent review
+
+The application-lifetime Task/comment recovery unit is frozen for integration.
+The independent whole-candidate critic issued actual-code **ACCEPT** after
+reviewing original command/payload/handle retention, strict direct/lookup receipt
+correlation, Main-validated policy no-effect proof, original writer normalization,
+revision-safe comment completion and the bounded outstanding-submission map.
+A lookup with missing, pending, held, malformed or unavailable evidence retains
+HOLD. Completed but unacknowledged obligations count towards the bound; the
+existing successful UI/store workflow performs a local acknowledgement.
+
+Three actual caller defects were corrected during that review. The graph Create
+Task parent now propagates failed submission instead of turning it into a
+fulfilled callback. The existing comment Send control remains available for
+original-intent lookup after the current draft is cleared or exceeds its length
+limit. A replacement Create Task form registers its open lease in layout phase,
+so an old late success cannot acknowledge the intent already restored by the new
+form. Normal successful parent close without replacement still acknowledges and
+releases the completed intent.
+
+The final author run passed **110/110 tests across ten suites**: real filesystem
+TeamOwner recovery 22, strict transport facade 29, existing Host mutations 18,
+attachments 6, group facade/projection 3, Task detail core policies 17, legacy
+Create Task identity 4, actual CreateTaskDialog 7, original Send control 3 and
+actual graph hook/callback 1. Scoped lint and format checks passed for the 26
+owned paths; source-size and provisioning guards passed without cap changes.
+A bounded strict helper/core/Main-projector type program passed; it is not the
+canonical project typecheck.
+
+The separate real-store Task detail renderer integration suite has not collected
+locally because its exact CodeMirror language dependency set is still being
+recovered. Its new actual retirement/unmount case has no local PASS yet. The
+finite source closure must include the new reviewed helpers before committed
+proof. Renderer reload durability is explicitly outside this application-lifetime
+retention claim; the existing draft store is not a new command journal.
+
+The three-file existing Task board group extension also received independent
+actual-code ACCEPT. It uses the original offline fixture, Group filter, Create
+Task controls and reload, checking canonical group association and preserving
+the original group receipt separately. Strict script typechecking and scoped
+format/diff checks passed. Actual Electron acceptance remains pending on the
+combined committed head.
+
+
+## Independent plan audit: remaining F08 Electron evidence
+
+The independent plan audit identified a specific acceptance omission rather than
+a confirmed production defect. F08 requires mutation between snapshot and
+subscribe, reconnect/gap and a late former-target response specifically in
+Electron/CDP. The existing-handle owner A to default B switch, unavailable A
+without effects at B and rollback handle survival likewise need their concrete
+routing proof. The retained P5 handoff separates CLI/adapter race results from
+ordinary Electron automatic-update evidence; the existing six negative routing
+probes and ten Desktop variants do not establish the full required sequence.
+
+A bounded continuation at the existing offline Task board/routing boundary is
+being researched. No alternative harness, provider allocation or mocked native
+acceptance is authorized by that design exercise. Until the actual required
+proofs and the other retained P7/P8 obligations pass, this remains a scoped
+integration checkpoint, not an unqualified final `candidate-synthetic` result.
+The original M19 custody HOLD, unavailable historical M17 packed tuple and broader
+historical-source metadata qualification remain separately open.
+
+
+## Confirmed c5 CI contract and forwarding corrections
+
+The source identity adapter now always supplies the required callable publication
+assertion. With configured source admission, its closure retains the original
+admission and receiver across awaits; without that optional policy, the existing
+legacy identity fence remains authoritative. The native consumer's required
+callback contract is unchanged. Two actual identity regressions cover callable
+legacy publication across an await and revoked original source admission before
+a write, with no fresh capture. The existing IPC fixture supplies the newly
+required stopped-import fence. Two TDS forwarding assertions now verify the
+original third options object and invoke its actual `shouldStillWrite` callback,
+while retaining their exact business payload/call-count assertions.
+
+All three existing focused suites passed **183/183** (TDS 162, identity 11 and
+IPC 10). The normal Host build/declarations refresh and exact four-file fast lint
+and diff checks passed. Independent actual-code review accepted the completed
+delta; no production port was weakened or cast to bypass validation. Existing
+formatting outside the changed lines was preserved. These are local corrections
+to the confirmed c5 canonical CI findings; full qualification of the new commit
+remains pending, and no new native result is inferred.

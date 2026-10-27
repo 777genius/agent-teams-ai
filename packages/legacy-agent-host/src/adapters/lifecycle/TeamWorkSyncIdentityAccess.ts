@@ -68,7 +68,7 @@ export class TeamWorkSyncIdentityAccess {
   withCurrentPublication<T>(
     teamName: string,
     identityId: string,
-    operation: (assertCurrent?: () => void) => Promise<T>
+    operation: (assertCurrent: () => void) => Promise<T>
   ): Promise<{ current: true; value: T } | { current: false; identity: TeamWorkSyncIdentityObservation }> {
     assertSafeTeamName(teamName);
     return this.ports.withFence(teamName, async () => {
@@ -78,7 +78,9 @@ export class TeamWorkSyncIdentityAccess {
         if (identity.status !== 'identified' || identity.identityId !== identityId)
           return { current: false as const, identity };
         admission?.assertCurrent();
-        return { current: true as const, value: await operation(admission?.assertCurrent) };
+        // Legacy callers retain the identity fence without an optional source policy.
+        const assertCurrent = () => admission?.assertCurrent();
+        return { current: true as const, value: await operation(assertCurrent) };
       };
       return admission ? admission.publish(publish) : publish();
     });

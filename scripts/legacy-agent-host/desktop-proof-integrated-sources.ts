@@ -1,5 +1,7 @@
 /** Finite source closure of the integrated lifecycle, WorkSync and member-action checkpoint. */
 export const desktopProofIntegratedSources = [
+  'test/features/member-work-sync/main/registerMemberWorkSyncIpc.test.ts',
+  'test/main/services/team/TeamDataService.test.ts',
   'src/features/internal-storage/main/infrastructure/InternalStorageJsonReplica.ts',
   'src/features/member-work-sync/core/application/RuntimeTurnSettledIngestor.ts',
   'src/features/member-work-sync/core/application/RuntimeTurnSettledPorts.ts',

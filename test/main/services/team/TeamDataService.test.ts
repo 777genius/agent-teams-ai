@@ -4451,6 +4451,11 @@ describe('TeamDataService', () => {
       await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
 
       expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+      const forwarding = (
+        inboxWriter.sendMessage as unknown as { mock: { calls: unknown[][] } }
+      ).mock.calls[0]?.[2] as { shouldStillWrite: () => boolean };
+      expect(forwarding).toEqual({ shouldStillWrite: expect.any(Function) });
+      expect(forwarding.shouldStillWrite()).toBe(true);
       expect(inboxWriter.sendMessage).toHaveBeenCalledWith(
         'my-team',
         expect.objectContaining({
@@ -4462,7 +4467,8 @@ describe('TeamDataService', () => {
           leadSessionId: 'lead-1',
           taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'my-team' }],
           messageId: 'task-comment-forward:my-team:task-1:comment-1',
-        })
+        }),
+        forwarding
       );
       const firstSendRequest = (
         inboxWriter.sendMessage as unknown as { mock: { calls: unknown[][] } }
@@ -5382,6 +5388,11 @@ describe('TeamDataService', () => {
       await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
 
       expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+      const forwarding = (
+        inboxWriter.sendMessage as unknown as { mock: { calls: unknown[][] } }
+      ).mock.calls[0]?.[2] as { shouldStillWrite: () => boolean };
+      expect(forwarding).toEqual({ shouldStillWrite: expect.any(Function) });
+      expect(forwarding.shouldStillWrite()).toBe(true);
       expect(inboxWriter.sendMessage).toHaveBeenCalledWith(
         'my-team',
         expect.objectContaining({
@@ -5389,7 +5400,8 @@ describe('TeamDataService', () => {
           summary: 'Comment on #abcd1234',
           messageKind: 'task_comment_notification',
           messageId: 'task-comment-forward:my-team:task-1:comment-2',
-        })
+        }),
+        forwarding
       );
     } finally {
       if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
