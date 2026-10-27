@@ -4,7 +4,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { TeamCreationRefusal } from '../../../src/features/agent-backend/contracts/creation';
 import { CapturedTeamRegistry } from '../../../src/features/agent-backend/main/infrastructure/CapturedTeamRegistry';
 import { createHostTeamsApi } from '../../../src/features/agent-backend/renderer/createHostTeamsApi';
-import { readTeamCreationResult } from '../../../src/features/agent-backend/renderer/readTeamCreationResult';
+import {
+  readTeamCreationConfigResult,
+  readTeamCreationResult,
+} from '../../../src/features/agent-backend/renderer/readTeamCreationResult';
 
 import type { AgentBackendApi } from '../../../src/features/agent-backend/contracts';
 import type { BackendOwnerBinding } from '../../../src/features/agent-backend/main/application/backendBinding';
@@ -179,6 +182,69 @@ describe('original Create refusal transport', () => {
     await expect(teams.createTeam(request)).rejects.toBeInstanceOf(TeamCreationRefusal);
     expect(createTeamResult).toHaveBeenCalledWith(request);
     expect(legacyCreate).not.toHaveBeenCalled();
+  });
+
+  it('retains save-only refusal metadata through the raw existing bridge and accepts its legacy void acknowledgement', async () => {
+    const result = {
+      success: false,
+      error: 'teamName must be kebab-case [a-z0-9-], max 64 chars',
+      failure: { kind: 'captured-team-create-refusal', code: 'invalid', outcome: 'not-dispatched' },
+    };
+    const createConfigResult = vi.fn(async () => result);
+    const legacyCreate = vi.fn();
+    const legacy = { createConfig: legacyCreate, createConfigResult } as unknown as TeamsAPI;
+    const teams = createHostTeamsApi(legacy, {} as AgentBackendApi);
+    const request = { teamName: 'invalid name', members: [] };
+    await expect(teams.createConfig(request)).rejects.toBeInstanceOf(TeamCreationRefusal);
+    await expect(teams.createConfig(request)).rejects.toThrow(result.error);
+    expect(createConfigResult).toHaveBeenCalledWith(request);
+    expect(legacyCreate).not.toHaveBeenCalled();
+    expect(readTeamCreationConfigResult({ success: true, data: undefined })).toBeUndefined();
+    expect(
+      readTeamCreationConfigResult({ success: true, data: { teamName: 'host-team:TEST' } })
+    ).toEqual({ teamName: 'host-team:TEST' });
+    expect(() => readTeamCreationResult({ success: true, data: undefined })).toThrow(
+      'Invalid Host Create'
+    );
+    for (const failure of [
+      undefined,
+      { ...result.failure, outcome: 'unknown' },
+      { ...result.failure, nativePath: '/private' },
+    ]) {
+      expect(() =>
+        readTeamCreationConfigResult({ success: false, error: 'UNKNOWN', failure })
+      ).toThrow('UNKNOWN');
+      try {
+        readTeamCreationConfigResult({ success: false, error: 'UNKNOWN', failure });
+      } catch (error) {
+        expect(error).not.toBeInstanceOf(TeamCreationRefusal);
+      }
+    }
+    expect(() => readTeamCreationConfigResult({ failure: result.failure } as never)).toThrow(
+      'Invalid Create response.'
+    );
+    try {
+      readTeamCreationConfigResult({ failure: result.failure } as never);
+    } catch (error) {
+      expect(error).not.toBeInstanceOf(TeamCreationRefusal);
+    }
+  });
+
+  it('keeps the original receiver when either raw Create operation is unavailable', async () => {
+    const legacy = {
+      async createTeam() {
+        expect(this).toBe(legacy);
+        return { runId: 'TEST-run' };
+      },
+      async createConfig() {
+        expect(this).toBe(legacy);
+      },
+    } as unknown as TeamsAPI;
+    const teams = createHostTeamsApi(legacy, {} as AgentBackendApi);
+    await expect(
+      teams.createTeam({ teamName: 'TEST', cwd: '/TEST', members: [] })
+    ).resolves.toEqual({ runId: 'TEST-run' });
+    await expect(teams.createConfig({ teamName: 'TEST', members: [] })).resolves.toBeUndefined();
   });
 
   it('reconstructs only the finite structured refusal after the raw contextBridge result', () => {

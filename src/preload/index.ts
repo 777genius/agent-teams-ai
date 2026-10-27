@@ -1122,6 +1122,8 @@ const electronAPI: ElectronAPI = {
     createConfig: async (request: TeamCreateConfigRequest) => {
       return invokeIpcWithResult<void | TeamCreateConfigResponse>(TEAM_CREATE_CONFIG, request);
     },
+    createConfigResult: (request: TeamCreateConfigRequest) =>
+      ipcRenderer.invoke(TEAM_CREATE_CONFIG, request),
     getMemberLogs: async (teamName: string, memberName: string) => {
       return invokeIpcWithResult<MemberLogSummary[]>(TEAM_GET_MEMBER_LOGS, teamName, memberName);
     },

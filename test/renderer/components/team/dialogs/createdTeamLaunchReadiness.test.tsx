@@ -303,32 +303,50 @@ describe('original Create launch flow scoped evidence', () => {
       createConfig.mock.calls[0]![0].command.commandId
     );
   });
-  it('does not treat a save-only error as the unsupported branded launch-refusal proof', async () => {
-    const f = mount();
-    createConfig.mockRejectedValue(new TeamCreationRefusal('conflict', 'rejected'));
-    await expect(f.save()(f.input.request)).rejects.toThrow('creation refused');
-    f.unmount();
-    f.render();
-    await expect(f.save()({ ...f.input.request, teamName: 'TEST-other' })).rejects.toThrow(
-      'uncertain'
-    );
-    expect(createConfig).toHaveBeenCalledTimes(1);
-  });
-  it('does not release a late branded refusal after the original owner changes', async () => {
-    const f = mount();
-    const create = vi.fn(async () => {
-      context.activeContextId = 'TEST-other-owner';
-      throw new TeamCreationRefusal('unavailable', 'not-dispatched');
-    });
-    await expect(f.submit()(f.input.request, create)).rejects.toThrow('creation refused');
-    f.unmount();
-    f.render();
-    context.activeContextId = 'TEST-local';
-    await expect(
-      f.submit()({ ...f.input.request, teamName: 'TEST-other' }, create)
-    ).rejects.toThrow('uncertain');
-    expect(create).toHaveBeenCalledTimes(1);
-  });
+  it.each(['not-dispatched', 'rejected'] as const)(
+    'permits save-only correction after its proven original %s refusal',
+    async (outcome) => {
+      const f = mount();
+      createConfig.mockRejectedValueOnce(
+        new IpcError(
+          'team:createConfig',
+          'safe refusal',
+          new TeamCreationRefusal('conflict', outcome)
+        )
+      );
+      await expect(f.save()(f.input.request)).rejects.toThrow('safe refusal');
+      f.unmount();
+      f.render();
+      createConfig.mockResolvedValueOnce(undefined);
+      await expect(
+        f.save()({ ...f.input.request, teamName: 'TEST-corrected' })
+      ).resolves.toBeUndefined();
+      expect(createConfig.mock.calls[1]![0].command.commandId).not.toBe(
+        createConfig.mock.calls[0]![0].command.commandId
+      );
+    }
+  );
+  it.each(['launch', 'config'] as const)(
+    'does not release a late %s branded refusal after the original owner changes',
+    async (kind) => {
+      const f = mount();
+      const create = vi.fn(async () => {
+        context.activeContextId = 'TEST-other-owner';
+        throw new TeamCreationRefusal('unavailable', 'not-dispatched');
+      });
+      createConfig.mockImplementation(create);
+      const submit = (request: TeamCreateRequest) =>
+        kind === 'launch' ? f.submit()(request, create) : f.save()(request);
+      await expect(submit(f.input.request)).rejects.toThrow('creation refused');
+      f.unmount();
+      f.render();
+      context.activeContextId = 'TEST-local';
+      await expect(submit({ ...f.input.request, teamName: 'TEST-other' })).rejects.toThrow(
+        'uncertain'
+      );
+      expect(create).toHaveBeenCalledTimes(1);
+    }
+  );
   it('passes only the last actual successful Host proof through existing diagnostics', async () => {
     const proof = {
       preparationId: 'TEST-prepare',

@@ -1,5 +1,7 @@
 /** Finite source closure of the integrated lifecycle, WorkSync and member-action checkpoint. */
 export const desktopProofIntegratedSources = [
+  'test/main/ipc/teams.test.ts',
+  'test/features/agent-backend/configuredHostTeam.test.ts',
   'src/features/agent-backend/renderer/createHostMemberSpawnStatuses.ts',
   'test/features/agent-backend/hostMemberSpawnStatuses.test.ts',
   'test/features/team-group-chats/groupChats.integration.test.ts',

@@ -27,7 +27,7 @@ import {
 import { projectHostMemberAttachmentCapabilities } from './projectHostMemberAttachmentCapabilities';
 import { projectHostSavedTeamRequest } from './projectHostSavedTeamRequest';
 import { readHostRosterConfiguration } from './readHostRosterConfiguration';
-import { readTeamCreationResult } from './readTeamCreationResult';
+import { createTeamCreationResultApi } from './readTeamCreationResult';
 import { remapHostCrossTeamMessages } from './remapHostCrossTeamMessages';
 import { TeamProductReadOrder } from './TeamProductReadOrder';
 import {
@@ -657,14 +657,13 @@ export function createHostTeamsApi(
       readOrder.invalidateReads(handleId);
     },
   });
+  const creation = createTeamCreationResultApi(legacy);
   // contextBridge freezes its API properties; decorate a mutable copy while keeping the original receiver.
   return new Proxy(
     { ...legacy },
     {
       get(_target, property) {
-        if (property === 'createTeam' && legacy.createTeamResult)
-          return async (request: Parameters<TeamsAPI['createTeam']>[0]) =>
-            readTeamCreationResult(await legacy.createTeamResult!.call(legacy, request));
+        if (property === 'createTeam' || property === 'createConfig') return creation[property];
         if (property === 'updateToolApprovalSettings')
           return (...args: Parameters<TeamsAPI['updateToolApprovalSettings']>) =>
             isHostTeamSelectionKey(args[0])

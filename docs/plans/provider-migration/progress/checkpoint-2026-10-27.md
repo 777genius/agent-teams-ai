@@ -597,3 +597,35 @@ reviewed the completed helper and exact three-line API wiring and accepted them.
 Both new helper and regression are explicitly source-pinned. Actual mixed
 Desktop acceptance and canonical project qualification on this changed source
 remain pending; the earlier failed native receipt is unchanged.
+
+
+## Finite corrective Create refusal checkpoint
+
+Both existing Create operations now preserve the same finite refusal envelope
+through their original IPC channels. Legacy launch validation and save-only
+request parsing may report `invalid/not-dispatched` only before entry into the
+Team/native writer. This is **not** a universal filesystem no-effects claim:
+legacy validation may create the selected cwd. Save-only Host Create forwards
+only the existing branded refusal; its original registry create/lookup path must
+still prove the original command absent under the captured current owner.
+Generic post-dispatch errors, unavailable or pending lookup, malformed envelopes
+and changed-owner results retain UNKNOWN/HOLD. No message-string inference or
+blanket catch-to-refusal conversion is added.
+
+The existing preload supplies an optional raw save-only result, and the renderer
+shares the finite decoder/decorator between launch and save-only Create. Legacy
+save-only success without a DTO remains supported, original receivers are
+preserved and each operation performs one original bridge invocation. The
+application-lifetime intent can be corrected after a proven current refusal in
+either mode; uncertain outcomes keep the original intent through unmount.
+
+The author reports **312/312** tests passed across four existing suites (276 Main
+IPC, 16 actual unmount/intent, 13 refusal transport and 7 real Host registry
+cases). Scoped fast lint and formatting passed for all ten changed files;
+bounded strict TypeScript passed for the decoder/registry/adapter closure.
+Independent actual-code review accepted the unit, and integration diff checks
+passed. Main/preload full-project typechecking and actual Desktop qualification
+on this changed source remain pending. The finite source list explicitly covers
+the two additionally affected existing regression files; no closure was generated
+from unfinished stopped-source admission work. A whole-working-tree source-size
+PASS is not claimed while that separate work is still in progress.

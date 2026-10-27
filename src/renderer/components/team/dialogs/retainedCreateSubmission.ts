@@ -61,7 +61,6 @@ export async function submitRetainedCreate<
   } catch (error) {
     const refusal = error instanceof IpcError ? error.causeError : error;
     if (
-      kind === 'launch' &&
       refusal instanceof TeamCreationRefusal &&
       isContextScopedRequestEpochCurrent(epoch) &&
       currentOwner() === owner &&

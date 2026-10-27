@@ -529,6 +529,10 @@ export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi {
     messageIds: readonly string[]
   ) => Promise<DiscardQueuedUserMessagesResult>;
   createConfig: (request: TeamCreateConfigRequest) => Promise<void | TeamCreateConfigResponse>;
+  /** Raw existing save-only Create result retains only the finite refusal proof. */
+  createConfigResult?: (
+    request: TeamCreateConfigRequest
+  ) => Promise<IpcResult<void | TeamCreateConfigResponse>>;
   getMemberLogs: (teamName: string, memberName: string) => Promise<MemberLogSummary[]>;
   getTaskActivity: (
     teamName: string,

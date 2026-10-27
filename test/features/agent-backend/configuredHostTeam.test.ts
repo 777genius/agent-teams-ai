@@ -7,7 +7,10 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { hostTeamSelectionKey } from '../../../src/features/agent-backend/contracts';
+import {
+  hostTeamSelectionKey,
+  TeamCreationRefusal,
+} from '../../../src/features/agent-backend/contracts';
 import {
   CapturedHostClient,
   createConfiguredHostTeam,
@@ -241,6 +244,55 @@ describe('existing Create-config to actual Host registry', () => {
     ).rejects.toThrow();
     expect(await readdir(join(f.root, 'store/teams'))).toEqual(['test-created']);
   });
+
+  it.each(['absent', 'unavailable', 'changed-owner'] as const)(
+    'releases a Host configuration refusal only after its original owner lookup is absent (%s)',
+    async (lookup) => {
+      const f = await fixture(),
+        feature = f.feature();
+      let current = true;
+      const original = CapturedHostClient.prototype.request;
+      const observed: { method: string; params: unknown }[] = [];
+      vi.spyOn(CapturedHostClient.prototype, 'request').mockImplementation(async function (
+        this: CapturedHostClient,
+        method,
+        params,
+        options
+      ) {
+        if (method === 'team.registry.create') {
+          observed.push({ method, params });
+          return { ok: false, code: 'conflict', outcome: 'rejected' };
+        }
+        if (method === 'team.registry.lookup') {
+          observed.push({ method, params });
+          if (lookup === 'unavailable') return { ok: false, code: 'hold', outcome: 'unknown' };
+          const result = await original.call(this, method, params, options);
+          if (lookup === 'changed-owner') current = false;
+          return result;
+        }
+        return original.call(this, method, params, options);
+      });
+      const result = createConfiguredHostTeam({
+        feature,
+        contextId: 'local',
+        request: f.request,
+        guard: { isCurrent: () => current },
+      });
+      if (lookup === 'absent') await expect(result).rejects.toBeInstanceOf(TeamCreationRefusal);
+      else await expect(result).rejects.not.toBeInstanceOf(TeamCreationRefusal);
+      expect(observed.map((row) => row.method)).toEqual([
+        'team.registry.create',
+        'team.registry.lookup',
+      ]);
+      const originalParams = observed[0]!.params as Record<string, unknown>;
+      expect(observed[1]!.params).toEqual({
+        owner: originalParams.owner,
+        commandId: originalParams.commandId,
+        payload: { contextId: 'local', expected: originalParams.payload },
+      });
+      expect(feature.listBindings('local').bindings).toEqual([]);
+    }
+  );
 
   it('rejects missing identity and private/native selectors before invoking the creation port', async () => {
     const createConfiguredTeam = vi.fn(),

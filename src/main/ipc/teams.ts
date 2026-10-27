@@ -2062,6 +2062,23 @@ function noteLaunchIntentFailed(teamName: string, source: string): void {
   } as TeamProvisioningProgress);
 }
 
+/** Only proven Create refusals carry this finite correction proof across contextBridge. */
+function teamCreationFailureResult<T>(error: unknown, message: string): IpcResult<T> {
+  return {
+    success: false,
+    error: message,
+    ...(error instanceof TeamCreationRefusal
+      ? {
+          failure: {
+            kind: 'captured-team-create-refusal',
+            code: error.code,
+            outcome: error.outcome,
+          },
+        }
+      : {}),
+  };
+}
+
 async function handleCreateTeam(
   event: IpcMainInvokeEvent,
   request: unknown
@@ -2070,24 +2087,18 @@ async function handleCreateTeam(
     try {
       return { success: true, data: await createDesktopCapturedTeam(event, request) };
     } catch (error) {
-      return {
-        success: false,
-        error: 'Captured Host creation unavailable. Refresh teams or retry the unchanged form.',
-        ...(error instanceof TeamCreationRefusal
-          ? {
-              failure: {
-                kind: 'captured-team-create-refusal',
-                code: error.code,
-                outcome: error.outcome,
-              },
-            }
-          : {}),
-      };
+      return teamCreationFailureResult(
+        error,
+        'Captured Host creation unavailable. Refresh teams or retry the unchanged form.'
+      );
     }
   }
   const validation = await validateProvisioningRequest(request);
   if (!validation.valid) {
-    return { success: false, error: validation.error };
+    return teamCreationFailureResult(
+      new TeamCreationRefusal('invalid', 'not-dispatched'),
+      validation.error
+    );
   }
   const progressTargetWindow = BrowserWindow.fromWebContents(event.sender);
 
@@ -3468,12 +3479,11 @@ async function handleCreateConfig(
   if (isDesktopAgentBackendSelected()) {
     try {
       return { success: true, data: await createDesktopCapturedTeamConfiguration(event, request) };
-    } catch {
-      return {
-        success: false,
-        error:
-          'Captured Host configuration unavailable. Refresh teams or retry the unchanged form.',
-      };
+    } catch (error) {
+      return teamCreationFailureResult(
+        error,
+        'Captured Host configuration unavailable. Refresh teams or retry the unchanged form.'
+      );
     }
   }
   let payload: ReturnType<typeof parseCreateTeamRequest>;
@@ -3481,7 +3491,10 @@ async function handleCreateConfig(
     payload = parseCreateTeamRequest(request);
   } catch (error) {
     if (error instanceof TeamRequestValidationError || error instanceof TeamRuntimeSelectionError)
-      return teamReadFailureResult(error);
+      return teamCreationFailureResult(
+        new TeamCreationRefusal('invalid', 'not-dispatched'),
+        error.message
+      );
     return wrapTeamHandler('createConfig', () => Promise.reject(error));
   }
   return wrapTeamHandler('createConfig', async () => {

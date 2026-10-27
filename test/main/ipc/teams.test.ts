@@ -1,4 +1,4 @@
-import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments/contracts';
+import { TeamCreationRefusal } from '@features/agent-backend/contracts';
 import { TeamReadFailureError } from '@features/team-read-recovery/main';
 import { bindTeamProvisioningStartApi } from '@main/services/team/contracts/TeamProvisioningApis';
 import {
@@ -13,6 +13,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments/contracts';
 import type { ElectronAPI } from '@shared/types/api';
 import type {
   BoardTaskActivityDetailResult,
@@ -1068,6 +1069,97 @@ describe('ipc teams handlers', () => {
       selected.mockRestore();
     }
   });
+
+  it.each([TEAM_CREATE, TEAM_CREATE_CONFIG])(
+    'brands only prewriter legacy validation refusal for %s',
+    async (channel) => {
+      const result = await handlers.get(channel)!({ sender: {} } as never, {
+        teamName: 'invalid name',
+        members: [],
+        cwd: os.tmpdir(),
+      });
+      expect(result).toMatchObject({
+        success: false,
+        error: expect.stringContaining('teamName'),
+        failure: {
+          kind: 'captured-team-create-refusal',
+          code: 'invalid',
+          outcome: 'not-dispatched',
+        },
+      });
+      expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
+      expect(service.createTeamConfig).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([TEAM_CREATE, TEAM_CREATE_CONFIG])(
+    'does not brand postdispatch legacy failure for %s',
+    async (channel) => {
+      if (channel === TEAM_CREATE)
+        teamHandlerMocks.createTeam.mockRejectedValueOnce(
+          new Error('TEST failure after writer entry')
+        );
+      else
+        service.createTeamConfig.mockRejectedValueOnce(
+          new Error('TEST failure after writer entry')
+        );
+      const result = await handlers.get(channel)!({ sender: {} } as never, {
+        teamName: 'test-created',
+        members: [],
+        cwd: os.tmpdir(),
+      });
+      expect(result).toMatchObject({
+        success: false,
+        error: expect.stringContaining('TEST failure after writer entry'),
+      });
+      expect(result).not.toHaveProperty('failure');
+      expect(vi.mocked(console.error).mock.calls).toEqual([
+        [
+          '[IPC:teams]',
+          `[teams:${channel === TEAM_CREATE ? 'create' : 'createConfig'}] TEST failure after writer entry`,
+        ],
+      ]);
+      vi.mocked(console.error).mockClear();
+    }
+  );
+
+  it.each(['proven-refusal', 'unknown'] as const)(
+    'preserves only proven Host config refusal metadata (%s)',
+    async (outcome) => {
+      const selected = vi
+        .spyOn(desktopAgentBackend, 'isDesktopAgentBackendSelected')
+        .mockReturnValue(true);
+      const create = vi
+        .spyOn(desktopAgentBackend, 'createDesktopCapturedTeamConfiguration')
+        .mockRejectedValue(
+          outcome === 'proven-refusal'
+            ? new TeamCreationRefusal('conflict', 'rejected')
+            : new Error('TEST lookup unavailable')
+        );
+      try {
+        const result = await handlers.get(TEAM_CREATE_CONFIG)!({ sender: {} } as never, {
+          teamName: 'test-created',
+          members: [],
+        });
+        expect(result).toMatchObject({
+          success: false,
+          error:
+            'Captured Host configuration unavailable. Refresh teams or retry the unchanged form.',
+        });
+        if (outcome === 'proven-refusal')
+          expect(result).toHaveProperty('failure', {
+            kind: 'captured-team-create-refusal',
+            code: 'conflict',
+            outcome: 'rejected',
+          });
+        else expect(result).not.toHaveProperty('failure');
+        expect(service.createTeamConfig).not.toHaveBeenCalled();
+      } finally {
+        create.mockRestore();
+        selected.mockRestore();
+      }
+    }
+  );
 
   it('forwards selected model checks with effort to prepareProvisioning', async () => {
     const handler = handlers.get(TEAM_PREPARE_PROVISIONING)!;
@@ -7667,6 +7759,15 @@ describe('ipc teams handlers', () => {
                 ? 'RUNTIME_SELECTION_UNSUPPORTED'
                 : 'RUNTIME_SELECTION_REQUIRED'
             ),
+            ...(entry === 'create'
+              ? {
+                  failure: {
+                    kind: 'captured-team-create-refusal',
+                    code: 'invalid',
+                    outcome: 'not-dispatched',
+                  },
+                }
+              : {}),
           });
           expect(noteIntent).not.toHaveBeenCalled();
           expect(computeTeamWatchScope()?.has(teamName)).not.toBe(true);
