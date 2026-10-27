@@ -1732,7 +1732,7 @@ describe('collapsed message visualization access', () => {
     async (opener) => {
       vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
       const source = String.raw`root = Stack([Card([TextContent("@alice work @TeamX #abc123 C:\\new\\test")])]);`;
-      const delimiter = opener.match(/^[`~]+/)![0];
+      const delimiter = /^[`~]+/.exec(opener)![0];
       const block = `${opener}\n${source}\n${delimiter}`;
       const prose = 'Hi @alice from @TeamX\\nReady\\t#abc123';
       const host = document.createElement('div');
@@ -1744,20 +1744,22 @@ describe('collapsed message visualization access', () => {
           { from: 'alice', to: 'user' },
           { from: 'alice', to: 'user', groupChatId: 'group-a', groupMessageId: 'post-1' },
         ]) {
-          await act(async () =>
-            root.render(
-              React.createElement(ActivityItem, {
-                key: `${origin.from}:${origin.groupChatId ?? 'direct'}`,
-                message: {
-                  ...origin,
-                  text: `${prose}\n\n${block}`,
-                  timestamp: '2026-10-27T10:00:00.000Z',
-                  read: true,
-                },
-                teamName: 'sandbox',
-                memberColorMap: new Map([['alice', 'blue']]),
-                teamNames: ['TeamX'],
-              })
+          await act(() =>
+            Promise.resolve(
+              root.render(
+                React.createElement(ActivityItem, {
+                  key: `${origin.from}:${origin.groupChatId ?? 'direct'}`,
+                  message: {
+                    ...origin,
+                    text: `${prose}\n\n${block}`,
+                    timestamp: '2026-10-27T10:00:00.000Z',
+                    read: true,
+                  },
+                  teamName: 'sandbox',
+                  memberColorMap: new Map([['alice', 'blue']]),
+                  teamNames: ['TeamX'],
+                })
+              )
             )
           );
           const shown = host.querySelector('[data-markdown-renderer="full"]')?.textContent ?? '';
@@ -1773,7 +1775,7 @@ describe('collapsed message visualization access', () => {
           expect(parsed.root).toEqual(parseChatVisualization(source).root);
         }
       } finally {
-        await act(async () => root.unmount());
+        await act(() => Promise.resolve(root.unmount()));
         host.remove();
       }
     }

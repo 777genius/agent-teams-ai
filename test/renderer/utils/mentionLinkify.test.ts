@@ -36,7 +36,7 @@ describe('mentionLinkify', () => {
   it.each(['```openui-lang', '~~~OPENUI', '````text'])(
     'preserves code data inside %s while linking surrounding mentions',
     (opener) => {
-      const delimiter = opener.match(/^[`~]+/)![0];
+      const delimiter = /^[`~]+/.exec(opener)![0];
       const source = 'root = Stack([Card([TextContent("@Alice work from @TeamX here")])]);';
       const block = `${opener}\n${source}\n${delimiter}`;
       const text = `Hi @Alice from @TeamX\n\n${block}\n\nAfter @Alice`;

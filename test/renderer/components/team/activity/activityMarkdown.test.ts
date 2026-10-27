@@ -11,7 +11,7 @@ describe('literal visualization data in message presentation', () => {
     'keeps multiline OpenUI text unchanged in a lead thought (%s)',
     (opener) => {
       const source = 'root = Stack([Card([TextContent("First\nSecond @alice work #1")])]);';
-      const delimiter = opener.match(/^[`~]+/)![0];
+      const delimiter = /^[`~]+/.exec(opener)![0];
       const block = `${opener}\n${source}\n${delimiter}`;
       const shown = buildThoughtDisplayContent(
         { text: `Before\nsecond\n\n${block}\n\nAfter` },
