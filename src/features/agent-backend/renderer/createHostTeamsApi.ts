@@ -26,6 +26,7 @@ import {
 import { projectHostMemberAttachmentCapabilities } from './projectHostMemberAttachmentCapabilities';
 import { projectHostSavedTeamRequest } from './projectHostSavedTeamRequest';
 import { readHostRosterConfiguration } from './readHostRosterConfiguration';
+import { readTeamCreationResult } from './readTeamCreationResult';
 import { remapHostCrossTeamMessages } from './remapHostCrossTeamMessages';
 import { TeamProductReadOrder } from './TeamProductReadOrder';
 import {
@@ -648,6 +649,9 @@ export function createHostTeamsApi(
     { ...legacy },
     {
       get(_target, property) {
+        if (property === 'createTeam' && legacy.createTeamResult)
+          return async (request: Parameters<TeamsAPI['createTeam']>[0]) =>
+            readTeamCreationResult(await legacy.createTeamResult!.call(legacy, request));
         if (property === 'updateToolApprovalSettings')
           return (...args: Parameters<TeamsAPI['updateToolApprovalSettings']>) =>
             isHostTeamSelectionKey(args[0])

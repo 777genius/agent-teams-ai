@@ -9,7 +9,7 @@ import {
   validateAgentAttachmentIpcPayload,
   validateAgentAttachmentSerializedIpcPayload,
 } from '@features/agent-attachments/main';
-import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
+import { isHostTeamSelectionKey, TeamCreationRefusal } from '@features/agent-backend/contracts';
 import { readNativeInboxAttachmentCapability } from '@features/member-work-sync/main';
 import { persistNodeMemberSettingsRelaunch } from '@features/team-provisioning/main';
 import {
@@ -2069,10 +2069,19 @@ async function handleCreateTeam(
   if (isDesktopAgentBackendSelected()) {
     try {
       return { success: true, data: await createDesktopCapturedTeam(event, request) };
-    } catch {
+    } catch (error) {
       return {
         success: false,
         error: 'Captured Host creation unavailable. Refresh teams or retry the unchanged form.',
+        ...(error instanceof TeamCreationRefusal
+          ? {
+              failure: {
+                kind: 'captured-team-create-refusal',
+                code: error.code,
+                outcome: error.outcome,
+              },
+            }
+          : {}),
       };
     }
   }

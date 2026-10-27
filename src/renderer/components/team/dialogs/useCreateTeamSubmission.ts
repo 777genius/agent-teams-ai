@@ -1,10 +1,12 @@
 import { useCallback, useRef } from 'react';
 
+import { TeamCreationRefusal } from '@features/agent-backend/contracts';
 import { useStore } from '@renderer/store';
 import {
   captureContextScopedRequestEpoch,
   isContextScopedRequestEpochCurrent,
 } from '@renderer/store/utils/contextScopedRequestEpoch';
+import { IpcError } from '@renderer/utils/unwrapIpc';
 import { createdTeamSelectionSignature } from '@shared/utils/createdTeamReadiness';
 
 import type { TeamCreateRequest } from '@shared/types/team';
@@ -35,10 +37,18 @@ export function useCreateTeamSubmission() {
       const intent = submitted.current ?? { signature, commandId: crypto.randomUUID() };
       submitted.current = intent;
       const epoch = captureContextScopedRequestEpoch();
-      const result = await create({
-        ...request,
-        command: { commandId: intent.commandId, idempotencyKey: intent.commandId },
-      });
+      let result: T;
+      try {
+        result = await create({
+          ...request,
+          command: { commandId: intent.commandId, idempotencyKey: intent.commandId },
+        });
+      } catch (error) {
+        const refusal = error instanceof IpcError ? error.causeError : error;
+        if (refusal instanceof TeamCreationRefusal && submitted.current === intent)
+          submitted.current = null;
+        throw error;
+      }
       if (!isContextScopedRequestEpochCurrent(epoch))
         throw new Error('Team context changed after Create.');
       submitted.current = null;

@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import {
   hostTeamSelectionKey,
   STOPPED_TEAM_IMPORT_CHANNEL,
+  TeamCreationRefusal,
 } from '@features/agent-backend/contracts';
 import {
   captureLegacyStoppedSource,
@@ -317,9 +318,25 @@ export async function createDesktopCapturedTeam(
   event: IpcMainInvokeEvent,
   request: unknown
 ): Promise<TeamCreateResponse> {
-  const scope = captureCreationScope(event);
-  const target = await scope.feature.captureTeamCreation(scope.contextId, scope.guard);
-  return createLaunchedHostTeam({ ...scope, target, request });
+  let submitted = false;
+  try {
+    const scope = captureCreationScope(event);
+    const target = await scope.feature.captureTeamCreation(scope.contextId, scope.guard);
+    return await createLaunchedHostTeam({
+      ...scope,
+      target: {
+        ...target,
+        submit: (...args) => {
+          submitted = true;
+          return target.submit(...args);
+        },
+      },
+      request,
+    });
+  } catch (error) {
+    if (!submitted) throw new TeamCreationRefusal('unavailable', 'not-dispatched');
+    throw error;
+  }
 }
 
 /** Existing Team dialog checks retain this shell, context and handle through cleanup. */

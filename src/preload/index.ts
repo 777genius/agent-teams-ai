@@ -1006,6 +1006,7 @@ const electronAPI: ElectronAPI = {
     createTeam: async (request: TeamCreateRequest) => {
       return invokeIpcWithResult<TeamCreateResponse>(TEAM_CREATE, request);
     },
+    createTeamResult: (request: TeamCreateRequest) => ipcRenderer.invoke(TEAM_CREATE, request),
     launchTeam: async (request: TeamLaunchRequest) => {
       return invokeIpcWithResult<TeamLaunchResponse>(TEAM_LAUNCH, request);
     },

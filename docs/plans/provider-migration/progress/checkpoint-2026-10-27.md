@@ -186,3 +186,22 @@ of the eight changed files, source size and provisioning architecture guards.
 An independent implementation review requested the empty-header/epoch-zero
 compatibility checks, which passed before commit. Native/UI acceptance and final
 exact-head CI remain separate from this product-data regression proof.
+
+
+## Original Create intent and definitive refusals
+
+Final UI review confirmed that a known pre-dispatch Create rejection was losing
+its typed outcome through IPC and leaving the form permanently attached to the
+old command. The existing Create response now carries a finite refusal envelope;
+the renderer reconstructs its typed error and releases the retained intent only
+for that proof. After a Host submit rejection, the same captured owner must prove
+absence of the original registry command and expected draft before correction is
+allowed. Published/pending/held intents, failed lookups and changed authority stay
+UNKNOWN with the original command. No mutation is replayed by this correction.
+
+The author ran **32 focused tests in five affected suites**, bounded strict
+typechecking of the new contract/registry/renderer closure, fast lint and source
+size checks. Independent integration and root reviews accepted the original-owner
+absence fence and transport. Canonical whole-project validation remains a fresh
+remote exact-head obligation. The two new production helpers are in the existing
+finite native source closure.

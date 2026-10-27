@@ -1,12 +1,14 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { TeamCreationRefusal } from '@features/agent-backend/contracts';
 import { createLaunchGuard } from '@renderer/components/team/dialogs/providerLaunchAuthority';
 import { runProviderPrepareDiagnostics } from '@renderer/components/team/dialogs/providerPrepareDiagnostics';
 import { updateProviderCheck } from '@renderer/components/team/dialogs/provisioningProviderChecks';
-import { useCreateTeamSubmission } from '@renderer/components/team/dialogs/useCreateTeamSubmission';
 import { useCreatedTeamLaunchReadiness } from '@renderer/components/team/dialogs/useCreatedTeamLaunchReadiness';
+import { useCreateTeamSubmission } from '@renderer/components/team/dialogs/useCreateTeamSubmission';
 import { invalidateContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
+import { IpcError } from '@renderer/utils/unwrapIpc';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { CreatedTeamReadiness, TeamCreateRequest } from '@shared/types/team';
@@ -163,6 +165,36 @@ describe('original Create launch flow scoped evidence', () => {
       return 'host-team:TEST';
     });
     await expect(f.submit()(f.input.request, success)).rejects.toThrow('context changed');
+  });
+  it('permits correction with a new command only after a typed original Create refusal', async () => {
+    const f = mount();
+    const original: TeamCreateRequest[] = [];
+    const create = vi.fn(async (request: TeamCreateRequest) => {
+      original.push(request);
+      if (original.length === 1)
+        throw new IpcError(
+          'team:create',
+          'safe refusal',
+          new TeamCreationRefusal('conflict', 'rejected')
+        );
+      return 'host-team:TEST-new';
+    });
+    await expect(f.submit()(f.input.request, create)).rejects.toThrow('safe refusal');
+    await expect(
+      f.submit()({ ...f.input.request, teamName: 'TEST-corrected' }, create)
+    ).resolves.toBe('host-team:TEST-new');
+    expect(original[0]!.command!.commandId).not.toBe(original[1]!.command!.commandId);
+  });
+  it('does not release the retained intent for an untyped error that merely resembles rejection', async () => {
+    const f = mount();
+    const create = vi.fn(async () => {
+      throw Object.assign(new Error('not dispatched'), { code: 'conflict', outcome: 'rejected' });
+    });
+    await expect(f.submit()(f.input.request, create)).rejects.toThrow('not dispatched');
+    await expect(f.submit()({ ...f.input.request, prompt: 'edited' }, create)).rejects.toThrow(
+      'uncertain'
+    );
+    expect(create).toHaveBeenCalledTimes(1);
   });
   it('passes only the last actual successful Host proof through existing diagnostics', async () => {
     const proof = {

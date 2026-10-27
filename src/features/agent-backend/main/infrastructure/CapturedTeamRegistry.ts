@@ -10,6 +10,7 @@ import {
   createTeamLaunchSubmitResultSchema,
 } from '@agent-teams/legacy-agent-host/team-registry/create-launch-contracts';
 
+import { TeamCreationRefusal } from '../../contracts/creation';
 import {
   assertBackendRequestGuard,
   BackendRoutingError,
@@ -76,6 +77,19 @@ export class CapturedTeamRegistry {
     if (method === 'team.registry.list')
       observeCapturedHostStartup('read-complete', 'registry-list');
     this.current(guard, 'unknown');
+    if (
+      (method === 'team.registry.create' || method === 'team.creation.submit') &&
+      result &&
+      typeof result === 'object' &&
+      !Array.isArray(result) &&
+      result.ok === false &&
+      result.outcome === 'rejected' &&
+      (result.code === 'invalid' ||
+        result.code === 'conflict' ||
+        result.code === 'forbidden' ||
+        result.code === 'unavailable')
+    )
+      throw new TeamCreationRefusal(result.code, 'rejected');
     if (!result || typeof result !== 'object' || Array.isArray(result) || result.ok !== true)
       throw new BackendRoutingError(
         'hold',
@@ -145,6 +159,13 @@ export class CapturedTeamRegistry {
     try {
       value = await this.request('team.creation.submit', commandId, captured, guard);
     } catch (error) {
+      if (error instanceof TeamCreationRefusal) {
+        // A later launch refusal may follow registry publication. Only original
+        // owner-confirmed absence proves that editing this Create is safe.
+        const creation = await this.lookup(commandId, captured.draft, guard);
+        if (creation !== null) throw new BackendRoutingError('hold', 'unknown');
+        throw error;
+      }
       // Transport uncertainty permits only one original read, never a replacement submit.
       value = await this.request('team.creation.lookup', commandId, captured, guard);
       if (value === null) throw error;

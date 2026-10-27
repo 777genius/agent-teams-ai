@@ -11,6 +11,7 @@ import type { CliInstallerAPI, OpenCodeRuntimeAPI } from './cliInstaller';
 import type { TelemetryAPI, WindowsElevationStatus } from './desktopShell';
 import type { EditorAPI, EditorFileChangeEvent, ProjectAPI } from './editor';
 import type { ApiKeysAPI, McpCatalogAPI, PluginCatalogAPI, SkillsCatalogAPI } from './extensions';
+import type { IpcResult } from './ipc';
 import type {
   AppConfig,
   DetectedError,
@@ -485,6 +486,8 @@ export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi {
   initializeGitRepository: (projectPath: string) => Promise<TeamWorktreeGitStatus>;
   createInitialGitCommit: (projectPath: string) => Promise<TeamWorktreeGitStatus>;
   createTeam: (request: TeamCreateRequest) => Promise<TeamCreateResponse>;
+  /** Raw existing Create IPC result preserves the finite refusal through contextBridge. */
+  createTeamResult?: (request: TeamCreateRequest) => Promise<IpcResult<TeamCreateResponse>>;
   getProvisioningStatus: (runId: string) => Promise<TeamProvisioningProgress>;
   getLaunchFailureDiagnostics: (
     teamName: string,
