@@ -310,3 +310,66 @@ export async function readDesktopStoppedImportSeed(root: string): Promise<Stoppe
   ]);
   return seed;
 }
+
+/** Read-only TEST diagnostics: no proof publication, process lookup, repair, or Launch retry. */
+export async function readStoppedImportSourceDiagnostics(
+  root: string,
+  options: { node: string; electron: string }
+): Promise<Record<string, unknown>> {
+  assert.equal(await realpath(root), root);
+  assert.match(basename(root), /^TEST-desktop-backend-[A-Za-z0-9]+$/);
+  for (const executable of [options.node, options.electron])
+    assert.equal(await realpath(executable), executable);
+  const environment = {
+    HOME: join(root, 'home'),
+    CLAUDE_ROOT: join(root, 'claude'),
+    AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: join(root, 'claude'),
+    PATH: '/usr/bin:/bin',
+    TMPDIR: join(root, 'tmp'),
+  };
+  const inspect = String.raw`
+    const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
+    const root=process.argv[1];
+    if(!/^TEST-desktop-backend-[A-Za-z0-9]+$/.test(path.basename(root))||fs.realpathSync(root)!==root)throw Error('Invalid TEST root');
+    const team=path.join(root,'claude/teams/test-stopped-legacy');
+    const stat=fs.lstatSync(team),big=fs.lstatSync(team,{bigint:true});
+    if(!stat.isDirectory()||stat.isSymbolicLink())throw Error('Invalid TEST source directory');
+    const names=fs.readdirSync(team).sort();if(names.length>128)throw Error('TEST census bound');
+    const files=names.map(name=>{const file=path.join(team,name),s=fs.lstatSync(file);if(s.isSymbolicLink())throw Error('TEST source symlink');if(!s.isFile())return {name,kind:'directory'};if(s.size>1024*1024)throw Error('TEST source byte bound');return {name,sizeBytes:s.size,nlink:s.nlink,dev:s.dev,ino:s.ino,sha256:crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')};});
+    const read=name=>{try{return JSON.parse(fs.readFileSync(path.join(team,name),'utf8'))}catch(error){return {readError:error.code||error.message}}};
+    process.stdout.write(JSON.stringify({nodeVersion:process.versions.node,electronVersion:process.versions.electron,
+      directory:{dev:stat.dev,ino:stat.ino,birthtimeMs:stat.birthtimeMs,birthtimeNs:String(big.birthtimeNs)},
+      launchState:read('launch-state.json'),freshness:read('launch-freshness.json'),stopped:read('launch-stopped.json'),files}));
+  `;
+  const execute = (executable: string, args: string[], electron = false, cwd = root) => {
+    try {
+      return JSON.parse(
+        execFileSync(executable, args, {
+          cwd,
+          timeout: 10_000,
+          maxBuffer: 128 * 1024,
+          encoding: 'utf8',
+          env: { ...environment, ...(electron ? { ELECTRON_RUN_AS_NODE: '1' } : {}) },
+        })
+      ) as unknown;
+    } catch (error) {
+      return { diagnosticError: error instanceof Error ? error.message : String(error) };
+    }
+  };
+  return {
+    node: execute(options.node, ['-e', inspect, root]),
+    electron: execute(options.electron, ['-e', inspect, root], true),
+    canonicalNodeRead: execute(
+      options.node,
+      [
+        '--import',
+        createRequire(import.meta.url).resolve('tsx'),
+        join(import.meta.dirname, 'desktop-stopped-import-prior-run.ts'),
+        root,
+        '--read-only',
+      ],
+      false,
+      join(import.meta.dirname, '../..')
+    ),
+  };
+}

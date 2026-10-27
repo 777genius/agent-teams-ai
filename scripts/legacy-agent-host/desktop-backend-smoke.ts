@@ -322,7 +322,7 @@ async function main(): Promise<void> {
     } else if (legacyImportMode) {
       assert.ok(conversationModel);
       await runDesktopStoppedImportUiSmoke(cdp, {
-        fixture, evidence, model: conversationModel,
+        fixture, evidence, model: conversationModel, electron,
         assertOwnedRenderer: () => assertOwnedCdpListener(group),
         observeOwnedHost: () => {
           const hosts = groupMembers(group).filter(row => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);

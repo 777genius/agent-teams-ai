@@ -243,9 +243,8 @@ export async function runDesktopStoppedImportAttachmentUi(
     size: readBytes.length,
     reference,
   };
-  // Use Electron's original TEST-home Downloads target. The original file
-  // action already worked there; configuring Chromium's default context does
-  // not control Electron's persist:dev partition.
+  // Scope the TEST download policy to this captured Page target. Configuring
+  // Chromium's default context does not control Electron's persist:dev partition.
   const directory = join(options.fixtureRoot, 'home/Downloads');
   assert.equal(await realpath(options.fixtureRoot), options.fixtureRoot);
   await mkdir(directory, { mode: 0o700, recursive: true });
@@ -253,6 +252,21 @@ export async function runDesktopStoppedImportAttachmentUi(
   assert.equal(seed.sourceMessage.file.filename, 'source-original.txt');
   const path = join(directory, seed.sourceMessage.file.filename);
   await assert.rejects(stat(path), { code: 'ENOENT' });
+  options.assertOwnedRenderer();
+  const targetInfo = record(record(await cdp.send('Target.getTargetInfo')).targetInfo);
+  assert.equal(targetInfo.type, 'page');
+  assert.equal(typeof targetInfo.browserContextId, 'string');
+  assert.ok(String(targetInfo.browserContextId).length > 0);
+  const downloadPolicy = { behavior: 'allow', downloadPath: directory };
+  await cdp.send('Page.setDownloadBehavior', downloadPolicy);
+  options.assertOwnedRenderer();
+  proof.downloadPolicy = {
+    method: 'Page.setDownloadBehavior',
+    ...downloadPolicy,
+    rendererBrowserContextId: targetInfo.browserContextId,
+    acknowledged: true,
+    scope: 'captured TEST renderer context via current Page target',
+  };
   const selector = `[role="dialog"] button[aria-label=${JSON.stringify('Download ' + seed.sourceMessage.file.filename)}]`;
   await ui.scrollTo(selector, 'original source file Download tile');
   const downloadAttempt = { path, startedAtMs: Date.now(), clickAcknowledgedAtMs: 0, deadlineAtMs: 0, budgetMs: 45_000 };

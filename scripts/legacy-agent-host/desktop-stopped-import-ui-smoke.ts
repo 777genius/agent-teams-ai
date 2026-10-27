@@ -7,6 +7,7 @@ import { fileDigest } from './desktop-backend-fixture.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import {
   readDesktopStoppedImportSeed,
+  readStoppedImportSourceDiagnostics,
   stoppedImportSourceBytes,
 } from './desktop-stopped-import-fixture.ts';
 import {
@@ -70,6 +71,7 @@ export async function runDesktopStoppedImportUiSmoke(
     fixture: Awaited<ReturnType<typeof prepareDesktopBackendFixture>>;
     evidence: Record<string, unknown>;
     model: Awaited<ReturnType<typeof startNativeTeamModel>>;
+    electron: string;
     assertOwnedRenderer(): void;
     observeOwnedHost(): void;
   }
@@ -253,7 +255,19 @@ export async function runDesktopStoppedImportUiSmoke(
       'Launch dialog closed without submit'
     );
   };
-  await openDialog();
+  if (launchContinuation)
+    proof.sourceBeforeLaunchDiagnostics = await readStoppedImportSourceDiagnostics(fixture.root, {
+      node: fixture.node,
+      electron: options.electron,
+    });
+  await openDialog().catch(async (error) => {
+    if (launchContinuation)
+      proof.sourceFailureDiagnostics = await readStoppedImportSourceDiagnostics(fixture.root, {
+        node: fixture.node,
+        electron: options.electron,
+      });
+    throw error;
+  });
   const lookupRequest = { teamName: seed.teamName, action: 'lookup' };
   const lookup = record(
     await cdp.evaluate(

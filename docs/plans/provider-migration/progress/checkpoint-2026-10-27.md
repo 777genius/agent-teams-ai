@@ -205,3 +205,27 @@ size checks. Independent integration and root reviews accepted the original-owne
 absence fence and transport. Canonical whole-project validation remains a fresh
 remote exact-head obligation. The two new production helpers are in the existing
 finite native source closure.
+
+
+## Actual source UI results and bounded diagnostics
+
+Run `40543867901` on `fe6449efd` completed all normal checks/full qualification
+and the actual native Create UI scenario successfully. This qualifies that source
+Create route on macOS 15.7.5 / build `24G624`; it does not qualify packed/installed
+custody, Edit, the mixed route or stopped-import Launch. The mixed readiness wait,
+import-only original Download wait and import-to-Launch source custody gate failed.
+Their receipts remain INCOMPLETE; no native acceptance is inferred from unit PASS.
+
+The import continuation now records bounded read-only source directory/file
+identity, hashes, release/census markers and comparisons from the captured Node
+and Electron runtimes before its one Launch click and on failure. It never
+repairs or republishes proof, looks up a process or retries Launch. Strict script
+typechecking and an actual Linux child-stop/read-only diagnostic check passed;
+the macOS cause remains unconfirmed pending the next actual run.
+
+The import-only Download harness now applies the existing captured Page download
+policy to its isolated TEST Downloads directory and records that context before
+the same original click. Its 45-second budget and exact byte/SHA checks remain.
+Strict script typechecking and independent review passed. Diagnostic artifacts
+retain hidden owner state under the existing TEST hoststore plus the two exact
+synthetic source Team/Task directories, without collecting a user home.

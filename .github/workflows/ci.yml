@@ -744,6 +744,7 @@ jobs:
           name: stage1-source-desktop-${{ matrix.variant || matrix.mode }}-${{ github.sha }}
           retention-days: 14
           if-no-files-found: warn
+          include-hidden-files: true
           path: |
             ${{ runner.temp }}/stage1-desktop-${{ matrix.variant || matrix.mode }}.log
             ${{ runner.temp }}/stage1-readback-${{ matrix.variant || matrix.mode }}.log
@@ -754,6 +755,8 @@ jobs:
             /private/tmp/TEST-desktop-backend-*/*.log
             /private/tmp/TEST-desktop-backend-*/*.ndjson
             /private/tmp/TEST-desktop-backend-*/hoststore/**
+            /private/tmp/TEST-desktop-backend-*/claude/teams/test-stopped-legacy/**
+            /private/tmp/TEST-desktop-backend-*/claude/tasks/test-stopped-legacy/**
             /private/tmp/TEST-desktop-backend-*/workspace/**
 
   # Required by branch protection. Keep the name static for every event: on
