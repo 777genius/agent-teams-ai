@@ -4,7 +4,10 @@ import { serializeCanonicalTemplateContent } from '../domain/canonicalTemplateSe
 import { validateTemplateName } from '../domain/templateNamePolicy';
 
 import { CustomTeamTemplateStorageInterruptedError } from './CustomTeamTemplateStorageInterruptedError';
-import { checkStoredTemplate } from './reconcileCustomTeamTemplateWrite';
+import {
+  checkStoredTemplate,
+  type CustomTeamTemplateWriteIdentity,
+} from './reconcileCustomTeamTemplateWrite';
 import { waitForStorageSettlement } from './waitForStorageSettlement';
 
 import type { CustomTeamTemplateHasher, CustomTeamTemplateStorageGateway } from './ports';
@@ -110,13 +113,13 @@ export class DuplicateCustomTeamTemplateUseCase {
           }
           hadUnknownExecution = true;
           // reconcile
-          const identity = {
+          const identity: CustomTeamTemplateWriteIdentity = {
             templateId,
             name: nameValidation.value,
             description: source.description,
             contentHash,
           };
-          const check = await checkStoredTemplate(gateway, identity as any, this.deps.hasher);
+          const check = await checkStoredTemplate(gateway, identity, this.deps.hasher);
           if (check.status === 'saved') {
             return {
               status: 'duplicated',

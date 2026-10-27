@@ -195,10 +195,18 @@ export class UpdateCustomTeamTemplateUseCase {
             });
             if (read.status === 'found') {
               const stored = read.template;
+              const storedHash = this.deps.hasher.hashCanonicalContent(
+                serializeCanonicalTemplateContent({
+                  schemaVersion: CUSTOM_TEAM_TEMPLATE_SCHEMA_VERSION,
+                  teamPrompt: stored.teamPrompt,
+                  members: stored.members,
+                })
+              );
               if (
-                stored.revision !== request.expectedRevision &&
+                stored.revision === request.expectedRevision + 1 &&
                 stored.name === nameValidation.value &&
-                (stored.description ?? null) === (trimmedDescription ?? null)
+                (stored.description ?? null) === (trimmedDescription ?? null) &&
+                storedHash === contentHash
               ) {
                 return { status: 'updated', template: stored };
               }

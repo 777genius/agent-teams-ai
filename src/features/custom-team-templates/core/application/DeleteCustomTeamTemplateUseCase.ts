@@ -1,11 +1,11 @@
+import { CustomTeamTemplateStorageInterruptedError } from './CustomTeamTemplateStorageInterruptedError';
+import { waitForStorageSettlement } from './waitForStorageSettlement';
+
 import type { CustomTeamTemplateStorageGateway } from './ports';
 import type {
   DeleteCustomTeamTemplateRequest,
   DeleteCustomTeamTemplateResult,
 } from '@features/custom-team-templates/contracts';
-
-import { CustomTeamTemplateStorageInterruptedError } from './CustomTeamTemplateStorageInterruptedError';
-import { waitForStorageSettlement } from './waitForStorageSettlement';
 
 export interface DeleteCustomTeamTemplateUseCaseDeps {
   /** Null when the SQLite worker bundle is unavailable in this environment. */

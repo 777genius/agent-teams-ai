@@ -4,10 +4,14 @@ import { serializeCanonicalTemplateContent } from '../domain/canonicalTemplateSe
 import { validateTemplateContent } from '../domain/templateContentPolicy';
 import { validateTemplateName } from '../domain/templateNamePolicy';
 
-import type { CustomTeamTemplateHasher, CustomTeamTemplateStorageGateway } from './ports';
-import { checkStoredTemplate } from './reconcileCustomTeamTemplateWrite';
 import { CustomTeamTemplateStorageInterruptedError } from './CustomTeamTemplateStorageInterruptedError';
+import {
+  checkStoredTemplate,
+  type CustomTeamTemplateWriteIdentity,
+} from './reconcileCustomTeamTemplateWrite';
 import { waitForStorageSettlement } from './waitForStorageSettlement';
+
+import type { CustomTeamTemplateHasher, CustomTeamTemplateStorageGateway } from './ports';
 import type {
   CopyBuiltinTemplateRequest,
   CopyBuiltinTemplateResult,
@@ -113,9 +117,8 @@ export class CopyBuiltinTemplateUseCase {
             {
               templateId,
               name: nameValidation.value,
-              description: undefined,
               contentHash,
-            } as any,
+            } as CustomTeamTemplateWriteIdentity,
             this.deps.hasher
           );
           if (check.status === 'saved') {
