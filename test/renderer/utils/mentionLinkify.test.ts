@@ -52,6 +52,21 @@ describe('mentionLinkify', () => {
     expect(linkifyAllMentionsInMarkdown(code, new Map([['Alice', 'blue']]), ['TeamX'])).toBe(code);
   });
 
+  it('links table-cell mentions when literal backticks occur in different GFM cells', () => {
+    const table = '| Command | Owner |\n| --- | --- |\n| `foo | @Alice |\n| bar` | @Bob |';
+    expect(
+      linkifyMentionsInMarkdown(
+        table,
+        new Map([
+          ['Alice', 'blue'],
+          ['Bob', 'red'],
+        ])
+      )
+    ).toBe(
+      '| Command | Owner |\n| --- | --- |\n| `foo | [@Alice](mention://blue/Alice) |\n| bar` | [@Bob](mention://red/Bob) |'
+    );
+  });
+
   it('linkifies @ after start of string', () => {
     const m = new Map([['Alice', 'blue']]);
     const r = linkifyMentionsInMarkdown('@Alice hello', m);

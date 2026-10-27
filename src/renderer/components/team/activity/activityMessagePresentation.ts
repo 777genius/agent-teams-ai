@@ -11,7 +11,7 @@ import {
   getIdleNoiseLabel,
 } from '@renderer/utils/idleNotificationSemantics';
 import {
-  mapMarkdownOutsideCode,
+  normalizeLegacyMarkdownEscapes,
   stripAgentBlocksForMarkdown,
 } from '@renderer/utils/markdownCodeRanges';
 import {
@@ -143,9 +143,7 @@ export function getStrippedActivityTextCached({
     if (!hasBootstrapDisplay) stripped = stripAgentBlocksForMarkdown(stripped);
     if (!stripped) return null;
     if (isCrossTeamAny) stripped = stripCrossTeamPrefix(stripped);
-    return mapMarkdownOutsideCode(stripped, (prose) =>
-      prose.replace(/\\n/g, '\n').replace(/\\t/g, '\t')
-    );
+    return normalizeLegacyMarkdownEscapes(stripped);
   });
 }
 
