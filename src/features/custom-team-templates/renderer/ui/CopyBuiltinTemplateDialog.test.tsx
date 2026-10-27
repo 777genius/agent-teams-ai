@@ -15,13 +15,21 @@ vi.mock('@renderer/api', () => ({
 // assertion meaningful.
 vi.mock('@features/localization/renderer', async () => {
   const { default: ruTeam } = await import('@features/localization/renderer/locales/ru/team.json');
-  const names = (ruTeam as { templates: { names: Record<string, string> } }).templates.names;
+  const templates = (
+    ruTeam as {
+      templates: { names: Record<string, string>; descriptions: Record<string, string> };
+    }
+  ).templates;
   return {
     useAppTranslation: () => ({
       t: (key: string, values?: Record<string, unknown>) => {
         const builtin = /^templates\.names\.(.+)$/.exec(key);
         if (builtin) {
-          return names[builtin[1]] ?? key;
+          return templates.names[builtin[1]] ?? key;
+        }
+        const description = /^templates\.descriptions\.(.+)$/.exec(key);
+        if (description) {
+          return templates.descriptions[description[1]] ?? key;
         }
         return values
           ? `${key}|${Object.entries(values)
@@ -54,14 +62,21 @@ vi.mock('@renderer/components/ui/dialog', () => ({
     React.createElement('h2', null, children),
 }));
 
+import ruTeam from '@features/localization/renderer/locales/ru/team.json';
 import { TEAM_TEMPLATES } from '@features/team-templates';
 
 import { CopyBuiltinTemplateDialog } from './CopyBuiltinTemplateDialog';
 
 import type { CopyBuiltinTemplateResult } from '@features/custom-team-templates/contracts';
 
-const RU_SOFTWARE = 'Разработка цифрового продукта';
-const RU_MARKETING = 'Маркетинговая команда';
+const RU_TEMPLATES = (
+  ruTeam as {
+    templates: { names: Record<string, string>; descriptions: Record<string, string> };
+  }
+).templates;
+const RU_SOFTWARE = RU_TEMPLATES.names['software-product'];
+const RU_MARKETING = RU_TEMPLATES.names.marketing;
+const RU_SOFTWARE_DESCRIPTION = RU_TEMPLATES.descriptions['software-product'];
 
 let host: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
@@ -139,8 +154,11 @@ describe('CopyBuiltinTemplateDialog localization', () => {
     expect(grid).not.toBeNull();
     expect(grid?.textContent).toContain(RU_SOFTWARE);
     expect(grid?.textContent).toContain(RU_MARKETING);
+    // Descriptions follow the same localized lookup as the catalogue.
+    expect(grid?.textContent).toContain(RU_SOFTWARE_DESCRIPTION);
     // The English catalogue value must not leak into the localized UI.
     expect(grid?.textContent).not.toContain('Software Product Team');
+    expect(grid?.textContent).not.toContain(TEAM_TEMPLATES[0].description);
     expect(host.querySelector('[data-testid="builtin-preview"]')?.textContent).toContain(
       RU_SOFTWARE
     );

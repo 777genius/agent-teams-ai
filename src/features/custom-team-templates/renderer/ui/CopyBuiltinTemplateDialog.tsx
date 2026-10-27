@@ -249,7 +249,7 @@ export const CopyBuiltinTemplateDialog = ({
                       <ShieldCheck className="size-4 shrink-0 text-sky-400" />
                     </div>
                     <p className="mt-1 line-clamp-2 text-xs text-[var(--color-text-muted)]">
-                      {tpl.description}
+                      {t(`templates.descriptions.${tpl.id}`)}
                     </p>
                     <span className="mt-2 inline-block text-[11px] text-[var(--color-text-secondary)]">
                       {t('customTemplates.copyBuiltin.membersCount', {
