@@ -13,18 +13,23 @@ type BudgetStatus = 'within' | 'limit' | 'unavailable';
 function cleanSource(source: string): string | null {
   // The SDK extracts embedded fences before removing comments, and only protects
   // double-quoted strings during that step. Nested wrappers are not our DSL.
-  for (let index = 0; index < source.length; index++) {
-    if (source[index] === '"') {
-      for (index++; index < source.length; index++) {
-        if (source[index] === '\\') index++;
-        else if (source[index] === '"') break;
+  let fenceIndex = 0;
+  while (fenceIndex < source.length) {
+    if (source[fenceIndex] === '"') {
+      fenceIndex++;
+      while (fenceIndex < source.length) {
+        if (source[fenceIndex] === '\\') fenceIndex++;
+        else if (source[fenceIndex] === '"') break;
+        fenceIndex++;
       }
-    } else if (source.startsWith('```', index)) return null;
+    } else if (source.startsWith('```', fenceIndex)) return null;
+    fenceIndex++;
   }
 
   let result = '';
   let quote: string | null = null;
-  for (let index = 0; index < source.length; index++) {
+  let index = 0;
+  while (index < source.length) {
     const char = source[index];
     if (quote) {
       result += char;
@@ -37,6 +42,7 @@ function cleanSource(source: string): string | null {
       while (index < source.length && source[index] !== '\n') index++;
       if (index < source.length) result += '\n';
     } else result += char;
+    index++;
   }
   return result;
 }
