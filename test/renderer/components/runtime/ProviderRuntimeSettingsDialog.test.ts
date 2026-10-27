@@ -677,6 +677,160 @@ describe('ProviderRuntimeSettingsDialog', () => {
     }
   });
 
+  it.each([
+    { runtimeState: 'unavailable', supported: true },
+    { runtimeState: 'unsupported', supported: false },
+  ])(
+    'allows clearing a saved Anthropic Fast default when the runtime is $runtimeState',
+    async ({ supported }) => {
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      const onRefreshProvider = vi.fn(() => Promise.resolve(undefined));
+      storeState.appConfig.providerConnections.anthropic.fastModeDefault = true;
+      const provider: CliProviderStatus = {
+        ...createAnthropicProvider(),
+        runtimeCapabilities: {
+          fastMode: { supported, available: false, source: 'runtime' },
+        },
+      };
+
+      await act(async () => {
+        root.render(
+          React.createElement(ProviderRuntimeSettingsDialog, {
+            open: true,
+            onOpenChange: vi.fn(),
+            providers: [provider],
+            initialProviderId: 'anthropic',
+            onSelectBackend: vi.fn(),
+            onRefreshProvider,
+          })
+        );
+      });
+
+      expect(storeState.updateConfig).not.toHaveBeenCalled();
+      expect(findButtonByText(host, 'Default Off').disabled).toBe(false);
+      expect(findButtonByText(host, 'Prefer Fast').disabled).toBe(true);
+      expect(findButtonByText(host, 'Prefer Fast').className).toContain('shadow-sm');
+
+      await act(async () => {
+        findButtonByText(host, 'Default Off').click();
+      });
+
+      expect(storeState.updateConfig).toHaveBeenCalledExactlyOnceWith('providerConnections', {
+        anthropic: { fastModeDefault: false },
+      });
+      expect(storeState.appConfig.providerConnections.anthropic.fastModeDefault).toBe(false);
+      expect(onRefreshProvider).toHaveBeenCalledExactlyOnceWith('anthropic', 'provider_change');
+      if (!supported) {
+        expect(host.textContent).not.toContain('Prefer Fast');
+      }
+      await act(async () => root.unmount());
+    }
+  );
+
+  it('keeps Anthropic Fast default controls busy until the saved change finishes refreshing', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    let finishRefresh!: () => void;
+    const refresh = new Promise<void>((resolve) => {
+      finishRefresh = resolve;
+    });
+    const onRefreshProvider = vi.fn(() => refresh);
+    storeState.appConfig.providerConnections.anthropic.fastModeDefault = true;
+    const provider: CliProviderStatus = {
+      ...createAnthropicProvider(),
+      runtimeCapabilities: {
+        fastMode: { supported: true, available: true, source: 'runtime' },
+      },
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [provider],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider,
+        })
+      );
+    });
+    await act(async () => {
+      findButtonByText(host, 'Default Off').click();
+    });
+
+    expect(findButtonByText(host, 'Default Off').disabled).toBe(true);
+    expect(findButtonByText(host, 'Prefer Fast').disabled).toBe(true);
+    await act(async () => {
+      findButtonByText(host, 'Prefer Fast').click();
+    });
+    expect(storeState.updateConfig).toHaveBeenCalledExactlyOnceWith('providerConnections', {
+      anthropic: { fastModeDefault: false },
+    });
+
+    await act(async () => finishRefresh());
+    expect(findButtonByText(host, 'Default Off').disabled).toBe(false);
+    expect(findButtonByText(host, 'Prefer Fast').disabled).toBe(false);
+    await act(async () => root.unmount());
+  });
+
+  it('keeps Anthropic Fast off through capability hydration until explicitly enabled', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const provider: CliProviderStatus = {
+      ...createAnthropicProvider(),
+      runtimeCapabilities: {
+        fastMode: { supported: false, available: false, source: 'runtime' },
+      },
+    };
+    const props = {
+      open: true,
+      onOpenChange: vi.fn(),
+      providers: [provider],
+      initialProviderId: 'anthropic' as const,
+      onSelectBackend: vi.fn(),
+      onRefreshProvider: vi.fn(() => Promise.resolve(undefined)),
+    };
+
+    await act(async () => {
+      root.render(React.createElement(ProviderRuntimeSettingsDialog, props));
+    });
+    expect(host.textContent).not.toContain('Default Off');
+    expect(host.textContent).not.toContain('Prefer Fast');
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          ...props,
+          providers: [
+            {
+              ...provider,
+              runtimeCapabilities: {
+                fastMode: { supported: true, available: true, source: 'runtime' },
+              },
+            },
+          ],
+        })
+      );
+    });
+
+    expect(storeState.updateConfig).not.toHaveBeenCalled();
+    expect(storeState.appConfig.providerConnections.anthropic.fastModeDefault).toBe(false);
+    expect(findButtonByText(host, 'Default Off').className).toContain('shadow-sm');
+    expect(findButtonByText(host, 'Prefer Fast').disabled).toBe(false);
+    await act(async () => {
+      findButtonByText(host, 'Prefer Fast').click();
+    });
+    expect(storeState.updateConfig).toHaveBeenCalledExactlyOnceWith('providerConnections', {
+      anthropic: { fastModeDefault: true },
+    });
+    await act(async () => root.unmount());
+  });
+
   it('renders anthropic connection cards and can switch to API key mode', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);

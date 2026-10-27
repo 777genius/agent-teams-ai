@@ -173,6 +173,22 @@ function parseNullSeparatedEnv(content: string): NodeJS.ProcessEnv {
   return parsed;
 }
 
+/** A failed shell may still have completed env -0 before a logout hook failed. */
+function isCompleteEnvDump(content: string): boolean {
+  if (!content.endsWith('\0')) {
+    return false;
+  }
+  return content
+    .slice(0, -1)
+    .split('\0')
+    .every((record) => {
+      const separatorIndex = record.indexOf('=');
+      // Reject startup text in keys; values may contain newlines and equals signs.
+      // Do not restrict keys to shell identifiers: Bash exports BASH_FUNC_*%% too.
+      return separatorIndex > 0 && !/[\r\n]/.test(record.slice(0, separatorIndex));
+    });
+}
+
 /**
  * Spawn the given shell with args and resolve its exported environment.
  */
@@ -221,7 +237,8 @@ async function readShellEnv(shellPath: string, args: string[]): Promise<NodeJS.P
       }
       if (!settled) {
         settled = true;
-        if (chunks.length === 0 && (code !== 0 || signal)) {
+        const content = Buffer.concat(chunks).toString('utf8');
+        if ((code !== 0 || signal) && !isCompleteEnvDump(content)) {
           reject(
             new Error(
               signal
@@ -231,7 +248,7 @@ async function readShellEnv(shellPath: string, args: string[]): Promise<NodeJS.P
           );
           return;
         }
-        resolve(Buffer.concat(chunks).toString('utf8'));
+        resolve(content);
       }
     });
   });

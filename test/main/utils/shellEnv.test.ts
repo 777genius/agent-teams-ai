@@ -397,6 +397,104 @@ describe('shellEnv', () => {
     expect(hoisted.loggerWarn).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['startup banner', 'Shell plugin failed to initialize\n'],
+    ['startup banner containing equals', 'PLUGIN_INIT=failed\n'],
+    ['unterminated last record', 'PATH=/login/bin\0ANTHROPIC_AUTH_TOKEN=truncated'],
+    ['malformed complete record', 'PATH=/login/bin\0not-an-env-record\0'],
+    ['banner-prefixed key', 'Shell plugin failed\nPATH=/login/bin\0'],
+    ['empty complete record', '\0'],
+  ])(
+    'retries a failed login shell with %s instead of caching its output',
+    async (_name, output) => {
+      const interactiveEnv = {
+        ANTHROPIC_BASE_URL: 'http://127.0.0.1:15721',
+        ANTHROPIC_AUTH_TOKEN: 'TEST-interactive-token',
+        ANTHROPIC_MODEL: 'TEST-main-model',
+        ANTHROPIC_SMALL_FAST_MODEL: 'TEST-fast-model',
+      };
+      hoisted.spawn.mockImplementation((_shellPath: string, args: string[]) => {
+        const child = createChild();
+        queueMicrotask(() => {
+          if (args[0] === '-lic') {
+            child.stdout.emit('data', Buffer.from(output));
+            emitClose(child, 42, null);
+          } else {
+            emitEnv(child, interactiveEnv);
+          }
+        });
+        return child;
+      });
+
+      const shellEnv = await importShellEnv();
+
+      await expect(shellEnv.resolveInteractiveShellEnv()).resolves.toEqual(interactiveEnv);
+      expect(hoisted.spawn.mock.calls.map((call) => call[1])).toEqual([
+        ['-lic', 'env -0'],
+        ['-ic', 'env -0'],
+      ]);
+      expect(shellEnv.getCachedShellEnv()).toEqual(interactiveEnv);
+      expect(hoisted.loggerWarn).not.toHaveBeenCalled();
+    }
+  );
+
+  it('keeps complete env output when a logout hook fails after the dump', async () => {
+    const env = {
+      PATH: '/complete/bin',
+      HOME: '/Users/tester',
+      EMPTY: '',
+      NOTE: 'first=value\nsecond=value',
+      'BASH_FUNC_module%%': '() {\n printf "%s\\n" "a=b";\n}',
+      ANTHROPIC_AUTH_TOKEN: 'TEST-complete-token',
+    };
+    const dump = `${Object.entries(env)
+      .map(([key, value]) => `${key}=${value}`)
+      .join('\0')}\0`;
+    const child = createChild();
+    hoisted.spawn.mockReturnValueOnce(child);
+    const shellEnv = await importShellEnv();
+    const result = shellEnv.resolveInteractiveShellEnv();
+
+    child.stdout.emit('data', Buffer.from(dump.slice(0, 17)));
+    child.stdout.emit('data', Buffer.from(dump.slice(17)));
+    emitClose(child, 42, null);
+
+    await expect(result).resolves.toEqual(env);
+    expect(shellEnv.getCachedShellEnv()).toEqual(env);
+    expect(hoisted.spawn).toHaveBeenCalledTimes(1);
+    expect(hoisted.loggerWarn).not.toHaveBeenCalled();
+  });
+
+  it('leaves noisy failures uncached and reuses the failure cooldown', async () => {
+    hoisted.spawn.mockImplementation((_shellPath: string, args: string[]) => {
+      const child = createChild();
+      queueMicrotask(() => {
+        const output = args[0] === '-lic' ? 'Login plugin failed\n' : 'PLUGIN_INIT=failed\n';
+        child.stdout.emit('data', Buffer.from(output));
+        emitClose(child, 42, null);
+      });
+      return child;
+    });
+    const shellEnv = await importShellEnv();
+    const firstFallback = { PATH: '/fallback/first' };
+    const secondFallback = { PATH: '/fallback/second' };
+
+    await expect(
+      shellEnv.resolveInteractiveShellEnvBestEffort({ fallbackEnv: firstFallback })
+    ).resolves.toBe(firstFallback);
+    expect(shellEnv.getCachedShellEnv()).toBeNull();
+    expect(hoisted.spawn).toHaveBeenCalledTimes(2);
+    await expect(
+      shellEnv.resolveInteractiveShellEnvBestEffort({ fallbackEnv: secondFallback })
+    ).resolves.toBe(secondFallback);
+    expect(shellEnv.getCachedShellEnv()).toBeNull();
+    expect(hoisted.spawn).toHaveBeenCalledTimes(2);
+    expect(hoisted.loggerWarn).toHaveBeenCalledTimes(1);
+    expect(hoisted.loggerWarn).toHaveBeenCalledWith(
+      'Failed to resolve shell env after login and interactive probes: login=shell env command exited with code 42; interactive=shell env command exited with code 42'
+    );
+  });
+
   it('coalesces concurrent best-effort calls behind one shell process', async () => {
     const children: MockChildProcess[] = [];
     hoisted.spawn.mockImplementation(() => {

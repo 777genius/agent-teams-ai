@@ -47,11 +47,15 @@ ${envExpression}
 describePosix('shellEnv real child-process integration', () => {
   const originalShell = process.env.SHELL;
   const originalInvocationFile = process.env.FAKE_SHELL_INVOCATIONS;
+  const originalHome = process.env.HOME;
+  const originalUserProfile = process.env.USERPROFILE;
   let tempDir = '';
 
   beforeEach(async () => {
     clearShellEnvCache();
     tempDir = await mkdtemp(path.join(tmpdir(), 'agent-teams-shell-env-'));
+    process.env.HOME = tempDir;
+    process.env.USERPROFILE = tempDir;
     delete process.env.FAKE_SHELL_INVOCATIONS;
   });
 
@@ -66,6 +70,16 @@ describePosix('shellEnv real child-process integration', () => {
       delete process.env.FAKE_SHELL_INVOCATIONS;
     } else {
       process.env.FAKE_SHELL_INVOCATIONS = originalInvocationFile;
+    }
+    if (originalHome === undefined) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = originalHome;
+    }
+    if (originalUserProfile === undefined) {
+      delete process.env.USERPROFILE;
+    } else {
+      process.env.USERPROFILE = originalUserProfile;
     }
     await rm(tempDir, { recursive: true, force: true });
   });
@@ -189,6 +203,103 @@ writeEnv({
       PATH: '/interactive-real/bin:/usr/bin',
       HOME: '/interactive-home',
     });
+  });
+
+  it.each([
+    ['banner', 'TEST shell plugin failed\n'],
+    ['banner with equals', 'PLUGIN_INIT=failed\n'],
+  ])(
+    'recovers the four Anthropic variables after a failed login shell prints a %s',
+    async (_name, banner) => {
+      const invocationFile = path.join(tempDir, 'noisy-login-invocations.log');
+      process.env.FAKE_SHELL_INVOCATIONS = invocationFile;
+      const expectedEnv = {
+        HOME: tempDir,
+        ANTHROPIC_BASE_URL: 'http://127.0.0.1:15721',
+        ANTHROPIC_AUTH_TOKEN: 'TEST-interactive-token',
+        ANTHROPIC_MODEL: 'TEST-main-model',
+        ANTHROPIC_SMALL_FAST_MODEL: 'TEST-fast-model',
+      };
+      process.env.SHELL = await createFakeShell(
+        tempDir,
+        'noisy-login-shell.js',
+        envWriterSource(`
+const fs = require('fs');
+fs.appendFileSync(process.env.FAKE_SHELL_INVOCATIONS, process.argv[2] + '\\n');
+if (process.argv[2] === '-lic') {
+  process.stdout.write(${JSON.stringify(banner)});
+  process.exitCode = 42;
+} else {
+  writeEnv(${JSON.stringify(expectedEnv)});
+}
+`)
+      );
+
+      await expect(
+        resolveInteractiveShellEnvBestEffort({ timeoutMs: 2_000, fallbackEnv: {} })
+      ).resolves.toEqual(expectedEnv);
+      expect(getCachedShellEnv()).toEqual(expectedEnv);
+      await expect(readFile(invocationFile, 'utf8')).resolves.toBe('-lic\n-ic\n');
+      expect(console.warn).not.toHaveBeenCalled();
+    }
+  );
+
+  it('does not cache noisy failures or retry real shell processes during the cooldown', async () => {
+    const invocationFile = path.join(tempDir, 'noisy-failure-invocations.log');
+    process.env.FAKE_SHELL_INVOCATIONS = invocationFile;
+    process.env.SHELL = await createFakeShell(
+      tempDir,
+      'noisy-failure-shell.js',
+      `const fs = require('fs');
+fs.appendFileSync(process.env.FAKE_SHELL_INVOCATIONS, process.argv[2] + '\\n');
+process.stdout.write('PLUGIN_INIT=failed\\n');
+process.exitCode = 42;`
+    );
+    const firstFallback = { HOME: tempDir, PATH: '/fallback/first' };
+    const secondFallback = { HOME: tempDir, PATH: '/fallback/second' };
+
+    await expect(
+      resolveInteractiveShellEnvBestEffort({ timeoutMs: 2_000, fallbackEnv: firstFallback })
+    ).resolves.toBe(firstFallback);
+    expect(getCachedShellEnv()).toBeNull();
+    await expect(
+      resolveInteractiveShellEnvBestEffort({ timeoutMs: 2_000, fallbackEnv: secondFallback })
+    ).resolves.toBe(secondFallback);
+    expect(getCachedShellEnv()).toBeNull();
+    await expect(readFile(invocationFile, 'utf8')).resolves.toBe('-lic\n-ic\n');
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(console.warn).toHaveBeenCalledWith(
+      '[Utils:shellEnv]',
+      'Failed to resolve shell env after login and interactive probes: login=shell env command exited with code 42; interactive=shell env command exited with code 42'
+    );
+    vi.mocked(console.warn).mockClear();
+  });
+
+  it('retains a real complete env dump even when the shell exits nonzero afterwards', async () => {
+    const invocationFile = path.join(tempDir, 'logout-failure-invocations.log');
+    process.env.FAKE_SHELL_INVOCATIONS = invocationFile;
+    const expectedEnv = {
+      HOME: tempDir,
+      EMPTY: '',
+      NOTE: 'first=value\nsecond=value',
+      'BASH_FUNC_module%%': '() {\n printf "%s\\n" "a=b";\n}',
+      ANTHROPIC_AUTH_TOKEN: 'TEST-complete-token',
+    };
+    process.env.SHELL = await createFakeShell(
+      tempDir,
+      'logout-failure-shell.js',
+      envWriterSource(`
+const fs = require('fs');
+fs.appendFileSync(process.env.FAKE_SHELL_INVOCATIONS, process.argv[2] + '\\n');
+writeEnv(${JSON.stringify(expectedEnv)});
+process.exitCode = 42;
+`)
+    );
+
+    await expect(resolveInteractiveShellEnv()).resolves.toEqual(expectedEnv);
+    expect(getCachedShellEnv()).toEqual(expectedEnv);
+    await expect(readFile(invocationFile, 'utf8')).resolves.toBe('-lic\n');
+    expect(console.warn).not.toHaveBeenCalled();
   });
 
   it('coalesces concurrent best-effort calls into one real shell process', async () => {
