@@ -421,6 +421,7 @@ export const desktopProofIntegratedSources = [
   // Existing stopped import source setup and its explicit native Launch continuation.
   'scripts/legacy-agent-host/desktop-stopped-import-prior-run.ts',
   'scripts/legacy-agent-host/desktop-stopped-import-launch-ui.ts',
+  'scripts/legacy-agent-host/desktop-mixed-edit-team-ui.ts',
   'src/main/services/team/provisioning/LegacyNativeStopRelease.ts',
   'src/main/services/team/provisioning/LegacyNativeStopCensus.ts',
   'src/main/utils/cliProcessCustody.ts',

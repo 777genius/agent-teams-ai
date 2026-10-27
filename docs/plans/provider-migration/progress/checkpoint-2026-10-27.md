@@ -157,3 +157,10 @@ The nine variants have distinct artifact identities. YAML, all eight shell run
 steps, embedded JavaScript syntax and whitespace checks passed; an independent
 review found no blocking workflow issue. These are selected existing acceptance
 routes, not new native results or a replacement for the unchanged M01–M19 matrix.
+
+The existing mixed Create/Launch smoke now also exercises the changed Edit Team
+path before native allocation: its original description control, one Save, exact
+same-owner settings/roster/receipt checks, renderer reload, and reopening/canceling
+the same Edit dialog. It then continues the existing native mixed launch/group/
+member-restart workflow. Strict script typechecking, whitespace and independent
+review passed; actual Edit UI acceptance awaits the next exact-head run.

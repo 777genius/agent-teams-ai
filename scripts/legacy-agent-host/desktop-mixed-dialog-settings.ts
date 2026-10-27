@@ -162,7 +162,11 @@ export async function configureMixedCreateSettings(cdp: UiCdpPort, ui: Controls)
 }
 
 /** Check configured intent independently of effective provider recipes. */
-export function assertMixedSavedSettings(state: Record<string, unknown>, workspace: string) {
+export function assertMixedSavedSettings(
+  state: Record<string, unknown>,
+  workspace: string,
+  description = mixedDescription
+) {
   const settings = record(state.savedSettings);
   for (const [name, value] of Object.entries({
     cwd: workspace,
@@ -173,7 +177,7 @@ export function assertMixedSavedSettings(state: Record<string, unknown>, workspa
     limitContext: true,
     skipPermissions: true,
     syncModelsWithLead: false,
-    description: mixedDescription,
+    description,
     color: 'blue',
   }))
     assert.equal(settings[name], value, 'saved ' + name);

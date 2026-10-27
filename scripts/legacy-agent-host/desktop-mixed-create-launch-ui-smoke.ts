@@ -1,4 +1,5 @@
 import { runDesktopMixedMemberRestartUiSmoke } from './desktop-mixed-member-restart-ui-smoke.ts';
+import { runMixedEditTeamUi, mixedEditedDescription } from './desktop-mixed-edit-team-ui.ts';
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
 import { runDesktopMixedGroupUiSmoke } from './desktop-mixed-group-ui-smoke.ts';
 import assert from 'node:assert/strict';
@@ -51,7 +52,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     status: 'INCOMPLETE',
     steps,
     scope:
-      'Original configured Create save-only3 members → original Launch hydration/close/reopen/preflights → one fresh3-member native capture → one original Launch lead prompt and2 Composer inputs/MCP/effects/replies → original mixed group/directed Bob input/three-provider ACK → original isolated Bob Restart/three-provider continuation → Stop/reload/Launch readback',
+      'Original configured Create save-only3 members → original Edit description/Save/reload/reopen → original Launch hydration/close/reopen/preflights → one fresh3-member native capture → one original Launch lead prompt and2 Composer inputs/MCP/effects/replies → original mixed group/directed Bob input/three-provider ACK → original isolated Bob Restart/three-provider continuation → Stop/reload/Launch readback',
     excluded: [
       'real credentials/projects/vendor inference',
       'immediate Create launch',
@@ -163,8 +164,8 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     (state) => Array.isArray(state.members) && state.members.length === 3,
     'three saved members'
   );
-  const configuredBeforeLaunch = assertMixedSavedSettings(saved, workspace);
-  proof.configuredBeforeLaunch = configuredBeforeLaunch;
+  let configuredBeforeLaunch = assertMixedSavedSettings(saved, workspace);
+  proof.configuredAfterCreate = configuredBeforeLaunch;
   const members = (saved.members as unknown[]).map(record);
   assert.deepEqual(
     members.map((row) => [row.name, row.role]),
@@ -209,6 +210,26 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   const teamSelector = `[data-team-name=${JSON.stringify(key)}]`;
   await ui.scrollTo(teamSelector, 'original newly created Team card');
   await ui.click(teamSelector, 'open original newly created Team');
+  const edited = await runMixedEditTeamUi(cdp, {
+    selection: key,
+    handleId: String(handleId),
+    before: saved,
+    evidence: proof,
+    ownerState,
+    assertOwnedRenderer: assertCurrent,
+    assertNoNativeInputs: () => {
+      assertCurrent();
+      assert.ok(modelRows.every((model) => model.observations.length === 0));
+    },
+    step: (row) => steps.push(row),
+  });
+  proof.editTeam = edited.proof;
+  configuredBeforeLaunch = assertMixedSavedSettings(
+    edited.state,
+    workspace,
+    mixedEditedDescription
+  );
+  proof.configuredBeforeLaunch = configuredBeforeLaunch;
   await ui.click('button', 'open original mixed Launch dialog', 'Launch');
   await ui.waitRead(
     `Boolean(document.querySelector('[role="dialog"]'))`,
@@ -225,7 +246,10 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     `!document.querySelector('[role="dialog"]')`,
     'original Launch closed without allocation'
   );
-  assert.deepEqual(assertMixedSavedSettings(await ownerState(), workspace), configuredBeforeLaunch);
+  assert.deepEqual(
+    assertMixedSavedSettings(await ownerState(), workspace, mixedEditedDescription),
+    configuredBeforeLaunch
+  );
   assert.equal(((await ownerState()).runtimeCaptures as unknown[] | undefined)?.length ?? 0, 0);
   await ui.click('button', 'reopen original mixed Launch before Submit', 'Launch');
   proof.reopenedLaunchHydration = await assertMixedLaunchHydration(cdp, ui);
@@ -260,7 +284,7 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
   assert.ok(Array.isArray(capture.members) && capture.members.length === 3);
   proof.capture = capture;
   assert.equal(record(state.savedSettings).allowExperimentalLocalModels, false);
-  const configuredAfterLaunch = assertMixedSavedSettings(state, workspace);
+  const configuredAfterLaunch = assertMixedSavedSettings(state, workspace, mixedEditedDescription);
   assert.deepEqual(
     configuredAfterLaunch,
     {
@@ -462,11 +486,14 @@ export async function runDesktopMixedCreateLaunchUiSmoke(
     expectedObservations
   );
   assert.equal(record(after.savedSettings).allowExperimentalLocalModels, false);
-  const configuredAfterStop = assertMixedSavedSettings(after, workspace);
+  const configuredAfterStop = assertMixedSavedSettings(after, workspace, mixedEditedDescription);
   assert.deepEqual(configuredAfterStop, configuredAfterLaunch);
   await ui.click('button', 'reopen original mixed Launch after Stop/reload', 'Launch');
   proof.stoppedReloadLaunchHydration = await assertMixedLaunchHydration(cdp, ui);
-  assert.deepEqual(assertMixedSavedSettings(await ownerState(), workspace), configuredAfterStop);
+  assert.deepEqual(
+    assertMixedSavedSettings(await ownerState(), workspace, mixedEditedDescription),
+    configuredAfterStop
+  );
   assert.equal(((await ownerState()).runtimeCaptures as unknown[]).length, 1);
   assert.deepEqual(
     modelRows.map((model) => model.observations.length),
