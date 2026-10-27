@@ -6,7 +6,10 @@ import {
 
 import { HostTeamOperationError } from './createHostTeamMutations';
 import { hostTeamSelectionKey, isHostTeamSelectionKey } from './hostTeamRouting';
-import { translateHostTaskReferences } from './translateHostTaskReferences';
+import {
+  storeHostTaskReferenceTeam,
+  translateHostTaskReferences,
+} from './translateHostTaskReferences';
 
 import type { BackendGroupPayloads } from '../contracts/groupChats';
 import type {
@@ -58,8 +61,15 @@ export function createHostGroupChatsApi(
         throw new HostTeamOperationError('unavailable', 'not-dispatched', commandId);
       const canonicalName = product.value.teamName;
       const canonical = (ref?: string) => {
-        if (ref === undefined || ref === teamName) return canonicalName;
-        throw new HostTeamOperationError('unsupported', 'not-dispatched', commandId);
+        const stored = storeHostTaskReferenceTeam(
+          ref,
+          canonicalName,
+          teamName,
+          connections.bindings
+        );
+        if (stored === undefined)
+          throw new HostTeamOperationError('unsupported', 'not-dispatched', commandId);
+        return stored;
       };
       request = {
         ...request,

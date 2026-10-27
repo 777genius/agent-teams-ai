@@ -67,6 +67,7 @@ function task(value: unknown, teamName: string): TeamTaskWithKanban {
     ...strings(source, [
       'displayId',
       'description',
+      'prompt',
       'owner',
       'createdBy',
       'createdAt',
@@ -79,6 +80,7 @@ function task(value: unknown, teamName: string): TeamTaskWithKanban {
     if (source[key] !== undefined) result[key] = array(source[key], text);
   if (source.descriptionTaskRefs !== undefined)
     result.descriptionTaskRefs = refs(source.descriptionTaskRefs);
+  if (source.promptTaskRefs !== undefined) result.promptTaskRefs = refs(source.promptTaskRefs);
   if (source.comments !== undefined) result.comments = array(source.comments, comment);
   if (source.attachments !== undefined)
     result.attachments = projectAttachmentMetadata(source.attachments);

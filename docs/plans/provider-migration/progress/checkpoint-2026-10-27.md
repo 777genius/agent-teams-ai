@@ -229,3 +229,29 @@ the same original click. Its 45-second budget and exact byte/SHA checks remain.
 Strict script typechecking and independent review passed. Diagnostic artifacts
 retain hidden owner state under the existing TEST hoststore plus the two exact
 synthetic source Team/Task directories, without collecting a user home.
+
+
+## Same-owner Task reference identity
+
+Whole-PR UI review confirmed that global Task suggestions offered another Team's
+Task while the captured Host mutation adapters rejected every foreign selection.
+Existing Create Task, comments and prepared local/group Composer controls now
+translate explicitly captured same-owner Team selections into finite immutable
+Task reference metadata using the existing resource UUID. They never select a
+foreign filesystem root, grant authority or infer a binding from a mutable name.
+Reads resolve only the exact resource under the same owner; a purged/recreated
+Team remains an explicit unavailable opaque reference. Different owners are
+refused, and self references retain their existing canonical representation.
+
+Only the specific Host TaskRef validator accepts this finite metadata token; the
+generic safe filesystem segment validator is unchanged. The existing Main Task
+snapshot projection also now retains its allowlisted prompt/promptTaskRefs, so
+these configured references survive actual mapper/readback rather than only
+mutation receipts. No new storage or routing framework is introduced.
+
+Two independent critics accepted the identity/metadata/path boundaries. Final
+focused verification passed **62 tests in four suites**, including actual Main
+mapper readback, Task/comment/prepared Composer/group refs, different-owner
+refusal, purge/recreate isolation and unchanged self routing. A bounded strict
+compiler closure, precise fast lint, source-size and provisioning guards passed.
+Whole-project and actual Desktop exact-head qualification remain remote gates.

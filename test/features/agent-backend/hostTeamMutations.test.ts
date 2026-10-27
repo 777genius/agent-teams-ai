@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { safeSegment } from '../../../packages/legacy-agent-host/src/team/identity';
+import { validateTeamCommand } from '../../../packages/legacy-agent-host/src/team/validateTeamCommand';
+import { projectTeamSnapshot } from '../../../src/features/agent-backend/main/adapters/output/projectTeamSnapshot';
 import {
   createHostTeamsApi,
   hostTeamSelectionKey,
@@ -7,10 +10,12 @@ import {
 import { buildPreparedSendRequest } from '../../../src/renderer/components/team/messages/composerSendUtils';
 import { createEncodedTaskReference } from '../../../src/renderer/utils/taskReferenceUtils';
 
+import type { BackendConnectionSnapshot } from '../../../src/features/agent-backend/contracts/connections';
 import type {
   AgentBackendApi,
   BackendOperationRequest,
 } from '../../../src/features/agent-backend/contracts/operations';
+import type { BackendTeamSnapshot } from '../../../src/features/agent-backend/contracts/teamSnapshot';
 import type { TeamsAPI } from '../../../src/shared/types/api';
 
 function fixture() {
@@ -27,6 +32,8 @@ function fixture() {
       'addTaskComment',
       'sendMessage',
       'startTask',
+      'getTask',
+      'getMessagesPage',
       'startTaskByUser',
       'requestReview',
       'updateKanban',
@@ -95,6 +102,178 @@ function fixture() {
 }
 
 describe('ordinary Host Team mutation adapters', () => {
+  it('round trips same-owner Task, comment and prepared Composer refs by exact immutable resource identity', async () => {
+    const f = fixture(),
+      target = hostTeamSelectionKey('TEST-B');
+    const resource = '22222222-2222-5222-8222-222222222222';
+    const storedTeam = `host-ref:${resource}`;
+    let bindings: BackendConnectionSnapshot['bindings'] = [
+      {
+        handle: { handleId: 'TEST-A' },
+        label: 'A',
+        members: [],
+        ownerResourceRef: 'TEST-owner',
+        teamResourceRef: '11111111-1111-5111-8111-111111111111',
+      },
+      {
+        handle: { handleId: 'TEST-B' },
+        label: 'B',
+        members: [],
+        ownerResourceRef: 'TEST-owner',
+        teamResourceRef: resource,
+      },
+    ];
+    const product: BackendTeamSnapshot = {
+      teamName: 'actual-team',
+      revision: 'a'.repeat(64),
+      feed: {
+        streamId: '33333333-3333-4333-8333-333333333333',
+        sequence: 0,
+        cursor: '11111111-1111-4111-8111-111111111111',
+      },
+      members: [],
+      tasks: [],
+      messages: [],
+      kanbanState: { teamName: 'actual-team', reviewers: [], tasks: {} },
+    };
+    const backend: AgentBackendApi = {
+      getConnections: vi.fn<AgentBackendApi['getConnections']>(async () => ({
+        state: 'ready',
+        bindings: structuredClone(bindings),
+      })),
+      invoke: vi.fn<AgentBackendApi['invoke']>(async (request) => {
+        if (request.operation === 'team.snapshot')
+          return { ok: true, value: projectTeamSnapshot(structuredClone(product)) };
+        const base = { commandId: request.commandId, phase: 'completed' as const };
+        if (request.operation === 'task.create') {
+          const task = { id: 'TEST-new', status: 'pending' as const, ...request.payload };
+          product.tasks.push(task);
+          return { ok: true, value: { ...base, operation: request.operation, task } };
+        }
+        if (request.operation === 'task.comment') {
+          const comment = {
+            id: 'TEST-comment',
+            author: 'user',
+            createdAt: '2026-10-27',
+            type: 'regular' as const,
+            text: request.payload.text,
+            taskRefs: request.payload.taskRefs,
+          };
+          product.tasks[0]!.comments = [comment];
+          return { ok: true, value: { ...base, operation: request.operation, comment } };
+        }
+        if (request.operation === 'message.send') {
+          product.messages.push({
+            from: 'user',
+            timestamp: '2026-10-27',
+            read: false,
+            to: request.payload.to,
+            text: request.payload.text,
+            summary: request.payload.summary,
+            taskRefs: request.payload.taskRefs,
+            messageId: request.commandId,
+          });
+          return {
+            ok: true,
+            value: { ...base, operation: request.operation, messageId: request.commandId },
+          };
+        }
+        throw new Error('Unexpected TEST mutation');
+      }),
+    };
+    const teams = createHostTeamsApi(f.legacy, backend);
+    const reference = { taskId: 'TEST-B-task', displayId: '7', teamName: target };
+    const text = createEncodedTaskReference('7', reference.taskId, target);
+    const created = await teams.createTask(f.key, {
+      subject: 'TEST foreign ref',
+      description: text,
+      descriptionTaskRefs: [reference],
+      prompt: text,
+      promptTaskRefs: [reference],
+    });
+    expect(product.tasks[0]!.descriptionTaskRefs).toEqual([{ ...reference, teamName: storedTeam }]);
+    expect(product.tasks[0]!.promptTaskRefs).toEqual([{ ...reference, teamName: storedTeam }]);
+    expect(created.descriptionTaskRefs).toEqual([reference]);
+    expect(created.description).toBe(text);
+    const comment = await teams.addTaskComment(f.key, created.id, { text, taskRefs: [reference] });
+    expect(comment.taskRefs).toEqual([reference]);
+    expect(comment.text).toBe(text);
+    const prepared = buildPreparedSendRequest({
+      attemptId: 'TEST-ref-message',
+      teamName: f.key,
+      selectedTeam: null,
+      localRecipient: 'alice',
+      crossTeamRecipient: null,
+      text,
+      summary: text,
+      attachments: [],
+      actionMode: 'ask',
+      taskRefs: [reference],
+    });
+    if (prepared.kind !== 'local') throw new Error('Expected local Composer');
+    await teams.sendMessage(f.key, prepared.request);
+    const read = await teams.getTask(f.key, created.id);
+    expect(read?.descriptionTaskRefs).toEqual([reference]);
+    expect(read?.promptTaskRefs).toEqual([reference]);
+    expect(read?.comments?.[0]?.taskRefs).toEqual([reference]);
+    expect((await teams.getMessagesPage(f.key)).messages[0]).toMatchObject({
+      text,
+      summary: text,
+      taskRefs: [reference],
+    });
+    for (const entry of Object.values(f.legacy))
+      if (typeof entry === 'function') expect(entry).not.toHaveBeenCalled();
+
+    bindings[1]!.ownerResourceRef = 'TEST-other-owner';
+    vi.mocked(backend.invoke).mockClear();
+    await expect(
+      teams.createTask(f.key, { subject: 'TEST denied', descriptionTaskRefs: [reference] })
+    ).rejects.toMatchObject({ code: 'unsupported', outcome: 'not-dispatched' });
+    expect(backend.invoke).not.toHaveBeenCalled();
+
+    bindings = [
+      bindings[0]!,
+      {
+        ...bindings[1]!,
+        handle: { handleId: 'TEST-replacement-B' },
+        ownerResourceRef: 'TEST-owner',
+        teamResourceRef: '99999999-9999-5999-8999-999999999999',
+      },
+    ];
+    const afterPurge = await teams.getTask(f.key, created.id);
+    expect(afterPurge?.descriptionTaskRefs?.[0]?.teamName).toBe(
+      `${f.key}:unbound:${encodeURIComponent(storedTeam)}`
+    );
+    expect(afterPurge?.descriptionTaskRefs?.[0]?.teamName).not.toBe(
+      hostTeamSelectionKey('TEST-replacement-B')
+    );
+    expect(afterPurge?.description).not.toContain(target);
+    expect(f.legacy.getTask).not.toHaveBeenCalled();
+  });
+
+  it('admits only the finite reference metadata token while generic filesystem segments remain unchanged', () => {
+    const teamName = 'host-ref:22222222-2222-5222-8222-222222222222';
+    const command = {
+      commandId: 'TEST-ref',
+      operation: 'task.create' as const,
+      payload: {
+        subject: 'TEST metadata',
+        descriptionTaskRefs: [{ taskId: 'TEST-task', displayId: '1', teamName }],
+      },
+    };
+    expect(() => validateTeamCommand(command)).not.toThrow();
+    expect(() => safeSegment(teamName)).toThrow();
+    for (const bad of ['host-ref:../../arbitrary', 'host-ref:not-a-resource', '/TEST/path'])
+      expect(() =>
+        validateTeamCommand({
+          ...command,
+          payload: {
+            ...command.payload,
+            descriptionTaskRefs: [{ taskId: 'TEST-task', displayId: '1', teamName: bad }],
+          },
+        })
+      ).toThrow();
+  });
   it('routes the existing reorder, dependency and clarification controls to the captured owner', async () => {
     const f = fixture();
     await f.teams.updateKanbanColumnOrder(f.key, 'todo', ['TEST-b', 'TEST-a']);
@@ -506,14 +685,22 @@ it('routes existing kanban remove once, preserves UNKNOWN/refusal and never writ
   expect(f.legacy.updateTaskStatus).not.toHaveBeenCalled();
 });
 
-
 it('routes Disapprove as one explicit review command while generic remove retains its guarded contract', async () => {
   const f = fixture();
   await f.teams.updateKanban(f.key, 'TEST-task', { op: 'disapprove' });
-  const commands = f.invoke.mock.calls.map(([request]) => request).filter((request) => request.operation !== 'team.snapshot');
+  const commands = f.invoke.mock.calls
+    .map(([request]) => request)
+    .filter((request) => request.operation !== 'team.snapshot');
   expect(commands).toHaveLength(1);
-  expect(commands[0]).toMatchObject({ operation: 'task.review', payload: { taskId: 'TEST-task', action: 'disapprove' } });
+  expect(commands[0]).toMatchObject({
+    operation: 'task.review',
+    payload: { taskId: 'TEST-task', action: 'disapprove' },
+  });
   expect(f.legacy.updateKanban).not.toHaveBeenCalled();
-  await expect(f.teams.updateKanban(f.key, 'TEST-task', { op: 'disapprove', from: 'user' } as never)).rejects.toThrow();
-  expect(f.invoke.mock.calls.filter(([request]) => request.operation !== 'team.snapshot')).toHaveLength(1);
+  await expect(
+    f.teams.updateKanban(f.key, 'TEST-task', { op: 'disapprove', from: 'user' } as never)
+  ).rejects.toThrow();
+  expect(
+    f.invoke.mock.calls.filter(([request]) => request.operation !== 'team.snapshot')
+  ).toHaveLength(1);
 });

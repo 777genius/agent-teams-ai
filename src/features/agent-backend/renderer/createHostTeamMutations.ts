@@ -2,11 +2,13 @@ import { parseStandaloneSlashCommand } from '@shared/utils/slashCommands';
 
 import {
   qualifyHostTaskReferenceTeam,
+  storeHostTaskReferenceTeam,
   translateHostTaskReferences,
 } from './translateHostTaskReferences';
 import { prepareHostAttachments, uploadHostAttachments } from './uploadHostAttachments';
 
 import type { BackendHandle } from '../contracts';
+import type { BackendConnectionSnapshot } from '../contracts/connections';
 import type {
   AgentBackendApi,
   BackendCommandReceipt,
@@ -98,16 +100,21 @@ export function createHostTeamMutations(options: {
   backend: AgentBackendApi;
   resolve(
     key: string,
-    current: () => boolean
-  ): Promise<{ handle: BackendHandle; teamName: string }>;
+    current: () => boolean,
+    referenceTeams?: readonly string[]
+  ): Promise<{
+    handle: BackendHandle;
+    teamName: string;
+    referenceBindings?: BackendConnectionSnapshot['bindings'];
+  }>;
   captureScope(): () => boolean;
   invalidateReads?(handle: BackendHandle): void;
 }) {
-  function refs(key: string, source: TaskRef[] | undefined): TaskRef[] | undefined {
+  function refs(source: TaskRef[] | undefined): TaskRef[] | undefined {
     if (source === undefined) return undefined;
     if (!Array.isArray(source)) return unsupported();
-    // Referenced targets must be this captured team. Cross-owner refs need their own binding contract.
-    if (source.some((ref) => ref.teamName !== key)) return unsupported();
+    if (source.some((ref) => !ref || typeof ref.teamName !== 'string' || !ref.teamName))
+      return unsupported();
     return source.map((ref) => ({ ...ref }));
   }
   async function execute(
@@ -120,11 +127,28 @@ export function createHostTeamMutations(options: {
   ) {
     // Convert UI selection references only after resolving the original captured target.
     const current = options.captureScope();
-    const target = await options.resolve(key, current);
     const payload = { ...command.payload } as Record<string, unknown>;
+    const referenceTeams = new Set<string>();
+    const collect = (team?: string) => {
+      if (team !== undefined && team !== key) referenceTeams.add(team);
+      return team ?? key;
+    };
+    for (const field of ['text', 'description', 'prompt', 'summary', 'comment', 'note']) {
+      if (typeof payload[field] === 'string') translateHostTaskReferences(payload[field], collect);
+    }
+    for (const field of ['taskRefs', 'descriptionTaskRefs', 'promptTaskRefs']) {
+      const source = payload[field] as TaskRef[] | undefined;
+      source?.forEach((ref) => collect(ref.teamName));
+    }
+    const target = await options.resolve(key, current, [...referenceTeams]);
     const toCanonical = (team?: string) => {
-      if (team !== undefined && team !== key) return unsupported();
-      return target.teamName;
+      const stored = storeHostTaskReferenceTeam(
+        team,
+        target.teamName,
+        key,
+        target.referenceBindings ?? []
+      );
+      return stored ?? unsupported();
     };
     for (const field of ['text', 'description', 'prompt', 'summary', 'comment', 'note']) {
       if (typeof payload[field] === 'string')
@@ -132,7 +156,8 @@ export function createHostTeamMutations(options: {
     }
     for (const field of ['taskRefs', 'descriptionTaskRefs', 'promptTaskRefs']) {
       const source = payload[field] as TaskRef[] | undefined;
-      if (source) payload[field] = source.map((ref) => ({ ...ref, teamName: target.teamName }));
+      if (source)
+        payload[field] = source.map((ref) => ({ ...ref, teamName: toCanonical(ref.teamName) }));
     }
     if (!current())
       throw new HostTeamOperationError('context-changed', 'not-dispatched', command.commandId);
@@ -160,12 +185,17 @@ export function createHostTeamMutations(options: {
     const qualify = (source: TaskRef[] | undefined) =>
       source?.map((ref) => ({
         ...ref,
-        teamName: qualifyHostTaskReferenceTeam(ref.teamName, target.teamName, key),
+        teamName: qualifyHostTaskReferenceTeam(
+          ref.teamName,
+          target.teamName,
+          key,
+          target.referenceBindings
+        ),
       }));
     if (receipt.task) {
       const task = { ...receipt.task };
       const toSelection = (team?: string) =>
-        qualifyHostTaskReferenceTeam(team, target.teamName, key);
+        qualifyHostTaskReferenceTeam(team, target.teamName, key, target.referenceBindings);
       if (task.description !== undefined)
         task.description = translateHostTaskReferences(task.description, toSelection);
       if (task.descriptionTaskRefs) task.descriptionTaskRefs = qualify(task.descriptionTaskRefs);
@@ -189,7 +219,7 @@ export function createHostTeamMutations(options: {
       if (comment.taskRefs) comment.taskRefs = qualify(comment.taskRefs);
       if (comment.text !== undefined)
         comment.text = translateHostTaskReferences(comment.text, (team) =>
-          qualifyHostTaskReferenceTeam(team, target.teamName, key)
+          qualifyHostTaskReferenceTeam(team, target.teamName, key, target.referenceBindings)
         );
       receipt.comment = comment;
     }
@@ -296,7 +326,7 @@ export function createHostTeamMutations(options: {
       }
       if (patch.op !== 'request_changes') return unsupported();
       object(patch, ['op', 'comment', 'taskRefs']);
-      const taskRefs = refs(key, patch.taskRefs);
+      const taskRefs = refs(patch.taskRefs);
       await execute(key, {
         commandId: crypto.randomUUID(),
         operation: 'task.review',
@@ -333,8 +363,8 @@ export function createHostTeamMutations(options: {
         if (request.command.commandId !== request.command.idempotencyKey) return unsupported();
       }
       const commandId = request.command?.commandId ?? crypto.randomUUID();
-      const descriptionTaskRefs = refs(key, request.descriptionTaskRefs);
-      const promptTaskRefs = refs(key, request.promptTaskRefs);
+      const descriptionTaskRefs = refs(request.descriptionTaskRefs);
+      const promptTaskRefs = refs(request.promptTaskRefs);
       const receipt = await execute(key, {
         commandId,
         operation: 'task.create',
@@ -451,7 +481,7 @@ export function createHostTeamMutations(options: {
       const request = structuredClone(input);
       object(request, ['text', 'taskRefs', 'attachments']);
       const files = attachments(request.attachments, 'task');
-      const taskRefs = refs(key, request.taskRefs);
+      const taskRefs = refs(request.taskRefs);
       const receipt = await execute(
         key,
         {
@@ -478,7 +508,7 @@ export function createHostTeamMutations(options: {
       ]);
       if (parseStandaloneSlashCommand(request.text)) return unsupported();
       const files = attachments(request.attachments, 'message');
-      const taskRefs = refs(key, request.taskRefs);
+      const taskRefs = refs(request.taskRefs);
       const receipt = await execute(
         key,
         {

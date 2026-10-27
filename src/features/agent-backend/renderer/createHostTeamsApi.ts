@@ -31,6 +31,7 @@ import { remapHostCrossTeamMessages } from './remapHostCrossTeamMessages';
 import { TeamProductReadOrder } from './TeamProductReadOrder';
 import {
   qualifyHostTaskReferenceTeam,
+  storeHostTaskReferenceTeam,
   translateHostTaskReferences,
 } from './translateHostTaskReferences';
 
@@ -74,7 +75,7 @@ function remapSnapshot(
   bindings: Connection[] = []
 ): BackendTeamSnapshot {
   const mapTeam = (team?: string) =>
-    qualifyHostTaskReferenceTeam(team, snapshot.teamName, selection);
+    qualifyHostTaskReferenceTeam(team, snapshot.teamName, selection, bindings);
   const refs = <T extends { taskRefs?: { teamName: string }[] }>(entry: T): T => ({
     ...entry,
     ...('text' in entry && typeof entry.text === 'string'
@@ -531,11 +532,18 @@ export function createHostTeamsApi(
     backend,
     captureScope,
     invalidateReads: (handle) => readOrder.invalidateReads(handle.handleId),
-    async resolve(key, check) {
-      const connection = await resolveConnection(key, check);
+    async resolve(key, check, referenceTeams) {
+      const bindings = await connections(check);
+      const connection = await resolveConnection(key, check, bindings);
+      if (referenceTeams?.some((team) => !storeHostTaskReferenceTeam(team, '', key, bindings)))
+        throw new HostTeamOperationError('unsupported', 'not-dispatched');
       const read = await snapshot(connection, check);
       read.assertCurrent();
-      return { handle: { ...connection.handle }, teamName: read.data.teamName };
+      return {
+        handle: { ...connection.handle },
+        teamName: read.data.teamName,
+        referenceBindings: bindings,
+      };
     },
   });
   const roster = createHostTeamRoster({

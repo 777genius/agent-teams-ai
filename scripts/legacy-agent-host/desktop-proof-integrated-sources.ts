@@ -402,6 +402,7 @@ export const desktopProofIntegratedSources = [
   'src/features/team-group-chats/main/composition/createTeamGroupChatsFeature.ts',
   'src/features/team-group-chats/main/infrastructure/GroupChatStorage.ts',
   'test/features/agent-backend/hostGroupChats.test.ts',
+  'test/features/agent-backend/hostTeamMutations.test.ts',
   // Original Create refusal transport and safe form correction.
   'src/features/agent-backend/contracts/creation.ts',
   'src/features/agent-backend/renderer/readTeamCreationResult.ts',

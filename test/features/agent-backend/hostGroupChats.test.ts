@@ -1,4 +1,5 @@
 import { expect, it, vi } from 'vitest';
+
 import { BackendOperationsFacade } from '../../../src/features/agent-backend/main/adapters/input/BackendOperationsFacade';
 import { projectTeamSnapshot } from '../../../src/features/agent-backend/main/adapters/output/projectTeamSnapshot';
 import { createHostGroupChatsApi } from '../../../src/features/agent-backend/renderer/createHostGroupChatsApi';
@@ -6,9 +7,12 @@ import {
   createHostTeamsApi,
   hostTeamSelectionKey,
 } from '../../../src/features/agent-backend/renderer/createHostTeamsApi';
+import { createEncodedTaskReference } from '../../../src/renderer/utils/taskReferenceUtils';
+
+import type { BackendConnectionSnapshot } from '../../../src/features/agent-backend/contracts/connections';
 import type { AgentBackendApi } from '../../../src/features/agent-backend/contracts/operations';
-import type { BackendOwnerRouter } from '../../../src/features/agent-backend/main/application/BackendOwnerRouter';
 import type { BackendTeamSnapshot } from '../../../src/features/agent-backend/contracts/teamSnapshot';
+import type { BackendOwnerRouter } from '../../../src/features/agent-backend/main/application/BackendOwnerRouter';
 import type { TeamGroupChatsAPI } from '../../../src/features/team-group-chats/contracts';
 import type { TeamsAPI } from '../../../src/shared/types/api';
 const id = '10000000-0000-4000-8000-000000000001';
@@ -222,4 +226,89 @@ it('snapshot/history preserve validated group envelopes, expose only logical gro
     })
   ).rejects.toThrow(/cursor expired/);
   expect(legacyRead).not.toHaveBeenCalled();
+});
+
+it('group Composer persists same-owner foreign Task refs as immutable metadata and reads their exact handle', async () => {
+  const f = fixture();
+  const target = hostTeamSelectionKey('TEST-target');
+  const resource = '44444444-4444-5444-8444-444444444444';
+  const bindings: BackendConnectionSnapshot['bindings'] = [
+    {
+      handle: { handleId: 'TEST-opaque' },
+      label: 'A',
+      members: [],
+      ownerResourceRef: 'TEST-owner',
+      teamResourceRef: '33333333-3333-5333-8333-333333333333',
+    },
+    {
+      handle: { handleId: 'TEST-target' },
+      label: 'B',
+      members: [],
+      ownerResourceRef: 'TEST-owner',
+      teamResourceRef: resource,
+    },
+  ];
+  vi.mocked(f.backend.getConnections).mockImplementation(async () => ({
+    state: 'ready',
+    bindings,
+  }));
+  const reference = { taskId: 'TEST-task', displayId: '7', teamName: target };
+  const text = createEncodedTaskReference('7', reference.taskId, target);
+  const stored = `host-ref:${resource}`;
+  vi.mocked(f.backend.invoke).mockImplementation(async (request) => {
+    if (request.operation === 'team.snapshot')
+      return { ok: true, value: projectTeamSnapshot(f.snapshot) };
+    if (request.operation !== 'group.send') throw new Error('Unexpected group effect');
+    expect(request.handle).toEqual(bindings[0]!.handle);
+    expect(request.payload.taskRefs).toEqual([{ ...reference, teamName: stored }]);
+    expect(request.payload.text).toBe(createEncodedTaskReference('7', reference.taskId, stored));
+    expect(request.payload.summary).toBe(request.payload.text);
+    f.snapshot.messages = [
+      {
+        ...canonical,
+        text: request.payload.text,
+        summary: request.payload.summary,
+        taskRefs: request.payload.taskRefs,
+      },
+    ];
+    return {
+      ok: true,
+      value: {
+        kind: 'group-chat-command',
+        commandId: request.commandId,
+        operation: 'send',
+        phase: 'completed',
+        result: { saved: true, groupChatId: id, messageId: post, statusPersisted: true },
+      },
+    };
+  });
+  const api = createHostGroupChatsApi(f.legacy, f.backend, () => () => true);
+  await api.send({
+    teamName: key,
+    groupChatId: id,
+    messageId: post,
+    text,
+    summary: text,
+    taskRefs: [reference],
+  });
+  const legacyRead = vi.fn<TeamsAPI['getMessagesPage']>();
+  const teams = createHostTeamsApi(
+    { getMessagesPage: legacyRead } as unknown as TeamsAPI,
+    f.backend
+  );
+  expect((await teams.getMessagesPage(key, { groupChatId: id })).messages[0]).toMatchObject({
+    text,
+    summary: text,
+    taskRefs: [reference],
+  });
+  bindings[1]!.ownerResourceRef = 'TEST-foreign-owner';
+  vi.mocked(f.backend.invoke).mockClear();
+  await expect(
+    api.send({ teamName: key, groupChatId: id, messageId: post, text, taskRefs: [reference] })
+  ).rejects.toMatchObject({ code: 'unsupported', outcome: 'not-dispatched' });
+  expect(vi.mocked(f.backend.invoke).mock.calls.map(([request]) => request.operation)).toEqual([
+    'team.snapshot',
+  ]);
+  expect(legacyRead).not.toHaveBeenCalled();
+  expect(f.legacy.send).not.toHaveBeenCalled();
 });

@@ -18,7 +18,10 @@ function validateRefs(value: TaskRef[] | undefined): void {
   for (const ref of value) {
     if (!ref || typeof ref !== 'object') throw new TeamOwnerError('invalid');
     safeSegment(ref.taskId);
-    safeSegment(ref.teamName);
+    if (typeof ref.teamName !== 'string') throw new TeamOwnerError('invalid');
+    // Opaque same-owner reference metadata is never passed to a filesystem adapter as a Team path.
+    if (!/^host-ref:[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(ref.teamName))
+      safeSegment(ref.teamName);
     validateTeamText(ref.displayId);
     if (
       ref.displayId.length > 128 ||

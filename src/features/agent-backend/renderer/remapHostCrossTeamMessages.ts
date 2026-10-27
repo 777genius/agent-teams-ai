@@ -30,7 +30,7 @@ export function remapHostCrossTeamMessages(
     const map = (value?: string) => {
       if (origin && value === origin.fromTeamName && from) return from;
       if (origin && value === origin.toTeamName && to) return to;
-      return qualifyHostTaskReferenceTeam(value, teamName, selection);
+      return qualifyHostTaskReferenceTeam(value, teamName, selection, bindings);
     };
     return {
       ...message,
