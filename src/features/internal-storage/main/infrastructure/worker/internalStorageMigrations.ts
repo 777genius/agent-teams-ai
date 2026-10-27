@@ -217,7 +217,16 @@ export function runInternalStorageMigrations(db: SqliteDatabase): void {
     }
     const apply = db.transaction(() => {
       for (const statement of migration.statements) {
-        db.exec(statement);
+        try {
+          db.exec(statement);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          // Keep migrations idempotent when a column already exists (for example
+          // when a database is re-migrated or a schema is partially upgraded).
+          if (!/duplicate column name/i.test(message)) {
+            throw error;
+          }
+        }
       }
       db.pragma(`user_version = ${migration.version}`);
     });
