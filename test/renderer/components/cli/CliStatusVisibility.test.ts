@@ -3392,7 +3392,7 @@ describe('CLI status visibility during completed install state', () => {
 
     const onRefreshProvider = providerRuntimeSettingsDialogProps?.onRefreshProvider;
     await expect(onRefreshProvider?.('codex')).resolves.toBe(true);
-    expect(storeState.invalidateCliProviderModelCatalog).toHaveBeenCalledTimes(1);
+    expect(storeState.invalidateCliStatus).toHaveBeenCalledTimes(1);
     expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('codex', {
       silent: false,
       checkReason: 'manual_refresh',

@@ -679,6 +679,7 @@ describe('codex catalog watchdog races', () => {
         await vi.advanceTimersByTimeAsync(5_000);
         expect(getProviderStatus).toHaveBeenCalledTimes(7);
       } finally {
+        store.setState({ cliStatus: null });
         await store.getState().invalidateCliStatus();
         Object.defineProperty(window, 'electronAPI', {
           configurable: true,
@@ -707,6 +708,7 @@ describe('codex catalog watchdog races', () => {
       value: {
         cliInstaller: {
           getProviderStatus: vi.fn().mockReturnValueOnce(first).mockReturnValueOnce(second),
+          invalidateStatus: vi.fn().mockResolvedValue(undefined),
         },
       },
     });
@@ -732,12 +734,141 @@ describe('codex catalog watchdog races', () => {
       vi.mocked(console.error).mockClear();
       expect(vi.getTimerCount()).toBe(1);
     } finally {
+      store.setState({ cliStatus: null });
+      await store.getState().invalidateCliStatus();
       Object.defineProperty(window, 'electronAPI', {
         configurable: true,
         writable: true,
         value: previousApi,
       });
       vi.useRealTimers();
+    }
+  });
+});
+
+describe('Codex catalog retry after main invalidation', () => {
+  function installLoadingCodex() {
+    vi.useFakeTimers();
+    const status = createLoadingMultimodelCliStatus();
+    const previousApi = window.electronAPI;
+    const getProviderStatus = vi.fn((providerId: string) =>
+      Promise.resolve({
+        ...status.providers.find((provider) => provider.providerId === providerId)!,
+        supported: true,
+        statusCheckOutcome: 'authoritative' as const,
+        modelCatalog: null,
+        modelCatalogRefreshState:
+          providerId === 'codex' ? ('loading' as const) : ('ready' as const),
+        runtimeCapabilities: { modelCatalog: { dynamic: true } },
+      })
+    );
+    const invalidateStatus = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      writable: true,
+      value: { cliInstaller: { getProviderStatus, invalidateStatus } },
+    });
+    const store = createCliInstallerStore();
+    store.setState({ cliStatus: status });
+    return {
+      store,
+      getProviderStatus,
+      invalidateStatus,
+      cleanup: async () => {
+        store.setState({ cliStatus: null });
+        invalidateStatus.mockResolvedValue(undefined);
+        await store.getState().invalidateCliStatus();
+        Object.defineProperty(window, 'electronAPI', {
+          configurable: true,
+          writable: true,
+          value: previousApi,
+        });
+        vi.useRealTimers();
+      },
+    };
+  }
+
+  it.each(['anthropic', 'opencode'] as const)(
+    'restores a loading Codex retry after the main acknowledgement and %s refresh',
+    async (providerId) => {
+      const fixture = installLoadingCodex();
+      let acknowledge!: () => void;
+      const acknowledgement = new Promise<void>((resolve) => {
+        acknowledge = resolve;
+      });
+      try {
+        await fixture.store.getState().fetchCliProviderStatus('codex');
+        fixture.invalidateStatus.mockReturnValueOnce(acknowledgement);
+        const invalidation = fixture.store.getState().invalidateCliStatus();
+        await vi.advanceTimersByTimeAsync(5_000);
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(1);
+        expect(vi.getTimerCount()).toBe(0);
+
+        acknowledge();
+        await invalidation;
+        await fixture.store.getState().fetchCliProviderStatus(providerId);
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(2);
+        expect(vi.getTimerCount()).toBe(1);
+        await vi.advanceTimersByTimeAsync(5_000);
+        expect(fixture.getProviderStatus.mock.calls.map(([id]) => id)).toEqual([
+          'codex',
+          providerId,
+          'codex',
+        ]);
+      } finally {
+        acknowledge();
+        await fixture.cleanup();
+      }
+    }
+  );
+
+  it('does not restore retries after a rejected main invalidation', async () => {
+    const fixture = installLoadingCodex();
+    try {
+      await fixture.store.getState().fetchCliProviderStatus('codex');
+      fixture.invalidateStatus.mockRejectedValueOnce(new Error('Main invalidation failed'));
+      await expect(fixture.store.getState().invalidateCliStatus()).rejects.toThrow(
+        'Main invalidation failed'
+      );
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(fixture.getProviderStatus).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it('does not restore retries while a newer main invalidation is pending', async () => {
+    const fixture = installLoadingCodex();
+    let acknowledgeOld!: () => void;
+    let acknowledgeNew!: () => void;
+    const oldAcknowledgement = new Promise<void>((resolve) => {
+      acknowledgeOld = resolve;
+    });
+    const newAcknowledgement = new Promise<void>((resolve) => {
+      acknowledgeNew = resolve;
+    });
+    try {
+      await fixture.store.getState().fetchCliProviderStatus('codex');
+      fixture.invalidateStatus
+        .mockReturnValueOnce(oldAcknowledgement)
+        .mockReturnValueOnce(newAcknowledgement);
+      const oldInvalidation = fixture.store.getState().invalidateCliStatus();
+      const newInvalidation = fixture.store.getState().invalidateCliStatus();
+      acknowledgeOld();
+      await oldInvalidation;
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(fixture.getProviderStatus).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+
+      acknowledgeNew();
+      await newInvalidation;
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(fixture.getProviderStatus.mock.calls.map(([id]) => id)).toEqual(['codex', 'codex']);
+    } finally {
+      acknowledgeOld();
+      acknowledgeNew();
+      await fixture.cleanup();
     }
   });
 });

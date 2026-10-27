@@ -737,6 +737,89 @@ describe('shellEnv', () => {
     expect(hoisted.spawn).toHaveBeenCalledTimes(3);
   });
 
+  it('preserves a joiner fallback when discovery fails after the soft timeout', async () => {
+    const children: MockChildProcess[] = [];
+    hoisted.spawn.mockImplementation(() => {
+      const child = createChild();
+      children.push(child);
+      return child;
+    });
+    const shellEnv = await importShellEnv();
+    const fallbackEnv = { HOME: '/custom/home', PATH: '/fallback/bin', EMPTY: '' };
+    const processEnvBefore = { ...process.env };
+    const bestEffort = shellEnv.resolveInteractiveShellEnvBestEffort({
+      timeoutMs: 1_500,
+      fallbackEnv,
+    });
+    const pending = shellEnv.waitForPendingShellEnv();
+    const otherJoiner = shellEnv.waitForPendingShellEnv();
+
+    await vi.advanceTimersByTimeAsync(1_500);
+    expect(await bestEffort).toBe(fallbackEnv);
+    emitError(children[0], 'login failed');
+    await vi.advanceTimersByTimeAsync(0);
+    emitError(children[1], 'interactive failed');
+
+    expect((await pending) ?? fallbackEnv).toBe(fallbackEnv);
+    expect(await otherJoiner).toBeNull();
+    expect(shellEnv.getCachedShellEnv()).toBeNull();
+    expect(await shellEnv.waitForPendingShellEnv()).toBeNull();
+    expect(
+      await shellEnv.resolveInteractiveShellEnvBestEffort({ timeoutMs: 1_500, fallbackEnv })
+    ).toBe(fallbackEnv);
+    expect(hoisted.spawn).toHaveBeenCalledTimes(2);
+    expect(process.env).toEqual(processEnvBefore);
+  });
+
+  it('joins a completed empty environment as a successful cached result', async () => {
+    const child = createChild();
+    hoisted.spawn.mockReturnValueOnce(child);
+    const shellEnv = await importShellEnv();
+
+    expect(await shellEnv.waitForPendingShellEnv()).toBeNull();
+    expect(hoisted.spawn).not.toHaveBeenCalled();
+    const strict = shellEnv.resolveInteractiveShellEnv();
+    const pending = shellEnv.waitForPendingShellEnv();
+    const frame = shellFrame(child);
+    child.stdout.emit('data', Buffer.from(frame.start + frame.end));
+    emitClose(child, 0, null);
+
+    const resolved = await strict;
+    expect(resolved).toEqual({});
+    expect(await pending).toBe(resolved);
+    expect(await shellEnv.waitForPendingShellEnv()).toBe(resolved);
+    expect(shellEnv.getCachedShellEnv()).toBe(resolved);
+    expect(hoisted.spawn).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not substitute a newer cache for a failed probe that a caller already joined', async () => {
+    const children: MockChildProcess[] = [];
+    hoisted.spawn.mockImplementation(() => {
+      const child = createChild();
+      children.push(child);
+      return child;
+    });
+    const shellEnv = await importShellEnv();
+    const failedProbe = shellEnv.resolveInteractiveShellEnv();
+    const failedJoin = shellEnv.waitForPendingShellEnv();
+    shellEnv.clearShellEnvCache();
+    const successfulProbe = shellEnv.resolveInteractiveShellEnv();
+    const successfulJoin = shellEnv.waitForPendingShellEnv();
+
+    emitError(children[0], 'old login failed');
+    await vi.advanceTimersByTimeAsync(0);
+    emitEnv(children[1], { HOME: '/new/home', PATH: '/new/bin' });
+    const resolved = await successfulProbe;
+    expect(await successfulJoin).toBe(resolved);
+    emitError(children[2], 'old interactive failed');
+
+    expect(await failedProbe).toEqual({});
+    expect(await failedJoin).toBeNull();
+    expect(shellEnv.getCachedShellEnv()).toBe(resolved);
+    expect(await shellEnv.waitForPendingShellEnv()).toBe(resolved);
+    expect(hoisted.spawn).toHaveBeenCalledTimes(3);
+  });
+
   it('uses cached shell env immediately without spawning or returning fallback', async () => {
     const firstChild = createChild();
     hoisted.spawn.mockReturnValueOnce(firstChild);

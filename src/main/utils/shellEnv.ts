@@ -384,9 +384,15 @@ export async function resolveInteractiveShellEnvBestEffort(
   }
 }
 
-/** Wait for discovery already in progress without starting a probe or bypassing its cooldown. */
+/** Wait for an existing probe's successful cache result, or null when it fails. */
 export async function waitForPendingShellEnv(): Promise<NodeJS.ProcessEnv | null> {
-  return shellEnvResolvePromise ?? cachedInteractiveShellEnv;
+  const pending = shellEnvResolvePromise;
+  if (!pending) return cachedInteractiveShellEnv;
+  const resolved = await pending;
+  // Strict resolution returns an uncached {} on failure. Preserve a joiner's
+  // fallback in that case, without confusing a successfully cached empty env
+  // or substituting another probe's cache if discovery was cleared meanwhile.
+  return resolved === cachedInteractiveShellEnv ? resolved : null;
 }
 
 /**

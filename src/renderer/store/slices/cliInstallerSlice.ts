@@ -1565,7 +1565,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
 
   invalidateCliStatus: async () => {
     clearCodexCatalogLoadingRefresh('codex');
-    cliStatusEpoch += 1;
+    const epoch = ++cliStatusEpoch;
     cliProviderStatusGeneration += 1;
     cliStatusInFlight = null;
     cliProviderStatusInFlight.clear();
@@ -1577,8 +1577,8 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       cliProviderStatusLoading: {},
     }));
     await api.cliInstaller?.invalidateStatus();
+    if (epoch === cliStatusEpoch) scheduleCodexCatalogLoadingRefreshes(get);
   },
-
   installCli: () => {
     set({
       cliInstallerState: 'checking',
