@@ -368,6 +368,11 @@ export async function resolveInteractiveShellEnvBestEffort(
   }
 }
 
+/** Wait for discovery already in progress without starting a probe or bypassing its cooldown. */
+export async function waitForPendingShellEnv(): Promise<NodeJS.ProcessEnv | null> {
+  return shellEnvResolvePromise ?? cachedInteractiveShellEnv;
+}
+
 /**
  * Clear the cached shell environment. Useful for testing.
  */

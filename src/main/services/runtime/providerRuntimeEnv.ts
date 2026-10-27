@@ -106,6 +106,17 @@ export function resolveAnthropicConnectionMode(
   return 'auto';
 }
 
+export function shouldResolveAnthropicShellEnv(
+  providerId: RuntimeEnvProviderId | undefined,
+  preference: AnthropicRuntimeConnectionPreference = ConfigManager.getInstance().getConfig()
+    .providerConnections.anthropic
+): boolean {
+  return (
+    resolveRuntimeProviderId(providerId) === 'anthropic' &&
+    resolveAnthropicConnectionMode(preference) === 'auto'
+  );
+}
+
 function clearExplicitAnthropicRouteEnv(
   env: NodeJS.ProcessEnv,
   connectionMode: AnthropicConnectionMode
