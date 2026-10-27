@@ -10,6 +10,7 @@ import {
   classifyIdleNotification,
   getIdleNoiseLabel,
 } from '@renderer/utils/idleNotificationSemantics';
+import { mapMarkdownOutsideCode } from '@renderer/utils/markdownCodeRanges';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import {
   CROSS_TEAM_SENT_SOURCE,
@@ -140,7 +141,9 @@ export function getStrippedActivityTextCached({
     if (!hasBootstrapDisplay) stripped = stripAgentBlocks(stripped).trim();
     if (!stripped) return null;
     if (isCrossTeamAny) stripped = stripCrossTeamPrefix(stripped);
-    return stripped.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+    return mapMarkdownOutsideCode(stripped, (prose) =>
+      prose.replace(/\\n/g, '\n').replace(/\\t/g, '\t')
+    );
   });
 }
 

@@ -2,10 +2,9 @@ import { randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import remarkParse from 'remark-parse';
-import { unified } from 'unified';
 import { describe, expect, it } from 'vitest';
 
+import { readOpenUIReply } from '../../../../scripts/lib/openui-chat-reply';
 import { parseChatVisualization } from '../../../../src/features/chat-visualizations/renderer/parseChatVisualization';
 import { guardChatVisualizationProgram } from '../../../../src/features/chat-visualizations/renderer/programGuards';
 import { TeamInboxWriter } from '../../../../src/main/services/team/TeamInboxWriter';
@@ -13,8 +12,6 @@ import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
-import { readMarkdownFence } from '../../../../src/renderer/components/chat/viewers/MarkdownFence';
-import { stripAgentBlocks } from '../../../../src/shared/constants/agentBlocks';
 
 import {
   createOpenCodeLiveHarness,
@@ -24,8 +21,6 @@ import {
   waitForOpenCodeMemberIdle,
   waitUntil,
 } from './openCodeLiveTestHarness';
-
-import type { Root, RootContent } from 'mdast';
 
 const liveDescribe =
   process.env.OPENCODE_E2E === '1' && process.env.OPENCODE_E2E_VISUALIZATION === '1'
@@ -58,31 +53,12 @@ interface CaseContext {
   bindings: Record<string, OpenCodeOriginalTranscriptBinding>;
 }
 
-const markdownParser = unified().use(remarkParse);
 function visibleContent(text: string): { sources: string[]; prose: string } {
-  const markdown = stripAgentBlocks(text);
-  const sources: string[] = [];
-  const prose: string[] = [];
-  function visit(node: Root | RootContent): void {
-    if (node.type === 'code') {
-      const fence = readMarkdownFence(markdown, {
-        tagName: 'pre',
-        position: node.position,
-        children: [
-          {
-            tagName: 'code',
-            properties: { className: [`language-${node.lang ?? ''}`] },
-            children: [{ value: node.value }],
-          },
-        ],
-      });
-      if (fence?.state === 'closed' && ['openui', 'openui-lang'].includes(fence.language ?? ''))
-        sources.push(fence.source);
-    } else if (node.type === 'text' || node.type === 'inlineCode') prose.push(node.value);
-    else if ('children' in node) for (const child of node.children) visit(child as RootContent);
-  }
-  visit(markdownParser.parse(markdown));
-  return { sources, prose: prose.join(' ') };
+  const { fences, prose } = readOpenUIReply(text);
+  return {
+    sources: fences.filter((fence) => fence.state === 'closed').map((fence) => fence.source),
+    prose,
+  };
 }
 
 async function readReplies(teamName: string): Promise<Reply[]> {

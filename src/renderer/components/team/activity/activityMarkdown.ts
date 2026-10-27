@@ -1,3 +1,4 @@
+import { mapMarkdownOutsideCode } from '@renderer/utils/markdownCodeRanges';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
 import { linkifyTaskIdsInMarkdown } from '@renderer/utils/taskReferenceUtils';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
@@ -43,7 +44,7 @@ export function buildThoughtDisplayContent(
       text = stripAgentBlocks(text);
     }
     if (preserveLineBreaks) {
-      text = text.replace(/\n/g, '  \n');
+      text = mapMarkdownOutsideCode(text, (prose) => prose.replace(/\n/g, '  \n'));
     }
     text = linkifyTaskIdsInMarkdown(text, thought.taskRefs);
     if ((memberColorMap && memberColorMap.size > 0) || teamNames.length > 0) {

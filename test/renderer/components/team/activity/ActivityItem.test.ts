@@ -1,6 +1,8 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { parseChatVisualization } from '@features/chat-visualizations/renderer/parseChatVisualization';
+import { guardChatVisualizationProgram } from '@features/chat-visualizations/renderer/programGuards';
 import {
   ActivityItem,
   getCrossTeamSentMemberName,
@@ -1725,6 +1727,58 @@ describe('message task action and dialog ownership', () => {
 });
 
 describe('collapsed message visualization access', () => {
+  it.each(['```openui-lang', '~~~openui'])(
+    'preserves literal OpenUI data in %s through main, direct, and group message presentation',
+    async (opener) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const source = String.raw`root = Stack([Card([TextContent("@alice work @TeamX #abc123 C:\\new\\test")])]);`;
+      const delimiter = opener.match(/^[`~]+/)![0];
+      const block = `${opener}\n${source}\n${delimiter}`;
+      const prose = 'Hi @alice from @TeamX\\nReady\\t#abc123';
+      const host = document.createElement('div');
+      document.body.append(host);
+      const root = createRoot(host);
+      try {
+        for (const origin of [
+          { from: 'team-lead', to: 'user' },
+          { from: 'alice', to: 'user' },
+          { from: 'alice', to: 'user', groupChatId: 'group-a', groupMessageId: 'post-1' },
+        ]) {
+          await act(async () =>
+            root.render(
+              React.createElement(ActivityItem, {
+                key: `${origin.from}:${origin.groupChatId ?? 'direct'}`,
+                message: {
+                  ...origin,
+                  text: `${prose}\n\n${block}`,
+                  timestamp: '2026-10-27T10:00:00.000Z',
+                  read: true,
+                },
+                teamName: 'sandbox',
+                memberColorMap: new Map([['alice', 'blue']]),
+                teamNames: ['TeamX'],
+              })
+            )
+          );
+          const shown = host.querySelector('[data-markdown-renderer="full"]')?.textContent ?? '';
+          expect(shown).toBe(
+            `Hi [@alice](mention://blue/alice) from [TeamX](team://TeamX)\nReady\t[#abc123](task://abc123)\n\n${block}`
+          );
+          const shownSource = shown.slice(
+            shown.indexOf(opener) + opener.length + 1,
+            shown.lastIndexOf(delimiter)
+          );
+          const parsed = parseChatVisualization(shownSource);
+          expect(guardChatVisualizationProgram(parsed, 'closed')).toEqual({ status: 'ready' });
+          expect(parsed.root).toEqual(parseChatVisualization(source).root);
+        }
+      } finally {
+        await act(async () => root.unmount());
+        host.remove();
+      }
+    }
+  );
+
   it.each(['openui-lang', 'mermaid'])(
     'keeps %s on the rich rendering path instead of a label-only preview',
     async (language) => {

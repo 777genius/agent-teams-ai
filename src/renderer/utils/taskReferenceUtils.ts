@@ -1,5 +1,7 @@
 import { getTaskDisplayId } from '@shared/utils/taskIdentity';
 
+import { mapMarkdownOutsideCode } from './markdownCodeRanges';
+
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { TaskRef, TeamTask } from '@shared/types';
 
@@ -354,91 +356,97 @@ export function linkifyTaskIdsInMarkdown(text: string, taskRefs?: TaskRef[]): st
     return result;
   };
 
-  let result = '';
-  let cursor = 0;
+  return mapMarkdownOutsideCode(
+    text,
+    (prose) => {
+      let result = '';
+      let cursor = 0;
 
-  while (cursor < text.length) {
-    const char = text[cursor];
+      while (cursor < prose.length) {
+        const char = prose[cursor];
 
-    if (char === '[') {
-      const linkEnd = findMarkdownLinkEnd(text, cursor);
-      if (linkEnd !== -1) {
-        const closeBracket = text.indexOf(']', cursor + 1);
-        const label = text.slice(cursor + 1, closeBracket);
-        const labelOccurrences = findTaskReferenceOccurrences(label).map((occurrence) => {
-          const pairedTaskRef = consumeStructuredTaskRef();
-          return {
-            ...occurrence,
-            pairedTaskRef: matchingStructuredTaskRef(pairedTaskRef, occurrence.ref),
-          };
-        });
-        const hrefStart = closeBracket + 2;
-        const href = text.slice(hrefStart, linkEnd - 1);
-        const parsedHref = parseTaskLinkHref(href);
-        const legacyTaskId =
-          parsedHref && parsedHref.teamName === undefined && parsedHref.displayId === undefined
-            ? parsedHref.taskId
-            : undefined;
-        const legacyLabelOccurrence = legacyTaskId
-          ? labelOccurrences.find(
-              (occurrence) =>
-                occurrence.pairedTaskRef &&
-                occurrence.ref.toLowerCase() === legacyTaskId.toLowerCase()
-            )
-          : undefined;
-        if (legacyLabelOccurrence?.pairedTaskRef) {
-          result += text.slice(cursor, hrefStart);
-          result += buildTaskLinkHref(legacyLabelOccurrence.pairedTaskRef);
-          result += text.slice(linkEnd - 1, linkEnd);
-        } else {
-          result += text.slice(cursor, linkEnd);
+        if (char === '[') {
+          const linkEnd = findMarkdownLinkEnd(prose, cursor);
+          if (linkEnd !== -1) {
+            const closeBracket = prose.indexOf(']', cursor + 1);
+            const label = prose.slice(cursor + 1, closeBracket);
+            const labelOccurrences = findTaskReferenceOccurrences(label).map((occurrence) => {
+              const pairedTaskRef = consumeStructuredTaskRef();
+              return {
+                ...occurrence,
+                pairedTaskRef: matchingStructuredTaskRef(pairedTaskRef, occurrence.ref),
+              };
+            });
+            const hrefStart = closeBracket + 2;
+            const href = prose.slice(hrefStart, linkEnd - 1);
+            const parsedHref = parseTaskLinkHref(href);
+            const legacyTaskId =
+              parsedHref && parsedHref.teamName === undefined && parsedHref.displayId === undefined
+                ? parsedHref.taskId
+                : undefined;
+            const legacyLabelOccurrence = legacyTaskId
+              ? labelOccurrences.find(
+                  (occurrence) =>
+                    occurrence.pairedTaskRef &&
+                    occurrence.ref.toLowerCase() === legacyTaskId.toLowerCase()
+                )
+              : undefined;
+            if (legacyLabelOccurrence?.pairedTaskRef) {
+              result += prose.slice(cursor, hrefStart);
+              result += buildTaskLinkHref(legacyLabelOccurrence.pairedTaskRef);
+              result += prose.slice(linkEnd - 1, linkEnd);
+            } else {
+              result += prose.slice(cursor, linkEnd);
+            }
+            cursor = linkEnd;
+            continue;
+          }
         }
-        cursor = linkEnd;
-        continue;
-      }
-    }
 
-    if (char === '`') {
-      const run = /^`+/.exec(text.slice(cursor))?.[0] ?? '`';
+        if (char === '`') {
+          const run = /^`+/.exec(prose.slice(cursor))?.[0] ?? '`';
 
-      if (
-        run.length >= 3 &&
-        (cursor === 0 || text[cursor - 1] === '\n') &&
-        (text[cursor + run.length] === undefined || /\s/.test(text[cursor + run.length]))
-      ) {
-        const fenceEnd = findClosingFence(text, cursor, run);
-        if (fenceEnd !== -1) {
-          result += text.slice(cursor, fenceEnd);
-          cursor = fenceEnd;
-          continue;
+          if (
+            run.length >= 3 &&
+            (cursor === 0 || prose[cursor - 1] === '\n') &&
+            (prose[cursor + run.length] === undefined || /\s/.test(prose[cursor + run.length]))
+          ) {
+            const fenceEnd = findClosingFence(prose, cursor, run);
+            if (fenceEnd !== -1) {
+              result += prose.slice(cursor, fenceEnd);
+              cursor = fenceEnd;
+              continue;
+            }
+          }
+
+          const codeEnd = findClosingBacktickRun(prose, cursor, run.length);
+          if (codeEnd !== -1) {
+            const code = prose.slice(cursor + run.length, codeEnd);
+            const codeMatch = EXACT_TASK_REF_REGEX.exec(code.trim());
+            if (codeMatch) {
+              result += buildLink(code.trim(), codeMatch[1]);
+            } else {
+              result += prose.slice(cursor, codeEnd + run.length);
+            }
+            cursor = codeEnd + run.length;
+            continue;
+          }
         }
+
+        let nextSpecial = prose.length;
+        const nextLink = prose.indexOf('[', cursor + 1);
+        const nextCode = prose.indexOf('`', cursor + 1);
+        if (nextLink !== -1) nextSpecial = Math.min(nextSpecial, nextLink);
+        if (nextCode !== -1) nextSpecial = Math.min(nextSpecial, nextCode);
+
+        result += linkifyPlainText(prose.slice(cursor, nextSpecial));
+        cursor = nextSpecial;
       }
 
-      const codeEnd = findClosingBacktickRun(text, cursor, run.length);
-      if (codeEnd !== -1) {
-        const code = text.slice(cursor + run.length, codeEnd);
-        const codeMatch = EXACT_TASK_REF_REGEX.exec(code.trim());
-        if (codeMatch) {
-          result += buildLink(code.trim(), codeMatch[1]);
-        } else {
-          result += text.slice(cursor, codeEnd + run.length);
-        }
-        cursor = codeEnd + run.length;
-        continue;
-      }
-    }
-
-    let nextSpecial = text.length;
-    const nextLink = text.indexOf('[', cursor + 1);
-    const nextCode = text.indexOf('`', cursor + 1);
-    if (nextLink !== -1) nextSpecial = Math.min(nextSpecial, nextLink);
-    if (nextCode !== -1) nextSpecial = Math.min(nextSpecial, nextCode);
-
-    result += linkifyPlainText(text.slice(cursor, nextSpecial));
-    cursor = nextSpecial;
-  }
-
-  return result;
+      return result;
+    },
+    { handleInlineTaskReferences: true }
+  );
 }
 
 export function stripEncodedTaskReferenceMetadata(text: string): string {

@@ -11,6 +11,7 @@ import { resolveLiveSmokeOrchestratorCliPath } from '../lib/live-smoke-runtime.m
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createParser } from '@openuidev/lang-core';
+import { readOpenUIReply } from '../lib/openui-chat-reply';
 import type { TeamCreateRequest } from '../../src/shared/types/team';
 // Existing raw CDP client; all interaction stays in the owned dev:mcp renderer.
 // @ts-expect-error Existing JavaScript harness has no declaration file.
@@ -169,6 +170,8 @@ const button = (text: string, root = 'document') =>
   `Array.from(${root}.querySelectorAll('button')).find(e => e.textContent?.trim() === ${JSON.stringify(text)} || e.getAttribute('aria-label') === ${JSON.stringify(text)})`;
 const openuiArticle = (marker: string) =>
   `Array.from(document.querySelectorAll('article')).find(e => e.textContent.includes(${JSON.stringify(marker)}) && e.querySelector('[data-chat-visualization-kind="openui"]'))`;
+const openuiBlock = (marker: string, fenceIndex: number) =>
+  `${openuiArticle(marker)}?.querySelectorAll('[data-chat-visualization-kind="openui"]')[${fenceIndex}]`;
 async function fill(selector: string, value: string) {
   await click(`document.querySelector(${JSON.stringify(selector)})`);
   await cdp.send('Input.insertText', { text: value });
@@ -191,11 +194,6 @@ type Message = {
   groupChatId?: string;
   groupMessageId?: string;
 };
-function extractClosedVisualizationSource(text: string): string | undefined {
-  return text.match(
-    /(?:^|\n)```(?:openui-lang|openui)[ \t]*\r?\n([\s\S]*?)\r?\n```[ \t]*(?:\r?\n|$)/
-  )?.[1];
-}
 async function parseGeneratedVisualization(text: string) {
   const protocol = JSON.parse(
     await readFile(
@@ -206,7 +204,9 @@ async function parseGeneratedVisualization(text: string) {
       'utf8'
     )
   );
-  const source = extractClosedVisualizationSource(text);
+  const { fences, prose } = readOpenUIReply(text);
+  const fenceIndex = fences.findIndex((fence) => fence.state === 'closed');
+  const source = fences[fenceIndex]?.source;
   assert(
     source && source.length <= 32_000,
     'Actual Codex visualization needs a bounded closed fence'
@@ -221,10 +221,10 @@ async function parseGeneratedVisualization(text: string) {
     props: { children: { typeName: string; props: Record<string, unknown> }[] };
   }[];
   assert(Array.isArray(cards), 'Actual root Stack Cards');
-  return { source, parsed, cards };
+  return { source, parsed, cards, fenceIndex, prose };
 }
 async function verifyGeneratedCatalog(text: string, output: string) {
-  const { source, parsed, cards } = await parseGeneratedVisualization(text);
+  const { source, parsed, cards, fenceIndex } = await parseGeneratedVisualization(text);
   const expected = [
     ['BAR_GROUPED', 'BarChart', 'grouped'],
     ['BAR_STACKED', 'BarChart', 'stacked'],
@@ -277,9 +277,12 @@ async function verifyGeneratedCatalog(text: string, output: string) {
     'Actual static cell types'
   );
   await json(output, { ok: true, expected, source, root: parsed.root });
-  return tableCard.props.children
-    .filter((node) => node.typeName === 'TextContent')
-    .map((node) => ({ text: node.props.text, size: node.props.size ?? 'default' }));
+  return {
+    fenceIndex,
+    textExamples: tableCard.props.children
+      .filter((node) => node.typeName === 'TextContent')
+      .map((node) => ({ text: node.props.text, size: node.props.size ?? 'default' })),
+  };
 }
 async function main() {
   const f = await fixture();
@@ -316,7 +319,7 @@ async function main() {
       result = (await messages()).find(
         (message) =>
           message.from === 'visualizer' &&
-          message.text.includes(marker) &&
+          readOpenUIReply(message.text).prose.includes(marker) &&
           message.groupChatId === groupId &&
           accept(message)
       );
@@ -424,11 +427,11 @@ async function main() {
     );
     await json(path.join(f.shots, 'discovery-request-delivery.json'), discoverySent);
     const discovery = await reply(discoveryMarker, undefined, (message) =>
-      Boolean(extractClosedVisualizationSource(message.text))
+      readOpenUIReply(message.text).fences.some((fence) => fence.state === 'closed')
     );
     const discovered = await parseGeneratedVisualization(discovery.text);
     assert(
-      discovery.text.replace(discovered.source, '').includes(discoveryMarker),
+      discovered.prose.includes(discoveryMarker),
       'Discovery explanation must accompany the visualization'
     );
     const discoveryChart = discovered.cards
@@ -453,14 +456,12 @@ async function main() {
       root: discovered.parsed.root,
     });
     await openSurface('visualizer');
-    const discoveryArticle = openuiArticle(discoveryMarker);
+    const discoveryBlock = openuiBlock(discoveryMarker, discovered.fenceIndex);
     await waitFor(
-      `${discoveryArticle}?.querySelector('[data-chat-visualization-kind="openui"][data-chat-visualization-status="content"]')`,
+      `${discoveryBlock}?.getAttribute('data-chat-visualization-status') === 'content'`,
       'discovered OpenUI reply valid'
     );
-    await click(
-      `${discoveryArticle}.querySelector('[data-chat-visualization-kind="openui"] button')`
-    );
+    await click(`${discoveryBlock}.querySelector('button')`);
     await waitFor(
       `document.querySelector('[role="dialog"] [data-openui-chart="bar"]')`,
       'discovered OpenUI chart rendered'
@@ -477,7 +478,7 @@ async function main() {
     );
     await json(path.join(f.shots, 'catalog-request-delivery.json'), sent);
     const gallery = await reply(galleryMarker);
-    const textExamples = await verifyGeneratedCatalog(
+    const { textExamples, fenceIndex: galleryFenceIndex } = await verifyGeneratedCatalog(
       gallery.text,
       path.join(f.shots, 'catalog-parser-proof.json')
     );
@@ -486,12 +487,12 @@ async function main() {
       'Agent must generate both formats'
     );
     await openSurface('visualizer');
-    const galleryArticle = openuiArticle(galleryMarker);
+    const galleryBlock = openuiBlock(galleryMarker, galleryFenceIndex);
     await waitFor(
-      `${galleryArticle}?.querySelector('[data-chat-visualization-kind="openui"][data-chat-visualization-status="content"]')`,
+      `${galleryBlock}?.getAttribute('data-chat-visualization-status') === 'content'`,
       'agent gallery valid'
     );
-    const opener = `${galleryArticle}.querySelector('[data-chat-visualization-kind="openui"] button')`;
+    const opener = `${galleryBlock}.querySelector('button')`;
     await click(opener);
     await waitFor(
       `document.querySelector('[role="dialog"] [data-openui-chart="bar"]')`,
@@ -556,7 +557,7 @@ async function main() {
     );
     await click(`document.querySelector('[role="switch"][aria-label="Full Screen"]')`);
     await waitFor(
-      `${galleryArticle}?.querySelector('[data-chat-visualization-kind="openui"][data-chat-visualization-presentation="inline"] [data-openui-chart="line"]')`,
+      `${galleryBlock}?.getAttribute('data-chat-visualization-presentation') === 'inline' && ${galleryBlock}?.querySelector('[data-openui-chart="line"]')`,
       'main gallery inline'
     );
     await screenshot(path.join(f.shots, 'main-gallery-inline.png'));
