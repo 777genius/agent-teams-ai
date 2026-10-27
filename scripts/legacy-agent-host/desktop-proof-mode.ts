@@ -1,3 +1,6 @@
+import { teamRosterRevision } from '../../packages/legacy-agent-host/dist/team/rosterSchema.js';
+import type { OwnerState } from '../../packages/legacy-agent-host/dist/team/ownerState.js';
+import { NATIVE_MEMBER } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/member-creation.ts';
 import assert from 'node:assert/strict';
 import { nativeProcessReadbackAction } from './desktop-native-process-readback.ts';
 import { startProcessModel } from './desktop-native-process-model.ts';
@@ -158,6 +161,63 @@ export async function prepareDesktopProofMode(
     createConfigMode ||
     createLaunchMode;
   const mixedModels = mixedMode ? await startDesktopMixedModels(fixtureRoot) : undefined;
+  const nativeMemberCreation =
+    createLaunchMode && process.env.LEGACY_DESKTOP_NATIVE_MEMBER_CREATE === '1'
+      ? {
+          capture: () => {
+            const state = JSON.parse(
+              readFileSync(
+                join(fixtureRoot(), 'hoststore/teams/test-created-native/.host-owner/state.json'),
+                'utf8'
+              )
+            ) as OwnerState;
+            assert.equal(state.savedSettings?.model, 'claude-opus-4-6');
+            assert.equal(state.savedSettings.effort, 'medium');
+            assert.notEqual(state.savedSettings.syncModelsWithLead, false);
+            return {
+              input: {
+                commandId: NATIVE_MEMBER.commandId,
+                expectedRosterRevision: teamRosterRevision(
+                  state.members,
+                  state.rosterVersion,
+                  state.savedSettings
+                ),
+                member: {
+                  name: NATIVE_MEMBER.name,
+                  providerId: 'anthropic' as const,
+                  role: 'TEST configured persistent native teammate',
+                  workflow: 'Answer the deliberately addressed TEST work only.',
+                },
+              },
+              model: state.savedSettings.model!,
+              effort: state.savedSettings.effort,
+            };
+          },
+          principalId: (name: string) => {
+            const state = JSON.parse(
+              readFileSync(
+                join(fixtureRoot(), 'hoststore/teams/test-created-native/.host-owner/state.json'),
+                'utf8'
+              )
+            ) as OwnerState;
+            const member = state.members.find((value) => value.name === name);
+            assert.ok(member);
+            const grants = state.grants.filter(
+              (value) =>
+                value.memberName === name && !value.revoked && value.principalId.startsWith('agent:')
+            );
+            assert.equal(grants.length, 1);
+            if (name === NATIVE_MEMBER.name) {
+              const original = state.rosterCommands?.find(
+                (value) => value.commandId === NATIVE_MEMBER.commandId
+              )?.nativeCreation;
+              assert.equal(original?.member.memberId, member.memberId);
+              assert.equal(original?.selection?.principalId, grants[0]!.principalId);
+            }
+            return grants[0]!.principalId;
+          },
+        }
+      : undefined;
   const model = processUiMode
     ? processModel
     : mode === 'native-quit-ui'
@@ -244,6 +304,7 @@ export async function prepareDesktopProofMode(
               : launchDialogMode || createLaunchMode
                 ? await startNativeTeamModel({
                     allowModelProbes: true,
+                    ...(nativeMemberCreation ? { nativeMemberCreation } : {}),
                     ...(resumeMode
                       ? { uiGeneratedMessageIds: true, captureHistoryMarkers: true }
                       : {}),

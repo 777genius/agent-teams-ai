@@ -1,3 +1,4 @@
+import { runDesktopCreateMemberUi } from './desktop-create-member-ui.ts';
 import assert from 'node:assert/strict';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -134,13 +135,25 @@ export async function runDesktopCreateUiSmoke(
       rows.length === 1 &&
       Array.isArray(rows[0]!.inputs) &&
       (rows[0]!.inputs as unknown[]).length === 1 &&
-      (rows[0]!.inputs as unknown[]).map(record).every((input) => input.phase === 'terminal' && input.terminal === 'succeeded'),
+      (rows[0]!.inputs as unknown[])
+        .map(record)
+        .every((input) => input.phase === 'terminal' && input.terminal === 'succeeded'),
     'one native initial input'
   );
   assert.equal(model.observations.length, 8);
   assert.ok(model.probes.length >= 1 && model.probes.length <= 8);
-  assert.ok(model.observations.every((row) => row.requestedModel === 'claude-opus-4-6' && row.requestedEffort === 'medium' && row.contextEffective));
-  assert.ok(model.observations.some((row) => row.toolResultError), 'actual Bash exit7 observed');
+  assert.ok(
+    model.observations.every(
+      (row) =>
+        row.requestedModel === 'claude-opus-4-6' &&
+        row.requestedEffort === 'medium' &&
+        row.contextEffective
+    )
+  );
+  assert.ok(
+    model.observations.some((row) => row.toolResultError),
+    'actual Bash exit7 observed'
+  );
   assert.deepEqual(model.failures, []);
   assert.equal(await readFile(join(fixture.root, 'workspace/native-effect.txt'), 'utf8'), 'ONE\n');
   const tasks = await Promise.all(
@@ -161,6 +174,18 @@ export async function runDesktopCreateUiSmoke(
   );
   const screenshot = join(fixture.root, 'ui-original-create-native.png');
   await writeFile(screenshot, Buffer.from(String(shot.data), 'base64'), { mode: 0o600 });
+  const addition =
+    process.env.LEGACY_DESKTOP_NATIVE_MEMBER_CREATE === '1'
+      ? await runDesktopCreateMemberUi(cdp, {
+          root: fixture.root,
+          launchId: capture.launchId,
+          model,
+          evidence: proof,
+          assertOwnedRenderer: options.assertOwnedRenderer,
+          step: (value) => steps.push(value),
+        })
+      : undefined;
+  const expectedSessions = addition?.expectedSessions ?? 1;
   const hosts = processTable().filter(
     (row) => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`
   );
@@ -171,7 +196,9 @@ export async function runDesktopCreateUiSmoke(
   await ui.click('button[aria-label="Stop"]', 'Stop original created Team once', 'Stop');
   await poll(
     sessions,
-    (rows) => rows.length === 1 && rows[0]!.phase === 'closed' && rows[0]!.custody === 'released',
+    (rows) =>
+      rows.length === expectedSessions &&
+      rows.every((value) => value.phase === 'closed' && value.custody === 'released'),
     'created native custody released'
   );
   await poll(
@@ -201,6 +228,23 @@ export async function runDesktopCreateUiSmoke(
   assert.deepEqual(final.savedSettings, saved);
   assert.equal((final.runtimeCaptures as unknown[]).length, 1);
   assert.equal(model.observations.length, 8);
+  if (addition) {
+    const retainedProduct = addition.assertRetained(final);
+    assert.equal(
+      model.nativeMemberObservations?.length,
+      addition.observations,
+      'Stop/reload cannot cause another native member input'
+    );
+    const stopped = await sessions();
+    assert.equal(stopped.length, 2);
+    assert.ok(stopped.every((value) => value.phase === 'closed' && value.custody === 'released'));
+    Object.assign(addition.proof, {
+      retainedProduct,
+      status: 'PASS',
+      stoppedSessions: stopped,
+      retainedAfterReload: true,
+    });
+  }
   Object.assign(proof, {
     status: 'PASS',
     capture,

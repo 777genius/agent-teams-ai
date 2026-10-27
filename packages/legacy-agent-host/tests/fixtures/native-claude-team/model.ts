@@ -13,6 +13,8 @@ import { assertNativeChatAttachments } from './chat-attachments.ts';
 import { assertNativeMessagePdf } from '../native-message-pdf.ts';
 import { contextCompactionScript } from '../native-claude-compaction/model.ts';
 import type { CompactionScenario } from '../native-claude-compaction/model.ts';
+import { nativeMemberCreationScript } from './member-creation.ts';
+import type { NativeMemberCreationScenario } from './member-creation.ts';
 import { ordinarySubagentScript } from '../native-claude-subagent/model.ts';
 // Finite Anthropic SSE oracle adapted from the archived P1 packed-host walk.
 // It scripts model responses only: native Claude executes every MCP/Bash tool.
@@ -142,6 +144,7 @@ export async function startNativeTeamModel(
     crossTeam?: NativeCrossTeamScenario;
     ordinarySubagents?: { workspace: string; parentStopRequested?: () => boolean };
     contextCompaction?: CompactionScenario;
+    nativeMemberCreation?: NativeMemberCreationScenario;
     requireVisibleReply?: boolean;
     /** TEST Quit proof: hold one real first-turn inference until its client is closed. */
     holdInitialTurnResponse?: boolean;
@@ -154,6 +157,7 @@ export async function startNativeTeamModel(
     memberName?: 'alice' | 'team-lead';
   } = {}
 ) {
+  const nativeMember = options.nativeMemberCreation ? nativeMemberCreationScript(options.nativeMemberCreation, nativeToolReceipt) : undefined;
   const crossTeam = options.crossTeam ? nativeCrossTeamScript(options.crossTeam) : undefined;
   const groupChats = options.groupChats ? nativeGroupChatScript(nativeToolReceipt) : undefined;
   const compaction = options.contextCompaction
@@ -285,7 +289,7 @@ export async function startNativeTeamModel(
         probeText === 'Reply only OK. Do not use tools, access files or run commands.' &&
         tools.length === 0
       ) {
-        assert.ok(probes.length < 8, 'finite native model probe request budget');
+        assert.ok(probes.length < (nativeMember ? 9 : 8), 'finite native model probe request budget');
         probes.push({
           ...(typeof body.model === 'string' ? { requestedModel: body.model } : {}),
           ...(typeof record(body.output_config).effort === 'string'
@@ -298,6 +302,11 @@ export async function startNativeTeamModel(
           { type: 'text', text: 'OK' },
           typeof body.model === 'string' ? body.model : undefined
         );
+        return;
+      }
+      const memberBlock = nativeMember?.respond(body, tools);
+      if (memberBlock) {
+        emitResponse(response, ++sequence, memberBlock, typeof body.model === 'string' ? body.model : undefined);
         return;
       }
       if (options.allowModelProbes && tools.length === 0 && unexpectedNoToolsRequests.length < 2) {
@@ -566,6 +575,7 @@ export async function startNativeTeamModel(
       return compactionTokenRequests;
     },
     observations,
+    ...(nativeMember ? { nativeMemberObservations: nativeMember.observations } : {}),
     ...(groupChats ? { groupRequests: groupChats.requests } : {}),
     ...(options.holdInitialTurnResponse ? { heldInitialRequests } : {}),
     probes,

@@ -314,3 +314,107 @@ The available macOS runner advertises macOS 15 and has demonstrated build
 the historical packed custody qualification to the current tuple. Packed/
 installed M17 and the original M19 custody HOLD remain explicit unresolved
 qualification obligations. PR remains Draft; no merge, release or activation.
+
+
+## Current source Desktop run and reviewed follow-ups
+
+[CI run 40553118520](https://github.com/777genius/agent-teams-ai/actions/runs/40553118520)
+finished on exact `6c8e79a57331c9cb4c4cf7a9f6223554b08cff81`. The original
+receipts remain unchanged. Its overall conclusion is **failure**, not acceptance
+of later fixes: canonical validate/build/typechecks, main/renderer lint and test
+shards 1, 2 and 4 passed. Feature lint found one unnecessary non-null assertion;
+`974f79b26` removes only that assertion. Test shard 3 and the Windows ledger smoke
+both found the same old exact TEAM_CREATE failure-envelope expectation;
+`692729836` updates that exact assertion, preserving the draft-only and no-legacy
+writer checks. The affected IPC suite passed **270/270** after that repair.
+The Windows original run had **1240 passed, 5 existing skipped, 1 failed**; its
+failure is not a second product defect. Full qualification remains failed for
+this original run and must be rerun on the final pushed source.
+
+| Original source Desktop case | Observed result | Boundary retained |
+| --- | --- | --- |
+| Create with native launch | PASS | Actual SDK/CLI/MCP, original native work and Stop/released; dev wrapper required SIGTERM after that proof, so natural app exit is not claimed |
+| Pending-open Quit and cold readback | PASS | Original physical group absent and app exit0; Runtime remains held/unknown, and cold startup adds no allocation/input |
+| Active-input Quit and cold readback | PASS | App exit0 without signal, original group absent before cleanup, cold Runtime/product state unchanged |
+| Native review and cold readback | PASS | Original Changes actions, exact mixed bytes/decision history and cold readback without new allocation/input; partial evidence remains nonreviewable and wrapper SIGTERM is not natural Quit |
+| Cold selected Resume | PASS | Same profile across guarded Quit/startup, explicit selected checkpoint/history and second Stop; app exit0 without signal |
+| Mixed Create/Launch and Edit | FAIL at aggregate launch progress | Original Edit subproof passed one CAS and reload. Durable native attempts became ready, but the earlier opening observation had already been stored as disconnected in the renderer |
+| Existing Task board/cross-Team controls | FAIL before the original drag | No drag or order command occurred; the Manual choice remounted the board, and the harness reopened its already-closed sort popover |
+| Saved legacy import only | FAIL at external TaskRef observation | Attachments, exact download bytes and internal destination navigation passed. The actual captured source result opened the existing Task tab; the harness incorrectly expected a dialog |
+| Stopped legacy import followed by native Launch | FAIL before target Launch | The original native release proof was valid at preparation, then legacy background writers changed the source inventory; the canonical refusal is retained |
+
+Retained receipt SHA-256 values for the successful cases:
+
+- Create: `08c97b16b4fb6266170ba30def434ef455eab9353675ad21f7baadc5179d27d5`.
+- Pending-open Quit: `2f1dc4dce478675b77cb194e747df0d56487cb74946703075397116818118eee`;
+  cold readback: `4a41c1c550d8c1db03e5ac04b89f1a4cdc36406aa2bd14d1e2d262caa44d0f8e`.
+- Active-input Quit: `2fb5ed48f4bd241c6567ca8ff8ce64218df68c9012cbcdc27ea1959fd6d4de7a`;
+  cold readback: `727c9e399dd1df307f24cdbbd5fe982b87c5f457d65b45e00bc586051042c77a`.
+- Native review: `919cb9e3029f97c4040f5b8aa75346ae4813487998f75bce43505f3481154f2a`;
+  cold readback: `aa74c6d7acc2176d3634404512e714fea2b77e1075b0782b31a530c07819dc81`.
+- Cold selected Resume: `b36a937e0d7bb8e1e516082462a76d3c1b3027aa63b5acc7749876da33b3d97c`.
+
+### Narrow fixes already pushed after the original run
+
+`3375c1306` keeps a known current in-flight native factory in
+`pending-bootstrap/opening` only after exact binding/config validation, with the
+original live continuation, current Host incarnations, unexpired deadline and
+no unresolved retained interaction. Native readiness, work/control availability
+remain false and Runtime custody remains unknown. Cold, completed, expired,
+unavailable and revoked cases do not gain authority. The actual RuntimeOwner
+regression failed before the patch and the existing team-launch suite passed
+**22/22** afterward, including seven negative cases. No renderer terminal rule
+or retry policy was relaxed.
+
+`2036bf13d` removes the redundant sort-toggle click, uses the existing real-wheel
+scroll helper and verifies hit targets before the one original drag. `0072ba91a`
+checks the actual external-source Task tab: captured context/team/task identity,
+current read entry with null task and unavailable/missing phase, matching active
+session surface, visible page and exact selected tab. It closes only that tab
+through the existing control before the next reference. Neither patch changes
+production navigation, mutates store state from a read, retries a business action
+or reduces the original timeout. Strict scripts typecheck, formatting and diff
+checks passed; new native/UI acceptance is still required.
+
+### Import writer boundary and remaining native membership proof
+
+The retained source diagnostics now disprove the earlier runtime-precision
+hypothesis: Node 24.21.0 and Electron's Node 24.22.0 reported the same directory
+identity, including birthtime nanoseconds. The canonical reader instead reports
+`Incomplete solo native inventory`. Existing work-sync lifecycle adoption adds
+`_backupIdentityId` to config; its router also materializes member metadata and
+later inactive reconciliation creates `.member-work-sync` state. The original
+strict census refuses these changes. The proposed next repair is a narrow
+admission/publication fence for positively qualified stopped sources at the
+existing legacy writer boundaries. It must preserve active/UNKNOWN old owners,
+source directory identity and backup/restore lifetimes; no source proof repair,
+late fixture baseline, deletion purge or census allowlist relaxation is accepted.
+
+This is the selected finite stopped-solo source shape. A legacy config that
+already contained extra lifecycle metadata before Stop is not newly qualified
+by that repair. General historical-format import and the original M19 custody
+HOLD are not claimed complete.
+
+The plan review also confirmed a missing actual-SDK boundary for additive native
+membership. An optional continuation of the existing solo Create scenario is
+now implemented: one lead Do input uses `team_member_create`, the original read-only
+lookup, explicit addressed work and a real peer reply; subsequent original lead
+inputs prove the current roster reminder exactly once. Existing lead bindings,
+grants and prior work must remain unchanged, then ordinary Stop/reload must
+retain the new member and release both sessions. This is the same harness and
+existing UI, with a separate tenth CI variant whose gate requires its own proof.
+It is not yet a native PASS. No generic hot roster CAS or production default
+change is introduced.
+
+
+The optional native-add proof implementation passed the existing strict Host
+test and Desktop-script typechecks, six model-oracle admission/identity tests,
+source/provisioning guards, ten-variant YAML/shell syntax and all three embedded
+JavaScript checks. Two independent final reviews accepted the original-command
+lookup, one new allocation, exact retained product/receipt identity and actual
+request assertions. The original captured saved Opus/medium values are frozen
+once with the input; omitting the optional peer model deliberately exercises
+the existing configured inheritance path, and every actual peer request must
+carry those values plus the configured role/workflow. No production inheritance
+code changed. The finite source closure has **1329 files, missing 0**. These are
+fixture/compiler/review results; actual native-add acceptance is still pending.

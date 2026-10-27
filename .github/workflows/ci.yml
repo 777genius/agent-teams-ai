@@ -536,6 +536,10 @@ jobs:
             label: mixed Create and Launch
           - mode: native-create-ui
             label: Create with native launch
+          - mode: native-create-ui
+            variant: native-create-member
+            label: solo Create and native persistent teammate
+            native_member_create: '1'
           - mode: stopped-import-ui
             label: saved legacy import only
           - mode: stopped-import-ui
@@ -565,6 +569,7 @@ jobs:
       STAGE1_READBACK_MODE: ${{ matrix.readback || '' }}
       STAGE1_QUIT_SCENARIO: ${{ matrix.quit_scenario || '' }}
       LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH: ${{ matrix.import_launch || '' }}
+      LEGACY_DESKTOP_NATIVE_MEMBER_CREATE: ${{ matrix.native_member_create || '' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -720,6 +725,14 @@ jobs:
           const receipt = JSON.parse(readFileSync(path, 'utf8'));
           assert.equal(receipt.mode, expectedMode);
           assert.equal(receipt.status, 'PASS', 'INCOMPLETE remains an acceptance failure');
+          if (phase === 'desktop' && process.env.LEGACY_DESKTOP_NATIVE_MEMBER_CREATE === '1') {
+            const added = receipt.createLaunchDialogProof?.nativeMemberCreationProof;
+            assert.equal(added?.status, 'PASS', 'ordinary solo Create alone does not qualify native addition');
+            assert.equal(added.currentRosterReminderExactlyOnce, true);
+            assert.equal(added.retainedAfterReload, true);
+            assert.equal(added.stoppedSessions?.length, 2);
+            assert.ok(added.stoppedSessions.every(value => value.phase === 'closed' && value.custody === 'released'));
+          }
           if (phase === 'desktop' && process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1') {
             const imported = receipt.stoppedImportUiProof;
             assert.equal(imported?.status, 'PASS');

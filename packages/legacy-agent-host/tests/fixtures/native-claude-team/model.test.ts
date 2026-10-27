@@ -155,3 +155,147 @@ test('conversation MCP receipts require the current trusted capture principal', 
     await model.close();
   }
 });
+
+// This admits only exact deliberate tokens and original native receipts, not fabricated native evidence.
+test('additive member oracle keeps original lookup identity and rejects failed or foreign receipts', async () => {
+  const { nativeMemberCreationScript, NATIVE_MEMBER } = await import('./member-creation.ts');
+  const input = {
+    commandId: NATIVE_MEMBER.commandId,
+    expectedRosterRevision: 'a'.repeat(64),
+    member: { name: NATIVE_MEMBER.name, providerId: 'anthropic' as const, model: 'TEST-model' },
+  };
+  const make = () =>
+    nativeMemberCreationScript(
+      {
+        capture: () => ({ input, model: 'TEST-model', effort: 'medium' }),
+        principalId: (name) => `agent:${name}`,
+      },
+      nativeToolReceipt
+    );
+  const tools = ['team_member_create', 'team_member_create_lookup', 'message_send'].map(
+    (name) => `mcp__team__${name}`
+  );
+  const body = (content: unknown[] = []) => ({
+    system: 'TEST_CAPTURED_ALICE_ROLE_CONTEXT_V1',
+    messages: [
+      { role: 'user', content: `${NATIVE_MEMBER.create}\nTURN ACTION MODE: DO` },
+      ...(content.length ? [{ role: 'user', content }] : []),
+    ],
+  });
+  const result = {
+    commandId: input.commandId,
+    memberId: 'TEST-new-member',
+    name: NATIVE_MEMBER.name,
+    revision: 'b'.repeat(64),
+    phase: 'completed',
+  };
+  const observed = (step: number, value: unknown, is_error = false) => [
+    {
+      type: 'tool_result',
+      tool_use_id: `native_member_${NATIVE_MEMBER.create}_${step}`,
+      content: JSON.stringify(value),
+      is_error,
+    },
+  ];
+  const fixture = make();
+  assert.equal(
+    fixture.respond({ messages: [{ role: 'user', content: 'ordinary input' }] }, tools),
+    undefined
+  );
+  assert.deepEqual(fixture.respond(body(), tools)?.input, input);
+  assert.equal(
+    fixture.respond(body(observed(0, result)), tools)?.name,
+    'mcp__team__team_member_create_lookup'
+  );
+  assert.deepEqual(fixture.respond(body(observed(1, result)), tools)?.input, {
+    commandId: 'TEST-native-new-peer-work',
+    to: NATIVE_MEMBER.name,
+    text: NATIVE_MEMBER.work,
+  });
+  assert.deepEqual(fixture.observations[2]?.originalLookup, result);
+  const bad = make();
+  bad.respond(body(), tools);
+  assert.throws(() => bad.respond(body(observed(0, result, true)), tools));
+  const mismatched = make();
+  mismatched.respond(body(), tools);
+  assert.throws(() =>
+    mismatched.respond(body(observed(0, { ...result, commandId: 'other' })), tools)
+  );
+  const changed = make();
+  changed.respond(body(), tools);
+  changed.respond(body(observed(0, result)), tools);
+  assert.throws(() =>
+    changed.respond(body(observed(1, { ...result, memberId: 'replacement' })), tools)
+  );
+});
+
+test('additive member oracle requires current roster once and retains exact actor and original input budgets', async () => {
+  const { nativeMemberCreationScript, NATIVE_MEMBER } = await import('./member-creation.ts');
+  const make = () =>
+    nativeMemberCreationScript(
+      {
+        capture: () => ({
+          input: {
+            commandId: NATIVE_MEMBER.commandId,
+            expectedRosterRevision: 'a'.repeat(64),
+            member: { name: NATIVE_MEMBER.name, providerId: 'anthropic' },
+          },
+          model: 'TEST-model',
+          effort: 'medium',
+        }),
+        principalId: (name) => `agent:${name}`,
+      },
+      nativeToolReceipt
+    );
+  const tools = ['mcp__team__message_send'];
+  const body = (text: string, result?: unknown) => ({
+    model: 'TEST-model',
+    output_config: { effort: 'medium' },
+    system: 'TEST_CAPTURED_ALICE_ROLE_CONTEXT_V1',
+    messages: [
+      { role: 'user', content: text },
+      ...(result
+        ? [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'tool_result',
+                  tool_use_id: `native_member_${NATIVE_MEMBER.work}_0`,
+                  content: JSON.stringify(result),
+                },
+              ],
+            },
+          ]
+        : []),
+    ],
+  });
+  assert.throws(() => make().respond(body(NATIVE_MEMBER.next), tools));
+  const reminder = 'Internal standing context restored after provider context compaction.';
+  assert.equal(
+    make().respond(body(`${reminder} "name":"${NATIVE_MEMBER.name}" ${NATIVE_MEMBER.next}`), tools)
+      ?.type,
+    'tool_use'
+  );
+  assert.throws(() => make().respond(body(`${reminder} ${NATIVE_MEMBER.followup}`), tools));
+  for (const effort of [undefined, 'high']) {
+    const rejected = make();
+    rejected.respond(body(`${NATIVE_MEMBER.create} TURN ACTION MODE: DO`), [
+      'mcp__team__team_member_create',
+    ]);
+    assert.throws(() =>
+      rejected.respond({ ...body(NATIVE_MEMBER.work), output_config: { effort } }, tools)
+    );
+  }
+  const peer = make();
+  peer.respond(body(`${NATIVE_MEMBER.create} TURN ACTION MODE: DO`), [
+    'mcp__team__team_member_create',
+  ]);
+  peer.respond(body(NATIVE_MEMBER.work), tools);
+  assert.throws(() =>
+    peer.respond(
+      body(NATIVE_MEMBER.work, { phase: 'completed', principalId: 'agent:team-lead' }),
+      tools
+    )
+  );
+});

@@ -403,6 +403,10 @@ export const desktopProofIntegratedSources = [
   'src/features/team-group-chats/main/infrastructure/GroupChatStorage.ts',
   'test/features/agent-backend/hostGroupChats.test.ts',
   'test/features/agent-backend/hostTeamMutations.test.ts',
+  // Original solo Create → native additive persistent teammate, TEST oracle and UI continuation.
+  'scripts/legacy-agent-host/desktop-create-member-ui.ts',
+  'packages/legacy-agent-host/tests/fixtures/native-claude-team/member-creation.ts',
+  'packages/legacy-agent-host/tests/fixtures/native-claude-team/model.test.ts',
   // Captured Host presentation and current main environment/provider refresh boundary.
   'src/renderer/components/team/members/MemberList.tsx',
   'src/renderer/utils/memberRuntimeVisualState.ts',
