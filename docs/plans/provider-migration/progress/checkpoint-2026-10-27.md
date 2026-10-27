@@ -1372,3 +1372,38 @@ pending. This qualifies no full F08/M18 row: the first global snapshot race,
 stale product snapshot across a same-A in-flight mutation, live owner/default
 switch, unavailable owner, transport reconnect/Host restart and cross-owner
 routing remain excluded. Original receipts and historical acceptance are intact.
+
+
+## Original Task Trash and Restore controls after prior proof scopes
+
+Both existing offline Taskboard modes now append one original seeded-Task
+Delete/themed confirmation/Trash/Restore continuation after their earlier proof
+censuses; cross-Team mode runs it after the F08 continuation. It preserves the
+preceding receipt bytes, captures the original canonical Task, clicks each
+mutation once, requires exactly the two new completed lifecycle receipts, checks
+the exact Task ID/subject/display-ID Trash row and returns that same Task to the
+active board with the canonical Restore policy (`pending`, not its old status).
+Canonical Task/ref/settings fields and peer Task/receipt/inbox/config/board/owner
+bytes are checked; no provider, Team, Task or input is added for this proof.
+
+A scripts-only alias issue was corrected with explicit preconditions for this
+known canonical UUID fixture and its retained nonempty displayId. The UI row uses
+that exact displayId; the confirmation uses the exact existing UUID prefix rule.
+The production `taskIdentity.ts` formatter remains pinned. No product type or
+script compiler alias is changed.
+
+The 800-line source guard rejected appending the whole continuation to the old
+board helper. Only that accepted function was moved into the small existing-flow
+`desktop-task-trash-ui-smoke.ts` helper. The old board source is byte-identical to
+HEAD; the accepted comment/function body SHA-256 is
+`9046cac51182edcd08f4dfc0934f638ede80eeb26e600bbb794e48032700710c` before and after
+extraction. Independent whole-code and root reviews accepted the original UI
+proof, exact alias repair and mechanical composition. No cap/exemption is raised
+and no new harness, mode, UI, test ID or product policy is introduced.
+
+The final combined strict scripts TypeScript check, scoped new-helper lint/format,
+finite source-pin checks and diff check pass. Source-size guard passes 4622 files.
+The helper and newly relied existing Task identity/Trash/themed-confirmation
+sources are explicitly pinned. Original backend glue retains its existing style;
+no broad reformat is applied. This is static preparation only: original Desktop
+execution/receipt/visual review on the final combined head remains required.

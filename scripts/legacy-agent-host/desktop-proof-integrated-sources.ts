@@ -1,5 +1,9 @@
 /** Finite source closure of the integrated lifecycle, WorkSync and member-action checkpoint. */
 export const desktopProofIntegratedSources = [
+  'scripts/legacy-agent-host/desktop-task-trash-ui-smoke.ts',
+  'src/shared/utils/taskIdentity.ts',
+  'src/renderer/components/team/kanban/TrashDialog.tsx',
+  'src/renderer/components/common/ConfirmDialog.tsx',
   'src/features/agent-graph/renderer/hooks/useGraphTaskActions.tsx',
   'test/features/agent-backend/hostLeadCoordination.test.tsx',
   'src/features/agent-backend/main/adapters/output/projectDeletedTasks.ts',
