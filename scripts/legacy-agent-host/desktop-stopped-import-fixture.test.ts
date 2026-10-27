@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -28,6 +29,16 @@ test(
     assert.ok(seed.priorRun);
     const preparation = await json(seed.priorRun.path);
     assert.equal(preparation.sourceNativeInputs, 0);
+    const configBytes = await readFile(join(seed.roots[0]!, 'config.json'));
+    assert.equal(
+      JSON.parse(configBytes.toString('utf8'))._backupIdentityId,
+      preparation.backupIdentityId
+    );
+    assert.match(preparation.backupIdentityId, /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/);
+    assert.equal(
+      createHash('sha256').update(configBytes).digest('hex'),
+      preparation.configBeforeStopSha256
+    );
     assert.match(preparation.scope, /Synthetic.+actual source-owned TEST Node child/);
     const stopped = await json(join(seed.roots[0]!, 'launch-stopped.json'));
     assert.deepEqual(stopped.nativeRelease, preparation.proof);

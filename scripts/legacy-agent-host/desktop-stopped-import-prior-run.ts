@@ -1,6 +1,6 @@
 // Source preparation only. The existing desktop smoke owns all import/Launch acceptance.
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { lstatSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -97,14 +97,19 @@ if (process.argv[3] === '--read-only') {
   const write = (file: string, value: unknown) =>
     writeFileSync(join(team, file), JSON.stringify(value), { mode: 0o600 });
   const meta = JSON.parse(readFileSync(join(team, 'team.meta.json'), 'utf8'));
+  const backupIdentityId = randomUUID();
   const sourceRunId = `TEST-prior-run-${randomUUID()}`;
   const sourceSessionId = `TEST-synthetic-source-session-${randomUUID()}`;
   write('config.json', {
     name: LEGACY_IMPORT_TEAM,
+    _backupIdentityId: backupIdentityId,
     leadAgentId: `team-lead@${LEGACY_IMPORT_TEAM}`,
     leadSessionId: sourceSessionId,
     members: [{ name: 'team-lead', agentType: 'team-lead', providerId: 'anthropic' }],
   });
+  const configBeforeStopSha256 = createHash('sha256')
+    .update(readFileSync(join(team, 'config.json')))
+    .digest('hex');
   write('members.meta.json', { version: 1, members: [] });
   write('launch-state.json', {
     version: 2,
@@ -153,12 +158,24 @@ if (process.argv[3] === '--read-only') {
     assert.ok(proof, 'existing process owner confirms physical exit before publication');
     await store.markStopped(LEGACY_IMPORT_TEAM, authority, proof);
     assert.deepEqual(readLegacyNativeStopRelease(team, LEGACY_IMPORT_TEAM), proof);
+    assert.equal(
+      JSON.parse(readFileSync(join(team, 'config.json'), 'utf8'))._backupIdentityId,
+      backupIdentityId
+    );
+    assert.equal(
+      createHash('sha256')
+        .update(readFileSync(join(team, 'config.json')))
+        .digest('hex'),
+      configBeforeStopSha256
+    );
     const evidence = {
       scope:
         'Synthetic solo legacy product/run records with an actual source-owned TEST Node child and existing captured Stop publication; no old provider inference',
       sourceRunId,
       sourceSessionId,
       sourceNativeInputs: 0,
+      backupIdentityId,
+      configBeforeStopSha256,
       savedSettings: meta,
       proof,
       childExit: { exitCode: child.exitCode, signalCode: child.signalCode },

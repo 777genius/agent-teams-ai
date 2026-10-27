@@ -11,6 +11,7 @@ import {
   type LegacyNativeTarget,
   nativeRecord,
   nativeReleaseDigest,
+  readLegacyBackupIdentityMarker,
   readLegacyNativeCensus,
   readNativeRecord,
 } from './LegacyNativeStopCensus';
@@ -72,6 +73,7 @@ export function captureLegacyNativeStop(
     if (!processCapture) return null;
     const teamDir = join(teamsBasePath, run.teamName);
     const config = readNativeRecord(join(teamDir, 'config.json'), 10 * 1024 * 1024);
+    const expectedMarker = readLegacyBackupIdentityMarker(config);
     if (!Array.isArray(config.members) || config.members.length !== 1) return null;
     const leadName = nativeRecord(config.members[0]).name;
     if (!identityText(leadName)) return null;
@@ -98,14 +100,14 @@ export function captureLegacyNativeStop(
       freshness.runId !== target.runId
     )
       return null;
-    const original = readLegacyNativeCensus(teamDir, target);
+    const original = readLegacyNativeCensus(teamDir, target, expectedMarker);
     return Object.freeze({
       complete() {
         try {
           if (!current()) return null;
           const verified = readVerifiedCliProcessRelease(processCapture);
           if (!verified) return null;
-          const census = readLegacyNativeCensus(teamDir, target);
+          const census = readLegacyNativeCensus(teamDir, target, expectedMarker);
           if (!sameDirectory(original, census)) return null;
           const proof: LegacyNativeStopRelease = {
             version: 1,

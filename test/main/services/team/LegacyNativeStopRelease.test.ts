@@ -14,6 +14,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { nativeReleaseDigest } from '../../../../src/main/services/team/provisioning/LegacyNativeStopCensus';
+import * as nativeCensus from '../../../../src/main/services/team/provisioning/LegacyNativeStopCensus';
 import {
   captureLegacyNativeStopPublication,
   captureTrackedLegacyNativeStopPublication,
@@ -127,6 +128,104 @@ function fixture() {
 }
 
 describe('bounded old Desktop native release proof (no native process execution)', () => {
+  const changeMarker = (f: ReturnType<typeof fixture>, marker: unknown) => {
+    const config = JSON.parse(readFileSync(join(f.teamDir, 'config.json'), 'utf8'));
+    if (marker === undefined) delete config._backupIdentityId;
+    else config._backupIdentityId = marker;
+    f.write('config.json', config);
+  };
+  it('keeps the original absent-marker digest bytes and private proof shape unchanged', () => {
+    const f = fixture(),
+      attempt = f.capture()!;
+    recordVerifiedCliProcessRelease(f.child, [f.identity]);
+    const proof = attempt.complete()!;
+    expect(proof.census).toEqual({
+      directory: expect.any(Object),
+      nativeDigest: '3a92d6b165366406f7999a902f33f6469825c3ac2797a532f078d08c69c58865',
+    });
+    f.publish(proof);
+    expect(readLegacyNativeStopRelease(f.teamDir, f.teamName)).toEqual(proof);
+  });
+  it('pins an exact opaque non-UUID backup marker in capture and cold proof digest', () => {
+    const f = fixture();
+    changeMarker(f, 'opaque backup identity: original');
+    const bytes = readFileSync(join(f.teamDir, 'config.json'));
+    const attempt = f.capture()!;
+    expect(attempt).not.toBeNull();
+    recordVerifiedCliProcessRelease(f.child, [f.identity]);
+    const proof = attempt.complete()!;
+    expect(proof.census.nativeDigest).not.toBe(
+      '3a92d6b165366406f7999a902f33f6469825c3ac2797a532f078d08c69c58865'
+    );
+    f.publish(proof);
+    expect(isCurrentLegacyNativeStopRelease(f.teamDir, proof, true)).toBe(true);
+    expect(readLegacyNativeStopRelease(f.teamDir, f.teamName)).toEqual(proof);
+    expect(readFileSync(join(f.teamDir, 'config.json'))).toEqual(bytes);
+  });
+  it.each([null, 7, {}, [], '', ' ', ' padded', 'padded '])(
+    'refuses an invalid present backup marker %j without normalization',
+    (marker) => {
+      const f = fixture();
+      changeMarker(f, marker);
+      expect(f.capture()).toBeNull();
+    }
+  );
+  it.each([
+    [undefined, 'new opaque identity'],
+    ['original opaque identity', 'replacement identity'],
+    ['original opaque identity', undefined],
+  ])('refuses backup marker replacement before complete (%j -> %j)', (original, replacement) => {
+    const f = fixture();
+    changeMarker(f, original);
+    const attempt = f.capture()!;
+    expect(attempt).not.toBeNull();
+    changeMarker(f, replacement);
+    recordVerifiedCliProcessRelease(f.child, [f.identity]);
+    expect(attempt.complete()).toBeNull();
+  });
+  it.each([
+    [undefined, 'new opaque identity'],
+    ['original opaque identity', 'replacement identity'],
+    ['original opaque identity', undefined],
+  ])(
+    'invalidates a published proof on backup marker replacement (%j -> %j)',
+    (original, replacement) => {
+      const f = fixture();
+      changeMarker(f, original);
+      const attempt = f.capture()!;
+      recordVerifiedCliProcessRelease(f.child, [f.identity]);
+      const proof = attempt.complete()!;
+      f.publish(proof);
+      expect(readLegacyNativeStopRelease(f.teamDir, f.teamName)).toEqual(proof);
+      changeMarker(f, replacement);
+      expect(isCurrentLegacyNativeStopRelease(f.teamDir, proof, true)).toBe(false);
+      expect(readLegacyNativeStopRelease(f.teamDir, f.teamName)).toBeNull();
+    }
+  );
+  it('refuses marker replacement between original config capture and initial census', () => {
+    const f = fixture();
+    changeMarker(f, 'original identity');
+    const originalRead = nativeCensus.readLegacyNativeCensus;
+    const spy = vi
+      .spyOn(nativeCensus, 'readLegacyNativeCensus')
+      .mockImplementationOnce((...args) => {
+        changeMarker(f, 'replacement identity');
+        return originalRead(...args);
+      });
+    try {
+      expect(f.capture()).toBeNull();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+  it('does not admit another spelling or arbitrary config metadata with the marker', () => {
+    const f = fixture();
+    changeMarker(f, 'original identity');
+    const config = JSON.parse(readFileSync(join(f.teamDir, 'config.json'), 'utf8'));
+    f.write('config.json', { ...config, _backupidentityid: 'other' });
+    expect(f.capture()).toBeNull();
+  });
+
   it('permits final old-run map cleanup but never lets a late successor child inherit its proof', async () => {
     for (const replacement of [false, true]) {
       const f = fixture(),

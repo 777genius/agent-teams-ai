@@ -25,6 +25,7 @@ const configKeys = new Set([
   'leadSessionId',
   'projectPath',
   'members',
+  '_backupIdentityId',
 ]);
 const memberKeys = new Set([
   'name',
@@ -56,6 +57,20 @@ export interface LegacyNativeTarget {
 export interface LegacyNativeCensus {
   directory: { dev: number; ino: number; birthtimeMs: number };
   nativeDigest: string;
+}
+
+export type LegacyBackupIdentityMarker = Readonly<
+  { present: false } | { present: true; value: string }
+>;
+
+/** Private capture only: preserve exact presence/value; never normalize source metadata. */
+export function readLegacyBackupIdentityMarker(config: Row): LegacyBackupIdentityMarker {
+  if (!Object.prototype.hasOwnProperty.call(config, '_backupIdentityId'))
+    return Object.freeze({ present: false });
+  const value = config._backupIdentityId;
+  if (typeof value !== 'string' || !value || value !== value.trim())
+    throw new Error('Invalid native backup identity');
+  return Object.freeze({ present: true, value });
 }
 
 export function nativeReleaseDigest(value: unknown): string {
@@ -164,12 +179,20 @@ function productMetadata(teamName: string, meta: Row): boolean {
 
 export function readLegacyNativeCensus(
   teamDir: string,
-  target: LegacyNativeTarget
+  target: LegacyNativeTarget,
+  expectedMarker?: LegacyBackupIdentityMarker
 ): LegacyNativeCensus {
   const directory = lstatSync(teamDir);
   if (!directory.isDirectory() || directory.isSymbolicLink())
     throw new Error('Native Team directory changed');
   const config = readNativeRecord(join(teamDir, 'config.json'), 10 * 1024 * 1024);
+  const marker = readLegacyBackupIdentityMarker(config);
+  if (
+    expectedMarker &&
+    (marker.present !== expectedMarker.present ||
+      (marker.present && expectedMarker.present && marker.value !== expectedMarker.value))
+  )
+    throw new Error('Native backup identity changed');
   const roster = readNativeRecord(join(teamDir, 'members.meta.json'), 20 * 1024 * 1024);
   const meta = readNativeRecord(join(teamDir, 'team.meta.json'));
   if (
@@ -208,6 +231,7 @@ export function readLegacyNativeCensus(
     nativeProjection(roster, target),
     nativeProjection(meta, target),
   ];
+  if (marker.present) identities.push({ _backupIdentityId: marker.value });
   assertQualifiedArtifacts(teamDir);
   const after = lstatSync(teamDir);
   if (after.dev !== directory.dev || after.ino !== directory.ino)
