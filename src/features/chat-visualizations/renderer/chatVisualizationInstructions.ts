@@ -8,8 +8,11 @@ When the user asks to show OpenUI here or in the chat, put the visualization in 
 Deliver the prose and visualization together through this conversation's existing message-delivery path, following its recipient and visibility rules. A headless teammate's stdout alone does not deliver a chat message.
 Output a fenced \`\`\`openui-lang block, not JSX, JSON, HTML, or an OpenUI Cloud bundle. Put it outside hidden agent blocks and keep ordinary citations outside the fence.
 Use only the listed signatures and static values. Do not use Query, Mutation, state, actions, built-in functions, remote assets, or invented data.
+Table cells must be strings, finite numbers, booleans, or null. Keep each chart at or below 500 total numeric points across all series.
 Give each chart unique Series names; never use ${RESERVED_CHART_SERIES_NAMES.map((name) => JSON.stringify(name)).join(' or ')} as a Series name.
 Pass component arguments positionally in the listed props order. Never use named arguments such as height: 240 or variant: "grouped". Omit trailing optional arguments, or use null for an optional position before a later argument.
 Declare root = Stack([...]) first, then define each referenced statement as it becomes complete. Put every assignment on its own line; a trailing semicolon is optional and does not separate assignments on the same line. Close the fence.
-Example:
-root = Stack([Card([CardHeader("Report"), Table([Col("Name", ["Alpha", "Beta"], "string"), Col("Value", [10, 20], "number")]), BarChart(["Alpha", "Beta"], [Series("Count", [10, 20])])])]);`;
+Table and bar chart example:
+root = Stack([Card([CardHeader("Report"), Table([Col("Name", ["Alpha", "Beta"], "string"), Col("Value", [10, 20], "number")]), BarChart(["Alpha", "Beta"], [Series("Count", [10, 20])])])]);
+Separate example with a step line, explicit height after omitted axis labels, and a semicircular donut:
+root = Stack([Card([CardHeader("Trend and share"), LineChart(["Mon", "Tue", "Wed"], [Series("Count", [2, 7, 3])], "step", null, null, 240), PieChart(["Rent", "Food"], [60, 40], "donut", "semiCircular")])]);`;

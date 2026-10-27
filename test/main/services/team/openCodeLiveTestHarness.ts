@@ -389,6 +389,7 @@ export async function waitForOpenCodeMemberIdle(input: {
   memberName: string;
   projectPath: string;
   timeoutMs: number;
+  originalBinding?: OpenCodeOriginalTranscriptBinding;
 }): Promise<void> {
   const deadline = Date.now() + input.timeoutMs;
   let lastState: string | null = null;
