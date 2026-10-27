@@ -97,7 +97,9 @@ async function setup(t: { after(fn: () => Promise<void>): void }, members = ['A'
     failBeforeRuntime = new Set<string>(),
     ready = new Set(members),
     contextAccepted = new Set(members),
-    proofOverride = new Map<string, NativeContextEvidence>();
+    proofOverride = new Map<string, NativeContextEvidence>(),
+    heldFactories = new Map<string, Promise<void>>(),
+    failedFactories = new Set<string>();
   let now = Date.now(),
     authorized = true;
   const definition: TeamLaunchDefinition = {
@@ -123,6 +125,9 @@ async function setup(t: { after(fn: () => Promise<void>): void }, members = ['A'
       driverFactory: {
         open: async (request) => {
           opens.set(request.sessionId, (opens.get(request.sessionId) ?? 0) + 1);
+          const held = heldFactories.get(request.sessionId);
+          if (held) await held;
+          if (failedFactories.has(request.sessionId)) throw new Error('TEST factory failed after opening');
           const session = new ControlledSession(request.sessionId);
           sessions.set(request.sessionId, session);
           return { driver: session, capabilities: ['tools'] };
@@ -199,6 +204,12 @@ async function setup(t: { after(fn: () => Promise<void>): void }, members = ['A'
     ready,
     contextAccepted,
     proofOverride,
+    failedFactories,
+    holdFactory: (id: string): (() => void) => {
+      let release!: () => void;
+      heldFactories.set(id, new Promise<void>((resolve) => { release = resolve; }));
+      return release;
+    },
     definition,
     make,
     advance: (ms: number) => {
@@ -213,6 +224,97 @@ async function settle(launch: TeamLaunchOwner): Promise<void> {
   for (let count = 0; count < 4; count++) await tick();
   launch.refresh();
 }
+
+test('current in-flight Runtime opening stays pending until the same native factory completes', async (t) => {
+  const f = await setup(t, ['A']);
+  const release = f.holdFactory('A');
+  const { launch, runtime, evidence } = f.make();
+  launch.start('TEST-delayed-open');
+  try {
+    await tick();
+    const source = runtime.readSession(binding('A'));
+    assert.equal(source.record?.phase, 'opening', 'actual Runtime persists intent before the held factory');
+    assert.equal(source.record?.custody, 'unknown');
+    assert.equal(source.attached, false);
+    const pending = launch.read();
+    const attempt = pending.members[0]!.attempt;
+    assert.equal(pending.status, 'pending');
+    assert.equal(attempt.status, 'pending-bootstrap');
+    assert.equal(attempt.reason, 'opening');
+    assert.equal(attempt.nativeReady, false);
+    assert.equal(attempt.usable, false);
+    assert.equal(attempt.controlAvailable, false);
+    assert.equal(attempt.noAllocation, false);
+    assert.equal(launch.canWork('A', evidence('A')), false);
+    launch.start('TEST-delayed-open');
+    assert.equal(f.opens.get('A'), 1, 'same original launch cannot reopen the pending factory');
+    assert.equal(runtime.readSession(binding('A')).record?.custody, 'unknown');
+    release();
+    await settle(launch);
+    const ready = launch.read();
+    assert.equal(ready.status, 'ready');
+    assert.equal(ready.members[0]!.attempt.attemptId, attempt.attemptId);
+    assert.equal(ready.members[0]!.attempt.contextApplied, true);
+    assert.equal(ready.members[0]!.attempt.usable, true);
+    assert.equal(f.opens.get('A'), 1);
+    assert.equal(f.sessions.get('A')!.submits.length, 0, 'bootstrap adds no hidden native input');
+  } finally {
+    release();
+    await settle(launch);
+    launch.seal();
+  }
+});
+
+test('opening without a current live original continuation retains UNKNOWN and authority fences', async (t) => {
+  for (const scenario of ['cold-same-host', 'replacement-host', 'source-owner-lost', 'deadline', 'unavailable', 'completed-failure', 'authority-revoked'] as const) {
+    await t.test(scenario, async (t) => {
+      const f = await setup(t, ['A']);
+      const release = f.holdFactory('A');
+      const original = f.make();
+      original.launch.start('TEST-delayed-open');
+      try {
+        await tick();
+        assert.equal(original.runtime.readSession(binding('A')).record?.phase, 'opening');
+        let launch = original.launch;
+        if (scenario === 'cold-same-host' || scenario === 'replacement-host') {
+          launch = f.make(scenario === 'cold-same-host' ? 'host-1' : 'host-2').launch;
+          launch.start('TEST-delayed-open');
+        } else if (scenario === 'source-owner-lost') {
+          f.runtimeStore.fenced(binding('A'), (tx) => {
+            const record = tx.get()!;
+            record.hostIncarnation = 'other-host';
+            tx.put(record, 'growth');
+          });
+        } else if (scenario === 'deadline') f.advance(30_000);
+        else if (scenario === 'unavailable') f.observationFailure.add('A');
+        else if (scenario === 'completed-failure') {
+          f.failedFactories.add('A');
+          release();
+          await settle(launch);
+          assert.equal(original.runtime.readSession(binding('A')).record?.phase, 'held');
+        } else f.revoke();
+        if (scenario === 'authority-revoked') {
+          assert.throws(() => launch.read(), (error) => error instanceof TeamLaunchError && error.code === 'forbidden');
+        } else {
+          const state = launch.read();
+          const attempt = state.members[0]!.attempt;
+          assert.equal(state.ready, 0);
+          assert.equal(attempt.status, 'unknown');
+          assert.equal(attempt.nativeReady, false);
+          assert.equal(attempt.usable, false);
+          assert.equal(attempt.controlAvailable, false);
+          assert.equal(attempt.noAllocation, false);
+          launch.seal();
+        }
+        assert.equal(f.opens.get('A'), 1, 'uncertain allocation never opens a replacement');
+      } finally {
+        release();
+        await tick();
+        original.launch.seal();
+      }
+    });
+  }
+});
 
 test('source launch times retain original admission across read/replay/reconstruction', async (t) => {
   const f = await setup(t, ['A']);

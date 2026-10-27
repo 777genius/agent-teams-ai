@@ -586,6 +586,21 @@ export class TeamLaunchOwner {
         attempt.reason = 'binding-mismatch';
         continue;
       }
+      // The original factory is still running; unknown custody grants no work/control authority.
+      // A cold, completed or expired open continues through the existing UNKNOWN projection below.
+      if (
+        source.phase === 'opening' &&
+        !source.sealed &&
+        source.hostIncarnation === this.options.hostIncarnation &&
+        attempt.hostIncarnation === this.options.hostIncarnation &&
+        this.active.has(`${member.memberId}:${attempt.attemptId}`) &&
+        this.now() < attempt.deadlineMs &&
+        !source.interactions.some((item) => item.phase !== 'resolved')
+      ) {
+        attempt.status = 'pending-bootstrap';
+        attempt.reason = 'opening';
+        continue;
+      }
       if (
         !observation.attached ||
         source.hostIncarnation !== this.options.hostIncarnation ||
