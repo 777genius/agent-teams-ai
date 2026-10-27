@@ -33,7 +33,7 @@ export async function desktopProofEvidence(options: {
       ? {
           model: {
             observations: conversationModel.observations,
-            ...(conversationModel.nativeMemberObservations?.length ? { nativeMemberObservations: conversationModel.nativeMemberObservations } : {}),
+            ...(conversationModel.nativeMemberObservations ? { nativeMemberObservations: conversationModel.nativeMemberObservations } : {}),
             probes: conversationModel.probes,
             unexpectedNoToolsRequests: conversationModel.unexpectedNoToolsRequests,
             failures: conversationModel.failures,

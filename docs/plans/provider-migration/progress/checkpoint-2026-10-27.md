@@ -418,3 +418,79 @@ the existing configured inheritance path, and every actual peer request must
 carry those values plus the configured role/workflow. No production inheritance
 code changed. The finite source closure has **1329 files, missing 0**. These are
 fixture/compiler/review results; actual native-add acceptance is still pending.
+
+## Exact 7415702 source run: native addition and remaining failures
+
+[CI run 40559325843](https://github.com/777genius/agent-teams-ai/actions/runs/40559325843)
+is running the full source gates and ten separately gated Desktop variants on
+exact `7415702c69513dd709f301fc51299ddca3859867`. Canonical validate, all three
+lint shards, all four test shards and the Windows ledger smoke passed. The
+`Full qualification` aggregation also passed, but it does not include the
+optional native jobs and therefore is not complete Stage 1/native acceptance.
+Later source changes must receive their own qualification.
+
+The new **solo Create plus native persistent teammate** job passed. Its original
+receipt is retained in artifact `12759326202`,
+`stage1-source-desktop-native-create-member-7415702c69513dd709f301fc51299ddca3859867`;
+receipt SHA-256 is
+`619df172fa55876376cf0bda26b142d25d53985084a9dfebc2bef0c0ac34e548`.
+The actual lead SDK/MCP flow created one persistent peer, performed the original
+creation lookup, delivered addressed work and received the peer reply. Five
+original inputs succeeded (four lead, one peer). The original creation receipt,
+member IDs/settings and captured bindings were retained. The next original lead
+input contained the current roster reminder exactly once, with no repeat on the
+following input. Ordinary Stop released both sessions; reload retained the
+member. The app exited with code 0 and no signal; its process group was empty
+before harness cleanup and the captured Host was absent.
+
+The original native-add receipt did not retain the separate raw
+`nativeMemberObservations` array: the evidence object was created before the
+first inference, and an initial `array.length` condition omitted the then-empty
+array. The actual helper assertions still ran, but raw request retention is not
+claimed for that original receipt. A one-line collector repair retains the
+existing array reference by presence for future runs. Historical evidence is
+unchanged.
+
+The stopped-source import/native Launch job failed before target Launch. Its
+receipt SHA-256 is
+`f2065bad7a9410f8c067428ebb4b7c9e7e8b80d2803af2482d8d534a176f466c`
+in artifact `12761410748`. The same config lifecycle marker, comment-journal
+replica and WorkSync/member files changed after the original Stop. Additionally,
+the passive Electron snapshot observed a transient
+`group-chats.json.lock-transition-v2`: ordinary group listing used the legacy
+write lock for a read-only callback. The canonical reader still correctly
+reports `Incomplete solo native inventory`. The fix under review keeps the
+original directory/owner admission through physical writes and adds a pure
+single-registry read for listing. No source proof or census rule is relaxed.
+
+The mixed Create/Launch job also remains failed; receipt SHA-256 is
+`e6f98da6fded3555608462e808e1b316e8985f9fb568ca460d56929c54d8aed6`
+in artifact `12761106754`. The opening fix is effective: this run's renderer
+store received authoritative aggregate `ready`, `Team is ready.` and all three
+bootstrap confirmations. The visible original progress block nevertheless
+remained at `Finishing launch` / `2 teammates still joining`. The existing
+presentation requires per-member spawn observations, while the Host Teams API
+currently rejects that existing read operation as unsupported. A narrow
+owner-qualified read projection is being independently reviewed; no timeout or
+readiness assertion is weakened. The original Edit CAS/reload subproof passed
+again. Failure cleanup exited naturally with code 0 and no remaining group.
+
+Fresh holistic review also found that both Create submission hooks retained the
+command only inside the dialog instance. The actual Team list conditionally
+unmounts that dialog, so an uncertain submission could acquire a fresh command
+on reopening. The reviewed repair now retains one finite application-lifetime
+intent qualified by owner, operation and product draft, with an in-flight fence.
+Changed owner/draft/operation stays held; only the original current success or
+supported finite launch refusal frees the slot. Focused regressions use a real
+unmount/remount. Existing draft storage is reused; missing copied overrides
+remain an explicit unchanged-draft HOLD rather than an invented new draft.
+The two existing focused suites passed **25/25** tests, including actual
+unmount/remount, pending calls, original-owner replay and finite refusal. Scoped
+formatting, fast lint and diff checks passed; an independent critic accepted the
+fix. The new helper and regression are explicitly included in the finite source
+closure. Canonical project and actual Desktop qualification of this new source
+repair remain pending; no durable renderer-reload guarantee is claimed.
+
+The original M19 custody HOLD, unavailable packed M17 build `24G90`, broader
+historical import formats and the remaining current native variants stay open.
+PR remains Draft; there has been no merge, release, publication or activation.

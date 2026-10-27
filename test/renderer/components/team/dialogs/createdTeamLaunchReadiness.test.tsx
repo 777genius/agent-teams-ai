@@ -5,22 +5,36 @@ import { TeamCreationRefusal } from '@features/agent-backend/contracts';
 import { createLaunchGuard } from '@renderer/components/team/dialogs/providerLaunchAuthority';
 import { runProviderPrepareDiagnostics } from '@renderer/components/team/dialogs/providerPrepareDiagnostics';
 import { updateProviderCheck } from '@renderer/components/team/dialogs/provisioningProviderChecks';
+import { __resetRetainedCreateSubmissionForTests } from '@renderer/components/team/dialogs/retainedCreateSubmission';
+import { useCreateConfigSubmission } from '@renderer/components/team/dialogs/useCreateConfigSubmission';
 import { useCreatedTeamLaunchReadiness } from '@renderer/components/team/dialogs/useCreatedTeamLaunchReadiness';
 import { useCreateTeamSubmission } from '@renderer/components/team/dialogs/useCreateTeamSubmission';
-import { invalidateContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
+import {
+  invalidateContextScopedRequestEpoch,
+  resetContextScopedRequestEpochForTests,
+} from '@renderer/store/utils/contextScopedRequestEpoch';
 import { IpcError } from '@renderer/utils/unwrapIpc';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { CreatedTeamReadiness, TeamCreateRequest } from '@shared/types/team';
 
-const { context } = vi.hoisted(() => ({ context: { activeContextId: 'TEST-local' } }));
-vi.mock('@renderer/store', () => ({
-  useStore: (select: (value: unknown) => unknown) => select(context),
+const { context, createConfig } = vi.hoisted(() => ({
+  context: { activeContextId: 'TEST-local' },
+  createConfig: vi.fn(),
 }));
+vi.mock('@renderer/store', () => ({
+  useStore: Object.assign((select: (value: unknown) => unknown) => select(context), {
+    getState: () => context,
+  }),
+}));
+vi.mock('@renderer/api', () => ({ api: { teams: { createConfig } } }));
 let dispose = () => {};
 afterEach(() => {
   dispose();
   context.activeContextId = 'TEST-local';
+  createConfig.mockReset();
+  __resetRetainedCreateSubmissionForTests();
+  resetContextScopedRequestEpochForTests();
   vi.useRealTimers();
 });
 
@@ -37,9 +51,11 @@ function mount() {
   };
   let output!: ReturnType<typeof useCreatedTeamLaunchReadiness>;
   let submit!: ReturnType<typeof useCreateTeamSubmission>;
+  let save!: ReturnType<typeof useCreateConfigSubmission>;
   function View() {
     output = useCreatedTeamLaunchReadiness(input);
     submit = useCreateTeamSubmission();
+    save = useCreateConfigSubmission(input.open);
     return null;
   }
   const host = document.createElement('div');
@@ -55,6 +71,8 @@ function mount() {
     input,
     output: () => output,
     submit: () => submit,
+    save: () => save,
+    unmount: () => act(() => root.render(null)),
     run,
     render,
     async settle() {
@@ -148,9 +166,11 @@ describe('original Create launch flow scoped evidence', () => {
     });
     await expect(f.submit()(f.input.request, create)).rejects.toThrow('UNKNOWN');
     f.input.open = false;
-    f.render();
+    f.unmount();
     f.input.open = true;
     f.render();
+    // Proof/selection renewal is not a new product intent, even after an epoch invalidation.
+    invalidateContextScopedRequestEpoch();
     const proof = await f.settle();
     await expect(
       f.submit()({ ...f.input.request, createdTeamReadiness: proof }, create)
@@ -166,25 +186,30 @@ describe('original Create launch flow scoped evidence', () => {
     });
     await expect(f.submit()(f.input.request, success)).rejects.toThrow('context changed');
   });
-  it('permits correction with a new command only after a typed original Create refusal', async () => {
-    const f = mount();
-    const original: TeamCreateRequest[] = [];
-    const create = vi.fn(async (request: TeamCreateRequest) => {
-      original.push(request);
-      if (original.length === 1)
-        throw new IpcError(
-          'team:create',
-          'safe refusal',
-          new TeamCreationRefusal('conflict', 'rejected')
-        );
-      return 'host-team:TEST-new';
-    });
-    await expect(f.submit()(f.input.request, create)).rejects.toThrow('safe refusal');
-    await expect(
-      f.submit()({ ...f.input.request, teamName: 'TEST-corrected' }, create)
-    ).resolves.toBe('host-team:TEST-new');
-    expect(original[0]!.command!.commandId).not.toBe(original[1]!.command!.commandId);
-  });
+  it.each(['not-dispatched', 'rejected'] as const)(
+    'permits correction only after a typed original Create %s refusal',
+    async (outcome) => {
+      const f = mount();
+      const original: TeamCreateRequest[] = [];
+      const create = vi.fn(async (request: TeamCreateRequest) => {
+        original.push(request);
+        if (original.length === 1)
+          throw new IpcError(
+            'team:create',
+            'safe refusal',
+            new TeamCreationRefusal('conflict', outcome)
+          );
+        return 'host-team:TEST-new';
+      });
+      await expect(f.submit()(f.input.request, create)).rejects.toThrow('safe refusal');
+      f.unmount();
+      f.render();
+      await expect(
+        f.submit()({ ...f.input.request, teamName: 'TEST-corrected' }, create)
+      ).resolves.toBe('host-team:TEST-new');
+      expect(original[0]!.command!.commandId).not.toBe(original[1]!.command!.commandId);
+    }
+  );
   it('does not release the retained intent for an untyped error that merely resembles rejection', async () => {
     const f = mount();
     const create = vi.fn(async () => {
@@ -194,6 +219,114 @@ describe('original Create launch flow scoped evidence', () => {
     await expect(f.submit()({ ...f.input.request, prompt: 'edited' }, create)).rejects.toThrow(
       'uncertain'
     );
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+  it.each(['launch', 'config'] as const)(
+    'keeps one owner-qualified %s intent across actual unmount and operation changes',
+    async (kind) => {
+      const f = mount();
+      const calls: TeamCreateRequest[] = [];
+      const unknown = vi.fn(async (request: TeamCreateRequest) => {
+        calls.push(request);
+        throw new Error('UNKNOWN');
+      });
+      createConfig.mockImplementation(unknown);
+      const submit = (request: TeamCreateRequest) =>
+        kind === 'launch' ? f.submit()(request, unknown) : f.save()(request);
+      await expect(submit(f.input.request)).rejects.toThrow('UNKNOWN');
+      f.input.open = false;
+      f.render(); // Save-only previously cleared the intent merely because open became false.
+      f.unmount();
+      f.input.open = true;
+      f.render();
+      context.activeContextId = 'TEST-other-owner';
+      await expect(submit(f.input.request)).rejects.toThrow('original owner');
+      context.activeContextId = 'TEST-local';
+      await expect(submit({ ...f.input.request, prompt: 'changed' })).rejects.toThrow('uncertain');
+      await expect(
+        kind === 'launch' ? f.save()(f.input.request) : f.submit()(f.input.request, unknown)
+      ).rejects.toThrow('original owner and operation');
+      expect(calls).toHaveLength(1);
+      await expect(submit({ ...f.input.request })).rejects.toThrow('UNKNOWN');
+      expect(calls).toHaveLength(2);
+      expect(calls[1]!.command).toEqual(calls[0]!.command);
+    }
+  );
+  it.each(['launch', 'config'] as const)(
+    'holds the %s slot during an in-flight call even after actual remount, then releases on success',
+    async (kind) => {
+      const f = mount();
+      const calls: TeamCreateRequest[] = [];
+      const result =
+        kind === 'launch' ? 'host-team:TEST-original' : { teamName: 'host-team:TEST-original' };
+      let complete!: () => void;
+      const create = vi.fn(async (request: TeamCreateRequest) => {
+        calls.push(request);
+        await new Promise<void>((resolve) => {
+          complete = resolve;
+        });
+        return result;
+      });
+      createConfig.mockImplementation(create);
+      const submit = (request: TeamCreateRequest) =>
+        kind === 'launch' ? f.submit()(request, create) : f.save()(request);
+      const pending = submit(f.input.request);
+      f.unmount();
+      f.render();
+      await expect(submit(f.input.request)).rejects.toThrow('still pending');
+      expect(calls).toHaveLength(1);
+      complete();
+      await expect(pending).resolves.toEqual(result);
+      const next = submit({ ...f.input.request, teamName: 'TEST-next' });
+      complete();
+      await expect(next).resolves.toEqual(result);
+      expect(calls).toHaveLength(2);
+      expect(calls[1]!.command!.commandId).not.toBe(calls[0]!.command!.commandId);
+    }
+  );
+  it('keeps an uncertain save-only command after ordinary untyped rejection and clears on its positive receipt', async () => {
+    const f = mount();
+    createConfig.mockRejectedValueOnce(new Error('invalid text is not definitive proof'));
+    await expect(f.save()(f.input.request)).rejects.toThrow('not definitive proof');
+    f.unmount();
+    f.render();
+    await expect(f.save()({ ...f.input.request, teamName: 'TEST-corrected' })).rejects.toThrow(
+      'uncertain'
+    );
+    createConfig.mockResolvedValue({ teamName: 'host-team:TEST-saved' });
+    await expect(f.save()(f.input.request)).resolves.toEqual({ teamName: 'host-team:TEST-saved' });
+    expect(createConfig.mock.calls[1]![0].command).toEqual(createConfig.mock.calls[0]![0].command);
+    await expect(f.save()({ ...f.input.request, teamName: 'TEST-new' })).resolves.toEqual({
+      teamName: 'host-team:TEST-saved',
+    });
+    expect(createConfig.mock.calls[2]![0].command.commandId).not.toBe(
+      createConfig.mock.calls[0]![0].command.commandId
+    );
+  });
+  it('does not treat a save-only error as the unsupported branded launch-refusal proof', async () => {
+    const f = mount();
+    createConfig.mockRejectedValue(new TeamCreationRefusal('conflict', 'rejected'));
+    await expect(f.save()(f.input.request)).rejects.toThrow('creation refused');
+    f.unmount();
+    f.render();
+    await expect(f.save()({ ...f.input.request, teamName: 'TEST-other' })).rejects.toThrow(
+      'uncertain'
+    );
+    expect(createConfig).toHaveBeenCalledTimes(1);
+  });
+  it('does not release a late branded refusal after the original owner changes', async () => {
+    const f = mount();
+    const create = vi.fn(async () => {
+      context.activeContextId = 'TEST-other-owner';
+      throw new TeamCreationRefusal('unavailable', 'not-dispatched');
+    });
+    await expect(f.submit()(f.input.request, create)).rejects.toThrow('creation refused');
+    f.unmount();
+    f.render();
+    context.activeContextId = 'TEST-local';
+    await expect(
+      f.submit()({ ...f.input.request, teamName: 'TEST-other' }, create)
+    ).rejects.toThrow('uncertain');
     expect(create).toHaveBeenCalledTimes(1);
   });
   it('passes only the last actual successful Host proof through existing diagnostics', async () => {

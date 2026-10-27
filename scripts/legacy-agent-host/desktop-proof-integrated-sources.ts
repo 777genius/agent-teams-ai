@@ -1,5 +1,7 @@
 /** Finite source closure of the integrated lifecycle, WorkSync and member-action checkpoint. */
 export const desktopProofIntegratedSources = [
+  'src/renderer/components/team/dialogs/retainedCreateSubmission.ts',
+  'test/renderer/components/team/dialogs/createdTeamLaunchReadiness.test.tsx',
   'packages/legacy-agent-host/src/evidence/NativeFailedToolObservation.ts',
   'packages/legacy-agent-host/tests/fixtures/native-cross-team-script.ts',
   'scripts/legacy-agent-host/desktop-proof-integrated-sources.ts',
