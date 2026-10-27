@@ -24,7 +24,12 @@ export async function runDesktopTaskBoardUiSmoke(
     root: string;
     repo: string;
     handleId: string;
-    seed: { taskId: string; subject: string; commandId: string };
+    seed: {
+      taskId: string;
+      subject: string;
+      commandId: string;
+      group?: { groupChatId: string; name: string; commandId: string };
+    };
     assertOwnedRenderer(): void;
     evidence: Record<string, unknown>;
   }
@@ -44,7 +49,30 @@ export async function runDesktopTaskBoardUiSmoke(
     assert.ok(names.length <= 128, 'bounded TEST product census');
     return Promise.all(names.sort().map((name) => json(join(directory, name))));
   };
-  const commands = () => rows(commandDirectory);
+  const group = options.seed.group;
+  assert.ok(group, 'the two original board modes require their canonical group seed');
+  const originalGroupReceipts = (await rows(commandDirectory)).filter(
+    (row) => row.family === 'group-chat'
+  );
+  assert.equal(originalGroupReceipts.length, group ? 1 : 0);
+  if (group) {
+    const original = originalGroupReceipts[0]!;
+    assert.equal(original.commandId, group.commandId);
+    assert.equal(original.principalId, 'TEST-human');
+    assert.equal(original.phase, 'completed');
+    assert.equal(record(original.request).operation, 'create');
+    assert.equal(record(original.request).id, group.groupChatId);
+    assert.equal(record(original.response).id, group.groupChatId);
+  }
+  const commands = async () => {
+    const all = await rows(commandDirectory);
+    assert.deepEqual(
+      all.filter((row) => row.family === 'group-chat'),
+      originalGroupReceipts,
+      'the one original fixture group receipt is retained separately and never mutated'
+    );
+    return all.filter((row) => row.family !== 'group-chat');
+  };
   const steps: Record<string, unknown>[] = [];
   const step = (row: Record<string, unknown>) =>
     steps.push({ monotonicMs: Math.round(performance.now()), ...row });
@@ -55,6 +83,7 @@ export async function runDesktopTaskBoardUiSmoke(
       'Original Create Task dependency picker, Task assignee/Mark resolved, sortable TODO cards and blocked Start/Complete controls; offline canonical Host persistence',
     qaInventory: [
       'Create dependency through original optional fields; reciprocal canonical graph and visible blocker',
+      'Original Group chat filter supplies Create Task association; exact receipt/snapshot and renderer reload retain it',
       'Change assignee through existing Radix MemberSelect; retained captured owner',
       'TEST API sets clarification because no set control exists; original Mark resolved clears it',
       'Columns/Manual controls and one trusted pointer drag change canonical column order',
@@ -72,6 +101,13 @@ export async function runDesktopTaskBoardUiSmoke(
     sourceSha256: await fileDigest(import.meta.filename),
   };
   options.evidence.taskBoardUiProof = proof;
+  if (group)
+    proof.groupAssociation = {
+      status: 'INCOMPLETE',
+      ...group,
+      fixtureReceipt: await json(join(options.root, 'ui-group-seed-receipt.json')),
+      canonicalGroupReceipt: originalGroupReceipts[0],
+    };
   const ui = createDesktopUiControls(cdp, {
     assertOwnedRenderer: options.assertOwnedRenderer,
     step,
@@ -197,6 +233,39 @@ export async function runDesktopTaskBoardUiSmoke(
     assert.equal(matches.length, 1, 'exactly one business intent per actual control');
     return matches[0]!;
   };
+  const readGroupSnapshot = async (phase: string, taskIds: string[]) => {
+    assert.ok(group);
+    options.assertOwnedRenderer();
+    const result = record(
+      await cdp.evaluate(
+        `window.electronAPI.agentBackend.invoke(${desktopJsLiteral({ handle: { handleId: options.handleId }, commandId: 'TEST-task-board-group-snapshot-' + phase, operation: 'team.snapshot', payload: {} })})`
+      )
+    );
+    assert.equal(result.ok, true);
+    const snapshot = record(result.value);
+    assert.ok(Array.isArray(snapshot.tasks));
+    const tasks = snapshot.tasks.map(record);
+    assert.deepEqual(tasks.map((row) => row.id).sort(), [...taskIds].sort());
+    assert.ok(tasks.every((row) => row.groupChatId === group.groupChatId));
+    return snapshot;
+  };
+  const selectGroupFilter = async (name: string) => {
+    await ui.click('button[aria-label="Filter tasks"]', 'open original Task filters');
+    await ui.click(
+      'button[role="combobox"][aria-label="Group chat"]',
+      'open original Group chat filter'
+    );
+    await ui.click('[role="option"]', 'choose original Group chat filter option', name);
+    await ui.waitRead(
+      `document.querySelector('button[role="combobox"][aria-label="Group chat"]')?.textContent.trim()===${desktopJsLiteral(name)}`,
+      'original Group chat filter value'
+    );
+    await ui.click('button[aria-label="Filter tasks"]', 'close original Task filters');
+    await ui.waitRead(
+      `!document.querySelector('button[role="combobox"][aria-label="Group chat"]')`,
+      'original Task filters closed'
+    );
+  };
   const before = await rows(taskDirectory);
   assert.equal(before.length, 1);
   assert.equal(before[0]!.id, options.seed.taskId);
@@ -207,6 +276,15 @@ export async function runDesktopTaskBoardUiSmoke(
     'canonical seed card'
   );
   proof.initialScreenshot = await screenshot('ui-task-board-initial.png');
+  if (group) {
+    assert.equal(before[0]!.groupChatId, group.groupChatId);
+    const association = record(proof.groupAssociation);
+    const seeded = await json(join(options.root, 'ui-seed-receipt.json'));
+    assert.equal(record(record(seeded.command).payload).groupChatId, group.groupChatId);
+    association.beforeCreate = await readGroupSnapshot('before', [options.seed.taskId]);
+    await selectGroupFilter(group.name + ' (1)');
+    association.originalFilterSelection = group.name;
+  }
 
   await ui.click('button', 'open existing Create Task dialog', 'Task');
   await ui.click('[role="dialog"] #task-subject', 'focus ordinary Subject');
@@ -277,6 +355,16 @@ export async function runDesktopTaskBoardUiSmoke(
   assert.equal(creates[0]!.principalId, 'TEST-human');
   assert.equal(record(creates[0]!.effects).taskId, taskId);
   proof.createReceipt = creates[0];
+  if (group) {
+    assert.equal(created[0]!.groupChatId, group.groupChatId);
+    assert.equal(record(record(creates[0]!.command).payload).groupChatId, group.groupChatId);
+    record(proof.groupAssociation).afterCreate = await readGroupSnapshot('created', [
+      options.seed.taskId,
+      taskId,
+    ]);
+    await selectGroupFilter('All groups');
+    record(proof.groupAssociation).filterClearedBeforeRemainingWorkflow = true;
+  }
 
   // No current UI sets clarification. This is explicit TEST setup, never a signoff action.
   options.assertOwnedRenderer();
@@ -633,6 +721,13 @@ export async function runDesktopTaskBoardUiSmoke(
   assert.deepEqual(await rows(taskDirectory), stableTasks);
   assert.deepEqual(await commands(), stableCommands, 'reload/navigation never replays mutations');
   assert.equal(await readFile(join(teamDirectory, 'kanban-state.json'), 'utf8'), stableBoard);
+  if (group) {
+    assert.equal((await task(taskId)).groupChatId, group.groupChatId);
+    assert.equal((await task(options.seed.taskId)).groupChatId, group.groupChatId);
+    const association = record(proof.groupAssociation);
+    association.afterReload = await readGroupSnapshot('reloaded', [options.seed.taskId, taskId]);
+    association.status = 'PASS';
+  }
   proof.reloadedScreenshot = await screenshot('ui-task-board-reloaded.png');
   await runDesktopTaskBoardAttachmentsUi(cdp, {
     root: options.root,
@@ -659,6 +754,8 @@ export async function runDesktopTaskBoardUiSmoke(
       'src/renderer/components/team/dialogs/TaskCommentInput.tsx',
       'src/renderer/components/team/dialogs/TaskCommentsSection.tsx',
       'src/renderer/components/team/kanban/KanbanBoard.tsx',
+      'src/renderer/components/team/kanban/KanbanFilterPopover.tsx',
+      'src/renderer/components/team/kanban/teamTaskProjection.ts',
       'src/renderer/components/team/kanban/KanbanTaskCard.tsx',
       'src/features/agent-backend/renderer/createHostTeamMutations.ts',
     ].map(async (path) => ({ path, sha256: await fileDigest(join(options.repo, path)) }))

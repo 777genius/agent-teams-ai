@@ -83,6 +83,9 @@ export async function prepareDesktopProofFixture(
         }
       : {}),
     seedUiTask: options.uiMode,
+    ...(['task-board-ui', 'task-board-cross-team-ui'].includes(mode)
+      ? { taskBoardGroup: true }
+      : {}),
     approvalUi: options.approvalUiMode,
     ...(mode === 'native-conversation-ui' && process.env.LEGACY_DESKTOP_CHAT_ATTACHMENTS === '1'
       ? { nativeChatAttachments: true }

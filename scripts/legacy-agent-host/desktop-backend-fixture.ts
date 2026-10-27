@@ -54,6 +54,7 @@ export async function prepareDesktopBackendFixture(
     nativeChatAttachments?: boolean;
     nativeGroupChats?: boolean;
     seedUiTask?: boolean;
+    taskBoardGroup?: boolean;
     seedUiPreferences?: boolean;
     seedCodexApiKey?: boolean;
     launchDialog?: boolean;
@@ -454,27 +455,90 @@ export async function prepareDesktopBackendFixture(
       },
     ];
   }
-  let uiSeed: { taskId: string; subject: string; commandId: string } | undefined;
+  let uiSeed:
+    | {
+        taskId: string;
+        subject: string;
+        commandId: string;
+        group?: { groupChatId: string; name: string; commandId: string };
+      }
+    | undefined;
+  if (options.taskBoardGroup) {
+    if (!options.seedUiTask || profile.runtime)
+      throw new Error('Task board group proof requires the original offline Task fixture');
+    const members = profile.teams[0]!.members;
+    if (members.length !== 1 || members[0]!.name !== 'alice')
+      throw new Error('Task board group proof requires its original saved Alice member');
+    // One additional saved offline actor satisfies the ordinary two-agent group rule.
+    // It receives no runtime binding, provider allocation or principal grant.
+    members.push({ memberId: 'TEST-board-peer-id', name: 'board-peer', role: 'member' });
+  }
   if (options.seedUiTask) {
     const lease = acquireProfileWriterLease(owner.storageRoot);
     try {
       lease.assertCurrent();
       const selected = profile.teams[0]!;
-      const team = createFilesystemTeamOwner({
+      const teamOwner = createFilesystemTeamOwner({
         root: owner.storageRoot,
         binding: selected.binding,
         members: selected.members,
         grants: selected.grants,
         ...(selected.savedSettings ? { savedSettings: selected.savedSettings } : {}),
-      }).connect(profile.principalId);
+      });
+      const team = teamOwner.connect(profile.principalId);
+      let group: { groupChatId: string; name: string; commandId: string } | undefined;
+      if (options.taskBoardGroup) {
+        group = {
+          groupChatId: '10000000-0000-4000-8000-000000000017',
+          name: 'TEST board group',
+          commandId: 'TEST-task-board-group-seed',
+        };
+        const receipt = await teamOwner
+          .groupCommands(profile.principalId, {
+            getRun: async () => null,
+          })
+          .execute(
+            group.commandId,
+            {
+              operation: 'create',
+              id: group.groupChatId,
+              name: group.name,
+              selectedMemberNames: ['alice', 'board-peer'],
+              excludedMemberNames: [],
+              autoIncludeNewMembers: false,
+            },
+            { before: () => lease.assertCurrent(), inside: () => lease.assertCurrent() }
+          );
+        if (
+          receipt.phase !== 'completed' ||
+          !receipt.result ||
+          typeof receipt.result !== 'object' ||
+          Array.isArray(receipt.result) ||
+          !('id' in receipt.result) ||
+          receipt.result.id !== group.groupChatId
+        )
+          throw new Error('Original canonical Task board group seed did not complete');
+        await writeFile(
+          join(root, 'ui-group-seed-receipt.json'),
+          JSON.stringify(receipt, null, 2),
+          {
+            mode: 0o600,
+            flag: 'wx',
+          }
+        );
+      }
       const subject = 'TEST persisted Host sidebar seed';
       const commandId = 'TEST-ui-offline-seed';
-      const receipt = team.execute({ commandId, operation: 'task.create', payload: { subject } });
+      const receipt = team.execute({
+        commandId,
+        operation: 'task.create',
+        payload: { subject, ...(group ? { groupChatId: group.groupChatId } : {}) },
+      });
       if (receipt.phase !== 'completed') throw new Error('TEST canonical seed did not complete');
       const tasks = team.listTasks();
       if (tasks.length !== 1 || tasks[0]!.subject !== subject)
         throw new Error('TEST canonical seed mismatch');
-      uiSeed = { taskId: tasks[0]!.id, subject, commandId };
+      uiSeed = { taskId: tasks[0]!.id, subject, commandId, ...(group ? { group } : {}) };
       await writeFile(join(root, 'ui-seed-receipt.json'), JSON.stringify(receipt, null, 2), {
         mode: 0o600,
       });
@@ -567,6 +631,9 @@ export async function prepareDesktopBackendFixture(
         members: [
           { memberId: 'alice-id', label: 'alice' },
           ...(options.nativeGroupChats ? [{ memberId: 'bob-id', label: 'bob' }] : []),
+          ...(options.taskBoardGroup
+            ? [{ memberId: 'TEST-board-peer-id', label: 'board-peer' }]
+            : []),
         ],
         scope,
       },

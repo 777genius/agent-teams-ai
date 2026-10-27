@@ -1033,3 +1033,31 @@ additional affected helper/regression/necessary existing paths were explicitly
 source-pinned, without deriving a closure from other dirty work. Canonical full
 project and exact-head Desktop qualification remain pending. The accepted
 three-file group UI E2E and separate routing/F08 work remain separate units.
+
+
+## Original Task board group-association E2E integration
+
+The accepted extension is confined to the three existing fixture/board files.
+Only `task-board-ui` and `task-board-cross-team-ui` add one saved offline TEST
+peer beside Alice, with matching captured descriptor metadata and no runtime,
+provider allocation or new principal grants. Under the same original profile
+writer lease, the fixture creates a real canonical active two-agent group and
+links the original single seed Task to it. It preserves the seed Task's existing
+identity/subject and retains the group receipt separately.
+
+The existing Group chat filter supplies the existing Create Task form's group
+selection. The original single Create action is checked against its exact
+canonical Task/receipt payload and captured Team snapshot; the same association
+must survive the existing renderer reload. Every Task command census separately
+checks that the original group-family receipt remains unchanged. The group filter
+is cleared before the existing Alice/dependency/drag/review workflow continues.
+The board helper now requires its group seed explicitly, so a missing fixture
+cannot silently fall back to the earlier board proof. The original combined
+cross-Team overlay preserves this base roster and only adds its existing Teams.
+
+Independent actual-code review accepted the extension; the final required-seed
+and descriptor-census guards were separately approved. Existing strict script
+TypeScript, scoped formatting and diff checks passed. Both existing Group filter
+and task projection sources are explicitly pinned and included in the proof's
+source hashes. Actual Desktop execution on the changed head remains pending;
+prior Task board PASS receipts do not qualify this new group-association phase.

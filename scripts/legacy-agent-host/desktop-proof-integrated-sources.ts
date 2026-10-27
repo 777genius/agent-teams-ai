@@ -1,5 +1,7 @@
 /** Finite source closure of the integrated lifecycle, WorkSync and member-action checkpoint. */
 export const desktopProofIntegratedSources = [
+  'src/renderer/components/team/kanban/KanbanFilterPopover.tsx',
+  'src/renderer/components/team/kanban/teamTaskProjection.ts',
   'packages/legacy-agent-host/tests/task-group-association.test.ts',
   'src/features/agent-backend/contracts/taskSubmission.ts',
   'src/features/agent-backend/main/adapters/output/projectTaskSubmission.ts',
