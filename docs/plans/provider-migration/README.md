@@ -65,10 +65,17 @@ workflows, pending/revoke/control guards и product approvals. Это не за�
 
 [Checkpoint за 27–28 октября](progress/checkpoint-2026-10-27.md) сохраняет merge с
 main, независимое ревью конфликтов, исправления Create/Launch/Task/group/attachment/
-import/backup путей и точные результаты каждого запуска. Текущий исправленный
-production-кандидат **`8465a0a` запушен**; его собственный полный
-[CI/Desktop run40631328410](https://github.com/777genius/agent-teams-ai/actions/runs/40631328410)
-завершён. **Canonical Full qualification прошёл: 23 896 PASS / 0 FAIL / 97 SKIP**,
+import/backup путей и точные результаты каждого запуска. Текущий source-кандидат
+**`514082c` запушен**: поверх production-исправления `8465a0a` он содержит только
+проверенную TEST-замену CodeQL и документацию. Его собственный
+[canonical CI40634432861](https://github.com/777genius/agent-teams-ai/actions/runs/40634432861)
+запущен; результат пока ожидается.
+[CodeQL40634384705](https://github.com/777genius/agent-teams-ai/actions/runs/40634384705)
+прошёл оба анализа; alert590 исправлен, все три review threads resolved/outdated.
+
+Последний полный native/CI запуск —
+[8465 / run40631328410](https://github.com/777genius/agent-teams-ai/actions/runs/40631328410),
+он завершён. **Canonical Full qualification прошёл: 23 896 PASS / 0 FAIL / 97 SKIP**,
 все typed lint, Validate, workspace/Host и Windows smoke. Полные affected suites
 тоже прошли: TeamBackupService72 и queue27. Все десять Desktop-job остановились
 на существующем 60-секундном таймауте загрузки pinned Node **до TEST/native/UI**.
@@ -80,8 +87,8 @@ production-кандидат **`8465a0a` запушен**; его собстве�
 scanner сохраняет прежнюю грамматику и все проверки original/current input.
 Независимый критик и root приняли семантику и линейность; **14/14** локальных
 HTTP/fixture тестов прошли, включая 4 097 обёрток с недопустимым хвостом.
-Новый удалённый CodeQL и canonical результат будут зафиксированы отдельно;
-новая macOS/native квалификация из локального результата не следует.
+Собственный удалённый CodeQL прошёл; canonical результат фиксируется отдельно.
+Новая macOS/native квалификация из этого локального результата не следует.
 
 Предыдущий завершённый combined run —
 [`40629530746`](https://github.com/777genius/agent-teams-ai/actions/runs/40629530746)
@@ -131,8 +138,13 @@ complete system-reminder wrappers вокруг точного Runtime текст
 и cap16; actual HTTP RED→GREEN и bounded Mixed/provider31/31 прошли. Native
 уведомления/group/Restart всё ещё требуют собственного результата.
 
-Точный upstream до `c4c576ce` включён merge `8db2347b`; все 13 upstream-файлов
-сохранены побайтно. Строгий TEST shell согласован с command printf, с исходным
+Точный upstream до `c4c576ce` включён merge `8db2347b`; при merge все 13 файлов
+сохранены побайтно. Последующая отдельная portability-проверка выявила отсутствие
+сборки Host перед тестами нового upstream-workflow. На всех трёх ОС не загружаются
+те же dist exports. Root и критик приняли отдельную двухстрочную правку:
+существующий Host build перед прежними тестами; её собственный remote PASS пока
+ожидается. Остальной upstream сохранён.
+Строгий TEST shell согласован с command printf, с исходным
 RED и последующим локальным/macOS PASS. Provider-архив `2aa5d730…` и OpenCode V1
 scope неизменны. Финальное source review включает matcher и исправление audit
 drain; новые факты CI сохраняются отдельно от прежнего ревью.

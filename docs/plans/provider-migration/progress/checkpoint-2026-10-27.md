@@ -4879,3 +4879,95 @@ transport fix. No further blind native dispatch is needed to validate this
 language-preserving TEST correction; fresh native qualification remains open.
 The original a98 Resume ambiguity, Mixed continuation, packed24G90 custody and
 original M19 HOLD are not relaxed or relabeled.
+
+
+### 514082c scanner commit pushed; one canonical-only qualification dispatched
+
+The accepted scanner and exactly the two README/checkpoint files are committed
+as514082cff4fb9688c7f59df1555355ba2414ad0b,
+`test: scan SDK reminder wrappers without backtracking`, and immediately pushed.
+Local and origin HEAD match; worktree/index are clean. Expected8465 parent,
+reviewed scanner/test hashes, unchanged queue source/test and actual provider
+archive2aa5d730… are verified before commit. No other source or workflow changes.
+
+Root independently verifies exact514082c local/remote HEAD, the four-path commit,
+clean state, includedc4c main and OPEN/Draft/MERGEABLE PR. One canonical-only
+ci.yml dispatch is issued at2026-10-28T04:48:58.215125Z withstage1_desktop=false.
+Original run40634432861 is created04:48:59Z on exact514082c. Automatic CodeQL
+run40634384705 is created04:48:28Z on the same head. Both outcomes are pending
+at this entry; neither gate is claimed from older results. Native acquisition is
+not retried and current native/packed/original custody limits remain explicit.
+
+
+### 514 automatic workflow census: expected Draft gate and concrete portability prerequisite gap
+
+A complete current-head workflow check also examines checks outside the manually
+dispatched canonical run. Automatic PR CI40634384714 reports Full qualification
+failure/job122638112712 because plan.full=false and the final gate explicitly
+says Draft feedback does not qualify for merge. Validate/root/lint/Windows are
+skipped in that Draft feedback run. This is the designed Draft boundary, not an
+executed test failure and not a substitute for independent canonical40634432861.
+Its retained sanitized log SHA256 is
+`31621a58fb7956a7234ee8946790945b3bd03e61fa34c1a74286a0e66aa30829`.
+
+Separate automatic Anthropic environment portability40634384670 exposes a real
+integration prerequisite omission. Linux122637858472, Windows122637858187 and
+macOS122637858487 all report7 suite collection failures plus3 suites/101 passing
+tests. The same missing exports occur on every platform: Host lifecycle from
+atomicWrite/durablePathOperations, and attachments/portable from the renderer
+attachment contract. Original sanitized job-log hashes:
+
+- Linux `54ec7e0c6398e3546fcb839e922c534f461a2ed9a66b6a18c82bc9f2d8c2be19`;
+- Windows `6f02accfa9de0b401fa309c5ce3913250e033a3fb6dc1aed498f181873a2f5d7`;
+- macOS `d0dc55e7c155de436c12edfb54f7d959aa4721e2b45afe471d3a3a6e389311b9`.
+
+Root and an independent critic verify the cause against actual source: these
+public package exports target dist; ordinary install does not build Host and the
+focused portability workflow has no preceding Host build. Production imports
+are legitimate, and Vitest does not substitute source aliases. Host's existing
+prebuild already compiles its task-change-ledger dependency. The existing main,
+Codex and Windows workflows use the same Host build prerequisite. The smallest
+correction is one existing pnpm Host build step after install, before the existing
+lint and unchanged ten-file suite. No product, mock, alias, retry or extra
+dependency change is supported or needed.
+
+This workflow was one of the13 files brought in byte-for-byte by8db2347b. Their
+exact equality is a fact of that original merge; this subsequent separately
+reviewed prerequisite correction must not be reported as retaining all13 files
+identical forever. The other incorporated upstream behavior remains unchanged.
+
+
+### 514 scanner CodeQL is green; all three review threads resolved automatically
+
+Automatic CodeQL40634384705 completes SUCCESS on exact514082c. JavaScript/
+TypeScript job122637858384 completes04:56:00Z; Actions job122637858637 completes
+04:54:02Z. The separate CodeQL check122639403015 also reports SUCCESS. Root
+reads the original run/check metadata and alert590: its PR instance is now fixed.
+The retained instance still identifies the original finding commit6c27cfca…;
+that is not relabeled as the new analysis head. A fresh complete GraphQL read of
+all three PR review threads finds all resolved/outdated, including590 thread
+PRRT_kwDORVTEtM6w-k6T. No manual dismissal, resolution or comment is performed.
+Current514 canonical is still separate and pending at this entry.
+
+### Portability prerequisite correction: exact two-line workflow reviewed
+
+The only non-documentation delta after514 is the existing
+.github/workflows/anthropic-env-portability.yml. It adds one step after successful
+install and before typed lint and the unchanged ten-file Vitest command:
+`pnpm --filter @agent-teams/legacy-agent-host build`. This existing build invokes
+its existing task-change-ledger prebuild. The workflow hash is
+`4822ca196c711a962fb13e5f9356a45bac4d00c3e3d59195f1413f731d947d03`.
+Root and the independent critic inspect the actual exactly-two-line diff and
+independently verify the hash. YAML syntax/format and git diff --check pass.
+No new unit test of YAML text is introduced; the original three-platform RED and
+the upcoming original focused matrix are the relevant behavioral evidence.
+
+Triggers, permissions, matrix, timeout, installer, tests/assertions and all
+production/fixture/package bytes remain unchanged. Existing current canonical
+features-lint job122638279754 already executes the same Host plus ledger build
+successfully at04:51:22Z. That validates command availability, not this newly
+corrected workflow's own result. Its fresh automatic portability matrix and
+Actions CodeQL remain required. A full canonical rerun solely for this workflow
+prerequisite is not needed: original514 source qualification is retained exactly,
+with the subsequent workflow-only delta stated separately. Draft feedback is
+not promoted into latest-head merge qualification or native qualification.

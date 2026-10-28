@@ -66,6 +66,8 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build captured Host and ledger prerequisites
+        run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Lint the integration tests with type information
         if: runner.os == 'Linux'
         run: >-
