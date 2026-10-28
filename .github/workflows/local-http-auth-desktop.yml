@@ -47,11 +47,18 @@ jobs:
           sudo apt-get install -y xvfb libnss3 libgtk-3-0 libgbm1 libasound2t64
       - name: Frozen desktop dependencies and Electron native postinstall
         run: pnpm install --frozen-lockfile
-      - name: Configure the installed Electron Chromium sandbox
+      - name: Secure installed Chromium assets and sandboxes
         run: |
           sandbox_path="$(node -p 'require("path").join(require("path").dirname(require.resolve("electron/package.json")), "dist", "chrome-sandbox")')"
           sudo chown root:root "$sandbox_path"
           sudo chmod 4755 "$sandbox_path"
+          chrome_root=/opt/google/chrome
+          test "$(realpath "$chrome_root")" = "$chrome_root"
+          test -f "$chrome_root/chrome"
+          test -f "$chrome_root/chrome-sandbox"
+          sudo chown -R root:root "$chrome_root"
+          sudo chmod -R go-w "$chrome_root"
+          sudo chmod 4755 "$chrome_root/chrome-sandbox"
       - name: Typecheck the desktop harness
         run: node node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.local-http-auth-desktop.json
       - name: Real dev:mcp desktop auth qualification
