@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { TEAM_TEMPLATES } from '@features/team-templates/core';
+import { TEAM_TEMPLATES } from '@features/team-templates';
 
 import { CopyBuiltinTemplateUseCase } from '../../core/application/CopyBuiltinTemplateUseCase';
 import { DeleteCustomTeamTemplateUseCase } from '../../core/application/DeleteCustomTeamTemplateUseCase';
