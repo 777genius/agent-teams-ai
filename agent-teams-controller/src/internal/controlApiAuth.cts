@@ -4,47 +4,16 @@ const authFs = require('node:fs') as typeof import('node:fs');
 const authPath = require('node:path') as typeof import('node:path');
 const authCrypto = require('node:crypto') as typeof import('node:crypto');
 const authOs = require('node:os') as typeof import('node:os');
-const { assertPrivateWindowsAcl } = require('./windowsPrivateAcl.ts') as {
+const { assertPrivateWindowsAcl } = require('./windowsPrivateAcl.cts') as {
   assertPrivateWindowsAcl(this: void, file: string): void;
 };
 
-export interface ControlContext {
-  claudeDir: string;
-}
-export interface ControlFlags {
-  controlUrl?: unknown;
-  'control-url'?: unknown;
-}
-export interface ControlAuthority {
-  schemaVersion: 1;
-  service: 'api';
-  profileScope: string;
-  instanceId: string;
-  generation: string;
-  baseUrl: string;
-  token: string;
-}
-export interface ControlAuthoritySource {
-  read(): ControlAuthority;
-}
-export interface ControlRequestOptions {
-  method?: string;
-  body?: unknown;
-  signal?: AbortSignal;
-  headers?: HeadersInit;
-}
-export interface ControlAuthModule {
-  resolveControlAuthorities(
-    context: ControlContext,
-    flags?: ControlFlags,
-    fixedReference?: string
-  ): ControlAuthoritySource[];
-  authenticatedControlFetch(
-    source: ControlAuthoritySource,
-    pathname: string,
-    options?: ControlRequestOptions
-  ): Promise<Response>;
-}
+type ControlContext = import('./controlApiAuthTypes').ControlContext;
+type ControlFlags = import('./controlApiAuthTypes').ControlFlags;
+type ControlAuthority = import('./controlApiAuthTypes').ControlAuthority;
+type ControlAuthoritySource = import('./controlApiAuthTypes').ControlAuthoritySource;
+type ControlRequestOptions = import('./controlApiAuthTypes').ControlRequestOptions;
+type ControlAuthModule = import('./controlApiAuthTypes').ControlAuthModule;
 
 class DiscoveryChanged extends Error {}
 

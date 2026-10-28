@@ -1,5 +1,5 @@
 const path = require('path');
-const controlApiAuth = require('./controlApiAuth.ts');
+const controlApiAuth = require('./controlApiAuth.cts');
 
 function mismatch(detail) {
   const error = new Error(`APP_CONTEXT_MISMATCH: ${detail}`);

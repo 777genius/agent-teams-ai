@@ -1,5 +1,5 @@
 const desktopBinding = require('./desktopControlBinding.js');
-const controlApiAuth = require('./controlApiAuth.ts');
+const controlApiAuth = require('./controlApiAuth.cts');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');

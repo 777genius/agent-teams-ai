@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ControlAuthority } from '../src/internal/controlApiAuth';
+import type { ControlAuthority } from '../src/internal/controlApiAuthTypes';
 
 const require = createRequire(import.meta.url);
 const bindingPath = require.resolve('../src/internal/desktopControlBinding.js');

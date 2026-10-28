@@ -22,12 +22,12 @@ async function copyRecursive(sourceDir, targetDir) {
     }
 
     if (entry.isFile()) {
-      if (entry.name.endsWith('.ts')) {
+      if (/\.(?:c?ts)$/.test(entry.name)) {
         const source = await readFile(sourcePath, 'utf8');
         await writeFile(
-          targetPath.replace(/\.ts$/, '.js'),
+          targetPath.replace(/\.(?:c?ts)$/, '.js'),
           stripTypeScriptTypes(source).replaceAll(
-            './windowsPrivateAcl.ts',
+            './windowsPrivateAcl.cts',
             './windowsPrivateAcl.js'
           )
         );
@@ -35,7 +35,7 @@ async function copyRecursive(sourceDir, targetDir) {
         await writeFile(
           targetPath,
           (await readFile(sourcePath, 'utf8')).replaceAll(
-            './controlApiAuth.ts',
+            './controlApiAuth.cts',
             './controlApiAuth.js'
           )
         );

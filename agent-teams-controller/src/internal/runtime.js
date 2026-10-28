@@ -1,5 +1,5 @@
 const desktopBinding = require('./desktopControlBinding.js');
-const controlApiAuth = require('./controlApiAuth.ts');
+const controlApiAuth = require('./controlApiAuth.cts');
 const runtimeHelpers = require('./runtimeHelpers.js');
 const { buildMemberRosterContext } = require('./briefingProtocols.js');
 

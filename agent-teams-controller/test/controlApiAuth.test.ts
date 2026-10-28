@@ -21,9 +21,9 @@ import type {
   ControlAuthModule,
   ControlAuthority,
   ControlContext,
-} from '../src/internal/controlApiAuth';
+} from '../src/internal/controlApiAuthTypes';
 const require = createRequire(import.meta.url);
-const auth = require('../src/internal/controlApiAuth.ts') as ControlAuthModule;
+const auth = require('../src/internal/controlApiAuth.cts') as ControlAuthModule;
 const runtime = require('../src/internal/runtime.js') as {
   listTeams(context: ControlContext, flags?: Record<string, unknown>): Promise<unknown>;
   runtimeBootstrapCheckin(

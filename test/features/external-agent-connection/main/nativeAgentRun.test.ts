@@ -19,7 +19,7 @@ import { killProcessTreeAndWait, spawnCli } from '@main/utils/childProcess';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ConnectionInfoV1 } from '@features/external-agent-connection/contracts';
-import type { ControlAuthModule } from '../../../../agent-teams-controller/src/internal/controlApiAuth';
+import type { ControlAuthModule } from '../../../../agent-teams-controller/src/internal/controlApiAuthTypes';
 import type { ChildProcess } from 'node:child_process';
 
 const providerLaunch = vi.hoisted(() => ({
@@ -277,7 +277,7 @@ describe('native one-shot provider transport', () => {
       expect(childEnv[API_AUTH_REFERENCE_ENV]).toBe(reference);
       expect(childEnv.AGENT_TEAMS_BOUND_CONTROL_AUTH_TOKEN).toBeUndefined();
       const client = createRequire(import.meta.url)(
-        '../../../../agent-teams-controller/src/internal/controlApiAuth.ts'
+        '../../../../agent-teams-controller/src/internal/controlApiAuth.cts'
       ) as ControlAuthModule;
       const [source] = client.resolveControlAuthorities(
         { claudeDir: root },

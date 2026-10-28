@@ -2,7 +2,7 @@
 const { execFileSync } = require('node:child_process') as typeof import('node:child_process');
 const path = require('node:path') as typeof import('node:path');
 
-export interface WindowsAclSnapshot {
+interface WindowsAclSnapshot {
   userSid: string;
   ownerSid: string;
   rules: { sid: string; type: string }[];
@@ -36,7 +36,7 @@ function validateWindowsAcl(snapshot: WindowsAclSnapshot): void {
   }
 }
 
-export type WindowsAclRunner = (script: string) => string;
+type WindowsAclRunner = (script: string) => string;
 const runAcl: WindowsAclRunner = (script) => {
   const executable = path.win32.join(
     process.env.SystemRoot ?? 'C:\\Windows',
